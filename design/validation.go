@@ -14,54 +14,54 @@ import (
 /* Validation keywords for any instance type */
 
 // http://json-schema.org/latest/json-schema-validation.html#anchor76
-func (p *Member) Enum(val ...interface{}) *Member {
-	p.Validations = append(p.Validations, validateEnum(val))
-	return p
+func (a *Attribute) Enum(val ...interface{}) *Attribute {
+	a.Validations = append(a.Validations, validateEnum(val))
+	return a
 }
 
 // Set default value
-func (p *Member) Default(def interface{}) *Member {
-	p.DefaultValue = def
-	return p
+func (a *Attribute) Default(def interface{}) *Attribute {
+	a.DefaultValue = def
+	return a
 }
 
 // Set string format
-func (p *Member) Format(f string) *Member {
-	p.Validations = append(p.Validations, validateFormat(f))
-	return p
+func (a *Attribute) Format(f string) *Attribute {
+	a.Validations = append(a.Validations, validateFormat(f))
+	return a
 }
 
 // Minimum value validation
-func (p *Member) Minimum(val int) *Member {
-	p.Validations = append(p.Validations, validateIntMinimum(val))
-	return p
+func (a *Attribute) Minimum(val int) *Attribute {
+	a.Validations = append(a.Validations, validateIntMinimum(val))
+	return a
 }
 
 // Maximum value validation
-func (p *Member) Maximum(val int) *Member {
-	p.Validations = append(p.Validations, validateIntMaximum(val))
-	return p
+func (a *Attribute) Maximum(val int) *Attribute {
+	a.Validations = append(a.Validations, validateIntMaximum(val))
+	return a
 }
 
 // Minimum length validation
-func (p *Member) MinLength(val int) *Member {
-	p.Validations = append(p.Validations, validateMinLength(val))
-	return p
+func (a *Attribute) MinLength(val int) *Attribute {
+	a.Validations = append(a.Validations, validateMinLength(val))
+	return a
 }
 
 // Maximum length validation
-func (p *Member) MaxLength(val int) *Member {
-	p.Validations = append(p.Validations, validateMaxLength(val))
-	return p
+func (a *Attribute) MaxLength(val int) *Attribute {
+	a.Validations = append(a.Validations, validateMaxLength(val))
+	return a
 }
 
 // Maximum length validation
-func (p *Member) Required(names ...string) *Member {
-	if p.Type.Kind() != ObjectType {
+func (a *Attribute) Required(names ...string) *Attribute {
+	if a.Type.Kind() != ObjectType {
 		panic("Required validation must be applied to object types")
 	}
-	p.Validations = append(p.Validations, validateRequired(names))
-	return p
+	a.Validations = append(a.Validations, validateRequired(names))
+	return a
 }
 
 // validateRequired returns a validation function that checks whether given value is nil

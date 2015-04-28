@@ -224,7 +224,7 @@ func (a *Array) Name() string {
 }
 
 // A JSON object
-type Object map[string]*Member
+type Object map[string]*Attribute
 
 // Type kind
 func (o Object) Kind() Kind {
@@ -294,8 +294,8 @@ func (a Object) Name() string {
 }
 
 // An object member with optional description, default value and validations
-type Member struct {
-	Type         DataType     // Member type
+type Attribute struct {
+	Type         DataType     // Attribute type
 	Description  string       // Optional description
 	Validations  []Validation // Optional validation functions
 	DefaultValue interface{}  // Optional member default value
@@ -304,29 +304,13 @@ type Member struct {
 // A validation takes a value and produces nil on success or an error otherwise
 type Validation func(name string, val interface{}) error
 
-// M is a helper function that creates a member.
-// M is intended for declaring a literal object.
-// Usage:
-//    obj := Object{"Name": M{String, "Object name"}}
-func M(typ DataType, desc string) *Member {
-	return &Member{Type: typ, Description: desc}
-}
-
-// Create member from object.
-// Useful to define a payload member from a media type for example.
-// Usage:
-//    createPayload := From(TaskMediaType.Object).Required("Details")
-func From(o Object) *Member {
-	return &Member{Type: o}
-}
-
 // Load calls load on the underlying type then runs any member validation.
-func (m *Member) Load(name string, value interface{}) (interface{}, error) {
-	res, err := m.Type.Load(value)
+func (a *Attribute) Load(name string, value interface{}) (interface{}, error) {
+	res, err := a.Type.Load(value)
 	if err != nil {
 		return nil, err
 	}
-	for _, validation := range m.Validations {
+	for _, validation := range a.Validations {
 		if err := validation(name, res); err != nil {
 			return nil, err
 		}

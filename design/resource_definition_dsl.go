@@ -9,31 +9,18 @@ import (
 	"bitbucket.org/pkg/inflect"
 )
 
-var (
-	// Resources defined by application
-	Resources []*ResourceDefinition
-
-	// Resource factories indexed by name
-	resourceFactories map[string]func()
-)
-
 // A REST resource
 // Defines a media type and a set of actions that can be executed through HTTP requests.
 // A resource is versioned so that multiple versions of the same resource may
 // be exposed by the API.
-type ResourceDefinition struct {
+type Resource struct {
 	Name        string             // Resource name
 	BasePath    string             // Common URL prefix to all resource action HTTP requests
 	Description string             // Optional description
 	Version     string             // Optional version
 	MediaType   *MediaType         // Default media type, describes the resource attributes
-	Actions     map[string]*ActionDefinition // Exposed resource actions indexed by name
+	Actions     map[string]*Action // Exposed resource actions indexed by name
 }
-
-func Resource(name string, def Deferred) {
-
-}
-
 
 // Action adds or retrieves an action with the given name.
 // Use returned value to define description, http method, path, parameters and responses.
