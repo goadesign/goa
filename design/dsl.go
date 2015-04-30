@@ -1,6 +1,9 @@
 package design
 
-import "fmt"
+import (
+	"fmt"
+	"runtime"
+)
 
 var (
 	ctxStack contextStack // Global DSL evaluation stack
@@ -18,125 +21,78 @@ func (s contextStack) Current() interface{} {
 	return s[len(s)-1]
 }
 
-// Run DSL in given evaluation context
-func executeDSL(dsl func(), ctx interface{}) error {
+// executeDSL runs DSL in given evaluation context and returns true if successful.
+// It initializes dslError in case of failure (and returns false).
+func executeDSL(dsl func(), ctx interface{}) bool {
 	ctxStack = append(ctxStack, ctx)
 	dsl()
 	ctxStack = ctxStack[:len(ctxStack)-1]
-	return dslError
+	return dslError == nil
 }
 
-// Action defines an action definition DSL
-func Action(name string, dsl func()) {
-	action := &ActionDefinition{Name: name}
-	err := executeDSL(dsl, action)
-	if err != nil {
+// incompatibleDsl should be called by DSL functions when they are
+// invoked in an incorrect context (e.g. "Params" in "Resource").
+func incompatibleDsl() {
+	pc, _, _, ok := runtime.Caller(2)
+	if !ok {
+		dslError = "invalid definition"
 		return
 	}
-	switch c := ctxStack.Current().(type) {
-	case *Resource:
-		c.Actions = append(c.Actions, action)
-	default:
-		dslError = fmt.Errorf("Only resources have a Action field")
+	dslFunc := runtime.FuncForPC(pc).Name()
+	_, file, line, ok := runtime.Caller(3)
+	if !ok {
+		dslError = fmt.Errorf("invalid use of %s", dslFunc)
+		return
 	}
+	dslError = fmt.Errorf("Invalid use of %s in %s:%d", dslFunc, file, line)
 }
 
-// Define API base params
-func BaseParams(attributes ...*Attribute) {
-	switch c := ctxStack.Current().(type) {
-	case *APIDefinition:
-		c.BaseParams = attributes
-	default:
-		dslError = fmt.Errorf("Only API definitions have a BaseParams field")
+// actionDefinition returns true and current context if it is an ActionDefinition,
+// nil and false otherwise.
+func actionDefinition() (*ActionDefinition, bool) {
+	a, ok := ctxStack.Current().(*ActionDefinition)
+	if !ok {
+		incompatibleDsl()
 	}
+	return a, ok
 }
 
-// Define API base path
-func BasePath(val string) {
-	switch c := ctxStack.Current().(type) {
-	case *APIDefinition:
-		c.BasePath = val
-	default:
-		dslError = fmt.Errorf("Only API definitions have a BasePath field")
+// apiDefinition returns true and current context if it is an APIDefinition,
+// nil and false otherwise.
+func apiDefinition() (*APIDefinition, bool) {
+	a, ok := ctxStack.Current().(*APIDefinition)
+	if !ok {
+		incompatibleDsl()
 	}
+	return a, ok
 }
 
-func Description(val string) {
-	switch c := ctxStack.Current().(type) {
-	case *APIDefinition:
-		c.Description = val
-	case *ResponseTemplate:
-		c.Description = val
-	case *Attribute:
-		c.Description = val
-	case *MediaType:
-		c.Description = val
-	case *Action:
-		c.Description = val
-	default:
-		dslError = fmt.Errorf("Only API definitions, response templates, attributes, media types and actions have a Description field")
+// attribute returns true and current context if it is an Attribute,
+// nil and false otherwise.
+func attribute() (*Attribute, bool) {
+	a, ok := ctxStack.Current().(*Attribute)
+	if !ok {
+		incompatibleDsl()
 	}
+	return a, ok
 }
 
-func Headers(val ...Header) {
-	switch c := ctxStack.Current().(type) {
-	case *ActionDefinition:
-		c.Headers = val
-	case *Response:
-		c.Headers = val
-	default:
-		dslError = fmt.Errorf("Only Action and response definitions have a Header field")
+// resourceDefinition returns true and current context if it is a ResourceDefinition,
+// nil and false otherwise.
+func resourceDefinition() (*ResourceDefinition, bool) {
+	r, ok := ctxStack.Current().(*ResourceDefinition)
+	if !ok {
+		incompatibleDsl()
 	}
+	return r, ok
 }
 
-func MediaType(val *MediaType) {
-	switch c := ctxStack.Current().(type) {
-	case *Resource:
-		c.MediaType = val
-	default:
-		dslError = fmt.Errorf("Only resource definitions have a MediaType field")
+// responseDefinition returns true and current context if it is a ResponseDefinition,
+// nil and false otherwise.
+func responseDefinition() (*ResponseDefinition, bool) {
+	r, ok := ctxStack.Current().(*ResponseDefinition)
+	if !ok {
+		incompatibleDsl()
 	}
-}
-
-func ResponseTemplate(name string, dsl func()) {
-	template := &ResponseTemplate{Name: name}
-	err := executeDSL(dsl, template)
-	if err != nil {
-		return err
-	}
-	switch c := ctxStack.Current().(type) {
-	case *APIDefinition:
-		c.ResponseTemplates = append(c.ResponseTemplates, template)
-	default:
-		dslError = fmt.Errorf("Only API definitions have a ResourceTemplate field")
-	}
-}
-
-func Status(val int) {
-	switch c := ctxStack.Current().(type) {
-	case *Response:
-		c.Status = val
-	default:
-		dslError = fmt.Errorf("Only response definitions have a Status field")
-	}
-}
-
-func Title(val string) {
-	switch c := ctxStack.Current().(type) {
-	case *APIDefinition:
-		c.Title = val
-	default:
-		dslError = fmt.Errorf("Only API definitions have a Title field")
-	}
-}
-
-func Trait(name string, val func()) {
-	trait := &TraitDefinition{Name: name, Definition: val}
-	switch c := ctxStack.Current().(type) {
-	case *APIDefinition:
-		c.Traits = append(c.Traits, trait)
-	default:
-		dslError = fmt.Errorf("Only API definitions have a Trait field")
-	}
-
+	return r, ok
 }

@@ -1,4 +1,4 @@
-package design
+package main
 
 import . "github.com/raphael/goa/design"
 
@@ -12,7 +12,7 @@ var _ = Resource("bottle", func() {
 		Params(
 			Attribute("year", Integer, func() {
 				Description("Filter by year")
-			}), // Equivalent to A("year")
+			}),
 		)
 		Response(Ok, MediaCollection(BottleMediaType))
 	})
@@ -71,9 +71,8 @@ var _ = Resource("bottle", func() {
 		)
 		Headers(
 			Header("X-Force", func() {
-				//Required()
 				Enum("true", "false")
-			})
+			}),
 		)
 		Response(NoContent)
 		Response(NotFound)

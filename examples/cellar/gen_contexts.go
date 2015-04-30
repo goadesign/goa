@@ -82,6 +82,13 @@ func (c *UpdateBottleContext) id() int {
 	return c.Context.IntPathParam("id")
 }
 
+// Payload returns the request payload
+func (c *UpdateBottleContext) Payload() *UpdateBottleContext {
+	var p UpdateBottlePayload
+	c.Context.Bind(&p)
+	return &p
+}
+
 // UpdateBottlePayload provides the bottles update action payload
 type UpdateBottlePayload struct {
 	Name            *string   `json:"name,omitempty"`

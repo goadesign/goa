@@ -23,17 +23,48 @@ func API(name string, dsl func()) {
 	apiDSL.dsls = append(apiDSL.dsls, dsl)
 }
 
-// Run DSL to produce API definition
-func (d *apiDSL) execute() (*APIDefinition, error) {
-	def := APIDefinition{Name: d.name}
-	ctxStack = append(ctxStack, def)
-	for _, dsl := range d.dsls {
-		dsl()
-		if dslError != nil {
-			return nil, dslError
-		}
+// BaseParams defines the API base params
+func BaseParams(attributes ...*Attribute) {
+	switch c := ctxStack.Current().(type) {
+	case *APIDefinition:
+		c.BaseParams = attributes
+	default:
+		incompatibleDsl()
 	}
-	return def, nil
 }
 
+// BasePath defines the API base path
+func BasePath(val string) {
+	if def, ok := apiDefinition(); ok {
+		def.BasePath = val
+	}
+}
 
+// ResponseTemplate defines a response template
+func ResponseTemplate(name string, dsl func()) {
+	if def, ok := apiDefinition(); ok {
+		template := &ResponseTemplate{Name: name}
+		if ok := executeDSL(dsl, template); ok {
+			def.ResponseTemplates = append(def.ResponseTemplates, template)
+		}
+	}
+}
+
+// Title sets the API title
+func Title(val string) {
+	if a, ok := apiDefinition(); ok {
+		s.Title = val
+	}
+}
+
+// Trait defines an API trait
+func Trait(name string, val func()) {
+	trait := &TraitDefinition{Name: name, Definition: val}
+	switch c := ctxStack.Current().(type) {
+	case *APIDefinition:
+		c.Traits = append(c.Traits, trait)
+	default:
+		incompatibleDsl()
+	}
+
+}

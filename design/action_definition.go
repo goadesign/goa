@@ -12,15 +12,20 @@ import (
 // (i.e. portions of the URL that define parameter values), query string
 // parameters and a payload parameter (request body).
 type ActionDefinition struct {
-	Name        string       // Action name, e.g. "create"
-	Description string       // Action description, e.g. "Creates a task"
-	Resource    *Resource    // Resource containing action
-	Routes      []*Route     // Action routes
-	Responses   []*Response  // Set of possible response definitions
-	PathParams  ActionParams // Path parameters if any
-	QueryParams ActionParams // Query string parameters if any
-	Payload     *Member      // Payload blueprint (request body) if any
-	Headers     []*Header    // Special request headers that need to be made available to action
+	Name        string                // Action name, e.g. "create"
+	Description string                // Action description, e.g. "Creates a task"
+	Resource    *ResourceDefinition   // Resource containing action
+	Routes      []*Route              // Action routes
+	Responses   []*ResponseDefinition // Set of possible response definitions
+	Params      ActionParams          // Path parameters if any
+	Payload     *Member               // Payload blueprint (request body) if any
+	Headers     []*Header             // Special request headers that need to be made available to action
+}
+
+// An action route
+type Route struct {
+	Verb string
+	Path string
 }
 
 // Regular expression used to capture path parameters

@@ -12,7 +12,7 @@ import (
 // name and a URL that points to a related resource.
 // Finally media types also define views which describe which members and
 // links to render when building the response body.
-type MediaType struct {
+type MediaTypeDefinition struct {
 	Object
 	Identifier   string           // RFC 6838 Media type identifier
 	Description  string           // Optional description

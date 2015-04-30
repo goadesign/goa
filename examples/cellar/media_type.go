@@ -1,4 +1,4 @@
-package design
+package main
 
 import . "github.com/raphael/goa/design"
 
