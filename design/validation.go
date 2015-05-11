@@ -11,58 +11,9 @@ import (
 	"time"
 )
 
-/* Validation keywords for any instance type */
-
-// http://json-schema.org/latest/json-schema-validation.html#anchor76
-func (a *Attribute) Enum(val ...interface{}) *Attribute {
-	a.Validations = append(a.Validations, validateEnum(val))
-	return a
-}
-
-// Set default value
-func (a *Attribute) Default(def interface{}) *Attribute {
-	a.DefaultValue = def
-	return a
-}
-
-// Set string format
-func (a *Attribute) Format(f string) *Attribute {
-	a.Validations = append(a.Validations, validateFormat(f))
-	return a
-}
-
-// Minimum value validation
-func (a *Attribute) Minimum(val int) *Attribute {
-	a.Validations = append(a.Validations, validateIntMinimum(val))
-	return a
-}
-
-// Maximum value validation
-func (a *Attribute) Maximum(val int) *Attribute {
-	a.Validations = append(a.Validations, validateIntMaximum(val))
-	return a
-}
-
-// Minimum length validation
-func (a *Attribute) MinLength(val int) *Attribute {
-	a.Validations = append(a.Validations, validateMinLength(val))
-	return a
-}
-
-// Maximum length validation
-func (a *Attribute) MaxLength(val int) *Attribute {
-	a.Validations = append(a.Validations, validateMaxLength(val))
-	return a
-}
-
-// Maximum length validation
-func (a *Attribute) Required(names ...string) *Attribute {
-	if a.Type.Kind() != ObjectType {
-		panic("Required validation must be applied to object types")
-	}
-	a.Validations = append(a.Validations, validateRequired(names))
-	return a
-}
+// Validation defines an attribute validation function.
+// Validation functions take a value and produce nil on success or an error on failure.
+type Validation func(name string, val interface{}) error
 
 // validateRequired returns a validation function that checks whether given value is nil
 func validateRequired(fieldNames []string) Validation {

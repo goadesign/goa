@@ -23,11 +23,11 @@ type MediaTypeDefinition struct {
 
 // A link contains a URL to a related resource.
 type Link struct {
-	Name        string     // Link name
-	Description string     // Optional description
-	Member      *Member    // Member used to render link
-	MediaType   *MediaType // Member used to render link
-	View        string     // View used to render link if not "link"
+	Name        string               // Link name
+	Description string               // Optional description
+	Member      *AttributeDefinition // Member used to render link
+	MediaType   *MediaTypeDefinition // Member used to render link
+	View        string               // View used to render link if not "link"
 }
 
 // A view defines which members and links to render when building a response.
@@ -35,7 +35,7 @@ type Link struct {
 // The members fields are inherited from the parent media type but may be overridden.
 type View struct {
 	Object
-	MediaType *MediaType
+	MediaType *MediaTypeDefinition
 	Links     []string
 	Name      string
 }

@@ -1,35 +1,31 @@
 package design
 
+import "fmt"
+
 var (
-	apiDSLSource *apiDSL // API DSL
+	definition *APIDefinition // API definition created via DSL
 )
 
-// apiDSL contains the non-evaluated API DSL functions
-type apiDSL struct {
-	name string   // Name of API
-	dsls []func() // DSL funcs
-}
-
-// API creates or amends the API DSL
 func API(name string, dsl func()) {
-	if apiDSL != nil {
-		if apiDSL.name != name {
-			fatalf("API defined with conflicting names '%s' and '%s'",
-				apiDSL.name, name)
-		}
+	if definition != nil {
+		appendError(fmt.Errorf("multiple API definitions."))
 	} else {
-		apiDSL = &apiDSL{name: name}
+		definition = &APIDefinition{Name: name}
+		executeDSL(dsl, definition)
 	}
-	apiDSL.dsls = append(apiDSL.dsls, dsl)
+	if len(dslErrors) > 0 {
+		reportErrors()
+	}
+	//generate() TBD
 }
 
 // BaseParams defines the API base params
-func BaseParams(attributes ...*Attribute) {
-	switch c := ctxStack.Current().(type) {
+func BaseParams(attributes ...*AttributeDefinition) {
+	switch c := ctxStack.current().(type) {
 	case *APIDefinition:
 		c.BaseParams = attributes
 	default:
-		incompatibleDsl()
+		incompatibleDsl("BaseParams")
 	}
 }
 
@@ -43,7 +39,7 @@ func BasePath(val string) {
 // ResponseTemplate defines a response template
 func ResponseTemplate(name string, dsl func()) {
 	if def, ok := apiDefinition(); ok {
-		template := &ResponseTemplate{Name: name}
+		template := &ResponseTemplateDefinition{Name: name}
 		if ok := executeDSL(dsl, template); ok {
 			def.ResponseTemplates = append(def.ResponseTemplates, template)
 		}
@@ -53,18 +49,15 @@ func ResponseTemplate(name string, dsl func()) {
 // Title sets the API title
 func Title(val string) {
 	if a, ok := apiDefinition(); ok {
-		s.Title = val
+		a.Title = val
 	}
 }
 
 // Trait defines an API trait
 func Trait(name string, val func()) {
-	trait := &TraitDefinition{Name: name, Definition: val}
-	switch c := ctxStack.Current().(type) {
-	case *APIDefinition:
-		c.Traits = append(c.Traits, trait)
-	default:
-		incompatibleDsl()
+	if a, ok := apiDefinition(); ok {
+		trait := &TraitDefinition{Name: name, Dsl: val}
+		a.Traits = append(a.Traits, trait)
 	}
 
 }

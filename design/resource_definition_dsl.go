@@ -3,7 +3,7 @@ package design
 import "fmt"
 
 // MediaType sets the resource media type
-func MediaType(val *MediaType) {
+func MediaType(val *MediaTypeDefinition) {
 	switch c := ctxStack.Current().(type) {
 	case *Resource:
 		c.MediaType = val

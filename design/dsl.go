@@ -2,19 +2,29 @@ package design
 
 import (
 	"fmt"
+	"os"
+	"reflect"
+	"regexp"
 	"runtime"
 )
 
 var (
-	ctxStack contextStack // Global DSL evaluation stack
-	dslError error        // Last evaluation error if any
+	ctxStack  contextStack // Global DSL evaluation stack
+	dslErrors []*dslError  // DSL evaluation errors
 )
 
 // DSL evaluation contexts stack
 type contextStack []interface{}
 
+// A DSL error with name of the file and line number of where error occurred.
+type dslError struct {
+	Error error
+	File  string
+	Line  int
+}
+
 // Current evaluation context, i.e. object being currently built by DSL
-func (s contextStack) Current() interface{} {
+func (s contextStack) current() interface{} {
 	if len(s) == 0 {
 		return nil
 	}
@@ -32,19 +42,49 @@ func executeDSL(dsl func(), ctx interface{}) bool {
 
 // incompatibleDsl should be called by DSL functions when they are
 // invoked in an incorrect context (e.g. "Params" in "Resource").
-func incompatibleDsl() {
-	pc, _, _, ok := runtime.Caller(2)
-	if !ok {
-		dslError = "invalid definition"
-		return
+func incompatibleDsl(dslFunc string) {
+	appendError(fmt.Errorf("Invalid use of %s in %s:%d", dslFunc, file, line))
+}
+
+// invalidArgError records an invalid argument error.
+// It is used by DSL functions that take dynamic arguments.
+func invalidArgError(expected string, actual interface{}) {
+	appendError(fmt.Errorf("cannot use %v (type %s) as type %s in argument to Attribute",
+		actual, reflect.TypeOf(actual), expected))
+}
+
+// appendError records a DSL error for reporting post DSL execution.
+func appendError(err error) {
+	file, line := computeErrorLocation()
+	dslErrors = append(dslErrors, &dslError{
+		Error: err,
+		File:  file,
+		Line:  line,
+	})
+}
+
+// computeErrorLocation implements a heuristic to find the location in the user code where the
+// error occurred. It walks back the callstack until the file doesn't match "/goa/design/*.go".
+// When successful it returns the file name and line number.
+func computeErrorLocation() (string, int) {
+	depth := 2
+	_, file, line, ok := runtime.Caller(depth)
+	for ok && regexp.MatchString(`/goa/design/.+\.go$`, file) {
+		depth += 1
+		_, file, line, ok = runtime.Caller(depth)
 	}
-	dslFunc := runtime.FuncForPC(pc).Name()
-	_, file, line, ok := runtime.Caller(3)
 	if !ok {
-		dslError = fmt.Errorf("invalid use of %s", dslFunc)
-		return
+		return "<unknown>", 0
 	}
-	dslError = fmt.Errorf("Invalid use of %s in %s:%d", dslFunc, file, line)
+	return file, line
+}
+
+// reportErrors prints the DSL errors and exits the process.
+func reportErrors() {
+	for _, err := range dslErrors {
+		fmt.Printf("%s: %d: %s\n", err.Line, err.Line, err.Error.Error())
+	}
+	os.Exit(1)
 }
 
 // actionDefinition returns true and current context if it is an ActionDefinition,
@@ -52,7 +92,7 @@ func incompatibleDsl() {
 func actionDefinition() (*ActionDefinition, bool) {
 	a, ok := ctxStack.Current().(*ActionDefinition)
 	if !ok {
-		incompatibleDsl()
+		incompatibleDsl(caller())
 	}
 	return a, ok
 }
@@ -62,17 +102,17 @@ func actionDefinition() (*ActionDefinition, bool) {
 func apiDefinition() (*APIDefinition, bool) {
 	a, ok := ctxStack.Current().(*APIDefinition)
 	if !ok {
-		incompatibleDsl()
+		incompatibleDsl(caller())
 	}
 	return a, ok
 }
 
 // attribute returns true and current context if it is an Attribute,
 // nil and false otherwise.
-func attribute() (*Attribute, bool) {
-	a, ok := ctxStack.Current().(*Attribute)
+func attributeDefinition() (*AttributeDefinition, bool) {
+	a, ok := ctxStack.Current().(*AttributeDefinition)
 	if !ok {
-		incompatibleDsl()
+		incompatibleDsl(caller())
 	}
 	return a, ok
 }
@@ -82,7 +122,7 @@ func attribute() (*Attribute, bool) {
 func resourceDefinition() (*ResourceDefinition, bool) {
 	r, ok := ctxStack.Current().(*ResourceDefinition)
 	if !ok {
-		incompatibleDsl()
+		incompatibleDsl(caller())
 	}
 	return r, ok
 }
@@ -92,7 +132,16 @@ func resourceDefinition() (*ResourceDefinition, bool) {
 func responseDefinition() (*ResponseDefinition, bool) {
 	r, ok := ctxStack.Current().(*ResponseDefinition)
 	if !ok {
-		incompatibleDsl()
+		incompatibleDsl(caller())
 	}
 	return r, ok
+}
+
+// Name of calling function.
+func caller() string {
+	pc, _, _, err := runtime.Caller(1)
+	if err != nil {
+		return "<unknown>"
+	}
+	return runtime.FuncForPC(pc).Name()
 }

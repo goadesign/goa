@@ -3,6 +3,7 @@ package main
 import . "github.com/raphael/goa/design"
 
 var _ = Resource("bottle", func() {
+
 	MediaType(BottleMediaType)
 	Trait("Authenticated")
 
@@ -10,9 +11,7 @@ var _ = Resource("bottle", func() {
 		Routing(Get(""))
 		Description("List all bottles in account optionally filtering by year")
 		Params(
-			Attribute("year", Integer, func() {
-				Description("Filter by year")
-			}),
+			Param("year", Integer, "Filter by year"),
 		)
 		Response(Ok, MediaCollection(BottleMediaType))
 	})
@@ -21,7 +20,7 @@ var _ = Resource("bottle", func() {
 		Routing(Get("/:id"))
 		Description("Retrieve bottle with given id")
 		Params(
-			Attribute("id", Required()),
+			Param("id", Required()),
 		)
 		Response(Ok, BottleMediaType)
 		Response(NotFound)
@@ -30,49 +29,47 @@ var _ = Resource("bottle", func() {
 	Action("create", func() {
 		Routing(Post(""))
 		Description("Record new bottle")
-		Payload(
-			Attribute("name", func() { Required() }),
-			Attribute("vintage", func() { Required() }),
-			Attribute("vineyard", func() { Required() }),
-			Attribute("varietal"),
-			Attribute("color"),
-			Attribute("sweet"),
-			Attribute("country"),
-			Attribute("region"),
-			Attribute("review"),
-			Attribute("characteristics"),
-		)
+		Payload(Object(
+			Member("name", Required()),
+			Member("vintage", Required()),
+			Member("vineyard", Required()),
+			Member("varietal"),
+			Member("color"),
+			Member("sweet"),
+			Member("country"),
+			Member("region"),
+			Member("review"),
+			Member("characteristics"),
+		))
 		Response(Created)
 	})
 
 	Action("update", func() {
 		Route(Patch("/:id"))
 		Params(
-			Attribute("id", func() { Required() }),
+			Param("id", Required()),
 		)
 		Payload(
-			Attribute("name"),
-			Attribute("vineyard"),
-			Attribute("varietal"),
-			Attribute("vintage"),
-			Attribute("color"),
-			Attribute("sweet"),
-			Attribute("country"),
-			Attribute("region"),
-			Attribute("review"),
-			Attribute("characteristics"),
+			Member("name"),
+			Member("vineyard"),
+			Member("varietal"),
+			Member("vintage"),
+			Member("color"),
+			Member("sweet"),
+			Member("country"),
+			Member("region"),
+			Member("review"),
+			Member("characteristics"),
 		)
 	})
 
 	Action("delete", func() {
 		Route(Delete("/:id"))
 		Params(
-			Attribute("id", func() { Required() }),
+			Param("id", Required()),
 		)
 		Headers(
-			Header("X-Force", func() {
-				Enum("true", "false")
-			}),
+			Header("X-Force", Enum("true", "false")),
 		)
 		Response(NoContent)
 		Response(NotFound)

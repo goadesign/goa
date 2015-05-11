@@ -17,28 +17,35 @@ type ActionDefinition struct {
 	Resource    *ResourceDefinition   // Resource containing action
 	Routes      []*Route              // Action routes
 	Responses   []*ResponseDefinition // Set of possible response definitions
-	Params      ActionParams          // Path parameters if any
-	Payload     *Member               // Payload blueprint (request body) if any
-	Headers     []*Header             // Special request headers that need to be made available to action
+	PathParams  ActionParams          // Path  parameters if any
+	QueryParams ActionParams          // Query parameters if any
+	Payload     *AttributeDefinition  // Payload blueprint (request body) if any
+	Headers     []*HeaderDefinition   // Request headers that need to be made available to action
 }
 
 // An action route
 type Route struct {
-	Verb string
-	Path string
+	Verb string // HTTP method, e.g. "GET", "POST", etc.
+	Path string // URL path e.g. "/tasks/:id"
+}
+
+// A header definition for headers that need to be made available to the action.
+type HeaderDefinition struct {
+	Name   string               // Header key, e.g. "X-Request-Id"
+	Member *AttributeDefinition // Header definition including validations
 }
 
 // Regular expression used to capture path parameters
 var pathRegex = regexp.MustCompile("/:([^/]+)")
 
 // Internal helper method that sets HTTP method, path and path params
-func (a *Action) method(method, path string) *Action {
-	a.HttpMethod = method
-	a.Path = path
+func (a *ActionDefinition) method(method, path string) *ActionDefinition {
+	r := Route{Verb: method, Path: path}
+	a.Routes = append(a.Routes, &r)
 	var matches = pathRegex.FindAllStringSubmatch(path, -1)
 	a.PathParams = make(map[string]*ActionParam, len(matches))
 	for _, m := range matches {
-		mem := Member{Type: String}
+		mem := AttributeDefinition{Type: String}
 		a.PathParams[m[1]] = &ActionParam{Name: m[1], Member: &mem}
 	}
 	return a
@@ -46,7 +53,7 @@ func (a *Action) method(method, path string) *Action {
 
 // Validates that action definition is consistent: parameters have unique names, has at least one
 // response.
-func (a *Action) validate() error {
+func (a *ActionDefinition) validate() error {
 	if a.Name == "" {
 		return fmt.Errorf("Action name cannot be empty")
 	}
@@ -75,7 +82,7 @@ func (a *Action) validate() error {
 }
 
 // Validate action parameters (make sure they have names, members and types)
-func (a *Action) validateParams(isPath bool) error {
+func (a *ActionDefinition) validateParams(isPath bool) error {
 	var params ActionParams
 	if isPath {
 		params = a.PathParams

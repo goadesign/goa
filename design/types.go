@@ -224,7 +224,7 @@ func (a *Array) Name() string {
 }
 
 // A JSON object
-type Object map[string]*Attribute
+type Object map[string]*AttributeDefinition
 
 // Type kind
 func (o Object) Kind() Kind {
@@ -291,31 +291,6 @@ func (o Object) Load(value interface{}) (interface{}, error) {
 // JSON schema type name
 func (a Object) Name() string {
 	return "object"
-}
-
-// An object member with optional description, default value and validations
-type Attribute struct {
-	Type         DataType     // Attribute type
-	Description  string       // Optional description
-	Validations  []Validation // Optional validation functions
-	DefaultValue interface{}  // Optional member default value
-}
-
-// A validation takes a value and produces nil on success or an error otherwise
-type Validation func(name string, val interface{}) error
-
-// Load calls load on the underlying type then runs any member validation.
-func (a *Attribute) Load(name string, value interface{}) (interface{}, error) {
-	res, err := a.Type.Load(value)
-	if err != nil {
-		return nil, err
-	}
-	for _, validation := range a.Validations {
-		if err := validation(name, res); err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
 }
 
 // Error raised when "Load" cannot coerce a value to the data type

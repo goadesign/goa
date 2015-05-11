@@ -7,12 +7,12 @@ import "fmt"
 // A resource is versioned so that multiple versions of the same resource may
 // be exposed by the API.
 type ResourceDefinition struct {
-	Name        string             // Resource name
-	BasePath    string             // Common URL prefix to all resource action HTTP requests
-	Description string             // Optional description
-	Version     string             // Optional version
-	MediaType   *MediaType         // Default media type, describes the resource attributes
-	Actions     map[string]*Action // Exposed resource actions indexed by name
+	Name        string                       // Resource name
+	BasePath    string                       // Common URL prefix to all resource action HTTP requests
+	Description string                       // Optional description
+	Version     string                       // Optional version
+	MediaType   *MediaTypeDefinition         // Default media type, describes the resource attributes
+	Actions     map[string]*ActionDefinition // Exposed resource actions indexed by name
 }
 
 // Validates that resource definition is consistent: action names are valid and each action is
