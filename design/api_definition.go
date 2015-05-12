@@ -2,13 +2,14 @@ package design
 
 // APIDefinition defines the global properties of the API
 type APIDefinition struct {
-	Name              string                        // API name
-	Title             string                        // API Title
-	Description       string                        // API description
-	BasePath          string                        // Common base path to all API actions
-	BaseParams        []*AttributeDefinition        // Common path parameters to all API actions
-	Traits            []*TraitDefinition            // Traits available to all API resources and actions
-	ResponseTemplates []*ResponseTemplateDefinition // Response templates available to all API actions
+	Name              string                                 // API name
+	Title             string                                 // API Title
+	Description       string                                 // API description
+	BasePath          string                                 // Common base path to all API actions
+	BaseParams        []*AttributeDefinition                 // Common path parameters to all API actions
+	Resources         map[string]*ResourceDefinition         // Exposed resources indexed by name
+	Traits            map[string]*TraitDefinition            // Traits available to all API resources and actions indexed by name
+	ResponseTemplates map[string]*ResponseTemplateDefinition // Response templates available to all API actions indexed by name
 }
 
 // ResponseTemplateDefinition defines a HTTP response status and optional validation rules.

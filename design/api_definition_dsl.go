@@ -3,15 +3,15 @@ package design
 import "fmt"
 
 var (
-	definition *APIDefinition // API definition created via DSL
+	Definition *APIDefinition // API definition created via DSL
 )
 
 func API(name string, dsl func()) {
-	if definition != nil {
+	if Definition != nil {
 		appendError(fmt.Errorf("multiple API definitions."))
 	} else {
-		definition = &APIDefinition{Name: name}
-		executeDSL(dsl, definition)
+		Definition = &APIDefinition{Name: name}
+		executeDSL(dsl, Definition)
 	}
 	if len(dslErrors) > 0 {
 		reportErrors()
@@ -31,17 +31,21 @@ func BaseParams(attributes ...*AttributeDefinition) {
 
 // BasePath defines the API base path
 func BasePath(val string) {
-	if def, ok := apiDefinition(); ok {
-		def.BasePath = val
+	if a, ok := apiDefinition(); ok {
+		a.BasePath = val
 	}
 }
 
 // ResponseTemplate defines a response template
 func ResponseTemplate(name string, dsl func()) {
-	if def, ok := apiDefinition(); ok {
+	if a, ok := apiDefinition(); ok {
+		if _, ok := a.ResponseTemplates[name]; ok {
+			appendError(fmt.Errorf("multiple definitions for response template %s", name))
+			return
+		}
 		template := &ResponseTemplateDefinition{Name: name}
 		if ok := executeDSL(dsl, template); ok {
-			def.ResponseTemplates = append(def.ResponseTemplates, template)
+			a.ResponseTemplates[name] = template
 		}
 	}
 }
@@ -56,8 +60,12 @@ func Title(val string) {
 // Trait defines an API trait
 func Trait(name string, val func()) {
 	if a, ok := apiDefinition(); ok {
+		if _, ok := a.Traits[name]; ok {
+			appendError(fmt.Errorf("multiple definitions for trait %s", name))
+			return
+		}
 		trait := &TraitDefinition{Name: name, Dsl: val}
-		a.Traits = append(a.Traits, trait)
+		a.Traits[name] = trait
 	}
 
 }

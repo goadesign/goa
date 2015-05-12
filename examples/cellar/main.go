@@ -1,16 +1,22 @@
 package main
 
-import "github.com/raphael/goa"
+import (
+	"fmt"
+	"time"
+
+	"github.com/raphael/goa"
+)
 
 func main() {
 	app := goa.New("cellar")
 
 	c := app.NewController("bottle")
-	c.Action("list", listBottles)
-	c.Action("show", showBottle)
-	c.Action("create", createBottle)
-	c.Action("update", updateBottle)
-	c.Action("delete", deleteBottle)
+	c.List(listBottles)
+	c.Show(showBottle)
+	c.Create(createBottle)
+	c.Update(updateBottle)
+	c.Delete(deleteBottle)
+	c.Action("rate", rateBottle)
 }
 
 func listBottles(c *ListBottleContext) *goa.Response {
@@ -20,26 +26,46 @@ func listBottles(c *ListBottleContext) *goa.Response {
 	} else {
 		bottles = db.GetBottles(c.accountID())
 	}
-	resp := goa.Ok()
-	resp.Body = BottleMediaType.Render(bottles)
-	return resp
+	return goa.Ok(BottleMediaType.Render(bottles))
 }
 
-func showBottle(c *ShowBottleContext) *goa.Response {
+func showBottle(c *ShowBottleContext) *oa.Response {
 	bottle := db.GetBottle(c.accountID(), c.id())
 	if bottle == nil {
 		return goa.NotFound()
 	}
-	resp := goa.Ok()
-	resp.Body = BottleMediaType.Render(bottle)
-	return resp
+	return goa.Ok(BottleMediaType.Render(bottle))
 }
 
 func createBottle(c *CreateBottleContext) *goa.Response {
-	bottle := db.BottleFromPayload(c.Payload())
-	resp = goa.Created()
-	resp.Body = BottleMediaType.Render(bottle)
-	resp.Header.Set("Location", bottle.Href)
+	bottle := db.NewBottle()
+	payload = c.Payload()
+	bottle.Name = payload.Name
+	bottle.Vintage = payload.Vintage
+	bottle.Vineyard = payload.Vineyard
+	if payload.HasVarietal() {
+		bottle.Varietal = payload.Varietal
+	}
+	if payload.HasColor() {
+		bottle.Color = payload.Color
+	}
+	if payload.HasSweet() {
+		bottle.Sweet = payload.Sweet
+	}
+	if payload.HasCountry() {
+		bottle.Country = payload.Country
+	}
+	if payload.HasRegion() {
+		bottle.Region = payload.Region
+	}
+	if payload.HasReview() {
+		bottle.Review = payload.Review
+	}
+	if payload.HasCharacteristics() {
+		bottle.Characteristics = payload.Characteristics
+	}
+	resp = goa.Created(BottleMediaType.Render(bottle))
+	resp.Header.Set("Location", href(bottle))
 	return resp
 }
 
@@ -48,13 +74,62 @@ func updateBottle(c *UpdateBottleContext) *goa.Response {
 	if bottle == nil {
 		return goa.NotFound()
 	}
-	db.UpdateBottle(bottle, c)
+	payload = c.Payload()
+	if payload.HasName() {
+		bottle.Name = payload.Name
+	}
+	if payload.HasVintage() {
+		bottle.Vintage = payload.Vintage
+	}
+	if payload.HasVineyard() {
+		bottle.Vineyard = payload.Vineyard
+	}
+	if payload.HasVarietal() {
+		bottle.Varietal = payload.Varietal
+	}
+	if payload.HasColor() {
+		bottle.Color = payload.Color
+	}
+	if payload.HasSweet() {
+		bottle.Sweet = payload.Sweet
+	}
+	if payload.HasCountry() {
+		bottle.Country = payload.Country
+	}
+	if payload.HasRegion() {
+		bottle.Region = payload.Region
+	}
+	if payload.HasReview() {
+		bottle.Review = payload.Review
+	}
+	if payload.HasCharacteristics() {
+		bottle.Characteristics = payload.Characteristics
+	}
+	db.Save(bottle)
 	return goa.NoContent()
 }
 
 func deleteBottle(c *DeleteBottleContext) *goa.Response {
-	if db.Delete(c.accountID(), c.id()) {
-		return goa.NoContent()
+	bottle := db.GetBottle(c.accountID(), c.id())
+	if bottle == nil {
+		return goa.NotFound()
 	}
-	return goa.NotFound()
+	db.Delete(bottle)
+	return goa.NoContent()
+}
+
+func rateBottle(c *RateBottleContext) *goa.Response {
+	bottle := db.GetBottle(c.accountID(), c.id())
+	if bottle == nil {
+		return goa.NotFound()
+	}
+	bottle.Ratings = c.Ratings()
+	bottle.RatedAt = time.Now()
+	db.Save(bottle)
+	return goa.NoContent()
+}
+
+// href computes a bottle API href.
+func href(bottle) string {
+	return fmt.Sprintf("/bottles/%d", bottle.ID)
 }
