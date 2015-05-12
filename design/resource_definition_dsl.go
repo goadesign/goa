@@ -4,19 +4,19 @@ import "fmt"
 
 // MediaType sets the resource media type
 func MediaType(val *MediaTypeDefinition) {
-	switch c := ctxStack.Current().(type) {
-	case *Resource:
+	switch c := ctxStack.current().(type) {
+	case *ResourceDefinition:
 		c.MediaType = val
 	default:
-		dslError = fmt.Errorf("Only resource definitions have a MediaType field")
+		appendError(fmt.Errorf("Only resource definitions have a MediaType field"))
 	}
 }
 
 func Status(val int) {
-	switch c := ctxStack.Current().(type) {
-	case *Response:
+	switch c := ctxStack.current().(type) {
+	case *ResponseDefinition:
 		c.Status = val
 	default:
-		dslError = fmt.Errorf("Only response definitions have a Status field")
+		appendError(fmt.Errorf("Only response definitions have a Status field"))
 	}
 }

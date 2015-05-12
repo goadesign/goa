@@ -32,18 +32,19 @@ func (s contextStack) current() interface{} {
 }
 
 // executeDSL runs DSL in given evaluation context and returns true if successful.
-// It initializes dslError in case of failure (and returns false).
+// It appends to dslErrors in case of failure (and returns false).
 func executeDSL(dsl func(), ctx interface{}) bool {
+	errorCount := len(dslErrors)
 	ctxStack = append(ctxStack, ctx)
 	dsl()
 	ctxStack = ctxStack[:len(ctxStack)-1]
-	return dslError == nil
+	return len(dslErrors) > errorCount
 }
 
 // incompatibleDsl should be called by DSL functions when they are
 // invoked in an incorrect context (e.g. "Params" in "Resource").
 func incompatibleDsl(dslFunc string) {
-	appendError(fmt.Errorf("Invalid use of %s in %s:%d", dslFunc, file, line))
+	appendError(fmt.Errorf("Invalid use of %s", dslFunc))
 }
 
 // invalidArgError records an invalid argument error.
@@ -69,9 +70,13 @@ func appendError(err error) {
 func computeErrorLocation() (string, int) {
 	depth := 2
 	_, file, line, ok := runtime.Caller(depth)
-	for ok && regexp.MatchString(`/goa/design/.+\.go$`, file) {
+	if ok {
+		ok, _ = regexp.MatchString(`/goa/design/.+\.go$`, file)
+	}
+	for ok {
 		depth += 1
 		_, file, line, ok = runtime.Caller(depth)
+		ok, _ = regexp.MatchString(`/goa/design/.+\.go$`, file)
 	}
 	if !ok {
 		return "<unknown>", 0
@@ -90,7 +95,7 @@ func reportErrors() {
 // actionDefinition returns true and current context if it is an ActionDefinition,
 // nil and false otherwise.
 func actionDefinition() (*ActionDefinition, bool) {
-	a, ok := ctxStack.Current().(*ActionDefinition)
+	a, ok := ctxStack.current().(*ActionDefinition)
 	if !ok {
 		incompatibleDsl(caller())
 	}
@@ -100,7 +105,7 @@ func actionDefinition() (*ActionDefinition, bool) {
 // apiDefinition returns true and current context if it is an APIDefinition,
 // nil and false otherwise.
 func apiDefinition() (*APIDefinition, bool) {
-	a, ok := ctxStack.Current().(*APIDefinition)
+	a, ok := ctxStack.current().(*APIDefinition)
 	if !ok {
 		incompatibleDsl(caller())
 	}
@@ -110,7 +115,7 @@ func apiDefinition() (*APIDefinition, bool) {
 // attribute returns true and current context if it is an Attribute,
 // nil and false otherwise.
 func attributeDefinition() (*AttributeDefinition, bool) {
-	a, ok := ctxStack.Current().(*AttributeDefinition)
+	a, ok := ctxStack.current().(*AttributeDefinition)
 	if !ok {
 		incompatibleDsl(caller())
 	}
@@ -120,7 +125,7 @@ func attributeDefinition() (*AttributeDefinition, bool) {
 // resourceDefinition returns true and current context if it is a ResourceDefinition,
 // nil and false otherwise.
 func resourceDefinition() (*ResourceDefinition, bool) {
-	r, ok := ctxStack.Current().(*ResourceDefinition)
+	r, ok := ctxStack.current().(*ResourceDefinition)
 	if !ok {
 		incompatibleDsl(caller())
 	}
@@ -130,7 +135,7 @@ func resourceDefinition() (*ResourceDefinition, bool) {
 // responseDefinition returns true and current context if it is a ResponseDefinition,
 // nil and false otherwise.
 func responseDefinition() (*ResponseDefinition, bool) {
-	r, ok := ctxStack.Current().(*ResponseDefinition)
+	r, ok := ctxStack.current().(*ResponseDefinition)
 	if !ok {
 		incompatibleDsl(caller())
 	}
@@ -139,8 +144,8 @@ func responseDefinition() (*ResponseDefinition, bool) {
 
 // Name of calling function.
 func caller() string {
-	pc, _, _, err := runtime.Caller(1)
-	if err != nil {
+	pc, _, _, ok := runtime.Caller(1)
+	if ok {
 		return "<unknown>"
 	}
 	return runtime.FuncForPC(pc).Name()

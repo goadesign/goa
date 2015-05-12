@@ -45,6 +45,7 @@ var ipv4Regex = regexp.MustCompile(`^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$`)
 // - "uri": RFC3986 URI value
 // - "mac": IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address value
 // - "cidr": RFC4632 and RFC4291 CIDR notation IP address value
+// - "regexp": Regular expression syntax accepted by RE2
 func validateFormat(f string) Validation {
 	return func(name string, val interface{}) error {
 		if val == nil {
@@ -81,6 +82,8 @@ func validateFormat(f string) Validation {
 				_, err = net.ParseMAC(sval)
 			case "cidr":
 				_, _, err = net.ParseCIDR(sval)
+			case "regexp":
+				_, err = regexp.Compile(sval)
 			default:
 				err = fmt.Errorf("unknown validation format '%s'", f)
 			}

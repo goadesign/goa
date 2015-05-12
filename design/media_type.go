@@ -42,8 +42,8 @@ type View struct {
 
 // NewMediaType creates new media type from its identifier, description and type.
 // Initializes a default view that returns all the media type members.
-func NewMediaType(id, desc string, o Object) *MediaType {
-	mt := MediaType{Object: o, Identifier: id, Description: desc, Links: make(map[string]*Link)}
+func NewMediaType(id, desc string, o Object) *MediaTypeDefinition {
+	mt := MediaTypeDefinition{Object: o, Identifier: id, Description: desc, Links: make(map[string]*Link)}
 	mt.Views = map[string]*View{"default": &View{Name: "default", Object: o}}
 	return &mt
 }
@@ -51,7 +51,7 @@ func NewMediaType(id, desc string, o Object) *MediaType {
 // View adds a new view to the media type.
 // It returns the view so it can be modified further.
 // This method ignore passed-in property names that do not exist in media type.
-func (m *MediaType) View(name string, members ...string) *View {
+func (m *MediaTypeDefinition) View(name string, members ...string) *View {
 	o := make(Object, len(members))
 	i := 0
 	for n, p := range m.Object {
@@ -109,7 +109,7 @@ func (v *View) Link(links ...string) *View {
 
 // Link adds a new link to the given media type member.
 // It returns the link so it can be modified further.
-func (m *MediaType) Link(name string) *Link {
+func (m *MediaTypeDefinition) Link(name string) *Link {
 	member, ok := m.Object[name]
 	if !ok {
 		panic(fmt.Sprintf("Invalid  link '%s', no such media type member.", name))
@@ -131,7 +131,7 @@ func (l *Link) As(name string) *Link {
 // CollectionOf creates a collection media type from its element media type.
 // A collection media type represents the content of responses that return a
 // collection of resources such as "index" actions.
-func CollectionOf(m *MediaType) *MediaType {
+func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
 	col := *m
 	col.isCollection = true
 	return &col
@@ -147,7 +147,7 @@ func CollectionOf(m *MediaType) *MediaType {
 // on each element of the array.
 // Once the resulting map has been built the values are validated using the view property
 // validations.
-func (m *MediaType) Render(value interface{}, viewName string) (interface{}, error) {
+func (m *MediaTypeDefinition) Render(value interface{}, viewName string) (interface{}, error) {
 	if value == nil {
 		return make(map[string]interface{}), nil
 	}
@@ -191,7 +191,7 @@ func (m *MediaType) Render(value interface{}, viewName string) (interface{}, err
 // Render given struct
 // Builds map with values corresponding to fields with media type property names then validates it
 // View name must be valid
-func (m *MediaType) renderStruct(value interface{}, viewName string) (map[string]interface{}, error) {
+func (m *MediaTypeDefinition) renderStruct(value interface{}, viewName string) (map[string]interface{}, error) {
 	t := reflect.TypeOf(value)
 	v := reflect.ValueOf(value)
 	numField := t.NumField()
@@ -223,7 +223,7 @@ func (m *MediaType) renderStruct(value interface{}, viewName string) (map[string
 // Render given map
 // Builds map with values corresponding to media type property names then validates it
 // View name must be valid
-func (m *MediaType) renderMap(value map[string]interface{}, viewName string) (map[string]interface{}, error) {
+func (m *MediaTypeDefinition) renderMap(value map[string]interface{}, viewName string) (map[string]interface{}, error) {
 	rendered := make(map[string]interface{})
 	view := m.Views[viewName]
 	for n, v := range value {
@@ -236,7 +236,7 @@ func (m *MediaType) renderMap(value map[string]interface{}, viewName string) (ma
 
 // First make sure that any property with default value has its value initialized in the map, then
 // run property validation functions on value associated with property name.
-func (m *MediaType) validate(rendered map[string]interface{}) error {
+func (m *MediaTypeDefinition) validate(rendered map[string]interface{}) error {
 	for n, p := range m.Object {
 		if _, ok := rendered[n]; !ok {
 			if p.DefaultValue != nil {

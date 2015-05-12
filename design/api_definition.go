@@ -17,7 +17,7 @@ type ResponseTemplateDefinition struct {
 	Status      int                  // HTTP status
 	Description string               // Response description
 	MediaType   *MediaTypeDefinition // Response body media type if any
-	Headers     HeaderPatterns       // Response header validations
+	Headers     []*HeaderDefinition  // Response header validations
 }
 
 // TraitDefinition defines a set of reusable properties.
