@@ -1,13 +1,9 @@
 package goa
 
-import (
-	"github.com/julienschmidt/httprouter"
-	"github.com/raphael/goa/design"
-)
+import "github.com/raphael/goa/design"
 
-var (
-	router = httprouter.New()
-)
+// Registered handlers
+var handlers map[string]*handler = make(map[string]*handler)
 
 type handlerFunc func(*Context) *Response
 
@@ -17,11 +13,8 @@ type handler struct {
 	Handler      handlerFunc
 }
 
-func registerHandlers(handlers []*handler) {
-	if design.Definition == nil {
-		fatalf("missing API definition")
-	}
-	for _, handler := range handlers {
+func registerHandlers(hs []*handler) {
+	for _, handler := range hs {
 		resource, ok := design.Definition.Resources[handler.ResourceName]
 		if !ok {
 			fatalf("unknown resource %s", handler.ResourceName)
@@ -30,7 +23,6 @@ func registerHandlers(handlers []*handler) {
 		if !ok {
 			fatalf("unknown %s action '%s'", handler.ResourceName, handler.ActionName)
 		}
-		for _, route := range action.Routes {
-		}
+		handlers[handler.ResourceName+"#"+handler.ActionName] = handler
 	}
 }
