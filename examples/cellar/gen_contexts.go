@@ -1,5 +1,7 @@
 package main
 
+import "github.com/raphael/goa"
+
 // ListBottleContext provides the bottles list action context
 type ListBottleContext struct {
 	*goa.Context

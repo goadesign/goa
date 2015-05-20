@@ -10,6 +10,9 @@ type Response struct {
 	Header     http.Header
 }
 
+func writeResponse(w http.ResponseWriter, r *Response) {
+}
+
 // fromBody is a helper function that creates a response with the given body.
 func fromBody(b ...interface{}) *Response {
 	if len(b) == 0 {

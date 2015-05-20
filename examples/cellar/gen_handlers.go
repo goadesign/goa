@@ -2,12 +2,14 @@ package main
 
 import "reflect"
 
-var _ = goa.registerHandlers(
-	goa.handler{"bottles", "list", listBottlesHandler},
-	goa.handler{"bottles", "show", showBottlesHandler},
-	goa.handler{"bottles", "create", createBottlesHandler},
-	goa.handler{"bottles", "update", updateBottlesHandler},
-	goa.handler{"bottles", "delete", deleteBottlesHandler},
+import "github.com/raphael/goa"
+
+var _ = goa.RegisterHandlers(
+	goa.Handler{"bottles", "list", listBottlesHandler},
+	goa.Handler{"bottles", "show", showBottlesHandler},
+	goa.Handler{"bottles", "create", createBottlesHandler},
+	goa.Handler{"bottles", "update", updateBottlesHandler},
+	goa.Handler{"bottles", "delete", deleteBottlesHandler},
 )
 
 func listBottlesHandler(c *goa.Context) *goa.Response {
