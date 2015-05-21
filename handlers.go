@@ -10,7 +10,7 @@ import (
 var handlers map[string]*Handler = make(map[string]*Handler)
 
 // HandlerFunc defines the generic handler function.
-type HandlerFunc func(*Context) error
+type HandlerFunc func(interface{}, *Context) error
 
 // Handler associates a generated handler function with the corresponding resource and action.
 // Generated handler functions all use the same generic signature so they can be called from non
@@ -25,18 +25,21 @@ type Handler struct {
 
 // RegisterHandlers stores the given handlers and indexes them for later lookup.
 // This function is meant to be called by code generated with the goa tool.
-func RegisterHandlers(hs []*Handler) {
+func RegisterHandlers(hs ...*Handler) error {
 	for _, handler := range hs {
 		res, ok := design.Definition.Resources[handler.ResourceName]
 		if !ok {
-			fatalf("unknown resource %s", handler.ResourceName)
+			fatalf("unknown resource %s, please re-run the goa tool",
+				handler.ResourceName)
 		}
 		a, ok := res.Actions[handler.ActionName]
 		if !ok {
-			fatalf("unknown %s action '%s'", handler.ResourceName, handler.ActionName)
+			fatalf("unknown %s action '%s', please re-run the goa tool",
+				handler.ResourceName, handler.ActionName)
 		}
 		handlers[handlerId(res, a)] = handler
 	}
+	return nil
 }
 
 // handlerId is an internal function that returns a unique id for a resource and an action.

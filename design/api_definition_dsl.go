@@ -6,7 +6,7 @@ var (
 	Definition *APIDefinition // API definition created via DSL
 )
 
-func API(name string, dsl func()) {
+func API(name string, dsl func()) error {
 	if Definition != nil {
 		appendError(fmt.Errorf("multiple API definitions."))
 	} else {
@@ -17,6 +17,7 @@ func API(name string, dsl func()) {
 		reportErrors()
 	}
 	//generate() TBD
+	return nil // Need to return something for 'var _ = ' trick
 }
 
 // BaseParams defines the API base params

@@ -3,17 +3,18 @@ package design
 import "fmt"
 
 // Resource defines a resource
-func Resource(name string, dsl func()) {
+func Resource(name string, dsl func()) error {
 	if a, ok := apiDefinition(); ok {
 		if _, ok := a.Resources[name]; ok {
 			appendError(fmt.Errorf("multiple definitions for resource %s", name))
-			return
+			return nil
 		}
 		resource := &ResourceDefinition{Name: name}
 		if ok := executeDSL(dsl, resource); ok {
 			a.Resources[name] = resource
 		}
 	}
+	return nil // To all for 'var _ = ' trick
 }
 
 // MediaType sets the resource media type

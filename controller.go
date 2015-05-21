@@ -25,9 +25,9 @@ type Action struct {
 	Definition *design.ActionDefinition // Endpoint definition
 }
 
-// SetActionHandler registers a handler for the action with given name.
+// AddActionHandler registers a handler for the action with given name.
 // The handler is a function whose signature depends on the action
-func (c *Controller) SetActionHandler(name string, handler interface{}) {
+func (c *Controller) AddActionHandler(name string, handler interface{}) {
 	if _, ok := c.Actions[name]; ok {
 		fatalf("multiple handlers for %s of %s.", name, c.Resource.Name)
 	}
@@ -35,13 +35,12 @@ func (c *Controller) SetActionHandler(name string, handler interface{}) {
 	if !ok {
 		fatalf("%s does not have an action with name '%s'", c.Resource.Name, name)
 	}
-	c.Actions[name] = &Action{Handler: handler, Definition: action}
 	h, ok := handlers[handlerId(c.Resource, action)]
 	if !ok {
 		fatalf("handler for action %s of %s not defined, you may need to run 'goa'.")
 	}
 	// We're set, now hook up the handler with httprouter.
-	handle := c.actionHandle(action, h.HandlerF)
+	handle := c.actionHandle(h.HandlerF, handler)
 	for _, r := range action.Routes {
 		c.router.Handle(r.Verb, r.Path, handle)
 	}
@@ -55,14 +54,14 @@ func (c *Controller) SetErrorHandler(handler ErrorHandler) {
 }
 
 // actionHandle returns a httprouter handle for the given action definition.
-func (c *Controller) actionHandle(a *design.ActionDefinition, h HandlerFunc) httprouter.Handle {
+// The generated handler builds an action specific context and calls the user handler.
+func (c *Controller) actionHandle(generated HandlerFunc, user interface{}) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		//pathParans := load(params)
 		context := Context{
-			Action: a,
-			// Initialize context with params
+		// Initialize context with params
 		}
-		err := h(&context)
+		err := generated(user, &context)
 		if err != nil {
 			c.handleError(&context, err)
 		}
