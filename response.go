@@ -10,20 +10,6 @@ type Response struct {
 	Header     http.Header
 }
 
-func writeResponse(w http.ResponseWriter, r *Response) {
-}
-
-// fromBody is a helper function that creates a response with the given body.
-func fromBody(b ...interface{}) *Response {
-	if len(b) == 0 {
-		return &Response{}
-	} else if len(b) == 1 {
-		return &Response{Body: b[0]}
-	} else {
-		return &Response{Body: b}
-	}
-}
-
 // Continue creates a response with status code 100.
 func Continue(b ...interface{}) *Response {
 	r := fromBody(b)
@@ -309,4 +295,18 @@ func HTTPVersionNotSupported(b ...interface{}) *Response {
 	r := fromBody(b)
 	r.StatusCode = http.StatusHTTPVersionNotSupported
 	return r
+}
+
+func writeResponse(w http.ResponseWriter, r *Response) {
+}
+
+// fromBody is a helper function that creates a response with the given body.
+func fromBody(b ...interface{}) *Response {
+	if len(b) == 0 {
+		return &Response{}
+	} else if len(b) == 1 {
+		return &Response{Body: b[0]}
+	} else {
+		return &Response{Body: b}
+	}
 }

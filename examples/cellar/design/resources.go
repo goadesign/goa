@@ -8,26 +8,26 @@ var _ = Resource("bottle", func() {
 	Trait("Authenticated")
 
 	Action("list", func() {
-		Routing(Get(""))
+		Route(Get(""))
 		Description("List all bottles in account optionally filtering by year")
 		Params(
-			Param("year", Integer, "Filter by year"),
+			Param("years", Collection(Integer), "Filter by years"),
 		)
 		Response(Ok, MediaCollection(BottleMediaType))
 	})
 
-	Action("get", func() {
-		Routing(Get("/:id"))
+	Action("show", func() {
+		Route(Get("/:id"))
 		Description("Retrieve bottle with given id")
 		Params(
-			Param("id", Required()),
+			Param("id", Integer, "Bottle ID"),
 		)
 		Response(Ok, BottleMediaType)
 		Response(NotFound)
 	})
 
 	Action("create", func() {
-		Routing(Post(""))
+		Route(Post(""))
 		Description("Record new bottle")
 		Payload(Object(
 			Member("name", Required()),
@@ -47,7 +47,7 @@ var _ = Resource("bottle", func() {
 	Action("update", func() {
 		Route(Patch("/:id"))
 		Params(
-			Param("id", Required()),
+			Param("id", Integer, "Bottle ID"),
 		)
 		Payload(
 			Member("name"),
@@ -66,7 +66,7 @@ var _ = Resource("bottle", func() {
 	Action("delete", func() {
 		Route(Delete("/:id"))
 		Params(
-			Param("id", Required()),
+			Param("id", Integer, "Bottle ID"),
 		)
 		Headers(
 			Header("X-Force", Enum("true", "false")),

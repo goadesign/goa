@@ -25,6 +25,11 @@ var _ = API("cellar", func() {
 		MediaType(mt)
 	})
 
+	ResponseTemplate("Created", func() {
+		Description("Resource created")
+		Status(201)
+	})
+
 	Trait("Authenticated", func() {
 		Headers(
 			Header("Auth-Token", Required()),
