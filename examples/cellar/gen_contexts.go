@@ -1,6 +1,10 @@
 package main
 
-import "github.com/raphael/goa"
+import (
+	"encoding/json"
+
+	"github.com/raphael/goa"
+)
 
 // ListBottleContext provides the bottles list action context
 type ListBottleContext struct {
@@ -50,9 +54,22 @@ func (c *CreateBottleContext) accountID() int {
 
 // Payload returns the request payload
 func (c *CreateBottleContext) Payload() *CreateBottlePayload {
+	decoder := json.NewDecoder(c.Context.R.Body)
 	var p CreateBottlePayload
-	c.Context.Bind(&p)
-	return &p
+	err := decoder.Decode(&p)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateRequired("create Bottle payload", "Name", p.Name, ""); err != nil {
+		return nil, err
+	}
+	if err := validateRequired("create Bottle payload", "Vintage", p.Vintage, ""); err != nil {
+		return nil, err
+	}
+	if err := validateRequired("create Bottle payload", "Vineyard", p.Vineyard, ""); err != nil {
+		return nil, err
+	}
+	return &p, nil
 }
 
 // CreateBottlePayload provides the bottles create action payload

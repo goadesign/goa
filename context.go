@@ -14,9 +14,6 @@ type Context struct {
 	W             http.ResponseWriter
 }
 
-func (c *Context) Bind() {
-}
-
 func (c *Context) IntPathParam(name string) int {
 	return 0
 }

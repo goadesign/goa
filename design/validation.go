@@ -1,213 +1,82 @@
 package design
 
-import (
-	"fmt"
-	"net"
-	"net/mail"
-	"net/url"
-	"reflect"
-	"regexp"
-	"strings"
-	"time"
-)
+// ValidationDefinition is the common interface for all validation data structures.
+// It doesn't expose any method and simply exists to help with documentation.
+type ValidationDefinition interface{}
 
-// Validation defines an attribute validation function.
-// Validation functions take a value and produce nil on success or an error on failure.
-type Validation func(name string, val interface{}) error
-
-// validateRequired returns a validation function that checks whether given value is nil
-func validateRequired(fieldNames []string) Validation {
-	return func(name string, val interface{}) error {
-		mval := val.(map[string]interface{})
-		for _, n := range fieldNames {
-			if v := mval[n]; v == nil {
-				return fmt.Errorf("%s member '%s' is missing.", name, n)
-			}
-		}
-		return nil
-	}
+// EnumValidationDefinition represents an enum validation as described at
+// http://json-schema.org/latest/json-schema-validation.html#anchor76.
+type EnumValidationDefinition struct {
+	Values []interface{}
 }
 
-// Regular expression used to validate RFC1035 hostnames
-var hostnameRegex = regexp.MustCompile(`^[[:alnum:]][[:alnum:]\-]{0,61}[[:alnum:]]|[[:alpha:]]$`)
-
-// Simple regular expression for IPv4 values, more rigorous checking is done via net.ParseIP
-var ipv4Regex = regexp.MustCompile(`^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$`)
-
-// validateFormat returns a validation function that validates the format of the given string
-// The format specification follows the json schema draft 4 validation extension.
-// see http://json-schema.org/latest/json-schema-validation.html#anchor105
-// Supported formats are:
-// - "date-time": RFC3339 date time value
-// - "email": RFC5322 email address
-// - "hostname": RFC1035 Internet host name
-// - "ipv4" and "ipv6": RFC2673 and RFC2373 IP address values
-// - "uri": RFC3986 URI value
-// - "mac": IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address value
-// - "cidr": RFC4632 and RFC4291 CIDR notation IP address value
-// - "regexp": Regular expression syntax accepted by RE2
-func validateFormat(f string) Validation {
-	return func(name string, val interface{}) error {
-		if val == nil {
-			return nil
-		}
-		if sval, ok := val.(string); !ok {
-			return fmt.Errorf("type of %s is invalid, got '%v' (%s), need string",
-				name, val, reflect.TypeOf(val))
-		} else {
-			var err error
-			switch strings.ToLower(f) {
-			case "date-time":
-				_, err = time.Parse(time.RFC3339, sval)
-			case "email":
-				_, err = mail.ParseAddress(sval)
-			case "hostname":
-				if !hostnameRegex.MatchString(sval) {
-					err = fmt.Errorf("hostname value '%s' does not match %s",
-						sval, hostnameRegex.String())
-				}
-			case "ipv4", "ipv6":
-				ip := net.ParseIP(sval)
-				if ip == nil {
-					err = fmt.Errorf("\"%s\" is an invalid %s value", sval, f)
-				}
-				if f == "ipv4" {
-					if !ipv4Regex.MatchString(sval) {
-						err = fmt.Errorf("\"%s\" is an invalid ipv4 value", sval)
-					}
-				}
-			case "uri":
-				_, err = url.ParseRequestURI(sval)
-			case "mac":
-				_, err = net.ParseMAC(sval)
-			case "cidr":
-				_, _, err = net.ParseCIDR(sval)
-			case "regexp":
-				_, err = regexp.Compile(sval)
-			default:
-				err = fmt.Errorf("unknown validation format '%s'", f)
-			}
-			if err == nil {
-				return nil
-			}
-			return fmt.Errorf("invalid %s value, %s", name, err)
-		}
-	}
+// NewEnumValidation creates a definition for an enum validation.
+func NewEnumValidation(val ...interface{}) ValidationDefinition {
+	return &EnumValidationDefinition{Values: val}
 }
 
-// validateIntMaxValue returns a validation function that checks whether given value is a int that
-// is lesser than max.
-func validateIntMaximum(max int) Validation {
-	return func(name string, val interface{}) error {
-		if val == nil {
-			return nil
-		}
-		if ival, ok := val.(int); !ok {
-			return fmt.Errorf("type of %s is invalid, got '%v', need integer",
-				name, val)
-		} else if ival > max {
-			return fmt.Errorf("%v is an invalid %s value: maximum allowed is %v",
-				ival, name, max)
-		}
-		return nil
-	}
+// FormatValidationDefinition represents a format validation as described at
+// http://json-schema.org/latest/json-schema-validation.html#anchor104.
+type FormatValidationDefinition struct {
+	Format string
 }
 
-// validateIntMinValue returns a validation function that checks whether given value is a int that
-// is greater than min.
-func validateIntMinimum(min int) Validation {
-	return func(name string, val interface{}) error {
-		if val == nil {
-			return nil
-		}
-		if ival, ok := val.(int); !ok {
-			return fmt.Errorf("type of %s is invalid, got '%v', need integer",
-				name, val)
-		} else if ival < min {
-			return fmt.Errorf("%v is an invalid %s value: minimum allowed is %v",
-				ival, name, min)
-		}
-		return nil
-	}
+// NewFormatValidation creates a definition for a format validation.
+func NewFormatValidation(f string) ValidationDefinition {
+	return &FormatValidationDefinition{Format: f}
 }
 
-// validateMinLength returns a validation function that checks whether given string or array has
-// at least the number of given characters or elements.
-func validateMinLength(min int) Validation {
-	return func(name string, val interface{}) error {
-		if val == nil {
-			return nil
-		}
-		if sval, ok := val.(string); ok {
-			if len(sval) < min {
-				return fmt.Errorf("%v (%d characters) is an invalid %s value: minimum allowed length is %v",
-					sval, len(sval), name, min)
-			}
-		} else {
-			k := reflect.TypeOf(val).Kind()
-			if k == reflect.Slice || k == reflect.Array {
-				v := reflect.ValueOf(val)
-				if v.Len() < min {
-					return fmt.Errorf("%v (%d items) is an invalid %s value: minimum allowed length is %v",
-						v.Interface(), v.Len(), name, min)
-				}
-			} else {
-				return fmt.Errorf("'%v' is an invalid %s value, need string or array",
-					val, name)
-			}
-		}
-		return nil
-	}
+// MinimumValidationDefinition represents an minimum value validation as described at
+// http://json-schema.org/latest/json-schema-validation.html#anchor21.
+type MinimumValidationDefinition struct {
+	Min int
 }
 
-// validateMaxLength returns a validation function that checks whether given string or array has
-// at most the number of given characters or elements.
-func validateMaxLength(max int) Validation {
-	return func(name string, val interface{}) error {
-		if val == nil {
-			return nil
-		}
-		if sval, ok := val.(string); ok {
-			if len(sval) > max {
-				return fmt.Errorf("%v (%d characters) is an invalid %s value: maximum allowed length is %v",
-					sval, len(sval), name, max)
-			}
-		} else {
-			k := reflect.TypeOf(val).Kind()
-			if k == reflect.Slice || k == reflect.Array {
-				v := reflect.ValueOf(val)
-				if v.Len() > max {
-					return fmt.Errorf("%v (%d items) is an invalid %s value: maximum allowed length is %v",
-						v.Interface(), v.Len(), name, max)
-				}
-			} else {
-				return fmt.Errorf("'%v' is an invalid %s value, need string or array",
-					val, name)
-			}
-		}
-		return nil
-	}
+// NewMinimumValidation creates a definition for a minimum value validation.
+func NewMinimumValidation(min int) ValidationDefinition {
+	return &MinimumValidationDefinition{Min: min}
 }
 
-// validateEnum returns a validation function that checks whether given value is one of the
-// valid values.
-func validateEnum(valid []interface{}) Validation {
-	return func(name string, val interface{}) error {
-		ok := false
-		for _, v := range valid {
-			if v == val {
-				ok = true
-				break
-			}
-		}
-		if !ok {
-			sValid := make([]string, len(valid))
-			for i, v := range valid {
-				sValid[i] = fmt.Sprintf("%v", v)
-			}
-			return fmt.Errorf("\"%v\" is an invalid %s value: allowed values are %s",
-				val, name, strings.Join(sValid, ", "))
-		}
-		return nil
-	}
+// MaximumValidationDefinition represents a maximum value validation as described at
+// http://json-schema.org/latest/json-schema-validation.html#anchor17.
+type MaximumValidationDefinition struct {
+	Max int
+}
+
+// NewMaximumValidation creates a definition for a maximum value validation.
+func NewMaximumValidation(max int) ValidationDefinition {
+	return &MaximumValidationDefinition{Max: max}
+}
+
+// MinLengthValidationDefinition represents an minimum length validation as described at
+// http://json-schema.org/latest/json-schema-validation.html#anchor29.
+type MinLengthValidationDefinition struct {
+	MinLength int
+}
+
+// NewMinLengthValidation creates a definition for a minimum length validation.
+func NewMinLengthValidation(minLength int) ValidationDefinition {
+	return &MinLengthValidationDefinition{MinLength: minLength}
+}
+
+// MaxLengthValidationDefinition represents an maximum length validation as described at
+// http://json-schema.org/latest/json-schema-validation.html#anchor26.
+type MaxLengthValidationDefinition struct {
+	MaxLength int
+}
+
+// NewMaxLengthValidation creates a definition for a maximum length validation.
+func NewMaxLengthValidation(maxLength int) ValidationDefinition {
+	return &MaxLengthValidationDefinition{MaxLength: maxLength}
+}
+
+// RequiredValidationDefinition represents a required validation as described at
+// http://json-schema.org/latest/json-schema-validation.html#anchor61.
+type RequiredValidationDefinition struct {
+	Names []string
+}
+
+// NewRequiredValidation creates a definition for a required fields validation.
+func NewRequiredValidation(names ...string) ValidationDefinition {
+	return &RequiredValidationDefinition{Names: names}
 }
