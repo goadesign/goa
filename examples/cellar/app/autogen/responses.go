@@ -1,4 +1,4 @@
-package main
+package autogen
 
 import "github.com/raphael/goa"
 

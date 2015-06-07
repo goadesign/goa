@@ -1,4 +1,4 @@
-package main
+package autogen
 
 // A bottle of wine with associated rating
 type BottleResource struct {

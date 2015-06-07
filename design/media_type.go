@@ -2,7 +2,6 @@ package design
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 )
 
@@ -137,6 +136,10 @@ func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
 	return &col
 }
 
+// TBD: the functions below are runtime functions - not design function
+// Equivalent code should be generated to avoid runtime dependencies on
+// design code
+
 // Render accepts either a struct or a map indexed by keys.
 // If given a struct Render picks the struct fields whose names match the view property names.
 // If the fields are tagged with json tags then Render uses the tag names to do the comparison with
@@ -147,110 +150,110 @@ func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
 // on each element of the array.
 // Once the resulting map has been built the values are validated using the view property
 // validations.
-func (m *MediaTypeDefinition) Render(value interface{}, viewName string) (interface{}, error) {
-	if value == nil {
-		return make(map[string]interface{}), nil
-	}
-	if _, ok := m.Views[viewName]; !ok {
-		return nil, fmt.Errorf("View '%s' not found", viewName)
-	}
-	var rendered map[string]interface{}
-	switch reflect.TypeOf(value).Kind() {
-	case reflect.Slice:
-		s := reflect.ValueOf(value)
-		res := make([]interface{}, s.Len())
-		for i := 0; i < s.Len(); i++ {
-			var err error
-			if res[i], err = m.Render(s.Index(i).Interface(), viewName); err != nil {
-				return nil, err
-			}
-		}
-		return res, nil
-	case reflect.Struct:
-		var err error
-		if rendered, err = m.renderStruct(value, viewName); err != nil {
-			return nil, err
-		}
-	case reflect.Map:
-		var err error
-		if rendered, err = m.renderMap(value.(map[string]interface{}), viewName); err != nil {
-			return nil, err
-		}
-	case reflect.Ptr:
-		return m.Render(reflect.ValueOf(value).Elem().Interface(), viewName)
-	default:
-		return nil, fmt.Errorf("Rendered value must be a map, a struct, a slice of maps or structs, or a pointer to one of these. Given value was a %v.",
-			reflect.TypeOf(value))
-	}
-	if err := m.validate(rendered); err != nil {
-		return nil, err
-	}
-	return rendered, nil
-}
+/*func (m *MediaTypeDefinition) Render(value interface{}, viewName string) (interface{}, error) {*/
+//if value == nil {
+//return make(map[string]interface{}), nil
+//}
+//if _, ok := m.Views[viewName]; !ok {
+//return nil, fmt.Errorf("View '%s' not found", viewName)
+//}
+//var rendered map[string]interface{}
+//switch reflect.TypeOf(value).Kind() {
+//case reflect.Slice:
+//s := reflect.ValueOf(value)
+//res := make([]interface{}, s.Len())
+//for i := 0; i < s.Len(); i++ {
+//var err error
+//if res[i], err = m.Render(s.Index(i).Interface(), viewName); err != nil {
+//return nil, err
+//}
+//}
+//return res, nil
+//case reflect.Struct:
+//var err error
+//if rendered, err = m.renderStruct(value, viewName); err != nil {
+//return nil, err
+//}
+//case reflect.Map:
+//var err error
+//if rendered, err = m.renderMap(value.(map[string]interface{}), viewName); err != nil {
+//return nil, err
+//}
+//case reflect.Ptr:
+//return m.Render(reflect.ValueOf(value).Elem().Interface(), viewName)
+//default:
+//return nil, fmt.Errorf("Rendered value must be a map, a struct, a slice of maps or structs, or a pointer to one of these. Given value was a %v.",
+//reflect.TypeOf(value))
+//}
+//if err := m.validate(rendered); err != nil {
+//return nil, err
+//}
+//return rendered, nil
+/*}*/
 
 // Render given struct
 // Builds map with values corresponding to fields with media type property names then validates it
 // View name must be valid
-func (m *MediaTypeDefinition) renderStruct(value interface{}, viewName string) (map[string]interface{}, error) {
-	t := reflect.TypeOf(value)
-	v := reflect.ValueOf(value)
-	numField := t.NumField()
-	rendered := make(map[string]interface{})
-	view := m.Views[viewName]
-	for i := 0; i < numField; i++ {
-		field := t.Field(i)
-		name := field.Name
-		if member, ok := view.Object[name]; ok {
-			raw := v.FieldByName(field.Name).Interface()
-			val, err := member.Type.Load(raw)
-			if err != nil {
-				return nil, err
-			}
-			rendered[name] = val
-		} else {
-			member := m.Object[name]
-			if member == nil {
-				return nil, fmt.Errorf("Cannot render unknown member '%s'", name)
-			}
-			if member.DefaultValue != nil {
-				rendered[name] = member.DefaultValue
-			}
-		}
-	}
-	return rendered, nil
-}
+/*func (m *MediaTypeDefinition) renderStruct(value interface{}, viewName string) (map[string]interface{}, error) {*/
+//t := reflect.TypeOf(value)
+//v := reflect.ValueOf(value)
+//numField := t.NumField()
+//rendered := make(map[string]interface{})
+//view := m.Views[viewName]
+//for i := 0; i < numField; i++ {
+//field := t.Field(i)
+//name := field.Name
+//if member, ok := view.Object[name]; ok {
+//raw := v.FieldByName(field.Name).Interface()
+//val, err := member.Type.Load(raw)
+//if err != nil {
+//return nil, err
+//}
+//rendered[name] = val
+//} else {
+//member := m.Object[name]
+//if member == nil {
+//return nil, fmt.Errorf("Cannot render unknown member '%s'", name)
+//}
+//if member.DefaultValue != nil {
+//rendered[name] = member.DefaultValue
+//}
+//}
+//}
+//return rendered, nil
+/*}*/
 
 // Render given map
 // Builds map with values corresponding to media type property names then validates it
 // View name must be valid
-func (m *MediaTypeDefinition) renderMap(value map[string]interface{}, viewName string) (map[string]interface{}, error) {
-	rendered := make(map[string]interface{})
-	view := m.Views[viewName]
-	for n, v := range value {
-		if _, ok := view.Object[n]; ok {
-			rendered[n] = v
-		}
-	}
-	return rendered, nil
-}
+/*func (m *MediaTypeDefinition) renderMap(value map[string]interface{}, viewName string) (map[string]interface{}, error) {*/
+//rendered := make(map[string]interface{})
+//view := m.Views[viewName]
+//for n, v := range value {
+//if _, ok := view.Object[n]; ok {
+//rendered[n] = v
+//}
+//}
+//return rendered, nil
+//}
 
 // First make sure that any property with default value has its value initialized in the map, then
 // run property validation functions on value associated with property name.
-func (m *MediaTypeDefinition) validate(rendered map[string]interface{}) error {
-	for n, p := range m.Object {
-		if _, ok := rendered[n]; !ok {
-			if p.DefaultValue != nil {
-				rendered[n] = p.DefaultValue
-			}
-		}
-	}
-	for n, v := range rendered {
-		p := m.Object[n]
-		for _, validate := range p.Validations {
-			if err := validate(n, v); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
+/*func (m *MediaTypeDefinition) validate(rendered map[string]interface{}) error {*/
+//for n, p := range m.Object {
+//if _, ok := rendered[n]; !ok {
+//if p.DefaultValue != nil {
+//rendered[n] = p.DefaultValue
+//}
+//}
+//}
+//for n, v := range rendered {
+//p := m.Object[n]
+//for _, validate := range p.Validations {
+//if err := validate(n, v); err != nil {
+//return err
+//}
+//}
+//}
+//return nil
+/*}*/

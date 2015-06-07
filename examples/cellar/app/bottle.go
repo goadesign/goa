@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"time"
+
+	"github.com/raphael/goa/examples/cellar/app/autogen"
 )
 
 // List all bottles in account optionally filtering by year
-func ListBottles(c *ListBottleContext) error {
+func ListBottles(c *autogen.ListBottleContext) error {
 	var bottles []*db.Bottle
 	var err error
 	if c.HasYears() {
@@ -21,7 +23,7 @@ func ListBottles(c *ListBottleContext) error {
 }
 
 // Retrieve bottle with given id
-func ShowBottle(c *ShowBottleContext) error {
+func ShowBottle(c *autogen.ShowBottleContext) error {
 	bottle, err := db.GetBottle(c.AccountID(), c.ID())
 	if err != nil {
 		return err
@@ -34,7 +36,7 @@ func ShowBottle(c *ShowBottleContext) error {
 }
 
 // Record new bottle
-func CreateBottle(c *CreateBottleContext) error {
+func CreateBottle(c *autogen.CreateBottleContext) error {
 	bottle := db.NewBottle()
 	payload, err := c.Payload()
 	if err != nil {
@@ -69,7 +71,7 @@ func CreateBottle(c *CreateBottleContext) error {
 	return nil
 }
 
-func UpdateBottle(c *UpdateBottleContext) error {
+func UpdateBottle(c *autogen.UpdateBottleContext) error {
 	bottle := db.GetBottle(c.AccountID(), c.ID())
 	if bottle == nil {
 		c.NotFound()
@@ -115,7 +117,7 @@ func UpdateBottle(c *UpdateBottleContext) error {
 }
 
 // Delete bottle
-func DeleteBottle(c *DeleteBottleContext) error {
+func DeleteBottle(c *autogen.DeleteBottleContext) error {
 	bottle := db.GetBottle(c.AccountID(), c.ID())
 	if bottle == nil {
 		c.NotFound()
@@ -129,7 +131,7 @@ func DeleteBottle(c *DeleteBottleContext) error {
 	return nil
 }
 
-func RateBottle(c *RateBottleContext) error {
+func RateBottle(c *autogen.RateBottleContext) error {
 	bottle := db.GetBottle(c.AccountID(), c.ID())
 	if bottle == nil {
 		c.NotFound()

@@ -49,6 +49,6 @@ func (a *AttributeDefinition) Required(names ...string) *AttributeDefinition {
 	if a.Type.Kind() != ObjectType {
 		panic("Required validation must be applied to object types")
 	}
-	a.Validations = append(a.Validations, NewRequiredValidation(names))
+	a.Validations = append(a.Validations, NewRequiredValidation(names...))
 	return a
 }
