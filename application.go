@@ -1,6 +1,9 @@
 package goa
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/julienschmidt/httprouter"
 	"github.com/raphael/goa/design"
 )
@@ -55,4 +58,13 @@ func (a *Application) NewController(name string) *Controller {
 // Controllers may override the application error handler.
 func (a *Application) SetErrorHandler(handler ErrorHandler) {
 	a.ErrorHandler = handler
+}
+
+// Fatalf displays an error message and exits the process with status code 1.
+// This function is meant to be used by initialization code to prevent the application from even
+// starting up when something is obviously wrong.
+// In particular this function must not be used when serving requests.
+func Fatalf(format string, val ...interface{}) {
+	fmt.Fprintf(os.Stderr, format, val...)
+	os.Exit(1)
 }

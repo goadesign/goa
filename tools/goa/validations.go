@@ -37,7 +37,7 @@ var ipv4Regex = regexp.MustCompile(`^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$`)
 // - "mac": IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address value
 // - "cidr": RFC4632 and RFC4291 CIDR notation IP address value
 // - "regexp": Regular expression syntax accepted by RE2
-func validateFormat(f string) Validation {
+func validateFormat(f string) error {
 	return func(name string, val interface{}) error {
 		if val == nil {
 			return nil

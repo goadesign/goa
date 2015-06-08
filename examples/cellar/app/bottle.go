@@ -1,15 +1,15 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/raphael/goa/examples/cellar/app/autogen"
+	"github.com/raphael/goa/examples/cellar/app/db"
 )
 
 // List all bottles in account optionally filtering by year
 func ListBottles(c *autogen.ListBottleContext) error {
-	var bottles []*db.Bottle
+	var bottles []*autogen.BottleResource
 	var err error
 	if c.HasYears() {
 		bottles, err = db.GetBottlesByYears(c.AccountID(), c.Years())
@@ -63,9 +63,6 @@ func CreateBottle(c *autogen.CreateBottleContext) error {
 	if payload.HasReview() {
 		bottle.Review = payload.Review
 	}
-	if payload.HasCharacteristics() {
-		bottle.Characteristics = payload.Characteristics
-	}
 	c.Header.Set("Location", href(bottle))
 	c.Created() // Make that optional (use first 2xx response as default)?
 	return nil
@@ -108,9 +105,6 @@ func UpdateBottle(c *autogen.UpdateBottleContext) error {
 	if payload.HasReview() {
 		bottle.Review = payload.Review
 	}
-	if payload.HasCharacteristics() {
-		bottle.Characteristics = payload.Characteristics
-	}
 	db.Save(bottle)
 	c.NoContent()
 	return nil
@@ -142,9 +136,4 @@ func RateBottle(c *autogen.RateBottleContext) error {
 	db.Save(bottle)
 	c.NoContent()
 	return nil
-}
-
-// href computes a bottle API href.
-func href(bottle) string {
-	return fmt.Sprintf("/bottles/%d", bottle.ID)
 }
