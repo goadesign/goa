@@ -91,7 +91,7 @@ func (c *CreateBottleContext) Payload() (*CreateBottlePayload, error) {
 // CreateBottlePayload provides the bottles create action payload
 type CreateBottlePayload struct {
 	Name     string  `json:"name"`
-	Vintage  string  `json:"vintage"`
+	Vintage  int     `json:"vintage"`
 	Vineyard string  `json:"vineyard"`
 	Varietal *string `json:"vintage,omitempty"`
 	Color    *string `json:"color,omitempty"`
@@ -104,6 +104,11 @@ type CreateBottlePayload struct {
 // Validate applies the payload validation rules and returns an error in case of failure.
 func (p *CreateBottlePayload) Validate() error {
 	return nil
+}
+
+// Created sends a HTTP response with status code 201 and an empty body.
+func (c *CreateBottleContext) Created() {
+	c.Context.Respond(201, nil)
 }
 
 // UpdateBottleContext provides the bottles update action context
@@ -133,7 +138,7 @@ func (c *UpdateBottleContext) Payload() (*UpdateBottlePayload, error) {
 // UpdateBottlePayload provides the bottles update action payload
 type UpdateBottlePayload struct {
 	Name     string  `json:"name"`
-	Vintage  string  `json:"vintage"`
+	Vintage  int     `json:"vintage"`
 	Vineyard string  `json:"vineyard"`
 	Varietal *string `json:"vintage"`
 	Color    *string `json:"color"`
@@ -146,6 +151,16 @@ type UpdateBottlePayload struct {
 // Validate implements the validation rules specified by the payload design definition.
 func (p *UpdateBottlePayload) Validate() error {
 	return nil
+}
+
+// NotFound sends a HTTP response with status code 404 and an empty body.
+func (c *UpdateBottleContext) NotFound() {
+	c.Context.Respond(404, nil)
+}
+
+// NoContent sends a HTTP response with status code 204 and an empty body.
+func (c *UpdateBottleContext) NoContent() {
+	c.Context.Respond(204, nil)
 }
 
 // DeleteBottleContext provides the bottles delete action context

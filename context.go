@@ -12,6 +12,7 @@ type Context struct {
 	PayloadParams interface{}            // Payload (request body) parameters
 	R             *http.Request          // Underlying HTTP request
 	W             http.ResponseWriter    // Underlying HTTP response writer
+	Header        http.Header            // Underlying response headers
 }
 
 // Validator is implemented by all data structures that can be validated.

@@ -58,7 +58,7 @@ func Init() {
 				Review:   "Favorite",
 			},
 		},
-		42: []*autogen.BottleResource{
+		2: []*autogen.BottleResource{
 			&autogen.BottleResource{
 				ID:       200,
 				Href:     BottleHref(42, 200),
@@ -89,18 +89,18 @@ func Init() {
 	}
 }
 
-// Return bottle with given id from given account.
-func GetBottle(account, id int) (*autogen.BottleResource, error) {
+// Return bottle with given id from given account or nil if not found.
+func GetBottle(account, id int) *autogen.BottleResource {
 	bottles, ok := data[account]
 	if !ok {
-		return nil, fmt.Errorf("unknown account %d", account)
+		return nil
 	}
 	for _, b := range bottles {
 		if b.ID == id {
-			return b, nil
+			return b
 		}
 	}
-	return nil, fmt.Errorf("no bottle with id %d in account %d", id, account)
+	return nil
 }
 
 // Return bottles from given account.
@@ -132,4 +132,45 @@ func GetBottlesByYears(account int, years []int) ([]*autogen.BottleResource, err
 		}
 	}
 	return res, nil
+}
+
+// NewBottle creates a new bottle resource.
+func NewBottle(account int) *autogen.BottleResource {
+	bottles, _ := data[account]
+	newID := 1
+	taken := true
+	for ; taken; newID++ {
+		taken = false
+		for _, b := range bottles {
+			if b.ID == newID {
+				taken = true
+				break
+			}
+		}
+	}
+	bottle := autogen.BottleResource{ID: newID}
+	data[newID] = append(data[newID], &bottle)
+	return &bottle
+}
+
+// Save persists bottle to database.
+func Save(account int, b *autogen.BottleResource) {
+	data[account] = append(data[account], b)
+}
+
+// Delete deletes bottle from database.
+func Delete(account, id int) {
+	if bs, ok := data[account]; ok {
+		idx := -1
+		for i, b := range bs {
+			if b.ID == id {
+				idx = i
+				break
+			}
+		}
+		if idx > -1 {
+			bs = append(bs[:idx], bs[idx+1:]...)
+			data[account] = bs
+		}
+	}
 }

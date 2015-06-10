@@ -24,10 +24,7 @@ func ListBottles(c *autogen.ListBottleContext) error {
 
 // Retrieve bottle with given id
 func ShowBottle(c *autogen.ShowBottleContext) error {
-	bottle, err := db.GetBottle(c.AccountID(), c.ID())
-	if err != nil {
-		return err
-	}
+	bottle := db.GetBottle(c.AccountID(), c.ID())
 	if bottle == nil {
 		c.NotFound()
 		return nil
@@ -37,7 +34,7 @@ func ShowBottle(c *autogen.ShowBottleContext) error {
 
 // Record new bottle
 func CreateBottle(c *autogen.CreateBottleContext) error {
-	bottle := db.NewBottle()
+	bottle := db.NewBottle(c.AccountID())
 	payload, err := c.Payload()
 	if err != nil {
 		return err
@@ -45,25 +42,25 @@ func CreateBottle(c *autogen.CreateBottleContext) error {
 	bottle.Name = payload.Name
 	bottle.Vintage = payload.Vintage
 	bottle.Vineyard = payload.Vineyard
-	if payload.HasVarietal() {
-		bottle.Varietal = payload.Varietal
+	if payload.Varietal != nil {
+		bottle.Varietal = *payload.Varietal
 	}
-	if payload.HasColor() {
-		bottle.Color = payload.Color
+	if payload.Color != nil {
+		bottle.Color = *payload.Color
 	}
-	if payload.HasSweet() {
-		bottle.Sweet = payload.Sweet
+	if payload.Sweet != nil {
+		bottle.Sweet = *payload.Sweet
 	}
-	if payload.HasCountry() {
-		bottle.Country = payload.Country
+	if payload.Country != nil {
+		bottle.Country = *payload.Country
 	}
-	if payload.HasRegion() {
-		bottle.Region = payload.Region
+	if payload.Region != nil {
+		bottle.Region = *payload.Region
 	}
-	if payload.HasReview() {
-		bottle.Review = payload.Review
+	if payload.Review != nil {
+		bottle.Review = *payload.Review
 	}
-	c.Header.Set("Location", href(bottle))
+	c.Header.Set("Location", db.BottleHref(c.AccountID(), bottle.ID))
 	c.Created() // Make that optional (use first 2xx response as default)?
 	return nil
 }
@@ -78,34 +75,28 @@ func UpdateBottle(c *autogen.UpdateBottleContext) error {
 	if err != nil {
 		return err
 	}
-	if payload.HasName() {
-		bottle.Name = payload.Name
+	bottle.Name = payload.Name
+	bottle.Vintage = payload.Vintage
+	bottle.Vineyard = payload.Vineyard
+	if payload.Varietal != nil {
+		bottle.Varietal = *payload.Varietal
 	}
-	if payload.HasVintage() {
-		bottle.Vintage = payload.Vintage
+	if payload.Color != nil {
+		bottle.Color = *payload.Color
 	}
-	if payload.HasVineyard() {
-		bottle.Vineyard = payload.Vineyard
+	if payload.Sweet != nil {
+		bottle.Sweet = *payload.Sweet
 	}
-	if payload.HasVarietal() {
-		bottle.Varietal = payload.Varietal
+	if payload.Country != nil {
+		bottle.Country = *payload.Country
 	}
-	if payload.HasColor() {
-		bottle.Color = payload.Color
+	if payload.Region != nil {
+		bottle.Region = *payload.Region
 	}
-	if payload.HasSweet() {
-		bottle.Sweet = payload.Sweet
+	if payload.Review != nil {
+		bottle.Review = *payload.Review
 	}
-	if payload.HasCountry() {
-		bottle.Country = payload.Country
-	}
-	if payload.HasRegion() {
-		bottle.Region = payload.Region
-	}
-	if payload.HasReview() {
-		bottle.Review = payload.Review
-	}
-	db.Save(bottle)
+	db.Save(c.AccountID(), bottle)
 	c.NoContent()
 	return nil
 }
