@@ -43,4 +43,5 @@ var BottleMediaType = MediaType("application/vnd.goa.example.bottle", func() {
 			Description("Wine characteristics")
 		}),
 	)
+	Required("name", "vineyard")
 })

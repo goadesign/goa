@@ -2,10 +2,10 @@ package goa
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/raphael/goa/design"
 )
 
 // Applications consist of a set of controllers.
@@ -29,28 +29,26 @@ func New(name string) *Application {
 	}
 }
 
-// NewController adds a controller for the resource with given name to the application.
-func (a *Application) NewController(name string) *Controller {
-	def := design.Definition
-	if def == nil {
-		fatalf("no API metadata, use design.Api to create it")
+// Mount adds the given controller to the application.
+// It panics if a controller for a resource with the same name was already added.
+func (a *Application) Mount(c *Controller) {
+	if c.Handlers == nil {
+		Fatalf("controller has no handlers, use SetHandlers to register them")
 	}
-	res, ok := def.Resources[name]
-	if !ok {
-		fatalf("unknown resource \"%s\"", name)
+	for k, u := range c.Handlers {
+		id := handlerId(c.Resource, k)
+		h, ok := handlers[id]
+		if !ok {
+			Fatalf("unknown %s action %s", c.Resource, k)
+		}
+		a.router.Handle(h.Verb, h.Path, c.actionHandle(h.HandlerF, u))
 	}
-	if _, ok := a.Controllers[name]; ok {
-		fatalf("multiple controllers for %s", name)
-	}
-	c := &Controller{
-		Application: a,
-		Resource:    res,
-		Actions:     make(map[string]*Action),
-		router:      a.router,
-	}
-	a.Controllers[name] = c
+	c.Application = a
+}
 
-	return c
+// Run starts the application loop and sets up a listener on the given host/port
+func (a *Application) Run(addr string) {
+	http.ListenAndServe(addr, a.router)
 }
 
 // SetErrorHandler defines an application wide error handler.

@@ -2,13 +2,15 @@ package autogen
 
 import "github.com/raphael/goa"
 
-var _ = goa.RegisterHandlers(
-	&goa.Handler{"bottles", "list", listBottlesHandler},
-	&goa.Handler{"bottles", "show", showBottlesHandler},
-	&goa.Handler{"bottles", "create", createBottlesHandler},
-	&goa.Handler{"bottles", "update", updateBottlesHandler},
-	&goa.Handler{"bottles", "delete", deleteBottlesHandler},
-)
+func init() {
+	goa.RegisterHandlers(
+		&goa.Handler{"bottles", "list", listBottlesHandler, "GET", "/accounts/:accountID/bottles"},
+		&goa.Handler{"bottles", "show", showBottlesHandler, "GET", "/accounts/:accountID/bottles/:id"},
+		&goa.Handler{"bottles", "create", createBottlesHandler, "POST", "/accounts/:accountID/bottles"},
+		&goa.Handler{"bottles", "update", updateBottlesHandler, "PUT", "/accounts/:accountID/bottles/:id"},
+		&goa.Handler{"bottles", "delete", deleteBottlesHandler, "DELETE", "/accounts/:accountID/bottles/:id"},
+	)
+}
 
 func listBottlesHandler(userHandler interface{}, c *goa.Context) error {
 	ctx := ListBottleContext{Context: c}

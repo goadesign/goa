@@ -14,24 +14,26 @@ func Resource(name string, dsl func()) error {
 			a.Resources[name] = resource
 		}
 	}
-	return nil // To all for 'var _ = ' trick
+	return nil // to allow for 'var _ = ' trick
 }
 
 // MediaType sets the resource media type
 func MediaType(val *MediaTypeDefinition) {
-	switch c := ctxStack.current().(type) {
-	case *ResourceDefinition:
-		c.MediaType = val
-	default:
-		appendError(fmt.Errorf("Only resource definitions have a MediaType field"))
+	if r, ok := resourceDefinition(); ok {
+		r.MediaType = val
 	}
 }
 
-func Status(val int) {
-	switch c := ctxStack.current().(type) {
-	case *ResponseDefinition:
-		c.Status = val
-	default:
-		appendError(fmt.Errorf("Only response definitions have a Status field"))
+// Prefix sets the resource path prefix
+func Prefix(p string) {
+	if r, ok := resourceDefinition(); ok {
+		r.Prefix = p
+	}
+}
+
+// Prefix sets the resource path prefix
+func CanonicalAction(a string) {
+	if r, ok := resourceDefinition(); ok {
+		r.CanonicalAction = a
 	}
 }

@@ -9,7 +9,7 @@ import (
 
 // List all bottles in account optionally filtering by year
 func ListBottles(c *autogen.ListBottleContext) error {
-	var bottles []*autogen.BottleResource
+	var bottles []*autogen.Bottle
 	var err error
 	if c.HasYears() {
 		bottles, err = db.GetBottlesByYears(c.AccountID(), c.Years())
@@ -26,8 +26,7 @@ func ListBottles(c *autogen.ListBottleContext) error {
 func ShowBottle(c *autogen.ShowBottleContext) error {
 	bottle := db.GetBottle(c.AccountID(), c.ID())
 	if bottle == nil {
-		c.NotFound()
-		return nil
+		return c.NotFound()
 	}
 	return c.OK(bottle)
 }
@@ -60,16 +59,14 @@ func CreateBottle(c *autogen.CreateBottleContext) error {
 	if payload.Review != nil {
 		bottle.Review = *payload.Review
 	}
-	c.Header.Set("Location", db.BottleHref(c.AccountID(), bottle.ID))
-	c.Created() // Make that optional (use first 2xx response as default)?
-	return nil
+	c.Header.Set("Location", bottle.ComputeHref())
+	return c.Created()
 }
 
 func UpdateBottle(c *autogen.UpdateBottleContext) error {
 	bottle := db.GetBottle(c.AccountID(), c.ID())
 	if bottle == nil {
-		c.NotFound()
-		return nil
+		return c.NotFound()
 	}
 	payload, err := c.Payload()
 	if err != nil {
@@ -96,35 +93,27 @@ func UpdateBottle(c *autogen.UpdateBottleContext) error {
 	if payload.Review != nil {
 		bottle.Review = *payload.Review
 	}
-	db.Save(c.AccountID(), bottle)
-	c.NoContent()
-	return nil
+	db.Save(bottle)
+	return c.NoContent()
 }
 
 // Delete bottle
 func DeleteBottle(c *autogen.DeleteBottleContext) error {
 	bottle := db.GetBottle(c.AccountID(), c.ID())
 	if bottle == nil {
-		c.NotFound()
-		return nil
+		return c.NotFound()
 	}
-	err := db.Delete(bottle)
-	if err != nil {
-		return err
-	}
-	c.NoContent()
-	return nil
+	db.Delete(bottle)
+	return c.NoContent()
 }
 
 func RateBottle(c *autogen.RateBottleContext) error {
 	bottle := db.GetBottle(c.AccountID(), c.ID())
 	if bottle == nil {
-		c.NotFound()
-		return nil
+		return c.NotFound()
 	}
 	bottle.Ratings = c.Ratings()
 	bottle.RatedAt = time.Now()
 	db.Save(bottle)
-	c.NoContent()
-	return nil
+	return c.NoContent()
 }

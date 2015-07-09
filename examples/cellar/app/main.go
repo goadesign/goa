@@ -7,7 +7,7 @@ func main() {
 	c := goa.NewController("bottle")
 
 	// Register the resource action handlers
-	c.SetHandlers(goa.Actions{
+	c.SetHandlers(goa.Handlers{
 		"list":   ListBottles,
 		"show":   ShowBottle,
 		"create": CreateBottle,

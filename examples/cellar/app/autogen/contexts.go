@@ -29,7 +29,7 @@ func (c *ListBottleContext) HasYears() bool {
 }
 
 // OK builds a HTTP response with status code 200.
-func (c *ListBottleContext) OK(bottles []*BottleResource) error {
+func (c *ListBottleContext) OK(bottles []*Bottle) error {
 	js, err := json.Marshal(bottles)
 	if err != nil {
 		return fmt.Errorf("failed to serialize response body: %s", err)
@@ -53,7 +53,7 @@ func (c *ShowBottleContext) ID() int {
 }
 
 // OK builds a HTTP response with status code 200.
-func (c *ShowBottleContext) OK(bottle *BottleResource) error {
+func (c *ShowBottleContext) OK(bottle *Bottle) error {
 	if err := bottle.Validate(); err != nil {
 		return err
 	}
@@ -107,8 +107,8 @@ func (p *CreateBottlePayload) Validate() error {
 }
 
 // Created sends a HTTP response with status code 201 and an empty body.
-func (c *CreateBottleContext) Created() {
-	c.Context.Respond(201, nil)
+func (c *CreateBottleContext) Created() error {
+	return c.Context.Respond(201, nil)
 }
 
 // UpdateBottleContext provides the bottles update action context
@@ -154,13 +154,13 @@ func (p *UpdateBottlePayload) Validate() error {
 }
 
 // NotFound sends a HTTP response with status code 404 and an empty body.
-func (c *UpdateBottleContext) NotFound() {
-	c.Context.Respond(404, nil)
+func (c *UpdateBottleContext) NotFound() error {
+	return c.Context.Respond(404, nil)
 }
 
 // NoContent sends a HTTP response with status code 204 and an empty body.
-func (c *UpdateBottleContext) NoContent() {
-	c.Context.Respond(204, nil)
+func (c *UpdateBottleContext) NoContent() error {
+	return c.Context.Respond(204, nil)
 }
 
 // DeleteBottleContext provides the bottles delete action context
@@ -178,6 +178,16 @@ func (c *DeleteBottleContext) ID() int {
 	return c.Context.IntParam("id")
 }
 
+// NotFound sends a HTTP response with status code 404 and an empty body.
+func (c *DeleteBottleContext) NotFound() error {
+	return c.Context.Respond(404, nil)
+}
+
+// NoContent sends a HTTP response with status code 204 and an empty body.
+func (c *DeleteBottleContext) NoContent() error {
+	return c.Context.Respond(204, nil)
+}
+
 // RateBottleContext provides the bottles rate action context
 type RateBottleContext struct {
 	*goa.Context
@@ -191,4 +201,19 @@ func (c RateBottleContext) AccountID() int {
 // id returns the id request path parameter
 func (c *RateBottleContext) ID() int {
 	return c.Context.IntParam("id")
+}
+
+// Ratings returns the ratings value specified in the payload
+func (c *RateBottleContext) Ratings() int {
+	return c.Context.IntParam("id")
+}
+
+// NotFound sends a HTTP response with status code 404 and an empty body.
+func (c *RateBottleContext) NotFound() error {
+	return c.Context.Respond(404, nil)
+}
+
+// NoContent sends a HTTP response with status code 204 and an empty body.
+func (c *RateBottleContext) NoContent() error {
+	return c.Context.Respond(204, nil)
 }

@@ -4,46 +4,34 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/raphael/goa/design"
 )
 
-// Controllers implement a resource actions.
-// Use Application.NewController to create controller objects.
-type Controller struct {
-	Application  *Application               // Parent application
-	Resource     *design.ResourceDefinition // Corresponding resource definition
-	Actions      map[string]*Action         // Registered actions indexed by name
-	ErrorHandler ErrorHandler               // Controller specific error handler
-	router       *httprouter.Router         // Controller router
+type (
+	// Controllers implement the actions of a single resource.
+	// Use NewController to create controller objects.
+	Controller struct {
+		Application  *Application // Parent application
+		Handlers     Handlers     // Registered action handlers indexed by name
+		ErrorHandler ErrorHandler // Controller specific error handler
+		Resource     string       // Name of resource controller implements
+	}
+
+	// UserHandlers associates action names with their handler.
+	Handlers map[string]UserHandler
+
+	// UserHandlers are functions that contain the implementation for controller actions.
+	// The function signatures match the corresponding design action definition.
+	UserHandler interface{}
+)
+
+// NewController instantiates a new goa controller for the resource with given name.
+func NewController(resource string) *Controller {
+	return &Controller{Resource: resource}
 }
 
-// Action provides the implementation and definition of an API endpoint.
-// The implementation is provided via a handler function whose signature is given by the
-// definition.
-type Action struct {
-	Handler    interface{}              // Endpoint implementation: user action handler
-	Definition *design.ActionDefinition // Endpoint definition
-}
-
-// AddActionHandler registers a handler for the action with given name.
-// The handler is a function whose signature depends on the action
-func (c *Controller) AddActionHandler(name string, handler interface{}) {
-	if _, ok := c.Actions[name]; ok {
-		fatalf("multiple handlers for %s of %s.", name, c.Resource.Name)
-	}
-	action, ok := c.Resource.Actions[name]
-	if !ok {
-		fatalf("%s does not have an action with name '%s'", c.Resource.Name, name)
-	}
-	h, ok := handlers[handlerId(c.Resource, action)]
-	if !ok {
-		fatalf("handler for action %s of %s not defined, you may need to run 'goa'.")
-	}
-	// We're set, now hook up the handler with httprouter.
-	handle := c.actionHandle(h.HandlerF, handler)
-	for _, r := range action.Routes {
-		c.router.Handle(r.Verb, r.Path, handle)
-	}
+// SetHandlers sets the controller action handlers.
+func (c *Controller) SetHandlers(handlers Handlers) {
+	c.Handlers = handlers
 }
 
 // SetErrorHandler defines an application wide error handler.
