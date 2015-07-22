@@ -1,10 +1,16 @@
 package main
 
-import "github.com/raphael/goa"
+import (
+	"github.com/raphael/goa"
+	log "gopkg.in/inconshreveable/log15.v2"
+)
 
 func main() {
-	// Create "bottle" resource controller
-	c := goa.NewController("bottle")
+	// Setup logger
+	goa.Log.SetHandler(log.StdoutHandler)
+
+	// Create "bottles" resource controller
+	c := goa.NewController("bottles")
 
 	// Register the resource action handlers
 	c.SetHandlers(goa.Handlers{

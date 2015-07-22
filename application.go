@@ -6,32 +6,50 @@ import (
 	"os"
 
 	"github.com/julienschmidt/httprouter"
+	"gopkg.in/inconshreveable/log15.v2"
 )
 
-// Applications consist of a set of controllers.
-// A controller implements a resource action.
-type Application struct {
-	Name         string                 // Application name
-	Controllers  map[string]*Controller // Controllers indexed by resource name
-	ErrorHandler ErrorHandler           // Application global error handler
-	router       *httprouter.Router     // Application router
-}
+type (
+	// Applications consist of a set of controllers.
+	// A controller implements a resource action.
+	Application struct {
+		log15.Logger                        // Application logger
+		Name         string                 // Application name
+		Controllers  map[string]*Controller // Controllers indexed by resource name
+		ErrorHandler ErrorHandler           // Application global error handler
+		router       *httprouter.Router     // Application router
+	}
 
-// ErrorHandlers handle errors returned by action handlers and middleware.
-type ErrorHandler func(*Context, error)
+	// ErrorHandlers handle errors returned by action handlers and middleware.
+	ErrorHandler func(*Context, error)
+)
+
+var (
+	Log log15.Logger
+)
+
+// Log nothing by default
+func init() {
+	Log = log15.New()
+	Log.SetHandler(log15.DiscardHandler())
+}
 
 // New instantiates a new goa application with the given name.
 func New(name string) *Application {
 	return &Application{
-		Name:        name,
-		Controllers: make(map[string]*Controller),
-		router:      httprouter.New(),
+		Logger:       Log.New("app", name),
+		Name:         name,
+		Controllers:  make(map[string]*Controller),
+		ErrorHandler: DefaultErrorHandler,
+		router:       httprouter.New(),
 	}
 }
 
 // Mount adds the given controller to the application.
 // It panics if a controller for a resource with the same name was already added.
 func (a *Application) Mount(c *Controller) {
+	c.Logger = a.Logger.New("ctl", c.Resource)
+	c.Info("mouting")
 	if c.Handlers == nil {
 		Fatalf("controller has no handlers, use SetHandlers to register them")
 	}
@@ -42,12 +60,15 @@ func (a *Application) Mount(c *Controller) {
 			Fatalf("unknown %s action %s", c.Resource, k)
 		}
 		a.router.Handle(h.Verb, h.Path, c.actionHandle(h.HandlerF, u))
+		c.Info("handler", h.Verb, h.Path)
 	}
+	c.Info("mounted")
 	c.Application = a
 }
 
 // Run starts the application loop and sets up a listener on the given host/port
 func (a *Application) Run(addr string) {
+	a.Info("listen", "addr", addr)
 	http.ListenAndServe(addr, a.router)
 }
 
@@ -56,6 +77,14 @@ func (a *Application) Run(addr string) {
 // Controllers may override the application error handler.
 func (a *Application) SetErrorHandler(handler ErrorHandler) {
 	a.ErrorHandler = handler
+}
+
+// DefaultErrorHandler returns a 500 response with the error message as body.
+func DefaultErrorHandler(c *Context, e error) {
+	if err := c.Respond(500, []byte(e.Error())); err != nil {
+		Log.Error("failed to send default error handler response", "error", err)
+		c.Respond(500, []byte("unknown error"))
+	}
 }
 
 // Fatalf displays an error message and exits the process with status code 1.

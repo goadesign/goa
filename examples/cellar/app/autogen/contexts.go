@@ -1,8 +1,7 @@
 package autogen
 
 import (
-	"encoding/json"
-	"fmt"
+	"strconv"
 
 	"github.com/raphael/goa"
 )
@@ -10,46 +9,70 @@ import (
 // ListBottleContext provides the bottles list action context
 type ListBottleContext struct {
 	*goa.Context
+	AccountID int
+	Years     []int
+	HasYears  bool
 }
 
-// AccountID returns the AccountID request path parameter
-func (c *ListBottleContext) AccountID() int {
-	return c.Context.IntParam("account")
-}
-
-// Years returns the year request query parameter
-// HasYears() must return tru otherwise this method panics
-func (c *ListBottleContext) Years() []int {
-	return c.Context.IntSliceParam("years")
-}
-
-// HasYears() returns true if the "year" query string is defined
-func (c *ListBottleContext) HasYears() bool {
-	return c.Context.HasParam("years")
+// NewListBottleContext parses the incoming request URL and body and instantiates the context
+// accordingly. It returns an error if a required parameter is missing or if a parameter has an
+// invalid value.
+func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+	var err error
+	ctx := ListBottleContext{Context: c}
+	rawAccountID, _ := c.Params["accountID"]
+	if accountID, err := strconv.Atoi(rawAccountID); err == nil {
+		ctx.AccountID = int(accountID)
+	} else {
+		err = goa.InvalidParamValue("accountID", rawAccountID, "number", err)
+	}
+	rawYears := c.Query["years"]
+	if rawYears != nil {
+		ctx.HasYears = true
+		years := make([]int, len(rawYears))
+		for i, rawYear := range rawYears {
+			if year, err := strconv.Atoi(rawYear); err == nil {
+				years[i] = year
+			} else {
+				err = goa.InvalidParamValue("years", rawYears, "array of numbers", err)
+				break
+			}
+		}
+	}
+	return &ctx, err
 }
 
 // OK builds a HTTP response with status code 200.
 func (c *ListBottleContext) OK(bottles []*Bottle) error {
-	js, err := json.Marshal(bottles)
-	if err != nil {
-		return fmt.Errorf("failed to serialize response body: %s", err)
-	}
-	return c.Context.Respond(200, js)
+	return c.JSON(200, bottles)
 }
 
 // ShowBottleContext provides the bottles show action context
 type ShowBottleContext struct {
 	*goa.Context
+	AccountID int
+	ID        int
 }
 
-// AccountID returns the AccountID request path parameter
-func (c *ShowBottleContext) AccountID() int {
-	return c.Context.IntParam("account")
-}
-
-// id returns the id request path parameter
-func (c *ShowBottleContext) ID() int {
-	return c.Context.IntParam("id")
+// NewShowBottleContext parses the incoming request URL and body and instantiates the context
+// accordingly. It returns an error if a required parameter is missing or if a parameter has an
+// invalid value.
+func NewShowBottleContext(c *goa.Context) (*ShowBottleContext, error) {
+	var err error
+	ctx := ShowBottleContext{Context: c}
+	rawAccountID, _ := c.Params["accountID"]
+	if accountID, err := strconv.Atoi(rawAccountID); err == nil {
+		ctx.AccountID = int(accountID)
+	} else {
+		err = goa.InvalidParamValue("accountID", rawAccountID, "number", err)
+	}
+	rawID, _ := c.Params["ID"]
+	if ID, err := strconv.Atoi(rawID); err == nil {
+		ctx.ID = int(ID)
+	} else {
+		err = goa.InvalidParamValue("ID", rawID, "number", err)
+	}
+	return &ctx, err
 }
 
 // OK builds a HTTP response with status code 200.
@@ -57,163 +80,376 @@ func (c *ShowBottleContext) OK(bottle *Bottle) error {
 	if err := bottle.Validate(); err != nil {
 		return err
 	}
-	js, err := json.Marshal(bottle)
-	if err != nil {
-		return fmt.Errorf("failed to serialize response body: %s", err)
-	}
-	return c.Context.Respond(200, js)
+	return c.JSON(200, bottle)
 }
 
 // NotFound builds a HTTP response with status code 404.
 func (c *ShowBottleContext) NotFound() error {
-	return c.Context.Respond(404, nil)
+	return c.Respond(404, nil)
 }
 
-// CreateBottleContext provides the bottles create action context
-type CreateBottleContext struct {
-	*goa.Context
-}
+type (
+	// CreateBottleContext provides the bottles create action context
+	CreateBottleContext struct {
+		*goa.Context
+		AccountID int
+		Payload   *CreateBottlePayload
+	}
 
-// AccountID returns the AccountID request path parameter
-func (c *CreateBottleContext) AccountID() int {
-	return c.Context.IntParam("account")
-}
+	// CreateBottlePayload provides the bottles create action payload
+	CreateBottlePayload struct {
+		Name     string  `json:"name"`
+		Vintage  int     `json:"vintage"`
+		Vineyard string  `json:"vineyard"`
+		Varietal *string `json:"vintage,omitempty"`
+		Color    *string `json:"color,omitempty"`
+		Sweet    *bool   `json:"sweet,omitempty"`
+		Country  *string `json:"country,omitempty"`
+		Region   *string `json:"region,omitempty"`
+		Review   *string `json:"review,omitempty"`
+	}
+)
 
-// Payload returns the request payload
-func (c *CreateBottleContext) Payload() (*CreateBottlePayload, error) {
-	var p CreateBottlePayload
-	if err := c.Context.Bind(&p); err != nil {
+// NewCreateBottleContext parses the incoming request URL and body and instantiates the context
+// accordingly. It returns an error if a required parameter is missing or if a parameter has an
+// invalid value.
+func NewCreateBottleContext(c *goa.Context) (*CreateBottleContext, error) {
+	var err error
+	ctx := CreateBottleContext{Context: c}
+	rawAccountID, _ := c.Params["accountID"]
+	if accountID, err := strconv.Atoi(rawAccountID); err == nil {
+		ctx.AccountID = int(accountID)
+	} else {
+		err = goa.InvalidParamValue("accountID", rawAccountID, "number", err)
+	}
+	p, err := NewCreateBottlePayload(c.Payload)
+	if err != nil {
 		return nil, err
 	}
-	return &p, nil
+	ctx.Payload = p
+	return &ctx, err
 }
 
-// CreateBottlePayload provides the bottles create action payload
-type CreateBottlePayload struct {
-	Name     string  `json:"name"`
-	Vintage  int     `json:"vintage"`
-	Vineyard string  `json:"vineyard"`
-	Varietal *string `json:"vintage,omitempty"`
-	Color    *string `json:"color,omitempty"`
-	Sweet    *bool   `json:"sweet,omitempty"`
-	Country  *string `json:"country,omitempty"`
-	Region   *string `json:"region,omitempty"`
-	Review   *string `json:"review,omitempty"`
-}
-
-// Validate applies the payload validation rules and returns an error in case of failure.
-func (p *CreateBottlePayload) Validate() error {
-	return nil
+// NewCreateBottlePayload instantiates a CreateBottlePayload from a raw request body.
+// It validates each field and returns an error in case one or more validation fails.
+func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
+	var err error
+	p := CreateBottlePayload{}
+	m, ok := raw.(map[string]interface{})
+	if !ok {
+		err = goa.InvalidPayload("map", err)
+		goto end
+	}
+	if rawName, ok := m["name"]; ok {
+		if name, ok := rawName.(string); ok {
+			p.Name = name
+		} else {
+			err = goa.InvalidPayloadField("name", rawName, "string", err)
+		}
+	} else {
+		err = goa.MissingPayloadField("name", err)
+	}
+	if rawVintage, ok := m["vintage"]; ok {
+		if vintage, ok := rawVintage.(int); ok {
+			p.Vintage = vintage
+		} else {
+			err = goa.InvalidPayloadField("vintage", rawVintage, "int", err)
+		}
+	} else {
+		err = goa.MissingPayloadField("vintage", err)
+	}
+	if rawVineyard, ok := m["vineyard"]; ok {
+		if vineyard, ok := rawVineyard.(string); ok {
+			p.Vineyard = vineyard
+		} else {
+			err = goa.InvalidPayloadField("vineyard", rawVineyard, "string", err)
+		}
+	} else {
+		err = goa.MissingPayloadField("vineyard", err)
+	}
+	if rawVarietal, ok := m["varietal"]; ok {
+		if varietal, ok := rawVarietal.(string); ok {
+			p.Varietal = &varietal
+		} else {
+			err = goa.InvalidPayloadField("varietal", rawVarietal, "string", err)
+		}
+	}
+	if rawColor, ok := m["color"]; ok {
+		if color, ok := rawColor.(string); ok {
+			if color == "red" || color == "white" || color == "rose" || color == "yellow" {
+				p.Color = &color
+			} else {
+				err = goa.InvalidPayloadFieldValue("color", rawColor, []string{"red", "white", "rose", "yellow"}, err)
+			}
+		} else {
+			err = goa.InvalidPayloadField("color", rawColor, "string", err)
+		}
+	}
+	if rawSweet, ok := m["sweet"]; ok {
+		if sweet, ok := rawSweet.(bool); ok {
+			p.Sweet = &sweet
+		} else {
+			err = goa.InvalidPayloadField("sweet", rawSweet, "bool", err)
+		}
+	}
+	if rawRegion, ok := m["region"]; ok {
+		if region, ok := rawRegion.(string); ok {
+			p.Region = &region
+		} else {
+			err = goa.InvalidPayloadField("region", rawRegion, "string", err)
+		}
+	}
+	if rawCountry, ok := m["country"]; ok {
+		if country, ok := rawCountry.(string); ok {
+			p.Country = &country
+		} else {
+			err = goa.InvalidPayloadField("country", rawCountry, "string", err)
+		}
+	}
+	if rawReview, ok := m["review"]; ok {
+		if review, ok := rawReview.(string); ok {
+			p.Review = &review
+		} else {
+			err = goa.InvalidPayloadField("review", rawReview, "string", err)
+		}
+	}
+end:
+	return &p, err
 }
 
 // Created sends a HTTP response with status code 201 and an empty body.
-func (c *CreateBottleContext) Created() error {
-	return c.Context.Respond(201, nil)
+func (c *CreateBottleContext) Created(bottle *Bottle) error {
+	return c.JSON(201, bottle)
 }
 
-// UpdateBottleContext provides the bottles update action context
-type UpdateBottleContext struct {
-	*goa.Context
-}
+type (
+	// UpdateBottleContext provides the bottles update action context
+	UpdateBottleContext struct {
+		*goa.Context
+		AccountID int
+		ID        int
+		Payload   *UpdateBottlePayload
+	}
 
-// AccountID returns the AccountID request path parameter
-func (c *UpdateBottleContext) AccountID() int {
-	return c.Context.IntParam("account")
-}
+	// UpdateBottlePayload provides the bottles update action payload
+	UpdateBottlePayload struct {
+		Name     *string
+		Vintage  *int
+		Vineyard *string
+		Varietal *string
+		Color    *string
+		Sweet    *bool
+		Country  *string
+		Region   *string
+		Review   *string
+	}
+)
 
-// id returns the id request path parameter
-func (c *UpdateBottleContext) ID() int {
-	return c.Context.IntParam("id")
-}
-
-// Payload returns the request payload
-func (c *UpdateBottleContext) Payload() (*UpdateBottlePayload, error) {
-	var p UpdateBottlePayload
-	if err := c.Context.Bind(&p); err != nil {
+// NewUpdateBottleContext parses the incoming request URL and body and instantiates the context
+// accordingly. It returns an error if a required parameter is missing or if a parameter has an
+// invalid value.
+func NewUpdateBottleContext(c *goa.Context) (*UpdateBottleContext, error) {
+	var err error
+	ctx := UpdateBottleContext{Context: c}
+	rawAccountID, _ := c.Params["accountID"]
+	if accountID, err := strconv.Atoi(rawAccountID); err == nil {
+		ctx.AccountID = int(accountID)
+	} else {
+		err = goa.InvalidParamValue("accountID", rawAccountID, "number", err)
+	}
+	rawID, _ := c.Params["ID"]
+	if ID, err := strconv.Atoi(rawID); err == nil {
+		ctx.ID = int(ID)
+	} else {
+		err = goa.InvalidParamValue("ID", rawID, "number", err)
+	}
+	p, err := NewUpdateBottlePayload(c.Payload)
+	if err != nil {
 		return nil, err
 	}
-	return &p, nil
+	ctx.Payload = p
+	return &ctx, err
 }
 
-// UpdateBottlePayload provides the bottles update action payload
-type UpdateBottlePayload struct {
-	Name     string  `json:"name"`
-	Vintage  int     `json:"vintage"`
-	Vineyard string  `json:"vineyard"`
-	Varietal *string `json:"vintage"`
-	Color    *string `json:"color"`
-	Sweet    *bool   `json:"sweet"`
-	Country  *string `json:"country"`
-	Region   *string `json:"region"`
-	Review   *string `json:"review"`
-}
-
-// Validate implements the validation rules specified by the payload design definition.
-func (p *UpdateBottlePayload) Validate() error {
-	return nil
+// NewUpdateBottlePayload instantiates a UpdateBottlePayload from a raw request body.
+// It validates each field and returns an error in case one or more validation fails.
+func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
+	var err error
+	p := UpdateBottlePayload{}
+	m, ok := raw.(map[string]interface{})
+	if !ok {
+		err = goa.InvalidPayload("map", err)
+		goto end
+	}
+	if rawName, ok := m["name"]; ok {
+		if name, ok := rawName.(string); ok {
+			p.Name = &name
+		} else {
+			err = goa.InvalidPayloadField("name", rawName, "string", err)
+		}
+	}
+	if rawVintage, ok := m["vintage"]; ok {
+		if vintage, ok := rawVintage.(int); ok {
+			p.Vintage = &vintage
+		} else {
+			err = goa.InvalidPayloadField("vintage", rawVintage, "int", err)
+		}
+	}
+	if rawVineyard, ok := m["vineyard"]; ok {
+		if vineyard, ok := rawVineyard.(string); ok {
+			p.Vineyard = &vineyard
+		} else {
+			err = goa.InvalidPayloadField("vineyard", rawVineyard, "string", err)
+		}
+	}
+	if rawVarietal, ok := m["varietal"]; ok {
+		if varietal, ok := rawVarietal.(string); ok {
+			p.Varietal = &varietal
+		} else {
+			err = goa.InvalidPayloadField("varietal", rawVarietal, "string", err)
+		}
+	}
+	if rawColor, ok := m["color"]; ok {
+		if color, ok := rawColor.(string); ok {
+			if color == "red" || color == "white" || color == "rose" || color == "yellow" {
+				p.Color = &color
+			} else {
+				err = goa.InvalidPayloadFieldValue("color", rawColor, []string{"red", "white", "rose", "yellow"}, err)
+			}
+		} else {
+			err = goa.InvalidPayloadField("color", rawColor, "string", err)
+		}
+	}
+	if rawSweet, ok := m["sweet"]; ok {
+		if sweet, ok := rawSweet.(bool); ok {
+			p.Sweet = &sweet
+		} else {
+			err = goa.InvalidPayloadField("sweet", rawSweet, "bool", err)
+		}
+	}
+	if rawRegion, ok := m["region"]; ok {
+		if region, ok := rawRegion.(string); ok {
+			p.Region = &region
+		} else {
+			err = goa.InvalidPayloadField("region", rawRegion, "string", err)
+		}
+	}
+	if rawCountry, ok := m["country"]; ok {
+		if country, ok := rawCountry.(string); ok {
+			p.Country = &country
+		} else {
+			err = goa.InvalidPayloadField("country", rawCountry, "string", err)
+		}
+	}
+	if rawReview, ok := m["review"]; ok {
+		if review, ok := rawReview.(string); ok {
+			p.Review = &review
+		} else {
+			err = goa.InvalidPayloadField("review", rawReview, "string", err)
+		}
+	}
+end:
+	return &p, err
 }
 
 // NotFound sends a HTTP response with status code 404 and an empty body.
 func (c *UpdateBottleContext) NotFound() error {
-	return c.Context.Respond(404, nil)
+	return c.Respond(404, nil)
 }
 
 // NoContent sends a HTTP response with status code 204 and an empty body.
 func (c *UpdateBottleContext) NoContent() error {
-	return c.Context.Respond(204, nil)
+	return c.Respond(204, nil)
 }
 
 // DeleteBottleContext provides the bottles delete action context
 type DeleteBottleContext struct {
 	*goa.Context
+	AccountID int
+	ID        int
 }
 
-// AccountID returns the AccountID request path parameter
-func (c *DeleteBottleContext) AccountID() int {
-	return c.Context.IntParam("account")
-}
-
-// id returns the id request path parameter
-func (c *DeleteBottleContext) ID() int {
-	return c.Context.IntParam("id")
+// NewDeleteBottleContext parses the incoming request URL and body and instantiates the context
+// accordingly. It returns an error if a required parameter is missing or if a parameter has an
+// invalid value.
+func NewDeleteBottleContext(c *goa.Context) (*DeleteBottleContext, error) {
+	var err error
+	ctx := DeleteBottleContext{Context: c}
+	rawAccountID, _ := c.Params["accountID"]
+	if accountID, err := strconv.Atoi(rawAccountID); err == nil {
+		ctx.AccountID = int(accountID)
+	} else {
+		err = goa.InvalidParamValue("accountID", rawAccountID, "number", err)
+	}
+	rawID, _ := c.Params["ID"]
+	if ID, err := strconv.Atoi(rawID); err == nil {
+		ctx.ID = int(ID)
+	} else {
+		err = goa.InvalidParamValue("ID", rawID, "number", err)
+	}
+	return &ctx, err
 }
 
 // NotFound sends a HTTP response with status code 404 and an empty body.
 func (c *DeleteBottleContext) NotFound() error {
-	return c.Context.Respond(404, nil)
+	return c.Respond(404, nil)
 }
 
 // NoContent sends a HTTP response with status code 204 and an empty body.
 func (c *DeleteBottleContext) NoContent() error {
-	return c.Context.Respond(204, nil)
+	return c.Respond(204, nil)
 }
 
 // RateBottleContext provides the bottles rate action context
 type RateBottleContext struct {
 	*goa.Context
+	AccountID int
+	ID        int
+	Payload   *RateBottlePayload
 }
 
-// AccountID returns the AccountID request path parameter
-func (c RateBottleContext) AccountID() int {
-	return c.Context.IntParam("account")
+// NewRateBottleContext parses the incoming request URL and body and instantiates the context
+// accordingly. It returns an error if a required parameter is missing or if a parameter has an
+// invalid value.
+func NewRateBottleContext(c *goa.Context) (*RateBottleContext, error) {
+	var err error
+	ctx := RateBottleContext{Context: c}
+	rawAccountID, _ := c.Params["accountID"]
+	if accountID, err := strconv.Atoi(rawAccountID); err == nil {
+		ctx.AccountID = int(accountID)
+	} else {
+		err = goa.InvalidParamValue("accountID", rawAccountID, "number", err)
+	}
+	rawID, _ := c.Params["ID"]
+	if ID, err := strconv.Atoi(rawID); err == nil {
+		ctx.ID = int(ID)
+	} else {
+		err = goa.InvalidParamValue("ID", rawID, "number", err)
+	}
+	var p RateBottlePayload
+	if err := c.Bind(&p); err != nil {
+		return nil, err
+	}
+	ctx.Payload = &p
+	return &ctx, err
 }
 
-// id returns the id request path parameter
-func (c *RateBottleContext) ID() int {
-	return c.Context.IntParam("id")
+// RateBottlePayload provides the bottles create action payload
+type RateBottlePayload struct {
+	Ratings int `json:"ratings"`
 }
 
-// Ratings returns the ratings value specified in the payload
-func (c *RateBottleContext) Ratings() int {
-	return c.Context.IntParam("id")
+// Validate applies the payload validation rules and returns an error in case of failure.
+func (p *RateBottlePayload) Validate() error {
+	return nil
 }
 
 // NotFound sends a HTTP response with status code 404 and an empty body.
 func (c *RateBottleContext) NotFound() error {
-	return c.Context.Respond(404, nil)
+	return c.Respond(404, nil)
 }
 
 // NoContent sends a HTTP response with status code 204 and an empty body.
 func (c *RateBottleContext) NoContent() error {
-	return c.Context.Respond(204, nil)
+	return c.Respond(204, nil)
 }

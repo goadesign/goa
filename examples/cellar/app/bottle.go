@@ -11,10 +11,10 @@ import (
 func ListBottles(c *autogen.ListBottleContext) error {
 	var bottles []*autogen.Bottle
 	var err error
-	if c.HasYears() {
-		bottles, err = db.GetBottlesByYears(c.AccountID(), c.Years())
+	if c.HasYears {
+		bottles, err = db.GetBottlesByYears(c.AccountID, c.Years)
 	} else {
-		bottles, err = db.GetBottles(c.AccountID())
+		bottles, err = db.GetBottles(c.AccountID)
 	}
 	if err != nil {
 		return err
@@ -24,7 +24,7 @@ func ListBottles(c *autogen.ListBottleContext) error {
 
 // Retrieve bottle with given id
 func ShowBottle(c *autogen.ShowBottleContext) error {
-	bottle := db.GetBottle(c.AccountID(), c.ID())
+	bottle := db.GetBottle(c.AccountID, c.ID)
 	if bottle == nil {
 		return c.NotFound()
 	}
@@ -33,11 +33,8 @@ func ShowBottle(c *autogen.ShowBottleContext) error {
 
 // Record new bottle
 func CreateBottle(c *autogen.CreateBottleContext) error {
-	bottle := db.NewBottle(c.AccountID())
-	payload, err := c.Payload()
-	if err != nil {
-		return err
-	}
+	bottle := db.NewBottle(c.AccountID)
+	payload := c.Payload
 	bottle.Name = payload.Name
 	bottle.Vintage = payload.Vintage
 	bottle.Vineyard = payload.Vineyard
@@ -60,21 +57,24 @@ func CreateBottle(c *autogen.CreateBottleContext) error {
 		bottle.Review = *payload.Review
 	}
 	c.Header.Set("Location", bottle.ComputeHref())
-	return c.Created()
+	return c.Created(bottle)
 }
 
 func UpdateBottle(c *autogen.UpdateBottleContext) error {
-	bottle := db.GetBottle(c.AccountID(), c.ID())
+	bottle := db.GetBottle(c.AccountID, c.ID)
 	if bottle == nil {
 		return c.NotFound()
 	}
-	payload, err := c.Payload()
-	if err != nil {
-		return err
+	payload := c.Payload
+	if payload.Name != nil {
+		bottle.Name = *payload.Name
 	}
-	bottle.Name = payload.Name
-	bottle.Vintage = payload.Vintage
-	bottle.Vineyard = payload.Vineyard
+	if payload.Vintage != nil {
+		bottle.Vintage = *payload.Vintage
+	}
+	if payload.Vineyard != nil {
+		bottle.Vineyard = *payload.Vineyard
+	}
 	if payload.Varietal != nil {
 		bottle.Varietal = *payload.Varietal
 	}
@@ -99,7 +99,7 @@ func UpdateBottle(c *autogen.UpdateBottleContext) error {
 
 // Delete bottle
 func DeleteBottle(c *autogen.DeleteBottleContext) error {
-	bottle := db.GetBottle(c.AccountID(), c.ID())
+	bottle := db.GetBottle(c.AccountID, c.ID)
 	if bottle == nil {
 		return c.NotFound()
 	}
@@ -108,11 +108,11 @@ func DeleteBottle(c *autogen.DeleteBottleContext) error {
 }
 
 func RateBottle(c *autogen.RateBottleContext) error {
-	bottle := db.GetBottle(c.AccountID(), c.ID())
+	bottle := db.GetBottle(c.AccountID, c.ID)
 	if bottle == nil {
 		return c.NotFound()
 	}
-	bottle.Ratings = c.Ratings()
+	bottle.Ratings = c.Payload.Ratings
 	bottle.RatedAt = time.Now()
 	db.Save(bottle)
 	return c.NoContent()

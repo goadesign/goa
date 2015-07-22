@@ -21,10 +21,13 @@ type Handler struct {
 	Path         string
 }
 
+func init() {
+	handlers = make(map[string]*Handler)
+}
+
 // RegisterHandlers stores the given handlers and indexes them for later lookup.
 // This function is meant to be called by code generated with the goa tool.
 func RegisterHandlers(hs ...*Handler) {
-	handlers := make(map[string]*Handler)
 	for _, handler := range hs {
 		handlers[handlerId(handler.ResourceName, handler.ActionName)] = handler
 	}
