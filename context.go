@@ -4,20 +4,20 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"gopkg.in/inconshreveable/log15.v2"
+	log "gopkg.in/inconshreveable/log15.v2"
 )
 
 // Context is the object that provides access to the underlying HTTP request and response data.
 type Context struct {
-	log15.Logger                     // Context logger
-	Params       map[string]string   // URL string parameters
-	Query        map[string][]string // Query string parameters
-	Payload      interface{}         // Payload (request body) parameters
-	R            *http.Request       // Underlying HTTP request
-	W            http.ResponseWriter // Underlying HTTP response writer
-	Header       http.Header         // Underlying response headers
-	RespStatus   int                 // HTTP response status code
-	RespLen      int                 // Written response Length
+	log.Logger                     // Context logger
+	Params     map[string]string   // URL string parameters
+	Query      map[string][]string // Query string parameters
+	Payload    interface{}         // Payload (request body) parameters
+	R          *http.Request       // Underlying HTTP request
+	W          http.ResponseWriter // Underlying HTTP response writer
+	Header     http.Header         // Underlying response headers
+	RespStatus int                 // HTTP response status code
+	RespLen    int                 // Written response Length
 }
 
 // Validator is implemented by all data structures that can be validated.
@@ -63,7 +63,7 @@ func (c *Context) RespondBadRequest(body string) error {
 	return c.Respond(400, []byte(body))
 }
 
-// RespondBadResponse sends a HTTP response with status code 500 and the given body.
-func (c *Context) RespondBadResponse(body string) error {
+// RespondBug sends a HTTP response with status code 500 and the given body.
+func (c *Context) RespondBug(body string) error {
 	return c.Respond(500, []byte(body))
 }

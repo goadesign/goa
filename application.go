@@ -6,14 +6,14 @@ import (
 	"os"
 
 	"github.com/julienschmidt/httprouter"
-	"gopkg.in/inconshreveable/log15.v2"
+	log "gopkg.in/inconshreveable/log15.v2"
 )
 
 type (
 	// Applications consist of a set of controllers.
 	// A controller implements a resource action.
 	Application struct {
-		log15.Logger                        // Application logger
+		log.Logger                          // Application logger
 		Name         string                 // Application name
 		Controllers  map[string]*Controller // Controllers indexed by resource name
 		ErrorHandler ErrorHandler           // Application global error handler
@@ -25,13 +25,13 @@ type (
 )
 
 var (
-	Log log15.Logger
+	Log log.Logger
 )
 
 // Log nothing by default
 func init() {
-	Log = log15.New()
-	Log.SetHandler(log15.DiscardHandler())
+	Log = log.New()
+	Log.SetHandler(log.DiscardHandler())
 }
 
 // New instantiates a new goa application with the given name.
@@ -59,8 +59,12 @@ func (a *Application) Mount(c *Controller) {
 		if !ok {
 			Fatalf("unknown %s action %s", c.Resource, k)
 		}
-		a.router.Handle(h.Verb, h.Path, c.actionHandle(h.HandlerF, u))
-		c.Info("handler", h.Verb, h.Path)
+		handler, err := h.HandlerF(u)
+		if err != nil {
+			Fatalf(err.Error())
+		}
+		a.router.Handle(h.Verb, h.Path, c.actionHandle(handler))
+		c.Info("handler", "action", k, h.Verb, h.Path)
 	}
 	c.Info("mounted")
 	c.Application = a
@@ -79,11 +83,11 @@ func (a *Application) SetErrorHandler(handler ErrorHandler) {
 	a.ErrorHandler = handler
 }
 
-// DefaultErrorHandler returns a 500 response with the error message as body.
+// DefaultErrorHandler returns a 400 response with the error message as body.
 func DefaultErrorHandler(c *Context, e error) {
-	if err := c.Respond(500, []byte(e.Error())); err != nil {
+	if err := c.Respond(400, []byte(e.Error())); err != nil {
 		Log.Error("failed to send default error handler response", "error", err)
-		c.Respond(500, []byte("unknown error"))
+		c.W.WriteHeader(500)
 	}
 }
 

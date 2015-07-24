@@ -28,11 +28,11 @@ type (
 	Handlers map[string]UserHandler
 
 	// UserHandlers are functions that contain the implementation for controller actions.
-	// The function signatures match the corresponding design action definition.
+	// The function signatures is specified by the corresponding design action definition.
 	UserHandler interface{}
 )
 
-// ShortID produces a "unique" 6 byte long string.
+// ShortID produces a "unique" 6 bytes long string.
 // Do not use as a reliable way to get unique IDs, instead use for things like logging.
 func ShortID() string {
 	b := make([]byte, 6)
@@ -51,7 +51,7 @@ func (c *Controller) SetHandlers(handlers Handlers) {
 }
 
 // SetErrorHandler defines an application wide error handler.
-// The default error handler returns a 500 status code with the error message in the response body.
+// The default error handler returns a 400 status code with the error message in the response body.
 // Controllers may override the application error handler.
 func (c *Controller) SetErrorHandler(handler ErrorHandler) {
 	c.ErrorHandler = handler
@@ -59,14 +59,12 @@ func (c *Controller) SetErrorHandler(handler ErrorHandler) {
 
 // actionHandle returns a httprouter handle for the given action definition.
 // The generated handler builds an action specific context and calls the user handler.
-func (c *Controller) actionHandle(generated HandlerFunc, user interface{}) httprouter.Handle {
+func (c *Controller) actionHandle(h Handler) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		// Setup recover
 		defer func() {
 			if r := recover(); r != nil {
-				//c.handleError()
-				// TBD CALL handleERROR
-				// CHANGE OTHER PLACES (ERRORS) TO SIMPLY RETURN 400
+				c.handleCritical(w, r)
 			}
 		}()
 		// Log started event
@@ -108,7 +106,7 @@ func (c *Controller) actionHandle(generated HandlerFunc, user interface{}) httpr
 			ctx.Debug("query", ToLogCtxA(query))
 		}
 		if err != nil {
-			ctx.JSON(400, fmt.Errorf("invalid JSON: %s", err))
+			ctx.Respond(400, []byte(fmt.Sprintf(`{"kind":"invalid request","msg":"invalid JSON: %s"}`, err)))
 			goto end
 		}
 		if r.ContentLength > 0 {
@@ -120,7 +118,7 @@ func (c *Controller) actionHandle(generated HandlerFunc, user interface{}) httpr
 		}
 
 		// Call user controller handler
-		if err := generated(user, &ctx); err != nil {
+		if err := h(&ctx); err != nil {
 			c.handleError(&ctx, err)
 		}
 
@@ -131,10 +129,17 @@ func (c *Controller) actionHandle(generated HandlerFunc, user interface{}) httpr
 	}
 }
 
-// handleError looks up the error handler (first in the controller then in the application) and
-// invokes it.
+// handleCritical is the callback triggered when a controller action causes a panic.
+// It simply returns 500 after logging the error.
+func (c *Controller) handleCritical(w http.ResponseWriter, msg interface{}) {
+	log.Error(fmt.Sprintf("BUG: %v", msg))
+	w.WriteHeader(500)
+}
+
+// handleError is the callback triggered when an invalid request is received.
+// It looks up the error handler (first in the controller then in the application) and invokes it.
+// The default error handler returns a status code of 400 and uses the error message as body.
 func (c *Controller) handleError(ctx *Context, actionErr error) {
-	ctx.Error(actionErr.Error())
 	handler := c.ErrorHandler
 	if handler == nil {
 		handler = c.Application.ErrorHandler
