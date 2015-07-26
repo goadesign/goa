@@ -1,8 +1,6 @@
 package design
 
-// ValidationDefinition is the common interface for all validation data structures.
-// It doesn't expose any method and simply exists to help with documentation.
-type ValidationDefinition interface{}
+import "github.com/raphael/goa/design"
 
 // EnumValidationDefinition represents an enum validation as described at
 // http://json-schema.org/latest/json-schema-validation.html#anchor76.
@@ -11,7 +9,7 @@ type EnumValidationDefinition struct {
 }
 
 // NewEnumValidation creates a definition for an enum validation.
-func NewEnumValidation(val ...interface{}) ValidationDefinition {
+func NewEnumValidation(val ...interface{}) design.ValidationDefinition {
 	return &EnumValidationDefinition{Values: val}
 }
 
@@ -22,7 +20,7 @@ type FormatValidationDefinition struct {
 }
 
 // NewFormatValidation creates a definition for a format validation.
-func NewFormatValidation(f string) ValidationDefinition {
+func NewFormatValidation(f string) design.ValidationDefinition {
 	return &FormatValidationDefinition{Format: f}
 }
 
@@ -33,7 +31,7 @@ type MinimumValidationDefinition struct {
 }
 
 // NewMinimumValidation creates a definition for a minimum value validation.
-func NewMinimumValidation(min int) ValidationDefinition {
+func NewMinimumValidation(min int) design.ValidationDefinition {
 	return &MinimumValidationDefinition{Min: min}
 }
 
@@ -44,7 +42,7 @@ type MaximumValidationDefinition struct {
 }
 
 // NewMaximumValidation creates a definition for a maximum value validation.
-func NewMaximumValidation(max int) ValidationDefinition {
+func NewMaximumValidation(max int) design.ValidationDefinition {
 	return &MaximumValidationDefinition{Max: max}
 }
 
@@ -55,7 +53,7 @@ type MinLengthValidationDefinition struct {
 }
 
 // NewMinLengthValidation creates a definition for a minimum length validation.
-func NewMinLengthValidation(minLength int) ValidationDefinition {
+func NewMinLengthValidation(minLength int) design.ValidationDefinition {
 	return &MinLengthValidationDefinition{MinLength: minLength}
 }
 
@@ -66,7 +64,7 @@ type MaxLengthValidationDefinition struct {
 }
 
 // NewMaxLengthValidation creates a definition for a maximum length validation.
-func NewMaxLengthValidation(maxLength int) ValidationDefinition {
+func NewMaxLengthValidation(maxLength int) design.ValidationDefinition {
 	return &MaxLengthValidationDefinition{MaxLength: maxLength}
 }
 
@@ -77,6 +75,6 @@ type RequiredValidationDefinition struct {
 }
 
 // NewRequiredValidation creates a definition for a required fields validation.
-func NewRequiredValidation(names ...string) ValidationDefinition {
+func NewRequiredValidation(names ...string) design.ValidationDefinition {
 	return &RequiredValidationDefinition{Names: names}
 }

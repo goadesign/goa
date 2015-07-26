@@ -3,45 +3,23 @@ package main
 import . "github.com/raphael/goa/design"
 
 var BottleMediaType = MediaType("application/vnd.goa.example.bottle", func() {
-	Description("A Droplet is a DigitalOcean virtual machine.")
-	Attributes(
-		Attribute("id", Integer, func() {
-			Description("ID of bottle")
-		}),
-		Attribute("href", String, func() {
-			Description("API href of bottle")
-		}),
-		Attribute("name", String, func() {
-			Description("Name of wine")
-		}),
-		Attribute("vineyard", String, func() {
-			Description("Name of vineyard / winery")
-		}),
-		Attribute("varietal", String, func() {
-			Description("Wine varietal")
-		}),
-		Attribute("vintage", Integer, func() {
-			Description("Wine vintage")
-		}),
-		Attribute("color", String, func() {
-			Description("Type of wine")
+	Description("A bottle of wine")
+	Attributes(func() {
+		Attribute("id", Integer, "ID of bottle")
+		Attribute("href", String, "API href of bottle")
+		Attribute("name", String, "Name of wine")
+		Attribute("vineyard", String, "Name of vineyard / winery")
+		Attribute("varietal", String, "Wine varietal")
+		Attribute("vintage", Integer, "Wine vintage")
+		Attribute("color", String, "Type of wine", func() {
 			Enum("red", "white", "rose", "yellow")
-		}),
-		Attribute("sweet", Bool, func() {
-			Description("Whether wine is sweet or dry")
-		}),
-		Attribute("country", String, func() {
-			Description("Country of origin")
-		}),
-		Attribute("region", String, func() {
-			Description("Region")
-		}),
-		Attribute("review", String, func() {
-			Description("Review")
-		}),
-		Attribute("characteristics", CollectionOf(String), func() {
-			Description("Wine characteristics")
-		}),
-	)
-	Required("name", "vineyard")
+		})
+		Attribute("sweet", Bool, "Whether wine is sweet or dry")
+		Attribute("country", String, "Country of origin")
+		Attribute("region", String, "Region")
+		Attribute("review", String, "Review")
+		Attribute("characteristics", CollectionOf(String), "Wine characteristics")
+
+		Required("name", "vineyard")
+	})
 })

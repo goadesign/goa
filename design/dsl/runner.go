@@ -1,4 +1,4 @@
-package design
+package dsl
 
 import (
 	"fmt"
@@ -94,8 +94,8 @@ func reportErrors() {
 
 // actionDefinition returns true and current context if it is an ActionDefinition,
 // nil and false otherwise.
-func actionDefinition() (*ActionDefinition, bool) {
-	a, ok := ctxStack.current().(*ActionDefinition)
+func actionDefinition() (*design.ActionDefinition, bool) {
+	a, ok := ctxStack.current().(*design.ActionDefinition)
 	if !ok {
 		incompatibleDsl(caller())
 	}
@@ -104,8 +104,8 @@ func actionDefinition() (*ActionDefinition, bool) {
 
 // apiDefinition returns true and current context if it is an APIDefinition,
 // nil and false otherwise.
-func apiDefinition() (*APIDefinition, bool) {
-	a, ok := ctxStack.current().(*APIDefinition)
+func apiDefinition() (*design.APIDefinition, bool) {
+	a, ok := ctxStack.current().(*design.APIDefinition)
 	if !ok {
 		incompatibleDsl(caller())
 	}
@@ -114,8 +114,8 @@ func apiDefinition() (*APIDefinition, bool) {
 
 // attribute returns true and current context if it is an Attribute,
 // nil and false otherwise.
-func attributeDefinition() (*AttributeDefinition, bool) {
-	a, ok := ctxStack.current().(*AttributeDefinition)
+func attributeDefinition() (*design.AttributeDefinition, bool) {
+	a, ok := ctxStack.current().(*design.AttributeDefinition)
 	if !ok {
 		incompatibleDsl(caller())
 	}
@@ -124,8 +124,8 @@ func attributeDefinition() (*AttributeDefinition, bool) {
 
 // resourceDefinition returns true and current context if it is a ResourceDefinition,
 // nil and false otherwise.
-func resourceDefinition() (*ResourceDefinition, bool) {
-	r, ok := ctxStack.current().(*ResourceDefinition)
+func resourceDefinition() (*design.ResourceDefinition, bool) {
+	r, ok := ctxStack.current().(*design.ResourceDefinition)
 	if !ok {
 		incompatibleDsl(caller())
 	}
@@ -134,8 +134,8 @@ func resourceDefinition() (*ResourceDefinition, bool) {
 
 // responseDefinition returns true and current context if it is a ResponseDefinition,
 // nil and false otherwise.
-func responseDefinition() (*ResponseDefinition, bool) {
-	r, ok := ctxStack.current().(*ResponseDefinition)
+func responseDefinition() (*design.ResponseDefinition, bool) {
+	r, ok := ctxStack.current().(*design.ResponseDefinition)
 	if !ok {
 		incompatibleDsl(caller())
 	}
@@ -145,7 +145,7 @@ func responseDefinition() (*ResponseDefinition, bool) {
 // Name of calling function.
 func caller() string {
 	pc, _, _, ok := runtime.Caller(1)
-	if ok {
+	if !ok {
 		return "<unknown>"
 	}
 	return runtime.FuncForPC(pc).Name()

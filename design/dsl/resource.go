@@ -1,9 +1,13 @@
-package design
+package dsl
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/raphael/goa/design"
+)
 
 // Resource defines a resource
-func Resource(name string, dsl func()) error {
+func Resource(name string, dsl func()) {
 	if a, ok := apiDefinition(); ok {
 		if _, ok := a.Resources[name]; ok {
 			appendError(fmt.Errorf("multiple definitions for resource %s", name))
@@ -14,12 +18,13 @@ func Resource(name string, dsl func()) error {
 			a.Resources[name] = resource
 		}
 	}
-	return nil // to allow for 'var _ = ' trick
 }
 
 // MediaType sets the resource media type
-func MediaType(val *MediaTypeDefinition) {
-	if r, ok := resourceDefinition(); ok {
+func MediaType(val interface{}) {
+	if r, ok := ctxStack.current().(*design.ResourceDefinition); ok {
+		r.MediaType = val
+	} else if r, ok := responseDefinition(); ok {
 		r.MediaType = val
 	}
 }

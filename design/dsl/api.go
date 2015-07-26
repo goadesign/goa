@@ -1,16 +1,16 @@
-package design
+package dsl
 
-import "fmt"
+import (
+	"fmt"
 
-var (
-	Definition *APIDefinition // API definition created via DSL
+	"github.com/raphael/goa/design"
 )
 
 func API(name string, dsl func()) error {
 	if Definition != nil {
 		appendError(fmt.Errorf("multiple API definitions."))
 	} else {
-		Definition = &APIDefinition{Name: name}
+		Definition = &design.APIDefinition{Name: name}
 		executeDSL(dsl, Definition)
 	}
 	if len(dslErrors) > 0 {
@@ -21,9 +21,9 @@ func API(name string, dsl func()) error {
 }
 
 // BaseParams defines the API base params
-func BaseParams(attributes ...*AttributeDefinition) {
+func BaseParams(attributes ...*design.AttributeDefinition) {
 	switch c := ctxStack.current().(type) {
-	case *APIDefinition:
+	case *design.APIDefinition:
 		c.BaseParams = attributes
 	default:
 		incompatibleDsl("BaseParams")

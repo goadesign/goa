@@ -3,45 +3,13 @@ package design
 import (
 	"fmt"
 	"strings"
+
+	"github.com/raphael/goa/design"
 )
-
-// A media type describes the rendering of a resource using property and link
-// definitions. An property corresponds to a single member of the media type,
-// it has a name and a type as well as optional validation rules. A link has a
-// name and a URL that points to a related resource.
-// Finally media types also define views which describe which members and
-// links to render when building the response body.
-type MediaTypeDefinition struct {
-	Object
-	Identifier   string           // RFC 6838 Media type identifier
-	Description  string           // Optional description
-	Links        map[string]*Link // List of rendered links indexed by name (named hrefs to related resources)
-	Views        map[string]*View // List of supported views indexed by name
-	isCollection bool             // Whether media type is for a collection
-}
-
-// A link contains a URL to a related resource.
-type Link struct {
-	Name        string               // Link name
-	Description string               // Optional description
-	Member      *AttributeDefinition // Member used to render link
-	MediaType   *MediaTypeDefinition // Member used to render link
-	View        string               // View used to render link if not "link"
-}
-
-// A view defines which members and links to render when building a response.
-// The view property names must match the names of the parent media type members.
-// The members fields are inherited from the parent media type but may be overridden.
-type View struct {
-	Object
-	MediaType *MediaTypeDefinition
-	Links     []string
-	Name      string
-}
 
 // NewMediaType creates new media type from its identifier, description and type.
 // Initializes a default view that returns all the media type members.
-func NewMediaType(id, desc string, o Object) *MediaTypeDefinition {
+func NewMediaType(id, desc string, o Object) *design.MediaTypeDefinition {
 	mt := MediaTypeDefinition{Object: o, Identifier: id, Description: desc, Links: make(map[string]*Link)}
 	mt.Views = map[string]*View{"default": &View{Name: "default", Object: o}}
 	return &mt
@@ -50,7 +18,7 @@ func NewMediaType(id, desc string, o Object) *MediaTypeDefinition {
 // View adds a new view to the media type.
 // It returns the view so it can be modified further.
 // This method ignore passed-in property names that do not exist in media type.
-func (m *MediaTypeDefinition) View(name string, members ...string) *View {
+func (m *design.MediaTypeDefinition) View(name string, members ...string) *View {
 	o := make(Object, len(members))
 	i := 0
 	for n, p := range m.Object {
@@ -108,7 +76,7 @@ func (v *View) Link(links ...string) *View {
 
 // Link adds a new link to the given media type member.
 // It returns the link so it can be modified further.
-func (m *MediaTypeDefinition) Link(name string) *Link {
+func (m *design.MediaTypeDefinition) Link(name string) *Link {
 	member, ok := m.Object[name]
 	if !ok {
 		panic(fmt.Sprintf("Invalid  link '%s', no such media type member.", name))
@@ -130,7 +98,7 @@ func (l *Link) As(name string) *Link {
 // CollectionOf creates a collection media type from its element media type.
 // A collection media type represents the content of responses that return a
 // collection of resources such as "index" actions.
-func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
+func CollectionOf(m *design.MediaTypeDefinition) *MediaTypeDefinition {
 	col := *m
 	col.isCollection = true
 	return &col
@@ -150,7 +118,7 @@ func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
 // on each element of the array.
 // Once the resulting map has been built the values are validated using the view property
 // validations.
-/*func (m *MediaTypeDefinition) Render(value interface{}, viewName string) (interface{}, error) {*/
+/*design.func (m *MediaTypeDefinition) Render(value interface{}, viewName string) (interface{}, error) {*/
 //if value == nil {
 //return make(map[string]interface{}), nil
 //}
@@ -194,7 +162,7 @@ func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
 // Render given struct
 // Builds map with values corresponding to fields with media type property names then validates it
 // View name must be valid
-/*func (m *MediaTypeDefinition) renderStruct(value interface{}, viewName string) (map[string]interface{}, error) {*/
+/*design.func (m *MediaTypeDefinition) renderStruct(value interface{}, viewName string) (map[string]interface{}, error) {*/
 //t := reflect.TypeOf(value)
 //v := reflect.ValueOf(value)
 //numField := t.NumField()
@@ -226,7 +194,7 @@ func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
 // Render given map
 // Builds map with values corresponding to media type property names then validates it
 // View name must be valid
-/*func (m *MediaTypeDefinition) renderMap(value map[string]interface{}, viewName string) (map[string]interface{}, error) {*/
+/*design.func (m *MediaTypeDefinition) renderMap(value map[string]interface{}, viewName string) (map[string]interface{}, error) {*/
 //rendered := make(map[string]interface{})
 //view := m.Views[viewName]
 //for n, v := range value {
@@ -239,7 +207,7 @@ func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
 
 // First make sure that any property with default value has its value initialized in the map, then
 // run property validation functions on value associated with property name.
-/*func (m *MediaTypeDefinition) validate(rendered map[string]interface{}) error {*/
+/*design.func (m *MediaTypeDefinition) validate(rendered map[string]interface{}) error {*/
 //for n, p := range m.Object {
 //if _, ok := rendered[n]; !ok {
 //if p.DefaultValue != nil {

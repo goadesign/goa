@@ -22,9 +22,9 @@ var _ = Resource("account", func() {
 	Action("create", func() {
 		Route(Post(""))
 		Description("Create new account")
-		Payload(Object(
+		Payload(
 			Member("name", Required()),
-		))
+		)
 		Response(Created)
 	})
 
@@ -81,7 +81,7 @@ var _ = Resource("bottle", func() {
 	Action("create", func() {
 		Route(Post(""))
 		Description("Record new bottle")
-		Payload(Object(
+		Payload(
 			Member("name", Required()),
 			Member("vintage", Required()),
 			Member("vineyard", Required()),
@@ -92,7 +92,7 @@ var _ = Resource("bottle", func() {
 			Member("region"),
 			Member("review"),
 			Member("characteristics"),
-		))
+		)
 		Response(Created)
 	})
 

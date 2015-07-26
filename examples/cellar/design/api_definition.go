@@ -19,6 +19,12 @@ var _ = API("cellar", func() {
 		MediaType("application/json")
 	})
 
+	ResponseTemplate("NoContent", func() {
+		Description("Request with empty response")
+		Status(204)
+		MediaType("application/json")
+	})
+
 	ResponseTemplate("Ok", func(mt string) {
 		Description("Resource listing")
 		Status(200)
