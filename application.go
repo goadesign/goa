@@ -28,10 +28,10 @@ var (
 	Log log.Logger
 )
 
-// Log nothing by default
+// Log to STDOUT by default
 func init() {
 	Log = log.New()
-	Log.SetHandler(log.DiscardHandler())
+	Log.SetHandler(log.StdoutHandler)
 }
 
 // New instantiates a new goa application with the given name.

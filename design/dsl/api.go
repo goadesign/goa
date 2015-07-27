@@ -6,6 +6,29 @@ import (
 	"github.com/raphael/goa/design"
 )
 
+// API defines the top level API DSL.
+//
+// API("cellar", func() {
+//	Title("The virtual wine cellar")
+//	Description("A basic example of a CRUD API implemented with goa")
+//	BasePath("/:accountID")
+//	BaseParams(
+//		Param("accountID", Integer,
+//			"API request account. All actions operate on resources belonging to the account."),
+//	)
+//	ResponseTemplate("NotFound", func() {
+//		Description("Resource not found")
+//		Status(404)
+//		MediaType("application/json")
+//	})
+//	Trait("Authenticated", func() {
+//		Headers(func() {
+//			Header("Auth-Token", String)
+//			Required("Auth-Token")
+//		})
+//	})
+// })
+//
 func API(name string, dsl func()) error {
 	if Definition != nil {
 		appendError(fmt.Errorf("multiple API definitions."))
