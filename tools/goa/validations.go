@@ -1,4 +1,4 @@
-package autogen
+package main
 
 import (
 	"fmt"
