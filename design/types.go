@@ -8,7 +8,8 @@ type (
 
 	// DataType is the common interface to all types.
 	DataType interface {
-		Kind() Kind
+		Kind() Kind   // Kind
+		Name() string // go type name
 	}
 
 	// Primitive is the type for null, boolean, integer, number and string.
@@ -77,10 +78,37 @@ func (p Primitive) Kind() {
 	return Kind(p)
 }
 
+func (p Primitive) Name() string {
+	switch p.Kind() {
+	case NullType:
+		return "nil"
+	case BooleanType:
+		return "bool"
+	case IntegerType:
+		return "int"
+	case NumberType:
+		return "float64"
+	case StringType:
+		return "string"
+	default:
+		panic(fmt.Sprintf("goa bug: unknown primitive type %#v", p))
+	}
+}
+
 func (a *Array) Kind() {
 	return ArrayType
 }
 
+func (a *Array) Name() {
+	return "[]" + a.ElemType.Name()
+}
+
 func (a *Object) Kind() {
 	return ObjectType
+}
+
+// Not actually used as only payloads can be objects.
+// Payloads are treated separatly.
+func (a *Object) Name() {
+	return "map[string]interface{}"
 }

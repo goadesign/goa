@@ -1,48 +1,56 @@
 package main
 
 import (
-	"bytes"
-	"fmt"
+	"io"
 	"text/template"
+
+	"github.com/raphael/goa/design"
 )
 
-type ContextsWriter struct {
-	HeaderTmpl  *template.Template
-	CtxTmpl     *template.Template
-	CtxNewTmpl  *template.Template
-	CtxRespTmpl *template.Template
-	PayloadTmpl *template.Template
-}
+type (
+	ContextsWriter struct {
+		*CodeWriter
+		CtxTmpl     *template.Template
+		CtxNewTmpl  *template.Template
+		CtxRespTmpl *template.Template
+		PayloadTmpl *template.Template
+	}
+
+	ContextData struct {
+		Name          string // e.g. "ListBottleContext"
+		TargetPackage string // e.g. "github.com/goauser/repo"
+		Params        *design.AttributeDefinition
+		Payload       *design.AttributeDefinition
+		Headers       *design.AttributeDefinition
+		Responses     []*design.ResponseDefinition
+	}
+)
 
 // NewContextsWriter returns a contexts code writer.
 // Contexts provide the glue between the underlying request data and the user controller.
 func NewContextsWriter() (*ContextsWriter, error) {
-	funcMap := template.FuncMap{
-		"comment":     comment,
-		"commandLine": commandLine,
-	}
-	headerTmpl, err := template.New("header").Funcs(funcMap).Parse(headerT)
+	cw, err := NewCodeWriter()
 	if err != nil {
 		return nil, err
 	}
-	ctxTmpl, err := template.New("context").Funcs(funcMap).Parse(ctxT)
+	ctxTmpl, err := template.New("context").Funcs(cw.FuncMap).Parse(ctxT)
 	if err != nil {
 		return nil, err
 	}
-	ctxNewTmpl, err := template.New("new").Funcs(funcMap).Parse(ctxNewT)
+	ctxNewTmpl, err := template.New("new").Funcs(cw.FuncMap).Parse(ctxNewT)
 	if err != nil {
 		return nil, err
 	}
-	ctxRespTmpl, err := template.New("response").Funcs(funcMap).Parse(ctxRespT)
+	ctxRespTmpl, err := template.New("response").Funcs(cw.FuncMap).Parse(ctxRespT)
 	if err != nil {
 		return nil, err
 	}
-	payloadTmpl, err := template.New("payload").Funcs(funcMap).Parse(payloadT)
+	payloadTmpl, err := template.New("payload").Funcs(cw.FuncMap).Parse(payloadT)
 	if err != nil {
 		return nil, err
 	}
 	w := ContextsWriter{
-		HeaderTmpl:  headerTmpl,
+		CodeWriter:  cw,
 		CtxTmpl:     ctxTmpl,
 		CtxNewTmpl:  ctxNewTmpl,
 		CtxRespTmpl: ctxRespTmpl,
@@ -52,41 +60,39 @@ func NewContextsWriter() (*ContextsWriter, error) {
 }
 
 // Write writes the code for the context types to outdir.
-func (w *ContextsWriter) Write(targetPack, outdir string) error {
-	ctx := map[string]interface{}{
-		"ToolVersion": Version,
-		"Pkg":         targetPack,
-	}
-	var buffer bytes.Buffer
-	if err := w.HeaderTmpl.Execute(&buffer, ctx); err != nil {
-		return fmt.Errorf("failed to generate contexts: %s", err)
+func (w *ContextsWriter) Write(data *ContextData, wr io.Writer) error {
+	if err := w.WriteHeader(data.TargetPackage, wr); err != nil {
+		return err
 	}
 	return nil
 }
 
 const (
-	headerT = `
-//************************************************************************//
-//                    API Controller Action Contexts
-//
-// Generated with goagen v{{.ToolVersion}}, command line:
-{{comment commandLine}}
-//
-// The content of this file is auto-generated, DO NOT MODIFY
-//************************************************************************//
-
-package {{.Pkg}}
-
-import (
-	{{if .NeedStrconv}}"strconv"
-	{{end}}
-	"github.com/raphael/goa"
-)
-
+	ctxT = `// {{.Name}} provides the {{.ResourceName}} {{.ActionName}} action context
+type {{.Name}} struct {
+	*goa.Context
+	{{range .Params}}{{camelize .Name}} {{.Type.Name}}
+{{end}} }
 `
 
-	ctxT     = `package {{.}}`
-	ctxNewT  = `package {{.}}`
-	ctxRespT = `package {{.}}`
-	payloadT = `package {{.}}`
+	ctxNewT = `
+// New{{.Name}} parses the incoming request URL and body, performs validations and creates the
+// context used by the controller action.
+func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
+	var err error
+	ctx := {{.Name}}{Context: c}
+	{{range .Params}}{{initContext .}}
+	{{end}}return &ctx, err
+}
+`
+	ctxRespT = `// {.Name}} builds a HTTP response with status code {{.Code}}.
+func (c *{{.Context}}) {{.Name}}({{.Resource}} {{.Type}}) error {
+	return c.JSON({{.Code}}, {{.Resource}})
+}
+`
+	payloadT = `// {{.Name}} is the {{.ResourceName}} {{.ActionName}} action payload.
+type {{.Name}} struct {
+	{{$name, $val := range .Type.Object}}{{camelize $name}} {{$val.Type.Name}} ` + "`" + `json:"{{.Name}}{{if not .Required}},omitempty{{end}}"` + "`" + `
+{{end}} }
+`
 )
