@@ -1,6 +1,6 @@
 package main
 
-import . "github.com/raphael/goa/design"
+import . "github.com/raphael/goa/design/dsl"
 
 var _ = API("cellar", func() {
 

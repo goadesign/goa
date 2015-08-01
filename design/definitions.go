@@ -3,7 +3,8 @@ package design
 import "fmt"
 
 var (
-	Design *APIDefinition // Design is the API definition created via DSL.
+	// Design is the API definition created via DSL.
+	Design *APIDefinition
 )
 
 type (
@@ -16,14 +17,14 @@ type (
 
 	// APIDefinition defines the global properties of the API.
 	APIDefinition struct {
-		Name              string                                 // API name
-		Title             string                                 // API Title
-		Description       string                                 // API description
-		BasePath          string                                 // Common base path to all API actions
-		BaseParams        []*AttributeDefinition                 // Common path parameters to all API actions
-		Resources         map[string]*ResourceDefinition         // Exposed resources indexed by name
-		Traits            map[string]*TraitDefinition            // Traits available to all API resources and actions indexed by name
-		ResponseTemplates map[string]*ResponseTemplateDefinition // Response templates available to all API actions indexed by name
+		Name              string                         // API name
+		Title             string                         // API Title
+		Description       string                         // API description
+		BasePath          string                         // Common base path to all API actions
+		BaseParams        []*AttributeDefinition         // Common path parameters to all API actions
+		Resources         map[string]*ResourceDefinition // Exposed resources indexed by name
+		Traits            map[string]*TraitDefinition    // Traits available to all API resources and actions indexed by name
+		ResponseTemplates map[string]*ResponseDefinition // Response templates available to all API actions indexed by name
 	}
 
 	// ResourceDefinition describes a REST resource.
@@ -39,6 +40,7 @@ type (
 		MediaType       *MediaTypeDefinition         // Default media type, describes the resource attributes
 		Actions         map[string]*ActionDefinition // Exposed resource actions indexed by name
 		CanonicalAction string                       // Action with canonical resource path
+
 	}
 
 	// MediaTypeDefinition describes the rendering of a resource using property and link
@@ -111,8 +113,8 @@ type (
 		MediaType *MediaTypeDefinition // Parent media type definition
 	}
 
-	// ResponseTemplateDefinition defines a HTTP response status and optional validation rules.
-	ResponseTemplateDefinition struct {
+	// ResponseDefinition defines a HTTP response status and optional validation rules.
+	ResponseDefinition struct {
 		Name        string               // Response name
 		Status      int                  // HTTP status
 		Description string               // Response description
@@ -126,13 +128,13 @@ type (
 		Dsl  func() // Trait DSL
 	}
 
-	// An action route
+	// RouteDefinition represents an action route.
 	RouteDefinition struct {
 		Verb string // HTTP method, e.g. "GET", "POST", etc.
 		Path string // URL path e.g. "/tasks/:id"
 	}
 
-	// A header definition for headers that need to be made available to the action.
+	// HeaderDefinition define headers that need to be made available to the action.
 	HeaderDefinition struct {
 		Name   string               // Header key, e.g. "X-Request-Id"
 		Member *AttributeDefinition // Header definition including validations
@@ -143,7 +145,7 @@ type (
 	ValidationDefinition interface{}
 )
 
-// Validates that resource definition is consistent: action names are valid and each action is
+// Validate tests whether the resource definition is consistent: action names are valid and each action is
 // valid.
 func (r *ResourceDefinition) Validate() error {
 	if r.Name == "" {
@@ -154,7 +156,7 @@ func (r *ResourceDefinition) Validate() error {
 		if a.Name == r.CanonicalAction {
 			found = true
 		}
-		if err := a.validate(); err != nil {
+		if err := a.Validate(); err != nil {
 			return err
 		}
 	}
@@ -164,8 +166,8 @@ func (r *ResourceDefinition) Validate() error {
 	return nil
 }
 
-// Validates that action definition is consistent: parameters have unique names, has at least one
-// response.
+// Validate tests whether the action definition is consistent: parameters have unique names and it has at least
+//  one response.
 func (a *ActionDefinition) Validate() error {
 	if a.Name == "" {
 		return fmt.Errorf("Action name cannot be empty")
@@ -177,38 +179,28 @@ func (a *ActionDefinition) Validate() error {
 			}
 		}
 	}
-	for _, p := range a.PathParams {
-		for _, q := range a.QueryParams {
-			if p.Name == q.Name {
-				return fmt.Errorf("Action has both path parameter and query parameter named %s",
-					p.Name)
-			}
-		}
-	}
-	if err := a.validateParams(true); err != nil {
-		return err
-	}
-	if err := a.validateParams(false); err != nil {
+	if err := a.ValidateParams(); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Validate action parameters (make sure they have names, members and types)
-func (a *ActionDefinition) validateParams(isPath bool) error {
-	var params ActionParams
-	if isPath {
-		params = a.PathParams
-	} else {
-		params = a.QueryParams
+// ValidateParams checks the action parameters (make sure they have names, members and types).
+func (a *ActionDefinition) ValidateParams() error {
+	if a.Params.Type == nil {
+		return nil
+	}
+	params, ok := a.Params.Type.(Object)
+	if !ok {
+		return fmt.Errorf("invalid params type %s for action %s", a.Params.Type.Name(), a.Name)
 	}
 	for n, p := range params {
 		if n == "" {
 			return fmt.Errorf("%s has parameter with no name", a.Name)
-		} else if p.Member == nil {
+		} else if p == nil {
 			return fmt.Errorf("Member field of %s parameter :%s cannot be nil",
 				a.Name, n)
-		} else if p.Member.Type == nil {
+		} else if p.Type == nil {
 			return fmt.Errorf("type of %s parameter :%s cannot be nil",
 				a.Name, n)
 		}

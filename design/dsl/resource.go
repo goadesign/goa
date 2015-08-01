@@ -36,7 +36,7 @@ func Prefix(p string) {
 	}
 }
 
-// Prefix sets the resource path prefix
+// CanonicalAction sets the name of the action with canonical href.
 func CanonicalAction(a string) {
 	if r, ok := resourceDefinition(); ok {
 		r.CanonicalAction = a

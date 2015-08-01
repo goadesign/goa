@@ -26,31 +26,38 @@ type (
 )
 
 const (
-	NullType    Kind = iota + 1 // JSON null value
-	BooleanType                 // A JSON bool
-	IntegerType                 // A JSON integer
-	NumberType                  // A JSON number (includes integers)
-	StringType                  // A JSON string
-	ArrayType                   // A JSON array
-	ObjectType                  // A JSON object
+	// NullType is the JSON null value.
+	NullType Kind = iota + 1
+	// BooleanType represents a JSON bool.
+	BooleanType
+	// IntegerType represents a JSON integer.
+	IntegerType
+	// NumberType represents a JSON number including integers.
+	NumberType
+	// StringType represents a JSON string.
+	StringType
+	// ArrayType represents a JSON array.
+	ArrayType
+	// ObjectType represents a JSON object.
+	ObjectType
 
-	// Type for the JSON null value
+	// Null is the type for the JSON null value.
 	Null = Primitive(NullType)
 
-	// Type for a JSON boolean
+	// Boolean is the type for a JSON boolean.
 	Boolean = Primitive(BooleanType)
 
-	// Type for a JSON number without a fraction or exponent part
+	// Integer is the type for a JSON number without a fraction or exponent part.
 	Integer = Primitive(IntegerType)
 
-	// Type for any JSON number, including integers
+	// Number is the type for any JSON number, including integers.
 	Number = Primitive(NumberType)
 
-	// Type for a JSON string
+	// String is the type for a JSON string.
 	String = Primitive(StringType)
 )
 
-// Human readable name of type
+// Name is the human readable name of type.
 func (k Kind) Name() string {
 	switch Kind(k) {
 	case NullType:
@@ -68,16 +75,18 @@ func (k Kind) Name() string {
 	case ObjectType:
 		return "object"
 	default:
-		panic(fmt.Sprintf("goa bug: unknown type %#v", b))
+		panic(fmt.Sprintf("goa bug: unknown type %#v", k))
 	}
 }
 
 // DataType implementation
 
-func (p Primitive) Kind() {
+// Kind implements DataType.
+func (p Primitive) Kind() Kind {
 	return Kind(p)
 }
 
+// Name implements DataType, it return a human friendly name for the primitive.
 func (p Primitive) Name() string {
 	switch p.Kind() {
 	case NullType:
@@ -95,20 +104,23 @@ func (p Primitive) Name() string {
 	}
 }
 
-func (a *Array) Kind() {
+// Kind implements DataType.
+func (a *Array) Kind() Kind {
 	return ArrayType
 }
 
-func (a *Array) Name() {
+// Name implements DataType.
+func (a *Array) Name() string {
 	return "[]" + a.ElemType.Name()
 }
 
-func (a *Object) Kind() {
+// Kind implements DataType.
+func (a Object) Kind() Kind {
 	return ObjectType
 }
 
-// Not actually used as only payloads can be objects.
+// Name is not actually used as only payloads can be objects.
 // Payloads are treated separatly.
-func (a *Object) Name() {
+func (a Object) Name() string {
 	return "map[string]interface{}"
 }

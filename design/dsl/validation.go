@@ -1,4 +1,4 @@
-package design
+package dsl
 
 import "github.com/raphael/goa/design"
 

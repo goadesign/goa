@@ -31,7 +31,7 @@ import (
 //
 func API(name string, dsl func()) error {
 	if Definition != nil {
-		appendError(fmt.Errorf("multiple API definitions."))
+		appendError(fmt.Errorf("multiple API definitions"))
 	} else {
 		Definition = &design.APIDefinition{Name: name}
 		executeDSL(dsl, Definition)
