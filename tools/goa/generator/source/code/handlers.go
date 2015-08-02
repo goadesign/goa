@@ -1,10 +1,10 @@
 package main
 
-import (
-	"io"
-	"text/template"
-)
+import "text/template"
 
+// HandlersWriter generate code for a goa application handlers.
+// Handlers receive a HTTP request, create the action context, call the action code and send the
+// resulting HTTP response.
 type HandlersWriter struct {
 	*CodeWriter
 	HandlerTmpl *template.Template
@@ -12,8 +12,8 @@ type HandlersWriter struct {
 
 // NewHandlersWriter returns a contexts code writer.
 // Handlers provide the glue between the underlying request data and the user controller.
-func NewHandlersWriter() (*HandlersWriter, error) {
-	cw, err := NewCodeWriter()
+func NewHandlersWriter(filename string) (*HandlersWriter, error) {
+	cw, err := NewCodeWriter(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -29,8 +29,8 @@ func NewHandlersWriter() (*HandlersWriter, error) {
 }
 
 // Write writes the code for the context types to outdir.
-func (w *HandlersWriter) Write(targetPack string, wr io.Writer) error {
-	if err := w.WriteHeader(targetPack, wr); err != nil {
+func (w *HandlersWriter) Write(targetPack string) error {
+	if err := w.WriteHeader(targetPack); err != nil {
 		return err
 	}
 	return nil

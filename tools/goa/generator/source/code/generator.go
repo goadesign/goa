@@ -1,9 +1,6 @@
 package main
 
-import (
-	"os"
-	"path/filepath"
-)
+import "path/filepath"
 
 // Generator is the goa code generator.
 type Generator struct {
@@ -15,37 +12,31 @@ type Generator struct {
 // WriteCode writes the code and updates the generator Files field accordingly.
 func (g *Generator) WriteCode() error {
 	g.Files = nil
-	c, err := NewContextsWriter()
+	ctxFile := filepath.Join(g.Outdir, "contexts.go")
+	hdlFile := filepath.Join(g.Outdir, "handlers.go")
+	resFile := filepath.Join(g.Outdir, "resources.go")
+
+	ctxWr, err := NewContextsWriter(ctxFile)
 	if err != nil {
 		return err
 	}
-	ctxFile, err := os.Create(filepath.Join(g.Outdir, "contexts.go"))
+	hdlWr, err := NewHandlersWriter(hdlFile)
 	if err != nil {
 		return err
 	}
-	err = c.Write(g.TargetPackage, ctxFile)
+	resWr, err := NewResourcesWriter(resFile)
 	if err != nil {
 		return err
 	}
-	h, err := NewHandlersWriter()
-	if err != nil {
+
+	if err = ctxWr.Write(g.TargetPackage); err != nil {
 		return err
 	}
-	hFile, err := os.Create(filepath.Join(g.Outdir, "handlers.go"))
-	if err != nil {
+	if err = hdlWr.Write(g.TargetPackage); err != nil {
 		return err
 	}
-	err = h.Write(g.TargetPackage, hFile)
-	if err != nil {
+	if err = resWr.Write(g.TargetPackage); err != nil {
 		return err
 	}
-	r, err := NewResourcesWriter()
-	if err != nil {
-		return err
-	}
-	resFile, err := os.Create(filepath.Join(g.Outdir, "resources.go"))
-	if err != nil {
-		return err
-	}
-	return r.Write(g.TargetPackage, resFile)
+	return nil
 }

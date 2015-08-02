@@ -1,10 +1,17 @@
 package design
 
-import "fmt"
+import (
+	"fmt"
+	"regexp"
+	"strings"
+)
 
 var (
 	// Design is the API definition created via DSL.
 	Design *APIDefinition
+
+	// ParamsRegex is the regular expression used to capture path parameters.
+	ParamsRegex = regexp.MustCompile("/:(.*)/")
 )
 
 type (
@@ -34,13 +41,15 @@ type (
 	// by the API.
 	ResourceDefinition struct {
 		Name            string                       // Resource name
-		Prefix          string                       // Common URL prefix to all resource action HTTP requests
+		BasePath        string                       // Common URL prefix to all resource action HTTP requests
+		BaseParams      *AttributeDefinition         // Object describing each parameter that appears in BasePath if any
+		ParentName      string                       // Name of parent resource if any
 		Description     string                       // Optional description
 		Version         string                       // Optional version
 		MediaType       *MediaTypeDefinition         // Default media type, describes the resource attributes
 		Actions         map[string]*ActionDefinition // Exposed resource actions indexed by name
 		CanonicalAction string                       // Action with canonical resource path
-
+		computedParent  *ResourceDefinition          // cached computed parent resource
 	}
 
 	// MediaTypeDefinition describes the rendering of a resource using property and link
@@ -83,15 +92,6 @@ type (
 		Validations  []ValidationDefinition // Optional validation functions
 		DefaultValue interface{}            // Optional member default value
 	}
-
-	// ActionParam defines an action parameter (path element, query string or payload).
-	ActionParam struct {
-		Name   string               // Name of parameter
-		Member *AttributeDefinition // Type and validations (if any)
-	}
-
-	// ActionParams defines a map of action parameters indexed by name.
-	ActionParams map[string]*ActionParam
 
 	// LinkDefinition defines a media type link, it specifies a URL to a related resource.
 	LinkDefinition struct {
@@ -145,6 +145,23 @@ type (
 	ValidationDefinition interface{}
 )
 
+// Validate tests whether the API definition is consistent: all resource parent names resolve to
+// an actual resource.
+func (a *APIDefinition) Validate() error {
+	for _, r := range a.Resources {
+		if err := r.Validate(); err != nil {
+			return fmt.Errorf("Resource %s: %s", r.Name, err)
+		}
+		if r.ParentName == "" {
+			continue
+		}
+		if r.Parent() == nil {
+			return fmt.Errorf("Resource %s: Unknown parent resource %s", r.Name, r.ParentName)
+		}
+	}
+	return nil
+}
+
 // Validate tests whether the resource definition is consistent: action names are valid and each action is
 // valid.
 func (r *ResourceDefinition) Validate() error {
@@ -157,11 +174,63 @@ func (r *ResourceDefinition) Validate() error {
 			found = true
 		}
 		if err := a.Validate(); err != nil {
-			return err
+			return fmt.Errorf("Action %s: %s", a.Name, err)
 		}
 	}
 	if r.CanonicalAction != "" && !found {
 		return fmt.Errorf("Unknown canonical action '%s'", r.CanonicalAction)
+	}
+	if r.BaseParams != nil {
+		baseParams, ok := r.BaseParams.Type.(Object)
+		if !ok {
+			return fmt.Errorf("Invalid type for BaseParams, must be an Object")
+		}
+		vs := ParamsRegex.FindAllStringSubmatch(r.BasePath, -1)
+		if len(vs) > 1 {
+			vars := vs[1]
+			if len(vars) != len(baseParams) {
+				return fmt.Errorf("BasePath defines parameters %s but BaseParams has %d elements",
+					strings.Join([]string{
+						strings.Join(vars[:len(vars)-1], ", "),
+						vars[len(vars)-1],
+					}, " and "),
+					len(baseParams),
+				)
+			}
+			for _, v := range vars {
+				found := false
+				for n := range baseParams {
+					if v == n {
+						found = true
+						break
+					}
+				}
+				if !found {
+					return fmt.Errorf("Variable %s from base path %s does not match any parameter from BaseParams",
+						v, r.BasePath)
+				}
+			}
+		} else {
+			if len(baseParams) > 0 {
+				return fmt.Errorf("BasePath does not use variables defines in BaseParams")
+			}
+		}
+	}
+	return nil
+}
+
+// Parent returns the parent resource if any.
+func (r *ResourceDefinition) Parent() *ResourceDefinition {
+	if r.computedParent != nil {
+		return r.computedParent
+	}
+	if r.ParentName == "" {
+		return nil
+	}
+	for _, res := range Design.Resources {
+		if res.Name == r.ParentName {
+			return res
+		}
 	}
 	return nil
 }

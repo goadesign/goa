@@ -1,6 +1,10 @@
 package dsl
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/raphael/goa/design"
+)
 
 // Attribute defines an attribute type, description and an optional validation DSL.
 // When Attribute() is used in an action parameter definition all the arguments are optional and
@@ -26,7 +30,7 @@ import "fmt"
 //
 //     Param("AccountID", Integer, "Account ID")
 //
-func Attribute(name string, args ...interface{}) *AttributeDefinition {
+func Attribute(name string, args ...interface{}) *design.AttributeDefinition {
 	if parent, ok := attributeDefinition(); ok {
 		if parent.Type == nil {
 			parent.Type = &Object{}
@@ -59,7 +63,7 @@ func Attribute(name string, args ...interface{}) *AttributeDefinition {
 		} else if len(args) != 0 {
 			appendError(fmt.Errorf("too many arguments in call to Attribute"))
 		}
-		att := AttributeDefinition{
+		att := design.AttributeDefinition{
 			Type:        dataType,
 			Description: description,
 		}
@@ -71,70 +75,75 @@ func Attribute(name string, args ...interface{}) *AttributeDefinition {
 }
 
 // Header is an alias to Attribute
-func Header(args ...interface{}) *AttributeDefinition {
+func Header(args ...interface{}) *design.AttributeDefinition {
 	return Attribute(args...)
 }
 
 // Member is an alias to Attribute
-func Member(args ...interface{}) *AttributeDefinition {
+func Member(args ...interface{}) *design.AttributeDefinition {
 	return Attribute(args...)
 }
 
 // Param is an alias to Attribute
-func Param(args ...interface{}) *AttributeDefinition {
+func Param(args ...interface{}) *design.AttributeDefinition {
 	return Attribute(args...)
 }
 
-/* Validation keywords for any instance type */
-
 // Enum defines the possible values for an attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor76.
-func (a *AttributeDefinition) Enum(val ...interface{}) *AttributeDefinition {
-	a.Validations = append(a.Validations, NewEnumValidation(val))
-	return a
+func Enum(val ...interface{}) {
+	if a, ok := attributeDefinition(); ok {
+		a.Validations = append(a.Validations, NewEnumValidation(val))
+	}
 }
 
 // Default sets the default value for an attribute.
-func (a *AttributeDefinition) Default(def interface{}) *AttributeDefinition {
-	a.DefaultValue = def
-	return a
+func Default(def interface{}) {
+	if a, ok := attributeDefinition(); ok {
+		a.DefaultValue = def
+	}
 }
 
 // Format sets the string format for an attribute.
-func (a *AttributeDefinition) Format(f string) *AttributeDefinition {
-	a.Validations = append(a.Validations, NewFormatValidation(f))
-	return a
+func Format(f string) {
+	if a, ok := attributeDefinition(); ok {
+		a.Validations = append(a.Validations, NewFormatValidation(f))
+	}
 }
 
 // Minimum value validation
-func (a *AttributeDefinition) Minimum(val int) *AttributeDefinition {
-	a.Validations = append(a.Validations, NewMinimumValidation(val))
-	return a
+func Minimum(val int) {
+	if a, ok := attributeDefinition(); ok {
+		a.Validations = append(a.Validations, NewMinimumValidation(val))
+	}
 }
 
 // Maximum value validation
-func (a *AttributeDefinition) Maximum(val int) *AttributeDefinition {
-	a.Validations = append(a.Validations, NewMaximumValidation(val))
-	return a
+func Maximum(val int) {
+	if a, ok := attributeDefinition(); ok {
+		a.Validations = append(a.Validations, NewMaximumValidation(val))
+	}
 }
 
 // MinLength validation
-func (a *AttributeDefinition) MinLength(val int) *AttributeDefinition {
-	a.Validations = append(a.Validations, NewMinLengthValidation(val))
-	return a
+func MinLength(val int) {
+	if a, ok := attributeDefinition(); ok {
+		a.Validations = append(a.Validations, NewMinLengthValidation(val))
+	}
 }
 
 // MaxLength validation
-func (a *AttributeDefinition) MaxLength(val int) *AttributeDefinition {
-	a.Validations = append(a.Validations, NewMaxLengthValidation(val))
-	return a
+func MaxLength(val int) {
+	if a, ok := attributeDefinition(); ok {
+		a.Validations = append(a.Validations, NewMaxLengthValidation(val))
+	}
 }
 
 // Required properties validation
-func (a *AttributeDefinition) Required(names ...string) *AttributeDefinition {
-	if a.Type.Kind() != ObjectType {
-		panic("Required validation must be applied to object types")
+func Required(names ...string) {
+	if a, ok := attributeDefinition(); ok {
+		if a.Type.Kind() != ObjectType {
+			a.Validations = append(a.Validations, NewRequiredValidation(names...))
+		}
 	}
-	a.Validations = append(a.Validations, NewRequiredValidation(names...))
-	return a
 }

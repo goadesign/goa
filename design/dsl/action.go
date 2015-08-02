@@ -41,7 +41,7 @@ func Action(name string, dsl func()) {
 // Routing adds one or more routes to the action
 func Routing(routes ...*RouteDefinition) {
 	if a, ok := actionDefinition(); ok {
-		a.Routes = apDefinitionpend(a.Routes, routes...)
+		a.Routes = append(a.Routes, routes...)
 	}
 }
 

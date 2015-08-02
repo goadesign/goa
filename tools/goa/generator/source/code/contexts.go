@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io"
 	"text/template"
 
 	"github.com/raphael/goa/design"
@@ -28,8 +27,8 @@ type (
 
 // NewContextsWriter returns a contexts code writer.
 // Contexts provide the glue between the underlying request data and the user controller.
-func NewContextsWriter() (*ContextsWriter, error) {
-	cw, err := NewCodeWriter()
+func NewContextsWriter(filename string) (*ContextsWriter, error) {
+	cw, err := NewCodeWriter(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -60,8 +59,8 @@ func NewContextsWriter() (*ContextsWriter, error) {
 }
 
 // Write writes the code for the context types to outdir.
-func (w *ContextsWriter) Write(data *ContextData, wr io.Writer) error {
-	if err := w.WriteHeader(data.TargetPackage, wr); err != nil {
+func (w *ContextsWriter) Write(data *ContextData) error {
+	if err := w.WriteHeader(data.TargetPackage); err != nil {
 		return err
 	}
 	return nil
