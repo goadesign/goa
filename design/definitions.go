@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"bitbucket.org/pkg/inflect"
 )
 
 var (
@@ -143,6 +145,48 @@ type (
 	// ValidationDefinition is the common interface for all validation data structures.
 	// It doesn't expose any method and simply exists to help with documentation.
 	ValidationDefinition interface{}
+
+	// EnumValidationDefinition represents an enum validation as described at
+	// http://json-schema.org/latest/json-schema-validation.html#anchor76.
+	EnumValidationDefinition struct {
+		Values []interface{}
+	}
+
+	// FormatValidationDefinition represents a format validation as described at
+	// http://json-schema.org/latest/json-schema-validation.html#anchor104.
+	FormatValidationDefinition struct {
+		Format string
+	}
+
+	// MinimumValidationDefinition represents an minimum value validation as described at
+	// http://json-schema.org/latest/json-schema-validation.html#anchor21.
+	MinimumValidationDefinition struct {
+		Min int
+	}
+
+	// MaximumValidationDefinition represents a maximum value validation as described at
+	// http://json-schema.org/latest/json-schema-validation.html#anchor17.
+	MaximumValidationDefinition struct {
+		Max int
+	}
+
+	// MinLengthValidationDefinition represents an minimum length validation as described at
+	// http://json-schema.org/latest/json-schema-validation.html#anchor29.
+	MinLengthValidationDefinition struct {
+		MinLength int
+	}
+
+	// MaxLengthValidationDefinition represents an maximum length validation as described at
+	// http://json-schema.org/latest/json-schema-validation.html#anchor26.
+	MaxLengthValidationDefinition struct {
+		MaxLength int
+	}
+
+	// RequiredValidationDefinition represents a required validation as described at
+	// http://json-schema.org/latest/json-schema-validation.html#anchor61.
+	RequiredValidationDefinition struct {
+		Names []string
+	}
 )
 
 // Validate tests whether the API definition is consistent: all resource parent names resolve to
@@ -251,7 +295,16 @@ func (a *ActionDefinition) Validate() error {
 	if err := a.ValidateParams(); err != nil {
 		return err
 	}
+	if err := a.Payload.Validate(); err != nil {
+		return fmt.Errorf(`invalid payload definition for action "%s": %s`,
+			a.Name, err)
+	}
 	return nil
+}
+
+// ContextName returns the name of the context data structure that correspones to this action.
+func (a *ActionDefinition) ContextName() string {
+	return inflect.Camelize(a.Name) + inflect.Camelize(a.Resource.Name) + "Context"
 }
 
 // ValidateParams checks the action parameters (make sure they have names, members and types).
@@ -267,12 +320,93 @@ func (a *ActionDefinition) ValidateParams() error {
 		if n == "" {
 			return fmt.Errorf("%s has parameter with no name", a.Name)
 		} else if p == nil {
-			return fmt.Errorf("Member field of %s parameter :%s cannot be nil",
-				a.Name, n)
+			return fmt.Errorf("definition of parameter %s of action %s cannot be nil",
+				n, a.Name)
 		} else if p.Type == nil {
-			return fmt.Errorf("type of %s parameter :%s cannot be nil",
-				a.Name, n)
+			return fmt.Errorf("type of parameter %s of action %s cannot be nil",
+				n, a.Name)
+		}
+		if p.Type.Kind() == ObjectType {
+			return fmt.Errorf(`parameter %s of action %s cannot be an object, only action payloads may be of type object`,
+				n, a.Name)
+		}
+		if err := p.Validate(); err != nil {
+			return fmt.Errorf(`invalid definition for parameter %s of action %s: %s`,
+				n, a.Name, err)
 		}
 	}
 	return nil
+}
+
+// AttributeIterator is the type of iterator functions given to Iterate to iterate over each
+// member of an object attribute.
+type AttributeIterator func(name string, att *AttributeDefinition) error
+
+// Validate tests whether the attribute definition is consistent: required fields exist.
+func (a *AttributeDefinition) Validate() error {
+	o, isObject := a.Type.(Object)
+	for _, v := range a.Validations {
+		if r, ok := v.(*RequiredValidationDefinition); ok {
+			if !isObject {
+				return fmt.Errorf("required fields validation defined on attribute of type %s", a.Type.Name())
+			}
+			for _, n := range r.Names {
+				var found bool
+				for an := range o {
+					if n == an {
+						found = true
+						break
+					}
+				}
+				if !found {
+					return fmt.Errorf(`required field "%s" does not exist`, n)
+				}
+			}
+		}
+	}
+	if isObject {
+		for _, att := range o {
+			if err := att.Validate(); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// Iterate runs the given function on each member of the attribute.
+// If the iterator function returns an error then iterator stops and returns the error.
+// Iterate panics if the type of a is not Object.
+func (a *AttributeDefinition) Iterate(it AttributeIterator) error {
+	o, ok := a.Type.(Object)
+	if !ok {
+		panic("iterated attribute not an object")
+	}
+	for n, at := range o {
+		if err := it(n, at); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// IsRequired returns true if the given string matches the name of a required attribute, false
+// otherwise.
+// IsRequired panics if the type of a is not Object.
+func (a *AttributeDefinition) IsRequired(attName string) bool {
+	_, ok := a.Type.(Object)
+	if !ok {
+		panic("iterated attribute not an object")
+	}
+	for _, v := range a.Validations {
+		if r, ok := v.(*RequiredValidationDefinition); ok {
+			for _, name := range r.Names {
+				if name == attName {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

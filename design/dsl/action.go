@@ -30,7 +30,7 @@ import . "github.com/raphael/goa/design"
 // })
 func Action(name string, dsl func()) {
 	if r, ok := resourceDefinition(); ok {
-		action := &design.ActionDefinition{Name: name}
+		action := &ActionDefinition{Name: name}
 		if !executeDSL(dsl, action) {
 			return
 		}
@@ -118,11 +118,6 @@ func Payload(dsl func()) {
 // Response records a possible action response.
 func Response(resp *ResponseDefinition) {
 	if a, ok := actionDefinition(); ok {
-		for _, r := range a.Responses {
-			if r.Status == resp.Status {
-				fail
-			}
-		}
 		a.Responses = append(a.Responses, resp)
 	}
 }

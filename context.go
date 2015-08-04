@@ -26,6 +26,23 @@ type Validator interface {
 	Validate() error
 }
 
+// Get returns the param or query string with the given name and true or an empty string and false
+// if there isn't one.
+func (c *Context) Get(name string) (string, bool) {
+	v, ok := c.Params[name]
+	if !ok {
+		var vs []string
+		vs, ok = c.Query[name]
+		if ok {
+			v = vs[0]
+		}
+	}
+	if !ok {
+		return "", false
+	}
+	return v, true
+}
+
 // Bind loads the request body in the given Validator then calls the Validate method on the
 // unmarshalled object.
 func (c *Context) Bind(v Validator) error {

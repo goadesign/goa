@@ -20,13 +20,13 @@ type ListBottleContext struct {
 func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
-	rawAccountID, _ := c.Params["accountID"]
+	rawAccountID, _ := c.Get("accountID")
 	if accountID, err := strconv.Atoi(rawAccountID); err == nil {
 		ctx.AccountID = int(accountID)
 	} else {
 		err = goa.InvalidParamValue("accountID", rawAccountID, "number", err)
 	}
-	rawYears := c.Query["years"]
+	rawYears := c.Get("years")
 	if rawYears != nil {
 		ctx.HasYears = true
 		years := make([]int, len(rawYears))
@@ -60,13 +60,13 @@ type ShowBottleContext struct {
 func NewShowBottleContext(c *goa.Context) (*ShowBottleContext, error) {
 	var err error
 	ctx := ShowBottleContext{Context: c}
-	rawAccountID, _ := c.Params["accountID"]
+	rawAccountID, _ := c.Get("accountID")
 	if accountID, err := strconv.Atoi(rawAccountID); err == nil {
 		ctx.AccountID = int(accountID)
 	} else {
 		err = goa.InvalidParamValue("accountID", rawAccountID, "number", err)
 	}
-	rawID, _ := c.Params["ID"]
+	rawID, _ := c.Get("ID")
 	if ID, err := strconv.Atoi(rawID); err == nil {
 		ctx.ID = int(ID)
 	} else {
@@ -116,7 +116,7 @@ type (
 func NewCreateBottleContext(c *goa.Context) (*CreateBottleContext, error) {
 	var err error
 	ctx := CreateBottleContext{Context: c}
-	rawAccountID, _ := c.Params["accountID"]
+	rawAccountID, _ := c.Get("accountID")
 	if accountID, err := strconv.Atoi(rawAccountID); err == nil {
 		ctx.AccountID = int(accountID)
 	} else {
@@ -251,13 +251,13 @@ type (
 func NewUpdateBottleContext(c *goa.Context) (*UpdateBottleContext, error) {
 	var err error
 	ctx := UpdateBottleContext{Context: c}
-	rawAccountID, _ := c.Params["accountID"]
+	rawAccountID, _ := c.Get("accountID")
 	if accountID, err := strconv.Atoi(rawAccountID); err == nil {
 		ctx.AccountID = int(accountID)
 	} else {
 		err = goa.InvalidParamValue("accountID", rawAccountID, "number", err)
 	}
-	rawID, _ := c.Params["ID"]
+	rawID, _ := c.Get("ID")
 	if ID, err := strconv.Atoi(rawID); err == nil {
 		ctx.ID = int(ID)
 	} else {
@@ -375,13 +375,13 @@ type DeleteBottleContext struct {
 func NewDeleteBottleContext(c *goa.Context) (*DeleteBottleContext, error) {
 	var err error
 	ctx := DeleteBottleContext{Context: c}
-	rawAccountID, _ := c.Params["accountID"]
+	rawAccountID, _ := c.Get("accountID")
 	if accountID, err := strconv.Atoi(rawAccountID); err == nil {
 		ctx.AccountID = int(accountID)
 	} else {
 		err = goa.InvalidParamValue("accountID", rawAccountID, "number", err)
 	}
-	rawID, _ := c.Params["ID"]
+	rawID, _ := c.Get("ID")
 	if ID, err := strconv.Atoi(rawID); err == nil {
 		ctx.ID = int(ID)
 	} else {
@@ -414,13 +414,13 @@ type RateBottleContext struct {
 func NewRateBottleContext(c *goa.Context) (*RateBottleContext, error) {
 	var err error
 	ctx := RateBottleContext{Context: c}
-	rawAccountID, _ := c.Params["accountID"]
+	rawAccountID, _ := c.Get("accountID")
 	if accountID, err := strconv.Atoi(rawAccountID); err == nil {
 		ctx.AccountID = int(accountID)
 	} else {
 		err = goa.InvalidParamValue("accountID", rawAccountID, "number", err)
 	}
-	rawID, _ := c.Params["ID"]
+	rawID, _ := c.Get("ID")
 	if ID, err := strconv.Atoi(rawID); err == nil {
 		ctx.ID = int(ID)
 	} else {

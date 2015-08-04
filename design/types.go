@@ -17,7 +17,7 @@ type (
 
 	// Array is the type for a JSON array.
 	Array struct {
-		ElemType DataType
+		ElemType *AttributeDefinition
 	}
 
 	// Object is the type for a JSON object.
@@ -26,10 +26,8 @@ type (
 )
 
 const (
-	// NullType is the JSON null value.
-	NullType Kind = iota + 1
 	// BooleanType represents a JSON bool.
-	BooleanType
+	BooleanType = iota + 1
 	// IntegerType represents a JSON integer.
 	IntegerType
 	// NumberType represents a JSON number including integers.
@@ -40,10 +38,9 @@ const (
 	ArrayType
 	// ObjectType represents a JSON object.
 	ObjectType
+)
 
-	// Null is the type for the JSON null value.
-	Null = Primitive(NullType)
-
+const (
 	// Boolean is the type for a JSON boolean.
 	Boolean = Primitive(BooleanType)
 
@@ -60,8 +57,6 @@ const (
 // Name is the human readable name of type.
 func (k Kind) Name() string {
 	switch Kind(k) {
-	case NullType:
-		return "null"
 	case BooleanType:
 		return "boolean"
 	case IntegerType:
@@ -89,8 +84,6 @@ func (p Primitive) Kind() Kind {
 // Name implements DataType, it return a human friendly name for the primitive.
 func (p Primitive) Name() string {
 	switch p.Kind() {
-	case NullType:
-		return "nil"
 	case BooleanType:
 		return "bool"
 	case IntegerType:
@@ -111,7 +104,7 @@ func (a *Array) Kind() Kind {
 
 // Name implements DataType.
 func (a *Array) Name() string {
-	return "[]" + a.ElemType.Name()
+	return "[]" + a.ElemType.Type.Name()
 }
 
 // Kind implements DataType.

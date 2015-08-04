@@ -3,7 +3,7 @@ package dsl
 import (
 	"fmt"
 
-	"github.com/raphael/goa/design"
+	. "github.com/raphael/goa/design"
 )
 
 // API defines the top level API DSL.
@@ -30,11 +30,11 @@ import (
 // })
 //
 func API(name string, dsl func()) error {
-	if Definition != nil {
+	if Design != nil {
 		appendError(fmt.Errorf("multiple API definitions"))
 	} else {
-		Definition = &design.APIDefinition{Name: name}
-		executeDSL(dsl, Definition)
+		Design = &APIDefinition{Name: name}
+		executeDSL(dsl, Design)
 	}
 	if len(dslErrors) > 0 {
 		reportErrors()
@@ -44,9 +44,9 @@ func API(name string, dsl func()) error {
 }
 
 // BaseParams defines the API base params
-func BaseParams(attributes ...*design.AttributeDefinition) {
+func BaseParams(attributes ...*AttributeDefinition) {
 	switch c := ctxStack.current().(type) {
-	case *design.APIDefinition:
+	case *APIDefinition:
 		c.BaseParams = attributes
 	default:
 		incompatibleDsl("BaseParams")

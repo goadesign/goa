@@ -1,6 +1,10 @@
 package main
 
-import "path/filepath"
+import (
+	"path/filepath"
+
+	"github.com/raphael/goa/design"
+)
 
 // Generator is the goa code generator.
 type Generator struct {
@@ -29,8 +33,22 @@ func (g *Generator) WriteCode() error {
 		return err
 	}
 
-	if err = ctxWr.Write(g.TargetPackage); err != nil {
-		return err
+	ctxWr.WriteHeader(g.TargetPackage)
+	for _, res := range design.Design.Resources {
+		for _, a := range res.Actions {
+			ctxData := ContextData{
+				Name:         a.ContextName(),
+				ResourceName: res.Name,
+				ActionName:   a.Name,
+				Params:       a.Params,
+				Payload:      a.Payload,
+				Headers:      a.Headers,
+				Responses:    a.Responses,
+			}
+			if err = ctxWr.Write(&ctxData); err != nil {
+				return err
+			}
+		}
 	}
 	if err = hdlWr.Write(g.TargetPackage); err != nil {
 		return err
