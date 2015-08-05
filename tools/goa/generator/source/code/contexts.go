@@ -2,7 +2,6 @@ package main
 
 import (
 	"text/template"
-	"unicode"
 
 	"github.com/raphael/goa/design"
 )
@@ -70,13 +69,14 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 
 // Write writes the code for the context types to outdir.
 func (w *ContextsWriter) Write(data *ContextData) error {
+	w.WriteHeader("main")
 	if err := w.CtxTmpl.Execute(w.writer, data); err != nil {
 		return err
 	}
 	if err := w.CtxNewTmpl.Execute(w.writer, data); err != nil {
 		return err
 	}
-	return nil
+	return w.FormatCode()
 }
 
 // newCoerceData is a helper function that creates a map that can be given to the "Coerce"
@@ -89,37 +89,13 @@ func newCoerceData(name string, att *design.AttributeDefinition, target string) 
 	}
 }
 
-// goify makes a valid go identifier out of any string.
-// It does that by replacing any non letter and non digit character with "_" and by making sure
-// the first character is a letter or "_".
-func goify(str string) string {
-	if str == "" {
-		return "_"
-	}
-	if !unicode.IsLetter(str[0]) && str[0] != '_' {
-		res = "_" + str[0:1]
-	} else {
-		res = str[0:1]
-	}
-	i := 1
-	for i < len(str) {
-		if !unicode.IsLetter(str[i]) && !unicode.IsDigit(str[i]) {
-			res += "_"
-		} else {
-			res += str[i : i+1]
-		}
-		i++
-	}
-	return res
-}
-
 // elemType returns the go type name of the array elements.
 func elemType(a *design.AttributeDefinition) string {
 	return a.Type.(*design.Array).ElemType.Type.Name()
 }
 
 // arrayAttribute returns the array element attribute definition.
-func arrayAttribute(a *design.AttributeDefinition) string {
+func arrayAttribute(a *design.AttributeDefinition) *design.AttributeDefinition {
 	return a.Type.(*design.Array).ElemType
 }
 
@@ -127,8 +103,8 @@ const (
 	ctxT = `// {{.Name}} provides the {{.ResourceName}} {{.ActionName}} action context
 type {{.Name}} struct {
 	*goa.Context
-	{{range .Params.Type.(Object)}}{{camelize .Name}} {{.Type.Name}}
-{{end}} }
+	{{if .Params}}{{range $name, $att := object .Params.Type}}{{camelize $name}} {{.Type.Name}}
+{{end}}{{end}} }
 `
 
 	ctxNewT = `
@@ -149,24 +125,23 @@ type {{.Name}} struct {
 	}
 	{{end}}{{if eq .Attribute.Type.Kind 4}}{{/* StringType */}}{{.Target}} = raw{{camelize .Name}}
 	{{end}}{{if eq .Attribute.Type.Kind 5}}{{/* ArrayType */}}elems{{camelize .Name}} := strings.Split(raw{{camelize .Name}}, ",")
-	elems{{camelize .Name}}2 := make([]{{elemType .Attribute}}, len(elems{{camelize .Name}}))
-	for i, rawElem := range elems{{camelize .Name}} {
-		{{template "Coerce" (newCoerceData "elem" (arrayAttribute .Attribute) (printf "elems%s2[i]" (camelize .Name)))}}
-	}
+	{{if eq (arrayAttribute .Attribute).Type.Kind 4}}{{.Target}} = elems{{camelize .Name}}{{else}}elems{{camelize .Name}}2 := make([]{{elemType .Attribute}}, len(elems{{camelize .Name}}))
+	for i, rawElem := range elems{{camelize .Name}} { 
+		{{template "Coerce" (newCoerceData "elem" (arrayAttribute .Attribute) (printf "elems%s2[i]" (camelize .Name)))}} }
 	{{.Target}} = elems{{camelize .Name}}2
-{{end}}// New{{.Name}} parses the incoming request URL and body, performs validations and creates the
+{{end}}{{end}}{{end}}{{/* define */}}// New{{.Name}} parses the incoming request URL and body, performs validations and creates the
 // context used by the controller action.
 func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 	var err error
 	ctx := {{.Name}}{Context: c}
-	{{$params := .Params}}{{range $name, $att := $params.Type.(Object)}}raw{{camelize $name}}, {{if $params.IsRequired $name}}ok{{else}}_{{end}} := c.Get("{{$name}}")
-	{{if $params.IsRequired $name}}if !ok {
+	{{$params := .Params}}{{if $params}}{{range $name, $att := object $params.Type}}raw{{camelize $name}}, {{if ($params.IsRequired $name)}}ok{{else}}_{{end}} := c.Get("{{$name}}")
+	{{if ($params.IsRequired $name)}}if !ok {
 		err = goa.MissingParam("$name", err)
 	} else {
-	{{end}}{{template "Coerce" (newCoerceData $name $att ctx.(camelize (goify $name)))}}
-	{{if $params.IsRequired $name}} }
+	{{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (camelize (goify $name))))}}
+	{{if ($params.IsRequired $name)}} }
 	{{end}}
-	{{end}}{{/* range $params */}}{{if .Payload}}var p {{.PayloadTypeName}}
+	{{end}}{{/* range $params */}}{{end}}{{if .Payload}}var p {{.PayloadTypeName}}
 	if err := c.Bind(&p); err != nil {
 		return nil, err
 	}
@@ -181,7 +156,8 @@ func (c *{{.Context}}) {{.Name}}({{.Resource}} {{.Type}}) error {
 `
 	payloadT = `// {{.Name}} is the {{.ResourceName}} {{.ActionName}} action payload.
 type {{.Name}} struct {
-	{{$name, $val := range .Type.Object}}{{camelize $name}} {{$val.Type.Name}} ` + "`" + `json:"{{.Name}}{{if not .Required}},omitempty{{end}}"` + "`" + `
+	{{range $name, $val := object .Type.Object}}{{camelize $name}} {{$val.Type.Name}} ` +
+		"`" + `json:"{{.Name}}{{if not .Required}},omitempty{{end}}"` + "`" + `
 {{end}} }
 `
 )

@@ -3,7 +3,7 @@ package dsl
 import (
 	"fmt"
 
-	"github.com/raphael/goa/design"
+	. "github.com/raphael/goa/design"
 )
 
 // Attribute defines an attribute type, description and an optional validation DSL.
@@ -30,10 +30,10 @@ import (
 //
 //     Param("AccountID", Integer, "Account ID")
 //
-func Attribute(name string, args ...interface{}) *design.AttributeDefinition {
+func Attribute(name string, args ...interface{}) {
 	if parent, ok := attributeDefinition(); ok {
 		if parent.Type == nil {
-			parent.Type = &Object{}
+			parent.Type = Object{}
 		}
 		var dataType DataType
 		var description string
@@ -63,30 +63,30 @@ func Attribute(name string, args ...interface{}) *design.AttributeDefinition {
 		} else if len(args) != 0 {
 			appendError(fmt.Errorf("too many arguments in call to Attribute"))
 		}
-		att := design.AttributeDefinition{
+		att := AttributeDefinition{
 			Type:        dataType,
 			Description: description,
 		}
 		if dsl != nil {
 			executeDSL(dsl, &att)
 		}
-		parent.Type.(*Object)[name] = &att
+		parent.Type.(Object)[name] = &att
 	}
 }
 
-// Header is an alias to Attribute
-func Header(args ...interface{}) *design.AttributeDefinition {
-	return Attribute(args...)
+// Header is an alias of Attribute
+func Header(name string, args ...interface{}) {
+	Attribute(name, args...)
 }
 
-// Member is an alias to Attribute
-func Member(args ...interface{}) *design.AttributeDefinition {
-	return Attribute(args...)
+// Member is an alias of Attribute
+func Member(name string, args ...interface{}) {
+	Attribute(name, args...)
 }
 
-// Param is an alias to Attribute
-func Param(args ...interface{}) *design.AttributeDefinition {
-	return Attribute(args...)
+// Param is an alias of Attribute
+func Param(name string, args ...interface{}) {
+	Attribute(name, args...)
 }
 
 // Enum defines the possible values for an attribute.
