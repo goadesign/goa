@@ -3,7 +3,7 @@ package dsl
 import (
 	"fmt"
 
-	"github.com/raphael/goa/design"
+	. "github.com/raphael/goa/design"
 )
 
 // Resource defines a resource DSL.
@@ -23,7 +23,6 @@ func Resource(name string, dsl func()) {
 	if a, ok := apiDefinition(); ok {
 		if _, ok := a.Resources[name]; ok {
 			appendError(fmt.Errorf("multiple definitions for resource %s", name))
-			return nil
 		}
 		resource := &ResourceDefinition{Name: name}
 		if ok := executeDSL(dsl, resource); ok {
@@ -33,11 +32,12 @@ func Resource(name string, dsl func()) {
 }
 
 // MediaType sets the resource media type
-func MediaType(val interface{}) {
-	if r, ok := ctxStack.current().(*design.ResourceDefinition); ok {
-		r.MediaType = val
+func MediaType(m *MediaTypeDefinition) {
+	if r, ok := ctxStack.current().(*ResourceDefinition); ok {
+		r.MediaType = m
+		m.Resource = r
 	} else if r, ok := responseDefinition(); ok {
-		r.MediaType = val
+		r.MediaType = m
 	}
 }
 

@@ -5,11 +5,21 @@ import (
 	"strings"
 )
 
+// TBD: DSLisize
+
 // NewMediaType creates new media type from its identifier, description and type.
 // Initializes a default view that returns all the media type members.
-func NewMediaType(id, desc string, o Object) *MediaTypeDefinition {
-	mt := MediaTypeDefinition{Object: o, Identifier: id, Description: desc, Links: make(map[string]*LinkDefinition)}
-	mt.Views = map[string]*ViewDefinition{"default": &ViewDefinition{Name: "default", Object: o}}
+func NewMediaType(id, name, desc string, o Object) *MediaTypeDefinition {
+	mt := MediaTypeDefinition{
+		Object:      o,
+		Identifier:  id,
+		Name:        name,
+		Description: desc,
+		Links:       make(map[string]*LinkDefinition),
+	}
+	mt.Views = map[string]*ViewDefinition{
+		"default": &ViewDefinition{Name: "default", Object: o},
+	}
 	return &mt
 }
 

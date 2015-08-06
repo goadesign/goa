@@ -1,38 +1,38 @@
 package dsl
 
-import "github.com/raphael/goa/design"
+import . "github.com/raphael/goa/design"
 
 // NewEnumValidation creates a definition for an enum validation.
-func NewEnumValidation(val ...interface{}) design.ValidationDefinition {
-	return &design.EnumValidationDefinition{Values: val}
+func NewEnumValidation(val ...interface{}) ValidationDefinition {
+	return &EnumValidationDefinition{Values: val}
 }
 
 // NewFormatValidation creates a definition for a format validation.
-func NewFormatValidation(f string) design.ValidationDefinition {
-	return &design.FormatValidationDefinition{Format: f}
+func NewFormatValidation(f string) ValidationDefinition {
+	return &FormatValidationDefinition{Format: f}
 }
 
 // NewMinimumValidation creates a definition for a minimum value validation.
-func NewMinimumValidation(min int) design.ValidationDefinition {
-	return &design.MinimumValidationDefinition{Min: min}
+func NewMinimumValidation(min int) ValidationDefinition {
+	return &MinimumValidationDefinition{Min: min}
 }
 
 // NewMaximumValidation creates a definition for a maximum value validation.
-func NewMaximumValidation(max int) design.ValidationDefinition {
-	return &design.MaximumValidationDefinition{Max: max}
+func NewMaximumValidation(max int) ValidationDefinition {
+	return &MaximumValidationDefinition{Max: max}
 }
 
 // NewMinLengthValidation creates a definition for a minimum length validation.
-func NewMinLengthValidation(minLength int) design.ValidationDefinition {
-	return &design.MinLengthValidationDefinition{MinLength: minLength}
+func NewMinLengthValidation(minLength int) ValidationDefinition {
+	return &MinLengthValidationDefinition{MinLength: minLength}
 }
 
 // NewMaxLengthValidation creates a definition for a maximum length validation.
-func NewMaxLengthValidation(maxLength int) design.ValidationDefinition {
-	return &design.MaxLengthValidationDefinition{MaxLength: maxLength}
+func NewMaxLengthValidation(maxLength int) ValidationDefinition {
+	return &MaxLengthValidationDefinition{MaxLength: maxLength}
 }
 
 // NewRequiredValidation creates a definition for a required fields validation.
-func NewRequiredValidation(names ...string) design.ValidationDefinition {
-	return &design.RequiredValidationDefinition{Names: names}
+func NewRequiredValidation(names ...string) ValidationDefinition {
+	return &RequiredValidationDefinition{Names: names}
 }

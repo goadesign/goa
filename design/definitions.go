@@ -1,8 +1,11 @@
 package design
 
 import (
+	"bytes"
 	"fmt"
+	"mime"
 	"regexp"
+	"sort"
 	"strings"
 
 	"bitbucket.org/pkg/inflect"
@@ -62,8 +65,10 @@ type (
 	// building the response body for the corresponding view.
 	MediaTypeDefinition struct {
 		Object                                  // A media type definition is a JSON object
+		Name         string                     // Name used in generated code
 		Identifier   string                     // RFC 6838 Media type identifier
 		Description  string                     // Optional description
+		Resource     *ResourceDefinition        // Corresponding resource if any
 		Links        map[string]*LinkDefinition // List of rendered links indexed by name (named hrefs to related resources)
 		Views        map[string]*ViewDefinition // List of supported views indexed by name
 		isCollection bool                       // Whether media type is for a collection of resources (true) or not (false)
@@ -260,6 +265,11 @@ func (r *ResourceDefinition) Validate() error {
 			}
 		}
 	}
+	if r.MediaType != nil {
+		if err := r.MediaType.Validate(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -280,7 +290,7 @@ func (r *ResourceDefinition) Parent() *ResourceDefinition {
 }
 
 // Validate tests whether the action definition is consistent: parameters have unique names and it has at least
-//  one response.
+// one response.
 func (a *ActionDefinition) Validate() error {
 	if a.Name == "" {
 		return fmt.Errorf("Action name cannot be empty")
@@ -290,6 +300,9 @@ func (a *ActionDefinition) Validate() error {
 			if i != j && r.Status == r2.Status {
 				return fmt.Errorf("Multiple response definitions with status code %d", r.Status)
 			}
+		}
+		if err := r.Validate(); err != nil {
+			return fmt.Errorf("invalid %d response definition: %s", r.Status, err)
 		}
 	}
 	if err := a.ValidateParams(); err != nil {
@@ -302,9 +315,14 @@ func (a *ActionDefinition) Validate() error {
 	return nil
 }
 
-// ContextName returns the name of the context data structure that correspones to this action.
+// ContextName computes the name of the context data structure that corresponds to this action.
 func (a *ActionDefinition) ContextName() string {
 	return inflect.Camelize(a.Name) + inflect.Camelize(a.Resource.Name) + "Context"
+}
+
+// PayloadTypeName computes the name of the payload data structure that corresponds to this action.
+func (a *ActionDefinition) PayloadTypeName() string {
+	return inflect.Camelize(a.Name) + inflect.Camelize(a.Resource.Name) + "Payload"
 }
 
 // ValidateParams checks the action parameters (make sure they have names, members and types).
@@ -314,7 +332,7 @@ func (a *ActionDefinition) ValidateParams() error {
 	}
 	params, ok := a.Params.Type.(Object)
 	if !ok {
-		return fmt.Errorf("invalid params type %s for action %s", a.Params.Type.Name(), a.Name)
+		return fmt.Errorf("invalid params type %s for action %s", a.Params.Type.GoType(), a.Name)
 	}
 	for n, p := range params {
 		if n == "" {
@@ -348,7 +366,7 @@ func (a *AttributeDefinition) Validate() error {
 	for _, v := range a.Validations {
 		if r, ok := v.(*RequiredValidationDefinition); ok {
 			if !isObject {
-				return fmt.Errorf("required fields validation defined on attribute of type %s", a.Type.Name())
+				return fmt.Errorf("required fields validation defined on attribute of type %s", a.Type.GoType())
 			}
 			for _, n := range r.Names {
 				var found bool
@@ -409,4 +427,75 @@ func (a *AttributeDefinition) IsRequired(attName string) bool {
 		}
 	}
 	return false
+}
+
+// Struct returns the go code for a data structure that contains field which match the attribute
+// type fields.
+// It panics if the attribute type is not Object.
+func (a *AttributeDefinition) Struct() string {
+	var buffer bytes.Buffer
+	buffer.WriteString("struct {\n")
+	o := a.Type.(Object)
+	keys := make([]string, len(o))
+	i := 0
+	for n := range o {
+		keys[i] = n
+		i++
+	}
+	sort.Strings(keys)
+	for _, n := range keys {
+		att := o[n]
+		code := att.Type.GoType()
+		switch t := att.Type.(type) {
+		case *Array:
+			code = t.Struct()
+		case Object:
+			code = att.Struct()
+		}
+		var omit string
+		if !a.IsRequired(n) {
+			omit = ",omitempty"
+		}
+		buffer.WriteString(fmt.Sprintf("\t%s %s `json:\"%s%s\"`\n",
+			Goify(n, true), code, n, omit))
+	}
+	buffer.WriteString("}")
+	return buffer.String()
+}
+
+// Validate checks that the media type definition is consistent: its identifier is a valid media
+// type identifier.
+func (m *MediaTypeDefinition) Validate() error {
+	if m.Resource == nil && m.Name == "" {
+		return fmt.Errorf("Media type must have a name")
+	}
+	if m.Identifier != "" {
+		_, _, err := mime.ParseMediaType(m.Identifier)
+		if err != nil {
+			return fmt.Errorf("invalid media type identifier: %s", err)
+		}
+	}
+	return nil
+}
+
+// TypeName computes the generated go structure type name for the media type.
+func (m *MediaTypeDefinition) TypeName() string {
+	if m.Resource != nil {
+		return Goify(m.Resource.Name, true)
+	}
+	return Goify(m.Name, true)
+}
+
+// Validate checks that the response definition is consistent: its status is set and the media
+// type definition if any is valid.
+func (r *ResponseDefinition) Validate() error {
+	if r.Status == 0 {
+		return fmt.Errorf("response status not defined")
+	}
+	if r.MediaType != nil {
+		if err := r.MediaType.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
 }

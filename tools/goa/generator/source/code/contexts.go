@@ -10,22 +10,25 @@ type (
 	// ContextsWriter generate codes for a goa application contexts.
 	ContextsWriter struct {
 		*CodeWriter
-		CtxTmpl     *template.Template
-		CtxNewTmpl  *template.Template
-		CtxRespTmpl *template.Template
-		PayloadTmpl *template.Template
+		CtxTmpl        *template.Template
+		CtxNewTmpl     *template.Template
+		CtxRespTmpl    *template.Template
+		PayloadTmpl    *template.Template
+		NewPayloadTmpl *template.Template
+		MediaTypeTmpl  *template.Template
 	}
 
-	// ContextData contains all the information used by the template to render the contexts
-	// code.
+	// ContextData contains all the information used by the template to render the context
+	// code for an action.
 	ContextData struct {
-		Name         string // e.g. "ListBottleContext"
-		ResourceName string // e.g. "bottles"
-		ActionName   string // e.g. "list"
-		Params       *design.AttributeDefinition
-		Payload      *design.AttributeDefinition
-		Headers      *design.AttributeDefinition
-		Responses    []*design.ResponseDefinition
+		Name            string // e.g. "ListBottleContext"
+		ResourceName    string // e.g. "bottles"
+		ActionName      string // e.g. "list"
+		PayloadTypeName string // e.g. "ListBottlePayload"
+		Params          *design.AttributeDefinition
+		Payload         *design.AttributeDefinition
+		Headers         *design.AttributeDefinition
+		Responses       []*design.ResponseDefinition
 	}
 )
 
@@ -57,23 +60,47 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 	if err != nil {
 		return nil, err
 	}
+	newPayloadTmpl, err := template.New("newpayload").Funcs(cw.FuncMap).Parse(newPayloadT)
+	if err != nil {
+		return nil, err
+	}
+	mediaTypeTmpl, err := template.New("mediatype").Funcs(cw.FuncMap).Parse(mediaTypeT)
+	if err != nil {
+		return nil, err
+	}
 	w := ContextsWriter{
-		CodeWriter:  cw,
-		CtxTmpl:     ctxTmpl,
-		CtxNewTmpl:  ctxNewTmpl,
-		CtxRespTmpl: ctxRespTmpl,
-		PayloadTmpl: payloadTmpl,
+		CodeWriter:     cw,
+		CtxTmpl:        ctxTmpl,
+		CtxNewTmpl:     ctxNewTmpl,
+		CtxRespTmpl:    ctxRespTmpl,
+		PayloadTmpl:    payloadTmpl,
+		NewPayloadTmpl: newPayloadTmpl,
+		MediaTypeTmpl:  mediaTypeTmpl,
 	}
 	return &w, nil
 }
 
-// Write writes the code for the context types to outdir.
+// Write writes the code for the context types to the writer.
 func (w *ContextsWriter) Write(data *ContextData) error {
 	w.WriteHeader("main")
 	if err := w.CtxTmpl.Execute(w.writer, data); err != nil {
 		return err
 	}
 	if err := w.CtxNewTmpl.Execute(w.writer, data); err != nil {
+		return err
+	}
+	if data.Payload != nil {
+		if err := w.PayloadTmpl.Execute(w.writer, data); err != nil {
+			return err
+		}
+		if err := w.NewPayloadTmpl.Execute(w.writer, data); err != nil {
+			return err
+		}
+	}
+	if err := w.MediaTypeTmpl.Execute(w.writer, data); err != nil {
+		return err
+	}
+	if err := w.CtxRespTmpl.Execute(w.writer, data); err != nil {
 		return err
 	}
 	return w.FormatCode()
@@ -83,7 +110,8 @@ func (w *ContextsWriter) Write(data *ContextData) error {
 // template.
 func newCoerceData(name string, att *design.AttributeDefinition, target string) map[string]interface{} {
 	return map[string]interface{}{
-		"Name":      goify(name),
+		"Name":      name,
+		"VarName":   design.Goify(name, false),
 		"Attribute": att,
 		"Target":    target,
 	}
@@ -91,7 +119,7 @@ func newCoerceData(name string, att *design.AttributeDefinition, target string) 
 
 // elemType returns the go type name of the array elements.
 func elemType(a *design.AttributeDefinition) string {
-	return a.Type.(*design.Array).ElemType.Type.Name()
+	return a.Type.(*design.Array).ElemType.Type.GoType()
 }
 
 // arrayAttribute returns the array element attribute definition.
@@ -108,38 +136,38 @@ type {{.Name}} struct {
 `
 
 	ctxNewT = `
-{{define "Coerce"}}{{if eq .Attribute.Type.Kind 1}}{{/* BooleanType */}}	if {{.Name}}, err := strconv.ParseBool(raw{{camelize .Name}}); err == nil {
-		{{.Target}} = {{.Name}}
+{{define "Coerce"}}{{if eq .Attribute.Type.Kind 1}}{{/* BooleanType */}}	if {{.VarName}}, err := strconv.ParseBool(raw{{camelize .Name}}); err == nil {
+		{{.Target}} = {{.VarName}}
 	} else {
 		err = goa.InvalidParamValue("{{.Name}}", raw{{camelize .Name}}, "boolean", err)
 	}
-	{{end}}{{if eq .Attribute.Type.Kind 2}}{{/* IntegerType */}}if {{.Name}}, err := strconv.Atoi(raw{{camelize .Name}}); err == nil {
-		{{.Target}} = int({{.Name}})
+	{{end}}{{if eq .Attribute.Type.Kind 2}}{{/* IntegerType */}}if {{.VarName}}, err := strconv.Atoi(raw{{camelize .Name}}); err == nil {
+		{{.Target}} = int({{.VarName}})
 	} else {
 		err = goa.InvalidParamValue("{{.Name}}", raw{{camelize .Name}}, "integer", err)
 	}
-	{{end}}{{if eq .Attribute.Type.Kind 3}}{{/* NumberType */}}if {{.Name}}, err := strconv.ParseFloat(raw{{camelize .Name}}, 64); err == nil {
-		{{.Target}} = {{.Name}}
+	{{end}}{{if eq .Attribute.Type.Kind 3}}{{/* NumberType */}}if {{.VarName}}, err := strconv.ParseFloat(raw{{camelize .Name}}, 64); err == nil {
+		{{.Target}} = {{.VarName}}
 	} else {
 		err = goa.InvalidParamValue("{{.Name}}", raw{{camelize .Name}}, "number", err)
 	}
 	{{end}}{{if eq .Attribute.Type.Kind 4}}{{/* StringType */}}{{.Target}} = raw{{camelize .Name}}
 	{{end}}{{if eq .Attribute.Type.Kind 5}}{{/* ArrayType */}}elems{{camelize .Name}} := strings.Split(raw{{camelize .Name}}, ",")
-	{{if eq (arrayAttribute .Attribute).Type.Kind 4}}{{.Target}} = elems{{camelize .Name}}{{else}}elems{{camelize .Name}}2 := make([]{{elemType .Attribute}}, len(elems{{camelize .Name}}))
+	{{if eq (arrayAttribute .Attribute).Type.Kind 4}}{{.Target}} = elems{{camelize .Name}}
+	{{else}}elems{{camelize .Name}}2 := make([]{{elemType .Attribute}}, len(elems{{camelize .Name}}))
 	for i, rawElem := range elems{{camelize .Name}} { 
 		{{template "Coerce" (newCoerceData "elem" (arrayAttribute .Attribute) (printf "elems%s2[i]" (camelize .Name)))}} }
 	{{.Target}} = elems{{camelize .Name}}2
-{{end}}{{end}}{{end}}{{/* define */}}// New{{.Name}} parses the incoming request URL and body, performs validations and creates the
+{{end}}{{end}}{{end}}{{/* define */}}// New{{camelize .Name}} parses the incoming request URL and body, performs validations and creates the
 // context used by the controller action.
-func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
+func New{{camelize .Name}}(c *goa.Context) (*{{.Name}}, error) {
 	var err error
 	ctx := {{.Name}}{Context: c}
 	{{$params := .Params}}{{if $params}}{{range $name, $att := object $params.Type}}raw{{camelize $name}}, {{if ($params.IsRequired $name)}}ok{{else}}_{{end}} := c.Get("{{$name}}")
 	{{if ($params.IsRequired $name)}}if !ok {
-		err = goa.MissingParam("$name", err)
+		err = goa.MissingParam("{{$name}}", err)
 	} else {
-	{{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (camelize (goify $name))))}}
-	{{if ($params.IsRequired $name)}} }
+	{{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (camelize (goify $name))))}}{{if ($params.IsRequired $name)}} }
 	{{end}}
 	{{end}}{{/* range $params */}}{{end}}{{if .Payload}}var p {{.PayloadTypeName}}
 	if err := c.Bind(&p); err != nil {
@@ -149,15 +177,18 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 	{{end}}return &ctx, err
 }
 `
-	ctxRespT = `// {.Name}} builds a HTTP response with status code {{.Code}}.
-func (c *{{.Context}}) {{.Name}}({{.Resource}} {{.Type}}) error {
-	return c.JSON({{.Code}}, {{.Resource}})
+	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{.Name}} sends a HTTP response with status code {{.Status}}.
+func (c *{{$ctx.Name}}) {{.Name}}({{if .MediaType}}resp *{{.MediaType.TypeName}}{{end}}) error {
+	{{if .MediaType}}return c.JSON({{.Status}}, resp){{else}}return c.Respond({{.Status}}, nil){{end}}
 }
 `
-	payloadT = `// {{.Name}} is the {{.ResourceName}} {{.ActionName}} action payload.
-type {{.Name}} struct {
-	{{range $name, $val := object .Type.Object}}{{camelize $name}} {{$val.Type.Name}} ` +
+	payloadT = `// {{.PayloadTypeName}} is the {{.ResourceName}} {{.ActionName}} action payload.
+type {{.PayloadTypeName}} struct {
+	{{range $name, $val := object .Payload.Type.Object}}{{camelize $name}} {{$val.Type.Name}} ` +
 		"`" + `json:"{{.Name}}{{if not .Required}},omitempty{{end}}"` + "`" + `
 {{end}} }
 `
+	newPayloadT = `// New{{.ActionName}}`
+
+	mediaTypeT = `// New{{.ActionName}}`
 )

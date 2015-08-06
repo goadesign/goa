@@ -207,6 +207,103 @@ var _ = Describe("ContextWriter", func() {
 					Ω(written).Should(ContainSubstring(intArrayContextFactory))
 				})
 			})
+
+			Context("with an param using a reserved keyword as name", func() {
+				BeforeEach(func() {
+					intParam := &design.AttributeDefinition{Type: design.Integer}
+					dataType := design.Object{
+						"int": intParam,
+					}
+					params = &design.AttributeDefinition{
+						Type: dataType,
+					}
+				})
+
+				It("writes the contexts code", func() {
+					err := writer.Write(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(resContext))
+					Ω(written).Should(ContainSubstring(resContextFactory))
+				})
+			})
+
+			Context("with a required param", func() {
+				BeforeEach(func() {
+					intParam := &design.AttributeDefinition{Type: design.Integer}
+					dataType := design.Object{
+						"int": intParam,
+					}
+					required := design.RequiredValidationDefinition{
+						Names: []string{"int"},
+					}
+					params = &design.AttributeDefinition{
+						Type:        dataType,
+						Validations: []design.ValidationDefinition{&required},
+					}
+				})
+
+				It("writes the contexts code", func() {
+					err := writer.Write(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(requiredContext))
+					Ω(written).Should(ContainSubstring(requiredContextFactory))
+				})
+			})
+
+			Context("with a simple payload", func() {
+				BeforeEach(func() {
+					payload = &design.AttributeDefinition{Type: design.String}
+				})
+
+				It("writes the contexts code", func() {
+					err := writer.Write(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(payloadContext))
+					Ω(written).Should(ContainSubstring(payloadContextFactory))
+				})
+			})
+
+			Context("with a object payload", func() {
+				BeforeEach(func() {
+					intParam := &design.AttributeDefinition{Type: design.Integer}
+					strParam := &design.AttributeDefinition{Type: design.String}
+					dataType := design.Object{
+						"int": intParam,
+						"str": strParam,
+					}
+					required := design.RequiredValidationDefinition{
+						Names: []string{"int"},
+					}
+					payload = &design.AttributeDefinition{
+						Type:        dataType,
+						Validations: []design.ValidationDefinition{&required},
+					}
+				})
+
+				It("writes the contexts code", func() {
+					err := writer.Write(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(payloadObjContext))
+					Ω(written).Should(ContainSubstring(payloadObjContextFactory))
+				})
+			})
+
 		})
 	})
 })
@@ -349,6 +446,85 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 		}
 	}
 	ctx.Param = elemsParam2
+
+	return &ctx, err
+}
+`
+
+const resContext = `
+type ListBottleContext struct {
+	*goa.Context
+	Int int
+}
+`
+
+const resContextFactory = `
+func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+	var err error
+	ctx := ListBottleContext{Context: c}
+	rawInt, _ := c.Get("int")
+	if int_, err := strconv.Atoi(rawInt); err == nil {
+		ctx.Int = int(int_)
+	} else {
+		err = goa.InvalidParamValue("int", rawInt, "integer", err)
+	}
+
+	return &ctx, err
+}
+`
+
+const requiredContext = `
+type ListBottleContext struct {
+	*goa.Context
+	Int int
+}
+`
+
+const requiredContextFactory = `
+func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+	var err error
+	ctx := ListBottleContext{Context: c}
+	rawInt, ok := c.Get("int")
+	if !ok {
+		err = goa.MissingParam("int", err)
+	} else {
+		if int_, err := strconv.Atoi(rawInt); err == nil {
+			ctx.Int = int(int_)
+		} else {
+			err = goa.InvalidParamValue("int", rawInt, "integer", err)
+		}
+	}
+
+	return &ctx, err
+}
+`
+
+const payloadContext = `
+type ListBottleContext struct {
+	*goa.Context
+	payload *ListBottlePayload
+}
+`
+
+const payloadContextFactory = `
+func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+	var err error
+	ctx := ListBottleContext{Context: c}
+
+	return &ctx, err
+}
+`
+const payloadObjContext = `
+type ListBottleContext struct {
+	*goa.Context
+	payload *ListBottlePayload
+}
+`
+
+const payloadObjContextFactory = `
+func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+	var err error
+	ctx := ListBottleContext{Context: c}
 
 	return &ctx, err
 }
