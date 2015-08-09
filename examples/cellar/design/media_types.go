@@ -1,6 +1,6 @@
 package main
 
-import . "github.com/raphael/goa/design"
+import . "github.com/raphael/goa/design/dsl"
 
 var BottleMediaType = MediaType("application/vnd.goa.example.bottle", func() {
 	Description("A bottle of wine")

@@ -1,6 +1,11 @@
 package dsl
 
-import . "github.com/raphael/goa/design"
+import (
+	"fmt"
+
+	"bitbucket.org/pkg/inflect"
+	. "github.com/raphael/goa/design"
+)
 
 // Action defines an action definition DSL.
 //
@@ -105,12 +110,18 @@ func Params(dsl func()) {
 	}
 }
 
-// Payload sets the action payload attributes.
-func Payload(dsl func()) {
+// Payload defines the action payload DSL.
+func Payload(p interface{}) {
 	if a, ok := actionDefinition(); ok {
-		payload := new(AttributeDefinition)
-		if executeDSL(dsl, payload) {
-			a.Payload = payload
+		if at, ok := p.(*design.AttributeDefinition); ok {
+			a.Payload = at
+			return
+		}
+		rn := inflect.Camelize(a.Resource.Name)
+		an := inflect.Camelize(a.Name)
+		payload := design.AttributeDefinition{Name: fmt.Sprintf("%s%sPayload", an, rn)}
+		if executeDSL(dsl, &payload) {
+			a.Payload = &payload
 		}
 	}
 }

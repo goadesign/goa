@@ -1,10 +1,13 @@
+// Package design defines types which describe the data types used by action controllers.
+// These are the data structures of the request payloads and parameters as well as the response
+// payloads.
+// There are primitive types corresponding to the JSON primitive types (bool, string, integer and
+// number), array types which represent a collection of another type and object types corresponding
+// to JSON objects (i.e. a map indexed by strings where each value may be any of the data types).
+// On top of these the package also defines "user types" and "media types". Both these types are
+// named objects with additional properties (a description and for media types the media type
+// identifier, links and views).
 package design
-
-import (
-	"bytes"
-	"fmt"
-	"unicode"
-)
 
 type (
 	// A Kind defines the JSON type that a DataType represents.
@@ -12,8 +15,14 @@ type (
 
 	// DataType is the common interface to all types.
 	DataType interface {
-		Kind() Kind     // Kind
-		GoType() string // go type name
+		Kind() Kind // Kind
+	}
+
+	// DataStructure is the interface implemented by all data structure types. That is
+	// objects, user types and media types.
+	DataStructure interface {
+		// Object represents the data structure underlying attributes.
+		Obj() Object
 	}
 
 	// Primitive is the type for null, boolean, integer, number and string.
@@ -25,196 +34,110 @@ type (
 	}
 
 	// Object is the type for a JSON object.
-	// Attribute definitions have a type (DataType) and may also define validation rules.
 	Object map[string]*AttributeDefinition
+
+	// UserType is the type for user defined types that are not media types (e.g. payload
+	// types).
+	UserTypeDefinition struct {
+		// A user type is an object
+		Object
+		// Name of type
+		Name string
+		// Description is the optional description of the media type.
+		Description string
+	}
+
+	// MediaTypeDefinition describes the rendering of a resource using property and link
+	// definitions. A property corresponds to a single member of the media type,
+	// it has a name and a type as well as optional validation rules. A link has a
+	// name and a URL that points to a related resource.
+	// Media types also define views which describe which members and links to render when
+	// building the response body for the corresponding view.
+	MediaTypeDefinition struct {
+		// A media type is a type
+		UserTypeDefinition
+		// Identifier is the RFC 6838 media type identifier.
+		Identifier string
+		// Links list the rendered links indexed by name.
+		Links map[string]*LinkDefinition
+		// Views list the supported views indexed by name.
+		Views map[string]*ViewDefinition
+	}
 )
 
 const (
-	// BooleanType represents a JSON bool.
-	BooleanType = iota + 1
-	// IntegerType represents a JSON integer.
-	IntegerType
-	// NumberType represents a JSON number including integers.
-	NumberType
-	// StringType represents a JSON string.
-	StringType
-	// ArrayType represents a JSON array.
-	ArrayType
-	// ObjectType represents a JSON object.
-	ObjectType
+	// BooleanKind represents a JSON bool.
+	BooleanKind = iota + 1
+	// IntegerKind represents a JSON integer.
+	IntegerKind
+	// NumberKind represents a JSON number including integers.
+	NumberKind
+	// StringKind represents a JSON string.
+	StringKind
+	// ArrayKind represents a JSON array.
+	ArrayKind
+	// ObjectKind represents a JSON object.
+	ObjectKind
+	// UserTypeKind represents a user type.
+	UserTypeKind
+	// MediaTypeKind represents a media type.
+	MediaTypeKind
 )
 
 const (
 	// Boolean is the type for a JSON boolean.
-	Boolean = Primitive(BooleanType)
+	Boolean = Primitive(BooleanKind)
 
 	// Integer is the type for a JSON number without a fraction or exponent part.
-	Integer = Primitive(IntegerType)
+	Integer = Primitive(IntegerKind)
 
 	// Number is the type for any JSON number, including integers.
-	Number = Primitive(NumberType)
+	Number = Primitive(NumberKind)
 
 	// String is the type for a JSON string.
-	String = Primitive(StringType)
+	String = Primitive(StringKind)
 )
-
-// Name is the human readable name of type.
-func (k Kind) Name() string {
-	switch Kind(k) {
-	case BooleanType:
-		return "boolean"
-	case IntegerType:
-		return "integer"
-	case NumberType:
-		return "number"
-	case StringType:
-		return "string"
-	case ArrayType:
-		return "array"
-	case ObjectType:
-		return "object"
-	default:
-		panic(fmt.Sprintf("goa bug: unknown type %#v", k))
-	}
-}
 
 // DataType implementation
 
-// Kind implements DataType.
+// Kind implements DataKind.
 func (p Primitive) Kind() Kind {
 	return Kind(p)
 }
 
-// GoType implements DataType, it return a human friendly name for the primitive.
-func (p Primitive) GoType() string {
-	switch p.Kind() {
-	case BooleanType:
-		return "bool"
-	case IntegerType:
-		return "int"
-	case NumberType:
-		return "float64"
-	case StringType:
-		return "string"
-	default:
-		panic(fmt.Sprintf("goa bug: unknown primitive type %#v", p))
-	}
-}
-
-// Kind implements DataType.
+// Kind implements DataKind.
 func (a *Array) Kind() Kind {
-	return ArrayType
+	return ArrayKind
 }
 
-// GoType implements DataType.
-func (a *Array) GoType() string {
-	return "[]" + a.ElemType.Type.GoType()
-}
-
-// Struct returns go code that defines a array of items that match the arrray ElemType definition.
-func (a *Array) Struct() string {
-	switch t := a.ElemType.Type.(type) {
-	case Primitive:
-		return "[]" + t.GoType()
-	case *Array:
-		return "[]" + t.Struct()
-	case Object:
-		return "[]" + a.ElemType.Struct()
-	}
-	panic("goa bug: unknown array element type")
-}
-
-// Kind implements DataType.
+// Kind implements DataKind.
 func (o Object) Kind() Kind {
-	return ObjectType
+	return ObjectKind
 }
 
-// GoType is not actually used as only payloads can be objects.
-// Payloads are treated separatly.
-func (o Object) GoType() string {
-	return "map[string]interface{}"
+// Kind implements DataKind.
+func (u *UserTypeDefinition) Kind() Kind {
+	return UserTypeKind
 }
 
-// Goify makes a valid go identifier out of any string.
-// It does that by removing any non letter and non digit character and by making sure the first
-// character is a letter or "_".
-// Goify produces a "CamelCase" version of the string, if firstUpper is true the first character
-// of the identifier is uppercase otherwise it's lowercase.
-func Goify(str string, firstUpper bool) string {
-	var b bytes.Buffer
-	var firstWritten, nextUpper bool
-	for i := 0; i < len(str); i++ {
-		r := rune(str[i])
-		if r == '_' {
-			nextUpper = true
-		} else if unicode.IsLetter(r) || unicode.IsDigit(r) {
-			if !firstWritten {
-				if firstUpper {
-					r = unicode.ToUpper(r)
-				} else {
-					r = unicode.ToLower(r)
-				}
-				firstWritten = true
-				nextUpper = false
-			} else if nextUpper {
-				r = unicode.ToUpper(r)
-				nextUpper = false
-			}
-			b.WriteRune(r)
-		}
-	}
-	if b.Len() == 0 {
-		return "_v" // you have a better idea?
-	}
-	res := b.String()
-	if _, ok := reserved[res]; ok {
-		res += "_"
-	}
-	return res
+// Kind implements DataKind.
+func (m *MediaTypeDefinition) Kind() Kind {
+	return MediaTypeKind
 }
 
-// reserved golang keywords
-var reserved = map[string]bool{
-	"byte":       true,
-	"complex128": true,
-	"complex64":  true,
-	"float32":    true,
-	"float64":    true,
-	"int":        true,
-	"int16":      true,
-	"int32":      true,
-	"int64":      true,
-	"int8":       true,
-	"rune":       true,
-	"string":     true,
-	"uint16":     true,
-	"uint32":     true,
-	"uint64":     true,
-	"uint8":      true,
+// DataStructure implementation
 
-	"break":       true,
-	"case":        true,
-	"chan":        true,
-	"const":       true,
-	"continue":    true,
-	"default":     true,
-	"defer":       true,
-	"else":        true,
-	"fallthrough": true,
-	"for":         true,
-	"func":        true,
-	"go":          true,
-	"goto":        true,
-	"if":          true,
-	"import":      true,
-	"interface":   true,
-	"map":         true,
-	"package":     true,
-	"range":       true,
-	"return":      true,
-	"select":      true,
-	"struct":      true,
-	"switch":      true,
-	"type":        true,
-	"var":         true,
+// Obj returns itself for objects.
+func (o Object) Obj() Object {
+	return o
+}
+
+// Object returns the underlying object.
+func (u *UserTypeDefinition) Obj() Object {
+	return u.Object
+}
+
+// Object returns the underlying object.
+func (m *MediaTypeDefinition) Obj() Object {
+	return m.Object
 }

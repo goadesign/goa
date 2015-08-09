@@ -1,106 +1,65 @@
 package design
 
-import (
-	"fmt"
-	"strings"
-)
+import "fmt"
+import . "github.com/raphael/goa/design"
 
-// TBD: DSLisize
-
-// NewMediaType creates new media type from its identifier, description and type.
-// Initializes a default view that returns all the media type members.
-func NewMediaType(id, name, desc string, o Object) *MediaTypeDefinition {
-	mt := MediaTypeDefinition{
-		Object:      o,
-		Identifier:  id,
-		Name:        name,
-		Description: desc,
-		Links:       make(map[string]*LinkDefinition),
+// MediaType defines a media type DSL.
+//
+// MediaType("application/vnd.goa.example.bottle", func() {
+//	Description("A bottle of wine")
+//	Attributes(func() {
+//		Attribute("id", Integer, "ID of bottle")
+//		Attribute("href", String, "API href of bottle")
+//		Attribute("origin", Origin, "Details on wine origin")
+//		Links(func() {
+//			Link("origin")
+//		})
+//              Required("href")
+//      })
+//	View("default", func() {
+//		Attribute("id")
+//		Attribute("href")
+//	})
+// })
+func MediaType(identifier string, dsl func()) {
+	mt := MediaTypeDefinition{Name: name}
+	if ok := executeDSL(dsl, &mt); ok {
+		Design.MediaTypes = append(Design.MediaTypes, &mt)
 	}
-	mt.Views = map[string]*ViewDefinition{
-		"default": &ViewDefinition{Name: "default", Object: o},
-	}
-	return &mt
 }
 
 // View adds a new view to the media type.
-// It returns the view so it can be modified further.
-// This method ignore passed-in property names that do not exist in media type.
-func (m *MediaTypeDefinition) View(name string, members ...string) *ViewDefinition {
-	o := make(Object, len(members))
-	i := 0
-	for n, p := range m.Object {
-		found := false
-		for _, m := range members {
-			if m == n {
-				found = true
-				break
-			}
+func View(name string, dsl func()) {
+	if mt, ok := mediaTypeDefinition(); ok {
+		if _, ok = mt.Views[name]; ok {
+			appendError(fmt.Errorf("multiple definitions for view %s in media type %s", name, mt.Name))
 		}
-		if found {
-			o[n] = p
-			i++
+		v := ViewDefinition{Name: name}
+		if ok := executeDSL(dsl, &v); ok {
+			mt.Views[name] = &v
 		}
 	}
-	view := ViewDefinition{Name: name, Object: o, MediaType: m}
-	m.Views[name] = &view
-	return &view
 }
 
-// With sets the list of member names rendered by view.
-// If a member is a media type then the view used to render it defaults to the view with same name.
-// The view used to renber media types members can be explicitely set using the syntax
-// "<member name>:<view name>". For example:
-//     m.View("expanded").As("id", "expensive_attribute:default")
-func (v *ViewDefinition) With(members ...string) *ViewDefinition {
-	o := Object{}
-	for _, m := range members {
-		elems := strings.SplitN(m, ":", 2)
-		mm, ok := v.MediaType.Object[elems[0]]
-		if !ok {
-			panic(fmt.Sprintf("Invalid view member '%s', no such media type member.", m))
-		}
-		if len(elems) > 1 {
-			if mm.Type.Kind() != ObjectType {
-				panic(fmt.Sprintf("Cannot use view '%s' to render media type member '%s': not a media type", elems[1], elems[0]))
-			}
-		}
-		o[m] = mm
+// Attributes defines the media type attributes DSL.
+func Attributes(dsl func()) {
+	if mt, ok := mediaTypeDefinition(); ok {
+		executeDSL(dsl, &mt)
 	}
-	v.Object = o
-	return v
 }
 
-// Link specifies the list of links rendered with this media type.
-func (v *ViewDefinition) Link(links ...string) *ViewDefinition {
-	for _, l := range links {
-		if _, ok := v.MediaType.Links[l]; !ok {
-			panic(fmt.Sprintf("Invalid view link '%s', no such media type link.", l))
-		}
+// Links defines the media type links DSL.
+func Links(dsl func()) {
+	if mt, ok := mediaTypeDefinition(); ok {
+		executeDSL(dsl, &mt)
 	}
-	v.Links = append(v.Links, links...)
-	return v
 }
 
-// Link adds a new link to the given media type member.
-// It returns the link so it can be modified further.
-func (m *MediaTypeDefinition) Link(name string) *LinkDefinition {
-	member, ok := m.Object[name]
-	if !ok {
-		panic(fmt.Sprintf("Invalid  link '%s', no such media type member.", name))
+// Link defines a media type link DSL.
+func Link(name string, args ...interface{}) {
+	if _, ok := mediaTypeDefinition(); ok {
+		Attribute(name, args...)
 	}
-	link := LinkDefinition{Name: name, Member: member, MediaType: m}
-	m.Links[name] = &link
-	return &link
-}
-
-// As overrides the link name.
-// It returns the link so it can be modified further.
-func (l *LinkDefinition) As(name string) *LinkDefinition {
-	delete(l.MediaType.Links, l.Name)
-	l.Name = name
-	l.MediaType.Links[name] = l
-	return l
 }
 
 // CollectionOf creates a collection media type from its element media type.

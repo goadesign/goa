@@ -17,7 +17,7 @@ var _ = Describe("Struct", func() {
 				att = new(design.AttributeDefinition)
 			}
 			att.Type = object
-			st = att.Struct()
+			st = design.SourceCode(att.Type.(design.Object))
 		})
 
 		Context("of primitive types", func() {

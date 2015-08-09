@@ -96,8 +96,8 @@ func reportErrors() {
 
 // actionDefinition returns true and current context if it is an ActionDefinition,
 // nil and false otherwise.
-func actionDefinition() (*ActionDefinition, bool) {
-	a, ok := ctxStack.current().(*ActionDefinition)
+func actionDefinition() (*design.ActionDefinition, bool) {
+	a, ok := ctxStack.current().(*design.ActionDefinition)
 	if !ok {
 		incompatibleDsl(caller())
 	}

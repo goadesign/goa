@@ -21,14 +21,15 @@ type (
 	// ContextData contains all the information used by the template to render the context
 	// code for an action.
 	ContextData struct {
-		Name            string // e.g. "ListBottleContext"
-		ResourceName    string // e.g. "bottles"
-		ActionName      string // e.g. "list"
-		PayloadTypeName string // e.g. "ListBottlePayload"
-		Params          *design.AttributeDefinition
-		Payload         *design.AttributeDefinition
-		Headers         *design.AttributeDefinition
-		Responses       []*design.ResponseDefinition
+		Name             string // e.g. "ListBottleContext"
+		ResourceName     string // e.g. "bottles"
+		ActionName       string // e.g. "list"
+		PayloadTypeName  string // e.g. "ListBottlePayload"
+		PayloadSignature string // e.g. "*ListBottlePayload"
+		Params           *design.AttributeDefinition
+		Payload          *design.AttributeDefinition
+		Headers          *design.AttributeDefinition
+		Responses        []*design.ResponseDefinition
 	}
 )
 
@@ -90,11 +91,13 @@ func (w *ContextsWriter) Write(data *ContextData) error {
 		return err
 	}
 	if data.Payload != nil {
-		if err := w.PayloadTmpl.Execute(w.writer, data); err != nil {
-			return err
-		}
-		if err := w.NewPayloadTmpl.Execute(w.writer, data); err != nil {
-			return err
+		if _, ok := data.Payload.Type.(design.Object); ok {
+			if err := w.PayloadTmpl.Execute(w.writer, data); err != nil {
+				return err
+			}
+			if err := w.NewPayloadTmpl.Execute(w.writer, data); err != nil {
+				return err
+			}
 		}
 	}
 	if err := w.MediaTypeTmpl.Execute(w.writer, data); err != nil {
@@ -131,7 +134,8 @@ const (
 	ctxT = `// {{.Name}} provides the {{.ResourceName}} {{.ActionName}} action context
 type {{.Name}} struct {
 	*goa.Context
-	{{if .Params}}{{range $name, $att := object .Params.Type}}{{camelize $name}} {{.Type.Name}}
+	{{if .Params}}{{range $name, $att := object .Params.Type}}{{camelize $name}} {{.Type.GoType}}
+{{end}}{{if .PayloadTypeName}}payload {{.PayloadSignature}}
 {{end}}{{end}} }
 `
 
@@ -167,7 +171,7 @@ func New{{camelize .Name}}(c *goa.Context) (*{{.Name}}, error) {
 	{{if ($params.IsRequired $name)}}if !ok {
 		err = goa.MissingParam("{{$name}}", err)
 	} else {
-	{{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (camelize (goify $name))))}}{{if ($params.IsRequired $name)}} }
+	{{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (camelize (goify $name true))))}}{{if ($params.IsRequired $name)}} }
 	{{end}}
 	{{end}}{{/* range $params */}}{{end}}{{if .Payload}}var p {{.PayloadTypeName}}
 	if err := c.Bind(&p); err != nil {
@@ -180,12 +184,12 @@ func New{{camelize .Name}}(c *goa.Context) (*{{.Name}}, error) {
 	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{.Name}} sends a HTTP response with status code {{.Status}}.
 func (c *{{$ctx.Name}}) {{.Name}}({{if .MediaType}}resp *{{.MediaType.TypeName}}{{end}}) error {
 	{{if .MediaType}}return c.JSON({{.Status}}, resp){{else}}return c.Respond({{.Status}}, nil){{end}}
-}
+{{end}} }
 `
-	payloadT = `// {{.PayloadTypeName}} is the {{.ResourceName}} {{.ActionName}} action payload.
+	payloadT = `{{$payload := .Payload}}// {{.PayloadTypeName}} is the {{.ResourceName}} {{.ActionName}} action payload.
 type {{.PayloadTypeName}} struct {
-	{{range $name, $val := object .Payload.Type.Object}}{{camelize $name}} {{$val.Type.Name}} ` +
-		"`" + `json:"{{.Name}}{{if not .Required}},omitempty{{end}}"` + "`" + `
+	{{range $name, $val := object .Payload.Type}}{{camelize $name}} {{$val.Type.GoType}} ` +
+		"`" + `json:"{{$name}}{{if not ($payload.IsRequired $name)}},omitempty{{end}}"` + "`" + `
 {{end}} }
 `
 	newPayloadT = `// New{{.ActionName}}`

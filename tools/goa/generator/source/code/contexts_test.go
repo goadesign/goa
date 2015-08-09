@@ -293,6 +293,7 @@ var _ = Describe("ContextWriter", func() {
 				})
 
 				It("writes the contexts code", func() {
+					Ω(newErr).ShouldNot(HaveOccurred())
 					err := writer.Write(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
