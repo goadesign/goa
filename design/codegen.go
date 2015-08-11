@@ -15,41 +15,54 @@ func (a *ActionDefinition) ContextName() string {
 }
 
 // SourceCode returns the Go code that defines a Go type which matches the data structure
-// definition.
-func SourceCode(d DataStructure) string {
+// definition (the part that comes after `type foo`).
+func SourceCode(ds DataStructure) string {
 	var buffer bytes.Buffer
-	buffer.WriteString("struct {\n")
-	o := d.Obj()
-	keys := make([]string, len(o))
-	i := 0
-	for n := range o {
-		keys[i] = n
-		i++
+	def := ds.Definition()
+	t := def.Type
+	switch actual := t.(type) {
+	case Primitive:
+		return GoTypeName(t)
+	case *Array:
+		return "[]" + SourceCode(actual.ElemType)
+	case Object:
+		buffer.WriteString("struct {\n")
+		keys := make([]string, len(actual))
+		i := 0
+		for n := range actual {
+			keys[i] = n
+			i++
+		}
+		sort.Strings(keys)
+		for _, name := range keys {
+			typedef := TypeDef(actual[name])
+			fname := Goify(name, true)
+			var omit string
+			if !def.IsRequired(name) {
+				omit = ",omitempty"
+			}
+			field := fmt.Sprintf("\t%s %s `json:\"%s%s\"`\n", fname, typedef, name, omit)
+			buffer.WriteString(field)
+		}
+		buffer.WriteString("}")
+		return buffer.String()
+	default:
+		panic("goa bug: unknown data structure type")
 	}
-	sort.Strings(keys)
-	for _, name := range keys {
-		typedef := TypeDef(o[name].Type)
-		fname := Goify(name, true)
-		field := fmt.Sprintf("\t%s %s `json:\"%s\"`\n", fname, typedef, name)
-		buffer.WriteString(field)
-	}
-	buffer.WriteString("}")
-	return buffer.String()
 }
 
-// TypeDef returns the Go type definition (the part that comes after 'type foo') for the given data
-// type.
-func TypeDef(t DataType) string {
+// TypeDef returns the Go type definition for the given data structure attribute.
+func TypeDef(a *AttributeDefinition) string {
 	var typedef string
-	switch actual := t.(type) {
-	case *UserTypeDefinition, *MediaTypeDefinition:
-		typedef = "*" + GoTypeName(actual)
-	case Object:
-		typedef = SourceCode(actual)
-	case *Array:
-		typedef = "[]" + TypeDef(actual.ElemType.Type)
+	switch actual := a.Type.(type) {
 	case Primitive:
 		typedef = GoTypeName(actual)
+	case *Array:
+		typedef = "[]" + TypeDef(actual.ElemType)
+	case Object:
+		typedef = SourceCode(a)
+	case *UserTypeDefinition, *MediaTypeDefinition:
+		typedef = "*" + GoTypeName(actual)
 	}
 	return typedef
 }

@@ -1,10 +1,6 @@
 package dsl
 
-import (
-	"fmt"
-
-	. "github.com/raphael/goa/design"
-)
+import . "github.com/raphael/goa/design"
 
 // Resource defines a resource DSL.
 //
@@ -21,10 +17,10 @@ import (
 // })
 func Resource(name string, dsl func()) {
 	if a, ok := apiDefinition(); ok {
-		if _, ok := a.Resources[name]; ok {
-			appendError(fmt.Errorf("multiple definitions for resource %s", name))
+		resource, ok := a.Resources[name]
+		if !ok {
+			resource = &ResourceDefinition{Name: name}
 		}
-		resource := &ResourceDefinition{Name: name}
 		if ok := executeDSL(dsl, resource); ok {
 			a.Resources[name] = resource
 		}

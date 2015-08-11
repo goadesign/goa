@@ -20,14 +20,7 @@ import (
 //         Header("X-Account", Integer)
 //         Required("Authorization", "X-Account")
 //     })
-//     Params(func() {
-//         Param("id", Integer, "Account ID")
-//         Required("id")
-//     })
-//     Payload(func() {
-//         Member("name")
-//         Member("year")
-//     })
+//     Payload(UpdatePayload)
 //     Responses(
 //         NoContent(),
 //         NotFound(),
@@ -35,7 +28,10 @@ import (
 // })
 func Action(name string, dsl func()) {
 	if r, ok := resourceDefinition(); ok {
-		action := &ActionDefinition{Name: name}
+		action, ok := r.Actions[name]
+		if !ok {
+			action = &ActionDefinition{Name: name}
+		}
 		if !executeDSL(dsl, action) {
 			return
 		}

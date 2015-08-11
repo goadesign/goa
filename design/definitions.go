@@ -7,7 +7,7 @@ var (
 	Design *APIDefinition
 
 	// ParamsRegex is the regular expression used to capture path parameters.
-	ParamsRegex = regexp.MustCompile("/:(.*)/")
+	ParamsRegex = regexp.MustCompile("/:([^/]*)/")
 )
 
 type (
@@ -59,8 +59,6 @@ type (
 		Actions map[string]*ActionDefinition
 		// Action with canonical resource path
 		CanonicalAction string
-		// cached computed parent resource
-		computedParent *ResourceDefinition
 	}
 
 	// TypeDefinition describes a named data structure to be used e.g. for request payloads.
@@ -227,35 +225,12 @@ type (
 
 // Parent returns the parent resource if any.
 func (r *ResourceDefinition) Parent() *ResourceDefinition {
-	if r.computedParent != nil {
-		return r.computedParent
-	}
 	if r.ParentName == "" {
 		return nil
 	}
 	for _, res := range Design.Resources {
 		if res.Name == r.ParentName {
 			return res
-		}
-	}
-	return nil
-}
-
-// AttributeIterator is the type of iterator functions given to Iterate to iterate over each
-// member of an object attribute.
-type AttributeIterator func(name string, att *AttributeDefinition) error
-
-// Iterate runs the given function on each member of the attribute.
-// If the iterator function returns an error then iterator stops and returns the error.
-// Iterate panics if the type of a is not Object.
-func (a *AttributeDefinition) Iterate(it AttributeIterator) error {
-	o, ok := a.Type.(Object)
-	if !ok {
-		panic("iterated attribute not an object")
-	}
-	for n, at := range o {
-		if err := it(n, at); err != nil {
-			return err
 		}
 	}
 	return nil

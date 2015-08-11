@@ -19,10 +19,10 @@ type (
 	}
 
 	// DataStructure is the interface implemented by all data structure types. That is
-	// objects, user types and media types.
+	// attribute definitions, user types and media types.
 	DataStructure interface {
-		// Object represents the data structure underlying attributes.
-		Obj() Object
+		// Definition returns the data structure definition.
+		Definition() *AttributeDefinition
 	}
 
 	// Primitive is the type for null, boolean, integer, number and string.
@@ -36,11 +36,11 @@ type (
 	// Object is the type for a JSON object.
 	Object map[string]*AttributeDefinition
 
-	// UserType is the type for user defined types that are not media types (e.g. payload
-	// types).
+	// UserTypeDefinition is the type for user defined types that are not media types
+	// (e.g. payload types).
 	UserTypeDefinition struct {
-		// A user type is an object
-		Object
+		// A user type is an attribute definition.
+		*AttributeDefinition
 		// Name of type
 		Name string
 		// Description is the optional description of the media type.
@@ -127,17 +127,17 @@ func (m *MediaTypeDefinition) Kind() Kind {
 
 // DataStructure implementation
 
-// Obj returns itself for objects.
-func (o Object) Obj() Object {
-	return o
+// Definition returns itself for attribute definitions.
+func (a *AttributeDefinition) Definition() *AttributeDefinition {
+	return a
 }
 
-// Object returns the underlying object.
-func (u *UserTypeDefinition) Obj() Object {
-	return u.Object
+// Definition returns the underlying attribute definition.
+func (u *UserTypeDefinition) Definition() *AttributeDefinition {
+	return u.AttributeDefinition
 }
 
-// Object returns the underlying object.
-func (m *MediaTypeDefinition) Obj() Object {
-	return m.Object
+// Definition returns the underlying attribute definition.
+func (m *MediaTypeDefinition) Definition() *AttributeDefinition {
+	return m.AttributeDefinition
 }
