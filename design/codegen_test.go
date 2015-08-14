@@ -17,7 +17,7 @@ var _ = Describe("SourceCode", func() {
 				att = new(design.AttributeDefinition)
 			}
 			att.Type = object
-			st = design.SourceCode(att)
+			st = design.GoTypeDef(att)
 		})
 
 		Context("of primitive types", func() {
@@ -103,7 +103,7 @@ var _ = Describe("SourceCode", func() {
 		JustBeforeEach(func() {
 			array := &design.Array{ElemType: elemType}
 			att := &design.AttributeDefinition{Type: array}
-			source = design.SourceCode(att)
+			source = design.GoTypeDef(att)
 		})
 
 		Context("of primitive type", func() {

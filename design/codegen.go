@@ -4,85 +4,136 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
+	"text/template"
 	"unicode"
 
 	"bitbucket.org/pkg/inflect"
 )
+
+var (
+	primitiveT *template.Template
+	arrayT     *template.Template
+	objectT    *template.Template
+)
+
+func init() {
+	var err error
+	primitiveT, err = template.New("primitive").Parse(primitiveTmpl)
+	if err != nil {
+		panic(err)
+	}
+	arrayT, err = template.New("array").Parse(arrayTmpl)
+	if err != nil {
+		panic(err)
+	}
+	objectT, err = template.New("object").Parse(objectTmpl)
+	if err != nil {
+		panic(err)
+	}
+}
 
 // ContextName computes the name of the context data structure that corresponds to this action.
 func (a *ActionDefinition) ContextName() string {
 	return inflect.Camelize(a.Name) + inflect.Camelize(a.Resource.Name) + "Context"
 }
 
-// Unmarshaler produces the go code that initializes a user type from its JSON representation.
+// PrimitiveUnmarshaler produces the go code that initializes a primitive type from its JSON
+// representation.
+// The source contains the raw interface{} value and target the name of the variable to initialize.
+// The generated code assumes that there is a variable called "err" of type error that it can use
+// to record errors.
+func PrimitiveUnmarshaler(p Primitive, context, source, target string) string {
+	data := map[string]string{
+		"source":  source,
+		"target":  target,
+		"type":    GoTypeName(p),
+		"context": context,
+	}
+	var b bytes.Buffer
+	err := primitiveT.Execute(&b, data)
+	if err != nil {
+		panic(err)
+	}
+	return b.String()
+}
+
+// ArrayUnmarshaler produces the go code that initializes an array from its JSON representation.
+// The source contains the raw interface{} value and target the name of the variable to initialize.
+// The generated code assumes that there is a variable called "err" of type error that it can use
+// to record errors.
+func ArrayUnmarshaler(a *Array, context, source, target string) string {
+	data := map[string]string{
+		"source":  source,
+		"target":  target,
+		"type":    GoTypeName(a),
+		"context": context,
+	}
+	var b bytes.Buffer
+	err := arrayT.Execute(&b, data)
+	if err != nil {
+		panic(err)
+	}
+	return b.String()
+}
+
+// ObjectUnmarshaler produces the go code that initializes an object type from its JSON
+// representation.
+// The source contains the raw interface{} value and target the name of the variable to initialize.
+// The generated code assumes that there is a variable called "err" of type error that it can use
+// to record errors.
+func ObjectUnmarshaler(o Object, context, source, target string) string {
+	data := map[string]string{
+		"source":  source,
+		"target":  target,
+		"type":    GoTypeName(o),
+		"context": context,
+	}
+	var b bytes.Buffer
+	err := objectT.Execute(&b, data)
+	if err != nil {
+		panic(err)
+	}
+	return b.String()
+}
+
+// Unmarshaler produces the go code that initializes a data structure from its JSON representation.
 // This include running any validation defined on the type.
-func Unmarshaler(ds DataStructure) string {
+// The source contains the raw interface{} value and target the name of the variable to initialize.
+// The generated code assumes that there is a variable called "err" of type error that it can use
+// to record errors.
+func Unmarshaler(ds DataStructure, context, source, target string) string {
 	def := ds.Definition()
 	switch actual := def.Type.(type) {
+	case Primitive:
+		return PrimitiveUnmarshaler(actual, context, source, target)
+	case *Array:
+		return ArrayUnmarshaler(actual, context, source, target)
+	case Object:
+		return ObjectUnmarshaler(actual, context, source, target)
+	case DataStructure:
+		return Unmarshaler(actual, context, source, target)
+	default:
+		panic("unknown type")
 	}
 }
 
-type primitiveCoerceData struct {
-	// Raw contains the name of the variable containing the raw (interface{}) value.
-	Raw string
-
-	// Type is the name of the type to coerce to.
-	Type string
-
-	// Target is the name of the target variable
-	Target string
-
-	// Error is the name of the error factory method. The method must take 4 arguments:
-	// the name of the payload field or param being coerced, its value, the target type and
-	// the conversion error.
-	Error string
-
-	// Name is the name of the payload field or parameter being coerced.
-	Name string
-}
-
-type arrayCoerceData struct {
-	// Raw contains the name of the variable containing the raw (interface{}) value.
-	Raw string
-
-	// Type is the name of the type to coerce to.
-	Type string
-
-	// ElemConversion is the source code used to convert a single array element.
-	ElemConversion string
-}
-
 const (
-	primitiveCoerce = `	if val, ok := {{.Raw}}.({{.Type}}); ok {
-		{{.Target}} = val
+	primitiveTmpl = `	if val, ok := {{.source}}.({{.type}}); ok {
+		{{.target}} = val
 	} else {
-		err = goa.{{.Error}}("{{.Name}}", {{.Raw}}, "{{.Type}}", fmt.Printf("incompatible type"))
+		err = goa.IncompatibleTypeError("{{.name}}", {{.source}}, "{{.type}}")
 	}`
 
-	arrayCoerce = `	if val, ok := {{.Raw}}.([]interface{}), ok {
+	arrayTmpl = `	if val, ok := {{.Raw}}.([]interface{}), ok {
 		{{.Target}} = make([]{{.ElemType}}, len(val))
 		for i, v := range val {
 			var e {{.ElemType}}
 			{{.ElemConversion}}	
 		}`
 
-	objectCoerve = `	if val, ok := {{.Raw}}.(map[string]interface{}), ok {
+	objectTmpl = `	if val, ok := {{.Raw}}.(map[string]interface{}), ok {
 `
 )
-
-// TypeUnmarshaler produces the go code that initializes a data type from its JSON representation.
-func TypeUnmarshaler(t DataType, target string) string {
-	switch actual := def.Type.(type) {
-	case Primitive:
-		return fmt.Sprintf(primitivePayloadCoerce, GoTypeName(t), target, t.Kind().Name())
-	case *Array:
-		elemType := GoTypeName(actual.ElemType.Type)
-		return fmt.Sprintf(arrayPayloadCoerce, target, elemType, elemType, Unmarshaler(actual.ElemType, "e"))
-		for n, att := range actual {
-
-		}
-	}
-}
 
 // GoTypeDef returns the Go code that defines a Go type which matches the data structure
 // definition (the part that comes after `type foo`).
