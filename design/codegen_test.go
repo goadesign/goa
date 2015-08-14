@@ -7,7 +7,7 @@ import (
 )
 
 var _ = Describe("SourceCode", func() {
-	Context("given an attribute definition", func() {
+	Context("given an attribute definition with fields", func() {
 		var att *design.AttributeDefinition
 		var object design.Object
 		var st string
@@ -73,7 +73,7 @@ var _ = Describe("SourceCode", func() {
 			})
 		})
 
-		Context("with required fields", func() {
+		Context("that are required", func() {
 			BeforeEach(func() {
 				object = design.Object{
 					"foo": &design.AttributeDefinition{Type: design.Integer},

@@ -14,9 +14,79 @@ func (a *ActionDefinition) ContextName() string {
 	return inflect.Camelize(a.Name) + inflect.Camelize(a.Resource.Name) + "Context"
 }
 
-// SourceCode returns the Go code that defines a Go type which matches the data structure
+// Unmarshaler produces the go code that initializes a user type from its JSON representation.
+// This include running any validation defined on the type.
+func Unmarshaler(ds DataStructure) string {
+	def := ds.Definition()
+	switch actual := def.Type.(type) {
+	}
+}
+
+type primitiveCoerceData struct {
+	// Raw contains the name of the variable containing the raw (interface{}) value.
+	Raw string
+
+	// Type is the name of the type to coerce to.
+	Type string
+
+	// Target is the name of the target variable
+	Target string
+
+	// Error is the name of the error factory method. The method must take 4 arguments:
+	// the name of the payload field or param being coerced, its value, the target type and
+	// the conversion error.
+	Error string
+
+	// Name is the name of the payload field or parameter being coerced.
+	Name string
+}
+
+type arrayCoerceData struct {
+	// Raw contains the name of the variable containing the raw (interface{}) value.
+	Raw string
+
+	// Type is the name of the type to coerce to.
+	Type string
+
+	// ElemConversion is the source code used to convert a single array element.
+	ElemConversion string
+}
+
+const (
+	primitiveCoerce = `	if val, ok := {{.Raw}}.({{.Type}}); ok {
+		{{.Target}} = val
+	} else {
+		err = goa.{{.Error}}("{{.Name}}", {{.Raw}}, "{{.Type}}", fmt.Printf("incompatible type"))
+	}`
+
+	arrayCoerce = `	if val, ok := {{.Raw}}.([]interface{}), ok {
+		{{.Target}} = make([]{{.ElemType}}, len(val))
+		for i, v := range val {
+			var e {{.ElemType}}
+			{{.ElemConversion}}	
+		}`
+
+	objectCoerve = `	if val, ok := {{.Raw}}.(map[string]interface{}), ok {
+`
+)
+
+// TypeUnmarshaler produces the go code that initializes a data type from its JSON representation.
+func TypeUnmarshaler(t DataType, target string) string {
+	switch actual := def.Type.(type) {
+	case Primitive:
+		return fmt.Sprintf(primitivePayloadCoerce, GoTypeName(t), target, t.Kind().Name())
+	case *Array:
+		elemType := GoTypeName(actual.ElemType.Type)
+		return fmt.Sprintf(arrayPayloadCoerce, target, elemType, elemType, Unmarshaler(actual.ElemType, "e"))
+		for n, att := range actual {
+
+		}
+	}
+}
+
+// GoTypeDef returns the Go code that defines a Go type which matches the data structure
 // definition (the part that comes after `type foo`).
-func SourceCode(ds DataStructure) string {
+func GoTypeDef(ds DataStructure) string {
 	var buffer bytes.Buffer
 	def := ds.Definition()
 	t := def.Type
@@ -24,7 +94,7 @@ func SourceCode(ds DataStructure) string {
 	case Primitive:
 		return GoTypeName(t)
 	case *Array:
-		return "[]" + SourceCode(actual.ElemType)
+		return "[]" + GoTypeDef(actual.ElemType)
 	case Object:
 		buffer.WriteString("struct {\n")
 		keys := make([]string, len(actual))
@@ -35,7 +105,7 @@ func SourceCode(ds DataStructure) string {
 		}
 		sort.Strings(keys)
 		for _, name := range keys {
-			typedef := TypeDef(actual[name])
+			typedef := GoTypeDef(actual[name])
 			fname := Goify(name, true)
 			var omit string
 			if !def.IsRequired(name) {
@@ -46,25 +116,22 @@ func SourceCode(ds DataStructure) string {
 		}
 		buffer.WriteString("}")
 		return buffer.String()
+	case *UserTypeDefinition, *MediaTypeDefinition:
+		return "*" + GoTypeName(actual)
 	default:
 		panic("goa bug: unknown data structure type")
 	}
 }
 
-// TypeDef returns the Go type definition for the given data structure attribute.
-func TypeDef(a *AttributeDefinition) string {
-	var typedef string
-	switch actual := a.Type.(type) {
-	case Primitive:
-		typedef = GoTypeName(actual)
-	case *Array:
-		typedef = "[]" + TypeDef(actual.ElemType)
-	case Object:
-		typedef = SourceCode(a)
+// GoTypeRef returns the Go code that refers to the Go type which matches the given data type
+// (the part that comes after `var foo`)
+func GoTypeRef(t DataType) string {
+	switch t.(type) {
 	case *UserTypeDefinition, *MediaTypeDefinition:
-		typedef = "*" + GoTypeName(actual)
+		return "*" + GoTypeName(t)
+	default:
+		return GoTypeName(t)
 	}
-	return typedef
 }
 
 // GoTypeName returns the Go type name for a data type.
@@ -84,7 +151,7 @@ func GoTypeName(t DataType) string {
 			panic(fmt.Sprintf("goa bug: unknown primitive type %#v", actual))
 		}
 	case *Array:
-		return "[]" + GoTypeName(actual.ElemType.Type)
+		return "[]" + GoTypeRef(actual.ElemType.Type)
 	case Object:
 		return "map[string]interface{}"
 	case *UserTypeDefinition:

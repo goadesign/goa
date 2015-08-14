@@ -37,15 +37,13 @@ func (g *Generator) WriteCode() error {
 	for _, res := range design.Design.Resources {
 		for _, a := range res.Actions {
 			ctxData := ContextData{
-				Name:             a.ContextName(),
-				ResourceName:     res.Name,
-				ActionName:       a.Name,
-				PayloadTypeName:  a.PayloadTypeName(),
-				PayloadSignature: a.PayloadTypeSignature(),
-				Params:           a.Params,
-				Payload:          a.Payload,
-				Headers:          a.Headers,
-				Responses:        a.Responses,
+				Name:         a.ContextName(),
+				ResourceName: res.Name,
+				ActionName:   a.Name,
+				Params:       a.Params,
+				Payload:      a.Payload,
+				Headers:      a.Headers,
+				Responses:    a.Responses,
 			}
 			if err = ctxWr.Write(&ctxData); err != nil {
 				return err

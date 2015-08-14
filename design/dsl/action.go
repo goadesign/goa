@@ -115,7 +115,10 @@ func Payload(p interface{}) {
 		}
 		rn := inflect.Camelize(a.Resource.Name)
 		an := inflect.Camelize(a.Name)
-		payload := design.AttributeDefinition{Name: fmt.Sprintf("%s%sPayload", an, rn)}
+		a.Payload = &design.UserTypeDefinition{
+			AttributeDefinition: new(design.AttributeDefinition),
+			Name:                fmt.Sprintf("%s%sPayload", an, rn),
+		}
 		if executeDSL(dsl, &payload) {
 			a.Payload = &payload
 		}

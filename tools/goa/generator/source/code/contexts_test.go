@@ -34,10 +34,19 @@ var _ = Describe("ContextWriter", func() {
 		})
 
 		Context("with data", func() {
-			var params, payload, headers *design.AttributeDefinition
+			var params, headers *design.AttributeDefinition
+			var payload *design.UserTypeDefinition
 			var responses []*design.ResponseDefinition
 
 			var data *ContextData
+
+			BeforeEach(func() {
+				params = nil
+				headers = nil
+				payload = nil
+				responses = nil
+				data = nil
+			})
 
 			JustBeforeEach(func() {
 				data = &ContextData{
@@ -260,7 +269,10 @@ var _ = Describe("ContextWriter", func() {
 
 			Context("with a simple payload", func() {
 				BeforeEach(func() {
-					payload = &design.AttributeDefinition{Type: design.String}
+					payload = &design.UserTypeDefinition{
+						AttributeDefinition: &design.AttributeDefinition{Type: design.String},
+						Name:                "ListBottlePayload",
+					}
 				})
 
 				It("writes the contexts code", func() {
@@ -286,9 +298,12 @@ var _ = Describe("ContextWriter", func() {
 					required := design.RequiredValidationDefinition{
 						Names: []string{"int"},
 					}
-					payload = &design.AttributeDefinition{
-						Type:        dataType,
-						Validations: []design.ValidationDefinition{&required},
+					payload = &design.UserTypeDefinition{
+						AttributeDefinition: &design.AttributeDefinition{
+							Type:        dataType,
+							Validations: []design.ValidationDefinition{&required},
+						},
+						Name: "ListBottlePayload",
 					}
 				})
 
@@ -340,7 +355,6 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	} else {
 		err = goa.InvalidParamValue("param", rawParam, "integer", err)
 	}
-
 	return &ctx, err
 }
 `
@@ -358,7 +372,6 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	ctx := ListBottleContext{Context: c}
 	rawParam, _ := c.Get("param")
 	ctx.Param = rawParam
-
 	return &ctx, err
 }
 `
@@ -380,7 +393,6 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	} else {
 		err = goa.InvalidParamValue("param", rawParam, "number", err)
 	}
-
 	return &ctx, err
 }
 `
@@ -401,7 +413,6 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	} else {
 		err = goa.InvalidParamValue("param", rawParam, "boolean", err)
 	}
-
 	return &ctx, err
 }
 `
@@ -420,7 +431,6 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	rawParam, _ := c.Get("param")
 	elemsParam := strings.Split(rawParam, ",")
 	ctx.Param = elemsParam
-
 	return &ctx, err
 }
 `
@@ -447,7 +457,6 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 		}
 	}
 	ctx.Param = elemsParam2
-
 	return &ctx, err
 }
 `
@@ -469,7 +478,6 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	} else {
 		err = goa.InvalidParamValue("int", rawInt, "integer", err)
 	}
-
 	return &ctx, err
 }
 `
@@ -495,7 +503,6 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 			err = goa.InvalidParamValue("int", rawInt, "integer", err)
 		}
 	}
-
 	return &ctx, err
 }
 `
@@ -511,7 +518,11 @@ const payloadContextFactory = `
 func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
-
+	var p *ListBottlePayload
+	if err := c.Bind(&p); err != nil {
+		return nil, err
+	}
+	ctx.Payload = &p
 	return &ctx, err
 }
 `
@@ -526,7 +537,11 @@ const payloadObjContextFactory = `
 func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
-
+	var p *ListBottlePayload
+	if err := c.Bind(&p); err != nil {
+		return nil, err
+	}
+	ctx.Payload = &p
 	return &ctx, err
 }
 `

@@ -21,15 +21,13 @@ type (
 	// ContextData contains all the information used by the template to render the context
 	// code for an action.
 	ContextData struct {
-		Name             string // e.g. "ListBottleContext"
-		ResourceName     string // e.g. "bottles"
-		ActionName       string // e.g. "list"
-		PayloadTypeName  string // e.g. "ListBottlePayload"
-		PayloadSignature string // e.g. "*ListBottlePayload"
-		Params           *design.AttributeDefinition
-		Payload          *design.AttributeDefinition
-		Headers          *design.AttributeDefinition
-		Responses        []*design.ResponseDefinition
+		Name         string // e.g. "ListBottleContext"
+		ResourceName string // e.g. "bottles"
+		ActionName   string // e.g. "list"
+		Params       *design.AttributeDefinition
+		Payload      *design.UserTypeDefinition
+		Headers      *design.AttributeDefinition
+		Responses    []*design.ResponseDefinition
 	}
 )
 
@@ -47,7 +45,6 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 	ctxNewTmpl, err := template.New("new").Funcs(
 		cw.FuncMap).Funcs(template.FuncMap{
 		"newCoerceData":  newCoerceData,
-		"elemType":       elemType,
 		"arrayAttribute": arrayAttribute,
 	}).Parse(ctxNewT)
 	if err != nil {
@@ -120,11 +117,6 @@ func newCoerceData(name string, att *design.AttributeDefinition, target string) 
 	}
 }
 
-// elemType returns the go type name of the array elements.
-func elemType(a *design.AttributeDefinition) string {
-	return a.Type.(*design.Array).ElemType.Type.GoType()
-}
-
 // arrayAttribute returns the array element attribute definition.
 func arrayAttribute(a *design.AttributeDefinition) *design.AttributeDefinition {
 	return a.Type.(*design.Array).ElemType
@@ -134,13 +126,11 @@ const (
 	ctxT = `// {{.Name}} provides the {{.ResourceName}} {{.ActionName}} action context
 type {{.Name}} struct {
 	*goa.Context
-	{{if .Params}}{{range $name, $att := object .Params.Type}}{{camelize $name}} {{.Type.GoType}}
-{{end}}{{if .PayloadTypeName}}payload {{.PayloadSignature}}
-{{end}}{{end}} }
+	{{if .Params}}{{range $name, $att := object .Params.Type}}{{camelize $name}} {{gotyperef .Type}}
+{{end}}{{end}}{{if .Payload}}	payload {{gotyperef .Payload}}
+{{end}} }
 `
-
-	ctxNewT = `
-{{define "Coerce"}}{{if eq .Attribute.Type.Kind 1}}{{/* BooleanType */}}	if {{.VarName}}, err := strconv.ParseBool(raw{{camelize .Name}}); err == nil {
+	coerce = `	{{if eq .Attribute.Type.Kind 1}}{{/* BooleanType */}}if {{.VarName}}, err := strconv.ParseBool(raw{{camelize .Name}}); err == nil {
 		{{.Target}} = {{.VarName}}
 	} else {
 		err = goa.InvalidParamValue("{{.Name}}", raw{{camelize .Name}}, "boolean", err)
@@ -158,22 +148,24 @@ type {{.Name}} struct {
 	{{end}}{{if eq .Attribute.Type.Kind 4}}{{/* StringType */}}{{.Target}} = raw{{camelize .Name}}
 	{{end}}{{if eq .Attribute.Type.Kind 5}}{{/* ArrayType */}}elems{{camelize .Name}} := strings.Split(raw{{camelize .Name}}, ",")
 	{{if eq (arrayAttribute .Attribute).Type.Kind 4}}{{.Target}} = elems{{camelize .Name}}
-	{{else}}elems{{camelize .Name}}2 := make([]{{elemType .Attribute}}, len(elems{{camelize .Name}}))
+	{{else}}elems{{camelize .Name}}2 := make({{gotyperef .Attribute.Type}}, len(elems{{camelize .Name}}))
 	for i, rawElem := range elems{{camelize .Name}} { 
-		{{template "Coerce" (newCoerceData "elem" (arrayAttribute .Attribute) (printf "elems%s2[i]" (camelize .Name)))}} }
+		{{template "Coerce" (newCoerceData "elem" (arrayAttribute .Attribute) (printf "elems%s2[i]" (camelize .Name)))}}}
 	{{.Target}} = elems{{camelize .Name}}2
-{{end}}{{end}}{{end}}{{/* define */}}// New{{camelize .Name}} parses the incoming request URL and body, performs validations and creates the
+{{end}}{{end}}`
+
+	ctxNewT = `{{define "Coerce"}}` + coerce + `{{end}}` + `
+// New{{camelize .Name}} parses the incoming request URL and body, performs validations and creates the
 // context used by the controller action.
 func New{{camelize .Name}}(c *goa.Context) (*{{.Name}}, error) {
 	var err error
 	ctx := {{.Name}}{Context: c}
-	{{$params := .Params}}{{if $params}}{{range $name, $att := object $params.Type}}raw{{camelize $name}}, {{if ($params.IsRequired $name)}}ok{{else}}_{{end}} := c.Get("{{$name}}")
+	{{if.Params}}{{$params := .Params}}{{range $name, $att := object $params.Type}}raw{{camelize $name}}, {{if ($params.IsRequired $name)}}ok{{else}}_{{end}} := c.Get("{{$name}}")
 	{{if ($params.IsRequired $name)}}if !ok {
 		err = goa.MissingParam("{{$name}}", err)
 	} else {
-	{{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (camelize (goify $name true))))}}{{if ($params.IsRequired $name)}} }
-	{{end}}
-	{{end}}{{/* range $params */}}{{end}}{{if .Payload}}var p {{.PayloadTypeName}}
+	{{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (camelize (goify $name true))))}}{{if ($params.IsRequired $name)}}}
+	{{end}}{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}var p {{gotyperef .Payload}}
 	if err := c.Bind(&p); err != nil {
 		return nil, err
 	}
@@ -186,11 +178,8 @@ func (c *{{$ctx.Name}}) {{.Name}}({{if .MediaType}}resp *{{.MediaType.TypeName}}
 	{{if .MediaType}}return c.JSON({{.Status}}, resp){{else}}return c.Respond({{.Status}}, nil){{end}}
 {{end}} }
 `
-	payloadT = `{{$payload := .Payload}}// {{.PayloadTypeName}} is the {{.ResourceName}} {{.ActionName}} action payload.
-type {{.PayloadTypeName}} struct {
-	{{range $name, $val := object .Payload.Type}}{{camelize $name}} {{$val.Type.GoType}} ` +
-		"`" + `json:"{{$name}}{{if not ($payload.IsRequired $name)}},omitempty{{end}}"` + "`" + `
-{{end}} }
+	payloadT = `{{$payload := .Payload}}// {{gotypename .Payload}} is the {{.ResourceName}} {{.ActionName}} action payload.
+type {{gotypename .Payload}} {{gotypedef .Payload}}
 `
 	newPayloadT = `// New{{.ActionName}}`
 

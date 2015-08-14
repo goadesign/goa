@@ -91,7 +91,7 @@ type (
 		// Path and query string parameters
 		Params *AttributeDefinition
 		// Payload blueprint (request body) if any
-		Payload *AttributeDefinition
+		Payload *UserTypeDefinition
 		// Request headers that need to be made available to action
 		Headers *AttributeDefinition
 	}

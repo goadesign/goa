@@ -36,6 +36,9 @@ func NewCodeWriter(filename string) (*CodeWriter, error) {
 		"camelize":    inflect.Camelize,
 		"comment":     comment,
 		"commandLine": commandLine,
+		"gotypename":  design.GoTypeName,
+		"gotypedef":   design.GoTypeDef,
+		"gotyperef":   design.GoTypeRef,
 		"goify":       design.Goify,
 		"object":      object,
 	}

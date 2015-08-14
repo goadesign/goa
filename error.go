@@ -21,12 +21,23 @@ type (
 )
 
 const (
-	ErrInvalidParam             = iota + 1 // Parameter is of the wrong type
-	ErrMissingParam                        // Required parameter is missing
-	ErrInvalidPayload                      // Payload is of the wrong type
-	ErrMissingPayloadField                 // Required payload field is missing
-	ErrInvalidPayloadField                 // Payload field is of the wrong type
-	ErrInvalidPayloadFieldValue            // Payload field has an invalid value (not in enum)
+	// ErrInvalidParam is the error used when the parameter is of the wrong type
+	ErrInvalidParam = iota + 1
+
+	// ErrMissingParam is the error used when a required parameter is missing
+	ErrMissingParam
+
+	// ErrInvalidPayload is the error used when the payload is of the wrong type
+	ErrInvalidPayload
+
+	// ErrMissingPayloadField is the error used when a required payload field is missing
+	ErrMissingPayloadField
+
+	// ErrInvalidPayloadField is the error used when a payload field is of the wrong type
+	ErrInvalidPayloadField
+
+	// ErrInvalidPayloadFieldValue is the error used when a Payload field has an invalid value (not in enum)
+	ErrInvalidPayloadFieldValue
 )
 
 // Title returns a human friendly error title
@@ -121,6 +132,9 @@ func MissingPayloadField(name string, err error) error {
 // InvalidPayloadField coerces the given error into a MultiError then appends a typed error with
 // kind ErrInvalidPayloadField and returns the resulting MultiError.
 func InvalidPayloadField(name string, val interface{}, expected string, err error) error {
+	if name == "" {
+		return InvalidPayload(expected, err)
+	}
 	terr := TypedError{
 		Kind: ErrInvalidPayloadField,
 		Mesg: fmt.Sprintf("invalid value '%v' for payload field %s, must be a %s",

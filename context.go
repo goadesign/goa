@@ -12,7 +12,7 @@ type Context struct {
 	log.Logger                     // Context logger
 	Params     map[string]string   // URL string parameters
 	Query      map[string][]string // Query string parameters
-	Payload    interface{}         // Payload (request body) parameters
+	Payload    interface{}         // Deserialized payload (request body)
 	R          *http.Request       // Underlying HTTP request
 	W          http.ResponseWriter // Underlying HTTP response writer
 	Header     http.Header         // Underlying response headers
