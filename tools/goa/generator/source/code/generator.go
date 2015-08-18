@@ -3,6 +3,8 @@ package main
 import (
 	"path/filepath"
 
+	"bitbucket.org/pkg/inflect"
+
 	"github.com/raphael/goa/design"
 )
 
@@ -36,8 +38,9 @@ func (g *Generator) WriteCode() error {
 	ctxWr.WriteHeader(g.TargetPackage)
 	for _, res := range design.Design.Resources {
 		for _, a := range res.Actions {
+			ctxName := inflect.Camelize(a.Name) + inflect.Camelize(a.Resource.Name) + "Context"
 			ctxData := ContextData{
-				Name:         a.ContextName(),
+				Name:         ctxName,
 				ResourceName: res.Name,
 				ActionName:   a.Name,
 				Params:       a.Params,

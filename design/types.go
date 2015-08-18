@@ -25,6 +25,13 @@ type (
 		Definition() *AttributeDefinition
 	}
 
+	// NamedType is the interface implemented by all named data structures. That is
+	// user and media types.
+	NamedType interface {
+		// TypeName is the user defined name of the data structure.
+		TypeName() string
+	}
+
 	// Primitive is the type for null, boolean, integer, number and string.
 	Primitive Kind
 
@@ -140,4 +147,16 @@ func (u *UserTypeDefinition) Definition() *AttributeDefinition {
 // Definition returns the underlying attribute definition.
 func (m *MediaTypeDefinition) Definition() *AttributeDefinition {
 	return m.AttributeDefinition
+}
+
+// NamedType implementation
+
+// TypeName is the user type name.
+func (u *UserTypeDefinition) TypeName() string {
+	return u.Name
+}
+
+// TypeName is the media type name.
+func (m *MediaTypeDefinition) TypeName() string {
+	return m.Name
 }

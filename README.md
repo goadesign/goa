@@ -6,14 +6,23 @@ goa is a framework for building RESTful APIs in go.
 
 There are a number of good good go packages for writing modular web
 applications out there so why build another one? Glad you asked...
-goa takes a slightly different approach to the problem: instead of
+The various Go web application packages out there tend to focus on
+providing a small, highly modular and narrowly focused framework.
+This is great when writing simple APIs that tend to stay unchanged.
+However there are a number of problems that all non trivial API
+implementations must address that tend to be left "as an exercise to
+the reader", things like API documentation, request payload
+validation, response media type definitions to list just a few.
+
+goa takes a different approach to building web applications: instead of
 focusing solely on helping with implementation, goa makes it possible
-to describe the *design* of an API explicitely.
+to describe the *design* of an API holistically and uses that
+description to provide specialized helper code for the implementation.
 
 The goa DSL allows writing self-explanatory code that describes the
 API, the resources it exposes and for each resource its properties
-and actions. The DSL gets compiled into metadata that describes your
-API. goa comes with the `goa` tool which can generate both code and
+and actions. The DSL gets translated into metadata that describes your
+API. goa comes with the `goa` tool which generates both code and
 documentation from that metadata.
 
 The resulting code is specific to your API so that for example
@@ -22,8 +31,9 @@ using them. Each generated handler has a signature that is specific
 to the corresponding resource action. It's not just the parameters
 though, each handler also has access to specific helper methods to
 generate the possible responses for that action. The metadata can
-also include validation rules so that the generated code can take
-care of validating the incoming request parameters and payload.
+also include validation rules so that the generated code also takes
+care of validating the incoming request parameters and payload prior
+to invoking your code.
 
 The end result is controller code that is terse and clean, the
 boilerplate is all gone. Another big benefit is the clean separation
@@ -59,30 +69,27 @@ package design
 
 import . "github.com/raphael/goa/design/dsl"
 
-func init() {
+var _ = API("cellar", func() {
+	Title("The virtual wine cellar")
+	Description("A basic example of a CRUD API implemented with goa")
+})
 
-	API("cellar", func() {
-		Title("The virtual wine cellar")
-		Description("A basic example of a CRUD API implemented with goa")
+var _ = Resource("bottle", func() {
+	MediaType(BottleMediaType)
+
+	Action("show", func() {
+		Description("Retrieve bottle with given id")
+		Routing(
+			GET("/:id"),
+		)
+		Params(
+			Param("id", Integer, "Account ID"),
+		)
+		Responses(
+			goa.OK(BottleMediaType),
+		)
 	})
-
-	Resource("bottle", func() {
-		MediaType(BottleMediaType)
-
-		Action("show", func() {
-			Description("Retrieve bottle with given id")
-			Routing(
-				GET("/:id"),
-			)
-			Params(
-				Param("id", Integer, "Account ID"),
-			)
-			Responses(
-				goa.OK(BottleMediaType),
-			)
-		})
-	})
-}
+})
 
 var BottleMediaType = MediaType("application/vnd.goa.example.bottle", func() {
 	Description("A bottle of wine")
@@ -95,13 +102,13 @@ var BottleMediaType = MediaType("application/vnd.goa.example.bottle", func() {
 })
 ```
 Let's break this down:
-* We define a `design` package and use a `init` function to declare the API, we could also have
-  used an anonymous variable: `var _ = API(...`.
+* We define a `design` package and use anonymous variables to declare the API, we could also have
+  used a package `init` function.
 * The `API` function takes two arguments: the name of the API and an anonymous function that 
   defines additional properties, here a title and a description.
 * The `Resource` function also takes a name and an anonymous function. Properties defines in the
   anonymous function includes the actions supported by the resource.
-* The `Action` function follows the same pattern of name + anonymous function. Actions are defined
+* The `Action` function follows the same pattern of name and anonymous function. Actions are defined
   in resources, they can be CRUD (Create/Read/Update/Delete) actions or so-called "custom" actions.
   Here we define a Read (`show`) action.
 * The `Action` function defines the action endpoint, parameters, payload (not used here) and
@@ -110,7 +117,7 @@ Let's break this down:
   declaring the `OK` response. A media type has a name as defined by [RFC 6838](https://tools.ietf.org/html/rfc6838)
   and describes the attributes of the response body (the JSON object fields in goa).
 
-The DSL reference contains more details for each of the functions use in the example above.
+The DSL reference contains more details for each of the functions used in the example above.
 
 Now that we have a design for the API we can use the `goa` tool to generate all the boilerplate for
 our app. The goa tool takes the path to the package as argument (the same path you'd use if you
@@ -198,5 +205,6 @@ Content-Type: text/plain; charset=utf-8
 invalid value 'a' for parameter id, must be a int"
 ```
 Congratulations on writing you first goa application!
-This was just scratching the surface though - proceed to read the documentation and learn about all
-the other things `goa` can do.
+
+The documentation goes over all the other features that come with goa such as documentation
+generation, response validation and the complete DSL description.
