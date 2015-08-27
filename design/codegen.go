@@ -171,7 +171,12 @@ func NamedTypeUnmarshaler(t NamedType, context, source, target string) string {
 	return namedTypeUnmarshalerR(t, context, source, target, 1)
 }
 func namedTypeUnmarshalerR(t NamedType, context, source, target string, depth int) string {
-	data := map[string]interface{}{}
+	data := map[string]interface{}{
+		"source":  source,
+		"target":  target,
+		"context": context,
+		"depth":   depth,
+	}
 	var b bytes.Buffer
 	err := userT.Execute(&b, data)
 	if err != nil {
@@ -220,18 +225,20 @@ const (
 {{tabs .depth}}}`
 
 	objectTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
-{{tabs .depth}}{{$context := .context}}{{$depth := .depth}}{{$target := .target}}{{range $name, $att := .type}}	if v, ok := val["{{$name}}"]; ok {
+{{tabs .depth}}{{$context := .context}}{{$depth := .depth}}{{$target := .target}}	{{$target}} = make(map[string]interface{})
+{{range $name, $att := .type}}{{tabs $depth}}	if v, ok := val["{{$name}}"]; ok {
 {{unmarshalType $att.Type (printf "%s[\"%s\"]" $context $name) "v" (printf "%s[\"%s\"]" $target $name) (add $depth 2)}}
 {{tabs $depth}}	}
-{{tabs $depth}}{{end}}} else {
-{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, ` + "`{{tabulate (gotypename .type) (add .depth 1)}}`)" + `
+{{end}}{{tabs $depth}}} else {
+{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, ` + "`{{tabulate (gotypename .type) (add .depth 2)}}`)" + `
 {{tabs .depth}}}`
 
 	userTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
-{{tabs .depth}}	{{range $name, $att := .type.Definition.Type}}if v, ok := val["{{$name}}"]; ok {
+{{tabs .depth}}	{{.target}} = new({{.type.Name}})
+{{range $name, $att := .type.Definition.Type}}{{tabs .depth}}	if v, ok := val["{{$name}}"]; ok {
 {{unmarshalType $att.Type (printf "%s.%s" .context $name) "v" (printf "%s.%s" .target $name) (add .depth 2)}}
 {{tabs .depth}}	}
-{{tabs .depth}}{{end}}} else {
+{{end}}{{tabs .depth}}} else {
 {{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, {{gotypename .type}})
 {{tabs .depth}}}`
 )

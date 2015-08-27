@@ -1,6 +1,13 @@
 package design_test
 
 import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"text/template"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/raphael/goa/design"
@@ -228,6 +235,7 @@ var _ = Describe("Unmarshaler", func() {
 
 		It("generates the unmarshaler code", func() {
 			expected := `	if val, ok := raw.(map[string]interface{}); ok {
+		p = make(map[string]interface{})
 		if v, ok := val["foo"]; ok {
 			if val, ok := v.(int); ok {
 				p["foo"] = val
@@ -237,8 +245,8 @@ var _ = Describe("Unmarshaler", func() {
 		}
 	} else {
 		err = goa.IncompatibleTypeError(` + "``" + `, raw, ` + "`" + `struct {
-			Foo int
-		}` + "`" + `)
+				Foo int
+			}` + "`" + `)
 	}`
 			Ω(unmarshaler).Should(Equal(expected))
 		})
@@ -314,6 +322,61 @@ var _ = Describe("Unmarshaler", func() {
 	}`
 			Ω(unmarshaler).Should(Equal(expected))
 		})
+
+		Context("compiling", func() {
+			var gopath, srcDir string
+			var out []byte
+			var execErr error
+
+			JustBeforeEach(func() {
+				cmd := exec.Command("go", "build", "-o", "test")
+				cmd.Env = []string{fmt.Sprintf("PATH=%s", os.Getenv("PATH"))}
+				cmd.Env = append(cmd.Env, fmt.Sprintf("GOPATH=%s", os.Getenv("GOPATH")))
+				cmd.Path = srcDir
+				out, execErr = cmd.CombinedOutput()
+			})
+
+			BeforeEach(func() {
+				var err error
+				gopath, err = ioutil.TempDir("", "")
+				Ω(err).ShouldNot(HaveOccurred())
+				tmpl := template.New(mainTmpl)
+				srcDir = filepath.Join(gopath, "src", "test")
+				err = os.MkdirAll(srcDir, 0755)
+				Ω(err).ShouldNot(HaveOccurred())
+				tmpFile, err := os.Open(filepath.Join(srcDir, "main.go"))
+				Ω(err).ShouldNot(HaveOccurred())
+				raw := "raw"
+				data := map[string]interface{}{
+					"raw":    raw,
+					"source": unmarshaler,
+				}
+				err = tmpl.Execute(tmpFile, data)
+				Ω(err).ShouldNot(HaveOccurred())
+			})
+
+			It("compiles", func() {
+				expected := "ok"
+				Ω(execErr).ShouldNot(HaveOccurred())
+				Ω(string(out)).Should(Equal(expected))
+			})
+
+		})
 	})
 
 })
+
+const mainTmpl = `import "github.com/raphael/goa"
+import "fmt"
+import "os"
+
+func main() {
+	var err error
+	raw = {{.raw}}
+	{{.source}}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err.Error())
+	}
+	fmt.Printf("%v", p)
+}
+`
