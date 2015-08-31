@@ -5,14 +5,14 @@ import . "github.com/raphael/goa/design"
 // Resource defines a resource DSL.
 //
 // Resource("bottle", func() {
-//      Description("A wine bottle") // Resource description
-// 	MediaType(BottleMediaType)   // Resource actions default media type
-// 	Prefix("/bottles")           // Resource actions path prefix if not ""
-//      Parent("account")            // Name of parent resource if any
-// 	CanonicalAction("show")      // Action that returns canonical representation
-// 	Trait("Authenticated")       // Included trait if any, can appear more than once
-// 	Action("show", func() {      // Action definition, can appear more than once
-//        // ... Action DSL
+//	Description("A wine bottle")		// Resource description
+// 	ResourceMediaType(BottleMediaType)  // Resource actions default media type
+// 	Prefix("/bottles")           		// Resource actions path prefix if not ""
+//	Parent("account")            		// Name of parent resource if any
+// 	CanonicalAction("show")      		// Action that returns canonical representation
+// 	Trait("Authenticated")       		// Included trait if any, can appear more than once
+// 	Action("show", func() {      		// Action definition, can appear more than once
+//		// ... Action DSL
 // 	})
 // })
 func Resource(name string, dsl func()) {
@@ -27,11 +27,10 @@ func Resource(name string, dsl func()) {
 	}
 }
 
-// MediaType sets the resource media type
-func MediaType(m *MediaTypeDefinition) {
+// ResourceMediaType sets the resource media type
+func ResourceMediaType(m *MediaTypeDefinition) {
 	if r, ok := ctxStack.current().(*ResourceDefinition); ok {
 		r.MediaType = m
-		m.Resource = r
 	} else if r, ok := responseDefinition(); ok {
 		r.MediaType = m
 	}
@@ -41,14 +40,14 @@ func MediaType(m *MediaTypeDefinition) {
 // The parent resource is used to compute the path to the resource actions.
 func Parent(p string) {
 	if r, ok := resourceDefinition(); ok {
-		r.Parent = p
+		r.ParentName = p
 	}
 }
 
 // Prefix sets the resource path prefix
 func Prefix(p string) {
 	if r, ok := resourceDefinition(); ok {
-		r.Prefix = p
+		r.BasePath = p
 	}
 }
 

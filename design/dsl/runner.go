@@ -96,8 +96,8 @@ func reportErrors() {
 
 // actionDefinition returns true and current context if it is an ActionDefinition,
 // nil and false otherwise.
-func actionDefinition() (*design.ActionDefinition, bool) {
-	a, ok := ctxStack.current().(*design.ActionDefinition)
+func actionDefinition() (*ActionDefinition, bool) {
+	a, ok := ctxStack.current().(*ActionDefinition)
 	if !ok {
 		incompatibleDsl(caller())
 	}
@@ -128,6 +128,16 @@ func attributeDefinition() (*AttributeDefinition, bool) {
 // nil and false otherwise.
 func resourceDefinition() (*ResourceDefinition, bool) {
 	r, ok := ctxStack.current().(*ResourceDefinition)
+	if !ok {
+		incompatibleDsl(caller())
+	}
+	return r, ok
+}
+
+// mediaTypeDefinition returns true and current context if it is a MediaTypeDefinition,
+// nil and false otherwise.
+func mediaTypeDefinition() (*MediaTypeDefinition, bool) {
+	r, ok := ctxStack.current().(*MediaTypeDefinition)
 	if !ok {
 		incompatibleDsl(caller())
 	}

@@ -107,20 +107,18 @@ func Params(dsl func()) {
 }
 
 // Payload defines the action payload DSL.
-func Payload(p interface{}) {
+func Payload(dsl func()) {
 	if a, ok := actionDefinition(); ok {
-		if at, ok := p.(*design.AttributeDefinition); ok {
-			a.Payload = at
-			return
-		}
 		rn := inflect.Camelize(a.Resource.Name)
 		an := inflect.Camelize(a.Name)
-		a.Payload = &design.UserTypeDefinition{
-			AttributeDefinition: new(design.AttributeDefinition),
+		a.Payload = &UserTypeDefinition{
+			AttributeDefinition: new(AttributeDefinition),
 			Name:                fmt.Sprintf("%s%sPayload", an, rn),
 		}
+
+		payload := new(UserTypeDefinition)
 		if executeDSL(dsl, &payload) {
-			a.Payload = &payload
+			a.Payload = payload
 		}
 	}
 }

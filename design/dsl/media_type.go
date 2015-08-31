@@ -1,4 +1,4 @@
-package design
+package dsl
 
 import "fmt"
 import . "github.com/raphael/goa/design"
@@ -21,11 +21,13 @@ import . "github.com/raphael/goa/design"
 //		Attribute("href")
 //	})
 // })
-func MediaType(identifier string, dsl func()) {
-	mt := MediaTypeDefinition{Name: name}
-	if ok := executeDSL(dsl, &mt); ok {
-		Design.MediaTypes = append(Design.MediaTypes, &mt)
+func MediaType(identifier string, dsl func()) *MediaTypeDefinition {
+	mt := &MediaTypeDefinition{Identifier: identifier}
+	if ok := executeDSL(dsl, mt); ok {
+		Design.MediaTypes = append(Design.MediaTypes, mt)
 	}
+
+	return mt
 }
 
 // View adds a new view to the media type.
@@ -62,11 +64,14 @@ func Link(name string, args ...interface{}) {
 	}
 }
 
+// FIXME
+//
 // CollectionOf creates a collection media type from its element media type.
 // A collection media type represents the content of responses that return a
 // collection of resources such as "index" actions.
-func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
-	col := *m
-	col.isCollection = true
-	return &col
-}
+//
+// func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
+// 	col := *m
+// 	col.IsCollection = true
+// 	return &col
+// }
