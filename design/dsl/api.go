@@ -43,13 +43,34 @@ func API(name string, dsl func()) error {
 	return nil // Need to return something for 'var _ = ' trick
 }
 
-// BaseParams defines the API base params
-func BaseParams(attributes ...*AttributeDefinition) {
+// Description sets the description of the source
+func Description(desc string) {
 	switch c := ctxStack.current().(type) {
 	case *APIDefinition:
-		c.BaseParams = attributes
+		c.Description = desc
+	case *ResourceDefinition:
+		c.Description = desc
+	case *TypeDefinition:
+		c.Description = desc
+	case *ActionDefinition:
+		c.Description = desc
+	case *AttributeDefinition:
+		c.Description = desc
+	case *LinkDefinition:
+		c.Description = desc
+	case *ResponseDefinition:
+		c.Description = desc
+	case *UserTypeDefinition:
+		c.Description = desc
 	default:
-		incompatibleDsl("BaseParams")
+		incompatibleDsl("Description")
+	}
+}
+
+// BaseParams defines the API base params
+func BaseParams(dsl func()) {
+	if a, ok := apiDefinition(); ok {
+		executeDSL(dsl, &a)
 	}
 }
 
@@ -67,7 +88,7 @@ func ResponseTemplate(name string, dsl func()) {
 			appendError(fmt.Errorf("multiple definitions for response template %s", name))
 			return
 		}
-		template := &ResponseTemplateDefinition{Name: name}
+		template := &ResponseDefinition{Name: name}
 		if ok := executeDSL(dsl, template); ok {
 			a.ResponseTemplates[name] = template
 		}

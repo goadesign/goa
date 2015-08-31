@@ -13,7 +13,8 @@ var enumValidationTemplateC *template.Template
 // Generate enum validation code.
 func EnumValidationCode(values []interface{}) (string, error) {
 	if enumValidationTemplateC == nil {
-		enumValidationTemplateC, err := template.New("enum validation").Funcs(funcMap).Parse(enumValidationTemplate)
+		var err error
+		enumValidationTemplateC, err = template.New("enum validation").Funcs(funcMap).Parse(enumValidationTemplate)
 		if err != nil {
 			return "", fmt.Errorf("failed to instantiate enum validation template: %s", err)
 		}
