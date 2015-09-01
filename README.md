@@ -76,24 +76,22 @@ var _ = API("cellar", func() {
 
 var _ = Resource("bottle", func() {
 	MediaType(BottleMediaType)
-
 	Action("show", func() {
 		Description("Retrieve bottle with given id")
 		Routing(
 			GET("/:id"),
 		)
-		Params(
-			Param("id", Integer, "Account ID"),
-		)
-		Responses(
-			goa.OK(BottleMediaType),
-		)
+		Params(func() {
+			Param("id", Integer, "Account ID")
+		})
+		Response(OK, func() {
+			MediaType(BottleMediaType)
+		})
 	})
 })
 
 var BottleMediaType = MediaType("application/vnd.goa.example.bottle", func() {
 	Description("A bottle of wine")
-
 	Attributes(func() {
 		Attribute("id", Integer, "ID of bottle")
 		Attribute("href", String, "API href of bottle")
