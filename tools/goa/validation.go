@@ -10,7 +10,7 @@ import (
 // Enum validation compiled template
 var enumValidationTemplateC *template.Template
 
-// Generate enum validation code.
+// EnumValidationCode generates the enum validation code.
 func EnumValidationCode(values []interface{}) (string, error) {
 	if enumValidationTemplateC == nil {
 		var err error

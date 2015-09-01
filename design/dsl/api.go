@@ -97,81 +97,72 @@ func ResponseTemplate(name string, p interface{}) {
 				if len(params) == 0 {
 					appendError(fmt.Errorf("expected one argument when invoking response template %s", name))
 					return nil
-				} else {
-					return tmpl(params[0])
 				}
+				return tmpl(params[0])
 			}
 		} else if tmpl, ok := p.(func(v1, v2 string) *ResponseTemplateDefinition); ok {
 			a.ResponseTemplateFuncs[name] = func(params ...string) *ResponseTemplateDefinition {
 				if len(params) < 2 {
 					appendError(fmt.Errorf("expected two arguments when invoking response template %s", name))
 					return nil
-				} else {
-					return tmpl(params[0], params[1])
 				}
+				return tmpl(params[0], params[1])
 			}
 		} else if tmpl, ok := p.(func(v1, v2, v3 string) *ResponseTemplateDefinition); ok {
 			a.ResponseTemplateFuncs[name] = func(params ...string) *ResponseTemplateDefinition {
 				if len(params) < 3 {
 					appendError(fmt.Errorf("expected three arguments when invoking response template %s", name))
 					return nil
-				} else {
-					return tmpl(params[0], params[1], params[2])
 				}
+				return tmpl(params[0], params[1], params[2])
 			}
 		} else if tmpl, ok := p.(func(v1, v2, v3, v4 string) *ResponseTemplateDefinition); ok {
 			a.ResponseTemplateFuncs[name] = func(params ...string) *ResponseTemplateDefinition {
 				if len(params) < 4 {
 					appendError(fmt.Errorf("expected four arguments when invoking response template %s", name))
 					return nil
-				} else {
-					return tmpl(params[0], params[1], params[2], params[3])
 				}
+				return tmpl(params[0], params[1], params[2], params[3])
 			}
 		} else if tmpl, ok := p.(func(v1, v2, v3, v4, v5 string) *ResponseTemplateDefinition); ok {
 			a.ResponseTemplateFuncs[name] = func(params ...string) *ResponseTemplateDefinition {
 				if len(params) < 5 {
 					appendError(fmt.Errorf("expected five arguments when invoking response template %s", name))
 					return nil
-				} else {
-					return tmpl(params[0], params[1], params[2], params[3], params[4])
 				}
+				return tmpl(params[0], params[1], params[2], params[3], params[4])
 			}
 		} else if tmpl, ok := p.(func(v1, v2, v3, v4, v5, v6 string) *ResponseTemplateDefinition); ok {
 			a.ResponseTemplateFuncs[name] = func(params ...string) *ResponseTemplateDefinition {
 				if len(params) < 6 {
 					appendError(fmt.Errorf("expected six arguments when invoking response template %s", name))
 					return nil
-				} else {
-					return tmpl(params[0], params[1], params[2], params[3], params[4], params[5])
 				}
+				return tmpl(params[0], params[1], params[2], params[3], params[4], params[5])
 			}
 		} else if tmpl, ok := p.(func(v1, v2, v3, v4, v5, v6, v7 string) *ResponseTemplateDefinition); ok {
 			a.ResponseTemplateFuncs[name] = func(params ...string) *ResponseTemplateDefinition {
 				if len(params) < 7 {
 					appendError(fmt.Errorf("expected seven arguments when invoking response template %s", name))
 					return nil
-				} else {
-					return tmpl(params[0], params[1], params[2], params[3], params[4], params[5], params[6])
 				}
+				return tmpl(params[0], params[1], params[2], params[3], params[4], params[5], params[6])
 			}
 		} else if tmpl, ok := p.(func(v1, v2, v3, v4, v5, v6, v7, v8 string) *ResponseTemplateDefinition); ok {
 			a.ResponseTemplateFuncs[name] = func(params ...string) *ResponseTemplateDefinition {
 				if len(params) < 8 {
 					appendError(fmt.Errorf("expected eight arguments when invoking response template %s", name))
 					return nil
-				} else {
-					return tmpl(params[0], params[1], params[2], params[3], params[4], params[5], params[6], params[7])
 				}
+				return tmpl(params[0], params[1], params[2], params[3], params[4], params[5], params[6], params[7])
 			}
 		} else if tmpl, ok := p.(func(v1, v2, v3, v4, v5, v6, v7, v8, v9 string) *ResponseTemplateDefinition); ok {
 			a.ResponseTemplateFuncs[name] = func(params ...string) *ResponseTemplateDefinition {
 				if len(params) < 9 {
 					appendError(fmt.Errorf("expected nine arguments when invoking response template %s", name))
 					return nil
-				} else {
-					return tmpl(params[0], params[1], params[2], params[3], params[4], params[5], params[6], params[7], params[8])
 				}
+				return tmpl(params[0], params[1], params[2], params[3], params[4], params[5], params[6], params[7], params[8])
 			}
 		} else if tmpl, ok := p.(func(v ...string) *ResponseTemplateDefinition); ok {
 			a.ResponseTemplateFuncs[name] = func(params ...string) *ResponseTemplateDefinition {

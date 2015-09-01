@@ -60,12 +60,11 @@ func init() {
 		if len(params) < 1 {
 			appendError(fmt.Errorf("expected media type as argument when invoking response template OK"))
 			return nil
-		} else {
-			return &ResponseTemplateDefinition{
-				Name:      "OK",
-				Status:    200,
-				MediaType: params[0],
-			}
+		}
+		return &ResponseTemplateDefinition{
+			Name:      "OK",
+			Status:    200,
+			MediaType: params[0],
 		}
 	}
 
