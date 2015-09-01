@@ -14,7 +14,7 @@ import (
 )
 
 type (
-	// Controllers implement the actions of a single resource.
+	// Controller implements the actions of a single resource.
 	// Use NewController to create controller objects.
 	Controller struct {
 		log.Logger                // Controller logger
@@ -24,10 +24,10 @@ type (
 		Resource     string       // Name of resource controller implements
 	}
 
-	// UserHandlers associates action names with their handler.
+	// Handlers associates action names with their handler.
 	Handlers map[string]UserHandler
 
-	// UserHandlers are functions that contain the implementation for controller actions.
+	// UserHandler is a function that contain the implementation for controller actions.
 	// The function signatures is specified by the corresponding design action definition.
 	UserHandler interface{}
 )

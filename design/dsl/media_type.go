@@ -1,4 +1,4 @@
-package design
+package dsl
 
 import "fmt"
 import . "github.com/raphael/goa/design"
@@ -21,11 +21,30 @@ import . "github.com/raphael/goa/design"
 //		Attribute("href")
 //	})
 // })
-func MediaType(identifier string, dsl func()) {
-	mt := MediaTypeDefinition{Name: name}
-	if ok := executeDSL(dsl, &mt); ok {
-		Design.MediaTypes = append(Design.MediaTypes, &mt)
+//
+// MediaType also refers to a media type (by name or by reference):
+//
+// 	ResponseTemplate("NotFound", func() {
+//		Status(404)
+//		MediaType("application/json")
+//	})
+//
+// This function returns the newly defined media type in the first mode, nil otherwise.
+func MediaType(identifier string, dsl ...func()) *MediaTypeDefinition {
+	var mt *MediaTypeDefinition
+	if _, ok := apiDefinition(); ok {
+		mt = &MediaTypeDefinition{UserTypeDefinition: &UserTypeDefinition{Name: identifier}}
+		if len(dsl) > 0 {
+			if ok := executeDSL(dsl[0], mt); ok {
+				Design.MediaTypes = append(Design.MediaTypes, mt)
+			}
+		}
+	} else if r, ok := resourceDefinition(); ok {
+		r.MediaType = identifier
+	} else if r, ok := responseDefinition(); ok {
+		r.MediaType = identifier
 	}
+	return mt
 }
 
 // View adds a new view to the media type.
@@ -62,11 +81,36 @@ func Link(name string, args ...interface{}) {
 	}
 }
 
+// ArrayOf creates an array from its element type.
+func ArrayOf(t DataType) *Array {
+	at := AttributeDefinition{Type: t}
+	return &Array{ElemType: &at}
+}
+
 // CollectionOf creates a collection media type from its element media type.
 // A collection media type represents the content of responses that return a
 // collection of resources such as "index" actions.
 func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
-	col := *m
-	col.isCollection = true
+	id := m.Identifier
+	if id != "" {
+		id += ";type=collection"
+	}
+	mat := m.UserTypeDefinition.AttributeDefinition
+	at := AttributeDefinition{
+		Type:        &Array{ElemType: mat},
+		Description: fmt.Sprintf("Collection of %s", mat.Description),
+	}
+	ut := UserTypeDefinition{
+		AttributeDefinition: &at,
+		Name:                m.UserTypeDefinition.Name,
+		Description:         m.UserTypeDefinition.Description,
+	}
+	col := MediaTypeDefinition{
+		// A media type is a type
+		UserTypeDefinition: &ut,
+		Identifier:         id,
+		Links:              m.Links,
+		Views:              m.Views,
+	}
 	return &col
 }

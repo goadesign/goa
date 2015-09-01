@@ -10,7 +10,7 @@ import (
 )
 
 type (
-	// Applications consist of a set of controllers.
+	// Application consists of a set of controllers.
 	// A controller implements a resource action.
 	Application struct {
 		log.Logger                          // Application logger
@@ -20,11 +20,13 @@ type (
 		router       *httprouter.Router     // Application router
 	}
 
-	// ErrorHandlers handle errors returned by action handlers and middleware.
+	// ErrorHandler handles errors returned by action handlers and middleware.
 	ErrorHandler func(*Context, error)
 )
 
 var (
+	// Log is the global logger. Configure it by setting its handler.
+	// See https://godoc.org/github.com/inconshreveable/log15
 	Log log.Logger
 )
 
@@ -54,7 +56,7 @@ func (a *Application) Mount(c *Controller) {
 		Fatalf("controller has no handlers, use SetHandlers to register them")
 	}
 	for k, u := range c.Handlers {
-		id := handlerId(c.Resource, k)
+		id := handlerID(c.Resource, k)
 		h, ok := handlers[id]
 		if !ok {
 			Fatalf("unknown %s action %s", c.Resource, k)

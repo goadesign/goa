@@ -1,7 +1,26 @@
 package main
 
-import . "github.com/raphael/goa/design/dsl"
+import (
+	. "github.com/raphael/goa/design"
+	. "github.com/raphael/goa/design/dsl"
+)
 
+// AccountMediaType is the account resource media type.
+var AccountMediaType = MediaType("application/vnd.goa.example.account", func() {
+	Description("A tenant account")
+	Attributes(func() {
+		Attribute("id", Integer, "ID of account")
+		Attribute("href", String, "API href of account")
+		Attribute("name", String, "Name of account")
+		Attribute("created_at", String, "Date of creation", func() {
+			Format("date-time")
+		})
+
+		Required("name")
+	})
+})
+
+// BottleMediaType is the bottle resource media type.
 var BottleMediaType = MediaType("application/vnd.goa.example.bottle", func() {
 	Description("A bottle of wine")
 	Attributes(func() {
@@ -14,11 +33,17 @@ var BottleMediaType = MediaType("application/vnd.goa.example.bottle", func() {
 		Attribute("color", String, "Type of wine", func() {
 			Enum("red", "white", "rose", "yellow")
 		})
-		Attribute("sweet", Bool, "Whether wine is sweet or dry")
+		Attribute("sweet", Boolean, "Whether wine is sweet or dry")
 		Attribute("country", String, "Country of origin")
 		Attribute("region", String, "Region")
 		Attribute("review", String, "Review")
-		Attribute("characteristics", CollectionOf(String), "Wine characteristics")
+		Attribute("characteristics", ArrayOf(String), "Wine characteristics")
+		Attribute("created_at", String, "Date of creation", func() {
+			Format("date-time")
+		})
+		Attribute("updated_at", String, "Date of last update", func() {
+			Format("date-time")
+		})
 
 		Required("name", "vineyard")
 	})

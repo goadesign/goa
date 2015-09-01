@@ -9,7 +9,7 @@ import (
 // In-memory "database"
 var data map[int][]*autogen.Bottle
 
-// HREF from id
+// BottleHref computes the bottle href from its id.
 func BottleHref(account, id int) string {
 	return fmt.Sprintf("/api/%d/bottles/%d", account, id)
 }
@@ -94,7 +94,7 @@ func init() {
 	}
 }
 
-// Return bottle with given id from given account or nil if not found.
+// GetBottle returns the bottle with the given id from the given account or nil if not found.
 func GetBottle(account, id int) *autogen.Bottle {
 	bottles, ok := data[account]
 	if !ok {
@@ -108,7 +108,7 @@ func GetBottle(account, id int) *autogen.Bottle {
 	return nil
 }
 
-// Return bottles from given account.
+// GetBottles return the bottles from the given account.
 func GetBottles(account int) ([]*autogen.Bottle, error) {
 	bottles, ok := data[account]
 	if !ok {
@@ -117,7 +117,7 @@ func GetBottles(account int) ([]*autogen.Bottle, error) {
 	return bottles, nil
 }
 
-// Return bottles with vintage in given array from given account.
+// GetBottlesByYears returns the bottles with the vintage in the given array from the given account.
 func GetBottlesByYears(account int, years []int) ([]*autogen.Bottle, error) {
 	bottles, ok := data[account]
 	if !ok {

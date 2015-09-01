@@ -14,9 +14,17 @@ func init() {
 	Log.SetHandler(log15.LvlFilterHandler(log15.LvlInfo, log15.StdoutHandler))
 }
 
-// Log a message at the given level with context key/value pairs
+// Debug logs a message at the debug level with context key/value pairs.
 func Debug(msg string, ctx ...interface{}) { Log.Debug(msg, ctx...) }
-func Info(msg string, ctx ...interface{})  { Log.Info(msg, ctx...) }
-func Warn(msg string, ctx ...interface{})  { Log.Warn(msg, ctx...) }
+
+// Info logs a message at the info level with context key/value pairs.
+func Info(msg string, ctx ...interface{}) { Log.Info(msg, ctx...) }
+
+// Warn logs a message at the warning level with context key/value pairs.
+func Warn(msg string, ctx ...interface{}) { Log.Warn(msg, ctx...) }
+
+// Error logs a message at the error level with context key/value pairs.
 func Error(msg string, ctx ...interface{}) { Log.Error(msg, ctx...) }
-func Crit(msg string, ctx ...interface{})  { Log.Crit(msg, ctx...) }
+
+// Crit logs a message at the critical level with context key/value pairs.
+func Crit(msg string, ctx ...interface{}) { Log.Crit(msg, ctx...) }

@@ -2,8 +2,8 @@ package goa
 
 import "net/http"
 
-// Responses are created by controller actions.
-// They contain the information needed to produce a HTTP response.
+// Response is created by controller actions.
+// It contains the information needed to produce a HTTP response.
 type Response struct {
 	StatusCode int
 	Body       interface{}

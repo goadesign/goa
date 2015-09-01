@@ -22,13 +22,15 @@ type (
 		// Common base path to all API actions
 		BasePath string
 		// Common path parameters to all API actions
-		BaseParams []*AttributeDefinition
+		BaseParams *AttributeDefinition
 		// Exposed resources indexed by name
 		Resources map[string]*ResourceDefinition
 		// Traits available to all API resources and actions indexed by name
 		Traits map[string]*TraitDefinition
 		// Response templates available to all API actions indexed by name
-		ResponseTemplates map[string]*ResponseDefinition
+		ResponseTemplates map[string]*ResponseTemplateDefinition
+		// Response template factories available to all API actions indexed by name
+		ResponseTemplateFuncs map[string]func(params ...string)
 		// User types
 		UserTypes []*UserTypeDefinition
 		// Media types
@@ -54,7 +56,7 @@ type (
 		// Optional version
 		Version string
 		// Default media type, describes the resource attributes
-		MediaType *MediaTypeDefinition
+		MediaType string
 		// Exposed resource actions indexed by name
 		Actions map[string]*ActionDefinition
 		// Action with canonical resource path
@@ -69,6 +71,19 @@ type (
 		Name string
 		// Optional description
 		Description string
+	}
+
+	// ResponseTemplateDefinition describes a response template that can be used by API actions
+	// to define their responses.
+	ResponseTemplateDefinition struct {
+		// Name used in generated code
+		Name string
+		// Optional description
+		Description string
+		// HTTP status
+		Status int
+		// Media type used to render link
+		MediaType string
 	}
 
 	// ActionDefinition defines a resource action.
@@ -147,7 +162,7 @@ type (
 		// Response description
 		Description string
 		// Response body media type if any
-		MediaType *MediaTypeDefinition
+		MediaType string
 		// Response header validations
 		Headers []*HeaderDefinition
 	}
@@ -222,6 +237,18 @@ type (
 		Names []string
 	}
 )
+
+// MediaType returns the media type with the given name/identifier - nil if none exist.
+func (a *APIDefinition) MediaType(name string) *MediaTypeDefinition {
+	var mt *MediaTypeDefinition
+	for _, m := range Design.MediaTypes {
+		if m.Name == name {
+			mt = m
+			break
+		}
+	}
+	return mt
+}
 
 // Parent returns the parent resource if any.
 func (r *ResourceDefinition) Parent() *ResourceDefinition {

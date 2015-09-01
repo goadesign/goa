@@ -84,9 +84,11 @@ func (r *ResourceDefinition) Validate() error {
 			}
 		}
 	}
-	if r.MediaType != nil {
-		if err := r.MediaType.Validate(); err != nil {
-			return err
+	if r.MediaType != "" {
+		if mt := Design.MediaType(r.MediaType); mt != nil {
+			if err := mt.Validate(); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -189,9 +191,11 @@ func (r *ResponseDefinition) Validate() error {
 	if r.Status == 0 {
 		return fmt.Errorf("response status not defined")
 	}
-	if r.MediaType != nil {
-		if err := r.MediaType.Validate(); err != nil {
-			return err
+	if r.MediaType != "" {
+		if mt := Design.MediaType(r.MediaType); mt != nil {
+			if err := mt.Validate(); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

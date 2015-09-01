@@ -62,7 +62,7 @@ type (
 	// building the response body for the corresponding view.
 	MediaTypeDefinition struct {
 		// A media type is a type
-		UserTypeDefinition
+		*UserTypeDefinition
 		// Identifier is the RFC 6838 media type identifier.
 		Identifier string
 		// Links list the rendered links indexed by name.

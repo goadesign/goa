@@ -36,11 +36,11 @@ func (s contextStack) current() interface{} {
 // executeDSL runs DSL in given evaluation context and returns true if successful.
 // It appends to dslErrors in case of failure (and returns false).
 func executeDSL(dsl func(), ctx interface{}) bool {
-	errorCount := len(dslErrors)
+	initCount := len(dslErrors)
 	ctxStack = append(ctxStack, ctx)
 	dsl()
 	ctxStack = ctxStack[:len(ctxStack)-1]
-	return len(dslErrors) > errorCount
+	return len(dslErrors) > initCount
 }
 
 // incompatibleDsl should be called by DSL functions when they are
@@ -76,7 +76,7 @@ func computeErrorLocation() (string, int) {
 		ok, _ = regexp.MatchString(`/goa/design/.+\.go$`, file)
 	}
 	for ok {
-		depth += 1
+		depth++
 		_, file, line, ok = runtime.Caller(depth)
 		ok, _ = regexp.MatchString(`/goa/design/.+\.go$`, file)
 	}
@@ -89,15 +89,15 @@ func computeErrorLocation() (string, int) {
 // reportErrors prints the DSL errors and exits the process.
 func reportErrors() {
 	for _, err := range dslErrors {
-		fmt.Printf("%s: %d: %s\n", err.Line, err.Line, err.Error.Error())
+		fmt.Printf("%d: %d: %s\n", err.Line, err.Line, err.Error.Error())
 	}
 	os.Exit(1)
 }
 
 // actionDefinition returns true and current context if it is an ActionDefinition,
 // nil and false otherwise.
-func actionDefinition() (*design.ActionDefinition, bool) {
-	a, ok := ctxStack.current().(*design.ActionDefinition)
+func actionDefinition() (*ActionDefinition, bool) {
+	a, ok := ctxStack.current().(*ActionDefinition)
 	if !ok {
 		incompatibleDsl(caller())
 	}
@@ -108,6 +108,16 @@ func actionDefinition() (*design.ActionDefinition, bool) {
 // nil and false otherwise.
 func apiDefinition() (*APIDefinition, bool) {
 	a, ok := ctxStack.current().(*APIDefinition)
+	if !ok {
+		incompatibleDsl(caller())
+	}
+	return a, ok
+}
+
+// mediaTypeDefinition returns true and current context if it is a MediaTypeDefinition,
+// nil and false otherwise.
+func mediaTypeDefinition() (*MediaTypeDefinition, bool) {
+	a, ok := ctxStack.current().(*MediaTypeDefinition)
 	if !ok {
 		incompatibleDsl(caller())
 	}

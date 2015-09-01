@@ -1,6 +1,9 @@
 package main
 
-import . "github.com/raphael/goa/design/dsl"
+import (
+	. "github.com/raphael/goa/design"
+	. "github.com/raphael/goa/design/dsl"
+)
 
 var _ = API("cellar", func() {
 
@@ -8,10 +11,10 @@ var _ = API("cellar", func() {
 	Description("A basic example of a CRUD API implemented with goa")
 	BasePath("/:accountID")
 
-	BaseParams(
+	BaseParams(func() {
 		Param("accountID", Integer,
-			"API request account. All actions operate on resources belonging to the account."),
-	)
+			"API request account. All actions operate on resources belonging to the account.")
+	})
 
 	ResponseTemplate("NotFound", func() {
 		Description("Resource not found")
@@ -25,7 +28,7 @@ var _ = API("cellar", func() {
 		MediaType("application/json")
 	})
 
-	ResponseTemplate("Ok", func(mt string) {
+	ResponseTemplate("OK", func(mt string) {
 		Description("Resource listing")
 		Status(200)
 		MediaType(mt)
@@ -37,8 +40,9 @@ var _ = API("cellar", func() {
 	})
 
 	Trait("Authenticated", func() {
-		Headers(
-			Header("Auth-Token", Required()),
-		)
+		Headers(func() {
+			Header("Auth-Token")
+			Required("Auth-Token")
+		})
 	})
 })

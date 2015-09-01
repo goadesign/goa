@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
-	"strings"
 	"text/template"
 	"unicode"
 )
@@ -14,6 +13,7 @@ var (
 	arrayT     *template.Template
 	objectT    *template.Template
 	userT      *template.Template
+	tempCount  int
 )
 
 //  init instantiates the templates.
@@ -24,9 +24,10 @@ func init() {
 		"unmarshalAttribute": attributeUnmarshalerR,
 		"gotypename":         GoTypeName,
 		"gotyperef":          GoTypeRef,
+		"goify":              Goify,
 		"tabs":               tabs,
-		"tabulate":           tabulate,
 		"add":                func(a, b int) int { return a + b },
+		"tempvar":            tempvar,
 	}
 	if primitiveT, err = template.New("primitive").Funcs(fm).Parse(primitiveTmpl); err != nil {
 		panic(err)
@@ -194,6 +195,7 @@ func ValidationChecker(att *AttributeDefinition, context, target string) string 
 }
 func validationCheckerR(att *AttributeDefinition, context, target string, depth int) string {
 	var b bytes.Buffer
+	// TBD
 	//for _, v := range att.Validations {
 	//switch actual := v.(type) {
 	//case *EnumValidationDefinition:
@@ -218,26 +220,32 @@ const (
 	arrayTmpl = `{{tabs .depth}}if val, ok := {{.source}}.([]interface{}); ok {
 {{tabs .depth}}	{{.target}} = make([]{{gotyperef .elemType.Type}}, len(val))
 {{tabs .depth}}	for i, v := range val {
-{{unmarshalAttribute .elemType (printf "%s[*]" .context) "v" (printf "%s[i]" .target) (add .depth 2)}}
+{{tabs .depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef .elemType.Type}}
+{{unmarshalAttribute .elemType (printf "%s[*]" .context) "v" $temp (add .depth 2)}}
+{{tabs .depth}}		{{printf "%s[i]" .target}} = {{$temp}}
 {{tabs .depth}}	}
 {{tabs .depth}}} else {
 {{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "[]{{gotyperef .elemType.Type}}")
 {{tabs .depth}}}`
 
 	objectTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
-{{tabs .depth}}{{$context := .context}}{{$depth := .depth}}{{$target := .target}}	{{$target}} = make(map[string]interface{})
+{{tabs .depth}}{{$context := .context}}{{$depth := .depth}}{{$target := .target}}	{{$target}} = new({{gotypename .type}})
 {{range $name, $att := .type}}{{tabs $depth}}	if v, ok := val["{{$name}}"]; ok {
-{{unmarshalType $att.Type (printf "%s[\"%s\"]" $context $name) "v" (printf "%s[\"%s\"]" $target $name) (add $depth 2)}}
-{{tabs $depth}}	}
+{{tabs $depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type}}
+{{unmarshalType $att.Type (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}
+{{tabs $depth}}		{{printf "%s.%s" $target (goify $name true)}} = {{$temp}}
+{{tabs $depth}}}
 {{end}}{{tabs $depth}}} else {
-{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, ` + "`{{tabulate (gotypename .type) (add .depth 2)}}`)" + `
+{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, ` + "`{{gotypename .type}}`)" + `
 {{tabs .depth}}}`
 
 	userTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
-{{tabs .depth}}	{{.target}} = new({{.type.Name}})
+		{{tabs .depth}}	{{.target}} = new({{.type.Name}})
 {{range $name, $att := .type.Definition.Type}}{{tabs .depth}}	if v, ok := val["{{$name}}"]; ok {
-{{unmarshalType $att.Type (printf "%s.%s" .context $name) "v" (printf "%s.%s" .target $name) (add .depth 2)}}
-{{tabs .depth}}	}
+{{tabs .depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type}}
+{{unmarshalType $att.Type (printf "%s.%s" .context (goify $name true)) "v" $temp (add .depth 2)}}
+{{tabs .depth}}		{{printf "%s.%s" .target (goify $name true)}} = {{$temp}}
+{{tabs .depth}}}
 {{end}}{{tabs .depth}}} else {
 {{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, {{gotypename .type}})
 {{tabs .depth}}}`
@@ -245,7 +253,11 @@ const (
 
 // GoTypeDef returns the Go code that defines a Go type which matches the data structure
 // definition (the part that comes after `type foo`).
-func GoTypeDef(ds DataStructure, jsonTags bool) string {
+// tabs indicates the number of tab character(s) used to tabulate the definition however the first
+// line is never indented.
+// jsonTags controls whether to produce json tags.
+// inner indicates whether to prefix the struct of an attribute of type object with *.
+func GoTypeDef(ds DataStructure, tabs int, jsonTags, inner bool) string {
 	var buffer bytes.Buffer
 	def := ds.Definition()
 	t := def.Type
@@ -253,8 +265,11 @@ func GoTypeDef(ds DataStructure, jsonTags bool) string {
 	case Primitive:
 		return GoTypeName(t)
 	case *Array:
-		return "[]" + GoTypeDef(actual.ElemType, jsonTags)
+		return "[]" + GoTypeDef(actual.ElemType, tabs, jsonTags, true)
 	case Object:
+		if inner {
+			buffer.WriteByte('*')
+		}
 		buffer.WriteString("struct {\n")
 		keys := make([]string, len(actual))
 		i := 0
@@ -264,7 +279,8 @@ func GoTypeDef(ds DataStructure, jsonTags bool) string {
 		}
 		sort.Strings(keys)
 		for _, name := range keys {
-			typedef := GoTypeDef(actual[name], jsonTags)
+			WriteTabs(&buffer, tabs+1)
+			typedef := GoTypeDef(actual[name], tabs+1, jsonTags, true)
 			fname := Goify(name, true)
 			var tags string
 			if jsonTags {
@@ -274,9 +290,9 @@ func GoTypeDef(ds DataStructure, jsonTags bool) string {
 				}
 				tags = fmt.Sprintf(" `json:\"%s%s\"`", name, omit)
 			}
-			field := fmt.Sprintf("\t%s %s%s\n", fname, typedef, tags)
-			buffer.WriteString(field)
+			buffer.WriteString(fmt.Sprintf("%s %s%s\n", fname, typedef, tags))
 		}
+		WriteTabs(&buffer, tabs)
 		buffer.WriteString("}")
 		return buffer.String()
 	case *UserTypeDefinition, *MediaTypeDefinition:
@@ -316,7 +332,7 @@ func GoTypeName(t DataType) string {
 	case *Array:
 		return "[]" + GoTypeRef(actual.ElemType.Type)
 	case Object:
-		return GoTypeDef(&AttributeDefinition{Type: actual}, false)
+		return GoTypeDef(&AttributeDefinition{Type: actual}, 0, false, false)
 	case *UserTypeDefinition:
 		return Goify(actual.Name, true)
 	case *MediaTypeDefinition:
@@ -362,6 +378,13 @@ func Goify(str string, firstUpper bool) string {
 		res += "_"
 	}
 	return res
+}
+
+// WriteTabs is a helper function that writes count tabulation characters to buf.
+func WriteTabs(buf *bytes.Buffer, count int) {
+	for i := 0; i < count; i++ {
+		buf.WriteByte('\t')
+	}
 }
 
 // reserved golang keywords
@@ -420,21 +443,8 @@ func tabs(depth int) string {
 	return tabs
 }
 
-// tabulate prefixes each line of the given string with depth tab characters except the first one.
-func tabulate(text string, depth int) string {
-	lines := strings.Split(text, "\n")
-	if len(lines) == 1 {
-		return text
-	}
-	var b bytes.Buffer
-	b.WriteString(lines[0])
-	b.WriteByte('\n')
-	for i := 1; i < len(lines); i++ {
-		b.WriteString(tabs(depth))
-		b.WriteString(lines[i])
-		if i < len(lines)-1 {
-			b.WriteByte('\n')
-		}
-	}
-	return b.String()
+// tempvar generates a unique temp var name.
+func tempvar() string {
+	tempCount++
+	return fmt.Sprintf("tmp%d", tempCount)
 }

@@ -22,7 +22,7 @@ type (
 		Target Target // Generator target, code or documentation.
 	}
 
-	// Generator target, code or documentation for now
+	// Target is the generator target, code or documentation for now.
 	Target string
 )
 
@@ -35,7 +35,10 @@ var (
 )
 
 const (
+	// Code is the code target, causes goa to generate Go source code.
 	Code Target = "code"
+
+	// Docs is the docs targs, causes goa to generate JSON docs.
 	Docs Target = "docs"
 )
 
@@ -91,14 +94,13 @@ func (g *Generator) Build(pack string) (string, error) {
 	if err != nil {
 		if len(b) > 0 {
 			return "", fmt.Errorf(string(b))
-		} else {
-			return "", fmt.Errorf("failed to compile goagen: %s", err)
 		}
+		return "", fmt.Errorf("failed to compile goagen: %s", err)
 	}
 	return filepath.Join(dest, "goagen"), nil
 }
 
-// Generate generates the target output (either code or documentation at this time).
+// Run generates the target output (either code or documentation at this time).
 // This first builds a generator tool using the user design package then invokes the tool.
 func (g *Generator) Run(tool, dest, pack string) ([]string, error) {
 	c := exec.Cmd{

@@ -7,7 +7,7 @@ import (
 	"github.com/raphael/goa/examples/cellar/app/db"
 )
 
-// List all bottles in account optionally filtering by year
+// ListBottles lists all the bottles in the account optionally filtering by year.
 func ListBottles(c *autogen.ListBottleContext) error {
 	var bottles []*autogen.Bottle
 	var err error
@@ -22,7 +22,7 @@ func ListBottles(c *autogen.ListBottleContext) error {
 	return c.OK(bottles)
 }
 
-// Retrieve bottle with given id
+// ShowBottle retrieves the bottle with the given id.
 func ShowBottle(c *autogen.ShowBottleContext) error {
 	bottle := db.GetBottle(c.AccountID, c.ID)
 	if bottle == nil {
@@ -31,7 +31,7 @@ func ShowBottle(c *autogen.ShowBottleContext) error {
 	return c.OK(bottle)
 }
 
-// Record new bottle
+// CreateBottle records a new bottle.
 func CreateBottle(c *autogen.CreateBottleContext) error {
 	bottle := db.NewBottle(c.AccountID)
 	payload := c.Payload
@@ -60,6 +60,7 @@ func CreateBottle(c *autogen.CreateBottleContext) error {
 	return c.Created(bottle)
 }
 
+// UpdateBottle updates a bottle field(s).
 func UpdateBottle(c *autogen.UpdateBottleContext) error {
 	bottle := db.GetBottle(c.AccountID, c.ID)
 	if bottle == nil {
@@ -97,7 +98,7 @@ func UpdateBottle(c *autogen.UpdateBottleContext) error {
 	return c.NoContent()
 }
 
-// Delete bottle
+// DeleteBottle removes a bottle from the database.
 func DeleteBottle(c *autogen.DeleteBottleContext) error {
 	bottle := db.GetBottle(c.AccountID, c.ID)
 	if bottle == nil {
@@ -107,6 +108,7 @@ func DeleteBottle(c *autogen.DeleteBottleContext) error {
 	return c.NoContent()
 }
 
+// RateBottle rates a bottle.
 func RateBottle(c *autogen.RateBottleContext) error {
 	bottle := db.GetBottle(c.AccountID, c.ID)
 	if bottle == nil {

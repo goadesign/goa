@@ -142,7 +142,7 @@ func MaxLength(val int) {
 // Required properties validation
 func Required(names ...string) {
 	if a, ok := attributeDefinition(); ok {
-		if a.Type.Kind() != ObjectType {
+		if a.Type.Kind() != ObjectKind {
 			a.Validations = append(a.Validations, NewRequiredValidation(names...))
 		}
 	}

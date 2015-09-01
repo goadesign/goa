@@ -26,8 +26,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	} else {
 		err = goa.InvalidParamValue("accountID", rawAccountID, "number", err)
 	}
-	rawYears := c.Get("years")
-	if rawYears != nil {
+	if rawYears, ok := c.Query["years"]; ok {
 		ctx.HasYears = true
 		years := make([]int, len(rawYears))
 		for i, rawYear := range rawYears {

@@ -1,11 +1,14 @@
 package main
 
-import . "github.com/raphael/goa/design"
+import (
+	. "github.com/raphael/goa/design"
+	. "github.com/raphael/goa/design/dsl"
+)
 
 var _ = Resource("account", func() {
 
 	MediaType(AccountMediaType)
-	Prefix("accounts")
+	BasePath("/accounts")
 	CanonicalAction("show")
 	Trait("Authenticated")
 

@@ -27,28 +27,11 @@ func Resource(name string, dsl func()) {
 	}
 }
 
-// MediaType sets the resource media type
-func MediaType(m *MediaTypeDefinition) {
-	if r, ok := ctxStack.current().(*ResourceDefinition); ok {
-		r.MediaType = m
-		m.Resource = r
-	} else if r, ok := responseDefinition(); ok {
-		r.MediaType = m
-	}
-}
-
 // Parent defines the resource parent.
 // The parent resource is used to compute the path to the resource actions.
 func Parent(p string) {
 	if r, ok := resourceDefinition(); ok {
-		r.Parent = p
-	}
-}
-
-// Prefix sets the resource path prefix
-func Prefix(p string) {
-	if r, ok := resourceDefinition(); ok {
-		r.Prefix = p
+		r.ParentName = p
 	}
 }
 

@@ -154,6 +154,12 @@ func InvalidPayloadFieldValue(name string, val interface{}, expected []string, e
 	return appendError(err, &terr)
 }
 
+// IncompatibleTypeError is the error produced by the generated code when a payload type does not
+// match the design definition.
+func IncompatibleTypeError(ctx string, val interface{}, expected string) error {
+	return fmt.Errorf("type of %s must be %s but got value %v", ctx, expected, val)
+}
+
 // appendError coerces the first argument into a MultiError then appends the second argument and
 // returns the resulting MultiError.
 func appendError(err error, err2 error) error {

@@ -176,17 +176,21 @@ func New{{camelize .Name}}(c *goa.Context) (*{{.Name}}, error) {
 	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{.Name}} sends a HTTP response with status code {{.Status}}.
 func (c *{{$ctx.Name}}) {{.Name}}({{if .MediaType}}resp *{{.MediaType.TypeName}}{{end}}) error {
 	{{if .MediaType}}return c.JSON({{.Status}}, resp){{else}}return c.Respond({{.Status}}, nil){{end}}
-{{end}} }
+{{end}}}
 `
 	payloadT = `{{$payload := .Payload}}// {{gotypename .Payload}} is the {{.ResourceName}} {{.ActionName}} action payload.
-type {{gotypename .Payload}} {{gotypedef .Payload}}
+type {{gotypename .Payload}} {{gotypedef .Payload 0 true false}}
 `
 	newPayloadT = `// New{{gotypename .Payload}} instantiates a {{gotypename .Payload}} from a raw request body.
 // It validates each field and returns an error if any validation fails.
 func New{{gotypename .Payload}}(raw interface{}) ({{gotyperef .Payload}}, error) {
 	var err error
 	p := {{gotypename .Payload}}{}
-	m, ok := raw.(map[string]interface{})`
+	//m, ok := raw.(map[string]interface{})
+	//TBD
+	
+	return p, err
+}`
 
 	mediaTypeT = `// New{{.ActionName}}`
 )
