@@ -4,20 +4,25 @@ goa is a framework for building RESTful APIs in go.
 
 ## Why goa?
 
-There are a number of good good go packages for writing modular web
+There are a number of good go packages for writing modular web
 applications out there so why build another one? Glad you asked...
-The various Go web application packages out there tend to focus on
-providing a small, highly modular and narrowly focused framework.
-This is great when writing simple APIs that tend to stay unchanged.
-However there are a number of problems that all non trivial API
-implementations must address that tend to be left "as an exercise to
-the reader", things like API documentation, request payload
-validation, response media type definitions to list just a few.
+The existing packages tend to focus on providing small and highly
+modular frameworks that are purposefully narrowly focused. The
+intent is to keep things simple and to avoid mixing concerns.
+
+This is great when writing simple APIs that tend to change rarely
+however there are a number of problems that any non trivial API
+implementation must address. Things like documentation, request 
+validation, response media type definitions etc. are hard to do
+in a way that stays consistent and flexible as the API surface
+grows.
 
 goa takes a different approach to building web applications: instead of
 focusing solely on helping with implementation, goa makes it possible
-to describe the *design* of an API holistically and uses that
-description to provide specialized helper code for the implementation.
+to describe the *design* of an API in an holistic way. goa then uses that
+description to provide specialized helper code to the implementation,
+generate documentation and potentially do other things in the future
+(e.g. automatic tests generation would be nice - any taker?).
 
 The goa DSL allows writing self-explanatory code that describes the
 API, the resources it exposes and for each resource its properties
@@ -67,7 +72,10 @@ following content:
 ```go
 package design
 
-import . "github.com/raphael/goa/design/dsl"
+import (
+	. "github.com/raphael/goa/design"
+	. "github.com/raphael/goa/design/dsl"
+)
 
 var _ = API("cellar", func() {
 	Title("The virtual wine cellar")
@@ -87,6 +95,7 @@ var _ = Resource("bottle", func() {
 		Response(OK, func() {
 			MediaType(BottleMediaType)
 		})
+		Response(NotFound)
 	})
 })
 
@@ -142,16 +151,33 @@ import "./autogen"
 import "github.com/raphael/goa"
 
 func main() {
+	// Create a new controller called "bottles".
 	c := goa.NewController("bottles")
+	
+	// Attach the ShowBottle handler to the "show" action of the "bottles" controller.
 	c.SetHandlers(goa.Handlers{ "show": ShowBottle })
+	
+	// Create a new goa app.
 	app := goa.New("cellar")
+	
+	// Mount the "bottles" controller onto the app.
 	app.Mount(c)
+	
+	// Run the app, this calls http.ListenAndServe internally.
 	app.Run(":8080")
 } 
 
+// ShowBottle implements the "show" action of the "bottles" controller.
 func ShowBottle(c *autogen.ShowBottleContext) error {
-	bottle := Bottle{ID: c.ID, Name: fmt.Sprintf("Bottle #%d", c.ID)}
-	bottle.Href := bottle.ComputeHref()
+	if c.ID == 0 {
+		// Emulate a missing record with ID 0
+		return c.NotFound()
+	}
+	// Build the resource using the generated data structure
+	bottle := autogen.Bottle{ID: c.ID, Name: fmt.Sprintf("Bottle #%d", c.ID)}
+	
+	// Let the generated code produce the HTTP response using the
+	// media type described in the design (BottleMediaType).
 	return c.OK(&bottle)
 }
 ```
