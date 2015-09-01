@@ -10,13 +10,15 @@ var _ = Describe("GoTypeDef", func() {
 	Context("given an attribute definition with fields", func() {
 		var att *design.AttributeDefinition
 		var object design.Object
+		var required *design.RequiredValidationDefinition
 		var st string
 
 		JustBeforeEach(func() {
-			if att == nil {
-				att = new(design.AttributeDefinition)
-			}
+			att = new(design.AttributeDefinition)
 			att.Type = object
+			if required != nil {
+				att.Validations = []design.ValidationDefinition{required}
+			}
 			st = design.GoTypeDef(att, 0, true, false)
 		})
 
@@ -26,6 +28,7 @@ var _ = Describe("GoTypeDef", func() {
 					"foo": &design.AttributeDefinition{Type: design.Integer},
 					"bar": &design.AttributeDefinition{Type: design.String},
 				}
+				required = nil
 			})
 
 			It("produces the struct go code", func() {
@@ -44,6 +47,7 @@ var _ = Describe("GoTypeDef", func() {
 				object = design.Object{
 					"foo": &design.AttributeDefinition{Type: array},
 				}
+				required = nil
 			})
 
 			It("produces the struct go code", func() {
@@ -61,6 +65,7 @@ var _ = Describe("GoTypeDef", func() {
 				object = design.Object{
 					"foo": &design.AttributeDefinition{Type: array},
 				}
+				required = nil
 			})
 
 			It("produces the struct go code", func() {
@@ -78,11 +83,8 @@ var _ = Describe("GoTypeDef", func() {
 				object = design.Object{
 					"foo": &design.AttributeDefinition{Type: design.Integer},
 				}
-				required := &design.RequiredValidationDefinition{
+				required = &design.RequiredValidationDefinition{
 					Names: []string{"foo"},
-				}
-				att = &design.AttributeDefinition{
-					Validations: []design.ValidationDefinition{required},
 				}
 			})
 
