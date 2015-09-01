@@ -36,7 +36,7 @@ var _ = Describe("ContextWriter", func() {
 		Context("with data", func() {
 			var params, headers *design.AttributeDefinition
 			var payload *design.UserTypeDefinition
-			var responses []*design.ResponseDefinition
+			var responses map[string]*design.ResponseDefinition
 
 			var data *ContextData
 
