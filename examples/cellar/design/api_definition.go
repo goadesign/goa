@@ -1,4 +1,4 @@
-package main
+package design
 
 import (
 	. "github.com/raphael/goa/design"
@@ -16,27 +16,12 @@ var _ = API("cellar", func() {
 			"API request account. All actions operate on resources belonging to the account.")
 	})
 
-	ResponseTemplate("NotFound", func() {
-		Description("Resource not found")
-		Status(404)
-		MediaType("application/json")
-	})
-
-	ResponseTemplate("NoContent", func() {
-		Description("Request with empty response")
-		Status(204)
-		MediaType("application/json")
-	})
-
-	ResponseTemplate("OK", func(mt string) {
-		Description("Resource listing")
-		Status(200)
-		MediaType(mt)
-	})
-
 	ResponseTemplate("Created", func() {
 		Description("Resource created")
 		Status(201)
+		Headers(func() {
+			Header("Location", String, "href to created resource")
+		})
 	})
 
 	Trait("Authenticated", func() {

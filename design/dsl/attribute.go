@@ -31,7 +31,7 @@ import (
 //     Param("AccountID", Integer, "Account ID")
 //
 func Attribute(name string, args ...interface{}) {
-	if parent, ok := attributeDefinition(); ok {
+	if parent, ok := attributeDefinition(true); ok {
 		if parent.Type == nil {
 			parent.Type = Object{}
 		}
@@ -92,56 +92,56 @@ func Param(name string, args ...interface{}) {
 // Enum defines the possible values for an attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor76.
 func Enum(val ...interface{}) {
-	if a, ok := attributeDefinition(); ok {
+	if a, ok := attributeDefinition(true); ok {
 		a.Validations = append(a.Validations, NewEnumValidation(val))
 	}
 }
 
 // Default sets the default value for an attribute.
 func Default(def interface{}) {
-	if a, ok := attributeDefinition(); ok {
+	if a, ok := attributeDefinition(true); ok {
 		a.DefaultValue = def
 	}
 }
 
 // Format sets the string format for an attribute.
 func Format(f string) {
-	if a, ok := attributeDefinition(); ok {
+	if a, ok := attributeDefinition(true); ok {
 		a.Validations = append(a.Validations, NewFormatValidation(f))
 	}
 }
 
 // Minimum value validation
 func Minimum(val int) {
-	if a, ok := attributeDefinition(); ok {
+	if a, ok := attributeDefinition(true); ok {
 		a.Validations = append(a.Validations, NewMinimumValidation(val))
 	}
 }
 
 // Maximum value validation
 func Maximum(val int) {
-	if a, ok := attributeDefinition(); ok {
+	if a, ok := attributeDefinition(true); ok {
 		a.Validations = append(a.Validations, NewMaximumValidation(val))
 	}
 }
 
 // MinLength validation
 func MinLength(val int) {
-	if a, ok := attributeDefinition(); ok {
+	if a, ok := attributeDefinition(true); ok {
 		a.Validations = append(a.Validations, NewMinLengthValidation(val))
 	}
 }
 
 // MaxLength validation
 func MaxLength(val int) {
-	if a, ok := attributeDefinition(); ok {
+	if a, ok := attributeDefinition(true); ok {
 		a.Validations = append(a.Validations, NewMaxLengthValidation(val))
 	}
 }
 
 // Required properties validation
 func Required(names ...string) {
-	if a, ok := attributeDefinition(); ok {
+	if a, ok := attributeDefinition(true); ok {
 		if a.Type.Kind() != ObjectKind {
 			a.Validations = append(a.Validations, NewRequiredValidation(names...))
 		}

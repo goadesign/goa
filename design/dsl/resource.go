@@ -4,7 +4,7 @@ import . "github.com/raphael/goa/design"
 
 // Resource defines a resource DSL.
 //
-// Resource("bottle", func() {
+// var _ = Resource("bottle", func() {
 //      Description("A wine bottle") // Resource description
 // 	MediaType(BottleMediaType)   // Resource actions default media type
 // 	Prefix("/bottles")           // Resource actions path prefix if not ""
@@ -15,9 +15,10 @@ import . "github.com/raphael/goa/design"
 //        // ... Action DSL
 // 	})
 // })
-func Resource(name string, dsl func()) {
-	if a, ok := apiDefinition(); ok {
-		resource, ok := a.Resources[name]
+func Resource(name string, dsl func()) *ResourceDefinition {
+	var resource *ResourceDefinition
+	if a, ok := apiDefinition(true); ok {
+		resource, ok = a.Resources[name]
 		if !ok {
 			resource = &ResourceDefinition{Name: name}
 		}
@@ -25,19 +26,20 @@ func Resource(name string, dsl func()) {
 			a.Resources[name] = resource
 		}
 	}
+	return resource
 }
 
 // Parent defines the resource parent.
 // The parent resource is used to compute the path to the resource actions.
 func Parent(p string) {
-	if r, ok := resourceDefinition(); ok {
+	if r, ok := resourceDefinition(true); ok {
 		r.ParentName = p
 	}
 }
 
 // CanonicalAction sets the name of the action with canonical href.
 func CanonicalAction(a string) {
-	if r, ok := resourceDefinition(); ok {
+	if r, ok := resourceDefinition(true); ok {
 		r.CanonicalAction = a
 	}
 }

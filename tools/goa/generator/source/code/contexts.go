@@ -27,7 +27,7 @@ type (
 		Params       *design.AttributeDefinition
 		Payload      *design.UserTypeDefinition
 		Headers      *design.AttributeDefinition
-		Responses    []*design.ResponseDefinition
+		Responses    map[string]*design.ResponseDefinition
 	}
 )
 

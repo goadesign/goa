@@ -30,7 +30,7 @@ type (
 		// Response templates available to all API actions indexed by name
 		ResponseTemplates map[string]*ResponseTemplateDefinition
 		// Response template factories available to all API actions indexed by name
-		ResponseTemplateFuncs map[string]func(params ...string)
+		ResponseTemplateFuncs map[string]func(params ...string) *ResponseTemplateDefinition
 		// User types
 		UserTypes []*UserTypeDefinition
 		// Media types
@@ -82,8 +82,10 @@ type (
 		Description string
 		// HTTP status
 		Status int
-		// Media type used to render link
+		// Media type used to render response
 		MediaType string
+		// Header definitions, values may be a mix of strings and regexps
+		Headers map[string]interface{}
 	}
 
 	// ActionDefinition defines a resource action.
@@ -101,8 +103,8 @@ type (
 		Resource *ResourceDefinition
 		// Action routes
 		Routes []*RouteDefinition
-		// Set of possible response definitions
-		Responses []*ResponseDefinition
+		// Map of possible response definitions indexed by name
+		Responses map[string]*ResponseDefinition
 		// Path and query string parameters
 		Params *AttributeDefinition
 		// Payload blueprint (request body) if any

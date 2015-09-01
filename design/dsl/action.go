@@ -27,7 +27,7 @@ import (
 //     )
 // })
 func Action(name string, dsl func()) {
-	if r, ok := resourceDefinition(); ok {
+	if r, ok := resourceDefinition(true); ok {
 		action, ok := r.Actions[name]
 		if !ok {
 			action = &ActionDefinition{Name: name}
@@ -41,7 +41,7 @@ func Action(name string, dsl func()) {
 
 // Routing adds one or more routes to the action
 func Routing(routes ...*RouteDefinition) {
-	if a, ok := actionDefinition(); ok {
+	if a, ok := actionDefinition(true); ok {
 		a.Routes = append(a.Routes, routes...)
 	}
 }
@@ -88,7 +88,7 @@ func PATCH(path string) *RouteDefinition {
 
 // Headers computes the action headers from the given DSL.
 func Headers(dsl func()) {
-	if a, ok := actionDefinition(); ok {
+	if a, ok := actionDefinition(true); ok {
 		headers := new(AttributeDefinition)
 		if executeDSL(dsl, headers) {
 			a.Headers = headers
@@ -98,7 +98,7 @@ func Headers(dsl func()) {
 
 // Params computes the action parameters from the given DSL.
 func Params(dsl func()) {
-	if a, ok := actionDefinition(); ok {
+	if a, ok := actionDefinition(true); ok {
 		params := new(AttributeDefinition)
 		if executeDSL(dsl, params) {
 			a.Params = params
@@ -108,7 +108,7 @@ func Params(dsl func()) {
 
 // Payload defines the action payload DSL.
 func Payload(p interface{}) {
-	if a, ok := actionDefinition(); ok {
+	if a, ok := actionDefinition(true); ok {
 		var at *AttributeDefinition
 		if dsl, ok := p.(func()); ok {
 			executeDSL(dsl, at)
@@ -125,8 +125,19 @@ func Payload(p interface{}) {
 }
 
 // Response records a possible action response.
-func Response(resp *ResponseDefinition) {
-	if a, ok := actionDefinition(); ok {
-		a.Responses = append(a.Responses, resp)
+func Response(name string, dsl ...func()) {
+	if a, ok := actionDefinition(true); ok {
+		if _, ok := a.Responses[name]; ok {
+			appendError(fmt.Errorf("response %s is defined twice", name))
+			return
+		}
+		resp := ResponseDefinition{Name: name}
+		var d func()
+		if len(dsl) > 0 {
+			d = dsl[0]
+		}
+		if executeDSL(d, &resp) {
+			a.Responses[name] = &resp
+		}
 	}
 }

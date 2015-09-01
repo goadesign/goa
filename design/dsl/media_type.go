@@ -30,26 +30,42 @@ import . "github.com/raphael/goa/design"
 //	})
 //
 // This function returns the newly defined media type in the first mode, nil otherwise.
-func MediaType(identifier string, dsl ...func()) *MediaTypeDefinition {
+func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 	var mt *MediaTypeDefinition
-	if _, ok := apiDefinition(); ok {
-		mt = &MediaTypeDefinition{UserTypeDefinition: &UserTypeDefinition{Name: identifier}}
-		if len(dsl) > 0 {
-			if ok := executeDSL(dsl[0], mt); ok {
-				Design.MediaTypes = append(Design.MediaTypes, mt)
+	if _, ok := apiDefinition(false); ok {
+		if identifier, ok := val.(string); ok {
+			mt = &MediaTypeDefinition{UserTypeDefinition: &UserTypeDefinition{Name: identifier}}
+			if len(dsl) > 0 {
+				if ok := executeDSL(dsl[0], mt); ok {
+					Design.MediaTypes = append(Design.MediaTypes, mt)
+				}
 			}
+		} else {
+			appendError(fmt.Errorf("media type name must be a string, got %v", val))
 		}
-	} else if r, ok := resourceDefinition(); ok {
-		r.MediaType = identifier
-	} else if r, ok := responseDefinition(); ok {
-		r.MediaType = identifier
+	} else if r, ok := resourceDefinition(false); ok {
+		if m, ok := val.(*MediaTypeDefinition); ok {
+			r.MediaType = m.Name
+		} else if identifier, ok := val.(string); ok {
+			r.MediaType = identifier
+		} else {
+			appendError(fmt.Errorf("media type must be a string or a *MediaTypeDefinition, got %v", val))
+		}
+	} else if r, ok := responseDefinition(true); ok {
+		if m, ok := val.(*MediaTypeDefinition); ok {
+			r.MediaType = m.Name
+		} else if identifier, ok := val.(string); ok {
+			r.MediaType = identifier
+		} else {
+			appendError(fmt.Errorf("media type must be a string or a *MediaTypeDefinition, got %v", val))
+		}
 	}
 	return mt
 }
 
 // View adds a new view to the media type.
 func View(name string, dsl func()) {
-	if mt, ok := mediaTypeDefinition(); ok {
+	if mt, ok := mediaTypeDefinition(true); ok {
 		if _, ok = mt.Views[name]; ok {
 			appendError(fmt.Errorf("multiple definitions for view %s in media type %s", name, mt.Name))
 		}
@@ -62,21 +78,21 @@ func View(name string, dsl func()) {
 
 // Attributes defines the media type attributes DSL.
 func Attributes(dsl func()) {
-	if mt, ok := mediaTypeDefinition(); ok {
+	if mt, ok := mediaTypeDefinition(true); ok {
 		executeDSL(dsl, &mt)
 	}
 }
 
 // Links defines the media type links DSL.
 func Links(dsl func()) {
-	if mt, ok := mediaTypeDefinition(); ok {
+	if mt, ok := mediaTypeDefinition(true); ok {
 		executeDSL(dsl, &mt)
 	}
 }
 
 // Link defines a media type link DSL.
 func Link(name string, args ...interface{}) {
-	if _, ok := mediaTypeDefinition(); ok {
+	if _, ok := mediaTypeDefinition(true); ok {
 		Attribute(name, args...)
 	}
 }

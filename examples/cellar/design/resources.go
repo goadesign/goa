@@ -1,4 +1,4 @@
-package main
+package design
 
 import (
 	. "github.com/raphael/goa/design"
@@ -13,42 +13,54 @@ var _ = Resource("account", func() {
 	Trait("Authenticated")
 
 	Action("show", func() {
-		Route(Get("/:id"))
-		Description("Retrieve account with given id")
-		Params(
-			Param("id", Integer, "Account ID"),
+		Routing(
+			GET("/:id"),
 		)
-		Response(OK, AccountMediaType)
+		Description("Retrieve account with given id")
+		Params(func() {
+			Param("id", Integer, "Account ID")
+		})
+		Response(OK, func() {
+			MediaType(AccountMediaType)
+		})
 		Response(NotFound)
 	})
 
 	Action("create", func() {
-		Route(Post(""))
-		Description("Create new account")
-		Payload(
-			Member("name", Required()),
+		Routing(
+			POST(""),
 		)
+		Description("Create new account")
+		Payload(func() {
+			Member("name")
+			Required("name")
+		})
 		Response(Created)
 	})
 
 	Action("update", func() {
-		Route(Put("/:id"))
+		Routing(
+			PUT("/:id"),
+		)
 		Description("Change account name")
-		Params(
-			Param("id", Integer, "Accoutn ID"),
-		)
-		Payload(
-			Member("name"),
-		)
+		Params(func() {
+			Param("id", Integer, "Accoutn ID")
+		})
+		Payload(func() {
+			Member("name")
+			Required("name")
+		})
 		Response(NoContent)
 		Response(NotFound)
 	})
 
 	Action("delete", func() {
-		Route(Delete("/:id"))
-		Params(
-			Param("id", Integer, "Account ID"),
+		Routing(
+			DELETE("/:id"),
 		)
+		Params(func() {
+			Param("id", Integer, "Account ID")
+		})
 		Response(NoContent)
 		Response(NotFound)
 	})
@@ -57,89 +69,109 @@ var _ = Resource("account", func() {
 var _ = Resource("bottle", func() {
 
 	MediaType(BottleMediaType)
-	Prefix("bottles")
+	BasePath("bottles")
 	Parent("accounts")
 	CanonicalAction("show")
 	Trait("Authenticated")
 
 	Action("list", func() {
-		Route(Get(""))
-		Description("List all bottles in account optionally filtering by year")
-		Params(
-			Param("years", Collection(Integer), "Filter by years"),
+		Routing(
+			GET(""),
 		)
-		Response(OK, MediaCollection(BottleMediaType))
+		Description("List all bottles in account optionally filtering by year")
+		Params(func() {
+			Param("years", ArrayOf(Integer), "Filter by years")
+		})
+		Response(OK, func() {
+			MediaType(CollectionOf(BottleMediaType))
+		})
 	})
 
 	Action("show", func() {
-		Route(Get("/:id"))
-		Description("Retrieve bottle with given id")
-		Params(
-			Param("id", Integer, "Bottle ID"),
+		Routing(
+			GET("/:id"),
 		)
-		Response(OK, BottleMediaType)
+		Description("Retrieve bottle with given id")
+		Params(func() {
+			Param("id", Integer, "Bottle ID")
+		})
+		Response(OK, func() {
+			MediaType(BottleMediaType)
+		})
 		Response(NotFound)
 	})
 
 	Action("create", func() {
-		Route(Post(""))
-		Description("Record new bottle")
-		Payload(
-			Member("name", Required()),
-			Member("vintage", Required()),
-			Member("vineyard", Required()),
-			Member("varietal"),
-			Member("color"),
-			Member("sweet"),
-			Member("country"),
-			Member("region"),
-			Member("review"),
-			Member("characteristics"),
+		Routing(
+			POST(""),
 		)
+		Description("Record new bottle")
+		Payload(func() {
+			Member("name")
+			Member("vintage")
+			Member("vineyard")
+			Member("varietal")
+			Member("color")
+			Member("sweet")
+			Member("country")
+			Member("region")
+			Member("review")
+			Member("characteristics")
+
+			Required("name", "vintage", "vineyard")
+		})
 		Response(Created)
 	})
 
 	Action("update", func() {
-		Route(Patch("/:id"))
-		Params(
-			Param("id", Integer, "Bottle ID"),
+		Routing(
+			PATCH("/:id"),
 		)
-		Payload(
-			Member("name"),
-			Member("vineyard"),
-			Member("varietal"),
-			Member("vintage"),
-			Member("color"),
-			Member("sweet"),
-			Member("country"),
-			Member("region"),
-			Member("review"),
-			Member("characteristics"),
-		)
+		Params(func() {
+			Param("id", Integer, "Bottle ID")
+		})
+		Payload(func() {
+			Member("name")
+			Member("vineyard")
+			Member("varietal")
+			Member("vintage")
+			Member("color")
+			Member("sweet")
+			Member("country")
+			Member("region")
+			Member("review")
+			Member("characteristics")
+		})
 		Response(NoContent)
 		Response(NotFound)
 	})
 
 	Action("rate", func() {
-		Route(Put("/:id/actions/rate"))
-		Params(
-			Param("id", Integer, "Bottle ID"),
+		Routing(
+			PUT("/:id/actions/rate"),
 		)
-		Payload(
-			Member("rating"),
-		)
+		Params(func() {
+			Param("id", Integer, "Bottle ID")
+		})
+		Payload(func() {
+			Member("rating")
+		})
 		Response(NoContent)
 		Response(NotFound)
 	})
 
 	Action("delete", func() {
-		Route(Delete("/:id"))
-		Params(
-			Param("id", Integer, "Bottle ID"),
+		Routing(
+			DELETE("/:id"),
 		)
-		Headers(
-			Header("X-Force", Enum("true", "false")),
-		)
+		Params(func() {
+			Param("id", Integer, "Bottle ID")
+		})
+		Headers(func() {
+			Header("X-Force", func() {
+				Enum("true", "false")
+			})
+		})
 		Response(NoContent)
 		Response(NotFound)
 	})

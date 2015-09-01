@@ -36,6 +36,9 @@ func (s contextStack) current() interface{} {
 // executeDSL runs DSL in given evaluation context and returns true if successful.
 // It appends to dslErrors in case of failure (and returns false).
 func executeDSL(dsl func(), ctx interface{}) bool {
+	if dsl == nil {
+		return true
+	}
 	initCount := len(dslErrors)
 	ctxStack = append(ctxStack, ctx)
 	dsl()
@@ -96,9 +99,9 @@ func reportErrors() {
 
 // actionDefinition returns true and current context if it is an ActionDefinition,
 // nil and false otherwise.
-func actionDefinition() (*ActionDefinition, bool) {
+func actionDefinition(failIfNotAction bool) (*ActionDefinition, bool) {
 	a, ok := ctxStack.current().(*ActionDefinition)
-	if !ok {
+	if !ok && failIfNotAction {
 		incompatibleDsl(caller())
 	}
 	return a, ok
@@ -106,9 +109,9 @@ func actionDefinition() (*ActionDefinition, bool) {
 
 // apiDefinition returns true and current context if it is an APIDefinition,
 // nil and false otherwise.
-func apiDefinition() (*APIDefinition, bool) {
+func apiDefinition(failIfNotAPI bool) (*APIDefinition, bool) {
 	a, ok := ctxStack.current().(*APIDefinition)
-	if !ok {
+	if !ok && failIfNotAPI {
 		incompatibleDsl(caller())
 	}
 	return a, ok
@@ -116,9 +119,9 @@ func apiDefinition() (*APIDefinition, bool) {
 
 // mediaTypeDefinition returns true and current context if it is a MediaTypeDefinition,
 // nil and false otherwise.
-func mediaTypeDefinition() (*MediaTypeDefinition, bool) {
+func mediaTypeDefinition(failIfNotMT bool) (*MediaTypeDefinition, bool) {
 	a, ok := ctxStack.current().(*MediaTypeDefinition)
-	if !ok {
+	if !ok && failIfNotMT {
 		incompatibleDsl(caller())
 	}
 	return a, ok
@@ -126,9 +129,9 @@ func mediaTypeDefinition() (*MediaTypeDefinition, bool) {
 
 // attribute returns true and current context if it is an Attribute,
 // nil and false otherwise.
-func attributeDefinition() (*AttributeDefinition, bool) {
+func attributeDefinition(failIfNotAttribute bool) (*AttributeDefinition, bool) {
 	a, ok := ctxStack.current().(*AttributeDefinition)
-	if !ok {
+	if !ok && failIfNotAttribute {
 		incompatibleDsl(caller())
 	}
 	return a, ok
@@ -136,9 +139,9 @@ func attributeDefinition() (*AttributeDefinition, bool) {
 
 // resourceDefinition returns true and current context if it is a ResourceDefinition,
 // nil and false otherwise.
-func resourceDefinition() (*ResourceDefinition, bool) {
+func resourceDefinition(failIfNotResource bool) (*ResourceDefinition, bool) {
 	r, ok := ctxStack.current().(*ResourceDefinition)
-	if !ok {
+	if !ok && failIfNotResource {
 		incompatibleDsl(caller())
 	}
 	return r, ok
@@ -146,9 +149,9 @@ func resourceDefinition() (*ResourceDefinition, bool) {
 
 // responseDefinition returns true and current context if it is a ResponseDefinition,
 // nil and false otherwise.
-func responseDefinition() (*ResponseDefinition, bool) {
+func responseDefinition(failIfNotResponse bool) (*ResponseDefinition, bool) {
 	r, ok := ctxStack.current().(*ResponseDefinition)
-	if !ok {
+	if !ok && failIfNotResponse {
 		incompatibleDsl(caller())
 	}
 	return r, ok
