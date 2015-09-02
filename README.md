@@ -1,5 +1,7 @@
 # goa
 
+[![Build Status](https://travis-ci.org/raphael/goa.svg)](https://travis-ci.org/raphael/goa)
+
 goa is a framework for building RESTful APIs in go.
 
 ## Why goa?
