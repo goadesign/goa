@@ -56,6 +56,23 @@ func New(target Target) *Generator {
 	return &Generator{Target: target}
 }
 
+// ParseTarget parsed the given string and matches it against a target.
+func ParseTarget(t string) (target Target, err error) {
+	switch strings.ToLower(t) {
+	case "app":
+		target = App
+	case "client":
+		target = Client
+	case "test":
+		target = Test
+	case "docs":
+		target = Docs
+	default:
+		err = fmt.Errorf("invalid target %s", t)
+	}
+	return
+}
+
 // Generate generates the target output (either code or documentation at this time).
 // This first builds a generator tool using the user design package then invokes the tool.
 func (g *Generator) Generate(designPack, targetPack, dest string) ([]string, error) {

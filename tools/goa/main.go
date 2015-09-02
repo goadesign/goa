@@ -31,7 +31,12 @@ func main() {
 	if *debug {
 		generator.Debug = true
 	}
-	gen := generator.New(generator.Target(*target))
+	t, err := generator.ParseTarget(*target)
+	if err != nil {
+		log.Crit(err.Error())
+		os.Exit(1)
+	}
+	gen := generator.New(t)
 	files, err := gen.Generate(*pack, "autogen", dest)
 	if err != nil {
 		log.Crit(err.Error())
