@@ -355,10 +355,12 @@ var _ = Describe("code generation", func() {
 
 				JustBeforeEach(func() {
 					cmd := exec.Command("go", "build", "-o", "codegen")
-					cmd.Env = []string{fmt.Sprintf("PATH=%s", os.Getenv("PATH"))}
+					cmd.Env = os.Environ()
 					cmd.Env = append(cmd.Env, fmt.Sprintf("GOPATH=%s:%s", gopath, os.Getenv("GOPATH")))
 					cmd.Dir = srcDir
-					out, _ = cmd.CombinedOutput()
+					var err error
+					out, err = cmd.CombinedOutput()
+					Ω(err).ShouldNot(HaveOccurred())
 				})
 
 				BeforeEach(func() {
@@ -390,7 +392,7 @@ var _ = Describe("code generation", func() {
 				})
 
 				AfterEach(func() {
-					//	os.RemoveAll(gopath)
+					os.RemoveAll(gopath)
 				})
 
 				It("compiles", func() {
