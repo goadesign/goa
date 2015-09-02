@@ -7,17 +7,7 @@ sudo: false
 
 install:
   - go get -v ./...
-  - go get golang.org/x/tools/cmd/cover
-  - go get golang.org/x/tools/cmd/goimports
-  - go get github.com/golang/lint/golint
-  - go get github.com/onsi/gomega
-  - go get github.com/onsi/ginkgo
-  - go install github.com/onsi/ginkgo/ginkgo
   - export PATH=$PATH:$HOME/gopath/bin
 
 script:
-  - export DIRS=$(go list -f {{.Dir}} ./... | grep -v autogen)
-  - export PATH=$PATH:$HOME/gopath/bin
-  - test -z "`for d in $DIRS; do goimports -l $d/*.go | tee /dev/stderr; done`"
-  - test -z "`golint ./... | grep -v 'autogen' | grep -v 'should not use dot imports' | grep -v 'response.go:.*exported const' | tee /dev/stderr`"
-  - ginkgo -r --randomizeAllSpecs --failOnPending --randomizeSuites --race
+  - make

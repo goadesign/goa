@@ -127,7 +127,7 @@ func (a *ActionDefinition) ValidateParams() error {
 	}
 	params, ok := a.Params.Type.(Object)
 	if !ok {
-		return fmt.Errorf("invalid params type %s for action %s", GoTypeName(a.Params.Type), a.Name)
+		return fmt.Errorf("invalid params type %s for action %s", GoTypeName(a.Params.Type, 0), a.Name)
 	}
 	for n, p := range params {
 		if n == "" {
@@ -158,7 +158,7 @@ func (a *AttributeDefinition) Validate() error {
 		if r, ok := v.(*RequiredValidationDefinition); ok {
 			if !isObject {
 				return fmt.Errorf("required fields validation defined on attribute of type %s",
-					GoTypeName(a.Type))
+					GoTypeName(a.Type, 0))
 			}
 			for _, n := range r.Names {
 				var found bool

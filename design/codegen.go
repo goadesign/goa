@@ -9,11 +9,13 @@ import (
 )
 
 var (
+	// TempCount holds the value appended to variable names to make them unique.
+	TempCount int
+
 	primitiveT *template.Template
 	arrayT     *template.Template
 	objectT    *template.Template
 	userT      *template.Template
-	tempCount  int
 )
 
 //  init instantiates the templates.
@@ -211,43 +213,43 @@ func validationCheckerR(att *AttributeDefinition, context, target string, depth 
 }
 
 const (
-	primitiveTmpl = `{{tabs .depth}}if val, ok := {{.source}}.({{gotyperef .type}}); ok {
+	primitiveTmpl = `{{tabs .depth}}if val, ok := {{.source}}.({{gotyperef .type (add .depth 1)}}); ok {
 {{tabs .depth}}	{{.target}} = val
 {{tabs .depth}}} else {
-{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "{{gotypename .type}}")
+{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "{{gotyperef .type (add .depth 1)}}")
 {{tabs .depth}}}`
 
 	arrayTmpl = `{{tabs .depth}}if val, ok := {{.source}}.([]interface{}); ok {
-{{tabs .depth}}	{{.target}} = make([]{{gotyperef .elemType.Type}}, len(val))
+{{tabs .depth}}	{{.target}} = make([]{{gotyperef .elemType.Type (add .depth 2)}}, len(val))
 {{tabs .depth}}	for i, v := range val {
-{{tabs .depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef .elemType.Type}}
+{{tabs .depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef .elemType.Type (add .depth 3)}}
 {{unmarshalAttribute .elemType (printf "%s[*]" .context) "v" $temp (add .depth 2)}}
 {{tabs .depth}}		{{printf "%s[i]" .target}} = {{$temp}}
 {{tabs .depth}}	}
 {{tabs .depth}}} else {
-{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "[]{{gotyperef .elemType.Type}}")
+{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "[]interface{}")
 {{tabs .depth}}}`
 
 	objectTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
-{{tabs .depth}}{{$context := .context}}{{$depth := .depth}}{{$target := .target}}	{{$target}} = new({{gotypename .type}})
+{{tabs .depth}}{{$context := .context}}{{$depth := .depth}}{{$target := .target}}	{{$target}} = new({{gotypename .type (add .depth 1)}})
 {{range $name, $att := .type}}{{tabs $depth}}	if v, ok := val["{{$name}}"]; ok {
-{{tabs $depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type}}
+{{tabs $depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type (add $depth 2)}}
 {{unmarshalType $att.Type (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}
 {{tabs $depth}}		{{printf "%s.%s" $target (goify $name true)}} = {{$temp}}
-{{tabs $depth}}}
+{{tabs $depth}}	}
 {{end}}{{tabs $depth}}} else {
-{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, ` + "`{{gotypename .type}}`)" + `
+{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "map[string]interface{}")
 {{tabs .depth}}}`
 
 	userTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
 		{{tabs .depth}}	{{.target}} = new({{.type.Name}})
 {{range $name, $att := .type.Definition.Type}}{{tabs .depth}}	if v, ok := val["{{$name}}"]; ok {
-{{tabs .depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type}}
+{{tabs .depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type (add .depth 2)}}
 {{unmarshalType $att.Type (printf "%s.%s" .context (goify $name true)) "v" $temp (add .depth 2)}}
 {{tabs .depth}}		{{printf "%s.%s" .target (goify $name true)}} = {{$temp}}
 {{tabs .depth}}}
 {{end}}{{tabs .depth}}} else {
-{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, {{gotypename .type}})
+{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "map[string]interface{}")
 {{tabs .depth}}}`
 )
 
@@ -263,7 +265,7 @@ func GoTypeDef(ds DataStructure, tabs int, jsonTags, inner bool) string {
 	t := def.Type
 	switch actual := t.(type) {
 	case Primitive:
-		return GoTypeName(t)
+		return GoTypeName(t, tabs)
 	case *Array:
 		return "[]" + GoTypeDef(actual.ElemType, tabs, jsonTags, true)
 	case Object:
@@ -296,7 +298,7 @@ func GoTypeDef(ds DataStructure, tabs int, jsonTags, inner bool) string {
 		buffer.WriteString("}")
 		return buffer.String()
 	case *UserTypeDefinition, *MediaTypeDefinition:
-		return "*" + GoTypeName(actual)
+		return "*" + GoTypeName(actual, tabs)
 	default:
 		panic("goa bug: unknown data structure type")
 	}
@@ -304,17 +306,19 @@ func GoTypeDef(ds DataStructure, tabs int, jsonTags, inner bool) string {
 
 // GoTypeRef returns the Go code that refers to the Go type which matches the given data type
 // (the part that comes after `var foo`)
-func GoTypeRef(t DataType) string {
+// tabs is used to properly tabulate the object struct fields and only applies to this case.
+func GoTypeRef(t DataType, tabs int) string {
 	switch t.(type) {
 	case Object, *UserTypeDefinition, *MediaTypeDefinition:
-		return "*" + GoTypeName(t)
+		return "*" + GoTypeName(t, tabs)
 	default:
-		return GoTypeName(t)
+		return GoTypeName(t, tabs)
 	}
 }
 
 // GoTypeName returns the Go type name for a data type.
-func GoTypeName(t DataType) string {
+// tabs is used to properly tabulate the object struct fields and only applies to this case.
+func GoTypeName(t DataType, tabs int) string {
 	switch actual := t.(type) {
 	case Primitive:
 		switch actual.Kind() {
@@ -330,9 +334,9 @@ func GoTypeName(t DataType) string {
 			panic(fmt.Sprintf("goa bug: unknown primitive type %#v", actual))
 		}
 	case *Array:
-		return "[]" + GoTypeRef(actual.ElemType.Type)
+		return "[]" + GoTypeRef(actual.ElemType.Type, tabs+1)
 	case Object:
-		return GoTypeDef(&AttributeDefinition{Type: actual}, 0, false, false)
+		return GoTypeDef(&AttributeDefinition{Type: actual}, tabs, false, false)
 	case *UserTypeDefinition:
 		return Goify(actual.Name, true)
 	case *MediaTypeDefinition:
@@ -445,6 +449,6 @@ func tabs(depth int) string {
 
 // tempvar generates a unique temp var name.
 func tempvar() string {
-	tempCount++
-	return fmt.Sprintf("tmp%d", tempCount)
+	TempCount++
+	return fmt.Sprintf("tmp%d", TempCount)
 }

@@ -22,8 +22,8 @@ type (
 		Target Target // Generator target, code or documentation.
 	}
 
-	// Target is the generator target, code or documentation for now.
-	Target string
+	// Target is the generator target, source code or documentation for now.
+	Target int
 )
 
 var (
@@ -35,11 +35,17 @@ var (
 )
 
 const (
-	// Code is the code target, causes goa to generate Go source code.
-	Code Target = "code"
+	// App is the application source code target.
+	App Target = iota + 1
 
-	// Docs is the docs targs, causes goa to generate JSON docs.
-	Docs Target = "docs"
+	// Client is the client source code target.
+	Client
+
+	// Test is the tests source code target.
+	Test
+
+	// Docs is the JSON documentation target.
+	Docs
 )
 
 // New returns a generator for the given target.
