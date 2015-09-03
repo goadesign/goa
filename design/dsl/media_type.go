@@ -35,8 +35,8 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 	if _, ok := apiDefinition(false); ok {
 		if identifier, ok := val.(string); ok {
 			if _, ok := Design.MediaTypes[identifier]; ok {
-				appendError(fmt.Errorf("media type %s is defined twice"), identifier)
-				return
+				appendError(fmt.Errorf("media type %s is defined twice", identifier))
+				return nil
 			}
 			mt = &MediaTypeDefinition{UserTypeDefinition: &UserTypeDefinition{Name: identifier}}
 			if len(dsl) > 0 {

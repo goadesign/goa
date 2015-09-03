@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/raphael/goa/tools/goa/generator"
+	"github.com/raphael/goa/codegen"
 	"github.com/raphael/goa/tools/goa/log"
 
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -29,14 +29,14 @@ func main() {
 		}
 	}
 	if *debug {
-		generator.Debug = true
+		codegen.Debug = true
 	}
-	t, err := generator.ParseTarget(*target)
+	t, err := codegen.ParseTarget(*target)
 	if err != nil {
 		log.Crit(err.Error())
 		os.Exit(1)
 	}
-	gen := generator.New(t)
+	gen := codegen.New(t)
 	files, err := gen.Generate(*pack, "autogen", dest)
 	if err != nil {
 		log.Crit(err.Error())
