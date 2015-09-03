@@ -1,6 +1,9 @@
 package design
 
-import "regexp"
+import (
+	"regexp"
+	"sort"
+)
 
 var (
 	// Design is the API definition created via DSL.
@@ -34,7 +37,7 @@ type (
 		// User types
 		UserTypes []*UserTypeDefinition
 		// Media types
-		MediaTypes []*MediaTypeDefinition
+		MediaTypes map[string]*MediaTypeDefinition
 	}
 
 	// ResourceDefinition describes a REST resource.
@@ -238,28 +241,69 @@ type (
 	RequiredValidationDefinition struct {
 		Names []string
 	}
+
+	// ResourceIterator is the type of functions given to IterateResources.
+	ResourceIterator func(r *ResourceDefinition) error
+
+	// MediaTypeIterator is the type of functions given to IterateMediaTypes.
+	MediaTypeIterator func(m *MediaTypeDefinition) error
+
+	// ActionIterator is the type of functions given to IterateActions.
+	ActionIterator func(a *ActionDefinition) error
 )
 
-// MediaType returns the media type with the given name/identifier - nil if none exist.
-func (a *APIDefinition) MediaType(name string) *MediaTypeDefinition {
-	var mt *MediaTypeDefinition
-	for _, m := range Design.MediaTypes {
-		if m.Name == name {
-			mt = m
-			break
+// IterateResources calls the given iterator passing in each resource sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateResources returns that
+// error.
+func (a *APIDefinition) IterateResources(it ResourceIterator) error {
+	names := make([]string, len(a.Resources))
+	i := 0
+	for n := range a.Resources {
+		names[i] = n
+		i++
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		if err := it(a.Resources[n]); err != nil {
+			return err
 		}
 	}
-	return mt
+	return nil
 }
 
-// Parent returns the parent resource if any.
-func (r *ResourceDefinition) Parent() *ResourceDefinition {
-	if r.ParentName == "" {
-		return nil
+// IterateMediaTypes calls the given iterator passing in each media type sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateMediaTypes returns that
+// error.
+func (a *APIDefinition) IterateMediaTypes(it MediaTypeIterator) error {
+	names := make([]string, len(a.MediaTypes))
+	i := 0
+	for n := range a.MediaTypes {
+		names[i] = n
+		i++
 	}
-	for _, res := range Design.Resources {
-		if res.Name == r.ParentName {
-			return res
+	sort.Strings(names)
+	for _, n := range names {
+		if err := it(a.MediaTypes[n]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// IterateActions calls the given iterator passing in each resource action sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateActions returns that
+// error.
+func (r *ResourceDefinition) IterateActions(it ActionIterator) error {
+	names := make([]string, len(r.Actions))
+	i := 0
+	for n := range r.Actions {
+		names[i] = n
+		i++
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		if err := it(r.Actions[n]); err != nil {
+			return err
 		}
 	}
 	return nil

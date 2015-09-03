@@ -23,7 +23,7 @@ func (a *APIDefinition) Validate() error {
 		if r.ParentName == "" {
 			continue
 		}
-		if r.Parent() == nil {
+		if _, ok := Design.Resources[r.ParentName]; !ok {
 			return fmt.Errorf("Resource %s: Unknown parent resource %s", r.Name, r.ParentName)
 		}
 	}
@@ -85,7 +85,7 @@ func (r *ResourceDefinition) Validate() error {
 		}
 	}
 	if r.MediaType != "" {
-		if mt := Design.MediaType(r.MediaType); mt != nil {
+		if mt, ok := Design.MediaTypes[r.MediaType]; ok {
 			if err := mt.Validate(); err != nil {
 				return err
 			}
@@ -127,7 +127,7 @@ func (a *ActionDefinition) ValidateParams() error {
 	}
 	params, ok := a.Params.Type.(Object)
 	if !ok {
-		return fmt.Errorf("invalid params type %s for action %s", GoTypeName(a.Params.Type, 0), a.Name)
+		return fmt.Errorf(`"Params" field of action "%s" is not an object`, a.Name)
 	}
 	for n, p := range params {
 		if n == "" {
@@ -157,8 +157,7 @@ func (a *AttributeDefinition) Validate() error {
 	for _, v := range a.Validations {
 		if r, ok := v.(*RequiredValidationDefinition); ok {
 			if !isObject {
-				return fmt.Errorf("required fields validation defined on attribute of type %s",
-					GoTypeName(a.Type, 0))
+				return fmt.Errorf(`only objects may define a "Required" validation`)
 			}
 			for _, n := range r.Names {
 				var found bool
@@ -192,7 +191,7 @@ func (r *ResponseDefinition) Validate() error {
 		return fmt.Errorf("response status not defined")
 	}
 	if r.MediaType != "" {
-		if mt := Design.MediaType(r.MediaType); mt != nil {
+		if mt, ok := Design.MediaTypes[r.MediaType]; ok {
 			if err := mt.Validate(); err != nil {
 				return err
 			}

@@ -6,38 +6,6 @@ import (
 	"github.com/raphael/goa/design"
 )
 
-var _ = Describe("Parent", func() {
-	var res, parent *design.ResourceDefinition
-
-	JustBeforeEach(func() {
-		if res == nil {
-			panic("Kapow - forgot to initialize res...")
-		}
-		design.Design = &design.APIDefinition{Name: "test"}
-		design.Design.Resources = map[string]*design.ResourceDefinition{res.Name: res}
-		if parent != nil {
-			design.Design.Resources[parent.Name] = parent
-		}
-		parent = res.Parent()
-	})
-
-	Context("a resource with a parent", func() {
-		BeforeEach(func() {
-			res = &design.ResourceDefinition{
-				Name:       "Resource",
-				ParentName: "Parent",
-			}
-			parent = &design.ResourceDefinition{
-				Name: "Parent",
-			}
-		})
-
-		It("computes the parent", func() {
-			Ω(parent).ShouldNot(BeNil())
-		})
-	})
-})
-
 var _ = Describe("IsRequired", func() {
 	var required string
 	var attName string
