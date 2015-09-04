@@ -2,45 +2,28 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"strings"
 
 	"github.com/raphael/goa/codegen"
-	"github.com/raphael/goa/tools/goa/log"
-
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-var (
-	pack   = kingpin.Arg("package", "path to application design package").Required().String()
-	output = kingpin.Flag("output", "path to output directory").Short('o').String()
-	target = kingpin.Flag("target", "generator target").Short('t').Default("code").Enum("code", "docs")
-	debug  = kingpin.Flag("debug", "whether to print debug information").Short('d').Bool()
-)
+// debug is set via the debug command line flag.
+// When true the generators emit debug code (aimed at debugging code generation).
+var debug bool
 
 func main() {
-	kingpin.Parse()
-	dest := *output
-	if dest == "" {
-		var err error
-		dest, err = os.Getwd()
-		if err != nil {
-			kingpin.Fatalf("failed to get current directory: %s", err)
-		}
+	app = kingpin.New("goa", "the goa code generation tool")
+	app.Flag("debug", "Enable debug mode.").BoolVar(&debug)
+	design := app.Flag("design", "Design Go package path").Required().String()
+	for name, gen := range codegen.Generators {
+		cmd := app.Command(gen.GoaCmd(), gen.GoaCmdDescription())
+		gen.RegisterFlags(cmd)
 	}
-	if *debug {
-		codegen.Debug = true
+	cmd := kingpin.Parse()
+	gen, _ := codegen.Generators[cmd]
+	files, err := gen.Spawn()
+	kingpin.FatalIfError(err, err.String())
+	for i, f := range files {
+		fmt.Printf("%d. %s\n", i, f)
 	}
-	t, err := codegen.ParseTarget(*target)
-	if err != nil {
-		log.Crit(err.Error())
-		os.Exit(1)
-	}
-	gen := codegen.New(t)
-	files, err := gen.Generate(*pack, "autogen", dest)
-	if err != nil {
-		log.Crit(err.Error())
-	}
-	// Say something
-	fmt.Println(strings.Join(files, "\n"))
 }

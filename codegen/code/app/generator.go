@@ -5,7 +5,9 @@ import (
 
 	"bitbucket.org/pkg/inflect"
 
+	"github.com/raphael/goa/codegen"
 	"github.com/raphael/goa/design"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 // Generator is the goa code generator.
@@ -13,6 +15,15 @@ type Generator struct {
 	Outdir        string   // Output directory
 	TargetPackage string   // Target package name
 	Files         []string // Generated files
+}
+
+// NewGenerator returns the application code generator instance.
+func NewGenerator() codegen.Generator {
+	return new(Generator)
+}
+
+// RegisterFlags initializes the generator command line flags in the given kingpin command.
+func RegisterFlags(cmd *kingpin.CmdClause) {
 }
 
 // WriteCode writes the code and updates the generator Files field accordingly.

@@ -8,13 +8,12 @@ import (
 	"text/template"
 
 	"github.com/raphael/goa/codegen/version"
-	"github.com/raphael/goa/design"
-
-	"bitbucket.org/pkg/inflect"
 )
 
 type (
-	// Writer produces the go code for a goa application.
+	// Writer provide the basic implementation for a Go code generator.
+	// More specialized writers can encapsulate this basic writer and provide additional
+	// specific methods.
 	Writer struct {
 		// Filename of destination file
 		Filename string
@@ -34,14 +33,8 @@ func NewWriter(filename string) (*Writer, error) {
 		return nil, err
 	}
 	funcMap := template.FuncMap{
-		"camelize":    inflect.Camelize,
 		"comment":     comment,
 		"commandLine": commandLine,
-		"gotypename":  GoTypeName,
-		"gotypedef":   GoTypeDef,
-		"gotyperef":   GoTypeRef,
-		"goify":       Goify,
-		"object":      object,
 	}
 	headerTmpl, err := template.New("header").Funcs(funcMap).Parse(headerT)
 	if err != nil {
@@ -66,10 +59,11 @@ func (w *Writer) FormatCode() error {
 }
 
 // WriteHeader writes the generic generated code header.
-func (w *Writer) WriteHeader(targetPack string) error {
+func (w *Writer) WriteHeader(pack string, imports []string) error {
 	ctx := map[string]interface{}{
 		"ToolVersion": version.Version,
-		"Pkg":         targetPack,
+		"Pkg":         pack,
+		"Imports":     imports,
 	}
 	if err := w.HeaderTmpl.Execute(w.writer, ctx); err != nil {
 		return fmt.Errorf("failed to generate contexts: %s", err)
@@ -77,21 +71,15 @@ func (w *Writer) WriteHeader(targetPack string) error {
 	return nil
 }
 
-// Write implements the io.Writer Write method.
-func (w *Writer) Write(p []byte) (n int, err error) {
-	return w.writer.Write(p)
-}
-
-// object is a code generation helper that casts a data type to an object.
-// object panics if the given argument dynamic type is not object.
-func object(dtype design.DataType) design.Object {
-	return dtype.(design.Object)
+// Write implements io.Writer so that variables of type *Writer can be used in template.Execute.
+func (w *Writer) Write(b []byte) (int, error) {
+	return w.writer.Write(b)
 }
 
 const (
 	headerT = `
 //************************************************************************//
-//                    API Controller Action Contexts
+// {{.Title}}
 //
 // Generated with goagen v{{.ToolVersion}}, command line:
 {{comment commandLine}}
@@ -100,11 +88,9 @@ const (
 //************************************************************************//
 
 package {{.Pkg}}
-
-import (
-	{{if .NeedStrconv}}"strconv"
-	{{end}}
-	"github.com/raphael/goa"
+{{if .Imports}}
+import ({{range .Imports}}
+	{{.}}{{end}}
 )
-`
+{{end}}`
 )
