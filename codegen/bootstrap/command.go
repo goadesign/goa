@@ -1,4 +1,4 @@
-package generator
+package bootstrap
 
 import (
 	"fmt"
@@ -8,9 +8,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/alecthomas/kingpin"
-	"github.com/raphael/goa/codegen/generator"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
+
+// Commands contain the registered generation commands.
+// Each generator package registers itself in its init function.
+var Commands []Command
 
 type (
 	// Command is the interrace implemented be all code generation goa commands.
@@ -24,12 +27,12 @@ type (
 		Description() string
 
 		// RegisterFlags initialize the given command flags with all the flags relevant to
-		// this generator.
+		// this command.
 		RegisterFlags(*kingpin.CmdClause)
 
 		// Run generates the corresponding generator code, compiles and runs it.
 		// It returns the list of generated files.
-		// Spawn uses the variables initialized by kingpin.Parse and defined in RegisterFlags.
+		// Run uses the variables initialized by kingpin.Parse and defined in RegisterFlags.
 		Run() ([]string, error)
 	}
 
@@ -38,33 +41,42 @@ type (
 		// DesignPackage contains the (Go package) path to the user Go design package.
 		DesignPackage string
 
+		// Factory is the function used to create instances of the corresponding generator.
+		// For example NewAppGenerator.
+		Factory string
+
+		// Flags is the list of flags to be used when invoking the generator on the command
+		// line.
+		Flags map[string]string
+
+		// Files contains the list of generated filenames.
+		Files []string
+
 		// Debug toggles debug mode.
 		// If debug mode is enabled then the generated files are not cleaned up upon failure.
 		// Also logs additional debug information.
-		// Set this flag to true prior to calling Generator.Spawn.
+		// Set this flag to true prior to calling Command.Run.
 		Debug bool
 	}
-
-	// AppCommand is the command used to generate and run the application code generator.
-	AppCommand struct {
-		*BaseCommand
-	}
-
-	// DocsCommand is the command used to generate and run the documentation generator.
-	DocsCommand struct {
-		*BaseCommand
-	}
-
-	// TestCommand is the command used to generate and run the test code generator.
-	TestCommand struct {
-		*BaseCommand
-	}
-
-	// ClientCommand is the command used to generate and run the client code generator.
-	ClientCommand struct {
-		*BaseCommand
-	}
 )
+
+// RegisterFlags registers the common command line flags with the given command clause.
+func (b *BaseCommand) RegisterFlags(cmd *kingpin.CmdClause) {
+	outdir := ""
+	cmd.Flag("out", "destination directory").Required().StringVar(&outdir)
+	b.Flags = map[string]string{
+		"OutDir": outdir,
+	}
+}
+
+// Run compiles and runs the generator and returns the generated filenames.
+func (b *BaseCommand) Run() ([]string, error) {
+	genbin, err := b.compile(b.Factory)
+	if err != nil {
+		return nil, err
+	}
+	return b.spawn(genbin)
+}
 
 // compile compiles a generator tool using the user design package and the target generator code.
 // It returns the name of the compiled tool on success (located under $GOPATH/bin), an error
@@ -82,7 +94,13 @@ func (b *BaseCommand) compile(factory string) (string, error) {
 		defer os.RemoveAll(srcDir)
 	}
 	filename := filepath.Join(srcDir, "main.go")
-	w := generator.NewWriter(factory, filename, b.DesignPackage)
+	w, err := NewWriter(factory, filename, b.DesignPackage)
+	if err != nil {
+		return "", err
+	}
+	if err := w.Write(); err != nil {
+		return "", err
+	}
 	c := exec.Cmd{
 		Path: "go",
 		Args: []string{"build", "-o", "goagen"},
@@ -98,32 +116,17 @@ func (b *BaseCommand) compile(factory string) (string, error) {
 	return filepath.Join(srcDir, "goagen"), nil
 }
 
-// run runs the compiled generator with the given arguments.
-func (b *BaseCommand) run(genbin string, args []string) ([]string, error) {
+// spawn runs the compiled generator using the arguments initialized by Kingpin when parsing the
+// command line.
+func (b *BaseCommand) spawn(genbin string) ([]string, error) {
+	var args []string
+	for name, value := range b.Flags {
+		args = append(args, fmt.Sprintf("%s=%s", name, value))
+	}
 	cmd := exec.Command(genbin, args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
 	}
 	return strings.Split(string(out), "\n"), nil
-}
-
-// Name of command.
-func (a *AppCommand) Name() string { return "app" }
-
-// Description of command.
-func (a *AppCommand) Description() string { return "application code" }
-
-// RegisterFlags registers the command line flags with the given command clause.
-func (a *AppCommand) RegisterFlags(cmd *kingpin.CmdClause) {
-	// TBD
-}
-
-// Run compiles and runs the generator and returns the generated filenames.
-func (a *AppCommand) Run() ([]string, error) {
-	genbin, err := a.compile("NewAppGenerator")
-	if err != nil {
-		return err
-	}
-	return a.run(genbin, args)
 }

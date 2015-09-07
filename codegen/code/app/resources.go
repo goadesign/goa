@@ -34,7 +34,8 @@ func NewResourcesWriter(filename string) (*ResourcesWriter, error) {
 
 // Write writes the code for the context types to outdir.
 func (w *ResourcesWriter) Write(targetPack string) error {
-	if err := w.WriteHeader(targetPack); err != nil {
+	imports := []string{}
+	if err := w.WriteHeader(targetPack, imports); err != nil {
 		return err
 	}
 	return nil

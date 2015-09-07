@@ -11,7 +11,7 @@ var handlers map[string]*HandlerFactory
 // Handlers accept a context and return an error.
 // If the error returned is not nil then the controller error handler (if defined) or application
 // error handler gets invoked.
-type Handler func(*Context) error
+type Handler func(Context) error
 
 // HandlerFunc defines the generic handler factory function.
 type HandlerFunc func(interface{}) (Handler, error)

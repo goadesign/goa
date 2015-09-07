@@ -90,7 +90,7 @@ func (c *Controller) actionHandle(h Handler) httprouter.Handle {
 			decoder := json.NewDecoder(r.Body)
 			err = decoder.Decode(&payload)
 		}
-		ctx := Context{
+		ctx := ContextData{
 			Logger:  c.Logger.New("id", id),
 			Params:  params,
 			Query:   query,
@@ -139,7 +139,7 @@ func (c *Controller) handleCritical(w http.ResponseWriter, msg interface{}) {
 // handleError is the callback triggered when an invalid request is received.
 // It looks up the error handler (first in the controller then in the application) and invokes it.
 // The default error handler returns a status code of 400 and uses the error message as body.
-func (c *Controller) handleError(ctx *Context, actionErr error) {
+func (c *Controller) handleError(ctx Context, actionErr error) {
 	handler := c.ErrorHandler
 	if handler == nil {
 		handler = c.Application.ErrorHandler

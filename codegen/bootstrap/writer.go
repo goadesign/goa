@@ -1,4 +1,4 @@
-package generator
+package bootstrap
 
 import (
 	"reflect"
@@ -32,18 +32,18 @@ func NewWriter(factory, filename, designPackage string) (*Writer, error) {
 		Writer:        w,
 		Factory:       factory,
 		DesignPackage: designPackage,
-	}
+	}, nil
 }
 
 // WriteMain generates the Go source code for the generator "main" function.
 // factory is the name of the function used to instantiate the generator.
-func (w *Writer) WriteMain(factory string) error {
-	imports = []string{
+func (w *Writer) Write() error {
+	imports := []string{
 		w.DesignPackage,
-		goaPackagePath(),
+		w.goaPackagePath(),
 	}
 	w.WriteHeader("main", imports)
-	tmpl, err := template.New(mainTmpl).Parse()
+	tmpl, err := template.New("generator").Parse(mainTmpl)
 	if err != nil {
 		panic(err)
 	}
@@ -66,5 +66,5 @@ func (w *Writer) goaPackagePath() string {
 const mainTmpl = `
 func main() {
 	gen := {{.Factory}}("{{.DesignPackage}}")
-	gen.Main()
+	gen.Generate()
 }`

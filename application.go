@@ -17,11 +17,12 @@ type (
 		Name         string                 // Application name
 		Controllers  map[string]*Controller // Controllers indexed by resource name
 		ErrorHandler ErrorHandler           // Application global error handler
+		Middleware   []Middleware           // Middleware chain
 		router       *httprouter.Router     // Application router
 	}
 
 	// ErrorHandler handles errors returned by action handlers and middleware.
-	ErrorHandler func(*Context, error)
+	ErrorHandler func(Context, error)
 )
 
 var (
@@ -72,6 +73,16 @@ func (a *Application) Mount(c *Controller) {
 	c.Application = a
 }
 
+// Use adds a middleware to the middleware chain.
+// See NewMiddleware for the list of possible types for middleware.
+func (a *Application) Use(middleware interface{}) {
+	m, err := NewMiddleware(middleware)
+	if err != nil {
+		Fatalf("invalid middlware %#v", middleware)
+	}
+	a.Middleware = append(a.Middleware, m)
+}
+
 // Run starts the application loop and sets up a listener on the given host/port
 func (a *Application) Run(addr string) {
 	a.Info("listen", "addr", addr)
@@ -86,10 +97,10 @@ func (a *Application) SetErrorHandler(handler ErrorHandler) {
 }
 
 // DefaultErrorHandler returns a 400 response with the error message as body.
-func DefaultErrorHandler(c *Context, e error) {
+func DefaultErrorHandler(c Context, e error) {
 	if err := c.Respond(400, []byte(e.Error())); err != nil {
 		Log.Error("failed to send default error handler response", "error", err)
-		c.W.WriteHeader(500)
+		c.ResponseWriter().WriteHeader(500)
 	}
 }
 

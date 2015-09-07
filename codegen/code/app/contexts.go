@@ -3,6 +3,8 @@ package app
 import (
 	"text/template"
 
+	"bitbucket.org/pkg/inflect"
+
 	"github.com/raphael/goa/codegen/code"
 	"github.com/raphael/goa/design"
 )
@@ -39,7 +41,13 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 	if err != nil {
 		return nil, err
 	}
-	ctxTmpl, err := template.New("context").Funcs(cw.FuncMap).Parse(ctxT)
+	funcMap := cw.FuncMap
+	funcMap["camelize"] = inflect.Camelize
+	funcMap["gotyperef"] = code.GoTypeRef
+	funcMap["gotypedef"] = code.GoTypeDef
+	funcMap["goify"] = code.Goify
+	funcMap["gotypename"] = code.GoTypeName
+	ctxTmpl, err := template.New("context").Funcs(funcMap).Parse(ctxT)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +89,8 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 
 // Write writes the code for the context types to the writer.
 func (w *ContextsWriter) Write(data *ContextData) error {
-	w.WriteHeader("main")
+	imports := []string{}
+	w.WriteHeader("main", imports)
 	if err := w.CtxTmpl.Execute(w.Writer, data); err != nil {
 		return err
 	}
@@ -127,7 +136,7 @@ const (
 	ctxT = `// {{.Name}} provides the {{.ResourceName}} {{.ActionName}} action context
 type {{.Name}} struct {
 	*goa.Context
-	{{if .Params}}{{range $name, $att := object .Params.Type}}{{camelize $name}} {{gotyperef .Type 0}}
+	{{if .Params}}{{range $name, $att := .Params.Type.AsObject}}{{camelize $name}} {{gotyperef .Type 0}}
 {{end}}{{end}}{{if .Payload}}	payload {{gotyperef .Payload 0}}
 {{end}} }
 `
@@ -150,7 +159,7 @@ type {{.Name}} struct {
 	{{end}}{{if eq .Attribute.Type.Kind 5}}{{/* ArrayType */}}elems{{camelize .Name}} := strings.Split(raw{{camelize .Name}}, ",")
 	{{if eq (arrayAttribute .Attribute).Type.Kind 4}}{{.Target}} = elems{{camelize .Name}}
 	{{else}}elems{{camelize .Name}}2 := make({{gotyperef .Attribute.Type 1}}, len(elems{{camelize .Name}}))
-	for i, rawElem := range elems{{camelize .Name}} { 
+	for i, rawElem := range elems{{camelize .Name}} {
 		{{template "Coerce" (newCoerceData "elem" (arrayAttribute .Attribute) (printf "elems%s2[i]" (camelize .Name)))}}}
 	{{.Target}} = elems{{camelize .Name}}2
 {{end}}{{end}}`
@@ -161,7 +170,7 @@ type {{.Name}} struct {
 func New{{camelize .Name}}(c *goa.Context) (*{{.Name}}, error) {
 	var err error
 	ctx := {{.Name}}{Context: c}
-	{{if.Params}}{{$params := .Params}}{{range $name, $att := object $params.Type}}raw{{camelize $name}}, {{if ($params.IsRequired $name)}}ok{{else}}_{{end}} := c.Get("{{$name}}")
+	{{if.Params}}{{$params := .Params}}{{range $name, $att := $params.Type.AsObject}}raw{{camelize $name}}, {{if ($params.IsRequired $name)}}ok{{else}}_{{end}} := c.Get("{{$name}}")
 	{{if ($params.IsRequired $name)}}if !ok {
 		err = goa.MissingParam("{{$name}}", err)
 	} else {
@@ -189,7 +198,7 @@ func New{{gotypename .Payload 0}}(raw interface{}) ({{gotyperef .Payload 0}}, er
 	p := {{gotypename .Payload 1}}{}
 	//m, ok := raw.(map[string]interface{})
 	//TBD
-	
+
 	return p, err
 }`
 

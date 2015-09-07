@@ -15,7 +15,8 @@ type (
 
 	// DataType is the common interface to all types.
 	DataType interface {
-		Kind() Kind // Kind
+		Kind() Kind       // Kind
+		AsObject() Object // Cast to Object, panics if underlying type is not object.
 	}
 
 	// DataStructure is the interface implemented by all data structure types. That is
@@ -108,29 +109,34 @@ const (
 // DataType implementation
 
 // Kind implements DataKind.
-func (p Primitive) Kind() Kind {
-	return Kind(p)
-}
+func (p Primitive) Kind() Kind { return Kind(p) }
+
+// AsObject panics.
+func (p Primitive) AsObject() Object { panic("not an  object") }
 
 // Kind implements DataKind.
-func (a *Array) Kind() Kind {
-	return ArrayKind
-}
+func (a *Array) Kind() Kind { return ArrayKind }
+
+// AsObject panics.
+func (a *Array) AsObject() Object { panic("not an  object") }
 
 // Kind implements DataKind.
-func (o Object) Kind() Kind {
-	return ObjectKind
-}
+func (o Object) Kind() Kind { return ObjectKind }
+
+// AsObject returns the underlying object.
+func (o Object) AsObject() Object { return o }
 
 // Kind implements DataKind.
-func (u *UserTypeDefinition) Kind() Kind {
-	return UserTypeKind
-}
+func (u *UserTypeDefinition) Kind() Kind { return UserTypeKind }
+
+// AsObject calls AsObject on the user type underlying data type.
+func (u *UserTypeDefinition) AsObject() Object { return u.Type.AsObject() }
 
 // Kind implements DataKind.
-func (m *MediaTypeDefinition) Kind() Kind {
-	return MediaTypeKind
-}
+func (m *MediaTypeDefinition) Kind() Kind { return MediaTypeKind }
+
+// AsObject calls AsObject on the media type underlying data type.
+func (m *MediaTypeDefinition) AsObject() Object { return m.Type.AsObject() }
 
 // DataStructure implementation
 
