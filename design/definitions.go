@@ -1,6 +1,7 @@
 package design
 
 import (
+	"path/filepath"
 	"regexp"
 	"sort"
 )
@@ -309,6 +310,38 @@ func (r *ResourceDefinition) IterateActions(it ActionIterator) error {
 	return nil
 }
 
+// CanonicalPathAndParams computes the canonical path and parameters from the canonical action and
+// the parents.
+// It returns the empty string and nil if the resource or any of its parents has no canonical
+// action.
+func (r *ResourceDefinition) CanonicalPathAndParams() (path string, params []string) {
+	if r.CanonicalAction == "" {
+		return "", nil
+	}
+	ca, ok := r.Actions[r.CanonicalAction]
+	if !ok {
+		return
+	}
+	if len(ca.Routes) == 0 {
+		return
+	}
+	var parentPath string
+	var parentParams []string
+	if r.ParentName != "" {
+		parent, ok := Design.Resources[r.ParentName]
+		if !ok {
+			return
+		}
+		parentPath, parentParams = parent.CanonicalPathAndParams()
+		if parentPath == "" {
+			return
+		}
+	}
+	path = filepath.Join(parentPath, ca.Routes[0].Path)
+	params = append(parentParams, ca.Routes[0].Params()...)
+	return
+}
+
 // IsRequired returns true if the given string matches the name of a required attribute, false
 // otherwise.
 // IsRequired panics if the type of a is not Object.
@@ -327,4 +360,15 @@ func (a *AttributeDefinition) IsRequired(attName string) bool {
 		}
 	}
 	return false
+}
+
+// Params returns the route parameters.
+// For example for the route "GET /foo/:fooID" Params returns []string{"fooID"}.
+func (r *RouteDefinition) Params() []string {
+	matches := ParamsRegex.FindAllStringSubmatch(r.Path, -1)
+	params := make([]string, len(matches))
+	for i, m := range matches {
+		params[i] = m[1]
+	}
+	return params
 }

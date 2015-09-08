@@ -1,9 +1,11 @@
 package app
 
 import (
+	"strings"
 	"text/template"
 
 	"github.com/raphael/goa/codegen/code"
+	"github.com/raphael/goa/design"
 )
 
 // ResourcesWriter generate code for a goa application resources.
@@ -21,6 +23,8 @@ func NewResourcesWriter(filename string) (*ResourcesWriter, error) {
 	if err != nil {
 		return nil, err
 	}
+	funcMap := cw.FuncMap
+	funcMap["join"] = strings.Join
 	resourceTmpl, err := template.New("resource").Funcs(cw.FuncMap).Parse(resourceT)
 	if err != nil {
 		return nil, err
@@ -32,15 +36,29 @@ func NewResourcesWriter(filename string) (*ResourcesWriter, error) {
 	return &w, nil
 }
 
-// Write writes the code for the context types to outdir.
-func (w *ResourcesWriter) Write(targetPack string) error {
-	imports := []string{}
-	if err := w.WriteHeader(targetPack, imports); err != nil {
-		return err
-	}
-	return nil
+// ResourceTemplateData contains the information required to generate the resource code.
+type ResourceTemplateData struct {
+	Name              string                     // Name of resource
+	Identifier        string                     // Identifier of resource media type
+	Description       string                     // Description of resource
+	Type              *design.UserTypeDefinition // Type of resource media type
+	CanonicalTemplate string                     // CanonicalFormat represents the resource canonical path in the form of a fmt.Sprintf format.
+	CanonicalParams   []string                   // CanonicalParams is the list of parameter names that appear in the resource canonical path in order.
+}
+
+// Write writes the code for the context types to the writer.
+func (w *ResourcesWriter) Write(targetPack string, data *ResourceTemplateData) error {
+	return w.ResourceTmpl.Execute(w.Writer, data)
 }
 
 const (
-	resourceT = `package {{.}}`
+	resourceT = `// {{.Description}}
+// Media type: {{.Identifier}}
+type {{.Name}} {{gotypedef .Type 0 true false}}
+{{if .CanonicalTemplate}}
+// {{.Name}}Href returns the resource href.
+func {{.Name}}Href({{join .CanonicalParams ", "}} string) string {
+	return fmt.Sprintf("{{.CanonicalTemplate}}", {{join .CanonicalParams}})
+}
+{{end}}`
 )

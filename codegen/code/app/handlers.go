@@ -34,10 +34,6 @@ func NewHandlersWriter(filename string) (*HandlersWriter, error) {
 
 // Write writes the code for the context types to outdir.
 func (w *HandlersWriter) Write(targetPack string) error {
-	imports := []string{}
-	if err := w.WriteHeader(targetPack, imports); err != nil {
-		return err
-	}
 	return nil
 }
 

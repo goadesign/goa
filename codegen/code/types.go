@@ -29,7 +29,7 @@ func init() {
 		"gotypename":         GoTypeName,
 		"gotyperef":          GoTypeRef,
 		"goify":              Goify,
-		"tabs":               tabs,
+		"tabs":               Tabs,
 		"add":                func(a, b int) int { return a + b },
 		"tempvar":            tempvar,
 	}
@@ -438,16 +438,6 @@ var reserved = map[string]bool{
 	"switch":      true,
 	"type":        true,
 	"var":         true,
-}
-
-// tabs returns a string made of depth tab characters.
-func tabs(depth int) string {
-	var tabs string
-	for i := 0; i < depth; i++ {
-		tabs += "\t"
-	}
-	//	return fmt.Sprintf("%d%s", depth, tabs)
-	return tabs
 }
 
 // tempvar generates a unique temp var name.

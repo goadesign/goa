@@ -61,7 +61,7 @@ func (w *Writer) FormatCode() error {
 }
 
 // WriteHeader writes the generic generated code header.
-func (w *Writer) WriteHeader(pack string, imports []string) error {
+func (w *Writer) WriteHeader(title, pack string, imports []string) error {
 	ctx := map[string]interface{}{
 		"ToolVersion": version.Version,
 		"Pkg":         pack,
@@ -76,6 +76,16 @@ func (w *Writer) WriteHeader(pack string, imports []string) error {
 // Write implements io.Writer so that variables of type *Writer can be used in template.Execute.
 func (w *Writer) Write(b []byte) (int, error) {
 	return w.writer.Write(b)
+}
+
+// Tabs returns a string made of depth tab characters.
+func Tabs(depth int) string {
+	var tabs string
+	for i := 0; i < depth; i++ {
+		tabs += "\t"
+	}
+	//	return fmt.Sprintf("%d%s", depth, tabs)
+	return tabs
 }
 
 const (

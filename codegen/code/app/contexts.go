@@ -47,6 +47,8 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 	funcMap["goify"] = code.Goify
 	funcMap["gotypename"] = code.GoTypeName
 	funcMap["typeUnmarshaler"] = code.TypeUnmarshaler
+	funcMap["tabs"] = code.Tabs
+	funcMap["add"] = func(a, b int) int { return a + b }
 	ctxTmpl, err := template.New("context").Funcs(funcMap).Parse(ctxT)
 	if err != nil {
 		return nil, err
@@ -84,8 +86,6 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 
 // Write writes the code for the context types to the writer.
 func (w *ContextsWriter) Write(data *ContextTemplateData) error {
-	imports := []string{}
-	w.WriteHeader("main", imports)
 	if err := w.CtxTmpl.Execute(w.Writer, data); err != nil {
 		return err
 	}
@@ -107,17 +107,18 @@ func (w *ContextsWriter) Write(data *ContextTemplateData) error {
 			return err
 		}
 	}
-	return w.FormatCode()
+	return nil
 }
 
 // newCoerceData is a helper function that creates a map that can be given to the "Coerce"
 // template.
-func newCoerceData(name string, att *design.AttributeDefinition, target string) map[string]interface{} {
+func newCoerceData(name string, att *design.AttributeDefinition, target string, depth int) map[string]interface{} {
 	return map[string]interface{}{
 		"Name":      name,
 		"VarName":   code.Goify(name, false),
 		"Attribute": att,
 		"Target":    target,
+		"Depth":     depth,
 	}
 }
 
@@ -130,32 +131,32 @@ const (
 	ctxT = `// {{.Name}} provides the {{.ResourceName}} {{.ActionName}} action context
 type {{.Name}} struct {
 	goa.Context
-	{{if .Params}}{{range $name, $att := .Params.Type.AsObject}}{{camelize $name}} {{gotyperef .Type 0}}
+{{if .Params}}{{range $name, $att := .Params.Type.AsObject}}	{{camelize $name}} {{gotyperef .Type 0}}
 {{end}}{{end}}{{if .Payload}}	payload {{gotyperef .Payload 0}}
-{{end}} }
+{{end}}}
 `
-	coerce = `{{if eq .Attribute.Type.Kind 1}}{{/* BooleanType */}}if {{.VarName}}, err := strconv.ParseBool(raw{{camelize .Name}}); err == nil {
-		{{.Target}} = {{.VarName}}
-	} else {
-		err = goa.InvalidParamValue("{{.Name}}", raw{{camelize .Name}}, "boolean", err)
-	}
-	{{end}}{{if eq .Attribute.Type.Kind 2}}{{/* IntegerType */}}if {{.VarName}}, err := strconv.Atoi(raw{{camelize .Name}}); err == nil {
-		{{.Target}} = int({{.VarName}})
-	} else {
-		err = goa.InvalidParamValue("{{.Name}}", raw{{camelize .Name}}, "integer", err)
-	}
-	{{end}}{{if eq .Attribute.Type.Kind 3}}{{/* NumberType */}}if {{.VarName}}, err := strconv.ParseFloat(raw{{camelize .Name}}, 64); err == nil {
-		{{.Target}} = {{.VarName}}
-	} else {
-		err = goa.InvalidParamValue("{{.Name}}", raw{{camelize .Name}}, "number", err)
-	}
-	{{end}}{{if eq .Attribute.Type.Kind 4}}{{/* StringType */}}{{.Target}} = raw{{camelize .Name}}
-	{{end}}{{if eq .Attribute.Type.Kind 5}}{{/* ArrayType */}}elems{{camelize .Name}} := strings.Split(raw{{camelize .Name}}, ",")
-	{{if eq (arrayAttribute .Attribute).Type.Kind 4}}{{.Target}} = elems{{camelize .Name}}
-	{{else}}elems{{camelize .Name}}2 := make({{gotyperef .Attribute.Type 1}}, len(elems{{camelize .Name}}))
-	for i, rawElem := range elems{{camelize .Name}} {
-		{{template "Coerce" (newCoerceData "elem" (arrayAttribute .Attribute) (printf "elems%s2[i]" (camelize .Name)))}}}
-	{{.Target}} = elems{{camelize .Name}}
+	coerce = `{{if eq .Attribute.Type.Kind 1}}{{/* BooleanType */}}{{tabs .Depth}}if {{.VarName}}, err := strconv.ParseBool(raw{{camelize .Name}}); err == nil {
+{{tabs .Depth}}	{{.Target}} = {{.VarName}}
+{{tabs .Depth}}} else {
+{{tabs .Depth}}	err = goa.InvalidParamValue("{{.Name}}", raw{{camelize .Name}}, "boolean", err)
+{{tabs .Depth}}}
+{{end}}{{if eq .Attribute.Type.Kind 2}}{{/* IntegerType */}}{{tabs .Depth}}if {{.VarName}}, err := strconv.Atoi(raw{{camelize .Name}}); err == nil {
+{{tabs .Depth}}	{{.Target}} = int({{.VarName}})
+{{tabs .Depth}}} else {
+{{tabs .Depth}}	err = goa.InvalidParamValue("{{.Name}}", raw{{camelize .Name}}, "integer", err)
+{{tabs .Depth}}}
+{{end}}{{if eq .Attribute.Type.Kind 3}}{{/* NumberType */}}{{tabs .Depth}}if {{.VarName}}, err := strconv.ParseFloat(raw{{camelize .Name}}, 64); err == nil {
+{{tabs .Depth}}	{{.Target}} = {{.VarName}}
+{{tabs .Depth}}} else {
+{{tabs .Depth}}	err = goa.InvalidParamValue("{{.Name}}", raw{{camelize .Name}}, "number", err)
+{{tabs .Depth}}}
+{{end}}{{if eq .Attribute.Type.Kind 4}}{{/* StringType */}}{{tabs .Depth}}{{.Target}} = raw{{camelize .Name}}
+{{end}}{{if eq .Attribute.Type.Kind 5}}{{/* ArrayType */}}{{tabs .Depth}}elems{{camelize .Name}} := strings.Split(raw{{camelize .Name}}, ",")
+{{if eq (arrayAttribute .Attribute).Type.Kind 4}}{{tabs .Depth}}{{.Target}} = elems{{camelize .Name}}
+{{else}}{{tabs .Depth}}elems{{camelize .Name}}2 := make({{gotyperef .Attribute.Type .Depth}}, len(elems{{camelize .Name}}))
+{{tabs .Depth}}for i, rawElem := range elems{{camelize .Name}} {
+{{template "Coerce" (newCoerceData "elem" (arrayAttribute .Attribute) (printf "elems%s2[i]" (camelize .Name)) (add .Depth 1))}}{{tabs .Depth}}}
+{{tabs .Depth}}{{.Target}} = elems{{camelize .Name}}
 {{end}}{{end}}`
 
 	ctxNewT = `{{define "Coerce"}}` + coerce + `{{end}}` + `
@@ -164,19 +165,19 @@ type {{.Name}} struct {
 func New{{camelize .Name}}(c goa.Context) (*{{.Name}}, error) {
 	var err error
 	ctx := {{.Name}}{Context: c}
-	{{if.Params}}{{$params := .Params}}{{range $name, $att := $params.Type.AsObject}}raw{{camelize $name}}, {{if ($params.IsRequired $name)}}ok{{else}}_{{end}} := c.Get("{{$name}}")
-	{{if ($params.IsRequired $name)}}if !ok {
+{{if.Params}}{{$params := .Params}}{{range $name, $att := $params.Type.AsObject}}	raw{{camelize $name}}, {{if ($params.IsRequired $name)}}ok{{else}}_{{end}} := c.Get("{{$name}}")
+{{if ($params.IsRequired $name)}}	if !ok {
 		err = goa.MissingParam("{{$name}}", err)
 	} else {
-	{{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (camelize (goify $name true))))}}{{if ($params.IsRequired $name)}}}
-	{{end}}{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}if payload := c.Payload(); payload != nil {
+{{end}}{{$depth := or (and ($params.IsRequired $name) 2) 1}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (camelize (goify $name true))) $depth)}}{{if ($params.IsRequired $name)}}	}
+{{end}}{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	if payload := c.Payload(); payload != nil {
 		p, err := New{{gotypename .Payload 0}}(payload)
 		if err != nil {
 			return nil, err
 		}
 		ctx.Payload = p
 	}
-	{{end}}return &ctx, err
+{{end}}	return &ctx, err
 }
 `
 	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{.Name}} sends a HTTP response with status code {{.Status}}.

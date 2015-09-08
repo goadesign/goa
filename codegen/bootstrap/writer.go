@@ -42,7 +42,7 @@ func (w *Writer) Write() error {
 		w.DesignPackage,
 		w.goaPackagePath(),
 	}
-	w.WriteHeader("main", imports)
+	w.WriteHeader("Code Generator", "main", imports)
 	tmpl, err := template.New("generator").Parse(mainTmpl)
 	if err != nil {
 		panic(err)
