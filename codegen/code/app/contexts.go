@@ -21,9 +21,9 @@ type (
 		MediaTypeTmpl  *template.Template
 	}
 
-	// ContextData contains all the information used by the template to render the context
+	// ContextTemplateData contains all the information used by the template to render the context
 	// code for an action.
-	ContextData struct {
+	ContextTemplateData struct {
 		Name         string // e.g. "ListBottleContext"
 		ResourceName string // e.g. "bottles"
 		ActionName   string // e.g. "list"
@@ -47,6 +47,7 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 	funcMap["gotypedef"] = code.GoTypeDef
 	funcMap["goify"] = code.Goify
 	funcMap["gotypename"] = code.GoTypeName
+	funcMap["typeUnmarshaler"] = code.TypeUnmarshaler
 	ctxTmpl, err := template.New("context").Funcs(funcMap).Parse(ctxT)
 	if err != nil {
 		return nil, err
@@ -88,7 +89,7 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 }
 
 // Write writes the code for the context types to the writer.
-func (w *ContextsWriter) Write(data *ContextData) error {
+func (w *ContextsWriter) Write(data *ContextTemplateData) error {
 	imports := []string{}
 	w.WriteHeader("main", imports)
 	if err := w.CtxTmpl.Execute(w.Writer, data); err != nil {
@@ -135,7 +136,7 @@ func arrayAttribute(a *design.AttributeDefinition) *design.AttributeDefinition {
 const (
 	ctxT = `// {{.Name}} provides the {{.ResourceName}} {{.ActionName}} action context
 type {{.Name}} struct {
-	*goa.Context
+	goa.Context
 	{{if .Params}}{{range $name, $att := .Params.Type.AsObject}}{{camelize $name}} {{gotyperef .Type 0}}
 {{end}}{{end}}{{if .Payload}}	payload {{gotyperef .Payload 0}}
 {{end}} }
@@ -161,13 +162,13 @@ type {{.Name}} struct {
 	{{else}}elems{{camelize .Name}}2 := make({{gotyperef .Attribute.Type 1}}, len(elems{{camelize .Name}}))
 	for i, rawElem := range elems{{camelize .Name}} {
 		{{template "Coerce" (newCoerceData "elem" (arrayAttribute .Attribute) (printf "elems%s2[i]" (camelize .Name)))}}}
-	{{.Target}} = elems{{camelize .Name}}2
+	{{.Target}} = elems{{camelize .Name}}
 {{end}}{{end}}`
 
 	ctxNewT = `{{define "Coerce"}}` + coerce + `{{end}}` + `
 // New{{camelize .Name}} parses the incoming request URL and body, performs validations and creates the
 // context used by the controller action.
-func New{{camelize .Name}}(c *goa.Context) (*{{.Name}}, error) {
+func New{{camelize .Name}}(c goa.Context) (*{{.Name}}, error) {
 	var err error
 	ctx := {{.Name}}{Context: c}
 	{{if.Params}}{{$params := .Params}}{{range $name, $att := $params.Type.AsObject}}raw{{camelize $name}}, {{if ($params.IsRequired $name)}}ok{{else}}_{{end}} := c.Get("{{$name}}")
@@ -175,11 +176,13 @@ func New{{camelize .Name}}(c *goa.Context) (*{{.Name}}, error) {
 		err = goa.MissingParam("{{$name}}", err)
 	} else {
 	{{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (camelize (goify $name true))))}}{{if ($params.IsRequired $name)}}}
-	{{end}}{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}var p {{gotyperef .Payload 1}}
-	if err := c.Bind(&p); err != nil {
-		return nil, err
+	{{end}}{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}if payload := c.Payload(); payload != nil {
+		p, err := New{{gotypename .Payload 0}}(payload)
+		if err != nil {
+			return nil, err
+		}
+		ctx.Payload = p
 	}
-	ctx.Payload = &p
 	{{end}}return &ctx, err
 }
 `
@@ -195,9 +198,8 @@ type {{gotypename .Payload 1}} {{gotypedef .Payload 0 true false}}
 // It validates each field and returns an error if any validation fails.
 func New{{gotypename .Payload 0}}(raw interface{}) ({{gotyperef .Payload 0}}, error) {
 	var err error
-	p := {{gotypename .Payload 1}}{}
-	//m, ok := raw.(map[string]interface{})
-	//TBD
+	var p {{gotyperef .Payload 1}}
+{{typeUnmarshaler .Payload "" "raw" "p"}}
 
 	return p, err
 }`

@@ -8,7 +8,7 @@ import (
 
 // ListBottleContext provides the bottles list action context
 type ListBottleContext struct {
-	*goa.Context
+	goa.Context
 	AccountID int
 	Years     []int
 	HasYears  bool
@@ -17,7 +17,7 @@ type ListBottleContext struct {
 // NewListBottleContext parses the incoming request URL and body and instantiates the context
 // accordingly. It returns an error if a required parameter is missing or if a parameter has an
 // invalid value.
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawAccountID, _ := c.Get("accountID")
@@ -26,7 +26,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	} else {
 		err = goa.InvalidParamValue("accountID", rawAccountID, "number", err)
 	}
-	if rawYears, ok := c.Query["years"]; ok {
+	if rawYears := c.GetMany("years"); rawYears != nil {
 		ctx.HasYears = true
 		years := make([]int, len(rawYears))
 		for i, rawYear := range rawYears {
@@ -48,7 +48,7 @@ func (c *ListBottleContext) OK(bottles []*Bottle) error {
 
 // ShowBottleContext provides the bottles show action context
 type ShowBottleContext struct {
-	*goa.Context
+	goa.Context
 	AccountID int
 	ID        int
 }
@@ -56,7 +56,7 @@ type ShowBottleContext struct {
 // NewShowBottleContext parses the incoming request URL and body and instantiates the context
 // accordingly. It returns an error if a required parameter is missing or if a parameter has an
 // invalid value.
-func NewShowBottleContext(c *goa.Context) (*ShowBottleContext, error) {
+func NewShowBottleContext(c goa.Context) (*ShowBottleContext, error) {
 	var err error
 	ctx := ShowBottleContext{Context: c}
 	rawAccountID, _ := c.Get("accountID")
@@ -90,7 +90,7 @@ func (c *ShowBottleContext) NotFound() error {
 type (
 	// CreateBottleContext provides the bottles create action context
 	CreateBottleContext struct {
-		*goa.Context
+		goa.Context
 		AccountID int
 		Payload   *CreateBottlePayload
 	}
@@ -112,7 +112,7 @@ type (
 // NewCreateBottleContext parses the incoming request URL and body and instantiates the context
 // accordingly. It returns an error if a required parameter is missing or if a parameter has an
 // invalid value.
-func NewCreateBottleContext(c *goa.Context) (*CreateBottleContext, error) {
+func NewCreateBottleContext(c goa.Context) (*CreateBottleContext, error) {
 	var err error
 	ctx := CreateBottleContext{Context: c}
 	rawAccountID, _ := c.Get("accountID")
@@ -121,11 +121,13 @@ func NewCreateBottleContext(c *goa.Context) (*CreateBottleContext, error) {
 	} else {
 		err = goa.InvalidParamValue("accountID", rawAccountID, "number", err)
 	}
-	p, err := NewCreateBottlePayload(c.Payload)
-	if err != nil {
-		return nil, err
+	if payload := c.Payload(); payload != nil {
+		p, err := NewCreateBottlePayload(payload)
+		if err != nil {
+			return nil, err
+		}
+		ctx.Payload = p
 	}
-	ctx.Payload = p
 	return &ctx, err
 }
 
@@ -224,7 +226,7 @@ func (c *CreateBottleContext) Created(bottle *Bottle) error {
 type (
 	// UpdateBottleContext provides the bottles update action context
 	UpdateBottleContext struct {
-		*goa.Context
+		goa.Context
 		AccountID int
 		ID        int
 		Payload   *UpdateBottlePayload
@@ -247,7 +249,7 @@ type (
 // NewUpdateBottleContext parses the incoming request URL and body and instantiates the context
 // accordingly. It returns an error if a required parameter is missing or if a parameter has an
 // invalid value.
-func NewUpdateBottleContext(c *goa.Context) (*UpdateBottleContext, error) {
+func NewUpdateBottleContext(c goa.Context) (*UpdateBottleContext, error) {
 	var err error
 	ctx := UpdateBottleContext{Context: c}
 	rawAccountID, _ := c.Get("accountID")
@@ -262,11 +264,13 @@ func NewUpdateBottleContext(c *goa.Context) (*UpdateBottleContext, error) {
 	} else {
 		err = goa.InvalidParamValue("ID", rawID, "number", err)
 	}
-	p, err := NewUpdateBottlePayload(c.Payload)
-	if err != nil {
-		return nil, err
+	if payload := c.Payload(); payload != nil {
+		p, err := NewUpdateBottlePayload(payload)
+		if err != nil {
+			return nil, err
+		}
+		ctx.Payload = p
 	}
-	ctx.Payload = p
 	return &ctx, err
 }
 
@@ -363,7 +367,7 @@ func (c *UpdateBottleContext) NoContent() error {
 
 // DeleteBottleContext provides the bottles delete action context
 type DeleteBottleContext struct {
-	*goa.Context
+	goa.Context
 	AccountID int
 	ID        int
 }
@@ -371,7 +375,7 @@ type DeleteBottleContext struct {
 // NewDeleteBottleContext parses the incoming request URL and body and instantiates the context
 // accordingly. It returns an error if a required parameter is missing or if a parameter has an
 // invalid value.
-func NewDeleteBottleContext(c *goa.Context) (*DeleteBottleContext, error) {
+func NewDeleteBottleContext(c goa.Context) (*DeleteBottleContext, error) {
 	var err error
 	ctx := DeleteBottleContext{Context: c}
 	rawAccountID, _ := c.Get("accountID")
@@ -401,7 +405,7 @@ func (c *DeleteBottleContext) NoContent() error {
 
 // RateBottleContext provides the bottles rate action context
 type RateBottleContext struct {
-	*goa.Context
+	goa.Context
 	AccountID int
 	ID        int
 	Payload   *RateBottlePayload
@@ -410,7 +414,7 @@ type RateBottleContext struct {
 // NewRateBottleContext parses the incoming request URL and body and instantiates the context
 // accordingly. It returns an error if a required parameter is missing or if a parameter has an
 // invalid value.
-func NewRateBottleContext(c *goa.Context) (*RateBottleContext, error) {
+func NewRateBottleContext(c goa.Context) (*RateBottleContext, error) {
 	var err error
 	ctx := RateBottleContext{Context: c}
 	rawAccountID, _ := c.Get("accountID")
@@ -425,12 +429,32 @@ func NewRateBottleContext(c *goa.Context) (*RateBottleContext, error) {
 	} else {
 		err = goa.InvalidParamValue("ID", rawID, "number", err)
 	}
-	var p RateBottlePayload
-	if err := c.Bind(&p); err != nil {
-		return nil, err
+	if payload := c.Payload(); payload != nil {
+		p, err := NewRateBottlePayload(payload)
+		if err != nil {
+			return nil, err
+		}
+		ctx.Payload = p
 	}
-	ctx.Payload = &p
 	return &ctx, err
+}
+
+// NewRateBottlePayload instantiates a RateBottlePayload from the raw request body.
+func NewRateBottlePayload(raw interface{}) (*RateBottlePayload, error) {
+	var err error
+	var p *RateBottlePayload
+	if val, ok := raw.(map[string]interface{}); ok {
+		if v, ok := val["ratings"]; ok {
+			var tmp1 int
+			if val, ok := v.(int); ok {
+				tmp1 = val
+			} else {
+				err = goa.IncompatibleTypeError(".rating", v, "int")
+			}
+			p.Ratings = tmp1
+		}
+	}
+	return p, err
 }
 
 // RateBottlePayload provides the bottles create action payload

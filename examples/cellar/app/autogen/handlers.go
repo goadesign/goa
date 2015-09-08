@@ -22,7 +22,7 @@ func listBottlesHandler(userHandler interface{}) (goa.Handler, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid handler signature for action list bottles, expected 'func(c *ListBottleContext) error'")
 	}
-	return func(c *goa.Context) error {
+	return func(c goa.Context) error {
 		ctx, err := NewListBottleContext(c)
 		if err != nil {
 			return err
@@ -36,7 +36,7 @@ func showBottlesHandler(userHandler interface{}) (goa.Handler, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid handler signature for action show bottle, expected 'func(c *ShowBottleContext) error'")
 	}
-	return func(c *goa.Context) error {
+	return func(c goa.Context) error {
 		ctx, err := NewShowBottleContext(c)
 		if err != nil {
 			return err
@@ -50,7 +50,7 @@ func createBottlesHandler(userHandler interface{}) (goa.Handler, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid handler signature for create bottles, expected 'func(c *CreateBottleContext) error'")
 	}
-	return func(c *goa.Context) error {
+	return func(c goa.Context) error {
 		ctx, err := NewCreateBottleContext(c)
 		if err != nil {
 			return err
@@ -64,7 +64,7 @@ func updateBottlesHandler(userHandler interface{}) (goa.Handler, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid handler signature for update bottles, expected 'func(c *UpdateBottleContext) error'")
 	}
-	return func(c *goa.Context) error {
+	return func(c goa.Context) error {
 		ctx, err := NewUpdateBottleContext(c)
 		if err != nil {
 			return err
@@ -78,7 +78,7 @@ func rateBottlesHandler(userHandler interface{}) (goa.Handler, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid handler signature for rate bottles, expected 'func(c *RateBottleContext) error'")
 	}
-	return func(c *goa.Context) error {
+	return func(c goa.Context) error {
 		ctx, err := NewRateBottleContext(c)
 		if err != nil {
 			return err
@@ -92,7 +92,7 @@ func deleteBottlesHandler(userHandler interface{}) (goa.Handler, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid handler signature for delete bottles, expected 'func(c *DeleteBottleContext) error'")
 	}
-	return func(c *goa.Context) error {
+	return func(c goa.Context) error {
 		ctx, err := NewDeleteBottleContext(c)
 		if err != nil {
 			return err

@@ -39,7 +39,7 @@ var _ = Describe("ContextWriter", func() {
 			var payload *design.UserTypeDefinition
 			var responses map[string]*design.ResponseDefinition
 
-			var data *app.ContextData
+			var data *app.ContextTemplateData
 
 			BeforeEach(func() {
 				params = nil
@@ -50,7 +50,7 @@ var _ = Describe("ContextWriter", func() {
 			})
 
 			JustBeforeEach(func() {
-				data = &app.ContextData{
+				data = &app.ContextTemplateData{
 					Name:         "ListBottleContext",
 					ResourceName: "bottles",
 					ActionName:   "list",
@@ -327,12 +327,12 @@ var _ = Describe("ContextWriter", func() {
 
 const emptyContext = `
 type ListBottleContext struct {
-	*goa.Context
+	goa.Context
 }
 `
 
 const emptyContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	return &ctx, err
@@ -341,13 +341,13 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 
 const intContext = `
 type ListBottleContext struct {
-	*goa.Context
+	goa.Context
 	Param int
 }
 `
 
 const intContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam, _ := c.Get("param")
@@ -362,13 +362,13 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 
 const strContext = `
 type ListBottleContext struct {
-	*goa.Context
+	goa.Context
 	Param string
 }
 `
 
 const strContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam, _ := c.Get("param")
@@ -379,13 +379,13 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 
 const numContext = `
 type ListBottleContext struct {
-	*goa.Context
+	goa.Context
 	Param float64
 }
 `
 
 const numContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam, _ := c.Get("param")
@@ -399,13 +399,13 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 `
 const boolContext = `
 type ListBottleContext struct {
-	*goa.Context
+	goa.Context
 	Param bool
 }
 `
 
 const boolContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam, _ := c.Get("param")
@@ -420,13 +420,13 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 
 const arrayContext = `
 type ListBottleContext struct {
-	*goa.Context
+	goa.Context
 	Param []string
 }
 `
 
 const arrayContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam, _ := c.Get("param")
@@ -438,13 +438,13 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 
 const intArrayContext = `
 type ListBottleContext struct {
-	*goa.Context
+	goa.Context
 	Param []int
 }
 `
 
 const intArrayContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam, _ := c.Get("param")
@@ -457,20 +457,20 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 			err = goa.InvalidParamValue("elem", rawElem, "integer", err)
 		}
 	}
-	ctx.Param = elemsParam2
+	ctx.Param = elemsParam
 	return &ctx, err
 }
 `
 
 const resContext = `
 type ListBottleContext struct {
-	*goa.Context
+	goa.Context
 	Int int
 }
 `
 
 const resContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawInt, _ := c.Get("int")
@@ -485,13 +485,13 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 
 const requiredContext = `
 type ListBottleContext struct {
-	*goa.Context
+	goa.Context
 	Int int
 }
 `
 
 const requiredContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawInt, ok := c.Get("int")
@@ -510,39 +510,43 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 
 const payloadContext = `
 type ListBottleContext struct {
-	*goa.Context
+	goa.Context
 	payload *ListBottlePayload
 }
 `
 
 const payloadContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
-	var p *ListBottlePayload
-	if err := c.Bind(&p); err != nil {
-		return nil, err
+	if payload := c.Payload(); payload != nil {
+		p, err := NewListBottlePayload(payload)
+		if err != nil {
+			return nil, err
+		}
+		ctx.Payload = p
 	}
-	ctx.Payload = &p
 	return &ctx, err
 }
 `
 const payloadObjContext = `
 type ListBottleContext struct {
-	*goa.Context
+	goa.Context
 	payload *ListBottlePayload
 }
 `
 
 const payloadObjContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
-	var p *ListBottlePayload
-	if err := c.Bind(&p); err != nil {
-		return nil, err
+	if payload := c.Payload(); payload != nil {
+		p, err := NewListBottlePayload(payload)
+		if err != nil {
+			return nil, err
+		}
+		ctx.Payload = p
 	}
-	ctx.Payload = &p
 	return &ctx, err
 }
 `

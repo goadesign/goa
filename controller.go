@@ -91,13 +91,13 @@ func (c *Controller) actionHandle(h Handler) httprouter.Handle {
 			err = decoder.Decode(&payload)
 		}
 		ctx := ContextData{
-			Logger:  c.Logger.New("id", id),
-			Params:  params,
-			Query:   query,
-			Payload: payload,
-			R:       r,
-			W:       w,
-			Header:  w.Header(),
+			Logger:      c.Logger.New("id", id),
+			Params:      params,
+			Query:       query,
+			PayloadData: payload,
+			R:           r,
+			W:           w,
+			HeaderData:  w.Header(),
 		}
 		if len(params) > 0 {
 			ctx.Debug("params", ToLogCtx(params))

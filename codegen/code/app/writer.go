@@ -54,7 +54,7 @@ func (w *Writer) Write() ([]string, error) {
 	for _, res := range design.Design.Resources {
 		for _, a := range res.Actions {
 			ctxName := inflect.Camelize(a.Name) + inflect.Camelize(a.Resource.Name) + "Context"
-			ctxData := ContextData{
+			ctxData := ContextTemplateData{
 				Name:         ctxName,
 				ResourceName: res.Name,
 				ActionName:   a.Name,

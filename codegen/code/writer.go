@@ -3,6 +3,7 @@ package code
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"text/template"
@@ -53,7 +54,8 @@ func NewWriter(filename string) (*Writer, error) {
 func (w *Writer) FormatCode() error {
 	cmd := exec.Command("gofmt", "-w", w.Filename)
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf(string(output))
+		content, _ := ioutil.ReadFile(w.Filename)
+		return fmt.Errorf("%s\n========\nContent:\n%s", string(output), content)
 	}
 	return nil
 }

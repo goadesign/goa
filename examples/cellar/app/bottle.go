@@ -56,7 +56,7 @@ func CreateBottle(c *autogen.CreateBottleContext) error {
 	if payload.Review != nil {
 		bottle.Review = *payload.Review
 	}
-	c.Header.Set("Location", bottle.ComputeHref())
+	c.Header().Set("Location", bottle.ComputeHref())
 	return c.Created(bottle)
 }
 

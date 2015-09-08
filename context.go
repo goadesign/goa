@@ -15,15 +15,22 @@ import (
 type Context interface {
 	// Get returns the param or query string with the given name and true or an empty string
 	// and false if there isn't one.
+	// If there is more than one query string value then Get returns the first one. Use GetMany
+	// to retrieve all the values instead.
 	Get(name string) (string, bool)
+
+	// GetMany returns the query string values with the given name or nil if there aren't any.
+	GetMany(name string) []string
 
 	// Env returns the request environment.
 	// Environment values are typically created and used by middleware.
 	Env() map[string]interface{}
 
-	// Bind loads the request body in the given Validator then calls the Validate method on the
-	// unmarshalled object.
-	Bind(v Validator) error
+	// Payload returns the raw deserialized request body or nil if the body is empty.
+	Payload() interface{}
+
+	// Header returns the underlying request headers.
+	Header() http.Header
 
 	// Respond writes the given HTTP status code and response body.
 	// This method can only be called once per request.
@@ -33,11 +40,11 @@ type Context interface {
 	// and serialized JSON string as body.
 	JSON(code int, body interface{}) error
 
-	// RespondBadRequest sends a HTTP response with status code 400 and the given body.
-	RespondBadRequest(body string) error
+	// Bug sends a HTTP response with status code 400 and the given body.
+	BadRequest(body string) error
 
-	// RespondBug sends a HTTP response with status code 500 and the given body.
-	RespondBug(body string) error
+	// Bug sends a HTTP response with status code 500 and the given body.
+	Bug(body string) error
 
 	// Log is the request specific logger.
 	// All log entries are prefixed with the request ID.
@@ -45,59 +52,51 @@ type Context interface {
 
 	// Request returns the underlying HTTP request.
 	// In general it should not be necessary to call this function, the request elements should
-	// be accessed using the other functions exposed by Context (i.e. Get, Env and Bind)
+	// be accessed using the other functions exposed by Context (i.e. Get, GetMany, Payload, etc.)
 	Request() *http.Request
 
 	// ResponseWriter returns the underlying HTTP response writer.
 	// In general it should not be necessary to call this function, the response can be Written
 	// using on the helper functions exposes by Context (i.e. Respond, JSON, RespondError and
-	// RespondBug)
+	// Bug)
 	ResponseWriter() http.ResponseWriter
 
 	// New creates a new context with the same environment. Only the Request and ResponseWriter
-	// are different (in particular note that Get returns the same value with the new context
-	// even if the request has a different URL).
-	// This method is used to wrap "legacy" middleware that acts on http.Handler instead of
-	// goa.Handler. This means that legacy middleware can't affect the request itself, it can
-	// only update the environment.
+	// are different (in particular note that Get and GetMany are unaffected).
+	// This method is useful to wrap "legacy" middleware that acts on http.Handler instead of
+	// goa.Handler.
 	New(http.ResponseWriter, *http.Request) Context
 }
 
 // ContextData is the object that provides access to the underlying HTTP request and response data.
 // It implements the Context interface.
 type ContextData struct {
-	log.Logger                        // Context logger
-	Params     map[string]string      // URL string parameters
-	Query      map[string][]string    // Query string parameters
-	Payload    interface{}            // Deserialized payload (request body)
-	R          *http.Request          // Underlying HTTP request
-	W          http.ResponseWriter    // Underlying HTTP response writer
-	Header     http.Header            // Underlying response headers
-	RespStatus int                    // HTTP response status code
-	RespLen    int                    // Written response Length
-	EnvData    map[string]interface{} // Env is the request environment used by middleware to stash state.
-}
-
-// Validator is implemented by all data structures that can be validated.
-// This includes request and response body data structures.
-type Validator interface {
-	Validate() error
+	log.Logger                         // Context logger
+	Params      map[string]string      // URL string parameters
+	Query       map[string][]string    // Query string parameters
+	PayloadData interface{}            // Deserialized payload (request body)
+	R           *http.Request          // Underlying HTTP request
+	W           http.ResponseWriter    // Underlying HTTP response writer
+	HeaderData  http.Header            // Underlying response headers
+	RespStatus  int                    // HTTP response status code
+	RespLen     int                    // Written response Length
+	EnvData     map[string]interface{} // Env is the request environment used by middleware to stash state.
 }
 
 // New creates a new context with the same environment. Only the R and W fields are updated.
 // This is useful to create contexts out of middlewares that act directly on http.Handler.
 func (c *ContextData) New(w http.ResponseWriter, r *http.Request) Context {
 	newC := ContextData{
-		Logger:     c.Logger,
-		Params:     c.Params,
-		Query:      c.Query,
-		Payload:    c.Payload,
-		R:          r,
-		W:          w,
-		Header:     c.Header,
-		RespStatus: c.RespStatus,
-		RespLen:    c.RespLen,
-		EnvData:    c.EnvData,
+		Logger:      c.Logger,
+		Params:      c.Params,
+		Query:       c.Query,
+		PayloadData: c.PayloadData,
+		R:           r,
+		W:           w,
+		HeaderData:  c.HeaderData,
+		RespStatus:  c.RespStatus,
+		RespLen:     c.RespLen,
+		EnvData:     c.EnvData,
 	}
 	return &newC
 }
@@ -119,20 +118,25 @@ func (c *ContextData) Get(name string) (string, bool) {
 	return v, true
 }
 
+// GetMany returns the query string values with the given name and or if there aren't any.
+func (c *ContextData) GetMany(name string) []string {
+	return c.Query[name]
+}
+
 // Env returns the request environment.
 // Environment values are typically created and used by middleware.
 func (c *ContextData) Env() map[string]interface{} {
 	return c.EnvData
 }
 
-// Bind loads the request body in the given Validator then calls the Validate method on the
-// unmarshalled object.
-func (c *ContextData) Bind(v Validator) error {
-	decoder := json.NewDecoder(c.R.Body)
-	if err := decoder.Decode(v); err != nil {
-		return err
-	}
-	return v.Validate()
+// Payload returns the deserialized request body or nil if body is empty.
+func (c *ContextData) Payload() interface{} {
+	return c.PayloadData
+}
+
+// Header returns the underlying request headers.
+func (c *ContextData) Header() http.Header {
+	return c.HeaderData
 }
 
 // Respond writes the given HTTP status code and response body.
@@ -157,13 +161,13 @@ func (c *ContextData) JSON(code int, body interface{}) error {
 	return c.Respond(code, js)
 }
 
-// RespondBadRequest sends a HTTP response with status code 400 and the given body.
-func (c *ContextData) RespondBadRequest(body string) error {
+// BadRequest sends a HTTP response with status code 400 and the given body.
+func (c *ContextData) BadRequest(body string) error {
 	return c.Respond(400, []byte(body))
 }
 
-// RespondBug sends a HTTP response with status code 500 and the given body.
-func (c *ContextData) RespondBug(body string) error {
+// Bug sends a HTTP response with status code 500 and the given body.
+func (c *ContextData) Bug(body string) error {
 	return c.Respond(500, []byte(body))
 }
 
@@ -174,7 +178,7 @@ func (c *ContextData) Log() log15.Logger {
 
 // Request returns the underlying HTTP request.
 // In general it should not be necessary to call this function, the request elements should
-// be accessed using the other functions exposed by Context (i.e. Get, Env and Bind)
+// be accessed using the other functions exposed by Context (i.e. Get, GetMany, Payload, etc.)
 func (c *ContextData) Request() *http.Request {
 	return c.R
 }
@@ -182,7 +186,7 @@ func (c *ContextData) Request() *http.Request {
 // ResponseWriter returns the underlying HTTP response writer.
 // In general it should not be necessary to call this function, the response can be Written
 // using on the helper functions exposes by Context (i.e. Respond, JSON, RespondError and
-// RespondBug)
+// Bug)
 func (c *ContextData) ResponseWriter() http.ResponseWriter {
 	return c.W
 }

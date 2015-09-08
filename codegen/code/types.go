@@ -177,6 +177,7 @@ func NamedTypeUnmarshaler(t design.NamedType, context, source, target string) st
 }
 func namedTypeUnmarshalerR(t design.NamedType, context, source, target string, depth int) string {
 	data := map[string]interface{}{
+		"type":    t,
 		"source":  source,
 		"target":  target,
 		"context": context,
@@ -244,12 +245,12 @@ const (
 {{tabs .depth}}}`
 
 	userTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
-		{{tabs .depth}}	{{.target}} = new({{.type.Name}})
-{{range $name, $att := .type.Definition.Type}}{{tabs .depth}}	if v, ok := val["{{$name}}"]; ok {
-{{tabs .depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type (add .depth 2)}}
-{{unmarshalType $att.Type (printf "%s.%s" .context (goify $name true)) "v" $temp (add .depth 2)}}
-{{tabs .depth}}		{{printf "%s.%s" .target (goify $name true)}} = {{$temp}}
-{{tabs .depth}}}
+		{{tabs .depth}}{{$depth := .depth}}{{$context := .context}}{{$target := .target}}	{{.target}} = new({{.type.Name}})
+{{range $name, $att := .type.Definition.Type.AsObject}}{{tabs $depth}}	if v, ok := val["{{$name}}"]; ok {
+{{tabs $depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type (add $depth 2)}}
+{{unmarshalType $att.Type (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}
+{{tabs $depth}}		{{printf "%s.%s" $target (goify $name true)}} = {{$temp}}
+{{tabs $depth}}}
 {{end}}{{tabs .depth}}} else {
 {{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "map[string]interface{}")
 {{tabs .depth}}}`
