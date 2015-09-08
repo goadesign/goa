@@ -18,7 +18,6 @@ type (
 		CtxRespTmpl    *template.Template
 		PayloadTmpl    *template.Template
 		NewPayloadTmpl *template.Template
-		MediaTypeTmpl  *template.Template
 	}
 
 	// ContextTemplateData contains all the information used by the template to render the context
@@ -72,10 +71,6 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 	if err != nil {
 		return nil, err
 	}
-	mediaTypeTmpl, err := template.New("mediatype").Funcs(cw.FuncMap).Parse(mediaTypeT)
-	if err != nil {
-		return nil, err
-	}
 	w := ContextsWriter{
 		Writer:         cw,
 		CtxTmpl:        ctxTmpl,
@@ -83,7 +78,6 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 		CtxRespTmpl:    ctxRespTmpl,
 		PayloadTmpl:    payloadTmpl,
 		NewPayloadTmpl: newPayloadTmpl,
-		MediaTypeTmpl:  mediaTypeTmpl,
 	}
 	return &w, nil
 }
@@ -108,11 +102,10 @@ func (w *ContextsWriter) Write(data *ContextTemplateData) error {
 			}
 		}
 	}
-	if err := w.MediaTypeTmpl.Execute(w.Writer, data); err != nil {
-		return err
-	}
-	if err := w.CtxRespTmpl.Execute(w.Writer, data); err != nil {
-		return err
+	if len(data.Responses) > 0 {
+		if err := w.CtxRespTmpl.Execute(w.Writer, data); err != nil {
+			return err
+		}
 	}
 	return w.FormatCode()
 }
@@ -141,7 +134,7 @@ type {{.Name}} struct {
 {{end}}{{end}}{{if .Payload}}	payload {{gotyperef .Payload 0}}
 {{end}} }
 `
-	coerce = `	{{if eq .Attribute.Type.Kind 1}}{{/* BooleanType */}}if {{.VarName}}, err := strconv.ParseBool(raw{{camelize .Name}}); err == nil {
+	coerce = `{{if eq .Attribute.Type.Kind 1}}{{/* BooleanType */}}if {{.VarName}}, err := strconv.ParseBool(raw{{camelize .Name}}); err == nil {
 		{{.Target}} = {{.VarName}}
 	} else {
 		err = goa.InvalidParamValue("{{.Name}}", raw{{camelize .Name}}, "boolean", err)
