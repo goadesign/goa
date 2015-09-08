@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"strings"
 	"text/template"
 
@@ -25,6 +26,7 @@ func NewResourcesWriter(filename string) (*ResourcesWriter, error) {
 	}
 	funcMap := cw.FuncMap
 	funcMap["join"] = strings.Join
+	funcMap["gotypedef"] = code.GoTypeDef
 	resourceTmpl, err := template.New("resource").Funcs(cw.FuncMap).Parse(resourceT)
 	if err != nil {
 		return nil, err
@@ -47,7 +49,10 @@ type ResourceTemplateData struct {
 }
 
 // Write writes the code for the context types to the writer.
-func (w *ResourcesWriter) Write(targetPack string, data *ResourceTemplateData) error {
+func (w *ResourcesWriter) Write(data *ResourceTemplateData) error {
+	if data.Type == nil {
+		return fmt.Errorf("missing resource type definition for %s", data.Name)
+	}
 	return w.ResourceTmpl.Execute(w.Writer, data)
 }
 
@@ -58,7 +63,7 @@ type {{.Name}} {{gotypedef .Type 0 true false}}
 {{if .CanonicalTemplate}}
 // {{.Name}}Href returns the resource href.
 func {{.Name}}Href({{join .CanonicalParams ", "}} string) string {
-	return fmt.Sprintf("{{.CanonicalTemplate}}", {{join .CanonicalParams}})
+	return fmt.Sprintf("{{.CanonicalTemplate}}", {{join .CanonicalParams ", "}})
 }
 {{end}}`
 )

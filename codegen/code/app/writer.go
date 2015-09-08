@@ -114,7 +114,7 @@ func (w *Writer) Write() ([]string, error) {
 			CanonicalTemplate: canoTemplate,
 			CanonicalParams:   canoParams,
 		}
-		if err := w.resourcesWriter.Write(w.targetPackage, &data); err != nil {
+		if err := w.resourcesWriter.Write(&data); err != nil {
 			return nil, err
 		}
 	}
