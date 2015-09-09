@@ -4,6 +4,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+
+	"bitbucket.org/pkg/inflect"
 )
 
 var (
@@ -310,6 +312,12 @@ func (r *ResourceDefinition) IterateActions(it ActionIterator) error {
 	return nil
 }
 
+// FormatName returns the name of the resource. The name can be formatted either camel or snake case
+// and plural or singular.
+func (r *ResourceDefinition) FormatName(snake, plural bool) string {
+	return format(r.Name, &snake, &plural)
+}
+
 // CanonicalPathAndParams computes the canonical path and parameters from the canonical action and
 // the parents.
 // It returns the empty string and nil if the resource or any of its parents has no canonical
@@ -342,6 +350,12 @@ func (r *ResourceDefinition) CanonicalPathAndParams() (path string, params []str
 	return
 }
 
+// FormatName returns the name of the action. The name can be formatted either camel or snake case
+// and plural or singular.
+func (a *ActionDefinition) FormatName(snake bool) string {
+	return format(a.Name, &snake, nil)
+}
+
 // IsRequired returns true if the given string matches the name of a required attribute, false
 // otherwise.
 // IsRequired panics if the type of a is not Object.
@@ -371,4 +385,24 @@ func (r *RouteDefinition) Params() []string {
 		params[i] = m[1]
 	}
 	return params
+}
+
+// format uses the inflect package to pluralize or singularize and camelize or underscore the given
+// string.
+func format(n string, snake, plural *bool) string {
+	if plural != nil {
+		if *plural {
+			n = inflect.Pluralize(n)
+		} else {
+			n = inflect.Singularize(n)
+		}
+	}
+	if snake != nil {
+		if *snake {
+			n = inflect.Underscore(n)
+		} else {
+			n = inflect.Camelize(n)
+		}
+	}
+	return n
 }

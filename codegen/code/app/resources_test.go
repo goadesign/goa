@@ -42,6 +42,7 @@ var _ = Describe("ResourceWriter", func() {
 			var data *app.ResourceTemplateData
 
 			BeforeEach(func() {
+				userType = nil
 				canoTemplate = ""
 				canoParams = nil
 				data = nil
@@ -104,6 +105,7 @@ var _ = Describe("ResourceWriter", func() {
 						Description:         "Bottle type",
 					}
 				})
+
 				It("writes the resources code", func() {
 					err := writer.Write(data)
 					Ω(err).ShouldNot(HaveOccurred())
@@ -112,6 +114,23 @@ var _ = Describe("ResourceWriter", func() {
 					written := string(b)
 					Ω(written).ShouldNot(BeEmpty())
 					Ω(written).Should(ContainSubstring(simpleResource))
+				})
+
+				Context("and a canonical action", func() {
+					BeforeEach(func() {
+						canoTemplate = "/bottles/%s"
+						canoParams = []string{"id"}
+					})
+
+					It("writes the href method", func() {
+						err := writer.Write(data)
+						Ω(err).ShouldNot(HaveOccurred())
+						b, err := ioutil.ReadFile(filename)
+						Ω(err).ShouldNot(HaveOccurred())
+						written := string(b)
+						Ω(written).ShouldNot(BeEmpty())
+						Ω(written).Should(ContainSubstring(simpleResourceHref))
+					})
 				})
 			})
 		})
@@ -126,4 +145,7 @@ const (
 	Str string ` + "`" + `json:"str,omitempty"` + "`" + `
 }
 `
+	simpleResourceHref = `func BottleHref(id string) string {
+	return fmt.Sprintf("/bottles/%s", id)
+}`
 )

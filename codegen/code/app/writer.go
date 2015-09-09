@@ -59,22 +59,23 @@ func (w *Writer) Write() ([]string, error) {
 	imports := []string{}
 	title := fmt.Sprintf("%s: Application Contexts", w.apiName)
 	w.contextsWriter.WriteHeader(title, w.targetPackage, imports)
-	for _, res := range design.Design.Resources {
-		for _, a := range res.Actions {
+	err := design.Design.IterateResources(func(r *design.ResourceDefinition) error {
+		return r.IterateActions(func(a *design.ActionDefinition) error {
 			ctxName := inflect.Camelize(a.Name) + inflect.Camelize(a.Resource.Name) + "Context"
 			ctxData := ContextTemplateData{
 				Name:         ctxName,
-				ResourceName: res.Name,
+				ResourceName: r.Name,
 				ActionName:   a.Name,
 				Params:       a.Params,
 				Payload:      a.Payload,
 				Headers:      a.Headers,
 				Responses:    a.Responses,
 			}
-			if err := w.contextsWriter.Write(&ctxData); err != nil {
-				return nil, err
-			}
-		}
+			return w.contextsWriter.Write(&ctxData)
+		})
+	})
+	if err != nil {
+		return nil, err
 	}
 	if err := w.contextsWriter.FormatCode(); err != nil {
 		return nil, err
@@ -83,7 +84,25 @@ func (w *Writer) Write() ([]string, error) {
 	imports = []string{}
 	title = fmt.Sprintf("%s: Application Handlers", w.apiName)
 	w.handlersWriter.WriteHeader(title, w.targetPackage, imports)
-	if err := w.handlersWriter.Write(w.targetPackage); err != nil {
+	var handlersData []*ActionHandlerData
+	design.Design.IterateResources(func(r *design.ResourceDefinition) error {
+		return r.IterateActions(func(a *design.ActionDefinition) error {
+			if len(a.Routes) > 0 {
+				name := fmt.Sprintf("%s%sHandler", a.FormatName(true), r.FormatName(false, true))
+				context := fmt.Sprintf("%s%sContext", a.FormatName(false), r.FormatName(false, false))
+				handlersData = append(handlersData, &ActionHandlerData{
+					Resource: r.Name,
+					Action:   a.Name,
+					Verb:     a.Routes[0].Verb,
+					Path:     a.Routes[0].Path,
+					Name:     name,
+					Context:  context,
+				})
+			}
+			return nil
+		})
+	})
+	if err := w.handlersWriter.Write(handlersData); err != nil {
 		return nil, err
 	}
 	if err := w.handlersWriter.FormatCode(); err != nil {
@@ -93,8 +112,8 @@ func (w *Writer) Write() ([]string, error) {
 	imports = []string{}
 	title = fmt.Sprintf("%s: Application Resources", w.apiName)
 	w.contextsWriter.WriteHeader(title, w.targetPackage, imports)
-	for _, res := range design.Design.Resources {
-		m, ok := design.Design.MediaTypes[res.MediaType]
+	err = design.Design.IterateResources(func(r *design.ResourceDefinition) error {
+		m, ok := design.Design.MediaTypes[r.MediaType]
 		var identifier string
 		var resType *design.UserTypeDefinition
 		if ok {
@@ -103,20 +122,21 @@ func (w *Writer) Write() ([]string, error) {
 		} else {
 			identifier = "application/text"
 		}
-		canoTemplate, canoParams := res.CanonicalPathAndParams()
+		canoTemplate, canoParams := r.CanonicalPathAndParams()
 		canoTemplate = design.ParamsRegex.ReplaceAllLiteralString(canoTemplate, "%s")
 
 		data := ResourceTemplateData{
-			Name:              res.Name,
+			Name:              r.Name,
 			Identifier:        identifier,
-			Description:       res.Description,
+			Description:       r.Description,
 			Type:              resType,
 			CanonicalTemplate: canoTemplate,
 			CanonicalParams:   canoParams,
 		}
-		if err := w.resourcesWriter.Write(&data); err != nil {
-			return nil, err
-		}
+		return w.resourcesWriter.Write(&data)
+	})
+	if err != nil {
+		return nil, err
 	}
 	if err := w.resourcesWriter.FormatCode(); err != nil {
 		return nil, err
