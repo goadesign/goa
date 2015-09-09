@@ -15,8 +15,8 @@ type HandlersWriter struct {
 	HandlerTmpl *template.Template
 }
 
-// ActionHandlerData contains the information required to generate an action handler.
-type ActionHandlerData struct {
+// ActionHandlerTemplateData contains the information required to generate an action handler.
+type ActionHandlerTemplateData struct {
 	Resource string // Lower case plural resource name, e.g. "bottles"
 	Action   string // Lower case action name, e.g. "list"
 	Verb     string // HTTP method, e.g. "GET"
@@ -49,9 +49,11 @@ func NewHandlersWriter(filename string) (*HandlersWriter, error) {
 }
 
 // Write writes the handlers code.
-func (w *HandlersWriter) Write(data []*ActionHandlerData) error {
-	if err := w.InitTmpl.Execute(w.Writer, data); err != nil {
-		return err
+func (w *HandlersWriter) Write(data []*ActionHandlerTemplateData) error {
+	if len(data) > 0 {
+		if err := w.InitTmpl.Execute(w.Writer, data); err != nil {
+			return err
+		}
 	}
 	for _, h := range data {
 		if err := w.HandlerTmpl.Execute(w.Writer, h); err != nil {
@@ -64,14 +66,16 @@ func (w *HandlersWriter) Write(data []*ActionHandlerData) error {
 const (
 	initT = `func init() {
 	goa.RegisterHandlers(
-{{range .}}		&goa.HandlerFactory{"{{.Resource}}", "{{.Action}}", "{{.Verb}}", "{{.Path}}"}, {{.Name}}},
+{{range .}}		&goa.HandlerFactory{"{{.Resource}}", "{{.Action}}", "{{.Verb}}", "{{.Path}}", {{.Name}}},
 {{end}}	)
-}`
+}
+`
 
-	handlerT = `func {{.Name}}(userHandler interface{}) (goa.Handler, error) {
+	handlerT = `
+func {{.Name}}(userHandler interface{}) (goa.Handler, error) {
 	h, ok := userHandler.(func(c *{{.Context}}) error)
 	if !ok {
-		return nil, fmt.Errorf("invalid handler signature for action {{.Action}}, expected 'func(c *{{.Context}}) error'")
+		return nil, fmt.Errorf("invalid handler signature for action {{.Action}} {{.Resource}}, expected 'func(c *{{.Context}}) error'")
 	}
 	return func(c goa.Context) error {
 		ctx, err := New{{.Context}}(c)
@@ -80,5 +84,6 @@ const (
 		}
 		return h(ctx)
 	}, nil
-}`
+}
+`
 )

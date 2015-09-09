@@ -84,13 +84,13 @@ func (w *Writer) Write() ([]string, error) {
 	imports = []string{}
 	title = fmt.Sprintf("%s: Application Handlers", w.apiName)
 	w.handlersWriter.WriteHeader(title, w.targetPackage, imports)
-	var handlersData []*ActionHandlerData
+	var handlersData []*ActionHandlerTemplateData
 	design.Design.IterateResources(func(r *design.ResourceDefinition) error {
 		return r.IterateActions(func(a *design.ActionDefinition) error {
 			if len(a.Routes) > 0 {
 				name := fmt.Sprintf("%s%sHandler", a.FormatName(true), r.FormatName(false, true))
 				context := fmt.Sprintf("%s%sContext", a.FormatName(false), r.FormatName(false, false))
-				handlersData = append(handlersData, &ActionHandlerData{
+				handlersData = append(handlersData, &ActionHandlerTemplateData{
 					Resource: r.Name,
 					Action:   a.Name,
 					Verb:     a.Routes[0].Verb,
