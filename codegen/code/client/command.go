@@ -26,7 +26,7 @@ func (c *Command) Description() string { return "application code" }
 // RegisterFlags registers the command line flags with the given command clause.
 func (c *Command) RegisterFlags(cmd *kingpin.CmdClause) {
 	c.BaseCommand.RegisterFlags(cmd)
-	targetPackage := ""
+	var targetPackage string
 	cmd.Flag("package", "target package").Required().StringVar(&targetPackage)
-	c.Flags["TargetPackage"] = targetPackage
+	c.Flags["TargetPackage"] = &targetPackage
 }
