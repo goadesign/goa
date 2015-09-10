@@ -13,7 +13,7 @@ import (
 
 // Commands contain the registered generation commands.
 // Each generator package registers itself in its init function.
-var Commands []Command
+var Commands map[string]Command
 
 type (
 	// Command is the interrace implemented be all code generation goa commands.
@@ -64,6 +64,18 @@ type (
 		tempDir string
 	}
 )
+
+func init() {
+	Commands = make(map[string]Command)
+}
+
+// Register adds a command to Commands.
+func Register(cmd Command) {
+	if _, ok := Commands[cmd.Name()]; ok {
+		panic("goa: duplicate command ")
+	}
+	Commands[cmd.Name()] = cmd
+}
 
 // RegisterFlags registers the common command line flags with the given command clause.
 func (b *BaseCommand) RegisterFlags(cmd *kingpin.CmdClause) {

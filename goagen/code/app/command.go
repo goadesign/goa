@@ -5,11 +5,6 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-// init registers the command with the bootstrap tool.
-func init() {
-	bootstrap.Commands = append(bootstrap.Commands, new(Command))
-}
-
 // Command is the goa application code generator command line data structure.
 // It implements generator.Command.
 type Command struct {
@@ -17,11 +12,16 @@ type Command struct {
 	TargetPackage string // Target package name
 }
 
+// New instantiates a new command.
+func New() *Command {
+	return &Command{BaseCommand: new(bootstrap.BaseCommand)}
+}
+
 // Name of command.
 func (c *Command) Name() string { return "app" }
 
 // Description of command.
-func (c *Command) Description() string { return "application code" }
+func (c *Command) Description() string { return "Generate application code." }
 
 // RegisterFlags registers the command line flags with the given command clause.
 func (c *Command) RegisterFlags(cmd *kingpin.CmdClause) {
