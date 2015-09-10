@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"text/template"
@@ -24,6 +25,9 @@ type (
 // filename if the path to the "main.go" file being created.
 // designPackage is the Go package path to the user design package.
 func NewWriter(factory, filename, designPackage string) (*Writer, error) {
+	if factory == "" {
+		return nil, fmt.Errorf("missing generator factory method")
+	}
 	w, err := code.NewWriter(filename)
 	if err != nil {
 		return nil, err
@@ -40,7 +44,6 @@ func NewWriter(factory, filename, designPackage string) (*Writer, error) {
 func (w *Writer) Write() error {
 	imports := []string{
 		w.DesignPackage,
-		w.goaPackagePath(),
 	}
 	w.WriteHeader("Code Generator", "main", imports)
 	tmpl, err := template.New("generator").Parse(mainTmpl)
@@ -58,7 +61,7 @@ func (w *Writer) Write() error {
 // This is necessary to support the use of github.com/raphael/goa and
 // gopkg.in/raphael/goa.vX.
 func (w *Writer) goaPackagePath() string {
-	t := reflect.TypeOf(w)
+	t := reflect.TypeOf(*w)
 	elems := strings.Split(t.PkgPath(), "/")
 	return strings.Join(elems[:3], "/")
 }

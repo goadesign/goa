@@ -46,8 +46,9 @@ type (
 		Factory string
 
 		// Flags is the list of flags to be used when invoking the generator on the command
-		// line.
-		Flags map[string]string
+		// line. They are pointer to strings so that the command line parser can update the
+		// values.
+		Flags map[string]*string
 
 		// Files contains the list of generated filenames.
 		Files []string
@@ -57,20 +58,30 @@ type (
 		// Also logs additional debug information.
 		// Set this flag to true prior to calling Command.Run.
 		Debug bool
+
+		// tempDir holds the name of the temporary directory located under $GOPATH/src used
+		// to compile the goagen tool.
+		tempDir string
 	}
 )
 
 // RegisterFlags registers the common command line flags with the given command clause.
 func (b *BaseCommand) RegisterFlags(cmd *kingpin.CmdClause) {
-	outdir := ""
+	var outdir string
 	cmd.Flag("out", "destination directory").Required().StringVar(&outdir)
-	b.Flags = map[string]string{
-		"OutDir": outdir,
+	b.Flags = map[string]*string{
+		"OutDir": &outdir,
 	}
 }
 
 // Run compiles and runs the generator and returns the generated filenames.
 func (b *BaseCommand) Run() ([]string, error) {
+	defer func() {
+		if !b.Debug && b.tempDir != "" {
+			os.RemoveAll(b.tempDir)
+			b.tempDir = ""
+		}
+	}()
 	genbin, err := b.compile(b.Factory)
 	if err != nil {
 		return nil, err
@@ -88,10 +99,18 @@ func (b *BaseCommand) compile(factory string) (string, error) {
 	}
 	srcDir, err := ioutil.TempDir(filepath.Join(gopath, "src"), "goa")
 	if err != nil {
+		if _, ok := err.(*os.PathError); ok {
+			return "", fmt.Errorf(`invalid $GOPATH value "%s"`, gopath)
+		}
 		return "", err
 	}
-	if !b.Debug {
-		defer os.RemoveAll(srcDir)
+	b.tempDir = srcDir
+	designPath := filepath.Join(gopath, "src", b.DesignPackage)
+	if _, err := os.Stat(designPath); err != nil {
+		return "", fmt.Errorf(`cannot find design package at path "%s"`, designPath)
+	}
+	if b.Debug {
+		fmt.Printf("goagen source dir: %s\n", srcDir)
 	}
 	filename := filepath.Join(srcDir, "main.go")
 	w, err := NewWriter(factory, filename, b.DesignPackage)
@@ -101,12 +120,23 @@ func (b *BaseCommand) compile(factory string) (string, error) {
 	if err := w.Write(); err != nil {
 		return "", err
 	}
+	if b.Debug {
+		src, _ := ioutil.ReadFile(filename)
+		fmt.Printf("goagen source:\n%s\n", src)
+	}
+	gobin, err := exec.LookPath("go")
+	if err != nil {
+		return "", fmt.Errorf(`failed to find a go compiler, looked in "%s"`, os.Getenv("PATH"))
+	}
 	c := exec.Cmd{
-		Path: "go",
-		Args: []string{"build", "-o", "goagen"},
+		Path: gobin,
+		Args: []string{gobin, "build", "-o", "goagen"},
 		Dir:  srcDir,
 	}
 	out, err := c.CombinedOutput()
+	if b.Debug {
+		fmt.Printf("[%s]$ %s build -o goagen\n%s\n", srcDir, gobin, out)
+	}
 	if err != nil {
 		if len(out) > 0 {
 			return "", fmt.Errorf(string(out))
@@ -121,12 +151,18 @@ func (b *BaseCommand) compile(factory string) (string, error) {
 func (b *BaseCommand) spawn(genbin string) ([]string, error) {
 	var args []string
 	for name, value := range b.Flags {
-		args = append(args, fmt.Sprintf("%s=%s", name, value))
+		if value != nil {
+			args = append(args, fmt.Sprintf("%s=%s", name, *value))
+		}
 	}
 	cmd := exec.Command(genbin, args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %s", err, out)
 	}
-	return strings.Split(string(out), "\n"), nil
+	res := strings.Split(string(out), "\n")
+	if len(res) > 0 && res[len(res)-1] == "" {
+		res = res[:len(res)-1]
+	}
+	return res, nil
 }

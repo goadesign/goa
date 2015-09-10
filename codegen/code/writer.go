@@ -102,7 +102,7 @@ const (
 package {{.Pkg}}
 {{if .Imports}}
 import ({{range .Imports}}
-	{{.}}{{end}}
+	"{{.}}"{{end}}
 )
 {{end}}`
 )
