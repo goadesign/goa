@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/raphael/goa/codegen/bootstrap"
+	"github.com/raphael/goa/goagen/bootstrap"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 

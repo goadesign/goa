@@ -9,7 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa/codegen/bootstrap"
+	"github.com/raphael/goa/goagen/bootstrap"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -182,7 +182,7 @@ var _ = Describe("Run", func() {
 
 		BeforeEach(func() {
 			factory = "design.NewFoo"
-			designPackage = "github.com/raphael/goa/testgoacodegen"
+			designPackage = "github.com/raphael/goa/testgoagoagen"
 			designPackageDir = filepath.Join(os.Getenv("GOPATH"), "src", designPackage)
 		})
 

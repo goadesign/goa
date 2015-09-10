@@ -6,7 +6,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa/codegen/code/app"
+	"github.com/raphael/goa/goagen/code/app"
 )
 
 var _ = Describe("HandlerWriter", func() {

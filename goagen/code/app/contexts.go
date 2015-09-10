@@ -5,8 +5,8 @@ import (
 
 	"bitbucket.org/pkg/inflect"
 
-	"github.com/raphael/goa/codegen/code"
 	"github.com/raphael/goa/design"
+	"github.com/raphael/goa/goagen/code"
 )
 
 type (

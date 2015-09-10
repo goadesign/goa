@@ -1,6 +1,6 @@
 package test
 
-import "github.com/raphael/goa/codegen/bootstrap"
+import "github.com/raphael/goa/goagen/bootstrap"
 
 // init registers the command with the bootstrap tool.
 func init() {

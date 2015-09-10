@@ -3,7 +3,7 @@ package app
 import (
 	"text/template"
 
-	"github.com/raphael/goa/codegen/code"
+	"github.com/raphael/goa/goagen/code"
 )
 
 // HandlersWriter generate code for a goa application handlers.

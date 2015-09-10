@@ -1,6 +1,6 @@
 package app
 
-import "github.com/raphael/goa/codegen/code"
+import "github.com/raphael/goa/goagen/code"
 
 // ValidationWriter generate code that implements data validation.
 type ValidationWriter struct {

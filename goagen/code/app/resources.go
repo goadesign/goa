@@ -5,8 +5,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/raphael/goa/codegen/code"
 	"github.com/raphael/goa/design"
+	"github.com/raphael/goa/goagen/code"
 )
 
 // ResourcesWriter generate code for a goa application resources.

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/raphael/goa/codegen/code"
+	"github.com/raphael/goa/goagen/code"
 )
 
 type (

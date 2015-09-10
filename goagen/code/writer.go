@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"text/template"
 
-	"github.com/raphael/goa/codegen/version"
+	"github.com/raphael/goa/goagen/version"
 )
 
 type (

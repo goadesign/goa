@@ -10,8 +10,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa/codegen/code"
 	"github.com/raphael/goa/design"
+	"github.com/raphael/goa/goagen/code"
 )
 
 var _ = Describe("code generation", func() {
@@ -355,7 +355,7 @@ var _ = Describe("code generation", func() {
 				var out []byte
 
 				JustBeforeEach(func() {
-					cmd := exec.Command("go", "build", "-o", "codegen")
+					cmd := exec.Command("go", "build", "-o", "goagen")
 					cmd.Env = os.Environ()
 					cmd.Env = append(cmd.Env, fmt.Sprintf("GOPATH=%s:%s", gopath, os.Getenv("GOPATH")))
 					cmd.Dir = srcDir
@@ -399,7 +399,7 @@ var _ = Describe("code generation", func() {
 				It("compiles", func() {
 					Ω(string(out)).Should(BeEmpty())
 
-					cmd := exec.Command("./codegen")
+					cmd := exec.Command("./goagen")
 					cmd.Env = []string{fmt.Sprintf("PATH=%s", filepath.Join(gopath, "bin"))}
 					cmd.Dir = srcDir
 					code, err := cmd.CombinedOutput()
