@@ -248,11 +248,13 @@ func NewFoo(designPath string) *Generator { return new(Generator) }
 
 func init() { panic("kaboom") }
 `
+
 	validSource = `package design
 type Generator int
 func (g *Generator) Generate() {}
 func NewFoo(designPath string) *Generator { return new(Generator) }
 `
+
 	validSourceTmpl = `package design
 import "fmt"
 type Generator int

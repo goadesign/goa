@@ -5,11 +5,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/raphael/goa/goagen/app"
 	"github.com/raphael/goa/goagen/bootstrap"
-	"github.com/raphael/goa/goagen/code/app"
-	"github.com/raphael/goa/goagen/code/client"
-	"github.com/raphael/goa/goagen/code/test"
+	"github.com/raphael/goa/goagen/client"
 	"github.com/raphael/goa/goagen/docs"
+	"github.com/raphael/goa/goagen/test"
 	"github.com/raphael/goa/goagen/version"
 	"gopkg.in/alecthomas/kingpin.v2"
 )

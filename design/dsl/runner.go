@@ -43,7 +43,7 @@ func executeDSL(dsl func(), ctx interface{}) bool {
 	ctxStack = append(ctxStack, ctx)
 	dsl()
 	ctxStack = ctxStack[:len(ctxStack)-1]
-	return len(dslErrors) > initCount
+	return len(dslErrors) <= initCount
 }
 
 // incompatibleDsl should be called by DSL functions when they are
