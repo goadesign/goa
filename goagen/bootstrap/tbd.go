@@ -25,10 +25,9 @@ func (t *TBDCommand) Description() string { return t.Desc }
 // Run overrides the base command Run to simply print the description and example for a not
 // implemented yet command.
 func (t *TBDCommand) Run() ([]string, error) {
-	fmt.Println("NOT IMPLEMENTED")
-	fmt.Println("===============")
-	fmt.Println("")
-	fmt.Println(t.Description)
+	fmt.Println("Work in progress: this command is not implemented yet.")
+	fmt.Println("If if was it would:")
+	fmt.Println(t.Desc)
 	if len(t.Example) > 0 {
 		fmt.Println("\nExample Output:")
 		fmt.Println(t.Example)

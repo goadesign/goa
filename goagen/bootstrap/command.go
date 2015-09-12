@@ -94,7 +94,7 @@ func (b *BaseCommand) Run() ([]string, error) {
 			b.tempDir = ""
 		}
 	}()
-	genbin, err := b.compile(b.Factory)
+	genbin, err := b.compile()
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (b *BaseCommand) Run() ([]string, error) {
 // compile compiles a generator tool using the user design package and the target generator code.
 // It returns the name of the compiled tool on success (located under $GOPATH/bin), an error
 // otherwise.
-func (b *BaseCommand) compile(factory string) (string, error) {
+func (b *BaseCommand) compile() (string, error) {
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
 		return "", fmt.Errorf("$GOPATH not defined")
@@ -125,7 +125,7 @@ func (b *BaseCommand) compile(factory string) (string, error) {
 		fmt.Printf("goagen source dir: %s\n", srcDir)
 	}
 	filename := filepath.Join(srcDir, "main.go")
-	w, err := NewWriter(factory, filename, b.DesignPackage)
+	w, err := NewWriter(b.Factory, filename, b.DesignPackage)
 	if err != nil {
 		return "", err
 	}
