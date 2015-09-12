@@ -13,9 +13,11 @@
 DIRS=$(shell go list -f {{.Dir}} ./...)
 DEPEND=golang.org/x/tools/cmd/cover golang.org/x/tools/cmd/goimports \
 	github.com/golang/lint/golint github.com/onsi/gomega \
-	github.com/onsi/ginkgo github.com/onsi/ginkgo/ginkgo \
+	github.com/onsi/ginkgo github.com/onsi/ginkgo/ginkgo
 
-all: depend lint test
+.PHONY: goagen
+
+all: depend lint test goagen
 
 depend:
 	@go get $(DEPEND)
@@ -32,3 +34,7 @@ lint:
 
 test:
 	@ginkgo -r --randomizeAllSpecs --failOnPending --randomizeSuites --race
+
+goagen:
+	@cd goagen && \
+	go build -o goagen

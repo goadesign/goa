@@ -9,6 +9,7 @@ import (
 	"github.com/raphael/goa/goagen/bootstrap"
 	"github.com/raphael/goa/goagen/client"
 	"github.com/raphael/goa/goagen/docs"
+	"github.com/raphael/goa/goagen/js"
 	"github.com/raphael/goa/goagen/test"
 	"github.com/raphael/goa/goagen/version"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -20,6 +21,7 @@ func init() {
 	bootstrap.Register(client.New())
 	bootstrap.Register(test.New())
 	bootstrap.Register(docs.New())
+	bootstrap.Register(js.New())
 }
 
 func main() {

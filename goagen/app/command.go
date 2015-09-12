@@ -14,7 +14,7 @@ type Command struct {
 
 // New instantiates a new command.
 func New() *Command {
-	return &Command{BaseCommand: new(bootstrap.BaseCommand)}
+	return &Command{BaseCommand: &bootstrap.BaseCommand{Factory: "NewAppGenerator"}}
 }
 
 // Name of command.
