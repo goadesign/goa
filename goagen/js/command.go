@@ -8,8 +8,8 @@ type Command struct {
 	*bootstrap.TBDCommand
 }
 
-// New instantiates a new command.
-func New() *Command {
+// NewCommand instantiates a new command.
+func NewCommand() *Command {
 	t := bootstrap.NewTBDCommand("Generate javascript client", "")
 	return &Command{TBDCommand: t}
 }

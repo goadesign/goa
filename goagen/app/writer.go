@@ -25,7 +25,7 @@ type Writer struct {
 }
 
 // NewWriter creates a new application code writer.
-func NewWriter(apiName, outdir, target string) (*Writer, error) {
+func NewWriter(outdir, target string) (*Writer, error) {
 	ctxFile := filepath.Join(outdir, "contexts.go")
 	hdlFile := filepath.Join(outdir, "handlers.go")
 	resFile := filepath.Join(outdir, "resources.go")
@@ -50,7 +50,7 @@ func NewWriter(apiName, outdir, target string) (*Writer, error) {
 		handlersFilename:  hdlFile,
 		resourcesFilename: resFile,
 		targetPackage:     target,
-		apiName:           apiName,
+		apiName:           design.Design.Name,
 	}, nil
 }
 

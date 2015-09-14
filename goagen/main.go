@@ -17,11 +17,11 @@ import (
 
 // init registers all subcommands.
 func init() {
-	bootstrap.Register(app.New())
-	bootstrap.Register(client.New())
-	bootstrap.Register(test.New())
-	bootstrap.Register(docs.New())
-	bootstrap.Register(js.New())
+	bootstrap.Register(app.NewCommand())
+	bootstrap.Register(client.NewCommand())
+	bootstrap.Register(test.NewCommand())
+	bootstrap.Register(docs.NewCommand())
+	bootstrap.Register(js.NewCommand())
 }
 
 func main() {

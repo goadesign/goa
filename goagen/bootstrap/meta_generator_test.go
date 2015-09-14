@@ -10,52 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/raphael/goa/goagen/bootstrap"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
-
-var _ = Describe("RegisterFlags", func() {
-	const testCmd = "testCmd"
-	var base *bootstrap.BaseCommand
-	var app *kingpin.Application
-	var cmd *kingpin.CmdClause
-
-	BeforeEach(func() {
-		base = &bootstrap.BaseCommand{}
-		app = kingpin.New("test", "fake")
-		cmd = app.Command(testCmd, "fake too")
-	})
-
-	JustBeforeEach(func() {
-		base.RegisterFlags(cmd)
-	})
-
-	It("registers the default flags", func() {
-		Ω(base.Flags).Should(HaveKey("OutDir"))
-	})
-
-	Context("with command line flags", func() {
-		const flagVal = "testme"
-		var args []string
-		var parsedCmd string
-
-		BeforeEach(func() {
-			args = []string{testCmd, "--out=" + flagVal}
-		})
-
-		JustBeforeEach(func() {
-			var err error
-			parsedCmd, err = app.Parse(args)
-			Ω(err).ShouldNot(HaveOccurred())
-		})
-
-		It("parses the default flags", func() {
-			Ω(parsedCmd).Should(Equal(testCmd))
-			Ω(base.Flags).Should(HaveKey("OutDir"))
-			Ω(base.Flags["OutDir"]).ShouldNot(BeNil())
-			Ω(*base.Flags["OutDir"]).Should(Equal(flagVal))
-		})
-	})
-})
 
 var _ = Describe("Run", func() {
 	var compiledFiles []string
@@ -67,7 +22,7 @@ var _ = Describe("Run", func() {
 	var designPackageDir string
 	var designPackageSource string
 
-	var base *bootstrap.BaseCommand
+	var meta *bootstrap.MetaGenerator
 
 	BeforeEach(func() {
 		factory = ""
@@ -86,12 +41,12 @@ var _ = Describe("Run", func() {
 			err = ioutil.WriteFile(filepath.Join(designPackageDir, "design.go"), []byte(designPackageSource), 0655)
 			Ω(err).ShouldNot(HaveOccurred())
 		}
-		base = &bootstrap.BaseCommand{
+		meta = &bootstrap.MetaGenerator{
 			Factory:       factory,
 			Debug:         debug,
 			DesignPackage: designPackage,
 		}
-		compiledFiles, compileError = base.Run()
+		compiledFiles, compileError = meta.Generate()
 	})
 
 	AfterEach(func() {

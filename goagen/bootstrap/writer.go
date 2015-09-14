@@ -15,6 +15,8 @@ type (
 		*code.Writer
 		// Factory is the factory function used to create the generator.
 		Factory string
+		// Imports list the generator specific imports.
+		Imports []string
 		// DesignPackage contains the (Go package) path to the user Go design package.
 		DesignPackage string
 	}
@@ -24,7 +26,7 @@ type (
 // factory is the name of the factory function for the generator.
 // filename if the path to the "main.go" file being created.
 // designPackage is the Go package path to the user design package.
-func NewWriter(factory, filename, designPackage string) (*Writer, error) {
+func NewWriter(factory string, imports []string, filename, designPackage string) (*Writer, error) {
 	if factory == "" {
 		return nil, fmt.Errorf("missing generator factory method")
 	}
@@ -35,6 +37,7 @@ func NewWriter(factory, filename, designPackage string) (*Writer, error) {
 	return &Writer{
 		Writer:        w,
 		Factory:       factory,
+		Imports:       imports,
 		DesignPackage: designPackage,
 	}, nil
 }
@@ -42,9 +45,7 @@ func NewWriter(factory, filename, designPackage string) (*Writer, error) {
 // WriteMain generates the Go source code for the generator "main" function.
 // factory is the name of the function used to instantiate the generator.
 func (w *Writer) Write() error {
-	imports := []string{
-		w.DesignPackage,
-	}
+	imports := append(w.Imports, w.DesignPackage)
 	w.WriteHeader("Code Generator", "main", imports)
 	tmpl, err := template.New("generator").Parse(mainTmpl)
 	if err != nil {

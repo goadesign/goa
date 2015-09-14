@@ -6,15 +6,19 @@ import (
 )
 
 // Command is the goa application code generator command line data structure.
-// It implements generator.Command.
+// It implements bootstrap.Command.
 type Command struct {
-	*bootstrap.BaseCommand
+	Generator     *bootstrap.MetaGenerator
 	TargetPackage string // Target package name
 }
 
-// New instantiates a new command.
-func New() *Command {
-	return &Command{BaseCommand: &bootstrap.BaseCommand{Factory: "NewAppGenerator"}}
+// NewCommand instantiates a new command.
+func NewCommand() *Command {
+	gen := bootstrap.MetaGenerator{
+		Factory: "app.NewGenerator",
+		Imports: []string{"github.com/raphael/goa/goagen/app"},
+	}
+	return &Command{Generator: &gen}
 }
 
 // Name of command.
@@ -25,8 +29,17 @@ func (c *Command) Description() string { return "Generate application code." }
 
 // RegisterFlags registers the command line flags with the given command clause.
 func (c *Command) RegisterFlags(cmd *kingpin.CmdClause) {
-	c.BaseCommand.RegisterFlags(cmd)
+	gen := c.Generator
+	gen.Flags = make(map[string]*string)
+	var outdir string
 	var targetPackage string
+	cmd.Flag("out", "destination directory").Required().StringVar(&outdir)
 	cmd.Flag("package", "target package").Required().StringVar(&targetPackage)
-	c.Flags["TargetPackage"] = &targetPackage
+	gen.Flags["OutDir"] = &outdir
+	gen.Flags["TargetPackage"] = &targetPackage
+}
+
+// Run simply calls the generator.
+func (c *Command) Run() ([]string, error) {
+	return c.Generator.Generate()
 }

@@ -9,8 +9,8 @@ type Command struct {
 	TargetPackage string // Target package name
 }
 
-// New instantiates a new command.
-func New() *Command {
+// NewCommand instantiates a new command.
+func NewCommand() *Command {
 	t := bootstrap.NewTBDCommand("Generate Go API client", "")
 	return &Command{TBDCommand: t}
 }
