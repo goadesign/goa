@@ -3,40 +3,62 @@ package app_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/raphael/goa/goagen"
 	"github.com/raphael/goa/goagen/app"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
+// FakeRegistry captures flags defined by RegisterFlags.
+type FakeRegistry struct {
+	// Flags keeps track of all registered flags. It indexes their
+	// descriptions by name.
+	Flags map[string]string
+}
+
+// Flag implement FlagRegistry
+func (f *FakeRegistry) Flag(n, h string) *kingpin.FlagClause {
+	f.Flags[n] = h
+	return new(kingpin.FlagClause)
+}
+
 var _ = Describe("RegisterFlags", func() {
 	const testCmd = "testCmd"
 	var appCmd *app.Command
-	var kapp *kingpin.Application
-	var cmd *kingpin.CmdClause
 
-	BeforeEach(func() {
-		appCmd = app.NewCommand()
-		kapp = kingpin.New("test", "fake")
-		cmd = kapp.Command(testCmd, "fake too")
-	})
+	Context("using fake registry", func() {
+		var reg *FakeRegistry
 
-	JustBeforeEach(func() {
-		appCmd.RegisterFlags(cmd)
-	})
+		BeforeEach(func() {
+			reg = &FakeRegistry{Flags: make(map[string]string)}
+			appCmd = app.NewCommand()
+		})
 
-	It("registers the default flags", func() {
-		Ω(appCmd.Generator.Flags).Should(HaveKey("OutDir"))
+		JustBeforeEach(func() {
+			appCmd.RegisterFlags(reg)
+		})
+
+		It("registers the required flags", func() {
+			_, ok := reg.Flags["target"]
+			Ω(ok).Should(BeTrue())
+		})
 	})
 
 	Context("with command line flags", func() {
+		var kapp *kingpin.Application
+		var cmd *kingpin.CmdClause
 		const flagVal = "testme"
 		var args []string
 		var parsedCmd string
 
 		BeforeEach(func() {
-			args = []string{testCmd, "--out=" + flagVal, "--package=dummy"}
+			kapp = kingpin.New("test", "test")
+			cmd = kapp.Command("testCmd", "testCmd")
+			args = []string{testCmd, "-o" + flagVal, "-d=design", "--target=dummy"}
 		})
 
 		JustBeforeEach(func() {
+			goagen.RegisterFlags(cmd)
+			appCmd.RegisterFlags(cmd)
 			var err error
 			parsedCmd, err = kapp.Parse(args)
 			Ω(err).ShouldNot(HaveOccurred())
@@ -44,9 +66,7 @@ var _ = Describe("RegisterFlags", func() {
 
 		It("parses the default flags", func() {
 			Ω(parsedCmd).Should(Equal(testCmd))
-			Ω(appCmd.Generator.Flags).Should(HaveKey("OutDir"))
-			Ω(appCmd.Generator.Flags["OutDir"]).ShouldNot(BeNil())
-			Ω(*appCmd.Generator.Flags["OutDir"]).Should(Equal(flagVal))
+			Ω(goagen.OutputDir).Should(Equal(flagVal))
 		})
 	})
 })

@@ -1,15 +1,104 @@
-package main
+package goagen
+
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"text/template"
+)
 
 type (
 	// Generator is the common interface for all generators. It exposes the
 	// single Generate method which is the entry point to the generation
-	// code. The generation code has access to both the user design package
-	// under the alias "design" and the command line flags initialized by
-	// the corresponding command.
+	// GoGenerator
 	Generator interface {
 		// Generate generates the output (code, documentation etc.) and
 		// returns the list of generated filenames on success or an
 		// error.
 		Generate() ([]string, error)
 	}
+
+	// GoGenerator provide the basic implementation for a Go code generator.
+	// Other generators can use this basic generator and provide specialized
+	// behavior that implements the Generator interface.
+	GoGenerator struct {
+		// Filename of destination file
+		Filename string
+		// HeaderTmpl is the generic generated code header template.
+		HeaderTmpl *template.Template
+		// FuncMap is the template helper functions map.
+		FuncMap template.FuncMap
+	}
+)
+
+// NewGoGenerator returns a Go code generator that writes to the given file.
+func NewGoGenerator(filename string) *GoGenerator {
+	funcMap := template.FuncMap{
+		"comment":     Comment,
+		"commandLine": CommandLine,
+	}
+	headerTmpl, err := template.New("header").Funcs(funcMap).Parse(headerT)
+	if err != nil {
+		panic(err) // bug
+	}
+	w := GoGenerator{
+		Filename:   filename,
+		HeaderTmpl: headerTmpl,
+		FuncMap:    funcMap,
+	}
+	return &w
+}
+
+// FormatCode runs "gofmt -w" on the generated file.
+func (w *GoGenerator) FormatCode() error {
+	cmd := exec.Command("gofmt", "-w", w.Filename)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		content, _ := ioutil.ReadFile(w.Filename)
+		return fmt.Errorf("%s\n========\nContent:\n%s", string(output), content)
+	}
+	return nil
+}
+
+// WriteHeader writes the generic generated code header.
+func (w *GoGenerator) WriteHeader(title, pack string, imports []string) error {
+	ctx := map[string]interface{}{
+		"ToolVersion": Version,
+		"Pkg":         pack,
+		"Imports":     imports,
+	}
+	if err := w.HeaderTmpl.Execute(w, ctx); err != nil {
+		return fmt.Errorf("failed to generate contexts: %s", err)
+	}
+	return nil
+}
+
+// Write implements io.Writer so that variables of type *GoGenerator can be
+// used in template.Execute.
+func (w *GoGenerator) Write(b []byte) (int, error) {
+	file, err := os.OpenFile(w.Filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0755)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+	return file.Write(b)
+}
+
+const (
+	headerT = `
+//************************************************************************//
+// {{.Title}}
+//
+// Generated with goagen v{{.ToolVersion}}, command line:
+{{comment commandLine}}
+//
+// The content of this file is auto-generated, DO NOT MODIFY
+//************************************************************************//
+
+package {{.Pkg}}
+{{if .Imports}}
+import ({{range .Imports}}
+	"{{.}}"{{end}}
+)
+{{end}}`
 )

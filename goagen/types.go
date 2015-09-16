@@ -1,4 +1,4 @@
-package code
+package goagen
 
 import (
 	"bytes"
@@ -106,12 +106,7 @@ func primitiveUnmarshalerR(p design.Primitive, context, source, target string, d
 		"context": context,
 		"depth":   depth,
 	}
-	var b bytes.Buffer
-	err := primitiveT.Execute(&b, data)
-	if err != nil {
-		panic(err) // should never happen
-	}
-	return b.String()
+	return runTemplate(primitiveT, data)
 }
 
 // ArrayUnmarshaler produces the go code that initializes an array from its JSON representation.
@@ -130,12 +125,7 @@ func arrayUnmarshalerR(a *design.Array, context, source, target string, depth in
 		"context":  context,
 		"depth":    depth,
 	}
-	var b bytes.Buffer
-	err := arrayT.Execute(&b, data)
-	if err != nil {
-		panic(err) // should never happen
-	}
-	return b.String()
+	return runTemplate(arrayT, data)
 }
 
 // ObjectUnmarshaler produces the go code that initializes an object type from its JSON
@@ -155,12 +145,7 @@ func objectUnmarshalerR(o design.Object, context, source, target string, depth i
 		"context": context,
 		"depth":   depth,
 	}
-	var b bytes.Buffer
-	err := objectT.Execute(&b, data)
-	if err != nil {
-		panic(err)
-	}
-	return b.String()
+	return runTemplate(objectT, data)
 }
 
 // NamedTypeUnmarshaler produces the go code that initializes a named type from its JSON
@@ -183,78 +168,8 @@ func namedTypeUnmarshalerR(t design.NamedType, context, source, target string, d
 		"context": context,
 		"depth":   depth,
 	}
-	var b bytes.Buffer
-	err := userT.Execute(&b, data)
-	if err != nil {
-		panic(err) // should never happen
-	}
-	return b.String()
+	return runTemplate(userT, data)
 }
-
-// ValidationChecker produces Go code that runs the validation defined in the given attribute
-// definition against the content of the variable named target recursively.
-// context is used to keep track of recursion to produce helpful error messages in case of type
-// validation error.
-func ValidationChecker(att *design.AttributeDefinition, context, target string) string {
-	return validationCheckerR(att, context, target, 1)
-}
-func validationCheckerR(att *design.AttributeDefinition, context, target string, depth int) string {
-	var b bytes.Buffer
-	// TBD
-	//for _, v := range att.Validations {
-	//switch actual := v.(type) {
-	//case *EnumValidationDefinition:
-	//case *FormatValidationDefinition:
-	//case *MinimumValidationDefinition:
-	//case *MaximumValidationDefinition:
-	//case *MinLengthValidationDefinition:
-	//case *MaxLengthValidationDefinition:
-	//case *RequiredValidationDefinition:
-	//}
-	//}
-	return b.String()
-}
-
-const (
-	primitiveTmpl = `{{tabs .depth}}if val, ok := {{.source}}.({{gotyperef .type (add .depth 1)}}); ok {
-{{tabs .depth}}	{{.target}} = val
-{{tabs .depth}}} else {
-{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "{{gotyperef .type (add .depth 1)}}")
-{{tabs .depth}}}`
-
-	arrayTmpl = `{{tabs .depth}}if val, ok := {{.source}}.([]interface{}); ok {
-{{tabs .depth}}	{{.target}} = make([]{{gotyperef .elemType.Type (add .depth 2)}}, len(val))
-{{tabs .depth}}	for i, v := range val {
-{{tabs .depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef .elemType.Type (add .depth 3)}}
-{{unmarshalAttribute .elemType (printf "%s[*]" .context) "v" $temp (add .depth 2)}}
-{{tabs .depth}}		{{printf "%s[i]" .target}} = {{$temp}}
-{{tabs .depth}}	}
-{{tabs .depth}}} else {
-{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "[]interface{}")
-{{tabs .depth}}}`
-
-	objectTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
-{{tabs .depth}}{{$context := .context}}{{$depth := .depth}}{{$target := .target}}	{{$target}} = new({{gotypename .type (add .depth 1)}})
-{{range $name, $att := .type}}{{tabs $depth}}	if v, ok := val["{{$name}}"]; ok {
-{{tabs $depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type (add $depth 2)}}
-{{unmarshalType $att.Type (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}
-{{tabs $depth}}		{{printf "%s.%s" $target (goify $name true)}} = {{$temp}}
-{{tabs $depth}}	}
-{{end}}{{tabs $depth}}} else {
-{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "map[string]interface{}")
-{{tabs .depth}}}`
-
-	userTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
-{{tabs .depth}}{{$depth := .depth}}{{$context := .context}}{{$target := .target}}	{{.target}} = new({{.type.Name}})
-{{range $name, $att := .type.Definition.Type.AsObject}}{{tabs $depth}}	if v, ok := val["{{$name}}"]; ok {
-{{tabs $depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type (add $depth 2)}}
-{{unmarshalType $att.Type (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}
-{{tabs $depth}}		{{printf "%s.%s" $target (goify $name true)}} = {{$temp}}
-{{tabs $depth}}	}
-{{end}}{{tabs .depth}}} else {
-{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "map[string]interface{}")
-{{tabs .depth}}}`
-)
 
 // GoTypeDef returns the Go code that defines a Go type which matches the data structure
 // definition (the part that comes after `type foo`).
@@ -445,3 +360,55 @@ func tempvar() string {
 	TempCount++
 	return fmt.Sprintf("tmp%d", TempCount)
 }
+
+// runTemplate executs the given template with the given input and returns
+// the rendered string.
+func runTemplate(tmpl *template.Template, data interface{}) string {
+	var b bytes.Buffer
+	err := tmpl.Execute(&b, data)
+	if err != nil {
+		panic(err) // should never happen, bug if it does.
+	}
+	return b.String()
+}
+
+const (
+	primitiveTmpl = `{{tabs .depth}}if val, ok := {{.source}}.({{gotyperef .type (add .depth 1)}}); ok {
+{{tabs .depth}}	{{.target}} = val
+{{tabs .depth}}} else {
+{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "{{gotyperef .type (add .depth 1)}}")
+{{tabs .depth}}}`
+
+	arrayTmpl = `{{tabs .depth}}if val, ok := {{.source}}.([]interface{}); ok {
+{{tabs .depth}}	{{.target}} = make([]{{gotyperef .elemType.Type (add .depth 2)}}, len(val))
+{{tabs .depth}}	for i, v := range val {
+{{tabs .depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef .elemType.Type (add .depth 3)}}
+{{unmarshalAttribute .elemType (printf "%s[*]" .context) "v" $temp (add .depth 2)}}
+{{tabs .depth}}		{{printf "%s[i]" .target}} = {{$temp}}
+{{tabs .depth}}	}
+{{tabs .depth}}} else {
+{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "[]interface{}")
+{{tabs .depth}}}`
+
+	objectTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
+{{tabs .depth}}{{$context := .context}}{{$depth := .depth}}{{$target := .target}}	{{$target}} = new({{gotypename .type (add .depth 1)}})
+{{range $name, $att := .type}}{{tabs $depth}}	if v, ok := val["{{$name}}"]; ok {
+{{tabs $depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type (add $depth 2)}}
+{{unmarshalType $att.Type (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}
+{{tabs $depth}}		{{printf "%s.%s" $target (goify $name true)}} = {{$temp}}
+{{tabs $depth}}	}
+{{end}}{{tabs $depth}}} else {
+{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "map[string]interface{}")
+{{tabs .depth}}}`
+
+	userTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
+{{tabs .depth}}{{$depth := .depth}}{{$context := .context}}{{$target := .target}}	{{.target}} = new({{.type.Name}})
+{{range $name, $att := .type.Definition.Type.ToObject}}{{tabs $depth}}	if v, ok := val["{{$name}}"]; ok {
+{{tabs $depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type (add $depth 2)}}
+{{unmarshalType $att.Type (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}
+{{tabs $depth}}		{{printf "%s.%s" $target (goify $name true)}} = {{$temp}}
+{{tabs $depth}}	}
+{{end}}{{tabs .depth}}} else {
+{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "map[string]interface{}")
+{{tabs .depth}}}`
+)

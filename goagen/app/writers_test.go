@@ -10,7 +10,7 @@ import (
 	"github.com/raphael/goa/goagen/app"
 )
 
-var _ = Describe("ContextWriter", func() {
+var _ = Describe("ContextsWriter", func() {
 	var writer *app.ContextsWriter
 	var filename string
 	var newErr error
@@ -63,7 +63,7 @@ var _ = Describe("ContextWriter", func() {
 
 			Context("with simple data", func() {
 				It("writes the contexts code", func() {
-					err := writer.Write(data)
+					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
 					Ω(err).ShouldNot(HaveOccurred())
@@ -86,7 +86,7 @@ var _ = Describe("ContextWriter", func() {
 				})
 
 				It("writes the contexts code", func() {
-					err := writer.Write(data)
+					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
 					Ω(err).ShouldNot(HaveOccurred())
@@ -109,7 +109,7 @@ var _ = Describe("ContextWriter", func() {
 				})
 
 				It("writes the contexts code", func() {
-					err := writer.Write(data)
+					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
 					Ω(err).ShouldNot(HaveOccurred())
@@ -132,7 +132,7 @@ var _ = Describe("ContextWriter", func() {
 				})
 
 				It("writes the contexts code", func() {
-					err := writer.Write(data)
+					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
 					Ω(err).ShouldNot(HaveOccurred())
@@ -155,7 +155,7 @@ var _ = Describe("ContextWriter", func() {
 				})
 
 				It("writes the contexts code", func() {
-					err := writer.Write(data)
+					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
 					Ω(err).ShouldNot(HaveOccurred())
@@ -181,7 +181,7 @@ var _ = Describe("ContextWriter", func() {
 				})
 
 				It("writes the contexts code", func() {
-					err := writer.Write(data)
+					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
 					Ω(err).ShouldNot(HaveOccurred())
@@ -207,7 +207,7 @@ var _ = Describe("ContextWriter", func() {
 				})
 
 				It("writes the contexts code", func() {
-					err := writer.Write(data)
+					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
 					Ω(err).ShouldNot(HaveOccurred())
@@ -230,7 +230,7 @@ var _ = Describe("ContextWriter", func() {
 				})
 
 				It("writes the contexts code", func() {
-					err := writer.Write(data)
+					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
 					Ω(err).ShouldNot(HaveOccurred())
@@ -257,7 +257,7 @@ var _ = Describe("ContextWriter", func() {
 				})
 
 				It("writes the contexts code", func() {
-					err := writer.Write(data)
+					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
 					Ω(err).ShouldNot(HaveOccurred())
@@ -277,7 +277,7 @@ var _ = Describe("ContextWriter", func() {
 				})
 
 				It("writes the contexts code", func() {
-					err := writer.Write(data)
+					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
 					Ω(err).ShouldNot(HaveOccurred())
@@ -310,7 +310,7 @@ var _ = Describe("ContextWriter", func() {
 
 				It("writes the contexts code", func() {
 					Ω(newErr).ShouldNot(HaveOccurred())
-					err := writer.Write(data)
+					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
 					Ω(err).ShouldNot(HaveOccurred())
@@ -325,13 +325,250 @@ var _ = Describe("ContextWriter", func() {
 	})
 })
 
-const emptyContext = `
+var _ = Describe("HandlersWriter", func() {
+	var writer *app.HandlersWriter
+	var filename string
+	var newErr error
+
+	JustBeforeEach(func() {
+		writer, newErr = app.NewHandlersWriter(filename)
+	})
+
+	Context("correctly configured", func() {
+		var f *os.File
+		BeforeEach(func() {
+			f, _ = ioutil.TempFile("", "")
+			filename = f.Name()
+		})
+
+		AfterEach(func() {
+			os.Remove(filename)
+		})
+
+		It("NewHandlersWriter creates a writer", func() {
+			Ω(newErr).ShouldNot(HaveOccurred())
+		})
+
+		Context("with data", func() {
+			var actions, verbs, paths, names, contexts []string
+
+			var data []*app.HandlerTemplateData
+
+			BeforeEach(func() {
+				actions = nil
+				verbs = nil
+				paths = nil
+				names = nil
+				contexts = nil
+			})
+
+			JustBeforeEach(func() {
+				data = make([]*app.HandlerTemplateData, len(actions))
+				for i := 0; i < len(actions); i++ {
+					e := &app.HandlerTemplateData{
+						Resource: "bottles",
+						Action:   actions[i],
+						Verb:     verbs[i],
+						Path:     paths[i],
+						Name:     names[i],
+						Context:  contexts[i],
+					}
+					data[i] = e
+				}
+			})
+
+			Context("with missing data", func() {
+				It("returns an empty string", func() {
+					err := writer.Execute(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).Should(BeEmpty())
+				})
+			})
+
+			Context("with a simple handler", func() {
+				BeforeEach(func() {
+					actions = []string{"list"}
+					verbs = []string{"GET"}
+					paths = []string{"/accounts/:accountID/bottles"}
+					names = []string{"listBottlesHandler"}
+					contexts = []string{"ListBottleContext"}
+				})
+
+				It("writes the handlers code", func() {
+					err := writer.Execute(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(simpleHandler))
+					Ω(written).Should(ContainSubstring(simpleInit))
+				})
+			})
+
+			Context("with multiple handlers", func() {
+				BeforeEach(func() {
+					actions = []string{"list", "show"}
+					verbs = []string{"GET", "GET"}
+					paths = []string{"/accounts/:accountID/bottles", "/accounts/:accountID/bottles/:id"}
+					names = []string{"listBottlesHandler", "showBottlesHandler"}
+					contexts = []string{"ListBottleContext", "ShowBottleContext"}
+				})
+
+				It("writes the handlers code", func() {
+					err := writer.Execute(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(multiHandler1))
+					Ω(written).Should(ContainSubstring(multiHandler2))
+					Ω(written).Should(ContainSubstring(multiInit))
+				})
+			})
+		})
+	})
+})
+
+var _ = Describe("ResourceWriter", func() {
+	var writer *app.ResourcesWriter
+	var filename string
+	var newErr error
+
+	JustBeforeEach(func() {
+		writer, newErr = app.NewResourcesWriter(filename)
+	})
+
+	Context("correctly configured", func() {
+		var f *os.File
+		BeforeEach(func() {
+			f, _ = ioutil.TempFile("", "")
+			filename = f.Name()
+		})
+
+		AfterEach(func() {
+			os.Remove(filename)
+		})
+
+		It("NewResourcesWriter creates a writer", func() {
+			Ω(newErr).ShouldNot(HaveOccurred())
+		})
+
+		Context("with data", func() {
+			var canoTemplate string
+			var canoParams []string
+			var userType *design.UserTypeDefinition
+
+			var data *app.ResourceTemplateData
+
+			BeforeEach(func() {
+				userType = nil
+				canoTemplate = ""
+				canoParams = nil
+				data = nil
+			})
+
+			JustBeforeEach(func() {
+				data = &app.ResourceTemplateData{
+					Name:              "Bottle",
+					Identifier:        "vnd.acme.com/resources",
+					Description:       "A bottle resource",
+					Type:              userType,
+					CanonicalTemplate: canoTemplate,
+					CanonicalParams:   canoParams,
+				}
+			})
+
+			Context("with missing resource type definition", func() {
+				It("returns an error", func() {
+					err := writer.Execute(data)
+					Ω(err).Should(HaveOccurred())
+				})
+			})
+
+			Context("with a string resource", func() {
+				BeforeEach(func() {
+					attDef := &design.AttributeDefinition{
+						Type: design.String,
+					}
+					userType = &design.UserTypeDefinition{
+						AttributeDefinition: attDef,
+						Name:                "Bottle",
+						Description:         "Bottle type",
+					}
+				})
+				It("writes the resources code", func() {
+					err := writer.Execute(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(stringResource))
+				})
+			})
+
+			Context("with a user type resource", func() {
+				BeforeEach(func() {
+					intParam := &design.AttributeDefinition{Type: design.Integer}
+					strParam := &design.AttributeDefinition{Type: design.String}
+					dataType := design.Object{
+						"int": intParam,
+						"str": strParam,
+					}
+					attDef := &design.AttributeDefinition{
+						Type: dataType,
+					}
+					userType = &design.UserTypeDefinition{
+						AttributeDefinition: attDef,
+						Name:                "Bottle",
+						Description:         "Bottle type",
+					}
+				})
+
+				It("writes the resources code", func() {
+					err := writer.Execute(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(simpleResource))
+				})
+
+				Context("and a canonical action", func() {
+					BeforeEach(func() {
+						canoTemplate = "/bottles/%s"
+						canoParams = []string{"id"}
+					})
+
+					It("writes the href method", func() {
+						err := writer.Execute(data)
+						Ω(err).ShouldNot(HaveOccurred())
+						b, err := ioutil.ReadFile(filename)
+						Ω(err).ShouldNot(HaveOccurred())
+						written := string(b)
+						Ω(written).ShouldNot(BeEmpty())
+						Ω(written).Should(ContainSubstring(simpleResourceHref))
+					})
+				})
+			})
+		})
+	})
+})
+
+const (
+	emptyContext = `
 type ListBottleContext struct {
 	goa.Context
 }
 `
 
-const emptyContextFactory = `
+	emptyContextFactory = `
 func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
@@ -339,14 +576,14 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 }
 `
 
-const intContext = `
+	intContext = `
 type ListBottleContext struct {
 	goa.Context
 	Param int
 }
 `
 
-const intContextFactory = `
+	intContextFactory = `
 func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
@@ -360,14 +597,14 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 }
 `
 
-const strContext = `
+	strContext = `
 type ListBottleContext struct {
 	goa.Context
 	Param string
 }
 `
 
-const strContextFactory = `
+	strContextFactory = `
 func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
@@ -377,14 +614,14 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 }
 `
 
-const numContext = `
+	numContext = `
 type ListBottleContext struct {
 	goa.Context
 	Param float64
 }
 `
 
-const numContextFactory = `
+	numContextFactory = `
 func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
@@ -397,14 +634,14 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	return &ctx, err
 }
 `
-const boolContext = `
+	boolContext = `
 type ListBottleContext struct {
 	goa.Context
 	Param bool
 }
 `
 
-const boolContextFactory = `
+	boolContextFactory = `
 func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
@@ -418,14 +655,14 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 }
 `
 
-const arrayContext = `
+	arrayContext = `
 type ListBottleContext struct {
 	goa.Context
 	Param []string
 }
 `
 
-const arrayContextFactory = `
+	arrayContextFactory = `
 func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
@@ -436,14 +673,14 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 }
 `
 
-const intArrayContext = `
+	intArrayContext = `
 type ListBottleContext struct {
 	goa.Context
 	Param []int
 }
 `
 
-const intArrayContextFactory = `
+	intArrayContextFactory = `
 func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
@@ -462,14 +699,14 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 }
 `
 
-const resContext = `
+	resContext = `
 type ListBottleContext struct {
 	goa.Context
 	Int int
 }
 `
 
-const resContextFactory = `
+	resContextFactory = `
 func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
@@ -483,14 +720,14 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 }
 `
 
-const requiredContext = `
+	requiredContext = `
 type ListBottleContext struct {
 	goa.Context
 	Int int
 }
 `
 
-const requiredContextFactory = `
+	requiredContextFactory = `
 func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
@@ -508,14 +745,14 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 }
 `
 
-const payloadContext = `
+	payloadContext = `
 type ListBottleContext struct {
 	goa.Context
 	payload *ListBottlePayload
 }
 `
 
-const payloadContextFactory = `
+	payloadContextFactory = `
 func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
@@ -529,14 +766,14 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	return &ctx, err
 }
 `
-const payloadObjContext = `
+	payloadObjContext = `
 type ListBottleContext struct {
 	goa.Context
 	payload *ListBottlePayload
 }
 `
 
-const payloadObjContextFactory = `
+	payloadObjContextFactory = `
 func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
@@ -550,3 +787,70 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	return &ctx, err
 }
 `
+
+	simpleHandler = `func listBottlesHandler(userHandler interface{}) (goa.Handler, error) {
+	h, ok := userHandler.(func(c *ListBottleContext) error)
+	if !ok {
+		return nil, fmt.Errorf("invalid handler signature for action list bottles, expected 'func(c *ListBottleContext) error'")
+	}
+	return func(c goa.Context) error {
+		ctx, err := NewListBottleContext(c)
+		if err != nil {
+			return err
+		}
+		return h(ctx)
+	}, nil
+}
+`
+	simpleInit = `func init() {
+	goa.RegisterHandlers(
+		&goa.HandlerFactory{"bottles", "list", "GET", "/accounts/:accountID/bottles", listBottlesHandler},
+	)
+}
+`
+	multiHandler1 = `func listBottlesHandler(userHandler interface{}) (goa.Handler, error) {
+	h, ok := userHandler.(func(c *ListBottleContext) error)
+	if !ok {
+		return nil, fmt.Errorf("invalid handler signature for action list bottles, expected 'func(c *ListBottleContext) error'")
+	}
+	return func(c goa.Context) error {
+		ctx, err := NewListBottleContext(c)
+		if err != nil {
+			return err
+		}
+		return h(ctx)
+	}, nil
+}
+`
+	multiHandler2 = `func showBottlesHandler(userHandler interface{}) (goa.Handler, error) {
+	h, ok := userHandler.(func(c *ShowBottleContext) error)
+	if !ok {
+		return nil, fmt.Errorf("invalid handler signature for action show bottles, expected 'func(c *ShowBottleContext) error'")
+	}
+	return func(c goa.Context) error {
+		ctx, err := NewShowBottleContext(c)
+		if err != nil {
+			return err
+		}
+		return h(ctx)
+	}, nil
+}
+`
+	multiInit = `func init() {
+	goa.RegisterHandlers(
+		&goa.HandlerFactory{"bottles", "list", "GET", "/accounts/:accountID/bottles", listBottlesHandler},
+		&goa.HandlerFactory{"bottles", "show", "GET", "/accounts/:accountID/bottles/:id", showBottlesHandler},
+	)
+}
+`
+	stringResource = `type Bottle string`
+
+	simpleResource = `type Bottle struct {
+	Int int ` + "`" + `json:"int,omitempty"` + "`" + `
+	Str string ` + "`" + `json:"str,omitempty"` + "`" + `
+}
+`
+	simpleResourceHref = `func BottleHref(id string) string {
+	return fmt.Sprintf("/bottles/%s", id)
+}`
+)

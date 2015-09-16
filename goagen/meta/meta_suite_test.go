@@ -1,4 +1,4 @@
-package bootstrap_test
+package meta_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestBootstrap(t *testing.T) {
+func TestMeta(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Bootstrap Suite")
+	RunSpecs(t, "Meta Suite")
 }

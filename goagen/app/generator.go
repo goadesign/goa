@@ -2,64 +2,73 @@ package app
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
-	"regexp"
 
 	"bitbucket.org/pkg/inflect"
+
 	"github.com/raphael/goa/design"
+	"github.com/raphael/goa/goagen"
+
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-// ParamsRegex is the regex used to capture path parameters.
-var ParamsRegex = regexp.MustCompile("(?:[^/]*/:([^/]+))+")
-
-// Writer is the application code writer.
-type Writer struct {
-	contextsWriter    *ContextsWriter
-	handlersWriter    *HandlersWriter
-	resourcesWriter   *ResourcesWriter
+// Generator is the application code generator.
+type Generator struct {
+	*goagen.GoGenerator
+	ContextsWriter    *ContextsWriter
+	HandlersWriter    *HandlersWriter
+	ResourcesWriter   *ResourcesWriter
 	contextsFilename  string
 	handlersFilename  string
 	resourcesFilename string
-	targetPackage     string
 	apiName           string
 }
 
-// NewWriter creates a new application code writer.
-func NewWriter(outdir, target string) (*Writer, error) {
+// NewGenerator returns the application code generator.
+func NewGenerator() *Generator {
+	outdir := goagen.OutputDir
 	ctxFile := filepath.Join(outdir, "contexts.go")
 	hdlFile := filepath.Join(outdir, "handlers.go")
 	resFile := filepath.Join(outdir, "resources.go")
 
 	ctxWr, err := NewContextsWriter(ctxFile)
 	if err != nil {
-		return nil, err
+		panic(err) // bug
 	}
 	hdlWr, err := NewHandlersWriter(hdlFile)
 	if err != nil {
-		return nil, err
+		panic(err) // bug
 	}
 	resWr, err := NewResourcesWriter(resFile)
 	if err != nil {
-		return nil, err
+		panic(err) // bug
 	}
-	return &Writer{
-		contextsWriter:    ctxWr,
-		handlersWriter:    hdlWr,
-		resourcesWriter:   resWr,
+	return &Generator{
+		ContextsWriter:    ctxWr,
+		HandlersWriter:    hdlWr,
+		ResourcesWriter:   resWr,
 		contextsFilename:  ctxFile,
 		handlersFilename:  hdlFile,
 		resourcesFilename: resFile,
-		targetPackage:     target,
 		apiName:           design.Design.Name,
-	}, nil
+	}
 }
 
-// Write writes the code and returns the list of generated files in case of success, an error.
-func (w *Writer) Write() ([]string, error) {
+// Generate the application code, implement goagen.Generator.
+func (g *Generator) Generate() ([]string, error) {
+	app := kingpin.New("Code generator", "application code generator")
+	goagen.RegisterFlags(app)
+	NewCommand().RegisterFlags(app)
+	_, err := app.Parse(os.Args[1:])
+	if err != nil {
+		return nil, err
+	}
+	g.GoGenerator = goagen.NewGoGenerator(goagen.OutputDir)
 	imports := []string{}
-	title := fmt.Sprintf("%s: Application Contexts", w.apiName)
-	w.contextsWriter.WriteHeader(title, w.targetPackage, imports)
-	err := design.Design.IterateResources(func(r *design.ResourceDefinition) error {
+	title := fmt.Sprintf("%s: Application Contexts", g.apiName)
+	g.ContextsWriter.WriteHeader(title, TargetPackage, imports)
+	err = design.Design.IterateResources(func(r *design.ResourceDefinition) error {
 		return r.IterateActions(func(a *design.ActionDefinition) error {
 			ctxName := inflect.Camelize(a.Name) + inflect.Camelize(a.Resource.Name) + "Context"
 			ctxData := ContextTemplateData{
@@ -71,26 +80,26 @@ func (w *Writer) Write() ([]string, error) {
 				Headers:      a.Headers,
 				Responses:    a.Responses,
 			}
-			return w.contextsWriter.Write(&ctxData)
+			return g.ContextsWriter.Execute(&ctxData)
 		})
 	})
 	if err != nil {
 		return nil, err
 	}
-	if err := w.contextsWriter.FormatCode(); err != nil {
+	if err := g.ContextsWriter.FormatCode(); err != nil {
 		return nil, err
 	}
 
 	imports = []string{}
-	title = fmt.Sprintf("%s: Application Handlers", w.apiName)
-	w.handlersWriter.WriteHeader(title, w.targetPackage, imports)
-	var handlersData []*ActionHandlerTemplateData
+	title = fmt.Sprintf("%s: Application Handlers", g.apiName)
+	g.HandlersWriter.WriteHeader(title, TargetPackage, imports)
+	var handlersData []*HandlerTemplateData
 	design.Design.IterateResources(func(r *design.ResourceDefinition) error {
 		return r.IterateActions(func(a *design.ActionDefinition) error {
 			if len(a.Routes) > 0 {
 				name := fmt.Sprintf("%s%sHandler", a.FormatName(true), r.FormatName(false, true))
 				context := fmt.Sprintf("%s%sContext", a.FormatName(false), r.FormatName(false, false))
-				handlersData = append(handlersData, &ActionHandlerTemplateData{
+				handlersData = append(handlersData, &HandlerTemplateData{
 					Resource: r.Name,
 					Action:   a.Name,
 					Verb:     a.Routes[0].Verb,
@@ -102,16 +111,16 @@ func (w *Writer) Write() ([]string, error) {
 			return nil
 		})
 	})
-	if err := w.handlersWriter.Write(handlersData); err != nil {
+	if err := g.HandlersWriter.Execute(handlersData); err != nil {
 		return nil, err
 	}
-	if err := w.handlersWriter.FormatCode(); err != nil {
+	if err := g.HandlersWriter.FormatCode(); err != nil {
 		return nil, err
 	}
 
 	imports = []string{}
-	title = fmt.Sprintf("%s: Application Resources", w.apiName)
-	w.contextsWriter.WriteHeader(title, w.targetPackage, imports)
+	title = fmt.Sprintf("%s: Application Resources", g.apiName)
+	g.ResourcesWriter.WriteHeader(title, TargetPackage, imports)
 	err = design.Design.IterateResources(func(r *design.ResourceDefinition) error {
 		m, ok := design.Design.MediaTypes[r.MediaType]
 		var identifier string
@@ -133,14 +142,14 @@ func (w *Writer) Write() ([]string, error) {
 			CanonicalTemplate: canoTemplate,
 			CanonicalParams:   canoParams,
 		}
-		return w.resourcesWriter.Write(&data)
+		return g.ResourcesWriter.Execute(&data)
 	})
 	if err != nil {
 		return nil, err
 	}
-	if err := w.resourcesWriter.FormatCode(); err != nil {
+	if err := g.ResourcesWriter.FormatCode(); err != nil {
 		return nil, err
 	}
 
-	return []string{w.contextsFilename, w.handlersFilename, w.resourcesFilename}, nil
+	return []string{g.contextsFilename, g.handlersFilename, g.resourcesFilename}, nil
 }

@@ -1,4 +1,4 @@
-package code
+package goagen
 
 import (
 	"fmt"
@@ -8,14 +8,14 @@ import (
 	"github.com/rightscale/rsc/gen/writers/text"
 )
 
-// commandLine return the command used to run this process.
-func commandLine() string {
+// CommandLine return the command used to run this process.
+func CommandLine() string {
 	return fmt.Sprintf("$ %s %s", os.Args[0], strings.Join(os.Args[1:], " "))
 }
 
-// comment produces line comments by concatenating the given strings and producing 80 characters
+// Comment produces line comments by concatenating the given strings and producing 80 characters
 // long lines starting with "//"
-func comment(elems ...string) string {
+func Comment(elems ...string) string {
 	var lines []string
 	for _, e := range elems {
 		lines = append(lines, strings.Split(e, "\n")...)
@@ -26,4 +26,14 @@ func comment(elems ...string) string {
 	}
 	t := strings.Join(trimmed, "\n")
 	return text.Indent(t, "// ")
+}
+
+// Tabs returns a string made of depth tab characters.
+func Tabs(depth int) string {
+	var tabs string
+	for i := 0; i < depth; i++ {
+		tabs += "\t"
+	}
+	//	return fmt.Sprintf("%d%s", depth, tabs)
+	return tabs
 }

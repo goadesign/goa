@@ -1,45 +1,38 @@
 package app
 
 import (
-	"github.com/raphael/goa/goagen/bootstrap"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/raphael/goa/goagen"
+	"github.com/raphael/goa/goagen/meta"
+)
+
+var (
+	// TargetPackage is the name of the generated Go package.
+	TargetPackage string
 )
 
 // Command is the goa application code generator command line data structure.
-// It implements bootstrap.Command.
+// It implements meta.Command.
 type Command struct {
-	Generator     *bootstrap.MetaGenerator
-	TargetPackage string // Target package name
+	*goagen.BaseCommand
 }
 
 // NewCommand instantiates a new command.
 func NewCommand() *Command {
-	gen := bootstrap.MetaGenerator{
-		Factory: "app.NewGenerator",
-		Imports: []string{"github.com/raphael/goa/goagen/app"},
-	}
-	return &Command{Generator: &gen}
+	base := goagen.NewBaseCommand("app", "Generate application GoGenerator")
+	return &Command{BaseCommand: base}
 }
 
-// Name of command.
-func (c *Command) Name() string { return "app" }
-
-// Description of command.
-func (c *Command) Description() string { return "Generate application code." }
-
-// RegisterFlags registers the command line flags with the given command clause.
-func (c *Command) RegisterFlags(cmd *kingpin.CmdClause) {
-	gen := c.Generator
-	gen.Flags = make(map[string]*string)
-	var outdir string
-	var targetPackage string
-	cmd.Flag("out", "destination directory").Required().StringVar(&outdir)
-	cmd.Flag("package", "target package").Required().StringVar(&targetPackage)
-	gen.Flags["OutDir"] = &outdir
-	gen.Flags["TargetPackage"] = &targetPackage
+// RegisterFlags registers the command line flags with the given registry.
+func (c *Command) RegisterFlags(r goagen.FlagRegistry) {
+	r.Flag("target", "target package").Required().StringVar(&TargetPackage)
 }
 
-// Run simply calls the generator.
+// Run simply calls the meta generator.
 func (c *Command) Run() ([]string, error) {
-	return c.Generator.Generate()
+	gen := meta.NewGenerator(
+		"app.NewGenerator",
+		[]string{"github.com/raphael/goa/goagen/app"},
+		map[string]string{"target": TargetPackage},
+	)
+	return gen.Generate()
 }

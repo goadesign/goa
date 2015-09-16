@@ -1,7 +1,8 @@
-package bootstrap_test
+package meta_test
 
 import (
 	"bytes"
+	"fmt"
 	"html/template"
 	"io/ioutil"
 	"os"
@@ -9,7 +10,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa/goagen/bootstrap"
+	"github.com/raphael/goa/goagen"
+	"github.com/raphael/goa/goagen/meta"
 )
 
 var _ = Describe("Run", func() {
@@ -18,18 +20,20 @@ var _ = Describe("Run", func() {
 
 	var factory string
 	var debug bool
+	var outputDir string
 	var designPackage string
 	var designPackageDir string
 	var designPackageSource string
 
-	var meta *bootstrap.MetaGenerator
+	var m *meta.Generator
 
 	BeforeEach(func() {
 		factory = ""
 		debug = false
-		designPackage = ""
-		designPackageDir = ""
-		designPackageSource = ""
+		outputDir = "/tmp"
+		designPackage = "github.com/raphael/goa/testgoagoagen"
+		designPackageSource = "foo"
+		designPackageDir = filepath.Join(os.Getenv("GOPATH"), "src", designPackage)
 		compiledFiles = nil
 		compileError = nil
 	})
@@ -41,12 +45,13 @@ var _ = Describe("Run", func() {
 			err = ioutil.WriteFile(filepath.Join(designPackageDir, "design.go"), []byte(designPackageSource), 0655)
 			Ω(err).ShouldNot(HaveOccurred())
 		}
-		meta = &bootstrap.MetaGenerator{
-			Factory:       factory,
-			Debug:         debug,
-			DesignPackage: designPackage,
+		m = &meta.Generator{
+			Factory: factory,
 		}
-		compiledFiles, compileError = meta.Generate()
+		goagen.Debug = debug
+		goagen.OutputDir = outputDir
+		goagen.DesignPackagePath = designPackage
+		compiledFiles, compileError = m.Generate()
 	})
 
 	AfterEach(func() {
@@ -86,7 +91,8 @@ var _ = Describe("Run", func() {
 		})
 
 		It("fails with a useful error message", func() {
-			Ω(compileError).Should(MatchError(`invalid $GOPATH value "` + invalidPath + `"`))
+			msg := fmt.Sprintf(`cannot find design package at path "%s/src/%s"`, invalidPath, designPackage)
+			Ω(compileError).Should(MatchError(msg))
 		})
 
 	})
@@ -101,16 +107,6 @@ var _ = Describe("Run", func() {
 		It("fails with a useful error message", func() {
 			path := filepath.Join(os.Getenv("GOPATH"), "src", designPackage)
 			Ω(compileError).Should(MatchError(`cannot find design package at path "` + path + `"`))
-		})
-	})
-
-	Context("with no factory specified", func() {
-		BeforeEach(func() {
-			designPackage = "github.com/raphael/goa" // must be a valid package path
-		})
-
-		It("fails with a useful error message", func() {
-			Ω(compileError).Should(MatchError(`missing generator factory method`))
 		})
 	})
 
@@ -133,12 +129,33 @@ var _ = Describe("Run", func() {
 		})
 	})
 
+	Context("with no output directory specified", func() {
+		BeforeEach(func() {
+			factory = "design.NewFoo"
+			outputDir = ""
+		})
+
+		It("fails with a useful error message", func() {
+			Ω(compileError).Should(MatchError("missing output directory specification"))
+		})
+	})
+
+	Context("with no design package path specified", func() {
+		BeforeEach(func() {
+			factory = "design.NewFoo"
+			designPackage = ""
+		})
+
+		It("fails with a useful error message", func() {
+			Ω(compileError).Should(MatchError("missing design package path specification"))
+		})
+	})
+
 	Context("with design package content", func() {
 
 		BeforeEach(func() {
 			factory = "design.NewFoo"
-			designPackage = "github.com/raphael/goa/testgoagoagen"
-			designPackageDir = filepath.Join(os.Getenv("GOPATH"), "src", designPackage)
+			outputDir = "/tmp"
 		})
 
 		Context("that is not valid Go code", func() {

@@ -1,16 +1,16 @@
 package docs
 
-import "github.com/raphael/goa/goagen/bootstrap"
+import "github.com/raphael/goa/goagen"
 
 // Command is the goa application code generator command line data structure.
-// It implements bootstrap.Command.
+// It implements meta.Command.
 type Command struct {
-	*bootstrap.TBDCommand
+	*goagen.TBDCommand
 }
 
 // NewCommand instantiates a new command.
 func NewCommand() *Command {
-	t := bootstrap.NewTBDCommand("Generate documentation", "")
+	t := goagen.NewTBDCommand("Generate documentation", "")
 	return &Command{TBDCommand: t}
 }
 

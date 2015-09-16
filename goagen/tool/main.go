@@ -5,23 +5,27 @@ import (
 	"os"
 	"strings"
 
+	"github.com/raphael/goa/goagen"
 	"github.com/raphael/goa/goagen/app"
-	"github.com/raphael/goa/goagen/bootstrap"
 	"github.com/raphael/goa/goagen/client"
 	"github.com/raphael/goa/goagen/docs"
 	"github.com/raphael/goa/goagen/js"
 	"github.com/raphael/goa/goagen/test"
-	"github.com/raphael/goa/goagen/version"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
+// Commands contains the list of all supported sub-commands.
+var Commands []goagen.Command
+
 // init registers all subcommands.
 func init() {
-	bootstrap.Register(app.NewCommand())
-	bootstrap.Register(client.NewCommand())
-	bootstrap.Register(test.NewCommand())
-	bootstrap.Register(docs.NewCommand())
-	bootstrap.Register(js.NewCommand())
+	Commands = []goagen.Command{
+		app.NewCommand(),
+		client.NewCommand(),
+		test.NewCommand(),
+		docs.NewCommand(),
+		js.NewCommand(),
+	}
 }
 
 func main() {
@@ -35,12 +39,13 @@ func main() {
 }
 
 // command parses the command line and returns the specified sub-command.
-func command() bootstrap.Command {
+func command() goagen.Command {
 	a := kingpin.New("goagen", "goa code generation tool")
-	a.Version(version.Version)
+	a.Version(goagen.Version)
 	a.Help = help
-	for n, c := range bootstrap.Commands {
-		cmd := a.Command(n, c.Description())
+	goagen.RegisterFlags(a)
+	for _, c := range Commands {
+		cmd := a.Command(c.Name(), c.Description())
 		c.RegisterFlags(cmd)
 	}
 	cmdName := kingpin.MustParse(a.Parse(os.Args[1:]))
@@ -48,14 +53,15 @@ func command() bootstrap.Command {
 		a.Usage(os.Args[1:])
 		os.Exit(1)
 	}
-	cmd, ok := bootstrap.Commands[cmdName]
-	if !ok {
-		panic("goa: unknown command")
+	for _, c := range Commands {
+		if cmdName == c.Name() {
+			return c
+		}
 	}
-	return cmd
+	panic("goa: unknown command") // bug
 }
 
 const help = `The goagen tool generates various artefacts from a goa application design package (metadata).
 Each sub-command supported by the tool matches a specific type of artefacts. For example
-the "app" command causes goagen to generate the application code.
+the "app" command causes goagen to generate the application GoGenerator
 `

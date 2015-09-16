@@ -1,4 +1,4 @@
-package code_test
+package goagen_test
 
 import (
 	"fmt"
@@ -11,12 +11,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/goagen/code"
+	"github.com/raphael/goa/goagen"
 )
 
 var _ = Describe("code generation", func() {
 	BeforeEach(func() {
-		code.TempCount = 0
+		goagen.TempCount = 0
 	})
 
 	Describe("GoTypeDef", func() {
@@ -32,7 +32,7 @@ var _ = Describe("code generation", func() {
 				if required != nil {
 					att.Validations = []design.ValidationDefinition{required}
 				}
-				st = code.GoTypeDef(att, 0, true, false)
+				st = goagen.GoTypeDef(att, 0, true, false)
 			})
 
 			Context("of primitive types", func() {
@@ -118,7 +118,7 @@ var _ = Describe("code generation", func() {
 			JustBeforeEach(func() {
 				array := &design.Array{ElemType: elemType}
 				att := &design.AttributeDefinition{Type: array}
-				source = code.GoTypeDef(att, 0, true, false)
+				source = goagen.GoTypeDef(att, 0, true, false)
 			})
 
 			Context("of primitive type", func() {
@@ -163,7 +163,7 @@ var _ = Describe("code generation", func() {
 			var p design.Primitive
 
 			JustBeforeEach(func() {
-				unmarshaler = code.PrimitiveUnmarshaler(p, context, source, target)
+				unmarshaler = goagen.PrimitiveUnmarshaler(p, context, source, target)
 			})
 
 			Context("integer", func() {
@@ -201,7 +201,7 @@ var _ = Describe("code generation", func() {
 			var p *design.Array
 
 			JustBeforeEach(func() {
-				unmarshaler = code.ArrayUnmarshaler(p, context, source, target)
+				unmarshaler = goagen.ArrayUnmarshaler(p, context, source, target)
 			})
 
 			BeforeEach(func() {
@@ -213,21 +213,7 @@ var _ = Describe("code generation", func() {
 			})
 
 			It("generates the unmarshaler code", func() {
-				expected := `	if val, ok := raw.([]interface{}); ok {
-		p = make([]int, len(val))
-		for i, v := range val {
-			var tmp1 int
-			if val, ok := v.(int); ok {
-				tmp1 = val
-			} else {
-				err = goa.IncompatibleTypeError(` + "`" + `[*]` + "`" + `, v, "int")
-			}
-			p[i] = tmp1
-		}
-	} else {
-		err = goa.IncompatibleTypeError(` + "``" + `, raw, "[]interface{}")
-	}`
-				Ω(unmarshaler).Should(Equal(expected))
+				Ω(unmarshaler).Should(Equal(primitiveUnmarshaled))
 			})
 		})
 
@@ -235,7 +221,7 @@ var _ = Describe("code generation", func() {
 			var o design.Object
 
 			JustBeforeEach(func() {
-				unmarshaler = code.ObjectUnmarshaler(o, context, source, target)
+				unmarshaler = goagen.ObjectUnmarshaler(o, context, source, target)
 			})
 
 			BeforeEach(func() {
@@ -244,23 +230,7 @@ var _ = Describe("code generation", func() {
 			})
 
 			It("generates the unmarshaler code", func() {
-				expected := `	if val, ok := raw.(map[string]interface{}); ok {
-		p = new(struct {
-			Foo int
-		})
-		if v, ok := val["foo"]; ok {
-			var tmp1 int
-			if val, ok := v.(int); ok {
-				tmp1 = val
-			} else {
-				err = goa.IncompatibleTypeError(` + "`" + `.Foo` + "`" + `, v, "int")
-			}
-			p.Foo = tmp1
-		}
-	} else {
-		err = goa.IncompatibleTypeError(` + "``" + `, raw, "map[string]interface{}")
-	}`
-				Ω(unmarshaler).Should(Equal(expected))
+				Ω(unmarshaler).Should(Equal(simpleUnmarshaled))
 			})
 		})
 
@@ -268,7 +238,7 @@ var _ = Describe("code generation", func() {
 			var o design.Object
 
 			JustBeforeEach(func() {
-				unmarshaler = code.ObjectUnmarshaler(o, context, source, target)
+				unmarshaler = goagen.ObjectUnmarshaler(o, context, source, target)
 			})
 
 			BeforeEach(func() {
@@ -285,7 +255,106 @@ var _ = Describe("code generation", func() {
 			})
 
 			It("generates the unmarshaler code", func() {
-				expected := `	if val, ok := raw.(map[string]interface{}); ok {
+				Ω(unmarshaler).Should(Equal(complexUnmarshalled))
+			})
+
+			Context("compiling", func() {
+				var gopath, srcDir string
+				var out []byte
+
+				JustBeforeEach(func() {
+					cmd := exec.Command("go", "build", "-o", "goagen")
+					cmd.Env = os.Environ()
+					cmd.Env = append(cmd.Env, fmt.Sprintf("GOPATH=%s:%s", gopath, os.Getenv("GOPATH")))
+					cmd.Dir = srcDir
+					var err error
+					out, err = cmd.CombinedOutput()
+					Ω(err).ShouldNot(HaveOccurred())
+				})
+
+				BeforeEach(func() {
+					var err error
+					gopath, err = ioutil.TempDir("", "")
+					Ω(err).ShouldNot(HaveOccurred())
+					tmpl, err := template.New("main").Parse(mainTmpl)
+					Ω(err).ShouldNot(HaveOccurred())
+					srcDir = filepath.Join(gopath, "src", "test")
+					err = os.MkdirAll(srcDir, 0755)
+					Ω(err).ShouldNot(HaveOccurred())
+					tmpFile, err := os.Create(filepath.Join(srcDir, "main.go"))
+					Ω(err).ShouldNot(HaveOccurred())
+					unmarshaler = goagen.ObjectUnmarshaler(o, context, source, target)
+					data := map[string]interface{}{
+						"raw": `interface{}(map[string]interface{}{
+			"baz": map[string]interface{}{
+				"foo": 345,
+				"bar":[]interface{}{1,2,3},
+			},
+			"faz": 2,
+		})`,
+						"source":     unmarshaler,
+						"target":     target,
+						"targetType": goagen.GoTypeRef(o, 1),
+					}
+					err = tmpl.Execute(tmpFile, data)
+					Ω(err).ShouldNot(HaveOccurred())
+				})
+
+				AfterEach(func() {
+					os.RemoveAll(gopath)
+				})
+
+				It("compiles", func() {
+					Ω(string(out)).Should(BeEmpty())
+
+					cmd := exec.Command("./goagen")
+					cmd.Env = []string{fmt.Sprintf("PATH=%s", filepath.Join(gopath, "bin"))}
+					cmd.Dir = srcDir
+					code, err := cmd.CombinedOutput()
+					Ω(err).ShouldNot(HaveOccurred())
+					Ω(string(code)).Should(Equal(`{"Baz":{"Bar":[1,2,3],"Foo":345},"Faz":2}`))
+				})
+
+			})
+		})
+
+	})
+})
+
+const (
+	primitiveUnmarshaled = `	if val, ok := raw.([]interface{}); ok {
+		p = make([]int, len(val))
+		for i, v := range val {
+			var tmp1 int
+			if val, ok := v.(int); ok {
+				tmp1 = val
+			} else {
+				err = goa.IncompatibleTypeError(` + "`" + `[*]` + "`" + `, v, "int")
+			}
+			p[i] = tmp1
+		}
+	} else {
+		err = goa.IncompatibleTypeError(` + "``" + `, raw, "[]interface{}")
+	}`
+
+	simpleUnmarshaled = `	if val, ok := raw.(map[string]interface{}); ok {
+		p = new(struct {
+			Foo int
+		})
+		if v, ok := val["foo"]; ok {
+			var tmp1 int
+			if val, ok := v.(int); ok {
+				tmp1 = val
+			} else {
+				err = goa.IncompatibleTypeError(` + "`" + `.Foo` + "`" + `, v, "int")
+			}
+			p.Foo = tmp1
+		}
+	} else {
+		err = goa.IncompatibleTypeError(` + "``" + `, raw, "map[string]interface{}")
+	}`
+
+	complexUnmarshalled = `	if val, ok := raw.(map[string]interface{}); ok {
 		p = new(struct {
 			Baz *struct {
 				Bar []int
@@ -347,73 +416,8 @@ var _ = Describe("code generation", func() {
 	} else {
 		err = goa.IncompatibleTypeError(` + "``" + `, raw, "map[string]interface{}")
 	}`
-				Ω(unmarshaler).Should(Equal(expected))
-			})
 
-			Context("compiling", func() {
-				var gopath, srcDir string
-				var out []byte
-
-				JustBeforeEach(func() {
-					cmd := exec.Command("go", "build", "-o", "goagen")
-					cmd.Env = os.Environ()
-					cmd.Env = append(cmd.Env, fmt.Sprintf("GOPATH=%s:%s", gopath, os.Getenv("GOPATH")))
-					cmd.Dir = srcDir
-					var err error
-					out, err = cmd.CombinedOutput()
-					Ω(err).ShouldNot(HaveOccurred())
-				})
-
-				BeforeEach(func() {
-					var err error
-					gopath, err = ioutil.TempDir("", "")
-					Ω(err).ShouldNot(HaveOccurred())
-					tmpl, err := template.New("main").Parse(mainTmpl)
-					Ω(err).ShouldNot(HaveOccurred())
-					srcDir = filepath.Join(gopath, "src", "test")
-					err = os.MkdirAll(srcDir, 0755)
-					Ω(err).ShouldNot(HaveOccurred())
-					tmpFile, err := os.Create(filepath.Join(srcDir, "main.go"))
-					Ω(err).ShouldNot(HaveOccurred())
-					unmarshaler = code.ObjectUnmarshaler(o, context, source, target)
-					data := map[string]interface{}{
-						"raw": `interface{}(map[string]interface{}{
-			"baz": map[string]interface{}{
-				"foo": 345,
-				"bar":[]interface{}{1,2,3},
-			},
-			"faz": 2,
-		})`,
-						"source":     unmarshaler,
-						"target":     target,
-						"targetType": code.GoTypeRef(o, 1),
-					}
-					err = tmpl.Execute(tmpFile, data)
-					Ω(err).ShouldNot(HaveOccurred())
-				})
-
-				AfterEach(func() {
-					os.RemoveAll(gopath)
-				})
-
-				It("compiles", func() {
-					Ω(string(out)).Should(BeEmpty())
-
-					cmd := exec.Command("./goagen")
-					cmd.Env = []string{fmt.Sprintf("PATH=%s", filepath.Join(gopath, "bin"))}
-					cmd.Dir = srcDir
-					code, err := cmd.CombinedOutput()
-					Ω(err).ShouldNot(HaveOccurred())
-					Ω(string(code)).Should(Equal(`{"Baz":{"Bar":[1,2,3],"Foo":345},"Faz":2}`))
-				})
-
-			})
-		})
-
-	})
-})
-
-const mainTmpl = `package main
+	mainTmpl = `package main
 
 import (
 	"fmt"
@@ -440,3 +444,4 @@ func main() {
 	fmt.Print(string(b))
 }
 `
+)

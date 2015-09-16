@@ -1,17 +1,17 @@
 package client
 
-import "github.com/raphael/goa/goagen/bootstrap"
+import "github.com/raphael/goa/goagen"
 
 // Command is the goa application code generator command line data structure.
-// It implements bootstrap.Command.
+// It implements meta.Command.
 type Command struct {
-	*bootstrap.TBDCommand
+	*goagen.TBDCommand
 	TargetPackage string // Target package name
 }
 
 // NewCommand instantiates a new command.
 func NewCommand() *Command {
-	t := bootstrap.NewTBDCommand("Generate Go API client", "")
+	t := goagen.NewTBDCommand("Generate Go API client", "")
 	return &Command{TBDCommand: t}
 }
 

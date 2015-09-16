@@ -1,4 +1,4 @@
-package code_test
+package main_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestCode(t *testing.T) {
+func TestTool(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Code Suite")
+	RunSpecs(t, "Tool Suite")
 }
