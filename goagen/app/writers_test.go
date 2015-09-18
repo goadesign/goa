@@ -13,10 +13,11 @@ import (
 var _ = Describe("ContextsWriter", func() {
 	var writer *app.ContextsWriter
 	var filename string
-	var newErr error
 
 	JustBeforeEach(func() {
-		writer, newErr = app.NewContextsWriter(filename)
+		var err error
+		writer, err = app.NewContextsWriter(filename)
+		Ω(err).ShouldNot(HaveOccurred())
 	})
 
 	Context("correctly configured", func() {
@@ -28,10 +29,6 @@ var _ = Describe("ContextsWriter", func() {
 
 		AfterEach(func() {
 			os.Remove(filename)
-		})
-
-		It("NewContextsWriter creates a writer", func() {
-			Ω(newErr).ShouldNot(HaveOccurred())
 		})
 
 		Context("with data", func() {
@@ -309,7 +306,6 @@ var _ = Describe("ContextsWriter", func() {
 				})
 
 				It("writes the contexts code", func() {
-					Ω(newErr).ShouldNot(HaveOccurred())
 					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
@@ -328,10 +324,11 @@ var _ = Describe("ContextsWriter", func() {
 var _ = Describe("HandlersWriter", func() {
 	var writer *app.HandlersWriter
 	var filename string
-	var newErr error
 
 	JustBeforeEach(func() {
-		writer, newErr = app.NewHandlersWriter(filename)
+		var err error
+		writer, err = app.NewHandlersWriter(filename)
+		Ω(err).ShouldNot(HaveOccurred())
 	})
 
 	Context("correctly configured", func() {
@@ -343,10 +340,6 @@ var _ = Describe("HandlersWriter", func() {
 
 		AfterEach(func() {
 			os.Remove(filename)
-		})
-
-		It("NewHandlersWriter creates a writer", func() {
-			Ω(newErr).ShouldNot(HaveOccurred())
 		})
 
 		Context("with data", func() {
@@ -437,10 +430,11 @@ var _ = Describe("HandlersWriter", func() {
 var _ = Describe("ResourceWriter", func() {
 	var writer *app.ResourcesWriter
 	var filename string
-	var newErr error
 
 	JustBeforeEach(func() {
-		writer, newErr = app.NewResourcesWriter(filename)
+		var err error
+		writer, err = app.NewResourcesWriter(filename)
+		Ω(err).ShouldNot(HaveOccurred())
 	})
 
 	Context("correctly configured", func() {
@@ -452,10 +446,6 @@ var _ = Describe("ResourceWriter", func() {
 
 		AfterEach(func() {
 			os.Remove(filename)
-		})
-
-		It("NewResourcesWriter creates a writer", func() {
-			Ω(newErr).ShouldNot(HaveOccurred())
 		})
 
 		Context("with data", func() {

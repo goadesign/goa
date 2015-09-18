@@ -356,21 +356,23 @@ func (a *ActionDefinition) FormatName(snake bool) string {
 	return format(a.Name, &snake, nil)
 }
 
-// IsRequired returns true if the given string matches the name of a required attribute, false
-// otherwise.
-// IsRequired panics if the type of a is not Object.
-func (a *AttributeDefinition) IsRequired(attName string) bool {
-	_, ok := a.Type.(Object)
-	if !ok {
-		panic("iterated attribute not an object")
-	}
+// AllRequired returns the complete list of all required attribute names, nil
+// if it doesn't have a RequiredValidationDefinition validation.
+func (a *AttributeDefinition) AllRequired() []string {
 	for _, v := range a.Validations {
 		if r, ok := v.(*RequiredValidationDefinition); ok {
-			for _, name := range r.Names {
-				if name == attName {
-					return true
-				}
-			}
+			return r.Names
+		}
+	}
+	return nil
+}
+
+// IsRequired returns true if the given string matches the name of a required
+// attribute, false otherwise.
+func (a *AttributeDefinition) IsRequired(attName string) bool {
+	for _, name := range a.AllRequired() {
+		if name == attName {
+			return true
 		}
 	}
 	return false

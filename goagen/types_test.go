@@ -175,7 +175,7 @@ var _ = Describe("code generation", func() {
 					expected := `	if val, ok := raw.(int); ok {
 		p = val
 	} else {
-		err = goa.IncompatibleTypeError(` + "``" + `, raw, "int")
+		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "int", err)
 	}`
 					Ω(unmarshaler).Should(Equal(expected))
 				})
@@ -190,7 +190,7 @@ var _ = Describe("code generation", func() {
 					expected := `	if val, ok := raw.(string); ok {
 		p = val
 	} else {
-		err = goa.IncompatibleTypeError(` + "``" + `, raw, "string")
+		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "string", err)
 	}`
 					Ω(unmarshaler).Should(Equal(expected))
 				})
@@ -269,6 +269,7 @@ var _ = Describe("code generation", func() {
 					cmd.Dir = srcDir
 					var err error
 					out, err = cmd.CombinedOutput()
+					Ω(out).Should(BeEmpty())
 					Ω(err).ShouldNot(HaveOccurred())
 				})
 
@@ -311,8 +312,8 @@ var _ = Describe("code generation", func() {
 					cmd.Env = []string{fmt.Sprintf("PATH=%s", filepath.Join(gopath, "bin"))}
 					cmd.Dir = srcDir
 					code, err := cmd.CombinedOutput()
-					Ω(err).ShouldNot(HaveOccurred())
 					Ω(string(code)).Should(Equal(`{"Baz":{"Bar":[1,2,3],"Foo":345},"Faz":2}`))
+					Ω(err).ShouldNot(HaveOccurred())
 				})
 
 			})
@@ -329,12 +330,12 @@ const (
 			if val, ok := v.(int); ok {
 				tmp1 = val
 			} else {
-				err = goa.IncompatibleTypeError(` + "`" + `[*]` + "`" + `, v, "int")
+				err = goa.InvalidAttributeTypeError(` + "`" + `[*]` + "`" + `, v, "int", err)
 			}
 			p[i] = tmp1
 		}
 	} else {
-		err = goa.IncompatibleTypeError(` + "``" + `, raw, "[]interface{}")
+		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "[]interface{}", err)
 	}`
 
 	simpleUnmarshaled = `	if val, ok := raw.(map[string]interface{}); ok {
@@ -346,12 +347,12 @@ const (
 			if val, ok := v.(int); ok {
 				tmp1 = val
 			} else {
-				err = goa.IncompatibleTypeError(` + "`" + `.Foo` + "`" + `, v, "int")
+				err = goa.InvalidAttributeTypeError(` + "`" + `.Foo` + "`" + `, v, "int", err)
 			}
 			p.Foo = tmp1
 		}
 	} else {
-		err = goa.IncompatibleTypeError(` + "``" + `, raw, "map[string]interface{}")
+		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "map[string]interface{}", err)
 	}`
 
 	complexUnmarshalled = `	if val, ok := raw.(map[string]interface{}); ok {
@@ -381,12 +382,12 @@ const (
 							if val, ok := v.(int); ok {
 								tmp3 = val
 							} else {
-								err = goa.IncompatibleTypeError(` + "`" + `.Baz.Bar[*]` + "`" + `, v, "int")
+								err = goa.InvalidAttributeTypeError(` + "`" + `.Baz.Bar[*]` + "`" + `, v, "int", err)
 							}
 							tmp2[i] = tmp3
 						}
 					} else {
-						err = goa.IncompatibleTypeError(` + "`" + `.Baz.Bar` + "`" + `, v, "[]interface{}")
+						err = goa.InvalidAttributeTypeError(` + "`" + `.Baz.Bar` + "`" + `, v, "[]interface{}", err)
 					}
 					tmp1.Bar = tmp2
 				}
@@ -395,12 +396,12 @@ const (
 					if val, ok := v.(int); ok {
 						tmp4 = val
 					} else {
-						err = goa.IncompatibleTypeError(` + "`" + `.Baz.Foo` + "`" + `, v, "int")
+						err = goa.InvalidAttributeTypeError(` + "`" + `.Baz.Foo` + "`" + `, v, "int", err)
 					}
 					tmp1.Foo = tmp4
 				}
 			} else {
-				err = goa.IncompatibleTypeError(` + "`" + `.Baz` + "`" + `, v, "map[string]interface{}")
+				err = goa.InvalidAttributeTypeError(` + "`" + `.Baz` + "`" + `, v, "map[string]interface{}", err)
 			}
 			p.Baz = tmp1
 		}
@@ -409,12 +410,12 @@ const (
 			if val, ok := v.(int); ok {
 				tmp5 = val
 			} else {
-				err = goa.IncompatibleTypeError(` + "`" + `.Faz` + "`" + `, v, "int")
+				err = goa.InvalidAttributeTypeError(` + "`" + `.Faz` + "`" + `, v, "int", err)
 			}
 			p.Faz = tmp5
 		}
 	} else {
-		err = goa.IncompatibleTypeError(` + "``" + `, raw, "map[string]interface{}")
+		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "map[string]interface{}", err)
 	}`
 
 	mainTmpl = `package main

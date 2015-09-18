@@ -2,8 +2,10 @@ package goagen
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 	"text/template"
 	"unicode"
 
@@ -14,10 +16,10 @@ var (
 	// TempCount holds the value appended to variable names to make them unique.
 	TempCount int
 
-	primitiveT *template.Template
-	arrayT     *template.Template
-	objectT    *template.Template
-	userT      *template.Template
+	primitiveT    *template.Template
+	arrayT        *template.Template
+	objectOrUserT *template.Template
+	userT         *template.Template
 )
 
 //  init instantiates the templates.
@@ -32,6 +34,7 @@ func init() {
 		"tabs":               Tabs,
 		"add":                func(a, b int) int { return a + b },
 		"tempvar":            tempvar,
+		"has":                has,
 	}
 	if primitiveT, err = template.New("primitive").Funcs(fm).Parse(primitiveTmpl); err != nil {
 		panic(err)
@@ -39,10 +42,7 @@ func init() {
 	if arrayT, err = template.New("array").Funcs(fm).Parse(arrayTmpl); err != nil {
 		panic(err)
 	}
-	if objectT, err = template.New("object").Funcs(fm).Parse(objectTmpl); err != nil {
-		panic(err)
-	}
-	if userT, err = template.New("user").Funcs(fm).Parse(userTmpl); err != nil {
+	if objectOrUserT, err = template.New("object").Funcs(fm).Parse(objectTmpl); err != nil {
 		panic(err)
 	}
 }
@@ -65,7 +65,7 @@ func typeUnmarshalerR(t design.DataType, context, source, target string, depth i
 	case *design.Array:
 		return arrayUnmarshalerR(actual, context, source, target, depth)
 	case design.Object:
-		return objectUnmarshalerR(actual, context, source, target, depth)
+		return objectUnmarshalerR(actual, nil, context, source, target, depth)
 	case design.NamedType:
 		return namedTypeUnmarshalerR(actual, context, source, target, depth)
 	default:
@@ -85,8 +85,13 @@ func AttributeUnmarshaler(att *design.AttributeDefinition, context, source, targ
 	return attributeUnmarshalerR(att, context, source, target, 1)
 }
 func attributeUnmarshalerR(att *design.AttributeDefinition, context, source, target string, depth int) string {
-	return typeUnmarshalerR(att.Type, context, source, target, depth) +
-		validationCheckerR(att, context, target, depth)
+	var unmarshaler string
+	if o, ok := att.Type.(design.Object); ok {
+		unmarshaler = objectUnmarshalerR(o, att.AllRequired(), context, source, target, depth)
+	} else {
+		unmarshaler = typeUnmarshalerR(att.Type, context, source, target, depth)
+	}
+	return unmarshaler + validationCheckerR(att, context, target, depth)
 }
 
 // PrimitiveUnmarshaler produces the go code that initializes a primitive type from its JSON
@@ -135,17 +140,18 @@ func arrayUnmarshalerR(a *design.Array, context, source, target string, depth in
 // The generated code assumes that there is a variable called "err" of type error that it can use
 // to record errors.
 func ObjectUnmarshaler(o design.Object, context, source, target string) string {
-	return objectUnmarshalerR(o, context, source, target, 1)
+	return objectUnmarshalerR(o, nil, context, source, target, 1)
 }
-func objectUnmarshalerR(o design.Object, context, source, target string, depth int) string {
+func objectUnmarshalerR(o design.Object, required []string, context, source, target string, depth int) string {
 	data := map[string]interface{}{
-		"source":  source,
-		"target":  target,
-		"type":    o,
-		"context": context,
-		"depth":   depth,
+		"type":     o,
+		"required": required,
+		"context":  context,
+		"source":   source,
+		"target":   target,
+		"depth":    depth,
 	}
-	return runTemplate(objectT, data)
+	return runTemplate(objectOrUserT, data)
 }
 
 // NamedTypeUnmarshaler produces the go code that initializes a named type from its JSON
@@ -163,12 +169,12 @@ func NamedTypeUnmarshaler(t design.NamedType, context, source, target string) st
 func namedTypeUnmarshalerR(t design.NamedType, context, source, target string, depth int) string {
 	data := map[string]interface{}{
 		"type":    t,
+		"context": context,
 		"source":  source,
 		"target":  target,
-		"context": context,
 		"depth":   depth,
 	}
-	return runTemplate(userT, data)
+	return runTemplate(objectOrUserT, data)
 }
 
 // GoTypeDef returns the Go code that defines a Go type which matches the data structure
@@ -361,6 +367,34 @@ func tempvar() string {
 	return fmt.Sprintf("tmp%d", TempCount)
 }
 
+// has returns true is slice contains val, false otherwise.
+func has(slice []string, val string) bool {
+	for _, s := range slice {
+		if s == val {
+			return true
+		}
+	}
+	return false
+}
+
+// toJSON returns the JSON representation of the given value.
+func toJSON(val interface{}) string {
+	js, err := json.Marshal(val)
+	if err != nil {
+		return "<error serializing value>"
+	}
+	return string(js)
+}
+
+// toSlice returns Go code that represents the given slice.
+func toSlice(val []interface{}) string {
+	elems := make([]string, len(val))
+	for i, v := range val {
+		elems[i] = fmt.Sprintf("%#v", v)
+	}
+	return fmt.Sprintf("[]interface{}{%s}", strings.Join(elems, ", "))
+}
+
 // runTemplate executs the given template with the given input and returns
 // the rendered string.
 func runTemplate(tmpl *template.Template, data interface{}) string {
@@ -376,7 +410,7 @@ const (
 	primitiveTmpl = `{{tabs .depth}}if val, ok := {{.source}}.({{gotyperef .type (add .depth 1)}}); ok {
 {{tabs .depth}}	{{.target}} = val
 {{tabs .depth}}} else {
-{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "{{gotyperef .type (add .depth 1)}}")
+{{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "{{gotyperef .type (add .depth 1)}}", err)
 {{tabs .depth}}}`
 
 	arrayTmpl = `{{tabs .depth}}if val, ok := {{.source}}.([]interface{}); ok {
@@ -387,28 +421,19 @@ const (
 {{tabs .depth}}		{{printf "%s[i]" .target}} = {{$temp}}
 {{tabs .depth}}	}
 {{tabs .depth}}} else {
-{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "[]interface{}")
+{{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "[]interface{}", err)
 {{tabs .depth}}}`
 
 	objectTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
-{{tabs .depth}}{{$context := .context}}{{$depth := .depth}}{{$target := .target}}	{{$target}} = new({{gotypename .type (add .depth 1)}})
-{{range $name, $att := .type}}{{tabs $depth}}	if v, ok := val["{{$name}}"]; ok {
+{{tabs .depth}}{{$context := .context}}{{$depth := .depth}}{{$target := .target}}{{$required := .required}}	{{$target}} = new({{gotypename .type (add .depth 1)}})
+{{range $name, $att := .type.ToObject}}{{tabs $depth}}	if v, ok := val["{{$name}}"]; ok {
 {{tabs $depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type (add $depth 2)}}
-{{unmarshalType $att.Type (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}
+{{unmarshalAttribute $att (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}
 {{tabs $depth}}		{{printf "%s.%s" $target (goify $name true)}} = {{$temp}}
-{{tabs $depth}}	}
+{{tabs $depth}}	}{{if (has $required $name)}} else {
+{{tabs $depth}}		err = goa.MissingAttributeError(` + "`" + `{{.context}}` + "`" + `, "{{$name}}", err)
+{{tabs $depth}}	}{{end}}
 {{end}}{{tabs $depth}}} else {
-{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "map[string]interface{}")
-{{tabs .depth}}}`
-
-	userTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
-{{tabs .depth}}{{$depth := .depth}}{{$context := .context}}{{$target := .target}}	{{.target}} = new({{.type.Name}})
-{{range $name, $att := .type.Definition.Type.ToObject}}{{tabs $depth}}	if v, ok := val["{{$name}}"]; ok {
-{{tabs $depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type (add $depth 2)}}
-{{unmarshalType $att.Type (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}
-{{tabs $depth}}		{{printf "%s.%s" $target (goify $name true)}} = {{$temp}}
-{{tabs $depth}}	}
-{{end}}{{tabs .depth}}} else {
-{{tabs .depth}}	err = goa.IncompatibleTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "map[string]interface{}")
+{{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "map[string]interface{}", err)
 {{tabs .depth}}}`
 )

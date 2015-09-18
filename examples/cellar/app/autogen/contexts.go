@@ -449,7 +449,7 @@ func NewRateBottlePayload(raw interface{}) (*RateBottlePayload, error) {
 			if val, ok := v.(int); ok {
 				tmp1 = val
 			} else {
-				err = goa.IncompatibleTypeError(".rating", v, "int")
+				err = goa.InvalidAttributeTypeError(".rating", v, "int")
 			}
 			p.Ratings = tmp1
 		}

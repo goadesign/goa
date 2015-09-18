@@ -86,6 +86,7 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 	funcMap["goify"] = goagen.Goify
 	funcMap["gotypename"] = goagen.GoTypeName
 	funcMap["typeUnmarshaler"] = goagen.TypeUnmarshaler
+	funcMap["validationChecker"] = goagen.ValidationChecker
 	funcMap["tabs"] = goagen.Tabs
 	funcMap["add"] = func(a, b int) int { return a + b }
 	ctxTmpl, err := template.New("context").Funcs(funcMap).Parse(ctxT)
@@ -277,7 +278,7 @@ func New{{camelize .Name}}(c goa.Context) (*{{.Name}}, error) {
 		err = goa.MissingParam("{{$name}}", err)
 	} else {
 {{end}}{{$depth := or (and ($params.IsRequired $name) 2) 1}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (camelize (goify $name true))) $depth)}}{{if ($params.IsRequired $name)}}	}
-{{end}}{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	if payload := c.Payload(); payload != nil {
+{{end}}{{validationChecker $att $name}}{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	if payload := c.Payload(); payload != nil {
 		p, err := New{{gotypename .Payload 0}}(payload)
 		if err != nil {
 			return nil, err
@@ -287,10 +288,6 @@ func New{{camelize .Name}}(c goa.Context) (*{{.Name}}, error) {
 {{end}}	return &ctx, err
 }
 `
-	// validationT generates validation GoGenerator
-	// template input: *design.AttributeDefinition
-	validationT = `{{range .Validations}}`
-
 	// ctxRespT generates response helper methods GoGenerator
 	// template input: *ContextTemplateData
 	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{.Name}} sends a HTTP response with status code {{.Status}}.
@@ -311,7 +308,7 @@ func New{{gotypename .Payload 0}}(raw interface{}) ({{gotyperef .Payload 0}}, er
 	var err error
 	var p {{gotyperef .Payload 1}}
 {{typeUnmarshaler .Payload "" "raw" "p"}}
-
+{{validationChecker .Payload.AttributeDefinition "p"}}
 	return p, err
 }`
 

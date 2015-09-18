@@ -2,6 +2,7 @@ package goagen
 
 import (
 	"fmt"
+	"strings"
 	"text/template"
 
 	"github.com/raphael/goa/design"
@@ -20,17 +21,20 @@ func init() {
 	fm := template.FuncMap{
 		"tabs":    Tabs,
 		"tempvar": tempvar,
+		"json":    toJSON,
+		"slice":   toSlice,
+		"oneof":   oneof,
 	}
-	if enumValT, err = template.New("user").Funcs(fm).Parse(enumValTmpl); err != nil {
+	if enumValT, err = template.New("enum").Funcs(fm).Parse(enumValTmpl); err != nil {
 		panic(err)
 	}
-	if formatValT, err = template.New("user").Funcs(fm).Parse(formatValTmpl); err != nil {
+	if formatValT, err = template.New("format").Funcs(fm).Parse(formatValTmpl); err != nil {
 		panic(err)
 	}
-	if minMaxValT, err = template.New("user").Funcs(fm).Parse(minMaxValTmpl); err != nil {
+	if minMaxValT, err = template.New("minMax").Funcs(fm).Parse(minMaxValTmpl); err != nil {
 		panic(err)
 	}
-	if lengthValT, err = template.New("user").Funcs(fm).Parse(lengthValTmpl); err != nil {
+	if lengthValT, err = template.New("length").Funcs(fm).Parse(lengthValTmpl); err != nil {
 		panic(err)
 	}
 }
@@ -41,8 +45,11 @@ func init() {
 // validation error.
 // The generated code assumes that there is a pre-existing "err" variable of type
 // error. It initializes that variable in case a validation fails.
-func ValidationChecker(att *design.AttributeDefinition, context, target string) string {
-	return validationCheckerR(att, context, target, 1)
+// TBD: decide whether context is something given to the checker or something
+// that is not needed because the error message is "in context". Apply a consistent
+// behavior between this and the code generation functions in types.go.
+func ValidationChecker(att *design.AttributeDefinition, target string) string {
+	return validationCheckerR(att, "", target, 1)
 }
 func validationCheckerR(att *design.AttributeDefinition, context, target string, depth int) string {
 	data := map[string]interface{}{
@@ -85,38 +92,34 @@ func validationCheckerR(att *design.AttributeDefinition, context, target string,
 	return res
 }
 
+// oneof produces code that compares target with each element of vals and ORs
+// the result, e.g. "target == 1 || target == 2".
+func oneof(target string, vals []interface{}) string {
+	elems := make([]string, len(vals))
+	for i, v := range vals {
+		elems[i] = fmt.Sprintf("%s == %#v", target, v)
+	}
+	return strings.Join(elems, " || ")
+}
+
 const (
-	enumValTmpl = `{{tabs .depth}}if err == nil {
-{{tabs .depth}}{{$depth := .depth}}{{$target := .target}}{{$ok := tempvar}}	{{$ok}} := false
-{{$goto_marker := tempvar}}{{range .values}}{{tabs $depth}}	if {{$target}} == {{printf "%#v" .}} {
-{{tabs $depth}}		{{$ok}} = true
-{{tabs $depth}}		goto {{$goto_marker}}
-{{tabs $depth}}	}
-{{end}}	{{$goto_marker}}:
-{{tabs .depth}}	if !{{$ok}} {
-{{tabs .depth}}		err = goa.InvalidEnumValueError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{.values}})
-{{tabs .depth}}	}
+	enumValTmpl = `{{tabs .depth}}if !({{oneof .target .values}}) {
+{{tabs .depth}}	err = goa.InvalidEnumValueError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{slice .values}}, err)
 {{tabs .depth}}}
 `
 
-	formatValTmpl = `{{tabs .depth}}if err == nil {
-{{tabs .depth}}	if err2 := goa.ValidateFormat({{.format}}, {{.target}}); err2 != nil {
-{{tabs .depth}}		err = goa.InvalidFormatError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{.format}}, err2.Error())
-{{tabs .depth}}	}
+	formatValTmpl = `{{tabs .depth}}if err2 := goa.ValidateFormat({{.format}}, {{.target}}); err2 != nil {
+{{tabs .depth}}		err = goa.InvalidFormatError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{.format}}, err2.Error(), err)
 {{tabs .depth}}}
 `
 
-	minMaxValTmpl = `{{tabs .depth}}if err == nil {
-{{tabs .depth}} if {{.target}} {{if .min}}<{{else}}>{{end}} {{if .min}}{{.min}}{{else}}{{.max}}{{end}} {
-{{tabs .depth}}		err = goa.InvalidRangeError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{if .min}}{{.min}}, true{{else}}{{.max}}, false{{end}})
-{{tabs .depth}}	}
+	minMaxValTmpl = `{{tabs .depth}}if {{.target}} {{if .min}}<{{else}}>{{end}} {{if .min}}{{.min}}{{else}}{{.max}}{{end}} {
+{{tabs .depth}}	err = goa.InvalidRangeError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{if .min}}{{.min}}, true{{else}}{{.max}}, false{{end}}, err)
 {{tabs .depth}}}
 `
 
-	lengthValTmpl = `{{tabs .depth}}if err == nil {
-{{tabs .depth}} if len({{.target}}) {{if .minLength}}<{{else}}>{{end}} {{if .minLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
-{{tabs .depth}}		err = goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{if .minLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}})
-{{tabs .depth}}	}
+	lengthValTmpl = `{{tabs .depth}}if len({{.target}}) {{if .minLength}}<{{else}}>{{end}} {{if .minLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
+{{tabs .depth}}	err = goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{if .minLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}, err)
 {{tabs .depth}}}
 `
 )
