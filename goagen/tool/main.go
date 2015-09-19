@@ -63,5 +63,5 @@ func command() goagen.Command {
 
 const help = `The goagen tool generates various artefacts from a goa application design package (metadata).
 Each sub-command supported by the tool matches a specific type of artefacts. For example
-the "app" command causes goagen to generate the application GoGenerator
+the "app" command causes goagen to generate the application code.
 `
