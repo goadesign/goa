@@ -350,10 +350,16 @@ func (r *ResourceDefinition) CanonicalPathAndParams() (path string, params []str
 	return
 }
 
-// FormatName returns the name of the action. The name can be formatted either camel or snake case
-// and plural or singular.
+// FormatName returns the name of the action. The name can be formatted either
+// camel or snake case and plural or singular.
 func (a *ActionDefinition) FormatName(snake bool) string {
 	return format(a.Name, &snake, nil)
+}
+
+// FormatName returns the name of the response. The name can be formatted either
+// camel or snake case.
+func (r *ResponseDefinition) FormatName(snake bool) string {
+	return format(r.Name, &snake, nil)
 }
 
 // AllRequired returns the complete list of all required attribute names, nil
@@ -403,6 +409,9 @@ func format(n string, snake, plural *bool) string {
 		if *snake {
 			n = inflect.Underscore(n)
 		} else {
+			if n == "ok" {
+				return "OK"
+			}
 			n = inflect.Camelize(n)
 		}
 	}

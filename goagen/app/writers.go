@@ -52,6 +52,7 @@ type (
 		Payload      *design.UserTypeDefinition
 		Headers      *design.AttributeDefinition
 		Responses    map[string]*design.ResponseDefinition
+		MediaTypes   map[string]*design.MediaTypeDefinition
 	}
 
 	// HandlerTemplateData contains the information required to generate an action handler.
@@ -231,7 +232,7 @@ func arrayAttribute(a *design.AttributeDefinition) *design.AttributeDefinition {
 const (
 	// ctxT generates the code for the context data type.
 	// template input: *ContextTemplateData
-	ctxT = `// {{.Name}} provides the {{.ResourceName}} {{.ActionName}} action context
+	ctxT = `// {{.Name}} provides the {{.ResourceName}} {{.ActionName}} action context.
 type {{.Name}} struct {
 	goa.Context
 {{if .Params}}{{range $name, $att := .Params.Type.ToObject}}	{{camelize $name}} {{gotyperef .Type 0}}
@@ -269,7 +270,7 @@ type {{.Name}} struct {
 	// template input: *ContextTemplateData
 	ctxNewT = `{{define "Coerce"}}` + coerceT + `{{end}}` + `
 // New{{camelize .Name}} parses the incoming request URL and body, performs validations and creates the
-// context used by the controller action.
+// context used by the {{.ResourceName}} controller {{.ActionName}} action.
 func New{{camelize .Name}}(c goa.Context) (*{{.Name}}, error) {
 	var err error
 	ctx := {{.Name}}{Context: c}
@@ -290,9 +291,9 @@ func New{{camelize .Name}}(c goa.Context) (*{{.Name}}, error) {
 `
 	// ctxRespT generates response helper methods GoGenerator
 	// template input: *ContextTemplateData
-	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{.Name}} sends a HTTP response with status code {{.Status}}.
-func (c *{{$ctx.Name}}) {{.Name}}({{if .MediaType}}resp *{{.MediaType.TypeName}}{{end}}) error {
-	{{if .MediaType}}return c.JSON({{.Status}}, resp){{else}}return c.Respond({{.Status}}, nil){{end}}
+	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{.FormatName false }} sends a HTTP response with status code {{.Status}}.
+func (c *{{$ctx.Name}}) {{.FormatName false}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp *{{$mt.TypeName}}{{end}}) error {
+	{{if $mt}}return c.JSON({{.Status}}, resp){{else}}return c.Respond({{.Status}}, nil){{end}}
 {{end}}}
 `
 	// payloadT generates the payload type definition GoGenerator
@@ -315,7 +316,8 @@ func New{{gotypename .Payload 0}}(raw interface{}) ({{gotyperef .Payload 0}}, er
 	// initT generates the package init function which registers all
 	// handlers with goa.
 	// template input: *HandlerTemplateData
-	initT = `func init() {
+	initT = `
+func init() {
 	goa.RegisterHandlers(
 {{range .}}		&goa.HandlerFactory{"{{.Resource}}", "{{.Action}}", "{{.Verb}}", "{{.Path}}", {{.Name}}},
 {{end}}	)

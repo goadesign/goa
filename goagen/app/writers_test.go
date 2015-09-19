@@ -35,6 +35,7 @@ var _ = Describe("ContextsWriter", func() {
 			var params, headers *design.AttributeDefinition
 			var payload *design.UserTypeDefinition
 			var responses map[string]*design.ResponseDefinition
+			var mediaTypes map[string]*design.MediaTypeDefinition
 
 			var data *app.ContextTemplateData
 
@@ -43,6 +44,7 @@ var _ = Describe("ContextsWriter", func() {
 				headers = nil
 				payload = nil
 				responses = nil
+				mediaTypes = nil
 				data = nil
 			})
 
@@ -55,6 +57,7 @@ var _ = Describe("ContextsWriter", func() {
 					Payload:      payload,
 					Headers:      headers,
 					Responses:    responses,
+					MediaTypes:   mediaTypes,
 				}
 			})
 

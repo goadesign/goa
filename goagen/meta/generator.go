@@ -85,7 +85,7 @@ func (m *Generator) Generate() ([]string, error) {
 	// Generate tool source code.
 	filename := filepath.Join(gendir, "main.go")
 	m.GoGenerator = goagen.NewGoGenerator(filename)
-	imports := append(m.Imports, goagen.DesignPackagePath)
+	imports := append(m.Imports, "fmt", "os", goagen.DesignPackagePath)
 	m.WriteHeader("Code Generator", "main", imports)
 	tmpl, err := template.New("generator").Parse(mainTmpl)
 	if err != nil {
@@ -160,6 +160,10 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 
 const mainTmpl = `
 func main() {
-	gen := {{.Factory}}("{{.DesignPackage}}")
+	gen, err := {{.Factory}}("{{.DesignPackage}}")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, err.Error())
+		os.Exit(1)
+	}
 	gen.Generate()
 }`

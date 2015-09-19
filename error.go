@@ -131,8 +131,6 @@ func (m MultiError) Error() string {
 	return buffer.String()
 }
 
-// TBD: MAKE SURE CTX IS PASSED AND HANDLED CORRECTLY IN ALL ERRORS
-
 // InvalidParamTypeError appends a typed error of kind ErrInvalidParamType to
 // err and returns it.
 func InvalidParamTypeError(name string, val interface{}, expected string, err error) error {

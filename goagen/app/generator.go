@@ -26,7 +26,14 @@ type Generator struct {
 }
 
 // NewGenerator returns the application code generator.
-func NewGenerator() *Generator {
+func NewGenerator() (*Generator, error) {
+	app := kingpin.New("Code generator", "application code generator")
+	goagen.RegisterFlags(app)
+	NewCommand().RegisterFlags(app)
+	_, err := app.Parse(os.Args[1:])
+	if err != nil {
+		return nil, err
+	}
 	outdir := goagen.OutputDir
 	ctxFile := filepath.Join(outdir, "contexts.go")
 	hdlFile := filepath.Join(outdir, "handlers.go")
@@ -44,31 +51,33 @@ func NewGenerator() *Generator {
 	if err != nil {
 		panic(err) // bug
 	}
+	var name string
+	if design.Design == nil {
+		name = "<missing API definition>"
+	} else {
+		name = design.Design.Name
+	}
 	return &Generator{
+		GoGenerator:       goagen.NewGoGenerator(outdir),
 		ContextsWriter:    ctxWr,
 		HandlersWriter:    hdlWr,
 		ResourcesWriter:   resWr,
 		contextsFilename:  ctxFile,
 		handlersFilename:  hdlFile,
 		resourcesFilename: resFile,
-		apiName:           design.Design.Name,
-	}
+		apiName:           name,
+	}, nil
 }
 
 // Generate the application code, implement goagen.Generator.
 func (g *Generator) Generate() ([]string, error) {
-	app := kingpin.New("Code generator", "application code generator")
-	goagen.RegisterFlags(app)
-	NewCommand().RegisterFlags(app)
-	_, err := app.Parse(os.Args[1:])
-	if err != nil {
-		return nil, err
+	if design.Design == nil {
+		return nil, fmt.Errorf("missing API definition, make sure design.Design is properly initialized")
 	}
-	g.GoGenerator = goagen.NewGoGenerator(goagen.OutputDir)
 	imports := []string{}
 	title := fmt.Sprintf("%s: Application Contexts", g.apiName)
 	g.ContextsWriter.WriteHeader(title, TargetPackage, imports)
-	err = design.Design.IterateResources(func(r *design.ResourceDefinition) error {
+	err := design.Design.IterateResources(func(r *design.ResourceDefinition) error {
 		return r.IterateActions(func(a *design.ActionDefinition) error {
 			ctxName := inflect.Camelize(a.Name) + inflect.Camelize(a.Resource.Name) + "Context"
 			ctxData := ContextTemplateData{
@@ -79,6 +88,7 @@ func (g *Generator) Generate() ([]string, error) {
 				Payload:      a.Payload,
 				Headers:      a.Headers,
 				Responses:    a.Responses,
+				MediaTypes:   design.Design.MediaTypes,
 			}
 			return g.ContextsWriter.Execute(&ctxData)
 		})

@@ -216,7 +216,7 @@ invalid go code
 	panickySource = `package design
 type Generator int
 func (g *Generator) Generate() {}
-func NewFoo(designPath string) *Generator { return new(Generator) }
+func NewFoo(designPath string) (*Generator, error) { return new(Generator), nil }
 
 func init() { panic("kaboom") }
 `
@@ -224,7 +224,7 @@ func init() { panic("kaboom") }
 	validSource = `package design
 type Generator int
 func (g *Generator) Generate() {}
-func NewFoo(designPath string) *Generator { return new(Generator) }
+func NewFoo(designPath string) (*Generator, error) { return new(Generator), nil }
 `
 
 	validSourceTmpl = `package design
@@ -234,6 +234,6 @@ func (g *Generator) Generate() {
 	{{range .}}fmt.Println("{{.}}")
 	{{end}}
 }
-func NewFoo(designPath string) *Generator { return new(Generator) }
+func NewFoo(designPath string) (*Generator, error) { return new(Generator), nil }
 `
 )
