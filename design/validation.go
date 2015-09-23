@@ -100,6 +100,9 @@ func (a *ActionDefinition) Validate() error {
 	if a.Name == "" {
 		return fmt.Errorf("Action name cannot be empty")
 	}
+	if len(a.Routes) == 0 {
+		return fmt.Errorf("No route defined for action %s", a.Name)
+	}
 	for i, r := range a.Responses {
 		for j, r2 := range a.Responses {
 			if i != j && r.Status == r2.Status {
@@ -107,22 +110,27 @@ func (a *ActionDefinition) Validate() error {
 			}
 		}
 		if err := r.Validate(); err != nil {
+			if r.Status == 0 {
+				return fmt.Errorf("invalid response definition: %s", err)
+			}
 			return fmt.Errorf("invalid %d response definition: %s", r.Status, err)
 		}
 	}
 	if err := a.ValidateParams(); err != nil {
 		return err
 	}
-	if err := a.Payload.Validate(); err != nil {
-		return fmt.Errorf(`invalid payload definition for action "%s": %s`,
-			a.Name, err)
+	if a.Payload != nil {
+		if err := a.Payload.Validate(); err != nil {
+			return fmt.Errorf(`invalid payload definition for action "%s": %s`,
+				a.Name, err)
+		}
 	}
 	return nil
 }
 
 // ValidateParams checks the action parameters (make sure they have names, members and types).
 func (a *ActionDefinition) ValidateParams() error {
-	if a.Params.Type == nil {
+	if a.Params == nil {
 		return nil
 	}
 	params, ok := a.Params.Type.(Object)
@@ -202,7 +210,7 @@ func (r *ResponseDefinition) Validate() error {
 
 // Validate checks that the user type definition is consistent: it has a name.
 func (u *UserTypeDefinition) Validate() error {
-	if u.Name == "" {
+	if u.TypeName == "" {
 		return fmt.Errorf("User type must have a name")
 	}
 	return nil
@@ -211,7 +219,7 @@ func (u *UserTypeDefinition) Validate() error {
 // Validate checks that the media type definition is consistent: its identifier is a valid media
 // type identifier.
 func (m *MediaTypeDefinition) Validate() error {
-	if m.Name == "" {
+	if m.TypeName == "" {
 		return fmt.Errorf("Media type must have a name")
 	}
 	if m.Identifier != "" {

@@ -1,6 +1,7 @@
 package design
 
 import (
+	"fmt"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -17,6 +18,12 @@ var (
 )
 
 type (
+	// DSLDefinition is the common interface implemented by all definitions.
+	DSLDefinition interface {
+		// Context is used to build error messages that refer to the definition.
+		Context() string
+	}
+
 	// APIDefinition defines the global properties of the API.
 	APIDefinition struct {
 		// API name
@@ -34,9 +41,9 @@ type (
 		// Traits available to all API resources and actions indexed by name
 		Traits map[string]*TraitDefinition
 		// Response templates available to all API actions indexed by name
-		ResponseTemplates map[string]*ResponseTemplateDefinition
+		Responses map[string]*ResponseDefinition
 		// Response template factories available to all API actions indexed by name
-		ResponseTemplateFuncs map[string]func(params ...string) *ResponseTemplateDefinition
+		ResponseTemplates map[string]*ResponseTemplateDefinition
 		// User types
 		UserTypes []*UserTypeDefinition
 		// Media types
@@ -79,19 +86,28 @@ type (
 		Description string
 	}
 
-	// ResponseTemplateDefinition describes a response template that can be used by API actions
-	// to define their responses.
-	ResponseTemplateDefinition struct {
-		// Name used in generated code
+	// ResponseDefinition defines a HTTP response status and optional validation rules.
+	ResponseDefinition struct {
+		// Response name
 		Name string
-		// Optional description
-		Description string
 		// HTTP status
 		Status int
-		// Media type used to render response
+		// Response description
+		Description string
+		// Response body media type if any
 		MediaType string
-		// Header definitions, values may be a mix of strings and regexps
-		Headers map[string]interface{}
+		// Response header definitions
+		Headers *AttributeDefinition
+	}
+
+	// ResponseTemplateDefinition defines a response template.
+	// A response template is a function that takes an arbitrary number
+	// of strings and returns a response definition.
+	ResponseTemplateDefinition struct {
+		// Response template name
+		Name string
+		// Response template function
+		Template func(params ...string) *ResponseDefinition
 	}
 
 	// ActionDefinition defines a resource action.
@@ -156,23 +172,9 @@ type (
 		// Name of view
 		Name string
 		// Links to render
-		Links []string
 		// Parent media type definition
+		Links     []string
 		MediaType *MediaTypeDefinition
-	}
-
-	// ResponseDefinition defines a HTTP response status and optional validation rules.
-	ResponseDefinition struct {
-		// Response name
-		Name string
-		// HTTP status
-		Status int
-		// Response description
-		Description string
-		// Response body media type if any
-		MediaType string
-		// Response header validations
-		Headers []*HeaderDefinition
 	}
 
 	// TraitDefinition defines a set of reusable properties.
@@ -191,17 +193,11 @@ type (
 		Path string
 	}
 
-	// HeaderDefinition define headers that need to be made available to the action.
-	HeaderDefinition struct {
-		// Header key, e.g. "X-Request-Id"
-		Name string
-		// Member describes headers including validations.
-		Member *AttributeDefinition
-	}
-
 	// ValidationDefinition is the common interface for all validation data structures.
 	// It doesn't expose any method and simply exists to help with documentation.
-	ValidationDefinition interface{}
+	ValidationDefinition interface {
+		DSLDefinition
+	}
 
 	// EnumValidationDefinition represents an enum validation as described at
 	// http://json-schema.org/latest/json-schema-validation.html#anchor76.
@@ -255,6 +251,14 @@ type (
 	ActionIterator func(a *ActionDefinition) error
 )
 
+// Context returns the generic definition name used in error messages.
+func (a *APIDefinition) Context() string {
+	if a.Name != "" {
+		return fmt.Sprintf("api %#v", a.Name)
+	}
+	return "unnamed API"
+}
+
 // IterateResources calls the given iterator passing in each resource sorted in alphabetical order.
 // Iteration stops if an iterator returns an error and in this case IterateResources returns that
 // error.
@@ -291,6 +295,14 @@ func (a *APIDefinition) IterateMediaTypes(it MediaTypeIterator) error {
 		}
 	}
 	return nil
+}
+
+// Context returns the generic definition name used in error messages.
+func (r *ResourceDefinition) Context() string {
+	if r.Name != "" {
+		return fmt.Sprintf("resource %#v", r.Name)
+	}
+	return "unnamed resource"
 }
 
 // IterateActions calls the given iterator passing in each resource action sorted in alphabetical order.
@@ -350,16 +362,73 @@ func (r *ResourceDefinition) CanonicalPathAndParams() (path string, params []str
 	return
 }
 
-// FormatName returns the name of the action. The name can be formatted either
-// camel or snake case and plural or singular.
-func (a *ActionDefinition) FormatName(snake bool) string {
-	return format(a.Name, &snake, nil)
+// Context returns the generic definition name used in error messages.
+func (t *TypeDefinition) Context() string {
+	if t.Name != "" {
+		return fmt.Sprintf("type %#v", t.Name)
+	}
+	return "unnamed type"
+}
+
+// Context returns the generic definition name used in error messages.
+func (r *ResponseDefinition) Context() string {
+	if r.Name != "" {
+		return fmt.Sprintf("response %#v", r.Name)
+	}
+	return "unnamed response"
 }
 
 // FormatName returns the name of the response. The name can be formatted either
 // camel or snake case.
 func (r *ResponseDefinition) FormatName(snake bool) string {
 	return format(r.Name, &snake, nil)
+}
+
+// Dup returns a copy of the response definition.
+func (r *ResponseDefinition) Dup() *ResponseDefinition {
+	res := ResponseDefinition{
+		Name:        r.Name,
+		Status:      r.Status,
+		Description: r.Description,
+		MediaType:   r.MediaType,
+	}
+	if r.Headers != nil {
+		res.Headers = r.Headers.Dup()
+	}
+	return &res
+}
+
+// Context returns the generic definition name used in error messages.
+func (r *ResponseTemplateDefinition) Context() string {
+	if r.Name != "" {
+		return fmt.Sprintf("response template %#v", r.Name)
+	}
+	return "unnamed response template"
+}
+
+// Context returns the generic definition name used in error messages.
+func (a *ActionDefinition) Context() string {
+	var prefix, suffix string
+	if a.Name != "" {
+		prefix = fmt.Sprintf("action %#v", a.Name)
+	} else {
+		prefix = "unnamed action"
+	}
+	if a.Resource != nil {
+		suffix = fmt.Sprintf(" of %s", a.Resource.Context())
+	}
+	return prefix + suffix
+}
+
+// FormatName returns the name of the action. The name can be formatted either
+// camel or snake case and plural or singular.
+func (a *ActionDefinition) FormatName(snake bool) string {
+	return format(a.Name, &snake, nil)
+}
+
+// Context returns the generic definition name used in error messages.
+func (a *AttributeDefinition) Context() string {
+	return fmt.Sprintf("attribute of type %s", a.Type.Name())
 }
 
 // AllRequired returns the complete list of all required attribute names, nil
@@ -384,6 +453,63 @@ func (a *AttributeDefinition) IsRequired(attName string) bool {
 	return false
 }
 
+// Dup returns a copy of the attribute definition.
+// Note: the underlying type is not copied, simply aliased for practicality.
+func (a *AttributeDefinition) Dup() *AttributeDefinition {
+	valDup := make([]ValidationDefinition, len(a.Validations))
+	for i, v := range a.Validations {
+		valDup[i] = v
+	}
+	dup := AttributeDefinition{
+		Type:         a.Type,
+		Description:  a.Description,
+		Validations:  valDup,
+		DefaultValue: a.DefaultValue,
+	}
+	return &dup
+}
+
+// Context returns the generic definition name used in error messages.
+func (l *LinkDefinition) Context() string {
+	var prefix, suffix string
+	if l.Name != "" {
+		prefix = fmt.Sprintf("link %#v", l.Name)
+	} else {
+		prefix = "unnamed link"
+	}
+	if l.MediaType != nil {
+		suffix = fmt.Sprintf(" of %s", l.MediaType.Context())
+	}
+	return prefix + suffix
+}
+
+// Context returns the generic definition name used in error messages.
+func (v *ViewDefinition) Context() string {
+	var prefix, suffix string
+	if v.Name != "" {
+		prefix = fmt.Sprintf("view %#v", v.Name)
+	} else {
+		prefix = "unnamed view"
+	}
+	if v.MediaType != nil {
+		suffix = fmt.Sprintf(" of %s", v.MediaType.Context())
+	}
+	return prefix + suffix
+}
+
+// Context returns the generic definition name used in error messages.
+func (t *TraitDefinition) Context() string {
+	if t.Name != "" {
+		return fmt.Sprintf("trait %#v", t.Name)
+	}
+	return "unnamed trait"
+}
+
+// Context returns the generic definition name used in error messages.
+func (r *RouteDefinition) Context() string {
+	return fmt.Sprintf("route %s %s", r.Verb, r.Path)
+}
+
 // Params returns the route parameters.
 // For example for the route "GET /foo/:fooID" Params returns []string{"fooID"}.
 func (r *RouteDefinition) Params() []string {
@@ -393,6 +519,41 @@ func (r *RouteDefinition) Params() []string {
 		params[i] = m[1]
 	}
 	return params
+}
+
+// Context returns the generic definition name used in error messages.
+func (v *EnumValidationDefinition) Context() string {
+	return "enum validation"
+}
+
+// Context returns the generic definition name used in error messages.
+func (f *FormatValidationDefinition) Context() string {
+	return "format validation"
+}
+
+// Context returns the generic definition name used in error messages.
+func (m *MinimumValidationDefinition) Context() string {
+	return "min value validation"
+}
+
+// Context returns the generic definition name used in error messages.
+func (m *MaximumValidationDefinition) Context() string {
+	return "max value validation"
+}
+
+// Context returns the generic definition name used in error messages.
+func (m *MinLengthValidationDefinition) Context() string {
+	return "min length validation"
+}
+
+// Context returns the generic definition name used in error messages.
+func (m *MaxLengthValidationDefinition) Context() string {
+	return "max length validation"
+}
+
+// Context returns the generic definition name used in error messages.
+func (r *RequiredValidationDefinition) Context() string {
+	return "required field validation"
 }
 
 // format uses the inflect package to pluralize or singularize and camelize or underscore the given

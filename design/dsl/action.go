@@ -28,9 +28,16 @@ import (
 // })
 func Action(name string, dsl func()) {
 	if r, ok := resourceDefinition(true); ok {
-		action, ok := r.Actions[name]
+		var action *ActionDefinition
+		if r.Actions == nil {
+			r.Actions = make(map[string]*ActionDefinition)
+		}
+		action, ok = r.Actions[name]
 		if !ok {
-			action = &ActionDefinition{Name: name}
+			action = &ActionDefinition{
+				Resource: r,
+				Name:     name,
+			}
 		}
 		if !executeDSL(dsl, action) {
 			return
@@ -119,25 +126,55 @@ func Payload(p interface{}) {
 		an := inflect.Camelize(a.Name)
 		a.Payload = &UserTypeDefinition{
 			AttributeDefinition: at,
-			Name:                fmt.Sprintf("%s%sPayload", an, rn),
+			TypeName:            fmt.Sprintf("%s%sPayload", an, rn),
 		}
 	}
 }
 
 // Response records a possible action response.
-func Response(name string, dsl ...func()) {
+func Response(name string, paramsAndDSL ...interface{}) {
 	if a, ok := actionDefinition(true); ok {
+		if a.Responses == nil {
+			a.Responses = make(map[string]*ResponseDefinition)
+		}
 		if _, ok := a.Responses[name]; ok {
 			appendError(fmt.Errorf("response %s is defined twice", name))
 			return
 		}
-		resp := ResponseDefinition{Name: name}
-		var d func()
-		if len(dsl) > 0 {
-			d = dsl[0]
+		var params []string
+		var dsl func()
+		if len(paramsAndDSL) > 0 {
+			d := paramsAndDSL[len(paramsAndDSL)-1]
+			if dsl, ok = d.(func()); ok {
+				paramsAndDSL = paramsAndDSL[:len(paramsAndDSL)-1]
+			}
+			params = make([]string, len(paramsAndDSL))
+			for i, p := range paramsAndDSL {
+				params[i], ok = p.(string)
+				if !ok {
+					appendError(fmt.Errorf("invalid response template parameter %#v, must be a string", p))
+					return
+				}
+			}
 		}
-		if executeDSL(d, &resp) {
-			a.Responses[name] = &resp
+		var resp *ResponseDefinition
+		if len(params) > 0 {
+			if tmpl, ok := Design.ResponseTemplates[name]; ok {
+				resp = tmpl.Template(params...)
+			} else {
+				appendError(fmt.Errorf("no response template named %#v", name))
+				return
+			}
+		} else {
+			if ar, ok := Design.Responses[name]; ok {
+				resp = ar.Dup()
+			} else {
+				resp = &ResponseDefinition{Name: name}
+			}
 		}
+		if (dsl != nil) && !executeDSL(dsl, resp) {
+			return
+		}
+		a.Responses[name] = resp
 	}
 }

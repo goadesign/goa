@@ -66,10 +66,10 @@ func typeUnmarshalerR(t design.DataType, context, source, target string, depth i
 		return arrayUnmarshalerR(actual, context, source, target, depth)
 	case design.Object:
 		return objectUnmarshalerR(actual, nil, context, source, target, depth)
-	case design.NamedType:
+	case *design.UserTypeDefinition, *design.MediaTypeDefinition:
 		return namedTypeUnmarshalerR(actual, context, source, target, depth)
 	default:
-		panic("unknown type")
+		panic(actual)
 	}
 }
 
@@ -163,10 +163,10 @@ func objectUnmarshalerR(o design.Object, required []string, context, source, tar
 // mismatch or validation error.
 // The generated code assumes that there is a variable called "err" of type error that it can use
 // to record errors.
-func NamedTypeUnmarshaler(t design.NamedType, context, source, target string) string {
+func NamedTypeUnmarshaler(t design.DataType, context, source, target string) string {
 	return namedTypeUnmarshalerR(t, context, source, target, 1)
 }
-func namedTypeUnmarshalerR(t design.NamedType, context, source, target string, depth int) string {
+func namedTypeUnmarshalerR(t design.DataType, context, source, target string, depth int) string {
 	data := map[string]interface{}{
 		"type":    t,
 		"context": context,
@@ -262,9 +262,9 @@ func GoTypeName(t design.DataType, tabs int) string {
 	case design.Object:
 		return GoTypeDef(&design.AttributeDefinition{Type: actual}, tabs, false, false)
 	case *design.UserTypeDefinition:
-		return Goify(actual.Name, true)
+		return Goify(actual.TypeName, true)
 	case *design.MediaTypeDefinition:
-		return Goify(actual.Name, true)
+		return Goify(actual.TypeName, true)
 	default:
 		panic(fmt.Sprintf("goa bug: unknown type %#v", actual))
 	}

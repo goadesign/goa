@@ -9,6 +9,8 @@
 // identifier, links and views).
 package design
 
+import "fmt"
+
 type (
 	// A Kind defines the JSON type that a DataType represents.
 	Kind uint
@@ -16,6 +18,7 @@ type (
 	// DataType is the common interface to all types.
 	DataType interface {
 		Kind() Kind       // Kind
+		Name() string     // Name returns the type name.
 		ToObject() Object // ToObject returns the underlying object if any, nil otherwise.
 	}
 
@@ -24,13 +27,6 @@ type (
 	DataStructure interface {
 		// Definition returns the data structure definition.
 		Definition() *AttributeDefinition
-	}
-
-	// NamedType is the interface implemented by all named data structures. That is
-	// user and media types.
-	NamedType interface {
-		// TypeName is the user defined name of the data structure.
-		TypeName() string
 	}
 
 	// Primitive is the type for null, boolean, integer, number and string.
@@ -50,7 +46,7 @@ type (
 		// A user type is an attribute definition.
 		*AttributeDefinition
 		// Name of type
-		Name string
+		TypeName string
 		// Description is the optional description of the media type.
 		Description string
 	}
@@ -111,11 +107,30 @@ const (
 // Kind implements DataKind.
 func (p Primitive) Kind() Kind { return Kind(p) }
 
+// Name returns the type name.
+func (p Primitive) Name() string {
+	switch p {
+	case Boolean:
+		return "boolean"
+	case Integer:
+		return "integer"
+	case Number:
+		return "number"
+	case String:
+		return "string"
+	default:
+		panic("unknown primitive type") // bug
+	}
+}
+
 // ToObject returns nil.
 func (p Primitive) ToObject() Object { return nil }
 
 // Kind implements DataKind.
 func (a *Array) Kind() Kind { return ArrayKind }
+
+// Name returns the type name.
+func (a *Array) Name() string { return fmt.Sprintf("array of %s", a.ElemType.Type.Name()) }
 
 // ToObject returns nil.
 func (a *Array) ToObject() Object { return nil }
@@ -123,17 +138,26 @@ func (a *Array) ToObject() Object { return nil }
 // Kind implements DataKind.
 func (o Object) Kind() Kind { return ObjectKind }
 
+// Name returns the type name.
+func (o Object) Name() string { return "object" }
+
 // ToObject returns the underlying object.
 func (o Object) ToObject() Object { return o }
 
 // Kind implements DataKind.
 func (u *UserTypeDefinition) Kind() Kind { return UserTypeKind }
 
+// Name returns the type name.
+func (u *UserTypeDefinition) Name() string { return u.TypeName }
+
 // ToObject calls ToObject on the user type underlying data type.
 func (u *UserTypeDefinition) ToObject() Object { return u.Type.ToObject() }
 
 // Kind implements DataKind.
 func (m *MediaTypeDefinition) Kind() Kind { return MediaTypeKind }
+
+// Name returns the type name.
+func (m *MediaTypeDefinition) Name() string { return m.TypeName }
 
 // ToObject calls ToObject on the media type underlying data type.
 func (m *MediaTypeDefinition) ToObject() Object { return m.Type.ToObject() }
@@ -153,16 +177,4 @@ func (u *UserTypeDefinition) Definition() *AttributeDefinition {
 // Definition returns the underlying attribute definition.
 func (m *MediaTypeDefinition) Definition() *AttributeDefinition {
 	return m.AttributeDefinition
-}
-
-// NamedType implementation
-
-// TypeName is the user type name.
-func (u *UserTypeDefinition) TypeName() string {
-	return u.Name
-}
-
-// TypeName is the media type name.
-func (m *MediaTypeDefinition) TypeName() string {
-	return m.Name
 }

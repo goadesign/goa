@@ -110,7 +110,7 @@ var _ = Describe("Generate", func() {
 				Type: design.Object{
 					"id": &idAt,
 				},
-				Validations: []design.ValidationDefinition{&required},
+				Validations: []design.ValidationDefinition{required},
 			}
 			resp := design.ResponseDefinition{
 				Name:        "ok",
@@ -127,7 +127,7 @@ var _ = Describe("Generate", func() {
 			}
 			ut := design.UserTypeDefinition{
 				AttributeDefinition: &at,
-				Name:                "id",
+				TypeName:            "id",
 			}
 			res := design.ResourceDefinition{
 				Name:            "Widget",
@@ -218,8 +218,12 @@ type GetWidgetContext struct {
 func NewGetWidgetContext(c goa.Context) (*GetWidgetContext, error) {
 	var err error
 	ctx := GetWidgetContext{Context: c}
-	rawId, _ := c.Get("id")
-	ctx.Id = rawId
+	rawId, ok := c.Get("id")
+	if !ok {
+		err = goa.MissingParam("id", err)
+	} else {
+		ctx.Id = rawId
+	}
 	return &ctx, err
 }
 

@@ -7,266 +7,275 @@ import (
 )
 
 const (
-	Continue           = "StatusContinue"
-	SwitchingProtocols = "StatusSwitchingProtocols"
+	Continue           = "Continue"
+	SwitchingProtocols = "SwitchingProtocols"
 
-	OK                   = "StatusOK"
-	Created              = "StatusCreated"
-	Accepted             = "StatusAccepted"
-	NonAuthoritativeInfo = "StatusNonAuthoritativeInfo"
-	NoContent            = "StatusNoContent"
-	ResetContent         = "StatusResetContent"
-	PartialContent       = "StatusPartialContent"
+	OK                   = "OK"
+	Created              = "Created"
+	Accepted             = "Accepted"
+	NonAuthoritativeInfo = "NonAuthoritativeInfo"
+	NoContent            = "NoContent"
+	ResetContent         = "ResetContent"
+	PartialContent       = "PartialContent"
 
-	MultipleChoices   = "StatusMultipleChoices"
-	MovedPermanently  = "StatusMovedPermanently"
-	Found             = "StatusFound"
-	SeeOther          = "StatusSeeOther"
-	NotModified       = "StatusNotModified"
-	UseProxy          = "StatusUseProxy"
-	TemporaryRedirect = "StatusTemporaryRedirect"
+	MultipleChoices   = "MultipleChoices"
+	MovedPermanently  = "MovedPermanently"
+	Found             = "Found"
+	SeeOther          = "SeeOther"
+	NotModified       = "NotModified"
+	UseProxy          = "UseProxy"
+	TemporaryRedirect = "TemporaryRedirect"
 
-	BadRequest                   = "StatusBadRequest"
-	Unauthorized                 = "StatusUnauthorized"
-	PaymentRequired              = "StatusPaymentRequired"
-	Forbidden                    = "StatusForbidden"
-	NotFound                     = "StatusNotFound"
-	MethodNotAllowed             = "StatusMethodNotAllowed"
-	NotAcceptable                = "StatusNotAcceptable"
-	ProxyAuthRequired            = "StatusProxyAuthRequired"
-	RequestTimeout               = "StatusRequestTimeout"
-	Conflict                     = "StatusConflict"
-	Gone                         = "StatusGone"
-	LengthRequired               = "StatusLengthRequired"
-	PreconditionFailed           = "StatusPreconditionFailed"
-	RequestEntityTooLarge        = "StatusRequestEntityTooLarge"
-	RequestURITooLong            = "StatusRequestURITooLong"
-	UnsupportedMediaType         = "StatusUnsupportedMediaType"
-	RequestedRangeNotSatisfiable = "StatusRequestedRangeNotSatisfiable"
-	ExpectationFailed            = "StatusExpectationFailed"
-	Teapot                       = "StatusTeapot"
+	BadRequest                   = "BadRequest"
+	Unauthorized                 = "Unauthorized"
+	PaymentRequired              = "PaymentRequired"
+	Forbidden                    = "Forbidden"
+	NotFound                     = "NotFound"
+	MethodNotAllowed             = "MethodNotAllowed"
+	NotAcceptable                = "NotAcceptable"
+	ProxyAuthRequired            = "ProxyAuthRequired"
+	RequestTimeout               = "RequestTimeout"
+	Conflict                     = "Conflict"
+	Gone                         = "Gone"
+	LengthRequired               = "LengthRequired"
+	PreconditionFailed           = "PreconditionFailed"
+	RequestEntityTooLarge        = "RequestEntityTooLarge"
+	RequestURITooLong            = "RequestURITooLong"
+	UnsupportedMediaType         = "UnsupportedMediaType"
+	RequestedRangeNotSatisfiable = "RequestedRangeNotSatisfiable"
+	ExpectationFailed            = "ExpectationFailed"
+	Teapot                       = "Teapot"
 
-	InternalServerError     = "StatusInternalServerError"
-	NotImplemented          = "StatusNotImplemented"
-	BadGateway              = "StatusBadGateway"
-	ServiceUnavailable      = "StatusServiceUnavailable"
-	GatewayTimeout          = "StatusGatewayTimeout"
-	HTTPVersionNotSupported = "StatusHTTPVersionNotSupported"
+	InternalServerError     = "InternalServerError"
+	NotImplemented          = "NotImplemented"
+	BadGateway              = "BadGateway"
+	ServiceUnavailable      = "ServiceUnavailable"
+	GatewayTimeout          = "GatewayTimeout"
+	HTTPVersionNotSupported = "HTTPVersionNotSupported"
 )
 
-// init loads the built-in response templates.
-func init() {
-	Design.ResponseTemplateFuncs["OK"] = func(params ...string) *ResponseTemplateDefinition {
+// InitDesign loads the built-in response templates.
+func InitDesign() {
+	Design = &APIDefinition{}
+	Design.ResponseTemplates = make(map[string]*ResponseTemplateDefinition)
+	t := func(params ...string) *ResponseDefinition {
 		if len(params) < 1 {
 			appendError(fmt.Errorf("expected media type as argument when invoking response template OK"))
 			return nil
 		}
-		return &ResponseTemplateDefinition{
-			Name:      "OK",
+		return &ResponseDefinition{
+			Name:      OK,
 			Status:    200,
 			MediaType: params[0],
 		}
 	}
+	Design.ResponseTemplates[OK] = &ResponseTemplateDefinition{
+		Name:     OK,
+		Template: t,
+	}
 
-	Design.ResponseTemplates["Continue"] = &ResponseTemplateDefinition{
-		Name:   "Continue",
+	Design.Responses = make(map[string]*ResponseDefinition)
+	Design.Responses[Continue] = &ResponseDefinition{
+		Name:   Continue,
 		Status: 100,
 	}
 
-	Design.ResponseTemplates["SwitchingProtocols"] = &ResponseTemplateDefinition{
-		Name:   "SwitchingProtocols",
+	Design.Responses[SwitchingProtocols] = &ResponseDefinition{
+		Name:   SwitchingProtocols,
 		Status: 101,
 	}
 
-	Design.ResponseTemplates["Created"] = &ResponseTemplateDefinition{
-		Name:   "Created",
+	Design.Responses[Created] = &ResponseDefinition{
+		Name:   Created,
 		Status: 201,
 	}
 
-	Design.ResponseTemplates["Accepted"] = &ResponseTemplateDefinition{
-		Name:   "Accepted",
+	Design.Responses[Accepted] = &ResponseDefinition{
+		Name:   Accepted,
 		Status: 202,
 	}
 
-	Design.ResponseTemplates["NonAuthoritativeInfo"] = &ResponseTemplateDefinition{
-		Name:   "NonAuthoritativeInfo",
+	Design.Responses[NonAuthoritativeInfo] = &ResponseDefinition{
+		Name:   NonAuthoritativeInfo,
 		Status: 203,
 	}
 
-	Design.ResponseTemplates["NoContent"] = &ResponseTemplateDefinition{
-		Name:   "NoContent",
+	Design.Responses[NoContent] = &ResponseDefinition{
+		Name:   NoContent,
 		Status: 204,
 	}
 
-	Design.ResponseTemplates["ResetContent"] = &ResponseTemplateDefinition{
-		Name:   "ResetContent",
+	Design.Responses[ResetContent] = &ResponseDefinition{
+		Name:   ResetContent,
 		Status: 205,
 	}
 
-	Design.ResponseTemplates["PartialContent"] = &ResponseTemplateDefinition{
-		Name:   "PartialContent",
+	Design.Responses[PartialContent] = &ResponseDefinition{
+		Name:   PartialContent,
 		Status: 206,
 	}
 
-	Design.ResponseTemplates["MultipleChoices"] = &ResponseTemplateDefinition{
-		Name:   "MultipleChoices",
+	Design.Responses[MultipleChoices] = &ResponseDefinition{
+		Name:   MultipleChoices,
 		Status: 300,
 	}
 
-	Design.ResponseTemplates["MovedPermanently"] = &ResponseTemplateDefinition{
-		Name:   "MovedPermanently",
+	Design.Responses[MovedPermanently] = &ResponseDefinition{
+		Name:   MovedPermanently,
 		Status: 301,
 	}
 
-	Design.ResponseTemplates["Found"] = &ResponseTemplateDefinition{
-		Name:   "Found",
+	Design.Responses[Found] = &ResponseDefinition{
+		Name:   Found,
 		Status: 302,
 	}
 
-	Design.ResponseTemplates["SeeOther"] = &ResponseTemplateDefinition{
-		Name:   "SeeOther",
+	Design.Responses[SeeOther] = &ResponseDefinition{
+		Name:   SeeOther,
 		Status: 303,
 	}
 
-	Design.ResponseTemplates["NotModified"] = &ResponseTemplateDefinition{
-		Name:   "NotModified",
+	Design.Responses[NotModified] = &ResponseDefinition{
+		Name:   NotModified,
 		Status: 304,
 	}
 
-	Design.ResponseTemplates["UseProxy"] = &ResponseTemplateDefinition{
-		Name:   "UseProxy",
+	Design.Responses[UseProxy] = &ResponseDefinition{
+		Name:   UseProxy,
 		Status: 305,
 	}
 
-	Design.ResponseTemplates["TemporaryRedirect"] = &ResponseTemplateDefinition{
-		Name:   "TemporaryRedirect",
+	Design.Responses[TemporaryRedirect] = &ResponseDefinition{
+		Name:   TemporaryRedirect,
 		Status: 307,
 	}
 
-	Design.ResponseTemplates["BadRequest"] = &ResponseTemplateDefinition{
-		Name:   "BadRequest",
+	Design.Responses[BadRequest] = &ResponseDefinition{
+		Name:   BadRequest,
 		Status: 400,
 	}
 
-	Design.ResponseTemplates["Unauthorized"] = &ResponseTemplateDefinition{
-		Name:   "Unauthorized",
+	Design.Responses[Unauthorized] = &ResponseDefinition{
+		Name:   Unauthorized,
 		Status: 401,
 	}
 
-	Design.ResponseTemplates["PaymentRequired"] = &ResponseTemplateDefinition{
-		Name:   "PaymentRequired",
+	Design.Responses[PaymentRequired] = &ResponseDefinition{
+		Name:   PaymentRequired,
 		Status: 402,
 	}
 
-	Design.ResponseTemplates["Forbidden"] = &ResponseTemplateDefinition{
-		Name:   "Forbidden",
+	Design.Responses[Forbidden] = &ResponseDefinition{
+		Name:   Forbidden,
 		Status: 403,
 	}
 
-	Design.ResponseTemplates["NotFound"] = &ResponseTemplateDefinition{
-		Name:   "NotFound",
+	Design.Responses[NotFound] = &ResponseDefinition{
+		Name:   NotFound,
 		Status: 404,
 	}
 
-	Design.ResponseTemplates["MethodNotAllowed"] = &ResponseTemplateDefinition{
-		Name:   "MethodNotAllowed",
+	Design.Responses[MethodNotAllowed] = &ResponseDefinition{
+		Name:   MethodNotAllowed,
 		Status: 405,
 	}
 
-	Design.ResponseTemplates["NotAcceptable"] = &ResponseTemplateDefinition{
-		Name:   "NotAcceptable",
+	Design.Responses[NotAcceptable] = &ResponseDefinition{
+		Name:   NotAcceptable,
 		Status: 406,
 	}
 
-	Design.ResponseTemplates["ProxyAuthRequired"] = &ResponseTemplateDefinition{
-		Name:   "ProxyAuthRequired",
+	Design.Responses[ProxyAuthRequired] = &ResponseDefinition{
+		Name:   ProxyAuthRequired,
 		Status: 407,
 	}
 
-	Design.ResponseTemplates["RequestTimeout"] = &ResponseTemplateDefinition{
-		Name:   "RequestTimeout",
+	Design.Responses[RequestTimeout] = &ResponseDefinition{
+		Name:   RequestTimeout,
 		Status: 408,
 	}
 
-	Design.ResponseTemplates["Conflict"] = &ResponseTemplateDefinition{
-		Name:   "Conflict",
+	Design.Responses[Conflict] = &ResponseDefinition{
+		Name:   Conflict,
 		Status: 409,
 	}
 
-	Design.ResponseTemplates["Gone"] = &ResponseTemplateDefinition{
-		Name:   "Gone",
+	Design.Responses[Gone] = &ResponseDefinition{
+		Name:   Gone,
 		Status: 410,
 	}
 
-	Design.ResponseTemplates["LengthRequired"] = &ResponseTemplateDefinition{
-		Name:   "LengthRequired",
+	Design.Responses[LengthRequired] = &ResponseDefinition{
+		Name:   LengthRequired,
 		Status: 411,
 	}
 
-	Design.ResponseTemplates["PreconditionFailed"] = &ResponseTemplateDefinition{
-		Name:   "PreconditionFailed",
+	Design.Responses[PreconditionFailed] = &ResponseDefinition{
+		Name:   PreconditionFailed,
 		Status: 412,
 	}
 
-	Design.ResponseTemplates["RequestEntityTooLarge"] = &ResponseTemplateDefinition{
-		Name:   "RequestEntityTooLarge",
+	Design.Responses[RequestEntityTooLarge] = &ResponseDefinition{
+		Name:   RequestEntityTooLarge,
 		Status: 413,
 	}
 
-	Design.ResponseTemplates["RequestURITooLong"] = &ResponseTemplateDefinition{
-		Name:   "RequestURITooLong",
+	Design.Responses[RequestURITooLong] = &ResponseDefinition{
+		Name:   RequestURITooLong,
 		Status: 414,
 	}
 
-	Design.ResponseTemplates["UnsupportedMediaType"] = &ResponseTemplateDefinition{
-		Name:   "UnsupportedMediaType",
+	Design.Responses[UnsupportedMediaType] = &ResponseDefinition{
+		Name:   UnsupportedMediaType,
 		Status: 415,
 	}
 
-	Design.ResponseTemplates["RequestedRangeNotSatisfiable"] = &ResponseTemplateDefinition{
-		Name:   "RequestedRangeNotSatisfiable",
+	Design.Responses[RequestedRangeNotSatisfiable] = &ResponseDefinition{
+		Name:   RequestedRangeNotSatisfiable,
 		Status: 416,
 	}
 
-	Design.ResponseTemplates["ExpectationFailed"] = &ResponseTemplateDefinition{
-		Name:   "ExpectationFailed",
+	Design.Responses[ExpectationFailed] = &ResponseDefinition{
+		Name:   ExpectationFailed,
 		Status: 417,
 	}
 
-	Design.ResponseTemplates["Teapot"] = &ResponseTemplateDefinition{
-		Name:   "Teapot",
+	Design.Responses[Teapot] = &ResponseDefinition{
+		Name:   Teapot,
 		Status: 418,
 	}
 
-	Design.ResponseTemplates["InternalServerError"] = &ResponseTemplateDefinition{
-		Name:   "InternalServerError",
+	Design.Responses[InternalServerError] = &ResponseDefinition{
+		Name:   InternalServerError,
 		Status: 500,
 	}
 
-	Design.ResponseTemplates["NotImplemented"] = &ResponseTemplateDefinition{
-		Name:   "NotImplemented",
+	Design.Responses[NotImplemented] = &ResponseDefinition{
+		Name:   NotImplemented,
 		Status: 501,
 	}
 
-	Design.ResponseTemplates["BadGateway"] = &ResponseTemplateDefinition{
-		Name:   "BadGateway",
+	Design.Responses[BadGateway] = &ResponseDefinition{
+		Name:   BadGateway,
 		Status: 502,
 	}
 
-	Design.ResponseTemplates["ServiceUnavailable"] = &ResponseTemplateDefinition{
-		Name:   "ServiceUnavailable",
+	Design.Responses[ServiceUnavailable] = &ResponseDefinition{
+		Name:   ServiceUnavailable,
 		Status: 503,
 	}
 
-	Design.ResponseTemplates["GatewayTimeout"] = &ResponseTemplateDefinition{
-		Name:   "GatewayTimeout",
+	Design.Responses[GatewayTimeout] = &ResponseDefinition{
+		Name:   GatewayTimeout,
 		Status: 504,
 	}
 
-	Design.ResponseTemplates["HTTPVersionNotSupported"] = &ResponseTemplateDefinition{
-		Name:   "HTTPVersionNotSupported",
+	Design.Responses[HTTPVersionNotSupported] = &ResponseDefinition{
+		Name:   HTTPVersionNotSupported,
 		Status: 505,
 	}
+
+	DSLErrors = nil
 }
 
 // Status sets the ResponseTemplate status

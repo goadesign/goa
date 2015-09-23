@@ -35,33 +35,33 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 	if _, ok := apiDefinition(false); ok {
 		if identifier, ok := val.(string); ok {
 			if _, ok := Design.MediaTypes[identifier]; ok {
-				appendError(fmt.Errorf("media type %s is defined twice", identifier))
+				appendError(fmt.Errorf("media type %#v is defined twice", identifier))
 				return nil
 			}
-			mt = &MediaTypeDefinition{UserTypeDefinition: &UserTypeDefinition{Name: identifier}}
+			mt = &MediaTypeDefinition{UserTypeDefinition: &UserTypeDefinition{TypeName: identifier}}
 			if len(dsl) > 0 {
 				if ok := executeDSL(dsl[0], mt); ok {
 					Design.MediaTypes[identifier] = mt
 				}
 			}
 		} else {
-			appendError(fmt.Errorf("media type name must be a string, got %v", val))
+			appendError(fmt.Errorf("media type name must be a string, got %#v", val))
 		}
 	} else if r, ok := resourceDefinition(false); ok {
 		if m, ok := val.(*MediaTypeDefinition); ok {
-			r.MediaType = m.Name
+			r.MediaType = m.TypeName
 		} else if identifier, ok := val.(string); ok {
 			r.MediaType = identifier
 		} else {
-			appendError(fmt.Errorf("media type must be a string or a *MediaTypeDefinition, got %v", val))
+			appendError(fmt.Errorf("media type must be a string or a *MediaTypeDefinition, got %#v", val))
 		}
 	} else if r, ok := responseDefinition(true); ok {
 		if m, ok := val.(*MediaTypeDefinition); ok {
-			r.MediaType = m.Name
+			r.MediaType = m.TypeName
 		} else if identifier, ok := val.(string); ok {
 			r.MediaType = identifier
 		} else {
-			appendError(fmt.Errorf("media type must be a string or a *MediaTypeDefinition, got %v", val))
+			appendError(fmt.Errorf("media type must be a string or a *MediaTypeDefinition, got %#v", val))
 		}
 	}
 	return mt
@@ -71,7 +71,7 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 func View(name string, dsl func()) {
 	if mt, ok := mediaTypeDefinition(true); ok {
 		if _, ok = mt.Views[name]; ok {
-			appendError(fmt.Errorf("multiple definitions for view %s in media type %s", name, mt.Name))
+			appendError(fmt.Errorf("multiple definitions for view %#v in media type %#v", name, mt.TypeName))
 		}
 		v := ViewDefinition{Name: name}
 		if ok := executeDSL(dsl, &v); ok {
@@ -83,14 +83,14 @@ func View(name string, dsl func()) {
 // Attributes defines the media type attributes DSL.
 func Attributes(dsl func()) {
 	if mt, ok := mediaTypeDefinition(true); ok {
-		executeDSL(dsl, &mt)
+		executeDSL(dsl, mt)
 	}
 }
 
 // Links defines the media type links DSL.
 func Links(dsl func()) {
 	if mt, ok := mediaTypeDefinition(true); ok {
-		executeDSL(dsl, &mt)
+		executeDSL(dsl, mt)
 	}
 }
 
@@ -122,7 +122,7 @@ func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
 	}
 	ut := UserTypeDefinition{
 		AttributeDefinition: &at,
-		Name:                m.UserTypeDefinition.Name,
+		TypeName:            m.UserTypeDefinition.TypeName,
 		Description:         m.UserTypeDefinition.Description,
 	}
 	col := MediaTypeDefinition{

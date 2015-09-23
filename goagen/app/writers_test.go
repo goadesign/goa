@@ -272,7 +272,7 @@ var _ = Describe("ContextsWriter", func() {
 				BeforeEach(func() {
 					payload = &design.UserTypeDefinition{
 						AttributeDefinition: &design.AttributeDefinition{Type: design.String},
-						Name:                "ListBottlePayload",
+						TypeName:            "ListBottlePayload",
 					}
 				})
 
@@ -304,7 +304,7 @@ var _ = Describe("ContextsWriter", func() {
 							Type:        dataType,
 							Validations: []design.ValidationDefinition{&required},
 						},
-						Name: "ListBottlePayload",
+						TypeName: "ListBottlePayload",
 					}
 				})
 
@@ -490,7 +490,7 @@ var _ = Describe("ResourceWriter", func() {
 					}
 					userType = &design.UserTypeDefinition{
 						AttributeDefinition: attDef,
-						Name:                "Bottle",
+						TypeName:            "Bottle",
 						Description:         "Bottle type",
 					}
 				})
@@ -518,7 +518,7 @@ var _ = Describe("ResourceWriter", func() {
 					}
 					userType = &design.UserTypeDefinition{
 						AttributeDefinition: attDef,
-						Name:                "Bottle",
+						TypeName:            "Bottle",
 						Description:         "Bottle type",
 					}
 				})

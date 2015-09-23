@@ -14,11 +14,15 @@ import (
 //
 // * Attribute(name string, dataType DataType, description string, dsl func())
 //
+// * Attribute(name string, dataType DataType, description string)
+//
 // * Attribute(name string, dataType DataType, dsl func())
 //
-// * Attribute(name string, dsl func())
+// * Attribute(name string, dataType DataType)
 //
-// * Attribute(name string)
+// * Attribute(name string, dsl func()) /* dataType is String */
+//
+// * Attribute(name string) /* dataType is String */
 //
 // The following all call this method:
 //
@@ -26,7 +30,7 @@ import (
 //         Enum("one", "two")
 //     })
 //
-//     Header("Authorization", String)
+//     Header("Authorization")
 //
 //     Param("AccountID", Integer, "Account ID")
 //
@@ -41,14 +45,18 @@ func Attribute(name string, args ...interface{}) {
 		var ok bool
 		if len(args) == 1 {
 			if dsl, ok = args[0].(func()); !ok {
-				invalidArgError("func()", args[0])
+				if dataType, ok = args[0].(DataType); !ok {
+					invalidArgError("DataType or func()", args[0])
+				}
 			}
 		} else if len(args) == 2 {
 			if dataType, ok = args[0].(DataType); !ok {
 				invalidArgError("DataType", args[0])
 			}
 			if dsl, ok = args[1].(func()); !ok {
-				invalidArgError("func()", args[1])
+				if description, ok = args[1].(string); !ok {
+					invalidArgError("string or func()", args[1])
+				}
 			}
 		} else if len(args) == 3 {
 			if dataType, ok = args[0].(DataType); !ok {
@@ -62,6 +70,9 @@ func Attribute(name string, args ...interface{}) {
 			}
 		} else if len(args) != 0 {
 			appendError(fmt.Errorf("too many arguments in call to Attribute"))
+		}
+		if dataType == nil {
+			dataType = String
 		}
 		att := AttributeDefinition{
 			Type:        dataType,
