@@ -584,7 +584,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	if param, err := strconv.Atoi(rawParam); err == nil {
 		ctx.Param = int(param)
 	} else {
-		err = goa.InvalidParamValue("param", rawParam, "integer", err)
+		err = goa.InvalidParamTypeError("param", rawParam, "integer", err)
 	}
 	return &ctx, err
 }
@@ -622,7 +622,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	if param, err := strconv.ParseFloat(rawParam, 64); err == nil {
 		ctx.Param = param
 	} else {
-		err = goa.InvalidParamValue("param", rawParam, "number", err)
+		err = goa.InvalidParamTypeError("param", rawParam, "number", err)
 	}
 	return &ctx, err
 }
@@ -642,7 +642,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	if param, err := strconv.ParseBool(rawParam); err == nil {
 		ctx.Param = param
 	} else {
-		err = goa.InvalidParamValue("param", rawParam, "boolean", err)
+		err = goa.InvalidParamTypeError("param", rawParam, "boolean", err)
 	}
 	return &ctx, err
 }
@@ -684,7 +684,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 		if elem, err := strconv.Atoi(rawElem); err == nil {
 			elemsParam2[i] = int(elem)
 		} else {
-			err = goa.InvalidParamValue("elem", rawElem, "integer", err)
+			err = goa.InvalidParamTypeError("elem", rawElem, "integer", err)
 		}
 	}
 	ctx.Param = elemsParam
@@ -707,7 +707,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	if int_, err := strconv.Atoi(rawInt); err == nil {
 		ctx.Int = int(int_)
 	} else {
-		err = goa.InvalidParamValue("int", rawInt, "integer", err)
+		err = goa.InvalidParamTypeError("int", rawInt, "integer", err)
 	}
 	return &ctx, err
 }
@@ -731,7 +731,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 		if int_, err := strconv.Atoi(rawInt); err == nil {
 			ctx.Int = int(int_)
 		} else {
-			err = goa.InvalidParamValue("int", rawInt, "integer", err)
+			err = goa.InvalidParamTypeError("int", rawInt, "integer", err)
 		}
 	}
 	return &ctx, err

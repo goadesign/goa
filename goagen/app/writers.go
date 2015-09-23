@@ -245,17 +245,17 @@ type {{.Name}} struct {
 	coerceT = `{{if eq .Attribute.Type.Kind 1}}{{/* BooleanType */}}{{tabs .Depth}}if {{.VarName}}, err := strconv.ParseBool(raw{{camelize .Name}}); err == nil {
 {{tabs .Depth}}	{{.Target}} = {{.VarName}}
 {{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.InvalidParamValue("{{.Name}}", raw{{camelize .Name}}, "boolean", err)
+{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{camelize .Name}}, "boolean", err)
 {{tabs .Depth}}}
 {{end}}{{if eq .Attribute.Type.Kind 2}}{{/* IntegerType */}}{{tabs .Depth}}if {{.VarName}}, err := strconv.Atoi(raw{{camelize .Name}}); err == nil {
 {{tabs .Depth}}	{{.Target}} = int({{.VarName}})
 {{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.InvalidParamValue("{{.Name}}", raw{{camelize .Name}}, "integer", err)
+{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{camelize .Name}}, "integer", err)
 {{tabs .Depth}}}
 {{end}}{{if eq .Attribute.Type.Kind 3}}{{/* NumberType */}}{{tabs .Depth}}if {{.VarName}}, err := strconv.ParseFloat(raw{{camelize .Name}}, 64); err == nil {
 {{tabs .Depth}}	{{.Target}} = {{.VarName}}
 {{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.InvalidParamValue("{{.Name}}", raw{{camelize .Name}}, "number", err)
+{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{camelize .Name}}, "number", err)
 {{tabs .Depth}}}
 {{end}}{{if eq .Attribute.Type.Kind 4}}{{/* StringType */}}{{tabs .Depth}}{{.Target}} = raw{{camelize .Name}}
 {{end}}{{if eq .Attribute.Type.Kind 5}}{{/* ArrayType */}}{{tabs .Depth}}elems{{camelize .Name}} := strings.Split(raw{{camelize .Name}}, ",")
