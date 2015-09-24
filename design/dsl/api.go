@@ -21,6 +21,9 @@ import (
 //		Status(404)
 //		MediaType("application/json")
 //	})
+//      Type("BottlePayload", func() {
+//		Attribute("name")
+//	})
 //	Trait("Authenticated", func() {
 //		Headers(func() {
 //			Header("Auth-Token", String)
@@ -34,7 +37,7 @@ func API(name string, dsl func()) error {
 		InitDesign()
 		Design.Name = name
 	} else if Design.Name != name {
-		appendError(fmt.Errorf("multiple API definitions: %#v and %#v", name, Design.Name))
+		RecordError(fmt.Errorf("multiple API definitions: %#v and %#v", name, Design.Name))
 		return DSLErrors
 	}
 	executeDSL(dsl, Design)
@@ -96,11 +99,11 @@ func ResponseTemplate(name string, p interface{}) {
 	}
 	if a, ok := apiDefinition(true); ok {
 		if _, ok := a.Responses[name]; ok {
-			appendError(fmt.Errorf("multiple definitions for response template %s", name))
+			RecordError(fmt.Errorf("multiple definitions for response template %s", name))
 			return
 		}
 		if _, ok := a.ResponseTemplates[name]; ok {
-			appendError(fmt.Errorf("multiple definitions for response template %s", name))
+			RecordError(fmt.Errorf("multiple definitions for response template %s", name))
 			return
 		}
 		if dsl, ok := p.(func()); ok {
@@ -111,7 +114,7 @@ func ResponseTemplate(name string, p interface{}) {
 		} else if tmpl, ok := p.(func(v string)); ok {
 			t := func(params ...string) *ResponseDefinition {
 				if len(params) == 0 {
-					appendError(fmt.Errorf("expected one argument when invoking response template %s", name))
+					RecordError(fmt.Errorf("expected one argument when invoking response template %s", name))
 					return nil
 				}
 				r := &ResponseDefinition{Name: name}
@@ -125,7 +128,7 @@ func ResponseTemplate(name string, p interface{}) {
 		} else if tmpl, ok := p.(func(v1, v2 string)); ok {
 			t := func(params ...string) *ResponseDefinition {
 				if len(params) < 2 {
-					appendError(fmt.Errorf("expected two arguments when invoking response template %s", name))
+					RecordError(fmt.Errorf("expected two arguments when invoking response template %s", name))
 					return nil
 				}
 				r := &ResponseDefinition{Name: name}
@@ -139,7 +142,7 @@ func ResponseTemplate(name string, p interface{}) {
 		} else if tmpl, ok := p.(func(v1, v2, v3 string)); ok {
 			t := func(params ...string) *ResponseDefinition {
 				if len(params) < 3 {
-					appendError(fmt.Errorf("expected three arguments when invoking response template %s", name))
+					RecordError(fmt.Errorf("expected three arguments when invoking response template %s", name))
 					return nil
 				}
 				r := &ResponseDefinition{Name: name}
@@ -153,7 +156,7 @@ func ResponseTemplate(name string, p interface{}) {
 		} else if tmpl, ok := p.(func(v1, v2, v3, v4 string)); ok {
 			t := func(params ...string) *ResponseDefinition {
 				if len(params) < 4 {
-					appendError(fmt.Errorf("expected four arguments when invoking response template %s", name))
+					RecordError(fmt.Errorf("expected four arguments when invoking response template %s", name))
 					return nil
 				}
 				r := &ResponseDefinition{Name: name}
@@ -167,7 +170,7 @@ func ResponseTemplate(name string, p interface{}) {
 		} else if tmpl, ok := p.(func(v1, v2, v3, v4, v5 string)); ok {
 			t := func(params ...string) *ResponseDefinition {
 				if len(params) < 5 {
-					appendError(fmt.Errorf("expected five arguments when invoking response template %s", name))
+					RecordError(fmt.Errorf("expected five arguments when invoking response template %s", name))
 					return nil
 				}
 				r := &ResponseDefinition{Name: name}
@@ -181,7 +184,7 @@ func ResponseTemplate(name string, p interface{}) {
 		} else if tmpl, ok := p.(func(v1, v2, v3, v4, v5, v6 string)); ok {
 			t := func(params ...string) *ResponseDefinition {
 				if len(params) < 6 {
-					appendError(fmt.Errorf("expected six arguments when invoking response template %s", name))
+					RecordError(fmt.Errorf("expected six arguments when invoking response template %s", name))
 					return nil
 				}
 				r := &ResponseDefinition{Name: name}
@@ -195,7 +198,7 @@ func ResponseTemplate(name string, p interface{}) {
 		} else if tmpl, ok := p.(func(v1, v2, v3, v4, v5, v6, v7 string)); ok {
 			t := func(params ...string) *ResponseDefinition {
 				if len(params) < 7 {
-					appendError(fmt.Errorf("expected seven arguments when invoking response template %s", name))
+					RecordError(fmt.Errorf("expected seven arguments when invoking response template %s", name))
 					return nil
 				}
 				r := &ResponseDefinition{Name: name}
@@ -209,7 +212,7 @@ func ResponseTemplate(name string, p interface{}) {
 		} else if tmpl, ok := p.(func(v1, v2, v3, v4, v5, v6, v7, v8 string)); ok {
 			t := func(params ...string) *ResponseDefinition {
 				if len(params) < 8 {
-					appendError(fmt.Errorf("expected eight arguments when invoking response template %s", name))
+					RecordError(fmt.Errorf("expected eight arguments when invoking response template %s", name))
 					return nil
 				}
 				r := &ResponseDefinition{Name: name}
@@ -223,7 +226,7 @@ func ResponseTemplate(name string, p interface{}) {
 		} else if tmpl, ok := p.(func(v1, v2, v3, v4, v5, v6, v7, v8, v9 string)); ok {
 			t := func(params ...string) *ResponseDefinition {
 				if len(params) < 9 {
-					appendError(fmt.Errorf("expected nine arguments when invoking response template %s", name))
+					RecordError(fmt.Errorf("expected nine arguments when invoking response template %s", name))
 					return nil
 				}
 				r := &ResponseDefinition{Name: name}
@@ -261,10 +264,10 @@ func Title(val string) {
 func Trait(name string, val ...func()) {
 	if a, ok := apiDefinition(false); ok {
 		if len(val) < 1 {
-			appendError(fmt.Errorf("missing trait DSL for %s", name))
+			RecordError(fmt.Errorf("missing trait DSL for %s", name))
 		} else {
 			if _, ok := a.Traits[name]; ok {
-				appendError(fmt.Errorf("multiple definitions for trait %s", name))
+				RecordError(fmt.Errorf("multiple definitions for trait %s", name))
 				return
 			}
 			trait := &TraitDefinition{Name: name, Dsl: val[0]}
@@ -277,19 +280,19 @@ func Trait(name string, val ...func()) {
 		if trait, ok := Design.Traits[name]; ok {
 			executeDSL(trait.Dsl, r)
 		} else {
-			appendError(fmt.Errorf("unknown trait %s", name))
+			RecordError(fmt.Errorf("unknown trait %s", name))
 		}
 	} else if a, ok := actionDefinition(false); ok {
 		if trait, ok := Design.Traits[name]; ok {
 			executeDSL(trait.Dsl, a)
 		} else {
-			appendError(fmt.Errorf("unknown trait %s", name))
+			RecordError(fmt.Errorf("unknown trait %s", name))
 		}
 	} else if a, ok := attributeDefinition(false); ok {
 		if trait, ok := Design.Traits[name]; ok {
 			executeDSL(trait.Dsl, a)
 		} else {
-			appendError(fmt.Errorf("unknown trait %s", name))
+			RecordError(fmt.Errorf("unknown trait %s", name))
 		}
 	}
 }

@@ -60,7 +60,7 @@ func InitDesign() {
 	Design.ResponseTemplates = make(map[string]*ResponseTemplateDefinition)
 	t := func(params ...string) *ResponseDefinition {
 		if len(params) < 1 {
-			appendError(fmt.Errorf("expected media type as argument when invoking response template OK"))
+			RecordError(fmt.Errorf("expected media type as argument when invoking response template OK"))
 			return nil
 		}
 		return &ResponseDefinition{
@@ -274,14 +274,21 @@ func InitDesign() {
 		Name:   HTTPVersionNotSupported,
 		Status: 505,
 	}
-
-	DSLErrors = nil
 }
 
-// Status sets the ResponseTemplate status
-func Status(status int) error {
+// Status sets the Response status
+func Status(status int) {
 	if r, ok := responseDefinition(true); ok {
 		r.Status = status
 	}
-	return nil
+}
+
+// Name sets the name of the response.
+// Useful when using response templates to override the template name.
+func Name(name string) {
+	if r, ok := responseDefinition(true); ok {
+		delete(Design.Responses, r.Name)
+		r.Name = name
+		Design.Responses[name] = r
+	}
 }

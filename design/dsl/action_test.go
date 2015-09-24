@@ -1,6 +1,8 @@
 package dsl_test
 
 import (
+	"strconv"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/raphael/goa/design"
@@ -10,19 +12,24 @@ import (
 var _ = Describe("Action", func() {
 	var name string
 	var dsl func()
-	var parent *ResourceDefinition
+	var action *ActionDefinition
 
 	BeforeEach(func() {
-		dsl = nil
-		name = ""
-		InitDesign()
+		Design = nil
 		DSLErrors = nil
-		parent = &ResourceDefinition{}
-		Reset([]DSLDefinition{parent})
+		name = ""
+		dsl = nil
 	})
 
 	JustBeforeEach(func() {
-		Action(name, dsl)
+		API("test", func() {
+			Resource("res", func() {
+				Action(name, dsl)
+			})
+		})
+		if r, ok := Design.Resources["res"]; ok {
+			action = r.Actions[name]
+		}
 	})
 
 	Context("with only a name", func() {
@@ -31,53 +38,50 @@ var _ = Describe("Action", func() {
 		})
 
 		It("produces an invalid action", func() {
-			Ω(parent.Actions).Should(HaveKey(name))
-			Ω(parent.Actions[name]).ShouldNot(BeNil())
-			Ω(parent.Actions[name].Validate()).Should(HaveOccurred())
+			Ω(action).ShouldNot(BeNil())
+			Ω(action.Validate()).Should(HaveOccurred())
 		})
 	})
 
 	Context("with a name and DSL defining a route", func() {
+		var route = GET("/:id")
+
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() { Routing(GET("/:id")) }
+			dsl = func() { Routing(route) }
 		})
 
-		It("produces a valid action with the given route", func() {
-			Ω(parent.Actions).Should(HaveKey(name))
-			action := parent.Actions[name]
+		It("produces a valid action definition with the route and default status of 200 set", func() {
 			Ω(action).ShouldNot(BeNil())
-			Ω(action.Validate()).ShouldNot(HaveOccurred())
 			Ω(action.Name).Should(Equal(name))
+			Ω(action.Validate()).ShouldNot(HaveOccurred())
+			Ω(action.Routes).ShouldNot(BeNil())
 			Ω(action.Routes).Should(HaveLen(1))
+			Ω(action.Routes[0]).Should(Equal(route))
 		})
 	})
 
 	Context("with a name and DSL defining a description, route, headers, payload and responses", func() {
-		var payload *UserTypeDefinition
+		const typeName = "typeName"
 		const description = "description"
 		const headerName = "Foo"
 		BeforeEach(func() {
+			API("test", func() {
+				Type(typeName, func() {
+					Attribute("name")
+				})
+			})
 			name = "foo"
-			pat := AttributeDefinition{
-				Type: String,
-			}
-			payload = &UserTypeDefinition{
-				AttributeDefinition: &pat,
-				TypeName:            "id",
-			}
 			dsl = func() {
 				Description(description)
 				Routing(GET("/:id"))
 				Headers(func() { Header(headerName) })
-				Payload(payload)
+				Payload(typeName)
 				Response(NoContent)
 			}
 		})
 
 		It("produces a valid action with the given properties", func() {
-			Ω(parent.Actions).Should(HaveKey(name))
-			action := parent.Actions[name]
 			Ω(action).ShouldNot(BeNil())
 			Ω(action.Validate()).ShouldNot(HaveOccurred())
 			Ω(action.Name).Should(Equal(name))
@@ -95,7 +99,6 @@ var _ = Describe("Action", func() {
 	})
 
 	Context("using a response template", func() {
-		var tmplDef *ResponseTemplateDefinition
 		const tmplName = "tmpl"
 		const respMediaType = "media"
 		const respStatus = 200
@@ -103,39 +106,54 @@ var _ = Describe("Action", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			t := func(v ...string) *ResponseDefinition {
-				return &ResponseDefinition{
-					Name:   v[0],
-					Status: respStatus,
-				}
-			}
-			tmplDef = &ResponseTemplateDefinition{
-				Name:     tmplName,
-				Template: t,
-			}
-			responseTemplates := map[string]*ResponseTemplateDefinition{tmplName: tmplDef}
-			Design = &APIDefinition{
-				ResponseTemplates: responseTemplates,
-			}
-			dsl = func() {
-				Routing(GET("/:id"))
-				Response(tmplName, respName, func() {
-					MediaType(respMediaType)
+			API("test", func() {
+				ResponseTemplate(tmplName, func(status, name string) {
+					st, err := strconv.Atoi(status)
+					if err != nil {
+						RecordError(err)
+						return
+					}
+					Status(st)
+					Name(name)
 				})
-			}
+			})
 		})
 
-		It("defines the response definition using the template", func() {
-			Ω(parent.Actions).Should(HaveKey(name))
-			action := parent.Actions[name]
-			Ω(action).ShouldNot(BeNil())
-			Ω(action.Responses).ShouldNot(BeNil())
-			Ω(action.Responses).Should(HaveLen(1))
-			Ω(action.Responses).Should(HaveKey(tmplName))
-			resp := action.Responses[tmplName]
-			Ω(resp.Name).Should(Equal(respName))
-			Ω(resp.Status).Should(Equal(respStatus))
-			Ω(resp.MediaType).Should(Equal(respMediaType))
+		Context("called correctly", func() {
+			BeforeEach(func() {
+				dsl = func() {
+					Routing(GET("/:id"))
+					Response(tmplName, strconv.Itoa(respStatus), respName, func() {
+						MediaType(respMediaType)
+					})
+				}
+			})
+
+			It("defines the response definition using the template", func() {
+				Ω(action).ShouldNot(BeNil())
+				Ω(action.Responses).ShouldNot(BeNil())
+				Ω(action.Responses).Should(HaveLen(1))
+				Ω(action.Responses).Should(HaveKey(tmplName))
+				resp := action.Responses[tmplName]
+				Ω(resp.Name).Should(Equal(respName))
+				Ω(resp.Status).Should(Equal(respStatus))
+				Ω(resp.MediaType).Should(Equal(respMediaType))
+			})
+		})
+
+		Context("called incorrectly", func() {
+			BeforeEach(func() {
+				dsl = func() {
+					Routing(GET("/id"))
+					Response(tmplName, "not an integer", respName, func() {
+						MediaType(respMediaType)
+					})
+				}
+			})
+
+			It("fails", func() {
+				Ω(DSLErrors).Should(HaveOccurred())
+			})
 		})
 	})
 })

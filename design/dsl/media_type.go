@@ -39,7 +39,7 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 	if _, ok := apiDefinition(false); ok {
 		if identifier, ok := val.(string); ok {
 			if _, ok := Design.MediaTypes[identifier]; ok {
-				appendError(fmt.Errorf("media type %#v is defined twice", identifier))
+				RecordError(fmt.Errorf("media type %#v is defined twice", identifier))
 				return nil
 			}
 			mt = &MediaTypeDefinition{
@@ -54,31 +54,31 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 				}
 			}
 		} else {
-			appendError(fmt.Errorf("media type name must be a string, got %#v", val))
+			RecordError(fmt.Errorf("media type name must be a string, got %#v", val))
 		}
 	} else if r, ok := resourceDefinition(false); ok {
 		if m, ok := val.(*MediaTypeDefinition); ok {
 			if m.UserTypeDefinition == nil {
-				appendError(fmt.Errorf("invalid media type specification, media type is not initialized"))
+				RecordError(fmt.Errorf("invalid media type specification, media type is not initialized"))
 			} else {
 				r.MediaType = m.TypeName
 			}
 		} else if identifier, ok := val.(string); ok {
 			r.MediaType = identifier
 		} else {
-			appendError(fmt.Errorf("media type must be a string or a *MediaTypeDefinition, got %#v", val))
+			RecordError(fmt.Errorf("media type must be a string or a *MediaTypeDefinition, got %#v", val))
 		}
 	} else if r, ok := responseDefinition(true); ok {
 		if m, ok := val.(*MediaTypeDefinition); ok {
 			if m.UserTypeDefinition == nil {
-				appendError(fmt.Errorf("invalid media type specification, media type is not initialized"))
+				RecordError(fmt.Errorf("invalid media type specification, media type is not initialized"))
 			} else {
 				r.MediaType = m.TypeName
 			}
 		} else if identifier, ok := val.(string); ok {
 			r.MediaType = identifier
 		} else {
-			appendError(fmt.Errorf("media type must be a string or a *MediaTypeDefinition, got %#v", val))
+			RecordError(fmt.Errorf("media type must be a string or a *MediaTypeDefinition, got %#v", val))
 		}
 	}
 	return mt
@@ -93,7 +93,7 @@ func View(name string, dsl ...func()) {
 			mt.Views = make(map[string]*ViewDefinition)
 		} else {
 			if _, ok = mt.Views[name]; ok {
-				appendError(fmt.Errorf("multiple definitions for view %#v in media type %#v", name, mt.TypeName))
+				RecordError(fmt.Errorf("multiple definitions for view %#v in media type %#v", name, mt.TypeName))
 			}
 		}
 		at := &AttributeDefinition{}
@@ -150,7 +150,7 @@ func Link(name string, args ...interface{}) {
 			mt.Links = make(map[string]*LinkDefinition)
 		} else {
 			if _, ok := mt.Links[name]; ok {
-				appendError(fmt.Errorf("duplicate definition for link %#v", name))
+				RecordError(fmt.Errorf("duplicate definition for link %#v", name))
 				return
 			}
 		}
@@ -167,7 +167,7 @@ func Link(name string, args ...interface{}) {
 				if lmt, ok = args[0].(*MediaTypeDefinition); ok {
 					view = "default"
 				} else {
-					appendError(fmt.Errorf("invalid Link argument, must be string or *MediaTypeDefinition, got %#v", args[0]))
+					RecordError(fmt.Errorf("invalid Link argument, must be string or *MediaTypeDefinition, got %#v", args[0]))
 					return
 				}
 			}
@@ -175,15 +175,15 @@ func Link(name string, args ...interface{}) {
 			if v, ok := args[0].(string); ok {
 				view = v
 			} else {
-				appendError(fmt.Errorf("invalid Link argument in first position, must be string, got %#v", args[0]))
+				RecordError(fmt.Errorf("invalid Link argument in first position, must be string, got %#v", args[0]))
 				return
 			}
 			if lmt, ok = args[1].(*MediaTypeDefinition); !ok {
-				appendError(fmt.Errorf("invalid Link argument in second position, must be *MediaTypeDefinition, got %#v", args[0]))
+				RecordError(fmt.Errorf("invalid Link argument in second position, must be *MediaTypeDefinition, got %#v", args[0]))
 				return
 			}
 		default:
-			appendError(fmt.Errorf("invalid Link argument count, must be 0, 1 or 2, got %#v", len(args)))
+			RecordError(fmt.Errorf("invalid Link argument count, must be 0, 1 or 2, got %#v", len(args)))
 			return
 		}
 		link.View = view

@@ -45,7 +45,7 @@ func Attribute(name string, args ...interface{}) {
 		if parent.Type == nil {
 			parent.Type = Object{}
 		} else if _, ok := parent.Type.(Object); !ok {
-			appendError(fmt.Errorf("can't define child attributes on attribute of type %s", parent.Type.Name()))
+			RecordError(fmt.Errorf("can't define child attributes on attribute of type %s", parent.Type.Name()))
 			return
 		}
 		var dataType DataType
@@ -80,7 +80,7 @@ func Attribute(name string, args ...interface{}) {
 				invalidArgError("func()", args[2])
 			}
 		} else {
-			appendError(fmt.Errorf("too many arguments in call to Attribute"))
+			RecordError(fmt.Errorf("too many arguments in call to Attribute"))
 		}
 		att := AttributeDefinition{
 			Type:        dataType,

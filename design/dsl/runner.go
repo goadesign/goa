@@ -34,13 +34,6 @@ type (
 	}
 )
 
-// Reset resets the runner internal evaluation stack with the given stack.
-// Mainly useful for tests.
-func Reset(stack []DSLDefinition) {
-	ctxStack = stack
-	DSLErrors = nil
-}
-
 // Current evaluation context, i.e. object being currently built by DSL
 func (s contextStack) current() DSLDefinition {
 	if len(s) == 0 {
@@ -87,20 +80,20 @@ func incompatibleDsl(dslFunc string) {
 	if ctxStack.current() != nil {
 		suffix = fmt.Sprintf(" in %s", ctxStack.current().Context())
 	}
-	appendError(fmt.Errorf("Invalid use of %s%s", elems[len(elems)-1], suffix))
+	RecordError(fmt.Errorf("Invalid use of %s%s", elems[len(elems)-1], suffix))
 }
 
 // invalidArgError records an invalid argument error.
 // It is used by DSL functions that take dynamic arguments.
 func invalidArgError(expected string, actual interface{}) {
-	appendError(fmt.Errorf("cannot use %#v (type %s) as type %s in argument to Attribute",
+	RecordError(fmt.Errorf("cannot use %#v (type %s) as type %s in argument to Attribute",
 		actual, reflect.TypeOf(actual), expected))
 }
 
-// appendError records a DSL error for reporting post DSL execution.
+// RecordError records a DSL error for reporting post DSL execution.
 // TBD: REMOVE ANY CONTEXT FROM ERROR MESSAGES AND ADD CONTEXT GENERICALLY
 // EITHER HERE OR BY ADDING SOME NEW CONSTRUCTS.
-func appendError(err error) {
+func RecordError(err error) {
 	file, line := computeErrorLocation()
 	DSLErrors = append(DSLErrors, &dslError{
 		GoError: err,

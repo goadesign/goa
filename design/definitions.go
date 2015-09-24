@@ -45,7 +45,7 @@ type (
 		// Response template factories available to all API actions indexed by name
 		ResponseTemplates map[string]*ResponseTemplateDefinition
 		// User types
-		UserTypes []*UserTypeDefinition
+		Types map[string]*UserTypeDefinition
 		// Media types
 		MediaTypes map[string]*MediaTypeDefinition
 	}

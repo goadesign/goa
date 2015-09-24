@@ -8,37 +8,44 @@ import (
 )
 
 var _ = Describe("Attribute", func() {
-	var parent *AttributeDefinition
 	var name string
 	var dataType DataType
 	var description string
 	var dsl func()
 
+	var parent *AttributeDefinition
+
 	BeforeEach(func() {
-		parent = new(AttributeDefinition)
+		Design = nil
+		DSLErrors = nil
 		name = ""
 		dataType = nil
 		description = ""
 		dsl = nil
-		DSLErrors = nil
 	})
 
 	JustBeforeEach(func() {
-		Reset([]DSLDefinition{parent})
-		if dsl == nil {
-			if dataType == nil {
-				Attribute(name)
-			} else if description == "" {
-				Attribute(name, dataType)
-			} else {
-				Attribute(name, dataType, description)
-			}
-		} else if dataType == nil {
-			Attribute(name, dsl)
-		} else if description == "" {
-			Attribute(name, dataType, dsl)
-		} else {
-			Attribute(name, dataType, description, dsl)
+		API("test", func() {
+			Type("type", func() {
+				if dsl == nil {
+					if dataType == nil {
+						Attribute(name)
+					} else if description == "" {
+						Attribute(name, dataType)
+					} else {
+						Attribute(name, dataType, description)
+					}
+				} else if dataType == nil {
+					Attribute(name, dsl)
+				} else if description == "" {
+					Attribute(name, dataType, dsl)
+				} else {
+					Attribute(name, dataType, description, dsl)
+				}
+			})
+		})
+		if t, ok := Design.Types["type"]; ok {
+			parent = t.AttributeDefinition
 		}
 	})
 
@@ -191,6 +198,7 @@ var _ = Describe("Attribute", func() {
 			})
 
 			It("initializes the object attributes", func() {
+				Ω(DSLErrors).ShouldNot(HaveOccurred())
 				t := parent.Type
 				Ω(t).ShouldNot(BeNil())
 				Ω(t).Should(BeAssignableToTypeOf(Object{}))

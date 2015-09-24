@@ -13,10 +13,17 @@ import . "github.com/raphael/goa/design"
 //
 // This function returns the newly defined user type.
 func Type(name string, dsl func()) *UserTypeDefinition {
-	at := &AttributeDefinition{}
-	executeDSL(dsl, at)
-	return &UserTypeDefinition{
-		AttributeDefinition: at,
-		TypeName:            name,
+	if Design.Types == nil {
+		Design.Types = make(map[string]*UserTypeDefinition)
 	}
+	var t *UserTypeDefinition
+	at := &AttributeDefinition{}
+	if executeDSL(dsl, at) {
+		t = &UserTypeDefinition{
+			TypeName:            name,
+			AttributeDefinition: at,
+		}
+		Design.Types[name] = t
+	}
+	return t
 }

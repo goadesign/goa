@@ -21,10 +21,8 @@ import (
 //         Required("Authorization", "X-Account")
 //     })
 //     Payload(UpdatePayload)
-//     Responses(
-//         NoContent(),
-//         NotFound(),
-//     )
+//     Response(NoContent)
+//     Response(NotFound)
 // })
 func Action(name string, dsl func()) {
 	if r, ok := resourceDefinition(true); ok {
@@ -137,7 +135,7 @@ func Response(name string, paramsAndDSL ...interface{}) {
 			a.Responses = make(map[string]*ResponseDefinition)
 		}
 		if _, ok := a.Responses[name]; ok {
-			appendError(fmt.Errorf("response %s is defined twice", name))
+			RecordError(fmt.Errorf("response %s is defined twice", name))
 			return
 		}
 		var params []string
@@ -151,7 +149,7 @@ func Response(name string, paramsAndDSL ...interface{}) {
 			for i, p := range paramsAndDSL {
 				params[i], ok = p.(string)
 				if !ok {
-					appendError(fmt.Errorf("invalid response template parameter %#v, must be a string", p))
+					RecordError(fmt.Errorf("invalid response template parameter %#v, must be a string", p))
 					return
 				}
 			}
@@ -161,7 +159,7 @@ func Response(name string, paramsAndDSL ...interface{}) {
 			if tmpl, ok := Design.ResponseTemplates[name]; ok {
 				resp = tmpl.Template(params...)
 			} else {
-				appendError(fmt.Errorf("no response template named %#v", name))
+				RecordError(fmt.Errorf("no response template named %#v", name))
 				return
 			}
 		} else {
