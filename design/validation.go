@@ -84,6 +84,11 @@ func (r *ResourceDefinition) Validate() error {
 			}
 		}
 	}
+	if r.ParentName != "" {
+		if _, ok := Design.Resources[r.ParentName]; !ok {
+			return fmt.Errorf("Parent resource named %#v not found", r.ParentName)
+		}
+	}
 	if r.MediaType != "" {
 		if mt, ok := Design.MediaTypes[r.MediaType]; ok {
 			if err := mt.Validate(); err != nil {

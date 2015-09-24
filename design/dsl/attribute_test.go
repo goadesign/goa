@@ -20,6 +20,7 @@ var _ = Describe("Attribute", func() {
 		dataType = nil
 		description = ""
 		dsl = nil
+		DSLErrors = nil
 	})
 
 	JustBeforeEach(func() {
@@ -131,6 +132,7 @@ var _ = Describe("Attribute", func() {
 			Ω(o[name].Validations[0]).Should(BeAssignableToTypeOf(&EnumValidationDefinition{}))
 		})
 	})
+
 	Context("with a name, type integer, a description and a DSL defining an enum validation", func() {
 		BeforeEach(func() {
 			name = "foo"
@@ -150,6 +152,56 @@ var _ = Describe("Attribute", func() {
 			Ω(o[name].Validations).Should(HaveLen(1))
 			Ω(o[name].Validations[0]).Should(BeAssignableToTypeOf(&EnumValidationDefinition{}))
 			Ω(o[name].Description).Should(Equal(description))
+		})
+	})
+
+	Context("with child attributes", func() {
+		const childAtt = "childAtt"
+
+		BeforeEach(func() {
+			name = "foo"
+			dsl = func() { Attribute(childAtt) }
+		})
+
+		Context("on an attribute that is not an object", func() {
+			BeforeEach(func() {
+				dataType = Integer
+			})
+
+			It("fails", func() {
+				Ω(DSLErrors).Should(HaveOccurred())
+			})
+		})
+
+		Context("on an attribute that does not have a type", func() {
+			It("sets the type to Object", func() {
+				t := parent.Type
+				Ω(t).ShouldNot(BeNil())
+				Ω(t).Should(BeAssignableToTypeOf(Object{}))
+				o := t.(Object)
+				Ω(o).Should(HaveLen(1))
+				Ω(o).Should(HaveKey(name))
+				Ω(o[name].Type).Should(BeAssignableToTypeOf(Object{}))
+			})
+		})
+
+		Context("on an attribute of type Object", func() {
+			BeforeEach(func() {
+				dataType = Object{}
+			})
+
+			It("initializes the object attributes", func() {
+				t := parent.Type
+				Ω(t).ShouldNot(BeNil())
+				Ω(t).Should(BeAssignableToTypeOf(Object{}))
+				o := t.(Object)
+				Ω(o).Should(HaveLen(1))
+				Ω(o).Should(HaveKey(name))
+				Ω(o[name].Type).Should(BeAssignableToTypeOf(Object{}))
+				co := o[name].Type.(Object)
+				Ω(co).Should(HaveLen(1))
+				Ω(co).Should(HaveKey(childAtt))
+			})
 		})
 	})
 })

@@ -7,7 +7,7 @@ import . "github.com/raphael/goa/design"
 // var _ = Resource("bottle", func() {
 //      Description("A wine bottle") // Resource description
 // 	MediaType(BottleMediaType)   // Resource actions default media type
-// 	Prefix("/bottles")           // Resource actions path prefix if not ""
+// 	BasePath("/bottles")         // Resource actions path prefix if not ""
 //      Parent("account")            // Name of parent resource if any
 // 	CanonicalAction("show")      // Action that returns canonical representation
 // 	Trait("Authenticated")       // Included trait if any, can appear more than once
@@ -16,11 +16,17 @@ import . "github.com/raphael/goa/design"
 // 	})
 // })
 func Resource(name string, dsl func()) *ResourceDefinition {
+	if Design.Resources == nil {
+		Design.Resources = make(map[string]*ResourceDefinition)
+	}
 	var resource *ResourceDefinition
 	if a, ok := apiDefinition(true); ok {
 		resource, ok = a.Resources[name]
 		if !ok {
-			resource = &ResourceDefinition{Name: name}
+			resource = &ResourceDefinition{
+				Name:      name,
+				MediaType: "plain/text",
+			}
 		}
 		if ok := executeDSL(dsl, resource); ok {
 			a.Resources[name] = resource

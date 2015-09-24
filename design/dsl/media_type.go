@@ -58,7 +58,11 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 		}
 	} else if r, ok := resourceDefinition(false); ok {
 		if m, ok := val.(*MediaTypeDefinition); ok {
-			r.MediaType = m.TypeName
+			if m.UserTypeDefinition == nil {
+				appendError(fmt.Errorf("invalid media type specification, media type is not initialized"))
+			} else {
+				r.MediaType = m.TypeName
+			}
 		} else if identifier, ok := val.(string); ok {
 			r.MediaType = identifier
 		} else {
@@ -66,7 +70,11 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 		}
 	} else if r, ok := responseDefinition(true); ok {
 		if m, ok := val.(*MediaTypeDefinition); ok {
-			r.MediaType = m.TypeName
+			if m.UserTypeDefinition == nil {
+				appendError(fmt.Errorf("invalid media type specification, media type is not initialized"))
+			} else {
+				r.MediaType = m.TypeName
+			}
 		} else if identifier, ok := val.(string); ok {
 			r.MediaType = identifier
 		} else {

@@ -20,7 +20,7 @@ import (
 //
 // * Attribute(name string, dataType DataType)
 //
-// * Attribute(name string, dsl func()) /* dataType is String */
+// * Attribute(name string, dsl func()) /* dataType is Object described by DSL */
 //
 // * Attribute(name string) /* dataType is String */
 //
@@ -38,20 +38,23 @@ func Attribute(name string, args ...interface{}) {
 	var parent *AttributeDefinition
 	if at, ok := attributeDefinition(false); ok {
 		parent = at
-	} else {
-		if mt, ok := mediaTypeDefinition(true); ok {
-			parent = mt.AttributeDefinition
-		}
+	} else if mt, ok := mediaTypeDefinition(true); ok {
+		parent = mt.AttributeDefinition
 	}
 	if parent != nil {
 		if parent.Type == nil {
 			parent.Type = Object{}
+		} else if _, ok := parent.Type.(Object); !ok {
+			appendError(fmt.Errorf("can't define child attributes on attribute of type %s", parent.Type.Name()))
+			return
 		}
 		var dataType DataType
 		var description string
 		var dsl func()
 		var ok bool
-		if len(args) == 1 {
+		if len(args) == 0 {
+			dataType = String
+		} else if len(args) == 1 {
 			if dsl, ok = args[0].(func()); !ok {
 				if dataType, ok = args[0].(DataType); !ok {
 					invalidArgError("DataType or func()", args[0])
@@ -76,11 +79,8 @@ func Attribute(name string, args ...interface{}) {
 			if dsl, ok = args[2].(func()); !ok {
 				invalidArgError("func()", args[2])
 			}
-		} else if len(args) != 0 {
+		} else {
 			appendError(fmt.Errorf("too many arguments in call to Attribute"))
-		}
-		if dataType == nil {
-			dataType = String
 		}
 		att := AttributeDefinition{
 			Type:        dataType,
@@ -88,6 +88,10 @@ func Attribute(name string, args ...interface{}) {
 		}
 		if dsl != nil {
 			executeDSL(dsl, &att)
+		}
+		if att.Type == nil {
+			// DSL did not contain an "Attribute" declaration
+			att.Type = String
 		}
 		parent.Type.(Object)[name] = &att
 	}

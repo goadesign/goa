@@ -30,12 +30,13 @@ import (
 // })
 //
 func API(name string, dsl func()) error {
-	if Design != nil {
-		appendError(fmt.Errorf("multiple API definitions"))
+	if Design == nil {
+		InitDesign()
+		Design.Name = name
+	} else if Design.Name != name {
+		appendError(fmt.Errorf("multiple API definitions: %#v and %#v", name, Design.Name))
 		return DSLErrors
 	}
-	InitDesign()
-	Design.Name = name
 	executeDSL(dsl, Design)
 	return DSLErrors
 }

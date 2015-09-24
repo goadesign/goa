@@ -29,7 +29,7 @@ var _ = Describe("MediaType", func() {
 	})
 
 	Context("with no DSL and no name", func() {
-		It("produces an invalid API definition", func() {
+		It("produces an invalid media type definition", func() {
 			Ω(mt).ShouldNot(BeNil())
 			Ω(mt.Validate()).Should(HaveOccurred())
 		})
@@ -40,7 +40,7 @@ var _ = Describe("MediaType", func() {
 			name = "foo"
 		})
 
-		It("produces a valid API definition", func() {
+		It("produces a valid media type definition", func() {
 			Ω(mt).ShouldNot(BeNil())
 			Ω(mt.Validate()).ShouldNot(HaveOccurred())
 		})
