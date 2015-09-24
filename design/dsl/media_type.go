@@ -19,6 +19,7 @@ import . "github.com/raphael/goa/design"
 //	View("default", func() {
 //		Attribute("id")
 //		Attribute("href")
+//		Attribute("links")
 //	})
 // })
 //
@@ -32,13 +33,21 @@ import . "github.com/raphael/goa/design"
 // This function returns the newly defined media type in the first mode, nil otherwise.
 func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 	var mt *MediaTypeDefinition
+	if Design.MediaTypes == nil {
+		Design.MediaTypes = make(map[string]*MediaTypeDefinition)
+	}
 	if _, ok := apiDefinition(false); ok {
 		if identifier, ok := val.(string); ok {
 			if _, ok := Design.MediaTypes[identifier]; ok {
 				appendError(fmt.Errorf("media type %#v is defined twice", identifier))
 				return nil
 			}
-			mt = &MediaTypeDefinition{UserTypeDefinition: &UserTypeDefinition{TypeName: identifier}}
+			mt = &MediaTypeDefinition{
+				UserTypeDefinition: &UserTypeDefinition{
+					AttributeDefinition: &AttributeDefinition{},
+					TypeName:            identifier,
+				},
+			}
 			if len(dsl) > 0 {
 				if ok := executeDSL(dsl[0], mt); ok {
 					Design.MediaTypes[identifier] = mt
@@ -68,15 +77,31 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 }
 
 // View adds a new view to the media type.
-func View(name string, dsl func()) {
-	if mt, ok := mediaTypeDefinition(true); ok {
-		if _, ok = mt.Views[name]; ok {
-			appendError(fmt.Errorf("multiple definitions for view %#v in media type %#v", name, mt.TypeName))
+// It takes the view name and the DSL defining it.
+// View can also be used to specify the view used to render an attribute.
+func View(name string, dsl ...func()) {
+	if mt, ok := mediaTypeDefinition(false); ok {
+		if mt.Views == nil {
+			mt.Views = make(map[string]*ViewDefinition)
+		} else {
+			if _, ok = mt.Views[name]; ok {
+				appendError(fmt.Errorf("multiple definitions for view %#v in media type %#v", name, mt.TypeName))
+			}
 		}
-		v := ViewDefinition{Name: name}
-		if ok := executeDSL(dsl, &v); ok {
-			mt.Views[name] = &v
+		at := &AttributeDefinition{}
+		ok := true
+		if len(dsl) > 0 {
+			ok = executeDSL(dsl[0], at)
 		}
+		if ok {
+			mt.Views[name] = &ViewDefinition{
+				AttributeDefinition: at,
+				Name:                name,
+				Parent:              mt,
+			}
+		}
+	} else if a, ok := attributeDefinition(true); ok {
+		a.View = name
 	}
 }
 
@@ -95,9 +120,67 @@ func Links(dsl func()) {
 }
 
 // Link defines a media type link DSL.
+// At the minimum a link has a name potentially corresponding to one of the
+// media type attribute names.
+// A link may also define the view used to render the link content if different
+// from "link".
+// Finally a link can also optionally define the media type used to render its
+// content if not the one associated with the attribute of same name.
+// Examples:
+//
+// Link("vendor")
+//
+// Link("vendor", "view")
+//
+// Link("vendor", LinkMediaType)
+//
+// Link("vendor", "view", LinkMediaType)
+//
 func Link(name string, args ...interface{}) {
-	if _, ok := mediaTypeDefinition(true); ok {
-		Attribute(name, args...)
+	if mt, ok := mediaTypeDefinition(true); ok {
+		if mt.Links == nil {
+			mt.Links = make(map[string]*LinkDefinition)
+		} else {
+			if _, ok := mt.Links[name]; ok {
+				appendError(fmt.Errorf("duplicate definition for link %#v", name))
+				return
+			}
+		}
+		link := &LinkDefinition{Name: name, Parent: mt}
+		var view string
+		var lmt *MediaTypeDefinition
+		switch len(args) {
+		case 0:
+			view = "default"
+		case 1:
+			if v, ok := args[0].(string); ok {
+				view = v
+			} else {
+				if lmt, ok = args[0].(*MediaTypeDefinition); ok {
+					view = "default"
+				} else {
+					appendError(fmt.Errorf("invalid Link argument, must be string or *MediaTypeDefinition, got %#v", args[0]))
+					return
+				}
+			}
+		case 2:
+			if v, ok := args[0].(string); ok {
+				view = v
+			} else {
+				appendError(fmt.Errorf("invalid Link argument in first position, must be string, got %#v", args[0]))
+				return
+			}
+			if lmt, ok = args[1].(*MediaTypeDefinition); !ok {
+				appendError(fmt.Errorf("invalid Link argument in second position, must be *MediaTypeDefinition, got %#v", args[0]))
+				return
+			}
+		default:
+			appendError(fmt.Errorf("invalid Link argument count, must be 0, 1 or 2, got %#v", len(args)))
+			return
+		}
+		link.View = view
+		link.MediaType = lmt
+		mt.Links[name] = link
 	}
 }
 
@@ -122,8 +205,7 @@ func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
 	}
 	ut := UserTypeDefinition{
 		AttributeDefinition: &at,
-		TypeName:            m.UserTypeDefinition.TypeName,
-		Description:         m.UserTypeDefinition.Description,
+		TypeName:            m.UserTypeDefinition.TypeName + "Collection",
 	}
 	col := MediaTypeDefinition{
 		// A media type is a type

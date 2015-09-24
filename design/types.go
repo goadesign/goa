@@ -47,8 +47,6 @@ type (
 		*AttributeDefinition
 		// Name of type
 		TypeName string
-		// Description is the optional description of the media type.
-		Description string
 	}
 
 	// MediaTypeDefinition describes the rendering of a resource using property and link

@@ -491,7 +491,6 @@ var _ = Describe("ResourceWriter", func() {
 					userType = &design.UserTypeDefinition{
 						AttributeDefinition: attDef,
 						TypeName:            "Bottle",
-						Description:         "Bottle type",
 					}
 				})
 				It("writes the resources code", func() {
@@ -519,7 +518,6 @@ var _ = Describe("ResourceWriter", func() {
 					userType = &design.UserTypeDefinition{
 						AttributeDefinition: attDef,
 						TypeName:            "Bottle",
-						Description:         "Bottle type",
 					}
 				})
 

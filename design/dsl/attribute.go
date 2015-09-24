@@ -35,7 +35,15 @@ import (
 //     Param("AccountID", Integer, "Account ID")
 //
 func Attribute(name string, args ...interface{}) {
-	if parent, ok := attributeDefinition(true); ok {
+	var parent *AttributeDefinition
+	if at, ok := attributeDefinition(false); ok {
+		parent = at
+	} else {
+		if mt, ok := mediaTypeDefinition(true); ok {
+			parent = mt.AttributeDefinition
+		}
+	}
+	if parent != nil {
 		if parent.Type == nil {
 			parent.Type = Object{}
 		}

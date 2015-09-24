@@ -79,7 +79,7 @@ func (g *Generator) Generate() ([]string, error) {
 	g.ContextsWriter.WriteHeader(title, TargetPackage, imports)
 	err := design.Design.IterateResources(func(r *design.ResourceDefinition) error {
 		return r.IterateActions(func(a *design.ActionDefinition) error {
-			ctxName := inflect.Camelize(a.Name) + inflect.Camelize(a.Resource.Name) + "Context"
+			ctxName := inflect.Camelize(a.Name) + inflect.Camelize(a.Parent.Name) + "Context"
 			ctxData := ContextTemplateData{
 				Name:         ctxName,
 				ResourceName: r.Name,

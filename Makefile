@@ -34,6 +34,7 @@ lint:
 
 test:
 	@ginkgo -r --randomizeAllSpecs --failOnPending --randomizeSuites --race
+	@cd examples/cellar/app && go build
 
 goagen:
 	@cd goagen && \

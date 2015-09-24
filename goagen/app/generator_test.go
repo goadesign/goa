@@ -139,7 +139,7 @@ var _ = Describe("Generate", func() {
 			get := design.ActionDefinition{
 				Name:        "get",
 				Description: "get widgets",
-				Resource:    &res,
+				Parent:      &res,
 				Routes:      []*design.RouteDefinition{&route},
 				Responses:   map[string]*design.ResponseDefinition{"ok": &resp},
 				Params:      &params,

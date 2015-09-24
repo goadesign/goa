@@ -76,16 +76,6 @@ type (
 		CanonicalAction string
 	}
 
-	// TypeDefinition describes a named data structure to be used e.g. for request payloads.
-	TypeDefinition struct {
-		// A media type definition is a JSON object
-		Object
-		// Name used in generated code
-		Name string
-		// Optional description
-		Description string
-	}
-
 	// ResponseDefinition defines a HTTP response status and optional validation rules.
 	ResponseDefinition struct {
 		// Response name
@@ -98,6 +88,8 @@ type (
 		MediaType string
 		// Response header definitions
 		Headers *AttributeDefinition
+		// Parent Action
+		Parent *ActionDefinition
 	}
 
 	// ResponseTemplateDefinition defines a response template.
@@ -122,7 +114,7 @@ type (
 		// Action description, e.g. "Creates a task"
 		Description string
 		// Parent resource
-		Resource *ResourceDefinition
+		Parent *ResourceDefinition
 		// Action routes
 		Routes []*RouteDefinition
 		// Map of possible response definitions indexed by name
@@ -146,20 +138,21 @@ type (
 		Validations []ValidationDefinition
 		// Optional member default value
 		DefaultValue interface{}
+		// Optional view used to render Attribute (only applies to media type attributes).
+		View string
 	}
 
 	// LinkDefinition defines a media type link, it specifies a URL to a related resource.
 	LinkDefinition struct {
 		// Link name
 		Name string
-		// Optional description
-		Description string
-		// Member used to render link
-		Member *AttributeDefinition
-		// Media type used to render link
+		// Media type used to render link if not the one associated
+		// with the parent media type attribute with name Name	.
 		MediaType *MediaTypeDefinition
 		// View used to render link if not "link"
 		View string
+		// Parent media Type
+		Parent *MediaTypeDefinition
 	}
 
 	// ViewDefinition defines which members and links to render when building a response.
@@ -168,13 +161,11 @@ type (
 	// The members fields are inherited from the parent media type but may be overridden.
 	ViewDefinition struct {
 		// Set of properties included in view
-		Object
+		*AttributeDefinition
 		// Name of view
 		Name string
-		// Links to render
-		// Parent media type definition
-		Links     []string
-		MediaType *MediaTypeDefinition
+		// Parent media Type
+		Parent *MediaTypeDefinition
 	}
 
 	// TraitDefinition defines a set of reusable properties.
@@ -363,19 +354,25 @@ func (r *ResourceDefinition) CanonicalPathAndParams() (path string, params []str
 }
 
 // Context returns the generic definition name used in error messages.
-func (t *TypeDefinition) Context() string {
-	if t.Name != "" {
-		return fmt.Sprintf("type %#v", t.Name)
+func (t *UserTypeDefinition) Context() string {
+	if t.TypeName != "" {
+		return fmt.Sprintf("type %#v", t.TypeName)
 	}
 	return "unnamed type"
 }
 
 // Context returns the generic definition name used in error messages.
 func (r *ResponseDefinition) Context() string {
+	var prefix, suffix string
 	if r.Name != "" {
-		return fmt.Sprintf("response %#v", r.Name)
+		prefix = fmt.Sprintf("response %#v", r.Name)
+	} else {
+		prefix = "unnamed response"
 	}
-	return "unnamed response"
+	if r.Parent != nil {
+		suffix = fmt.Sprintf(" of %s", r.Parent.Context())
+	}
+	return prefix + suffix
 }
 
 // FormatName returns the name of the response. The name can be formatted either
@@ -414,8 +411,8 @@ func (a *ActionDefinition) Context() string {
 	} else {
 		prefix = "unnamed action"
 	}
-	if a.Resource != nil {
-		suffix = fmt.Sprintf(" of %s", a.Resource.Context())
+	if a.Parent != nil {
+		suffix = fmt.Sprintf(" of %s", a.Parent.Context())
 	}
 	return prefix + suffix
 }
@@ -428,7 +425,10 @@ func (a *ActionDefinition) FormatName(snake bool) string {
 
 // Context returns the generic definition name used in error messages.
 func (a *AttributeDefinition) Context() string {
-	return fmt.Sprintf("attribute of type %s", a.Type.Name())
+	if a.Type != nil {
+		return fmt.Sprintf("attribute of type %s", a.Type.Name())
+	}
+	return fmt.Sprintf("untyped attribute")
 }
 
 // AllRequired returns the complete list of all required attribute names, nil
@@ -477,8 +477,8 @@ func (l *LinkDefinition) Context() string {
 	} else {
 		prefix = "unnamed link"
 	}
-	if l.MediaType != nil {
-		suffix = fmt.Sprintf(" of %s", l.MediaType.Context())
+	if l.Parent != nil {
+		suffix = fmt.Sprintf(" of %s", l.Parent.Context())
 	}
 	return prefix + suffix
 }
@@ -491,8 +491,8 @@ func (v *ViewDefinition) Context() string {
 	} else {
 		prefix = "unnamed view"
 	}
-	if v.MediaType != nil {
-		suffix = fmt.Sprintf(" of %s", v.MediaType.Context())
+	if v.Parent != nil {
+		suffix = fmt.Sprintf(" of %s", v.Parent.Context())
 	}
 	return prefix + suffix
 }

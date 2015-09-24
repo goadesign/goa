@@ -2,6 +2,7 @@ package dsl
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"regexp"
 	"runtime"
@@ -128,6 +129,10 @@ func computeErrorLocation() (file string, line int) {
 			ok = !nok
 		}
 	}
+	gopath := os.Getenv("GOPATH") + "/src/"
+	if strings.HasPrefix(file, gopath) {
+		file = file[len(gopath):]
+	}
 	return
 }
 
@@ -154,11 +159,11 @@ func apiDefinition(failIfNotAPI bool) (*APIDefinition, bool) {
 // mediaTypeDefinition returns true and current context if it is a MediaTypeDefinition,
 // nil and false otherwise.
 func mediaTypeDefinition(failIfNotMT bool) (*MediaTypeDefinition, bool) {
-	a, ok := ctxStack.current().(*MediaTypeDefinition)
+	m, ok := ctxStack.current().(*MediaTypeDefinition)
 	if !ok && failIfNotMT {
 		incompatibleDsl(caller())
 	}
-	return a, ok
+	return m, ok
 }
 
 // attribute returns true and current context if it is an Attribute,

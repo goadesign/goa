@@ -28,15 +28,14 @@ import (
 // })
 func Action(name string, dsl func()) {
 	if r, ok := resourceDefinition(true); ok {
-		var action *ActionDefinition
 		if r.Actions == nil {
 			r.Actions = make(map[string]*ActionDefinition)
 		}
-		action, ok = r.Actions[name]
+		action, ok := r.Actions[name]
 		if !ok {
 			action = &ActionDefinition{
-				Resource: r,
-				Name:     name,
+				Parent: r,
+				Name:   name,
 			}
 		}
 		if !executeDSL(dsl, action) {
@@ -122,7 +121,7 @@ func Payload(p interface{}) {
 		} else {
 			at, _ = p.(*AttributeDefinition)
 		}
-		rn := inflect.Camelize(a.Resource.Name)
+		rn := inflect.Camelize(a.Parent.Name)
 		an := inflect.Camelize(a.Name)
 		a.Payload = &UserTypeDefinition{
 			AttributeDefinition: at,
