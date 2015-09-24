@@ -77,23 +77,22 @@ func executeDSL(dsl func(), ctx DSLDefinition) bool {
 func incompatibleDsl(dslFunc string) {
 	elems := strings.Split(dslFunc, ".")
 	var suffix string
-	if ctxStack.current() != nil {
-		suffix = fmt.Sprintf(" in %s", ctxStack.current().Context())
-	}
-	RecordError(fmt.Errorf("Invalid use of %s%s", elems[len(elems)-1], suffix))
+	ReportError("Invalid use of %s%s", elems[len(elems)-1], suffix)
 }
 
 // invalidArgError records an invalid argument error.
 // It is used by DSL functions that take dynamic arguments.
 func invalidArgError(expected string, actual interface{}) {
-	RecordError(fmt.Errorf("cannot use %#v (type %s) as type %s in argument to Attribute",
-		actual, reflect.TypeOf(actual), expected))
+	ReportError("cannot use %#v (type %s) as type %s in argument to Attribute",
+		actual, reflect.TypeOf(actual), expected)
 }
 
-// RecordError records a DSL error for reporting post DSL execution.
-// TBD: REMOVE ANY CONTEXT FROM ERROR MESSAGES AND ADD CONTEXT GENERICALLY
-// EITHER HERE OR BY ADDING SOME NEW CONSTRUCTS.
-func RecordError(err error) {
+// ReportError records a DSL error for reporting post DSL execution.
+func ReportError(fm string, vals ...interface{}) {
+	if cur := ctxStack.current(); cur != nil {
+		fm += fmt.Sprintf(" in %s", cur.Context())
+	}
+	err := fmt.Errorf(fm, vals...)
 	file, line := computeErrorLocation()
 	DSLErrors = append(DSLErrors, &dslError{
 		GoError: err,

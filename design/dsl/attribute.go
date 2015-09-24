@@ -1,10 +1,6 @@
 package dsl
 
-import (
-	"fmt"
-
-	. "github.com/raphael/goa/design"
-)
+import . "github.com/raphael/goa/design"
 
 // Attribute defines an attribute type, description and an optional validation DSL.
 // When Attribute() is used in an action parameter definition all the arguments are optional and
@@ -45,7 +41,7 @@ func Attribute(name string, args ...interface{}) {
 		if parent.Type == nil {
 			parent.Type = Object{}
 		} else if _, ok := parent.Type.(Object); !ok {
-			RecordError(fmt.Errorf("can't define child attributes on attribute of type %s", parent.Type.Name()))
+			ReportError("can't define child attributes on attribute of type %s", parent.Type.Name())
 			return
 		}
 		var dataType DataType
@@ -80,7 +76,7 @@ func Attribute(name string, args ...interface{}) {
 				invalidArgError("func()", args[2])
 			}
 		} else {
-			RecordError(fmt.Errorf("too many arguments in call to Attribute"))
+			ReportError("too many arguments in call to Attribute")
 		}
 		att := AttributeDefinition{
 			Type:        dataType,

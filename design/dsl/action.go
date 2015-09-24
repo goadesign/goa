@@ -91,11 +91,21 @@ func PATCH(path string) *RouteDefinition {
 }
 
 // Headers computes the action headers from the given DSL.
+// Headers is also used to set the headers on a response.
 func Headers(dsl func()) {
-	if a, ok := actionDefinition(true); ok {
+	if a, ok := actionDefinition(false); ok {
 		headers := new(AttributeDefinition)
 		if executeDSL(dsl, headers) {
 			a.Headers = headers
+		}
+	} else if r, ok := responseDefinition(true); ok {
+		if r.Headers != nil {
+			ReportError("headers already defined")
+			return
+		}
+		h := &AttributeDefinition{}
+		if executeDSL(dsl, h) {
+			r.Headers = h
 		}
 	}
 }
@@ -125,53 +135,5 @@ func Payload(p interface{}) {
 			AttributeDefinition: at,
 			TypeName:            fmt.Sprintf("%s%sPayload", an, rn),
 		}
-	}
-}
-
-// Response records a possible action response.
-func Response(name string, paramsAndDSL ...interface{}) {
-	if a, ok := actionDefinition(true); ok {
-		if a.Responses == nil {
-			a.Responses = make(map[string]*ResponseDefinition)
-		}
-		if _, ok := a.Responses[name]; ok {
-			RecordError(fmt.Errorf("response %s is defined twice", name))
-			return
-		}
-		var params []string
-		var dsl func()
-		if len(paramsAndDSL) > 0 {
-			d := paramsAndDSL[len(paramsAndDSL)-1]
-			if dsl, ok = d.(func()); ok {
-				paramsAndDSL = paramsAndDSL[:len(paramsAndDSL)-1]
-			}
-			params = make([]string, len(paramsAndDSL))
-			for i, p := range paramsAndDSL {
-				params[i], ok = p.(string)
-				if !ok {
-					RecordError(fmt.Errorf("invalid response template parameter %#v, must be a string", p))
-					return
-				}
-			}
-		}
-		var resp *ResponseDefinition
-		if len(params) > 0 {
-			if tmpl, ok := Design.ResponseTemplates[name]; ok {
-				resp = tmpl.Template(params...)
-			} else {
-				RecordError(fmt.Errorf("no response template named %#v", name))
-				return
-			}
-		} else {
-			if ar, ok := Design.Responses[name]; ok {
-				resp = ar.Dup()
-			} else {
-				resp = &ResponseDefinition{Name: name}
-			}
-		}
-		if (dsl != nil) && !executeDSL(dsl, resp) {
-			return
-		}
-		a.Responses[name] = resp
 	}
 }

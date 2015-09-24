@@ -110,7 +110,7 @@ var _ = Describe("Action", func() {
 				ResponseTemplate(tmplName, func(status, name string) {
 					st, err := strconv.Atoi(status)
 					if err != nil {
-						RecordError(err)
+						ReportError(err.Error())
 						return
 					}
 					Status(st)

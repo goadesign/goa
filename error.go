@@ -139,7 +139,7 @@ func InvalidParamTypeError(name string, val interface{}, expected string, err er
 		Mesg: fmt.Sprintf("invalid value %#v for parameter %#v, must be a %s",
 			val, name, expected),
 	}
-	return RecordError(err, &terr)
+	return ReportError(err, &terr)
 }
 
 // MissingParamError appends a typed error of kind ErrMissingParam to err and
@@ -149,7 +149,7 @@ func MissingParamError(name string, err error) error {
 		Kind: ErrMissingParam,
 		Mesg: fmt.Sprintf("missing required parameter %#v", name),
 	}
-	return RecordError(err, &terr)
+	return ReportError(err, &terr)
 }
 
 // InvalidAttributeTypeError appends a typed error of kind ErrIncompatibleType
@@ -160,7 +160,7 @@ func InvalidAttributeTypeError(ctx string, val interface{}, expected string, err
 		Mesg: fmt.Sprintf("type of %s must be %s but got value %#v", ctx,
 			expected, val),
 	}
-	return RecordError(err, &terr)
+	return ReportError(err, &terr)
 }
 
 // MissingAttributeError appends a typed error of kind ErrMissingAttribute to
@@ -170,7 +170,7 @@ func MissingAttributeError(ctx, name string, err error) error {
 		Kind: ErrMissingAttribute,
 		Mesg: fmt.Sprintf("attribute %#v of %s is missing and required", name, ctx),
 	}
-	return RecordError(err, &terr)
+	return ReportError(err, &terr)
 }
 
 // InvalidEnumValueError appends a typed error of kind ErrInvalidEnumValue to
@@ -185,7 +185,7 @@ func InvalidEnumValueError(ctx string, val interface{}, allowed []interface{}, e
 		Mesg: fmt.Sprintf("value of %s must be one of %s but got value %#v", ctx,
 			strings.Join(elems, ", "), val),
 	}
-	return RecordError(err, &terr)
+	return ReportError(err, &terr)
 }
 
 // InvalidFormatError appends a typed error of kind ErrInvalidFormat to err and
@@ -196,7 +196,7 @@ func InvalidFormatError(ctx, target, format string, formatError, err error) erro
 		Mesg: fmt.Sprintf("%s must be formatted as a %s but got value %#v, %s",
 			ctx, format, target, formatError.Error()),
 	}
-	return RecordError(err, &terr)
+	return ReportError(err, &terr)
 }
 
 // InvalidRangeError appends a typed error of kind ErrInvalidRange to err and
@@ -211,7 +211,7 @@ func InvalidRangeError(ctx, target string, value int, min bool, err error) error
 		Mesg: fmt.Sprintf("%s must be %s than %d but got value %#v",
 			ctx, comp, value, target),
 	}
-	return RecordError(err, &terr)
+	return ReportError(err, &terr)
 }
 
 // InvalidLengthError appends a typed error of kind ErrInvalidLength to err and
@@ -226,12 +226,12 @@ func InvalidLengthError(ctx, target string, value int, min bool, err error) erro
 		Mesg: fmt.Sprintf("length of %s must be %s than %d but got value %#v",
 			ctx, comp, value, target),
 	}
-	return RecordError(err, &terr)
+	return ReportError(err, &terr)
 }
 
-// RecordError coerces the first argument into a MultiError then appends the second argument and
+// ReportError coerces the first argument into a MultiError then appends the second argument and
 // returns the resulting MultiError.
-func RecordError(err error, err2 error) error {
+func ReportError(err error, err2 error) error {
 	if err == nil {
 		return MultiError{err2}
 	}
