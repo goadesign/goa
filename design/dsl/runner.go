@@ -3,6 +3,7 @@ package dsl
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"runtime"
@@ -76,14 +77,13 @@ func executeDSL(dsl func(), ctx DSLDefinition) bool {
 // invoked in an incorrect context (e.g. "Params" in "Resource").
 func incompatibleDsl(dslFunc string) {
 	elems := strings.Split(dslFunc, ".")
-	var suffix string
-	ReportError("Invalid use of %s%s", elems[len(elems)-1], suffix)
+	ReportError("invalid use of %s", elems[len(elems)-1])
 }
 
 // invalidArgError records an invalid argument error.
 // It is used by DSL functions that take dynamic arguments.
 func invalidArgError(expected string, actual interface{}) {
-	ReportError("cannot use %#v (type %s) as type %s in argument to Attribute",
+	ReportError("cannot use %#v (type %s) as type %s",
 		actual, reflect.TypeOf(actual), expected)
 }
 
@@ -101,9 +101,11 @@ func ReportError(fm string, vals ...interface{}) {
 	})
 }
 
-// computeErrorLocation implements a heuristic to find the location in the user code where the
-// error occurred. It walks back the callstack until the file doesn't match "/goa/design/*.go".
-// When successful it returns the file name and line number.
+// computeErrorLocation implements a heuristic to find the location in the user
+// code where the error occurred. It walks back the callstack until the file
+// doesn't match "/goa/design/*.go".
+// When successful it returns the file name and line number, empty string and
+// 0 otherwise.
 func computeErrorLocation() (file string, line int) {
 	depth := 2
 	_, file, line, _ = runtime.Caller(depth)
@@ -121,10 +123,19 @@ func computeErrorLocation() (file string, line int) {
 			ok = !nok
 		}
 	}
-	gopath := os.Getenv("GOPATH") + "/src/"
-	if strings.HasPrefix(file, gopath) {
-		file = file[len(gopath):]
+	wd, err := os.Getwd()
+	if err != nil {
+		return
 	}
+	wd, err = filepath.Abs(wd)
+	if err != nil {
+		return
+	}
+	f, err := filepath.Rel(wd, file)
+	if err != nil {
+		return
+	}
+	file = f
 	return
 }
 

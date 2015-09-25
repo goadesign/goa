@@ -2,6 +2,20 @@ package dsl
 
 import . "github.com/raphael/goa/design"
 
+// SupportedValidationFormats lists the supported formats for use with the
+// Format DSL.
+var SupportedValidationFormats = []string{
+	"cidr",
+	"date-time",
+	"email",
+	"hostname",
+	"ipv4",
+	"ipv6",
+	"mac",
+	"regexp",
+	"uri",
+}
+
 // NewEnumValidation creates a definition for an enum validation.
 func NewEnumValidation(val ...interface{}) ValidationDefinition {
 	return &EnumValidationDefinition{Values: val}

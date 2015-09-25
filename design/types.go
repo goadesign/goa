@@ -9,7 +9,10 @@
 // identifier, links and views).
 package design
 
-import "fmt"
+import (
+	"fmt"
+	"reflect"
+)
 
 type (
 	// A Kind defines the JSON type that a DataType represents.
@@ -17,13 +20,20 @@ type (
 
 	// DataType is the common interface to all types.
 	DataType interface {
-		Kind() Kind       // Kind
-		Name() string     // Name returns the type name.
-		ToObject() Object // ToObject returns the underlying object if any, nil otherwise.
+		// Kind of data type, one of the Kind enum.
+		Kind() Kind
+		// Name returns the type name.
+		Name() string
+		// ToObject returns the underlying object if any (i.e. if Kind
+		// is ObjectKind, UserTypeKind or MediaTypeKind), nil otherwise.
+		ToObject() Object
+		// IsCompatible checks whether val has a Go type that is
+		// compatible with the data type.
+		IsCompatible(val interface{}) bool
 	}
 
-	// DataStructure is the interface implemented by all data structure types. That is
-	// attribute definitions, user types and media types.
+	// DataStructure is the interface implemented by all data structure types.
+	// That is attribute definitions, user types and media types.
 	DataStructure interface {
 		// Definition returns the data structure definition.
 		Definition() *AttributeDefinition
@@ -124,6 +134,56 @@ func (p Primitive) Name() string {
 // ToObject returns nil.
 func (p Primitive) ToObject() Object { return nil }
 
+// IsCompatible returns true if val is compatible with p.
+func (p Primitive) IsCompatible(val interface{}) (ok bool) {
+	switch p {
+	case Boolean:
+		_, ok = val.(bool)
+	case Integer:
+		_, ok = val.(int)
+		if !ok {
+			_, ok = val.(int8)
+		}
+		if !ok {
+			_, ok = val.(int16)
+		}
+		if !ok {
+			_, ok = val.(int32)
+		}
+		if !ok {
+			_, ok = val.(int64)
+		}
+		if !ok {
+			_, ok = val.(uint)
+		}
+		if !ok {
+			_, ok = val.(uint8)
+		}
+		if !ok {
+			_, ok = val.(uint16)
+		}
+		if !ok {
+			_, ok = val.(uint32)
+		}
+		if !ok {
+			_, ok = val.(uint64)
+		}
+	case Number:
+		ok = Integer.IsCompatible(val)
+		if !ok {
+			_, ok = val.(float32)
+		}
+		if !ok {
+			_, ok = val.(float64)
+		}
+	case String:
+		_, ok = val.(string)
+	default:
+		panic("unknown primitive type") // bug
+	}
+	return
+}
+
 // Kind implements DataKind.
 func (a *Array) Kind() Kind { return ArrayKind }
 
@@ -132,6 +192,12 @@ func (a *Array) Name() string { return fmt.Sprintf("array of %s", a.ElemType.Typ
 
 // ToObject returns nil.
 func (a *Array) ToObject() Object { return nil }
+
+// IsCompatible returns true if val is compatible with p.
+func (a *Array) IsCompatible(val interface{}) bool {
+	k := reflect.TypeOf(val).Kind()
+	return k == reflect.Array || k == reflect.Slice
+}
 
 // Kind implements DataKind.
 func (o Object) Kind() Kind { return ObjectKind }
@@ -142,6 +208,12 @@ func (o Object) Name() string { return "object" }
 // ToObject returns the underlying object.
 func (o Object) ToObject() Object { return o }
 
+// IsCompatible returns true if val is compatible with p.
+func (o Object) IsCompatible(val interface{}) bool {
+	k := reflect.TypeOf(val).Kind()
+	return k == reflect.Map || k == reflect.Struct
+}
+
 // Kind implements DataKind.
 func (u *UserTypeDefinition) Kind() Kind { return UserTypeKind }
 
@@ -151,28 +223,19 @@ func (u *UserTypeDefinition) Name() string { return u.TypeName }
 // ToObject calls ToObject on the user type underlying data type.
 func (u *UserTypeDefinition) ToObject() Object { return u.Type.ToObject() }
 
+// IsCompatible returns true if val is compatible with p.
+func (u *UserTypeDefinition) IsCompatible(val interface{}) bool {
+	return u.Type.IsCompatible(val)
+}
+
 // Kind implements DataKind.
 func (m *MediaTypeDefinition) Kind() Kind { return MediaTypeKind }
 
-// Name returns the type name.
-func (m *MediaTypeDefinition) Name() string { return m.TypeName }
-
-// ToObject calls ToObject on the media type underlying data type.
-func (m *MediaTypeDefinition) ToObject() Object { return m.Type.ToObject() }
-
 // DataStructure implementation
 
-// Definition returns itself for attribute definitions.
+// Definition returns the underlying attribute definition.
+// Note that this function is "inherited" by both UserTypeDefinition and
+// MediaTypeDefinition.
 func (a *AttributeDefinition) Definition() *AttributeDefinition {
 	return a
-}
-
-// Definition returns the underlying attribute definition.
-func (u *UserTypeDefinition) Definition() *AttributeDefinition {
-	return u.AttributeDefinition
-}
-
-// Definition returns the underlying attribute definition.
-func (m *MediaTypeDefinition) Definition() *AttributeDefinition {
-	return m.AttributeDefinition
 }

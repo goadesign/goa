@@ -79,9 +79,8 @@ var _ = Describe("MediaType", func() {
 			Ω(mt).ShouldNot(BeNil())
 			Ω(mt.Validate()).ShouldNot(HaveOccurred())
 			Ω(mt.AttributeDefinition).ShouldNot(BeNil())
-			at := mt.AttributeDefinition
-			Ω(at.Type).Should(BeAssignableToTypeOf(Object{}))
-			o := at.Type.(Object)
+			Ω(mt.Type).Should(BeAssignableToTypeOf(Object{}))
+			o := mt.Type.(Object)
 			Ω(o).Should(HaveLen(1))
 			Ω(o).Should(HaveKey(attName))
 		})

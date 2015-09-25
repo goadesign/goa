@@ -124,7 +124,7 @@ var _ = Describe("Attribute", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dataType = Integer
-			dsl = func() { Enum("one", "two") }
+			dsl = func() { Enum(1, 2) }
 		})
 
 		It("produces an attribute of type integer with a validation", func() {
@@ -143,7 +143,7 @@ var _ = Describe("Attribute", func() {
 	Context("with a name, type integer, a description and a DSL defining an enum validation", func() {
 		BeforeEach(func() {
 			name = "foo"
-			dataType = Integer
+			dataType = String
 			description = "bar"
 			dsl = func() { Enum("one", "two") }
 		})
@@ -155,7 +155,7 @@ var _ = Describe("Attribute", func() {
 			o := t.(Object)
 			Ω(o).Should(HaveLen(1))
 			Ω(o).Should(HaveKey(name))
-			Ω(o[name].Type).Should(Equal(Integer))
+			Ω(o[name].Type).Should(Equal(String))
 			Ω(o[name].Validations).Should(HaveLen(1))
 			Ω(o[name].Validations[0]).Should(BeAssignableToTypeOf(&EnumValidationDefinition{}))
 			Ω(o[name].Description).Should(Equal(description))
