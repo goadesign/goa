@@ -2,6 +2,8 @@ package goagen
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -53,8 +55,9 @@ type (
 
 // RegisterFlags registers the global flags.
 func RegisterFlags(r FlagRegistry) {
+	cwd, _ := os.Getwd()
 	r.Flag("out", "output directory").
-		Required().
+		Default(filepath.Join(cwd, "autogen")).
 		Short('o').
 		StringVar(&OutputDir)
 

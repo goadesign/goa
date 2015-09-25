@@ -8,6 +8,9 @@ import (
 var (
 	// TargetPackage is the name of the generated Go package.
 	TargetPackage string
+
+	// OutputDir is the path to the output directory.
+	OutputDir string
 )
 
 // Command is the goa application code generator command line data structure.
@@ -29,10 +32,11 @@ func (c *Command) RegisterFlags(r goagen.FlagRegistry) {
 
 // Run simply calls the meta generator.
 func (c *Command) Run() ([]string, error) {
+	flags := map[string]string{"target": TargetPackage}
 	gen := meta.NewGenerator(
 		"app.NewGenerator",
-		[]string{"github.com/raphael/goa/goagen/app"},
-		map[string]string{"target": TargetPackage},
+		[]*goagen.ImportSpec{goagen.SimpleImport("github.com/raphael/goa/goagen/app")},
+		flags,
 	)
 	return gen.Generate()
 }

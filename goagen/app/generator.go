@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"bitbucket.org/pkg/inflect"
 
@@ -22,7 +23,6 @@ type Generator struct {
 	contextsFilename  string
 	handlersFilename  string
 	resourcesFilename string
-	apiName           string
 }
 
 // NewGenerator returns the application code generator.
@@ -32,7 +32,8 @@ func NewGenerator() (*Generator, error) {
 	NewCommand().RegisterFlags(app)
 	_, err := app.Parse(os.Args[1:])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(`invalid command line: %s. Command line was "%s"`,
+			err, strings.Join(os.Args, " "))
 	}
 	outdir := goagen.OutputDir
 	ctxFile := filepath.Join(outdir, "contexts.go")
@@ -51,12 +52,6 @@ func NewGenerator() (*Generator, error) {
 	if err != nil {
 		panic(err) // bug
 	}
-	var name string
-	if design.Design == nil {
-		name = "<missing API definition>"
-	} else {
-		name = design.Design.Name
-	}
 	return &Generator{
 		GoGenerator:       goagen.NewGoGenerator(outdir),
 		ContextsWriter:    ctxWr,
@@ -65,19 +60,17 @@ func NewGenerator() (*Generator, error) {
 		contextsFilename:  ctxFile,
 		handlersFilename:  hdlFile,
 		resourcesFilename: resFile,
-		apiName:           name,
 	}, nil
 }
 
 // Generate the application code, implement goagen.Generator.
-func (g *Generator) Generate() ([]string, error) {
-	if design.Design == nil {
+func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
+	if api == nil {
 		return nil, fmt.Errorf("missing API definition, make sure design.Design is properly initialized")
 	}
-	imports := []string{}
-	title := fmt.Sprintf("%s: Application Contexts", g.apiName)
-	g.ContextsWriter.WriteHeader(title, TargetPackage, imports)
-	err := design.Design.IterateResources(func(r *design.ResourceDefinition) error {
+	title := fmt.Sprintf("%s: Application Contexts", api.Name)
+	g.ContextsWriter.WriteHeader(title, TargetPackage, nil)
+	err := api.IterateResources(func(r *design.ResourceDefinition) error {
 		return r.IterateActions(func(a *design.ActionDefinition) error {
 			ctxName := inflect.Camelize(a.Name) + inflect.Camelize(a.Parent.Name) + "Context"
 			ctxData := ContextTemplateData{
@@ -88,7 +81,7 @@ func (g *Generator) Generate() ([]string, error) {
 				Payload:      a.Payload,
 				Headers:      a.Headers,
 				Responses:    a.Responses,
-				MediaTypes:   design.Design.MediaTypes,
+				MediaTypes:   api.MediaTypes,
 			}
 			return g.ContextsWriter.Execute(&ctxData)
 		})
@@ -100,11 +93,10 @@ func (g *Generator) Generate() ([]string, error) {
 		return nil, err
 	}
 
-	imports = []string{}
-	title = fmt.Sprintf("%s: Application Handlers", g.apiName)
-	g.HandlersWriter.WriteHeader(title, TargetPackage, imports)
+	title = fmt.Sprintf("%s: Application Handlers", api.Name)
+	g.HandlersWriter.WriteHeader(title, TargetPackage, nil)
 	var handlersData []*HandlerTemplateData
-	design.Design.IterateResources(func(r *design.ResourceDefinition) error {
+	api.IterateResources(func(r *design.ResourceDefinition) error {
 		return r.IterateActions(func(a *design.ActionDefinition) error {
 			if len(a.Routes) > 0 {
 				name := fmt.Sprintf("%s%sHandler", a.FormatName(true), r.FormatName(false, true))
@@ -128,11 +120,10 @@ func (g *Generator) Generate() ([]string, error) {
 		return nil, err
 	}
 
-	imports = []string{}
-	title = fmt.Sprintf("%s: Application Resources", g.apiName)
-	g.ResourcesWriter.WriteHeader(title, TargetPackage, imports)
-	err = design.Design.IterateResources(func(r *design.ResourceDefinition) error {
-		m, ok := design.Design.MediaTypes[r.MediaType]
+	title = fmt.Sprintf("%s: Application Resources", api.Name)
+	g.ResourcesWriter.WriteHeader(title, TargetPackage, nil)
+	err = api.IterateResources(func(r *design.ResourceDefinition) error {
+		m, ok := api.MediaTypes[r.MediaType]
 		var identifier string
 		var resType *design.UserTypeDefinition
 		if ok {

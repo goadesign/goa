@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"text/template"
+
+	"github.com/raphael/goa/design"
 )
 
 type (
@@ -16,7 +18,7 @@ type (
 		// Generate generates the output (code, documentation etc.) and
 		// returns the list of generated filenames on success or an
 		// error.
-		Generate() ([]string, error)
+		Generate(*design.APIDefinition) ([]string, error)
 	}
 
 	// GoGenerator provide the basic implementation for a Go code generator.
@@ -61,8 +63,9 @@ func (w *GoGenerator) FormatCode() error {
 }
 
 // WriteHeader writes the generic generated code header.
-func (w *GoGenerator) WriteHeader(title, pack string, imports []string) error {
+func (w *GoGenerator) WriteHeader(title, pack string, imports []*ImportSpec) error {
 	ctx := map[string]interface{}{
+		"Title":       title,
 		"ToolVersion": Version,
 		"Pkg":         pack,
 		"Imports":     imports,
@@ -98,7 +101,7 @@ const (
 package {{.Pkg}}
 {{if .Imports}}
 import ({{range .Imports}}
-	"{{.}}"{{end}}
+	{{.Code}}{{end}}
 )
 {{end}}`
 )

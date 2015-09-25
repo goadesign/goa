@@ -26,7 +26,7 @@ type Generator struct {
 
 	// Imports list the imports that are specific for that generator that
 	// should be added to the main Go file.
-	Imports []string
+	Imports []*goagen.ImportSpec
 
 	// Flags is the list of flags to be used when invoking the final
 	// generator on the command line.
@@ -35,7 +35,7 @@ type Generator struct {
 
 // NewGenerator returns a meta generator that can run an actual Generator
 // given its factory method and command line flags.
-func NewGenerator(factory string, imports []string, flags map[string]string) *Generator {
+func NewGenerator(factory string, imports []*goagen.ImportSpec, flags map[string]string) *Generator {
 	return &Generator{
 		Factory: factory,
 		Imports: imports,
@@ -51,6 +51,9 @@ func (m *Generator) Generate() ([]string, error) {
 	}
 	if goagen.DesignPackagePath == "" {
 		return nil, fmt.Errorf("missing design package path specification")
+	}
+	if err := os.MkdirAll(goagen.OutputDir, 0755); err != nil {
+		return nil, err
 	}
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
@@ -85,7 +88,11 @@ func (m *Generator) Generate() ([]string, error) {
 	// Generate tool source code.
 	filename := filepath.Join(gendir, "main.go")
 	m.GoGenerator = goagen.NewGoGenerator(filename)
-	imports := append(m.Imports, "fmt", "os", goagen.DesignPackagePath)
+	imports := append(m.Imports,
+		goagen.SimpleImport("fmt"),
+		goagen.SimpleImport("os"),
+		goagen.NewImport(".", "github.com/raphael/goa/design"),
+	)
 	m.WriteHeader("Code Generator", "main", imports)
 	tmpl, err := template.New("generator").Parse(mainTmpl)
 	if err != nil {
@@ -142,9 +149,12 @@ func (m *Generator) compile(srcDir string) (string, error) {
 // spawn runs the compiled generator using the arguments initialized by Kingpin
 // when parsing the command line.
 func (m *Generator) spawn(genbin string) ([]string, error) {
-	var args []string
+	args := []string{
+		fmt.Sprintf("--out=%s", goagen.OutputDir),
+		fmt.Sprintf("--design=%s", goagen.DesignPackagePath),
+	}
 	for name, value := range m.Flags {
-		args = append(args, fmt.Sprintf("%s=%s", name, value))
+		args = append(args, fmt.Sprintf("--%s=%s", name, value))
 	}
 	cmd := exec.Command(genbin, args...)
 	out, err := cmd.CombinedOutput()
@@ -160,10 +170,10 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 
 const mainTmpl = `
 func main() {
-	gen, err := {{.Factory}}("{{.DesignPackage}}")
+	gen, err := {{.Factory}}()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	gen.Generate()
+	gen.Generate(Design)
 }`
