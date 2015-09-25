@@ -47,6 +47,7 @@ var _ = Describe("Run", func() {
 		}
 		m = &meta.Generator{
 			Factory: factory,
+			Imports: []*goagen.ImportSpec{goagen.SimpleImport(designPackage)},
 		}
 		goagen.Debug = debug
 		goagen.OutputDir = outputDir
@@ -115,7 +116,7 @@ var _ = Describe("Run", func() {
 		const invalidPath = "/foobar"
 
 		BeforeEach(func() {
-			factory = "design.NewFoo"
+			factory = "foo.NewFoo"
 			pathEnv = os.Getenv("PATH")
 			os.Setenv("PATH", invalidPath)
 		})
@@ -131,7 +132,7 @@ var _ = Describe("Run", func() {
 
 	Context("with no output directory specified", func() {
 		BeforeEach(func() {
-			factory = "design.NewFoo"
+			factory = "foo.NewFoo"
 			outputDir = ""
 		})
 
@@ -142,7 +143,7 @@ var _ = Describe("Run", func() {
 
 	Context("with no design package path specified", func() {
 		BeforeEach(func() {
-			factory = "design.NewFoo"
+			factory = "foo.NewFoo"
 			designPackage = ""
 		})
 
@@ -154,7 +155,7 @@ var _ = Describe("Run", func() {
 	Context("with design package content", func() {
 
 		BeforeEach(func() {
-			factory = "design.NewFoo"
+			factory = "foo.NewFoo"
 			outputDir = "/tmp"
 		})
 
@@ -209,31 +210,34 @@ var _ = Describe("Run", func() {
 })
 
 const (
-	invalidSource = `package design
+	invalidSource = `package foo
 invalid go code
 `
 
-	panickySource = `package design
+	panickySource = `package foo
+import . "github.com/raphael/goa/design"
 type Generator int
-func (g *Generator) Generate() {}
-func NewFoo(designPath string) (*Generator, error) { return new(Generator), nil }
+func (g *Generator) Generate(api *APIDefinition) {}
+func NewFoo() (*Generator, error) { return new(Generator), nil }
 
 func init() { panic("kaboom") }
 `
 
-	validSource = `package design
+	validSource = `package foo
+import . "github.com/raphael/goa/design"
 type Generator int
-func (g *Generator) Generate() {}
-func NewFoo(designPath string) (*Generator, error) { return new(Generator), nil }
+func (g *Generator) Generate(api *APIDefinition) {}
+func NewFoo() (*Generator, error) { return new(Generator), nil }
 `
 
-	validSourceTmpl = `package design
+	validSourceTmpl = `package foo
 import "fmt"
+import . "github.com/raphael/goa/design"
 type Generator int
-func (g *Generator) Generate() {
+func (g *Generator) Generate(api *APIDefinition) {
 	{{range .}}fmt.Println("{{.}}")
 	{{end}}
 }
-func NewFoo(designPath string) (*Generator, error) { return new(Generator), nil }
+func NewFoo() (*Generator, error) { return new(Generator), nil }
 `
 )

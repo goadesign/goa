@@ -63,7 +63,7 @@ var _ = Describe("Generate", func() {
 		var err error
 		gen, err = app.NewGenerator()
 		Ω(err).ShouldNot(HaveOccurred())
-		files, genErr = gen.Generate()
+		files, genErr = gen.Generate(design.Design)
 	})
 
 	AfterEach(func() {
@@ -197,7 +197,7 @@ var _ = Describe("Generate", func() {
 })
 
 const contextsCodeTmpl = `//************************************************************************//
-// <no value>
+// test api: Application Contexts
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen --out={{.outDir}} --design={{.design}}
@@ -234,7 +234,7 @@ func (c *GetWidgetContext) OK(resp *id) error {
 `
 
 const handlersCodeTmpl = `//************************************************************************//
-// <no value>
+// test api: Application Handlers
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen --out={{.outDir}} --design={{.design}}
@@ -266,7 +266,7 @@ func getWidgetsHandler(userHandler interface{}) (goa.Handler, error) {
 `
 
 const resourcesCodeTmpl = `//************************************************************************//
-// <no value>
+// test api: Application Resources
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen --out={{.outDir}} --design={{.design}}
