@@ -1,4 +1,4 @@
-package runner_test
+package test
 
 import (
 	. "github.com/onsi/ginkgo"
