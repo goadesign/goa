@@ -28,16 +28,26 @@ import . "github.com/raphael/goa/design"
 //	})
 // })
 //
+// We can't rely on this being run first, any of the top level DSL could run
+// in any order. The top level DSLs are API, Resource, MediaType and Type.
+// The first one to be called executes InitDesign.
+// API checks whether that has been called yet (i.e. if the global variable
+// Design is initialized) and if so makes sure that if it has a name it is the
+// same as the one used in the argument: API can be called multiple times as
+// long as it's always to define the same API.
 func API(name string, dsl func()) error {
 	if Design == nil {
 		InitDesign()
-		Design.Name = name
-	} else if Design.Name != name {
+	} else if Design.Name != "" && Design.Name != name {
 		ReportError("multiple API definitions: %#v and %#v", name, Design.Name)
 		return DSLErrors
 	}
-	executeDSL(dsl, Design)
-	return DSLErrors
+	if !topLevelDefinition(true) {
+		return DSLErrors
+	}
+	Design.Name = name
+	Design.DSL = dsl
+	return nil
 }
 
 // Description sets the description on the evaluation scope.
@@ -51,6 +61,8 @@ func Description(d string) {
 		a.Description = d
 	} else if m, ok := mediaTypeDefinition(false); ok {
 		m.Description = d
+	} else if a, ok := attributeDefinition(false); ok {
+		a.Description = d
 	} else if r, ok := responseDefinition(true); ok {
 		r.Description = d
 	}
@@ -90,10 +102,10 @@ func BaseParams(dsl func()) {
 //	}
 // }
 func ResponseTemplate(name string, p interface{}) {
-	if Design.ResponseTemplates == nil {
-		Design.ResponseTemplates = make(map[string]*ResponseTemplateDefinition)
-	}
 	if a, ok := apiDefinition(true); ok {
+		if Design.ResponseTemplates == nil {
+			Design.ResponseTemplates = make(map[string]*ResponseTemplateDefinition)
+		}
 		if _, ok := a.Responses[name]; ok {
 			ReportError("multiple definitions for response template %s", name)
 			return
@@ -266,7 +278,7 @@ func Trait(name string, val ...func()) {
 				ReportError("multiple definitions for trait %s", name)
 				return
 			}
-			trait := &TraitDefinition{Name: name, Dsl: val[0]}
+			trait := &TraitDefinition{Name: name, DSL: val[0]}
 			if a.Traits == nil {
 				a.Traits = make(map[string]*TraitDefinition)
 			}
@@ -274,19 +286,19 @@ func Trait(name string, val ...func()) {
 		}
 	} else if r, ok := resourceDefinition(false); ok {
 		if trait, ok := Design.Traits[name]; ok {
-			executeDSL(trait.Dsl, r)
+			executeDSL(trait.DSL, r)
 		} else {
 			ReportError("unknown trait %s", name)
 		}
 	} else if a, ok := actionDefinition(false); ok {
 		if trait, ok := Design.Traits[name]; ok {
-			executeDSL(trait.Dsl, a)
+			executeDSL(trait.DSL, a)
 		} else {
 			ReportError("unknown trait %s", name)
 		}
 	} else if a, ok := attributeDefinition(false); ok {
 		if trait, ok := Design.Traits[name]; ok {
-			executeDSL(trait.Dsl, a)
+			executeDSL(trait.DSL, a)
 		} else {
 			ReportError("unknown trait %s", name)
 		}

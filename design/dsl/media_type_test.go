@@ -21,9 +21,8 @@ var _ = Describe("MediaType", func() {
 	})
 
 	JustBeforeEach(func() {
-		API("test", func() {
-			MediaType(name, dsl)
-		})
+		MediaType(name, dsl)
+		RunDSL()
 		Ω(DSLErrors).ShouldNot(HaveOccurred())
 		mt, _ = Design.MediaTypes[name]
 	})

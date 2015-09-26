@@ -32,30 +32,29 @@ import . "github.com/raphael/goa/design"
 //
 // This function returns the newly defined media type in the first mode, nil otherwise.
 func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
-	var mt *MediaTypeDefinition
+	if Design == nil {
+		InitDesign()
+	}
 	if Design.MediaTypes == nil {
 		Design.MediaTypes = make(map[string]*MediaTypeDefinition)
 	}
-	if _, ok := apiDefinition(false); ok {
-		if identifier, ok := val.(string); ok {
-			if _, ok := Design.MediaTypes[identifier]; ok {
-				ReportError("media type %#v is defined twice", identifier)
-				return nil
-			}
-			mt = &MediaTypeDefinition{
-				UserTypeDefinition: &UserTypeDefinition{
-					AttributeDefinition: &AttributeDefinition{},
-					TypeName:            identifier,
-				},
-			}
-			if len(dsl) > 0 {
-				if ok := executeDSL(dsl[0], mt); ok {
-					Design.MediaTypes[identifier] = mt
-				}
-			}
-		} else {
-			ReportError("media type name must be a string, got %#v", val)
+	if topLevelDefinition(false) {
+		identifier, ok := val.(string)
+		if !ok {
+			ReportError("media type identifier must be a string, got %#v", val)
+			return nil
 		}
+		if _, ok := Design.MediaTypes[identifier]; ok {
+			ReportError("media type %#v is defined twice", identifier)
+			return nil
+		}
+		var d func()
+		if len(dsl) > 0 {
+			d = dsl[0]
+		}
+		mt := NewMediaTypeDefinition(identifier, d)
+		Design.MediaTypes[identifier] = mt
+		return mt
 	} else if r, ok := resourceDefinition(false); ok {
 		if m, ok := val.(*MediaTypeDefinition); ok {
 			if m.UserTypeDefinition == nil {
@@ -81,7 +80,7 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 			ReportError("media type must be a string or a *MediaTypeDefinition, got %#v", val)
 		}
 	}
-	return mt
+	return nil
 }
 
 // View adds a new view to the media type.

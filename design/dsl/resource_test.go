@@ -21,9 +21,8 @@ var _ = Describe("Resource", func() {
 	})
 
 	JustBeforeEach(func() {
-		API("test", func() {
-			Resource(name, dsl)
-		})
+		Resource(name, dsl)
+		RunDSL()
 		res, _ = Design.Resources[name]
 	})
 

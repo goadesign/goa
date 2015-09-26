@@ -7,6 +7,51 @@ import (
 	. "github.com/raphael/goa/design/dsl"
 )
 
+var _ = Describe("DSL execution", func() {
+	Context("with cyclical type dependencies", func() {
+		const type1Name = "type1Name"
+		const type2Name = "type2Name"
+		const att1Name = "att1Name"
+		const att2Name = "att2Name"
+
+		BeforeEach(func() {
+			Design = nil
+
+			API("foo", func() {})
+
+			var type1, type2 *UserTypeDefinition
+
+			type1 = Type(type1Name, func() {
+				Attribute(att1Name, type2)
+			})
+			type2 = Type(type2Name, func() {
+				Attribute(att2Name, type1)
+			})
+		})
+
+		JustBeforeEach(func() {
+			RunDSL()
+		})
+
+		It("still produces the correct metadata", func() {
+			Ω(DSLErrors).Should(BeEmpty())
+			Ω(Design.Types).Should(HaveLen(2))
+			t1 := Design.Types[type1Name]
+			t2 := Design.Types[type2Name]
+			Ω(t1).ShouldNot(BeNil())
+			Ω(t2).ShouldNot(BeNil())
+			Ω(t1.Type).Should(BeAssignableToTypeOf(Object{}))
+			Ω(t2.Type).Should(BeAssignableToTypeOf(Object{}))
+			o1 := t1.Type.(Object)
+			o2 := t2.Type.(Object)
+			Ω(o1).Should(HaveKey(att1Name))
+			Ω(o2).Should(HaveKey(att2Name))
+			Ω(o1[att1Name].Type).Should(Equal(t2))
+			Ω(o2[att2Name].Type).Should(Equal(t1))
+		})
+	})
+})
+
 var _ = Describe("DSL errors", func() {
 	var dslErrorMsg string
 
@@ -22,7 +67,7 @@ var _ = Describe("DSL errors", func() {
 		const errMsg = "err"
 
 		// See NOTE below.
-		const lineNumber = 30
+		const lineNumber = 75
 
 		BeforeEach(func() {
 			// NOTE: moving the line below requires updating the
@@ -40,8 +85,8 @@ var _ = Describe("DSL errors", func() {
 	})
 
 	Context("with multiple errors", func() {
-		const error1msg = "foo"
-		const error2msg = "foo"
+		const error1msg = "foo1"
+		const error2msg = "foo2"
 
 		BeforeEach(func() {
 			ReportError(error1msg)
@@ -56,7 +101,7 @@ var _ = Describe("DSL errors", func() {
 
 	Context("with invalid DSL", func() {
 		// See NOTE below.
-		const lineNumber = 66
+		const lineNumber = 111
 
 		BeforeEach(func() {
 			Design = nil
@@ -65,6 +110,7 @@ var _ = Describe("DSL errors", func() {
 				// constant above to match its number.
 				Attributes(func() {})
 			})
+			RunDSL()
 		})
 
 		It("reports an invalid DSL error", func() {
@@ -78,17 +124,16 @@ var _ = Describe("DSL errors", func() {
 
 	Context("with DSL calling a function with an invalid argument type", func() {
 		// See NOTE below.
-		const lineNumber = 89
+		const lineNumber = 134
 
 		BeforeEach(func() {
 			Design = nil
-			API("foo", func() {
-				Type("bar", func() {
-					// NOTE: moving the line below requires updating the
-					// constant above to match its number.
-					Attribute("baz", 42)
-				})
+			Type("bar", func() {
+				// NOTE: moving the line below requires updating the
+				// constant above to match its number.
+				Attribute("baz", 42)
 			})
+			RunDSL()
 		})
 
 		It("reports an incompatible type DSL error", func() {
@@ -99,5 +144,4 @@ var _ = Describe("DSL errors", func() {
 			Ω(DSLErrors[0].Line).Should(Equal(lineNumber))
 		})
 	})
-
 })

@@ -25,25 +25,24 @@ var _ = Describe("Attribute", func() {
 	})
 
 	JustBeforeEach(func() {
-		API("test", func() {
-			Type("type", func() {
-				if dsl == nil {
-					if dataType == nil {
-						Attribute(name)
-					} else if description == "" {
-						Attribute(name, dataType)
-					} else {
-						Attribute(name, dataType, description)
-					}
-				} else if dataType == nil {
-					Attribute(name, dsl)
+		Type("type", func() {
+			if dsl == nil {
+				if dataType == nil {
+					Attribute(name)
 				} else if description == "" {
-					Attribute(name, dataType, dsl)
+					Attribute(name, dataType)
 				} else {
-					Attribute(name, dataType, description, dsl)
+					Attribute(name, dataType, description)
 				}
-			})
+			} else if dataType == nil {
+				Attribute(name, dsl)
+			} else if description == "" {
+				Attribute(name, dataType, dsl)
+			} else {
+				Attribute(name, dataType, description, dsl)
+			}
 		})
+		RunDSL()
 		if t, ok := Design.Types["type"]; ok {
 			parent = t.AttributeDefinition
 		}

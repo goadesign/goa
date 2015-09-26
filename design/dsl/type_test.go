@@ -21,9 +21,8 @@ var _ = Describe("Type", func() {
 	})
 
 	JustBeforeEach(func() {
-		API("test", func() {
-			Type(name, dsl)
-		})
+		Type(name, dsl)
+		RunDSL()
 		Ω(DSLErrors).ShouldNot(HaveOccurred())
 		ut, _ = Design.Types[name]
 	})

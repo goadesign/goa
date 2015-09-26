@@ -57,6 +57,8 @@ type (
 		*AttributeDefinition
 		// Name of type
 		TypeName string
+		// DSL contains the DSL used to create this definition if any.
+		DSL func()
 	}
 
 	// MediaTypeDefinition describes the rendering of a resource using property and link
@@ -214,6 +216,16 @@ func (o Object) IsCompatible(val interface{}) bool {
 	return k == reflect.Map || k == reflect.Struct
 }
 
+// NewUserTypeDefinition creates a user type definition but does not
+// execute the DSL.
+func NewUserTypeDefinition(name string, dsl func()) *UserTypeDefinition {
+	return &UserTypeDefinition{
+		TypeName:            name,
+		AttributeDefinition: &AttributeDefinition{},
+		DSL:                 dsl,
+	}
+}
+
 // Kind implements DataKind.
 func (u *UserTypeDefinition) Kind() Kind { return UserTypeKind }
 
@@ -226,6 +238,18 @@ func (u *UserTypeDefinition) ToObject() Object { return u.Type.ToObject() }
 // IsCompatible returns true if val is compatible with p.
 func (u *UserTypeDefinition) IsCompatible(val interface{}) bool {
 	return u.Type.IsCompatible(val)
+}
+
+// NewMediaTypeDefinition creates a media type definition but does not
+// execute the DSL.
+func NewMediaTypeDefinition(name string, dsl func()) *MediaTypeDefinition {
+	return &MediaTypeDefinition{
+		UserTypeDefinition: &UserTypeDefinition{
+			AttributeDefinition: &AttributeDefinition{},
+			TypeName:            name,
+			DSL:                 dsl,
+		},
+	}
 }
 
 // Kind implements DataKind.

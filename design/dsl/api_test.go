@@ -20,6 +20,7 @@ var _ = Describe("API", func() {
 
 	JustBeforeEach(func() {
 		API(name, dsl)
+		RunDSL()
 	})
 
 	Context("with no DSL", func() {
@@ -33,9 +34,23 @@ var _ = Describe("API", func() {
 		})
 	})
 
-	Context("with an already defined API", func() {
+	Context("with an already defined API with the same name", func() {
+		BeforeEach(func() {
+			name = "foo"
+		})
+
+		It("produces a valid API definition", func() {
+			Ω(API(name, dsl)).ShouldNot(HaveOccurred())
+		})
+	})
+
+	Context("with an already defined API with a different name", func() {
+		BeforeEach(func() {
+			name = "foo"
+		})
+
 		It("returns an error", func() {
-			Ω(API("new", dsl)).Should(HaveOccurred())
+			Ω(API("news", dsl)).Should(HaveOccurred())
 		})
 	})
 

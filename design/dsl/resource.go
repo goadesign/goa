@@ -16,21 +16,20 @@ import . "github.com/raphael/goa/design"
 // 	})
 // })
 func Resource(name string, dsl func()) *ResourceDefinition {
+	if Design == nil {
+		InitDesign()
+	}
 	if Design.Resources == nil {
 		Design.Resources = make(map[string]*ResourceDefinition)
 	}
 	var resource *ResourceDefinition
-	if a, ok := apiDefinition(true); ok {
-		resource, ok = a.Resources[name]
-		if !ok {
-			resource = &ResourceDefinition{
-				Name:      name,
-				MediaType: "plain/text",
-			}
+	if topLevelDefinition(true) {
+		if _, ok := Design.Resources[name]; ok {
+			ReportError("resource %#v is defined twice", name)
+			return nil
 		}
-		if ok := executeDSL(dsl, resource); ok {
-			a.Resources[name] = resource
-		}
+		resource = NewResourceDefinition(name, dsl)
+		Design.Resources[name] = resource
 	}
 	return resource
 }

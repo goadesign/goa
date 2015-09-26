@@ -48,6 +48,12 @@ type (
 		Types map[string]*UserTypeDefinition
 		// Media types
 		MediaTypes map[string]*MediaTypeDefinition
+		// dsl contains the DSL used to create this definition if any.
+		DSL func()
+		// saved contains a copy of the API definition pre DSL execution.
+		// This copy gets updated each time a top DSL function is
+		// executed. see dsl.RunDSL.
+		saved *APIDefinition
 	}
 
 	// ResourceDefinition describes a REST resource.
@@ -74,6 +80,8 @@ type (
 		Actions map[string]*ActionDefinition
 		// Action with canonical resource path
 		CanonicalAction string
+		// dsl contains the DSL used to create this definition if any.
+		DSL func()
 	}
 
 	// ResponseDefinition defines a HTTP response status and optional validation rules.
@@ -173,7 +181,7 @@ type (
 		// Trait name
 		Name string
 		// Trait DSL
-		Dsl func()
+		DSL func()
 	}
 
 	// RouteDefinition represents an action route.
@@ -286,6 +294,16 @@ func (a *APIDefinition) IterateMediaTypes(it MediaTypeIterator) error {
 		}
 	}
 	return nil
+}
+
+// NewResourceDefinition creates a resource definition but does not
+// execute the DSL.
+func NewResourceDefinition(name string, dsl func()) *ResourceDefinition {
+	return &ResourceDefinition{
+		Name:      name,
+		MediaType: "plain/text",
+		DSL:       dsl,
+	}
 }
 
 // Context returns the generic definition name used in error messages.

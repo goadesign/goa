@@ -2,6 +2,8 @@ package meta
 
 import (
 	"fmt"
+	"go/parser"
+	"go/token"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -84,6 +86,36 @@ func (m *Generator) Generate() ([]string, error) {
 	if goagen.Debug {
 		fmt.Printf("goagen source dir: %s\n", gendir)
 	}
+
+	// Generate design package init to run DSL
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, designPath, nil, parser.ImportsOnly)
+	if err != nil {
+		return nil, err
+	}
+	pkgNames := make([]string, len(pkgs))
+	i := 0
+	for n := range pkgs {
+		pkgNames[i] = n
+		i++
+	}
+	if len(pkgs) > 1 {
+		return nil, fmt.Errorf("more than one Go package found in %s (%s)",
+			designPath, strings.Join(pkgNames, ","))
+	}
+	if len(pkgs) == 0 {
+		return nil, fmt.Errorf("no Go package found in %s", designPath)
+	}
+	packageName := pkgNames[0]
+	initFile, err := ioutil.TempFile(designPath, "goainit")
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(initFile.Name())
+	initFile.WriteString(fmt.Sprintf("package %s\n\n", packageName))
+	initFile.WriteString(`import "github.com/raphael/goa/design/dsl"\n\n`)
+	initFile.WriteString("func init() { dsl.RunDSL() }\n")
+	initFile.Close()
 
 	// Generate tool source code.
 	filename := filepath.Join(gendir, "main.go")

@@ -21,13 +21,12 @@ var _ = Describe("Response", func() {
 	})
 
 	JustBeforeEach(func() {
-		API("test", func() {
-			Resource("res", func() {
-				Action("action", func() {
-					Response(name, dsl)
-				})
+		Resource("res", func() {
+			Action("action", func() {
+				Response(name, dsl)
 			})
 		})
+		RunDSL()
 		if r, ok := Design.Resources["res"]; ok {
 			if a, ok := r.Actions["action"]; ok {
 				res = a.Responses[name]

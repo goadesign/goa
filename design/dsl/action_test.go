@@ -22,11 +22,10 @@ var _ = Describe("Action", func() {
 	})
 
 	JustBeforeEach(func() {
-		API("test", func() {
-			Resource("res", func() {
-				Action(name, dsl)
-			})
+		Resource("res", func() {
+			Action(name, dsl)
 		})
+		RunDSL()
 		if r, ok := Design.Resources["res"]; ok {
 			action = r.Actions[name]
 		}
@@ -38,6 +37,7 @@ var _ = Describe("Action", func() {
 		})
 
 		It("produces an invalid action", func() {
+			Ω(DSLErrors).ShouldNot(HaveOccurred())
 			Ω(action).ShouldNot(BeNil())
 			Ω(action.Validate()).Should(HaveOccurred())
 		})
@@ -52,6 +52,7 @@ var _ = Describe("Action", func() {
 		})
 
 		It("produces a valid action definition with the route and default status of 200 set", func() {
+			Ω(DSLErrors).ShouldNot(HaveOccurred())
 			Ω(action).ShouldNot(BeNil())
 			Ω(action.Name).Should(Equal(name))
 			Ω(action.Validate()).ShouldNot(HaveOccurred())
@@ -65,11 +66,10 @@ var _ = Describe("Action", func() {
 		const typeName = "typeName"
 		const description = "description"
 		const headerName = "Foo"
+
 		BeforeEach(func() {
-			API("test", func() {
-				Type(typeName, func() {
-					Attribute("name")
-				})
+			Type(typeName, func() {
+				Attribute("name")
 			})
 			name = "foo"
 			dsl = func() {
@@ -82,6 +82,7 @@ var _ = Describe("Action", func() {
 		})
 
 		It("produces a valid action with the given properties", func() {
+			Ω(DSLErrors).ShouldNot(HaveOccurred())
 			Ω(action).ShouldNot(BeNil())
 			Ω(action.Validate()).ShouldNot(HaveOccurred())
 			Ω(action.Name).Should(Equal(name))
@@ -130,6 +131,7 @@ var _ = Describe("Action", func() {
 			})
 
 			It("defines the response definition using the template", func() {
+				Ω(DSLErrors).ShouldNot(HaveOccurred())
 				Ω(action).ShouldNot(BeNil())
 				Ω(action.Responses).ShouldNot(BeNil())
 				Ω(action.Responses).Should(HaveLen(1))

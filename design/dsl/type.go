@@ -13,15 +13,21 @@ import . "github.com/raphael/goa/design"
 //
 // This function returns the newly defined user type.
 func Type(name string, dsl func()) *UserTypeDefinition {
+	if Design == nil {
+		InitDesign()
+	}
 	if Design.Types == nil {
 		Design.Types = make(map[string]*UserTypeDefinition)
+	} else if _, ok := Design.Types[name]; ok {
+		ReportError("type %#v defined twice", name)
+		return nil
 	}
 	var t *UserTypeDefinition
-	at := &AttributeDefinition{}
-	if executeDSL(dsl, at) {
+	if topLevelDefinition(true) {
 		t = &UserTypeDefinition{
 			TypeName:            name,
-			AttributeDefinition: at,
+			AttributeDefinition: &AttributeDefinition{},
+			DSL:                 dsl,
 		}
 		Design.Types[name] = t
 	}

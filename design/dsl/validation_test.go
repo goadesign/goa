@@ -17,11 +17,10 @@ var _ = Describe("Validation", func() {
 		JustBeforeEach(func() {
 			Design = nil
 			DSLErrors = nil
-			API("foo", func() {
-				Type("bar", func() {
-					dsl()
-				})
+			Type("bar", func() {
+				dsl()
 			})
+			RunDSL()
 			if DSLErrors == nil {
 				Ω(Design.Types).ShouldNot(BeNil())
 				Ω(Design.Types).Should(HaveKey("bar"))

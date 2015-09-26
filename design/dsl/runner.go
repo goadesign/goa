@@ -35,6 +35,32 @@ type (
 	}
 )
 
+// RunDSL runs all the registered top level DSLs and returns any error.
+// This function is called by the client package init.
+// goagen creates that function during code generation.
+func RunDSL() error {
+	if Design == nil {
+		return nil
+	}
+	DSLErrors = nil
+	// First run the top level API DSL to initialize responses and
+	// response templates needed by resources.
+	executeDSL(Design.DSL, Design)
+	// Then run the user type DSLs
+	for _, t := range Design.Types {
+		executeDSL(t.DSL, t.AttributeDefinition)
+	}
+	// Then the media type DSLs
+	for _, mt := range Design.MediaTypes {
+		executeDSL(mt.DSL, mt)
+	}
+	// And now that we have everything the resources.
+	for _, r := range Design.Resources {
+		executeDSL(r.DSL, r)
+	}
+	return DSLErrors
+}
+
 // Current evaluation context, i.e. object being currently built by DSL
 func (s contextStack) current() DSLDefinition {
 	if len(s) == 0 {
@@ -73,9 +99,9 @@ func executeDSL(dsl func(), ctx DSLDefinition) bool {
 	return len(DSLErrors) <= initCount
 }
 
-// incompatibleDsl should be called by DSL functions when they are
+// incompatibleDSL should be called by DSL functions when they are
 // invoked in an incorrect context (e.g. "Params" in "Resource").
-func incompatibleDsl(dslFunc string) {
+func incompatibleDSL(dslFunc string) {
 	elems := strings.Split(dslFunc, ".")
 	ReportError("invalid use of %s", elems[len(elems)-1])
 }
@@ -89,10 +115,13 @@ func invalidArgError(expected string, actual interface{}) {
 
 // ReportError records a DSL error for reporting post DSL execution.
 func ReportError(fm string, vals ...interface{}) {
+	var suffix string
 	if cur := ctxStack.current(); cur != nil {
-		fm += fmt.Sprintf(" in %s", cur.Context())
+		suffix = fmt.Sprintf(" in %s", cur.Context())
+	} else {
+		suffix = " (top level)"
 	}
-	err := fmt.Errorf(fm, vals...)
+	err := fmt.Errorf(fm+suffix, vals...)
 	file, line := computeErrorLocation()
 	DSLErrors = append(DSLErrors, &dslError{
 		GoError: err,
@@ -139,12 +168,22 @@ func computeErrorLocation() (file string, line int) {
 	return
 }
 
+// topLevelDefinition returns true if the currently evaluated DSL is a root
+// DSL (i.e. is not being run in the context of another definition).
+func topLevelDefinition(failItNotTopLevel bool) bool {
+	top := ctxStack.current() == nil
+	if failItNotTopLevel && !top {
+		incompatibleDSL(caller())
+	}
+	return top
+}
+
 // actionDefinition returns true and current context if it is an ActionDefinition,
 // nil and false otherwise.
 func actionDefinition(failIfNotAction bool) (*ActionDefinition, bool) {
 	a, ok := ctxStack.current().(*ActionDefinition)
 	if !ok && failIfNotAction {
-		incompatibleDsl(caller())
+		incompatibleDSL(caller())
 	}
 	return a, ok
 }
@@ -154,7 +193,7 @@ func actionDefinition(failIfNotAction bool) (*ActionDefinition, bool) {
 func apiDefinition(failIfNotAPI bool) (*APIDefinition, bool) {
 	a, ok := ctxStack.current().(*APIDefinition)
 	if !ok && failIfNotAPI {
-		incompatibleDsl(caller())
+		incompatibleDSL(caller())
 	}
 	return a, ok
 }
@@ -164,7 +203,7 @@ func apiDefinition(failIfNotAPI bool) (*APIDefinition, bool) {
 func mediaTypeDefinition(failIfNotMT bool) (*MediaTypeDefinition, bool) {
 	m, ok := ctxStack.current().(*MediaTypeDefinition)
 	if !ok && failIfNotMT {
-		incompatibleDsl(caller())
+		incompatibleDSL(caller())
 	}
 	return m, ok
 }
@@ -174,7 +213,7 @@ func mediaTypeDefinition(failIfNotMT bool) (*MediaTypeDefinition, bool) {
 func attributeDefinition(failIfNotAttribute bool) (*AttributeDefinition, bool) {
 	a, ok := ctxStack.current().(*AttributeDefinition)
 	if !ok && failIfNotAttribute {
-		incompatibleDsl(caller())
+		incompatibleDSL(caller())
 	}
 	return a, ok
 }
@@ -184,7 +223,7 @@ func attributeDefinition(failIfNotAttribute bool) (*AttributeDefinition, bool) {
 func resourceDefinition(failIfNotResource bool) (*ResourceDefinition, bool) {
 	r, ok := ctxStack.current().(*ResourceDefinition)
 	if !ok && failIfNotResource {
-		incompatibleDsl(caller())
+		incompatibleDSL(caller())
 	}
 	return r, ok
 }
@@ -194,7 +233,7 @@ func resourceDefinition(failIfNotResource bool) (*ResourceDefinition, bool) {
 func responseDefinition(failIfNotResponse bool) (*ResponseDefinition, bool) {
 	r, ok := ctxStack.current().(*ResponseDefinition)
 	if !ok && failIfNotResponse {
-		incompatibleDsl(caller())
+		incompatibleDSL(caller())
 	}
 	return r, ok
 }
