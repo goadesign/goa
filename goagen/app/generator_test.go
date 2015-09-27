@@ -220,7 +220,7 @@ func NewGetWidgetContext(c goa.Context) (*GetWidgetContext, error) {
 	ctx := GetWidgetContext{Context: c}
 	rawId, ok := c.Get("id")
 	if !ok {
-		err = goa.MissingParam("id", err)
+		err = goa.MissingParamError("id", err)
 	} else {
 		ctx.Id = rawId
 	}

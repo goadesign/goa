@@ -53,7 +53,7 @@ const (
 
 // Response records a possible action response.
 func Response(name string, paramsAndDSL ...interface{}) {
-	if a, ok := actionDefinition(true); ok {
+	if a, ok := actionDefinition(false); ok {
 		if a.Responses == nil {
 			a.Responses = make(map[string]*ResponseDefinition)
 		}
@@ -61,43 +61,66 @@ func Response(name string, paramsAndDSL ...interface{}) {
 			ReportError("response %s is defined twice", name)
 			return
 		}
-		var params []string
-		var dsl func()
-		if len(paramsAndDSL) > 0 {
-			d := paramsAndDSL[len(paramsAndDSL)-1]
-			if dsl, ok = d.(func()); ok {
-				paramsAndDSL = paramsAndDSL[:len(paramsAndDSL)-1]
-			}
-			params = make([]string, len(paramsAndDSL))
-			for i, p := range paramsAndDSL {
-				params[i], ok = p.(string)
-				if !ok {
-					ReportError("invalid response template parameter %#v, must be a string", p)
-					return
-				}
-			}
+		if resp := executeResponseDSL(name, paramsAndDSL...); resp != nil {
+			resp.Parent = a
+			a.Responses[name] = resp
 		}
-		var resp *ResponseDefinition
-		if len(params) > 0 {
-			if tmpl, ok := Design.ResponseTemplates[name]; ok {
-				resp = tmpl.Template(params...)
-			} else {
-				ReportError("no response template named %#v", name)
-				return
-			}
-		} else {
-			if ar, ok := Design.Responses[name]; ok {
-				resp = ar.Dup()
-			} else {
-				resp = &ResponseDefinition{Name: name}
-			}
+	} else if r, ok := resourceDefinition(true); ok {
+		if r.Responses == nil {
+			r.Responses = make(map[string]*ResponseDefinition)
 		}
-		if (dsl != nil) && !executeDSL(dsl, resp) {
+		if _, ok := r.Responses[name]; ok {
+			ReportError("response %s is defined twice", name)
 			return
 		}
-		resp.Parent = a
-		a.Responses[name] = resp
+		if resp := executeResponseDSL(name, paramsAndDSL...); resp != nil {
+			resp.Parent = r
+			r.Responses[name] = resp
+		}
 	}
+}
+
+func executeResponseDSL(name string, paramsAndDSL ...interface{}) *ResponseDefinition {
+	var params []string
+	var dsl func()
+	var ok bool
+	if len(paramsAndDSL) > 0 {
+		d := paramsAndDSL[len(paramsAndDSL)-1]
+		if dsl, ok = d.(func()); ok {
+			paramsAndDSL = paramsAndDSL[:len(paramsAndDSL)-1]
+		}
+		params = make([]string, len(paramsAndDSL))
+		for i, p := range paramsAndDSL {
+			params[i], ok = p.(string)
+			if !ok {
+				ReportError("invalid response template parameter %#v, must be a string", p)
+				return nil
+			}
+		}
+	}
+	var resp *ResponseDefinition
+	if len(params) > 0 {
+		if tmpl, ok := Design.ResponseTemplates[name]; ok {
+			resp = tmpl.Template(params...)
+		} else if tmpl, ok := Design.DefaultResponseTemplates[name]; ok {
+			resp = tmpl.Template(params...)
+		} else {
+			ReportError("no response template named %#v", name)
+			return nil
+		}
+	} else {
+		if ar, ok := Design.Responses[name]; ok {
+			resp = ar.Dup()
+		} else if ar, ok := Design.DefaultResponses[name]; ok {
+			resp = ar.Dup()
+		} else {
+			resp = &ResponseDefinition{Name: name}
+		}
+	}
+	if (dsl != nil) && !executeDSL(dsl, resp) {
+		return nil
+	}
+	return resp
 }
 
 // Status sets the Response status

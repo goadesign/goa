@@ -40,7 +40,8 @@ var _ = Describe("API", func() {
 		})
 
 		It("produces a valid API definition", func() {
-			Ω(API(name, dsl)).ShouldNot(HaveOccurred())
+			API(name, dsl)
+			Ω(DSLErrors).ShouldNot(HaveOccurred())
 		})
 	})
 
@@ -50,7 +51,8 @@ var _ = Describe("API", func() {
 		})
 
 		It("returns an error", func() {
-			Ω(API("news", dsl)).Should(HaveOccurred())
+			API("news", dsl)
+			Ω(DSLErrors).Should(HaveOccurred())
 		})
 	})
 
@@ -137,7 +139,7 @@ var _ = Describe("API", func() {
 			const respDesc = "Resource Not Found"
 			const respStatus = 404
 			const respMediaType = "text/plain"
-			const respTName = "OK2"
+			const respTName = "OK"
 			const respTDesc = "All good"
 			const respTStatus = 200
 
@@ -168,7 +170,7 @@ var _ = Describe("API", func() {
 				actual := *Design.Responses[respName]
 				Ω(actual).Should(Equal(expected))
 
-				Ω(Design.ResponseTemplates).Should(HaveLen(2))
+				Ω(Design.ResponseTemplates).Should(HaveLen(1))
 				Ω(Design.ResponseTemplates).Should(HaveKey(respTName))
 				Ω(Design.ResponseTemplates[respTName]).ShouldNot(BeNil())
 			})

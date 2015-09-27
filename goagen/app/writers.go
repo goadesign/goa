@@ -274,9 +274,12 @@ type {{.Name}} struct {
 func New{{camelize .Name}}(c goa.Context) (*{{.Name}}, error) {
 	var err error
 	ctx := {{.Name}}{Context: c}
-{{if.Params}}{{$params := .Params}}{{range $name, $att := $params.Type.ToObject}}	raw{{camelize $name}}, {{if ($params.IsRequired $name)}}ok{{else}}_{{end}} := c.Get("{{$name}}")
+{{if .Headers}}{{$headers := .Headers}}{{range $name := .Headers}}{{if ($headers.IsRequired $name)}}if c.Header.Get("{{$name}}") == "" {
+		err = goa.MissingHeaderError("{{$name}}", err)
+	}{{end}}{{end}}
+{{end}}{{if.Params}}{{$params := .Params}}{{range $name, $att := $params.Type.ToObject}}	raw{{camelize $name}}, {{if ($params.IsRequired $name)}}ok{{else}}_{{end}} := c.Get("{{$name}}")
 {{if ($params.IsRequired $name)}}	if !ok {
-		err = goa.MissingParam("{{$name}}", err)
+		err = goa.MissingParamError("{{$name}}", err)
 	} else {
 {{end}}{{$depth := or (and ($params.IsRequired $name) 2) 1}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (camelize (goify $name true))) $depth)}}{{if ($params.IsRequired $name)}}	}
 {{end}}{{validationChecker $att $name}}{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	if payload := c.Payload(); payload != nil {

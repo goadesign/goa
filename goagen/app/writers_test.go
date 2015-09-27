@@ -724,7 +724,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	ctx := ListBottleContext{Context: c}
 	rawInt, ok := c.Get("int")
 	if !ok {
-		err = goa.MissingParam("int", err)
+		err = goa.MissingParamError("int", err)
 	} else {
 		if int_, err := strconv.Atoi(rawInt); err == nil {
 			ctx.Int = int(int_)

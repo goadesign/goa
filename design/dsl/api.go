@@ -35,19 +35,19 @@ import . "github.com/raphael/goa/design"
 // Design is initialized) and if so makes sure that if it has a name it is the
 // same as the one used in the argument: API can be called multiple times as
 // long as it's always to define the same API.
-func API(name string, dsl func()) error {
+func API(name string, dsl func()) *APIDefinition {
 	if Design == nil {
 		InitDesign()
 	} else if Design.Name != "" && Design.Name != name {
 		ReportError("multiple API definitions: %#v and %#v", name, Design.Name)
-		return DSLErrors
+		return nil
 	}
 	if !topLevelDefinition(true) {
-		return DSLErrors
+		return nil
 	}
 	Design.Name = name
 	Design.DSL = dsl
-	return nil
+	return Design
 }
 
 // Description sets the description on the evaluation scope.
@@ -103,8 +103,11 @@ func BaseParams(dsl func()) {
 // }
 func ResponseTemplate(name string, p interface{}) {
 	if a, ok := apiDefinition(true); ok {
-		if Design.ResponseTemplates == nil {
-			Design.ResponseTemplates = make(map[string]*ResponseTemplateDefinition)
+		if a.Responses == nil {
+			a.Responses = make(map[string]*ResponseDefinition)
+		}
+		if a.ResponseTemplates == nil {
+			a.ResponseTemplates = make(map[string]*ResponseTemplateDefinition)
 		}
 		if _, ok := a.Responses[name]; ok {
 			ReportError("multiple definitions for response template %s", name)

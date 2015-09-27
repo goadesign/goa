@@ -47,7 +47,7 @@ var _ = Describe("Run", func() {
 		}
 		m = &meta.Generator{
 			Factory: factory,
-			Imports: []*goagen.ImportSpec{goagen.SimpleImport(designPackage)},
+			Imports: nil, // []*goagen.ImportSpec{goagen.SimpleImport(designPackage)},
 		}
 		goagen.Debug = debug
 		goagen.OutputDir = outputDir
@@ -217,7 +217,10 @@ invalid go code
 	panickySource = `package foo
 import . "github.com/raphael/goa/design"
 type Generator int
-func (g *Generator) Generate(api *APIDefinition) {}
+var Metadata *APIDefinition
+func (g *Generator) Generate(api *APIDefinition) ([]string, error) {
+	return nil, nil
+}
 func NewFoo() (*Generator, error) { return new(Generator), nil }
 
 func init() { panic("kaboom") }
@@ -226,7 +229,10 @@ func init() { panic("kaboom") }
 	validSource = `package foo
 import . "github.com/raphael/goa/design"
 type Generator int
-func (g *Generator) Generate(api *APIDefinition) {}
+var Metadata *APIDefinition
+func (g *Generator) Generate(api *APIDefinition) ([]string, error) {
+	return nil, nil
+}
 func NewFoo() (*Generator, error) { return new(Generator), nil }
 `
 
@@ -234,9 +240,11 @@ func NewFoo() (*Generator, error) { return new(Generator), nil }
 import "fmt"
 import . "github.com/raphael/goa/design"
 type Generator int
-func (g *Generator) Generate(api *APIDefinition) {
+var Metadata *APIDefinition
+func (g *Generator) Generate(api *APIDefinition) ([]string, error) {
 	{{range .}}fmt.Println("{{.}}")
 	{{end}}
+	return nil, nil
 }
 func NewFoo() (*Generator, error) { return new(Generator), nil }
 `

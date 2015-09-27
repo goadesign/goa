@@ -98,6 +98,11 @@ func Headers(dsl func()) {
 		if executeDSL(dsl, headers) {
 			a.Headers = headers
 		}
+	} else if r, ok := resourceDefinition(false); ok {
+		headers := new(AttributeDefinition)
+		if executeDSL(dsl, headers) {
+			r.Headers = headers
+		}
 	} else if r, ok := responseDefinition(true); ok {
 		if r.Headers != nil {
 			ReportError("headers already defined")
@@ -112,10 +117,15 @@ func Headers(dsl func()) {
 
 // Params computes the action parameters from the given DSL.
 func Params(dsl func()) {
-	if a, ok := actionDefinition(true); ok {
+	if a, ok := actionDefinition(false); ok {
 		params := new(AttributeDefinition)
 		if executeDSL(dsl, params) {
 			a.Params = params
+		}
+	} else if r, ok := resourceDefinition(true); ok {
+		params := new(AttributeDefinition)
+		if executeDSL(dsl, params) {
+			r.Params = params
 		}
 	}
 }
@@ -123,7 +133,9 @@ func Params(dsl func()) {
 // Payload defines the action payload DSL.
 func Payload(p interface{}) {
 	if a, ok := actionDefinition(true); ok {
-		var at *AttributeDefinition
+		at := &AttributeDefinition{
+			Type: Object{},
+		}
 		if dsl, ok := p.(func()); ok {
 			executeDSL(dsl, at)
 		} else {

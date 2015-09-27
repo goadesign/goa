@@ -229,12 +229,18 @@ func MaxLength(val int) {
 
 // Required properties validation
 func Required(names ...string) {
-	if a, ok := attributeDefinition(true); ok {
-		if a.Type != nil && a.Type.Kind() != ObjectKind {
-			incompatibleAttributeType("required", a.Type.Name(), "an object")
-		} else {
-			a.Validations = append(a.Validations, NewRequiredValidation(names...))
-		}
+	var at *AttributeDefinition
+	if a, ok := attributeDefinition(false); ok {
+		at = a
+	} else if mt, ok := mediaTypeDefinition(true); ok {
+		at = mt.AttributeDefinition
+	} else {
+		return
+	}
+	if at.Type != nil && at.Type.Kind() != ObjectKind {
+		incompatibleAttributeType("required", at.Type.Name(), "an object")
+	} else {
+		at.Validations = append(at.Validations, NewRequiredValidation(names...))
 	}
 }
 

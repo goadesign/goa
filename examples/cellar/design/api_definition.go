@@ -5,7 +5,9 @@ import (
 	. "github.com/raphael/goa/design/dsl"
 )
 
-var _ = API("cellar", func() {
+// Metadata is the cellar application API metadata used by goa to generate
+// the application code, client, tests, documentation etc.
+var Metadata = API("cellar", func() {
 
 	Title("The virtual wine cellar")
 	Description("A basic example of a CRUD API implemented with goa")

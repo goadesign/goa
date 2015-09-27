@@ -92,13 +92,11 @@ var _ = Describe("Response", func() {
 
 	Context("with a status and name override", func() {
 		const status = 201
-		const respName = "name"
 
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
 				Status(status)
-				Name(respName)
 			}
 		})
 
@@ -106,7 +104,6 @@ var _ = Describe("Response", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.Validate()).ShouldNot(HaveOccurred())
 			Ω(res.Status).Should(Equal(status))
-			Ω(res.Name).Should(Equal(respName))
 		})
 	})
 

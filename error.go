@@ -46,7 +46,7 @@ const (
 	ErrInvalidParamType = iota + 1
 
 	// ErrMissingParam is the error produced by the generated code when a
-	// required request parameter is missing
+	// required request parameter is missing.
 	ErrMissingParam
 
 	// ErrInvalidAttributeType is the error produced by the generated
@@ -63,6 +63,10 @@ const (
 	// a values does not match one of the values listed in the attribute
 	// definition as being valid (i.e. not part of the enum).
 	ErrInvalidEnumValue
+
+	// ErrMissingHeader is the error produced by the generated code when a
+	// required header is missing.
+	ErrMissingHeader
 
 	// ErrInvalidFormat is the error produced by the generated code when
 	// a value does not match the format specified in the attribute
@@ -92,6 +96,8 @@ func (k ErrorKind) Title() string {
 		return "invalid attribute type"
 	case ErrMissingAttribute:
 		return "missing required attribute"
+	case ErrMissingHeader:
+		return "missing required HTTP header"
 	case ErrInvalidEnumValue:
 		return "invalid value"
 	case ErrInvalidRange:
@@ -169,6 +175,16 @@ func MissingAttributeError(ctx, name string, err error) error {
 	terr := TypedError{
 		Kind: ErrMissingAttribute,
 		Mesg: fmt.Sprintf("attribute %#v of %s is missing and required", name, ctx),
+	}
+	return ReportError(err, &terr)
+}
+
+// MissingHeaderError appends a typed error of kind ErrMissingHeader to err and
+// returns it.
+func MissingHeaderError(name string, err error) error {
+	terr := TypedError{
+		Kind: ErrMissingHeader,
+		Mesg: fmt.Sprintf("missing required HTTP header %#v", name),
 	}
 	return ReportError(err, &terr)
 }

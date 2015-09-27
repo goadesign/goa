@@ -77,10 +77,10 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 				Name:         ctxName,
 				ResourceName: r.Name,
 				ActionName:   a.Name,
-				Params:       a.Params,
 				Payload:      a.Payload,
-				Headers:      a.Headers,
-				Responses:    a.Responses,
+				Params:       r.Params.Merge(a.Params),
+				Headers:      r.Headers.Merge(a.Headers),
+				Responses:    MergeResponses(r.Responses, a.Responses),
 				MediaTypes:   api.MediaTypes,
 			}
 			return g.ContextsWriter.Execute(&ctxData)
@@ -153,4 +153,19 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	}
 
 	return []string{g.contextsFilename, g.handlersFilename, g.resourcesFilename}, nil
+}
+
+// MergeResponses merge the response maps overriding the first argument map entries with the
+// second argument map entries in case of collision.
+func MergeResponses(l, r map[string]*design.ResponseDefinition) map[string]*design.ResponseDefinition {
+	if l == nil {
+		return r
+	}
+	if r == nil {
+		return l
+	}
+	for n, r := range r {
+		l[n] = r
+	}
+	return l
 }

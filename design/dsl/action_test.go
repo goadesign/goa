@@ -159,3 +159,32 @@ var _ = Describe("Action", func() {
 		})
 	})
 })
+
+var _ = Describe("Payload", func() {
+	Context("with a payload definition", func() {
+		BeforeEach(func() {
+			Design = nil
+			Resource("foo", func() {
+				Action("bar", func() {
+					Payload(func() {
+						Member("name")
+						Required("name")
+					})
+				})
+			})
+		})
+
+		JustBeforeEach(func() {
+			RunDSL()
+		})
+
+		It("generates the payload type", func() {
+			Ω(DSLErrors).ShouldNot(HaveOccurred())
+			Ω(Design).ShouldNot(BeNil())
+			Ω(Design.Resources).Should(HaveKey("foo"))
+			Ω(Design.Resources["foo"].Actions).Should(HaveKey("bar"))
+			Ω(Design.Resources["foo"].Actions["bar"].Payload).ShouldNot(BeNil())
+			Ω(Design.Resources["foo"].Actions["bar"].Payload).ShouldNot(BeNil())
+		})
+	})
+})

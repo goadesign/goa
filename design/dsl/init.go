@@ -6,7 +6,7 @@ import . "github.com/raphael/goa/design"
 // response templates.
 func InitDesign() {
 	Design = &APIDefinition{}
-	Design.ResponseTemplates = make(map[string]*ResponseTemplateDefinition)
+	Design.DefaultResponseTemplates = make(map[string]*ResponseTemplateDefinition)
 	t := func(params ...string) *ResponseDefinition {
 		if len(params) < 1 {
 			ReportError("expected media type as argument when invoking response template OK")
@@ -18,208 +18,208 @@ func InitDesign() {
 			MediaType: params[0],
 		}
 	}
-	Design.ResponseTemplates[OK] = &ResponseTemplateDefinition{
+	Design.DefaultResponseTemplates[OK] = &ResponseTemplateDefinition{
 		Name:     OK,
 		Template: t,
 	}
 
-	Design.Responses = make(map[string]*ResponseDefinition)
-	Design.Responses[Continue] = &ResponseDefinition{
+	Design.DefaultResponses = make(map[string]*ResponseDefinition)
+	Design.DefaultResponses[Continue] = &ResponseDefinition{
 		Name:   Continue,
 		Status: 100,
 	}
 
-	Design.Responses[SwitchingProtocols] = &ResponseDefinition{
+	Design.DefaultResponses[SwitchingProtocols] = &ResponseDefinition{
 		Name:   SwitchingProtocols,
 		Status: 101,
 	}
 
-	Design.Responses[Created] = &ResponseDefinition{
+	Design.DefaultResponses[Created] = &ResponseDefinition{
 		Name:   Created,
 		Status: 201,
 	}
 
-	Design.Responses[Accepted] = &ResponseDefinition{
+	Design.DefaultResponses[Accepted] = &ResponseDefinition{
 		Name:   Accepted,
 		Status: 202,
 	}
 
-	Design.Responses[NonAuthoritativeInfo] = &ResponseDefinition{
+	Design.DefaultResponses[NonAuthoritativeInfo] = &ResponseDefinition{
 		Name:   NonAuthoritativeInfo,
 		Status: 203,
 	}
 
-	Design.Responses[NoContent] = &ResponseDefinition{
+	Design.DefaultResponses[NoContent] = &ResponseDefinition{
 		Name:   NoContent,
 		Status: 204,
 	}
 
-	Design.Responses[ResetContent] = &ResponseDefinition{
+	Design.DefaultResponses[ResetContent] = &ResponseDefinition{
 		Name:   ResetContent,
 		Status: 205,
 	}
 
-	Design.Responses[PartialContent] = &ResponseDefinition{
+	Design.DefaultResponses[PartialContent] = &ResponseDefinition{
 		Name:   PartialContent,
 		Status: 206,
 	}
 
-	Design.Responses[MultipleChoices] = &ResponseDefinition{
+	Design.DefaultResponses[MultipleChoices] = &ResponseDefinition{
 		Name:   MultipleChoices,
 		Status: 300,
 	}
 
-	Design.Responses[MovedPermanently] = &ResponseDefinition{
+	Design.DefaultResponses[MovedPermanently] = &ResponseDefinition{
 		Name:   MovedPermanently,
 		Status: 301,
 	}
 
-	Design.Responses[Found] = &ResponseDefinition{
+	Design.DefaultResponses[Found] = &ResponseDefinition{
 		Name:   Found,
 		Status: 302,
 	}
 
-	Design.Responses[SeeOther] = &ResponseDefinition{
+	Design.DefaultResponses[SeeOther] = &ResponseDefinition{
 		Name:   SeeOther,
 		Status: 303,
 	}
 
-	Design.Responses[NotModified] = &ResponseDefinition{
+	Design.DefaultResponses[NotModified] = &ResponseDefinition{
 		Name:   NotModified,
 		Status: 304,
 	}
 
-	Design.Responses[UseProxy] = &ResponseDefinition{
+	Design.DefaultResponses[UseProxy] = &ResponseDefinition{
 		Name:   UseProxy,
 		Status: 305,
 	}
 
-	Design.Responses[TemporaryRedirect] = &ResponseDefinition{
+	Design.DefaultResponses[TemporaryRedirect] = &ResponseDefinition{
 		Name:   TemporaryRedirect,
 		Status: 307,
 	}
 
-	Design.Responses[BadRequest] = &ResponseDefinition{
+	Design.DefaultResponses[BadRequest] = &ResponseDefinition{
 		Name:   BadRequest,
 		Status: 400,
 	}
 
-	Design.Responses[Unauthorized] = &ResponseDefinition{
+	Design.DefaultResponses[Unauthorized] = &ResponseDefinition{
 		Name:   Unauthorized,
 		Status: 401,
 	}
 
-	Design.Responses[PaymentRequired] = &ResponseDefinition{
+	Design.DefaultResponses[PaymentRequired] = &ResponseDefinition{
 		Name:   PaymentRequired,
 		Status: 402,
 	}
 
-	Design.Responses[Forbidden] = &ResponseDefinition{
+	Design.DefaultResponses[Forbidden] = &ResponseDefinition{
 		Name:   Forbidden,
 		Status: 403,
 	}
 
-	Design.Responses[NotFound] = &ResponseDefinition{
+	Design.DefaultResponses[NotFound] = &ResponseDefinition{
 		Name:   NotFound,
 		Status: 404,
 	}
 
-	Design.Responses[MethodNotAllowed] = &ResponseDefinition{
+	Design.DefaultResponses[MethodNotAllowed] = &ResponseDefinition{
 		Name:   MethodNotAllowed,
 		Status: 405,
 	}
 
-	Design.Responses[NotAcceptable] = &ResponseDefinition{
+	Design.DefaultResponses[NotAcceptable] = &ResponseDefinition{
 		Name:   NotAcceptable,
 		Status: 406,
 	}
 
-	Design.Responses[ProxyAuthRequired] = &ResponseDefinition{
+	Design.DefaultResponses[ProxyAuthRequired] = &ResponseDefinition{
 		Name:   ProxyAuthRequired,
 		Status: 407,
 	}
 
-	Design.Responses[RequestTimeout] = &ResponseDefinition{
+	Design.DefaultResponses[RequestTimeout] = &ResponseDefinition{
 		Name:   RequestTimeout,
 		Status: 408,
 	}
 
-	Design.Responses[Conflict] = &ResponseDefinition{
+	Design.DefaultResponses[Conflict] = &ResponseDefinition{
 		Name:   Conflict,
 		Status: 409,
 	}
 
-	Design.Responses[Gone] = &ResponseDefinition{
+	Design.DefaultResponses[Gone] = &ResponseDefinition{
 		Name:   Gone,
 		Status: 410,
 	}
 
-	Design.Responses[LengthRequired] = &ResponseDefinition{
+	Design.DefaultResponses[LengthRequired] = &ResponseDefinition{
 		Name:   LengthRequired,
 		Status: 411,
 	}
 
-	Design.Responses[PreconditionFailed] = &ResponseDefinition{
+	Design.DefaultResponses[PreconditionFailed] = &ResponseDefinition{
 		Name:   PreconditionFailed,
 		Status: 412,
 	}
 
-	Design.Responses[RequestEntityTooLarge] = &ResponseDefinition{
+	Design.DefaultResponses[RequestEntityTooLarge] = &ResponseDefinition{
 		Name:   RequestEntityTooLarge,
 		Status: 413,
 	}
 
-	Design.Responses[RequestURITooLong] = &ResponseDefinition{
+	Design.DefaultResponses[RequestURITooLong] = &ResponseDefinition{
 		Name:   RequestURITooLong,
 		Status: 414,
 	}
 
-	Design.Responses[UnsupportedMediaType] = &ResponseDefinition{
+	Design.DefaultResponses[UnsupportedMediaType] = &ResponseDefinition{
 		Name:   UnsupportedMediaType,
 		Status: 415,
 	}
 
-	Design.Responses[RequestedRangeNotSatisfiable] = &ResponseDefinition{
+	Design.DefaultResponses[RequestedRangeNotSatisfiable] = &ResponseDefinition{
 		Name:   RequestedRangeNotSatisfiable,
 		Status: 416,
 	}
 
-	Design.Responses[ExpectationFailed] = &ResponseDefinition{
+	Design.DefaultResponses[ExpectationFailed] = &ResponseDefinition{
 		Name:   ExpectationFailed,
 		Status: 417,
 	}
 
-	Design.Responses[Teapot] = &ResponseDefinition{
+	Design.DefaultResponses[Teapot] = &ResponseDefinition{
 		Name:   Teapot,
 		Status: 418,
 	}
 
-	Design.Responses[InternalServerError] = &ResponseDefinition{
+	Design.DefaultResponses[InternalServerError] = &ResponseDefinition{
 		Name:   InternalServerError,
 		Status: 500,
 	}
 
-	Design.Responses[NotImplemented] = &ResponseDefinition{
+	Design.DefaultResponses[NotImplemented] = &ResponseDefinition{
 		Name:   NotImplemented,
 		Status: 501,
 	}
 
-	Design.Responses[BadGateway] = &ResponseDefinition{
+	Design.DefaultResponses[BadGateway] = &ResponseDefinition{
 		Name:   BadGateway,
 		Status: 502,
 	}
 
-	Design.Responses[ServiceUnavailable] = &ResponseDefinition{
+	Design.DefaultResponses[ServiceUnavailable] = &ResponseDefinition{
 		Name:   ServiceUnavailable,
 		Status: 503,
 	}
 
-	Design.Responses[GatewayTimeout] = &ResponseDefinition{
+	Design.DefaultResponses[GatewayTimeout] = &ResponseDefinition{
 		Name:   GatewayTimeout,
 		Status: 504,
 	}
 
-	Design.Responses[HTTPVersionNotSupported] = &ResponseDefinition{
+	Design.DefaultResponses[HTTPVersionNotSupported] = &ResponseDefinition{
 		Name:   HTTPVersionNotSupported,
 		Status: 505,
 	}

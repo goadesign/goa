@@ -87,9 +87,9 @@ func (m *Generator) Generate() ([]string, error) {
 		fmt.Printf("goagen source dir: %s\n", gendir)
 	}
 
-	// Generate design package init to run DSL
+	// Figure out design package name from its path
 	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, designPath, nil, parser.ImportsOnly)
+	pkgs, err := parser.ParseDir(fset, designPath, nil, parser.PackageClauseOnly)
 	if err != nil {
 		return nil, err
 	}
@@ -106,16 +106,7 @@ func (m *Generator) Generate() ([]string, error) {
 	if len(pkgs) == 0 {
 		return nil, fmt.Errorf("no Go package found in %s", designPath)
 	}
-	packageName := pkgNames[0]
-	initFile, err := ioutil.TempFile(designPath, "goainit")
-	if err != nil {
-		return nil, err
-	}
-	defer os.Remove(initFile.Name())
-	initFile.WriteString(fmt.Sprintf("package %s\n\n", packageName))
-	initFile.WriteString(`import "github.com/raphael/goa/design/dsl"\n\n`)
-	initFile.WriteString("func init() { dsl.RunDSL() }\n")
-	initFile.Close()
+	pkgName := pkgNames[0]
 
 	// Generate tool source code.
 	filename := filepath.Join(gendir, "main.go")
@@ -123,7 +114,10 @@ func (m *Generator) Generate() ([]string, error) {
 	imports := append(m.Imports,
 		goagen.SimpleImport("fmt"),
 		goagen.SimpleImport("os"),
+		goagen.SimpleImport("strings"),
 		goagen.NewImport(".", "github.com/raphael/goa/design"),
+		goagen.NewImport(".", "github.com/raphael/goa/design/dsl"),
+		goagen.SimpleImport(goagen.DesignPackagePath),
 	)
 	m.WriteHeader("Code Generator", "main", imports)
 	tmpl, err := template.New("generator").Parse(mainTmpl)
@@ -133,6 +127,8 @@ func (m *Generator) Generate() ([]string, error) {
 	context := map[string]string{
 		"Factory":       m.Factory,
 		"DesignPackage": goagen.DesignPackagePath,
+		"PkgName":       pkgName,
+		"MetadataVar":   "Metadata",
 	}
 	err = tmpl.Execute(m, context)
 	if err != nil {
@@ -194,7 +190,7 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 		return nil, fmt.Errorf("%s: %s", err, out)
 	}
 	res := strings.Split(string(out), "\n")
-	if len(res) > 0 && res[len(res)-1] == "" {
+	for (len(res) > 0) && (res[len(res)-1] == "") {
 		res = res[:len(res)-1]
 	}
 	return res, nil
@@ -202,10 +198,20 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 
 const mainTmpl = `
 func main() {
+	Design = {{.PkgName}}.{{.MetadataVar}}
+	failOnError(RunDSL())
+	var files []string
 	gen, err := {{.Factory}}()
+	if err == nil {
+		files, err = gen.Generate(Design)
+	}
+	failOnError(err)
+	fmt.Println(strings.Join(files, "\n"))
+}
+
+func failOnError(err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	gen.Generate(Design)
 }`

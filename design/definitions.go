@@ -40,10 +40,14 @@ type (
 		Resources map[string]*ResourceDefinition
 		// Traits available to all API resources and actions indexed by name
 		Traits map[string]*TraitDefinition
-		// Response templates available to all API actions indexed by name
+		// Responses available to all API actions indexed by name
 		Responses map[string]*ResponseDefinition
 		// Response template factories available to all API actions indexed by name
 		ResponseTemplates map[string]*ResponseTemplateDefinition
+		// Built-in responses
+		DefaultResponses map[string]*ResponseDefinition
+		// Built-in response templates
+		DefaultResponseTemplates map[string]*ResponseTemplateDefinition
 		// User types
 		Types map[string]*UserTypeDefinition
 		// Media types
@@ -80,6 +84,12 @@ type (
 		Actions map[string]*ActionDefinition
 		// Action with canonical resource path
 		CanonicalAction string
+		// Map of response definitions that apply to all actions indexed by name.
+		Responses map[string]*ResponseDefinition
+		// Path and query string parameters that apply to all actions.
+		Params *AttributeDefinition
+		// Request headers that apply to all actions.
+		Headers *AttributeDefinition
 		// dsl contains the DSL used to create this definition if any.
 		DSL func()
 	}
@@ -96,8 +106,8 @@ type (
 		MediaType string
 		// Response header definitions
 		Headers *AttributeDefinition
-		// Parent Action
-		Parent *ActionDefinition
+		// Parent action or resource
+		Parent DSLDefinition
 	}
 
 	// ResponseTemplateDefinition defines a response template.
@@ -485,6 +495,27 @@ func (a *AttributeDefinition) Dup() *AttributeDefinition {
 		DefaultValue: a.DefaultValue,
 	}
 	return &dup
+}
+
+// Merge merges the argument attributes into the target and returns the target.
+// This only applies to attributes of type Object and Merge panics if the
+// argument or the target is not of type Object.
+func (a *AttributeDefinition) Merge(other *AttributeDefinition) *AttributeDefinition {
+	if other == nil {
+		return a
+	}
+	if a == nil {
+		return other
+	}
+	left := a.Type.(Object)
+	right := other.Type.(Object)
+	if left == nil || right == nil {
+		panic("cannot merge non object attributes") // bug
+	}
+	for n, v := range right {
+		left[n] = v
+	}
+	return a
 }
 
 // Context returns the generic definition name used in error messages.
