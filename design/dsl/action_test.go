@@ -115,7 +115,6 @@ var _ = Describe("Action", func() {
 						return
 					}
 					Status(st)
-					Name(name)
 				})
 			})
 		})
@@ -137,7 +136,7 @@ var _ = Describe("Action", func() {
 				Ω(action.Responses).Should(HaveLen(1))
 				Ω(action.Responses).Should(HaveKey(tmplName))
 				resp := action.Responses[tmplName]
-				Ω(resp.Name).Should(Equal(respName))
+				Ω(resp.Name).Should(Equal(tmplName))
 				Ω(resp.Status).Should(Equal(respStatus))
 				Ω(resp.MediaType).Should(Equal(respMediaType))
 			})

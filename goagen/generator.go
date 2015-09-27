@@ -6,24 +6,12 @@ import (
 	"os"
 	"os/exec"
 	"text/template"
-
-	"github.com/raphael/goa/design"
 )
 
 type (
-	// Generator is the common interface for all generators. It exposes the
-	// single Generate method which is the entry point to the generation
-	// GoGenerator
-	Generator interface {
-		// Generate generates the output (code, documentation etc.) and
-		// returns the list of generated filenames on success or an
-		// error.
-		Generate(*design.APIDefinition) ([]string, error)
-	}
-
 	// GoGenerator provide the basic implementation for a Go code generator.
 	// Other generators can use this basic generator and provide specialized
-	// behavior that implements the Generator interface.
+	// behavior that implements the generator package Generate function.
 	GoGenerator struct {
 		// Filename of destination file
 		Filename string

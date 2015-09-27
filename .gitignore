@@ -1,4 +1,4 @@
-examples/cellar/app/app
+examples/cellar/cellar
 **/*.coverprofile
 goagen/tool/goagen
 goagen/goagen

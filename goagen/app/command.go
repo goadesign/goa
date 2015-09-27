@@ -27,7 +27,7 @@ func NewCommand() *Command {
 
 // RegisterFlags registers the command line flags with the given registry.
 func (c *Command) RegisterFlags(r goagen.FlagRegistry) {
-	r.Flag("target", "target package").Default("autogen").StringVar(&TargetPackage)
+	r.Flag("target", "target package").Default("app").StringVar(&TargetPackage)
 }
 
 // Run simply calls the meta generator.

@@ -25,6 +25,15 @@ type Generator struct {
 	resourcesFilename string
 }
 
+// Generate is the generator entry point called by the meta generator.
+func Generate(api *design.APIDefinition) ([]string, error) {
+	g, err := NewGenerator()
+	if err != nil {
+		return nil, err
+	}
+	return g.Generate(api)
+}
+
 // NewGenerator returns the application code generator.
 func NewGenerator() (*Generator, error) {
 	app := kingpin.New("Code generator", "application code generator")
@@ -35,7 +44,10 @@ func NewGenerator() (*Generator, error) {
 		return nil, fmt.Errorf(`invalid command line: %s. Command line was "%s"`,
 			err, strings.Join(os.Args, " "))
 	}
-	outdir := goagen.OutputDir
+	outdir := filepath.Join(goagen.OutputDir, "app")
+	if err = os.MkdirAll(outdir, 0777); err != nil {
+		return nil, err
+	}
 	ctxFile := filepath.Join(outdir, "contexts.go")
 	hdlFile := filepath.Join(outdir, "handlers.go")
 	resFile := filepath.Join(outdir, "resources.go")

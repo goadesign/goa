@@ -83,13 +83,13 @@ var _ = Describe("Generate", func() {
 			Ω(genErr).Should(BeNil())
 			Ω(files).Should(HaveLen(3))
 			isEmptySource := func(filename string) {
-				contextsContent, err := ioutil.ReadFile(filepath.Join(outDir, filename))
+				contextsContent, err := ioutil.ReadFile(filepath.Join(outDir, "app", filename))
 				Ω(err).ShouldNot(HaveOccurred())
 				lines := strings.Split(string(contextsContent), "\n")
 				Ω(lines).ShouldNot(BeEmpty())
 				Ω(len(lines)).Should(BeNumerically(">", 1))
 				last2Lines := lines[len(lines)-2] + "\n" + lines[len(lines)-1]
-				Ω(last2Lines).Should(Equal("package autogen\n"))
+				Ω(last2Lines).Should(Equal("package app\n"))
 			}
 			isEmptySource("contexts.go")
 			isEmptySource("handlers.go")
@@ -184,7 +184,7 @@ var _ = Describe("Generate", func() {
 			resourcesCode := b.String()
 
 			isSource := func(filename, content string) {
-				contextsContent, err := ioutil.ReadFile(filepath.Join(outDir, filename))
+				contextsContent, err := ioutil.ReadFile(filepath.Join(outDir, "app", filename))
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(string(contextsContent)).Should(Equal(content))
 			}
@@ -205,7 +205,7 @@ const contextsCodeTmpl = `//****************************************************
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
-package autogen
+package app
 
 // GetWidgetContext provides the Widget get action context.
 type GetWidgetContext struct {
@@ -242,7 +242,7 @@ const handlersCodeTmpl = `//****************************************************
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
-package autogen
+package app
 
 func init() {
 	goa.RegisterHandlers(
@@ -274,7 +274,7 @@ const resourcesCodeTmpl = `//***************************************************
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
-package autogen
+package app
 
 // Widgetty
 // Media type: vnd.rightscale.goagen.test.widgets

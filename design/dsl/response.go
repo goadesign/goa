@@ -129,13 +129,3 @@ func Status(status int) {
 		r.Status = status
 	}
 }
-
-// Name sets the name of the response.
-// Useful when using response templates to override the template name.
-func Name(name string) {
-	if r, ok := responseDefinition(true); ok {
-		delete(Design.Responses, r.Name)
-		r.Name = name
-		Design.Responses[name] = r
-	}
-}

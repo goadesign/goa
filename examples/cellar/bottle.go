@@ -3,13 +3,13 @@ package main
 import (
 	"time"
 
-	"github.com/raphael/goa/examples/cellar/app/autogen"
-	"github.com/raphael/goa/examples/cellar/app/db"
+	"github.com/raphael/goa/examples/cellar/autogen/app"
+	"github.com/raphael/goa/examples/cellar/db"
 )
 
 // ListBottles lists all the bottles in the account optionally filtering by year.
-func ListBottles(c *autogen.ListBottleContext) error {
-	var bottles []*autogen.Bottle
+func ListBottles(c *app.ListBottleContext) error {
+	var bottles []*app.Bottle
 	var err error
 	if c.HasYears {
 		bottles, err = db.GetBottlesByYears(c.AccountID, c.Years)
@@ -23,7 +23,7 @@ func ListBottles(c *autogen.ListBottleContext) error {
 }
 
 // ShowBottle retrieves the bottle with the given id.
-func ShowBottle(c *autogen.ShowBottleContext) error {
+func ShowBottle(c *app.ShowBottleContext) error {
 	bottle := db.GetBottle(c.AccountID, c.ID)
 	if bottle == nil {
 		return c.NotFound()
@@ -32,7 +32,7 @@ func ShowBottle(c *autogen.ShowBottleContext) error {
 }
 
 // CreateBottle records a new bottle.
-func CreateBottle(c *autogen.CreateBottleContext) error {
+func CreateBottle(c *app.CreateBottleContext) error {
 	bottle := db.NewBottle(c.AccountID)
 	payload := c.Payload
 	bottle.Name = payload.Name
@@ -61,7 +61,7 @@ func CreateBottle(c *autogen.CreateBottleContext) error {
 }
 
 // UpdateBottle updates a bottle field(s).
-func UpdateBottle(c *autogen.UpdateBottleContext) error {
+func UpdateBottle(c *app.UpdateBottleContext) error {
 	bottle := db.GetBottle(c.AccountID, c.ID)
 	if bottle == nil {
 		return c.NotFound()
@@ -99,7 +99,7 @@ func UpdateBottle(c *autogen.UpdateBottleContext) error {
 }
 
 // DeleteBottle removes a bottle from the database.
-func DeleteBottle(c *autogen.DeleteBottleContext) error {
+func DeleteBottle(c *app.DeleteBottleContext) error {
 	bottle := db.GetBottle(c.AccountID, c.ID)
 	if bottle == nil {
 		return c.NotFound()
@@ -109,7 +109,7 @@ func DeleteBottle(c *autogen.DeleteBottleContext) error {
 }
 
 // RateBottle rates a bottle.
-func RateBottle(c *autogen.RateBottleContext) error {
+func RateBottle(c *app.RateBottleContext) error {
 	bottle := db.GetBottle(c.AccountID, c.ID)
 	if bottle == nil {
 		return c.NotFound()

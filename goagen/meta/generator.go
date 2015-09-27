@@ -20,11 +20,14 @@ import (
 type Generator struct {
 	*goagen.GoGenerator
 
-	// Factory is the function used to create instances of the corresponding
-	// generator including the package.
-	// The meta generator generates a main function which calls the
-	// generator factory method then calls Generate on the resulting object.
-	Factory string
+	// Genfunc contains the name of the generator entry point function.
+	// The function signature must be:
+	//
+	// func Genfunc(api *design.APIDefinition) ([]string, error)
+	//
+	// where "api" contains the DSL generated metadata and the returned
+	// string array lists the generated filenames.
+	Genfunc string
 
 	// Imports list the imports that are specific for that generator that
 	// should be added to the main Go file.
@@ -37,9 +40,9 @@ type Generator struct {
 
 // NewGenerator returns a meta generator that can run an actual Generator
 // given its factory method and command line flags.
-func NewGenerator(factory string, imports []*goagen.ImportSpec, flags map[string]string) *Generator {
+func NewGenerator(genfunc string, imports []*goagen.ImportSpec, flags map[string]string) *Generator {
 	return &Generator{
-		Factory: factory,
+		Genfunc: genfunc,
 		Imports: imports,
 		Flags:   flags,
 	}
@@ -125,7 +128,7 @@ func (m *Generator) Generate() ([]string, error) {
 		panic(err) // bug
 	}
 	context := map[string]string{
-		"Factory":       m.Factory,
+		"Genfunc":       m.Genfunc,
 		"DesignPackage": goagen.DesignPackagePath,
 		"PkgName":       pkgName,
 		"MetadataVar":   "Metadata",
@@ -200,11 +203,7 @@ const mainTmpl = `
 func main() {
 	Design = {{.PkgName}}.{{.MetadataVar}}
 	failOnError(RunDSL())
-	var files []string
-	gen, err := {{.Factory}}()
-	if err == nil {
-		files, err = gen.Generate(Design)
-	}
+	files, err := {{.Genfunc}}(Design)
 	failOnError(err)
 	fmt.Println(strings.Join(files, "\n"))
 }

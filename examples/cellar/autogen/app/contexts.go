@@ -1,4 +1,4 @@
-package autogen
+package app
 
 import (
 	"strconv"

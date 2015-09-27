@@ -18,7 +18,7 @@ var _ = Describe("Run", func() {
 	var compiledFiles []string
 	var compileError error
 
-	var factory string
+	var genfunc string
 	var debug bool
 	var outputDir string
 	var designPackage string
@@ -28,7 +28,7 @@ var _ = Describe("Run", func() {
 	var m *meta.Generator
 
 	BeforeEach(func() {
-		factory = ""
+		genfunc = ""
 		debug = false
 		outputDir = "/tmp"
 		designPackage = "github.com/raphael/goa/testgoagoagen"
@@ -46,7 +46,7 @@ var _ = Describe("Run", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 		}
 		m = &meta.Generator{
-			Factory: factory,
+			Genfunc: genfunc,
 			Imports: nil, // []*goagen.ImportSpec{goagen.SimpleImport(designPackage)},
 		}
 		goagen.Debug = debug
@@ -116,7 +116,7 @@ var _ = Describe("Run", func() {
 		const invalidPath = "/foobar"
 
 		BeforeEach(func() {
-			factory = "foo.NewFoo"
+			genfunc = "foo.Generate"
 			pathEnv = os.Getenv("PATH")
 			os.Setenv("PATH", invalidPath)
 		})
@@ -132,7 +132,7 @@ var _ = Describe("Run", func() {
 
 	Context("with no output directory specified", func() {
 		BeforeEach(func() {
-			factory = "foo.NewFoo"
+			genfunc = "foo.Generate"
 			outputDir = ""
 		})
 
@@ -143,7 +143,18 @@ var _ = Describe("Run", func() {
 
 	Context("with no design package path specified", func() {
 		BeforeEach(func() {
-			factory = "foo.NewFoo"
+			genfunc = "foo.Generate"
+			outputDir = ""
+		})
+
+		It("fails with a useful error message", func() {
+			Ω(compileError).Should(MatchError("missing output directory specification"))
+		})
+	})
+
+	Context("with no design package path specified", func() {
+		BeforeEach(func() {
+			genfunc = "foo.Generate"
 			designPackage = ""
 		})
 
@@ -155,7 +166,7 @@ var _ = Describe("Run", func() {
 	Context("with design package content", func() {
 
 		BeforeEach(func() {
-			factory = "foo.NewFoo"
+			genfunc = "foo.Generate"
 			outputDir = "/tmp"
 		})
 
@@ -216,36 +227,30 @@ invalid go code
 
 	panickySource = `package foo
 import . "github.com/raphael/goa/design"
-type Generator int
 var Metadata *APIDefinition
-func (g *Generator) Generate(api *APIDefinition) ([]string, error) {
+func Generate(api *APIDefinition) ([]string, error) {
 	return nil, nil
 }
-func NewFoo() (*Generator, error) { return new(Generator), nil }
 
 func init() { panic("kaboom") }
 `
 
 	validSource = `package foo
 import . "github.com/raphael/goa/design"
-type Generator int
 var Metadata *APIDefinition
-func (g *Generator) Generate(api *APIDefinition) ([]string, error) {
+func Generate(api *APIDefinition) ([]string, error) {
 	return nil, nil
 }
-func NewFoo() (*Generator, error) { return new(Generator), nil }
 `
 
 	validSourceTmpl = `package foo
 import "fmt"
 import . "github.com/raphael/goa/design"
-type Generator int
 var Metadata *APIDefinition
-func (g *Generator) Generate(api *APIDefinition) ([]string, error) {
+func Generate(api *APIDefinition) ([]string, error) {
 	{{range .}}fmt.Println("{{.}}")
 	{{end}}
 	return nil, nil
 }
-func NewFoo() (*Generator, error) { return new(Generator), nil }
 `
 )
