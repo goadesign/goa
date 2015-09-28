@@ -14,7 +14,7 @@ const resourceName = "R"
 const resourceDescription = "R description"
 const typeName = "T"
 const typeDescription = "T description"
-const mediaTypeName = "MT"
+const mediaTypeIdentifier = "MT"
 const mediaTypeDescription = "MT description"
 
 var _ = API(apiName, func() {
@@ -29,7 +29,7 @@ var _ = Type(typeName, func() {
 	Description(typeDescription)
 })
 
-var _ = MediaType(mediaTypeName, func() {
+var _ = MediaType(mediaTypeIdentifier, func() {
 	Description(mediaTypeDescription)
 })
 
@@ -55,10 +55,10 @@ func init() {
 				Ω(Design.Types[typeName].TypeName).Should(Equal(typeName))
 				Ω(Design.Types[typeName].Description).Should(Equal(typeDescription))
 
-				Ω(Design.MediaTypes).Should(HaveKey(mediaTypeName))
-				Ω(Design.MediaTypes[mediaTypeName]).ShouldNot(BeNil())
-				Ω(Design.MediaTypes[mediaTypeName].TypeName).Should(Equal(mediaTypeName))
-				Ω(Design.MediaTypes[mediaTypeName].Description).Should(Equal(mediaTypeDescription))
+				Ω(Design.MediaTypes).Should(HaveKey(mediaTypeIdentifier))
+				Ω(Design.MediaTypes[mediaTypeIdentifier]).ShouldNot(BeNil())
+				Ω(Design.MediaTypes[mediaTypeIdentifier].Identifier).Should(Equal(mediaTypeIdentifier))
+				Ω(Design.MediaTypes[mediaTypeIdentifier].Description).Should(Equal(mediaTypeDescription))
 			})
 		})
 	})
