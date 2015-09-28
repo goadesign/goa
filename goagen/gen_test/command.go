@@ -1,4 +1,4 @@
-package test
+package gentest
 
 import "github.com/raphael/goa/goagen"
 

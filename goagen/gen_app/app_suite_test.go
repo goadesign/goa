@@ -1,4 +1,4 @@
-package app_test
+package genapp_test
 
 import (
 	. "github.com/onsi/ginkgo"

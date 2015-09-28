@@ -1,4 +1,4 @@
-package docs
+package genclient
 
 import "github.com/raphael/goa/goagen"
 
@@ -6,13 +6,14 @@ import "github.com/raphael/goa/goagen"
 // It implements meta.Command.
 type Command struct {
 	*goagen.TBDCommand
+	TargetPackage string // Target package name
 }
 
 // NewCommand instantiates a new command.
 func NewCommand() *Command {
-	t := goagen.NewTBDCommand("Generate documentation", "")
+	t := goagen.NewTBDCommand("Generate Go API client", "")
 	return &Command{TBDCommand: t}
 }
 
 // Name of command.
-func (c *Command) Name() string { return "docs" }
+func (c *Command) Name() string { return "client" }

@@ -1,4 +1,4 @@
-package app_test
+package genapp_test
 
 import (
 	"io/ioutil"
@@ -7,16 +7,16 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/goagen/app"
+	"github.com/raphael/goa/goagen/gen_app"
 )
 
 var _ = Describe("ContextsWriter", func() {
-	var writer *app.ContextsWriter
+	var writer *genapp.ContextsWriter
 	var filename string
 
 	JustBeforeEach(func() {
 		var err error
-		writer, err = app.NewContextsWriter(filename)
+		writer, err = genapp.NewContextsWriter(filename)
 		Ω(err).ShouldNot(HaveOccurred())
 	})
 
@@ -37,7 +37,7 @@ var _ = Describe("ContextsWriter", func() {
 			var responses map[string]*design.ResponseDefinition
 			var mediaTypes map[string]*design.MediaTypeDefinition
 
-			var data *app.ContextTemplateData
+			var data *genapp.ContextTemplateData
 
 			BeforeEach(func() {
 				params = nil
@@ -49,7 +49,7 @@ var _ = Describe("ContextsWriter", func() {
 			})
 
 			JustBeforeEach(func() {
-				data = &app.ContextTemplateData{
+				data = &genapp.ContextTemplateData{
 					Name:         "ListBottleContext",
 					ResourceName: "bottles",
 					ActionName:   "list",
@@ -325,12 +325,12 @@ var _ = Describe("ContextsWriter", func() {
 })
 
 var _ = Describe("HandlersWriter", func() {
-	var writer *app.HandlersWriter
+	var writer *genapp.HandlersWriter
 	var filename string
 
 	JustBeforeEach(func() {
 		var err error
-		writer, err = app.NewHandlersWriter(filename)
+		writer, err = genapp.NewHandlersWriter(filename)
 		Ω(err).ShouldNot(HaveOccurred())
 	})
 
@@ -348,7 +348,7 @@ var _ = Describe("HandlersWriter", func() {
 		Context("with data", func() {
 			var actions, verbs, paths, names, contexts []string
 
-			var data []*app.HandlerTemplateData
+			var data []*genapp.HandlerTemplateData
 
 			BeforeEach(func() {
 				actions = nil
@@ -359,9 +359,9 @@ var _ = Describe("HandlersWriter", func() {
 			})
 
 			JustBeforeEach(func() {
-				data = make([]*app.HandlerTemplateData, len(actions))
+				data = make([]*genapp.HandlerTemplateData, len(actions))
 				for i := 0; i < len(actions); i++ {
-					e := &app.HandlerTemplateData{
+					e := &genapp.HandlerTemplateData{
 						Resource: "bottles",
 						Action:   actions[i],
 						Verb:     verbs[i],
@@ -431,12 +431,12 @@ var _ = Describe("HandlersWriter", func() {
 })
 
 var _ = Describe("ResourceWriter", func() {
-	var writer *app.ResourcesWriter
+	var writer *genapp.ResourcesWriter
 	var filename string
 
 	JustBeforeEach(func() {
 		var err error
-		writer, err = app.NewResourcesWriter(filename)
+		writer, err = genapp.NewResourcesWriter(filename)
 		Ω(err).ShouldNot(HaveOccurred())
 	})
 
@@ -456,7 +456,7 @@ var _ = Describe("ResourceWriter", func() {
 			var canoParams []string
 			var userType *design.UserTypeDefinition
 
-			var data *app.ResourceTemplateData
+			var data *genapp.ResourceTemplateData
 
 			BeforeEach(func() {
 				userType = nil
@@ -466,7 +466,7 @@ var _ = Describe("ResourceWriter", func() {
 			})
 
 			JustBeforeEach(func() {
-				data = &app.ResourceTemplateData{
+				data = &genapp.ResourceTemplateData{
 					Name:              "Bottle",
 					Identifier:        "vnd.acme.com/resources",
 					Description:       "A bottle resource",

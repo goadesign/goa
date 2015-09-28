@@ -1,4 +1,4 @@
-package js
+package genangular
 
 import "github.com/raphael/goa/goagen"
 

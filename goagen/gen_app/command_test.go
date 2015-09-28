@@ -1,10 +1,10 @@
-package app_test
+package genapp_test
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/raphael/goa/goagen"
-	"github.com/raphael/goa/goagen/app"
+	"github.com/raphael/goa/goagen/gen_app"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -23,14 +23,14 @@ func (f *FakeRegistry) Flag(n, h string) *kingpin.FlagClause {
 
 var _ = Describe("RegisterFlags", func() {
 	const testCmd = "testCmd"
-	var appCmd *app.Command
+	var appCmd *genapp.Command
 
 	Context("using fake registry", func() {
 		var reg *FakeRegistry
 
 		BeforeEach(func() {
 			reg = &FakeRegistry{Flags: make(map[string]string)}
-			appCmd = app.NewCommand()
+			appCmd = genapp.NewCommand()
 		})
 
 		JustBeforeEach(func() {

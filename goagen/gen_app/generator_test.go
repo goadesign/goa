@@ -1,4 +1,4 @@
-package app_test
+package genapp_test
 
 import (
 	"bytes"
@@ -11,11 +11,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/goagen/app"
+	"github.com/raphael/goa/goagen/gen_app"
 )
 
 var _ = Describe("NewGenerator", func() {
-	var gen *app.Generator
+	var gen *genapp.Generator
 
 	Context("with dummy command line flags", func() {
 		BeforeEach(func() {
@@ -25,7 +25,7 @@ var _ = Describe("NewGenerator", func() {
 		It("instantiates a generator with initialized writers", func() {
 			design.Design = &design.APIDefinition{Name: "foo"}
 			var err error
-			gen, err = app.NewGenerator()
+			gen, err = genapp.NewGenerator()
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(gen).ShouldNot(BeNil())
 			Ω(gen.ContextsWriter).ShouldNot(BeNil())
@@ -36,7 +36,7 @@ var _ = Describe("NewGenerator", func() {
 		It("instantiates a generator with initialized writers even if Design is not initialized", func() {
 			design.Design = nil
 			var err error
-			gen, err = app.NewGenerator()
+			gen, err = genapp.NewGenerator()
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(gen).ShouldNot(BeNil())
 			Ω(gen.ContextsWriter).ShouldNot(BeNil())
@@ -47,7 +47,7 @@ var _ = Describe("NewGenerator", func() {
 })
 
 var _ = Describe("Generate", func() {
-	var gen *app.Generator
+	var gen *genapp.Generator
 	var outDir string
 	var files []string
 	var genErr error
@@ -61,7 +61,7 @@ var _ = Describe("Generate", func() {
 
 	JustBeforeEach(func() {
 		var err error
-		gen, err = app.NewGenerator()
+		gen, err = genapp.NewGenerator()
 		Ω(err).ShouldNot(HaveOccurred())
 		files, genErr = gen.Generate(design.Design)
 	})
