@@ -21,9 +21,8 @@ var _ = Describe("Resource", func() {
 	})
 
 	JustBeforeEach(func() {
-		Resource(name, dsl)
+		res = Resource(name, dsl)
 		RunDSL()
-		res, _ = Design.Resources[name]
 	})
 
 	Context("with no DSL and no name", func() {
@@ -183,12 +182,13 @@ var _ = Describe("Resource", func() {
 
 	Context("with a valid media type", func() {
 		const typeName = "typeName"
+		const identifier = "vnd.raphael.goa.test"
 
 		var mediaType = &MediaTypeDefinition{
 			UserTypeDefinition: &UserTypeDefinition{
 				TypeName: typeName,
 			},
-			Identifier: "foo",
+			Identifier: identifier,
 		}
 
 		BeforeEach(func() {
@@ -201,7 +201,7 @@ var _ = Describe("Resource", func() {
 		It("sets the media type", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.Validate()).ShouldNot(HaveOccurred())
-			Ω(res.MediaType).Should(Equal(typeName))
+			Ω(res.MediaType).Should(Equal(identifier))
 		})
 	})
 

@@ -10,7 +10,8 @@ import (
 
 // CommandLine return the command used to run this process.
 func CommandLine() string {
-	return fmt.Sprintf("$ %s %s", os.Args[0], strings.Join(os.Args[1:], " "))
+	cmd := fmt.Sprintf("$ %s %s", os.Args[0], strings.Join(os.Args[1:], " "))
+	return strings.Replace(cmd, " --", "\n  --", -1)
 }
 
 // Comment produces line comments by concatenating the given strings and producing 80 characters

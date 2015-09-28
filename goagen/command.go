@@ -13,6 +13,9 @@ var (
 	// written to.
 	OutputDir string
 
+	// Force is true if pre-existing files should be overwritten during generation.
+	Force bool
+
 	// DesignPackagePath is the path to the user Go design package.
 	DesignPackagePath string
 
@@ -65,6 +68,9 @@ func RegisterFlags(r FlagRegistry) {
 		Required().
 		Short('d').
 		StringVar(&DesignPackagePath)
+
+	r.Flag("force", "overwrite existing files").
+		BoolVar(&Force)
 
 	r.Flag("debug", "enable debug mode").
 		BoolVar(&Debug)

@@ -184,6 +184,9 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 		fmt.Sprintf("--out=%s", goagen.OutputDir),
 		fmt.Sprintf("--design=%s", goagen.DesignPackagePath),
 	}
+	if goagen.Force {
+		args = append(args, "--force")
+	}
 	for name, value := range m.Flags {
 		args = append(args, fmt.Sprintf("--%s=%s", name, value))
 	}

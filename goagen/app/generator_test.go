@@ -19,7 +19,7 @@ var _ = Describe("NewGenerator", func() {
 
 	Context("with dummy command line flags", func() {
 		BeforeEach(func() {
-			os.Args = []string{"goagen", "--out=foo", "--design=bar"}
+			os.Args = []string{"goagen", "--out=foo", "--design=bar", "--force"}
 		})
 
 		It("instantiates a generator with initialized writers", func() {
@@ -200,7 +200,9 @@ const contextsCodeTmpl = `//****************************************************
 // test api: Application Contexts
 //
 // Generated with goagen v0.0.1, command line:
-// $ goagen --out={{.outDir}} --design={{.design}}
+// $ goagen
+// --out={{.outDir}}
+// --design={{.design}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
@@ -237,7 +239,9 @@ const handlersCodeTmpl = `//****************************************************
 // test api: Application Handlers
 //
 // Generated with goagen v0.0.1, command line:
-// $ goagen --out={{.outDir}} --design={{.design}}
+// $ goagen
+// --out={{.outDir}}
+// --design={{.design}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
@@ -269,7 +273,9 @@ const resourcesCodeTmpl = `//***************************************************
 // test api: Application Resources
 //
 // Generated with goagen v0.0.1, command line:
-// $ goagen --out={{.outDir}} --design={{.design}}
+// $ goagen
+// --out={{.outDir}}
+// --design={{.design}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//

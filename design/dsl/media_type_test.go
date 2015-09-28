@@ -21,16 +21,15 @@ var _ = Describe("MediaType", func() {
 	})
 
 	JustBeforeEach(func() {
-		MediaType(name, dsl)
+		mt = MediaType(name, dsl)
 		RunDSL()
 		Ω(Errors).ShouldNot(HaveOccurred())
-		mt, _ = Design.MediaTypes[name]
 	})
 
-	Context("with no DSL and no name", func() {
-		It("produces an invalid media type definition", func() {
+	Context("with no DSL and no identifier", func() {
+		It("produces a valid media type definition", func() {
 			Ω(mt).ShouldNot(BeNil())
-			Ω(mt.Validate()).Should(HaveOccurred())
+			Ω(mt.Validate()).ShouldNot(HaveOccurred())
 		})
 	})
 

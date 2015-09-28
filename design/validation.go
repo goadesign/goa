@@ -232,6 +232,8 @@ func (m *MediaTypeDefinition) Validate() error {
 		if err != nil {
 			return fmt.Errorf("invalid media type identifier: %s", err)
 		}
+	} else {
+		m.Identifier = "plain/text"
 	}
 	return nil
 }

@@ -55,11 +55,12 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 			ReportError("invalid media type identifier %#v: %s",
 				identifier, err)
 		}
-		lastTwo := strings.Split(mediatype, ".")
-		if len(lastTwo) > 1 {
-			lastTwo = lastTwo[len(lastTwo)-2:]
+		elems := strings.Split(mediatype, ".")
+		var prefix string
+		if len(elems) > 1 {
+			prefix = elems[len(elems)-2]
 		}
-		typeName := inflect.Camelize(lastTwo[0]) + inflect.Camelize(lastTwo[1])
+		typeName := inflect.Camelize(prefix) + inflect.Camelize(elems[len(elems)-1]) + "Media"
 		if _, ok := Design.MediaTypes[identifier]; ok {
 			ReportError("media type %#v is defined twice", identifier)
 			return nil

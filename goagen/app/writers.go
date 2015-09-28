@@ -314,7 +314,8 @@ func New{{gotypename .Payload 0}}(raw interface{}) ({{gotyperef .Payload 0}}, er
 {{typeUnmarshaler .Payload "" "raw" "p"}}
 {{validationChecker .Payload.AttributeDefinition "p"}}
 	return p, err
-}`
+}
+`
 
 	// initT generates the package init function which registers all
 	// handlers with goa.

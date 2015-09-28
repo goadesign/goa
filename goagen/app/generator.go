@@ -45,6 +45,15 @@ func NewGenerator() (*Generator, error) {
 			err, strings.Join(os.Args, " "))
 	}
 	outdir := filepath.Join(goagen.OutputDir, "app")
+	if _, err = os.Stat(outdir); err == nil {
+		if !goagen.Force {
+			if cwd, err := os.Getwd(); err == nil {
+				outdir, _ = filepath.Rel(cwd, outdir)
+			}
+			return nil, fmt.Errorf("directory %#v already exists, use --foce to overwrite", outdir)
+		}
+	}
+	os.RemoveAll(outdir)
 	if err = os.MkdirAll(outdir, 0777); err != nil {
 		return nil, err
 	}
