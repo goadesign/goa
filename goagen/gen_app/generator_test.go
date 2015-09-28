@@ -19,7 +19,11 @@ var _ = Describe("NewGenerator", func() {
 
 	Context("with dummy command line flags", func() {
 		BeforeEach(func() {
-			os.Args = []string{"goagen", "--out=foo", "--design=bar", "--force"}
+			os.Args = []string{"goagen", "--out=_foo", "--design=bar", "--force"}
+		})
+
+		AfterEach(func() {
+			os.RemoveAll("_foo")
 		})
 
 		It("instantiates a generator with initialized writers", func() {
