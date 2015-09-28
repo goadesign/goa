@@ -16,7 +16,7 @@ var _ = Describe("Action", func() {
 
 	BeforeEach(func() {
 		Design = nil
-		DSLErrors = nil
+		Errors = nil
 		name = ""
 		dsl = nil
 	})
@@ -37,7 +37,7 @@ var _ = Describe("Action", func() {
 		})
 
 		It("produces an invalid action", func() {
-			Ω(DSLErrors).ShouldNot(HaveOccurred())
+			Ω(Errors).ShouldNot(HaveOccurred())
 			Ω(action).ShouldNot(BeNil())
 			Ω(action.Validate()).Should(HaveOccurred())
 		})
@@ -52,7 +52,7 @@ var _ = Describe("Action", func() {
 		})
 
 		It("produces a valid action definition with the route and default status of 200 set", func() {
-			Ω(DSLErrors).ShouldNot(HaveOccurred())
+			Ω(Errors).ShouldNot(HaveOccurred())
 			Ω(action).ShouldNot(BeNil())
 			Ω(action.Name).Should(Equal(name))
 			Ω(action.Validate()).ShouldNot(HaveOccurred())
@@ -82,7 +82,7 @@ var _ = Describe("Action", func() {
 		})
 
 		It("produces a valid action with the given properties", func() {
-			Ω(DSLErrors).ShouldNot(HaveOccurred())
+			Ω(Errors).ShouldNot(HaveOccurred())
 			Ω(action).ShouldNot(BeNil())
 			Ω(action.Validate()).ShouldNot(HaveOccurred())
 			Ω(action.Name).Should(Equal(name))
@@ -130,7 +130,7 @@ var _ = Describe("Action", func() {
 			})
 
 			It("defines the response definition using the template", func() {
-				Ω(DSLErrors).ShouldNot(HaveOccurred())
+				Ω(Errors).ShouldNot(HaveOccurred())
 				Ω(action).ShouldNot(BeNil())
 				Ω(action.Responses).ShouldNot(BeNil())
 				Ω(action.Responses).Should(HaveLen(1))
@@ -153,7 +153,7 @@ var _ = Describe("Action", func() {
 			})
 
 			It("fails", func() {
-				Ω(DSLErrors).Should(HaveOccurred())
+				Ω(Errors).Should(HaveOccurred())
 			})
 		})
 	})
@@ -178,7 +178,7 @@ var _ = Describe("Payload", func() {
 		})
 
 		It("generates the payload type", func() {
-			Ω(DSLErrors).ShouldNot(HaveOccurred())
+			Ω(Errors).ShouldNot(HaveOccurred())
 			Ω(Design).ShouldNot(BeNil())
 			Ω(Design.Resources).Should(HaveKey("foo"))
 			Ω(Design.Resources["foo"].Actions).Should(HaveKey("bar"))

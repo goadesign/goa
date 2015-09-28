@@ -13,26 +13,28 @@ import (
 )
 
 var (
-	// DSLErrors contains the DSL execution errors if any.
-	DSLErrors multiError
+	// Errors contains the DSL execution errors if any.
+	Errors MultiError
 
 	// Global DSL evaluation stack
 	ctxStack contextStack
 )
 
 type (
-	// DSL evaluation contexts stack
-	contextStack []DSLDefinition
+	// MultiError collects all DSL errors. It implements error.
+	MultiError []*Error
 
-	// multiError collects all DSL errors. It implements error.
-	multiError []*dslError
-
-	// A DSL error with name of the file and line number of where error occurred.
-	dslError struct {
+	// Error represents an error that occurred while running the API DSL.
+	// It contains the name of the file and line number of where the error
+	// occurred as well as the original Go error.
+	Error struct {
 		GoError error
 		File    string
 		Line    int
 	}
+
+	// DSL evaluation contexts stack
+	contextStack []DSLDefinition
 )
 
 // RunDSL runs all the registered top level DSLs and returns any error.
@@ -42,7 +44,7 @@ func RunDSL() error {
 	if Design == nil {
 		return nil
 	}
-	DSLErrors = nil
+	Errors = nil
 	// First run the top level API DSL to initialize responses and
 	// response templates needed by resources.
 	executeDSL(Design.DSL, Design)
@@ -58,7 +60,16 @@ func RunDSL() error {
 	for _, r := range Design.Resources {
 		executeDSL(r.DSL, r)
 	}
-	return DSLErrors
+	if Errors == nil {
+		// This is a little bit puzzling I know but casting the nil
+		// Errors slice to the error interface ends up in a value
+		// that is not the nil error interface so a naive
+		// "if err != nil" in the caller would match even if Errors
+		// was nil (iow the zero value of MultiError is not the zero
+		// value of error).
+		return nil
+	}
+	return Errors
 }
 
 // Current evaluation context, i.e. object being currently built by DSL
@@ -70,7 +81,7 @@ func (s contextStack) current() DSLDefinition {
 }
 
 // Error returns the error message.
-func (m multiError) Error() string {
+func (m MultiError) Error() string {
 	msgs := make([]string, len(m))
 	for i, de := range m {
 		msgs[i] = de.Error()
@@ -79,7 +90,7 @@ func (m multiError) Error() string {
 }
 
 // Error returns the underlying error message.
-func (de *dslError) Error() (res string) {
+func (de *Error) Error() (res string) {
 	if err := de.GoError; err != nil {
 		res = fmt.Sprintf("[%s:%d] %s", de.File, de.Line, err.Error())
 	}
@@ -87,16 +98,16 @@ func (de *dslError) Error() (res string) {
 }
 
 // executeDSL runs DSL in given evaluation context and returns true if successful.
-// It appends to DSLErrors in case of failure (and returns false).
+// It appends to Errors in case of failure (and returns false).
 func executeDSL(dsl func(), ctx DSLDefinition) bool {
 	if dsl == nil {
 		return true
 	}
-	initCount := len(DSLErrors)
+	initCount := len(Errors)
 	ctxStack = append(ctxStack, ctx)
 	dsl()
 	ctxStack = ctxStack[:len(ctxStack)-1]
-	return len(DSLErrors) <= initCount
+	return len(Errors) <= initCount
 }
 
 // incompatibleDSL should be called by DSL functions when they are
@@ -123,7 +134,7 @@ func ReportError(fm string, vals ...interface{}) {
 	}
 	err := fmt.Errorf(fm+suffix, vals...)
 	file, line := computeErrorLocation()
-	DSLErrors = append(DSLErrors, &dslError{
+	Errors = append(Errors, &Error{
 		GoError: err,
 		File:    file,
 		Line:    line,

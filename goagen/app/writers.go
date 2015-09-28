@@ -274,7 +274,7 @@ type {{.Name}} struct {
 func New{{camelize .Name}}(c goa.Context) (*{{.Name}}, error) {
 	var err error
 	ctx := {{.Name}}{Context: c}
-{{if .Headers}}{{$headers := .Headers}}{{range $name := .Headers}}{{if ($headers.IsRequired $name)}}if c.Header.Get("{{$name}}") == "" {
+	{{if .Headers}}{{$headers := .Headers}}{{range $name, $_ := $headers.Type.ToObject}}{{if ($headers.IsRequired $name)}}if c.Header.Get("{{$name}}") == "" {
 		err = goa.MissingHeaderError("{{$name}}", err)
 	}{{end}}{{end}}
 {{end}}{{if.Params}}{{$params := .Params}}{{range $name, $att := $params.Type.ToObject}}	raw{{camelize $name}}, {{if ($params.IsRequired $name)}}ok{{else}}_{{end}} := c.Get("{{$name}}")
@@ -297,8 +297,8 @@ func New{{camelize .Name}}(c goa.Context) (*{{.Name}}, error) {
 	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{.FormatName false }} sends a HTTP response with status code {{.Status}}.
 func (c *{{$ctx.Name}}) {{.FormatName false}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp *{{$mt.TypeName}}{{end}}) error {
 	{{if $mt}}return c.JSON({{.Status}}, resp){{else}}return c.Respond({{.Status}}, nil){{end}}
-{{end}}}
-`
+}
+{{end}}`
 	// payloadT generates the payload type definition GoGenerator
 	// template input: *ContextTemplateData
 	payloadT = `{{$payload := .Payload}}// {{gotypename .Payload 0}} is the {{.ResourceName}} {{.ActionName}} action payload.

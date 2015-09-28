@@ -39,7 +39,7 @@ func init() {
 	var _ = Describe("DSL execution", func() {
 		Context("with global DSL definitions", func() {
 			It("runs the DSL", func() {
-				Ω(DSLErrors).Should(BeEmpty())
+				Ω(Errors).Should(BeEmpty())
 
 				Ω(Design).ShouldNot(BeNil())
 				Ω(Design.Name).Should(Equal(apiName))

@@ -1,6 +1,12 @@
 package dsl
 
-import "fmt"
+import (
+	"fmt"
+	"mime"
+	"strings"
+
+	"bitbucket.org/pkg/inflect"
+)
 import . "github.com/raphael/goa/design"
 
 // MediaType defines a media type DSL.
@@ -44,6 +50,16 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 			ReportError("media type identifier must be a string, got %#v", val)
 			return nil
 		}
+		mediatype, _, err := mime.ParseMediaType(identifier)
+		if err != nil {
+			ReportError("invalid media type identifier %#v: %s",
+				identifier, err)
+		}
+		lastTwo := strings.Split(mediatype, ".")
+		if len(lastTwo) > 1 {
+			lastTwo = lastTwo[len(lastTwo)-2:]
+		}
+		typeName := inflect.Camelize(lastTwo[0]) + inflect.Camelize(lastTwo[1])
 		if _, ok := Design.MediaTypes[identifier]; ok {
 			ReportError("media type %#v is defined twice", identifier)
 			return nil
@@ -52,7 +68,7 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 		if len(dsl) > 0 {
 			d = dsl[0]
 		}
-		mt := NewMediaTypeDefinition(identifier, d)
+		mt := NewMediaTypeDefinition(typeName, identifier, d)
 		Design.MediaTypes[identifier] = mt
 		return mt
 	} else if r, ok := resourceDefinition(false); ok {
@@ -60,7 +76,7 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 			if m.UserTypeDefinition == nil {
 				ReportError("invalid media type specification, media type is not initialized")
 			} else {
-				r.MediaType = m.TypeName
+				r.MediaType = m.Identifier
 			}
 		} else if identifier, ok := val.(string); ok {
 			r.MediaType = identifier

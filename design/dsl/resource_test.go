@@ -15,7 +15,7 @@ var _ = Describe("Resource", func() {
 
 	BeforeEach(func() {
 		Design = nil
-		DSLErrors = nil
+		Errors = nil
 		name = ""
 		dsl = nil
 	})
@@ -177,7 +177,7 @@ var _ = Describe("Resource", func() {
 		})
 
 		It("fails", func() {
-			Ω(DSLErrors).Should(HaveOccurred())
+			Ω(Errors).Should(HaveOccurred())
 		})
 	})
 
@@ -212,7 +212,7 @@ var _ = Describe("Resource", func() {
 		})
 
 		It("returns an error", func() {
-			Ω(DSLErrors).Should(HaveOccurred())
+			Ω(Errors).Should(HaveOccurred())
 		})
 	})
 

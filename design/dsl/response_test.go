@@ -15,7 +15,7 @@ var _ = Describe("Response", func() {
 
 	BeforeEach(func() {
 		Design = nil
-		DSLErrors = nil
+		Errors = nil
 		name = ""
 		dsl = nil
 	})

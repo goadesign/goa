@@ -242,13 +242,14 @@ func (u *UserTypeDefinition) IsCompatible(val interface{}) bool {
 
 // NewMediaTypeDefinition creates a media type definition but does not
 // execute the DSL.
-func NewMediaTypeDefinition(name string, dsl func()) *MediaTypeDefinition {
+func NewMediaTypeDefinition(name, identifier string, dsl func()) *MediaTypeDefinition {
 	return &MediaTypeDefinition{
 		UserTypeDefinition: &UserTypeDefinition{
 			AttributeDefinition: &AttributeDefinition{},
 			TypeName:            name,
 			DSL:                 dsl,
 		},
+		Identifier: identifier,
 	}
 }
 

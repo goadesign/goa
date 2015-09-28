@@ -15,7 +15,7 @@ var _ = Describe("Type", func() {
 
 	BeforeEach(func() {
 		Design = nil
-		DSLErrors = nil
+		Errors = nil
 		name = ""
 		dsl = nil
 	})
@@ -23,7 +23,7 @@ var _ = Describe("Type", func() {
 	JustBeforeEach(func() {
 		Type(name, dsl)
 		RunDSL()
-		Ω(DSLErrors).ShouldNot(HaveOccurred())
+		Ω(Errors).ShouldNot(HaveOccurred())
 		ut, _ = Design.Types[name]
 	})
 

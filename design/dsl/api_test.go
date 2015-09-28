@@ -13,7 +13,7 @@ var _ = Describe("API", func() {
 
 	BeforeEach(func() {
 		Design = nil
-		DSLErrors = nil
+		Errors = nil
 		name = ""
 		dsl = nil
 	})
@@ -41,7 +41,7 @@ var _ = Describe("API", func() {
 
 		It("produces a valid API definition", func() {
 			API(name, dsl)
-			Ω(DSLErrors).ShouldNot(HaveOccurred())
+			Ω(Errors).ShouldNot(HaveOccurred())
 		})
 	})
 
@@ -52,13 +52,13 @@ var _ = Describe("API", func() {
 
 		It("returns an error", func() {
 			API("news", dsl)
-			Ω(DSLErrors).Should(HaveOccurred())
+			Ω(Errors).Should(HaveOccurred())
 		})
 	})
 
 	Context("with valid DSL", func() {
 		JustBeforeEach(func() {
-			Ω(DSLErrors).ShouldNot(HaveOccurred())
+			Ω(Errors).ShouldNot(HaveOccurred())
 			Ω(Design.Validate()).ShouldNot(HaveOccurred())
 		})
 

@@ -16,12 +16,12 @@ var _ = Describe("Validation", func() {
 
 		JustBeforeEach(func() {
 			Design = nil
-			DSLErrors = nil
+			Errors = nil
 			Type("bar", func() {
 				dsl()
 			})
 			RunDSL()
-			if DSLErrors == nil {
+			if Errors == nil {
 				Ω(Design.Types).ShouldNot(BeNil())
 				Ω(Design.Types).Should(HaveKey("bar"))
 				Ω(Design.Types["bar"]).ShouldNot(BeNil())
@@ -42,7 +42,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("records the validation", func() {
-				Ω(DSLErrors).ShouldNot(HaveOccurred())
+				Ω(Errors).ShouldNot(HaveOccurred())
 				Ω(att.Validations).Should(HaveLen(1))
 				v := att.Validations[0]
 				Ω(v).Should(BeAssignableToTypeOf(&EnumValidationDefinition{}))
@@ -61,7 +61,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("produces an error", func() {
-				Ω(DSLErrors).Should(HaveOccurred())
+				Ω(Errors).Should(HaveOccurred())
 			})
 		})
 
@@ -75,7 +75,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("records the validation", func() {
-				Ω(DSLErrors).ShouldNot(HaveOccurred())
+				Ω(Errors).ShouldNot(HaveOccurred())
 				Ω(att.Validations).Should(HaveLen(1))
 				v := att.Validations[0]
 				Ω(v).Should(BeAssignableToTypeOf(&FormatValidationDefinition{}))
@@ -94,7 +94,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("produces an error", func() {
-				Ω(DSLErrors).Should(HaveOccurred())
+				Ω(Errors).Should(HaveOccurred())
 			})
 		})
 
@@ -108,7 +108,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("produces an error", func() {
-				Ω(DSLErrors).Should(HaveOccurred())
+				Ω(Errors).Should(HaveOccurred())
 			})
 		})
 
@@ -122,7 +122,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("records the validation", func() {
-				Ω(DSLErrors).ShouldNot(HaveOccurred())
+				Ω(Errors).ShouldNot(HaveOccurred())
 				Ω(att.Validations).Should(HaveLen(1))
 				v := att.Validations[0]
 				Ω(v).Should(BeAssignableToTypeOf(&MinimumValidationDefinition{}))
@@ -141,7 +141,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("produces an error", func() {
-				Ω(DSLErrors).Should(HaveOccurred())
+				Ω(Errors).Should(HaveOccurred())
 			})
 		})
 
@@ -155,7 +155,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("records the validation", func() {
-				Ω(DSLErrors).ShouldNot(HaveOccurred())
+				Ω(Errors).ShouldNot(HaveOccurred())
 				Ω(att.Validations).Should(HaveLen(1))
 				v := att.Validations[0]
 				Ω(v).Should(BeAssignableToTypeOf(&MaximumValidationDefinition{}))
@@ -174,7 +174,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("produces an error", func() {
-				Ω(DSLErrors).Should(HaveOccurred())
+				Ω(Errors).Should(HaveOccurred())
 			})
 		})
 
@@ -188,7 +188,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("records the validation", func() {
-				Ω(DSLErrors).ShouldNot(HaveOccurred())
+				Ω(Errors).ShouldNot(HaveOccurred())
 				Ω(att.Validations).Should(HaveLen(1))
 				v := att.Validations[0]
 				Ω(v).Should(BeAssignableToTypeOf(&MinLengthValidationDefinition{}))
@@ -207,7 +207,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("produces an error", func() {
-				Ω(DSLErrors).Should(HaveOccurred())
+				Ω(Errors).Should(HaveOccurred())
 			})
 		})
 
@@ -221,7 +221,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("records the validation", func() {
-				Ω(DSLErrors).ShouldNot(HaveOccurred())
+				Ω(Errors).ShouldNot(HaveOccurred())
 				Ω(att.Validations).Should(HaveLen(1))
 				v := att.Validations[0]
 				Ω(v).Should(BeAssignableToTypeOf(&MaxLengthValidationDefinition{}))
@@ -240,7 +240,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("produces an error", func() {
-				Ω(DSLErrors).Should(HaveOccurred())
+				Ω(Errors).Should(HaveOccurred())
 			})
 		})
 
@@ -253,7 +253,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("records the validation", func() {
-				Ω(DSLErrors).ShouldNot(HaveOccurred())
+				Ω(Errors).ShouldNot(HaveOccurred())
 				Ω(Design.Types["bar"].Validations).Should(HaveLen(1))
 				v := Design.Types["bar"].Validations[0]
 				Ω(v).Should(BeAssignableToTypeOf(&RequiredValidationDefinition{}))

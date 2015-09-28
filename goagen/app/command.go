@@ -34,7 +34,7 @@ func (c *Command) RegisterFlags(r goagen.FlagRegistry) {
 func (c *Command) Run() ([]string, error) {
 	flags := map[string]string{"target": TargetPackage}
 	gen := meta.NewGenerator(
-		"app.NewGenerator",
+		"app.Generate",
 		[]*goagen.ImportSpec{goagen.SimpleImport("github.com/raphael/goa/goagen/app")},
 		flags,
 	)

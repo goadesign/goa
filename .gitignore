@@ -2,3 +2,4 @@ examples/cellar/cellar
 **/*.coverprofile
 goagen/tool/goagen
 goagen/goagen
+**/autogen

@@ -17,7 +17,7 @@ var _ = Describe("Attribute", func() {
 
 	BeforeEach(func() {
 		Design = nil
-		DSLErrors = nil
+		Errors = nil
 		name = ""
 		dataType = nil
 		description = ""
@@ -175,7 +175,7 @@ var _ = Describe("Attribute", func() {
 			})
 
 			It("fails", func() {
-				Ω(DSLErrors).Should(HaveOccurred())
+				Ω(Errors).Should(HaveOccurred())
 			})
 		})
 
@@ -197,7 +197,7 @@ var _ = Describe("Attribute", func() {
 			})
 
 			It("initializes the object attributes", func() {
-				Ω(DSLErrors).ShouldNot(HaveOccurred())
+				Ω(Errors).ShouldNot(HaveOccurred())
 				t := parent.Type
 				Ω(t).ShouldNot(BeNil())
 				Ω(t).Should(BeAssignableToTypeOf(Object{}))

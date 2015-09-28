@@ -34,7 +34,7 @@ var _ = Describe("DSL execution", func() {
 		})
 
 		It("still produces the correct metadata", func() {
-			Ω(DSLErrors).Should(BeEmpty())
+			Ω(Errors).Should(BeEmpty())
 			Ω(Design.Types).Should(HaveLen(2))
 			t1 := Design.Types[type1Name]
 			t2 := Design.Types[type2Name]
@@ -53,14 +53,14 @@ var _ = Describe("DSL execution", func() {
 })
 
 var _ = Describe("DSL errors", func() {
-	var dslErrorMsg string
+	var ErrorMsg string
 
 	BeforeEach(func() {
-		DSLErrors = nil
+		Errors = nil
 	})
 
 	JustBeforeEach(func() {
-		dslErrorMsg = DSLErrors.Error()
+		ErrorMsg = Errors.Error()
 	})
 
 	Context("with one error", func() {
@@ -76,11 +76,11 @@ var _ = Describe("DSL errors", func() {
 		})
 
 		It("computes the location", func() {
-			Ω(dslErrorMsg).Should(ContainSubstring(errMsg))
-			Ω(DSLErrors).Should(HaveLen(1))
-			Ω(DSLErrors[0]).ShouldNot(BeNil())
-			Ω(DSLErrors[0].File).Should(HaveSuffix("runner_test.go"))
-			Ω(DSLErrors[0].Line).Should(Equal(lineNumber))
+			Ω(ErrorMsg).Should(ContainSubstring(errMsg))
+			Ω(Errors).Should(HaveLen(1))
+			Ω(Errors[0]).ShouldNot(BeNil())
+			Ω(Errors[0].File).Should(HaveSuffix("runner_test.go"))
+			Ω(Errors[0].Line).Should(Equal(lineNumber))
 		})
 	})
 
@@ -94,8 +94,8 @@ var _ = Describe("DSL errors", func() {
 		})
 
 		It("reports all errors", func() {
-			Ω(dslErrorMsg).Should(ContainSubstring(error1msg))
-			Ω(dslErrorMsg).Should(ContainSubstring(error2msg))
+			Ω(ErrorMsg).Should(ContainSubstring(error1msg))
+			Ω(ErrorMsg).Should(ContainSubstring(error2msg))
 		})
 	})
 
@@ -114,11 +114,11 @@ var _ = Describe("DSL errors", func() {
 		})
 
 		It("reports an invalid DSL error", func() {
-			Ω(dslErrorMsg).Should(ContainSubstring("invalid use of Attributes"))
-			Ω(DSLErrors).Should(HaveLen(1))
-			Ω(DSLErrors[0]).ShouldNot(BeNil())
-			Ω(DSLErrors[0].File).Should(HaveSuffix("runner_test.go"))
-			Ω(DSLErrors[0].Line).Should(Equal(lineNumber))
+			Ω(ErrorMsg).Should(ContainSubstring("invalid use of Attributes"))
+			Ω(Errors).Should(HaveLen(1))
+			Ω(Errors[0]).ShouldNot(BeNil())
+			Ω(Errors[0].File).Should(HaveSuffix("runner_test.go"))
+			Ω(Errors[0].Line).Should(Equal(lineNumber))
 		})
 	})
 
@@ -137,11 +137,11 @@ var _ = Describe("DSL errors", func() {
 		})
 
 		It("reports an incompatible type DSL error", func() {
-			Ω(dslErrorMsg).Should(ContainSubstring("cannot use 42 (type int) as type"))
-			Ω(DSLErrors).Should(HaveLen(1))
-			Ω(DSLErrors[0]).ShouldNot(BeNil())
-			Ω(DSLErrors[0].File).Should(HaveSuffix("runner_test.go"))
-			Ω(DSLErrors[0].Line).Should(Equal(lineNumber))
+			Ω(ErrorMsg).Should(ContainSubstring("cannot use 42 (type int) as type"))
+			Ω(Errors).Should(HaveLen(1))
+			Ω(Errors[0]).ShouldNot(BeNil())
+			Ω(Errors[0].File).Should(HaveSuffix("runner_test.go"))
+			Ω(Errors[0].Line).Should(Equal(lineNumber))
 		})
 	})
 })

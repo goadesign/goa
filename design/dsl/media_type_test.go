@@ -15,7 +15,7 @@ var _ = Describe("MediaType", func() {
 
 	BeforeEach(func() {
 		Design = nil
-		DSLErrors = nil
+		Errors = nil
 		name = ""
 		dsl = nil
 	})
@@ -23,7 +23,7 @@ var _ = Describe("MediaType", func() {
 	JustBeforeEach(func() {
 		MediaType(name, dsl)
 		RunDSL()
-		Ω(DSLErrors).ShouldNot(HaveOccurred())
+		Ω(Errors).ShouldNot(HaveOccurred())
 		mt, _ = Design.MediaTypes[name]
 	})
 

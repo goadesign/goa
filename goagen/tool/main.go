@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/raphael/goa/goagen"
@@ -35,7 +36,21 @@ func main() {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	fmt.Println(strings.Join(files, "\n"))
+	rels := make([]string, len(files))
+	cwd, err := os.Getwd()
+	if err != nil {
+		rels = files
+	} else {
+		for i, f := range files {
+			r, err := filepath.Rel(cwd, f)
+			if err == nil {
+				rels[i] = r
+			} else {
+				rels[i] = f
+			}
+		}
+	}
+	fmt.Println(strings.Join(rels, "\n"))
 }
 
 // command parses the command line and returns the specified sub-command.

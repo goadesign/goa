@@ -190,7 +190,7 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 	cmd := exec.Command(genbin, args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("%s: %s", err, out)
+		return nil, fmt.Errorf("%s\n%s", err, string(out))
 	}
 	res := strings.Split(string(out), "\n")
 	for (len(res) > 0) && (res[len(res)-1] == "") {
@@ -210,7 +210,7 @@ func main() {
 
 func failOnError(err error) {
 	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
+		fmt.Fprintf(os.Stderr, "%s", err)
 		os.Exit(1)
 	}
 }`
