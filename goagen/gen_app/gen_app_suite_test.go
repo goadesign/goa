@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestCode(t *testing.T) {
+func TestGenApp(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "App code Suite")
+	RunSpecs(t, "GenApp Suite")
 }

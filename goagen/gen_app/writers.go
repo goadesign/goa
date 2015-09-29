@@ -214,12 +214,12 @@ func (w *ResourcesWriter) Execute(data *ResourceTemplateData) error {
 
 // newCoerceData is a helper function that creates a map that can be given to the "Coerce"
 // template.
-func newCoerceData(name string, att *design.AttributeDefinition, target string, depth int) map[string]interface{} {
+func newCoerceData(name string, att *design.AttributeDefinition, pkg string, depth int) map[string]interface{} {
 	return map[string]interface{}{
 		"Name":      name,
 		"VarName":   goagen.Goify(name, false),
 		"Attribute": att,
-		"Target":    target,
+		"Pkg":       pkg,
 		"Depth":     depth,
 	}
 }
@@ -243,27 +243,27 @@ type {{.Name}} struct {
 	// data to the actual type.
 	// template input: map[string]interface{} as returned by newCoerceData
 	coerceT = `{{if eq .Attribute.Type.Kind 1}}{{/* BooleanType */}}{{tabs .Depth}}if {{.VarName}}, err := strconv.ParseBool(raw{{camelize .Name}}); err == nil {
-{{tabs .Depth}}	{{.Target}} = {{.VarName}}
+{{tabs .Depth}}	{{.Pkg}} = {{.VarName}}
 {{tabs .Depth}}} else {
 {{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{camelize .Name}}, "boolean", err)
 {{tabs .Depth}}}
 {{end}}{{if eq .Attribute.Type.Kind 2}}{{/* IntegerType */}}{{tabs .Depth}}if {{.VarName}}, err := strconv.Atoi(raw{{camelize .Name}}); err == nil {
-{{tabs .Depth}}	{{.Target}} = int({{.VarName}})
+{{tabs .Depth}}	{{.Pkg}} = int({{.VarName}})
 {{tabs .Depth}}} else {
 {{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{camelize .Name}}, "integer", err)
 {{tabs .Depth}}}
 {{end}}{{if eq .Attribute.Type.Kind 3}}{{/* NumberType */}}{{tabs .Depth}}if {{.VarName}}, err := strconv.ParseFloat(raw{{camelize .Name}}, 64); err == nil {
-{{tabs .Depth}}	{{.Target}} = {{.VarName}}
+{{tabs .Depth}}	{{.Pkg}} = {{.VarName}}
 {{tabs .Depth}}} else {
 {{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{camelize .Name}}, "number", err)
 {{tabs .Depth}}}
-{{end}}{{if eq .Attribute.Type.Kind 4}}{{/* StringType */}}{{tabs .Depth}}{{.Target}} = raw{{camelize .Name}}
+{{end}}{{if eq .Attribute.Type.Kind 4}}{{/* StringType */}}{{tabs .Depth}}{{.Pkg}} = raw{{camelize .Name}}
 {{end}}{{if eq .Attribute.Type.Kind 5}}{{/* ArrayType */}}{{tabs .Depth}}elems{{camelize .Name}} := strings.Split(raw{{camelize .Name}}, ",")
-{{if eq (arrayAttribute .Attribute).Type.Kind 4}}{{tabs .Depth}}{{.Target}} = elems{{camelize .Name}}
+{{if eq (arrayAttribute .Attribute).Type.Kind 4}}{{tabs .Depth}}{{.Pkg}} = elems{{camelize .Name}}
 {{else}}{{tabs .Depth}}elems{{camelize .Name}}2 := make({{gotyperef .Attribute.Type .Depth}}, len(elems{{camelize .Name}}))
 {{tabs .Depth}}for i, rawElem := range elems{{camelize .Name}} {
 {{template "Coerce" (newCoerceData "elem" (arrayAttribute .Attribute) (printf "elems%s2[i]" (camelize .Name)) (add .Depth 1))}}{{tabs .Depth}}}
-{{tabs .Depth}}{{.Target}} = elems{{camelize .Name}}
+{{tabs .Depth}}{{.Pkg}} = elems{{camelize .Name}}
 {{end}}{{end}}`
 
 	// ctxNewT generates the code for the context factory method.

@@ -38,7 +38,7 @@ var _ = Describe("RegisterFlags", func() {
 		})
 
 		It("registers the required flags", func() {
-			_, ok := reg.Flags["target"]
+			_, ok := reg.Flags["pkg"]
 			Ω(ok).Should(BeTrue())
 		})
 	})
@@ -53,7 +53,7 @@ var _ = Describe("RegisterFlags", func() {
 		BeforeEach(func() {
 			kapp = kingpin.New("test", "test")
 			cmd = kapp.Command("testCmd", "testCmd")
-			args = []string{testCmd, "-o" + flagVal, "-d=design", "--target=dummy"}
+			args = []string{testCmd, "-o" + flagVal, "-d=design", "--pkg=dummy"}
 		})
 
 		JustBeforeEach(func() {
