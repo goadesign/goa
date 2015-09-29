@@ -56,12 +56,13 @@ func command() codegen.Command {
 	codegen.RegisterFlags(a)
 	for _, c := range Commands {
 		cmd := a.Command(c.Name(), c.Description())
+		if c.Name() == "default" {
+			cmd.Default()
+		}
 		c.RegisterFlags(cmd)
 	}
+	// a.Command("default", "default command, generates all known artefacts").Default()
 	cmdName := kingpin.MustParse(a.Parse(os.Args[1:]))
-	if cmdName == "" || cmdName == "all" {
-		return new(AllCommand)
-	}
 	for _, c := range Commands {
 		if cmdName == c.Name() {
 			return c

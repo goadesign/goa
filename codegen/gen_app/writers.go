@@ -42,6 +42,13 @@ type (
 		ResourceTmpl *template.Template
 	}
 
+	// MediaTypesWriter generate code for a goa application media types.
+	// Media types are data structures used to render the response bodies.
+	MediaTypesWriter struct {
+		*codegen.GoGenerator
+		MediaTypeTmpl *template.Template
+	}
+
 	// ContextTemplateData contains all the information used by the template to render the context
 	// code for an action.
 	ContextTemplateData struct {
@@ -65,8 +72,8 @@ type (
 		Context  string // Name of corresponding context data structure e.g. "ListBottleContext"
 	}
 
-	// ResourceTemplateData contains the information required to generate the resource GoGenerator
-	ResourceTemplateData struct {
+	// ResourceData contains the information required to generate the resource GoGenerator
+	ResourceData struct {
 		Name              string                     // Name of resource
 		Identifier        string                     // Identifier of resource media type
 		Description       string                     // Description of resource
@@ -204,12 +211,37 @@ func NewResourcesWriter(filename string) (*ResourcesWriter, error) {
 	return &w, nil
 }
 
+// NewMediaTypesWriter returns a contexts code writer.
+// Media types contain the data used to render response bodies.
+func NewMediaTypesWriter(filename string) (*MediaTypesWriter, error) {
+	cw := codegen.NewGoGenerator(filename)
+	funcMap := cw.FuncMap
+	funcMap["gotypedef"] = codegen.GoTypeDef
+	mediaTypeTmpl, err := template.New("media type").Funcs(cw.FuncMap).Parse(mediaTypeT)
+	if err != nil {
+		return nil, err
+	}
+	w := MediaTypesWriter{
+		GoGenerator:   cw,
+		MediaTypeTmpl: mediaTypeTmpl,
+	}
+	return &w, nil
+}
+
 // Execute writes the code for the context types to the writer.
-func (w *ResourcesWriter) Execute(data *ResourceTemplateData) error {
+func (w *ResourcesWriter) Execute(data *ResourceData) error {
 	if data.Type == nil {
 		return fmt.Errorf("missing resource type definition for %s", data.Name)
 	}
 	return w.ResourceTmpl.Execute(w, data)
+}
+
+// Execute writes the code for the context types to the writer.
+func (w *MediaTypesWriter) Execute(data *ResourceData) error {
+	if data.Type == nil {
+		return fmt.Errorf("missing media type definition for %s", data.Name)
+	}
+	return w.MediaTypeTmpl.Execute(w, data)
 }
 
 // newCoerceData is a helper function that creates a map that can be given to the "Coerce"
@@ -242,20 +274,20 @@ type {{.Name}} struct {
 	// coerceT generates the code that coerces the generic deserialized
 	// data to the actual type.
 	// template input: map[string]interface{} as returned by newCoerceData
-	coerceT = `{{if eq .Attribute.Type.Kind 1}}{{/* BooleanType */}}{{tabs .Depth}}if {{.VarName}}, err := strconv.ParseBool(raw{{camelize .Name}}); err == nil {
+	coerceT = `{{if eq .Attribute.Type.Kind 1}}{{/* BooleanType */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.ParseBool(raw{{camelize .Name}}); err2 == nil {
 {{tabs .Depth}}	{{.Pkg}} = {{.VarName}}
 {{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{camelize .Name}}, "boolean", err)
+{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{camelize .Name}}, "boolean", err2)
 {{tabs .Depth}}}
-{{end}}{{if eq .Attribute.Type.Kind 2}}{{/* IntegerType */}}{{tabs .Depth}}if {{.VarName}}, err := strconv.Atoi(raw{{camelize .Name}}); err == nil {
+{{end}}{{if eq .Attribute.Type.Kind 2}}{{/* IntegerType */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.Atoi(raw{{camelize .Name}}); err2 == nil {
 {{tabs .Depth}}	{{.Pkg}} = int({{.VarName}})
 {{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{camelize .Name}}, "integer", err)
+{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{camelize .Name}}, "integer", err2)
 {{tabs .Depth}}}
-{{end}}{{if eq .Attribute.Type.Kind 3}}{{/* NumberType */}}{{tabs .Depth}}if {{.VarName}}, err := strconv.ParseFloat(raw{{camelize .Name}}, 64); err == nil {
+{{end}}{{if eq .Attribute.Type.Kind 3}}{{/* NumberType */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.ParseFloat(raw{{camelize .Name}}, 64); err2 == nil {
 {{tabs .Depth}}	{{.Pkg}} = {{.VarName}}
 {{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{camelize .Name}}, "number", err)
+{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{camelize .Name}}, "number", err2)
 {{tabs .Depth}}}
 {{end}}{{if eq .Attribute.Type.Kind 4}}{{/* StringType */}}{{tabs .Depth}}{{.Pkg}} = raw{{camelize .Name}}
 {{end}}{{if eq .Attribute.Type.Kind 5}}{{/* ArrayType */}}{{tabs .Depth}}elems{{camelize .Name}} := strings.Split(raw{{camelize .Name}}, ",")
@@ -291,6 +323,7 @@ func New{{camelize .Name}}(c goa.Context) (*{{.Name}}, error) {
 	}
 {{end}}	return &ctx, err
 }
+
 `
 	// ctxRespT generates response helper methods GoGenerator
 	// template input: *ContextTemplateData
@@ -301,7 +334,7 @@ func (c *{{$ctx.Name}}) {{.FormatName false}}({{$mt := (index $ctx.MediaTypes .M
 {{end}}`
 	// payloadT generates the payload type definition GoGenerator
 	// template input: *ContextTemplateData
-	payloadT = `{{$payload := .Payload}}// {{gotypename .Payload 0}} is the {{.ResourceName}} {{.ActionName}} action payload.
+	payloadT = `{{$payload := .Payload}}// {{gotypename .Payload 0}} is the {{.ResourceName}} {package app{.ActionName}} action payload.
 type {{gotypename .Payload 1}} {{gotypedef .Payload 0 true false}}
 `
 	// newPayloadT generates the code for the payload factory method.
@@ -320,8 +353,7 @@ func New{{gotypename .Payload 0}}(raw interface{}) ({{gotyperef .Payload 0}}, er
 	// initT generates the package init function which registers all
 	// handlers with goa.
 	// template input: *HandlerTemplateData
-	initT = `
-func init() {
+	initT = `func init() {
 	goa.RegisterHandlers(
 {{range .}}		&goa.HandlerFactory{"{{.Resource}}", "{{.Action}}", "{{.Verb}}", "{{.Path}}", {{.Name}}},
 {{end}}	)
@@ -345,14 +377,19 @@ func {{.Name}}(userHandler interface{}) (goa.Handler, error) {
 }
 `
 	// resourceT generates the code for a resource.
-	// template input: *ResourceTemplateData
-	resourceT = `// {{.Description}}
-// Media type: {{.Identifier}}
+	// template input: *ResourceData
+	resourceT = `// {{if .Description}}{{.Description}}{{else}}{{.Name}} resource{{end}}
 type {{.Name}} {{gotypedef .Type 0 true false}}
 {{if .CanonicalTemplate}}
 // {{.Name}}Href returns the resource href.
-func {{.Name}}Href({{join .CanonicalParams ", "}} string) string {
+func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} string{{end}}) string {
 	return fmt.Sprintf("{{.CanonicalTemplate}}", {{join .CanonicalParams ", "}})
 }
 {{end}}`
+	// mediaTypeT generates the code for a media type.
+	// template input: *ResourceData
+	mediaTypeT = `// {{if .Description}}{{.Description}}{{else}}{{.Name}} media type{{end}}
+// Identifier: {{.Identifier}}
+type {{.Name}} {{gotypedef .Type 0 true false}}
+`
 )

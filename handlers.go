@@ -34,7 +34,7 @@ func init() {
 }
 
 // RegisterHandlers stores the given handlers and indexes them for later lookup.
-// This function is meant to be called by code generated with the goa tool.
+// This function is meant to be called by code generated with the goagen tool.
 func RegisterHandlers(hs ...*HandlerFactory) {
 	for _, handler := range hs {
 		handlers[handlerID(handler.ResourceName, handler.ActionName)] = handler

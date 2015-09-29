@@ -120,7 +120,7 @@ func (m *Generator) Generate() ([]string, error) {
 		codegen.SimpleImport("strings"),
 		codegen.NewImport(".", "github.com/raphael/goa/design"),
 		codegen.NewImport(".", "github.com/raphael/goa/design/dsl"),
-		codegen.SimpleImport(codegen.DesignPackagePath),
+		codegen.NewImport("_", codegen.DesignPackagePath),
 	)
 	m.WriteHeader("Code Generator", "main", imports)
 	tmpl, err := template.New("generator").Parse(mainTmpl)
@@ -131,7 +131,6 @@ func (m *Generator) Generate() ([]string, error) {
 		"Genfunc":       m.Genfunc,
 		"DesignPackage": codegen.DesignPackagePath,
 		"PkgName":       pkgName,
-		"MetadataVar":   "Metadata",
 	}
 	err = tmpl.Execute(m, context)
 	if err != nil {
@@ -204,7 +203,6 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 
 const mainTmpl = `
 func main() {
-	Design = {{.PkgName}}.{{.MetadataVar}}
 	failOnError(RunDSL())
 	files, err := {{.Genfunc}}(Design)
 	failOnError(err)

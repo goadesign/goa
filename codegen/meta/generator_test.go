@@ -47,7 +47,7 @@ var _ = Describe("Run", func() {
 		}
 		m = &meta.Generator{
 			Genfunc: genfunc,
-			Imports: nil, // []*codegen.ImportSpec{codegen.SimpleImport(designPackage)},
+			Imports: []*codegen.ImportSpec{codegen.SimpleImport(designPackage)},
 		}
 		codegen.Debug = debug
 		codegen.OutputDir = outputDir

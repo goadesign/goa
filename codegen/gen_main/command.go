@@ -29,7 +29,7 @@ func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
 func (c *Command) Run() ([]string, error) {
 	flags := map[string]string{"name": AppName}
 	gen := meta.NewGenerator(
-		"main.Generate",
+		"genmain.Generate",
 		[]*codegen.ImportSpec{codegen.SimpleImport("github.com/raphael/goa/codegen/gen_main")},
 		flags,
 	)

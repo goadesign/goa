@@ -456,7 +456,7 @@ var _ = Describe("ResourceWriter", func() {
 			var canoParams []string
 			var userType *design.UserTypeDefinition
 
-			var data *genapp.ResourceTemplateData
+			var data *genapp.ResourceData
 
 			BeforeEach(func() {
 				userType = nil
@@ -466,7 +466,7 @@ var _ = Describe("ResourceWriter", func() {
 			})
 
 			JustBeforeEach(func() {
-				data = &genapp.ResourceTemplateData{
+				data = &genapp.ResourceData{
 					Name:              "Bottle",
 					Identifier:        "vnd.acme.com/resources",
 					Description:       "A bottle resource",
@@ -579,10 +579,10 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam, _ := c.Get("param")
-	if param, err := strconv.Atoi(rawParam); err == nil {
+	if param, err2 := strconv.Atoi(rawParam); err2 == nil {
 		ctx.Param = int(param)
 	} else {
-		err = goa.InvalidParamTypeError("param", rawParam, "integer", err)
+		err = goa.InvalidParamTypeError("param", rawParam, "integer", err2)
 	}
 	return &ctx, err
 }
@@ -617,10 +617,10 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam, _ := c.Get("param")
-	if param, err := strconv.ParseFloat(rawParam, 64); err == nil {
+	if param, err2 := strconv.ParseFloat(rawParam, 64); err2 == nil {
 		ctx.Param = param
 	} else {
-		err = goa.InvalidParamTypeError("param", rawParam, "number", err)
+		err = goa.InvalidParamTypeError("param", rawParam, "number", err2)
 	}
 	return &ctx, err
 }
@@ -637,10 +637,10 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam, _ := c.Get("param")
-	if param, err := strconv.ParseBool(rawParam); err == nil {
+	if param, err2 := strconv.ParseBool(rawParam); err2 == nil {
 		ctx.Param = param
 	} else {
-		err = goa.InvalidParamTypeError("param", rawParam, "boolean", err)
+		err = goa.InvalidParamTypeError("param", rawParam, "boolean", err2)
 	}
 	return &ctx, err
 }
@@ -679,10 +679,10 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	elemsParam := strings.Split(rawParam, ",")
 	elemsParam2 := make([]int, len(elemsParam))
 	for i, rawElem := range elemsParam {
-		if elem, err := strconv.Atoi(rawElem); err == nil {
+		if elem, err2 := strconv.Atoi(rawElem); err2 == nil {
 			elemsParam2[i] = int(elem)
 		} else {
-			err = goa.InvalidParamTypeError("elem", rawElem, "integer", err)
+			err = goa.InvalidParamTypeError("elem", rawElem, "integer", err2)
 		}
 	}
 	ctx.Param = elemsParam
@@ -702,10 +702,10 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawInt, _ := c.Get("int")
-	if int_, err := strconv.Atoi(rawInt); err == nil {
+	if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
 		ctx.Int = int(int_)
 	} else {
-		err = goa.InvalidParamTypeError("int", rawInt, "integer", err)
+		err = goa.InvalidParamTypeError("int", rawInt, "integer", err2)
 	}
 	return &ctx, err
 }
@@ -726,10 +726,10 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	if !ok {
 		err = goa.MissingParamError("int", err)
 	} else {
-		if int_, err := strconv.Atoi(rawInt); err == nil {
+		if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
 			ctx.Int = int(int_)
 		} else {
-			err = goa.InvalidParamTypeError("int", rawInt, "integer", err)
+			err = goa.InvalidParamTypeError("int", rawInt, "integer", err2)
 		}
 	}
 	return &ctx, err

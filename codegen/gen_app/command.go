@@ -34,8 +34,8 @@ func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
 func (c *Command) Run() ([]string, error) {
 	flags := map[string]string{"pkg": TargetPackage}
 	gen := meta.NewGenerator(
-		"app.Generate",
-		[]*codegen.ImportSpec{codegen.SimpleImport("github.com/raphael/goa/codegen/app")},
+		"genapp.Generate",
+		[]*codegen.ImportSpec{codegen.SimpleImport("github.com/raphael/goa/codegen/gen_app")},
 		flags,
 	)
 	return gen.Generate()

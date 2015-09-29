@@ -85,19 +85,18 @@ var _ = Describe("Generate", func() {
 
 		It("generates correct empty files", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(3))
+			Ω(files).Should(HaveLen(4))
 			isEmptySource := func(filename string) {
 				contextsContent, err := ioutil.ReadFile(filepath.Join(outDir, "app", filename))
 				Ω(err).ShouldNot(HaveOccurred())
 				lines := strings.Split(string(contextsContent), "\n")
 				Ω(lines).ShouldNot(BeEmpty())
 				Ω(len(lines)).Should(BeNumerically(">", 1))
-				last2Lines := lines[len(lines)-2] + "\n" + lines[len(lines)-1]
-				Ω(last2Lines).Should(Equal("package app\n"))
 			}
 			isEmptySource("contexts.go")
 			isEmptySource("handlers.go")
 			isEmptySource("resources.go")
+			isEmptySource("media_types.go")
 		})
 	})
 
@@ -164,7 +163,7 @@ var _ = Describe("Generate", func() {
 
 		It("generates the corresponding code", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(3))
+			Ω(files).Should(HaveLen(4))
 			data := map[string]string{"outDir": outDir, "design": "foo"}
 			contextsCodeT, err := template.New("context").Parse(contextsCodeTmpl)
 			Ω(err).ShouldNot(HaveOccurred())
@@ -187,6 +186,13 @@ var _ = Describe("Generate", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			resourcesCode := b.String()
 
+			mediaTypesCodeT, err := template.New("media types").Parse(mediaTypesCodeTmpl)
+			Ω(err).ShouldNot(HaveOccurred())
+			b.Reset()
+			err = mediaTypesCodeT.Execute(&b, data)
+			Ω(err).ShouldNot(HaveOccurred())
+			mediaTypesCode := b.String()
+
 			isSource := func(filename, content string) {
 				contextsContent, err := ioutil.ReadFile(filepath.Join(outDir, "app", filename))
 				Ω(err).ShouldNot(HaveOccurred())
@@ -196,6 +202,7 @@ var _ = Describe("Generate", func() {
 			isSource("contexts.go", contextsCode)
 			isSource("handlers.go", handlersCode)
 			isSource("resources.go", resourcesCode)
+			isSource("media_types.go", mediaTypesCode)
 		})
 	})
 })
@@ -212,6 +219,11 @@ const contextsCodeTmpl = `//****************************************************
 //************************************************************************//
 
 package app
+
+import (
+	"github.com/raphael/goa"
+	"strconv"
+)
 
 // GetWidgetContext provides the Widget get action context.
 type GetWidgetContext struct {
@@ -252,16 +264,21 @@ const handlersCodeTmpl = `//****************************************************
 
 package app
 
+import (
+	"fmt"
+	"github.com/raphael/goa"
+)
+
 func init() {
 	goa.RegisterHandlers(
-		&goa.HandlerFactory{"Widget", "get", "GET", "/:id", getWidgetsHandler},
+		&goa.HandlerFactory{"widgets", "get", "GET", "/:id", getWidgetsHandler},
 	)
 }
 
 func getWidgetsHandler(userHandler interface{}) (goa.Handler, error) {
 	h, ok := userHandler.(func(c *GetWidgetContext) error)
 	if !ok {
-		return nil, fmt.Errorf("invalid handler signature for action get Widget, expected 'func(c *GetWidgetContext) error'")
+		return nil, fmt.Errorf("invalid handler signature for action get widgets, expected 'func(c *GetWidgetContext) error'")
 	}
 	return func(c goa.Context) error {
 		ctx, err := NewGetWidgetContext(c)
@@ -287,11 +304,28 @@ const resourcesCodeTmpl = `//***************************************************
 package app
 
 // Widgetty
-// Media type: vnd.rightscale.codegen.test.widgets
 type Widget string
 
 // WidgetHref returns the resource href.
-func WidgetHref(string) string {
-	return fmt.Sprintf("/:id")
+func WidgetHref() string {
+	return fmt.Sprintf("/:id", )
 }
+`
+
+const mediaTypesCodeTmpl = `//************************************************************************//
+// test api: Application Media Types
+//
+// Generated with codegen v0.0.1, command line:
+// $ codegen
+// --out={{.outDir}}
+// --design={{.design}}
+//
+// The content of this file is auto-generated, DO NOT MODIFY
+//************************************************************************//
+
+package app
+
+// id media type
+// Identifier: vnd.rightscale.codegen.test.widgets
+type id string
 `

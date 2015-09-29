@@ -42,10 +42,14 @@ func NewGoGenerator(filename string) *GoGenerator {
 
 // FormatCode runs "gofmt -w" on the generated file.
 func (w *GoGenerator) FormatCode() error {
-	cmd := exec.Command("gofmt", "-w", w.Filename)
+	cmd := exec.Command("goimport", "-w", w.Filename)
 	if output, err := cmd.CombinedOutput(); err != nil {
-		content, _ := ioutil.ReadFile(w.Filename)
-		return fmt.Errorf("%s\n========\nContent:\n%s", string(output), content)
+		if len(output) > 0 {
+			// goimport exits with status code 1 if modifies the code which is not a
+			// failure. Look for an error message to know something bad happened.
+			content, _ := ioutil.ReadFile(w.Filename)
+			return fmt.Errorf("%s\n========\nContent:\n%s", string(output), content)
+		}
 	}
 	return nil
 }
@@ -76,8 +80,7 @@ func (w *GoGenerator) Write(b []byte) (int, error) {
 }
 
 const (
-	headerT = `
-//************************************************************************//
+	headerT = `{{if .Title}}//************************************************************************//
 // {{.Title}}
 //
 // Generated with codegen v{{.ToolVersion}}, command line:
@@ -86,10 +89,11 @@ const (
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
-package {{.Pkg}}
-{{if .Imports}}
-import ({{range .Imports}}
+{{end}}package {{.Pkg}}
+
+{{if .Imports}}import ({{range .Imports}}
 	{{.Code}}{{end}}
 )
+
 {{end}}`
 )

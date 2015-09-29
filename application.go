@@ -49,7 +49,8 @@ func New(name string) *Application {
 }
 
 // Mount adds the given controller to the application.
-// It panics if a controller for a resource with the same name was already added.
+// This consists of binding the controller user handlers to the generated handlers that get called
+// by the HTTP router.
 func (a *Application) Mount(c *Controller) {
 	c.Logger = a.Logger.New("ctl", c.Resource)
 	c.Info("mouting")
