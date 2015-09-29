@@ -37,5 +37,5 @@ test:
 	@cd examples/cellar && go build
 
 goagen:
-	@cd goagen/tool && \
-	go build -o goagen
+	@cd goagen && \
+	go install

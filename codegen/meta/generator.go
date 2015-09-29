@@ -11,14 +11,14 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/raphael/goa/goagen"
+	"github.com/raphael/goa/codegen"
 )
 
 // Generator generates the code of, compiles and runs generators.
 // This extra step is necessary to compile in the end user design package so
 // that generator code can iterate through it.
 type Generator struct {
-	*goagen.GoGenerator
+	*codegen.GoGenerator
 
 	// Genfunc contains the name of the generator entry point function.
 	// The function signature must be:
@@ -31,7 +31,7 @@ type Generator struct {
 
 	// Imports list the imports that are specific for that generator that
 	// should be added to the main Go file.
-	Imports []*goagen.ImportSpec
+	Imports []*codegen.ImportSpec
 
 	// Flags is the list of flags to be used when invoking the final
 	// generator on the command line.
@@ -40,7 +40,7 @@ type Generator struct {
 
 // NewGenerator returns a meta generator that can run an actual Generator
 // given its factory method and command line flags.
-func NewGenerator(genfunc string, imports []*goagen.ImportSpec, flags map[string]string) *Generator {
+func NewGenerator(genfunc string, imports []*codegen.ImportSpec, flags map[string]string) *Generator {
 	return &Generator{
 		Genfunc: genfunc,
 		Imports: imports,
@@ -51,20 +51,20 @@ func NewGenerator(genfunc string, imports []*goagen.ImportSpec, flags map[string
 // Generate compiles and runs the generator and returns the generated filenames.
 func (m *Generator) Generate() ([]string, error) {
 	// First make sure environment is setup correctly.
-	if goagen.OutputDir == "" {
+	if codegen.OutputDir == "" {
 		return nil, fmt.Errorf("missing output directory specification")
 	}
-	if goagen.DesignPackagePath == "" {
+	if codegen.DesignPackagePath == "" {
 		return nil, fmt.Errorf("missing design package path specification")
 	}
-	if err := os.MkdirAll(goagen.OutputDir, 0755); err != nil {
+	if err := os.MkdirAll(codegen.OutputDir, 0755); err != nil {
 		return nil, err
 	}
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
 		return nil, fmt.Errorf("$GOPATH not defined")
 	}
-	designPath := filepath.Join(gopath, "src", goagen.DesignPackagePath)
+	designPath := filepath.Join(gopath, "src", codegen.DesignPackagePath)
 	if _, err := os.Stat(designPath); err != nil {
 		return nil, fmt.Errorf(`cannot find design package at path "%s"`, designPath)
 	}
@@ -74,20 +74,20 @@ func (m *Generator) Generate() ([]string, error) {
 	}
 
 	// Create temporary directory used for generation under the output dir.
-	gendir, err := ioutil.TempDir(goagen.OutputDir, "goagen")
+	gendir, err := ioutil.TempDir(codegen.OutputDir, "codegen")
 	if err != nil {
 		if _, ok := err.(*os.PathError); ok {
-			err = fmt.Errorf(`invalid output directory path "%s"`, goagen.OutputDir)
+			err = fmt.Errorf(`invalid output directory path "%s"`, codegen.OutputDir)
 		}
 		return nil, err
 	}
 	defer func() {
-		if !goagen.Debug {
+		if !codegen.Debug {
 			os.RemoveAll(gendir)
 		}
 	}()
-	if goagen.Debug {
-		fmt.Printf("goagen source dir: %s\n", gendir)
+	if codegen.Debug {
+		fmt.Printf("codegen source dir: %s\n", gendir)
 	}
 
 	// Figure out design package name from its path
@@ -113,14 +113,14 @@ func (m *Generator) Generate() ([]string, error) {
 
 	// Generate tool source code.
 	filename := filepath.Join(gendir, "main.go")
-	m.GoGenerator = goagen.NewGoGenerator(filename)
+	m.GoGenerator = codegen.NewGoGenerator(filename)
 	imports := append(m.Imports,
-		goagen.SimpleImport("fmt"),
-		goagen.SimpleImport("os"),
-		goagen.SimpleImport("strings"),
-		goagen.NewImport(".", "github.com/raphael/goa/design"),
-		goagen.NewImport(".", "github.com/raphael/goa/design/dsl"),
-		goagen.SimpleImport(goagen.DesignPackagePath),
+		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("os"),
+		codegen.SimpleImport("strings"),
+		codegen.NewImport(".", "github.com/raphael/goa/design"),
+		codegen.NewImport(".", "github.com/raphael/goa/design/dsl"),
+		codegen.SimpleImport(codegen.DesignPackagePath),
 	)
 	m.WriteHeader("Code Generator", "main", imports)
 	tmpl, err := template.New("generator").Parse(mainTmpl)
@@ -129,7 +129,7 @@ func (m *Generator) Generate() ([]string, error) {
 	}
 	context := map[string]string{
 		"Genfunc":       m.Genfunc,
-		"DesignPackage": goagen.DesignPackagePath,
+		"DesignPackage": codegen.DesignPackagePath,
 		"PkgName":       pkgName,
 		"MetadataVar":   "Metadata",
 	}
@@ -137,9 +137,9 @@ func (m *Generator) Generate() ([]string, error) {
 	if err != nil {
 		panic(err) // bug
 	}
-	if goagen.Debug {
+	if codegen.Debug {
 		src, _ := ioutil.ReadFile(filename)
-		fmt.Printf("goagen source:\n%s\n", src)
+		fmt.Printf("codegen source:\n%s\n", src)
 	}
 
 	// Compile and run generated tool.
@@ -161,30 +161,30 @@ func (m *Generator) compile(srcDir string) (string, error) {
 	}
 	c := exec.Cmd{
 		Path: gobin,
-		Args: []string{gobin, "build", "-o", "goagen"},
+		Args: []string{gobin, "build", "-o", "codegen"},
 		Dir:  srcDir,
 	}
 	out, err := c.CombinedOutput()
-	if goagen.Debug {
-		fmt.Printf("[%s]$ %s build -o goagen\n%s\n", srcDir, gobin, out)
+	if codegen.Debug {
+		fmt.Printf("[%s]$ %s build -o codegen\n%s\n", srcDir, gobin, out)
 	}
 	if err != nil {
 		if len(out) > 0 {
 			return "", fmt.Errorf(string(out))
 		}
-		return "", fmt.Errorf("failed to compile goagen: %s", err)
+		return "", fmt.Errorf("failed to compile codegen: %s", err)
 	}
-	return filepath.Join(srcDir, "goagen"), nil
+	return filepath.Join(srcDir, "codegen"), nil
 }
 
 // spawn runs the compiled generator using the arguments initialized by Kingpin
 // when parsing the command line.
 func (m *Generator) spawn(genbin string) ([]string, error) {
 	args := []string{
-		fmt.Sprintf("--out=%s", goagen.OutputDir),
-		fmt.Sprintf("--design=%s", goagen.DesignPackagePath),
+		fmt.Sprintf("--out=%s", codegen.OutputDir),
+		fmt.Sprintf("--design=%s", codegen.DesignPackagePath),
 	}
-	if goagen.Force {
+	if codegen.Force {
 		args = append(args, "--force")
 	}
 	for name, value := range m.Flags {

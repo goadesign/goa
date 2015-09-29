@@ -10,8 +10,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/raphael/goa/codegen/gen_app"
 	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/goagen/gen_app"
 )
 
 var _ = Describe("NewGenerator", func() {
@@ -19,7 +19,7 @@ var _ = Describe("NewGenerator", func() {
 
 	Context("with dummy command line flags", func() {
 		BeforeEach(func() {
-			os.Args = []string{"goagen", "--out=_foo", "--design=bar", "--force"}
+			os.Args = []string{"codegen", "--out=_foo", "--design=bar", "--force"}
 		})
 
 		AfterEach(func() {
@@ -60,7 +60,7 @@ var _ = Describe("Generate", func() {
 		var err error
 		outDir, err = ioutil.TempDir("", "")
 		Ω(err).ShouldNot(HaveOccurred())
-		os.Args = []string{"goagen", "--out=" + outDir, "--design=foo"}
+		os.Args = []string{"codegen", "--out=" + outDir, "--design=foo"}
 	})
 
 	JustBeforeEach(func() {
@@ -120,7 +120,7 @@ var _ = Describe("Generate", func() {
 				Name:        "ok",
 				Status:      200,
 				Description: "get of widgets",
-				MediaType:   "vnd.rightscale.goagen.test.widgets",
+				MediaType:   "vnd.rightscale.codegen.test.widgets",
 			}
 			route := design.RouteDefinition{
 				Verb: "GET",
@@ -137,7 +137,7 @@ var _ = Describe("Generate", func() {
 				Name:            "Widget",
 				BasePath:        "/widgets",
 				Description:     "Widgetty",
-				MediaType:       "vnd.rightscale.goagen.test.widgets",
+				MediaType:       "vnd.rightscale.codegen.test.widgets",
 				CanonicalAction: "get",
 			}
 			get := design.ActionDefinition{
@@ -151,14 +151,14 @@ var _ = Describe("Generate", func() {
 			res.Actions = map[string]*design.ActionDefinition{"get": &get}
 			mt := design.MediaTypeDefinition{
 				UserTypeDefinition: &ut,
-				Identifier:         "vnd.rightscale.goagen.test.widgets",
+				Identifier:         "vnd.rightscale.codegen.test.widgets",
 			}
 			design.Design = &design.APIDefinition{
 				Name:        "test api",
 				Title:       "dummy API with no resource",
 				Description: "I told you it's dummy",
 				Resources:   map[string]*design.ResourceDefinition{"Widget": &res},
-				MediaTypes:  map[string]*design.MediaTypeDefinition{"vnd.rightscale.goagen.test.widgets": &mt},
+				MediaTypes:  map[string]*design.MediaTypeDefinition{"vnd.rightscale.codegen.test.widgets": &mt},
 			}
 		})
 
@@ -203,8 +203,8 @@ var _ = Describe("Generate", func() {
 const contextsCodeTmpl = `//************************************************************************//
 // test api: Application Contexts
 //
-// Generated with goagen v0.0.1, command line:
-// $ goagen
+// Generated with codegen v0.0.1, command line:
+// $ codegen
 // --out={{.outDir}}
 // --design={{.design}}
 //
@@ -242,8 +242,8 @@ func (c *GetWidgetContext) OK(resp *id) error {
 const handlersCodeTmpl = `//************************************************************************//
 // test api: Application Handlers
 //
-// Generated with goagen v0.0.1, command line:
-// $ goagen
+// Generated with codegen v0.0.1, command line:
+// $ codegen
 // --out={{.outDir}}
 // --design={{.design}}
 //
@@ -276,8 +276,8 @@ func getWidgetsHandler(userHandler interface{}) (goa.Handler, error) {
 const resourcesCodeTmpl = `//************************************************************************//
 // test api: Application Resources
 //
-// Generated with goagen v0.0.1, command line:
-// $ goagen
+// Generated with codegen v0.0.1, command line:
+// $ codegen
 // --out={{.outDir}}
 // --design={{.design}}
 //
@@ -287,7 +287,7 @@ const resourcesCodeTmpl = `//***************************************************
 package app
 
 // Widgetty
-// Media type: vnd.rightscale.goagen.test.widgets
+// Media type: vnd.rightscale.codegen.test.widgets
 type Widget string
 
 // WidgetHref returns the resource href.

@@ -6,18 +6,18 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/raphael/goa/goagen"
-	"github.com/raphael/goa/goagen/gen_app"
-	"github.com/raphael/goa/goagen/gen_main"
+	"github.com/raphael/goa/codegen"
+	"github.com/raphael/goa/codegen/gen_app"
+	"github.com/raphael/goa/codegen/gen_main"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 // Commands contains the list of all supported sub-commands.
-var Commands []goagen.Command
+var Commands []codegen.Command
 
 // init registers all subcommands.
 func init() {
-	Commands = []goagen.Command{
+	Commands = []codegen.Command{
 		&AllCommand{},
 		genapp.NewCommand(),
 		genmain.NewCommand(),
@@ -49,11 +49,11 @@ func main() {
 }
 
 // command parses the command line and returns the specified sub-command.
-func command() goagen.Command {
-	a := kingpin.New("goagen", "goa code generation tool")
-	a.Version(goagen.Version)
+func command() codegen.Command {
+	a := kingpin.New("codegen", "goa code generation tool")
+	a.Version(codegen.Version)
 	a.Help = help
-	goagen.RegisterFlags(a)
+	codegen.RegisterFlags(a)
 	for _, c := range Commands {
 		cmd := a.Command(c.Name(), c.Description())
 		c.RegisterFlags(cmd)
@@ -72,10 +72,10 @@ func command() goagen.Command {
 	return nil
 }
 
-const help = `The goagen tool generates various artefacts from a goa application design package (metadata).
+const help = `The codegen tool generates various artefacts from a goa application design package (metadata).
 
 Each sub-command supported by the tool produces a specific type of artefacts. For example
-the "app" command causes goagen to generate the code that supports the application controllers.
+the "app" command causes codegen to generate the code that supports the application controllers.
 
 The "default" command (also invoked when no command is provided on the command line) runs all the
 commands, generating all the supported artefacts.

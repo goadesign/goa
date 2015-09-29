@@ -3,8 +3,8 @@ package genapp_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa/goagen"
-	"github.com/raphael/goa/goagen/gen_app"
+	"github.com/raphael/goa/codegen"
+	"github.com/raphael/goa/codegen/gen_app"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -57,7 +57,7 @@ var _ = Describe("RegisterFlags", func() {
 		})
 
 		JustBeforeEach(func() {
-			goagen.RegisterFlags(cmd)
+			codegen.RegisterFlags(cmd)
 			appCmd.RegisterFlags(cmd)
 			var err error
 			parsedCmd, err = kapp.Parse(args)
@@ -66,7 +66,7 @@ var _ = Describe("RegisterFlags", func() {
 
 		It("parses the default flags", func() {
 			Ω(parsedCmd).Should(Equal(testCmd))
-			Ω(goagen.OutputDir).Should(Equal(flagVal))
+			Ω(codegen.OutputDir).Should(Equal(flagVal))
 		})
 	})
 })

@@ -10,8 +10,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa/goagen"
-	"github.com/raphael/goa/goagen/meta"
+	"github.com/raphael/goa/codegen"
+	"github.com/raphael/goa/codegen/meta"
 )
 
 var _ = Describe("Run", func() {
@@ -31,7 +31,7 @@ var _ = Describe("Run", func() {
 		genfunc = ""
 		debug = false
 		outputDir = "/tmp"
-		designPackage = "github.com/raphael/goa/testgoagoagen"
+		designPackage = "github.com/raphael/goa/testgoacodegen"
 		designPackageSource = "foo"
 		designPackageDir = filepath.Join(os.Getenv("GOPATH"), "src", designPackage)
 		compiledFiles = nil
@@ -47,11 +47,11 @@ var _ = Describe("Run", func() {
 		}
 		m = &meta.Generator{
 			Genfunc: genfunc,
-			Imports: nil, // []*goagen.ImportSpec{goagen.SimpleImport(designPackage)},
+			Imports: nil, // []*codegen.ImportSpec{codegen.SimpleImport(designPackage)},
 		}
-		goagen.Debug = debug
-		goagen.OutputDir = outputDir
-		goagen.DesignPackagePath = designPackage
+		codegen.Debug = debug
+		codegen.OutputDir = outputDir
+		codegen.DesignPackagePath = designPackage
 		compiledFiles, compileError = m.Generate()
 	})
 

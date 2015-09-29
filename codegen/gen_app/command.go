@@ -1,8 +1,8 @@
 package genapp
 
 import (
-	"github.com/raphael/goa/goagen"
-	"github.com/raphael/goa/goagen/meta"
+	"github.com/raphael/goa/codegen"
+	"github.com/raphael/goa/codegen/meta"
 )
 
 var (
@@ -16,17 +16,17 @@ var (
 // Command is the goa application code generator command line data structure.
 // It implements meta.Command.
 type Command struct {
-	*goagen.BaseCommand
+	*codegen.BaseCommand
 }
 
 // NewCommand instantiates a new command.
 func NewCommand() *Command {
-	base := goagen.NewBaseCommand("app", "Generate application GoGenerator")
+	base := codegen.NewBaseCommand("app", "Generate application GoGenerator")
 	return &Command{BaseCommand: base}
 }
 
 // RegisterFlags registers the command line flags with the given registry.
-func (c *Command) RegisterFlags(r goagen.FlagRegistry) {
+func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
 	r.Flag("pkg", "target package").Default("app").StringVar(&TargetPackage)
 }
 
@@ -34,8 +34,8 @@ func (c *Command) RegisterFlags(r goagen.FlagRegistry) {
 func (c *Command) Run() ([]string, error) {
 	flags := map[string]string{"pkg": TargetPackage}
 	gen := meta.NewGenerator(
-		"genapp.Generate",
-		[]*goagen.ImportSpec{goagen.SimpleImport("github.com/raphael/goa/goagen/gen_app")},
+		"app.Generate",
+		[]*codegen.ImportSpec{codegen.SimpleImport("github.com/raphael/goa/codegen/app")},
 		flags,
 	)
 	return gen.Generate()

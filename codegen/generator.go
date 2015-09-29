@@ -1,4 +1,4 @@
-package goagen
+package codegen
 
 import (
 	"fmt"
@@ -80,7 +80,7 @@ const (
 //************************************************************************//
 // {{.Title}}
 //
-// Generated with goagen v{{.ToolVersion}}, command line:
+// Generated with codegen v{{.ToolVersion}}, command line:
 {{comment commandLine}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY

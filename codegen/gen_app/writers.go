@@ -7,8 +7,8 @@ import (
 	"text/template"
 
 	"bitbucket.org/pkg/inflect"
+	"github.com/raphael/goa/codegen"
 	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/goagen"
 )
 
 // ParamsRegex is the regex used to capture path parameters.
@@ -17,7 +17,7 @@ var ParamsRegex = regexp.MustCompile("(?:[^/]*/:([^/]+))+")
 type (
 	// ContextsWriter generate codes for a goa application contexts.
 	ContextsWriter struct {
-		*goagen.GoGenerator
+		*codegen.GoGenerator
 		CtxTmpl        *template.Template
 		CtxNewTmpl     *template.Template
 		CtxRespTmpl    *template.Template
@@ -29,7 +29,7 @@ type (
 	// Handlers receive a HTTP request, create the action context, call the action code and send the
 	// resulting HTTP response.
 	HandlersWriter struct {
-		*goagen.GoGenerator
+		*codegen.GoGenerator
 		InitTmpl    *template.Template
 		HandlerTmpl *template.Template
 	}
@@ -38,7 +38,7 @@ type (
 	// Resources are data structures initialized by the application handlers and passed to controller
 	// actions.
 	ResourcesWriter struct {
-		*goagen.GoGenerator
+		*codegen.GoGenerator
 		ResourceTmpl *template.Template
 	}
 
@@ -79,16 +79,16 @@ type (
 // NewContextsWriter returns a contexts code writer.
 // Contexts provide the glue between the underlying request data and the user controller.
 func NewContextsWriter(filename string) (*ContextsWriter, error) {
-	cw := goagen.NewGoGenerator(filename)
+	cw := codegen.NewGoGenerator(filename)
 	funcMap := cw.FuncMap
 	funcMap["camelize"] = inflect.Camelize
-	funcMap["gotyperef"] = goagen.GoTypeRef
-	funcMap["gotypedef"] = goagen.GoTypeDef
-	funcMap["goify"] = goagen.Goify
-	funcMap["gotypename"] = goagen.GoTypeName
-	funcMap["typeUnmarshaler"] = goagen.TypeUnmarshaler
-	funcMap["validationChecker"] = goagen.ValidationChecker
-	funcMap["tabs"] = goagen.Tabs
+	funcMap["gotyperef"] = codegen.GoTypeRef
+	funcMap["gotypedef"] = codegen.GoTypeDef
+	funcMap["goify"] = codegen.Goify
+	funcMap["gotypename"] = codegen.GoTypeName
+	funcMap["typeUnmarshaler"] = codegen.TypeUnmarshaler
+	funcMap["validationChecker"] = codegen.ValidationChecker
+	funcMap["tabs"] = codegen.Tabs
 	funcMap["add"] = func(a, b int) int { return a + b }
 	ctxTmpl, err := template.New("context").Funcs(funcMap).Parse(ctxT)
 	if err != nil {
@@ -154,7 +154,7 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 // NewHandlersWriter returns a handlers code writer.
 // Handlers provide the glue between the underlying request data and the user controller.
 func NewHandlersWriter(filename string) (*HandlersWriter, error) {
-	cw := goagen.NewGoGenerator(filename)
+	cw := codegen.NewGoGenerator(filename)
 	initTmpl, err := template.New("init").Funcs(cw.FuncMap).Parse(initT)
 	if err != nil {
 		return nil, err
@@ -189,10 +189,10 @@ func (w *HandlersWriter) Execute(data []*HandlerTemplateData) error {
 // NewResourcesWriter returns a contexts code writer.
 // Resources provide the glue between the underlying request data and the user controller.
 func NewResourcesWriter(filename string) (*ResourcesWriter, error) {
-	cw := goagen.NewGoGenerator(filename)
+	cw := codegen.NewGoGenerator(filename)
 	funcMap := cw.FuncMap
 	funcMap["join"] = strings.Join
-	funcMap["gotypedef"] = goagen.GoTypeDef
+	funcMap["gotypedef"] = codegen.GoTypeDef
 	resourceTmpl, err := template.New("resource").Funcs(cw.FuncMap).Parse(resourceT)
 	if err != nil {
 		return nil, err
@@ -217,7 +217,7 @@ func (w *ResourcesWriter) Execute(data *ResourceTemplateData) error {
 func newCoerceData(name string, att *design.AttributeDefinition, pkg string, depth int) map[string]interface{} {
 	return map[string]interface{}{
 		"Name":      name,
-		"VarName":   goagen.Goify(name, false),
+		"VarName":   codegen.Goify(name, false),
 		"Attribute": att,
 		"Pkg":       pkg,
 		"Depth":     depth,

@@ -8,15 +8,15 @@ import (
 
 	"bitbucket.org/pkg/inflect"
 
+	"github.com/raphael/goa/codegen"
 	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/goagen"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 // Generator is the application code generator.
 type Generator struct {
-	*goagen.GoGenerator
+	*codegen.GoGenerator
 	ContextsWriter    *ContextsWriter
 	HandlersWriter    *HandlersWriter
 	ResourcesWriter   *ResourcesWriter
@@ -37,16 +37,16 @@ func Generate(api *design.APIDefinition) ([]string, error) {
 // NewGenerator returns the application code generator.
 func NewGenerator() (*Generator, error) {
 	app := kingpin.New("Code generator", "application code generator")
-	goagen.RegisterFlags(app)
+	codegen.RegisterFlags(app)
 	NewCommand().RegisterFlags(app)
 	_, err := app.Parse(os.Args[1:])
 	if err != nil {
 		return nil, fmt.Errorf(`invalid command line: %s. Command line was "%s"`,
 			err, strings.Join(os.Args, " "))
 	}
-	outdir := filepath.Join(goagen.OutputDir, "app")
+	outdir := filepath.Join(codegen.OutputDir, "app")
 	if _, err = os.Stat(outdir); err == nil {
-		if !goagen.Force {
+		if !codegen.Force {
 			if cwd, err := os.Getwd(); err == nil {
 				outdir, _ = filepath.Rel(cwd, outdir)
 			}
@@ -74,7 +74,7 @@ func NewGenerator() (*Generator, error) {
 		panic(err) // bug
 	}
 	return &Generator{
-		GoGenerator:       goagen.NewGoGenerator(outdir),
+		GoGenerator:       codegen.NewGoGenerator(outdir),
 		ContextsWriter:    ctxWr,
 		HandlersWriter:    hdlWr,
 		ResourcesWriter:   resWr,
@@ -84,7 +84,7 @@ func NewGenerator() (*Generator, error) {
 	}, nil
 }
 
-// Generate the application code, implement goagen.Generator.
+// Generate the application code, implement codegen.Generator.
 func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	if api == nil {
 		return nil, fmt.Errorf("missing API definition, make sure design.Design is properly initialized")

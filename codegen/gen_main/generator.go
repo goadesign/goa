@@ -9,8 +9,8 @@ import (
 
 	"bitbucket.org/pkg/inflect"
 
+	"github.com/raphael/goa/codegen"
 	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/goagen"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -30,7 +30,7 @@ func Generate(api *design.APIDefinition) ([]string, error) {
 // NewGenerator returns the application code generator.
 func NewGenerator() (*Generator, error) {
 	app := kingpin.New("Main generator", "application main generator")
-	goagen.RegisterFlags(app)
+	codegen.RegisterFlags(app)
 	NewCommand().RegisterFlags(app)
 	_, err := app.Parse(os.Args[1:])
 	if err != nil {
@@ -43,18 +43,18 @@ func NewGenerator() (*Generator, error) {
 // Generate produces the skeleton main.
 func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	var genfiles []string
-	mainFile := filepath.Join(goagen.OutputDir, "main.go")
+	mainFile := filepath.Join(codegen.OutputDir, "main.go")
 	_, err := os.Stat(mainFile)
-	if err != nil || goagen.Force {
+	if err != nil || codegen.Force {
 		tmpl, err := template.New("main").Funcs(template.FuncMap{"tempvar": tempvar}).Parse(mainTmpl)
 		if err != nil {
 			panic(err.Error()) // bug
 		}
-		g := goagen.NewGoGenerator(mainFile)
+		g := codegen.NewGoGenerator(mainFile)
 		title := fmt.Sprintf("%s: Application Main", api.Name)
-		imports := []*goagen.ImportSpec{
-			goagen.SimpleImport("github.com/raphael/goa"),
-			goagen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
+		imports := []*codegen.ImportSpec{
+			codegen.SimpleImport("github.com/raphael/goa"),
+			codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
 		}
 		g.WriteHeader(title, "main", imports)
 		data := map[string]interface{}{
@@ -74,12 +74,12 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	if err != nil {
 		panic(err.Error()) // bug
 	}
-	imports := []*goagen.ImportSpec{goagen.SimpleImport("github.com/raphael/goa")}
+	imports := []*codegen.ImportSpec{codegen.SimpleImport("github.com/raphael/goa")}
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
-		filename := filepath.Join(goagen.OutputDir, r.FormatName(true, false)) + ".go"
+		filename := filepath.Join(codegen.OutputDir, r.FormatName(true, false)) + ".go"
 		_, err := os.Stat(filename)
-		if err != nil || goagen.Force {
-			resGen := goagen.NewGoGenerator(filename)
+		if err != nil || codegen.Force {
+			resGen := codegen.NewGoGenerator(filename)
 			resGen.WriteHeader(fmt.Sprintf("Resource %s Controller", r.Name), "main", imports)
 			err := r.IterateActions(func(a *design.ActionDefinition) error {
 				name := inflect.Camelize(a.Name) + inflect.Camelize(a.Parent.Name)

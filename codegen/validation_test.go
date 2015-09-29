@@ -1,15 +1,15 @@
-package goagen_test
+package codegen_test
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/raphael/goa/codegen"
 	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/goagen"
 )
 
 var _ = Describe("validation code generation", func() {
 	BeforeEach(func() {
-		goagen.TempCount = 0
+		codegen.TempCount = 0
 	})
 
 	Describe("ValidationChecker", func() {
@@ -24,7 +24,7 @@ var _ = Describe("validation code generation", func() {
 			JustBeforeEach(func() {
 				att.Type = attType
 				att.Validations = validations
-				code = goagen.ValidationChecker(att, target)
+				code = codegen.ValidationChecker(att, target)
 			})
 
 			Context("of enum", func() {

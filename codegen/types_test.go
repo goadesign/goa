@@ -1,4 +1,4 @@
-package goagen_test
+package codegen_test
 
 import (
 	"fmt"
@@ -10,13 +10,13 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/raphael/goa/codegen"
 	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/goagen"
 )
 
 var _ = Describe("code generation", func() {
 	BeforeEach(func() {
-		goagen.TempCount = 0
+		codegen.TempCount = 0
 	})
 
 	Describe("GoTypeDef", func() {
@@ -32,7 +32,7 @@ var _ = Describe("code generation", func() {
 				if required != nil {
 					att.Validations = []design.ValidationDefinition{required}
 				}
-				st = goagen.GoTypeDef(att, 0, true, false)
+				st = codegen.GoTypeDef(att, 0, true, false)
 			})
 
 			Context("of primitive types", func() {
@@ -118,7 +118,7 @@ var _ = Describe("code generation", func() {
 			JustBeforeEach(func() {
 				array := &design.Array{ElemType: elemType}
 				att := &design.AttributeDefinition{Type: array}
-				source = goagen.GoTypeDef(att, 0, true, false)
+				source = codegen.GoTypeDef(att, 0, true, false)
 			})
 
 			Context("of primitive type", func() {
@@ -163,7 +163,7 @@ var _ = Describe("code generation", func() {
 			var p design.Primitive
 
 			JustBeforeEach(func() {
-				unmarshaler = goagen.PrimitiveUnmarshaler(p, context, source, target)
+				unmarshaler = codegen.PrimitiveUnmarshaler(p, context, source, target)
 			})
 
 			Context("integer", func() {
@@ -201,7 +201,7 @@ var _ = Describe("code generation", func() {
 			var p *design.Array
 
 			JustBeforeEach(func() {
-				unmarshaler = goagen.ArrayUnmarshaler(p, context, source, target)
+				unmarshaler = codegen.ArrayUnmarshaler(p, context, source, target)
 			})
 
 			BeforeEach(func() {
@@ -221,7 +221,7 @@ var _ = Describe("code generation", func() {
 			var o design.Object
 
 			JustBeforeEach(func() {
-				unmarshaler = goagen.ObjectUnmarshaler(o, context, source, target)
+				unmarshaler = codegen.ObjectUnmarshaler(o, context, source, target)
 			})
 
 			BeforeEach(func() {
@@ -238,7 +238,7 @@ var _ = Describe("code generation", func() {
 			var o design.Object
 
 			JustBeforeEach(func() {
-				unmarshaler = goagen.ObjectUnmarshaler(o, context, source, target)
+				unmarshaler = codegen.ObjectUnmarshaler(o, context, source, target)
 			})
 
 			BeforeEach(func() {
@@ -263,7 +263,7 @@ var _ = Describe("code generation", func() {
 				var out []byte
 
 				JustBeforeEach(func() {
-					cmd := exec.Command("go", "build", "-o", "goagen")
+					cmd := exec.Command("go", "build", "-o", "codegen")
 					cmd.Env = os.Environ()
 					cmd.Env = append(cmd.Env, fmt.Sprintf("GOPATH=%s:%s", gopath, os.Getenv("GOPATH")))
 					cmd.Dir = srcDir
@@ -284,7 +284,7 @@ var _ = Describe("code generation", func() {
 					Ω(err).ShouldNot(HaveOccurred())
 					tmpFile, err := os.Create(filepath.Join(srcDir, "main.go"))
 					Ω(err).ShouldNot(HaveOccurred())
-					unmarshaler = goagen.ObjectUnmarshaler(o, context, source, target)
+					unmarshaler = codegen.ObjectUnmarshaler(o, context, source, target)
 					data := map[string]interface{}{
 						"raw": `interface{}(map[string]interface{}{
 			"baz": map[string]interface{}{
@@ -295,7 +295,7 @@ var _ = Describe("code generation", func() {
 		})`,
 						"source":     unmarshaler,
 						"target":     target,
-						"targetType": goagen.GoTypeRef(o, 1),
+						"targetType": codegen.GoTypeRef(o, 1),
 					}
 					err = tmpl.Execute(tmpFile, data)
 					Ω(err).ShouldNot(HaveOccurred())
@@ -308,7 +308,7 @@ var _ = Describe("code generation", func() {
 				It("compiles", func() {
 					Ω(string(out)).Should(BeEmpty())
 
-					cmd := exec.Command("./goagen")
+					cmd := exec.Command("./codegen")
 					cmd.Env = []string{fmt.Sprintf("PATH=%s", filepath.Join(gopath, "bin"))}
 					cmd.Dir = srcDir
 					code, err := cmd.CombinedOutput()

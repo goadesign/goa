@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/raphael/goa/goagen"
+	"github.com/raphael/goa/codegen"
 )
 
 // AllCommand is the default command. It runs all known commands.
@@ -21,7 +21,7 @@ func (a *AllCommand) Name() string { return "default" }
 func (a *AllCommand) Description() string { return "Default command, generates all artefacts." }
 
 // RegisterFlags is a dummy method for the default command.
-func (a *AllCommand) RegisterFlags(goagen.FlagRegistry) {}
+func (a *AllCommand) RegisterFlags(codegen.FlagRegistry) {}
 
 // Run runs each known command and returns all the generated files and/or errors.
 func (a *AllCommand) Run() ([]string, error) {
@@ -31,7 +31,7 @@ func (a *AllCommand) Run() ([]string, error) {
 		a.Errors = append(a.Errors, fmt.Errorf("ERR - %s:\n%s\n", c.Name, err.Error()))
 		all = append(all, files...)
 	}
-	if a.Errors != nil && !goagen.Force {
+	if a.Errors != nil && !codegen.Force {
 		// Cleanup in case of failure
 		for _, f := range all {
 			os.Remove(f)

@@ -1,4 +1,4 @@
-package goagen_test
+package codegen_test
 
 import (
 	. "github.com/onsi/ginkgo"

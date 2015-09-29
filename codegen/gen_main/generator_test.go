@@ -9,8 +9,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"github.com/raphael/goa/codegen/gen_main"
 	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/goagen/gen_main"
 )
 
 var _ = Describe("NewGenerator", func() {
@@ -18,7 +18,7 @@ var _ = Describe("NewGenerator", func() {
 
 	Context("with dummy command line flags", func() {
 		BeforeEach(func() {
-			os.Args = []string{"goagen", "--out=_foo", "--design=bar", "--force"}
+			os.Args = []string{"codegen", "--out=_foo", "--design=bar", "--force"}
 		})
 
 		AfterEach(func() {
@@ -44,7 +44,7 @@ var _ = Describe("NewGenerator", func() {
 })
 
 var _ = Describe("Generate", func() {
-	const testgenPackagePath = "github.com/raphael/goa/goagen/gen_main/goatest"
+	const testgenPackagePath = "github.com/raphael/goa/codegen/gen_main/goatest"
 
 	var gen *genmain.Generator
 	var outDir string
@@ -56,7 +56,7 @@ var _ = Describe("Generate", func() {
 		outDir = filepath.Join(gopath, "src", testgenPackagePath)
 		err := os.MkdirAll(outDir, 0777)
 		Ω(err).ShouldNot(HaveOccurred())
-		os.Args = []string{"goagen", "--out=" + outDir, "--design=foo"}
+		os.Args = []string{"codegen", "--out=" + outDir, "--design=foo"}
 	})
 
 	JustBeforeEach(func() {
