@@ -7,11 +7,8 @@ import (
 	"strings"
 
 	"github.com/raphael/goa/goagen"
-	"github.com/raphael/goa/goagen/app"
-	"github.com/raphael/goa/goagen/client"
-	"github.com/raphael/goa/goagen/docs"
-	"github.com/raphael/goa/goagen/js"
-	"github.com/raphael/goa/goagen/test"
+	"github.com/raphael/goa/goagen/gen_app"
+	"github.com/raphael/goa/goagen/gen_main"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -21,11 +18,9 @@ var Commands []goagen.Command
 // init registers all subcommands.
 func init() {
 	Commands = []goagen.Command{
-		app.NewCommand(),
-		client.NewCommand(),
-		test.NewCommand(),
-		docs.NewCommand(),
-		js.NewCommand(),
+		&AllCommand{},
+		genapp.NewCommand(),
+		genmain.NewCommand(),
 	}
 }
 
@@ -64,19 +59,27 @@ func command() goagen.Command {
 		c.RegisterFlags(cmd)
 	}
 	cmdName := kingpin.MustParse(a.Parse(os.Args[1:]))
-	if cmdName == "" {
-		a.Usage(os.Args[1:])
-		os.Exit(1)
+	if cmdName == "" || cmdName == "all" {
+		return new(AllCommand)
 	}
 	for _, c := range Commands {
 		if cmdName == c.Name() {
 			return c
 		}
 	}
-	panic("goa: unknown command") // bug
+	a.Usage(os.Args[1:])
+	os.Exit(1)
+	return nil
 }
 
 const help = `The goagen tool generates various artefacts from a goa application design package (metadata).
-Each sub-command supported by the tool matches a specific type of artefacts. For example
-the "app" command causes goagen to generate the application code.
+
+Each sub-command supported by the tool produces a specific type of artefacts. For example
+the "app" command causes goagen to generate the code that supports the application controllers.
+
+The "default" command (also invoked when no command is provided on the command line) runs all the
+commands, generating all the supported artefacts.
+
+Artefact generation skips any file or directory that already exists unless the --force flag is
+also provided.
 `
