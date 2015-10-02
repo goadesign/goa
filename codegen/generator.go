@@ -40,9 +40,9 @@ func NewGoGenerator(filename string) *GoGenerator {
 	return &w
 }
 
-// FormatCode runs "gofmt -w" on the generated file.
+// FormatCode runs "goimports -w" on the generated file.
 func (w *GoGenerator) FormatCode() error {
-	cmd := exec.Command("goimport", "-w", w.Filename)
+	cmd := exec.Command("goimports", "-w", w.Filename)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		if len(output) > 0 {
 			// goimport exits with status code 1 if modifies the code which is not a

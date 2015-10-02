@@ -404,12 +404,12 @@ func GoTypeName(t design.DataType, tabs int) string {
 		}
 	case *design.Array:
 		return "[]" + GoTypeRef(actual.ElemType.Type, tabs+1)
-	case design.Object:
-		return GoTypeDef(&design.AttributeDefinition{Type: actual}, tabs, false, false)
-	case *design.UserTypeDefinition:
-		return Goify(actual.TypeName, true)
 	case *design.MediaTypeDefinition:
 		return Goify(actual.TypeName, true)
+	case *design.UserTypeDefinition:
+		return Goify(actual.TypeName, true)
+	case design.Object:
+		return GoTypeDef(&design.AttributeDefinition{Type: actual}, tabs, false, false)
 	default:
 		panic(fmt.Sprintf("goa bug: unknown type %#v", actual))
 	}
