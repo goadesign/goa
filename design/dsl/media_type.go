@@ -1,7 +1,6 @@
 package dsl
 
 import (
-	"fmt"
 	"mime"
 	"strings"
 
@@ -203,21 +202,21 @@ func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
 		params["type"] = "collection"
 		id = mime.FormatMediaType(mediatype, params)
 	}
-	mat := m.UserTypeDefinition.AttributeDefinition
-	at := AttributeDefinition{
-		Type:        &Array{ElemType: mat},
-		Description: fmt.Sprintf("Collection of %s", mat.Description),
+	typeName := m.TypeName + "Collection"
+	mt := NewMediaTypeDefinition(typeName, id, func() {
+		if mt, ok := mediaTypeDefinition(true); ok {
+			tempMT := NewMediaTypeDefinition(m.TypeName, m.Identifier, m.DSL)
+			if executeDSL(tempMT.DSL, tempMT) {
+				mt.Views = tempMT.Views
+				mt.Links = tempMT.Links
+				mt.TypeName = typeName
+				mt.AttributeDefinition = tempMT.AttributeDefinition
+				mt.AttributeDefinition.Type = ArrayOf(mt.AttributeDefinition.Type)
+			}
+		}
+	})
+	if executeDSL(mt.DSL, mt) {
+		Design.MediaTypes[id] = mt
 	}
-	ut := UserTypeDefinition{
-		AttributeDefinition: &at,
-		TypeName:            m.UserTypeDefinition.TypeName + "Collection",
-	}
-	col := MediaTypeDefinition{
-		// A media type is a type
-		UserTypeDefinition: &ut,
-		Identifier:         id,
-		Links:              m.Links,
-		Views:              m.Views,
-	}
-	return &col
+	return mt
 }

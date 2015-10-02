@@ -27,6 +27,9 @@ type (
 		// IsObject returns true if the underlying type is an object, a user type which
 		// is an object or a media type whose type is an object.
 		IsObject() bool
+		// IsArray returns true if the underlying type is an array, a user type which
+		// is an array or a media type whose type is an array.
+		IsArray() bool
 		// ToObject returns the underlying object if any (i.e. if IsObject returns true),
 		// nil otherwise.
 		ToObject() Object
@@ -139,6 +142,9 @@ func (p Primitive) Name() string {
 // IsObject returns false.
 func (p Primitive) IsObject() bool { return false }
 
+// IsArray returns false.
+func (p Primitive) IsArray() bool { return false }
+
 // ToObject returns nil.
 func (p Primitive) ToObject() Object { return nil }
 
@@ -201,6 +207,9 @@ func (a *Array) Name() string { return fmt.Sprintf("array of %s", a.ElemType.Typ
 // IsObject returns false.
 func (a *Array) IsObject() bool { return false }
 
+// IsArray returns true.
+func (a *Array) IsArray() bool { return true }
+
 // ToObject returns nil.
 func (a *Array) ToObject() Object { return nil }
 
@@ -218,6 +227,9 @@ func (o Object) Name() string { return "object" }
 
 // IsObject returns true.
 func (o Object) IsObject() bool { return true }
+
+// IsArray returns false.
+func (o Object) IsArray() bool { return false }
 
 // ToObject returns the underlying object.
 func (o Object) ToObject() Object { return o }
@@ -246,6 +258,9 @@ func (u *UserTypeDefinition) Name() string { return u.TypeName }
 
 // IsObject calls IsObject on the user type underlying data type.
 func (u *UserTypeDefinition) IsObject() bool { return u.Type.IsObject() }
+
+// IsArray calls IsArray on the user type underlying data type.
+func (u *UserTypeDefinition) IsArray() bool { return u.Type.IsArray() }
 
 // ToObject calls ToObject on the user type underlying data type.
 func (u *UserTypeDefinition) ToObject() Object { return u.Type.ToObject() }

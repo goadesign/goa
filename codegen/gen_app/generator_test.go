@@ -220,10 +220,7 @@ const contextsCodeTmpl = `//****************************************************
 
 package app
 
-import (
-	"github.com/raphael/goa"
-	"strconv"
-)
+import "github.com/raphael/goa"
 
 // GetWidgetContext provides the Widget get action context.
 type GetWidgetContext struct {
@@ -268,6 +265,7 @@ package app
 
 import (
 	"fmt"
+
 	"github.com/raphael/goa"
 )
 
@@ -305,12 +303,14 @@ const resourcesCodeTmpl = `//***************************************************
 
 package app
 
+import "fmt"
+
 // Widgetty
 type Widget string
 
 // WidgetHref returns the resource href.
 func WidgetHref() string {
-	return fmt.Sprintf("/:id", )
+	return fmt.Sprintf("/:id")
 }
 `
 
@@ -326,5 +326,4 @@ const mediaTypesCodeTmpl = `//**************************************************
 //************************************************************************//
 
 package app
-
 `
