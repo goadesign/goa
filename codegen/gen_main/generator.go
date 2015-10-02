@@ -45,8 +45,11 @@ func NewGenerator() (*Generator, error) {
 // Generate produces the skeleton main.
 func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	mainFile := filepath.Join(codegen.OutputDir, "main.go")
+	if codegen.Force {
+		os.Remove(mainFile)
+	}
 	_, err := os.Stat(mainFile)
-	if err != nil || codegen.Force {
+	if err != nil {
 		tmpl, err := template.New("main").Funcs(template.FuncMap{"tempvar": tempvar}).Parse(mainTmpl)
 		if err != nil {
 			panic(err.Error()) // bug
@@ -84,8 +87,11 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	imports := []*codegen.ImportSpec{codegen.SimpleImport(imp)}
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
 		filename := filepath.Join(codegen.OutputDir, r.FormatName(true, false)) + ".go"
+		if codegen.Force {
+			os.Remove(filename)
+		}
 		_, err := os.Stat(filename)
-		if err != nil || codegen.Force {
+		if err != nil {
 			resGen := codegen.NewGoGenerator(filename)
 			g.genfiles = append(g.genfiles, filename)
 			resGen.WriteHeader("", "main", imports)

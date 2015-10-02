@@ -213,7 +213,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	title = fmt.Sprintf("%s: Application Media Types", api.Name)
 	g.MediaTypesWriter.WriteHeader(title, TargetPackage, nil)
 	err = api.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
-		if _, ok := mt.Type.(design.DataStructure); ok {
+		if mt.Type.IsObject() {
 			return g.MediaTypesWriter.Execute(mt)
 		}
 		return nil

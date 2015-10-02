@@ -328,8 +328,7 @@ func New{{camelize .Name}}(c goa.Context) (*{{.Name}}, error) {
 	// template input: *ContextTemplateData
 	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{.FormatName false }} sends a HTTP response with status code {{.Status}}.
 func (c *{{$ctx.Name}}) {{goify .Name true}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp *{{$mt.TypeName}}{{if gt (len $mt.Views) 1}}, view {{$mt.TypeName}}ViewEnum{{end}}{{end}}) error {
-{{if $mt}}	var r interface{}
-{{if gt (len $mt.Views) 1}}{{range $view := $mt.Views}}	if view == {{$mt.TypeName}}{{goify .Name true}}View {
+{{if $mt}}{{if gt (len $mt.Views) 1}}{{range $view := $mt.Views}}	if view == {{$mt.TypeName}}{{goify .Name true}}View {
 	{{mediaTypeMarshaler $mt "" "resp" "r" $view}}
 	}
 {{end}}{{else}}{{mediaTypeMarshaler $mt "" "resp" "r" ""}}
@@ -396,7 +395,7 @@ func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} string{
 	// template input: *ResourceData
 	mediaTypeT = `// {{if .Description}}{{.Description}}{{else}}{{.TypeName}} media type{{end}}
 // Identifier: {{.Identifier}}
-type {{.TypeName}} {{gotypedef .Type 0 true false}}{{if .Views}}
+type {{.TypeName}} {{gotypedef . 0 true false}}{{if .Views}}
 
 // {{.Name}} views
 type {{.TypeName}}ViewEnum string

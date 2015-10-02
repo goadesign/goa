@@ -94,7 +94,7 @@ var _ = Resource("bottle", func() {
 		Params(func() {
 			Param("id", Integer, "Account ID")
 		})
-		Response(OK, BottleMediaType)
+		Response(OK, BottleMediaType.Identifier)
 		Response(NotFound)
 	})
 })
@@ -132,12 +132,12 @@ Let's break this down:
 The DSL reference contains more details for each of the functions used in the example above and
 others that help define payload types and custom responses as well.
 
-Now that we have a design for the API we can use the `codegen` tool to generate all the boilerplate
+Now that we have a design for the API we can use the `goagen` tool to generate all the boilerplate
 for our app. The tool takes the path to the Go package as argument (the same path you'd use if you
 were to import the design package in a Go source file). So for example if you created the design
 package under `$GOPATH/src/app`, the command line would be:
 ```
-codegen -d app/design
+goagen -d app/design
 ```
 This creates two artefacts:
 * A
@@ -152,7 +152,7 @@ This creates two artefacts:
 * `handlers.go` provide the glue between the underlying go http server handler and the controller
   actions. They create the action specific context and call your code.
 
-`codegen` also created the files `main.go` and `bottle.go` which provide a starting point for your
+`goagen` also created the files `main.go` and `bottle.go` which provide a starting point for your
 app. The next and final step consists of implementing the `bottle` resource `show` action, open the
  file `bottle.go` and replace the existing `ShowBottle` function with:
 ```go
@@ -211,7 +211,7 @@ $ curl -i localhost:8080/0
 HTTP/1.1 404 NotFound
 Date: Mon, 27 Jul 2015 04:35:22 GMT
 ```
-You can exercise the validation code that `codegen` generated for you by passing an invalid (non-
+You can exercise the validation code that `goagen` generated for you by passing an invalid (non-
 integer) id:
 ```
 $ curl -i localhost:8080/a
@@ -225,5 +225,5 @@ invalid value 'a' for parameter id, must be a int
 That's it! congratulations on writing you first goa application!
 
 This example only covers a fraction of what goa can do, additional documentation is in the works.
-As next steps try `codegen --help` to get a sense of what can be tweaked. Also take a look at
+As next steps try `goagen --help` to get a sense of what can be tweaked. Also take a look at
 [goa, the Language](DSL.md).

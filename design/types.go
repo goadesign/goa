@@ -24,8 +24,11 @@ type (
 		Kind() Kind
 		// Name returns the type name.
 		Name() string
-		// ToObject returns the underlying object if any (i.e. if Kind
-		// is ObjectKind, UserTypeKind or MediaTypeKind), nil otherwise.
+		// IsObject returns true if the underlying type is an object, a user type which
+		// is an object or a media type whose type is an object.
+		IsObject() bool
+		// ToObject returns the underlying object if any (i.e. if IsObject returns true),
+		// nil otherwise.
 		ToObject() Object
 		// IsCompatible checks whether val has a Go type that is
 		// compatible with the data type.
@@ -133,6 +136,9 @@ func (p Primitive) Name() string {
 	}
 }
 
+// IsObject returns false.
+func (p Primitive) IsObject() bool { return false }
+
 // ToObject returns nil.
 func (p Primitive) ToObject() Object { return nil }
 
@@ -192,6 +198,9 @@ func (a *Array) Kind() Kind { return ArrayKind }
 // Name returns the type name.
 func (a *Array) Name() string { return fmt.Sprintf("array of %s", a.ElemType.Type.Name()) }
 
+// IsObject returns false.
+func (a *Array) IsObject() bool { return false }
+
 // ToObject returns nil.
 func (a *Array) ToObject() Object { return nil }
 
@@ -206,6 +215,9 @@ func (o Object) Kind() Kind { return ObjectKind }
 
 // Name returns the type name.
 func (o Object) Name() string { return "object" }
+
+// IsObject returns true.
+func (o Object) IsObject() bool { return true }
 
 // ToObject returns the underlying object.
 func (o Object) ToObject() Object { return o }
@@ -231,6 +243,9 @@ func (u *UserTypeDefinition) Kind() Kind { return UserTypeKind }
 
 // Name returns the type name.
 func (u *UserTypeDefinition) Name() string { return u.TypeName }
+
+// IsObject calls IsObject on the user type underlying data type.
+func (u *UserTypeDefinition) IsObject() bool { return u.Type.IsObject() }
 
 // ToObject calls ToObject on the user type underlying data type.
 func (u *UserTypeDefinition) ToObject() Object { return u.Type.ToObject() }

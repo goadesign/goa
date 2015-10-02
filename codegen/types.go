@@ -555,11 +555,10 @@ func runTemplate(tmpl *template.Template, data interface{}) string {
 }
 
 const (
-	mArrayTmpl = `{{tabs .depth}}{{$tmp := tempvar}}{{$tmp}} := make([]interface{}, len({{.source}}))
+	mArrayTmpl = `{{tabs .depth}}{{.target}} := make([]interface{}, len({{.source}}))
 {{tabs .depth}}for i, r := range {{.source}} {
-{{marshalAttribute .elemType (printf "%s[*]" .context) "r" (printf "%s[i]" $tmp) (add .depth 1)}}
+{{marshalAttribute .elemType (printf "%s[*]" .context) "r" (printf "%s[i]" .target) (add .depth 1)}}
 {{tabs .depth}}}
-{{tabs .depth}}{{.target}} = {{$tmp}}
 `
 
 	mObjectTmpl = `{{$ctx := .}}{{range $r := .required}}{{$at := index $ctx.o $r}}{{$required := goify $r true}}{{if eq $at.Type.Kind 4}}{{tabs .depth}}if {{.source}}.{{$required}} == "" {
