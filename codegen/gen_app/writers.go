@@ -231,6 +231,7 @@ func NewMediaTypesWriter(filename string) (*MediaTypesWriter, error) {
 	funcMap := cw.FuncMap
 	funcMap["gotypedef"] = codegen.GoTypeDef
 	funcMap["goify"] = codegen.Goify
+	funcMap["gotypename"] = codegen.GoTypeName
 	mediaTypeTmpl, err := template.New("media type").Funcs(funcMap).Parse(mediaTypeT)
 	if err != nil {
 		return nil, err
@@ -254,6 +255,7 @@ func NewUserTypesWriter(filename string) (*UserTypesWriter, error) {
 	funcMap := cw.FuncMap
 	funcMap["gotypedef"] = codegen.GoTypeDef
 	funcMap["goify"] = codegen.Goify
+	funcMap["gotypename"] = codegen.GoTypeName
 	userTypeTmpl, err := template.New("user type").Funcs(funcMap).Parse(userTypeT)
 	if err != nil {
 		return nil, err
@@ -354,9 +356,9 @@ func New{{camelize .Name}}(c goa.Context) (*{{.Name}}, error) {
 	// ctxRespT generates response helper methods GoGenerator
 	// template input: *ContextTemplateData
 	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{.FormatName false }} sends a HTTP response with status code {{.Status}}.
-func (c *{{$ctx.Name}}) {{goify .Name true}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp *{{$mt.TypeName}}{{if gt (len $mt.Views) 1}}, view {{$mt.TypeName}}ViewEnum{{end}}{{end}}) error {
+func (c *{{$ctx.Name}}) {{goify .Name true}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp *{{gotypename $mt 0}}{{if gt (len $mt.Views) 1}}, view {{gotypename $mt 0}}ViewEnum{{end}}{{end}}) error {
 {{if $mt}}	var r interface{}
-{{if gt (len $mt.Views) 1}}{{range $view := $mt.Views}}	if view == {{$mt.TypeName}}{{goify .Name true}}View {
+{{if gt (len $mt.Views) 1}}{{range $view := $mt.Views}}	if view == {{gotypename $mt 0}}{{goify .Name true}}View {
 	{{mediaTypeMarshaler $mt "" "resp" "r" $view}}
 	}
 {{end}}{{else}}{{mediaTypeMarshaler $mt "" "resp" "r" ""}}
@@ -365,7 +367,7 @@ func (c *{{$ctx.Name}}) {{goify .Name true}}({{$mt := (index $ctx.MediaTypes .Me
 {{end}}`
 	// payloadT generates the payload type definition GoGenerator
 	// template input: *ContextTemplateData
-	payloadT = `{{$payload := .Payload}}// {{gotypename .Payload 0}} is the {{.ResourceName}} {package app{.ActionName}} action payload.
+	payloadT = `{{$payload := .Payload}}// {{gotypename .Payload 0}} is the {{.ResourceName}} {{.ActionName}} action payload.
 type {{gotypename .Payload 1}} {{gotypedef .Payload 0 true false}}
 `
 	// newPayloadT generates the code for the payload factory method.
@@ -421,22 +423,22 @@ func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} string{
 
 	// mediaTypeT generates the code for a media type.
 	// template input: *design.MediaTypeDefinition
-	mediaTypeT = `// {{if .Description}}{{.Description}}{{else}}{{.TypeName}} media type{{end}}
+	mediaTypeT = `// {{if .Description}}{{.Description}}{{else}}{{gotypename . 0}} media type{{end}}
 // Identifier: {{.Identifier}}
-type {{.TypeName}} {{gotypedef . 0 true false}}{{if .Views}}
+type {{gotypename . 0}} {{gotypedef . 0 true false}}{{if .Views}}
 
 // {{.Name}} views
-type {{.TypeName}}ViewEnum string
+type {{gotypename . 0}}ViewEnum string
 
 const (
-{{$typeName := .TypeName}}{{range $name, $view := .Views}}// {{if .Description}}{{.Description}}{{else}}{{$typeName}} {{.Name}} view{{end}}
+{{$typeName := gotypename . 0}}{{range $name, $view := .Views}}// {{if .Description}}{{.Description}}{{else}}{{$typeName}} {{.Name}} view{{end}}
 	{{$typeName}}{{goify .Name true}}View {{$typeName}}ViewEnum = "{{.Name}}"
 {{end}}){{end}}
 `
 
 	// userTypeT generates the code for a user type.
 	// template input: *design.UserTypeDefinition
-	userTypeT = `// {{if .Description}}{{.Description}}{{else}}{{.TypeName}} type{{end}}
-type {{.TypeName}} {{gotypedef . 0 true false}}
+	userTypeT = `// {{if .Description}}{{.Description}}{{else}}{{gotypename . 0}} type{{end}}
+type {{gotypename . 0}} {{gotypedef . 0 true false}}
 `
 )

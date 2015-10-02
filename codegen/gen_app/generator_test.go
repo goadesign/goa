@@ -246,7 +246,7 @@ func NewGetWidgetContext(c goa.Context) (*GetWidgetContext, error) {
 }
 
 // OK sends a HTTP response with status code 200.
-func (c *GetWidgetContext) OK(resp *id) error {
+func (c *GetWidgetContext) OK(resp *Id) error {
 	var r interface{}
 	r = resp
 	return c.JSON(200, r)
