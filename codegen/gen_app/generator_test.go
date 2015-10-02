@@ -85,7 +85,7 @@ var _ = Describe("Generate", func() {
 
 		It("generates correct empty files", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(4))
+			Ω(files).Should(HaveLen(5))
 			isEmptySource := func(filename string) {
 				contextsContent, err := ioutil.ReadFile(filepath.Join(outDir, "app", filename))
 				Ω(err).ShouldNot(HaveOccurred())
@@ -163,7 +163,7 @@ var _ = Describe("Generate", func() {
 
 		It("generates the corresponding code", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(4))
+			Ω(files).Should(HaveLen(5))
 			data := map[string]string{"outDir": outDir, "design": "foo"}
 			contextsCodeT, err := template.New("context").Parse(contextsCodeTmpl)
 			Ω(err).ShouldNot(HaveOccurred())

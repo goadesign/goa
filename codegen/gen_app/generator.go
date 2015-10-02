@@ -238,8 +238,6 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		return nil, err
 	}
 
-	return g.genfiles, nil
-
 	title = fmt.Sprintf("%s: Application User Types", api.Name)
 	g.UserTypesWriter.WriteHeader(title, TargetPackage, nil)
 	err = api.IterateUserTypes(func(t *design.UserTypeDefinition) error {
