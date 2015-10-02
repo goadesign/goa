@@ -3,7 +3,7 @@ package db
 import (
 	"fmt"
 
-	"github.com/raphael/goa/examples/cellar/autogen/app"
+	"github.com/raphael/goa/examples/cellar/app"
 )
 
 // In-memory "database"
@@ -16,79 +16,81 @@ func BottleHref(account, id int) string {
 
 // Initialize "database" with dummy data
 func init() {
+	account := &app.Account{ID: 1}
+	account2 := &app.Account{ID: 2}
 	data = map[int][]*app.Bottle{
 		1: []*app.Bottle{
 			&app.Bottle{
-				ID:        100,
-				AccountID: 1,
-				Href:      BottleHref(1, 100),
-				Name:      "Number 8",
-				Vineyard:  "Asti Winery",
-				Varietal:  "Merlot",
-				Vintage:   2012,
-				Color:     "red",
-				Sweet:     false,
-				Country:   "USA",
-				Region:    "California",
-				Review:    "Great value",
+				ID:       100,
+				Account:  account,
+				Href:     BottleHref(1, 100),
+				Name:     "Number 8",
+				Vineyard: "Asti Winery",
+				Varietal: "Merlot",
+				Vintage:  2012,
+				Color:    "red",
+				Sweet:    false,
+				Country:  "USA",
+				Region:   "California",
+				Review:   "Great value",
 			},
 			&app.Bottle{
-				ID:        101,
-				AccountID: 1,
-				Href:      BottleHref(1, 101),
-				Name:      "Mourvedre",
-				Vineyard:  "Rideau",
-				Varietal:  "Mourvedre",
-				Vintage:   2012,
-				Color:     "red",
-				Sweet:     false,
-				Country:   "USA",
-				Region:    "California",
-				Review:    "Good but expensive",
+				ID:       101,
+				Account:  account,
+				Href:     BottleHref(1, 101),
+				Name:     "Mourvedre",
+				Vineyard: "Rideau",
+				Varietal: "Mourvedre",
+				Vintage:  2012,
+				Color:    "red",
+				Sweet:    false,
+				Country:  "USA",
+				Region:   "California",
+				Review:   "Good but expensive",
 			},
 			&app.Bottle{
-				ID:        102,
-				AccountID: 1,
-				Href:      BottleHref(1, 102),
-				Name:      "Blue's Cuvee",
-				Vineyard:  "Longoria",
-				Varietal:  "Cabernet Franc with Merlot, Malbec, Cabernet Sauvignon and Syrah",
-				Vintage:   2012,
-				Color:     "red",
-				Sweet:     false,
-				Country:   "USA",
-				Region:    "California",
-				Review:    "Favorite",
+				ID:       102,
+				Account:  account,
+				Href:     BottleHref(1, 102),
+				Name:     "Blue's Cuvee",
+				Vineyard: "Longoria",
+				Varietal: "Cabernet Franc with Merlot, Malbec, Cabernet Sauvignon and Syrah",
+				Vintage:  2012,
+				Color:    "red",
+				Sweet:    false,
+				Country:  "USA",
+				Region:   "California",
+				Review:   "Favorite",
 			},
 		},
 		2: []*app.Bottle{
 			&app.Bottle{
-				ID:        200,
-				AccountID: 2,
-				Href:      BottleHref(42, 200),
-				Name:      "Blackstone Merlot",
-				Vineyard:  "Blackstone",
-				Varietal:  "Merlot",
-				Vintage:   2012,
-				Color:     "red",
-				Sweet:     false,
-				Country:   "USA",
-				Region:    "California",
-				Review:    "OK",
+				ID:       200,
+				Account:  account2,
+				Href:     BottleHref(42, 200),
+				Name:     "Blackstone Merlot",
+				Vineyard: "Blackstone",
+				Varietal: "Merlot",
+				Vintage:  2012,
+				Color:    "red",
+				Sweet:    false,
+				Country:  "USA",
+				Region:   "California",
+				Review:   "OK",
 			},
 			&app.Bottle{
-				ID:        201,
-				AccountID: 2,
-				Href:      BottleHref(42, 201),
-				Name:      "Wild Horse",
-				Vineyard:  "Wild Horse",
-				Varietal:  "Pinot Noir",
-				Vintage:   2012,
-				Color:     "red",
-				Sweet:     false,
-				Country:   "USA",
-				Region:    "California",
-				Review:    "Solid Pinot",
+				ID:       201,
+				Account:  account2,
+				Href:     BottleHref(42, 201),
+				Name:     "Wild Horse",
+				Vineyard: "Wild Horse",
+				Varietal: "Pinot Noir",
+				Vintage:  2012,
+				Color:    "red",
+				Sweet:    false,
+				Country:  "USA",
+				Region:   "California",
+				Review:   "Solid Pinot",
 			},
 		},
 	}
@@ -160,7 +162,7 @@ func NewBottle(account int) *app.Bottle {
 
 // Save persists bottle to database.
 func Save(b *app.Bottle) {
-	data[b.AccountID] = append(data[b.AccountID], b)
+	data[b.Account.ID] = append(data[b.Account.ID], b)
 }
 
 // Delete deletes bottle from database.
@@ -168,9 +170,9 @@ func Delete(bottle *app.Bottle) {
 	if bottle == nil {
 		return
 	}
-	account := bottle.AccountID
+	account := bottle.Account
 	id := bottle.ID
-	if bs, ok := data[account]; ok {
+	if bs, ok := data[account.ID]; ok {
 		idx := -1
 		for i, b := range bs {
 			if b.ID == id {
@@ -180,7 +182,7 @@ func Delete(bottle *app.Bottle) {
 		}
 		if idx > -1 {
 			bs = append(bs[:idx], bs[idx+1:]...)
-			data[account] = bs
+			data[account.ID] = bs
 		}
 	}
 }

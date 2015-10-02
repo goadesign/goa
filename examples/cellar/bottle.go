@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/raphael/goa/examples/cellar/autogen/app"
+	"github.com/raphael/goa/examples/cellar/app"
 	"github.com/raphael/goa/examples/cellar/db"
 )
 
@@ -19,7 +19,7 @@ func ListBottles(c *app.ListBottleContext) error {
 	if err != nil {
 		return err
 	}
-	return c.OK(bottles)
+	return c.OK(bottles, "default")
 }
 
 // ShowBottle retrieves the bottle with the given id.

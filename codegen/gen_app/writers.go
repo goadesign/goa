@@ -93,6 +93,7 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 	funcMap["gotypedef"] = codegen.GoTypeDef
 	funcMap["goify"] = codegen.Goify
 	funcMap["gotypename"] = codegen.GoTypeName
+	funcMap["mediaTypeMarshaler"] = codegen.MediaTypeMarshaler
 	funcMap["typeUnmarshaler"] = codegen.TypeUnmarshaler
 	funcMap["validationChecker"] = codegen.ValidationChecker
 	funcMap["tabs"] = codegen.Tabs
@@ -217,7 +218,8 @@ func NewMediaTypesWriter(filename string) (*MediaTypesWriter, error) {
 	cw := codegen.NewGoGenerator(filename)
 	funcMap := cw.FuncMap
 	funcMap["gotypedef"] = codegen.GoTypeDef
-	mediaTypeTmpl, err := template.New("media type").Funcs(cw.FuncMap).Parse(mediaTypeT)
+	funcMap["goify"] = codegen.Goify
+	mediaTypeTmpl, err := template.New("media type").Funcs(funcMap).Parse(mediaTypeT)
 	if err != nil {
 		return nil, err
 	}
@@ -237,11 +239,8 @@ func (w *ResourcesWriter) Execute(data *ResourceData) error {
 }
 
 // Execute writes the code for the context types to the writer.
-func (w *MediaTypesWriter) Execute(data *ResourceData) error {
-	if data.Type == nil {
-		return fmt.Errorf("missing media type definition for %s", data.Name)
-	}
-	return w.MediaTypeTmpl.Execute(w, data)
+func (w *MediaTypesWriter) Execute(mt *design.MediaTypeDefinition) error {
+	return w.MediaTypeTmpl.Execute(w, mt)
 }
 
 // newCoerceData is a helper function that creates a map that can be given to the "Coerce"
@@ -328,8 +327,13 @@ func New{{camelize .Name}}(c goa.Context) (*{{.Name}}, error) {
 	// ctxRespT generates response helper methods GoGenerator
 	// template input: *ContextTemplateData
 	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{.FormatName false }} sends a HTTP response with status code {{.Status}}.
-func (c *{{$ctx.Name}}) {{.FormatName false}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp *{{$mt.TypeName}}{{end}}) error {
-	{{if $mt}}return c.JSON({{.Status}}, resp){{else}}return c.Respond({{.Status}}, nil){{end}}
+func (c *{{$ctx.Name}}) {{goify .Name true}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp *{{$mt.TypeName}}{{if gt (len $mt.Views) 1}}, view {{$mt.TypeName}}ViewEnum{{end}}{{end}}) error {
+{{if $mt}}	var r interface{}
+{{if gt (len $mt.Views) 1}}{{range $view := $mt.Views}}	if view == {{$mt.TypeName}}{{goify .Name true}}View {
+	{{mediaTypeMarshaler $mt "" "resp" "r" $view}}
+	}
+{{end}}{{else}}{{mediaTypeMarshaler $mt "" "resp" "r" ""}}
+{{end}}	return c.JSON({{.Status}}, r){{else}}return c.Respond({{.Status}}, nil){{end}}
 }
 {{end}}`
 	// payloadT generates the payload type definition GoGenerator
@@ -376,6 +380,7 @@ func {{.Name}}(userHandler interface{}) (goa.Handler, error) {
 	}, nil
 }
 `
+
 	// resourceT generates the code for a resource.
 	// template input: *ResourceData
 	resourceT = `// {{if .Description}}{{.Description}}{{else}}{{.Name}} resource{{end}}
@@ -386,10 +391,19 @@ func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} string{
 	return fmt.Sprintf("{{.CanonicalTemplate}}", {{join .CanonicalParams ", "}})
 }
 {{end}}`
+
 	// mediaTypeT generates the code for a media type.
 	// template input: *ResourceData
-	mediaTypeT = `// {{if .Description}}{{.Description}}{{else}}{{.Name}} media type{{end}}
+	mediaTypeT = `// {{if .Description}}{{.Description}}{{else}}{{.TypeName}} media type{{end}}
 // Identifier: {{.Identifier}}
-type {{.Name}} {{gotypedef .Type 0 true false}}
+type {{.TypeName}} {{gotypedef .Type 0 true false}}{{if .Views}}
+
+// {{.Name}} views
+type {{.TypeName}}ViewEnum string
+
+const (
+{{$typeName := .TypeName}}{{range $name, $view := .Views}}// {{if .Description}}{{.Description}}{{else}}{{$typeName}} {{.Name}} view{{end}}
+	{{$typeName}}{{goify .Name true}}View {{$typeName}}ViewEnum = "{{.Name}}"
+{{end}}){{end}}
 `
 )

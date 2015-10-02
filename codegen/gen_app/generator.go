@@ -101,7 +101,7 @@ func NewGenerator() (*Generator, error) {
 
 // AppOutputDir returns the directory containing the generated files.
 func AppOutputDir() string {
-	return filepath.Join(codegen.OutputDir, "app")
+	return filepath.Join(codegen.OutputDir, AppSubDir)
 }
 
 // Generate the application code, implement codegen.Generator.
@@ -213,18 +213,10 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	title = fmt.Sprintf("%s: Application Media Types", api.Name)
 	g.MediaTypesWriter.WriteHeader(title, TargetPackage, nil)
 	err = api.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
-		var identifier string
-		var mtType *design.UserTypeDefinition
-		identifier = mt.Identifier
-		mtType = mt.UserTypeDefinition
-
-		data := ResourceData{
-			Name:        mt.TypeName,
-			Identifier:  identifier,
-			Description: mt.Description,
-			Type:        mtType,
+		if _, ok := mt.Type.(design.DataStructure); ok {
+			return g.MediaTypesWriter.Execute(mt)
 		}
-		return g.MediaTypesWriter.Execute(&data)
+		return nil
 	})
 	g.genfiles = append(g.genfiles, g.mediaTypesFilename)
 	if err != nil {

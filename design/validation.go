@@ -6,13 +6,6 @@ import (
 	"strings"
 )
 
-// Validatable is the interface implemented by all the design definitions.
-type Validatable interface {
-	// Validate returns nil if the definition is properly initialized (no required
-	// field is missing, field formats are all correct etc.), an error otherwise.
-	Validate() error
-}
-
 // Validate tests whether the API definition is consistent: all resource parent names resolve to
 // an actual resource.
 func (a *APIDefinition) Validate() error {
@@ -234,6 +227,61 @@ func (m *MediaTypeDefinition) Validate() error {
 		}
 	} else {
 		m.Identifier = "plain/text"
+	}
+	if m.Type == nil { // TBD move this to somewhere else than validation code
+		m.Type = String
+	}
+	if o := m.Type.ToObject(); o != nil {
+		for n, att := range o {
+			if att.View != "" {
+				cmt, ok := att.Type.(*MediaTypeDefinition)
+				if !ok {
+					return fmt.Errorf("attribute %s of media type %s defines a view for rendering but its type is not MediaTypeDefinition",
+						n, m.Identifier)
+				}
+				if _, ok := cmt.Views[att.View]; !ok {
+					return fmt.Errorf("attribute %s of media type %s uses unknown view %#v",
+						n, m.Identifier, att.View)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// Validate checks that the link definition is consistent: it has a media type or the name of an
+// attribute part of the parent media type.
+func (l *LinkDefinition) Validate() error {
+	mediaType := l.MediaType
+	if mediaType == nil {
+		if l.Name == "" {
+			return fmt.Errorf("Links must have a name")
+		}
+		if l.Parent == nil {
+			return fmt.Errorf("Link %#v must have a parent media type", l.Name)
+		}
+		if l.Parent.ToObject() == nil {
+			return fmt.Errorf("Link %#v parent media type must be an Object", l.Name)
+		}
+		att, ok := l.Parent.ToObject()[l.Name]
+		if !ok {
+			return fmt.Errorf("Link %#v name must match one of the parent media type attribute names", l.Name)
+		}
+		if mediaType, ok = att.Type.(*MediaTypeDefinition); !ok {
+			return fmt.Errorf("Link %#v attribute type must be a media type", l.Name)
+		}
+	}
+	viewFound := false
+	view := l.View
+	for v := range mediaType.Views {
+		if v == view {
+			viewFound = true
+			break
+		}
+	}
+	if !viewFound {
+		return fmt.Errorf("Link %#v of media type %s uses view %#v which does not exist on target media type %#v",
+			l.Name, l.Parent.Identifier, view, mediaType.Identifier)
 	}
 	return nil
 }

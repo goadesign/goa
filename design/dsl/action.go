@@ -15,6 +15,10 @@ import (
 //         PUT("/:id"),
 //         PUT("/organizations/:org/accounts/:id"),
 //     )
+//     Params(func() {
+//         Param("org", String)
+//         Param("id", Integer)
+//     })
 //     Headers(func() {
 //         Header("Authorization", String)
 //         Header("X-Account", Integer)

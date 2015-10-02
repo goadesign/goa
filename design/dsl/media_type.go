@@ -144,23 +144,16 @@ func Links(dsl func()) {
 }
 
 // Link defines a media type link DSL.
-// At the minimum a link has a name potentially corresponding to one of the
-// media type attribute names.
+// At the minimum a link has a name corresponding to one of the media type attribute names.
 // A link may also define the view used to render the link content if different
 // from "link".
-// Finally a link can also optionally define the media type used to render its
-// content if not the one associated with the attribute of same name.
 // Examples:
 //
 // Link("vendor")
 //
 // Link("vendor", "view")
 //
-// Link("vendor", LinkMediaType)
-//
-// Link("vendor", "view", LinkMediaType)
-//
-func Link(name string, args ...interface{}) {
+func Link(name string, view ...string) {
 	if mt, ok := mediaTypeDefinition(true); ok {
 		if mt.Links == nil {
 			mt.Links = make(map[string]*LinkDefinition)
@@ -171,39 +164,14 @@ func Link(name string, args ...interface{}) {
 			}
 		}
 		link := &LinkDefinition{Name: name, Parent: mt}
-		var view string
-		var lmt *MediaTypeDefinition
-		switch len(args) {
-		case 0:
-			view = "default"
-		case 1:
-			if v, ok := args[0].(string); ok {
-				view = v
-			} else {
-				if lmt, ok = args[0].(*MediaTypeDefinition); ok {
-					view = "default"
-				} else {
-					ReportError("invalid Link argument, must be string or *MediaTypeDefinition, got %#v", args[0])
-					return
-				}
-			}
-		case 2:
-			if v, ok := args[0].(string); ok {
-				view = v
-			} else {
-				ReportError("invalid Link argument in first position, must be string, got %#v", args[0])
-				return
-			}
-			if lmt, ok = args[1].(*MediaTypeDefinition); !ok {
-				ReportError("invalid Link argument in second position, must be *MediaTypeDefinition, got %#v", args[0])
-				return
-			}
-		default:
-			ReportError("invalid Link argument count, must be 0, 1 or 2, got %#v", len(args))
-			return
+		if len(view) > 1 {
+			ReportError("invalid syntax in Link definition for %#v, allowed syntax is Link(name) or Link(name, view)", name)
 		}
-		link.View = view
-		link.MediaType = lmt
+		if len(view) > 0 {
+			link.View = view[0]
+		} else {
+			link.View = "link"
+		}
 		mt.Links[name] = link
 	}
 }
@@ -219,8 +187,21 @@ func ArrayOf(t DataType) *Array {
 // collection of resources such as "index" actions.
 func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
 	id := m.Identifier
-	if id != "" {
-		id += ";type=collection"
+	mediatype, params, err := mime.ParseMediaType(id)
+	if err != nil {
+		ReportError("invalid media type identifier %#v: %s", id, err)
+		return nil
+	}
+	hasType := false
+	for param := range params {
+		if param == "type" {
+			hasType = true
+			break
+		}
+	}
+	if !hasType {
+		params["type"] = "collection"
+		id = mime.FormatMediaType(mediatype, params)
 	}
 	mat := m.UserTypeDefinition.AttributeDefinition
 	at := AttributeDefinition{

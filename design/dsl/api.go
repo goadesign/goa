@@ -80,10 +80,15 @@ func BasePath(val string) {
 
 // BaseParams defines the API base path parameters.
 func BaseParams(dsl func()) {
-	if a, ok := apiDefinition(true); ok {
+	if a, ok := apiDefinition(false); ok {
 		params := new(AttributeDefinition)
 		if executeDSL(dsl, params) {
 			a.BaseParams = params
+		}
+	} else if r, ok := resourceDefinition(true); ok {
+		params := new(AttributeDefinition)
+		if executeDSL(dsl, params) {
+			r.BaseParams = params
 		}
 	}
 }

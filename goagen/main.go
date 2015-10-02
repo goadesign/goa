@@ -27,8 +27,8 @@ func init() {
 func main() {
 	files, err := command().Run()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "FAIL\n")
-		fmt.Fprintf(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, "FAIL")
+		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 	rels := make([]string, len(files))

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/raphael/goa"
@@ -42,8 +43,42 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 }
 
 // OK builds a HTTP response with status code 200.
-func (c *ListBottleContext) OK(bottles []*Bottle) error {
-	return c.JSON(200, bottles)
+func (c *ListBottleContext) OK(bottles []*Bottle, view string) error {
+	var r interface{}
+	if view == "default" {
+		tmp1 := make([]interface{}, len(bottles))
+		for i, tmp2 := range bottles {
+			if tmp2.Account == nil {
+				return fmt.Errorf(`bottle resource is missing required attribute "account"`)
+			}
+			if tmp2.Name == "" {
+				return fmt.Errorf(`bottle resource is missing required attribute "name"`)
+			}
+			if tmp2.Vineyard == "" {
+				return fmt.Errorf(`bottle resource is missing required attribute "vineyard"`)
+			}
+			tmp3 := map[string]interface{}{
+				"id":       tmp2.ID,
+				"href":     tmp2.Href,
+				"name":     tmp2.Name,
+				"vineyard": tmp2.Vineyard,
+				"varietal": tmp2.Varietal,
+				"vintage":  tmp2.Vintage,
+			}
+			tmp3["links"] = []map[string]string{
+				map[string]string{
+					"rel":  "account",
+					"href": fmt.Sprintf("/accounts/%v", tmp2.Account.ComputeHref()),
+				},
+			}
+			tmp1[i] = tmp3
+		}
+	}
+	if view == "extended" {
+		// ...
+	}
+
+	return c.JSON(200, r)
 }
 
 // ShowBottleContext provides the bottles show action context

@@ -24,3 +24,4 @@
 * Documentation: DSL reference, middleware support more examples etc
 * Add examples to DSL including auto-generated examples
 * Praxis JSON to goa metadata generator
+* Implement response inline media type (with resource media type inheritance)

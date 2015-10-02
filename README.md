@@ -27,7 +27,7 @@ and in the future generate documentation, API clients, tests and others
 The goa DSL allows writing self-explanatory code that describes the
 API, the resources it exposes and for each resource its properties
 and actions. The DSL gets translated into metadata that describes the
-API. goa comes with the `codegen` tool which generates both code and
+API. goa comes with the `goagen` tool which generates both code and
 (in the future) documentation from that metadata.
 
 The resulting code is specific to your API so that for example
@@ -56,14 +56,20 @@ follows the same pattern and was a big inspiration for goa.
 Assuming you have a working Go setup:
 ```
 go get github.com/raphael/goa
+go install github.com/raphael/goa/goagen
+```
+The code generation functionality relies on [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports):
+```
+go get golang.org/x/tools/cmd/goimports
 ```
 
 ## Getting Started
 
 ### Writing your first goa application
 
-The first thing to do when writing a goa application is to describe
-the API via the goa DSL, create a file `design/design.go` with the
+The first thing to do when writing a goa application is to describe the API using the goa DSL.
+Create a new directory under `$GOPATH/src` for the new goa application, say `$GOPATH/src/app`.
+In that directory create a `design` sub directory and the file `design/design.go` with the
 following content:
 ```go
 package design
@@ -104,7 +110,8 @@ var BottleMediaType = MediaType("application/vnd.goa.example.bottle", func() {
 ```
 Let's break this down:
 * We define a `design` package and use an anonymous variable to declare the API, we could also have
-  used a package `init` function.
+  used a package `init` function. The actual name of the package could be anything, `design` is just
+  a convention.
 * The `API` function takes two arguments: the name of the API and an anonymous function that
   defines additional properties, here a title and a description.
 * We then declare a resource "bottle" using the `Resource` function which also takes a name and an
@@ -115,7 +122,9 @@ Let's break this down:
   (Create/Read/Update/Delete) actions or so-called "custom" actions. Here we define a single Read
   (`show`) action.
 * The `Action` function defines the action endpoint, parameters, payload (not used here) and
-  responses.
+  responses. `goa` defines default response templates for all standard HTTP status code. Custom
+  response templates may be defined to specify additional properties such as required headers and
+  application specific media types.
 * Finally we define the resource media type as a global variable so we can refer to it when
   declaring the `OK` response. A media type has a name as defined by [RFC 6838](https://tools.ietf.org/html/rfc6838)
   and describes the attributes of the response body (the JSON object fields in goa).
@@ -130,7 +139,11 @@ package under `$GOPATH/src/app`, the command line would be:
 ```
 codegen -d app/design
 ```
-This creates a `autogen` folder containing three files:
+This creates two artefacts:
+* A
+* The `app` directory which contains the underpinning code that glues the low level HTTP router
+  with your app. The content of this directory
+   `autogen` folder containing three files:
 * `resources.go` contains the bottle resource data structure definition.
 * `contexts.go` contains the context data structure definitions. Contexts play a similar role
   to Martini's `martini.Context`, goji's `web.C` or echo's `echo.Context` to take a few arbitrary
@@ -212,4 +225,5 @@ invalid value 'a' for parameter id, must be a int
 That's it! congratulations on writing you first goa application!
 
 This example only covers a fraction of what goa can do, additional documentation is in the works.
-As next steps try `codegen --help` to get a sense of what can be tweaked.
+As next steps try `codegen --help` to get a sense of what can be tweaked. Also take a look at
+[goa, the Language](DSL.md).

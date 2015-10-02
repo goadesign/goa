@@ -11,7 +11,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/raphael/goa/codegen"
-	"github.com/raphael/goa/design"
+	. "github.com/raphael/goa/design"
+	. "github.com/raphael/goa/design/dsl"
 )
 
 var _ = Describe("code generation", func() {
@@ -21,25 +22,25 @@ var _ = Describe("code generation", func() {
 
 	Describe("GoTypeDef", func() {
 		Context("given an attribute definition with fields", func() {
-			var att *design.AttributeDefinition
-			var object design.Object
-			var required *design.RequiredValidationDefinition
+			var att *AttributeDefinition
+			var object Object
+			var required *RequiredValidationDefinition
 			var st string
 
 			JustBeforeEach(func() {
-				att = new(design.AttributeDefinition)
+				att = new(AttributeDefinition)
 				att.Type = object
 				if required != nil {
-					att.Validations = []design.ValidationDefinition{required}
+					att.Validations = []ValidationDefinition{required}
 				}
 				st = codegen.GoTypeDef(att, 0, true, false)
 			})
 
 			Context("of primitive types", func() {
 				BeforeEach(func() {
-					object = design.Object{
-						"foo": &design.AttributeDefinition{Type: design.Integer},
-						"bar": &design.AttributeDefinition{Type: design.String},
+					object = Object{
+						"foo": &AttributeDefinition{Type: Integer},
+						"bar": &AttributeDefinition{Type: String},
 					}
 					required = nil
 				})
@@ -55,10 +56,10 @@ var _ = Describe("code generation", func() {
 
 			Context("of array of primitive types", func() {
 				BeforeEach(func() {
-					elemType := &design.AttributeDefinition{Type: design.Integer}
-					array := &design.Array{ElemType: elemType}
-					object = design.Object{
-						"foo": &design.AttributeDefinition{Type: array},
+					elemType := &AttributeDefinition{Type: Integer}
+					array := &Array{ElemType: elemType}
+					object = Object{
+						"foo": &AttributeDefinition{Type: array},
 					}
 					required = nil
 				})
@@ -70,13 +71,13 @@ var _ = Describe("code generation", func() {
 
 			Context("of array of objects", func() {
 				BeforeEach(func() {
-					obj := design.Object{
-						"bar": &design.AttributeDefinition{Type: design.Integer},
+					obj := Object{
+						"bar": &AttributeDefinition{Type: Integer},
 					}
-					elemType := &design.AttributeDefinition{Type: obj}
-					array := &design.Array{ElemType: elemType}
-					object = design.Object{
-						"foo": &design.AttributeDefinition{Type: array},
+					elemType := &AttributeDefinition{Type: obj}
+					array := &Array{ElemType: elemType}
+					object = Object{
+						"foo": &AttributeDefinition{Type: array},
 					}
 					required = nil
 				})
@@ -93,10 +94,10 @@ var _ = Describe("code generation", func() {
 
 			Context("that are required", func() {
 				BeforeEach(func() {
-					object = design.Object{
-						"foo": &design.AttributeDefinition{Type: design.Integer},
+					object = Object{
+						"foo": &AttributeDefinition{Type: Integer},
 					}
-					required = &design.RequiredValidationDefinition{
+					required = &RequiredValidationDefinition{
 						Names: []string{"foo"},
 					}
 				})
@@ -112,18 +113,18 @@ var _ = Describe("code generation", func() {
 		})
 
 		Context("given an array", func() {
-			var elemType *design.AttributeDefinition
+			var elemType *AttributeDefinition
 			var source string
 
 			JustBeforeEach(func() {
-				array := &design.Array{ElemType: elemType}
-				att := &design.AttributeDefinition{Type: array}
+				array := &Array{ElemType: elemType}
+				att := &AttributeDefinition{Type: array}
 				source = codegen.GoTypeDef(att, 0, true, false)
 			})
 
 			Context("of primitive type", func() {
 				BeforeEach(func() {
-					elemType = &design.AttributeDefinition{Type: design.Integer}
+					elemType = &AttributeDefinition{Type: Integer}
 				})
 
 				It("produces the array go code", func() {
@@ -134,11 +135,11 @@ var _ = Describe("code generation", func() {
 
 			Context("of object type", func() {
 				BeforeEach(func() {
-					object := design.Object{
-						"foo": &design.AttributeDefinition{Type: design.Integer},
-						"bar": &design.AttributeDefinition{Type: design.String},
+					object := Object{
+						"foo": &AttributeDefinition{Type: Integer},
+						"bar": &AttributeDefinition{Type: String},
 					}
-					elemType = &design.AttributeDefinition{Type: object}
+					elemType = &AttributeDefinition{Type: object}
 				})
 
 				It("produces the array go code", func() {
@@ -149,26 +150,34 @@ var _ = Describe("code generation", func() {
 
 	})
 
-	Describe("Unmarshaler", func() {
-		var unmarshaler string
+	Describe("Marshaler", func() {
+		var marshaler, unmarshaler string
 		var context, source, target string
 
 		BeforeEach(func() {
+			codegen.TempCount = 0
 			context = ""
 			source = "raw"
 			target = "p"
 		})
 
 		Context("with a primitive type", func() {
-			var p design.Primitive
+			var p Primitive
 
 			JustBeforeEach(func() {
+				marshaler = codegen.TypeMarshaler(p, context, source, target)
+				codegen.TempCount = 0
 				unmarshaler = codegen.PrimitiveUnmarshaler(p, context, source, target)
 			})
 
 			Context("integer", func() {
 				BeforeEach(func() {
-					p = design.Primitive(design.IntegerKind)
+					p = Primitive(IntegerKind)
+				})
+
+				It("generates the marshaler code", func() {
+					expected := `	p = raw`
+					Ω(marshaler).Should(Equal(expected))
 				})
 
 				It("generates the unmarshaler code", func() {
@@ -183,7 +192,12 @@ var _ = Describe("code generation", func() {
 
 			Context("string", func() {
 				BeforeEach(func() {
-					p = design.Primitive(design.StringKind)
+					p = Primitive(StringKind)
+				})
+
+				It("generates the marshaler code", func() {
+					expected := `	p = raw`
+					Ω(marshaler).Should(Equal(expected))
 				})
 
 				It("generates the unmarshaler code", func() {
@@ -198,35 +212,47 @@ var _ = Describe("code generation", func() {
 		})
 
 		Context("with an array of primitive types", func() {
-			var p *design.Array
+			var p *Array
 
 			JustBeforeEach(func() {
+				marshaler = codegen.ArrayMarshaler(p, context, source, target)
+				codegen.TempCount = 0
 				unmarshaler = codegen.ArrayUnmarshaler(p, context, source, target)
 			})
 
 			BeforeEach(func() {
-				p = &design.Array{
-					ElemType: &design.AttributeDefinition{
-						Type: design.Primitive(design.IntegerKind),
+				p = &Array{
+					ElemType: &AttributeDefinition{
+						Type: Primitive(IntegerKind),
 					},
 				}
 			})
 
+			It("generates the marshaler code", func() {
+				Ω(marshaler).Should(Equal(arrayMarshaled))
+			})
+
 			It("generates the unmarshaler code", func() {
-				Ω(unmarshaler).Should(Equal(primitiveUnmarshaled))
+				Ω(unmarshaler).Should(Equal(arrayUnmarshaled))
 			})
 		})
 
 		Context("with a simple object", func() {
-			var o design.Object
+			var o Object
 
 			JustBeforeEach(func() {
+				marshaler = codegen.ObjectMarshaler(o, context, source, target)
+				codegen.TempCount = 0
 				unmarshaler = codegen.ObjectUnmarshaler(o, context, source, target)
 			})
 
 			BeforeEach(func() {
-				intAtt := &design.AttributeDefinition{Type: design.Primitive(design.IntegerKind)}
-				o = design.Object{"foo": intAtt}
+				intAtt := &AttributeDefinition{Type: Primitive(IntegerKind)}
+				o = Object{"foo": intAtt}
+			})
+
+			It("generates the marshaler code", func() {
+				Ω(marshaler).Should(Equal(simpleMarshaled))
 			})
 
 			It("generates the unmarshaler code", func() {
@@ -235,31 +261,39 @@ var _ = Describe("code generation", func() {
 		})
 
 		Context("with a complex object", func() {
-			var o design.Object
+			var o Object
 
 			JustBeforeEach(func() {
+				marshaler = codegen.ObjectMarshaler(o, context, source, target)
+				codegen.TempCount = 0
 				unmarshaler = codegen.ObjectUnmarshaler(o, context, source, target)
 			})
 
 			BeforeEach(func() {
-				ar := &design.Array{
-					ElemType: &design.AttributeDefinition{
-						Type: design.Primitive(design.IntegerKind),
+				ar := &Array{
+					ElemType: &AttributeDefinition{
+						Type: Primitive(IntegerKind),
 					},
 				}
-				intAtt := &design.AttributeDefinition{Type: design.Primitive(design.IntegerKind)}
-				arAtt := &design.AttributeDefinition{Type: ar}
-				io := design.Object{"foo": intAtt, "bar": arAtt}
-				ioAtt := &design.AttributeDefinition{Type: io}
-				o = design.Object{"baz": ioAtt, "faz": intAtt}
+				intAtt := &AttributeDefinition{Type: Primitive(IntegerKind)}
+				arAtt := &AttributeDefinition{Type: ar}
+				io := Object{"foo": intAtt, "bar": arAtt}
+				ioAtt := &AttributeDefinition{Type: io}
+				o = Object{"baz": ioAtt, "faz": intAtt}
+			})
+
+			It("generates the marshaler code", func() {
+				Ω(marshaler).Should(Equal(complexMarshaled))
 			})
 
 			It("generates the unmarshaler code", func() {
-				Ω(unmarshaler).Should(Equal(complexUnmarshalled))
+				Ω(unmarshaler).Should(Equal(complexUnmarshaled))
 			})
 
 			Context("compiling", func() {
 				var gopath, srcDir string
+				var tmpl *template.Template
+				var tmpFile *os.File
 				var out []byte
 
 				JustBeforeEach(func() {
@@ -277,53 +311,114 @@ var _ = Describe("code generation", func() {
 					var err error
 					gopath, err = ioutil.TempDir("", "")
 					Ω(err).ShouldNot(HaveOccurred())
-					tmpl, err := template.New("main").Parse(mainTmpl)
+					tmpl, err = template.New("main").Parse(mainTmpl)
 					Ω(err).ShouldNot(HaveOccurred())
 					srcDir = filepath.Join(gopath, "src", "test")
 					err = os.MkdirAll(srcDir, 0755)
 					Ω(err).ShouldNot(HaveOccurred())
-					tmpFile, err := os.Create(filepath.Join(srcDir, "main.go"))
+					tmpFile, err = os.Create(filepath.Join(srcDir, "main.go"))
 					Ω(err).ShouldNot(HaveOccurred())
-					unmarshaler = codegen.ObjectUnmarshaler(o, context, source, target)
-					data := map[string]interface{}{
-						"raw": `interface{}(map[string]interface{}{
+				})
+
+				Context("unmarshaler code", func() {
+					BeforeEach(func() {
+						unmarshaler = codegen.ObjectUnmarshaler(o, context, source, target)
+						data := map[string]interface{}{
+							"raw": `interface{}(map[string]interface{}{
 			"baz": map[string]interface{}{
 				"foo": 345,
 				"bar":[]interface{}{1,2,3},
 			},
 			"faz": 2,
 		})`,
-						"source":     unmarshaler,
-						"target":     target,
-						"targetType": codegen.GoTypeRef(o, 1),
-					}
-					err = tmpl.Execute(tmpFile, data)
-					Ω(err).ShouldNot(HaveOccurred())
+							"source":     unmarshaler,
+							"target":     target,
+							"targetType": codegen.GoTypeRef(o, 1),
+						}
+						err := tmpl.Execute(tmpFile, data)
+						Ω(err).ShouldNot(HaveOccurred())
+					})
+					It("compiles", func() {
+						Ω(string(out)).Should(BeEmpty())
+
+						cmd := exec.Command("./codegen")
+						cmd.Env = []string{fmt.Sprintf("PATH=%s", filepath.Join(gopath, "bin"))}
+						cmd.Dir = srcDir
+						code, err := cmd.CombinedOutput()
+						Ω(string(code)).Should(Equal(`{"Baz":{"Bar":[1,2,3],"Foo":345},"Faz":2}`))
+						Ω(err).ShouldNot(HaveOccurred())
+					})
 				})
 
 				AfterEach(func() {
 					os.RemoveAll(gopath)
 				})
 
-				It("compiles", func() {
-					Ω(string(out)).Should(BeEmpty())
-
-					cmd := exec.Command("./codegen")
-					cmd.Env = []string{fmt.Sprintf("PATH=%s", filepath.Join(gopath, "bin"))}
-					cmd.Dir = srcDir
-					code, err := cmd.CombinedOutput()
-					Ω(string(code)).Should(Equal(`{"Baz":{"Bar":[1,2,3],"Foo":345},"Faz":2}`))
-					Ω(err).ShouldNot(HaveOccurred())
-				})
-
 			})
 		})
 
+		Context("with a media type with links", func() {
+			var testMediaType *MediaTypeDefinition
+
+			JustBeforeEach(func() {
+				marshaler = codegen.MediaTypeMarshaler(testMediaType, context, source, target, "")
+			})
+
+			BeforeEach(func() {
+				dsl := func() {
+					fooMediaType := MediaType("fooMT", func() {
+						Attribute("fooAtt", Integer)
+						Attribute("href")
+						View("link", func() {
+							Attribute("href")
+						})
+					})
+					barMediaType := MediaType("barMT", func() {
+						Attribute("barAtt", Integer)
+						Attribute("href")
+						View("link", func() {
+							Attribute("href")
+						})
+					})
+					bazMediaType := MediaType("bazMT", func() {
+						Attribute("bazAtt", Integer)
+						Attribute("href")
+						Attribute("name")
+						View("bazLink", func() {
+							Attribute("href")
+							Attribute("name")
+						})
+					})
+					testMediaType = MediaType("test", func() {
+						Attribute("foo", fooMediaType)
+						Attribute("bar", barMediaType)
+						Attribute("baz", bazMediaType)
+						Links(func() {
+							Link("foo")
+							Link("baz", "bazLink")
+						})
+					})
+				}
+				dsl()
+				RunDSL()
+			})
+
+			It("generates the marshaler code", func() {
+				Ω(marshaler).Should(Equal(mtMarshaled))
+			})
+		})
 	})
 })
 
 const (
-	primitiveUnmarshaled = `	if val, ok := raw.([]interface{}); ok {
+	arrayMarshaled = `	tmp1 := make([]interface{}, len(raw))
+	for i, r := range raw {
+		tmp1[i] = r
+	}
+	p = tmp1
+`
+
+	arrayUnmarshaled = `	if val, ok := raw.([]interface{}); ok {
 		p = make([]int, len(val))
 		for i, v := range val {
 			var tmp1 int
@@ -337,6 +432,11 @@ const (
 	} else {
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "[]interface{}", err)
 	}`
+
+	simpleMarshaled = `	p := map[string]interface{}{
+		"foo": raw.Foo,
+	}
+`
 
 	simpleUnmarshaled = `	if val, ok := raw.(map[string]interface{}); ok {
 		p = new(struct {
@@ -355,7 +455,24 @@ const (
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "map[string]interface{}", err)
 	}`
 
-	complexUnmarshalled = `	if val, ok := raw.(map[string]interface{}); ok {
+	complexMarshaled = `	p := map[string]interface{}{
+		"faz": raw.Faz,
+	}
+	if raw.Baz != nil {
+		p["baz"] := map[string]interface{}{
+			"foo": raw.Baz.Foo,
+		}
+		if raw.Baz.Bar != nil {
+			tmp1 := make([]interface{}, len(raw.Baz.Bar))
+			for i, r := range raw.Baz.Bar {
+				tmp1[i] = r
+			}
+			p["baz"]["bar"] = tmp1
+		}
+	}
+`
+
+	complexUnmarshaled = `	if val, ok := raw.(map[string]interface{}); ok {
 		p = new(struct {
 			Baz *struct {
 				Bar []int
@@ -417,6 +534,38 @@ const (
 	} else {
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "map[string]interface{}", err)
 	}`
+
+	mtMarshaled = `	p := map[string]interface{}{
+	}
+	if raw.Bar != nil {
+		p["bar"] := map[string]interface{}{
+			"barAtt": raw.Bar.BarAtt,
+			"href": raw.Bar.Href,
+		}
+	}
+	if raw.Baz != nil {
+		p["baz"] := map[string]interface{}{
+			"bazAtt": raw.Baz.BazAtt,
+			"href": raw.Baz.Href,
+			"name": raw.Baz.Name,
+		}
+	}
+	if raw.Foo != nil {
+		p["foo"] := map[string]interface{}{
+			"fooAtt": raw.Foo.FooAtt,
+			"href": raw.Foo.Href,
+		}
+	}
+	links := make(map[string]interface{})
+	links["Baz"] := map[string]interface{}{
+		"href": raw.Baz.Href,
+		"name": raw.Baz.Name,
+	}
+	links["Foo"] := map[string]interface{}{
+		"href": raw.Foo.Href,
+	}
+	p["links"] = links
+`
 
 	mainTmpl = `package main
 

@@ -9,8 +9,9 @@ var (
 	// TargetPackage is the name of the generated Go package.
 	TargetPackage string
 
-	// OutputDir is the path to the output directory.
-	OutputDir string
+	// AppSubDir is the name of the output directory sub-directory where application files are
+	// generated.
+	AppSubDir string
 )
 
 // Command is the goa application code generator command line data structure.
@@ -21,13 +22,14 @@ type Command struct {
 
 // NewCommand instantiates a new command.
 func NewCommand() *Command {
-	base := codegen.NewBaseCommand("app", "Generate application GoGenerator")
+	base := codegen.NewBaseCommand("app", "Generate application code")
 	return &Command{BaseCommand: base}
 }
 
 // RegisterFlags registers the command line flags with the given registry.
 func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
 	r.Flag("pkg", "target package").Default("app").StringVar(&TargetPackage)
+	r.Flag("subdir", "name of output sub-directory where application files are generated").Default("app").StringVar(&AppSubDir)
 }
 
 // Run simply calls the meta generator.

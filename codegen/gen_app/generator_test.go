@@ -247,7 +247,9 @@ func NewGetWidgetContext(c goa.Context) (*GetWidgetContext, error) {
 
 // OK sends a HTTP response with status code 200.
 func (c *GetWidgetContext) OK(resp *id) error {
-	return c.JSON(200, resp)
+	var r interface{}
+	r = resp
+	return c.JSON(200, r)
 }
 `
 
@@ -325,7 +327,4 @@ const mediaTypesCodeTmpl = `//**************************************************
 
 package app
 
-// id media type
-// Identifier: vnd.rightscale.codegen.test.widgets
-type id string
 `

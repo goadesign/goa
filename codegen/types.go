@@ -16,16 +16,21 @@ var (
 	// TempCount holds the value appended to variable names to make them unique.
 	TempCount int
 
-	primitiveT    *template.Template
-	arrayT        *template.Template
-	objectOrUserT *template.Template
-	userT         *template.Template
+	mArrayT          *template.Template
+	mObjectT         *template.Template
+	mLinkT           *template.Template
+	unmPrimitiveT    *template.Template
+	unmArrayT        *template.Template
+	unmObjectOrUserT *template.Template
 )
 
 //  init instantiates the templates.
 func init() {
 	var err error
 	fm := template.FuncMap{
+		"marshalType":        typeMarshalerR,
+		"marshalAttribute":   attributeMarshalerR,
+		"marshalMediaType":   mediaTypeMarshalerR,
 		"unmarshalType":      typeUnmarshalerR,
 		"unmarshalAttribute": attributeUnmarshalerR,
 		"gotypename":         GoTypeName,
@@ -36,18 +41,158 @@ func init() {
 		"tempvar":            tempvar,
 		"has":                has,
 	}
-	if primitiveT, err = template.New("primitive").Funcs(fm).Parse(primitiveTmpl); err != nil {
+	if mArrayT, err = template.New("array marshaler").Funcs(fm).Parse(mArrayTmpl); err != nil {
 		panic(err)
 	}
-	if arrayT, err = template.New("array").Funcs(fm).Parse(arrayTmpl); err != nil {
+	if mObjectT, err = template.New("object marshaler").Funcs(fm).Parse(mObjectTmpl); err != nil {
 		panic(err)
 	}
-	if objectOrUserT, err = template.New("object").Funcs(fm).Parse(objectTmpl); err != nil {
+	if mLinkT, err = template.New("links marshaler").Funcs(fm).Parse(mLinkTmpl); err != nil {
+		panic(err)
+	}
+	if unmPrimitiveT, err = template.New("primitive unmarshaler").Funcs(fm).Parse(unmPrimitiveTmpl); err != nil {
+		panic(err)
+	}
+	if unmArrayT, err = template.New("array unmarshaler").Funcs(fm).Parse(unmArrayTmpl); err != nil {
+		panic(err)
+	}
+	if unmObjectOrUserT, err = template.New("object unmarshaler").Funcs(fm).Parse(unmObjectTmpl); err != nil {
 		panic(err)
 	}
 }
 
-// TypeUnmarshaler produces the go code that initializes a variable of the given type given
+// TypeMarshaler produces the Go code that initiliazes the variable named target which is an
+// interface{} with the content of the variable named source which contains an instance of the type
+// data structure.
+// The code takes care of rendering media types according to the view defined on the attribute
+// if any. It also renders media type links. Finally it validates the results using any type
+// validation that is defined on the type attributes (if the type contains attributes).
+// The generated code assumes that there is a variable called "err" of type error that it can use
+// to record errors.
+func TypeMarshaler(t design.DataType, context, source, target string) string {
+	return typeMarshalerR(t, context, source, target, 1)
+}
+func typeMarshalerR(t design.DataType, context, source, target string, depth int) string {
+	switch actual := t.(type) {
+	case design.Primitive:
+		return fmt.Sprintf("%s%s = %s", Tabs(depth), target, source)
+	case *design.Array:
+		return arrayMarshalerR(actual, context, source, target, depth)
+	case design.Object, *design.UserTypeDefinition:
+		return objectMarshalerR(actual.ToObject(), nil, context, source, target, depth)
+	default:
+		// this should never get called with a MediaType, MediaTypeMarshaler should be
+		// called instead so the view is properly taken into account.
+		panic(actual)
+	}
+}
+
+// AttributeMarshaler produces the Go code that initiliazes the variable named target which holds an
+// interface{} with the content of the variable named source which contains an
+// instance of the attribute type data structure. The attribute view is used to render child
+// attributes if there are any. As with TypeMarshaler the code renders media type links and runs any
+// validation defined on the type definition.
+//
+// The generated code assumes that there is a variable called "err" of type error that it can use
+// to record errors.
+func AttributeMarshaler(att *design.AttributeDefinition, context, source, target string) string {
+	return attributeMarshalerR(att, context, source, target, 1)
+}
+func attributeMarshalerR(att *design.AttributeDefinition, context, source, target string, depth int) string {
+	var marshaler string
+	switch actual := att.Type.(type) {
+	case *design.MediaTypeDefinition:
+		marshaler = mediaTypeMarshalerR(actual, context, source, target, att.View, depth)
+	case design.Object:
+		marshaler = objectMarshalerR(actual, att.AllRequired(), context, source, target, depth)
+	default:
+		marshaler = typeMarshalerR(att.Type, context, source, target, depth)
+	}
+	return marshaler + validationCheckerR(att, context, target, depth)
+}
+
+// ArrayMarshaler produces the Go code that marshals an array for rendering.
+// source is the name of the variable that contains the array value and target the name of the
+// variable to initialize.
+// The generated code assumes that there is a variable called "err" of type error that it can use
+// to record errors.
+func ArrayMarshaler(a *design.Array, context, source, target string) string {
+	return arrayMarshalerR(a, context, source, target, 1)
+}
+func arrayMarshalerR(a *design.Array, context, source, target string, depth int) string {
+	data := map[string]interface{}{
+		"source":   source,
+		"target":   target,
+		"elemType": a.ElemType,
+		"context":  context,
+		"depth":    depth,
+	}
+	return runTemplate(mArrayT, data)
+}
+
+// ObjectMarshaler produces the Go code that initializes the variable named target which holds a
+// map of string to interface{} with the content of the variable named source which contains an
+// instance of the object data structure. The code runs any validation defined on the object
+// attribute definitions.
+// The generated code assumes that there is a variable called "err" of type error that it can use
+// to record errors.
+func ObjectMarshaler(o design.Object, context, source, target string) string {
+	return objectMarshalerR(o, nil, context, source, target, 1)
+}
+func objectMarshalerR(o design.Object, required []string, context, source, target string, depth int) string {
+	data := map[string]interface{}{
+		"type":     o,
+		"required": required,
+		"context":  context,
+		"source":   source,
+		"target":   target,
+		"depth":    depth,
+	}
+	return runTemplate(mObjectT, data)
+}
+
+// MediaTypeMarshaler produces the Go code that initializes the variable named target which holds a
+// map of string to interface{} with the content of the variable named source which contains an
+// instance of the media type data structure. The code runs any validation defined on the media
+// type definition. Also view is used to know which fields to copy and which ones to omit and for
+// fields that are media types which view to use to render it. The rendering also takes care of
+// following links.
+// The generated code assumes that there is a variable called "err" of type error that it can use
+// to record errors.
+func MediaTypeMarshaler(mt *design.MediaTypeDefinition, context, source, target, view string) string {
+	return mediaTypeMarshalerR(mt, context, source, target, view, 1)
+}
+func mediaTypeMarshalerR(mt *design.MediaTypeDefinition, context, source, target, view string, depth int) string {
+	rendered := mt.AttributeDefinition
+	if view == "" {
+		view = "default"
+	}
+	if v, ok := mt.Views[view]; ok {
+		rendered = &design.AttributeDefinition{
+			Type:        v.Type.ToObject(),
+			Validations: mt.Validations,
+		}
+	}
+	links := mt.Links
+	for n, l := range links {
+		if l.MediaType == nil {
+			// DSL validation makes sure this won't blow up.
+			l.MediaType = mt.ToObject()[n].Type.(*design.MediaTypeDefinition)
+		}
+	}
+	data := map[string]interface{}{
+		"links":   links,
+		"context": context,
+		"source":  source,
+		"target":  target,
+		"view":    view,
+		"depth":   depth,
+	}
+	linkMarshaler := runTemplate(mLinkT, data)
+	return attributeMarshalerR(rendered, context, source, target, depth) + linkMarshaler
+}
+
+// TypeUnmarshaler produces the Go code that initializes a variable of the given type given
 // a deserialized (interface{}) value.
 // source is the name of the variable that contains the raw interface{} value and target the
 // name of the variable to initialize.
@@ -73,7 +218,7 @@ func typeUnmarshalerR(t design.DataType, context, source, target string, depth i
 	}
 }
 
-// AttributeUnmarshaler produces the go code that initializes an attribute given a deserialized
+// AttributeUnmarshaler produces the Go code that initializes an attribute given a deserialized
 // (interface{}) value.
 // source is the name of the variable that contains the raw interface{} value and target the
 // name of the variable to initialize.
@@ -91,10 +236,10 @@ func attributeUnmarshalerR(att *design.AttributeDefinition, context, source, tar
 	} else {
 		unmarshaler = typeUnmarshalerR(att.Type, context, source, target, depth)
 	}
-	return unmarshaler + validationCheckerR(att, context, target, depth)
+	return validationCheckerR(att, context, source, depth) + unmarshaler
 }
 
-// PrimitiveUnmarshaler produces the go code that initializes a primitive type from its JSON
+// PrimitiveUnmarshaler produces the Go code that initializes a primitive type from its JSON
 // representation.
 // source is the name of the variable that contains the raw interface{} value and target the
 // name of the variable to initialize.
@@ -111,10 +256,10 @@ func primitiveUnmarshalerR(p design.Primitive, context, source, target string, d
 		"context": context,
 		"depth":   depth,
 	}
-	return runTemplate(primitiveT, data)
+	return runTemplate(unmPrimitiveT, data)
 }
 
-// ArrayUnmarshaler produces the go code that initializes an array from its JSON representation.
+// ArrayUnmarshaler produces the Go code that initializes an array from its JSON representation.
 // source is the name of the variable that contains the raw interface{} value and target the
 // name of the variable to initialize.
 // The generated code assumes that there is a variable called "err" of type error that it can use
@@ -130,10 +275,10 @@ func arrayUnmarshalerR(a *design.Array, context, source, target string, depth in
 		"context":  context,
 		"depth":    depth,
 	}
-	return runTemplate(arrayT, data)
+	return runTemplate(unmArrayT, data)
 }
 
-// ObjectUnmarshaler produces the go code that initializes an object type from its JSON
+// ObjectUnmarshaler produces the Go code that initializes an object type from its JSON
 // representation.
 // source is the name of the variable that contains the raw interface{} value and target the
 // name of the variable to initialize.
@@ -151,10 +296,10 @@ func objectUnmarshalerR(o design.Object, required []string, context, source, tar
 		"target":   target,
 		"depth":    depth,
 	}
-	return runTemplate(objectOrUserT, data)
+	return runTemplate(unmObjectOrUserT, data)
 }
 
-// NamedTypeUnmarshaler produces the go code that initializes a named type from its JSON
+// NamedTypeUnmarshaler produces the Go code that initializes a named type from its JSON
 // representation.
 // This include running any validation defined on the type.
 // source is the name of the variable that contains the raw interface{} value and target the
@@ -174,7 +319,7 @@ func namedTypeUnmarshalerR(t design.DataType, context, source, target string, de
 		"target":  target,
 		"depth":   depth,
 	}
-	return runTemplate(objectOrUserT, data)
+	return runTemplate(unmObjectOrUserT, data)
 }
 
 // GoTypeDef returns the Go code that defines a Go type which matches the data structure
@@ -270,12 +415,15 @@ func GoTypeName(t design.DataType, tabs int) string {
 	}
 }
 
-// Goify makes a valid go identifier out of any string.
+// Goify makes a valid Go identifier out of any string.
 // It does that by removing any non letter and non digit character and by making sure the first
 // character is a letter or "_".
 // Goify produces a "CamelCase" version of the string, if firstUpper is true the first character
 // of the identifier is uppercase otherwise it's lowercase.
 func Goify(str string, firstUpper bool) string {
+	if str == "ok" && firstUpper {
+		return "OK"
+	}
 	var b bytes.Buffer
 	var firstWritten, nextUpper bool
 	for i := 0; i < len(str); i++ {
@@ -407,13 +555,36 @@ func runTemplate(tmpl *template.Template, data interface{}) string {
 }
 
 const (
-	primitiveTmpl = `{{tabs .depth}}if val, ok := {{.source}}.({{gotyperef .type (add .depth 1)}}); ok {
+	mArrayTmpl = `{{tabs .depth}}{{$tmp := tempvar}}{{$tmp}} := make([]interface{}, len({{.source}}))
+{{tabs .depth}}for i, r := range {{.source}} {
+{{marshalAttribute .elemType (printf "%s[*]" .context) "r" (printf "%s[i]" $tmp) (add .depth 1)}}
+{{tabs .depth}}}
+{{tabs .depth}}{{.target}} = {{$tmp}}
+`
+
+	mObjectTmpl = `{{$ctx := .}}{{range $r := .required}}{{$at := index $ctx.o $r}}{{$required := goify $r true}}{{if eq $at.Type.Kind 4}}{{tabs .depth}}if {{.source}}.{{$required}} == "" {
+{{tabs .depth}} return fmt.Errorf("missing required attribute \"{{$r}}\"")
+{{tabs .depth}}}{{else if gt $at.type.Kind 4}}{{tabs .depth}}if {{.source}}.{{$required}} == nil {
+{{tabs .depth}} return fmt.Errorf("missing required attribute \"{{$r}}\"")
+{{tabs .depth}}}
+{{end}}{{end}}{{tabs .depth}}{{.target}} := map[string]interface{}{
+{{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{tabs $ctx.depth}}	"{{$n}}": {{$ctx.source}}.{{goify $n true}},
+{{end}}{{end}}{{tabs $ctx.depth}}}{{range $n, $at := .type}}{{if gt $at.Type.Kind 4}}
+{{tabs $ctx.depth}}if {{$ctx.source}}.{{goify $n true}} != nil {
+{{marshalAttribute $at (printf "%s.%s" $ctx.context (goify $n true)) (printf "%s.%s" $ctx.source (goify $n true)) (printf "%s[\"%s\"]" $ctx.target $n) (add $ctx.depth 1)}}{{tabs $ctx.depth}}}{{end}}{{end}}
+`
+
+	mLinkTmpl = `{{if .links}}{{$ctx := .}}{{tabs .depth}}links := make(map[string]interface{})
+{{range $n, $l := .links}}{{marshalMediaType $l.MediaType (printf "link %s" $n) (printf "%s.%s" $ctx.source (goify $l.Name true)) (printf "links[\"%s\"]" (goify $n true)) $l.View $ctx.depth}}{{end}}{{tabs .depth}}{{.target}}["links"] = links
+{{end}}`
+
+	unmPrimitiveTmpl = `{{tabs .depth}}if val, ok := {{.source}}.({{gotyperef .type (add .depth 1)}}); ok {
 {{tabs .depth}}	{{.target}} = val
 {{tabs .depth}}} else {
 {{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "{{gotyperef .type (add .depth 1)}}", err)
 {{tabs .depth}}}`
 
-	arrayTmpl = `{{tabs .depth}}if val, ok := {{.source}}.([]interface{}); ok {
+	unmArrayTmpl = `{{tabs .depth}}if val, ok := {{.source}}.([]interface{}); ok {
 {{tabs .depth}}	{{.target}} = make([]{{gotyperef .elemType.Type (add .depth 2)}}, len(val))
 {{tabs .depth}}	for i, v := range val {
 {{tabs .depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef .elemType.Type (add .depth 3)}}
@@ -424,7 +595,7 @@ const (
 {{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "[]interface{}", err)
 {{tabs .depth}}}`
 
-	objectTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
+	unmObjectTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
 {{tabs .depth}}{{$context := .context}}{{$depth := .depth}}{{$target := .target}}{{$required := .required}}	{{$target}} = new({{gotypename .type (add .depth 1)}})
 {{range $name, $att := .type.ToObject}}{{tabs $depth}}	if v, ok := val["{{$name}}"]; ok {
 {{tabs $depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type (add $depth 2)}}
