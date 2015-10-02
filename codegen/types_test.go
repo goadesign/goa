@@ -411,11 +411,10 @@ var _ = Describe("code generation", func() {
 })
 
 const (
-	arrayMarshaled = `	tmp1 := make([]interface{}, len(raw))
+	arrayMarshaled = `	p = make([]interface{}, len(raw))
 	for i, r := range raw {
-		tmp1[i] = r
+		p[i] = r
 	}
-	p = tmp1
 `
 
 	arrayUnmarshaled = `	if val, ok := raw.([]interface{}); ok {
@@ -433,7 +432,7 @@ const (
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "[]interface{}", err)
 	}`
 
-	simpleMarshaled = `	p := map[string]interface{}{
+	simpleMarshaled = `	p = map[string]interface{}{
 		"foo": raw.Foo,
 	}
 `
@@ -455,19 +454,18 @@ const (
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "map[string]interface{}", err)
 	}`
 
-	complexMarshaled = `	p := map[string]interface{}{
+	complexMarshaled = `	p = map[string]interface{}{
 		"faz": raw.Faz,
 	}
 	if raw.Baz != nil {
-		p["baz"] := map[string]interface{}{
+		p["baz"] = map[string]interface{}{
 			"foo": raw.Baz.Foo,
 		}
 		if raw.Baz.Bar != nil {
-			tmp1 := make([]interface{}, len(raw.Baz.Bar))
+			p["baz"]["bar"] = make([]interface{}, len(raw.Baz.Bar))
 			for i, r := range raw.Baz.Bar {
-				tmp1[i] = r
+				p["baz"]["bar"][i] = r
 			}
-			p["baz"]["bar"] = tmp1
 		}
 	}
 `
@@ -535,33 +533,33 @@ const (
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "map[string]interface{}", err)
 	}`
 
-	mtMarshaled = `	p := map[string]interface{}{
+	mtMarshaled = `	p = map[string]interface{}{
 	}
 	if raw.Bar != nil {
-		p["bar"] := map[string]interface{}{
+		p["bar"] = map[string]interface{}{
 			"barAtt": raw.Bar.BarAtt,
 			"href": raw.Bar.Href,
 		}
 	}
 	if raw.Baz != nil {
-		p["baz"] := map[string]interface{}{
+		p["baz"] = map[string]interface{}{
 			"bazAtt": raw.Baz.BazAtt,
 			"href": raw.Baz.Href,
 			"name": raw.Baz.Name,
 		}
 	}
 	if raw.Foo != nil {
-		p["foo"] := map[string]interface{}{
+		p["foo"] = map[string]interface{}{
 			"fooAtt": raw.Foo.FooAtt,
 			"href": raw.Foo.Href,
 		}
 	}
 	links := make(map[string]interface{})
-	links["Baz"] := map[string]interface{}{
+	links["Baz"] = map[string]interface{}{
 		"href": raw.Baz.Href,
 		"name": raw.Baz.Name,
 	}
-	links["Foo"] := map[string]interface{}{
+	links["Foo"] = map[string]interface{}{
 		"href": raw.Foo.Href,
 	}
 	p["links"] = links

@@ -1,7 +1,6 @@
 package genapp
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 	"text/template"
@@ -49,6 +48,13 @@ type (
 		MediaTypeTmpl *template.Template
 	}
 
+	// UserTypesWriter generate code for a goa application user types.
+	// User types are data structures defined in the DSL with "Type".
+	UserTypesWriter struct {
+		*codegen.GoGenerator
+		UserTypeTmpl *template.Template
+	}
+
 	// ContextTemplateData contains all the information used by the template to render the context
 	// code for an action.
 	ContextTemplateData struct {
@@ -60,6 +66,7 @@ type (
 		Headers      *design.AttributeDefinition
 		Responses    map[string]*design.ResponseDefinition
 		MediaTypes   map[string]*design.MediaTypeDefinition
+		Types        map[string]*design.UserTypeDefinition
 	}
 
 	// HandlerTemplateData contains the information required to generate an action handler.
@@ -212,6 +219,11 @@ func NewResourcesWriter(filename string) (*ResourcesWriter, error) {
 	return &w, nil
 }
 
+// Execute writes the code for the context types to the writer.
+func (w *ResourcesWriter) Execute(data *ResourceData) error {
+	return w.ResourceTmpl.Execute(w, data)
+}
+
 // NewMediaTypesWriter returns a contexts code writer.
 // Media types contain the data used to render response bodies.
 func NewMediaTypesWriter(filename string) (*MediaTypesWriter, error) {
@@ -231,16 +243,31 @@ func NewMediaTypesWriter(filename string) (*MediaTypesWriter, error) {
 }
 
 // Execute writes the code for the context types to the writer.
-func (w *ResourcesWriter) Execute(data *ResourceData) error {
-	if data.Type == nil {
-		return fmt.Errorf("missing resource type definition for %s", data.Name)
+func (w *MediaTypesWriter) Execute(mt *design.MediaTypeDefinition) error {
+	return w.MediaTypeTmpl.Execute(w, mt)
+}
+
+// NewUserTypesWriter returns a contexts code writer.
+// User types contain custom data structured defined in the DSL with "Type".
+func NewUserTypesWriter(filename string) (*UserTypesWriter, error) {
+	cw := codegen.NewGoGenerator(filename)
+	funcMap := cw.FuncMap
+	funcMap["gotypedef"] = codegen.GoTypeDef
+	funcMap["goify"] = codegen.Goify
+	userTypeTmpl, err := template.New("user type").Funcs(funcMap).Parse(userTypeT)
+	if err != nil {
+		return nil, err
 	}
-	return w.ResourceTmpl.Execute(w, data)
+	w := UserTypesWriter{
+		GoGenerator:  cw,
+		UserTypeTmpl: userTypeTmpl,
+	}
+	return &w, nil
 }
 
 // Execute writes the code for the context types to the writer.
-func (w *MediaTypesWriter) Execute(mt *design.MediaTypeDefinition) error {
-	return w.MediaTypeTmpl.Execute(w, mt)
+func (w *UserTypesWriter) Execute(ut *design.UserTypeDefinition) error {
+	return w.UserTypeTmpl.Execute(w, ut)
 }
 
 // newCoerceData is a helper function that creates a map that can be given to the "Coerce"
@@ -328,7 +355,8 @@ func New{{camelize .Name}}(c goa.Context) (*{{.Name}}, error) {
 	// template input: *ContextTemplateData
 	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{.FormatName false }} sends a HTTP response with status code {{.Status}}.
 func (c *{{$ctx.Name}}) {{goify .Name true}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp *{{$mt.TypeName}}{{if gt (len $mt.Views) 1}}, view {{$mt.TypeName}}ViewEnum{{end}}{{end}}) error {
-{{if $mt}}{{if gt (len $mt.Views) 1}}{{range $view := $mt.Views}}	if view == {{$mt.TypeName}}{{goify .Name true}}View {
+{{if $mt}}	var r interface{}
+{{if gt (len $mt.Views) 1}}{{range $view := $mt.Views}}	if view == {{$mt.TypeName}}{{goify .Name true}}View {
 	{{mediaTypeMarshaler $mt "" "resp" "r" $view}}
 	}
 {{end}}{{else}}{{mediaTypeMarshaler $mt "" "resp" "r" ""}}
@@ -382,9 +410,9 @@ func {{.Name}}(userHandler interface{}) (goa.Handler, error) {
 
 	// resourceT generates the code for a resource.
 	// template input: *ResourceData
-	resourceT = `// {{if .Description}}{{.Description}}{{else}}{{.Name}} resource{{end}}
+	resourceT = `{{if .Type}}// {{if .Description}}{{.Description}}{{else}}{{.Name}} resource{{end}}
 type {{.Name}} {{gotypedef .Type 0 true false}}
-{{if .CanonicalTemplate}}
+{{end}}{{if .CanonicalTemplate}}
 // {{.Name}}Href returns the resource href.
 func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} string{{end}}) string {
 	return fmt.Sprintf("{{.CanonicalTemplate}}", {{join .CanonicalParams ", "}})
@@ -392,7 +420,7 @@ func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} string{
 {{end}}`
 
 	// mediaTypeT generates the code for a media type.
-	// template input: *ResourceData
+	// template input: *design.MediaTypeDefinition
 	mediaTypeT = `// {{if .Description}}{{.Description}}{{else}}{{.TypeName}} media type{{end}}
 // Identifier: {{.Identifier}}
 type {{.TypeName}} {{gotypedef . 0 true false}}{{if .Views}}
@@ -404,5 +432,11 @@ const (
 {{$typeName := .TypeName}}{{range $name, $view := .Views}}// {{if .Description}}{{.Description}}{{else}}{{$typeName}} {{.Name}} view{{end}}
 	{{$typeName}}{{goify .Name true}}View {{$typeName}}ViewEnum = "{{.Name}}"
 {{end}}){{end}}
+`
+
+	// userTypeT generates the code for a user type.
+	// template input: *design.UserTypeDefinition
+	userTypeT = `// {{if .Description}}{{.Description}}{{else}}{{.TypeName}} type{{end}}
+type {{.TypeName}} {{gotypedef . 0 true false}}
 `
 )

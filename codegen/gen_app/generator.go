@@ -21,10 +21,12 @@ type Generator struct {
 	HandlersWriter     *HandlersWriter
 	ResourcesWriter    *ResourcesWriter
 	MediaTypesWriter   *MediaTypesWriter
+	UserTypesWriter    *UserTypesWriter
 	contextsFilename   string
 	handlersFilename   string
 	resourcesFilename  string
 	mediaTypesFilename string
+	userTypesFilename  string
 	canDeleteOutputDir bool
 	genfiles           []string
 }
@@ -68,6 +70,7 @@ func NewGenerator() (*Generator, error) {
 	hdlFile := filepath.Join(outdir, "handlers.go")
 	resFile := filepath.Join(outdir, "resources.go")
 	mtFile := filepath.Join(outdir, "media_types.go")
+	utFile := filepath.Join(outdir, "user_types.go")
 
 	ctxWr, err := NewContextsWriter(ctxFile)
 	if err != nil {
@@ -85,16 +88,22 @@ func NewGenerator() (*Generator, error) {
 	if err != nil {
 		panic(err) // bug
 	}
+	utWr, err := NewUserTypesWriter(utFile)
+	if err != nil {
+		panic(err) // bug
+	}
 	return &Generator{
 		GoGenerator:        codegen.NewGoGenerator(outdir),
 		ContextsWriter:     ctxWr,
 		HandlersWriter:     hdlWr,
 		ResourcesWriter:    resWr,
 		MediaTypesWriter:   mtWr,
+		UserTypesWriter:    utWr,
 		contextsFilename:   ctxFile,
 		handlersFilename:   hdlFile,
 		resourcesFilename:  resFile,
 		mediaTypesFilename: mtFile,
+		userTypesFilename:  utFile,
 		canDeleteOutputDir: canDeleteDir,
 	}, nil
 }
@@ -127,6 +136,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 				Headers:      r.Headers.Merge(a.Headers),
 				Responses:    MergeResponses(r.Responses, a.Responses),
 				MediaTypes:   api.MediaTypes,
+				Types:        api.Types,
 			}
 			return g.ContextsWriter.Execute(&ctxData)
 		})
@@ -224,6 +234,23 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		return nil, err
 	}
 	if err := g.MediaTypesWriter.FormatCode(); err != nil {
+		g.Cleanup()
+		return nil, err
+	}
+
+	return g.genfiles, nil
+
+	title = fmt.Sprintf("%s: Application User Types", api.Name)
+	g.UserTypesWriter.WriteHeader(title, TargetPackage, nil)
+	err = api.IterateUserTypes(func(t *design.UserTypeDefinition) error {
+		return g.UserTypesWriter.Execute(t)
+	})
+	g.genfiles = append(g.genfiles, g.userTypesFilename)
+	if err != nil {
+		g.Cleanup()
+		return nil, err
+	}
+	if err := g.UserTypesWriter.FormatCode(); err != nil {
 		g.Cleanup()
 		return nil, err
 	}

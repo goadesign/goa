@@ -36,6 +36,7 @@ var _ = Describe("ContextsWriter", func() {
 			var payload *design.UserTypeDefinition
 			var responses map[string]*design.ResponseDefinition
 			var mediaTypes map[string]*design.MediaTypeDefinition
+			var userTypes map[string]*design.UserTypeDefinition
 
 			var data *genapp.ContextTemplateData
 
@@ -58,6 +59,7 @@ var _ = Describe("ContextsWriter", func() {
 					Headers:      headers,
 					Responses:    responses,
 					MediaTypes:   mediaTypes,
+					Types:        userTypes,
 				}
 			})
 
@@ -477,9 +479,9 @@ var _ = Describe("ResourceWriter", func() {
 			})
 
 			Context("with missing resource type definition", func() {
-				It("returns an error", func() {
+				It("does not return an error", func() {
 					err := writer.Execute(data)
-					Ω(err).Should(HaveOccurred())
+					Ω(err).ShouldNot(HaveOccurred())
 				})
 			})
 

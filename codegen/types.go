@@ -555,7 +555,7 @@ func runTemplate(tmpl *template.Template, data interface{}) string {
 }
 
 const (
-	mArrayTmpl = `{{tabs .depth}}{{.target}} := make([]interface{}, len({{.source}}))
+	mArrayTmpl = `{{tabs .depth}}{{.target}} = make([]interface{}, len({{.source}}))
 {{tabs .depth}}for i, r := range {{.source}} {
 {{marshalAttribute .elemType (printf "%s[*]" .context) "r" (printf "%s[i]" .target) (add .depth 1)}}
 {{tabs .depth}}}
@@ -566,7 +566,7 @@ const (
 {{tabs .depth}}}{{else if gt $at.type.Kind 4}}{{tabs .depth}}if {{.source}}.{{$required}} == nil {
 {{tabs .depth}} return fmt.Errorf("missing required attribute \"{{$r}}\"")
 {{tabs .depth}}}
-{{end}}{{end}}{{tabs .depth}}{{.target}} := map[string]interface{}{
+{{end}}{{end}}{{tabs .depth}}{{.target}} = map[string]interface{}{
 {{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{tabs $ctx.depth}}	"{{$n}}": {{$ctx.source}}.{{goify $n true}},
 {{end}}{{end}}{{tabs $ctx.depth}}}{{range $n, $at := .type}}{{if gt $at.Type.Kind 4}}
 {{tabs $ctx.depth}}if {{$ctx.source}}.{{goify $n true}} != nil {

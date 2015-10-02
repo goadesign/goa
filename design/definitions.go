@@ -256,6 +256,9 @@ type (
 	// MediaTypeIterator is the type of functions given to IterateMediaTypes.
 	MediaTypeIterator func(m *MediaTypeDefinition) error
 
+	// UserTypeIterator is the type of functions given to IterateUserTypes.
+	UserTypeIterator func(m *UserTypeDefinition) error
+
 	// ActionIterator is the type of functions given to IterateActions.
 	ActionIterator func(a *ActionDefinition) error
 )
@@ -300,6 +303,25 @@ func (a *APIDefinition) IterateMediaTypes(it MediaTypeIterator) error {
 	sort.Strings(names)
 	for _, n := range names {
 		if err := it(a.MediaTypes[n]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// IterateUserTypes calls the given iterator passing in each user type sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateUserTypes returns that
+// error.
+func (a *APIDefinition) IterateUserTypes(it UserTypeIterator) error {
+	names := make([]string, len(a.Types))
+	i := 0
+	for n := range a.Types {
+		names[i] = n
+		i++
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		if err := it(a.Types[n]); err != nil {
 			return err
 		}
 	}
