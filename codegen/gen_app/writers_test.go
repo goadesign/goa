@@ -741,7 +741,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	payloadContext = `
 type ListBottleContext struct {
 	goa.Context
-	payload *ListBottlePayload
+	Payload *ListBottlePayload
 }
 `
 
@@ -762,7 +762,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	payloadObjContext = `
 type ListBottleContext struct {
 	goa.Context
-	payload *ListBottlePayload
+	Payload *ListBottlePayload
 }
 `
 

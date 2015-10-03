@@ -19,11 +19,12 @@ var (
 func init() {
 	var err error
 	fm := template.FuncMap{
-		"tabs":    Tabs,
-		"tempvar": tempvar,
-		"json":    toJSON,
-		"slice":   toSlice,
-		"oneof":   oneof,
+		"tabs":     Tabs,
+		"tempvar":  tempvar,
+		"json":     toJSON,
+		"slice":    toSlice,
+		"oneof":    oneof,
+		"constant": constant,
 	}
 	if enumValT, err = template.New("enum").Funcs(fm).Parse(enumValTmpl); err != nil {
 		panic(err)
@@ -102,24 +103,45 @@ func oneof(target string, vals []interface{}) string {
 	return strings.Join(elems, " || ")
 }
 
+// constant returns the Go constant name of the format with the given value.
+func constant(formatName string) string {
+	switch formatName {
+	case "date-time":
+		return "goa.FormatDateTime"
+	case "email":
+		return "goa.FormatEmail"
+	case "hostname":
+		return "goa.FormatHostname"
+	case "ipv4":
+		return "goa.FormatIPv4"
+	case "ipv6":
+		return "goa.FormatIPv6"
+	case "uri":
+		return "goa.FormatURI"
+	case "mac":
+		return "goa.FormatMAC"
+	case "cidr":
+		return "goa.FormatCIDR"
+	case "regexp":
+		return "goa.FormatRegexp"
+	}
+	panic("unknown format") // bug
+}
+
 const (
 	enumValTmpl = `{{tabs .depth}}if !({{oneof .target .values}}) {
 {{tabs .depth}}	err = goa.InvalidEnumValueError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{slice .values}}, err)
-{{tabs .depth}}}
-`
+{{tabs .depth}}}`
 
-	formatValTmpl = `{{tabs .depth}}if err2 := goa.ValidateFormat({{.format}}, {{.target}}); err2 != nil {
-{{tabs .depth}}		err = goa.InvalidFormatError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{.format}}, err2.Error(), err)
-{{tabs .depth}}}
-`
+	formatValTmpl = `{{tabs .depth}}if err2 := goa.ValidateFormat({{constant .format}}, {{.target}}); err2 != nil {
+{{tabs .depth}}		err = goa.InvalidFormatError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{constant .format}}, err2, err)
+{{tabs .depth}}}`
 
 	minMaxValTmpl = `{{tabs .depth}}if {{.target}} {{if .min}}<{{else}}>{{end}} {{if .min}}{{.min}}{{else}}{{.max}}{{end}} {
 {{tabs .depth}}	err = goa.InvalidRangeError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{if .min}}{{.min}}, true{{else}}{{.max}}, false{{end}}, err)
-{{tabs .depth}}}
-`
+{{tabs .depth}}}`
 
 	lengthValTmpl = `{{tabs .depth}}if len({{.target}}) {{if .minLength}}<{{else}}>{{end}} {{if .minLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
 {{tabs .depth}}	err = goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{if .minLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}, err)
-{{tabs .depth}}}
-`
+{{tabs .depth}}}`
 )

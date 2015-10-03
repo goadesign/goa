@@ -296,7 +296,7 @@ const (
 type {{.Name}} struct {
 	goa.Context
 {{if .Params}}{{range $name, $att := .Params.Type.ToObject}}	{{camelize $name}} {{gotyperef .Type 0}}
-{{end}}{{end}}{{if .Payload}}	payload {{gotyperef .Payload 0}}
+{{end}}{{end}}{{if .Payload}}	Payload {{gotyperef .Payload 0}}
 {{end}}}
 `
 	// coerceT generates the code that coerces the generic deserialized
@@ -334,7 +334,7 @@ type {{.Name}} struct {
 func New{{camelize .Name}}(c goa.Context) (*{{.Name}}, error) {
 	var err error
 	ctx := {{.Name}}{Context: c}
-{{if .Headers}}{{$headers := .Headers}}{{range $name, $_ := $headers.Type.ToObject}}{{if ($headers.IsRequired $name)}}	if c.Header.Get("{{$name}}") == "" {
+{{if .Headers}}{{$headers := .Headers}}{{range $name, $_ := $headers.Type.ToObject}}{{if ($headers.IsRequired $name)}}	if c.Header().Get("{{$name}}") == "" {
 		err = goa.MissingHeaderError("{{$name}}", err)
 	}{{end}}{{end}}
 {{end}}{{if.Params}}{{$params := .Params}}{{range $name, $att := $params.Type.ToObject}}	raw{{camelize $name}}, {{if ($params.IsRequired $name)}}ok{{else}}_{{end}} := c.Get("{{$name}}")

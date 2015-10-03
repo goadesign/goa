@@ -33,6 +33,7 @@ func init() {
 		"marshalMediaType":   mediaTypeMarshalerR,
 		"unmarshalType":      typeUnmarshalerR,
 		"unmarshalAttribute": attributeUnmarshalerR,
+		"validate":           validationCheckerR,
 		"gotypename":         GoTypeName,
 		"gotyperef":          GoTypeRef,
 		"goify":              Goify,
@@ -236,7 +237,7 @@ func attributeUnmarshalerR(att *design.AttributeDefinition, context, source, tar
 	} else {
 		unmarshaler = typeUnmarshalerR(att.Type, context, source, target, depth)
 	}
-	return validationCheckerR(att, context, source, depth) + unmarshaler
+	return unmarshaler
 }
 
 // PrimitiveUnmarshaler produces the Go code that initializes a primitive type from its JSON
@@ -587,7 +588,8 @@ const (
 {{tabs .depth}}	{{.target}} = make([]{{gotyperef .elemType.Type (add .depth 2)}}, len(val))
 {{tabs .depth}}	for i, v := range val {
 {{tabs .depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef .elemType.Type (add .depth 3)}}
-{{unmarshalAttribute .elemType (printf "%s[*]" .context) "v" $temp (add .depth 2)}}
+{{unmarshalAttribute .elemType (printf "%s[*]" .context) "v" $temp (add .depth 2)}}{{$ctx := .}}{{range $ctx.elemType.Validations}}
+{{validate $ctx.elemType (printf "%s[*]" $ctx.context) $temp (add $ctx.depth 2)}}{{end}}
 {{tabs .depth}}		{{printf "%s[i]" .target}} = {{$temp}}
 {{tabs .depth}}	}
 {{tabs .depth}}} else {
@@ -598,7 +600,8 @@ const (
 {{tabs .depth}}{{$context := .context}}{{$depth := .depth}}{{$target := .target}}{{$required := .required}}	{{$target}} = new({{gotypename .type (add .depth 1)}})
 {{range $name, $att := .type.ToObject}}{{tabs $depth}}	if v, ok := val["{{$name}}"]; ok {
 {{tabs $depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type (add $depth 2)}}
-{{unmarshalAttribute $att (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}
+{{unmarshalAttribute $att (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}{{range $att.Validations}}
+{{validate $att (printf "%s.%s" $context (goify $name true)) $temp (add $depth 2)}}{{end}}
 {{tabs $depth}}		{{printf "%s.%s" $target (goify $name true)}} = {{$temp}}
 {{tabs $depth}}	}{{if (has $required $name)}} else {
 {{tabs $depth}}		err = goa.MissingAttributeError(` + "`" + `{{.context}}` + "`" + `, "{{$name}}", err)

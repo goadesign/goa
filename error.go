@@ -206,7 +206,7 @@ func InvalidEnumValueError(ctx string, val interface{}, allowed []interface{}, e
 
 // InvalidFormatError appends a typed error of kind ErrInvalidFormat to err and
 // returns it.
-func InvalidFormatError(ctx, target, format string, formatError, err error) error {
+func InvalidFormatError(ctx, target string, format Format, formatError, err error) error {
 	terr := TypedError{
 		Kind: ErrInvalidFormat,
 		Mesg: fmt.Sprintf("%s must be formatted as a %s but got value %#v, %s",
