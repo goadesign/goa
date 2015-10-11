@@ -36,7 +36,7 @@ func NewMiddleware(m interface{}) (mw Middleware, err error) {
 		mw = func(h Handler) Handler {
 			return func(c Context) (err error) {
 				m(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					ctx := c.New(w, r)
+					ctx := c.Duplicate(w, r)
 					err = h(ctx)
 				})).ServeHTTP(c.ResponseWriter(), c.Request())
 				return

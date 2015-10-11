@@ -102,13 +102,13 @@ var _ = Describe("Resource", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				CanonicalAction(can)
+				CanonicalActionName(can)
 			}
 		})
 
 		It("sets the canonical action and produces an invalid resource definition", func() {
 			Ω(res).ShouldNot(BeNil())
-			Ω(res.CanonicalAction).Should(Equal(can))
+			Ω(res.CanonicalActionName).Should(Equal(can))
 			Ω(res.Validate()).Should(HaveOccurred())
 		})
 	})
@@ -120,13 +120,13 @@ var _ = Describe("Resource", func() {
 			name = "foo"
 			dsl = func() {
 				Action(can, func() { Routing(PUT(":/id")) })
-				CanonicalAction(can)
+				CanonicalActionName(can)
 			}
 		})
 
 		It("sets the canonical action and produces a valid resource definition", func() {
 			Ω(res).ShouldNot(BeNil())
-			Ω(res.CanonicalAction).Should(Equal(can))
+			Ω(res.CanonicalActionName).Should(Equal(can))
 			Ω(res.Validate()).ShouldNot(HaveOccurred())
 		})
 	})

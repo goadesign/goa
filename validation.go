@@ -100,3 +100,17 @@ func ValidateFormat(f Format, val string) error {
 	}
 	return nil
 }
+
+// knownPatterns records the compiled patterns.
+var knownPatterns map[string]*regexp.Regexp
+
+// ValidatePattern returns an error if val does not match the regular expression p.
+// It makes an effort to minimize the number of times the regular expression needs to be compiled.
+func ValidatePattern(p string, val string) bool {
+	r, ok := knownPatterns[p]
+	if !ok {
+		r := regexp.MustCompile(p) // DSL validation makes sure regexp is valid
+		knownPatterns[p] = r
+	}
+	return r.MatchString(val)
+}

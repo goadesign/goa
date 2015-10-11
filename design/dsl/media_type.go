@@ -77,6 +77,7 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 				ReportError("invalid media type specification, media type is not initialized")
 			} else {
 				r.MediaType = m.Identifier
+				m.Resource = r
 			}
 		} else if identifier, ok := val.(string); ok {
 			r.MediaType = identifier
@@ -85,11 +86,7 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 		}
 	} else if r, ok := responseDefinition(true); ok {
 		if m, ok := val.(*MediaTypeDefinition); ok {
-			if m.UserTypeDefinition == nil {
-				ReportError("invalid media type specification, media type is not initialized")
-			} else {
-				r.MediaType = m.TypeName
-			}
+			r.MediaType = m.Identifier
 		} else if identifier, ok := val.(string); ok {
 			r.MediaType = identifier
 		} else {
@@ -184,6 +181,7 @@ func ArrayOf(t DataType) *Array {
 // CollectionOf creates a collection media type from its element media type.
 // A collection media type represents the content of responses that return a
 // collection of resources such as "index" actions.
+// TBD: this relies on the underlying media type to have been evaled already.
 func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
 	id := m.Identifier
 	mediatype, params, err := mime.ParseMediaType(id)
@@ -210,8 +208,9 @@ func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
 				mt.Views = tempMT.Views
 				mt.Links = tempMT.Links
 				mt.TypeName = typeName
-				mt.AttributeDefinition = tempMT.AttributeDefinition
-				mt.AttributeDefinition.Type = ArrayOf(mt.AttributeDefinition.Type)
+				mt.AttributeDefinition = &AttributeDefinition{
+					Type: ArrayOf(m.Type),
+				}
 			}
 		}
 	})

@@ -9,7 +9,7 @@ import . "github.com/raphael/goa/design"
 // 	MediaType(BottleMediaType)   // Resource actions default media type
 // 	BasePath("/bottles")         // Resource actions path prefix if not ""
 //      Parent("account")            // Name of parent resource if any
-// 	CanonicalAction("show")      // Action that returns canonical representation
+// 	CanonicalActionName("show")      // Action that returns canonical representation
 // 	Trait("Authenticated")       // Included trait if any, can appear more than once
 // 	Action("show", func() {      // Action definition, can appear more than once
 //        // ... Action DSL
@@ -42,9 +42,9 @@ func Parent(p string) {
 	}
 }
 
-// CanonicalAction sets the name of the action with canonical href.
-func CanonicalAction(a string) {
+// CanonicalActionName sets the name of the action with canonical href.
+func CanonicalActionName(a string) {
 	if r, ok := resourceDefinition(true); ok {
-		r.CanonicalAction = a
+		r.CanonicalActionName = a
 	}
 }

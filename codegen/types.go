@@ -28,10 +28,8 @@ var (
 func init() {
 	var err error
 	fm := template.FuncMap{
-		"marshalType":        typeMarshalerR,
 		"marshalAttribute":   attributeMarshalerR,
 		"marshalMediaType":   mediaTypeMarshalerR,
-		"unmarshalType":      typeUnmarshalerR,
 		"unmarshalAttribute": attributeUnmarshalerR,
 		"validate":           validationCheckerR,
 		"gotypename":         GoTypeName,
@@ -141,6 +139,14 @@ func ObjectMarshaler(o design.Object, context, source, target string) string {
 	return objectMarshalerR(o, nil, context, source, target, 1)
 }
 func objectMarshalerR(o design.Object, required []string, context, source, target string, depth int) string {
+	keys := make([]string, len(o))
+	values := make([]design.AttributeDefinition, len(o))
+	i := 0
+	for k, v := range o {
+		keys[i] = k
+		values[i] = *v
+		i++
+	}
 	data := map[string]interface{}{
 		"type":     o,
 		"required": required,
@@ -169,27 +175,54 @@ func mediaTypeMarshalerR(mt *design.MediaTypeDefinition, context, source, target
 		view = "default"
 	}
 	if v, ok := mt.Views[view]; ok {
+		var vals []design.ValidationDefinition
+		if viewObj := v.Type.ToObject(); viewObj != nil {
+			attNames := make([]string, len(viewObj))
+			i := 0
+			for n := range viewObj {
+				attNames[i] = n
+				i++
+			}
+			vals = make([]design.ValidationDefinition, len(mt.Validations))
+			for i, va := range mt.Validations {
+				if r, ok := va.(*design.RequiredValidationDefinition); ok {
+					var required []string
+					for _, n := range r.Names {
+						found := false
+						for _, an := range attNames {
+							if an == n {
+								required = append(required, n)
+								found = true
+								break
+							}
+						}
+						if found {
+							break
+						}
+					}
+					vals[i] = &design.RequiredValidationDefinition{Names: required}
+				} else {
+					vals[i] = va
+				}
+			}
+		}
 		rendered = &design.AttributeDefinition{
 			Type:        v.Type.ToObject(),
-			Validations: mt.Validations,
+			Validations: vals,
 		}
 	}
-	links := mt.Links
-	for n, l := range links {
-		if l.MediaType == nil {
-			// DSL validation makes sure this won't blow up.
-			l.MediaType = mt.ToObject()[n].Type.(*design.MediaTypeDefinition)
+	var linkMarshaler string
+	if len(mt.Links) > 0 {
+		data := map[string]interface{}{
+			"links":   mt.Links,
+			"context": context,
+			"source":  source,
+			"target":  target,
+			"view":    view,
+			"depth":   depth,
 		}
+		linkMarshaler = runTemplate(mLinkT, data)
 	}
-	data := map[string]interface{}{
-		"links":   links,
-		"context": context,
-		"source":  source,
-		"target":  target,
-		"view":    view,
-		"depth":   depth,
-	}
-	linkMarshaler := runTemplate(mLinkT, data)
 	return attributeMarshalerR(rendered, context, source, target, depth) + linkMarshaler
 }
 
@@ -424,6 +457,8 @@ func GoTypeName(t design.DataType, tabs int) string {
 func Goify(str string, firstUpper bool) string {
 	if str == "ok" && firstUpper {
 		return "OK"
+	} else if str == "id" && firstUpper {
+		return "ID"
 	}
 	var b bytes.Buffer
 	var firstWritten, nextUpper bool
@@ -562,12 +597,13 @@ const (
 {{tabs .depth}}}
 `
 
-	mObjectTmpl = `{{$ctx := .}}{{range $r := .required}}{{$at := index $ctx.o $r}}{{$required := goify $r true}}{{if eq $at.Type.Kind 4}}{{tabs .depth}}if {{.source}}.{{$required}} == "" {
-{{tabs .depth}} return fmt.Errorf("missing required attribute \"{{$r}}\"")
-{{tabs .depth}}}{{else if gt $at.type.Kind 4}}{{tabs .depth}}if {{.source}}.{{$required}} == nil {
-{{tabs .depth}} return fmt.Errorf("missing required attribute \"{{$r}}\"")
-{{tabs .depth}}}
-{{end}}{{end}}{{tabs .depth}}{{.target}} = map[string]interface{}{
+	mObjectTmpl = `{{$ctx := .}}{{range $r := .required}}{{$at := index $ctx.type $r}}{{$required := goify $r true}}{{if eq $at.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.source}}.{{$required}} == "" {
+{{tabs $ctx.depth}} return fmt.Errorf("missing required attribute \"{{$r}}\"")
+{{tabs $ctx.depth}}}{{else if gt $at.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.source}}.{{$required}} == nil {
+{{tabs $ctx.depth}} return fmt.Errorf("missing required attribute \"{{$r}}\"")
+{{tabs $ctx.depth}}}
+{{end}}
+{{end}}{{tabs .depth}}{{.target}} = map[string]interface{}{
 {{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{tabs $ctx.depth}}	"{{$n}}": {{$ctx.source}}.{{goify $n true}},
 {{end}}{{end}}{{tabs $ctx.depth}}}{{range $n, $at := .type}}{{if gt $at.Type.Kind 4}}
 {{tabs $ctx.depth}}if {{$ctx.source}}.{{goify $n true}} != nil {

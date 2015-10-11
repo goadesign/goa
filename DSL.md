@@ -83,7 +83,7 @@ Resource("name", func() {
 	MediaType(MediaType)
 	BasePath("/path")
 	Parent("parent")
-	CanonicalAction("show")
+	CanonicalActionName("show")
 	Trait("Authenticated")
 	Action("show", func() {
 		Routing(GET("/:id"))
@@ -101,7 +101,7 @@ responses. Each action may override the default to provide an action specific me
 Common request path prefix for all resource actions.
 ##### Parent
 Name of parent resource if any.
-##### CanonicalAction
+##### CanonicalActionName
 Name of canonical action if not `show`.
 ##### Trait
 Executes the trait with given name. See [Trait](#trait).

@@ -13,6 +13,10 @@ import (
 // It provides access to the underlying request data and exposes helper methods to create the
 // response.
 type Context interface {
+	// Log is the request specific logger.
+	// All log entries are prefixed with the request ID.
+	log.Logger
+
 	// Get returns the param or query string with the given name and true or an empty string
 	// and false if there isn't one.
 	// If there is more than one query string value then Get returns the first one. Use GetMany
@@ -46,10 +50,6 @@ type Context interface {
 	// Bug sends a HTTP response with status code 500 and the given body.
 	Bug(body string) error
 
-	// Log is the request specific logger.
-	// All log entries are prefixed with the request ID.
-	Log() log15.Logger
-
 	// Request returns the underlying HTTP request.
 	// In general it should not be necessary to call this function, the request elements should
 	// be accessed using the other functions exposed by Context (i.e. Get, GetMany, Payload, etc.)
@@ -61,11 +61,11 @@ type Context interface {
 	// Bug)
 	ResponseWriter() http.ResponseWriter
 
-	// New creates a new context with the same environment. Only the Request and ResponseWriter
-	// are different (in particular note that Get and GetMany are unaffected).
+	// Duplicate creates a new context with the same environment. Only the Request and
+	// ResponseWriter are different (in particular note that Get and GetMany are unaffected).
 	// This method is useful to wrap "legacy" middleware that acts on http.Handler instead of
 	// goa.Handler.
-	New(http.ResponseWriter, *http.Request) Context
+	Duplicate(http.ResponseWriter, *http.Request) Context
 }
 
 // ContextData is the object that provides access to the underlying HTTP request and response data.
@@ -83,9 +83,9 @@ type ContextData struct {
 	EnvData     map[string]interface{} // Env is the request environment used by middleware to stash state.
 }
 
-// New creates a new context with the same environment. Only the R and W fields are updated.
+// Duplicate creates a new context with the same environment. Only the R and W fields are updated.
 // This is useful to create contexts out of middlewares that act directly on http.Handler.
-func (c *ContextData) New(w http.ResponseWriter, r *http.Request) Context {
+func (c *ContextData) Duplicate(w http.ResponseWriter, r *http.Request) Context {
 	newC := ContextData{
 		Logger:      c.Logger,
 		Params:      c.Params,

@@ -26,6 +26,11 @@ func NewFormatValidation(f string) ValidationDefinition {
 	return &FormatValidationDefinition{Format: f}
 }
 
+// NewPatternValidation creates a definition for a pattern validation.
+func NewPatternValidation(p string) ValidationDefinition {
+	return &PatternValidationDefinition{Pattern: p}
+}
+
 // NewMinimumValidation creates a definition for a minimum value validation.
 func NewMinimumValidation(min int) ValidationDefinition {
 	return &MinimumValidationDefinition{Min: min}

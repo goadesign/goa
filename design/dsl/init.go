@@ -34,6 +34,11 @@ func InitDesign() {
 		Status: 101,
 	}
 
+	Design.DefaultResponses[OK] = &ResponseDefinition{
+		Name:   OK,
+		Status: 200,
+	}
+
 	Design.DefaultResponses[Created] = &ResponseDefinition{
 		Name:   Created,
 		Status: 201,

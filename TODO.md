@@ -21,6 +21,8 @@
 
 ## Enhancements
 
+* Make sure "type overload" works. I.e. Param("foo", Type, func() { Attribute(...) })
+* Add "defaults" action to resources.
 * Documentation: DSL reference, middleware support more examples etc
 * Add examples to DSL including auto-generated examples
 * Praxis JSON to goa metadata generator

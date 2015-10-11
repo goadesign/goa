@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"bitbucket.org/pkg/inflect"
-
 	"github.com/raphael/goa/codegen"
 	"github.com/raphael/goa/design"
 
@@ -17,18 +15,18 @@ import (
 // Generator is the application code generator.
 type Generator struct {
 	*codegen.GoGenerator
-	ContextsWriter     *ContextsWriter
-	HandlersWriter     *HandlersWriter
-	ResourcesWriter    *ResourcesWriter
-	MediaTypesWriter   *MediaTypesWriter
-	UserTypesWriter    *UserTypesWriter
-	contextsFilename   string
-	handlersFilename   string
-	resourcesFilename  string
-	mediaTypesFilename string
-	userTypesFilename  string
-	canDeleteOutputDir bool
-	genfiles           []string
+	ContextsWriter      *ContextsWriter
+	ControllersWriter   *ControllersWriter
+	ResourcesWriter     *ResourcesWriter
+	MediaTypesWriter    *MediaTypesWriter
+	UserTypesWriter     *UserTypesWriter
+	contextsFilename    string
+	controllersFilename string
+	resourcesFilename   string
+	mediaTypesFilename  string
+	userTypesFilename   string
+	canDeleteOutputDir  bool
+	genfiles            []string
 }
 
 // Generate is the generator entry point called by the meta generator.
@@ -67,7 +65,7 @@ func NewGenerator() (*Generator, error) {
 		return nil, err
 	}
 	ctxFile := filepath.Join(outdir, "contexts.go")
-	hdlFile := filepath.Join(outdir, "handlers.go")
+	ctlFile := filepath.Join(outdir, "controllers.go")
 	resFile := filepath.Join(outdir, "resources.go")
 	mtFile := filepath.Join(outdir, "media_types.go")
 	utFile := filepath.Join(outdir, "user_types.go")
@@ -76,7 +74,7 @@ func NewGenerator() (*Generator, error) {
 	if err != nil {
 		panic(err) // bug
 	}
-	hdlWr, err := NewHandlersWriter(hdlFile)
+	ctlWr, err := NewControllersWriter(ctlFile)
 	if err != nil {
 		panic(err) // bug
 	}
@@ -93,18 +91,18 @@ func NewGenerator() (*Generator, error) {
 		panic(err) // bug
 	}
 	return &Generator{
-		GoGenerator:        codegen.NewGoGenerator(outdir),
-		ContextsWriter:     ctxWr,
-		HandlersWriter:     hdlWr,
-		ResourcesWriter:    resWr,
-		MediaTypesWriter:   mtWr,
-		UserTypesWriter:    utWr,
-		contextsFilename:   ctxFile,
-		handlersFilename:   hdlFile,
-		resourcesFilename:  resFile,
-		mediaTypesFilename: mtFile,
-		userTypesFilename:  utFile,
-		canDeleteOutputDir: canDeleteDir,
+		GoGenerator:         codegen.NewGoGenerator(outdir),
+		ContextsWriter:      ctxWr,
+		ControllersWriter:   ctlWr,
+		ResourcesWriter:     resWr,
+		MediaTypesWriter:    mtWr,
+		UserTypesWriter:     utWr,
+		contextsFilename:    ctxFile,
+		controllersFilename: ctlFile,
+		resourcesFilename:   resFile,
+		mediaTypesFilename:  mtFile,
+		userTypesFilename:   utFile,
+		canDeleteOutputDir:  canDeleteDir,
 	}, nil
 }
 
@@ -126,14 +124,15 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	g.ContextsWriter.WriteHeader(title, TargetPackage, imports)
 	err := api.IterateResources(func(r *design.ResourceDefinition) error {
 		return r.IterateActions(func(a *design.ActionDefinition) error {
-			ctxName := inflect.Camelize(a.Name) + inflect.Camelize(a.Parent.Name) + "Context"
+			ctxName := codegen.Goify(a.Name, true) + codegen.Goify(a.Parent.Name, true) + "Context"
 			ctxData := ContextTemplateData{
 				Name:         ctxName,
 				ResourceName: r.Name,
 				ActionName:   a.Name,
 				Payload:      a.Payload,
-				Params:       r.Params.Merge(a.Params),
+				Params:       r.Params.Merge(a.Params).Merge(api.BaseParams),
 				Headers:      r.Headers.Merge(a.Headers),
+				Routes:       a.Routes,
 				Responses:    MergeResponses(r.Responses, a.Responses),
 				MediaTypes:   api.MediaTypes,
 				Types:        api.Types,
@@ -151,36 +150,38 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		return nil, err
 	}
 
-	title = fmt.Sprintf("%s: Application Handlers", api.Name)
+	title = fmt.Sprintf("%s: Application Controllers", api.Name)
 	imports = []*codegen.ImportSpec{
-		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("github.com/raphael/goa"),
 	}
-	g.HandlersWriter.WriteHeader(title, TargetPackage, imports)
-	var handlersData []*HandlerTemplateData
+	g.ControllersWriter.WriteHeader(title, TargetPackage, imports)
+	var controllersData []*ControllerTemplateData
 	api.IterateResources(func(r *design.ResourceDefinition) error {
-		return r.IterateActions(func(a *design.ActionDefinition) error {
-			if len(a.Routes) > 0 {
-				name := fmt.Sprintf("%s%sHandler", a.FormatName(true), r.FormatName(false, true))
-				context := fmt.Sprintf("%s%sContext", a.FormatName(false), r.FormatName(false, false))
-				handlersData = append(handlersData, &HandlerTemplateData{
-					Resource: r.FormatName(true, true),
-					Action:   a.Name,
-					Verb:     a.Routes[0].Verb,
-					Path:     a.Routes[0].Path,
-					Name:     name,
-					Context:  context,
-				})
+		data := &ControllerTemplateData{Resource: r.FormatName(false, false)}
+		err := r.IterateActions(func(a *design.ActionDefinition) error {
+			context := fmt.Sprintf("%s%sContext", a.FormatName(false), r.FormatName(false, false))
+			action := map[string]interface{}{
+				"Name":    a.FormatName(false),
+				"Routes":  a.Routes,
+				"Context": context,
 			}
+			data.Actions = append(data.Actions, action)
 			return nil
 		})
+		if err != nil {
+			return err
+		}
+		if len(data.Actions) > 0 {
+			controllersData = append(controllersData, data)
+		}
+		return nil
 	})
-	g.genfiles = append(g.genfiles, g.handlersFilename)
-	if err := g.HandlersWriter.Execute(handlersData); err != nil {
+	g.genfiles = append(g.genfiles, g.controllersFilename)
+	if err := g.ControllersWriter.Execute(controllersData); err != nil {
 		g.Cleanup()
 		return nil, err
 	}
-	if err := g.HandlersWriter.FormatCode(); err != nil {
+	if err := g.ControllersWriter.FormatCode(); err != nil {
 		g.Cleanup()
 		return nil, err
 	}
@@ -197,8 +198,14 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		} else {
 			identifier = "application/text"
 		}
-		canoTemplate, canoParams := r.CanonicalPathAndParams()
+		canoTemplate := r.URITemplate()
 		canoTemplate = design.ParamsRegex.ReplaceAllLiteralString(canoTemplate, "%s")
+		var canoParams []string
+		if ca := r.CanonicalAction(); ca != nil {
+			if len(ca.Routes) > 0 {
+				canoParams = ca.Routes[0].Params()
+			}
+		}
 
 		data := ResourceData{
 			Name:              r.FormatName(false, false),

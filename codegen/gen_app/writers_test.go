@@ -326,13 +326,13 @@ var _ = Describe("ContextsWriter", func() {
 	})
 })
 
-var _ = Describe("HandlersWriter", func() {
-	var writer *genapp.HandlersWriter
+var _ = Describe("ControllersWriter", func() {
+	var writer *genapp.ControllersWriter
 	var filename string
 
 	JustBeforeEach(func() {
 		var err error
-		writer, err = genapp.NewHandlersWriter(filename)
+		writer, err = genapp.NewControllersWriter(filename)
 		Ω(err).ShouldNot(HaveOccurred())
 	})
 
@@ -348,30 +348,38 @@ var _ = Describe("HandlersWriter", func() {
 		})
 
 		Context("with data", func() {
-			var actions, verbs, paths, names, contexts []string
+			var actions, verbs, paths, contexts []string
 
-			var data []*genapp.HandlerTemplateData
+			var data []*genapp.ControllerTemplateData
 
 			BeforeEach(func() {
 				actions = nil
 				verbs = nil
 				paths = nil
-				names = nil
 				contexts = nil
 			})
 
 			JustBeforeEach(func() {
-				data = make([]*genapp.HandlerTemplateData, len(actions))
-				for i := 0; i < len(actions); i++ {
-					e := &genapp.HandlerTemplateData{
-						Resource: "bottles",
-						Action:   actions[i],
-						Verb:     verbs[i],
-						Path:     paths[i],
-						Name:     names[i],
-						Context:  contexts[i],
+				d := &genapp.ControllerTemplateData{
+					Resource: "Bottles",
+				}
+				as := make([]map[string]interface{}, len(actions))
+				for i, a := range actions {
+					as[i] = map[string]interface{}{
+						"Name": a,
+						"Routes": []*design.RouteDefinition{
+							&design.RouteDefinition{
+								Verb: verbs[i],
+								Path: paths[i],
+							}},
+						"Context": contexts[i],
 					}
-					data[i] = e
+				}
+				if len(as) > 0 {
+					d.Actions = as
+					data = []*genapp.ControllerTemplateData{d}
+				} else {
+					data = nil
 				}
 			})
 
@@ -386,46 +394,43 @@ var _ = Describe("HandlersWriter", func() {
 				})
 			})
 
-			Context("with a simple handler", func() {
+			Context("with a simple controller", func() {
 				BeforeEach(func() {
 					actions = []string{"list"}
 					verbs = []string{"GET"}
 					paths = []string{"/accounts/:accountID/bottles"}
-					names = []string{"listBottlesHandler"}
 					contexts = []string{"ListBottleContext"}
 				})
 
-				It("writes the handlers code", func() {
+				It("writes the controller code", func() {
 					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
 					Ω(err).ShouldNot(HaveOccurred())
 					written := string(b)
 					Ω(written).ShouldNot(BeEmpty())
-					Ω(written).Should(ContainSubstring(simpleHandler))
-					Ω(written).Should(ContainSubstring(simpleInit))
+					Ω(written).Should(ContainSubstring(simpleController))
+					Ω(written).Should(ContainSubstring(simpleMount))
 				})
 			})
 
-			Context("with multiple handlers", func() {
+			Context("with multiple controllers", func() {
 				BeforeEach(func() {
 					actions = []string{"list", "show"}
 					verbs = []string{"GET", "GET"}
 					paths = []string{"/accounts/:accountID/bottles", "/accounts/:accountID/bottles/:id"}
-					names = []string{"listBottlesHandler", "showBottlesHandler"}
 					contexts = []string{"ListBottleContext", "ShowBottleContext"}
 				})
 
-				It("writes the handlers code", func() {
+				It("writes the controllers code", func() {
 					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
 					Ω(err).ShouldNot(HaveOccurred())
 					written := string(b)
 					Ω(written).ShouldNot(BeEmpty())
-					Ω(written).Should(ContainSubstring(multiHandler1))
-					Ω(written).Should(ContainSubstring(multiHandler2))
-					Ω(written).Should(ContainSubstring(multiInit))
+					Ω(written).Should(ContainSubstring(multiController))
+					Ω(written).Should(ContainSubstring(multiMount))
 				})
 			})
 		})
@@ -781,61 +786,70 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 }
 `
 
-	simpleHandler = `func listBottlesHandler(userHandler interface{}) (goa.Handler, error) {
-	h, ok := userHandler.(func(c *ListBottleContext) error)
-	if !ok {
-		return nil, fmt.Errorf("invalid handler signature for action list bottles, expected 'func(c *ListBottleContext) error'")
-	}
-	return func(c goa.Context) error {
+	simpleController = `type BottlesController interface {
+	list(*ListBottleContext) error
+}
+`
+
+	simpleMount = `func MountBottlesController(app *goa.Application, ctrl BottlesController) {
+	idx := 0
+	var h goa.Handler
+	logger := app.Logger.New("ctrl", "Bottles")
+	logger.Info("mounting")
+
+	h = func(c goa.Context) error {
 		ctx, err := NewListBottleContext(c)
 		if err != nil {
 			return err
 		}
-		return h(ctx)
-	}, nil
-}
-`
-	simpleInit = `func init() {
-	goa.RegisterHandlers(
-		&goa.HandlerFactory{"bottles", "list", "GET", "/accounts/:accountID/bottles", listBottlesHandler},
-	)
-}
-`
-	multiHandler1 = `func listBottlesHandler(userHandler interface{}) (goa.Handler, error) {
-	h, ok := userHandler.(func(c *ListBottleContext) error)
-	if !ok {
-		return nil, fmt.Errorf("invalid handler signature for action list bottles, expected 'func(c *ListBottleContext) error'")
+		return ctrl.list(ctx)
 	}
-	return func(c goa.Context) error {
+	app.Router.Handle("GET", "/accounts/:accountID/bottles", goa.NewHTTPRouterHandle(app, "Bottles", h))
+	idx++
+	logger.Info("handler", "action", idx, "GET", "/accounts/:accountID/bottles")
+
+	logger.Info("mounted")
+}
+`
+
+	multiController = `type BottlesController interface {
+	list(*ListBottleContext) error
+	show(*ShowBottleContext) error
+}
+`
+
+	multiMount = `func MountBottlesController(app *goa.Application, ctrl BottlesController) {
+	idx := 0
+	var h goa.Handler
+	logger := app.Logger.New("ctrl", "Bottles")
+	logger.Info("mounting")
+
+	h = func(c goa.Context) error {
 		ctx, err := NewListBottleContext(c)
 		if err != nil {
 			return err
 		}
-		return h(ctx)
-	}, nil
-}
-`
-	multiHandler2 = `func showBottlesHandler(userHandler interface{}) (goa.Handler, error) {
-	h, ok := userHandler.(func(c *ShowBottleContext) error)
-	if !ok {
-		return nil, fmt.Errorf("invalid handler signature for action show bottles, expected 'func(c *ShowBottleContext) error'")
+		return ctrl.list(ctx)
 	}
-	return func(c goa.Context) error {
+	app.Router.Handle("GET", "/accounts/:accountID/bottles", goa.NewHTTPRouterHandle(app, "Bottles", h))
+	idx++
+	logger.Info("handler", "action", idx, "GET", "/accounts/:accountID/bottles")
+
+	h = func(c goa.Context) error {
 		ctx, err := NewShowBottleContext(c)
 		if err != nil {
 			return err
 		}
-		return h(ctx)
-	}, nil
+		return ctrl.show(ctx)
+	}
+	app.Router.Handle("GET", "/accounts/:accountID/bottles/:id", goa.NewHTTPRouterHandle(app, "Bottles", h))
+	idx++
+	logger.Info("handler", "action", idx, "GET", "/accounts/:accountID/bottles/:id")
+
+	logger.Info("mounted")
 }
 `
-	multiInit = `func init() {
-	goa.RegisterHandlers(
-		&goa.HandlerFactory{"bottles", "list", "GET", "/accounts/:accountID/bottles", listBottlesHandler},
-		&goa.HandlerFactory{"bottles", "show", "GET", "/accounts/:accountID/bottles/:id", showBottlesHandler},
-	)
-}
-`
+
 	stringResource = `type Bottle string`
 
 	simpleResource = `type Bottle struct {

@@ -33,7 +33,7 @@ var _ = Describe("NewGenerator", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(gen).ShouldNot(BeNil())
 			Ω(gen.ContextsWriter).ShouldNot(BeNil())
-			Ω(gen.HandlersWriter).ShouldNot(BeNil())
+			Ω(gen.ControllersWriter).ShouldNot(BeNil())
 			Ω(gen.ResourcesWriter).ShouldNot(BeNil())
 		})
 
@@ -44,7 +44,7 @@ var _ = Describe("NewGenerator", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(gen).ShouldNot(BeNil())
 			Ω(gen.ContextsWriter).ShouldNot(BeNil())
-			Ω(gen.HandlersWriter).ShouldNot(BeNil())
+			Ω(gen.ControllersWriter).ShouldNot(BeNil())
 			Ω(gen.ResourcesWriter).ShouldNot(BeNil())
 		})
 	})
@@ -94,7 +94,7 @@ var _ = Describe("Generate", func() {
 				Ω(len(lines)).Should(BeNumerically(">", 1))
 			}
 			isEmptySource("contexts.go")
-			isEmptySource("handlers.go")
+			isEmptySource("controllers.go")
 			isEmptySource("resources.go")
 			isEmptySource("media_types.go")
 		})
@@ -133,11 +133,11 @@ var _ = Describe("Generate", func() {
 				TypeName:            "id",
 			}
 			res := design.ResourceDefinition{
-				Name:            "Widget",
-				BasePath:        "/widgets",
-				Description:     "Widgetty",
-				MediaType:       "vnd.rightscale.codegen.test.widgets",
-				CanonicalAction: "get",
+				Name:                "Widget",
+				BasePath:            "/widgets",
+				Description:         "Widgetty",
+				MediaType:           "vnd.rightscale.codegen.test.widgets",
+				CanonicalActionName: "get",
 			}
 			get := design.ActionDefinition{
 				Name:        "get",
@@ -172,12 +172,12 @@ var _ = Describe("Generate", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			contextsCode := b.String()
 
-			handlersCodeT, err := template.New("handlers").Parse(handlersCodeTmpl)
+			controllersCodeT, err := template.New("controllers").Parse(controllersCodeTmpl)
 			Ω(err).ShouldNot(HaveOccurred())
 			b.Reset()
-			err = handlersCodeT.Execute(&b, data)
+			err = controllersCodeT.Execute(&b, data)
 			Ω(err).ShouldNot(HaveOccurred())
-			handlersCode := b.String()
+			controllersCode := b.String()
 
 			resourcesCodeT, err := template.New("resources").Parse(resourcesCodeTmpl)
 			Ω(err).ShouldNot(HaveOccurred())
@@ -200,7 +200,7 @@ var _ = Describe("Generate", func() {
 			}
 
 			isSource("contexts.go", contextsCode)
-			isSource("handlers.go", handlersCode)
+			isSource("controllers.go", controllersCode)
 			isSource("resources.go", resourcesCode)
 			isSource("media_types.go", mediaTypesCode)
 		})
@@ -250,8 +250,8 @@ func (c *GetWidgetContext) OK(resp *Id) error {
 }
 `
 
-const handlersCodeTmpl = `//************************************************************************//
-// test api: Application Handlers
+const controllersCodeTmpl = `//************************************************************************//
+// test api: Application Controllers
 //
 // Generated with codegen v0.0.1, command line:
 // $ codegen
@@ -264,29 +264,32 @@ const handlersCodeTmpl = `//****************************************************
 package app
 
 import (
-	"fmt"
-
 	"github.com/raphael/goa"
 )
 
-func init() {
-	goa.RegisterHandlers(
-		&goa.HandlerFactory{"widgets", "get", "GET", "/:id", getWidgetsHandler},
-	)
+type WidgetController interface {
+	Get(*GetWidgetContext) error
 }
 
-func getWidgetsHandler(userHandler interface{}) (goa.Handler, error) {
-	h, ok := userHandler.(func(c *GetWidgetContext) error)
-	if !ok {
-		return nil, fmt.Errorf("invalid handler signature for action get widgets, expected 'func(c *GetWidgetContext) error'")
-	}
-	return func(c goa.Context) error {
+// MountWidgetController "mounts" a Widget resource controller on the given application.
+func MountWidgetController(app *goa.Application, ctrl BottlesController) {
+	idx := 0
+	var h goa.Handler
+	logger := app.Logger.New("ctrl", "Widget")
+	logger.Info("mounting")
+
+	h = func(c goa.Context) error {
 		ctx, err := NewGetWidgetContext(c)
 		if err != nil {
 			return err
 		}
-		return h(ctx)
-	}, nil
+		return ctrl.Get(ctx)
+	}
+	app.Router.Handle("GET", "/:id", goa.ActionHandle(h))
+	idx++
+	logger.Info("handler", "action", idx, "GET", "/:id")
+
+	logger.Info("mounted")
 }
 `
 

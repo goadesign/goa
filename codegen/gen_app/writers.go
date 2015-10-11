@@ -5,7 +5,6 @@ import (
 	"strings"
 	"text/template"
 
-	"bitbucket.org/pkg/inflect"
 	"github.com/raphael/goa/codegen"
 	"github.com/raphael/goa/design"
 )
@@ -24,13 +23,13 @@ type (
 		NewPayloadTmpl *template.Template
 	}
 
-	// HandlersWriter generate code for a goa application handlers.
+	// ControllersWriter generate code for a goa application handlers.
 	// Handlers receive a HTTP request, create the action context, call the action code and send the
 	// resulting HTTP response.
-	HandlersWriter struct {
+	ControllersWriter struct {
 		*codegen.GoGenerator
-		InitTmpl    *template.Template
-		HandlerTmpl *template.Template
+		CtrlTmpl  *template.Template
+		MountTmpl *template.Template
 	}
 
 	// ResourcesWriter generate code for a goa application resources.
@@ -64,19 +63,16 @@ type (
 		Params       *design.AttributeDefinition
 		Payload      *design.UserTypeDefinition
 		Headers      *design.AttributeDefinition
+		Routes       []*design.RouteDefinition
 		Responses    map[string]*design.ResponseDefinition
 		MediaTypes   map[string]*design.MediaTypeDefinition
 		Types        map[string]*design.UserTypeDefinition
 	}
 
-	// HandlerTemplateData contains the information required to generate an action handler.
-	HandlerTemplateData struct {
-		Resource string // Lower case plural resource name, e.g. "bottles"
-		Action   string // Lower case action name, e.g. "list"
-		Verb     string // HTTP method, e.g. "GET"
-		Path     string // Action request path, e.g. "/accounts/:accountID/bottles"
-		Name     string // Handler function name, e.g. "listBottlesHandler"
-		Context  string // Name of corresponding context data structure e.g. "ListBottleContext"
+	// ControllerTemplateData contains the information required to generate an action handler.
+	ControllerTemplateData struct {
+		Resource string                   // Lower case plural resource name, e.g. "bottles"
+		Actions  []map[string]interface{} // Array of actions, each action has keys "Name", "Routes" and "Context"
 	}
 
 	// ResourceData contains the information required to generate the resource GoGenerator
@@ -90,12 +86,45 @@ type (
 	}
 )
 
+// IsPathParam returns true if the given parameter name corresponds to a path parameter for all
+// the context action routes. Such parameter is required but does not need to be validated as
+// httprouter takes care of that.
+func (c *ContextTemplateData) IsPathParam(param string) bool {
+	params := c.Params
+	pp := false
+	if params.Type.IsObject() {
+		for _, r := range c.Routes {
+			pp = false
+			for _, p := range r.Params() {
+				if p == param {
+					pp = true
+					break
+				}
+			}
+			if !pp {
+				break
+			}
+		}
+	}
+	return pp
+}
+
+// MustValidate returns true if code that checks for the presence of the given param must be
+// generated.
+func (c *ContextTemplateData) MustValidate(name string) bool {
+	return c.Params.IsRequired(name) && !c.IsPathParam(name)
+}
+
+// MustSetHas returns true if the "Has" context field for the given parameter must be generated.
+func (c *ContextTemplateData) MustSetHas(name string) bool {
+	return !c.Params.IsRequired(name) && !c.IsPathParam(name)
+}
+
 // NewContextsWriter returns a contexts code writer.
 // Contexts provide the glue between the underlying request data and the user controller.
 func NewContextsWriter(filename string) (*ContextsWriter, error) {
 	cw := codegen.NewGoGenerator(filename)
 	funcMap := cw.FuncMap
-	funcMap["camelize"] = inflect.Camelize
 	funcMap["gotyperef"] = codegen.GoTypeRef
 	funcMap["gotypedef"] = codegen.GoTypeDef
 	funcMap["goify"] = codegen.Goify
@@ -166,35 +195,35 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 	return nil
 }
 
-// NewHandlersWriter returns a handlers code writer.
+// NewControllersWriter returns a handlers code writer.
 // Handlers provide the glue between the underlying request data and the user controller.
-func NewHandlersWriter(filename string) (*HandlersWriter, error) {
+func NewControllersWriter(filename string) (*ControllersWriter, error) {
 	cw := codegen.NewGoGenerator(filename)
-	initTmpl, err := template.New("init").Funcs(cw.FuncMap).Parse(initT)
+	funcMap := cw.FuncMap
+	funcMap["add"] = func(a, b int) int { return a + b }
+	ctrlTmpl, err := template.New("controller").Funcs(funcMap).Parse(ctrlT)
 	if err != nil {
 		return nil, err
 	}
-	handlerTmpl, err := template.New("handler").Funcs(cw.FuncMap).Parse(handlerT)
+	mountTmpl, err := template.New("mount").Funcs(funcMap).Parse(mountT)
 	if err != nil {
 		return nil, err
 	}
-	w := HandlersWriter{
+	w := ControllersWriter{
 		GoGenerator: cw,
-		HandlerTmpl: handlerTmpl,
-		InitTmpl:    initTmpl,
+		CtrlTmpl:    ctrlTmpl,
+		MountTmpl:   mountTmpl,
 	}
 	return &w, nil
 }
 
 // Execute writes the handlers GoGenerator
-func (w *HandlersWriter) Execute(data []*HandlerTemplateData) error {
-	if len(data) > 0 {
-		if err := w.InitTmpl.Execute(w, data); err != nil {
+func (w *ControllersWriter) Execute(data []*ControllerTemplateData) error {
+	for _, d := range data {
+		if err := w.CtrlTmpl.Execute(w, d); err != nil {
 			return err
 		}
-	}
-	for _, h := range data {
-		if err := w.HandlerTmpl.Execute(w, h); err != nil {
+		if err := w.MountTmpl.Execute(w, d); err != nil {
 			return err
 		}
 	}
@@ -295,54 +324,59 @@ const (
 	ctxT = `// {{.Name}} provides the {{.ResourceName}} {{.ActionName}} action context.
 type {{.Name}} struct {
 	goa.Context
-{{if .Params}}{{range $name, $att := .Params.Type.ToObject}}	{{camelize $name}} {{gotyperef .Type 0}}
-{{end}}{{end}}{{if .Payload}}	Payload {{gotyperef .Payload 0}}
+{{if .Params}}{{$ctx := .}}{{range $name, $att := .Params.Type.ToObject}}	{{goify $name true}} {{gotyperef .Type 0}}
+{{if $ctx.MustSetHas $name}}
+	Has{{goify $name true}} bool
+{{end}}{{end}}{{end}}{{if .Payload}}
+	Payload {{gotyperef .Payload 0}}
 {{end}}}
 `
 	// coerceT generates the code that coerces the generic deserialized
 	// data to the actual type.
 	// template input: map[string]interface{} as returned by newCoerceData
-	coerceT = `{{if eq .Attribute.Type.Kind 1}}{{/* BooleanType */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.ParseBool(raw{{camelize .Name}}); err2 == nil {
+	coerceT = `{{if eq .Attribute.Type.Kind 1}}{{/* BooleanType */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.ParseBool(raw{{goify .Name true}}); err2 == nil {
 {{tabs .Depth}}	{{.Pkg}} = {{.VarName}}
 {{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{camelize .Name}}, "boolean", err2)
+{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "boolean", err2)
 {{tabs .Depth}}}
-{{end}}{{if eq .Attribute.Type.Kind 2}}{{/* IntegerType */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.Atoi(raw{{camelize .Name}}); err2 == nil {
+{{end}}{{if eq .Attribute.Type.Kind 2}}{{/* IntegerType */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.Atoi(raw{{goify .Name true}}); err2 == nil {
 {{tabs .Depth}}	{{.Pkg}} = int({{.VarName}})
 {{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{camelize .Name}}, "integer", err2)
+{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "integer", err2)
 {{tabs .Depth}}}
-{{end}}{{if eq .Attribute.Type.Kind 3}}{{/* NumberType */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.ParseFloat(raw{{camelize .Name}}, 64); err2 == nil {
+{{end}}{{if eq .Attribute.Type.Kind 3}}{{/* NumberType */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.ParseFloat(raw{{goify .Name true}}, 64); err2 == nil {
 {{tabs .Depth}}	{{.Pkg}} = {{.VarName}}
 {{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{camelize .Name}}, "number", err2)
+{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "number", err2)
 {{tabs .Depth}}}
-{{end}}{{if eq .Attribute.Type.Kind 4}}{{/* StringType */}}{{tabs .Depth}}{{.Pkg}} = raw{{camelize .Name}}
-{{end}}{{if eq .Attribute.Type.Kind 5}}{{/* ArrayType */}}{{tabs .Depth}}elems{{camelize .Name}} := strings.Split(raw{{camelize .Name}}, ",")
-{{if eq (arrayAttribute .Attribute).Type.Kind 4}}{{tabs .Depth}}{{.Pkg}} = elems{{camelize .Name}}
-{{else}}{{tabs .Depth}}elems{{camelize .Name}}2 := make({{gotyperef .Attribute.Type .Depth}}, len(elems{{camelize .Name}}))
-{{tabs .Depth}}for i, rawElem := range elems{{camelize .Name}} {
-{{template "Coerce" (newCoerceData "elem" (arrayAttribute .Attribute) (printf "elems%s2[i]" (camelize .Name)) (add .Depth 1))}}{{tabs .Depth}}}
-{{tabs .Depth}}{{.Pkg}} = elems{{camelize .Name}}
+{{end}}{{if eq .Attribute.Type.Kind 4}}{{/* StringType */}}{{tabs .Depth}}{{.Pkg}} = raw{{goify .Name true}}
+{{end}}{{if eq .Attribute.Type.Kind 5}}{{/* ArrayType */}}{{tabs .Depth}}elems{{goify .Name true}} := strings.Split(raw{{goify .Name true}}, ",")
+{{if eq (arrayAttribute .Attribute).Type.Kind 4}}{{tabs .Depth}}{{.Pkg}} = elems{{goify .Name true}}
+{{else}}{{tabs .Depth}}elems{{goify .Name true}}2 := make({{gotyperef .Attribute.Type .Depth}}, len(elems{{goify .Name true}}))
+{{tabs .Depth}}for i, rawElem := range elems{{goify .Name true}} {
+{{template "Coerce" (newCoerceData "elem" (arrayAttribute .Attribute) (printf "elems%s2[i]" (goify .Name true)) (add .Depth 1))}}{{tabs .Depth}}}
+{{tabs .Depth}}{{.Pkg}} = elems{{goify .Name true}}2
 {{end}}{{end}}`
 
 	// ctxNewT generates the code for the context factory method.
 	// template input: *ContextTemplateData
 	ctxNewT = `{{define "Coerce"}}` + coerceT + `{{end}}` + `
-// New{{camelize .Name}} parses the incoming request URL and body, performs validations and creates the
+// New{{goify .Name true}} parses the incoming request URL and body, performs validations and creates the
 // context used by the {{.ResourceName}} controller {{.ActionName}} action.
-func New{{camelize .Name}}(c goa.Context) (*{{.Name}}, error) {
+func New{{.Name}}(c goa.Context) (*{{.Name}}, error) {
 	var err error
 	ctx := {{.Name}}{Context: c}
 {{if .Headers}}{{$headers := .Headers}}{{range $name, $_ := $headers.Type.ToObject}}{{if ($headers.IsRequired $name)}}	if c.Header().Get("{{$name}}") == "" {
 		err = goa.MissingHeaderError("{{$name}}", err)
 	}{{end}}{{end}}
-{{end}}{{if.Params}}{{$params := .Params}}{{range $name, $att := $params.Type.ToObject}}	raw{{camelize $name}}, {{if ($params.IsRequired $name)}}ok{{else}}_{{end}} := c.Get("{{$name}}")
-{{if ($params.IsRequired $name)}}	if !ok {
+{{end}}{{if.Params}}{{$ctx := .}}{{range $name, $att := .Params.Type.ToObject}}	raw{{goify $name true}}, ok := c.Get("{{$name}}")
+{{if ($ctx.MustValidate $name)}}	if !ok {
 		err = goa.MissingParamError("{{$name}}", err)
 	} else {
-{{end}}{{$depth := or (and ($params.IsRequired $name) 2) 1}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (camelize (goify $name true))) $depth)}}{{if ($params.IsRequired $name)}}	}
-{{end}}{{validationChecker $att $name}}{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	if payload := c.Payload(); payload != nil {
+{{else}}	if ok {
+{{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (goify $name true)) 2)}}{{if $ctx.MustSetHas $name}}		ctx.Has{{goify $name true}} = true
+{{end}}	}
+{{validationChecker $att $name}}{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	if payload := c.Payload(); payload != nil {
 		p, err := New{{gotypename .Payload 0}}(payload)
 		if err != nil {
 			return nil, err
@@ -356,15 +390,16 @@ func New{{camelize .Name}}(c goa.Context) (*{{.Name}}, error) {
 	// ctxRespT generates response helper methods GoGenerator
 	// template input: *ContextTemplateData
 	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{.FormatName false }} sends a HTTP response with status code {{.Status}}.
-func (c *{{$ctx.Name}}) {{goify .Name true}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp *{{gotypename $mt 0}}{{if gt (len $mt.Views) 1}}, view {{gotypename $mt 0}}ViewEnum{{end}}{{end}}) error {
-{{if $mt}}	var r interface{}
-{{if gt (len $mt.Views) 1}}{{range $view := $mt.Views}}	if view == {{gotypename $mt 0}}{{goify .Name true}}View {
-	{{mediaTypeMarshaler $mt "" "resp" "r" $view}}
+	func (c *{{$ctx.Name}}) {{goify .Name true}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp *{{gotypename $mt 0}}{{if gt (len $mt.Views) 1}}, view {{gotypename $mt 0}}ViewEnum{{end}}{{end}}) error {
+	{{if $mt}}	var r interface{}
+	{{if gt (len $mt.Views) 1}}{{range $mt.Views}}	if view == {{gotypename $mt 0}}{{goify .Name true}}View {
+		{{mediaTypeMarshaler $mt "" "resp" "r" .Name}}
+		}
+	{{end}}{{else}}{{mediaTypeMarshaler $mt "" "resp" "r" ""}}
+	{{end}}	return c.JSON({{.Status}}, r){{else}}return c.Respond({{.Status}}, nil){{end}}
 	}
-{{end}}{{else}}{{mediaTypeMarshaler $mt "" "resp" "r" ""}}
-{{end}}	return c.JSON({{.Status}}, r){{else}}return c.Respond({{.Status}}, nil){{end}}
-}
-{{end}}`
+	{{end}}`
+
 	// payloadT generates the payload type definition GoGenerator
 	// template input: *ContextTemplateData
 	payloadT = `{{$payload := .Payload}}// {{gotypename .Payload 0}} is the {{.ResourceName}} {{.ActionName}} action payload.
@@ -383,30 +418,35 @@ func New{{gotypename .Payload 0}}(raw interface{}) ({{gotyperef .Payload 0}}, er
 }
 `
 
-	// initT generates the package init function which registers all
-	// handlers with goa.
-	// template input: *HandlerTemplateData
-	initT = `func init() {
-	goa.RegisterHandlers(
-{{range .}}		&goa.HandlerFactory{"{{.Resource}}", "{{.Action}}", "{{.Verb}}", "{{.Path}}", {{.Name}}},
-{{end}}	)
-}
+	// ctrlT generates the controller interface for a given resource.
+	// template input: *ControllerTemplateData
+	ctrlT = `type {{.Resource}}Controller interface {
+{{range .Actions}}	{{.Name}}(*{{.Context}}) error
+{{end}}}
 `
-	// handlerT generates the code for an action handler.
-	// template input: *HandlerTemplateData
-	handlerT = `
-func {{.Name}}(userHandler interface{}) (goa.Handler, error) {
-	h, ok := userHandler.(func(c *{{.Context}}) error)
-	if !ok {
-		return nil, fmt.Errorf("invalid handler signature for action {{.Action}} {{.Resource}}, expected 'func(c *{{.Context}}) error'")
-	}
-	return func(c goa.Context) error {
+
+	// mountT generates the code for a resource "Mount" function.
+	// template input: *ControllerTemplateData
+	mountT = `
+// Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given application.
+func Mount{{.Resource}}Controller(app *goa.Application, ctrl {{.Resource}}Controller) {
+	idx := 0
+	var h goa.Handler
+	logger := app.Logger.New("ctrl", "{{.Resource}}")
+	logger.Info("mounting")
+{{$res := .Resource}}{{range .Actions}}
+	h = func(c goa.Context) error {
 		ctx, err := New{{.Context}}(c)
 		if err != nil {
 			return err
 		}
-		return h(ctx)
-	}, nil
+		return ctrl.{{.Name}}(ctx)
+	}
+{{range .Routes}}	app.Router.Handle("{{.Verb}}", "{{.FullPath}}", goa.NewHTTPRouterHandle(app, "{{$res}}", h))
+	idx++
+	logger.Info("handler", "action", idx, "{{.Verb}}", "{{.FullPath}}")
+{{end}}{{end}}
+	logger.Info("mounted")
 }
 `
 

@@ -33,6 +33,9 @@ type (
 		// ToObject returns the underlying object if any (i.e. if IsObject returns true),
 		// nil otherwise.
 		ToObject() Object
+		// ToArray returns the underlying array if any (i.e. if IsArray returns true),
+		// nil otherwise.
+		ToArray() *Array
 		// IsCompatible checks whether val has a Go type that is
 		// compatible with the data type.
 		IsCompatible(val interface{}) bool
@@ -82,6 +85,8 @@ type (
 		Links map[string]*LinkDefinition
 		// Views list the supported views indexed by name.
 		Views map[string]*ViewDefinition
+		// Resource this media type is the canonical representation for if any
+		Resource *ResourceDefinition
 	}
 )
 
@@ -148,6 +153,9 @@ func (p Primitive) IsArray() bool { return false }
 // ToObject returns nil.
 func (p Primitive) ToObject() Object { return nil }
 
+// ToArray returns nil.
+func (p Primitive) ToArray() *Array { return nil }
+
 // IsCompatible returns true if val is compatible with p.
 func (p Primitive) IsCompatible(val interface{}) (ok bool) {
 	switch p {
@@ -202,7 +210,12 @@ func (p Primitive) IsCompatible(val interface{}) (ok bool) {
 func (a *Array) Kind() Kind { return ArrayKind }
 
 // Name returns the type name.
-func (a *Array) Name() string { return fmt.Sprintf("array of %s", a.ElemType.Type.Name()) }
+func (a *Array) Name() string {
+	if a.ElemType != nil && a.ElemType.Type != nil {
+		return fmt.Sprintf("array of %s", a.ElemType.Type.Name())
+	}
+	return fmt.Sprintf("untyped array")
+}
 
 // IsObject returns false.
 func (a *Array) IsObject() bool { return false }
@@ -212,6 +225,9 @@ func (a *Array) IsArray() bool { return true }
 
 // ToObject returns nil.
 func (a *Array) ToObject() Object { return nil }
+
+// ToArray returns a.
+func (a *Array) ToArray() *Array { return a }
 
 // IsCompatible returns true if val is compatible with p.
 func (a *Array) IsCompatible(val interface{}) bool {
@@ -233,6 +249,9 @@ func (o Object) IsArray() bool { return false }
 
 // ToObject returns the underlying object.
 func (o Object) ToObject() Object { return o }
+
+// ToArray returns nil.
+func (o Object) ToArray() *Array { return nil }
 
 // IsCompatible returns true if val is compatible with p.
 func (o Object) IsCompatible(val interface{}) bool {
@@ -264,6 +283,9 @@ func (u *UserTypeDefinition) IsArray() bool { return u.Type.IsArray() }
 
 // ToObject calls ToObject on the user type underlying data type.
 func (u *UserTypeDefinition) ToObject() Object { return u.Type.ToObject() }
+
+// ToArray calls ToArray on the user type underlying data type.
+func (u *UserTypeDefinition) ToArray() *Array { return u.Type.ToArray() }
 
 // IsCompatible returns true if val is compatible with p.
 func (u *UserTypeDefinition) IsCompatible(val interface{}) bool {

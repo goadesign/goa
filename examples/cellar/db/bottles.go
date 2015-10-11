@@ -16,8 +16,8 @@ func BottleHref(account, id int) string {
 
 // Initialize "database" with dummy data
 func init() {
-	account := &app.Account{ID: 1}
-	account2 := &app.Account{ID: 2}
+	account := &app.ExampleAccountMedia{ID: 1}
+	account2 := &app.ExampleAccountMedia{ID: 2}
 	data = map[int][]*app.Bottle{
 		1: []*app.Bottle{
 			&app.Bottle{

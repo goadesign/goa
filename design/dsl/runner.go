@@ -60,16 +60,17 @@ func RunDSL() error {
 	for _, r := range Design.Resources {
 		executeDSL(r.DSL, r)
 	}
-	if Errors == nil {
-		// This is a little bit puzzling I know but casting the nil
-		// Errors slice to the error interface ends up in a value
-		// that is not the nil error interface so a naive
-		// "if err != nil" in the caller would match even if Errors
-		// was nil (iow the zero value of MultiError is not the zero
-		// value of error).
-		return nil
+	// Second pass to do final merges with defaults for example.
+	for _, r := range Design.Resources {
+		finalizeResource(r)
 	}
-	return Errors
+	if Errors != nil {
+		return Errors
+	}
+	if err := Design.Validate(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Current evaluation context, i.e. object being currently built by DSL
@@ -108,6 +109,25 @@ func executeDSL(dsl func(), ctx DSLDefinition) bool {
 	dsl()
 	ctxStack = ctxStack[:len(ctxStack)-1]
 	return len(Errors) <= initCount
+}
+
+// finalizeResource makes the final pass at the resource DSL. This is needed so that the order
+// of DSL function calls is irrelevant. For example a resource response may be defined after an
+// action refers to it.
+func finalizeResource(r *ResourceDefinition) {
+	for _, a := range r.Actions {
+		for name, resp := range a.Responses {
+			if pr, ok := a.Parent.Responses[name]; ok {
+				resp.Merge(pr)
+			}
+			if ar, ok := Design.Responses[name]; ok {
+				resp.Merge(ar)
+			}
+			if dr, ok := Design.DefaultResponses[name]; ok {
+				resp.Merge(dr)
+			}
+		}
+	}
 }
 
 // incompatibleDSL should be called by DSL functions when they are

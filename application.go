@@ -13,12 +13,11 @@ type (
 	// Application consists of a set of controllers.
 	// A controller implements a resource action.
 	Application struct {
-		log.Logger                          // Application logger
-		Name         string                 // Application name
-		Controllers  map[string]*Controller // Controllers indexed by resource name
-		ErrorHandler ErrorHandler           // Application global error handler
-		Middleware   []Middleware           // Middleware chain
-		router       *httprouter.Router     // Application router
+		log.Logger                      // Application logger
+		Name         string             // Application name
+		ErrorHandler ErrorHandler       // Application global error handler
+		Middleware   []Middleware       // Middleware chain
+		Router       *httprouter.Router // Application router
 	}
 
 	// ErrorHandler handles errors returned by action handlers and middleware.
@@ -26,7 +25,7 @@ type (
 )
 
 var (
-	// Log is the global logger. Configure it by setting its handler.
+	// Log is the global logger. Configure it by setting its handler prior to calling New.
 	// See https://godoc.org/github.com/inconshreveable/log15
 	Log log.Logger
 )
@@ -42,36 +41,9 @@ func New(name string) *Application {
 	return &Application{
 		Logger:       Log.New("app", name),
 		Name:         name,
-		Controllers:  make(map[string]*Controller),
 		ErrorHandler: DefaultErrorHandler,
-		router:       httprouter.New(),
+		Router:       httprouter.New(),
 	}
-}
-
-// Mount adds the given controller to the application.
-// This consists of binding the controller user handlers to the generated handlers that get called
-// by the HTTP router.
-func (a *Application) Mount(c *Controller) {
-	c.Logger = a.Logger.New("ctl", c.Resource)
-	c.Info("mouting")
-	if c.Handlers == nil {
-		Fatalf("controller has no handlers, use SetHandlers to register them")
-	}
-	for k, u := range c.Handlers {
-		id := handlerID(c.Resource, k)
-		h, ok := handlers[id]
-		if !ok {
-			Fatalf("unknown %s action %s", c.Resource, k)
-		}
-		handler, err := h.HandlerF(u)
-		if err != nil {
-			Fatalf(err.Error())
-		}
-		a.router.Handle(h.Verb, h.Path, c.actionHandle(handler))
-		c.Info("handler", "action", k, h.Verb, h.Path)
-	}
-	c.Info("mounted")
-	c.Application = a
 }
 
 // Use adds a middleware to the middleware chain.
@@ -87,7 +59,7 @@ func (a *Application) Use(middleware interface{}) {
 // Run starts the application loop and sets up a listener on the given host/port
 func (a *Application) Run(addr string) {
 	a.Info("listen", "addr", addr)
-	http.ListenAndServe(addr, a.router)
+	http.ListenAndServe(addr, a.Router)
 }
 
 // SetErrorHandler defines an application wide error handler.
@@ -99,9 +71,8 @@ func (a *Application) SetErrorHandler(handler ErrorHandler) {
 
 // DefaultErrorHandler returns a 400 response with the error message as body.
 func DefaultErrorHandler(c Context, e error) {
-	if err := c.Respond(400, []byte(e.Error())); err != nil {
+	if err := c.Respond(500, []byte(e.Error())); err != nil {
 		Log.Error("failed to send default error handler response", "error", err)
-		c.ResponseWriter().WriteHeader(500)
 	}
 }
 

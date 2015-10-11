@@ -35,6 +35,11 @@ var AccountMediaType = MediaType("application/vnd.goa.example.account", func() {
 		Attribute("created_at")
 		Attribute("created_by")
 	})
+
+	View("link", func() {
+		Attribute("href")
+		Attribute("name")
+	})
 })
 
 // BottleMediaType is the bottle resource media type.

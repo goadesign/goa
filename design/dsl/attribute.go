@@ -1,6 +1,7 @@
 package dsl
 
 import (
+	"regexp"
 	"strings"
 
 	. "github.com/raphael/goa/design"
@@ -178,6 +179,22 @@ func Format(f string) {
 					f, strings.Join(SupportedValidationFormats, ", "))
 			} else {
 				a.Validations = append(a.Validations, NewFormatValidation(f))
+			}
+		}
+	}
+}
+
+// Pattern sets the pattern (regexp) for an attribute.
+func Pattern(p string) {
+	if a, ok := attributeDefinition(true); ok {
+		if a.Type != nil && a.Type.Kind() != StringKind {
+			incompatibleAttributeType("pattern", a.Type.Name(), "a string")
+		} else {
+			_, err := regexp.Compile(p)
+			if err != nil {
+				ReportError("invalid pattern %#v, %s", p, err)
+			} else {
+				a.Validations = append(a.Validations, NewPatternValidation(p))
 			}
 		}
 	}

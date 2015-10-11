@@ -73,6 +73,11 @@ const (
 	// definition.
 	ErrInvalidFormat
 
+	// ErrInvalidPattern is the error produced by the generated code when
+	// a value does not match the regular expression specified in the
+	// attribute definition.
+	ErrInvalidPattern
+
 	// ErrInvalidRange is the error produced by the generated code when
 	// a value is less than the minimum specified in the design definition
 	// or more than the maximum.
@@ -211,6 +216,17 @@ func InvalidFormatError(ctx, target string, format Format, formatError, err erro
 		Kind: ErrInvalidFormat,
 		Mesg: fmt.Sprintf("%s must be formatted as a %s but got value %#v, %s",
 			ctx, format, target, formatError.Error()),
+	}
+	return ReportError(err, &terr)
+}
+
+// InvalidPatternError appends a typed error of kind ErrInvalidPattern to err and
+// returns it.
+func InvalidPatternError(ctx, target string, pattern string, err error) error {
+	terr := TypedError{
+		Kind: ErrInvalidPattern,
+		Mesg: fmt.Sprintf("%s must be match the regexp %#v but got value %#v",
+			ctx, pattern, target),
 	}
 	return ReportError(err, &terr)
 }

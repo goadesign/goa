@@ -9,10 +9,11 @@ import (
 )
 
 var (
-	enumValT   *template.Template
-	formatValT *template.Template
-	minMaxValT *template.Template
-	lengthValT *template.Template
+	enumValT    *template.Template
+	formatValT  *template.Template
+	patternValT *template.Template
+	minMaxValT  *template.Template
+	lengthValT  *template.Template
 )
 
 //  init instantiates the templates.
@@ -30,6 +31,9 @@ func init() {
 		panic(err)
 	}
 	if formatValT, err = template.New("format").Funcs(fm).Parse(formatValTmpl); err != nil {
+		panic(err)
+	}
+	if patternValT, err = template.New("pattern").Funcs(fm).Parse(patternValTmpl); err != nil {
 		panic(err)
 	}
 	if minMaxValT, err = template.New("minMax").Funcs(fm).Parse(minMaxValTmpl); err != nil {
@@ -67,6 +71,9 @@ func validationCheckerR(att *design.AttributeDefinition, context, target string,
 		case *design.FormatValidationDefinition:
 			data["format"] = actual.Format
 			res += runTemplate(formatValT, data)
+		case *design.PatternValidationDefinition:
+			data["pattern"] = actual.Pattern
+			res += runTemplate(patternValT, data)
 		case *design.MinimumValidationDefinition:
 			data["min"] = actual.Min
 			delete(data, "max")
@@ -133,7 +140,11 @@ const (
 {{tabs .depth}}	err = goa.InvalidEnumValueError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{slice .values}}, err)
 {{tabs .depth}}}`
 
-	formatValTmpl = `{{tabs .depth}}if err2 := goa.ValidateFormat({{constant .format}}, {{.target}}); err2 != nil {
+	formatValTmpl = `{{tabs .depth}}if ok := goa.ValidatePattern({{.pattern}}, {{.target}}); !ok {
+{{tabs .depth}}		err = goa.InvalidPatternError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{.pattern}}, err)
+{{tabs .depth}}}`
+
+	patternValTmpl = `{{tabs .depth}}if err2 := goa.ValidateFormat({{constant .format}}, {{.target}}); err2 != nil {
 {{tabs .depth}}		err = goa.InvalidFormatError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{constant .format}}, err2, err)
 {{tabs .depth}}}`
 

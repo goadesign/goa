@@ -98,6 +98,39 @@ var _ = Describe("Validation", func() {
 			})
 		})
 
+		Context("with a valid pattern validation", func() {
+			BeforeEach(func() {
+				dsl = func() {
+					Attribute(attName, String, func() {
+						Pattern("^foo$")
+					})
+				}
+			})
+
+			It("records the validation", func() {
+				Ω(Errors).ShouldNot(HaveOccurred())
+				Ω(att.Validations).Should(HaveLen(1))
+				v := att.Validations[0]
+				Ω(v).Should(BeAssignableToTypeOf(&PatternValidationDefinition{}))
+				expected := &PatternValidationDefinition{Pattern: "^foo$"}
+				Ω(v.(*PatternValidationDefinition)).Should(Equal(expected))
+			})
+		})
+
+		Context("with an invalid pattern validation", func() {
+			BeforeEach(func() {
+				dsl = func() {
+					Attribute(attName, String, func() {
+						Pattern("[invalid")
+					})
+				}
+			})
+
+			It("produces an error", func() {
+				Ω(Errors).Should(HaveOccurred())
+			})
+		})
+
 		Context("with an invalid format validation type", func() {
 			BeforeEach(func() {
 				dsl = func() {

@@ -9,7 +9,7 @@ var _ = Resource("account", func() {
 
 	MediaType(AccountMediaType)
 	BasePath("/accounts")
-	CanonicalAction("show")
+	CanonicalActionName("show")
 	Trait("Authenticated")
 
 	Action("show", func() {
@@ -70,8 +70,8 @@ var _ = Resource("bottle", func() {
 
 	MediaType(BottleMediaType)
 	BasePath("bottles")
-	Parent("accounts")
-	CanonicalAction("show")
+	Parent("account")
+	CanonicalActionName("show")
 	Trait("Authenticated")
 
 	Action("list", func() {

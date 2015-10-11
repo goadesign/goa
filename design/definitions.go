@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"sort"
 
+	"github.com/julienschmidt/httprouter"
+
 	"bitbucket.org/pkg/inflect"
 )
 
@@ -14,7 +16,7 @@ var (
 	Design *APIDefinition
 
 	// ParamsRegex is the regular expression used to capture path parameters.
-	ParamsRegex = regexp.MustCompile("/:([^/]*)/")
+	ParamsRegex = regexp.MustCompile("/(:|\\*)([a-zA-Z0-9_]+)")
 )
 
 type (
@@ -54,10 +56,6 @@ type (
 		MediaTypes map[string]*MediaTypeDefinition
 		// dsl contains the DSL used to create this definition if any.
 		DSL func()
-		// saved contains a copy of the API definition pre DSL execution.
-		// This copy gets updated each time a top DSL function is
-		// executed. see dsl.RunDSL.
-		saved *APIDefinition
 	}
 
 	// ResourceDefinition describes a REST resource.
@@ -83,7 +81,7 @@ type (
 		// Exposed resource actions indexed by name
 		Actions map[string]*ActionDefinition
 		// Action with canonical resource path
-		CanonicalAction string
+		CanonicalActionName string
 		// Map of response definitions that apply to all actions indexed by name.
 		Responses map[string]*ResponseDefinition
 		// Path and query string parameters that apply to all actions.
@@ -164,11 +162,11 @@ type (
 	LinkDefinition struct {
 		// Link name
 		Name string
-		// Media type used to render link if not the one associated
-		// with the parent media type attribute with name Name	.
-		MediaType *MediaTypeDefinition
 		// View used to render link if not "link"
 		View string
+		// URITemplate is the RFC6570 URI template of the link Href.
+		URITemplate string
+
 		// Parent media Type
 		Parent *MediaTypeDefinition
 	}
@@ -200,6 +198,8 @@ type (
 		Verb string
 		// Path is the URL path e.g. "/tasks/:id"
 		Path string
+		// Parent is the action this route applies to.
+		Parent *ActionDefinition
 	}
 
 	// ValidationDefinition is the common interface for all validation data structures.
@@ -218,6 +218,12 @@ type (
 	// http://json-schema.org/latest/json-schema-validation.html#anchor104.
 	FormatValidationDefinition struct {
 		Format string
+	}
+
+	// PatternValidationDefinition represents a pattern validation as described at
+	// http://json-schema.org/latest/json-schema-validation.html#anchor33
+	PatternValidationDefinition struct {
+		Pattern string
 	}
 
 	// MinimumValidationDefinition represents an minimum value validation as described at
@@ -371,36 +377,52 @@ func (r *ResourceDefinition) FormatName(snake, plural bool) string {
 	return format(r.Name, &snake, &plural)
 }
 
-// CanonicalPathAndParams computes the canonical path and parameters from the canonical action and
-// the parents.
-// It returns the empty string and nil if the resource or any of its parents has no canonical
-// action.
-func (r *ResourceDefinition) CanonicalPathAndParams() (path string, params []string) {
-	if r.CanonicalAction == "" {
-		return "", nil
+// CanonicalAction returns the canonical action of the resource if any.
+// The canonical action is used to compute hrefs to resources.
+func (r *ResourceDefinition) CanonicalAction() *ActionDefinition {
+	name := r.CanonicalActionName
+	if name == "" {
+		name = "show"
 	}
-	ca, ok := r.Actions[r.CanonicalAction]
-	if !ok {
-		return
+	ca, _ := r.Actions[name]
+	return ca
+}
+
+// URITemplate returns a httprouter compliant URI template to this resource.
+// The result is the empty string if the resource does not have a "show" action
+// and does not define a different canonical action.
+func (r *ResourceDefinition) URITemplate() string {
+	ca := r.CanonicalAction()
+	if ca == nil || len(ca.Routes) == 0 {
+		return ""
 	}
-	if len(ca.Routes) == 0 {
-		return
+	var parentURI string
+	if p := r.Parent(); p != nil {
+		parentURI = p.URITemplate()
 	}
-	var parentPath string
-	var parentParams []string
+	return filepath.Join(parentURI, ca.Routes[0].Path)
+}
+
+// FullPath computes the base path to the resource actions concatenating the API and parent resource
+// base paths as needed.
+func (r *ResourceDefinition) FullPath() string {
+	var basePath string
+	if p := r.Parent(); p != nil {
+		basePath = p.FullPath()
+	} else {
+		basePath = Design.BasePath
+	}
+	return httprouter.CleanPath(filepath.Join(basePath, r.BasePath))
+}
+
+// Parent returns the parent resource if any, nil otherwise.
+func (r *ResourceDefinition) Parent() *ResourceDefinition {
 	if r.ParentName != "" {
-		parent, ok := Design.Resources[r.ParentName]
-		if !ok {
-			return
-		}
-		parentPath, parentParams = parent.CanonicalPathAndParams()
-		if parentPath == "" {
-			return
+		if parent, ok := Design.Resources[r.ParentName]; ok {
+			return parent
 		}
 	}
-	path = filepath.Join(parentPath, ca.Routes[0].Path)
-	params = append(parentParams, ca.Routes[0].Params()...)
-	return
+	return nil
 }
 
 // Context returns the generic definition name used in error messages.
@@ -443,6 +465,39 @@ func (r *ResponseDefinition) Dup() *ResponseDefinition {
 		res.Headers = r.Headers.Dup()
 	}
 	return &res
+}
+
+// Merge merges other into target. Only the fields of target that are not already set are merged.
+func (r *ResponseDefinition) Merge(other *ResponseDefinition) {
+	if other == nil {
+		return
+	}
+	if r.Name == "" {
+		r.Name = other.Name
+	}
+	if r.Status == 0 {
+		r.Status = other.Status
+	}
+	if r.Description == "" {
+		r.Description = other.Description
+	}
+	if r.MediaType == "" {
+		r.MediaType = other.MediaType
+	}
+	if other.Headers != nil {
+		otherHeaders := other.Headers.Type.ToObject()
+		if len(otherHeaders) > 0 {
+			if r.Headers == nil {
+				r.Headers = &AttributeDefinition{Type: Object{}}
+			}
+			headers := r.Headers.Type.ToObject()
+			for n, h := range otherHeaders {
+				if _, ok := headers[n]; !ok {
+					headers[n] = h
+				}
+			}
+		}
+	}
 }
 
 // Context returns the generic definition name used in error messages.
@@ -554,6 +609,24 @@ func (l *LinkDefinition) Context() string {
 	return prefix + suffix
 }
 
+// Attribute returns the linked attribute.
+func (l *LinkDefinition) Attribute() *AttributeDefinition {
+	p := l.Parent.ToObject()
+	if p == nil {
+		return nil
+	}
+	att, _ := p[l.Name]
+
+	return att
+}
+
+// MediaType returns the media type of the linked attribute.
+func (l *LinkDefinition) MediaType() *MediaTypeDefinition {
+	att := l.Attribute()
+	mt, _ := att.Type.(*MediaTypeDefinition)
+	return mt
+}
+
 // Context returns the generic definition name used in error messages.
 func (v *ViewDefinition) Context() string {
 	var prefix, suffix string
@@ -584,12 +657,19 @@ func (r *RouteDefinition) Context() string {
 // Params returns the route parameters.
 // For example for the route "GET /foo/:fooID" Params returns []string{"fooID"}.
 func (r *RouteDefinition) Params() []string {
-	matches := ParamsRegex.FindAllStringSubmatch(r.Path, -1)
+	matches := ParamsRegex.FindAllStringSubmatch(r.FullPath(), -1)
 	params := make([]string, len(matches))
 	for i, m := range matches {
-		params[i] = m[1]
+		params[i] = m[2]
 	}
 	return params
+}
+
+// FullPath returns the action full path computed by concatenating the API and resource base paths
+// with the action specific path.
+func (r *RouteDefinition) FullPath() string {
+	base := r.Parent.Parent.FullPath()
+	return httprouter.CleanPath(filepath.Join(base, r.Path))
 }
 
 // Context returns the generic definition name used in error messages.
@@ -600,6 +680,11 @@ func (v *EnumValidationDefinition) Context() string {
 // Context returns the generic definition name used in error messages.
 func (f *FormatValidationDefinition) Context() string {
 	return "format validation"
+}
+
+// Context returns the generic definition name used in error messages.
+func (f *PatternValidationDefinition) Context() string {
+	return "pattern validation"
 }
 
 // Context returns the generic definition name used in error messages.
