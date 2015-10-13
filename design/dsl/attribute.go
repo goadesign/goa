@@ -49,17 +49,32 @@ func Attribute(name string, args ...interface{}) {
 			ReportError("can't define child attributes on attribute of type %s", parent.Type.Name())
 			return
 		}
+		var baseAttr *AttributeDefinition
+		if parent.BaseType != nil {
+			for n, att := range parent.BaseType.ToObject() {
+				if n == name {
+					baseAttr = att
+					break
+				}
+			}
+		}
 		var dataType DataType
 		var description string
 		var dsl func()
 		var ok bool
 		if len(args) == 0 {
-			dataType = String
+			if baseAttr != nil {
+				dataType = baseAttr.Type
+			} else {
+				dataType = String
+			}
 		} else if len(args) == 1 {
 			if dsl, ok = args[0].(func()); !ok {
 				if dataType, ok = args[0].(DataType); !ok {
 					invalidArgError("DataType or func()", args[0])
 				}
+			} else if baseAttr != nil {
+				dataType = baseAttr.Type
 			}
 		} else if len(args) == 2 {
 			if dataType, ok = args[0].(DataType); !ok {
@@ -83,18 +98,30 @@ func Attribute(name string, args ...interface{}) {
 		} else {
 			ReportError("too many arguments in call to Attribute")
 		}
-		att := AttributeDefinition{
-			Type:        dataType,
-			Description: description,
+		var att *AttributeDefinition
+		if baseAttr != nil {
+			att = baseAttr.Dup()
+			if description != "" {
+				att.Description = description
+			}
+			if dataType != nil {
+				att.Type = dataType
+			}
+		} else {
+			att = &AttributeDefinition{
+				Type:        dataType,
+				Description: description,
+			}
 		}
+		att.BaseType = parent.BaseType
 		if dsl != nil {
-			executeDSL(dsl, &att)
+			executeDSL(dsl, att)
 		}
 		if att.Type == nil {
 			// DSL did not contain an "Attribute" declaration
 			att.Type = String
 		}
-		parent.Type.(Object)[name] = &att
+		parent.Type.(Object)[name] = att
 	}
 }
 

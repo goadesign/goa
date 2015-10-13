@@ -66,7 +66,7 @@ func NewGenerator() (*Generator, error) {
 	}
 	ctxFile := filepath.Join(outdir, "contexts.go")
 	ctlFile := filepath.Join(outdir, "controllers.go")
-	resFile := filepath.Join(outdir, "resources.go")
+	resFile := filepath.Join(outdir, "hrefs.go")
 	mtFile := filepath.Join(outdir, "media_types.go")
 	utFile := filepath.Join(outdir, "user_types.go")
 
@@ -130,7 +130,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 				ResourceName: r.Name,
 				ActionName:   a.Name,
 				Payload:      a.Payload,
-				Params:       r.Params.Merge(a.Params).Merge(api.BaseParams),
+				Params:       a.AllParams(),
 				Headers:      r.Headers.Merge(a.Headers),
 				Routes:       a.Routes,
 				Responses:    MergeResponses(r.Responses, a.Responses),
@@ -186,20 +186,18 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		return nil, err
 	}
 
-	title = fmt.Sprintf("%s: Application Resources", api.Name)
+	title = fmt.Sprintf("%s: Application Resource Href Factories", api.Name)
 	g.ResourcesWriter.WriteHeader(title, TargetPackage, nil)
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
 		m, ok := api.MediaTypes[r.MediaType]
 		var identifier string
-		var resType *design.UserTypeDefinition
 		if ok {
 			identifier = m.Identifier
-			resType = m.UserTypeDefinition
 		} else {
 			identifier = "application/text"
 		}
 		canoTemplate := r.URITemplate()
-		canoTemplate = design.ParamsRegex.ReplaceAllLiteralString(canoTemplate, "%s")
+		canoTemplate = design.ParamsRegex.ReplaceAllLiteralString(canoTemplate, "/%v")
 		var canoParams []string
 		if ca := r.CanonicalAction(); ca != nil {
 			if len(ca.Routes) > 0 {
@@ -211,7 +209,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 			Name:              r.FormatName(false, false),
 			Identifier:        identifier,
 			Description:       r.Description,
-			Type:              resType,
+			Type:              m,
 			CanonicalTemplate: canoTemplate,
 			CanonicalParams:   canoParams,
 		}

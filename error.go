@@ -233,7 +233,7 @@ func InvalidPatternError(ctx, target string, pattern string, err error) error {
 
 // InvalidRangeError appends a typed error of kind ErrInvalidRange to err and
 // returns it.
-func InvalidRangeError(ctx, target string, value int, min bool, err error) error {
+func InvalidRangeError(ctx string, target interface{}, value int, min bool, err error) error {
 	comp := "greater or equal to"
 	if !min {
 		comp = "lesser or equal to"

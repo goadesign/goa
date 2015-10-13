@@ -115,7 +115,8 @@ func executeDSL(dsl func(), ctx DSLDefinition) bool {
 // of DSL function calls is irrelevant. For example a resource response may be defined after an
 // action refers to it.
 func finalizeResource(r *ResourceDefinition) {
-	for _, a := range r.Actions {
+	r.IterateActions(func(a *ActionDefinition) error {
+		// 1. Merge response definitions
 		for name, resp := range a.Responses {
 			if pr, ok := a.Parent.Responses[name]; ok {
 				resp.Merge(pr)
@@ -127,7 +128,31 @@ func finalizeResource(r *ResourceDefinition) {
 				resp.Merge(dr)
 			}
 		}
-	}
+		// 2. Create implicit action parameters for path wildcards that dont' have one
+		for _, r := range a.Routes {
+			wcs := ExtractWildcards(r.FullPath())
+			for _, wc := range wcs {
+				found := false
+				var o Object
+				if a.Params != nil {
+					o = a.Params.Type.ToObject()
+				} else {
+					o = Object{}
+					a.Params = &AttributeDefinition{Type: o}
+				}
+				for n := range o {
+					if n == wc {
+						found = true
+						break
+					}
+				}
+				if !found {
+					o[wc] = &AttributeDefinition{Type: String}
+				}
+			}
+		}
+		return nil
+	})
 }
 
 // incompatibleDSL should be called by DSL functions when they are
@@ -233,6 +258,16 @@ func apiDefinition(failIfNotAPI bool) (*APIDefinition, bool) {
 // nil and false otherwise.
 func mediaTypeDefinition(failIfNotMT bool) (*MediaTypeDefinition, bool) {
 	m, ok := ctxStack.current().(*MediaTypeDefinition)
+	if !ok && failIfNotMT {
+		incompatibleDSL(caller())
+	}
+	return m, ok
+}
+
+// typeDefinition returns true and current context if it is a UserTypeDefinition,
+// nil and false otherwise.
+func typeDefinition(failIfNotMT bool) (*UserTypeDefinition, bool) {
+	m, ok := ctxStack.current().(*UserTypeDefinition)
 	if !ok && failIfNotMT {
 		incompatibleDSL(caller())
 	}

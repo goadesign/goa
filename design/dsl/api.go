@@ -75,6 +75,15 @@ func BasePath(val string) {
 		a.BasePath = val
 	} else if r, ok := resourceDefinition(true); ok {
 		r.BasePath = val
+		awcs := ExtractWildcards(Design.BasePath)
+		wcs := ExtractWildcards(val)
+		for _, awc := range awcs {
+			for _, wc := range wcs {
+				if awc == wc {
+					ReportError(`duplicate wildcard "%s" in API and resource base paths`, wc)
+				}
+			}
+		}
 	}
 }
 

@@ -1,5 +1,5 @@
 //************************************************************************//
-// cellar: Application User Types
+// cellar: Application Resource Href Factories
 //
 // Generated with codegen v0.0.1, command line:
 // $ /home/raphael/go/src/github.com/raphael/goa/examples/cellar/codegen583049478/codegen
@@ -13,16 +13,14 @@
 
 package app
 
-// BottlePayload type
-type BottlePayload struct {
-	Characteristics string
-	Color           string
-	Country         string
-	Name            string
-	Region          string
-	Review          string
-	Sweetness       int
-	Varietal        string
-	Vineyard        string
-	Vintage         int
+import "fmt"
+
+// AccountHref returns the resource href.
+func AccountHref(accountID interface{}) string {
+	return fmt.Sprintf("/cellar/accounts/%v", accountID)
+}
+
+// BottleHref returns the resource href.
+func BottleHref(accountID, id interface{}) string {
+	return fmt.Sprintf("/cellar/accounts/%v/bottles/%v", accountID, id)
 }

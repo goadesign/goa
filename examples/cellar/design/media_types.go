@@ -5,8 +5,8 @@ import (
 	. "github.com/raphael/goa/design/dsl"
 )
 
-// AccountMediaType is the account resource media type.
-var AccountMediaType = MediaType("application/vnd.goa.example.account", func() {
+// Account is the account resource media type.
+var Account = MediaType("application/vnd.goa.example.account", func() {
 	Description("A tenant account")
 	Attributes(func() {
 		Attribute("id", Integer, "ID of account")
@@ -42,30 +42,18 @@ var AccountMediaType = MediaType("application/vnd.goa.example.account", func() {
 	})
 })
 
-// BottleMediaType is the bottle resource media type.
-var BottleMediaType = MediaType("application/vnd.goa.example.bottle", func() {
+// Bottle is the bottle resource media type.
+var Bottle = MediaType("application/vnd.goa.example.bottle", func() {
 	Description("A bottle of wine")
+	BaseType(BottlePayload)
 	Attributes(func() {
 		Attribute("id", Integer, "ID of bottle")
 		Attribute("href", String, "API href of bottle")
-		Attribute("name", String, "Name of wine")
-		Attribute("account", AccountMediaType, "Owner account")
-		Attribute("vineyard", String, "Name of vineyard / winery")
-		Attribute("varietal", String, "Wine varietal")
-		Attribute("vintage", Integer, "Wine vintage", func() {
-			Minimum(1900)
-			Maximum(2020)
+		Attribute("rating", Integer, "Rating of bottle between 1 and 5", func() {
+			Minimum(1)
+			Maximum(5)
 		})
-		Attribute("color", String, "Type o9f wine", func() {
-			Enum("red", "white", "rose", "yellow")
-		})
-		Attribute("sweet", Boolean, "Whether wine is sweet or dry")
-		Attribute("country", String, "Country of origin")
-		Attribute("region", String, "Region")
-		Attribute("review", String, "Review", func() {
-			MinLength(10)
-		})
-		Attribute("characteristics", ArrayOf(String), "Wine characteristics")
+		Attribute("account", Account, "Account that owns bottle")
 		Attribute("created_at", String, "Date of creation", func() {
 			Format("date-time")
 		})
@@ -87,6 +75,13 @@ var BottleMediaType = MediaType("application/vnd.goa.example.bottle", func() {
 			Attribute("links")
 		})
 
+		View("tiny", func() {
+			Attribute("id")
+			Attribute("href")
+			Attribute("name")
+			Attribute("links")
+		})
+
 		View("full", func() {
 			Attribute("id")
 			Attribute("href")
@@ -95,7 +90,7 @@ var BottleMediaType = MediaType("application/vnd.goa.example.bottle", func() {
 			Attribute("varietal")
 			Attribute("vintage")
 			Attribute("color")
-			Attribute("sweet")
+			Attribute("sweetness")
 			Attribute("country")
 			Attribute("region")
 			Attribute("review")

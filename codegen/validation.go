@@ -62,42 +62,42 @@ func validationCheckerR(att *design.AttributeDefinition, context, target string,
 		"context": context,
 		"depth":   depth,
 	}
-	var res string
+	var res []string
 	for _, v := range att.Validations {
 		switch actual := v.(type) {
 		case *design.EnumValidationDefinition:
 			data["values"] = actual.Values
-			res += runTemplate(enumValT, data)
+			res = append(res, runTemplate(enumValT, data))
 		case *design.FormatValidationDefinition:
 			data["format"] = actual.Format
-			res += runTemplate(formatValT, data)
+			res = append(res, runTemplate(formatValT, data))
 		case *design.PatternValidationDefinition:
 			data["pattern"] = actual.Pattern
-			res += runTemplate(patternValT, data)
+			res = append(res, runTemplate(patternValT, data))
 		case *design.MinimumValidationDefinition:
 			data["min"] = actual.Min
 			delete(data, "max")
-			res += runTemplate(minMaxValT, data)
+			res = append(res, runTemplate(minMaxValT, data))
 		case *design.MaximumValidationDefinition:
 			data["max"] = actual.Max
 			delete(data, "min")
-			res += runTemplate(minMaxValT, data)
+			res = append(res, runTemplate(minMaxValT, data))
 		case *design.MinLengthValidationDefinition:
 			data["minLength"] = actual.MinLength
 			delete(data, "maxLength")
-			res += runTemplate(lengthValT, data)
+			res = append(res, runTemplate(lengthValT, data))
 		case *design.MaxLengthValidationDefinition:
 			data["maxLength"] = actual.MaxLength
 			delete(data, "minLength")
-			res += runTemplate(lengthValT, data)
+			res = append(res, runTemplate(lengthValT, data))
 		}
 	}
 	for name, catt := range att.Type.ToObject() {
-		cctx := fmt.Sprintf("%s.%s", context, name)
-		ctgt := fmt.Sprintf("%s.%s", target, name)
-		res += validationCheckerR(catt, cctx, ctgt, depth+1)
+		cctx := fmt.Sprintf("%s.%s", context, Goify(name, true))
+		ctgt := fmt.Sprintf("%s.%s", target, Goify(name, true))
+		res = append(res, validationCheckerR(catt, cctx, ctgt, depth+1))
 	}
-	return res
+	return strings.Join(res, "\n")
 }
 
 // oneof produces code that compares target with each element of vals and ORs
@@ -140,11 +140,11 @@ const (
 {{tabs .depth}}	err = goa.InvalidEnumValueError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{slice .values}}, err)
 {{tabs .depth}}}`
 
-	formatValTmpl = `{{tabs .depth}}if ok := goa.ValidatePattern({{.pattern}}, {{.target}}); !ok {
+	patternValTmpl = `{{tabs .depth}}if ok := goa.ValidatePattern({{.pattern}}, {{.target}}); !ok {
 {{tabs .depth}}		err = goa.InvalidPatternError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{.pattern}}, err)
 {{tabs .depth}}}`
 
-	patternValTmpl = `{{tabs .depth}}if err2 := goa.ValidateFormat({{constant .format}}, {{.target}}); err2 != nil {
+	formatValTmpl = `{{tabs .depth}}if err2 := goa.ValidateFormat({{constant .format}}, {{.target}}); err2 != nil {
 {{tabs .depth}}		err = goa.InvalidFormatError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{constant .format}}, err2, err)
 {{tabs .depth}}}`
 

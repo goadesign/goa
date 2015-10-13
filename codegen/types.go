@@ -19,6 +19,7 @@ var (
 	mArrayT          *template.Template
 	mObjectT         *template.Template
 	mLinkT           *template.Template
+	mCollectionT     *template.Template
 	unmPrimitiveT    *template.Template
 	unmArrayT        *template.Template
 	unmObjectOrUserT *template.Template
@@ -35,6 +36,7 @@ func init() {
 		"gotypename":         GoTypeName,
 		"gotyperef":          GoTypeRef,
 		"goify":              Goify,
+		"gonative":           GoNativeType,
 		"tabs":               Tabs,
 		"add":                func(a, b int) int { return a + b },
 		"tempvar":            tempvar,
@@ -47,6 +49,9 @@ func init() {
 		panic(err)
 	}
 	if mLinkT, err = template.New("links marshaler").Funcs(fm).Parse(mLinkTmpl); err != nil {
+		panic(err)
+	}
+	if mCollectionT, err = template.New("collection marshaler").Funcs(fm).Parse(mCollectionTmpl); err != nil {
 		panic(err)
 	}
 	if unmPrimitiveT, err = template.New("primitive unmarshaler").Funcs(fm).Parse(unmPrimitiveTmpl); err != nil {
@@ -98,16 +103,14 @@ func AttributeMarshaler(att *design.AttributeDefinition, context, source, target
 	return attributeMarshalerR(att, context, source, target, 1)
 }
 func attributeMarshalerR(att *design.AttributeDefinition, context, source, target string, depth int) string {
-	var marshaler string
 	switch actual := att.Type.(type) {
 	case *design.MediaTypeDefinition:
-		marshaler = mediaTypeMarshalerR(actual, context, source, target, att.View, depth)
+		return mediaTypeMarshalerR(actual, context, source, target, att.View, depth)
 	case design.Object:
-		marshaler = objectMarshalerR(actual, att.AllRequired(), context, source, target, depth)
+		return objectMarshalerR(actual, att.AllRequired(), context, source, target, depth)
 	default:
-		marshaler = typeMarshalerR(att.Type, context, source, target, depth)
+		return typeMarshalerR(att.Type, context, source, target, depth)
 	}
-	return marshaler + validationCheckerR(att, context, target, depth)
 }
 
 // ArrayMarshaler produces the Go code that marshals an array for rendering.
@@ -139,15 +142,8 @@ func ObjectMarshaler(o design.Object, context, source, target string) string {
 	return objectMarshalerR(o, nil, context, source, target, 1)
 }
 func objectMarshalerR(o design.Object, required []string, context, source, target string, depth int) string {
-	keys := make([]string, len(o))
-	values := make([]design.AttributeDefinition, len(o))
-	i := 0
-	for k, v := range o {
-		keys[i] = k
-		values[i] = *v
-		i++
-	}
 	data := map[string]interface{}{
+		"origType": &design.AttributeDefinition{Type: GoifyObject(o)},
 		"type":     o,
 		"required": required,
 		"context":  context,
@@ -159,14 +155,16 @@ func objectMarshalerR(o design.Object, required []string, context, source, targe
 }
 
 // MediaTypeMarshaler produces the Go code that initializes the variable named target which holds a
-// map of string to interface{} with the content of the variable named source which contains an
-// instance of the media type data structure. The code runs any validation defined on the media
-// type definition. Also view is used to know which fields to copy and which ones to omit and for
-// fields that are media types which view to use to render it. The rendering also takes care of
-// following links.
+// an interface{} with the content of the variable named source which contains an instance of the
+// media type data structure. The code runs any validation defined on the media type definition.
+// Also view is used to know which fields to copy and which ones to omit and for fields that are
+// media types which view to use to render it. The rendering also takes care of following links.
 // The generated code assumes that there is a variable called "err" of type error that it can use
 // to record errors.
 func MediaTypeMarshaler(mt *design.MediaTypeDefinition, context, source, target, view string) string {
+	if mt.Type.IsArray() {
+		return collectionMediaTypeMarshalerR(mt, context, source, target, view, 1)
+	}
 	return mediaTypeMarshalerR(mt, context, source, target, view, 1)
 }
 func mediaTypeMarshalerR(mt *design.MediaTypeDefinition, context, source, target, view string, depth int) string {
@@ -174,12 +172,16 @@ func mediaTypeMarshalerR(mt *design.MediaTypeDefinition, context, source, target
 	if view == "" {
 		view = "default"
 	}
+	renderLinks := false
 	if v, ok := mt.Views[view]; ok {
 		var vals []design.ValidationDefinition
 		if viewObj := v.Type.ToObject(); viewObj != nil {
 			attNames := make([]string, len(viewObj))
 			i := 0
 			for n := range viewObj {
+				if n == "links" {
+					renderLinks = true
+				}
 				attNames[i] = n
 				i++
 			}
@@ -207,12 +209,12 @@ func mediaTypeMarshalerR(mt *design.MediaTypeDefinition, context, source, target
 			}
 		}
 		rendered = &design.AttributeDefinition{
-			Type:        v.Type.ToObject(),
+			Type:        design.DataType(v.Type.ToObject()),
 			Validations: vals,
 		}
 	}
 	var linkMarshaler string
-	if len(mt.Links) > 0 {
+	if renderLinks && len(mt.Links) > 0 {
 		data := map[string]interface{}{
 			"links":   mt.Links,
 			"context": context,
@@ -221,9 +223,30 @@ func mediaTypeMarshalerR(mt *design.MediaTypeDefinition, context, source, target
 			"view":    view,
 			"depth":   depth,
 		}
-		linkMarshaler = runTemplate(mLinkT, data)
+		linkMarshaler = "\n" + runTemplate(mLinkT, data)
 	}
-	return attributeMarshalerR(rendered, context, source, target, depth) + linkMarshaler
+	nolink := rendered.Dup()
+	if o := rendered.Type.ToObject(); o != nil {
+		obj := make(design.Object, len(o))
+		for n, at := range o {
+			if n != "links" {
+				obj[n] = at
+			}
+		}
+		nolink.Type = obj
+	}
+	return attributeMarshalerR(nolink, context, source, target, depth) + linkMarshaler
+}
+func collectionMediaTypeMarshalerR(mt *design.MediaTypeDefinition, context, source, target, view string, depth int) string {
+	data := map[string]interface{}{
+		"context":       context,
+		"source":        source,
+		"target":        target,
+		"view":          view,
+		"depth":         depth,
+		"elemMediaType": mt.Type.(*design.Array).ElemType.Type,
+	}
+	return runTemplate(mCollectionT, data)
 }
 
 // TypeUnmarshaler produces the Go code that initializes a variable of the given type given
@@ -353,6 +376,10 @@ func namedTypeUnmarshalerR(t design.DataType, context, source, target string, de
 		"target":  target,
 		"depth":   depth,
 	}
+	if t.IsArray() {
+		data["elemType"] = t.ToArray().ElemType
+		return runTemplate(unmArrayT, data)
+	}
 	return runTemplate(unmObjectOrUserT, data)
 }
 
@@ -363,6 +390,19 @@ func namedTypeUnmarshalerR(t design.DataType, context, source, target string, de
 // jsonTags controls whether to produce json tags.
 // inner indicates whether to prefix the struct of an attribute of type object with *.
 func GoTypeDef(ds design.DataStructure, tabs int, jsonTags, inner bool) string {
+	return godef(ds, tabs, jsonTags, inner, false)
+}
+
+// GoResDef returns the Go code that defines a resource data structure.
+func GoResDef(ds design.DataStructure, tabs int) string {
+	return godef(ds, tabs, false, false, true)
+}
+
+// godef is the common implementation for both GoTypeDef and GoResDef.
+// The only difference between the two is how the type names for fields that refer to a media type
+// is generated: GoTypeDef uses the type name but GoResDef uses the underlying resource name if the
+// type is a media type that corresponds to the canonical representation of a resource.
+func godef(ds design.DataStructure, tabs int, jsonTags, inner, res bool) string {
 	var buffer bytes.Buffer
 	def := ds.Definition()
 	t := def.Type
@@ -370,7 +410,7 @@ func GoTypeDef(ds design.DataStructure, tabs int, jsonTags, inner bool) string {
 	case design.Primitive:
 		return GoTypeName(t, tabs)
 	case *design.Array:
-		return "[]" + GoTypeDef(actual.ElemType, tabs, jsonTags, true)
+		return "[]" + godef(actual.ElemType, tabs, jsonTags, true, res)
 	case design.Object:
 		if inner {
 			buffer.WriteByte('*')
@@ -385,7 +425,7 @@ func GoTypeDef(ds design.DataStructure, tabs int, jsonTags, inner bool) string {
 		sort.Strings(keys)
 		for _, name := range keys {
 			WriteTabs(&buffer, tabs+1)
-			typedef := GoTypeDef(actual[name], tabs+1, jsonTags, true)
+			typedef := godef(actual[name], tabs+1, jsonTags, true, res)
 			fname := Goify(name, true)
 			var tags string
 			if jsonTags {
@@ -395,12 +435,21 @@ func GoTypeDef(ds design.DataStructure, tabs int, jsonTags, inner bool) string {
 				}
 				tags = fmt.Sprintf(" `json:\"%s%s\"`", name, omit)
 			}
-			buffer.WriteString(fmt.Sprintf("%s %s%s\n", fname, typedef, tags))
+			desc := actual[name].Description
+			if desc != "" {
+				desc = fmt.Sprintf("// %s\n", desc)
+			}
+			buffer.WriteString(fmt.Sprintf("%s%s %s%s\n", desc, fname, typedef, tags))
 		}
 		WriteTabs(&buffer, tabs)
 		buffer.WriteString("}")
 		return buffer.String()
-	case *design.UserTypeDefinition, *design.MediaTypeDefinition:
+	case *design.UserTypeDefinition:
+		return "*" + GoTypeName(actual, tabs)
+	case *design.MediaTypeDefinition:
+		if res && actual.Resource != nil {
+			return "*" + actual.Resource.FormatName(false, false)
+		}
 		return "*" + GoTypeName(actual, tabs)
 	default:
 		panic("goa bug: unknown data structure type")
@@ -412,7 +461,13 @@ func GoTypeDef(ds design.DataStructure, tabs int, jsonTags, inner bool) string {
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
 func GoTypeRef(t design.DataType, tabs int) string {
 	switch t.(type) {
-	case design.Object, *design.UserTypeDefinition, *design.MediaTypeDefinition:
+	case *design.UserTypeDefinition, *design.MediaTypeDefinition:
+		var prefix string
+		if t.IsObject() {
+			prefix = "*"
+		}
+		return prefix + GoTypeName(t, tabs)
+	case design.Object:
 		return "*" + GoTypeName(t, tabs)
 	default:
 		return GoTypeName(t, tabs)
@@ -422,6 +477,24 @@ func GoTypeRef(t design.DataType, tabs int) string {
 // GoTypeName returns the Go type name for a data type.
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
 func GoTypeName(t design.DataType, tabs int) string {
+	switch actual := t.(type) {
+	case design.Primitive:
+		return GoNativeType(t)
+	case *design.Array:
+		return "[]" + GoTypeRef(actual.ElemType.Type, tabs+1)
+	case *design.MediaTypeDefinition:
+		return Goify(actual.TypeName, true)
+	case *design.UserTypeDefinition:
+		return Goify(actual.TypeName, true)
+	case design.Object:
+		return GoTypeDef(&design.AttributeDefinition{Type: actual}, tabs, false, false)
+	default:
+		panic(fmt.Sprintf("goa bug: unknown type %#v", actual))
+	}
+}
+
+// GoNativeType returns the Go built-in type from which instances of t can be initialized.
+func GoNativeType(t design.DataType) string {
 	switch actual := t.(type) {
 	case design.Primitive:
 		switch actual.Kind() {
@@ -437,13 +510,13 @@ func GoTypeName(t design.DataType, tabs int) string {
 			panic(fmt.Sprintf("goa bug: unknown primitive type %#v", actual))
 		}
 	case *design.Array:
-		return "[]" + GoTypeRef(actual.ElemType.Type, tabs+1)
+		return "[]" + GoNativeType(actual.ElemType.Type)
 	case *design.MediaTypeDefinition:
-		return Goify(actual.TypeName, true)
+		return GoNativeType(actual.Type)
 	case *design.UserTypeDefinition:
-		return Goify(actual.TypeName, true)
+		return GoNativeType(actual.Type)
 	case design.Object:
-		return GoTypeDef(&design.AttributeDefinition{Type: actual}, tabs, false, false)
+		return "map[string]interface{}"
 	default:
 		panic(fmt.Sprintf("goa bug: unknown type %#v", actual))
 	}
@@ -488,6 +561,19 @@ func Goify(str string, firstUpper bool) string {
 	res := b.String()
 	if _, ok := reserved[res]; ok {
 		res += "_"
+	}
+	return res
+}
+
+// GoifyObject creates a new object from an existing one where the keys are goified recursively.
+func GoifyObject(o design.Object) design.Object {
+	res := make(design.Object)
+	for n, at := range o {
+		if at.Type.IsObject() {
+			at = at.Dup()
+			at.Type = GoifyObject(at.Type.ToObject())
+		}
+		res[Goify(n, true)] = at
 	}
 	return res
 }
@@ -591,27 +677,38 @@ func runTemplate(tmpl *template.Template, data interface{}) string {
 }
 
 const (
-	mArrayTmpl = `{{tabs .depth}}{{.target}} = make([]interface{}, len({{.source}}))
+	mArrayTmpl = `{{$tmp := tempvar}}{{tabs .depth}}{{$tmp}} := make([]{{gonative .elemType.Type}}, len({{.source}}))
 {{tabs .depth}}for i, r := range {{.source}} {
-{{marshalAttribute .elemType (printf "%s[*]" .context) "r" (printf "%s[i]" .target) (add .depth 1)}}
+{{marshalAttribute .elemType (printf "%s[*]" .context) "r" (printf "%s[i]" $tmp) (add .depth 1)}}
 {{tabs .depth}}}
-`
+{{tabs .depth}}{{.target}} = {{$tmp}}`
 
 	mObjectTmpl = `{{$ctx := .}}{{range $r := .required}}{{$at := index $ctx.type $r}}{{$required := goify $r true}}{{if eq $at.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.source}}.{{$required}} == "" {
-{{tabs $ctx.depth}} return fmt.Errorf("missing required attribute \"{{$r}}\"")
+{{tabs $ctx.depth}} err = fmt.Errorf("missing required attribute \"{{$r}}\"")
 {{tabs $ctx.depth}}}{{else if gt $at.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.source}}.{{$required}} == nil {
-{{tabs $ctx.depth}} return fmt.Errorf("missing required attribute \"{{$r}}\"")
+{{tabs $ctx.depth}} err = fmt.Errorf("missing required attribute \"{{$r}}\"")
 {{tabs $ctx.depth}}}
 {{end}}
-{{end}}{{tabs .depth}}{{.target}} = map[string]interface{}{
-{{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{tabs $ctx.depth}}	"{{$n}}": {{$ctx.source}}.{{goify $n true}},
-{{end}}{{end}}{{tabs $ctx.depth}}}{{range $n, $at := .type}}{{if gt $at.Type.Kind 4}}
-{{tabs $ctx.depth}}if {{$ctx.source}}.{{goify $n true}} != nil {
-{{marshalAttribute $at (printf "%s.%s" $ctx.context (goify $n true)) (printf "%s.%s" $ctx.source (goify $n true)) (printf "%s[\"%s\"]" $ctx.target $n) (add $ctx.depth 1)}}{{tabs $ctx.depth}}}{{end}}{{end}}
-`
+{{end}}{{validate $.origType (printf "%s" .context) .source .depth}}
+{{tabs .depth}}if err == nil {
+{{$tmp := tempvar}}{{tabs .depth}}	{{$tmp}} := map[string]interface{}{
+{{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{tabs $ctx.depth}}		"{{$n}}": {{$ctx.source}}.{{goify $n true}},
+{{end}}{{end}}{{tabs $ctx.depth}}	}{{range $n, $at := .type}}{{if gt $at.Type.Kind 4}}
+{{tabs $ctx.depth}}	if {{$ctx.source}}.{{goify $n true}} != nil {
+{{marshalAttribute $at (printf "%s.%s" $ctx.context (goify $n true)) (printf "%s.%s" $ctx.source (goify $n true)) (printf "%s[\"%s\"]" $tmp $n) (add $ctx.depth 2)}}
+{{tabs $ctx.depth}}	}{{end}}{{end}}
+{{tabs .depth}}	{{.target}} = {{$tmp}}
+}`
+
+	mCollectionTmpl = `{{tabs .depth}}{{$tmp := tempvar}}{{$tmp}} := make([]{{gonative .elemMediaType}}, len({{.source}}))
+{{tabs .depth}}for i, res := range {{.source}} {
+{{marshalMediaType .elemMediaType (printf "%s[*]" .context) "res" (printf "%s[i]" $tmp) .view (add .depth 1)}}
+{{tabs .depth}}}
+{{tabs .depth}}{{.target}} = {{$tmp}}`
 
 	mLinkTmpl = `{{if .links}}{{$ctx := .}}{{tabs .depth}}links := make(map[string]interface{})
-{{range $n, $l := .links}}{{marshalMediaType $l.MediaType (printf "link %s" $n) (printf "%s.%s" $ctx.source (goify $l.Name true)) (printf "links[\"%s\"]" (goify $n true)) $l.View $ctx.depth}}{{end}}{{tabs .depth}}{{.target}}["links"] = links
+{{range $n, $l := .links}}{{marshalMediaType $l.MediaType (printf "link %s" $n) (printf "%s.%s" $ctx.source (goify $l.Name true)) (printf "links[\"%s\"]" (goify $n true)) $l.View $ctx.depth}}{{end}}
+{{tabs .depth}}{{.target}}["links"] = links
 {{end}}`
 
 	unmPrimitiveTmpl = `{{tabs .depth}}if val, ok := {{.source}}.({{gotyperef .type (add .depth 1)}}); ok {
@@ -624,8 +721,8 @@ const (
 {{tabs .depth}}	{{.target}} = make([]{{gotyperef .elemType.Type (add .depth 2)}}, len(val))
 {{tabs .depth}}	for i, v := range val {
 {{tabs .depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef .elemType.Type (add .depth 3)}}
-{{unmarshalAttribute .elemType (printf "%s[*]" .context) "v" $temp (add .depth 2)}}{{$ctx := .}}{{range $ctx.elemType.Validations}}
-{{validate $ctx.elemType (printf "%s[*]" $ctx.context) $temp (add $ctx.depth 2)}}{{end}}
+{{unmarshalAttribute .elemType (printf "%s[*]" .context) "v" $temp (add .depth 2)}}{{$ctx := .}}
+{{validate $ctx.elemType (printf "%s[*]" $ctx.context) $temp (add $ctx.depth 2)}}
 {{tabs .depth}}		{{printf "%s[i]" .target}} = {{$temp}}
 {{tabs .depth}}	}
 {{tabs .depth}}} else {
@@ -636,9 +733,9 @@ const (
 {{tabs .depth}}{{$context := .context}}{{$depth := .depth}}{{$target := .target}}{{$required := .required}}	{{$target}} = new({{gotypename .type (add .depth 1)}})
 {{range $name, $att := .type.ToObject}}{{tabs $depth}}	if v, ok := val["{{$name}}"]; ok {
 {{tabs $depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type (add $depth 2)}}
-{{unmarshalAttribute $att (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}{{range $att.Validations}}
-{{validate $att (printf "%s.%s" $context (goify $name true)) $temp (add $depth 2)}}{{end}}
-{{tabs $depth}}		{{printf "%s.%s" $target (goify $name true)}} = {{$temp}}
+{{unmarshalAttribute $att (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}
+{{$validation := validate $att (printf "%s.%s" $context (goify $name true)) $temp (add $depth 2)}}{{if $validation}}{{$validation}}
+{{end}}{{tabs $depth}}		{{printf "%s.%s" $target (goify $name true)}} = {{$temp}}
 {{tabs $depth}}	}{{if (has $required $name)}} else {
 {{tabs $depth}}		err = goa.MissingAttributeError(` + "`" + `{{.context}}` + "`" + `, "{{$name}}", err)
 {{tabs $depth}}	}{{end}}

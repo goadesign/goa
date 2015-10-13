@@ -37,6 +37,10 @@ import . "github.com/raphael/goa/design"
 //
 // This function returns the newly defined media type in the first mode, nil otherwise.
 func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
+	if len(dsl) > 1 {
+		ReportError("too many arguments in MediaType call")
+		return nil
+	}
 	if Design == nil {
 		InitDesign()
 	}
@@ -55,11 +59,7 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 				identifier, err)
 		}
 		elems := strings.Split(mediatype, ".")
-		var prefix string
-		if len(elems) > 1 {
-			prefix = elems[len(elems)-2]
-		}
-		typeName := inflect.Camelize(prefix) + inflect.Camelize(elems[len(elems)-1]) + "Media"
+		typeName := inflect.Camelize(elems[len(elems)-1])
 		if _, ok := Design.MediaTypes[identifier]; ok {
 			ReportError("media type %#v is defined twice", identifier)
 			return nil
@@ -96,24 +96,102 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 	return nil
 }
 
+// BaseType defines the type from which the media or user type is derived from if any. The type can
+// be further customized using the Attributes DSL (to add new attributes for example).
+//
+// Implementation note: BaseType and Attributes may appear in any order in the definition of a type.
+// If BaseType appears first then it sets both the BaseType and Type fields of the underlying
+// attribute. Running Attributes subsequently then initializes type sub-attributes potentially
+// overridding attributes inherited from the base type.
+// If Attributes appears first then its sets the type to Object and sets the object attributes.
+// Running BaseType subsequently creates a duplicate type and merges the object attributes into
+// the copy. The copy is then set as the type of the underlying media or user type attribute.
+// TL;DR the implementation of BaseType needs to handle the case where attributes already exist.
+func BaseType(t DataType) {
+	var att *AttributeDefinition
+	if mt, ok := mediaTypeDefinition(false); ok {
+		att = mt.AttributeDefinition
+		mt.BaseType = t
+	} else if ut, ok := typeDefinition(true); ok {
+		att = ut.AttributeDefinition
+		ut.BaseType = t
+	}
+	if att != nil {
+		dup := t
+		if t.IsArray() {
+			dup = t.ToArray().Dup()
+		} else if t.IsObject() {
+			dup = t.ToObject().Dup()
+		}
+		if att.Type == nil {
+			att.Type = dup
+		} else if dup.IsObject() && att.Type.IsObject() {
+			dup.ToObject().Merge(att.Type.ToObject())
+			att.Type = dup
+		}
+	}
+}
+
+// TypeName makes it possible to set the Go struct name in the generated code.
+func TypeName(name string) {
+	if mt, ok := mediaTypeDefinition(false); ok {
+		mt.TypeName = name
+	} else if ut, ok := typeDefinition(true); ok {
+		ut.TypeName = name
+	}
+}
+
 // View adds a new view to the media type.
 // It takes the view name and the DSL defining it.
 // View can also be used to specify the view used to render an attribute.
 func View(name string, dsl ...func()) {
 	if mt, ok := mediaTypeDefinition(false); ok {
+		if !mt.Type.IsObject() && !mt.Type.IsArray() {
+			ReportError("cannot define view on non object and non collection media types")
+			return
+		}
 		if mt.Views == nil {
 			mt.Views = make(map[string]*ViewDefinition)
 		} else {
 			if _, ok = mt.Views[name]; ok {
 				ReportError("multiple definitions for view %#v in media type %#v", name, mt.TypeName)
+				return
 			}
 		}
 		at := &AttributeDefinition{}
-		ok := true
+		ok := false
 		if len(dsl) > 0 {
 			ok = executeDSL(dsl[0], at)
+		} else if mt.Type.IsArray() {
+			// inherit view from collection element if present
+			elem := mt.Type.ToArray().ElemType
+			if elem != nil {
+				if pa, ok2 := elem.Type.(*MediaTypeDefinition); ok2 {
+					if v, ok2 := pa.Views[name]; ok2 {
+						at = v.AttributeDefinition
+						ok = true
+					} else {
+						ReportError("unknown view %#v", name)
+						return
+					}
+				}
+			}
 		}
 		if ok {
+			o := at.Type.ToObject()
+			if o != nil {
+				mto := mt.Type.ToObject()
+				if mto == nil {
+					mto = mt.Type.ToArray().ElemType.Type.ToObject()
+				}
+				for n := range o {
+					if existing, ok := mto[n]; ok {
+						o[n] = existing
+					} else if n != "links" {
+						ReportError("unknown attribute %#v", n)
+					}
+				}
+			}
 			mt.Views[name] = &ViewDefinition{
 				AttributeDefinition: at,
 				Name:                name,
@@ -182,7 +260,7 @@ func ArrayOf(t DataType) *Array {
 // A collection media type represents the content of responses that return a
 // collection of resources such as "index" actions.
 // TBD: this relies on the underlying media type to have been evaled already.
-func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
+func CollectionOf(m *MediaTypeDefinition, dsl ...func()) *MediaTypeDefinition {
 	id := m.Identifier
 	mediatype, params, err := mime.ParseMediaType(id)
 	if err != nil {
@@ -203,14 +281,10 @@ func CollectionOf(m *MediaTypeDefinition) *MediaTypeDefinition {
 	typeName := m.TypeName + "Collection"
 	mt := NewMediaTypeDefinition(typeName, id, func() {
 		if mt, ok := mediaTypeDefinition(true); ok {
-			tempMT := NewMediaTypeDefinition(m.TypeName, m.Identifier, m.DSL)
-			if executeDSL(tempMT.DSL, tempMT) {
-				mt.Views = tempMT.Views
-				mt.Links = tempMT.Links
-				mt.TypeName = typeName
-				mt.AttributeDefinition = &AttributeDefinition{
-					Type: ArrayOf(m.Type),
-				}
+			mt.TypeName = typeName
+			mt.AttributeDefinition = &AttributeDefinition{Type: ArrayOf(m)}
+			if len(dsl) > 0 {
+				executeDSL(dsl[0], mt)
 			}
 		}
 	})

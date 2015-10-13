@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/raphael/goa"
+	"github.com/raphael/goa/examples/cellar/app"
 	log "gopkg.in/inconshreveable/log15.v2"
 )
 
@@ -9,25 +10,17 @@ func main() {
 	// Setup logger
 	goa.Log.SetHandler(log.StdoutHandler)
 
-	// Create "bottles" resource controller
-	c := goa.NewController("bottles")
-
-	// Register the resource action handlers
-	c.SetHandlers(goa.Handlers{
-		"list":   ListBottles,
-		"show":   ShowBottle,
-		"create": CreateBottle,
-		"update": UpdateBottle,
-		"delete": DeleteBottle,
-		"rate":   RateBottle,
-	})
-
 	// Create goa application
-	app := goa.New("cellar")
+	api := goa.New("cellar")
 
-	// Mount controller onto application
-	app.Mount(c)
+	// Mount account controller onto application
+	ac := NewAccountController()
+	app.MountAccountController(api, ac)
+
+	// Mount bottle controller onto application
+	bc := NewBottleController()
+	app.MountBottleController(api, bc)
 
 	// Run application, listen on port 8080
-	app.Run(":8080")
+	api.Run(":8080")
 }

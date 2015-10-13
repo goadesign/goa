@@ -16,7 +16,7 @@ var (
 	Design *APIDefinition
 
 	// ParamsRegex is the regular expression used to capture path parameters.
-	ParamsRegex = regexp.MustCompile("/(:|\\*)([a-zA-Z0-9_]+)")
+	ParamsRegex = regexp.MustCompile("/(?::|\\*)([a-zA-Z0-9_]+)")
 )
 
 type (
@@ -148,6 +148,8 @@ type (
 	AttributeDefinition struct {
 		// Attribute type
 		Type DataType
+		// Attribute base type if any
+		BaseType DataType
 		// Optional description
 		Description string
 		// Optional validation functions
@@ -267,6 +269,9 @@ type (
 
 	// ActionIterator is the type of functions given to IterateActions.
 	ActionIterator func(a *ActionDefinition) error
+
+	// ResponseIterator is the type of functions given to IterateResponses.
+	ResponseIterator func(r *ResponseDefinition) error
 )
 
 // Context returns the generic definition name used in error messages.
@@ -328,6 +333,25 @@ func (a *APIDefinition) IterateUserTypes(it UserTypeIterator) error {
 	sort.Strings(names)
 	for _, n := range names {
 		if err := it(a.Types[n]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// IterateResponses calls the given iterator passing in each response sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateResponses returns that
+// error.
+func (a *APIDefinition) IterateResponses(it ResponseIterator) error {
+	names := make([]string, len(a.Responses))
+	i := 0
+	for n := range a.Responses {
+		names[i] = n
+		i++
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		if err := it(a.Responses[n]); err != nil {
 			return err
 		}
 	}
@@ -396,11 +420,7 @@ func (r *ResourceDefinition) URITemplate() string {
 	if ca == nil || len(ca.Routes) == 0 {
 		return ""
 	}
-	var parentURI string
-	if p := r.Parent(); p != nil {
-		parentURI = p.URITemplate()
-	}
-	return filepath.Join(parentURI, ca.Routes[0].Path)
+	return ca.Routes[0].FullPath()
 }
 
 // FullPath computes the base path to the resource actions concatenating the API and parent resource
@@ -408,7 +428,14 @@ func (r *ResourceDefinition) URITemplate() string {
 func (r *ResourceDefinition) FullPath() string {
 	var basePath string
 	if p := r.Parent(); p != nil {
-		basePath = p.FullPath()
+		if ca := p.CanonicalAction(); ca != nil {
+			if routes := ca.Routes; len(routes) > 0 {
+				// Note: all these tests should be true at code generation time
+				// as DSL validation makes sure that parent resources have a
+				// canonical path.
+				basePath = filepath.Join(routes[0].FullPath())
+			}
+		}
 	} else {
 		basePath = Design.BasePath
 	}
@@ -512,12 +539,12 @@ func (r *ResponseTemplateDefinition) Context() string {
 func (a *ActionDefinition) Context() string {
 	var prefix, suffix string
 	if a.Name != "" {
-		prefix = fmt.Sprintf("action %#v", a.Name)
+		suffix = fmt.Sprintf(" action %#v", a.Name)
 	} else {
-		prefix = "unnamed action"
+		suffix = " unnamed action"
 	}
 	if a.Parent != nil {
-		suffix = fmt.Sprintf(" of %s", a.Parent.Context())
+		prefix = a.Parent.Context()
 	}
 	return prefix + suffix
 }
@@ -526,6 +553,44 @@ func (a *ActionDefinition) Context() string {
 // camel or snake case and plural or singular.
 func (a *ActionDefinition) FormatName(snake bool) string {
 	return format(a.Name, &snake, nil)
+}
+
+// AllParams returns the path and query string parameters of the action across all its routes.
+func (a *ActionDefinition) AllParams() *AttributeDefinition {
+	var res *AttributeDefinition
+	if a.Params != nil {
+		res = a.Params.Dup()
+	} else {
+		res = &AttributeDefinition{Type: Object{}}
+	}
+	res = res.Merge(a.Parent.BaseParams)
+	res = res.Merge(Design.BaseParams)
+	if p := a.Parent.Parent(); p != nil {
+		res = res.Merge(p.CanonicalAction().AllParams())
+	}
+	return res
+}
+
+// AllParamNames returns the path and query string parameter names of the action across all its
+// routes.
+func (a *ActionDefinition) AllParamNames() []string {
+	var params []string
+	for _, r := range a.Routes {
+		for _, p := range r.Params() {
+			found := false
+			for _, pa := range params {
+				if pa == p {
+					found = true
+					break
+				}
+			}
+			if !found {
+				params = append(params, p)
+			}
+		}
+	}
+	sort.Strings(params)
+	return params
 }
 
 // Context returns the generic definition name used in error messages.
@@ -559,14 +624,20 @@ func (a *AttributeDefinition) IsRequired(attName string) bool {
 }
 
 // Dup returns a copy of the attribute definition.
-// Note: the underlying type is not copied, simply aliased for practicality.
+// Note: the primitive underlying types are not duplicated for simplicity.
 func (a *AttributeDefinition) Dup() *AttributeDefinition {
 	valDup := make([]ValidationDefinition, len(a.Validations))
 	for i, v := range a.Validations {
 		valDup[i] = v
 	}
+	t := a.Type
+	if t.IsArray() {
+		t = t.ToArray().Dup()
+	} else if t.IsObject() {
+		t = t.ToObject().Dup()
+	}
 	dup := AttributeDefinition{
-		Type:         a.Type,
+		Type:         t,
 		Description:  a.Description,
 		Validations:  valDup,
 		DefaultValue: a.DefaultValue,
@@ -651,18 +722,13 @@ func (t *TraitDefinition) Context() string {
 
 // Context returns the generic definition name used in error messages.
 func (r *RouteDefinition) Context() string {
-	return fmt.Sprintf("route %s %s", r.Verb, r.Path)
+	return fmt.Sprintf(`route %s "%s" of %s`, r.Verb, r.Path, r.Parent.Context())
 }
 
 // Params returns the route parameters.
 // For example for the route "GET /foo/:fooID" Params returns []string{"fooID"}.
 func (r *RouteDefinition) Params() []string {
-	matches := ParamsRegex.FindAllStringSubmatch(r.FullPath(), -1)
-	params := make([]string, len(matches))
-	for i, m := range matches {
-		params[i] = m[2]
-	}
-	return params
+	return ExtractWildcards(r.FullPath())
 }
 
 // FullPath returns the action full path computed by concatenating the API and resource base paths
@@ -728,9 +794,21 @@ func format(n string, snake, plural *bool) string {
 		} else {
 			if n == "ok" {
 				return "OK"
+			} else if n == "id" {
+				return "ID"
 			}
 			n = inflect.Camelize(n)
 		}
 	}
 	return n
+}
+
+// ExtractWildcards returns the names of the wildcards that appear in path.
+func ExtractWildcards(path string) []string {
+	matches := ParamsRegex.FindAllStringSubmatch(path, -1)
+	wcs := make([]string, len(matches))
+	for i, m := range matches {
+		wcs[i] = m[1]
+	}
+	return wcs
 }

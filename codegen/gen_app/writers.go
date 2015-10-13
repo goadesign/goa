@@ -77,12 +77,12 @@ type (
 
 	// ResourceData contains the information required to generate the resource GoGenerator
 	ResourceData struct {
-		Name              string                     // Name of resource
-		Identifier        string                     // Identifier of resource media type
-		Description       string                     // Description of resource
-		Type              *design.UserTypeDefinition // Type of resource media type
-		CanonicalTemplate string                     // CanonicalFormat represents the resource canonical path in the form of a fmt.Sprintf format.
-		CanonicalParams   []string                   // CanonicalParams is the list of parameter names that appear in the resource canonical path in order.
+		Name              string                      // Name of resource
+		Identifier        string                      // Identifier of resource media type
+		Description       string                      // Description of resource
+		Type              *design.MediaTypeDefinition // Type of resource media type
+		CanonicalTemplate string                      // CanonicalFormat represents the resource canonical path in the form of a fmt.Sprintf format.
+		CanonicalParams   []string                    // CanonicalParams is the list of parameter names that appear in the resource canonical path in order.
 	}
 )
 
@@ -236,7 +236,7 @@ func NewResourcesWriter(filename string) (*ResourcesWriter, error) {
 	cw := codegen.NewGoGenerator(filename)
 	funcMap := cw.FuncMap
 	funcMap["join"] = strings.Join
-	funcMap["gotypedef"] = codegen.GoTypeDef
+	funcMap["goresdef"] = codegen.GoResDef
 	resourceTmpl, err := template.New("resource").Funcs(cw.FuncMap).Parse(resourceT)
 	if err != nil {
 		return nil, err
@@ -259,8 +259,13 @@ func NewMediaTypesWriter(filename string) (*MediaTypesWriter, error) {
 	cw := codegen.NewGoGenerator(filename)
 	funcMap := cw.FuncMap
 	funcMap["gotypedef"] = codegen.GoTypeDef
+	funcMap["gotyperef"] = codegen.GoTypeRef
 	funcMap["goify"] = codegen.Goify
 	funcMap["gotypename"] = codegen.GoTypeName
+	funcMap["gonative"] = codegen.GoNativeType
+	funcMap["typeUnmarshaler"] = codegen.TypeUnmarshaler
+	funcMap["typeMarshaler"] = codegen.MediaTypeMarshaler
+	funcMap["validate"] = codegen.ValidationChecker
 	mediaTypeTmpl, err := template.New("media type").Funcs(funcMap).Parse(mediaTypeT)
 	if err != nil {
 		return nil, err
@@ -390,20 +395,19 @@ func New{{.Name}}(c goa.Context) (*{{.Name}}, error) {
 	// ctxRespT generates response helper methods GoGenerator
 	// template input: *ContextTemplateData
 	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{.FormatName false }} sends a HTTP response with status code {{.Status}}.
-	func (c *{{$ctx.Name}}) {{goify .Name true}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp *{{gotypename $mt 0}}{{if gt (len $mt.Views) 1}}, view {{gotypename $mt 0}}ViewEnum{{end}}{{end}}) error {
-	{{if $mt}}	var r interface{}
-	{{if gt (len $mt.Views) 1}}{{range $mt.Views}}	if view == {{gotypename $mt 0}}{{goify .Name true}}View {
-		{{mediaTypeMarshaler $mt "" "resp" "r" .Name}}
-		}
-	{{end}}{{else}}{{mediaTypeMarshaler $mt "" "resp" "r" ""}}
-	{{end}}	return c.JSON({{.Status}}, r){{else}}return c.Respond({{.Status}}, nil){{end}}
+func (c *{{$ctx.Name}}) {{goify .Name true}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp {{gotyperef $mt 0}}{{if gt (len $mt.Views) 1}}, view {{gotypename $mt 0}}ViewEnum{{end}}{{end}}) error {
+{{if $mt}}	r, err := resp.Dump({{if gt (len $mt.Views) 1}}view{{end}})
+	if err != nil {
+		return err
 	}
-	{{end}}`
+	return c.JSON({{.Status}}, r){{else}}return c.Respond({{.Status}}, nil){{end}}
+}
+{{end}}`
 
 	// payloadT generates the payload type definition GoGenerator
 	// template input: *ContextTemplateData
 	payloadT = `{{$payload := .Payload}}// {{gotypename .Payload 0}} is the {{.ResourceName}} {{.ActionName}} action payload.
-type {{gotypename .Payload 1}} {{gotypedef .Payload 0 true false}}
+type {{gotypename .Payload 1}} {{gotypedef .Payload 0 false false}}
 `
 	// newPayloadT generates the code for the payload factory method.
 	// template input: *ContextTemplateData
@@ -434,7 +438,7 @@ func Mount{{.Resource}}Controller(app *goa.Application, ctrl {{.Resource}}Contro
 	var h goa.Handler
 	logger := app.Logger.New("ctrl", "{{.Resource}}")
 	logger.Info("mounting")
-{{$res := .Resource}}{{range .Actions}}
+{{$res := .Resource}}{{range .Actions}}{{$action := .}}
 	h = func(c goa.Context) error {
 		ctx, err := New{{.Context}}(c)
 		if err != nil {
@@ -444,7 +448,7 @@ func Mount{{.Resource}}Controller(app *goa.Application, ctrl {{.Resource}}Contro
 	}
 {{range .Routes}}	app.Router.Handle("{{.Verb}}", "{{.FullPath}}", goa.NewHTTPRouterHandle(app, "{{$res}}", h))
 	idx++
-	logger.Info("handler", "action", idx, "{{.Verb}}", "{{.FullPath}}")
+	logger.Info("handler", "action", "{{$action.Name}}", "{{.Verb}}", "{{.FullPath}}")
 {{end}}{{end}}
 	logger.Info("mounted")
 }
@@ -452,11 +456,8 @@ func Mount{{.Resource}}Controller(app *goa.Application, ctrl {{.Resource}}Contro
 
 	// resourceT generates the code for a resource.
 	// template input: *ResourceData
-	resourceT = `{{if .Type}}// {{if .Description}}{{.Description}}{{else}}{{.Name}} resource{{end}}
-type {{.Name}} {{gotypedef .Type 0 true false}}
-{{end}}{{if .CanonicalTemplate}}
-// {{.Name}}Href returns the resource href.
-func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} string{{end}}) string {
+	resourceT = `{{if .CanonicalTemplate}}// {{.Name}}Href returns the resource href.
+func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} interface{}{{end}}) string {
 	return fmt.Sprintf("{{.CanonicalTemplate}}", {{join .CanonicalParams ", "}})
 }
 {{end}}`
@@ -465,7 +466,7 @@ func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} string{
 	// template input: *design.MediaTypeDefinition
 	mediaTypeT = `// {{if .Description}}{{.Description}}{{else}}{{gotypename . 0}} media type{{end}}
 // Identifier: {{.Identifier}}
-type {{gotypename . 0}} {{gotypedef . 0 true false}}{{if .Views}}
+type {{gotypename . 0}} {{gotypedef . 0 false false}}{{if .Views}}
 
 // {{.Name}} views
 type {{gotypename . 0}}ViewEnum string
@@ -474,11 +475,40 @@ const (
 {{$typeName := gotypename . 0}}{{range $name, $view := .Views}}// {{if .Description}}{{.Description}}{{else}}{{$typeName}} {{.Name}} view{{end}}
 	{{$typeName}}{{goify .Name true}}View {{$typeName}}ViewEnum = "{{.Name}}"
 {{end}}){{end}}
+// Load{{gotypename . 0}} loads raw data into an instance of {{gotypename . 0}} running all the
+// validations. Raw data is defined by data that the JSON unmarshaler would create when unmarshaling
+// into a variable of type interface{}. See https://golang.org/pkg/encoding/json/#Unmarshal for the
+// complete list of supported data types.
+func Load{{gotypename . 0}}(raw interface{}) ({{gotyperef . 1}}, error) {
+	var err error
+	var res {{gotyperef . 1}}
+	{{typeUnmarshaler . "" "raw" "res"}}
+	return res, err
+}
+
+// Dump produces raw data from an instance of {{gotypename . 0}} running all the
+// validations. See Load{{gotypename . 0}} for the definition of raw data.
+func (mt {{gotyperef . 0}}) Dump({{if gt (len .Views) 1}}view {{gotypename . 0}}ViewEnum{{end}}) ({{gonative .}}, error) {
+	var err error
+	var res {{gonative .}}
+{{$mt := .}}{{if gt (len .Views) 1}}{{range .Views}}	if view == {{gotypename $mt 0}}{{goify .Name true}}View {
+		{{typeMarshaler $mt "" "mt" "res" .Name}}
+	}
+{{end}}{{else}}	var err error
+	{{range $mt.Views}}{{typeMarshaler $mt "" "mt" "res" .Name}}{{end}}{{/* ranges over the one element */}}
+{{end}}	return res, err
+}
+
+// Validate validates the media type instance.
+func (mt {{gotyperef . 0}}) Validate() (err error) {
+{{validate .AttributeDefinition "mt"}}
+	return
+}
 `
 
 	// userTypeT generates the code for a user type.
 	// template input: *design.UserTypeDefinition
 	userTypeT = `// {{if .Description}}{{.Description}}{{else}}{{gotypename . 0}} type{{end}}
-type {{gotypename . 0}} {{gotypedef . 0 true false}}
+type {{gotypename . 0}} {{gotypedef . 0 false false}}
 `
 )

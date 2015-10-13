@@ -7,22 +7,20 @@ import (
 
 var _ = Resource("account", func() {
 
-	MediaType(AccountMediaType)
+	MediaType(Account)
 	BasePath("/accounts")
 	CanonicalActionName("show")
 	Trait("Authenticated")
 
 	Action("show", func() {
 		Routing(
-			GET("/:id"),
+			GET("/:accountID"),
 		)
 		Description("Retrieve account with given id")
 		Params(func() {
-			Param("id", Integer, "Account ID")
+			Param("accountID", Integer, "Account ID")
 		})
-		Response(OK, func() {
-			MediaType(AccountMediaType)
-		})
+		Response(OK)
 		Response(NotFound)
 	})
 
@@ -40,11 +38,11 @@ var _ = Resource("account", func() {
 
 	Action("update", func() {
 		Routing(
-			PUT("/:id"),
+			PUT("/:accountID"),
 		)
 		Description("Change account name")
 		Params(func() {
-			Param("id", Integer, "Accoutn ID")
+			Param("accountID", Integer, "Accoutn ID")
 		})
 		Payload(func() {
 			Member("name")
@@ -56,10 +54,10 @@ var _ = Resource("account", func() {
 
 	Action("delete", func() {
 		Routing(
-			DELETE("/:id"),
+			DELETE("/:accountID"),
 		)
 		Params(func() {
-			Param("id", Integer, "Account ID")
+			Param("accountID", Integer, "Account ID")
 		})
 		Response(NoContent)
 		Response(NotFound)
@@ -68,7 +66,7 @@ var _ = Resource("account", func() {
 
 var _ = Resource("bottle", func() {
 
-	MediaType(BottleMediaType)
+	MediaType(Bottle)
 	BasePath("bottles")
 	Parent("account")
 	CanonicalActionName("show")
@@ -83,7 +81,10 @@ var _ = Resource("bottle", func() {
 			Param("years", ArrayOf(Integer), "Filter by years")
 		})
 		Response(OK, func() {
-			MediaType(CollectionOf(BottleMediaType))
+			MediaType(CollectionOf(Bottle, func() {
+				View("default")
+				View("tiny")
+			}))
 		})
 	})
 
@@ -93,11 +94,9 @@ var _ = Resource("bottle", func() {
 		)
 		Description("Retrieve bottle with given id")
 		Params(func() {
-			Param("id", Integer, "Bottle ID")
+			Param("id")
 		})
-		Response(OK, func() {
-			MediaType(BottleMediaType)
-		})
+		Response(OK)
 		Response(NotFound)
 	})
 
@@ -106,19 +105,8 @@ var _ = Resource("bottle", func() {
 			POST(""),
 		)
 		Description("Record new bottle")
-		Payload(func() {
-			Member("name")
-			Member("vintage")
-			Member("vineyard")
-			Member("varietal")
-			Member("color")
-			Member("sweet")
-			Member("country")
-			Member("region")
-			Member("review")
-			Member("characteristics")
-
-			Required("name", "vintage", "vineyard")
+		Payload(BottlePayload, func() {
+			Required("name", "vineyard", "varietal", "vintage", "color")
 		})
 		Response(Created)
 	})
@@ -128,20 +116,9 @@ var _ = Resource("bottle", func() {
 			PATCH("/:id"),
 		)
 		Params(func() {
-			Param("id", Integer, "Bottle ID")
+			Param("id")
 		})
-		Payload(func() {
-			Member("name")
-			Member("vineyard")
-			Member("varietal")
-			Member("vintage")
-			Member("color")
-			Member("sweet")
-			Member("country")
-			Member("region")
-			Member("review")
-			Member("characteristics")
-		})
+		Payload(BottlePayload)
 		Response(NoContent)
 		Response(NotFound)
 	})
@@ -151,10 +128,11 @@ var _ = Resource("bottle", func() {
 			PUT("/:id/actions/rate"),
 		)
 		Params(func() {
-			Param("id", Integer, "Bottle ID")
+			Param("id")
 		})
 		Payload(func() {
 			Member("rating")
+			Required("rating")
 		})
 		Response(NoContent)
 		Response(NotFound)
@@ -165,7 +143,7 @@ var _ = Resource("bottle", func() {
 			DELETE("/:id"),
 		)
 		Params(func() {
-			Param("id", Integer, "Bottle ID")
+			Param("id")
 		})
 		Headers(func() {
 			Header("X-Force", func() {

@@ -2,7 +2,7 @@
 // cellar: Application Contexts
 //
 // Generated with codegen v0.0.1, command line:
-// $ /home/raphael/go/src/github.com/raphael/goa/examples/cellar/codegen485234072/codegen
+// $ /home/raphael/go/src/github.com/raphael/goa/examples/cellar/codegen583049478/codegen
 // --out=/home/raphael/go/src/github.com/raphael/goa/examples/cellar
 // --design=github.com/raphael/goa/examples/cellar/design
 // --force
@@ -14,7 +14,6 @@
 package app
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -24,7 +23,6 @@ import (
 // CreateAccountContext provides the account create action context.
 type CreateAccountContext struct {
 	goa.Context
-	AccountID int
 
 	Payload *CreateAccountPayload
 }
@@ -36,14 +34,6 @@ func NewCreateAccountContext(c goa.Context) (*CreateAccountContext, error) {
 	ctx := CreateAccountContext{Context: c}
 	if c.Header().Get("Auth-Token") == "" {
 		err = goa.MissingHeaderError("Auth-Token", err)
-	}
-	rawAccountID, ok := c.Get("accountID")
-	if ok {
-		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
-			ctx.AccountID = int(accountID)
-		} else {
-			err = goa.InvalidParamTypeError("accountID", rawAccountID, "integer", err2)
-		}
 	}
 	if payload := c.Payload(); payload != nil {
 		p, err := NewCreateAccountPayload(payload)
@@ -57,7 +47,8 @@ func NewCreateAccountContext(c goa.Context) (*CreateAccountContext, error) {
 
 // CreateAccountPayload is the account create action payload.
 type CreateAccountPayload struct {
-	Name string `json:"name"`
+	// Name of account
+	Name string
 }
 
 // NewCreateAccountPayload instantiates a CreateAccountPayload from a raw request body.
@@ -92,7 +83,6 @@ func (c *CreateAccountContext) Created() error {
 type DeleteAccountContext struct {
 	goa.Context
 	AccountID int
-	ID        int
 }
 
 // NewDeleteAccountContext parses the incoming request URL and body, performs validations and creates the
@@ -109,14 +99,6 @@ func NewDeleteAccountContext(c goa.Context) (*DeleteAccountContext, error) {
 			ctx.AccountID = int(accountID)
 		} else {
 			err = goa.InvalidParamTypeError("accountID", rawAccountID, "integer", err2)
-		}
-	}
-	rawID, ok := c.Get("id")
-	if ok {
-		if id, err2 := strconv.Atoi(rawID); err2 == nil {
-			ctx.ID = int(id)
-		} else {
-			err = goa.InvalidParamTypeError("id", rawID, "integer", err2)
 		}
 	}
 	return &ctx, err
@@ -136,7 +118,6 @@ func (c *DeleteAccountContext) NotFound() error {
 type ShowAccountContext struct {
 	goa.Context
 	AccountID int
-	ID        int
 }
 
 // NewShowAccountContext parses the incoming request URL and body, performs validations and creates the
@@ -155,14 +136,6 @@ func NewShowAccountContext(c goa.Context) (*ShowAccountContext, error) {
 			err = goa.InvalidParamTypeError("accountID", rawAccountID, "integer", err2)
 		}
 	}
-	rawID, ok := c.Get("id")
-	if ok {
-		if id, err2 := strconv.Atoi(rawID); err2 == nil {
-			ctx.ID = int(id)
-		} else {
-			err = goa.InvalidParamTypeError("id", rawID, "integer", err2)
-		}
-	}
 	return &ctx, err
 }
 
@@ -172,41 +145,10 @@ func (c *ShowAccountContext) NotFound() error {
 }
 
 // OK sends a HTTP response with status code 200.
-func (c *ShowAccountContext) OK(resp *ExampleAccountMedia, view ExampleAccountMediaViewEnum) error {
-	var r interface{}
-	if view == ExampleAccountMediaDefaultView {
-		if resp.Name == "" {
-			return fmt.Errorf("missing required attribute \"name\"")
-		}
-		r = map[string]interface{}{
-			"href": resp.Href,
-			"id":   resp.ID,
-			"name": resp.Name,
-		}
-
-	}
-	if view == ExampleAccountMediaFullView {
-		if resp.Name == "" {
-			return fmt.Errorf("missing required attribute \"name\"")
-		}
-		r = map[string]interface{}{
-			"created_at": resp.CreatedAt,
-			"created_by": resp.CreatedBy,
-			"href":       resp.Href,
-			"id":         resp.ID,
-			"name":       resp.Name,
-		}
-
-	}
-	if view == ExampleAccountMediaLinkView {
-		if resp.Name == "" {
-			return fmt.Errorf("missing required attribute \"name\"")
-		}
-		r = map[string]interface{}{
-			"href": resp.Href,
-			"name": resp.Name,
-		}
-
+func (c *ShowAccountContext) OK(resp *Account, view AccountViewEnum) error {
+	r, err := resp.Dump(view)
+	if err != nil {
+		return err
 	}
 	return c.JSON(200, r)
 }
@@ -215,7 +157,6 @@ func (c *ShowAccountContext) OK(resp *ExampleAccountMedia, view ExampleAccountMe
 type UpdateAccountContext struct {
 	goa.Context
 	AccountID int
-	ID        int
 
 	Payload *UpdateAccountPayload
 }
@@ -236,14 +177,6 @@ func NewUpdateAccountContext(c goa.Context) (*UpdateAccountContext, error) {
 			err = goa.InvalidParamTypeError("accountID", rawAccountID, "integer", err2)
 		}
 	}
-	rawID, ok := c.Get("id")
-	if ok {
-		if id, err2 := strconv.Atoi(rawID); err2 == nil {
-			ctx.ID = int(id)
-		} else {
-			err = goa.InvalidParamTypeError("id", rawID, "integer", err2)
-		}
-	}
 	if payload := c.Payload(); payload != nil {
 		p, err := NewUpdateAccountPayload(payload)
 		if err != nil {
@@ -256,7 +189,8 @@ func NewUpdateAccountContext(c goa.Context) (*UpdateAccountContext, error) {
 
 // UpdateAccountPayload is the account update action payload.
 type UpdateAccountPayload struct {
-	Name string `json:"name"`
+	// Name of account
+	Name string
 }
 
 // NewUpdateAccountPayload instantiates a UpdateAccountPayload from a raw request body.
@@ -328,16 +262,16 @@ func NewCreateBottleContext(c goa.Context) (*CreateBottleContext, error) {
 
 // CreateBottlePayload is the bottle create action payload.
 type CreateBottlePayload struct {
-	Characteristics string `json:"characteristics,omitempty"`
-	Color           string `json:"color,omitempty"`
-	Country         string `json:"country,omitempty"`
-	Name            string `json:"name"`
-	Region          string `json:"region,omitempty"`
-	Review          string `json:"review,omitempty"`
-	Sweet           string `json:"sweet,omitempty"`
-	Varietal        string `json:"varietal,omitempty"`
-	Vineyard        string `json:"vineyard"`
-	Vintage         string `json:"vintage"`
+	Characteristics string
+	Color           string
+	Country         string
+	Name            string
+	Region          string
+	Review          string
+	Sweetness       int
+	Varietal        string
+	Vineyard        string
+	Vintage         int
 }
 
 // NewCreateBottlePayload instantiates a CreateBottlePayload from a raw request body.
@@ -354,6 +288,12 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 			} else {
 				err = goa.InvalidAttributeTypeError(`.Characteristics`, v, "string", err)
 			}
+			if len(tmp3) < 10 {
+				err = goa.InvalidLengthError(`.Characteristics`, tmp3, 10, true, err)
+			}
+			if len(tmp3) > 300 {
+				err = goa.InvalidLengthError(`.Characteristics`, tmp3, 300, false, err)
+			}
 			p.Characteristics = tmp3
 		}
 		if v, ok := val["color"]; ok {
@@ -362,6 +302,9 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 				tmp4 = val
 			} else {
 				err = goa.InvalidAttributeTypeError(`.Color`, v, "string", err)
+			}
+			if !(tmp4 == "red" || tmp4 == "white" || tmp4 == "rose" || tmp4 == "yellow" || tmp4 == "sparkling") {
+				err = goa.InvalidEnumValueError(`.Color`, tmp4, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
 			}
 			p.Color = tmp4
 		}
@@ -372,6 +315,9 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 			} else {
 				err = goa.InvalidAttributeTypeError(`.Country`, v, "string", err)
 			}
+			if len(tmp5) < 2 {
+				err = goa.InvalidLengthError(`.Country`, tmp5, 2, true, err)
+			}
 			p.Country = tmp5
 		}
 		if v, ok := val["name"]; ok {
@@ -380,6 +326,9 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 				tmp6 = val
 			} else {
 				err = goa.InvalidAttributeTypeError(`.Name`, v, "string", err)
+			}
+			if len(tmp6) < 2 {
+				err = goa.InvalidLengthError(`.Name`, tmp6, 2, true, err)
 			}
 			p.Name = tmp6
 		}
@@ -399,16 +348,28 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 			} else {
 				err = goa.InvalidAttributeTypeError(`.Review`, v, "string", err)
 			}
+			if len(tmp8) < 10 {
+				err = goa.InvalidLengthError(`.Review`, tmp8, 10, true, err)
+			}
+			if len(tmp8) > 300 {
+				err = goa.InvalidLengthError(`.Review`, tmp8, 300, false, err)
+			}
 			p.Review = tmp8
 		}
-		if v, ok := val["sweet"]; ok {
-			var tmp9 string
-			if val, ok := v.(string); ok {
+		if v, ok := val["sweetness"]; ok {
+			var tmp9 int
+			if val, ok := v.(int); ok {
 				tmp9 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`.Sweet`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.Sweetness`, v, "int", err)
 			}
-			p.Sweet = tmp9
+			if tmp9 < 1 {
+				err = goa.InvalidRangeError(`.Sweetness`, tmp9, 1, true, err)
+			}
+			if tmp9 > 5 {
+				err = goa.InvalidRangeError(`.Sweetness`, tmp9, 5, false, err)
+			}
+			p.Sweetness = tmp9
 		}
 		if v, ok := val["varietal"]; ok {
 			var tmp10 string
@@ -416,6 +377,9 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 				tmp10 = val
 			} else {
 				err = goa.InvalidAttributeTypeError(`.Varietal`, v, "string", err)
+			}
+			if len(tmp10) < 4 {
+				err = goa.InvalidLengthError(`.Varietal`, tmp10, 4, true, err)
 			}
 			p.Varietal = tmp10
 		}
@@ -426,21 +390,69 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 			} else {
 				err = goa.InvalidAttributeTypeError(`.Vineyard`, v, "string", err)
 			}
+			if len(tmp11) < 2 {
+				err = goa.InvalidLengthError(`.Vineyard`, tmp11, 2, true, err)
+			}
 			p.Vineyard = tmp11
 		}
 		if v, ok := val["vintage"]; ok {
-			var tmp12 string
-			if val, ok := v.(string); ok {
+			var tmp12 int
+			if val, ok := v.(int); ok {
 				tmp12 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`.Vintage`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.Vintage`, v, "int", err)
+			}
+			if tmp12 < 1900 {
+				err = goa.InvalidRangeError(`.Vintage`, tmp12, 1900, true, err)
+			}
+			if tmp12 > 2020 {
+				err = goa.InvalidRangeError(`.Vintage`, tmp12, 2020, false, err)
 			}
 			p.Vintage = tmp12
 		}
 	} else {
 		err = goa.InvalidAttributeTypeError(``, raw, "map[string]interface{}", err)
 	}
+	if len(p.Varietal) < 4 {
+		err = goa.InvalidLengthError(`.Varietal`, p.Varietal, 4, true, err)
+	}
+	if len(p.Country) < 2 {
+		err = goa.InvalidLengthError(`.Country`, p.Country, 2, true, err)
+	}
 
+	if len(p.Characteristics) < 10 {
+		err = goa.InvalidLengthError(`.Characteristics`, p.Characteristics, 10, true, err)
+	}
+	if len(p.Characteristics) > 300 {
+		err = goa.InvalidLengthError(`.Characteristics`, p.Characteristics, 300, false, err)
+	}
+	if len(p.Review) < 10 {
+		err = goa.InvalidLengthError(`.Review`, p.Review, 10, true, err)
+	}
+	if len(p.Review) > 300 {
+		err = goa.InvalidLengthError(`.Review`, p.Review, 300, false, err)
+	}
+	if len(p.Name) < 2 {
+		err = goa.InvalidLengthError(`.Name`, p.Name, 2, true, err)
+	}
+	if len(p.Vineyard) < 2 {
+		err = goa.InvalidLengthError(`.Vineyard`, p.Vineyard, 2, true, err)
+	}
+	if p.Vintage < 1900 {
+		err = goa.InvalidRangeError(`.Vintage`, p.Vintage, 1900, true, err)
+	}
+	if p.Vintage > 2020 {
+		err = goa.InvalidRangeError(`.Vintage`, p.Vintage, 2020, false, err)
+	}
+	if !(p.Color == "red" || p.Color == "white" || p.Color == "rose" || p.Color == "yellow" || p.Color == "sparkling") {
+		err = goa.InvalidEnumValueError(`.Color`, p.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
+	}
+	if p.Sweetness < 1 {
+		err = goa.InvalidRangeError(`.Sweetness`, p.Sweetness, 1, true, err)
+	}
+	if p.Sweetness > 5 {
+		err = goa.InvalidRangeError(`.Sweetness`, p.Sweetness, 5, false, err)
+	}
 	return p, err
 }
 
@@ -536,57 +548,10 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 }
 
 // OK sends a HTTP response with status code 200.
-func (c *ListBottleContext) OK(resp *ExampleBottleMediaCollection, view ExampleBottleMediaCollectionViewEnum) error {
-	var r interface{}
-	if view == ExampleBottleMediaCollectionDefaultView {
-		r = map[string]interface{}{
-			"href":     resp.Href,
-			"id":       resp.ID,
-			"links":    resp.Links,
-			"name":     resp.Name,
-			"varietal": resp.Varietal,
-			"vineyard": resp.Vineyard,
-			"vintage":  resp.Vintage,
-		}
-		links := make(map[string]interface{})
-		if resp.Account.Name == "" {
-			return fmt.Errorf("missing required attribute \"name\"")
-		}
-		links["Account"] = map[string]interface{}{
-			"href": resp.Account.Href,
-			"name": resp.Account.Name,
-		}
-		r["links"] = links
-
-	}
-	if view == ExampleBottleMediaCollectionFullView {
-		r = map[string]interface{}{
-			"account":         resp.Account,
-			"characteristics": resp.Characteristics,
-			"color":           resp.Color,
-			"country":         resp.Country,
-			"created_at":      resp.CreatedAt,
-			"href":            resp.Href,
-			"id":              resp.ID,
-			"name":            resp.Name,
-			"region":          resp.Region,
-			"review":          resp.Review,
-			"sweet":           resp.Sweet,
-			"updated_at":      resp.UpdatedAt,
-			"varietal":        resp.Varietal,
-			"vineyard":        resp.Vineyard,
-			"vintage":         resp.Vintage,
-		}
-		links := make(map[string]interface{})
-		if resp.Account.Name == "" {
-			return fmt.Errorf("missing required attribute \"name\"")
-		}
-		links["Account"] = map[string]interface{}{
-			"href": resp.Account.Href,
-			"name": resp.Account.Name,
-		}
-		r["links"] = links
-
+func (c *ListBottleContext) OK(resp BottleCollection, view BottleCollectionViewEnum) error {
+	r, err := resp.Dump(view)
+	if err != nil {
+		return err
 	}
 	return c.JSON(200, r)
 }
@@ -636,7 +601,8 @@ func NewRateBottleContext(c goa.Context) (*RateBottleContext, error) {
 
 // RateBottlePayload is the bottle rate action payload.
 type RateBottlePayload struct {
-	Rating string `json:"rating,omitempty"`
+	// Rating of bottle between 1 and 5
+	Rating int
 }
 
 // NewRateBottlePayload instantiates a RateBottlePayload from a raw request body.
@@ -647,18 +613,29 @@ func NewRateBottlePayload(raw interface{}) (*RateBottlePayload, error) {
 	if val, ok := raw.(map[string]interface{}); ok {
 		p = new(RateBottlePayload)
 		if v, ok := val["rating"]; ok {
-			var tmp13 string
-			if val, ok := v.(string); ok {
+			var tmp13 int
+			if val, ok := v.(int); ok {
 				tmp13 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`.Rating`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.Rating`, v, "int", err)
+			}
+			if tmp13 < 1 {
+				err = goa.InvalidRangeError(`.Rating`, tmp13, 1, true, err)
+			}
+			if tmp13 > 5 {
+				err = goa.InvalidRangeError(`.Rating`, tmp13, 5, false, err)
 			}
 			p.Rating = tmp13
 		}
 	} else {
 		err = goa.InvalidAttributeTypeError(``, raw, "map[string]interface{}", err)
 	}
-
+	if p.Rating < 1 {
+		err = goa.InvalidRangeError(`.Rating`, p.Rating, 1, true, err)
+	}
+	if p.Rating > 5 {
+		err = goa.InvalidRangeError(`.Rating`, p.Rating, 5, false, err)
+	}
 	return p, err
 }
 
@@ -712,63 +689,10 @@ func (c *ShowBottleContext) NotFound() error {
 }
 
 // OK sends a HTTP response with status code 200.
-func (c *ShowBottleContext) OK(resp *ExampleBottleMedia, view ExampleBottleMediaViewEnum) error {
-	var r interface{}
-	if view == ExampleBottleMediaDefaultView {
-		if resp.Name == "" {
-			return fmt.Errorf("missing required attribute \"name\"")
-		}
-		r = map[string]interface{}{
-			"href":     resp.Href,
-			"id":       resp.ID,
-			"links":    resp.Links,
-			"name":     resp.Name,
-			"varietal": resp.Varietal,
-			"vineyard": resp.Vineyard,
-			"vintage":  resp.Vintage,
-		}
-		links := make(map[string]interface{})
-		if resp.Account.Name == "" {
-			return fmt.Errorf("missing required attribute \"name\"")
-		}
-		links["Account"] = map[string]interface{}{
-			"href": resp.Account.Href,
-			"name": resp.Account.Name,
-		}
-		r["links"] = links
-
-	}
-	if view == ExampleBottleMediaFullView {
-		if resp.Account == "" {
-			return fmt.Errorf("missing required attribute \"account\"")
-		}
-		r = map[string]interface{}{
-			"account":         resp.Account,
-			"characteristics": resp.Characteristics,
-			"color":           resp.Color,
-			"country":         resp.Country,
-			"created_at":      resp.CreatedAt,
-			"href":            resp.Href,
-			"id":              resp.ID,
-			"name":            resp.Name,
-			"region":          resp.Region,
-			"review":          resp.Review,
-			"sweet":           resp.Sweet,
-			"updated_at":      resp.UpdatedAt,
-			"varietal":        resp.Varietal,
-			"vineyard":        resp.Vineyard,
-			"vintage":         resp.Vintage,
-		}
-		links := make(map[string]interface{})
-		if resp.Account.Name == "" {
-			return fmt.Errorf("missing required attribute \"name\"")
-		}
-		links["Account"] = map[string]interface{}{
-			"href": resp.Account.Href,
-			"name": resp.Account.Name,
-		}
-		r["links"] = links
-
+func (c *ShowBottleContext) OK(resp *Bottle, view BottleViewEnum) error {
+	r, err := resp.Dump(view)
+	if err != nil {
+		return err
 	}
 	return c.JSON(200, r)
 }
@@ -818,16 +742,16 @@ func NewUpdateBottleContext(c goa.Context) (*UpdateBottleContext, error) {
 
 // UpdateBottlePayload is the bottle update action payload.
 type UpdateBottlePayload struct {
-	Characteristics string `json:"characteristics,omitempty"`
-	Color           string `json:"color,omitempty"`
-	Country         string `json:"country,omitempty"`
-	Name            string `json:"name,omitempty"`
-	Region          string `json:"region,omitempty"`
-	Review          string `json:"review,omitempty"`
-	Sweet           string `json:"sweet,omitempty"`
-	Varietal        string `json:"varietal,omitempty"`
-	Vineyard        string `json:"vineyard,omitempty"`
-	Vintage         string `json:"vintage,omitempty"`
+	Characteristics string
+	Color           string
+	Country         string
+	Name            string
+	Region          string
+	Review          string
+	Sweetness       int
+	Varietal        string
+	Vineyard        string
+	Vintage         int
 }
 
 // NewUpdateBottlePayload instantiates a UpdateBottlePayload from a raw request body.
@@ -844,6 +768,12 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 			} else {
 				err = goa.InvalidAttributeTypeError(`.Characteristics`, v, "string", err)
 			}
+			if len(tmp14) < 10 {
+				err = goa.InvalidLengthError(`.Characteristics`, tmp14, 10, true, err)
+			}
+			if len(tmp14) > 300 {
+				err = goa.InvalidLengthError(`.Characteristics`, tmp14, 300, false, err)
+			}
 			p.Characteristics = tmp14
 		}
 		if v, ok := val["color"]; ok {
@@ -852,6 +782,9 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 				tmp15 = val
 			} else {
 				err = goa.InvalidAttributeTypeError(`.Color`, v, "string", err)
+			}
+			if !(tmp15 == "red" || tmp15 == "white" || tmp15 == "rose" || tmp15 == "yellow" || tmp15 == "sparkling") {
+				err = goa.InvalidEnumValueError(`.Color`, tmp15, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
 			}
 			p.Color = tmp15
 		}
@@ -862,6 +795,9 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 			} else {
 				err = goa.InvalidAttributeTypeError(`.Country`, v, "string", err)
 			}
+			if len(tmp16) < 2 {
+				err = goa.InvalidLengthError(`.Country`, tmp16, 2, true, err)
+			}
 			p.Country = tmp16
 		}
 		if v, ok := val["name"]; ok {
@@ -870,6 +806,9 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 				tmp17 = val
 			} else {
 				err = goa.InvalidAttributeTypeError(`.Name`, v, "string", err)
+			}
+			if len(tmp17) < 2 {
+				err = goa.InvalidLengthError(`.Name`, tmp17, 2, true, err)
 			}
 			p.Name = tmp17
 		}
@@ -889,16 +828,28 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 			} else {
 				err = goa.InvalidAttributeTypeError(`.Review`, v, "string", err)
 			}
+			if len(tmp19) < 10 {
+				err = goa.InvalidLengthError(`.Review`, tmp19, 10, true, err)
+			}
+			if len(tmp19) > 300 {
+				err = goa.InvalidLengthError(`.Review`, tmp19, 300, false, err)
+			}
 			p.Review = tmp19
 		}
-		if v, ok := val["sweet"]; ok {
-			var tmp20 string
-			if val, ok := v.(string); ok {
+		if v, ok := val["sweetness"]; ok {
+			var tmp20 int
+			if val, ok := v.(int); ok {
 				tmp20 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`.Sweet`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.Sweetness`, v, "int", err)
 			}
-			p.Sweet = tmp20
+			if tmp20 < 1 {
+				err = goa.InvalidRangeError(`.Sweetness`, tmp20, 1, true, err)
+			}
+			if tmp20 > 5 {
+				err = goa.InvalidRangeError(`.Sweetness`, tmp20, 5, false, err)
+			}
+			p.Sweetness = tmp20
 		}
 		if v, ok := val["varietal"]; ok {
 			var tmp21 string
@@ -906,6 +857,9 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 				tmp21 = val
 			} else {
 				err = goa.InvalidAttributeTypeError(`.Varietal`, v, "string", err)
+			}
+			if len(tmp21) < 4 {
+				err = goa.InvalidLengthError(`.Varietal`, tmp21, 4, true, err)
 			}
 			p.Varietal = tmp21
 		}
@@ -916,21 +870,69 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 			} else {
 				err = goa.InvalidAttributeTypeError(`.Vineyard`, v, "string", err)
 			}
+			if len(tmp22) < 2 {
+				err = goa.InvalidLengthError(`.Vineyard`, tmp22, 2, true, err)
+			}
 			p.Vineyard = tmp22
 		}
 		if v, ok := val["vintage"]; ok {
-			var tmp23 string
-			if val, ok := v.(string); ok {
+			var tmp23 int
+			if val, ok := v.(int); ok {
 				tmp23 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`.Vintage`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.Vintage`, v, "int", err)
+			}
+			if tmp23 < 1900 {
+				err = goa.InvalidRangeError(`.Vintage`, tmp23, 1900, true, err)
+			}
+			if tmp23 > 2020 {
+				err = goa.InvalidRangeError(`.Vintage`, tmp23, 2020, false, err)
 			}
 			p.Vintage = tmp23
 		}
 	} else {
 		err = goa.InvalidAttributeTypeError(``, raw, "map[string]interface{}", err)
 	}
+	if len(p.Name) < 2 {
+		err = goa.InvalidLengthError(`.Name`, p.Name, 2, true, err)
+	}
+	if len(p.Vineyard) < 2 {
+		err = goa.InvalidLengthError(`.Vineyard`, p.Vineyard, 2, true, err)
+	}
+	if p.Vintage < 1900 {
+		err = goa.InvalidRangeError(`.Vintage`, p.Vintage, 1900, true, err)
+	}
+	if p.Vintage > 2020 {
+		err = goa.InvalidRangeError(`.Vintage`, p.Vintage, 2020, false, err)
+	}
+	if !(p.Color == "red" || p.Color == "white" || p.Color == "rose" || p.Color == "yellow" || p.Color == "sparkling") {
+		err = goa.InvalidEnumValueError(`.Color`, p.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
+	}
+	if p.Sweetness < 1 {
+		err = goa.InvalidRangeError(`.Sweetness`, p.Sweetness, 1, true, err)
+	}
+	if p.Sweetness > 5 {
+		err = goa.InvalidRangeError(`.Sweetness`, p.Sweetness, 5, false, err)
+	}
+	if len(p.Review) < 10 {
+		err = goa.InvalidLengthError(`.Review`, p.Review, 10, true, err)
+	}
+	if len(p.Review) > 300 {
+		err = goa.InvalidLengthError(`.Review`, p.Review, 300, false, err)
+	}
+	if len(p.Varietal) < 4 {
+		err = goa.InvalidLengthError(`.Varietal`, p.Varietal, 4, true, err)
+	}
+	if len(p.Country) < 2 {
+		err = goa.InvalidLengthError(`.Country`, p.Country, 2, true, err)
+	}
 
+	if len(p.Characteristics) < 10 {
+		err = goa.InvalidLengthError(`.Characteristics`, p.Characteristics, 10, true, err)
+	}
+	if len(p.Characteristics) > 300 {
+		err = goa.InvalidLengthError(`.Characteristics`, p.Characteristics, 300, false, err)
+	}
 	return p, err
 }
 

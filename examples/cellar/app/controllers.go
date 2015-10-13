@@ -2,7 +2,7 @@
 // cellar: Application Controllers
 //
 // Generated with codegen v0.0.1, command line:
-// $ /home/raphael/go/src/github.com/raphael/goa/examples/cellar/codegen485234072/codegen
+// $ /home/raphael/go/src/github.com/raphael/goa/examples/cellar/codegen583049478/codegen
 // --out=/home/raphael/go/src/github.com/raphael/goa/examples/cellar
 // --design=github.com/raphael/goa/examples/cellar/design
 // --force
@@ -38,9 +38,9 @@ func MountAccountController(app *goa.Application, ctrl AccountController) {
 		}
 		return ctrl.Create(ctx)
 	}
-	app.Router.Handle("POST", "/:accountID/accounts", goa.NewHTTPRouterHandle(app, "Account", h))
+	app.Router.Handle("POST", "/cellar/accounts", goa.NewHTTPRouterHandle(app, "Account", h))
 	idx++
-	logger.Info("handler", "action", idx, "POST", "/:accountID/accounts")
+	logger.Info("handler", "action", "Create", "POST", "/cellar/accounts")
 
 	h = func(c goa.Context) error {
 		ctx, err := NewDeleteAccountContext(c)
@@ -49,9 +49,9 @@ func MountAccountController(app *goa.Application, ctrl AccountController) {
 		}
 		return ctrl.Delete(ctx)
 	}
-	app.Router.Handle("DELETE", "/:accountID/accounts/:id", goa.NewHTTPRouterHandle(app, "Account", h))
+	app.Router.Handle("DELETE", "/cellar/accounts/:accountID", goa.NewHTTPRouterHandle(app, "Account", h))
 	idx++
-	logger.Info("handler", "action", idx, "DELETE", "/:accountID/accounts/:id")
+	logger.Info("handler", "action", "Delete", "DELETE", "/cellar/accounts/:accountID")
 
 	h = func(c goa.Context) error {
 		ctx, err := NewShowAccountContext(c)
@@ -60,9 +60,9 @@ func MountAccountController(app *goa.Application, ctrl AccountController) {
 		}
 		return ctrl.Show(ctx)
 	}
-	app.Router.Handle("GET", "/:accountID/accounts/:id", goa.NewHTTPRouterHandle(app, "Account", h))
+	app.Router.Handle("GET", "/cellar/accounts/:accountID", goa.NewHTTPRouterHandle(app, "Account", h))
 	idx++
-	logger.Info("handler", "action", idx, "GET", "/:accountID/accounts/:id")
+	logger.Info("handler", "action", "Show", "GET", "/cellar/accounts/:accountID")
 
 	h = func(c goa.Context) error {
 		ctx, err := NewUpdateAccountContext(c)
@@ -71,9 +71,9 @@ func MountAccountController(app *goa.Application, ctrl AccountController) {
 		}
 		return ctrl.Update(ctx)
 	}
-	app.Router.Handle("PUT", "/:accountID/accounts/:id", goa.NewHTTPRouterHandle(app, "Account", h))
+	app.Router.Handle("PUT", "/cellar/accounts/:accountID", goa.NewHTTPRouterHandle(app, "Account", h))
 	idx++
-	logger.Info("handler", "action", idx, "PUT", "/:accountID/accounts/:id")
+	logger.Info("handler", "action", "Update", "PUT", "/cellar/accounts/:accountID")
 
 	logger.Info("mounted")
 }
@@ -101,9 +101,9 @@ func MountBottleController(app *goa.Application, ctrl BottleController) {
 		}
 		return ctrl.Create(ctx)
 	}
-	app.Router.Handle("POST", "/:accountID/accounts/bottles", goa.NewHTTPRouterHandle(app, "Bottle", h))
+	app.Router.Handle("POST", "/cellar/accounts/:accountID/bottles", goa.NewHTTPRouterHandle(app, "Bottle", h))
 	idx++
-	logger.Info("handler", "action", idx, "POST", "/:accountID/accounts/bottles")
+	logger.Info("handler", "action", "Create", "POST", "/cellar/accounts/:accountID/bottles")
 
 	h = func(c goa.Context) error {
 		ctx, err := NewDeleteBottleContext(c)
@@ -112,9 +112,9 @@ func MountBottleController(app *goa.Application, ctrl BottleController) {
 		}
 		return ctrl.Delete(ctx)
 	}
-	app.Router.Handle("DELETE", "/:accountID/accounts/bottles/:id", goa.NewHTTPRouterHandle(app, "Bottle", h))
+	app.Router.Handle("DELETE", "/cellar/accounts/:accountID/bottles/:id", goa.NewHTTPRouterHandle(app, "Bottle", h))
 	idx++
-	logger.Info("handler", "action", idx, "DELETE", "/:accountID/accounts/bottles/:id")
+	logger.Info("handler", "action", "Delete", "DELETE", "/cellar/accounts/:accountID/bottles/:id")
 
 	h = func(c goa.Context) error {
 		ctx, err := NewListBottleContext(c)
@@ -123,9 +123,9 @@ func MountBottleController(app *goa.Application, ctrl BottleController) {
 		}
 		return ctrl.List(ctx)
 	}
-	app.Router.Handle("GET", "/:accountID/accounts/bottles", goa.NewHTTPRouterHandle(app, "Bottle", h))
+	app.Router.Handle("GET", "/cellar/accounts/:accountID/bottles", goa.NewHTTPRouterHandle(app, "Bottle", h))
 	idx++
-	logger.Info("handler", "action", idx, "GET", "/:accountID/accounts/bottles")
+	logger.Info("handler", "action", "List", "GET", "/cellar/accounts/:accountID/bottles")
 
 	h = func(c goa.Context) error {
 		ctx, err := NewRateBottleContext(c)
@@ -134,9 +134,9 @@ func MountBottleController(app *goa.Application, ctrl BottleController) {
 		}
 		return ctrl.Rate(ctx)
 	}
-	app.Router.Handle("PUT", "/:accountID/accounts/bottles/:id/actions/rate", goa.NewHTTPRouterHandle(app, "Bottle", h))
+	app.Router.Handle("PUT", "/cellar/accounts/:accountID/bottles/:id/actions/rate", goa.NewHTTPRouterHandle(app, "Bottle", h))
 	idx++
-	logger.Info("handler", "action", idx, "PUT", "/:accountID/accounts/bottles/:id/actions/rate")
+	logger.Info("handler", "action", "Rate", "PUT", "/cellar/accounts/:accountID/bottles/:id/actions/rate")
 
 	h = func(c goa.Context) error {
 		ctx, err := NewShowBottleContext(c)
@@ -145,9 +145,9 @@ func MountBottleController(app *goa.Application, ctrl BottleController) {
 		}
 		return ctrl.Show(ctx)
 	}
-	app.Router.Handle("GET", "/:accountID/accounts/bottles/:id", goa.NewHTTPRouterHandle(app, "Bottle", h))
+	app.Router.Handle("GET", "/cellar/accounts/:accountID/bottles/:id", goa.NewHTTPRouterHandle(app, "Bottle", h))
 	idx++
-	logger.Info("handler", "action", idx, "GET", "/:accountID/accounts/bottles/:id")
+	logger.Info("handler", "action", "Show", "GET", "/cellar/accounts/:accountID/bottles/:id")
 
 	h = func(c goa.Context) error {
 		ctx, err := NewUpdateBottleContext(c)
@@ -156,9 +156,9 @@ func MountBottleController(app *goa.Application, ctrl BottleController) {
 		}
 		return ctrl.Update(ctx)
 	}
-	app.Router.Handle("PATCH", "/:accountID/accounts/bottles/:id", goa.NewHTTPRouterHandle(app, "Bottle", h))
+	app.Router.Handle("PATCH", "/cellar/accounts/:accountID/bottles/:id", goa.NewHTTPRouterHandle(app, "Bottle", h))
 	idx++
-	logger.Info("handler", "action", idx, "PATCH", "/:accountID/accounts/bottles/:id")
+	logger.Info("handler", "action", "Update", "PATCH", "/cellar/accounts/:accountID/bottles/:id")
 
 	logger.Info("mounted")
 }

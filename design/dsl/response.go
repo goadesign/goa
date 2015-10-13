@@ -62,6 +62,9 @@ func Response(name string, paramsAndDSL ...interface{}) {
 			return
 		}
 		if resp := executeResponseDSL(name, paramsAndDSL...); resp != nil {
+			if resp.Status == 200 && resp.MediaType == "" {
+				resp.MediaType = a.Parent.MediaType
+			}
 			resp.Parent = a
 			a.Responses[name] = resp
 		}
@@ -74,6 +77,9 @@ func Response(name string, paramsAndDSL ...interface{}) {
 			return
 		}
 		if resp := executeResponseDSL(name, paramsAndDSL...); resp != nil {
+			if resp.Status == 200 && resp.MediaType == "" {
+				resp.MediaType = r.MediaType
+			}
 			resp.Parent = r
 			r.Responses[name] = resp
 		}

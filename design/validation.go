@@ -44,33 +44,121 @@ func (verr *ValidationErrors) AsError() *ValidationErrors {
 	return nil
 }
 
+type routeInfo struct {
+	Key       string
+	Resource  *ResourceDefinition
+	Action    *ActionDefinition
+	Route     *RouteDefinition
+	Wildcards []*wildCardInfo
+}
+
+type wildCardInfo struct {
+	Name string
+	Orig DSLDefinition
+}
+
+func newRouteInfo(resource *ResourceDefinition, action *ActionDefinition, route *RouteDefinition) *routeInfo {
+	vars := route.Params()
+	wi := make([]*wildCardInfo, len(vars))
+	for i, v := range vars {
+		var orig DSLDefinition
+		if strings.Contains(route.Path, v) {
+			orig = route
+		} else if strings.Contains(resource.BasePath, v) {
+			orig = resource
+		} else {
+			orig = Design
+		}
+		wi[i] = &wildCardInfo{Name: v, Orig: orig}
+	}
+	key := ParamsRegex.ReplaceAllLiteralString(route.FullPath(), "*")
+	return &routeInfo{
+		Key:       key,
+		Resource:  resource,
+		Action:    action,
+		Route:     route,
+		Wildcards: wi,
+	}
+}
+
+// DifferentWildcards returns the list of wildcards in other that have a different name from the
+// wildcard in target at the same position.
+func (r *routeInfo) DifferentWildcards(other *routeInfo) (res [][2]*wildCardInfo) {
+	for i, wc := range other.Wildcards {
+		if r.Wildcards[i].Name != wc.Name {
+			res = append(res, [2]*wildCardInfo{r.Wildcards[i], wc})
+		}
+	}
+	return
+}
+
 // Validate tests whether the API definition is consistent: all resource parent names resolve to
 // an actual resource.
 func (a *APIDefinition) Validate() *ValidationErrors {
 	verr := new(ValidationErrors)
-	if err := a.BaseParams.Validate("base parameters", a); err != nil {
-		verr.Merge(err)
-	}
-	for _, r := range a.Resources {
-		if err := r.Validate(); err != nil {
+	var allRoutes []*routeInfo
+	if a.BaseParams != nil {
+		if err := a.BaseParams.Validate("base parameters", a); err != nil {
 			verr.Merge(err)
 		}
 	}
-	for _, mt := range a.MediaTypes {
+	a.IterateResources(func(r *ResourceDefinition) error {
+		if err := r.Validate(); err != nil {
+			verr.Merge(err)
+		}
+		r.IterateActions(func(ac *ActionDefinition) error {
+			for _, ro := range ac.Routes {
+				info := newRouteInfo(r, ac, ro)
+				allRoutes = append(allRoutes, info)
+			}
+			return nil
+		})
+		return nil
+	})
+	for _, route := range allRoutes {
+		for _, other := range allRoutes {
+			if route == other {
+				continue
+			}
+			if strings.HasPrefix(route.Key, other.Key) {
+				diffs := route.DifferentWildcards(other)
+				if len(diffs) > 0 {
+					var msg string
+					conflicts := make([]string, len(diffs))
+					for i, d := range diffs {
+						conflicts[i] = fmt.Sprintf(`"%s" from %s and "%s" from %s`, d[0].Name, d[0].Orig.Context(), d[1].Name, d[1].Orig.Context())
+					}
+					msg = fmt.Sprintf("%s", strings.Join(conflicts, ", "))
+					verr.Add(route.Action,
+						`route "%s" conflicts with route "%s" of %s action %s. Make sure wildcards at the same positions have the same name. Conflicting wildcards are %s.`,
+						route.Route.FullPath(),
+						other.Route.FullPath(),
+						other.Resource.Name,
+						other.Action.Name,
+						msg,
+					)
+				}
+			}
+		}
+	}
+	a.IterateMediaTypes(func(mt *MediaTypeDefinition) error {
 		if err := mt.Validate(); err != nil {
 			verr.Merge(err)
 		}
-	}
-	for _, t := range a.Types {
+		return nil
+	})
+	a.IterateUserTypes(func(t *UserTypeDefinition) error {
 		if err := t.Validate("", a); err != nil {
 			verr.Merge(err)
 		}
-	}
-	for _, r := range a.Responses {
+		return nil
+	})
+	a.IterateResponses(func(r *ResponseDefinition) error {
 		if err := r.Validate(); err != nil {
 			verr.Merge(err)
 		}
-	}
+		return nil
+	})
 
 	return verr.AsError()
 }
@@ -99,9 +187,8 @@ func (r *ResourceDefinition) Validate() *ValidationErrors {
 		if !ok {
 			verr.Add(r, "invalid type for BaseParams, must be an Object", r)
 		} else {
-			vs := ParamsRegex.FindAllStringSubmatch(r.BasePath, -1)
-			if len(vs) > 1 {
-				vars := vs[1]
+			vars := ExtractWildcards(r.BasePath)
+			if len(vars) > 1 {
 				if len(vars) != len(baseParams) {
 					verr.Add(r, "BasePath defines parameters %s but BaseParams has %d elements",
 						strings.Join([]string{
@@ -132,8 +219,13 @@ func (r *ResourceDefinition) Validate() *ValidationErrors {
 		}
 	}
 	if r.ParentName != "" {
-		if _, ok := Design.Resources[r.ParentName]; !ok {
+		p, ok := Design.Resources[r.ParentName]
+		if !ok {
 			verr.Add(r, "Parent resource named %#v not found", r.ParentName)
+		} else {
+			if p.CanonicalAction() == nil {
+				verr.Add(r, "Parent resource %#v has no canonical action", r.ParentName)
+			}
 		}
 	}
 	for _, resp := range r.Responses {
@@ -192,6 +284,22 @@ func (a *ActionDefinition) ValidateParams() *ValidationErrors {
 	params, ok := a.Params.Type.(Object)
 	if !ok {
 		verr.Add(a, `"Params" field of action is not an object`)
+	}
+	var wcs []string
+	for _, r := range a.Routes {
+		rwcs := ExtractWildcards(r.FullPath())
+		for _, rwc := range rwcs {
+			found := false
+			for _, wc := range wcs {
+				if rwc == wc {
+					found = true
+					break
+				}
+			}
+			if !found {
+				wcs = append(wcs, rwc)
+			}
+		}
 	}
 	for n, p := range params {
 		if n == "" {
@@ -329,7 +437,11 @@ func (m *MediaTypeDefinition) Validate() *ValidationErrors {
 			if err := a.ElemType.Validate("array element", m); err != nil {
 				verr.Merge(err)
 			} else {
-				obj = a.ElemType.Type.ToObject()
+				if _, ok := a.ElemType.Type.(*MediaTypeDefinition); !ok {
+					verr.Add(m, "collection media type array element type must be a media type, got %s", a.ElemType.Type.Name())
+				} else {
+					obj = a.ElemType.Type.ToObject()
+				}
 			}
 		}
 	} else {

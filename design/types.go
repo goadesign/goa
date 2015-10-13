@@ -235,6 +235,11 @@ func (a *Array) IsCompatible(val interface{}) bool {
 	return k == reflect.Array || k == reflect.Slice
 }
 
+// Dup creates a shallow copy of a.
+func (a *Array) Dup() *Array {
+	return &Array{ElemType: a.ElemType.Dup()}
+}
+
 // Kind implements DataKind.
 func (o Object) Kind() Kind { return ObjectKind }
 
@@ -252,6 +257,22 @@ func (o Object) ToObject() Object { return o }
 
 // ToArray returns nil.
 func (o Object) ToArray() *Array { return nil }
+
+// Dup creates a shallow copy of o.
+func (o Object) Dup() Object {
+	res := make(Object, len(o))
+	for n, att := range o {
+		res[n] = att.Dup()
+	}
+	return res
+}
+
+// Merge copies other's attributes into o overridding any pre-existing attribute with the same name.
+func (o Object) Merge(other Object) {
+	for n, att := range other {
+		o[n] = att.Dup()
+	}
+}
 
 // IsCompatible returns true if val is compatible with p.
 func (o Object) IsCompatible(val interface{}) bool {
