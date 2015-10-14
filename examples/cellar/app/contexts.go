@@ -2,7 +2,7 @@
 // cellar: Application Contexts
 //
 // Generated with codegen v0.0.1, command line:
-// $ /home/raphael/go/src/github.com/raphael/goa/examples/cellar/codegen583049478/codegen
+// $ /home/raphael/go/src/github.com/raphael/goa/examples/cellar/codegen650451510/codegen
 // --out=/home/raphael/go/src/github.com/raphael/goa/examples/cellar
 // --design=github.com/raphael/goa/examples/cellar/design
 // --force
@@ -23,7 +23,6 @@ import (
 // CreateAccountContext provides the account create action context.
 type CreateAccountContext struct {
 	goa.Context
-
 	Payload *CreateAccountPayload
 }
 
@@ -157,8 +156,7 @@ func (c *ShowAccountContext) OK(resp *Account, view AccountViewEnum) error {
 type UpdateAccountContext struct {
 	goa.Context
 	AccountID int
-
-	Payload *UpdateAccountPayload
+	Payload   *UpdateAccountPayload
 }
 
 // NewUpdateAccountContext parses the incoming request URL and body, performs validations and creates the
@@ -230,8 +228,7 @@ func (c *UpdateAccountContext) NotFound() error {
 type CreateBottleContext struct {
 	goa.Context
 	AccountID int
-
-	Payload *CreateBottlePayload
+	Payload   *CreateBottlePayload
 }
 
 // NewCreateBottleContext parses the incoming request URL and body, performs validations and creates the
@@ -413,18 +410,14 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 	} else {
 		err = goa.InvalidAttributeTypeError(``, raw, "map[string]interface{}", err)
 	}
-	if len(p.Varietal) < 4 {
-		err = goa.InvalidLengthError(`.Varietal`, p.Varietal, 4, true, err)
+	if len(p.Vineyard) < 2 {
+		err = goa.InvalidLengthError(`.Vineyard`, p.Vineyard, 2, true, err)
 	}
-	if len(p.Country) < 2 {
-		err = goa.InvalidLengthError(`.Country`, p.Country, 2, true, err)
+	if p.Vintage < 1900 {
+		err = goa.InvalidRangeError(`.Vintage`, p.Vintage, 1900, true, err)
 	}
-
-	if len(p.Characteristics) < 10 {
-		err = goa.InvalidLengthError(`.Characteristics`, p.Characteristics, 10, true, err)
-	}
-	if len(p.Characteristics) > 300 {
-		err = goa.InvalidLengthError(`.Characteristics`, p.Characteristics, 300, false, err)
+	if p.Vintage > 2020 {
+		err = goa.InvalidRangeError(`.Vintage`, p.Vintage, 2020, false, err)
 	}
 	if len(p.Review) < 10 {
 		err = goa.InvalidLengthError(`.Review`, p.Review, 10, true, err)
@@ -435,14 +428,8 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 	if len(p.Name) < 2 {
 		err = goa.InvalidLengthError(`.Name`, p.Name, 2, true, err)
 	}
-	if len(p.Vineyard) < 2 {
-		err = goa.InvalidLengthError(`.Vineyard`, p.Vineyard, 2, true, err)
-	}
-	if p.Vintage < 1900 {
-		err = goa.InvalidRangeError(`.Vintage`, p.Vintage, 1900, true, err)
-	}
-	if p.Vintage > 2020 {
-		err = goa.InvalidRangeError(`.Vintage`, p.Vintage, 2020, false, err)
+	if len(p.Varietal) < 4 {
+		err = goa.InvalidLengthError(`.Varietal`, p.Varietal, 4, true, err)
 	}
 	if !(p.Color == "red" || p.Color == "white" || p.Color == "rose" || p.Color == "yellow" || p.Color == "sparkling") {
 		err = goa.InvalidEnumValueError(`.Color`, p.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
@@ -452,6 +439,15 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 	}
 	if p.Sweetness > 5 {
 		err = goa.InvalidRangeError(`.Sweetness`, p.Sweetness, 5, false, err)
+	}
+	if len(p.Country) < 2 {
+		err = goa.InvalidLengthError(`.Country`, p.Country, 2, true, err)
+	}
+	if len(p.Characteristics) < 10 {
+		err = goa.InvalidLengthError(`.Characteristics`, p.Characteristics, 10, true, err)
+	}
+	if len(p.Characteristics) > 300 {
+		err = goa.InvalidLengthError(`.Characteristics`, p.Characteristics, 300, false, err)
 	}
 	return p, err
 }
@@ -561,8 +557,7 @@ type RateBottleContext struct {
 	goa.Context
 	AccountID int
 	ID        int
-
-	Payload *RateBottlePayload
+	Payload   *RateBottlePayload
 }
 
 // NewRateBottleContext parses the incoming request URL and body, performs validations and creates the
@@ -702,8 +697,7 @@ type UpdateBottleContext struct {
 	goa.Context
 	AccountID int
 	ID        int
-
-	Payload *UpdateBottlePayload
+	Payload   *UpdateBottlePayload
 }
 
 // NewUpdateBottleContext parses the incoming request URL and body, performs validations and creates the
@@ -893,8 +887,11 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 	} else {
 		err = goa.InvalidAttributeTypeError(``, raw, "map[string]interface{}", err)
 	}
-	if len(p.Name) < 2 {
-		err = goa.InvalidLengthError(`.Name`, p.Name, 2, true, err)
+	if len(p.Review) < 10 {
+		err = goa.InvalidLengthError(`.Review`, p.Review, 10, true, err)
+	}
+	if len(p.Review) > 300 {
+		err = goa.InvalidLengthError(`.Review`, p.Review, 300, false, err)
 	}
 	if len(p.Vineyard) < 2 {
 		err = goa.InvalidLengthError(`.Vineyard`, p.Vineyard, 2, true, err)
@@ -914,24 +911,20 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 	if p.Sweetness > 5 {
 		err = goa.InvalidRangeError(`.Sweetness`, p.Sweetness, 5, false, err)
 	}
-	if len(p.Review) < 10 {
-		err = goa.InvalidLengthError(`.Review`, p.Review, 10, true, err)
-	}
-	if len(p.Review) > 300 {
-		err = goa.InvalidLengthError(`.Review`, p.Review, 300, false, err)
-	}
-	if len(p.Varietal) < 4 {
-		err = goa.InvalidLengthError(`.Varietal`, p.Varietal, 4, true, err)
-	}
 	if len(p.Country) < 2 {
 		err = goa.InvalidLengthError(`.Country`, p.Country, 2, true, err)
 	}
-
 	if len(p.Characteristics) < 10 {
 		err = goa.InvalidLengthError(`.Characteristics`, p.Characteristics, 10, true, err)
 	}
 	if len(p.Characteristics) > 300 {
 		err = goa.InvalidLengthError(`.Characteristics`, p.Characteristics, 300, false, err)
+	}
+	if len(p.Name) < 2 {
+		err = goa.InvalidLengthError(`.Name`, p.Name, 2, true, err)
+	}
+	if len(p.Varietal) < 4 {
+		err = goa.InvalidLengthError(`.Varietal`, p.Varietal, 4, true, err)
 	}
 	return p, err
 }

@@ -685,10 +685,10 @@ const (
 
 	mObjectTmpl = `{{$ctx := .}}{{range $r := .required}}{{$at := index $ctx.type $r}}{{$required := goify $r true}}{{if eq $at.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.source}}.{{$required}} == "" {
 {{tabs $ctx.depth}} err = fmt.Errorf("missing required attribute \"{{$r}}\"")
-{{tabs $ctx.depth}}}{{else if gt $at.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.source}}.{{$required}} == nil {
+{{tabs $ctx.depth}}{{else if gt $at.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.source}}.{{$required}} == nil {
 {{tabs $ctx.depth}} err = fmt.Errorf("missing required attribute \"{{$r}}\"")
-{{tabs $ctx.depth}}}
-{{end}}{{end}}{{$validation := validate $.origType (printf "%s" .context) .source .depth}}{{if $validation}}{{$validation}}
+{{end}}{{tabs $ctx.depth}}}
+{{end}}{{$validation := validate $.origType (printf "%s" .context) .source .depth}}{{if $validation}}{{$validation}}
 {{end}}{{if or $validation $ctx.required}}{{tabs .depth}}if err == nil {
 {{end}}{{$depth := add .depth (or (and (or $validation $ctx.required) 1) 0)}}{{$tmp := tempvar}}{{tabs $depth}}{{$tmp}} := map[string]interface{}{
 {{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{tabs $depth}}	"{{$n}}": {{$ctx.source}}.{{goify $n true}},

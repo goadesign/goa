@@ -2,7 +2,7 @@
 // cellar: Application Media Types
 //
 // Generated with codegen v0.0.1, command line:
-// $ /home/raphael/go/src/github.com/raphael/goa/examples/cellar/codegen583049478/codegen
+// $ /home/raphael/go/src/github.com/raphael/goa/examples/cellar/codegen650451510/codegen
 // --out=/home/raphael/go/src/github.com/raphael/goa/examples/cellar
 // --design=github.com/raphael/goa/examples/cellar/design
 // --force
@@ -121,7 +121,6 @@ func (mt *Account) Dump(view AccountViewEnum) (map[string]interface{}, error) {
 		if mt.Name == "" {
 			err = fmt.Errorf("missing required attribute \"name\"")
 		}
-
 		if err == nil {
 			tmp29 := map[string]interface{}{
 				"href": mt.Href,
@@ -135,12 +134,11 @@ func (mt *Account) Dump(view AccountViewEnum) (map[string]interface{}, error) {
 		if mt.Name == "" {
 			err = fmt.Errorf("missing required attribute \"name\"")
 		}
-
-		if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.CreatedAt); err2 != nil {
-			err = goa.InvalidFormatError(`.CreatedAt`, mt.CreatedAt, goa.FormatDateTime, err2, err)
-		}
 		if err2 := goa.ValidateFormat(goa.FormatEmail, mt.CreatedBy); err2 != nil {
 			err = goa.InvalidFormatError(`.CreatedBy`, mt.CreatedBy, goa.FormatEmail, err2, err)
+		}
+		if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.CreatedAt); err2 != nil {
+			err = goa.InvalidFormatError(`.CreatedAt`, mt.CreatedAt, goa.FormatDateTime, err2, err)
 		}
 		if err == nil {
 			tmp30 := map[string]interface{}{
@@ -157,7 +155,6 @@ func (mt *Account) Dump(view AccountViewEnum) (map[string]interface{}, error) {
 		if mt.Name == "" {
 			err = fmt.Errorf("missing required attribute \"name\"")
 		}
-
 		if err == nil {
 			tmp31 := map[string]interface{}{
 				"href": mt.Href,
@@ -171,14 +168,12 @@ func (mt *Account) Dump(view AccountViewEnum) (map[string]interface{}, error) {
 
 // Validate validates the media type instance.
 func (mt *Account) Validate() (err error) {
-
 	if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.CreatedAt); err2 != nil {
 		err = goa.InvalidFormatError(`.CreatedAt`, mt.CreatedAt, goa.FormatDateTime, err2, err)
 	}
 	if err2 := goa.ValidateFormat(goa.FormatEmail, mt.CreatedBy); err2 != nil {
 		err = goa.InvalidFormatError(`.CreatedBy`, mt.CreatedBy, goa.FormatEmail, err2, err)
 	}
-
 	return
 }
 
@@ -294,7 +289,6 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 			if err2 := goa.ValidateFormat(goa.FormatEmail, tmp32.CreatedBy); err2 != nil {
 				err = goa.InvalidFormatError(`.Account.CreatedBy`, tmp32.CreatedBy, goa.FormatEmail, err2, err)
 			}
-
 			res.Account = tmp32
 		}
 		if v, ok := val["characteristics"]; ok {
@@ -498,6 +492,12 @@ func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
 		if mt.Name == "" {
 			err = fmt.Errorf("missing required attribute \"name\"")
 		}
+		if len(mt.Name) < 2 {
+			err = goa.InvalidLengthError(`.Name`, mt.Name, 2, true, err)
+		}
+		if len(mt.Vineyard) < 2 {
+			err = goa.InvalidLengthError(`.Vineyard`, mt.Vineyard, 2, true, err)
+		}
 		if len(mt.Varietal) < 4 {
 			err = goa.InvalidLengthError(`.Varietal`, mt.Varietal, 4, true, err)
 		}
@@ -506,13 +506,6 @@ func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
 		}
 		if mt.Vintage > 2020 {
 			err = goa.InvalidRangeError(`.Vintage`, mt.Vintage, 2020, false, err)
-		}
-
-		if len(mt.Name) < 2 {
-			err = goa.InvalidLengthError(`.Name`, mt.Name, 2, true, err)
-		}
-		if len(mt.Vineyard) < 2 {
-			err = goa.InvalidLengthError(`.Vineyard`, mt.Vineyard, 2, true, err)
 		}
 		if err == nil {
 			tmp54 := map[string]interface{}{
@@ -529,7 +522,6 @@ func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
 		if mt.Account.Name == "" {
 			err = fmt.Errorf("missing required attribute \"name\"")
 		}
-
 		if err == nil {
 			tmp53 := map[string]interface{}{
 				"href": mt.Account.Href,
@@ -544,20 +536,6 @@ func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
 		if mt.Account == nil {
 			err = fmt.Errorf("missing required attribute \"account\"")
 		}
-
-		if mt.Vintage < 1900 {
-			err = goa.InvalidRangeError(`.Vintage`, mt.Vintage, 1900, true, err)
-		}
-		if mt.Vintage > 2020 {
-			err = goa.InvalidRangeError(`.Vintage`, mt.Vintage, 2020, false, err)
-		}
-		if len(mt.Country) < 2 {
-			err = goa.InvalidLengthError(`.Country`, mt.Country, 2, true, err)
-		}
-
-		if len(mt.Vineyard) < 2 {
-			err = goa.InvalidLengthError(`.Vineyard`, mt.Vineyard, 2, true, err)
-		}
 		if len(mt.Review) < 10 {
 			err = goa.InvalidLengthError(`.Review`, mt.Review, 10, true, err)
 		}
@@ -567,37 +545,47 @@ func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
 		if !(mt.Color == "red" || mt.Color == "white" || mt.Color == "rose" || mt.Color == "yellow" || mt.Color == "sparkling") {
 			err = goa.InvalidEnumValueError(`.Color`, mt.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
 		}
+		if len(mt.Name) < 2 {
+			err = goa.InvalidLengthError(`.Name`, mt.Name, 2, true, err)
+		}
+		if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.CreatedAt); err2 != nil {
+			err = goa.InvalidFormatError(`.CreatedAt`, mt.CreatedAt, goa.FormatDateTime, err2, err)
+		}
+		if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.UpdatedAt); err2 != nil {
+			err = goa.InvalidFormatError(`.UpdatedAt`, mt.UpdatedAt, goa.FormatDateTime, err2, err)
+		}
+		if len(mt.Vineyard) < 2 {
+			err = goa.InvalidLengthError(`.Vineyard`, mt.Vineyard, 2, true, err)
+		}
 		if mt.Sweetness < 1 {
 			err = goa.InvalidRangeError(`.Sweetness`, mt.Sweetness, 1, true, err)
 		}
 		if mt.Sweetness > 5 {
 			err = goa.InvalidRangeError(`.Sweetness`, mt.Sweetness, 5, false, err)
 		}
-		if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.UpdatedAt); err2 != nil {
-			err = goa.InvalidFormatError(`.UpdatedAt`, mt.UpdatedAt, goa.FormatDateTime, err2, err)
-		}
 		if len(mt.Varietal) < 4 {
 			err = goa.InvalidLengthError(`.Varietal`, mt.Varietal, 4, true, err)
 		}
-		if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.CreatedAt); err2 != nil {
-			err = goa.InvalidFormatError(`.CreatedAt`, mt.CreatedAt, goa.FormatDateTime, err2, err)
+		if mt.Vintage < 1900 {
+			err = goa.InvalidRangeError(`.Vintage`, mt.Vintage, 1900, true, err)
 		}
-
-		if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.Account.CreatedAt); err2 != nil {
-			err = goa.InvalidFormatError(`.Account.CreatedAt`, mt.Account.CreatedAt, goa.FormatDateTime, err2, err)
+		if mt.Vintage > 2020 {
+			err = goa.InvalidRangeError(`.Vintage`, mt.Vintage, 2020, false, err)
 		}
-		if err2 := goa.ValidateFormat(goa.FormatEmail, mt.Account.CreatedBy); err2 != nil {
-			err = goa.InvalidFormatError(`.Account.CreatedBy`, mt.Account.CreatedBy, goa.FormatEmail, err2, err)
+		if len(mt.Country) < 2 {
+			err = goa.InvalidLengthError(`.Country`, mt.Country, 2, true, err)
 		}
-
 		if len(mt.Characteristics) < 10 {
 			err = goa.InvalidLengthError(`.Characteristics`, mt.Characteristics, 10, true, err)
 		}
 		if len(mt.Characteristics) > 300 {
 			err = goa.InvalidLengthError(`.Characteristics`, mt.Characteristics, 300, false, err)
 		}
-		if len(mt.Name) < 2 {
-			err = goa.InvalidLengthError(`.Name`, mt.Name, 2, true, err)
+		if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.Account.CreatedAt); err2 != nil {
+			err = goa.InvalidFormatError(`.Account.CreatedAt`, mt.Account.CreatedAt, goa.FormatDateTime, err2, err)
+		}
+		if err2 := goa.ValidateFormat(goa.FormatEmail, mt.Account.CreatedBy); err2 != nil {
+			err = goa.InvalidFormatError(`.Account.CreatedBy`, mt.Account.CreatedBy, goa.FormatEmail, err2, err)
 		}
 		if err == nil {
 			tmp55 := map[string]interface{}{
@@ -620,7 +608,6 @@ func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
 				if mt.Account.Name == "" {
 					err = fmt.Errorf("missing required attribute \"name\"")
 				}
-
 				if err == nil {
 					tmp56 := map[string]interface{}{
 						"href": mt.Account.Href,
@@ -637,7 +624,6 @@ func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
 		if mt.Name == "" {
 			err = fmt.Errorf("missing required attribute \"name\"")
 		}
-
 		if len(mt.Name) < 2 {
 			err = goa.InvalidLengthError(`.Name`, mt.Name, 2, true, err)
 		}
@@ -653,7 +639,6 @@ func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
 		if mt.Account.Name == "" {
 			err = fmt.Errorf("missing required attribute \"name\"")
 		}
-
 		if err == nil {
 			tmp57 := map[string]interface{}{
 				"href": mt.Account.Href,
@@ -669,37 +654,29 @@ func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
 
 // Validate validates the media type instance.
 func (mt *Bottle) Validate() (err error) {
-
-	if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.Account.CreatedAt); err2 != nil {
-		err = goa.InvalidFormatError(`.Account.CreatedAt`, mt.Account.CreatedAt, goa.FormatDateTime, err2, err)
+	if len(mt.Name) < 2 {
+		err = goa.InvalidLengthError(`.Name`, mt.Name, 2, true, err)
 	}
-	if err2 := goa.ValidateFormat(goa.FormatEmail, mt.Account.CreatedBy); err2 != nil {
-		err = goa.InvalidFormatError(`.Account.CreatedBy`, mt.Account.CreatedBy, goa.FormatEmail, err2, err)
+	if len(mt.Varietal) < 4 {
+		err = goa.InvalidLengthError(`.Varietal`, mt.Varietal, 4, true, err)
 	}
-
-	if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.CreatedAt); err2 != nil {
-		err = goa.InvalidFormatError(`.CreatedAt`, mt.CreatedAt, goa.FormatDateTime, err2, err)
+	if len(mt.Vineyard) < 2 {
+		err = goa.InvalidLengthError(`.Vineyard`, mt.Vineyard, 2, true, err)
+	}
+	if len(mt.Country) < 2 {
+		err = goa.InvalidLengthError(`.Country`, mt.Country, 2, true, err)
 	}
 	if !(mt.Color == "red" || mt.Color == "white" || mt.Color == "rose" || mt.Color == "yellow" || mt.Color == "sparkling") {
 		err = goa.InvalidEnumValueError(`.Color`, mt.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
 	}
-	if len(mt.Name) < 2 {
-		err = goa.InvalidLengthError(`.Name`, mt.Name, 2, true, err)
-	}
-	if len(mt.Characteristics) < 10 {
-		err = goa.InvalidLengthError(`.Characteristics`, mt.Characteristics, 10, true, err)
-	}
-	if len(mt.Characteristics) > 300 {
-		err = goa.InvalidLengthError(`.Characteristics`, mt.Characteristics, 300, false, err)
-	}
 	if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.UpdatedAt); err2 != nil {
 		err = goa.InvalidFormatError(`.UpdatedAt`, mt.UpdatedAt, goa.FormatDateTime, err2, err)
 	}
-	if mt.Vintage < 1900 {
-		err = goa.InvalidRangeError(`.Vintage`, mt.Vintage, 1900, true, err)
+	if len(mt.Review) < 10 {
+		err = goa.InvalidLengthError(`.Review`, mt.Review, 10, true, err)
 	}
-	if mt.Vintage > 2020 {
-		err = goa.InvalidRangeError(`.Vintage`, mt.Vintage, 2020, false, err)
+	if len(mt.Review) > 300 {
+		err = goa.InvalidLengthError(`.Review`, mt.Review, 300, false, err)
 	}
 	if mt.Sweetness < 1 {
 		err = goa.InvalidRangeError(`.Sweetness`, mt.Sweetness, 1, true, err)
@@ -707,27 +684,32 @@ func (mt *Bottle) Validate() (err error) {
 	if mt.Sweetness > 5 {
 		err = goa.InvalidRangeError(`.Sweetness`, mt.Sweetness, 5, false, err)
 	}
-
-	if len(mt.Varietal) < 4 {
-		err = goa.InvalidLengthError(`.Varietal`, mt.Varietal, 4, true, err)
-	}
-	if len(mt.Country) < 2 {
-		err = goa.InvalidLengthError(`.Country`, mt.Country, 2, true, err)
-	}
 	if mt.Rating < 1 {
 		err = goa.InvalidRangeError(`.Rating`, mt.Rating, 1, true, err)
 	}
 	if mt.Rating > 5 {
 		err = goa.InvalidRangeError(`.Rating`, mt.Rating, 5, false, err)
 	}
-	if len(mt.Vineyard) < 2 {
-		err = goa.InvalidLengthError(`.Vineyard`, mt.Vineyard, 2, true, err)
+	if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.Account.CreatedAt); err2 != nil {
+		err = goa.InvalidFormatError(`.Account.CreatedAt`, mt.Account.CreatedAt, goa.FormatDateTime, err2, err)
 	}
-	if len(mt.Review) < 10 {
-		err = goa.InvalidLengthError(`.Review`, mt.Review, 10, true, err)
+	if err2 := goa.ValidateFormat(goa.FormatEmail, mt.Account.CreatedBy); err2 != nil {
+		err = goa.InvalidFormatError(`.Account.CreatedBy`, mt.Account.CreatedBy, goa.FormatEmail, err2, err)
 	}
-	if len(mt.Review) > 300 {
-		err = goa.InvalidLengthError(`.Review`, mt.Review, 300, false, err)
+	if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.CreatedAt); err2 != nil {
+		err = goa.InvalidFormatError(`.CreatedAt`, mt.CreatedAt, goa.FormatDateTime, err2, err)
+	}
+	if mt.Vintage < 1900 {
+		err = goa.InvalidRangeError(`.Vintage`, mt.Vintage, 1900, true, err)
+	}
+	if mt.Vintage > 2020 {
+		err = goa.InvalidRangeError(`.Vintage`, mt.Vintage, 2020, false, err)
+	}
+	if len(mt.Characteristics) < 10 {
+		err = goa.InvalidLengthError(`.Characteristics`, mt.Characteristics, 10, true, err)
+	}
+	if len(mt.Characteristics) > 300 {
+		err = goa.InvalidLengthError(`.Characteristics`, mt.Characteristics, 300, false, err)
 	}
 	return
 }
@@ -817,7 +799,6 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 					} else {
 						err = goa.InvalidAttributeTypeError(`[*].Account`, v, "map[string]interface{}", err)
 					}
-
 					if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp60.CreatedAt); err2 != nil {
 						err = goa.InvalidFormatError(`[*].Account.CreatedAt`, tmp60.CreatedAt, goa.FormatDateTime, err2, err)
 					}
@@ -1015,50 +996,8 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 			} else {
 				err = goa.InvalidAttributeTypeError(`[*]`, v, "map[string]interface{}", err)
 			}
-			if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp59.CreatedAt); err2 != nil {
-				err = goa.InvalidFormatError(`[*].CreatedAt`, tmp59.CreatedAt, goa.FormatDateTime, err2, err)
-			}
 			if !(tmp59.Color == "red" || tmp59.Color == "white" || tmp59.Color == "rose" || tmp59.Color == "yellow" || tmp59.Color == "sparkling") {
 				err = goa.InvalidEnumValueError(`[*].Color`, tmp59.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
-			}
-			if len(tmp59.Name) < 2 {
-				err = goa.InvalidLengthError(`[*].Name`, tmp59.Name, 2, true, err)
-			}
-
-			if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp59.Account.CreatedAt); err2 != nil {
-				err = goa.InvalidFormatError(`[*].Account.CreatedAt`, tmp59.Account.CreatedAt, goa.FormatDateTime, err2, err)
-			}
-			if err2 := goa.ValidateFormat(goa.FormatEmail, tmp59.Account.CreatedBy); err2 != nil {
-				err = goa.InvalidFormatError(`[*].Account.CreatedBy`, tmp59.Account.CreatedBy, goa.FormatEmail, err2, err)
-			}
-			if tmp59.Vintage < 1900 {
-				err = goa.InvalidRangeError(`[*].Vintage`, tmp59.Vintage, 1900, true, err)
-			}
-			if tmp59.Vintage > 2020 {
-				err = goa.InvalidRangeError(`[*].Vintage`, tmp59.Vintage, 2020, false, err)
-			}
-			if tmp59.Sweetness < 1 {
-				err = goa.InvalidRangeError(`[*].Sweetness`, tmp59.Sweetness, 1, true, err)
-			}
-			if tmp59.Sweetness > 5 {
-				err = goa.InvalidRangeError(`[*].Sweetness`, tmp59.Sweetness, 5, false, err)
-			}
-			if len(tmp59.Characteristics) < 10 {
-				err = goa.InvalidLengthError(`[*].Characteristics`, tmp59.Characteristics, 10, true, err)
-			}
-			if len(tmp59.Characteristics) > 300 {
-				err = goa.InvalidLengthError(`[*].Characteristics`, tmp59.Characteristics, 300, false, err)
-			}
-			if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp59.UpdatedAt); err2 != nil {
-				err = goa.InvalidFormatError(`[*].UpdatedAt`, tmp59.UpdatedAt, goa.FormatDateTime, err2, err)
-			}
-
-			if len(tmp59.Varietal) < 4 {
-				err = goa.InvalidLengthError(`[*].Varietal`, tmp59.Varietal, 4, true, err)
-			}
-
-			if len(tmp59.Vineyard) < 2 {
-				err = goa.InvalidLengthError(`[*].Vineyard`, tmp59.Vineyard, 2, true, err)
 			}
 			if len(tmp59.Review) < 10 {
 				err = goa.InvalidLengthError(`[*].Review`, tmp59.Review, 10, true, err)
@@ -1066,14 +1005,53 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 			if len(tmp59.Review) > 300 {
 				err = goa.InvalidLengthError(`[*].Review`, tmp59.Review, 300, false, err)
 			}
-			if len(tmp59.Country) < 2 {
-				err = goa.InvalidLengthError(`[*].Country`, tmp59.Country, 2, true, err)
+			if tmp59.Sweetness < 1 {
+				err = goa.InvalidRangeError(`[*].Sweetness`, tmp59.Sweetness, 1, true, err)
+			}
+			if tmp59.Sweetness > 5 {
+				err = goa.InvalidRangeError(`[*].Sweetness`, tmp59.Sweetness, 5, false, err)
+			}
+			if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp59.UpdatedAt); err2 != nil {
+				err = goa.InvalidFormatError(`[*].UpdatedAt`, tmp59.UpdatedAt, goa.FormatDateTime, err2, err)
+			}
+			if tmp59.Vintage < 1900 {
+				err = goa.InvalidRangeError(`[*].Vintage`, tmp59.Vintage, 1900, true, err)
+			}
+			if tmp59.Vintage > 2020 {
+				err = goa.InvalidRangeError(`[*].Vintage`, tmp59.Vintage, 2020, false, err)
+			}
+			if len(tmp59.Characteristics) < 10 {
+				err = goa.InvalidLengthError(`[*].Characteristics`, tmp59.Characteristics, 10, true, err)
+			}
+			if len(tmp59.Characteristics) > 300 {
+				err = goa.InvalidLengthError(`[*].Characteristics`, tmp59.Characteristics, 300, false, err)
 			}
 			if tmp59.Rating < 1 {
 				err = goa.InvalidRangeError(`[*].Rating`, tmp59.Rating, 1, true, err)
 			}
 			if tmp59.Rating > 5 {
 				err = goa.InvalidRangeError(`[*].Rating`, tmp59.Rating, 5, false, err)
+			}
+			if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp59.Account.CreatedAt); err2 != nil {
+				err = goa.InvalidFormatError(`[*].Account.CreatedAt`, tmp59.Account.CreatedAt, goa.FormatDateTime, err2, err)
+			}
+			if err2 := goa.ValidateFormat(goa.FormatEmail, tmp59.Account.CreatedBy); err2 != nil {
+				err = goa.InvalidFormatError(`[*].Account.CreatedBy`, tmp59.Account.CreatedBy, goa.FormatEmail, err2, err)
+			}
+			if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp59.CreatedAt); err2 != nil {
+				err = goa.InvalidFormatError(`[*].CreatedAt`, tmp59.CreatedAt, goa.FormatDateTime, err2, err)
+			}
+			if len(tmp59.Vineyard) < 2 {
+				err = goa.InvalidLengthError(`[*].Vineyard`, tmp59.Vineyard, 2, true, err)
+			}
+			if len(tmp59.Country) < 2 {
+				err = goa.InvalidLengthError(`[*].Country`, tmp59.Country, 2, true, err)
+			}
+			if len(tmp59.Name) < 2 {
+				err = goa.InvalidLengthError(`[*].Name`, tmp59.Name, 2, true, err)
+			}
+			if len(tmp59.Varietal) < 4 {
+				err = goa.InvalidLengthError(`[*].Varietal`, tmp59.Varietal, 4, true, err)
 			}
 			res[i] = tmp59
 		}
@@ -1094,7 +1072,12 @@ func (mt BottleCollection) Dump(view BottleCollectionViewEnum) ([]map[string]int
 			if res.Name == "" {
 				err = fmt.Errorf("missing required attribute \"name\"")
 			}
-
+			if res.Vintage < 1900 {
+				err = goa.InvalidRangeError(`[*].Vintage`, res.Vintage, 1900, true, err)
+			}
+			if res.Vintage > 2020 {
+				err = goa.InvalidRangeError(`[*].Vintage`, res.Vintage, 2020, false, err)
+			}
 			if len(res.Name) < 2 {
 				err = goa.InvalidLengthError(`[*].Name`, res.Name, 2, true, err)
 			}
@@ -1104,13 +1087,6 @@ func (mt BottleCollection) Dump(view BottleCollectionViewEnum) ([]map[string]int
 			if len(res.Varietal) < 4 {
 				err = goa.InvalidLengthError(`[*].Varietal`, res.Varietal, 4, true, err)
 			}
-			if res.Vintage < 1900 {
-				err = goa.InvalidRangeError(`[*].Vintage`, res.Vintage, 1900, true, err)
-			}
-			if res.Vintage > 2020 {
-				err = goa.InvalidRangeError(`[*].Vintage`, res.Vintage, 2020, false, err)
-			}
-
 			if err == nil {
 				tmp83 := map[string]interface{}{
 					"href":     res.Href,
@@ -1126,7 +1102,6 @@ func (mt BottleCollection) Dump(view BottleCollectionViewEnum) ([]map[string]int
 			if res.Account.Name == "" {
 				err = fmt.Errorf("missing required attribute \"name\"")
 			}
-
 			if err == nil {
 				tmp82 := map[string]interface{}{
 					"href": res.Account.Href,
@@ -1145,7 +1120,6 @@ func (mt BottleCollection) Dump(view BottleCollectionViewEnum) ([]map[string]int
 			if res.Name == "" {
 				err = fmt.Errorf("missing required attribute \"name\"")
 			}
-
 			if len(res.Name) < 2 {
 				err = goa.InvalidLengthError(`[*].Name`, res.Name, 2, true, err)
 			}
@@ -1161,7 +1135,6 @@ func (mt BottleCollection) Dump(view BottleCollectionViewEnum) ([]map[string]int
 			if res.Account.Name == "" {
 				err = fmt.Errorf("missing required attribute \"name\"")
 			}
-
 			if err == nil {
 				tmp85 := map[string]interface{}{
 					"href": res.Account.Href,
