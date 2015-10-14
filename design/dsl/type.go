@@ -29,6 +29,9 @@ func Type(name string, dsl func()) *UserTypeDefinition {
 			AttributeDefinition: &AttributeDefinition{},
 			DSL:                 dsl,
 		}
+		if dsl == nil {
+			t.Type = String
+		}
 		Design.Types[name] = t
 	}
 	return t

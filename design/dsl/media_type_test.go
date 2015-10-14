@@ -88,14 +88,39 @@ var _ = Describe("MediaType", func() {
 		const linkName = "link"
 		var link1Name, link2Name string
 		var link2View string
+		var linkedMT1, linkedMT2 *MediaTypeDefinition
 
 		BeforeEach(func() {
 			name = "foo"
 			link1Name = "l1"
 			link2Name = "l2"
 			link2View = "l2v"
+			linkedMT1 = NewMediaTypeDefinition("MT1", "MT1", func() {
+				Attributes(func() {
+					Attribute("foo")
+				})
+				View("link", func() {
+					Attribute("foo")
+				})
+			})
+			InitDesign()
+			linkedMT2 = NewMediaTypeDefinition("MT2", "MT2", func() {
+				Attributes(func() {
+					Attribute("foo")
+				})
+				View("l2v", func() {
+					Attribute("foo")
+				})
+			})
+			Design.MediaTypes = make(map[string]*MediaTypeDefinition)
+			Design.MediaTypes["MT1"] = linkedMT1
+			Design.MediaTypes["MT2"] = linkedMT2
 			dsl = func() {
 				Attributes(func() {
+					Attributes(func() {
+						Attribute(link1Name, linkedMT1)
+						Attribute(link2Name, linkedMT2)
+					})
 					Links(func() {
 						Link(link1Name)
 						Link(link2Name, link2View)
@@ -126,6 +151,9 @@ var _ = Describe("MediaType", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
+				Attributes(func() {
+					Attribute(viewAtt)
+				})
 				View(viewName, func() {
 					Attribute(viewAtt)
 				})

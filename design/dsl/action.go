@@ -184,6 +184,12 @@ func Payload(p interface{}, dsls ...func()) {
 			att = actual
 		case DataStructure:
 			att = actual.Definition()
+		case string:
+			ut, ok := Design.Types[actual]
+			if !ok {
+				ReportError("unknown payload type %s", actual)
+			}
+			att = ut.AttributeDefinition
 		}
 		if len(dsls) == 1 {
 			if dsl != nil {

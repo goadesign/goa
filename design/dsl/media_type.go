@@ -1,12 +1,16 @@
 package dsl
 
 import (
+	"fmt"
 	"mime"
 	"strings"
 
 	"bitbucket.org/pkg/inflect"
 )
 import . "github.com/raphael/goa/design"
+
+// Counter used to create unique media type names for identifier-less media types.
+var mediaTypeCount int
 
 // MediaType defines a media type DSL.
 //
@@ -60,6 +64,10 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 		}
 		elems := strings.Split(mediatype, ".")
 		typeName := inflect.Camelize(elems[len(elems)-1])
+		if typeName == "" {
+			mediaTypeCount++
+			typeName = fmt.Sprintf("MediaType%d", mediaTypeCount)
+		}
 		if _, ok := Design.MediaTypes[identifier]; ok {
 			ReportError("media type %#v is defined twice", identifier)
 			return nil

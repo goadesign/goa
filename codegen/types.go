@@ -688,17 +688,16 @@ const (
 {{tabs $ctx.depth}}}{{else if gt $at.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.source}}.{{$required}} == nil {
 {{tabs $ctx.depth}} err = fmt.Errorf("missing required attribute \"{{$r}}\"")
 {{tabs $ctx.depth}}}
-{{end}}
-{{end}}{{validate $.origType (printf "%s" .context) .source .depth}}
-{{tabs .depth}}if err == nil {
-{{$tmp := tempvar}}{{tabs .depth}}	{{$tmp}} := map[string]interface{}{
-{{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{tabs $ctx.depth}}		"{{$n}}": {{$ctx.source}}.{{goify $n true}},
-{{end}}{{end}}{{tabs $ctx.depth}}	}{{range $n, $at := .type}}{{if gt $at.Type.Kind 4}}
-{{tabs $ctx.depth}}	if {{$ctx.source}}.{{goify $n true}} != nil {
-{{marshalAttribute $at (printf "%s.%s" $ctx.context (goify $n true)) (printf "%s.%s" $ctx.source (goify $n true)) (printf "%s[\"%s\"]" $tmp $n) (add $ctx.depth 2)}}
-{{tabs $ctx.depth}}	}{{end}}{{end}}
-{{tabs .depth}}	{{.target}} = {{$tmp}}
-}`
+{{end}}{{end}}{{$validation := validate $.origType (printf "%s" .context) .source .depth}}{{if $validation}}{{$validation}}
+{{end}}{{if or $validation $ctx.required}}{{tabs .depth}}if err == nil {
+{{end}}{{$depth := add .depth (or (and (or $validation $ctx.required) 1) 0)}}{{$tmp := tempvar}}{{tabs $depth}}{{$tmp}} := map[string]interface{}{
+{{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{tabs $depth}}	"{{$n}}": {{$ctx.source}}.{{goify $n true}},
+{{end}}{{end}}{{tabs $depth}}}{{range $n, $at := .type}}{{if gt $at.Type.Kind 4}}
+{{tabs $depth}}if {{$ctx.source}}.{{goify $n true}} != nil {
+{{marshalAttribute $at (printf "%s.%s" $ctx.context (goify $n true)) (printf "%s.%s" $ctx.source (goify $n true)) (printf "%s[\"%s\"]" $tmp $n) (add $depth 1)}}
+{{tabs $depth}}}{{end}}{{end}}
+{{tabs $depth}}{{.target}} = {{$tmp}}{{if or $validation $ctx.required}}
+{{tabs .depth}}}{{end}}`
 
 	mCollectionTmpl = `{{tabs .depth}}{{$tmp := tempvar}}{{$tmp}} := make([]{{gonative .elemMediaType}}, len({{.source}}))
 {{tabs .depth}}for i, res := range {{.source}} {
@@ -722,8 +721,8 @@ const (
 {{tabs .depth}}	for i, v := range val {
 {{tabs .depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef .elemType.Type (add .depth 3)}}
 {{unmarshalAttribute .elemType (printf "%s[*]" .context) "v" $temp (add .depth 2)}}{{$ctx := .}}
-{{validate $ctx.elemType (printf "%s[*]" $ctx.context) $temp (add $ctx.depth 2)}}
-{{tabs .depth}}		{{printf "%s[i]" .target}} = {{$temp}}
+{{$validation := validate $ctx.elemType (printf "%s[*]" $ctx.context) $temp (add $ctx.depth 2)}}{{if $validation}}{{$validation}}
+{{end}}{{tabs .depth}}		{{printf "%s[i]" .target}} = {{$temp}}
 {{tabs .depth}}	}
 {{tabs .depth}}} else {
 {{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "[]interface{}", err)

@@ -5,6 +5,7 @@ import . "github.com/raphael/goa/design"
 // InitDesign initializes the Design global variable and loads the built-in
 // response templates.
 func InitDesign() {
+	ctxStack = nil // mostly for tests
 	Design = &APIDefinition{}
 	Design.DefaultResponseTemplates = make(map[string]*ResponseTemplateDefinition)
 	t := func(params ...string) *ResponseDefinition {

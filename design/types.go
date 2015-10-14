@@ -318,7 +318,7 @@ func (u *UserTypeDefinition) IsCompatible(val interface{}) bool {
 func NewMediaTypeDefinition(name, identifier string, dsl func()) *MediaTypeDefinition {
 	return &MediaTypeDefinition{
 		UserTypeDefinition: &UserTypeDefinition{
-			AttributeDefinition: &AttributeDefinition{},
+			AttributeDefinition: &AttributeDefinition{Type: Object{}},
 			TypeName:            name,
 			DSL:                 dsl,
 		},

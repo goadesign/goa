@@ -437,7 +437,7 @@ var _ = Describe("ControllersWriter", func() {
 	})
 })
 
-var _ = Describe("ResourceWriter", func() {
+var _ = Describe("HrefWriter", func() {
 	var writer *genapp.ResourcesWriter
 	var filename string
 
@@ -461,12 +461,12 @@ var _ = Describe("ResourceWriter", func() {
 		Context("with data", func() {
 			var canoTemplate string
 			var canoParams []string
-			var userType *design.UserTypeDefinition
+			var mediaType *design.MediaTypeDefinition
 
 			var data *genapp.ResourceData
 
 			BeforeEach(func() {
-				userType = nil
+				mediaType = nil
 				canoTemplate = ""
 				canoParams = nil
 				data = nil
@@ -477,7 +477,7 @@ var _ = Describe("ResourceWriter", func() {
 					Name:              "Bottle",
 					Identifier:        "vnd.acme.com/resources",
 					Description:       "A bottle resource",
-					Type:              userType,
+					Type:              mediaType,
 					CanonicalTemplate: canoTemplate,
 					CanonicalParams:   canoParams,
 				}
@@ -495,19 +495,16 @@ var _ = Describe("ResourceWriter", func() {
 					attDef := &design.AttributeDefinition{
 						Type: design.String,
 					}
-					userType = &design.UserTypeDefinition{
-						AttributeDefinition: attDef,
-						TypeName:            "Bottle",
+					mediaType = &design.MediaTypeDefinition{
+						UserTypeDefinition: &design.UserTypeDefinition{
+							AttributeDefinition: attDef,
+							TypeName:            "Bottle",
+						},
 					}
 				})
-				It("writes the resources code", func() {
+				It("does not return an error", func() {
 					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
-					b, err := ioutil.ReadFile(filename)
-					Ω(err).ShouldNot(HaveOccurred())
-					written := string(b)
-					Ω(written).ShouldNot(BeEmpty())
-					Ω(written).Should(ContainSubstring(stringResource))
 				})
 			})
 
@@ -522,25 +519,17 @@ var _ = Describe("ResourceWriter", func() {
 					attDef := &design.AttributeDefinition{
 						Type: dataType,
 					}
-					userType = &design.UserTypeDefinition{
-						AttributeDefinition: attDef,
-						TypeName:            "Bottle",
+					mediaType = &design.MediaTypeDefinition{
+						UserTypeDefinition: &design.UserTypeDefinition{
+							AttributeDefinition: attDef,
+							TypeName:            "Bottle",
+						},
 					}
-				})
-
-				It("writes the resources code", func() {
-					err := writer.Execute(data)
-					Ω(err).ShouldNot(HaveOccurred())
-					b, err := ioutil.ReadFile(filename)
-					Ω(err).ShouldNot(HaveOccurred())
-					written := string(b)
-					Ω(written).ShouldNot(BeEmpty())
-					Ω(written).Should(ContainSubstring(simpleResource))
 				})
 
 				Context("and a canonical action", func() {
 					BeforeEach(func() {
-						canoTemplate = "/bottles/%s"
+						canoTemplate = "/bottles/%v"
 						canoParams = []string{"id"}
 					})
 
@@ -578,6 +567,8 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 type ListBottleContext struct {
 	goa.Context
 	Param int
+
+	HasParam bool
 }
 `
 
@@ -585,11 +576,14 @@ type ListBottleContext struct {
 func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
-	rawParam, _ := c.Get("param")
-	if param, err2 := strconv.Atoi(rawParam); err2 == nil {
-		ctx.Param = int(param)
-	} else {
-		err = goa.InvalidParamTypeError("param", rawParam, "integer", err2)
+	rawParam, ok := c.Get("param")
+	if ok {
+		if param, err2 := strconv.Atoi(rawParam); err2 == nil {
+			ctx.Param = int(param)
+		} else {
+			err = goa.InvalidParamTypeError("param", rawParam, "integer", err2)
+		}
+		ctx.HasParam = true
 	}
 	return &ctx, err
 }
@@ -599,6 +593,8 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 type ListBottleContext struct {
 	goa.Context
 	Param string
+
+	HasParam bool
 }
 `
 
@@ -606,8 +602,11 @@ type ListBottleContext struct {
 func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
-	rawParam, _ := c.Get("param")
-	ctx.Param = rawParam
+	rawParam, ok := c.Get("param")
+	if ok {
+		ctx.Param = rawParam
+		ctx.HasParam = true
+	}
 	return &ctx, err
 }
 `
@@ -616,6 +615,8 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 type ListBottleContext struct {
 	goa.Context
 	Param float64
+
+	HasParam bool
 }
 `
 
@@ -623,11 +624,14 @@ type ListBottleContext struct {
 func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
-	rawParam, _ := c.Get("param")
-	if param, err2 := strconv.ParseFloat(rawParam, 64); err2 == nil {
-		ctx.Param = param
-	} else {
-		err = goa.InvalidParamTypeError("param", rawParam, "number", err2)
+	rawParam, ok := c.Get("param")
+	if ok {
+		if param, err2 := strconv.ParseFloat(rawParam, 64); err2 == nil {
+			ctx.Param = param
+		} else {
+			err = goa.InvalidParamTypeError("param", rawParam, "number", err2)
+		}
+		ctx.HasParam = true
 	}
 	return &ctx, err
 }
@@ -636,6 +640,8 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 type ListBottleContext struct {
 	goa.Context
 	Param bool
+
+	HasParam bool
 }
 `
 
@@ -643,11 +649,14 @@ type ListBottleContext struct {
 func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
-	rawParam, _ := c.Get("param")
-	if param, err2 := strconv.ParseBool(rawParam); err2 == nil {
-		ctx.Param = param
-	} else {
-		err = goa.InvalidParamTypeError("param", rawParam, "boolean", err2)
+	rawParam, ok := c.Get("param")
+	if ok {
+		if param, err2 := strconv.ParseBool(rawParam); err2 == nil {
+			ctx.Param = param
+		} else {
+			err = goa.InvalidParamTypeError("param", rawParam, "boolean", err2)
+		}
+		ctx.HasParam = true
 	}
 	return &ctx, err
 }
@@ -657,6 +666,8 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 type ListBottleContext struct {
 	goa.Context
 	Param []string
+
+	HasParam bool
 }
 `
 
@@ -664,9 +675,12 @@ type ListBottleContext struct {
 func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
-	rawParam, _ := c.Get("param")
-	elemsParam := strings.Split(rawParam, ",")
-	ctx.Param = elemsParam
+	rawParam, ok := c.Get("param")
+	if ok {
+		elemsParam := strings.Split(rawParam, ",")
+		ctx.Param = elemsParam
+		ctx.HasParam = true
+	}
 	return &ctx, err
 }
 `
@@ -675,6 +689,8 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 type ListBottleContext struct {
 	goa.Context
 	Param []int
+
+	HasParam bool
 }
 `
 
@@ -682,17 +698,20 @@ type ListBottleContext struct {
 func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
-	rawParam, _ := c.Get("param")
-	elemsParam := strings.Split(rawParam, ",")
-	elemsParam2 := make([]int, len(elemsParam))
-	for i, rawElem := range elemsParam {
-		if elem, err2 := strconv.Atoi(rawElem); err2 == nil {
-			elemsParam2[i] = int(elem)
-		} else {
-			err = goa.InvalidParamTypeError("elem", rawElem, "integer", err2)
+	rawParam, ok := c.Get("param")
+	if ok {
+		elemsParam := strings.Split(rawParam, ",")
+		elemsParam2 := make([]int, len(elemsParam))
+		for i, rawElem := range elemsParam {
+			if elem, err2 := strconv.Atoi(rawElem); err2 == nil {
+				elemsParam2[i] = int(elem)
+			} else {
+				err = goa.InvalidParamTypeError("elem", rawElem, "integer", err2)
+			}
 		}
+		ctx.Param = elemsParam2
+		ctx.HasParam = true
 	}
-	ctx.Param = elemsParam
 	return &ctx, err
 }
 `
@@ -701,6 +720,8 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 type ListBottleContext struct {
 	goa.Context
 	Int int
+
+	HasInt bool
 }
 `
 
@@ -708,11 +729,14 @@ type ListBottleContext struct {
 func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
-	rawInt, _ := c.Get("int")
-	if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
-		ctx.Int = int(int_)
-	} else {
-		err = goa.InvalidParamTypeError("int", rawInt, "integer", err2)
+	rawInt, ok := c.Get("int")
+	if ok {
+		if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
+			ctx.Int = int(int_)
+		} else {
+			err = goa.InvalidParamTypeError("int", rawInt, "integer", err2)
+		}
+		ctx.HasInt = true
 	}
 	return &ctx, err
 }
@@ -746,7 +770,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	payloadContext = `
 type ListBottleContext struct {
 	goa.Context
-	Payload *ListBottlePayload
+	Payload ListBottlePayload
 }
 `
 
@@ -806,7 +830,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	}
 	app.Router.Handle("GET", "/accounts/:accountID/bottles", goa.NewHTTPRouterHandle(app, "Bottles", h))
 	idx++
-	logger.Info("handler", "action", idx, "GET", "/accounts/:accountID/bottles")
+	logger.Info("handler", "action", "list", "GET", "/accounts/:accountID/bottles")
 
 	logger.Info("mounted")
 }
@@ -833,7 +857,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	}
 	app.Router.Handle("GET", "/accounts/:accountID/bottles", goa.NewHTTPRouterHandle(app, "Bottles", h))
 	idx++
-	logger.Info("handler", "action", idx, "GET", "/accounts/:accountID/bottles")
+	logger.Info("handler", "action", "list", "GET", "/accounts/:accountID/bottles")
 
 	h = func(c goa.Context) error {
 		ctx, err := NewShowBottleContext(c)
@@ -844,20 +868,14 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	}
 	app.Router.Handle("GET", "/accounts/:accountID/bottles/:id", goa.NewHTTPRouterHandle(app, "Bottles", h))
 	idx++
-	logger.Info("handler", "action", idx, "GET", "/accounts/:accountID/bottles/:id")
+	logger.Info("handler", "action", "show", "GET", "/accounts/:accountID/bottles/:id")
 
 	logger.Info("mounted")
 }
 `
 
-	stringResource = `type Bottle string`
-
-	simpleResource = `type Bottle struct {
-	Int int ` + "`" + `json:"int,omitempty"` + "`" + `
-	Str string ` + "`" + `json:"str,omitempty"` + "`" + `
+	simpleResourceHref = `func BottleHref(id interface{}) string {
+	return fmt.Sprintf("/bottles/%v", id)
 }
 `
-	simpleResourceHref = `func BottleHref(id string) string {
-	return fmt.Sprintf("/bottles/%s", id)
-}`
 )

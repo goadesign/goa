@@ -95,7 +95,10 @@ func validationCheckerR(att *design.AttributeDefinition, context, target string,
 	for name, catt := range att.Type.ToObject() {
 		cctx := fmt.Sprintf("%s.%s", context, Goify(name, true))
 		ctgt := fmt.Sprintf("%s.%s", target, Goify(name, true))
-		res = append(res, validationCheckerR(catt, cctx, ctgt, depth+1))
+		cr := validationCheckerR(catt, cctx, ctgt, depth+1)
+		if cr != "" {
+			res = append(res, cr)
+		}
 	}
 	return strings.Join(res, "\n")
 }

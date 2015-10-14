@@ -30,7 +30,7 @@ var _ = Describe("Type", func() {
 	Context("with no DSL and no name", func() {
 		It("produces an invalid type definition", func() {
 			Ω(ut).ShouldNot(BeNil())
-			Ω(ut.Validate()).Should(HaveOccurred())
+			Ω(ut.Validate("test", Design)).Should(HaveOccurred())
 		})
 	})
 
@@ -41,7 +41,7 @@ var _ = Describe("Type", func() {
 
 		It("produces a valid type definition", func() {
 			Ω(ut).ShouldNot(BeNil())
-			Ω(ut.Validate()).ShouldNot(HaveOccurred())
+			Ω(ut.Validate("test", Design)).ShouldNot(HaveOccurred())
 		})
 	})
 
@@ -57,7 +57,7 @@ var _ = Describe("Type", func() {
 
 		It("sets the attributes", func() {
 			Ω(ut).ShouldNot(BeNil())
-			Ω(ut.Validate()).ShouldNot(HaveOccurred())
+			Ω(ut.Validate("test", Design)).ShouldNot(HaveOccurred())
 			Ω(ut.AttributeDefinition).ShouldNot(BeNil())
 			Ω(ut.Type).Should(BeAssignableToTypeOf(Object{}))
 			o := ut.Type.(Object)

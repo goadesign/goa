@@ -411,11 +411,11 @@ var _ = Describe("code generation", func() {
 })
 
 const (
-	arrayMarshaled = `	p = make([]interface{}, len(raw))
+	arrayMarshaled = `	tmp1 := make([]int, len(raw))
 	for i, r := range raw {
-		p[i] = r
+		tmp1[i] = r
 	}
-`
+	p = tmp1`
 
 	arrayUnmarshaled = `	if val, ok := raw.([]interface{}); ok {
 		p = make([]int, len(val))
@@ -432,10 +432,10 @@ const (
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "[]interface{}", err)
 	}`
 
-	simpleMarshaled = `	p = map[string]interface{}{
+	simpleMarshaled = `	tmp1 := map[string]interface{}{
 		"foo": raw.Foo,
 	}
-`
+	p = tmp1`
 
 	simpleUnmarshaled = `	if val, ok := raw.(map[string]interface{}); ok {
 		p = new(struct {
@@ -454,21 +454,23 @@ const (
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "map[string]interface{}", err)
 	}`
 
-	complexMarshaled = `	p = map[string]interface{}{
+	complexMarshaled = `	tmp1 := map[string]interface{}{
 		"faz": raw.Faz,
 	}
 	if raw.Baz != nil {
-		p["baz"] = map[string]interface{}{
+		tmp2 := map[string]interface{}{
 			"foo": raw.Baz.Foo,
 		}
 		if raw.Baz.Bar != nil {
-			p["baz"]["bar"] = make([]interface{}, len(raw.Baz.Bar))
+			tmp3 := make([]int, len(raw.Baz.Bar))
 			for i, r := range raw.Baz.Bar {
-				p["baz"]["bar"][i] = r
+				tmp3[i] = r
 			}
+			tmp2["bar"] = tmp3
 		}
+		tmp1["baz"] = tmp2
 	}
-`
+	p = tmp1`
 
 	complexUnmarshaled = `	if val, ok := raw.(map[string]interface{}); ok {
 		p = new(struct {
@@ -533,37 +535,31 @@ const (
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "map[string]interface{}", err)
 	}`
 
-	mtMarshaled = `	p = map[string]interface{}{
+	mtMarshaled = `	tmp1 := map[string]interface{}{
 	}
 	if raw.Bar != nil {
-		p["bar"] = map[string]interface{}{
+		tmp2 := map[string]interface{}{
 			"barAtt": raw.Bar.BarAtt,
 			"href": raw.Bar.Href,
 		}
+		tmp1["bar"] = tmp2
 	}
 	if raw.Baz != nil {
-		p["baz"] = map[string]interface{}{
+		tmp3 := map[string]interface{}{
 			"bazAtt": raw.Baz.BazAtt,
 			"href": raw.Baz.Href,
 			"name": raw.Baz.Name,
 		}
+		tmp1["baz"] = tmp3
 	}
 	if raw.Foo != nil {
-		p["foo"] = map[string]interface{}{
+		tmp4 := map[string]interface{}{
 			"fooAtt": raw.Foo.FooAtt,
 			"href": raw.Foo.Href,
 		}
+		tmp1["foo"] = tmp4
 	}
-	links := make(map[string]interface{})
-	links["Baz"] = map[string]interface{}{
-		"href": raw.Baz.Href,
-		"name": raw.Baz.Name,
-	}
-	links["Foo"] = map[string]interface{}{
-		"href": raw.Foo.Href,
-	}
-	p["links"] = links
-`
+	p = tmp1`
 
 	mainTmpl = `package main
 

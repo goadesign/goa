@@ -332,8 +332,7 @@ type {{.Name}} struct {
 {{if .Params}}{{$ctx := .}}{{range $name, $att := .Params.Type.ToObject}}	{{goify $name true}} {{gotyperef .Type 0}}
 {{if $ctx.MustSetHas $name}}
 	Has{{goify $name true}} bool
-{{end}}{{end}}{{end}}{{if .Payload}}
-	Payload {{gotyperef .Payload 0}}
+{{end}}{{end}}{{end}}{{if .Payload}}	Payload {{gotyperef .Payload 0}}
 {{end}}}
 `
 	// coerceT generates the code that coerces the generic deserialized

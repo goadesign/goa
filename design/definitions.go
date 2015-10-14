@@ -734,7 +734,10 @@ func (r *RouteDefinition) Params() []string {
 // FullPath returns the action full path computed by concatenating the API and resource base paths
 // with the action specific path.
 func (r *RouteDefinition) FullPath() string {
-	base := r.Parent.Parent.FullPath()
+	var base string
+	if r.Parent != nil && r.Parent.Parent != nil {
+		base = r.Parent.Parent.FullPath()
+	}
 	return httprouter.CleanPath(filepath.Join(base, r.Path))
 }
 

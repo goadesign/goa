@@ -5,6 +5,8 @@ import (
 	. "github.com/raphael/goa/design/dsl"
 )
 
+// BottlePayload defines the data structure used in the create bottle request body.
+// It is also the base type for the bottle media type used to render bottles.
 var BottlePayload = Type("BottlePayload", func() {
 	Attribute("name", func() {
 		MinLength(2)

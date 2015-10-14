@@ -95,7 +95,7 @@ var _ = Describe("Generate", func() {
 			}
 			isEmptySource("contexts.go")
 			isEmptySource("controllers.go")
-			isEmptySource("resources.go")
+			isEmptySource("hrefs.go")
 			isEmptySource("media_types.go")
 		})
 	})
@@ -179,12 +179,12 @@ var _ = Describe("Generate", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			controllersCode := b.String()
 
-			resourcesCodeT, err := template.New("resources").Parse(resourcesCodeTmpl)
+			hrefsCodeT, err := template.New("hrefs").Parse(hrefsCodeTmpl)
 			Ω(err).ShouldNot(HaveOccurred())
 			b.Reset()
-			err = resourcesCodeT.Execute(&b, data)
+			err = hrefsCodeT.Execute(&b, data)
 			Ω(err).ShouldNot(HaveOccurred())
-			resourcesCode := b.String()
+			hrefsCode := b.String()
 
 			mediaTypesCodeT, err := template.New("media types").Parse(mediaTypesCodeTmpl)
 			Ω(err).ShouldNot(HaveOccurred())
@@ -201,7 +201,7 @@ var _ = Describe("Generate", func() {
 
 			isSource("contexts.go", contextsCode)
 			isSource("controllers.go", controllersCode)
-			isSource("resources.go", resourcesCode)
+			isSource("hrefs.go", hrefsCode)
 			isSource("media_types.go", mediaTypesCode)
 		})
 	})
@@ -225,7 +225,7 @@ import "github.com/raphael/goa"
 // GetWidgetContext provides the Widget get action context.
 type GetWidgetContext struct {
 	goa.Context
-	Id string
+	ID string
 }
 
 // NewGetWidgetContext parses the incoming request URL and body, performs validations and creates the
@@ -233,19 +233,19 @@ type GetWidgetContext struct {
 func NewGetWidgetContext(c goa.Context) (*GetWidgetContext, error) {
 	var err error
 	ctx := GetWidgetContext{Context: c}
-	rawId, ok := c.Get("id")
-	if !ok {
-		err = goa.MissingParamError("id", err)
-	} else {
-		ctx.Id = rawId
+	rawID, ok := c.Get("id")
+	if ok {
+		ctx.ID = rawID
 	}
 	return &ctx, err
 }
 
 // OK sends a HTTP response with status code 200.
-func (c *GetWidgetContext) OK(resp *Id) error {
-	var r interface{}
-	r = resp
+func (c *GetWidgetContext) OK(resp ID) error {
+	r, err := resp.Dump()
+	if err != nil {
+		return err
+	}
 	return c.JSON(200, r)
 }
 `
@@ -272,7 +272,7 @@ type WidgetController interface {
 }
 
 // MountWidgetController "mounts" a Widget resource controller on the given application.
-func MountWidgetController(app *goa.Application, ctrl BottlesController) {
+func MountWidgetController(app *goa.Application, ctrl WidgetController) {
 	idx := 0
 	var h goa.Handler
 	logger := app.Logger.New("ctrl", "Widget")
@@ -285,16 +285,16 @@ func MountWidgetController(app *goa.Application, ctrl BottlesController) {
 		}
 		return ctrl.Get(ctx)
 	}
-	app.Router.Handle("GET", "/:id", goa.ActionHandle(h))
+	app.Router.Handle("GET", "/:id", goa.NewHTTPRouterHandle(app, "Widget", h))
 	idx++
-	logger.Info("handler", "action", idx, "GET", "/:id")
+	logger.Info("handler", "action", "Get", "GET", "/:id")
 
 	logger.Info("mounted")
 }
 `
 
-const resourcesCodeTmpl = `//************************************************************************//
-// test api: Application Resources
+const hrefsCodeTmpl = `//************************************************************************//
+// test api: Application Resource Href Factories
 //
 // Generated with codegen v0.0.1, command line:
 // $ codegen
@@ -308,12 +308,9 @@ package app
 
 import "fmt"
 
-// Widgetty
-type Widget string
-
 // WidgetHref returns the resource href.
-func WidgetHref() string {
-	return fmt.Sprintf("/:id")
+func WidgetHref(id interface{}) string {
+	return fmt.Sprintf("/%v", id)
 }
 `
 
