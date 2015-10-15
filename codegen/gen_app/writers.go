@@ -328,7 +328,7 @@ const (
 	// template input: *ContextTemplateData
 	ctxT = `// {{.Name}} provides the {{.ResourceName}} {{.ActionName}} action context.
 type {{.Name}} struct {
-	goa.Context
+	*goa.Context
 {{if .Params}}{{$ctx := .}}{{range $name, $att := .Params.Type.ToObject}}	{{goify $name true}} {{gotyperef .Type 0}}
 {{if $ctx.MustSetHas $name}}
 	Has{{goify $name true}} bool
@@ -367,10 +367,10 @@ type {{.Name}} struct {
 	ctxNewT = `{{define "Coerce"}}` + coerceT + `{{end}}` + `
 // New{{goify .Name true}} parses the incoming request URL and body, performs validations and creates the
 // context used by the {{.ResourceName}} controller {{.ActionName}} action.
-func New{{.Name}}(c goa.Context) (*{{.Name}}, error) {
+func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 	var err error
 	ctx := {{.Name}}{Context: c}
-{{if .Headers}}{{$headers := .Headers}}{{range $name, $_ := $headers.Type.ToObject}}{{if ($headers.IsRequired $name)}}	if c.Header().Get("{{$name}}") == "" {
+{{if .Headers}}{{$headers := .Headers}}{{range $name, $_ := $headers.Type.ToObject}}{{if ($headers.IsRequired $name)}}	if c.Request().Header.Get("{{$name}}") == "" {
 		err = goa.MissingHeaderError("{{$name}}", err)
 	}{{end}}{{end}}
 {{end}}{{if.Params}}{{$ctx := .}}{{range $name, $att := .Params.Type.ToObject}}	raw{{goify $name true}}, ok := c.Get("{{$name}}")
@@ -380,13 +380,12 @@ func New{{.Name}}(c goa.Context) (*{{.Name}}, error) {
 {{else}}	if ok {
 {{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (goify $name true)) 2)}}{{if $ctx.MustSetHas $name}}		ctx.Has{{goify $name true}} = true
 {{end}}	}
-{{validationChecker $att $name}}{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	if payload := c.Payload(); payload != nil {
-		p, err := New{{gotypename .Payload 0}}(payload)
-		if err != nil {
-			return nil, err
-		}
-		ctx.Payload = p
+{{validationChecker $att $name}}{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}payload := c.Payload()
+	p, err := New{{gotypename .Payload 0}}(payload)
+	if err != nil {
+		return nil, err
 	}
+	ctx.Payload = p
 {{end}}	return &ctx, err
 }
 
@@ -397,7 +396,7 @@ func New{{.Name}}(c goa.Context) (*{{.Name}}, error) {
 func (c *{{$ctx.Name}}) {{goify .Name true}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp {{gotyperef $mt 0}}{{if gt (len $mt.Views) 1}}, view {{gotypename $mt 0}}ViewEnum{{end}}{{end}}) error {
 {{if $mt}}	r, err := resp.Dump({{if gt (len $mt.Views) 1}}view{{end}})
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid response: %s", err)
 	}
 	return c.JSON({{.Status}}, r){{else}}return c.Respond({{.Status}}, nil){{end}}
 }
@@ -415,8 +414,10 @@ type {{gotypename .Payload 1}} {{gotypedef .Payload 0 false false}}
 func New{{gotypename .Payload 0}}(raw interface{}) ({{gotyperef .Payload 0}}, error) {
 	var err error
 	var p {{gotyperef .Payload 1}}
-{{typeUnmarshaler .Payload "" "raw" "p"}}
-{{validationChecker .Payload.AttributeDefinition "p"}}
+{{typeUnmarshaler .Payload "payload" "raw" "p"}}
+	if p != nil {
+		{{validationChecker .Payload.AttributeDefinition "p"}}
+	}
 	return p, err
 }
 `
@@ -438,10 +439,10 @@ func Mount{{.Resource}}Controller(app *goa.Application, ctrl {{.Resource}}Contro
 	logger := app.Logger.New("ctrl", "{{.Resource}}")
 	logger.Info("mounting")
 {{$res := .Resource}}{{range .Actions}}{{$action := .}}
-	h = func(c goa.Context) error {
+	h = func(c *goa.Context) error {
 		ctx, err := New{{.Context}}(c)
 		if err != nil {
-			return err
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.{{.Name}}(ctx)
 	}

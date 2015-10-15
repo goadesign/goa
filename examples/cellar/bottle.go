@@ -61,7 +61,7 @@ func (b *BottleController) Create(c *app.CreateBottleContext) error {
 	if payload.Review != "" {
 		bottle.Review = payload.Review
 	}
-	c.Header().Set("Location", app.BottleHref(c.AccountID, bottle.ID))
+	c.ResponseHeader().Set("Location", app.BottleHref(c.AccountID, bottle.ID))
 	return c.Created()
 }
 

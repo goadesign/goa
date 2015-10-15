@@ -93,7 +93,7 @@ func ValidateFormat(f Format, val string) error {
 	case FormatRegexp:
 		_, err = regexp.Compile(val)
 	default:
-		panic("invalid format value")
+		return fmt.Errorf("unknown format %#v", f)
 	}
 	if err != nil {
 		return fmt.Errorf("invalid %s value, %s", f, err)

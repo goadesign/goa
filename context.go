@@ -2,114 +2,91 @@ package goa
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 
-	"gopkg.in/inconshreveable/log15.v2"
-
+	"golang.org/x/net/context"
 	log "gopkg.in/inconshreveable/log15.v2"
 )
 
-// Context is the interface implemented by all context objects.
-// It provides access to the underlying request data and exposes helper methods to create the
-// response.
-type Context interface {
-	// Log is the request specific logger.
-	// All log entries are prefixed with the request ID.
-	log.Logger
-
-	// Get returns the param or query string with the given name and true or an empty string
-	// and false if there isn't one.
-	// If there is more than one query string value then Get returns the first one. Use GetMany
-	// to retrieve all the values instead.
-	Get(name string) (string, bool)
-
-	// GetMany returns the query string values with the given name or nil if there aren't any.
-	GetMany(name string) []string
-
-	// Env returns the request environment.
-	// Environment values are typically created and used by middleware.
-	Env() map[string]interface{}
-
-	// Payload returns the raw deserialized request body or nil if the body is empty.
-	Payload() interface{}
-
-	// Header returns the underlying request headers.
-	Header() http.Header
-
-	// Respond writes the given HTTP status code and response body.
-	// This method can only be called once per request.
-	Respond(code int, body []byte) error
-
-	// JSON serializes the given body into JSON and sends a HTTP response with the given code
-	// and serialized JSON string as body.
-	JSON(code int, body interface{}) error
-
-	// Bug sends a HTTP response with status code 400 and the given body.
-	BadRequest(body string) error
-
-	// Bug sends a HTTP response with status code 500 and the given body.
-	Bug(body string) error
-
-	// Request returns the underlying HTTP request.
-	// In general it should not be necessary to call this function, the request elements should
-	// be accessed using the other functions exposed by Context (i.e. Get, GetMany, Payload, etc.)
-	Request() *http.Request
-
-	// ResponseWriter returns the underlying HTTP response writer.
-	// In general it should not be necessary to call this function, the response can be Written
-	// using on the helper functions exposes by Context (i.e. Respond, JSON, RespondError and
-	// Bug)
-	ResponseWriter() http.ResponseWriter
-
-	// Duplicate creates a new context with the same environment. Only the Request and
-	// ResponseWriter are different (in particular note that Get and GetMany are unaffected).
-	// This method is useful to wrap "legacy" middleware that acts on http.Handler instead of
-	// goa.Handler.
-	Duplicate(http.ResponseWriter, *http.Request) Context
+// Context is the object that provides access to the underlying HTTP request and response state.
+// It implements the context.Context interface described at http://blog.golang.org/context.
+type Context struct {
+	context.Context // A goa context is a golang context
+	log.Logger      // Context logger
 }
 
-// ContextData is the object that provides access to the underlying HTTP request and response data.
-// It implements the Context interface.
-type ContextData struct {
-	log.Logger                         // Context logger
-	Params      map[string]string      // URL string parameters
-	Query       map[string][]string    // Query string parameters
-	PayloadData interface{}            // Deserialized payload (request body)
-	R           *http.Request          // Underlying HTTP request
-	W           http.ResponseWriter    // Underlying HTTP response writer
-	HeaderData  http.Header            // Underlying response headers
-	RespStatus  int                    // HTTP response status code
-	RespLen     int                    // Written response Length
-	EnvData     map[string]interface{} // Env is the request environment used by middleware to stash state.
+// key is the type used to store internal values in the context.
+// Context provides typed accessor methods to these values.
+type key int
+
+const (
+	reqKey key = iota
+	respKey
+	paramKey
+	queryKey
+	payloadKey
+	respStatusKey
+	respLenKey
+)
+
+// AddValue sets the value associated with key in the context.
+// The value can be retrieved using the Value method.
+// Note that this changes the underlying context.Context object and thus clients holding a reference
+// to that won't be able to access the new value. It's probably a bad idea to hold a reference to
+// the inner context anyway...
+func (c *Context) AddValue(key, val interface{}) {
+	c.Context = context.WithValue(c.Context, key, val)
 }
 
-// Duplicate creates a new context with the same environment. Only the R and W fields are updated.
-// This is useful to create contexts out of middlewares that act directly on http.Handler.
-func (c *ContextData) Duplicate(w http.ResponseWriter, r *http.Request) Context {
-	newC := ContextData{
-		Logger:      c.Logger,
-		Params:      c.Params,
-		Query:       c.Query,
-		PayloadData: c.PayloadData,
-		R:           r,
-		W:           w,
-		HeaderData:  c.HeaderData,
-		RespStatus:  c.RespStatus,
-		RespLen:     c.RespLen,
-		EnvData:     c.EnvData,
+// Request returns the underlying HTTP request.
+func (c *Context) Request() *http.Request {
+	return c.Value(reqKey).(*http.Request)
+}
+
+// ResponseWriter returns the raw HTTP response writer.
+func (c *Context) ResponseWriter() http.ResponseWriter {
+	return c.Value(respKey).(http.ResponseWriter)
+}
+
+// ResponseHeader returns the response HTTP header object.
+func (c *Context) ResponseHeader() http.Header {
+	if rw := c.ResponseWriter(); rw != nil {
+		return rw.Header()
 	}
-	return &newC
+	return nil
+}
+
+// ResponseStatus returns the response status if it was set via one of the context response
+// methods (Respond, JSON, BadRequest, Bug), 0 otherwise.
+func (c *Context) ResponseStatus() int {
+	if is := c.Value(respStatusKey); is != nil {
+		return is.(int)
+	}
+	return 0
+}
+
+// ResponseLength returns the response body length in bytes if the response was written to the
+// context via one of the response methods (Respond, JSON, BadRequest, Bug), 0 otherwise.
+func (c *Context) ResponseLength() int {
+	if is := c.Value(respLenKey); is != nil {
+		return is.(int)
+	}
+	return 0
 }
 
 // Get returns the param or query string with the given name and true or an empty string and false
 // if there isn't one.
-func (c *ContextData) Get(name string) (string, bool) {
-	v, ok := c.Params[name]
+func (c *Context) Get(name string) (string, bool) {
+	params := c.Value(paramKey).(map[string]string)
+	v, ok := params[name]
 	if !ok {
 		var vs []string
-		vs, ok = c.Query[name]
+		query := c.Value(queryKey).(map[string][]string)
+		vs, ok = query[name]
 		if ok {
-			v = vs[0]
+			v = strings.Join(vs, ",")
 		}
 	}
 	if !ok {
@@ -118,42 +95,33 @@ func (c *ContextData) Get(name string) (string, bool) {
 	return v, true
 }
 
-// GetMany returns the query string values with the given name and or if there aren't any.
-func (c *ContextData) GetMany(name string) []string {
-	return c.Query[name]
-}
-
-// Env returns the request environment.
-// Environment values are typically created and used by middleware.
-func (c *ContextData) Env() map[string]interface{} {
-	return c.EnvData
+// GetMany returns the query string values with the given name or nil if there aren't any.
+func (c *Context) GetMany(name string) []string {
+	query := c.Value(queryKey).(map[string][]string)
+	return query[name]
 }
 
 // Payload returns the deserialized request body or nil if body is empty.
-func (c *ContextData) Payload() interface{} {
-	return c.PayloadData
-}
-
-// Header returns the underlying request headers.
-func (c *ContextData) Header() http.Header {
-	return c.HeaderData
+func (c *Context) Payload() interface{} {
+	return c.Value(payloadKey)
 }
 
 // Respond writes the given HTTP status code and response body.
-// This method can only be called once per request.
-func (c *ContextData) Respond(code int, body []byte) error {
-	c.RespStatus = code
-	c.W.WriteHeader(code)
-	if _, err := c.W.Write(body); err != nil {
+// This method should only be called once per request.
+func (c *Context) Respond(code int, body []byte) error {
+	c.Context = context.WithValue(c.Context, respStatusKey, code)
+	rw := c.ResponseWriter()
+	rw.WriteHeader(code)
+	if _, err := rw.Write(body); err != nil {
 		return err
 	}
-	c.RespLen = len(body)
+	c.Context = context.WithValue(c.Context, respLenKey, len(body))
 	return nil
 }
 
-// JSON serializes the given body into JSON and sends a HTTP response with the given code
-// and serialized JSON string as body.
-func (c *ContextData) JSON(code int, body interface{}) error {
+// JSON serializes the given body into JSON and sends a HTTP response with the given status code
+// and JSON as body.
+func (c *Context) JSON(code int, body interface{}) error {
 	js, err := json.Marshal(body)
 	if err != nil {
 		return err
@@ -161,32 +129,14 @@ func (c *ContextData) JSON(code int, body interface{}) error {
 	return c.Respond(code, js)
 }
 
-// BadRequest sends a HTTP response with status code 400 and the given body.
-func (c *ContextData) BadRequest(body string) error {
-	return c.Respond(400, []byte(body))
+// BadRequest sends a HTTP response with status code 400 and the given error as body.
+func (c *Context) BadRequest(err *BadRequestError) error {
+	return c.Respond(400, []byte(err.Error()))
 }
 
 // Bug sends a HTTP response with status code 500 and the given body.
-func (c *ContextData) Bug(body string) error {
+// The body can be set using a format and substituted values a la fmt.Printf.
+func (c *Context) Bug(format string, a ...interface{}) error {
+	body := fmt.Sprintf(format, a...)
 	return c.Respond(500, []byte(body))
-}
-
-// Log is the request specific logger.
-func (c *ContextData) Log() log15.Logger {
-	return c.Logger
-}
-
-// Request returns the underlying HTTP request.
-// In general it should not be necessary to call this function, the request elements should
-// be accessed using the other functions exposed by Context (i.e. Get, GetMany, Payload, etc.)
-func (c *ContextData) Request() *http.Request {
-	return c.R
-}
-
-// ResponseWriter returns the underlying HTTP response writer.
-// In general it should not be necessary to call this function, the response can be Written
-// using on the helper functions exposes by Context (i.e. Respond, JSON, RespondError and
-// Bug)
-func (c *ContextData) ResponseWriter() http.ResponseWriter {
-	return c.W
 }

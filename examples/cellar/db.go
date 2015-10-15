@@ -17,8 +17,8 @@ type DB struct {
 
 // NewDB initializes a new "DB" with dummy data.
 func NewDB() *DB {
-	account := &app.Account{ID: 1}
-	account2 := &app.Account{ID: 2}
+	account := &app.Account{ID: 1, Name: "account 1", Href: app.AccountHref(1)}
+	account2 := &app.Account{ID: 2, Name: "account 2", Href: app.AccountHref(2)}
 	bottles := map[int][]*app.Bottle{
 		1: []*app.Bottle{
 			&app.Bottle{

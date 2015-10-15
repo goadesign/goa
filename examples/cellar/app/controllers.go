@@ -2,7 +2,7 @@
 // cellar: Application Controllers
 //
 // Generated with codegen v0.0.1, command line:
-// $ /home/raphael/go/src/github.com/raphael/goa/examples/cellar/codegen650451510/codegen
+// $ /home/raphael/go/src/github.com/raphael/goa/examples/cellar/codegen641745468/codegen
 // --out=/home/raphael/go/src/github.com/raphael/goa/examples/cellar
 // --design=github.com/raphael/goa/examples/cellar/design
 // --force
@@ -31,10 +31,10 @@ func MountAccountController(app *goa.Application, ctrl AccountController) {
 	logger := app.Logger.New("ctrl", "Account")
 	logger.Info("mounting")
 
-	h = func(c goa.Context) error {
+	h = func(c *goa.Context) error {
 		ctx, err := NewCreateAccountContext(c)
 		if err != nil {
-			return err
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Create(ctx)
 	}
@@ -42,10 +42,10 @@ func MountAccountController(app *goa.Application, ctrl AccountController) {
 	idx++
 	logger.Info("handler", "action", "Create", "POST", "/cellar/accounts")
 
-	h = func(c goa.Context) error {
+	h = func(c *goa.Context) error {
 		ctx, err := NewDeleteAccountContext(c)
 		if err != nil {
-			return err
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Delete(ctx)
 	}
@@ -53,10 +53,10 @@ func MountAccountController(app *goa.Application, ctrl AccountController) {
 	idx++
 	logger.Info("handler", "action", "Delete", "DELETE", "/cellar/accounts/:accountID")
 
-	h = func(c goa.Context) error {
+	h = func(c *goa.Context) error {
 		ctx, err := NewShowAccountContext(c)
 		if err != nil {
-			return err
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Show(ctx)
 	}
@@ -64,10 +64,10 @@ func MountAccountController(app *goa.Application, ctrl AccountController) {
 	idx++
 	logger.Info("handler", "action", "Show", "GET", "/cellar/accounts/:accountID")
 
-	h = func(c goa.Context) error {
+	h = func(c *goa.Context) error {
 		ctx, err := NewUpdateAccountContext(c)
 		if err != nil {
-			return err
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Update(ctx)
 	}
@@ -94,10 +94,10 @@ func MountBottleController(app *goa.Application, ctrl BottleController) {
 	logger := app.Logger.New("ctrl", "Bottle")
 	logger.Info("mounting")
 
-	h = func(c goa.Context) error {
+	h = func(c *goa.Context) error {
 		ctx, err := NewCreateBottleContext(c)
 		if err != nil {
-			return err
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Create(ctx)
 	}
@@ -105,10 +105,10 @@ func MountBottleController(app *goa.Application, ctrl BottleController) {
 	idx++
 	logger.Info("handler", "action", "Create", "POST", "/cellar/accounts/:accountID/bottles")
 
-	h = func(c goa.Context) error {
+	h = func(c *goa.Context) error {
 		ctx, err := NewDeleteBottleContext(c)
 		if err != nil {
-			return err
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Delete(ctx)
 	}
@@ -116,10 +116,10 @@ func MountBottleController(app *goa.Application, ctrl BottleController) {
 	idx++
 	logger.Info("handler", "action", "Delete", "DELETE", "/cellar/accounts/:accountID/bottles/:id")
 
-	h = func(c goa.Context) error {
+	h = func(c *goa.Context) error {
 		ctx, err := NewListBottleContext(c)
 		if err != nil {
-			return err
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.List(ctx)
 	}
@@ -127,10 +127,10 @@ func MountBottleController(app *goa.Application, ctrl BottleController) {
 	idx++
 	logger.Info("handler", "action", "List", "GET", "/cellar/accounts/:accountID/bottles")
 
-	h = func(c goa.Context) error {
+	h = func(c *goa.Context) error {
 		ctx, err := NewRateBottleContext(c)
 		if err != nil {
-			return err
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Rate(ctx)
 	}
@@ -138,10 +138,10 @@ func MountBottleController(app *goa.Application, ctrl BottleController) {
 	idx++
 	logger.Info("handler", "action", "Rate", "PUT", "/cellar/accounts/:accountID/bottles/:id/actions/rate")
 
-	h = func(c goa.Context) error {
+	h = func(c *goa.Context) error {
 		ctx, err := NewShowBottleContext(c)
 		if err != nil {
-			return err
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Show(ctx)
 	}
@@ -149,10 +149,10 @@ func MountBottleController(app *goa.Application, ctrl BottleController) {
 	idx++
 	logger.Info("handler", "action", "Show", "GET", "/cellar/accounts/:accountID/bottles/:id")
 
-	h = func(c goa.Context) error {
+	h = func(c *goa.Context) error {
 		ctx, err := NewUpdateBottleContext(c)
 		if err != nil {
-			return err
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Update(ctx)
 	}
