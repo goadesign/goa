@@ -445,7 +445,7 @@ func Mount{{.Resource}}Controller(app *goa.Application, ctrl {{.Resource}}Contro
 		}
 		return ctrl.{{.Name}}(ctx)
 	}
-{{range .Routes}}	app.Router.Handle("{{.Verb}}", "{{.FullPath}}", goa.NewHTTPRouterHandle(app, "{{$res}}", h))
+{{range .Routes}}	app.Router.Handle("{{.Verb}}", "{{.FullPath}}", goa.NewHTTPRouterHandle(app, "{{$res}}", "{{$action.Name}}", h))
 	idx++
 	logger.Info("handler", "action", "{{$action.Name}}", "{{.Verb}}", "{{.FullPath}}")
 {{end}}{{end}}

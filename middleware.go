@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	log "gopkg.in/inconshreveable/log15.v2"
+
 	"golang.org/x/net/context"
 )
 
@@ -94,6 +96,44 @@ func init() {
 // middlewareKey is the private type used for goa middlewares to store values in the context.
 // It is private to avoid possible collisions with keys used by other packages.
 type middlewareKey int
+
+// LogRequest creates a request logger middleware.
+// This middleware is aware of the RequestID middleware and if registered after it leverates the
+// request ID for logging.
+func LogRequest() Middleware {
+	return func(h Handler) Handler {
+		return func(ctx *Context) error {
+			reqID := ctx.Value(ReqIDKey)
+			if reqID == nil {
+				reqID = ShortID()
+			}
+			ctx.Logger = ctx.Logger.New("id", reqID)
+			startedAt := time.Now()
+			r := ctx.Value(reqKey).(*http.Request)
+			ctx.Info("started", r.Method, r.URL.String())
+			params := ctx.Value(paramKey).(map[string]string)
+			if len(params) > 0 {
+				ctx.Debug("params", ToLogCtx(params))
+			}
+			query := ctx.Value(queryKey).(map[string][]string)
+			if len(query) > 0 {
+				ctx.Debug("query", ToLogCtxA(query))
+			}
+			payload := ctx.Value(payloadKey)
+			if r.ContentLength > 0 {
+				if mp, ok := payload.(map[string]interface{}); ok {
+					ctx.Debug("payload", log.Ctx(mp))
+				} else {
+					ctx.Debug("payload", "raw", payload)
+				}
+			}
+			err := h(ctx)
+			ctx.Info("completed", "status", ctx.ResponseStatus(),
+				"bytes", ctx.ResponseLength(), "time", time.Since(startedAt).String())
+			return err
+		}
+	}
+}
 
 // RequestID is a middleware that injects a request ID into the context of each request.
 // Retrieve it using ctx.Value(ReqIDKey). If the incoming request has a RequestIDHeader header then

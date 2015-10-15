@@ -3,15 +3,16 @@ package main
 import (
 	"github.com/raphael/goa"
 	"github.com/raphael/goa/examples/cellar/app"
-	log "gopkg.in/inconshreveable/log15.v2"
 )
 
 func main() {
-	// Setup logger
-	goa.Log.SetHandler(log.StdoutHandler)
-
 	// Create goa application
 	api := goa.New("cellar")
+
+	// Setup middleware
+	api.Use(goa.Recover())
+	api.Use(goa.RequestID())
+	api.Use(goa.LogRequest())
 
 	// Mount account controller onto application
 	ac := NewAccountController()

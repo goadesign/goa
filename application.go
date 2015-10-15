@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"time"
 
 	"golang.org/x/net/context"
 
@@ -120,14 +119,21 @@ func TerseErrorHandler(c *Context, e error) {
 
 // NewHTTPRouterHandle returns a httprouter handle which initializes a new context using the HTTP
 // request state and calls the given handler with it.
-func NewHTTPRouterHandle(app *Application, resName string, h Handler) httprouter.Handle {
-	logger := app.Logger.New("ctrl", resName)
+func NewHTTPRouterHandle(app *Application, resName, actName string, h Handler) httprouter.Handle {
+	// Setup middleware outside of closure
+	chain := app.Middleware
+	ml := len(chain)
+	middleware := func(ctx *Context) error {
+		if err := h(ctx); err != nil {
+			app.ErrorHandler(ctx, err)
+		}
+		return nil
+	}
+	for i := range chain {
+		middleware = chain[ml-i-1](middleware)
+	}
+	logger := app.Logger.New("ctrl", resName, "action", actName)
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-		// Log started event
-		startedAt := time.Now()
-		id := ShortID()
-		logger.Info("started", "id", id, r.Method, r.URL.String())
-
 		// Collect URL and query string parameters
 		params := make(map[string]string, len(p))
 		for _, param := range p {
@@ -157,44 +163,28 @@ func NewHTTPRouterHandle(app *Application, resName string, h Handler) httprouter
 		gctx = context.WithValue(gctx, payloadKey, payload)
 		ctx := &Context{
 			Context: gctx,
-			Logger:  logger.New("id", id),
+			Logger:  logger,
 		}
 
-		// Setup middleware
-		middleware := app.Middleware
-		ml := len(middleware)
-		for i := range middleware {
-			h = middleware[ml-i-1](h)
-		}
-
-		// Log request details if needed
-		if len(params) > 0 {
-			ctx.Debug("params", ToLogCtx(params))
-		}
-		if len(query) > 0 {
-			ctx.Debug("query", ToLogCtxA(query))
-		}
+		// Handle invalid payload
+		handler := middleware
 		if err != nil {
-			ctx.Respond(400, []byte(fmt.Sprintf(`{"kind":"invalid request","msg":"invalid JSON: %s"}`, err)))
-			goto end
-		}
-		if r.ContentLength > 0 {
-			if mp, ok := payload.(map[string]interface{}); ok {
-				ctx.Debug("payload", log.Ctx(mp))
-			} else {
-				ctx.Debug("payload", "raw", payload)
+			handler = func(ctx *Context) error {
+				ctx.Respond(400, []byte(fmt.Sprintf(`{"kind":"invalid request","msg":"invalid JSON: %s"}`, err)))
+				return nil
+			}
+			for i := range chain {
+				handler = chain[ml-i-1](handler)
 			}
 		}
 
-		// Call middleware and user controller handler
-		if err := h(ctx); err != nil {
-			app.ErrorHandler(ctx, err)
-		}
+		// Invoke middleware chain
+		handler(ctx)
 
-		// We're done
-	end:
-		log.Info("completed", "id", id, "status", ctx.ResponseStatus(),
-			"bytes", ctx.ResponseLength(), "time", time.Since(startedAt).String())
+		// Make sure a response is sent back to client.
+		if !ctx.ResponseWritten() {
+			app.ErrorHandler(ctx, fmt.Errorf("unhandled request"))
+		}
 	}
 }
 

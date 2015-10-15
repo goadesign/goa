@@ -27,6 +27,7 @@ const (
 	paramKey
 	queryKey
 	payloadKey
+	respWrittenKey
 	respStatusKey
 	respLenKey
 )
@@ -56,6 +57,14 @@ func (c *Context) ResponseHeader() http.Header {
 		return rw.Header()
 	}
 	return nil
+}
+
+// ResponseWritten returns true if an HTTP response was written.
+func (c *Context) ResponseWritten() bool {
+	if wr := c.Value(respStatusKey); wr != nil {
+		return true
+	}
+	return false
 }
 
 // ResponseStatus returns the response status if it was set via one of the context response
@@ -109,12 +118,13 @@ func (c *Context) Payload() interface{} {
 // Respond writes the given HTTP status code and response body.
 // This method should only be called once per request.
 func (c *Context) Respond(code int, body []byte) error {
-	c.Context = context.WithValue(c.Context, respStatusKey, code)
 	rw := c.ResponseWriter()
 	rw.WriteHeader(code)
 	if _, err := rw.Write(body); err != nil {
 		return err
 	}
+	c.Context = context.WithValue(c.Context, respWrittenKey, true)
+	c.Context = context.WithValue(c.Context, respStatusKey, code)
 	c.Context = context.WithValue(c.Context, respLenKey, len(body))
 	return nil
 }
