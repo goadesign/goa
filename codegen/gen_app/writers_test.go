@@ -824,7 +824,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 		}
 		return ctrl.list(ctx)
 	}
-	app.Router.Handle("GET", "/accounts/:accountID/bottles", goa.NewHTTPRouterHandle(app, "Bottles", h))
+	app.Router.Handle("GET", "/accounts/:accountID/bottles", goa.NewHTTPRouterHandle(app, "Bottles", "list", h))
 	idx++
 	logger.Info("handler", "action", "list", "GET", "/accounts/:accountID/bottles")
 
@@ -851,7 +851,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 		}
 		return ctrl.list(ctx)
 	}
-	app.Router.Handle("GET", "/accounts/:accountID/bottles", goa.NewHTTPRouterHandle(app, "Bottles", h))
+	app.Router.Handle("GET", "/accounts/:accountID/bottles", goa.NewHTTPRouterHandle(app, "Bottles", "list", h))
 	idx++
 	logger.Info("handler", "action", "list", "GET", "/accounts/:accountID/bottles")
 
@@ -862,7 +862,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 		}
 		return ctrl.show(ctx)
 	}
-	app.Router.Handle("GET", "/accounts/:accountID/bottles/:id", goa.NewHTTPRouterHandle(app, "Bottles", h))
+	app.Router.Handle("GET", "/accounts/:accountID/bottles/:id", goa.NewHTTPRouterHandle(app, "Bottles", "show", h))
 	idx++
 	logger.Info("handler", "action", "show", "GET", "/accounts/:accountID/bottles/:id")
 
