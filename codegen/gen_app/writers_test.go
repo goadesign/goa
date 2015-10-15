@@ -551,12 +551,12 @@ var _ = Describe("HrefWriter", func() {
 const (
 	emptyContext = `
 type ListBottleContext struct {
-	goa.Context
+	*goa.Context
 }
 `
 
 	emptyContextFactory = `
-func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	return &ctx, err
@@ -565,7 +565,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 
 	intContext = `
 type ListBottleContext struct {
-	goa.Context
+	*goa.Context
 	Param int
 
 	HasParam bool
@@ -573,7 +573,7 @@ type ListBottleContext struct {
 `
 
 	intContextFactory = `
-func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam, ok := c.Get("param")
@@ -591,7 +591,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 
 	strContext = `
 type ListBottleContext struct {
-	goa.Context
+	*goa.Context
 	Param string
 
 	HasParam bool
@@ -599,7 +599,7 @@ type ListBottleContext struct {
 `
 
 	strContextFactory = `
-func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam, ok := c.Get("param")
@@ -613,7 +613,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 
 	numContext = `
 type ListBottleContext struct {
-	goa.Context
+	*goa.Context
 	Param float64
 
 	HasParam bool
@@ -621,7 +621,7 @@ type ListBottleContext struct {
 `
 
 	numContextFactory = `
-func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam, ok := c.Get("param")
@@ -638,7 +638,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 `
 	boolContext = `
 type ListBottleContext struct {
-	goa.Context
+	*goa.Context
 	Param bool
 
 	HasParam bool
@@ -646,7 +646,7 @@ type ListBottleContext struct {
 `
 
 	boolContextFactory = `
-func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam, ok := c.Get("param")
@@ -664,7 +664,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 
 	arrayContext = `
 type ListBottleContext struct {
-	goa.Context
+	*goa.Context
 	Param []string
 
 	HasParam bool
@@ -672,7 +672,7 @@ type ListBottleContext struct {
 `
 
 	arrayContextFactory = `
-func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam, ok := c.Get("param")
@@ -687,7 +687,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 
 	intArrayContext = `
 type ListBottleContext struct {
-	goa.Context
+	*goa.Context
 	Param []int
 
 	HasParam bool
@@ -695,7 +695,7 @@ type ListBottleContext struct {
 `
 
 	intArrayContextFactory = `
-func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam, ok := c.Get("param")
@@ -718,7 +718,7 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 
 	resContext = `
 type ListBottleContext struct {
-	goa.Context
+	*goa.Context
 	Int int
 
 	HasInt bool
@@ -726,7 +726,7 @@ type ListBottleContext struct {
 `
 
 	resContextFactory = `
-func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawInt, ok := c.Get("int")
@@ -744,13 +744,13 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 
 	requiredContext = `
 type ListBottleContext struct {
-	goa.Context
+	*goa.Context
 	Int int
 }
 `
 
 	requiredContextFactory = `
-func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawInt, ok := c.Get("int")
@@ -769,43 +769,39 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 
 	payloadContext = `
 type ListBottleContext struct {
-	goa.Context
+	*goa.Context
 	Payload ListBottlePayload
 }
 `
 
 	payloadContextFactory = `
-func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
-	if payload := c.Payload(); payload != nil {
-		p, err := NewListBottlePayload(payload)
-		if err != nil {
-			return nil, err
-		}
-		ctx.Payload = p
+	p, err := NewListBottlePayload(c.Payload())
+	if err != nil {
+		return nil, err
 	}
+	ctx.Payload = p
 	return &ctx, err
 }
 `
 	payloadObjContext = `
 type ListBottleContext struct {
-	goa.Context
+	*goa.Context
 	Payload *ListBottlePayload
 }
 `
 
 	payloadObjContextFactory = `
-func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
-	if payload := c.Payload(); payload != nil {
-		p, err := NewListBottlePayload(payload)
-		if err != nil {
-			return nil, err
-		}
-		ctx.Payload = p
+	p, err := NewListBottlePayload(c.Payload())
+	if err != nil {
+		return nil, err
 	}
+	ctx.Payload = p
 	return &ctx, err
 }
 `
@@ -821,10 +817,10 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	logger := app.Logger.New("ctrl", "Bottles")
 	logger.Info("mounting")
 
-	h = func(c goa.Context) error {
+	h = func(c *goa.Context) error {
 		ctx, err := NewListBottleContext(c)
 		if err != nil {
-			return err
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.list(ctx)
 	}
@@ -848,10 +844,10 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	logger := app.Logger.New("ctrl", "Bottles")
 	logger.Info("mounting")
 
-	h = func(c goa.Context) error {
+	h = func(c *goa.Context) error {
 		ctx, err := NewListBottleContext(c)
 		if err != nil {
-			return err
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.list(ctx)
 	}
@@ -859,10 +855,10 @@ func NewListBottleContext(c goa.Context) (*ListBottleContext, error) {
 	idx++
 	logger.Info("handler", "action", "list", "GET", "/accounts/:accountID/bottles")
 
-	h = func(c goa.Context) error {
+	h = func(c *goa.Context) error {
 		ctx, err := NewShowBottleContext(c)
 		if err != nil {
-			return err
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.show(ctx)
 	}

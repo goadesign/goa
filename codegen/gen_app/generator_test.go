@@ -220,17 +220,21 @@ const contextsCodeTmpl = `//****************************************************
 
 package app
 
-import "github.com/raphael/goa"
+import (
+	"fmt"
+
+	"github.com/raphael/goa"
+)
 
 // GetWidgetContext provides the Widget get action context.
 type GetWidgetContext struct {
-	goa.Context
+	*goa.Context
 	ID string
 }
 
 // NewGetWidgetContext parses the incoming request URL and body, performs validations and creates the
 // context used by the Widget controller get action.
-func NewGetWidgetContext(c goa.Context) (*GetWidgetContext, error) {
+func NewGetWidgetContext(c *goa.Context) (*GetWidgetContext, error) {
 	var err error
 	ctx := GetWidgetContext{Context: c}
 	rawID, ok := c.Get("id")
@@ -244,7 +248,7 @@ func NewGetWidgetContext(c goa.Context) (*GetWidgetContext, error) {
 func (c *GetWidgetContext) OK(resp ID) error {
 	r, err := resp.Dump()
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid response: %s", err)
 	}
 	return c.JSON(200, r)
 }
@@ -278,10 +282,10 @@ func MountWidgetController(app *goa.Application, ctrl WidgetController) {
 	logger := app.Logger.New("ctrl", "Widget")
 	logger.Info("mounting")
 
-	h = func(c goa.Context) error {
+	h = func(c *goa.Context) error {
 		ctx, err := NewGetWidgetContext(c)
 		if err != nil {
-			return err
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Get(ctx)
 	}
