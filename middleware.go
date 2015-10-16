@@ -113,11 +113,19 @@ func LogRequest() Middleware {
 			ctx.Info("started", r.Method, r.URL.String())
 			params := ctx.Value(paramKey).(map[string]string)
 			if len(params) > 0 {
-				ctx.Debug("params", ToLogCtx(params))
+				logCtx := make(log.Ctx, len(params))
+				for k, v := range params {
+					logCtx[k] = interface{}(v)
+				}
+				ctx.Debug("params", logCtx)
 			}
 			query := ctx.Value(queryKey).(map[string][]string)
 			if len(query) > 0 {
-				ctx.Debug("query", ToLogCtxA(query))
+				logCtx := make(log.Ctx, len(query))
+				for k, v := range query {
+					logCtx[k] = interface{}(v)
+				}
+				ctx.Debug("query", logCtx)
 			}
 			payload := ctx.Value(payloadKey)
 			if r.ContentLength > 0 {
