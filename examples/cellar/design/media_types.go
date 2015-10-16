@@ -60,6 +60,17 @@ var Bottle = MediaType("application/vnd.goa.example.bottle", func() {
 		Attribute("updated_at", String, "Date of last update", func() {
 			Format("date-time")
 		})
+		// Attributes below inherit from the base type
+		Attribute("name")
+		Attribute("vineyard")
+		Attribute("varietal")
+		Attribute("vintage")
+		Attribute("color")
+		Attribute("sweetness")
+		Attribute("country")
+		Attribute("region")
+		Attribute("review")
+		Attribute("characteristics")
 
 		Links(func() {
 			Link("account")

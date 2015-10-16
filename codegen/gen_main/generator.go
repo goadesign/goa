@@ -7,8 +7,6 @@ import (
 	"strings"
 	"text/template"
 
-	"bitbucket.org/pkg/inflect"
-
 	"github.com/raphael/goa/codegen"
 	"github.com/raphael/goa/design"
 
@@ -45,7 +43,7 @@ func NewGenerator() (*Generator, error) {
 // Generate produces the skeleton main.
 func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	mainFile := filepath.Join(codegen.OutputDir, "main.go")
-	if codegen.Force {
+	if Force {
 		os.Remove(mainFile)
 	}
 	_, err := os.Stat(mainFile)
@@ -56,8 +54,15 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		}
 		gg := codegen.NewGoGenerator(mainFile)
 		g.genfiles = []string{mainFile}
+		appPkg, err := filepath.Rel(os.Getenv("GOPATH"), codegen.OutputDir)
+		if err != nil {
+			return nil, err
+		}
+		appPkg = strings.TrimPrefix(appPkg, "src/")
+		appPkg = filepath.Join(appPkg, "app")
 		imports := []*codegen.ImportSpec{
 			codegen.SimpleImport("github.com/raphael/goa"),
+			codegen.SimpleImport(appPkg),
 			codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
 		}
 		gg.WriteHeader("", "main", imports)
@@ -75,7 +80,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 			return nil, err
 		}
 	}
-	tmpl, err := template.New("ctrl").Parse(ctrlTmpl)
+	tmpl, err := template.New("ctrl").Funcs(template.FuncMap{"okResp": okResp}).Parse(ctrlTmpl)
 	if err != nil {
 		panic(err.Error()) // bug
 	}
@@ -87,33 +92,16 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	imports := []*codegen.ImportSpec{codegen.SimpleImport(imp)}
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
 		filename := filepath.Join(codegen.OutputDir, r.FormatName(true, false)) + ".go"
-		if codegen.Force {
-			os.Remove(filename)
+		if Force {
+			if err := os.Remove(filename); err != nil {
+				return err
+			}
 		}
-		_, err := os.Stat(filename)
-		if err != nil {
+		if _, err := os.Stat(filename); err != nil {
 			resGen := codegen.NewGoGenerator(filename)
 			g.genfiles = append(g.genfiles, filename)
 			resGen.WriteHeader("", "main", imports)
-			err := r.IterateActions(func(a *design.ActionDefinition) error {
-				name := inflect.Camelize(a.Name) + inflect.Camelize(a.Parent.Name)
-				resp, ok := a.Responses["OK"]
-				var mt *design.MediaTypeDefinition
-				if ok {
-					mt = api.MediaTypes[resp.MediaType]
-				}
-				data := map[string]interface{}{
-					"Description": a.Description,
-					"Name":        name,
-					"OKResp":      resp,
-					"MediaType":   mt,
-				}
-				err := tmpl.Execute(resGen, data)
-				if err != nil {
-					panic(err.Error())
-				}
-				return err
-			})
+			err := tmpl.Execute(resGen, r)
 			if err != nil {
 				g.Cleanup()
 				return err
@@ -147,34 +135,65 @@ var tempCount int
 // tempvar generates a unique temp var name.
 func tempvar() string {
 	tempCount++
+	if tempCount == 1 {
+		return "c"
+	}
 	return fmt.Sprintf("c%d", tempCount)
+}
+
+func okResp(a *design.ActionDefinition) map[string]interface{} {
+	var ok *design.ResponseDefinition
+	for _, resp := range a.Responses {
+		if resp.Status == 200 {
+			ok = resp
+			break
+		}
+	}
+	if ok == nil {
+		return nil
+	}
+	var mt *design.MediaTypeDefinition
+	var ok2 bool
+	if mt, ok2 = design.Design.MediaTypes[ok.MediaType]; !ok2 {
+		return nil
+	}
+	return map[string]interface{}{
+		"Name":             ok.Name,
+		"HasMultipleViews": len(mt.Views) > 1,
+		"GoType":           codegen.GoNativeType(mt),
+	}
 }
 
 const mainTmpl = `
 func main() {
-	// Setup logger
-	goa.Log.SetHandler(log.StdoutHandler)
-
 	// Create application
-	app := goa.New("{{.Name}}")
+	api := goa.New("{{.Name}}")
 
-{{range $name, $res := .Resources}}	// Create "{{$res.FormatName true true}}" resource controller
-	{{$tmp := tempvar}}{{$tmp}} := goa.NewController("{{$res.FormatName true true}}")
+	// Setup middleware
+	api.Use(goa.Recover())
+	api.Use(goa.RequestID())
+	api.Use(goa.LogRequest())
 
-	// Register the resource action handlers
-	{{$tmp}}.SetHandlers(goa.Handlers{
-{{range .Actions}}		"{{.FormatName true}}":   {{.FormatName false}}{{.Parent.FormatName false false}},
-{{end}}	})
-
-	// Mount controller onto application
-	app.Mount({{$tmp}})
+{{range $name, $res := .Resources}}	// Mount "{{$res.FormatName true true}}" controller
+	{{$tmp := tempvar}}{{$tmp}} := New{{$res.FormatName false false}}Controller()
+	app.Mount{{$res.FormatName false false}}Controller(api, {{$tmp}})
 {{end}}
 	// Run application, listen on port 8080
-	app.Run(":8080")
+	api.Run(":8080")
 }
 `
-const ctrlTmpl = `// {{.Description}}
-func {{.Name}}(c *app.{{.Name}}Context) error {
-	return {{if .OKResp}}c.{{.OKResp.FormatName false}}({{if .MediaType}}&app.{{.MediaType.TypeName}}{}{{end}}){{else}}nil{{end}}
+const ctrlTmpl = `// {{$ctrlName := printf "%s%s" (.FormatName false false) "Controller"}}{{$ctrlName}} implements the {{.FormatName true false}} resource.
+type {{$ctrlName}} struct {}
+
+// New{{$ctrlName}} creates a {{.FormatName true false}} controller.
+func New{{$ctrlName}}() *{{$ctrlName}} {
+	return &{{$ctrlName}}{}
 }
+{{$ctrl := .}}{{range .Actions}}
+// {{.Name}} runs the {{.FormatName false}} action.
+func (c *{{$ctrlName}}) {{.FormatName false}}(ctx *app.{{.FormatName false}}{{$ctrl.FormatName false false}}Context) error {
+{{$ok := okResp .}}{{if $ok}}	res := &app.{{$ctrl.FormatName false false}}{}
+{{end}}	return {{if $ok}}ctx.{{$ok.Name}}(res{{if $ok.HasMultipleViews}}, "default"{{end}}){{else}}nil{{end}}
+}
+{{end}}
 `

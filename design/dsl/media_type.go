@@ -12,51 +12,35 @@ import . "github.com/raphael/goa/design"
 // Counter used to create unique media type names for identifier-less media types.
 var mediaTypeCount int
 
-// MediaType defines a media type DSL.
+// MediaType implements the DSL for media type definitions.
 //
-// MediaType("application/vnd.goa.example.bottle", func() {
-//	Description("A bottle of wine")
-//	Attributes(func() {
-//		Attribute("id", Integer, "ID of bottle")
-//		Attribute("href", String, "API href of bottle")
-//		Attribute("origin", Origin, "Details on wine origin")
-//		Links(func() {
-//			Link("origin")
+// 	MediaType("application/vnd.goa.example.bottle", func() {
+//		Description("A bottle of wine")
+//		Attributes(func() {
+//			Attribute("id", Integer, "ID of bottle")
+//			Attribute("href", String, "API href of bottle")
+//			Attribute("origin", Origin, "Details on wine origin")
+//			Links(func() {
+//				Link("origin")
+//			})
+//              	Required("href")
+//     		 })
+//		View("default", func() {
+//			Attribute("id")
+//			Attribute("href")
+//			Attribute("links")
 //		})
-//              Required("href")
-//      })
-//	View("default", func() {
-//		Attribute("id")
-//		Attribute("href")
-//		Attribute("links")
-//	})
-// })
+// 	})
 //
-// MediaType also refers to a media type (by name or by reference):
-//
-// 	ResponseTemplate("NotFound", func() {
-//		Status(404)
-//		MediaType("application/json")
-//	})
-//
-// This function returns the newly defined media type in the first mode, nil otherwise.
-func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
-	if len(dsl) > 1 {
-		ReportError("too many arguments in MediaType call")
-		return nil
-	}
+// This function returns the media type definition so it can be referred to throughout the DSL.
+func MediaType(identifier string, dsl func()) *MediaTypeDefinition {
 	if Design == nil {
 		InitDesign()
 	}
 	if Design.MediaTypes == nil {
 		Design.MediaTypes = make(map[string]*MediaTypeDefinition)
 	}
-	if topLevelDefinition(false) {
-		identifier, ok := val.(string)
-		if !ok {
-			ReportError("media type identifier must be a string, got %#v", val)
-			return nil
-		}
+	if topLevelDefinition(true) {
 		mediatype, _, err := mime.ParseMediaType(identifier)
 		if err != nil {
 			ReportError("invalid media type identifier %#v: %s",
@@ -72,14 +56,41 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 			ReportError("media type %#v is defined twice", identifier)
 			return nil
 		}
-		var d func()
-		if len(dsl) > 0 {
-			d = dsl[0]
-		}
-		mt := NewMediaTypeDefinition(typeName, identifier, d)
+		mt := NewMediaTypeDefinition(typeName, identifier, dsl)
 		Design.MediaTypes[identifier] = mt
 		return mt
-	} else if r, ok := resourceDefinition(false); ok {
+	}
+	return nil
+}
+
+// Media refers to a media type (by name or by reference):
+//
+// 	ResponseTemplate("NotFound", func() {
+//		Status(404)
+//		Media("application/json")
+//	})
+//
+func Media(val interface{}) {
+	if r, ok := responseDefinition(true); ok {
+		if m, ok := val.(*MediaTypeDefinition); ok {
+			r.MediaType = m.Identifier
+		} else if identifier, ok := val.(string); ok {
+			r.MediaType = identifier
+		} else {
+			ReportError("media type must be a string or a pointer to MediaTypeDefinition, got %#v", val)
+		}
+	}
+}
+
+// DefaultMedia sets a resource default media type (by name or by reference):
+//
+// 	var _ = Resource("bottle", func() {
+// 		DefaultMedia(BottleMedia)
+// 		// ...
+// 	})
+//
+func DefaultMedia(val interface{}) {
+	if r, ok := resourceDefinition(true); ok {
 		if m, ok := val.(*MediaTypeDefinition); ok {
 			if m.UserTypeDefinition == nil {
 				ReportError("invalid media type specification, media type is not initialized")
@@ -92,51 +103,20 @@ func MediaType(val interface{}, dsl ...func()) *MediaTypeDefinition {
 		} else {
 			ReportError("media type must be a string or a *MediaTypeDefinition, got %#v", val)
 		}
-	} else if r, ok := responseDefinition(true); ok {
-		if m, ok := val.(*MediaTypeDefinition); ok {
-			r.MediaType = m.Identifier
-		} else if identifier, ok := val.(string); ok {
-			r.MediaType = identifier
-		} else {
-			ReportError("media type must be a string or a *MediaTypeDefinition, got %#v", val)
-		}
 	}
-	return nil
 }
 
 // BaseType defines the type from which the media or user type is derived from if any. The type can
 // be further customized using the Attributes DSL (to add new attributes for example).
 //
-// Implementation note: BaseType and Attributes may appear in any order in the definition of a type.
-// If BaseType appears first then it sets both the BaseType and Type fields of the underlying
-// attribute. Running Attributes subsequently then initializes type sub-attributes potentially
-// overridding attributes inherited from the base type.
-// If Attributes appears first then its sets the type to Object and sets the object attributes.
-// Running BaseType subsequently creates a duplicate type and merges the object attributes into
-// the copy. The copy is then set as the type of the underlying media or user type attribute.
-// TL;DR the implementation of BaseType needs to handle the case where attributes already exist.
+// Implementation note: the base type comes into play when generting the code. Each attribute being
+// generated is first looked up in the base type and if found initialized from the corresponding
+// parent base type.
 func BaseType(t DataType) {
-	var att *AttributeDefinition
 	if mt, ok := mediaTypeDefinition(false); ok {
-		att = mt.AttributeDefinition
 		mt.BaseType = t
 	} else if ut, ok := typeDefinition(true); ok {
-		att = ut.AttributeDefinition
 		ut.BaseType = t
-	}
-	if att != nil {
-		dup := t
-		if t.IsArray() {
-			dup = t.ToArray().Dup()
-		} else if t.IsObject() {
-			dup = t.ToObject().Dup()
-		}
-		if att.Type == nil {
-			att.Type = dup
-		} else if dup.IsObject() && att.Type.IsObject() {
-			dup.ToObject().Merge(att.Type.ToObject())
-			att.Type = dup
-		}
 	}
 }
 

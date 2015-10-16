@@ -183,9 +183,6 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 		fmt.Sprintf("--out=%s", codegen.OutputDir),
 		fmt.Sprintf("--design=%s", codegen.DesignPackagePath),
 	}
-	if codegen.Force {
-		args = append(args, "--force")
-	}
 	for name, value := range m.Flags {
 		args = append(args, fmt.Sprintf("--%s=%s", name, value))
 	}

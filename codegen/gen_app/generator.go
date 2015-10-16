@@ -25,7 +25,6 @@ type Generator struct {
 	resourcesFilename   string
 	mediaTypesFilename  string
 	userTypesFilename   string
-	canDeleteOutputDir  bool
 	genfiles            []string
 }
 
@@ -49,17 +48,6 @@ func NewGenerator() (*Generator, error) {
 			err, strings.Join(os.Args, " "))
 	}
 	outdir := AppOutputDir()
-	canDeleteDir := false
-	if _, err = os.Stat(outdir); err == nil {
-		if !codegen.Force {
-			if cwd, err := os.Getwd(); err == nil {
-				outdir, _ = filepath.Rel(cwd, outdir)
-			}
-			return nil, fmt.Errorf("directory %#v already exists, use --force to overwrite", outdir)
-		}
-	} else {
-		canDeleteDir = true
-	}
 	os.RemoveAll(outdir)
 	if err = os.MkdirAll(outdir, 0777); err != nil {
 		return nil, err
@@ -102,7 +90,6 @@ func NewGenerator() (*Generator, error) {
 		resourcesFilename:   resFile,
 		mediaTypesFilename:  mtFile,
 		userTypesFilename:   utFile,
-		canDeleteOutputDir:  canDeleteDir,
 	}, nil
 }
 
@@ -266,13 +253,7 @@ func (g *Generator) Cleanup() {
 	if len(g.genfiles) == 0 {
 		return
 	}
-	if g.canDeleteOutputDir {
-		os.RemoveAll(AppOutputDir())
-	} else {
-		for _, f := range g.genfiles {
-			os.Remove(f)
-		}
-	}
+	os.RemoveAll(AppOutputDir())
 	g.genfiles = nil
 }
 

@@ -27,9 +27,9 @@ var _ = Describe("MediaType", func() {
 	})
 
 	Context("with no DSL and no identifier", func() {
-		It("produces a valid media type definition", func() {
+		It("produces an error", func() {
 			Ω(mt).ShouldNot(BeNil())
-			Ω(mt.Validate()).ShouldNot(HaveOccurred())
+			Ω(mt.Validate()).Should(HaveOccurred())
 		})
 	})
 
@@ -38,26 +38,9 @@ var _ = Describe("MediaType", func() {
 			name = "foo"
 		})
 
-		It("produces a valid media type definition", func() {
+		It("produces an error", func() {
 			Ω(mt).ShouldNot(BeNil())
-			Ω(mt.Validate()).ShouldNot(HaveOccurred())
-		})
-	})
-
-	Context("with a description", func() {
-		const description = "desc"
-
-		BeforeEach(func() {
-			name = "foo"
-			dsl = func() {
-				Description(description)
-			}
-		})
-
-		It("sets the description", func() {
-			Ω(mt).ShouldNot(BeNil())
-			Ω(mt.Validate()).ShouldNot(HaveOccurred())
-			Ω(mt.Description).Should(Equal(description))
+			Ω(mt.Validate()).Should(HaveOccurred())
 		})
 	})
 
@@ -70,6 +53,7 @@ var _ = Describe("MediaType", func() {
 				Attributes(func() {
 					Attribute(attName)
 				})
+				View("default", func() { Attribute(attName) })
 			}
 		})
 
@@ -81,6 +65,27 @@ var _ = Describe("MediaType", func() {
 			o := mt.Type.(Object)
 			Ω(o).Should(HaveLen(1))
 			Ω(o).Should(HaveKey(attName))
+		})
+	})
+
+	Context("with a description", func() {
+		const description = "desc"
+
+		BeforeEach(func() {
+			name = "foo"
+			dsl = func() {
+				Description(description)
+				Attributes(func() {
+					Attribute("attName")
+				})
+				View("default", func() { Attribute("attName") })
+			}
+		})
+
+		It("sets the description", func() {
+			Ω(mt).ShouldNot(BeNil())
+			Ω(mt.Validate()).ShouldNot(HaveOccurred())
+			Ω(mt.Description).Should(Equal(description))
 		})
 	})
 
@@ -99,6 +104,9 @@ var _ = Describe("MediaType", func() {
 				Attributes(func() {
 					Attribute("foo")
 				})
+				View("default", func() {
+					Attribute("foo")
+				})
 				View("link", func() {
 					Attribute("foo")
 				})
@@ -109,6 +117,9 @@ var _ = Describe("MediaType", func() {
 					Attribute("foo")
 				})
 				View("l2v", func() {
+					Attribute("foo")
+				})
+				View("default", func() {
 					Attribute("foo")
 				})
 			})
@@ -124,6 +135,10 @@ var _ = Describe("MediaType", func() {
 					Links(func() {
 						Link(link1Name)
 						Link(link2Name, link2View)
+					})
+					View("default", func() {
+						Attribute(link1Name)
+						Attribute(link2Name)
 					})
 				})
 			}
@@ -157,6 +172,9 @@ var _ = Describe("MediaType", func() {
 				View(viewName, func() {
 					Attribute(viewAtt)
 				})
+				View("default", func() {
+					Attribute(viewAtt)
+				})
 			}
 		})
 
@@ -164,7 +182,7 @@ var _ = Describe("MediaType", func() {
 			Ω(mt).ShouldNot(BeNil())
 			Ω(mt.Validate()).ShouldNot(HaveOccurred())
 			Ω(mt.Views).ShouldNot(BeNil())
-			Ω(mt.Views).Should(HaveLen(1))
+			Ω(mt.Views).Should(HaveLen(2))
 			Ω(mt.Views).Should(HaveKey(viewName))
 			v := mt.Views[viewName]
 			Ω(v.Name).Should(Equal(viewName))

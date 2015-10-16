@@ -124,7 +124,7 @@ var _ = Describe("Action", func() {
 				dsl = func() {
 					Routing(GET("/:id"))
 					Response(tmplName, strconv.Itoa(respStatus), respName, func() {
-						MediaType(respMediaType)
+						Media(respMediaType)
 					})
 				}
 			})
@@ -147,7 +147,7 @@ var _ = Describe("Action", func() {
 				dsl = func() {
 					Routing(GET("/id"))
 					Response(tmplName, "not an integer", respName, func() {
-						MediaType(respMediaType)
+						Media(respMediaType)
 					})
 				}
 			})

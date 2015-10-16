@@ -4,52 +4,40 @@ goa is a framework for building RESTful APIs in Go.
 
 ## Why goa?
 
-There are a number of good Go packages for writing modular web
-applications out there so why build another one? Glad you asked :)
-The existing packages tend to focus on providing small and highly
-modular frameworks that are purposefully narrowly focused. The
-intent is to keep things simple and to avoid mixing concerns.
+There are a number of good Go packages for writing modular web applications out there so why build
+another one? Glad you asked! The existing packages tend to focus on providing small and highly
+modular frameworks that are purposefully narrowly focused. The intent is to keep things simple and
+to avoid mixing concerns.
 
-This is great when writing simple APIs that tend to change rarely
-however there are a number of problems that any non trivial API
-implementation must address. Things like documentation, request
-validation, response media type definitions are hard to do
-in a way that stays consistent and flexible as the API surface
-grows.
+This is great when writing simple APIs that tend to change rarely. However there are a number of
+problems that any non trivial API implementation must address. Things like request validation,
+response media type definitions or documentation are hard to do in a way that stays consistent and
+flexible as the API surface grows.
 
-goa takes a different approach to building web applications: instead of
-focusing solely on helping with implementation, goa makes it possible
-to describe the *design* of an API in an holistic way. goa then uses that
-description to provide specialized helper code to the implementation,
-and in the future generate documentation, API clients, tests and others
-(see TODO if you would like to contribute).
+goa takes a different approach to building web applications: instead of focusing solely on helping
+with implementation, goa makes it possible to describe the *design* of an API in an holistic way.
+goa then uses that description to provide specialized helper code to the implementation, and (in
+the future) generate documentation, API clients, tests, even custom artefacts.
 
-The goa DSL allows writing self-explanatory code that describes the
-API, the resources it exposes and for each resource its properties
-and actions. The DSL gets translated into metadata that describes the
-API. goa comes with the `goagen` tool which generates both code and
-(in the future) documentation from that metadata.
+The goa DSL allows writing self-explanatory code that describes the API, the resources it exposes
+and for each resource the properties and actions. goa comes with the `goagen` tool which runs the
+DSL and generates various artefacts from the resulting metadata.
 
-The resulting code is specific to your API so that for example
-there is no need to cast or bind any handler argument prior to
-using them. Each generated handler has a signature that is specific
-to the corresponding resource action. It's not just the parameters
-though, each handler also has access to specific helper methods to
-generate the possible responses for that action. The metadata can
-also include validation rules so that the generated code also takes
-care of validating the incoming request parameters and payload prior
-to invoking your code.
+One of the `goagen` output is glue code that binds your code with the underlying HTTP server. This
+code is specific to your API so that for example there is no need to cast or "bind" any handler
+argument prior to using them. Each generated handler has a signature that is specific to the
+corresponding resource action. It's not just the parameters though, each handler also has access to
+specific helper methods that generate the possible responses for that action. The metadata can also
+include validation rules so that the generated code also takes care of validating the incoming
+request parameters and payload prior to invoking your code.
 
-The end result is controller code that is terse and clean, the
-boilerplate is all gone. Another big benefit is the clean separation
-of concern between design and implementation: on bigger projects it's
-often the case that API design changes require careful review, being
-able to generate a new version of the documentation without having to
-write a single line of implementation is a big boon.
+The end result is controller code that is terse and clean, the boilerplate is all gone. Another big
+benefit is the clean separation of concern between design and implementation: on bigger projects
+it's often the case that API design changes require careful review, being able to generate a new
+version of the documentation without having to write a single line of implementation is a big boon.
 
-This idea of separating design and implementation is not new, the
-[Praxis](http://praxis-framework.io) framework from RightScale
-follows the same pattern and was a big inspiration for goa.
+This idea of separating design and implementation is not new, the excellent [Praxis](http://praxis-framework.io)
+framework from RightScale follows the same pattern and was an inspiration to goa.
 
 ## Installation
 
@@ -85,7 +73,7 @@ var _ = API("cellar", func() {
 })
 
 var _ = Resource("bottle", func() {
-	MediaType(BottleMediaType)
+	DefaultMedia(BottleMedia)
 	Action("show", func() {
 		Description("Retrieve bottle with given id")
 		Routing(
@@ -99,12 +87,17 @@ var _ = Resource("bottle", func() {
 	})
 })
 
-var BottleMediaType = MediaType("application/vnd.goa.example.bottle", func() {
+var BottleMedia = MediaType("application/vnd.goa.example.bottle", func() {
 	Description("A bottle of wine")
 	Attributes(func() {
 		Attribute("id", Integer, "Unique bottle ID")
 		Attribute("href", String, "API href for making requests on the bottle")
 		Attribute("name", String, "Name of wine")
+	})
+	View("default", func() {
+		Attribute("id")
+		Attribute("href")
+		Attribute("name")
 	})
 })
 ```
@@ -129,18 +122,34 @@ Let's break this down:
   declaring the `OK` response. A media type has a name as defined by [RFC 6838](https://tools.ietf.org/html/rfc6838)
   and describes the attributes of the response body (the JSON object fields in goa).
 
-The DSL reference contains more details for each of the functions used in the example above and
-others that help define payload types and custom responses as well.
+> The [DSL reference](https://github.com/raphael/goa/DSL.md) lists all the goa DSL keywords together
+with a description and example usage.
 
-Now that we have a design for the API we can use the `goagen` tool to generate all the boilerplate
-for our app. The tool takes the path to the Go package as argument (the same path you'd use if you
-were to import the design package in a Go source file). So for example if you created the design
-package under `$GOPATH/src/app`, the command line would be:
+Now that we have a design for our API we can use the `goagen` tool to generate all the boilerplate
+code. The tool takes the path to the Go package as argument (the same path you'd use if you were to
+import the design package in a Go source file). So for example if you created the design package
+under `$GOPATH/src/app`, the command line would be:
 ```
 goagen -d app/design
 ```
-This creates two artefacts:
-* A
+The tool outputs the names of the files it generates - by default it generates the files in the
+current working directory. The list should look something like this:
+```
+app/contexts.go
+app/controllers.go
+app/hrefs.go
+app/media_types.go
+app/user_types.go
+main.go
+bottle.go
+```
+Note how `goagen` generated a main for our app as well as a skeleton controller (`bottle.go`). This
+is meant to help bootstrap a new development, going forward as the design evolves only the files in
+the `app` sub-package should be re-generated (re-run the tool again and note how it only generates
+the files under the app directory this time). This behavior, the name of the `app` package and
+other settings are all configurable via command line parameters, see the [goagen docs](https://github.com/raphael/goa/goagen.md)
+for details.
+
 * The `app` directory which contains the underpinning code that glues the low level HTTP router
   with your app. The content of this directory
    `autogen` folder containing three files:

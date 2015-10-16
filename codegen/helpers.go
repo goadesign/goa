@@ -3,6 +3,7 @@ package codegen
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/rightscale/rsc/gen/writers/text"
@@ -10,7 +11,7 @@ import (
 
 // CommandLine return the command used to run this process.
 func CommandLine() string {
-	cmd := fmt.Sprintf("$ %s %s", os.Args[0], strings.Join(os.Args[1:], " "))
+	cmd := fmt.Sprintf("$ %s %s", filepath.Base(os.Args[0]), strings.Join(os.Args[1:], " "))
 	return strings.Replace(cmd, " --", "\n  --", -1)
 }
 

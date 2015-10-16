@@ -92,13 +92,16 @@ func validationCheckerR(att *design.AttributeDefinition, context, target string,
 			res = append(res, runTemplate(lengthValT, data))
 		}
 	}
-	for name, catt := range att.Type.ToObject() {
-		cctx := fmt.Sprintf("%s.%s", context, Goify(name, true))
-		ctgt := fmt.Sprintf("%s.%s", target, Goify(name, true))
-		cr := validationCheckerR(catt, cctx, ctgt, depth+1)
-		if cr != "" {
-			res = append(res, cr)
-		}
+	if o := att.Type.ToObject(); o != nil {
+		o.IterateAttributes(func(name string, catt *design.AttributeDefinition) error {
+			cctx := fmt.Sprintf("%s.%s", context, Goify(name, true))
+			ctgt := fmt.Sprintf("%s.%s", target, Goify(name, true))
+			cr := validationCheckerR(catt, cctx, ctgt, depth+1)
+			if cr != "" {
+				res = append(res, cr)
+			}
+			return nil
+		})
 	}
 	return strings.Join(res, "\n")
 }

@@ -18,7 +18,7 @@ var _ = Describe("NewGenerator", func() {
 
 	Context("with dummy command line flags", func() {
 		BeforeEach(func() {
-			os.Args = []string{"codegen", "--out=_foo", "--design=bar", "--force"}
+			os.Args = []string{"codegen", "--out=_foo", "--design=bar"}
 		})
 
 		AfterEach(func() {
@@ -84,7 +84,7 @@ var _ = Describe("Generate", func() {
 			Ω(files).Should(HaveLen(1))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "main.go"))
 			Ω(err).ShouldNot(HaveOccurred())
-			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically(">=", 18))
+			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically(">=", 16))
 			_, err = gexec.Build(testgenPackagePath)
 			Ω(err).ShouldNot(HaveOccurred())
 		})

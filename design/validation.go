@@ -463,10 +463,17 @@ func (m *MediaTypeDefinition) Validate() *ValidationErrors {
 			}
 		}
 	}
-	for _, v := range m.Views {
+	hasDefaultView := false
+	for n, v := range m.Views {
+		if n == "default" {
+			hasDefaultView = true
+		}
 		if err := v.Validate(); err != nil {
 			verr.Merge(err)
 		}
+	}
+	if !hasDefaultView {
+		verr.Add(m, `media type does not define the default view, use View("default", ...) to define it.`)
 	}
 	for _, l := range m.Links {
 		if err := l.Validate(); err != nil {

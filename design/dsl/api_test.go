@@ -148,12 +148,12 @@ var _ = Describe("API", func() {
 					ResponseTemplate(respName, func() {
 						Description(respDesc)
 						Status(respStatus)
-						MediaType(respMediaType)
+						Media(respMediaType)
 					})
 					ResponseTemplate(respTName, func(mt string) {
 						Description(respTDesc)
 						Status(respTStatus)
-						MediaType(mt)
+						Media(mt)
 					})
 				}
 			})

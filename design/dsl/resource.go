@@ -6,7 +6,7 @@ import . "github.com/raphael/goa/design"
 //
 // var _ = Resource("bottle", func() {
 //      Description("A wine bottle") // Resource description
-// 	MediaType(BottleMediaType)   // Resource actions default media type
+// 	DefaultMedia(BottleMediaType)   // Resource actions default media type
 // 	BasePath("/bottles")         // Resource actions path prefix if not ""
 //      Parent("account")            // Name of parent resource if any
 // 	CanonicalActionName("show")      // Action that returns canonical representation

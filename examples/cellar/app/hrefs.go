@@ -2,10 +2,9 @@
 // cellar: Application Resource Href Factories
 //
 // Generated with codegen v0.0.1, command line:
-// $ /home/raphael/go/src/github.com/raphael/goa/examples/cellar/codegen425613848/codegen
+// $ codegen
 // --out=/home/raphael/go/src/github.com/raphael/goa/examples/cellar
 // --design=github.com/raphael/goa/examples/cellar/design
-// --force
 // --pkg=app
 //
 // The content of this file is auto-generated, DO NOT MODIFY

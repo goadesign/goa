@@ -1,19 +1,14 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"regexp"
-	"strings"
 
 	"github.com/raphael/goa/codegen"
 )
 
 // AllCommand is the default command. It runs all known commands.
-type AllCommand struct {
-	// Errors contains all the generation errors if any.
-	Errors []error
-}
+type AllCommand struct{}
 
 // Name returns the command name.
 func (a *AllCommand) Name() string { return "default" }
@@ -33,32 +28,24 @@ func (a *AllCommand) RegisterFlags(r codegen.FlagRegistry) {
 // Run runs each known command and returns all the generated files and/or errors.
 func (a *AllCommand) Run() ([]string, error) {
 	var all []string
+	var err error
 	for _, c := range Commands {
 		if c != a {
-			files, err := c.Run()
+			var files []string
+			files, err = c.Run()
 			if err != nil {
-				a.Errors = append(a.Errors, fmt.Errorf("%s:\n%s\n", c.Name(), simplify(err.Error())))
+				break
 			}
 			all = append(all, files...)
 		}
 	}
-	if len(a.Errors) == 0 {
-		return all, nil
+	if err != nil {
+		for _, f := range all {
+			os.Remove(f)
+		}
+		return nil, err
 	}
-	for _, f := range all {
-		os.Remove(f)
-	}
-	return nil, a
-
-}
-
-// Error implements the error interface.
-func (a *AllCommand) Error() string {
-	msgs := make([]string, len(a.Errors))
-	for i, e := range a.Errors {
-		msgs[i] = e.Error()
-	}
-	return strings.Join(msgs, "")
+	return all, nil
 }
 
 // metadataRegexp is the regular expression used to match undefined Metadata variable errors.

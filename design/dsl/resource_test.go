@@ -154,7 +154,7 @@ var _ = Describe("Resource", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				MediaType(mediaType)
+				DefaultMedia(mediaType)
 			}
 		})
 
@@ -171,7 +171,7 @@ var _ = Describe("Resource", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				MediaType(mediaType)
+				DefaultMedia(mediaType)
 			}
 		})
 
@@ -194,7 +194,7 @@ var _ = Describe("Resource", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				MediaType(mediaType)
+				DefaultMedia(mediaType)
 			}
 		})
 

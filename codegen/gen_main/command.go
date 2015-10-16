@@ -5,8 +5,13 @@ import (
 	"github.com/raphael/goa/codegen/meta"
 )
 
-// AppName is the name of the generated application.
-var AppName string
+var (
+	// AppName is the name of the generated application.
+	AppName string
+
+	// Force is true if pre-existing files should be overwritten during generation.
+	Force bool
+)
 
 // Command is the goa application code generator command line data structure.
 // It implements meta.Command.
@@ -22,6 +27,7 @@ func NewCommand() *Command {
 
 // RegisterFlags registers the command line flags with the given registry.
 func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
+	r.Flag("force", "overwrite existing files").BoolVar(&Force)
 	r.Flag("name", "application name").Default("app").StringVar(&AppName)
 }
 

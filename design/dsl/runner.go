@@ -60,16 +60,26 @@ func RunDSL() error {
 	for _, r := range Design.Resources {
 		executeDSL(r.DSL, r)
 	}
-	// Second pass to do final merges with defaults for example.
-	for _, r := range Design.Resources {
-		finalizeResource(r)
+
+	// Validate DSL
+	if err := Design.Validate(); err != nil {
+		return err
 	}
 	if Errors != nil {
 		return Errors
 	}
-	if err := Design.Validate(); err != nil {
-		return err
+
+	// Second pass post-validation does final merges with defaults and base types.
+	for _, t := range Design.Types {
+		finalizeType(t)
 	}
+	for _, mt := range Design.MediaTypes {
+		finalizeMediaType(mt)
+	}
+	for _, r := range Design.Resources {
+		finalizeResource(r)
+	}
+
 	return nil
 }
 
@@ -109,6 +119,24 @@ func executeDSL(dsl func(), ctx DSLDefinition) bool {
 	dsl()
 	ctxStack = ctxStack[:len(ctxStack)-1]
 	return len(Errors) <= initCount
+}
+
+// finalizeMediaType merges any base type attribute into the media type attributes
+func finalizeMediaType(mt *MediaTypeDefinition) {
+	if mt.BaseType != nil {
+		if bat := mt.AttributeDefinition; bat != nil {
+			mt.AttributeDefinition.Inherit(bat)
+		}
+	}
+}
+
+// finalizeType merges any base type attribute into the type attributes
+func finalizeType(ut *UserTypeDefinition) {
+	if ut.BaseType != nil {
+		if bat := ut.AttributeDefinition; bat != nil {
+			ut.AttributeDefinition.Inherit(bat)
+		}
+	}
 }
 
 // finalizeResource makes the final pass at the resource DSL. This is needed so that the order

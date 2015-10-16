@@ -12,6 +12,7 @@ package design
 import (
 	"fmt"
 	"reflect"
+	"sort"
 )
 
 type (
@@ -278,6 +279,28 @@ func (o Object) Merge(other Object) {
 func (o Object) IsCompatible(val interface{}) bool {
 	k := reflect.TypeOf(val).Kind()
 	return k == reflect.Map || k == reflect.Struct
+}
+
+// AttributeIterator is the type of the function given to IterateAttributes.
+type AttributeIterator func(string, *AttributeDefinition) error
+
+// IterateAttributes calls the given iterator passing in each attribute sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateObject returns that
+// error.
+func (o Object) IterateAttributes(it AttributeIterator) error {
+	names := make([]string, len(o))
+	i := 0
+	for n := range o {
+		names[i] = n
+		i++
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		if err := it(n, o[n]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // NewUserTypeDefinition creates a user type definition but does not

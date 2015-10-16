@@ -645,7 +645,8 @@ func (a *AttributeDefinition) Dup() *AttributeDefinition {
 	return &dup
 }
 
-// Merge merges the argument attributes into the target and returns the target.
+// Merge merges the argument attributes into the target and returns the target overriding existing
+// attributes with identical names.
 // This only applies to attributes of type Object and Merge panics if the
 // argument or the target is not of type Object.
 func (a *AttributeDefinition) Merge(other *AttributeDefinition) *AttributeDefinition {
@@ -664,6 +665,67 @@ func (a *AttributeDefinition) Merge(other *AttributeDefinition) *AttributeDefini
 		left[n] = v
 	}
 	return a
+}
+
+// Inherit merges the properties of existing target type attributes with the argument's.
+// The algorithm is recursive so that child attributes are also merged.
+func (a *AttributeDefinition) Inherit(parent *AttributeDefinition) {
+	if a == nil || parent == nil {
+		return
+	}
+	o := a.Type.ToObject()
+	p := parent.Type.ToObject()
+	if o == nil || p == nil {
+		return
+	}
+	for _, v := range parent.Validations {
+		found := false
+		for _, vc := range a.Validations {
+			if v == vc {
+				found = true
+				break
+			}
+		}
+		if !found {
+			a.Validations = append(a.Validations, parent)
+		}
+	}
+	for n, att := range o {
+		if patt, ok := p[n]; ok {
+			if att.Description == "" {
+				att.Description = patt.Description
+			}
+			for _, v := range patt.Validations {
+				found := false
+				for _, vc := range att.Validations {
+					if v == vc {
+						found = true
+						break
+					}
+				}
+				if !found {
+					att.Validations = append(att.Validations, v)
+				}
+			}
+			if att.DefaultValue == nil {
+				att.DefaultValue = patt.DefaultValue
+			}
+			if att.View == "" {
+				att.View = patt.View
+			}
+			if att.Type == nil {
+				att.Type = patt.Type
+			} else if co := att.Type.ToObject(); co != nil {
+				if po := patt.Type.ToObject(); po != nil {
+					for n, att := range co {
+						if pcatt, ok := po[n]; ok {
+							att.Inherit(pcatt)
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 // Context returns the generic definition name used in error messages.

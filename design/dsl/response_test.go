@@ -115,7 +115,7 @@ var _ = Describe("Response", func() {
 			name = "foo"
 			dsl = func() {
 				Status(status)
-				MediaType(mediaType)
+				Media(mediaType)
 			}
 		})
 

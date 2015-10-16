@@ -7,7 +7,7 @@ import (
 
 var _ = Resource("account", func() {
 
-	MediaType(Account)
+	DefaultMedia(Account)
 	BasePath("/accounts")
 	CanonicalActionName("show")
 	Trait("Authenticated")
@@ -66,7 +66,7 @@ var _ = Resource("account", func() {
 
 var _ = Resource("bottle", func() {
 
-	MediaType(Bottle)
+	DefaultMedia(Bottle)
 	BasePath("bottles")
 	Parent("account")
 	CanonicalActionName("show")
@@ -81,7 +81,7 @@ var _ = Resource("bottle", func() {
 			Param("years", ArrayOf(Integer), "Filter by years")
 		})
 		Response(OK, func() {
-			MediaType(CollectionOf(Bottle, func() {
+			Media(CollectionOf(Bottle, func() {
 				View("default")
 				View("tiny")
 			}))

@@ -27,7 +27,6 @@ func init() {
 func main() {
 	files, err := command().Run()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "FAIL")
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
@@ -73,14 +72,11 @@ func command() codegen.Command {
 	return nil
 }
 
-const help = `The codegen tool generates various artefacts from a goa application design package (metadata).
+const help = `The goagen tool generates various artefacts from a goa application design package (metadata).
 
 Each sub-command supported by the tool produces a specific type of artefacts. For example
-the "app" command causes codegen to generate the code that supports the application controllers.
+the "app" command causes goagen to generate the code that supports the application controllers.
 
-The "default" command (also invoked when no command is provided on the command line) runs all the
-commands, generating all the supported artefacts.
-
-Artefact generation skips any file or directory that already exists unless the --force flag is
-also provided.
+The "default" command (also invoked when no command is provided on the command line) runs the "app"
+and "main" commands generating the application code and main skeleton code if not already present.
 `

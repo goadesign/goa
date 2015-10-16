@@ -493,15 +493,14 @@ func (mt {{gotyperef . 0}}) Dump({{if gt (len .Views) 1}}view {{gotypename . 0}}
 {{$mt := .}}{{if gt (len .Views) 1}}{{range .Views}}	if view == {{gotypename $mt 0}}{{goify .Name true}}View {
 		{{typeMarshaler $mt "" "mt" "res" .Name}}
 	}
-{{end}}{{else}}	var err error
-	{{range $mt.Views}}{{typeMarshaler $mt "" "mt" "res" .Name}}{{end}}{{/* ranges over the one element */}}
-{{end}}	return res, err
+{{end}}{{else}}{{range $mt.Views}}{{typeMarshaler $mt "" "mt" "res" .Name}}{{/* ranges over the one element */}}
+{{end}}{{end}}	return res, err
 }
 
 // Validate validates the media type instance.
 func (mt {{gotyperef . 0}}) Validate() (err error) {
-{{validate .AttributeDefinition "mt"}}
-	return
+{{$validation := validate .AttributeDefinition "mt"}}{{if $validation}}{{$validation}}
+{{end}} return
 }
 `
 

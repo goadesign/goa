@@ -19,7 +19,7 @@ var _ = Describe("NewGenerator", func() {
 
 	Context("with dummy command line flags", func() {
 		BeforeEach(func() {
-			os.Args = []string{"codegen", "--out=_foo", "--design=bar", "--force"}
+			os.Args = []string{"codegen", "--out=_foo", "--design=bar"}
 		})
 
 		AfterEach(func() {
