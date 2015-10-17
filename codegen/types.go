@@ -771,8 +771,8 @@ const (
 {{tabs .depth}}{{.target}} = {{$tmp}}`
 
 	mLinkTmpl = `{{if .links}}{{$ctx := .}}{{tabs .depth}}links := make(map[string]interface{})
-{{range $n, $l := .links}}{{marshalMediaType $l.MediaType (printf "link %s" $n) (printf "%s.%s" $ctx.source (goify $l.Name true)) (printf "links[\"%s\"]" (goify $n true)) $l.View $ctx.depth}}{{end}}
-{{tabs .depth}}{{.target}}["links"] = links
+{{range $n, $l := .links}}{{marshalMediaType $l.MediaType (printf "link %s" $n) (printf "%s.%s" $ctx.source (goify $l.Name true)) (printf "links[\"%s\"]" (goify $n true)) $l.View $ctx.depth}}
+{{end}}{{tabs .depth}}{{.target}}["links"] = links
 {{end}}`
 
 	unmPrimitiveTmpl = `{{tabs .depth}}if val, ok := {{.source}}.({{gotyperef .type (add .depth 1)}}); ok {
