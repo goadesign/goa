@@ -29,29 +29,29 @@ type (
 	// See http://json-schema.org/documentation.html
 	JSONSchema struct {
 		// Core schema
-		ID           string
-		Type         JSONType
-		Properties   map[string]*JSONSchema
-		Item         *JSONSchema
-		Definitions  map[string]*JSONSchema
-		DefaultValue interface{}
+		ID           string                 `json:"id,omitempty"`
+		Type         JSONType               `json:"type,omitempty"`
+		Properties   map[string]*JSONSchema `json:"properties,omitempty"`
+		Item         *JSONSchema            `json:"item,omitempty"`
+		Definitions  map[string]*JSONSchema `json:"definitions,omitempty"`
+		DefaultValue interface{}            `json:"default_value,omitempty"`
 
 		// Hyper schema
-		Title     string
-		Media     *JSONMedia
-		ReadOnly  bool
-		PathStart string
-		Links     []*JSONLink
+		Title     string      `json:"title,omitempty"`
+		Media     *JSONMedia  `json:"media,omitempty"`
+		ReadOnly  bool        `json:"read_only,omitempty"`
+		PathStart string      `json:"path_start,omitempty"`
+		Links     []*JSONLink `json:"links,omitempty"`
 
 		// Validation
-		Enum      []interface{}
-		Format    string
-		Pattern   string
-		Minimum   int
-		Maximum   int
-		MinLength int
-		MaxLength int
-		Required  []string
+		Enum      []interface{} `json:"enum,omitempty"`
+		Format    string        `json:"format,omitempty"`
+		Pattern   string        `json:"pattern,omitempty"`
+		Minimum   int           `json:"minimum,omitempty"`
+		Maximum   int           `json:"maximum,omitempty"`
+		MinLength int           `json:"min_length,omitempty"`
+		MaxLength int           `json:"max_length,omitempty"`
+		Required  []string      `json:"required,omitempty"`
 	}
 
 	// JSONType is the JSON type enum.

@@ -146,7 +146,7 @@ func tempvar() string {
 
 // generateMetadata returns true if the metadata should be generated.
 func generateMetadata() bool {
-	return codegen.CommandName == "default"
+	return codegen.CommandName == "" || codegen.CommandName == "metadata"
 }
 
 func okResp(a *design.ActionDefinition) map[string]interface{} {

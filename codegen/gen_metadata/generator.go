@@ -109,7 +109,11 @@ var metadata []byte
 
 // MountMetadataController mounts the metadata under "/schema".
 func MountController(app *goa.Application) {
+	logger := app.Logger.New("ctrl", "Metadata")
+	logger.Info("mounting")
 	app.Router.GET("/schema", getMetadata)
+	logger.Info("handler", "action", "Get", "GET", "/schema")
+	logger.Info("mounted")
 }
 
 // getMetadata is the httprouter handle that returns the metadata JSON schema.
