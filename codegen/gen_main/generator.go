@@ -54,15 +54,17 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		}
 		gg := codegen.NewGoGenerator(mainFile)
 		g.genfiles = []string{mainFile}
-		appPkg, err := filepath.Rel(os.Getenv("GOPATH"), codegen.OutputDir)
+		outPkg, err := filepath.Rel(os.Getenv("GOPATH"), codegen.OutputDir)
 		if err != nil {
 			return nil, err
 		}
-		appPkg = strings.TrimPrefix(appPkg, "src/")
-		appPkg = filepath.Join(appPkg, "app")
+		outPkg = strings.TrimPrefix(outPkg, "src/")
+		appPkg := filepath.Join(outPkg, "app")
+		metadataPkg := filepath.Join(outPkg, "metadata")
 		imports := []*codegen.ImportSpec{
 			codegen.SimpleImport("github.com/raphael/goa"),
 			codegen.SimpleImport(appPkg),
+			codegen.SimpleImport(metadataPkg),
 			codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
 		}
 		gg.WriteHeader("", "main", imports)
@@ -177,7 +179,8 @@ func main() {
 {{range $name, $res := .Resources}}	// Mount "{{$res.FormatName true true}}" controller
 	{{$tmp := tempvar}}{{$tmp}} := New{{$res.FormatName false false}}Controller()
 	app.Mount{{$res.FormatName false false}}Controller(api, {{$tmp}})
-{{end}}
+{{end}}	metadata.MountController(api)
+
 	// Run application, listen on port 8080
 	api.Run(":8080")
 }

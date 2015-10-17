@@ -16,13 +16,12 @@ type Command struct {
 
 // NewCommand instantiates a new command.
 func NewCommand() *Command {
-	base := codegen.NewBaseCommand("main", "Generate application metadata controller")
+	base := codegen.NewBaseCommand("metadata", "Generate application metadata controller")
 	return &Command{BaseCommand: base}
 }
 
 // RegisterFlags registers the command line flags with the given registry.
 func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
-	r.Flag("hostname", "API hostname used to build JSON schema ID.").Short('h').Required().StringVar(&HostName)
 }
 
 // Run simply calls the meta generator.

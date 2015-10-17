@@ -3,6 +3,7 @@ package genmetadata
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -47,6 +48,18 @@ func MetadataDir() string {
 
 // Generate produces the skeleton main.
 func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
+	os.RemoveAll(MetadataDir())
+	os.MkdirAll(MetadataDir(), 0755)
+	s := APISchema(api)
+	js, err := json.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+	metadataFile := filepath.Join(MetadataDir(), "schema.json")
+	if err := ioutil.WriteFile(metadataFile, js, 0755); err != nil {
+		return nil, err
+	}
+	g.genfiles = append(g.genfiles, metadataFile)
 	controllerFile := filepath.Join(MetadataDir(), "metadata.go")
 	tmpl, err := template.New("metadata").Parse(metadataTmpl)
 	if err != nil {
@@ -59,7 +72,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	}
 	gg.WriteHeader("", "metadata", imports)
 	data := map[string]interface{}{
-		"API": api,
+		"MetadataFile": metadataFile,
 	}
 	err = tmpl.Execute(gg, data)
 	if err != nil {
@@ -68,39 +81,6 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	}
 	if err := gg.FormatCode(); err != nil {
 		g.Cleanup()
-		return nil, err
-	}
-	jsonDir := filepath.Join(MetadataDir(), "files")
-	s := APISchema(api)
-	filename := filepath.Join(jsonDir, "api.json")
-	f, err := os.Create(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	js, err := json.Marshal(s)
-	if err != nil {
-		return nil, err
-	}
-	f.Write(js)
-	g.genfiles = append(g.genfiles, filename)
-	err = api.IterateResources(func(r *design.ResourceDefinition) error {
-		filename := filepath.Join(jsonDir, r.FormatName(true, false)) + ".json"
-		s := ResourceSchema(api, r)
-		f, err := os.Create(filename)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		js, err := json.Marshal(s)
-		if err != nil {
-			return err
-		}
-		f.Write(js)
-		g.genfiles = append(g.genfiles, filename)
-		return nil
-	})
-	if err != nil {
 		return nil, err
 	}
 	return g.genfiles, nil
@@ -124,8 +104,22 @@ func tempvar() string {
 }
 
 const metadataTmpl = `
-func Get(c *goa.Context) error {
-	m := 
-	return c.JSON(200, js)
+// Cached metadata
+var metadata []byte
+
+// MountMetadataController mounts the metadata under "/schema".
+func MountController(app *goa.Application) {
+	app.Router.GET("/schema", getMetadata)
+}
+
+// getMetadata is the httprouter handle that returns the metadata JSON schema.
+func getMetadata(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	if len(metadata) == 0 {
+		metadata, _ = ioutil.ReadFile("{{.MetadataFile}}")
+	}
+	w.Header().Set("Content-Type", "application/schema+json")
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	w.WriteHeader(200)
+	w.Write(metadata)
 }
 `

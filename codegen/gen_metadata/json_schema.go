@@ -86,6 +86,9 @@ func (s *JSONSchema) Merge(other *JSONSchema) {
 	}
 	for n, p := range other.Properties {
 		if _, ok := s.Properties[n]; !ok {
+			if s.Properties == nil {
+				s.Properties = make(map[string]*JSONSchema)
+			}
 			s.Properties[n] = p
 		}
 	}
@@ -143,10 +146,10 @@ func (s *JSONSchema) Merge(other *JSONSchema) {
 
 // TypeSchema produces the JSON schema corresponding to the given data type.
 func TypeSchema(t design.DataType) *JSONSchema {
-	if t == nil {
-		return new(JSONSchema)
-	}
 	s := &JSONSchema{}
+	if t == nil {
+		return s
+	}
 	switch actual := t.(type) {
 	case design.Primitive:
 		s.Type = JSONType(actual.Name())
@@ -160,6 +163,9 @@ func TypeSchema(t design.DataType) *JSONSchema {
 			s.Properties[n] = AttributeSchema(at)
 		}
 	case *design.UserTypeDefinition:
+		if actual == nil {
+			return s
+		}
 		s.ID = fmt.Sprintf("#%s", url.QueryEscape(actual.Name()))
 		s.Merge(AttributeSchema(actual.AttributeDefinition))
 	case *design.MediaTypeDefinition:
@@ -228,39 +234,41 @@ func MediaTypeSchema(mt *design.MediaTypeDefinition) *JSONSchema {
 
 // ResourceSchema produces the JSON schema corresponding to the given API resource.
 func ResourceSchema(api *design.APIDefinition, r *design.ResourceDefinition) *JSONSchema {
-	mt, _ := api.MediaTypes[r.MediaType] // DSL validation makes usre this is not nil
-	s := MediaTypeSchema(mt)
-	s.ID = fmt.Sprintf("/%s", url.QueryEscape(r.Name))
-	for _, a := range r.Actions {
-		requestSchema := AttributeSchema(a.Params)
-		requestSchema.Merge(TypeSchema(a.Payload))
-		var successResponse *design.ResponseDefinition
-		for _, resp := range a.Responses {
-			if resp.Status > 199 && resp.Status < 300 {
-				successResponse = resp
-				break
+	if mt, ok := api.MediaTypes[r.MediaType]; ok {
+		s := MediaTypeSchema(mt)
+		s.ID = fmt.Sprintf("/%s", url.QueryEscape(r.Name))
+		for _, a := range r.Actions {
+			requestSchema := AttributeSchema(a.Params)
+			requestSchema.Merge(TypeSchema(a.Payload))
+			var successResponse *design.ResponseDefinition
+			for _, resp := range a.Responses {
+				if resp.Status > 199 && resp.Status < 300 {
+					successResponse = resp
+					break
+				}
+			}
+			var respMT *design.MediaTypeDefinition
+			if successResponse != nil {
+				respMT, _ = api.MediaTypes[successResponse.MediaType]
+			}
+			for _, r := range a.Routes {
+				link := JSONLink{
+					Title:  a.Description,
+					Rel:    a.Name,
+					Href:   r.Path,
+					Method: r.Verb,
+					Schema: requestSchema,
+				}
+				if respMT != nil {
+					link.MediaType = respMT.Identifier
+					link.TargetSchema = MediaTypeSchema(respMT)
+				}
+				s.Links = append(s.Links, &link)
 			}
 		}
-		var respMT *design.MediaTypeDefinition
-		if successResponse != nil {
-			respMT, _ = api.MediaTypes[successResponse.MediaType]
-		}
-		for _, r := range a.Routes {
-			link := JSONLink{
-				Title:  a.Description,
-				Rel:    a.Name,
-				Href:   r.Path,
-				Method: r.Verb,
-				Schema: requestSchema,
-			}
-			if respMT != nil {
-				link.MediaType = respMT.Identifier
-				link.TargetSchema = MediaTypeSchema(respMT)
-			}
-			s.Links = append(s.Links, &link)
-		}
+		return s
 	}
-	return s
+	return nil
 }
 
 // APISchema produces the JSON schema corresponding to the given API definition.

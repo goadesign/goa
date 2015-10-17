@@ -9,6 +9,7 @@ import (
 	"github.com/raphael/goa/codegen"
 	"github.com/raphael/goa/codegen/gen_app"
 	"github.com/raphael/goa/codegen/gen_main"
+	"github.com/raphael/goa/codegen/gen_metadata"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -21,6 +22,7 @@ func init() {
 		&AllCommand{},
 		genapp.NewCommand(),
 		genmain.NewCommand(),
+		genmetadata.NewCommand(),
 	}
 }
 
@@ -77,6 +79,7 @@ const help = `The goagen tool generates various artefacts from a goa application
 Each sub-command supported by the tool produces a specific type of artefacts. For example
 the "app" command causes goagen to generate the code that supports the application controllers.
 
-The "default" command (also invoked when no command is provided on the command line) runs the "app"
-and "main" commands generating the application code and main skeleton code if not already present.
+The "default" command (also invoked when no command is provided on the command line) runs the "app",
+"main" and "metadata" commands generating the application code and main skeleton code if not
+already present.
 `
