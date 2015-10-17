@@ -238,12 +238,6 @@ func Link(name string, view ...string) {
 	}
 }
 
-// ArrayOf creates an array from its element type.
-func ArrayOf(t DataType) *Array {
-	at := AttributeDefinition{Type: t}
-	return &Array{ElemType: &at}
-}
-
 // CollectionOf creates a collection media type from its element media type.
 // A collection media type represents the content of responses that return a
 // collection of resources such as "index" actions.

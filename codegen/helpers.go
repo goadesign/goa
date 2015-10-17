@@ -11,6 +11,9 @@ import (
 
 // CommandLine return the command used to run this process.
 func CommandLine() string {
+	// We don't use the full path to the tool so that running goagen multiple times doesn't
+	// end up creating different command line comments (because of the temporary directory it
+	// runs in).
 	cmd := fmt.Sprintf("$ %s %s", filepath.Base(os.Args[0]), strings.Join(os.Args[1:], " "))
 	return strings.Replace(cmd, " --", "\n  --", -1)
 }

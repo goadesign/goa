@@ -18,11 +18,13 @@ var (
 
 	mArrayT          *template.Template
 	mObjectT         *template.Template
+	mHashT           *template.Template
 	mLinkT           *template.Template
 	mCollectionT     *template.Template
 	unmPrimitiveT    *template.Template
 	unmArrayT        *template.Template
 	unmObjectOrUserT *template.Template
+	unmHashT         *template.Template
 )
 
 //  init instantiates the templates.
@@ -48,6 +50,9 @@ func init() {
 	if mObjectT, err = template.New("object marshaler").Funcs(fm).Parse(mObjectTmpl); err != nil {
 		panic(err)
 	}
+	if mHashT, err = template.New("hash marshaler").Funcs(fm).Parse(mHashTmpl); err != nil {
+		panic(err)
+	}
 	if mLinkT, err = template.New("links marshaler").Funcs(fm).Parse(mLinkTmpl); err != nil {
 		panic(err)
 	}
@@ -61,6 +66,9 @@ func init() {
 		panic(err)
 	}
 	if unmObjectOrUserT, err = template.New("object unmarshaler").Funcs(fm).Parse(unmObjectTmpl); err != nil {
+		panic(err)
+	}
+	if unmHashT, err = template.New("hash unmarshaler").Funcs(fm).Parse(unmHashTmpl); err != nil {
 		panic(err)
 	}
 }
@@ -82,6 +90,8 @@ func typeMarshalerR(t design.DataType, context, source, target string, depth int
 		return fmt.Sprintf("%s%s = %s", Tabs(depth), target, source)
 	case *design.Array:
 		return arrayMarshalerR(actual, context, source, target, depth)
+	case *design.Hash:
+		return hashMarshalerR(actual, context, source, target, depth)
 	case design.Object, *design.UserTypeDefinition:
 		return objectMarshalerR(actual.ToObject(), nil, context, source, target, depth)
 	default:
@@ -130,6 +140,26 @@ func arrayMarshalerR(a *design.Array, context, source, target string, depth int)
 		"depth":    depth,
 	}
 	return runTemplate(mArrayT, data)
+}
+
+// HashMarshaler produces the Go code that initializes the variable named target which holds a
+// map of interface{} to interface{} with the content of the variable named source which contains an
+// instance of the hash map. The code runs any validation defined on the hash map key and value
+// attribute definitions.
+// The generated code assumes that there is a variable called "err" of type error that it can use
+// to record errors.
+func HashMarshaler(h *design.Hash, context, source, target string) string {
+	return hashMarshalerR(h, context, source, target, 1)
+}
+func hashMarshalerR(h *design.Hash, context, source, target string, depth int) string {
+	data := map[string]interface{}{
+		"type":    h,
+		"context": context,
+		"source":  source,
+		"target":  target,
+		"depth":   depth,
+	}
+	return runTemplate(mHashT, data)
 }
 
 // ObjectMarshaler produces the Go code that initializes the variable named target which holds a
@@ -266,6 +296,8 @@ func typeUnmarshalerR(t design.DataType, context, source, target string, depth i
 		return primitiveUnmarshalerR(actual, context, source, target, depth)
 	case *design.Array:
 		return arrayUnmarshalerR(actual, context, source, target, depth)
+	case *design.Hash:
+		return hashUnmarshalerR(actual, context, source, target, depth)
 	case design.Object:
 		return objectUnmarshalerR(actual, nil, context, source, target, depth)
 	case *design.UserTypeDefinition, *design.MediaTypeDefinition:
@@ -296,7 +328,7 @@ func attributeUnmarshalerR(att *design.AttributeDefinition, context, source, tar
 	return unmarshaler
 }
 
-// PrimitiveUnmarshaler produces the Go code that initializes a primitive type from its JSON
+// PrimitiveUnmarshaler produces the Go code that initializes a primitive type from its deserialized
 // representation.
 // source is the name of the variable that contains the raw interface{} value and target the
 // name of the variable to initialize.
@@ -316,7 +348,7 @@ func primitiveUnmarshalerR(p design.Primitive, context, source, target string, d
 	return runTemplate(unmPrimitiveT, data)
 }
 
-// ArrayUnmarshaler produces the Go code that initializes an array from its JSON representation.
+// ArrayUnmarshaler produces the Go code that initializes an array from its deserialized epresentation.
 // source is the name of the variable that contains the raw interface{} value and target the
 // name of the variable to initialize.
 // The generated code assumes that there is a variable called "err" of type error that it can use
@@ -335,7 +367,27 @@ func arrayUnmarshalerR(a *design.Array, context, source, target string, depth in
 	return runTemplate(unmArrayT, data)
 }
 
-// ObjectUnmarshaler produces the Go code that initializes an object type from its JSON
+// HashUnmarshaler produces the Go code that initializes a hash map from its deserialized
+// representation.
+// source is the name of the variable that contains the raw map[string]interface{} value and target
+// the name of the variable to initialize.
+// The generated code assumes that there is a variable called "err" of type error that it can use
+// to record errors.
+func HashUnmarshaler(h *design.Hash, context, source, target string) string {
+	return hashUnmarshalerR(h, context, source, target, 1)
+}
+func hashUnmarshalerR(h *design.Hash, context, source, target string, depth int) string {
+	data := map[string]interface{}{
+		"type":    h,
+		"context": context,
+		"source":  source,
+		"target":  target,
+		"depth":   depth,
+	}
+	return runTemplate(unmHashT, data)
+}
+
+// ObjectUnmarshaler produces the Go code that initializes an object type from its deserialized
 // representation.
 // source is the name of the variable that contains the raw interface{} value and target the
 // name of the variable to initialize.
@@ -356,7 +408,7 @@ func objectUnmarshalerR(o design.Object, required []string, context, source, tar
 	return runTemplate(unmObjectOrUserT, data)
 }
 
-// NamedTypeUnmarshaler produces the Go code that initializes a named type from its JSON
+// NamedTypeUnmarshaler produces the Go code that initializes a named type from its deserialized
 // representation.
 // This include running any validation defined on the type.
 // source is the name of the variable that contains the raw interface{} value and target the
@@ -411,6 +463,10 @@ func godef(ds design.DataStructure, tabs int, jsonTags, inner, res bool) string 
 		return GoTypeName(t, tabs)
 	case *design.Array:
 		return "[]" + godef(actual.ElemType, tabs, jsonTags, true, res)
+	case *design.Hash:
+		keyDef := godef(actual.KeyType, tabs, jsonTags, true, res)
+		elemDef := godef(actual.ElemType, tabs, jsonTags, true, res)
+		return fmt.Sprintf("map[%s]%s", keyDef, elemDef)
 	case design.Object:
 		if inner {
 			buffer.WriteByte('*')
@@ -699,6 +755,15 @@ const (
 {{tabs $depth}}{{.target}} = {{$tmp}}{{if or $validation $ctx.required}}
 {{tabs .depth}}}{{end}}`
 
+	mHashTmpl = `{{tabs .depth}}{{.target}} = make(map[interface{}]interface{}, len({{.source}}))
+{{tabs .depth}}for k, v := range {{.source}} {
+{{tabs .depth}}	var mk interface{}
+{{marshalAttribute .type.ToHash.KeyType (printf "%s.keys[*]" .context) "k" "mk" (add .depth 1)}}
+{{tabs .depth}}	var mv interface{}
+{{marshalAttribute .type.ToHash.ElemType (printf "%s.values[*]" .context) "v" "mv" (add .depth 1)}}
+{{tabs .depth}}	{{.target}}[mk] = mv
+{{tabs .depth}}}`
+
 	mCollectionTmpl = `{{tabs .depth}}{{$tmp := tempvar}}{{$tmp}} := make([]{{gonative .elemMediaType}}, len({{.source}}))
 {{tabs .depth}}for i, res := range {{.source}} {
 {{marshalMediaType .elemMediaType (printf "%s[*]" .context) "res" (printf "%s[i]" $tmp) .view (add .depth 1)}}
@@ -740,5 +805,21 @@ const (
 {{tabs $depth}}	}{{end}}
 {{end}}{{tabs $depth}}} else {
 {{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "map[string]interface{}", err)
+{{tabs .depth}}}`
+
+	unmHashTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
+{{tabs .depth}}	{{$tmp := tempvar}}{{$tmp}} := make(map[{{gotypename .type.KeyType.Type (add .depth 1)}}]{{gotypename .type.ElemType.Type (add .depth 1)}})
+{{tabs .depth}}	for k, v := range val {
+{{tabs .depth}}		{{$ki := tempvar}}var {{$ki}} interface{}
+{{tabs .depth}}		err = json.Unmarshal([]byte(k), &{{$ki}})
+{{tabs .depth}}		if err != nil {
+{{tabs .depth}}			return
+{{tabs .depth}}		}
+{{tabs .depth}}		{{$k := tempvar}}{{unmarshalAttribute .type.KeyType (printf "%s.keys[*]" .context) $ki $k (add .depth 2)}}
+{{tabs .depth}}		{{$v := tempvar}}var {{$v}} {{gotypename .type.ElemType.Type}}
+{{tabs .depth}}		{{unmarshalAttribute .type.ElemType (printf "%s.values[*]" .context) "v" $v (add .depth 2)}}
+{{tabs .depth}}		{{$tmp}}[{{$k}}] = {{$v}}
+{{tabs .depth}}	}
+{{tabs .depth}}	{{.target}} = {{$tmp}}
 {{tabs .depth}}}`
 )

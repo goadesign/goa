@@ -31,12 +31,18 @@ type (
 		// IsArray returns true if the underlying type is an array, a user type which
 		// is an array or a media type whose type is an array.
 		IsArray() bool
+		// IsHash returns true if the underlying type is a hash map, a user type which
+		// is a hash map or a media type whose type is a hash map.
+		IsHash() bool
 		// ToObject returns the underlying object if any (i.e. if IsObject returns true),
 		// nil otherwise.
 		ToObject() Object
 		// ToArray returns the underlying array if any (i.e. if IsArray returns true),
 		// nil otherwise.
 		ToArray() *Array
+		// ToHash returns the underlying hash map if any (i.e. if IsHash returns true),
+		// nil otherwise.
+		ToHash() *Hash
 		// IsCompatible checks whether val has a Go type that is
 		// compatible with the data type.
 		IsCompatible(val interface{}) bool
@@ -59,6 +65,12 @@ type (
 
 	// Object is the type for a JSON object.
 	Object map[string]*AttributeDefinition
+
+	// Hash is the type for a hash map.
+	Hash struct {
+		KeyType  *AttributeDefinition
+		ElemType *AttributeDefinition
+	}
 
 	// UserTypeDefinition is the type for user defined types that are not media types
 	// (e.g. payload types).
@@ -104,6 +116,8 @@ const (
 	ArrayKind
 	// ObjectKind represents a JSON object.
 	ObjectKind
+	// HashKind represents a JSON object where the keys are not known in advance.
+	HashKind
 	// UserTypeKind represents a user type.
 	UserTypeKind
 	// MediaTypeKind represents a media type.
@@ -151,11 +165,17 @@ func (p Primitive) IsObject() bool { return false }
 // IsArray returns false.
 func (p Primitive) IsArray() bool { return false }
 
+// IsHash returns false.
+func (p Primitive) IsHash() bool { return false }
+
 // ToObject returns nil.
 func (p Primitive) ToObject() Object { return nil }
 
 // ToArray returns nil.
 func (p Primitive) ToArray() *Array { return nil }
+
+// ToHash returns nil.
+func (p Primitive) ToHash() *Hash { return nil }
 
 // IsCompatible returns true if val is compatible with p.
 func (p Primitive) IsCompatible(val interface{}) (ok bool) {
@@ -224,11 +244,17 @@ func (a *Array) IsObject() bool { return false }
 // IsArray returns true.
 func (a *Array) IsArray() bool { return true }
 
+// IsHash returns false.
+func (a *Array) IsHash() bool { return false }
+
 // ToObject returns nil.
 func (a *Array) ToObject() Object { return nil }
 
 // ToArray returns a.
 func (a *Array) ToArray() *Array { return a }
+
+// ToHash returns nil.
+func (a *Array) ToHash() *Hash { return nil }
 
 // IsCompatible returns true if val is compatible with p.
 func (a *Array) IsCompatible(val interface{}) bool {
@@ -253,11 +279,17 @@ func (o Object) IsObject() bool { return true }
 // IsArray returns false.
 func (o Object) IsArray() bool { return false }
 
+// IsHash returns false.
+func (o Object) IsHash() bool { return false }
+
 // ToObject returns the underlying object.
 func (o Object) ToObject() Object { return o }
 
 // ToArray returns nil.
 func (o Object) ToArray() *Array { return nil }
+
+// ToHash returns nil.
+func (o Object) ToHash() *Hash { return nil }
 
 // Dup creates a shallow copy of o.
 func (o Object) Dup() Object {
@@ -279,6 +311,36 @@ func (o Object) Merge(other Object) {
 func (o Object) IsCompatible(val interface{}) bool {
 	k := reflect.TypeOf(val).Kind()
 	return k == reflect.Map || k == reflect.Struct
+}
+
+// Kind implements DataKind.
+func (h *Hash) Kind() Kind { return HashKind }
+
+// Name returns the type name.
+func (h *Hash) Name() string { return "hash" }
+
+// IsObject returns false.
+func (h *Hash) IsObject() bool { return false }
+
+// IsArray returns false.
+func (h *Hash) IsArray() bool { return false }
+
+// IsHash returns true.
+func (h *Hash) IsHash() bool { return true }
+
+// ToObject returns nil.
+func (h *Hash) ToObject() Object { return nil }
+
+// ToArray returns nil.
+func (h *Hash) ToArray() *Array { return nil }
+
+// ToHash returns the underlying hash map.
+func (h *Hash) ToHash() *Hash { return h }
+
+// IsCompatible returns true if val is compatible with p.
+func (h *Hash) IsCompatible(val interface{}) bool {
+	k := reflect.TypeOf(val).Kind()
+	return k == reflect.Map
 }
 
 // AttributeIterator is the type of the function given to IterateAttributes.
@@ -325,11 +387,17 @@ func (u *UserTypeDefinition) IsObject() bool { return u.Type.IsObject() }
 // IsArray calls IsArray on the user type underlying data type.
 func (u *UserTypeDefinition) IsArray() bool { return u.Type.IsArray() }
 
+// IsHash calls IsHash on the user type underlying data type.
+func (u *UserTypeDefinition) IsHash() bool { return u.Type.IsHash() }
+
 // ToObject calls ToObject on the user type underlying data type.
 func (u *UserTypeDefinition) ToObject() Object { return u.Type.ToObject() }
 
 // ToArray calls ToArray on the user type underlying data type.
 func (u *UserTypeDefinition) ToArray() *Array { return u.Type.ToArray() }
+
+// ToHash calls ToHash on the user type underlying data type.
+func (u *UserTypeDefinition) ToHash() *Hash { return u.Type.ToHash() }
 
 // IsCompatible returns true if val is compatible with p.
 func (u *UserTypeDefinition) IsCompatible(val interface{}) bool {

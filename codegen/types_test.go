@@ -54,6 +54,22 @@ var _ = Describe("code generation", func() {
 				})
 			})
 
+			Context("of hash of primitive types", func() {
+				BeforeEach(func() {
+					elemType := &AttributeDefinition{Type: Integer}
+					keyType := &AttributeDefinition{Type: Integer}
+					hash := &Hash{KeyType: keyType, ElemType: elemType}
+					object = Object{
+						"foo": &AttributeDefinition{Type: hash},
+					}
+					required = nil
+				})
+
+				It("produces the struct go code", func() {
+					Ω(st).Should(Equal("struct {\n\tFoo map[int]int `json:\"foo,omitempty\"`\n}"))
+				})
+			})
+
 			Context("of array of primitive types", func() {
 				BeforeEach(func() {
 					elemType := &AttributeDefinition{Type: Integer}
@@ -66,6 +82,35 @@ var _ = Describe("code generation", func() {
 
 				It("produces the struct go code", func() {
 					Ω(st).Should(Equal("struct {\n\tFoo []int `json:\"foo,omitempty\"`\n}"))
+				})
+			})
+
+			Context("of hash of objects", func() {
+				BeforeEach(func() {
+					elem := Object{
+						"elemAtt": &AttributeDefinition{Type: Integer},
+					}
+					key := Object{
+						"keyAtt": &AttributeDefinition{Type: String},
+					}
+					elemType := &AttributeDefinition{Type: elem}
+					keyType := &AttributeDefinition{Type: key}
+					hash := &Hash{KeyType: keyType, ElemType: elemType}
+					object = Object{
+						"foo": &AttributeDefinition{Type: hash},
+					}
+					required = nil
+				})
+
+				It("produces the struct go code", func() {
+					expected := "struct {\n" +
+						"	Foo map[*struct {\n" +
+						"		KeyAtt string `json:\"keyAtt,omitempty\"`\n" +
+						"	}]*struct {\n" +
+						"		ElemAtt int `json:\"elemAtt,omitempty\"`\n" +
+						"	} `json:\"foo,omitempty\"`\n" +
+						"}"
+					Ω(st).Should(Equal(expected))
 				})
 			})
 

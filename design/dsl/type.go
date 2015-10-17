@@ -36,3 +36,16 @@ func Type(name string, dsl func()) *UserTypeDefinition {
 	}
 	return t
 }
+
+// ArrayOf creates an array from its element type.
+func ArrayOf(t DataType) *Array {
+	at := AttributeDefinition{Type: t}
+	return &Array{ElemType: &at}
+}
+
+// HashOf creates a hash map from its key and element types.
+func HashOf(k, v DataType) *Hash {
+	kat := AttributeDefinition{Type: k}
+	vat := AttributeDefinition{Type: v}
+	return &Hash{KeyType: &kat, ElemType: &vat}
+}
