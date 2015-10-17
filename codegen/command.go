@@ -20,6 +20,9 @@ var (
 	// Also logs additional debug information.
 	// Set this flag to true prior to calling Generate.
 	Debug bool
+
+	// CommandName is the name of the command being run.
+	CommandName string
 )
 
 type (
