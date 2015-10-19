@@ -79,7 +79,7 @@ const (
 	JSONString = "string"
 )
 
-// JSON schema reference
+// SchemaRef is the JSON Hyper-schema standard href.
 const SchemaRef = "http://json-schema.org/draft-04/hyper-schema"
 
 var (
