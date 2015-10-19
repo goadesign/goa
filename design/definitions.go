@@ -15,8 +15,8 @@ var (
 	// Design is the API definition created via DSL.
 	Design *APIDefinition
 
-	// ParamsRegex is the regular expression used to capture path parameters.
-	ParamsRegex = regexp.MustCompile("/(?::|\\*)([a-zA-Z0-9_]+)")
+	// WildcardRegex is the regular expression used to capture path parameters.
+	WildcardRegex = regexp.MustCompile("/(?::|\\*)([a-zA-Z0-9_]+)")
 )
 
 type (
@@ -870,7 +870,7 @@ func format(n string, snake, plural *bool) string {
 
 // ExtractWildcards returns the names of the wildcards that appear in path.
 func ExtractWildcards(path string) []string {
-	matches := ParamsRegex.FindAllStringSubmatch(path, -1)
+	matches := WildcardRegex.FindAllStringSubmatch(path, -1)
 	wcs := make([]string, len(matches))
 	for i, m := range matches {
 		wcs[i] = m[1]

@@ -1,6 +1,7 @@
-package genmetadata_test
+package genschema_test
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -8,13 +9,12 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
-	"github.com/raphael/goa/codegen/gen_main"
+	"github.com/raphael/goa/codegen/gen_schema"
 	"github.com/raphael/goa/design"
 )
 
 var _ = Describe("NewGenerator", func() {
-	var gen *genmain.Generator
+	var gen *genschema.Generator
 
 	Context("with dummy command line flags", func() {
 		BeforeEach(func() {
@@ -28,7 +28,7 @@ var _ = Describe("NewGenerator", func() {
 		It("instantiates a generator", func() {
 			design.Design = &design.APIDefinition{Name: "foo"}
 			var err error
-			gen, err = genmain.NewGenerator()
+			gen, err = genschema.NewGenerator()
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(gen).ShouldNot(BeNil())
 		})
@@ -36,7 +36,7 @@ var _ = Describe("NewGenerator", func() {
 		It("instantiates a generator even if Design is not initialized", func() {
 			design.Design = nil
 			var err error
-			gen, err = genmain.NewGenerator()
+			gen, err = genschema.NewGenerator()
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(gen).ShouldNot(BeNil())
 		})
@@ -44,9 +44,9 @@ var _ = Describe("NewGenerator", func() {
 })
 
 var _ = Describe("Generate", func() {
-	const testgenPackagePath = "github.com/raphael/goa/codegen/gen_main/goatest"
+	const testgenPackagePath = "github.com/raphael/goa/codegen/gen_schema/goatest"
 
-	var gen *genmain.Generator
+	var gen *genschema.Generator
 	var outDir string
 	var files []string
 	var genErr error
@@ -61,7 +61,7 @@ var _ = Describe("Generate", func() {
 
 	JustBeforeEach(func() {
 		var err error
-		gen, err = genmain.NewGenerator()
+		gen, err = genschema.NewGenerator()
 		Ω(err).ShouldNot(HaveOccurred())
 		files, genErr = gen.Generate(design.Design)
 	})
@@ -79,13 +79,14 @@ var _ = Describe("Generate", func() {
 			}
 		})
 
-		It("generates a dummy app", func() {
+		It("generates a dummy schema", func() {
 			Ω(genErr).Should(BeNil())
 			Ω(files).Should(HaveLen(1))
-			content, err := ioutil.ReadFile(filepath.Join(outDir, "main.go"))
+			content, err := ioutil.ReadFile(filepath.Join(genschema.JSONSchemaDir(), "schema.json"))
 			Ω(err).ShouldNot(HaveOccurred())
-			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically(">=", 17))
-			_, err = gexec.Build(testgenPackagePath)
+			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically("==", 1))
+			var s genschema.JSONSchema
+			err = json.Unmarshal(content, &s)
 			Ω(err).ShouldNot(HaveOccurred())
 		})
 	})

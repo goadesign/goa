@@ -42,7 +42,7 @@ var _ = Resource("account", func() {
 		)
 		Description("Change account name")
 		Params(func() {
-			Param("accountID", Integer, "Accoutn ID")
+			Param("accountID", Integer, "Account ID")
 		})
 		Payload(func() {
 			Member("name")
@@ -90,11 +90,11 @@ var _ = Resource("bottle", func() {
 
 	Action("show", func() {
 		Routing(
-			GET("/:id"),
+			GET("/:bottleID"),
 		)
 		Description("Retrieve bottle with given id")
 		Params(func() {
-			Param("id")
+			Param("bottleID")
 		})
 		Response(OK)
 		Response(NotFound)
@@ -113,10 +113,10 @@ var _ = Resource("bottle", func() {
 
 	Action("update", func() {
 		Routing(
-			PATCH("/:id"),
+			PATCH("/:bottleID"),
 		)
 		Params(func() {
-			Param("id")
+			Param("bottleID")
 		})
 		Payload(BottlePayload)
 		Response(NoContent)
@@ -125,10 +125,10 @@ var _ = Resource("bottle", func() {
 
 	Action("rate", func() {
 		Routing(
-			PUT("/:id/actions/rate"),
+			PUT("/:bottleID/actions/rate"),
 		)
 		Params(func() {
-			Param("id")
+			Param("bottleID")
 		})
 		Payload(func() {
 			Member("rating")
@@ -140,10 +140,10 @@ var _ = Resource("bottle", func() {
 
 	Action("delete", func() {
 		Routing(
-			DELETE("/:id"),
+			DELETE("/:bottleID"),
 		)
 		Params(func() {
-			Param("id")
+			Param("bottleID")
 		})
 		Headers(func() {
 			Header("X-Force", func() {

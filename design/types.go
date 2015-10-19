@@ -404,6 +404,12 @@ func (u *UserTypeDefinition) IsCompatible(val interface{}) bool {
 	return u.Type.IsCompatible(val)
 }
 
+// FormatName formats the type name and returns either the "camelized" or "snake case" version of
+// the name. It can also pluralize the name.
+func (u *UserTypeDefinition) FormatName(snake, plural bool) string {
+	return format(u.TypeName, &snake, &plural)
+}
+
 // NewMediaTypeDefinition creates a media type definition but does not
 // execute the DSL.
 func NewMediaTypeDefinition(name, identifier string, dsl func()) *MediaTypeDefinition {

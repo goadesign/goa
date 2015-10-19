@@ -48,7 +48,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	}
 	_, err := os.Stat(mainFile)
 	if err != nil {
-		funcs := template.FuncMap{"tempvar": tempvar, "generateMetadata": generateMetadata}
+		funcs := template.FuncMap{"tempvar": tempvar, "generateJSONSchema": generateJSONSchema}
 		tmpl, err := template.New("main").Funcs(funcs).Parse(mainTmpl)
 		if err != nil {
 			panic(err.Error()) // bug
@@ -61,12 +61,14 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		}
 		outPkg = strings.TrimPrefix(outPkg, "src/")
 		appPkg := filepath.Join(outPkg, "app")
-		metadataPkg := filepath.Join(outPkg, "metadata")
 		imports := []*codegen.ImportSpec{
 			codegen.SimpleImport("github.com/raphael/goa"),
 			codegen.SimpleImport(appPkg),
-			codegen.SimpleImport(metadataPkg),
 			codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
+		}
+		if generateJSONSchema() {
+			jsonSchemaPkg := filepath.Join(outPkg, "schema")
+			imports = append(imports, codegen.SimpleImport(jsonSchemaPkg))
 		}
 		gg.WriteHeader("", "main", imports)
 		data := map[string]interface{}{
@@ -144,9 +146,9 @@ func tempvar() string {
 	return fmt.Sprintf("c%d", tempCount)
 }
 
-// generateMetadata returns true if the metadata should be generated.
-func generateMetadata() bool {
-	return codegen.CommandName == "" || codegen.CommandName == "metadata"
+// generateJSONSchema returns true if the API JSON schema should be generated.
+func generateJSONSchema() bool {
+	return codegen.CommandName == "" || codegen.CommandName == "schema"
 }
 
 func okResp(a *design.ActionDefinition) map[string]interface{} {
@@ -185,7 +187,7 @@ func main() {
 {{range $name, $res := .Resources}}	// Mount "{{$res.FormatName true true}}" controller
 	{{$tmp := tempvar}}{{$tmp}} := New{{$res.FormatName false false}}Controller()
 	app.Mount{{$res.FormatName false false}}Controller(api, {{$tmp}})
-{{end}}{{if generateMetadata}}	metadata.MountController(api)
+{{end}}{{if generateJSONSchema}}	schema.MountController(api)
 {{end}}
 	// Run application, listen on port 8080
 	api.Run(":8080")

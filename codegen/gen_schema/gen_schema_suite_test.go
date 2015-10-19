@@ -1,4 +1,4 @@
-package genmetadata_test
+package genschema_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestGenMain(t *testing.T) {
+func TestGenSchema(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "GenMetadata Suite")
+	RunSpecs(t, "GenSchema Suite")
 }

@@ -71,7 +71,7 @@ func newRouteInfo(resource *ResourceDefinition, action *ActionDefinition, route 
 		}
 		wi[i] = &wildCardInfo{Name: v, Orig: orig}
 	}
-	key := ParamsRegex.ReplaceAllLiteralString(route.FullPath(), "*")
+	key := WildcardRegex.ReplaceAllLiteralString(route.FullPath(), "*")
 	return &routeInfo{
 		Key:       key,
 		Resource:  resource,

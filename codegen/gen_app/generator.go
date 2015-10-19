@@ -184,7 +184,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 			identifier = "application/text"
 		}
 		canoTemplate := r.URITemplate()
-		canoTemplate = design.ParamsRegex.ReplaceAllLiteralString(canoTemplate, "/%v")
+		canoTemplate = design.WildcardRegex.ReplaceAllLiteralString(canoTemplate, "/%v")
 		var canoParams []string
 		if ca := r.CanonicalAction(); ca != nil {
 			if len(ca.Routes) > 0 {

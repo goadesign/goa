@@ -1,4 +1,4 @@
-package genmetadata
+package genschema
 
 import (
 	"encoding/json"
@@ -31,7 +31,7 @@ func Generate(api *design.APIDefinition) ([]string, error) {
 
 // NewGenerator returns the application code generator.
 func NewGenerator() (*Generator, error) {
-	app := kingpin.New("Main generator", "application metadata generator")
+	app := kingpin.New("Main generator", "application JSON schema generator")
 	codegen.RegisterFlags(app)
 	_, err := app.Parse(os.Args[1:])
 	if err != nil {
@@ -41,27 +41,27 @@ func NewGenerator() (*Generator, error) {
 	return new(Generator), nil
 }
 
-// MetadataDir is the path to the directory where the metadata controller is generated.
-func MetadataDir() string {
-	return filepath.Join(codegen.OutputDir, "metadata")
+// JSONSchemaDir is the path to the directory where the schema controller is generated.
+func JSONSchemaDir() string {
+	return filepath.Join(codegen.OutputDir, "schema")
 }
 
 // Generate produces the skeleton main.
 func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
-	os.RemoveAll(MetadataDir())
-	os.MkdirAll(MetadataDir(), 0755)
+	os.RemoveAll(JSONSchemaDir())
+	os.MkdirAll(JSONSchemaDir(), 0755)
 	s := APISchema(api)
 	js, err := json.Marshal(s)
 	if err != nil {
 		return nil, err
 	}
-	metadataFile := filepath.Join(MetadataDir(), "schema.json")
-	if err := ioutil.WriteFile(metadataFile, js, 0755); err != nil {
+	schemaFile := filepath.Join(JSONSchemaDir(), "schema.json")
+	if err := ioutil.WriteFile(schemaFile, js, 0755); err != nil {
 		return nil, err
 	}
-	g.genfiles = append(g.genfiles, metadataFile)
-	controllerFile := filepath.Join(MetadataDir(), "metadata.go")
-	tmpl, err := template.New("metadata").Parse(metadataTmpl)
+	g.genfiles = append(g.genfiles, schemaFile)
+	controllerFile := filepath.Join(JSONSchemaDir(), "schema.go")
+	tmpl, err := template.New("schema").Parse(jsonSchemaTmpl)
 	if err != nil {
 		panic(err.Error()) // bug
 	}
@@ -70,9 +70,9 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/raphael/goa"),
 	}
-	gg.WriteHeader("", "metadata", imports)
+	gg.WriteHeader("", "schema", imports)
 	data := map[string]interface{}{
-		"MetadataFile": metadataFile,
+		"JSONSchemaFile": schemaFile,
 	}
 	err = tmpl.Execute(gg, data)
 	if err != nil {
@@ -103,27 +103,27 @@ func tempvar() string {
 	return fmt.Sprintf("c%d", tempCount)
 }
 
-const metadataTmpl = `
-// Cached metadata
-var metadata []byte
+const jsonSchemaTmpl = `
+// Cached schema
+var schema []byte
 
-// MountMetadataController mounts the metadata under "/schema".
-func MountController(app *goa.Application) {
-	logger := app.Logger.New("ctrl", "Metadata")
+// MountJSONSchemaController mounts the API JSON schema controller under "/schema".
+func MountJSONSchemaController(app *goa.Application) {
+	logger := app.Logger.New("ctrl", "Schema")
 	logger.Info("mounting")
-	app.Router.GET("/schema", getMetadata)
+	app.Router.GET("/schema", getSchema)
 	logger.Info("handler", "action", "Get", "GET", "/schema")
 	logger.Info("mounted")
 }
 
-// getMetadata is the httprouter handle that returns the metadata JSON schema.
-func getMetadata(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	if len(metadata) == 0 {
-		metadata, _ = ioutil.ReadFile("{{.MetadataFile}}")
+// getSchema is the httprouter handle that returns the API JSON schema.
+func getSchema(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	if len(schema) == 0 {
+		schema, _ = ioutil.ReadFile("{{.JSONSchemaFile}}")
 	}
 	w.Header().Set("Content-Type", "application/schema+json")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	w.WriteHeader(200)
-	w.Write(metadata)
+	w.Write(schema)
 }
 `

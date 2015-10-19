@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"github.com/raphael/goa/codegen"
 	"github.com/raphael/goa/codegen/gen_main"
 	"github.com/raphael/goa/design"
 )
@@ -51,12 +52,16 @@ var _ = Describe("Generate", func() {
 	var files []string
 	var genErr error
 
+	var oldCommand string
+
 	BeforeEach(func() {
 		gopath := os.Getenv("GOPATH")
 		outDir = filepath.Join(gopath, "src", testgenPackagePath)
 		err := os.MkdirAll(outDir, 0777)
 		Ω(err).ShouldNot(HaveOccurred())
 		os.Args = []string{"codegen", "--out=" + outDir, "--design=foo"}
+		oldCommand = codegen.CommandName
+		codegen.CommandName = "app"
 	})
 
 	JustBeforeEach(func() {
@@ -67,6 +72,7 @@ var _ = Describe("Generate", func() {
 	})
 
 	AfterEach(func() {
+		codegen.CommandName = oldCommand
 		os.RemoveAll(outDir)
 	})
 

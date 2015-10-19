@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"regexp"
 
 	"github.com/raphael/goa/codegen"
 )
@@ -46,19 +45,4 @@ func (a *AllCommand) Run() ([]string, error) {
 		return nil, err
 	}
 	return all, nil
-}
-
-// metadataRegexp is the regular expression used to match undefined Metadata variable errors.
-var metadataRegexp = regexp.MustCompile(`undefined: "[^"]+"\.Metadata`)
-
-// simplify recognizes certain error messages and makes them easier to understand to users.
-func simplify(msg string) string {
-	switch {
-	case metadataRegexp.MatchString(msg):
-		return `"Metadata" global variable not found. Please make sure to assign the API definition to a variable named "Metadata":
-	var Metadata = API(...
-`
-	default:
-		return msg
-	}
 }

@@ -9,8 +9,8 @@ import (
 	"github.com/raphael/goa/design"
 )
 
-// ParamsRegex is the regex used to capture path parameters.
-var ParamsRegex = regexp.MustCompile("(?:[^/]*/:([^/]+))+")
+// WildcardRegex is the regex used to capture path parameters.
+var WildcardRegex = regexp.MustCompile("(?:[^/]*/:([^/]+))+")
 
 type (
 	// ContextsWriter generate codes for a goa application contexts.

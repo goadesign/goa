@@ -1,12 +1,12 @@
-package genmetadata
+package genschema
 
 import (
 	"github.com/raphael/goa/codegen"
 	"github.com/raphael/goa/codegen/meta"
 )
 
-// HostName is used to build the JSON schema ID of the root document.
-var HostName string
+// ServiceURL is used to build the JSON schema ID of the root document.
+var ServiceURL string
 
 // Command is the goa application code generator command line data structure.
 // It implements meta.Command.
@@ -16,19 +16,20 @@ type Command struct {
 
 // NewCommand instantiates a new command.
 func NewCommand() *Command {
-	base := codegen.NewBaseCommand("metadata", "Generate application metadata controller")
+	base := codegen.NewBaseCommand("schema", "Generate application JSON schema controller")
 	return &Command{BaseCommand: base}
 }
 
 // RegisterFlags registers the command line flags with the given registry.
 func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
+	r.Flag("url", "API base URL used to build JSON schema ID, e.g. https://www.myapi.com").Short('u').Required().StringVar(&ServiceURL)
 }
 
 // Run simply calls the meta generator.
 func (c *Command) Run() ([]string, error) {
 	gen := meta.NewGenerator(
-		"genmetadata.Generate",
-		[]*codegen.ImportSpec{codegen.SimpleImport("github.com/raphael/goa/codegen/gen_metadata")},
+		"genschema.Generate",
+		[]*codegen.ImportSpec{codegen.SimpleImport("github.com/raphael/goa/codegen/gen_schema")},
 		nil,
 	)
 	return gen.Generate()
