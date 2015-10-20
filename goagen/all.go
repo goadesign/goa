@@ -13,7 +13,7 @@ type AllCommand struct{}
 func (a *AllCommand) Name() string { return "default" }
 
 // Description returns the command description.
-func (a *AllCommand) Description() string { return "Default command, generates all artefacts." }
+func (a *AllCommand) Description() string { return "Default command, generates all artifacts." }
 
 // RegisterFlags registers all the sub-commands flags.
 func (a *AllCommand) RegisterFlags(r codegen.FlagRegistry) {

@@ -1,7 +1,6 @@
 package genschema
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -51,7 +50,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	os.RemoveAll(JSONSchemaDir())
 	os.MkdirAll(JSONSchemaDir(), 0755)
 	s := APISchema(api)
-	js, err := json.Marshal(s)
+	js, err := s.JSON()
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +65,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		panic(err.Error()) // bug
 	}
 	gg := codegen.NewGoGenerator(controllerFile)
-	g.genfiles = []string{controllerFile}
+	g.genfiles = []string{controllerFile, schemaFile}
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/raphael/goa"),
 	}
@@ -107,12 +106,12 @@ const jsonSchemaTmpl = `
 // Cached schema
 var schema []byte
 
-// MountJSONSchemaController mounts the API JSON schema controller under "/schema".
-func MountJSONSchemaController(app *goa.Application) {
+// MountController mounts the API JSON schema controller under "/schema".
+func MountController(app *goa.Application) {
 	logger := app.Logger.New("ctrl", "Schema")
 	logger.Info("mounting")
 	app.Router.GET("/schema", getSchema)
-	logger.Info("handler", "action", "Get", "GET", "/schema")
+	logger.Info("handler", "action", "Show", "GET", "/schema")
 	logger.Info("mounted")
 }
 

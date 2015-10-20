@@ -1,6 +1,7 @@
 package genschema
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/raphael/goa/design"
@@ -93,14 +94,30 @@ var (
 	mediaTypeDefinitions map[string]*JSONSchema
 )
 
+// Initialize the global variables
+func init() {
+	resourceDefinitions = make(map[string]*JSONSchema)
+	typeDefinitions = make(map[string]*JSONSchema)
+	mediaTypeDefinitions = make(map[string]*JSONSchema)
+}
+
 // NewJSONSchema instantiates a new JSON schema.
 func NewJSONSchema() *JSONSchema {
 	js := JSONSchema{
-		Schema:      SchemaRef,
 		Properties:  make(map[string]*JSONSchema),
 		Definitions: make(map[string]*JSONSchema),
 	}
 	return &js
+}
+
+// JSON serializes the schema into JSON.
+// It makes sure the "$schema" standard field is set if needed prior to delegating to the standard
+// JSON marshaler.
+func (s *JSONSchema) JSON() ([]byte, error) {
+	if s.Ref == "" {
+		s.Schema = SchemaRef
+	}
+	return json.Marshal(s)
 }
 
 // APISchema produces the API JSON hyper schema.
@@ -191,6 +208,7 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 	s := NewJSONSchema()
 	s.Description = r.Description
 	s.Type = JSONObject
+	resourceDefinitions[r.Name] = s
 	if mt, ok := api.MediaTypes[r.MediaType]; ok {
 		GenerateMediaTypeDefinition(api, mt)
 		mtd, _ := mediaTypeDefinitions[mt.TypeName]
@@ -202,10 +220,8 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 		var requestSchema *JSONSchema
 		if a.Payload != nil {
 			requestSchema = TypeSchema(api, a.Payload)
-		} else {
-			requestSchema = NewJSONSchema()
+			requestSchema.Description = a.Name + " payload"
 		}
-		requestSchema.Description = a.Name + " payload"
 		if a.Params != nil {
 			params := a.Params.Dup()
 			// We don't want to keep the path params, these are defined inline in the href
@@ -240,7 +256,6 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 			}
 			s.Links = append(s.Links, &link)
 		}
-		resourceDefinitions[r.Name] = s
 	}
 }
 
@@ -251,6 +266,7 @@ func GenerateMediaTypeDefinition(api *design.APIDefinition, mt *design.MediaType
 	}
 	s := NewJSONSchema()
 	s.Media = &JSONMedia{Type: mt.Identifier}
+	mediaTypeDefinitions[mt.TypeName] = s
 	for _, l := range mt.Links {
 		att := l.Attribute() // cannot be nil if DSL validated
 		r := l.MediaType().Resource
@@ -268,7 +284,6 @@ func GenerateMediaTypeDefinition(api *design.APIDefinition, mt *design.MediaType
 		})
 	}
 	s.Merge(TypeSchema(api, mt.UserTypeDefinition))
-	mediaTypeDefinitions[mt.TypeName] = s
 }
 
 // GenerateTypeDefinition produces the JSON schema corresponding to the given type.
@@ -276,7 +291,9 @@ func GenerateTypeDefinition(api *design.APIDefinition, ut *design.UserTypeDefini
 	if _, ok := typeDefinitions[ut.TypeName]; ok {
 		return
 	}
-	mediaTypeDefinitions[ut.TypeName] = AttributeSchema(api, ut.AttributeDefinition)
+	s := NewJSONSchema()
+	typeDefinitions[ut.TypeName] = s
+	buildAttributeSchema(api, s, ut.AttributeDefinition)
 }
 
 // TypeSchema produces the JSON schema corresponding to the given data type.
@@ -287,12 +304,17 @@ func TypeSchema(api *design.APIDefinition, t design.DataType) *JSONSchema {
 		s.Type = JSONType(actual.Name())
 	case *design.Array:
 		s.Type = JSONArray
-		s.Item = AttributeSchema(api, actual.ElemType)
+		s.Item = NewJSONSchema()
+		buildAttributeSchema(api, s.Item, actual.ElemType)
 	case design.Object:
 		s.Type = JSONObject
 		for n, at := range actual {
-			s.Definitions[n] = AttributeSchema(api, at)
-			s.Properties[n] = AttributeSchema(api, at)
+			def := NewJSONSchema()
+			buildAttributeSchema(api, def, at)
+			s.Definitions[n] = def
+			prop := NewJSONSchema()
+			prop.Ref = n
+			s.Properties[n] = prop
 		}
 	case *design.Hash:
 		s.Type = JSONObject
@@ -301,33 +323,6 @@ func TypeSchema(api *design.APIDefinition, t design.DataType) *JSONSchema {
 		s.Ref = TypeRef(api, actual)
 	case *design.MediaTypeDefinition:
 		s.Ref = MediaTypeRef(api, actual)
-	}
-	return s
-}
-
-// AttributeSchema produces the JSON schema that corresponds to the given attribute.
-func AttributeSchema(api *design.APIDefinition, at *design.AttributeDefinition) *JSONSchema {
-	s := TypeSchema(api, at.Type)
-	s.DefaultValue = at.DefaultValue
-	for _, val := range at.Validations {
-		switch actual := val.(type) {
-		case *design.EnumValidationDefinition:
-			s.Enum = actual.Values
-		case *design.FormatValidationDefinition:
-			s.Format = actual.Format
-		case *design.PatternValidationDefinition:
-			s.Pattern = actual.Pattern
-		case *design.MinimumValidationDefinition:
-			s.Minimum = actual.Min
-		case *design.MaximumValidationDefinition:
-			s.Maximum = actual.Max
-		case *design.MinLengthValidationDefinition:
-			s.MinLength = actual.MinLength
-		case *design.MaxLengthValidationDefinition:
-			s.MaxLength = actual.MaxLength
-		case *design.RequiredValidationDefinition:
-			s.Required = actual.Names
-		}
 	}
 	return s
 }
@@ -439,31 +434,41 @@ func (s *JSONSchema) Dup() *JSONSchema {
 	return &js
 }
 
+// buildAttributeSchema initializes the given JSON schema that corresponds to the given attribute.
+func buildAttributeSchema(api *design.APIDefinition, s *JSONSchema, at *design.AttributeDefinition) *JSONSchema {
+	s.Merge(TypeSchema(api, at.Type))
+	s.DefaultValue = at.DefaultValue
+	for _, val := range at.Validations {
+		switch actual := val.(type) {
+		case *design.EnumValidationDefinition:
+			s.Enum = actual.Values
+		case *design.FormatValidationDefinition:
+			s.Format = actual.Format
+		case *design.PatternValidationDefinition:
+			s.Pattern = actual.Pattern
+		case *design.MinimumValidationDefinition:
+			s.Minimum = actual.Min
+		case *design.MaximumValidationDefinition:
+			s.Maximum = actual.Max
+		case *design.MinLengthValidationDefinition:
+			s.MinLength = actual.MinLength
+		case *design.MaxLengthValidationDefinition:
+			s.MaxLength = actual.MaxLength
+		case *design.RequiredValidationDefinition:
+			s.Required = actual.Names
+		}
+	}
+	return s
+}
+
 // toSchemaHref produces a href that replaces the path wildcards with JSON schema references when
 // appropriate.
 func toSchemaHref(api *design.APIDefinition, r *design.RouteDefinition) string {
-	res := r.Parent.Parent
-	refs := make(map[string]string)
-	for res != nil {
-		ca := res.CanonicalAction()
-		if ca != nil && len(ca.Routes) > 0 {
-			pnames := ca.Routes[0].Params()
-			if len(pnames) > 0 {
-				pname := pnames[len(pnames)-1]
-				refs[pname] = fmt.Sprintf("{%s/%s}", ResourceRef(api, res), pname)
-			}
-		}
-		res = res.Parent()
-	}
 	params := r.Params()
-	tmpl := design.WildcardRegex.ReplaceAllLiteralString(r.FullPath(), "%s")
 	args := make([]interface{}, len(params))
 	for i, p := range params {
-		if ref, ok := refs[p]; ok {
-			args[i] = ref
-		} else {
-			args[i] = p
-		}
+		args[i] = fmt.Sprintf("{%s}", p)
 	}
+	tmpl := design.WildcardRegex.ReplaceAllLiteralString(r.FullPath(), "%s")
 	return fmt.Sprintf(tmpl, args...)
 }

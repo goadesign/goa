@@ -152,6 +152,13 @@ func Default(def interface{}) {
 	}
 }
 
+// Identity sets the attribute identity property names.
+func Identity(names ...string) {
+	if a, ok := attributeDefinition(true); ok {
+		a.IdentityProperties = names
+	}
+}
+
 // Enum defines the possible values for an attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor76.
 func Enum(val ...interface{}) {

@@ -291,7 +291,7 @@ func MountWidgetController(app *goa.Application, ctrl WidgetController) {
 	}
 	app.Router.Handle("GET", "/:id", goa.NewHTTPRouterHandle(app, "Widget", "Get", h))
 	idx++
-	logger.Info("handler", "action", "Get", "GET", "/:id")
+	logger.Info("handler", "action", "Get", "route", "GET /:id")
 
 	logger.Info("mounted")
 }

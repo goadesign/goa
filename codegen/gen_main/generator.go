@@ -187,7 +187,9 @@ func main() {
 {{range $name, $res := .Resources}}	// Mount "{{$res.FormatName true true}}" controller
 	{{$tmp := tempvar}}{{$tmp}} := New{{$res.FormatName false false}}Controller()
 	app.Mount{{$res.FormatName false false}}Controller(api, {{$tmp}})
-{{end}}{{if generateJSONSchema}}	schema.MountController(api)
+{{end}}{{if generateJSONSchema}}
+	// Mount JSON schema provider controller
+	schema.MountController(api)
 {{end}}
 	// Run application, listen on port 8080
 	api.Run(":8080")

@@ -21,8 +21,8 @@ func init() {
 	Commands = []codegen.Command{
 		&AllCommand{},
 		genapp.NewCommand(),
-		genmain.NewCommand(),
 		genschema.NewCommand(),
+		genmain.NewCommand(),
 	}
 }
 
@@ -73,12 +73,12 @@ func command() codegen.Command {
 	return nil
 }
 
-const help = `The goagen tool generates various artefacts from a goa application design package (metadata).
+const help = `The goagen tool generates various artifacts from a goa application design package (metadata).
 
-Each sub-command supported by the tool produces a specific type of artefacts. For example
+Each sub-command supported by the tool produces a specific type of artifacts. For example
 the "app" command causes goagen to generate the code that supports the application controllers.
 
 The "default" command (also invoked when no command is provided on the command line) runs the "app",
 "main" and "schema" commands generating the application code and main skeleton code if not
-already present.
+already present as well as its JSON hyper-schema.
 `

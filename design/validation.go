@@ -359,16 +359,33 @@ func (a *AttributeDefinition) Validate(ctx string, parent DSLDefinition) *Valida
 		}
 	}
 	if isObject {
+		for _, i := range a.IdentityProperties {
+			found := false
+			for n := range o {
+				if i == n {
+					found = true
+					break
+				}
+			}
+			if !found {
+				verr.Add(a, `identity attribute name %#v does not match an existing attribute name`, i)
+			}
+		}
 		for n, att := range o {
 			ctx = fmt.Sprintf("field %s", n)
 			if err := att.Validate(ctx, a); err != nil {
 				verr.Merge(err)
 			}
 		}
-	} else if a.Type.IsArray() {
-		elemType := a.Type.ToArray().ElemType
-		if err := elemType.Validate(ctx, a); err != nil {
-			verr.Merge(err)
+	} else {
+		if len(a.IdentityProperties) > 0 {
+			verr.Add(a, "non-object attribute cannot define identity properties")
+		}
+		if a.Type.IsArray() {
+			elemType := a.Type.ToArray().ElemType
+			if err := elemType.Validate(ctx, a); err != nil {
+				verr.Merge(err)
+			}
 		}
 	}
 
