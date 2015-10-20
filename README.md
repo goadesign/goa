@@ -218,23 +218,27 @@ func (c *ShowBottleContext) OK(resp *BottleMedia) error {
 to do is provide an actual implementation. Open the file `bottle.go` and replace the existing
 `ShowBottle` function with:
 ```go
-// ShowBottle implements the "show" action of the "bottles" controller.
-func ShowBottle(ctx *app.ShowBottleContext) error {
-	if ctx.ID == 0 {
+// Show implements the "show" action of the "bottles" controller.
+func (c *BottleController) Show(ctx *app.ShowBottleContext) error {
+	if ctx.BottleID == 0 {
 		// Emulate a missing record with ID 0
 		return ctx.NotFound()
 	}
 	// Build the resource using the generated data structure
-	bottle := app.Bottle{ID: ctx.ID, Name: fmt.Sprintf("Bottle #%d", ctx.ID)}
+	bottle := app.Bottle{
+		ID:   ctx.BottleID,
+		Name: fmt.Sprintf("Bottle #%d", ctx.BottleID),
+		Href: app.BottleHref(ctx.BottleID),
+	}
 
 	// Let the generated code produce the HTTP response using the
 	// media type described in the design (BottleMedia).
 	return ctx.OK(&bottle)
 }
 ```
-Before we build and run the app, let's take a look at `main.go`. The file contains a default
+Before we build and run the app, let's take a peek at `main.go`: the file contains a default
 implementation of `main` that instantiates a new goa application, initializes default middleware,
-mounts the `bottle` and `schema` controllers and finally run the HTTP server:
+mounts the `bottle` and `schema` controllers and runs the HTTP server.
 ```go
 func main() {
 	// Create application
@@ -263,38 +267,41 @@ go build -o cellar
 ```
 This should produce something like:
 ```
-INFO[07-26|21:33:03] mouting                                  app=cellar ctl=Bottle
-INFO[07-26|21:33:03] handler                                  app=cellar ctl=Bottle action=Show GET=/bottles/:bottleID
-INFO[07-26|21:33:03] mounted                                  app=cellar ctl=Bottle
-INFO[07-26|21:33:03] mouting                                  app=cellar ctl=Schema
-INFO[07-26|21:33:03] handler                                  app=cellar ctl=Schema action=GetSchema GET=/schema
-INFO[07-26|21:33:03] mounted                                  app=cellar ctl=Schema
-INFO[07-26|21:33:03] listen                                   app=cellar addr=:8080
+INFO[10-19|17:50:57] mounting                                 app=app ctrl=Bottle
+INFO[10-19|17:50:57] handler                                  app=app ctrl=Bottle action=Show route="GET /bottles/:bottleID"
+INFO[10-19|17:50:57] mounted                                  app=app ctrl=Bottle
+INFO[10-19|17:50:57] mounting                                 app=app ctrl=Schema
+INFO[10-19|17:50:57] handler                                  app=app ctrl=Schema action=Show route="GET /schema"
+INFO[10-19|17:50:57] mounted                                  app=app ctrl=Schema
+INFO[10-19|17:50:57] listen                                   app=app addr=:8080
 ```
 You can now test the app using `curl` for example:
 ```
 $ curl -i localhost:8080/bottles/1
 HTTP/1.1 200 OK
-Date: Mon, 27 Jul 2015 04:35:22 GMT
-Content-Length: 40
-Content-Type: text/plain; charset=utf-8
+Date: Tue, 20 Oct 2015 01:03:51 GMT
+Content-Length: 47
+Content-Type: application/vnd.goa.example.bottle; charset=utf-8
 
-{"ID":1,"Href":"/bottles/1","Name":"Bottle #1"}
+{"href":"/bottles/1","id":1,"name":"Bottle #1"}
 
 $ curl -i localhost:8080/bottles/0
 HTTP/1.1 404 NotFound
 Date: Mon, 27 Jul 2015 04:35:22 GMT
+Content-Length: 0
+Content-Type: text/plain; charset=utf-8
 ```
 You can exercise the validation code that `goagen` generated for you by passing an invalid (non-
 integer) id:
 ```
 $ curl -i localhost:8080/bottles/a
-HTTP/1.1 400 Bad Request
-Date: Mon, 27 Jul 2015 04:37:09 GMT
-Content-Length: 17
-Content-Type: text/plain; charset=utf-8
 
-invalid value 'a' for parameter id, must be a int
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+Date: Tue, 20 Oct 2015 01:16:40 GMT
+Content-Length: 120
+
+[{"kind":1,"title":"invalid parameter value","msg":"invalid value \"a\" for parameter \"bottleID\", must be a integer"}]
 ```
 Finally request the API JSON Hyper-schema with:
 ```

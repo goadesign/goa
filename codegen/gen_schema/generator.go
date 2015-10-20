@@ -32,6 +32,7 @@ func Generate(api *design.APIDefinition) ([]string, error) {
 func NewGenerator() (*Generator, error) {
 	app := kingpin.New("Main generator", "application JSON schema generator")
 	codegen.RegisterFlags(app)
+	NewCommand().RegisterFlags(app)
 	_, err := app.Parse(os.Args[1:])
 	if err != nil {
 		return nil, fmt.Errorf(`invalid command line: %s. Command line was "%s"`,
@@ -65,11 +66,10 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		panic(err.Error()) // bug
 	}
 	gg := codegen.NewGoGenerator(controllerFile)
-	g.genfiles = []string{controllerFile, schemaFile}
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/raphael/goa"),
 	}
-	gg.WriteHeader("", "schema", imports)
+	gg.WriteHeader(fmt.Sprintf("%s JSON Hyper-schema", api.Name), "schema", imports)
 	data := map[string]interface{}{
 		"JSONSchemaFile": schemaFile,
 	}
@@ -82,6 +82,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		g.Cleanup()
 		return nil, err
 	}
+	g.genfiles = []string{controllerFile, schemaFile}
 	return g.genfiles, nil
 }
 
@@ -111,7 +112,7 @@ func MountController(app *goa.Application) {
 	logger := app.Logger.New("ctrl", "Schema")
 	logger.Info("mounting")
 	app.Router.GET("/schema", getSchema)
-	logger.Info("handler", "action", "Show", "GET", "/schema")
+	logger.Info("handler", "action", "Show", "route", "GET /schema")
 	logger.Info("mounted")
 }
 

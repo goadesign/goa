@@ -341,17 +341,17 @@ type {{.Name}} struct {
 	coerceT = `{{if eq .Attribute.Type.Kind 1}}{{/* BooleanType */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.ParseBool(raw{{goify .Name true}}); err2 == nil {
 {{tabs .Depth}}	{{.Pkg}} = {{.VarName}}
 {{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "boolean", err2)
+{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "boolean", err)
 {{tabs .Depth}}}
 {{end}}{{if eq .Attribute.Type.Kind 2}}{{/* IntegerType */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.Atoi(raw{{goify .Name true}}); err2 == nil {
 {{tabs .Depth}}	{{.Pkg}} = int({{.VarName}})
 {{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "integer", err2)
+{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "integer", err)
 {{tabs .Depth}}}
 {{end}}{{if eq .Attribute.Type.Kind 3}}{{/* NumberType */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.ParseFloat(raw{{goify .Name true}}, 64); err2 == nil {
 {{tabs .Depth}}	{{.Pkg}} = {{.VarName}}
 {{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "number", err2)
+{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "number", err)
 {{tabs .Depth}}}
 {{end}}{{if eq .Attribute.Type.Kind 4}}{{/* StringType */}}{{tabs .Depth}}{{.Pkg}} = raw{{goify .Name true}}
 {{end}}{{if eq .Attribute.Type.Kind 5}}{{/* ArrayType */}}{{tabs .Depth}}elems{{goify .Name true}} := strings.Split(raw{{goify .Name true}}, ",")
@@ -392,12 +392,13 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 	// ctxRespT generates response helper methods GoGenerator
 	// template input: *ContextTemplateData
 	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{.FormatName false }} sends a HTTP response with status code {{.Status}}.
-func (c *{{$ctx.Name}}) {{goify .Name true}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp {{gotyperef $mt 0}}{{if gt (len $mt.Views) 1}}, view {{gotypename $mt 0}}ViewEnum{{end}}{{end}}) error {
+func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp {{gotyperef $mt 0}}{{if gt (len $mt.Views) 1}}, view {{gotypename $mt 0}}ViewEnum{{end}}{{end}}) error {
 {{if $mt}}	r, err := resp.Dump({{if gt (len $mt.Views) 1}}view{{end}})
 	if err != nil {
 		return fmt.Errorf("invalid response: %s", err)
 	}
-	return c.JSON({{.Status}}, r){{else}}return c.Respond({{.Status}}, nil){{end}}
+	ctx.ResponseHeader().Set("Content-Type", "{{$mt.Identifier}}; charset=utf-8")
+	return ctx.JSON({{.Status}}, r){{else}}return ctx.Respond({{.Status}}, nil){{end}}
 }
 {{end}}`
 
@@ -423,7 +424,8 @@ func New{{gotypename .Payload 0}}(raw interface{}) ({{gotyperef .Payload 0}}, er
 
 	// ctrlT generates the controller interface for a given resource.
 	// template input: *ControllerTemplateData
-	ctrlT = `type {{.Resource}}Controller interface {
+	ctrlT = `// {{.Resource}}Controller is the controller interface for the {{.Resource}} actions.
+type {{.Resource}}Controller interface {
 {{range .Actions}}	{{.Name}}(*{{.Context}}) error
 {{end}}}
 `
@@ -433,12 +435,10 @@ func New{{gotypename .Payload 0}}(raw interface{}) ({{gotyperef .Payload 0}}, er
 	mountT = `
 // Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given application.
 func Mount{{.Resource}}Controller(app *goa.Application, ctrl {{.Resource}}Controller) {
-	idx := 0
 	var h goa.Handler
 	logger := app.Logger.New("ctrl", "{{.Resource}}")
-	logger.Info("mounting")
-{{$res := .Resource}}{{range .Actions}}{{$action := .}}
-	h = func(c *goa.Context) error {
+	logger.Info("mounting"){{$res := .Resource}}
+{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
 		ctx, err := New{{.Context}}(c)
 		if err != nil {
 			return goa.NewBadRequestError(err)
@@ -446,10 +446,8 @@ func Mount{{.Resource}}Controller(app *goa.Application, ctrl {{.Resource}}Contro
 		return ctrl.{{.Name}}(ctx)
 	}
 {{range .Routes}}	app.Router.Handle("{{.Verb}}", "{{.FullPath}}", goa.NewHTTPRouterHandle(app, "{{$res}}", "{{$action.Name}}", h))
-	idx++
 	logger.Info("handler", "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}")
-{{end}}{{end}}
-	logger.Info("mounted")
+{{end}}{{end}}	logger.Info("mounted")
 }
 `
 

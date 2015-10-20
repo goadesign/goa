@@ -581,7 +581,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 		if param, err2 := strconv.Atoi(rawParam); err2 == nil {
 			ctx.Param = int(param)
 		} else {
-			err = goa.InvalidParamTypeError("param", rawParam, "integer", err2)
+			err = goa.InvalidParamTypeError("param", rawParam, "integer", err)
 		}
 		ctx.HasParam = true
 	}
@@ -629,7 +629,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 		if param, err2 := strconv.ParseFloat(rawParam, 64); err2 == nil {
 			ctx.Param = param
 		} else {
-			err = goa.InvalidParamTypeError("param", rawParam, "number", err2)
+			err = goa.InvalidParamTypeError("param", rawParam, "number", err)
 		}
 		ctx.HasParam = true
 	}
@@ -654,7 +654,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 		if param, err2 := strconv.ParseBool(rawParam); err2 == nil {
 			ctx.Param = param
 		} else {
-			err = goa.InvalidParamTypeError("param", rawParam, "boolean", err2)
+			err = goa.InvalidParamTypeError("param", rawParam, "boolean", err)
 		}
 		ctx.HasParam = true
 	}
@@ -706,7 +706,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 			if elem, err2 := strconv.Atoi(rawElem); err2 == nil {
 				elemsParam2[i] = int(elem)
 			} else {
-				err = goa.InvalidParamTypeError("elem", rawElem, "integer", err2)
+				err = goa.InvalidParamTypeError("elem", rawElem, "integer", err)
 			}
 		}
 		ctx.Param = elemsParam2
@@ -734,7 +734,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 		if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
 			ctx.Int = int(int_)
 		} else {
-			err = goa.InvalidParamTypeError("int", rawInt, "integer", err2)
+			err = goa.InvalidParamTypeError("int", rawInt, "integer", err)
 		}
 		ctx.HasInt = true
 	}
@@ -760,7 +760,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 		if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
 			ctx.Int = int(int_)
 		} else {
-			err = goa.InvalidParamTypeError("int", rawInt, "integer", err2)
+			err = goa.InvalidParamTypeError("int", rawInt, "integer", err)
 		}
 	}
 	return &ctx, err
@@ -806,17 +806,16 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 }
 `
 
-	simpleController = `type BottlesController interface {
+	simpleController = `// BottlesController is the controller interface for the Bottles actions.
+type BottlesController interface {
 	list(*ListBottleContext) error
 }
 `
 
 	simpleMount = `func MountBottlesController(app *goa.Application, ctrl BottlesController) {
-	idx := 0
 	var h goa.Handler
 	logger := app.Logger.New("ctrl", "Bottles")
 	logger.Info("mounting")
-
 	h = func(c *goa.Context) error {
 		ctx, err := NewListBottleContext(c)
 		if err != nil {
@@ -825,25 +824,22 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 		return ctrl.list(ctx)
 	}
 	app.Router.Handle("GET", "/accounts/:accountID/bottles", goa.NewHTTPRouterHandle(app, "Bottles", "list", h))
-	idx++
 	logger.Info("handler", "action", "list", "route", "GET /accounts/:accountID/bottles")
-
 	logger.Info("mounted")
 }
 `
 
-	multiController = `type BottlesController interface {
+	multiController = `// BottlesController is the controller interface for the Bottles actions.
+type BottlesController interface {
 	list(*ListBottleContext) error
 	show(*ShowBottleContext) error
 }
 `
 
 	multiMount = `func MountBottlesController(app *goa.Application, ctrl BottlesController) {
-	idx := 0
 	var h goa.Handler
 	logger := app.Logger.New("ctrl", "Bottles")
 	logger.Info("mounting")
-
 	h = func(c *goa.Context) error {
 		ctx, err := NewListBottleContext(c)
 		if err != nil {
@@ -852,9 +848,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 		return ctrl.list(ctx)
 	}
 	app.Router.Handle("GET", "/accounts/:accountID/bottles", goa.NewHTTPRouterHandle(app, "Bottles", "list", h))
-	idx++
 	logger.Info("handler", "action", "list", "route", "GET /accounts/:accountID/bottles")
-
 	h = func(c *goa.Context) error {
 		ctx, err := NewShowBottleContext(c)
 		if err != nil {
@@ -863,9 +857,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 		return ctrl.show(ctx)
 	}
 	app.Router.Handle("GET", "/accounts/:accountID/bottles/:id", goa.NewHTTPRouterHandle(app, "Bottles", "show", h))
-	idx++
 	logger.Info("handler", "action", "show", "route", "GET /accounts/:accountID/bottles/:id")
-
 	logger.Info("mounted")
 }
 `

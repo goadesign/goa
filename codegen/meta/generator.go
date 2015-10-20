@@ -74,7 +74,7 @@ func (m *Generator) Generate() ([]string, error) {
 	}
 
 	// Create temporary directory used for generation under the output dir.
-	gendir, err := ioutil.TempDir(codegen.OutputDir, "codegen")
+	gendir, err := ioutil.TempDir(codegen.OutputDir, "goagen")
 	if err != nil {
 		if _, ok := err.(*os.PathError); ok {
 			err = fmt.Errorf(`invalid output directory path "%s"`, codegen.OutputDir)
@@ -87,7 +87,7 @@ func (m *Generator) Generate() ([]string, error) {
 		}
 	}()
 	if codegen.Debug {
-		fmt.Printf("codegen source dir: %s\n", gendir)
+		fmt.Printf("goagen source dir: %s\n", gendir)
 	}
 
 	// Figure out design package name from its path
@@ -138,7 +138,7 @@ func (m *Generator) Generate() ([]string, error) {
 	}
 	if codegen.Debug {
 		src, _ := ioutil.ReadFile(filename)
-		fmt.Printf("codegen source:\n%s\n", src)
+		fmt.Printf("goagen source:\n%s\n", src)
 	}
 
 	// Compile and run generated tool.
@@ -160,20 +160,20 @@ func (m *Generator) compile(srcDir string) (string, error) {
 	}
 	c := exec.Cmd{
 		Path: gobin,
-		Args: []string{gobin, "build", "-o", "codegen"},
+		Args: []string{gobin, "build", "-o", "goagen"},
 		Dir:  srcDir,
 	}
 	out, err := c.CombinedOutput()
 	if codegen.Debug {
-		fmt.Printf("[%s]$ %s build -o codegen\n%s\n", srcDir, gobin, out)
+		fmt.Printf("[%s]$ %s build -o goagen\n%s\n", srcDir, gobin, out)
 	}
 	if err != nil {
 		if len(out) > 0 {
 			return "", fmt.Errorf(string(out))
 		}
-		return "", fmt.Errorf("failed to compile codegen: %s", err)
+		return "", fmt.Errorf("failed to compile goagen: %s", err)
 	}
-	return filepath.Join(srcDir, "codegen"), nil
+	return filepath.Join(srcDir, "goagen"), nil
 }
 
 // spawn runs the compiled generator using the arguments initialized by Kingpin

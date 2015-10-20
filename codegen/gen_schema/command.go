@@ -30,10 +30,11 @@ func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
 
 // Run simply calls the meta generator.
 func (c *Command) Run() ([]string, error) {
+	flags := map[string]string{"url": ServiceURL}
 	gen := meta.NewGenerator(
 		"genschema.Generate",
 		[]*codegen.ImportSpec{codegen.SimpleImport("github.com/raphael/goa/codegen/gen_schema")},
-		nil,
+		flags,
 	)
 	return gen.Generate()
 }

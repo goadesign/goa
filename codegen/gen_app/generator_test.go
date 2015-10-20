@@ -19,7 +19,7 @@ var _ = Describe("NewGenerator", func() {
 
 	Context("with dummy command line flags", func() {
 		BeforeEach(func() {
-			os.Args = []string{"codegen", "--out=_foo", "--design=bar"}
+			os.Args = []string{"goagen", "--out=_foo", "--design=bar"}
 		})
 
 		AfterEach(func() {
@@ -60,7 +60,7 @@ var _ = Describe("Generate", func() {
 		var err error
 		outDir, err = ioutil.TempDir("", "")
 		Ω(err).ShouldNot(HaveOccurred())
-		os.Args = []string{"codegen", "--out=" + outDir, "--design=foo"}
+		os.Args = []string{"goagen", "--out=" + outDir, "--design=foo"}
 	})
 
 	JustBeforeEach(func() {
@@ -210,8 +210,8 @@ var _ = Describe("Generate", func() {
 const contextsCodeTmpl = `//************************************************************************//
 // test api: Application Contexts
 //
-// Generated with codegen v0.0.1, command line:
-// $ codegen
+// Generated with goagen v0.0.1, command line:
+// $ goagen
 // --out={{.outDir}}
 // --design={{.design}}
 //
@@ -245,20 +245,21 @@ func NewGetWidgetContext(c *goa.Context) (*GetWidgetContext, error) {
 }
 
 // OK sends a HTTP response with status code 200.
-func (c *GetWidgetContext) OK(resp ID) error {
+func (ctx *GetWidgetContext) OK(resp ID) error {
 	r, err := resp.Dump()
 	if err != nil {
 		return fmt.Errorf("invalid response: %s", err)
 	}
-	return c.JSON(200, r)
+	ctx.ResponseHeader().Set("Content-Type", "vnd.rightscale.codegen.test.widgets; charset=utf-8")
+	return ctx.JSON(200, r)
 }
 `
 
 const controllersCodeTmpl = `//************************************************************************//
 // test api: Application Controllers
 //
-// Generated with codegen v0.0.1, command line:
-// $ codegen
+// Generated with goagen v0.0.1, command line:
+// $ goagen
 // --out={{.outDir}}
 // --design={{.design}}
 //
@@ -271,17 +272,16 @@ import (
 	"github.com/raphael/goa"
 )
 
+// WidgetController is the controller interface for the Widget actions.
 type WidgetController interface {
 	Get(*GetWidgetContext) error
 }
 
 // MountWidgetController "mounts" a Widget resource controller on the given application.
 func MountWidgetController(app *goa.Application, ctrl WidgetController) {
-	idx := 0
 	var h goa.Handler
 	logger := app.Logger.New("ctrl", "Widget")
 	logger.Info("mounting")
-
 	h = func(c *goa.Context) error {
 		ctx, err := NewGetWidgetContext(c)
 		if err != nil {
@@ -290,9 +290,7 @@ func MountWidgetController(app *goa.Application, ctrl WidgetController) {
 		return ctrl.Get(ctx)
 	}
 	app.Router.Handle("GET", "/:id", goa.NewHTTPRouterHandle(app, "Widget", "Get", h))
-	idx++
 	logger.Info("handler", "action", "Get", "route", "GET /:id")
-
 	logger.Info("mounted")
 }
 `
@@ -300,8 +298,8 @@ func MountWidgetController(app *goa.Application, ctrl WidgetController) {
 const hrefsCodeTmpl = `//************************************************************************//
 // test api: Application Resource Href Factories
 //
-// Generated with codegen v0.0.1, command line:
-// $ codegen
+// Generated with goagen v0.0.1, command line:
+// $ goagen
 // --out={{.outDir}}
 // --design={{.design}}
 //
@@ -321,8 +319,8 @@ func WidgetHref(id interface{}) string {
 const mediaTypesCodeTmpl = `//************************************************************************//
 // test api: Application Media Types
 //
-// Generated with codegen v0.0.1, command line:
-// $ codegen
+// Generated with goagen v0.0.1, command line:
+// $ goagen
 // --out={{.outDir}}
 // --design={{.design}}
 //

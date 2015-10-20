@@ -15,7 +15,7 @@ func CommandLine() string {
 	// end up creating different command line comments (because of the temporary directory it
 	// runs in).
 	cmd := fmt.Sprintf("$ %s %s", filepath.Base(os.Args[0]), strings.Join(os.Args[1:], " "))
-	return strings.Replace(cmd, " --", "\n  --", -1)
+	return strings.Replace(cmd, " --", "\n    --", -1)
 }
 
 // Comment produces line comments by concatenating the given strings and producing 80 characters

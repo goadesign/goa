@@ -11,14 +11,14 @@ type (
 	// JSONSchema represents an instance of a JSON schema.
 	// See http://json-schema.org/documentation.html
 	JSONSchema struct {
+		Schema string `json:"$schema,omitempty"`
 		// Core schema
 		ID           string                 `json:"id,omitempty"`
-		Description  string                 `json:"description,omitempty"`
-		Schema       string                 `json:"$schema"`
 		Type         JSONType               `json:"type,omitempty"`
-		Properties   map[string]*JSONSchema `json:"properties,omitempty"`
 		Item         *JSONSchema            `json:"item,omitempty"`
+		Properties   map[string]*JSONSchema `json:"properties,omitempty"`
 		Definitions  map[string]*JSONSchema `json:"definitions,omitempty"`
+		Description  string                 `json:"description,omitempty"`
 		DefaultValue interface{}            `json:"defaultValue,omitempty"`
 
 		// Hyper schema
@@ -39,6 +39,9 @@ type (
 		MaxLength            int           `json:"maxLength,omitempty"`
 		Required             []string      `json:"required,omitempty"`
 		AdditionalProperties bool          `json:"additionalProperties,omitempty"`
+
+		// Union
+		AnyOf []*JSONSchema `json:"anyOf,omitempty"`
 	}
 
 	// JSONType is the JSON type enum.
@@ -84,21 +87,13 @@ const (
 const SchemaRef = "http://json-schema.org/draft-04/hyper-schema"
 
 var (
-	// Resource JSON Schemas that have been generated.
-	resourceDefinitions map[string]*JSONSchema
-
-	// Type JSON Schemas that have been generated.
-	typeDefinitions map[string]*JSONSchema
-
-	// Media type JSON Schemas that have been generated.
-	mediaTypeDefinitions map[string]*JSONSchema
+	// definitions contains the generated JSON schema definitions
+	definitions map[string]*JSONSchema
 )
 
 // Initialize the global variables
 func init() {
-	resourceDefinitions = make(map[string]*JSONSchema)
-	typeDefinitions = make(map[string]*JSONSchema)
-	mediaTypeDefinitions = make(map[string]*JSONSchema)
+	definitions = make(map[string]*JSONSchema)
 }
 
 // NewJSONSchema instantiates a new JSON schema.
@@ -122,9 +117,8 @@ func (s *JSONSchema) JSON() ([]byte, error) {
 
 // APISchema produces the API JSON hyper schema.
 func APISchema(api *design.APIDefinition) *JSONSchema {
-	properties := make(map[string]*JSONSchema, len(api.Resources))
 	api.IterateResources(func(r *design.ResourceDefinition) error {
-		properties[r.Name] = &JSONSchema{Ref: ResourceRef(api, r)}
+		GenerateResourceDefinition(api, r)
 		return nil
 	})
 	links := []*JSONLink{
@@ -142,79 +136,27 @@ func APISchema(api *design.APIDefinition) *JSONSchema {
 			},
 		},
 	}
-	definitions := map[string]*JSONSchema{
-		"resources": &JSONSchema{
-			Description: fmt.Sprintf("%s resources", api.Name),
-			Schema:      SchemaRef,
-			Type:        JSONObject,
-			Properties:  resourceDefinitions,
-		},
-		"media": &JSONSchema{
-			Description: fmt.Sprintf("%s media types", api.Name),
-			Schema:      SchemaRef,
-			Type:        JSONObject,
-			Properties:  mediaTypeDefinitions,
-		},
-		"types": &JSONSchema{
-			Description: fmt.Sprintf("%s user types", api.Name),
-			Schema:      SchemaRef,
-			Type:        JSONObject,
-			Properties:  typeDefinitions,
-		},
-	}
 	s := JSONSchema{
 		ID:          fmt.Sprintf("%s/schema", ServiceURL),
-		Schema:      SchemaRef,
 		Title:       api.Title,
 		Description: api.Description,
 		Type:        JSONObject,
 		Definitions: definitions,
-		Properties:  properties,
+		Properties:  propertiesFromDefs(definitions, "#/definitions/"),
 		Links:       links,
 	}
 	return &s
 }
 
-// ResourceRef produces the JSON reference to the resource definition.
-func ResourceRef(api *design.APIDefinition, r *design.ResourceDefinition) string {
-	if _, ok := resourceDefinitions[r.Name]; !ok {
-		GenerateResourceDefinition(api, r)
-	}
-	return fmt.Sprintf("#/definitions/resources/%s", r.FormatName(true, false))
-}
-
-// MediaTypeRef produces the JSON reference to the media type definition.
-func MediaTypeRef(api *design.APIDefinition, mt *design.MediaTypeDefinition) string {
-	if _, ok := mediaTypeDefinitions[mt.TypeName]; !ok {
-		GenerateMediaTypeDefinition(api, mt)
-	}
-	return fmt.Sprintf("#/definitions/media/%s", mt.FormatName(true, false))
-}
-
-// TypeRef produces the JSON reference to the type definition.
-func TypeRef(api *design.APIDefinition, ut *design.UserTypeDefinition) string {
-	if _, ok := resourceDefinitions[ut.TypeName]; !ok {
-		GenerateTypeDefinition(api, ut)
-	}
-	return fmt.Sprintf("#/definitions/types/%s", ut.FormatName(true, false))
-}
-
 // GenerateResourceDefinition produces the JSON schema corresponding to the given API resource.
 // It stores the results in cachedSchema.
 func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDefinition) {
-	if _, ok := resourceDefinitions[r.Name]; ok {
-		return
-	}
 	s := NewJSONSchema()
 	s.Description = r.Description
 	s.Type = JSONObject
-	resourceDefinitions[r.Name] = s
+	definitions[r.FormatName(true, false)] = s
 	if mt, ok := api.MediaTypes[r.MediaType]; ok {
-		GenerateMediaTypeDefinition(api, mt)
-		mtd, _ := mediaTypeDefinitions[mt.TypeName]
-		for n, p := range mtd.Properties {
-			s.Properties[n] = p.Dup()
-		}
+		buildMediaTypeSchema(api, mt, s)
 	}
 	for _, a := range r.Actions {
 		var requestSchema *JSONSchema
@@ -231,68 +173,77 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 				}
 			}
 		}
-		var successResponse *design.ResponseDefinition
+		var targetSchema *JSONSchema
+		var identifier string
 		for _, resp := range a.Responses {
-			if resp.Status > 199 && resp.Status < 300 {
-				successResponse = resp
-				break
+			if mt, ok := api.MediaTypes[resp.MediaType]; ok {
+				if identifier == "" {
+					identifier = mt.Identifier
+				} else {
+					identifier = ""
+				}
+				if targetSchema == nil {
+					targetSchema = TypeSchema(api, mt)
+				} else if targetSchema.AnyOf == nil {
+					firstSchema := targetSchema
+					targetSchema = NewJSONSchema()
+					targetSchema.AnyOf = []*JSONSchema{firstSchema, TypeSchema(api, mt)}
+				} else {
+					targetSchema.AnyOf = append(targetSchema.AnyOf, TypeSchema(api, mt))
+				}
 			}
 		}
-		var respMT *design.MediaTypeDefinition
-		if successResponse != nil {
-			respMT, _ = api.MediaTypes[successResponse.MediaType]
-		}
-		for _, r := range a.Routes {
+		for i, r := range a.Routes {
 			link := JSONLink{
-				Title:  a.Description,
-				Rel:    a.Name,
-				Href:   toSchemaHref(api, r),
-				Method: r.Verb,
-				Schema: requestSchema,
+				Title:        a.Description,
+				Rel:          a.Name,
+				Href:         toSchemaHref(api, r),
+				Method:       r.Verb,
+				Schema:       requestSchema,
+				TargetSchema: targetSchema,
+				MediaType:    identifier,
 			}
-			if respMT != nil {
-				link.MediaType = respMT.Identifier
-				link.TargetSchema = TypeSchema(api, respMT)
+			if i == 0 && a.Parent.CanonicalAction().Name == a.Name {
+				link.Rel = "self"
 			}
 			s.Links = append(s.Links, &link)
 		}
 	}
 }
 
+// MediaTypeRef produces the JSON reference to the media type definition.
+func MediaTypeRef(api *design.APIDefinition, mt *design.MediaTypeDefinition) string {
+	if _, ok := definitions[mt.FormatName(true, false)]; !ok {
+		GenerateMediaTypeDefinition(api, mt)
+	}
+	return fmt.Sprintf("#/definitions/%s", mt.FormatName(true, false))
+}
+
+// TypeRef produces the JSON reference to the type definition.
+func TypeRef(api *design.APIDefinition, ut *design.UserTypeDefinition) string {
+	if _, ok := definitions[ut.FormatName(true, false)]; !ok {
+		GenerateTypeDefinition(api, ut)
+	}
+	return fmt.Sprintf("#/definitions/%s", ut.FormatName(true, false))
+}
+
 // GenerateMediaTypeDefinition produces the JSON schema corresponding to the given media type.
 func GenerateMediaTypeDefinition(api *design.APIDefinition, mt *design.MediaTypeDefinition) {
-	if _, ok := mediaTypeDefinitions[mt.TypeName]; ok {
+	if _, ok := definitions[mt.FormatName(true, false)]; ok {
 		return
 	}
 	s := NewJSONSchema()
-	s.Media = &JSONMedia{Type: mt.Identifier}
-	mediaTypeDefinitions[mt.TypeName] = s
-	for _, l := range mt.Links {
-		att := l.Attribute() // cannot be nil if DSL validated
-		r := l.MediaType().Resource
-		var href string
-		if r != nil {
-			href = toSchemaHref(api, r.CanonicalAction().Routes[0])
-		}
-		s.Links = append(s.Links, &JSONLink{
-			Title:        att.Description,
-			Rel:          l.Name,
-			Href:         href,
-			Method:       "GET",
-			TargetSchema: TypeSchema(api, l.MediaType()),
-			MediaType:    l.MediaType().Identifier,
-		})
-	}
-	s.Merge(TypeSchema(api, mt.UserTypeDefinition))
+	definitions[mt.FormatName(true, false)] = s
+	buildMediaTypeSchema(api, mt, s)
 }
 
 // GenerateTypeDefinition produces the JSON schema corresponding to the given type.
 func GenerateTypeDefinition(api *design.APIDefinition, ut *design.UserTypeDefinition) {
-	if _, ok := typeDefinitions[ut.TypeName]; ok {
+	if _, ok := definitions[ut.FormatName(true, false)]; ok {
 		return
 	}
 	s := NewJSONSchema()
-	typeDefinitions[ut.TypeName] = s
+	definitions[ut.FormatName(true, false)] = s
 	buildAttributeSchema(api, s, ut.AttributeDefinition)
 }
 
@@ -309,11 +260,8 @@ func TypeSchema(api *design.APIDefinition, t design.DataType) *JSONSchema {
 	case design.Object:
 		s.Type = JSONObject
 		for n, at := range actual {
-			def := NewJSONSchema()
-			buildAttributeSchema(api, def, at)
-			s.Definitions[n] = def
 			prop := NewJSONSchema()
-			prop.Ref = n
+			buildAttributeSchema(api, prop, at)
 			s.Properties[n] = prop
 		}
 	case *design.Hash:
@@ -438,6 +386,7 @@ func (s *JSONSchema) Dup() *JSONSchema {
 func buildAttributeSchema(api *design.APIDefinition, s *JSONSchema, at *design.AttributeDefinition) *JSONSchema {
 	s.Merge(TypeSchema(api, at.Type))
 	s.DefaultValue = at.DefaultValue
+	s.Description = at.Description
 	for _, val := range at.Validations {
 		switch actual := val.(type) {
 		case *design.EnumValidationDefinition:
@@ -467,8 +416,45 @@ func toSchemaHref(api *design.APIDefinition, r *design.RouteDefinition) string {
 	params := r.Params()
 	args := make([]interface{}, len(params))
 	for i, p := range params {
-		args[i] = fmt.Sprintf("{%s}", p)
+		args[i] = fmt.Sprintf("/{%s}", p)
 	}
 	tmpl := design.WildcardRegex.ReplaceAllLiteralString(r.FullPath(), "%s")
 	return fmt.Sprintf(tmpl, args...)
+}
+
+// propertiesFromDefs creates a Properties map referencing the given definitions under the given
+// path.
+func propertiesFromDefs(definitions map[string]*JSONSchema, path string) map[string]*JSONSchema {
+	res := make(map[string]*JSONSchema, len(definitions))
+	for n := range definitions {
+		if n == "identity" {
+			continue
+		}
+		s := NewJSONSchema()
+		s.Ref = path + n
+		res[n] = s
+	}
+	return res
+}
+
+// buildMediaTypeSchema initializes s as the JSON schema representing mt.
+func buildMediaTypeSchema(api *design.APIDefinition, mt *design.MediaTypeDefinition, s *JSONSchema) {
+	s.Media = &JSONMedia{Type: mt.Identifier}
+	for _, l := range mt.Links {
+		att := l.Attribute() // cannot be nil if DSL validated
+		r := l.MediaType().Resource
+		var href string
+		if r != nil {
+			href = toSchemaHref(api, r.CanonicalAction().Routes[0])
+		}
+		s.Links = append(s.Links, &JSONLink{
+			Title:        att.Description,
+			Rel:          l.Name,
+			Href:         href,
+			Method:       "GET",
+			TargetSchema: TypeSchema(api, l.MediaType()),
+			MediaType:    l.MediaType().Identifier,
+		})
+	}
+	buildAttributeSchema(api, s, mt.AttributeDefinition)
 }

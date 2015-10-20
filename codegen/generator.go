@@ -83,7 +83,7 @@ const (
 	headerT = `{{if .Title}}//************************************************************************//
 // {{.Title}}
 //
-// Generated with codegen v{{.ToolVersion}}, command line:
+// Generated with goagen v{{.ToolVersion}}, command line:
 {{comment commandLine}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY
