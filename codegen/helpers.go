@@ -5,8 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/rightscale/rsc/gen/writers/text"
 )
 
 // CommandLine return the command used to run this process.
@@ -30,7 +28,29 @@ func Comment(elems ...string) string {
 		trimmed[i] = strings.TrimLeft(l, " \t")
 	}
 	t := strings.Join(trimmed, "\n")
-	return text.Indent(t, "// ")
+
+	return Indent(t, "// ")
+}
+
+// Indent inserts prefix at the beginning of each non-empty line of s. The
+// end-of-line marker is NL.
+func Indent(s, prefix string) string {
+	return string(IndentBytes([]byte(s), []byte(prefix)))
+}
+
+// IndentBytes inserts prefix at the beginning of each non-empty line of b.
+// The end-of-line marker is NL.
+func IndentBytes(b, prefix []byte) []byte {
+	var res []byte
+	bol := true
+	for _, c := range b {
+		if bol && c != '\n' {
+			res = append(res, prefix...)
+		}
+		res = append(res, c)
+		bol = c == '\n'
+	}
+	return res
 }
 
 // Tabs returns a string made of depth tab characters.

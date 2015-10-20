@@ -16,7 +16,7 @@ var (
 	Design *APIDefinition
 
 	// WildcardRegex is the regular expression used to capture path parameters.
-	WildcardRegex = regexp.MustCompile("/(?::|\\*)([a-zA-Z0-9_]+)")
+	WildcardRegex = regexp.MustCompile(`/(?::|\*)([a-zA-Z0-9_]+)`)
 )
 
 type (
