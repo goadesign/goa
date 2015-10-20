@@ -33,7 +33,7 @@ lint:
 	fi
 
 test:
-	@ginkgo -r --randomizeAllSpecs --failOnPending --randomizeSuites --race
+	@ginkgo -r --randomizeAllSpecs --failOnPending --randomizeSuites --race -skipPackage vendor
 	@cd examples/cellar && go build
 
 goagen:
