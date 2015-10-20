@@ -41,13 +41,19 @@ func MediaType(identifier string, dsl func()) *MediaTypeDefinition {
 		Design.MediaTypes = make(map[string]*MediaTypeDefinition)
 	}
 	if topLevelDefinition(true) {
-		mediatype, _, err := mime.ParseMediaType(identifier)
+		identifier, params, err := mime.ParseMediaType(identifier)
 		if err != nil {
 			ReportError("invalid media type identifier %#v: %s",
 				identifier, err)
 		}
-		elems := strings.Split(mediatype, ".")
-		typeName := inflect.Camelize(elems[len(elems)-1])
+		slash := strings.Index(identifier, "/")
+		if slash == -1 {
+			identifier += "/json"
+		}
+		identifier = mime.FormatMediaType(identifier, params)
+		elems := strings.Split(identifier, ".")
+		elems = strings.Split(elems[len(elems)-1], "/")
+		typeName := inflect.Camelize(elems[0])
 		if typeName == "" {
 			mediaTypeCount++
 			typeName = fmt.Sprintf("MediaType%d", mediaTypeCount)
@@ -249,6 +255,10 @@ func CollectionOf(m *MediaTypeDefinition, dsl ...func()) *MediaTypeDefinition {
 		ReportError("invalid media type identifier %#v: %s", id, err)
 		return nil
 	}
+	slash := strings.Index(mediatype, "/")
+	if slash == -1 {
+		mediatype += "/json"
+	}
 	hasType := false
 	for param := range params {
 		if param == "type" {
@@ -258,8 +268,8 @@ func CollectionOf(m *MediaTypeDefinition, dsl ...func()) *MediaTypeDefinition {
 	}
 	if !hasType {
 		params["type"] = "collection"
-		id = mime.FormatMediaType(mediatype, params)
 	}
+	id = mime.FormatMediaType(mediatype, params)
 	typeName := m.TypeName + "Collection"
 	mt := NewMediaTypeDefinition(typeName, id, func() {
 		if mt, ok := mediaTypeDefinition(true); ok {

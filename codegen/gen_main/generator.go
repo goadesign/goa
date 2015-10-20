@@ -171,6 +171,7 @@ func okResp(a *design.ActionDefinition) map[string]interface{} {
 		"Name":             ok.Name,
 		"HasMultipleViews": len(mt.Views) > 1,
 		"GoType":           codegen.GoNativeType(mt),
+		"TypeRef":          "app." + codegen.GoTypeRef(mt, 1),
 	}
 }
 
@@ -205,7 +206,7 @@ func New{{$ctrlName}}() *{{$ctrlName}} {
 {{$ctrl := .}}{{range .Actions}}
 // {{.Name}} runs the {{.FormatName false}} action.
 func (c *{{$ctrlName}}) {{.FormatName false}}(ctx *app.{{.FormatName false}}{{$ctrl.FormatName false false}}Context) error {
-{{$ok := okResp .}}{{if $ok}}	res := &app.{{$ctrl.FormatName false false}}{}
+{{$ok := okResp .}}{{if $ok}}	res := {{$ok.TypeRef}}{}
 {{end}}	return {{if $ok}}ctx.{{$ok.Name}}(res{{if $ok.HasMultipleViews}}, "default"{{end}}){{else}}nil{{end}}
 }
 {{end}}

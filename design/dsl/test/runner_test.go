@@ -14,7 +14,7 @@ const resourceName = "R"
 const resourceDescription = "R description"
 const typeName = "T"
 const typeDescription = "T description"
-const mediaTypeIdentifier = "MT"
+const mediaTypeIdentifier = "mt/json"
 const mediaTypeDescription = "MT description"
 
 var _ = API(apiName, func() {

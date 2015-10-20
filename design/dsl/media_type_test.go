@@ -197,3 +197,26 @@ var _ = Describe("MediaType", func() {
 		})
 	})
 })
+
+var _ = Describe("CollectionOf", func() {
+	Context("used on a global variable", func() {
+		var col *MediaTypeDefinition
+		BeforeEach(func() {
+			Design = nil
+			mt := MediaType("MT", func() { Attribute("id") })
+			col = CollectionOf(mt)
+		})
+
+		JustBeforeEach(func() {
+			RunDSL()
+			Ω(Errors).ShouldNot(HaveOccurred())
+		})
+
+		It("produces a media type", func() {
+			Ω(col).ShouldNot(BeNil())
+			Ω(col.Identifier).ShouldNot(BeEmpty())
+			Ω(col.TypeName).ShouldNot(BeEmpty())
+			Ω(Design.MediaTypes).Should(HaveKey(col.Identifier))
+		})
+	})
+})

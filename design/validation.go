@@ -2,7 +2,6 @@ package design
 
 import (
 	"fmt"
-	"mime"
 	"strings"
 )
 
@@ -435,14 +434,6 @@ func (m *MediaTypeDefinition) Validate() *ValidationErrors {
 	if err := m.UserTypeDefinition.Validate("", m); err != nil {
 		verr.Merge(err)
 	}
-	if m.Identifier != "" {
-		_, _, err := mime.ParseMediaType(m.Identifier)
-		if err != nil {
-			verr.Add(m, "invalid media type identifier: %s", err)
-		}
-	} else {
-		m.Identifier = "plain/text"
-	}
 	if m.Type == nil { // TBD move this to somewhere else than validation code
 		m.Type = String
 	}
@@ -480,17 +471,19 @@ func (m *MediaTypeDefinition) Validate() *ValidationErrors {
 			}
 		}
 	}
-	hasDefaultView := false
-	for n, v := range m.Views {
-		if n == "default" {
-			hasDefaultView = true
+	if !m.Type.IsArray() {
+		hasDefaultView := false
+		for n, v := range m.Views {
+			if n == "default" {
+				hasDefaultView = true
+			}
+			if err := v.Validate(); err != nil {
+				verr.Merge(err)
+			}
 		}
-		if err := v.Validate(); err != nil {
-			verr.Merge(err)
+		if !hasDefaultView {
+			verr.Add(m, `media type does not define the default view, use View("default", ...) to define it.`)
 		}
-	}
-	if !hasDefaultView {
-		verr.Add(m, `media type does not define the default view, use View("default", ...) to define it.`)
 	}
 	for _, l := range m.Links {
 		if err := l.Validate(); err != nil {
