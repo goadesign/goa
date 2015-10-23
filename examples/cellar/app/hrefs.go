@@ -1,8 +1,8 @@
 //************************************************************************//
 // cellar: Application Resource Href Factories
 //
-// Generated with codegen v0.0.1, command line:
-// $ codegen
+// Generated with goagen v0.0.1, command line:
+// $ goagen
 // --out=/home/raphael/go/src/github.com/raphael/goa/examples/cellar
 // --design=github.com/raphael/goa/examples/cellar/design
 // --pkg=app
@@ -20,6 +20,6 @@ func AccountHref(accountID interface{}) string {
 }
 
 // BottleHref returns the resource href.
-func BottleHref(accountID, id interface{}) string {
-	return fmt.Sprintf("/cellar/accounts/%v/bottles/%v", accountID, id)
+func BottleHref(accountID, bottleID interface{}) string {
+	return fmt.Sprintf("/cellar/accounts/%v/bottles/%v", accountID, bottleID)
 }

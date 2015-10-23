@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"runtime"
 	"strings"
@@ -105,7 +106,7 @@ func LogRequest() Middleware {
 		return func(ctx *Context) error {
 			reqID := ctx.Value(ReqIDKey)
 			if reqID == nil {
-				reqID = ShortID()
+				reqID = shortID()
 			}
 			ctx.Logger = ctx.Logger.New("id", reqID)
 			startedAt := time.Now()
@@ -225,6 +226,14 @@ func Timeout(timeout time.Duration) Middleware {
 			return h(ctx)
 		}
 	}
+}
+
+// shortID produces a "unique" 6 bytes long string.
+// Do not use as a reliable way to get unique IDs, instead use for things like logging.
+func shortID() string {
+	b := make([]byte, 6)
+	io.ReadFull(rand.Reader, b)
+	return base64.StdEncoding.EncodeToString(b)
 }
 
 // handlerToMiddleware creates a middleware from a raw handler.

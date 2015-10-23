@@ -1,17 +1,15 @@
 package goa
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 
 	"golang.org/x/net/context"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/raphael/goa/support"
 	log "gopkg.in/inconshreveable/log15.v2"
 )
 
@@ -81,12 +79,12 @@ func New(name string) *Application {
 // Use adds a middleware to the application middleware chain.
 // See NewMiddleware for the list of possible types for middleware.
 // goa comes with a set of commonly used middleware, see middleware.go.
-func (a *Application) Use(middleware interface{}) {
+func (app *Application) Use(middleware interface{}) {
 	m, err := NewMiddleware(middleware)
 	if err != nil {
 		Fatal("invalid middleware", "middleware", middleware, "err", err)
 	}
-	a.Middleware = append(a.Middleware, m)
+	app.Middleware = append(app.Middleware, m)
 }
 
 // SetErrorHandler defines an application wide error handler.
@@ -94,46 +92,17 @@ func (a *Application) Use(middleware interface{}) {
 // TerseErrorHandler provides an alternative implementation that does not send the error message
 // in the response body for internal errors (e.g. for production).
 // Set it with SetErrorHandler(TerseErrorHandler).
-func (a *Application) SetErrorHandler(handler ErrorHandler) {
-	a.ErrorHandler = handler
+func (app *Application) SetErrorHandler(handler ErrorHandler) {
+	app.ErrorHandler = handler
 }
 
 // Run starts the HTTP server and sets up a listener on the given host/port.
 // It logs an error and exits the process with status 1 if the server fails to start (e.g. if the
 // listen port is busy).
-func (a *Application) Run(addr string) {
-	a.Info("listen", "addr", addr)
-	if err := http.ListenAndServe(addr, a.Router); err != nil {
+func (app *Application) Run(addr string) {
+	app.Info("listen", "addr", addr)
+	if err := http.ListenAndServe(addr, app.Router); err != nil {
 		Fatal("startup failed", "err", err)
-	}
-}
-
-// DefaultErrorHandler returns a 400 response for request validation errors (instances of
-// BadRequestError) and a 500 response for other errors. It writes the error message to the
-// response body in both cases.
-func DefaultErrorHandler(c *Context, e error) {
-	status := 500
-	if _, ok := e.(*BadRequestError); ok {
-		c.ResponseHeader().Set("Content-Type", "application/json")
-		status = 400
-	}
-	if err := c.Respond(status, []byte(e.Error())); err != nil {
-		Log.Error("failed to send default error handler response", "err", err)
-	}
-}
-
-// TerseErrorHandler behaves like DefaultErrorHandler except that it does not set the response
-// body for internal errors.
-func TerseErrorHandler(c *Context, e error) {
-	status := 500
-	var body []byte
-	if _, ok := e.(*BadRequestError); ok {
-		c.ResponseHeader().Set("Content-Type", "application/json")
-		status = 400
-		body = []byte(e.Error())
-	}
-	if err := c.Respond(status, body); err != nil {
-		Log.Error("failed to send terse error handler response", "err", err)
 	}
 }
 
@@ -142,7 +111,7 @@ func TerseErrorHandler(c *Context, e error) {
 // the application error handler.
 // This function is intended for the controller generated code. User code should not have to call
 // it directly.
-func NewHTTPRouterHandle(app *Application, resName, actName string, h Handler) httprouter.Handle {
+func (app *Application) NewHTTPRouterHandle(resName, actName string, h Handler) httprouter.Handle {
 	// Setup middleware outside of closure
 	chain := app.Middleware
 	ml := len(chain)
@@ -208,12 +177,33 @@ func NewHTTPRouterHandle(app *Application, resName, actName string, h Handler) h
 	}
 }
 
-// ShortID produces a "unique" 6 bytes long string.
-// Do not use as a reliable way to get unique IDs, instead use for things like logging.
-func ShortID() string {
-	b := make([]byte, 6)
-	io.ReadFull(rand.Reader, b)
-	return base64.StdEncoding.EncodeToString(b)
+// DefaultErrorHandler returns a 400 response for request validation errors (instances of
+// BadRequestError) and a 500 response for other errors. It writes the error message to the
+// response body in both cases.
+func DefaultErrorHandler(c *Context, e error) {
+	status := 500
+	if _, ok := e.(*support.BadRequestError); ok {
+		c.ResponseHeader().Set("Content-Type", "application/json")
+		status = 400
+	}
+	if err := c.Respond(status, []byte(e.Error())); err != nil {
+		Log.Error("failed to send default error handler response", "err", err)
+	}
+}
+
+// terseerrorhandler behaves like defaulterrorhandler except that it does not set the response
+// body for internal errors.
+func TerseErrorHandler(c *Context, e error) {
+	status := 500
+	var body []byte
+	if _, ok := e.(*support.BadRequestError); ok {
+		c.ResponseHeader().Set("Content-Type", "application/json")
+		status = 400
+		body = []byte(e.Error())
+	}
+	if err := c.Respond(status, body); err != nil {
+		Log.Error("failed to send terse error handler response", "err", err)
+	}
 }
 
 // Fatal logs a critical message and exits the process with status code 1.

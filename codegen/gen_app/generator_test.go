@@ -270,6 +270,7 @@ package app
 
 import (
 	"github.com/raphael/goa"
+	"github.com/raphael/goa/support"
 )
 
 // WidgetController is the controller interface for the Widget actions.
@@ -285,11 +286,11 @@ func MountWidgetController(app *goa.Application, ctrl WidgetController) {
 	h = func(c *goa.Context) error {
 		ctx, err := NewGetWidgetContext(c)
 		if err != nil {
-			return goa.NewBadRequestError(err)
+			return support.NewBadRequestError(err)
 		}
 		return ctrl.Get(ctx)
 	}
-	app.Router.Handle("GET", "/:id", goa.NewHTTPRouterHandle(app, "Widget", "Get", h))
+	app.Router.Handle("GET", "/:id", app.NewHTTPRouterHandle("Widget", "Get", h))
 	logger.Info("handler", "action", "Get", "route", "GET /:id")
 	logger.Info("mounted")
 }

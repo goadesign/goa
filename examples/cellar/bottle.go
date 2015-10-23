@@ -13,33 +13,33 @@ func NewBottleController() *BottleController {
 }
 
 // List lists all the bottles in the account optionally filtering by year.
-func (b *BottleController) List(c *app.ListBottleContext) error {
+func (b *BottleController) List(ctx *app.ListBottleContext) error {
 	var bottles []*app.Bottle
 	var err error
-	if c.HasYears {
-		bottles, err = b.db.GetBottlesByYears(c.AccountID, c.Years)
+	if ctx.HasYears {
+		bottles, err = b.db.GetBottlesByYears(ctx.AccountID, ctx.Years)
 	} else {
-		bottles, err = b.db.GetBottles(c.AccountID)
+		bottles, err = b.db.GetBottles(ctx.AccountID)
 	}
 	if err != nil {
 		return err
 	}
-	return c.OK(bottles, "default")
+	return ctx.OK(bottles, "default")
 }
 
 // Show retrieves the bottle with the given id.
-func (b *BottleController) Show(c *app.ShowBottleContext) error {
-	bottle := b.db.GetBottle(c.AccountID, c.ID)
+func (b *BottleController) Show(ctx *app.ShowBottleContext) error {
+	bottle := b.db.GetBottle(ctx.AccountID, ctx.BottleID)
 	if bottle == nil {
-		return c.NotFound()
+		return ctx.NotFound()
 	}
-	return c.OK(bottle, "default")
+	return ctx.OK(bottle, "default")
 }
 
 // Create records a new bottle.
-func (b *BottleController) Create(c *app.CreateBottleContext) error {
-	bottle := b.db.NewBottle(c.AccountID)
-	payload := c.Payload
+func (b *BottleController) Create(ctx *app.CreateBottleContext) error {
+	bottle := b.db.NewBottle(ctx.AccountID)
+	payload := ctx.Payload
 	bottle.Name = payload.Name
 	bottle.Vintage = payload.Vintage
 	bottle.Vineyard = payload.Vineyard
@@ -61,17 +61,17 @@ func (b *BottleController) Create(c *app.CreateBottleContext) error {
 	if payload.Review != "" {
 		bottle.Review = payload.Review
 	}
-	c.ResponseHeader().Set("Location", app.BottleHref(c.AccountID, bottle.ID))
-	return c.Created()
+	ctx.ResponseHeader().Set("Location", app.BottleHref(ctx.AccountID, bottle.ID))
+	return ctx.Created()
 }
 
 // Update updates a bottle field(s).
-func (b *BottleController) Update(c *app.UpdateBottleContext) error {
-	bottle := b.db.GetBottle(c.AccountID, c.ID)
+func (b *BottleController) Update(ctx *app.UpdateBottleContext) error {
+	bottle := b.db.GetBottle(ctx.AccountID, ctx.BottleID)
 	if bottle == nil {
-		return c.NotFound()
+		return ctx.NotFound()
 	}
-	payload := c.Payload
+	payload := ctx.Payload
 	if payload.Name != "" {
 		bottle.Name = payload.Name
 	}
@@ -100,26 +100,26 @@ func (b *BottleController) Update(c *app.UpdateBottleContext) error {
 		bottle.Review = payload.Review
 	}
 	b.db.SaveBottle(bottle)
-	return c.NoContent()
+	return ctx.NoContent()
 }
 
 // Delete removes a bottle from the database.
-func (b *BottleController) Delete(c *app.DeleteBottleContext) error {
-	bottle := b.db.GetBottle(c.AccountID, c.ID)
+func (b *BottleController) Delete(ctx *app.DeleteBottleContext) error {
+	bottle := b.db.GetBottle(ctx.AccountID, ctx.BottleID)
 	if bottle == nil {
-		return c.NotFound()
+		return ctx.NotFound()
 	}
 	b.db.DeleteBottle(bottle)
-	return c.NoContent()
+	return ctx.NoContent()
 }
 
 // Rate rates a bottle.
-func (b *BottleController) Rate(c *app.RateBottleContext) error {
-	bottle := b.db.GetBottle(c.AccountID, c.ID)
+func (b *BottleController) Rate(ctx *app.RateBottleContext) error {
+	bottle := b.db.GetBottle(ctx.AccountID, ctx.BottleID)
 	if bottle == nil {
-		return c.NotFound()
+		return ctx.NotFound()
 	}
-	bottle.Rating = c.Payload.Rating
+	bottle.Rating = ctx.Payload.Rating
 	b.db.SaveBottle(bottle)
-	return c.NoContent()
+	return ctx.NoContent()
 }

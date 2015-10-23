@@ -94,7 +94,7 @@ var _ = Resource("bottle", func() {
 		)
 		Description("Retrieve bottle with given id")
 		Params(func() {
-			Param("bottleID")
+			Param("bottleID", Integer)
 		})
 		Response(OK)
 		Response(NotFound)
@@ -116,7 +116,7 @@ var _ = Resource("bottle", func() {
 			PATCH("/:bottleID"),
 		)
 		Params(func() {
-			Param("bottleID")
+			Param("bottleID", Integer)
 		})
 		Payload(BottlePayload)
 		Response(NoContent)
@@ -128,7 +128,7 @@ var _ = Resource("bottle", func() {
 			PUT("/:bottleID/actions/rate"),
 		)
 		Params(func() {
-			Param("bottleID")
+			Param("bottleID", Integer)
 		})
 		Payload(func() {
 			Member("rating")
@@ -143,7 +143,7 @@ var _ = Resource("bottle", func() {
 			DELETE("/:bottleID"),
 		)
 		Params(func() {
-			Param("bottleID")
+			Param("bottleID", Integer)
 		})
 		Headers(func() {
 			Header("X-Force", func() {
