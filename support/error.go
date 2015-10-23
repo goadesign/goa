@@ -1,9 +1,9 @@
-// Package goa standardizes on structured error responses: a request that fails because of invalid
-// input or unexpected condition produces a response that contains one or more structured error(s).
-// Each error object has three keys: a kind (number), a title and a message. The title for a given
-// kind is always the same, the intent is to provide a human friendly categorization. The message
-// is specific to the error occurrence and provides additional details that often include
-// contextual information (name of parameters etc.).
+// Package support standardizes on structured error responses: a request that fails because of
+// invalid input or unexpected condition produces a response that contains one or more structured
+// error(s). Each error object has three keys: a kind (number), a title and a message. The title
+// for a given kind is always the same, the intent is to provide a human friendly categorization.
+// The message is specific to the error occurrence and provides additional details that often
+// include contextual information (name of parameters etc.).
 //
 // The basic data structure backing errors is TypedError which simply contains the kind and message.
 // Multiple errors (not just TypedError instances) can be encapsulated in a MultiError. Both
@@ -17,7 +17,7 @@
 // back to the client. The response status code is inferred from the type wrapping the error object:
 // a BadRequestError produces a 400 status code while any other error produce a 500. This behavior
 // can be overridden by setting a custom ErrorHandler in the application.
-package goa
+package support
 
 import (
 	"bytes"

@@ -1,8 +1,8 @@
 //************************************************************************//
 // cellar: Application Contexts
 //
-// Generated with codegen v0.0.1, command line:
-// $ codegen
+// Generated with goagen v0.0.1, command line:
+// $ goagen
 // --out=/home/raphael/go/src/github.com/raphael/goa/examples/cellar
 // --design=github.com/raphael/goa/examples/cellar/design
 // --pkg=app
@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/raphael/goa"
+	"github.com/raphael/goa/support"
 )
 
 // CreateAccountContext provides the account create action context.
@@ -32,7 +33,7 @@ func NewCreateAccountContext(c *goa.Context) (*CreateAccountContext, error) {
 	var err error
 	ctx := CreateAccountContext{Context: c}
 	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
+		err = support.MissingHeaderError("Auth-Token", err)
 	}
 	p, err := NewCreateAccountPayload(c.Payload())
 	if err != nil {
@@ -60,22 +61,21 @@ func NewCreateAccountPayload(raw interface{}) (*CreateAccountPayload, error) {
 			if val, ok := v.(string); ok {
 				tmp1 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Name`, v, "string", err)
+				err = support.InvalidAttributeTypeError(`payload.Name`, v, "string", err)
 			}
 			p.Name = tmp1
+		} else {
+			err = support.MissingAttributeError(`payload`, "name", err)
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)
-	}
-	if p != nil {
-
+		err = support.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)
 	}
 	return p, err
 }
 
 // Created sends a HTTP response with status code 201.
-func (c *CreateAccountContext) Created() error {
-	return c.Respond(201, nil)
+func (ctx *CreateAccountContext) Created() error {
+	return ctx.Respond(201, nil)
 }
 
 // DeleteAccountContext provides the account delete action context.
@@ -90,27 +90,27 @@ func NewDeleteAccountContext(c *goa.Context) (*DeleteAccountContext, error) {
 	var err error
 	ctx := DeleteAccountContext{Context: c}
 	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
+		err = support.MissingHeaderError("Auth-Token", err)
 	}
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
 			ctx.AccountID = int(accountID)
 		} else {
-			err = goa.InvalidParamTypeError("accountID", rawAccountID, "integer", err2)
+			err = support.InvalidParamTypeError("accountID", rawAccountID, "integer", err)
 		}
 	}
 	return &ctx, err
 }
 
 // NoContent sends a HTTP response with status code 204.
-func (c *DeleteAccountContext) NoContent() error {
-	return c.Respond(204, nil)
+func (ctx *DeleteAccountContext) NoContent() error {
+	return ctx.Respond(204, nil)
 }
 
 // NotFound sends a HTTP response with status code 404.
-func (c *DeleteAccountContext) NotFound() error {
-	return c.Respond(404, nil)
+func (ctx *DeleteAccountContext) NotFound() error {
+	return ctx.Respond(404, nil)
 }
 
 // ShowAccountContext provides the account show action context.
@@ -125,31 +125,32 @@ func NewShowAccountContext(c *goa.Context) (*ShowAccountContext, error) {
 	var err error
 	ctx := ShowAccountContext{Context: c}
 	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
+		err = support.MissingHeaderError("Auth-Token", err)
 	}
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
 			ctx.AccountID = int(accountID)
 		} else {
-			err = goa.InvalidParamTypeError("accountID", rawAccountID, "integer", err2)
+			err = support.InvalidParamTypeError("accountID", rawAccountID, "integer", err)
 		}
 	}
 	return &ctx, err
 }
 
 // NotFound sends a HTTP response with status code 404.
-func (c *ShowAccountContext) NotFound() error {
-	return c.Respond(404, nil)
+func (ctx *ShowAccountContext) NotFound() error {
+	return ctx.Respond(404, nil)
 }
 
 // OK sends a HTTP response with status code 200.
-func (c *ShowAccountContext) OK(resp *Account, view AccountViewEnum) error {
+func (ctx *ShowAccountContext) OK(resp *Account, view AccountViewEnum) error {
 	r, err := resp.Dump(view)
 	if err != nil {
 		return fmt.Errorf("invalid response: %s", err)
 	}
-	return c.JSON(200, r)
+	ctx.ResponseHeader().Set("Content-Type", "application/vnd.goa.example.account; charset=utf-8")
+	return ctx.JSON(200, r)
 }
 
 // UpdateAccountContext provides the account update action context.
@@ -165,14 +166,14 @@ func NewUpdateAccountContext(c *goa.Context) (*UpdateAccountContext, error) {
 	var err error
 	ctx := UpdateAccountContext{Context: c}
 	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
+		err = support.MissingHeaderError("Auth-Token", err)
 	}
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
 			ctx.AccountID = int(accountID)
 		} else {
-			err = goa.InvalidParamTypeError("accountID", rawAccountID, "integer", err2)
+			err = support.InvalidParamTypeError("accountID", rawAccountID, "integer", err)
 		}
 	}
 	p, err := NewUpdateAccountPayload(c.Payload())
@@ -201,27 +202,26 @@ func NewUpdateAccountPayload(raw interface{}) (*UpdateAccountPayload, error) {
 			if val, ok := v.(string); ok {
 				tmp2 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Name`, v, "string", err)
+				err = support.InvalidAttributeTypeError(`payload.Name`, v, "string", err)
 			}
 			p.Name = tmp2
+		} else {
+			err = support.MissingAttributeError(`payload`, "name", err)
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)
-	}
-	if p != nil {
-
+		err = support.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)
 	}
 	return p, err
 }
 
 // NoContent sends a HTTP response with status code 204.
-func (c *UpdateAccountContext) NoContent() error {
-	return c.Respond(204, nil)
+func (ctx *UpdateAccountContext) NoContent() error {
+	return ctx.Respond(204, nil)
 }
 
 // NotFound sends a HTTP response with status code 404.
-func (c *UpdateAccountContext) NotFound() error {
-	return c.Respond(404, nil)
+func (ctx *UpdateAccountContext) NotFound() error {
+	return ctx.Respond(404, nil)
 }
 
 // CreateBottleContext provides the bottle create action context.
@@ -237,14 +237,14 @@ func NewCreateBottleContext(c *goa.Context) (*CreateBottleContext, error) {
 	var err error
 	ctx := CreateBottleContext{Context: c}
 	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
+		err = support.MissingHeaderError("Auth-Token", err)
 	}
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
 			ctx.AccountID = int(accountID)
 		} else {
-			err = goa.InvalidParamTypeError("accountID", rawAccountID, "integer", err2)
+			err = support.InvalidParamTypeError("accountID", rawAccountID, "integer", err)
 		}
 	}
 	p, err := NewCreateBottlePayload(c.Payload())
@@ -281,13 +281,13 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 			if val, ok := v.(string); ok {
 				tmp3 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Characteristics`, v, "string", err)
+				err = support.InvalidAttributeTypeError(`payload.Characteristics`, v, "string", err)
 			}
 			if len(tmp3) < 10 {
-				err = goa.InvalidLengthError(`payload.Characteristics`, tmp3, 10, true, err)
+				err = support.InvalidLengthError(`payload.Characteristics`, tmp3, 10, true, err)
 			}
 			if len(tmp3) > 300 {
-				err = goa.InvalidLengthError(`payload.Characteristics`, tmp3, 300, false, err)
+				err = support.InvalidLengthError(`payload.Characteristics`, tmp3, 300, false, err)
 			}
 			p.Characteristics = tmp3
 		}
@@ -296,22 +296,24 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 			if val, ok := v.(string); ok {
 				tmp4 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Color`, v, "string", err)
+				err = support.InvalidAttributeTypeError(`payload.Color`, v, "string", err)
 			}
 			if !(tmp4 == "red" || tmp4 == "white" || tmp4 == "rose" || tmp4 == "yellow" || tmp4 == "sparkling") {
-				err = goa.InvalidEnumValueError(`payload.Color`, tmp4, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
+				err = support.InvalidEnumValueError(`payload.Color`, tmp4, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
 			}
 			p.Color = tmp4
+		} else {
+			err = support.MissingAttributeError(`payload`, "color", err)
 		}
 		if v, ok := val["country"]; ok {
 			var tmp5 string
 			if val, ok := v.(string); ok {
 				tmp5 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Country`, v, "string", err)
+				err = support.InvalidAttributeTypeError(`payload.Country`, v, "string", err)
 			}
 			if len(tmp5) < 2 {
-				err = goa.InvalidLengthError(`payload.Country`, tmp5, 2, true, err)
+				err = support.InvalidLengthError(`payload.Country`, tmp5, 2, true, err)
 			}
 			p.Country = tmp5
 		}
@@ -320,19 +322,21 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 			if val, ok := v.(string); ok {
 				tmp6 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Name`, v, "string", err)
+				err = support.InvalidAttributeTypeError(`payload.Name`, v, "string", err)
 			}
 			if len(tmp6) < 2 {
-				err = goa.InvalidLengthError(`payload.Name`, tmp6, 2, true, err)
+				err = support.InvalidLengthError(`payload.Name`, tmp6, 2, true, err)
 			}
 			p.Name = tmp6
+		} else {
+			err = support.MissingAttributeError(`payload`, "name", err)
 		}
 		if v, ok := val["region"]; ok {
 			var tmp7 string
 			if val, ok := v.(string); ok {
 				tmp7 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Region`, v, "string", err)
+				err = support.InvalidAttributeTypeError(`payload.Region`, v, "string", err)
 			}
 			p.Region = tmp7
 		}
@@ -341,13 +345,13 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 			if val, ok := v.(string); ok {
 				tmp8 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Review`, v, "string", err)
+				err = support.InvalidAttributeTypeError(`payload.Review`, v, "string", err)
 			}
 			if len(tmp8) < 10 {
-				err = goa.InvalidLengthError(`payload.Review`, tmp8, 10, true, err)
+				err = support.InvalidLengthError(`payload.Review`, tmp8, 10, true, err)
 			}
 			if len(tmp8) > 300 {
-				err = goa.InvalidLengthError(`payload.Review`, tmp8, 300, false, err)
+				err = support.InvalidLengthError(`payload.Review`, tmp8, 300, false, err)
 			}
 			p.Review = tmp8
 		}
@@ -356,13 +360,13 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 			if val, ok := v.(int); ok {
 				tmp9 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Sweetness`, v, "int", err)
+				err = support.InvalidAttributeTypeError(`payload.Sweetness`, v, "int", err)
 			}
 			if tmp9 < 1 {
-				err = goa.InvalidRangeError(`payload.Sweetness`, tmp9, 1, true, err)
+				err = support.InvalidRangeError(`payload.Sweetness`, tmp9, 1, true, err)
 			}
 			if tmp9 > 5 {
-				err = goa.InvalidRangeError(`payload.Sweetness`, tmp9, 5, false, err)
+				err = support.InvalidRangeError(`payload.Sweetness`, tmp9, 5, false, err)
 			}
 			p.Sweetness = tmp9
 		}
@@ -371,97 +375,103 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 			if val, ok := v.(string); ok {
 				tmp10 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Varietal`, v, "string", err)
+				err = support.InvalidAttributeTypeError(`payload.Varietal`, v, "string", err)
 			}
 			if len(tmp10) < 4 {
-				err = goa.InvalidLengthError(`payload.Varietal`, tmp10, 4, true, err)
+				err = support.InvalidLengthError(`payload.Varietal`, tmp10, 4, true, err)
 			}
 			p.Varietal = tmp10
+		} else {
+			err = support.MissingAttributeError(`payload`, "varietal", err)
 		}
 		if v, ok := val["vineyard"]; ok {
 			var tmp11 string
 			if val, ok := v.(string); ok {
 				tmp11 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Vineyard`, v, "string", err)
+				err = support.InvalidAttributeTypeError(`payload.Vineyard`, v, "string", err)
 			}
 			if len(tmp11) < 2 {
-				err = goa.InvalidLengthError(`payload.Vineyard`, tmp11, 2, true, err)
+				err = support.InvalidLengthError(`payload.Vineyard`, tmp11, 2, true, err)
 			}
 			p.Vineyard = tmp11
+		} else {
+			err = support.MissingAttributeError(`payload`, "vineyard", err)
 		}
 		if v, ok := val["vintage"]; ok {
 			var tmp12 int
 			if val, ok := v.(int); ok {
 				tmp12 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Vintage`, v, "int", err)
+				err = support.InvalidAttributeTypeError(`payload.Vintage`, v, "int", err)
 			}
 			if tmp12 < 1900 {
-				err = goa.InvalidRangeError(`payload.Vintage`, tmp12, 1900, true, err)
+				err = support.InvalidRangeError(`payload.Vintage`, tmp12, 1900, true, err)
 			}
 			if tmp12 > 2020 {
-				err = goa.InvalidRangeError(`payload.Vintage`, tmp12, 2020, false, err)
+				err = support.InvalidRangeError(`payload.Vintage`, tmp12, 2020, false, err)
 			}
 			p.Vintage = tmp12
+		} else {
+			err = support.MissingAttributeError(`payload`, "vintage", err)
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)
+		err = support.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)
 	}
 	if p != nil {
 		if len(p.Characteristics) < 10 {
-			err = goa.InvalidLengthError(`.Characteristics`, p.Characteristics, 10, true, err)
+			err = support.InvalidLengthError(`.Characteristics`, p.Characteristics, 10, true, err)
 		}
 		if len(p.Characteristics) > 300 {
-			err = goa.InvalidLengthError(`.Characteristics`, p.Characteristics, 300, false, err)
+			err = support.InvalidLengthError(`.Characteristics`, p.Characteristics, 300, false, err)
 		}
 		if !(p.Color == "red" || p.Color == "white" || p.Color == "rose" || p.Color == "yellow" || p.Color == "sparkling") {
-			err = goa.InvalidEnumValueError(`.Color`, p.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
+			err = support.InvalidEnumValueError(`.Color`, p.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
 		}
 		if len(p.Country) < 2 {
-			err = goa.InvalidLengthError(`.Country`, p.Country, 2, true, err)
+			err = support.InvalidLengthError(`.Country`, p.Country, 2, true, err)
 		}
 		if len(p.Name) < 2 {
-			err = goa.InvalidLengthError(`.Name`, p.Name, 2, true, err)
+			err = support.InvalidLengthError(`.Name`, p.Name, 2, true, err)
 		}
 		if len(p.Review) < 10 {
-			err = goa.InvalidLengthError(`.Review`, p.Review, 10, true, err)
+			err = support.InvalidLengthError(`.Review`, p.Review, 10, true, err)
 		}
 		if len(p.Review) > 300 {
-			err = goa.InvalidLengthError(`.Review`, p.Review, 300, false, err)
+			err = support.InvalidLengthError(`.Review`, p.Review, 300, false, err)
 		}
 		if p.Sweetness < 1 {
-			err = goa.InvalidRangeError(`.Sweetness`, p.Sweetness, 1, true, err)
+			err = support.InvalidRangeError(`.Sweetness`, p.Sweetness, 1, true, err)
 		}
 		if p.Sweetness > 5 {
-			err = goa.InvalidRangeError(`.Sweetness`, p.Sweetness, 5, false, err)
+			err = support.InvalidRangeError(`.Sweetness`, p.Sweetness, 5, false, err)
 		}
 		if len(p.Varietal) < 4 {
-			err = goa.InvalidLengthError(`.Varietal`, p.Varietal, 4, true, err)
+			err = support.InvalidLengthError(`.Varietal`, p.Varietal, 4, true, err)
 		}
 		if len(p.Vineyard) < 2 {
-			err = goa.InvalidLengthError(`.Vineyard`, p.Vineyard, 2, true, err)
+			err = support.InvalidLengthError(`.Vineyard`, p.Vineyard, 2, true, err)
 		}
 		if p.Vintage < 1900 {
-			err = goa.InvalidRangeError(`.Vintage`, p.Vintage, 1900, true, err)
+			err = support.InvalidRangeError(`.Vintage`, p.Vintage, 1900, true, err)
 		}
 		if p.Vintage > 2020 {
-			err = goa.InvalidRangeError(`.Vintage`, p.Vintage, 2020, false, err)
+			err = support.InvalidRangeError(`.Vintage`, p.Vintage, 2020, false, err)
 		}
 	}
 	return p, err
 }
 
 // Created sends a HTTP response with status code 201.
-func (c *CreateBottleContext) Created() error {
-	return c.Respond(201, nil)
+func (ctx *CreateBottleContext) Created() error {
+	return ctx.Respond(201, nil)
 }
 
 // DeleteBottleContext provides the bottle delete action context.
 type DeleteBottleContext struct {
 	*goa.Context
 	AccountID int
-	ID        int
+	BottleID  int
 }
 
 // NewDeleteBottleContext parses the incoming request URL and body, performs validations and creates the
@@ -470,35 +480,35 @@ func NewDeleteBottleContext(c *goa.Context) (*DeleteBottleContext, error) {
 	var err error
 	ctx := DeleteBottleContext{Context: c}
 	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
+		err = support.MissingHeaderError("Auth-Token", err)
 	}
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
 			ctx.AccountID = int(accountID)
 		} else {
-			err = goa.InvalidParamTypeError("accountID", rawAccountID, "integer", err2)
+			err = support.InvalidParamTypeError("accountID", rawAccountID, "integer", err)
 		}
 	}
-	rawID, ok := c.Get("id")
+	rawBottleID, ok := c.Get("bottleID")
 	if ok {
-		if id, err2 := strconv.Atoi(rawID); err2 == nil {
-			ctx.ID = int(id)
+		if bottleID, err2 := strconv.Atoi(rawBottleID); err2 == nil {
+			ctx.BottleID = int(bottleID)
 		} else {
-			err = goa.InvalidParamTypeError("id", rawID, "integer", err2)
+			err = support.InvalidParamTypeError("bottleID", rawBottleID, "integer", err)
 		}
 	}
 	return &ctx, err
 }
 
 // NoContent sends a HTTP response with status code 204.
-func (c *DeleteBottleContext) NoContent() error {
-	return c.Respond(204, nil)
+func (ctx *DeleteBottleContext) NoContent() error {
+	return ctx.Respond(204, nil)
 }
 
 // NotFound sends a HTTP response with status code 404.
-func (c *DeleteBottleContext) NotFound() error {
-	return c.Respond(404, nil)
+func (ctx *DeleteBottleContext) NotFound() error {
+	return ctx.Respond(404, nil)
 }
 
 // ListBottleContext provides the bottle list action context.
@@ -516,14 +526,14 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
+		err = support.MissingHeaderError("Auth-Token", err)
 	}
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
 			ctx.AccountID = int(accountID)
 		} else {
-			err = goa.InvalidParamTypeError("accountID", rawAccountID, "integer", err2)
+			err = support.InvalidParamTypeError("accountID", rawAccountID, "integer", err)
 		}
 	}
 	rawYears, ok := c.Get("years")
@@ -534,7 +544,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 			if elem, err2 := strconv.Atoi(rawElem); err2 == nil {
 				elemsYears2[i] = int(elem)
 			} else {
-				err = goa.InvalidParamTypeError("elem", rawElem, "integer", err2)
+				err = support.InvalidParamTypeError("elem", rawElem, "integer", err)
 			}
 		}
 		ctx.Years = elemsYears2
@@ -544,19 +554,20 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 }
 
 // OK sends a HTTP response with status code 200.
-func (c *ListBottleContext) OK(resp BottleCollection, view BottleCollectionViewEnum) error {
+func (ctx *ListBottleContext) OK(resp BottleCollection, view BottleCollectionViewEnum) error {
 	r, err := resp.Dump(view)
 	if err != nil {
 		return fmt.Errorf("invalid response: %s", err)
 	}
-	return c.JSON(200, r)
+	ctx.ResponseHeader().Set("Content-Type", "application/vnd.goa.example.bottle; type=collection; charset=utf-8")
+	return ctx.JSON(200, r)
 }
 
 // RateBottleContext provides the bottle rate action context.
 type RateBottleContext struct {
 	*goa.Context
 	AccountID int
-	ID        int
+	BottleID  int
 	Payload   *RateBottlePayload
 }
 
@@ -566,22 +577,22 @@ func NewRateBottleContext(c *goa.Context) (*RateBottleContext, error) {
 	var err error
 	ctx := RateBottleContext{Context: c}
 	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
+		err = support.MissingHeaderError("Auth-Token", err)
 	}
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
 			ctx.AccountID = int(accountID)
 		} else {
-			err = goa.InvalidParamTypeError("accountID", rawAccountID, "integer", err2)
+			err = support.InvalidParamTypeError("accountID", rawAccountID, "integer", err)
 		}
 	}
-	rawID, ok := c.Get("id")
+	rawBottleID, ok := c.Get("bottleID")
 	if ok {
-		if id, err2 := strconv.Atoi(rawID); err2 == nil {
-			ctx.ID = int(id)
+		if bottleID, err2 := strconv.Atoi(rawBottleID); err2 == nil {
+			ctx.BottleID = int(bottleID)
 		} else {
-			err = goa.InvalidParamTypeError("id", rawID, "integer", err2)
+			err = support.InvalidParamTypeError("bottleID", rawBottleID, "integer", err)
 		}
 	}
 	p, err := NewRateBottlePayload(c.Payload())
@@ -610,45 +621,47 @@ func NewRateBottlePayload(raw interface{}) (*RateBottlePayload, error) {
 			if val, ok := v.(int); ok {
 				tmp13 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Rating`, v, "int", err)
+				err = support.InvalidAttributeTypeError(`payload.Rating`, v, "int", err)
 			}
 			if tmp13 < 1 {
-				err = goa.InvalidRangeError(`payload.Rating`, tmp13, 1, true, err)
+				err = support.InvalidRangeError(`payload.Rating`, tmp13, 1, true, err)
 			}
 			if tmp13 > 5 {
-				err = goa.InvalidRangeError(`payload.Rating`, tmp13, 5, false, err)
+				err = support.InvalidRangeError(`payload.Rating`, tmp13, 5, false, err)
 			}
 			p.Rating = tmp13
+		} else {
+			err = support.MissingAttributeError(`payload`, "rating", err)
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)
+		err = support.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)
 	}
 	if p != nil {
 		if p.Rating < 1 {
-			err = goa.InvalidRangeError(`.Rating`, p.Rating, 1, true, err)
+			err = support.InvalidRangeError(`.Rating`, p.Rating, 1, true, err)
 		}
 		if p.Rating > 5 {
-			err = goa.InvalidRangeError(`.Rating`, p.Rating, 5, false, err)
+			err = support.InvalidRangeError(`.Rating`, p.Rating, 5, false, err)
 		}
 	}
 	return p, err
 }
 
 // NoContent sends a HTTP response with status code 204.
-func (c *RateBottleContext) NoContent() error {
-	return c.Respond(204, nil)
+func (ctx *RateBottleContext) NoContent() error {
+	return ctx.Respond(204, nil)
 }
 
 // NotFound sends a HTTP response with status code 404.
-func (c *RateBottleContext) NotFound() error {
-	return c.Respond(404, nil)
+func (ctx *RateBottleContext) NotFound() error {
+	return ctx.Respond(404, nil)
 }
 
 // ShowBottleContext provides the bottle show action context.
 type ShowBottleContext struct {
 	*goa.Context
 	AccountID int
-	ID        int
+	BottleID  int
 }
 
 // NewShowBottleContext parses the incoming request URL and body, performs validations and creates the
@@ -657,46 +670,47 @@ func NewShowBottleContext(c *goa.Context) (*ShowBottleContext, error) {
 	var err error
 	ctx := ShowBottleContext{Context: c}
 	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
+		err = support.MissingHeaderError("Auth-Token", err)
 	}
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
 			ctx.AccountID = int(accountID)
 		} else {
-			err = goa.InvalidParamTypeError("accountID", rawAccountID, "integer", err2)
+			err = support.InvalidParamTypeError("accountID", rawAccountID, "integer", err)
 		}
 	}
-	rawID, ok := c.Get("id")
+	rawBottleID, ok := c.Get("bottleID")
 	if ok {
-		if id, err2 := strconv.Atoi(rawID); err2 == nil {
-			ctx.ID = int(id)
+		if bottleID, err2 := strconv.Atoi(rawBottleID); err2 == nil {
+			ctx.BottleID = int(bottleID)
 		} else {
-			err = goa.InvalidParamTypeError("id", rawID, "integer", err2)
+			err = support.InvalidParamTypeError("bottleID", rawBottleID, "integer", err)
 		}
 	}
 	return &ctx, err
 }
 
 // NotFound sends a HTTP response with status code 404.
-func (c *ShowBottleContext) NotFound() error {
-	return c.Respond(404, nil)
+func (ctx *ShowBottleContext) NotFound() error {
+	return ctx.Respond(404, nil)
 }
 
 // OK sends a HTTP response with status code 200.
-func (c *ShowBottleContext) OK(resp *Bottle, view BottleViewEnum) error {
+func (ctx *ShowBottleContext) OK(resp *Bottle, view BottleViewEnum) error {
 	r, err := resp.Dump(view)
 	if err != nil {
 		return fmt.Errorf("invalid response: %s", err)
 	}
-	return c.JSON(200, r)
+	ctx.ResponseHeader().Set("Content-Type", "application/vnd.goa.example.bottle; charset=utf-8")
+	return ctx.JSON(200, r)
 }
 
 // UpdateBottleContext provides the bottle update action context.
 type UpdateBottleContext struct {
 	*goa.Context
 	AccountID int
-	ID        int
+	BottleID  int
 	Payload   *UpdateBottlePayload
 }
 
@@ -706,22 +720,22 @@ func NewUpdateBottleContext(c *goa.Context) (*UpdateBottleContext, error) {
 	var err error
 	ctx := UpdateBottleContext{Context: c}
 	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
+		err = support.MissingHeaderError("Auth-Token", err)
 	}
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
 			ctx.AccountID = int(accountID)
 		} else {
-			err = goa.InvalidParamTypeError("accountID", rawAccountID, "integer", err2)
+			err = support.InvalidParamTypeError("accountID", rawAccountID, "integer", err)
 		}
 	}
-	rawID, ok := c.Get("id")
+	rawBottleID, ok := c.Get("bottleID")
 	if ok {
-		if id, err2 := strconv.Atoi(rawID); err2 == nil {
-			ctx.ID = int(id)
+		if bottleID, err2 := strconv.Atoi(rawBottleID); err2 == nil {
+			ctx.BottleID = int(bottleID)
 		} else {
-			err = goa.InvalidParamTypeError("id", rawID, "integer", err2)
+			err = support.InvalidParamTypeError("bottleID", rawBottleID, "integer", err)
 		}
 	}
 	p, err := NewUpdateBottlePayload(c.Payload())
@@ -758,13 +772,13 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 			if val, ok := v.(string); ok {
 				tmp14 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Characteristics`, v, "string", err)
+				err = support.InvalidAttributeTypeError(`payload.Characteristics`, v, "string", err)
 			}
 			if len(tmp14) < 10 {
-				err = goa.InvalidLengthError(`payload.Characteristics`, tmp14, 10, true, err)
+				err = support.InvalidLengthError(`payload.Characteristics`, tmp14, 10, true, err)
 			}
 			if len(tmp14) > 300 {
-				err = goa.InvalidLengthError(`payload.Characteristics`, tmp14, 300, false, err)
+				err = support.InvalidLengthError(`payload.Characteristics`, tmp14, 300, false, err)
 			}
 			p.Characteristics = tmp14
 		}
@@ -773,22 +787,24 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 			if val, ok := v.(string); ok {
 				tmp15 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Color`, v, "string", err)
+				err = support.InvalidAttributeTypeError(`payload.Color`, v, "string", err)
 			}
 			if !(tmp15 == "red" || tmp15 == "white" || tmp15 == "rose" || tmp15 == "yellow" || tmp15 == "sparkling") {
-				err = goa.InvalidEnumValueError(`payload.Color`, tmp15, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
+				err = support.InvalidEnumValueError(`payload.Color`, tmp15, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
 			}
 			p.Color = tmp15
+		} else {
+			err = support.MissingAttributeError(`payload`, "color", err)
 		}
 		if v, ok := val["country"]; ok {
 			var tmp16 string
 			if val, ok := v.(string); ok {
 				tmp16 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Country`, v, "string", err)
+				err = support.InvalidAttributeTypeError(`payload.Country`, v, "string", err)
 			}
 			if len(tmp16) < 2 {
-				err = goa.InvalidLengthError(`payload.Country`, tmp16, 2, true, err)
+				err = support.InvalidLengthError(`payload.Country`, tmp16, 2, true, err)
 			}
 			p.Country = tmp16
 		}
@@ -797,19 +813,21 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 			if val, ok := v.(string); ok {
 				tmp17 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Name`, v, "string", err)
+				err = support.InvalidAttributeTypeError(`payload.Name`, v, "string", err)
 			}
 			if len(tmp17) < 2 {
-				err = goa.InvalidLengthError(`payload.Name`, tmp17, 2, true, err)
+				err = support.InvalidLengthError(`payload.Name`, tmp17, 2, true, err)
 			}
 			p.Name = tmp17
+		} else {
+			err = support.MissingAttributeError(`payload`, "name", err)
 		}
 		if v, ok := val["region"]; ok {
 			var tmp18 string
 			if val, ok := v.(string); ok {
 				tmp18 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Region`, v, "string", err)
+				err = support.InvalidAttributeTypeError(`payload.Region`, v, "string", err)
 			}
 			p.Region = tmp18
 		}
@@ -818,13 +836,13 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 			if val, ok := v.(string); ok {
 				tmp19 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Review`, v, "string", err)
+				err = support.InvalidAttributeTypeError(`payload.Review`, v, "string", err)
 			}
 			if len(tmp19) < 10 {
-				err = goa.InvalidLengthError(`payload.Review`, tmp19, 10, true, err)
+				err = support.InvalidLengthError(`payload.Review`, tmp19, 10, true, err)
 			}
 			if len(tmp19) > 300 {
-				err = goa.InvalidLengthError(`payload.Review`, tmp19, 300, false, err)
+				err = support.InvalidLengthError(`payload.Review`, tmp19, 300, false, err)
 			}
 			p.Review = tmp19
 		}
@@ -833,13 +851,13 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 			if val, ok := v.(int); ok {
 				tmp20 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Sweetness`, v, "int", err)
+				err = support.InvalidAttributeTypeError(`payload.Sweetness`, v, "int", err)
 			}
 			if tmp20 < 1 {
-				err = goa.InvalidRangeError(`payload.Sweetness`, tmp20, 1, true, err)
+				err = support.InvalidRangeError(`payload.Sweetness`, tmp20, 1, true, err)
 			}
 			if tmp20 > 5 {
-				err = goa.InvalidRangeError(`payload.Sweetness`, tmp20, 5, false, err)
+				err = support.InvalidRangeError(`payload.Sweetness`, tmp20, 5, false, err)
 			}
 			p.Sweetness = tmp20
 		}
@@ -848,93 +866,99 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 			if val, ok := v.(string); ok {
 				tmp21 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Varietal`, v, "string", err)
+				err = support.InvalidAttributeTypeError(`payload.Varietal`, v, "string", err)
 			}
 			if len(tmp21) < 4 {
-				err = goa.InvalidLengthError(`payload.Varietal`, tmp21, 4, true, err)
+				err = support.InvalidLengthError(`payload.Varietal`, tmp21, 4, true, err)
 			}
 			p.Varietal = tmp21
+		} else {
+			err = support.MissingAttributeError(`payload`, "varietal", err)
 		}
 		if v, ok := val["vineyard"]; ok {
 			var tmp22 string
 			if val, ok := v.(string); ok {
 				tmp22 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Vineyard`, v, "string", err)
+				err = support.InvalidAttributeTypeError(`payload.Vineyard`, v, "string", err)
 			}
 			if len(tmp22) < 2 {
-				err = goa.InvalidLengthError(`payload.Vineyard`, tmp22, 2, true, err)
+				err = support.InvalidLengthError(`payload.Vineyard`, tmp22, 2, true, err)
 			}
 			p.Vineyard = tmp22
+		} else {
+			err = support.MissingAttributeError(`payload`, "vineyard", err)
 		}
 		if v, ok := val["vintage"]; ok {
 			var tmp23 int
 			if val, ok := v.(int); ok {
 				tmp23 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Vintage`, v, "int", err)
+				err = support.InvalidAttributeTypeError(`payload.Vintage`, v, "int", err)
 			}
 			if tmp23 < 1900 {
-				err = goa.InvalidRangeError(`payload.Vintage`, tmp23, 1900, true, err)
+				err = support.InvalidRangeError(`payload.Vintage`, tmp23, 1900, true, err)
 			}
 			if tmp23 > 2020 {
-				err = goa.InvalidRangeError(`payload.Vintage`, tmp23, 2020, false, err)
+				err = support.InvalidRangeError(`payload.Vintage`, tmp23, 2020, false, err)
 			}
 			p.Vintage = tmp23
+		} else {
+			err = support.MissingAttributeError(`payload`, "vintage", err)
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)
+		err = support.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)
 	}
 	if p != nil {
 		if len(p.Characteristics) < 10 {
-			err = goa.InvalidLengthError(`.Characteristics`, p.Characteristics, 10, true, err)
+			err = support.InvalidLengthError(`.Characteristics`, p.Characteristics, 10, true, err)
 		}
 		if len(p.Characteristics) > 300 {
-			err = goa.InvalidLengthError(`.Characteristics`, p.Characteristics, 300, false, err)
+			err = support.InvalidLengthError(`.Characteristics`, p.Characteristics, 300, false, err)
 		}
 		if !(p.Color == "red" || p.Color == "white" || p.Color == "rose" || p.Color == "yellow" || p.Color == "sparkling") {
-			err = goa.InvalidEnumValueError(`.Color`, p.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
+			err = support.InvalidEnumValueError(`.Color`, p.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
 		}
 		if len(p.Country) < 2 {
-			err = goa.InvalidLengthError(`.Country`, p.Country, 2, true, err)
+			err = support.InvalidLengthError(`.Country`, p.Country, 2, true, err)
 		}
 		if len(p.Name) < 2 {
-			err = goa.InvalidLengthError(`.Name`, p.Name, 2, true, err)
+			err = support.InvalidLengthError(`.Name`, p.Name, 2, true, err)
 		}
 		if len(p.Review) < 10 {
-			err = goa.InvalidLengthError(`.Review`, p.Review, 10, true, err)
+			err = support.InvalidLengthError(`.Review`, p.Review, 10, true, err)
 		}
 		if len(p.Review) > 300 {
-			err = goa.InvalidLengthError(`.Review`, p.Review, 300, false, err)
+			err = support.InvalidLengthError(`.Review`, p.Review, 300, false, err)
 		}
 		if p.Sweetness < 1 {
-			err = goa.InvalidRangeError(`.Sweetness`, p.Sweetness, 1, true, err)
+			err = support.InvalidRangeError(`.Sweetness`, p.Sweetness, 1, true, err)
 		}
 		if p.Sweetness > 5 {
-			err = goa.InvalidRangeError(`.Sweetness`, p.Sweetness, 5, false, err)
+			err = support.InvalidRangeError(`.Sweetness`, p.Sweetness, 5, false, err)
 		}
 		if len(p.Varietal) < 4 {
-			err = goa.InvalidLengthError(`.Varietal`, p.Varietal, 4, true, err)
+			err = support.InvalidLengthError(`.Varietal`, p.Varietal, 4, true, err)
 		}
 		if len(p.Vineyard) < 2 {
-			err = goa.InvalidLengthError(`.Vineyard`, p.Vineyard, 2, true, err)
+			err = support.InvalidLengthError(`.Vineyard`, p.Vineyard, 2, true, err)
 		}
 		if p.Vintage < 1900 {
-			err = goa.InvalidRangeError(`.Vintage`, p.Vintage, 1900, true, err)
+			err = support.InvalidRangeError(`.Vintage`, p.Vintage, 1900, true, err)
 		}
 		if p.Vintage > 2020 {
-			err = goa.InvalidRangeError(`.Vintage`, p.Vintage, 2020, false, err)
+			err = support.InvalidRangeError(`.Vintage`, p.Vintage, 2020, false, err)
 		}
 	}
 	return p, err
 }
 
 // NoContent sends a HTTP response with status code 204.
-func (c *UpdateBottleContext) NoContent() error {
-	return c.Respond(204, nil)
+func (ctx *UpdateBottleContext) NoContent() error {
+	return ctx.Respond(204, nil)
 }
 
 // NotFound sends a HTTP response with status code 404.
-func (c *UpdateBottleContext) NotFound() error {
-	return c.Respond(404, nil)
+func (ctx *UpdateBottleContext) NotFound() error {
+	return ctx.Respond(404, nil)
 }

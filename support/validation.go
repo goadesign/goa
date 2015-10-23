@@ -1,4 +1,4 @@
-package goa
+package support
 
 import (
 	"fmt"

@@ -788,7 +788,7 @@ const (
 	unmPrimitiveTmpl = `{{tabs .depth}}if val, ok := {{.source}}.({{gotyperef .type (add .depth 1)}}); ok {
 {{tabs .depth}}	{{.target}} = val
 {{tabs .depth}}} else {
-{{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "{{gotyperef .type (add .depth 1)}}", err)
+{{tabs .depth}}	err = support.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "{{gotyperef .type (add .depth 1)}}", err)
 {{tabs .depth}}}`
 
 	unmArrayTmpl = `{{tabs .depth}}if val, ok := {{.source}}.([]interface{}); ok {
@@ -800,7 +800,7 @@ const (
 {{end}}{{tabs .depth}}		{{printf "%s[i]" .target}} = {{$temp}}
 {{tabs .depth}}	}
 {{tabs .depth}}} else {
-{{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "[]interface{}", err)
+{{tabs .depth}}	err = support.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "[]interface{}", err)
 {{tabs .depth}}}`
 
 	unmObjectTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
@@ -811,10 +811,10 @@ const (
 {{$validation := validate $att (printf "%s.%s" $context (goify $name true)) $temp (add $depth 2)}}{{if $validation}}{{$validation}}
 {{end}}{{tabs $depth}}		{{printf "%s.%s" $target (goify $name true)}} = {{$temp}}
 {{tabs $depth}}	}{{if (has $required $name)}} else {
-{{tabs $depth}}		err = goa.MissingAttributeError(` + "`" + `{{$context}}` + "`" + `, "{{$name}}", err)
+{{tabs $depth}}		err = support.MissingAttributeError(` + "`" + `{{$context}}` + "`" + `, "{{$name}}", err)
 {{tabs $depth}}	}{{end}}
 {{end}}{{tabs $depth}}} else {
-{{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "map[string]interface{}", err)
+{{tabs .depth}}	err = support.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "map[string]interface{}", err)
 {{tabs .depth}}}`
 
 	unmHashTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {

@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/raphael/goa/support"
+
 	"golang.org/x/net/context"
 	log "gopkg.in/inconshreveable/log15.v2"
 )
@@ -140,7 +142,7 @@ func (c *Context) JSON(code int, body interface{}) error {
 }
 
 // BadRequest sends a HTTP response with status code 400 and the given error as body.
-func (c *Context) BadRequest(err *BadRequestError) error {
+func (c *Context) BadRequest(err *support.BadRequestError) error {
 	return c.Respond(400, []byte(err.Error()))
 }
 
