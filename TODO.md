@@ -33,7 +33,7 @@
 
 * Load then validate
 * Render produces native types so that it works with JSON, YAML etc.
-* BaseType should walk each attribute and look for a parent definition (consider embedded structs)
+* Reference should walk each attribute and look for a parent definition (consider embedded structs)
 
 ### TODO
 

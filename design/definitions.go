@@ -148,8 +148,8 @@ type (
 	AttributeDefinition struct {
 		// Attribute type
 		Type DataType
-		// Attribute base type if any
-		BaseType DataType
+		// Attribute reference type if any
+		Reference DataType
 		// Optional description
 		Description string
 		// Optional validation functions

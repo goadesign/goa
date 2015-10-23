@@ -123,7 +123,7 @@ func executeDSL(dsl func(), ctx DSLDefinition) bool {
 
 // finalizeMediaType merges any base type attribute into the media type attributes
 func finalizeMediaType(mt *MediaTypeDefinition) {
-	if mt.BaseType != nil {
+	if mt.Reference != nil {
 		if bat := mt.AttributeDefinition; bat != nil {
 			mt.AttributeDefinition.Inherit(bat)
 		}
@@ -132,7 +132,7 @@ func finalizeMediaType(mt *MediaTypeDefinition) {
 
 // finalizeType merges any base type attribute into the type attributes
 func finalizeType(ut *UserTypeDefinition) {
-	if ut.BaseType != nil {
+	if ut.Reference != nil {
 		if bat := ut.AttributeDefinition; bat != nil {
 			ut.AttributeDefinition.Inherit(bat)
 		}

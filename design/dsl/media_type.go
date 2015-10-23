@@ -6,29 +6,51 @@ import (
 	"strings"
 
 	"bitbucket.org/pkg/inflect"
+	. "github.com/raphael/goa/design"
 )
-import . "github.com/raphael/goa/design"
 
 // Counter used to create unique media type names for identifier-less media types.
 var mediaTypeCount int
 
-// MediaType implements the DSL for media type definitions.
+// MediaType implements the media type definition DSL. A media type definition describes the
+// representation of a resource used in a response body. This includes listing all the *potential*
+// resource attributes that can appear in the body. Views specify which of the attributes are
+// actually rendered so that the same media type definition may represent multiple rendering of a
+// given resource representation.
+//
+// All media types must define a view named "default". This view is used to render the media type in
+// response bodies when no other view is specified.
+//
+// A media type definition may also define links to other media types. This is done by first
+// defining an attribute for the linked-to media type and then referring to that attribute in the
+// Links DSL. Views may then elect to render one or the other or both. Links are rendered using the
+// special "link" view. Media types that are linked to must define that view. Here is an example
+// showing all the possible media type sub-definitions:
 //
 // 	MediaType("application/vnd.goa.example.bottle", func() {
 //		Description("A bottle of wine")
 //		Attributes(func() {
 //			Attribute("id", Integer, "ID of bottle")
 //			Attribute("href", String, "API href of bottle")
+//			Attribute("account", Account, "Owner account")
 //			Attribute("origin", Origin, "Details on wine origin")
 //			Links(func() {
-//				Link("origin")
+//				Link("account")        // Defines a link to the Account media type
+//				Link("origin", "tiny") // Overrides the default view used to render links
 //			})
-//              	Required("href")
+//              	Required("id", "href")
 //     		 })
 //		View("default", func() {
 //			Attribute("id")
 //			Attribute("href")
-//			Attribute("links")
+//			Attribute("links") // Default view renders links
+//		})
+//		View("extended", func() {
+//			Attribute("id")
+//			Attribute("href")
+//			Attribute("account") // Extended view renders account inline
+//			Attribute("origin")  // Extended view renders origin inline
+//			Attribute("links")   // Extended view also renders links
 //		})
 // 	})
 //
@@ -69,13 +91,14 @@ func MediaType(identifier string, dsl func()) *MediaTypeDefinition {
 	return nil
 }
 
-// Media refers to a media type (by name or by reference):
+// Media sets a response media type by name or by reference using a value returned by MediaType:
 //
-// 	ResponseTemplate("NotFound", func() {
+// 	Response("NotFound", func() {
 //		Status(404)
 //		Media("application/json")
 //	})
 //
+// Media can be used inside Response or ResponseTemplate.
 func Media(val interface{}) {
 	if r, ok := responseDefinition(true); ok {
 		if m, ok := val.(*MediaTypeDefinition); ok {
@@ -88,45 +111,45 @@ func Media(val interface{}) {
 	}
 }
 
-// DefaultMedia sets a resource default media type (by name or by reference):
+// Reference sets a type or media type reference. The value itself can be a type or a media type.
+// The reference type attributes define the default properties for attributes with the same name in
+// the type using the reference. So for example if a type is defined as such:
 //
-// 	var _ = Resource("bottle", func() {
-// 		DefaultMedia(BottleMedia)
-// 		// ...
-// 	})
+// 	var Bottle = Type("bottle", func() {
+//		Attribute("name", func() {
+//			MinLength(3)
+//		})
+//		Attribute("vintage", Integer, func() {
+//			Minimum(1970)
+//		})
+//		Attribute("somethingelse")
+//	})
 //
-func DefaultMedia(val interface{}) {
-	if r, ok := resourceDefinition(true); ok {
-		if m, ok := val.(*MediaTypeDefinition); ok {
-			if m.UserTypeDefinition == nil {
-				ReportError("invalid media type specification, media type is not initialized")
-			} else {
-				r.MediaType = m.Identifier
-				m.Resource = r
-			}
-		} else if identifier, ok := val.(string); ok {
-			r.MediaType = identifier
-		} else {
-			ReportError("media type must be a string or a *MediaTypeDefinition, got %#v", val)
-		}
-	}
-}
-
-// BaseType defines the type from which the media or user type is derived from if any. The type can
-// be further customized using the Attributes DSL (to add new attributes for example).
+// Declaring the following media type:
 //
-// Implementation note: the base type comes into play when generting the code. Each attribute being
-// generated is first looked up in the base type and if found initialized from the corresponding
-// parent base type.
-func BaseType(t DataType) {
+// 	var BottleMedia = MediaType("vnd.goa.bottle", func() {
+//		Reference(Bottle)
+//		Attributes(func() {
+//			Attribute("id", Integer)
+//			Attribute("name")
+//			Attribute("vintage")
+//		})
+//	})
+//
+// defines the "name" and "vintage" attributes with the same type and validations as defined in
+// the Bottle type.
+func Reference(t DataType) {
 	if mt, ok := mediaTypeDefinition(false); ok {
-		mt.BaseType = t
+		mt.Reference = t
 	} else if ut, ok := typeDefinition(true); ok {
-		ut.BaseType = t
+		ut.Reference = t
 	}
 }
 
-// TypeName makes it possible to set the Go struct name in the generated code.
+// TypeName makes it possible to set the Go struct name for a type or media type in the generated
+// code. By default goagen uses the name (type) or identifier (media type) given in the DSL and
+// computes a valid Go identifier from it. This function makes it possible to override that and
+// provide a custom name. name must be a valid Go identifier.
 func TypeName(name string) {
 	if mt, ok := mediaTypeDefinition(false); ok {
 		mt.TypeName = name
@@ -135,9 +158,24 @@ func TypeName(name string) {
 	}
 }
 
-// View adds a new view to the media type.
-// It takes the view name and the DSL defining it.
-// View can also be used to specify the view used to render an attribute.
+// View adds a new view to a media type. A view has a name and lists attributes that are
+// rendered when the view is used to produce a response. The attribute names must appear in the
+// media type definition. If an attribute is itself a media type then the view may specify which
+// view to use when rendering the attribute using the View function in the View DSL. If not
+// specified then the view named "default" is used. Examples:
+//
+//	View("default", func() {
+//		Attribute("id")         // "id" and "name" must be media type attributes
+//		Attribute("name")
+//	})
+//
+//	View("extended", func() {
+//		Attribute("id")
+//		Attribute("name")
+//		Attribute("origin", func() {
+//			View("extended") // Use view "extended" to render attribute "origin"
+//		})
+//	})
 func View(name string, dsl ...func()) {
 	if mt, ok := mediaTypeDefinition(false); ok {
 		if !mt.Type.IsObject() && !mt.Type.IsArray() {
@@ -197,30 +235,26 @@ func View(name string, dsl ...func()) {
 	}
 }
 
-// Attributes defines the media type attributes DSL.
+// Attributes implements the media type attributes DSL. See MediaType.
 func Attributes(dsl func()) {
 	if mt, ok := mediaTypeDefinition(true); ok {
 		executeDSL(dsl, mt)
 	}
 }
 
-// Links defines the media type links DSL.
+// Links implements the media type links DSL. See MediaType.
 func Links(dsl func()) {
 	if mt, ok := mediaTypeDefinition(true); ok {
 		executeDSL(dsl, mt)
 	}
 }
 
-// Link defines a media type link DSL.
-// At the minimum a link has a name corresponding to one of the media type attribute names.
-// A link may also define the view used to render the link content if different
-// from "link".
-// Examples:
+// Link adds a link to a media type. At the minimum a link has a name corresponding to one of the
+// media type attribute names. A link may also define the view used to render the linked-to
+// attribute. The default view used to render links is "link". Examples:
 //
-// Link("vendor")
-//
-// Link("vendor", "view")
-//
+// 	Link("origin")           // Use the "link" view of the "origin" attribute
+//	Link("account", "tiny")  // Use the "tiny" view of the "account" attribute
 func Link(name string, view ...string) {
 	if mt, ok := mediaTypeDefinition(true); ok {
 		if mt.Links == nil {
@@ -244,10 +278,11 @@ func Link(name string, view ...string) {
 	}
 }
 
-// CollectionOf creates a collection media type from its element media type.
-// A collection media type represents the content of responses that return a
-// collection of resources such as "index" actions.
-// TBD: this relies on the underlying media type to have been evaled already.
+// CollectionOf creates a collection media type from its element media type. A collection media
+// type represents the content of responses that return a collection of resources such as "list"
+// actions. This function can be called from any place where a media type can be used.
+// The resulting media type identifier is built from the element media type by appending the media
+// type parameter "type" with value "collection".
 func CollectionOf(m *MediaTypeDefinition, dsl ...func()) *MediaTypeDefinition {
 	id := m.Identifier
 	mediatype, params, err := mime.ParseMediaType(id)

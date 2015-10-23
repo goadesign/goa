@@ -7,34 +7,70 @@ import (
 	. "github.com/raphael/goa/design"
 )
 
-// Attribute defines an attribute type, description and an optional validation DSL.
-// When Attribute() is used in an action parameter definition all the arguments are optional and
-// the corresponding attribute definition fields are inherited from the resource media type
-// attribute of the same name.
-// Valid usage:
+// Attribute implements the attribute definition DSL. An attribute describes a data structure
+// recursively. Attributes are used for describing request headers, parameters and payloads -
+// response bodies and headers - media types and types. An attribute definition is recursive:
+// attributes may include other attributes. At the basic level an attribute has a name,
+// a type and optionally a default value and validation rules. The type of an attribute can be one of:
 //
-// * Attribute(name string, dataType DataType, description string, dsl func())
+// * The primitive types Boolean, Integer, Number or String.
 //
-// * Attribute(name string, dataType DataType, description string)
+// * A type defined via the Type function.
 //
-// * Attribute(name string, dataType DataType, dsl func())
+// * A media type defined via the MediaType function.
 //
-// * Attribute(name string, dataType DataType)
+// * An object described recursively with child attributes.
 //
-// * Attribute(name string, dsl func()) /* dataType is String or Object (if DSL defines child attributes) */
+// * An array defined using the ArrayOf function.
 //
-// * Attribute(name string) /* dataType is String */
+// * An hashmap defined using the HashOf function.
 //
-// The following all call this method:
+// Attributes can be defined using the Attribute, Param, Member or Header functions depending
+// on where the definition appears. The syntax for all these DSL is the same.
+// Here are some examples:
 //
-//     Attribute("foo", func() {
-//         Enum("one", "two")
-//     })
+//	 Attribute("name")             //  Defines an attribute of type String
 //
-//     Header("Authorization")
+//	 Attribute("name", func() {
+//	 	Pattern("^foo")        // Adds a validation rule to the attribute
+//	 })
 //
-//     Param("AccountID", Integer, "Account ID")
+//	 Attribute("name", Integer)    // Defines an attribute of type Integer
 //
+//	 Attribute("name", Integer, func() {
+//	 	Default(42)            // With a default value
+//	 })
+//
+//	 Attribute("name", Integer, "description") // Specifies a description
+//
+//	 Attribute("name", Integer, "description", func() {
+//	 	Enum(1, 2)             // And validation rules
+//	 })
+//
+// Nested attributes:
+//
+//	 Attribute("nested", func() {
+//	 	Description("description")
+//	 	Attribute("child")
+//	 	Attribute("child2", func() {
+//	 		// ....
+//	 	})
+//              Required("child")
+//	 })
+//
+// Here are all the valid usage of the Attribute function:
+//
+//	 Attribute(name string, dataType DataType, description string, dsl func())
+//
+//	 Attribute(name string, dataType DataType, description string)
+//
+//	 Attribute(name string, dataType DataType, dsl func())
+//
+//	 Attribute(name string, dataType DataType)
+//
+//	 Attribute(name string, dsl func()) /* dataType is String or Object (if DSL defines child attributes) */
+//
+//	 Attribute(name string) /* dataType is String */
 func Attribute(name string, args ...interface{}) {
 	var parent *AttributeDefinition
 	if at, ok := attributeDefinition(false); ok {
@@ -50,8 +86,8 @@ func Attribute(name string, args ...interface{}) {
 			return
 		}
 		var baseAttr *AttributeDefinition
-		if parent.BaseType != nil {
-			for n, att := range parent.BaseType.ToObject() {
+		if parent.Reference != nil {
+			for n, att := range parent.Reference.ToObject() {
 				if n == name {
 					baseAttr = att
 					break
@@ -113,7 +149,7 @@ func Attribute(name string, args ...interface{}) {
 				Description: description,
 			}
 		}
-		att.BaseType = parent.BaseType
+		att.Reference = parent.Reference
 		if dsl != nil {
 			executeDSL(dsl, att)
 		}
@@ -125,17 +161,17 @@ func Attribute(name string, args ...interface{}) {
 	}
 }
 
-// Header is an alias of Attribute
+// Header is an alias of Attribute.
 func Header(name string, args ...interface{}) {
 	Attribute(name, args...)
 }
 
-// Member is an alias of Attribute
+// Member is an alias of Attribute.
 func Member(name string, args ...interface{}) {
 	Attribute(name, args...)
 }
 
-// Param is an alias of Attribute
+// Param is an alias of Attribute.
 func Param(name string, args ...interface{}) {
 	Attribute(name, args...)
 }
@@ -152,14 +188,7 @@ func Default(def interface{}) {
 	}
 }
 
-// Identity sets the attribute identity property names.
-func Identity(names ...string) {
-	if a, ok := attributeDefinition(true); ok {
-		a.IdentityProperties = names
-	}
-}
-
-// Enum defines the possible values for an attribute.
+// Enum adds a "enum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor76.
 func Enum(val ...interface{}) {
 	if a, ok := attributeDefinition(true); ok {
@@ -190,12 +219,44 @@ func Enum(val ...interface{}) {
 			}
 		}
 		if ok {
-			a.Validations = append(a.Validations, NewEnumValidation(val...))
+			a.Validations = append(a.Validations, &EnumValidationDefinition{Values: val})
 		}
 	}
 }
 
-// Format sets the string format for an attribute.
+// SupportedValidationFormats lists the supported formats for use with the
+// Format DSL.
+var SupportedValidationFormats = []string{
+	"cidr",
+	"date-time",
+	"email",
+	"hostname",
+	"ipv4",
+	"ipv6",
+	"mac",
+	"regexp",
+	"uri",
+}
+
+// Format adds a "format" validation to the attribute.
+// See http://json-schema.org/latest/json-schema-validation.html#anchor104.
+// The formats supported by goa are:
+//
+// "date-time": RFC3339 date time
+//
+// "email": RFC5322 email address
+//
+// "hostname": RFC1035 internet host name
+//
+// "ipv4" and "ipv6": RFC2373 IPv4 and IPv6 address
+//
+// "uri": RFC3986 URI
+//
+// "mac": IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address
+//
+// "cidr": RFC4632 or RFC4291 CIDR notation IP address
+//
+// "regexp": RE2 regular expression
 func Format(f string) {
 	if a, ok := attributeDefinition(true); ok {
 		if a.Type != nil && a.Type.Kind() != StringKind {
@@ -212,13 +273,14 @@ func Format(f string) {
 				ReportError("unsupported format %#v, supported formats are: %s",
 					f, strings.Join(SupportedValidationFormats, ", "))
 			} else {
-				a.Validations = append(a.Validations, NewFormatValidation(f))
+				a.Validations = append(a.Validations, &FormatValidationDefinition{Format: f})
 			}
 		}
 	}
 }
 
-// Pattern sets the pattern (regexp) for an attribute.
+// Pattern adds a "pattern" validation to the attribute.
+// See http://json-schema.org/latest/json-schema-validation.html#anchor33.
 func Pattern(p string) {
 	if a, ok := attributeDefinition(true); ok {
 		if a.Type != nil && a.Type.Kind() != StringKind {
@@ -228,57 +290,62 @@ func Pattern(p string) {
 			if err != nil {
 				ReportError("invalid pattern %#v, %s", p, err)
 			} else {
-				a.Validations = append(a.Validations, NewPatternValidation(p))
+				a.Validations = append(a.Validations, &PatternValidationDefinition{Pattern: p})
 			}
 		}
 	}
 }
 
-// Minimum value validation
+// Minimum adds a "minimum" validation to the attribute.
+// See http://json-schema.org/latest/json-schema-validation.html#anchor21.
 func Minimum(val int) {
 	if a, ok := attributeDefinition(true); ok {
 		if a.Type != nil && a.Type.Kind() != IntegerKind && a.Type.Kind() != NumberKind {
 			incompatibleAttributeType("minimum", a.Type.Name(), "an integer or a number")
 		} else {
-			a.Validations = append(a.Validations, NewMinimumValidation(val))
+			a.Validations = append(a.Validations, &MinimumValidationDefinition{Min: val})
 		}
 	}
 }
 
-// Maximum value validation
+// Maximum adds a "maximum" validation to the attribute.
+// See http://json-schema.org/latest/json-schema-validation.html#anchor17.
 func Maximum(val int) {
 	if a, ok := attributeDefinition(true); ok {
 		if a.Type != nil && a.Type.Kind() != IntegerKind && a.Type.Kind() != NumberKind {
 			incompatibleAttributeType("maximum", a.Type.Name(), "an integer or a number")
 		} else {
-			a.Validations = append(a.Validations, NewMaximumValidation(val))
+			a.Validations = append(a.Validations, &MaximumValidationDefinition{Max: val})
 		}
 	}
 }
 
-// MinLength validation
+// MinLength adss a "minItems" validation to the attribute.
+// See http://json-schema.org/latest/json-schema-validation.html#anchor45.
 func MinLength(val int) {
 	if a, ok := attributeDefinition(true); ok {
 		if a.Type != nil && a.Type.Kind() != StringKind && a.Type.Kind() != ArrayKind {
 			incompatibleAttributeType("minimum length", a.Type.Name(), "a string or an array")
 		} else {
-			a.Validations = append(a.Validations, NewMinLengthValidation(val))
+			a.Validations = append(a.Validations, &MinLengthValidationDefinition{MinLength: val})
 		}
 	}
 }
 
-// MaxLength validation
+// MaxLength adss a "maxItems" validation to the attribute.
+// See http://json-schema.org/latest/json-schema-validation.html#anchor42.
 func MaxLength(val int) {
 	if a, ok := attributeDefinition(true); ok {
 		if a.Type != nil && a.Type.Kind() != StringKind && a.Type.Kind() != ArrayKind {
 			incompatibleAttributeType("maximum length", a.Type.Name(), "a string or an array")
 		} else {
-			a.Validations = append(a.Validations, NewMaxLengthValidation(val))
+			a.Validations = append(a.Validations, &MaxLengthValidationDefinition{MaxLength: val})
 		}
 	}
 }
 
-// Required properties validation
+// Required adds a "required" validation to the attribute.
+// See http://json-schema.org/latest/json-schema-validation.html#anchor61.
 func Required(names ...string) {
 	var at *AttributeDefinition
 	if a, ok := attributeDefinition(false); ok {
@@ -291,7 +358,7 @@ func Required(names ...string) {
 	if at.Type != nil && at.Type.Kind() != ObjectKind {
 		incompatibleAttributeType("required", at.Type.Name(), "an object")
 	} else {
-		at.Validations = append(at.Validations, NewRequiredValidation(names...))
+		at.Validations = append(at.Validations, &RequiredValidationDefinition{Names: names})
 	}
 }
 

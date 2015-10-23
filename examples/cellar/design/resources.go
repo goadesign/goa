@@ -10,7 +10,7 @@ var _ = Resource("account", func() {
 	DefaultMedia(Account)
 	BasePath("/accounts")
 	CanonicalActionName("show")
-	Trait("Authenticated")
+	UseTrait("Authenticated")
 
 	Action("show", func() {
 		Routing(
@@ -70,7 +70,7 @@ var _ = Resource("bottle", func() {
 	BasePath("bottles")
 	Parent("account")
 	CanonicalActionName("show")
-	Trait("Authenticated")
+	UseTrait("Authenticated")
 
 	Action("list", func() {
 		Routing(
