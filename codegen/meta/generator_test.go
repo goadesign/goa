@@ -198,6 +198,22 @@ var _ = Describe("Run", func() {
 			It("successfully runs", func() {
 				Ω(compileError).ShouldNot(HaveOccurred())
 			})
+
+			Context("with a comma separated list of path in GOPATH", func() {
+				var gopath string
+				BeforeEach(func() {
+					gopath = os.Getenv("GOPATH")
+					os.Setenv("GOPATH", gopath+":/tmp")
+				})
+
+				AfterEach(func() {
+					os.Setenv("GOPATH", gopath)
+				})
+
+				It("successfull runs", func() {
+					Ω(compileError).ShouldNot(HaveOccurred())
+				})
+			})
 		})
 
 		Context("with code that returns generated file paths", func() {

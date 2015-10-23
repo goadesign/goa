@@ -64,9 +64,22 @@ func (m *Generator) Generate() ([]string, error) {
 	if gopath == "" {
 		return nil, fmt.Errorf("$GOPATH not defined")
 	}
-	designPath := filepath.Join(gopath, "src", codegen.DesignPackagePath)
-	if _, err := os.Stat(designPath); err != nil {
-		return nil, fmt.Errorf(`cannot find design package at path "%s"`, designPath)
+	candidates := strings.Split(gopath, ":")
+	for i, c := range candidates {
+		candidates[i] = filepath.Join(c, "src", codegen.DesignPackagePath)
+	}
+	var designPath string
+	for _, path := range candidates {
+		if _, err := os.Stat(path); err == nil {
+			designPath = path
+			break
+		}
+	}
+	if designPath == "" {
+		if len(candidates) == 1 {
+			return nil, fmt.Errorf(`cannot find design package at path "%s"`, candidates[0])
+		}
+		return nil, fmt.Errorf(`cannot find design package in any of the paths %s`, strings.Join(candidates, ", "))
 	}
 	_, err := exec.LookPath("go")
 	if err != nil {
