@@ -1,0 +1,472 @@
+package genschema
+
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/raphael/goa/design"
+)
+
+type (
+	// JSONSchema represents an instance of a JSON schema.
+	// See http://json-schema.org/documentation.html
+	JSONSchema struct {
+		Schema string `json:"$schema,omitempty"`
+		// Core schema
+		ID           string                 `json:"id,omitempty"`
+		Title        string                 `json:"title,omitempty"`
+		Type         JSONType               `json:"type,omitempty"`
+		Item         *JSONSchema            `json:"item,omitempty"`
+		Properties   map[string]*JSONSchema `json:"properties,omitempty"`
+		Definitions  map[string]*JSONSchema `json:"definitions,omitempty"`
+		Description  string                 `json:"description,omitempty"`
+		DefaultValue interface{}            `json:"defaultValue,omitempty"`
+
+		// Hyper schema
+		Media     *JSONMedia  `json:"media,omitempty"`
+		ReadOnly  bool        `json:"readOnly,omitempty"`
+		PathStart string      `json:"pathStart,omitempty"`
+		Links     []*JSONLink `json:"links,omitempty"`
+		Ref       string      `json:"$ref,omitempty"`
+
+		// Validation
+		Enum                 []interface{} `json:"enum,omitempty"`
+		Format               string        `json:"format,omitempty"`
+		Pattern              string        `json:"pattern,omitempty"`
+		Minimum              int           `json:"minimum,omitempty"`
+		Maximum              int           `json:"maximum,omitempty"`
+		MinLength            int           `json:"minLength,omitempty"`
+		MaxLength            int           `json:"maxLength,omitempty"`
+		Required             []string      `json:"required,omitempty"`
+		AdditionalProperties bool          `json:"additionalProperties,omitempty"`
+
+		// Union
+		AnyOf []*JSONSchema `json:"anyOf,omitempty"`
+	}
+
+	// JSONType is the JSON type enum.
+	JSONType string
+
+	// JSONMedia represents a "media" field in a JSON hyper schema.
+	JSONMedia struct {
+		BinaryEncoding string `json:"binaryEncoding,omitempty"`
+		Type           string `json:"type,omitempty"`
+	}
+
+	// JSONLink represents a "link" field in a JSON hyper schema.
+	JSONLink struct {
+		Title        string      `json:"title,omitempty"`
+		Description  string      `json:"description,omitempty"`
+		Rel          string      `json:"rel,omitempty"`
+		Href         string      `json:"href,omitempty"`
+		Method       string      `json:"method,omitempty"`
+		Schema       *JSONSchema `json:"schema,omitempty"`
+		TargetSchema *JSONSchema `json:"targetSchema,omitempty"`
+		MediaType    string      `json:"mediaType,omitempty"`
+		EncType      string      `json:"encType,omitempty"`
+	}
+)
+
+const (
+	// JSONArray represents a JSON array.
+	JSONArray JSONType = "array"
+	// JSONBoolean represents a JSON boolean.
+	JSONBoolean = "boolean"
+	// JSONInteger represents a JSON number without a fraction or exponent part.
+	JSONInteger = "integer"
+	// JSONNumber represents any JSON number. Number includes integer.
+	JSONNumber = "number"
+	// JSONNull represents the JSON null value.
+	JSONNull = "null"
+	// JSONObject represents a JSON object.
+	JSONObject = "object"
+	// JSONString represents a JSON string.
+	JSONString = "string"
+)
+
+// SchemaRef is the JSON Hyper-schema standard href.
+const SchemaRef = "http://json-schema.org/draft-04/hyper-schema"
+
+var (
+	// definitions contains the generated JSON schema definitions
+	definitions map[string]*JSONSchema
+)
+
+// Initialize the global variables
+func init() {
+	definitions = make(map[string]*JSONSchema)
+}
+
+// NewJSONSchema instantiates a new JSON schema.
+func NewJSONSchema() *JSONSchema {
+	js := JSONSchema{
+		Properties:  make(map[string]*JSONSchema),
+		Definitions: make(map[string]*JSONSchema),
+	}
+	return &js
+}
+
+// JSON serializes the schema into JSON.
+// It makes sure the "$schema" standard field is set if needed prior to delegating to the standard
+// JSON marshaler.
+func (s *JSONSchema) JSON() ([]byte, error) {
+	if s.Ref == "" {
+		s.Schema = SchemaRef
+	}
+	return json.Marshal(s)
+}
+
+// APISchema produces the API JSON hyper schema.
+func APISchema(api *design.APIDefinition) *JSONSchema {
+	api.IterateResources(func(r *design.ResourceDefinition) error {
+		GenerateResourceDefinition(api, r)
+		return nil
+	})
+	links := []*JSONLink{
+		&JSONLink{
+			Href: ServiceURL,
+			Rel:  "self",
+		},
+		&JSONLink{
+			Href:   "/schema",
+			Method: "GET",
+			Rel:    "self",
+			TargetSchema: &JSONSchema{
+				Schema:               SchemaRef,
+				AdditionalProperties: true,
+			},
+		},
+	}
+	s := JSONSchema{
+		ID:          fmt.Sprintf("%s/schema", ServiceURL),
+		Title:       api.Title,
+		Description: api.Description,
+		Type:        JSONObject,
+		Definitions: definitions,
+		Properties:  propertiesFromDefs(definitions, "#/definitions/"),
+		Links:       links,
+	}
+	return &s
+}
+
+// GenerateResourceDefinition produces the JSON schema corresponding to the given API resource.
+// It stores the results in cachedSchema.
+func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDefinition) {
+	s := NewJSONSchema()
+	s.Description = r.Description
+	s.Type = JSONObject
+	s.Title = r.Name
+	definitions[r.FormatName(true, false)] = s
+	if mt, ok := api.MediaTypes[r.MediaType]; ok {
+		buildMediaTypeSchema(api, mt, s)
+	}
+	for _, a := range r.Actions {
+		var requestSchema *JSONSchema
+		if a.Payload != nil {
+			requestSchema = TypeSchema(api, a.Payload)
+			requestSchema.Description = a.Name + " payload"
+		}
+		if a.Params != nil {
+			params := a.Params.Dup()
+			// We don't want to keep the path params, these are defined inline in the href
+			for _, r := range a.Routes {
+				for _, p := range r.Params() {
+					delete(params.Type.ToObject(), p)
+				}
+			}
+		}
+		var targetSchema *JSONSchema
+		var identifier string
+		for _, resp := range a.Responses {
+			if mt, ok := api.MediaTypes[resp.MediaType]; ok {
+				if identifier == "" {
+					identifier = mt.Identifier
+				} else {
+					identifier = ""
+				}
+				if targetSchema == nil {
+					targetSchema = TypeSchema(api, mt)
+				} else if targetSchema.AnyOf == nil {
+					firstSchema := targetSchema
+					targetSchema = NewJSONSchema()
+					targetSchema.AnyOf = []*JSONSchema{firstSchema, TypeSchema(api, mt)}
+				} else {
+					targetSchema.AnyOf = append(targetSchema.AnyOf, TypeSchema(api, mt))
+				}
+			}
+		}
+		for i, r := range a.Routes {
+			link := JSONLink{
+				Title:        a.Name,
+				Rel:          a.FormatName(true),
+				Href:         toSchemaHref(api, r),
+				Method:       r.Verb,
+				Schema:       requestSchema,
+				TargetSchema: targetSchema,
+				MediaType:    identifier,
+			}
+			if i == 0 {
+				if ca := a.Parent.CanonicalAction(); ca != nil {
+					if ca.Name == a.Name {
+						link.Rel = "self"
+					}
+				}
+			}
+			s.Links = append(s.Links, &link)
+		}
+	}
+}
+
+// MediaTypeRef produces the JSON reference to the media type definition.
+func MediaTypeRef(api *design.APIDefinition, mt *design.MediaTypeDefinition) string {
+	if _, ok := definitions[mt.FormatName(true, false)]; !ok {
+		GenerateMediaTypeDefinition(api, mt)
+	}
+	return fmt.Sprintf("#/definitions/%s", mt.FormatName(true, false))
+}
+
+// TypeRef produces the JSON reference to the type definition.
+func TypeRef(api *design.APIDefinition, ut *design.UserTypeDefinition) string {
+	if _, ok := definitions[ut.FormatName(true, false)]; !ok {
+		GenerateTypeDefinition(api, ut)
+	}
+	return fmt.Sprintf("#/definitions/%s", ut.FormatName(true, false))
+}
+
+// GenerateMediaTypeDefinition produces the JSON schema corresponding to the given media type.
+func GenerateMediaTypeDefinition(api *design.APIDefinition, mt *design.MediaTypeDefinition) {
+	if _, ok := definitions[mt.FormatName(true, false)]; ok {
+		return
+	}
+	s := NewJSONSchema()
+	s.Title = mt.TypeName
+	definitions[mt.FormatName(true, false)] = s
+	buildMediaTypeSchema(api, mt, s)
+}
+
+// GenerateTypeDefinition produces the JSON schema corresponding to the given type.
+func GenerateTypeDefinition(api *design.APIDefinition, ut *design.UserTypeDefinition) {
+	if _, ok := definitions[ut.FormatName(true, false)]; ok {
+		return
+	}
+	s := NewJSONSchema()
+	s.Title = ut.TypeName
+	definitions[ut.FormatName(true, false)] = s
+	buildAttributeSchema(api, s, ut.AttributeDefinition)
+}
+
+// TypeSchema produces the JSON schema corresponding to the given data type.
+func TypeSchema(api *design.APIDefinition, t design.DataType) *JSONSchema {
+	s := NewJSONSchema()
+	switch actual := t.(type) {
+	case design.Primitive:
+		s.Type = JSONType(actual.Name())
+	case *design.Array:
+		s.Type = JSONArray
+		s.Item = NewJSONSchema()
+		buildAttributeSchema(api, s.Item, actual.ElemType)
+	case design.Object:
+		s.Type = JSONObject
+		for n, at := range actual {
+			prop := NewJSONSchema()
+			buildAttributeSchema(api, prop, at)
+			s.Properties[n] = prop
+		}
+	case *design.Hash:
+		s.Type = JSONObject
+		s.AdditionalProperties = true
+	case *design.UserTypeDefinition:
+		s.Ref = TypeRef(api, actual)
+	case *design.MediaTypeDefinition:
+		s.Ref = MediaTypeRef(api, actual)
+	}
+	return s
+}
+
+// Merge does a two level deep merge of other into s.
+func (s *JSONSchema) Merge(other *JSONSchema) {
+	if s.ID == "" {
+		s.ID = other.ID
+	}
+	if s.Type == "" {
+		s.Type = other.Type
+	}
+	if s.Ref == "" {
+		s.Ref = other.Ref
+	}
+	for n, p := range other.Properties {
+		if _, ok := s.Properties[n]; !ok {
+			if s.Properties == nil {
+				s.Properties = make(map[string]*JSONSchema)
+			}
+			s.Properties[n] = p
+		}
+	}
+	if s.Item == nil {
+		s.Item = other.Item
+	}
+	for n, d := range other.Definitions {
+		if _, ok := s.Definitions[n]; !ok {
+			s.Definitions[n] = d
+		}
+	}
+	if s.DefaultValue == nil {
+		s.DefaultValue = other.DefaultValue
+	}
+	if s.Title == "" {
+		s.Title = other.Title
+	}
+	if s.Media == nil {
+		s.Media = other.Media
+	}
+	if s.ReadOnly == false {
+		s.ReadOnly = other.ReadOnly
+	}
+	if s.PathStart == "" {
+		s.PathStart = other.PathStart
+	}
+	for _, l := range other.Links {
+		s.Links = append(s.Links, l)
+	}
+	if s.Enum == nil {
+		s.Enum = other.Enum
+	}
+	if s.Format == "" {
+		s.Format = other.Format
+	}
+	if s.Pattern == "" {
+		s.Pattern = other.Pattern
+	}
+	if s.Minimum > other.Minimum {
+		s.Minimum = other.Minimum
+	}
+	if s.Maximum < other.Maximum {
+		s.Maximum = other.Maximum
+	}
+	if s.MinLength > other.MinLength {
+		s.MinLength = other.MinLength
+	}
+	if s.MaxLength < other.MaxLength {
+		s.MaxLength = other.MaxLength
+	}
+	for _, r := range other.Required {
+		s.Required = append(s.Required, r)
+	}
+	if s.AdditionalProperties == false {
+		s.AdditionalProperties = other.AdditionalProperties
+	}
+}
+
+// Dup creates a shallow clone of the given schema.
+func (s *JSONSchema) Dup() *JSONSchema {
+	js := JSONSchema{
+		ID:                   s.ID,
+		Description:          s.Description,
+		Schema:               s.Schema,
+		Type:                 s.Type,
+		DefaultValue:         s.DefaultValue,
+		Title:                s.Title,
+		Media:                s.Media,
+		ReadOnly:             s.ReadOnly,
+		PathStart:            s.PathStart,
+		Links:                s.Links,
+		Ref:                  s.Ref,
+		Enum:                 s.Enum,
+		Format:               s.Format,
+		Pattern:              s.Pattern,
+		Minimum:              s.Minimum,
+		Maximum:              s.Maximum,
+		MinLength:            s.MinLength,
+		MaxLength:            s.MaxLength,
+		Required:             s.Required,
+		AdditionalProperties: s.AdditionalProperties,
+	}
+	for n, p := range s.Properties {
+		js.Properties[n] = p.Dup()
+	}
+	if s.Item != nil {
+		js.Item = s.Item.Dup()
+	}
+	for n, d := range s.Definitions {
+		js.Definitions[n] = d.Dup()
+	}
+	return &js
+}
+
+// buildAttributeSchema initializes the given JSON schema that corresponds to the given attribute.
+func buildAttributeSchema(api *design.APIDefinition, s *JSONSchema, at *design.AttributeDefinition) *JSONSchema {
+	s.Merge(TypeSchema(api, at.Type))
+	s.DefaultValue = at.DefaultValue
+	s.Description = at.Description
+	for _, val := range at.Validations {
+		switch actual := val.(type) {
+		case *design.EnumValidationDefinition:
+			s.Enum = actual.Values
+		case *design.FormatValidationDefinition:
+			s.Format = actual.Format
+		case *design.PatternValidationDefinition:
+			s.Pattern = actual.Pattern
+		case *design.MinimumValidationDefinition:
+			s.Minimum = actual.Min
+		case *design.MaximumValidationDefinition:
+			s.Maximum = actual.Max
+		case *design.MinLengthValidationDefinition:
+			s.MinLength = actual.MinLength
+		case *design.MaxLengthValidationDefinition:
+			s.MaxLength = actual.MaxLength
+		case *design.RequiredValidationDefinition:
+			s.Required = actual.Names
+		}
+	}
+	return s
+}
+
+// toSchemaHref produces a href that replaces the path wildcards with JSON schema references when
+// appropriate.
+func toSchemaHref(api *design.APIDefinition, r *design.RouteDefinition) string {
+	params := r.Params()
+	args := make([]interface{}, len(params))
+	for i, p := range params {
+		args[i] = fmt.Sprintf("/{%s}", p)
+	}
+	tmpl := design.WildcardRegex.ReplaceAllLiteralString(r.FullPath(), "%s")
+	return fmt.Sprintf(tmpl, args...)
+}
+
+// propertiesFromDefs creates a Properties map referencing the given definitions under the given
+// path.
+func propertiesFromDefs(definitions map[string]*JSONSchema, path string) map[string]*JSONSchema {
+	res := make(map[string]*JSONSchema, len(definitions))
+	for n := range definitions {
+		if n == "identity" {
+			continue
+		}
+		s := NewJSONSchema()
+		s.Ref = path + n
+		res[n] = s
+	}
+	return res
+}
+
+// buildMediaTypeSchema initializes s as the JSON schema representing mt.
+func buildMediaTypeSchema(api *design.APIDefinition, mt *design.MediaTypeDefinition, s *JSONSchema) {
+	s.Media = &JSONMedia{Type: mt.Identifier}
+	for _, l := range mt.Links {
+		att := l.Attribute() // cannot be nil if DSL validated
+		r := l.MediaType().Resource
+		var href string
+		if r != nil {
+			href = toSchemaHref(api, r.CanonicalAction().Routes[0])
+		}
+		s.Links = append(s.Links, &JSONLink{
+			Title:        l.Name,
+			Rel:          l.Name,
+			Description:  att.Description,
+			Href:         href,
+			Method:       "GET",
+			TargetSchema: TypeSchema(api, l.MediaType()),
+			MediaType:    l.MediaType().Identifier,
+		})
+	}
+	buildAttributeSchema(api, s, mt.AttributeDefinition)
+}

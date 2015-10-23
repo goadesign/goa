@@ -1,0 +1,5 @@
+examples/cellar/cellar
+**/*.coverprofile
+goagen/goagen
+**/autogen
+vendor

@@ -1,0 +1,15 @@
+package: github.com/raphael/goa
+import:
+  - package: golang.org/x/tools
+    subpackages:
+      - /cmd/goimports
+  - package: bitbucket.org/pkg/inflect
+  - package: github.com/julienschmidt/httprouter
+  - package: gopkg.in/alecthomas/kingpin.v2
+  - package: github.com/alecthomas/template
+  - package: github.com/alecthomas/units
+  - package: golang.org/x/net
+    subpackages:
+      - /context
+  - package: gopkg.in/inconshreveable/log15.v2
+  - package: github.com/mattn/go-colorable
