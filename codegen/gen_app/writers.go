@@ -414,11 +414,11 @@ type {{gotypename .Payload 1}} {{gotypedef .Payload 0 false false}}
 func New{{gotypename .Payload 0}}(raw interface{}) ({{gotyperef .Payload 0}}, error) {
 	var err error
 	var p {{gotyperef .Payload 1}}
-{{typeUnmarshaler .Payload "payload" "raw" "p"}}
-	if p != nil {
-		{{validationChecker .Payload.AttributeDefinition "p"}}
+{{typeUnmarshaler .Payload "payload" "raw" "p"}}{{$validation := validationChecker .Payload.AttributeDefinition "p"}}
+{{if $validation}}	if p != nil {
+		{{$validation}}
 	}
-	return p, err
+{{end}}	return p, err
 }
 `
 

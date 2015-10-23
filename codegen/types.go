@@ -421,12 +421,22 @@ func NamedTypeUnmarshaler(t design.DataType, context, source, target string) str
 	return namedTypeUnmarshalerR(t, context, source, target, 1)
 }
 func namedTypeUnmarshalerR(t design.DataType, context, source, target string, depth int) string {
+	var required []string
+	if ds, ok := t.(design.DataStructure); ok {
+		for _, v := range ds.Definition().Validations {
+			if r, ok := v.(*design.RequiredValidationDefinition); ok {
+				required = r.Names
+				break
+			}
+		}
+	}
 	data := map[string]interface{}{
-		"type":    t,
-		"context": context,
-		"source":  source,
-		"target":  target,
-		"depth":   depth,
+		"type":     t,
+		"context":  context,
+		"source":   source,
+		"target":   target,
+		"required": required,
+		"depth":    depth,
 	}
 	if t.IsArray() {
 		data["elemType"] = t.ToArray().ElemType
@@ -801,7 +811,7 @@ const (
 {{$validation := validate $att (printf "%s.%s" $context (goify $name true)) $temp (add $depth 2)}}{{if $validation}}{{$validation}}
 {{end}}{{tabs $depth}}		{{printf "%s.%s" $target (goify $name true)}} = {{$temp}}
 {{tabs $depth}}	}{{if (has $required $name)}} else {
-{{tabs $depth}}		err = goa.MissingAttributeError(` + "`" + `{{.context}}` + "`" + `, "{{$name}}", err)
+{{tabs $depth}}		err = goa.MissingAttributeError(` + "`" + `{{$context}}` + "`" + `, "{{$name}}", err)
 {{tabs $depth}}	}{{end}}
 {{end}}{{tabs $depth}}} else {
 {{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "map[string]interface{}", err)
