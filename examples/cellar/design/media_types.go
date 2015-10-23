@@ -45,7 +45,7 @@ var Account = MediaType("application/vnd.goa.example.account", func() {
 // Bottle is the bottle resource media type.
 var Bottle = MediaType("application/vnd.goa.example.bottle", func() {
 	Description("A bottle of wine")
-	BaseType(BottlePayload)
+	Reference(BottlePayload)
 	Attributes(func() {
 		Attribute("id", Integer, "ID of bottle")
 		Attribute("href", String, "API href of bottle")

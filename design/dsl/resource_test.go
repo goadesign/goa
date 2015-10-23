@@ -208,7 +208,7 @@ var _ = Describe("Resource", func() {
 	Context("with a trait that does not exist", func() {
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() { Trait("Authenticated") }
+			dsl = func() { UseTrait("Authenticated") }
 		})
 
 		It("returns an error", func() {
@@ -222,7 +222,7 @@ var _ = Describe("Resource", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() { Trait(traitName) }
+			dsl = func() { UseTrait(traitName) }
 			API("test", func() {
 				Trait(traitName, func() {
 					Description(description)

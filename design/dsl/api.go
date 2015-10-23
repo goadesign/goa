@@ -2,40 +2,43 @@ package dsl
 
 import . "github.com/raphael/goa/design"
 
-// API defines the top level API DSL.
+// API implements the top level API DSL. It defines the API name, description and other global
+// properties such as the base path to all the API resource actions. Here is an example showing all
+// the possible API sub-definitions:
 //
-// API("cellar", func() {
-//	Title("The virtual wine cellar")
-//	Description("A basic example of a CRUD API implemented with goa")
-//	BasePath("/:accountID")
-//	BaseParams(func() {
-//		Param("accountID", Integer,
-//			"API request account. All actions operate on resources belonging to the account."),
-//	})
-//	ResponseTemplate("NotFound", func() {
-//		Description("Resource not found")
-//		Status(404)
-//		MediaType("application/json")
-//	})
-//      Type("BottlePayload", func() {
-//		Attribute("name")
-//	})
-//	Trait("Authenticated", func() {
-//		Headers(func() {
-//			Header("Auth-Token", String)
-//			Required("Auth-Token")
-//		})
-//	})
-// })
+// 	API("API name", func() {
+// 		Title("title")                          // API title used in documentation
+// 		Description("description")              // API description used in documentation
+// 		BasePath("/base/:param")                // Common base path to all API actions
+// 		BaseParams(func() {                     // Common parameters to all API actions
+// 			Param("param")
+// 		})
+// 		ResponseTemplate("static", func() {     // Response template for use by actions
+// 			Description("description")
+// 			Status(404)
+// 			MediaType("application/json")
+// 		})
+// 		ResponseTemplate("dynamic", func(arg1, arg2 string) {
+// 			Description(arg1)
+// 			Status(200)
+// 			MediaType(arg2)
+// 		})
+// 		Trait("Authenticated", func() {         // Traits define DSL that can be run anywhere
+// 			Headers(func() {
+// 				Header("header")
+// 				Required("header")
+// 			})
+// 		})
+// 	}
 //
-// We can't rely on this being run first, any of the top level DSL could run
-// in any order. The top level DSLs are API, Resource, MediaType and Type.
-// The first one to be called executes InitDesign.
-// API checks whether that has been called yet (i.e. if the global variable
-// Design is initialized) and if so makes sure that if it has a name it is the
-// same as the one used in the argument: API can be called multiple times as
-// long as it's always to define the same API.
 func API(name string, dsl func()) *APIDefinition {
+	// We can't rely on this being run first, any of the top level DSL could run
+	// in any order. The top level DSLs are API, Resource, MediaType and Type.
+	// The first one to be called executes InitDesign.
+	// API checks whether that has been called yet (i.e. if the global variable
+	// Design is initialized) and if so makes sure that if it has a name it is the
+	// same as the one used in the argument: API can be called multiple times as
+	// long as it's always to define the same API.
 	if Design == nil {
 		InitDesign()
 	} else if Design.Name != "" && Design.Name != name {
@@ -50,7 +53,7 @@ func API(name string, dsl func()) *APIDefinition {
 	return Design
 }
 
-// Description sets the description on the evaluation scope.
+// Description sets the definition description.
 // Description can be called inside API, Resource, Action or MediaType.
 func Description(d string) {
 	if a, ok := apiDefinition(false); ok {
@@ -68,8 +71,9 @@ func Description(d string) {
 	}
 }
 
-// BasePath defines the API base path, i.e. the common path prefix to all the
-// API actions.
+// BasePath defines the API base path, i.e. the common path prefix to all the API actions.
+// The path may define wildcards (see Routing for a description of the wildcard syntax).
+// The corresponding parameters must be described using BaseParams.
 func BasePath(val string) {
 	if a, ok := apiDefinition(false); ok {
 		a.BasePath = val
@@ -87,7 +91,9 @@ func BasePath(val string) {
 	}
 }
 
-// BaseParams defines the API base path parameters.
+// BaseParams defines the API base path parameters. These parameters may correspond to wildcards in
+// the BasePath or URL query string values.
+// The DSL for describing each Param is the Attribute DSL.
 func BaseParams(dsl func()) {
 	if a, ok := apiDefinition(false); ok {
 		params := new(AttributeDefinition)
@@ -102,19 +108,33 @@ func BaseParams(dsl func()) {
 	}
 }
 
-// ResponseTemplate defines a response template that actions can use to
-// specify their responses. A response template has a name and can optionally
-// take additional string parameters (up to 9). These parameters can be used in
-// the DSL function to define the response fields. For example the function
-// could accept an argument that specifies the response media type. These
-// arguments must be provided when the corresponding response is defined on an
-// action. For example:
-// ResponseTemplate("Success", func(mt string) *ResponseDefinition {
-//	return &ResponseDefinition{
-//		Status: 200,
-//		MediaType: mt,
-//	}
-// }
+// ResponseTemplate defines a response template that action definitions can use to describe their
+// responses. The template may specify the HTTP response status, header specification and body media
+// type. The template consists of a name and an anonymous function. The function is called when an
+// action uses the template to define a response. Response template functions may accept up to 9
+// string parameters that they can use to define the response fields. Here is an example of a
+// response template definition that uses a function with one argument used to pass in the name of
+// the response body media type:
+//
+//	ResponseTemplate(OK, func(mt string) {
+//		Status(200)                             // OK response uses status code 200
+//		Media(mt)                               // Media type name set by action definition
+//		Headers(func() {
+//			Header("X-Request-Id", func() { // X-Request-Id header contains a string
+//				Pattern("[0-9A-F]+")    // Regexp used to validate the response header content
+//			})
+//			Required("X-Request-Id")        // Header is mandatory
+//		})
+//	})
+//
+// This template can the be used by actions to define the OK response as follows:
+//
+//	Response(OK, "vnd.goa.example")
+//
+// goa comes with a set of predefined response templates (one per standard HTTP status code). The
+// OK template is the only one that accepts an argument. It is used as shown in the example above to
+// set the response media type. Other predefined templates do not use arguments. ResponseTemplate
+// makes it possible to define additional response templates specific to the API.
 func ResponseTemplate(name string, p interface{}) {
 	if a, ok := apiDefinition(true); ok {
 		if a.Responses == nil {
@@ -278,44 +298,50 @@ func ResponseTemplate(name string, p interface{}) {
 	}
 }
 
-// Title sets the API title
+// Title sets the API title used by generated documentation, JSON Hyper-schema, code comments etc.
 func Title(val string) {
 	if a, ok := apiDefinition(true); ok {
 		a.Title = val
 	}
 }
 
-// Trait defines an API trait
+// Trait defines an API trait. A trait encapsulates arbitrary DSL that gets executed wherever the
+// trait is called via the UseTrait function.
 func Trait(name string, val ...func()) {
-	if a, ok := apiDefinition(false); ok {
+	if a, ok := apiDefinition(true); ok {
 		if len(val) < 1 {
 			ReportError("missing trait DSL for %s", name)
-		} else {
-			if _, ok := a.Traits[name]; ok {
-				ReportError("multiple definitions for trait %s", name)
-				return
-			}
-			trait := &TraitDefinition{Name: name, DSL: val[0]}
-			if a.Traits == nil {
-				a.Traits = make(map[string]*TraitDefinition)
-			}
-			a.Traits[name] = trait
+			return
+		} else if len(val) > 1 {
+			ReportError("too many arguments given to Trait")
+			return
 		}
-	} else if r, ok := resourceDefinition(false); ok {
-		if trait, ok := Design.Traits[name]; ok {
-			executeDSL(trait.DSL, r)
-		} else {
-			ReportError("unknown trait %s", name)
+		if _, ok := a.Traits[name]; ok {
+			ReportError("multiple definitions for trait %s", name)
+			return
 		}
+		trait := &TraitDefinition{Name: name, DSL: val[0]}
+		if a.Traits == nil {
+			a.Traits = make(map[string]*TraitDefinition)
+		}
+		a.Traits[name] = trait
+	}
+}
+
+// UseTrait executes the API trait with the given name. UseTrait can be used inside a Resource,
+// Action or Attribute DSL.
+func UseTrait(name string) {
+	var def DSLDefinition
+	if r, ok := resourceDefinition(false); ok {
+		def = r
 	} else if a, ok := actionDefinition(false); ok {
+		def = a
+	} else if a, ok := attributeDefinition(true); ok {
+		def = a
+	}
+	if def != nil {
 		if trait, ok := Design.Traits[name]; ok {
-			executeDSL(trait.DSL, a)
-		} else {
-			ReportError("unknown trait %s", name)
-		}
-	} else if a, ok := attributeDefinition(false); ok {
-		if trait, ok := Design.Traits[name]; ok {
-			executeDSL(trait.DSL, a)
+			executeDSL(trait.DSL, def)
 		} else {
 			ReportError("unknown trait %s", name)
 		}

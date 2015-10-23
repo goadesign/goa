@@ -125,7 +125,7 @@ Let's break this down:
   declaring the `OK` response. A media type has an identifier as defined by [RFC 6838](https://tools.ietf.org/html/rfc6838)
   and describes the attributes of the response body (the JSON object fields in goa).
 
-> The [DSL reference](DSL.md) lists all the goa DSL keywords together with a description and example usage.
+> The [DSL GoDoc](https://godoc.org/github.com/raphael/goa/design/dsl) lists all the goa DSL keywords together with a description and example usage.
 
 Now that we have a design for our API we can use the `goagen` tool to generate all the boilerplate
 code. The tool takes the path to the Go package as argument (the same path you'd use if you were to
@@ -320,7 +320,7 @@ This example only covers a fraction of what goa can do but is hopefully enough t
 benefits of design-based API development.
 
 From here you can:
-* Consult [goa, the Language](DSL.md) for details on the DSL.
+* Consult the [DSL GoDoc](https://godoc.org/github.com/raphael/goa/design/dsl) for details on the DSL.
 * Take a look at the provided `cellar` example in `examples/cellar`.
 * Read about [`goagen`](goagen.md).
 
