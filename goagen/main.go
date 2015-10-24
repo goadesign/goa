@@ -8,6 +8,7 @@ import (
 
 	"github.com/raphael/goa/codegen"
 	"github.com/raphael/goa/codegen/gen_app"
+	"github.com/raphael/goa/codegen/gen_gen"
 	"github.com/raphael/goa/codegen/gen_main"
 	"github.com/raphael/goa/codegen/gen_schema"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -23,6 +24,7 @@ func init() {
 		genapp.NewCommand(),
 		genschema.NewCommand(),
 		genmain.NewCommand(),
+		gengen.NewCommand(),
 	}
 }
 
