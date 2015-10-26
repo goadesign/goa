@@ -15,17 +15,12 @@ import (
 )
 
 // Commands contains the list of all supported sub-commands.
-var Commands []codegen.Command
-
-// init registers all subcommands.
-func init() {
-	Commands = []codegen.Command{
-		&AllCommand{},
-		genapp.NewCommand(),
-		genschema.NewCommand(),
-		genmain.NewCommand(),
-		gengen.NewCommand(),
-	}
+var Commands = []codegen.Command{
+	&DefaultCommand{},
+	genapp.NewCommand(),
+	genschema.NewCommand(),
+	genmain.NewCommand(),
+	gengen.NewCommand(),
 }
 
 func main() {
