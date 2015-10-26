@@ -46,16 +46,11 @@ func NewMiddleware(m interface{}) (mw Middleware, err error) {
 		mw = handlerToMiddleware(m)
 	case func(http.Handler) http.Handler:
 		mw = func(h Handler) Handler {
-			return func(c *Context) (err error) {
+			return func(ctx *Context) (err error) {
+				rw := ctx.Value(respKey).(http.ResponseWriter)
 				m(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					nc := context.WithValue(c.Context, respKey, w)
-					nc = context.WithValue(nc, reqKey, r)
-					newC := Context{
-						Context: nc,
-						Logger:  c.Logger,
-					}
-					err = h(&newC)
-				})).ServeHTTP(c.ResponseWriter(), c.Request())
+					err = h(ctx)
+				})).ServeHTTP(rw, ctx.Request())
 				return
 			}
 		}
@@ -154,7 +149,7 @@ func RequestID() Middleware {
 			if id == "" {
 				id = fmt.Sprintf("%s-%d", reqPrefix, atomic.AddInt64(&reqID, 1))
 			}
-			ctx.AddValue(ReqIDKey, id)
+			ctx.SetValue(ReqIDKey, id)
 
 			return h(ctx)
 		}
@@ -180,7 +175,9 @@ func Recover() Middleware {
 					buf = buf[:runtime.Stack(buf, false)]
 					lines := strings.Split(string(buf), "\n")
 					stack := lines[3:]
-					Log.Error("panic", "err", err, "stack", stack)
+					if ctx != nil && ctx.Logger != nil {
+						ctx.Logger.Error("panic", "err", err, "stack", stack)
+					}
 				}
 			}()
 			return h(ctx)
@@ -241,11 +238,11 @@ func shortID() string {
 // an error by also returning the error or calls the next handler in the chain otherwise.
 func handlerToMiddleware(m Handler) Middleware {
 	return func(h Handler) Handler {
-		return func(c *Context) error {
-			if err := m(c); err != nil {
+		return func(ctx *Context) error {
+			if err := m(ctx); err != nil {
 				return err
 			}
-			return h(c)
+			return h(ctx)
 		}
 	}
 }
@@ -255,9 +252,9 @@ func handlerToMiddleware(m Handler) Middleware {
 // middleware in the chain.
 func httpHandlerToMiddleware(m http.HandlerFunc) Middleware {
 	return func(h Handler) Handler {
-		return func(c *Context) error {
-			m.ServeHTTP(c.ResponseWriter(), c.Request())
-			return h(c)
+		return func(ctx *Context) error {
+			m.ServeHTTP(ctx, ctx.Request())
+			return h(ctx)
 		}
 	}
 }

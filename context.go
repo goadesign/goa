@@ -13,14 +13,15 @@ import (
 )
 
 // Context is the object that provides access to the underlying HTTP request and response state.
-// It implements the context.Context interface described at http://blog.golang.org/context.
+// Context implements http.ResponseWriter and also provides helper methods for writing HTTP responses.
+// It also implements the context.Context interface described at http://blog.golang.org/context.
 type Context struct {
 	context.Context // A goa context is a golang context
-	log.Logger      // Context logger
+	log.Logger      //(ctx *Context) logger
 }
 
 // key is the type used to store internal values in the context.
-// Context provides typed accessor methods to these values.
+//(ctx *Context) provides typed accessor methods to these values.
 type key int
 
 const (
@@ -34,36 +35,48 @@ const (
 	respLenKey
 )
 
-// AddValue sets the value associated with key in the context.
+// NewContext builds a goa context from the given context.Context and request state.
+// If gctx is nil then context.Background is used instead.
+func NewContext(gctx context.Context,
+	req *http.Request,
+	rw http.ResponseWriter,
+	params map[string]string,
+	query map[string][]string,
+	payload interface{}) *Context {
+
+	if gctx == nil {
+		gctx = context.Background()
+	}
+	gctx = context.WithValue(gctx, reqKey, req)
+	gctx = context.WithValue(gctx, respKey, rw)
+	gctx = context.WithValue(gctx, paramKey, params)
+	gctx = context.WithValue(gctx, queryKey, query)
+	gctx = context.WithValue(gctx, payloadKey, payload)
+
+	return &Context{Context: gctx}
+}
+
+// SetValue sets the value associated with key in the context.
 // The value can be retrieved using the Value method.
 // Note that this changes the underlying context.Context object and thus clients holding a reference
 // to that won't be able to access the new value. It's probably a bad idea to hold a reference to
 // the inner context anyway...
-func (c *Context) AddValue(key, val interface{}) {
-	c.Context = context.WithValue(c.Context, key, val)
+func (ctx *Context) SetValue(key, val interface{}) {
+	ctx.Context = context.WithValue(ctx.Context, key, val)
 }
 
 // Request returns the underlying HTTP request.
-func (c *Context) Request() *http.Request {
-	return c.Value(reqKey).(*http.Request)
-}
-
-// ResponseWriter returns the raw HTTP response writer.
-func (c *Context) ResponseWriter() http.ResponseWriter {
-	return c.Value(respKey).(http.ResponseWriter)
-}
-
-// ResponseHeader returns the response HTTP header object.
-func (c *Context) ResponseHeader() http.Header {
-	if rw := c.ResponseWriter(); rw != nil {
-		return rw.Header()
+func (ctx *Context) Request() *http.Request {
+	r := ctx.Value(reqKey)
+	if r != nil {
+		return r.(*http.Request)
 	}
 	return nil
 }
 
 // ResponseWritten returns true if an HTTP response was written.
-func (c *Context) ResponseWritten() bool {
-	if wr := c.Value(respStatusKey); wr != nil {
+func (ctx *Context) ResponseWritten() bool {
+	if wr := ctx.Value(respStatusKey); wr != nil {
 		return true
 	}
 	return false
@@ -71,8 +84,8 @@ func (c *Context) ResponseWritten() bool {
 
 // ResponseStatus returns the response status if it was set via one of the context response
 // methods (Respond, JSON, BadRequest, Bug), 0 otherwise.
-func (c *Context) ResponseStatus() int {
-	if is := c.Value(respStatusKey); is != nil {
+func (ctx *Context) ResponseStatus() int {
+	if is := ctx.Value(respStatusKey); is != nil {
 		return is.(int)
 	}
 	return 0
@@ -80,8 +93,8 @@ func (c *Context) ResponseStatus() int {
 
 // ResponseLength returns the response body length in bytes if the response was written to the
 // context via one of the response methods (Respond, JSON, BadRequest, Bug), 0 otherwise.
-func (c *Context) ResponseLength() int {
-	if is := c.Value(respLenKey); is != nil {
+func (ctx *Context) ResponseLength() int {
+	if is := ctx.Value(respLenKey); is != nil {
 		return is.(int)
 	}
 	return 0
@@ -89,12 +102,16 @@ func (c *Context) ResponseLength() int {
 
 // Get returns the param or query string with the given name and true or an empty string and false
 // if there isn't one.
-func (c *Context) Get(name string) (string, bool) {
-	params := c.Value(paramKey).(map[string]string)
+func (ctx *Context) Get(name string) (string, bool) {
+	iparams := ctx.Value(paramKey)
+	if iparams == nil {
+		return "", false
+	}
+	params := iparams.(map[string]string)
 	v, ok := params[name]
 	if !ok {
 		var vs []string
-		query := c.Value(queryKey).(map[string][]string)
+		query := ctx.Value(queryKey).(map[string][]string)
 		vs, ok = query[name]
 		if ok {
 			v = strings.Join(vs, ",")
@@ -107,48 +124,77 @@ func (c *Context) Get(name string) (string, bool) {
 }
 
 // GetMany returns the query string values with the given name or nil if there aren't any.
-func (c *Context) GetMany(name string) []string {
-	query := c.Value(queryKey).(map[string][]string)
+func (ctx *Context) GetMany(name string) []string {
+	q := ctx.Value(queryKey)
+	if q == nil {
+		return nil
+	}
+	query := q.(map[string][]string)
 	return query[name]
 }
 
 // Payload returns the deserialized request body or nil if body is empty.
-func (c *Context) Payload() interface{} {
-	return c.Value(payloadKey)
+func (ctx *Context) Payload() interface{} {
+	return ctx.Value(payloadKey)
 }
 
 // Respond writes the given HTTP status code and response body.
 // This method should only be called once per request.
-func (c *Context) Respond(code int, body []byte) error {
-	rw := c.ResponseWriter()
-	rw.WriteHeader(code)
-	if _, err := rw.Write(body); err != nil {
+func (ctx *Context) Respond(code int, body []byte) error {
+	ctx.WriteHeader(code)
+	if _, err := ctx.Write(body); err != nil {
 		return err
 	}
-	c.Context = context.WithValue(c.Context, respWrittenKey, true)
-	c.Context = context.WithValue(c.Context, respStatusKey, code)
-	c.Context = context.WithValue(c.Context, respLenKey, len(body))
 	return nil
 }
 
 // JSON serializes the given body into JSON and sends a HTTP response with the given status code
 // and JSON as body.
-func (c *Context) JSON(code int, body interface{}) error {
+func (ctx *Context) JSON(code int, body interface{}) error {
 	js, err := json.Marshal(body)
 	if err != nil {
 		return err
 	}
-	return c.Respond(code, js)
+	return ctx.Respond(code, js)
 }
 
 // BadRequest sends a HTTP response with status code 400 and the given error as body.
-func (c *Context) BadRequest(err *support.BadRequestError) error {
-	return c.Respond(400, []byte(err.Error()))
+func (ctx *Context) BadRequest(err *support.BadRequestError) error {
+	return ctx.Respond(400, []byte(err.Error()))
 }
 
 // Bug sends a HTTP response with status code 500 and the given body.
 // The body can be set using a format and substituted values a la fmt.Printf.
-func (c *Context) Bug(format string, a ...interface{}) error {
+func (ctx *Context) Bug(format string, a ...interface{}) error {
 	body := fmt.Sprintf(format, a...)
-	return c.Respond(500, []byte(body))
+	return ctx.Respond(500, []byte(body))
+}
+
+// Header returns the response header. It implements the http.ResponseWriter interface.
+func (ctx *Context) Header() http.Header {
+	rw := ctx.Value(respKey)
+	if rw != nil {
+		return rw.(http.ResponseWriter).Header()
+	}
+	return nil
+}
+
+// WriteHeader writes the HTTP status code to the response. It implements the
+// http.ResponseWriter interface.
+func (ctx *Context) WriteHeader(code int) {
+	rw := ctx.Value(respKey)
+	if rw != nil {
+		ctx.Context = context.WithValue(ctx.Context, respStatusKey, code)
+		rw.(http.ResponseWriter).WriteHeader(code)
+	}
+}
+
+// Write writes the HTTP response body. It implements the http.ResponseWriter interface.
+func (ctx *Context) Write(body []byte) (int, error) {
+	rw := ctx.Value(respKey)
+	if rw != nil {
+		ctx.Context = context.WithValue(ctx.Context, respLenKey, ctx.ResponseLength()+len(body))
+		return rw.(http.ResponseWriter).Write(body)
+	}
+	return 0, fmt.Errorf("response writer not initialized")
 }

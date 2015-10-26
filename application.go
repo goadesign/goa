@@ -148,12 +148,8 @@ func (app *Application) NewHTTPRouterHandle(resName, actName string, h Handler) 
 		// Build context
 		gctx, cancel := context.WithCancel(context.Background())
 		defer cancel() // Signal completion of request to any child goroutine
-		gctx = context.WithValue(context.Background(), reqKey, r)
-		gctx = context.WithValue(gctx, respKey, w)
-		gctx = context.WithValue(gctx, paramKey, params)
-		gctx = context.WithValue(gctx, queryKey, query)
-		gctx = context.WithValue(gctx, payloadKey, payload)
-		ctx := &Context{Context: gctx, Logger: logger}
+		ctx := NewContext(gctx, r, w, params, query, payload)
+		ctx.Logger = logger
 
 		// Handle invalid payload
 		handler := middleware
@@ -183,7 +179,7 @@ func (app *Application) NewHTTPRouterHandle(resName, actName string, h Handler) 
 func DefaultErrorHandler(c *Context, e error) {
 	status := 500
 	if _, ok := e.(*support.BadRequestError); ok {
-		c.ResponseHeader().Set("Content-Type", "application/json")
+		c.Header().Set("Content-Type", "application/json")
 		status = 400
 	}
 	if err := c.Respond(status, []byte(e.Error())); err != nil {
@@ -191,13 +187,13 @@ func DefaultErrorHandler(c *Context, e error) {
 	}
 }
 
-// terseerrorhandler behaves like defaulterrorhandler except that it does not set the response
+// TerseErrorHandler behaves like DefaultErrorHandler except that it does not set the response
 // body for internal errors.
 func TerseErrorHandler(c *Context, e error) {
 	status := 500
 	var body []byte
 	if _, ok := e.(*support.BadRequestError); ok {
-		c.ResponseHeader().Set("Content-Type", "application/json")
+		c.Header().Set("Content-Type", "application/json")
 		status = 400
 		body = []byte(e.Error())
 	}

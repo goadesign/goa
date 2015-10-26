@@ -250,7 +250,7 @@ func (ctx *GetWidgetContext) OK(resp ID) error {
 	if err != nil {
 		return fmt.Errorf("invalid response: %s", err)
 	}
-	ctx.ResponseHeader().Set("Content-Type", "vnd.rightscale.codegen.test.widgets; charset=utf-8")
+	ctx.Header().Set("Content-Type", "vnd.rightscale.codegen.test.widgets; charset=utf-8")
 	return ctx.JSON(200, r)
 }
 `
