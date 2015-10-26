@@ -28,7 +28,7 @@ func NewCommand() *Command {
 // RegisterFlags registers the command line flags with the given registry.
 func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
 	r.Flag("force", "overwrite existing files").BoolVar(&Force)
-	r.Flag("name", "application name").Default("app").StringVar(&AppName)
+	r.Flag("name", "application name").Default("API").StringVar(&AppName)
 }
 
 // Run simply calls the meta generator.

@@ -9,26 +9,29 @@ import (
 	"github.com/raphael/goa/goagen/gen_schema"
 )
 
-// DefaultCommands lists the commands run by default when no sub-command is provided on the
+// BootstrapCommands lists the commands run by default when no sub-command is provided on the
 // command line.
-var DefaultCommands = []codegen.Command{
+var BootstrapCommands = []codegen.Command{
 	genapp.NewCommand(),
 	genmain.NewCommand(),
 	genschema.NewCommand(),
 }
 
-// DefaultCommand is the default command. It runs all known commands.
-type DefaultCommand struct{}
+// BootstrapCommand is the default command. It runs all common commands useful to bootstrap a goa
+// application.
+type BootstrapCommand struct{}
 
 // Name returns the command name.
-func (a *DefaultCommand) Name() string { return "default" }
+func (a *BootstrapCommand) Name() string { return "bootstrap" }
 
 // Description returns the command description.
-func (a *DefaultCommand) Description() string { return "Default command, generates all artifacts." }
+func (a *BootstrapCommand) Description() string {
+	return `Bootstrap command, equivalent to running "app", "main" and "schema" commands sequentially.`
+}
 
 // RegisterFlags registers all the sub-commands flags.
-func (a *DefaultCommand) RegisterFlags(r codegen.FlagRegistry) {
-	for _, c := range DefaultCommands {
+func (a *BootstrapCommand) RegisterFlags(r codegen.FlagRegistry) {
+	for _, c := range BootstrapCommands {
 		if c != a {
 			c.RegisterFlags(r)
 		}
@@ -36,10 +39,10 @@ func (a *DefaultCommand) RegisterFlags(r codegen.FlagRegistry) {
 }
 
 // Run runs each known command and returns all the generated files and/or errors.
-func (a *DefaultCommand) Run() ([]string, error) {
+func (a *BootstrapCommand) Run() ([]string, error) {
 	var all []string
 	var err error
-	for _, c := range DefaultCommands {
+	for _, c := range BootstrapCommands {
 		if c != a {
 			var files []string
 			files, err = c.Run()

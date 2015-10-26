@@ -16,10 +16,10 @@ import (
 
 // Commands contains the list of all supported sub-commands.
 var Commands = []codegen.Command{
-	&DefaultCommand{},
+	&BootstrapCommand{},
 	genapp.NewCommand(),
-	genschema.NewCommand(),
 	genmain.NewCommand(),
+	genschema.NewCommand(),
 	gengen.NewCommand(),
 }
 
@@ -48,34 +48,32 @@ func main() {
 
 // command parses the command line and returns the specified sub-command.
 func command() codegen.Command {
-	a := kingpin.New("codegen", "goa code generation tool")
-	a.Version(codegen.Version)
-	a.Help = help
-	codegen.RegisterFlags(a)
+	app := kingpin.New("codegen", "goa code generation tool")
+	app.Version(codegen.Version)
+	app.Help = help
+	codegen.RegisterFlags(app)
 	for _, c := range Commands {
-		cmd := a.Command(c.Name(), c.Description())
-		if c.Name() == "default" {
-			cmd.Default()
-		}
+		cmd := app.Command(c.Name(), c.Description())
 		c.RegisterFlags(cmd)
 	}
-	codegen.CommandName = kingpin.MustParse(a.Parse(os.Args[1:]))
+	codegen.CommandName = kingpin.MustParse(app.Parse(os.Args[1:]))
 	for _, c := range Commands {
 		if codegen.CommandName == c.Name() {
 			return c
 		}
 	}
-	a.Usage(os.Args[1:])
+	app.Usage(os.Args[1:])
 	os.Exit(1)
 	return nil
 }
 
-const help = `The goagen tool generates various artifacts from a goa application design package (metadata).
+const help = `The goagen tool generates various artifacts from a goa application design
+package (metadata).
 
-Each sub-command supported by the tool produces a specific type of artifacts. For example
-the "app" command causes goagen to generate the code that supports the application controllers.
+Each command supported by the tool produces a specific type of artifacts. For example
+the "app" command generates the code that supports the application controllers.
 
-The "default" command (also invoked when no command is provided on the command line) runs the "app",
-"main" and "schema" commands generating the application code and main skeleton code if not
-already present as well as its JSON hyper-schema.
+The "bootstrap" command runs the "app", "main" and "schema" commands generating the
+controllers supporting code and main skeleton code (if not already present) as well as
+the API JSON hyper-schema.
 `
