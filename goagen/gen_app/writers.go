@@ -341,17 +341,17 @@ type {{.Name}} struct {
 	coerceT = `{{if eq .Attribute.Type.Kind 1}}{{/* BooleanType */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.ParseBool(raw{{goify .Name true}}); err2 == nil {
 {{tabs .Depth}}	{{.Pkg}} = {{.VarName}}
 {{tabs .Depth}}} else {
-{{tabs .Depth}}	err = support.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "boolean", err)
+{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "boolean", err)
 {{tabs .Depth}}}
 {{end}}{{if eq .Attribute.Type.Kind 2}}{{/* IntegerType */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.Atoi(raw{{goify .Name true}}); err2 == nil {
 {{tabs .Depth}}	{{.Pkg}} = int({{.VarName}})
 {{tabs .Depth}}} else {
-{{tabs .Depth}}	err = support.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "integer", err)
+{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "integer", err)
 {{tabs .Depth}}}
 {{end}}{{if eq .Attribute.Type.Kind 3}}{{/* NumberType */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.ParseFloat(raw{{goify .Name true}}, 64); err2 == nil {
 {{tabs .Depth}}	{{.Pkg}} = {{.VarName}}
 {{tabs .Depth}}} else {
-{{tabs .Depth}}	err = support.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "number", err)
+{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "number", err)
 {{tabs .Depth}}}
 {{end}}{{if eq .Attribute.Type.Kind 4}}{{/* StringType */}}{{tabs .Depth}}{{.Pkg}} = raw{{goify .Name true}}
 {{end}}{{if eq .Attribute.Type.Kind 5}}{{/* ArrayType */}}{{tabs .Depth}}elems{{goify .Name true}} := strings.Split(raw{{goify .Name true}}, ",")
@@ -371,11 +371,11 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 	var err error
 	ctx := {{.Name}}{Context: c}
 {{if .Headers}}{{$headers := .Headers}}{{range $name, $_ := $headers.Type.ToObject}}{{if ($headers.IsRequired $name)}}	if c.Request().Header.Get("{{$name}}") == "" {
-		err = support.MissingHeaderError("{{$name}}", err)
+		err = goa.MissingHeaderError("{{$name}}", err)
 	}{{end}}{{end}}
 {{end}}{{if.Params}}{{$ctx := .}}{{range $name, $att := .Params.Type.ToObject}}	raw{{goify $name true}}, ok := c.Get("{{$name}}")
 {{if ($ctx.MustValidate $name)}}	if !ok {
-		err = support.MissingParamError("{{$name}}", err)
+		err = goa.MissingParamError("{{$name}}", err)
 	} else {
 {{else}}	if ok {
 {{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (goify $name true)) 2)}}{{if $ctx.MustSetHas $name}}		ctx.Has{{goify $name true}} = true
@@ -441,7 +441,7 @@ func Mount{{.Resource}}Controller(app *goa.Application, ctrl {{.Resource}}Contro
 {{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
 		ctx, err := New{{.Context}}(c)
 		if err != nil {
-			return support.NewBadRequestError(err)
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.{{.Name}}(ctx)
 	}

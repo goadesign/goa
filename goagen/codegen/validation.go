@@ -120,45 +120,45 @@ func oneof(target string, vals []interface{}) string {
 func constant(formatName string) string {
 	switch formatName {
 	case "date-time":
-		return "support.FormatDateTime"
+		return "goa.FormatDateTime"
 	case "email":
-		return "support.FormatEmail"
+		return "goa.FormatEmail"
 	case "hostname":
-		return "support.FormatHostname"
+		return "goa.FormatHostname"
 	case "ipv4":
-		return "support.FormatIPv4"
+		return "goa.FormatIPv4"
 	case "ipv6":
-		return "support.FormatIPv6"
+		return "goa.FormatIPv6"
 	case "uri":
-		return "support.FormatURI"
+		return "goa.FormatURI"
 	case "mac":
-		return "support.FormatMAC"
+		return "goa.FormatMAC"
 	case "cidr":
-		return "support.FormatCIDR"
+		return "goa.FormatCIDR"
 	case "regexp":
-		return "support.FormatRegexp"
+		return "goa.FormatRegexp"
 	}
 	panic("unknown format") // bug
 }
 
 const (
 	enumValTmpl = `{{tabs .depth}}if !({{oneof .target .values}}) {
-{{tabs .depth}}	err = support.InvalidEnumValueError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{slice .values}}, err)
+{{tabs .depth}}	err = goa.InvalidEnumValueError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{slice .values}}, err)
 {{tabs .depth}}}`
 
-	patternValTmpl = `{{tabs .depth}}if ok := support.ValidatePattern({{.pattern}}, {{.target}}); !ok {
-{{tabs .depth}}		err = support.InvalidPatternError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{.pattern}}, err)
+	patternValTmpl = `{{tabs .depth}}if ok := goa.ValidatePattern({{.pattern}}, {{.target}}); !ok {
+{{tabs .depth}}		err = goa.InvalidPatternError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{.pattern}}, err)
 {{tabs .depth}}}`
 
-	formatValTmpl = `{{tabs .depth}}if err2 := support.ValidateFormat({{constant .format}}, {{.target}}); err2 != nil {
-{{tabs .depth}}		err = support.InvalidFormatError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{constant .format}}, err2, err)
+	formatValTmpl = `{{tabs .depth}}if err2 := goa.ValidateFormat({{constant .format}}, {{.target}}); err2 != nil {
+{{tabs .depth}}		err = goa.InvalidFormatError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{constant .format}}, err2, err)
 {{tabs .depth}}}`
 
 	minMaxValTmpl = `{{tabs .depth}}if {{.target}} {{if .min}}<{{else}}>{{end}} {{if .min}}{{.min}}{{else}}{{.max}}{{end}} {
-{{tabs .depth}}	err = support.InvalidRangeError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{if .min}}{{.min}}, true{{else}}{{.max}}, false{{end}}, err)
+{{tabs .depth}}	err = goa.InvalidRangeError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{if .min}}{{.min}}, true{{else}}{{.max}}, false{{end}}, err)
 {{tabs .depth}}}`
 
 	lengthValTmpl = `{{tabs .depth}}if len({{.target}}) {{if .minLength}}<{{else}}>{{end}} {{if .minLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
-{{tabs .depth}}	err = support.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{if .minLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}, err)
+{{tabs .depth}}	err = goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{if .minLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}, err)
 {{tabs .depth}}}`
 )

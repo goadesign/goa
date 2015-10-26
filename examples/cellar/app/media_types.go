@@ -15,7 +15,7 @@ package app
 import (
 	"fmt"
 
-	"github.com/raphael/goa/support"
+	"github.com/raphael/goa"
 )
 
 // A tenant account
@@ -59,10 +59,10 @@ func LoadAccount(raw interface{}) (*Account, error) {
 			if val, ok := v.(string); ok {
 				tmp24 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.CreatedAt`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.CreatedAt`, v, "string", err)
 			}
-			if err2 := support.ValidateFormat(support.FormatDateTime, tmp24); err2 != nil {
-				err = support.InvalidFormatError(`.CreatedAt`, tmp24, support.FormatDateTime, err2, err)
+			if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp24); err2 != nil {
+				err = goa.InvalidFormatError(`.CreatedAt`, tmp24, goa.FormatDateTime, err2, err)
 			}
 			res.CreatedAt = tmp24
 		}
@@ -71,10 +71,10 @@ func LoadAccount(raw interface{}) (*Account, error) {
 			if val, ok := v.(string); ok {
 				tmp25 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.CreatedBy`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.CreatedBy`, v, "string", err)
 			}
-			if err2 := support.ValidateFormat(support.FormatEmail, tmp25); err2 != nil {
-				err = support.InvalidFormatError(`.CreatedBy`, tmp25, support.FormatEmail, err2, err)
+			if err2 := goa.ValidateFormat(goa.FormatEmail, tmp25); err2 != nil {
+				err = goa.InvalidFormatError(`.CreatedBy`, tmp25, goa.FormatEmail, err2, err)
 			}
 			res.CreatedBy = tmp25
 		}
@@ -83,7 +83,7 @@ func LoadAccount(raw interface{}) (*Account, error) {
 			if val, ok := v.(string); ok {
 				tmp26 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.Href`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.Href`, v, "string", err)
 			}
 			res.Href = tmp26
 		}
@@ -92,7 +92,7 @@ func LoadAccount(raw interface{}) (*Account, error) {
 			if val, ok := v.(int); ok {
 				tmp27 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.ID`, v, "int", err)
+				err = goa.InvalidAttributeTypeError(`.ID`, v, "int", err)
 			}
 			res.ID = tmp27
 		}
@@ -101,14 +101,14 @@ func LoadAccount(raw interface{}) (*Account, error) {
 			if val, ok := v.(string); ok {
 				tmp28 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.Name`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.Name`, v, "string", err)
 			}
 			res.Name = tmp28
 		} else {
-			err = support.MissingAttributeError(``, "name", err)
+			err = goa.MissingAttributeError(``, "name", err)
 		}
 	} else {
-		err = support.InvalidAttributeTypeError(``, raw, "map[string]interface{}", err)
+		err = goa.InvalidAttributeTypeError(``, raw, "map[string]interface{}", err)
 	}
 	return res, err
 }
@@ -135,11 +135,11 @@ func (mt *Account) Dump(view AccountViewEnum) (map[string]interface{}, error) {
 		if mt.Name == "" {
 			err = fmt.Errorf("missing required attribute \"name\"")
 		}
-		if err2 := support.ValidateFormat(support.FormatDateTime, mt.CreatedAt); err2 != nil {
-			err = support.InvalidFormatError(`.CreatedAt`, mt.CreatedAt, support.FormatDateTime, err2, err)
+		if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.CreatedAt); err2 != nil {
+			err = goa.InvalidFormatError(`.CreatedAt`, mt.CreatedAt, goa.FormatDateTime, err2, err)
 		}
-		if err2 := support.ValidateFormat(support.FormatEmail, mt.CreatedBy); err2 != nil {
-			err = support.InvalidFormatError(`.CreatedBy`, mt.CreatedBy, support.FormatEmail, err2, err)
+		if err2 := goa.ValidateFormat(goa.FormatEmail, mt.CreatedBy); err2 != nil {
+			err = goa.InvalidFormatError(`.CreatedBy`, mt.CreatedBy, goa.FormatEmail, err2, err)
 		}
 		if err == nil {
 			tmp30 := map[string]interface{}{
@@ -169,11 +169,11 @@ func (mt *Account) Dump(view AccountViewEnum) (map[string]interface{}, error) {
 
 // Validate validates the media type instance.
 func (mt *Account) Validate() (err error) {
-	if err2 := support.ValidateFormat(support.FormatDateTime, mt.CreatedAt); err2 != nil {
-		err = support.InvalidFormatError(`.CreatedAt`, mt.CreatedAt, support.FormatDateTime, err2, err)
+	if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.CreatedAt); err2 != nil {
+		err = goa.InvalidFormatError(`.CreatedAt`, mt.CreatedAt, goa.FormatDateTime, err2, err)
 	}
-	if err2 := support.ValidateFormat(support.FormatEmail, mt.CreatedBy); err2 != nil {
-		err = support.InvalidFormatError(`.CreatedBy`, mt.CreatedBy, support.FormatEmail, err2, err)
+	if err2 := goa.ValidateFormat(goa.FormatEmail, mt.CreatedBy); err2 != nil {
+		err = goa.InvalidFormatError(`.CreatedBy`, mt.CreatedBy, goa.FormatEmail, err2, err)
 	}
 	return
 }
@@ -235,10 +235,10 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 					if val, ok := v.(string); ok {
 						tmp33 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`.Account.CreatedAt`, v, "string", err)
+						err = goa.InvalidAttributeTypeError(`.Account.CreatedAt`, v, "string", err)
 					}
-					if err2 := support.ValidateFormat(support.FormatDateTime, tmp33); err2 != nil {
-						err = support.InvalidFormatError(`.Account.CreatedAt`, tmp33, support.FormatDateTime, err2, err)
+					if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp33); err2 != nil {
+						err = goa.InvalidFormatError(`.Account.CreatedAt`, tmp33, goa.FormatDateTime, err2, err)
 					}
 					tmp32.CreatedAt = tmp33
 				}
@@ -247,10 +247,10 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 					if val, ok := v.(string); ok {
 						tmp34 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`.Account.CreatedBy`, v, "string", err)
+						err = goa.InvalidAttributeTypeError(`.Account.CreatedBy`, v, "string", err)
 					}
-					if err2 := support.ValidateFormat(support.FormatEmail, tmp34); err2 != nil {
-						err = support.InvalidFormatError(`.Account.CreatedBy`, tmp34, support.FormatEmail, err2, err)
+					if err2 := goa.ValidateFormat(goa.FormatEmail, tmp34); err2 != nil {
+						err = goa.InvalidFormatError(`.Account.CreatedBy`, tmp34, goa.FormatEmail, err2, err)
 					}
 					tmp32.CreatedBy = tmp34
 				}
@@ -259,7 +259,7 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 					if val, ok := v.(string); ok {
 						tmp35 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`.Account.Href`, v, "string", err)
+						err = goa.InvalidAttributeTypeError(`.Account.Href`, v, "string", err)
 					}
 					tmp32.Href = tmp35
 				}
@@ -268,7 +268,7 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 					if val, ok := v.(int); ok {
 						tmp36 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`.Account.ID`, v, "int", err)
+						err = goa.InvalidAttributeTypeError(`.Account.ID`, v, "int", err)
 					}
 					tmp32.ID = tmp36
 				}
@@ -277,37 +277,37 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 					if val, ok := v.(string); ok {
 						tmp37 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`.Account.Name`, v, "string", err)
+						err = goa.InvalidAttributeTypeError(`.Account.Name`, v, "string", err)
 					}
 					tmp32.Name = tmp37
 				} else {
-					err = support.MissingAttributeError(`.Account`, "name", err)
+					err = goa.MissingAttributeError(`.Account`, "name", err)
 				}
 			} else {
-				err = support.InvalidAttributeTypeError(`.Account`, v, "map[string]interface{}", err)
+				err = goa.InvalidAttributeTypeError(`.Account`, v, "map[string]interface{}", err)
 			}
-			if err2 := support.ValidateFormat(support.FormatDateTime, tmp32.CreatedAt); err2 != nil {
-				err = support.InvalidFormatError(`.Account.CreatedAt`, tmp32.CreatedAt, support.FormatDateTime, err2, err)
+			if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp32.CreatedAt); err2 != nil {
+				err = goa.InvalidFormatError(`.Account.CreatedAt`, tmp32.CreatedAt, goa.FormatDateTime, err2, err)
 			}
-			if err2 := support.ValidateFormat(support.FormatEmail, tmp32.CreatedBy); err2 != nil {
-				err = support.InvalidFormatError(`.Account.CreatedBy`, tmp32.CreatedBy, support.FormatEmail, err2, err)
+			if err2 := goa.ValidateFormat(goa.FormatEmail, tmp32.CreatedBy); err2 != nil {
+				err = goa.InvalidFormatError(`.Account.CreatedBy`, tmp32.CreatedBy, goa.FormatEmail, err2, err)
 			}
 			res.Account = tmp32
 		} else {
-			err = support.MissingAttributeError(``, "account", err)
+			err = goa.MissingAttributeError(``, "account", err)
 		}
 		if v, ok := val["characteristics"]; ok {
 			var tmp38 string
 			if val, ok := v.(string); ok {
 				tmp38 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.Characteristics`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.Characteristics`, v, "string", err)
 			}
 			if len(tmp38) < 10 {
-				err = support.InvalidLengthError(`.Characteristics`, tmp38, 10, true, err)
+				err = goa.InvalidLengthError(`.Characteristics`, tmp38, 10, true, err)
 			}
 			if len(tmp38) > 300 {
-				err = support.InvalidLengthError(`.Characteristics`, tmp38, 300, false, err)
+				err = goa.InvalidLengthError(`.Characteristics`, tmp38, 300, false, err)
 			}
 			res.Characteristics = tmp38
 		}
@@ -316,10 +316,10 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 			if val, ok := v.(string); ok {
 				tmp39 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.Color`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.Color`, v, "string", err)
 			}
 			if !(tmp39 == "red" || tmp39 == "white" || tmp39 == "rose" || tmp39 == "yellow" || tmp39 == "sparkling") {
-				err = support.InvalidEnumValueError(`.Color`, tmp39, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
+				err = goa.InvalidEnumValueError(`.Color`, tmp39, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
 			}
 			res.Color = tmp39
 		}
@@ -328,10 +328,10 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 			if val, ok := v.(string); ok {
 				tmp40 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.Country`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.Country`, v, "string", err)
 			}
 			if len(tmp40) < 2 {
-				err = support.InvalidLengthError(`.Country`, tmp40, 2, true, err)
+				err = goa.InvalidLengthError(`.Country`, tmp40, 2, true, err)
 			}
 			res.Country = tmp40
 		}
@@ -340,10 +340,10 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 			if val, ok := v.(string); ok {
 				tmp41 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.CreatedAt`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.CreatedAt`, v, "string", err)
 			}
-			if err2 := support.ValidateFormat(support.FormatDateTime, tmp41); err2 != nil {
-				err = support.InvalidFormatError(`.CreatedAt`, tmp41, support.FormatDateTime, err2, err)
+			if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp41); err2 != nil {
+				err = goa.InvalidFormatError(`.CreatedAt`, tmp41, goa.FormatDateTime, err2, err)
 			}
 			res.CreatedAt = tmp41
 		}
@@ -352,7 +352,7 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 			if val, ok := v.(string); ok {
 				tmp42 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.Href`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.Href`, v, "string", err)
 			}
 			res.Href = tmp42
 		}
@@ -361,7 +361,7 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 			if val, ok := v.(int); ok {
 				tmp43 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.ID`, v, "int", err)
+				err = goa.InvalidAttributeTypeError(`.ID`, v, "int", err)
 			}
 			res.ID = tmp43
 		}
@@ -370,27 +370,27 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 			if val, ok := v.(string); ok {
 				tmp44 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.Name`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.Name`, v, "string", err)
 			}
 			if len(tmp44) < 2 {
-				err = support.InvalidLengthError(`.Name`, tmp44, 2, true, err)
+				err = goa.InvalidLengthError(`.Name`, tmp44, 2, true, err)
 			}
 			res.Name = tmp44
 		} else {
-			err = support.MissingAttributeError(``, "name", err)
+			err = goa.MissingAttributeError(``, "name", err)
 		}
 		if v, ok := val["rating"]; ok {
 			var tmp45 int
 			if val, ok := v.(int); ok {
 				tmp45 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.Rating`, v, "int", err)
+				err = goa.InvalidAttributeTypeError(`.Rating`, v, "int", err)
 			}
 			if tmp45 < 1 {
-				err = support.InvalidRangeError(`.Rating`, tmp45, 1, true, err)
+				err = goa.InvalidRangeError(`.Rating`, tmp45, 1, true, err)
 			}
 			if tmp45 > 5 {
-				err = support.InvalidRangeError(`.Rating`, tmp45, 5, false, err)
+				err = goa.InvalidRangeError(`.Rating`, tmp45, 5, false, err)
 			}
 			res.Rating = tmp45
 		}
@@ -399,7 +399,7 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 			if val, ok := v.(string); ok {
 				tmp46 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.Region`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.Region`, v, "string", err)
 			}
 			res.Region = tmp46
 		}
@@ -408,13 +408,13 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 			if val, ok := v.(string); ok {
 				tmp47 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.Review`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.Review`, v, "string", err)
 			}
 			if len(tmp47) < 10 {
-				err = support.InvalidLengthError(`.Review`, tmp47, 10, true, err)
+				err = goa.InvalidLengthError(`.Review`, tmp47, 10, true, err)
 			}
 			if len(tmp47) > 300 {
-				err = support.InvalidLengthError(`.Review`, tmp47, 300, false, err)
+				err = goa.InvalidLengthError(`.Review`, tmp47, 300, false, err)
 			}
 			res.Review = tmp47
 		}
@@ -423,13 +423,13 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 			if val, ok := v.(int); ok {
 				tmp48 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.Sweetness`, v, "int", err)
+				err = goa.InvalidAttributeTypeError(`.Sweetness`, v, "int", err)
 			}
 			if tmp48 < 1 {
-				err = support.InvalidRangeError(`.Sweetness`, tmp48, 1, true, err)
+				err = goa.InvalidRangeError(`.Sweetness`, tmp48, 1, true, err)
 			}
 			if tmp48 > 5 {
-				err = support.InvalidRangeError(`.Sweetness`, tmp48, 5, false, err)
+				err = goa.InvalidRangeError(`.Sweetness`, tmp48, 5, false, err)
 			}
 			res.Sweetness = tmp48
 		}
@@ -438,10 +438,10 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 			if val, ok := v.(string); ok {
 				tmp49 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.UpdatedAt`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.UpdatedAt`, v, "string", err)
 			}
-			if err2 := support.ValidateFormat(support.FormatDateTime, tmp49); err2 != nil {
-				err = support.InvalidFormatError(`.UpdatedAt`, tmp49, support.FormatDateTime, err2, err)
+			if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp49); err2 != nil {
+				err = goa.InvalidFormatError(`.UpdatedAt`, tmp49, goa.FormatDateTime, err2, err)
 			}
 			res.UpdatedAt = tmp49
 		}
@@ -450,10 +450,10 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 			if val, ok := v.(string); ok {
 				tmp50 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.Varietal`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.Varietal`, v, "string", err)
 			}
 			if len(tmp50) < 4 {
-				err = support.InvalidLengthError(`.Varietal`, tmp50, 4, true, err)
+				err = goa.InvalidLengthError(`.Varietal`, tmp50, 4, true, err)
 			}
 			res.Varietal = tmp50
 		}
@@ -462,32 +462,32 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 			if val, ok := v.(string); ok {
 				tmp51 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.Vineyard`, v, "string", err)
+				err = goa.InvalidAttributeTypeError(`.Vineyard`, v, "string", err)
 			}
 			if len(tmp51) < 2 {
-				err = support.InvalidLengthError(`.Vineyard`, tmp51, 2, true, err)
+				err = goa.InvalidLengthError(`.Vineyard`, tmp51, 2, true, err)
 			}
 			res.Vineyard = tmp51
 		} else {
-			err = support.MissingAttributeError(``, "vineyard", err)
+			err = goa.MissingAttributeError(``, "vineyard", err)
 		}
 		if v, ok := val["vintage"]; ok {
 			var tmp52 int
 			if val, ok := v.(int); ok {
 				tmp52 = val
 			} else {
-				err = support.InvalidAttributeTypeError(`.Vintage`, v, "int", err)
+				err = goa.InvalidAttributeTypeError(`.Vintage`, v, "int", err)
 			}
 			if tmp52 < 1900 {
-				err = support.InvalidRangeError(`.Vintage`, tmp52, 1900, true, err)
+				err = goa.InvalidRangeError(`.Vintage`, tmp52, 1900, true, err)
 			}
 			if tmp52 > 2020 {
-				err = support.InvalidRangeError(`.Vintage`, tmp52, 2020, false, err)
+				err = goa.InvalidRangeError(`.Vintage`, tmp52, 2020, false, err)
 			}
 			res.Vintage = tmp52
 		}
 	} else {
-		err = support.InvalidAttributeTypeError(``, raw, "map[string]interface{}", err)
+		err = goa.InvalidAttributeTypeError(``, raw, "map[string]interface{}", err)
 	}
 	return res, err
 }
@@ -502,19 +502,19 @@ func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
 			err = fmt.Errorf("missing required attribute \"name\"")
 		}
 		if len(mt.Name) < 2 {
-			err = support.InvalidLengthError(`.Name`, mt.Name, 2, true, err)
+			err = goa.InvalidLengthError(`.Name`, mt.Name, 2, true, err)
 		}
 		if len(mt.Varietal) < 4 {
-			err = support.InvalidLengthError(`.Varietal`, mt.Varietal, 4, true, err)
+			err = goa.InvalidLengthError(`.Varietal`, mt.Varietal, 4, true, err)
 		}
 		if len(mt.Vineyard) < 2 {
-			err = support.InvalidLengthError(`.Vineyard`, mt.Vineyard, 2, true, err)
+			err = goa.InvalidLengthError(`.Vineyard`, mt.Vineyard, 2, true, err)
 		}
 		if mt.Vintage < 1900 {
-			err = support.InvalidRangeError(`.Vintage`, mt.Vintage, 1900, true, err)
+			err = goa.InvalidRangeError(`.Vintage`, mt.Vintage, 1900, true, err)
 		}
 		if mt.Vintage > 2020 {
-			err = support.InvalidRangeError(`.Vintage`, mt.Vintage, 2020, false, err)
+			err = goa.InvalidRangeError(`.Vintage`, mt.Vintage, 2020, false, err)
 		}
 		if err == nil {
 			tmp54 := map[string]interface{}{
@@ -545,56 +545,56 @@ func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
 		if mt.Account == nil {
 			err = fmt.Errorf("missing required attribute \"account\"")
 		}
-		if err2 := support.ValidateFormat(support.FormatDateTime, mt.Account.CreatedAt); err2 != nil {
-			err = support.InvalidFormatError(`.Account.CreatedAt`, mt.Account.CreatedAt, support.FormatDateTime, err2, err)
+		if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.Account.CreatedAt); err2 != nil {
+			err = goa.InvalidFormatError(`.Account.CreatedAt`, mt.Account.CreatedAt, goa.FormatDateTime, err2, err)
 		}
-		if err2 := support.ValidateFormat(support.FormatEmail, mt.Account.CreatedBy); err2 != nil {
-			err = support.InvalidFormatError(`.Account.CreatedBy`, mt.Account.CreatedBy, support.FormatEmail, err2, err)
+		if err2 := goa.ValidateFormat(goa.FormatEmail, mt.Account.CreatedBy); err2 != nil {
+			err = goa.InvalidFormatError(`.Account.CreatedBy`, mt.Account.CreatedBy, goa.FormatEmail, err2, err)
 		}
 		if len(mt.Characteristics) < 10 {
-			err = support.InvalidLengthError(`.Characteristics`, mt.Characteristics, 10, true, err)
+			err = goa.InvalidLengthError(`.Characteristics`, mt.Characteristics, 10, true, err)
 		}
 		if len(mt.Characteristics) > 300 {
-			err = support.InvalidLengthError(`.Characteristics`, mt.Characteristics, 300, false, err)
+			err = goa.InvalidLengthError(`.Characteristics`, mt.Characteristics, 300, false, err)
 		}
 		if !(mt.Color == "red" || mt.Color == "white" || mt.Color == "rose" || mt.Color == "yellow" || mt.Color == "sparkling") {
-			err = support.InvalidEnumValueError(`.Color`, mt.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
+			err = goa.InvalidEnumValueError(`.Color`, mt.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
 		}
 		if len(mt.Country) < 2 {
-			err = support.InvalidLengthError(`.Country`, mt.Country, 2, true, err)
+			err = goa.InvalidLengthError(`.Country`, mt.Country, 2, true, err)
 		}
-		if err2 := support.ValidateFormat(support.FormatDateTime, mt.CreatedAt); err2 != nil {
-			err = support.InvalidFormatError(`.CreatedAt`, mt.CreatedAt, support.FormatDateTime, err2, err)
+		if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.CreatedAt); err2 != nil {
+			err = goa.InvalidFormatError(`.CreatedAt`, mt.CreatedAt, goa.FormatDateTime, err2, err)
 		}
 		if len(mt.Name) < 2 {
-			err = support.InvalidLengthError(`.Name`, mt.Name, 2, true, err)
+			err = goa.InvalidLengthError(`.Name`, mt.Name, 2, true, err)
 		}
 		if len(mt.Review) < 10 {
-			err = support.InvalidLengthError(`.Review`, mt.Review, 10, true, err)
+			err = goa.InvalidLengthError(`.Review`, mt.Review, 10, true, err)
 		}
 		if len(mt.Review) > 300 {
-			err = support.InvalidLengthError(`.Review`, mt.Review, 300, false, err)
+			err = goa.InvalidLengthError(`.Review`, mt.Review, 300, false, err)
 		}
 		if mt.Sweetness < 1 {
-			err = support.InvalidRangeError(`.Sweetness`, mt.Sweetness, 1, true, err)
+			err = goa.InvalidRangeError(`.Sweetness`, mt.Sweetness, 1, true, err)
 		}
 		if mt.Sweetness > 5 {
-			err = support.InvalidRangeError(`.Sweetness`, mt.Sweetness, 5, false, err)
+			err = goa.InvalidRangeError(`.Sweetness`, mt.Sweetness, 5, false, err)
 		}
-		if err2 := support.ValidateFormat(support.FormatDateTime, mt.UpdatedAt); err2 != nil {
-			err = support.InvalidFormatError(`.UpdatedAt`, mt.UpdatedAt, support.FormatDateTime, err2, err)
+		if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.UpdatedAt); err2 != nil {
+			err = goa.InvalidFormatError(`.UpdatedAt`, mt.UpdatedAt, goa.FormatDateTime, err2, err)
 		}
 		if len(mt.Varietal) < 4 {
-			err = support.InvalidLengthError(`.Varietal`, mt.Varietal, 4, true, err)
+			err = goa.InvalidLengthError(`.Varietal`, mt.Varietal, 4, true, err)
 		}
 		if len(mt.Vineyard) < 2 {
-			err = support.InvalidLengthError(`.Vineyard`, mt.Vineyard, 2, true, err)
+			err = goa.InvalidLengthError(`.Vineyard`, mt.Vineyard, 2, true, err)
 		}
 		if mt.Vintage < 1900 {
-			err = support.InvalidRangeError(`.Vintage`, mt.Vintage, 1900, true, err)
+			err = goa.InvalidRangeError(`.Vintage`, mt.Vintage, 1900, true, err)
 		}
 		if mt.Vintage > 2020 {
-			err = support.InvalidRangeError(`.Vintage`, mt.Vintage, 2020, false, err)
+			err = goa.InvalidRangeError(`.Vintage`, mt.Vintage, 2020, false, err)
 		}
 		if err == nil {
 			tmp55 := map[string]interface{}{
@@ -634,7 +634,7 @@ func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
 			err = fmt.Errorf("missing required attribute \"name\"")
 		}
 		if len(mt.Name) < 2 {
-			err = support.InvalidLengthError(`.Name`, mt.Name, 2, true, err)
+			err = goa.InvalidLengthError(`.Name`, mt.Name, 2, true, err)
 		}
 		if err == nil {
 			tmp58 := map[string]interface{}{
@@ -663,62 +663,62 @@ func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
 
 // Validate validates the media type instance.
 func (mt *Bottle) Validate() (err error) {
-	if err2 := support.ValidateFormat(support.FormatDateTime, mt.Account.CreatedAt); err2 != nil {
-		err = support.InvalidFormatError(`.Account.CreatedAt`, mt.Account.CreatedAt, support.FormatDateTime, err2, err)
+	if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.Account.CreatedAt); err2 != nil {
+		err = goa.InvalidFormatError(`.Account.CreatedAt`, mt.Account.CreatedAt, goa.FormatDateTime, err2, err)
 	}
-	if err2 := support.ValidateFormat(support.FormatEmail, mt.Account.CreatedBy); err2 != nil {
-		err = support.InvalidFormatError(`.Account.CreatedBy`, mt.Account.CreatedBy, support.FormatEmail, err2, err)
+	if err2 := goa.ValidateFormat(goa.FormatEmail, mt.Account.CreatedBy); err2 != nil {
+		err = goa.InvalidFormatError(`.Account.CreatedBy`, mt.Account.CreatedBy, goa.FormatEmail, err2, err)
 	}
 	if len(mt.Characteristics) < 10 {
-		err = support.InvalidLengthError(`.Characteristics`, mt.Characteristics, 10, true, err)
+		err = goa.InvalidLengthError(`.Characteristics`, mt.Characteristics, 10, true, err)
 	}
 	if len(mt.Characteristics) > 300 {
-		err = support.InvalidLengthError(`.Characteristics`, mt.Characteristics, 300, false, err)
+		err = goa.InvalidLengthError(`.Characteristics`, mt.Characteristics, 300, false, err)
 	}
 	if !(mt.Color == "red" || mt.Color == "white" || mt.Color == "rose" || mt.Color == "yellow" || mt.Color == "sparkling") {
-		err = support.InvalidEnumValueError(`.Color`, mt.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
+		err = goa.InvalidEnumValueError(`.Color`, mt.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
 	}
 	if len(mt.Country) < 2 {
-		err = support.InvalidLengthError(`.Country`, mt.Country, 2, true, err)
+		err = goa.InvalidLengthError(`.Country`, mt.Country, 2, true, err)
 	}
-	if err2 := support.ValidateFormat(support.FormatDateTime, mt.CreatedAt); err2 != nil {
-		err = support.InvalidFormatError(`.CreatedAt`, mt.CreatedAt, support.FormatDateTime, err2, err)
+	if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.CreatedAt); err2 != nil {
+		err = goa.InvalidFormatError(`.CreatedAt`, mt.CreatedAt, goa.FormatDateTime, err2, err)
 	}
 	if len(mt.Name) < 2 {
-		err = support.InvalidLengthError(`.Name`, mt.Name, 2, true, err)
+		err = goa.InvalidLengthError(`.Name`, mt.Name, 2, true, err)
 	}
 	if mt.Rating < 1 {
-		err = support.InvalidRangeError(`.Rating`, mt.Rating, 1, true, err)
+		err = goa.InvalidRangeError(`.Rating`, mt.Rating, 1, true, err)
 	}
 	if mt.Rating > 5 {
-		err = support.InvalidRangeError(`.Rating`, mt.Rating, 5, false, err)
+		err = goa.InvalidRangeError(`.Rating`, mt.Rating, 5, false, err)
 	}
 	if len(mt.Review) < 10 {
-		err = support.InvalidLengthError(`.Review`, mt.Review, 10, true, err)
+		err = goa.InvalidLengthError(`.Review`, mt.Review, 10, true, err)
 	}
 	if len(mt.Review) > 300 {
-		err = support.InvalidLengthError(`.Review`, mt.Review, 300, false, err)
+		err = goa.InvalidLengthError(`.Review`, mt.Review, 300, false, err)
 	}
 	if mt.Sweetness < 1 {
-		err = support.InvalidRangeError(`.Sweetness`, mt.Sweetness, 1, true, err)
+		err = goa.InvalidRangeError(`.Sweetness`, mt.Sweetness, 1, true, err)
 	}
 	if mt.Sweetness > 5 {
-		err = support.InvalidRangeError(`.Sweetness`, mt.Sweetness, 5, false, err)
+		err = goa.InvalidRangeError(`.Sweetness`, mt.Sweetness, 5, false, err)
 	}
-	if err2 := support.ValidateFormat(support.FormatDateTime, mt.UpdatedAt); err2 != nil {
-		err = support.InvalidFormatError(`.UpdatedAt`, mt.UpdatedAt, support.FormatDateTime, err2, err)
+	if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.UpdatedAt); err2 != nil {
+		err = goa.InvalidFormatError(`.UpdatedAt`, mt.UpdatedAt, goa.FormatDateTime, err2, err)
 	}
 	if len(mt.Varietal) < 4 {
-		err = support.InvalidLengthError(`.Varietal`, mt.Varietal, 4, true, err)
+		err = goa.InvalidLengthError(`.Varietal`, mt.Varietal, 4, true, err)
 	}
 	if len(mt.Vineyard) < 2 {
-		err = support.InvalidLengthError(`.Vineyard`, mt.Vineyard, 2, true, err)
+		err = goa.InvalidLengthError(`.Vineyard`, mt.Vineyard, 2, true, err)
 	}
 	if mt.Vintage < 1900 {
-		err = support.InvalidRangeError(`.Vintage`, mt.Vintage, 1900, true, err)
+		err = goa.InvalidRangeError(`.Vintage`, mt.Vintage, 1900, true, err)
 	}
 	if mt.Vintage > 2020 {
-		err = support.InvalidRangeError(`.Vintage`, mt.Vintage, 2020, false, err)
+		err = goa.InvalidRangeError(`.Vintage`, mt.Vintage, 2020, false, err)
 	}
 	return
 }
@@ -759,10 +759,10 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 							if val, ok := v.(string); ok {
 								tmp61 = val
 							} else {
-								err = support.InvalidAttributeTypeError(`[*].Account.CreatedAt`, v, "string", err)
+								err = goa.InvalidAttributeTypeError(`[*].Account.CreatedAt`, v, "string", err)
 							}
-							if err2 := support.ValidateFormat(support.FormatDateTime, tmp61); err2 != nil {
-								err = support.InvalidFormatError(`[*].Account.CreatedAt`, tmp61, support.FormatDateTime, err2, err)
+							if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp61); err2 != nil {
+								err = goa.InvalidFormatError(`[*].Account.CreatedAt`, tmp61, goa.FormatDateTime, err2, err)
 							}
 							tmp60.CreatedAt = tmp61
 						}
@@ -771,10 +771,10 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 							if val, ok := v.(string); ok {
 								tmp62 = val
 							} else {
-								err = support.InvalidAttributeTypeError(`[*].Account.CreatedBy`, v, "string", err)
+								err = goa.InvalidAttributeTypeError(`[*].Account.CreatedBy`, v, "string", err)
 							}
-							if err2 := support.ValidateFormat(support.FormatEmail, tmp62); err2 != nil {
-								err = support.InvalidFormatError(`[*].Account.CreatedBy`, tmp62, support.FormatEmail, err2, err)
+							if err2 := goa.ValidateFormat(goa.FormatEmail, tmp62); err2 != nil {
+								err = goa.InvalidFormatError(`[*].Account.CreatedBy`, tmp62, goa.FormatEmail, err2, err)
 							}
 							tmp60.CreatedBy = tmp62
 						}
@@ -783,7 +783,7 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 							if val, ok := v.(string); ok {
 								tmp63 = val
 							} else {
-								err = support.InvalidAttributeTypeError(`[*].Account.Href`, v, "string", err)
+								err = goa.InvalidAttributeTypeError(`[*].Account.Href`, v, "string", err)
 							}
 							tmp60.Href = tmp63
 						}
@@ -792,7 +792,7 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 							if val, ok := v.(int); ok {
 								tmp64 = val
 							} else {
-								err = support.InvalidAttributeTypeError(`[*].Account.ID`, v, "int", err)
+								err = goa.InvalidAttributeTypeError(`[*].Account.ID`, v, "int", err)
 							}
 							tmp60.ID = tmp64
 						}
@@ -801,37 +801,37 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 							if val, ok := v.(string); ok {
 								tmp65 = val
 							} else {
-								err = support.InvalidAttributeTypeError(`[*].Account.Name`, v, "string", err)
+								err = goa.InvalidAttributeTypeError(`[*].Account.Name`, v, "string", err)
 							}
 							tmp60.Name = tmp65
 						} else {
-							err = support.MissingAttributeError(`[*].Account`, "name", err)
+							err = goa.MissingAttributeError(`[*].Account`, "name", err)
 						}
 					} else {
-						err = support.InvalidAttributeTypeError(`[*].Account`, v, "map[string]interface{}", err)
+						err = goa.InvalidAttributeTypeError(`[*].Account`, v, "map[string]interface{}", err)
 					}
-					if err2 := support.ValidateFormat(support.FormatDateTime, tmp60.CreatedAt); err2 != nil {
-						err = support.InvalidFormatError(`[*].Account.CreatedAt`, tmp60.CreatedAt, support.FormatDateTime, err2, err)
+					if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp60.CreatedAt); err2 != nil {
+						err = goa.InvalidFormatError(`[*].Account.CreatedAt`, tmp60.CreatedAt, goa.FormatDateTime, err2, err)
 					}
-					if err2 := support.ValidateFormat(support.FormatEmail, tmp60.CreatedBy); err2 != nil {
-						err = support.InvalidFormatError(`[*].Account.CreatedBy`, tmp60.CreatedBy, support.FormatEmail, err2, err)
+					if err2 := goa.ValidateFormat(goa.FormatEmail, tmp60.CreatedBy); err2 != nil {
+						err = goa.InvalidFormatError(`[*].Account.CreatedBy`, tmp60.CreatedBy, goa.FormatEmail, err2, err)
 					}
 					tmp59.Account = tmp60
 				} else {
-					err = support.MissingAttributeError(`[*]`, "account", err)
+					err = goa.MissingAttributeError(`[*]`, "account", err)
 				}
 				if v, ok := val["characteristics"]; ok {
 					var tmp66 string
 					if val, ok := v.(string); ok {
 						tmp66 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`[*].Characteristics`, v, "string", err)
+						err = goa.InvalidAttributeTypeError(`[*].Characteristics`, v, "string", err)
 					}
 					if len(tmp66) < 10 {
-						err = support.InvalidLengthError(`[*].Characteristics`, tmp66, 10, true, err)
+						err = goa.InvalidLengthError(`[*].Characteristics`, tmp66, 10, true, err)
 					}
 					if len(tmp66) > 300 {
-						err = support.InvalidLengthError(`[*].Characteristics`, tmp66, 300, false, err)
+						err = goa.InvalidLengthError(`[*].Characteristics`, tmp66, 300, false, err)
 					}
 					tmp59.Characteristics = tmp66
 				}
@@ -840,10 +840,10 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 					if val, ok := v.(string); ok {
 						tmp67 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`[*].Color`, v, "string", err)
+						err = goa.InvalidAttributeTypeError(`[*].Color`, v, "string", err)
 					}
 					if !(tmp67 == "red" || tmp67 == "white" || tmp67 == "rose" || tmp67 == "yellow" || tmp67 == "sparkling") {
-						err = support.InvalidEnumValueError(`[*].Color`, tmp67, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
+						err = goa.InvalidEnumValueError(`[*].Color`, tmp67, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
 					}
 					tmp59.Color = tmp67
 				}
@@ -852,10 +852,10 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 					if val, ok := v.(string); ok {
 						tmp68 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`[*].Country`, v, "string", err)
+						err = goa.InvalidAttributeTypeError(`[*].Country`, v, "string", err)
 					}
 					if len(tmp68) < 2 {
-						err = support.InvalidLengthError(`[*].Country`, tmp68, 2, true, err)
+						err = goa.InvalidLengthError(`[*].Country`, tmp68, 2, true, err)
 					}
 					tmp59.Country = tmp68
 				}
@@ -864,10 +864,10 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 					if val, ok := v.(string); ok {
 						tmp69 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`[*].CreatedAt`, v, "string", err)
+						err = goa.InvalidAttributeTypeError(`[*].CreatedAt`, v, "string", err)
 					}
-					if err2 := support.ValidateFormat(support.FormatDateTime, tmp69); err2 != nil {
-						err = support.InvalidFormatError(`[*].CreatedAt`, tmp69, support.FormatDateTime, err2, err)
+					if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp69); err2 != nil {
+						err = goa.InvalidFormatError(`[*].CreatedAt`, tmp69, goa.FormatDateTime, err2, err)
 					}
 					tmp59.CreatedAt = tmp69
 				}
@@ -876,7 +876,7 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 					if val, ok := v.(string); ok {
 						tmp70 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`[*].Href`, v, "string", err)
+						err = goa.InvalidAttributeTypeError(`[*].Href`, v, "string", err)
 					}
 					tmp59.Href = tmp70
 				}
@@ -885,7 +885,7 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 					if val, ok := v.(int); ok {
 						tmp71 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`[*].ID`, v, "int", err)
+						err = goa.InvalidAttributeTypeError(`[*].ID`, v, "int", err)
 					}
 					tmp59.ID = tmp71
 				}
@@ -894,27 +894,27 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 					if val, ok := v.(string); ok {
 						tmp72 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`[*].Name`, v, "string", err)
+						err = goa.InvalidAttributeTypeError(`[*].Name`, v, "string", err)
 					}
 					if len(tmp72) < 2 {
-						err = support.InvalidLengthError(`[*].Name`, tmp72, 2, true, err)
+						err = goa.InvalidLengthError(`[*].Name`, tmp72, 2, true, err)
 					}
 					tmp59.Name = tmp72
 				} else {
-					err = support.MissingAttributeError(`[*]`, "name", err)
+					err = goa.MissingAttributeError(`[*]`, "name", err)
 				}
 				if v, ok := val["rating"]; ok {
 					var tmp73 int
 					if val, ok := v.(int); ok {
 						tmp73 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`[*].Rating`, v, "int", err)
+						err = goa.InvalidAttributeTypeError(`[*].Rating`, v, "int", err)
 					}
 					if tmp73 < 1 {
-						err = support.InvalidRangeError(`[*].Rating`, tmp73, 1, true, err)
+						err = goa.InvalidRangeError(`[*].Rating`, tmp73, 1, true, err)
 					}
 					if tmp73 > 5 {
-						err = support.InvalidRangeError(`[*].Rating`, tmp73, 5, false, err)
+						err = goa.InvalidRangeError(`[*].Rating`, tmp73, 5, false, err)
 					}
 					tmp59.Rating = tmp73
 				}
@@ -923,7 +923,7 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 					if val, ok := v.(string); ok {
 						tmp74 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`[*].Region`, v, "string", err)
+						err = goa.InvalidAttributeTypeError(`[*].Region`, v, "string", err)
 					}
 					tmp59.Region = tmp74
 				}
@@ -932,13 +932,13 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 					if val, ok := v.(string); ok {
 						tmp75 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`[*].Review`, v, "string", err)
+						err = goa.InvalidAttributeTypeError(`[*].Review`, v, "string", err)
 					}
 					if len(tmp75) < 10 {
-						err = support.InvalidLengthError(`[*].Review`, tmp75, 10, true, err)
+						err = goa.InvalidLengthError(`[*].Review`, tmp75, 10, true, err)
 					}
 					if len(tmp75) > 300 {
-						err = support.InvalidLengthError(`[*].Review`, tmp75, 300, false, err)
+						err = goa.InvalidLengthError(`[*].Review`, tmp75, 300, false, err)
 					}
 					tmp59.Review = tmp75
 				}
@@ -947,13 +947,13 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 					if val, ok := v.(int); ok {
 						tmp76 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`[*].Sweetness`, v, "int", err)
+						err = goa.InvalidAttributeTypeError(`[*].Sweetness`, v, "int", err)
 					}
 					if tmp76 < 1 {
-						err = support.InvalidRangeError(`[*].Sweetness`, tmp76, 1, true, err)
+						err = goa.InvalidRangeError(`[*].Sweetness`, tmp76, 1, true, err)
 					}
 					if tmp76 > 5 {
-						err = support.InvalidRangeError(`[*].Sweetness`, tmp76, 5, false, err)
+						err = goa.InvalidRangeError(`[*].Sweetness`, tmp76, 5, false, err)
 					}
 					tmp59.Sweetness = tmp76
 				}
@@ -962,10 +962,10 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 					if val, ok := v.(string); ok {
 						tmp77 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`[*].UpdatedAt`, v, "string", err)
+						err = goa.InvalidAttributeTypeError(`[*].UpdatedAt`, v, "string", err)
 					}
-					if err2 := support.ValidateFormat(support.FormatDateTime, tmp77); err2 != nil {
-						err = support.InvalidFormatError(`[*].UpdatedAt`, tmp77, support.FormatDateTime, err2, err)
+					if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp77); err2 != nil {
+						err = goa.InvalidFormatError(`[*].UpdatedAt`, tmp77, goa.FormatDateTime, err2, err)
 					}
 					tmp59.UpdatedAt = tmp77
 				}
@@ -974,10 +974,10 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 					if val, ok := v.(string); ok {
 						tmp78 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`[*].Varietal`, v, "string", err)
+						err = goa.InvalidAttributeTypeError(`[*].Varietal`, v, "string", err)
 					}
 					if len(tmp78) < 4 {
-						err = support.InvalidLengthError(`[*].Varietal`, tmp78, 4, true, err)
+						err = goa.InvalidLengthError(`[*].Varietal`, tmp78, 4, true, err)
 					}
 					tmp59.Varietal = tmp78
 				}
@@ -986,94 +986,94 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 					if val, ok := v.(string); ok {
 						tmp79 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`[*].Vineyard`, v, "string", err)
+						err = goa.InvalidAttributeTypeError(`[*].Vineyard`, v, "string", err)
 					}
 					if len(tmp79) < 2 {
-						err = support.InvalidLengthError(`[*].Vineyard`, tmp79, 2, true, err)
+						err = goa.InvalidLengthError(`[*].Vineyard`, tmp79, 2, true, err)
 					}
 					tmp59.Vineyard = tmp79
 				} else {
-					err = support.MissingAttributeError(`[*]`, "vineyard", err)
+					err = goa.MissingAttributeError(`[*]`, "vineyard", err)
 				}
 				if v, ok := val["vintage"]; ok {
 					var tmp80 int
 					if val, ok := v.(int); ok {
 						tmp80 = val
 					} else {
-						err = support.InvalidAttributeTypeError(`[*].Vintage`, v, "int", err)
+						err = goa.InvalidAttributeTypeError(`[*].Vintage`, v, "int", err)
 					}
 					if tmp80 < 1900 {
-						err = support.InvalidRangeError(`[*].Vintage`, tmp80, 1900, true, err)
+						err = goa.InvalidRangeError(`[*].Vintage`, tmp80, 1900, true, err)
 					}
 					if tmp80 > 2020 {
-						err = support.InvalidRangeError(`[*].Vintage`, tmp80, 2020, false, err)
+						err = goa.InvalidRangeError(`[*].Vintage`, tmp80, 2020, false, err)
 					}
 					tmp59.Vintage = tmp80
 				}
 			} else {
-				err = support.InvalidAttributeTypeError(`[*]`, v, "map[string]interface{}", err)
+				err = goa.InvalidAttributeTypeError(`[*]`, v, "map[string]interface{}", err)
 			}
-			if err2 := support.ValidateFormat(support.FormatDateTime, tmp59.Account.CreatedAt); err2 != nil {
-				err = support.InvalidFormatError(`[*].Account.CreatedAt`, tmp59.Account.CreatedAt, support.FormatDateTime, err2, err)
+			if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp59.Account.CreatedAt); err2 != nil {
+				err = goa.InvalidFormatError(`[*].Account.CreatedAt`, tmp59.Account.CreatedAt, goa.FormatDateTime, err2, err)
 			}
-			if err2 := support.ValidateFormat(support.FormatEmail, tmp59.Account.CreatedBy); err2 != nil {
-				err = support.InvalidFormatError(`[*].Account.CreatedBy`, tmp59.Account.CreatedBy, support.FormatEmail, err2, err)
+			if err2 := goa.ValidateFormat(goa.FormatEmail, tmp59.Account.CreatedBy); err2 != nil {
+				err = goa.InvalidFormatError(`[*].Account.CreatedBy`, tmp59.Account.CreatedBy, goa.FormatEmail, err2, err)
 			}
 			if len(tmp59.Characteristics) < 10 {
-				err = support.InvalidLengthError(`[*].Characteristics`, tmp59.Characteristics, 10, true, err)
+				err = goa.InvalidLengthError(`[*].Characteristics`, tmp59.Characteristics, 10, true, err)
 			}
 			if len(tmp59.Characteristics) > 300 {
-				err = support.InvalidLengthError(`[*].Characteristics`, tmp59.Characteristics, 300, false, err)
+				err = goa.InvalidLengthError(`[*].Characteristics`, tmp59.Characteristics, 300, false, err)
 			}
 			if !(tmp59.Color == "red" || tmp59.Color == "white" || tmp59.Color == "rose" || tmp59.Color == "yellow" || tmp59.Color == "sparkling") {
-				err = support.InvalidEnumValueError(`[*].Color`, tmp59.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
+				err = goa.InvalidEnumValueError(`[*].Color`, tmp59.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
 			}
 			if len(tmp59.Country) < 2 {
-				err = support.InvalidLengthError(`[*].Country`, tmp59.Country, 2, true, err)
+				err = goa.InvalidLengthError(`[*].Country`, tmp59.Country, 2, true, err)
 			}
-			if err2 := support.ValidateFormat(support.FormatDateTime, tmp59.CreatedAt); err2 != nil {
-				err = support.InvalidFormatError(`[*].CreatedAt`, tmp59.CreatedAt, support.FormatDateTime, err2, err)
+			if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp59.CreatedAt); err2 != nil {
+				err = goa.InvalidFormatError(`[*].CreatedAt`, tmp59.CreatedAt, goa.FormatDateTime, err2, err)
 			}
 			if len(tmp59.Name) < 2 {
-				err = support.InvalidLengthError(`[*].Name`, tmp59.Name, 2, true, err)
+				err = goa.InvalidLengthError(`[*].Name`, tmp59.Name, 2, true, err)
 			}
 			if tmp59.Rating < 1 {
-				err = support.InvalidRangeError(`[*].Rating`, tmp59.Rating, 1, true, err)
+				err = goa.InvalidRangeError(`[*].Rating`, tmp59.Rating, 1, true, err)
 			}
 			if tmp59.Rating > 5 {
-				err = support.InvalidRangeError(`[*].Rating`, tmp59.Rating, 5, false, err)
+				err = goa.InvalidRangeError(`[*].Rating`, tmp59.Rating, 5, false, err)
 			}
 			if len(tmp59.Review) < 10 {
-				err = support.InvalidLengthError(`[*].Review`, tmp59.Review, 10, true, err)
+				err = goa.InvalidLengthError(`[*].Review`, tmp59.Review, 10, true, err)
 			}
 			if len(tmp59.Review) > 300 {
-				err = support.InvalidLengthError(`[*].Review`, tmp59.Review, 300, false, err)
+				err = goa.InvalidLengthError(`[*].Review`, tmp59.Review, 300, false, err)
 			}
 			if tmp59.Sweetness < 1 {
-				err = support.InvalidRangeError(`[*].Sweetness`, tmp59.Sweetness, 1, true, err)
+				err = goa.InvalidRangeError(`[*].Sweetness`, tmp59.Sweetness, 1, true, err)
 			}
 			if tmp59.Sweetness > 5 {
-				err = support.InvalidRangeError(`[*].Sweetness`, tmp59.Sweetness, 5, false, err)
+				err = goa.InvalidRangeError(`[*].Sweetness`, tmp59.Sweetness, 5, false, err)
 			}
-			if err2 := support.ValidateFormat(support.FormatDateTime, tmp59.UpdatedAt); err2 != nil {
-				err = support.InvalidFormatError(`[*].UpdatedAt`, tmp59.UpdatedAt, support.FormatDateTime, err2, err)
+			if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp59.UpdatedAt); err2 != nil {
+				err = goa.InvalidFormatError(`[*].UpdatedAt`, tmp59.UpdatedAt, goa.FormatDateTime, err2, err)
 			}
 			if len(tmp59.Varietal) < 4 {
-				err = support.InvalidLengthError(`[*].Varietal`, tmp59.Varietal, 4, true, err)
+				err = goa.InvalidLengthError(`[*].Varietal`, tmp59.Varietal, 4, true, err)
 			}
 			if len(tmp59.Vineyard) < 2 {
-				err = support.InvalidLengthError(`[*].Vineyard`, tmp59.Vineyard, 2, true, err)
+				err = goa.InvalidLengthError(`[*].Vineyard`, tmp59.Vineyard, 2, true, err)
 			}
 			if tmp59.Vintage < 1900 {
-				err = support.InvalidRangeError(`[*].Vintage`, tmp59.Vintage, 1900, true, err)
+				err = goa.InvalidRangeError(`[*].Vintage`, tmp59.Vintage, 1900, true, err)
 			}
 			if tmp59.Vintage > 2020 {
-				err = support.InvalidRangeError(`[*].Vintage`, tmp59.Vintage, 2020, false, err)
+				err = goa.InvalidRangeError(`[*].Vintage`, tmp59.Vintage, 2020, false, err)
 			}
 			res[i] = tmp59
 		}
 	} else {
-		err = support.InvalidAttributeTypeError(``, raw, "[]interface{}", err)
+		err = goa.InvalidAttributeTypeError(``, raw, "[]interface{}", err)
 	}
 	return res, err
 }
@@ -1090,19 +1090,19 @@ func (mt BottleCollection) Dump(view BottleCollectionViewEnum) ([]map[string]int
 				err = fmt.Errorf("missing required attribute \"name\"")
 			}
 			if len(res.Name) < 2 {
-				err = support.InvalidLengthError(`[*].Name`, res.Name, 2, true, err)
+				err = goa.InvalidLengthError(`[*].Name`, res.Name, 2, true, err)
 			}
 			if len(res.Varietal) < 4 {
-				err = support.InvalidLengthError(`[*].Varietal`, res.Varietal, 4, true, err)
+				err = goa.InvalidLengthError(`[*].Varietal`, res.Varietal, 4, true, err)
 			}
 			if len(res.Vineyard) < 2 {
-				err = support.InvalidLengthError(`[*].Vineyard`, res.Vineyard, 2, true, err)
+				err = goa.InvalidLengthError(`[*].Vineyard`, res.Vineyard, 2, true, err)
 			}
 			if res.Vintage < 1900 {
-				err = support.InvalidRangeError(`[*].Vintage`, res.Vintage, 1900, true, err)
+				err = goa.InvalidRangeError(`[*].Vintage`, res.Vintage, 1900, true, err)
 			}
 			if res.Vintage > 2020 {
-				err = support.InvalidRangeError(`[*].Vintage`, res.Vintage, 2020, false, err)
+				err = goa.InvalidRangeError(`[*].Vintage`, res.Vintage, 2020, false, err)
 			}
 			if err == nil {
 				tmp83 := map[string]interface{}{
@@ -1138,7 +1138,7 @@ func (mt BottleCollection) Dump(view BottleCollectionViewEnum) ([]map[string]int
 				err = fmt.Errorf("missing required attribute \"name\"")
 			}
 			if len(res.Name) < 2 {
-				err = support.InvalidLengthError(`[*].Name`, res.Name, 2, true, err)
+				err = goa.InvalidLengthError(`[*].Name`, res.Name, 2, true, err)
 			}
 			if err == nil {
 				tmp86 := map[string]interface{}{

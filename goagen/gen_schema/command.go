@@ -2,7 +2,7 @@ package genschema
 
 import (
 	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/codegen/meta"
+	"github.com/raphael/goa/goagen/meta"
 )
 
 // ServiceURL is used to build the JSON schema ID of the root document.
@@ -33,7 +33,7 @@ func (c *Command) Run() ([]string, error) {
 	flags := map[string]string{"url": ServiceURL}
 	gen := meta.NewGenerator(
 		"genschema.Generate",
-		[]*codegen.ImportSpec{codegen.SimpleImport("github.com/raphael/goa/goagen/codegen/gen_schema")},
+		[]*codegen.ImportSpec{codegen.SimpleImport("github.com/raphael/goa/goagen/gen_schema")},
 		flags,
 	)
 	return gen.Generate()

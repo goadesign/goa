@@ -140,7 +140,6 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	title = fmt.Sprintf("%s: Application Controllers", api.Name)
 	imports = []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/raphael/goa"),
-		codegen.SimpleImport("github.com/raphael/goa/support"),
 	}
 	g.ControllersWriter.WriteHeader(title, TargetPackage, imports)
 	var controllersData []*ControllerTemplateData
@@ -215,7 +214,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 
 	title = fmt.Sprintf("%s: Application Media Types", api.Name)
 	imports = []*codegen.ImportSpec{
-		codegen.SimpleImport("github.com/raphael/goa/support"),
+		codegen.SimpleImport("github.com/raphael/goa"),
 		codegen.SimpleImport("fmt"),
 	}
 	g.MediaTypesWriter.WriteHeader(title, TargetPackage, imports)

@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/goagen/codegen/gen_app"
+	"github.com/raphael/goa/goagen/gen_app"
 )
 
 var _ = Describe("NewGenerator", func() {
@@ -270,7 +270,6 @@ package app
 
 import (
 	"github.com/raphael/goa"
-	"github.com/raphael/goa/support"
 )
 
 // WidgetController is the controller interface for the Widget actions.
@@ -286,7 +285,7 @@ func MountWidgetController(app *goa.Application, ctrl WidgetController) {
 	h = func(c *goa.Context) error {
 		ctx, err := NewGetWidgetContext(c)
 		if err != nil {
-			return support.NewBadRequestError(err)
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Get(ctx)
 	}

@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/raphael/goa"
-	"github.com/raphael/goa/support"
 	"golang.org/x/net/context"
 	"gopkg.in/inconshreveable/log15.v2"
 )
@@ -160,7 +159,7 @@ var _ = Describe("Context", func() {
 
 		Context("BadRequest", func() {
 			err := fmt.Errorf("boom")
-			var badReq = &support.BadRequestError{Actual: err}
+			var badReq = &goa.BadRequestError{Actual: err}
 
 			BeforeEach(func() {
 				handler = func(c *goa.Context) error {

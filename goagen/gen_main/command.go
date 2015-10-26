@@ -2,7 +2,7 @@ package genmain
 
 import (
 	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/codegen/meta"
+	"github.com/raphael/goa/goagen/meta"
 )
 
 var (
@@ -36,7 +36,7 @@ func (c *Command) Run() ([]string, error) {
 	flags := map[string]string{"name": AppName}
 	gen := meta.NewGenerator(
 		"genmain.Generate",
-		[]*codegen.ImportSpec{codegen.SimpleImport("github.com/raphael/goa/goagen/codegen/gen_main")},
+		[]*codegen.ImportSpec{codegen.SimpleImport("github.com/raphael/goa/goagen/gen_main")},
 		flags,
 	)
 	return gen.Generate()

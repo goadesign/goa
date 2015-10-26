@@ -229,7 +229,7 @@ var _ = Describe("code generation", func() {
 					expected := `	if val, ok := raw.(int); ok {
 		p = val
 	} else {
-		err = support.InvalidAttributeTypeError(` + "``" + `, raw, "int", err)
+		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "int", err)
 	}`
 					Ω(unmarshaler).Should(Equal(expected))
 				})
@@ -249,7 +249,7 @@ var _ = Describe("code generation", func() {
 					expected := `	if val, ok := raw.(string); ok {
 		p = val
 	} else {
-		err = support.InvalidAttributeTypeError(` + "``" + `, raw, "string", err)
+		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "string", err)
 	}`
 					Ω(unmarshaler).Should(Equal(expected))
 				})
@@ -469,12 +469,12 @@ const (
 			if val, ok := v.(int); ok {
 				tmp1 = val
 			} else {
-				err = support.InvalidAttributeTypeError(` + "`" + `[*]` + "`" + `, v, "int", err)
+				err = goa.InvalidAttributeTypeError(` + "`" + `[*]` + "`" + `, v, "int", err)
 			}
 			p[i] = tmp1
 		}
 	} else {
-		err = support.InvalidAttributeTypeError(` + "``" + `, raw, "[]interface{}", err)
+		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "[]interface{}", err)
 	}`
 
 	simpleMarshaled = `	tmp1 := map[string]interface{}{
@@ -491,12 +491,12 @@ const (
 			if val, ok := v.(int); ok {
 				tmp1 = val
 			} else {
-				err = support.InvalidAttributeTypeError(` + "`" + `.Foo` + "`" + `, v, "int", err)
+				err = goa.InvalidAttributeTypeError(` + "`" + `.Foo` + "`" + `, v, "int", err)
 			}
 			p.Foo = tmp1
 		}
 	} else {
-		err = support.InvalidAttributeTypeError(` + "``" + `, raw, "map[string]interface{}", err)
+		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "map[string]interface{}", err)
 	}`
 
 	complexMarshaled = `	tmp1 := map[string]interface{}{
@@ -544,12 +544,12 @@ const (
 							if val, ok := v.(int); ok {
 								tmp3 = val
 							} else {
-								err = support.InvalidAttributeTypeError(` + "`" + `.Baz.Bar[*]` + "`" + `, v, "int", err)
+								err = goa.InvalidAttributeTypeError(` + "`" + `.Baz.Bar[*]` + "`" + `, v, "int", err)
 							}
 							tmp2[i] = tmp3
 						}
 					} else {
-						err = support.InvalidAttributeTypeError(` + "`" + `.Baz.Bar` + "`" + `, v, "[]interface{}", err)
+						err = goa.InvalidAttributeTypeError(` + "`" + `.Baz.Bar` + "`" + `, v, "[]interface{}", err)
 					}
 					tmp1.Bar = tmp2
 				}
@@ -558,12 +558,12 @@ const (
 					if val, ok := v.(int); ok {
 						tmp4 = val
 					} else {
-						err = support.InvalidAttributeTypeError(` + "`" + `.Baz.Foo` + "`" + `, v, "int", err)
+						err = goa.InvalidAttributeTypeError(` + "`" + `.Baz.Foo` + "`" + `, v, "int", err)
 					}
 					tmp1.Foo = tmp4
 				}
 			} else {
-				err = support.InvalidAttributeTypeError(` + "`" + `.Baz` + "`" + `, v, "map[string]interface{}", err)
+				err = goa.InvalidAttributeTypeError(` + "`" + `.Baz` + "`" + `, v, "map[string]interface{}", err)
 			}
 			p.Baz = tmp1
 		}
@@ -572,12 +572,12 @@ const (
 			if val, ok := v.(int); ok {
 				tmp5 = val
 			} else {
-				err = support.InvalidAttributeTypeError(` + "`" + `.Faz` + "`" + `, v, "int", err)
+				err = goa.InvalidAttributeTypeError(` + "`" + `.Faz` + "`" + `, v, "int", err)
 			}
 			p.Faz = tmp5
 		}
 	} else {
-		err = support.InvalidAttributeTypeError(` + "``" + `, raw, "map[string]interface{}", err)
+		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "map[string]interface{}", err)
 	}`
 
 	mtMarshaled = `	tmp1 := map[string]interface{}{
@@ -613,7 +613,7 @@ import (
 	"os"
 	"encoding/json"
 
-	"github.com/raphael/goa/support"
+	"github.com/raphael/goa"
 )
 
 func main() {

@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/codegen/meta"
+	"github.com/raphael/goa/goagen/meta"
 )
 
 var _ = Describe("Run", func() {

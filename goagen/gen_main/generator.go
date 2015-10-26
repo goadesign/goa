@@ -62,7 +62,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		outPkg = strings.TrimPrefix(outPkg, "src/")
 		appPkg := filepath.Join(outPkg, "app")
 		imports := []*codegen.ImportSpec{
-			codegen.SimpleImport("github.com/raphael/goa/support"),
+			codegen.SimpleImport("github.com/raphael/goa"),
 			codegen.SimpleImport(appPkg),
 			codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
 		}
