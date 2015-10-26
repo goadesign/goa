@@ -513,17 +513,18 @@ func (l *LinkDefinition) Validate() *ValidationErrors {
 		mediaType, ok := att.Type.(*MediaTypeDefinition)
 		if !ok {
 			verr.Add(l, "attribute type must be a media type")
-		}
-		viewFound := false
-		view := l.View
-		for v := range mediaType.Views {
-			if v == view {
-				viewFound = true
-				break
+		} else {
+			viewFound := false
+			view := l.View
+			for v := range mediaType.Views {
+				if v == view {
+					viewFound = true
+					break
+				}
 			}
-		}
-		if !viewFound {
-			verr.Add(l, "view %#v does not exist on target media type %#v", view, mediaType.Identifier)
+			if !viewFound {
+				verr.Add(l, "view %#v does not exist on target media type %#v", view, mediaType.Identifier)
+			}
 		}
 	}
 	return verr.AsError()
