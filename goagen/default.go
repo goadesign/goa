@@ -9,7 +9,7 @@ import (
 	"github.com/raphael/goa/goagen/gen_schema"
 )
 
-//  DefaultCommands lists the commands run by default when no sub-command is provided on the
+// DefaultCommands lists the commands run by default when no sub-command is provided on the
 // command line.
 var DefaultCommands = []codegen.Command{
 	genapp.NewCommand(),
