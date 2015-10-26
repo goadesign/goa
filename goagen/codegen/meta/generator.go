@@ -11,7 +11,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/raphael/goa/codegen"
+	"github.com/raphael/goa/goagen/codegen"
 )
 
 // Generator generates the code of, compiles and runs generators.

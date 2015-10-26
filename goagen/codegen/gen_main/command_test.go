@@ -3,7 +3,7 @@ package genmain_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa/codegen/gen_main"
+	"github.com/raphael/goa/goagen/codegen/gen_main"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 

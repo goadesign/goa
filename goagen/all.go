@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/raphael/goa/codegen"
+	"github.com/raphael/goa/goagen/codegen"
 )
 
 // AllCommand is the default command. It runs all known commands.

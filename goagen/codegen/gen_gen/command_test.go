@@ -7,8 +7,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa/codegen"
-	"github.com/raphael/goa/codegen/gen_gen"
+	"github.com/raphael/goa/goagen/codegen"
+	"github.com/raphael/goa/goagen/codegen/gen_gen"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 

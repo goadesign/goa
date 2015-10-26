@@ -10,9 +10,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa/codegen"
 	. "github.com/raphael/goa/design"
 	. "github.com/raphael/goa/design/dsl"
+	"github.com/raphael/goa/goagen/codegen"
 )
 
 var _ = Describe("code generation", func() {
