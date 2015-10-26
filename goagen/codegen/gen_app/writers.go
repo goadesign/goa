@@ -5,8 +5,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/raphael/goa/codegen"
 	"github.com/raphael/goa/design"
+	"github.com/raphael/goa/goagen/codegen"
 )
 
 // WildcardRegex is the regex used to capture path parameters.

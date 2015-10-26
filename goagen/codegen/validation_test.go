@@ -3,8 +3,8 @@ package codegen_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa/codegen"
 	"github.com/raphael/goa/design"
+	"github.com/raphael/goa/goagen/codegen"
 )
 
 var _ = Describe("validation code generation", func() {

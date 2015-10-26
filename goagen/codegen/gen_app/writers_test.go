@@ -6,8 +6,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa/codegen/gen_app"
 	"github.com/raphael/goa/design"
+	"github.com/raphael/goa/goagen/codegen/gen_app"
 )
 
 var _ = Describe("ContextsWriter", func() {

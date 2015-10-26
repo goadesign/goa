@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/raphael/goa/codegen"
-	"github.com/raphael/goa/codegen/gen_app"
-	"github.com/raphael/goa/codegen/gen_gen"
-	"github.com/raphael/goa/codegen/gen_main"
-	"github.com/raphael/goa/codegen/gen_schema"
+	"github.com/raphael/goa/goagen/codegen"
+	"github.com/raphael/goa/goagen/codegen/gen_app"
+	"github.com/raphael/goa/goagen/codegen/gen_gen"
+	"github.com/raphael/goa/goagen/codegen/gen_main"
+	"github.com/raphael/goa/goagen/codegen/gen_schema"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
