@@ -149,7 +149,7 @@ func (ctx *ShowAccountContext) OK(resp *Account, view AccountViewEnum) error {
 	if err != nil {
 		return fmt.Errorf("invalid response: %s", err)
 	}
-	ctx.ResponseHeader().Set("Content-Type", "application/vnd.goa.example.account; charset=utf-8")
+	ctx.Header().Set("Content-Type", "application/vnd.goa.example.account; charset=utf-8")
 	return ctx.JSON(200, r)
 }
 
@@ -559,7 +559,7 @@ func (ctx *ListBottleContext) OK(resp BottleCollection, view BottleCollectionVie
 	if err != nil {
 		return fmt.Errorf("invalid response: %s", err)
 	}
-	ctx.ResponseHeader().Set("Content-Type", "application/vnd.goa.example.bottle; type=collection; charset=utf-8")
+	ctx.Header().Set("Content-Type", "application/vnd.goa.example.bottle; type=collection; charset=utf-8")
 	return ctx.JSON(200, r)
 }
 
@@ -702,7 +702,7 @@ func (ctx *ShowBottleContext) OK(resp *Bottle, view BottleViewEnum) error {
 	if err != nil {
 		return fmt.Errorf("invalid response: %s", err)
 	}
-	ctx.ResponseHeader().Set("Content-Type", "application/vnd.goa.example.bottle; charset=utf-8")
+	ctx.Header().Set("Content-Type", "application/vnd.goa.example.bottle; charset=utf-8")
 	return ctx.JSON(200, r)
 }
 
