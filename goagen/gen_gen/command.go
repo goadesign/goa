@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/codegen/meta"
+	"github.com/raphael/goa/goagen/meta"
 )
 
 var (

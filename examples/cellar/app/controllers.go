@@ -12,10 +12,7 @@
 
 package app
 
-import (
-	"github.com/raphael/goa"
-	"github.com/raphael/goa/support"
-)
+import "github.com/raphael/goa"
 
 // AccountController is the controller interface for the Account actions.
 type AccountController interface {
@@ -33,7 +30,7 @@ func MountAccountController(app *goa.Application, ctrl AccountController) {
 	h = func(c *goa.Context) error {
 		ctx, err := NewCreateAccountContext(c)
 		if err != nil {
-			return support.NewBadRequestError(err)
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Create(ctx)
 	}
@@ -42,7 +39,7 @@ func MountAccountController(app *goa.Application, ctrl AccountController) {
 	h = func(c *goa.Context) error {
 		ctx, err := NewDeleteAccountContext(c)
 		if err != nil {
-			return support.NewBadRequestError(err)
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Delete(ctx)
 	}
@@ -51,7 +48,7 @@ func MountAccountController(app *goa.Application, ctrl AccountController) {
 	h = func(c *goa.Context) error {
 		ctx, err := NewShowAccountContext(c)
 		if err != nil {
-			return support.NewBadRequestError(err)
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Show(ctx)
 	}
@@ -60,7 +57,7 @@ func MountAccountController(app *goa.Application, ctrl AccountController) {
 	h = func(c *goa.Context) error {
 		ctx, err := NewUpdateAccountContext(c)
 		if err != nil {
-			return support.NewBadRequestError(err)
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Update(ctx)
 	}
@@ -87,7 +84,7 @@ func MountBottleController(app *goa.Application, ctrl BottleController) {
 	h = func(c *goa.Context) error {
 		ctx, err := NewCreateBottleContext(c)
 		if err != nil {
-			return support.NewBadRequestError(err)
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Create(ctx)
 	}
@@ -96,7 +93,7 @@ func MountBottleController(app *goa.Application, ctrl BottleController) {
 	h = func(c *goa.Context) error {
 		ctx, err := NewDeleteBottleContext(c)
 		if err != nil {
-			return support.NewBadRequestError(err)
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Delete(ctx)
 	}
@@ -105,7 +102,7 @@ func MountBottleController(app *goa.Application, ctrl BottleController) {
 	h = func(c *goa.Context) error {
 		ctx, err := NewListBottleContext(c)
 		if err != nil {
-			return support.NewBadRequestError(err)
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.List(ctx)
 	}
@@ -114,7 +111,7 @@ func MountBottleController(app *goa.Application, ctrl BottleController) {
 	h = func(c *goa.Context) error {
 		ctx, err := NewRateBottleContext(c)
 		if err != nil {
-			return support.NewBadRequestError(err)
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Rate(ctx)
 	}
@@ -123,7 +120,7 @@ func MountBottleController(app *goa.Application, ctrl BottleController) {
 	h = func(c *goa.Context) error {
 		ctx, err := NewShowBottleContext(c)
 		if err != nil {
-			return support.NewBadRequestError(err)
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Show(ctx)
 	}
@@ -132,7 +129,7 @@ func MountBottleController(app *goa.Application, ctrl BottleController) {
 	h = func(c *goa.Context) error {
 		ctx, err := NewUpdateBottleContext(c)
 		if err != nil {
-			return support.NewBadRequestError(err)
+			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Update(ctx)
 	}

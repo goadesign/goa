@@ -11,7 +11,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 	"github.com/raphael/goa/design"
 	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/codegen/gen_main"
+	"github.com/raphael/goa/goagen/gen_main"
 )
 
 var _ = Describe("NewGenerator", func() {
@@ -45,7 +45,7 @@ var _ = Describe("NewGenerator", func() {
 })
 
 var _ = Describe("Generate", func() {
-	const testgenPackagePath = "github.com/raphael/goa/goagen/codegen/gen_main/goatest"
+	const testgenPackagePath = "github.com/raphael/goa/goagen/gen_main/goatest"
 
 	var gen *genmain.Generator
 	var outDir string

@@ -9,7 +9,6 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/raphael/goa/support"
 	log "gopkg.in/inconshreveable/log15.v2"
 )
 
@@ -178,7 +177,7 @@ func (app *Application) NewHTTPRouterHandle(resName, actName string, h Handler) 
 // response body in both cases.
 func DefaultErrorHandler(c *Context, e error) {
 	status := 500
-	if _, ok := e.(*support.BadRequestError); ok {
+	if _, ok := e.(*BadRequestError); ok {
 		c.Header().Set("Content-Type", "application/json")
 		status = 400
 	}
@@ -192,7 +191,7 @@ func DefaultErrorHandler(c *Context, e error) {
 func TerseErrorHandler(c *Context, e error) {
 	status := 500
 	var body []byte
-	if _, ok := e.(*support.BadRequestError); ok {
+	if _, ok := e.(*BadRequestError); ok {
 		c.Header().Set("Content-Type", "application/json")
 		status = 400
 		body = []byte(e.Error())
