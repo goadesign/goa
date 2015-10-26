@@ -183,7 +183,63 @@ var _ = Describe("Payload", func() {
 			Ω(Design.Resources).Should(HaveKey("foo"))
 			Ω(Design.Resources["foo"].Actions).Should(HaveKey("bar"))
 			Ω(Design.Resources["foo"].Actions["bar"].Payload).ShouldNot(BeNil())
-			Ω(Design.Resources["foo"].Actions["bar"].Payload).ShouldNot(BeNil())
 		})
 	})
+
+	Context("with an array", func() {
+		BeforeEach(func() {
+			Design = nil
+			Resource("foo", func() {
+				Action("bar", func() {
+					Payload(ArrayOf(Integer))
+				})
+			})
+		})
+
+		JustBeforeEach(func() {
+			RunDSL()
+		})
+
+		It("sets the payload type", func() {
+			Ω(Errors).ShouldNot(HaveOccurred())
+			Ω(Design).ShouldNot(BeNil())
+			Ω(Design.Resources).Should(HaveKey("foo"))
+			Ω(Design.Resources["foo"].Actions).Should(HaveKey("bar"))
+			Ω(Design.Resources["foo"].Actions["bar"].Payload).ShouldNot(BeNil())
+			Ω(Design.Resources["foo"].Actions["bar"].Payload.Type).ShouldNot(BeNil())
+			Ω(Design.Resources["foo"].Actions["bar"].Payload.Type.IsArray()).Should(BeTrue())
+			Ω(Design.Resources["foo"].Actions["bar"].Payload.Type.ToArray().ElemType).ShouldNot(BeNil())
+			Ω(Design.Resources["foo"].Actions["bar"].Payload.Type.ToArray().ElemType.Type).Should(Equal(Integer))
+		})
+	})
+
+	Context("with a hash", func() {
+		BeforeEach(func() {
+			Design = nil
+			Resource("foo", func() {
+				Action("bar", func() {
+					Payload(HashOf(String, Integer))
+				})
+			})
+		})
+
+		JustBeforeEach(func() {
+			RunDSL()
+		})
+
+		It("sets the payload type", func() {
+			Ω(Errors).ShouldNot(HaveOccurred())
+			Ω(Design).ShouldNot(BeNil())
+			Ω(Design.Resources).Should(HaveKey("foo"))
+			Ω(Design.Resources["foo"].Actions).Should(HaveKey("bar"))
+			Ω(Design.Resources["foo"].Actions["bar"].Payload).ShouldNot(BeNil())
+			Ω(Design.Resources["foo"].Actions["bar"].Payload.Type).ShouldNot(BeNil())
+			Ω(Design.Resources["foo"].Actions["bar"].Payload.Type.IsHash()).Should(BeTrue())
+			Ω(Design.Resources["foo"].Actions["bar"].Payload.Type.ToHash().ElemType).ShouldNot(BeNil())
+			Ω(Design.Resources["foo"].Actions["bar"].Payload.Type.ToHash().KeyType).ShouldNot(BeNil())
+			Ω(Design.Resources["foo"].Actions["bar"].Payload.Type.ToHash().ElemType.Type).Should(Equal(Integer))
+			Ω(Design.Resources["foo"].Actions["bar"].Payload.Type.ToHash().KeyType.Type).Should(Equal(String))
+		})
+	})
+
 })

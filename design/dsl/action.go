@@ -228,6 +228,10 @@ func Payload(p interface{}, dsls ...func()) {
 				ReportError("unknown payload type %s", actual)
 			}
 			att = ut.AttributeDefinition
+		case *Array:
+			att = &AttributeDefinition{Type: actual}
+		case *Hash:
+			att = &AttributeDefinition{Type: actual}
 		}
 		if len(dsls) == 1 {
 			if dsl != nil {
