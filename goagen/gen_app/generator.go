@@ -95,7 +95,7 @@ func NewGenerator() (*Generator, error) {
 
 // AppOutputDir returns the directory containing the generated files.
 func AppOutputDir() string {
-	return filepath.Join(codegen.OutputDir, AppSubDir)
+	return filepath.Join(codegen.OutputDir, TargetPackage)
 }
 
 // Generate the application code, implement codegen.Generator.
