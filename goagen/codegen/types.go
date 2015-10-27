@@ -751,6 +751,7 @@ const (
 
 	mObjectTmpl = `{{$ctx := .}}{{range $r := .required}}{{$at := index $ctx.type $r}}{{$required := goify $r true}}{{if eq $at.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.source}}.{{$required}} == "" {
 {{tabs $ctx.depth}} err = fmt.Errorf("missing required attribute \"{{$r}}\"")
+{{tabs $ctx.depth}}}
 {{tabs $ctx.depth}}{{else if gt $at.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.source}}.{{$required}} == nil {
 {{tabs $ctx.depth}} err = fmt.Errorf("missing required attribute \"{{$r}}\"")
 {{tabs $ctx.depth}}}
