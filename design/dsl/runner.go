@@ -60,6 +60,10 @@ func RunDSL() error {
 	for _, r := range Design.Resources {
 		executeDSL(r.DSL, r)
 	}
+	// Don't attempt to validate syntactically incorrect DSL
+	if Errors != nil {
+		return Errors
+	}
 
 	// Validate DSL
 	if err := Design.Validate(); err != nil {
