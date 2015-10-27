@@ -595,10 +595,7 @@ func (a *ActionDefinition) AllParamNames() []string {
 
 // Context returns the generic definition name used in error messages.
 func (a *AttributeDefinition) Context() string {
-	if a.Type != nil {
-		return fmt.Sprintf("attribute of type %s", a.Type.Name())
-	}
-	return fmt.Sprintf("untyped attribute")
+	return ""
 }
 
 // AllRequired returns the complete list of all required attribute names, nil

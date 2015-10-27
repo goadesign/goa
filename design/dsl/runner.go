@@ -205,7 +205,9 @@ func invalidArgError(expected string, actual interface{}) {
 func ReportError(fm string, vals ...interface{}) {
 	var suffix string
 	if cur := ctxStack.current(); cur != nil {
-		suffix = fmt.Sprintf(" in %s", cur.Context())
+		if ctx := cur.Context(); ctx != "" {
+			suffix = fmt.Sprintf(" in %s", ctx)
+		}
 	} else {
 		suffix = " (top level)"
 	}
