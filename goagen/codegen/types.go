@@ -753,8 +753,8 @@ const (
 {{tabs $ctx.depth}} err = fmt.Errorf("missing required attribute \"{{$r}}\"")
 {{tabs $ctx.depth}}{{else if gt $at.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.source}}.{{$required}} == nil {
 {{tabs $ctx.depth}} err = fmt.Errorf("missing required attribute \"{{$r}}\"")
-{{end}}{{tabs $ctx.depth}}}
-{{end}}{{$validation := validate $.origType (printf "%s" .context) .source .depth}}{{if $validation}}{{$validation}}
+{{tabs $ctx.depth}}}
+{{end}}{{/* if eq $at.Type.Kind 4 */}}{{end}}{{/* range */}}{{$validation := validate $.origType (printf "%s" .context) .source .depth}}{{if $validation}}{{$validation}}
 {{end}}{{if or $validation $ctx.required}}{{tabs .depth}}if err == nil {
 {{end}}{{$depth := add .depth (or (and (or $validation $ctx.required) 1) 0)}}{{$tmp := tempvar}}{{tabs $depth}}{{$tmp}} := map[string]interface{}{
 {{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{tabs $depth}}	"{{$n}}": {{$ctx.source}}.{{goify $n true}},

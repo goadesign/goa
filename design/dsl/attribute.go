@@ -365,6 +365,6 @@ func Required(names ...string) {
 // incompatibleAttributeType reports an error for validations defined on
 // incompatible attributes (e.g. max value on string).
 func incompatibleAttributeType(validation, actual, expected string) {
-	ReportError("invalid %s validation definition: attribute must be %s",
+	ReportError("invalid %s validation definition: attribute must be %s (but type is %s)",
 		validation, expected, actual)
 }
