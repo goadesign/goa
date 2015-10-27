@@ -156,9 +156,6 @@ type (
 		Validations []ValidationDefinition
 		// Optional member default value
 		DefaultValue interface{}
-		// Names of identity attributes if any
-		// Identity attributes are mostly useful for documentation generation
-		IdentityProperties []string
 		// Optional view used to render Attribute (only applies to media type attributes).
 		View string
 	}
