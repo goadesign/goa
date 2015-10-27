@@ -110,6 +110,10 @@ func (k ErrorKind) Title() string {
 		return "missing required HTTP header"
 	case ErrInvalidEnumValue:
 		return "invalid value"
+	case ErrInvalidFormat:
+		return "value does not match validation format"
+	case ErrInvalidPattern:
+		return "value does not match validation pattern"
 	case ErrInvalidRange:
 		return "invalid value range"
 	case ErrInvalidLength:
@@ -293,7 +297,7 @@ func InvalidLengthError(ctx, target string, value int, min bool, err error) erro
 		comp = "lesser or equal to"
 	}
 	terr := TypedError{
-		Kind: ErrInvalidRange,
+		Kind: ErrInvalidLength,
 		Mesg: fmt.Sprintf("length of %s must be %s than %d but got value %#v",
 			ctx, comp, value, target),
 	}
@@ -304,10 +308,31 @@ func InvalidLengthError(ctx, target string, value int, min bool, err error) erro
 // returns the resulting MultiError.
 func ReportError(err error, err2 error) error {
 	if err == nil {
+		if err2 == nil {
+			return MultiError{}
+		}
+		if _, ok := err2.(MultiError); ok {
+			return err2
+		}
 		return MultiError{err2}
 	}
-	if merr, ok := err.(MultiError); ok {
+	merr, ok := err.(MultiError)
+	if err2 == nil {
+		if ok {
+			return err
+		}
+		return MultiError{err}
+	}
+	merr2, ok2 := err2.(MultiError)
+	if ok {
+		if ok2 {
+			return append(merr, merr2...)
+		}
 		return append(merr, err2)
 	}
-	return MultiError{err, err2}
+	merr = MultiError{err}
+	if ok2 {
+		return append(merr, merr2...)
+	}
+	return append(merr, err2)
 }
