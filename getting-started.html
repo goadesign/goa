@@ -30,7 +30,7 @@
                                 Let's write a simplistic API with goa to make the concept of design-based development more concrete.
 				The code below is an extract from the more complete "cellar" example that can be found in the
 				<a href="https://github.com/raphael/goa/blob/master/example/cellar" target="_blank">github repository</a>.
-				The API makes it possible to retrieve wine bottle information.
+				The API subset we''be using makes it possible to retrieve wine bottle information given an id.
                         </p>
                         <p>
                                 The first thing to do when writing a goa application is to describe the API using the goa design language.
@@ -93,7 +93,7 @@ var BottleMedia = MediaType("application/vnd.goa.example.bottle", func() {
                                 <li>
                                         The <code>Resource</code> function then declares a "bottle" resource. The function also takes a name and an
                                         anonymous function. Properties defined in the anonymous function includes all the actions supported by
-                                        the resource.
+                                        the resource as well as a default media type used to render the resource in responses.
                                 </li>
                                 <li>
                                         Each resource action is declared using the <code>Action</code> function which follows the same pattern of
@@ -133,7 +133,7 @@ var BottleMedia = MediaType("application/vnd.goa.example.bottle", func() {
                                 under <code>$GOPATH/src/cellar</code>, the command line would be:
                         </p>
                         <pre>
-        $ goagen -d cellar/design
+        $ goagen bootstrap -d cellar/design
                         </pre>
                         <p>
                                 The tool outputs the names of the files it generates - by default it generates the files in the
@@ -155,15 +155,14 @@ var BottleMedia = MediaType("application/vnd.goa.example.bottle", func() {
                                 two files are meant to help bootstrap a new development, they won't be re-generated (by default) if
                                 already present (re-run the tool again and note how it only generates the files under the "app" and
                                 "schema" directories this time). This behavior and many other aspects are configurable via command
-                                line arguments, see the [goagen docs](goagen.md) for details.
+                                line arguments, see the <a href="https://github.com/raphael/goa/blob/master/goagen.md">goagen docs</a> for details.
                         </p>
                         <p>
                                 Back to the list of generated files:
                         </p>
                         <ul>
                                 <li>
-                                        The <code>app</code> directory contains the underpinning algorithms that glue the low level HTTP router with
-                                        your code.
+                                        The <code>app</code> directory contains the generated code that glues the low level HTTP router to your code.
                                 </li>
                                 <li>
                                         The <code>schema</code> directory contains a JSON Hyper-schema representation of the API together with the
@@ -188,13 +187,14 @@ var BottleMedia = MediaType("application/vnd.goa.example.bottle", func() {
                                         <code>contexts.go</code> contains the context data structure definitions. Contexts play a similar role
                                         to Martini's <code>martini.Context</code>, goji's <code>web.C</code> or echo's <code>echo.Context</code> to take a few arbitrary
                                         examples: they are given as first argument to all controller actions and provide helper methods to
-                                        retrieve the action parameters or write the response.
+                                        access the request state or write the response.
                                 </li>
                                 <li>
                                         <code>hrefs.go</code> provide global functions for building resource hrefs. Resource hrefs make it possible
                                         for responses to link to related resources. goa knows how to build these hrefs by looking at the
-                                        request path for the resource "canonical" action (by default the "show" action). See the Action
-                                        design language function for additional information.
+                                        request path for the resource "canonical" action (by default the "show" action). See the
+                                        <a href="https://godoc.org/github.com/raphael/goa/design/dsl#Action">Action</a> design language function for
+                                        additional information.
                                 </li>
                                 <li>
                                         <code>media_types.go</code> contains the media type data structures used by resource actions to build the
@@ -223,13 +223,13 @@ type ShowBottleContext struct {
         BottleID int
 }</code></pre>
                         <p>
-                                The context data structure contains the id of the bottle to be shown declared as an <code>int</code> since
+                                The context data structure contains the id of the bottle declared as an <code>int</code> since
                                 that's the type specified in the design language. It also contains an anonymous field which gives access to the
                                 raw underlying request and response states (including access to the <code>http.Request</code> and
-                                <code>http.ResponseWriter</code> objects. The goa context data structure also implements the golang
+                                <code>http.ResponseWriter</code> objects). The goa context data structure also implements the golang
                                 <a href="https://godoc.org/golang.org/x/net/context"><code>context.Context</code></a> interface which makes it possible to
                                 carry deadlines and cancelation signals for example across different goroutines involved in handling
-                                the request. The built-in <code>Timeout</code> middleware takes advantage of this.
+                                the request. The built-in <a href="https://godoc.org/github.com/raphael/goa#Timeout">Timeout</a> middleware takes advantage of this.
                         </p>
 
                         <p>
@@ -295,6 +295,16 @@ func (c *BottleController) Show(ctx *app.ShowBottleContext) error {
         api.Run(":8080")
 }</code></pre>
                         <p>
+                                Mounting a controller onto an application registers all the controller action endpoints with the
+                                application router. The code also makes sure that there is no conflict between routes of different
+                                actions.
+                        </p>
+                        <blockquote>
+                                The goa router requires that all routes form a tree so that for example using a route
+                                <code>/foo/:id</code> and a route <code>/foo/:fooID/bar/:id</code> in the same application is not
+                                permitted. Instead use </code>/foo/:fooID</code> for the first route for example.
+                        </blockquote>
+                        <p>
                                 Now compile and run the application:
                         </p>
                         <pre>
@@ -306,10 +316,10 @@ func (c *BottleController) Show(ctx *app.ShowBottleContext) error {
                         </p>
                         <pre>
 INFO[10-19|17:50:57] mounting                   app=app ctrl=Bottle
-INFO[10-19|17:50:57] handler                    app=app ctrl=Bottle action=Show route="GET /bottles/:bottleID"
+INFO[10-19|17:50:57] handler                    app=app ctrl=Bottle action=Show method="GET" route="/bottles/:bottleID"
 INFO[10-19|17:50:57] mounted                    app=app ctrl=Bottle
 INFO[10-19|17:50:57] mounting                   app=app ctrl=Schema
-INFO[10-19|17:50:57] handler                    app=app ctrl=Schema action=Show route="GET /schema"
+INFO[10-19|17:50:57] handler                    app=app ctrl=Schema action=Show method="GET" route="/schema"
 INFO[10-19|17:50:57] mounted                    app=app ctrl=Schema
 INFO[10-19|17:50:57] listen                     app=app addr=:8080
                         </pre>
