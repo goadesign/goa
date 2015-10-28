@@ -3632,6 +3632,42 @@
 
 	}
 
+/* Nav */
+	#nav {
+		background-color: #4696e5;
+		color: #d0e4f8;
+		padding: 5px 0 5px 0 ;
+		text-align: center;
+		-moz-align-items: center;
+		-webkit-align-items: center;
+		-ms-align-items: center;
+		align-items: center;
+		-moz-justify-content: center;
+		-webkit-justify-content: center;
+		-ms-justify-content: center;
+		justify-content: center;
+		position: fixed;
+		border-bottom:1px solid #ddd;
+		top:0px;
+		left:0px;
+		right:0px;
+		z-index:999999;
+	}
+		#nav ul {
+			margin-bottom: 0;
+		}
+
+		#nav button,
+		#nav .button {
+			background-color: transparent;
+			color: #ffffff !important;
+			box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.25);
+		}
+			#nav .button.special {
+				box-shadow: none;
+				background-color: #ffffff;
+				color: #4696e5 !important;
+			}
 /* Header */
 
 	#header {

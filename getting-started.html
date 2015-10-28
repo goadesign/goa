@@ -1,0 +1,383 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+        <title>goa, getting started</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
+        <link rel="stylesheet" href="assets/css/main.css" />
+        <!--[if lte IE 8]><link rel="stylesheet" href="assets/css/ie8.css" /><![endif]-->
+        <!--[if lte IE 9]><link rel="stylesheet" href="assets/css/ie9.css" /><![endif]-->
+        <link rel="stylesheet" href="assets/css/googlecode.css"/>
+</head>
+<body id="top">
+	<div id="nav">
+		<ul class="actions">
+			<li>
+				<a class="button" href="index.html">Intro</a>
+			</li>
+			<li>
+				<a class="button special" href="getting-started.html">Guide</a>
+			</li>
+		</ul>
+	</div>
+        <section id="one" class="wrapper style2 special">
+                <h2>Getting Started with goa</h2>
+        </section>
+        <section id="one" class="wrapper">
+                <div class="inner">
+                        <p>
+                                Let's write a simplistic API with goa to make the concept of design-based development more concrete.
+				The code below is an extract from the more complete "cellar" example that can be found in the
+				<a href="https://github.com/raphael/goa/blob/master/example/cellar">github repository</a>. The API
+				makes it possible to retrieve wine bottle information.
+                        </p>
+                        <p>
+                                The first thing to do when writing a goa application is to describe the API using the goa design language.
+                                Create a new directory under <code>$GOPATH/src</code> for the new goa application, say <code>$GOPATH/src/cellar</code>.
+                                In that directory create a <code>design</code> sub directory and the file <code>design/design.go</code> with the
+                                following content:
+                        </p>
+                        <pre><code class="go">package design
+
+import (
+        . "github.com/raphael/goa/design"
+        . "github.com/raphael/goa/design/dsl"
+)
+
+var _ = API("cellar", func() {
+        Title("The virtual wine cellar")
+        Description("A basic example of an API implemented with goa")
+})
+
+var _ = Resource("bottle", func() {
+        BasePath("/bottles")
+        DefaultMedia(BottleMedia)
+        Action("show", func() {
+                Description("Retrieve bottle with given id")
+                Routing(GET("/:bottleID"))
+                Params(func() {
+                        Param("bottleID", Integer, "Bottle ID")
+                })
+                Response(OK)
+                Response(NotFound)
+        })
+})
+
+var BottleMedia = MediaType("application/vnd.goa.example.bottle", func() {
+        Description("A bottle of wine")
+        Attributes(func() {
+                Attribute("id", Integer, "Unique bottle ID")
+                Attribute("href", String, "API href for making requests on the bottle")
+                Attribute("name", String, "Name of wine")
+        })
+        View("default", func() {
+                Attribute("id")
+                Attribute("href")
+                Attribute("name")
+        })
+}) </code></pre>
+                <p>
+                        Let's break this down:
+                </p>
+                        <ul>
+                                <li>
+                                        We define a <code>design</code> package and use an anonymous variable to declare the API, we could also have
+                                        used a package <code>init</code> function. The actual name of the package could be anything, <code>design</code> is just
+                                        a convention.
+                                </li>
+                                <li>
+                                        The <code>API</code> function declares our API, it takes two arguments: the name of the API and an anonymous function that
+                                        defines additional properties, here a title and a description.
+                                </li>
+                                <li>
+                                        The <code>Resource</code> function then declares a "bottle" resource. The function also takes a name and an
+                                        anonymous function. Properties defined in the anonymous function includes all the actions supported by
+                                        the resource.
+                                </li>
+                                <li>
+                                        Each resource action is declared using the <code>Action</code> function which follows the same pattern of
+                                        name and anonymous function. Actions are defined in resources, they represent specific API endpoints complete
+					with a HTTP method, a URL as well as parameter, payload and response definitions. The parameters may be defined
+					using wildcards in the URL or may correspond to query strings appended to the URL. The payload describes the
+					data structure of the request body if any. Here we define a single action (<code>show</code>) but resources
+					may define an arbitrary number of them.
+                                </li>
+                                <li>
+                                        The <code>Action</code> function defines the action endpoint, parameters, payload (not used here) and
+                                        responses. <code>goa</code> defines default response templates for all standard HTTP status code. A response
+					template defines the response HTTP status code, its media type if any (which describes the response body data
+					structure) and headers it may define. The <code>ResponseTemplate</code> <code>API</code>design language
+					function (not used here) makes it possible to define additional response templates or override the existing ones.
+                                </li>
+                                <li>
+                                        Finally we define the resource media type as a global variable so we can refer to it when
+                                        declaring the <code>OK</code> response. A media type has an identifier as defined by
+                                        <a href="https://tools.ietf.org/html/rfc6838">RFC 6838</a>
+                                        and describes the attributes of the response body (the JSON object fields in goa).
+                                </li>
+				<li>
+					The media type data structure is described using the <code>Attribute</code> design language function. This
+					function makes it possible to provide a recursive definition of the fields of the data structure. At each
+					level it defines the name and type of the fields as well as their validation rules (not used here).
+				</li>
+                        </ul>
+
+                        <blockquote>
+                                The <a href="https://godoc.org/github.com/raphael/goa/design/dsl">dsl package GoDoc</a> lists all the goa design language keywords together with a description and example usage.
+                        </blockquote>
+                        <p>
+                                Now that we have a design for our API we can use the <code>goagen</code> tool to generate all the boilerplate
+                                code. The tool takes the path to the Go package as argument (the same path you'd use if you were to
+                                import the design package in a Go source file). So for example if you created the design package
+                                under <code>$GOPATH/src/cellar</code>, the command line would be:
+                        </p>
+                        <pre>
+        $ goagen -d cellar/design
+                        </pre>
+                        <p>
+                                The tool outputs the names of the files it generates - by default it generates the files in the
+                                current working directory. The list should look something like this:
+                        </p>
+                        <pre>
+        app/contexts.go
+        app/controllers.go
+        app/hrefs.go
+        app/media_types.go
+        app/user_types.go
+        schema/schema.go
+        schema/schema.json
+        main.go
+        bottle.go
+                        </pre>
+                        <p>
+                                Note how <code>goagen</code> generated a main for our app as well as a skeleton controller (<code>bottle.go</code>). These
+                                two files are meant to help bootstrap a new development, they won't be re-generated (by default) if
+                                already present (re-run the tool again and note how it only generates the files under the "app" and
+                                "schema" directories this time). This behavior and many other aspects are configurable via command
+                                line arguments, see the [goagen docs](goagen.md) for details.
+                        </p>
+                        <p>
+                                Back to the list of generated files:
+                        </p>
+                        <ul>
+                                <li>
+                                        The <code>app</code> directory contains the underpinning algorithms that glue the low level HTTP router with
+                                        your code.
+                                </li>
+                                <li>
+                                        The <code>schema</code> directory contains a JSON Hyper-schema representation of the API together with the
+                                        implementation of a controller that serves the file when requests are sent to <code>/schema</code>.
+                                </li>
+                                <li>
+                                        As discussed above the <code>main.go</code> and <code>bottle.go</code> files provide a starting point for implementing
+                                        the application entry point and the <code>bottle</code> controller respectively.
+                                </li>
+                        </ul>
+                        <p>
+                                Looking at the content of the <code>app</code> package:
+                        </p>
+                        <ul>
+                                <li>
+                                        <code>controllers.go</code> contains the controller interface type definitions. There is one such interface
+                                        per resource defined in the design language. The file also contains the code that "mount" implementations of
+                                        these controller interfaces onto the application. The exact meaning of "mounting" a controller
+                                        is discussed further below.
+                                </li>
+                                <li>
+                                        <code>contexts.go</code> contains the context data structure definitions. Contexts play a similar role
+                                        to Martini's <code>martini.Context</code>, goji's <code>web.C</code> or echo's <code>echo.Context</code> to take a few arbitrary
+                                        examples: they are given as first argument to all controller actions and provide helper methods to
+                                        retrieve the action parameters or write the response.
+                                </li>
+                                <li>
+                                        <code>hrefs.go</code> provide global functions for building resource hrefs. Resource hrefs make it possible
+                                        for responses to link to related resources. goa knows how to build these hrefs by looking at the
+                                        request path for the resource "canonical" action (by default the "show" action). See the Action
+                                        design language function for additional information.
+                                </li>
+                                <li>
+                                        <code>media_types.go</code> contains the media type data structures used by resource actions to build the
+                                        responses. These data structures also expose methods that can be called to instantiate them from
+                                        raw data or dump them back to raw data performing all the validations defined in the design language in both
+                                        cases.
+                                </li>
+                                <li>
+                                        <code>user_types.go</code> contains the data structures defined via the "Type" design language function. Such types may
+                                        be used to define a request payload or response media types.
+                                </li>
+                        </ul>
+                        <p>
+                                Now that <code>goagen</code> did its work the only thing left for us to do is to provide an implementation of
+                                the <code>bottle</code> controller. The type definition generated by <code>goagen</code> is:
+                        </p>
+                        <pre><code class="go">type BottleController interface {
+        Show(*ShowBottleContext) error
+}</code></pre>
+                        <p>
+                                Simple enough... Let's take a look at the definition of <code>ShowBottleContext</code> in <code>app/contexts.go</code>:
+                        </p>
+                        <pre><code class="go">// ShowBottleContext provides the bottle show action context.
+type ShowBottleContext struct {
+        *goa.Context
+        BottleID int
+}</code></pre>
+                        <p>
+                                The context data structure contains the id of the bottle to be shown declared as an <code>int</code> since
+                                that's the type specified in the design language. It also contains an anonymous field which gives access to the
+                                raw underlying request and response states (including access to the <code>http.Request</code> and
+                                <code>http.ResponseWriter</code> objects. The goa context data structure also implements the golang
+                                <a href="https://godoc.org/golang.org/x/net/context"><code>context.Context</code></a> interface which makes it possible to
+                                carry deadlines and cancelation signals for example across different goroutines involved in handling
+                                the request. The built-in <code>Timeout</code> middleware takes advantage of this.
+                        </p>
+
+                        <p>
+                                The same file also defines two methods on the context data structure:
+                        </p>
+                        <pre><code class="go">// NotFound sends a HTTP response with status code 404.
+func (c *ShowBottleContext) NotFound() error {
+        return c.Respond(404, nil)
+}
+
+// OK sends a HTTP response with status code 200.
+func (c *ShowBottleContext) OK(resp *BottleMedia) error {
+        r, err := resp.Dump()
+        if err != nil {
+                return fmt.Errorf("invalid response: %s", err)
+        }
+        return c.JSON(200, r)
+}</code></pre>
+                        <p>
+                                <code>goagen</code> also generated an empty implementation of the controller in <code>bottle.go</code> so all we have left
+                                to do is provide an actual implementation. Open the file <code>bottle.go</code> and replace the existing
+                                <code>Show</code> method with:
+                        </p>
+                        <pre><code class="go">// Show implements the "show" action of the "bottles" controller.
+func (c *BottleController) Show(ctx *app.ShowBottleContext) error {
+        if ctx.BottleID == 0 {
+                // Emulate a missing record with ID 0
+                return ctx.NotFound()
+        }
+        // Build the resource using the generated data structure
+        bottle := app.Bottle{
+                ID:   ctx.BottleID,
+                Name: fmt.Sprintf("Bottle #%d", ctx.BottleID),
+                Href: app.BottleHref(ctx.BottleID),
+        }
+
+        // Let the generated code produce the HTTP response using the
+        // media type described in the design (BottleMedia).
+        return ctx.OK(&bottle)
+}</code></pre>
+                        <p>
+                                Before we build and run the app, let's take a peek at <code>main.go</code>: the file contains a default
+                                implementation of <code>main</code> that instantiates a new goa application, initializes default middleware,
+                                mounts the <code>bottle</code> and <code>schema</code> controllers and runs the HTTP server.
+                        </p>
+                        <pre><code class="go">func main() {
+        // Create application
+        api := goa.New("cellar")
+
+        // Setup middleware
+        api.Use(goa.Recover())
+        api.Use(goa.RequestID())
+        api.Use(goa.LogRequest())
+
+        // Mount "bottles" controller
+        c := NewBottleController()
+        app.MountBottleController(api, c)
+
+        // Mount JSON schema provider controller
+        schema.MountController(api)
+
+        // Run application, listen on port 8080
+        api.Run(":8080")
+}</code></pre>
+                        <p>
+                                Now compile and run the application:
+                        </p>
+                        <pre>
+        $ go build -o cellar
+        $ ./cellar
+                        </pre>
+                        <p>
+                                This should produce something like:
+                        </p>
+                        <pre>
+INFO[10-19|17:50:57] mounting                   app=app ctrl=Bottle
+INFO[10-19|17:50:57] handler                    app=app ctrl=Bottle action=Show route="GET /bottles/:bottleID"
+INFO[10-19|17:50:57] mounted                    app=app ctrl=Bottle
+INFO[10-19|17:50:57] mounting                   app=app ctrl=Schema
+INFO[10-19|17:50:57] handler                    app=app ctrl=Schema action=Show route="GET /schema"
+INFO[10-19|17:50:57] mounted                    app=app ctrl=Schema
+INFO[10-19|17:50:57] listen                     app=app addr=:8080
+                        </pre>
+                        <p>
+                                You can now test the app using <code>curl</code> for example:
+                        </p>
+                        <pre>
+        $ curl -i localhost:8080/bottles/1
+        HTTP/1.1 200 OK
+        Date: Tue, 20 Oct 2015 01:03:51 GMT
+        Content-Length: 47
+        Content-Type: application/vnd.goa.example.bottle; charset=utf-8
+
+        {"href":"/bottles/1","id":1,"name":"Bottle #1"}
+
+        $ curl -i localhost:8080/bottles/0
+        HTTP/1.1 404 NotFound
+        Date: Mon, 27 Jul 2015 04:35:22 GMT
+        Content-Length: 0
+        Content-Type: text/plain; charset=utf-8
+                        </pre>
+                        <p>
+                                You can exercise the validation code generated by <code>goagen</code> by passing an invalid (non-integer) id:
+                        </p>
+                        <pre>
+        $ curl -i localhost:8080/bottles/a
+
+        HTTP/1.1 400 Bad Request
+        Content-Type: application/json
+        Date: Tue, 20 Oct 2015 01:16:40 GMT
+        Content-Length: 120
+
+        [{"kind":1,"title":"invalid parameter value","msg":"invalid value \"a\" for parameter \"bottleID\", must be a integer"}]
+                        </pre>
+                        <p>
+                                Finally request the API JSON Hyper-schema with:
+                        </p>
+                        <pre>
+        $ curl -i localhost:8080/schema
+                        </pre>
+                        <p>
+                                That's it! congratulations on writing you first goa application!
+                        </p>
+                        <p>
+                                This example only covers a fraction of what goa can do but is hopefully enough to illustrate the
+                                benefits of design-based API development.
+                        </p>
+                </div>
+        </section>
+
+        <!-- Footer -->
+        <footer id="footer">
+                <ul class="icons">
+                        <li><a href="mailto:info@goa.design" class="icon fa-email"><span class="label">Contact</span></a></li>
+                        <li><a href="https://github.com/raphael/goa" class="icon fa-github"><span class="label">Github</span></a></li>
+                </ul>
+                <p class="copyright">&copy;2015 Raphael Simon. Design: <a href="http://html5up.net">HTML5 UP</a></p>
+        </footer>
+
+        <!-- Scripts -->
+        <script src="assets/js/jquery.min.js"></script>
+        <script src="assets/js/jquery.scrolly.min.js"></script>
+        <script src="assets/js/skel.min.js"></script>
+        <script src="assets/js/util.js"></script>
+        <script src="assets/js/main.js"></script>
+        <script src="assets/js/highlight.pack.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="assets/js/nav.js"></script>
+        <!--[if lte IE 8]><script src="assets/js/ie/respond.min.js"></script><![endif]-->
+</body>
+</html>
