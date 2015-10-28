@@ -417,47 +417,6 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 	} else {
 		err = goa.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)
 	}
-	if p != nil {
-		if len(p.Characteristics) < 10 {
-			err = goa.InvalidLengthError(`.Characteristics`, p.Characteristics, 10, true, err)
-		}
-		if len(p.Characteristics) > 300 {
-			err = goa.InvalidLengthError(`.Characteristics`, p.Characteristics, 300, false, err)
-		}
-		if !(p.Color == "red" || p.Color == "white" || p.Color == "rose" || p.Color == "yellow" || p.Color == "sparkling") {
-			err = goa.InvalidEnumValueError(`.Color`, p.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
-		}
-		if len(p.Country) < 2 {
-			err = goa.InvalidLengthError(`.Country`, p.Country, 2, true, err)
-		}
-		if len(p.Name) < 2 {
-			err = goa.InvalidLengthError(`.Name`, p.Name, 2, true, err)
-		}
-		if len(p.Review) < 10 {
-			err = goa.InvalidLengthError(`.Review`, p.Review, 10, true, err)
-		}
-		if len(p.Review) > 300 {
-			err = goa.InvalidLengthError(`.Review`, p.Review, 300, false, err)
-		}
-		if p.Sweetness < 1 {
-			err = goa.InvalidRangeError(`.Sweetness`, p.Sweetness, 1, true, err)
-		}
-		if p.Sweetness > 5 {
-			err = goa.InvalidRangeError(`.Sweetness`, p.Sweetness, 5, false, err)
-		}
-		if len(p.Varietal) < 4 {
-			err = goa.InvalidLengthError(`.Varietal`, p.Varietal, 4, true, err)
-		}
-		if len(p.Vineyard) < 2 {
-			err = goa.InvalidLengthError(`.Vineyard`, p.Vineyard, 2, true, err)
-		}
-		if p.Vintage < 1900 {
-			err = goa.InvalidRangeError(`.Vintage`, p.Vintage, 1900, true, err)
-		}
-		if p.Vintage > 2020 {
-			err = goa.InvalidRangeError(`.Vintage`, p.Vintage, 2020, false, err)
-		}
-	}
 	return p, err
 }
 
@@ -634,14 +593,6 @@ func NewRateBottlePayload(raw interface{}) (*RateBottlePayload, error) {
 		}
 	} else {
 		err = goa.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)
-	}
-	if p != nil {
-		if p.Rating < 1 {
-			err = goa.InvalidRangeError(`.Rating`, p.Rating, 1, true, err)
-		}
-		if p.Rating > 5 {
-			err = goa.InvalidRangeError(`.Rating`, p.Rating, 5, false, err)
-		}
 	}
 	return p, err
 }
@@ -907,47 +858,6 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 		}
 	} else {
 		err = goa.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)
-	}
-	if p != nil {
-		if len(p.Characteristics) < 10 {
-			err = goa.InvalidLengthError(`.Characteristics`, p.Characteristics, 10, true, err)
-		}
-		if len(p.Characteristics) > 300 {
-			err = goa.InvalidLengthError(`.Characteristics`, p.Characteristics, 300, false, err)
-		}
-		if !(p.Color == "red" || p.Color == "white" || p.Color == "rose" || p.Color == "yellow" || p.Color == "sparkling") {
-			err = goa.InvalidEnumValueError(`.Color`, p.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
-		}
-		if len(p.Country) < 2 {
-			err = goa.InvalidLengthError(`.Country`, p.Country, 2, true, err)
-		}
-		if len(p.Name) < 2 {
-			err = goa.InvalidLengthError(`.Name`, p.Name, 2, true, err)
-		}
-		if len(p.Review) < 10 {
-			err = goa.InvalidLengthError(`.Review`, p.Review, 10, true, err)
-		}
-		if len(p.Review) > 300 {
-			err = goa.InvalidLengthError(`.Review`, p.Review, 300, false, err)
-		}
-		if p.Sweetness < 1 {
-			err = goa.InvalidRangeError(`.Sweetness`, p.Sweetness, 1, true, err)
-		}
-		if p.Sweetness > 5 {
-			err = goa.InvalidRangeError(`.Sweetness`, p.Sweetness, 5, false, err)
-		}
-		if len(p.Varietal) < 4 {
-			err = goa.InvalidLengthError(`.Varietal`, p.Varietal, 4, true, err)
-		}
-		if len(p.Vineyard) < 2 {
-			err = goa.InvalidLengthError(`.Vineyard`, p.Vineyard, 2, true, err)
-		}
-		if p.Vintage < 1900 {
-			err = goa.InvalidRangeError(`.Vintage`, p.Vintage, 1900, true, err)
-		}
-		if p.Vintage > 2020 {
-			err = goa.InvalidRangeError(`.Vintage`, p.Vintage, 2020, false, err)
-		}
 	}
 	return p, err
 }
