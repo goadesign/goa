@@ -178,10 +178,10 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 		return err
 	}
 	if data.Payload != nil {
+		if err := w.PayloadTmpl.Execute(w, data); err != nil {
+			return err
+		}
 		if _, ok := data.Payload.Type.(design.Object); ok {
-			if err := w.PayloadTmpl.Execute(w, data); err != nil {
-				return err
-			}
 			if err := w.NewPayloadTmpl.Execute(w, data); err != nil {
 				return err
 			}
