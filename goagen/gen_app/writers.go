@@ -265,7 +265,7 @@ func NewMediaTypesWriter(filename string) (*MediaTypesWriter, error) {
 	funcMap["gonative"] = codegen.GoNativeType
 	funcMap["typeUnmarshaler"] = codegen.TypeUnmarshaler
 	funcMap["typeMarshaler"] = codegen.MediaTypeMarshaler
-	funcMap["validate"] = codegen.ValidationChecker
+	funcMap["recursiveValidate"] = codegen.RecursiveChecker
 	mediaTypeTmpl, err := template.New("media type").Funcs(funcMap).Parse(mediaTypeT)
 	if err != nil {
 		return nil, err
@@ -494,7 +494,7 @@ func (mt {{gotyperef . 0}}) Dump({{if gt (len .Views) 1}}view {{gotypename . 0}}
 
 // Validate validates the media type instance.
 func (mt {{gotyperef . 0}}) Validate() (err error) {
-{{$validation := validate .AttributeDefinition "mt"}}{{if $validation}}{{$validation}}
+{{$validation := recursiveValidate .AttributeDefinition "mt"}}{{if $validation}}{{$validation}}
 {{end}} return
 }
 `

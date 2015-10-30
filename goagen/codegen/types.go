@@ -101,11 +101,11 @@ func typeMarshalerR(t design.DataType, context, source, target string, depth int
 	}
 }
 
-// AttributeMarshaler produces the Go code that initiliazes the variable named target which holds an
-// interface{} with the content of the variable named source which contains an
-// instance of the attribute type data structure. The attribute view is used to render child
-// attributes if there are any. As with TypeMarshaler the code renders media type links and runs any
-// validation defined on the type definition.
+// AttributeMarshaler produces the Go code that initiliazes the variable named with the value of
+// target which holds an interface{} with the content of the variable named with the value of source
+// which contains an instance of the attribute type data structure. The attribute view is used to
+// render child attributes if there are any. As with TypeMarshaler the code renders media type links
+// and runs any validation defined on the type definition.
 //
 // The generated code assumes that there is a variable called "err" of type error that it can use
 // to record errors.
@@ -113,14 +113,20 @@ func AttributeMarshaler(att *design.AttributeDefinition, context, source, target
 	return attributeMarshalerR(att, context, source, target, 1)
 }
 func attributeMarshalerR(att *design.AttributeDefinition, context, source, target string, depth int) string {
+	var marshaler string
 	switch actual := att.Type.(type) {
 	case *design.MediaTypeDefinition:
-		return mediaTypeMarshalerR(actual, context, source, target, att.View, depth)
+		marshaler = mediaTypeMarshalerR(actual, context, source, target, att.View, depth)
 	case design.Object:
-		return objectMarshalerR(actual, att.AllRequired(), context, source, target, depth)
+		marshaler = objectMarshalerR(actual, att.AllRequired(), context, source, target, depth)
 	default:
-		return typeMarshalerR(att.Type, context, source, target, depth)
+		marshaler = typeMarshalerR(att.Type, context, source, target, depth)
 	}
+	validation := ValidationChecker(att, source)
+	if validation != "" {
+		return validation + "\n	if err == nil {\n" + marshaler + "\n	}"
+	}
+	return marshaler
 }
 
 // ArrayMarshaler produces the Go code that marshals an array for rendering.
@@ -172,14 +178,16 @@ func ObjectMarshaler(o design.Object, context, source, target string) string {
 	return objectMarshalerR(o, nil, context, source, target, 1)
 }
 func objectMarshalerR(o design.Object, required []string, context, source, target string, depth int) string {
+	att := &design.AttributeDefinition{Type: o}
+	att.Validations = append(att.Validations, &design.RequiredValidationDefinition{Names: required})
 	data := map[string]interface{}{
-		"origType": &design.AttributeDefinition{Type: GoifyObject(o)},
-		"type":     o,
-		"required": required,
-		"context":  context,
-		"source":   source,
-		"target":   target,
-		"depth":    depth,
+		"attribute": att,
+		"type":      o,
+		"required":  required,
+		"context":   context,
+		"source":    source,
+		"target":    target,
+		"depth":     depth,
 	}
 	return runTemplate(mObjectT, data)
 }
@@ -255,17 +263,22 @@ func mediaTypeMarshalerR(mt *design.MediaTypeDefinition, context, source, target
 		}
 		linkMarshaler = "\n" + runTemplate(mLinkT, data)
 	}
-	nolink := rendered.Dup()
-	if o := rendered.Type.ToObject(); o != nil {
-		obj := make(design.Object, len(o))
-		for n, at := range o {
-			if n != "links" {
-				obj[n] = at
+	final := rendered.Dup()
+	o := rendered.Type.ToObject()
+	mtObj := mt.Type.ToObject()
+	newObj := make(design.Object)
+	for n := range o {
+		if n != "links" {
+			for an, at := range mtObj {
+				if an == n {
+					newObj[n] = at
+					break
+				}
 			}
 		}
-		nolink.Type = obj
 	}
-	return attributeMarshalerR(nolink, context, source, target, depth) + linkMarshaler
+	final.Type = newObj
+	return attributeMarshalerR(final, context, source, target, depth) + linkMarshaler
 }
 func collectionMediaTypeMarshalerR(mt *design.MediaTypeDefinition, context, source, target, view string, depth int) string {
 	data := map[string]interface{}{
@@ -324,6 +337,10 @@ func attributeUnmarshalerR(att *design.AttributeDefinition, context, source, tar
 		unmarshaler = objectUnmarshalerR(o, att.AllRequired(), context, source, target, depth)
 	} else {
 		unmarshaler = typeUnmarshalerR(att.Type, context, source, target, depth)
+	}
+	validation := ValidationChecker(att, target)
+	if validation != "" {
+		return unmarshaler + "\n	if err != nil {\n" + strings.Replace(validation, "\n", "\n\t", -1) + "\n	}"
 	}
 	return unmarshaler
 }
@@ -631,19 +648,6 @@ func Goify(str string, firstUpper bool) string {
 	return res
 }
 
-// GoifyObject creates a new object from an existing one where the keys are goified recursively.
-func GoifyObject(o design.Object) design.Object {
-	res := make(design.Object)
-	for n, at := range o {
-		if at.Type.IsObject() {
-			at = at.Dup()
-			at.Type = GoifyObject(at.Type.ToObject())
-		}
-		res[Goify(n, true)] = at
-	}
-	return res
-}
-
 // WriteTabs is a helper function that writes count tabulation characters to buf.
 func WriteTabs(buf *bytes.Buffer, count int) {
 	for i := 0; i < count; i++ {
@@ -750,25 +754,27 @@ const (
 {{tabs .depth}}{{.target}} = {{$tmp}}`
 
 	mObjectTmpl = `{{$ctx := .}}{{range $r := .required}}{{$at := index $ctx.type $r}}{{$required := goify $r true}}{{if eq $at.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.source}}.{{$required}} == "" {
-{{tabs $ctx.depth}} err = fmt.Errorf("missing required attribute \"{{$r}}\"")
+{{tabs $ctx.depth}}	err = goa.MissingAttributeError(` + "`" + `{{$ctx.context}}` + "`" + `, "{{$r}}", err)
 {{tabs $ctx.depth}}}
 {{tabs $ctx.depth}}{{else if gt $at.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.source}}.{{$required}} == nil {
-{{tabs $ctx.depth}} err = fmt.Errorf("missing required attribute \"{{$r}}\"")
+{{tabs $ctx.depth}}	err = goa.MissingAttributeError(` + "`" + `{{$ctx.context}}` + "`" + `, "{{$r}}", err)
 {{tabs $ctx.depth}}}
-{{end}}{{/* if eq $at.Type.Kind 4 */}}{{end}}{{/* range */}}{{$validation := validate $.origType (printf "%s" .context) .source .depth}}{{if $validation}}{{$validation}}
-{{end}}{{if or $validation $ctx.required}}{{tabs .depth}}if err == nil {
-{{end}}{{$depth := add .depth (or (and (or $validation $ctx.required) 1) 0)}}{{$tmp := tempvar}}{{tabs $depth}}{{$tmp}} := map[string]interface{}{
-{{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{tabs $depth}}	"{{$n}}": {{$ctx.source}}.{{goify $n true}},
-{{end}}{{end}}{{tabs $depth}}}{{range $n, $at := .type}}{{if gt $at.Type.Kind 4}}
-{{tabs $depth}}if {{$ctx.source}}.{{goify $n true}} != nil {
-{{marshalAttribute $at (printf "%s.%s" $ctx.context (goify $n true)) (printf "%s.%s" $ctx.source (goify $n true)) (printf "%s[\"%s\"]" $tmp $n) (add $depth 1)}}
-{{tabs $depth}}}{{end}}{{end}}
-{{tabs $depth}}{{.target}} = {{$tmp}}{{if or $validation $ctx.required}}
+{{end}}{{/* if eq $at.Type.Kind 4 */}}{{end}}{{/* range */}}{{if $ctx.required}}{{tabs .depth}}if err == nil {
+{{end}}{{$depth := add .depth (or (and $ctx.required 1) 0)}}{{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{$validation := validate $at (has $ctx.required $n) (printf "%s.%s" $ctx.context $n) (printf "%s.%s" $ctx.source (goify $n true)) $depth}}{{if $validation}}{{$validation}}
+{{end}}{{end}}{{end}}{{/* range */}}{{tabs $depth}}if err == nil {
+{{$tmp := tempvar}}{{tabs $depth}}	{{$tmp}} := map[string]interface{}{
+{{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{tabs $depth}}		"{{$n}}": {{$ctx.source}}.{{goify $n true}},
+{{end}}{{end}}{{tabs $depth}}	}{{range $n, $at := .type}}{{if gt $at.Type.Kind 4}}
+{{tabs $depth}}	if {{$ctx.source}}.{{goify $n true}} != nil {
+{{marshalAttribute $at (printf "%s.%s" $ctx.context (goify $n true)) (printf "%s.%s" $ctx.source (goify $n true)) (printf "%s[\"%s\"]" $tmp $n) (add $depth 2)}}
+{{tabs $depth}}	}{{end}}{{end}}
+{{tabs $depth}}	{{.target}} = {{$tmp}}
+{{tabs .depth}}}{{if $ctx.required}}
 {{tabs .depth}}}{{end}}`
 
 	mHashTmpl = `{{tabs .depth}}{{.target}} = make(map[interface{}]interface{}, len({{.source}}))
 {{tabs .depth}}for k, v := range {{.source}} {
-{{tabs .depth}}	var mk interface{}
+{{tabs .depth}}	var mk interface{ }
 {{marshalAttribute .type.ToHash.KeyType (printf "%s.keys[*]" .context) "k" "mk" (add .depth 1)}}
 {{tabs .depth}}	var mv interface{}
 {{marshalAttribute .type.ToHash.ElemType (printf "%s.values[*]" .context) "v" "mv" (add .depth 1)}}
@@ -781,10 +787,11 @@ const (
 {{tabs .depth}}}
 {{tabs .depth}}{{.target}} = {{$tmp}}`
 
-	mLinkTmpl = `{{if .links}}{{$ctx := .}}{{tabs .depth}}links := make(map[string]interface{})
-{{range $n, $l := .links}}{{marshalMediaType $l.MediaType (printf "link %s" $n) (printf "%s.%s" $ctx.source (goify $l.Name true)) (printf "links[\"%s\"]" (goify $n true)) $l.View $ctx.depth}}
-{{end}}{{tabs .depth}}{{.target}}["links"] = links
-{{end}}`
+	mLinkTmpl = `{{if .links}}{{$ctx := .}}{{tabs .depth}}if err == nil {
+{{tabs .depth}}	links := make(map[string]interface{})
+{{range $n, $l := .links}}{{marshalMediaType $l.MediaType (printf "link %s" $n) (printf "%s.%s" $ctx.source (goify $l.Name true)) (printf "links[\"%s\"]" $n) $l.View (add $ctx.depth 1)}}
+{{end}}{{tabs .depth}}	{{.target}}["links"] = links
+}{{end}}`
 
 	unmPrimitiveTmpl = `{{tabs .depth}}if val, ok := {{.source}}.({{gotyperef .type (add .depth 1)}}); ok {
 {{tabs .depth}}	{{.target}} = val
@@ -797,8 +804,7 @@ const (
 {{tabs .depth}}	for i, v := range val {
 {{tabs .depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef .elemType.Type (add .depth 3)}}
 {{unmarshalAttribute .elemType (printf "%s[*]" .context) "v" $temp (add .depth 2)}}{{$ctx := .}}
-{{$validation := validate $ctx.elemType (printf "%s[*]" $ctx.context) $temp (add $ctx.depth 2)}}{{if $validation}}{{$validation}}
-{{end}}{{tabs .depth}}		{{printf "%s[i]" .target}} = {{$temp}}
+{{tabs .depth}}		{{printf "%s[i]" .target}} = {{$temp}}
 {{tabs .depth}}	}
 {{tabs .depth}}} else {
 {{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "[]interface{}", err)
@@ -809,8 +815,7 @@ const (
 {{range $name, $att := .type.ToObject}}{{tabs $depth}}	if v, ok := val["{{$name}}"]; ok {
 {{tabs $depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type (add $depth 2)}}
 {{unmarshalAttribute $att (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}
-{{$validation := validate $att (printf "%s.%s" $context (goify $name true)) $temp (add $depth 2)}}{{if $validation}}{{$validation}}
-{{end}}{{tabs $depth}}		{{printf "%s.%s" $target (goify $name true)}} = {{$temp}}
+{{tabs $depth}}		{{printf "%s.%s" $target (goify $name true)}} = {{$temp}}
 {{tabs $depth}}	}{{if (has $required $name)}} else {
 {{tabs $depth}}		err = goa.MissingAttributeError(` + "`" + `{{$context}}` + "`" + `, "{{$name}}", err)
 {{tabs $depth}}	}{{end}}

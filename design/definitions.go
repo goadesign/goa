@@ -627,14 +627,12 @@ func (a *AttributeDefinition) Dup() *AttributeDefinition {
 	for i, v := range a.Validations {
 		valDup[i] = v
 	}
-	t := a.Type
-	if t.IsArray() {
-		t = t.ToArray().Dup()
-	} else if t.IsObject() {
-		t = t.ToObject().Dup()
+	dupType := a.Type
+	if dupType != nil {
+		dupType = dupType.Dup()
 	}
 	dup := AttributeDefinition{
-		Type:         t,
+		Type:         dupType,
 		Description:  a.Description,
 		Validations:  valDup,
 		DefaultValue: a.DefaultValue,

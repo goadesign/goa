@@ -9,11 +9,12 @@ import (
 )
 
 var (
-	enumValT    *template.Template
-	formatValT  *template.Template
-	patternValT *template.Template
-	minMaxValT  *template.Template
-	lengthValT  *template.Template
+	enumValT     *template.Template
+	formatValT   *template.Template
+	patternValT  *template.Template
+	minMaxValT   *template.Template
+	lengthValT   *template.Template
+	requiredValT *template.Template
 )
 
 //  init instantiates the templates.
@@ -21,11 +22,10 @@ func init() {
 	var err error
 	fm := template.FuncMap{
 		"tabs":     Tabs,
-		"tempvar":  tempvar,
-		"json":     toJSON,
 		"slice":    toSlice,
 		"oneof":    oneof,
 		"constant": constant,
+		"goify":    Goify,
 	}
 	if enumValT, err = template.New("enum").Funcs(fm).Parse(enumValTmpl); err != nil {
 		panic(err)
@@ -42,6 +42,28 @@ func init() {
 	if lengthValT, err = template.New("length").Funcs(fm).Parse(lengthValTmpl); err != nil {
 		panic(err)
 	}
+	if requiredValT, err = template.New("required").Funcs(fm).Parse(requiredValTmpl); err != nil {
+		panic(err)
+	}
+}
+
+// RecursiveChecker produces Go code that runs the validation checks recursively over the given
+// attribute.
+func RecursiveChecker(att *design.AttributeDefinition, target string) string {
+	var checks []string
+	validation := ValidationChecker(att, target)
+	if validation != "" {
+		checks = append(checks, validation)
+	}
+	if o := att.Type.ToObject(); o != nil {
+		for n, catt := range o {
+			validation := RecursiveChecker(catt, fmt.Sprintf("%s.%s", target, Goify(n, true)))
+			if validation != "" {
+				checks = append(checks, validation)
+			}
+		}
+	}
+	return strings.Join(checks, "\n")
 }
 
 // ValidationChecker produces Go code that runs the validation defined in the given attribute
@@ -50,58 +72,66 @@ func init() {
 // validation error.
 // The generated code assumes that there is a pre-existing "err" variable of type
 // error. It initializes that variable in case a validation fails.
-// TBD: decide whether context is something given to the checker or something
-// that is not needed because the error message is "in context". Apply a consistent
-// behavior between this and the code generation functions in types.go.
+// Note: we do not want to recurse here, recursion is done by the marshaler/unmarshaler code.
 func ValidationChecker(att *design.AttributeDefinition, target string) string {
-	return validationCheckerR(att, "", target, 1)
+	return validationCheckerR(att, false, "", target, 1)
 }
-func validationCheckerR(att *design.AttributeDefinition, context, target string, depth int) string {
+func validationCheckerR(att *design.AttributeDefinition, required bool, context, target string, depth int) string {
 	data := map[string]interface{}{
-		"target":  target,
-		"context": context,
-		"depth":   depth,
+		"attribute": att,
+		"required":  required,
+		"context":   context,
+		"target":    target,
+		"depth":     depth,
 	}
 	var res []string
 	for _, v := range att.Validations {
 		switch actual := v.(type) {
 		case *design.EnumValidationDefinition:
 			data["values"] = actual.Values
-			res = append(res, runTemplate(enumValT, data))
+			if val := runTemplate(enumValT, data); val != "" {
+				res = append(res, val)
+			}
 		case *design.FormatValidationDefinition:
 			data["format"] = actual.Format
-			res = append(res, runTemplate(formatValT, data))
+			if val := runTemplate(formatValT, data); val != "" {
+				res = append(res, val)
+			}
 		case *design.PatternValidationDefinition:
 			data["pattern"] = actual.Pattern
-			res = append(res, runTemplate(patternValT, data))
+			if val := runTemplate(patternValT, data); val != "" {
+				res = append(res, val)
+			}
 		case *design.MinimumValidationDefinition:
 			data["min"] = actual.Min
 			delete(data, "max")
-			res = append(res, runTemplate(minMaxValT, data))
+			if val := runTemplate(minMaxValT, data); val != "" {
+				res = append(res, val)
+			}
 		case *design.MaximumValidationDefinition:
 			data["max"] = actual.Max
 			delete(data, "min")
-			res = append(res, runTemplate(minMaxValT, data))
+			if val := runTemplate(minMaxValT, data); val != "" {
+				res = append(res, val)
+			}
 		case *design.MinLengthValidationDefinition:
 			data["minLength"] = actual.MinLength
 			delete(data, "maxLength")
-			res = append(res, runTemplate(lengthValT, data))
+			if val := runTemplate(lengthValT, data); val != "" {
+				res = append(res, val)
+			}
 		case *design.MaxLengthValidationDefinition:
 			data["maxLength"] = actual.MaxLength
 			delete(data, "minLength")
-			res = append(res, runTemplate(lengthValT, data))
-		}
-	}
-	if o := att.Type.ToObject(); o != nil {
-		o.IterateAttributes(func(name string, catt *design.AttributeDefinition) error {
-			cctx := fmt.Sprintf("%s.%s", context, Goify(name, true))
-			ctgt := fmt.Sprintf("%s.%s", target, Goify(name, true))
-			cr := validationCheckerR(catt, cctx, ctgt, depth+1)
-			if cr != "" {
-				res = append(res, cr)
+			if val := runTemplate(lengthValT, data); val != "" {
+				res = append(res, val)
 			}
-			return nil
-		})
+		case *design.RequiredValidationDefinition:
+			data["required"] = actual.Names
+			if val := runTemplate(requiredValT, data); val != "" {
+				res = append(res, val)
+			}
+		}
 	}
 	return strings.Join(res, "\n")
 }
@@ -142,17 +172,24 @@ func constant(formatName string) string {
 }
 
 const (
-	enumValTmpl = `{{tabs .depth}}if !({{oneof .target .values}}) {
+	enumValTmpl = `{{if not .required}}{{if eq .attribute.Type.Kind 4}}{{tabs .depth}}if {{.target}} != "" {
+{{else if gt .attribute.Type.Kind 4}}{{tabs .depth}}if {{.target}} != nil {
+{{end}}{{end}}{{tabs .depth}}if !({{oneof .target .values}}) {
 {{tabs .depth}}	err = goa.InvalidEnumValueError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{slice .values}}, err)
-{{tabs .depth}}}`
+{{if and (not .required) (gt .attribute.Type.Kind 3)}}{{tabs .depth}}	}
+{{end}}{{tabs .depth}}}`
 
-	patternValTmpl = `{{tabs .depth}}if ok := goa.ValidatePattern({{.pattern}}, {{.target}}); !ok {
+	patternValTmpl = `{{if not .required}}{{tabs .depth}}if {{.target}} != "" {
+{{end}}{{tabs .depth}}if ok := goa.ValidatePattern({{.pattern}}, {{.target}}); !ok {
 {{tabs .depth}}		err = goa.InvalidPatternError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{.pattern}}, err)
-{{tabs .depth}}}`
+{{if not .required}}{{tabs .depth}}	}
+{{end}}{{tabs .depth}}}`
 
-	formatValTmpl = `{{tabs .depth}}if err2 := goa.ValidateFormat({{constant .format}}, {{.target}}); err2 != nil {
+	formatValTmpl = `{{ if not .required}}{{tabs .depth}}if {{.target}} != "" {
+{{end}}{{tabs .depth}}if err2 := goa.ValidateFormat({{constant .format}}, {{.target}}); err2 != nil {
 {{tabs .depth}}		err = goa.InvalidFormatError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{constant .format}}, err2, err)
-{{tabs .depth}}}`
+{{if not .required}}{{tabs .depth}}	}
+{{end}}{{tabs .depth}}}`
 
 	minMaxValTmpl = `{{tabs .depth}}if {{.target}} {{if .min}}<{{else}}>{{end}} {{if .min}}{{.min}}{{else}}{{.max}}{{end}} {
 {{tabs .depth}}	err = goa.InvalidRangeError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{if .min}}{{.min}}, true{{else}}{{.max}}, false{{end}}, err)
@@ -161,4 +198,11 @@ const (
 	lengthValTmpl = `{{tabs .depth}}if len({{.target}}) {{if .minLength}}<{{else}}>{{end}} {{if .minLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
 {{tabs .depth}}	err = goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{if .minLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}, err)
 {{tabs .depth}}}`
+
+	requiredValTmpl = `{{$ctx := .}}{{range $r := .required}}{{$catt := index $ctx.attribute.Type.ToObject $r}}{{if eq $catt.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.target}}.{{goify $r true}} == "" {
+{{tabs $ctx.depth}}	err = goa.MissingAttributeError(` + "`" + `{{$ctx.context}}` + "`" + `, "{{$r}}", err)
+{{tabs $ctx.depth}}}{{else if gt $catt.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.target}}.{{goify $r true}} == nil {
+{{tabs $ctx.depth}}	err = goa.MissingAttributeError(` + "`" + `{{$ctx.context}}` + "`" + `, "{{$r}}", err)
+{{tabs $ctx.depth}}}{{end}}
+{{end}}`
 )
