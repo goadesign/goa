@@ -26,6 +26,7 @@ func init() {
 		"oneof":    oneof,
 		"constant": constant,
 		"goify":    Goify,
+		"add":      func(a, b int) int { return a + b },
 	}
 	if enumValT, err = template.New("enum").Funcs(fm).Parse(enumValTmpl); err != nil {
 		panic(err)
@@ -172,31 +173,31 @@ func constant(formatName string) string {
 }
 
 const (
-	enumValTmpl = `{{if not .required}}{{if eq .attribute.Type.Kind 4}}{{tabs .depth}}if {{.target}} != "" {
-{{else if gt .attribute.Type.Kind 4}}{{tabs .depth}}if {{.target}} != nil {
-{{end}}{{end}}{{tabs .depth}}if !({{oneof .target .values}}) {
-{{tabs .depth}}	err = goa.InvalidEnumValueError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{slice .values}}, err)
-{{if and (not .required) (gt .attribute.Type.Kind 3)}}{{tabs .depth}}	}
+	enumValTmpl = `{{$depth := or (and (and (not .required) (eq .attribute.Type.Kind 4)) (add .depth 1)) .depth}}{{if not .required}}{{if eq .attribute.Type.Kind 4}}{{tabs .depth}}if {{.target}} != "" {
+{{else if gt .attribute.Type.Kind 4}}{{tabs $depth}}if {{.target}} != nil {
+{{end}}{{end}}{{tabs $depth}}if !({{oneof .target .values}}) {
+{{tabs $depth}}	err = goa.InvalidEnumValueError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{slice .values}}, err)
+{{if and (not .required) (gt .attribute.Type.Kind 3)}}{{tabs $depth}}	}
 {{end}}{{tabs .depth}}}`
 
-	patternValTmpl = `{{if not .required}}{{tabs .depth}}if {{.target}} != "" {
-{{end}}{{tabs .depth}}if ok := goa.ValidatePattern({{.pattern}}, {{.target}}); !ok {
-{{tabs .depth}}		err = goa.InvalidPatternError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{.pattern}}, err)
-{{if not .required}}{{tabs .depth}}	}
+	patternValTmpl = `{{$depth := or (and (not .required) (add .depth 1)) .depth}}{{if not .required}}{{tabs .depth}}if {{.target}} != "" {
+{{end}}{{tabs $depth}}if ok := goa.ValidatePattern({{.pattern}}, {{.target}}); !ok {
+{{tabs $depth}}	err = goa.InvalidPatternError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{.pattern}}, err)
+{{tabs $depth}}}{{if not .required}}
+{{tabs .depth}}}{{end}}`
+
+	formatValTmpl = `{{$depth := or (and (not .required) (add .depth 1)) .depth}}{{ if not .required}}{{tabs .depth}}if {{.target}} != "" {
+{{end}}{{tabs $depth}}if err2 := goa.ValidateFormat({{constant .format}}, {{.target}}); err2 != nil {
+{{tabs $depth}}		err = goa.InvalidFormatError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{constant .format}}, err2, err)
+{{if not .required}}{{tabs $depth}}	}
 {{end}}{{tabs .depth}}}`
 
-	formatValTmpl = `{{ if not .required}}{{tabs .depth}}if {{.target}} != "" {
-{{end}}{{tabs .depth}}if err2 := goa.ValidateFormat({{constant .format}}, {{.target}}); err2 != nil {
-{{tabs .depth}}		err = goa.InvalidFormatError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{constant .format}}, err2, err)
-{{if not .required}}{{tabs .depth}}	}
-{{end}}{{tabs .depth}}}`
-
-	minMaxValTmpl = `{{tabs .depth}}if {{.target}} {{if .min}}<{{else}}>{{end}} {{if .min}}{{.min}}{{else}}{{.max}}{{end}} {
-{{tabs .depth}}	err = goa.InvalidRangeError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{if .min}}{{.min}}, true{{else}}{{.max}}, false{{end}}, err)
+	minMaxValTmpl = `{{$depth := or (and (not .required) (add .depth 1)) .depth}}{{tabs .depth}}if {{.target}} {{if .min}}<{{else}}>{{end}} {{if .min}}{{.min}}{{else}}{{.max}}{{end}} {
+{{tabs $depth}}	err = goa.InvalidRangeError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{if .min}}{{.min}}, true{{else}}{{.max}}, false{{end}}, err)
 {{tabs .depth}}}`
 
-	lengthValTmpl = `{{tabs .depth}}if len({{.target}}) {{if .minLength}}<{{else}}>{{end}} {{if .minLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
-{{tabs .depth}}	err = goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{if .minLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}, err)
+	lengthValTmpl = `{{$depth := or (and (not .required) (add .depth 1)) .depth}}{{tabs .depth}}if len({{.target}}) {{if .minLength}}<{{else}}>{{end}} {{if .minLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
+{{tabs $depth}}	err = goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{if .minLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}, err)
 {{tabs .depth}}}`
 
 	requiredValTmpl = `{{$ctx := .}}{{range $r := .required}}{{$catt := index $ctx.attribute.Type.ToObject $r}}{{if eq $catt.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.target}}.{{goify $r true}} == "" {

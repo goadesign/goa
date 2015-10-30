@@ -405,47 +405,46 @@ var _ = Describe("code generation", func() {
 		Context("with a media type with links", func() {
 			var testMediaType *MediaTypeDefinition
 
-			JustBeforeEach(func() {
-				marshaler = codegen.MediaTypeMarshaler(testMediaType, context, source, target, "")
-			})
-
 			BeforeEach(func() {
-				dsl := func() {
-					fooMediaType := MediaType("fooMT", func() {
-						Attribute("fooAtt", Integer)
+				Design = nil
+				fooMediaType := MediaType("fooMT", func() {
+					Attribute("fooAtt", Integer)
+					Attribute("href")
+					View("link", func() {
 						Attribute("href")
-						View("link", func() {
-							Attribute("href")
-						})
 					})
-					barMediaType := MediaType("barMT", func() {
-						Attribute("barAtt", Integer)
+				})
+				barMediaType := MediaType("barMT", func() {
+					Attribute("barAtt", Integer)
+					Attribute("href")
+					View("link", func() {
 						Attribute("href")
-						View("link", func() {
-							Attribute("href")
-						})
 					})
-					bazMediaType := MediaType("bazMT", func() {
-						Attribute("bazAtt", Integer)
+				})
+				bazMediaType := MediaType("bazMT", func() {
+					Attribute("bazAtt", Integer)
+					Attribute("href")
+					Attribute("name")
+					View("bazLink", func() {
 						Attribute("href")
 						Attribute("name")
-						View("bazLink", func() {
-							Attribute("href")
-							Attribute("name")
-						})
 					})
-					testMediaType = MediaType("test", func() {
-						Attribute("foo", fooMediaType)
-						Attribute("bar", barMediaType)
-						Attribute("baz", bazMediaType)
-						Links(func() {
-							Link("foo")
-							Link("baz", "bazLink")
-						})
+				})
+				testMediaType = MediaType("test", func() {
+					Attribute("foo", fooMediaType)
+					Attribute("bar", barMediaType)
+					Attribute("baz", bazMediaType)
+					Links(func() {
+						Link("foo")
+						Link("baz", "bazLink")
 					})
-				}
-				dsl()
+				})
 				RunDSL()
+				Ω(Errors).ShouldNot(HaveOccurred())
+			})
+
+			JustBeforeEach(func() {
+				marshaler = codegen.MediaTypeMarshaler(testMediaType, context, source, target, "")
 			})
 
 			It("generates the marshaler code", func() {

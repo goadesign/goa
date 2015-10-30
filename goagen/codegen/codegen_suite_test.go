@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestGoagen(t *testing.T) {
+func TestCodegen(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Goagen Suite")
+	RunSpecs(t, "Codegen Suite")
 }
