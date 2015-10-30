@@ -62,6 +62,24 @@ var _ = Describe("Action", func() {
 		})
 	})
 
+	Context("with a string payload", func() {
+		BeforeEach(func() {
+			name = "foo"
+			dsl = func() {
+				Routing(GET("/:id"))
+				Payload(String)
+			}
+		})
+
+		It("produces a valid action with the given properties", func() {
+			Ω(Errors).ShouldNot(HaveOccurred())
+			Ω(action).ShouldNot(BeNil())
+			Ω(action.Validate()).ShouldNot(HaveOccurred())
+			Ω(action.Payload).ShouldNot(BeNil())
+			Ω(action.Payload.Type).Should(Equal(String))
+		})
+	})
+
 	Context("with a name and DSL defining a description, route, headers, payload and responses", func() {
 		const typeName = "typeName"
 		const description = "description"
