@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
 
@@ -845,7 +846,10 @@ func format(n string, snake, plural *bool) string {
 		if *plural {
 			n = inflect.Pluralize(n)
 		} else {
-			n = inflect.Singularize(n)
+			if strings.ToLower(n) != "status" {
+				// I know...
+				n = inflect.Singularize(n)
+			}
 		}
 	}
 	if snake != nil {
