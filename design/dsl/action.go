@@ -232,6 +232,8 @@ func Payload(p interface{}, dsls ...func()) {
 			att = &AttributeDefinition{Type: actual}
 		case *Hash:
 			att = &AttributeDefinition{Type: actual}
+		case Primitive:
+			att = &AttributeDefinition{Type: actual}
 		}
 		if len(dsls) == 1 {
 			if dsl != nil {
