@@ -33,11 +33,25 @@ var _ = Describe("validation code generation", func() {
 					enumVal := &design.EnumValidationDefinition{
 						Values: []interface{}{1, 2, 3},
 					}
-					validations = append(validations, enumVal)
+					validations = []design.ValidationDefinition{enumVal}
 				})
 
 				It("produces the validation go code", func() {
 					Ω(code).Should(Equal(enumValCode))
+				})
+			})
+
+			Context("of pattern", func() {
+				BeforeEach(func() {
+					attType = design.String
+					patternVal := &design.PatternValidationDefinition{
+						Pattern: ".*",
+					}
+					validations = []design.ValidationDefinition{patternVal}
+				})
+
+				It("produces the validation go code", func() {
+					Ω(code).Should(Equal(patternValCode))
 				})
 			})
 		})
@@ -47,5 +61,11 @@ var _ = Describe("validation code generation", func() {
 const (
 	enumValCode = `	if !(val == 1 || val == 2 || val == 3) {
 		err = goa.InvalidEnumValueError(` + "``" + `, val, []interface{}{1, 2, 3}, err)
+	}`
+
+	patternValCode = `	if val != "" {
+		if ok := goa.ValidatePattern(.*, val); !ok {
+			err = goa.InvalidPatternError(` + "``" + `, val, .*, err)
+		}
 	}`
 )
