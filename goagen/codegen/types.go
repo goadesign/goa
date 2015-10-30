@@ -528,12 +528,20 @@ func godef(ds design.DataStructure, tabs int, jsonTags, inner, res bool) string 
 		buffer.WriteString("}")
 		return buffer.String()
 	case *design.UserTypeDefinition:
-		return "*" + GoTypeName(actual, tabs)
+		name := GoTypeName(actual, tabs)
+		if actual.Type.IsObject() {
+			return "*" + name
+		}
+		return name
 	case *design.MediaTypeDefinition:
 		if res && actual.Resource != nil {
 			return "*" + actual.Resource.FormatName(false, false)
 		}
-		return "*" + GoTypeName(actual, tabs)
+		name := GoTypeName(actual, tabs)
+		if actual.Type.IsObject() {
+			return "*" + name
+		}
+		return name
 	default:
 		panic("goa bug: unknown data structure type")
 	}
