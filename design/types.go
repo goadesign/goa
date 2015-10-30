@@ -46,6 +46,9 @@ type (
 		// IsCompatible checks whether val has a Go type that is
 		// compatible with the data type.
 		IsCompatible(val interface{}) bool
+		// Dup creates a copy of the type. This is only relevant for types that are
+		// DSLDefinition (i.e. have an attribute definition).
+		Dup() DataType
 	}
 
 	// DataStructure is the interface implemented by all data structure types.
@@ -227,6 +230,11 @@ func (p Primitive) IsCompatible(val interface{}) (ok bool) {
 	return
 }
 
+// Dup returns the primitive type.
+func (p Primitive) Dup() DataType {
+	return p
+}
+
 // Kind implements DataKind.
 func (a *Array) Kind() Kind { return ArrayKind }
 
@@ -262,8 +270,8 @@ func (a *Array) IsCompatible(val interface{}) bool {
 	return k == reflect.Array || k == reflect.Slice
 }
 
-// Dup creates a shallow copy of a.
-func (a *Array) Dup() *Array {
+// Dup calls Dup on the array ElemType and creates an array with the result.
+func (a *Array) Dup() DataType {
 	return &Array{ElemType: a.ElemType.Dup()}
 }
 
@@ -291,15 +299,6 @@ func (o Object) ToArray() *Array { return nil }
 // ToHash returns nil.
 func (o Object) ToHash() *Hash { return nil }
 
-// Dup creates a shallow copy of o.
-func (o Object) Dup() Object {
-	res := make(Object, len(o))
-	for n, att := range o {
-		res[n] = att.Dup()
-	}
-	return res
-}
-
 // Merge copies other's attributes into o overridding any pre-existing attribute with the same name.
 func (o Object) Merge(other Object) {
 	for n, att := range other {
@@ -311,6 +310,15 @@ func (o Object) Merge(other Object) {
 func (o Object) IsCompatible(val interface{}) bool {
 	k := reflect.TypeOf(val).Kind()
 	return k == reflect.Map || k == reflect.Struct
+}
+
+// Dup creates a copy of o.
+func (o Object) Dup() DataType {
+	res := make(Object, len(o))
+	for n, att := range o {
+		res[n] = att.Dup()
+	}
+	return res
 }
 
 // Kind implements DataKind.
@@ -341,6 +349,14 @@ func (h *Hash) ToHash() *Hash { return h }
 func (h *Hash) IsCompatible(val interface{}) bool {
 	k := reflect.TypeOf(val).Kind()
 	return k == reflect.Map
+}
+
+// Dup creates a copy of h.
+func (h *Hash) Dup() DataType {
+	return &Hash{
+		KeyType:  h.KeyType.Dup(),
+		ElemType: h.ElemType.Dup(),
+	}
 }
 
 // AttributeIterator is the type of the function given to IterateAttributes.
@@ -404,6 +420,15 @@ func (u *UserTypeDefinition) IsCompatible(val interface{}) bool {
 	return u.Type.IsCompatible(val)
 }
 
+// Dup returns a copy of u.
+func (u *UserTypeDefinition) Dup() DataType {
+	return &UserTypeDefinition{
+		AttributeDefinition: u.AttributeDefinition.Dup(),
+		TypeName:            u.TypeName,
+		DSL:                 u.DSL,
+	}
+}
+
 // FormatName formats the type name and returns either the "camelized" or "snake case" version of
 // the name. It can also pluralize the name.
 func (u *UserTypeDefinition) FormatName(snake, plural bool) string {
@@ -425,6 +450,17 @@ func NewMediaTypeDefinition(name, identifier string, dsl func()) *MediaTypeDefin
 
 // Kind implements DataKind.
 func (m *MediaTypeDefinition) Kind() Kind { return MediaTypeKind }
+
+// Dup returns a copy of m.
+func (m *MediaTypeDefinition) Dup() DataType {
+	return &MediaTypeDefinition{
+		UserTypeDefinition: m.UserTypeDefinition.Dup().(*UserTypeDefinition),
+		Identifier:         m.Identifier,
+		Links:              m.Links,
+		Views:              m.Views,
+		Resource:           m.Resource,
+	}
+}
 
 // DataStructure implementation
 

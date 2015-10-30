@@ -89,7 +89,7 @@ func Attribute(name string, args ...interface{}) {
 		if parent.Reference != nil {
 			for n, att := range parent.Reference.ToObject() {
 				if n == name {
-					baseAttr = att
+					baseAttr = att.Dup()
 					break
 				}
 			}
@@ -136,7 +136,7 @@ func Attribute(name string, args ...interface{}) {
 		}
 		var att *AttributeDefinition
 		if baseAttr != nil {
-			att = baseAttr.Dup()
+			att = baseAttr
 			if description != "" {
 				att.Description = description
 			}
