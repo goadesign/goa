@@ -431,8 +431,8 @@ func (u *UserTypeDefinition) Dup() DataType {
 
 // FormatName formats the type name and returns either the "camelized" or "snake case" version of
 // the name. It can also pluralize the name.
-func (u *UserTypeDefinition) FormatName(snake, plural bool) string {
-	return format(u.TypeName, &snake, &plural)
+func (u *UserTypeDefinition) FormatName(snake bool) string {
+	return format(u.TypeName, &snake)
 }
 
 // NewMediaTypeDefinition creates a media type definition but does not

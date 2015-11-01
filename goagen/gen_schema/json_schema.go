@@ -156,7 +156,7 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 	s.Description = r.Description
 	s.Type = JSONObject
 	s.Title = r.Name
-	definitions[r.FormatName(true, false)] = s
+	definitions[r.FormatName(true)] = s
 	if mt, ok := api.MediaTypes[r.MediaType]; ok {
 		buildMediaTypeSchema(api, mt, s)
 	}
@@ -219,39 +219,39 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 
 // MediaTypeRef produces the JSON reference to the media type definition.
 func MediaTypeRef(api *design.APIDefinition, mt *design.MediaTypeDefinition) string {
-	if _, ok := definitions[mt.FormatName(true, false)]; !ok {
+	if _, ok := definitions[mt.FormatName(true)]; !ok {
 		GenerateMediaTypeDefinition(api, mt)
 	}
-	return fmt.Sprintf("#/definitions/%s", mt.FormatName(true, false))
+	return fmt.Sprintf("#/definitions/%s", mt.FormatName(true))
 }
 
 // TypeRef produces the JSON reference to the type definition.
 func TypeRef(api *design.APIDefinition, ut *design.UserTypeDefinition) string {
-	if _, ok := definitions[ut.FormatName(true, false)]; !ok {
+	if _, ok := definitions[ut.FormatName(true)]; !ok {
 		GenerateTypeDefinition(api, ut)
 	}
-	return fmt.Sprintf("#/definitions/%s", ut.FormatName(true, false))
+	return fmt.Sprintf("#/definitions/%s", ut.FormatName(true))
 }
 
 // GenerateMediaTypeDefinition produces the JSON schema corresponding to the given media type.
 func GenerateMediaTypeDefinition(api *design.APIDefinition, mt *design.MediaTypeDefinition) {
-	if _, ok := definitions[mt.FormatName(true, false)]; ok {
+	if _, ok := definitions[mt.FormatName(true)]; ok {
 		return
 	}
 	s := NewJSONSchema()
 	s.Title = mt.TypeName
-	definitions[mt.FormatName(true, false)] = s
+	definitions[mt.FormatName(true)] = s
 	buildMediaTypeSchema(api, mt, s)
 }
 
 // GenerateTypeDefinition produces the JSON schema corresponding to the given type.
 func GenerateTypeDefinition(api *design.APIDefinition, ut *design.UserTypeDefinition) {
-	if _, ok := definitions[ut.FormatName(true, false)]; ok {
+	if _, ok := definitions[ut.FormatName(true)]; ok {
 		return
 	}
 	s := NewJSONSchema()
 	s.Title = ut.TypeName
-	definitions[ut.FormatName(true, false)] = s
+	definitions[ut.FormatName(true)] = s
 	buildAttributeSchema(api, s, ut.AttributeDefinition)
 }
 
