@@ -96,7 +96,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	imp = filepath.Join(imp, "app")
 	imports := []*codegen.ImportSpec{codegen.SimpleImport(imp)}
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
-		filename := filepath.Join(codegen.OutputDir, r.FormatName(true, false)) + ".go"
+		filename := filepath.Join(codegen.OutputDir, r.FormatName(false)) + ".go"
 		if Force {
 			if err := os.Remove(filename); err != nil {
 				return err

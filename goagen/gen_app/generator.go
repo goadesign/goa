@@ -144,9 +144,9 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	g.ControllersWriter.WriteHeader(title, TargetPackage, imports)
 	var controllersData []*ControllerTemplateData
 	api.IterateResources(func(r *design.ResourceDefinition) error {
-		data := &ControllerTemplateData{Resource: r.FormatName(false, false)}
+		data := &ControllerTemplateData{Resource: r.FormatName(false)}
 		err := r.IterateActions(func(a *design.ActionDefinition) error {
-			context := fmt.Sprintf("%s%sContext", a.FormatName(false), r.FormatName(false, false))
+			context := fmt.Sprintf("%s%sContext", a.FormatName(false), r.FormatName(false))
 			action := map[string]interface{}{
 				"Name":    a.FormatName(false),
 				"Routes":  a.Routes,
@@ -193,7 +193,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		}
 
 		data := ResourceData{
-			Name:              r.FormatName(false, false),
+			Name:              r.FormatName(false),
 			Identifier:        identifier,
 			Description:       r.Description,
 			Type:              m,
