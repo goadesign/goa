@@ -50,15 +50,15 @@ func init() {
 
 // RecursiveChecker produces Go code that runs the validation checks recursively over the given
 // attribute.
-func RecursiveChecker(att *design.AttributeDefinition, target string) string {
+func RecursiveChecker(att *design.AttributeDefinition, target, context string) string {
 	var checks []string
-	validation := ValidationChecker(att, target)
+	validation := ValidationChecker(att, target, context)
 	if validation != "" {
 		checks = append(checks, validation)
 	}
 	if o := att.Type.ToObject(); o != nil {
 		for n, catt := range o {
-			validation := RecursiveChecker(catt, fmt.Sprintf("%s.%s", target, Goify(n, true)))
+			validation := RecursiveChecker(catt, fmt.Sprintf("%s.%s", target, Goify(n, true)), fmt.Sprintf("%s.%s", context, n))
 			if validation != "" {
 				checks = append(checks, validation)
 			}
@@ -74,8 +74,8 @@ func RecursiveChecker(att *design.AttributeDefinition, target string) string {
 // The generated code assumes that there is a pre-existing "err" variable of type
 // error. It initializes that variable in case a validation fails.
 // Note: we do not want to recurse here, recursion is done by the marshaler/unmarshaler code.
-func ValidationChecker(att *design.AttributeDefinition, target string) string {
-	return validationCheckerR(att, false, "", target, 1)
+func ValidationChecker(att *design.AttributeDefinition, target, context string) string {
+	return validationCheckerR(att, false, context, target, 1)
 }
 func validationCheckerR(att *design.AttributeDefinition, required bool, context, target string, depth int) string {
 	data := map[string]interface{}{

@@ -226,8 +226,8 @@ var _ = Describe("code generation", func() {
 				})
 
 				It("generates the unmarshaler code", func() {
-					expected := `	if val, ok := raw.(int); ok {
-		p = val
+					expected := `	if f, ok := raw.(float64); ok {
+		p = int(f)
 	} else {
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "int", err)
 	}`
@@ -371,10 +371,10 @@ var _ = Describe("code generation", func() {
 						data := map[string]interface{}{
 							"raw": `interface{}(map[string]interface{}{
 			"baz": map[string]interface{}{
-				"foo": 345,
-				"bar":[]interface{}{1,2,3},
+				"foo": 345.0,
+				"bar":[]interface{}{1.0,2.0,3.0},
 			},
-			"faz": 2,
+			"faz": 2.0,
 		})`,
 							"source":     unmarshaler,
 							"target":     target,
@@ -465,8 +465,8 @@ const (
 		p = make([]int, len(val))
 		for i, v := range val {
 			var tmp1 int
-			if val, ok := v.(int); ok {
-				tmp1 = val
+			if f, ok := v.(float64); ok {
+				tmp1 = int(f)
 			} else {
 				err = goa.InvalidAttributeTypeError(` + "`" + `[*]` + "`" + `, v, "int", err)
 			}
@@ -489,8 +489,8 @@ const (
 		})
 		if v, ok := val["foo"]; ok {
 			var tmp1 int
-			if val, ok := v.(int); ok {
-				tmp1 = val
+			if f, ok := v.(float64); ok {
+				tmp1 = int(f)
 			} else {
 				err = goa.InvalidAttributeTypeError(` + "`" + `.Foo` + "`" + `, v, "int", err)
 			}
@@ -546,8 +546,8 @@ const (
 						tmp2 = make([]int, len(val))
 						for i, v := range val {
 							var tmp3 int
-							if val, ok := v.(int); ok {
-								tmp3 = val
+							if f, ok := v.(float64); ok {
+								tmp3 = int(f)
 							} else {
 								err = goa.InvalidAttributeTypeError(` + "`" + `.Baz.Bar[*]` + "`" + `, v, "int", err)
 							}
@@ -560,8 +560,8 @@ const (
 				}
 				if v, ok := val["foo"]; ok {
 					var tmp4 int
-					if val, ok := v.(int); ok {
-						tmp4 = val
+					if f, ok := v.(float64); ok {
+						tmp4 = int(f)
 					} else {
 						err = goa.InvalidAttributeTypeError(` + "`" + `.Baz.Foo` + "`" + `, v, "int", err)
 					}
@@ -574,8 +574,8 @@ const (
 		}
 		if v, ok := val["faz"]; ok {
 			var tmp5 int
-			if val, ok := v.(int); ok {
-				tmp5 = val
+			if f, ok := v.(float64); ok {
+				tmp5 = int(f)
 			} else {
 				err = goa.InvalidAttributeTypeError(` + "`" + `.Faz` + "`" + `, v, "int", err)
 			}
