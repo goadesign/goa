@@ -277,9 +277,9 @@ func InvalidPatternError(ctx, target string, pattern string, err error) error {
 // InvalidRangeError appends a typed error of kind ErrInvalidRange to err and
 // returns it.
 func InvalidRangeError(ctx string, target interface{}, value int, min bool, err error) error {
-	comp := "greater or equal to"
+	comp := "greater or equal"
 	if !min {
-		comp = "lesser or equal to"
+		comp = "lesser or equal"
 	}
 	terr := TypedError{
 		Kind: ErrInvalidRange,
@@ -292,14 +292,14 @@ func InvalidRangeError(ctx string, target interface{}, value int, min bool, err 
 // InvalidLengthError appends a typed error of kind ErrInvalidLength to err and
 // returns it.
 func InvalidLengthError(ctx, target string, value int, min bool, err error) error {
-	comp := "greater or equal to"
+	comp := "greater or equal"
 	if !min {
-		comp = "lesser or equal to"
+		comp = "lesser or equal"
 	}
 	terr := TypedError{
 		Kind: ErrInvalidLength,
-		Mesg: fmt.Sprintf("length of %s must be %s than %d but got value %#v",
-			ctx, comp, value, target),
+		Mesg: fmt.Sprintf("length of %s must be %s than %d but got value %#v (len=%d)",
+			ctx, comp, value, target, len(target)),
 	}
 	return ReportError(err, &terr)
 }

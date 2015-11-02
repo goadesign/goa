@@ -19,12 +19,13 @@ var _ = Describe("validation code generation", func() {
 
 			att := new(design.AttributeDefinition)
 			target := "val"
+			context := "context"
 			var code string // generated code
 
 			JustBeforeEach(func() {
 				att.Type = attType
 				att.Validations = validations
-				code = codegen.ValidationChecker(att, target)
+				code = codegen.ValidationChecker(att, target, context)
 			})
 
 			Context("of enum", func() {
@@ -60,12 +61,12 @@ var _ = Describe("validation code generation", func() {
 
 const (
 	enumValCode = `	if !(val == 1 || val == 2 || val == 3) {
-		err = goa.InvalidEnumValueError(` + "``" + `, val, []interface{}{1, 2, 3}, err)
+		err = goa.InvalidEnumValueError(` + "`context`" + `, val, []interface{}{1, 2, 3}, err)
 	}`
 
 	patternValCode = `	if val != "" {
 		if ok := goa.ValidatePattern(.*, val); !ok {
-			err = goa.InvalidPatternError(` + "``" + `, val, .*, err)
+			err = goa.InvalidPatternError(` + "`context`" + `, val, .*, err)
 		}
 	}`
 )
