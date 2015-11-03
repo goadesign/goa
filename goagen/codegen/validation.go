@@ -57,12 +57,13 @@ func RecursiveChecker(att *design.AttributeDefinition, target, context string) s
 		checks = append(checks, validation)
 	}
 	if o := att.Type.ToObject(); o != nil {
-		for n, catt := range o {
+		o.IterateAttributes(func(n string, catt *design.AttributeDefinition) error {
 			validation := RecursiveChecker(catt, fmt.Sprintf("%s.%s", target, Goify(n, true)), fmt.Sprintf("%s.%s", context, n))
 			if validation != "" {
 				checks = append(checks, validation)
 			}
-		}
+			return nil
+		})
 	}
 	return strings.Join(checks, "\n")
 }
