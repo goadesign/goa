@@ -132,14 +132,12 @@ func (mt *Account) Dump(view AccountViewEnum) (map[string]interface{}, error) {
 				err = goa.MissingAttributeError(``, "name", err)
 			}
 			if err == nil {
-				if err == nil {
-					tmp29 := map[string]interface{}{
-						"href": mt.Href,
-						"id":   mt.ID,
-						"name": mt.Name,
-					}
-					res = tmp29
+				tmp29 := map[string]interface{}{
+					"href": mt.Href,
+					"id":   mt.ID,
+					"name": mt.Name,
 				}
+				res = tmp29
 			}
 		}
 	}
@@ -163,16 +161,14 @@ func (mt *Account) Dump(view AccountViewEnum) (map[string]interface{}, error) {
 						err = goa.InvalidFormatError(`.created_by`, mt.CreatedBy, goa.FormatEmail, err2, err)
 					}
 				}
-				if err == nil {
-					tmp30 := map[string]interface{}{
-						"created_at": mt.CreatedAt,
-						"created_by": mt.CreatedBy,
-						"href":       mt.Href,
-						"id":         mt.ID,
-						"name":       mt.Name,
-					}
-					res = tmp30
+				tmp30 := map[string]interface{}{
+					"created_at": mt.CreatedAt,
+					"created_by": mt.CreatedBy,
+					"href":       mt.Href,
+					"id":         mt.ID,
+					"name":       mt.Name,
 				}
+				res = tmp30
 			}
 		}
 	}
@@ -186,13 +182,11 @@ func (mt *Account) Dump(view AccountViewEnum) (map[string]interface{}, error) {
 				err = goa.MissingAttributeError(``, "name", err)
 			}
 			if err == nil {
-				if err == nil {
-					tmp31 := map[string]interface{}{
-						"href": mt.Href,
-						"name": mt.Name,
-					}
-					res = tmp31
+				tmp31 := map[string]interface{}{
+					"href": mt.Href,
+					"name": mt.Name,
 				}
+				res = tmp31
 			}
 		}
 	}
@@ -594,17 +588,15 @@ func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
 				if mt.Vintage > 2020 {
 					err = goa.InvalidRangeError(`.vintage`, mt.Vintage, 2020, false, err)
 				}
-				if err == nil {
-					tmp54 := map[string]interface{}{
-						"href":     mt.Href,
-						"id":       mt.ID,
-						"name":     mt.Name,
-						"varietal": mt.Varietal,
-						"vineyard": mt.Vineyard,
-						"vintage":  mt.Vintage,
-					}
-					res = tmp54
+				tmp54 := map[string]interface{}{
+					"href":     mt.Href,
+					"id":       mt.ID,
+					"name":     mt.Name,
+					"varietal": mt.Varietal,
+					"vineyard": mt.Vineyard,
+					"vintage":  mt.Vintage,
 				}
+				res = tmp54
 			}
 		}
 		if err == nil {
@@ -618,13 +610,11 @@ func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
 					err = goa.MissingAttributeError(`link account`, "name", err)
 				}
 				if err == nil {
-					if err == nil {
-						tmp53 := map[string]interface{}{
-							"href": mt.Account.Href,
-							"name": mt.Account.Name,
-						}
-						links["account"] = tmp53
+					tmp53 := map[string]interface{}{
+						"href": mt.Account.Href,
+						"name": mt.Account.Name,
 					}
+					links["account"] = tmp53
 				}
 			}
 			res["links"] = links
@@ -691,46 +681,42 @@ func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
 				if mt.Vintage > 2020 {
 					err = goa.InvalidRangeError(`.vintage`, mt.Vintage, 2020, false, err)
 				}
-				if err == nil {
-					tmp55 := map[string]interface{}{
-						"characteristics": mt.Characteristics,
-						"color":           mt.Color,
-						"country":         mt.Country,
-						"created_at":      mt.CreatedAt,
-						"href":            mt.Href,
-						"id":              mt.ID,
-						"name":            mt.Name,
-						"region":          mt.Region,
-						"review":          mt.Review,
-						"sweetness":       mt.Sweetness,
-						"updated_at":      mt.UpdatedAt,
-						"varietal":        mt.Varietal,
-						"vineyard":        mt.Vineyard,
-						"vintage":         mt.Vintage,
+				tmp55 := map[string]interface{}{
+					"characteristics": mt.Characteristics,
+					"color":           mt.Color,
+					"country":         mt.Country,
+					"created_at":      mt.CreatedAt,
+					"href":            mt.Href,
+					"id":              mt.ID,
+					"name":            mt.Name,
+					"region":          mt.Region,
+					"review":          mt.Review,
+					"sweetness":       mt.Sweetness,
+					"updated_at":      mt.UpdatedAt,
+					"varietal":        mt.Varietal,
+					"vineyard":        mt.Vineyard,
+					"vintage":         mt.Vintage,
+				}
+				if mt.Account != nil {
+					if mt.Account.Name == "" {
+						err = goa.MissingAttributeError(`.Account`, "name", err)
 					}
-					if mt.Account != nil {
+
+					if err == nil {
 						if mt.Account.Name == "" {
 							err = goa.MissingAttributeError(`.Account`, "name", err)
 						}
-
 						if err == nil {
-							if mt.Account.Name == "" {
-								err = goa.MissingAttributeError(`.Account`, "name", err)
+							tmp56 := map[string]interface{}{
+								"href": mt.Account.Href,
+								"id":   mt.Account.ID,
+								"name": mt.Account.Name,
 							}
-							if err == nil {
-								if err == nil {
-									tmp56 := map[string]interface{}{
-										"href": mt.Account.Href,
-										"id":   mt.Account.ID,
-										"name": mt.Account.Name,
-									}
-									tmp55["account"] = tmp56
-								}
-							}
+							tmp55["account"] = tmp56
 						}
 					}
-					res = tmp55
 				}
+				res = tmp55
 			}
 		}
 	}
@@ -747,14 +733,12 @@ func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
 				if len(mt.Name) < 2 {
 					err = goa.InvalidLengthError(`.name`, mt.Name, 2, true, err)
 				}
-				if err == nil {
-					tmp58 := map[string]interface{}{
-						"href": mt.Href,
-						"id":   mt.ID,
-						"name": mt.Name,
-					}
-					res = tmp58
+				tmp58 := map[string]interface{}{
+					"href": mt.Href,
+					"id":   mt.ID,
+					"name": mt.Name,
 				}
+				res = tmp58
 			}
 		}
 		if err == nil {
@@ -768,13 +752,11 @@ func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
 					err = goa.MissingAttributeError(`link account`, "name", err)
 				}
 				if err == nil {
-					if err == nil {
-						tmp57 := map[string]interface{}{
-							"href": mt.Account.Href,
-							"name": mt.Account.Name,
-						}
-						links["account"] = tmp57
+					tmp57 := map[string]interface{}{
+						"href": mt.Account.Href,
+						"name": mt.Account.Name,
 					}
+					links["account"] = tmp57
 				}
 			}
 			res["links"] = links
@@ -1227,17 +1209,15 @@ func (mt BottleCollection) Dump(view BottleCollectionViewEnum) ([]map[string]int
 					if res.Vintage > 2020 {
 						err = goa.InvalidRangeError(`[*].vintage`, res.Vintage, 2020, false, err)
 					}
-					if err == nil {
-						tmp83 := map[string]interface{}{
-							"href":     res.Href,
-							"id":       res.ID,
-							"name":     res.Name,
-							"varietal": res.Varietal,
-							"vineyard": res.Vineyard,
-							"vintage":  res.Vintage,
-						}
-						tmp81[i] = tmp83
+					tmp83 := map[string]interface{}{
+						"href":     res.Href,
+						"id":       res.ID,
+						"name":     res.Name,
+						"varietal": res.Varietal,
+						"vineyard": res.Vineyard,
+						"vintage":  res.Vintage,
 					}
+					tmp81[i] = tmp83
 				}
 			}
 			if err == nil {
@@ -1251,13 +1231,11 @@ func (mt BottleCollection) Dump(view BottleCollectionViewEnum) ([]map[string]int
 						err = goa.MissingAttributeError(`link account`, "name", err)
 					}
 					if err == nil {
-						if err == nil {
-							tmp82 := map[string]interface{}{
-								"href": res.Account.Href,
-								"name": res.Account.Name,
-							}
-							links["account"] = tmp82
+						tmp82 := map[string]interface{}{
+							"href": res.Account.Href,
+							"name": res.Account.Name,
 						}
+						links["account"] = tmp82
 					}
 				}
 				tmp81[i]["links"] = links
@@ -1280,14 +1258,12 @@ func (mt BottleCollection) Dump(view BottleCollectionViewEnum) ([]map[string]int
 					if len(res.Name) < 2 {
 						err = goa.InvalidLengthError(`[*].name`, res.Name, 2, true, err)
 					}
-					if err == nil {
-						tmp86 := map[string]interface{}{
-							"href": res.Href,
-							"id":   res.ID,
-							"name": res.Name,
-						}
-						tmp84[i] = tmp86
+					tmp86 := map[string]interface{}{
+						"href": res.Href,
+						"id":   res.ID,
+						"name": res.Name,
 					}
+					tmp84[i] = tmp86
 				}
 			}
 			if err == nil {
@@ -1301,13 +1277,11 @@ func (mt BottleCollection) Dump(view BottleCollectionViewEnum) ([]map[string]int
 						err = goa.MissingAttributeError(`link account`, "name", err)
 					}
 					if err == nil {
-						if err == nil {
-							tmp85 := map[string]interface{}{
-								"href": res.Account.Href,
-								"name": res.Account.Name,
-							}
-							links["account"] = tmp85
+						tmp85 := map[string]interface{}{
+							"href": res.Account.Href,
+							"name": res.Account.Name,
 						}
+						links["account"] = tmp85
 					}
 				}
 				tmp84[i]["links"] = links
