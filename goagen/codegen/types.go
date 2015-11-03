@@ -124,7 +124,10 @@ func attributeMarshalerR(att *design.AttributeDefinition, context, source, targe
 	}
 	validation := ValidationChecker(att, source, context)
 	if validation != "" {
-		return validation + "\n	if err == nil {\n" + marshaler + "\n	}"
+		if !strings.HasPrefix(strings.TrimLeft(" \t\n", marshaler), "if err == nil {") {
+			return validation + "\n	if err == nil {\n" + marshaler + "\n	}"
+		}
+		return validation + marshaler
 	}
 	return marshaler
 }
@@ -767,17 +770,17 @@ const (
 {{tabs $ctx.depth}}{{else if gt $at.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.source}}.{{$required}} == nil {
 {{tabs $ctx.depth}}	err = goa.MissingAttributeError(` + "`" + `{{$ctx.context}}` + "`" + `, "{{$r}}", err)
 {{tabs $ctx.depth}}}
-{{end}}{{/* if eq $at.Type.Kind 4 */}}{{end}}{{/* range */}}{{if $ctx.required}}{{tabs .depth}}if err == nil {
-{{end}}{{$depth := add .depth (or (and $ctx.required 1) 0)}}{{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{$validation := validate $at (has $ctx.required $n) (printf "%s.%s" $ctx.context $n) (printf "%s.%s" $ctx.source (goify $n true)) $depth}}{{if $validation}}{{$validation}}
-{{end}}{{end}}{{end}}{{/* range */}}{{tabs $depth}}if err == nil {
-{{$tmp := tempvar}}{{tabs $depth}}	{{$tmp}} := map[string]interface{}{
+{{end}}{{/* if eq $at.Type.Kind 4 */}}{{end}}{{/* range */}}{{$needCheck := false}}{{if $ctx.required}}{{tabs .depth}}if err == nil {
+{{end}}{{$depth := add .depth (or (and $ctx.required 1) 0)}}{{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{$validation := validate $at (has $ctx.required $n) (printf "%s.%s" $ctx.context $n) (printf "%s.%s" $ctx.source (goify $n true)) $depth}}{{if $validation}}{{$needCheck := true}}{{$validation}}
+{{end}}{{end}}{{end}}{{/* range */}}{{if $needCheck}}{{tabs $depth}}if err == nil {
+{{end}}{{$tmp := tempvar}}{{tabs $depth}}	{{$tmp}} := map[string]interface{}{
 {{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{tabs $depth}}		"{{$n}}": {{$ctx.source}}.{{goify $n true}},
 {{end}}{{end}}{{tabs $depth}}	}{{range $n, $at := .type}}{{if gt $at.Type.Kind 4}}
 {{tabs $depth}}	if {{$ctx.source}}.{{goify $n true}} != nil {
 {{marshalAttribute $at (printf "%s.%s" $ctx.context (goify $n true)) (printf "%s.%s" $ctx.source (goify $n true)) (printf "%s[\"%s\"]" $tmp $n) (add $depth 2)}}
 {{tabs $depth}}	}{{end}}{{end}}
-{{tabs $depth}}	{{.target}} = {{$tmp}}
-{{tabs .depth}}}{{if $ctx.required}}
+{{tabs $depth}}	{{.target}} = {{$tmp}}{{if $needCheck}}
+{{tabs .depth}}}{{end}}{{if $ctx.required}}
 {{tabs .depth}}}{{end}}`
 
 	mHashTmpl = `{{tabs .depth}}{{.target}} = make(map[interface{}]interface{}, len({{.source}}))
