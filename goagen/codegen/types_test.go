@@ -476,12 +476,10 @@ const (
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "[]interface{}", err)
 	}`
 
-	simpleMarshaled = `	if err == nil {
-		tmp1 := map[string]interface{}{
-			"foo": raw.Foo,
-		}
-		p = tmp1
-	}`
+	simpleMarshaled = `	tmp1 := map[string]interface{}{
+		"foo": raw.Foo,
+	}
+	p = tmp1`
 
 	simpleUnmarshaled = `	if val, ok := raw.(map[string]interface{}); ok {
 		p = new(struct {
@@ -500,27 +498,23 @@ const (
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "map[string]interface{}", err)
 	}`
 
-	complexMarshaled = `	if err == nil {
-		tmp1 := map[string]interface{}{
-			"faz": raw.Faz,
+	complexMarshaled = `	tmp1 := map[string]interface{}{
+		"faz": raw.Faz,
+	}
+	if raw.Baz != nil {
+		tmp2 := map[string]interface{}{
+			"foo": raw.Baz.Foo,
 		}
-		if raw.Baz != nil {
-			if err == nil {
-				tmp2 := map[string]interface{}{
-					"foo": raw.Baz.Foo,
-				}
-				if raw.Baz.Bar != nil {
-					tmp3 := make([]int, len(raw.Baz.Bar))
-					for i, r := range raw.Baz.Bar {
-						tmp3[i] = r
-					}
-					tmp2["bar"] = tmp3
-				}
-				tmp1["baz"] = tmp2
+		if raw.Baz.Bar != nil {
+			tmp3 := make([]int, len(raw.Baz.Bar))
+			for i, r := range raw.Baz.Bar {
+				tmp3[i] = r
 			}
+			tmp2["bar"] = tmp3
 		}
-		p = tmp1
-	}`
+		tmp1["baz"] = tmp2
+	}
+	p = tmp1`
 
 	complexUnmarshaled = `	if val, ok := raw.(map[string]interface{}); ok {
 		p = new(struct {
@@ -585,39 +579,31 @@ const (
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "map[string]interface{}", err)
 	}`
 
-	mtMarshaled = `	if err == nil {
-		tmp1 := map[string]interface{}{
+	mtMarshaled = `	tmp1 := map[string]interface{}{
+	}
+	if raw.Bar != nil {
+		tmp2 := map[string]interface{}{
+			"barAtt": raw.Bar.BarAtt,
+			"href": raw.Bar.Href,
 		}
-		if raw.Bar != nil {
-			if err == nil {
-				tmp2 := map[string]interface{}{
-					"barAtt": raw.Bar.BarAtt,
-					"href": raw.Bar.Href,
-				}
-				tmp1["bar"] = tmp2
-			}
+		tmp1["bar"] = tmp2
+	}
+	if raw.Baz != nil {
+		tmp3 := map[string]interface{}{
+			"bazAtt": raw.Baz.BazAtt,
+			"href": raw.Baz.Href,
+			"name": raw.Baz.Name,
 		}
-		if raw.Baz != nil {
-			if err == nil {
-				tmp3 := map[string]interface{}{
-					"bazAtt": raw.Baz.BazAtt,
-					"href": raw.Baz.Href,
-					"name": raw.Baz.Name,
-				}
-				tmp1["baz"] = tmp3
-			}
+		tmp1["baz"] = tmp3
+	}
+	if raw.Foo != nil {
+		tmp4 := map[string]interface{}{
+			"fooAtt": raw.Foo.FooAtt,
+			"href": raw.Foo.Href,
 		}
-		if raw.Foo != nil {
-			if err == nil {
-				tmp4 := map[string]interface{}{
-					"fooAtt": raw.Foo.FooAtt,
-					"href": raw.Foo.Href,
-				}
-				tmp1["foo"] = tmp4
-			}
-		}
-		p = tmp1
-	}`
+		tmp1["foo"] = tmp4
+	}
+	p = tmp1`
 
 	mainTmpl = `package main
 

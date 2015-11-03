@@ -772,15 +772,15 @@ const (
 {{tabs $ctx.depth}}}
 {{end}}{{/* if eq $at.Type.Kind 4 */}}{{end}}{{/* range */}}{{$needCheck := false}}{{if $ctx.required}}{{tabs .depth}}if err == nil {
 {{end}}{{$depth := add .depth (or (and $ctx.required 1) 0)}}{{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{$validation := validate $at (has $ctx.required $n) (printf "%s.%s" $ctx.context $n) (printf "%s.%s" $ctx.source (goify $n true)) $depth}}{{if $validation}}{{$needCheck := true}}{{$validation}}
-{{end}}{{end}}{{end}}{{/* range */}}{{if $needCheck}}{{tabs $depth}}if err == nil {
-{{end}}{{$tmp := tempvar}}{{tabs $depth}}	{{$tmp}} := map[string]interface{}{
-{{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{tabs $depth}}		"{{$n}}": {{$ctx.source}}.{{goify $n true}},
-{{end}}{{end}}{{tabs $depth}}	}{{range $n, $at := .type}}{{if gt $at.Type.Kind 4}}
-{{tabs $depth}}	if {{$ctx.source}}.{{goify $n true}} != nil {
-{{marshalAttribute $at (printf "%s.%s" $ctx.context (goify $n true)) (printf "%s.%s" $ctx.source (goify $n true)) (printf "%s[\"%s\"]" $tmp $n) (add $depth 2)}}
-{{tabs $depth}}	}{{end}}{{end}}
-{{tabs $depth}}	{{.target}} = {{$tmp}}{{if $needCheck}}
-{{tabs .depth}}}{{end}}{{if $ctx.required}}
+{{end}}{{end}}{{end}}{{/* range */}}{{if $needCheck}}{{$depth := add $depth 1}}{{tabs $depth}}if err == nil {
+{{end}}{{$tmp := tempvar}}{{tabs $depth}}{{$tmp}} := map[string]interface{}{
+{{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{tabs $depth}}	"{{$n}}": {{$ctx.source}}.{{goify $n true}},
+{{end}}{{end}}{{tabs $depth}}}{{range $n, $at := .type}}{{if gt $at.Type.Kind 4}}
+{{tabs $depth}}if {{$ctx.source}}.{{goify $n true}} != nil {
+{{marshalAttribute $at (printf "%s.%s" $ctx.context (goify $n true)) (printf "%s.%s" $ctx.source (goify $n true)) (printf "%s[\"%s\"]" $tmp $n) (add $depth 1)}}
+{{tabs $depth}}}{{end}}{{end}}
+{{tabs $depth}}{{.target}} = {{$tmp}}{{if $needCheck}}
+{{tabs .depth}}	}{{end}}{{if $ctx.required}}
 {{tabs .depth}}}{{end}}`
 
 	mHashTmpl = `{{tabs .depth}}{{.target}} = make(map[interface{}]interface{}, len({{.source}}))
