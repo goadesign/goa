@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"strings"
 
-	. "github.com/raphael/goa/design"
+	"github.com/raphael/goa/design"
 )
 
 var (
@@ -34,30 +34,30 @@ type (
 	}
 
 	// DSL evaluation contexts stack
-	contextStack []DSLDefinition
+	contextStack []design.DSLDefinition
 )
 
 // RunDSL runs all the registered top level DSLs and returns any error.
 // This function is called by the client package init.
 // goagen creates that function during code generation.
 func RunDSL() error {
-	if Design == nil {
+	if design.Design == nil {
 		return nil
 	}
 	Errors = nil
 	// First run the top level API DSL to initialize responses and
 	// response templates needed by resources.
-	executeDSL(Design.DSL, Design)
+	executeDSL(design.Design.DSL, design.Design)
 	// Then run the user type DSLs
-	for _, t := range Design.Types {
+	for _, t := range design.Design.Types {
 		executeDSL(t.DSL, t.AttributeDefinition)
 	}
 	// Then the media type DSLs
-	for _, mt := range Design.MediaTypes {
+	for _, mt := range design.Design.MediaTypes {
 		executeDSL(mt.DSL, mt)
 	}
 	// And now that we have everything the resources.
-	for _, r := range Design.Resources {
+	for _, r := range design.Design.Resources {
 		executeDSL(r.DSL, r)
 	}
 	// Don't attempt to validate syntactically incorrect DSL
@@ -66,7 +66,7 @@ func RunDSL() error {
 	}
 
 	// Validate DSL
-	if err := Design.Validate(); err != nil {
+	if err := design.Design.Validate(); err != nil {
 		return err
 	}
 	if Errors != nil {
@@ -74,13 +74,13 @@ func RunDSL() error {
 	}
 
 	// Second pass post-validation does final merges with defaults and base types.
-	for _, t := range Design.Types {
+	for _, t := range design.Design.Types {
 		finalizeType(t)
 	}
-	for _, mt := range Design.MediaTypes {
+	for _, mt := range design.Design.MediaTypes {
 		finalizeMediaType(mt)
 	}
-	for _, r := range Design.Resources {
+	for _, r := range design.Design.Resources {
 		finalizeResource(r)
 	}
 
@@ -88,7 +88,7 @@ func RunDSL() error {
 }
 
 // Current evaluation context, i.e. object being currently built by DSL
-func (s contextStack) current() DSLDefinition {
+func (s contextStack) current() design.DSLDefinition {
 	if len(s) == 0 {
 		return nil
 	}
@@ -114,7 +114,7 @@ func (de *Error) Error() (res string) {
 
 // executeDSL runs DSL in given evaluation context and returns true if successful.
 // It appends to Errors in case of failure (and returns false).
-func executeDSL(dsl func(), ctx DSLDefinition) bool {
+func executeDSL(dsl func(), ctx design.DSLDefinition) bool {
 	if dsl == nil {
 		return true
 	}
@@ -126,7 +126,7 @@ func executeDSL(dsl func(), ctx DSLDefinition) bool {
 }
 
 // finalizeMediaType merges any base type attribute into the media type attributes
-func finalizeMediaType(mt *MediaTypeDefinition) {
+func finalizeMediaType(mt *design.MediaTypeDefinition) {
 	if mt.Reference != nil {
 		if bat := mt.AttributeDefinition; bat != nil {
 			mt.AttributeDefinition.Inherit(bat)
@@ -135,7 +135,7 @@ func finalizeMediaType(mt *MediaTypeDefinition) {
 }
 
 // finalizeType merges any base type attribute into the type attributes
-func finalizeType(ut *UserTypeDefinition) {
+func finalizeType(ut *design.UserTypeDefinition) {
 	if ut.Reference != nil {
 		if bat := ut.AttributeDefinition; bat != nil {
 			ut.AttributeDefinition.Inherit(bat)
@@ -146,31 +146,31 @@ func finalizeType(ut *UserTypeDefinition) {
 // finalizeResource makes the final pass at the resource DSL. This is needed so that the order
 // of DSL function calls is irrelevant. For example a resource response may be defined after an
 // action refers to it.
-func finalizeResource(r *ResourceDefinition) {
-	r.IterateActions(func(a *ActionDefinition) error {
+func finalizeResource(r *design.ResourceDefinition) {
+	r.IterateActions(func(a *design.ActionDefinition) error {
 		// 1. Merge response definitions
 		for name, resp := range a.Responses {
 			if pr, ok := a.Parent.Responses[name]; ok {
 				resp.Merge(pr)
 			}
-			if ar, ok := Design.Responses[name]; ok {
+			if ar, ok := design.Design.Responses[name]; ok {
 				resp.Merge(ar)
 			}
-			if dr, ok := Design.DefaultResponses[name]; ok {
+			if dr, ok := design.Design.DefaultResponses[name]; ok {
 				resp.Merge(dr)
 			}
 		}
 		// 2. Create implicit action parameters for path wildcards that dont' have one
 		for _, r := range a.Routes {
-			wcs := ExtractWildcards(r.FullPath())
+			wcs := design.ExtractWildcards(r.FullPath())
 			for _, wc := range wcs {
 				found := false
-				var o Object
+				var o design.Object
 				if a.Params != nil {
 					o = a.Params.Type.ToObject()
 				} else {
-					o = Object{}
-					a.Params = &AttributeDefinition{Type: o}
+					o = design.Object{}
+					a.Params = &design.AttributeDefinition{Type: o}
 				}
 				for n := range o {
 					if n == wc {
@@ -179,7 +179,7 @@ func finalizeResource(r *ResourceDefinition) {
 					}
 				}
 				if !found {
-					o[wc] = &AttributeDefinition{Type: String}
+					o[wc] = &design.AttributeDefinition{Type: design.String}
 				}
 			}
 		}
@@ -270,8 +270,8 @@ func topLevelDefinition(failItNotTopLevel bool) bool {
 
 // actionDefinition returns true and current context if it is an ActionDefinition,
 // nil and false otherwise.
-func actionDefinition(failIfNotAction bool) (*ActionDefinition, bool) {
-	a, ok := ctxStack.current().(*ActionDefinition)
+func actionDefinition(failIfNotAction bool) (*design.ActionDefinition, bool) {
+	a, ok := ctxStack.current().(*design.ActionDefinition)
 	if !ok && failIfNotAction {
 		incompatibleDSL(caller())
 	}
@@ -280,8 +280,8 @@ func actionDefinition(failIfNotAction bool) (*ActionDefinition, bool) {
 
 // apiDefinition returns true and current context if it is an APIDefinition,
 // nil and false otherwise.
-func apiDefinition(failIfNotAPI bool) (*APIDefinition, bool) {
-	a, ok := ctxStack.current().(*APIDefinition)
+func apiDefinition(failIfNotAPI bool) (*design.APIDefinition, bool) {
+	a, ok := ctxStack.current().(*design.APIDefinition)
 	if !ok && failIfNotAPI {
 		incompatibleDSL(caller())
 	}
@@ -290,8 +290,8 @@ func apiDefinition(failIfNotAPI bool) (*APIDefinition, bool) {
 
 // mediaTypeDefinition returns true and current context if it is a MediaTypeDefinition,
 // nil and false otherwise.
-func mediaTypeDefinition(failIfNotMT bool) (*MediaTypeDefinition, bool) {
-	m, ok := ctxStack.current().(*MediaTypeDefinition)
+func mediaTypeDefinition(failIfNotMT bool) (*design.MediaTypeDefinition, bool) {
+	m, ok := ctxStack.current().(*design.MediaTypeDefinition)
 	if !ok && failIfNotMT {
 		incompatibleDSL(caller())
 	}
@@ -300,8 +300,8 @@ func mediaTypeDefinition(failIfNotMT bool) (*MediaTypeDefinition, bool) {
 
 // typeDefinition returns true and current context if it is a UserTypeDefinition,
 // nil and false otherwise.
-func typeDefinition(failIfNotMT bool) (*UserTypeDefinition, bool) {
-	m, ok := ctxStack.current().(*UserTypeDefinition)
+func typeDefinition(failIfNotMT bool) (*design.UserTypeDefinition, bool) {
+	m, ok := ctxStack.current().(*design.UserTypeDefinition)
 	if !ok && failIfNotMT {
 		incompatibleDSL(caller())
 	}
@@ -310,8 +310,8 @@ func typeDefinition(failIfNotMT bool) (*UserTypeDefinition, bool) {
 
 // attribute returns true and current context if it is an Attribute,
 // nil and false otherwise.
-func attributeDefinition(failIfNotAttribute bool) (*AttributeDefinition, bool) {
-	a, ok := ctxStack.current().(*AttributeDefinition)
+func attributeDefinition(failIfNotAttribute bool) (*design.AttributeDefinition, bool) {
+	a, ok := ctxStack.current().(*design.AttributeDefinition)
 	if !ok && failIfNotAttribute {
 		incompatibleDSL(caller())
 	}
@@ -320,8 +320,8 @@ func attributeDefinition(failIfNotAttribute bool) (*AttributeDefinition, bool) {
 
 // resourceDefinition returns true and current context if it is a ResourceDefinition,
 // nil and false otherwise.
-func resourceDefinition(failIfNotResource bool) (*ResourceDefinition, bool) {
-	r, ok := ctxStack.current().(*ResourceDefinition)
+func resourceDefinition(failIfNotResource bool) (*design.ResourceDefinition, bool) {
+	r, ok := ctxStack.current().(*design.ResourceDefinition)
 	if !ok && failIfNotResource {
 		incompatibleDSL(caller())
 	}
@@ -330,8 +330,8 @@ func resourceDefinition(failIfNotResource bool) (*ResourceDefinition, bool) {
 
 // responseDefinition returns true and current context if it is a ResponseDefinition,
 // nil and false otherwise.
-func responseDefinition(failIfNotResponse bool) (*ResponseDefinition, bool) {
-	r, ok := ctxStack.current().(*ResponseDefinition)
+func responseDefinition(failIfNotResponse bool) (*design.ResponseDefinition, bool) {
+	r, ok := ctxStack.current().(*design.ResponseDefinition)
 	if !ok && failIfNotResponse {
 		incompatibleDSL(caller())
 	}

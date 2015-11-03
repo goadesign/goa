@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"bitbucket.org/pkg/inflect"
-	. "github.com/raphael/goa/design"
+	"github.com/raphael/goa/design"
 )
 
 // Action implements the action definition DSL. Action definitions describe specific API endpoints
@@ -41,11 +41,11 @@ import (
 func Action(name string, dsl func()) {
 	if r, ok := resourceDefinition(true); ok {
 		if r.Actions == nil {
-			r.Actions = make(map[string]*ActionDefinition)
+			r.Actions = make(map[string]*design.ActionDefinition)
 		}
 		action, ok := r.Actions[name]
 		if !ok {
-			action = &ActionDefinition{
+			action = &design.ActionDefinition{
 				Parent: r,
 				Name:   name,
 			}
@@ -62,11 +62,11 @@ func Action(name string, dsl func()) {
 // [httprouter](https://godoc.org/github.com/julienschmidt/httprouter) package documentation. These
 // wildcards define parameters using the `:name` or `*name` syntax where `:name` matches a path
 // segment and `*name` is a catch-all that matches the path until the end.
-func Routing(routes ...*RouteDefinition) {
+func Routing(routes ...*design.RouteDefinition) {
 	if a, ok := actionDefinition(true); ok {
 		for _, r := range routes {
-			rwcs := ExtractWildcards(a.Parent.FullPath())
-			wcs := ExtractWildcards(r.Path)
+			rwcs := design.ExtractWildcards(a.Parent.FullPath())
+			wcs := design.ExtractWildcards(r.Path)
 			for _, rwc := range rwcs {
 				for _, wc := range wcs {
 					if rwc == wc {
@@ -82,43 +82,43 @@ func Routing(routes ...*RouteDefinition) {
 }
 
 // GET creates a route using the GET HTTP method.
-func GET(path string) *RouteDefinition {
-	return &RouteDefinition{Verb: "GET", Path: path}
+func GET(path string) *design.RouteDefinition {
+	return &design.RouteDefinition{Verb: "GET", Path: path}
 }
 
 // HEAD creates a route using the HEAD HTTP method.
-func HEAD(path string) *RouteDefinition {
-	return &RouteDefinition{Verb: "HEAD", Path: path}
+func HEAD(path string) *design.RouteDefinition {
+	return &design.RouteDefinition{Verb: "HEAD", Path: path}
 }
 
 // POST creates a route using the POST HTTP method.
-func POST(path string) *RouteDefinition {
-	return &RouteDefinition{Verb: "POST", Path: path}
+func POST(path string) *design.RouteDefinition {
+	return &design.RouteDefinition{Verb: "POST", Path: path}
 }
 
 // PUT creates a route using the PUT HTTP method.
-func PUT(path string) *RouteDefinition {
-	return &RouteDefinition{Verb: "PUT", Path: path}
+func PUT(path string) *design.RouteDefinition {
+	return &design.RouteDefinition{Verb: "PUT", Path: path}
 }
 
 // DELETE creates a route using the DELETE HTTP method.
-func DELETE(path string) *RouteDefinition {
-	return &RouteDefinition{Verb: "DELETE", Path: path}
+func DELETE(path string) *design.RouteDefinition {
+	return &design.RouteDefinition{Verb: "DELETE", Path: path}
 }
 
 // TRACE creates a route using the TRACE HTTP method.
-func TRACE(path string) *RouteDefinition {
-	return &RouteDefinition{Verb: "TRACE", Path: path}
+func TRACE(path string) *design.RouteDefinition {
+	return &design.RouteDefinition{Verb: "TRACE", Path: path}
 }
 
 // CONNECT creates a route using the GET HTTP method.
-func CONNECT(path string) *RouteDefinition {
-	return &RouteDefinition{Verb: "CONNECT", Path: path}
+func CONNECT(path string) *design.RouteDefinition {
+	return &design.RouteDefinition{Verb: "CONNECT", Path: path}
 }
 
 // PATCH creates a route using the PATCH HTTP method.
-func PATCH(path string) *RouteDefinition {
-	return &RouteDefinition{Verb: "PATCH", Path: path}
+func PATCH(path string) *design.RouteDefinition {
+	return &design.RouteDefinition{Verb: "PATCH", Path: path}
 }
 
 // Headers implements the DSL for describing HTTP headers. The DSL syntax is identical to the one
@@ -151,9 +151,9 @@ func Headers(dsl func()) {
 			return
 		}
 		var mtid string
-		if pa, ok := r.Parent.(*ResourceDefinition); ok {
+		if pa, ok := r.Parent.(*design.ResourceDefinition); ok {
 			mtid = pa.MediaType
-		} else if pa, ok := r.Parent.(*ActionDefinition); ok {
+		} else if pa, ok := r.Parent.(*design.ActionDefinition); ok {
 			mtid = pa.Parent.MediaType
 		}
 		h := newAttribute(mtid)
@@ -211,29 +211,29 @@ func Payload(p interface{}, dsls ...func()) {
 		return
 	}
 	if a, ok := actionDefinition(true); ok {
-		var att *AttributeDefinition
+		var att *design.AttributeDefinition
 		var dsl func()
 		switch actual := p.(type) {
 		case func():
 			dsl = actual
 			att = newAttribute(a.Parent.MediaType)
-			att.Type = Object{}
-		case *AttributeDefinition:
+			att.Type = design.Object{}
+		case *design.AttributeDefinition:
 			att = actual.Dup()
-		case DataStructure:
+		case design.DataStructure:
 			att = actual.Definition().Dup()
 		case string:
-			ut, ok := Design.Types[actual]
+			ut, ok := design.Design.Types[actual]
 			if !ok {
 				ReportError("unknown payload type %s", actual)
 			}
 			att = ut.AttributeDefinition.Dup()
-		case *Array:
-			att = &AttributeDefinition{Type: actual}
-		case *Hash:
-			att = &AttributeDefinition{Type: actual}
-		case Primitive:
-			att = &AttributeDefinition{Type: actual}
+		case *design.Array:
+			att = &design.AttributeDefinition{Type: actual}
+		case *design.Hash:
+			att = &design.AttributeDefinition{Type: actual}
+		case design.Primitive:
+			att = &design.AttributeDefinition{Type: actual}
 		}
 		if len(dsls) == 1 {
 			if dsl != nil {
@@ -246,7 +246,7 @@ func Payload(p interface{}, dsls ...func()) {
 		}
 		rn := inflect.Camelize(a.Parent.Name)
 		an := inflect.Camelize(a.Name)
-		a.Payload = &UserTypeDefinition{
+		a.Payload = &design.UserTypeDefinition{
 			AttributeDefinition: att,
 			TypeName:            fmt.Sprintf("%s%sPayload", an, rn),
 		}
@@ -255,10 +255,10 @@ func Payload(p interface{}, dsls ...func()) {
 
 // newAttribute creates a new attribute definition using the media type with the given identifier
 // as base type.
-func newAttribute(baseMT string) *AttributeDefinition {
-	var base DataType
-	if mt, ok := Design.MediaTypes[baseMT]; ok {
+func newAttribute(baseMT string) *design.AttributeDefinition {
+	var base design.DataType
+	if mt, ok := design.Design.MediaTypes[baseMT]; ok {
 		base = mt.Type
 	}
-	return &AttributeDefinition{Reference: base}
+	return &design.AttributeDefinition{Reference: base}
 }

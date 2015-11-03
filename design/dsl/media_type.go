@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"bitbucket.org/pkg/inflect"
-	. "github.com/raphael/goa/design"
+	"github.com/raphael/goa/design"
 )
 
 // Counter used to create unique media type names for identifier-less media types.
@@ -55,12 +55,12 @@ var mediaTypeCount int
 // 	})
 //
 // This function returns the media type definition so it can be referred to throughout the DSL.
-func MediaType(identifier string, dsl func()) *MediaTypeDefinition {
-	if Design == nil {
+func MediaType(identifier string, dsl func()) *design.MediaTypeDefinition {
+	if design.Design == nil {
 		InitDesign()
 	}
-	if Design.MediaTypes == nil {
-		Design.MediaTypes = make(map[string]*MediaTypeDefinition)
+	if design.Design.MediaTypes == nil {
+		design.Design.MediaTypes = make(map[string]*design.MediaTypeDefinition)
 	}
 	if topLevelDefinition(true) {
 		identifier, params, err := mime.ParseMediaType(identifier)
@@ -80,12 +80,12 @@ func MediaType(identifier string, dsl func()) *MediaTypeDefinition {
 			mediaTypeCount++
 			typeName = fmt.Sprintf("MediaType%d", mediaTypeCount)
 		}
-		if _, ok := Design.MediaTypes[identifier]; ok {
+		if _, ok := design.Design.MediaTypes[identifier]; ok {
 			ReportError("media type %#v is defined twice", identifier)
 			return nil
 		}
-		mt := NewMediaTypeDefinition(typeName, identifier, dsl)
-		Design.MediaTypes[identifier] = mt
+		mt := design.NewMediaTypeDefinition(typeName, identifier, dsl)
+		design.Design.MediaTypes[identifier] = mt
 		return mt
 	}
 	return nil
@@ -101,7 +101,7 @@ func MediaType(identifier string, dsl func()) *MediaTypeDefinition {
 // Media can be used inside Response or ResponseTemplate.
 func Media(val interface{}) {
 	if r, ok := responseDefinition(true); ok {
-		if m, ok := val.(*MediaTypeDefinition); ok {
+		if m, ok := val.(*design.MediaTypeDefinition); ok {
 			r.MediaType = m.Identifier
 		} else if identifier, ok := val.(string); ok {
 			r.MediaType = identifier
@@ -138,7 +138,7 @@ func Media(val interface{}) {
 //
 // defines the "name" and "vintage" attributes with the same type and validations as defined in
 // the Bottle type.
-func Reference(t DataType) {
+func Reference(t design.DataType) {
 	if mt, ok := mediaTypeDefinition(false); ok {
 		mt.Reference = t
 	} else if ut, ok := typeDefinition(true); ok {
@@ -183,14 +183,14 @@ func View(name string, dsl ...func()) {
 			return
 		}
 		if mt.Views == nil {
-			mt.Views = make(map[string]*ViewDefinition)
+			mt.Views = make(map[string]*design.ViewDefinition)
 		} else {
 			if _, ok = mt.Views[name]; ok {
 				ReportError("multiple definitions for view %#v in media type %#v", name, mt.TypeName)
 				return
 			}
 		}
-		at := &AttributeDefinition{}
+		at := &design.AttributeDefinition{}
 		ok := false
 		if len(dsl) > 0 {
 			ok = executeDSL(dsl[0], at)
@@ -198,7 +198,7 @@ func View(name string, dsl ...func()) {
 			// inherit view from collection element if present
 			elem := mt.Type.ToArray().ElemType
 			if elem != nil {
-				if pa, ok2 := elem.Type.(*MediaTypeDefinition); ok2 {
+				if pa, ok2 := elem.Type.(*design.MediaTypeDefinition); ok2 {
 					if v, ok2 := pa.Views[name]; ok2 {
 						at = v.AttributeDefinition
 						ok = true
@@ -224,7 +224,7 @@ func View(name string, dsl ...func()) {
 					}
 				}
 			}
-			mt.Views[name] = &ViewDefinition{
+			mt.Views[name] = &design.ViewDefinition{
 				AttributeDefinition: at,
 				Name:                name,
 				Parent:              mt,
@@ -258,14 +258,14 @@ func Links(dsl func()) {
 func Link(name string, view ...string) {
 	if mt, ok := mediaTypeDefinition(true); ok {
 		if mt.Links == nil {
-			mt.Links = make(map[string]*LinkDefinition)
+			mt.Links = make(map[string]*design.LinkDefinition)
 		} else {
 			if _, ok := mt.Links[name]; ok {
 				ReportError("duplicate definition for link %#v", name)
 				return
 			}
 		}
-		link := &LinkDefinition{Name: name, Parent: mt}
+		link := &design.LinkDefinition{Name: name, Parent: mt}
 		if len(view) > 1 {
 			ReportError("invalid syntax in Link definition for %#v, allowed syntax is Link(name) or Link(name, view)", name)
 		}
@@ -283,7 +283,7 @@ func Link(name string, view ...string) {
 // actions. This function can be called from any place where a media type can be used.
 // The resulting media type identifier is built from the element media type by appending the media
 // type parameter "type" with value "collection".
-func CollectionOf(m *MediaTypeDefinition, dsl ...func()) *MediaTypeDefinition {
+func CollectionOf(m *design.MediaTypeDefinition, dsl ...func()) *design.MediaTypeDefinition {
 	id := m.Identifier
 	mediatype, params, err := mime.ParseMediaType(id)
 	if err != nil {
@@ -306,17 +306,17 @@ func CollectionOf(m *MediaTypeDefinition, dsl ...func()) *MediaTypeDefinition {
 	}
 	id = mime.FormatMediaType(mediatype, params)
 	typeName := m.TypeName + "Collection"
-	mt := NewMediaTypeDefinition(typeName, id, func() {
+	mt := design.NewMediaTypeDefinition(typeName, id, func() {
 		if mt, ok := mediaTypeDefinition(true); ok {
 			mt.TypeName = typeName
-			mt.AttributeDefinition = &AttributeDefinition{Type: ArrayOf(m)}
+			mt.AttributeDefinition = &design.AttributeDefinition{Type: ArrayOf(m)}
 			if len(dsl) > 0 {
 				executeDSL(dsl[0], mt)
 			}
 		}
 	})
 	if executeDSL(mt.DSL, mt) {
-		Design.MediaTypes[id] = mt
+		design.Design.MediaTypes[id] = mt
 	}
 	return mt
 }

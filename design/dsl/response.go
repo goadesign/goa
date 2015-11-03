@@ -1,6 +1,6 @@
 package dsl
 
-import . "github.com/raphael/goa/design"
+import "github.com/raphael/goa/design"
 
 // Response implements the response definition DSL. Response takes the name of the response as
 // first parameter. goa defines all the standard HTTP status name as global variables so they can be
@@ -52,7 +52,7 @@ import . "github.com/raphael/goa/design"
 func Response(name string, paramsAndDSL ...interface{}) {
 	if a, ok := actionDefinition(false); ok {
 		if a.Responses == nil {
-			a.Responses = make(map[string]*ResponseDefinition)
+			a.Responses = make(map[string]*design.ResponseDefinition)
 		}
 		if _, ok := a.Responses[name]; ok {
 			ReportError("response %s is defined twice", name)
@@ -67,7 +67,7 @@ func Response(name string, paramsAndDSL ...interface{}) {
 		}
 	} else if r, ok := resourceDefinition(true); ok {
 		if r.Responses == nil {
-			r.Responses = make(map[string]*ResponseDefinition)
+			r.Responses = make(map[string]*design.ResponseDefinition)
 		}
 		if _, ok := r.Responses[name]; ok {
 			ReportError("response %s is defined twice", name)
@@ -90,7 +90,7 @@ func Status(status int) {
 	}
 }
 
-func executeResponseDSL(name string, paramsAndDSL ...interface{}) *ResponseDefinition {
+func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.ResponseDefinition {
 	var params []string
 	var dsl func()
 	var ok bool
@@ -108,23 +108,23 @@ func executeResponseDSL(name string, paramsAndDSL ...interface{}) *ResponseDefin
 			}
 		}
 	}
-	var resp *ResponseDefinition
+	var resp *design.ResponseDefinition
 	if len(params) > 0 {
-		if tmpl, ok := Design.ResponseTemplates[name]; ok {
+		if tmpl, ok := design.Design.ResponseTemplates[name]; ok {
 			resp = tmpl.Template(params...)
-		} else if tmpl, ok := Design.DefaultResponseTemplates[name]; ok {
+		} else if tmpl, ok := design.Design.DefaultResponseTemplates[name]; ok {
 			resp = tmpl.Template(params...)
 		} else {
 			ReportError("no response template named %#v", name)
 			return nil
 		}
 	} else {
-		if ar, ok := Design.Responses[name]; ok {
+		if ar, ok := design.Design.Responses[name]; ok {
 			resp = ar.Dup()
-		} else if ar, ok := Design.DefaultResponses[name]; ok {
+		} else if ar, ok := design.Design.DefaultResponses[name]; ok {
 			resp = ar.Dup()
 		} else {
-			resp = &ResponseDefinition{Name: name}
+			resp = &design.ResponseDefinition{Name: name}
 		}
 	}
 	if (dsl != nil) && !executeDSL(dsl, resp) {

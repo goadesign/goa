@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	. "github.com/raphael/goa/design"
+	"github.com/raphael/goa/design"
 )
 
 // Attribute implements the attribute definition DSL. An attribute describes a data structure
@@ -72,7 +72,7 @@ import (
 //
 //	 Attribute(name string) /* dataType is String */
 func Attribute(name string, args ...interface{}) {
-	var parent *AttributeDefinition
+	var parent *design.AttributeDefinition
 	if at, ok := attributeDefinition(false); ok {
 		parent = at
 	} else if mt, ok := mediaTypeDefinition(true); ok {
@@ -80,12 +80,12 @@ func Attribute(name string, args ...interface{}) {
 	}
 	if parent != nil {
 		if parent.Type == nil {
-			parent.Type = Object{}
-		} else if _, ok := parent.Type.(Object); !ok {
+			parent.Type = design.Object{}
+		} else if _, ok := parent.Type.(design.Object); !ok {
 			ReportError("can't define child attributes on attribute of type %s", parent.Type.Name())
 			return
 		}
-		var baseAttr *AttributeDefinition
+		var baseAttr *design.AttributeDefinition
 		if parent.Reference != nil {
 			for n, att := range parent.Reference.ToObject() {
 				if n == name {
@@ -94,7 +94,7 @@ func Attribute(name string, args ...interface{}) {
 				}
 			}
 		}
-		var dataType DataType
+		var dataType design.DataType
 		var description string
 		var dsl func()
 		var ok bool
@@ -102,18 +102,18 @@ func Attribute(name string, args ...interface{}) {
 			if baseAttr != nil {
 				dataType = baseAttr.Type
 			} else {
-				dataType = String
+				dataType = design.String
 			}
 		} else if len(args) == 1 {
 			if dsl, ok = args[0].(func()); !ok {
-				if dataType, ok = args[0].(DataType); !ok {
+				if dataType, ok = args[0].(design.DataType); !ok {
 					invalidArgError("DataType or func()", args[0])
 				}
 			} else if baseAttr != nil {
 				dataType = baseAttr.Type
 			}
 		} else if len(args) == 2 {
-			if dataType, ok = args[0].(DataType); !ok {
+			if dataType, ok = args[0].(design.DataType); !ok {
 				invalidArgError("DataType", args[0])
 			}
 			if dsl, ok = args[1].(func()); !ok {
@@ -122,7 +122,7 @@ func Attribute(name string, args ...interface{}) {
 				}
 			}
 		} else if len(args) == 3 {
-			if dataType, ok = args[0].(DataType); !ok {
+			if dataType, ok = args[0].(design.DataType); !ok {
 				invalidArgError("DataType", args[0])
 			}
 			if description, ok = args[1].(string); !ok {
@@ -134,7 +134,7 @@ func Attribute(name string, args ...interface{}) {
 		} else {
 			ReportError("too many arguments in call to Attribute")
 		}
-		var att *AttributeDefinition
+		var att *design.AttributeDefinition
 		if baseAttr != nil {
 			att = baseAttr
 			if description != "" {
@@ -144,7 +144,7 @@ func Attribute(name string, args ...interface{}) {
 				att.Type = dataType
 			}
 		} else {
-			att = &AttributeDefinition{
+			att = &design.AttributeDefinition{
 				Type:        dataType,
 				Description: description,
 			}
@@ -155,9 +155,9 @@ func Attribute(name string, args ...interface{}) {
 		}
 		if att.Type == nil {
 			// DSL did not contain an "Attribute" declaration
-			att.Type = String
+			att.Type = design.String
 		}
-		parent.Type.(Object)[name] = att
+		parent.Type.(design.Object)[name] = att
 	}
 }
 
@@ -219,7 +219,7 @@ func Enum(val ...interface{}) {
 			}
 		}
 		if ok {
-			a.Validations = append(a.Validations, &EnumValidationDefinition{Values: val})
+			a.Validations = append(a.Validations, &design.EnumValidationDefinition{Values: val})
 		}
 	}
 }
@@ -259,7 +259,7 @@ var SupportedValidationFormats = []string{
 // "regexp": RE2 regular expression
 func Format(f string) {
 	if a, ok := attributeDefinition(true); ok {
-		if a.Type != nil && a.Type.Kind() != StringKind {
+		if a.Type != nil && a.Type.Kind() != design.StringKind {
 			incompatibleAttributeType("format", a.Type.Name(), "a string")
 		} else {
 			supported := false
@@ -273,7 +273,7 @@ func Format(f string) {
 				ReportError("unsupported format %#v, supported formats are: %s",
 					f, strings.Join(SupportedValidationFormats, ", "))
 			} else {
-				a.Validations = append(a.Validations, &FormatValidationDefinition{Format: f})
+				a.Validations = append(a.Validations, &design.FormatValidationDefinition{Format: f})
 			}
 		}
 	}
@@ -283,14 +283,14 @@ func Format(f string) {
 // See http://json-schema.org/latest/json-schema-validation.html#anchor33.
 func Pattern(p string) {
 	if a, ok := attributeDefinition(true); ok {
-		if a.Type != nil && a.Type.Kind() != StringKind {
+		if a.Type != nil && a.Type.Kind() != design.StringKind {
 			incompatibleAttributeType("pattern", a.Type.Name(), "a string")
 		} else {
 			_, err := regexp.Compile(p)
 			if err != nil {
 				ReportError("invalid pattern %#v, %s", p, err)
 			} else {
-				a.Validations = append(a.Validations, &PatternValidationDefinition{Pattern: p})
+				a.Validations = append(a.Validations, &design.PatternValidationDefinition{Pattern: p})
 			}
 		}
 	}
@@ -300,10 +300,10 @@ func Pattern(p string) {
 // See http://json-schema.org/latest/json-schema-validation.html#anchor21.
 func Minimum(val int) {
 	if a, ok := attributeDefinition(true); ok {
-		if a.Type != nil && a.Type.Kind() != IntegerKind && a.Type.Kind() != NumberKind {
+		if a.Type != nil && a.Type.Kind() != design.IntegerKind && a.Type.Kind() != design.NumberKind {
 			incompatibleAttributeType("minimum", a.Type.Name(), "an integer or a number")
 		} else {
-			a.Validations = append(a.Validations, &MinimumValidationDefinition{Min: val})
+			a.Validations = append(a.Validations, &design.MinimumValidationDefinition{Min: val})
 		}
 	}
 }
@@ -312,10 +312,10 @@ func Minimum(val int) {
 // See http://json-schema.org/latest/json-schema-validation.html#anchor17.
 func Maximum(val int) {
 	if a, ok := attributeDefinition(true); ok {
-		if a.Type != nil && a.Type.Kind() != IntegerKind && a.Type.Kind() != NumberKind {
+		if a.Type != nil && a.Type.Kind() != design.IntegerKind && a.Type.Kind() != design.NumberKind {
 			incompatibleAttributeType("maximum", a.Type.Name(), "an integer or a number")
 		} else {
-			a.Validations = append(a.Validations, &MaximumValidationDefinition{Max: val})
+			a.Validations = append(a.Validations, &design.MaximumValidationDefinition{Max: val})
 		}
 	}
 }
@@ -324,10 +324,10 @@ func Maximum(val int) {
 // See http://json-schema.org/latest/json-schema-validation.html#anchor45.
 func MinLength(val int) {
 	if a, ok := attributeDefinition(true); ok {
-		if a.Type != nil && a.Type.Kind() != StringKind && a.Type.Kind() != ArrayKind {
+		if a.Type != nil && a.Type.Kind() != design.StringKind && a.Type.Kind() != design.ArrayKind {
 			incompatibleAttributeType("minimum length", a.Type.Name(), "a string or an array")
 		} else {
-			a.Validations = append(a.Validations, &MinLengthValidationDefinition{MinLength: val})
+			a.Validations = append(a.Validations, &design.MinLengthValidationDefinition{MinLength: val})
 		}
 	}
 }
@@ -336,10 +336,10 @@ func MinLength(val int) {
 // See http://json-schema.org/latest/json-schema-validation.html#anchor42.
 func MaxLength(val int) {
 	if a, ok := attributeDefinition(true); ok {
-		if a.Type != nil && a.Type.Kind() != StringKind && a.Type.Kind() != ArrayKind {
+		if a.Type != nil && a.Type.Kind() != design.StringKind && a.Type.Kind() != design.ArrayKind {
 			incompatibleAttributeType("maximum length", a.Type.Name(), "a string or an array")
 		} else {
-			a.Validations = append(a.Validations, &MaxLengthValidationDefinition{MaxLength: val})
+			a.Validations = append(a.Validations, &design.MaxLengthValidationDefinition{MaxLength: val})
 		}
 	}
 }
@@ -347,7 +347,7 @@ func MaxLength(val int) {
 // Required adds a "required" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor61.
 func Required(names ...string) {
-	var at *AttributeDefinition
+	var at *design.AttributeDefinition
 	if a, ok := attributeDefinition(false); ok {
 		at = a
 	} else if mt, ok := mediaTypeDefinition(true); ok {
@@ -355,10 +355,10 @@ func Required(names ...string) {
 	} else {
 		return
 	}
-	if at.Type != nil && at.Type.Kind() != ObjectKind {
+	if at.Type != nil && at.Type.Kind() != design.ObjectKind {
 		incompatibleAttributeType("required", at.Type.Name(), "an object")
 	} else {
-		at.Validations = append(at.Validations, &RequiredValidationDefinition{Names: names})
+		at.Validations = append(at.Validations, &design.RequiredValidationDefinition{Names: names})
 	}
 }
 
