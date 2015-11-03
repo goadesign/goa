@@ -1,7 +1,7 @@
 /*
 Package goa provides the runtime support for goa web applications.
 
-Design & Code Generation
+Code Generation
 
 goa applications development begins with writing the *design* of an application. The design is
 described using the goa language implemented by the github.com/raphael/goa/design/dsl package.
