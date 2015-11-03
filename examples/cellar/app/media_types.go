@@ -795,52 +795,6 @@ func (mt *Bottle) Validate() (err error) {
 		err = goa.MissingAttributeError(`response`, "vineyard", err)
 	}
 
-	if mt.Rating < 1 {
-		err = goa.InvalidRangeError(`response.rating`, mt.Rating, 1, true, err)
-	}
-	if mt.Rating > 5 {
-		err = goa.InvalidRangeError(`response.rating`, mt.Rating, 5, false, err)
-	}
-	if len(mt.Varietal) < 4 {
-		err = goa.InvalidLengthError(`response.varietal`, mt.Varietal, 4, true, err)
-	}
-	if mt.Color != "" {
-		if !(mt.Color == "red" || mt.Color == "white" || mt.Color == "rose" || mt.Color == "yellow" || mt.Color == "sparkling") {
-			err = goa.InvalidEnumValueError(`response.color`, mt.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
-		}
-	}
-	if len(mt.Characteristics) < 10 {
-		err = goa.InvalidLengthError(`response.characteristics`, mt.Characteristics, 10, true, err)
-	}
-	if len(mt.Characteristics) > 300 {
-		err = goa.InvalidLengthError(`response.characteristics`, mt.Characteristics, 300, false, err)
-	}
-	if mt.UpdatedAt != "" {
-		if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.UpdatedAt); err2 != nil {
-			err = goa.InvalidFormatError(`response.updated_at`, mt.UpdatedAt, goa.FormatDateTime, err2, err)
-		}
-	}
-	if len(mt.Country) < 2 {
-		err = goa.InvalidLengthError(`response.country`, mt.Country, 2, true, err)
-	}
-	if mt.Vintage < 1900 {
-		err = goa.InvalidRangeError(`response.vintage`, mt.Vintage, 1900, true, err)
-	}
-	if mt.Vintage > 2020 {
-		err = goa.InvalidRangeError(`response.vintage`, mt.Vintage, 2020, false, err)
-	}
-	if mt.Sweetness < 1 {
-		err = goa.InvalidRangeError(`response.sweetness`, mt.Sweetness, 1, true, err)
-	}
-	if mt.Sweetness > 5 {
-		err = goa.InvalidRangeError(`response.sweetness`, mt.Sweetness, 5, false, err)
-	}
-	if len(mt.Review) < 10 {
-		err = goa.InvalidLengthError(`response.review`, mt.Review, 10, true, err)
-	}
-	if len(mt.Review) > 300 {
-		err = goa.InvalidLengthError(`response.review`, mt.Review, 300, false, err)
-	}
 	if mt.Account.CreatedAt != "" {
 		if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.Account.CreatedAt); err2 != nil {
 			err = goa.InvalidFormatError(`response.account.created_at`, mt.Account.CreatedAt, goa.FormatDateTime, err2, err)
@@ -851,6 +805,20 @@ func (mt *Bottle) Validate() (err error) {
 			err = goa.InvalidFormatError(`response.account.created_by`, mt.Account.CreatedBy, goa.FormatEmail, err2, err)
 		}
 	}
+	if len(mt.Characteristics) < 10 {
+		err = goa.InvalidLengthError(`response.characteristics`, mt.Characteristics, 10, true, err)
+	}
+	if len(mt.Characteristics) > 300 {
+		err = goa.InvalidLengthError(`response.characteristics`, mt.Characteristics, 300, false, err)
+	}
+	if mt.Color != "" {
+		if !(mt.Color == "red" || mt.Color == "white" || mt.Color == "rose" || mt.Color == "yellow" || mt.Color == "sparkling") {
+			err = goa.InvalidEnumValueError(`response.color`, mt.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
+		}
+	}
+	if len(mt.Country) < 2 {
+		err = goa.InvalidLengthError(`response.country`, mt.Country, 2, true, err)
+	}
 	if mt.CreatedAt != "" {
 		if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.CreatedAt); err2 != nil {
 			err = goa.InvalidFormatError(`response.created_at`, mt.CreatedAt, goa.FormatDateTime, err2, err)
@@ -859,8 +827,40 @@ func (mt *Bottle) Validate() (err error) {
 	if len(mt.Name) < 2 {
 		err = goa.InvalidLengthError(`response.name`, mt.Name, 2, true, err)
 	}
+	if mt.Rating < 1 {
+		err = goa.InvalidRangeError(`response.rating`, mt.Rating, 1, true, err)
+	}
+	if mt.Rating > 5 {
+		err = goa.InvalidRangeError(`response.rating`, mt.Rating, 5, false, err)
+	}
+	if len(mt.Review) < 10 {
+		err = goa.InvalidLengthError(`response.review`, mt.Review, 10, true, err)
+	}
+	if len(mt.Review) > 300 {
+		err = goa.InvalidLengthError(`response.review`, mt.Review, 300, false, err)
+	}
+	if mt.Sweetness < 1 {
+		err = goa.InvalidRangeError(`response.sweetness`, mt.Sweetness, 1, true, err)
+	}
+	if mt.Sweetness > 5 {
+		err = goa.InvalidRangeError(`response.sweetness`, mt.Sweetness, 5, false, err)
+	}
+	if mt.UpdatedAt != "" {
+		if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.UpdatedAt); err2 != nil {
+			err = goa.InvalidFormatError(`response.updated_at`, mt.UpdatedAt, goa.FormatDateTime, err2, err)
+		}
+	}
+	if len(mt.Varietal) < 4 {
+		err = goa.InvalidLengthError(`response.varietal`, mt.Varietal, 4, true, err)
+	}
 	if len(mt.Vineyard) < 2 {
 		err = goa.InvalidLengthError(`response.vineyard`, mt.Vineyard, 2, true, err)
+	}
+	if mt.Vintage < 1900 {
+		err = goa.InvalidRangeError(`response.vintage`, mt.Vintage, 1900, true, err)
+	}
+	if mt.Vintage > 2020 {
+		err = goa.InvalidRangeError(`response.vintage`, mt.Vintage, 2020, false, err)
 	}
 	return
 }
