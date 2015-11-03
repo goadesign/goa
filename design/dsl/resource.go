@@ -1,6 +1,6 @@
 package dsl
 
-import . "github.com/raphael/goa/design"
+import "github.com/raphael/goa/design"
 
 // Resource implements the resource definition DSL. There is one resource definition per resource
 // exposed by the API. The resource DSL allows setting the resource default media type. This media
@@ -32,21 +32,21 @@ import . "github.com/raphael/goa/design"
 //			// ... Action DSL
 //		})
 //	 })
-func Resource(name string, dsl func()) *ResourceDefinition {
-	if Design == nil {
+func Resource(name string, dsl func()) *design.ResourceDefinition {
+	if design.Design == nil {
 		InitDesign()
 	}
-	if Design.Resources == nil {
-		Design.Resources = make(map[string]*ResourceDefinition)
+	if design.Design.Resources == nil {
+		design.Design.Resources = make(map[string]*design.ResourceDefinition)
 	}
-	var resource *ResourceDefinition
+	var resource *design.ResourceDefinition
 	if topLevelDefinition(true) {
-		if _, ok := Design.Resources[name]; ok {
+		if _, ok := design.Design.Resources[name]; ok {
 			ReportError("resource %#v is defined twice", name)
 			return nil
 		}
-		resource = NewResourceDefinition(name, dsl)
-		Design.Resources[name] = resource
+		resource = design.NewResourceDefinition(name, dsl)
+		design.Design.Resources[name] = resource
 	}
 	return resource
 }
@@ -71,7 +71,7 @@ func Resource(name string, dsl func()) *ResourceDefinition {
 // Payload defines the payload attribute with the same type and validations.
 func DefaultMedia(val interface{}) {
 	if r, ok := resourceDefinition(true); ok {
-		if m, ok := val.(*MediaTypeDefinition); ok {
+		if m, ok := val.(*design.MediaTypeDefinition); ok {
 			if m.UserTypeDefinition == nil {
 				ReportError("invalid media type specification, media type is not initialized")
 			} else {
@@ -81,7 +81,7 @@ func DefaultMedia(val interface{}) {
 		} else if identifier, ok := val.(string); ok {
 			r.MediaType = identifier
 		} else {
-			ReportError("media type must be a string or a *MediaTypeDefinition, got %#v", val)
+			ReportError("media type must be a string or a *design.MediaTypeDefinition, got %#v", val)
 		}
 	}
 }

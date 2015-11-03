@@ -1,6 +1,6 @@
 package dsl
 
-import . "github.com/raphael/goa/design"
+import "github.com/raphael/goa/design"
 
 // Type implements the type definition DSL. A type definition describes a data structure consisting
 // of attributes. Each attribute has a type which can also refer to a type definition (or use a
@@ -24,27 +24,27 @@ import . "github.com/raphael/goa/design"
 // })
 //
 // This function returns the newly defined type so the value can be used throughout the DSL.
-func Type(name string, dsl func()) *UserTypeDefinition {
-	if Design == nil {
+func Type(name string, dsl func()) *design.UserTypeDefinition {
+	if design.Design == nil {
 		InitDesign()
 	}
-	if Design.Types == nil {
-		Design.Types = make(map[string]*UserTypeDefinition)
-	} else if _, ok := Design.Types[name]; ok {
+	if design.Design.Types == nil {
+		design.Design.Types = make(map[string]*design.UserTypeDefinition)
+	} else if _, ok := design.Design.Types[name]; ok {
 		ReportError("type %#v defined twice", name)
 		return nil
 	}
-	var t *UserTypeDefinition
+	var t *design.UserTypeDefinition
 	if topLevelDefinition(true) {
-		t = &UserTypeDefinition{
+		t = &design.UserTypeDefinition{
 			TypeName:            name,
-			AttributeDefinition: &AttributeDefinition{},
+			AttributeDefinition: &design.AttributeDefinition{},
 			DSL:                 dsl,
 		}
 		if dsl == nil {
-			t.Type = String
+			t.Type = design.String
 		}
-		Design.Types[name] = t
+		design.Design.Types[name] = t
 	}
 	return t
 }
@@ -64,9 +64,9 @@ func Type(name string, dsl func()) *UserTypeDefinition {
 //		})
 //		Payload(ArrayOf(Bottle))  // Equivalent to Payload(Bottles)
 //	})
-func ArrayOf(t DataType) *Array {
-	at := AttributeDefinition{Type: t}
-	return &Array{ElemType: &at}
+func ArrayOf(t design.DataType) *design.Array {
+	at := design.AttributeDefinition{Type: t}
+	return &design.Array{ElemType: &at}
 }
 
 // HashOf creates a hash map from its key and element types. The result can be used anywhere a type
@@ -83,8 +83,8 @@ func ArrayOf(t DataType) *Array {
 //			Member("ratings", HashOf(String, Integer)) // Artificial examples...
 //			Member("bottles", RatedBottles)
 //	})
-func HashOf(k, v DataType) *Hash {
-	kat := AttributeDefinition{Type: k}
-	vat := AttributeDefinition{Type: v}
-	return &Hash{KeyType: &kat, ElemType: &vat}
+func HashOf(k, v design.DataType) *design.Hash {
+	kat := design.AttributeDefinition{Type: k}
+	vat := design.AttributeDefinition{Type: v}
+	return &design.Hash{KeyType: &kat, ElemType: &vat}
 }
