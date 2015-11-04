@@ -47,8 +47,13 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		os.Remove(mainFile)
 	}
 	_, err := os.Stat(mainFile)
+	funcs := template.FuncMap{
+		"tempvar":            tempvar,
+		"generateJSONSchema": generateJSONSchema,
+		"goify":              codegen.Goify,
+		"okResp":             okResp,
+	}
 	if err != nil {
-		funcs := template.FuncMap{"tempvar": tempvar, "generateJSONSchema": generateJSONSchema}
 		tmpl, err := template.New("main").Funcs(funcs).Parse(mainTmpl)
 		if err != nil {
 			panic(err.Error()) // bug
@@ -85,7 +90,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 			return nil, err
 		}
 	}
-	tmpl, err := template.New("ctrl").Funcs(template.FuncMap{"okResp": okResp}).Parse(ctrlTmpl)
+	tmpl, err := template.New("ctrl").Funcs(funcs).Parse(ctrlTmpl)
 	if err != nil {
 		panic(err.Error()) // bug
 	}
@@ -96,7 +101,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	imp = filepath.Join(imp, "app")
 	imports := []*codegen.ImportSpec{codegen.SimpleImport(imp)}
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
-		filename := filepath.Join(codegen.OutputDir, r.FormatName(false)) + ".go"
+		filename := filepath.Join(codegen.OutputDir, r.FormatName(true)) + ".go"
 		if Force {
 			if err := os.Remove(filename); err != nil {
 				return err
@@ -191,9 +196,9 @@ func main() {
 	api.Use(goa.RequestID())
 	api.Use(goa.LogRequest())
 
-{{range $name, $res := .Resources}}	// Mount "{{$res.FormatName true true}}" controller
-	{{$tmp := tempvar}}{{$tmp}} := New{{$res.FormatName false false}}Controller()
-	app.Mount{{$res.FormatName false false}}Controller(api, {{$tmp}})
+{{range $name, $res := .Resources}}	// Mount "{{$res.Name}}" controller
+	{{$tmp := tempvar}}{{$tmp}} := New{{goify $res.Name true}}Controller()
+	app.Mount{{goify $res.Name true}}Controller(api, {{$tmp}})
 {{end}}{{if generateJSONSchema}}
 	// Mount JSON schema provider controller
 	schema.MountController(api)
@@ -202,16 +207,16 @@ func main() {
 	api.Run(":8080")
 }
 `
-const ctrlTmpl = `// {{$ctrlName := printf "%s%s" (.FormatName false false) "Controller"}}{{$ctrlName}} implements the {{.FormatName true false}} resource.
+const ctrlTmpl = `// {{$ctrlName := printf "%s%s" (goify .Name true) "Controller"}}{{$ctrlName}} implements the {{.Name}} resource.
 type {{$ctrlName}} struct {}
 
-// New{{$ctrlName}} creates a {{.FormatName true false}} controller.
+// New{{$ctrlName}} creates a {{.Name}} controller.
 func New{{$ctrlName}}() *{{$ctrlName}} {
 	return &{{$ctrlName}}{}
 }
 {{$ctrl := .}}{{range .Actions}}
-// {{.Name}} runs the {{.FormatName false}} action.
-func (c *{{$ctrlName}}) {{.FormatName false}}(ctx *app.{{.FormatName false}}{{$ctrl.FormatName false false}}Context) error {
+// {{goify .Name true}} runs the {{.Name}} action.
+func (c *{{$ctrlName}}) {{goify .Name true}}(ctx *app.{{goify .Name true}}{{goify $ctrl.Name true}}Context) error {
 {{$ok := okResp .}}{{if $ok}}	res := {{$ok.TypeRef}}{}
 {{end}}	return {{if $ok}}ctx.{{$ok.Name}}(res{{if $ok.HasMultipleViews}}, "default"{{end}}){{else}}nil{{end}}
 }
