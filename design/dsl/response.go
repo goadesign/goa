@@ -173,6 +173,7 @@ const (
 	RequestedRangeNotSatisfiable = "RequestedRangeNotSatisfiable"
 	ExpectationFailed            = "ExpectationFailed"
 	Teapot                       = "Teapot"
+	UnprocessableEntity          = "UnprocessableEntity"
 
 	InternalServerError     = "InternalServerError"
 	NotImplemented          = "NotImplemented"

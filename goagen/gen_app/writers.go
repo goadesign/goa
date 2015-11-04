@@ -390,13 +390,13 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 	// ctxRespT generates response helper methods GoGenerator
 	// template input: *ContextTemplateData
 	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{goify .Name true}} sends a HTTP response with status code {{.Status}}.
-func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp {{gotyperef $mt 0}}{{if gt (len $mt.Views) 1}}, view {{gotypename $mt 0}}ViewEnum{{end}}{{end}}) error {
+	func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp {{gotyperef $mt 0}}{{if gt (len $mt.Views) 1}}, view {{gotypename $mt 0}}ViewEnum{{end}}{{else if .MediaType}}resp []byte{{end}}) error {
 {{if $mt}}	r, err := resp.Dump({{if gt (len $mt.Views) 1}}view{{end}})
 	if err != nil {
 		return fmt.Errorf("invalid response: %s", err)
 	}
 	ctx.Header().Set("Content-Type", "{{$mt.Identifier}}; charset=utf-8")
-	return ctx.JSON({{.Status}}, r){{else}}return ctx.Respond({{.Status}}, nil){{end}}
+	return ctx.JSON({{.Status}}, r){{else}}return ctx.Respond({{.Status}}, {{if and (not $mt) .MediaType}}resp{{else}}nil{{end}}){{end}}
 }
 {{end}}`
 

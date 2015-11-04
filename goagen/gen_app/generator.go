@@ -144,11 +144,11 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	g.ControllersWriter.WriteHeader(title, TargetPackage, imports)
 	var controllersData []*ControllerTemplateData
 	api.IterateResources(func(r *design.ResourceDefinition) error {
-		data := &ControllerTemplateData{Resource: r.FormatName(false)}
+		data := &ControllerTemplateData{Resource: codegen.Goify(r.Name, true)}
 		err := r.IterateActions(func(a *design.ActionDefinition) error {
-			context := fmt.Sprintf("%s%sContext", a.FormatName(false), r.FormatName(false))
+			context := fmt.Sprintf("%s%sContext", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			action := map[string]interface{}{
-				"Name":    a.FormatName(false),
+				"Name":    codegen.Goify(a.Name, true),
 				"Routes":  a.Routes,
 				"Context": context,
 			}
