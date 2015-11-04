@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
 
@@ -791,6 +792,9 @@ func (r *RouteDefinition) Params() []string {
 // FullPath returns the action full path computed by concatenating the API and resource base paths
 // with the action specific path.
 func (r *RouteDefinition) FullPath() string {
+	if strings.HasPrefix(r.Path, "//") {
+		return httprouter.CleanPath(r.Path[1:])
+	}
 	var base string
 	if r.Parent != nil && r.Parent.Parent != nil {
 		base = r.Parent.Parent.FullPath()
