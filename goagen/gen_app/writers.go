@@ -377,9 +377,9 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 	} else {
 {{else}}	if ok {
 {{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (goify $name true)) 2)}}{{if $ctx.MustSetHas $name}}		ctx.Has{{goify $name true}} = true
+{{end}}{{$validation := validationChecker $att (printf "ctx.%s" (goify $name true)) $name}}{{if $validation}}{{$validation}}
 {{end}}	}
-{{$validation := validationChecker $att $name $name}}{{if $validation}}{{$validation}}
-{{end}}{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	p, err := New{{gotypename .Payload 0}}(c.Payload())
+{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	p, err := New{{gotypename .Payload 0}}(c.Payload())
 	if err != nil {
 		return nil, err
 	}
