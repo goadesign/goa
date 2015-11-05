@@ -65,8 +65,8 @@ const (
 	}`
 
 	patternValCode = `	if val != "" {
-		if ok := goa.ValidatePattern(.*, val); !ok {
-			err = goa.InvalidPatternError(` + "`context`" + `, val, .*, err)
+		if ok := goa.ValidatePattern(` + "`.*`" + `, val); !ok {
+			err = goa.InvalidPatternError(` + "`context`" + `, val, ` + "`.*`" + `, err)
 		}
 	}`
 )
