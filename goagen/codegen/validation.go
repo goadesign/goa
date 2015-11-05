@@ -182,8 +182,8 @@ const (
 {{end}}{{tabs .depth}}}`
 
 	patternValTmpl = `{{$depth := or (and (not .required) (add .depth 1)) .depth}}{{if not .required}}{{tabs .depth}}if {{.target}} != "" {
-{{end}}{{tabs $depth}}if ok := goa.ValidatePattern({{.pattern}}, {{.target}}); !ok {
-{{tabs $depth}}	err = goa.InvalidPatternError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{.pattern}}, err)
+{{end}}{{tabs $depth}}if ok := goa.ValidatePattern(` + "`{{.pattern}}`" + `, {{.target}}); !ok {
+{{tabs $depth}}	err = goa.InvalidPatternError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, ` + "`{{.pattern}}`" + `, err)
 {{tabs $depth}}}{{if not .required}}
 {{tabs .depth}}}{{end}}`
 
