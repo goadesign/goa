@@ -125,7 +125,13 @@ func attributeMarshalerR(att *design.AttributeDefinition, context, source, targe
 	validation := ValidationChecker(att, source, context)
 	if validation != "" {
 		if !strings.HasPrefix(strings.TrimLeft(" \t\n", marshaler), "if err == nil {") {
-			return validation + "\n	if err == nil {\n" + marshaler + "\n	}"
+			return fmt.Sprintf(
+				"%s\n%sif err == nil {\n%s\n%s}",
+				validation,
+				Tabs(depth),
+				marshaler,
+				Tabs(depth),
+			)
 		}
 		return validation + marshaler
 	}
