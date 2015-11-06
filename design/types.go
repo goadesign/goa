@@ -462,6 +462,20 @@ func (m *MediaTypeDefinition) Dup() DataType {
 	}
 }
 
+// ComputeViews returns the media type views recursing as necessary if the media type is a
+// collection.
+func (m *MediaTypeDefinition) ComputeViews() map[string]*ViewDefinition {
+	if m.Views != nil {
+		return m.Views
+	}
+	if m.IsArray() {
+		if mt, ok := m.ToArray().ElemType.Type.(*MediaTypeDefinition); ok {
+			return mt.ComputeViews()
+		}
+	}
+	return nil
+}
+
 // DataStructure implementation
 
 // Definition returns the underlying attribute definition.

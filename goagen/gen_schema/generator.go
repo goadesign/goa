@@ -94,15 +94,6 @@ func (g *Generator) Cleanup() {
 	g.genfiles = nil
 }
 
-// tempCount is the counter used to create unique temporary variable names.
-var tempCount int
-
-// tempvar generates a unique temp var name.
-func tempvar() string {
-	tempCount++
-	return fmt.Sprintf("c%d", tempCount)
-}
-
 const jsonSchemaTmpl = `
 // Cached schema
 var schema []byte

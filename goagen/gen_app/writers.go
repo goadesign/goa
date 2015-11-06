@@ -264,6 +264,8 @@ func NewMediaTypesWriter(filename string) (*MediaTypesWriter, error) {
 	funcMap["typeUnmarshaler"] = codegen.TypeUnmarshaler
 	funcMap["typeMarshaler"] = codegen.MediaTypeMarshaler
 	funcMap["recursiveValidate"] = codegen.RecursiveChecker
+	funcMap["tempvar"] = codegen.Tempvar
+	funcMap["newDumpData"] = newDumpData
 	mediaTypeTmpl, err := template.New("media type").Funcs(funcMap).Parse(mediaTypeT)
 	if err != nil {
 		return nil, err
@@ -304,8 +306,7 @@ func (w *UserTypesWriter) Execute(ut *design.UserTypeDefinition) error {
 	return w.UserTypeTmpl.Execute(w, ut)
 }
 
-// newCoerceData is a helper function that creates a map that can be given to the "Coerce"
-// template.
+// newCoerceData is a helper function that creates a map that can be given to the "Coerce" template.
 func newCoerceData(name string, att *design.AttributeDefinition, pkg string, depth int) map[string]interface{} {
 	return map[string]interface{}{
 		"Name":      name,
@@ -313,6 +314,17 @@ func newCoerceData(name string, att *design.AttributeDefinition, pkg string, dep
 		"Attribute": att,
 		"Pkg":       pkg,
 		"Depth":     depth,
+	}
+}
+
+// newDumpData is a helper function that creates a map that can be given to the "Dump" template.
+func newDumpData(mt *design.MediaTypeDefinition, context, source, target, view string) map[string]interface{} {
+	return map[string]interface{}{
+		"MediaType": mt,
+		"Context":   context,
+		"Source":    source,
+		"Target":    target,
+		"View":      view,
 	}
 }
 
@@ -457,7 +469,7 @@ func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} interfa
 
 	// mediaTypeT generates the code for a media type.
 	// template input: *design.MediaTypeDefinition
-	mediaTypeT = `// {{if .Description}}{{.Description}}{{else}}{{gotypename . 0}} media type{{end}}
+	mediaTypeT = `{{define "Dump"}}` + dumpT + `{{end}}` + `// {{if .Description}}{{.Description}}{{else}}{{gotypename . 0}} media type{{end}}
 // Identifier: {{.Identifier}}
 type {{gotypename . 0}} {{gotypedef . 0 false false}}{{if .Views}}
 
@@ -484,10 +496,10 @@ func Load{{gotypename . 0}}(raw interface{}) ({{gotyperef . 1}}, error) {
 func (mt {{gotyperef . 0}}) Dump({{if gt (len .Views) 1}}view {{gotypename . 0}}ViewEnum{{end}}) ({{gonative .}}, error) {
 	var err error
 	var res {{gonative .}}
-{{$mt := .}}{{if gt (len .Views) 1}}{{range .Views}}	if view == {{gotypename $mt 0}}{{goify .Name true}}View {
-		{{typeMarshaler $mt "" "mt" "res" .Name}}
+{{$mt := .}}{{if gt (len .ComputeViews) 1}}{{range .ComputeViews}}   if view == {{gotypename $mt 0}}{{goify .Name true}}View {
+		{{template "Dump" (newDumpData $mt (printf "%s view" .Name) "mt" "res" .Name)}}
 	}
-{{end}}{{else}}{{range $mt.Views}}{{typeMarshaler $mt "" "mt" "res" .Name}}{{/* ranges over the one element */}}
+{{end}}{{else}}{{range $mt.ComputeViews}}{{template "Dump" (newDumpData $mt (printf "%s view" .Name) "mt" "res" .Name)}}{{/* ranges over the one element */}}
 {{end}}{{end}}	return res, err
 }
 
@@ -497,6 +509,12 @@ func (mt {{gotyperef . 0}}) Validate() (err error) {
 {{end}} return
 }
 `
+
+	// dumpT generates the code for dumping a media type or media type collection element.
+	dumpT = `{{if .MediaType.IsArray}}	res = make({{gonative .MediaType}}, len({{.Source}}))
+{{$tmp := tempvar}}{{$i := tempvar}}	for {{$i}}, {{$tmp}} := range {{.Source}} {
+		{{template "Dump" (newDumpData .MediaType.ToArray.ElemType.Type (printf "%s[*]" .Context) $tmp (printf "%s[%s]" .Target $i) .View)}}
+	}{{else}}{{typeMarshaler .MediaType .Context .Source .Target .View}}{{end}}`
 
 	// userTypeT generates the code for a user type.
 	// template input: *design.UserTypeDefinition
