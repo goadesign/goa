@@ -41,7 +41,7 @@ func init() {
 		"gonative":           GoNativeType,
 		"tabs":               Tabs,
 		"add":                func(a, b int) int { return a + b },
-		"tempvar":            tempvar,
+		"tempvar":            Tempvar,
 		"has":                has,
 	}
 	if mArrayT, err = template.New("array marshaler").Funcs(fm).Parse(mArrayTmpl); err != nil {
@@ -666,6 +666,12 @@ func WriteTabs(buf *bytes.Buffer, count int) {
 	}
 }
 
+// Tempvar generates a unique variable name.
+func Tempvar() string {
+	TempCount++
+	return fmt.Sprintf("tmp%d", TempCount)
+}
+
 // reserved golang keywords
 var reserved = map[string]bool{
 	"byte":       true,
@@ -710,12 +716,6 @@ var reserved = map[string]bool{
 	"switch":      true,
 	"type":        true,
 	"var":         true,
-}
-
-// tempvar generates a unique temp var name.
-func tempvar() string {
-	TempCount++
-	return fmt.Sprintf("tmp%d", TempCount)
 }
 
 // has returns true is slice contains val, false otherwise.

@@ -9,6 +9,7 @@ import (
 )
 
 var (
+	arrayValT    *template.Template
 	enumValT     *template.Template
 	formatValT   *template.Template
 	patternValT  *template.Template
@@ -21,12 +22,16 @@ var (
 func init() {
 	var err error
 	fm := template.FuncMap{
-		"tabs":     Tabs,
-		"slice":    toSlice,
-		"oneof":    oneof,
-		"constant": constant,
-		"goify":    Goify,
-		"add":      func(a, b int) int { return a + b },
+		"tabs":             Tabs,
+		"slice":            toSlice,
+		"oneof":            oneof,
+		"constant":         constant,
+		"goify":            Goify,
+		"add":              func(a, b int) int { return a + b },
+		"recursiveChecker": RecursiveChecker,
+	}
+	if arrayValT, err = template.New("array").Funcs(fm).Parse(arrayValTmpl); err != nil {
+		panic(err)
 	}
 	if enumValT, err = template.New("enum").Funcs(fm).Parse(enumValTmpl); err != nil {
 		panic(err)
@@ -64,6 +69,17 @@ func RecursiveChecker(att *design.AttributeDefinition, target, context string) s
 			}
 			return nil
 		})
+	} else if a := att.Type.ToArray(); a != nil {
+		data := map[string]interface{}{
+			"attribute": att,
+			"context":   context,
+			"target":    target,
+			"depth":     1,
+		}
+		validation := runTemplate(arrayValT, data)
+		if validation != "" {
+			checks = append(checks, validation)
+		}
 	}
 	return strings.Join(checks, "\n")
 }
@@ -174,6 +190,10 @@ func constant(formatName string) string {
 }
 
 const (
+	arrayValTmpl = `{{$validation := recursiveChecker .attribute.Type.ToArray.ElemType "e" (printf "%s[*]" .context)}}{{if $validation}}{{tabs .depth}}for _, e := range {{.target}} {
+{{tabs .depth}}{{$validation}}
+{{tabs .depth}}}{{end}}`
+
 	enumValTmpl = `{{$depth := or (and (and (not .required) (eq .attribute.Type.Kind 4)) (add .depth 1)) .depth}}{{if not .required}}{{if eq .attribute.Type.Kind 4}}{{tabs .depth}}if {{.target}} != "" {
 {{else if gt .attribute.Type.Kind 4}}{{tabs $depth}}if {{.target}} != nil {
 {{end}}{{end}}{{tabs $depth}}if !({{oneof .target .values}}) {
