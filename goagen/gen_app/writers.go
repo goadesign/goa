@@ -512,8 +512,8 @@ func (mt {{gotyperef . 0}}) Validate() (err error) {
 
 	// dumpT generates the code for dumping a media type or media type collection element.
 	dumpT = `{{if .MediaType.IsArray}}	res = make({{gonative .MediaType}}, len({{.Source}}))
-{{$tmp := tempvar}}{{$i := tempvar}}	for {{$i}}, {{$tmp}} := range {{.Source}} {
-		{{template "Dump" (newDumpData .MediaType.ToArray.ElemType.Type (printf "%s[*]" .Context) $tmp (printf "%s[%s]" .Target $i) .View)}}
+{{$tmp := tempvar}}	for i, {{$tmp}} := range {{.Source}} {
+		{{template "Dump" (newDumpData .MediaType.ToArray.ElemType.Type (printf "%s[*]" .Context) $tmp (printf "%s[i]" .Target) .View)}}
 	}{{else}}{{typeMarshaler .MediaType .Context .Source .Target .View}}{{end}}`
 
 	// userTypeT generates the code for a user type.
