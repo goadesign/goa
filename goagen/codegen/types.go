@@ -16,15 +16,17 @@ var (
 	// TempCount holds the value appended to variable names to make them unique.
 	TempCount int
 
-	mArrayT          *template.Template
-	mObjectT         *template.Template
-	mHashT           *template.Template
-	mLinkT           *template.Template
-	mCollectionT     *template.Template
-	unmPrimitiveT    *template.Template
-	unmArrayT        *template.Template
-	unmObjectOrUserT *template.Template
-	unmHashT         *template.Template
+	mArrayT           *template.Template
+	mObjectT          *template.Template
+	mHashT            *template.Template
+	mLinkT            *template.Template
+	mCollectionT      *template.Template
+	unmPrimitiveT     *template.Template
+	unmUserPrimitiveT *template.Template
+	unmArrayT         *template.Template
+	unmObjectOrUserT  *template.Template
+	unmHashT          *template.Template
+	unmUserT          *template.Template
 )
 
 //  init instantiates the templates.
@@ -60,6 +62,9 @@ func init() {
 		panic(err)
 	}
 	if unmPrimitiveT, err = template.New("primitive unmarshaler").Funcs(fm).Parse(unmPrimitiveTmpl); err != nil {
+		panic(err)
+	}
+	if unmUserPrimitiveT, err = template.New("user primitive unmarshaler").Funcs(fm).Parse(unmUserPrimitiveTmpl); err != nil {
 		panic(err)
 	}
 	if unmArrayT, err = template.New("array unmarshaler").Funcs(fm).Parse(unmArrayTmpl); err != nil {
@@ -183,10 +188,10 @@ func hashMarshalerR(h *design.Hash, context, source, target string, depth int) s
 // attribute definitions.
 // The generated code assumes that there is a variable called "err" of type error that it can use
 // to record errors.
-func ObjectMarshaler(o design.Object, context, source, target string) string {
+func ObjectMarshaler(o design.DataType, context, source, target string) string {
 	return objectMarshalerR(o, nil, context, source, target, 1)
 }
-func objectMarshalerR(o design.Object, required []string, context, source, target string, depth int) string {
+func objectMarshalerR(o design.DataType, required []string, context, source, target string, depth int) string {
 	att := &design.AttributeDefinition{Type: o}
 	att.Validations = append(att.Validations, &design.RequiredValidationDefinition{Names: required})
 	data := map[string]interface{}{
@@ -322,11 +327,30 @@ func typeUnmarshalerR(t design.DataType, context, source, target string, depth i
 		return hashUnmarshalerR(actual, context, source, target, depth)
 	case design.Object:
 		return objectUnmarshalerR(actual, nil, context, source, target, depth)
-	case *design.UserTypeDefinition, *design.MediaTypeDefinition:
-		return namedTypeUnmarshalerR(actual, context, source, target, depth)
+	case *design.UserTypeDefinition:
+		if actual.IsObject() {
+			return objectUnmarshalerR(actual, nil, context, source, target, depth)
+		} else if actual.IsArray() {
+			return arrayUnmarshalerR(actual.ToArray(), context, source, target, depth)
+		} else if actual.IsHash() {
+			return hashUnmarshalerR(actual.ToHash(), context, source, target, depth)
+		}
+		return userPrimitiveUnmarshalerR(actual, context, source, target, depth)
+	case *design.MediaTypeDefinition:
+		return typeUnmarshalerR(actual.UserTypeDefinition, context, source, target, depth)
 	default:
 		panic(actual)
 	}
+}
+func userPrimitiveUnmarshalerR(u *design.UserTypeDefinition, context, source, target string, depth int) string {
+	data := map[string]interface{}{
+		"source":  source,
+		"target":  target,
+		"type":    u,
+		"context": context,
+		"depth":   depth,
+	}
+	return runTemplate(unmUserPrimitiveT, data)
 }
 
 // AttributeUnmarshaler produces the Go code that initializes an attribute given a deserialized
@@ -419,10 +443,10 @@ func hashUnmarshalerR(h *design.Hash, context, source, target string, depth int)
 // name of the variable to initialize.
 // The generated code assumes that there is a variable called "err" of type error that it can use
 // to record errors.
-func ObjectUnmarshaler(o design.Object, context, source, target string) string {
+func ObjectUnmarshaler(o design.DataType, context, source, target string) string {
 	return objectUnmarshalerR(o, nil, context, source, target, 1)
 }
-func objectUnmarshalerR(o design.Object, required []string, context, source, target string, depth int) string {
+func objectUnmarshalerR(o design.DataType, required []string, context, source, target string, depth int) string {
 	data := map[string]interface{}{
 		"type":     o,
 		"required": required,
@@ -430,43 +454,6 @@ func objectUnmarshalerR(o design.Object, required []string, context, source, tar
 		"source":   source,
 		"target":   target,
 		"depth":    depth,
-	}
-	return runTemplate(unmObjectOrUserT, data)
-}
-
-// NamedTypeUnmarshaler produces the Go code that initializes a named type from its deserialized
-// representation.
-// This include running any validation defined on the type.
-// source is the name of the variable that contains the raw interface{} value and target the
-// name of the variable to initialize.
-// context is used to keep track of recursion to produce helpful error messages in case of type
-// mismatch or validation error.
-// The generated code assumes that there is a variable called "err" of type error that it can use
-// to record errors.
-func NamedTypeUnmarshaler(t design.DataType, context, source, target string) string {
-	return namedTypeUnmarshalerR(t, context, source, target, 1)
-}
-func namedTypeUnmarshalerR(t design.DataType, context, source, target string, depth int) string {
-	var required []string
-	if ds, ok := t.(design.DataStructure); ok {
-		for _, v := range ds.Definition().Validations {
-			if r, ok := v.(*design.RequiredValidationDefinition); ok {
-				required = r.Names
-				break
-			}
-		}
-	}
-	data := map[string]interface{}{
-		"type":     t,
-		"context":  context,
-		"source":   source,
-		"target":   target,
-		"required": required,
-		"depth":    depth,
-	}
-	if t.IsArray() {
-		data["elemType"] = t.ToArray().ElemType
-		return runTemplate(unmArrayT, data)
 	}
 	return runTemplate(unmObjectOrUserT, data)
 }
@@ -582,12 +569,14 @@ func GoTypeName(t design.DataType, tabs int) string {
 		return GoNativeType(t)
 	case *design.Array:
 		return "[]" + GoTypeRef(actual.ElemType.Type, tabs+1)
-	case *design.MediaTypeDefinition:
-		return Goify(actual.TypeName, true)
-	case *design.UserTypeDefinition:
-		return Goify(actual.TypeName, true)
 	case design.Object:
 		return GoTypeDef(&design.AttributeDefinition{Type: actual}, tabs, false, false)
+	case *design.Hash:
+		return fmt.Sprintf("map[%s]%s", GoTypeRef(actual.KeyType.Type, tabs+1), GoTypeRef(actual.ElemType.Type, tabs+1))
+	case *design.UserTypeDefinition:
+		return Goify(actual.TypeName, true)
+	case *design.MediaTypeDefinition:
+		return Goify(actual.TypeName, true)
 	default:
 		panic(fmt.Sprintf("goa bug: unknown type %#v", actual))
 	}
@@ -611,12 +600,12 @@ func GoNativeType(t design.DataType) string {
 		}
 	case *design.Array:
 		return "[]" + GoNativeType(actual.ElemType.Type)
+	case design.Object, *design.Hash:
+		return "map[string]interface{}"
 	case *design.MediaTypeDefinition:
 		return GoNativeType(actual.Type)
 	case *design.UserTypeDefinition:
 		return GoNativeType(actual.Type)
-	case design.Object:
-		return "map[string]interface{}"
 	default:
 		panic(fmt.Sprintf("goa bug: unknown type %#v", actual))
 	}
@@ -810,11 +799,15 @@ const (
 {{end}}{{tabs .depth}}	{{.target}}["links"] = links
 }{{end}}`
 
-	unmPrimitiveTmpl = `{{if eq .type.Kind 2}}{{tabs .depth}}if f, ok := {{.source}}.(float64); ok {
-{{tabs .depth}}	{{.target}} = int(f)
-{{else}}{{tabs .depth}}if val, ok := {{.source}}.({{gotyperef .type (add .depth 1)}}); ok {
+	unmUserPrimitiveTmpl = `{{tabs .depth}}if val, ok := {{.source}}.({{gonative .type}}); ok {
+{{tabs .depth}}	{{.target}} = {{gotyperef .type 0}})val
+{{tabs .depth}}} else {
+{{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "{{gonative .type}}", err)
+{{tabs .depth}}}`
+
+	unmPrimitiveTmpl = `{{tabs .depth}}if val, ok := {{.source}}.({{gotyperef .type (add .depth 1)}}); ok {
 {{tabs .depth}}	{{.target}} = val
-{{end}}{{tabs .depth}}} else {
+{{tabs .depth}}} else {
 {{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "{{gotyperef .type (add .depth 1)}}", err)
 {{tabs .depth}}}`
 
