@@ -800,7 +800,7 @@ const (
 }{{end}}`
 
 	unmUserPrimitiveTmpl = `{{tabs .depth}}if val, ok := {{.source}}.({{gonative .type}}); ok {
-{{tabs .depth}}	{{.target}} = {{gotyperef .type 0}})val
+{{tabs .depth}}	{{.target}} = {{gotyperef .type 0}}(val)
 {{tabs .depth}}} else {
 {{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "{{gonative .type}}", err)
 {{tabs .depth}}}`
