@@ -328,8 +328,15 @@ func typeUnmarshalerR(t design.DataType, context, source, target string, depth i
 	case design.Object:
 		return objectUnmarshalerR(actual, nil, context, source, target, depth)
 	case *design.UserTypeDefinition:
+		var required []string
+		for _, v := range actual.Validations {
+			if r, ok := v.(*design.RequiredValidationDefinition); ok {
+				required = r.Names
+				break
+			}
+		}
 		if actual.IsObject() {
-			return objectUnmarshalerR(actual, nil, context, source, target, depth)
+			return objectUnmarshalerR(actual, required, context, source, target, depth)
 		} else if actual.IsArray() {
 			return arrayUnmarshalerR(actual.ToArray(), context, source, target, depth)
 		} else if actual.IsHash() {
