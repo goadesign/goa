@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
-
-	"bitbucket.org/pkg/inflect"
 )
 
 var (
@@ -396,12 +394,6 @@ func (r *ResourceDefinition) IterateActions(it ActionIterator) error {
 	return nil
 }
 
-// FormatName returns the name of the resource. The name can be formatted either camel or snake case
-// and plural or singular.
-func (r *ResourceDefinition) FormatName(snake bool) string {
-	return format(r.Name, &snake)
-}
-
 // CanonicalAction returns the canonical action of the resource if any.
 // The canonical action is used to compute hrefs to resources.
 func (r *ResourceDefinition) CanonicalAction() *ActionDefinition {
@@ -475,12 +467,6 @@ func (r *ResponseDefinition) Context() string {
 	return prefix + suffix
 }
 
-// FormatName returns the name of the response. The name can be formatted either
-// camel or snake case.
-func (r *ResponseDefinition) FormatName(snake bool) string {
-	return format(r.Name, &snake)
-}
-
 // Dup returns a copy of the response definition.
 func (r *ResponseDefinition) Dup() *ResponseDefinition {
 	res := ResponseDefinition{
@@ -548,12 +534,6 @@ func (a *ActionDefinition) Context() string {
 		prefix = a.Parent.Context()
 	}
 	return prefix + suffix
-}
-
-// FormatName returns the name of the action. The name can be formatted either
-// camel or snake case and plural or singular.
-func (a *ActionDefinition) FormatName(snake bool) string {
-	return format(a.Name, &snake)
 }
 
 // AllParams returns the path and query string parameters of the action across all its routes.
@@ -840,24 +820,6 @@ func (m *MaxLengthValidationDefinition) Context() string {
 // Context returns the generic definition name used in error messages.
 func (r *RequiredValidationDefinition) Context() string {
 	return "required field validation"
-}
-
-// format uses the inflect package to pluralize or singularize and camelize or underscore the given
-// string.
-func format(n string, snake *bool) string {
-	if snake != nil {
-		if *snake {
-			n = inflect.Underscore(n)
-		} else {
-			if n == "ok" {
-				return "OK"
-			} else if n == "id" {
-				return "ID"
-			}
-			n = inflect.Camelize(n)
-		}
-	}
-	return n
 }
 
 // ExtractWildcards returns the names of the wildcards that appear in path.

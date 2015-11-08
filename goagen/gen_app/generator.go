@@ -193,7 +193,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		}
 
 		data := ResourceData{
-			Name:              r.FormatName(false),
+			Name:              codegen.Goify(r.Name, true),
 			Identifier:        identifier,
 			Description:       r.Description,
 			Type:              m,

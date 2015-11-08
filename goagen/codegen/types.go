@@ -78,7 +78,7 @@ func init() {
 	}
 }
 
-// TypeMarshaler produces the Go code that initiliazes the variable named target which is an
+// TypeMarshaler produces the Go code that initializes the variable named target which is an
 // interface{} with the content of the variable named source which contains an instance of the type
 // data structure.
 // The code takes care of rendering media types according to the view defined on the attribute
@@ -372,17 +372,12 @@ func AttributeUnmarshaler(att *design.AttributeDefinition, context, source, targ
 	return attributeUnmarshalerR(att, context, source, target, 1)
 }
 func attributeUnmarshalerR(att *design.AttributeDefinition, context, source, target string, depth int) string {
-	var unmarshaler string
-	if o, ok := att.Type.(design.Object); ok {
-		unmarshaler = objectUnmarshalerR(o, att.AllRequired(), context, source, target, depth)
-	} else {
-		unmarshaler = typeUnmarshalerR(att.Type, context, source, target, depth)
-	}
+	unmarshaler := typeUnmarshalerR(att.Type, context, source, target, depth)
 	validation := ValidationChecker(att, target, context)
-	if validation != "" {
-		return unmarshaler + "\n	if err == nil {\n" + strings.Replace(validation, "\n", "\n\t", -1) + "\n	}"
+	if validation == "" {
+		return unmarshaler
 	}
-	return unmarshaler
+	return fmt.Sprintf("%s\n\tif err == nil {\n%s\n\t}", unmarshaler, strings.Replace(validation, "\n", "\n\t", -1))
 }
 
 // PrimitiveUnmarshaler produces the Go code that initializes a primitive type from its deserialized
@@ -538,7 +533,7 @@ func godef(ds design.DataStructure, tabs int, jsonTags, inner, res bool) string 
 		return name
 	case *design.MediaTypeDefinition:
 		if res && actual.Resource != nil {
-			return "*" + actual.Resource.FormatName(false)
+			return "*" + Goify(actual.Resource.Name, true)
 		}
 		name := GoTypeName(actual, tabs)
 		if actual.Type.IsObject() {

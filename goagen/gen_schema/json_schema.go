@@ -156,7 +156,7 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 	s.Description = r.Description
 	s.Type = JSONObject
 	s.Title = r.Name
-	definitions[r.FormatName(true)] = s
+	definitions[r.Name] = s
 	if mt, ok := api.MediaTypes[r.MediaType]; ok {
 		buildMediaTypeSchema(api, mt, s)
 	}
@@ -198,7 +198,7 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 		for i, r := range a.Routes {
 			link := JSONLink{
 				Title:        a.Name,
-				Rel:          a.FormatName(true),
+				Rel:          a.Name,
 				Href:         toSchemaHref(api, r),
 				Method:       r.Verb,
 				Schema:       requestSchema,
@@ -219,39 +219,39 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 
 // MediaTypeRef produces the JSON reference to the media type definition.
 func MediaTypeRef(api *design.APIDefinition, mt *design.MediaTypeDefinition) string {
-	if _, ok := definitions[mt.FormatName(true)]; !ok {
+	if _, ok := definitions[mt.Identifier]; !ok {
 		GenerateMediaTypeDefinition(api, mt)
 	}
-	return fmt.Sprintf("#/definitions/%s", mt.FormatName(true))
+	return fmt.Sprintf("#/definitions/%s", mt.Name)
 }
 
 // TypeRef produces the JSON reference to the type definition.
 func TypeRef(api *design.APIDefinition, ut *design.UserTypeDefinition) string {
-	if _, ok := definitions[ut.FormatName(true)]; !ok {
+	if _, ok := definitions[ut.TypeName]; !ok {
 		GenerateTypeDefinition(api, ut)
 	}
-	return fmt.Sprintf("#/definitions/%s", ut.FormatName(true))
+	return fmt.Sprintf("#/definitions/%s", ut.Name)
 }
 
 // GenerateMediaTypeDefinition produces the JSON schema corresponding to the given media type.
 func GenerateMediaTypeDefinition(api *design.APIDefinition, mt *design.MediaTypeDefinition) {
-	if _, ok := definitions[mt.FormatName(true)]; ok {
+	if _, ok := definitions[mt.Identifier]; ok {
 		return
 	}
 	s := NewJSONSchema()
 	s.Title = mt.TypeName
-	definitions[mt.FormatName(true)] = s
+	definitions[mt.Identifier] = s
 	buildMediaTypeSchema(api, mt, s)
 }
 
 // GenerateTypeDefinition produces the JSON schema corresponding to the given type.
 func GenerateTypeDefinition(api *design.APIDefinition, ut *design.UserTypeDefinition) {
-	if _, ok := definitions[ut.FormatName(true)]; ok {
+	if _, ok := definitions[ut.TypeName]; ok {
 		return
 	}
 	s := NewJSONSchema()
 	s.Title = ut.TypeName
-	definitions[ut.FormatName(true)] = s
+	definitions[ut.TypeName] = s
 	buildAttributeSchema(api, s, ut.AttributeDefinition)
 }
 
