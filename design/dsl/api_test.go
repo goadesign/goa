@@ -90,6 +90,65 @@ var _ = Describe("API", func() {
 			})
 		})
 
+		Context("with a terms of service", func() {
+			const terms = "terms"
+
+			BeforeEach(func() {
+				dsl = func() {
+					TermsOfService(terms)
+				}
+			})
+
+			It("sets the API terms of service", func() {
+				Ω(Design.TermsOfService).Should(Equal(terms))
+			})
+		})
+
+		Context("with contact information", func() {
+			const contactName = "contactName"
+			const contactEmail = "contactEmail"
+			const contactURL = "contactURL"
+
+			BeforeEach(func() {
+				dsl = func() {
+					Contact(func() {
+						Name(contactName)
+						Email(contactEmail)
+						URL(contactURL)
+					})
+				}
+			})
+
+			It("sets the contact information", func() {
+				Ω(Design.Contact).Should(Equal(&ContactDefinition{
+					Name:  contactName,
+					Email: contactEmail,
+					URL:   contactURL,
+				}))
+			})
+		})
+
+		Context("with license information", func() {
+			const licenseName = "licenseName"
+			const licenseURL = "licenseURL"
+
+			BeforeEach(func() {
+				dsl = func() {
+					License(func() {
+						Name(licenseName)
+						URL(licenseURL)
+					})
+				}
+			})
+
+			It("sets the API license information", func() {
+				Ω(Design.License).Should(Equal(&LicenseDefinition{
+					Name: licenseName,
+					URL:  licenseURL,
+				}))
+			})
+		})
+
 		Context("with a BasePath", func() {
 			const basePath = "basePath"
 

@@ -9,6 +9,16 @@ import "github.com/raphael/goa/design"
 // 	API("API name", func() {
 // 		Title("title")                          // API title used in documentation
 // 		Description("description")              // API description used in documentation
+//		TermsOfService("terms")
+//		Contact(func() {
+//			Name("contact name")
+//			Email("contact email")
+//			URL("contact URL")
+//		})
+//		License(func() {
+//			Name("license name")
+//			URL("license URL")
+//		})
 // 		BasePath("/base/:param")                // Common base path to all API actions
 // 		BaseParams(func() {                     // Common parameters to all API actions
 // 			Param("param")
@@ -105,6 +115,58 @@ func BaseParams(dsl func()) {
 		if executeDSL(dsl, params) {
 			r.BaseParams = params
 		}
+	}
+}
+
+// TermsOfService describes the API terms of services or links to them.
+func TermsOfService(terms string) {
+	if a, ok := apiDefinition(true); ok {
+		a.TermsOfService = terms
+	}
+}
+
+// Contact sets the API contact information.
+func Contact(dsl func()) {
+	if a, ok := apiDefinition(true); ok {
+		contact := new(design.ContactDefinition)
+		if executeDSL(dsl, contact) {
+			a.Contact = contact
+		}
+	}
+}
+
+// License sets the API license information.
+func License(dsl func()) {
+	if a, ok := apiDefinition(true); ok {
+		license := new(design.LicenseDefinition)
+		if executeDSL(dsl, license) {
+			a.License = license
+		}
+	}
+}
+
+// Name sets the contact or license name.
+func Name(name string) {
+	if c, ok := contactDefinition(false); ok {
+		c.Name = name
+	} else if l, ok := licenseDefinition(true); ok {
+		l.Name = name
+	}
+}
+
+// Email sets the contact email.
+func Email(email string) {
+	if c, ok := contactDefinition(true); ok {
+		c.Email = email
+	}
+}
+
+// URL sets the contact or license URL.
+func URL(url string) {
+	if c, ok := contactDefinition(false); ok {
+		c.URL = url
+	} else if l, ok := licenseDefinition(true); ok {
+		l.URL = url
 	}
 }
 
