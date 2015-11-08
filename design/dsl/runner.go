@@ -288,6 +288,26 @@ func apiDefinition(failIfNotAPI bool) (*design.APIDefinition, bool) {
 	return a, ok
 }
 
+// contactDefinition returns true and current context if it is an ContactDefinition,
+// nil and false otherwise.
+func contactDefinition(failIfNotContact bool) (*design.ContactDefinition, bool) {
+	a, ok := ctxStack.current().(*design.ContactDefinition)
+	if !ok && failIfNotContact {
+		incompatibleDSL(caller())
+	}
+	return a, ok
+}
+
+// licenseDefinition returns true and current context if it is an APIDefinition,
+// nil and false otherwise.
+func licenseDefinition(failIfNotLicense bool) (*design.LicenseDefinition, bool) {
+	l, ok := ctxStack.current().(*design.LicenseDefinition)
+	if !ok && failIfNotLicense {
+		incompatibleDSL(caller())
+	}
+	return l, ok
+}
+
 // mediaTypeDefinition returns true and current context if it is a MediaTypeDefinition,
 // nil and false otherwise.
 func mediaTypeDefinition(failIfNotMT bool) (*design.MediaTypeDefinition, bool) {

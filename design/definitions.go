@@ -37,6 +37,12 @@ type (
 		BasePath string
 		// Common path parameters to all API actions
 		BaseParams *AttributeDefinition
+		// TermsOfService describes or links to the API terms of service
+		TermsOfService string
+		// Contact provides the API users with contact information
+		Contact *ContactDefinition
+		// License describes the API license
+		License *LicenseDefinition
 		// Exposed resources indexed by name
 		Resources map[string]*ResourceDefinition
 		// Traits available to all API resources and actions indexed by name
@@ -55,6 +61,24 @@ type (
 		MediaTypes map[string]*MediaTypeDefinition
 		// dsl contains the DSL used to create this definition if any.
 		DSL func()
+	}
+
+	// ContactDefinition contains the API contact information.
+	ContactDefinition struct {
+		// Name of the contact person/organization
+		Name string
+		// Email address of the contact person/organization
+		Email string
+		// URL pointing to the contact information
+		URL string
+	}
+
+	// LicenseDefinition contains the license information for the API.
+	LicenseDefinition struct {
+		// Name of license used for the API
+		Name string
+		// URL to the license used for the API
+		URL string
 	}
 
 	// ResourceDefinition describes a REST resource.
@@ -443,6 +467,22 @@ func (r *ResourceDefinition) Parent() *ResourceDefinition {
 		}
 	}
 	return nil
+}
+
+// Context returns the generic definition name used in error messages.
+func (c *ContactDefinition) Context() string {
+	if c.Name != "" {
+		return fmt.Sprintf("contact %s", c.Name)
+	}
+	return "unnamed contact"
+}
+
+// Context returns the generic definition name used in error messages.
+func (l *LicenseDefinition) Context() string {
+	if l.Name != "" {
+		return fmt.Sprintf("license %s", l.Name)
+	}
+	return "unnamed license"
 }
 
 // Context returns the generic definition name used in error messages.
