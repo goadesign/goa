@@ -1,6 +1,10 @@
 package dsl
 
-import "github.com/raphael/goa/design"
+import (
+	"regexp"
+
+	"github.com/raphael/goa/design"
+)
 
 // API implements the top level API DSL. It defines the API name, description and other global
 // properties such as the base path to all the API resource actions. Here is an example showing all
@@ -10,15 +14,20 @@ import "github.com/raphael/goa/design"
 // 		Title("title")                          // API title used in documentation
 // 		Description("description")              // API description used in documentation
 //		TermsOfService("terms")
-//		Contact(func() {
+//		Contact(func() {			// API Contact information
 //			Name("contact name")
 //			Email("contact email")
 //			URL("contact URL")
 //		})
-//		License(func() {
+//		License(func() {			// API Licensing information
 //			Name("license name")
 //			URL("license URL")
 //		})
+//		Docs(func() {
+//			Doc("doc description", "doc URL")
+//			Doc("doc2 description", "doc2 URL")
+//		})
+//		Host("goa.design")                      // API hostname
 // 		BasePath("/base/:param")                // Common base path to all API actions
 // 		BaseParams(func() {                     // Common parameters to all API actions
 // 			Param("param")
@@ -125,6 +134,20 @@ func TermsOfService(terms string) {
 	}
 }
 
+// Regular expression used to validate RFC1035 hostnames*/
+var hostnameRegex = regexp.MustCompile(`^[[:alnum:]][[:alnum:]\-]{0,61}[[:alnum:]]|[[:alpha:]]$`)
+
+// Host sets the API hostname.
+func Host(host string) {
+	if a, ok := apiDefinition(true); ok {
+		if !hostnameRegex.MatchString(host) {
+			ReportError(`invalid hostname value "%s"`, host)
+		} else {
+			a.Host = host
+		}
+	}
+}
+
 // Contact sets the API contact information.
 func Contact(dsl func()) {
 	if a, ok := apiDefinition(true); ok {
@@ -142,6 +165,20 @@ func License(dsl func()) {
 		if executeDSL(dsl, license) {
 			a.License = license
 		}
+	}
+}
+
+// Docs provides a single external documentation pointer.
+func Docs(description, url string) {
+	if d, ok := docsDefinition(true); ok {
+		doc := struct {
+			Description string `json:"description,omitempty"`
+			URL         string `json:"url,omitempty"`
+		}{
+			Description: description,
+			URL:         url,
+		}
+		d = append(d, &doc)
 	}
 }
 

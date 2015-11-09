@@ -33,6 +33,8 @@ type (
 		Title string
 		// API description
 		Description string // API description
+		// API hostname
+		Host string
 		// Common base path to all API actions
 		BasePath string
 		// Common path parameters to all API actions
@@ -43,6 +45,8 @@ type (
 		Contact *ContactDefinition
 		// License describes the API license
 		License *LicenseDefinition
+		// Docs points to the API external documentation
+		Docs *DocsDefinition
 		// Exposed resources indexed by name
 		Resources map[string]*ResourceDefinition
 		// Traits available to all API resources and actions indexed by name
@@ -66,19 +70,27 @@ type (
 	// ContactDefinition contains the API contact information.
 	ContactDefinition struct {
 		// Name of the contact person/organization
-		Name string
+		Name string `json:"name,omitempty"`
 		// Email address of the contact person/organization
-		Email string
+		Email string `json:"email,omitempty"`
 		// URL pointing to the contact information
-		URL string
+		URL string `json:"url,omitempty"`
 	}
 
 	// LicenseDefinition contains the license information for the API.
 	LicenseDefinition struct {
 		// Name of license used for the API
-		Name string
+		Name string `json:"name,omitempty"`
 		// URL to the license used for the API
-		URL string
+		URL string `json:"url,omitempty"`
+	}
+
+	// DocsDefinition points to external documentation.
+	DocsDefinition []*struct {
+		// Description of documentation.
+		Description string `json:"description,omitempty"`
+		// URL to documentation.
+		URL string `json:"url,omitempty"`
 	}
 
 	// ResourceDefinition describes a REST resource.
@@ -483,6 +495,11 @@ func (l *LicenseDefinition) Context() string {
 		return fmt.Sprintf("license %s", l.Name)
 	}
 	return "unnamed license"
+}
+
+// Context returns the generic definition name used in error messages.
+func (d DocsDefinition) Context() string {
+	return fmt.Sprintf("documentation for %s", Design.Name)
 }
 
 // Context returns the generic definition name used in error messages.

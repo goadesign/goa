@@ -308,6 +308,16 @@ func licenseDefinition(failIfNotLicense bool) (*design.LicenseDefinition, bool) 
 	return l, ok
 }
 
+// docsDefinition returns true and current context if it is a DocsDefinition,
+// nil and false otherwise.
+func docsDefinition(failIfNotDocs bool) (design.DocsDefinition, bool) {
+	a, ok := ctxStack.current().(design.DocsDefinition)
+	if !ok && failIfNotDocs {
+		incompatibleDSL(caller())
+	}
+	return a, ok
+}
+
 // mediaTypeDefinition returns true and current context if it is a MediaTypeDefinition,
 // nil and false otherwise.
 func mediaTypeDefinition(failIfNotMT bool) (*design.MediaTypeDefinition, bool) {
