@@ -102,7 +102,7 @@ func ValidateFormat(f Format, val string) error {
 }
 
 // knownPatterns records the compiled patterns.
-var knownPatterns map[string]*regexp.Regexp
+var knownPatterns = make(map[string]*regexp.Regexp)
 
 // ValidatePattern returns an error if val does not match the regular expression p.
 // It makes an effort to minimize the number of times the regular expression needs to be compiled.
