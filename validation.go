@@ -109,7 +109,7 @@ var knownPatterns = make(map[string]*regexp.Regexp)
 func ValidatePattern(p string, val string) bool {
 	r, ok := knownPatterns[p]
 	if !ok {
-		r := regexp.MustCompile(p) // DSL validation makes sure regexp is valid
+		r = regexp.MustCompile(p) // DSL validation makes sure regexp is valid
 		knownPatterns[p] = r
 	}
 	return r.MatchString(val)
