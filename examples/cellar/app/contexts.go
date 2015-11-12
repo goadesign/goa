@@ -31,9 +31,7 @@ type CreateAccountContext struct {
 func NewCreateAccountContext(c *goa.Context) (*CreateAccountContext, error) {
 	var err error
 	ctx := CreateAccountContext{Context: c}
-	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
-	}
+
 	p, err := NewCreateAccountPayload(c.Payload())
 	if err != nil {
 		return nil, err
@@ -88,9 +86,7 @@ type DeleteAccountContext struct {
 func NewDeleteAccountContext(c *goa.Context) (*DeleteAccountContext, error) {
 	var err error
 	ctx := DeleteAccountContext{Context: c}
-	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
-	}
+
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
@@ -123,9 +119,7 @@ type ShowAccountContext struct {
 func NewShowAccountContext(c *goa.Context) (*ShowAccountContext, error) {
 	var err error
 	ctx := ShowAccountContext{Context: c}
-	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
-	}
+
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
@@ -164,9 +158,7 @@ type UpdateAccountContext struct {
 func NewUpdateAccountContext(c *goa.Context) (*UpdateAccountContext, error) {
 	var err error
 	ctx := UpdateAccountContext{Context: c}
-	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
-	}
+
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
@@ -235,9 +227,7 @@ type CreateBottleContext struct {
 func NewCreateBottleContext(c *goa.Context) (*CreateBottleContext, error) {
 	var err error
 	ctx := CreateBottleContext{Context: c}
-	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
-	}
+
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
@@ -457,9 +447,7 @@ type DeleteBottleContext struct {
 func NewDeleteBottleContext(c *goa.Context) (*DeleteBottleContext, error) {
 	var err error
 	ctx := DeleteBottleContext{Context: c}
-	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
-	}
+
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
@@ -503,9 +491,7 @@ type ListBottleContext struct {
 func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
-	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
-	}
+
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
@@ -554,9 +540,7 @@ type RateBottleContext struct {
 func NewRateBottleContext(c *goa.Context) (*RateBottleContext, error) {
 	var err error
 	ctx := RateBottleContext{Context: c}
-	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
-	}
+
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
@@ -641,9 +625,7 @@ type ShowBottleContext struct {
 func NewShowBottleContext(c *goa.Context) (*ShowBottleContext, error) {
 	var err error
 	ctx := ShowBottleContext{Context: c}
-	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
-	}
+
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
@@ -691,9 +673,7 @@ type UpdateBottleContext struct {
 func NewUpdateBottleContext(c *goa.Context) (*UpdateBottleContext, error) {
 	var err error
 	ctx := UpdateBottleContext{Context: c}
-	if c.Request().Header.Get("Auth-Token") == "" {
-		err = goa.MissingHeaderError("Auth-Token", err)
-	}
+
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
