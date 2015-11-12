@@ -2,8 +2,14 @@
 
 package main
 
-import "github.com/raphael/goa/examples/cellar/controllers"
+import (
+	"github.com/raphael/goa"
+	"github.com/raphael/goa/examples/cellar/controllers"
+)
 
 func main() {
-	controllers.Run(":8080")
+	api := controllers.New()
+	api.Use(goa.LogRequest())
+	controllers.Mount(api)
+	api.Run(":8080")
 }

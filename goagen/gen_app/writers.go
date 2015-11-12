@@ -444,9 +444,7 @@ type {{.Resource}}Controller interface {
 // Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given application.
 func Mount{{.Resource}}Controller(app *goa.Application, ctrl {{.Resource}}Controller) {
 	var h goa.Handler
-	logger := app.Logger.New("ctrl", "{{.Resource}}")
-	logger.Info("mounting"){{$res := .Resource}}
-{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
+{{$res := .Resource}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
 		ctx, err := New{{.Context}}(c)
 		if err != nil {
 			return goa.NewBadRequestError(err)
@@ -454,9 +452,8 @@ func Mount{{.Resource}}Controller(app *goa.Application, ctrl {{.Resource}}Contro
 		return ctrl.{{.Name}}(ctx)
 	}
 {{range .Routes}}	app.Router.Handle("{{.Verb}}", "{{.FullPath}}", app.NewHTTPRouterHandle("{{$res}}", "{{$action.Name}}", h))
-	logger.Info("handler", "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}")
-{{end}}{{end}}	logger.Info("mounted")
-}
+	app.Logger.Info("mount", "ctrl", "{{$res}}", "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}")
+{{end}}{{end}}}
 `
 
 	// resourceT generates the code for a resource.

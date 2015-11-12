@@ -14,12 +14,12 @@ import (
 // Context implements http.ResponseWriter and also provides helper methods for writing HTTP responses.
 // It also implements the context.Context interface described at http://blog.golang.org/context.
 type Context struct {
-	context.Context // A goa context is a golang context
-	log.Logger      //(ctx *Context) logger
+	context.Context // Underlying context
+	log.Logger      // Context logger
 }
 
 // key is the type used to store internal values in the context.
-//(ctx *Context) provides typed accessor methods to these values.
+// Context provides typed accessor methods to these values.
 type key int
 
 const (

@@ -12,27 +12,21 @@
 package swagger
 
 import (
-	"net/http"
-
-	"github.com/julienschmidt/httprouter"
 	"github.com/raphael/goa"
 )
 
-// MountController mounts the Swagger spec controller under "/swagger.json".
+// MountController mounts the swagger spec controller under "/swagger.json".
 func MountController(app *goa.Application) {
-	logger := app.Logger.New("ctrl", "Swagger")
-	logger.Info("mounting")
-	app.Router.GET("/swagger.json", getSwagger)
-	logger.Info("handler", "action", "Show", "route", "GET /swagger.json")
-	logger.Info("mounted")
+	app.Logger.Info("mount", "ctrl", "Swagger", "action", "Show", "route", "GET /swagger.json")
+	app.Router.Handle("GET", "/swagger.json", app.NewHTTPRouterHandle("Swagger", "Show", getSwagger))
 }
 
 // getSwagger is the httprouter handle that returns the Swagger spec.
-func getSwagger(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	w.Header().Set("Content-Type", "application/schema+json")
-	w.Header().Set("Cache-Control", "public, max-age=3600")
-	w.WriteHeader(200)
-	w.Write([]byte(spec))
+// func getSwagger(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func getSwagger(ctx *goa.Context) error {
+	ctx.Header().Set("Content-Type", "application/swagger+json")
+	ctx.Header().Set("Cache-Control", "public, max-age=3600")
+	return ctx.Respond(200, []byte(spec))
 }
 
 // Generated spec

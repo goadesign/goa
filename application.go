@@ -13,7 +13,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"golang.org/x/net/context"
 	log "gopkg.in/inconshreveable/log15.v2"
-	"gopkg.in/tylerb/graceful.v1"
 )
 
 type (
@@ -199,6 +198,11 @@ func (app *Application) waitForInterrupt(interrupts chan os.Signal) {
 	}
 }
 
+// ServeHTTP implements the http.Handler interface.
+func (app *Application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	app.Router.ServeHTTP(w, r)
+}
+
 // NewHTTPRouterHandle returns a httprouter handle from a goa handler. This handle initializes the
 // request context by loading the request state, invokes the handler and in case of error invokes
 // the application error handler.
@@ -260,7 +264,7 @@ func (app *Application) NewHTTPRouterHandle(resName, actName string, h Handler) 
 		handler(ctx)
 
 		// Make sure a response is sent back to client.
-		if !ctx.ResponseWritten() {
+		if ctx.ResponseStatus() == 0 {
 			app.ErrorHandler(ctx, fmt.Errorf("unhandled request"))
 		}
 	}

@@ -56,7 +56,6 @@ var _ = Describe("New", func() {
 		)
 
 		BeforeEach(func() {
-			Design = nil
 			API("test", func() {
 				Title(title)
 				Description(description)

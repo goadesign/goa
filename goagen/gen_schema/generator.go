@@ -97,19 +97,16 @@ func (g *Generator) Cleanup() {
 const jsonSchemaTmpl = `
 // MountController mounts the API JSON schema controller under "/schema.json".
 func MountController(app *goa.Application) {
-	logger := app.Logger.New("ctrl", "Schema")
-	logger.Info("mounting")
-	app.Router.GET("/schema.json", getSchema)
-	logger.Info("handler", "action", "Show", "route", "GET /schema.json")
-	logger.Info("mounted")
+	app.Logger.Info("mount", "ctrl", "Schema", "action", "Show", "route", "GET /schema.json")
+	app.Router.Handle("GET", "/schema.json", app.NewHTTPRouterHandle("Schema", "Show", getSchema))
 }
 
-// getSchema is the httprouter handle that returns the API JSON schema.
-func getSchema(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	w.Header().Set("Content-Type", "application/schema+json")
-	w.Header().Set("Cache-Control", "public, max-age=3600")
-	w.WriteHeader(200)
-	w.Write([]byte(schema))
+// getSchema is the httprouter handle that returns the API JSON hyper schema.
+// func getSchema(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func getSchema(ctx *goa.Context) error {
+	ctx.Header().Set("Content-Type", "application/schema+json")
+	ctx.Header().Set("Cache-Control", "public, max-age=3600")
+	return ctx.Respond(200, []byte(schema))
 }
 
 // Generated schema

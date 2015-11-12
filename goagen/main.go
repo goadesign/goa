@@ -11,6 +11,7 @@ import (
 	"github.com/raphael/goa/goagen/gen_gen"
 	"github.com/raphael/goa/goagen/gen_main"
 	"github.com/raphael/goa/goagen/gen_schema"
+	"github.com/raphael/goa/goagen/gen_swagger"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -19,6 +20,7 @@ var Commands = []codegen.Command{
 	&BootstrapCommand{},
 	genapp.NewCommand(),
 	genmain.NewCommand(),
+	genswagger.NewCommand(),
 	genschema.NewCommand(),
 	gengen.NewCommand(),
 }
