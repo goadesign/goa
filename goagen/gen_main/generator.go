@@ -219,9 +219,9 @@ func main() {
 	api := goa.New("{{.Name}}")
 
 	// Setup middleware
-	api.Use(goa.Recover())
 	api.Use(goa.RequestID())
 	api.Use(goa.LogRequest())
+	api.Use(goa.Recover())
 
 {{range $name, $res := .Resources}}	// Mount "{{$res.Name}}" controller
 	{{$tmp := tempvar}}{{$tmp}} := New{{goify $res.Name true}}Controller()
