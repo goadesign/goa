@@ -71,7 +71,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	}
 	gg.WriteHeader(fmt.Sprintf("%s JSON Hyper-schema", api.Name), "schema", imports)
 	data := map[string]interface{}{
-		"JSONSchemaFile": schemaFile,
+		"schema": string(js),
 	}
 	err = tmpl.Execute(gg, data)
 	if err != nil {
@@ -95,26 +95,23 @@ func (g *Generator) Cleanup() {
 }
 
 const jsonSchemaTmpl = `
-// Cached schema
-var schema []byte
-
-// MountController mounts the API JSON schema controller under "/schema".
+// MountController mounts the API JSON schema controller under "/schema.json".
 func MountController(app *goa.Application) {
 	logger := app.Logger.New("ctrl", "Schema")
 	logger.Info("mounting")
-	app.Router.GET("/schema", getSchema)
-	logger.Info("handler", "action", "Show", "route", "GET /schema")
+	app.Router.GET("/schema.json", getSchema)
+	logger.Info("handler", "action", "Show", "route", "GET /schema.json")
 	logger.Info("mounted")
 }
 
 // getSchema is the httprouter handle that returns the API JSON schema.
 func getSchema(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	if len(schema) == 0 {
-		schema, _ = ioutil.ReadFile("{{.JSONSchemaFile}}")
-	}
 	w.Header().Set("Content-Type", "application/schema+json")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	w.WriteHeader(200)
-	w.Write(schema)
+	w.Write([]byte(schema))
 }
+
+// Generated schema
+const schema = ` + "`" + `{{.schema}}` + "`" + `
 `

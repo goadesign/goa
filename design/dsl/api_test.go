@@ -107,7 +107,7 @@ var _ = Describe("API", func() {
 		Context("with contact information", func() {
 			const contactName = "contactName"
 			const contactEmail = "contactEmail"
-			const contactURL = "contactURL"
+			const contactURL = "http://contactURL.com"
 
 			BeforeEach(func() {
 				dsl = func() {
@@ -130,7 +130,7 @@ var _ = Describe("API", func() {
 
 		Context("with license information", func() {
 			const licenseName = "licenseName"
-			const licenseURL = "licenseURL"
+			const licenseURL = "http://licenseURL.com"
 
 			BeforeEach(func() {
 				dsl = func() {

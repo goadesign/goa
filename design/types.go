@@ -10,7 +10,6 @@
 package design
 
 import (
-	"fmt"
 	"reflect"
 	"sort"
 )
@@ -240,10 +239,7 @@ func (a *Array) Kind() Kind { return ArrayKind }
 
 // Name returns the type name.
 func (a *Array) Name() string {
-	if a.ElemType != nil && a.ElemType.Type != nil {
-		return fmt.Sprintf("array of %s", a.ElemType.Type.Name())
-	}
-	return fmt.Sprintf("untyped array")
+	return "array"
 }
 
 // IsObject returns false.
@@ -394,8 +390,8 @@ func NewUserTypeDefinition(name string, dsl func()) *UserTypeDefinition {
 // Kind implements DataKind.
 func (u *UserTypeDefinition) Kind() Kind { return UserTypeKind }
 
-// Name returns the type name.
-func (u *UserTypeDefinition) Name() string { return u.TypeName }
+// Name returns the JSON type name.
+func (u *UserTypeDefinition) Name() string { return u.Type.Name() }
 
 // IsObject calls IsObject on the user type underlying data type.
 func (u *UserTypeDefinition) IsObject() bool { return u.Type.IsObject() }

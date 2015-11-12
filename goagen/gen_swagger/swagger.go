@@ -1,6 +1,9 @@
 package genswagger
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/raphael/goa/design"
 	"github.com/raphael/goa/goagen/gen_schema"
 )
@@ -9,21 +12,21 @@ type (
 	// Swagger represents an instance of a swagger object.
 	// See https://swagger.io/specification/
 	Swagger struct {
-		Swagger             string                         `json:"swagger,omitempty"`
-		Info                *Info                          `json:"info,omitempty"`
-		Host                string                         `json:"host,omitempty"`
-		BasePath            string                         `json:"basePath,omitempty"`
-		Schemes             []string                       `json:"schems,omitempty"`
-		Consumes            []string                       `json:"consumes,omitempty"`
-		Produces            []string                       `json:"produces,omitempty"`
-		Paths               []*Path                        `json:"paths,omitempty"`
-		Definitions         []*Definition                  `json:"definitions,omitempty"`
-		Parameters          []*Parameter                   `json:"parameters,omitempty"`
-		Responses           map[string]*Response           `json:"responses,omitempty"`
-		SecurityDefinitions map[string]*SecurityDefinition `json:"securityDefinitions,omitempty"`
-		Security            []map[string][]string          `json:"security,omitempty"`
-		Tags                []Tag                          `json:"tags,omitempty"`
-		ExternalDocs        *ExternalDocs                  `json:"externalDocs,omitempty"`
+		Swagger             string                           `json:"swagger,omitempty"`
+		Info                *Info                            `json:"info,omitempty"`
+		Host                string                           `json:"host,omitempty"`
+		BasePath            string                           `json:"basePath,omitempty"`
+		Schemes             []string                         `json:"schemes,omitempty"`
+		Consumes            []string                         `json:"consumes,omitempty"`
+		Produces            []string                         `json:"produces,omitempty"`
+		Paths               map[string]*Path                 `json:"paths"`
+		Definitions         map[string]*genschema.JSONSchema `json:"definitions,omitempty"`
+		Parameters          map[string]*Parameter            `json:"parameters,omitempty"`
+		Responses           map[string]*Response             `json:"responses,omitempty"`
+		SecurityDefinitions map[string]*SecurityDefinition   `json:"securityDefinitions,omitempty"`
+		Security            []map[string][]string            `json:"security,omitempty"`
+		Tags                []Tag                            `json:"tags,omitempty"`
+		ExternalDocs        *ExternalDocs                    `json:"externalDocs,omitempty"`
 	}
 
 	// Info provides metadata about the API. The metadata can be used by the clients if needed,
@@ -34,7 +37,7 @@ type (
 		TermsOfService string                    `json:"termsOfService,omitempty"`
 		Contact        *design.ContactDefinition `json:"contact,omitempty"`
 		License        *design.LicenseDefinition `json:"license,omitempty"`
-		Version        string                    `json:"version,omitempty"`
+		Version        string                    `json:"version"`
 	}
 
 	// Path holds the relative paths to the individual endpoints.
@@ -60,10 +63,6 @@ type (
 		Parameters []*Parameter `parameters:"get,omitempty"`
 	}
 
-	// Definition holds data types that can be consumed and produced by operations.
-	// These data types can be primitives, arrays or models.
-	Definition *genschema.JSONSchema
-
 	// Operation describes a single API operation on a path.
 	Operation struct {
 		// Tags is a list of tags for API documentation control. Tags can be used for
@@ -87,7 +86,7 @@ type (
 		Parameters []*Parameter `json:"parameters,omitempty"`
 		// Responses is the list of possible responses as they are returned from executing
 		// this operation.
-		Responses map[string]Response `json:"responses,omitempty"`
+		Responses map[string]*Response `json:"responses,omitempty"`
 		// Schemes is the transfer protocol for the operation.
 		Schemes []string `json:"schemes,omitempty"`
 		// Deprecated declares this operation to be deprecated.
@@ -110,7 +109,7 @@ type (
 		Required bool `json:"required"`
 		// Schema defining the type used for the body parameter, only if "in" is body
 
-		Schema *genschema.JSONSchema `json:"schema"`
+		Schema *genschema.JSONSchema `json:"schema,omitempty"`
 		// properties below only apply if "in" is not body
 
 		//  Type of the parameter. Since the parameter is not located at the request body,
@@ -227,7 +226,7 @@ type (
 		// GFM syntax can be used for rich text representation.
 		Description string `json:"description,omitempty"`
 		// URL for the target documentation.
-		URL string
+		URL string `json:"url"`
 	}
 
 	// Items is a limited subset of JSON-Schema's items object. It is used by parameter
@@ -275,6 +274,17 @@ type (
 
 // New creates a Swagger spec from an API definition.
 func New(api *design.APIDefinition) (*Swagger, error) {
+	params, err := paramsFromDefinition(api.BaseParams, api.BasePath)
+	if err != nil {
+		return nil, err
+	}
+	var paramMap map[string]*Parameter
+	if len(params) > 0 {
+		paramMap = make(map[string]*Parameter, len(params))
+		for _, p := range params {
+			paramMap[p.Name] = p
+		}
+	}
 	s := &Swagger{
 		Swagger: "2.0",
 		Info: &Info{
@@ -287,52 +297,272 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 		},
 		Host:         api.Host,
 		BasePath:     api.BasePath,
+		Paths:        make(map[string]*Path),
 		Schemes:      []string{"https"},
 		Consumes:     []string{"application/json"},
 		Produces:     []string{"application/json"},
-		Parameters:   paramsFromDefinition(api.BaseParams),
+		Parameters:   paramMap,
 		ExternalDocs: docsFromDefinition(api.Docs),
 	}
-	api.IterateResponses(func(r *design.ResponseDefinition) error {
-		s.Responses[r.Name] = responseFromDefinition(r)
+	err = api.IterateResponses(func(r *design.ResponseDefinition) error {
+		res, err := responseFromDefinition(api, r)
+		if err != nil {
+			return err
+		}
+		if s.Responses == nil {
+			s.Responses = make(map[string]*Response)
+		}
+		s.Responses[r.Name] = res
 		return nil
 	})
-	api.IterateResources(func(res *design.ResourceDefinition) error {
-		res.IterateActions(func(a *design.ActionDefinition) error {
+	if err != nil {
+		return nil, err
+	}
+	err = api.IterateResources(func(res *design.ResourceDefinition) error {
+		return res.IterateActions(func(a *design.ActionDefinition) error {
 			for _, route := range a.Routes {
-				s.Paths = append(s.Paths, pathFromDefinition(route))
+				path, err := pathFromDefinition(api, route)
+				if err != nil {
+					return err
+				}
+				s.Paths[route.Path] = path
 			}
 			return nil
 		})
-		return nil
 	})
-	api.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
-		s.Definitions = append(s.Definitions, nil)
-		return nil
-	})
+	if err != nil {
+		return nil, err
+	}
+	if len(genschema.Definitions) > 0 {
+		s.Definitions = make(map[string]*genschema.JSONSchema)
+		for n, d := range genschema.Definitions {
+			// sad but swagger doesn't support these
+			d.Media = nil
+			d.Links = nil
+			s.Definitions[n] = d
+		}
+	}
 	return s, nil
 }
 
-func paramsFromDefinition(params *design.AttributeDefinition) []*Parameter {
-	return nil
+func paramsFromDefinition(params *design.AttributeDefinition, path string) ([]*Parameter, error) {
+	if params == nil {
+		return nil, nil
+	}
+	obj := params.Type.ToObject()
+	if obj == nil {
+		return nil, fmt.Errorf("invalid parameters definition, not an object")
+	}
+	res := make([]*Parameter, len(obj))
+	i := 0
+	wildcards := design.ExtractWildcards(path)
+	obj.IterateAttributes(func(n string, at *design.AttributeDefinition) error {
+		in := "query"
+		required := params.IsRequired(n)
+		for _, w := range wildcards {
+			if n == w {
+				in = "path"
+				required = true
+				break
+			}
+		}
+		param := &Parameter{
+			Name:        n,
+			Default:     at.DefaultValue,
+			Description: at.Description,
+			Required:    required,
+			In:          in,
+			Type:        at.Type.Name(),
+		}
+		var items *Items
+		if at.Type.IsArray() {
+			items = itemsFromDefinition(at)
+		}
+		param.Items = items
+		initValidations(at, param)
+		res[i] = param
+		i++
+		return nil
+	})
+	return res, nil
 }
 
-func responseFromDefinition(r *design.ResponseDefinition) *Response {
+func itemsFromDefinition(at *design.AttributeDefinition) *Items {
+	items := &Items{Type: at.Type.Name()}
+	initValidations(at, items)
+	if at.Type.IsArray() {
+		items.Items = itemsFromDefinition(at.Type.ToArray().ElemType)
+	}
+	return items
+}
+
+func responseFromDefinition(api *design.APIDefinition, r *design.ResponseDefinition) (*Response, error) {
+	var schema *genschema.JSONSchema
+	if r.MediaType != "" {
+		if mt, ok := api.MediaTypes[r.MediaType]; ok {
+			schema = genschema.TypeSchema(api, mt)
+		}
+	}
+	headers, err := headersFromDefinition(r.Headers)
+	if err != nil {
+		return nil, err
+	}
 	return &Response{
 		Description: r.Description,
-		Schema:      nil,
-		Headers:     headersFromDefinition(r.Headers),
+		Schema:      schema,
+		Headers:     headers,
+	}, nil
+}
+
+func headersFromDefinition(headers *design.AttributeDefinition) (map[string]*Header, error) {
+	if headers == nil {
+		return nil, nil
 	}
+	obj := headers.Type.ToObject()
+	if obj == nil {
+		return nil, fmt.Errorf("invalid headers definition, not an object")
+	}
+	res := make(map[string]*Header)
+	obj.IterateAttributes(func(n string, at *design.AttributeDefinition) error {
+		header := &Header{
+			Default:     at.DefaultValue,
+			Description: at.Description,
+			Type:        at.Type.Name(),
+		}
+		initValidations(at, header)
+		res[n] = header
+		return nil
+	})
+	return res, nil
 }
 
-func headersFromDefinition(headers *design.AttributeDefinition) map[string]*Header {
-	return nil
-}
-
-func pathFromDefinition(route *design.RouteDefinition) *Path {
-	return nil
+func pathFromDefinition(api *design.APIDefinition, route *design.RouteDefinition) (*Path, error) {
+	action := route.Parent
+	params, err := paramsFromDefinition(action.Params, route.Path)
+	if err != nil {
+		return nil, err
+	}
+	responses := make(map[string]*Response, len(action.Responses))
+	for _, r := range action.Responses {
+		resp, err := responseFromDefinition(api, r)
+		if err != nil {
+			return nil, err
+		}
+		responses[strconv.Itoa(r.Status)] = resp
+	}
+	operation := &Operation{
+		Description:  action.Description,
+		ExternalDocs: docsFromDefinition(action.Docs),
+		OperationID:  fmt.Sprintf("%s#%s", action.Parent.Name, action.Name),
+		Consumes:     []string{"application/json"},
+		Produces:     []string{"application/json"},
+		Parameters:   params,
+		Responses:    responses,
+		Schemes:      []string{"https"},
+		Deprecated:   false,
+	}
+	var path *Path
+	switch route.Verb {
+	case "GET":
+		path = &Path{Get: operation}
+	case "PUT":
+		path = &Path{Put: operation}
+	case "POST":
+		path = &Path{Post: operation}
+	case "DELETE":
+		path = &Path{Delete: operation}
+	case "OPTIONS":
+		path = &Path{Options: operation}
+	case "HEAD":
+		path = &Path{Head: operation}
+	case "PATCH":
+		path = &Path{Patch: operation}
+	}
+	return path, nil
 }
 
 func docsFromDefinition(docs *design.DocsDefinition) *ExternalDocs {
-	return nil
+	if docs == nil {
+		return nil
+	}
+	return &ExternalDocs{
+		Description: docs.Description,
+		URL:         docs.URL,
+	}
+}
+
+func initValidations(attr *design.AttributeDefinition, def interface{}) {
+	for _, v := range attr.Validations {
+		switch val := v.(type) {
+		case *design.EnumValidationDefinition:
+			switch actual := def.(type) {
+			case *Parameter:
+				actual.Enum = val.Values
+			case *Header:
+				actual.Enum = val.Values
+			case *Items:
+				actual.Enum = val.Values
+			}
+		case *design.FormatValidationDefinition:
+			switch actual := def.(type) {
+			case *Parameter:
+				actual.Format = val.Format
+			case *Header:
+				actual.Format = val.Format
+			case *Items:
+				actual.Format = val.Format
+			}
+		case *design.PatternValidationDefinition:
+			switch actual := def.(type) {
+			case *Parameter:
+				actual.Pattern = val.Pattern
+			case *Header:
+				actual.Pattern = val.Pattern
+			case *Items:
+				actual.Pattern = val.Pattern
+			}
+		case *design.MinimumValidationDefinition:
+			switch actual := def.(type) {
+			case *Parameter:
+				actual.Minimum = val.Min
+				actual.ExclusiveMinimum = true
+			case *Header:
+				actual.Minimum = val.Min
+				actual.ExclusiveMinimum = true
+			case *Items:
+				actual.Minimum = val.Min
+				actual.ExclusiveMinimum = true
+			}
+		case *design.MaximumValidationDefinition:
+			switch actual := def.(type) {
+			case *Parameter:
+				actual.Maximum = val.Max
+				actual.ExclusiveMaximum = true
+			case *Header:
+				actual.Maximum = val.Max
+				actual.ExclusiveMaximum = true
+			case *Items:
+				actual.Maximum = val.Max
+				actual.ExclusiveMaximum = true
+			}
+		case *design.MinLengthValidationDefinition:
+			switch actual := def.(type) {
+			case *Parameter:
+				actual.MinLength = val.MinLength
+			case *Header:
+				actual.MinLength = val.MinLength
+			case *Items:
+				actual.MinLength = val.MinLength
+			}
+		case *design.MaxLengthValidationDefinition:
+			switch actual := def.(type) {
+			case *Parameter:
+				actual.MaxLength = val.MaxLength
+			case *Header:
+				actual.MaxLength = val.MaxLength
+			case *Items:
+				actual.MaxLength = val.MaxLength
+			}
+		}
+	}
 }

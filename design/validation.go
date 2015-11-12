@@ -2,6 +2,7 @@ package design
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 )
 
@@ -101,11 +102,31 @@ func (a *APIDefinition) Validate() *ValidationErrors {
 			verr.Merge(err)
 		}
 	}
+	if a.Contact != nil && a.Contact.URL != "" {
+		if _, err := url.ParseRequestURI(a.Contact.URL); err != nil {
+			verr.Add(a, "invalid contact URL value: %s", err)
+		}
+	}
+	if a.License != nil && a.License.URL != "" {
+		if _, err := url.ParseRequestURI(a.License.URL); err != nil {
+			verr.Add(a, "invalid license URL value: %s", err)
+		}
+	}
+	if a.Docs != nil && a.Docs.URL != "" {
+		if _, err := url.ParseRequestURI(a.Docs.URL); err != nil {
+			verr.Add(a, "invalid docs URL value: %s", err)
+		}
+	}
 	a.IterateResources(func(r *ResourceDefinition) error {
 		if err := r.Validate(); err != nil {
 			verr.Merge(err)
 		}
 		r.IterateActions(func(ac *ActionDefinition) error {
+			if ac.Docs != nil && ac.Docs.URL != "" {
+				if _, err := url.ParseRequestURI(ac.Docs.URL); err != nil {
+					verr.Add(ac, "invalid action docs URL value: %s", err)
+				}
+			}
 			for _, ro := range ac.Routes {
 				info := newRouteInfo(r, ac, ro)
 				allRoutes = append(allRoutes, info)

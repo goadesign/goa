@@ -23,9 +23,9 @@ import (
 //			Name("license name")
 //			URL("license URL")
 //		})
-//		Docs(func() {
-//			Doc("doc description", "doc URL")
-//			Doc("doc2 description", "doc2 URL")
+//	 	Docs(func() {
+//			Description("doc description")
+//			URL("doc URL")
 //		})
 //		Host("goa.design")                      // API hostname
 // 		BasePath("/base/:param")                // Common base path to all API actions
@@ -85,8 +85,10 @@ func Description(d string) {
 		m.Description = d
 	} else if a, ok := attributeDefinition(false); ok {
 		a.Description = d
-	} else if r, ok := responseDefinition(true); ok {
+	} else if r, ok := responseDefinition(false); ok {
 		r.Description = d
+	} else if do, ok := docsDefinition(true); ok {
+		do.Description = d
 	}
 }
 
@@ -168,17 +170,18 @@ func License(dsl func()) {
 	}
 }
 
-// Docs provides a single external documentation pointer.
-func Docs(description, url string) {
-	if d, ok := docsDefinition(true); ok {
-		doc := struct {
-			Description string `json:"description,omitempty"`
-			URL         string `json:"url,omitempty"`
-		}{
-			Description: description,
-			URL:         url,
+// Docs provides external documentation pointers.
+func Docs(dsl func()) {
+	if a, ok := apiDefinition(false); ok {
+		docs := new(design.DocsDefinition)
+		if executeDSL(dsl, docs) {
+			a.Docs = docs
 		}
-		d = append(d, &doc)
+	} else if a, ok := actionDefinition(true); ok {
+		docs := new(design.DocsDefinition)
+		if executeDSL(dsl, docs) {
+			a.Docs = docs
+		}
 	}
 }
 
@@ -202,8 +205,10 @@ func Email(email string) {
 func URL(url string) {
 	if c, ok := contactDefinition(false); ok {
 		c.URL = url
-	} else if l, ok := licenseDefinition(true); ok {
+	} else if l, ok := licenseDefinition(false); ok {
 		l.URL = url
+	} else if d, ok := docsDefinition(true); ok {
+		d.URL = url
 	}
 }
 

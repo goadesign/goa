@@ -2,6 +2,7 @@ package dsl
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/raphael/goa/design"
@@ -298,24 +299,94 @@ func Pattern(p string) {
 
 // Minimum adds a "minimum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor21.
-func Minimum(val int) {
+func Minimum(val interface{}) {
 	if a, ok := attributeDefinition(true); ok {
 		if a.Type != nil && a.Type.Kind() != design.IntegerKind && a.Type.Kind() != design.NumberKind {
 			incompatibleAttributeType("minimum", a.Type.Name(), "an integer or a number")
 		} else {
-			a.Validations = append(a.Validations, &design.MinimumValidationDefinition{Min: val})
+			var f float64
+			switch v := val.(type) {
+			case float32:
+				f = float64(v)
+			case float64:
+				f = v
+			case int:
+				f = float64(v)
+			case int8:
+				f = float64(v)
+			case int16:
+				f = float64(v)
+			case int32:
+				f = float64(v)
+			case int64:
+				f = float64(v)
+			case uint8:
+				f = float64(v)
+			case uint16:
+				f = float64(v)
+			case uint32:
+				f = float64(v)
+			case uint64:
+				f = float64(v)
+			case string:
+				var err error
+				f, err = strconv.ParseFloat(v, 64)
+				if err != nil {
+					ReportError("invalid number value %#v", v)
+					return
+				}
+			default:
+				ReportError("invalid number value %#v", v)
+				return
+			}
+			a.Validations = append(a.Validations, &design.MinimumValidationDefinition{Min: f})
 		}
 	}
 }
 
 // Maximum adds a "maximum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor17.
-func Maximum(val int) {
+func Maximum(val interface{}) {
 	if a, ok := attributeDefinition(true); ok {
 		if a.Type != nil && a.Type.Kind() != design.IntegerKind && a.Type.Kind() != design.NumberKind {
 			incompatibleAttributeType("maximum", a.Type.Name(), "an integer or a number")
 		} else {
-			a.Validations = append(a.Validations, &design.MaximumValidationDefinition{Max: val})
+			var f float64
+			switch v := val.(type) {
+			case float32:
+				f = float64(v)
+			case float64:
+				f = v
+			case int:
+				f = float64(v)
+			case int8:
+				f = float64(v)
+			case int16:
+				f = float64(v)
+			case int32:
+				f = float64(v)
+			case int64:
+				f = float64(v)
+			case uint8:
+				f = float64(v)
+			case uint16:
+				f = float64(v)
+			case uint32:
+				f = float64(v)
+			case uint64:
+				f = float64(v)
+			case string:
+				var err error
+				f, err = strconv.ParseFloat(v, 64)
+				if err != nil {
+					ReportError("invalid number value %#v", v)
+					return
+				}
+			default:
+				ReportError("invalid number value %#v", v)
+				return
+			}
+			a.Validations = append(a.Validations, &design.MaximumValidationDefinition{Max: f})
 		}
 	}
 }

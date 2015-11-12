@@ -54,3 +54,6 @@
 * Equivalent to parse_href from praxis ResourceDefinition ?
 * Only use default medait ype if response template takes media type as arg (instead of hardcoded to 200)
 * Parameterize traits
+* Add swagger-like CollectionFormat
+* Add swagger-like support for security definitions
+* Add swagger-like support for deprecated, schemes

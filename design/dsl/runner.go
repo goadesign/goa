@@ -310,8 +310,8 @@ func licenseDefinition(failIfNotLicense bool) (*design.LicenseDefinition, bool) 
 
 // docsDefinition returns true and current context if it is a DocsDefinition,
 // nil and false otherwise.
-func docsDefinition(failIfNotDocs bool) (design.DocsDefinition, bool) {
-	a, ok := ctxStack.current().(design.DocsDefinition)
+func docsDefinition(failIfNotDocs bool) (*design.DocsDefinition, bool) {
+	a, ok := ctxStack.current().(*design.DocsDefinition)
 	if !ok && failIfNotDocs {
 		incompatibleDSL(caller())
 	}

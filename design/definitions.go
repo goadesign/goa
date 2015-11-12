@@ -86,7 +86,7 @@ type (
 	}
 
 	// DocsDefinition points to external documentation.
-	DocsDefinition []*struct {
+	DocsDefinition struct {
 		// Description of documentation.
 		Description string `json:"description,omitempty"`
 		// URL to documentation.
@@ -164,6 +164,8 @@ type (
 		Name string
 		// Action description, e.g. "Creates a task"
 		Description string
+		// Docs points to the API external documentation
+		Docs *DocsDefinition
 		// Parent resource
 		Parent *ResourceDefinition
 		// Action routes
@@ -266,13 +268,13 @@ type (
 	// MinimumValidationDefinition represents an minimum value validation as described at
 	// http://json-schema.org/latest/json-schema-validation.html#anchor21.
 	MinimumValidationDefinition struct {
-		Min int
+		Min float64
 	}
 
 	// MaximumValidationDefinition represents a maximum value validation as described at
 	// http://json-schema.org/latest/json-schema-validation.html#anchor17.
 	MaximumValidationDefinition struct {
-		Max int
+		Max float64
 	}
 
 	// MinLengthValidationDefinition represents an minimum length validation as described at
@@ -498,7 +500,7 @@ func (l *LicenseDefinition) Context() string {
 }
 
 // Context returns the generic definition name used in error messages.
-func (d DocsDefinition) Context() string {
+func (d *DocsDefinition) Context() string {
 	return fmt.Sprintf("documentation for %s", Design.Name)
 }
 
