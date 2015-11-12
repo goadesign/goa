@@ -175,9 +175,28 @@ func Recover() Middleware {
 					buf = buf[:runtime.Stack(buf, false)]
 					lines := strings.Split(string(buf), "\n")
 					stack := lines[3:]
+					status := http.StatusInternalServerError
+					var message string
 					if ctx != nil && ctx.Logger != nil {
+						reqID := ctx.Value(ReqIDKey)
+						if reqID != nil {
+							message = fmt.Sprintf(
+								"%s\nRefer to the following token when contacting support: %s",
+								http.StatusText(status),
+								reqID)
+						}
 						ctx.Logger.Error("panic", "err", err, "stack", stack)
 					}
+
+					// note we must respond or else a 500 with "unhandled request" is the
+					// default response.
+					if message == "" {
+						// without the request id (from middleware) we can only return the
+						// full error message for reference purposes. it is unlikely to make
+						// sense to the caller unless they understand the source code.
+						message = err.Error()
+					}
+					ctx.Respond(status, []byte(message))
 				}
 			}()
 			return h(ctx)
