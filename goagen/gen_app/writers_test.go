@@ -814,8 +814,6 @@ type BottlesController interface {
 
 	simpleMount = `func MountBottlesController(app *goa.Application, ctrl BottlesController) {
 	var h goa.Handler
-	logger := app.Logger.New("ctrl", "Bottles")
-	logger.Info("mounting")
 	h = func(c *goa.Context) error {
 		ctx, err := NewListBottleContext(c)
 		if err != nil {
@@ -824,8 +822,7 @@ type BottlesController interface {
 		return ctrl.list(ctx)
 	}
 	app.Router.Handle("GET", "/accounts/:accountID/bottles", app.NewHTTPRouterHandle("Bottles", "list", h))
-	logger.Info("handler", "action", "list", "route", "GET /accounts/:accountID/bottles")
-	logger.Info("mounted")
+	app.Logger.Info("mount", "ctrl", "Bottles", "action", "list", "route", "GET /accounts/:accountID/bottles")
 }
 `
 
@@ -838,8 +835,6 @@ type BottlesController interface {
 
 	multiMount = `func MountBottlesController(app *goa.Application, ctrl BottlesController) {
 	var h goa.Handler
-	logger := app.Logger.New("ctrl", "Bottles")
-	logger.Info("mounting")
 	h = func(c *goa.Context) error {
 		ctx, err := NewListBottleContext(c)
 		if err != nil {
@@ -848,7 +843,7 @@ type BottlesController interface {
 		return ctrl.list(ctx)
 	}
 	app.Router.Handle("GET", "/accounts/:accountID/bottles", app.NewHTTPRouterHandle("Bottles", "list", h))
-	logger.Info("handler", "action", "list", "route", "GET /accounts/:accountID/bottles")
+	app.Logger.Info("mount", "ctrl", "Bottles", "action", "list", "route", "GET /accounts/:accountID/bottles")
 	h = func(c *goa.Context) error {
 		ctx, err := NewShowBottleContext(c)
 		if err != nil {
@@ -857,8 +852,7 @@ type BottlesController interface {
 		return ctrl.show(ctx)
 	}
 	app.Router.Handle("GET", "/accounts/:accountID/bottles/:id", app.NewHTTPRouterHandle("Bottles", "show", h))
-	logger.Info("handler", "action", "show", "route", "GET /accounts/:accountID/bottles/:id")
-	logger.Info("mounted")
+	app.Logger.Info("mount", "ctrl", "Bottles", "action", "show", "route", "GET /accounts/:accountID/bottles/:id")
 }
 `
 

@@ -6,7 +6,7 @@ import (
 	"github.com/raphael/goa/goagen/codegen"
 	"github.com/raphael/goa/goagen/gen_app"
 	"github.com/raphael/goa/goagen/gen_main"
-	"github.com/raphael/goa/goagen/gen_schema"
+	"github.com/raphael/goa/goagen/gen_swagger"
 )
 
 // BootstrapCommands lists the commands run by default when no sub-command is provided on the
@@ -14,7 +14,7 @@ import (
 var BootstrapCommands = []codegen.Command{
 	genapp.NewCommand(),
 	genmain.NewCommand(),
-	genschema.NewCommand(),
+	genswagger.NewCommand(),
 }
 
 // BootstrapCommand is the default command. It runs all common commands useful to bootstrap a goa

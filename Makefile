@@ -13,7 +13,11 @@
 DIRS=$(shell go list -f {{.Dir}} ./...)
 DEPEND=golang.org/x/tools/cmd/cover golang.org/x/tools/cmd/goimports \
 	github.com/golang/lint/golint github.com/onsi/gomega \
-	github.com/onsi/ginkgo github.com/onsi/ginkgo/ginkgo
+	github.com/onsi/ginkgo github.com/onsi/ginkgo/ginkgo \
+	github.com/go-swagger/go-swagger \
+	github.com/PuerkitoBio/purell \
+	gopkg.in/yaml.v2 \
+	github.com/asaskevich/govalidator
 
 .PHONY: goagen
 

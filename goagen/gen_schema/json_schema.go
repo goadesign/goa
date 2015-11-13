@@ -33,8 +33,8 @@ type (
 		Enum                 []interface{} `json:"enum,omitempty"`
 		Format               string        `json:"format,omitempty"`
 		Pattern              string        `json:"pattern,omitempty"`
-		Minimum              int           `json:"minimum,omitempty"`
-		Maximum              int           `json:"maximum,omitempty"`
+		Minimum              float64       `json:"minimum,omitempty"`
+		Maximum              float64       `json:"maximum,omitempty"`
 		MinLength            int           `json:"minLength,omitempty"`
 		MaxLength            int           `json:"maxLength,omitempty"`
 		Required             []string      `json:"required,omitempty"`
@@ -88,13 +88,13 @@ const (
 const SchemaRef = "http://json-schema.org/draft-04/hyper-schema"
 
 var (
-	// definitions contains the generated JSON schema definitions
-	definitions map[string]*JSONSchema
+	// Definitions contains the generated JSON schema definitions
+	Definitions map[string]*JSONSchema
 )
 
 // Initialize the global variables
 func init() {
-	definitions = make(map[string]*JSONSchema)
+	Definitions = make(map[string]*JSONSchema)
 }
 
 // NewJSONSchema instantiates a new JSON schema.
@@ -142,8 +142,8 @@ func APISchema(api *design.APIDefinition) *JSONSchema {
 		Title:       api.Title,
 		Description: api.Description,
 		Type:        JSONObject,
-		Definitions: definitions,
-		Properties:  propertiesFromDefs(definitions, "#/definitions/"),
+		Definitions: Definitions,
+		Properties:  propertiesFromDefs(Definitions, "#/definitions/"),
 		Links:       links,
 	}
 	return &s
@@ -156,7 +156,7 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 	s.Description = r.Description
 	s.Type = JSONObject
 	s.Title = r.Name
-	definitions[r.Name] = s
+	Definitions[r.Name] = s
 	if mt, ok := api.MediaTypes[r.MediaType]; ok {
 		buildMediaTypeSchema(api, mt, s)
 	}
@@ -219,39 +219,39 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 
 // MediaTypeRef produces the JSON reference to the media type definition.
 func MediaTypeRef(api *design.APIDefinition, mt *design.MediaTypeDefinition) string {
-	if _, ok := definitions[mt.Identifier]; !ok {
+	if _, ok := Definitions[mt.TypeName]; !ok {
 		GenerateMediaTypeDefinition(api, mt)
 	}
-	return fmt.Sprintf("#/definitions/%s", mt.Name)
+	return fmt.Sprintf("#/definitions/%s", mt.TypeName)
 }
 
 // TypeRef produces the JSON reference to the type definition.
 func TypeRef(api *design.APIDefinition, ut *design.UserTypeDefinition) string {
-	if _, ok := definitions[ut.TypeName]; !ok {
+	if _, ok := Definitions[ut.TypeName]; !ok {
 		GenerateTypeDefinition(api, ut)
 	}
-	return fmt.Sprintf("#/definitions/%s", ut.Name)
+	return fmt.Sprintf("#/definitions/%s", ut.TypeName)
 }
 
 // GenerateMediaTypeDefinition produces the JSON schema corresponding to the given media type.
 func GenerateMediaTypeDefinition(api *design.APIDefinition, mt *design.MediaTypeDefinition) {
-	if _, ok := definitions[mt.Identifier]; ok {
+	if _, ok := Definitions[mt.TypeName]; ok {
 		return
 	}
 	s := NewJSONSchema()
-	s.Title = mt.TypeName
-	definitions[mt.Identifier] = s
+	s.Title = fmt.Sprintf("Mediatype identifier: %s", mt.Identifier)
+	Definitions[mt.TypeName] = s
 	buildMediaTypeSchema(api, mt, s)
 }
 
 // GenerateTypeDefinition produces the JSON schema corresponding to the given type.
 func GenerateTypeDefinition(api *design.APIDefinition, ut *design.UserTypeDefinition) {
-	if _, ok := definitions[ut.TypeName]; ok {
+	if _, ok := Definitions[ut.TypeName]; ok {
 		return
 	}
 	s := NewJSONSchema()
 	s.Title = ut.TypeName
-	definitions[ut.TypeName] = s
+	Definitions[ut.TypeName] = s
 	buildAttributeSchema(api, s, ut.AttributeDefinition)
 }
 

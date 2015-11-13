@@ -60,7 +60,7 @@ var _ = Describe("NewMiddleware", func() {
 			params := map[string]string{"foo": "bar"}
 			query := map[string][]string{"filter": []string{"one"}}
 			ctx = goa.NewContext(nil, req, rw, params, query, nil)
-			Ω(ctx.ResponseWritten()).Should(BeFalse())
+			Ω(ctx.ResponseStatus()).Should(Equal(0))
 		})
 
 		Context("using a goa handler", func() {
@@ -76,7 +76,6 @@ var _ = Describe("NewMiddleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
 				h := func(ctx *goa.Context) error { return nil }
 				Ω(middleware(h)(ctx)).ShouldNot(HaveOccurred())
-				Ω(ctx.ResponseWritten()).Should(BeTrue())
 				Ω(ctx.ResponseStatus()).Should(Equal(200))
 			})
 		})
@@ -93,7 +92,6 @@ var _ = Describe("NewMiddleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
 				h := func(ctx *goa.Context) error { return nil }
 				Ω(middleware(h)(ctx)).ShouldNot(HaveOccurred())
-				Ω(ctx.ResponseWritten()).Should(BeTrue())
 				Ω(ctx.ResponseStatus()).Should(Equal(200))
 			})
 		})
@@ -107,7 +105,6 @@ var _ = Describe("NewMiddleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
 				h := func(c *goa.Context) error { c.JSON(200, "ok"); return nil }
 				Ω(middleware(h)(ctx)).ShouldNot(HaveOccurred())
-				Ω(ctx.ResponseWritten()).Should(BeTrue())
 				Ω(ctx.ResponseStatus()).Should(Equal(200))
 			})
 		})
@@ -125,7 +122,6 @@ var _ = Describe("NewMiddleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
 				h := func(ctx *goa.Context) error { return nil }
 				Ω(middleware(h)(ctx)).ShouldNot(HaveOccurred())
-				Ω(ctx.ResponseWritten()).Should(BeTrue())
 				Ω(ctx.ResponseStatus()).Should(Equal(200))
 			})
 		})
@@ -142,7 +138,6 @@ var _ = Describe("NewMiddleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
 				h := func(ctx *goa.Context) error { return nil }
 				Ω(middleware(h)(ctx)).ShouldNot(HaveOccurred())
-				Ω(ctx.ResponseWritten()).Should(BeTrue())
 				Ω(ctx.ResponseStatus()).Should(Equal(200))
 			})
 		})

@@ -49,12 +49,6 @@ var _ = Describe("Context", func() {
 		})
 	})
 
-	Describe("ResponseWritten", func() {
-		It("returns false if not initialized", func() {
-			Ω(ctx.ResponseWritten()).Should(BeFalse())
-		})
-	})
-
 	Describe("ResponseStatus", func() {
 		It("returns 0 if not initialized", func() {
 			Ω(ctx.ResponseStatus()).Should(Equal(0))
@@ -126,7 +120,6 @@ var _ = Describe("Context", func() {
 			It("sets the context fields", func() {
 				Ω(ctx.Request()).Should(Equal(request))
 				Ω(ctx.Header()).Should(Equal(rw.Header()))
-				Ω(ctx.ResponseWritten()).Should(BeTrue())
 				Ω(ctx.ResponseStatus()).Should(Equal(respStatus))
 				Ω(ctx.ResponseLength()).Should(Equal(len(respContent)))
 				p, ok := ctx.Get("id")
@@ -151,7 +144,6 @@ var _ = Describe("Context", func() {
 			})
 
 			It("sets the context response fields with the JSON", func() {
-				Ω(ctx.ResponseWritten()).Should(BeTrue())
 				Ω(ctx.ResponseStatus()).Should(Equal(respStatus))
 				Ω(ctx.ResponseLength()).Should(Equal(len(respContent) + 2)) // quotes
 			})
@@ -170,7 +162,6 @@ var _ = Describe("Context", func() {
 			})
 
 			It("responds with 400 and the error body", func() {
-				Ω(ctx.ResponseWritten()).Should(BeTrue())
 				Ω(ctx.ResponseStatus()).Should(Equal(400))
 				tw := rw.(*TestResponseWriter)
 				Ω(string(tw.Body)).Should(ContainSubstring(err.Error()))

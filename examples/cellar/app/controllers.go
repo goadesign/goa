@@ -28,7 +28,6 @@ type AccountController interface {
 func MountAccountController(app *goa.Application, ctrl AccountController) {
 	var h goa.Handler
 	logger := app.Logger.New("ctrl", "Account")
-	logger.Info("mounting")
 	h = func(c *goa.Context) error {
 		ctx, err := NewCreateAccountContext(c)
 		if err != nil {

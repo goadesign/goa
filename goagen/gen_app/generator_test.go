@@ -280,8 +280,6 @@ type WidgetController interface {
 // MountWidgetController "mounts" a Widget resource controller on the given application.
 func MountWidgetController(app *goa.Application, ctrl WidgetController) {
 	var h goa.Handler
-	logger := app.Logger.New("ctrl", "Widget")
-	logger.Info("mounting")
 	h = func(c *goa.Context) error {
 		ctx, err := NewGetWidgetContext(c)
 		if err != nil {
@@ -290,8 +288,7 @@ func MountWidgetController(app *goa.Application, ctrl WidgetController) {
 		return ctrl.Get(ctx)
 	}
 	app.Router.Handle("GET", "/:id", app.NewHTTPRouterHandle("Widget", "Get", h))
-	logger.Info("handler", "action", "Get", "route", "GET /:id")
-	logger.Info("mounted")
+	app.Logger.Info("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
 }
 `
 

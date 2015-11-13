@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync/atomic"
@@ -151,6 +152,41 @@ func RequestID() Middleware {
 			}
 			ctx.SetValue(ReqIDKey, id)
 
+			return h(ctx)
+		}
+	}
+}
+
+// CORS is a middleware that sets the CORS (Cross-Origin Resource Sharing) headers with the given
+// values. Setting an argument to the empty string causes the corresponding header to not be set.
+// pathPattern - if not nil - defines the regular expression that the request path must
+// match for the headers to be set.
+func CORS(pathPattern *regexp.Regexp, allowOrigin, exposeHeaders, maxAge, allowCredentials, allowMethods, allowHeaders string) Middleware {
+	return func(h Handler) Handler {
+		return func(ctx *Context) error {
+			ctx.Info("URL PATH", "PATH", ctx.Request().URL.Path)
+			if pathPattern != nil && !pathPattern.MatchString(ctx.Request().URL.Path) {
+				return h(ctx)
+			}
+			header := ctx.Header()
+			if allowOrigin != "" {
+				header.Set("Access-Control-Allow-Origin", allowOrigin)
+			}
+			if exposeHeaders != "" {
+				header.Set("Access-Control-Expose-Headers", exposeHeaders)
+			}
+			if maxAge != "" {
+				header.Set("Access-Control-Max-Age", maxAge)
+			}
+			if allowCredentials != "" {
+				header.Set("Access-Control-Allow-Credentials", allowCredentials)
+			}
+			if allowMethods != "" {
+				header.Set("Access-Control-Allow-Methods", allowMethods)
+			}
+			if allowHeaders != "" {
+				header.Set("Access-Control-Allow-Headers", allowHeaders)
+			}
 			return h(ctx)
 		}
 	}

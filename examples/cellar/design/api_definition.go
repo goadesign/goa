@@ -24,7 +24,6 @@ var _ = API("cellar", func() {
 	Trait("Authenticated", func() {
 		Headers(func() {
 			Header("Auth-Token")
-			Required("Auth-Token")
 		})
 	})
 })
