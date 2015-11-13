@@ -812,7 +812,8 @@ type BottlesController interface {
 }
 `
 
-	simpleMount = `func MountBottlesController(app *goa.Application, ctrl BottlesController) {
+	simpleMount = `func MountBottlesController(service goa.Service, ctrl BottlesController) {
+	router := service.HTTPHandler().(*httprouter.Router)
 	var h goa.Handler
 	h = func(c *goa.Context) error {
 		ctx, err := NewListBottleContext(c)
@@ -821,8 +822,8 @@ type BottlesController interface {
 		}
 		return ctrl.list(ctx)
 	}
-	app.Router.Handle("GET", "/accounts/:accountID/bottles", app.NewHTTPRouterHandle("Bottles", "list", h))
-	app.Logger.Info("mount", "ctrl", "Bottles", "action", "list", "route", "GET /accounts/:accountID/bottles")
+	router.Handle("GET", "/accounts/:accountID/bottles", goa.NewHTTPRouterHandle(service, "Bottles", "list", h))
+	service.Info("mount", "ctrl", "Bottles", "action", "list", "route", "GET /accounts/:accountID/bottles")
 }
 `
 
@@ -833,7 +834,8 @@ type BottlesController interface {
 }
 `
 
-	multiMount = `func MountBottlesController(app *goa.Application, ctrl BottlesController) {
+	multiMount = `func MountBottlesController(service goa.Service, ctrl BottlesController) {
+	router := service.HTTPHandler().(*httprouter.Router)
 	var h goa.Handler
 	h = func(c *goa.Context) error {
 		ctx, err := NewListBottleContext(c)
@@ -842,8 +844,8 @@ type BottlesController interface {
 		}
 		return ctrl.list(ctx)
 	}
-	app.Router.Handle("GET", "/accounts/:accountID/bottles", app.NewHTTPRouterHandle("Bottles", "list", h))
-	app.Logger.Info("mount", "ctrl", "Bottles", "action", "list", "route", "GET /accounts/:accountID/bottles")
+	router.Handle("GET", "/accounts/:accountID/bottles", goa.NewHTTPRouterHandle(service, "Bottles", "list", h))
+	service.Info("mount", "ctrl", "Bottles", "action", "list", "route", "GET /accounts/:accountID/bottles")
 	h = func(c *goa.Context) error {
 		ctx, err := NewShowBottleContext(c)
 		if err != nil {
@@ -851,8 +853,8 @@ type BottlesController interface {
 		}
 		return ctrl.show(ctx)
 	}
-	app.Router.Handle("GET", "/accounts/:accountID/bottles/:id", app.NewHTTPRouterHandle("Bottles", "show", h))
-	app.Logger.Info("mount", "ctrl", "Bottles", "action", "show", "route", "GET /accounts/:accountID/bottles/:id")
+	router.Handle("GET", "/accounts/:accountID/bottles/:id", goa.NewHTTPRouterHandle(service, "Bottles", "show", h))
+	service.Info("mount", "ctrl", "Bottles", "action", "show", "route", "GET /accounts/:accountID/bottles/:id")
 }
 `
 

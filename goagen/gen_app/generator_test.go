@@ -269,6 +269,7 @@ const controllersCodeTmpl = `//*************************************************
 package app
 
 import (
+	"github.com/julienschmidt/httprouter"
 	"github.com/raphael/goa"
 )
 
@@ -277,8 +278,9 @@ type WidgetController interface {
 	Get(*GetWidgetContext) error
 }
 
-// MountWidgetController "mounts" a Widget resource controller on the given application.
-func MountWidgetController(app *goa.Application, ctrl WidgetController) {
+// MountWidgetController "mounts" a Widget resource controller on the given service.
+func MountWidgetController(service goa.Service, ctrl WidgetController) {
+	router := service.HTTPHandler().(*httprouter.Router)
 	var h goa.Handler
 	h = func(c *goa.Context) error {
 		ctx, err := NewGetWidgetContext(c)
@@ -287,8 +289,8 @@ func MountWidgetController(app *goa.Application, ctrl WidgetController) {
 		}
 		return ctrl.Get(ctx)
 	}
-	app.Router.Handle("GET", "/:id", app.NewHTTPRouterHandle("Widget", "Get", h))
-	app.Logger.Info("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
+	router.Handle("GET", "/:id", goa.NewHTTPRouterHandle(service, "Widget", "Get", h))
+	service.Info("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
 }
 `
 

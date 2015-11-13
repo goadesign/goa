@@ -96,9 +96,10 @@ func (g *Generator) Cleanup() {
 
 const jsonSchemaTmpl = `
 // MountController mounts the API JSON schema controller under "/schema.json".
-func MountController(app *goa.Application) {
-	app.Logger.Info("mount", "ctrl", "Schema", "action", "Show", "route", "GET /schema.json")
-	app.Router.Handle("GET", "/schema.json", app.NewHTTPRouterHandle("Schema", "Show", getSchema))
+func MountController(service goa.Service) {
+	service.Info("mount", "ctrl", "Schema", "action", "Show", "route", "GET /schema.json")
+	h := goa.NewHTTPRouterHandle(service, "Schema", "Show", getSchema)
+	service.HTTPHandler().(*httprouter.Router).Handle("GET", "/schema.json", h)
 }
 
 // getSchema is the httprouter handle that returns the API JSON hyper schema.

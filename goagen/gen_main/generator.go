@@ -215,7 +215,7 @@ func snakeCase(name string) string {
 
 const mainTmpl = `
 func main() {
-	// Create application
+	// Create service
 	api := goa.New("{{.Name}}")
 
 	// Setup middleware
@@ -230,8 +230,8 @@ func main() {
 	// Mount JSON schema provider controller
 	schema.MountController(api)
 {{end}}
-	// Run application, listen on port 8080
-	api.Run(":8080")
+	// Start service, listen on port 8080
+	api.ListenAndServe(":8080")
 }
 `
 const ctrlTmpl = `// {{$ctrlName := printf "%s%s" (goify .Name true) "Controller"}}{{$ctrlName}} implements the {{.Name}} resource.

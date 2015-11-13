@@ -12,21 +12,23 @@ import (
 
 var _ = Describe("Application", func() {
 	const appName = "foo"
-	var app *goa.Application
+	var s goa.Service
 
 	BeforeEach(func() {
-		app = goa.New(appName)
+		s = goa.New(appName)
 	})
 
 	Describe("New", func() {
 		It("creates an application", func() {
-			Ω(app).ShouldNot(BeNil())
+			Ω(s).ShouldNot(BeNil())
 		})
 
 		It("initializes the application fields", func() {
-			Ω(app.Name).Should(Equal(appName))
+			Ω(s.Name()).Should(Equal(appName))
+			Ω(s).Should(BeAssignableToTypeOf(&goa.Application{}))
+			app, _ := s.(*goa.Application)
+			Ω(app.Name()).Should(Equal(appName))
 			Ω(app.Logger).ShouldNot(BeNil())
-			Ω(app.ErrorHandler).ShouldNot(BeNil())
 			Ω(app.Router).ShouldNot(BeNil())
 		})
 	})
@@ -40,12 +42,12 @@ var _ = Describe("Application", func() {
 			})
 
 			JustBeforeEach(func() {
-				app.Use(m)
+				s.Use(m)
 			})
 
 			It("adds the middleware", func() {
-				Ω(app.Middleware).Should(HaveLen(1))
-				Ω(app.Middleware[0]).Should(BeAssignableToTypeOf(goa.RequestID()))
+				Ω(s.MiddlewareChain()).Should(HaveLen(1))
+				Ω(s.MiddlewareChain()[0]).Should(BeAssignableToTypeOf(goa.RequestID()))
 			})
 		})
 	})
@@ -61,7 +63,7 @@ var _ = Describe("Application", func() {
 		var ctx *goa.Context
 
 		JustBeforeEach(func() {
-			httpHandle = app.NewHTTPRouterHandle(resName, actName, handler)
+			httpHandle = goa.NewHTTPRouterHandle(s, resName, actName, handler)
 		})
 
 		BeforeEach(func() {
@@ -111,7 +113,7 @@ var _ = Describe("Application", func() {
 				middlewareCalled := false
 
 				BeforeEach(func() {
-					app.Use(TMiddleware(&middlewareCalled))
+					s.Use(TMiddleware(&middlewareCalled))
 				})
 
 				It("calls the middleware", func() {
@@ -124,8 +126,8 @@ var _ = Describe("Application", func() {
 				secondCalled := false
 
 				BeforeEach(func() {
-					app.Use(TMiddleware(&middlewareCalled))
-					app.Use(SecondMiddleware(&middlewareCalled, &secondCalled))
+					s.Use(TMiddleware(&middlewareCalled))
+					s.Use(SecondMiddleware(&middlewareCalled, &secondCalled))
 				})
 
 				It("calls the middleware in the right order", func() {
@@ -136,15 +138,9 @@ var _ = Describe("Application", func() {
 
 			Context("with a handler that fails", func() {
 				errorHandlerCalled := false
-				var oldErrorHandler goa.ErrorHandler
 
 				BeforeEach(func() {
-					oldErrorHandler = app.ErrorHandler
-					app.SetErrorHandler(TErrorHandler(&errorHandlerCalled))
-				})
-
-				AfterEach(func() {
-					app.SetErrorHandler(oldErrorHandler)
+					s.SetErrorHandler(TErrorHandler(&errorHandlerCalled))
 				})
 
 				Context("by returning an error", func() {
