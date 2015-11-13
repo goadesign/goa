@@ -3,12 +3,9 @@ package goa
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/tylerb/graceful"
@@ -66,19 +63,24 @@ var (
 	// See https://godoc.org/github.com/inconshreveable/log15
 	Log log.Logger
 
-	// InterruptSignals is the list of signals that initiate graceful shutdown.
-	// Note that only SIGINT is supported on Windows so this list should be
-	// overridden by the caller when running on that platform.
-	InterruptSignals = []os.Signal{
-		os.Signal(syscall.SIGINT),
-		os.Signal(syscall.SIGTERM),
-		os.Signal(syscall.SIGQUIT)}
+	// RootContext is the root context from which all request contexts are derived.
+	// Set values in the root context prior to starting the server to make these values
+	// available to all request handlers:
+	//
+	//	goa.RootContext = goa.RootContext.WithValue(key, value)
+	//
+	RootContext context.Context
+
+	// Cancel is the root context CancelFunc.
+	// Call goa.Cancel() to send a cancellation signal to all the active request handlers.
+	Cancel context.CancelFunc
 )
 
-// Log to STDOUT by default
+// Log to STDOUT by default.
 func init() {
 	Log = log.New()
 	Log.SetHandler(log.StdoutHandler)
+	RootContext, Cancel = context.WithCancel(context.Background())
 }
 
 // New instantiates an application with the given name.
@@ -112,91 +114,9 @@ func (app *Application) SetErrorHandler(handler ErrorHandler) {
 }
 
 // Run starts the HTTP server and sets up a listener on the given host/port.
-// It logs an error and exits the process with status 1 if the server fails to
-// start (e.g. if the listen port is busy).
-func (app *Application) Run(addr string) {
-	// prepare
-	app.prepareToRun(addr)
-
-	// we will trap interrupts here instead of allowing the graceful package to do
-	// it for us. the graceful package has the odd behavior of stopping the
-	// interrupt handler after first interrupt. this leads to the dreaded double-
-	// tap because the lack of any viable custom handler means that golang's
-	// default handler will kill the process on a second interrupt.
-	interruptChannel := make(chan os.Signal, 1)
-	signal.Notify(interruptChannel, InterruptSignals...)
-	go app.waitForInterrupt(interruptChannel)
-
-	// run in foreground
-	app.runServer()
-}
-
-// RunInBackground starts the HTTP server and sets up a listener on the given
-// host/port on a background go routine. The caller is responsible for trapping
-// interrupts and/or calling Shutdown() to initiate graceful shutdown.
-//
-// A background server is useful for apps that do other things besides serving
-// requests. An example is an adapter that primarily marshals requests and
-// responses between various services and secondarily serves a statistics API.
-func (app *Application) RunInBackground(addr string, waitGroup *sync.WaitGroup) {
-	// prepare
-	app.prepareToRun(addr)
-
-	// run in background. add go routine to waitgroup for synchronization.
-	waitGroup.Add(1)
-	go func() {
-		defer waitGroup.Done()
-		go app.runServer()
-	}()
-}
-
-// Initiates graceful shutdown of the running server once. Returns true on
-// initial shutdown and false if already shutting down.
-func (app *Application) Shutdown() bool {
-	app.interruptMutex.Lock()
-	defer app.interruptMutex.Unlock()
-	if app.interrupted {
-		return false
-	}
-	app.interrupted = true
-	app.server.Stop(0)
-	return true
-}
-
-// prepares for running either in foreground or background.
-func (app *Application) prepareToRun(addr string) {
-	// note the use of zero timeout (i.e. no forced shutdown timeout) so requests
-	// can run as long as they want. there is usually a hard limit to when the
-	// response must come back (e.g. the nginx timeout) before being abandoned so
-	// the handler should implement some kind of internal timeout (e.g. the go
-	// context deadline) instead of relying on a shutdown timeout.
-	app.server = &graceful.Server{
-		Timeout:          0,
-		Server:           &http.Server{Addr: addr, Handler: app.Router},
-		NoSignalHandling: true}
-}
-
-// runs the already setup graceful server, which blocks on current go routine.
-func (app *Application) runServer() {
-	app.Info("listen", "addr", app.server.Addr)
-	if err := app.server.ListenAndServe(); err != nil {
-		// there may be a final "accept" error after completion of graceful shutdown
-		// which can be safely ignored here.
-		if opErr, ok := err.(*net.OpError); !ok || (ok && opErr.Op != "accept") {
-			Fatal("startup failed", "err", err)
-		}
-	}
-}
-
-// handles multiple interrupts with grace.
-func (app *Application) waitForInterrupt(interrupts chan os.Signal) {
-	for signal := range interrupts {
-		if app.Shutdown() {
-			app.Warn(fmt.Sprintf("Received %v. Initiating graceful shutdown...", signal))
-		} else {
-			app.Warn(fmt.Sprintf("Received %v. Already gracefully shutting down.", signal))
-		}
-	}
+func (app *Application) Run(addr string) error {
+	app.Info("listen", "addr", addr)
+	return http.ListenAndServe(addr, app.Router)
 }
 
 // ServeHTTP implements the http.Handler interface.
@@ -244,7 +164,7 @@ func (app *Application) NewHTTPRouterHandle(resName, actName string, h Handler) 
 		}
 
 		// Build context
-		gctx, cancel := context.WithCancel(context.Background())
+		gctx, cancel := context.WithCancel(RootContext)
 		defer cancel() // Signal completion of request to any child goroutine
 		ctx := NewContext(gctx, r, w, params, query, payload)
 		ctx.Logger = logger
