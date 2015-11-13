@@ -13,3 +13,4 @@ import:
       - /context
   - package: gopkg.in/inconshreveable/log15.v2
   - package: github.com/mattn/go-colorable
+  - package: gopkg.in/tylerb/graceful.v1
