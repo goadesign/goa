@@ -11,7 +11,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/tylerb/graceful"
+	"gopkg.in/tylerb/graceful.v1"
 )
 
 // GracefulApplication is a goa application using a graceful shutdown server.
@@ -40,12 +40,48 @@ var InterruptSignals = []os.Signal{
 	os.Signal(syscall.SIGQUIT)}
 
 // NewGraceful returns a goa application that uses a graceful shutdown server.
-func NewGraceful(name string) *GracefulApplication {
-	return &GracefulApplication{Application: New(name)}
+func NewGraceful(name string) Service {
+	app, _ := New(name).(*Application)
+	return &GracefulApplication{Application: app}
 }
 
-// Run starts the HTTP server and sets up a listener on the given host/port.
-func (gapp *GracefulApplication) Run(addr string) error {
+// ListenAndServe starts the HTTP server and sets up a listener on the given host/port.
+func (gapp *GracefulApplication) ListenAndServe(addr string) error {
+	gapp.setup(addr)
+	gapp.Info("listen", "addr", addr)
+	if err := gapp.server.ListenAndServe(); err != nil {
+		// there may be a final "accept" error after completion of graceful shutdown
+		// which can be safely ignored here.
+		if opErr, ok := err.(*net.OpError); !ok || (ok && opErr.Op != "accept") {
+			return err
+		}
+	}
+	return nil
+}
+
+// ListenAndServeTLS starts a HTTPS server and sets up a listener on the given host/port.
+func (gapp *GracefulApplication) ListenAndServeTLS(addr, certFile, keyFile string) error {
+	gapp.setup(addr)
+	gapp.Info("listen ssl", "addr", addr)
+	return gapp.server.ListenAndServeTLS(certFile, keyFile)
+}
+
+// Shutdown initiates graceful shutdown of the running server once. Returns true on
+// initial shutdown and false if already shutting down.
+func (gapp *GracefulApplication) Shutdown() bool {
+	gapp.Lock()
+	defer gapp.Unlock()
+	if gapp.Interrupted {
+		return false
+	}
+	gapp.Interrupted = true
+	gapp.server.Stop(0)
+	Cancel()
+	return true
+}
+
+// setup initializes the interrupt handler and the underlying graceful server.
+func (gapp *GracefulApplication) setup(addr string) {
 	// we will trap interrupts here instead of allowing the graceful package to do
 	// it for us. the graceful package has the odd behavior of stopping the
 	// interrupt handler after first interrupt. this leads to the dreaded double-
@@ -75,34 +111,4 @@ func (gapp *GracefulApplication) Run(addr string) error {
 		Server:           &http.Server{Addr: addr, Handler: gapp.Router},
 		NoSignalHandling: true,
 	}
-
-	// Now start the application.
-	gapp.Info("listen", "addr", addr)
-	if err := gapp.server.ListenAndServe(); err != nil {
-		// there may be a final "accept" error after completion of graceful shutdown
-		// which can be safely ignored here.
-		if opErr, ok := err.(*net.OpError); !ok || (ok && opErr.Op != "accept") {
-			return err
-		}
-	}
-	return nil
-}
-
-// ServeHTTP is not supported by GracefulApplication.
-func (gapp *GracefulApplication) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	panic("ServerHTTP is not supported with the graceful server application")
-}
-
-// Shutdown initiates graceful shutdown of the running server once. Returns true on
-// initial shutdown and false if already shutting down.
-func (gapp *GracefulApplication) Shutdown() bool {
-	gapp.Lock()
-	defer gapp.Unlock()
-	if gapp.Interrupted {
-		return false
-	}
-	gapp.Interrupted = true
-	gapp.server.Stop(0)
-	Cancel()
-	return true
 }

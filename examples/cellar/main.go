@@ -11,5 +11,5 @@ func main() {
 	api := controllers.New()
 	api.Use(goa.LogRequest())
 	controllers.Mount(api)
-	api.Run(":8080")
+	api.ListenAndServe(":8080")
 }

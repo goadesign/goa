@@ -12,13 +12,15 @@
 package swagger
 
 import (
+	"github.com/julienschmidt/httprouter"
 	"github.com/raphael/goa"
 )
 
 // MountController mounts the swagger spec controller under "/swagger.json".
-func MountController(app *goa.Application) {
-	app.Logger.Info("mount", "ctrl", "Swagger", "action", "Show", "route", "GET /swagger.json")
-	app.Router.Handle("GET", "/swagger.json", app.NewHTTPRouterHandle("Swagger", "Show", getSwagger))
+func MountController(service goa.Service) {
+	service.Info("mount", "ctrl", "Swagger", "action", "Show", "route", "GET /swagger.json")
+	h := goa.NewHTTPRouterHandle(service, "Swagger", "Show", getSwagger)
+	service.HTTPHandler().(*httprouter.Router).Handle("GET", "/swagger.json", h)
 }
 
 // getSwagger is the httprouter handle that returns the Swagger spec.

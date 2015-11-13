@@ -83,7 +83,7 @@ var _ = Describe("Context", func() {
 
 	Context("with a request response", func() {
 		const appName = "foo"
-		var app *goa.Application
+		var app goa.Service
 		const resName = "res"
 		const actName = "act"
 		var handler goa.Handler
@@ -112,7 +112,7 @@ var _ = Describe("Context", func() {
 		})
 
 		JustBeforeEach(func() {
-			httpHandle = app.NewHTTPRouterHandle(resName, actName, handler)
+			httpHandle = goa.NewHTTPRouterHandle(app, resName, actName, handler)
 			httpHandle(rw, request, params)
 		})
 

@@ -441,8 +441,9 @@ type {{.Resource}}Controller interface {
 	// mountT generates the code for a resource "Mount" function.
 	// template input: *ControllerTemplateData
 	mountT = `
-// Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given application.
-func Mount{{.Resource}}Controller(app *goa.Application, ctrl {{.Resource}}Controller) {
+// Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given service.
+func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Controller) {
+	router := service.HTTPHandler().(*httprouter.Router)
 	var h goa.Handler
 {{$res := .Resource}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
 		ctx, err := New{{.Context}}(c)
@@ -451,8 +452,8 @@ func Mount{{.Resource}}Controller(app *goa.Application, ctrl {{.Resource}}Contro
 		}
 		return ctrl.{{.Name}}(ctx)
 	}
-{{range .Routes}}	app.Router.Handle("{{.Verb}}", "{{.FullPath}}", app.NewHTTPRouterHandle("{{$res}}", "{{$action.Name}}", h))
-	app.Logger.Info("mount", "ctrl", "{{$res}}", "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}")
+{{range .Routes}}	router.Handle("{{.Verb}}", "{{.FullPath}}", goa.NewHTTPRouterHandle(service, "{{$res}}", "{{$action.Name}}", h))
+	service.Info("mount", "ctrl", "{{$res}}", "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}")
 {{end}}{{end}}}
 `
 

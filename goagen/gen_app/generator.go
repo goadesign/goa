@@ -139,6 +139,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 
 	title = fmt.Sprintf("%s: Application Controllers", api.Name)
 	imports = []*codegen.ImportSpec{
+		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
 		codegen.SimpleImport("github.com/raphael/goa"),
 	}
 	g.ControllersWriter.WriteHeader(title, TargetPackage, imports)
