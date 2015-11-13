@@ -262,6 +262,7 @@ var _ = Describe("New", func() {
 					ResponseTemplate(notFoundName, func() {
 						Description(notFoundDesc)
 						Status(404)
+
 						Media(notFoundMt)
 					})
 				}
@@ -274,6 +275,112 @@ var _ = Describe("New", func() {
 				Ω(swagger.Responses[notFoundName].Description).Should(Equal(notFoundDesc))
 				Ω(swagger.Responses[okName]).ShouldNot(BeNil())
 				Ω(swagger.Responses[okName].Description).Should(Equal(okDesc))
+			})
+
+			It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
+		})
+
+		Context("with resources", func() {
+			BeforeEach(func() {
+				Origin := MediaType("application/vnd.goa.example.origin", func() {
+					Description("Origin of bottle")
+					Attributes(func() {
+						Attribute("id")
+						Attribute("href")
+						Attribute("country")
+					})
+					View("default", func() {
+						Attribute("id")
+						Attribute("href")
+						Attribute("country")
+					})
+					View("tiny", func() {
+						Attribute("id")
+					})
+				})
+				BottleMedia := MediaType("application/vnd.goa.example.bottle", func() {
+					Description("A bottle of wine")
+					Attributes(func() {
+						Attribute("id", Integer, "ID of bottle")
+						Attribute("href", String, "API href of bottle")
+						Attribute("origin", Origin, "Details on wine origin")
+						Links(func() {
+							Link("origin", "tiny")
+						})
+						Required("id", "href")
+					})
+					View("default", func() {
+						Attribute("id")
+						Attribute("href")
+						Attribute("links")
+					})
+					View("extended", func() {
+						Attribute("id")
+						Attribute("href")
+						Attribute("origin")
+						Attribute("links")
+					})
+				})
+				UpdatePayload := Type("UpdatePayload", func() {
+					Description("Type of create and upload action payloads")
+					Attribute("name", String, "name of bottle")
+					Attribute("origin", Origin, "Details on wine origin")
+					Required("name")
+				})
+				Resource("res", func() {
+					Description("A wine bottle")
+					DefaultMedia(BottleMedia)
+					BasePath("/bottles")
+					UseTrait("Authenticated")
+
+					Action("Update", func() {
+						Description("Update account")
+						Docs(func() {
+							Description("docs")
+							URL("http://cellarapi.com/docs/actions/update")
+						})
+						Routing(
+							PUT("/:id"),
+							PUT("//orgs/:org/accounts/:id"),
+						)
+						Params(func() {
+							Param("org", String)
+							Param("id", Integer)
+							Param("sort", func() {
+								Enum("asc", "desc")
+							})
+						})
+						Headers(func() {
+							Header("Authorization", String)
+							Header("X-Account", Integer)
+							Required("Authorization", "X-Account")
+						})
+						Payload(UpdatePayload)
+						Response(NoContent)
+						Response(NotFound)
+					})
+				})
+				base := Design.DSL
+				Design.DSL = func() {
+					base()
+					Trait("Authenticated", func() {
+						Headers(func() {
+							Header("header")
+							Required("header")
+						})
+					})
+				}
+			})
+
+			It("sets the Path fields", func() {
+				Ω(newErr).ShouldNot(HaveOccurred())
+				Ω(swagger.Paths).Should(HaveLen(2))
+				Ω(swagger.Paths["//orgs/{org}/accounts/{id}"]).ShouldNot(BeNil())
+				Ω(swagger.Paths["//orgs/{org}/accounts/{id}"].Put).ShouldNot(BeNil())
+				Ω(swagger.Paths["//orgs/{org}/accounts/{id}"].Put.Parameters).Should(HaveLen(3))
+				Ω(swagger.Paths["/{id}"]).ShouldNot(BeNil())
+				Ω(swagger.Paths["/{id}"].Put).ShouldNot(BeNil())
+				Ω(swagger.Paths["/{id}"].Put.Parameters).Should(HaveLen(3))
 			})
 
 			It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })

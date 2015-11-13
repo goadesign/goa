@@ -60,7 +60,7 @@ type (
 		Patch *Operation `json:"patch,omitempty"`
 		// Parameters is the list of parameters that are applicable for all the operations
 		// described under this path.
-		Parameters []*Parameter `parameters:"get,omitempty"`
+		Parameters []*Parameter `json:"parameters,omitempty"`
 	}
 
 	// Operation describes a single API operation on a path.
@@ -325,7 +325,13 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 				if err != nil {
 					return err
 				}
-				s.Paths[route.Path] = path
+				key := design.WildcardRegex.ReplaceAllStringFunc(
+					route.Path,
+					func(w string) string {
+						return fmt.Sprintf("/{%s}", w[2:])
+					},
+				)
+				s.Paths[key] = path
 			}
 			return nil
 		})
