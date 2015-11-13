@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/tylerb/graceful"
 	"golang.org/x/net/context"
 	log "gopkg.in/inconshreveable/log15.v2"
 )
