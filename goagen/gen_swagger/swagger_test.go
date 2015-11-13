@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/raphael/goa/design"
 	. "github.com/raphael/goa/design/dsl"
+	"github.com/raphael/goa/goagen/gen_schema"
 	"github.com/raphael/goa/goagen/gen_swagger"
 )
 
@@ -31,6 +32,7 @@ var _ = Describe("New", func() {
 		swagger = nil
 		newErr = nil
 		Design = nil
+		genschema.Definitions = make(map[string]*genschema.JSONSchema)
 	})
 
 	JustBeforeEach(func() {
