@@ -17,10 +17,6 @@ type (
 	Service interface {
 		// Logging methods, configure the log handler using the Logger global variable.
 		log.Logger
-		// HTTPHandler returns a http.Handler interface to the underlying service.
-		// Note: using the handler directly bypasses the graceful shutdown behavior of
-		// services instantiated with NewGraceful.
-		HTTPHandler() http.Handler
 
 		// Name is the name of the goa application.
 		Name() string
@@ -40,6 +36,10 @@ type (
 		ListenAndServe(addr string) error
 		// ListenAndServeTLS starts a HTTPS server on the given port.
 		ListenAndServeTLS(add, certFile, keyFile string) error
+		// HTTPHandler returns a http.Handler interface to the underlying service.
+		// Note: using the handler directly bypasses the graceful shutdown behavior of
+		// services instantiated with NewGraceful.
+		HTTPHandler() http.Handler
 	}
 
 	// Application represents a goa application. At the basic level an application consists of
@@ -93,16 +93,16 @@ var (
 	//
 	RootContext context.Context
 
-	// Cancel is the root context CancelFunc.
-	// Call goa.Cancel() to send a cancellation signal to all the active request handlers.
-	Cancel context.CancelFunc
+	// cancel is the root context CancelFunc.
+	// Call Cancel to send a cancellation signal to all the active request handlers.
+	cancel context.CancelFunc
 )
 
 // Log to STDOUT by default.
 func init() {
 	Log = log.New()
 	Log.SetHandler(log.StdoutHandler)
-	RootContext, Cancel = context.WithCancel(context.Background())
+	RootContext, cancel = context.WithCancel(context.Background())
 }
 
 // New instantiates an application with the given name.
@@ -113,6 +113,12 @@ func New(name string) Service {
 		errorHandler: DefaultErrorHandler,
 		Router:       httprouter.New(),
 	}
+}
+
+// Cancel sends a cancellation signal to all handlers through the action context.
+// see https://godoc.org/golang.org/x/net/context for details on how to handle the signal.
+func Cancel() {
+	cancel()
 }
 
 // Name returns the application name.

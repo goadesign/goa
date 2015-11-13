@@ -37,7 +37,8 @@ type GracefulApplication struct {
 var InterruptSignals = []os.Signal{
 	os.Signal(syscall.SIGINT),
 	os.Signal(syscall.SIGTERM),
-	os.Signal(syscall.SIGQUIT)}
+	os.Signal(syscall.SIGQUIT),
+}
 
 // NewGraceful returns a goa application that uses a graceful shutdown server.
 func NewGraceful(name string) Service {
