@@ -19,11 +19,11 @@ func init() {
 		log15.StreamHandler(os.Stderr, log15.LogfmtFormat()),
 		AppEngineLogHandler()),
 	)
-	api := controllers.New()
-	api.Use(AppEngineLogCtx())
-	api.Use(goa.CORS(corsPath, "*", "", "", "", "GET", ""))
-	controllers.Mount(api)
-	http.HandleFunc("/", api.ServeHTTP)
+	service := controllers.New()
+	service.Use(AppEngineLogCtx())
+	service.Use(goa.CORS(corsPath, "*", "", "", "", "GET", ""))
+	controllers.Mount(service)
+	http.HandleFunc("/", service.HTTPHandler().ServeHTTP)
 }
 
 // Format used for logging to AppEngine
