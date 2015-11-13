@@ -16,7 +16,7 @@ type (
 		ID           string                 `json:"id,omitempty"`
 		Title        string                 `json:"title,omitempty"`
 		Type         JSONType               `json:"type,omitempty"`
-		Item         *JSONSchema            `json:"item,omitempty"`
+		Items        *JSONSchema            `json:"items,omitempty"`
 		Properties   map[string]*JSONSchema `json:"properties,omitempty"`
 		Definitions  map[string]*JSONSchema `json:"definitions,omitempty"`
 		Description  string                 `json:"description,omitempty"`
@@ -263,8 +263,8 @@ func TypeSchema(api *design.APIDefinition, t design.DataType) *JSONSchema {
 		s.Type = JSONType(actual.Name())
 	case *design.Array:
 		s.Type = JSONArray
-		s.Item = NewJSONSchema()
-		buildAttributeSchema(api, s.Item, actual.ElemType)
+		s.Items = NewJSONSchema()
+		buildAttributeSchema(api, s.Items, actual.ElemType)
 	case design.Object:
 		s.Type = JSONObject
 		for n, at := range actual {
@@ -302,8 +302,8 @@ func (s *JSONSchema) Merge(other *JSONSchema) {
 			s.Properties[n] = p
 		}
 	}
-	if s.Item == nil {
-		s.Item = other.Item
+	if s.Items == nil {
+		s.Items = other.Items
 	}
 	for n, d := range other.Definitions {
 		if _, ok := s.Definitions[n]; !ok {
@@ -384,8 +384,8 @@ func (s *JSONSchema) Dup() *JSONSchema {
 	for n, p := range s.Properties {
 		js.Properties[n] = p.Dup()
 	}
-	if s.Item != nil {
-		js.Item = s.Item.Dup()
+	if s.Items != nil {
+		js.Items = s.Items.Dup()
 	}
 	for n, d := range s.Definitions {
 		js.Definitions[n] = d.Dup()

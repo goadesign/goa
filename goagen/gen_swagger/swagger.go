@@ -274,6 +274,9 @@ type (
 
 // New creates a Swagger spec from an API definition.
 func New(api *design.APIDefinition) (*Swagger, error) {
+	if api == nil {
+		return nil, nil
+	}
 	params, err := paramsFromDefinition(api.BaseParams, api.BasePath)
 	if err != nil {
 		return nil, err
@@ -331,6 +334,9 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 						return fmt.Sprintf("/{%s}", w[2:])
 					},
 				)
+				if key == "" {
+					key = "/"
+				}
 				s.Paths[key] = path
 			}
 			return nil

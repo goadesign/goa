@@ -10,9 +10,17 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/raphael/goa/design"
 	. "github.com/raphael/goa/design/dsl"
+	_ "github.com/raphael/goa/examples/cellar/design"
 	"github.com/raphael/goa/goagen/gen_schema"
 	"github.com/raphael/goa/goagen/gen_swagger"
 )
+
+// Save cellar example API definition for tests.
+var cellarDesign *APIDefinition
+
+func init() {
+	cellarDesign = Design
+}
 
 // validateSwagger validates that the given swagger object represents a valid Swagger spec.
 func validateSwagger(swagger *genswagger.Swagger) {
@@ -112,15 +120,7 @@ var _ = Describe("New", func() {
 			}))
 		})
 
-		It("serializes into valid swagger JSON", func() {
-			Ω(newErr).ShouldNot(HaveOccurred())
-			b, err := json.Marshal(swagger)
-			Ω(err).ShouldNot(HaveOccurred())
-			doc, err := spec.New(b, "")
-			Ω(err).ShouldNot(HaveOccurred())
-			err = validate.Spec(doc, strfmt.NewFormats())
-			Ω(err).ShouldNot(HaveOccurred())
-		})
+		It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
 
 		Context("with base params", func() {
 			const (
@@ -386,4 +386,13 @@ var _ = Describe("New", func() {
 			It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
 		})
 	})
+
+	Context("using the cellar example API definition", func() {
+		BeforeEach(func() {
+			Design = cellarDesign
+		})
+
+		It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
+	})
+
 })
