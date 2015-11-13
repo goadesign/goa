@@ -227,8 +227,8 @@ func main() {
 	{{$tmp := tempvar}}{{$tmp}} := New{{goify $res.Name true}}Controller()
 	app.Mount{{goify $res.Name true}}Controller(api, {{$tmp}})
 {{end}}{{if generateJSONSchema}}
-	// Mount JSON schema provider controller
-	schema.MountController(api)
+	// Mount Swagger spec provider controller
+	swagger.MountController(api)
 {{end}}
 	// Start service, listen on port 8080
 	api.ListenAndServe(":8080")
