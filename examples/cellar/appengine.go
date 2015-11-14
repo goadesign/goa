@@ -21,7 +21,7 @@ func init() {
 	)
 	service := controllers.New()
 	service.Use(AppEngineLogCtx())
-	service.Use(goa.CORS(corsPath, "*", "", "", "", "GET", ""))
+	service.Use(goa.CORS(corsPath, "*", "", "", "", "GET, POST, PUT, PATCH, DELETE", ""))
 	controllers.Mount(service)
 	http.HandleFunc("/", service.HTTPHandler().ServeHTTP)
 }
@@ -30,7 +30,7 @@ func init() {
 var logFormat = log15.JsonFormat()
 
 // Paths that must return CORS headers
-var corsPath = regexp.MustCompile(`^/(schema|swagger)\.json$`)
+var corsPath = regexp.MustCompile(`.*`)
 
 // AppEngineLogHandler sends logs to AppEngine.
 // The record must contain the appengine request context.
