@@ -3,6 +3,7 @@ package genswagger
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/raphael/goa/design"
 	"github.com/raphael/goa/goagen/gen_schema"
@@ -324,20 +325,9 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 	err = api.IterateResources(func(res *design.ResourceDefinition) error {
 		return res.IterateActions(func(a *design.ActionDefinition) error {
 			for _, route := range a.Routes {
-				path, err := pathFromDefinition(api, route)
-				if err != nil {
+				if err := buildPathFromDefinition(s, api, route); err != nil {
 					return err
 				}
-				key := design.WildcardRegex.ReplaceAllStringFunc(
-					route.Path,
-					func(w string) string {
-						return fmt.Sprintf("/{%s}", w[2:])
-					},
-				)
-				if key == "" {
-					key = "/"
-				}
-				s.Paths[key] = path
 			}
 			return nil
 		})
@@ -448,19 +438,30 @@ func headersFromDefinition(headers *design.AttributeDefinition) (map[string]*Hea
 	return res, nil
 }
 
-func pathFromDefinition(api *design.APIDefinition, route *design.RouteDefinition) (*Path, error) {
+func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *design.RouteDefinition) error {
 	action := route.Parent
-	params, err := paramsFromDefinition(action.Params, route.Path)
+	params, err := paramsFromDefinition(action.Params, route.FullPath())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	responses := make(map[string]*Response, len(action.Responses))
 	for _, r := range action.Responses {
 		resp, err := responseFromDefinition(api, r)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		responses[strconv.Itoa(r.Status)] = resp
+	}
+	if action.Payload != nil {
+		payloadSchema := genschema.TypeSchema(api, action.Payload)
+		pp := &Parameter{
+			Name:        "payload",
+			In:          "body",
+			Description: action.Payload.Description,
+			Required:    true,
+			Schema:      payloadSchema,
+		}
+		params = append(params, pp)
 	}
 	operation := &Operation{
 		Description:  action.Description,
@@ -473,24 +474,39 @@ func pathFromDefinition(api *design.APIDefinition, route *design.RouteDefinition
 		Schemes:      []string{"https"},
 		Deprecated:   false,
 	}
+	key := design.WildcardRegex.ReplaceAllStringFunc(
+		route.FullPath(),
+		func(w string) string {
+			return fmt.Sprintf("/{%s}", w[2:])
+		},
+	)
+	if key == "" {
+		key = "/"
+	}
+	key = strings.TrimPrefix(key, api.BasePath)
 	var path *Path
+	var ok bool
+	if path, ok = s.Paths[key]; !ok {
+		path = new(Path)
+		s.Paths[key] = path
+	}
 	switch route.Verb {
 	case "GET":
-		path = &Path{Get: operation}
+		path.Get = operation
 	case "PUT":
-		path = &Path{Put: operation}
+		path.Put = operation
 	case "POST":
-		path = &Path{Post: operation}
+		path.Post = operation
 	case "DELETE":
-		path = &Path{Delete: operation}
+		path.Delete = operation
 	case "OPTIONS":
-		path = &Path{Options: operation}
+		path.Options = operation
 	case "HEAD":
-		path = &Path{Head: operation}
+		path.Head = operation
 	case "PATCH":
-		path = &Path{Patch: operation}
+		path.Patch = operation
 	}
-	return path, nil
+	return nil
 }
 
 func docsFromDefinition(docs *design.DocsDefinition) *ExternalDocs {

@@ -375,12 +375,12 @@ var _ = Describe("New", func() {
 			It("sets the Path fields", func() {
 				Ω(newErr).ShouldNot(HaveOccurred())
 				Ω(swagger.Paths).Should(HaveLen(2))
-				Ω(swagger.Paths["//orgs/{org}/accounts/{id}"]).ShouldNot(BeNil())
-				Ω(swagger.Paths["//orgs/{org}/accounts/{id}"].Put).ShouldNot(BeNil())
-				Ω(swagger.Paths["//orgs/{org}/accounts/{id}"].Put.Parameters).Should(HaveLen(3))
-				Ω(swagger.Paths["/{id}"]).ShouldNot(BeNil())
-				Ω(swagger.Paths["/{id}"].Put).ShouldNot(BeNil())
-				Ω(swagger.Paths["/{id}"].Put.Parameters).Should(HaveLen(3))
+				Ω(swagger.Paths["/orgs/{org}/accounts/{id}"]).ShouldNot(BeNil())
+				Ω(swagger.Paths["/orgs/{org}/accounts/{id}"].Put).ShouldNot(BeNil())
+				Ω(swagger.Paths["/orgs/{org}/accounts/{id}"].Put.Parameters).Should(HaveLen(4))
+				Ω(swagger.Paths["/bottles/{id}"]).ShouldNot(BeNil())
+				Ω(swagger.Paths["/bottles/{id}"].Put).ShouldNot(BeNil())
+				Ω(swagger.Paths["/bottles/{id}"].Put.Parameters).Should(HaveLen(4))
 			})
 
 			It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
