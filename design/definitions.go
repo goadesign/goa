@@ -35,6 +35,8 @@ type (
 		Description string // API description
 		// API hostname
 		Host string
+		// API URL schemes
+		Schemes []string
 		// Common base path to all API actions
 		BasePath string
 		// Common path parameters to all API actions

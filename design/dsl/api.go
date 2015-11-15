@@ -28,6 +28,7 @@ import (
 //			URL("doc URL")
 //		})
 //		Host("goa.design")                      // API hostname
+//		Schemes("http")
 // 		BasePath("/base/:param")                // Common base path to all API actions
 // 		BaseParams(func() {                     // Common parameters to all API actions
 // 			Param("param")
@@ -146,6 +147,19 @@ func Host(host string) {
 			ReportError(`invalid hostname value "%s"`, host)
 		} else {
 			a.Host = host
+		}
+	}
+}
+
+// Schemes sets the API URL schemes.
+func Schemes(vals ...string) {
+	if a, ok := apiDefinition(true); ok {
+		for _, v := range vals {
+			if v != "http" && v != "https" && v!= "ws" && v!= "wss" {
+				ReportError(`invalid scheme "%s", must be one of "http", "https", "ws" or "wss"`, v)
+			} else {
+				a.Schemes = append(a.Schemes, v)
+			}
 		}
 	}
 }

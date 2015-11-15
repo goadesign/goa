@@ -9,8 +9,6 @@ var _ = Resource("account", func() {
 
 	DefaultMedia(Account)
 	BasePath("/accounts")
-	CanonicalActionName("show")
-	UseTrait("Authenticated")
 
 	Action("show", func() {
 		Routing(
@@ -33,7 +31,7 @@ var _ = Resource("account", func() {
 			Member("name")
 			Required("name")
 		})
-		Response(Created)
+		Response(Created, "/accounts/[0-9]+")
 	})
 
 	Action("update", func() {
@@ -69,8 +67,6 @@ var _ = Resource("bottle", func() {
 	DefaultMedia(Bottle)
 	BasePath("bottles")
 	Parent("account")
-	CanonicalActionName("show")
-	UseTrait("Authenticated")
 
 	Action("list", func() {
 		Routing(
@@ -108,7 +104,7 @@ var _ = Resource("bottle", func() {
 		Payload(BottlePayload, func() {
 			Required("name", "vineyard", "varietal", "vintage", "color")
 		})
-		Response(Created)
+		Response(Created, "^/accounts/[0-9]+/bottles/[0-9]+$")
 	})
 
 	Action("update", func() {
@@ -144,11 +140,6 @@ var _ = Resource("bottle", func() {
 		)
 		Params(func() {
 			Param("bottleID", Integer)
-		})
-		Headers(func() {
-			Header("X-Force", func() {
-				Enum("true", "false")
-			})
 		})
 		Response(NoContent)
 		Response(NotFound)
