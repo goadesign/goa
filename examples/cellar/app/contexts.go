@@ -31,7 +31,6 @@ type CreateAccountContext struct {
 func NewCreateAccountContext(c *goa.Context) (*CreateAccountContext, error) {
 	var err error
 	ctx := CreateAccountContext{Context: c}
-
 	p, err := NewCreateAccountPayload(c.Payload())
 	if err != nil {
 		return nil, err
@@ -86,7 +85,6 @@ type DeleteAccountContext struct {
 func NewDeleteAccountContext(c *goa.Context) (*DeleteAccountContext, error) {
 	var err error
 	ctx := DeleteAccountContext{Context: c}
-
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
@@ -119,7 +117,6 @@ type ShowAccountContext struct {
 func NewShowAccountContext(c *goa.Context) (*ShowAccountContext, error) {
 	var err error
 	ctx := ShowAccountContext{Context: c}
-
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
@@ -158,7 +155,6 @@ type UpdateAccountContext struct {
 func NewUpdateAccountContext(c *goa.Context) (*UpdateAccountContext, error) {
 	var err error
 	ctx := UpdateAccountContext{Context: c}
-
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
@@ -227,7 +223,6 @@ type CreateBottleContext struct {
 func NewCreateBottleContext(c *goa.Context) (*CreateBottleContext, error) {
 	var err error
 	ctx := CreateBottleContext{Context: c}
-
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
@@ -246,16 +241,15 @@ func NewCreateBottleContext(c *goa.Context) (*CreateBottleContext, error) {
 
 // CreateBottlePayload is the bottle create action payload.
 type CreateBottlePayload struct {
-	Characteristics string
-	Color           string
-	Country         string
-	Name            string
-	Region          string
-	Review          string
-	Sweetness       int
-	Varietal        string
-	Vineyard        string
-	Vintage         int
+	Color     string
+	Country   string
+	Name      string
+	Region    string
+	Review    string
+	Sweetness int
+	Varietal  string
+	Vineyard  string
+	Vintage   int
 }
 
 // NewCreateBottlePayload instantiates a CreateBottlePayload from a raw request body.
@@ -265,162 +259,145 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 	var p *CreateBottlePayload
 	if val, ok := raw.(map[string]interface{}); ok {
 		p = new(CreateBottlePayload)
-		if v, ok := val["characteristics"]; ok {
+		if v, ok := val["color"]; ok {
 			var tmp3 string
 			if val, ok := v.(string); ok {
 				tmp3 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Characteristics`, v, "string", err)
-			}
-			if err == nil {
-				if len(tmp3) < 10 {
-					err = goa.InvalidLengthError(`payload.Characteristics`, tmp3, 10, true, err)
-				}
-				if len(tmp3) > 300 {
-					err = goa.InvalidLengthError(`payload.Characteristics`, tmp3, 300, false, err)
-				}
-			}
-			p.Characteristics = tmp3
-		}
-		if v, ok := val["color"]; ok {
-			var tmp4 string
-			if val, ok := v.(string); ok {
-				tmp4 = val
-			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Color`, v, "string", err)
 			}
 			if err == nil {
-				if tmp4 != "" {
-					if !(tmp4 == "red" || tmp4 == "white" || tmp4 == "rose" || tmp4 == "yellow" || tmp4 == "sparkling") {
-						err = goa.InvalidEnumValueError(`payload.Color`, tmp4, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
+				if tmp3 != "" {
+					if !(tmp3 == "red" || tmp3 == "white" || tmp3 == "rose" || tmp3 == "yellow" || tmp3 == "sparkling") {
+						err = goa.InvalidEnumValueError(`payload.Color`, tmp3, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
 					}
 				}
 			}
-			p.Color = tmp4
+			p.Color = tmp3
 		} else {
 			err = goa.MissingAttributeError(`payload`, "color", err)
 		}
 		if v, ok := val["country"]; ok {
-			var tmp5 string
+			var tmp4 string
 			if val, ok := v.(string); ok {
-				tmp5 = val
+				tmp4 = val
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Country`, v, "string", err)
 			}
 			if err == nil {
-				if len(tmp5) < 2 {
-					err = goa.InvalidLengthError(`payload.Country`, tmp5, 2, true, err)
+				if len(tmp4) < 2 {
+					err = goa.InvalidLengthError(`payload.Country`, tmp4, 2, true, err)
 				}
 			}
-			p.Country = tmp5
+			p.Country = tmp4
 		}
 		if v, ok := val["name"]; ok {
-			var tmp6 string
+			var tmp5 string
 			if val, ok := v.(string); ok {
-				tmp6 = val
+				tmp5 = val
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Name`, v, "string", err)
 			}
 			if err == nil {
-				if len(tmp6) < 2 {
-					err = goa.InvalidLengthError(`payload.Name`, tmp6, 2, true, err)
+				if len(tmp5) < 2 {
+					err = goa.InvalidLengthError(`payload.Name`, tmp5, 2, true, err)
 				}
 			}
-			p.Name = tmp6
+			p.Name = tmp5
 		} else {
 			err = goa.MissingAttributeError(`payload`, "name", err)
 		}
 		if v, ok := val["region"]; ok {
+			var tmp6 string
+			if val, ok := v.(string); ok {
+				tmp6 = val
+			} else {
+				err = goa.InvalidAttributeTypeError(`payload.Region`, v, "string", err)
+			}
+			p.Region = tmp6
+		}
+		if v, ok := val["review"]; ok {
 			var tmp7 string
 			if val, ok := v.(string); ok {
 				tmp7 = val
 			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Region`, v, "string", err)
-			}
-			p.Region = tmp7
-		}
-		if v, ok := val["review"]; ok {
-			var tmp8 string
-			if val, ok := v.(string); ok {
-				tmp8 = val
-			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Review`, v, "string", err)
 			}
 			if err == nil {
-				if len(tmp8) < 10 {
-					err = goa.InvalidLengthError(`payload.Review`, tmp8, 10, true, err)
+				if len(tmp7) < 10 {
+					err = goa.InvalidLengthError(`payload.Review`, tmp7, 10, true, err)
 				}
-				if len(tmp8) > 300 {
-					err = goa.InvalidLengthError(`payload.Review`, tmp8, 300, false, err)
+				if len(tmp7) > 300 {
+					err = goa.InvalidLengthError(`payload.Review`, tmp7, 300, false, err)
 				}
 			}
-			p.Review = tmp8
+			p.Review = tmp7
 		}
 		if v, ok := val["sweetness"]; ok {
-			var tmp9 int
+			var tmp8 int
 			if f, ok := v.(float64); ok {
-				tmp9 = int(f)
+				tmp8 = int(f)
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Sweetness`, v, "int", err)
 			}
 			if err == nil {
-				if tmp9 < 1 {
-					err = goa.InvalidRangeError(`payload.Sweetness`, tmp9, 1, true, err)
+				if tmp8 < 1 {
+					err = goa.InvalidRangeError(`payload.Sweetness`, tmp8, 1, true, err)
 				}
-				if tmp9 > 5 {
-					err = goa.InvalidRangeError(`payload.Sweetness`, tmp9, 5, false, err)
+				if tmp8 > 5 {
+					err = goa.InvalidRangeError(`payload.Sweetness`, tmp8, 5, false, err)
 				}
 			}
-			p.Sweetness = tmp9
+			p.Sweetness = tmp8
 		}
 		if v, ok := val["varietal"]; ok {
-			var tmp10 string
+			var tmp9 string
 			if val, ok := v.(string); ok {
-				tmp10 = val
+				tmp9 = val
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Varietal`, v, "string", err)
 			}
 			if err == nil {
-				if len(tmp10) < 4 {
-					err = goa.InvalidLengthError(`payload.Varietal`, tmp10, 4, true, err)
+				if len(tmp9) < 4 {
+					err = goa.InvalidLengthError(`payload.Varietal`, tmp9, 4, true, err)
 				}
 			}
-			p.Varietal = tmp10
+			p.Varietal = tmp9
 		} else {
 			err = goa.MissingAttributeError(`payload`, "varietal", err)
 		}
 		if v, ok := val["vineyard"]; ok {
-			var tmp11 string
+			var tmp10 string
 			if val, ok := v.(string); ok {
-				tmp11 = val
+				tmp10 = val
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Vineyard`, v, "string", err)
 			}
 			if err == nil {
-				if len(tmp11) < 2 {
-					err = goa.InvalidLengthError(`payload.Vineyard`, tmp11, 2, true, err)
+				if len(tmp10) < 2 {
+					err = goa.InvalidLengthError(`payload.Vineyard`, tmp10, 2, true, err)
 				}
 			}
-			p.Vineyard = tmp11
+			p.Vineyard = tmp10
 		} else {
 			err = goa.MissingAttributeError(`payload`, "vineyard", err)
 		}
 		if v, ok := val["vintage"]; ok {
-			var tmp12 int
+			var tmp11 int
 			if f, ok := v.(float64); ok {
-				tmp12 = int(f)
+				tmp11 = int(f)
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Vintage`, v, "int", err)
 			}
 			if err == nil {
-				if tmp12 < 1900 {
-					err = goa.InvalidRangeError(`payload.Vintage`, tmp12, 1900, true, err)
+				if tmp11 < 1900 {
+					err = goa.InvalidRangeError(`payload.Vintage`, tmp11, 1900, true, err)
 				}
-				if tmp12 > 2020 {
-					err = goa.InvalidRangeError(`payload.Vintage`, tmp12, 2020, false, err)
+				if tmp11 > 2020 {
+					err = goa.InvalidRangeError(`payload.Vintage`, tmp11, 2020, false, err)
 				}
 			}
-			p.Vintage = tmp12
+			p.Vintage = tmp11
 		} else {
 			err = goa.MissingAttributeError(`payload`, "vintage", err)
 		}
@@ -447,7 +424,6 @@ type DeleteBottleContext struct {
 func NewDeleteBottleContext(c *goa.Context) (*DeleteBottleContext, error) {
 	var err error
 	ctx := DeleteBottleContext{Context: c}
-
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
@@ -491,7 +467,6 @@ type ListBottleContext struct {
 func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
-
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
@@ -540,7 +515,6 @@ type RateBottleContext struct {
 func NewRateBottleContext(c *goa.Context) (*RateBottleContext, error) {
 	var err error
 	ctx := RateBottleContext{Context: c}
-
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
@@ -579,21 +553,21 @@ func NewRateBottlePayload(raw interface{}) (*RateBottlePayload, error) {
 	if val, ok := raw.(map[string]interface{}); ok {
 		p = new(RateBottlePayload)
 		if v, ok := val["rating"]; ok {
-			var tmp13 int
+			var tmp12 int
 			if f, ok := v.(float64); ok {
-				tmp13 = int(f)
+				tmp12 = int(f)
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Rating`, v, "int", err)
 			}
 			if err == nil {
-				if tmp13 < 1 {
-					err = goa.InvalidRangeError(`payload.Rating`, tmp13, 1, true, err)
+				if tmp12 < 1 {
+					err = goa.InvalidRangeError(`payload.Rating`, tmp12, 1, true, err)
 				}
-				if tmp13 > 5 {
-					err = goa.InvalidRangeError(`payload.Rating`, tmp13, 5, false, err)
+				if tmp12 > 5 {
+					err = goa.InvalidRangeError(`payload.Rating`, tmp12, 5, false, err)
 				}
 			}
-			p.Rating = tmp13
+			p.Rating = tmp12
 		} else {
 			err = goa.MissingAttributeError(`payload`, "rating", err)
 		}
@@ -625,7 +599,6 @@ type ShowBottleContext struct {
 func NewShowBottleContext(c *goa.Context) (*ShowBottleContext, error) {
 	var err error
 	ctx := ShowBottleContext{Context: c}
-
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
@@ -673,7 +646,6 @@ type UpdateBottleContext struct {
 func NewUpdateBottleContext(c *goa.Context) (*UpdateBottleContext, error) {
 	var err error
 	ctx := UpdateBottleContext{Context: c}
-
 	rawAccountID, ok := c.Get("accountID")
 	if ok {
 		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
@@ -700,16 +672,15 @@ func NewUpdateBottleContext(c *goa.Context) (*UpdateBottleContext, error) {
 
 // UpdateBottlePayload is the bottle update action payload.
 type UpdateBottlePayload struct {
-	Characteristics string
-	Color           string
-	Country         string
-	Name            string
-	Region          string
-	Review          string
-	Sweetness       int
-	Varietal        string
-	Vineyard        string
-	Vintage         int
+	Color     string
+	Country   string
+	Name      string
+	Region    string
+	Review    string
+	Sweetness int
+	Varietal  string
+	Vineyard  string
+	Vintage   int
 }
 
 // NewUpdateBottlePayload instantiates a UpdateBottlePayload from a raw request body.
@@ -719,154 +690,137 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 	var p *UpdateBottlePayload
 	if val, ok := raw.(map[string]interface{}); ok {
 		p = new(UpdateBottlePayload)
-		if v, ok := val["characteristics"]; ok {
-			var tmp14 string
-			if val, ok := v.(string); ok {
-				tmp14 = val
-			} else {
-				err = goa.InvalidAttributeTypeError(`payload.Characteristics`, v, "string", err)
-			}
-			if err == nil {
-				if len(tmp14) < 10 {
-					err = goa.InvalidLengthError(`payload.Characteristics`, tmp14, 10, true, err)
-				}
-				if len(tmp14) > 300 {
-					err = goa.InvalidLengthError(`payload.Characteristics`, tmp14, 300, false, err)
-				}
-			}
-			p.Characteristics = tmp14
-		}
 		if v, ok := val["color"]; ok {
-			var tmp15 string
+			var tmp13 string
 			if val, ok := v.(string); ok {
-				tmp15 = val
+				tmp13 = val
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Color`, v, "string", err)
 			}
 			if err == nil {
-				if tmp15 != "" {
-					if !(tmp15 == "red" || tmp15 == "white" || tmp15 == "rose" || tmp15 == "yellow" || tmp15 == "sparkling") {
-						err = goa.InvalidEnumValueError(`payload.Color`, tmp15, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
+				if tmp13 != "" {
+					if !(tmp13 == "red" || tmp13 == "white" || tmp13 == "rose" || tmp13 == "yellow" || tmp13 == "sparkling") {
+						err = goa.InvalidEnumValueError(`payload.Color`, tmp13, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
 					}
 				}
 			}
-			p.Color = tmp15
+			p.Color = tmp13
 		}
 		if v, ok := val["country"]; ok {
-			var tmp16 string
+			var tmp14 string
 			if val, ok := v.(string); ok {
-				tmp16 = val
+				tmp14 = val
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Country`, v, "string", err)
 			}
 			if err == nil {
-				if len(tmp16) < 2 {
-					err = goa.InvalidLengthError(`payload.Country`, tmp16, 2, true, err)
+				if len(tmp14) < 2 {
+					err = goa.InvalidLengthError(`payload.Country`, tmp14, 2, true, err)
 				}
 			}
-			p.Country = tmp16
+			p.Country = tmp14
 		}
 		if v, ok := val["name"]; ok {
-			var tmp17 string
+			var tmp15 string
 			if val, ok := v.(string); ok {
-				tmp17 = val
+				tmp15 = val
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Name`, v, "string", err)
 			}
 			if err == nil {
-				if len(tmp17) < 2 {
-					err = goa.InvalidLengthError(`payload.Name`, tmp17, 2, true, err)
+				if len(tmp15) < 2 {
+					err = goa.InvalidLengthError(`payload.Name`, tmp15, 2, true, err)
 				}
 			}
-			p.Name = tmp17
+			p.Name = tmp15
 		}
 		if v, ok := val["region"]; ok {
-			var tmp18 string
+			var tmp16 string
 			if val, ok := v.(string); ok {
-				tmp18 = val
+				tmp16 = val
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Region`, v, "string", err)
 			}
-			p.Region = tmp18
+			p.Region = tmp16
 		}
 		if v, ok := val["review"]; ok {
-			var tmp19 string
+			var tmp17 string
 			if val, ok := v.(string); ok {
-				tmp19 = val
+				tmp17 = val
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Review`, v, "string", err)
 			}
 			if err == nil {
-				if len(tmp19) < 10 {
-					err = goa.InvalidLengthError(`payload.Review`, tmp19, 10, true, err)
+				if len(tmp17) < 10 {
+					err = goa.InvalidLengthError(`payload.Review`, tmp17, 10, true, err)
 				}
-				if len(tmp19) > 300 {
-					err = goa.InvalidLengthError(`payload.Review`, tmp19, 300, false, err)
+				if len(tmp17) > 300 {
+					err = goa.InvalidLengthError(`payload.Review`, tmp17, 300, false, err)
 				}
 			}
-			p.Review = tmp19
+			p.Review = tmp17
 		}
 		if v, ok := val["sweetness"]; ok {
-			var tmp20 int
+			var tmp18 int
 			if f, ok := v.(float64); ok {
-				tmp20 = int(f)
+				tmp18 = int(f)
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Sweetness`, v, "int", err)
 			}
 			if err == nil {
-				if tmp20 < 1 {
-					err = goa.InvalidRangeError(`payload.Sweetness`, tmp20, 1, true, err)
+				if tmp18 < 1 {
+					err = goa.InvalidRangeError(`payload.Sweetness`, tmp18, 1, true, err)
 				}
-				if tmp20 > 5 {
-					err = goa.InvalidRangeError(`payload.Sweetness`, tmp20, 5, false, err)
+				if tmp18 > 5 {
+					err = goa.InvalidRangeError(`payload.Sweetness`, tmp18, 5, false, err)
 				}
 			}
-			p.Sweetness = tmp20
+			p.Sweetness = tmp18
 		}
 		if v, ok := val["varietal"]; ok {
-			var tmp21 string
+			var tmp19 string
 			if val, ok := v.(string); ok {
-				tmp21 = val
+				tmp19 = val
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Varietal`, v, "string", err)
 			}
 			if err == nil {
-				if len(tmp21) < 4 {
-					err = goa.InvalidLengthError(`payload.Varietal`, tmp21, 4, true, err)
+				if len(tmp19) < 4 {
+					err = goa.InvalidLengthError(`payload.Varietal`, tmp19, 4, true, err)
 				}
 			}
-			p.Varietal = tmp21
+			p.Varietal = tmp19
 		}
 		if v, ok := val["vineyard"]; ok {
-			var tmp22 string
+			var tmp20 string
 			if val, ok := v.(string); ok {
-				tmp22 = val
+				tmp20 = val
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Vineyard`, v, "string", err)
 			}
 			if err == nil {
-				if len(tmp22) < 2 {
-					err = goa.InvalidLengthError(`payload.Vineyard`, tmp22, 2, true, err)
+				if len(tmp20) < 2 {
+					err = goa.InvalidLengthError(`payload.Vineyard`, tmp20, 2, true, err)
 				}
 			}
-			p.Vineyard = tmp22
+			p.Vineyard = tmp20
 		}
 		if v, ok := val["vintage"]; ok {
-			var tmp23 int
+			var tmp21 int
 			if f, ok := v.(float64); ok {
-				tmp23 = int(f)
+				tmp21 = int(f)
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Vintage`, v, "int", err)
 			}
 			if err == nil {
-				if tmp23 < 1900 {
-					err = goa.InvalidRangeError(`payload.Vintage`, tmp23, 1900, true, err)
+				if tmp21 < 1900 {
+					err = goa.InvalidRangeError(`payload.Vintage`, tmp21, 1900, true, err)
 				}
-				if tmp23 > 2020 {
-					err = goa.InvalidRangeError(`payload.Vintage`, tmp23, 2020, false, err)
+				if tmp21 > 2020 {
+					err = goa.InvalidRangeError(`payload.Vintage`, tmp21, 2020, false, err)
 				}
 			}
-			p.Vintage = tmp23
+			p.Vintage = tmp21
 		}
 	} else {
 		err = goa.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)

@@ -15,20 +15,12 @@ var Account = MediaType("application/vnd.goa.example.account", func() {
 		Attribute("created_at", String, "Date of creation", func() {
 			Format("date-time")
 		})
-		Attribute("created_by", String, "Email of account ownder", func() {
+		Attribute("created_by", String, "Email of account owner", func() {
 			Format("email")
 		})
-
-		Required("name")
 	})
 
 	View("default", func() {
-		Attribute("id")
-		Attribute("href")
-		Attribute("name")
-	})
-
-	View("full", func() {
 		Attribute("id")
 		Attribute("href")
 		Attribute("name")
@@ -37,6 +29,7 @@ var Account = MediaType("application/vnd.goa.example.account", func() {
 	})
 
 	View("link", func() {
+		Attribute("id")
 		Attribute("href")
 		Attribute("name")
 	})
@@ -70,7 +63,6 @@ var Bottle = MediaType("application/vnd.goa.example.bottle", func() {
 		Attribute("country")
 		Attribute("region")
 		Attribute("review")
-		Attribute("characteristics")
 
 		Links(func() {
 			Link("account")
@@ -80,6 +72,7 @@ var Bottle = MediaType("application/vnd.goa.example.bottle", func() {
 			Attribute("id")
 			Attribute("href")
 			Attribute("name")
+			Attribute("rating")
 			Attribute("vineyard")
 			Attribute("varietal")
 			Attribute("vintage")
@@ -90,6 +83,7 @@ var Bottle = MediaType("application/vnd.goa.example.bottle", func() {
 			Attribute("id")
 			Attribute("href")
 			Attribute("name")
+			Attribute("rating")
 			Attribute("links")
 		})
 
@@ -97,6 +91,10 @@ var Bottle = MediaType("application/vnd.goa.example.bottle", func() {
 			Attribute("id")
 			Attribute("href")
 			Attribute("name")
+			Attribute("account", func() {
+				View("full")
+			})
+			Attribute("rating")
 			Attribute("vineyard")
 			Attribute("varietal")
 			Attribute("vintage")
@@ -105,14 +103,9 @@ var Bottle = MediaType("application/vnd.goa.example.bottle", func() {
 			Attribute("country")
 			Attribute("region")
 			Attribute("review")
-			Attribute("characteristics")
 			Attribute("created_at")
 			Attribute("updated_at")
-			Attribute("account", func() {
-				View("full")
-			})
+			Attribute("links")
 		})
-
-		Required("account", "name", "vineyard")
 	})
 })

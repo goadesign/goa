@@ -14,14 +14,13 @@ package app
 
 // BottlePayload type
 type BottlePayload struct {
-	Characteristics string
-	Color           string
-	Country         string
-	Name            string
-	Region          string
-	Review          string
-	Sweetness       int
-	Varietal        string
-	Vineyard        string
-	Vintage         int
+	Color     string
+	Country   string
+	Name      string
+	Region    string
+	Review    string
+	Sweetness int
+	Varietal  string
+	Vineyard  string
+	Vintage   int
 }
