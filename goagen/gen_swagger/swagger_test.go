@@ -60,6 +60,7 @@ var _ = Describe("New", func() {
 			license      = "license"
 			licenseURL   = "http://licenseURL.com"
 			host         = "host"
+			scheme       = "https"
 			basePath     = "/base"
 			docDesc      = "doc description"
 			docURL       = "http://docURL.com"
@@ -84,6 +85,7 @@ var _ = Describe("New", func() {
 					URL(docURL)
 				})
 				Host(host)
+				Schemes(scheme)
 				BasePath(basePath)
 			})
 		})

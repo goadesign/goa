@@ -155,7 +155,7 @@ func Host(host string) {
 func Schemes(vals ...string) {
 	if a, ok := apiDefinition(true); ok {
 		for _, v := range vals {
-			if v != "http" && v != "https" && v!= "ws" && v!= "wss" {
+			if v != "http" && v != "https" && v != "ws" && v != "wss" {
 				ReportError(`invalid scheme "%s", must be one of "http", "https", "ws" or "wss"`, v)
 			} else {
 				a.Schemes = append(a.Schemes, v)
