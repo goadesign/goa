@@ -302,7 +302,7 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 		Host:         api.Host,
 		BasePath:     api.BasePath,
 		Paths:        make(map[string]*Path),
-		Schemes:      []string{"https"},
+		Schemes:      api.Schemes,
 		Consumes:     []string{"application/json"},
 		Produces:     []string{"application/json"},
 		Parameters:   paramMap,

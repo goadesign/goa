@@ -36,8 +36,4 @@ var BottlePayload = Type("BottlePayload", func() {
 		MinLength(10)
 		MaxLength(300)
 	})
-	Attribute("characteristics", func() {
-		MinLength(10)
-		MaxLength(300)
-	})
 })
