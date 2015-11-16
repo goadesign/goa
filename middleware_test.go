@@ -3,6 +3,7 @@ package goa_test
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -243,6 +244,104 @@ var _ = Describe("Timeout", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 		_, ok := ctx.Deadline()
 		Ω(ok).Should(BeTrue())
+	})
+})
+
+var _ = Describe("RequireHeader", func() {
+	var handler *testHandler
+	var ctx *goa.Context
+	var req *http.Request
+	params := map[string]string{"param": "value"}
+	query := map[string][]string{"query": []string{"qvalue"}}
+	payload := map[string]interface{}{"payload": 42}
+	headerName := "Some-Header"
+
+	BeforeEach(func() {
+		var err error
+		req, err = http.NewRequest("POST", "/foo/bar", strings.NewReader(`{"payload":42}`))
+		Ω(err).ShouldNot(HaveOccurred())
+		rw := new(TestResponseWriter)
+		ctx = goa.NewContext(nil, req, rw, params, query, payload)
+		handler = new(testHandler)
+		logger := log15.New("test", "test")
+		logger.SetHandler(handler)
+		ctx.Logger = logger
+	})
+
+	It("matches a header value", func() {
+		req.Header.Set(headerName, "some value")
+		h := func(ctx *goa.Context) error {
+			ctx.JSON(http.StatusOK, "ok")
+			return nil
+		}
+		t := goa.RequireHeader(
+			regexp.MustCompile("^/foo"),
+			headerName,
+			regexp.MustCompile("^some value$"),
+			http.StatusUnauthorized)(h)
+		err := t(ctx)
+		Ω(err).ShouldNot(HaveOccurred())
+		Ω(ctx.ResponseStatus()).Should(Equal(http.StatusOK))
+	})
+
+	It("responds with failure on mismatch", func() {
+		req.Header.Set(headerName, "some other value")
+		h := func(ctx *goa.Context) error {
+			panic("unreachable")
+		}
+		t := goa.RequireHeader(
+			regexp.MustCompile("^/foo"),
+			headerName,
+			regexp.MustCompile("^some value$"),
+			http.StatusUnauthorized)(h)
+		err := t(ctx)
+		Ω(err).ShouldNot(HaveOccurred())
+		Ω(ctx.ResponseStatus()).Should(Equal(http.StatusUnauthorized))
+	})
+
+	It("responds with failure when header is missing", func() {
+		h := func(ctx *goa.Context) error {
+			panic("unreachable")
+		}
+		t := goa.RequireHeader(
+			regexp.MustCompile("^/foo"),
+			headerName,
+			regexp.MustCompile("^some value$"),
+			http.StatusUnauthorized)(h)
+		err := t(ctx)
+		Ω(err).ShouldNot(HaveOccurred())
+		Ω(ctx.ResponseStatus()).Should(Equal(http.StatusUnauthorized))
+	})
+
+	It("passes through for a non-matching path", func() {
+		req.Header.Set(headerName, "bogus")
+		h := func(ctx *goa.Context) error {
+			ctx.JSON(http.StatusOK, "ok")
+			return nil
+		}
+		t := goa.RequireHeader(
+			regexp.MustCompile("^/baz"),
+			headerName,
+			regexp.MustCompile("^some value$"),
+			http.StatusUnauthorized)(h)
+		err := t(ctx)
+		Ω(err).ShouldNot(HaveOccurred())
+		Ω(ctx.ResponseStatus()).Should(Equal(http.StatusOK))
+	})
+
+	It("matches value for a nil path pattern", func() {
+		req.Header.Set(headerName, "bogus")
+		h := func(ctx *goa.Context) error {
+			panic("unreachable")
+		}
+		t := goa.RequireHeader(
+			nil,
+			headerName,
+			regexp.MustCompile("^some value$"),
+			http.StatusNotFound)(h)
+		err := t(ctx)
+		Ω(err).ShouldNot(HaveOccurred())
+		Ω(ctx.ResponseStatus()).Should(Equal(http.StatusNotFound))
 	})
 })
 

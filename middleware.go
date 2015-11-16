@@ -164,7 +164,6 @@ func RequestID() Middleware {
 func CORS(pathPattern *regexp.Regexp, allowOrigin, exposeHeaders, maxAge, allowCredentials, allowMethods, allowHeaders string) Middleware {
 	return func(h Handler) Handler {
 		return func(ctx *Context) error {
-			ctx.Info("URL PATH", "PATH", ctx.Request().URL.Path)
 			if pathPattern != nil && !pathPattern.MatchString(ctx.Request().URL.Path) {
 				return h(ctx)
 			}
@@ -279,6 +278,43 @@ func Timeout(timeout time.Duration) Middleware {
 			// care of canceling on completion.
 			ctx.Context, _ = context.WithTimeout(ctx.Context, timeout)
 			return h(ctx)
+		}
+	}
+}
+
+// RequireHeader requires a request header to match a value pattern. If the
+// header is missing or does not match then the failureStatus is the response
+// (e.g. http.StatusUnauthorized). If pathPattern is nil then any path is
+// included. If requiredHeaderValue is nil then any value is accepted so long as
+// the header is non-empty.
+func RequireHeader(
+	pathPattern *regexp.Regexp,
+	requiredHeaderName string,
+	requiredHeaderValue *regexp.Regexp,
+	failureStatus int) Middleware {
+
+	return func(h Handler) Handler {
+		return func(ctx *Context) (err error) {
+			if pathPattern == nil || pathPattern.MatchString(ctx.Request().URL.Path) {
+				matched := false
+				header := ctx.Request().Header
+				headerValue := header.Get(requiredHeaderName)
+				if len(headerValue) > 0 {
+					if requiredHeaderValue == nil {
+						matched = true
+					} else {
+						matched = requiredHeaderValue.MatchString(headerValue)
+					}
+				}
+				if matched {
+					err = h(ctx)
+				} else {
+					err = ctx.Respond(failureStatus, []byte(http.StatusText(failureStatus)))
+				}
+			} else {
+				err = h(ctx)
+			}
+			return
 		}
 	}
 }
