@@ -463,10 +463,21 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		}
 		params = append(params, pp)
 	}
+	operationID := fmt.Sprintf("%s#%s", action.Parent.Name, action.Name)
+	index := 0
+	for i, rt := range action.Routes {
+		if rt == route {
+			index = i
+			break
+		}
+	}
+	if index > 0 {
+		operationID = fmt.Sprintf("%s#%d", operationID, index)
+	}
 	operation := &Operation{
 		Description:  action.Description,
 		ExternalDocs: docsFromDefinition(action.Docs),
-		OperationID:  fmt.Sprintf("%s#%s", action.Parent.Name, action.Name),
+		OperationID:  operationID,
 		Consumes:     []string{"application/json"},
 		Produces:     []string{"application/json"},
 		Parameters:   params,
