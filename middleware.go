@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync/atomic"
@@ -156,6 +157,40 @@ func RequestID() Middleware {
 	}
 }
 
+// CORS is a middleware that sets the CORS (Cross-Origin Resource Sharing) headers with the given
+// values. Setting an argument to the empty string causes the corresponding header to not be set.
+// pathPattern - if not nil - defines the regular expression that the request path must
+// match for the headers to be set.
+func CORS(pathPattern *regexp.Regexp, allowOrigin, exposeHeaders, maxAge, allowCredentials, allowMethods, allowHeaders string) Middleware {
+	return func(h Handler) Handler {
+		return func(ctx *Context) error {
+			if pathPattern != nil && !pathPattern.MatchString(ctx.Request().URL.Path) {
+				return h(ctx)
+			}
+			header := ctx.Header()
+			if allowOrigin != "" {
+				header.Set("Access-Control-Allow-Origin", allowOrigin)
+			}
+			if exposeHeaders != "" {
+				header.Set("Access-Control-Expose-Headers", exposeHeaders)
+			}
+			if maxAge != "" {
+				header.Set("Access-Control-Max-Age", maxAge)
+			}
+			if allowCredentials != "" {
+				header.Set("Access-Control-Allow-Credentials", allowCredentials)
+			}
+			if allowMethods != "" {
+				header.Set("Access-Control-Allow-Methods", allowMethods)
+			}
+			if allowHeaders != "" {
+				header.Set("Access-Control-Allow-Headers", allowHeaders)
+			}
+			return h(ctx)
+		}
+	}
+}
+
 // Recover is a middleware that recovers panics and returns an internal error response.
 func Recover() Middleware {
 	return func(h Handler) Handler {
@@ -243,6 +278,43 @@ func Timeout(timeout time.Duration) Middleware {
 			// care of canceling on completion.
 			ctx.Context, _ = context.WithTimeout(ctx.Context, timeout)
 			return h(ctx)
+		}
+	}
+}
+
+// RequireHeader requires a request header to match a value pattern. If the
+// header is missing or does not match then the failureStatus is the response
+// (e.g. http.StatusUnauthorized). If pathPattern is nil then any path is
+// included. If requiredHeaderValue is nil then any value is accepted so long as
+// the header is non-empty.
+func RequireHeader(
+	pathPattern *regexp.Regexp,
+	requiredHeaderName string,
+	requiredHeaderValue *regexp.Regexp,
+	failureStatus int) Middleware {
+
+	return func(h Handler) Handler {
+		return func(ctx *Context) (err error) {
+			if pathPattern == nil || pathPattern.MatchString(ctx.Request().URL.Path) {
+				matched := false
+				header := ctx.Request().Header
+				headerValue := header.Get(requiredHeaderName)
+				if len(headerValue) > 0 {
+					if requiredHeaderValue == nil {
+						matched = true
+					} else {
+						matched = requiredHeaderValue.MatchString(headerValue)
+					}
+				}
+				if matched {
+					err = h(ctx)
+				} else {
+					err = ctx.Respond(failureStatus, []byte(http.StatusText(failureStatus)))
+				}
+			} else {
+				err = h(ctx)
+			}
+			return
 		}
 	}
 }
