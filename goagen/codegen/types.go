@@ -36,7 +36,7 @@ func init() {
 		"marshalAttribute":   attributeMarshalerR,
 		"marshalMediaType":   mediaTypeMarshalerR,
 		"unmarshalAttribute": attributeUnmarshalerR,
-		"validate":           validationCheckerR,
+		"validate":           ValidationChecker,
 		"gotypename":         GoTypeName,
 		"gotyperef":          GoTypeRef,
 		"goify":              Goify,
@@ -127,7 +127,7 @@ func attributeMarshalerR(att *design.AttributeDefinition, context, source, targe
 	default:
 		marshaler = typeMarshalerR(att.Type, context, source, target, depth)
 	}
-	validation := ValidationChecker(att, source, context)
+	validation := ValidationChecker(att, false, source, context, 1)
 	if validation != "" {
 		if !strings.HasPrefix(strings.TrimLeft(" \t\n", marshaler), "if err == nil {") {
 			return fmt.Sprintf(
@@ -373,7 +373,7 @@ func AttributeUnmarshaler(att *design.AttributeDefinition, context, source, targ
 }
 func attributeUnmarshalerR(att *design.AttributeDefinition, context, source, target string, depth int) string {
 	unmarshaler := typeUnmarshalerR(att.Type, context, source, target, depth)
-	validation := ValidationChecker(att, target, context)
+	validation := ValidationChecker(att, false, target, context, depth)
 	if validation == "" {
 		return unmarshaler
 	}
@@ -768,7 +768,7 @@ const (
 {{tabs $ctx.depth}}	err = goa.MissingAttributeError(` + "`" + `{{$ctx.context}}` + "`" + `, "{{$r}}", err)
 {{tabs $ctx.depth}}}
 {{end}}{{/* if eq $at.Type.Kind 4 */}}{{end}}{{/* range */}}{{$needCheck := false}}{{if $ctx.required}}{{tabs .depth}}if err == nil {
-{{end}}{{$depth := add .depth (or (and $ctx.required 1) 0)}}{{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{$validation := validate $at (has $ctx.required $n) (printf "%s.%s" $ctx.context $n) (printf "%s.%s" $ctx.source (goify $n true)) $depth}}{{if $validation}}{{$needCheck := true}}{{$validation}}
+{{end}}{{$depth := add .depth (or (and $ctx.required 1) 0)}}{{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{$validation := validate $at (has $ctx.required $n) (printf "%s.%s" $ctx.source (goify $n true)) (printf "%s.%s" $ctx.context $n) $depth}}{{if $validation}}{{$needCheck := true}}{{$validation}}
 {{end}}{{end}}{{end}}{{/* range */}}{{if $needCheck}}{{$depth := add $depth 1}}{{tabs $depth}}if err == nil {
 {{end}}{{$tmp := tempvar}}{{tabs $depth}}{{$tmp}} := map[string]interface{}{
 {{range $n, $at := .type}}{{if lt $at.Type.Kind 5}}{{tabs $depth}}	"{{$n}}": {{$ctx.source}}.{{goify $n true}},

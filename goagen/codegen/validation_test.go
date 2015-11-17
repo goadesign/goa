@@ -25,7 +25,7 @@ var _ = Describe("validation code generation", func() {
 			JustBeforeEach(func() {
 				att.Type = attType
 				att.Validations = validations
-				code = codegen.ValidationChecker(att, target, context)
+				code = codegen.ValidationChecker(att, false, target, context, 1)
 			})
 
 			Context("of enum", func() {

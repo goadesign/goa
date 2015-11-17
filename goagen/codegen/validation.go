@@ -55,15 +55,21 @@ func init() {
 
 // RecursiveChecker produces Go code that runs the validation checks recursively over the given
 // attribute.
-func RecursiveChecker(att *design.AttributeDefinition, target, context string) string {
+func RecursiveChecker(att *design.AttributeDefinition, required bool, target, context string, depth int) string {
 	var checks []string
-	validation := ValidationChecker(att, target, context)
+	validation := ValidationChecker(att, required, target, context, depth)
 	if validation != "" {
 		checks = append(checks, validation)
 	}
 	if o := att.Type.ToObject(); o != nil {
 		o.IterateAttributes(func(n string, catt *design.AttributeDefinition) error {
-			validation := RecursiveChecker(catt, fmt.Sprintf("%s.%s", target, Goify(n, true)), fmt.Sprintf("%s.%s", context, n))
+			validation := RecursiveChecker(
+				catt,
+				att.IsRequired(n),
+				fmt.Sprintf("%s.%s", target, Goify(n, true)),
+				fmt.Sprintf("%s.%s", context, n),
+				depth+1,
+			)
 			if validation != "" {
 				checks = append(checks, validation)
 			}
@@ -91,10 +97,7 @@ func RecursiveChecker(att *design.AttributeDefinition, target, context string) s
 // The generated code assumes that there is a pre-existing "err" variable of type
 // error. It initializes that variable in case a validation fails.
 // Note: we do not want to recurse here, recursion is done by the marshaler/unmarshaler code.
-func ValidationChecker(att *design.AttributeDefinition, target, context string) string {
-	return validationCheckerR(att, false, context, target, 1)
-}
-func validationCheckerR(att *design.AttributeDefinition, required bool, context, target string, depth int) string {
+func ValidationChecker(att *design.AttributeDefinition, required bool, target, context string, depth int) string {
 	data := map[string]interface{}{
 		"attribute": att,
 		"required":  required,
@@ -190,8 +193,8 @@ func constant(formatName string) string {
 }
 
 const (
-	arrayValTmpl = `{{$validation := recursiveChecker .attribute.Type.ToArray.ElemType "e" (printf "%s[*]" .context)}}{{if $validation}}{{tabs .depth}}for _, e := range {{.target}} {
-{{tabs .depth}}{{$validation}}
+	arrayValTmpl = `{{$validation := recursiveChecker .attribute.Type.ToArray.ElemType false "e" (printf "%s[*]" .context) .depth}}{{if $validation}}{{tabs .depth}}for _, e := range {{.target}} {
+{{$validation}}
 {{tabs .depth}}}{{end}}`
 
 	enumValTmpl = `{{$depth := or (and (and (not .required) (eq .attribute.Type.Kind 4)) (add .depth 1)) .depth}}{{if not .required}}{{if eq .attribute.Type.Kind 4}}{{tabs .depth}}if {{.target}} != "" {
