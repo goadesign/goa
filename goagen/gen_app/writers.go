@@ -129,7 +129,6 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 	funcMap["gotypedef"] = codegen.GoTypeDef
 	funcMap["goify"] = codegen.Goify
 	funcMap["gotypename"] = codegen.GoTypeName
-	funcMap["mediaTypeMarshaler"] = codegen.MediaTypeMarshaler
 	funcMap["typeUnmarshaler"] = codegen.TypeUnmarshaler
 	funcMap["validationChecker"] = codegen.ValidationChecker
 	funcMap["tabs"] = codegen.Tabs
@@ -403,8 +402,8 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 	// ctxRespT generates response helper methods GoGenerator
 	// template input: *ContextTemplateData
 	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{goify .Name true}} sends a HTTP response with status code {{.Status}}.
-	func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp {{gotyperef $mt 0}}{{if gt (len $mt.Views) 1}}, view {{gotypename $mt 0}}ViewEnum{{end}}{{else if .MediaType}}resp []byte{{end}}) error {
-{{if $mt}}	r, err := resp.Dump({{if gt (len $mt.Views) 1}}view{{end}})
+	func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{$mt := (index $ctx.MediaTypes .MediaType)}}{{if $mt}}resp {{gotyperef $mt 0}}{{if gt (len $mt.ComputeViews) 1}}, view {{gotypename $mt 0}}ViewEnum{{end}}{{else if .MediaType}}resp []byte{{end}}) error {
+{{if $mt}}	r, err := resp.Dump({{if gt (len $mt.ComputeViews) 1}}view{{end}})
 	if err != nil {
 		return fmt.Errorf("invalid response: %s", err)
 	}
@@ -469,13 +468,13 @@ func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} interfa
 	// template input: *design.MediaTypeDefinition
 	mediaTypeT = `{{define "Dump"}}` + dumpT + `{{end}}` + `// {{if .Description}}{{.Description}}{{else}}{{gotypename . 0}} media type{{end}}
 // Identifier: {{.Identifier}}
-type {{gotypename . 0}} {{gotypedef . 0 false false}}{{if .Views}}
+type {{gotypename . 0}} {{gotypedef . 0 false false}}{{if .ComputeViews}}
 
 // {{.Name}} views
 type {{gotypename . 0}}ViewEnum string
 
 const (
-{{$typeName := gotypename . 0}}{{range $name, $view := .Views}}// {{if .Description}}{{.Description}}{{else}}{{$typeName}} {{.Name}} view{{end}}
+{{$typeName := gotypename . 0}}{{range $name, $view := .ComputeViews}}// {{if .Description}}{{.Description}}{{else}}{{$typeName}} {{.Name}} view{{end}}
 	{{$typeName}}{{goify .Name true}}View {{$typeName}}ViewEnum = "{{.Name}}"
 {{end}}){{end}}
 // Load{{gotypename . 0}} loads raw data into an instance of {{gotypename . 0}} running all the
@@ -491,7 +490,7 @@ func Load{{gotypename . 0}}(raw interface{}) ({{gotyperef . 1}}, error) {
 
 // Dump produces raw data from an instance of {{gotypename . 0}} running all the
 // validations. See Load{{gotypename . 0}} for the definition of raw data.
-func (mt {{gotyperef . 0}}) Dump({{if gt (len .Views) 1}}view {{gotypename . 0}}ViewEnum{{end}}) ({{gonative .}}, error) {
+func (mt {{gotyperef . 0}}) Dump({{if gt (len .ComputeViews) 1}}view {{gotypename . 0}}ViewEnum{{end}}) ({{gonative .}}, error) {
 	var err error
 	var res {{gonative .}}
 {{$mt := .}}{{if gt (len .ComputeViews) 1}}{{range .ComputeViews}}   if view == {{gotypename $mt 0}}{{goify .Name true}}View {
