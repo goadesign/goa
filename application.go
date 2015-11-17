@@ -218,8 +218,10 @@ func NewHTTPRouterHandle(service Service, resName, actName string, h Handler) ht
 	chain := service.MiddlewareChain()
 	ml := len(chain)
 	middleware := func(ctx *Context) error {
-		if err := h(ctx); err != nil {
-			service.HandleError(ctx, err)
+		if !ctx.ResponseWritten() {
+			if err := h(ctx); err != nil {
+				service.HandleError(ctx, err)
+			}
 		}
 		return nil
 	}
