@@ -46,7 +46,7 @@
 //
 // The middleware automatically sets the "Vary" header to "Origin" unless the DSL defines a custom
 // value for it. The idea is to prevent caching of responses coming from different origins. Ideally
-// the application should make an effort as normalizing the value used in the  "Vary" header. See
+// the application should make an effort at normalizing the value used in the  "Vary" header. See
 // https://www.fastly.com/blog/best-practices-for-using-the-vary-header.
 //
 // CORS Usage in goa
@@ -61,7 +61,7 @@
 //
 // Secondly the service should mount the preflight controller. This controller takes care of
 // handling CORS preflight requests. It should be mounted *last* to avoid collisions in the low
-// level router between service OPTIONS handler and the preflight controller handlers.
+// level router between the service OPTIONS handler and the preflight controller handlers.
 //
 //	cors.MountPreflightController(service, spec)
 //
