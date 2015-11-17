@@ -67,8 +67,6 @@ func NewMiddleware(m interface{}) (mw Middleware, err error) {
 // ReqIDKey is the RequestID middleware key used to store the request ID value in the context.
 const ReqIDKey middlewareKey = 0
 
-// CORS
-
 // RequestIDHeader is the name of the header used to transmit the request ID.
 const RequestIDHeader = "X-Request-Id"
 
