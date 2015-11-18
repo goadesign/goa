@@ -1,40 +1,71 @@
 // +build appengine
 
-package cellar
+package main
 
 import (
 	"net/http"
 	"os"
-	"regexp"
 
 	"appengine"
 
 	"github.com/raphael/goa"
+	"github.com/raphael/goa/cors"
+	"github.com/raphael/goa/examples/cellar/app"
 	"github.com/raphael/goa/examples/cellar/controllers"
+	"github.com/raphael/goa/examples/cellar/swagger"
 	"gopkg.in/inconshreveable/log15.v2"
 )
 
 func init() {
+	// Configure logging for appengine
 	goa.Log.SetHandler(log15.MultiHandler(
 		log15.StreamHandler(os.Stderr, log15.LogfmtFormat()),
 		AppEngineLogHandler()),
 	)
-	service := controllers.New()
+
+	// Create goa application
+	service := goa.New("cellar")
+
+	// Setup CORS to allow for swagger UI.
+	spec, err := cors.New(func() {
+		cors.Origin("*", func() {
+			cors.Resource("/swagger.json", func() {
+				cors.Methods("GET", "POST", "PUT", "PATCH", "DELETE")
+			})
+		})
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	// Setup basic middleware
+	service.Use(goa.RequestID())
 	service.Use(AppEngineLogCtx())
-	service.Use(goa.CORS(corsPath, "*", "", "", "", "GET, POST, PUT, PATCH, DELETE", ""))
-	controllers.Mount(service)
+	service.Use(cors.Middleware(spec))
+	service.Use(goa.Recover())
+
+	// Mount account controller onto application
+	ac := controllers.NewAccount()
+	app.MountAccountController(service, ac)
+
+	// Mount bottle controller onto application
+	bc := controllers.NewBottle()
+	app.MountBottleController(service, bc)
+
+	// Mount Swagger Spec controller onto application
+	swagger.MountController(service)
+
+	// Mount CORS preflight controllers
+	cors.MountPreflightController(service, spec)
+
+	// Setup HTTP handler
 	http.HandleFunc("/", service.HTTPHandler().ServeHTTP)
 }
-
-// Format used for logging to AppEngine
-var logFormat = log15.JsonFormat()
-
-// Paths that must return CORS headers
-var corsPath = regexp.MustCompile(`.*`)
 
 // AppEngineLogHandler sends logs to AppEngine.
 // The record must contain the appengine request context.
 func AppEngineLogHandler() log15.Handler {
+	logFormat := log15.JsonFormat()
 	return log15.FuncHandler(func(r *log15.Record) error {
 		var c appengine.Context
 		index := 0
