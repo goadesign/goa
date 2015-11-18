@@ -6,7 +6,7 @@ import (
 )
 
 // Account is the account resource media type.
-var Account = MediaType("application/vnd.goa.example.account", func() {
+var Account = MediaType("application/vnd.goa.example.account+json", func() {
 	Description("A tenant account")
 	Attributes(func() {
 		Attribute("id", Integer, "ID of account")
@@ -36,7 +36,7 @@ var Account = MediaType("application/vnd.goa.example.account", func() {
 })
 
 // Bottle is the bottle resource media type.
-var Bottle = MediaType("application/vnd.goa.example.bottle", func() {
+var Bottle = MediaType("application/vnd.goa.example.bottle+json", func() {
 	Description("A bottle of wine")
 	Reference(BottlePayload)
 	Attributes(func() {
