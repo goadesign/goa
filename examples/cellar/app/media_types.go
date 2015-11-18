@@ -15,7 +15,7 @@ package app
 import "github.com/raphael/goa"
 
 // A tenant account
-// Identifier: application/vnd.goa.example.account
+// Identifier: application/vnd.goa.example.account+json
 type Account struct {
 	// Date of creation
 	CreatedAt string
@@ -165,7 +165,7 @@ func (mt *Account) Validate() (err error) {
 }
 
 // A bottle of wine
-// Identifier: application/vnd.goa.example.bottle
+// Identifier: application/vnd.goa.example.bottle+json
 type Bottle struct {
 	// Account that owns bottle
 	Account *Account
@@ -730,7 +730,7 @@ func (mt *Bottle) Validate() (err error) {
 }
 
 // BottleCollection media type
-// Identifier: application/vnd.goa.example.bottle; type=collection
+// Identifier: application/vnd.goa.example.bottle+json; type=collection
 type BottleCollection []*Bottle
 
 // array views

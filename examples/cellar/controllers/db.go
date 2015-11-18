@@ -34,6 +34,7 @@ func NewDB() *DB {
 				Country:   "USA",
 				Region:    "California",
 				Review:    "Great value",
+				Rating:    4,
 			},
 			&app.Bottle{
 				ID:        101,
@@ -48,6 +49,7 @@ func NewDB() *DB {
 				Country:   "USA",
 				Region:    "California",
 				Review:    "Good but expensive",
+				Rating:    3,
 			},
 			&app.Bottle{
 				ID:        102,
@@ -62,6 +64,7 @@ func NewDB() *DB {
 				Country:   "USA",
 				Region:    "California",
 				Review:    "Favorite",
+				Rating:    5,
 			},
 		},
 		2: []*app.Bottle{
@@ -78,6 +81,7 @@ func NewDB() *DB {
 				Country:   "USA",
 				Region:    "California",
 				Review:    "OK",
+				Rating:    3,
 			},
 			&app.Bottle{
 				ID:        201,
@@ -92,6 +96,7 @@ func NewDB() *DB {
 				Country:   "USA",
 				Region:    "California",
 				Review:    "Solid Pinot",
+				Rating:    4,
 			},
 		},
 	}

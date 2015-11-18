@@ -75,6 +75,7 @@ func MediaType(identifier string, dsl func()) *design.MediaTypeDefinition {
 		identifier = mime.FormatMediaType(identifier, params)
 		elems := strings.Split(identifier, ".")
 		elems = strings.Split(elems[len(elems)-1], "/")
+		elems = strings.Split(elems[0], "+")
 		typeName := inflect.Camelize(elems[0])
 		if typeName == "" {
 			mediaTypeCount++

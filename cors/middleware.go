@@ -109,9 +109,9 @@ func MountPreflightController(service goa.Service, spec Specification) {
 		path := res.Path
 		if res.IsPathPrefix {
 			if strings.HasSuffix(path, "/") {
-				path += "*"
+				path += "*cors"
 			} else {
-				path += "/*"
+				path += "/*cors"
 			}
 		}
 		var handle httprouter.Handle

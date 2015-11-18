@@ -29,7 +29,7 @@ func init() {
 	// Setup CORS to allow for swagger UI.
 	spec, err := cors.New(func() {
 		cors.Origin("*", func() {
-			cors.Resource("/swagger.json", func() {
+			cors.Resource("*", func() {
 				cors.Methods("GET", "POST", "PUT", "PATCH", "DELETE")
 			})
 		})
