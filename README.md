@@ -4,7 +4,7 @@ goa is a framework for building RESTful APIs in Go.
 
 ## Why goa?
 
-There are a number of good Go packages for writing modular web applications out there so why build
+There are a number of good Go packages for writing modular web services out there so why build
 another one? Glad you asked! The existing packages tend to focus on providing small and highly
 modular frameworks that are purposefully narrowly focused. The intent is to keep things simple and
 to avoid mixing concerns.
@@ -19,9 +19,9 @@ with implementation, goa makes it possible to describe the *design* of an API in
 goa then uses that description to provide specialized helper code to the implementation and to
 generate documentation, API clients, tests, even custom artifacts.
 
-The goa design language allows writing self-explanatory code that describes the resources exposed by the API
-and for each resource the properties and actions. goa comes with the `goagen` tool which runs the
-design language and generates various types of artifacts from the resulting metadata.
+The goa design language allows writing self-explanatory code that describes the resources exposed
+by the API and for each resource the properties and actions. goa comes with the `goagen` tool which
+runs the design language and generates various types of artifacts from the resulting metadata.
 
 One of the `goagen` output is glue code that binds your code with the underlying HTTP server. This
 code is specific to your API so that for example there is no need to cast or "bind" any handler
