@@ -87,7 +87,7 @@
 					<div class="8u 6u$(medium)">
 						<h3>Powerful Request Context</h3>
 						<p>
-							Every API action implementation in goa gets a context as first argument. The context implements the
+							Every API action handler in goa gets a context as first argument. The context implements the
 							<code>Context</code> interface from google's <a href="https://godoc.org/golang.org/x/net/context">context package</a>.
 							This means built-in support for deadlines and cancelation signals. The context also exposes the request
 							and response states with action specific helper methods generated from the design.

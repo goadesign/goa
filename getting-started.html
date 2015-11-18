@@ -27,14 +27,15 @@
         <section id="one" class="wrapper">
                 <div class="inner">
                         <p>
-                                Let's write a simplistic API with goa to make the concept of design-based development more concrete.
+                                Let's write a simplistic service with goa to make the concept of design-based API development more concrete.
 				The code below is an extract from the more complete "cellar" example that can be found in the
 				<a href="https://github.com/raphael/goa/blob/master/example/cellar" target="_blank">github repository</a>.
-				The API subset we''be using makes it possible to retrieve wine bottle information given an id.
+				The code deals with wine bottles, more specifically it makes it possible to retrieve pre-existing wine bottle
+                                models through simple GET requests.
                         </p>
                         <p>
-                                The first thing to do when writing a goa application is to describe the API using the goa design language.
-                                Create a new directory under <code>$GOPATH/src</code> for the new goa application, say <code>$GOPATH/src/cellar</code>.
+                                The first thing to do when writing a goa service is to describe the API using the goa design language.
+                                Create a new directory under <code>$GOPATH/src</code> for the new goa service, say <code>$GOPATH/src/cellar</code>.
                                 In that directory create a <code>design</code> sub directory and the file <code>design/design.go</code> with the
                                 following content:
                         </p>
@@ -76,7 +77,7 @@ var BottleMedia = MediaType("application/vnd.goa.example.bottle", func() {
                 Attribute("href")
                 Attribute("name")
         })
-}) </code></pre>
+})</code></pre>
                 <p>
                         Let's break this down:
                 </p>
@@ -124,7 +125,8 @@ var BottleMedia = MediaType("application/vnd.goa.example.bottle", func() {
                         </ul>
 
                         <blockquote>
-                                The <a href="https://godoc.org/github.com/raphael/goa/design/dsl" target="_blank">dsl package GoDoc</a> lists all the goa design language keywords together with a description and example usage.
+                                The <a href="https://godoc.org/github.com/raphael/goa/design/dsl" target="_blank">dsl package GoDoc</a> lists all
+                                the goa design language keywords together with a description and example usage.
                         </blockquote>
                         <p>
                                 Now that we have a design for our API we can use the <code>goagen</code> tool to generate all the boilerplate
@@ -145,8 +147,8 @@ var BottleMedia = MediaType("application/vnd.goa.example.bottle", func() {
         app/hrefs.go
         app/media_types.go
         app/user_types.go
-        schema/schema.go
-        schema/schema.json
+        swagger/swagger.go
+        swagger/swagger.json
         main.go
         bottle.go
                         </pre>
@@ -165,12 +167,12 @@ var BottleMedia = MediaType("application/vnd.goa.example.bottle", func() {
                                         The <code>app</code> directory contains the generated code that glues the low level HTTP router to your code.
                                 </li>
                                 <li>
-                                        The <code>schema</code> directory contains a JSON Hyper-schema representation of the API together with the
-                                        implementation of a controller that serves the file when requests are sent to <code>/schema</code>.
+                                        The <code>swagger</code> directory contains a swagger specification of the API together with the
+                                        implementation of a controller that serves the file when requests are sent to <code>/swagger.json</code>.
                                 </li>
                                 <li>
                                         As discussed above the <code>main.go</code> and <code>bottle.go</code> files provide a starting point for implementing
-                                        the application entry point and the <code>bottle</code> controller respectively.
+                                        the service entry point and the <code>bottle</code> controller respectively.
                                 </li>
                         </ul>
                         <p>
@@ -180,7 +182,7 @@ var BottleMedia = MediaType("application/vnd.goa.example.bottle", func() {
                                 <li>
                                         <code>controllers.go</code> contains the controller interface type definitions. There is one such interface
                                         per resource defined in the design language. The file also contains the code that "mount" implementations of
-                                        these controller interfaces onto the application. The exact meaning of "mounting" a controller
+                                        these controller interfaces onto the service. The exact meaning of "mounting" a controller
                                         is discussed further below.
                                 </li>
                                 <li>
@@ -272,31 +274,31 @@ func (c *BottleController) Show(ctx *app.ShowBottleContext) error {
 }</code></pre>
                         <p>
                                 Before we build and run the app, let's take a peek at <code>main.go</code>: the file contains a default
-                                implementation of <code>main</code> that instantiates a new goa application, initializes default middleware,
+                                implementation of <code>main</code> that instantiates a new goa service, initializes default middleware,
                                 mounts the <code>bottle</code> and <code>schema</code> controllers and runs the HTTP server.
                         </p>
                         <pre><code class="go">func main() {
-        // Create application
-        api := goa.New("cellar")
+        // Create service
+        service := goa.New("cellar")
 
         // Setup middleware
-        api.Use(goa.Recover())
-        api.Use(goa.RequestID())
-        api.Use(goa.LogRequest())
+        service.Use(goa.RequestID())
+        service.Use(goa.LogRequest())
+        service.Use(goa.Recover())
 
         // Mount "bottles" controller
         c := NewBottleController()
-        app.MountBottleController(api, c)
+        app.MountBottleController(service, c)
 
-        // Mount JSON schema provider controller
-        schema.MountController(api)
+        // Mount swagger spec provider controller
+        swagger.MountController(service)
 
-        // Run application, listen on port 8080
-        api.Run(":8080")
+        // Run service, listen on port 8080
+        service.ListenAndServe(":8080")
 }</code></pre>
                         <p>
-                                Mounting a controller onto an application registers all the controller action endpoints with the
-                                application router. The code also makes sure that there is no conflict between routes of different
+                                Mounting a controller onto a service registers all the controller action endpoints with the
+                                router. The code also makes sure that there is no conflict between routes of different
                                 actions.
                         </p>
                         <blockquote>
@@ -305,7 +307,7 @@ func (c *BottleController) Show(ctx *app.ShowBottleContext) error {
                                 permitted. Instead use </code>/foo/:fooID</code> for the first route for example.
                         </blockquote>
                         <p>
-                                Now compile and run the application:
+                                Now compile and run the service:
                         </p>
                         <pre>
         $ go build -o cellar
@@ -355,13 +357,13 @@ INFO[10-19|17:50:57] listen                     app=app addr=:8080
         [{"kind":1,"title":"invalid parameter value","msg":"invalid value \"a\" for parameter \"bottleID\", must be a integer"}]
                         </pre>
                         <p>
-                                Finally request the API JSON Hyper-schema with:
+                                Finally request the swagger specification with:
                         </p>
                         <pre>
-        $ curl -i localhost:8080/schema
+        $ curl -i localhost:8080/swagger.json
                         </pre>
                         <p>
-                                That's it! congratulations on writing you first goa application!
+                                That's it! congratulations on writing you first goa service!
                         </p>
                         <p>
                                 This example only covers a fraction of what goa can do but is hopefully enough to illustrate the
