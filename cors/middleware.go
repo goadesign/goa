@@ -57,7 +57,7 @@ func Middleware(spec Specification) goa.Middleware {
 					ok := false
 					for _, h := range headers {
 						for _, h2 := range res.Headers {
-							if h == h2 {
+							if h2 == "*" || h == h2 {
 								ok = true
 								break
 							}
@@ -138,8 +138,12 @@ func MountPreflightController(service goa.Service, spec Specification) {
 func (res *ResourceDefinition) FillHeaders(origin string, header http.Header) {
 	header.Set(acAllowOrigin, origin)
 	header.Set(acAllowMethods, strings.Join(res.Methods, ", "))
-	header.Set(acExposeHeaders, strings.Join(res.Expose, ", "))
-	header.Set(acMaxAge, strconv.Itoa(res.MaxAge))
+	if len(res.Expose) > 0 {
+		header.Set(acExposeHeaders, strings.Join(res.Expose, ", "))
+	}
+	if res.MaxAge > 0 {
+		header.Set(acMaxAge, strconv.Itoa(res.MaxAge))
+	}
 	if res.Credentials {
 		header.Set(acAllowCredentials, "true")
 	}
@@ -148,7 +152,7 @@ func (res *ResourceDefinition) FillHeaders(origin string, header http.Header) {
 // OriginAllowed returns true if the resource is accessible to the given origin.
 func (res *ResourceDefinition) OriginAllowed(origin string) bool {
 	if res.Origin != "" {
-		return res.Origin == origin
+		return res.Origin == "*" || res.Origin == origin
 	}
 	return res.OriginRegexp.MatchString(origin)
 }
