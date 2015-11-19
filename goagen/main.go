@@ -69,13 +69,12 @@ func command() codegen.Command {
 	return nil
 }
 
-const help = `The goagen tool generates various artifacts from a goa application design
-package (metadata).
+const help = `The goagen tool generates various artifacts from a goa service design package.
 
 Each command supported by the tool produces a specific type of artifacts. For example
-the "app" command generates the code that supports the application controllers.
+the "app" command generates the code that supports the service controllers.
 
-The "bootstrap" command runs the "app", "main" and "schema" commands generating the
+The "bootstrap" command runs the "app", "main" and "swagger" commands generating the
 controllers supporting code and main skeleton code (if not already present) as well as
-the API JSON hyper-schema.
+the API Swagger specification.
 `

@@ -6,7 +6,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
+
+	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/raphael/goa/design"
 	"github.com/raphael/goa/goagen/codegen"
@@ -14,6 +17,13 @@ import (
 
 // Generate is the generator entry point called by the meta generator.
 func Generate(api *design.APIDefinition) ([]string, error) {
+	app := kingpin.New("Swagger generator", "Swagger spec generator")
+	codegen.RegisterFlags(app)
+	_, err := app.Parse(os.Args[1:])
+	if err != nil {
+		return nil, fmt.Errorf(`invalid command line: %s. Command line was "%s"`,
+			err, strings.Join(os.Args, " "))
+	}
 	s, err := New(api)
 	if err != nil {
 		return nil, err

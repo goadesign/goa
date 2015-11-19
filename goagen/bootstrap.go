@@ -26,7 +26,7 @@ func (a *BootstrapCommand) Name() string { return "bootstrap" }
 
 // Description returns the command description.
 func (a *BootstrapCommand) Description() string {
-	return `Bootstrap command, equivalent to running "app", "main" and "schema" commands sequentially.`
+	return `Bootstrap command, equivalent to running "app", "main" and "swagger" commands sequentially.`
 }
 
 // RegisterFlags registers all the sub-commands flags.
