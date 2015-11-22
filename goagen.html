@@ -1,0 +1,229 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+        <title>goa, getting started</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
+        <link rel="stylesheet" href="assets/css/main.css" />
+        <!--[if lte IE 8]><link rel="stylesheet" href="assets/css/ie8.css" /><![endif]-->
+        <!--[if lte IE 9]><link rel="stylesheet" href="assets/css/ie9.css" /><![endif]-->
+        <link rel="stylesheet" href="assets/css/googlecode.css"/>
+</head>
+<body id="top">
+	<div id="nav">
+		<ul class="actions">
+			<li>
+				<a class="button" href="index.html">Intro</a>
+			</li>
+			<li>
+				<a class="button" href="getting-started.html">Guide</a>
+			</li>
+			<li>
+				<a class="button special" href="goagen.html">goagen</a>
+			</li>
+			<li>
+				<a class="button" href="swagger.html">Swagger</a>
+			</li>
+		</ul>
+	</div>
+        <section id="one" class="wrapper style2 special">
+                <h2>goagen, the Tool</h2>
+        </section>
+        <section id="one" class="wrapper">
+                <div class="inner">
+                        <p>
+                                <code>goagen</code> is a tool that generates various artifacts from a goa design package.
+                        </p>
+                        <p>
+                                Each type of artifact is associated with a <code>goagen</code> command that exposes it own set of flags.
+                                Internally these commands map to "generators" that contain the logic for generating the artifacts.
+                                It works something like this:
+                        </p>
+                        <ul>
+                                <li>
+                                        <code>goagen</code> first builds a temporary executable that contains the user design package. This temporary
+                                        executable also contains code that runs the design package and invokes the target generator
+                                        with the resulting data structures.
+                                </li>
+                                <li>
+                                        <code>goagen</code> then runs that temporary executable and reports any error. If the temporary executable
+                                        succeeds it prints the list of generated files.
+                                </li>
+                        </ul>
+                        <p>
+                                Each generator registers a command with the <code>goagen</code> tool, <code>goagen --help</code> lists all the available
+                                commands. These are:
+                        </p>
+                        <ul>
+                                <li>
+                                        <code>app</code>: generates the service boilerplate code including controllers, contexts, media types and user types.
+                                </li>
+                                <li>
+                                        <code>main</code>: generates a skeleton file for each resource controller as well as a default <code>main</code>.
+                                </li>
+                                <li>
+                                        <code>swagger</code>: generates the API Swagger specification.
+                                </li>
+                                <li>
+                                        <code>schema</code>: generates the API Hyper-schema JSON.
+                                </li>
+                                <li>
+                                        <code>gen</code>: invokes a third party generator.
+                                </li>
+                                <li>
+                                        <code>bootstrap</code>: invokes the <code>app</code>, <code>main</code> and <code>swagger</code>
+                                        generators in this order.
+                                </li>
+                        </ul>
+                        <p>
+                                The command <code>goagen --help-long</code> lists all the supported commands and their flags.
+                        </p>
+                        <h2>Common flags</h2>
+                        <p>
+                                The following flags apply to all the <code>goagen</code> commands:
+                        </p>
+                        <ul>
+                                <li>
+                                        <code>--design|-d=DESIGN</code> defines the Go package path to the service design package.
+                                </li>
+                                <li>
+                                        <code>--out|-o=OUT</code> specifies where to generate the files, defaults to the current directory.
+                                </li>
+                                        <li>
+                                        <code>--debug</code> enables <code>goagen</code> debug. This causes <code>goagen</code> to print the content of the temporary
+                                        files and to leave them around.
+                                </li>
+                                <li>
+                                        <code>--help|--help-long|--help-man</code> prints contextual help.
+                                </li>
+                        </ul>
+                        <h2><code>goagen app</code></h2>
+                        <p>
+                                The <code>app</code> command is arguably the most critical. It generates all the supporting code for the
+                                goa service. This command supports an additional flag:
+                        </p>
+                        <ul>
+                                <li>
+                                        <code>--pkg=app</code> specifies the name of the generated Go package, defaults to <code>app</code>. That's also the
+                                        name of the subdirectory that gets created to store the generated Go files.
+                                </li>
+                        </ul>
+                        <p>
+                                This command always deletes and re-creates any pre-existing directory with the same name. The idea
+                                being that these files should never be edited.
+                        </p>
+                        <h2><code>goagen main</code></h2>
+                        <p>
+                                The <code>main</code> command helps bootstrap a new goa service by generating a default <code>main.go</code> as
+                                well as a default (empty) implementation for each resource controller defined in the design package. By default
+                                this command only generates the files if they don't exist yet in the output directory. This
+                                command accepts two additional flags:
+                        </p>
+                        <ul>
+                                <li>
+                                        <code>--force</code> causes the files to be generated even if files with the same name already exist (in
+                                        which case they get overwritten).
+                                </li>
+                                <li>
+                                        <code>name=API</code> specifies the name of the service to be used in the generated call to <code>goa.New</code>.
+                                </li>
+                        </ul>
+                        <h2><code>goagen schema</code></h2>
+                        <p>
+                                The <code>schema</code> command generates a <a href="https://blog.heroku.com/archives/2014/1/8/json_schema_for_heroku_platform_api">Heroku-like</a>
+                                JSON hyper-schema representation of the API. The command accepts an additional flag:
+                        </p>
+                        <ul>
+                                <li>
+                                        <code>--url|-u=URL</code> specifies the base URL used to build the JSON schema ID.
+                                </li>
+                        </ul>
+                        <h2><code>goagen gen</code>: goagen Plugins</h2>
+                        <p>
+                                The <code>gen</code> command makes it possible to invoke <code>goagen</code> plugins.
+                                This command accepts two flags:
+                        </p>
+                        <ul>
+                                <li>
+                                        <code>--pkg-path=PKG-PATH</code> specifies the Go package path to the generator package.
+                                </li>
+                                <li>
+                                        <code>--pkg-name=PKG-NAME</code> specifies the Go package name of the generator package. It defaults to the
+                                        name of the inner most directory in the Go package path.
+                                </li>
+                        </ul>
+                        <p>
+                                A plugin consists of a Go package which exposes a <code>Generate</code> function with the following
+                                signature:
+                        <p>
+                        <pre><code class="go">func Generate(api *design.APIDefinition) ([]string, error)
+</pre></code>
+                        <p>
+                                 where api is the API definition computed from the design package. On success <code>Generate</code> should return
+                                 the path to the generated files. On error the error message gets displayed to the user (and
+                                 goagen exist with status 1).
+                        </p>
+                        <p>
+                                 The <code>Generate</code> method should take advantage of the <code>APIDefinition</code>
+                                 <code>IterateXXX</code> methods to iterate through the API resources, media types and types to
+                                 guarantee that the order doesn't change between two invokation of the function (thereby generating
+                                 different output even if the design hasn't changed).
+                        </p>
+                        <p>
+                                 The Output directory is available through the <code>codegen.OutputDir</code> variable. Here is an
+                                 example of a custom generator package source:
+                        </p>
+                        <pre><code class="go">// Package genresnames implements a goa generator which creates a file "names.txt"
+// containing the names of the API resources sorted in alphabetical order.
+// invoke with "goagen -d <Go package path to design package> gen --pkg-path=<Go package path to genresnames>"
+package genresnames
+
+ import (
+        "io/ioutil"
+        "path/filepath"
+        "strings"
+
+        "github.com/raphael/goa/codegen"
+        "github.com/raphael/goa/design"
+ )
+
+ // Generate is the function called by goagen to generate the "names.txt" file.
+ func Generate(api *design.APIDefinition) ([]string, error) {
+         names := make([]string, len(api.Resources))
+         i := 0
+         api.IterateResources(func(res *design.ResourceDefinition) error {
+                 names[i] = res.Name
+                 i++
+                 return nil
+         })
+         content := strings.Join(names, "\n")
+         outputFile := filepath.Join(codegen.OutputDir, "names.txt")
+         ioutil.WriteFile(outputFile, []byte(content), 0755)
+         return []string{outputFile}, nil
+ }
+</code></pre>
+                </div>
+        </section>
+
+        <!-- Footer -->
+        <footer id="footer">
+                <ul class="icons">
+                        <li><a href="mailto:info@goa.design" class="icon fa-envelope"><span class="label">Contact</span></a></li>
+                        <li><a href="https://github.com/raphael/goa" class="icon fa-github" target="_blank"><span class="label">Github</span></a></li>
+                </ul>
+                <p class="copyright">&copy;2015 Raphael Simon. Design: <a href="http://html5up.net">HTML5 UP</a></p>
+        </footer>
+
+        <!-- Scripts -->
+        <script src="assets/js/jquery.min.js"></script>
+        <script src="assets/js/jquery.scrolly.min.js"></script>
+        <script src="assets/js/skel.min.js"></script>
+        <script src="assets/js/util.js"></script>
+        <script src="assets/js/main.js"></script>
+        <script src="assets/js/highlight.pack.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="assets/js/nav.js"></script>
+        <!--[if lte IE 8]><script src="assets/js/ie/respond.min.js"></script><![endif]-->
+</body>
+</html>
