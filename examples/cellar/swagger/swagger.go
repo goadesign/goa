@@ -3,7 +3,7 @@
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
-// --out=.
+// --out=$(GOPATH)/src/github.com/raphael/goa/examples/cellar
 // --design=github.com/raphael/goa/examples/cellar/design
 //
 // The content of this file is auto-generated, DO NOT MODIFY
@@ -18,8 +18,9 @@ import (
 
 // MountController mounts the swagger spec controller under "/swagger.json".
 func MountController(service goa.Service) {
+	ctrl := service.NewController("Swagger")
 	service.Info("mount", "ctrl", "Swagger", "action", "Show", "route", "GET /swagger.json")
-	h := goa.NewHTTPRouterHandle(service, "Swagger", "Show", getSwagger)
+	h := ctrl.NewHTTPRouterHandle("Show", getSwagger)
 	service.HTTPHandler().(*httprouter.Router).Handle("GET", "/swagger.json", h)
 }
 

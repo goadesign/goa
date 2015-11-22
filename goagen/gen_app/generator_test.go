@@ -275,6 +275,7 @@ import (
 
 // WidgetController is the controller interface for the Widget actions.
 type WidgetController interface {
+	goa.Controller
 	Get(*GetWidgetContext) error
 }
 
@@ -289,7 +290,7 @@ func MountWidgetController(service goa.Service, ctrl WidgetController) {
 		}
 		return ctrl.Get(ctx)
 	}
-	router.Handle("GET", "/:id", goa.NewHTTPRouterHandle(service, "Widget", "Get", h))
+	router.Handle("GET", "/:id", ctrl.NewHTTPRouterHandle("Get", h))
 	service.Info("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
 }
 `

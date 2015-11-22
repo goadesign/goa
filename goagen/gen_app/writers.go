@@ -433,6 +433,7 @@ func New{{gotypename .Payload 0}}(raw interface{}) ({{gotyperef .Payload 0}}, er
 	// template input: *ControllerTemplateData
 	ctrlT = `// {{.Resource}}Controller is the controller interface for the {{.Resource}} actions.
 type {{.Resource}}Controller interface {
+	goa.Controller
 {{range .Actions}}	{{.Name}}(*{{.Context}}) error
 {{end}}}
 `
@@ -451,7 +452,7 @@ func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Control
 		}
 		return ctrl.{{.Name}}(ctx)
 	}
-{{range .Routes}}	router.Handle("{{.Verb}}", "{{.FullPath}}", goa.NewHTTPRouterHandle(service, "{{$res}}", "{{$action.Name}}", h))
+{{range .Routes}}	router.Handle("{{.Verb}}", "{{.FullPath}}", ctrl.NewHTTPRouterHandle("{{$action.Name}}", h))
 	service.Info("mount", "ctrl", "{{$res}}", "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}")
 {{end}}{{end}}}
 `

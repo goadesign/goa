@@ -128,7 +128,8 @@ func MountPreflightController(service goa.Service, spec Specification) {
 			h := func(ctx *goa.Context) error {
 				return ctx.Respond(200, nil)
 			}
-			router.OPTIONS(path, goa.NewHTTPRouterHandle(service, "CORS", "preflight", h))
+			ctrl := service.NewController("cors")
+			router.OPTIONS(path, ctrl.NewHTTPRouterHandle("preflight", h))
 		}
 	}
 }

@@ -1,15 +1,22 @@
 package controllers
 
-import "github.com/raphael/goa/examples/cellar/app"
+import (
+	"github.com/raphael/goa"
+	"github.com/raphael/goa/examples/cellar/app"
+)
 
 // AccountController implements the account resource.
 type AccountController struct {
+	goa.Controller
 	db *DB
 }
 
 // NewAccount creates a account controller.
-func NewAccount() *AccountController {
-	return &AccountController{db: NewDB()}
+func NewAccount(service goa.Service) *AccountController {
+	return &AccountController{
+		Controller: service.NewController("Account"),
+		db:         NewDB(),
+	}
 }
 
 // Show retrieves the account with the given id.

@@ -3,7 +3,7 @@
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
-// --out=.
+// --out=$(GOPATH)/src/github.com/raphael/goa/examples/cellar
 // --design=github.com/raphael/goa/examples/cellar/design
 // --pkg=app
 //

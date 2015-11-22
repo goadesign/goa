@@ -237,11 +237,13 @@ func main() {
 }
 `
 const ctrlTmpl = `// {{$ctrlName := printf "%s%s" (goify .Name true) "Controller"}}{{$ctrlName}} implements the {{.Name}} resource.
-type {{$ctrlName}} struct {}
+type {{$ctrlName}} struct {
+	goa.Controller
+}
 
 // New{{$ctrlName}} creates a {{.Name}} controller.
-func New{{$ctrlName}}() *{{$ctrlName}} {
-	return &{{$ctrlName}}{}
+func New{{$ctrlName}}(service goa.Service) {{$ctrlName}} {
+	return &{{$ctrlName}}{Controller: service.NewController("{{$ctrlName}}")}
 }
 {{$ctrl := .}}{{range .Actions}}
 // {{goify .Name true}} runs the {{.Name}} action.

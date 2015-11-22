@@ -1,15 +1,22 @@
 package controllers
 
-import "github.com/raphael/goa/examples/cellar/app"
+import (
+	"github.com/raphael/goa"
+	"github.com/raphael/goa/examples/cellar/app"
+)
 
 // BottleController implements the bottle resource.
 type BottleController struct {
+	goa.Controller
 	db *DB
 }
 
 // NewBottle creates a bottle controller.
-func NewBottle() *BottleController {
-	return &BottleController{db: NewDB()}
+func NewBottle(service goa.Service) *BottleController {
+	return &BottleController{
+		Controller: service.NewController("Bottle"),
+		db:         NewDB(),
+	}
 }
 
 // List lists all the bottles in the account optionally filtering by year.

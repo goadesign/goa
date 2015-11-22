@@ -21,16 +21,11 @@ type (
 		// Name is the name of the goa application.
 		Name() string
 
-		// SetErrorHandler allows setting the global service error handler.
+		// SetErrorHandler allows setting the service-wide error handler.
 		SetErrorHandler(ErrorHandler)
-		// HandleError invokes the global error handler.
-		HandleError(*Context, error)
 
-		// Use adds a middleware to the application middleware chain.
-		// It is a convenient method for doing append(service.MiddlewareChain(), m)
+		// Use adds a middleware to the service-wide middleware chain.
 		Use(m Middleware)
-		// MiddlewareChain returns the current middleware chain.
-		MiddlewareChain() []Middleware
 
 		// ListenAndServe starts a HTTP server on the given port.
 		ListenAndServe(addr string) error
@@ -40,6 +35,30 @@ type (
 		// Note: using the handler directly bypasses the graceful shutdown behavior of
 		// services instantiated with NewGraceful.
 		HTTPHandler() http.Handler
+
+		// NewController returns a controller for the resource with the given name.
+		// This method is mainly intended for use by generated code.
+		NewController(resName string) Controller
+	}
+
+	// Controller is the interface implemented by all goa controllers.
+	// A controller implements a given resource actions. There is a one-to-one relationship
+	// between designed resources and generated controllers.
+	// Controllers may override the service wide error handler and be equipped with controller
+	// specific middleware.
+	Controller interface {
+		// Use adds a middleware to the controller middleware chain.
+		// It is a convenient method for doing append(ctrl.MiddlewareChain(), m)
+		Use(Middleware)
+		// MiddlewareChain returns the controller middleware chain including the
+		// service-wide middleware.
+		MiddlewareChain() []Middleware
+		// SetErrorHandler sets the controller specific error handler.
+		SetErrorHandler(ErrorHandler)
+		// NewHTTPRouterHandle returns a httprouter handle from a goa handler.
+		// This function is intended for the controller generated code.
+		// User code should not need to call it directly.
+		NewHTTPRouterHandle(actName string, h Handler) httprouter.Handle
 	}
 
 	// Application represents a goa application. At the basic level an application consists of
@@ -50,8 +69,8 @@ type (
 	//
 	//	api := goa.New("my api")
 	//	api.Use(SomeMiddleware())
-	//	api.Use(SomeOtherMiddleware())
 	//	rc := NewResourceController()
+	//	rc.Use(SomeOtherMiddleware())
 	//	app.MountResourceController(api, rc)
 	//	api.ListenAndServe(":80")
 	//
@@ -63,6 +82,14 @@ type (
 		errorHandler ErrorHandler       // Application error handler
 		middleware   []Middleware       // Middleware chain
 		Router       *httprouter.Router // Application router
+	}
+
+	// ApplicationController provides the common state and behavior for generated controllers.
+	ApplicationController struct {
+		log.Logger                // Controller logger
+		app          *Application //Application which exposes controller
+		errorHandler ErrorHandler // Controller specific error handler if any
+		middleware   []Middleware // Controller specific middleware if any
 	}
 
 	// Handler defines the controller handler signatures.
@@ -126,16 +153,12 @@ func (app *Application) Name() string {
 	return app.name
 }
 
-// Use adds a middleware to the application middleware chain.
+// Use adds a middleware to the application wide middleware chain.
 // See NewMiddleware for wrapping goa and http handlers into goa middleware.
 // goa comes with a set of commonly used middleware, see middleware.go.
+// Controller specific middleware should be mounted using the Controller type Use method instead.
 func (app *Application) Use(m Middleware) {
 	app.middleware = append(app.middleware, m)
-}
-
-// MiddlewareChain returns the current middleware chain.
-func (app *Application) MiddlewareChain() []Middleware {
-	return app.middleware
 }
 
 // SetErrorHandler defines an application wide error handler.
@@ -144,13 +167,10 @@ func (app *Application) MiddlewareChain() []Middleware {
 // TerseErrorHandler provides an alternative implementation that does not write the error message
 // to the response body for internal errors (e.g. for production).
 // Set it with SetErrorHandler(TerseErrorHandler).
+// Controller specific error handlers should be set using the Controller type SetErrorHandler
+// method instead.
 func (app *Application) SetErrorHandler(handler ErrorHandler) {
 	app.errorHandler = handler
-}
-
-// HandleError invokes the application error handler.
-func (app *Application) HandleError(ctx *Context, err error) {
-	app.errorHandler(ctx, err)
 }
 
 // ListenAndServe starts a HTTP server and sets up a listener on the given host/port.
@@ -170,57 +190,59 @@ func (app *Application) HTTPHandler() http.Handler {
 	return app.Router
 }
 
-// DefaultErrorHandler returns a 400 response for request validation errors (instances of
-// BadRequestError) and a 500 response for other errors. It writes the error message to the
-// response body in both cases.
-func DefaultErrorHandler(c *Context, e error) {
-	status := 500
-	if _, ok := e.(*BadRequestError); ok {
-		c.Header().Set("Content-Type", "application/json")
-		status = 400
-	}
-	if err := c.Respond(status, []byte(e.Error())); err != nil {
-		Log.Error("failed to send default error handler response", "err", err)
+// NewController returns a controller for the given resource. This method is mainly intended for
+// use by the generated code. User code shouldn't have to call it directly.
+func (app *Application) NewController(resName string) Controller {
+	logger := app.New("ctrl", resName)
+	return &ApplicationController{
+		Logger: logger,
+		app:    app,
 	}
 }
 
-// TerseErrorHandler behaves like DefaultErrorHandler except that it does not set the response
-// body for internal errors.
-func TerseErrorHandler(c *Context, e error) {
-	status := 500
-	var body []byte
-	if _, ok := e.(*BadRequestError); ok {
-		c.Header().Set("Content-Type", "application/json")
-		status = 400
-		body = []byte(e.Error())
-	}
-	if err := c.Respond(status, body); err != nil {
-		Log.Error("failed to send terse error handler response", "err", err)
-	}
+// Use adds a middleware to the controller.
+// See NewMiddleware for wrapping goa and http handlers into goa middleware.
+// goa comes with a set of commonly used middleware, see middleware.go.
+func (ctrl *ApplicationController) Use(m Middleware) {
+	ctrl.middleware = append(ctrl.middleware, m)
 }
 
-// Fatal logs a critical message and exits the process with status code 1.
-// This function is meant to be used by initialization code to prevent the application from even
-// starting up when something is obviously wrong.
-// In particular this function should probably not be used when serving requests.
-func Fatal(msg string, ctx ...interface{}) {
-	log.Crit(msg, ctx...)
-	os.Exit(1)
+// MiddlewareChain returns the controller middleware chain.
+func (ctrl *ApplicationController) MiddlewareChain() []Middleware {
+	return append(ctrl.app.middleware, ctrl.middleware...)
+}
+
+// SetErrorHandler defines a controller specific error handler. When a controller action returns an
+// error goa checks whether the controller is equipped with a error handler and if so calls it with
+// the error given as argument. If there is no controller error handler then goa calls the
+// application wide error handler instead.
+func (ctrl *ApplicationController) SetErrorHandler(handler ErrorHandler) {
+	ctrl.errorHandler = handler
+}
+
+// HandleError invokes the controller error handler or - if there isn't one - the service error
+// handler.
+func (ctrl *ApplicationController) HandleError(ctx *Context, err error) {
+	if ctrl.errorHandler != nil {
+		ctrl.errorHandler(ctx, err)
+	} else if ctrl.app.errorHandler != nil {
+		ctrl.app.errorHandler(ctx, err)
+	}
 }
 
 // NewHTTPRouterHandle returns a httprouter handle from a goa handler. This handle initializes the
 // request context by loading the request state, invokes the handler and in case of error invokes
-// the application error handler.
+// the controller (if there is one) or application error handler.
 // This function is intended for the controller generated code. User code should not need to call
 // it directly.
-func NewHTTPRouterHandle(service Service, resName, actName string, h Handler) httprouter.Handle {
+func (ctrl *ApplicationController) NewHTTPRouterHandle(actName string, h Handler) httprouter.Handle {
 	// Setup middleware outside of closure
-	chain := service.MiddlewareChain()
+	chain := ctrl.MiddlewareChain()
 	ml := len(chain)
 	middleware := func(ctx *Context) error {
 		if !ctx.ResponseWritten() {
 			if err := h(ctx); err != nil {
-				service.HandleError(ctx, err)
+				ctrl.HandleError(ctx, err)
 			}
 		}
 		return nil
@@ -228,7 +250,7 @@ func NewHTTPRouterHandle(service Service, resName, actName string, h Handler) ht
 	for i := range chain {
 		middleware = chain[ml-i-1](middleware)
 	}
-	logger := service.New("ctrl", resName, "action", actName)
+	logger := ctrl.New("action", actName)
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		// Collect URL and query string parameters
 		params := make(map[string]string, len(p))
@@ -272,7 +294,45 @@ func NewHTTPRouterHandle(service Service, resName, actName string, h Handler) ht
 
 		// Make sure a response is sent back to client.
 		if ctx.ResponseStatus() == 0 {
-			service.HandleError(ctx, fmt.Errorf("unhandled request"))
+			ctrl.HandleError(ctx, fmt.Errorf("unhandled request"))
 		}
 	}
+}
+
+// DefaultErrorHandler returns a 400 response for request validation errors (instances of
+// BadRequestError) and a 500 response for other errors. It writes the error message to the
+// response body in both cases.
+func DefaultErrorHandler(c *Context, e error) {
+	status := 500
+	if _, ok := e.(*BadRequestError); ok {
+		c.Header().Set("Content-Type", "application/json")
+		status = 400
+	}
+	if err := c.Respond(status, []byte(e.Error())); err != nil {
+		Log.Error("failed to send default error handler response", "err", err)
+	}
+}
+
+// TerseErrorHandler behaves like DefaultErrorHandler except that it does not set the response
+// body for internal errors.
+func TerseErrorHandler(c *Context, e error) {
+	status := 500
+	var body []byte
+	if _, ok := e.(*BadRequestError); ok {
+		c.Header().Set("Content-Type", "application/json")
+		status = 400
+		body = []byte(e.Error())
+	}
+	if err := c.Respond(status, body); err != nil {
+		Log.Error("failed to send terse error handler response", "err", err)
+	}
+}
+
+// Fatal logs a critical message and exits the process with status code 1.
+// This function is meant to be used by initialization code to prevent the application from even
+// starting up when something is obviously wrong.
+// In particular this function should probably not be used when serving requests.
+func Fatal(msg string, ctx ...interface{}) {
+	log.Crit(msg, ctx...)
+	os.Exit(1)
 }

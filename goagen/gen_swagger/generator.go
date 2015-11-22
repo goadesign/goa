@@ -68,8 +68,9 @@ func Generate(api *design.APIDefinition) ([]string, error) {
 const swaggerTmpl = `
 // MountController mounts the swagger spec controller under "/swagger.json".
 func MountController(service goa.Service) {
+	ctrl := service.NewController("Swagger")
 	service.Info("mount", "ctrl", "Swagger", "action", "Show", "route", "GET /swagger.json")
-	h := goa.NewHTTPRouterHandle(service, "Swagger", "Show", getSwagger)
+	h := ctrl.NewHTTPRouterHandle("Show", getSwagger)
 	service.HTTPHandler().(*httprouter.Router).Handle("GET", "/swagger.json", h)
 }
 

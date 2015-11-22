@@ -33,8 +33,9 @@ var _ = Describe("Middleware", func() {
 			service.Use(cors.Middleware(spec))
 			router := service.HTTPHandler().(*httprouter.Router)
 			h := func(ctx *goa.Context) error { return ctx.Respond(200, nil) }
-			router.Handle(method, path, goa.NewHTTPRouterHandle(service, "", "", h))
-			router.Handle("OPTIONS", path, goa.NewHTTPRouterHandle(service, "", "", optionsHandler))
+			ctrl := service.NewController("test")
+			router.Handle(method, path, ctrl.NewHTTPRouterHandle("", h))
+			router.Handle("OPTIONS", path, ctrl.NewHTTPRouterHandle("", optionsHandler))
 			cors.MountPreflightController(service, spec)
 			portIndex++
 			port := 54511 + portIndex

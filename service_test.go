@@ -46,8 +46,9 @@ var _ = Describe("Application", func() {
 			})
 
 			It("adds the middleware", func() {
-				Ω(s.MiddlewareChain()).Should(HaveLen(1))
-				Ω(s.MiddlewareChain()[0]).Should(BeAssignableToTypeOf(goa.RequestID()))
+				ctrl := s.NewController("test")
+				Ω(ctrl.MiddlewareChain()).Should(HaveLen(1))
+				Ω(ctrl.MiddlewareChain()[0]).Should(BeAssignableToTypeOf(goa.RequestID()))
 			})
 		})
 	})
@@ -63,7 +64,8 @@ var _ = Describe("Application", func() {
 		var ctx *goa.Context
 
 		JustBeforeEach(func() {
-			httpHandle = goa.NewHTTPRouterHandle(s, resName, actName, handler)
+			ctrl := s.NewController("test")
+			httpHandle = ctrl.NewHTTPRouterHandle(actName, handler)
 		})
 
 		BeforeEach(func() {

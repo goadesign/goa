@@ -808,6 +808,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 
 	simpleController = `// BottlesController is the controller interface for the Bottles actions.
 type BottlesController interface {
+	goa.Controller
 	list(*ListBottleContext) error
 }
 `
@@ -822,13 +823,14 @@ type BottlesController interface {
 		}
 		return ctrl.list(ctx)
 	}
-	router.Handle("GET", "/accounts/:accountID/bottles", goa.NewHTTPRouterHandle(service, "Bottles", "list", h))
+	router.Handle("GET", "/accounts/:accountID/bottles", ctrl.NewHTTPRouterHandle("list", h))
 	service.Info("mount", "ctrl", "Bottles", "action", "list", "route", "GET /accounts/:accountID/bottles")
 }
 `
 
 	multiController = `// BottlesController is the controller interface for the Bottles actions.
 type BottlesController interface {
+	goa.Controller
 	list(*ListBottleContext) error
 	show(*ShowBottleContext) error
 }
@@ -844,7 +846,7 @@ type BottlesController interface {
 		}
 		return ctrl.list(ctx)
 	}
-	router.Handle("GET", "/accounts/:accountID/bottles", goa.NewHTTPRouterHandle(service, "Bottles", "list", h))
+	router.Handle("GET", "/accounts/:accountID/bottles", ctrl.NewHTTPRouterHandle("list", h))
 	service.Info("mount", "ctrl", "Bottles", "action", "list", "route", "GET /accounts/:accountID/bottles")
 	h = func(c *goa.Context) error {
 		ctx, err := NewShowBottleContext(c)
@@ -853,7 +855,7 @@ type BottlesController interface {
 		}
 		return ctrl.show(ctx)
 	}
-	router.Handle("GET", "/accounts/:accountID/bottles/:id", goa.NewHTTPRouterHandle(service, "Bottles", "show", h))
+	router.Handle("GET", "/accounts/:accountID/bottles/:id", ctrl.NewHTTPRouterHandle("show", h))
 	service.Info("mount", "ctrl", "Bottles", "action", "show", "route", "GET /accounts/:accountID/bottles/:id")
 }
 `

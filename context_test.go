@@ -112,7 +112,8 @@ var _ = Describe("Context", func() {
 		})
 
 		JustBeforeEach(func() {
-			httpHandle = goa.NewHTTPRouterHandle(app, resName, actName, handler)
+			ctrl := app.NewController(resName)
+			httpHandle = ctrl.NewHTTPRouterHandle(actName, handler)
 			httpHandle(rw, request, params)
 		})
 
