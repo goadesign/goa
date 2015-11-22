@@ -27,12 +27,12 @@ import (
 )
 
 type (
-	// ErrorId is an enum listing the possible types of errors.
-	ErrorKind int
+	// ErrorID is an enum listing the possible types of errors.
+	ErrorID int
 
 	// TypedError describes an error that can be returned in a HTTP response.
 	TypedError struct {
-		Id   ErrorKind
+		ID   ErrorID
 		Mesg string
 	}
 
@@ -96,7 +96,7 @@ const (
 )
 
 // Title returns a human friendly error title
-func (k ErrorKind) Title() string {
+func (k ErrorID) Title() string {
 	switch k {
 	case ErrInvalidParamType:
 		return "invalid parameter value"
@@ -125,12 +125,12 @@ func (k ErrorKind) Title() string {
 // MarshalJSON implements the json marshaler interface.
 func (t *TypedError) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Id    int    `json:"id"`
+		ID    int    `json:"id"`
 		Title string `json:"title"`
 		Msg   string `json:"msg"`
 	}{
-		Id:    int(t.Id),
-		Title: t.Id.Title(),
+		ID:    int(t.ID),
+		Title: t.ID.Title(),
 		Msg:   t.Mesg,
 	})
 }
@@ -189,7 +189,7 @@ func (b *BadRequestError) Error() string {
 // err and returns it.
 func InvalidParamTypeError(name string, val interface{}, expected string, err error) error {
 	terr := TypedError{
-		Id: ErrInvalidParamType,
+		ID: ErrInvalidParamType,
 		Mesg: fmt.Sprintf("invalid value %#v for parameter %#v, must be a %s",
 			val, name, expected),
 	}
@@ -200,7 +200,7 @@ func InvalidParamTypeError(name string, val interface{}, expected string, err er
 // returns it.
 func MissingParamError(name string, err error) error {
 	terr := TypedError{
-		Id:   ErrMissingParam,
+		ID:   ErrMissingParam,
 		Mesg: fmt.Sprintf("missing required parameter %#v", name),
 	}
 	return ReportError(err, &terr)
@@ -210,7 +210,7 @@ func MissingParamError(name string, err error) error {
 // to err and returns it.
 func InvalidAttributeTypeError(ctx string, val interface{}, expected string, err error) error {
 	terr := TypedError{
-		Id: ErrInvalidAttributeType,
+		ID: ErrInvalidAttributeType,
 		Mesg: fmt.Sprintf("type of %s must be %s but got value %#v", ctx,
 			expected, val),
 	}
@@ -221,7 +221,7 @@ func InvalidAttributeTypeError(ctx string, val interface{}, expected string, err
 // err and returns it.
 func MissingAttributeError(ctx, name string, err error) error {
 	terr := TypedError{
-		Id:   ErrMissingAttribute,
+		ID:   ErrMissingAttribute,
 		Mesg: fmt.Sprintf("attribute %#v of %s is missing and required", name, ctx),
 	}
 	return ReportError(err, &terr)
@@ -231,7 +231,7 @@ func MissingAttributeError(ctx, name string, err error) error {
 // returns it.
 func MissingHeaderError(name string, err error) error {
 	terr := TypedError{
-		Id:   ErrMissingHeader,
+		ID:   ErrMissingHeader,
 		Mesg: fmt.Sprintf("missing required HTTP header %#v", name),
 	}
 	return ReportError(err, &terr)
@@ -245,7 +245,7 @@ func InvalidEnumValueError(ctx string, val interface{}, allowed []interface{}, e
 		elems[i] = fmt.Sprintf("%#v", a)
 	}
 	terr := TypedError{
-		Id: ErrInvalidEnumValue,
+		ID: ErrInvalidEnumValue,
 		Mesg: fmt.Sprintf("value of %s must be one of %s but got value %#v", ctx,
 			strings.Join(elems, ", "), val),
 	}
@@ -256,7 +256,7 @@ func InvalidEnumValueError(ctx string, val interface{}, allowed []interface{}, e
 // returns it.
 func InvalidFormatError(ctx, target string, format Format, formatError, err error) error {
 	terr := TypedError{
-		Id: ErrInvalidFormat,
+		ID: ErrInvalidFormat,
 		Mesg: fmt.Sprintf("%s must be formatted as a %s but got value %#v, %s",
 			ctx, format, target, formatError.Error()),
 	}
@@ -267,7 +267,7 @@ func InvalidFormatError(ctx, target string, format Format, formatError, err erro
 // returns it.
 func InvalidPatternError(ctx, target string, pattern string, err error) error {
 	terr := TypedError{
-		Id: ErrInvalidPattern,
+		ID: ErrInvalidPattern,
 		Mesg: fmt.Sprintf("%s must be match the regexp %#v but got value %#v",
 			ctx, pattern, target),
 	}
@@ -282,7 +282,7 @@ func InvalidRangeError(ctx string, target interface{}, value int, min bool, err 
 		comp = "lesser or equal"
 	}
 	terr := TypedError{
-		Id: ErrInvalidRange,
+		ID: ErrInvalidRange,
 		Mesg: fmt.Sprintf("%s must be %s than %d but got value %#v",
 			ctx, comp, value, target),
 	}
@@ -297,7 +297,7 @@ func InvalidLengthError(ctx, target string, value int, min bool, err error) erro
 		comp = "lesser or equal"
 	}
 	terr := TypedError{
-		Id: ErrInvalidLength,
+		ID: ErrInvalidLength,
 		Mesg: fmt.Sprintf("length of %s must be %s than %d but got value %#v (len=%d)",
 			ctx, comp, value, target, len(target)),
 	}

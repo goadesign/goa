@@ -10,8 +10,8 @@ import (
 	"github.com/raphael/goa"
 )
 
-// allErrorKinds list all the existing goa.ErrorKind values.
-var allErrorKinds = [10]goa.ErrorKind{
+// allErrorKinds list all the existing goa.ErrorID values.
+var allErrorKinds = [10]goa.ErrorID{
 	goa.ErrInvalidParamType,
 	goa.ErrMissingParam,
 	goa.ErrInvalidAttributeType,
@@ -33,13 +33,13 @@ var _ = Describe("ErrorKind", func() {
 })
 
 var _ = Describe("TypedError", func() {
-	var kind goa.ErrorKind
+	var kind goa.ErrorID
 	var msg string
 
 	var typedError *goa.TypedError
 
 	JustBeforeEach(func() {
-		typedError = &goa.TypedError{Id: kind, Mesg: msg}
+		typedError = &goa.TypedError{ID: kind, Mesg: msg}
 	})
 
 	Context("of kind ErrInvalidParamType", func() {
@@ -166,7 +166,7 @@ var _ = Describe("InvalidParamTypeError", func() {
 		Ω(mErr).Should(HaveLen(1))
 		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrInvalidParamType))))
+		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidParamType))))
 		Ω(tErr.Mesg).Should(ContainSubstring(name))
 		Ω(tErr.Mesg).Should(ContainSubstring("%d", val))
 		Ω(tErr.Mesg).Should(ContainSubstring(expected))
@@ -185,7 +185,7 @@ var _ = Describe("InvalidParamTypeError", func() {
 			Ω(mErr[0]).Should(Equal(err))
 			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrInvalidParamType))))
+			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidParamType))))
 			Ω(tErr.Mesg).Should(ContainSubstring(name))
 			Ω(tErr.Mesg).Should(ContainSubstring("%d", val))
 			Ω(tErr.Mesg).Should(ContainSubstring(expected))
@@ -212,7 +212,7 @@ var _ = Describe("MissingParamError", func() {
 		Ω(mErr).Should(HaveLen(1))
 		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrMissingParam))))
+		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrMissingParam))))
 		Ω(tErr.Mesg).Should(ContainSubstring(name))
 	})
 
@@ -229,7 +229,7 @@ var _ = Describe("MissingParamError", func() {
 			Ω(mErr[0]).Should(Equal(err))
 			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrMissingParam))))
+			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrMissingParam))))
 			Ω(tErr.Mesg).Should(ContainSubstring(name))
 		})
 	})
@@ -256,7 +256,7 @@ var _ = Describe("InvalidAttributeTypeError", func() {
 		Ω(mErr).Should(HaveLen(1))
 		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrInvalidAttributeType))))
+		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidAttributeType))))
 		Ω(tErr.Mesg).Should(ContainSubstring(ctx))
 		Ω(tErr.Mesg).Should(ContainSubstring("%d", val))
 		Ω(tErr.Mesg).Should(ContainSubstring(expected))
@@ -275,7 +275,7 @@ var _ = Describe("InvalidAttributeTypeError", func() {
 			Ω(mErr[0]).Should(Equal(err))
 			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrInvalidAttributeType))))
+			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidAttributeType))))
 			Ω(tErr.Mesg).Should(ContainSubstring(ctx))
 			Ω(tErr.Mesg).Should(ContainSubstring("%d", val))
 			Ω(tErr.Mesg).Should(ContainSubstring(expected))
@@ -303,7 +303,7 @@ var _ = Describe("MissingAttributeError", func() {
 		Ω(mErr).Should(HaveLen(1))
 		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrMissingAttribute))))
+		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrMissingAttribute))))
 		Ω(tErr.Mesg).Should(ContainSubstring(ctx))
 		Ω(tErr.Mesg).Should(ContainSubstring(name))
 	})
@@ -321,7 +321,7 @@ var _ = Describe("MissingAttributeError", func() {
 			Ω(mErr[0]).Should(Equal(err))
 			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrMissingAttribute))))
+			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrMissingAttribute))))
 			Ω(tErr.Mesg).Should(ContainSubstring(ctx))
 			Ω(tErr.Mesg).Should(ContainSubstring(name))
 		})
@@ -347,7 +347,7 @@ var _ = Describe("MissingHeaderError", func() {
 		Ω(mErr).Should(HaveLen(1))
 		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrMissingHeader))))
+		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrMissingHeader))))
 		Ω(tErr.Mesg).Should(ContainSubstring(name))
 	})
 
@@ -364,7 +364,7 @@ var _ = Describe("MissingHeaderError", func() {
 			Ω(mErr[0]).Should(Equal(err))
 			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrMissingHeader))))
+			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrMissingHeader))))
 			Ω(tErr.Mesg).Should(ContainSubstring(name))
 		})
 	})
@@ -391,7 +391,7 @@ var _ = Describe("InvalidEnumValueError", func() {
 		Ω(mErr).Should(HaveLen(1))
 		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrInvalidEnumValue))))
+		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidEnumValue))))
 		Ω(tErr.Mesg).Should(ContainSubstring(ctx))
 		Ω(tErr.Mesg).Should(ContainSubstring("%d", val))
 		Ω(tErr.Mesg).Should(ContainSubstring(`"43", "44"`))
@@ -410,7 +410,7 @@ var _ = Describe("InvalidEnumValueError", func() {
 			Ω(mErr[0]).Should(Equal(err))
 			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrInvalidEnumValue))))
+			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidEnumValue))))
 			Ω(tErr.Mesg).Should(ContainSubstring(ctx))
 			Ω(tErr.Mesg).Should(ContainSubstring("%d", val))
 			Ω(tErr.Mesg).Should(ContainSubstring(`"43", "44"`))
@@ -440,7 +440,7 @@ var _ = Describe("InvalidFormatError", func() {
 		Ω(mErr).Should(HaveLen(1))
 		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrInvalidFormat))))
+		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidFormat))))
 		Ω(tErr.Mesg).Should(ContainSubstring(ctx))
 		Ω(tErr.Mesg).Should(ContainSubstring(target))
 		Ω(tErr.Mesg).Should(ContainSubstring("date-time"))
@@ -460,7 +460,7 @@ var _ = Describe("InvalidFormatError", func() {
 			Ω(mErr[0]).Should(Equal(err))
 			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrInvalidFormat))))
+			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidFormat))))
 			Ω(tErr.Mesg).Should(ContainSubstring(ctx))
 			Ω(tErr.Mesg).Should(ContainSubstring(target))
 			Ω(tErr.Mesg).Should(ContainSubstring("date-time"))
@@ -490,7 +490,7 @@ var _ = Describe("InvalidPatternError", func() {
 		Ω(mErr).Should(HaveLen(1))
 		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrInvalidPattern))))
+		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidPattern))))
 		Ω(tErr.Mesg).Should(ContainSubstring(ctx))
 		Ω(tErr.Mesg).Should(ContainSubstring(target))
 		Ω(tErr.Mesg).Should(ContainSubstring(pattern))
@@ -509,7 +509,7 @@ var _ = Describe("InvalidPatternError", func() {
 			Ω(mErr[0]).Should(Equal(err))
 			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrInvalidPattern))))
+			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidPattern))))
 			Ω(tErr.Mesg).Should(ContainSubstring(ctx))
 			Ω(tErr.Mesg).Should(ContainSubstring(target))
 			Ω(tErr.Mesg).Should(ContainSubstring(pattern))
@@ -539,7 +539,7 @@ var _ = Describe("InvalidRangeError", func() {
 		Ω(mErr).Should(HaveLen(1))
 		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrInvalidRange))))
+		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidRange))))
 		Ω(tErr.Mesg).Should(ContainSubstring(ctx))
 		Ω(tErr.Mesg).Should(ContainSubstring("greater or equal"))
 		Ω(tErr.Mesg).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
@@ -559,7 +559,7 @@ var _ = Describe("InvalidRangeError", func() {
 			Ω(mErr[0]).Should(Equal(err))
 			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrInvalidRange))))
+			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidRange))))
 			Ω(tErr.Mesg).Should(ContainSubstring(ctx))
 			Ω(tErr.Mesg).Should(ContainSubstring("greater or equal"))
 			Ω(tErr.Mesg).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
@@ -590,7 +590,7 @@ var _ = Describe("InvalidLengthError", func() {
 		Ω(mErr).Should(HaveLen(1))
 		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrInvalidLength))))
+		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidLength))))
 		Ω(tErr.Mesg).Should(ContainSubstring(ctx))
 		Ω(tErr.Mesg).Should(ContainSubstring("greater or equal"))
 		Ω(tErr.Mesg).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
@@ -610,7 +610,7 @@ var _ = Describe("InvalidLengthError", func() {
 			Ω(mErr[0]).Should(Equal(err))
 			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
 			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.Id).Should(Equal(goa.ErrorKind((goa.ErrInvalidLength))))
+			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidLength))))
 			Ω(tErr.Mesg).Should(ContainSubstring(ctx))
 			Ω(tErr.Mesg).Should(ContainSubstring("greater or equal"))
 			Ω(tErr.Mesg).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
