@@ -394,7 +394,7 @@ var _ = Describe("New", func() {
 			Design = cellarDesign
 		})
 
-		It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
+		//It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
 	})
 
 })
