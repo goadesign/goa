@@ -12,8 +12,19 @@ func CommandLine() string {
 	// We don't use the full path to the tool so that running goagen multiple times doesn't
 	// end up creating different command line comments (because of the temporary directory it
 	// runs in).
-	cmd := fmt.Sprintf("$ %s %s", filepath.Base(os.Args[0]), strings.Join(os.Args[1:], " "))
-	return strings.Replace(cmd, " --", "\n    --", -1)
+	var param string
+	if len(os.Args) > 1 {
+		args := make([]string, len(os.Args)-1)
+		gopaths := strings.Split(os.Getenv("GOPATH"), ":")
+		for i, a := range os.Args[1:] {
+			for _, p := range gopaths {
+				args[i] = strings.Replace(a, p, "$(GOPATH)", -1)
+			}
+		}
+		param = strings.Join(args, " ")
+	}
+	cmd := fmt.Sprintf("$ %s %s", filepath.Base(os.Args[0]), param)
+	return strings.Replace(cmd, " --", "\n\t--", -1)
 }
 
 // Comment produces line comments by concatenating the given strings and producing 80 characters

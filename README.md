@@ -60,4 +60,5 @@ Did you fix a bug? write docs or additional tests? or implement some new awesome
 You're a rock star!! Just make sure that `make` succeeds (or that TravisCI is green) and send a PR
 over.
 
-And if you're looking for inspiration the file [`TODO.md`](TODO.md) contains many good suggestions...
+And if you're looking for inspiration the [wookie](https://github.com/raphael/goa/wiki) contains a
+roadmap document with many good suggestions...

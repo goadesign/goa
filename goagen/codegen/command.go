@@ -1,6 +1,11 @@
 package codegen
 
-import "gopkg.in/alecthomas/kingpin.v2"
+import (
+	"fmt"
+	"os"
+
+	"gopkg.in/alecthomas/kingpin.v2"
+)
 
 var (
 	// OutputDir is the path to the directory the generated files should be
@@ -52,8 +57,13 @@ type (
 
 // RegisterFlags registers the global flags.
 func RegisterFlags(r FlagRegistry) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
 	r.Flag("out", "output directory").
-		Default(".").
+		Default(cwd).
 		Short('o').
 		StringVar(&OutputDir)
 
