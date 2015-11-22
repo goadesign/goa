@@ -45,8 +45,8 @@ func Middleware(spec Specification) goa.Middleware {
 				for _, m := range res.Methods {
 					if m == acMethod {
 						found = true
+						break
 					}
-					break
 				}
 				if !found {
 					goto handleCORS
@@ -62,7 +62,7 @@ func Middleware(spec Specification) goa.Middleware {
 								break
 							}
 						}
-						if ok {
+						if !ok {
 							break
 						}
 					}

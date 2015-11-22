@@ -31,6 +31,7 @@ func init() {
 		cors.Origin("*", func() {
 			cors.Resource("*", func() {
 				cors.Methods("GET", "POST", "PUT", "PATCH", "DELETE")
+				cors.Headers("*")
 			})
 		})
 	})
