@@ -389,12 +389,12 @@ var _ = Describe("New", func() {
 		})
 	})
 
-	Context("using the cellar example API definition", func() {
-		BeforeEach(func() {
-			Design = cellarDesign
+	/*	Context("using the cellar example API definition", func() {
+			BeforeEach(func() {
+				Design = cellarDesign
+			})
+
+			//It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
 		})
-
-		//It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
-	})
-
+	*/
 })
