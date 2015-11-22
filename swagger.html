@@ -44,41 +44,50 @@
                                 The HTTP responses must also contain CORS headers that authorize the UI javascript to access
                                 the JSON in the responses. Here is an example of how to mount CORS middleware on a goa
                                 service that authorizes requests from the swagger.goa.design domain, see the
-                                [cors package GoDoc](https://godoc.org/github.com/raphael/goa/cors) for details on how to
+                                <a href="https://godoc.org/github.com/raphael/goa/cors">cors package GoDoc</a> for details on how to
                                 setup CORS middleware in a goa service:
                         </p>
                         <pre><code class="go">package main
-                                // Create goa application
-                        	service := goa.New("cellar")
 
-                        	// Setup CORS to allow for swagger UI.
-                        	spec, err := cors.New(func() {
-                        		cors.Origin("swagger.goa.design", func() {
-                        			cors.Resource("*", func() {
-                        				cors.Methods("GET", "POST", "PUT", "PATCH", "DELETE")
-                        			})
-                        		})
-                        	})
-                        	if err != nil {
-                        		panic(err)
-                        	}
+import (
+	"github.com/raphael/goa"
+        // ...
+)
 
-                                // Mount CORS middleware
-                        	service.Use(cors.Middleware(spec))
+func main() {
+        // Create goa application
+	service := goa.New("cellar")
 
-                        	// Setup other middleware
-                        	service.Use(goa.RequestID())
-                        	service.Use(goa.Recover())
+        // Setup CORS to allow for swagger UI.
+        spec, err := cors.New(func() {
+                cors.Origin("http://swagger.goa.design", func() {
+                        cors.Resource("*", func() {
+                                cors.Methods("GET", "POST", "PUT", "PATCH", "DELETE")
+                        })
+                })
+        })
+        if err != nil {
+                panic(err)
+        }
 
-                        	// Mount controllers onto application
-                        	bc := controllers.NewBottle()
-                        	app.MountBottleController(service, bc)
+        // Mount CORS middleware
+        service.Use(cors.Middleware(spec))
 
-                        	// Mount CORS preflight controllers
-                                // Must be mounted last to avoid clashes with existing API OPTIONS
-                                // endpoints.
-                        	cors.MountPreflightController(service, spec)
-})</code></pre>
+        // Setup other middleware
+        service.Use(goa.RequestID())
+        service.Use(goa.Recover())
+
+        // Mount controllers onto application
+        // ...
+
+        // Mount CORS preflight controllers
+        // Must be mounted last to avoid clashes with existing API OPTIONS
+        // endpoints.
+        cors.MountPreflightController(service, spec)
+
+	// Run service
+	service.ListenAndServe(":8080")
+}</code></pre>
                 </div>
         </section>
 
