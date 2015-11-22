@@ -33,7 +33,8 @@
         <section id="one" class="wrapper">
                 <div class="inner">
                         <p>
-                                <code>goagen</code> is a tool that generates various artifacts from a goa design package.
+                                <code>goagen</code> is a tool that generates various artifacts from a goa design package.<br/>Install it with:
+                                <code class="bash">go get github.com/raphael/goa/goagen</code>
                         </p>
                         <p>
                                 Each type of artifact is associated with a <code>goagen</code> command that exposes it own set of flags.
@@ -129,10 +130,17 @@
                                         <code>name=API</code> specifies the name of the service to be used in the generated call to <code>goa.New</code>.
                                 </li>
                         </ul>
+                        <h2><code>goagen swagger</code></h2>
+                        <p>
+                                The <code>swagger</code> command generates a <a href="http://swagger.io">Swagger</a> specification of the API.
+                                The command does not accept additional flags. It generates both the Swagger JSON as well as a controller that
+                                can be mounted on the goa service to serve it under <code>/swagger.json</code>.
+                        </p>
                         <h2><code>goagen schema</code></h2>
                         <p>
                                 The <code>schema</code> command generates a <a href="https://blog.heroku.com/archives/2014/1/8/json_schema_for_heroku_platform_api">Heroku-like</a>
-                                JSON hyper-schema representation of the API. The command accepts an additional flag:
+                                JSON hyper-schema representation of the API. It generates both the JSON as well as a controller that
+                                can be mounted on the goa service to serve it under <code>/schema.json</code>. The command accepts an additional flag:
                         </p>
                         <ul>
                                 <li>
