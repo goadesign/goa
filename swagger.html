@@ -1,0 +1,105 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+        <title>goa, getting started</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
+        <link rel="stylesheet" href="assets/css/main.css" />
+        <!--[if lte IE 8]><link rel="stylesheet" href="assets/css/ie8.css" /><![endif]-->
+        <!--[if lte IE 9]><link rel="stylesheet" href="assets/css/ie9.css" /><![endif]-->
+        <link rel="stylesheet" href="assets/css/googlecode.css"/>
+</head>
+<body id="top">
+	<div id="nav">
+		<ul class="actions">
+			<li>
+				<a class="button" href="index.html">Intro</a>
+			</li>
+			<li>
+				<a class="button" href="getting-started.html">Guide</a>
+			</li>
+			<li>
+				<a class="button special" href="swagger.html">Swagger</a>
+			</li>
+		</ul>
+	</div>
+        <section id="one" class="wrapper style2 special">
+                <h2>Swagger Viewer</h2>
+        </section>
+        <section id="one" class="wrapper">
+                <div class="inner">
+                        <p>
+                                <a href="goagen.html"><code>goagen</code></a> can generate the Swagger specification of
+                                a goa service from its design package. <a href="http://swagger.goa.design">swagger.goa.design</a>
+                                is an online tool which runs <code>goagen swagger</code> on a given (public) github
+                                repository and renders the corresponding Swagger UI. This provides a convenient way to quickly
+                                look at an API definition of an open source goa service and experiment with it.
+                        </p>
+                        <h3>Try It! Buttons and CORS</h3>
+                        <p>
+                                The Swagger UI renders "Try It!" buttons under each operation. Clicking on these buttons
+                                causes the UI to send the corresponding API request to the host defined in the goa design
+                                package. The host must thus be actively running and hosting the API for the buttons to work.
+                                The HTTP responses must also contain CORS headers that authorize the UI javascript to access
+                                the JSON in the responses. Here is an example of how to mount CORS middleware on a goa
+                                service that authorizes requests from the swagger.goa.design domain, see the
+                                [cors package GoDoc](https://godoc.org/github.com/raphael/goa/cors) for details on how to
+                                setup CORS middleware in a goa service:
+                        </p>
+                        <pre><code class="go">package main
+                                // Create goa application
+                        	service := goa.New("cellar")
+
+                        	// Setup CORS to allow for swagger UI.
+                        	spec, err := cors.New(func() {
+                        		cors.Origin("swagger.goa.design", func() {
+                        			cors.Resource("*", func() {
+                        				cors.Methods("GET", "POST", "PUT", "PATCH", "DELETE")
+                        			})
+                        		})
+                        	})
+                        	if err != nil {
+                        		panic(err)
+                        	}
+
+                                // Mount CORS middleware
+                        	service.Use(cors.Middleware(spec))
+
+                        	// Setup other middleware
+                        	service.Use(goa.RequestID())
+                        	service.Use(goa.Recover())
+
+                        	// Mount controllers onto application
+                        	bc := controllers.NewBottle()
+                        	app.MountBottleController(service, bc)
+
+                        	// Mount CORS preflight controllers
+                                // Must be mounted last to avoid clashes with existing API OPTIONS
+                                // endpoints.
+                        	cors.MountPreflightController(service, spec)
+})</code></pre>
+                </div>
+        </section>
+
+        <!-- Footer -->
+        <footer id="footer">
+                <ul class="icons">
+                        <li><a href="mailto:info@goa.design" class="icon fa-envelope"><span class="label">Contact</span></a></li>
+                        <li><a href="https://github.com/raphael/goa" class="icon fa-github" target="_blank"><span class="label">Github</span></a></li>
+                </ul>
+                <p class="copyright">&copy;2015 Raphael Simon. Design: <a href="http://html5up.net">HTML5 UP</a></p>
+        </footer>
+
+        <!-- Scripts -->
+        <script src="assets/js/jquery.min.js"></script>
+        <script src="assets/js/jquery.scrolly.min.js"></script>
+        <script src="assets/js/skel.min.js"></script>
+        <script src="assets/js/util.js"></script>
+        <script src="assets/js/main.js"></script>
+        <script src="assets/js/highlight.pack.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="assets/js/nav.js"></script>
+        <!--[if lte IE 8]><script src="assets/js/ie/respond.min.js"></script><![endif]-->
+</body>
+</html>
