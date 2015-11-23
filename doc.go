@@ -1,6 +1,14 @@
 /*
 Package goa provides the runtime support for goa web applications.
 
+see also http://goa.design
+
+package cors: https://godoc.org/github.com/raphael/goa/cors
+
+package design: https://godoc.org/github.com/raphael/goa/design
+
+package dsl: https://godoc.org/github.com/raphael/goa/design/dsl
+
 Code Generation
 
 goa applications development begins with writing the *design* of an application. The design is
