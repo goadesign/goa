@@ -1,6 +1,7 @@
-# goa [![Build Status](https://travis-ci.org/raphael/goa.svg)](https://travis-ci.org/raphael/goa)
+# goa
 
-goa is a framework for building RESTful APIs in Go.
+goa is a framework for building RESTful microservices in Go.
+[![Build Status](https://travis-ci.org/raphael/goa.svg?branch=master)](https://travis-ci.org/raphael/goa)
 
 ## Why goa?
 
