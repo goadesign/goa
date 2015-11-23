@@ -218,22 +218,22 @@ func snakeCase(name string) string {
 const mainTmpl = `
 func main() {
 	// Create service
-	api := goa.New("{{.Name}}")
+	service := goa.New("{{.Name}}")
 
 	// Setup middleware
-	api.Use(goa.RequestID())
-	api.Use(goa.LogRequest())
-	api.Use(goa.Recover())
+	service.Use(goa.RequestID())
+	service.Use(goa.LogRequest())
+	service.Use(goa.Recover())
 
 {{range $name, $res := .Resources}}	// Mount "{{$res.Name}}" controller
-	{{$tmp := tempvar}}{{$tmp}} := New{{goify $res.Name true}}Controller()
-	app.Mount{{goify $res.Name true}}Controller(api, {{$tmp}})
+	{{$tmp := tempvar}}{{$tmp}} := New{{goify $res.Name true}}Controller(service)
+	app.Mount{{goify $res.Name true}}Controller(service, {{$tmp}})
 {{end}}{{if generateJSONSchema}}
 	// Mount Swagger spec provider controller
-	swagger.MountController(api)
+	swagger.MountController(service)
 {{end}}
 	// Start service, listen on port 8080
-	api.ListenAndServe(":8080")
+	service.ListenAndServe(":8080")
 }
 `
 const ctrlTmpl = `// {{$ctrlName := printf "%s%s" (goify .Name true) "Controller"}}{{$ctrlName}} implements the {{.Name}} resource.
@@ -242,7 +242,7 @@ type {{$ctrlName}} struct {
 }
 
 // New{{$ctrlName}} creates a {{.Name}} controller.
-func New{{$ctrlName}}(service goa.Service) {{$ctrlName}} {
+func New{{$ctrlName}}(service goa.Service) app.{{$ctrlName}} {
 	return &{{$ctrlName}}{Controller: service.NewController("{{$ctrlName}}")}
 }
 {{$ctrl := .}}{{range .Actions}}
