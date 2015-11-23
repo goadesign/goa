@@ -1,11 +1,11 @@
 // Package goa standardizes on structured error responses: a request that fails because of
 // invalid input or unexpected condition produces a response that contains one or more structured
-// error(s). Each error object has three keys: a kind (number), a title and a message. The title
-// for a given kind is always the same, the intent is to provide a human friendly categorization.
+// error(s). Each error object has three keys: a id (number), a title and a message. The title
+// for a given id is always the same, the intent is to provide a human friendly categorization.
 // The message is specific to the error occurrence and provides additional details that often
 // include contextual information (name of parameters etc.).
 //
-// The basic data structure backing errors is TypedError which simply contains the kind and message.
+// The basic data structure backing errors is TypedError which simply contains the id and message.
 // Multiple errors (not just TypedError instances) can be encapsulated in a MultiError. Both
 // TypedError and MultiError implement the error interface, the Error methods return valid JSON
 // that can be written directly to a response body.
@@ -27,12 +27,12 @@ import (
 )
 
 type (
-	// ErrorKind is an enum listing the possible types of errors.
-	ErrorKind int
+	// ErrorID is an enum listing the possible types of errors.
+	ErrorID int
 
 	// TypedError describes an error that can be returned in a HTTP response.
 	TypedError struct {
-		Kind ErrorKind
+		ID   ErrorID
 		Mesg string
 	}
 
@@ -96,7 +96,7 @@ const (
 )
 
 // Title returns a human friendly error title
-func (k ErrorKind) Title() string {
+func (k ErrorID) Title() string {
 	switch k {
 	case ErrInvalidParamType:
 		return "invalid parameter value"
@@ -125,12 +125,12 @@ func (k ErrorKind) Title() string {
 // MarshalJSON implements the json marshaler interface.
 func (t *TypedError) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Kind  int    `json:"kind"`
+		ID    int    `json:"id"`
 		Title string `json:"title"`
 		Msg   string `json:"msg"`
 	}{
-		Kind:  int(t.Kind),
-		Title: t.Kind.Title(),
+		ID:    int(t.ID),
+		Title: t.ID.Title(),
 		Msg:   t.Mesg,
 	})
 }
@@ -139,7 +139,7 @@ func (t *TypedError) MarshalJSON() ([]byte, error) {
 func (t *TypedError) Error() string {
 	js, err := json.Marshal(t)
 	if err != nil {
-		return `{"kind":0,"title":"generic","msg":"failed to serialize error"}`
+		return `{"id":0,"title":"generic","msg":"failed to serialize error"}`
 	}
 	return string(js)
 }
@@ -152,7 +152,7 @@ func (m MultiError) Error() string {
 		txt := err.Error()
 		if _, ok := err.(*TypedError); !ok {
 			b, err := json.Marshal(txt)
-			txt = `{"kind":0,"title":"generic","msg":`
+			txt = `{"id":0,"title":"generic","msg":`
 			if err != nil {
 				txt += `"unknown error"}`
 			} else {
@@ -185,59 +185,59 @@ func (b *BadRequestError) Error() string {
 	return b.Actual.Error()
 }
 
-// InvalidParamTypeError appends a typed error of kind ErrInvalidParamType to
+// InvalidParamTypeError appends a typed error of id ErrInvalidParamType to
 // err and returns it.
 func InvalidParamTypeError(name string, val interface{}, expected string, err error) error {
 	terr := TypedError{
-		Kind: ErrInvalidParamType,
+		ID: ErrInvalidParamType,
 		Mesg: fmt.Sprintf("invalid value %#v for parameter %#v, must be a %s",
 			val, name, expected),
 	}
 	return ReportError(err, &terr)
 }
 
-// MissingParamError appends a typed error of kind ErrMissingParam to err and
+// MissingParamError appends a typed error of id ErrMissingParam to err and
 // returns it.
 func MissingParamError(name string, err error) error {
 	terr := TypedError{
-		Kind: ErrMissingParam,
+		ID:   ErrMissingParam,
 		Mesg: fmt.Sprintf("missing required parameter %#v", name),
 	}
 	return ReportError(err, &terr)
 }
 
-// InvalidAttributeTypeError appends a typed error of kind ErrIncompatibleType
+// InvalidAttributeTypeError appends a typed error of id ErrIncompatibleType
 // to err and returns it.
 func InvalidAttributeTypeError(ctx string, val interface{}, expected string, err error) error {
 	terr := TypedError{
-		Kind: ErrInvalidAttributeType,
+		ID: ErrInvalidAttributeType,
 		Mesg: fmt.Sprintf("type of %s must be %s but got value %#v", ctx,
 			expected, val),
 	}
 	return ReportError(err, &terr)
 }
 
-// MissingAttributeError appends a typed error of kind ErrMissingAttribute to
+// MissingAttributeError appends a typed error of id ErrMissingAttribute to
 // err and returns it.
 func MissingAttributeError(ctx, name string, err error) error {
 	terr := TypedError{
-		Kind: ErrMissingAttribute,
+		ID:   ErrMissingAttribute,
 		Mesg: fmt.Sprintf("attribute %#v of %s is missing and required", name, ctx),
 	}
 	return ReportError(err, &terr)
 }
 
-// MissingHeaderError appends a typed error of kind ErrMissingHeader to err and
+// MissingHeaderError appends a typed error of id ErrMissingHeader to err and
 // returns it.
 func MissingHeaderError(name string, err error) error {
 	terr := TypedError{
-		Kind: ErrMissingHeader,
+		ID:   ErrMissingHeader,
 		Mesg: fmt.Sprintf("missing required HTTP header %#v", name),
 	}
 	return ReportError(err, &terr)
 }
 
-// InvalidEnumValueError appends a typed error of kind ErrInvalidEnumValue to
+// InvalidEnumValueError appends a typed error of id ErrInvalidEnumValue to
 // err and returns it.
 func InvalidEnumValueError(ctx string, val interface{}, allowed []interface{}, err error) error {
 	elems := make([]string, len(allowed))
@@ -245,36 +245,36 @@ func InvalidEnumValueError(ctx string, val interface{}, allowed []interface{}, e
 		elems[i] = fmt.Sprintf("%#v", a)
 	}
 	terr := TypedError{
-		Kind: ErrInvalidEnumValue,
+		ID: ErrInvalidEnumValue,
 		Mesg: fmt.Sprintf("value of %s must be one of %s but got value %#v", ctx,
 			strings.Join(elems, ", "), val),
 	}
 	return ReportError(err, &terr)
 }
 
-// InvalidFormatError appends a typed error of kind ErrInvalidFormat to err and
+// InvalidFormatError appends a typed error of id ErrInvalidFormat to err and
 // returns it.
 func InvalidFormatError(ctx, target string, format Format, formatError, err error) error {
 	terr := TypedError{
-		Kind: ErrInvalidFormat,
+		ID: ErrInvalidFormat,
 		Mesg: fmt.Sprintf("%s must be formatted as a %s but got value %#v, %s",
 			ctx, format, target, formatError.Error()),
 	}
 	return ReportError(err, &terr)
 }
 
-// InvalidPatternError appends a typed error of kind ErrInvalidPattern to err and
+// InvalidPatternError appends a typed error of id ErrInvalidPattern to err and
 // returns it.
 func InvalidPatternError(ctx, target string, pattern string, err error) error {
 	terr := TypedError{
-		Kind: ErrInvalidPattern,
+		ID: ErrInvalidPattern,
 		Mesg: fmt.Sprintf("%s must be match the regexp %#v but got value %#v",
 			ctx, pattern, target),
 	}
 	return ReportError(err, &terr)
 }
 
-// InvalidRangeError appends a typed error of kind ErrInvalidRange to err and
+// InvalidRangeError appends a typed error of id ErrInvalidRange to err and
 // returns it.
 func InvalidRangeError(ctx string, target interface{}, value int, min bool, err error) error {
 	comp := "greater or equal"
@@ -282,14 +282,14 @@ func InvalidRangeError(ctx string, target interface{}, value int, min bool, err 
 		comp = "lesser or equal"
 	}
 	terr := TypedError{
-		Kind: ErrInvalidRange,
+		ID: ErrInvalidRange,
 		Mesg: fmt.Sprintf("%s must be %s than %d but got value %#v",
 			ctx, comp, value, target),
 	}
 	return ReportError(err, &terr)
 }
 
-// InvalidLengthError appends a typed error of kind ErrInvalidLength to err and
+// InvalidLengthError appends a typed error of id ErrInvalidLength to err and
 // returns it.
 func InvalidLengthError(ctx, target string, value int, min bool, err error) error {
 	comp := "greater or equal"
@@ -297,7 +297,7 @@ func InvalidLengthError(ctx, target string, value int, min bool, err error) erro
 		comp = "lesser or equal"
 	}
 	terr := TypedError{
-		Kind: ErrInvalidLength,
+		ID: ErrInvalidLength,
 		Mesg: fmt.Sprintf("length of %s must be %s than %d but got value %#v (len=%d)",
 			ctx, comp, value, target, len(target)),
 	}

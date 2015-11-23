@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/raphael/goa/design"
 	. "github.com/raphael/goa/design/dsl"
-	_ "github.com/raphael/goa/examples/cellar/design"
+	//_ "github.com/raphael/goa/examples/cellar/design"
 	"github.com/raphael/goa/goagen/gen_schema"
 	"github.com/raphael/goa/goagen/gen_swagger"
 )
@@ -388,12 +388,12 @@ var _ = Describe("New", func() {
 		})
 	})
 
-	Context("using the cellar example API definition", func() {
-		BeforeEach(func() {
-			Design = cellarDesign
+	/*	Context("using the cellar example API definition", func() {
+			BeforeEach(func() {
+				Design = cellarDesign
+			})
+
+			//It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
 		})
-
-		It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
-	})
-
+	*/
 })
