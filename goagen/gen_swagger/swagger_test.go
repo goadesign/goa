@@ -27,6 +27,7 @@ func validateSwagger(swagger *genswagger.Swagger) {
 	doc, err := spec.New(b, "")
 	Ω(err).ShouldNot(HaveOccurred())
 	Ω(doc).ShouldNot(BeNil())
+	// TBD calling the swagger validator below causes Travis to hang...
 	// err = validate.Spec(doc, strfmt.NewFormats())
 	// Ω(err).ShouldNot(HaveOccurred())
 }
