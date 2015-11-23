@@ -46,11 +46,11 @@ func init() {
 	service.Use(goa.Recover())
 
 	// Mount account controller onto application
-	ac := controllers.NewAccount()
+	ac := controllers.NewAccount(service)
 	app.MountAccountController(service, ac)
 
 	// Mount bottle controller onto application
-	bc := controllers.NewBottle()
+	bc := controllers.NewBottle(service)
 	app.MountBottleController(service, bc)
 
 	// Mount Swagger Spec controller onto application
