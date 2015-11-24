@@ -468,33 +468,33 @@ func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} interfa
 	// mediaTypeT generates the code for a media type.
 	// template input: *design.MediaTypeDefinition
 	mediaTypeT = `{{define "Dump"}}` + dumpT + `{{end}}` + `// {{if .Description}}{{.Description}}{{else}}{{gotypename . 0}} media type{{end}}
-// Identifier: {{.Identifier}}
-type {{gotypename . 0}} {{gotypedef . 0 false false}}{{if .ComputeViews}}
+// Identifier: {{.Identifier}}{{$typeName := gotypename . 0}}
+type {{$typeName}} {{gotypedef . 0 false false}}{{$computedViews := .ComputeViews}}{{if gt (len $computedViews) 1}}
 
-// {{.Name}} views
-type {{gotypename . 0}}ViewEnum string
+// {{$typeName}} views
+type {{$typeName}}ViewEnum string
 
 const (
-{{$typeName := gotypename . 0}}{{range $name, $view := .ComputeViews}}// {{if .Description}}{{.Description}}{{else}}{{$typeName}} {{.Name}} view{{end}}
+{{range $name, $view := $computedViews}}// {{if .Description}}{{.Description}}{{else}}{{$typeName}} {{.Name}} view{{end}}
 	{{$typeName}}{{goify .Name true}}View {{$typeName}}ViewEnum = "{{.Name}}"
 {{end}}){{end}}
-// Load{{gotypename . 0}} loads raw data into an instance of {{gotypename . 0}} running all the
+// Load{{$typeName}} loads raw data into an instance of {{$typeName}} running all the
 // validations. Raw data is defined by data that the JSON unmarshaler would create when unmarshaling
 // into a variable of type interface{}. See https://golang.org/pkg/encoding/json/#Unmarshal for the
 // complete list of supported data types.
-func Load{{gotypename . 0}}(raw interface{}) ({{gotyperef . 1}}, error) {
+func Load{{$typeName}}(raw interface{}) ({{gotyperef . 1}}, error) {
 	var err error
 	var res {{gotyperef . 1}}
 	{{typeUnmarshaler . "" "raw" "res"}}
 	return res, err
 }
 
-// Dump produces raw data from an instance of {{gotypename . 0}} running all the
-// validations. See Load{{gotypename . 0}} for the definition of raw data.
-func (mt {{gotyperef . 0}}) Dump({{if gt (len .ComputeViews) 1}}view {{gotypename . 0}}ViewEnum{{end}}) ({{gonative .}}, error) {
+// Dump produces raw data from an instance of {{$typeName}} running all the
+// validations. See Load{{$typeName}} for the definition of raw data.
+func (mt {{gotyperef . 0}}) Dump({{if gt (len $computedViews) 1}}view {{$typeName}}ViewEnum{{end}}) ({{gonative .}}, error) {
 	var err error
 	var res {{gonative .}}
-{{$mt := .}}{{if gt (len .ComputeViews) 1}}{{range .ComputeViews}}   if view == {{gotypename $mt 0}}{{goify .Name true}}View {
+{{$mt := .}}{{if gt (len $computedViews) 1}}{{range $computedViews}}   if view == {{gotypename $mt 0}}{{goify .Name true}}View {
 		{{template "Dump" (newDumpData $mt (printf "%s view" .Name) "mt" "res" .Name)}}
 	}
 {{end}}{{else}}{{range $mt.ComputeViews}}{{template "Dump" (newDumpData $mt (printf "%s view" .Name) "mt" "res" .Name)}}{{/* ranges over the one element */}}
