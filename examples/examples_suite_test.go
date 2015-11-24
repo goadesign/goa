@@ -1,4 +1,4 @@
-package cellar_test
+package examples_test
 
 import (
 	. "github.com/onsi/ginkgo"
