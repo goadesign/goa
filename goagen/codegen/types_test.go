@@ -473,7 +473,7 @@ const (
 			p[i] = tmp1
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "[]interface{}", err)
+		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "array", err)
 	}`
 
 	simpleMarshaled = `	tmp1 := map[string]interface{}{
@@ -495,7 +495,7 @@ const (
 			p.Foo = tmp1
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "map[string]interface{}", err)
+		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "dictionary", err)
 	}`
 
 	complexMarshaled = `	tmp1 := map[string]interface{}{
@@ -548,7 +548,7 @@ const (
 							tmp2[i] = tmp3
 						}
 					} else {
-						err = goa.InvalidAttributeTypeError(` + "`" + `.Baz.Bar` + "`" + `, v, "[]interface{}", err)
+						err = goa.InvalidAttributeTypeError(` + "`" + `.Baz.Bar` + "`" + `, v, "array", err)
 					}
 					tmp1.Bar = tmp2
 				}
@@ -562,7 +562,7 @@ const (
 					tmp1.Foo = tmp4
 				}
 			} else {
-				err = goa.InvalidAttributeTypeError(` + "`" + `.Baz` + "`" + `, v, "map[string]interface{}", err)
+				err = goa.InvalidAttributeTypeError(` + "`" + `.Baz` + "`" + `, v, "dictionary", err)
 			}
 			p.Baz = tmp1
 		}
@@ -576,7 +576,7 @@ const (
 			p.Faz = tmp5
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "map[string]interface{}", err)
+		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "dictionary", err)
 	}`
 
 	mtMarshaled = `	tmp1 := map[string]interface{}{
