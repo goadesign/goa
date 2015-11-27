@@ -54,7 +54,7 @@ var _ = Describe("example cellar", func() {
 		cmd.Dir = tempdir
 		_, err := cmd.CombinedOutput()
 		Ω(err).ShouldNot(HaveOccurred())
-		cmd = exec.Command("cellar")
+		cmd = exec.Command("./cellar")
 		cmd.Dir = tempdir
 		b := &bytes.Buffer{}
 		cmd.Stdout = b
@@ -73,5 +73,9 @@ var _ = Describe("example cellar", func() {
 		}
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(b.String()).Should(ContainSubstring("GET /swagger.json"))
+	})
+
+	AfterEach(func() {
+		os.RemoveAll(tempdir)
 	})
 })
