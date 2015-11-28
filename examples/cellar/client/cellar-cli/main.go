@@ -94,73 +94,47 @@ func RegisterCommands(app *kingpin.Application) map[string]client.ActionCommand 
 	tmp1 := new(CreateAccountCommand)
 	sub = command.Command("account", "Create new account")
 	tmp1.RegisterFlags(sub)
-	tmp1.Help = "Create new account"
-	tmp1.Help += "\n\t--payload=PAYLOAD JSON encoded payload"
-
 	res["create account"] = tmp1
 	tmp2 := new(CreateBottleCommand)
 	sub = command.Command("bottle", "Record new bottle")
 	tmp2.RegisterFlags(sub)
-	tmp2.Help = "Record new bottle"
-	tmp2.Help += "\n\t--payload=PAYLOAD JSON encoded payload"
-
 	res["create bottle"] = tmp2
 	command = app.Command("delete", "delete action")
 	tmp3 := new(DeleteAccountCommand)
 	sub = command.Command("account", "")
 	tmp3.RegisterFlags(sub)
-	tmp3.Help = "Runs delete on a account resource."
-
 	res["delete account"] = tmp3
 	tmp4 := new(DeleteBottleCommand)
 	sub = command.Command("bottle", "")
 	tmp4.RegisterFlags(sub)
-	tmp4.Help = "Runs delete on a bottle resource."
-
 	res["delete bottle"] = tmp4
 	command = app.Command("list", "List all bottles in account optionally filtering by year")
 	tmp5 := new(ListBottleCommand)
 	sub = command.Command("bottle", "List all bottles in account optionally filtering by year")
 	tmp5.RegisterFlags(sub)
-	tmp5.Help = "List all bottles in account optionally filtering by year"
-	tmp5.Help += "\n\t--years=PARAM Filter by years"
-
 	res["list bottle"] = tmp5
 	command = app.Command("rate", "")
 	tmp6 := new(RateBottleCommand)
 	sub = command.Command("bottle", "")
 	tmp6.RegisterFlags(sub)
-	tmp6.Help = "Runs rate on a bottle resource."
-	tmp6.Help += "\n\t--payload=PAYLOAD JSON encoded payload"
-
 	res["rate bottle"] = tmp6
 	command = app.Command("show", "show action")
 	tmp7 := new(ShowAccountCommand)
 	sub = command.Command("account", "Retrieve account with given id")
 	tmp7.RegisterFlags(sub)
-	tmp7.Help = "Retrieve account with given id"
-
 	res["show account"] = tmp7
 	tmp8 := new(ShowBottleCommand)
 	sub = command.Command("bottle", "Retrieve bottle with given id")
 	tmp8.RegisterFlags(sub)
-	tmp8.Help = "Retrieve bottle with given id"
-
 	res["show bottle"] = tmp8
 	command = app.Command("update", "update action")
 	tmp9 := new(UpdateAccountCommand)
 	sub = command.Command("account", "Change account name")
 	tmp9.RegisterFlags(sub)
-	tmp9.Help = "Change account name"
-	tmp9.Help += "\n\t--payload=PAYLOAD JSON encoded payload"
-
 	res["update account"] = tmp9
 	tmp10 := new(UpdateBottleCommand)
 	sub = command.Command("bottle", "")
 	tmp10.RegisterFlags(sub)
-	tmp10.Help = "Runs update on a bottle resource."
-	tmp10.Help += "\n\t--payload=PAYLOAD JSON encoded payload"
-
 	res["update bottle"] = tmp10
 
 	return res

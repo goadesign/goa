@@ -12,53 +12,39 @@ import (
 type (
 	// CreateAccountCommand is the command line data structure for the create action of account
 	CreateAccountCommand struct {
-		// Help is the command line help.
-		Help string
 		// Path is the HTTP request path.
 		Path    string
 		Payload string
 	}
 	// DeleteAccountCommand is the command line data structure for the delete action of account
 	DeleteAccountCommand struct {
-		// Help is the command line help.
-		Help string
 		// Path is the HTTP request path.
 		Path string
 	}
 	// ShowAccountCommand is the command line data structure for the show action of account
 	ShowAccountCommand struct {
-		// Help is the command line help.
-		Help string
 		// Path is the HTTP request path.
 		Path string
 	}
 	// UpdateAccountCommand is the command line data structure for the update action of account
 	UpdateAccountCommand struct {
-		// Help is the command line help.
-		Help string
 		// Path is the HTTP request path.
 		Path    string
 		Payload string
 	}
 	// CreateBottleCommand is the command line data structure for the create action of bottle
 	CreateBottleCommand struct {
-		// Help is the command line help.
-		Help string
 		// Path is the HTTP request path.
 		Path    string
 		Payload string
 	}
 	// DeleteBottleCommand is the command line data structure for the delete action of bottle
 	DeleteBottleCommand struct {
-		// Help is the command line help.
-		Help string
 		// Path is the HTTP request path.
 		Path string
 	}
 	// ListBottleCommand is the command line data structure for the list action of bottle
 	ListBottleCommand struct {
-		// Help is the command line help.
-		Help string
 		// Path is the HTTP request path.
 		Path string
 		// Filter by years
@@ -66,23 +52,17 @@ type (
 	}
 	// RateBottleCommand is the command line data structure for the rate action of bottle
 	RateBottleCommand struct {
-		// Help is the command line help.
-		Help string
 		// Path is the HTTP request path.
 		Path    string
 		Payload string
 	}
 	// ShowBottleCommand is the command line data structure for the show action of bottle
 	ShowBottleCommand struct {
-		// Help is the command line help.
-		Help string
 		// Path is the HTTP request path.
 		Path string
 	}
 	// UpdateBottleCommand is the command line data structure for the update action of bottle
 	UpdateBottleCommand struct {
-		// Help is the command line help.
-		Help string
 		// Path is the HTTP request path.
 		Path    string
 		Payload string

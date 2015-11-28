@@ -509,8 +509,6 @@ const arrayToStringT = `	{{$tmp := tempvar}}{{$tmp}} := make([]string, len({{.Na
 
 const commandTypesTmpl = `{{$cmdName := goify (printf "%s%s%s" .Name (title .Parent.Name) "Command") true}}	// {{$cmdName}} is the command line data structure for the {{.Name}} action of {{.Parent.Name}}
 	{{$cmdName}} struct {
-		// Help is the command line help.
-		Help string
 		// Path is the HTTP request path.
 		Path string
 {{if .Payload}}		Payload string
@@ -615,11 +613,6 @@ func RegisterCommands(app *kingpin.Application) map[string]client.ActionCommand 
 {{range $action := $actions}}{{$cmdName := goify (printf "%s%sCommand" $action.Name (title $action.Parent.Name)) true}}{{$tmp := tempvar}}	{{$tmp}} := new({{$cmdName}})
 	sub = command.Command("{{$action.Parent.Name}}", "{{$action.Description}}")
 	{{$tmp}}.RegisterFlags(sub)
-	{{$tmp}}.Help = "{{if $action.Description}}{{$action.Description}}{{else}}Runs {{$action.Name}} on a {{$action.Parent.Name}} resource.{{end}}"
-{{if $action.Payload}}	{{$tmp}}.Help += "\n\t--payload=PAYLOAD JSON encoded payload"
-{{end}}{{$params := .QueryParams}}{{if $params}}{{range $name, $param := $params.Type.ToObject}}	{{$tmp}}.Help += "\n\t--{{$name}}=PARAM {{$param.Description}}"
-{{end}}{{end}}{{$headers := .Headers}}{{if $headers}}{{range $name, $header := $headers.Type.ToObject}}	{{$tmp}}.Help += "\n\t--{{$name}}=HEADER {{$header.Description}}"
-{{end}}{{end}}
 	res["{{printf "%s %s" $name $action.Parent.Name}}"] = {{$tmp}}
 {{end}}{{end}}
 	return res
