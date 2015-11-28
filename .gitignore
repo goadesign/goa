@@ -1,4 +1,5 @@
 examples/cellar/cellar
+examples/cellar/client/cellar-cli/cellar-cli
 **/*.coverprofile
 goagen/goagen
 **/autogen

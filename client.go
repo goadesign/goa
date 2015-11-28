@@ -18,11 +18,6 @@ import (
 	"gopkg.in/inconshreveable/log15.v2"
 )
 
-var (
-	// HiddenHeaders lists headers that should not be logged.
-	HiddenHeaders = map[string]bool{"Authorization": true, "Cookie": true}
-)
-
 type (
 	// Client is the command client data structure for all goa service clients.
 	Client struct {
@@ -91,7 +86,6 @@ type (
 		// RefreshURLFormat is a format that generates the refresh access token URL given a
 		// refresh token.
 		RefreshURLFormat string
-		// given callback URL.
 		// RefreshToken contains the OAuth2 refresh token from which access tokens are
 		// created.
 		RefreshToken string
@@ -205,6 +199,7 @@ func (s *OAuth2Signer) Refresh() error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	var r oauth2RefreshResponse
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -230,38 +225,34 @@ func (c *Client) dumpRequest(req *http.Request) []byte {
 	if err != nil {
 		log.Error("Failed to load request body for dump", "error", err.Error())
 	}
-	if c.Dump {
-		var buffer bytes.Buffer
-		buffer.WriteString(req.Method + " " + req.URL.String() + "\n")
-		writeHeaders(&buffer, req.Header)
-		if reqBody != nil {
-			buffer.WriteString("\n")
-			buffer.Write(reqBody)
-			buffer.WriteString("\n")
-		}
-		fmt.Fprint(os.Stderr, buffer.String())
+	var buffer bytes.Buffer
+	buffer.WriteString(req.Method + " " + req.URL.String() + "\n")
+	writeHeaders(&buffer, req.Header)
+	if reqBody != nil {
+		buffer.WriteString("\n")
+		buffer.Write(reqBody)
+		buffer.WriteString("\n")
 	}
+	fmt.Fprint(os.Stderr, buffer.String())
 	return nil
 }
 
 // dumpResponse dumps the response and the request.
 func (c *Client) dumpResponse(resp *http.Response, req *http.Request, reqBody []byte) {
 	respBody, _ := dumpRespBody(resp)
-	if c.Dump {
-		var buffer bytes.Buffer
-		buffer.WriteString("==> " + resp.Proto + " " + resp.Status + "\n")
-		writeHeaders(&buffer, resp.Header)
-		if respBody != nil {
-			buffer.WriteString("\n")
-			buffer.Write(respBody)
-			buffer.WriteString("\n")
-		}
-		fmt.Fprint(os.Stderr, buffer.String())
+	var buffer bytes.Buffer
+	buffer.WriteString("==> " + resp.Proto + " " + resp.Status + "\n")
+	writeHeaders(&buffer, resp.Header)
+	if respBody != nil {
+		buffer.WriteString("\n")
+		buffer.Write(respBody)
+		buffer.WriteString("\n")
 	}
+	fmt.Fprint(os.Stderr, buffer.String())
 }
 
 // writeHeaders is a helper function that writes the given HTTP headers to the given buffer as
-// human readable strings. writeHeaders filters out headers whose names are keys of HiddenHeaders.
+// human readable strings. writeHeaders filters out headers that are sensitive.
 func writeHeaders(buffer *bytes.Buffer, headers http.Header) {
 	filterHeaders(headers, func(name string, value []string) {
 		buffer.WriteString(name)
@@ -345,7 +336,8 @@ type headerIterator func(name string, value []string)
 // strings.
 func filterHeaders(headers http.Header, iterator headerIterator) {
 	for k, v := range headers {
-		if _, ok := HiddenHeaders[k]; ok {
+		// Skip sensitive headers
+		if k == "Authorization" || k == "Cookie" {
 			continue
 		}
 		iterator(k, v)
