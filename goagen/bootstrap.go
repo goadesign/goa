@@ -5,6 +5,7 @@ import (
 
 	"github.com/raphael/goa/goagen/codegen"
 	"github.com/raphael/goa/goagen/gen_app"
+	"github.com/raphael/goa/goagen/gen_client"
 	"github.com/raphael/goa/goagen/gen_main"
 	"github.com/raphael/goa/goagen/gen_swagger"
 )
@@ -14,6 +15,7 @@ import (
 var BootstrapCommands = []codegen.Command{
 	genapp.NewCommand(),
 	genmain.NewCommand(),
+	genclient.NewCommand(),
 	genswagger.NewCommand(),
 }
 

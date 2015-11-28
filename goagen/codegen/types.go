@@ -159,7 +159,7 @@ func arrayMarshalerR(a *design.Array, context, source, target string, depth int)
 		"context":  context,
 		"depth":    depth,
 	}
-	return runTemplate(mArrayT, data)
+	return RunTemplate(mArrayT, data)
 }
 
 // HashMarshaler produces the Go code that initializes the variable named target which holds a
@@ -179,7 +179,7 @@ func hashMarshalerR(h *design.Hash, context, source, target string, depth int) s
 		"target":  target,
 		"depth":   depth,
 	}
-	return runTemplate(mHashT, data)
+	return RunTemplate(mHashT, data)
 }
 
 // ObjectMarshaler produces the Go code that initializes the variable named target which holds a
@@ -203,7 +203,7 @@ func objectMarshalerR(o design.DataType, required []string, context, source, tar
 		"target":    target,
 		"depth":     depth,
 	}
-	return runTemplate(mObjectT, data)
+	return RunTemplate(mObjectT, data)
 }
 
 // MediaTypeMarshaler produces the Go code that initializes the variable named target which holds a
@@ -275,7 +275,7 @@ func mediaTypeMarshalerR(mt *design.MediaTypeDefinition, context, source, target
 			"view":    view,
 			"depth":   depth,
 		}
-		linkMarshaler = "\n" + runTemplate(mLinkT, data)
+		linkMarshaler = "\n" + RunTemplate(mLinkT, data)
 	}
 	final := rendered.Dup()
 	o := rendered.Type.ToObject()
@@ -303,7 +303,7 @@ func collectionMediaTypeMarshalerR(mt *design.MediaTypeDefinition, context, sour
 		"depth":         depth,
 		"elemMediaType": mt.Type.(*design.Array).ElemType.Type,
 	}
-	return runTemplate(mCollectionT, data)
+	return RunTemplate(mCollectionT, data)
 }
 
 // TypeUnmarshaler produces the Go code that initializes a variable of the given type given
@@ -357,7 +357,7 @@ func userPrimitiveUnmarshalerR(u *design.UserTypeDefinition, context, source, ta
 		"context": context,
 		"depth":   depth,
 	}
-	return runTemplate(unmUserPrimitiveT, data)
+	return RunTemplate(unmUserPrimitiveT, data)
 }
 
 // AttributeUnmarshaler produces the Go code that initializes an attribute given a deserialized
@@ -397,7 +397,7 @@ func primitiveUnmarshalerR(p design.Primitive, context, source, target string, d
 		"context": context,
 		"depth":   depth,
 	}
-	return runTemplate(unmPrimitiveT, data)
+	return RunTemplate(unmPrimitiveT, data)
 }
 
 // ArrayUnmarshaler produces the Go code that initializes an array from its deserialized epresentation.
@@ -416,7 +416,7 @@ func arrayUnmarshalerR(a *design.Array, context, source, target string, depth in
 		"context":  context,
 		"depth":    depth,
 	}
-	return runTemplate(unmArrayT, data)
+	return RunTemplate(unmArrayT, data)
 }
 
 // HashUnmarshaler produces the Go code that initializes a hash map from its deserialized
@@ -436,7 +436,7 @@ func hashUnmarshalerR(h *design.Hash, context, source, target string, depth int)
 		"target":  target,
 		"depth":   depth,
 	}
-	return runTemplate(unmHashT, data)
+	return RunTemplate(unmHashT, data)
 }
 
 // ObjectUnmarshaler produces the Go code that initializes an object type from its deserialized
@@ -457,7 +457,7 @@ func objectUnmarshalerR(o design.DataType, required []string, context, source, t
 		"target":   target,
 		"depth":    depth,
 	}
-	return runTemplate(unmObjectOrUserT, data)
+	return RunTemplate(unmObjectOrUserT, data)
 }
 
 // GoTypeDef returns the Go code that defines a Go type which matches the data structure
@@ -669,6 +669,17 @@ func Tempvar() string {
 	return fmt.Sprintf("tmp%d", TempCount)
 }
 
+// RunTemplate executs the given template with the given input and returns
+// the rendered string.
+func RunTemplate(tmpl *template.Template, data interface{}) string {
+	var b bytes.Buffer
+	err := tmpl.Execute(&b, data)
+	if err != nil {
+		panic(err) // should never happen, bug if it does.
+	}
+	return b.String()
+}
+
 // reserved golang keywords
 var reserved = map[string]bool{
 	"byte":       true,
@@ -741,17 +752,6 @@ func toSlice(val []interface{}) string {
 		elems[i] = fmt.Sprintf("%#v", v)
 	}
 	return fmt.Sprintf("[]interface{}{%s}", strings.Join(elems, ", "))
-}
-
-// runTemplate executs the given template with the given input and returns
-// the rendered string.
-func runTemplate(tmpl *template.Template, data interface{}) string {
-	var b bytes.Buffer
-	err := tmpl.Execute(&b, data)
-	if err != nil {
-		panic(err) // should never happen, bug if it does.
-	}
-	return b.String()
 }
 
 const (

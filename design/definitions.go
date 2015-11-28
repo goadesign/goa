@@ -176,6 +176,8 @@ type (
 		Responses map[string]*ResponseDefinition
 		// Path and query string parameters
 		Params *AttributeDefinition
+		// Query string parameters only
+		QueryParams *AttributeDefinition
 		// Payload blueprint (request body) if any
 		Payload *UserTypeDefinition
 		// Request headers that need to be made available to action
