@@ -29,7 +29,7 @@ type Account struct {
 	Name string
 }
 
-// object views
+// Account views
 type AccountViewEnum string
 
 const (
@@ -190,7 +190,7 @@ type Bottle struct {
 	Vintage   int
 }
 
-// object views
+// Bottle views
 type BottleViewEnum string
 
 const (
@@ -733,7 +733,7 @@ func (mt *Bottle) Validate() (err error) {
 // Identifier: application/vnd.goa.example.bottle+json; type=collection
 type BottleCollection []*Bottle
 
-// array views
+// BottleCollection views
 type BottleCollectionViewEnum string
 
 const (

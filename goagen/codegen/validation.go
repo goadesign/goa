@@ -82,7 +82,7 @@ func RecursiveChecker(att *design.AttributeDefinition, required bool, target, co
 			"target":    target,
 			"depth":     1,
 		}
-		validation := runTemplate(arrayValT, data)
+		validation := RunTemplate(arrayValT, data)
 		if validation != "" {
 			checks = append(checks, validation)
 		}
@@ -110,46 +110,46 @@ func ValidationChecker(att *design.AttributeDefinition, required bool, target, c
 		switch actual := v.(type) {
 		case *design.EnumValidationDefinition:
 			data["values"] = actual.Values
-			if val := runTemplate(enumValT, data); val != "" {
+			if val := RunTemplate(enumValT, data); val != "" {
 				res = append(res, val)
 			}
 		case *design.FormatValidationDefinition:
 			data["format"] = actual.Format
-			if val := runTemplate(formatValT, data); val != "" {
+			if val := RunTemplate(formatValT, data); val != "" {
 				res = append(res, val)
 			}
 		case *design.PatternValidationDefinition:
 			data["pattern"] = actual.Pattern
-			if val := runTemplate(patternValT, data); val != "" {
+			if val := RunTemplate(patternValT, data); val != "" {
 				res = append(res, val)
 			}
 		case *design.MinimumValidationDefinition:
 			data["min"] = actual.Min
 			delete(data, "max")
-			if val := runTemplate(minMaxValT, data); val != "" {
+			if val := RunTemplate(minMaxValT, data); val != "" {
 				res = append(res, val)
 			}
 		case *design.MaximumValidationDefinition:
 			data["max"] = actual.Max
 			delete(data, "min")
-			if val := runTemplate(minMaxValT, data); val != "" {
+			if val := RunTemplate(minMaxValT, data); val != "" {
 				res = append(res, val)
 			}
 		case *design.MinLengthValidationDefinition:
 			data["minLength"] = actual.MinLength
 			delete(data, "maxLength")
-			if val := runTemplate(lengthValT, data); val != "" {
+			if val := RunTemplate(lengthValT, data); val != "" {
 				res = append(res, val)
 			}
 		case *design.MaxLengthValidationDefinition:
 			data["maxLength"] = actual.MaxLength
 			delete(data, "minLength")
-			if val := runTemplate(lengthValT, data); val != "" {
+			if val := RunTemplate(lengthValT, data); val != "" {
 				res = append(res, val)
 			}
 		case *design.RequiredValidationDefinition:
 			data["required"] = actual.Names
-			if val := runTemplate(requiredValT, data); val != "" {
+			if val := RunTemplate(requiredValT, data); val != "" {
 				res = append(res, val)
 			}
 		}

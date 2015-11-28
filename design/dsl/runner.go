@@ -183,6 +183,19 @@ func finalizeResource(r *design.ResourceDefinition) {
 				}
 			}
 		}
+		// 3. Compute QueryParams from Params
+		if params := a.Params; params != nil {
+			queryParams := params.Dup()
+			for _, route := range a.Routes {
+				pnames := route.Params()
+				for _, pname := range pnames {
+					delete(queryParams.Type.ToObject(), pname)
+				}
+			}
+			// (note: we may end up with required attribute names that don't correspond
+			// to actual attributes cos' we just deleted them but that's probably OK.)
+			a.QueryParams = queryParams
+		}
 		return nil
 	})
 }
