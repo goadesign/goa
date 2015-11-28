@@ -24,6 +24,13 @@ func main() {
 	app.Flag("dump", "Dump HTTP request and response.").BoolVar(&c.Dump)
 	app.Flag("pp", "Pretty print response body").BoolVar(&PrettyPrint)
 	commands := RegisterCommands(app)
+	// Make "client-cli <action> [<resource>] --help" equivalent to
+	// "client-cli help <action> [<resource>]"
+	if os.Args[len(os.Args)-1] == "--help" {
+		args := append([]string{os.Args[0]}, "help")
+		args = append(args, os.Args[1:]...)
+		os.Args = args
+	}
 	cmdName, err := app.Parse(os.Args[1:])
 	if err != nil {
 		kingpin.Fatalf(err.Error())
@@ -36,6 +43,7 @@ func main() {
 	if err != nil {
 		kingpin.Fatalf("request failed: %s", err)
 	}
+	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		kingpin.Fatalf("failed to read body: %s", err)
@@ -47,7 +55,7 @@ func main() {
 			sbody = ": " + string(body)
 		}
 		fmt.Printf("error: %d%s", resp.StatusCode, sbody)
-	} else if len(body) > 0 {
+	} else if !c.Dump && len(body) > 0 {
 		var out string
 		if PrettyPrint {
 			var jbody interface{}
