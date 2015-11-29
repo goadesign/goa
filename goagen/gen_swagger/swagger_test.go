@@ -85,7 +85,7 @@ var _ = Describe("New", func() {
 					URL(docURL)
 				})
 				Host(host)
-				Schemes(scheme)
+				Scheme(scheme)
 				BasePath(basePath)
 			})
 		})
