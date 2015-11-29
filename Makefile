@@ -38,7 +38,6 @@ lint:
 
 test:
 	@ginkgo -r --randomizeAllSpecs --failOnPending --randomizeSuites --race -skipPackage vendor
-	@cd examples/cellar && go build
 
 goagen:
 	@cd goagen && \

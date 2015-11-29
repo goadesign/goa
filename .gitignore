@@ -4,3 +4,6 @@ examples/cellar/client/cellar-cli/cellar-cli
 goagen/goagen
 **/autogen
 vendor
+examples/cellar/app
+examples/cellar/client
+examples/cellar/swagger
