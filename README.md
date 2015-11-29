@@ -54,6 +54,15 @@ The code generation functionality relies on [goimports](https://godoc.org/golang
 go get golang.org/x/tools/cmd/goimports
 ```
 
+## Development Workflow
+
+1. Create API design using the [goa design language](https://godoc.org/github.com/raphael/goa/design/dsl).
+2. [Optional] If API design package is a public github repo use [swagger.goa.design](http://swagger.goa.design) to verify the design.
+3. Run [`goagen`](http://www.goa.design/goagen.html): `goagen bootstrap -d <design package path>`
+4. Fill-in implementation of generated controller actions.
+
+![goagen diagram](/images/goagen.svg?raw=true "goagen")
+
 ## Getting Started
 
 Follow the getting started guide and find other resources at [http://goa.design](http://www.goa.design).
