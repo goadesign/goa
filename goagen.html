@@ -135,21 +135,26 @@
                         <h2><code>goagen client</code></h2>
                         <p>
                                 The <code>client</code> command generates both an API client package and tool. The client package implements a <code>Client</code>
-                                object that exposes one method for each resource action. The method accepts any action parameter (path parameter
-                                and query string), header and payload expected by the action as arguments. The tool leverages the package to
-                                implement self-describing CLI.
-                                The <code>Client</code> object also makes it possible to define request signers that get invoked prior to sending the
-                                request and may modify it to include auth headers for example. goa comes with a few standard signers that implement
-                                [basic auth](https://godoc.org/github.com/raphael/goa#BasicSigner),
-                                [JWT auth](https://godoc.org/github.com/raphael/goa#JWTSigner) and a subset of
-                                [OAuth2](https://godoc.org/github.com/raphael/goa#OAuth2Signer). Custom signers my be used as well, they must
-                                implement the [Signer](https://godoc.org/github.com/raphael/goa#Signer) interface.
+                                object that exposes one method for each resource action. The generated code of the CLI tool leverages the package to
+                                make the API requests to the service.
+                        </p>
+                        <p>
+                                The <code>Client</code> object can be configured to use request signers that get invoked prior to sending the
+                                request. The signers modify the request to include auth headers for example. goa comes with signers that implement
+                                <a href="https://godoc.org/github.com/raphael/goa#BasicSigner">basic auth</a>,
+                                <a href="https://godoc.org/github.com/raphael/goa#JWTSigner">JWT auth</a> and a subset of
+                                <a href="https://godoc.org/github.com/raphael/goa#OAuth2Signer">OAuth2</a>. Custom signers my be used as well, they must
+                                implement the <a href="https://godoc.org/github.com/raphael/goa#Signer">Signer</a> interface.
                                 This command accepts three additional flags:
                         </p>
                         <ul>
                                 <li>
                                         <code>--version</code> specifies the CLI tool version.
+                                </li>
+                                <li>
                                         <code>--signer</code> specifies a signer object supported by the API. Signer objects generally perform auth.
+                                </li>
+                                <li>
                                         <code>--signerPkg</code> specifies the path to the package implementing the signer objects if not goa.
                                 </li>
                         </ul>
