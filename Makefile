@@ -32,7 +32,7 @@ lint:
 			echo "^ - Repo contains improperly formatted go files" && echo && exit 1; \
 		fi \
 	done
-	@if [ "`golint ./... | grep -v app | grep -v client | grep -v "should not use dot imports" | grep -v "response.go:.*exported const" | tee /dev/stderr`" ]; then \
+	@if [ "`golint ./... | grep -vf .golint_exclude | tee /dev/stderr`" ]; then \
 		echo "^ - Lint errors!" && echo && exit 1; \
 	fi
 
