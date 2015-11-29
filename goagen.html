@@ -64,6 +64,8 @@
                                         <code>main</code>: generates a skeleton file for each resource controller as well as a default <code>main</code>.
                                 </li>
                                 <li>
+                                        <code>client</code>: generates an API client Go package and tool.
+                                <li>
                                         <code>swagger</code>: generates the API Swagger specification.
                                 </li>
                                 <li>
@@ -73,7 +75,7 @@
                                         <code>gen</code>: invokes a third party generator.
                                 </li>
                                 <li>
-                                        <code>bootstrap</code>: invokes the <code>app</code>, <code>main</code> and <code>swagger</code>
+                                        <code>bootstrap</code>: invokes the <code>app</code>, <code>main</code>, <code>client</code> and <code>swagger</code>
                                         generators in this order.
                                 </li>
                         </ul>
@@ -128,6 +130,27 @@
                                 </li>
                                 <li>
                                         <code>name=API</code> specifies the name of the service to be used in the generated call to <code>goa.New</code>.
+                                </li>
+                        </ul>
+                        <h2><code>goagen client</code></h2>
+                        <p>
+                                The <code>client</code> command generates both an API client package and tool. The client package implements a <code>Client</code>
+                                object that exposes one method for each resource action. The method accepts any action parameter (path parameter
+                                and query string), header and payload expected by the action as arguments. The tool leverages the package to
+                                implement self-describing CLI.
+                                The <code>Client</code> object also makes it possible to define request signers that get invoked prior to sending the
+                                request and may modify it to include auth headers for example. goa comes with a few standard signers that implement
+                                [basic auth](https://godoc.org/github.com/raphael/goa#BasicSigner),
+                                [JWT auth](https://godoc.org/github.com/raphael/goa#JWTSigner) and a subset of
+                                [OAuth2](https://godoc.org/github.com/raphael/goa#OAuth2Signer). Custom signers my be used as well, they must
+                                implement the [Signer](https://godoc.org/github.com/raphael/goa#Signer) interface.
+                                This command accepts three additional flags:
+                        </p>
+                        <ul>
+                                <li>
+                                        <code>--version</code> specifies the CLI tool version.
+                                        <code>--signer</code> specifies a signer object supported by the API. Signer objects generally perform auth.
+                                        <code>--signerPkg</code> specifies the path to the package implementing the signer objects if not goa.
                                 </li>
                         </ul>
                         <h2><code>goagen swagger</code></h2>
