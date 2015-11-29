@@ -108,7 +108,7 @@ func LoadAccount(raw interface{}) (*Account, error) {
 			res.Name = tmp26
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(``, raw, "map[string]interface{}", err)
+		err = goa.InvalidAttributeTypeError(``, raw, "dictionary", err)
 	}
 	return res, err
 }
@@ -275,7 +275,7 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 					tmp29.Name = tmp34
 				}
 			} else {
-				err = goa.InvalidAttributeTypeError(`.Account`, v, "map[string]interface{}", err)
+				err = goa.InvalidAttributeTypeError(`.Account`, v, "dictionary", err)
 			}
 			res.Account = tmp29
 		}
@@ -479,7 +479,7 @@ func LoadBottle(raw interface{}) (*Bottle, error) {
 			res.Vintage = tmp48
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(``, raw, "map[string]interface{}", err)
+		err = goa.InvalidAttributeTypeError(``, raw, "dictionary", err)
 	}
 	return res, err
 }
@@ -820,7 +820,7 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 							tmp57.Name = tmp62
 						}
 					} else {
-						err = goa.InvalidAttributeTypeError(`[*].Account`, v, "map[string]interface{}", err)
+						err = goa.InvalidAttributeTypeError(`[*].Account`, v, "dictionary", err)
 					}
 					tmp56.Account = tmp57
 				}
@@ -1024,12 +1024,12 @@ func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
 					tmp56.Vintage = tmp76
 				}
 			} else {
-				err = goa.InvalidAttributeTypeError(`[*]`, v, "map[string]interface{}", err)
+				err = goa.InvalidAttributeTypeError(`[*]`, v, "dictionary", err)
 			}
 			res[i] = tmp56
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(``, raw, "[]interface{}", err)
+		err = goa.InvalidAttributeTypeError(``, raw, "array", err)
 	}
 	return res, err
 }

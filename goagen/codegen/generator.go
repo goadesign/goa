@@ -71,7 +71,7 @@ func (w *GoGenerator) WriteHeader(title, pack string, imports []*ImportSpec) err
 // Write implements io.Writer so that variables of type *GoGenerator can be
 // used in template.Execute.
 func (w *GoGenerator) Write(b []byte) (int, error) {
-	file, err := os.OpenFile(w.Filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0755)
+	file, err := os.OpenFile(w.Filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return 0, err
 	}
