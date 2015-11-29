@@ -60,6 +60,11 @@ func command() codegen.Command {
 		cmd := app.Command(c.Name(), c.Description())
 		c.RegisterFlags(cmd)
 	}
+	if os.Args[len(os.Args)-1] == "--help" {
+		args := append([]string{os.Args[0]}, "help")
+		args = append(args, os.Args[1:]...)
+		os.Args = args
+	}
 	codegen.CommandName = kingpin.MustParse(app.Parse(os.Args[1:]))
 	for _, c := range Commands {
 		if codegen.CommandName == c.Name() {
