@@ -62,10 +62,64 @@ go get golang.org/x/tools/cmd/goimports
 4. Fill-in implementation of generated controller actions.
 
 ![goagen diagram](https://cdn.rawgit.com/raphael/goa/master/images/goagenv2.svg "goagen")
+## Runtime
+
+While goa and `goagen` help you get going quickly, goa strives to make as little assumption as
+possible and as such is **not** an opinionated framework. The only loose requirement is that the
+API exposes some form of resources which only serve as a way to group API endpoints (*actions*).
+The semantic backing these resource is irrelevant to goa and is left completely up to you.
+
+### Request Contexts
+
+Resources are implemented through *controllers* - each exposing the underlying resource actions.
+The action methods all accept a context as first argument. The context is bound to the request
+and provides:
+* A concurrency-safe way of storing and retrieving state.
+* The ability to set deadlines and send cancellation signals. See the [Timeout middleware](https://godoc.org/github.com/raphael/goa#Timeout)
+  for an example. goa automatically sends a cancellation signal upon request completion.
+* "Typed" access to the request state. This means custom data structures generated from the API
+  design that are initialized and validated by goa prior to calling your code.
+* Response helper methods also generated from the API design that take care of serializing any
+  data structure that needs to be written to the response.
+
+### Logging
+
+The request contexts implement the Logger interface from inconshreveable's excellent [log15 package](https://godoc.org/gopkg.in/inconshreveable/log15.v2). This provides goa with structured
+logging where the log context is inherited all the way from the service to the request context,
+each log entry contains the name of the service, the controller and the action as well as a request
+specific identifier. The logger can be configured to write to many different backends including
+standard output or error but also syslog or even loggly.
+
+### Middleware
+
+goa supports both [classic middleware](http://www.alexedwards.net/blog/making-and-using-middleware) implemented
+using the http package or middleware using goa request handlers which have access to the request context.
+goa comes with several middleware that address common needs such as request logging, support for the
+[X-Request-Id](https://devcenter.heroku.com/articles/http-request-id) header, Timeout enforcement
+through the [context.Context](https://godoc.org/golang.org/x/net/context#Context) interface implemented
+by the goa request contexts, etc.
+Middleware can be mounted globally to the service via the [Service](https://godoc.org/github.com/raphael/goa#Service)
+interface or on a specific controller via the [Controller](https://godoc.org/github.com/raphael/goa#Controller) interface.
+
+### Graceful Shutdown
+
+goa services may be instantiated through the [NewGraceful](https://godoc.org/github.com/raphael/goa#NewGraceful) method
+which return an HTTP server backed by the [graceful](https://godoc.org/gopkg.in/tylerb/graceful.v1) package.
+This means that sending a TERM signal to the goa process won't kill ongoing requests - instead a
+graceful shutdown is initiated preventing new requests from being accepted and waiting until ongoing
+requests return prior to exiting the process.
+
+### Error Handling
+
+goa also supports error handling via service-wide or controller specific error handlers: an action
+that returns a non nil *error* triggers the controller error handler if one is defined - the service
+wide error handler otherwise. The default error handler responds with status code 500 providing the
+error details in the body. goa comes with the [Terse](https://godoc.org/github.com/raphael/goa#TerseErrorHandler)
+error handler which does not write the error details to the response body in case of internal errors.
 
 ## Getting Started
 
-Follow the getting started guide and find other resources at [http://goa.design](http://www.goa.design).
+Can't wait to give it a try? the easiest way is to follow the short [getting started](http://www.goa.design/getting-started.html) guide.
 
 ## Contributing
 
