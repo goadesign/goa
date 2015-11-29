@@ -24,7 +24,7 @@ var _ = API("cellar", func() {
 		URL("http://goa.design/getting-started.html")
 	})
 	Host("cellar.goa.design")
-	Schemes("http")
+	Scheme("http")
 	BasePath("/cellar")
 
 	ResponseTemplate(Created, func(pattern string) {
