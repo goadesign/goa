@@ -64,7 +64,7 @@ func NewCreateAccountPayload(raw interface{}) (*CreateAccountPayload, error) {
 			err = goa.MissingAttributeError(`payload`, "name", err)
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)
+		err = goa.InvalidAttributeTypeError(`payload`, raw, "dictionary", err)
 	}
 	return p, err
 }
@@ -196,7 +196,7 @@ func NewUpdateAccountPayload(raw interface{}) (*UpdateAccountPayload, error) {
 			err = goa.MissingAttributeError(`payload`, "name", err)
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)
+		err = goa.InvalidAttributeTypeError(`payload`, raw, "dictionary", err)
 	}
 	return p, err
 }
@@ -402,7 +402,7 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 			err = goa.MissingAttributeError(`payload`, "vintage", err)
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)
+		err = goa.InvalidAttributeTypeError(`payload`, raw, "dictionary", err)
 	}
 	return p, err
 }
@@ -572,7 +572,7 @@ func NewRateBottlePayload(raw interface{}) (*RateBottlePayload, error) {
 			err = goa.MissingAttributeError(`payload`, "rating", err)
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)
+		err = goa.InvalidAttributeTypeError(`payload`, raw, "dictionary", err)
 	}
 	return p, err
 }
@@ -823,7 +823,7 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 			p.Vintage = tmp21
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(`payload`, raw, "map[string]interface{}", err)
+		err = goa.InvalidAttributeTypeError(`payload`, raw, "dictionary", err)
 	}
 	return p, err
 }

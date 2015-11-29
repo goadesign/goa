@@ -45,7 +45,7 @@
 //	 	})
 //	 	content := strings.Join(names, "\n")
 //	 	outputFile := filepath.Join(codegen.OutputDir, "names.txt")
-//	 	ioutil.WriteFile(outputFile, []byte(content), 0755)
+//	 	ioutil.WriteFile(outputFile, []byte(content), 0644)
 //	 	return []string{outputFile}, nil
 //	 }
 package gengen
