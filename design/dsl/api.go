@@ -1,6 +1,8 @@
 package dsl
 
 import (
+	"fmt"
+	"reflect"
 	"regexp"
 
 	"github.com/raphael/goa/design"
@@ -269,149 +271,63 @@ func ResponseTemplate(name string, p interface{}) {
 			ReportError("multiple definitions for response template %s", name)
 			return
 		}
-		if dsl, ok := p.(func()); ok {
+
+		setupResponseTemplate(a, name, p)
+	}
+}
+
+func setupResponseTemplate(a *design.APIDefinition, name string, p interface{}) {
+	if f, ok := p.(func()); ok {
+		r := &design.ResponseDefinition{Name: name}
+		if executeDSL(f, r) {
+			a.Responses[name] = r
+		}
+	} else if tmpl, ok := p.(func(...string)); ok {
+		t := func(params ...string) *design.ResponseDefinition {
 			r := &design.ResponseDefinition{Name: name}
-			if ok := executeDSL(dsl, r); ok {
-				a.Responses[name] = r
+			executeDSL(func() { tmpl(params...) }, r)
+			return r
+		}
+		a.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
+			Name:     name,
+			Template: t,
+		}
+	} else {
+		typ := reflect.TypeOf(p)
+		if kind := typ.Kind(); kind != reflect.Func {
+			ReportError("dsl must be a function but got %s", kind)
+			return
+		}
+
+		num := typ.NumIn()
+		val := reflect.ValueOf(p)
+		t := func(params ...string) *design.ResponseDefinition {
+			if len(params) < num {
+				args := "1 argument"
+				if num > 0 {
+					args = fmt.Sprintf("%d arguments", num)
+				}
+				ReportError("expected at least %s when invoking response template %s", args, name)
+				return nil
 			}
-		} else if tmpl, ok := p.(func(v string)); ok {
-			t := func(params ...string) *design.ResponseDefinition {
-				if len(params) == 0 {
-					ReportError("expected one argument when invoking response template %s", name)
+			r := &design.ResponseDefinition{Name: name}
+
+			in := make([]reflect.Value, num)
+			for i := 0; i < num; i++ {
+				// type checking
+				if t := typ.In(i); t.Kind() != reflect.String {
+					ReportError("ResponseTemplate parameters must be strings but type of parameter at position %d is %s", i, t)
 					return nil
 				}
-				r := &design.ResponseDefinition{Name: name}
-				executeDSL(func() { tmpl(params[0]) }, r)
-				return r
+				// append input arguments
+				in[i] = reflect.ValueOf(params[i])
 			}
-			a.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
-				Name:     name,
-				Template: t,
-			}
-		} else if tmpl, ok := p.(func(v1, v2 string)); ok {
-			t := func(params ...string) *design.ResponseDefinition {
-				if len(params) < 2 {
-					ReportError("expected two arguments when invoking response template %s", name)
-					return nil
-				}
-				r := &design.ResponseDefinition{Name: name}
-				executeDSL(func() { tmpl(params[0], params[1]) }, r)
-				return r
-			}
-			a.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
-				Name:     name,
-				Template: t,
-			}
-		} else if tmpl, ok := p.(func(v1, v2, v3 string)); ok {
-			t := func(params ...string) *design.ResponseDefinition {
-				if len(params) < 3 {
-					ReportError("expected three arguments when invoking response template %s", name)
-					return nil
-				}
-				r := &design.ResponseDefinition{Name: name}
-				executeDSL(func() { tmpl(params[0], params[1], params[2]) }, r)
-				return r
-			}
-			a.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
-				Name:     name,
-				Template: t,
-			}
-		} else if tmpl, ok := p.(func(v1, v2, v3, v4 string)); ok {
-			t := func(params ...string) *design.ResponseDefinition {
-				if len(params) < 4 {
-					ReportError("expected four arguments when invoking response template %s", name)
-					return nil
-				}
-				r := &design.ResponseDefinition{Name: name}
-				executeDSL(func() { tmpl(params[0], params[1], params[2], params[3]) }, r)
-				return r
-			}
-			a.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
-				Name:     name,
-				Template: t,
-			}
-		} else if tmpl, ok := p.(func(v1, v2, v3, v4, v5 string)); ok {
-			t := func(params ...string) *design.ResponseDefinition {
-				if len(params) < 5 {
-					ReportError("expected five arguments when invoking response template %s", name)
-					return nil
-				}
-				r := &design.ResponseDefinition{Name: name}
-				executeDSL(func() { tmpl(params[0], params[1], params[2], params[3], params[4]) }, r)
-				return r
-			}
-			a.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
-				Name:     name,
-				Template: t,
-			}
-		} else if tmpl, ok := p.(func(v1, v2, v3, v4, v5, v6 string)); ok {
-			t := func(params ...string) *design.ResponseDefinition {
-				if len(params) < 6 {
-					ReportError("expected six arguments when invoking response template %s", name)
-					return nil
-				}
-				r := &design.ResponseDefinition{Name: name}
-				executeDSL(func() { tmpl(params[0], params[1], params[2], params[3], params[4], params[5]) }, r)
-				return r
-			}
-			a.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
-				Name:     name,
-				Template: t,
-			}
-		} else if tmpl, ok := p.(func(v1, v2, v3, v4, v5, v6, v7 string)); ok {
-			t := func(params ...string) *design.ResponseDefinition {
-				if len(params) < 7 {
-					ReportError("expected seven arguments when invoking response template %s", name)
-					return nil
-				}
-				r := &design.ResponseDefinition{Name: name}
-				executeDSL(func() { tmpl(params[0], params[1], params[2], params[3], params[4], params[5], params[6]) }, r)
-				return r
-			}
-			a.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
-				Name:     name,
-				Template: t,
-			}
-		} else if tmpl, ok := p.(func(v1, v2, v3, v4, v5, v6, v7, v8 string)); ok {
-			t := func(params ...string) *design.ResponseDefinition {
-				if len(params) < 8 {
-					ReportError("expected eight arguments when invoking response template %s", name)
-					return nil
-				}
-				r := &design.ResponseDefinition{Name: name}
-				executeDSL(func() { tmpl(params[0], params[1], params[2], params[3], params[4], params[5], params[6], params[7]) }, r)
-				return r
-			}
-			a.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
-				Name:     name,
-				Template: t,
-			}
-		} else if tmpl, ok := p.(func(v1, v2, v3, v4, v5, v6, v7, v8, v9 string)); ok {
-			t := func(params ...string) *design.ResponseDefinition {
-				if len(params) < 9 {
-					ReportError("expected nine arguments when invoking response template %s", name)
-					return nil
-				}
-				r := &design.ResponseDefinition{Name: name}
-				executeDSL(func() {
-					tmpl(params[0], params[1], params[2], params[3], params[4], params[5], params[6], params[7], params[8])
-				}, r)
-				return r
-			}
-			a.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
-				Name:     name,
-				Template: t,
-			}
-		} else if tmpl, ok := p.(func(v ...string)); ok {
-			t := func(params ...string) *design.ResponseDefinition {
-				r := &design.ResponseDefinition{Name: name}
-				executeDSL(func() { tmpl(params...) }, r)
-				return r
-			}
-			a.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
-				Name:     name,
-				Template: t,
-			}
+			executeDSL(func() { val.Call(in) }, r)
+			return r
+		}
+		a.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
+			Name:     name,
+			Template: t,
 		}
 	}
 }
