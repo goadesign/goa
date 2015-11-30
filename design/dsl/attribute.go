@@ -1,6 +1,7 @@
 package dsl
 
 import (
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -322,28 +323,8 @@ func Minimum(val interface{}) {
 		} else {
 			var f float64
 			switch v := val.(type) {
-			case float32:
-				f = float64(v)
-			case float64:
-				f = v
-			case int:
-				f = float64(v)
-			case int8:
-				f = float64(v)
-			case int16:
-				f = float64(v)
-			case int32:
-				f = float64(v)
-			case int64:
-				f = float64(v)
-			case uint8:
-				f = float64(v)
-			case uint16:
-				f = float64(v)
-			case uint32:
-				f = float64(v)
-			case uint64:
-				f = float64(v)
+			case float32, float64, int, int8, int16, int32, int64, uint8, uint16, uint32, uint64:
+				f = reflect.ValueOf(v).Convert(reflect.TypeOf(float64(0.0))).Float()
 			case string:
 				var err error
 				f, err = strconv.ParseFloat(v, 64)
@@ -369,28 +350,8 @@ func Maximum(val interface{}) {
 		} else {
 			var f float64
 			switch v := val.(type) {
-			case float32:
-				f = float64(v)
-			case float64:
-				f = v
-			case int:
-				f = float64(v)
-			case int8:
-				f = float64(v)
-			case int16:
-				f = float64(v)
-			case int32:
-				f = float64(v)
-			case int64:
-				f = float64(v)
-			case uint8:
-				f = float64(v)
-			case uint16:
-				f = float64(v)
-			case uint32:
-				f = float64(v)
-			case uint64:
-				f = float64(v)
+			case float32, float64, int, int8, int16, int32, int64, uint8, uint16, uint32, uint64:
+				f = reflect.ValueOf(v).Convert(reflect.TypeOf(float64(0.0))).Float()
 			case string:
 				var err error
 				f, err = strconv.ParseFloat(v, 64)
