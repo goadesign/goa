@@ -88,11 +88,8 @@ func Attribute(name string, args ...interface{}) {
 		}
 		var baseAttr *design.AttributeDefinition
 		if parent.Reference != nil {
-			for n, att := range parent.Reference.ToObject() {
-				if n == name {
-					baseAttr = att.Dup()
-					break
-				}
+			if att, ok := parent.Reference.ToObject()[name]; ok {
+				baseAttr = att.Dup()
 			}
 		}
 		var dataType design.DataType
