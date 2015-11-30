@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+  <head>
+    <title>goa JavaScript client loader</title>
+  </head>
+  <body>
+    <h1>cellar Client Test</h1>
+    <div id="response"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.16/require.min.js"></script>
+    <script>
+      requirejs.config({
+        paths: {
+          axios: '/index/axios.min',
+          client: '/index/client'
+        }
+      });
+      requirejs(['client'], function (client) {
+        client.get('/')
+          .then(function (resp) {
+            document.getElementById('response').innerHTML = resp;
+          });
+      });
+    </script>
+  </body>
+</html>
