@@ -1,6 +1,7 @@
 package dsl
 
 import (
+	"fmt"
 	"reflect"
 	"regexp"
 
@@ -294,12 +295,7 @@ func setupResponseTemplate(a *design.APIDefinition, name string, p interface{}) 
 	} else {
 		typ := reflect.TypeOf(p)
 		if kind := typ.Kind(); kind != reflect.Func {
-			ReportError("dsl should be a function but get %v", kind)
-			return
-		}
-
-		if num := typ.NumOut(); num > 0 {
-			ReportError("dsl should have 0 return parameter but get %d", num)
+			ReportError("dsl must be a function but got %s", kind)
 			return
 		}
 
@@ -307,7 +303,11 @@ func setupResponseTemplate(a *design.APIDefinition, name string, p interface{}) 
 		val := reflect.ValueOf(p)
 		t := func(params ...string) *design.ResponseDefinition {
 			if len(params) < num {
-				ReportError("expected at least %d argument when invoking response template %s", num, name)
+				args := "1 argument"
+				if num > 0 {
+					args = fmt.Sprintf("%d arguments", num)
+				}
+				ReportError("expected at least %s when invoking response template %s", args, name)
 				return nil
 			}
 			r := &design.ResponseDefinition{Name: name}
@@ -316,7 +316,7 @@ func setupResponseTemplate(a *design.APIDefinition, name string, p interface{}) 
 			for i := 0; i < num; i++ {
 				// type checking
 				if t := typ.In(i); t.Kind() != reflect.String {
-					ReportError("expect parameter type string but get %s", t)
+					ReportError("ResponseTemplate parameters must be strings but type of parameter at position %d is %s", i, t)
 					return nil
 				}
 				// append input arguments
