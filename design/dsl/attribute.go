@@ -79,84 +79,103 @@ func Attribute(name string, args ...interface{}) {
 	} else if mt, ok := mediaTypeDefinition(true); ok {
 		parent = mt.AttributeDefinition
 	}
+
 	if parent != nil {
 		if parent.Type == nil {
 			parent.Type = design.Object{}
-		} else if _, ok := parent.Type.(design.Object); !ok {
+		}
+		if _, ok := parent.Type.(design.Object); !ok {
 			ReportError("can't define child attributes on attribute of type %s", parent.Type.Name())
 			return
 		}
+
 		var baseAttr *design.AttributeDefinition
 		if parent.Reference != nil {
 			if att, ok := parent.Reference.ToObject()[name]; ok {
 				baseAttr = att.Dup()
 			}
 		}
-		var dataType design.DataType
-		var description string
-		var dsl func()
-		var ok bool
-		if len(args) == 0 {
-			if baseAttr != nil {
-				dataType = baseAttr.Type
-			} else {
-				dataType = design.String
-			}
-		} else if len(args) == 1 {
-			if dsl, ok = args[0].(func()); !ok {
-				if dataType, ok = args[0].(design.DataType); !ok {
-					invalidArgError("DataType or func()", args[0])
-				}
-			} else if baseAttr != nil {
-				dataType = baseAttr.Type
-			}
-		} else if len(args) == 2 {
-			if dataType, ok = args[0].(design.DataType); !ok {
-				invalidArgError("DataType", args[0])
-			}
-			if dsl, ok = args[1].(func()); !ok {
-				if description, ok = args[1].(string); !ok {
-					invalidArgError("string or func()", args[1])
-				}
-			}
-		} else if len(args) == 3 {
-			if dataType, ok = args[0].(design.DataType); !ok {
-				invalidArgError("DataType", args[0])
-			}
-			if description, ok = args[1].(string); !ok {
-				invalidArgError("string", args[1])
-			}
-			if dsl, ok = args[2].(func()); !ok {
-				invalidArgError("func()", args[2])
-			}
-		} else {
-			ReportError("too many arguments in call to Attribute")
-		}
-		var att *design.AttributeDefinition
+
+		dataType, description, dsl := parseAttributeArgs(baseAttr, args...)
 		if baseAttr != nil {
-			att = baseAttr
 			if description != "" {
-				att.Description = description
+				baseAttr.Description = description
 			}
 			if dataType != nil {
-				att.Type = dataType
+				baseAttr.Type = dataType
 			}
 		} else {
-			att = &design.AttributeDefinition{
+			baseAttr = &design.AttributeDefinition{
 				Type:        dataType,
 				Description: description,
 			}
 		}
-		att.Reference = parent.Reference
+		baseAttr.Reference = parent.Reference
 		if dsl != nil {
-			executeDSL(dsl, att)
+			executeDSL(dsl, baseAttr)
 		}
-		if att.Type == nil {
+		if baseAttr.Type == nil {
 			// DSL did not contain an "Attribute" declaration
-			att.Type = design.String
+			baseAttr.Type = design.String
 		}
-		parent.Type.(design.Object)[name] = att
+		parent.Type.(design.Object)[name] = baseAttr
 	}
+}
+
+func parseAttributeArgs(baseAttr *design.AttributeDefinition, args ...interface{}) (design.DataType, string, func()) {
+	var (
+		dataType    design.DataType
+		description string
+		dsl         func()
+		ok          bool
+	)
+
+	parseDataType := func(expected string, index int) {
+		if dataType, ok = args[index].(design.DataType); !ok {
+			invalidArgError(expected, args[index])
+		}
+	}
+	parseDescription := func(expected string, index int) {
+		if description, ok = args[index].(string); !ok {
+			invalidArgError(expected, args[index])
+		}
+	}
+	parseDSL := func(index int, success, failure func()) {
+		if dsl, ok = args[index].(func()); ok {
+			success()
+		} else {
+			failure()
+		}
+	}
+
+	success := func() {}
+
+	switch len(args) {
+	case 0:
+		if baseAttr != nil {
+			dataType = baseAttr.Type
+		} else {
+			dataType = design.String
+		}
+	case 1:
+		success = func() {
+			if baseAttr != nil {
+				dataType = baseAttr.Type
+			}
+		}
+		parseDSL(0, success, func() { parseDataType("DataType or func()", 0) })
+	case 2:
+		parseDataType("DataType", 0)
+		parseDSL(1, success, func() { parseDescription("string or func()", 1) })
+	case 3:
+		parseDataType("DataType", 0)
+		parseDescription("string", 1)
+		parseDSL(2, success, func() { invalidArgError("func()", args[2]) })
+	default:
+		ReportError("too many arguments in call to Attribute")
+	}
+
+	return dataType, description, dsl
 }
 
 // Header is an alias of Attribute.
