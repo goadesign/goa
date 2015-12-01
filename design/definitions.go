@@ -736,8 +736,10 @@ func (a *AttributeDefinition) inheritRecursive(parent *AttributeDefinition) {
 			}
 			if att.Type == nil {
 				att.Type = patt.Type
-			} else {
-				att.Inherit(patt)
+			} else if att.shouldInherit(patt) {
+				for _, att := range att.Type.ToObject() {
+					att.Inherit(patt.Type.ToObject()[n])
+				}
 			}
 		}
 	}
@@ -759,7 +761,8 @@ func (a *AttributeDefinition) inheritValidations(parent *AttributeDefinition) {
 }
 
 func (a *AttributeDefinition) shouldInherit(parent *AttributeDefinition) bool {
-	return a != nil && a.Type.ToObject() != nil && parent != nil && parent.Type.ToObject() != nil
+	return a != nil && a.Type.ToObject() != nil &&
+		parent != nil && parent.Type.ToObject() != nil
 }
 
 // Context returns the generic definition name used in error messages.
