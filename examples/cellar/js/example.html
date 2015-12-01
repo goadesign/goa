@@ -15,9 +15,12 @@
         }
       });
       requirejs(['client'], function (client) {
-        client.get('/')
+        client().showAccount ("/cellar/accounts/317")
           .then(function (resp) {
-            document.getElementById('response').innerHTML = resp;
+            document.getElementById('response').innerHTML = resp.statusText;
+          })
+          .catch(function (resp) {
+            document.getElementById('response').innerHTML = resp.statusText;
           });
       });
     </script>

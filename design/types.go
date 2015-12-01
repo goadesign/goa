@@ -48,6 +48,9 @@ type (
 		// Dup creates a copy of the type. This is only relevant for types that are
 		// DSLDefinition (i.e. have an attribute definition).
 		Dup() DataType
+		// Example returns a random value for the given data type.
+		// If the data type has validations then the example value validates them.
+		Example(r *RandomGenerator) interface{}
 	}
 
 	// DataStructure is the interface implemented by all data structure types.
@@ -234,6 +237,22 @@ func (p Primitive) Dup() DataType {
 	return p
 }
 
+// Example returns an instance of the given data type.
+func (p Primitive) Example(r *RandomGenerator) interface{} {
+	switch p {
+	case Boolean:
+		return r.Bool()
+	case Integer:
+		return r.Int()
+	case Number:
+		return r.Float64()
+	case String:
+		return r.String()
+	default:
+		panic("unknown primitive type") // bug
+	}
+}
+
 // Kind implements DataKind.
 func (a *Array) Kind() Kind { return ArrayKind }
 
@@ -269,6 +288,16 @@ func (a *Array) IsCompatible(val interface{}) bool {
 // Dup calls Dup on the array ElemType and creates an array with the result.
 func (a *Array) Dup() DataType {
 	return &Array{ElemType: a.ElemType.Dup()}
+}
+
+// Example produces a random array value.
+func (a *Array) Example(r *RandomGenerator) interface{} {
+	count := r.Int()%3 + 1
+	res := make([]interface{}, count)
+	for i := 0; i < count; i++ {
+		res[i] = a.ElemType.Type.Example(r)
+	}
+	return res
 }
 
 // Kind implements DataKind.
@@ -317,6 +346,15 @@ func (o Object) Dup() DataType {
 	return res
 }
 
+// Example returns a random value of the object.
+func (o Object) Example(r *RandomGenerator) interface{} {
+	res := make(map[string]interface{})
+	for n, att := range o {
+		res[n] = att.Type.Example(r)
+	}
+	return res
+}
+
 // Kind implements DataKind.
 func (h *Hash) Kind() Kind { return HashKind }
 
@@ -353,6 +391,16 @@ func (h *Hash) Dup() DataType {
 		KeyType:  h.KeyType.Dup(),
 		ElemType: h.ElemType.Dup(),
 	}
+}
+
+// Example returns a random hash value.
+func (h *Hash) Example(r *RandomGenerator) interface{} {
+	count := r.Int()%3 + 1
+	res := make(map[interface{}]interface{})
+	for i := 0; i < count; i++ {
+		res[h.KeyType.Type.Example(r)] = h.ElemType.Type.Example(r)
+	}
+	return res
 }
 
 // AttributeIterator is the type of the function given to IterateAttributes.

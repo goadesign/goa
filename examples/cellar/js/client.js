@@ -6,8 +6,8 @@ define(['axios'] , function (axios) {
         host = host || 'cellar.goa.design';
         timeout = timeout || 20000;
 
-        // The actual API client.
-        var client = axios.create({ timeout: timeout });
+        // Client is the object returned by this module.
+        var client = axios;
 
         // URL prefix for all API requests.
         var urlPrefix = scheme + '://' + host;
@@ -18,17 +18,18 @@ define(['axios'] , function (axios) {
         // config is an optional object to be merged into the config built by the function prior to making the request.
         // The content of the config object is described here: https://github.com/mzabriskie/axios#request-api
         // This function returns a promise which raises an error if the HTTP response is a 4xx or 5xx.
-        client.createAccount = function(path, data, config) {
+        client.createAccount = function (path, data, config) {
             cfg = {
+                timeout: timeout,
                 url: urlPrefix + path,
                 method: 'post',
-        data: data,
-        responseType: 'json'
+                data: data,
+                responseType: 'json'
             };
             if (config) {
                 cfg = utils.merge(cfg, config);
             }
-            return client.request(cfg);
+            return axios(cfg);
         }
 
         // Record new bottle
@@ -37,17 +38,18 @@ define(['axios'] , function (axios) {
         // config is an optional object to be merged into the config built by the function prior to making the request.
         // The content of the config object is described here: https://github.com/mzabriskie/axios#request-api
         // This function returns a promise which raises an error if the HTTP response is a 4xx or 5xx.
-        client.createBottle = function(path, data, config) {
+        client.createBottle = function (path, data, config) {
             cfg = {
+                timeout: timeout,
                 url: urlPrefix + path,
                 method: 'post',
-        data: data,
-        responseType: 'json'
+                data: data,
+                responseType: 'json'
             };
             if (config) {
                 cfg = utils.merge(cfg, config);
             }
-            return client.request(cfg);
+            return axios(cfg);
         }
 
         // deleteAccount calls the delete action of the account resource.
@@ -55,16 +57,17 @@ define(['axios'] , function (axios) {
         // config is an optional object to be merged into the config built by the function prior to making the request.
         // The content of the config object is described here: https://github.com/mzabriskie/axios#request-api
         // This function returns a promise which raises an error if the HTTP response is a 4xx or 5xx.
-        client.deleteAccount = function(path, config) {
+        client.deleteAccount = function (path, config) {
             cfg = {
+                timeout: timeout,
                 url: urlPrefix + path,
                 method: 'delete',
-        responseType: 'json'
+                responseType: 'json'
             };
             if (config) {
                 cfg = utils.merge(cfg, config);
             }
-            return client.request(cfg);
+            return axios(cfg);
         }
 
         // deleteBottle calls the delete action of the bottle resource.
@@ -72,16 +75,17 @@ define(['axios'] , function (axios) {
         // config is an optional object to be merged into the config built by the function prior to making the request.
         // The content of the config object is described here: https://github.com/mzabriskie/axios#request-api
         // This function returns a promise which raises an error if the HTTP response is a 4xx or 5xx.
-        client.deleteBottle = function(path, config) {
+        client.deleteBottle = function (path, config) {
             cfg = {
+                timeout: timeout,
                 url: urlPrefix + path,
                 method: 'delete',
-        responseType: 'json'
+                responseType: 'json'
             };
             if (config) {
                 cfg = utils.merge(cfg, config);
             }
-            return client.request(cfg);
+            return axios(cfg);
         }
 
         // Retrieve account with given id
@@ -89,16 +93,17 @@ define(['axios'] , function (axios) {
         // config is an optional object to be merged into the config built by the function prior to making the request.
         // The content of the config object is described here: https://github.com/mzabriskie/axios#request-api
         // This function returns a promise which raises an error if the HTTP response is a 4xx or 5xx.
-        client.showAccount = function(path, config) {
+        client.showAccount = function (path, config) {
             cfg = {
+                timeout: timeout,
                 url: urlPrefix + path,
                 method: 'get',
-        responseType: 'json'
+                responseType: 'json'
             };
             if (config) {
                 cfg = utils.merge(cfg, config);
             }
-            return client.request(cfg);
+            return axios(cfg);
         }
 
         // Retrieve bottle with given id
@@ -106,16 +111,17 @@ define(['axios'] , function (axios) {
         // config is an optional object to be merged into the config built by the function prior to making the request.
         // The content of the config object is described here: https://github.com/mzabriskie/axios#request-api
         // This function returns a promise which raises an error if the HTTP response is a 4xx or 5xx.
-        client.showBottle = function(path, config) {
+        client.showBottle = function (path, config) {
             cfg = {
+                timeout: timeout,
                 url: urlPrefix + path,
                 method: 'get',
-        responseType: 'json'
+                responseType: 'json'
             };
             if (config) {
                 cfg = utils.merge(cfg, config);
             }
-            return client.request(cfg);
+            return axios(cfg);
         }
 
         // Change account name
@@ -124,17 +130,18 @@ define(['axios'] , function (axios) {
         // config is an optional object to be merged into the config built by the function prior to making the request.
         // The content of the config object is described here: https://github.com/mzabriskie/axios#request-api
         // This function returns a promise which raises an error if the HTTP response is a 4xx or 5xx.
-        client.updateAccount = function(path, data, config) {
+        client.updateAccount = function (path, data, config) {
             cfg = {
+                timeout: timeout,
                 url: urlPrefix + path,
                 method: 'put',
-        data: data,
-        responseType: 'json'
+                data: data,
+                responseType: 'json'
             };
             if (config) {
                 cfg = utils.merge(cfg, config);
             }
-            return client.request(cfg);
+            return axios(cfg);
         }
 
         // updateBottle calls the update action of the bottle resource.
@@ -143,17 +150,18 @@ define(['axios'] , function (axios) {
         // config is an optional object to be merged into the config built by the function prior to making the request.
         // The content of the config object is described here: https://github.com/mzabriskie/axios#request-api
         // This function returns a promise which raises an error if the HTTP response is a 4xx or 5xx.
-        client.updateBottle = function(path, data, config) {
+        client.updateBottle = function (path, data, config) {
             cfg = {
+                timeout: timeout,
                 url: urlPrefix + path,
                 method: 'patch',
-        data: data,
-        responseType: 'json'
+                data: data,
+                responseType: 'json'
             };
             if (config) {
                 cfg = utils.merge(cfg, config);
             }
-            return client.request(cfg);
+            return axios(cfg);
         }
 
         // List all bottles in account optionally filtering by year
@@ -162,19 +170,20 @@ define(['axios'] , function (axios) {
         // config is an optional object to be merged into the config built by the function prior to making the request.
         // The content of the config object is described here: https://github.com/mzabriskie/axios#request-api
         // This function returns a promise which raises an error if the HTTP response is a 4xx or 5xx.
-        client.listBottle = function(path, years, config) {
+        client.listBottle = function (path, years, config) {
             cfg = {
+                timeout: timeout,
                 url: urlPrefix + path,
                 method: 'get',
         params: {
-            years: years
-                },
-        responseType: 'json'
+                years: years
+                    },
+                responseType: 'json'
             };
             if (config) {
                 cfg = utils.merge(cfg, config);
             }
-            return client.request(cfg);
+            return axios(cfg);
         }
 
         // rateBottle calls the rate action of the bottle resource.
@@ -183,17 +192,18 @@ define(['axios'] , function (axios) {
         // config is an optional object to be merged into the config built by the function prior to making the request.
         // The content of the config object is described here: https://github.com/mzabriskie/axios#request-api
         // This function returns a promise which raises an error if the HTTP response is a 4xx or 5xx.
-        client.rateBottle = function(path, data, config) {
+        client.rateBottle = function (path, data, config) {
             cfg = {
+                timeout: timeout,
                 url: urlPrefix + path,
                 method: 'put',
-        data: data,
-        responseType: 'json'
+                data: data,
+                responseType: 'json'
             };
             if (config) {
                 cfg = utils.merge(cfg, config);
             }
-            return client.request(cfg);
+            return axios(cfg);
         }
         return client;
     };
