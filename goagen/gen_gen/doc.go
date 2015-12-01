@@ -21,31 +21,44 @@
 //
 // Package genresnames implements a goa generator which creates a file "names.txt"
 // containing the names of the API resources sorted in alphabetical order.
-// invoke with "goagen -d <Go package path to design package> gen --pkg-path=<Go package path to genresnames>"
+// invoke with "goagen gen -d <Go package path to design package> --pkg-path=<Go package path to genresnames>"
+// 	package genresnames
 //
-//	 package genresnames
+// 	import (
+// 		"io/ioutil"
+// 		"os"
+// 		"path/filepath"
+// 		"strings"
 //
-//	 import (
-//	 	"io/ioutil"
-//	 	"path/filepath"
-//	 	"strings"
+// 		"gopkg.in/alecthomas/kingpin.v2"
 //
-//	 	"github.com/raphael/goa/goagen/codegen"
-//	 	"github.com/raphael/goa/design"
-//	 )
+// 		"github.com/raphael/goa/design"
+// 		"github.com/raphael/goa/goagen/codegen"
+// 	)
 //
-//	 // Generate is the function called by goagen to generate the "names.txt" file.
-//	 func Generate(api *design.APIDefinition) ([]string, error) {
-//	 	names := make([]string, len(api.Resources))
-//	 	i := 0
-//	 	api.IterateResources(func(res *design.ResourceDefinition) error {
-//	 		names[i] = res.Name
-//	 		i++
-//	 		return nil
-//	 	})
-//	 	content := strings.Join(names, "\n")
-//	 	outputFile := filepath.Join(codegen.OutputDir, "names.txt")
-//	 	ioutil.WriteFile(outputFile, []byte(content), 0644)
-//	 	return []string{outputFile}, nil
-//	 }
+// 	// Generate is the function called by goagen to generate the names file.
+// 	func Generate(api *design.APIDefinition) ([]string, error) {
+// 		// Make sure to parse the common flags so that codegen.OutputDir gets properly
+// 		// initialized.
+// 		app := kingpin.New("Resource names", "Resource name generator")
+// 		codegen.RegisterFlags(app)
+// 		if _, err := app.Parse(os.Args[1:]); err != nil {
+// 			panic(err)
+// 		}
+//
+// 		// Now iterate through the resources to gather their names
+// 		names := make([]string, len(api.Resources))
+// 		i := 0
+// 		api.IterateResources(func(res *design.ResourceDefinition) error {
+// 			names[i] = res.Name
+// 			i++
+// 			return nil
+// 		})
+// 		content := strings.Join(names, "\n")
+//
+// 		// Write the output file and return its name
+// 		outputFile := filepath.Join(codegen.OutputDir, "names.txt")
+// 		ioutil.WriteFile(outputFile, []byte(content), 0755)
+// 		return []string{outputFile}, nil
+// 	}
 package gengen
