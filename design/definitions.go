@@ -709,14 +709,43 @@ func (a *AttributeDefinition) Merge(other *AttributeDefinition) *AttributeDefini
 // Inherit merges the properties of existing target type attributes with the argument's.
 // The algorithm is recursive so that child attributes are also merged.
 func (a *AttributeDefinition) Inherit(parent *AttributeDefinition) {
-	if a == nil || parent == nil {
+	if !a.shouldInherit(parent) {
 		return
 	}
-	o := a.Type.ToObject()
-	p := parent.Type.ToObject()
-	if o == nil || p == nil {
+
+	a.inheritValidations(parent)
+	a.inheritRecursive(parent)
+}
+
+func (a *AttributeDefinition) inheritRecursive(parent *AttributeDefinition) {
+	if !a.shouldInherit(parent) {
 		return
 	}
+
+	for n, att := range a.Type.ToObject() {
+		if patt, ok := parent.Type.ToObject()[n]; ok {
+			if att.Description == "" {
+				att.Description = patt.Description
+			}
+			att.inheritValidations(patt)
+			if att.DefaultValue == nil {
+				att.DefaultValue = patt.DefaultValue
+			}
+			if att.View == "" {
+				att.View = patt.View
+			}
+			if att.Type == nil {
+				att.Type = patt.Type
+			} else if att.shouldInherit(patt) {
+				for _, att := range att.Type.ToObject() {
+					att.Inherit(patt.Type.ToObject()[n])
+				}
+			}
+		}
+	}
+}
+
+func (a *AttributeDefinition) inheritValidations(parent *AttributeDefinition) {
 	for _, v := range parent.Validations {
 		found := false
 		for _, vc := range a.Validations {
@@ -729,42 +758,11 @@ func (a *AttributeDefinition) Inherit(parent *AttributeDefinition) {
 			a.Validations = append(a.Validations, parent)
 		}
 	}
-	for n, att := range o {
-		if patt, ok := p[n]; ok {
-			if att.Description == "" {
-				att.Description = patt.Description
-			}
-			for _, v := range patt.Validations {
-				found := false
-				for _, vc := range att.Validations {
-					if v == vc {
-						found = true
-						break
-					}
-				}
-				if !found {
-					att.Validations = append(att.Validations, v)
-				}
-			}
-			if att.DefaultValue == nil {
-				att.DefaultValue = patt.DefaultValue
-			}
-			if att.View == "" {
-				att.View = patt.View
-			}
-			if att.Type == nil {
-				att.Type = patt.Type
-			} else if co := att.Type.ToObject(); co != nil {
-				if po := patt.Type.ToObject(); po != nil {
-					for n, att := range co {
-						if pcatt, ok := po[n]; ok {
-							att.Inherit(pcatt)
-						}
-					}
-				}
-			}
-		}
-	}
+}
+
+func (a *AttributeDefinition) shouldInherit(parent *AttributeDefinition) bool {
+	return a != nil && a.Type.ToObject() != nil &&
+		parent != nil && parent.Type.ToObject() != nil
 }
 
 // Context returns the generic definition name used in error messages.
