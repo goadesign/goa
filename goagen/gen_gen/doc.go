@@ -30,7 +30,7 @@
 //	 	"path/filepath"
 //	 	"strings"
 //
-//	 	"github.com/raphael/goa/codegen"
+//	 	"github.com/raphael/goa/goagen/codegen"
 //	 	"github.com/raphael/goa/design"
 //	 )
 //
