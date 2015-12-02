@@ -34,7 +34,7 @@ func NewCommand() *Command {
 func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
 	r.Flag("timeout", `the duration before the request times out.`).Default("20s").
 		DurationVar(&Timeout)
-	r.Flag("scheme", `the URL scheme used to make requests to the API.`).Default("https").
+	r.Flag("scheme", `the URL scheme used to make requests to the API, defaults to the scheme defined in the API design if any.`).
 		EnumVar(&Scheme, "http", "https")
 	r.Flag("host", `the API hostname, defaults to the hostname defined in the API design if any`).
 		StringVar(&Host)

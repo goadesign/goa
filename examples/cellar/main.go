@@ -3,12 +3,11 @@
 package main
 
 import (
-	"net/http"
-
-	"github.com/julienschmidt/httprouter"
 	"github.com/raphael/goa"
 	"github.com/raphael/goa/examples/cellar/app"
 	"github.com/raphael/goa/examples/cellar/controllers"
+	"github.com/raphael/goa/examples/cellar/js"
+	"github.com/raphael/goa/examples/cellar/schema"
 	"github.com/raphael/goa/examples/cellar/swagger"
 )
 
@@ -32,8 +31,11 @@ func main() {
 	// Mount Swagger Spec controller onto service
 	swagger.MountController(service)
 
-	// Serve static files under js
-	service.HTTPHandler().(*httprouter.Router).ServeFiles("/index/*filepath", http.Dir("/home/raphael/go/src/github.com/raphael/goa/examples/cellar/js"))
+	// Mount JSON Schema controller onto service
+	schema.MountController(service)
+
+	// Mount JavaScript example
+	js.MountController(service)
 
 	// Run service
 	service.ListenAndServe(":8080")

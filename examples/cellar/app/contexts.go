@@ -492,6 +492,11 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	return &ctx, err
 }
 
+// NotFound sends a HTTP response with status code 404.
+func (ctx *ListBottleContext) NotFound() error {
+	return ctx.Respond(404, nil)
+}
+
 // OK sends a HTTP response with status code 200.
 func (ctx *ListBottleContext) OK(resp BottleCollection, view BottleCollectionViewEnum) error {
 	r, err := resp.Dump(view)

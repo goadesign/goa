@@ -166,8 +166,8 @@ func finalizeResource(r *design.ResourceDefinition) {
 			for _, wc := range wcs {
 				found := false
 				var o design.Object
-				if a.Params != nil {
-					o = a.Params.Type.ToObject()
+				if all := a.AllParams(); all != nil {
+					o = all.Type.ToObject()
 				} else {
 					o = design.Object{}
 					a.Params = &design.AttributeDefinition{Type: o}
