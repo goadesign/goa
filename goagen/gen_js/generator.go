@@ -69,6 +69,9 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		panic(err.Error()) // bug
 	}
 	g.genfiles = []string{filePath}
+	if Scheme == "" && len(api.Schemes) > 0 {
+		Scheme = api.Schemes[0]
+	}
 	data := map[string]interface{}{
 		"API":     api,
 		"Host":    Host,
@@ -101,7 +104,15 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		panic(err.Error()) // bug
 	}
 	var exampleAction *design.ActionDefinition
-	for _, as := range actions {
+	keys := make([]string, len(actions))
+	i := 0
+	for n := range actions {
+		keys[i] = n
+		i++
+	}
+	sort.Strings(keys)
+	for _, n := range keys {
+		as, _ := actions[n]
 		for _, a := range as {
 			if exampleAction == nil && a.Routes[0].Verb == "GET" {
 				exampleAction = a
@@ -117,7 +128,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	file.Close()
 
 	if exampleAction != nil {
-		filePath = filepath.Join(codegen.OutputDir, "example.html")
+		filePath = filepath.Join(codegen.OutputDir, "index.html")
 		file, err = os.Create(filePath)
 		if err != nil {
 			g.Cleanup()
@@ -143,7 +154,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		examplePath := exampleAction.Routes[0].FullPath()
 		pathParams := exampleAction.Routes[0].Params()
 		if len(pathParams) > 0 {
-			pathVars := exampleAction.Params.Type.ToObject()
+			pathVars := exampleAction.AllParams().Type.ToObject()
 			pathValues := make([]interface{}, len(pathParams))
 			for i, n := range pathParams {
 				pathValues[i] = api.Example(pathVars[n].Type)
@@ -152,7 +163,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 			examplePath = fmt.Sprintf(format, pathValues...)
 		}
 		if len(argNames) > 0 {
-			examplePath += ", "
+			args = ", " + args
 		}
 		exampleFunc := fmt.Sprintf(
 			`%s%s ("%s"%s)`,
@@ -163,17 +174,41 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		)
 		err = tmpl.Execute(file, map[string]interface{}{"API": api, "ExampleFunc": exampleFunc})
 		file.Close()
-	}
 
-	filePath = filepath.Join(codegen.OutputDir, "axios.min.js")
-	file, err = os.Create(filePath)
-	if err != nil {
-		g.Cleanup()
-		return nil, err
+		filePath = filepath.Join(codegen.OutputDir, "axios.min.js")
+		file, err = os.Create(filePath)
+		if err != nil {
+			g.Cleanup()
+			return nil, err
+		}
+		g.genfiles = append(g.genfiles, filePath)
+		file.Write([]byte(axios))
+		file.Close()
+
+		controllerFile := filepath.Join(codegen.OutputDir, "example.go")
+		tmpl, err := template.New("exampleController").Parse(exampleCtrlT)
+		if err != nil {
+			panic(err.Error()) // bug
+		}
+		gg := codegen.NewGoGenerator(controllerFile)
+		imports := []*codegen.ImportSpec{
+			codegen.SimpleImport("net/http"),
+			codegen.SimpleImport("github.com/julienschmidt/httprouter"),
+			codegen.SimpleImport("github.com/raphael/goa"),
+		}
+		gg.WriteHeader(fmt.Sprintf("%s JavaScript Client Example", api.Name), "js", imports)
+		data := map[string]interface{}{
+			"ServeDir": codegen.OutputDir,
+		}
+		err = tmpl.Execute(gg, data)
+		if err != nil {
+			return nil, err
+		}
+		if err := gg.FormatCode(); err != nil {
+			return nil, err
+		}
+		g.genfiles = append(g.genfiles, controllerFile)
 	}
-	g.genfiles = append(g.genfiles, filePath)
-	file.Write([]byte(axios))
-	file.Close()
 
 	return g.genfiles, nil
 }
@@ -233,17 +268,17 @@ const jsFuncsT = `{{$params := params .}}
                 timeout: timeout,
                 url: urlPrefix + path,
                 method: '{{toLower (index .Routes 0).Verb}}',
-{{if $params}}        params: {
+{{if $params}}                params: {
 {{range $index, $param := $params}}{{if $index}},
-{{end}}                {{$param}}: {{$param}}{{end}}
-                    },
+{{end}}                    {{$param}}: {{$param}}{{end}}
+                },
 {{end}}{{if .Payload}}                data: data,
 {{end}}                responseType: 'json'
             };
             if (config) {
                 cfg = utils.merge(cfg, config);
             }
-            return axios(cfg);
+            return client(cfg);
         }
 `
 
@@ -259,8 +294,8 @@ const exampleT = `<!doctype html>
     <script>
       requirejs.config({
         paths: {
-          axios: '/index/axios.min',
-          client: '/index/client'
+          axios: '/js/axios.min',
+          client: '/js/client'
         }
       });
       requirejs(['client'], function (client) {
@@ -275,6 +310,14 @@ const exampleT = `<!doctype html>
     </script>
   </body>
 </html>
+`
+
+const exampleCtrlT = `// MountController mounts the JavaScript example controller under "/js".
+func MountController(service goa.Service) {
+	// Serve static files under js
+	service.ServeFiles("/js/*filepath", http.Dir("{{.ServeDir}}"))
+	service.Info("mount", "ctrl", "JS", "action", "ServeFiles", "route", "GET /js/*")
+}
 `
 
 const axios = `/* axios v0.7.0 | (c) 2015 by Matt Zabriskie */

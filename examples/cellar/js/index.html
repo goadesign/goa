@@ -10,12 +10,12 @@
     <script>
       requirejs.config({
         paths: {
-          axios: '/index/axios.min',
-          client: '/index/client'
+          axios: '/js/axios.min',
+          client: '/js/client'
         }
       });
       requirejs(['client'], function (client) {
-        client().showAccount ("/cellar/accounts/317")
+        client().listBottle ("/cellar/accounts/440/bottles", 317)
           .then(function (resp) {
             document.getElementById('response').innerHTML = resp.statusText;
           })

@@ -31,6 +31,17 @@ type (
 		ListenAndServe(addr string) error
 		// ListenAndServeTLS starts a HTTPS server on the given port.
 		ListenAndServeTLS(add, certFile, keyFile string) error
+		// ServeFiles serves files from the given file system root.
+		// The path must end with "/*filepath", files are then served from the local
+		// path /defined/root/dir/*filepath.
+		// For example if root is "/etc" and *filepath is "passwd", the local file
+		// "/etc/passwd" would be served.
+		// Internally a http.FileServer is used, therefore http.NotFound is used instead
+		// of the service's NotFound handler.
+		// To use the operating system's file system implementation,
+		// use http.Dir:
+		//     service.ServeFiles("/src/*filepath", http.Dir("/var/www"))
+		ServeFiles(path string, root http.FileSystem)
 		// HTTPHandler returns a http.Handler interface to the underlying service.
 		// Note: using the handler directly bypasses the graceful shutdown behavior of
 		// services instantiated with NewGraceful.
@@ -183,6 +194,11 @@ func (app *Application) ListenAndServe(addr string) error {
 func (app *Application) ListenAndServeTLS(addr, certFile, keyFile string) error {
 	app.Info("listen ssl", "addr", addr)
 	return http.ListenAndServeTLS(addr, certFile, keyFile, app.Router)
+}
+
+// ServeFiles simply delegates to the underlying router.
+func (app *Application) ServeFiles(path string, root http.FileSystem) {
+	app.HTTPHandler().(*httprouter.Router).ServeFiles(path, root)
 }
 
 // HTTPHandler returns a http.Handler to the service.
