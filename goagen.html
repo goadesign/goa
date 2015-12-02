@@ -171,49 +171,66 @@
                         <p>
                                 The generated module wraps the <code>axios</code> client and adds API specific functions, for example:
                         </p>
-                        <pre><code class="javascript">        // List all bottles in account optionally filtering by year
-        // path is the request path, the format is "/cellar/accounts/:accountID/bottles"
-        // years is used to build the request query string.
-        // config is an optional object to be merged into the config built by the function prior to making the request.
-        // The content of the config object is described here: https://github.com/mzabriskie/axios#request-api
-        // This function returns a promise which raises an error if the HTTP response is a 4xx or 5xx.
-        client.listBottle = function (path, years, config) {
-            cfg = {
-                timeout: timeout,
-                url: urlPrefix + path,
-                method: 'get',
-                params: {
-                    years: years
-                },
-                responseType: 'json'
-            };
-            if (config) {
-                cfg = utils.merge(cfg, config);
-            }
-            return client(cfg);
-        }</code></pre>
+                        <pre><code class="javascript">// List all bottles in account optionally filtering by year
+// path is the request path, the format is "/cellar/accounts/:accountID/bottles"
+// years is used to build the request query string.
+// config is an optional object to be merged into the config built by the function prior to making the request.
+// The content of the config object is described here: https://github.com/mzabriskie/axios#request-api
+// This function returns a promise which raises an error if the HTTP response is a 4xx or 5xx.
+client.listBottle = function (path, years, config) {
+  cfg = {
+    timeout: timeout,
+    url: urlPrefix + path,
+    method: 'get',
+    params: {
+      years: years
+    },
+    responseType: 'json'
+  };
+  if (config) {
+    cfg = utils.merge(cfg, config);
+  }
+  return client(cfg);
+}</code></pre>
                         <p>
                                 The generated client module can be loaded using <code>requirejs</code>:
                         </p>
-                        <pre><code class="javascript">        requirejs.config({
-                paths: {
-                        axios: '/js/axios.min',
-                        client: '/js/client'
-                }
-        });
-        requirejs(['client'], function (client) {
-                client().listBottle ("/cellar/accounts/440/bottles", 317)
-                .then(function (resp) {
-                        // All good, use resp
-                })
-                .catch(function (resp) {
-                        // Woops, request failed or returned 4xx or 5xx.
-                });
-        });</code></pre>
+                        <pre><code class="javascript">requirejs.config({
+  paths: {
+    axios: '/js/axios.min',
+    client: '/js/client'
+  }
+});
+requirejs(['client'], function (client) {
+  client().listBottle ("/cellar/accounts/440/bottles", 317)
+    .then(function (resp) {
+      // All good, use resp
+    })
+    .catch(function (resp) {
+      // Woops, request failed or returned 4xx or 5xx.
+    });
+});</code></pre>
                         <p>
                                 The code above assumes that the generated files <code>client.js</code> and <code>axios.min.js</code> are both
-                                served from <code>/js</code>.
+                                served from <code>/js</code>. The <code>resp</code> value returned to the promise is an object with the following
+                                fields:
                         </p>
+                        <pre><code language="javascript">{
+  // `data` is the response that was provided by the server
+  data: {},
+
+  // `status` is the HTTP status code from the server response
+  status: 200,
+
+  // `statusText` is the HTTP status message from the server response
+  statusText: 'OK',
+
+  // `headers` the headers that the server responded with
+  headers: {},
+
+  // `config` is the config that was provided to `axios` for the request
+  config: {}
+}</code></pre>
                         <p>
                                 The generator also produces an example HTML and controller that can be mounted on a
                                 goa service to quickly test the JavaScript. Simply import the <code>js</code> Go
