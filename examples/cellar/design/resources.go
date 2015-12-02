@@ -82,6 +82,7 @@ var _ = Resource("bottle", func() {
 				View("tiny")
 			}))
 		})
+		Response(NotFound)
 	})
 
 	Action("show", func() {
