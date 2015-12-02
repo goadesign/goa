@@ -62,7 +62,7 @@ go get golang.org/x/tools/cmd/goimports
 3. Run [`goagen`](http://www.goa.design/goagen.html): `goagen bootstrap -d <design package path>`
 4. Fill-in implementation of generated controller actions.
 
-![goagen diagram](https://cdn.rawgit.com/raphael/goa/master/images/goagenv3.svg "goagen")
+![goagen diagram](https://cdn.rawgit.com/raphael/goa/master/images/goagenv4.svg "goagen")
 ## Runtime
 
 While goa and `goagen` help you get going quickly, goa strives to make as little assumption as
