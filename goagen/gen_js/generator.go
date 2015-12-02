@@ -238,48 +238,55 @@ func params(action *design.ActionDefinition) []string {
 const moduleT = `// This module exports functions that give access to the {{.API.Name}} API hosted at {{.API.Host}}.
 // It uses the axios javascript library for making the actual HTTP requests.
 define(['axios'] , function (axios) {
-    return function (scheme, host, timeout) {
-        scheme = scheme || '{{.Scheme}}';
-        host = host || '{{.Host}}';
-        timeout = timeout || {{.Timeout}};
+  function merge(obj1, obj2) {
+    var obj3 = {};
+    for (var attrname in obj1) { obj3[attrname] = obj1[attrname]; }
+    for (var attrname in obj2) { obj3[attrname] = obj2[attrname]; }
+    return obj3;
+  }
 
-        // Client is the object returned by this module.
-        var client = axios;
+  return function (scheme, host, timeout) {
+    scheme = scheme || '{{.Scheme}}';
+    host = host || '{{.Host}}';
+    timeout = timeout || {{.Timeout}};
 
-        // URL prefix for all API requests.
-        var urlPrefix = scheme + '://' + host;
+    // Client is the object returned by this module.
+    var client = axios;
+
+    // URL prefix for all API requests.
+    var urlPrefix = scheme + '://' + host;
 `
 
-const moduleTend = `        return client;
-    };
+const moduleTend = `  return client;
+  };
 });
 `
 
 const jsFuncsT = `{{$params := params .}}
-        {{$name := printf "%s%s" .Name (title .Parent.Name)}}// {{if .Description}}{{.Description}}{{else}}{{$name}} calls the {{.Name}} action of the {{.Parent.Name}} resource.{{end}}
-        // path is the request path, the format is "{{(index .Routes 0).FullPath}}"
-        {{if .Payload}}// data contains the action payload (request body)
-        {{end}}{{if $params}}// {{join $params ", "}} {{if gt (len $params) 1}}are{{else}}is{{end}} used to build the request query string.
-        {{end}}// config is an optional object to be merged into the config built by the function prior to making the request.
-        // The content of the config object is described here: https://github.com/mzabriskie/axios#request-api
-        // This function returns a promise which raises an error if the HTTP response is a 4xx or 5xx.
-        client.{{$name}} = function (path{{if .Payload}}, data{{end}}{{if $params}}, {{join $params ", "}}{{end}}, config) {
-            cfg = {
-                timeout: timeout,
-                url: urlPrefix + path,
-                method: '{{toLower (index .Routes 0).Verb}}',
-{{if $params}}                params: {
+  {{$name := printf "%s%s" .Name (title .Parent.Name)}}// {{if .Description}}{{.Description}}{{else}}{{$name}} calls the {{.Name}} action of the {{.Parent.Name}} resource.{{end}}
+  // path is the request path, the format is "{{(index .Routes 0).FullPath}}"
+  {{if .Payload}}// data contains the action payload (request body)
+  {{end}}{{if $params}}// {{join $params ", "}} {{if gt (len $params) 1}}are{{else}}is{{end}} used to build the request query string.
+  {{end}}// config is an optional object to be merged into the config built by the function prior to making the request.
+  // The content of the config object is described here: https://github.com/mzabriskie/axios#request-api
+  // This function returns a promise which raises an error if the HTTP response is a 4xx or 5xx.
+  client.{{$name}} = function (path{{if .Payload}}, data{{end}}{{if $params}}, {{join $params ", "}}{{end}}, config) {
+    cfg = {
+      timeout: timeout,
+      url: urlPrefix + path,
+      method: '{{toLower (index .Routes 0).Verb}}',
+{{if $params}}      params: {
 {{range $index, $param := $params}}{{if $index}},
-{{end}}                    {{$param}}: {{$param}}{{end}}
-                },
-{{end}}{{if .Payload}}                data: data,
-{{end}}                responseType: 'json'
-            };
-            if (config) {
-                cfg = utils.merge(cfg, config);
-            }
-            return client(cfg);
-        }
+{{end}}        {{$param}}: {{$param}}{{end}}
+      },
+{{end}}{{if .Payload}}    data: data,
+{{end}}      responseType: 'json'
+    };
+    if (config) {
+      cfg = merge(cfg, config);
+    }
+    return client(cfg);
+  }
 `
 
 const exampleT = `<!doctype html>
