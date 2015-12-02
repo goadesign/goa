@@ -27,8 +27,7 @@ func main() {
 	// Make "client-cli <action> [<resource>] --help" equivalent to
 	// "client-cli help <action> [<resource>]"
 	if os.Args[len(os.Args)-1] == "--help" {
-		args := append([]string{os.Args[0]}, "help")
-		args = append(args, os.Args[1:]...)
+		args := append([]string{os.Args[0], "help"}, os.Args[1:len(os.Args)-1]...)
 		os.Args = args
 	}
 	cmdName, err := app.Parse(os.Args[1:])

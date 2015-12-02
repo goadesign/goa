@@ -142,6 +142,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		codegen.SimpleImport("github.com/raphael/goa"),
 		codegen.SimpleImport(clientPkg),
 		codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
+		codegen.SimpleImport("gopkg.in/alecthomas/kingpin.v2"),
 	}
 	gg.WriteHeader("", "main", imports)
 	gg.Write([]byte("type (\n"))
@@ -186,6 +187,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	imports = []*codegen.ImportSpec{
 		codegen.SimpleImport("net/http"),
 		codegen.SimpleImport("github.com/raphael/goa"),
+		codegen.SimpleImport("gopkg.in/alecthomas/kingpin.v2"),
 	}
 	gg.WriteHeader("", "client", imports)
 	err = tmpl.Execute(gg, api)
@@ -431,8 +433,7 @@ func main() {
 	// Make "client-cli <action> [<resource>] --help" equivalent to
 	// "client-cli help <action> [<resource>]"
 	if os.Args[len(os.Args) - 1] == "--help" {
-		args := append([]string{os.Args[0]}, "help")
-		args = append(args, os.Args[1:]...)
+		args := append([]string{os.Args[0], "help"}, os.Args[1:len(os.Args)-1]...)
 		os.Args = args
 	}
 	cmdName, err := app.Parse(os.Args[1:])
