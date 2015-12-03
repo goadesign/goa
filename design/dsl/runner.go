@@ -344,6 +344,7 @@ func mediaTypeDefinition(failIfNotMT bool) (*design.MediaTypeDefinition, bool) {
 // typeDefinition returns true and current context if it is a UserTypeDefinition,
 // nil and false otherwise.
 func typeDefinition(failIfNotMT bool) (*design.UserTypeDefinition, bool) {
+	fmt.Println("I'm a :", ctxStack.current())
 	m, ok := ctxStack.current().(*design.UserTypeDefinition)
 	if !ok && failIfNotMT {
 		incompatibleDSL(caller())
