@@ -10,6 +10,7 @@ import (
 	"github.com/raphael/goa/goagen/gen_app"
 	"github.com/raphael/goa/goagen/gen_client"
 	"github.com/raphael/goa/goagen/gen_gen"
+	"github.com/raphael/goa/goagen/gen_js"
 	"github.com/raphael/goa/goagen/gen_main"
 	"github.com/raphael/goa/goagen/gen_schema"
 	"github.com/raphael/goa/goagen/gen_swagger"
@@ -23,6 +24,7 @@ var Commands = []codegen.Command{
 	genmain.NewCommand(),
 	genclient.NewCommand(),
 	genswagger.NewCommand(),
+	genjs.NewCommand(),
 	genschema.NewCommand(),
 	gengen.NewCommand(),
 }
@@ -61,8 +63,7 @@ func command() codegen.Command {
 		c.RegisterFlags(cmd)
 	}
 	if os.Args[len(os.Args)-1] == "--help" {
-		args := append([]string{os.Args[0]}, "help")
-		args = append(args, os.Args[1:]...)
+		args := append([]string{os.Args[0], "help"}, os.Args[1:len(os.Args)-1]...)
 		os.Args = args
 	}
 	codegen.CommandName = kingpin.MustParse(app.Parse(os.Args[1:]))

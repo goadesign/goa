@@ -5,6 +5,7 @@ goa is a framework for building RESTful microservices in Go.
 [![Build Status](https://travis-ci.org/raphael/goa.svg?branch=master)](https://travis-ci.org/raphael/goa)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/raphael/goa/blob/master/LICENSE)
 [![Godoc](https://godoc.org/github.com/raphael/goa?status.svg)](http://godoc.org/github.com/raphael/goa)
+[![Slack](https://img.shields.io/badge/slack-goa-ff69b4.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
 ## Why goa?
 
@@ -61,7 +62,7 @@ go get golang.org/x/tools/cmd/goimports
 3. Run [`goagen`](http://www.goa.design/goagen.html): `goagen bootstrap -d <design package path>`
 4. Fill-in implementation of generated controller actions.
 
-![goagen diagram](https://cdn.rawgit.com/raphael/goa/master/images/goagenv2.svg "goagen")
+![goagen diagram](https://cdn.rawgit.com/raphael/goa/gh-pages/images/goagen.svg "goagen")
 ## Runtime
 
 While goa and `goagen` help you get going quickly, goa strives to make as little assumption as

@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -69,6 +70,8 @@ type (
 		DSL func()
 		// metadata is a list of key/value pairs
 		Metadata MetadataDefinition
+		// rand is the random generator used to generate examples.
+		rand *RandomGenerator
 	}
 
 	// ContactDefinition contains the API contact information.
@@ -411,6 +414,17 @@ func (a *APIDefinition) IterateResponses(it ResponseIterator) error {
 	return nil
 }
 
+// Example returns a random value for the given data type.
+// If the data type has validations then the example value validates them.
+// Example returns the same random value for a given api name (the random
+// generator is seeded after the api name).
+func (a *APIDefinition) Example(dt DataType) interface{} {
+	if a.rand == nil {
+		a.rand = NewRandomGenerator(a.Name)
+	}
+	return dt.Example(a.rand)
+}
+
 // NewResourceDefinition creates a resource definition but does not
 // execute the DSL.
 func NewResourceDefinition(name string, dsl func()) *ResourceDefinition {
@@ -697,6 +711,100 @@ func (a *AttributeDefinition) Dup() *AttributeDefinition {
 	return &dup
 }
 
+// Example returns a random instance of the attribute that validates.
+func (a *AttributeDefinition) Example(r *RandomGenerator) interface{} {
+	for _, v := range a.Validations {
+		switch actual := v.(type) {
+		case *EnumValidationDefinition:
+			count := len(actual.Values)
+			i := r.Int() % count
+			return actual.Values[i]
+		case *FormatValidationDefinition:
+			switch actual.Format {
+			case "email":
+				return r.faker.Email()
+			case "hostname":
+				return r.faker.DomainName() + "." + r.faker.DomainSuffix()
+			case "date-time":
+				return time.Now().Format(time.RFC3339)
+			case "ipv4":
+				ip := r.faker.IPv4Address()
+				return ip.String()
+			case "ipv6":
+				ip := r.faker.IPv6Address()
+				return ip.String()
+			case "uri":
+				return r.faker.URL()
+			case "mac":
+				res, err := regen.Generate(`([0-9A-F]{2}-){5}[0-9A-F]{2}`)
+				if err != nil {
+					return "12-34-56-78-9A-BC"
+				}
+				return res
+			case "cidr":
+				return "192.168.100.14/24"
+			case "regexp":
+				return r.faker.Characters(3) + ".*"
+			default:
+				panic("unknown format") // bug
+			}
+		case *PatternValidationDefinition:
+			res, err := regen.Generate(actual.Pattern)
+			if err != nil {
+				return r.faker.Name()
+			}
+			return res
+		case *MinimumValidationDefinition:
+			if a.Type.Kind() == IntegerKind {
+				res := r.Int()
+				for float64(res) < actual.Min {
+					res = r.Int()
+				}
+				return res
+			}
+			res := r.Float64()
+			for res < actual.Min {
+				res = r.Float64()
+			}
+			return res
+		case *MaximumValidationDefinition:
+			if a.Type.Kind() == IntegerKind {
+				res := r.Int()
+				for float64(res) > actual.Max {
+					res = r.Int()
+				}
+				return res
+			}
+			res := r.Float64()
+			for res > actual.Max {
+				res = r.Float64()
+			}
+			return res
+		case *MinLengthValidationDefinition:
+			count := actual.MinLength + (r.Int() % 3)
+			if a.Type.IsArray() {
+				res := make([]interface{}, count)
+				for i := 0; i < count; i++ {
+					res[i] = a.Type.ToArray().ElemType.Example(r)
+				}
+				return res
+			}
+			return r.faker.Characters(count)
+		case *MaxLengthValidationDefinition:
+			count := actual.MaxLength - (r.Int() % 3)
+			if a.Type.IsArray() {
+				res := make([]interface{}, count)
+				for i := 0; i < count; i++ {
+					res[i] = a.Type.ToArray().ElemType.Example(r)
+				}
+				return res
+			}
+			return r.faker.Characters(count)
+		}
+	}
+	return a.Type.Example(r)
+}
+
 // Merge merges the argument attributes into the target and returns the target overriding existing
 // attributes with identical names.
 // This only applies to attributes of type Object and Merge panics if the
@@ -722,14 +830,43 @@ func (a *AttributeDefinition) Merge(other *AttributeDefinition) *AttributeDefini
 // Inherit merges the properties of existing target type attributes with the argument's.
 // The algorithm is recursive so that child attributes are also merged.
 func (a *AttributeDefinition) Inherit(parent *AttributeDefinition) {
-	if a == nil || parent == nil {
+	if !a.shouldInherit(parent) {
 		return
 	}
-	o := a.Type.ToObject()
-	p := parent.Type.ToObject()
-	if o == nil || p == nil {
+
+	a.inheritValidations(parent)
+	a.inheritRecursive(parent)
+}
+
+func (a *AttributeDefinition) inheritRecursive(parent *AttributeDefinition) {
+	if !a.shouldInherit(parent) {
 		return
 	}
+
+	for n, att := range a.Type.ToObject() {
+		if patt, ok := parent.Type.ToObject()[n]; ok {
+			if att.Description == "" {
+				att.Description = patt.Description
+			}
+			att.inheritValidations(patt)
+			if att.DefaultValue == nil {
+				att.DefaultValue = patt.DefaultValue
+			}
+			if att.View == "" {
+				att.View = patt.View
+			}
+			if att.Type == nil {
+				att.Type = patt.Type
+			} else if att.shouldInherit(patt) {
+				for _, att := range att.Type.ToObject() {
+					att.Inherit(patt.Type.ToObject()[n])
+				}
+			}
+		}
+	}
+}
+
+func (a *AttributeDefinition) inheritValidations(parent *AttributeDefinition) {
 	for _, v := range parent.Validations {
 		found := false
 		for _, vc := range a.Validations {
@@ -742,42 +879,11 @@ func (a *AttributeDefinition) Inherit(parent *AttributeDefinition) {
 			a.Validations = append(a.Validations, parent)
 		}
 	}
-	for n, att := range o {
-		if patt, ok := p[n]; ok {
-			if att.Description == "" {
-				att.Description = patt.Description
-			}
-			for _, v := range patt.Validations {
-				found := false
-				for _, vc := range att.Validations {
-					if v == vc {
-						found = true
-						break
-					}
-				}
-				if !found {
-					att.Validations = append(att.Validations, v)
-				}
-			}
-			if att.DefaultValue == nil {
-				att.DefaultValue = patt.DefaultValue
-			}
-			if att.View == "" {
-				att.View = patt.View
-			}
-			if att.Type == nil {
-				att.Type = patt.Type
-			} else if co := att.Type.ToObject(); co != nil {
-				if po := patt.Type.ToObject(); po != nil {
-					for n, att := range co {
-						if pcatt, ok := po[n]; ok {
-							att.Inherit(pcatt)
-						}
-					}
-				}
-			}
-		}
-	}
+}
+
+func (a *AttributeDefinition) shouldInherit(parent *AttributeDefinition) bool {
+	return a != nil && a.Type.ToObject() != nil &&
+		parent != nil && parent.Type.ToObject() != nil
 }
 
 // Context returns the generic definition name used in error messages.
