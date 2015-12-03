@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/zach-klippenstein/goregen"
+	regen "github.com/zach-klippenstein/goregen"
 )
 
 var (
