@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/zach-klippenstein/goregen"
+	regen "github.com/zach-klippenstein/goregen"
 )
 
 var (
@@ -69,7 +69,8 @@ type (
 		MediaTypes map[string]*MediaTypeDefinition
 		// dsl contains the DSL used to create this definition if any.
 		DSL func()
-
+		// metadata is a list of key/value pairs
+		Metadata MetadataDefinition
 		// rand is the random generator used to generate examples.
 		rand *RandomGenerator
 	}
@@ -132,6 +133,8 @@ type (
 		Headers *AttributeDefinition
 		// dsl contains the DSL used to create this definition if any.
 		DSL func()
+		// metadata is a list of key/value pairs
+		Metadata MetadataDefinition
 	}
 
 	// ResponseDefinition defines a HTTP response status and optional validation rules.
@@ -148,6 +151,8 @@ type (
 		Headers *AttributeDefinition
 		// Parent action or resource
 		Parent DSLDefinition
+		// Metadata is a list of key/value pairs
+		Metadata MetadataDefinition
 	}
 
 	// ResponseTemplateDefinition defines a response template.
@@ -187,6 +192,8 @@ type (
 		Payload *UserTypeDefinition
 		// Request headers that need to be made available to action
 		Headers *AttributeDefinition
+		// Metadata is a list of key/value pairs
+		Metadata MetadataDefinition
 	}
 
 	// AttributeDefinition defines a JSON object member with optional description, default
@@ -200,11 +207,15 @@ type (
 		Description string
 		// Optional validation functions
 		Validations []ValidationDefinition
+		// Metadata is a list of key/value pairs
+		Metadata MetadataDefinition
 		// Optional member default value
 		DefaultValue interface{}
 		// Optional view used to render Attribute (only applies to media type attributes).
 		View string
 	}
+	// MetadataDefinition is a set of key/value pairs
+	MetadataDefinition map[string]string
 
 	// LinkDefinition defines a media type link, it specifies a URL to a related resource.
 	LinkDefinition struct {
@@ -695,6 +706,7 @@ func (a *AttributeDefinition) Dup() *AttributeDefinition {
 		Type:         dupType,
 		Description:  a.Description,
 		Validations:  valDup,
+		Metadata:     a.Metadata,
 		DefaultValue: a.DefaultValue,
 	}
 	return &dup
