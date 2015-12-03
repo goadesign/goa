@@ -81,8 +81,6 @@ type (
 		*AttributeDefinition
 		// Name of type
 		TypeName string
-		// Metadata defined on this resource
-		Metadata *MetadataDefinition
 		// DSL contains the DSL used to create this definition if any.
 		DSL func()
 	}
@@ -385,7 +383,6 @@ func NewUserTypeDefinition(name string, dsl func()) *UserTypeDefinition {
 	return &UserTypeDefinition{
 		TypeName:            name,
 		AttributeDefinition: &AttributeDefinition{},
-		Metadata:            &MetadataDefinition{},
 		DSL:                 dsl,
 	}
 }
@@ -423,7 +420,6 @@ func (u *UserTypeDefinition) IsCompatible(val interface{}) bool {
 func (u *UserTypeDefinition) Dup() DataType {
 	return &UserTypeDefinition{
 		AttributeDefinition: u.AttributeDefinition.Dup(),
-		Metadata:            u.Metadata,
 		TypeName:            u.TypeName,
 		DSL:                 u.DSL,
 	}
@@ -435,7 +431,6 @@ func NewMediaTypeDefinition(name, identifier string, dsl func()) *MediaTypeDefin
 	return &MediaTypeDefinition{
 		UserTypeDefinition: &UserTypeDefinition{
 			AttributeDefinition: &AttributeDefinition{Type: Object{}},
-			Metadata:            &MetadataDefinition{},
 			TypeName:            name,
 			DSL:                 dsl,
 		},
