@@ -6,7 +6,7 @@
 # - clean     delete all generated files
 # - generate  (re)generate all goagen-generated files.
 # - build     compile executable
-# - ae-build  build appengine 
+# - ae-build  build appengine
 # - ae-dev    deploy to local (dev) appengine
 # - ae-deploy deploy to appengine
 #
@@ -21,12 +21,16 @@ clean:
 	@rm -rf app
 	@rm -rf client
 	@rm -rf swagger
+	@rm -rf schema
+	@rm -rf js
 	@rm -f cellar
 
 generate:
 	@goagen app     -d github.com/raphael/goa/examples/cellar/design
 	@goagen client  -d github.com/raphael/goa/examples/cellar/design
 	@goagen swagger -d github.com/raphael/goa/examples/cellar/design
+	@goagen schema -d github.com/raphael/goa/examples/cellar/design
+	@goagen js -d github.com/raphael/goa/examples/cellar/design
 
 build:
 	@go build -o cellar

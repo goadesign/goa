@@ -29,7 +29,7 @@ func (b *BottleController) List(ctx *app.ListBottleContext) error {
 		bottles, err = b.db.GetBottles(ctx.AccountID)
 	}
 	if err != nil {
-		return err
+		return ctx.NotFound()
 	}
 	return ctx.OK(bottles, "default")
 }
