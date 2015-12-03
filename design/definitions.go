@@ -67,6 +67,8 @@ type (
 		MediaTypes map[string]*MediaTypeDefinition
 		// dsl contains the DSL used to create this definition if any.
 		DSL func()
+		// metadata is a list of key/value pairs
+		Metadata MetadataDefinition
 	}
 
 	// ContactDefinition contains the API contact information.
@@ -125,10 +127,10 @@ type (
 		Params *AttributeDefinition
 		// Request headers that apply to all actions.
 		Headers *AttributeDefinition
-		// Metadata defined on this resource
-		Metadata *MetadataDefinition
 		// dsl contains the DSL used to create this definition if any.
 		DSL func()
+		// metadata is a list of key/value pairs
+		Metadata MetadataDefinition
 	}
 
 	// ResponseDefinition defines a HTTP response status and optional validation rules.
@@ -145,6 +147,8 @@ type (
 		Headers *AttributeDefinition
 		// Parent action or resource
 		Parent DSLDefinition
+		// Metadata is a list of key/value pairs
+		Metadata MetadataDefinition
 	}
 
 	// ResponseTemplateDefinition defines a response template.
@@ -184,8 +188,8 @@ type (
 		Payload *UserTypeDefinition
 		// Request headers that need to be made available to action
 		Headers *AttributeDefinition
-		// Metadata defined on this resource
-		Metadata *MetadataDefinition
+		// Metadata is a list of key/value pairs
+		Metadata MetadataDefinition
 	}
 
 	// AttributeDefinition defines a JSON object member with optional description, default
@@ -199,21 +203,15 @@ type (
 		Description string
 		// Optional validation functions
 		Validations []ValidationDefinition
+		// Metadata is a list of key/value pairs
+		Metadata MetadataDefinition
 		// Optional member default value
 		DefaultValue interface{}
 		// Optional view used to render Attribute (only applies to media type attributes).
 		View string
-		// Metadata defined on this resource
-		Metadata *MetadataDefinition
 	}
-
-	// MetadataDefinition defines a metadata name and JSON value
-	MetadataDefinition struct {
-		// Metadata name
-		Name string
-		// JSON Value
-		Value string
-	}
+	// MetadataDefinition is a set of key/value pairs
+	MetadataDefinition map[string]string
 
 	// LinkDefinition defines a media type link, it specifies a URL to a related resource.
 	LinkDefinition struct {
@@ -780,21 +778,6 @@ func (a *AttributeDefinition) Inherit(parent *AttributeDefinition) {
 			}
 		}
 	}
-}
-
-// Context returns the generic definition name used in error messages.
-func (a *MetadataDefinition) Context() string {
-	return ""
-}
-
-// Dup returns a copy of the metadata definition.
-// Note: the primitive underlying types are not duplicated for simplicity.
-func (a *MetadataDefinition) Dup() *MetadataDefinition {
-	dup := MetadataDefinition{
-		Name:  a.Name,
-		Value: a.Value,
-	}
-	return &dup
 }
 
 // Context returns the generic definition name used in error messages.

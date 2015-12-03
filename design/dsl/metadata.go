@@ -1,68 +1,53 @@
 package dsl
 
-import (
-	"fmt"
-
-	"github.com/raphael/goa/design"
-)
-
 // Metadata is a key/value pair that can be assigned
-// to an object.  The value must be a JSON string.
-// Metadata is not currently used in standard generation but may be
+// to an object.  The value is expected be a JSON string, but is
+// not currently validated as such.
+// Metadata is not used in standard generation but may be
 // used by user-defined generators.
+// Usage:
 //	 Metadata("creator", `{"name":"goagen"}`)
 func Metadata(name string, value string) {
-	fmt.Println("ut metadata call")
-	var uparent *design.AttributeDefinition
 	if at, ok := attributeDefinition(false); ok {
-		fmt.Println("IS ATTRIBUTE")
-		uparent = at
-	}
-	if uparent != nil {
-		fmt.Println("uparent not nil")
-		if uparent.Type == nil {
-			uparent.Type = design.Object{}
+		if at.Metadata == nil {
+			at.Metadata = make(map[string]string)
 		}
-		if _, ok := uparent.Type.(design.Object); !ok {
-			ReportError("can't define metadata on attribute of type %s", uparent.Type.Name())
-			return
-		}
-
-		var baseMeta *design.MetadataDefinition
-
-		baseMeta = &design.MetadataDefinition{
-			Name:  name,
-			Value: value,
-		}
-		uparent.Metadata = baseMeta
-		fmt.Println("assigned metadata:", uparent.Metadata)
+		at.Metadata[name] = value
 		return
 	}
-	fmt.Println("mt metadata call")
-	var parent *design.MediaTypeDefinition
-	if mt, ok := mediaTypeDefinition(true); ok {
-		parent = mt
-		fmt.Println("IS MT")
-	}
-	fmt.Println(" - parent", parent)
-	if parent != nil {
-		if parent.Type == nil {
-			parent.Type = design.Object{}
+	if mt, ok := mediaTypeDefinition(false); ok {
+		if mt.Metadata == nil {
+			mt.Metadata = make(map[string]string)
 		}
-		if _, ok := parent.Type.(design.Object); !ok {
-			ReportError("can't define metadata on attribute of type %s", parent.Type.Name())
-			return
-		}
-
-		var baseMeta *design.MetadataDefinition
-
-		baseMeta = &design.MetadataDefinition{
-			Name:  name,
-			Value: value,
-		}
-
-		parent.Metadata = baseMeta
+		mt.Metadata[name] = value
 		return
 	}
-	return
+	if act, ok := actionDefinition(false); ok {
+		if act.Metadata == nil {
+			act.Metadata = make(map[string]string)
+		}
+		act.Metadata[name] = value
+		return
+	}
+	if res, ok := resourceDefinition(false); ok {
+		if res.Metadata == nil {
+			res.Metadata = make(map[string]string)
+		}
+		res.Metadata[name] = value
+		return
+	}
+	if rd, ok := responseDefinition(false); ok {
+		if rd.Metadata == nil {
+			rd.Metadata = make(map[string]string)
+		}
+		rd.Metadata[name] = value
+		return
+	}
+	if api, ok := apiDefinition(true); ok {
+		if api.Metadata == nil {
+			api.Metadata = make(map[string]string)
+		}
+		api.Metadata[name] = value
+		return
+	}
 }
