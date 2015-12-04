@@ -36,7 +36,6 @@ var _ = Describe("ContextsWriter", func() {
 			var payload *design.UserTypeDefinition
 			var responses map[string]*design.ResponseDefinition
 			var mediaTypes map[string]*design.MediaTypeDefinition
-			var userTypes map[string]*design.UserTypeDefinition
 
 			var data *genapp.ContextTemplateData
 
@@ -58,8 +57,7 @@ var _ = Describe("ContextsWriter", func() {
 					Payload:      payload,
 					Headers:      headers,
 					Responses:    responses,
-					MediaTypes:   mediaTypes,
-					Types:        userTypes,
+					API:          design.Design,
 				}
 			})
 
