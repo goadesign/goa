@@ -203,8 +203,10 @@ var _ = Describe("CollectionOf", func() {
 		var col *MediaTypeDefinition
 		BeforeEach(func() {
 			Design = nil
-			mt := MediaType("MT", func() { Attribute("id") })
+			mt := MediaType("application/vnd.example", func() { Attribute("id") })
+			Errors = nil
 			col = CollectionOf(mt)
+			Ω(Errors).ShouldNot(HaveOccurred())
 		})
 
 		JustBeforeEach(func() {
@@ -217,6 +219,37 @@ var _ = Describe("CollectionOf", func() {
 			Ω(col.Identifier).ShouldNot(BeEmpty())
 			Ω(col.TypeName).ShouldNot(BeEmpty())
 			Ω(Design.MediaTypes).Should(HaveKey(col.Identifier))
+		})
+	})
+
+	Context("defined with the media type identifier", func() {
+		var col *MediaTypeDefinition
+		BeforeEach(func() {
+			Design = nil
+			MediaType("application/vnd.example+json", func() { Attribute("id") })
+			col = MediaType("application/vnd.parent+json", func() { Attribute("mt", CollectionOf("application/vnd.example")) })
+		})
+
+		JustBeforeEach(func() {
+			RunDSL()
+			Ω(Errors).ShouldNot(HaveOccurred())
+		})
+
+		It("produces a media type", func() {
+			Ω(col).ShouldNot(BeNil())
+			Ω(col.Identifier).Should(Equal("application/vnd.parent+json"))
+			Ω(col.TypeName).Should(Equal("Parent"))
+			Ω(col.Type).ShouldNot(BeNil())
+			Ω(col.Type.ToObject()).ShouldNot(BeNil())
+			Ω(col.Type.ToObject()).Should(HaveKey("mt"))
+			mt := col.Type.ToObject()["mt"]
+			Ω(mt.Type).ShouldNot(BeNil())
+			Ω(mt.Type).Should(BeAssignableToTypeOf(&MediaTypeDefinition{}))
+			Ω(mt.Type.Name()).Should(Equal("array"))
+			et := mt.Type.ToArray().ElemType
+			Ω(et).ShouldNot(BeNil())
+			Ω(et.Type).Should(BeAssignableToTypeOf(&MediaTypeDefinition{}))
+			Ω(et.Type.(*MediaTypeDefinition).Identifier).Should(Equal("application/vnd.example+json"))
 		})
 	})
 })
