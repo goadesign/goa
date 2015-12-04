@@ -154,13 +154,17 @@ func Headers(dsl func()) {
 			ReportError("headers already defined")
 			return
 		}
-		var mtid string
-		if pa, ok := r.Parent.(*design.ResourceDefinition); ok {
-			mtid = pa.MediaType
-		} else if pa, ok := r.Parent.(*design.ActionDefinition); ok {
-			mtid = pa.Parent.MediaType
+		var h *design.AttributeDefinition
+		switch actual := r.Parent.(type) {
+		case *design.ResourceDefinition:
+			h = newAttribute(actual.MediaType)
+		case *design.ActionDefinition:
+			h = newAttribute(actual.Parent.MediaType)
+		case nil: // API ResponseTemplate
+			h = &design.AttributeDefinition{}
+		default:
+			ReportError("invalid use of Response or ResponseTemplate")
 		}
-		h := newAttribute(mtid)
 		if executeDSL(dsl, h) {
 			r.Headers = h
 		}

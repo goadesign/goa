@@ -35,7 +35,7 @@ var _ = Describe("MediaType", func() {
 
 	Context("with no DSL", func() {
 		BeforeEach(func() {
-			name = "foo"
+			name = "application/foo"
 		})
 
 		It("produces an error", func() {
@@ -48,7 +48,7 @@ var _ = Describe("MediaType", func() {
 		const attName = "att"
 
 		BeforeEach(func() {
-			name = "foo"
+			name = "application/foo"
 			dsl = func() {
 				Attributes(func() {
 					Attribute(attName)
@@ -72,7 +72,7 @@ var _ = Describe("MediaType", func() {
 		const description = "desc"
 
 		BeforeEach(func() {
-			name = "foo"
+			name = "application/foo"
 			dsl = func() {
 				Description(description)
 				Attributes(func() {
@@ -93,14 +93,14 @@ var _ = Describe("MediaType", func() {
 		const linkName = "link"
 		var link1Name, link2Name string
 		var link2View string
-		var linkedMT1, linkedMT2 *MediaTypeDefinition
+		var mt1, mt2 *MediaTypeDefinition
 
 		BeforeEach(func() {
 			name = "foo"
 			link1Name = "l1"
 			link2Name = "l2"
 			link2View = "l2v"
-			linkedMT1 = NewMediaTypeDefinition("MT1", "MT1", func() {
+			mt1 = NewMediaTypeDefinition("application/mt1", "application/mt1", func() {
 				Attributes(func() {
 					Attribute("foo")
 				})
@@ -112,7 +112,7 @@ var _ = Describe("MediaType", func() {
 				})
 			})
 			InitDesign()
-			linkedMT2 = NewMediaTypeDefinition("MT2", "MT2", func() {
+			mt2 = NewMediaTypeDefinition("application/mt2", "application/mt2", func() {
 				Attributes(func() {
 					Attribute("foo")
 				})
@@ -124,13 +124,13 @@ var _ = Describe("MediaType", func() {
 				})
 			})
 			Design.MediaTypes = make(map[string]*MediaTypeDefinition)
-			Design.MediaTypes["MT1"] = linkedMT1
-			Design.MediaTypes["MT2"] = linkedMT2
+			Design.MediaTypes["application/mt1"] = mt1
+			Design.MediaTypes["application/mt2"] = mt2
 			dsl = func() {
 				Attributes(func() {
 					Attributes(func() {
-						Attribute(link1Name, linkedMT1)
-						Attribute(link2Name, linkedMT2)
+						Attribute(link1Name, mt1)
+						Attribute(link2Name, mt2)
 					})
 					Links(func() {
 						Link(link1Name)
@@ -164,7 +164,7 @@ var _ = Describe("MediaType", func() {
 		const viewAtt = "att"
 
 		BeforeEach(func() {
-			name = "foo"
+			name = "application/foo"
 			dsl = func() {
 				Attributes(func() {
 					Attribute(viewAtt)
