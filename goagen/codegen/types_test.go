@@ -407,21 +407,24 @@ var _ = Describe("code generation", func() {
 
 			BeforeEach(func() {
 				Design = nil
-				fooMediaType := MediaType("fooMT", func() {
+				Errors = nil
+				fooMediaType := MediaType("application/fooMT", func() {
 					Attribute("fooAtt", Integer)
 					Attribute("href")
 					View("link", func() {
 						Attribute("href")
 					})
 				})
-				barMediaType := MediaType("barMT", func() {
+				Ω(Errors).ShouldNot(HaveOccurred())
+				barMediaType := MediaType("application/barMT", func() {
 					Attribute("barAtt", Integer)
 					Attribute("href")
 					View("link", func() {
 						Attribute("href")
 					})
 				})
-				bazMediaType := MediaType("bazMT", func() {
+				Ω(Errors).ShouldNot(HaveOccurred())
+				bazMediaType := MediaType("application/bazMT", func() {
 					Attribute("bazAtt", Integer)
 					Attribute("href")
 					Attribute("name")
@@ -430,7 +433,8 @@ var _ = Describe("code generation", func() {
 						Attribute("name")
 					})
 				})
-				testMediaType = MediaType("test", func() {
+				Ω(Errors).ShouldNot(HaveOccurred())
+				testMediaType = MediaType("application/test", func() {
 					Attribute("foo", fooMediaType)
 					Attribute("bar", barMediaType)
 					Attribute("baz", bazMediaType)
@@ -439,6 +443,7 @@ var _ = Describe("code generation", func() {
 						Link("baz", "bazLink")
 					})
 				})
+				Ω(Errors).ShouldNot(HaveOccurred())
 				RunDSL()
 				Ω(Errors).ShouldNot(HaveOccurred())
 			})

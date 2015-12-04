@@ -68,14 +68,17 @@ func MediaType(identifier string, dsl func()) *design.MediaTypeDefinition {
 		if err != nil {
 			ReportError("invalid media type identifier %#v: %s",
 				identifier, err)
+			// We don't return so that other errors may be
+			// captured in this one run.
+			identifier = "plain/text"
 		}
-		parts := strings.Split(identifier, "+")
-		canonicalID := parts[0]
+		canonicalID := design.CanonicalIdentifier(identifier)
 		// Validate that media type identifier doesn't clash
 		if _, ok := design.Design.MediaTypes[canonicalID]; ok {
 			ReportError("media type %#v is defined twice", identifier)
 			return nil
 		}
+		parts := strings.Split(identifier, "+")
 		// Make sure it has the `+json` suffix (TBD update when goa supports other encodings)
 		if len(parts) > 1 {
 			parts = parts[1:]

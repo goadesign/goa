@@ -2,6 +2,7 @@ package design
 
 import (
 	"fmt"
+	"mime"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -444,12 +445,19 @@ func (a *APIDefinition) MediaTypeWithIdentifier(id string) *MediaTypeDefinition 
 
 // CanonicalIdentifier returns the media type identifier sans suffix
 // which is what the DSL uses to store and lookup media types.
+// Note: the caller is responsible for validating that the given
+// identifier is a valid media type identifier.
+// Passing an invalid media type identifier causes a panic.
 func CanonicalIdentifier(identifier string) string {
-	id := identifier
+	base, params, err := mime.ParseMediaType(identifier)
+	if err != nil {
+		panic("invalid media type identifier " + identifier)
+	}
+	id := base
 	if i := strings.Index(id, "+"); i != -1 {
 		id = id[:i]
 	}
-	return id
+	return mime.FormatMediaType(id, params)
 }
 
 // NewResourceDefinition creates a resource definition but does not
