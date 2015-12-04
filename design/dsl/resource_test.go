@@ -149,7 +149,7 @@ var _ = Describe("Resource", func() {
 	})
 
 	Context("with a media type name", func() {
-		const mediaType = "mt"
+		const mediaType = "application/mt"
 
 		BeforeEach(func() {
 			name = "foo"
@@ -166,7 +166,7 @@ var _ = Describe("Resource", func() {
 	})
 
 	Context("with an invalid media type", func() {
-		var mediaType = &MediaTypeDefinition{Identifier: "foo"}
+		var mediaType = &MediaTypeDefinition{Identifier: "application/foo"}
 
 		BeforeEach(func() {
 			name = "foo"
@@ -182,7 +182,7 @@ var _ = Describe("Resource", func() {
 
 	Context("with a valid media type", func() {
 		const typeName = "typeName"
-		const identifier = "vnd.raphael.goa.test"
+		const identifier = "application/vnd.raphael.goa.test"
 
 		var mediaType = &MediaTypeDefinition{
 			UserTypeDefinition: &UserTypeDefinition{

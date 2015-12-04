@@ -35,7 +35,7 @@ var _ = Describe("MediaType", func() {
 
 	Context("with no DSL", func() {
 		BeforeEach(func() {
-			name = "foo"
+			name = "application/foo"
 		})
 
 		It("produces an error", func() {
@@ -48,7 +48,7 @@ var _ = Describe("MediaType", func() {
 		const attName = "att"
 
 		BeforeEach(func() {
-			name = "foo"
+			name = "application/foo"
 			dsl = func() {
 				Attributes(func() {
 					Attribute(attName)
@@ -72,7 +72,7 @@ var _ = Describe("MediaType", func() {
 		const description = "desc"
 
 		BeforeEach(func() {
-			name = "foo"
+			name = "application/foo"
 			dsl = func() {
 				Description(description)
 				Attributes(func() {
@@ -93,14 +93,14 @@ var _ = Describe("MediaType", func() {
 		const linkName = "link"
 		var link1Name, link2Name string
 		var link2View string
-		var linkedMT1, linkedMT2 *MediaTypeDefinition
+		var mt1, mt2 *MediaTypeDefinition
 
 		BeforeEach(func() {
 			name = "foo"
 			link1Name = "l1"
 			link2Name = "l2"
 			link2View = "l2v"
-			linkedMT1 = NewMediaTypeDefinition("MT1", "MT1", func() {
+			mt1 = NewMediaTypeDefinition("application/mt1", "application/mt1", func() {
 				Attributes(func() {
 					Attribute("foo")
 				})
@@ -112,7 +112,7 @@ var _ = Describe("MediaType", func() {
 				})
 			})
 			InitDesign()
-			linkedMT2 = NewMediaTypeDefinition("MT2", "MT2", func() {
+			mt2 = NewMediaTypeDefinition("application/mt2", "application/mt2", func() {
 				Attributes(func() {
 					Attribute("foo")
 				})
@@ -124,13 +124,13 @@ var _ = Describe("MediaType", func() {
 				})
 			})
 			Design.MediaTypes = make(map[string]*MediaTypeDefinition)
-			Design.MediaTypes["MT1"] = linkedMT1
-			Design.MediaTypes["MT2"] = linkedMT2
+			Design.MediaTypes["application/mt1"] = mt1
+			Design.MediaTypes["application/mt2"] = mt2
 			dsl = func() {
 				Attributes(func() {
 					Attributes(func() {
-						Attribute(link1Name, linkedMT1)
-						Attribute(link2Name, linkedMT2)
+						Attribute(link1Name, mt1)
+						Attribute(link2Name, mt2)
 					})
 					Links(func() {
 						Link(link1Name)
@@ -164,7 +164,7 @@ var _ = Describe("MediaType", func() {
 		const viewAtt = "att"
 
 		BeforeEach(func() {
-			name = "foo"
+			name = "application/foo"
 			dsl = func() {
 				Attributes(func() {
 					Attribute(viewAtt)
@@ -203,8 +203,10 @@ var _ = Describe("CollectionOf", func() {
 		var col *MediaTypeDefinition
 		BeforeEach(func() {
 			Design = nil
-			mt := MediaType("MT", func() { Attribute("id") })
+			mt := MediaType("application/vnd.example", func() { Attribute("id") })
+			Errors = nil
 			col = CollectionOf(mt)
+			Ω(Errors).ShouldNot(HaveOccurred())
 		})
 
 		JustBeforeEach(func() {
@@ -217,6 +219,37 @@ var _ = Describe("CollectionOf", func() {
 			Ω(col.Identifier).ShouldNot(BeEmpty())
 			Ω(col.TypeName).ShouldNot(BeEmpty())
 			Ω(Design.MediaTypes).Should(HaveKey(col.Identifier))
+		})
+	})
+
+	Context("defined with the media type identifier", func() {
+		var col *MediaTypeDefinition
+		BeforeEach(func() {
+			Design = nil
+			MediaType("application/vnd.example+json", func() { Attribute("id") })
+			col = MediaType("application/vnd.parent+json", func() { Attribute("mt", CollectionOf("application/vnd.example")) })
+		})
+
+		JustBeforeEach(func() {
+			RunDSL()
+			Ω(Errors).ShouldNot(HaveOccurred())
+		})
+
+		It("produces a media type", func() {
+			Ω(col).ShouldNot(BeNil())
+			Ω(col.Identifier).Should(Equal("application/vnd.parent+json"))
+			Ω(col.TypeName).Should(Equal("Parent"))
+			Ω(col.Type).ShouldNot(BeNil())
+			Ω(col.Type.ToObject()).ShouldNot(BeNil())
+			Ω(col.Type.ToObject()).Should(HaveKey("mt"))
+			mt := col.Type.ToObject()["mt"]
+			Ω(mt.Type).ShouldNot(BeNil())
+			Ω(mt.Type).Should(BeAssignableToTypeOf(&MediaTypeDefinition{}))
+			Ω(mt.Type.Name()).Should(Equal("array"))
+			et := mt.Type.ToArray().ElemType
+			Ω(et).ShouldNot(BeNil())
+			Ω(et.Type).Should(BeAssignableToTypeOf(&MediaTypeDefinition{}))
+			Ω(et.Type.(*MediaTypeDefinition).Identifier).Should(Equal("application/vnd.example+json"))
 		})
 	})
 })
