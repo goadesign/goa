@@ -445,13 +445,10 @@ func (a *APIDefinition) MediaTypeWithIdentifier(id string) *MediaTypeDefinition 
 
 // CanonicalIdentifier returns the media type identifier sans suffix
 // which is what the DSL uses to store and lookup media types.
-// Note: the caller is responsible for validating that the given
-// identifier is a valid media type identifier.
-// Passing an invalid media type identifier causes a panic.
 func CanonicalIdentifier(identifier string) string {
 	base, params, err := mime.ParseMediaType(identifier)
 	if err != nil {
-		panic("invalid media type identifier " + identifier)
+		return identifier
 	}
 	id := base
 	if i := strings.Index(id, "+"); i != -1 {
