@@ -2,6 +2,7 @@ package design
 
 import (
 	"fmt"
+	"mime"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -424,6 +425,36 @@ func (a *APIDefinition) Example(dt DataType) interface{} {
 		a.rand = NewRandomGenerator(a.Name)
 	}
 	return dt.Example(a.rand)
+}
+
+// MediaTypeWithIdentifier returns the media type with a matching
+// media type identifier. Two media type identifiers match if their
+// values sans suffix match. So for example "application/vnd.foo+xml",
+// "application/vnd.foo+json" and "application/vnd.foo" all match.
+func (a *APIDefinition) MediaTypeWithIdentifier(id string) *MediaTypeDefinition {
+	canonicalID := CanonicalIdentifier(id)
+	var mtwi *MediaTypeDefinition
+	for _, mt := range a.MediaTypes {
+		if canonicalID == CanonicalIdentifier(mt.Identifier) {
+			mtwi = mt
+			break
+		}
+	}
+	return mtwi
+}
+
+// CanonicalIdentifier returns the media type identifier sans suffix
+// which is what the DSL uses to store and lookup media types.
+func CanonicalIdentifier(identifier string) string {
+	base, params, err := mime.ParseMediaType(identifier)
+	if err != nil {
+		return identifier
+	}
+	id := base
+	if i := strings.Index(id, "+"); i != -1 {
+		id = id[:i]
+	}
+	return mime.FormatMediaType(id, params)
 }
 
 // NewResourceDefinition creates a resource definition but does not

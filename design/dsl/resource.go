@@ -75,11 +75,11 @@ func DefaultMedia(val interface{}) {
 			if m.UserTypeDefinition == nil {
 				ReportError("invalid media type specification, media type is not initialized")
 			} else {
-				r.MediaType = m.Identifier
+				r.MediaType = design.CanonicalIdentifier(m.Identifier)
 				m.Resource = r
 			}
 		} else if identifier, ok := val.(string); ok {
-			r.MediaType = identifier
+			r.MediaType = design.CanonicalIdentifier(identifier)
 		} else {
 			ReportError("media type must be a string or a *design.MediaTypeDefinition, got %#v", val)
 		}

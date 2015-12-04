@@ -154,13 +154,17 @@ func Headers(dsl func()) {
 			ReportError("headers already defined")
 			return
 		}
-		var mtid string
-		if pa, ok := r.Parent.(*design.ResourceDefinition); ok {
-			mtid = pa.MediaType
-		} else if pa, ok := r.Parent.(*design.ActionDefinition); ok {
-			mtid = pa.Parent.MediaType
+		var h *design.AttributeDefinition
+		switch actual := r.Parent.(type) {
+		case *design.ResourceDefinition:
+			h = newAttribute(actual.MediaType)
+		case *design.ActionDefinition:
+			h = newAttribute(actual.Parent.MediaType)
+		case nil: // API ResponseTemplate
+			h = &design.AttributeDefinition{}
+		default:
+			ReportError("invalid use of Response or ResponseTemplate")
 		}
-		h := newAttribute(mtid)
 		if executeDSL(dsl, h) {
 			r.Headers = h
 		}
@@ -261,7 +265,7 @@ func Payload(p interface{}, dsls ...func()) {
 // as base type.
 func newAttribute(baseMT string) *design.AttributeDefinition {
 	var base design.DataType
-	if mt, ok := design.Design.MediaTypes[baseMT]; ok {
+	if mt := design.Design.MediaTypeWithIdentifier(baseMT); mt != nil {
 		base = mt.Type
 	}
 	return &design.AttributeDefinition{Reference: base}

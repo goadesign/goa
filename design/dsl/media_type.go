@@ -63,16 +63,39 @@ func MediaType(identifier string, dsl func()) *design.MediaTypeDefinition {
 		design.Design.MediaTypes = make(map[string]*design.MediaTypeDefinition)
 	}
 	if topLevelDefinition(true) {
+		// Validate Media Type
 		identifier, params, err := mime.ParseMediaType(identifier)
 		if err != nil {
 			ReportError("invalid media type identifier %#v: %s",
 				identifier, err)
+			// We don't return so that other errors may be
+			// captured in this one run.
+			identifier = "plain/text"
 		}
-		slash := strings.Index(identifier, "/")
-		if slash == -1 {
-			identifier += "/json"
+		canonicalID := design.CanonicalIdentifier(identifier)
+		// Validate that media type identifier doesn't clash
+		if _, ok := design.Design.MediaTypes[canonicalID]; ok {
+			ReportError("media type %#v is defined twice", identifier)
+			return nil
+		}
+		parts := strings.Split(identifier, "+")
+		// Make sure it has the `+json` suffix (TBD update when goa supports other encodings)
+		if len(parts) > 1 {
+			parts = parts[1:]
+			found := false
+			for _, part := range parts {
+				if part == "json" {
+					found = true
+					break
+				}
+			}
+			if !found {
+				identifier += "+json"
+			}
 		}
 		identifier = mime.FormatMediaType(identifier, params)
+		// Concoct a Go type name from the identifier, should it be possible to set it in the DSL?
+		// pros: control the type name generated, cons: not needed in DSL, adds one more thing to worry about
 		elems := strings.Split(identifier, ".")
 		elems = strings.Split(elems[len(elems)-1], "/")
 		elems = strings.Split(elems[0], "+")
@@ -81,12 +104,9 @@ func MediaType(identifier string, dsl func()) *design.MediaTypeDefinition {
 			mediaTypeCount++
 			typeName = fmt.Sprintf("MediaType%d", mediaTypeCount)
 		}
-		if _, ok := design.Design.MediaTypes[identifier]; ok {
-			ReportError("media type %#v is defined twice", identifier)
-			return nil
-		}
+		// Now save the type in the API media types map
 		mt := design.NewMediaTypeDefinition(typeName, identifier, dsl)
-		design.Design.MediaTypes[identifier] = mt
+		design.Design.MediaTypes[canonicalID] = mt
 		return mt
 	}
 	return nil
@@ -284,16 +304,24 @@ func Link(name string, view ...string) {
 // actions. This function can be called from any place where a media type can be used.
 // The resulting media type identifier is built from the element media type by appending the media
 // type parameter "type" with value "collection".
-func CollectionOf(m *design.MediaTypeDefinition, dsl ...func()) *design.MediaTypeDefinition {
+func CollectionOf(v interface{}, dsl ...func()) *design.MediaTypeDefinition {
+	var m *design.MediaTypeDefinition
+	var ok bool
+	m, ok = v.(*design.MediaTypeDefinition)
+	if !ok {
+		if id, ok := v.(string); ok {
+			m = design.Design.MediaTypes[design.CanonicalIdentifier(id)]
+		}
+	}
+	if m == nil {
+		ReportError("invalid CollectionOf argument: not a media type and not a known media type identifier")
+		return nil
+	}
 	id := m.Identifier
 	mediatype, params, err := mime.ParseMediaType(id)
 	if err != nil {
 		ReportError("invalid media type identifier %#v: %s", id, err)
 		return nil
-	}
-	slash := strings.Index(mediatype, "/")
-	if slash == -1 {
-		mediatype += "/json"
 	}
 	hasType := false
 	for param := range params {
@@ -314,10 +342,18 @@ func CollectionOf(m *design.MediaTypeDefinition, dsl ...func()) *design.MediaTyp
 			if len(dsl) > 0 {
 				executeDSL(dsl[0], mt)
 			}
+			if mt.Views == nil {
+				// If the DSL didn't create any views (or there is no DSL at all)
+				// then inherit the views from the collection element.
+				mt.Views = make(map[string]*design.ViewDefinition)
+				for n, v := range m.Views {
+					mt.Views[n] = v
+				}
+			}
 		}
 	})
 	if executeDSL(mt.DSL, mt) {
-		design.Design.MediaTypes[id] = mt
+		design.Design.MediaTypes[design.CanonicalIdentifier(id)] = mt
 	}
 	return mt
 }
