@@ -121,8 +121,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 				Headers:      r.Headers.Merge(a.Headers),
 				Routes:       a.Routes,
 				Responses:    MergeResponses(r.Responses, a.Responses),
-				MediaTypes:   api.MediaTypes,
-				Types:        api.Types,
+				API:          api,
 			}
 			return g.ContextsWriter.Execute(&ctxData)
 		})
@@ -177,12 +176,12 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	title = fmt.Sprintf("%s: Application Resource Href Factories", api.Name)
 	g.ResourcesWriter.WriteHeader(title, TargetPackage, nil)
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
-		m, ok := api.MediaTypes[r.MediaType]
+		m := api.MediaTypeWithIdentifier(r.MediaType)
 		var identifier string
-		if ok {
+		if m != nil {
 			identifier = m.Identifier
 		} else {
-			identifier = "application/text"
+			identifier = "plain/text"
 		}
 		canoTemplate := r.URITemplate()
 		canoTemplate = design.WildcardRegex.ReplaceAllLiteralString(canoTemplate, "/%v")
