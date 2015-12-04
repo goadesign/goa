@@ -261,7 +261,7 @@ func Payload(p interface{}, dsls ...func()) {
 // as base type.
 func newAttribute(baseMT string) *design.AttributeDefinition {
 	var base design.DataType
-	if mt, ok := design.Design.MediaTypes[baseMT]; ok {
+	if mt := design.Design.MediaTypeWithIdentifier(baseMT); mt != nil {
 		base = mt.Type
 	}
 	return &design.AttributeDefinition{Reference: base}
