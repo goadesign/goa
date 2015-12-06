@@ -198,6 +198,48 @@ var _ = Describe("MediaType", func() {
 	})
 })
 
+var _ = Describe("Duplicate media types", func() {
+	var mt *MediaTypeDefinition
+	var duplicate *MediaTypeDefinition
+	const id = "application/foo"
+	const attName = "bar"
+	var dsl = func() {
+		Attributes(func() {
+			Attribute(attName)
+		})
+		View("default", func() { Attribute(attName) })
+	}
+
+	BeforeEach(func() {
+		Design = nil
+		Errors = nil
+		mt = MediaType(id, dsl)
+		Ω(Errors).ShouldNot(HaveOccurred())
+		duplicate = MediaType(id, dsl)
+	})
+
+	It("produces an error", func() {
+		Ω(Errors).Should(HaveOccurred())
+	})
+
+	Context("with a response definition using the duplicate", func() {
+		BeforeEach(func() {
+			Resource("foo", func() {
+				Action("show", func() {
+					Routing(GET(""))
+					Response(OK, func() {
+						Media(duplicate)
+					})
+				})
+			})
+		})
+
+		It("does not panic", func() {
+			Ω(func() { RunDSL() }).ShouldNot(Panic())
+		})
+	})
+})
+
 var _ = Describe("CollectionOf", func() {
 	Context("used on a global variable", func() {
 		var col *MediaTypeDefinition
