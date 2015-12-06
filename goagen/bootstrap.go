@@ -1,8 +1,6 @@
 package main
 
 import (
-	"os"
-
 	"github.com/raphael/goa/goagen/codegen"
 	"github.com/raphael/goa/goagen/gen_app"
 	"github.com/raphael/goa/goagen/gen_client"
@@ -41,9 +39,7 @@ func (a *BootstrapCommand) RegisterFlags(r codegen.FlagRegistry) {
 }
 
 // Run runs each known command and returns all the generated files and/or errors.
-func (a *BootstrapCommand) Run() ([]string, error) {
-	var all []string
-	var err error
+func (a *BootstrapCommand) Run() (all []string, err error) {
 	for _, c := range BootstrapCommands {
 		if c != a {
 			var files []string
@@ -54,11 +50,6 @@ func (a *BootstrapCommand) Run() ([]string, error) {
 			all = append(all, files...)
 		}
 	}
-	if err != nil {
-		for _, f := range all {
-			os.Remove(f)
-		}
-		return nil, err
-	}
-	return all, nil
+
+	return
 }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/raphael/goa/design"
 	"github.com/raphael/goa/goagen/codegen"
+	"github.com/raphael/goa/goagen/utils"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -43,12 +44,21 @@ func NewGenerator() (*Generator, error) {
 }
 
 // Generate produces the skeleton main.
-func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
+func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) {
+	go utils.Catch(nil, func() { g.Cleanup() })
+
+	defer func() {
+		if err != nil {
+			g.Cleanup()
+		}
+	}()
+
 	mainFile := filepath.Join(codegen.OutputDir, "main.go")
 	if Force {
 		os.Remove(mainFile)
 	}
-	_, err := os.Stat(mainFile)
+	g.genfiles = append(g.genfiles, mainFile)
+	_, err = os.Stat(mainFile)
 	funcs := template.FuncMap{
 		"tempvar":            tempvar,
 		"generateJSONSchema": generateJSONSchema,
@@ -56,15 +66,16 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		"okResp":             okResp,
 	}
 	if err != nil {
-		tmpl, err := template.New("main").Funcs(funcs).Parse(mainTmpl)
+		var tmpl *template.Template
+		tmpl, err = template.New("main").Funcs(funcs).Parse(mainTmpl)
 		if err != nil {
 			panic(err.Error()) // bug
 		}
 		gg := codegen.NewGoGenerator(mainFile)
-		g.genfiles = []string{mainFile}
-		outPkg, err := filepath.Rel(os.Getenv("GOPATH"), codegen.OutputDir)
+		var outPkg string
+		outPkg, err = filepath.Rel(os.Getenv("GOPATH"), codegen.OutputDir)
 		if err != nil {
-			return nil, err
+			return
 		}
 		outPkg = strings.TrimPrefix(outPkg, "src/")
 		appPkg := filepath.Join(outPkg, "app")
@@ -84,14 +95,11 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 			"Name":      AppName,
 			"Resources": api.Resources,
 		}
-		err = tmpl.Execute(gg, data)
-		if err != nil {
-			g.Cleanup()
-			return nil, err
+		if err = tmpl.Execute(gg, data); err != nil {
+			return
 		}
-		if err := gg.FormatCode(); err != nil {
-			g.Cleanup()
-			return nil, err
+		if err = gg.FormatCode(); err != nil {
+			return
 		}
 	}
 	tmpl, err := template.New("ctrl").Funcs(funcs).Parse(ctrlTmpl)
@@ -100,7 +108,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	}
 	imp, err := filepath.Rel(filepath.Join(os.Getenv("GOPATH"), "src"), codegen.OutputDir)
 	if err != nil {
-		return nil, err
+		return
 	}
 	imp = filepath.Join(imp, "app")
 	imports := []*codegen.ImportSpec{codegen.SimpleImport(imp)}
@@ -111,25 +119,22 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 				return err
 			}
 		}
+		g.genfiles = append(g.genfiles, filename)
 		if _, err := os.Stat(filename); err != nil {
 			resGen := codegen.NewGoGenerator(filename)
-			g.genfiles = append(g.genfiles, filename)
 			resGen.WriteHeader("", "main", imports)
 			err := tmpl.Execute(resGen, r)
 			if err != nil {
-				g.Cleanup()
 				return err
 			}
 			if err := resGen.FormatCode(); err != nil {
-				g.Cleanup()
 				return err
 			}
 		}
 		return nil
 	})
 	if err != nil {
-		g.Cleanup()
-		return nil, err
+		return
 	}
 
 	return g.genfiles, nil
