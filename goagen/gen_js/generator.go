@@ -11,6 +11,7 @@ import (
 
 	"github.com/raphael/goa/design"
 	"github.com/raphael/goa/goagen/codegen"
+	"github.com/raphael/goa/goagen/utils"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -43,7 +44,15 @@ func NewGenerator() (*Generator, error) {
 }
 
 // Generate produces the skeleton main.
-func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
+func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) {
+	go utils.Catch(nil, func() { g.Cleanup() })
+
+	defer func() {
+		if err != nil {
+			g.Cleanup()
+		}
+	}()
+
 	if Host == "" {
 		Host = api.Host
 	}
@@ -51,12 +60,13 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		return nil, fmt.Errorf("missing host value, specify it with --host")
 	}
 	codegen.OutputDir = filepath.Join(codegen.OutputDir, "js")
-	if err := os.RemoveAll(codegen.OutputDir); err != nil {
-		return nil, err
+	if err = os.RemoveAll(codegen.OutputDir); err != nil {
+		return
 	}
-	if err := os.MkdirAll(codegen.OutputDir, 0755); err != nil {
-		return nil, err
+	if err = os.MkdirAll(codegen.OutputDir, 0755); err != nil {
+		return
 	}
+	g.genfiles = append(g.genfiles, codegen.OutputDir)
 	funcs := template.FuncMap{
 		"title":   strings.Title,
 		"join":    strings.Join,
@@ -68,7 +78,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	if err != nil {
 		panic(err.Error()) // bug
 	}
-	g.genfiles = []string{filePath}
+	g.genfiles = append(g.genfiles, filePath)
 	if Scheme == "" && len(api.Schemes) > 0 {
 		Scheme = api.Schemes[0]
 	}
@@ -78,15 +88,12 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		"Scheme":  Scheme,
 		"Timeout": int64(Timeout / time.Millisecond),
 	}
-	file, err := os.Create(filePath)
-	if err != nil {
-		g.Cleanup()
-		return nil, err
+	var file *os.File
+	if file, err = os.Create(filePath); err != nil {
+		return
 	}
-	err = tmpl.Execute(file, data)
-	if err != nil {
-		g.Cleanup()
-		return nil, err
+	if err = tmpl.Execute(file, data); err != nil {
+		return
 	}
 	actions := make(map[string][]*design.ActionDefinition)
 	api.IterateResources(func(res *design.ResourceDefinition) error {
@@ -99,8 +106,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 			return nil
 		})
 	})
-	tmpl, err = template.New("jsFuncs").Funcs(funcs).Parse(jsFuncsT)
-	if err != nil {
+	if tmpl, err = template.New("jsFuncs").Funcs(funcs).Parse(jsFuncsT); err != nil {
 		panic(err.Error()) // bug
 	}
 	var exampleAction *design.ActionDefinition
@@ -117,10 +123,8 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 			if exampleAction == nil && a.Routes[0].Verb == "GET" {
 				exampleAction = a
 			}
-			err = tmpl.Execute(file, a)
-			if err != nil {
-				g.Cleanup()
-				return nil, err
+			if err = tmpl.Execute(file, a); err != nil {
+				return
 			}
 		}
 	}
@@ -129,13 +133,10 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 
 	if exampleAction != nil {
 		filePath = filepath.Join(codegen.OutputDir, "index.html")
-		file, err = os.Create(filePath)
-		if err != nil {
-			g.Cleanup()
-			return nil, err
+		if file, err = os.Create(filePath); err != nil {
+			return
 		}
-		tmpl, err = template.New("exampleHTML").Funcs(funcs).Parse(exampleT)
-		if err != nil {
+		if tmpl, err = template.New("exampleHTML").Funcs(funcs).Parse(exampleT); err != nil {
 			panic(err.Error()) // bug
 		}
 		g.genfiles = append(g.genfiles, filePath)
@@ -176,18 +177,15 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		file.Close()
 
 		filePath = filepath.Join(codegen.OutputDir, "axios.min.js")
-		file, err = os.Create(filePath)
-		if err != nil {
-			g.Cleanup()
-			return nil, err
+		if file, err = os.Create(filePath); err != nil {
+			return
 		}
 		g.genfiles = append(g.genfiles, filePath)
 		file.Write([]byte(axios))
 		file.Close()
 
 		controllerFile := filepath.Join(codegen.OutputDir, "example.go")
-		tmpl, err := template.New("exampleController").Parse(exampleCtrlT)
-		if err != nil {
+		if tmpl, err = template.New("exampleController").Parse(exampleCtrlT); err != nil {
 			panic(err.Error()) // bug
 		}
 		gg := codegen.NewGoGenerator(controllerFile)
@@ -196,18 +194,17 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 			codegen.SimpleImport("github.com/julienschmidt/httprouter"),
 			codegen.SimpleImport("github.com/raphael/goa"),
 		}
+		g.genfiles = append(g.genfiles, controllerFile)
 		gg.WriteHeader(fmt.Sprintf("%s JavaScript Client Example", api.Name), "js", imports)
 		data := map[string]interface{}{
 			"ServeDir": codegen.OutputDir,
 		}
-		err = tmpl.Execute(gg, data)
-		if err != nil {
-			return nil, err
+		if err = tmpl.Execute(gg, data); err != nil {
+			return
 		}
-		if err := gg.FormatCode(); err != nil {
-			return nil, err
+		if err = gg.FormatCode(); err != nil {
+			return
 		}
-		g.genfiles = append(g.genfiles, controllerFile)
 	}
 
 	return g.genfiles, nil
