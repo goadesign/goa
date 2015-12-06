@@ -133,7 +133,9 @@ func MediaType(identifier string, dsl func()) *design.MediaTypeDefinition {
 func Media(val interface{}) {
 	if r, ok := responseDefinition(true); ok {
 		if m, ok := val.(*design.MediaTypeDefinition); ok {
-			r.MediaType = m.Identifier
+			if m != nil {
+				r.MediaType = m.Identifier
+			}
 		} else if identifier, ok := val.(string); ok {
 			r.MediaType = identifier
 		} else {
