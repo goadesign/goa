@@ -14,6 +14,7 @@ import (
 	"github.com/raphael/goa/goagen/gen_main"
 	"github.com/raphael/goa/goagen/gen_schema"
 	"github.com/raphael/goa/goagen/gen_swagger"
+	"github.com/raphael/goa/goagen/utils"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -30,23 +31,43 @@ var Commands = []codegen.Command{
 }
 
 func main() {
-	files, err := command().Run()
+	var (
+		files            []string
+		err              error
+		terminatedByUser bool
+	)
+
+	cleanup := func() {
+		for _, f := range files {
+			os.RemoveAll(f)
+		}
+	}
+
+	go utils.Catch(nil, func() {
+		terminatedByUser = true
+	})
+
+	files, err = command().Run()
+
+	if terminatedByUser {
+		cleanup()
+		return
+	}
+
 	if err != nil {
+		cleanup()
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
+
 	rels := make([]string, len(files))
 	cwd, err := os.Getwd()
-	if err != nil {
-		rels = files
-	} else {
-		for i, f := range files {
-			r, err := filepath.Rel(cwd, f)
-			if err == nil {
-				rels[i] = r
-			} else {
-				rels[i] = f
-			}
+	for i, f := range files {
+		r, err := filepath.Rel(cwd, f)
+		if err == nil {
+			rels[i] = r
+		} else {
+			rels[i] = f
 		}
 	}
 	fmt.Println(strings.Join(rels, "\n"))
