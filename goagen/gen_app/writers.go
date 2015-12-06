@@ -129,6 +129,7 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 	funcMap["goify"] = codegen.Goify
 	funcMap["gotypename"] = codegen.GoTypeName
 	funcMap["typeUnmarshaler"] = codegen.TypeUnmarshaler
+	funcMap["userTypeUnmarshalerImpl"] = codegen.UserTypeUnmarshalerImpl
 	funcMap["validationChecker"] = codegen.ValidationChecker
 	funcMap["tabs"] = codegen.Tabs
 	funcMap["add"] = func(a, b int) int { return a + b }
@@ -136,8 +137,9 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 	if err != nil {
 		return nil, err
 	}
-	ctxNewTmpl, err := template.New("new").Funcs(
-		cw.FuncMap).Funcs(template.FuncMap{
+	ctxNewTmpl, err := template.New("new").
+		Funcs(cw.FuncMap).
+		Funcs(template.FuncMap{
 		"newCoerceData":  newCoerceData,
 		"arrayAttribute": arrayAttribute,
 	}).Parse(ctxNewT)
@@ -148,7 +150,7 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 	if err != nil {
 		return nil, err
 	}
-	payloadTmpl, err := template.New("payload").Funcs(cw.FuncMap).Parse(payloadT)
+	payloadTmpl, err := template.New("payload").Funcs(funcMap).Parse(payloadT)
 	if err != nil {
 		return nil, err
 	}
@@ -264,6 +266,8 @@ func NewMediaTypesWriter(filename string) (*MediaTypesWriter, error) {
 	funcMap["recursiveValidate"] = codegen.RecursiveChecker
 	funcMap["tempvar"] = codegen.Tempvar
 	funcMap["newDumpData"] = newDumpData
+	funcMap["userTypeUnmarshalerImpl"] = codegen.UserTypeUnmarshalerImpl
+	funcMap["mediaTypeMarshalerImpl"] = codegen.MediaTypeMarshalerImpl
 	mediaTypeTmpl, err := template.New("media type").Funcs(funcMap).Parse(mediaTypeT)
 	if err != nil {
 		return nil, err
@@ -288,6 +292,8 @@ func NewUserTypesWriter(filename string) (*UserTypesWriter, error) {
 	funcMap["gotypedef"] = codegen.GoTypeDef
 	funcMap["goify"] = codegen.Goify
 	funcMap["gotypename"] = codegen.GoTypeName
+	funcMap["userTypeUnmarshalerImpl"] = codegen.UserTypeUnmarshalerImpl
+	funcMap["userTypeMarshalerImpl"] = codegen.UserTypeMarshalerImpl
 	userTypeTmpl, err := template.New("user type").Funcs(funcMap).Parse(userTypeT)
 	if err != nil {
 		return nil, err
@@ -420,12 +426,12 @@ type {{gotypename .Payload 1}} {{gotypedef .Payload 0 false false}}
 	// template input: *ContextTemplateData
 	newPayloadT = `// New{{gotypename .Payload 0}} instantiates a {{gotypename .Payload 0}} from a raw request body.
 // It validates each field and returns an error if any validation fails.
-func New{{gotypename .Payload 0}}(raw interface{}) ({{gotyperef .Payload 0}}, error) {
-	var err error
-	var p {{gotyperef .Payload 1}}
+func New{{gotypename .Payload 0}}(raw interface{}) (p {{gotyperef .Payload 0}}, err error) {
 {{typeUnmarshaler .Payload "payload" "raw" "p"}}
-	return p, err
-}
+	return
+}{{if (not .Payload.IsPrimitive)}}
+
+{{userTypeUnmarshalerImpl .Payload "payload"}}{{end}}
 `
 
 	// ctrlT generates the controller interface for a given resource.
@@ -481,23 +487,19 @@ const (
 // validations. Raw data is defined by data that the JSON unmarshaler would create when unmarshaling
 // into a variable of type interface{}. See https://golang.org/pkg/encoding/json/#Unmarshal for the
 // complete list of supported data types.
-func Load{{$typeName}}(raw interface{}) ({{gotyperef . 1}}, error) {
-	var err error
-	var res {{gotyperef . 1}}
+func Load{{$typeName}}(raw interface{}) (res {{gotyperef . 1}}, err error) {
 	{{typeUnmarshaler . "" "raw" "res"}}
-	return res, err
+	return
 }
 
 // Dump produces raw data from an instance of {{$typeName}} running all the
 // validations. See Load{{$typeName}} for the definition of raw data.
-func (mt {{gotyperef . 0}}) Dump({{if gt (len $computedViews) 1}}view {{$typeName}}ViewEnum{{end}}) ({{gonative .}}, error) {
-	var err error
-	var res {{gonative .}}
-{{$mt := .}}{{if gt (len $computedViews) 1}}{{range $computedViews}}   if view == {{gotypename $mt 0}}{{goify .Name true}}View {
+func (mt {{gotyperef . 0}}) Dump({{if gt (len $computedViews) 1}}view {{$typeName}}ViewEnum{{end}}) (res {{gonative .}}, err error) {
+{{$mt := .}}{{if gt (len $computedViews) 1}}{{range $computedViews}}	if view == {{gotypename $mt 0}}{{goify .Name true}}View {
 		{{template "Dump" (newDumpData $mt (printf "%s view" .Name) "mt" "res" .Name)}}
 	}
 {{end}}{{else}}{{range $mt.ComputeViews}}{{template "Dump" (newDumpData $mt (printf "%s view" .Name) "mt" "res" .Name)}}{{/* ranges over the one element */}}
-{{end}}{{end}}	return res, err
+{{end}}{{end}}	return
 }
 
 // Validate validates the media type instance.
@@ -505,17 +507,27 @@ func (mt {{gotyperef . 0}}) Validate() (err error) {
 {{$validation := recursiveValidate .AttributeDefinition false "mt" "response" 1}}{{if $validation}}{{$validation}}
 {{end}} return
 }
+{{range $computedViews}}
+{{mediaTypeMarshalerImpl $mt .Name}}
+{{end}}
+{{userTypeUnmarshalerImpl .UserTypeDefinition "load"}}
 `
 
 	// dumpT generates the code for dumping a media type or media type collection element.
-	dumpT = `{{if .MediaType.IsArray}}	res = make({{gonative .MediaType}}, len({{.Source}}))
+	dumpT = `{{if .MediaType.IsArray}}	{{.Target}} = make({{gonative .MediaType}}, len({{.Source}}))
 {{$tmp := tempvar}}	for i, {{$tmp}} := range {{.Source}} {
-		{{template "Dump" (newDumpData .MediaType.ToArray.ElemType.Type (printf "%s[*]" .Context) $tmp (printf "%s[i]" .Target) .View)}}
+{{$tmpel := tempvar}}		var {{$tmpel}} {{gonative .MediaType.ToArray.ElemType.Type}}
+		{{template "Dump" (newDumpData .MediaType.ToArray.ElemType.Type (printf "%s[*]" .Context) $tmp $tmpel .View)}}
+		{{.Target}}[i] = {{$tmpel}}
 	}{{else}}{{typeMarshaler .MediaType .Context .Source .Target .View}}{{end}}`
 
 	// userTypeT generates the code for a user type.
 	// template input: *design.UserTypeDefinition
 	userTypeT = `// {{if .Description}}{{.Description}}{{else}}{{gotypename . 0}} type{{end}}
 type {{gotypename . 0}} {{gotypedef . 0 false false}}
+
+{{userTypeMarshalerImpl .}}
+
+{{userTypeUnmarshalerImpl . "load"}}
 `
 )
