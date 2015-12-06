@@ -59,7 +59,6 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 
 	os.RemoveAll(JSONSchemaDir())
 	os.MkdirAll(JSONSchemaDir(), 0755)
-	g.genfiles = append(g.genfiles, JSONSchemaDir())
 	s := APISchema(api)
 	js, err := s.JSON()
 	if err != nil {
