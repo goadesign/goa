@@ -24,6 +24,8 @@ type (
 		Kind() Kind
 		// Name returns the type name.
 		Name() string
+		// IsPrimitive returns true if the underlying type is one of the primitive types.
+		IsPrimitive() bool
 		// IsObject returns true if the underlying type is an object, a user type which
 		// is an object or a media type whose type is an object.
 		IsObject() bool
@@ -164,6 +166,9 @@ func (p Primitive) Name() string {
 	}
 }
 
+// IsPrimitive returns true.
+func (p Primitive) IsPrimitive() bool { return true }
+
 // IsObject returns false.
 func (p Primitive) IsObject() bool { return false }
 
@@ -261,6 +266,9 @@ func (a *Array) Name() string {
 	return "array"
 }
 
+// IsPrimitive returns false.
+func (a *Array) IsPrimitive() bool { return false }
+
 // IsObject returns false.
 func (a *Array) IsObject() bool { return false }
 
@@ -305,6 +313,9 @@ func (o Object) Kind() Kind { return ObjectKind }
 
 // Name returns the type name.
 func (o Object) Name() string { return "object" }
+
+// IsPrimitive returns false.
+func (o Object) IsPrimitive() bool { return false }
 
 // IsObject returns true.
 func (o Object) IsObject() bool { return true }
@@ -360,6 +371,9 @@ func (h *Hash) Kind() Kind { return HashKind }
 
 // Name returns the type name.
 func (h *Hash) Name() string { return "hash" }
+
+// IsPrimitive returns false.
+func (h *Hash) IsPrimitive() bool { return false }
 
 // IsObject returns false.
 func (h *Hash) IsObject() bool { return false }
@@ -440,6 +454,9 @@ func (u *UserTypeDefinition) Kind() Kind { return UserTypeKind }
 
 // Name returns the JSON type name.
 func (u *UserTypeDefinition) Name() string { return u.Type.Name() }
+
+// IsPrimitive calls IsPrimitive on the user type underlying data type.
+func (u *UserTypeDefinition) IsPrimitive() bool { return u.Type.IsPrimitive() }
 
 // IsObject calls IsObject on the user type underlying data type.
 func (u *UserTypeDefinition) IsObject() bool { return u.Type.IsObject() }

@@ -212,7 +212,7 @@ var _ = Describe("code generation", func() {
 			JustBeforeEach(func() {
 				marshaler = codegen.TypeMarshaler(p, context, source, target)
 				codegen.TempCount = 0
-				unmarshaler = codegen.PrimitiveUnmarshaler(p, context, source, target)
+				unmarshaler = codegen.TypeUnmarshaler(p, context, source, target)
 			})
 
 			Context("integer", func() {
@@ -260,9 +260,9 @@ var _ = Describe("code generation", func() {
 			var p *Array
 
 			JustBeforeEach(func() {
-				marshaler = codegen.ArrayMarshaler(p, context, source, target)
+				marshaler = codegen.TypeMarshaler(p, context, source, target)
 				codegen.TempCount = 0
-				unmarshaler = codegen.ArrayUnmarshaler(p, context, source, target)
+				unmarshaler = codegen.TypeUnmarshaler(p, context, source, target)
 			})
 
 			BeforeEach(func() {
@@ -286,9 +286,9 @@ var _ = Describe("code generation", func() {
 			var o Object
 
 			JustBeforeEach(func() {
-				marshaler = codegen.ObjectMarshaler(o, context, source, target)
+				marshaler = codegen.TypeMarshaler(o, context, source, target)
 				codegen.TempCount = 0
-				unmarshaler = codegen.ObjectUnmarshaler(o, context, source, target)
+				unmarshaler = codegen.TypeUnmarshaler(o, context, source, target)
 			})
 
 			BeforeEach(func() {
@@ -309,9 +309,9 @@ var _ = Describe("code generation", func() {
 			var o Object
 
 			JustBeforeEach(func() {
-				marshaler = codegen.ObjectMarshaler(o, context, source, target)
+				marshaler = codegen.TypeMarshaler(o, context, source, target)
 				codegen.TempCount = 0
-				unmarshaler = codegen.ObjectUnmarshaler(o, context, source, target)
+				unmarshaler = codegen.TypeUnmarshaler(o, context, source, target)
 			})
 
 			BeforeEach(func() {
@@ -367,7 +367,7 @@ var _ = Describe("code generation", func() {
 
 				Context("unmarshaler code", func() {
 					BeforeEach(func() {
-						unmarshaler = codegen.ObjectUnmarshaler(o, context, source, target)
+						unmarshaler = codegen.TypeUnmarshaler(o, context, source, target)
 						data := map[string]interface{}{
 							"raw": `interface{}(map[string]interface{}{
 			"baz": map[string]interface{}{
@@ -469,13 +469,11 @@ const (
 	arrayUnmarshaled = `	if val, ok := raw.([]interface{}); ok {
 		p = make([]int, len(val))
 		for i, v := range val {
-			var tmp1 int
 			if f, ok := v.(float64); ok {
-				tmp1 = int(f)
+				p[i] = int(f)
 			} else {
 				err = goa.InvalidAttributeTypeError(` + "`" + `[*]` + "`" + `, v, "int", err)
 			}
-			p[i] = tmp1
 		}
 	} else {
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "array", err)
@@ -544,13 +542,11 @@ const (
 					if val, ok := v.([]interface{}); ok {
 						tmp2 = make([]int, len(val))
 						for i, v := range val {
-							var tmp3 int
 							if f, ok := v.(float64); ok {
-								tmp3 = int(f)
+								tmp2[i] = int(f)
 							} else {
 								err = goa.InvalidAttributeTypeError(` + "`" + `.Baz.Bar[*]` + "`" + `, v, "int", err)
 							}
-							tmp2[i] = tmp3
 						}
 					} else {
 						err = goa.InvalidAttributeTypeError(` + "`" + `.Baz.Bar` + "`" + `, v, "array", err)
@@ -558,13 +554,13 @@ const (
 					tmp1.Bar = tmp2
 				}
 				if v, ok := val["foo"]; ok {
-					var tmp4 int
+					var tmp3 int
 					if f, ok := v.(float64); ok {
-						tmp4 = int(f)
+						tmp3 = int(f)
 					} else {
 						err = goa.InvalidAttributeTypeError(` + "`" + `.Baz.Foo` + "`" + `, v, "int", err)
 					}
-					tmp1.Foo = tmp4
+					tmp1.Foo = tmp3
 				}
 			} else {
 				err = goa.InvalidAttributeTypeError(` + "`" + `.Baz` + "`" + `, v, "dictionary", err)
@@ -572,19 +568,21 @@ const (
 			p.Baz = tmp1
 		}
 		if v, ok := val["faz"]; ok {
-			var tmp5 int
+			var tmp4 int
 			if f, ok := v.(float64); ok {
-				tmp5 = int(f)
+				tmp4 = int(f)
 			} else {
 				err = goa.InvalidAttributeTypeError(` + "`" + `.Faz` + "`" + `, v, "int", err)
 			}
-			p.Faz = tmp5
+			p.Faz = tmp4
 		}
 	} else {
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "dictionary", err)
 	}`
 
-	mtMarshaled = `	tmp1 := map[string]interface{}{
+	mtMarshaled = `	p, err = MarshalApplication(raw, err)`
+
+	mtMarshaledImpl = `	tmp1 := map[string]interface{}{
 	}
 	if raw.Bar != nil {
 		tmp2 := map[string]interface{}{

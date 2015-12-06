@@ -47,11 +47,16 @@ type CreateAccountPayload struct {
 
 // NewCreateAccountPayload instantiates a CreateAccountPayload from a raw request body.
 // It validates each field and returns an error if any validation fails.
-func NewCreateAccountPayload(raw interface{}) (*CreateAccountPayload, error) {
-	var err error
-	var p *CreateAccountPayload
-	if val, ok := raw.(map[string]interface{}); ok {
-		p = new(CreateAccountPayload)
+func NewCreateAccountPayload(raw interface{}) (p *CreateAccountPayload, err error) {
+	p, err = UnmarshalCreateAccountPayload(raw, err)
+	return
+}
+
+// UnmarshalCreateAccountPayload unmarshals and validates a raw interface{} into an instance of CreateAccountPayload
+func UnmarshalCreateAccountPayload(source interface{}, inErr error) (target *CreateAccountPayload, err error) {
+	err = inErr
+	if val, ok := source.(map[string]interface{}); ok {
+		target = new(CreateAccountPayload)
 		if v, ok := val["name"]; ok {
 			var tmp1 string
 			if val, ok := v.(string); ok {
@@ -59,14 +64,14 @@ func NewCreateAccountPayload(raw interface{}) (*CreateAccountPayload, error) {
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Name`, v, "string", err)
 			}
-			p.Name = tmp1
+			target.Name = tmp1
 		} else {
 			err = goa.MissingAttributeError(`payload`, "name", err)
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(`payload`, raw, "dictionary", err)
+		err = goa.InvalidAttributeTypeError(`payload`, source, "dictionary", err)
 	}
-	return p, err
+	return
 }
 
 // Created sends a HTTP response with status code 201.
@@ -179,11 +184,16 @@ type UpdateAccountPayload struct {
 
 // NewUpdateAccountPayload instantiates a UpdateAccountPayload from a raw request body.
 // It validates each field and returns an error if any validation fails.
-func NewUpdateAccountPayload(raw interface{}) (*UpdateAccountPayload, error) {
-	var err error
-	var p *UpdateAccountPayload
-	if val, ok := raw.(map[string]interface{}); ok {
-		p = new(UpdateAccountPayload)
+func NewUpdateAccountPayload(raw interface{}) (p *UpdateAccountPayload, err error) {
+	p, err = UnmarshalUpdateAccountPayload(raw, err)
+	return
+}
+
+// UnmarshalUpdateAccountPayload unmarshals and validates a raw interface{} into an instance of UpdateAccountPayload
+func UnmarshalUpdateAccountPayload(source interface{}, inErr error) (target *UpdateAccountPayload, err error) {
+	err = inErr
+	if val, ok := source.(map[string]interface{}); ok {
+		target = new(UpdateAccountPayload)
 		if v, ok := val["name"]; ok {
 			var tmp2 string
 			if val, ok := v.(string); ok {
@@ -191,14 +201,14 @@ func NewUpdateAccountPayload(raw interface{}) (*UpdateAccountPayload, error) {
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Name`, v, "string", err)
 			}
-			p.Name = tmp2
+			target.Name = tmp2
 		} else {
 			err = goa.MissingAttributeError(`payload`, "name", err)
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(`payload`, raw, "dictionary", err)
+		err = goa.InvalidAttributeTypeError(`payload`, source, "dictionary", err)
 	}
-	return p, err
+	return
 }
 
 // NoContent sends a HTTP response with status code 204.
@@ -254,11 +264,16 @@ type CreateBottlePayload struct {
 
 // NewCreateBottlePayload instantiates a CreateBottlePayload from a raw request body.
 // It validates each field and returns an error if any validation fails.
-func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
-	var err error
-	var p *CreateBottlePayload
-	if val, ok := raw.(map[string]interface{}); ok {
-		p = new(CreateBottlePayload)
+func NewCreateBottlePayload(raw interface{}) (p *CreateBottlePayload, err error) {
+	p, err = UnmarshalCreateBottlePayload(raw, err)
+	return
+}
+
+// UnmarshalCreateBottlePayload unmarshals and validates a raw interface{} into an instance of CreateBottlePayload
+func UnmarshalCreateBottlePayload(source interface{}, inErr error) (target *CreateBottlePayload, err error) {
+	err = inErr
+	if val, ok := source.(map[string]interface{}); ok {
+		target = new(CreateBottlePayload)
 		if v, ok := val["color"]; ok {
 			var tmp3 string
 			if val, ok := v.(string); ok {
@@ -273,7 +288,7 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 					}
 				}
 			}
-			p.Color = tmp3
+			target.Color = tmp3
 		} else {
 			err = goa.MissingAttributeError(`payload`, "color", err)
 		}
@@ -289,7 +304,7 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 					err = goa.InvalidLengthError(`payload.Country`, tmp4, 2, true, err)
 				}
 			}
-			p.Country = tmp4
+			target.Country = tmp4
 		}
 		if v, ok := val["name"]; ok {
 			var tmp5 string
@@ -303,7 +318,7 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 					err = goa.InvalidLengthError(`payload.Name`, tmp5, 2, true, err)
 				}
 			}
-			p.Name = tmp5
+			target.Name = tmp5
 		} else {
 			err = goa.MissingAttributeError(`payload`, "name", err)
 		}
@@ -314,7 +329,7 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Region`, v, "string", err)
 			}
-			p.Region = tmp6
+			target.Region = tmp6
 		}
 		if v, ok := val["review"]; ok {
 			var tmp7 string
@@ -331,7 +346,7 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 					err = goa.InvalidLengthError(`payload.Review`, tmp7, 300, false, err)
 				}
 			}
-			p.Review = tmp7
+			target.Review = tmp7
 		}
 		if v, ok := val["sweetness"]; ok {
 			var tmp8 int
@@ -348,7 +363,7 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 					err = goa.InvalidRangeError(`payload.Sweetness`, tmp8, 5, false, err)
 				}
 			}
-			p.Sweetness = tmp8
+			target.Sweetness = tmp8
 		}
 		if v, ok := val["varietal"]; ok {
 			var tmp9 string
@@ -362,7 +377,7 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 					err = goa.InvalidLengthError(`payload.Varietal`, tmp9, 4, true, err)
 				}
 			}
-			p.Varietal = tmp9
+			target.Varietal = tmp9
 		} else {
 			err = goa.MissingAttributeError(`payload`, "varietal", err)
 		}
@@ -378,7 +393,7 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 					err = goa.InvalidLengthError(`payload.Vineyard`, tmp10, 2, true, err)
 				}
 			}
-			p.Vineyard = tmp10
+			target.Vineyard = tmp10
 		} else {
 			err = goa.MissingAttributeError(`payload`, "vineyard", err)
 		}
@@ -397,14 +412,14 @@ func NewCreateBottlePayload(raw interface{}) (*CreateBottlePayload, error) {
 					err = goa.InvalidRangeError(`payload.Vintage`, tmp11, 2020, false, err)
 				}
 			}
-			p.Vintage = tmp11
+			target.Vintage = tmp11
 		} else {
 			err = goa.MissingAttributeError(`payload`, "vintage", err)
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(`payload`, raw, "dictionary", err)
+		err = goa.InvalidAttributeTypeError(`payload`, source, "dictionary", err)
 	}
-	return p, err
+	return
 }
 
 // Created sends a HTTP response with status code 201.
@@ -552,11 +567,16 @@ type RateBottlePayload struct {
 
 // NewRateBottlePayload instantiates a RateBottlePayload from a raw request body.
 // It validates each field and returns an error if any validation fails.
-func NewRateBottlePayload(raw interface{}) (*RateBottlePayload, error) {
-	var err error
-	var p *RateBottlePayload
-	if val, ok := raw.(map[string]interface{}); ok {
-		p = new(RateBottlePayload)
+func NewRateBottlePayload(raw interface{}) (p *RateBottlePayload, err error) {
+	p, err = UnmarshalRateBottlePayload(raw, err)
+	return
+}
+
+// UnmarshalRateBottlePayload unmarshals and validates a raw interface{} into an instance of RateBottlePayload
+func UnmarshalRateBottlePayload(source interface{}, inErr error) (target *RateBottlePayload, err error) {
+	err = inErr
+	if val, ok := source.(map[string]interface{}); ok {
+		target = new(RateBottlePayload)
 		if v, ok := val["rating"]; ok {
 			var tmp12 int
 			if f, ok := v.(float64); ok {
@@ -572,14 +592,14 @@ func NewRateBottlePayload(raw interface{}) (*RateBottlePayload, error) {
 					err = goa.InvalidRangeError(`payload.Rating`, tmp12, 5, false, err)
 				}
 			}
-			p.Rating = tmp12
+			target.Rating = tmp12
 		} else {
 			err = goa.MissingAttributeError(`payload`, "rating", err)
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(`payload`, raw, "dictionary", err)
+		err = goa.InvalidAttributeTypeError(`payload`, source, "dictionary", err)
 	}
-	return p, err
+	return
 }
 
 // NoContent sends a HTTP response with status code 204.
@@ -690,11 +710,16 @@ type UpdateBottlePayload struct {
 
 // NewUpdateBottlePayload instantiates a UpdateBottlePayload from a raw request body.
 // It validates each field and returns an error if any validation fails.
-func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
-	var err error
-	var p *UpdateBottlePayload
-	if val, ok := raw.(map[string]interface{}); ok {
-		p = new(UpdateBottlePayload)
+func NewUpdateBottlePayload(raw interface{}) (p *UpdateBottlePayload, err error) {
+	p, err = UnmarshalUpdateBottlePayload(raw, err)
+	return
+}
+
+// UnmarshalUpdateBottlePayload unmarshals and validates a raw interface{} into an instance of UpdateBottlePayload
+func UnmarshalUpdateBottlePayload(source interface{}, inErr error) (target *UpdateBottlePayload, err error) {
+	err = inErr
+	if val, ok := source.(map[string]interface{}); ok {
+		target = new(UpdateBottlePayload)
 		if v, ok := val["color"]; ok {
 			var tmp13 string
 			if val, ok := v.(string); ok {
@@ -709,7 +734,7 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 					}
 				}
 			}
-			p.Color = tmp13
+			target.Color = tmp13
 		}
 		if v, ok := val["country"]; ok {
 			var tmp14 string
@@ -723,7 +748,7 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 					err = goa.InvalidLengthError(`payload.Country`, tmp14, 2, true, err)
 				}
 			}
-			p.Country = tmp14
+			target.Country = tmp14
 		}
 		if v, ok := val["name"]; ok {
 			var tmp15 string
@@ -737,7 +762,7 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 					err = goa.InvalidLengthError(`payload.Name`, tmp15, 2, true, err)
 				}
 			}
-			p.Name = tmp15
+			target.Name = tmp15
 		}
 		if v, ok := val["region"]; ok {
 			var tmp16 string
@@ -746,7 +771,7 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 			} else {
 				err = goa.InvalidAttributeTypeError(`payload.Region`, v, "string", err)
 			}
-			p.Region = tmp16
+			target.Region = tmp16
 		}
 		if v, ok := val["review"]; ok {
 			var tmp17 string
@@ -763,7 +788,7 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 					err = goa.InvalidLengthError(`payload.Review`, tmp17, 300, false, err)
 				}
 			}
-			p.Review = tmp17
+			target.Review = tmp17
 		}
 		if v, ok := val["sweetness"]; ok {
 			var tmp18 int
@@ -780,7 +805,7 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 					err = goa.InvalidRangeError(`payload.Sweetness`, tmp18, 5, false, err)
 				}
 			}
-			p.Sweetness = tmp18
+			target.Sweetness = tmp18
 		}
 		if v, ok := val["varietal"]; ok {
 			var tmp19 string
@@ -794,7 +819,7 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 					err = goa.InvalidLengthError(`payload.Varietal`, tmp19, 4, true, err)
 				}
 			}
-			p.Varietal = tmp19
+			target.Varietal = tmp19
 		}
 		if v, ok := val["vineyard"]; ok {
 			var tmp20 string
@@ -808,7 +833,7 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 					err = goa.InvalidLengthError(`payload.Vineyard`, tmp20, 2, true, err)
 				}
 			}
-			p.Vineyard = tmp20
+			target.Vineyard = tmp20
 		}
 		if v, ok := val["vintage"]; ok {
 			var tmp21 int
@@ -825,12 +850,12 @@ func NewUpdateBottlePayload(raw interface{}) (*UpdateBottlePayload, error) {
 					err = goa.InvalidRangeError(`payload.Vintage`, tmp21, 2020, false, err)
 				}
 			}
-			p.Vintage = tmp21
+			target.Vintage = tmp21
 		}
 	} else {
-		err = goa.InvalidAttributeTypeError(`payload`, raw, "dictionary", err)
+		err = goa.InvalidAttributeTypeError(`payload`, source, "dictionary", err)
 	}
-	return p, err
+	return
 }
 
 // NoContent sends a HTTP response with status code 204.
