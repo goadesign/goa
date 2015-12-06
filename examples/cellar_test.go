@@ -34,8 +34,8 @@ var _ = Describe("example cellar", func() {
 		"client/client.go",
 		"client/account.go",
 		"client/bottle.go",
-		"swagger/swagger.go",
 		"swagger/swagger.json",
+		"swagger/swagger.go",
 		"",
 	}
 

@@ -13,40 +13,59 @@ import (
 
 	"github.com/raphael/goa/design"
 	"github.com/raphael/goa/goagen/codegen"
+	"github.com/raphael/goa/goagen/utils"
 )
 
 // Generate is the generator entry point called by the meta generator.
-func Generate(api *design.APIDefinition) ([]string, error) {
+func Generate(api *design.APIDefinition) (_ []string, err error) {
+	var genfiles []string
+
+	cleanup := func() {
+		for _, f := range genfiles {
+			os.Remove(f)
+		}
+	}
+
+	go utils.Catch(nil, cleanup)
+
+	defer func() {
+		if err != nil {
+			cleanup()
+		}
+	}()
+
 	app := kingpin.New("Swagger generator", "Swagger spec generator")
 	codegen.RegisterFlags(app)
-	_, err := app.Parse(os.Args[1:])
+	_, err = app.Parse(os.Args[1:])
 	if err != nil {
 		return nil, fmt.Errorf(`invalid command line: %s. Command line was "%s"`,
 			err, strings.Join(os.Args, " "))
 	}
 	s, err := New(api)
 	if err != nil {
-		return nil, err
+		return
 	}
 	b, err := json.Marshal(s)
 	if err != nil {
-		return nil, err
+		return
 	}
 	swaggerDir := filepath.Join(codegen.OutputDir, "swagger")
 	os.RemoveAll(swaggerDir)
 	if err = os.MkdirAll(swaggerDir, 0755); err != nil {
-		return nil, err
+		return
 	}
 	swaggerFile := filepath.Join(swaggerDir, "swagger.json")
 	err = ioutil.WriteFile(swaggerFile, b, 0644)
 	if err != nil {
-		return nil, err
+		return
 	}
+	genfiles = append(genfiles, swaggerFile)
 	controllerFile := filepath.Join(swaggerDir, "swagger.go")
 	tmpl, err := template.New("swagger").Parse(swaggerTmpl)
 	if err != nil {
 		panic(err.Error()) // bug
 	}
+	genfiles = append(genfiles, controllerFile)
 	gg := codegen.NewGoGenerator(controllerFile)
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/raphael/goa"),
@@ -55,14 +74,14 @@ func Generate(api *design.APIDefinition) ([]string, error) {
 	data := map[string]interface{}{
 		"spec": string(b),
 	}
-	err = tmpl.Execute(gg, data)
-	if err != nil {
-		return nil, err
+	if err = tmpl.Execute(gg, data); err != nil {
+		return
 	}
-	if err := gg.FormatCode(); err != nil {
-		return nil, err
+	if err = gg.FormatCode(); err != nil {
+		return
 	}
-	return []string{controllerFile, swaggerFile}, nil
+
+	return genfiles, nil
 }
 
 const swaggerTmpl = `
