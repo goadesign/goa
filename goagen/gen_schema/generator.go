@@ -10,6 +10,7 @@ import (
 
 	"github.com/raphael/goa/design"
 	"github.com/raphael/goa/goagen/codegen"
+	"github.com/raphael/goa/goagen/utils"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -47,19 +48,30 @@ func JSONSchemaDir() string {
 }
 
 // Generate produces the skeleton main.
-func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
+func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) {
+	go utils.Catch(nil, func() { g.Cleanup() })
+
+	defer func() {
+		if err != nil {
+			g.Cleanup()
+		}
+	}()
+
 	os.RemoveAll(JSONSchemaDir())
 	os.MkdirAll(JSONSchemaDir(), 0755)
+	g.genfiles = append(g.genfiles, JSONSchemaDir())
 	s := APISchema(api)
 	js, err := s.JSON()
 	if err != nil {
-		return nil, err
+		return
 	}
+
 	schemaFile := filepath.Join(JSONSchemaDir(), "schema.json")
-	if err := ioutil.WriteFile(schemaFile, js, 0755); err != nil {
-		return nil, err
+	if err = ioutil.WriteFile(schemaFile, js, 0755); err != nil {
+		return
 	}
 	g.genfiles = append(g.genfiles, schemaFile)
+
 	controllerFile := filepath.Join(JSONSchemaDir(), "schema.go")
 	tmpl, err := template.New("schema").Parse(jsonSchemaTmpl)
 	if err != nil {
@@ -69,20 +81,18 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/raphael/goa"),
 	}
+	g.genfiles = append(g.genfiles, controllerFile)
 	gg.WriteHeader(fmt.Sprintf("%s JSON Hyper-schema", api.Name), "schema", imports)
 	data := map[string]interface{}{
 		"schema": string(js),
 	}
-	err = tmpl.Execute(gg, data)
-	if err != nil {
-		g.Cleanup()
-		return nil, err
+	if err = tmpl.Execute(gg, data); err != nil {
+		return
 	}
-	if err := gg.FormatCode(); err != nil {
-		g.Cleanup()
-		return nil, err
+	if err = gg.FormatCode(); err != nil {
+		return
 	}
-	g.genfiles = []string{controllerFile, schemaFile}
+
 	return g.genfiles, nil
 }
 
