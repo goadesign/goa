@@ -15,7 +15,7 @@ package app
 import "github.com/raphael/goa"
 
 // A tenant account
-// Identifier: application/vnd.goa.example.account+json
+// Identifier: application/vnd.account+json
 type Account struct {
 	// Date of creation
 	CreatedAt string
@@ -43,110 +43,21 @@ const (
 // validations. Raw data is defined by data that the JSON unmarshaler would create when unmarshaling
 // into a variable of type interface{}. See https://golang.org/pkg/encoding/json/#Unmarshal for the
 // complete list of supported data types.
-func LoadAccount(raw interface{}) (*Account, error) {
-	var err error
-	var res *Account
-	if val, ok := raw.(map[string]interface{}); ok {
-		res = new(Account)
-		if v, ok := val["created_at"]; ok {
-			var tmp22 string
-			if val, ok := v.(string); ok {
-				tmp22 = val
-			} else {
-				err = goa.InvalidAttributeTypeError(`.CreatedAt`, v, "string", err)
-			}
-			if err == nil {
-				if tmp22 != "" {
-					if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp22); err2 != nil {
-						err = goa.InvalidFormatError(`.CreatedAt`, tmp22, goa.FormatDateTime, err2, err)
-					}
-				}
-			}
-			res.CreatedAt = tmp22
-		}
-		if v, ok := val["created_by"]; ok {
-			var tmp23 string
-			if val, ok := v.(string); ok {
-				tmp23 = val
-			} else {
-				err = goa.InvalidAttributeTypeError(`.CreatedBy`, v, "string", err)
-			}
-			if err == nil {
-				if tmp23 != "" {
-					if err2 := goa.ValidateFormat(goa.FormatEmail, tmp23); err2 != nil {
-						err = goa.InvalidFormatError(`.CreatedBy`, tmp23, goa.FormatEmail, err2, err)
-					}
-				}
-			}
-			res.CreatedBy = tmp23
-		}
-		if v, ok := val["href"]; ok {
-			var tmp24 string
-			if val, ok := v.(string); ok {
-				tmp24 = val
-			} else {
-				err = goa.InvalidAttributeTypeError(`.Href`, v, "string", err)
-			}
-			res.Href = tmp24
-		}
-		if v, ok := val["id"]; ok {
-			var tmp25 int
-			if f, ok := v.(float64); ok {
-				tmp25 = int(f)
-			} else {
-				err = goa.InvalidAttributeTypeError(`.ID`, v, "int", err)
-			}
-			res.ID = tmp25
-		}
-		if v, ok := val["name"]; ok {
-			var tmp26 string
-			if val, ok := v.(string); ok {
-				tmp26 = val
-			} else {
-				err = goa.InvalidAttributeTypeError(`.Name`, v, "string", err)
-			}
-			res.Name = tmp26
-		}
-	} else {
-		err = goa.InvalidAttributeTypeError(``, raw, "dictionary", err)
-	}
-	return res, err
+func LoadAccount(raw interface{}) (res *Account, err error) {
+	res, err = UnmarshalAccount(raw, err)
+	return
 }
 
 // Dump produces raw data from an instance of Account running all the
 // validations. See LoadAccount for the definition of raw data.
-func (mt *Account) Dump(view AccountViewEnum) (map[string]interface{}, error) {
-	var err error
-	var res map[string]interface{}
+func (mt *Account) Dump(view AccountViewEnum) (res map[string]interface{}, err error) {
 	if view == AccountDefaultView {
-		if mt.CreatedAt != "" {
-			if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.CreatedAt); err2 != nil {
-				err = goa.InvalidFormatError(`default view.created_at`, mt.CreatedAt, goa.FormatDateTime, err2, err)
-			}
-		}
-		if mt.CreatedBy != "" {
-			if err2 := goa.ValidateFormat(goa.FormatEmail, mt.CreatedBy); err2 != nil {
-				err = goa.InvalidFormatError(`default view.created_by`, mt.CreatedBy, goa.FormatEmail, err2, err)
-			}
-		}
-		tmp27 := map[string]interface{}{
-			"created_at": mt.CreatedAt,
-			"created_by": mt.CreatedBy,
-			"href":       mt.Href,
-			"id":         mt.ID,
-			"name":       mt.Name,
-		}
-		res = tmp27
+		res, err = MarshalAccount(mt, err)
 	}
 	if view == AccountLinkView {
-		tmp28 := map[string]interface{}{
-			"href": mt.Href,
-			"id":   mt.ID,
-			"name": mt.Name,
-		}
-		res = tmp28
+		res, err = MarshalAccountLink(mt, err)
 	}
-	return res, err
+	return
 }
 
 // Validate validates the media type instance.
@@ -164,8 +75,116 @@ func (mt *Account) Validate() (err error) {
 	return
 }
 
+// MarshalAccount validates and renders an instance of Account into a interface{}
+// using view "default".
+func MarshalAccount(source *Account, inErr error) (target map[string]interface{}, err error) {
+	err = inErr
+	if source.CreatedAt != "" {
+		if err2 := goa.ValidateFormat(goa.FormatDateTime, source.CreatedAt); err2 != nil {
+			err = goa.InvalidFormatError(`.created_at`, source.CreatedAt, goa.FormatDateTime, err2, err)
+		}
+	}
+	if source.CreatedBy != "" {
+		if err2 := goa.ValidateFormat(goa.FormatEmail, source.CreatedBy); err2 != nil {
+			err = goa.InvalidFormatError(`.created_by`, source.CreatedBy, goa.FormatEmail, err2, err)
+		}
+	}
+	tmp22 := map[string]interface{}{
+		"created_at": source.CreatedAt,
+		"created_by": source.CreatedBy,
+		"href":       source.Href,
+		"id":         source.ID,
+		"name":       source.Name,
+	}
+	target = tmp22
+	return
+}
+
+// MarshalAccountLink validates and renders an instance of Account into a interface{}
+// using view "link".
+func MarshalAccountLink(source *Account, inErr error) (target map[string]interface{}, err error) {
+	err = inErr
+	tmp23 := map[string]interface{}{
+		"href": source.Href,
+		"id":   source.ID,
+		"name": source.Name,
+	}
+	target = tmp23
+	return
+}
+
+// UnmarshalAccount unmarshals and validates a raw interface{} into an instance of Account
+func UnmarshalAccount(source interface{}, inErr error) (target *Account, err error) {
+	err = inErr
+	if val, ok := source.(map[string]interface{}); ok {
+		target = new(Account)
+		if v, ok := val["created_at"]; ok {
+			var tmp24 string
+			if val, ok := v.(string); ok {
+				tmp24 = val
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.CreatedAt`, v, "string", err)
+			}
+			if err == nil {
+				if tmp24 != "" {
+					if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp24); err2 != nil {
+						err = goa.InvalidFormatError(`load.CreatedAt`, tmp24, goa.FormatDateTime, err2, err)
+					}
+				}
+			}
+			target.CreatedAt = tmp24
+		}
+		if v, ok := val["created_by"]; ok {
+			var tmp25 string
+			if val, ok := v.(string); ok {
+				tmp25 = val
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.CreatedBy`, v, "string", err)
+			}
+			if err == nil {
+				if tmp25 != "" {
+					if err2 := goa.ValidateFormat(goa.FormatEmail, tmp25); err2 != nil {
+						err = goa.InvalidFormatError(`load.CreatedBy`, tmp25, goa.FormatEmail, err2, err)
+					}
+				}
+			}
+			target.CreatedBy = tmp25
+		}
+		if v, ok := val["href"]; ok {
+			var tmp26 string
+			if val, ok := v.(string); ok {
+				tmp26 = val
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.Href`, v, "string", err)
+			}
+			target.Href = tmp26
+		}
+		if v, ok := val["id"]; ok {
+			var tmp27 int
+			if f, ok := v.(float64); ok {
+				tmp27 = int(f)
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.ID`, v, "int", err)
+			}
+			target.ID = tmp27
+		}
+		if v, ok := val["name"]; ok {
+			var tmp28 string
+			if val, ok := v.(string); ok {
+				tmp28 = val
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.Name`, v, "string", err)
+			}
+			target.Name = tmp28
+		}
+	} else {
+		err = goa.InvalidAttributeTypeError(`load`, source, "dictionary", err)
+	}
+	return
+}
+
 // A bottle of wine
-// Identifier: application/vnd.goa.example.bottle+json
+// Identifier: application/vnd.bottle+json
 type Bottle struct {
 	// Account that owns bottle
 	Account *Account
@@ -206,461 +225,24 @@ const (
 // validations. Raw data is defined by data that the JSON unmarshaler would create when unmarshaling
 // into a variable of type interface{}. See https://golang.org/pkg/encoding/json/#Unmarshal for the
 // complete list of supported data types.
-func LoadBottle(raw interface{}) (*Bottle, error) {
-	var err error
-	var res *Bottle
-	if val, ok := raw.(map[string]interface{}); ok {
-		res = new(Bottle)
-		if v, ok := val["account"]; ok {
-			var tmp29 *Account
-			if val, ok := v.(map[string]interface{}); ok {
-				tmp29 = new(Account)
-				if v, ok := val["created_at"]; ok {
-					var tmp30 string
-					if val, ok := v.(string); ok {
-						tmp30 = val
-					} else {
-						err = goa.InvalidAttributeTypeError(`.Account.CreatedAt`, v, "string", err)
-					}
-					if err == nil {
-						if tmp30 != "" {
-							if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp30); err2 != nil {
-								err = goa.InvalidFormatError(`.Account.CreatedAt`, tmp30, goa.FormatDateTime, err2, err)
-							}
-						}
-					}
-					tmp29.CreatedAt = tmp30
-				}
-				if v, ok := val["created_by"]; ok {
-					var tmp31 string
-					if val, ok := v.(string); ok {
-						tmp31 = val
-					} else {
-						err = goa.InvalidAttributeTypeError(`.Account.CreatedBy`, v, "string", err)
-					}
-					if err == nil {
-						if tmp31 != "" {
-							if err2 := goa.ValidateFormat(goa.FormatEmail, tmp31); err2 != nil {
-								err = goa.InvalidFormatError(`.Account.CreatedBy`, tmp31, goa.FormatEmail, err2, err)
-							}
-						}
-					}
-					tmp29.CreatedBy = tmp31
-				}
-				if v, ok := val["href"]; ok {
-					var tmp32 string
-					if val, ok := v.(string); ok {
-						tmp32 = val
-					} else {
-						err = goa.InvalidAttributeTypeError(`.Account.Href`, v, "string", err)
-					}
-					tmp29.Href = tmp32
-				}
-				if v, ok := val["id"]; ok {
-					var tmp33 int
-					if f, ok := v.(float64); ok {
-						tmp33 = int(f)
-					} else {
-						err = goa.InvalidAttributeTypeError(`.Account.ID`, v, "int", err)
-					}
-					tmp29.ID = tmp33
-				}
-				if v, ok := val["name"]; ok {
-					var tmp34 string
-					if val, ok := v.(string); ok {
-						tmp34 = val
-					} else {
-						err = goa.InvalidAttributeTypeError(`.Account.Name`, v, "string", err)
-					}
-					tmp29.Name = tmp34
-				}
-			} else {
-				err = goa.InvalidAttributeTypeError(`.Account`, v, "dictionary", err)
-			}
-			res.Account = tmp29
-		}
-		if v, ok := val["color"]; ok {
-			var tmp35 string
-			if val, ok := v.(string); ok {
-				tmp35 = val
-			} else {
-				err = goa.InvalidAttributeTypeError(`.Color`, v, "string", err)
-			}
-			if err == nil {
-				if tmp35 != "" {
-					if !(tmp35 == "red" || tmp35 == "white" || tmp35 == "rose" || tmp35 == "yellow" || tmp35 == "sparkling") {
-						err = goa.InvalidEnumValueError(`.Color`, tmp35, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
-					}
-				}
-			}
-			res.Color = tmp35
-		}
-		if v, ok := val["country"]; ok {
-			var tmp36 string
-			if val, ok := v.(string); ok {
-				tmp36 = val
-			} else {
-				err = goa.InvalidAttributeTypeError(`.Country`, v, "string", err)
-			}
-			if err == nil {
-				if len(tmp36) < 2 {
-					err = goa.InvalidLengthError(`.Country`, tmp36, 2, true, err)
-				}
-			}
-			res.Country = tmp36
-		}
-		if v, ok := val["created_at"]; ok {
-			var tmp37 string
-			if val, ok := v.(string); ok {
-				tmp37 = val
-			} else {
-				err = goa.InvalidAttributeTypeError(`.CreatedAt`, v, "string", err)
-			}
-			if err == nil {
-				if tmp37 != "" {
-					if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp37); err2 != nil {
-						err = goa.InvalidFormatError(`.CreatedAt`, tmp37, goa.FormatDateTime, err2, err)
-					}
-				}
-			}
-			res.CreatedAt = tmp37
-		}
-		if v, ok := val["href"]; ok {
-			var tmp38 string
-			if val, ok := v.(string); ok {
-				tmp38 = val
-			} else {
-				err = goa.InvalidAttributeTypeError(`.Href`, v, "string", err)
-			}
-			res.Href = tmp38
-		}
-		if v, ok := val["id"]; ok {
-			var tmp39 int
-			if f, ok := v.(float64); ok {
-				tmp39 = int(f)
-			} else {
-				err = goa.InvalidAttributeTypeError(`.ID`, v, "int", err)
-			}
-			res.ID = tmp39
-		}
-		if v, ok := val["name"]; ok {
-			var tmp40 string
-			if val, ok := v.(string); ok {
-				tmp40 = val
-			} else {
-				err = goa.InvalidAttributeTypeError(`.Name`, v, "string", err)
-			}
-			if err == nil {
-				if len(tmp40) < 2 {
-					err = goa.InvalidLengthError(`.Name`, tmp40, 2, true, err)
-				}
-			}
-			res.Name = tmp40
-		}
-		if v, ok := val["rating"]; ok {
-			var tmp41 int
-			if f, ok := v.(float64); ok {
-				tmp41 = int(f)
-			} else {
-				err = goa.InvalidAttributeTypeError(`.Rating`, v, "int", err)
-			}
-			if err == nil {
-				if tmp41 < 1 {
-					err = goa.InvalidRangeError(`.Rating`, tmp41, 1, true, err)
-				}
-				if tmp41 > 5 {
-					err = goa.InvalidRangeError(`.Rating`, tmp41, 5, false, err)
-				}
-			}
-			res.Rating = tmp41
-		}
-		if v, ok := val["region"]; ok {
-			var tmp42 string
-			if val, ok := v.(string); ok {
-				tmp42 = val
-			} else {
-				err = goa.InvalidAttributeTypeError(`.Region`, v, "string", err)
-			}
-			res.Region = tmp42
-		}
-		if v, ok := val["review"]; ok {
-			var tmp43 string
-			if val, ok := v.(string); ok {
-				tmp43 = val
-			} else {
-				err = goa.InvalidAttributeTypeError(`.Review`, v, "string", err)
-			}
-			if err == nil {
-				if len(tmp43) < 10 {
-					err = goa.InvalidLengthError(`.Review`, tmp43, 10, true, err)
-				}
-				if len(tmp43) > 300 {
-					err = goa.InvalidLengthError(`.Review`, tmp43, 300, false, err)
-				}
-			}
-			res.Review = tmp43
-		}
-		if v, ok := val["sweetness"]; ok {
-			var tmp44 int
-			if f, ok := v.(float64); ok {
-				tmp44 = int(f)
-			} else {
-				err = goa.InvalidAttributeTypeError(`.Sweetness`, v, "int", err)
-			}
-			if err == nil {
-				if tmp44 < 1 {
-					err = goa.InvalidRangeError(`.Sweetness`, tmp44, 1, true, err)
-				}
-				if tmp44 > 5 {
-					err = goa.InvalidRangeError(`.Sweetness`, tmp44, 5, false, err)
-				}
-			}
-			res.Sweetness = tmp44
-		}
-		if v, ok := val["updated_at"]; ok {
-			var tmp45 string
-			if val, ok := v.(string); ok {
-				tmp45 = val
-			} else {
-				err = goa.InvalidAttributeTypeError(`.UpdatedAt`, v, "string", err)
-			}
-			if err == nil {
-				if tmp45 != "" {
-					if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp45); err2 != nil {
-						err = goa.InvalidFormatError(`.UpdatedAt`, tmp45, goa.FormatDateTime, err2, err)
-					}
-				}
-			}
-			res.UpdatedAt = tmp45
-		}
-		if v, ok := val["varietal"]; ok {
-			var tmp46 string
-			if val, ok := v.(string); ok {
-				tmp46 = val
-			} else {
-				err = goa.InvalidAttributeTypeError(`.Varietal`, v, "string", err)
-			}
-			if err == nil {
-				if len(tmp46) < 4 {
-					err = goa.InvalidLengthError(`.Varietal`, tmp46, 4, true, err)
-				}
-			}
-			res.Varietal = tmp46
-		}
-		if v, ok := val["vineyard"]; ok {
-			var tmp47 string
-			if val, ok := v.(string); ok {
-				tmp47 = val
-			} else {
-				err = goa.InvalidAttributeTypeError(`.Vineyard`, v, "string", err)
-			}
-			if err == nil {
-				if len(tmp47) < 2 {
-					err = goa.InvalidLengthError(`.Vineyard`, tmp47, 2, true, err)
-				}
-			}
-			res.Vineyard = tmp47
-		}
-		if v, ok := val["vintage"]; ok {
-			var tmp48 int
-			if f, ok := v.(float64); ok {
-				tmp48 = int(f)
-			} else {
-				err = goa.InvalidAttributeTypeError(`.Vintage`, v, "int", err)
-			}
-			if err == nil {
-				if tmp48 < 1900 {
-					err = goa.InvalidRangeError(`.Vintage`, tmp48, 1900, true, err)
-				}
-				if tmp48 > 2020 {
-					err = goa.InvalidRangeError(`.Vintage`, tmp48, 2020, false, err)
-				}
-			}
-			res.Vintage = tmp48
-		}
-	} else {
-		err = goa.InvalidAttributeTypeError(``, raw, "dictionary", err)
-	}
-	return res, err
+func LoadBottle(raw interface{}) (res *Bottle, err error) {
+	res, err = UnmarshalBottle(raw, err)
+	return
 }
 
 // Dump produces raw data from an instance of Bottle running all the
 // validations. See LoadBottle for the definition of raw data.
-func (mt *Bottle) Dump(view BottleViewEnum) (map[string]interface{}, error) {
-	var err error
-	var res map[string]interface{}
+func (mt *Bottle) Dump(view BottleViewEnum) (res map[string]interface{}, err error) {
 	if view == BottleDefaultView {
-		if len(mt.Name) < 2 {
-			err = goa.InvalidLengthError(`default view.name`, mt.Name, 2, true, err)
-		}
-		if mt.Rating < 1 {
-			err = goa.InvalidRangeError(`default view.rating`, mt.Rating, 1, true, err)
-		}
-		if mt.Rating > 5 {
-			err = goa.InvalidRangeError(`default view.rating`, mt.Rating, 5, false, err)
-		}
-		if len(mt.Varietal) < 4 {
-			err = goa.InvalidLengthError(`default view.varietal`, mt.Varietal, 4, true, err)
-		}
-		if len(mt.Vineyard) < 2 {
-			err = goa.InvalidLengthError(`default view.vineyard`, mt.Vineyard, 2, true, err)
-		}
-		if mt.Vintage < 1900 {
-			err = goa.InvalidRangeError(`default view.vintage`, mt.Vintage, 1900, true, err)
-		}
-		if mt.Vintage > 2020 {
-			err = goa.InvalidRangeError(`default view.vintage`, mt.Vintage, 2020, false, err)
-		}
-		tmp50 := map[string]interface{}{
-			"href":     mt.Href,
-			"id":       mt.ID,
-			"name":     mt.Name,
-			"rating":   mt.Rating,
-			"varietal": mt.Varietal,
-			"vineyard": mt.Vineyard,
-			"vintage":  mt.Vintage,
-		}
-		res = tmp50
-		if err == nil {
-			links := make(map[string]interface{})
-			tmp49 := map[string]interface{}{
-				"href": mt.Account.Href,
-				"id":   mt.Account.ID,
-				"name": mt.Account.Name,
-			}
-			links["account"] = tmp49
-			res["links"] = links
-		}
+		res, err = MarshalBottle(mt, err)
 	}
 	if view == BottleFullView {
-		if mt.Color != "" {
-			if !(mt.Color == "red" || mt.Color == "white" || mt.Color == "rose" || mt.Color == "yellow" || mt.Color == "sparkling") {
-				err = goa.InvalidEnumValueError(`full view.color`, mt.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
-			}
-		}
-		if len(mt.Country) < 2 {
-			err = goa.InvalidLengthError(`full view.country`, mt.Country, 2, true, err)
-		}
-		if mt.CreatedAt != "" {
-			if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.CreatedAt); err2 != nil {
-				err = goa.InvalidFormatError(`full view.created_at`, mt.CreatedAt, goa.FormatDateTime, err2, err)
-			}
-		}
-		if len(mt.Name) < 2 {
-			err = goa.InvalidLengthError(`full view.name`, mt.Name, 2, true, err)
-		}
-		if mt.Rating < 1 {
-			err = goa.InvalidRangeError(`full view.rating`, mt.Rating, 1, true, err)
-		}
-		if mt.Rating > 5 {
-			err = goa.InvalidRangeError(`full view.rating`, mt.Rating, 5, false, err)
-		}
-		if len(mt.Review) < 10 {
-			err = goa.InvalidLengthError(`full view.review`, mt.Review, 10, true, err)
-		}
-		if len(mt.Review) > 300 {
-			err = goa.InvalidLengthError(`full view.review`, mt.Review, 300, false, err)
-		}
-		if mt.Sweetness < 1 {
-			err = goa.InvalidRangeError(`full view.sweetness`, mt.Sweetness, 1, true, err)
-		}
-		if mt.Sweetness > 5 {
-			err = goa.InvalidRangeError(`full view.sweetness`, mt.Sweetness, 5, false, err)
-		}
-		if mt.UpdatedAt != "" {
-			if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.UpdatedAt); err2 != nil {
-				err = goa.InvalidFormatError(`full view.updated_at`, mt.UpdatedAt, goa.FormatDateTime, err2, err)
-			}
-		}
-		if len(mt.Varietal) < 4 {
-			err = goa.InvalidLengthError(`full view.varietal`, mt.Varietal, 4, true, err)
-		}
-		if len(mt.Vineyard) < 2 {
-			err = goa.InvalidLengthError(`full view.vineyard`, mt.Vineyard, 2, true, err)
-		}
-		if mt.Vintage < 1900 {
-			err = goa.InvalidRangeError(`full view.vintage`, mt.Vintage, 1900, true, err)
-		}
-		if mt.Vintage > 2020 {
-			err = goa.InvalidRangeError(`full view.vintage`, mt.Vintage, 2020, false, err)
-		}
-		tmp52 := map[string]interface{}{
-			"color":      mt.Color,
-			"country":    mt.Country,
-			"created_at": mt.CreatedAt,
-			"href":       mt.Href,
-			"id":         mt.ID,
-			"name":       mt.Name,
-			"rating":     mt.Rating,
-			"region":     mt.Region,
-			"review":     mt.Review,
-			"sweetness":  mt.Sweetness,
-			"updated_at": mt.UpdatedAt,
-			"varietal":   mt.Varietal,
-			"vineyard":   mt.Vineyard,
-			"vintage":    mt.Vintage,
-		}
-		if mt.Account != nil {
-			if mt.Account.CreatedAt != "" {
-				if err2 := goa.ValidateFormat(goa.FormatDateTime, mt.Account.CreatedAt); err2 != nil {
-					err = goa.InvalidFormatError(`full view.Account.created_at`, mt.Account.CreatedAt, goa.FormatDateTime, err2, err)
-				}
-			}
-			if mt.Account.CreatedBy != "" {
-				if err2 := goa.ValidateFormat(goa.FormatEmail, mt.Account.CreatedBy); err2 != nil {
-					err = goa.InvalidFormatError(`full view.Account.created_by`, mt.Account.CreatedBy, goa.FormatEmail, err2, err)
-				}
-			}
-			tmp53 := map[string]interface{}{
-				"created_at": mt.Account.CreatedAt,
-				"created_by": mt.Account.CreatedBy,
-				"href":       mt.Account.Href,
-				"id":         mt.Account.ID,
-				"name":       mt.Account.Name,
-			}
-			tmp52["account"] = tmp53
-		}
-		res = tmp52
-		if err == nil {
-			links := make(map[string]interface{})
-			tmp51 := map[string]interface{}{
-				"href": mt.Account.Href,
-				"id":   mt.Account.ID,
-				"name": mt.Account.Name,
-			}
-			links["account"] = tmp51
-			res["links"] = links
-		}
+		res, err = MarshalBottleFull(mt, err)
 	}
 	if view == BottleTinyView {
-		if len(mt.Name) < 2 {
-			err = goa.InvalidLengthError(`tiny view.name`, mt.Name, 2, true, err)
-		}
-		if mt.Rating < 1 {
-			err = goa.InvalidRangeError(`tiny view.rating`, mt.Rating, 1, true, err)
-		}
-		if mt.Rating > 5 {
-			err = goa.InvalidRangeError(`tiny view.rating`, mt.Rating, 5, false, err)
-		}
-		tmp55 := map[string]interface{}{
-			"href":   mt.Href,
-			"id":     mt.ID,
-			"name":   mt.Name,
-			"rating": mt.Rating,
-		}
-		res = tmp55
-		if err == nil {
-			links := make(map[string]interface{})
-			tmp54 := map[string]interface{}{
-				"href": mt.Account.Href,
-				"id":   mt.Account.ID,
-				"name": mt.Account.Name,
-			}
-			links["account"] = tmp54
-			res["links"] = links
-		}
+		res, err = MarshalBottleTiny(mt, err)
 	}
-	return res, err
+	return
 }
 
 // Validate validates the media type instance.
@@ -729,8 +311,377 @@ func (mt *Bottle) Validate() (err error) {
 	return
 }
 
+// MarshalBottle validates and renders an instance of Bottle into a interface{}
+// using view "default".
+func MarshalBottle(source *Bottle, inErr error) (target map[string]interface{}, err error) {
+	err = inErr
+	if len(source.Name) < 2 {
+		err = goa.InvalidLengthError(`.name`, source.Name, 2, true, err)
+	}
+	if source.Rating < 1 {
+		err = goa.InvalidRangeError(`.rating`, source.Rating, 1, true, err)
+	}
+	if source.Rating > 5 {
+		err = goa.InvalidRangeError(`.rating`, source.Rating, 5, false, err)
+	}
+	if len(source.Varietal) < 4 {
+		err = goa.InvalidLengthError(`.varietal`, source.Varietal, 4, true, err)
+	}
+	if len(source.Vineyard) < 2 {
+		err = goa.InvalidLengthError(`.vineyard`, source.Vineyard, 2, true, err)
+	}
+	if source.Vintage < 1900 {
+		err = goa.InvalidRangeError(`.vintage`, source.Vintage, 1900, true, err)
+	}
+	if source.Vintage > 2020 {
+		err = goa.InvalidRangeError(`.vintage`, source.Vintage, 2020, false, err)
+	}
+	tmp29 := map[string]interface{}{
+		"href":     source.Href,
+		"id":       source.ID,
+		"name":     source.Name,
+		"rating":   source.Rating,
+		"varietal": source.Varietal,
+		"vineyard": source.Vineyard,
+		"vintage":  source.Vintage,
+	}
+	target = tmp29
+	if err == nil {
+		links := make(map[string]interface{})
+		links["account"], err = MarshalAccountLink(source.Account, err)
+		target["links"] = links
+	}
+	return
+}
+
+// MarshalBottleFull validates and renders an instance of Bottle into a interface{}
+// using view "full".
+func MarshalBottleFull(source *Bottle, inErr error) (target map[string]interface{}, err error) {
+	err = inErr
+	if source.Color != "" {
+		if !(source.Color == "red" || source.Color == "white" || source.Color == "rose" || source.Color == "yellow" || source.Color == "sparkling") {
+			err = goa.InvalidEnumValueError(`.color`, source.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
+		}
+	}
+	if len(source.Country) < 2 {
+		err = goa.InvalidLengthError(`.country`, source.Country, 2, true, err)
+	}
+	if source.CreatedAt != "" {
+		if err2 := goa.ValidateFormat(goa.FormatDateTime, source.CreatedAt); err2 != nil {
+			err = goa.InvalidFormatError(`.created_at`, source.CreatedAt, goa.FormatDateTime, err2, err)
+		}
+	}
+	if len(source.Name) < 2 {
+		err = goa.InvalidLengthError(`.name`, source.Name, 2, true, err)
+	}
+	if source.Rating < 1 {
+		err = goa.InvalidRangeError(`.rating`, source.Rating, 1, true, err)
+	}
+	if source.Rating > 5 {
+		err = goa.InvalidRangeError(`.rating`, source.Rating, 5, false, err)
+	}
+	if len(source.Review) < 10 {
+		err = goa.InvalidLengthError(`.review`, source.Review, 10, true, err)
+	}
+	if len(source.Review) > 300 {
+		err = goa.InvalidLengthError(`.review`, source.Review, 300, false, err)
+	}
+	if source.Sweetness < 1 {
+		err = goa.InvalidRangeError(`.sweetness`, source.Sweetness, 1, true, err)
+	}
+	if source.Sweetness > 5 {
+		err = goa.InvalidRangeError(`.sweetness`, source.Sweetness, 5, false, err)
+	}
+	if source.UpdatedAt != "" {
+		if err2 := goa.ValidateFormat(goa.FormatDateTime, source.UpdatedAt); err2 != nil {
+			err = goa.InvalidFormatError(`.updated_at`, source.UpdatedAt, goa.FormatDateTime, err2, err)
+		}
+	}
+	if len(source.Varietal) < 4 {
+		err = goa.InvalidLengthError(`.varietal`, source.Varietal, 4, true, err)
+	}
+	if len(source.Vineyard) < 2 {
+		err = goa.InvalidLengthError(`.vineyard`, source.Vineyard, 2, true, err)
+	}
+	if source.Vintage < 1900 {
+		err = goa.InvalidRangeError(`.vintage`, source.Vintage, 1900, true, err)
+	}
+	if source.Vintage > 2020 {
+		err = goa.InvalidRangeError(`.vintage`, source.Vintage, 2020, false, err)
+	}
+	tmp30 := map[string]interface{}{
+		"color":      source.Color,
+		"country":    source.Country,
+		"created_at": source.CreatedAt,
+		"href":       source.Href,
+		"id":         source.ID,
+		"name":       source.Name,
+		"rating":     source.Rating,
+		"region":     source.Region,
+		"review":     source.Review,
+		"sweetness":  source.Sweetness,
+		"updated_at": source.UpdatedAt,
+		"varietal":   source.Varietal,
+		"vineyard":   source.Vineyard,
+		"vintage":    source.Vintage,
+	}
+	if source.Account != nil {
+		tmp30["account"], err = MarshalAccount(source.Account, err)
+	}
+	target = tmp30
+	if err == nil {
+		links := make(map[string]interface{})
+		links["account"], err = MarshalAccountLink(source.Account, err)
+		target["links"] = links
+	}
+	return
+}
+
+// MarshalBottleTiny validates and renders an instance of Bottle into a interface{}
+// using view "tiny".
+func MarshalBottleTiny(source *Bottle, inErr error) (target map[string]interface{}, err error) {
+	err = inErr
+	if len(source.Name) < 2 {
+		err = goa.InvalidLengthError(`.name`, source.Name, 2, true, err)
+	}
+	if source.Rating < 1 {
+		err = goa.InvalidRangeError(`.rating`, source.Rating, 1, true, err)
+	}
+	if source.Rating > 5 {
+		err = goa.InvalidRangeError(`.rating`, source.Rating, 5, false, err)
+	}
+	tmp31 := map[string]interface{}{
+		"href":   source.Href,
+		"id":     source.ID,
+		"name":   source.Name,
+		"rating": source.Rating,
+	}
+	target = tmp31
+	if err == nil {
+		links := make(map[string]interface{})
+		links["account"], err = MarshalAccountLink(source.Account, err)
+		target["links"] = links
+	}
+	return
+}
+
+// UnmarshalBottle unmarshals and validates a raw interface{} into an instance of Bottle
+func UnmarshalBottle(source interface{}, inErr error) (target *Bottle, err error) {
+	err = inErr
+	if val, ok := source.(map[string]interface{}); ok {
+		target = new(Bottle)
+		if v, ok := val["account"]; ok {
+			var tmp32 *Account
+			tmp32, err = UnmarshalAccount(v, err)
+			target.Account = tmp32
+		}
+		if v, ok := val["color"]; ok {
+			var tmp33 string
+			if val, ok := v.(string); ok {
+				tmp33 = val
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.Color`, v, "string", err)
+			}
+			if err == nil {
+				if tmp33 != "" {
+					if !(tmp33 == "red" || tmp33 == "white" || tmp33 == "rose" || tmp33 == "yellow" || tmp33 == "sparkling") {
+						err = goa.InvalidEnumValueError(`load.Color`, tmp33, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
+					}
+				}
+			}
+			target.Color = tmp33
+		}
+		if v, ok := val["country"]; ok {
+			var tmp34 string
+			if val, ok := v.(string); ok {
+				tmp34 = val
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.Country`, v, "string", err)
+			}
+			if err == nil {
+				if len(tmp34) < 2 {
+					err = goa.InvalidLengthError(`load.Country`, tmp34, 2, true, err)
+				}
+			}
+			target.Country = tmp34
+		}
+		if v, ok := val["created_at"]; ok {
+			var tmp35 string
+			if val, ok := v.(string); ok {
+				tmp35 = val
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.CreatedAt`, v, "string", err)
+			}
+			if err == nil {
+				if tmp35 != "" {
+					if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp35); err2 != nil {
+						err = goa.InvalidFormatError(`load.CreatedAt`, tmp35, goa.FormatDateTime, err2, err)
+					}
+				}
+			}
+			target.CreatedAt = tmp35
+		}
+		if v, ok := val["href"]; ok {
+			var tmp36 string
+			if val, ok := v.(string); ok {
+				tmp36 = val
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.Href`, v, "string", err)
+			}
+			target.Href = tmp36
+		}
+		if v, ok := val["id"]; ok {
+			var tmp37 int
+			if f, ok := v.(float64); ok {
+				tmp37 = int(f)
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.ID`, v, "int", err)
+			}
+			target.ID = tmp37
+		}
+		if v, ok := val["name"]; ok {
+			var tmp38 string
+			if val, ok := v.(string); ok {
+				tmp38 = val
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.Name`, v, "string", err)
+			}
+			if err == nil {
+				if len(tmp38) < 2 {
+					err = goa.InvalidLengthError(`load.Name`, tmp38, 2, true, err)
+				}
+			}
+			target.Name = tmp38
+		}
+		if v, ok := val["rating"]; ok {
+			var tmp39 int
+			if f, ok := v.(float64); ok {
+				tmp39 = int(f)
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.Rating`, v, "int", err)
+			}
+			if err == nil {
+				if tmp39 < 1 {
+					err = goa.InvalidRangeError(`load.Rating`, tmp39, 1, true, err)
+				}
+				if tmp39 > 5 {
+					err = goa.InvalidRangeError(`load.Rating`, tmp39, 5, false, err)
+				}
+			}
+			target.Rating = tmp39
+		}
+		if v, ok := val["region"]; ok {
+			var tmp40 string
+			if val, ok := v.(string); ok {
+				tmp40 = val
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.Region`, v, "string", err)
+			}
+			target.Region = tmp40
+		}
+		if v, ok := val["review"]; ok {
+			var tmp41 string
+			if val, ok := v.(string); ok {
+				tmp41 = val
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.Review`, v, "string", err)
+			}
+			if err == nil {
+				if len(tmp41) < 10 {
+					err = goa.InvalidLengthError(`load.Review`, tmp41, 10, true, err)
+				}
+				if len(tmp41) > 300 {
+					err = goa.InvalidLengthError(`load.Review`, tmp41, 300, false, err)
+				}
+			}
+			target.Review = tmp41
+		}
+		if v, ok := val["sweetness"]; ok {
+			var tmp42 int
+			if f, ok := v.(float64); ok {
+				tmp42 = int(f)
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.Sweetness`, v, "int", err)
+			}
+			if err == nil {
+				if tmp42 < 1 {
+					err = goa.InvalidRangeError(`load.Sweetness`, tmp42, 1, true, err)
+				}
+				if tmp42 > 5 {
+					err = goa.InvalidRangeError(`load.Sweetness`, tmp42, 5, false, err)
+				}
+			}
+			target.Sweetness = tmp42
+		}
+		if v, ok := val["updated_at"]; ok {
+			var tmp43 string
+			if val, ok := v.(string); ok {
+				tmp43 = val
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.UpdatedAt`, v, "string", err)
+			}
+			if err == nil {
+				if tmp43 != "" {
+					if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp43); err2 != nil {
+						err = goa.InvalidFormatError(`load.UpdatedAt`, tmp43, goa.FormatDateTime, err2, err)
+					}
+				}
+			}
+			target.UpdatedAt = tmp43
+		}
+		if v, ok := val["varietal"]; ok {
+			var tmp44 string
+			if val, ok := v.(string); ok {
+				tmp44 = val
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.Varietal`, v, "string", err)
+			}
+			if err == nil {
+				if len(tmp44) < 4 {
+					err = goa.InvalidLengthError(`load.Varietal`, tmp44, 4, true, err)
+				}
+			}
+			target.Varietal = tmp44
+		}
+		if v, ok := val["vineyard"]; ok {
+			var tmp45 string
+			if val, ok := v.(string); ok {
+				tmp45 = val
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.Vineyard`, v, "string", err)
+			}
+			if err == nil {
+				if len(tmp45) < 2 {
+					err = goa.InvalidLengthError(`load.Vineyard`, tmp45, 2, true, err)
+				}
+			}
+			target.Vineyard = tmp45
+		}
+		if v, ok := val["vintage"]; ok {
+			var tmp46 int
+			if f, ok := v.(float64); ok {
+				tmp46 = int(f)
+			} else {
+				err = goa.InvalidAttributeTypeError(`load.Vintage`, v, "int", err)
+			}
+			if err == nil {
+				if tmp46 < 1900 {
+					err = goa.InvalidRangeError(`load.Vintage`, tmp46, 1900, true, err)
+				}
+				if tmp46 > 2020 {
+					err = goa.InvalidRangeError(`load.Vintage`, tmp46, 2020, false, err)
+				}
+			}
+			target.Vintage = tmp46
+		}
+	} else {
+		err = goa.InvalidAttributeTypeError(`load`, source, "dictionary", err)
+	}
+	return
+}
+
 // BottleCollection media type
-// Identifier: application/vnd.goa.example.bottle+json; type=collection
+// Identifier: application/vnd.bottle+json; type=collection
 type BottleCollection []*Bottle
 
 // BottleCollection views
@@ -747,376 +698,31 @@ const (
 // validations. Raw data is defined by data that the JSON unmarshaler would create when unmarshaling
 // into a variable of type interface{}. See https://golang.org/pkg/encoding/json/#Unmarshal for the
 // complete list of supported data types.
-func LoadBottleCollection(raw interface{}) (BottleCollection, error) {
-	var err error
-	var res BottleCollection
-	if val, ok := raw.([]interface{}); ok {
-		res = make([]*Bottle, len(val))
-		for i, v := range val {
-			var tmp56 *Bottle
-			if val, ok := v.(map[string]interface{}); ok {
-				tmp56 = new(Bottle)
-				if v, ok := val["account"]; ok {
-					var tmp57 *Account
-					if val, ok := v.(map[string]interface{}); ok {
-						tmp57 = new(Account)
-						if v, ok := val["created_at"]; ok {
-							var tmp58 string
-							if val, ok := v.(string); ok {
-								tmp58 = val
-							} else {
-								err = goa.InvalidAttributeTypeError(`[*].Account.CreatedAt`, v, "string", err)
-							}
-							if err == nil {
-								if tmp58 != "" {
-									if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp58); err2 != nil {
-										err = goa.InvalidFormatError(`[*].Account.CreatedAt`, tmp58, goa.FormatDateTime, err2, err)
-									}
-								}
-							}
-							tmp57.CreatedAt = tmp58
-						}
-						if v, ok := val["created_by"]; ok {
-							var tmp59 string
-							if val, ok := v.(string); ok {
-								tmp59 = val
-							} else {
-								err = goa.InvalidAttributeTypeError(`[*].Account.CreatedBy`, v, "string", err)
-							}
-							if err == nil {
-								if tmp59 != "" {
-									if err2 := goa.ValidateFormat(goa.FormatEmail, tmp59); err2 != nil {
-										err = goa.InvalidFormatError(`[*].Account.CreatedBy`, tmp59, goa.FormatEmail, err2, err)
-									}
-								}
-							}
-							tmp57.CreatedBy = tmp59
-						}
-						if v, ok := val["href"]; ok {
-							var tmp60 string
-							if val, ok := v.(string); ok {
-								tmp60 = val
-							} else {
-								err = goa.InvalidAttributeTypeError(`[*].Account.Href`, v, "string", err)
-							}
-							tmp57.Href = tmp60
-						}
-						if v, ok := val["id"]; ok {
-							var tmp61 int
-							if f, ok := v.(float64); ok {
-								tmp61 = int(f)
-							} else {
-								err = goa.InvalidAttributeTypeError(`[*].Account.ID`, v, "int", err)
-							}
-							tmp57.ID = tmp61
-						}
-						if v, ok := val["name"]; ok {
-							var tmp62 string
-							if val, ok := v.(string); ok {
-								tmp62 = val
-							} else {
-								err = goa.InvalidAttributeTypeError(`[*].Account.Name`, v, "string", err)
-							}
-							tmp57.Name = tmp62
-						}
-					} else {
-						err = goa.InvalidAttributeTypeError(`[*].Account`, v, "dictionary", err)
-					}
-					tmp56.Account = tmp57
-				}
-				if v, ok := val["color"]; ok {
-					var tmp63 string
-					if val, ok := v.(string); ok {
-						tmp63 = val
-					} else {
-						err = goa.InvalidAttributeTypeError(`[*].Color`, v, "string", err)
-					}
-					if err == nil {
-						if tmp63 != "" {
-							if !(tmp63 == "red" || tmp63 == "white" || tmp63 == "rose" || tmp63 == "yellow" || tmp63 == "sparkling") {
-								err = goa.InvalidEnumValueError(`[*].Color`, tmp63, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
-							}
-						}
-					}
-					tmp56.Color = tmp63
-				}
-				if v, ok := val["country"]; ok {
-					var tmp64 string
-					if val, ok := v.(string); ok {
-						tmp64 = val
-					} else {
-						err = goa.InvalidAttributeTypeError(`[*].Country`, v, "string", err)
-					}
-					if err == nil {
-						if len(tmp64) < 2 {
-							err = goa.InvalidLengthError(`[*].Country`, tmp64, 2, true, err)
-						}
-					}
-					tmp56.Country = tmp64
-				}
-				if v, ok := val["created_at"]; ok {
-					var tmp65 string
-					if val, ok := v.(string); ok {
-						tmp65 = val
-					} else {
-						err = goa.InvalidAttributeTypeError(`[*].CreatedAt`, v, "string", err)
-					}
-					if err == nil {
-						if tmp65 != "" {
-							if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp65); err2 != nil {
-								err = goa.InvalidFormatError(`[*].CreatedAt`, tmp65, goa.FormatDateTime, err2, err)
-							}
-						}
-					}
-					tmp56.CreatedAt = tmp65
-				}
-				if v, ok := val["href"]; ok {
-					var tmp66 string
-					if val, ok := v.(string); ok {
-						tmp66 = val
-					} else {
-						err = goa.InvalidAttributeTypeError(`[*].Href`, v, "string", err)
-					}
-					tmp56.Href = tmp66
-				}
-				if v, ok := val["id"]; ok {
-					var tmp67 int
-					if f, ok := v.(float64); ok {
-						tmp67 = int(f)
-					} else {
-						err = goa.InvalidAttributeTypeError(`[*].ID`, v, "int", err)
-					}
-					tmp56.ID = tmp67
-				}
-				if v, ok := val["name"]; ok {
-					var tmp68 string
-					if val, ok := v.(string); ok {
-						tmp68 = val
-					} else {
-						err = goa.InvalidAttributeTypeError(`[*].Name`, v, "string", err)
-					}
-					if err == nil {
-						if len(tmp68) < 2 {
-							err = goa.InvalidLengthError(`[*].Name`, tmp68, 2, true, err)
-						}
-					}
-					tmp56.Name = tmp68
-				}
-				if v, ok := val["rating"]; ok {
-					var tmp69 int
-					if f, ok := v.(float64); ok {
-						tmp69 = int(f)
-					} else {
-						err = goa.InvalidAttributeTypeError(`[*].Rating`, v, "int", err)
-					}
-					if err == nil {
-						if tmp69 < 1 {
-							err = goa.InvalidRangeError(`[*].Rating`, tmp69, 1, true, err)
-						}
-						if tmp69 > 5 {
-							err = goa.InvalidRangeError(`[*].Rating`, tmp69, 5, false, err)
-						}
-					}
-					tmp56.Rating = tmp69
-				}
-				if v, ok := val["region"]; ok {
-					var tmp70 string
-					if val, ok := v.(string); ok {
-						tmp70 = val
-					} else {
-						err = goa.InvalidAttributeTypeError(`[*].Region`, v, "string", err)
-					}
-					tmp56.Region = tmp70
-				}
-				if v, ok := val["review"]; ok {
-					var tmp71 string
-					if val, ok := v.(string); ok {
-						tmp71 = val
-					} else {
-						err = goa.InvalidAttributeTypeError(`[*].Review`, v, "string", err)
-					}
-					if err == nil {
-						if len(tmp71) < 10 {
-							err = goa.InvalidLengthError(`[*].Review`, tmp71, 10, true, err)
-						}
-						if len(tmp71) > 300 {
-							err = goa.InvalidLengthError(`[*].Review`, tmp71, 300, false, err)
-						}
-					}
-					tmp56.Review = tmp71
-				}
-				if v, ok := val["sweetness"]; ok {
-					var tmp72 int
-					if f, ok := v.(float64); ok {
-						tmp72 = int(f)
-					} else {
-						err = goa.InvalidAttributeTypeError(`[*].Sweetness`, v, "int", err)
-					}
-					if err == nil {
-						if tmp72 < 1 {
-							err = goa.InvalidRangeError(`[*].Sweetness`, tmp72, 1, true, err)
-						}
-						if tmp72 > 5 {
-							err = goa.InvalidRangeError(`[*].Sweetness`, tmp72, 5, false, err)
-						}
-					}
-					tmp56.Sweetness = tmp72
-				}
-				if v, ok := val["updated_at"]; ok {
-					var tmp73 string
-					if val, ok := v.(string); ok {
-						tmp73 = val
-					} else {
-						err = goa.InvalidAttributeTypeError(`[*].UpdatedAt`, v, "string", err)
-					}
-					if err == nil {
-						if tmp73 != "" {
-							if err2 := goa.ValidateFormat(goa.FormatDateTime, tmp73); err2 != nil {
-								err = goa.InvalidFormatError(`[*].UpdatedAt`, tmp73, goa.FormatDateTime, err2, err)
-							}
-						}
-					}
-					tmp56.UpdatedAt = tmp73
-				}
-				if v, ok := val["varietal"]; ok {
-					var tmp74 string
-					if val, ok := v.(string); ok {
-						tmp74 = val
-					} else {
-						err = goa.InvalidAttributeTypeError(`[*].Varietal`, v, "string", err)
-					}
-					if err == nil {
-						if len(tmp74) < 4 {
-							err = goa.InvalidLengthError(`[*].Varietal`, tmp74, 4, true, err)
-						}
-					}
-					tmp56.Varietal = tmp74
-				}
-				if v, ok := val["vineyard"]; ok {
-					var tmp75 string
-					if val, ok := v.(string); ok {
-						tmp75 = val
-					} else {
-						err = goa.InvalidAttributeTypeError(`[*].Vineyard`, v, "string", err)
-					}
-					if err == nil {
-						if len(tmp75) < 2 {
-							err = goa.InvalidLengthError(`[*].Vineyard`, tmp75, 2, true, err)
-						}
-					}
-					tmp56.Vineyard = tmp75
-				}
-				if v, ok := val["vintage"]; ok {
-					var tmp76 int
-					if f, ok := v.(float64); ok {
-						tmp76 = int(f)
-					} else {
-						err = goa.InvalidAttributeTypeError(`[*].Vintage`, v, "int", err)
-					}
-					if err == nil {
-						if tmp76 < 1900 {
-							err = goa.InvalidRangeError(`[*].Vintage`, tmp76, 1900, true, err)
-						}
-						if tmp76 > 2020 {
-							err = goa.InvalidRangeError(`[*].Vintage`, tmp76, 2020, false, err)
-						}
-					}
-					tmp56.Vintage = tmp76
-				}
-			} else {
-				err = goa.InvalidAttributeTypeError(`[*]`, v, "dictionary", err)
-			}
-			res[i] = tmp56
-		}
-	} else {
-		err = goa.InvalidAttributeTypeError(``, raw, "array", err)
-	}
-	return res, err
+func LoadBottleCollection(raw interface{}) (res BottleCollection, err error) {
+	res, err = UnmarshalBottleCollection(raw, err)
+	return
 }
 
 // Dump produces raw data from an instance of BottleCollection running all the
 // validations. See LoadBottleCollection for the definition of raw data.
-func (mt BottleCollection) Dump(view BottleCollectionViewEnum) ([]map[string]interface{}, error) {
-	var err error
-	var res []map[string]interface{}
+func (mt BottleCollection) Dump(view BottleCollectionViewEnum) (res []map[string]interface{}, err error) {
 	if view == BottleCollectionDefaultView {
 		res = make([]map[string]interface{}, len(mt))
-		for i, tmp77 := range mt {
-			if len(tmp77.Name) < 2 {
-				err = goa.InvalidLengthError(`default view[*].name`, tmp77.Name, 2, true, err)
-			}
-			if tmp77.Rating < 1 {
-				err = goa.InvalidRangeError(`default view[*].rating`, tmp77.Rating, 1, true, err)
-			}
-			if tmp77.Rating > 5 {
-				err = goa.InvalidRangeError(`default view[*].rating`, tmp77.Rating, 5, false, err)
-			}
-			if len(tmp77.Varietal) < 4 {
-				err = goa.InvalidLengthError(`default view[*].varietal`, tmp77.Varietal, 4, true, err)
-			}
-			if len(tmp77.Vineyard) < 2 {
-				err = goa.InvalidLengthError(`default view[*].vineyard`, tmp77.Vineyard, 2, true, err)
-			}
-			if tmp77.Vintage < 1900 {
-				err = goa.InvalidRangeError(`default view[*].vintage`, tmp77.Vintage, 1900, true, err)
-			}
-			if tmp77.Vintage > 2020 {
-				err = goa.InvalidRangeError(`default view[*].vintage`, tmp77.Vintage, 2020, false, err)
-			}
-			tmp79 := map[string]interface{}{
-				"href":     tmp77.Href,
-				"id":       tmp77.ID,
-				"name":     tmp77.Name,
-				"rating":   tmp77.Rating,
-				"varietal": tmp77.Varietal,
-				"vineyard": tmp77.Vineyard,
-				"vintage":  tmp77.Vintage,
-			}
-			res[i] = tmp79
-			if err == nil {
-				links := make(map[string]interface{})
-				tmp78 := map[string]interface{}{
-					"href": tmp77.Account.Href,
-					"id":   tmp77.Account.ID,
-					"name": tmp77.Account.Name,
-				}
-				links["account"] = tmp78
-				res[i]["links"] = links
-			}
+		for i, tmp47 := range mt {
+			var tmp48 map[string]interface{}
+			tmp48, err = MarshalBottle(tmp47, err)
+			res[i] = tmp48
 		}
 	}
 	if view == BottleCollectionTinyView {
 		res = make([]map[string]interface{}, len(mt))
-		for i, tmp80 := range mt {
-			if len(tmp80.Name) < 2 {
-				err = goa.InvalidLengthError(`tiny view[*].name`, tmp80.Name, 2, true, err)
-			}
-			if tmp80.Rating < 1 {
-				err = goa.InvalidRangeError(`tiny view[*].rating`, tmp80.Rating, 1, true, err)
-			}
-			if tmp80.Rating > 5 {
-				err = goa.InvalidRangeError(`tiny view[*].rating`, tmp80.Rating, 5, false, err)
-			}
-			tmp82 := map[string]interface{}{
-				"href":   tmp80.Href,
-				"id":     tmp80.ID,
-				"name":   tmp80.Name,
-				"rating": tmp80.Rating,
-			}
-			res[i] = tmp82
-			if err == nil {
-				links := make(map[string]interface{})
-				tmp81 := map[string]interface{}{
-					"href": tmp80.Account.Href,
-					"id":   tmp80.Account.ID,
-					"name": tmp80.Account.Name,
-				}
-				links["account"] = tmp81
-				res[i]["links"] = links
-			}
+		for i, tmp49 := range mt {
+			var tmp50 map[string]interface{}
+			tmp50, err = MarshalBottleTiny(tmp49, err)
+			res[i] = tmp50
 		}
 	}
-	return res, err
+	return
 }
 
 // Validate validates the media type instance.
@@ -1183,6 +789,42 @@ func (mt BottleCollection) Validate() (err error) {
 		if e.Vintage > 2020 {
 			err = goa.InvalidRangeError(`response[*].vintage`, e.Vintage, 2020, false, err)
 		}
+	}
+	return
+}
+
+// MarshalBottleCollection validates and renders an instance of BottleCollection into a interface{}
+// using view "default".
+func MarshalBottleCollection(source BottleCollection, inErr error) (target []map[string]interface{}, err error) {
+	err = inErr
+	target = make([]map[string]interface{}, len(source))
+	for i, res := range source {
+		target[i], err = MarshalBottle(res, err)
+	}
+	return
+}
+
+// MarshalBottleCollectionTiny validates and renders an instance of BottleCollection into a interface{}
+// using view "tiny".
+func MarshalBottleCollectionTiny(source BottleCollection, inErr error) (target []map[string]interface{}, err error) {
+	err = inErr
+	target = make([]map[string]interface{}, len(source))
+	for i, res := range source {
+		target[i], err = MarshalBottleTiny(res, err)
+	}
+	return
+}
+
+// UnmarshalBottleCollection unmarshals and validates a raw interface{} into an instance of BottleCollection
+func UnmarshalBottleCollection(source interface{}, inErr error) (target BottleCollection, err error) {
+	err = inErr
+	if val, ok := source.([]interface{}); ok {
+		target = make([]*Bottle, len(val))
+		for i, v := range val {
+			target[i], err = UnmarshalBottle(v, err)
+		}
+	} else {
+		err = goa.InvalidAttributeTypeError(`load`, source, "array", err)
 	}
 	return
 }

@@ -198,10 +198,10 @@ const (
 {{tabs .depth}}}{{end}}`
 
 	enumValTmpl = `{{$depth := or (and (and (not .required) (eq .attribute.Type.Kind 4)) (add .depth 1)) .depth}}{{if not .required}}{{if eq .attribute.Type.Kind 4}}{{tabs .depth}}if {{.target}} != "" {
-{{else if gt .attribute.Type.Kind 4}}{{tabs $depth}}if {{.target}} != nil {
+{{else if (not .attribute.Type.IsPrimitive)}}{{tabs $depth}}if {{.target}} != nil {
 {{end}}{{end}}{{tabs $depth}}if !({{oneof .target .values}}) {
 {{tabs $depth}}	err = goa.InvalidEnumValueError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{slice .values}}, err)
-{{if and (not .required) (gt .attribute.Type.Kind 3)}}{{tabs $depth}}	}
+{{if and (not .required) (or (eq .attribute.Type.Kind 4) (not .attribute.Type.IsPrimitive))}}{{tabs $depth}}	}
 {{end}}{{tabs .depth}}}`
 
 	patternValTmpl = `{{$depth := or (and (not .required) (add .depth 1)) .depth}}{{if not .required}}{{tabs .depth}}if {{.target}} != "" {
@@ -226,7 +226,7 @@ const (
 
 	requiredValTmpl = `{{$ctx := .}}{{range $r := .required}}{{$catt := index $ctx.attribute.Type.ToObject $r}}{{if eq $catt.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.target}}.{{goify $r true}} == "" {
 {{tabs $ctx.depth}}	err = goa.MissingAttributeError(` + "`" + `{{$ctx.context}}` + "`" + `, "{{$r}}", err)
-{{tabs $ctx.depth}}}{{else if gt $catt.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.target}}.{{goify $r true}} == nil {
+{{tabs $ctx.depth}}}{{else if (not $catt.Type.IsPrimitive)}}{{tabs $ctx.depth}}if {{$ctx.target}}.{{goify $r true}} == nil {
 {{tabs $ctx.depth}}	err = goa.MissingAttributeError(` + "`" + `{{$ctx.context}}` + "`" + `, "{{$r}}", err)
 {{tabs $ctx.depth}}}{{end}}
 {{end}}`
