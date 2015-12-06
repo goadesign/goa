@@ -81,7 +81,7 @@ var _ = Describe("Generate", func() {
 
 		It("generates a dummy schema", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(2))
+			Ω(files).Should(HaveLen(3))
 			content, err := ioutil.ReadFile(filepath.Join(genschema.JSONSchemaDir(), "schema.json"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically("==", 1))

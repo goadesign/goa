@@ -87,7 +87,7 @@ var _ = Describe("Generate", func() {
 
 		It("generates a dummy app", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(3))
+			Ω(files).Should(HaveLen(5))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "testapi-cli", "main.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically(">=", 16))
