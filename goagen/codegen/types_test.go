@@ -492,7 +492,7 @@ var _ = Describe("code generation", func() {
 
 			It("generates the marshaler code", func() {
 				Ω(marshaler).Should(Equal(mtMarshaled))
-				Ω(marshaler2).Should(Equal(mtMarshaled))
+				Ω(marshaler2).Should(Equal(mtMarshaled2))
 			})
 		})
 
@@ -620,7 +620,8 @@ const (
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "dictionary", err)
 	}`
 
-	mtMarshaled = `	p, err = MarshalApplication(raw, err)`
+	mtMarshaled  = `	p, err = MarshalTest(raw, err)`
+	mtMarshaled2 = `	p, err = MarshalTest2(raw, err)`
 
 	mtMarshaledImpl = `	tmp1 := map[string]interface{}{
 	}
