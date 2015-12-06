@@ -72,7 +72,6 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 			panic(err.Error()) // bug
 		}
 		gg := codegen.NewGoGenerator(mainFile)
-		g.genfiles = append(g.genfiles, mainFile)
 		var outPkg string
 		outPkg, err = filepath.Rel(os.Getenv("GOPATH"), codegen.OutputDir)
 		if err != nil {
