@@ -58,10 +58,12 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	if err = os.RemoveAll(codegen.OutputDir); err != nil {
 		return
 	}
+	g.genfiles = append(g.genfiles, codegen.OutputDir)
 	toolDir := filepath.Join(codegen.OutputDir, fmt.Sprintf("%s-cli", api.Name))
 	if err = os.MkdirAll(toolDir, 0755); err != nil {
 		return
 	}
+	g.genfiles = append(g.genfiles, toolDir)
 	funcs := template.FuncMap{
 		"goify":        codegen.Goify,
 		"gotypedef":    codegen.GoTypeDef,
