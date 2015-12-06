@@ -8,6 +8,7 @@ import (
 
 	"github.com/raphael/goa/design"
 	"github.com/raphael/goa/goagen/codegen"
+	"github.com/raphael/goa/goagen/utils"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -99,7 +100,15 @@ func AppOutputDir() string {
 }
 
 // Generate the application code, implement codegen.Generator.
-func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
+func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) {
+	go utils.Catch(nil, func() { g.Cleanup() })
+
+	defer func() {
+		if err != nil {
+			g.Cleanup()
+		}
+	}()
+
 	if api == nil {
 		return nil, fmt.Errorf("missing API definition, make sure design.Design is properly initialized")
 	}
@@ -109,7 +118,7 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		codegen.SimpleImport("strconv"),
 	}
 	g.ContextsWriter.WriteHeader(title, TargetPackage, imports)
-	err := api.IterateResources(func(r *design.ResourceDefinition) error {
+	err = api.IterateResources(func(r *design.ResourceDefinition) error {
 		return r.IterateActions(func(a *design.ActionDefinition) error {
 			ctxName := codegen.Goify(a.Name, true) + codegen.Goify(a.Parent.Name, true) + "Context"
 			ctxData := ContextTemplateData{
@@ -128,12 +137,10 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	})
 	g.genfiles = append(g.genfiles, g.contextsFilename)
 	if err != nil {
-		g.Cleanup()
-		return nil, err
+		return
 	}
-	if err := g.ContextsWriter.FormatCode(); err != nil {
-		g.Cleanup()
-		return nil, err
+	if err = g.ContextsWriter.FormatCode(); err != nil {
+		return
 	}
 
 	title = fmt.Sprintf("%s: Application Controllers", api.Name)
@@ -164,13 +171,11 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 		return nil
 	})
 	g.genfiles = append(g.genfiles, g.controllersFilename)
-	if err := g.ControllersWriter.Execute(controllersData); err != nil {
-		g.Cleanup()
-		return nil, err
+	if err = g.ControllersWriter.Execute(controllersData); err != nil {
+		return
 	}
-	if err := g.ControllersWriter.FormatCode(); err != nil {
-		g.Cleanup()
-		return nil, err
+	if err = g.ControllersWriter.FormatCode(); err != nil {
+		return
 	}
 
 	title = fmt.Sprintf("%s: Application Resource Href Factories", api.Name)
@@ -204,12 +209,10 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	})
 	g.genfiles = append(g.genfiles, g.resourcesFilename)
 	if err != nil {
-		g.Cleanup()
-		return nil, err
+		return
 	}
-	if err := g.ResourcesWriter.FormatCode(); err != nil {
-		g.Cleanup()
-		return nil, err
+	if err = g.ResourcesWriter.FormatCode(); err != nil {
+		return
 	}
 
 	title = fmt.Sprintf("%s: Application Media Types", api.Name)
@@ -226,12 +229,10 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	})
 	g.genfiles = append(g.genfiles, g.mediaTypesFilename)
 	if err != nil {
-		g.Cleanup()
-		return nil, err
+		return
 	}
-	if err := g.MediaTypesWriter.FormatCode(); err != nil {
-		g.Cleanup()
-		return nil, err
+	if err = g.MediaTypesWriter.FormatCode(); err != nil {
+		return
 	}
 
 	title = fmt.Sprintf("%s: Application User Types", api.Name)
@@ -241,12 +242,10 @@ func (g *Generator) Generate(api *design.APIDefinition) ([]string, error) {
 	})
 	g.genfiles = append(g.genfiles, g.userTypesFilename)
 	if err != nil {
-		g.Cleanup()
-		return nil, err
+		return
 	}
-	if err := g.UserTypesWriter.FormatCode(); err != nil {
-		g.Cleanup()
-		return nil, err
+	if err = g.UserTypesWriter.FormatCode(); err != nil {
+		return
 	}
 
 	return g.genfiles, nil
