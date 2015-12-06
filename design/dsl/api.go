@@ -231,10 +231,10 @@ func URL(url string) {
 // ResponseTemplate defines a response template that action definitions can use to describe their
 // responses. The template may specify the HTTP response status, header specification and body media
 // type. The template consists of a name and an anonymous function. The function is called when an
-// action uses the template to define a response. Response template functions may accept up to 9
-// string parameters that they can use to define the response fields. Here is an example of a
-// response template definition that uses a function with one argument used to pass in the name of
-// the response body media type:
+// action uses the template to define a response. Response template functions accept string
+// parameters they can use to define the response fields. Here is an example of a response template
+// definition that uses a function with one argument corresponding to the name of the response body
+// media type:
 //
 //	ResponseTemplate(OK, func(mt string) {
 //		Status(200)                             // OK response uses status code 200
