@@ -456,6 +456,46 @@ var _ = Describe("code generation", func() {
 				Ω(marshaler).Should(Equal(mtMarshaled))
 			})
 		})
+
+		Context("with two media types referring to each other", func() {
+			var testMediaType *MediaTypeDefinition
+			var testMediaType2 *MediaTypeDefinition
+			var marshaler2 string
+
+			BeforeEach(func() {
+				Design = nil
+				Errors = nil
+				testMediaType = MediaType("application/test", func() {
+					Attribute("id")
+					Attribute("test2", CollectionOf("application/test2"))
+					View("default", func() {
+						Attribute("id")
+					})
+				})
+				Ω(Errors).ShouldNot(HaveOccurred())
+				testMediaType2 = MediaType("application/test2", func() {
+					Attribute("id")
+					Attribute("test", testMediaType)
+					View("default", func() {
+						Attribute("test")
+					})
+				})
+				Ω(Errors).ShouldNot(HaveOccurred())
+				RunDSL()
+				Ω(Errors).ShouldNot(HaveOccurred())
+			})
+
+			JustBeforeEach(func() {
+				marshaler = codegen.MediaTypeMarshaler(testMediaType, context, source, target, "")
+				marshaler2 = codegen.MediaTypeMarshaler(testMediaType2, context, source, target, "")
+			})
+
+			It("generates the marshaler code", func() {
+				Ω(marshaler).Should(Equal(mtMarshaled))
+				Ω(marshaler2).Should(Equal(mtMarshaled))
+			})
+		})
+
 	})
 })
 
