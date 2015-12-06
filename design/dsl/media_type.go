@@ -5,7 +5,6 @@ import (
 	"mime"
 	"strings"
 
-	"bitbucket.org/pkg/inflect"
 	"github.com/raphael/goa/design"
 )
 
@@ -96,10 +95,21 @@ func MediaType(identifier string, dsl func()) *design.MediaTypeDefinition {
 		identifier = mime.FormatMediaType(identifier, params)
 		// Concoct a Go type name from the identifier, should it be possible to set it in the DSL?
 		// pros: control the type name generated, cons: not needed in DSL, adds one more thing to worry about
-		elems := strings.Split(identifier, ".")
-		elems = strings.Split(elems[len(elems)-1], "/")
-		elems = strings.Split(elems[0], "+")
-		typeName := inflect.Camelize(elems[0])
+		lastPart := identifier
+		lastPartIndex := strings.LastIndex(identifier, "/")
+		if lastPartIndex > -1 {
+			lastPart = identifier[lastPartIndex+1:]
+		}
+		plusIndex := strings.Index(lastPart, "+")
+		if plusIndex > 0 {
+			lastPart = lastPart[:plusIndex]
+		}
+		lastPart = strings.TrimPrefix(lastPart, "vnd.")
+		elems := strings.Split(lastPart, ".")
+		for i, e := range elems {
+			elems[i] = strings.Title(e)
+		}
+		typeName := strings.Join(elems, "")
 		if typeName == "" {
 			mediaTypeCount++
 			typeName = fmt.Sprintf("MediaType%d", mediaTypeCount)

@@ -15,7 +15,7 @@ package app
 import "github.com/raphael/goa"
 
 // A tenant account
-// Identifier: application/vnd.goa.example.account+json
+// Identifier: application/vnd.account+json
 type Account struct {
 	// Date of creation
 	CreatedAt string
@@ -184,7 +184,7 @@ func UnmarshalAccount(source interface{}, inErr error) (target *Account, err err
 }
 
 // A bottle of wine
-// Identifier: application/vnd.goa.example.bottle+json
+// Identifier: application/vnd.bottle+json
 type Bottle struct {
 	// Account that owns bottle
 	Account *Account
@@ -681,7 +681,7 @@ func UnmarshalBottle(source interface{}, inErr error) (target *Bottle, err error
 }
 
 // BottleCollection media type
-// Identifier: application/vnd.goa.example.bottle+json; type=collection
+// Identifier: application/vnd.bottle+json; type=collection
 type BottleCollection []*Bottle
 
 // BottleCollection views
