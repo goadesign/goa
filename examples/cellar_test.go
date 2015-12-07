@@ -21,6 +21,7 @@ var _ = Describe("example cellar", func() {
 	var tempdir string
 
 	var files = []string{
+		"app",
 		"app/contexts.go",
 		"app/controllers.go",
 		"app/hrefs.go",
@@ -29,11 +30,14 @@ var _ = Describe("example cellar", func() {
 		"main.go",
 		"account.go",
 		"bottle.go",
+		"client",
+		"client/cellar-cli",
 		"client/cellar-cli/main.go",
 		"client/cellar-cli/commands.go",
 		"client/client.go",
 		"client/account.go",
 		"client/bottle.go",
+		"swagger",
 		"swagger/swagger.json",
 		"swagger/swagger.go",
 		"",

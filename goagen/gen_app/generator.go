@@ -91,6 +91,7 @@ func NewGenerator() (*Generator, error) {
 		resourcesFilename:   resFile,
 		mediaTypesFilename:  mtFile,
 		userTypesFilename:   utFile,
+		genfiles:            []string{outdir},
 	}, nil
 }
 

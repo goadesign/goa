@@ -66,6 +66,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	if err = os.MkdirAll(codegen.OutputDir, 0755); err != nil {
 		return
 	}
+	g.genfiles = append(g.genfiles, codegen.OutputDir)
 	funcs := template.FuncMap{
 		"title":   strings.Title,
 		"join":    strings.Join,
