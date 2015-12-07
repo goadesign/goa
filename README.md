@@ -6,7 +6,7 @@ goa is a framework for building RESTful microservices in Go.
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/raphael/goa/blob/master/LICENSE)
 [![Godoc](https://godoc.org/github.com/raphael/goa?status.svg)](http://godoc.org/github.com/raphael/goa)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
-[![Intro](https://img.shields.io/badge/post-goa-ff69b4.svg?style=flat)](https://blog.gopheracademy.com/advent-2015/goaUntanglingMicroservices/)
+[![Intro](https://img.shields.io/badge/post-gopheracademy-ff69b4.svg?style=flat)](https://blog.gopheracademy.com/advent-2015/goaUntanglingMicroservices/)
 
 ## Why goa?
 
