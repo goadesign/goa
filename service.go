@@ -21,6 +21,8 @@ type (
 		// Name is the name of the goa application.
 		Name() string
 
+		// ErrorHandler returns the currently set error handler, useful for middleware.
+		ErrorHandler() ErrorHandler
 		// SetErrorHandler allows setting the service-wide error handler.
 		SetErrorHandler(ErrorHandler)
 
@@ -64,6 +66,8 @@ type (
 		// MiddlewareChain returns the controller middleware chain including the
 		// service-wide middleware.
 		MiddlewareChain() []Middleware
+		// ErrorHandler returns the currently set error handler.
+		ErrorHandler() ErrorHandler
 		// SetErrorHandler sets the controller specific error handler.
 		SetErrorHandler(ErrorHandler)
 		// NewHTTPRouterHandle returns a httprouter handle from a goa handler.
@@ -172,6 +176,11 @@ func (app *Application) Use(m Middleware) {
 	app.middleware = append(app.middleware, m)
 }
 
+// ErrorHandler returns the currently set error handler.
+func (app *Application) ErrorHandler() ErrorHandler {
+	return app.errorHandler
+}
+
 // SetErrorHandler defines an application wide error handler.
 // The default error handler (DefaultErrorHandler) responds with a 500 status code and the error
 // message in the response body.
@@ -226,6 +235,11 @@ func (ctrl *ApplicationController) Use(m Middleware) {
 // MiddlewareChain returns the controller middleware chain.
 func (ctrl *ApplicationController) MiddlewareChain() []Middleware {
 	return append(ctrl.app.middleware, ctrl.middleware...)
+}
+
+// ErrorHandler returns the currently set error handler.
+func (ctrl *ApplicationController) ErrorHandler() ErrorHandler {
+	return ctrl.errorHandler
 }
 
 // SetErrorHandler defines a controller specific error handler. When a controller action returns an
