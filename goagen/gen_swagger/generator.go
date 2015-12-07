@@ -54,6 +54,7 @@ func Generate(api *design.APIDefinition) (_ []string, err error) {
 	if err = os.MkdirAll(swaggerDir, 0755); err != nil {
 		return
 	}
+	genfiles = append(genfiles, swaggerDir)
 	swaggerFile := filepath.Join(swaggerDir, "swagger.json")
 	err = ioutil.WriteFile(swaggerFile, b, 0644)
 	if err != nil {
