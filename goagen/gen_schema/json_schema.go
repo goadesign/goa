@@ -160,7 +160,7 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 	if mt, ok := api.MediaTypes[r.MediaType]; ok {
 		buildMediaTypeSchema(api, mt, s)
 	}
-	for _, a := range r.Actions {
+	r.IterateActions(func(a *design.ActionDefinition) error {
 		var requestSchema *JSONSchema
 		if a.Payload != nil {
 			requestSchema = TypeSchema(api, a.Payload)
@@ -214,7 +214,8 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 			}
 			s.Links = append(s.Links, &link)
 		}
-	}
+		return nil
+	})
 }
 
 // MediaTypeRef produces the JSON reference to the media type definition.
@@ -451,7 +452,14 @@ func propertiesFromDefs(definitions map[string]*JSONSchema, path string) map[str
 // buildMediaTypeSchema initializes s as the JSON schema representing mt.
 func buildMediaTypeSchema(api *design.APIDefinition, mt *design.MediaTypeDefinition, s *JSONSchema) {
 	s.Media = &JSONMedia{Type: mt.Identifier}
-	for _, l := range mt.Links {
+	lnames := make([]string, len(mt.Links))
+	i := 0
+	for n := range mt.Links {
+		lnames[i] = n
+		i++
+	}
+	for _, ln := range lnames {
+		l := mt.Links[ln]
 		att := l.Attribute() // cannot be nil if DSL validated
 		r := l.MediaType().Resource
 		var href string
