@@ -12,8 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rightscale/rsc/log"
-
 	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/inconshreveable/log15.v2"
 )
@@ -223,7 +221,7 @@ func (s *OAuth2Signer) Refresh() error {
 func (c *Client) dumpRequest(req *http.Request) []byte {
 	reqBody, err := dumpReqBody(req)
 	if err != nil {
-		log.Error("Failed to load request body for dump", "error", err.Error())
+		c.Error("Failed to load request body for dump", "err", err.Error())
 	}
 	var buffer bytes.Buffer
 	buffer.WriteString(req.Method + " " + req.URL.String() + "\n")
