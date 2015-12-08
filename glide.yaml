@@ -14,3 +14,5 @@ import:
   - package: gopkg.in/inconshreveable/log15.v2
   - package: github.com/mattn/go-colorable
   - package: gopkg.in/tylerb/graceful.v1
+  - package: github.com/manveru/faker
+  - package: github.com/zach-klippenstein/goregen
