@@ -148,6 +148,27 @@ var _ = Describe("Resource", func() {
 		})
 	})
 
+	Context("with base params", func() {
+		const basePath = "basePath/:paramID"
+
+		BeforeEach(func() {
+			name = "foo"
+			dsl = func() {
+				BasePath(basePath)
+				BaseParams(func() {
+					Param("paramID")
+				})
+			}
+		})
+
+		It("sets the base path and params", func() {
+			Ω(res).ShouldNot(BeNil())
+			Ω(res.Validate()).ShouldNot(HaveOccurred())
+			Ω(res.BasePath).Should(Equal(basePath))
+			Ω(res.BaseParams).ShouldNot(BeNil())
+		})
+	})
+
 	Context("with a media type name", func() {
 		const mediaType = "application/mt"
 

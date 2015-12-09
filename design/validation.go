@@ -208,7 +208,7 @@ func (r *ResourceDefinition) Validate() *ValidationErrors {
 			verr.Add(r, "invalid type for BaseParams, must be an Object", r)
 		} else {
 			vars := ExtractWildcards(r.BasePath)
-			if len(vars) > 1 {
+			if len(vars) > 0 {
 				if len(vars) != len(baseParams) {
 					verr.Add(r, "BasePath defines parameters %s but BaseParams has %d elements",
 						strings.Join([]string{
@@ -233,7 +233,7 @@ func (r *ResourceDefinition) Validate() *ValidationErrors {
 				}
 			} else {
 				if len(baseParams) > 0 {
-					verr.Add(r, "BasePath does not use variables defines in BaseParams")
+					verr.Add(r, "BasePath does not use variables defined in BaseParams")
 				}
 			}
 		}
