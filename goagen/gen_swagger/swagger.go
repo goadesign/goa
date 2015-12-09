@@ -1,6 +1,7 @@
 package genswagger
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -278,6 +279,10 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 	if api == nil {
 		return nil, nil
 	}
+	tags, _, err := tagsFromDefinition([]design.MetadataDefinition{api.Metadata})
+	if err != nil {
+		return nil, err
+	}
 	params, err := paramsFromDefinition(api.BaseParams, api.BasePath)
 	if err != nil {
 		return nil, err
@@ -306,8 +311,10 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 		Consumes:     []string{"application/json"},
 		Produces:     []string{"application/json"},
 		Parameters:   paramMap,
+		Tags:         tags,
 		ExternalDocs: docsFromDefinition(api.Docs),
 	}
+
 	err = api.IterateResponses(func(r *design.ResponseDefinition) error {
 		res, err := responseFromDefinition(api, r)
 		if err != nil {
@@ -345,6 +352,24 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 		}
 	}
 	return s, nil
+}
+
+func tagsFromDefinition(mdatas []design.MetadataDefinition) (tags []Tag, tagNames []string, err error) {
+	for _, mdata := range mdatas {
+		if mtags, found := mdata["tags"]; found {
+			tagObjs := []Tag{}
+			err = json.Unmarshal([]byte(mtags), &tagObjs)
+			if err != nil {
+				return
+			}
+
+			tags = append(tags, tagObjs...)
+			for _, tagObj := range tagObjs {
+				tagNames = append(tagNames, tagObj.Name)
+			}
+		}
+	}
+	return
 }
 
 func paramsFromDefinition(params *design.AttributeDefinition, path string) ([]*Parameter, error) {
@@ -440,6 +465,10 @@ func headersFromDefinition(headers *design.AttributeDefinition) (map[string]*Hea
 
 func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *design.RouteDefinition) error {
 	action := route.Parent
+	_, tagNames, err := tagsFromDefinition([]design.MetadataDefinition{action.Parent.Metadata, action.Metadata})
+	if err != nil {
+		return err
+	}
 	params, err := paramsFromDefinition(action.Params, route.FullPath())
 	if err != nil {
 		return err
@@ -475,6 +504,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		operationID = fmt.Sprintf("%s#%d", operationID, index)
 	}
 	operation := &Operation{
+		Tags:         tagNames,
 		Description:  action.Description,
 		ExternalDocs: docsFromDefinition(action.Docs),
 		OperationID:  operationID,
