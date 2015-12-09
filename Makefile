@@ -17,7 +17,14 @@ DEPEND=golang.org/x/tools/cmd/cover golang.org/x/tools/cmd/goimports \
 	github.com/go-swagger/go-swagger \
 	github.com/PuerkitoBio/purell \
 	gopkg.in/yaml.v2 \
-	github.com/asaskevich/govalidator
+	github.com/asaskevich/govalidator \
+	github.com/julienschmidt/httprouter \
+	github.com/manveru/faker \
+	github.com/zach-klippenstein/goregen \
+	gopkg.in/alecthomas/kingpin.v2 \
+	github.com/rightscale/rsc \
+	gopkg.in/tylerb/graceful.v1
+
 
 .PHONY: goagen
 
