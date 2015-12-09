@@ -317,9 +317,11 @@ var _ = Describe("code generation", func() {
 			BeforeEach(func() {
 				ar := &Array{
 					ElemType: &AttributeDefinition{
-						Type: Primitive(IntegerKind),
-					},
-				}
+						Type: &Array{
+							ElemType: &AttributeDefinition{
+								Type: Primitive(IntegerKind),
+							}}}}
+
 				intAtt := &AttributeDefinition{Type: Primitive(IntegerKind)}
 				arAtt := &AttributeDefinition{Type: ar}
 				io := Object{"foo": intAtt, "bar": arAtt}
@@ -370,12 +372,12 @@ var _ = Describe("code generation", func() {
 						unmarshaler = codegen.TypeUnmarshaler(o, context, source, target)
 						data := map[string]interface{}{
 							"raw": `interface{}(map[string]interface{}{
-			"baz": map[string]interface{}{
-				"foo": 345.0,
-				"bar":[]interface{}{1.0,2.0,3.0},
-			},
-			"faz": 2.0,
-		})`,
+								"baz": map[string]interface{}{
+									"foo": 345.0,
+									"bar":[]interface{}{[]interface{}{1.0,2.0,3.0}},
+								},
+								"faz": 2.0,
+							})`,
 							"source":     unmarshaler,
 							"target":     target,
 							"targetType": codegen.GoTypeRef(o, 1),
@@ -390,7 +392,7 @@ var _ = Describe("code generation", func() {
 						cmd.Env = []string{fmt.Sprintf("PATH=%s", filepath.Join(gopath, "bin"))}
 						cmd.Dir = srcDir
 						code, err := cmd.CombinedOutput()
-						Ω(string(code)).Should(Equal(`{"Baz":{"Bar":[1,2,3],"Foo":345},"Faz":2}`))
+						Ω(string(code)).Should(Equal(`{"Baz":{"Bar":[[1,2,3]],"Foo":345},"Faz":2}`))
 						Ω(err).ShouldNot(HaveOccurred())
 					})
 				})
@@ -501,16 +503,16 @@ var _ = Describe("code generation", func() {
 
 const (
 	arrayMarshaled = `	tmp1 := make([]int, len(raw))
-	for i, r := range raw {
-		tmp1[i] = r
+	for tmp2, tmp3 := range raw {
+		tmp1[tmp2] = tmp3
 	}
 	p = tmp1`
 
 	arrayUnmarshaled = `	if val, ok := raw.([]interface{}); ok {
 		p = make([]int, len(val))
-		for i, v := range val {
+		for tmp1, v := range val {
 			if f, ok := v.(float64); ok {
-				p[i] = int(f)
+				p[tmp1] = int(f)
 			} else {
 				err = goa.InvalidAttributeTypeError(` + "`" + `[*]` + "`" + `, v, "int", err)
 			}
@@ -549,9 +551,13 @@ const (
 			"foo": raw.Baz.Foo,
 		}
 		if raw.Baz.Bar != nil {
-			tmp3 := make([]int, len(raw.Baz.Bar))
-			for i, r := range raw.Baz.Bar {
-				tmp3[i] = r
+			tmp3 := make([][]int, len(raw.Baz.Bar))
+			for tmp4, tmp5 := range raw.Baz.Bar {
+				tmp6 := make([]int, len(tmp5))
+				for tmp7, tmp8 := range tmp5 {
+					tmp6[tmp7] = tmp8
+				}
+				tmp3[tmp4] = tmp6
 			}
 			tmp2["bar"] = tmp3
 		}
@@ -562,30 +568,37 @@ const (
 	complexUnmarshaled = `	if val, ok := raw.(map[string]interface{}); ok {
 		p = new(struct {
 			Baz *struct {
-				Bar []int
+				Bar [][]int
 				Foo int
 			}
 			Faz int
 		})
 		if v, ok := val["baz"]; ok {
 			var tmp1 *struct {
-				Bar []int
+				Bar [][]int
 				Foo int
 			}
 			if val, ok := v.(map[string]interface{}); ok {
 				tmp1 = new(struct {
-					Bar []int
+					Bar [][]int
 					Foo int
 				})
 				if v, ok := val["bar"]; ok {
-					var tmp2 []int
+					var tmp2 [][]int
 					if val, ok := v.([]interface{}); ok {
-						tmp2 = make([]int, len(val))
-						for i, v := range val {
-							if f, ok := v.(float64); ok {
-								tmp2[i] = int(f)
+						tmp2 = make([][]int, len(val))
+						for tmp3, v := range val {
+							if val, ok := v.([]interface{}); ok {
+								tmp2[tmp3] = make([]int, len(val))
+								for tmp4, v := range val {
+									if f, ok := v.(float64); ok {
+										tmp2[tmp3][tmp4] = int(f)
+									} else {
+										err = goa.InvalidAttributeTypeError(` + "`" + `.Baz.Bar[*][*]` + "`" + `, v, "int", err)
+									}
+								}
 							} else {
-								err = goa.InvalidAttributeTypeError(` + "`" + `.Baz.Bar[*]` + "`" + `, v, "int", err)
+								err = goa.InvalidAttributeTypeError(` + "`" + `.Baz.Bar[*]` + "`" + `, v, "array", err)
 							}
 						}
 					} else {
@@ -594,13 +607,13 @@ const (
 					tmp1.Bar = tmp2
 				}
 				if v, ok := val["foo"]; ok {
-					var tmp3 int
+					var tmp5 int
 					if f, ok := v.(float64); ok {
-						tmp3 = int(f)
+						tmp5 = int(f)
 					} else {
 						err = goa.InvalidAttributeTypeError(` + "`" + `.Baz.Foo` + "`" + `, v, "int", err)
 					}
-					tmp1.Foo = tmp3
+					tmp1.Foo = tmp5
 				}
 			} else {
 				err = goa.InvalidAttributeTypeError(` + "`" + `.Baz` + "`" + `, v, "dictionary", err)
@@ -608,13 +621,13 @@ const (
 			p.Baz = tmp1
 		}
 		if v, ok := val["faz"]; ok {
-			var tmp4 int
+			var tmp6 int
 			if f, ok := v.(float64); ok {
-				tmp4 = int(f)
+				tmp6 = int(f)
 			} else {
 				err = goa.InvalidAttributeTypeError(` + "`" + `.Faz` + "`" + `, v, "int", err)
 			}
-			p.Faz = tmp4
+			p.Faz = tmp6
 		}
 	} else {
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "dictionary", err)
