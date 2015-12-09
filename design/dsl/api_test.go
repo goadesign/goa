@@ -191,6 +191,31 @@ var _ = Describe("API", func() {
 				Ω(params[param1Name].Description).Should(Equal(param1Desc))
 				Ω(params[param2Name].Description).Should(Equal(param2Desc))
 			})
+
+			Context("and a BasePath using them", func() {
+				const basePath = "/:accountID/:id"
+
+				BeforeEach(func() {
+					prevDSL := dsl
+					dsl = func() {
+						BasePath(basePath)
+						prevDSL()
+					}
+				})
+
+				It("sets both the base path and parameters", func() {
+					Ω(Design.BaseParams.Type).Should(BeAssignableToTypeOf(Object{}))
+					params := Design.BaseParams.Type.ToObject()
+					Ω(params).Should(HaveLen(2))
+					Ω(params).Should(HaveKey(param1Name))
+					Ω(params).Should(HaveKey(param2Name))
+					Ω(params[param1Name].Type).Should(Equal(param1Type))
+					Ω(params[param2Name].Type).Should(Equal(param2Type))
+					Ω(params[param1Name].Description).Should(Equal(param1Desc))
+					Ω(params[param2Name].Description).Should(Equal(param2Desc))
+					Ω(Design.BasePath).Should(Equal(basePath))
+				})
+			})
 		})
 
 		Context("with ResponseTemplates", func() {
