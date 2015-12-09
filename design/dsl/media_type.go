@@ -46,7 +46,7 @@ var mediaTypeCount int
 //		})
 //		View("extended", func() {
 //			Attribute("id")
-//			Attribute("href"	fmt.Printf("RUNNING DSL FOR %#v\n", ctx.Context())
+//			Attribute("href")
 //			Attribute("account") // Extended view renders account inline
 //			Attribute("origin")  // Extended view renders origin inline
 //			Attribute("links")   // Extended view also renders links
