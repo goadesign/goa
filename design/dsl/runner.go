@@ -18,6 +18,12 @@ var (
 
 	// Global DSL evaluation stack
 	ctxStack contextStack
+
+	// generatedMediaTypes contains DSL definitions that were created by the design DSL and
+	// need to be executed as a second pass.
+	// An example of this are media types defined with CollectionOf: the element media type
+	// must be defined first then the definition created by CollectionOf must execute.
+	generatedMediaTypes map[string]*design.MediaTypeDefinition
 )
 
 type (
@@ -60,6 +66,14 @@ func RunDSL() error {
 	for _, r := range design.Design.Resources {
 		executeDSL(r.DSL, r)
 	}
+	// Now execute any generated media type definitions.
+	for _, mt := range generatedMediaTypes {
+		canonicalID := design.CanonicalIdentifier(mt.Identifier)
+		design.Design.MediaTypes[canonicalID] = mt
+		executeDSL(mt.DSL, mt)
+	}
+	generatedMediaTypes = make(map[string]*design.MediaTypeDefinition)
+
 	// Don't attempt to validate syntactically incorrect DSL
 	if Errors != nil {
 		return Errors

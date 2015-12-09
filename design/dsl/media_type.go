@@ -46,7 +46,7 @@ var mediaTypeCount int
 //		})
 //		View("extended", func() {
 //			Attribute("id")
-//			Attribute("href")
+//			Attribute("href"	fmt.Printf("RUNNING DSL FOR %#v\n", ctx.Context())
 //			Attribute("account") // Extended view renders account inline
 //			Attribute("origin")  // Extended view renders origin inline
 //			Attribute("links")   // Extended view also renders links
@@ -317,6 +317,9 @@ func Link(name string, view ...string) {
 // The resulting media type identifier is built from the element media type by appending the media
 // type parameter "type" with value "collection".
 func CollectionOf(v interface{}, dsl ...func()) *design.MediaTypeDefinition {
+	if generatedMediaTypes == nil {
+		generatedMediaTypes = make(map[string]*design.MediaTypeDefinition)
+	}
 	var m *design.MediaTypeDefinition
 	var ok bool
 	m, ok = v.(*design.MediaTypeDefinition)
@@ -347,6 +350,10 @@ func CollectionOf(v interface{}, dsl ...func()) *design.MediaTypeDefinition {
 	}
 	id = mime.FormatMediaType(mediatype, params)
 	typeName := m.TypeName + "Collection"
+	if mt, ok := generatedMediaTypes[typeName]; ok {
+		// Already have a type for this collection, reuse it.
+		return mt
+	}
 	mt := design.NewMediaTypeDefinition(typeName, id, func() {
 		if mt, ok := mediaTypeDefinition(true); ok {
 			mt.TypeName = typeName
@@ -364,8 +371,8 @@ func CollectionOf(v interface{}, dsl ...func()) *design.MediaTypeDefinition {
 			}
 		}
 	})
-	if executeDSL(mt.DSL, mt) {
-		design.Design.MediaTypes[design.CanonicalIdentifier(id)] = mt
-	}
+	// Do not execute the DSL right away, will be done last to make sure the element DSL has run
+	// first.
+	generatedMediaTypes[mt.TypeName] = mt
 	return mt
 }
