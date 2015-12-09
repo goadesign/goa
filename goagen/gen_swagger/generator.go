@@ -69,6 +69,7 @@ func Generate(api *design.APIDefinition) (_ []string, err error) {
 	genfiles = append(genfiles, controllerFile)
 	gg := codegen.NewGoGenerator(controllerFile)
 	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
 		codegen.SimpleImport("github.com/raphael/goa"),
 	}
 	gg.WriteHeader(fmt.Sprintf("%s Swagger Spec", api.Name), "swagger", imports)
