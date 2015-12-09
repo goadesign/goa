@@ -166,6 +166,8 @@ var _ = Describe("Resource", func() {
 			Ω(res.Validate()).ShouldNot(HaveOccurred())
 			Ω(res.BasePath).Should(Equal(basePath))
 			Ω(res.BaseParams).ShouldNot(BeNil())
+			Ω(res.BaseParams.Type).ShouldNot(BeNil())
+			Ω(res.BaseParams.Type.ToObject()).Should(HaveKey("paramID"))
 		})
 	})
 
