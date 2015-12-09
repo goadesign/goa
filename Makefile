@@ -22,7 +22,6 @@ DEPEND=golang.org/x/tools/cmd/cover golang.org/x/tools/cmd/goimports \
 	github.com/manveru/faker \
 	github.com/zach-klippenstein/goregen \
 	gopkg.in/alecthomas/kingpin.v2 \
-	github.com/rightscale/rsc \
 	gopkg.in/tylerb/graceful.v1
 
 
