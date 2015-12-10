@@ -603,24 +603,24 @@ const (
 	}`
 
 	hashArrayMarshaled = `	tmp1 := make([]map[string]interface{}, len(raw))
-	for i, r := range raw {
-		tmp2 := make(map[string]interface{}, len(r))
-		for k, v := range r {
+	for tmp2, tmp3 := range raw {
+		tmp4 := make(map[string]interface{}, len(tmp3))
+		for k, v := range tmp3 {
 			var mk string
 			mk = k
 			var mv interface{}
 			mv = v
-			tmp2[mk] = mv
+			tmp4[mk] = mv
 		}
-		tmp1[i] = tmp2
+		tmp1[tmp2] = tmp4
 	}
 	p = tmp1`
 
 	hashArrayUnmarshaled = `	if val, ok := raw.([]interface{}); ok {
 		p = make([]map[string]interface{}, len(val))
-		for i, v := range val {
+		for tmp1, v := range val {
 			if val, ok := v.(map[string]interface{}); ok {
-				p[i] = val
+				p[tmp1] = val
 			} else {
 				err = goa.InvalidAttributeTypeError(` + "`[*]`" + `, v, "hash", err)
 			}
