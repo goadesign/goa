@@ -254,6 +254,22 @@ var _ = Describe("code generation", func() {
 					Ω(unmarshaler).Should(Equal(expected))
 				})
 			})
+
+			Context("any", func() {
+				BeforeEach(func() {
+					p = Primitive(AnyKind)
+				})
+
+				It("generates the marshaler code", func() {
+					expected := `	p = raw`
+					Ω(marshaler).Should(Equal(expected))
+				})
+
+				It("generates the unmarshaler code", func() {
+					expected := `	p = raw`
+					Ω(unmarshaler).Should(Equal(expected))
+				})
+			})
 		})
 
 		Context("with an array of primitive types", func() {

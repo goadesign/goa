@@ -316,6 +316,8 @@ func toString(name, target string, att *design.AttributeDefinition) string {
 			return fmt.Sprintf("%s := strconv.FormatFloat(%s, 'f', -1, 64)", target, name)
 		case design.StringKind:
 			return fmt.Sprintf("%s := %s", target, name)
+		case design.AnyKind:
+			return fmt.Sprintf("%s := fmt.Sprintf(\"%%v\", %s)", target, name)
 		default:
 			panic("unknown primitive type")
 		}
@@ -354,6 +356,8 @@ func flagType(att *design.AttributeDefinition) string {
 	case design.BooleanKind:
 		return "Bool"
 	case design.StringKind:
+		return "String"
+	case design.AnyKind:
 		return "String"
 	case design.ArrayKind:
 		return flagType(att.Type.(*design.Array).ElemType) + "s"

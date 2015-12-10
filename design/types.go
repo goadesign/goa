@@ -119,6 +119,8 @@ const (
 	NumberKind
 	// StringKind represents a JSON string.
 	StringKind
+	// AnyKind represents a generic interface{}.
+	AnyKind
 	// ArrayKind represents a JSON array.
 	ArrayKind
 	// ObjectKind represents a JSON object.
@@ -143,6 +145,9 @@ const (
 
 	// String is the type for a JSON string.
 	String = Primitive(StringKind)
+
+	// Any is the type for an arbitrary JSON value (interface{} in Go).
+	Any = Primitive(AnyKind)
 )
 
 // DataType implementation
@@ -161,6 +166,8 @@ func (p Primitive) Name() string {
 		return "number"
 	case String:
 		return "string"
+	case Any:
+		return "any"
 	default:
 		panic("unknown primitive type") // bug
 	}
