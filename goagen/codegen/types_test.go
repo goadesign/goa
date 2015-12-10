@@ -698,7 +698,7 @@ func MarshalTestmtCollection(source TestmtCollection, inErr error) (target []map
 	err = inErr
 	target = make([]map[string]interface{}, len(source))
 	for i, res := range source {
-			target[i], err = MarshalTestmt(res, err)
+		target[i], err = MarshalTestmt(res, err)
 	}
 	return
 }`

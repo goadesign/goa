@@ -853,7 +853,7 @@ func toSlice(val []interface{}) string {
 const (
 	mArrayTmpl = `{{$tmp := tempvar}}{{tabs .depth}}{{$tmp}} := make([]{{gonative .elemType.Type}}, len({{.source}}))
 {{$tmpIndex := tempvar}}{{$tmpElement := tempvar}}{{tabs .depth}}for {{$tmpIndex}}, {{$tmpElement}} := range {{.source}} {
-{{marshalAttribute .elemType (printf "%s[*]" .context) (printf "%s" $tmpElement) (printf "%s[%s]" $tmp $tmpIndex) (add .depth 1)}}
+{{marshalAttribute .elemType (printf "%s[*]" .context) $tmpElement (printf "%s[%s]" $tmp $tmpIndex) (add .depth 1)}}
 {{tabs .depth}}}
 {{tabs .depth}}{{.target}} = {{$tmp}}`
 
@@ -897,7 +897,7 @@ const (
 
 	mCollectionTmpl = `{{tabs .depth}}{{.target}} = make([]{{gonative .elemMediaType}}, len({{.source}}))
 {{tabs .depth}}for i, res := range {{.source}} {
-{{tabs .depth}}{{marshalMediaType .elemMediaType "res" (printf "%s[i]" .target) .view (add .depth 1)}}
+{{marshalMediaType .elemMediaType "res" (printf "%s[i]" .target) .view (add .depth 1)}}
 {{tabs .depth}}}`
 
 	mLinkTmpl = `{{if .links}}{{$ctx := .}}{{tabs .depth}}if err == nil {
