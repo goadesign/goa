@@ -406,6 +406,7 @@ var _ = Describe("code generation", func() {
 
 		Context("with a media type with links", func() {
 			var testMediaType *MediaTypeDefinition
+			var marshalerImpl string
 
 			BeforeEach(func() {
 				Design = nil
@@ -452,10 +453,45 @@ var _ = Describe("code generation", func() {
 
 			JustBeforeEach(func() {
 				marshaler = codegen.MediaTypeMarshaler(testMediaType, context, source, target, "")
+				marshalerImpl = codegen.MediaTypeMarshalerImpl(testMediaType, "default")
 			})
 
 			It("generates the marshaler code", func() {
 				Ω(marshaler).Should(Equal(mtMarshaled))
+				Ω(marshalerImpl).Should(Equal(mtMarshaledImpl))
+			})
+		})
+
+		Context("with a collection media type", func() {
+			var collectionMediaType *MediaTypeDefinition
+			var marshalerImpl string
+
+			BeforeEach(func() {
+				Design = nil
+				Errors = nil
+
+				testMediaType := MediaType("application/testMT", func() {
+					Attributes(func() {
+						Attribute("id")
+					})
+				})
+				Ω(Errors).ShouldNot(HaveOccurred())
+
+				collectionMediaType = CollectionOf(testMediaType)
+				Ω(Errors).ShouldNot(HaveOccurred())
+
+				RunDSL()
+				Ω(Errors).ShouldNot(HaveOccurred())
+			})
+
+			JustBeforeEach(func() {
+				marshaler = codegen.MediaTypeMarshaler(collectionMediaType, context, source, target, "")
+				marshalerImpl = codegen.MediaTypeMarshalerImpl(collectionMediaType, "default")
+			})
+
+			It("generates the marshaler code", func() {
+				Ω(marshaler).Should(Equal(collectionMtMarshaled))
+				Ω(marshalerImpl).Should(Equal(collectionMtMarshaledImpl))
 			})
 		})
 
@@ -633,34 +669,39 @@ const (
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "dictionary", err)
 	}`
 
-	mtMarshaled  = `	p, err = MarshalTest(raw, err)`
-	mtMarshaled2 = `	p, err = MarshalTest2(raw, err)`
+	mtMarshaled           = `	p, err = MarshalTest(raw, err)`
+	collectionMtMarshaled = `	p, err = MarshalTestmtCollection(raw, err)`
+	mtMarshaled2          = `	p, err = MarshalTest2(raw, err)`
 
-	mtMarshaledImpl = `	tmp1 := map[string]interface{}{
+	mtMarshaledImpl = `// MarshalTest validates and renders an instance of Test into a interface{}
+// using view "default".
+func MarshalTest(source *Test, inErr error) (target map[string]interface{}, err error) {
+	err = inErr
+	tmp1 := map[string]interface{}{
 	}
-	if raw.Bar != nil {
-		tmp2 := map[string]interface{}{
-			"barAtt": raw.Bar.BarAtt,
-			"href": raw.Bar.Href,
-		}
-		tmp1["bar"] = tmp2
+	if source.Bar != nil {
+		tmp1["bar"], err = MarshalBarmt(source.Bar, err)
 	}
-	if raw.Baz != nil {
-		tmp3 := map[string]interface{}{
-			"bazAtt": raw.Baz.BazAtt,
-			"href": raw.Baz.Href,
-			"name": raw.Baz.Name,
-		}
-		tmp1["baz"] = tmp3
+	if source.Baz != nil {
+		tmp1["baz"], err = MarshalBazmt(source.Baz, err)
 	}
-	if raw.Foo != nil {
-		tmp4 := map[string]interface{}{
-			"fooAtt": raw.Foo.FooAtt,
-			"href": raw.Foo.Href,
-		}
-		tmp1["foo"] = tmp4
+	if source.Foo != nil {
+		tmp1["foo"], err = MarshalFoomt(source.Foo, err)
 	}
-	p = tmp1`
+	target = tmp1
+	return
+}`
+
+	collectionMtMarshaledImpl = `// MarshalTestmtCollection validates and renders an instance of TestmtCollection into a interface{}
+// using view "default".
+func MarshalTestmtCollection(source TestmtCollection, inErr error) (target []map[string]interface{}, err error) {
+	err = inErr
+	target = make([]map[string]interface{}, len(source))
+	for i, res := range source {
+			target[i], err = MarshalTestmt(res, err)
+	}
+	return
+}`
 
 	mainTmpl = `package main
 
