@@ -27,7 +27,7 @@ DEPEND=golang.org/x/tools/cmd/cover golang.org/x/tools/cmd/goimports \
 
 .PHONY: goagen
 
-all: depend lint test goagen
+all: depend lint goagen test
 
 depend:
 	@go get $(DEPEND)
