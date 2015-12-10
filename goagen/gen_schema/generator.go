@@ -79,6 +79,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	}
 	gg := codegen.NewGoGenerator(controllerFile)
 	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
 		codegen.SimpleImport("github.com/raphael/goa"),
 	}
 	g.genfiles = append(g.genfiles, controllerFile)
