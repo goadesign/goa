@@ -117,7 +117,7 @@ var _ = Describe("New", func() {
 				Paths:    make(map[string]*genswagger.Path),
 				Consumes: []string{"application/json"},
 				Produces: []string{"application/json"},
-				Tags:     []genswagger.Tag{{Name: tag}},
+				Tags:     []*genswagger.Tag{{Name: tag}},
 				ExternalDocs: &genswagger.ExternalDocs{
 					Description: docDesc,
 					URL:         docURL,

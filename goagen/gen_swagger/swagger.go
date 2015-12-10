@@ -27,7 +27,7 @@ type (
 		Responses           map[string]*Response             `json:"responses,omitempty"`
 		SecurityDefinitions map[string]*SecurityDefinition   `json:"securityDefinitions,omitempty"`
 		Security            []map[string][]string            `json:"security,omitempty"`
-		Tags                []Tag                            `json:"tags,omitempty"`
+		Tags                []*Tag                           `json:"tags,omitempty"`
 		ExternalDocs        *ExternalDocs                    `json:"externalDocs,omitempty"`
 	}
 
@@ -354,7 +354,7 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 	return s, nil
 }
 
-func tagsFromDefinition(mdata design.MetadataDefinition) (tags []Tag, err error) {
+func tagsFromDefinition(mdata design.MetadataDefinition) (tags []*Tag, err error) {
 	if mtags, found := mdata["tags"]; found {
 		err = json.Unmarshal([]byte(mtags), &tags)
 		if err != nil {
@@ -365,7 +365,7 @@ func tagsFromDefinition(mdata design.MetadataDefinition) (tags []Tag, err error)
 }
 
 func tagNamesFromDefinition(mdatas []design.MetadataDefinition) (tagNames []string, err error) {
-	var tags []Tag
+	var tags []*Tag
 	for _, mdata := range mdatas {
 		tags, err = tagsFromDefinition(mdata)
 		if err != nil {
