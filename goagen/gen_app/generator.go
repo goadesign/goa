@@ -115,8 +115,9 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	}
 	title := fmt.Sprintf("%s: Application Contexts", api.Name)
 	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("github.com/raphael/goa"),
+		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("strconv"),
+		codegen.SimpleImport("github.com/raphael/goa"),
 	}
 	g.ContextsWriter.WriteHeader(title, TargetPackage, imports)
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
