@@ -279,7 +279,7 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 	if api == nil {
 		return nil, nil
 	}
-	tags, _, err := tagsFromDefinition([]design.MetadataDefinition{api.Metadata})
+	tags, err := tagsFromDefinition(api.Metadata)
 	if err != nil {
 		return nil, err
 	}
@@ -354,19 +354,25 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 	return s, nil
 }
 
-func tagsFromDefinition(mdatas []design.MetadataDefinition) (tags []Tag, tagNames []string, err error) {
-	for _, mdata := range mdatas {
-		if mtags, found := mdata["tags"]; found {
-			tagObjs := []Tag{}
-			err = json.Unmarshal([]byte(mtags), &tagObjs)
-			if err != nil {
-				return
-			}
+func tagsFromDefinition(mdata design.MetadataDefinition) (tags []Tag, err error) {
+	if mtags, found := mdata["tags"]; found {
+		err = json.Unmarshal([]byte(mtags), &tags)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
 
-			tags = append(tags, tagObjs...)
-			for _, tagObj := range tagObjs {
-				tagNames = append(tagNames, tagObj.Name)
-			}
+func tagNamesFromDefinition(mdatas []design.MetadataDefinition) (tagNames []string, err error) {
+	var tags []Tag
+	for _, mdata := range mdatas {
+		tags, err = tagsFromDefinition(mdata)
+		if err != nil {
+			return
+		}
+		for _, tag := range tags {
+			tagNames = append(tagNames, tag.Name)
 		}
 	}
 	return
@@ -465,7 +471,7 @@ func headersFromDefinition(headers *design.AttributeDefinition) (map[string]*Hea
 
 func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *design.RouteDefinition) error {
 	action := route.Parent
-	_, tagNames, err := tagsFromDefinition([]design.MetadataDefinition{action.Parent.Metadata, action.Metadata})
+	tagNames, err := tagNamesFromDefinition([]design.MetadataDefinition{action.Parent.Metadata, action.Metadata})
 	if err != nil {
 		return err
 	}
