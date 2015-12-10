@@ -1,6 +1,7 @@
 package genswagger
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -26,7 +27,7 @@ type (
 		Responses           map[string]*Response             `json:"responses,omitempty"`
 		SecurityDefinitions map[string]*SecurityDefinition   `json:"securityDefinitions,omitempty"`
 		Security            []map[string][]string            `json:"security,omitempty"`
-		Tags                []Tag                            `json:"tags,omitempty"`
+		Tags                []*Tag                           `json:"tags,omitempty"`
 		ExternalDocs        *ExternalDocs                    `json:"externalDocs,omitempty"`
 	}
 
@@ -278,6 +279,10 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 	if api == nil {
 		return nil, nil
 	}
+	tags, err := tagsFromDefinition(api.Metadata)
+	if err != nil {
+		return nil, err
+	}
 	params, err := paramsFromDefinition(api.BaseParams, api.BasePath)
 	if err != nil {
 		return nil, err
@@ -306,8 +311,10 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 		Consumes:     []string{"application/json"},
 		Produces:     []string{"application/json"},
 		Parameters:   paramMap,
+		Tags:         tags,
 		ExternalDocs: docsFromDefinition(api.Docs),
 	}
+
 	err = api.IterateResponses(func(r *design.ResponseDefinition) error {
 		res, err := responseFromDefinition(api, r)
 		if err != nil {
@@ -345,6 +352,30 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 		}
 	}
 	return s, nil
+}
+
+func tagsFromDefinition(mdata design.MetadataDefinition) (tags []*Tag, err error) {
+	if mtags, found := mdata["tags"]; found {
+		err = json.Unmarshal([]byte(mtags), &tags)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func tagNamesFromDefinition(mdatas []design.MetadataDefinition) (tagNames []string, err error) {
+	var tags []*Tag
+	for _, mdata := range mdatas {
+		tags, err = tagsFromDefinition(mdata)
+		if err != nil {
+			return
+		}
+		for _, tag := range tags {
+			tagNames = append(tagNames, tag.Name)
+		}
+	}
+	return
 }
 
 func paramsFromDefinition(params *design.AttributeDefinition, path string) ([]*Parameter, error) {
@@ -440,6 +471,10 @@ func headersFromDefinition(headers *design.AttributeDefinition) (map[string]*Hea
 
 func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *design.RouteDefinition) error {
 	action := route.Parent
+	tagNames, err := tagNamesFromDefinition([]design.MetadataDefinition{action.Parent.Metadata, action.Metadata})
+	if err != nil {
+		return err
+	}
 	params, err := paramsFromDefinition(action.Params, route.FullPath())
 	if err != nil {
 		return err
@@ -475,6 +510,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		operationID = fmt.Sprintf("%s#%d", operationID, index)
 	}
 	operation := &Operation{
+		Tags:         tagNames,
 		Description:  action.Description,
 		ExternalDocs: docsFromDefinition(action.Docs),
 		OperationID:  operationID,

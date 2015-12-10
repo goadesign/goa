@@ -62,6 +62,7 @@ var _ = Describe("New", func() {
 			host         = "host"
 			scheme       = "https"
 			basePath     = "/base"
+			tag          = "tag"
 			docDesc      = "doc description"
 			docURL       = "http://docURL.com"
 		)
@@ -69,6 +70,7 @@ var _ = Describe("New", func() {
 		BeforeEach(func() {
 			API("test", func() {
 				Title(title)
+				Metadata("tags", `[{"name": "`+tag+`"}]`)
 				Description(description)
 				TermsOfService(terms)
 				Contact(func() {
@@ -115,6 +117,7 @@ var _ = Describe("New", func() {
 				Paths:    make(map[string]*genswagger.Path),
 				Consumes: []string{"application/json"},
 				Produces: []string{"application/json"},
+				Tags:     []*genswagger.Tag{{Name: tag}},
 				ExternalDocs: &genswagger.ExternalDocs{
 					Description: docDesc,
 					URL:         docURL,
@@ -330,12 +333,14 @@ var _ = Describe("New", func() {
 					Required("name")
 				})
 				Resource("res", func() {
+					Metadata("tags", `[{"name": "res"}]`)
 					Description("A wine bottle")
 					DefaultMedia(BottleMedia)
 					BasePath("/bottles")
 					UseTrait("Authenticated")
 
 					Action("Update", func() {
+						Metadata("tags", `[{"name": "Update"}]`)
 						Description("Update account")
 						Docs(func() {
 							Description("docs")
@@ -383,6 +388,12 @@ var _ = Describe("New", func() {
 				Ω(swagger.Paths["/bottles/{id}"]).ShouldNot(BeNil())
 				Ω(swagger.Paths["/bottles/{id}"].Put).ShouldNot(BeNil())
 				Ω(swagger.Paths["/bottles/{id}"].Put.Parameters).Should(HaveLen(4))
+			})
+
+			It("should set the inherited tag and the action tag", func() {
+				tags := []string{"res", "Update"}
+				Ω(swagger.Paths["/orgs/{org}/accounts/{id}"].Put.Tags).Should(Equal(tags))
+				Ω(swagger.Paths["/bottles/{id}"].Put.Tags).Should(Equal(tags))
 			})
 
 			It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
