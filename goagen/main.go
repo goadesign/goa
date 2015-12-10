@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -37,6 +38,14 @@ func main() {
 		terminatedByUser bool
 	)
 
+	// First check for the presence of `goimports`.
+	_, err = exec.LookPath("goimports")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Command goimports not found. Install with:\ngo get golang.org/x/tools/cmd/goimports")
+		os.Exit(1)
+	}
+
+	// Now proceed with code generation
 	cleanup := func() {
 		for _, f := range files {
 			os.RemoveAll(f)
@@ -75,7 +84,7 @@ func main() {
 
 // command parses the command line and returns the specified sub-command.
 func command() codegen.Command {
-	app := kingpin.New("codegen", "goa code generation tool")
+	app := kingpin.New("goagen", "goa code generation tool")
 	app.Version(codegen.Version)
 	app.Help = help
 	codegen.RegisterFlags(app)
@@ -103,7 +112,7 @@ const help = `The goagen tool generates various artifacts from a goa service des
 Each command supported by the tool produces a specific type of artifacts. For example
 the "app" command generates the code that supports the service controllers.
 
-The "bootstrap" command runs the "app", "main" and "swagger" commands generating the
-controllers supporting code and main skeleton code (if not already present) as well as
-the API Swagger specification.
+The "bootstrap" command runs the "app", "main", "client" and "swagger" commands generating the
+controllers supporting code and main skeleton code (if not already present) as well as a client
+package and tool and the Swagger specification for the API.
 `
