@@ -368,7 +368,8 @@ type {{.Name}} struct {
 {{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "number", err)
 {{tabs .Depth}}}
 {{end}}{{if eq .Attribute.Type.Kind 4}}{{/* StringType */}}{{tabs .Depth}}{{.Pkg}} = raw{{goify .Name true}}
-{{end}}{{if eq .Attribute.Type.Kind 5}}{{/* ArrayType */}}{{tabs .Depth}}elems{{goify .Name true}} := strings.Split(raw{{goify .Name true}}, ",")
+{{end}}{{if eq .Attribute.Type.Kind 5}}{{/* AnyType */}}{{tabs .Depth}}{{.Pkg}} = raw{{goify .Name true}}
+{{end}}{{if eq .Attribute.Type.Kind 6}}{{/* ArrayType */}}{{tabs .Depth}}elems{{goify .Name true}} := strings.Split(raw{{goify .Name true}}, ",")
 {{if eq (arrayAttribute .Attribute).Type.Kind 4}}{{tabs .Depth}}{{.Pkg}} = elems{{goify .Name true}}
 {{else}}{{tabs .Depth}}elems{{goify .Name true}}2 := make({{gotyperef .Attribute.Type .Depth}}, len(elems{{goify .Name true}}))
 {{tabs .Depth}}for i, rawElem := range elems{{goify .Name true}} {
