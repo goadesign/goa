@@ -854,8 +854,8 @@ func toSlice(val []interface{}) string {
 
 const (
 	mArrayTmpl = `{{$tmp := tempvar}}{{tabs .depth}}{{$tmp}} := make([]{{gonative .elemType.Type}}, len({{.source}}))
-{{tabs .depth}}for i, r := range {{.source}} {
-{{marshalAttribute .elemType (printf "%s[*]" .context) "r" (printf "%s[i]" $tmp) (add .depth 1)}}
+{{$tmpIndex := tempvar}}{{$tmpElement := tempvar}}{{tabs .depth}}for {{$tmpIndex}}, {{$tmpElement}} := range {{.source}} {
+{{marshalAttribute .elemType (printf "%s[*]" .context) $tmpElement (printf "%s[%s]" $tmp $tmpIndex) (add .depth 1)}}
 {{tabs .depth}}}
 {{tabs .depth}}{{.target}} = {{$tmp}}`
 
@@ -900,7 +900,7 @@ const (
 
 	mCollectionTmpl = `{{tabs .depth}}{{.target}} = make([]{{gonative .elemMediaType}}, len({{.source}}))
 {{tabs .depth}}for i, res := range {{.source}} {
-{{tabs .depth}}{{marshalMediaType .elemMediaType "res" (printf "%s[i]" .target) .view (add .depth 1)}}
+{{marshalMediaType .elemMediaType "res" (printf "%s[i]" .target) .view (add .depth 1)}}
 {{tabs .depth}}}`
 
 	mLinkTmpl = `{{if .links}}{{$ctx := .}}{{tabs .depth}}if err == nil {
@@ -933,8 +933,8 @@ func {{.Name}}(source {{gotyperef .Type 0}}, inErr error) (target {{gonative .Ty
 
 	unmArrayTmpl = `{{tabs .depth}}if val, ok := {{.source}}.([]interface{}); ok {
 {{tabs .depth}}	{{.target}} = make([]{{gotyperef .elemType.Type (add .depth 2)}}, len(val))
-{{tabs .depth}}	for i, v := range val {
-{{unmarshalAttribute .elemType (printf "%s[*]" .context) "v" (printf "%s[i]" .target) (add .depth 2)}}{{$ctx := .}}
+{{tabs .depth}}	{{$tmp := tempvar}}for {{$tmp}}, v := range val {
+{{unmarshalAttribute .elemType (printf "%s[*]" .context) "v" (printf "%s[%s]" .target $tmp) (add .depth 2)}}{{$ctx := .}}
 {{tabs .depth}}	}
 {{tabs .depth}}} else {
 {{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "array", err)
