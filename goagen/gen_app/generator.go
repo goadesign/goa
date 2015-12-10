@@ -238,7 +238,10 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	}
 
 	title = fmt.Sprintf("%s: Application User Types", api.Name)
-	g.UserTypesWriter.WriteHeader(title, TargetPackage, nil)
+	imports = []*codegen.ImportSpec{
+		codegen.SimpleImport("github.com/raphael/goa"),
+	}
+	g.UserTypesWriter.WriteHeader(title, TargetPackage, imports)
 	err = api.IterateUserTypes(func(t *design.UserTypeDefinition) error {
 		return g.UserTypesWriter.Execute(t)
 	})
