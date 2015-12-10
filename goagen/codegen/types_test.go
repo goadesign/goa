@@ -298,6 +298,35 @@ var _ = Describe("code generation", func() {
 			})
 		})
 
+		Context("with an array of hashes", func() {
+			var p *Array
+
+			JustBeforeEach(func() {
+				marshaler = codegen.TypeMarshaler(p, context, source, target)
+				codegen.TempCount = 0
+				unmarshaler = codegen.TypeUnmarshaler(p, context, source, target)
+			})
+
+			BeforeEach(func() {
+				p = &Array{
+					ElemType: &AttributeDefinition{
+						Type: &Hash{
+							KeyType:  &AttributeDefinition{Type: Primitive(StringKind)},
+							ElemType: &AttributeDefinition{Type: Primitive(AnyKind)},
+						},
+					},
+				}
+			})
+
+			It("generates the marshaler code", func() {
+				Ω(marshaler).Should(Equal(hashArrayMarshaled))
+			})
+
+			It("generates the unmarshaler code", func() {
+				Ω(unmarshaler).Should(Equal(hashArrayUnmarshaled))
+			})
+		})
+
 		Context("with a simple object", func() {
 			var o Object
 
@@ -567,6 +596,33 @@ const (
 				p[tmp1] = int(f)
 			} else {
 				err = goa.InvalidAttributeTypeError(` + "`" + `[*]` + "`" + `, v, "int", err)
+			}
+		}
+	} else {
+		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "array", err)
+	}`
+
+	hashArrayMarshaled = `	tmp1 := make([]map[string]interface{}, len(raw))
+	for tmp2, tmp3 := range raw {
+		tmp4 := make(map[string]interface{}, len(tmp3))
+		for k, v := range tmp3 {
+			var mk string
+			mk = k
+			var mv interface{}
+			mv = v
+			tmp4[mk] = mv
+		}
+		tmp1[tmp2] = tmp4
+	}
+	p = tmp1`
+
+	hashArrayUnmarshaled = `	if val, ok := raw.([]interface{}); ok {
+		p = make([]map[string]interface{}, len(val))
+		for tmp1, v := range val {
+			if val, ok := v.(map[string]interface{}); ok {
+				p[tmp1] = val
+			} else {
+				err = goa.InvalidAttributeTypeError(` + "`[*]`" + `, v, "hash", err)
 			}
 		}
 	} else {

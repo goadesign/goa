@@ -278,8 +278,10 @@ func GoNativeType(t design.DataType) string {
 		}
 	case *design.Array:
 		return "[]" + GoNativeType(actual.ElemType.Type)
-	case design.Object, *design.Hash:
+	case design.Object:
 		return "map[string]interface{}"
+	case *design.Hash:
+		return fmt.Sprintf("map[%s]%s", GoNativeType(actual.KeyType.Type), GoNativeType(actual.ElemType.Type))
 	case *design.MediaTypeDefinition:
 		return GoNativeType(actual.Type)
 	case *design.UserTypeDefinition:
@@ -888,11 +890,11 @@ const (
 {{tabs .depth}}	}{{end}}{{if $ctx.required}}
 {{tabs .depth}}}{{end}}`
 
-	mHashTmpl = `{{tabs .depth}}{{$tmp := tempvar}}{{$tmp}} := make(map[interface{}]interface{}, len({{.source}}))
+	mHashTmpl = `{{tabs .depth}}{{$tmp := tempvar}}{{$tmp}} := make(map[{{gonative .type.ToHash.KeyType.Type}}]{{gonative .type.ToHash.ElemType.Type}}, len({{.source}}))
 {{tabs .depth}}for k, v := range {{.source}} {
-{{tabs .depth}}	var mk interface{ }
+{{tabs .depth}}	var mk {{gonative .type.ToHash.KeyType.Type}}
 {{marshalAttribute .type.ToHash.KeyType (printf "%s.keys[*]" .context) "k" "mk" (add .depth 1)}}
-{{tabs .depth}}	var mv interface{}
+{{tabs .depth}}	var mv {{gonative .type.ToHash.ElemType.Type}}
 {{marshalAttribute .type.ToHash.ElemType (printf "%s.values[*]" .context) "v" "mv" (add .depth 1)}}
 {{tabs .depth}}	{{$tmp}}[mk] = mv
 {{tabs .depth}}}
@@ -954,7 +956,8 @@ func {{.Name}}(source {{gotyperef .Type 0}}, inErr error) (target {{gonative .Ty
 {{tabs .depth}}}`
 
 	unmHashTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
-		{{if and (eq .type.KeyType.Type.Kind 4) (eq .type.ElemType.Type.Kind 5)}}{{tabs .depth}}	{{.target}} = val{{else}}{{tabs .depth}}	{{$tmp := tempvar}}{{$tmp}} := make(map[{{gotypename .type.KeyType.Type (add .depth 1)}}]{{gotypename .type.ElemType.Type (add .depth 1)}})
+{{if and (eq .type.KeyType.Type.Kind 4) (eq .type.ElemType.Type.Kind 5)}}{{tabs .depth}}	{{.target}} = val
+{{else}}{{tabs .depth}}	{{$tmp := tempvar}}{{$tmp}} := make(map[{{gotypename .type.KeyType.Type (add .depth 1)}}]{{gotypename .type.ElemType.Type (add .depth 1)}})
 {{tabs .depth}}	for k, v := range val {
 {{$k := tempvar}}{{if not (eq .type.KeyType.Type.Kind 4)}}{{tabs .depth}}		{{$ki := tempvar}}var {{$ki}} interface{}
 {{tabs .depth}}		err = json.Unmarshal([]byte(k), &{{$ki}})
@@ -968,7 +971,9 @@ func {{.Name}}(source {{gotyperef .Type 0}}, inErr error) (target {{gonative .Ty
 {{end}}{{tabs .depth}}		{{$tmp}}[{{if eq .type.KeyType.Type.Kind 4}}k{{else}}{{$k}}{{end}}] = {{if eq .type.ElemType.Type.Kind 5}}v{{else}}{{$v}}{{end}}
 {{tabs .depth}}	}
 {{tabs .depth}}	{{.target}} = {{$tmp}}
-{{tabs .depth}}{{end}}}`
+{{end}}{{tabs .depth}}} else {
+{{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "hash", err)
+{{tabs .depth}}}`
 
 	unmUserImplTmpl = `// {{.Name}} unmarshals and validates a raw interface{} into an instance of {{gotypename .Type 0}}
 func {{.Name}}(source interface{}, inErr error) (target {{gotyperef .Type 0}}, err error) {
