@@ -9,7 +9,7 @@ import (
 	"appengine"
 
 	"github.com/raphael/goa"
-	"github.com/raphael/goa/cors"
+	"github.com/raphael/goa-middleware/cors"
 	"github.com/raphael/goa/examples/cellar/app"
 	"github.com/raphael/goa/examples/cellar/controllers"
 	"github.com/raphael/goa/examples/cellar/swagger"
