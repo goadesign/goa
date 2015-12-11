@@ -63,12 +63,10 @@ The code generation functionality relies on [goimports](https://godoc.org/golang
 go get golang.org/x/tools/cmd/goimports
 ```
 
-## Development Workflow
+## Middlewares
 
-1. Create API design using the [goa design language](https://godoc.org/github.com/raphael/goa/design/dsl).
-2. [Optional] If API design package is a public github repo use [swagger.goa.design](http://swagger.goa.design) to verify the design.
-3. Run [`goagen`](http://www.goa.design/goagen.html): `goagen bootstrap -d <design package path>`
-4. Fill-in implementation of generated controller actions.
+goa includes a number of [built-in middlewares](https://godoc.org/github.com/raphael/goa#Middleware).
+Additional middlewares can be found in the [goa-middleware](https://github.com/raphael/goa-middleware) repo.
 
 ## Getting Started
 
