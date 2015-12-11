@@ -1,9 +1,5 @@
 /*
-Package goa provides the runtime support for goa web services.
-
-see also http://goa.design
-
-package cors: https://godoc.org/github.com/raphael/goa/cors
+Package goa provides the runtime support for goa web services. See also http://goa.design.
 
 package design: https://godoc.org/github.com/raphael/goa/design
 
