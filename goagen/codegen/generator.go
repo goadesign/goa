@@ -28,13 +28,9 @@ func NewGoGenerator(filename string) *GoGenerator {
 		"comment":     Comment,
 		"commandLine": CommandLine,
 	}
-	headerTmpl, err := template.New("header").Funcs(funcMap).Parse(headerT)
-	if err != nil {
-		panic(err) // bug
-	}
 	w := GoGenerator{
 		Filename:   filename,
-		HeaderTmpl: headerTmpl,
+		HeaderTmpl: template.Must(template.New("header").Funcs(funcMap).Parse(headerT)),
 		FuncMap:    funcMap,
 	}
 	return &w
