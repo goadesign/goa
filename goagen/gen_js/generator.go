@@ -2,6 +2,7 @@ package genjs
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -43,6 +44,165 @@ func NewGenerator() (*Generator, error) {
 	return new(Generator), nil
 }
 
+func makeOutputDir(g *Generator) error {
+	codegen.OutputDir = filepath.Join(codegen.OutputDir, "js")
+	if err := os.RemoveAll(codegen.OutputDir); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(codegen.OutputDir, 0755); err != nil {
+		return err
+	}
+	g.genfiles = append(g.genfiles, codegen.OutputDir)
+	return nil
+}
+
+func (g *Generator) generateJS(jsFile string, funcs template.FuncMap, api *design.APIDefinition) (_ *design.ActionDefinition, err error) {
+	file, err := os.Create(jsFile)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+	g.genfiles = append(g.genfiles, jsFile)
+
+	moduleTmpl := template.Must(template.New("module").Funcs(funcs).Parse(moduleT))
+	jsFuncsTmpl := template.Must(template.New("jsFuncs").Funcs(funcs).Parse(jsFuncsT))
+
+	if Scheme == "" && len(api.Schemes) > 0 {
+		Scheme = api.Schemes[0]
+	}
+	data := map[string]interface{}{
+		"API":     api,
+		"Host":    Host,
+		"Scheme":  Scheme,
+		"Timeout": int64(Timeout / time.Millisecond),
+	}
+	if err = moduleTmpl.Execute(file, data); err != nil {
+		return
+	}
+
+	actions := make(map[string][]*design.ActionDefinition)
+	api.IterateResources(func(res *design.ResourceDefinition) error {
+		return res.IterateActions(func(action *design.ActionDefinition) error {
+			if as, ok := actions[action.Name]; ok {
+				actions[action.Name] = append(as, action)
+			} else {
+				actions[action.Name] = []*design.ActionDefinition{action}
+			}
+			return nil
+		})
+	})
+
+	var exampleAction *design.ActionDefinition
+	keys := []string{}
+	for n := range actions {
+		keys = append(keys, n)
+	}
+	sort.Strings(keys)
+	for _, n := range keys {
+		for _, a := range actions[n] {
+			if exampleAction == nil && a.Routes[0].Verb == "GET" {
+				exampleAction = a
+			}
+			if err = jsFuncsTmpl.Execute(file, a); err != nil {
+				return
+			}
+		}
+	}
+
+	_, err = file.Write([]byte(moduleTend))
+	return exampleAction, err
+}
+
+func (g *Generator) generateIndexHTML(
+	htmlFile string,
+	api *design.APIDefinition,
+	exampleAction *design.ActionDefinition,
+	funcs template.FuncMap,
+) error {
+	file, err := os.Create(htmlFile)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	g.genfiles = append(g.genfiles, htmlFile)
+
+	htmlTmpl := template.Must(template.New("exampleHTML").Funcs(funcs).Parse(exampleT))
+
+	argNames := params(exampleAction)
+	var args string
+	if len(argNames) > 0 {
+		query := exampleAction.QueryParams.Type.ToObject()
+		argValues := make([]string, len(argNames))
+		for i, n := range argNames {
+			q := query[n].Type.ToArray().ElemType
+			// below works because we deal with simple types in query strings
+			argValues[i] = fmt.Sprintf("%v", api.Example(q.Type))
+		}
+		args = strings.Join(argValues, ", ")
+	}
+	examplePath := exampleAction.Routes[0].FullPath()
+	pathParams := exampleAction.Routes[0].Params()
+	if len(pathParams) > 0 {
+		pathVars := exampleAction.AllParams().Type.ToObject()
+		pathValues := make([]interface{}, len(pathParams))
+		for i, n := range pathParams {
+			pathValues[i] = api.Example(pathVars[n].Type)
+		}
+		format := design.WildcardRegex.ReplaceAllLiteralString(examplePath, "/%v")
+		examplePath = fmt.Sprintf(format, pathValues...)
+	}
+	if len(argNames) > 0 {
+		args = ", " + args
+	}
+	exampleFunc := fmt.Sprintf(
+		`%s%s ("%s"%s)`,
+		exampleAction.Name,
+		strings.Title(exampleAction.Parent.Name),
+		examplePath,
+		args,
+	)
+	data := map[string]interface{}{
+		"API":         api,
+		"ExampleFunc": exampleFunc,
+	}
+	return htmlTmpl.Execute(file, data)
+}
+
+func (g *Generator) generateAxiosJS() error {
+	filePath := filepath.Join(codegen.OutputDir, "axios.min.js")
+	if err := ioutil.WriteFile(filePath, []byte(axios), 0644); err != nil {
+		return err
+	}
+	g.genfiles = append(g.genfiles, filePath)
+
+	return nil
+}
+
+func (g *Generator) generateExample(api *design.APIDefinition) error {
+	exampleTmpl := template.Must(template.New("exampleController").Parse(exampleCtrlT))
+
+	controllerFile := filepath.Join(codegen.OutputDir, "example.go")
+	gg := codegen.NewGoGenerator(controllerFile)
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("net/http"),
+		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
+		codegen.SimpleImport("github.com/raphael/goa"),
+	}
+	if err := gg.WriteHeader(fmt.Sprintf("%s JavaScript Client Example", api.Name), "js", imports); err != nil {
+		return err
+	}
+	g.genfiles = append(g.genfiles, controllerFile)
+
+	data := map[string]interface{}{
+		"ServeDir": codegen.OutputDir,
+	}
+	if err := exampleTmpl.Execute(gg, data); err != nil {
+		return err
+	}
+
+	return gg.FormatCode()
+}
+
 // Generate produces the skeleton main.
 func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) {
 	go utils.Catch(nil, func() { g.Cleanup() })
@@ -59,150 +219,37 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	if Host == "" {
 		return nil, fmt.Errorf("missing host value, specify it with --host")
 	}
-	codegen.OutputDir = filepath.Join(codegen.OutputDir, "js")
-	if err = os.RemoveAll(codegen.OutputDir); err != nil {
+
+	if err = makeOutputDir(g); err != nil {
 		return
 	}
-	if err = os.MkdirAll(codegen.OutputDir, 0755); err != nil {
-		return
-	}
-	g.genfiles = append(g.genfiles, codegen.OutputDir)
+
 	funcs := template.FuncMap{
 		"title":   strings.Title,
 		"join":    strings.Join,
 		"toLower": strings.ToLower,
 		"params":  params,
 	}
-	filePath := filepath.Join(codegen.OutputDir, "client.js")
-	tmpl, err := template.New("module").Funcs(funcs).Parse(moduleT)
+
+	// Generate client.js
+	exampleAction, err := g.generateJS(filepath.Join(codegen.OutputDir, "client.js"), funcs, api)
 	if err != nil {
-		panic(err.Error()) // bug
-	}
-	g.genfiles = append(g.genfiles, filePath)
-	if Scheme == "" && len(api.Schemes) > 0 {
-		Scheme = api.Schemes[0]
-	}
-	data := map[string]interface{}{
-		"API":     api,
-		"Host":    Host,
-		"Scheme":  Scheme,
-		"Timeout": int64(Timeout / time.Millisecond),
-	}
-	var file *os.File
-	if file, err = os.Create(filePath); err != nil {
 		return
 	}
-	if err = tmpl.Execute(file, data); err != nil {
-		return
-	}
-	actions := make(map[string][]*design.ActionDefinition)
-	api.IterateResources(func(res *design.ResourceDefinition) error {
-		return res.IterateActions(func(action *design.ActionDefinition) error {
-			if as, ok := actions[action.Name]; ok {
-				actions[action.Name] = append(as, action)
-			} else {
-				actions[action.Name] = []*design.ActionDefinition{action}
-			}
-			return nil
-		})
-	})
-	if tmpl, err = template.New("jsFuncs").Funcs(funcs).Parse(jsFuncsT); err != nil {
-		panic(err.Error()) // bug
-	}
-	var exampleAction *design.ActionDefinition
-	keys := make([]string, len(actions))
-	i := 0
-	for n := range actions {
-		keys[i] = n
-		i++
-	}
-	sort.Strings(keys)
-	for _, n := range keys {
-		as, _ := actions[n]
-		for _, a := range as {
-			if exampleAction == nil && a.Routes[0].Verb == "GET" {
-				exampleAction = a
-			}
-			if err = tmpl.Execute(file, a); err != nil {
-				return
-			}
-		}
-	}
-	file.Write([]byte(moduleTend))
-	file.Close()
 
 	if exampleAction != nil {
-		filePath = filepath.Join(codegen.OutputDir, "index.html")
-		if file, err = os.Create(filePath); err != nil {
+		// Generate index.html
+		if err = g.generateIndexHTML(filepath.Join(codegen.OutputDir, "index.html"), api, exampleAction, funcs); err != nil {
 			return
 		}
-		if tmpl, err = template.New("exampleHTML").Funcs(funcs).Parse(exampleT); err != nil {
-			panic(err.Error()) // bug
-		}
-		g.genfiles = append(g.genfiles, filePath)
-		argNames := params(exampleAction)
-		var args string
-		if len(argNames) > 0 {
-			query := exampleAction.QueryParams.Type.ToObject()
-			argValues := make([]string, len(argNames))
-			for i, n := range argNames {
-				q := query[n].Type.ToArray().ElemType
-				// below works because we deal with simple types in query strings
-				argValues[i] = fmt.Sprintf("%v", api.Example(q.Type))
-			}
-			args = strings.Join(argValues, ", ")
-		}
-		examplePath := exampleAction.Routes[0].FullPath()
-		pathParams := exampleAction.Routes[0].Params()
-		if len(pathParams) > 0 {
-			pathVars := exampleAction.AllParams().Type.ToObject()
-			pathValues := make([]interface{}, len(pathParams))
-			for i, n := range pathParams {
-				pathValues[i] = api.Example(pathVars[n].Type)
-			}
-			format := design.WildcardRegex.ReplaceAllLiteralString(examplePath, "/%v")
-			examplePath = fmt.Sprintf(format, pathValues...)
-		}
-		if len(argNames) > 0 {
-			args = ", " + args
-		}
-		exampleFunc := fmt.Sprintf(
-			`%s%s ("%s"%s)`,
-			exampleAction.Name,
-			strings.Title(exampleAction.Parent.Name),
-			examplePath,
-			args,
-		)
-		err = tmpl.Execute(file, map[string]interface{}{"API": api, "ExampleFunc": exampleFunc})
-		file.Close()
 
-		filePath = filepath.Join(codegen.OutputDir, "axios.min.js")
-		if file, err = os.Create(filePath); err != nil {
+		// Generate axios.html
+		if err = g.generateAxiosJS(); err != nil {
 			return
 		}
-		g.genfiles = append(g.genfiles, filePath)
-		file.Write([]byte(axios))
-		file.Close()
 
-		controllerFile := filepath.Join(codegen.OutputDir, "example.go")
-		if tmpl, err = template.New("exampleController").Parse(exampleCtrlT); err != nil {
-			panic(err.Error()) // bug
-		}
-		gg := codegen.NewGoGenerator(controllerFile)
-		imports := []*codegen.ImportSpec{
-			codegen.SimpleImport("net/http"),
-			codegen.SimpleImport("github.com/julienschmidt/httprouter"),
-			codegen.SimpleImport("github.com/raphael/goa"),
-		}
-		g.genfiles = append(g.genfiles, controllerFile)
-		gg.WriteHeader(fmt.Sprintf("%s JavaScript Client Example", api.Name), "js", imports)
-		data := map[string]interface{}{
-			"ServeDir": codegen.OutputDir,
-		}
-		if err = tmpl.Execute(gg, data); err != nil {
-			return
-		}
-		if err = gg.FormatCode(); err != nil {
+		// Generate example
+		if err = g.generateExample(api); err != nil {
 			return
 		}
 	}
