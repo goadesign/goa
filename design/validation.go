@@ -23,6 +23,9 @@ func (verr *ValidationErrors) Error() string {
 
 // Merge merges validation errors into the target.
 func (verr *ValidationErrors) Merge(err *ValidationErrors) {
+	if err == nil {
+		return
+	}
 	verr.Errors = append(verr.Errors, err.Errors...)
 	verr.Definitions = append(verr.Definitions, err.Definitions...)
 }
@@ -98,29 +101,15 @@ func (a *APIDefinition) Validate() *ValidationErrors {
 	verr := new(ValidationErrors)
 	var allRoutes []*routeInfo
 	if a.BaseParams != nil {
-		if err := a.BaseParams.Validate("base parameters", a); err != nil {
-			verr.Merge(err)
-		}
+		verr.Merge(a.BaseParams.Validate("base parameters", a))
 	}
-	if a.Contact != nil && a.Contact.URL != "" {
-		if _, err := url.ParseRequestURI(a.Contact.URL); err != nil {
-			verr.Add(a, "invalid contact URL value: %s", err)
-		}
-	}
-	if a.License != nil && a.License.URL != "" {
-		if _, err := url.ParseRequestURI(a.License.URL); err != nil {
-			verr.Add(a, "invalid license URL value: %s", err)
-		}
-	}
-	if a.Docs != nil && a.Docs.URL != "" {
-		if _, err := url.ParseRequestURI(a.Docs.URL); err != nil {
-			verr.Add(a, "invalid docs URL value: %s", err)
-		}
-	}
+
+	a.validateContact(verr)
+	a.validateLicense(verr)
+	a.validateDocs(verr)
+
 	a.IterateResources(func(r *ResourceDefinition) error {
-		if err := r.Validate(); err != nil {
-			verr.Merge(err)
-		}
+		verr.Merge(r.Validate())
 		r.IterateActions(func(ac *ActionDefinition) error {
 			if ac.Docs != nil && ac.Docs.URL != "" {
 				if _, err := url.ParseRequestURI(ac.Docs.URL); err != nil {
@@ -161,26 +150,45 @@ func (a *APIDefinition) Validate() *ValidationErrors {
 			}
 		}
 	}
+
 	a.IterateMediaTypes(func(mt *MediaTypeDefinition) error {
-		if err := mt.Validate(); err != nil {
-			verr.Merge(err)
-		}
+		verr.Merge(mt.Validate())
 		return nil
 	})
 	a.IterateUserTypes(func(t *UserTypeDefinition) error {
-		if err := t.Validate("", a); err != nil {
-			verr.Merge(err)
-		}
+		verr.Merge(t.Validate("", a))
 		return nil
 	})
 	a.IterateResponses(func(r *ResponseDefinition) error {
-		if err := r.Validate(); err != nil {
-			verr.Merge(err)
-		}
+		verr.Merge(r.Validate())
 		return nil
 	})
 
 	return verr.AsError()
+}
+
+func (a *APIDefinition) validateContact(verr *ValidationErrors) {
+	if a.Contact != nil && a.Contact.URL != "" {
+		if _, err := url.ParseRequestURI(a.Contact.URL); err != nil {
+			verr.Add(a, "invalid contact URL value: %s", err)
+		}
+	}
+}
+
+func (a *APIDefinition) validateLicense(verr *ValidationErrors) {
+	if a.License != nil && a.License.URL != "" {
+		if _, err := url.ParseRequestURI(a.License.URL); err != nil {
+			verr.Add(a, "invalid license URL value: %s", err)
+		}
+	}
+}
+
+func (a *APIDefinition) validateDocs(verr *ValidationErrors) {
+	if a.Docs != nil && a.Docs.URL != "" {
+		if _, err := url.ParseRequestURI(a.Docs.URL); err != nil {
+			verr.Add(a, "invalid docs URL value: %s", err)
+		}
+	}
 }
 
 // Validate tests whether the resource definition is consistent: action names are valid and each action is
@@ -195,9 +203,7 @@ func (r *ResourceDefinition) Validate() *ValidationErrors {
 		if a.Name == r.CanonicalActionName {
 			found = true
 		}
-		if err := a.Validate(); err != nil {
-			verr.Merge(err)
-		}
+		verr.Merge(a.Validate())
 	}
 	if r.CanonicalActionName != "" && !found {
 		verr.Add(r, `unknown canonical action "%s"`, r.CanonicalActionName)
@@ -219,14 +225,7 @@ func (r *ResourceDefinition) Validate() *ValidationErrors {
 					)
 				}
 				for _, v := range vars {
-					found := false
-					for n := range baseParams {
-						if v == n {
-							found = true
-							break
-						}
-					}
-					if !found {
+					if _, found := baseParams[v]; !found {
 						verr.Add(r, "Variable %s from base path %s does not match any parameter from BaseParams",
 							v, r.BasePath)
 					}
@@ -249,14 +248,10 @@ func (r *ResourceDefinition) Validate() *ValidationErrors {
 		}
 	}
 	for _, resp := range r.Responses {
-		if err := resp.Validate(); err != nil {
-			verr.Merge(err)
-		}
+		verr.Merge(resp.Validate())
 	}
 	if r.Params != nil {
-		if err := r.Params.Validate("resource parameters", r); err != nil {
-			verr.Merge(err)
-		}
+		verr.Merge(r.Params.Validate("resource parameters", r))
 	}
 	return verr.AsError()
 }
@@ -277,17 +272,11 @@ func (a *ActionDefinition) Validate() *ValidationErrors {
 				verr.Add(r, "Multiple response definitions with status code %d", r.Status)
 			}
 		}
-		if err := r.Validate(); err != nil {
-			verr.Merge(err)
-		}
+		verr.Merge(r.Validate())
 	}
-	if err := a.ValidateParams(); err != nil {
-		verr.Merge(err)
-	}
+	verr.Merge(a.ValidateParams())
 	if a.Payload != nil {
-		if err := a.Payload.Validate("action payload", a); err != nil {
-			verr.Merge(err)
-		}
+		verr.Merge(a.Payload.Validate("action payload", a))
 	}
 	if a.Parent == nil {
 		verr.Add(a, "missing parent resource")
@@ -333,14 +322,10 @@ func (a *ActionDefinition) ValidateParams() *ValidationErrors {
 			verr.Add(a, `parameter %s cannot be an object, only action payloads may be of type object`, n)
 		}
 		ctx := fmt.Sprintf("parameter %s", n)
-		if err := p.Validate(ctx, a); err != nil {
-			verr.Merge(err)
-		}
+		verr.Merge(p.Validate(ctx, a))
 	}
 	for _, resp := range a.Responses {
-		if err := resp.Validate(); err != nil {
-			verr.Merge(err)
-		}
+		verr.Merge(resp.Validate())
 	}
 	return verr.AsError()
 }
@@ -381,16 +366,12 @@ func (a *AttributeDefinition) Validate(ctx string, parent DSLDefinition) *Valida
 	if isObject {
 		for n, att := range o {
 			ctx = fmt.Sprintf("field %s", n)
-			if err := att.Validate(ctx, a); err != nil {
-				verr.Merge(err)
-			}
+			verr.Merge(att.Validate(ctx, a))
 		}
 	} else {
 		if a.Type.IsArray() {
 			elemType := a.Type.ToArray().ElemType
-			if err := elemType.Validate(ctx, a); err != nil {
-				verr.Merge(err)
-			}
+			verr.Merge(elemType.Validate(ctx, a))
 		}
 	}
 
@@ -402,9 +383,7 @@ func (a *AttributeDefinition) Validate(ctx string, parent DSLDefinition) *Valida
 func (r *ResponseDefinition) Validate() *ValidationErrors {
 	verr := new(ValidationErrors)
 	if r.Headers != nil {
-		if err := r.Headers.Validate("response headers", r); err != nil {
-			verr.Merge(err)
-		}
+		verr.Merge(r.Headers.Validate("response headers", r))
 	}
 	if r.Status == 0 {
 		verr.Add(r, "response status not defined")
@@ -427,9 +406,7 @@ func (u *UserTypeDefinition) Validate(ctx string, parent DSLDefinition) *Validat
 	if u.TypeName == "" {
 		verr.Add(parent, "%s - %s", ctx, "User type must have a name")
 	}
-	if err := u.AttributeDefinition.Validate(ctx, parent); err != nil {
-		verr.Merge(err)
-	}
+	verr.Merge(u.AttributeDefinition.Validate(ctx, parent))
 	return verr.AsError()
 }
 
@@ -437,9 +414,7 @@ func (u *UserTypeDefinition) Validate(ctx string, parent DSLDefinition) *Validat
 // type identifier.
 func (m *MediaTypeDefinition) Validate() *ValidationErrors {
 	verr := new(ValidationErrors)
-	if err := m.UserTypeDefinition.Validate("", m); err != nil {
-		verr.Merge(err)
-	}
+	verr.Merge(m.UserTypeDefinition.Validate("", m))
 	if m.Type == nil { // TBD move this to somewhere else than validation code
 		m.Type = String
 	}
@@ -463,9 +438,7 @@ func (m *MediaTypeDefinition) Validate() *ValidationErrors {
 	}
 	if obj != nil {
 		for n, att := range obj {
-			if err := att.Validate("attribute "+n, m); err != nil {
-				verr.Merge(err)
-			}
+			verr.Merge(att.Validate("attribute "+n, m))
 			if att.View != "" {
 				cmt, ok := att.Type.(*MediaTypeDefinition)
 				if !ok {
@@ -483,18 +456,14 @@ func (m *MediaTypeDefinition) Validate() *ValidationErrors {
 			if n == "default" {
 				hasDefaultView = true
 			}
-			if err := v.Validate(); err != nil {
-				verr.Merge(err)
-			}
+			verr.Merge(v.Validate())
 		}
 		if !hasDefaultView {
 			verr.Add(m, `media type does not define the default view, use View("default", ...) to define it.`)
 		}
 	}
 	for _, l := range m.Links {
-		if err := l.Validate(); err != nil {
-			verr.Merge(err)
-		}
+		verr.Merge(l.Validate())
 	}
 	return verr.AsError()
 }
@@ -543,8 +512,6 @@ func (v *ViewDefinition) Validate() *ValidationErrors {
 	if v.Parent == nil {
 		verr.Add(v, "View must have a parent media type")
 	}
-	if err := v.AttributeDefinition.Validate("", v); err != nil {
-		verr.Merge(err)
-	}
+	verr.Merge(v.AttributeDefinition.Validate("", v))
 	return verr.AsError()
 }
