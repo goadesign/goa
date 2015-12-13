@@ -566,78 +566,112 @@ func docsFromDefinition(docs *design.DocsDefinition) *ExternalDocs {
 	}
 }
 
+func initEnumValidation(def interface{}, values []interface{}) {
+	switch actual := def.(type) {
+	case *Parameter:
+		actual.Enum = values
+	case *Header:
+		actual.Enum = values
+	case *Items:
+		actual.Enum = values
+	}
+}
+
+func initFormatValidation(def interface{}, format string) {
+	switch actual := def.(type) {
+	case *Parameter:
+		actual.Format = format
+	case *Header:
+		actual.Format = format
+	case *Items:
+		actual.Format = format
+	}
+}
+
+func initPatternValidation(def interface{}, pattern string) {
+	switch actual := def.(type) {
+	case *Parameter:
+		actual.Pattern = pattern
+	case *Header:
+		actual.Pattern = pattern
+	case *Items:
+		actual.Pattern = pattern
+	}
+}
+
+func initMinimumValidation(def interface{}, min float64) {
+	switch actual := def.(type) {
+	case *Parameter:
+		actual.Minimum = min
+		actual.ExclusiveMinimum = true
+	case *Header:
+		actual.Minimum = min
+		actual.ExclusiveMinimum = true
+	case *Items:
+		actual.Minimum = min
+		actual.ExclusiveMinimum = true
+	}
+}
+
+func initMaximumValidation(def interface{}, max float64) {
+	switch actual := def.(type) {
+	case *Parameter:
+		actual.Maximum = max
+		actual.ExclusiveMaximum = true
+	case *Header:
+		actual.Maximum = max
+		actual.ExclusiveMaximum = true
+	case *Items:
+		actual.Maximum = max
+		actual.ExclusiveMaximum = true
+	}
+}
+
+func initMinLengthValidation(def interface{}, min int) {
+	switch actual := def.(type) {
+	case *Parameter:
+		actual.MinLength = min
+	case *Header:
+		actual.MinLength = min
+	case *Items:
+		actual.MinLength = min
+	}
+}
+
+func initMaxLengthValidation(def interface{}, max int) {
+	switch actual := def.(type) {
+	case *Parameter:
+		actual.MaxLength = max
+	case *Header:
+		actual.MaxLength = max
+	case *Items:
+		actual.MaxLength = max
+	}
+}
+
 func initValidations(attr *design.AttributeDefinition, def interface{}) {
 	for _, v := range attr.Validations {
 		switch val := v.(type) {
 		case *design.EnumValidationDefinition:
-			switch actual := def.(type) {
-			case *Parameter:
-				actual.Enum = val.Values
-			case *Header:
-				actual.Enum = val.Values
-			case *Items:
-				actual.Enum = val.Values
-			}
+			initEnumValidation(def, val.Values)
+
 		case *design.FormatValidationDefinition:
-			switch actual := def.(type) {
-			case *Parameter:
-				actual.Format = val.Format
-			case *Header:
-				actual.Format = val.Format
-			case *Items:
-				actual.Format = val.Format
-			}
+			initFormatValidation(def, val.Format)
+
 		case *design.PatternValidationDefinition:
-			switch actual := def.(type) {
-			case *Parameter:
-				actual.Pattern = val.Pattern
-			case *Header:
-				actual.Pattern = val.Pattern
-			case *Items:
-				actual.Pattern = val.Pattern
-			}
+			initPatternValidation(def, val.Pattern)
+
 		case *design.MinimumValidationDefinition:
-			switch actual := def.(type) {
-			case *Parameter:
-				actual.Minimum = val.Min
-				actual.ExclusiveMinimum = true
-			case *Header:
-				actual.Minimum = val.Min
-				actual.ExclusiveMinimum = true
-			case *Items:
-				actual.Minimum = val.Min
-				actual.ExclusiveMinimum = true
-			}
+			initMinimumValidation(def, val.Min)
+
 		case *design.MaximumValidationDefinition:
-			switch actual := def.(type) {
-			case *Parameter:
-				actual.Maximum = val.Max
-				actual.ExclusiveMaximum = true
-			case *Header:
-				actual.Maximum = val.Max
-				actual.ExclusiveMaximum = true
-			case *Items:
-				actual.Maximum = val.Max
-				actual.ExclusiveMaximum = true
-			}
+			initMaximumValidation(def, val.Max)
+
 		case *design.MinLengthValidationDefinition:
-			switch actual := def.(type) {
-			case *Parameter:
-				actual.MinLength = val.MinLength
-			case *Header:
-				actual.MinLength = val.MinLength
-			case *Items:
-				actual.MinLength = val.MinLength
-			}
+			initMinLengthValidation(def, val.MinLength)
+
 		case *design.MaxLengthValidationDefinition:
-			switch actual := def.(type) {
-			case *Parameter:
-				actual.MaxLength = val.MaxLength
-			case *Header:
-				actual.MaxLength = val.MaxLength
-			case *Items:
-				actual.MaxLength = val.MaxLength
-			}
+			initMaxLengthValidation(def, val.MaxLength)
 		}
 	}
 }

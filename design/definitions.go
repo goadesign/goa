@@ -745,6 +745,32 @@ func (a *AttributeDefinition) Dup() *AttributeDefinition {
 
 // Example returns a random instance of the attribute that validates.
 func (a *AttributeDefinition) Example(r *RandomGenerator) interface{} {
+	randomValidationLengthExample := func(count int) interface{} {
+		if a.Type.IsArray() {
+			res := make([]interface{}, count)
+			for i := 0; i < count; i++ {
+				res[i] = a.Type.ToArray().ElemType.Example(r)
+			}
+			return res
+		}
+		return r.faker.Characters(count)
+	}
+
+	randomLengthExample := func(validExample func(res float64) bool) interface{} {
+		if a.Type.Kind() == IntegerKind {
+			res := r.Int()
+			for !validExample(float64(res)) {
+				res = r.Int()
+			}
+			return res
+		}
+		res := r.Float64()
+		for !validExample(res) {
+			res = r.Float64()
+		}
+		return res
+	}
+
 	for _, v := range a.Validations {
 		switch actual := v.(type) {
 		case *EnumValidationDefinition:
@@ -752,34 +778,26 @@ func (a *AttributeDefinition) Example(r *RandomGenerator) interface{} {
 			i := r.Int() % count
 			return actual.Values[i]
 		case *FormatValidationDefinition:
-			switch actual.Format {
-			case "email":
-				return r.faker.Email()
-			case "hostname":
-				return r.faker.DomainName() + "." + r.faker.DomainSuffix()
-			case "date-time":
-				return time.Now().Format(time.RFC3339)
-			case "ipv4":
-				ip := r.faker.IPv4Address()
-				return ip.String()
-			case "ipv6":
-				ip := r.faker.IPv6Address()
-				return ip.String()
-			case "uri":
-				return r.faker.URL()
-			case "mac":
-				res, err := regen.Generate(`([0-9A-F]{2}-){5}[0-9A-F]{2}`)
-				if err != nil {
-					return "12-34-56-78-9A-BC"
-				}
+			if res, ok := map[string]interface{}{
+				"email":     r.faker.Email(),
+				"hostname":  r.faker.DomainName() + "." + r.faker.DomainSuffix(),
+				"date-time": time.Now().Format(time.RFC3339),
+				"ipv4":      r.faker.IPv4Address().String(),
+				"ipv6":      r.faker.IPv6Address().String(),
+				"uri":       r.faker.URL(),
+				"mac": func() string {
+					res, err := regen.Generate(`([0-9A-F]{2}-){5}[0-9A-F]{2}`)
+					if err != nil {
+						return "12-34-56-78-9A-BC"
+					}
+					return res
+				}(),
+				"cidr":   "192.168.100.14/24",
+				"regexp": r.faker.Characters(3) + ".*",
+			}[actual.Format]; ok {
 				return res
-			case "cidr":
-				return "192.168.100.14/24"
-			case "regexp":
-				return r.faker.Characters(3) + ".*"
-			default:
-				panic("unknown format") // bug
 			}
+			panic("unknown format") // bug
 		case *PatternValidationDefinition:
 			res, err := regen.Generate(actual.Pattern)
 			if err != nil {
@@ -787,51 +805,19 @@ func (a *AttributeDefinition) Example(r *RandomGenerator) interface{} {
 			}
 			return res
 		case *MinimumValidationDefinition:
-			if a.Type.Kind() == IntegerKind {
-				res := r.Int()
-				for float64(res) < actual.Min {
-					res = r.Int()
-				}
-				return res
-			}
-			res := r.Float64()
-			for res < actual.Min {
-				res = r.Float64()
-			}
-			return res
+			return randomLengthExample(func(res float64) bool {
+				return res >= actual.Min
+			})
 		case *MaximumValidationDefinition:
-			if a.Type.Kind() == IntegerKind {
-				res := r.Int()
-				for float64(res) > actual.Max {
-					res = r.Int()
-				}
-				return res
-			}
-			res := r.Float64()
-			for res > actual.Max {
-				res = r.Float64()
-			}
-			return res
+			return randomLengthExample(func(res float64) bool {
+				return res <= actual.Max
+			})
 		case *MinLengthValidationDefinition:
 			count := actual.MinLength + (r.Int() % 3)
-			if a.Type.IsArray() {
-				res := make([]interface{}, count)
-				for i := 0; i < count; i++ {
-					res[i] = a.Type.ToArray().ElemType.Example(r)
-				}
-				return res
-			}
-			return r.faker.Characters(count)
+			return randomValidationLengthExample(count)
 		case *MaxLengthValidationDefinition:
 			count := actual.MaxLength - (r.Int() % 3)
-			if a.Type.IsArray() {
-				res := make([]interface{}, count)
-				for i := 0; i < count; i++ {
-					res[i] = a.Type.ToArray().ElemType.Example(r)
-				}
-				return res
-			}
-			return r.faker.Characters(count)
+			return randomValidationLengthExample(count)
 		}
 	}
 	return a.Type.Example(r)

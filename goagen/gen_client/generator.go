@@ -44,6 +44,150 @@ func NewGenerator() (*Generator, error) {
 	return new(Generator), nil
 }
 
+func makeToolDir(g *Generator, apiName string) (toolDir string, err error) {
+	codegen.OutputDir = filepath.Join(codegen.OutputDir, "client")
+	if err = os.RemoveAll(codegen.OutputDir); err != nil {
+		return
+	}
+	g.genfiles = append(g.genfiles, codegen.OutputDir)
+	toolDir = filepath.Join(codegen.OutputDir, fmt.Sprintf("%s-cli", apiName))
+	if err = os.MkdirAll(toolDir, 0755); err != nil {
+		return
+	}
+	g.genfiles = append(g.genfiles, toolDir)
+	return
+}
+
+func (g *Generator) generateMain(mainFile string, clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
+	gg := codegen.NewGoGenerator(mainFile)
+	mainTmpl := template.Must(template.New("main").Funcs(funcs).Parse(mainTmpl))
+	registerCmdsTmpl := template.Must(template.New("registerCmds").Funcs(funcs).Parse(registerCmdsT))
+
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("os"),
+		codegen.SimpleImport(clientPkg),
+		codegen.SimpleImport("gopkg.in/alecthomas/kingpin.v2"),
+	}
+	for _, pkg := range SignerPackages {
+		imports = append(imports, codegen.SimpleImport(pkg))
+	}
+	if err := gg.WriteHeader("", "main", imports); err != nil {
+		return err
+	}
+	g.genfiles = append(g.genfiles, mainFile)
+
+	data := map[string]interface{}{
+		"API":     api,
+		"Signers": Signers,
+		"Version": Version,
+	}
+	if err := mainTmpl.Execute(gg, data); err != nil {
+		return err
+	}
+
+	actions := make(map[string][]*design.ActionDefinition)
+	api.IterateResources(func(res *design.ResourceDefinition) error {
+		return res.IterateActions(func(action *design.ActionDefinition) error {
+			if as, ok := actions[action.Name]; ok {
+				actions[action.Name] = append(as, action)
+			} else {
+				actions[action.Name] = []*design.ActionDefinition{action}
+			}
+			return nil
+		})
+	})
+	if err := registerCmdsTmpl.Execute(gg, actions); err != nil {
+		return err
+	}
+
+	return gg.FormatCode()
+}
+
+func (g *Generator) generateCommands(commandsFile string, clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
+	gg := codegen.NewGoGenerator(commandsFile)
+	commandTypesTmpl := template.Must(template.New("commandTypes").Funcs(funcs).Parse(commandTypesTmpl))
+	commandsTmpl := template.Must(template.New("commands").Funcs(funcs).Parse(commandsTmpl))
+
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("github.com/raphael/goa"),
+		codegen.SimpleImport(clientPkg),
+		codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
+		codegen.SimpleImport("gopkg.in/alecthomas/kingpin.v2"),
+	}
+	if err := gg.WriteHeader("", "main", imports); err != nil {
+		return err
+	}
+	g.genfiles = append(g.genfiles, commandsFile)
+
+	gg.Write([]byte("type (\n"))
+	if err := api.IterateResources(func(res *design.ResourceDefinition) error {
+		return res.IterateActions(func(action *design.ActionDefinition) error {
+			return commandTypesTmpl.Execute(gg, action)
+		})
+	}); err != nil {
+		return err
+	}
+	gg.Write([]byte(")\n\n"))
+
+	if err := api.IterateResources(func(res *design.ResourceDefinition) error {
+		return res.IterateActions(func(action *design.ActionDefinition) error {
+			return commandsTmpl.Execute(gg, action)
+		})
+	}); err != nil {
+		return err
+	}
+
+	return gg.FormatCode()
+}
+
+func (g *Generator) generateClient(clientFile string, clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
+	gg := codegen.NewGoGenerator(clientFile)
+	clientTmpl := template.Must(template.New("client").Funcs(funcs).Parse(clientTmpl))
+
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("net/http"),
+		codegen.SimpleImport("github.com/raphael/goa"),
+		codegen.SimpleImport("gopkg.in/alecthomas/kingpin.v2"),
+	}
+	if err := gg.WriteHeader("", "client", imports); err != nil {
+		return err
+	}
+	g.genfiles = append(g.genfiles, clientFile)
+
+	if err := clientTmpl.Execute(gg, api); err != nil {
+		return err
+	}
+
+	return gg.FormatCode()
+}
+
+func (g *Generator) generateClientResources(clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
+	clientsTmpl := template.Must(template.New("clients").Funcs(funcs).Parse(clientsTmpl))
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("bytes"),
+		codegen.SimpleImport("encoding/json"),
+		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("net/http"),
+	}
+
+	return api.IterateResources(func(res *design.ResourceDefinition) error {
+		filename := filepath.Join(codegen.OutputDir, snakeCase(res.Name)+".go")
+		resGen := codegen.NewGoGenerator(filename)
+		if err := resGen.WriteHeader("", "client", imports); err != nil {
+			return err
+		}
+		g.genfiles = append(g.genfiles, filename)
+
+		if err := res.IterateActions(func(action *design.ActionDefinition) error {
+			return clientsTmpl.Execute(resGen, action)
+		}); err != nil {
+			return err
+		}
+
+		return resGen.FormatCode()
+	})
+}
+
 // Generate produces the skeleton main.
 func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) {
 	go utils.Catch(nil, func() { g.Cleanup() })
@@ -54,16 +198,12 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		}
 	}()
 
-	codegen.OutputDir = filepath.Join(codegen.OutputDir, "client")
-	if err = os.RemoveAll(codegen.OutputDir); err != nil {
+	// Make tool directory
+	toolDir, err := makeToolDir(g, api.Name)
+	if err != nil {
 		return
 	}
-	g.genfiles = append(g.genfiles, codegen.OutputDir)
-	toolDir := filepath.Join(codegen.OutputDir, fmt.Sprintf("%s-cli", api.Name))
-	if err = os.MkdirAll(toolDir, 0755); err != nil {
-		return
-	}
-	g.genfiles = append(g.genfiles, toolDir)
+
 	funcs := template.FuncMap{
 		"goify":        codegen.Goify,
 		"gotypedef":    codegen.GoTypeDef,
@@ -79,144 +219,29 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		"defaultPath":  defaultPath,
 	}
 	clientPkg, err := filepath.Rel(os.Getenv("GOPATH"), codegen.OutputDir)
+	if err != nil {
+		return
+	}
 	clientPkg = strings.TrimPrefix(clientPkg, "src/")
-	arrayToStringTmpl, err = template.New("client").Funcs(funcs).Parse(arrayToStringT)
-	if err != nil {
-		panic(err.Error()) // bug
-	}
+	arrayToStringTmpl = template.Must(template.New("client").Funcs(funcs).Parse(arrayToStringT))
 
-	mainFile := filepath.Join(toolDir, "main.go")
-	tmpl, err := template.New("main").Funcs(funcs).Parse(mainTmpl)
-	if err != nil {
-		panic(err.Error()) // bug
-	}
-	gg := codegen.NewGoGenerator(mainFile)
-	g.genfiles = append(g.genfiles, mainFile)
-	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("os"),
-		codegen.SimpleImport(clientPkg),
-		codegen.SimpleImport("gopkg.in/alecthomas/kingpin.v2"),
-	}
-	for _, pkg := range SignerPackages {
-		imports = append(imports, codegen.SimpleImport(pkg))
-	}
-	gg.WriteHeader("", "main", imports)
-	data := map[string]interface{}{
-		"API":     api,
-		"Signers": Signers,
-		"Version": Version,
-	}
-	if err = tmpl.Execute(gg, data); err != nil {
-		return
-	}
-	actions := make(map[string][]*design.ActionDefinition)
-	api.IterateResources(func(res *design.ResourceDefinition) error {
-		return res.IterateActions(func(action *design.ActionDefinition) error {
-			if as, ok := actions[action.Name]; ok {
-				actions[action.Name] = append(as, action)
-			} else {
-				actions[action.Name] = []*design.ActionDefinition{action}
-			}
-			return nil
-		})
-	})
-	if tmpl, err = template.New("registerCmds").Funcs(funcs).Parse(registerCmdsT); err != nil {
-		panic(err.Error()) // bug
-	}
-	if err = tmpl.Execute(gg, actions); err != nil {
-		return
-	}
-	if err = gg.FormatCode(); err != nil {
+	// Generate client/client-cli/main.go
+	if err = g.generateMain(filepath.Join(toolDir, "main.go"), clientPkg, funcs, api); err != nil {
 		return
 	}
 
-	commandsFile := filepath.Join(toolDir, "commands.go")
-	if tmpl, err = template.New("commandTypes").Funcs(funcs).Parse(commandTypesTmpl); err != nil {
-		panic(err.Error()) // bug
-	}
-	gg = codegen.NewGoGenerator(commandsFile)
-	g.genfiles = append(g.genfiles, commandsFile)
-	imports = []*codegen.ImportSpec{
-		codegen.SimpleImport("github.com/raphael/goa"),
-		codegen.SimpleImport(clientPkg),
-		codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
-		codegen.SimpleImport("gopkg.in/alecthomas/kingpin.v2"),
-	}
-	gg.WriteHeader("", "main", imports)
-	gg.Write([]byte("type (\n"))
-	err = api.IterateResources(func(res *design.ResourceDefinition) error {
-		return res.IterateActions(func(action *design.ActionDefinition) error {
-			return tmpl.Execute(gg, action)
-		})
-	})
-	if err != nil {
-		return
-	}
-	gg.Write([]byte(")\n\n"))
-	if tmpl, err = template.New("commands").Funcs(funcs).Parse(commandsTmpl); err != nil {
-		panic(err.Error()) // bug
-	}
-	err = api.IterateResources(func(res *design.ResourceDefinition) error {
-		return res.IterateActions(func(action *design.ActionDefinition) error {
-			return tmpl.Execute(gg, action)
-		})
-	})
-	if err != nil {
-		return
-	}
-	if err = gg.FormatCode(); err != nil {
+	// Generate client/client-cli/commands.go
+	if err = g.generateCommands(filepath.Join(toolDir, "commands.go"), clientPkg, funcs, api); err != nil {
 		return
 	}
 
-	clientFile := filepath.Join(codegen.OutputDir, "client.go")
-	if tmpl, err = template.New("client").Funcs(funcs).Parse(clientTmpl); err != nil {
-		panic(err.Error()) // bug
-	}
-	gg = codegen.NewGoGenerator(clientFile)
-	g.genfiles = append(g.genfiles, clientFile)
-	imports = []*codegen.ImportSpec{
-		codegen.SimpleImport("net/http"),
-		codegen.SimpleImport("github.com/raphael/goa"),
-		codegen.SimpleImport("gopkg.in/alecthomas/kingpin.v2"),
-	}
-	gg.WriteHeader("", "client", imports)
-	if err = tmpl.Execute(gg, api); err != nil {
-		return
-	}
-	if err = gg.FormatCode(); err != nil {
+	// Generate client/client.go
+	if err = g.generateClient(filepath.Join(codegen.OutputDir, "client.go"), clientPkg, funcs, api); err != nil {
 		return
 	}
 
-	if tmpl, err = template.New("clients").Funcs(funcs).Parse(clientsTmpl); err != nil {
-		panic(err.Error()) // bug
-	}
-	imports = []*codegen.ImportSpec{
-		codegen.SimpleImport("bytes"),
-		codegen.SimpleImport("encoding/json"),
-		codegen.SimpleImport("fmt"),
-		codegen.SimpleImport("net/http"),
-	}
-	err = api.IterateResources(func(res *design.ResourceDefinition) error {
-		filename := filepath.Join(codegen.OutputDir, snakeCase(res.Name)+".go")
-		resGen := codegen.NewGoGenerator(filename)
-		g.genfiles = append(g.genfiles, filename)
-		resGen.WriteHeader("", "client", imports)
-		err := res.IterateActions(func(action *design.ActionDefinition) error {
-			err := tmpl.Execute(resGen, action)
-			if err != nil {
-				return err
-			}
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-		if err := resGen.FormatCode(); err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
+	// Generate client/$res.go
+	if err = g.generateClientResources(clientPkg, funcs, api); err != nil {
 		return
 	}
 
