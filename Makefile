@@ -12,6 +12,7 @@
 #
 DIRS=$(shell go list -f {{.Dir}} ./...)
 DEPEND=golang.org/x/tools/cmd/cover golang.org/x/tools/cmd/goimports \
+	github.com/on99/gocyclo \
 	github.com/golang/lint/golint github.com/onsi/gomega \
 	github.com/onsi/ginkgo github.com/onsi/ginkgo/ginkgo \
 	github.com/go-swagger/go-swagger \
@@ -27,7 +28,7 @@ DEPEND=golang.org/x/tools/cmd/cover golang.org/x/tools/cmd/goimports \
 
 .PHONY: goagen
 
-all: depend lint goagen test
+all: depend lint cyclo goagen test
 
 depend:
 	@go get $(DEPEND)
@@ -40,6 +41,11 @@ lint:
 	done
 	@if [ "`golint ./... | grep -vf .golint_exclude | tee /dev/stderr`" ]; then \
 		echo "^ - Lint errors!" && echo && exit 1; \
+	fi
+
+cyclo:
+	@if [ "`gocyclo -over 20 . | grep -v examples/cellar | tee /dev/stderr`" ]; then \
+		echo "^ - Code is needed to cleanup!" && echo && exit 1; \
 	fi
 
 test:

@@ -3,6 +3,7 @@ package genschema
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"github.com/raphael/goa/design"
 )
@@ -286,15 +287,33 @@ func TypeSchema(api *design.APIDefinition, t design.DataType) *JSONSchema {
 
 // Merge does a two level deep merge of other into s.
 func (s *JSONSchema) Merge(other *JSONSchema) {
-	if s.ID == "" {
-		s.ID = other.ID
+	for _, v := range []struct {
+		a, b   interface{}
+		needed bool
+	}{
+		{&s.ID, other.ID, s.ID == ""},
+		{&s.Type, other.Type, s.Type == ""},
+		{&s.Ref, other.Ref, s.Ref == ""},
+		{&s.Items, other.Items, s.Items == nil},
+		{&s.DefaultValue, other.DefaultValue, s.DefaultValue == nil},
+		{&s.Title, other.Title, s.Title == ""},
+		{&s.Media, other.Media, s.Media == nil},
+		{&s.ReadOnly, other.ReadOnly, s.ReadOnly == false},
+		{&s.PathStart, other.PathStart, s.PathStart == ""},
+		{&s.Enum, other.Enum, s.Enum == nil},
+		{&s.Format, other.Format, s.Format == ""},
+		{&s.Pattern, other.Pattern, s.Pattern == ""},
+		{&s.AdditionalProperties, other.AdditionalProperties, s.AdditionalProperties == false},
+		{&s.Minimum, other.Minimum, s.Minimum > other.Minimum},
+		{&s.Maximum, other.Maximum, s.Maximum < other.Maximum},
+		{&s.MinLength, other.MinLength, s.MinLength > other.MinLength},
+		{&s.MaxLength, other.MaxLength, s.MaxLength < other.MaxLength},
+	} {
+		if v.needed && v.b != nil {
+			reflect.Indirect(reflect.ValueOf(v.a)).Set(reflect.ValueOf(v.b))
+		}
 	}
-	if s.Type == "" {
-		s.Type = other.Type
-	}
-	if s.Ref == "" {
-		s.Ref = other.Ref
-	}
+
 	for n, p := range other.Properties {
 		if _, ok := s.Properties[n]; !ok {
 			if s.Properties == nil {
@@ -303,58 +322,19 @@ func (s *JSONSchema) Merge(other *JSONSchema) {
 			s.Properties[n] = p
 		}
 	}
-	if s.Items == nil {
-		s.Items = other.Items
-	}
+
 	for n, d := range other.Definitions {
 		if _, ok := s.Definitions[n]; !ok {
 			s.Definitions[n] = d
 		}
 	}
-	if s.DefaultValue == nil {
-		s.DefaultValue = other.DefaultValue
-	}
-	if s.Title == "" {
-		s.Title = other.Title
-	}
-	if s.Media == nil {
-		s.Media = other.Media
-	}
-	if s.ReadOnly == false {
-		s.ReadOnly = other.ReadOnly
-	}
-	if s.PathStart == "" {
-		s.PathStart = other.PathStart
-	}
+
 	for _, l := range other.Links {
 		s.Links = append(s.Links, l)
 	}
-	if s.Enum == nil {
-		s.Enum = other.Enum
-	}
-	if s.Format == "" {
-		s.Format = other.Format
-	}
-	if s.Pattern == "" {
-		s.Pattern = other.Pattern
-	}
-	if s.Minimum > other.Minimum {
-		s.Minimum = other.Minimum
-	}
-	if s.Maximum < other.Maximum {
-		s.Maximum = other.Maximum
-	}
-	if s.MinLength > other.MinLength {
-		s.MinLength = other.MinLength
-	}
-	if s.MaxLength < other.MaxLength {
-		s.MaxLength = other.MaxLength
-	}
+
 	for _, r := range other.Required {
 		s.Required = append(s.Required, r)
-	}
-	if s.AdditionalProperties == false {
-		s.AdditionalProperties = other.AdditionalProperties
 	}
 }
 

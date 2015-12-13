@@ -48,21 +48,19 @@ func NewGenerator(genfunc string, imports []*codegen.ImportSpec, flags map[strin
 	}
 }
 
-// Generate compiles and runs the generator and returns the generated filenames.
-func (m *Generator) Generate() ([]string, error) {
-	// First make sure environment is setup correctly.
+func getDesignPath() (string, error) {
 	if codegen.OutputDir == "" {
-		return nil, fmt.Errorf("missing output directory specification")
+		return "", fmt.Errorf("missing output directory specification")
 	}
 	if codegen.DesignPackagePath == "" {
-		return nil, fmt.Errorf("missing design package path specification")
+		return "", fmt.Errorf("missing design package path specification")
 	}
 	if err := os.MkdirAll(codegen.OutputDir, 0755); err != nil {
-		return nil, err
+		return "", err
 	}
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
-		return nil, fmt.Errorf("$GOPATH not defined")
+		return "", fmt.Errorf("$GOPATH not defined")
 	}
 	candidates := strings.Split(gopath, ":")
 	for i, c := range candidates {
@@ -77,37 +75,22 @@ func (m *Generator) Generate() ([]string, error) {
 	}
 	if designPath == "" {
 		if len(candidates) == 1 {
-			return nil, fmt.Errorf(`cannot find design package at path "%s"`, candidates[0])
+			return "", fmt.Errorf(`cannot find design package at path "%s"`, candidates[0])
 		}
-		return nil, fmt.Errorf(`cannot find design package in any of the paths %s`, strings.Join(candidates, ", "))
+		return "", fmt.Errorf(`cannot find design package in any of the paths %s`, strings.Join(candidates, ", "))
 	}
 	_, err := exec.LookPath("go")
 	if err != nil {
-		return nil, fmt.Errorf(`failed to find a go compiler, looked in "%s"`, os.Getenv("PATH"))
+		return "", fmt.Errorf(`failed to find a go compiler, looked in "%s"`, os.Getenv("PATH"))
 	}
+	return designPath, nil
+}
 
-	// Create temporary directory used for generation under the output dir.
-	gendir, err := ioutil.TempDir(codegen.OutputDir, "goagen")
-	if err != nil {
-		if _, ok := err.(*os.PathError); ok {
-			err = fmt.Errorf(`invalid output directory path "%s"`, codegen.OutputDir)
-		}
-		return nil, err
-	}
-	defer func() {
-		if !codegen.Debug {
-			os.RemoveAll(gendir)
-		}
-	}()
-	if codegen.Debug {
-		fmt.Printf("goagen source dir: %s\n", gendir)
-	}
-
-	// Figure out design package name from its path
+func getDesignPackageName(designPath string) (string, error) {
 	fset := token.NewFileSet()
 	pkgs, err := parser.ParseDir(fset, designPath, nil, parser.PackageClauseOnly)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	pkgNames := make([]string, len(pkgs))
 	i := 0
@@ -116,15 +99,16 @@ func (m *Generator) Generate() ([]string, error) {
 		i++
 	}
 	if len(pkgs) > 1 {
-		return nil, fmt.Errorf("more than one Go package found in %s (%s)",
+		return "", fmt.Errorf("more than one Go package found in %s (%s)",
 			designPath, strings.Join(pkgNames, ","))
 	}
 	if len(pkgs) == 0 {
-		return nil, fmt.Errorf("no Go package found in %s", designPath)
+		return "", fmt.Errorf("no Go package found in %s", designPath)
 	}
-	pkgName := pkgNames[0]
+	return pkgNames[0], nil
+}
 
-	// Generate tool source code.
+func (m *Generator) generateToolSourceCode(gendir, pkgName string) {
 	filename := filepath.Join(gendir, "main.go")
 	m.GoGenerator = codegen.NewGoGenerator(filename)
 	imports := append(m.Imports,
@@ -153,6 +137,41 @@ func (m *Generator) Generate() ([]string, error) {
 		src, _ := ioutil.ReadFile(filename)
 		fmt.Printf("goagen source:\n%s\n", src)
 	}
+}
+
+// Generate compiles and runs the generator and returns the generated filenames.
+func (m *Generator) Generate() ([]string, error) {
+	// First make sure environment is setup correctly.
+	designPath, err := getDesignPath()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create temporary directory used for generation under the output dir.
+	gendir, err := ioutil.TempDir(codegen.OutputDir, "goagen")
+	if err != nil {
+		if _, ok := err.(*os.PathError); ok {
+			err = fmt.Errorf(`invalid output directory path "%s"`, codegen.OutputDir)
+		}
+		return nil, err
+	}
+	defer func() {
+		if !codegen.Debug {
+			os.RemoveAll(gendir)
+		}
+	}()
+	if codegen.Debug {
+		fmt.Printf("goagen source dir: %s\n", gendir)
+	}
+
+	// Figure out design package name from its path
+	pkgName, err := getDesignPackageName(designPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Generate tool source code.
+	m.generateToolSourceCode(gendir, pkgName)
 
 	// Compile and run generated tool.
 	genbin, err := m.compile(gendir)
