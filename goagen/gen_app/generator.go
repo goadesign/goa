@@ -16,17 +16,7 @@ import (
 // Generator is the application code generator.
 type Generator struct {
 	*codegen.GoGenerator
-	ContextsWriter      *ContextsWriter
-	ControllersWriter   *ControllersWriter
-	ResourcesWriter     *ResourcesWriter
-	MediaTypesWriter    *MediaTypesWriter
-	UserTypesWriter     *UserTypesWriter
-	contextsFilename    string
-	controllersFilename string
-	resourcesFilename   string
-	mediaTypesFilename  string
-	userTypesFilename   string
-	genfiles            []string
+	genfiles []string
 }
 
 // Generate is the generator entry point called by the meta generator.
@@ -53,45 +43,9 @@ func NewGenerator() (*Generator, error) {
 	if err = os.MkdirAll(outdir, 0777); err != nil {
 		return nil, err
 	}
-	ctxFile := filepath.Join(outdir, "contexts.go")
-	ctlFile := filepath.Join(outdir, "controllers.go")
-	resFile := filepath.Join(outdir, "hrefs.go")
-	mtFile := filepath.Join(outdir, "media_types.go")
-	utFile := filepath.Join(outdir, "user_types.go")
-
-	ctxWr, err := NewContextsWriter(ctxFile)
-	if err != nil {
-		panic(err) // bug
-	}
-	ctlWr, err := NewControllersWriter(ctlFile)
-	if err != nil {
-		panic(err) // bug
-	}
-	resWr, err := NewResourcesWriter(resFile)
-	if err != nil {
-		panic(err) // bug
-	}
-	mtWr, err := NewMediaTypesWriter(mtFile)
-	if err != nil {
-		panic(err) // bug
-	}
-	utWr, err := NewUserTypesWriter(utFile)
-	if err != nil {
-		panic(err) // bug
-	}
 	return &Generator{
-		GoGenerator:         codegen.NewGoGenerator(outdir),
-		ContextsWriter:      ctxWr,
-		ControllersWriter:   ctlWr,
-		ResourcesWriter:     resWr,
-		MediaTypesWriter:    mtWr,
-		UserTypesWriter:     utWr,
-		contextsFilename:    ctxFile,
-		controllersFilename: ctlFile,
-		resourcesFilename:   resFile,
-		mediaTypesFilename:  mtFile,
-		userTypesFilename:   utFile,
-		genfiles:            []string{outdir},
+		GoGenerator: codegen.NewGoGenerator(outdir),
+		genfiles:    []string{outdir},
 	}, nil
 }
 
@@ -102,6 +56,10 @@ func AppOutputDir() string {
 
 // Generate the application code, implement codegen.Generator.
 func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) {
+	if api == nil {
+		return nil, fmt.Errorf("missing API definition, make sure design.Design is properly initialized")
+	}
+
 	go utils.Catch(nil, func() { g.Cleanup() })
 
 	defer func() {
@@ -110,146 +68,70 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		}
 	}()
 
-	if api == nil {
-		return nil, fmt.Errorf("missing API definition, make sure design.Design is properly initialized")
-	}
-	title := fmt.Sprintf("%s: Application Contexts", api.Name)
-	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("fmt"),
-		codegen.SimpleImport("strconv"),
-		codegen.SimpleImport("github.com/raphael/goa"),
-	}
-	g.ContextsWriter.WriteHeader(title, TargetPackage, imports)
-	err = api.IterateResources(func(r *design.ResourceDefinition) error {
-		return r.IterateActions(func(a *design.ActionDefinition) error {
-			ctxName := codegen.Goify(a.Name, true) + codegen.Goify(a.Parent.Name, true) + "Context"
-			ctxData := ContextTemplateData{
-				Name:         ctxName,
-				ResourceName: r.Name,
-				ActionName:   a.Name,
-				Payload:      a.Payload,
-				Params:       a.AllParams(),
-				Headers:      r.Headers.Merge(a.Headers),
-				Routes:       a.Routes,
-				Responses:    MergeResponses(r.Responses, a.Responses),
-				API:          api,
-			}
-			return g.ContextsWriter.Execute(&ctxData)
-		})
-	})
-	g.genfiles = append(g.genfiles, g.contextsFilename)
-	if err != nil {
-		return
-	}
-	if err = g.ContextsWriter.FormatCode(); err != nil {
-		return
-	}
-
-	title = fmt.Sprintf("%s: Application Controllers", api.Name)
-	imports = []*codegen.ImportSpec{
-		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
-		codegen.SimpleImport("github.com/raphael/goa"),
-	}
-	g.ControllersWriter.WriteHeader(title, TargetPackage, imports)
-	var controllersData []*ControllerTemplateData
-	api.IterateResources(func(r *design.ResourceDefinition) error {
-		data := &ControllerTemplateData{Resource: codegen.Goify(r.Name, true)}
-		err := r.IterateActions(func(a *design.ActionDefinition) error {
-			context := fmt.Sprintf("%s%sContext", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
-			action := map[string]interface{}{
-				"Name":    codegen.Goify(a.Name, true),
-				"Routes":  a.Routes,
-				"Context": context,
-			}
-			data.Actions = append(data.Actions, action)
-			return nil
-		})
-		if err != nil {
+	outdir := AppOutputDir()
+	err = api.IterateVersions(func(v *design.APIVersionDefinition) error {
+		verdir := filepath.Join(outdir, v.Version)
+		if err := os.MkdirAll(verdir, 0755); err != nil {
 			return err
 		}
-		if len(data.Actions) > 0 {
-			controllersData = append(controllersData, data)
+		if err := g.generateContexts(verdir, api, v); err != nil {
+			return err
+		}
+		if err := g.generateControllers(verdir, v); err != nil {
+			return err
+		}
+		if err := g.generateHrefs(verdir, v); err != nil {
+			return err
 		}
 		return nil
 	})
-	g.genfiles = append(g.genfiles, g.controllersFilename)
-	if err = g.ControllersWriter.Execute(controllersData); err != nil {
-		return
-	}
-	if err = g.ControllersWriter.FormatCode(); err != nil {
-		return
-	}
-
-	title = fmt.Sprintf("%s: Application Resource Href Factories", api.Name)
-	g.ResourcesWriter.WriteHeader(title, TargetPackage, nil)
-	err = api.IterateResources(func(r *design.ResourceDefinition) error {
-		m := api.MediaTypeWithIdentifier(r.MediaType)
-		var identifier string
-		if m != nil {
-			identifier = m.Identifier
-		} else {
-			identifier = "plain/text"
-		}
-		canoTemplate := r.URITemplate()
-		canoTemplate = design.WildcardRegex.ReplaceAllLiteralString(canoTemplate, "/%v")
-		var canoParams []string
-		if ca := r.CanonicalAction(); ca != nil {
-			if len(ca.Routes) > 0 {
-				canoParams = ca.Routes[0].Params()
-			}
-		}
-
-		data := ResourceData{
-			Name:              codegen.Goify(r.Name, true),
-			Identifier:        identifier,
-			Description:       r.Description,
-			Type:              m,
-			CanonicalTemplate: canoTemplate,
-			CanonicalParams:   canoParams,
-		}
-		return g.ResourcesWriter.Execute(&data)
-	})
-	g.genfiles = append(g.genfiles, g.resourcesFilename)
 	if err != nil {
-		return
-	}
-	if err = g.ResourcesWriter.FormatCode(); err != nil {
-		return
+		return nil, err
 	}
 
-	title = fmt.Sprintf("%s: Application Media Types", api.Name)
-	imports = []*codegen.ImportSpec{
+	mtFile := filepath.Join(outdir, "media_types.go")
+	mtWr, err := NewMediaTypesWriter(mtFile)
+	if err != nil {
+		panic(err) // bug
+	}
+	title := fmt.Sprintf("%s: Application Media Types", api.Context())
+	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/raphael/goa"),
 		codegen.SimpleImport("fmt"),
 	}
-	g.MediaTypesWriter.WriteHeader(title, TargetPackage, imports)
+	mtWr.WriteHeader(title, TargetPackage, imports)
 	err = api.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
 		if mt.Type.IsObject() || mt.Type.IsArray() {
-			return g.MediaTypesWriter.Execute(mt)
+			return mtWr.Execute(mt)
 		}
 		return nil
 	})
-	g.genfiles = append(g.genfiles, g.mediaTypesFilename)
+	g.genfiles = append(g.genfiles, mtFile)
 	if err != nil {
 		return
 	}
-	if err = g.MediaTypesWriter.FormatCode(); err != nil {
+	if err = mtWr.FormatCode(); err != nil {
 		return
 	}
 
-	title = fmt.Sprintf("%s: Application User Types", api.Name)
+	utFile := filepath.Join(outdir, "user_types.go")
+	utWr, err := NewUserTypesWriter(utFile)
+	if err != nil {
+		panic(err) // bug
+	}
+	title = fmt.Sprintf("%s: Application User Types", api.Context())
 	imports = []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/raphael/goa"),
 	}
-	g.UserTypesWriter.WriteHeader(title, TargetPackage, imports)
+	utWr.WriteHeader(title, TargetPackage, imports)
 	err = api.IterateUserTypes(func(t *design.UserTypeDefinition) error {
-		return g.UserTypesWriter.Execute(t)
+		return utWr.Execute(t)
 	})
-	g.genfiles = append(g.genfiles, g.userTypesFilename)
+	g.genfiles = append(g.genfiles, utFile)
 	if err != nil {
 		return
 	}
-	if err = g.UserTypesWriter.FormatCode(); err != nil {
+	if err = utWr.FormatCode(); err != nil {
 		return
 	}
 
@@ -278,4 +160,139 @@ func MergeResponses(l, r map[string]*design.ResponseDefinition) map[string]*desi
 		l[n] = r
 	}
 	return l
+}
+
+// generateContexts iterates through the version resources and actions and generates the action
+// contexts.
+func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, version *design.APIVersionDefinition) error {
+	ctxFile := filepath.Join(verdir, "contexts.go")
+	ctxWr, err := NewContextsWriter(ctxFile)
+	if err != nil {
+		panic(err) // bug
+	}
+	title := fmt.Sprintf("%s: Application Contexts", version.Context())
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("strconv"),
+		codegen.SimpleImport("github.com/raphael/goa"),
+	}
+	ctxWr.WriteHeader(title, TargetPackage, imports)
+	err = version.IterateResources(func(r *design.ResourceDefinition) error {
+		return r.IterateActions(func(a *design.ActionDefinition) error {
+			ctxName := codegen.Goify(a.Name, true) + codegen.Goify(a.Parent.Name, true) + "Context"
+			ctxData := ContextTemplateData{
+				Name:         ctxName,
+				ResourceName: r.Name,
+				ActionName:   a.Name,
+				Payload:      a.Payload,
+				Params:       a.AllParams(),
+				Headers:      r.Headers.Merge(a.Headers),
+				Routes:       a.Routes,
+				Responses:    MergeResponses(r.Responses, a.Responses),
+				API:          api,
+				Version:      version,
+			}
+			return ctxWr.Execute(&ctxData)
+		})
+	})
+	g.genfiles = append(g.genfiles, ctxFile)
+	if err != nil {
+		return err
+	}
+	if err = ctxWr.FormatCode(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// generateControllers iterates through the version resources and generates the low level
+// controllers.
+func (g *Generator) generateControllers(verdir string, version *design.APIVersionDefinition) error {
+	ctlFile := filepath.Join(verdir, "controllers.go")
+	ctlWr, err := NewControllersWriter(ctlFile)
+	if err != nil {
+		panic(err) // bug
+	}
+	title := fmt.Sprintf("%s: Application Controllers", version.Context())
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
+		codegen.SimpleImport("github.com/raphael/goa"),
+	}
+	ctlWr.WriteHeader(title, TargetPackage, imports)
+	var controllersData []*ControllerTemplateData
+	version.IterateResources(func(r *design.ResourceDefinition) error {
+		data := &ControllerTemplateData{Resource: codegen.Goify(r.Name, true)}
+		err := r.IterateActions(func(a *design.ActionDefinition) error {
+			context := fmt.Sprintf("%s%sContext", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
+			action := map[string]interface{}{
+				"Name":    codegen.Goify(a.Name, true),
+				"Routes":  a.Routes,
+				"Context": context,
+			}
+			data.Actions = append(data.Actions, action)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		if len(data.Actions) > 0 {
+			data.Version = version.Version
+			controllersData = append(controllersData, data)
+		}
+		return nil
+	})
+	g.genfiles = append(g.genfiles, ctlFile)
+	if err = ctlWr.Execute(controllersData); err != nil {
+		return err
+	}
+	if err = ctlWr.FormatCode(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// generateHrefs iterates through the version resources and generates the href factory methods.
+func (g *Generator) generateHrefs(verdir string, version *design.APIVersionDefinition) error {
+	hrefFile := filepath.Join(verdir, "hrefs.go")
+	resWr, err := NewResourcesWriter(hrefFile)
+	if err != nil {
+		panic(err) // bug
+	}
+	title := fmt.Sprintf("%s: Application Resource Href Factories", version.Context())
+	resWr.WriteHeader(title, TargetPackage, nil)
+	err = version.IterateResources(func(r *design.ResourceDefinition) error {
+		m := design.Design.MediaTypeWithIdentifier(r.MediaType)
+		var identifier string
+		if m != nil {
+			identifier = m.Identifier
+		} else {
+			identifier = "plain/text"
+		}
+		canoTemplate := r.URITemplate()
+		canoTemplate = design.WildcardRegex.ReplaceAllLiteralString(canoTemplate, "/%v")
+		var canoParams []string
+		if ca := r.CanonicalAction(); ca != nil {
+			if len(ca.Routes) > 0 {
+				canoParams = ca.Routes[0].Params()
+			}
+		}
+
+		data := ResourceData{
+			Name:              codegen.Goify(r.Name, true),
+			Identifier:        identifier,
+			Description:       r.Description,
+			Type:              m,
+			CanonicalTemplate: canoTemplate,
+			CanonicalParams:   canoParams,
+		}
+		return resWr.Execute(&data)
+	})
+	g.genfiles = append(g.genfiles, hrefFile)
+	if err != nil {
+		return err
+	}
+	if err = resWr.FormatCode(); err != nil {
+		return err
+	}
+	return nil
 }

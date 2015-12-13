@@ -66,12 +66,14 @@ type (
 		Routes       []*design.RouteDefinition
 		Responses    map[string]*design.ResponseDefinition
 		API          *design.APIDefinition
+		Version      *design.APIVersionDefinition
 	}
 
 	// ControllerTemplateData contains the information required to generate an action handler.
 	ControllerTemplateData struct {
 		Resource string                   // Lower case plural resource name, e.g. "bottles"
 		Actions  []map[string]interface{} // Array of actions, each action has keys "Name", "Routes" and "Context"
+		Version  string                   // Controller API version
 	}
 
 	// ResourceData contains the information required to generate the resource GoGenerator
@@ -450,18 +452,17 @@ type {{.Resource}}Controller interface {
 	// template input: *ControllerTemplateData
 	mountT = `
 // Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given service.
-func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Controller) {
-	router := service.HTTPHandler().(*httprouter.Router)
+func Mount{{.Resource}}Controller(service goa.Service, mux goa.VersionMux, ctrl {{.Resource}}Controller) {
 	var h goa.Handler
-{{$res := .Resource}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
+{{$res := .Resource}}{{$ver := .Resource.Version}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
 		ctx, err := New{{.Context}}(c)
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
 		return ctrl.{{.Name}}(ctx)
 	}
-{{range .Routes}}	router.Handle("{{.Verb}}", "{{.FullPath}}", ctrl.NewHTTPRouterHandle("{{$action.Name}}", h))
-	service.Info("mount", "ctrl", "{{$res}}", "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}")
+{{range .Routes}}	mux.Handle("{{.Verb}}", "{{.FullPath}}", ctrl.HandleFunc("{{$action.Name}}", h))
+	service.Info("mount", "ctrl", "{{$res}}",{{if $ver}} "version", "{{$ver}}",{{end}} "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}")
 {{end}}{{end}}}
 `
 

@@ -49,6 +49,10 @@ var _ = Describe("ContextsWriter", func() {
 			})
 
 			JustBeforeEach(func() {
+				var version *design.APIVersionDefinition
+				if design.Design != nil {
+					version = design.Design.APIVersionDefinition
+				}
 				data = &genapp.ContextTemplateData{
 					Name:         "ListBottleContext",
 					ResourceName: "bottles",
@@ -58,6 +62,7 @@ var _ = Describe("ContextsWriter", func() {
 					Headers:      headers,
 					Responses:    responses,
 					API:          design.Design,
+					Version:      version,
 				}
 			})
 

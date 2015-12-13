@@ -27,7 +27,11 @@ var _ = Describe("NewGenerator", func() {
 		})
 
 		It("instantiates a generator", func() {
-			design.Design = &design.APIDefinition{Name: "foo"}
+			design.Design = &design.APIDefinition{
+				APIVersionDefinition: &design.APIVersionDefinition{
+					Name: "foo",
+				},
+			}
 			var err error
 			gen, err = genmain.NewGenerator()
 			Ω(err).ShouldNot(HaveOccurred())
@@ -79,9 +83,11 @@ var _ = Describe("Generate", func() {
 	Context("with a dummy API", func() {
 		BeforeEach(func() {
 			design.Design = &design.APIDefinition{
-				Name:        "test api",
-				Title:       "dummy API with no resource",
-				Description: "I told you it's dummy",
+				APIVersionDefinition: &design.APIVersionDefinition{
+					Name:        "test api",
+					Title:       "dummy API with no resource",
+					Description: "I told you it's dummy",
+				},
 			}
 		})
 

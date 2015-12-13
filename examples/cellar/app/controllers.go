@@ -28,7 +28,7 @@ type AccountController interface {
 
 // MountAccountController "mounts" a Account resource controller on the given service.
 func MountAccountController(service goa.Service, ctrl AccountController) {
-	router := service.HTTPHandler().(*httprouter.Router)
+	mux := service.ServeMux()
 	var h goa.Handler
 	h = func(c *goa.Context) error {
 		ctx, err := NewCreateAccountContext(c)
@@ -37,7 +37,7 @@ func MountAccountController(service goa.Service, ctrl AccountController) {
 		}
 		return ctrl.Create(ctx)
 	}
-	router.Handle("POST", "/cellar/accounts", ctrl.NewHTTPRouterHandle("Create", h))
+	mux.Handle("POST", "/cellar/accounts", ctrl.HandleFunc("Create", h))
 	service.Info("mount", "ctrl", "Account", "action", "Create", "route", "POST /cellar/accounts")
 	h = func(c *goa.Context) error {
 		ctx, err := NewDeleteAccountContext(c)
@@ -46,7 +46,7 @@ func MountAccountController(service goa.Service, ctrl AccountController) {
 		}
 		return ctrl.Delete(ctx)
 	}
-	router.Handle("DELETE", "/cellar/accounts/:accountID", ctrl.NewHTTPRouterHandle("Delete", h))
+	mux.Handle("DELETE", "/cellar/accounts/:accountID", ctrl.HandleFunc("Delete", h))
 	service.Info("mount", "ctrl", "Account", "action", "Delete", "route", "DELETE /cellar/accounts/:accountID")
 	h = func(c *goa.Context) error {
 		ctx, err := NewShowAccountContext(c)
@@ -55,7 +55,7 @@ func MountAccountController(service goa.Service, ctrl AccountController) {
 		}
 		return ctrl.Show(ctx)
 	}
-	router.Handle("GET", "/cellar/accounts/:accountID", ctrl.NewHTTPRouterHandle("Show", h))
+	mux.Handle("GET", "/cellar/accounts/:accountID", ctrl.HandleFunc("Show", h))
 	service.Info("mount", "ctrl", "Account", "action", "Show", "route", "GET /cellar/accounts/:accountID")
 	h = func(c *goa.Context) error {
 		ctx, err := NewUpdateAccountContext(c)
@@ -64,7 +64,7 @@ func MountAccountController(service goa.Service, ctrl AccountController) {
 		}
 		return ctrl.Update(ctx)
 	}
-	router.Handle("PUT", "/cellar/accounts/:accountID", ctrl.NewHTTPRouterHandle("Update", h))
+	mux.Handle("PUT", "/cellar/accounts/:accountID", ctrl.HandleFunc("Update", h))
 	service.Info("mount", "ctrl", "Account", "action", "Update", "route", "PUT /cellar/accounts/:accountID")
 }
 
@@ -90,7 +90,7 @@ func MountBottleController(service goa.Service, ctrl BottleController) {
 		}
 		return ctrl.Create(ctx)
 	}
-	router.Handle("POST", "/cellar/accounts/:accountID/bottles", ctrl.NewHTTPRouterHandle("Create", h))
+	mux.Handle("POST", "/cellar/accounts/:accountID/bottles", ctrl.HandleFunc("Create", h))
 	service.Info("mount", "ctrl", "Bottle", "action", "Create", "route", "POST /cellar/accounts/:accountID/bottles")
 	h = func(c *goa.Context) error {
 		ctx, err := NewDeleteBottleContext(c)
@@ -99,7 +99,7 @@ func MountBottleController(service goa.Service, ctrl BottleController) {
 		}
 		return ctrl.Delete(ctx)
 	}
-	router.Handle("DELETE", "/cellar/accounts/:accountID/bottles/:bottleID", ctrl.NewHTTPRouterHandle("Delete", h))
+	mux.Handle("DELETE", "/cellar/accounts/:accountID/bottles/:bottleID", ctrl.HandleFunc("Delete", h))
 	service.Info("mount", "ctrl", "Bottle", "action", "Delete", "route", "DELETE /cellar/accounts/:accountID/bottles/:bottleID")
 	h = func(c *goa.Context) error {
 		ctx, err := NewListBottleContext(c)
@@ -108,7 +108,7 @@ func MountBottleController(service goa.Service, ctrl BottleController) {
 		}
 		return ctrl.List(ctx)
 	}
-	router.Handle("GET", "/cellar/accounts/:accountID/bottles", ctrl.NewHTTPRouterHandle("List", h))
+	mux.Handle("GET", "/cellar/accounts/:accountID/bottles", ctrl.HandleFunc("List", h))
 	service.Info("mount", "ctrl", "Bottle", "action", "List", "route", "GET /cellar/accounts/:accountID/bottles")
 	h = func(c *goa.Context) error {
 		ctx, err := NewRateBottleContext(c)
@@ -117,7 +117,7 @@ func MountBottleController(service goa.Service, ctrl BottleController) {
 		}
 		return ctrl.Rate(ctx)
 	}
-	router.Handle("PUT", "/cellar/accounts/:accountID/bottles/:bottleID/actions/rate", ctrl.NewHTTPRouterHandle("Rate", h))
+	mux.Handle("PUT", "/cellar/accounts/:accountID/bottles/:bottleID/actions/rate", ctrl.HandleFunc("Rate", h))
 	service.Info("mount", "ctrl", "Bottle", "action", "Rate", "route", "PUT /cellar/accounts/:accountID/bottles/:bottleID/actions/rate")
 	h = func(c *goa.Context) error {
 		ctx, err := NewShowBottleContext(c)
@@ -126,7 +126,7 @@ func MountBottleController(service goa.Service, ctrl BottleController) {
 		}
 		return ctrl.Show(ctx)
 	}
-	router.Handle("GET", "/cellar/accounts/:accountID/bottles/:bottleID", ctrl.NewHTTPRouterHandle("Show", h))
+	mux.Handle("GET", "/cellar/accounts/:accountID/bottles/:bottleID", ctrl.HandleFunc("Show", h))
 	service.Info("mount", "ctrl", "Bottle", "action", "Show", "route", "GET /cellar/accounts/:accountID/bottles/:bottleID")
 	h = func(c *goa.Context) error {
 		ctx, err := NewUpdateBottleContext(c)
@@ -135,6 +135,6 @@ func MountBottleController(service goa.Service, ctrl BottleController) {
 		}
 		return ctrl.Update(ctx)
 	}
-	router.Handle("PATCH", "/cellar/accounts/:accountID/bottles/:bottleID", ctrl.NewHTTPRouterHandle("Update", h))
+	mux.Handle("PATCH", "/cellar/accounts/:accountID/bottles/:bottleID", ctrl.HandleFunc("Update", h))
 	service.Info("mount", "ctrl", "Bottle", "action", "Update", "route", "PATCH /cellar/accounts/:accountID/bottles/:bottleID")
 }
