@@ -45,7 +45,7 @@ lint:
 
 cyclo:
 	@if [ "`gocyclo -over 20 . | grep -v examples/cellar | tee /dev/stderr`" ]; then \
-		echo "^ - Code is needed to cleanup!" && echo && exit 1; \
+		echo "^ - Cyclomatic complexity exceeds 20, refactor the code!" && echo && exit 1; \
 	fi
 
 test:
