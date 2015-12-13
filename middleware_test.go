@@ -146,6 +146,98 @@ var _ = Describe("NewMiddleware", func() {
 	})
 })
 
+var _ = Describe("VersionSetter", func() {
+	var req *http.Request
+	var ctx *goa.Context
+	var header, query, def string
+
+	const apiVersionQuery = "api_version"
+	const apiVersionHeader = "X-API-Version"
+	const apiVersion = "1.0"
+
+	BeforeEach(func() {
+		header = ""
+		query = ""
+		def = ""
+		var err error
+		req, err = http.NewRequest("GET", "/foo", nil)
+		Ω(err).ShouldNot(HaveOccurred())
+		ctx = goa.NewContext(nil, req, nil, nil, nil, nil)
+	})
+
+	JustBeforeEach(func() {
+		h := func(ctx *goa.Context) error {
+			ctx.JSON(200, "ok")
+			return nil
+		}
+		handler := goa.VersionSetter(header, query, def)(h)
+		err := handler(ctx)
+		Ω(err).ShouldNot(HaveOccurred())
+	})
+
+	Context("with no version set", func() {
+		It("does not set the version in the context", func() {
+			Ω(ctx.Value(goa.VersionKey)).Should(BeNil())
+		})
+	})
+
+	Context("with the version in the querystring", func() {
+		BeforeEach(func() {
+			ctx.Request().URL.RawQuery = fmt.Sprintf("%s=%s", apiVersionQuery, apiVersion)
+			query = apiVersionQuery
+		})
+
+		It("sets the version in the context", func() {
+			Ω(ctx.Value(goa.VersionKey)).Should(Equal(apiVersion))
+		})
+	})
+
+	Context("with the version in the header", func() {
+		BeforeEach(func() {
+			req.Header.Set(apiVersionHeader, apiVersion)
+			header = apiVersionHeader
+		})
+
+		It("sets the version in the context", func() {
+			Ω(ctx.Value(goa.VersionKey)).Should(Equal(apiVersion))
+		})
+	})
+
+	Context("with a default version header value", func() {
+		BeforeEach(func() {
+			def = apiVersion
+		})
+
+		It("sets the version in the context", func() {
+			Ω(ctx.Value(goa.VersionKey)).Should(Equal(apiVersion))
+		})
+	})
+
+	Context("with both a querystring and a default version value", func() {
+		BeforeEach(func() {
+			ctx.Request().URL.RawQuery = fmt.Sprintf("%s=%s", apiVersionQuery, apiVersion)
+			query = apiVersionQuery
+			def = "default"
+		})
+
+		It("sets the version in the context using the querystring", func() {
+			Ω(ctx.Value(goa.VersionKey)).Should(Equal(apiVersion))
+		})
+	})
+
+	Context("with both a header and a default version value", func() {
+		BeforeEach(func() {
+			req.Header.Set(apiVersionHeader, apiVersion)
+			header = apiVersionHeader
+			def = "default"
+		})
+
+		It("sets the version in the context using the querystring", func() {
+			Ω(ctx.Value(goa.VersionKey)).Should(Equal(apiVersion))
+		})
+	})
+})
+
 var _ = Describe("LogRequest", func() {
 	var handler *testHandler
 	var ctx *goa.Context

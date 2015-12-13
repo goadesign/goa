@@ -253,6 +253,11 @@ func (r *ResourceDefinition) Validate() *ValidationErrors {
 	if r.Params != nil {
 		verr.Merge(r.Params.Validate("resource parameters", r))
 	}
+	if r.Version != "" {
+		if _, ok := Design.Versions[r.Version]; !ok {
+			verr.Add(r, "Invalid API version %#v", r.Version)
+		}
+	}
 	return verr.AsError()
 }
 

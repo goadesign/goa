@@ -93,8 +93,8 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		}
 		gg.WriteHeader("", "main", imports)
 		data := map[string]interface{}{
-			"Name":      AppName,
-			"Resources": api.Resources,
+			"Name": AppName,
+			"API":  api,
 		}
 		if err = tmpl.Execute(gg, data); err != nil {
 			return
@@ -230,6 +230,7 @@ func main() {
 	service.Use(goa.RequestID())
 	service.Use(goa.LogRequest())
 	service.Use(goa.Recover())
+{{$api := .API}}{{if .API.Versions}}{{$ver, $prop := range .API.Versions}}
 
 {{range $name, $res := .Resources}}	// Mount "{{$res.Name}}" controller
 	{{$tmp := tempvar}}{{$tmp}} := New{{goify $res.Name true}}Controller(service)

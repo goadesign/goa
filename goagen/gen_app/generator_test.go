@@ -2,6 +2,7 @@ package genapp_test
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -26,26 +27,22 @@ var _ = Describe("NewGenerator", func() {
 			os.RemoveAll("_foo")
 		})
 
-		It("instantiates a generator with initialized writers", func() {
-			design.Design = &design.APIDefinition{Name: "foo"}
+		It("instantiates a generator", func() {
+			design.Design = &design.APIDefinition{
+				APIVersionDefinition: &design.APIVersionDefinition{Name: "foo"},
+			}
 			var err error
 			gen, err = genapp.NewGenerator()
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(gen).ShouldNot(BeNil())
-			Ω(gen.ContextsWriter).ShouldNot(BeNil())
-			Ω(gen.ControllersWriter).ShouldNot(BeNil())
-			Ω(gen.ResourcesWriter).ShouldNot(BeNil())
 		})
 
-		It("instantiates a generator with initialized writers even if Design is not initialized", func() {
+		It("instantiates a generator with initialized writers", func() {
 			design.Design = nil
 			var err error
 			gen, err = genapp.NewGenerator()
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(gen).ShouldNot(BeNil())
-			Ω(gen.ContextsWriter).ShouldNot(BeNil())
-			Ω(gen.ControllersWriter).ShouldNot(BeNil())
-			Ω(gen.ResourcesWriter).ShouldNot(BeNil())
 		})
 	})
 })
@@ -77,9 +74,11 @@ var _ = Describe("Generate", func() {
 	Context("with a dummy API", func() {
 		BeforeEach(func() {
 			design.Design = &design.APIDefinition{
-				Name:        "test api",
-				Title:       "dummy API with no resource",
-				Description: "I told you it's dummy",
+				APIVersionDefinition: &design.APIVersionDefinition{
+					Name:        "test api",
+					Title:       "dummy API with no resource",
+					Description: "I told you it's dummy",
+				},
 			}
 		})
 
@@ -101,6 +100,44 @@ var _ = Describe("Generate", func() {
 	})
 
 	Context("with a simple API", func() {
+		var contextsCode, controllersCode, hrefsCode, mediaTypesCode, version string
+
+		isSource := func(filename, content string) {
+			contextsContent, err := ioutil.ReadFile(filepath.Join(outDir, "app", filename))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(string(contextsContent)).Should(Equal(content))
+		}
+
+		runCodeTemplates := func(data map[string]string) {
+			contextsCodeT, err := template.New("context").Parse(contextsCodeTmpl)
+			Ω(err).ShouldNot(HaveOccurred())
+			var b bytes.Buffer
+			err = contextsCodeT.Execute(&b, data)
+			Ω(err).ShouldNot(HaveOccurred())
+			contextsCode = b.String()
+
+			controllersCodeT, err := template.New("controllers").Parse(controllersCodeTmpl)
+			Ω(err).ShouldNot(HaveOccurred())
+			b.Reset()
+			err = controllersCodeT.Execute(&b, data)
+			Ω(err).ShouldNot(HaveOccurred())
+			controllersCode = b.String()
+
+			hrefsCodeT, err := template.New("hrefs").Parse(hrefsCodeTmpl)
+			Ω(err).ShouldNot(HaveOccurred())
+			b.Reset()
+			err = hrefsCodeT.Execute(&b, data)
+			Ω(err).ShouldNot(HaveOccurred())
+			hrefsCode = b.String()
+
+			mediaTypesCodeT, err := template.New("media types").Parse(mediaTypesCodeTmpl)
+			Ω(err).ShouldNot(HaveOccurred())
+			b.Reset()
+			err = mediaTypesCodeT.Execute(&b, data)
+			Ω(err).ShouldNot(HaveOccurred())
+			mediaTypesCode = b.String()
+		}
+
 		BeforeEach(func() {
 			required := design.ValidationDefinition(&design.RequiredValidationDefinition{
 				Names: []string{"id"},
@@ -153,62 +190,62 @@ var _ = Describe("Generate", func() {
 				Identifier:         "vnd.rightscale.codegen.test.widgets",
 			}
 			design.Design = &design.APIDefinition{
-				Name:        "test api",
-				Title:       "dummy API with no resource",
-				Description: "I told you it's dummy",
-				Resources:   map[string]*design.ResourceDefinition{"Widget": &res},
-				MediaTypes:  map[string]*design.MediaTypeDefinition{"vnd.rightscale.codegen.test.widgets": &mt},
+				APIVersionDefinition: &design.APIVersionDefinition{
+					Name:        "test api",
+					Title:       "dummy API with no resource",
+					Description: "I told you it's dummy",
+					Resources:   map[string]*design.ResourceDefinition{"Widget": &res},
+				},
+				MediaTypes: map[string]*design.MediaTypeDefinition{"vnd.rightscale.codegen.test.widgets": &mt},
 			}
 		})
 
-		It("generates the corresponding code", func() {
-			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(6))
-			data := map[string]string{"outDir": outDir, "design": "foo"}
-			contextsCodeT, err := template.New("context").Parse(contextsCodeTmpl)
-			Ω(err).ShouldNot(HaveOccurred())
-			var b bytes.Buffer
-			err = contextsCodeT.Execute(&b, data)
-			Ω(err).ShouldNot(HaveOccurred())
-			contextsCode := b.String()
+		Context("", func() {
+			BeforeEach(func() {
+				runCodeTemplates(map[string]string{"outDir": outDir, "design": "foo", "version": ""})
+			})
 
-			controllersCodeT, err := template.New("controllers").Parse(controllersCodeTmpl)
-			Ω(err).ShouldNot(HaveOccurred())
-			b.Reset()
-			err = controllersCodeT.Execute(&b, data)
-			Ω(err).ShouldNot(HaveOccurred())
-			controllersCode := b.String()
+			It("generates the corresponding code", func() {
+				Ω(genErr).Should(BeNil())
+				Ω(files).Should(HaveLen(6))
 
-			hrefsCodeT, err := template.New("hrefs").Parse(hrefsCodeTmpl)
-			Ω(err).ShouldNot(HaveOccurred())
-			b.Reset()
-			err = hrefsCodeT.Execute(&b, data)
-			Ω(err).ShouldNot(HaveOccurred())
-			hrefsCode := b.String()
-
-			mediaTypesCodeT, err := template.New("media types").Parse(mediaTypesCodeTmpl)
-			Ω(err).ShouldNot(HaveOccurred())
-			b.Reset()
-			err = mediaTypesCodeT.Execute(&b, data)
-			Ω(err).ShouldNot(HaveOccurred())
-			mediaTypesCode := b.String()
-
-			isSource := func(filename, content string) {
-				contextsContent, err := ioutil.ReadFile(filepath.Join(outDir, "app", filename))
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(string(contextsContent)).Should(Equal(content))
-			}
-
-			isSource("contexts.go", contextsCode)
-			isSource("controllers.go", controllersCode)
-			isSource("hrefs.go", hrefsCode)
-			isSource("media_types.go", mediaTypesCode)
+				isSource("contexts.go", contextsCode)
+				isSource("controllers.go", controllersCode)
+				isSource("hrefs.go", hrefsCode)
+				isSource("media_types.go", mediaTypesCode)
+			})
 		})
+
+		Context("that is versioned", func() {
+			BeforeEach(func() {
+				version = "v1"
+				design.Design.Versions = make(map[string]*design.APIVersionDefinition)
+				verDef := design.Design.APIVersionDefinition
+				verDef.Version = version
+				design.Design.Versions[version] = verDef
+				runCodeTemplates(map[string]string{
+					"outDir":  outDir,
+					"design":  "foo",
+					"version": fmt.Sprintf(" version %s", version),
+				})
+			})
+
+			It("generates the versioned code", func() {
+				Ω(genErr).Should(BeNil())
+				Ω(files).Should(HaveLen(6))
+
+				isSource(version+"/contexts.go", contextsCode)
+				isSource(version+"/controllers.go", controllersCode)
+				isSource(version+"/hrefs.go", hrefsCode)
+				isSource("media_types.go", mediaTypesCode)
+			})
+		})
+
 	})
 })
 
 const contextsCodeTmpl = `//************************************************************************//
-// test api: Application Contexts
+// API "test api"{{.version}}: Application Contexts
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
@@ -256,7 +293,7 @@ func (ctx *GetWidgetContext) OK(resp ID) error {
 `
 
 const controllersCodeTmpl = `//************************************************************************//
-// test api: Application Controllers
+// API "test api"{{.version}}: Application Controllers
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
@@ -296,7 +333,7 @@ func MountWidgetController(service goa.Service, ctrl WidgetController) {
 `
 
 const hrefsCodeTmpl = `//************************************************************************//
-// test api: Application Resource Href Factories
+// API "test api"{{.version}}: Application Resource Href Factories
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
@@ -317,7 +354,7 @@ func WidgetHref(id interface{}) string {
 `
 
 const mediaTypesCodeTmpl = `//************************************************************************//
-// test api: Application Media Types
+// API "test api": Application Media Types
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen

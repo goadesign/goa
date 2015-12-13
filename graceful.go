@@ -109,7 +109,7 @@ func (gapp *GracefulApplication) setup(addr string) {
 	// context deadline) instead of relying on a shutdown timeout.
 	gapp.server = &graceful.Server{
 		Timeout:          0,
-		Server:           &http.Server{Addr: addr, Handler: gapp.Router},
+		Server:           &http.Server{Addr: addr, Handler: gapp.ServeMux()},
 		NoSignalHandling: true,
 	}
 }

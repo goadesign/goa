@@ -54,6 +54,10 @@ func RunDSL() error {
 	// First run the top level API DSL to initialize responses and
 	// response templates needed by resources.
 	executeDSL(design.Design.DSL, design.Design)
+	// The all the versions
+	for _, v := range design.Design.Versions {
+		executeDSL(v.DSL, v)
+	}
 	// Then run the user type DSLs
 	for _, t := range design.Design.Types {
 		executeDSL(t.DSL, t.AttributeDefinition)
@@ -310,6 +314,16 @@ func actionDefinition(failIfNotAction bool) (*design.ActionDefinition, bool) {
 func apiDefinition(failIfNotAPI bool) (*design.APIDefinition, bool) {
 	a, ok := ctxStack.current().(*design.APIDefinition)
 	if !ok && failIfNotAPI {
+		incompatibleDSL(caller())
+	}
+	return a, ok
+}
+
+// versionDefinition returns true and current context if it is an APIVersionDefinition,
+// nil and false otherwise.
+func versionDefinition(failIfNotVersion bool) (*design.APIVersionDefinition, bool) {
+	a, ok := ctxStack.current().(*design.APIVersionDefinition)
+	if !ok && failIfNotVersion {
 		incompatibleDSL(caller())
 	}
 	return a, ok

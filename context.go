@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
+	"net/url"
 
 	"golang.org/x/net/context"
 	log "gopkg.in/inconshreveable/log15.v2"
@@ -25,8 +25,7 @@ type key int
 const (
 	reqKey key = iota
 	respKey
-	paramKey
-	queryKey
+	paramsKey
 	payloadKey
 	respWrittenKey
 	respStatusKey
@@ -38,8 +37,7 @@ const (
 func NewContext(gctx context.Context,
 	req *http.Request,
 	rw http.ResponseWriter,
-	params map[string]string,
-	query map[string][]string,
+	params url.Values,
 	payload interface{}) *Context {
 
 	if gctx == nil {
@@ -47,8 +45,7 @@ func NewContext(gctx context.Context,
 	}
 	gctx = context.WithValue(gctx, reqKey, req)
 	gctx = context.WithValue(gctx, respKey, rw)
-	gctx = context.WithValue(gctx, paramKey, params)
-	gctx = context.WithValue(gctx, queryKey, query)
+	gctx = context.WithValue(gctx, paramsKey, params)
 	gctx = context.WithValue(gctx, payloadKey, payload)
 
 	return &Context{Context: gctx}
@@ -98,37 +95,19 @@ func (ctx *Context) ResponseLength() int {
 	return 0
 }
 
-// Get returns the param or query string with the given name and true or an empty string and false
-// if there isn't one.
-func (ctx *Context) Get(name string) (string, bool) {
-	iparams := ctx.Value(paramKey)
-	if iparams == nil {
-		return "", false
-	}
-	params := iparams.(map[string]string)
-	v, ok := params[name]
-	if !ok {
-		var vs []string
-		query := ctx.Value(queryKey).(map[string][]string)
-		vs, ok = query[name]
-		if ok {
-			v = strings.Join(vs, ",")
-		}
-	}
-	if !ok {
-		return "", false
-	}
-	return v, true
+// Get returns the param or querystring value with the given name.
+func (ctx *Context) Get(name string) string {
+	iparams := ctx.Value(paramsKey)
+	params := iparams.(url.Values)
+	return params.Get(name)
 }
 
-// GetMany returns the query string values with the given name or nil if there aren't any.
-func (ctx *Context) GetMany(name string) []string {
-	q := ctx.Value(queryKey)
-	if q == nil {
-		return nil
-	}
-	query := q.(map[string][]string)
-	return query[name]
+// GetMany returns the querystring values with the given name or nil if there aren't any.
+func (ctx *Context) GetMany(name string) ([]string, bool) {
+	iparams := ctx.Value(paramsKey)
+	params := iparams.(url.Values)
+	p, ok := params[name]
+	return p, ok
 }
 
 // GetNames returns all the querystring and URL parameter names.
