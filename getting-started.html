@@ -149,19 +149,23 @@ var BottleMedia = MediaType("application/vnd.goa.example.bottle+json", func() {
                                 current working directory. The list should look something like this:
                         </p>
                         <pre>
-        app/contexts.go
-        app/controllers.go
-        app/hrefs.go
-        app/media_types.go
-        app/user_types.go
-        main.go
-        bottle.go
-        client/cellar-cli/main.go
-        client/cellar-cli/commands.go
-        client/client.go
-        client/bottle.go
-        swagger/swagger.go
-        swagger/swagger.json
+app
+app/contexts.go
+app/controllers.go
+app/hrefs.go
+app/media_types.go
+app/user_types.go
+main.go
+bottle.go
+client
+client/cellar-cli
+client/cellar-cli/main.go
+client/cellar-cli/commands.go
+client/client.go
+client/bottle.go
+swagger
+swagger/swagger.json
+swagger/swagger.go
                         </pre>
                         <p>
                                 Note how <code>goagen</code> generated a main for our app as well as a skeleton controller (<code>bottle.go</code>). These
@@ -277,7 +281,7 @@ func (c *BottleController) Show(ctx *app.ShowBottleContext) error {
                 return ctx.NotFound()
         }
         // Build the resource using the generated data structure
-        bottle := app.Bottle{
+        bottle := app.GoaExampleBottle{
                 ID:   ctx.BottleID,
                 Name: fmt.Sprintf("Bottle #%d", ctx.BottleID),
                 Href: app.BottleHref(ctx.BottleID),

@@ -11,47 +11,53 @@
         <link rel="stylesheet" href="assets/css/googlecode.css"/>
 </head>
 <body id="top">
-	<div id="nav">
-		<ul class="actions">
-			<li>
-				<a class="button" href="index.html">Intro</a>
-			</li>
-			<li>
-				<a class="button" href="getting-started.html">Guide</a>
-			</li>
-			<li>
-				<a class="button special" href="goagen.html">goagen</a>
-			</li>
-			<li>
-				<a class="button" href="swagger.html">Swagger</a>
-			</li>
-		</ul>
-	</div>
+        <div id="nav">
+                <ul class="actions">
+                        <li>
+                                <a class="button" href="index.html">Intro</a>
+                        </li>
+                        <li>
+                                <a class="button" href="getting-started.html">Guide</a>
+                        </li>
+                        <li>
+                                <a class="button special" href="goagen.html">goagen</a>
+                        </li>
+                        <li>
+                                <a class="button" href="swagger.html">Swagger</a>
+                        </li>
+                </ul>
+        </div>
         <section id="one" class="wrapper style2 special">
                 <h2>goagen, the Tool</h2>
         </section>
         <section id="one" class="wrapper">
                 <div class="inner">
                         <p>
-                                <code>goagen</code> is a tool that generates various artifacts from a goa design package.<br/>Install it with:
-                                <code class="bash">go get github.com/raphael/goa/goagen</code>
+                                <code>goagen</code> is a tool that generates various artifacts from a goa design package.<br/> Install it with:
+                                <code class="bash">go get github.com/raphael/goa/goagen</code><br/>
+                                goagen relies on <code>goimports</code>:<br/>
+                                <code class="bash">go get golang.org/x/tools/cmd/goimports</code>
                         </p>
                         <p>
                                 Each type of artifact is associated with a <code>goagen</code> command that exposes it own set of flags.
                                 Internally these commands map to "generators" that contain the logic for generating the artifacts.
                                 It works something like this:
                         </p>
-                        <ul>
+                        <ol>
                                 <li>
-                                        <code>goagen</code> first builds a temporary executable that contains the user design package. This temporary
-                                        executable also contains code that runs the design package and invokes the target generator
-                                        with the resulting data structures.
+                                        goagen parses the command line to determine the type of output desired and invokes the appropriate generator.
                                 </li>
                                 <li>
-                                        <code>goagen</code> then runs that temporary executable and reports any error. If the temporary executable
-                                        succeeds it prints the list of generated files.
+                                        The generator writes the code of the tool that will produce the final output to a temporary Go workspace.
                                 </li>
-                        </ul>
+                                <li>
+                                        The tool composed of the design language package and the output producing code is compiled in the temporary workspace.
+                                </li>
+                                <li>
+                                        <code>goagen</code> then runs the tool which evaluates the design functions and traverses the resulting in-memory data
+                                        structures to write the output.
+                                </li>
+                        </ol>
                         <p>
                                 Each generator registers a command with the <code>goagen</code> tool, <code>goagen --help</code> lists all the available
                                 commands. These are:
@@ -67,10 +73,10 @@
                                         <code>client</code>: generates an API client Go package and tool.
                                 </li>
                                 <li>
-                                        <code>js</code>: generates a JavaScript API client.
+                                        <code>swagger</code>: generates the API Swagger specification.
                                 </li>
                                 <li>
-                                        <code>swagger</code>: generates the API Swagger specification.
+                                        <code>js</code>: generates a JavaScript API client.
                                 </li>
                                 <li>
                                         <code>schema</code>: generates the API Hyper-schema JSON.
@@ -80,7 +86,7 @@
                                 </li>
                                 <li>
                                         <code>bootstrap</code>: invokes the <code>app</code>, <code>main</code>, <code>client</code> and <code>swagger</code>
-                                        generators in this order.
+                                        generators.
                                 </li>
                         </ul>
                         <p>
@@ -352,7 +358,7 @@ func Generate(api *design.APIDefinition) ([]string, error) {
         ioutil.WriteFile(outputFile, []byte(content), 0755)
         return []string{outputFile}, nil
 }
-</pre></code>
+</code></pre>
                 </div>
         </section>
 
