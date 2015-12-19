@@ -569,52 +569,84 @@ var _ = Describe("InvalidRangeError", func() {
 })
 
 var _ = Describe("InvalidLengthError", func() {
-	var valErr, err error
-	ctx := "ctx"
-	target := "target"
-	value := 42
-	min := true
+	const ctx = "ctx"
+	const value = 42
+	const min = true
+
+	var target interface{}
+	var ln int
+	var err error
+
+	var valErr error
 
 	BeforeEach(func() {
 		err = nil
 	})
 
 	JustBeforeEach(func() {
-		valErr = goa.InvalidLengthError(ctx, target, value, min, err)
+		valErr = goa.InvalidLengthError(ctx, target, ln, value, min, err)
 	})
 
-	It("creates a multi error", func() {
-		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		mErr := valErr.(goa.MultiError)
-		Ω(mErr).Should(HaveLen(1))
-		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidLength))))
-		Ω(tErr.Mesg).Should(ContainSubstring(ctx))
-		Ω(tErr.Mesg).Should(ContainSubstring("greater or equal"))
-		Ω(tErr.Mesg).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
-		Ω(tErr.Mesg).Should(ContainSubstring(target))
-	})
-
-	Context("with a pre-existing error", func() {
+	Context("on strings", func() {
 		BeforeEach(func() {
-			err = errors.New("pre-existing")
+			target = "target"
+			ln = len("target")
 		})
 
-		It("appends to the multi-error", func() {
+		It("creates a multi error", func() {
 			Ω(valErr).ShouldNot(BeNil())
 			Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
 			mErr := valErr.(goa.MultiError)
-			Ω(mErr).Should(HaveLen(2))
-			Ω(mErr[0]).Should(Equal(err))
-			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-			tErr := mErr[1].(*goa.TypedError)
+			Ω(mErr).Should(HaveLen(1))
+			Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
+			tErr := mErr[0].(*goa.TypedError)
 			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidLength))))
 			Ω(tErr.Mesg).Should(ContainSubstring(ctx))
 			Ω(tErr.Mesg).Should(ContainSubstring("greater or equal"))
 			Ω(tErr.Mesg).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
-			Ω(tErr.Mesg).Should(ContainSubstring(target))
+			Ω(tErr.Mesg).Should(ContainSubstring(target.(string)))
+		})
+
+		Context("with a pre-existing error", func() {
+			BeforeEach(func() {
+				err = errors.New("pre-existing")
+			})
+
+			It("appends to the multi-error", func() {
+				Ω(valErr).ShouldNot(BeNil())
+				Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
+				mErr := valErr.(goa.MultiError)
+				Ω(mErr).Should(HaveLen(2))
+				Ω(mErr[0]).Should(Equal(err))
+				Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
+				tErr := mErr[1].(*goa.TypedError)
+				Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidLength))))
+				Ω(tErr.Mesg).Should(ContainSubstring(ctx))
+				Ω(tErr.Mesg).Should(ContainSubstring("greater or equal"))
+				Ω(tErr.Mesg).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
+				Ω(tErr.Mesg).Should(ContainSubstring(target.(string)))
+			})
+		})
+	})
+
+	Context("on slices", func() {
+		BeforeEach(func() {
+			target = []string{"target1", "target2"}
+			ln = 2
+		})
+
+		It("creates a multi error", func() {
+			Ω(valErr).ShouldNot(BeNil())
+			Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
+			mErr := valErr.(goa.MultiError)
+			Ω(mErr).Should(HaveLen(1))
+			Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
+			tErr := mErr[0].(*goa.TypedError)
+			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidLength))))
+			Ω(tErr.Mesg).Should(ContainSubstring(ctx))
+			Ω(tErr.Mesg).Should(ContainSubstring("greater or equal"))
+			Ω(tErr.Mesg).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
+			Ω(tErr.Mesg).Should(ContainSubstring(fmt.Sprintf("%#v", target)))
 		})
 	})
 })

@@ -221,7 +221,7 @@ const (
 {{tabs .depth}}}`
 
 	lengthValTmpl = `{{$depth := or (and (not .required) (add .depth 1)) .depth}}{{tabs .depth}}if len({{.target}}) {{if .minLength}}<{{else}}>{{end}} {{if .minLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
-{{tabs $depth}}	err = goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{if .minLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}, err)
+{{tabs $depth}}	err = goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, len({{.target}}), {{if .minLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}, err)
 {{tabs .depth}}}`
 
 	requiredValTmpl = `{{$ctx := .}}{{range $r := .required}}{{$catt := index $ctx.attribute.Type.ToObject $r}}{{if eq $catt.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.target}}.{{goify $r true}} == "" {
