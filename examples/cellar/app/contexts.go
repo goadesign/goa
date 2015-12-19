@@ -301,7 +301,7 @@ func UnmarshalCreateBottlePayload(source interface{}, inErr error) (target *Crea
 			}
 			if err == nil {
 				if len(tmp4) < 2 {
-					err = goa.InvalidLengthError(`payload.Country`, tmp4, 2, true, err)
+					err = goa.InvalidLengthError(`payload.Country`, tmp4, len(tmp4), 2, true, err)
 				}
 			}
 			target.Country = tmp4
@@ -315,7 +315,7 @@ func UnmarshalCreateBottlePayload(source interface{}, inErr error) (target *Crea
 			}
 			if err == nil {
 				if len(tmp5) < 2 {
-					err = goa.InvalidLengthError(`payload.Name`, tmp5, 2, true, err)
+					err = goa.InvalidLengthError(`payload.Name`, tmp5, len(tmp5), 2, true, err)
 				}
 			}
 			target.Name = tmp5
@@ -340,10 +340,10 @@ func UnmarshalCreateBottlePayload(source interface{}, inErr error) (target *Crea
 			}
 			if err == nil {
 				if len(tmp7) < 10 {
-					err = goa.InvalidLengthError(`payload.Review`, tmp7, 10, true, err)
+					err = goa.InvalidLengthError(`payload.Review`, tmp7, len(tmp7), 10, true, err)
 				}
 				if len(tmp7) > 300 {
-					err = goa.InvalidLengthError(`payload.Review`, tmp7, 300, false, err)
+					err = goa.InvalidLengthError(`payload.Review`, tmp7, len(tmp7), 300, false, err)
 				}
 			}
 			target.Review = tmp7
@@ -374,7 +374,7 @@ func UnmarshalCreateBottlePayload(source interface{}, inErr error) (target *Crea
 			}
 			if err == nil {
 				if len(tmp9) < 4 {
-					err = goa.InvalidLengthError(`payload.Varietal`, tmp9, 4, true, err)
+					err = goa.InvalidLengthError(`payload.Varietal`, tmp9, len(tmp9), 4, true, err)
 				}
 			}
 			target.Varietal = tmp9
@@ -390,7 +390,7 @@ func UnmarshalCreateBottlePayload(source interface{}, inErr error) (target *Crea
 			}
 			if err == nil {
 				if len(tmp10) < 2 {
-					err = goa.InvalidLengthError(`payload.Vineyard`, tmp10, 2, true, err)
+					err = goa.InvalidLengthError(`payload.Vineyard`, tmp10, len(tmp10), 2, true, err)
 				}
 			}
 			target.Vineyard = tmp10
@@ -745,7 +745,7 @@ func UnmarshalUpdateBottlePayload(source interface{}, inErr error) (target *Upda
 			}
 			if err == nil {
 				if len(tmp14) < 2 {
-					err = goa.InvalidLengthError(`payload.Country`, tmp14, 2, true, err)
+					err = goa.InvalidLengthError(`payload.Country`, tmp14, len(tmp14), 2, true, err)
 				}
 			}
 			target.Country = tmp14
@@ -759,7 +759,7 @@ func UnmarshalUpdateBottlePayload(source interface{}, inErr error) (target *Upda
 			}
 			if err == nil {
 				if len(tmp15) < 2 {
-					err = goa.InvalidLengthError(`payload.Name`, tmp15, 2, true, err)
+					err = goa.InvalidLengthError(`payload.Name`, tmp15, len(tmp15), 2, true, err)
 				}
 			}
 			target.Name = tmp15
@@ -782,10 +782,10 @@ func UnmarshalUpdateBottlePayload(source interface{}, inErr error) (target *Upda
 			}
 			if err == nil {
 				if len(tmp17) < 10 {
-					err = goa.InvalidLengthError(`payload.Review`, tmp17, 10, true, err)
+					err = goa.InvalidLengthError(`payload.Review`, tmp17, len(tmp17), 10, true, err)
 				}
 				if len(tmp17) > 300 {
-					err = goa.InvalidLengthError(`payload.Review`, tmp17, 300, false, err)
+					err = goa.InvalidLengthError(`payload.Review`, tmp17, len(tmp17), 300, false, err)
 				}
 			}
 			target.Review = tmp17
@@ -816,7 +816,7 @@ func UnmarshalUpdateBottlePayload(source interface{}, inErr error) (target *Upda
 			}
 			if err == nil {
 				if len(tmp19) < 4 {
-					err = goa.InvalidLengthError(`payload.Varietal`, tmp19, 4, true, err)
+					err = goa.InvalidLengthError(`payload.Varietal`, tmp19, len(tmp19), 4, true, err)
 				}
 			}
 			target.Varietal = tmp19
@@ -830,7 +830,7 @@ func UnmarshalUpdateBottlePayload(source interface{}, inErr error) (target *Upda
 			}
 			if err == nil {
 				if len(tmp20) < 2 {
-					err = goa.InvalidLengthError(`payload.Vineyard`, tmp20, 2, true, err)
+					err = goa.InvalidLengthError(`payload.Vineyard`, tmp20, len(tmp20), 2, true, err)
 				}
 			}
 			target.Vineyard = tmp20
