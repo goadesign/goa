@@ -291,7 +291,7 @@ func InvalidRangeError(ctx string, target interface{}, value int, min bool, err 
 
 // InvalidLengthError appends a typed error of id ErrInvalidLength to err and
 // returns it.
-func InvalidLengthError(ctx, target string, value int, min bool, err error) error {
+func InvalidLengthError(ctx string, target interface{}, ln, value int, min bool, err error) error {
 	comp := "greater or equal"
 	if !min {
 		comp = "lesser or equal"
@@ -299,7 +299,7 @@ func InvalidLengthError(ctx, target string, value int, min bool, err error) erro
 	terr := TypedError{
 		ID: ErrInvalidLength,
 		Mesg: fmt.Sprintf("length of %s must be %s than %d but got value %#v (len=%d)",
-			ctx, comp, value, target, len(target)),
+			ctx, comp, value, target, ln),
 	}
 	return ReportError(err, &terr)
 }
