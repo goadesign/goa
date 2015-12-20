@@ -62,7 +62,7 @@ func getDesignPath() (string, error) {
 	if gopath == "" {
 		return "", fmt.Errorf("$GOPATH not defined")
 	}
-	candidates := strings.Split(gopath, ":")
+	candidates := filepath.SplitList(gopath)
 	for i, c := range candidates {
 		candidates[i] = filepath.Join(c, "src", codegen.DesignPackagePath)
 	}
