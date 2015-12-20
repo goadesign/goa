@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	"github.com/raphael/goa/design"
 	"github.com/raphael/goa/goagen/codegen"
@@ -73,10 +72,6 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	g.genfiles = append(g.genfiles, schemaFile)
 
 	controllerFile := filepath.Join(JSONSchemaDir(), "schema.go")
-	tmpl, err := template.New("schema").Parse(jsonSchemaTmpl)
-	if err != nil {
-		panic(err.Error()) // bug
-	}
 	gg := codegen.NewGoGenerator(controllerFile)
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
@@ -84,12 +79,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	}
 	g.genfiles = append(g.genfiles, controllerFile)
 	gg.WriteHeader(fmt.Sprintf("%s JSON Hyper-schema", api.Name), "schema", imports)
-	data := map[string]interface{}{
-		"schema": string(js),
-	}
-	if err = tmpl.Execute(gg, data); err != nil {
-		return
-	}
+	gg.Write([]byte(jsonSchemaCtrl))
 	if err = gg.FormatCode(); err != nil {
 		return
 	}
@@ -105,23 +95,9 @@ func (g *Generator) Cleanup() {
 	g.genfiles = nil
 }
 
-const jsonSchemaTmpl = `
+const jsonSchemaCtrl = `
 // MountController mounts the API JSON schema controller under "/schema.json".
 func MountController(service goa.Service) {
-	ctrl := service.NewController("Schema")
-	service.Info("mount", "ctrl", "Schema", "action", "Show", "route", "GET /schema.json")
-	h := ctrl.NewHTTPRouterHandle("Show", getSchema)
-	service.HTTPHandler().(*httprouter.Router).Handle("GET", "/schema.json", h)
+	service.ServeFiles("/schema.json", "schema/schema.json")
 }
-
-// getSchema is the httprouter handle that returns the API JSON hyper schema.
-// func getSchema(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-func getSchema(ctx *goa.Context) error {
-	ctx.Header().Set("Content-Type", "application/schema+json")
-	ctx.Header().Set("Cache-Control", "public, max-age=3600")
-	return ctx.Respond(200, []byte(schema))
-}
-
-// Generated schema
-const schema = ` + "`" + `{{.schema}}` + "`" + `
 `
