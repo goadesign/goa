@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
 	"golang.org/x/net/context"
@@ -33,17 +35,18 @@ type (
 		ListenAndServe(addr string) error
 		// ListenAndServeTLS starts a HTTPS server on the given port.
 		ListenAndServeTLS(add, certFile, keyFile string) error
-		// ServeFiles serves files from the given file system root.
-		// The path must end with "/*filepath", files are then served from the local
-		// path /defined/root/dir/*filepath.
-		// For example if root is "/etc" and *filepath is "passwd", the local file
-		// "/etc/passwd" would be served.
-		// Internally a http.FileServer is used, therefore http.NotFound is used instead
-		// of the service's NotFound handler.
-		// To use the operating system's file system implementation,
-		// use http.Dir:
-		//     service.ServeFiles("/src/*filepath", http.Dir("/var/www"))
-		ServeFiles(path string, root http.FileSystem)
+		// ServeFiles replies to the request with the contents of the named file or
+		// directory. The logic // for what to do when the filename points to a file vs. a
+		// directory is the same as the standard http package ServeFile function. The path
+		// may end with a wildcard that matches the rest of the URL (e.g. *filepath). If it
+		// does the matching path is appended to filename to form the full file path, so:
+		// 	ServeFiles("/index.html", "/www/data/index.html")
+		// Returns the content of the file "/www/data/index.html" when requests are sent to
+		// "/index.html" and:
+		//	ServeFiles("/assets/*filepath", "/www/data/assets")
+		// returns the content of the file "/www/data/assets/x/y/z" when requests are sent
+		// to "/assets/x/y/z".
+		ServeFiles(path, filename string) error
 		// HTTPHandler returns a http.Handler interface to the underlying service.
 		// Note: using the handler directly bypasses the graceful shutdown behavior of
 		// services instantiated with NewGraceful.
@@ -205,9 +208,32 @@ func (app *Application) ListenAndServeTLS(addr, certFile, keyFile string) error 
 	return http.ListenAndServeTLS(addr, certFile, keyFile, app.Router)
 }
 
-// ServeFiles simply delegates to the underlying router.
-func (app *Application) ServeFiles(path string, root http.FileSystem) {
-	app.HTTPHandler().(*httprouter.Router).ServeFiles(path, root)
+// ServeFiles replies to the request with the contents of the named file or directory. The logic
+// for what to do when the filename points to a file vs. a directory is the same as the standard
+// http package ServeFile function. The path may end with a wildcard that matches the rest of the
+// URL (e.g. *filepath). If it does the matching path is appended to filename to form the full file
+// path, so:
+// 	ServeFiles("/index.html", "/www/data/index.html")
+// Returns the content of the file "/www/data/index.html" when requests are sent to "/index.html"
+// and:
+//	ServeFiles("/assets/*filepath", "/www/data/assets")
+// returns the content of the file "/www/data/assets/x/y/z" when requests are sent to
+// "/assets/x/y/z".
+func (app *Application) ServeFiles(path, filename string) error {
+	if strings.Contains(path, ":") {
+		return fmt.Errorf("path may only include wildcards that match the entire end of the URL (e.g. *filepath)")
+	}
+	if _, err := os.Stat(filename); err != nil {
+		return fmt.Errorf("ServeFiles: %s", err)
+	}
+	app.Router.GET(path, func(rw http.ResponseWriter, req *http.Request, params httprouter.Params) {
+		fullpath := filename
+		if len(params) > 0 {
+			fullpath = filepath.Join(fullpath, params[0].Value)
+		}
+		http.ServeFile(rw, req, fullpath)
+	})
+	return nil
 }
 
 // HTTPHandler returns a http.Handler to the service.
