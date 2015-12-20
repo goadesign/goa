@@ -65,6 +65,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		"goify":              codegen.Goify,
 		"okResp":             okResp,
 	}
+	gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
 	if err != nil {
 		var tmpl *template.Template
 		tmpl, err = template.New("main").Funcs(funcs).Parse(mainTmpl)
@@ -73,7 +74,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		}
 		gg := codegen.NewGoGenerator(mainFile)
 		var outPkg string
-		outPkg, err = filepath.Rel(os.Getenv("GOPATH"), codegen.OutputDir)
+		outPkg, err = filepath.Rel(gopath, codegen.OutputDir)
 		if err != nil {
 			return
 		}
@@ -106,7 +107,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	if err != nil {
 		panic(err.Error()) // bug
 	}
-	imp, err := filepath.Rel(filepath.Join(os.Getenv("GOPATH"), "src"), codegen.OutputDir)
+	imp, err := filepath.Rel(filepath.Join(gopath, "src"), codegen.OutputDir)
 	if err != nil {
 		return
 	}
