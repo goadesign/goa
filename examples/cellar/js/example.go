@@ -11,15 +11,11 @@
 
 package js
 
-import (
-	"net/http"
-
-	"github.com/raphael/goa"
-)
+import "github.com/raphael/goa"
 
 // MountController mounts the JavaScript example controller under "/js".
 func MountController(service goa.Service) {
 	// Serve static files under js
-	service.ServeFiles("/js/*filepath", http.Dir("/home/raphael/go/src/github.com/raphael/goa/examples/cellar/js"))
+	service.ServeFiles("/js/*filepath", "/home/raphael/go/src/github.com/raphael/goa/examples/cellar/js")
 	service.Info("mount", "ctrl", "JS", "action", "ServeFiles", "route", "GET /js/*")
 }

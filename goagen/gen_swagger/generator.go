@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -62,10 +61,6 @@ func Generate(api *design.APIDefinition) (_ []string, err error) {
 	}
 	genfiles = append(genfiles, swaggerFile)
 	controllerFile := filepath.Join(swaggerDir, "swagger.go")
-	tmpl, err := template.New("swagger").Parse(swaggerTmpl)
-	if err != nil {
-		panic(err.Error()) // bug
-	}
 	genfiles = append(genfiles, controllerFile)
 	gg := codegen.NewGoGenerator(controllerFile)
 	imports := []*codegen.ImportSpec{
@@ -73,12 +68,7 @@ func Generate(api *design.APIDefinition) (_ []string, err error) {
 		codegen.SimpleImport("github.com/raphael/goa"),
 	}
 	gg.WriteHeader(fmt.Sprintf("%s Swagger Spec", api.Name), "swagger", imports)
-	data := map[string]interface{}{
-		"spec": string(b),
-	}
-	if err = tmpl.Execute(gg, data); err != nil {
-		return
-	}
+	gg.Write([]byte(swagger))
 	if err = gg.FormatCode(); err != nil {
 		return
 	}
@@ -86,23 +76,9 @@ func Generate(api *design.APIDefinition) (_ []string, err error) {
 	return genfiles, nil
 }
 
-const swaggerTmpl = `
+const swagger = `
 // MountController mounts the swagger spec controller under "/swagger.json".
 func MountController(service goa.Service) {
-	ctrl := service.NewController("Swagger")
-	service.Info("mount", "ctrl", "Swagger", "action", "Show", "route", "GET /swagger.json")
-	h := ctrl.NewHTTPRouterHandle("Show", getSwagger)
-	service.HTTPHandler().(*httprouter.Router).Handle("GET", "/swagger.json", h)
+	service.ServeFiles("/swagger.json", "swagger/swagger.json")
 }
-
-// getSwagger is the httprouter handle that returns the Swagger spec.
-// func getSwagger(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-func getSwagger(ctx *goa.Context) error {
-	ctx.Header().Set("Content-Type", "application/swagger+json")
-	ctx.Header().Set("Cache-Control", "public, max-age=3600")
-	return ctx.Respond(200, []byte(spec))
-}
-
-// Generated spec
-const spec = ` + "`" + `{{.spec}} ` + "`" + `
 `
