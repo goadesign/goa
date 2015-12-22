@@ -227,14 +227,20 @@ func (app *Application) ServeFiles(path, filename string) error {
 		return fmt.Errorf("ServeFiles: %s", err)
 	}
 	app.Info("mount", "path", path, "filename", filename)
-	app.Router.GET(path, func(rw http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	ctrl := app.NewController("FileServer")
+	handle := ctrl.NewHTTPRouterHandle("Serve", func(ctx *Context) error {
 		fullpath := filename
+		params := ctx.GetNames()
 		if len(params) > 0 {
-			fullpath = filepath.Join(fullpath, params[0].Value)
+			if suffix, ok := ctx.Get(params[0]); ok {
+				fullpath = filepath.Join(fullpath, suffix)
+			}
 		}
-		app.Info("serve", "path", req.URL.Path, "filename", fullpath)
-		http.ServeFile(rw, req, fullpath)
+		app.Info("serve", "path", ctx.Request().URL.Path, "filename", fullpath)
+		http.ServeFile(ctx, ctx.Request(), fullpath)
+		return nil
 	})
+	app.Router.GET(path, handle)
 	return nil
 }
 

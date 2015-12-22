@@ -131,6 +131,31 @@ func (ctx *Context) GetMany(name string) []string {
 	return query[name]
 }
 
+// GetNames returns all the querystring and URL parameter names.
+func (ctx *Context) GetNames() []string {
+	var params map[string]string
+	var query map[string][]string
+	iparams := ctx.Value(paramKey)
+	if iparams != nil {
+		params = iparams.(map[string]string)
+	}
+	iquery := ctx.Value(queryKey)
+	if iquery != nil {
+		query = iquery.(map[string][]string)
+	}
+	names := make([]string, len(params)+len(query))
+	i := 0
+	for n := range params {
+		names[i] = n
+		i++
+	}
+	for n := range query {
+		names[i] = n
+		i++
+	}
+	return names
+}
+
 // Payload returns the deserialized request body or nil if body is empty.
 func (ctx *Context) Payload() interface{} {
 	return ctx.Value(payloadKey)
