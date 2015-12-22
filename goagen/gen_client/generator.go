@@ -589,7 +589,8 @@ func (c *Client) {{$funcName}}(path string{{if .Payload}}, payload {{if .Payload
 {{range $name, $att := $params.Type.ToObject}}{{if (eq $att.Type.Kind 4)}}	values.Set("{{$name}}", {{goify $name false}})
 {{else}}{{$tmp := tempvar}}{{toString (goify $name false) $tmp $att}}
 	values.Set("{{$name}}", {{$tmp}})
-{{end}}{{end}}{{end}}{{end}}req, err := http.NewRequest({{$route := index .Routes 0}}"{{$route.Verb}}", u.String(), body)
+{{end}}{{end}}	u.RawQuery = values.Encode()
+{{end}}{{end}}	req, err := http.NewRequest({{$route := index .Routes 0}}"{{$route.Verb}}", u.String(), body)
 	if err != nil {
 		return nil, err
 	}

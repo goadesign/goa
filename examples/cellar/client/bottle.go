@@ -67,6 +67,7 @@ func (c *Client) ListBottle(path string, years []int) (*http.Response, error) {
 	}
 	tmp11 := strings.Join(tmp12, ",")
 	values.Set("years", tmp11)
+	u.RawQuery = values.Encode()
 	req, err := http.NewRequest("GET", u.String(), body)
 	if err != nil {
 		return nil, err
