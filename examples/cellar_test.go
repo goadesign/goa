@@ -81,7 +81,7 @@ var _ = Describe("example cellar", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 		}
 		Ω(err).ShouldNot(HaveOccurred())
-		Ω(b.String()).Should(ContainSubstring("filename=swagger/swagger.json"))
+		Ω(b.String()).Should(ContainSubstring("file=swagger/swagger.json"))
 	})
 
 	AfterEach(func() {
