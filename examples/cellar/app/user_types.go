@@ -29,6 +29,46 @@ type BottlePayload struct {
 	Vintage   int
 }
 
+// Validate validates the type instance.
+func (ut *BottlePayload) Validate() (err error) {
+	if ut.Color != "" {
+		if !(ut.Color == "red" || ut.Color == "white" || ut.Color == "rose" || ut.Color == "yellow" || ut.Color == "sparkling") {
+			err = goa.InvalidEnumValueError(`response.color`, ut.Color, []interface{}{"red", "white", "rose", "yellow", "sparkling"}, err)
+		}
+	}
+	if len(ut.Country) < 2 {
+		err = goa.InvalidLengthError(`response.country`, ut.Country, len(ut.Country), 2, true, err)
+	}
+	if len(ut.Name) < 2 {
+		err = goa.InvalidLengthError(`response.name`, ut.Name, len(ut.Name), 2, true, err)
+	}
+	if len(ut.Review) < 10 {
+		err = goa.InvalidLengthError(`response.review`, ut.Review, len(ut.Review), 10, true, err)
+	}
+	if len(ut.Review) > 300 {
+		err = goa.InvalidLengthError(`response.review`, ut.Review, len(ut.Review), 300, false, err)
+	}
+	if ut.Sweetness < 1 {
+		err = goa.InvalidRangeError(`response.sweetness`, ut.Sweetness, 1, true, err)
+	}
+	if ut.Sweetness > 5 {
+		err = goa.InvalidRangeError(`response.sweetness`, ut.Sweetness, 5, false, err)
+	}
+	if len(ut.Varietal) < 4 {
+		err = goa.InvalidLengthError(`response.varietal`, ut.Varietal, len(ut.Varietal), 4, true, err)
+	}
+	if len(ut.Vineyard) < 2 {
+		err = goa.InvalidLengthError(`response.vineyard`, ut.Vineyard, len(ut.Vineyard), 2, true, err)
+	}
+	if ut.Vintage < 1900 {
+		err = goa.InvalidRangeError(`response.vintage`, ut.Vintage, 1900, true, err)
+	}
+	if ut.Vintage > 2020 {
+		err = goa.InvalidRangeError(`response.vintage`, ut.Vintage, 2020, false, err)
+	}
+	return
+}
+
 // MarshalBottlePayload validates and renders an instance of BottlePayload into a interface{}
 func MarshalBottlePayload(source *BottlePayload, inErr error) (target map[string]interface{}, err error) {
 	err = inErr
