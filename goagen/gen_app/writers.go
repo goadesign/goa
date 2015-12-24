@@ -290,8 +290,10 @@ func NewUserTypesWriter(filename string) (*UserTypesWriter, error) {
 	cw := codegen.NewGoGenerator(filename)
 	funcMap := cw.FuncMap
 	funcMap["gotypedef"] = codegen.GoTypeDef
+	funcMap["gotyperef"] = codegen.GoTypeRef
 	funcMap["goify"] = codegen.Goify
 	funcMap["gotypename"] = codegen.GoTypeName
+	funcMap["recursiveValidate"] = codegen.RecursiveChecker
 	funcMap["userTypeUnmarshalerImpl"] = codegen.UserTypeUnmarshalerImpl
 	funcMap["userTypeMarshalerImpl"] = codegen.UserTypeMarshalerImpl
 	userTypeTmpl, err := template.New("user type").Funcs(funcMap).Parse(userTypeT)
@@ -503,12 +505,12 @@ func (mt {{gotyperef . 0}}) Dump({{if gt (len $computedViews) 1}}view {{$typeNam
 {{end}}{{end}}	return
 }
 
-// Validate validates the media type instance.
+{{$validation := recursiveValidate .AttributeDefinition false "mt" "response" 1}}{{if $validation}}// Validate validates the media type instance.
 func (mt {{gotyperef . 0}}) Validate() (err error) {
-{{$validation := recursiveValidate .AttributeDefinition false "mt" "response" 1}}{{if $validation}}{{$validation}}
-{{end}} return
+{{$validation}}
+	return
 }
-{{range $computedViews}}
+{{end}}{{range $computedViews}}
 {{mediaTypeMarshalerImpl $mt .Name}}
 {{end}}
 {{userTypeUnmarshalerImpl .UserTypeDefinition "load"}}
@@ -527,7 +529,13 @@ func (mt {{gotyperef . 0}}) Validate() (err error) {
 	userTypeT = `// {{if .Description}}{{.Description}}{{else}}{{gotypename . 0}} type{{end}}
 type {{gotypename . 0}} {{gotypedef . 0 false false}}
 
-{{userTypeMarshalerImpl .}}
+{{$validation := recursiveValidate .AttributeDefinition false "ut" "response" 1}}{{if $validation}}// Validate validates the type instance.
+func (ut {{gotyperef . 0}}) Validate() (err error) {
+{{$validation}}
+	return
+}
+
+{{end}}{{userTypeMarshalerImpl .}}
 
 {{userTypeUnmarshalerImpl . "load"}}
 `
