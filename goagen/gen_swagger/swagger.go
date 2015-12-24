@@ -432,7 +432,7 @@ func itemsFromDefinition(at *design.AttributeDefinition) *Items {
 func responseFromDefinition(api *design.APIDefinition, r *design.ResponseDefinition) (*Response, error) {
 	var schema *genschema.JSONSchema
 	if r.MediaType != "" {
-		if mt, ok := api.MediaTypes[r.MediaType]; ok {
+		if mt, ok := api.MediaTypes[design.CanonicalIdentifier(r.MediaType)]; ok {
 			schema = genschema.TypeSchema(api, mt)
 		}
 	}
