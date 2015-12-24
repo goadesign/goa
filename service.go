@@ -226,7 +226,7 @@ func (app *Application) ServeFiles(path, filename string) error {
 	if _, err := os.Stat(filename); err != nil {
 		return fmt.Errorf("ServeFiles: %s", err)
 	}
-	app.Info("mount", "path", path, "filename", filename)
+	app.Info("mount", "file", filename, "route", fmt.Sprintf("GET %s", path))
 	ctrl := app.NewController("FileServer")
 	handle := ctrl.NewHTTPRouterHandle("Serve", func(ctx *Context) error {
 		fullpath := filename
