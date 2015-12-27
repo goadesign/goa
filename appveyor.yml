@@ -15,7 +15,6 @@ install:
 
 build_script:
   - make depend
-  - make goagen
   - make test
 
 test: off
