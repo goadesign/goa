@@ -154,6 +154,10 @@ type (
 		Parent DSLDefinition
 		// Metadata is a list of key/value pairs
 		Metadata MetadataDefinition
+		// Standard is true if the response definition comes from the goa default responses
+		Standard bool
+		// Global is true if the response definition comes from the global API properties
+		Global bool
 	}
 
 	// ResponseTemplateDefinition defines a response template.
