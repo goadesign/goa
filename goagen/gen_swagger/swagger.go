@@ -551,7 +551,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		Produces:     []string{"application/json"},
 		Parameters:   params,
 		Responses:    responses,
-		Schemes:      []string{"https"},
+		Schemes:      api.Schemes,
 		Deprecated:   false,
 	}
 	key := design.WildcardRegex.ReplaceAllStringFunc(
