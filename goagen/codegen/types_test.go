@@ -391,7 +391,7 @@ var _ = Describe("code generation", func() {
 				JustBeforeEach(func() {
 					cmd := exec.Command("go", "build", "-o", "codegen")
 					cmd.Env = os.Environ()
-					cmd.Env = append(cmd.Env, fmt.Sprintf("GOPATH=%s:%s", gopath, os.Getenv("GOPATH")))
+					cmd.Env = append(cmd.Env, fmt.Sprintf("GOPATH=%s%s%s", gopath, os.PathListSeparator, os.Getenv("GOPATH")))
 					cmd.Dir = srcDir
 					var err error
 					out, err = cmd.CombinedOutput()

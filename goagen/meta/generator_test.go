@@ -33,7 +33,8 @@ var _ = Describe("Run", func() {
 		outputDir = "/tmp"
 		designPackage = "github.com/raphael/goa/testgoacodegen"
 		designPackageSource = "foo"
-		designPackageDir = filepath.Join(os.Getenv("GOPATH"), "src", designPackage)
+		gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
+		designPackageDir = filepath.Join(gopath, "src", designPackage)
 		compiledFiles = nil
 		compileError = nil
 	})
@@ -106,7 +107,8 @@ var _ = Describe("Run", func() {
 		})
 
 		It("fails with a useful error message", func() {
-			path := filepath.Join(os.Getenv("GOPATH"), "src", designPackage)
+			gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
+			path := filepath.Join(gopath, "src", designPackage)
 			Ω(compileError).Should(MatchError(`cannot find design package at path "` + path + `"`))
 		})
 	})
@@ -203,7 +205,7 @@ var _ = Describe("Run", func() {
 				var gopath string
 				BeforeEach(func() {
 					gopath = os.Getenv("GOPATH")
-					os.Setenv("GOPATH", gopath+":/tmp")
+					os.Setenv("GOPATH", fmt.Sprintf("%s%c%s", gopath, os.PathListSeparator, os.TempDir()))
 				})
 
 				AfterEach(func() {

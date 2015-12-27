@@ -55,7 +55,7 @@ var _ = Describe("Generate", func() {
 	var oldCommand string
 
 	BeforeEach(func() {
-		gopath := os.Getenv("GOPATH")
+		gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
 		outDir = filepath.Join(gopath, "src", testgenPackagePath)
 		err := os.MkdirAll(outDir, 0777)
 		Ω(err).ShouldNot(HaveOccurred())
