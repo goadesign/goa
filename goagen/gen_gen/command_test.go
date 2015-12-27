@@ -57,7 +57,8 @@ var _ = Describe("RegisterFlags", func() {
 
 		BeforeEach(func() {
 			var err error
-			tmpPkg, err = ioutil.TempDir(filepath.Join(os.Getenv("GOPATH"), "src"), "goagen")
+			gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
+			tmpPkg, err = ioutil.TempDir(filepath.Join(gopath, "src"), "goagen")
 			Ω(err).ShouldNot(HaveOccurred())
 			ioutil.WriteFile(filepath.Join(tmpPkg, "dummy.go"), []byte(dummyGenSrc), 0755)
 			genCmd = gengen.NewCommand()
@@ -65,7 +66,7 @@ var _ = Describe("RegisterFlags", func() {
 			oldPkgName = gengen.GenPkgName
 			oldOutputDir = codegen.OutputDir
 			oldDesignPackagePath = codegen.DesignPackagePath
-			gengen.GenPkgPath, err = filepath.Rel(filepath.Join(os.Getenv("GOPATH"), "src"), tmpPkg)
+			gengen.GenPkgPath, err = filepath.Rel(filepath.Join(gopath, "src"), tmpPkg)
 			Ω(err).ShouldNot(HaveOccurred())
 			gengen.GenPkgName = "dummy"
 			codegen.OutputDir = tmpPkg

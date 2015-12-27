@@ -45,7 +45,7 @@ var _ = Describe("example cellar", func() {
 
 	BeforeEach(func() {
 		var err error
-		gopath := strings.Split(os.Getenv("GOPATH"), ":")[0]
+		gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
 		tempdir, err = ioutil.TempDir(filepath.Join(gopath, "src"), "cellar-test-tmpdir-")
 		Ω(err).ShouldNot(HaveOccurred())
 	})

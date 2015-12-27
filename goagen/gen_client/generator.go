@@ -218,7 +218,8 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		"enumOptions":  enumOptions,
 		"defaultPath":  defaultPath,
 	}
-	clientPkg, err := filepath.Rel(os.Getenv("GOPATH"), codegen.OutputDir)
+	gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
+	clientPkg, err := filepath.Rel(gopath, codegen.OutputDir)
 	if err != nil {
 		return
 	}

@@ -15,7 +15,7 @@ func CommandLine() string {
 	var param string
 	if len(os.Args) > 1 {
 		args := make([]string, len(os.Args)-1)
-		gopaths := strings.Split(os.Getenv("GOPATH"), ":")
+		gopaths := filepath.SplitList(os.Getenv("GOPATH"))
 		for i, a := range os.Args[1:] {
 			for _, p := range gopaths {
 				args[i] = strings.Replace(a, p, "$(GOPATH)", -1)
