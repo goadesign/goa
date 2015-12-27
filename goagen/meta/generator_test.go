@@ -205,7 +205,7 @@ var _ = Describe("Run", func() {
 				var gopath string
 				BeforeEach(func() {
 					gopath = os.Getenv("GOPATH")
-					os.Setenv("GOPATH", fmt.Sprintf("%s%s%stmp", gopath, os.PathListSeparator, os.PathSeparator))
+					os.Setenv("GOPATH", fmt.Sprintf("%s%c%s", gopath, os.PathListSeparator, os.TempDir()))
 				})
 
 				AfterEach(func() {
