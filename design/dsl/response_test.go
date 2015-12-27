@@ -153,4 +153,48 @@ var _ = Describe("Response", func() {
 		})
 	})
 
+	Context("not from the goa default definitions", func() {
+		BeforeEach(func() {
+			name = "foo"
+		})
+
+		It("does not set the Standard flag", func() {
+			Ω(res.Standard).Should(BeFalse())
+		})
+	})
+
+	Context("from the goa default definitions", func() {
+		BeforeEach(func() {
+			name = "Created"
+		})
+
+		It("sets the Standard flag", func() {
+			Ω(res.Standard).Should(BeTrue())
+		})
+	})
+
+	Context("not from the API global definitions", func() {
+		BeforeEach(func() {
+			name = "foo"
+		})
+
+		It("does not set the Global flag", func() {
+			Ω(res.Global).Should(BeFalse())
+		})
+	})
+
+	Context("from the API global definitions", func() {
+		BeforeEach(func() {
+			name = "global"
+			API("bar", func() {
+				ResponseTemplate(name, func() {})
+			})
+
+		})
+
+		It("sets the global flag", func() {
+			Ω(res.Global).Should(BeTrue())
+		})
+	})
+
 })

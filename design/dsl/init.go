@@ -1,6 +1,10 @@
 package dsl
 
-import "github.com/raphael/goa/design"
+import (
+	"net/http"
+
+	"github.com/raphael/goa/design"
+)
 
 // InitDesign initializes the Design global variable and loads the built-in
 // response templates.
@@ -72,8 +76,9 @@ func InitDesign() {
 		{505, HTTPVersionNotSupported},
 	} {
 		design.Design.DefaultResponses[p.name] = &design.ResponseDefinition{
-			Name:   p.name,
-			Status: p.status,
+			Name:        p.name,
+			Description: http.StatusText(p.status),
+			Status:      p.status,
 		}
 	}
 }
