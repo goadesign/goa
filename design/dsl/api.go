@@ -155,14 +155,20 @@ func Host(host string) {
 
 // Scheme sets the API URL schemes.
 func Scheme(vals ...string) {
-	if a, ok := apiDefinition(true); ok {
-		for _, v := range vals {
-			if v != "http" && v != "https" && v != "ws" && v != "wss" {
-				ReportError(`invalid scheme "%s", must be one of "http", "https", "ws" or "wss"`, v)
-			} else {
-				a.Schemes = append(a.Schemes, v)
-			}
+	ok := true
+	for _, v := range vals {
+		if v != "http" && v != "https" && v != "ws" && v != "wss" {
+			ReportError(`invalid scheme "%s", must be one of "http", "https", "ws" or "wss"`, v)
+			ok = false
 		}
+	}
+	if !ok {
+		return
+	}
+	if a, ok := apiDefinition(false); ok {
+		a.Schemes = append(a.Schemes, vals...)
+	} else if a, ok := actionDefinition(true); ok {
+		a.Schemes = append(a.Schemes, vals...)
 	}
 }
 
