@@ -185,6 +185,8 @@ type (
 		Docs *DocsDefinition
 		// Parent resource
 		Parent *ResourceDefinition
+		// Specific action URL schemes
+		Schemes []string
 		// Action routes
 		Routes []*RouteDefinition
 		// Map of possible response definitions indexed by name

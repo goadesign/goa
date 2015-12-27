@@ -542,6 +542,10 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	if index > 0 {
 		operationID = fmt.Sprintf("%s#%d", operationID, index)
 	}
+	schemes := action.Schemes
+	if len(schemes) == 0 {
+		schemes = api.Schemes
+	}
 	operation := &Operation{
 		Tags:         tagNames,
 		Description:  action.Description,
@@ -551,7 +555,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		Produces:     []string{"application/json"},
 		Parameters:   params,
 		Responses:    responses,
-		Schemes:      []string{"https"},
+		Schemes:      schemes,
 		Deprecated:   false,
 	}
 	key := design.WildcardRegex.ReplaceAllStringFunc(
