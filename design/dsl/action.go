@@ -22,6 +22,7 @@ import (
 //               Description("Update docs")
 //               URL("http//cellarapi.com/docs/actions/update")
 //           })
+//           Scheme("http")
 //	     Routing(
 //	         PUT("/:id"),                     // Full action path is built by appending "/:id" to parent resource base path
 //	         PUT("//orgs/:org/accounts/:id"), // The // prefix indicates an absolute path
