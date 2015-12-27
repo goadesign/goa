@@ -149,7 +149,7 @@ type (
 	// Response describes an operation response.
 	Response struct {
 		// Description of the response. GFM syntax can be used for rich text representation.
-		Description string `json:"description"`
+		Description string `json:"description,omitempty"`
 		// Schema is a definition of the response structure. It can be a primitive,
 		// an array or an object. If this field does not exist, it means no content is
 		// returned as part of the response. As an extension to the Schema Object, its root
@@ -157,6 +157,9 @@ type (
 		Schema *genschema.JSONSchema `json:"schema,omitempty"`
 		// Headers is a list of headers that are sent with the response.
 		Headers map[string]*Header `json:"headers,omitempty"`
+		// Ref references a global API response.
+		// This field is exclusive with the other fields of Response.
+		Ref string `json:"$ref,omitempty"`
 	}
 
 	// Header represents a header parameter.
@@ -316,7 +319,7 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 	}
 
 	err = api.IterateResponses(func(r *design.ResponseDefinition) error {
-		res, err := responseFromDefinition(api, r)
+		res, err := responseSpecFromDefinition(s, api, r)
 		if err != nil {
 			return err
 		}
@@ -429,7 +432,7 @@ func itemsFromDefinition(at *design.AttributeDefinition) *Items {
 	return items
 }
 
-func responseFromDefinition(api *design.APIDefinition, r *design.ResponseDefinition) (*Response, error) {
+func responseSpecFromDefinition(s *Swagger, api *design.APIDefinition, r *design.ResponseDefinition) (*Response, error) {
 	var schema *genschema.JSONSchema
 	if r.MediaType != "" {
 		if mt, ok := api.MediaTypes[design.CanonicalIdentifier(r.MediaType)]; ok {
@@ -445,6 +448,36 @@ func responseFromDefinition(api *design.APIDefinition, r *design.ResponseDefinit
 		Schema:      schema,
 		Headers:     headers,
 	}, nil
+}
+
+func responseFromDefinition(s *Swagger, api *design.APIDefinition, r *design.ResponseDefinition) (*Response, error) {
+	var (
+		response *Response
+		err      error
+	)
+	if r.Global || r.Standard {
+		response = &Response{
+			Ref: fmt.Sprintf("#/responses/%s", r.Name),
+		}
+	} else {
+		response, err = responseSpecFromDefinition(s, api, r)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if r.Standard {
+		if s.Responses == nil {
+			s.Responses = make(map[string]*Response)
+		}
+		if _, ok := s.Responses[r.Name]; !ok {
+			sp, err := responseSpecFromDefinition(s, api, r)
+			if err != nil {
+				return nil, err
+			}
+			s.Responses[r.Name] = sp
+		}
+	}
+	return response, nil
 }
 
 func headersFromDefinition(headers *design.AttributeDefinition) (map[string]*Header, error) {
@@ -475,13 +508,13 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	if err != nil {
 		return err
 	}
-	params, err := paramsFromDefinition(action.Params, route.FullPath())
+	params, err := paramsFromDefinition(action.AllParams(), route.FullPath())
 	if err != nil {
 		return err
 	}
 	responses := make(map[string]*Response, len(action.Responses))
 	for _, r := range action.Responses {
-		resp, err := responseFromDefinition(api, r)
+		resp, err := responseFromDefinition(s, api, r)
 		if err != nil {
 			return err
 		}
