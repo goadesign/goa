@@ -4,6 +4,7 @@ os: Windows Server 2012 R2
 
 environment:
   GOPATH: c:\gopath
+  clone_folder: c:\gopath\src\github.com\raphael\goa
 
 install:
   - go version
@@ -11,10 +12,10 @@ install:
   - mkdir c:\gopath
   - copy c:\MinGW\bin\mingw32-make.exe c:\MinGW\bin\make.exe
   - set PATH=%PATH%;c:\MinGW\bin;%GOPATH%\bin
-  - go get github.com/raphael/goa/goagen
 
 build_script:
   - make depend
+  - make goagen
   - make test
 
 test: off
