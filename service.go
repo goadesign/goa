@@ -327,12 +327,17 @@ func (ctrl *ApplicationController) NewHTTPRouterHandle(actName string, h Handler
 			query[name] = value
 		}
 
-		// Load body if any
+		// Build up payload, decoding JSON as necessary
 		var payload interface{}
 		var err error
 		if r.ContentLength > 0 {
-			decoder := json.NewDecoder(r.Body)
-			err = decoder.Decode(&payload)
+			contentType := r.Header.Get("Content-Type")
+			if contentType == "application/json" || contentType == "" {
+				decoder := json.NewDecoder(r.Body)
+				err = decoder.Decode(&payload)
+			}
+
+			// TODO: support othe content types here
 		}
 
 		// Build context
