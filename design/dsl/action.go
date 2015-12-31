@@ -206,7 +206,7 @@ func Params(dsl func()) {
 //
 //	 Payload(BottlePayload)	   // Request payload is described by the BottlePayload type
 //
-//	 Payload(func() {          // Request payload is described inline
+//	 Payload(func() {          // Request payload is an object and is described inline
 //	 	Member("Name")
 //	 })
 //
