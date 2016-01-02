@@ -26,6 +26,8 @@ type (
 		// ServeVersion adds a mux for the given API version.
 		// This method is called by the generated code once per API version defined in the design.
 		ServeVersion(version string, mux VersionMux)
+		// Version returns the mux for the given API version or nil if none.
+		Version(version string) VersionMux
 		// HandleMissingVersion handles requests that specify a non-existing API version.
 		HandleMissingVersion(rw http.ResponseWriter, req *http.Request, version string)
 	}
@@ -73,6 +75,14 @@ func (m *defaultMux) ServeVersion(version string, mux VersionMux) {
 	m.muxes[version] = mux
 }
 
+// VersionMux returns the mux addressing the given version if any.
+func (m *defaultMux) Version(version string) VersionMux {
+	if m.muxes == nil {
+		return nil
+	}
+	return m.muxes[version]
+}
+
 // HandleMissingVersion handles requests that specify a non-existing API version.
 func (m *defaultMux) HandleMissingVersion(rw http.ResponseWriter, req *http.Request, version string) {
 	rw.WriteHeader(400)
@@ -89,6 +99,7 @@ func (m *defaultMux) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// Optimize the unversionned API case
 	if len(m.muxes) == 0 {
 		m.router.ServeHTTP(rw, req)
+		return
 	}
 	var mux VersionMux
 	version := req.Header.Get("X-API-Version")
@@ -96,7 +107,7 @@ func (m *defaultMux) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		version = req.URL.Query().Get("api_version")
 	}
 	if version == "" {
-		mux = m
+		mux = m.defaultVersionMux
 	} else {
 		var ok bool
 		mux, ok = m.muxes[version]

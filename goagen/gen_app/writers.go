@@ -392,15 +392,14 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 {{if .Headers}}{{$headers := .Headers}}{{range $name, $_ := $headers.Type.ToObject}}{{if ($headers.IsRequired $name)}}	if c.Request().Header.Get("{{$name}}") == "" {
 		err = goa.MissingHeaderError("{{$name}}", err)
 	}{{end}}{{end}}
-{{end}}{{if.Params}}{{$ctx := .}}{{range $name, $att := .Params.Type.ToObject}}	raw{{goify $name true}}, ok := c.Get("{{$name}}")
-{{if ($ctx.MustValidate $name)}}	if !ok {
+{{end}}{{if.Params}}{{$ctx := .}}{{range $name, $att := .Params.Type.ToObject}}	raw{{goify $name true}} := c.Get("{{$name}}")
+{{$mustValidate := $ctx.MustValidate $name}}{{$depth := or (and $mustValidate 2) 1}}{{if $mustValidate}}	if raw{{goify $name true}} == "" {
 		err = goa.MissingParamError("{{$name}}", err)
 	} else {
-{{else}}	if ok {
-{{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (goify $name true)) 2)}}{{if $ctx.MustSetHas $name}}		ctx.Has{{goify $name true}} = true
-{{end}}{{$validation := validationChecker $att ($ctx.Params.IsRequired $name) (printf "ctx.%s" (goify $name true)) $name 1}}{{if $validation}}{{$validation}}
-{{end}}	}
-{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	p, err := New{{gotypename .Payload 0}}(c.Payload())
+{{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (goify $name true)) $depth)}}{{if $ctx.MustSetHas $name}}{{tabs $depth}}ctx.Has{{goify $name true}} = true
+{{end}}{{$validation := validationChecker $att ($ctx.Params.IsRequired $name) (printf "ctx.%s" (goify $name true)) $name $depth}}{{if $validation}}{{$validation}}
+{{end}}{{if $mustValidate}}	}
+{{end}}{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	p, err := New{{gotypename .Payload 0}}(c.Payload())
 	if err != nil {
 		return nil, err
 	}
@@ -452,9 +451,13 @@ type {{.Resource}}Controller interface {
 	// template input: *ControllerTemplateData
 	mountT = `
 // Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given service.
-func Mount{{.Resource}}Controller(service goa.Service, mux goa.VersionMux, ctrl {{.Resource}}Controller) {
+func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Controller) {
 	var h goa.Handler
-{{$res := .Resource}}{{$ver := .Resource.Version}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
+	mux := service.ServeMux(){{if .Version}}.Version("{{.Version}}")
+	if mux == nil {
+		panic("no mux for version {{.Version}}")
+	}{{end}}
+{{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
 		ctx, err := New{{.Context}}(c)
 		if err != nil {
 			return goa.NewBadRequestError(err)

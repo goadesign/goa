@@ -2,7 +2,6 @@ package genapp_test
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -226,7 +225,7 @@ var _ = Describe("Generate", func() {
 				runCodeTemplates(map[string]string{
 					"outDir":  outDir,
 					"design":  "foo",
-					"version": fmt.Sprintf(" version %s", version),
+					"version": version,
 				})
 			})
 
@@ -245,7 +244,7 @@ var _ = Describe("Generate", func() {
 })
 
 const contextsCodeTmpl = `//************************************************************************//
-// API "test api"{{.version}}: Application Contexts
+// API "test api"{{if .version}} version {{.version}}{{end}}: Application Contexts
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
@@ -274,10 +273,8 @@ type GetWidgetContext struct {
 func NewGetWidgetContext(c *goa.Context) (*GetWidgetContext, error) {
 	var err error
 	ctx := GetWidgetContext{Context: c}
-	rawID, ok := c.Get("id")
-	if ok {
-		ctx.ID = rawID
-	}
+	rawID := c.Get("id")
+	ctx.ID = rawID
 	return &ctx, err
 }
 
@@ -293,7 +290,7 @@ func (ctx *GetWidgetContext) OK(resp ID) error {
 `
 
 const controllersCodeTmpl = `//************************************************************************//
-// API "test api"{{.version}}: Application Controllers
+// API "test api"{{if .version}} version {{.version}}{{end}}: Application Controllers
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
@@ -305,10 +302,7 @@ const controllersCodeTmpl = `//*************************************************
 
 package app
 
-import (
-	"github.com/julienschmidt/httprouter"
-	"github.com/raphael/goa"
-)
+import "github.com/raphael/goa"
 
 // WidgetController is the controller interface for the Widget actions.
 type WidgetController interface {
@@ -318,8 +312,11 @@ type WidgetController interface {
 
 // MountWidgetController "mounts" a Widget resource controller on the given service.
 func MountWidgetController(service goa.Service, ctrl WidgetController) {
-	router := service.HTTPHandler().(*httprouter.Router)
 	var h goa.Handler
+	mux := service.ServeMux(){{if .version}}.Version("{{.version}}")
+	if mux == nil {
+		panic("no mux for version {{.version}}")
+	}{{end}}
 	h = func(c *goa.Context) error {
 		ctx, err := NewGetWidgetContext(c)
 		if err != nil {
@@ -327,13 +324,13 @@ func MountWidgetController(service goa.Service, ctrl WidgetController) {
 		}
 		return ctrl.Get(ctx)
 	}
-	router.Handle("GET", "/:id", ctrl.NewHTTPRouterHandle("Get", h))
-	service.Info("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
+	mux.Handle("GET", "/:id", ctrl.HandleFunc("Get", h))
+	service.Info("mount", "ctrl", "Widget",{{if .version}} "version", "{{.version}}",{{end}} "action", "Get", "route", "GET /:id")
 }
 `
 
 const hrefsCodeTmpl = `//************************************************************************//
-// API "test api"{{.version}}: Application Resource Href Factories
+// API "test api"{{if .version}} version {{.version}}{{end}}: Application Resource Href Factories
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen

@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
-	"github.com/julienschmidt/httprouter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/raphael/goa"
@@ -63,9 +63,8 @@ var _ = Describe("Context", func() {
 
 	Describe("Get", func() {
 		It(`returns "", false if not initialized`, func() {
-			p, ok := ctx.Get("foo")
+			p := ctx.Get("foo")
 			Ω(p).Should(Equal(""))
-			Ω(ok).Should(BeFalse())
 		})
 	})
 
@@ -90,10 +89,10 @@ var _ = Describe("Context", func() {
 		const reqBody = `"body"`
 		const respStatus = 200
 		var respContent = []byte("response")
-		var httpHandle httprouter.Handle
+		var handleFunc goa.HandleFunc
 		var rw http.ResponseWriter
 		var request *http.Request
-		var params httprouter.Params
+		var params url.Values
 
 		BeforeEach(func() {
 			app = goa.New(appName)
@@ -107,14 +106,13 @@ var _ = Describe("Context", func() {
 			request, err = http.NewRequest("POST", "/foo?filters=one&filters=two&filters=three", reader)
 			Ω(err).ShouldNot(HaveOccurred())
 			rw = new(TestResponseWriter)
-			id := httprouter.Param{Key: "id", Value: "42"}
-			params = httprouter.Params{id}
+			params = url.Values{"id": []string{"42"}, "filters": []string{"one", "two", "three"}}
 		})
 
 		JustBeforeEach(func() {
 			ctrl := app.NewController(resName)
-			httpHandle = ctrl.NewHTTPRouterHandle(actName, handler)
-			httpHandle(rw, request, params)
+			handleFunc = ctrl.HandleFunc(actName, handler)
+			handleFunc(rw, request, params)
 		})
 
 		Describe("Respond", func() {
@@ -123,8 +121,7 @@ var _ = Describe("Context", func() {
 				Ω(ctx.Header()).Should(Equal(rw.Header()))
 				Ω(ctx.ResponseStatus()).Should(Equal(respStatus))
 				Ω(ctx.ResponseLength()).Should(Equal(len(respContent)))
-				p, ok := ctx.Get("id")
-				Ω(ok).Should(BeTrue())
+				p := ctx.Get("id")
 				Ω(p).Should(Equal("42"))
 				ps := ctx.GetMany("filters")
 				Ω(ps).Should(Equal([]string{"one", "two", "three"}))

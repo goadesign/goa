@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 
-	"github.com/julienschmidt/httprouter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/raphael/goa"
@@ -31,7 +31,7 @@ var _ = Describe("Application", func() {
 			app, _ := s.(*goa.Application)
 			Ω(app.Name()).Should(Equal(appName))
 			Ω(app.Logger).ShouldNot(BeNil())
-			Ω(app.Router).ShouldNot(BeNil())
+			Ω(app.ServeMux).ShouldNot(BeNil())
 		})
 	})
 
@@ -62,12 +62,12 @@ var _ = Describe("Application", func() {
 		const respStatus = 200
 		var respContent = []byte("response")
 
-		var httpHandle httprouter.Handle
+		var handleFunc goa.HandleFunc
 		var ctx *goa.Context
 
 		JustBeforeEach(func() {
 			ctrl := s.NewController("test")
-			httpHandle = ctrl.NewHTTPRouterHandle(actName, handler)
+			handleFunc = ctrl.HandleFunc(actName, handler)
 		})
 
 		BeforeEach(func() {
@@ -79,34 +79,30 @@ var _ = Describe("Application", func() {
 		})
 
 		It("creates a handle", func() {
-			Ω(httpHandle).ShouldNot(BeNil())
+			Ω(handleFunc).ShouldNot(BeNil())
 		})
 
 		Context("with a request", func() {
 			var rw http.ResponseWriter
 			var r *http.Request
-			var p httprouter.Params
+			var p url.Values
 
 			BeforeEach(func() {
 				var err error
 				r, err = http.NewRequest("GET", "/foo", nil)
 				Ω(err).ShouldNot(HaveOccurred())
 				rw = new(TestResponseWriter)
-				id := httprouter.Param{Key: "id", Value: "42"}
-				query := httprouter.Param{Key: "sort", Value: "asc"}
-				p = httprouter.Params{id, query}
+				p = url.Values{"id": []string{"42"}, "sort": []string{"asc"}}
 			})
 
 			JustBeforeEach(func() {
-				httpHandle(rw, r, p)
+				handleFunc(rw, r, p)
 			})
 
 			It("creates a handle that handles the request", func() {
-				i, ok := ctx.Get("id")
-				Ω(ok).Should(BeTrue())
+				i := ctx.Get("id")
 				Ω(i).Should(Equal("42"))
-				s, ok := ctx.Get("sort")
-				Ω(ok).Should(BeTrue())
+				s := ctx.Get("sort")
 				Ω(s).Should(Equal("asc"))
 				tw := rw.(*TestResponseWriter)
 				Ω(tw.Status).Should(Equal(respStatus))

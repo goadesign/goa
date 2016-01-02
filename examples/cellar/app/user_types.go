@@ -1,5 +1,5 @@
 //************************************************************************//
-// cellar: Application User Types
+// API "cellar": Application User Types
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen

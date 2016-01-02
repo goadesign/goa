@@ -60,10 +60,10 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	g.genfiles = append(g.genfiles, mainFile)
 	_, err = os.Stat(mainFile)
 	funcs := template.FuncMap{
-		"tempvar":            tempvar,
-		"generateJSONSchema": generateJSONSchema,
-		"goify":              codegen.Goify,
-		"okResp":             okResp,
+		"tempvar":         tempvar,
+		"generateSwagger": generateSwagger,
+		"goify":           codegen.Goify,
+		"okResp":          okResp,
 	}
 	gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
 	if err != nil {
@@ -87,7 +87,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 			codegen.SimpleImport(swaggerPkg),
 			codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
 		}
-		if generateJSONSchema() {
+		if generateSwagger() {
 			jsonSchemaPkg := filepath.Join(outPkg, "schema")
 			imports = append(imports, codegen.SimpleImport(jsonSchemaPkg))
 		}
@@ -161,9 +161,9 @@ func tempvar() string {
 	return fmt.Sprintf("c%d", tempCount)
 }
 
-// generateJSONSchema returns true if the API JSON schema should be generated.
-func generateJSONSchema() bool {
-	return codegen.CommandName == "" || codegen.CommandName == "schema"
+// generateSwagger returns true if the API Swagger spec should be generated.
+func generateSwagger() bool {
+	return codegen.CommandName == "" || codegen.CommandName == "swagger"
 }
 
 func okResp(a *design.ActionDefinition) map[string]interface{} {
@@ -230,26 +230,26 @@ func main() {
 	service.Use(goa.RequestID())
 	service.Use(goa.LogRequest())
 	service.Use(goa.Recover())
-{{$api := .API}}{{if .API.Versions}}{{$ver, $prop := range .API.Versions}}
-
-{{range $name, $res := .Resources}}	// Mount "{{$res.Name}}" controller
-	{{$tmp := tempvar}}{{$tmp}} := New{{goify $res.Name true}}Controller(service)
-	app.Mount{{goify $res.Name true}}Controller(service, {{$tmp}})
-{{end}}{{if generateJSONSchema}}
-	// Mount Swagger spec provider controller
+{{$api := .API}}{{range $ver, $prop := .API.Versions}}
+{{if $ver}}	// Version {{$ver}}
+{{end}}{{range $name, $res := .Resources}}{{$name := goify (printf "%s%s" $res.Name $ver) true}}	// Mount "{{$res.Name}}" controller
+	{{$tmp := tempvar}}{{$tmp}} := New{{$name}}Controller(service)
+	app.Mount{{$name}}Controller(service, {{$tmp}})
+{{end}}
+{{end}}{{if generateSwagger}}// Mount Swagger spec provider controller
 	swagger.MountController(service)
 {{end}}
 	// Start service, listen on port 8080
 	service.ListenAndServe(":8080")
 }
 `
-const ctrlTmpl = `// {{$ctrlName := printf "%s%s" (goify .Name true) "Controller"}}{{$ctrlName}} implements the {{.Name}} resource.
+const ctrlTmpl = `// {{$ctrlName := printf "%s%s" (goify (printf "%s%s" .Name .Version)  true) "Controller"}}{{$ctrlName}} implements the{{if .Version}} {{.Version}} {{end}}{{.Name}} resource.
 type {{$ctrlName}} struct {
 	goa.Controller
 }
 
 // New{{$ctrlName}} creates a {{.Name}} controller.
-func New{{$ctrlName}}(service goa.Service) app.{{$ctrlName}} {
+func New{{$ctrlName}}(service goa.Service) {{if .Version}}{{.Version}}{{else}}app{{end}}.{{$ctrlName}} {
 	return &{{$ctrlName}}{Controller: service.NewController("{{$ctrlName}}")}
 }
 {{$ctrl := .}}{{range .Actions}}
