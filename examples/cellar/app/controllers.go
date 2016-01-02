@@ -1,5 +1,5 @@
 //************************************************************************//
-// cellar: Application Controllers
+// API "cellar": Application Controllers
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
@@ -12,10 +12,7 @@
 
 package app
 
-import (
-	"github.com/julienschmidt/httprouter"
-	"github.com/raphael/goa"
-)
+import "github.com/raphael/goa"
 
 // AccountController is the controller interface for the Account actions.
 type AccountController interface {
@@ -28,8 +25,8 @@ type AccountController interface {
 
 // MountAccountController "mounts" a Account resource controller on the given service.
 func MountAccountController(service goa.Service, ctrl AccountController) {
-	mux := service.ServeMux()
 	var h goa.Handler
+	mux := service.ServeMux()
 	h = func(c *goa.Context) error {
 		ctx, err := NewCreateAccountContext(c)
 		if err != nil {
@@ -81,8 +78,8 @@ type BottleController interface {
 
 // MountBottleController "mounts" a Bottle resource controller on the given service.
 func MountBottleController(service goa.Service, ctrl BottleController) {
-	router := service.HTTPHandler().(*httprouter.Router)
 	var h goa.Handler
+	mux := service.ServeMux()
 	h = func(c *goa.Context) error {
 		ctx, err := NewCreateBottleContext(c)
 		if err != nil {

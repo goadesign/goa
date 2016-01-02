@@ -47,10 +47,9 @@ type (
 		// returns the content of the file "/www/data/assets/x/y/z" when requests are sent
 		// to "/assets/x/y/z".
 		ServeFiles(path, filename string) error
-		// HTTPHandler returns a http.Handler interface to the underlying service.
-		// Note: using the handler directly bypasses the graceful shutdown behavior of
-		// services instantiated with NewGraceful.
-		HTTPHandler() http.Handler
+
+		// ServeMux returns the service request mux.
+		ServeMux() ServeMux
 
 		// NewController returns a controller for the resource with the given name.
 		// This method is mainly intended for use by generated code.
@@ -228,19 +227,18 @@ func (app *Application) ServeFiles(path, filename string) error {
 	}
 	app.Info("mount", "file", filename, "route", fmt.Sprintf("GET %s", path))
 	ctrl := app.NewController("FileServer")
-	handle := ctrl.NewHTTPRouterHandle("Serve", func(ctx *Context) error {
+	handle := ctrl.HandleFunc("Serve", func(ctx *Context) error {
 		fullpath := filename
 		params := ctx.GetNames()
 		if len(params) > 0 {
-			if suffix, ok := ctx.Get(params[0]); ok {
-				fullpath = filepath.Join(fullpath, suffix)
-			}
+			suffix := ctx.Get(params[0])
+			fullpath = filepath.Join(fullpath, suffix)
 		}
 		app.Info("serve", "path", ctx.Request().URL.Path, "filename", fullpath)
 		http.ServeFile(ctx, ctx.Request(), fullpath)
 		return nil
 	})
-	app.Router.GET(path, handle)
+	app.ServeMux().Handle("GET", path, handle)
 	return nil
 }
 
@@ -301,8 +299,6 @@ func (ctrl *ApplicationController) HandleError(ctx *Context, err error) {
 // it directly.
 func (ctrl *ApplicationController) HandleFunc(name string, h Handler) HandleFunc {
 	// Setup middleware outside of closure
-	chain := ctrl.MiddlewareChain()
-	ml := len(chain)
 	middleware := func(ctx *Context) error {
 		if !ctx.ResponseWritten() {
 			if err := h(ctx); err != nil {
@@ -311,22 +307,13 @@ func (ctrl *ApplicationController) HandleFunc(name string, h Handler) HandleFunc
 		}
 		return nil
 	}
+	chain := ctrl.MiddlewareChain()
+	ml := len(chain)
 	for i := range chain {
 		middleware = chain[ml-i-1](middleware)
 	}
-	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-		// Collect URL and query string parameters
-		params := make(map[string]string, len(p))
-		for _, param := range p {
-			params[param.Key] = param.Value
-		}
-		q := r.URL.Query()
-		query := make(map[string][]string, len(q))
-		for name, value := range q {
-			query[name] = value
-		}
-
-		// Build up payload, decoding JSON as necessary
+	return func(w http.ResponseWriter, r *http.Request, params url.Values) {
+		// Load body if any
 		var payload interface{}
 		var err error
 		if r.ContentLength > 0 {
@@ -336,7 +323,7 @@ func (ctrl *ApplicationController) HandleFunc(name string, h Handler) HandleFunc
 				err = decoder.Decode(&payload)
 			}
 
-			// TODO: support othe content types here
+			// TODO: support other content types here
 		}
 
 		// Build context

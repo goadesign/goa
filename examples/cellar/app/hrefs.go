@@ -1,5 +1,5 @@
 //************************************************************************//
-// cellar: Application Resource Href Factories
+// API "cellar": Application Resource Href Factories
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen

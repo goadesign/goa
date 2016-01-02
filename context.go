@@ -98,37 +98,33 @@ func (ctx *Context) ResponseLength() int {
 // Get returns the param or querystring value with the given name.
 func (ctx *Context) Get(name string) string {
 	iparams := ctx.Value(paramsKey)
+	if iparams == nil {
+		return ""
+	}
 	params := iparams.(url.Values)
 	return params.Get(name)
 }
 
 // GetMany returns the querystring values with the given name or nil if there aren't any.
-func (ctx *Context) GetMany(name string) ([]string, bool) {
+func (ctx *Context) GetMany(name string) []string {
 	iparams := ctx.Value(paramsKey)
+	if iparams == nil {
+		return nil
+	}
 	params := iparams.(url.Values)
-	p, ok := params[name]
-	return p, ok
+	return params[name]
 }
 
 // GetNames returns all the querystring and URL parameter names.
 func (ctx *Context) GetNames() []string {
-	var params map[string]string
-	var query map[string][]string
-	iparams := ctx.Value(paramKey)
-	if iparams != nil {
-		params = iparams.(map[string]string)
+	iparams := ctx.Value(paramsKey)
+	if iparams == nil {
+		return nil
 	}
-	iquery := ctx.Value(queryKey)
-	if iquery != nil {
-		query = iquery.(map[string][]string)
-	}
-	names := make([]string, len(params)+len(query))
+	params := iparams.(url.Values)
+	names := make([]string, len(params))
 	i := 0
 	for n := range params {
-		names[i] = n
-		i++
-	}
-	for n := range query {
 		names[i] = n
 		i++
 	}

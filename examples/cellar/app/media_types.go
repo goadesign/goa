@@ -1,5 +1,5 @@
 //************************************************************************//
-// cellar: Application Media Types
+// API "cellar": Application Media Types
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
