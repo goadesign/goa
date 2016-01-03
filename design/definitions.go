@@ -34,6 +34,8 @@ type (
 		*APIVersionDefinition
 		// Versions contain the API properties indexed by version.
 		Versions map[string]*APIVersionDefinition
+		// Exposed resources indexed by name
+		Resources map[string]*ResourceDefinition
 		// Types indexes the user defined types by name.
 		Types map[string]*UserTypeDefinition
 		// MediaTypes indexes the API media types by canonical identifier.
@@ -68,8 +70,6 @@ type (
 		License *LicenseDefinition
 		// Docs points to the API external documentation
 		Docs *DocsDefinition
-		// Exposed resources indexed by name
-		Resources map[string]*ResourceDefinition
 		// Traits available to all API resources and actions indexed by name
 		Traits map[string]*TraitDefinition
 		// Responses available to all API actions indexed by name
@@ -128,8 +128,8 @@ type (
 		ParentName string
 		// Optional description
 		Description string
-		// API version that uses this resource.
-		Version string
+		// API versions that expose this resource.
+		APIVersions []string
 		// Default media type, describes the resource attributes
 		MediaType string
 		// Exposed resource actions indexed by name
@@ -425,14 +425,11 @@ func (a *APIDefinition) MediaTypeWithIdentifier(id string) *MediaTypeDefinition 
 }
 
 // IterateVersions calls the given iterator passing in each API version definition sorted
-// alphabetically by version name. If the API defines no version then the common version gets
-// passed to the iterator. The common version is the one built with the API DSL function.
+// alphabetically by version name. It first calls the iterator on the embedded version definition
+// which contains the definitions for all the unversioned resources.
 // Iteration stops if an iterator returns an error and in this case IterateVersions returns that
 // error.
 func (a *APIDefinition) IterateVersions(it VersionIterator) error {
-	if len(a.Versions) == 0 {
-		return it(Design.APIVersionDefinition)
-	}
 	versions := make([]string, len(a.Versions))
 	i := 0
 	for n := range a.Versions {
@@ -440,6 +437,9 @@ func (a *APIDefinition) IterateVersions(it VersionIterator) error {
 		i++
 	}
 	sort.Strings(versions)
+	if err := it(Design.APIVersionDefinition); err != nil {
+		return err
+	}
 	for _, v := range versions {
 		if err := it(Design.Versions[v]); err != nil {
 			return err
@@ -466,28 +466,15 @@ func (v *APIVersionDefinition) IsDefault() bool {
 // Iteration stops if an iterator returns an error and in this case IterateResources returns that
 // error.
 func (v *APIVersionDefinition) IterateResources(it ResourceIterator) error {
-	var allResources map[string]*ResourceDefinition
-	common := Design.APIVersionDefinition
-	if common != v {
-		allResources = make(map[string]*ResourceDefinition, len(Design.Resources)+len(v.Resources))
-		for n, r := range Design.Resources {
-			allResources[n] = r
+	var names []string
+	for n, res := range Design.Resources {
+		if res.SupportsVersion(v.Version) {
+			names = append(names, n)
 		}
-		for n, r := range v.Resources {
-			allResources[n] = r
-		}
-	} else {
-		allResources = common.Resources
-	}
-	names := make([]string, len(allResources))
-	i := 0
-	for _, res := range allResources {
-		names[i] = res.Name
-		i++
 	}
 	sort.Strings(names)
 	for _, n := range names {
-		if err := it(allResources[n]); err != nil {
+		if err := it(Design.Resources[n]); err != nil {
 			return err
 		}
 	}
@@ -498,28 +485,15 @@ func (v *APIVersionDefinition) IterateResources(it ResourceIterator) error {
 // Iteration stops if an iterator returns an error and in this case IterateResponses returns that
 // error.
 func (v *APIVersionDefinition) IterateResponses(it ResponseIterator) error {
-	var allResponses map[string]*ResponseDefinition
-	common := Design.APIVersionDefinition
-	if common != v {
-		allResponses = make(map[string]*ResponseDefinition, len(Design.Responses)+len(v.Responses))
-		for n, r := range Design.Responses {
-			allResponses[n] = r
-		}
-		for n, r := range v.Responses {
-			allResponses[n] = r
-		}
-	} else {
-		allResponses = common.Responses
-	}
-	names := make([]string, len(allResponses))
+	names := make([]string, len(v.Responses))
 	i := 0
-	for n := range allResponses {
+	for n := range v.Responses {
 		names[i] = n
 		i++
 	}
 	sort.Strings(names)
 	for _, n := range names {
-		if err := it(allResponses[n]); err != nil {
+		if err := it(v.Responses[n]); err != nil {
 			return err
 		}
 	}
@@ -626,6 +600,25 @@ func (r *ResourceDefinition) Parent() *ResourceDefinition {
 		}
 	}
 	return nil
+}
+
+// SupportsVersion returns true if the resource is exposed by the given API version.
+// An empty string version means no version.
+func (r *ResourceDefinition) SupportsVersion(version string) bool {
+	if version == "" {
+		return r.SupportsNoVersion()
+	}
+	for _, v := range r.APIVersions {
+		if v == version {
+			return true
+		}
+	}
+	return false
+}
+
+// SupportsNoVersion returns true if the resource is exposed by an unversioned API.
+func (r *ResourceDefinition) SupportsNoVersion() bool {
+	return len(r.APIVersions) == 0
 }
 
 // Context returns the generic definition name used in error messages.

@@ -193,8 +193,8 @@ var _ = Describe("Generate", func() {
 					Name:        "test api",
 					Title:       "dummy API with no resource",
 					Description: "I told you it's dummy",
-					Resources:   map[string]*design.ResourceDefinition{"Widget": &res},
 				},
+				Resources:  map[string]*design.ResourceDefinition{"Widget": &res},
 				MediaTypes: map[string]*design.MediaTypeDefinition{"vnd.rightscale.codegen.test.widgets": &mt},
 			}
 		})
@@ -219,9 +219,10 @@ var _ = Describe("Generate", func() {
 			BeforeEach(func() {
 				version = "v1"
 				design.Design.Versions = make(map[string]*design.APIVersionDefinition)
-				verDef := design.Design.APIVersionDefinition
+				verDef := &design.APIVersionDefinition{}
 				verDef.Version = version
 				design.Design.Versions[version] = verDef
+				design.Design.Resources["Widget"].APIVersions = []string{version}
 				runCodeTemplates(map[string]string{
 					"outDir":  outDir,
 					"design":  "foo",
@@ -231,7 +232,7 @@ var _ = Describe("Generate", func() {
 
 			It("generates the versioned code", func() {
 				Ω(genErr).Should(BeNil())
-				Ω(files).Should(HaveLen(6))
+				Ω(files).Should(HaveLen(9))
 
 				isSource(version+"/contexts.go", contextsCode)
 				isSource(version+"/controllers.go", controllersCode)
@@ -254,7 +255,7 @@ const contextsCodeTmpl = `//****************************************************
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
-package app
+package {{if .version}}{{.version}}{{else}}app{{end}}
 
 import (
 	"fmt"
@@ -300,7 +301,7 @@ const controllersCodeTmpl = `//*************************************************
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
-package app
+package {{if .version}}{{.version}}{{else}}app{{end}}
 
 import "github.com/raphael/goa"
 
@@ -340,7 +341,7 @@ const hrefsCodeTmpl = `//*******************************************************
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
-package app
+package {{if .version}}{{.version}}{{else}}app{{end}}
 
 import "fmt"
 
