@@ -251,7 +251,7 @@ func main() {
 	app.Mount{{$name}}Controller(service, {{$tmp}})
 {{end}}{{end}}{{range $ver, $prop := $api.Versions}}
 	// Version {{$ver}}
-{{range $name, $res := .Resources}}{{if $res.SupportsVersion $ver}}{{$name := goify (printf "%s%s" $res.Name $ver) true}}	// Mount "{{$res.Name}}" controller
+{{range $name, $res := $api.Resources}}{{if $res.SupportsVersion $ver}}{{$name := goify (printf "%s%s" $res.Name $ver) true}}	// Mount "{{$res.Name}}" controller
 	{{$tmp := tempvar}}{{$tmp}} := New{{$name}}Controller(service)
 	{{goify $ver false}}.Mount{{goify $res.Name true}}Controller(service, {{$tmp}})
 {{end}}{{end}}

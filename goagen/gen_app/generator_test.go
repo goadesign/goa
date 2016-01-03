@@ -54,7 +54,8 @@ var _ = Describe("Generate", func() {
 
 	BeforeEach(func() {
 		var err error
-		outDir, err = ioutil.TempDir("", "")
+		gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
+		outDir, err = ioutil.TempDir(filepath.Join(gopath, "src"), "")
 		Ω(err).ShouldNot(HaveOccurred())
 		os.Args = []string{"goagen", "--out=" + outDir, "--design=foo"}
 	})
@@ -201,7 +202,7 @@ var _ = Describe("Generate", func() {
 
 		Context("", func() {
 			BeforeEach(func() {
-				runCodeTemplates(map[string]string{"outDir": outDir, "design": "foo", "version": ""})
+				runCodeTemplates(map[string]string{"outDir": outDir, "design": "foo", "version": "", "tmpDir": filepath.Base(outDir)})
 			})
 
 			It("generates the corresponding code", func() {
@@ -225,6 +226,7 @@ var _ = Describe("Generate", func() {
 				design.Design.Resources["Widget"].APIVersions = []string{version}
 				runCodeTemplates(map[string]string{
 					"outDir":  outDir,
+					"tmpDir":  filepath.Base(outDir),
 					"design":  "foo",
 					"version": version,
 				})
@@ -249,7 +251,7 @@ const contextsCodeTmpl = `//****************************************************
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
-// --out={{.outDir}}
+// --out=$(GOPATH)/src/{{.tmpDir}}
 // --design={{.design}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY
@@ -258,7 +260,8 @@ const contextsCodeTmpl = `//****************************************************
 package {{if .version}}{{.version}}{{else}}app{{end}}
 
 import (
-	"fmt"
+{{if .version}}	"{{.tmpDir}}/app"
+{{end}}	"fmt"
 
 	"github.com/raphael/goa"
 )
@@ -280,7 +283,7 @@ func NewGetWidgetContext(c *goa.Context) (*GetWidgetContext, error) {
 }
 
 // OK sends a HTTP response with status code 200.
-func (ctx *GetWidgetContext) OK(resp ID) error {
+func (ctx *GetWidgetContext) OK(resp {{if .version}}app.{{end}}ID) error {
 	r, err := resp.Dump()
 	if err != nil {
 		return fmt.Errorf("invalid response: %s", err)
@@ -295,7 +298,7 @@ const controllersCodeTmpl = `//*************************************************
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
-// --out={{.outDir}}
+// --out=$(GOPATH)/src/{{.tmpDir}}
 // --design={{.design}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY
@@ -335,7 +338,7 @@ const hrefsCodeTmpl = `//*******************************************************
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
-// --out={{.outDir}}
+// --out=$(GOPATH)/src/{{.tmpDir}}
 // --design={{.design}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY
@@ -356,7 +359,7 @@ const mediaTypesCodeTmpl = `//**************************************************
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
-// --out={{.outDir}}
+// --out=$(GOPATH)/src/{{.tmpDir}}
 // --design={{.design}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY

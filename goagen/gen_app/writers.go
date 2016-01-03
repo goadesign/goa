@@ -67,6 +67,7 @@ type (
 		Responses    map[string]*design.ResponseDefinition
 		API          *design.APIDefinition
 		Version      *design.APIVersionDefinition
+		TargetPkg    string
 	}
 
 	// ControllerTemplateData contains the information required to generate an action handler.
@@ -411,7 +412,7 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 	// ctxRespT generates response helper methods GoGenerator
 	// template input: *ContextTemplateData
 	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{goify .Name true}} sends a HTTP response with status code {{.Status}}.
-	func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{$mt := ($ctx.API.MediaTypeWithIdentifier .MediaType)}}{{if $mt}}resp {{gotyperef $mt 0}}{{if gt (len $mt.ComputeViews) 1}}, view {{gotypename $mt 0}}ViewEnum{{end}}{{else if .MediaType}}resp []byte{{end}}) error {
+	func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{$mt := ($ctx.API.MediaTypeWithIdentifier .MediaType)}}{{if $mt}}resp {{if $ctx.Version.Version}}{{$ctx.TargetPkg}}.{{end}}{{gotyperef $mt 0}}{{if gt (len $mt.ComputeViews) 1}}, view {{gotypename $mt 0}}ViewEnum{{end}}{{else if .MediaType}}resp []byte{{end}}) error {
 {{if $mt}}	r, err := resp.Dump({{if gt (len $mt.ComputeViews) 1}}view{{end}})
 	if err != nil {
 		return fmt.Errorf("invalid response: %s", err)
