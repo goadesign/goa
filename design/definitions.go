@@ -424,6 +424,25 @@ func (a *APIDefinition) MediaTypeWithIdentifier(id string) *MediaTypeDefinition 
 	return mtwi
 }
 
+// IterateResources calls the given iterator passing in each resource sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateResources returns that
+// error.
+func (a *APIDefinition) IterateResources(it ResourceIterator) error {
+	names := make([]string, len(a.Resources))
+	i := 0
+	for n := range a.Resources {
+		names[i] = n
+		i++
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		if err := it(a.Resources[n]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // IterateVersions calls the given iterator passing in each API version definition sorted
 // alphabetically by version name. It first calls the iterator on the embedded version definition
 // which contains the definitions for all the unversioned resources.

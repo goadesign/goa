@@ -54,6 +54,22 @@ func AppOutputDir() string {
 	return filepath.Join(codegen.OutputDir, TargetPackage)
 }
 
+// AppPackagePath returns the Go package path to the generated package.
+func AppPackagePath() (string, error) {
+	outputDir := AppOutputDir()
+	gopaths := filepath.SplitList(os.Getenv("GOPATH"))
+	for _, gopath := range gopaths {
+		if strings.HasPrefix(outputDir, gopath) {
+			path, err := filepath.Rel(filepath.Join(gopath, "src"), outputDir)
+			if err != nil {
+				return "", err
+			}
+			return path, nil
+		}
+	}
+	return "", fmt.Errorf("output directory outside of Go workspace, make sure to define GOPATH correctly or change output directory")
+}
+
 // Generate the application code, implement codegen.Generator.
 func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) {
 	if api == nil {
@@ -185,6 +201,13 @@ func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, v
 		codegen.SimpleImport("strconv"),
 		codegen.SimpleImport("github.com/raphael/goa"),
 	}
+	if !version.IsDefault() {
+		appPkg, err := AppPackagePath()
+		if err != nil {
+			return err
+		}
+		imports = append(imports, codegen.SimpleImport(appPkg))
+	}
 	ctxWr.WriteHeader(title, packageName(version), imports)
 	err = version.IterateResources(func(r *design.ResourceDefinition) error {
 		if !r.SupportsVersion(version.Version) {
@@ -203,6 +226,7 @@ func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, v
 				Responses:    MergeResponses(r.Responses, a.Responses),
 				API:          api,
 				Version:      version,
+				TargetPkg:    TargetPackage,
 			}
 			return ctxWr.Execute(&ctxData)
 		})
@@ -229,6 +253,13 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
 		codegen.SimpleImport("github.com/raphael/goa"),
+	}
+	if !version.IsDefault() {
+		appPkg, err := AppPackagePath()
+		if err != nil {
+			return err
+		}
+		imports = append(imports, codegen.SimpleImport(appPkg))
 	}
 	ctlWr.WriteHeader(title, packageName(version), imports)
 	var controllersData []*ControllerTemplateData

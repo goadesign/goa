@@ -78,18 +78,23 @@ func API(name string, dsl func()) *design.APIDefinition {
 // Version is the top level design language function which defines the API global property values
 // for a given version. The DSL used to define the property values is identical to the one used by
 // the API function.
-func Version(ver string, dsl func()) {
+func Version(ver string, dsl func()) *design.APIVersionDefinition {
 	if design.Design == nil {
 		InitDesign()
 	}
+	verdef := &design.APIVersionDefinition{Version: ver, DSL: dsl}
 	if _, ok := design.Design.Versions[ver]; ok {
 		ReportError("API Version %s defined twice", ver)
-		return
+		return verdef
+	}
+	if design.Design.Versions == nil {
+		design.Design.Versions = make(map[string]*design.APIVersionDefinition)
 	}
 	if ver == "" {
 		ReportError("version cannot be an empty string")
 	}
-	design.Design.Versions[ver] = &design.APIVersionDefinition{Version: ver, DSL: dsl}
+	design.Design.Versions[ver] = verdef
+	return verdef
 }
 
 // Description sets the definition description.
