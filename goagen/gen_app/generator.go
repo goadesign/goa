@@ -162,6 +162,15 @@ func MergeResponses(l, r map[string]*design.ResponseDefinition) map[string]*desi
 	return l
 }
 
+// Generated package name for resources supporting the given version.
+func packageName(version *design.APIVersionDefinition) (pack string) {
+	pack = TargetPackage
+	if version.Version != "" {
+		pack = codegen.Goify(version.Version, false)
+	}
+	return
+}
+
 // generateContexts iterates through the version resources and actions and generates the action
 // contexts.
 func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, version *design.APIVersionDefinition) error {
@@ -176,8 +185,11 @@ func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, v
 		codegen.SimpleImport("strconv"),
 		codegen.SimpleImport("github.com/raphael/goa"),
 	}
-	ctxWr.WriteHeader(title, TargetPackage, imports)
+	ctxWr.WriteHeader(title, packageName(version), imports)
 	err = version.IterateResources(func(r *design.ResourceDefinition) error {
+		if !r.SupportsVersion(version.Version) {
+			return nil
+		}
 		return r.IterateActions(func(a *design.ActionDefinition) error {
 			ctxName := codegen.Goify(a.Name, true) + codegen.Goify(a.Parent.Name, true) + "Context"
 			ctxData := ContextTemplateData{
@@ -218,9 +230,12 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
 		codegen.SimpleImport("github.com/raphael/goa"),
 	}
-	ctlWr.WriteHeader(title, TargetPackage, imports)
+	ctlWr.WriteHeader(title, packageName(version), imports)
 	var controllersData []*ControllerTemplateData
 	version.IterateResources(func(r *design.ResourceDefinition) error {
+		if !r.SupportsVersion(version.Version) {
+			return nil
+		}
 		data := &ControllerTemplateData{Resource: codegen.Goify(r.Name, true)}
 		err := r.IterateActions(func(a *design.ActionDefinition) error {
 			context := fmt.Sprintf("%s%sContext", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
@@ -259,8 +274,11 @@ func (g *Generator) generateHrefs(verdir string, version *design.APIVersionDefin
 		panic(err) // bug
 	}
 	title := fmt.Sprintf("%s: Application Resource Href Factories", version.Context())
-	resWr.WriteHeader(title, TargetPackage, nil)
+	resWr.WriteHeader(title, packageName(version), nil)
 	err = version.IterateResources(func(r *design.ResourceDefinition) error {
+		if !r.SupportsVersion(version.Version) {
+			return nil
+		}
 		m := design.Design.MediaTypeWithIdentifier(r.MediaType)
 		var identifier string
 		if m != nil {

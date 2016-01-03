@@ -43,6 +43,20 @@ func NewGenerator() (*Generator, error) {
 	return new(Generator), nil
 }
 
+// controllerVersion is the data structure used to render a specific version of the controller
+// mounting code.
+type controllerVersion struct {
+	Controller *design.ResourceDefinition
+	Version    string
+}
+
+func newControllerVersion(ctrl *design.ResourceDefinition, version string) *controllerVersion {
+	return &controllerVersion{
+		Controller: ctrl,
+		Version:    version,
+	}
+}
+
 // Generate produces the skeleton main.
 func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) {
 	go utils.Catch(nil, func() { g.Cleanup() })
@@ -60,10 +74,11 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	g.genfiles = append(g.genfiles, mainFile)
 	_, err = os.Stat(mainFile)
 	funcs := template.FuncMap{
-		"tempvar":         tempvar,
-		"generateSwagger": generateSwagger,
-		"goify":           codegen.Goify,
-		"okResp":          okResp,
+		"tempvar":              tempvar,
+		"generateSwagger":      generateSwagger,
+		"goify":                codegen.Goify,
+		"okResp":               okResp,
+		"newControllerVersion": newControllerVersion,
 	}
 	gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
 	if err != nil {
@@ -230,12 +245,16 @@ func main() {
 	service.Use(goa.RequestID())
 	service.Use(goa.LogRequest())
 	service.Use(goa.Recover())
-{{$api := .API}}{{range $ver, $prop := .API.Versions}}
-{{if $ver}}	// Version {{$ver}}
-{{end}}{{range $name, $res := .Resources}}{{$name := goify (printf "%s%s" $res.Name $ver) true}}	// Mount "{{$res.Name}}" controller
+{{$api := .API}}
+{{range $name, $res := $api.Resources}}{{if $res.SupportsNoVersion}}{{$name := goify $res.Name true}}	// Mount "{{$res.Name}}" controller
 	{{$tmp := tempvar}}{{$tmp}} := New{{$name}}Controller(service)
 	app.Mount{{$name}}Controller(service, {{$tmp}})
-{{end}}
+{{end}}{{end}}{{range $ver, $prop := $api.Versions}}
+	// Version {{$ver}}
+{{range $name, $res := .Resources}}{{if $res.SupportsVersion $ver}}{{$name := goify (printf "%s%s" $res.Name $ver) true}}	// Mount "{{$res.Name}}" controller
+	{{$tmp := tempvar}}{{$tmp}} := New{{$name}}Controller(service)
+	{{goify $ver false}}.Mount{{goify $res.Name true}}Controller(service, {{$tmp}})
+{{end}}{{end}}
 {{end}}{{if generateSwagger}}// Mount Swagger spec provider controller
 	swagger.MountController(service)
 {{end}}
@@ -243,16 +262,21 @@ func main() {
 	service.ListenAndServe(":8080")
 }
 `
-const ctrlTmpl = `// {{$ctrlName := printf "%s%s" (goify (printf "%s%s" .Name .Version)  true) "Controller"}}{{$ctrlName}} implements the{{if .Version}} {{.Version}} {{end}}{{.Name}} resource.
+const ctrlTmpl = `{{define "OneVersion"}}` + ctrlVerTmpl + `{{end}}` + `{{$ctrl := .}}{{/*
+*/}}{{if .APIVersions}}{{range $ver := .APIVersions}}{{template "OneVersion" (newControllerVersion $ctrl $ver)}}
+{{end}}{{else}}{{template "OneVersion" (newControllerVersion $ctrl "")}}
+{{end}}`
+
+const ctrlVerTmpl = `// {{$ctrlName := printf "%s%s" (goify (printf "%s%s" .Controller.Name .Version)  true) "Controller"}}{{$ctrlName}} implements the{{if .Version}} {{.Version}} {{end}}{{.Controller.Name}} resource.
 type {{$ctrlName}} struct {
 	goa.Controller
 }
 
-// New{{$ctrlName}} creates a {{.Name}} controller.
-func New{{$ctrlName}}(service goa.Service) {{if .Version}}{{.Version}}{{else}}app{{end}}.{{$ctrlName}} {
+// New{{$ctrlName}} creates a {{.Controller.Name}} controller.
+func New{{$ctrlName}}(service goa.Service) {{if .Version}}{{goify .Version false}}{{else}}app{{end}}.{{$ctrlName}} {
 	return &{{$ctrlName}}{Controller: service.NewController("{{$ctrlName}}")}
 }
-{{$ctrl := .}}{{range .Actions}}
+{{$ctrl := .Controller}}{{range .Controller.Actions}}
 // {{goify .Name true}} runs the {{.Name}} action.
 func (c *{{$ctrlName}}) {{goify .Name true}}(ctx *app.{{goify .Name true}}{{goify $ctrl.Name true}}Context) error {
 {{$ok := okResp .}}{{if $ok}}	res := {{$ok.TypeRef}}{}

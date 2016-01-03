@@ -198,6 +198,31 @@ func (r *ResourceDefinition) Validate() *ValidationErrors {
 	if r.Name == "" {
 		verr.Add(r, "Resource name cannot be empty")
 	}
+	r.validateActions(verr)
+	if r.BaseParams != nil {
+		r.validateBaseParams(verr)
+	}
+	if r.ParentName != "" {
+		r.validateParent(verr)
+	}
+	for _, resp := range r.Responses {
+		verr.Merge(resp.Validate())
+	}
+	if r.Params != nil {
+		verr.Merge(r.Params.Validate("resource parameters", r))
+	}
+	for _, version := range r.APIVersions {
+		if version == "" {
+			continue
+		}
+		if _, ok := Design.Versions[version]; !ok {
+			verr.Add(r, "Invalid API version %#v", version)
+		}
+	}
+	return verr.AsError()
+}
+
+func (r *ResourceDefinition) validateActions(verr *ValidationErrors) {
 	found := false
 	for _, a := range r.Actions {
 		if a.Name == r.CanonicalActionName {
@@ -208,57 +233,47 @@ func (r *ResourceDefinition) Validate() *ValidationErrors {
 	if r.CanonicalActionName != "" && !found {
 		verr.Add(r, `unknown canonical action "%s"`, r.CanonicalActionName)
 	}
-	if r.BaseParams != nil {
-		baseParams, ok := r.BaseParams.Type.(Object)
-		if !ok {
-			verr.Add(r, "invalid type for BaseParams, must be an Object", r)
+}
+
+func (r *ResourceDefinition) validateBaseParams(verr *ValidationErrors) {
+	baseParams, ok := r.BaseParams.Type.(Object)
+	if !ok {
+		verr.Add(r, "invalid type for BaseParams, must be an Object", r)
+	} else {
+		vars := ExtractWildcards(r.BasePath)
+		if len(vars) > 0 {
+			if len(vars) != len(baseParams) {
+				verr.Add(r, "BasePath defines parameters %s but BaseParams has %d elements",
+					strings.Join([]string{
+						strings.Join(vars[:len(vars)-1], ", "),
+						vars[len(vars)-1],
+					}, " and "),
+					len(baseParams),
+				)
+			}
+			for _, v := range vars {
+				if _, found := baseParams[v]; !found {
+					verr.Add(r, "Variable %s from base path %s does not match any parameter from BaseParams",
+						v, r.BasePath)
+				}
+			}
 		} else {
-			vars := ExtractWildcards(r.BasePath)
-			if len(vars) > 0 {
-				if len(vars) != len(baseParams) {
-					verr.Add(r, "BasePath defines parameters %s but BaseParams has %d elements",
-						strings.Join([]string{
-							strings.Join(vars[:len(vars)-1], ", "),
-							vars[len(vars)-1],
-						}, " and "),
-						len(baseParams),
-					)
-				}
-				for _, v := range vars {
-					if _, found := baseParams[v]; !found {
-						verr.Add(r, "Variable %s from base path %s does not match any parameter from BaseParams",
-							v, r.BasePath)
-					}
-				}
-			} else {
-				if len(baseParams) > 0 {
-					verr.Add(r, "BasePath does not use variables defined in BaseParams")
-				}
+			if len(baseParams) > 0 {
+				verr.Add(r, "BasePath does not use variables defined in BaseParams")
 			}
 		}
 	}
-	if r.ParentName != "" {
-		p, ok := Design.Resources[r.ParentName]
-		if !ok {
-			verr.Add(r, "Parent resource named %#v not found", r.ParentName)
-		} else {
-			if p.CanonicalAction() == nil {
-				verr.Add(r, "Parent resource %#v has no canonical action", r.ParentName)
-			}
+}
+
+func (r *ResourceDefinition) validateParent(verr *ValidationErrors) {
+	p, ok := Design.Resources[r.ParentName]
+	if !ok {
+		verr.Add(r, "Parent resource named %#v not found", r.ParentName)
+	} else {
+		if p.CanonicalAction() == nil {
+			verr.Add(r, "Parent resource %#v has no canonical action", r.ParentName)
 		}
 	}
-	for _, resp := range r.Responses {
-		verr.Merge(resp.Validate())
-	}
-	if r.Params != nil {
-		verr.Merge(r.Params.Validate("resource parameters", r))
-	}
-	if r.Version != "" {
-		if _, ok := Design.Versions[r.Version]; !ok {
-			verr.Add(r, "Invalid API version %#v", r.Version)
-		}
-	}
-	return verr.AsError()
 }
 
 // Validate tests whether the action definition is consistent: parameters have unique names and it has at least
