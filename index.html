@@ -1,165 +1,168 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-	<title>goa</title>
-	<meta charset="utf-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
-	<link rel="stylesheet" href="assets/css/main.css" />
-	<!--[if lte IE 8]><link rel="stylesheet" href="assets/css/ie8.css" /><![endif]-->
-	<!--[if lte IE 9]><link rel="stylesheet" href="assets/css/ie9.css" /><![endif]-->
+        <title>goa</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
+        <link rel="stylesheet" href="assets/css/main.css" />
+        <!--[if lte IE 8]><link rel="stylesheet" href="assets/css/ie8.css" /><![endif]-->
+        <!--[if lte IE 9]><link rel="stylesheet" href="assets/css/ie9.css" /><![endif]-->
 </head>
 <body id="top">
-	<div id="nav">
-		<ul class="actions">
-			<li>
-				<a class="button special" href="index.html">Intro</a>
-			</li>
-			<li>
-				<a class="button" href="getting-started.html">Guide</a>
-			</li>
-			<li>
-				<a class="button" href="goagen.html">goagen</a>
-			</li>
-			<li>
-				<a class="button" href="swagger.html">Swagger</a>
-			</li>
-		</ul>
-	</div>
-	<header id="header">
-		<div class="content">
-			<h1><a href="#">goa</a></h1>
-			<p>Design-based HTTP microservice dev in Go</p>
-			<ul class="actions">
-				<li><a href="https://github.com/raphael/goa" class="button special icon fa-github" target="_blank">Source</a></li>
-				<li><a href="#one" class="button icon fa-chevron-down scrolly">Learn More</a></li>
-			</ul>
-		</div>
-		<div class="image"><div class="inner"><img src="images/snapshot.png" alt="design language" /></div></div>
-	</header>
+        <div id="nav">
+                <ul class="actions">
+                        <li>
+                                <a class="button special" href="index.html">Intro</a>
+                        </li>
+                        <li>
+                                <a class="button" href="getting-started.html">Guide</a>
+                        </li>
+                        <li>
+                                <a class="button" href="goagen.html">goagen</a>
+                        </li>
+                        <li>
+                                <a class="button" href="swagger.html">Swagger</a>
+                        </li>
+                        <li>
+                                <a class="button" href="runtime.html">Runtime</a>
+                        </li>
+                </ul>
+        </div>
+        <header id="header">
+                <div class="content">
+                        <h1><a href="#">goa</a></h1>
+                        <p>Design-based HTTP microservice dev in Go</p>
+                        <ul class="actions">
+                                <li><a href="https://github.com/raphael/goa" class="button special icon fa-github" target="_blank">Source</a></li>
+                                <li><a href="#one" class="button icon fa-chevron-down scrolly">Learn More</a></li>
+                        </ul>
+                </div>
+                <div class="image"><div class="inner"><img src="images/snapshot.png" alt="design language" /></div></div>
+        </header>
 
-	<section id="one" class="wrapper style2 special">
-		<header class="major">
-			<h2>goa is a <a href="https://golang.org">Go</a> framework for developping RESTful microservices.</h2>
-		</header>
-	</section>
+        <section id="one" class="wrapper style2 special">
+                <header class="major">
+                        <h2>goa is a <a href="https://golang.org">Go</a> framework for developping RESTful microservices.</h2>
+                </header>
+        </section>
 
-	<!-- Two -->
-	<section id="two" class="wrapper">
-		<div class="inner alt">
-			<section class="spotlight">
-				<div class="row">
-					<div class="2u 3u$(small)">
-						<div class="box blue">
-							<div class="icon"><i class="fa fa-magic fa-5x blue"></i></div>
-						</div>
-					</div>
-					<div class="8u 6u$(medium)">
-						<h3>Code Generation</h3>
-						<p>
-							goa relies on code generation to alleviate the need for reflection or repetitive coding.
-							The <em>goagen</em> tool analyzes the API design and produces various artifacts including code,
-							documentation, tests or even your own output. The end result is application code that is
-							clean and terse.
-						</p>
-					</div>
-				</div>
-			</section>
-			<section class="spotlight">
-				<div class="row">
-					<div class="8u 6u$(medium)">
-						<h3>Design Based</h3>
-						<p>
-							The goa language allows writing self-explanatory code that describes the <em>design</em>
-							of the API. The description focuses on listing the resources and the actions they support.
-							The goa language is flexible and stays out of the way, you get to decide how your API
-							should work.
-						</p>
-					</div>
-					<div class="2u 3u$(small)">
-						<div class="box blue">
-							<div class="icon"><i class="fa fa-file-text fa-5x blue"></i></div>
-						</div>
-					</div>
-				</div>
-			</section>
-			<section class="spotlight">
-				<div class="row">
-					<div class="2u 3u$(small)">
-						<div class="box blue">
-							<div class="icon"><i class="fa fa-bolt fa-5x blue"></i></div>
-						</div>
-					</div>
-					<div class="8u 6u$(medium)">
-						<h3>Powerful Request Context</h3>
-						<p>
-							Every API action handler in goa gets a context as first argument. The context implements the
-							<code>Context</code> interface from google's <a href="https://godoc.org/golang.org/x/net/context">context package</a>.
-							This means built-in support for deadlines and cancelation signals. The context also exposes the request
-							and response states with action specific helper methods generated from the design.
-						</p>
-					</div>
-				</div>
-			</section>
-		</div>
-	</section>
+        <!-- Two -->
+        <section id="two" class="wrapper">
+                <div class="inner alt">
+                        <section class="spotlight">
+                                <div class="row">
+                                        <div class="2u 3u$(small)">
+                                                <div class="box blue">
+                                                        <div class="icon"><i class="fa fa-magic fa-5x blue"></i></div>
+                                                </div>
+                                        </div>
+                                        <div class="8u 6u$(medium)">
+                                                <h3>Code Generation</h3>
+                                                <p>
+                                                        goa relies on code generation to alleviate the need for reflection or repetitive coding.
+                                                        The <em>goagen</em> tool analyzes the API design and produces various artifacts including code,
+                                                        documentation, tests or even your own output. The end result is application code that is
+                                                        clean and terse.
+                                                </p>
+                                        </div>
+                                </div>
+                        </section>
+                        <section class="spotlight">
+                                <div class="row">
+                                        <div class="8u 6u$(medium)">
+                                                <h3>Design Based</h3>
+                                                <p>
+                                                        The goa language allows writing self-explanatory code that describes the <em>design</em>
+                                                        of the API. The description focuses on listing the resources and the actions they support.
+                                                        The goa language is flexible and stays out of the way, you get to decide how your API
+                                                        should work.
+                                                </p>
+                                        </div>
+                                        <div class="2u 3u$(small)">
+                                                <div class="box blue">
+                                                        <div class="icon"><i class="fa fa-file-text fa-5x blue"></i></div>
+                                                </div>
+                                        </div>
+                                </div>
+                        </section>
+                        <section class="spotlight">
+                                <div class="row">
+                                        <div class="2u 3u$(small)">
+                                                <div class="box blue">
+                                                        <div class="icon"><i class="fa fa-bolt fa-5x blue"></i></div>
+                                                </div>
+                                        </div>
+                                        <div class="8u 6u$(medium)">
+                                                <h3>Powerful Request Context</h3>
+                                                <p>
+                                                        Every API action handler in goa gets a context as first argument. The context implements the
+                                                        <code>Context</code> interface from google's <a href="https://godoc.org/golang.org/x/net/context">context package</a>.
+                                                        This means built-in support for deadlines and cancelation signals. The context also exposes the request
+                                                        and response states with action specific helper methods generated from the design.
+                                                </p>
+                                        </div>
+                                </div>
+                        </section>
+                </div>
+        </section>
 
-	<!-- Three -->
-	<section id="three" class="wrapper style2 special">
-		<header class="major">
-			<h2>Intrigued?</h2>
-			<p>
-				goa is in active development and production workloads are currently being developed with it.<br />
-				The approach is yielding a lot of interesting benefits, try it out and see for yourself!
-			</p>
-		</header>
-		<div class="inner alt">
-			<div class="row">
-				<div class="4u">
-					<h3>Getting Started</h3>
-					<p>
-						This short guide should get you started in a few minutes. Follow a few easy steps and see
-						what goa can do for you.
-					</p>
-					<a class="button icon fa-rocket" href="getting-started.html">Start here &raquo;</a>
-				</div>
-				<div class="4u">
-					<h3>goa, the Language</h3>
-					<p>
-						The goa language is at the core of the goa design-based approach to API development. Use it
-						to describe the resources your API supports.
-					</p>
-					<a class="button icon fa-book"  href="http://godoc.org/github.com/raphael/goa/design/dsl" target="_blank">Read the GoDoc &raquo;</a>
-				</div>
-				<div class="4u">
-					<h3>goagen, the Tool</h3>
-					<p>
-						<em>goagen</em> contains the magic that takes your API design and produces the glue code,
-						scaffolding, documentation and more.
-					</p>
-					<a class="button icon fa-question-circle"  href="goagen.html" target="_blank">Read the help &raquo;</a>
-				</div>
-			</div>
-		</div>
-	</section>
+        <!-- Three -->
+        <section id="three" class="wrapper style2 special">
+                <header class="major">
+                        <h2>Intrigued?</h2>
+                        <p>
+                                goa is in active development and production workloads are currently being developed with it.<br />
+                                The approach is yielding a lot of interesting benefits, try it out and see for yourself!
+                        </p>
+                </header>
+                <div class="inner alt">
+                        <div class="row">
+                                <div class="4u">
+                                        <h3>Getting Started</h3>
+                                        <p>
+                                                This short guide should get you started in a few minutes. Follow a few easy steps and see
+                                                what goa can do for you.
+                                        </p>
+                                        <a class="button icon fa-rocket" href="getting-started.html">Start here &raquo;</a>
+                                </div>
+                                <div class="4u">
+                                        <h3>goa, the Language</h3>
+                                        <p>
+                                                The goa language is at the core of the goa design-based approach to API development. Use it
+                                                to describe the resources your API supports.
+                                        </p>
+                                        <a class="button icon fa-book"  href="http://godoc.org/github.com/raphael/goa/design/dsl" target="_blank">Read the GoDoc &raquo;</a>
+                                </div>
+                                <div class="4u">
+                                        <h3>goagen, the Tool</h3>
+                                        <p>
+                                                <em>goagen</em> contains the magic that takes your API design and produces the glue code,
+                                                scaffolding, documentation and more.
+                                        </p>
+                                        <a class="button icon fa-question-circle"  href="goagen.html" target="_blank">Read the help &raquo;</a>
+                                </div>
+                        </div>
+                </div>
+        </section>
 
-	<!-- Footer -->
-	<footer id="footer">
-		<ul class="icons">
-			<li><a href="mailto:info@goa.design" class="icon fa-envelope"><span class="label">Contact</span></a></li>
-			<li><a href="https://github.com/raphael/goa" class="icon fa-github" target="_blank"><span class="label">Github</span></a></li>
-		</ul>
-		<p class="copyright">&copy;2015 Raphael Simon. Design: <a href="http://html5up.net">HTML5 UP</a></p>
-	</footer>
+        <!-- Footer -->
+        <footer id="footer">
+                <ul class="icons">
+                        <li><a href="mailto:info@goa.design" class="icon fa-envelope"><span class="label">Contact</span></a></li>
+                        <li><a href="https://github.com/raphael/goa" class="icon fa-github" target="_blank"><span class="label">Github</span></a></li>
+                </ul>
+                <p class="copyright">&copy;2015 Raphael Simon. Design: <a href="http://html5up.net">HTML5 UP</a></p>
+        </footer>
 
-	<!-- Scripts -->
-	<script src="assets/js/jquery.min.js"></script>
-	<script src="assets/js/jquery.scrolly.min.js"></script>
-	<script src="assets/js/skel.min.js"></script>
-	<script src="assets/js/util.js"></script>
-	<!--[if lte IE 8]><script src="assets/js/ie/respond.min.js"></script><![endif]-->
-	<script src="assets/js/main.js"></script>
-	<script src="assets/js/nav.js"></script>
+        <!-- Scripts -->
+        <script src="assets/js/jquery.min.js"></script>
+        <script src="assets/js/jquery.scrolly.min.js"></script>
+        <script src="assets/js/skel.min.js"></script>
+        <script src="assets/js/util.js"></script>
+        <!--[if lte IE 8]><script src="assets/js/ie/respond.min.js"></script><![endif]-->
+        <script src="assets/js/main.js"></script>
+        <script src="assets/js/nav.js"></script>
 
 </body>
 </html>
