@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"text/template"
 
@@ -190,14 +191,18 @@ func (m *Generator) compile(srcDir string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf(`failed to find a go compiler, looked in "%s"`, os.Getenv("PATH"))
 	}
+	bin := "goagen"
+	if runtime.GOOS == "windows" {
+		bin += ".exe"
+	}
 	c := exec.Cmd{
 		Path: gobin,
-		Args: []string{gobin, "build", "-o", "goagen"},
+		Args: []string{gobin, "build", "-o", bin},
 		Dir:  srcDir,
 	}
 	out, err := c.CombinedOutput()
 	if codegen.Debug {
-		fmt.Printf("[%s]$ %s build -o goagen\n%s\n", srcDir, gobin, out)
+		fmt.Printf("[%s]$ %s build -o %s\n%s\n", srcDir, gobin, bin, out)
 	}
 	if err != nil {
 		if len(out) > 0 {

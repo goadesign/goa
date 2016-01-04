@@ -3,7 +3,7 @@ package design
 import (
 	"fmt"
 	"mime"
-	"path/filepath"
+	"path"
 	"regexp"
 	"sort"
 	"strings"
@@ -532,13 +532,13 @@ func (r *ResourceDefinition) FullPath() string {
 				// Note: all these tests should be true at code generation time
 				// as DSL validation makes sure that parent resources have a
 				// canonical path.
-				basePath = filepath.Join(routes[0].FullPath())
+				basePath = path.Join(routes[0].FullPath())
 			}
 		}
 	} else {
 		basePath = Design.BasePath
 	}
-	return httprouter.CleanPath(filepath.Join(basePath, r.BasePath))
+	return httprouter.CleanPath(path.Join(basePath, r.BasePath))
 }
 
 // Parent returns the parent resource if any, nil otherwise.
@@ -985,7 +985,7 @@ func (r *RouteDefinition) FullPath() string {
 	if r.Parent != nil && r.Parent.Parent != nil {
 		base = r.Parent.Parent.FullPath()
 	}
-	return httprouter.CleanPath(filepath.Join(base, r.Path))
+	return httprouter.CleanPath(path.Join(base, r.Path))
 }
 
 // Context returns the generic definition name used in error messages.
