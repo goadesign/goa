@@ -634,7 +634,7 @@ func RegisterCommands(app *kingpin.Application) map[string]client.ActionCommand 
 {{if gt (len .) 0}}	var command, sub *kingpin.CmdClause
 {{end}}{{range $name, $actions := .}}	command = app.Command("{{$name}}", "{{if eq (len $actions) 1}}{{$a := index $actions 0}}{{$a.Description}}{{else}}{{$name}} action{{end}}")
 {{range $action := $actions}}{{$cmdName := goify (printf "%s%sCommand" $action.Name (title $action.Parent.Name)) true}}{{$tmp := tempvar}}	{{$tmp}} := new({{$cmdName}})
-	sub = command.Command("{{$action.Parent.Name}}", "{{$action.Description}}")
+	sub = command.Command("{{$action.Parent.Name}}", "{{$action.Parent.Description}}")
 	{{$tmp}}.RegisterFlags(sub)
 	res["{{printf "%s %s" $name $action.Parent.Name}}"] = {{$tmp}}
 {{end}}{{end}}
