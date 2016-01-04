@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -78,9 +79,9 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		if err != nil {
 			return
 		}
-		outPkg = strings.TrimPrefix(outPkg, "src/")
-		appPkg := filepath.Join(outPkg, "app")
-		swaggerPkg := filepath.Join(outPkg, "swagger")
+		outPkg = strings.TrimPrefix(filepath.ToSlash(outPkg), "src/")
+		appPkg := path.Join(outPkg, "app")
+		swaggerPkg := path.Join(outPkg, "swagger")
 		imports := []*codegen.ImportSpec{
 			codegen.SimpleImport("github.com/raphael/goa"),
 			codegen.SimpleImport(appPkg),
@@ -88,7 +89,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 			codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
 		}
 		if generateJSONSchema() {
-			jsonSchemaPkg := filepath.Join(outPkg, "schema")
+			jsonSchemaPkg := path.Join(outPkg, "schema")
 			imports = append(imports, codegen.SimpleImport(jsonSchemaPkg))
 		}
 		gg.WriteHeader("", "main", imports)
@@ -111,7 +112,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	if err != nil {
 		return
 	}
-	imp = filepath.Join(imp, "app")
+	imp = path.Join(filepath.ToSlash(imp), "app")
 	imports := []*codegen.ImportSpec{codegen.SimpleImport(imp)}
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
 		filename := filepath.Join(codegen.OutputDir, snakeCase(r.Name)+".go")
