@@ -216,7 +216,9 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 		fmt.Sprintf("--design=%s", codegen.DesignPackagePath),
 	}
 	for name, value := range m.Flags {
-		args = append(args, fmt.Sprintf("--%s=%s", name, value))
+		if value != "" {
+			args = append(args, fmt.Sprintf("--%s=%s", name, value))
+		}
 	}
 	cmd := exec.Command(genbin, args...)
 	out, err := cmd.CombinedOutput()

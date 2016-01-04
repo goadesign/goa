@@ -9,6 +9,9 @@ var (
 	// AppName is the name of the generated application.
 	AppName string
 
+	// TargetPackage is the name of the generated Go package.
+	TargetPackage string
+
 	// Force is true if pre-existing files should be overwritten during generation.
 	Force bool
 )
@@ -29,6 +32,8 @@ func NewCommand() *Command {
 func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
 	r.Flag("force", "overwrite existing files").BoolVar(&Force)
 	r.Flag("name", "application name").Default("API").StringVar(&AppName)
+	r.Flag("pkg", "Name of generated Go package containing controllers supporting code (contexts, media types, user types etc.)").
+		Default("app").StringVar(&TargetPackage)
 }
 
 // Run simply calls the meta generator.

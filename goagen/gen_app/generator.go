@@ -209,6 +209,10 @@ func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, v
 		imports = append(imports, codegen.SimpleImport(appPkg))
 	}
 	ctxWr.WriteHeader(title, packageName(version), imports)
+	var appPackage string
+	if !version.IsDefault() {
+		appPackage = TargetPackage
+	}
 	err = version.IterateResources(func(r *design.ResourceDefinition) error {
 		if !r.SupportsVersion(version.Version) {
 			return nil
@@ -226,7 +230,7 @@ func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, v
 				Responses:    MergeResponses(r.Responses, a.Responses),
 				API:          api,
 				Version:      version,
-				TargetPkg:    TargetPackage,
+				AppPackage:   appPackage,
 			}
 			return ctxWr.Execute(&ctxData)
 		})

@@ -67,7 +67,7 @@ type (
 		Responses    map[string]*design.ResponseDefinition
 		API          *design.APIDefinition
 		Version      *design.APIVersionDefinition
-		TargetPkg    string
+		AppPackage   string
 	}
 
 	// ControllerTemplateData contains the information required to generate an action handler.
@@ -131,11 +131,13 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 	funcMap["gotypedef"] = codegen.GoTypeDef
 	funcMap["goify"] = codegen.Goify
 	funcMap["gotypename"] = codegen.GoTypeName
+	funcMap["gopkgtypename"] = codegen.GoPackageTypeName
 	funcMap["typeUnmarshaler"] = codegen.TypeUnmarshaler
 	funcMap["userTypeUnmarshalerImpl"] = codegen.UserTypeUnmarshalerImpl
 	funcMap["validationChecker"] = codegen.ValidationChecker
 	funcMap["tabs"] = codegen.Tabs
 	funcMap["add"] = func(a, b int) int { return a + b }
+	funcMap["gopkgtyperef"] = codegen.GoPackageTypeRef
 	ctxTmpl, err := template.New("context").Funcs(funcMap).Parse(ctxT)
 	if err != nil {
 		return nil, err
@@ -412,14 +414,15 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 	// ctxRespT generates response helper methods GoGenerator
 	// template input: *ContextTemplateData
 	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{goify .Name true}} sends a HTTP response with status code {{.Status}}.
-	func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{$mt := ($ctx.API.MediaTypeWithIdentifier .MediaType)}}{{if $mt}}resp {{if $ctx.Version.Version}}{{$ctx.TargetPkg}}.{{end}}{{gotyperef $mt 0}}{{if gt (len $mt.ComputeViews) 1}}, view {{gotypename $mt 0}}ViewEnum{{end}}{{else if .MediaType}}resp []byte{{end}}) error {
+func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{$mt := ($ctx.API.MediaTypeWithIdentifier .MediaType)}}{{if $mt}}resp {{gopkgtyperef $mt $ctx.AppPackage 0}}{{if gt (len $mt.ComputeViews) 1}}, view {{gopkgtypename $mt $ctx.AppPackage 0}}ViewEnum{{end}}{{else if .MediaType}}resp []byte{{end}}) error {
 {{if $mt}}	r, err := resp.Dump({{if gt (len $mt.ComputeViews) 1}}view{{end}})
 	if err != nil {
 		return fmt.Errorf("invalid response: %s", err)
 	}
 	ctx.Header().Set("Content-Type", "{{$mt.Identifier}}; charset=utf-8")
-	return ctx.JSON({{.Status}}, r){{else}}return ctx.Respond({{.Status}}, {{if and (not $mt) .MediaType}}resp{{else}}nil{{end}}){{end}}
+	return ctx.JSON({{.Status}}, r){{else}}	return ctx.Respond({{.Status}}, {{if and (not $mt) .MediaType}}resp{{else}}nil{{end}}){{end}}
 }
+
 {{end}}`
 
 	// payloadT generates the payload type definition GoGenerator
