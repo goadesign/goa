@@ -37,7 +37,7 @@ func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
 // Run simply calls the meta generator.
 func (c *Command) Run() ([]string, error) {
 	if GenPkgName == "" {
-		GenPkgName = filepath.Base(GenPkgPath)
+		GenPkgName = filepath.ToSlash(filepath.Base(GenPkgPath))
 	}
 	gen := meta.NewGenerator(
 		fmt.Sprintf("%s.Generate", GenPkgName),

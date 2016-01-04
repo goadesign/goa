@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"text/template"
 
 	. "github.com/onsi/ginkgo"
@@ -389,7 +390,11 @@ var _ = Describe("code generation", func() {
 				var out []byte
 
 				JustBeforeEach(func() {
-					cmd := exec.Command("go", "build", "-o", "codegen")
+					bin := "codegen"
+					if runtime.GOOS == "windows" {
+						bin += ".exe"
+					}
+					cmd := exec.Command("go", "build", "-o", bin)
 					cmd.Env = os.Environ()
 					cmd.Env = append(cmd.Env, fmt.Sprintf("GOPATH=%s%s%s", gopath, os.PathListSeparator, os.Getenv("GOPATH")))
 					cmd.Dir = srcDir
@@ -433,7 +438,11 @@ var _ = Describe("code generation", func() {
 					It("compiles", func() {
 						Ω(string(out)).Should(BeEmpty())
 
-						cmd := exec.Command("./codegen")
+						bin := "codegen"
+						if runtime.GOOS == "windows" {
+							bin += ".exe"
+						}
+						cmd := exec.Command(filepath.FromSlash(fmt.Sprintf("./%s", bin)))
 						cmd.Env = []string{fmt.Sprintf("PATH=%s", filepath.Join(gopath, "bin"))}
 						cmd.Dir = srcDir
 						code, err := cmd.CombinedOutput()

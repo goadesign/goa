@@ -223,7 +223,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	if err != nil {
 		return
 	}
-	clientPkg = strings.TrimPrefix(clientPkg, "src/")
+	clientPkg = strings.TrimPrefix(filepath.ToSlash(clientPkg), "src/")
 	arrayToStringTmpl = template.Must(template.New("client").Funcs(funcs).Parse(arrayToStringT))
 
 	// Generate client/client-cli/main.go
