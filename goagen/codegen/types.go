@@ -223,36 +223,55 @@ func GoResDef(ds design.DataStructure, tabs int) string {
 // (the part that comes after `var foo`)
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
 func GoTypeRef(t design.DataType, tabs int) string {
+	return GoPackageTypeRef(t, "", tabs)
+}
+
+// GoPackageTypeRef returns the Go code that refers to the Go type which matches the given data type
+// coming from a different package.
+func GoPackageTypeRef(t design.DataType, pkgName string, tabs int) string {
 	switch t.(type) {
 	case *design.UserTypeDefinition, *design.MediaTypeDefinition:
 		var prefix string
 		if t.IsObject() {
 			prefix = "*"
 		}
-		return prefix + GoTypeName(t, tabs)
+		return prefix + GoPackageTypeName(t, pkgName, tabs)
 	case design.Object:
-		return "*" + GoTypeName(t, tabs)
+		return "*" + GoPackageTypeName(t, pkgName, tabs)
 	default:
-		return GoTypeName(t, tabs)
+		return GoPackageTypeName(t, pkgName, tabs)
 	}
 }
 
 // GoTypeName returns the Go type name for a data type.
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
 func GoTypeName(t design.DataType, tabs int) string {
+	return GoPackageTypeName(t, "", tabs)
+}
+
+// GoPackageTypeName returns the Go type name for a data type in the given package.
+func GoPackageTypeName(t design.DataType, pkgName string, tabs int) string {
+	var pkgPrefix string
+	if pkgName != "" {
+		pkgPrefix = pkgName + "."
+	}
 	switch actual := t.(type) {
 	case design.Primitive:
 		return GoNativeType(t)
 	case *design.Array:
-		return "[]" + GoTypeRef(actual.ElemType.Type, tabs+1)
+		return "[]" + GoPackageTypeRef(actual.ElemType.Type, pkgName, tabs+1)
 	case design.Object:
 		return GoTypeDef(&design.AttributeDefinition{Type: actual}, tabs, false, false)
 	case *design.Hash:
-		return fmt.Sprintf("map[%s]%s", GoTypeRef(actual.KeyType.Type, tabs+1), GoTypeRef(actual.ElemType.Type, tabs+1))
+		return fmt.Sprintf(
+			"map[%s]%s",
+			GoPackageTypeRef(actual.KeyType.Type, pkgName, tabs+1),
+			GoPackageTypeRef(actual.ElemType.Type, pkgName, tabs+1),
+		)
 	case *design.UserTypeDefinition:
-		return Goify(actual.TypeName, true)
+		return pkgPrefix + Goify(actual.TypeName, true)
 	case *design.MediaTypeDefinition:
-		return Goify(actual.TypeName, true)
+		return pkgPrefix + Goify(actual.TypeName, true)
 	default:
 		panic(fmt.Sprintf("goa bug: unknown type %#v", actual))
 	}

@@ -6,6 +6,7 @@ package examples_test
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -54,6 +55,9 @@ var _ = Describe("example cellar", func() {
 		cmd := exec.Command("goagen", "bootstrap", "-d", "github.com/raphael/goa/examples/cellar/design")
 		cmd.Dir = tempdir
 		out, err := cmd.CombinedOutput()
+		if err != nil {
+			fmt.Printf("\n==========%s\n==========\n", out)
+		}
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(string(out)).Should(Equal(strings.Join(files, "\n")))
 	})
@@ -61,7 +65,10 @@ var _ = Describe("example cellar", func() {
 	It("goagen generated valid Go code", func() {
 		cmd := exec.Command("go", "build", "-o", "cellar")
 		cmd.Dir = tempdir
-		_, err := cmd.CombinedOutput()
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			fmt.Printf("\n==========%s\n==========\n", out)
+		}
 		Ω(err).ShouldNot(HaveOccurred())
 		cmd = exec.Command("./cellar")
 		cmd.Dir = tempdir
