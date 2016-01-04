@@ -51,8 +51,7 @@ type (
 
 	// SelectVersionFunc is used by the default goa mux to compute the API version targetted by
 	// a given request.
-	// The default implementation looks for a version in the "X-API-Version" header and if
-	// not found in the "api_version" querystring value.
+	// The default implementation looks for a version as path prefix.
 	// Alternate implementations can be set using the DefaultMux SelectVersion method.
 	SelectVersionFunc func(*http.Request) string
 
@@ -66,19 +65,8 @@ type (
 func NewMux() ServeMux {
 	return &DefaultMux{
 		defaultVersionMux: &defaultVersionMux{router: httprouter.New()},
-		selectVersion:     DefaultSelectVersion,
+		selectVersion:     PathSelectVersionFunc("/:version"),
 	}
-}
-
-// DefaultSelectVersion is the default SelectVersionFunc used by the goa default mux.
-// It looks up the version in the "X-API-Version" header and if not found uses the "api_version"
-// querystring value.
-func DefaultSelectVersion(req *http.Request) (version string) {
-	version = req.Header.Get("X-API-Version")
-	if version == "" {
-		version = req.URL.Query().Get("api_version")
-	}
-	return
 }
 
 // PathSelectVersionFunc returns a SelectVersionFunc that uses the given path pattern to extract the
@@ -93,6 +81,35 @@ func PathSelectVersionFunc(pattern string) SelectVersionFunc {
 			version = match[1]
 		}
 		return
+	}
+}
+
+// HeaderSelectVersionFunc returns a SelectVersionFunc that looks for the version in the header with
+// the given name.
+func HeaderSelectVersionFunc(header string) SelectVersionFunc {
+	return func(req *http.Request) string {
+		return req.Header.Get(header)
+	}
+}
+
+// QuerySelectVersionFunc returns a SelectVersionFunc that looks for the version in the querystring
+// with the given key.
+func QuerySelectVersionFunc(query string) SelectVersionFunc {
+	return func(req *http.Request) string {
+		return req.URL.Query().Get(query)
+	}
+}
+
+// CombineSelectVersionFunc returns a SelectVersionFunc that tries each func passed as argument
+// in order and returns the first non-empty string version.
+func CombineSelectVersionFunc(funcs ...SelectVersionFunc) SelectVersionFunc {
+	return func(req *http.Request) string {
+		for _, f := range funcs {
+			if version := f(req); version != "" {
+				return version
+			}
+		}
+		return ""
 	}
 }
 
