@@ -317,10 +317,7 @@ type WidgetController interface {
 // MountWidgetController "mounts" a Widget resource controller on the given service.
 func MountWidgetController(service goa.Service, ctrl WidgetController) {
 	var h goa.Handler
-	mux := service.ServeMux(){{if .version}}.Version("{{.version}}")
-	if mux == nil {
-		panic("no mux for version {{.version}}")
-	}{{end}}
+	mux := service.ServeMux(){{if .version}}.Version("{{.version}}"){{end}}
 	h = func(c *goa.Context) error {
 		ctx, err := NewGetWidgetContext(c)
 		if err != nil {

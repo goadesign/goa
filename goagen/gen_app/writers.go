@@ -457,10 +457,7 @@ type {{.Resource}}Controller interface {
 // Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given service.
 func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Controller) {
 	var h goa.Handler
-	mux := service.ServeMux(){{if .Version}}.Version("{{.Version}}")
-	if mux == nil {
-		panic("no mux for version {{.Version}}")
-	}{{end}}
+	mux := service.ServeMux(){{if .Version}}.Version("{{.Version}}"){{end}}
 {{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
 		ctx, err := New{{.Context}}(c)
 		if err != nil {
