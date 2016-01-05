@@ -179,7 +179,7 @@ var _ = Describe("Run", func() {
 			})
 
 			It("fails with a useful error message", func() {
-				Ω(compileError.Error()).Should(ContainSubstring("unexpected go"))
+				Ω(compileError.Error()).Should(ContainSubstring("syntax error"))
 			})
 		})
 
