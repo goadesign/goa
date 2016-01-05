@@ -86,7 +86,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 
 	outdir := AppOutputDir()
 	err = api.IterateVersions(func(v *design.APIVersionDefinition) error {
-		verdir := filepath.Join(outdir, v.Version)
+		verdir := filepath.Join(outdir, codegen.VersionPackage(v.Version))
 		if err := os.MkdirAll(verdir, 0755); err != nil {
 			return err
 		}
@@ -182,7 +182,7 @@ func MergeResponses(l, r map[string]*design.ResponseDefinition) map[string]*desi
 func packageName(version *design.APIVersionDefinition) (pack string) {
 	pack = TargetPackage
 	if version.Version != "" {
-		pack = codegen.Goify(version.Version, false)
+		pack = codegen.Goify(codegen.VersionPackage(version.Version), false)
 	}
 	return
 }
