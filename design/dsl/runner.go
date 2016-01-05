@@ -55,7 +55,7 @@ func RunDSL() error {
 	// response templates needed by resources.
 	executeDSL(design.Design.DSL, design.Design)
 	// The all the versions
-	for _, v := range design.Design.Versions {
+	for _, v := range design.Design.APIVersions {
 		executeDSL(v.DSL, v)
 	}
 	// Then run the user type DSLs
@@ -82,7 +82,6 @@ func RunDSL() error {
 	if Errors != nil {
 		return Errors
 	}
-
 	// Validate DSL
 	if err := design.Design.Validate(); err != nil {
 		return err

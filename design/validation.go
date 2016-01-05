@@ -211,13 +211,8 @@ func (r *ResourceDefinition) Validate() *ValidationErrors {
 	if r.Params != nil {
 		verr.Merge(r.Params.Validate("resource parameters", r))
 	}
-	for _, version := range r.APIVersions {
-		if version == "" {
-			continue
-		}
-		if _, ok := Design.Versions[version]; !ok {
-			verr.Add(r, "Invalid API version %#v", version)
-		}
+	if err := CanUse(r, Design); err != nil {
+		verr.Add(r, "Invalid API version in list")
 	}
 	return verr.AsError()
 }
@@ -272,6 +267,9 @@ func (r *ResourceDefinition) validateParent(verr *ValidationErrors) {
 	} else {
 		if p.CanonicalAction() == nil {
 			verr.Add(r, "Parent resource %#v has no canonical action", r.ParentName)
+		}
+		if err := CanUse(r, p); err != nil {
+			verr.Add(r, err.Error())
 		}
 	}
 }
@@ -420,11 +418,31 @@ func (r *RouteDefinition) Validate() *ValidationErrors {
 	return verr.AsError()
 }
 
-// Validate checks that the user type definition is consistent: it has a name.
+// Validate checks that the user type definition is consistent: it has a name and all user and media
+// types used in fields support the API versions that use the type.
 func (u *UserTypeDefinition) Validate(ctx string, parent DSLDefinition) *ValidationErrors {
 	verr := new(ValidationErrors)
 	if u.TypeName == "" {
 		verr.Add(parent, "%s - %s", ctx, "User type must have a name")
+	}
+	if u.Type != nil {
+		// u.Type can be nil when types refer to each other.
+		if o := u.ToObject(); o != nil {
+			o.IterateAttributes(func(name string, at *AttributeDefinition) error {
+				var ut *UserTypeDefinition
+				if mt, ok := at.Type.(*MediaTypeDefinition); ok {
+					ut = mt.UserTypeDefinition
+				} else if ut2, ok := at.Type.(*UserTypeDefinition); ok {
+					ut = ut2
+				}
+				if ut != nil {
+					if err := CanUse(u, ut); err != nil {
+						verr.Add(u, err.Error())
+					}
+				}
+				return nil
+			})
+		}
 	}
 	verr.Merge(u.AttributeDefinition.Validate(ctx, parent))
 	return verr.AsError()

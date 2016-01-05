@@ -60,7 +60,7 @@ var _ = Describe("RegisterFlags", func() {
 			gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
 			tmpPkg, err = ioutil.TempDir(filepath.Join(gopath, "src"), "goagen")
 			Ω(err).ShouldNot(HaveOccurred())
-			ioutil.WriteFile(filepath.Join(tmpPkg, "dummy.go"), []byte(dummyGenSrc), 0755)
+			ioutil.WriteFile(filepath.Join(tmpPkg, "dummy.go"), []byte(dummyGenSrc), 0644)
 			genCmd = gengen.NewCommand()
 			oldPkgPath = gengen.GenPkgPath
 			oldPkgName = gengen.GenPkgName

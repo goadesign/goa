@@ -105,7 +105,11 @@ func CanonicalActionName(a string) {
 
 // APIVersion define the API version(s) that expose this resource.
 func APIVersion(versions ...string) {
-	if r, ok := resourceDefinition(true); ok {
+	if r, ok := resourceDefinition(false); ok {
 		r.APIVersions = append(r.APIVersions, versions...)
+	} else if m, ok := mediaTypeDefinition(false); ok {
+		m.APIVersions = append(m.APIVersions, versions...)
+	} else if t, ok := typeDefinition(true); ok {
+		t.APIVersions = append(t.APIVersions, versions...)
 	}
 }

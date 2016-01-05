@@ -269,8 +269,16 @@ func GoPackageTypeName(t design.DataType, pkgName string, tabs int) string {
 			GoPackageTypeRef(actual.ElemType.Type, pkgName, tabs+1),
 		)
 	case *design.UserTypeDefinition:
+		if len(actual.APIVersions) > 0 {
+			// This is a versioned type - use the definition from the current package
+			pkgPrefix = ""
+		}
 		return pkgPrefix + Goify(actual.TypeName, true)
 	case *design.MediaTypeDefinition:
+		if len(actual.APIVersions) > 0 {
+			// This is a versioned type - use the definition from the current package
+			pkgPrefix = ""
+		}
 		return pkgPrefix + Goify(actual.TypeName, true)
 	default:
 		panic(fmt.Sprintf("goa bug: unknown type %#v", actual))

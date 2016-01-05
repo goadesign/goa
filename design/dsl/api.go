@@ -83,17 +83,17 @@ func Version(ver string, dsl func()) *design.APIVersionDefinition {
 		InitDesign()
 	}
 	verdef := &design.APIVersionDefinition{Version: ver, DSL: dsl}
-	if _, ok := design.Design.Versions[ver]; ok {
+	if _, ok := design.Design.APIVersions[ver]; ok {
 		ReportError("API Version %s defined twice", ver)
 		return verdef
 	}
-	if design.Design.Versions == nil {
-		design.Design.Versions = make(map[string]*design.APIVersionDefinition)
+	if design.Design.APIVersions == nil {
+		design.Design.APIVersions = make(map[string]*design.APIVersionDefinition)
 	}
 	if ver == "" {
 		ReportError("version cannot be an empty string")
 	}
-	design.Design.Versions[ver] = verdef
+	design.Design.APIVersions[ver] = verdef
 	return verdef
 }
 
