@@ -34,6 +34,8 @@ type (
 		http.Handler
 		// Handle sets the HandleFunc for a given HTTP method and path.
 		Handle(method, path string, handle HandleFunc)
+		// Lookup returns the HandleFunc associated with the given HTTP method and path.
+		Lookup(method, path string) HandleFunc
 	}
 
 	// HandleFunc provides the implementation for an API endpoint.
@@ -57,15 +59,19 @@ type (
 
 	// defaultVersionMux is the default goa API version specific mux.
 	defaultVersionMux struct {
-		router *httprouter.Router
+		router  *httprouter.Router
+		handles map[string]HandleFunc
 	}
 )
 
 // NewMux creates a top level mux using the default goa mux implementation.
 func NewMux() ServeMux {
 	return &DefaultMux{
-		defaultVersionMux: &defaultVersionMux{router: httprouter.New()},
-		selectVersion:     PathSelectVersionFunc("/:version"),
+		defaultVersionMux: &defaultVersionMux{
+			router:  httprouter.New(),
+			handles: make(map[string]HandleFunc),
+		},
+		selectVersion: PathSelectVersionFunc("/:version"),
 	}
 }
 
@@ -173,7 +179,13 @@ func (m *defaultVersionMux) Handle(method, path string, handle HandleFunc) {
 		}
 		handle(rw, req, params)
 	}
+	m.handles[method+path] = handle
 	m.router.Handle(method, path, hthandle)
+}
+
+// Lookup returns the HandleFunc associated with the given method and path.
+func (m *defaultVersionMux) Lookup(method, path string) HandleFunc {
+	return m.handles[method+path]
 }
 
 // ServeHTTP is the function called back by the underlying HTTP server to handle incoming requests.

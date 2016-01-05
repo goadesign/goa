@@ -86,7 +86,10 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 
 	outdir := AppOutputDir()
 	err = api.IterateVersions(func(v *design.APIVersionDefinition) error {
-		verdir := filepath.Join(outdir, codegen.VersionPackage(v.Version))
+		verdir := outdir
+		if v.Version != "" {
+			verdir = filepath.Join(verdir, codegen.VersionPackage(v.Version))
+		}
 		if err := os.MkdirAll(verdir, 0755); err != nil {
 			return err
 		}

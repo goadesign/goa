@@ -211,8 +211,10 @@ func (r *ResourceDefinition) Validate() *ValidationErrors {
 	if r.Params != nil {
 		verr.Merge(r.Params.Validate("resource parameters", r))
 	}
-	if err := CanUse(r, Design); err != nil {
-		verr.Add(r, "Invalid API version in list")
+	if !r.SupportsNoVersion() {
+		if err := CanUse(r, Design); err != nil {
+			verr.Add(r, "Invalid API version in list")
+		}
 	}
 	return verr.AsError()
 }
