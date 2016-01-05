@@ -86,6 +86,8 @@ type (
 		*AttributeDefinition
 		// Name of type
 		TypeName string
+		// List of API versions that use the type.
+		APIVersions []string
 		// DSL contains the DSL used to create this definition if any.
 		DSL func()
 	}
@@ -495,6 +497,30 @@ func (u *UserTypeDefinition) Dup() DataType {
 		TypeName:            u.TypeName,
 		DSL:                 u.DSL,
 	}
+}
+
+// SupportsVersion returns true if the type is exposed by the given API version.
+// An empty string version means no version.
+func (u *UserTypeDefinition) SupportsVersion(version string) bool {
+	if version == "" {
+		return u.SupportsNoVersion()
+	}
+	for _, v := range u.APIVersions {
+		if v == version {
+			return true
+		}
+	}
+	return false
+}
+
+// SupportsNoVersion returns true if the resource is exposed by an unversioned API.
+func (u *UserTypeDefinition) SupportsNoVersion() bool {
+	return len(u.APIVersions) == 0
+}
+
+// Versions returns all the API versions that use the type.
+func (u *UserTypeDefinition) Versions() []string {
+	return u.APIVersions
 }
 
 // NewMediaTypeDefinition creates a media type definition but does not

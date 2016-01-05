@@ -66,7 +66,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	}
 
 	schemaFile := filepath.Join(JSONSchemaDir(), "schema.json")
-	if err = ioutil.WriteFile(schemaFile, js, 0755); err != nil {
+	if err = ioutil.WriteFile(schemaFile, js, 0644); err != nil {
 		return
 	}
 	g.genfiles = append(g.genfiles, schemaFile)

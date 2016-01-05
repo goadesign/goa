@@ -219,10 +219,10 @@ var _ = Describe("Generate", func() {
 		Context("that is versioned", func() {
 			BeforeEach(func() {
 				version = "v1"
-				design.Design.Versions = make(map[string]*design.APIVersionDefinition)
+				design.Design.APIVersions = make(map[string]*design.APIVersionDefinition)
 				verDef := &design.APIVersionDefinition{}
 				verDef.Version = version
-				design.Design.Versions[version] = verDef
+				design.Design.APIVersions[version] = verDef
 				design.Design.Resources["Widget"].APIVersions = []string{version}
 				runCodeTemplates(map[string]string{
 					"outDir":  outDir,
@@ -234,7 +234,7 @@ var _ = Describe("Generate", func() {
 
 			It("generates the versioned code", func() {
 				Ω(genErr).Should(BeNil())
-				Ω(files).Should(HaveLen(9))
+				Ω(files).Should(HaveLen(11))
 
 				isSource(version+"/contexts.go", contextsCode)
 				isSource(version+"/controllers.go", controllersCode)

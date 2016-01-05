@@ -28,6 +28,7 @@ var mediaTypeCount int
 //
 // 	MediaType("application/vnd.goa.example.bottle", func() {
 //		Description("A bottle of wine")
+//		APIVersion("1.0")
 //		Attributes(func() {
 //			Attribute("id", Integer, "ID of bottle")
 //			Attribute("href", String, "API href of bottle")

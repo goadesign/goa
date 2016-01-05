@@ -99,56 +99,16 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		if err := g.generateHrefs(verdir, v); err != nil {
 			return err
 		}
+		if err := g.generateMediaTypes(verdir, v); err != nil {
+			return err
+		}
+		if err := g.generateUserTypes(verdir, v); err != nil {
+			return err
+		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
-	}
-
-	mtFile := filepath.Join(outdir, "media_types.go")
-	mtWr, err := NewMediaTypesWriter(mtFile)
-	if err != nil {
-		panic(err) // bug
-	}
-	title := fmt.Sprintf("%s: Application Media Types", api.Context())
-	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("github.com/raphael/goa"),
-		codegen.SimpleImport("fmt"),
-	}
-	mtWr.WriteHeader(title, TargetPackage, imports)
-	err = api.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
-		if mt.Type.IsObject() || mt.Type.IsArray() {
-			return mtWr.Execute(mt)
-		}
-		return nil
-	})
-	g.genfiles = append(g.genfiles, mtFile)
-	if err != nil {
-		return
-	}
-	if err = mtWr.FormatCode(); err != nil {
-		return
-	}
-
-	utFile := filepath.Join(outdir, "user_types.go")
-	utWr, err := NewUserTypesWriter(utFile)
-	if err != nil {
-		panic(err) // bug
-	}
-	title = fmt.Sprintf("%s: Application User Types", api.Context())
-	imports = []*codegen.ImportSpec{
-		codegen.SimpleImport("github.com/raphael/goa"),
-	}
-	utWr.WriteHeader(title, TargetPackage, imports)
-	err = api.IterateUserTypes(func(t *design.UserTypeDefinition) error {
-		return utWr.Execute(t)
-	})
-	g.genfiles = append(g.genfiles, utFile)
-	if err != nil {
-		return
-	}
-	if err = utWr.FormatCode(); err != nil {
-		return
 	}
 
 	return g.genfiles, nil
@@ -239,10 +199,7 @@ func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, v
 	if err != nil {
 		return err
 	}
-	if err = ctxWr.FormatCode(); err != nil {
-		return err
-	}
-	return nil
+	return ctxWr.FormatCode()
 }
 
 // generateControllers iterates through the version resources and generates the low level
@@ -295,10 +252,7 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 	if err = ctlWr.Execute(controllersData); err != nil {
 		return err
 	}
-	if err = ctlWr.FormatCode(); err != nil {
-		return err
-	}
-	return nil
+	return ctlWr.FormatCode()
 }
 
 // generateHrefs iterates through the version resources and generates the href factory methods.
@@ -344,8 +298,56 @@ func (g *Generator) generateHrefs(verdir string, version *design.APIVersionDefin
 	if err != nil {
 		return err
 	}
-	if err = resWr.FormatCode(); err != nil {
+	return resWr.FormatCode()
+}
+
+// generateMediaTypes iterates through the media types and generate the data structures and
+// marshaling code.
+func (g *Generator) generateMediaTypes(verdir string, version *design.APIVersionDefinition) error {
+	mtFile := filepath.Join(verdir, "media_types.go")
+	mtWr, err := NewMediaTypesWriter(mtFile)
+	if err != nil {
+		panic(err) // bug
+	}
+	title := fmt.Sprintf("%s: Application Media Types", version.Context())
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("github.com/raphael/goa"),
+		codegen.SimpleImport("fmt"),
+	}
+	mtWr.WriteHeader(title, TargetPackage, imports)
+	err = version.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
+		if mt.Type.IsObject() || mt.Type.IsArray() {
+			return mtWr.Execute(mt)
+		}
+		return nil
+	})
+	g.genfiles = append(g.genfiles, mtFile)
+	if err != nil {
 		return err
 	}
-	return nil
+	return mtWr.FormatCode()
+}
+
+// generateUserTypes iterates through the user types and generates the data structures and
+// marshaling code.
+func (g *Generator) generateUserTypes(verdir string, version *design.APIVersionDefinition) error {
+	utFile := filepath.Join(verdir, "user_types.go")
+	utWr, err := NewUserTypesWriter(utFile)
+	if err != nil {
+		panic(err) // bug
+	}
+	title := fmt.Sprintf("%s: Application User Types", version.Context())
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("github.com/raphael/goa"),
+		codegen.SimpleImport("fmt"),
+	}
+	utWr.WriteHeader(title, TargetPackage, imports)
+	err = version.IterateUserTypes(func(t *design.UserTypeDefinition) error {
+		return utWr.Execute(t)
+	})
+	g.genfiles = append(g.genfiles, utFile)
+	if err != nil {
+		return err
+	}
+	return utWr.FormatCode()
 }
