@@ -1,7 +1,9 @@
 package goa_test
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -166,6 +168,41 @@ var _ = Describe("Application", func() {
 
 					It("triggers the error handler", func() {
 						Ω(errorHandlerCalled).Should(BeTrue())
+					})
+				})
+			})
+
+			Context("with different payload types", func() {
+				content := []byte(`{"hello": "world"}`)
+				decodedContent := map[string]interface{}{"hello": "world"}
+
+				BeforeEach(func() {
+					r.Header.Set("Content-Type", "application/json")
+					r.Body = ioutil.NopCloser(bytes.NewReader(content))
+					r.ContentLength = int64(len(content))
+				})
+
+				It("should work with application/json and load properly", func() {
+					Ω(ctx.Payload()).Should(Equal(decodedContent))
+				})
+
+				Context("with an empty Content-Type", func() {
+					BeforeEach(func() {
+						delete(r.Header, "Content-Type")
+					})
+
+					It("defaults to application/json and loads properly", func() {
+						Ω(ctx.Payload()).Should(Equal(decodedContent))
+					})
+				})
+
+				Context("with a Content-Type of 'application/octet-stream' or any other", func() {
+					BeforeEach(func() {
+						r.Header.Set("Content-Type", "application/octet-stream")
+					})
+
+					It("should have a nil payload", func() {
+						Ω(ctx.Payload()).Should(BeNil())
 					})
 				})
 			})
