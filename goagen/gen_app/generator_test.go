@@ -108,29 +108,33 @@ var _ = Describe("Generate", func() {
 			Ω(string(contextsContent)).Should(Equal(content))
 		}
 
+		funcs := template.FuncMap{
+			"sep": func() string { return string(os.PathSeparator) },
+		}
+
 		runCodeTemplates := func(data map[string]string) {
-			contextsCodeT, err := template.New("context").Parse(contextsCodeTmpl)
+			contextsCodeT, err := template.New("context").Funcs(funcs).Parse(contextsCodeTmpl)
 			Ω(err).ShouldNot(HaveOccurred())
 			var b bytes.Buffer
 			err = contextsCodeT.Execute(&b, data)
 			Ω(err).ShouldNot(HaveOccurred())
 			contextsCode = b.String()
 
-			controllersCodeT, err := template.New("controllers").Parse(controllersCodeTmpl)
+			controllersCodeT, err := template.New("controllers").Funcs(funcs).Parse(controllersCodeTmpl)
 			Ω(err).ShouldNot(HaveOccurred())
 			b.Reset()
 			err = controllersCodeT.Execute(&b, data)
 			Ω(err).ShouldNot(HaveOccurred())
 			controllersCode = b.String()
 
-			hrefsCodeT, err := template.New("hrefs").Parse(hrefsCodeTmpl)
+			hrefsCodeT, err := template.New("hrefs").Funcs(funcs).Parse(hrefsCodeTmpl)
 			Ω(err).ShouldNot(HaveOccurred())
 			b.Reset()
 			err = hrefsCodeT.Execute(&b, data)
 			Ω(err).ShouldNot(HaveOccurred())
 			hrefsCode = b.String()
 
-			mediaTypesCodeT, err := template.New("media types").Parse(mediaTypesCodeTmpl)
+			mediaTypesCodeT, err := template.New("media types").Funcs(funcs).Parse(mediaTypesCodeTmpl)
 			Ω(err).ShouldNot(HaveOccurred())
 			b.Reset()
 			err = mediaTypesCodeT.Execute(&b, data)
@@ -251,7 +255,7 @@ const contextsCodeTmpl = `//****************************************************
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
-// --out=$(GOPATH)/src/{{.tmpDir}}
+// --out=$(GOPATH){{sep}}src{{sep}}{{.tmpDir}}
 // --design={{.design}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY
@@ -298,7 +302,7 @@ const controllersCodeTmpl = `//*************************************************
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
-// --out=$(GOPATH)/src/{{.tmpDir}}
+// --out=$(GOPATH){{sep}}src{{sep}}{{.tmpDir}}
 // --design={{.design}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY
@@ -335,7 +339,7 @@ const hrefsCodeTmpl = `//*******************************************************
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
-// --out=$(GOPATH)/src/{{.tmpDir}}
+// --out=$(GOPATH){{sep}}src{{sep}}{{.tmpDir}}
 // --design={{.design}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY
@@ -356,7 +360,7 @@ const mediaTypesCodeTmpl = `//**************************************************
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
-// --out=$(GOPATH)/src/{{.tmpDir}}
+// --out=$(GOPATH){{sep}}src{{sep}}{{.tmpDir}}
 // --design={{.design}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY
