@@ -30,7 +30,7 @@ var _ = Describe("Run", func() {
 	BeforeEach(func() {
 		genfunc = ""
 		debug = false
-		outputDir = "/tmp"
+		outputDir = os.TempDir()
 		designPackage = "github.com/raphael/goa/testgoacodegen"
 		designPackageSource = "foo"
 		gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
@@ -93,7 +93,8 @@ var _ = Describe("Run", func() {
 		})
 
 		It("fails with a useful error message", func() {
-			msg := fmt.Sprintf(`cannot find design package at path "%s/src/%s"`, invalidPath, designPackage)
+			path := fmt.Sprintf("%s", filepath.Join(invalidPath, "src", filepath.FromSlash(designPackage)))
+			msg := fmt.Sprintf(`cannot find design package at path "%s"`, path)
 			Ω(compileError).Should(MatchError(msg))
 		})
 
@@ -169,7 +170,7 @@ var _ = Describe("Run", func() {
 
 		BeforeEach(func() {
 			genfunc = "foo.Generate"
-			outputDir = "/tmp"
+			outputDir = os.TempDir()
 		})
 
 		Context("that is not valid Go code", func() {
@@ -178,7 +179,7 @@ var _ = Describe("Run", func() {
 			})
 
 			It("fails with a useful error message", func() {
-				Ω(compileError.Error()).Should(ContainSubstring("unexpected go"))
+				Ω(compileError.Error()).Should(ContainSubstring("syntax error"))
 			})
 		})
 
