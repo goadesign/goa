@@ -10,7 +10,6 @@ clone_folder: c:\gopath\src\github.com\raphael\goa
 install:
   - go version
   - go env
-  - mkdir c:\gopath
   - copy c:\MinGW\bin\mingw32-make.exe c:\MinGW\bin\make.exe
   - set PATH=%PATH%;c:\MinGW\bin;%GOPATH%\bin
 
