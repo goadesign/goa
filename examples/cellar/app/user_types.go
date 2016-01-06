@@ -1,11 +1,10 @@
 //************************************************************************//
-// cellar: Application User Types
+// API "cellar": Application User Types
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
 // --out=$(GOPATH)/src/github.com/raphael/goa/examples/cellar
 // --design=github.com/raphael/goa/examples/cellar/design
-// --pkg=app
 //
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//

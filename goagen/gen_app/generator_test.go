@@ -26,26 +26,22 @@ var _ = Describe("NewGenerator", func() {
 			os.RemoveAll("_foo")
 		})
 
-		It("instantiates a generator with initialized writers", func() {
-			design.Design = &design.APIDefinition{Name: "foo"}
+		It("instantiates a generator", func() {
+			design.Design = &design.APIDefinition{
+				APIVersionDefinition: &design.APIVersionDefinition{Name: "foo"},
+			}
 			var err error
 			gen, err = genapp.NewGenerator()
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(gen).ShouldNot(BeNil())
-			Ω(gen.ContextsWriter).ShouldNot(BeNil())
-			Ω(gen.ControllersWriter).ShouldNot(BeNil())
-			Ω(gen.ResourcesWriter).ShouldNot(BeNil())
 		})
 
-		It("instantiates a generator with initialized writers even if Design is not initialized", func() {
+		It("instantiates a generator with initialized writers", func() {
 			design.Design = nil
 			var err error
 			gen, err = genapp.NewGenerator()
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(gen).ShouldNot(BeNil())
-			Ω(gen.ContextsWriter).ShouldNot(BeNil())
-			Ω(gen.ControllersWriter).ShouldNot(BeNil())
-			Ω(gen.ResourcesWriter).ShouldNot(BeNil())
 		})
 	})
 })
@@ -58,7 +54,8 @@ var _ = Describe("Generate", func() {
 
 	BeforeEach(func() {
 		var err error
-		outDir, err = ioutil.TempDir("", "")
+		gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
+		outDir, err = ioutil.TempDir(filepath.Join(gopath, "src"), "")
 		Ω(err).ShouldNot(HaveOccurred())
 		os.Args = []string{"goagen", "--out=" + outDir, "--design=foo"}
 	})
@@ -77,9 +74,11 @@ var _ = Describe("Generate", func() {
 	Context("with a dummy API", func() {
 		BeforeEach(func() {
 			design.Design = &design.APIDefinition{
-				Name:        "test api",
-				Title:       "dummy API with no resource",
-				Description: "I told you it's dummy",
+				APIVersionDefinition: &design.APIVersionDefinition{
+					Name:        "test api",
+					Title:       "dummy API with no resource",
+					Description: "I told you it's dummy",
+				},
 			}
 		})
 
@@ -101,6 +100,48 @@ var _ = Describe("Generate", func() {
 	})
 
 	Context("with a simple API", func() {
+		var contextsCode, controllersCode, hrefsCode, mediaTypesCode, version string
+
+		isSource := func(filename, content string) {
+			contextsContent, err := ioutil.ReadFile(filepath.Join(outDir, "app", filename))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(string(contextsContent)).Should(Equal(content))
+		}
+
+		funcs := template.FuncMap{
+			"sep": func() string { return string(os.PathSeparator) },
+		}
+
+		runCodeTemplates := func(data map[string]string) {
+			contextsCodeT, err := template.New("context").Funcs(funcs).Parse(contextsCodeTmpl)
+			Ω(err).ShouldNot(HaveOccurred())
+			var b bytes.Buffer
+			err = contextsCodeT.Execute(&b, data)
+			Ω(err).ShouldNot(HaveOccurred())
+			contextsCode = b.String()
+
+			controllersCodeT, err := template.New("controllers").Funcs(funcs).Parse(controllersCodeTmpl)
+			Ω(err).ShouldNot(HaveOccurred())
+			b.Reset()
+			err = controllersCodeT.Execute(&b, data)
+			Ω(err).ShouldNot(HaveOccurred())
+			controllersCode = b.String()
+
+			hrefsCodeT, err := template.New("hrefs").Funcs(funcs).Parse(hrefsCodeTmpl)
+			Ω(err).ShouldNot(HaveOccurred())
+			b.Reset()
+			err = hrefsCodeT.Execute(&b, data)
+			Ω(err).ShouldNot(HaveOccurred())
+			hrefsCode = b.String()
+
+			mediaTypesCodeT, err := template.New("media types").Funcs(funcs).Parse(mediaTypesCodeTmpl)
+			Ω(err).ShouldNot(HaveOccurred())
+			b.Reset()
+			err = mediaTypesCodeT.Execute(&b, data)
+			Ω(err).ShouldNot(HaveOccurred())
+			mediaTypesCode = b.String()
+		}
+
 		BeforeEach(func() {
 			required := design.ValidationDefinition(&design.RequiredValidationDefinition{
 				Names: []string{"id"},
@@ -153,75 +194,78 @@ var _ = Describe("Generate", func() {
 				Identifier:         "vnd.rightscale.codegen.test.widgets",
 			}
 			design.Design = &design.APIDefinition{
-				Name:        "test api",
-				Title:       "dummy API with no resource",
-				Description: "I told you it's dummy",
-				Resources:   map[string]*design.ResourceDefinition{"Widget": &res},
-				MediaTypes:  map[string]*design.MediaTypeDefinition{"vnd.rightscale.codegen.test.widgets": &mt},
+				APIVersionDefinition: &design.APIVersionDefinition{
+					Name:        "test api",
+					Title:       "dummy API with no resource",
+					Description: "I told you it's dummy",
+				},
+				Resources:  map[string]*design.ResourceDefinition{"Widget": &res},
+				MediaTypes: map[string]*design.MediaTypeDefinition{"vnd.rightscale.codegen.test.widgets": &mt},
 			}
 		})
 
-		It("generates the corresponding code", func() {
-			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(6))
-			data := map[string]string{"outDir": outDir, "design": "foo"}
-			contextsCodeT, err := template.New("context").Parse(contextsCodeTmpl)
-			Ω(err).ShouldNot(HaveOccurred())
-			var b bytes.Buffer
-			err = contextsCodeT.Execute(&b, data)
-			Ω(err).ShouldNot(HaveOccurred())
-			contextsCode := b.String()
+		Context("", func() {
+			BeforeEach(func() {
+				runCodeTemplates(map[string]string{"outDir": outDir, "design": "foo", "version": "", "tmpDir": filepath.Base(outDir)})
+			})
 
-			controllersCodeT, err := template.New("controllers").Parse(controllersCodeTmpl)
-			Ω(err).ShouldNot(HaveOccurred())
-			b.Reset()
-			err = controllersCodeT.Execute(&b, data)
-			Ω(err).ShouldNot(HaveOccurred())
-			controllersCode := b.String()
+			It("generates the corresponding code", func() {
+				Ω(genErr).Should(BeNil())
+				Ω(files).Should(HaveLen(6))
 
-			hrefsCodeT, err := template.New("hrefs").Parse(hrefsCodeTmpl)
-			Ω(err).ShouldNot(HaveOccurred())
-			b.Reset()
-			err = hrefsCodeT.Execute(&b, data)
-			Ω(err).ShouldNot(HaveOccurred())
-			hrefsCode := b.String()
-
-			mediaTypesCodeT, err := template.New("media types").Parse(mediaTypesCodeTmpl)
-			Ω(err).ShouldNot(HaveOccurred())
-			b.Reset()
-			err = mediaTypesCodeT.Execute(&b, data)
-			Ω(err).ShouldNot(HaveOccurred())
-			mediaTypesCode := b.String()
-
-			isSource := func(filename, content string) {
-				contextsContent, err := ioutil.ReadFile(filepath.Join(outDir, "app", filename))
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(string(contextsContent)).Should(Equal(content))
-			}
-
-			isSource("contexts.go", contextsCode)
-			isSource("controllers.go", controllersCode)
-			isSource("hrefs.go", hrefsCode)
-			isSource("media_types.go", mediaTypesCode)
+				isSource("contexts.go", contextsCode)
+				isSource("controllers.go", controllersCode)
+				isSource("hrefs.go", hrefsCode)
+				isSource("media_types.go", mediaTypesCode)
+			})
 		})
+
+		Context("that is versioned", func() {
+			BeforeEach(func() {
+				version = "v1"
+				design.Design.APIVersions = make(map[string]*design.APIVersionDefinition)
+				verDef := &design.APIVersionDefinition{}
+				verDef.Version = version
+				design.Design.APIVersions[version] = verDef
+				design.Design.Resources["Widget"].APIVersions = []string{version}
+				runCodeTemplates(map[string]string{
+					"outDir":  outDir,
+					"tmpDir":  filepath.Base(outDir),
+					"design":  "foo",
+					"version": version,
+				})
+			})
+
+			It("generates the versioned code", func() {
+				Ω(genErr).Should(BeNil())
+				Ω(files).Should(HaveLen(11))
+
+				isSource(version+"/contexts.go", contextsCode)
+				isSource(version+"/controllers.go", controllersCode)
+				isSource(version+"/hrefs.go", hrefsCode)
+				isSource("media_types.go", mediaTypesCode)
+			})
+		})
+
 	})
 })
 
 const contextsCodeTmpl = `//************************************************************************//
-// test api: Application Contexts
+// API "test api"{{if .version}} version {{.version}}{{end}}: Application Contexts
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
-// --out={{.outDir}}
+// --out=$(GOPATH){{sep}}src{{sep}}{{.tmpDir}}
 // --design={{.design}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
-package app
+package {{if .version}}{{.version}}{{else}}app{{end}}
 
 import (
-	"fmt"
+{{if .version}}	"{{.tmpDir}}/app"
+{{end}}	"fmt"
 
 	"github.com/raphael/goa"
 )
@@ -237,15 +281,13 @@ type GetWidgetContext struct {
 func NewGetWidgetContext(c *goa.Context) (*GetWidgetContext, error) {
 	var err error
 	ctx := GetWidgetContext{Context: c}
-	rawID, ok := c.Get("id")
-	if ok {
-		ctx.ID = rawID
-	}
+	rawID := c.Get("id")
+	ctx.ID = rawID
 	return &ctx, err
 }
 
 // OK sends a HTTP response with status code 200.
-func (ctx *GetWidgetContext) OK(resp ID) error {
+func (ctx *GetWidgetContext) OK(resp {{if .version}}app.{{end}}ID) error {
 	r, err := resp.Dump()
 	if err != nil {
 		return fmt.Errorf("invalid response: %s", err)
@@ -256,22 +298,19 @@ func (ctx *GetWidgetContext) OK(resp ID) error {
 `
 
 const controllersCodeTmpl = `//************************************************************************//
-// test api: Application Controllers
+// API "test api"{{if .version}} version {{.version}}{{end}}: Application Controllers
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
-// --out={{.outDir}}
+// --out=$(GOPATH){{sep}}src{{sep}}{{.tmpDir}}
 // --design={{.design}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
-package app
+package {{if .version}}{{.version}}{{else}}app{{end}}
 
-import (
-	"github.com/julienschmidt/httprouter"
-	"github.com/raphael/goa"
-)
+import "github.com/raphael/goa"
 
 // WidgetController is the controller interface for the Widget actions.
 type WidgetController interface {
@@ -281,8 +320,8 @@ type WidgetController interface {
 
 // MountWidgetController "mounts" a Widget resource controller on the given service.
 func MountWidgetController(service goa.Service, ctrl WidgetController) {
-	router := service.HTTPHandler().(*httprouter.Router)
 	var h goa.Handler
+	mux := service.ServeMux(){{if .version}}.Version("{{.version}}"){{end}}
 	h = func(c *goa.Context) error {
 		ctx, err := NewGetWidgetContext(c)
 		if err != nil {
@@ -290,23 +329,23 @@ func MountWidgetController(service goa.Service, ctrl WidgetController) {
 		}
 		return ctrl.Get(ctx)
 	}
-	router.Handle("GET", "/:id", ctrl.NewHTTPRouterHandle("Get", h))
-	service.Info("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
+	mux.Handle("GET", "/:id", ctrl.HandleFunc("Get", h))
+	service.Info("mount", "ctrl", "Widget",{{if .version}} "version", "{{.version}}",{{end}} "action", "Get", "route", "GET /:id")
 }
 `
 
 const hrefsCodeTmpl = `//************************************************************************//
-// test api: Application Resource Href Factories
+// API "test api"{{if .version}} version {{.version}}{{end}}: Application Resource Href Factories
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
-// --out={{.outDir}}
+// --out=$(GOPATH){{sep}}src{{sep}}{{.tmpDir}}
 // --design={{.design}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
-package app
+package {{if .version}}{{.version}}{{else}}app{{end}}
 
 import "fmt"
 
@@ -317,11 +356,11 @@ func WidgetHref(id interface{}) string {
 `
 
 const mediaTypesCodeTmpl = `//************************************************************************//
-// test api: Application Media Types
+// API "test api": Application Media Types
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
-// --out={{.outDir}}
+// --out=$(GOPATH){{sep}}src{{sep}}{{.tmpDir}}
 // --design={{.design}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY

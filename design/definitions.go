@@ -28,14 +28,44 @@ type (
 		Context() string
 	}
 
+	// Versioned is implemented by potentially versioned definitions such as resources and types.
+	Versioned interface {
+		DSLDefinition
+		// Versions returns an array of supported versions if the object is versioned, nil
+		// othewise.
+		Versions() []string
+		// SupportsVersion returns true if the object supports the given version.
+		SupportsVersion(ver string) bool
+		// SupportsNoVersion returns true if the object is unversioned.
+		SupportsNoVersion() bool
+	}
+
 	// APIDefinition defines the global properties of the API.
 	APIDefinition struct {
+		// APIVersionDefinition contains the default values for properties across all versions.
+		*APIVersionDefinition
+		// APIVersions contain the API properties indexed by version.
+		APIVersions map[string]*APIVersionDefinition
+		// Exposed resources indexed by name
+		Resources map[string]*ResourceDefinition
+		// Types indexes the user defined types by name.
+		Types map[string]*UserTypeDefinition
+		// MediaTypes indexes the API media types by canonical identifier.
+		MediaTypes map[string]*MediaTypeDefinition
+		// rand is the random generator used to generate examples.
+		rand *RandomGenerator
+	}
+
+	// APIVersionDefinition defines the properties of the API for a given version.
+	APIVersionDefinition struct {
 		// API name
 		Name string
 		// API Title
 		Title string
 		// API description
-		Description string // API description
+		Description string
+		// API version if any
+		Version string
 		// API hostname
 		Host string
 		// API URL schemes
@@ -52,8 +82,6 @@ type (
 		License *LicenseDefinition
 		// Docs points to the API external documentation
 		Docs *DocsDefinition
-		// Exposed resources indexed by name
-		Resources map[string]*ResourceDefinition
 		// Traits available to all API resources and actions indexed by name
 		Traits map[string]*TraitDefinition
 		// Responses available to all API actions indexed by name
@@ -64,16 +92,10 @@ type (
 		DefaultResponses map[string]*ResponseDefinition
 		// Built-in response templates
 		DefaultResponseTemplates map[string]*ResponseTemplateDefinition
-		// User types
-		Types map[string]*UserTypeDefinition
-		// Media types
-		MediaTypes map[string]*MediaTypeDefinition
-		// dsl contains the DSL used to create this definition if any.
+		// DSL contains the DSL used to create this definition if any.
 		DSL func()
-		// metadata is a list of key/value pairs
+		// Metadata is a list of key/value pairs
 		Metadata MetadataDefinition
-		// rand is the random generator used to generate examples.
-		rand *RandomGenerator
 	}
 
 	// ContactDefinition contains the API contact information.
@@ -118,8 +140,8 @@ type (
 		ParentName string
 		// Optional description
 		Description string
-		// Optional version
-		Version string
+		// API versions that expose this resource.
+		APIVersions []string
 		// Default media type, describes the resource attributes
 		MediaType string
 		// Exposed resource actions indexed by name
@@ -221,6 +243,7 @@ type (
 		// Optional view used to render Attribute (only applies to media type attributes).
 		View string
 	}
+
 	// MetadataDefinition is a set of key/value pairs
 	MetadataDefinition map[string]string
 
@@ -322,6 +345,9 @@ type (
 		Names []string
 	}
 
+	// VersionIterator is the type of functions given to IterateVersions.
+	VersionIterator func(v *APIVersionDefinition) error
+
 	// ResourceIterator is the type of functions given to IterateResources.
 	ResourceIterator func(r *ResourceDefinition) error
 
@@ -338,31 +364,44 @@ type (
 	ResponseIterator func(r *ResponseDefinition) error
 )
 
-// Context returns the generic definition name used in error messages.
-func (a *APIDefinition) Context() string {
-	if a.Name != "" {
-		return fmt.Sprintf("api %#v", a.Name)
+// CanUse returns nil if the provider supports all the versions supported by the client or if the
+// provider is unversioned.
+func CanUse(client, provider Versioned) error {
+	if provider.Versions() == nil {
+		return nil
 	}
-	return "unnamed API"
-}
-
-// IterateResources calls the given iterator passing in each resource sorted in alphabetical order.
-// Iteration stops if an iterator returns an error and in this case IterateResources returns that
-// error.
-func (a *APIDefinition) IterateResources(it ResourceIterator) error {
-	names := make([]string, len(a.Resources))
-	i := 0
-	for n := range a.Resources {
-		names[i] = n
-		i++
+	versions := client.Versions()
+	if versions == nil {
+		return fmt.Errorf("cannot use versioned %s from unversioned %s", provider.Context(),
+			client.Context())
 	}
-	sort.Strings(names)
-	for _, n := range names {
-		if err := it(a.Resources[n]); err != nil {
-			return err
+	providerVersions := provider.Versions()
+	if len(versions) > len(providerVersions) {
+		return fmt.Errorf("cannot use %s from %s: incompatible set of supported API versions",
+			provider.Context(), client.Context())
+	}
+	for _, v := range versions {
+		found := false
+		for _, pv := range providerVersions {
+			if v == pv {
+				found = true
+			}
+			break
+		}
+		if !found {
+			return fmt.Errorf("cannot use %s from %s: incompatible set of supported API versions",
+				provider.Context(), client.Context())
 		}
 	}
 	return nil
+}
+
+// Context returns the generic definition name used in error messages.
+func (a *APIDefinition) Context() string {
+	if a.Name != "" {
+		return fmt.Sprintf("API %#v", a.Name)
+	}
+	return "unnamed API"
 }
 
 // IterateMediaTypes calls the given iterator passing in each media type sorted in alphabetical order.
@@ -403,25 +442,6 @@ func (a *APIDefinition) IterateUserTypes(it UserTypeIterator) error {
 	return nil
 }
 
-// IterateResponses calls the given iterator passing in each response sorted in alphabetical order.
-// Iteration stops if an iterator returns an error and in this case IterateResponses returns that
-// error.
-func (a *APIDefinition) IterateResponses(it ResponseIterator) error {
-	names := make([]string, len(a.Responses))
-	i := 0
-	for n := range a.Responses {
-		names[i] = n
-		i++
-	}
-	sort.Strings(names)
-	for _, n := range names {
-		if err := it(a.Responses[n]); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // Example returns a random value for the given data type.
 // If the data type has validations then the example value validates them.
 // Example returns the same random value for a given api name (the random
@@ -447,6 +467,167 @@ func (a *APIDefinition) MediaTypeWithIdentifier(id string) *MediaTypeDefinition 
 		}
 	}
 	return mtwi
+}
+
+// IterateResources calls the given iterator passing in each resource sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateResources returns that
+// error.
+func (a *APIDefinition) IterateResources(it ResourceIterator) error {
+	names := make([]string, len(a.Resources))
+	i := 0
+	for n := range a.Resources {
+		names[i] = n
+		i++
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		if err := it(a.Resources[n]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// IterateVersions calls the given iterator passing in each API version definition sorted
+// alphabetically by version name. It first calls the iterator on the embedded version definition
+// which contains the definitions for all the unversioned resources.
+// Iteration stops if an iterator returns an error and in this case IterateVersions returns that
+// error.
+func (a *APIDefinition) IterateVersions(it VersionIterator) error {
+	versions := make([]string, len(a.APIVersions))
+	i := 0
+	for n := range a.APIVersions {
+		versions[i] = n
+		i++
+	}
+	sort.Strings(versions)
+	if err := it(Design.APIVersionDefinition); err != nil {
+		return err
+	}
+	for _, v := range versions {
+		if err := it(Design.APIVersions[v]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Versions returns an array of supported versions.
+func (a *APIDefinition) Versions() (versions []string) {
+	a.IterateVersions(func(v *APIVersionDefinition) error {
+		if v.Version != "" {
+			versions = append(versions, v.Version)
+		}
+		return nil
+	})
+	return
+}
+
+// SupportsVersion returns true if the object supports the given version.
+func (a *APIDefinition) SupportsVersion(ver string) bool {
+	found := fmt.Errorf("found")
+	res := a.IterateVersions(func(v *APIVersionDefinition) error {
+		if v.Version == ver {
+			return found
+		}
+		return nil
+	})
+	return res == found
+}
+
+// SupportsNoVersion returns true if the API is unversioned.
+func (a *APIDefinition) SupportsNoVersion() bool {
+	return len(a.APIVersions) == 0
+}
+
+// Context returns the generic definition name used in error messages.
+func (v *APIVersionDefinition) Context() string {
+	if v.Version != "" {
+		return fmt.Sprintf("%s version %s", Design.Context(), v.Version)
+	}
+	return Design.Context()
+}
+
+// IsDefault returns true if the version definition applies to all versions (i.e. is the API
+// definition).
+func (v *APIVersionDefinition) IsDefault() bool {
+	return v.Version == ""
+}
+
+// IterateResources calls the given iterator passing in each resource sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateResources returns that
+// error.
+func (v *APIVersionDefinition) IterateResources(it ResourceIterator) error {
+	var names []string
+	for n, res := range Design.Resources {
+		if res.SupportsVersion(v.Version) {
+			names = append(names, n)
+		}
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		if err := it(Design.Resources[n]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// IterateMediaTypes calls the given iterator passing in each media type sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateMediaTypes returns that
+// error.
+func (v *APIVersionDefinition) IterateMediaTypes(it MediaTypeIterator) error {
+	var names []string
+	for n, mt := range Design.MediaTypes {
+		if mt.SupportsVersion(v.Version) {
+			names = append(names, n)
+		}
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		if err := it(Design.MediaTypes[n]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// IterateUserTypes calls the given iterator passing in each user type sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateUserTypes returns that
+// error.
+func (v *APIVersionDefinition) IterateUserTypes(it UserTypeIterator) error {
+	var names []string
+	for n, ut := range Design.Types {
+		if ut.SupportsVersion(v.Version) {
+			names = append(names, n)
+		}
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		if err := it(Design.Types[n]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// IterateResponses calls the given iterator passing in each response sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateResponses returns that
+// error.
+func (v *APIVersionDefinition) IterateResponses(it ResponseIterator) error {
+	names := make([]string, len(v.Responses))
+	i := 0
+	for n := range v.Responses {
+		names[i] = n
+		i++
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		if err := it(v.Responses[n]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // CanonicalIdentifier returns the media type identifier sans suffix
@@ -549,6 +730,30 @@ func (r *ResourceDefinition) Parent() *ResourceDefinition {
 		}
 	}
 	return nil
+}
+
+// Versions returns the API versions that expose the resource.
+func (r *ResourceDefinition) Versions() []string {
+	return r.APIVersions
+}
+
+// SupportsVersion returns true if the resource is exposed by the given API version.
+// An empty string version means no version.
+func (r *ResourceDefinition) SupportsVersion(version string) bool {
+	if version == "" {
+		return r.SupportsNoVersion()
+	}
+	for _, v := range r.APIVersions {
+		if v == version {
+			return true
+		}
+	}
+	return false
+}
+
+// SupportsNoVersion returns true if the resource is exposed by an unversioned API.
+func (r *ResourceDefinition) SupportsNoVersion() bool {
+	return len(r.APIVersions) == 0
 }
 
 // Context returns the generic definition name used in error messages.

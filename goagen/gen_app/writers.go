@@ -66,12 +66,15 @@ type (
 		Routes       []*design.RouteDefinition
 		Responses    map[string]*design.ResponseDefinition
 		API          *design.APIDefinition
+		Version      *design.APIVersionDefinition
+		AppPackage   string
 	}
 
 	// ControllerTemplateData contains the information required to generate an action handler.
 	ControllerTemplateData struct {
 		Resource string                   // Lower case plural resource name, e.g. "bottles"
 		Actions  []map[string]interface{} // Array of actions, each action has keys "Name", "Routes" and "Context"
+		Version  string                   // Controller API version
 	}
 
 	// ResourceData contains the information required to generate the resource GoGenerator
@@ -128,11 +131,13 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 	funcMap["gotypedef"] = codegen.GoTypeDef
 	funcMap["goify"] = codegen.Goify
 	funcMap["gotypename"] = codegen.GoTypeName
+	funcMap["gopkgtypename"] = codegen.GoPackageTypeName
 	funcMap["typeUnmarshaler"] = codegen.TypeUnmarshaler
 	funcMap["userTypeUnmarshalerImpl"] = codegen.UserTypeUnmarshalerImpl
 	funcMap["validationChecker"] = codegen.ValidationChecker
 	funcMap["tabs"] = codegen.Tabs
 	funcMap["add"] = func(a, b int) int { return a + b }
+	funcMap["gopkgtyperef"] = codegen.GoPackageTypeRef
 	ctxTmpl, err := template.New("context").Funcs(funcMap).Parse(ctxT)
 	if err != nil {
 		return nil, err
@@ -390,15 +395,14 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 {{if .Headers}}{{$headers := .Headers}}{{range $name, $_ := $headers.Type.ToObject}}{{if ($headers.IsRequired $name)}}	if c.Request().Header.Get("{{$name}}") == "" {
 		err = goa.MissingHeaderError("{{$name}}", err)
 	}{{end}}{{end}}
-{{end}}{{if.Params}}{{$ctx := .}}{{range $name, $att := .Params.Type.ToObject}}	raw{{goify $name true}}, ok := c.Get("{{$name}}")
-{{if ($ctx.MustValidate $name)}}	if !ok {
+{{end}}{{if.Params}}{{$ctx := .}}{{range $name, $att := .Params.Type.ToObject}}	raw{{goify $name true}} := c.Get("{{$name}}")
+{{$mustValidate := $ctx.MustValidate $name}}{{$depth := or (and $mustValidate 2) 1}}{{if $mustValidate}}	if raw{{goify $name true}} == "" {
 		err = goa.MissingParamError("{{$name}}", err)
 	} else {
-{{else}}	if ok {
-{{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (goify $name true)) 2)}}{{if $ctx.MustSetHas $name}}		ctx.Has{{goify $name true}} = true
-{{end}}{{$validation := validationChecker $att ($ctx.Params.IsRequired $name) (printf "ctx.%s" (goify $name true)) $name 1}}{{if $validation}}{{$validation}}
-{{end}}	}
-{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	p, err := New{{gotypename .Payload 0}}(c.Payload())
+{{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (goify $name true)) $depth)}}{{if $ctx.MustSetHas $name}}{{tabs $depth}}ctx.Has{{goify $name true}} = true
+{{end}}{{$validation := validationChecker $att ($ctx.Params.IsRequired $name) (printf "ctx.%s" (goify $name true)) $name $depth}}{{if $validation}}{{$validation}}
+{{end}}{{if $mustValidate}}	}
+{{end}}{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	p, err := New{{gotypename .Payload 0}}(c.Payload())
 	if err != nil {
 		return nil, err
 	}
@@ -410,14 +414,15 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 	// ctxRespT generates response helper methods GoGenerator
 	// template input: *ContextTemplateData
 	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{goify .Name true}} sends a HTTP response with status code {{.Status}}.
-	func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{$mt := ($ctx.API.MediaTypeWithIdentifier .MediaType)}}{{if $mt}}resp {{gotyperef $mt 0}}{{if gt (len $mt.ComputeViews) 1}}, view {{gotypename $mt 0}}ViewEnum{{end}}{{else if .MediaType}}resp []byte{{end}}) error {
+func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{$mt := ($ctx.API.MediaTypeWithIdentifier .MediaType)}}{{if $mt}}resp {{gopkgtyperef $mt $ctx.AppPackage 0}}{{if gt (len $mt.ComputeViews) 1}}, view {{gopkgtypename $mt $ctx.AppPackage 0}}ViewEnum{{end}}{{else if .MediaType}}resp []byte{{end}}) error {
 {{if $mt}}	r, err := resp.Dump({{if gt (len $mt.ComputeViews) 1}}view{{end}})
 	if err != nil {
 		return fmt.Errorf("invalid response: %s", err)
 	}
 	ctx.Header().Set("Content-Type", "{{$mt.Identifier}}; charset=utf-8")
-	return ctx.JSON({{.Status}}, r){{else}}return ctx.Respond({{.Status}}, {{if and (not $mt) .MediaType}}resp{{else}}nil{{end}}){{end}}
+	return ctx.JSON({{.Status}}, r){{else}}	return ctx.Respond({{.Status}}, {{if and (not $mt) .MediaType}}resp{{else}}nil{{end}}){{end}}
 }
+
 {{end}}`
 
 	// payloadT generates the payload type definition GoGenerator
@@ -451,17 +456,17 @@ type {{.Resource}}Controller interface {
 	mountT = `
 // Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given service.
 func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Controller) {
-	router := service.HTTPHandler().(*httprouter.Router)
 	var h goa.Handler
-{{$res := .Resource}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
+	mux := service.ServeMux(){{if .Version}}.Version("{{.Version}}"){{end}}
+{{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
 		ctx, err := New{{.Context}}(c)
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
 		return ctrl.{{.Name}}(ctx)
 	}
-{{range .Routes}}	router.Handle("{{.Verb}}", "{{.FullPath}}", ctrl.NewHTTPRouterHandle("{{$action.Name}}", h))
-	service.Info("mount", "ctrl", "{{$res}}", "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}")
+{{range .Routes}}	mux.Handle("{{.Verb}}", "{{.FullPath}}", ctrl.HandleFunc("{{$action.Name}}", h))
+	service.Info("mount", "ctrl", "{{$res}}",{{if $ver}} "version", "{{$ver}}",{{end}} "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}")
 {{end}}{{end}}}
 `
 

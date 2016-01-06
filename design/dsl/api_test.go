@@ -39,9 +39,9 @@ var _ = Describe("API", func() {
 			name = "foo"
 		})
 
-		It("produces a valid API definition", func() {
+		It("produces an error", func() {
 			API(name, dsl)
-			Ω(Errors).ShouldNot(HaveOccurred())
+			Ω(Errors).Should(HaveOccurred())
 		})
 	})
 

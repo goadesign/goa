@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"runtime"
 	"strings"
@@ -65,8 +66,8 @@ func NewMiddleware(m interface{}) (mw Middleware, err error) {
 	return
 }
 
-// ReqIDKey is the RequestID middleware key used to store the request ID value in the context.
-const ReqIDKey middlewareKey = 0
+// ReqIDKey is the context key used by the RequestID middleware to store the request ID value.
+const ReqIDKey middlewareKey = 1
 
 // RequestIDHeader is the name of the header used to transmit the request ID.
 const RequestIDHeader = "X-Request-Id"
@@ -108,21 +109,13 @@ func LogRequest() Middleware {
 			startedAt := time.Now()
 			r := ctx.Value(reqKey).(*http.Request)
 			ctx.Info("started", r.Method, r.URL.String())
-			params := ctx.Value(paramKey).(map[string]string)
+			params := ctx.Value(paramsKey).(url.Values)
 			if len(params) > 0 {
 				logCtx := make(log.Ctx, len(params))
 				for k, v := range params {
 					logCtx[k] = interface{}(v)
 				}
 				ctx.Debug("params", logCtx)
-			}
-			query := ctx.Value(queryKey).(map[string][]string)
-			if len(query) > 0 {
-				logCtx := make(log.Ctx, len(query))
-				for k, v := range query {
-					logCtx[k] = interface{}(v)
-				}
-				ctx.Debug("query", logCtx)
 			}
 			payload := ctx.Value(payloadKey)
 			if r.ContentLength > 0 {

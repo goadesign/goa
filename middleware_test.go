@@ -3,6 +3,7 @@ package goa_test
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -58,9 +59,8 @@ var _ = Describe("NewMiddleware", func() {
 			req, err := http.NewRequest("GET", "/goo", nil)
 			Ω(err).ShouldNot(HaveOccurred())
 			rw := new(TestResponseWriter)
-			params := map[string]string{"foo": "bar"}
-			query := map[string][]string{"filter": []string{"one"}}
-			ctx = goa.NewContext(nil, req, rw, params, query, nil)
+			params := url.Values{"foo": []string{"bar"}}
+			ctx = goa.NewContext(nil, req, rw, params, nil)
 			Ω(ctx.ResponseStatus()).Should(Equal(0))
 		})
 
@@ -149,15 +149,14 @@ var _ = Describe("NewMiddleware", func() {
 var _ = Describe("LogRequest", func() {
 	var handler *testHandler
 	var ctx *goa.Context
-	params := map[string]string{"param": "value"}
-	query := map[string][]string{"query": []string{"qvalue"}}
+	params := url.Values{"param": []string{"value"}}
 	payload := map[string]interface{}{"payload": 42}
 
 	BeforeEach(func() {
 		req, err := http.NewRequest("POST", "/goo", strings.NewReader(`{"payload":42}`))
 		Ω(err).ShouldNot(HaveOccurred())
 		rw := new(TestResponseWriter)
-		ctx = goa.NewContext(nil, req, rw, params, query, payload)
+		ctx = goa.NewContext(nil, req, rw, params, payload)
 		handler = new(testHandler)
 		logger := log15.New("test", "test")
 		logger.SetHandler(handler)
@@ -171,7 +170,7 @@ var _ = Describe("LogRequest", func() {
 		}
 		lg := goa.LogRequest()(h)
 		Ω(lg(ctx)).ShouldNot(HaveOccurred())
-		Ω(handler.Records).Should(HaveLen(5))
+		Ω(handler.Records).Should(HaveLen(4))
 
 		Ω(handler.Records[0].Ctx).Should(HaveLen(6))
 		Ω(handler.Records[0].Ctx[4]).Should(Equal("POST"))
@@ -179,22 +178,18 @@ var _ = Describe("LogRequest", func() {
 
 		Ω(handler.Records[1].Ctx).Should(HaveLen(6))
 		Ω(handler.Records[1].Ctx[4]).Should(Equal("param"))
-		Ω(handler.Records[1].Ctx[5]).Should(Equal("value"))
+		Ω(handler.Records[1].Ctx[5]).Should(Equal([]string{"value"}))
 
 		Ω(handler.Records[2].Ctx).Should(HaveLen(6))
-		Ω(handler.Records[2].Ctx[4]).Should(Equal("query"))
-		Ω(handler.Records[2].Ctx[5]).Should(Equal([]string{"qvalue"}))
+		Ω(handler.Records[2].Ctx[4]).Should(Equal("payload"))
+		Ω(handler.Records[2].Ctx[5]).Should(Equal(42))
 
-		Ω(handler.Records[3].Ctx).Should(HaveLen(6))
-		Ω(handler.Records[3].Ctx[4]).Should(Equal("payload"))
-		Ω(handler.Records[3].Ctx[5]).Should(Equal(42))
-
-		Ω(handler.Records[4].Ctx).Should(HaveLen(10))
-		Ω(handler.Records[4].Ctx[4]).Should(Equal("status"))
-		Ω(handler.Records[4].Ctx[5]).Should(Equal(200))
-		Ω(handler.Records[4].Ctx[6]).Should(Equal("bytes"))
-		Ω(handler.Records[4].Ctx[7]).Should(Equal(4))
-		Ω(handler.Records[4].Ctx[8]).Should(Equal("time"))
+		Ω(handler.Records[3].Ctx).Should(HaveLen(10))
+		Ω(handler.Records[3].Ctx[4]).Should(Equal("status"))
+		Ω(handler.Records[3].Ctx[6]).Should(Equal("bytes"))
+		Ω(handler.Records[3].Ctx[5]).Should(Equal(200))
+		Ω(handler.Records[3].Ctx[7]).Should(Equal(4))
+		Ω(handler.Records[3].Ctx[8]).Should(Equal("time"))
 	})
 })
 
@@ -206,7 +201,7 @@ var _ = Describe("RequestID", func() {
 		req, err := http.NewRequest("GET", "/goo", nil)
 		Ω(err).ShouldNot(HaveOccurred())
 		req.Header.Set("X-Request-Id", reqID)
-		ctx = goa.NewContext(nil, req, new(TestResponseWriter), nil, nil, nil)
+		ctx = goa.NewContext(nil, req, new(TestResponseWriter), nil, nil)
 	})
 
 	It("sets the request ID in the context", func() {
@@ -226,7 +221,7 @@ var _ = Describe("Recover", func() {
 			panic("boom")
 		}
 		rg := goa.Recover()(h)
-		err := rg(goa.NewContext(nil, nil, nil, nil, nil, nil))
+		err := rg(goa.NewContext(nil, nil, nil, nil, nil))
 		Ω(err).Should(HaveOccurred())
 		Ω(err.Error()).Should(Equal("panic: boom"))
 	})
@@ -239,7 +234,7 @@ var _ = Describe("Timeout", func() {
 			return nil
 		}
 		t := goa.Timeout(time.Duration(1))(h)
-		ctx := goa.NewContext(nil, nil, nil, nil, nil, nil)
+		ctx := goa.NewContext(nil, nil, nil, nil, nil)
 		err := t(ctx)
 		Ω(err).ShouldNot(HaveOccurred())
 		_, ok := ctx.Deadline()
@@ -251,8 +246,7 @@ var _ = Describe("RequireHeader", func() {
 	var handler *testHandler
 	var ctx *goa.Context
 	var req *http.Request
-	params := map[string]string{"param": "value"}
-	query := map[string][]string{"query": []string{"qvalue"}}
+	params := url.Values{"param": []string{"value"}}
 	payload := map[string]interface{}{"payload": 42}
 	headerName := "Some-Header"
 
@@ -261,7 +255,7 @@ var _ = Describe("RequireHeader", func() {
 		req, err = http.NewRequest("POST", "/foo/bar", strings.NewReader(`{"payload":42}`))
 		Ω(err).ShouldNot(HaveOccurred())
 		rw := new(TestResponseWriter)
-		ctx = goa.NewContext(nil, req, rw, params, query, payload)
+		ctx = goa.NewContext(nil, req, rw, params, payload)
 		handler = new(testHandler)
 		logger := log15.New("test", "test")
 		logger.SetHandler(handler)
