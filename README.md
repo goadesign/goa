@@ -45,7 +45,7 @@ version of the documentation without having to write a single line of implementa
 This idea of separating design and implementation is not new, the excellent [Praxis](http://praxis-framework.io)
 framework from RightScale follows the same pattern and was an inspiration to goa.
 
-## The Whys and Hows
+## Other Whys and Hows
 
 If you are new to goa I can't recommend enough that you read the
 [Gopher Academy blog post](https://blog.gopheracademy.com/advent-2015/goaUntanglingMicroservices/).
@@ -63,15 +63,173 @@ The code generation functionality relies on [goimports](https://godoc.org/golang
 go get golang.org/x/tools/cmd/goimports
 ```
 
-## Middlewares
+## Teaser
 
-goa includes a number of [built-in middlewares](https://godoc.org/github.com/raphael/goa#Middleware).
-Additional middlewares can be found in the [goa-middleware](https://github.com/raphael/goa-middleware) repo.
+### 1. Design
 
-## Getting Started
+Create the file `$GOPATH/src/goa-adder/design/design.go` with the following content:
+```go
+package design
+
+import (
+        . "github.com/raphael/goa/design"
+        . "github.com/raphael/goa/design/dsl"
+)
+
+var _ = API("adder", func() {
+        Title("The adder API")
+        Description("A teaser for goa")
+        Host("localhost:8080")
+        Scheme("http")
+})
+
+var _ = Resource("operands", func() {
+        Action("add", func() {
+                Routing(GET("add/:left/:right"))
+                Description("add returns the sum of the left and right parameters in the response body")
+                Params(func() {
+                        Param("left", Integer, "Left operand")
+                        Param("right", Integer, "Right operand")
+                })
+                Response(OK, "plain/text")
+        })
+
+})
+```
+This file contains the design for an `adder` API which accepts HTTP GET requests to `/add/:x/:y`
+where `:x` and `:y` are placeholders for integer values. The API returns the sum of `x` and `y` in
+its body.
+
+### 2. Implement
+
+Now that the design is done, let's run `goagen` on the design package:
+```
+$ cd $GOPATH/src/goa-adder
+$ goagen bootstrap -d goa-adder/design
+```
+This produces the following outputs:
+
+* `main.go` and `adder.go` contain scaffolding code to help bootstrap the implementation.
+  running `goagen` again does no recreate them so that it's safe to edit their content.
+* an `app` package which contains glue code that binds the low level HTTP server to your 
+  implementation.
+* a `client` package with a `Client` struct that implements a `AddOperands` function which calls
+  the API with the given arguments and returns the `http.Response`. The `client` directory also
+  contains the complete source for a client CLI tool (see below).
+* a `swagger` package with implements the `GET /swagger.json` API endpoint. The response contains
+  the full Swagger specificiation of the API.
+
+### 3. Run
+
+First let's implement the API - edit the file `operands.go` and replace the content of the `Add`
+function with:
+```
+// Add runs the add action.
+func (c *OperandsController) Add(ctx *app.AddOperandsContext) error {
+        sum := ctx.Left + ctx.Right
+        return ctx.OK([]byte(strconv.Itoa(sum)))
+}
+```
+Now let's compile and run the service:
+```
+$ cd $GOPATH/src/goa-adder
+$ go build
+$ ./goa-adder
+INFO[01-04|08:24:06] mount                                    app=API ctrl=Operands action=Add route="GET /add/:left/:right"
+INFO[01-04|08:24:06] mount                                    app=API file=swagger/swagger.json route="GET /swagger.json"
+INFO[01-04|08:24:06] listen                                   app=API addr=:8080
+```
+Open a new console and compile the generated CLI tool:
+```
+cd $GOPATH/src/goa-adder/client/adder-cli
+go build
+```
+The tool includes contextual help:
+```
+$ ./adder-cli --help
+usage: adder-cli [<flags>] <command> [<args> ...]
+
+CLI client for the adder service
+
+Flags:
+      --help           Show context-sensitive help (also try --help-long and --help-man).
+  -s, --scheme="http"  Set the requests scheme
+  -h, --host=HOST      API hostname
+  -t, --timeout=20s    Set the request timeout, defaults to 20s
+      --dump           Dump HTTP request and response.
+      --pp             Pretty print response body
+
+Commands:
+  help [<command>...]
+    Show help.
+
+  add operands <path>
+    add adds the left and right parameters and returns the result
+
+$ ./adder-cli add operands --help
+usage: adder-cli add operands <path>
+
+Args:
+  <path>  Request path, format is /add/:left/:right
+```
+Now let's run it:
+```
+$ ./adder-cli add operands /add/1/2
+INFO[01-04|08:30:43] started                                  id=+LG8rvid GET=http://localhost:8080/add/1/2
+INFO[01-04|08:30:43] completed                                id=+LG8rvid status=200 time=842.472µs
+3
+```
+The console running the service shows the request that was just handled:
+```
+INFO[01-04|08:30:43] started                                  app=API ctrl=OperandsController action=Add id=k5QShkGsd5-1 GET=/add/1/2
+DBUG[01-04|08:30:43] params                                   app=API ctrl=OperandsController action=Add id=k5QShkGsd5-1 right=2 left=1
+INFO[01-04|08:30:43] completed                                app=API ctrl=OperandsController action=Add id=k5QShkGsd5-1 status=200 bytes=1 time=61.176µs
+```
+Now let's see how robust our service is and try to use non integer values:
+```
+./adder-cli add operands add/1/d
+INFO[01-04|08:32:53] started                                  id=hq3zYwXp GET=http://localhost:8080/add/1/d
+INFO[01-04|08:32:53] completed                                id=hq3zYwXp status=400 time=847.297µs
+error: 400: [{"id":1,"title":"invalid parameter value","msg":"invalid value \"d\" for parameter \"right\", must be a integer"}]
+```
+As you can see the generated code validated the incoming request state against the types defined
+in the design.
+
+### 4. Document
+
+The `swagger` directory contains the entire Swagger specification in the `swagger.json` file. The
+specification can also be accessed through the service:
+```
+$ curl localhost:8080/swagger.json
+```
+For open source services hosted on github [swagger.goa.design](http://swagger.goa.design) provides 
+a free service that renders the Swagger representation dynamically from goa design packages.
+
+## Resources
+
+### GoDoc
+
+* Package [goa](https://godoc.org/github.com/raphael/goa) contains the data structures and algorithms
+  used at runtime.
+* Package [dsl](https://godoc.org/github.com/raphael/goa/design/dsl) contains the implementation of
+  the goa design language.
+* Package [design](https://godoc.org/github.com/raphael/goa/design) defines the output data
+  structures of the design language.
+
+### Website
+
+[http://goa.design](http://goa.design) contains further information on goa.
+
+### Getting Started
 
 Can't wait to give it a try? the easiest way is to follow the short
 [getting started](http://www.goa.design/getting-started.html) guide.
+
+
+### Middleware
+
+goa includes a number of [built-in middlewares](https://godoc.org/github.com/raphael/goa#Middleware).
+Additional middlewares can be found in the [goa-middleware](https://github.com/raphael/goa-middleware) repo.
 
 ## Contributing
 
