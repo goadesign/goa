@@ -8,9 +8,9 @@ import (
 	"github.com/raphael/goa/design"
 )
 
-// API implements the top level API DSL. It defines the API name, description and other global
-// properties such as the base path to all the API resource actions. Here is an example showing all
-// the possible API sub-definitions:
+// API implements the top level API DSL. It defines the API name, default description and other
+// default global property values for all API versions. Here is an example showing all the possible
+// API sub-definitions:
 //
 // 	API("API name", func() {
 // 		Title("title")                          // API title used in documentation
@@ -55,24 +55,46 @@ import (
 //
 func API(name string, dsl func()) *design.APIDefinition {
 	// We can't rely on this being run first, any of the top level DSL could run
-	// in any order. The top level DSLs are API, Resource, MediaType and Type.
+	// in any order. The top level DSLs are API, Version, Resource, MediaType and Type.
 	// The first one to be called executes InitDesign.
-	// API checks whether that has been called yet (i.e. if the global variable
-	// Design is initialized) and if so makes sure that if it has a name it is the
-	// same as the one used in the argument: API can be called multiple times as
-	// long as it's always to define the same API.
 	if design.Design == nil {
 		InitDesign()
-	} else if design.Design.Name != "" && design.Design.Name != name {
-		ReportError("multiple API definitions: %#v and %#v", name, design.Design.Name)
+	}
+	if design.Design.Name != "" {
+		ReportError("multiple API definitions, only one is allowed")
 		return nil
 	}
 	if !topLevelDefinition(true) {
 		return nil
 	}
+	if name == "" {
+		ReportError("API name cannot be empty")
+	}
 	design.Design.Name = name
 	design.Design.DSL = dsl
 	return design.Design
+}
+
+// Version is the top level design language function which defines the API global property values
+// for a given version. The DSL used to define the property values is identical to the one used by
+// the API function.
+func Version(ver string, dsl func()) *design.APIVersionDefinition {
+	if design.Design == nil {
+		InitDesign()
+	}
+	verdef := &design.APIVersionDefinition{Version: ver, DSL: dsl}
+	if _, ok := design.Design.APIVersions[ver]; ok {
+		ReportError("API Version %s defined twice", ver)
+		return verdef
+	}
+	if design.Design.APIVersions == nil {
+		design.Design.APIVersions = make(map[string]*design.APIVersionDefinition)
+	}
+	if ver == "" {
+		ReportError("version cannot be an empty string")
+	}
+	design.Design.APIVersions[ver] = verdef
+	return verdef
 }
 
 // Description sets the definition description.
@@ -80,6 +102,8 @@ func API(name string, dsl func()) *design.APIDefinition {
 func Description(d string) {
 	if a, ok := apiDefinition(false); ok {
 		a.Description = d
+	} else if v, ok := versionDefinition(false); ok {
+		v.Description = d
 	} else if r, ok := resourceDefinition(false); ok {
 		r.Description = d
 	} else if a, ok := actionDefinition(false); ok {
@@ -101,6 +125,8 @@ func Description(d string) {
 func BasePath(val string) {
 	if a, ok := apiDefinition(false); ok {
 		a.BasePath = val
+	} else if v, ok := versionDefinition(false); ok {
+		v.BasePath = val
 	} else if r, ok := resourceDefinition(true); ok {
 		r.BasePath = val
 		awcs := design.ExtractWildcards(design.Design.BasePath)
@@ -119,23 +145,25 @@ func BasePath(val string) {
 // the BasePath or URL query string values.
 // The DSL for describing each Param is the Attribute DSL.
 func BaseParams(dsl func()) {
+	params := new(design.AttributeDefinition)
+	if !executeDSL(dsl, params) {
+		return
+	}
 	if a, ok := apiDefinition(false); ok {
-		params := new(design.AttributeDefinition)
-		if executeDSL(dsl, params) {
-			a.BaseParams = params
-		}
+		a.BaseParams = params
+	} else if v, ok := versionDefinition(false); ok {
+		v.BaseParams = params
 	} else if r, ok := resourceDefinition(true); ok {
-		params := new(design.AttributeDefinition)
-		if executeDSL(dsl, params) {
-			r.BaseParams = params
-		}
+		r.BaseParams = params
 	}
 }
 
 // TermsOfService describes the API terms of services or links to them.
 func TermsOfService(terms string) {
-	if a, ok := apiDefinition(true); ok {
+	if a, ok := apiDefinition(false); ok {
 		a.TermsOfService = terms
+	} else if v, ok := versionDefinition(true); ok {
+		v.TermsOfService = terms
 	}
 }
 
@@ -144,12 +172,14 @@ var hostnameRegex = regexp.MustCompile(`^[[:alnum:]][[:alnum:]\-]{0,61}[[:alnum:
 
 // Host sets the API hostname.
 func Host(host string) {
-	if a, ok := apiDefinition(true); ok {
-		if !hostnameRegex.MatchString(host) {
-			ReportError(`invalid hostname value "%s"`, host)
-		} else {
-			a.Host = host
-		}
+	if !hostnameRegex.MatchString(host) {
+		ReportError(`invalid hostname value "%s"`, host)
+		return
+	}
+	if a, ok := apiDefinition(false); ok {
+		a.Host = host
+	} else if v, ok := versionDefinition(true); ok {
+		v.Host = host
 	}
 }
 
@@ -167,6 +197,8 @@ func Scheme(vals ...string) {
 	}
 	if a, ok := apiDefinition(false); ok {
 		a.Schemes = append(a.Schemes, vals...)
+	} else if v, ok := versionDefinition(false); ok {
+		v.Schemes = append(v.Schemes, vals...)
 	} else if a, ok := actionDefinition(true); ok {
 		a.Schemes = append(a.Schemes, vals...)
 	}
@@ -174,36 +206,42 @@ func Scheme(vals ...string) {
 
 // Contact sets the API contact information.
 func Contact(dsl func()) {
-	if a, ok := apiDefinition(true); ok {
-		contact := new(design.ContactDefinition)
-		if executeDSL(dsl, contact) {
-			a.Contact = contact
-		}
+	contact := new(design.ContactDefinition)
+	if !executeDSL(dsl, contact) {
+		return
+	}
+	if a, ok := apiDefinition(false); ok {
+		a.Contact = contact
+	} else if v, ok := versionDefinition(true); ok {
+		v.Contact = contact
 	}
 }
 
 // License sets the API license information.
 func License(dsl func()) {
-	if a, ok := apiDefinition(true); ok {
-		license := new(design.LicenseDefinition)
-		if executeDSL(dsl, license) {
-			a.License = license
-		}
+	license := new(design.LicenseDefinition)
+	if !executeDSL(dsl, license) {
+		return
+	}
+	if a, ok := apiDefinition(false); ok {
+		a.License = license
+	} else if v, ok := versionDefinition(true); ok {
+		v.License = license
 	}
 }
 
 // Docs provides external documentation pointers.
 func Docs(dsl func()) {
+	docs := new(design.DocsDefinition)
+	if !executeDSL(dsl, docs) {
+		return
+	}
 	if a, ok := apiDefinition(false); ok {
-		docs := new(design.DocsDefinition)
-		if executeDSL(dsl, docs) {
-			a.Docs = docs
-		}
+		a.Docs = docs
+	} else if v, ok := versionDefinition(false); ok {
+		v.Docs = docs
 	} else if a, ok := actionDefinition(true); ok {
-		docs := new(design.DocsDefinition)
-		if executeDSL(dsl, docs) {
-			a.Docs = docs
-		}
+		a.Docs = docs
 	}
 }
 
@@ -262,31 +300,38 @@ func URL(url string) {
 // set the response media type. Other predefined templates do not use arguments. ResponseTemplate
 // makes it possible to define additional response templates specific to the API.
 func ResponseTemplate(name string, p interface{}) {
-	if a, ok := apiDefinition(true); ok {
-		if a.Responses == nil {
-			a.Responses = make(map[string]*design.ResponseDefinition)
-		}
-		if a.ResponseTemplates == nil {
-			a.ResponseTemplates = make(map[string]*design.ResponseTemplateDefinition)
-		}
-		if _, ok := a.Responses[name]; ok {
-			ReportError("multiple definitions for response template %s", name)
-			return
-		}
-		if _, ok := a.ResponseTemplates[name]; ok {
-			ReportError("multiple definitions for response template %s", name)
-			return
-		}
-
-		setupResponseTemplate(a, name, p)
+	var v *design.APIVersionDefinition
+	if a, ok := apiDefinition(false); ok {
+		v = a.APIVersionDefinition
+	} else if ver, ok := versionDefinition(true); ok {
+		v = ver
 	}
+	if v == nil {
+		return
+	}
+	if v.Responses == nil {
+		v.Responses = make(map[string]*design.ResponseDefinition)
+	}
+	if v.ResponseTemplates == nil {
+		v.ResponseTemplates = make(map[string]*design.ResponseTemplateDefinition)
+	}
+	if _, ok := v.Responses[name]; ok {
+		ReportError("multiple definitions for response template %s", name)
+		return
+	}
+	if _, ok := v.ResponseTemplates[name]; ok {
+		ReportError("multiple definitions for response template %s", name)
+		return
+	}
+
+	setupResponseTemplate(v, name, p)
 }
 
-func setupResponseTemplate(a *design.APIDefinition, name string, p interface{}) {
+func setupResponseTemplate(v *design.APIVersionDefinition, name string, p interface{}) {
 	if f, ok := p.(func()); ok {
 		r := &design.ResponseDefinition{Name: name}
 		if executeDSL(f, r) {
-			a.Responses[name] = r
+			v.Responses[name] = r
 		}
 	} else if tmpl, ok := p.(func(...string)); ok {
 		t := func(params ...string) *design.ResponseDefinition {
@@ -294,7 +339,7 @@ func setupResponseTemplate(a *design.APIDefinition, name string, p interface{}) 
 			executeDSL(func() { tmpl(params...) }, r)
 			return r
 		}
-		a.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
+		v.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
 			Name:     name,
 			Template: t,
 		}
@@ -331,7 +376,7 @@ func setupResponseTemplate(a *design.APIDefinition, name string, p interface{}) 
 			executeDSL(func() { val.Call(in) }, r)
 			return r
 		}
-		a.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
+		v.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
 			Name:     name,
 			Template: t,
 		}
@@ -340,32 +385,41 @@ func setupResponseTemplate(a *design.APIDefinition, name string, p interface{}) 
 
 // Title sets the API title used by generated documentation, JSON Hyper-schema, code comments etc.
 func Title(val string) {
-	if a, ok := apiDefinition(true); ok {
+	if a, ok := apiDefinition(false); ok {
 		a.Title = val
+	} else if v, ok := versionDefinition(true); ok {
+		v.Title = val
 	}
 }
 
 // Trait defines an API trait. A trait encapsulates arbitrary DSL that gets executed wherever the
 // trait is called via the UseTrait function.
 func Trait(name string, val ...func()) {
-	if a, ok := apiDefinition(true); ok {
-		if len(val) < 1 {
-			ReportError("missing trait DSL for %s", name)
-			return
-		} else if len(val) > 1 {
-			ReportError("too many arguments given to Trait")
-			return
-		}
-		if _, ok := a.Traits[name]; ok {
-			ReportError("multiple definitions for trait %s", name)
-			return
-		}
-		trait := &design.TraitDefinition{Name: name, DSL: val[0]}
-		if a.Traits == nil {
-			a.Traits = make(map[string]*design.TraitDefinition)
-		}
-		a.Traits[name] = trait
+	var ver *design.APIVersionDefinition
+	if a, ok := apiDefinition(false); ok {
+		ver = a.APIVersionDefinition
+	} else if v, ok := versionDefinition(true); ok {
+		ver = v
 	}
+	if len(val) < 1 {
+		ReportError("missing trait DSL for %s", name)
+		return
+	} else if len(val) > 1 {
+		ReportError("too many arguments given to Trait")
+		return
+	}
+	if ver == nil {
+		return
+	}
+	if _, ok := ver.Traits[name]; ok {
+		ReportError("multiple definitions for trait %s%s", name, ver.Context())
+		return
+	}
+	trait := &design.TraitDefinition{Name: name, DSL: val[0]}
+	if ver.Traits == nil {
+		ver.Traits = make(map[string]*design.TraitDefinition)
+	}
+	ver.Traits[name] = trait
 }
 
 // UseTrait executes the API trait with the given name. UseTrait can be used inside a Resource,

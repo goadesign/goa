@@ -118,7 +118,7 @@ func (m *Generator) generateToolSourceCode(gendir, pkgName string) {
 		codegen.SimpleImport("strings"),
 		codegen.NewImport(".", "github.com/raphael/goa/design"),
 		codegen.NewImport(".", "github.com/raphael/goa/design/dsl"),
-		codegen.NewImport("_", codegen.DesignPackagePath),
+		codegen.NewImport("_", filepath.ToSlash(codegen.DesignPackagePath)),
 	)
 	m.WriteHeader("Code Generator", "main", imports)
 	tmpl, err := template.New("generator").Parse(mainTmpl)
@@ -221,7 +221,9 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 		fmt.Sprintf("--design=%s", codegen.DesignPackagePath),
 	}
 	for name, value := range m.Flags {
-		args = append(args, fmt.Sprintf("--%s=%s", name, value))
+		if value != "" {
+			args = append(args, fmt.Sprintf("--%s=%s", name, value))
+		}
 	}
 	cmd := exec.Command(genbin, args...)
 	out, err := cmd.CombinedOutput()

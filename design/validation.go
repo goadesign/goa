@@ -198,6 +198,28 @@ func (r *ResourceDefinition) Validate() *ValidationErrors {
 	if r.Name == "" {
 		verr.Add(r, "Resource name cannot be empty")
 	}
+	r.validateActions(verr)
+	if r.BaseParams != nil {
+		r.validateBaseParams(verr)
+	}
+	if r.ParentName != "" {
+		r.validateParent(verr)
+	}
+	for _, resp := range r.Responses {
+		verr.Merge(resp.Validate())
+	}
+	if r.Params != nil {
+		verr.Merge(r.Params.Validate("resource parameters", r))
+	}
+	if !r.SupportsNoVersion() {
+		if err := CanUse(r, Design); err != nil {
+			verr.Add(r, "Invalid API version in list")
+		}
+	}
+	return verr.AsError()
+}
+
+func (r *ResourceDefinition) validateActions(verr *ValidationErrors) {
 	found := false
 	for _, a := range r.Actions {
 		if a.Name == r.CanonicalActionName {
@@ -208,52 +230,50 @@ func (r *ResourceDefinition) Validate() *ValidationErrors {
 	if r.CanonicalActionName != "" && !found {
 		verr.Add(r, `unknown canonical action "%s"`, r.CanonicalActionName)
 	}
-	if r.BaseParams != nil {
-		baseParams, ok := r.BaseParams.Type.(Object)
-		if !ok {
-			verr.Add(r, "invalid type for BaseParams, must be an Object", r)
+}
+
+func (r *ResourceDefinition) validateBaseParams(verr *ValidationErrors) {
+	baseParams, ok := r.BaseParams.Type.(Object)
+	if !ok {
+		verr.Add(r, "invalid type for BaseParams, must be an Object", r)
+	} else {
+		vars := ExtractWildcards(r.BasePath)
+		if len(vars) > 0 {
+			if len(vars) != len(baseParams) {
+				verr.Add(r, "BasePath defines parameters %s but BaseParams has %d elements",
+					strings.Join([]string{
+						strings.Join(vars[:len(vars)-1], ", "),
+						vars[len(vars)-1],
+					}, " and "),
+					len(baseParams),
+				)
+			}
+			for _, v := range vars {
+				if _, found := baseParams[v]; !found {
+					verr.Add(r, "Variable %s from base path %s does not match any parameter from BaseParams",
+						v, r.BasePath)
+				}
+			}
 		} else {
-			vars := ExtractWildcards(r.BasePath)
-			if len(vars) > 0 {
-				if len(vars) != len(baseParams) {
-					verr.Add(r, "BasePath defines parameters %s but BaseParams has %d elements",
-						strings.Join([]string{
-							strings.Join(vars[:len(vars)-1], ", "),
-							vars[len(vars)-1],
-						}, " and "),
-						len(baseParams),
-					)
-				}
-				for _, v := range vars {
-					if _, found := baseParams[v]; !found {
-						verr.Add(r, "Variable %s from base path %s does not match any parameter from BaseParams",
-							v, r.BasePath)
-					}
-				}
-			} else {
-				if len(baseParams) > 0 {
-					verr.Add(r, "BasePath does not use variables defined in BaseParams")
-				}
+			if len(baseParams) > 0 {
+				verr.Add(r, "BasePath does not use variables defined in BaseParams")
 			}
 		}
 	}
-	if r.ParentName != "" {
-		p, ok := Design.Resources[r.ParentName]
-		if !ok {
-			verr.Add(r, "Parent resource named %#v not found", r.ParentName)
-		} else {
-			if p.CanonicalAction() == nil {
-				verr.Add(r, "Parent resource %#v has no canonical action", r.ParentName)
-			}
+}
+
+func (r *ResourceDefinition) validateParent(verr *ValidationErrors) {
+	p, ok := Design.Resources[r.ParentName]
+	if !ok {
+		verr.Add(r, "Parent resource named %#v not found", r.ParentName)
+	} else {
+		if p.CanonicalAction() == nil {
+			verr.Add(r, "Parent resource %#v has no canonical action", r.ParentName)
+		}
+		if err := CanUse(r, p); err != nil {
+			verr.Add(r, err.Error())
 		}
 	}
-	for _, resp := range r.Responses {
-		verr.Merge(resp.Validate())
-	}
-	if r.Params != nil {
-		verr.Merge(r.Params.Validate("resource parameters", r))
-	}
-	return verr.AsError()
 }
 
 // Validate tests whether the action definition is consistent: parameters have unique names and it has at least
@@ -400,11 +420,31 @@ func (r *RouteDefinition) Validate() *ValidationErrors {
 	return verr.AsError()
 }
 
-// Validate checks that the user type definition is consistent: it has a name.
+// Validate checks that the user type definition is consistent: it has a name and all user and media
+// types used in fields support the API versions that use the type.
 func (u *UserTypeDefinition) Validate(ctx string, parent DSLDefinition) *ValidationErrors {
 	verr := new(ValidationErrors)
 	if u.TypeName == "" {
 		verr.Add(parent, "%s - %s", ctx, "User type must have a name")
+	}
+	if u.Type != nil {
+		// u.Type can be nil when types refer to each other.
+		if o := u.ToObject(); o != nil {
+			o.IterateAttributes(func(name string, at *AttributeDefinition) error {
+				var ut *UserTypeDefinition
+				if mt, ok := at.Type.(*MediaTypeDefinition); ok {
+					ut = mt.UserTypeDefinition
+				} else if ut2, ok := at.Type.(*UserTypeDefinition); ok {
+					ut = ut2
+				}
+				if ut != nil {
+					if err := CanUse(u, ut); err != nil {
+						verr.Add(u, err.Error())
+					}
+				}
+				return nil
+			})
+		}
 	}
 	verr.Merge(u.AttributeDefinition.Validate(ctx, parent))
 	return verr.AsError()
