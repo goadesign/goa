@@ -101,7 +101,7 @@ func VersionPackage(version string) string {
 			major := match[1]
 			for _, o := range others {
 				match = majorRegex.FindStringSubmatch(o)
-				if len(match) > 1 && major == match[1] {
+				if len(match) > 1 && major != match[1] {
 					uniqueMajor = false
 					break
 				}
