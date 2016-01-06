@@ -54,7 +54,7 @@ func RunDSL() error {
 	// First run the top level API DSL to initialize responses and
 	// response templates needed by resources.
 	executeDSL(design.Design.DSL, design.Design)
-	// The all the versions
+	// Then all the versions
 	for _, v := range design.Design.APIVersions {
 		executeDSL(v.DSL, v)
 	}
