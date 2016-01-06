@@ -88,6 +88,49 @@
                                 define a timeout value for all requests.
                         </p>
                         <h3>Supporting Functionality</h3>
+                        <h4>Service Mux</h4>
+                        <p>
+                                The goa HTTP request mux is in charge of dispatching incoming requests
+                                to the correct controller action. It implements the <code>ServeMux</code>
+                                interface which on top of the usual binding of HTTP method and path
+                                to handler also provides support for API versioning.
+                        </p>
+                        <p>
+                                The <code>ServeMux</code> interface <code>Handle</code> method associates
+                                a request HTTP method and path to a HandleFunc which is a function
+                                that accepts a http ResponseWriter and Request as well as a instance
+                                of url Values that contain all the path and querystring parameters.<br/>
+                                <br/>
+                                The interface also exposes a <code>Version</code> method that gives
+                                access to version specific muxes. This makes it possible to define
+                                different controller actions for the same request HTTP method and
+                                path but different API versions. The actual algorithm used to
+                                compute the targeted API version is provided via an instance of
+                                <code>SelectVersionFunc</code>. goa comes with several implementations
+                                of SelectVersionFunc:
+                        </p>
+                        <ul>
+                                <li>
+                                        The <code>PathSelectVersionFunc</code> function creates a
+                                        <code>SelectVersionFunc</code> that extracts the version from the request
+                                        path.
+                                </li>
+                                <li>
+                                        The <code>HeaderSelectVersionFunc</code> function creates a
+                                        <code>SelectVersionFunc</code> that extracts the version from the given
+                                        HTTP request header.
+                                </li>
+                                <li>
+                                        The <code>QuerySelectVersionFunc</code> function creates a
+                                        <code>SelectVersionFunc</code> that extracts the version from
+                                        the given querystring value.
+                                </li>
+                        </ul>
+                        <p>
+                                The function <code>CombineSelectVersionFunc</code> makes it possible to
+                                combine any number of <code>SelectionVersionFunc</code> to produce
+                                arbitrarily complex lookup algorithms.
+                        </p>
                         <h4>Middleware</h4>
                         <p>
                                 goa defines its own type of middleware but also supports "raw" http
@@ -146,6 +189,68 @@
                                 Custom error handlers can be easily swapped in, they consist of a
                                 function that accepts an instance of an action context and of an 
                                 error.
+                        </p>
+                        <h4>Request Mux and Versioning</h4>
+                        <p>
+                                As mentioned above the goa mux supports defining version specific
+                                muxes. Different versions can be defined in the design using the 
+                                <code>Version</code> DSL:
+                        </p>
+                        <pre><code class="go">package design
+
+import (
+        . "github.com/raphael/goa/design"
+        . "github.com/raphael/goa/design/dsl"
+)
+
+var _ = API("cellar", func() {
+        Description("A basic example of an API implemented with goa")
+        Scheme("http")
+        Host("localhost:8080")
+})
+
+var _ = Version("1.0", func() {
+        Title("The virtual winecellar v1.0 API")
+        // ... other API level properties
+})
+
+var _ = Version("2.0", func() {
+        Title("The virtual winecellar v2.0 API")
+        // ... other API level properties
+})
+
+var _ = Resource("bottle", func() {
+        BasePath("/bottles")
+        Version("1.0")
+        Version("2.0")
+        // ... other resource properties
+})
+
+var _ = Resource("bottle", func() {
+        BasePath("/bottles")
+        Version("3.0")
+        // ... other resource properties
+})
+</code></pre>
+                        <p>
+                                When <code>goagen</code> sees that the design defines versions it
+                                produces code that leverages the ServeMux interface Version method
+                                to mount controllers onto the appropriate version mux:
+                        </p>
+                        <pre><code class="go">func MountBottleV1Controller(service goa.Service, ctrl v1.BottleController) {
+                                // ...
+                        </code></pre>
+                        <p>
+                                Each version defined in the design produces a different package containing
+                                the corresponding generated controllers.
+                        </p>
+                        <p>
+                                The generated code relies on the <code>ServeMux</code> method exposed
+                                by the service to retrieve the top-level mux. The goa default mux
+                                implementation relies on the <a href="https://github.com/julienschmidt/httprouter">httprouter</a>
+                                package to implement the low level dispatch. Other low level routers
+                                can easily be subsituted by providing an implementation of the
+                                ServeMux interface.
                         </p>
                 </div>
         </section>
