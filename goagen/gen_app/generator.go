@@ -169,7 +169,7 @@ func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, v
 		if err != nil {
 			return err
 		}
-		imports = append(imports, codegen.SimpleImport(appPkg))
+		imports = append(imports, codegen.SimpleImport(filepath.ToSlash(appPkg)))
 	}
 	ctxWr.WriteHeader(title, packageName(version), imports)
 	var appPackage string
@@ -223,7 +223,7 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 		if err != nil {
 			return err
 		}
-		imports = append(imports, codegen.SimpleImport(appPkg))
+		imports = append(imports, codegen.SimpleImport(filepath.ToSlash(appPkg)))
 	}
 	ctlWr.WriteHeader(title, packageName(version), imports)
 	var controllersData []*ControllerTemplateData
