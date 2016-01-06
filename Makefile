@@ -23,7 +23,8 @@ DEPEND=golang.org/x/tools/cmd/cover golang.org/x/tools/cmd/goimports \
 	github.com/manveru/faker \
 	github.com/zach-klippenstein/goregen \
 	gopkg.in/alecthomas/kingpin.v2 \
-	gopkg.in/tylerb/graceful.v1
+	gopkg.in/tylerb/graceful.v1 \
+	bitbucket.org/pkg/inflect
 
 
 .PHONY: goagen

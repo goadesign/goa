@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -22,25 +23,25 @@ var _ = Describe("example cellar", func() {
 	var tempdir string
 
 	var files = []string{
-		"app",
-		"app/contexts.go",
-		"app/controllers.go",
-		"app/hrefs.go",
-		"app/media_types.go",
-		"app/user_types.go",
-		"main.go",
-		"account.go",
-		"bottle.go",
-		"client",
-		"client/cellar-cli",
-		"client/cellar-cli/main.go",
-		"client/cellar-cli/commands.go",
-		"client/client.go",
-		"client/account.go",
-		"client/bottle.go",
-		"swagger",
-		"swagger/swagger.json",
-		"swagger/swagger.go",
+		filepath.FromSlash("app"),
+		filepath.FromSlash("app/contexts.go"),
+		filepath.FromSlash("app/controllers.go"),
+		filepath.FromSlash("app/hrefs.go"),
+		filepath.FromSlash("app/media_types.go"),
+		filepath.FromSlash("app/user_types.go"),
+		filepath.FromSlash("main.go"),
+		filepath.FromSlash("account.go"),
+		filepath.FromSlash("bottle.go"),
+		filepath.FromSlash("client"),
+		filepath.FromSlash("client/cellar-cli"),
+		filepath.FromSlash("client/cellar-cli/main.go"),
+		filepath.FromSlash("client/cellar-cli/commands.go"),
+		filepath.FromSlash("client/client.go"),
+		filepath.FromSlash("client/account.go"),
+		filepath.FromSlash("client/bottle.go"),
+		filepath.FromSlash("swagger"),
+		filepath.FromSlash("swagger/swagger.json"),
+		filepath.FromSlash("swagger/swagger.go"),
 		"",
 	}
 
@@ -63,14 +64,18 @@ var _ = Describe("example cellar", func() {
 	})
 
 	It("goagen generated valid Go code", func() {
-		cmd := exec.Command("go", "build", "-o", "cellar")
+		bin := "cellar"
+		if runtime.GOOS == "windows" {
+			bin += ".exe"
+		}
+		cmd := exec.Command("go", "build", "-o", bin)
 		cmd.Dir = tempdir
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			fmt.Printf("\n==========%s\n==========\n", out)
 		}
 		Ω(err).ShouldNot(HaveOccurred())
-		cmd = exec.Command("./cellar")
+		cmd = exec.Command(fmt.Sprintf(".%c%s", filepath.Separator, bin))
 		cmd.Dir = tempdir
 		b := &bytes.Buffer{}
 		cmd.Stdout = b
@@ -81,7 +86,7 @@ var _ = Describe("example cellar", func() {
 			done <- cmd.Wait()
 		}()
 		select {
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(200 * time.Millisecond):
 			cmd.Process.Kill()
 			<-done
 		case err := <-done:
