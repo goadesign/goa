@@ -30,7 +30,8 @@ type GracefulApplication struct {
 	// Interrupted is true if the application is in the process of shutting down.
 	Interrupted bool
 
-	// CancelOnShutdown tells whether existing requests should be canceled when shutdown is triggered.
+	// CancelOnShutdown tells whether existing requests should be canceled when shutdown is
+	// triggered (true) or whether to wait until the requests complete (false).
 	CancelOnShutdown bool
 }
 
