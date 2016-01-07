@@ -242,6 +242,8 @@ type (
 		DefaultValue interface{}
 		// Optional view used to render Attribute (only applies to media type attributes).
 		View string
+		// List of API versions that use the type.
+		APIVersions []string
 	}
 
 	// MetadataDefinition is a set of key/value pairs
