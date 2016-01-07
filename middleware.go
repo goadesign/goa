@@ -293,8 +293,8 @@ const (
 	headerSecWebSocketKey = "Sec-WebSocket-Key"
 )
 
-// gzipResponseWriter is the ResponseWriter that negroni.ResponseWriter is
-// wrapped in.
+// gzipResponseWriter wraps the http.ResponseWriter to provide gzip
+// capabilities.
 type gzipResponseWriter struct {
 	http.ResponseWriter
 	gzw *gzip.Writer

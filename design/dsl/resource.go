@@ -109,7 +109,7 @@ func APIVersion(versions ...string) {
 		r.APIVersions = append(r.APIVersions, versions...)
 	} else if m, ok := mediaTypeDefinition(false); ok {
 		m.APIVersions = append(m.APIVersions, versions...)
-	} else if t, ok := typeDefinition(true); ok {
+	} else if t, ok := attributeDefinition(true); ok {
 		t.APIVersions = append(t.APIVersions, versions...)
 	}
 }

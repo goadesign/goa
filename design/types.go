@@ -86,8 +86,6 @@ type (
 		*AttributeDefinition
 		// Name of type
 		TypeName string
-		// List of API versions that use the type.
-		APIVersions []string
 		// DSL contains the DSL used to create this definition if any.
 		DSL func()
 	}
