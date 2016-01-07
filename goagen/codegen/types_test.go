@@ -34,7 +34,7 @@ var _ = Describe("code generation", func() {
 				if required != nil {
 					att.Validations = []ValidationDefinition{required}
 				}
-				st = codegen.GoTypeDef(att, 0, true, false)
+				st = codegen.GoTypeDef(att, false, "", 0, true, false)
 			})
 
 			Context("of primitive types", func() {
@@ -165,7 +165,7 @@ var _ = Describe("code generation", func() {
 			JustBeforeEach(func() {
 				array := &Array{ElemType: elemType}
 				att := &AttributeDefinition{Type: array}
-				source = codegen.GoTypeDef(att, 0, true, false)
+				source = codegen.GoTypeDef(att, false, "", 0, true, false)
 			})
 
 			Context("of primitive type", func() {
@@ -211,9 +211,9 @@ var _ = Describe("code generation", func() {
 			var p Primitive
 
 			JustBeforeEach(func() {
-				marshaler = codegen.TypeMarshaler(p, context, source, target)
+				marshaler = codegen.TypeMarshaler(p, false, "", context, source, target)
 				codegen.TempCount = 0
-				unmarshaler = codegen.TypeUnmarshaler(p, context, source, target)
+				unmarshaler = codegen.TypeUnmarshaler(p, false, "", context, source, target)
 			})
 
 			Context("integer", func() {
@@ -277,9 +277,9 @@ var _ = Describe("code generation", func() {
 			var p *Array
 
 			JustBeforeEach(func() {
-				marshaler = codegen.TypeMarshaler(p, context, source, target)
+				marshaler = codegen.TypeMarshaler(p, false, "", context, source, target)
 				codegen.TempCount = 0
-				unmarshaler = codegen.TypeUnmarshaler(p, context, source, target)
+				unmarshaler = codegen.TypeUnmarshaler(p, false, "", context, source, target)
 			})
 
 			BeforeEach(func() {
@@ -303,9 +303,9 @@ var _ = Describe("code generation", func() {
 			var p *Array
 
 			JustBeforeEach(func() {
-				marshaler = codegen.TypeMarshaler(p, context, source, target)
+				marshaler = codegen.TypeMarshaler(p, false, "", context, source, target)
 				codegen.TempCount = 0
-				unmarshaler = codegen.TypeUnmarshaler(p, context, source, target)
+				unmarshaler = codegen.TypeUnmarshaler(p, false, "", context, source, target)
 			})
 
 			BeforeEach(func() {
@@ -332,9 +332,9 @@ var _ = Describe("code generation", func() {
 			var o Object
 
 			JustBeforeEach(func() {
-				marshaler = codegen.TypeMarshaler(o, context, source, target)
+				marshaler = codegen.TypeMarshaler(o, false, "", context, source, target)
 				codegen.TempCount = 0
-				unmarshaler = codegen.TypeUnmarshaler(o, context, source, target)
+				unmarshaler = codegen.TypeUnmarshaler(o, false, "", context, source, target)
 			})
 
 			BeforeEach(func() {
@@ -355,9 +355,9 @@ var _ = Describe("code generation", func() {
 			var o Object
 
 			JustBeforeEach(func() {
-				marshaler = codegen.TypeMarshaler(o, context, source, target)
+				marshaler = codegen.TypeMarshaler(o, false, "", context, source, target)
 				codegen.TempCount = 0
-				unmarshaler = codegen.TypeUnmarshaler(o, context, source, target)
+				unmarshaler = codegen.TypeUnmarshaler(o, false, "", context, source, target)
 			})
 
 			BeforeEach(func() {
@@ -419,7 +419,7 @@ var _ = Describe("code generation", func() {
 
 				Context("unmarshaler code", func() {
 					BeforeEach(func() {
-						unmarshaler = codegen.TypeUnmarshaler(o, context, source, target)
+						unmarshaler = codegen.TypeUnmarshaler(o, false, "", context, source, target)
 						data := map[string]interface{}{
 							"raw": `interface{}(map[string]interface{}{
 								"baz": map[string]interface{}{
@@ -506,8 +506,8 @@ var _ = Describe("code generation", func() {
 			})
 
 			JustBeforeEach(func() {
-				marshaler = codegen.MediaTypeMarshaler(testMediaType, context, source, target, "")
-				marshalerImpl = codegen.MediaTypeMarshalerImpl(testMediaType, "default")
+				marshaler = codegen.MediaTypeMarshaler(testMediaType, false, "", context, source, target, "")
+				marshalerImpl = codegen.MediaTypeMarshalerImpl(testMediaType, false, "", "default")
 			})
 
 			It("generates the marshaler code", func() {
@@ -539,8 +539,8 @@ var _ = Describe("code generation", func() {
 			})
 
 			JustBeforeEach(func() {
-				marshaler = codegen.MediaTypeMarshaler(collectionMediaType, context, source, target, "")
-				marshalerImpl = codegen.MediaTypeMarshalerImpl(collectionMediaType, "default")
+				marshaler = codegen.MediaTypeMarshaler(collectionMediaType, false, "", context, source, target, "")
+				marshalerImpl = codegen.MediaTypeMarshalerImpl(collectionMediaType, false, "", "default")
 			})
 
 			It("generates the marshaler code", func() {
@@ -578,8 +578,8 @@ var _ = Describe("code generation", func() {
 			})
 
 			JustBeforeEach(func() {
-				marshaler = codegen.MediaTypeMarshaler(testMediaType, context, source, target, "")
-				marshaler2 = codegen.MediaTypeMarshaler(testMediaType2, context, source, target, "")
+				marshaler = codegen.MediaTypeMarshaler(testMediaType, false, "", context, source, target, "")
+				marshaler2 = codegen.MediaTypeMarshaler(testMediaType2, false, "", context, source, target, "")
 			})
 
 			It("generates the marshaler code", func() {

@@ -66,8 +66,24 @@ type (
 		Routes       []*design.RouteDefinition
 		Responses    map[string]*design.ResponseDefinition
 		API          *design.APIDefinition
-		Version      *design.APIVersionDefinition
-		AppPackage   string
+		Versioned    bool
+		DefaultPkg   string
+	}
+
+	// MediaTypeTemplateData contains all the information used by the template to redner the
+	// media types code.
+	MediaTypeTemplateData struct {
+		MediaType  *design.MediaTypeDefinition
+		Versioned  bool
+		DefaultPkg string
+	}
+
+	// UserTypeTemplateData contains all the information used by the template to redner the
+	// media types code.
+	UserTypeTemplateData struct {
+		UserType   *design.UserTypeDefinition
+		Versioned  bool
+		DefaultPkg string
 	}
 
 	// ControllerTemplateData contains the information required to generate an action handler.
@@ -285,8 +301,8 @@ func NewMediaTypesWriter(filename string) (*MediaTypesWriter, error) {
 }
 
 // Execute writes the code for the context types to the writer.
-func (w *MediaTypesWriter) Execute(mt *design.MediaTypeDefinition) error {
-	return w.MediaTypeTmpl.Execute(w, mt)
+func (w *MediaTypesWriter) Execute(data *MediaTypeTemplateData) error {
+	return w.MediaTypeTmpl.Execute(w, data)
 }
 
 // NewUserTypesWriter returns a contexts code writer.
@@ -313,8 +329,8 @@ func NewUserTypesWriter(filename string) (*UserTypesWriter, error) {
 }
 
 // Execute writes the code for the context types to the writer.
-func (w *UserTypesWriter) Execute(ut *design.UserTypeDefinition) error {
-	return w.UserTypeTmpl.Execute(w, ut)
+func (w *UserTypesWriter) Execute(data *UserTypeTemplateData) error {
+	return w.UserTypeTmpl.Execute(w, data)
 }
 
 // newCoerceData is a helper function that creates a map that can be given to the "Coerce" template.
@@ -329,13 +345,15 @@ func newCoerceData(name string, att *design.AttributeDefinition, pkg string, dep
 }
 
 // newDumpData is a helper function that creates a map that can be given to the "Dump" template.
-func newDumpData(mt *design.MediaTypeDefinition, context, source, target, view string) map[string]interface{} {
+func newDumpData(mt *design.MediaTypeDefinition, versioned bool, defaultPkg, context, source, target, view string) map[string]interface{} {
 	return map[string]interface{}{
-		"MediaType": mt,
-		"Context":   context,
-		"Source":    source,
-		"Target":    target,
-		"View":      view,
+		"MediaType":  mt,
+		"Context":    context,
+		"Source":     source,
+		"Target":     target,
+		"View":       view,
+		"Versioned":  versioned,
+		"DefaultPkg": defaultPkg,
 	}
 }
 
@@ -413,8 +431,11 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 `
 	// ctxRespT generates response helper methods GoGenerator
 	// template input: *ContextTemplateData
-	ctxRespT = `{{$ctx := .}}{{range .Responses}}// {{goify .Name true}} sends a HTTP response with status code {{.Status}}.
-func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{$mt := ($ctx.API.MediaTypeWithIdentifier .MediaType)}}{{if $mt}}resp {{gopkgtyperef $mt $ctx.AppPackage 0}}{{if gt (len $mt.ComputeViews) 1}}, view {{gopkgtypename $mt $ctx.AppPackage 0}}ViewEnum{{end}}{{else if .MediaType}}resp []byte{{end}}) error {
+	ctxRespT = `{{$ctx := .}}{{range .Responses}}{{$mt := $ctx.API.MediaTypeWithIdentifier .MediaType}}{{/*
+*/}}// {{goify .Name true}} sends a HTTP response with status code {{.Status}}.
+func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{/*
+*/}}{{if $mt}}resp {{gopkgtyperef $mt $ctx.Versioned $ctx.DefaultPkg 0}}{{if gt (len $mt.ComputeViews) 1}}, view {{gopkgtypename $mt $ctx.Versioned $ctx.DefaultPkg 0}}ViewEnum{{end}}{{/*
+*/}}{{else if .MediaType}}resp []byte{{end}}) error {
 {{if $mt}}	r, err := resp.Dump({{if gt (len $mt.ComputeViews) 1}}view{{end}})
 	if err != nil {
 		return fmt.Errorf("invalid response: %s", err)
@@ -428,18 +449,18 @@ func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{$mt := ($ctx.API.MediaTypeWithI
 	// payloadT generates the payload type definition GoGenerator
 	// template input: *ContextTemplateData
 	payloadT = `{{$payload := .Payload}}// {{gotypename .Payload 0}} is the {{.ResourceName}} {{.ActionName}} action payload.
-type {{gotypename .Payload 1}} {{gotypedef .Payload 0 false false}}
+type {{gotypename .Payload 1}} {{gotypedef .Payload .Versioned .DefaultPkg 0 false false}}
 `
 	// newPayloadT generates the code for the payload factory method.
 	// template input: *ContextTemplateData
 	newPayloadT = `// New{{gotypename .Payload 0}} instantiates a {{gotypename .Payload 0}} from a raw request body.
 // It validates each field and returns an error if any validation fails.
 func New{{gotypename .Payload 0}}(raw interface{}) (p {{gotyperef .Payload 0}}, err error) {
-{{typeUnmarshaler .Payload "payload" "raw" "p"}}
+{{typeUnmarshaler .Payload false "" "payload" "raw" "p"}}
 	return
 }{{if (not .Payload.IsPrimitive)}}
 
-{{userTypeUnmarshalerImpl .Payload "payload"}}{{end}}
+{{userTypeUnmarshalerImpl .Payload .Versioned .DefaultPkg "payload"}}{{end}}
 `
 
 	// ctrlT generates the controller interface for a given resource.
@@ -479,10 +500,10 @@ func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} interfa
 {{end}}`
 
 	// mediaTypeT generates the code for a media type.
-	// template input: *design.MediaTypeDefinition
-	mediaTypeT = `{{define "Dump"}}` + dumpT + `{{end}}` + `// {{if .Description}}{{.Description}}{{else}}{{gotypename . 0}} media type{{end}}
-// Identifier: {{.Identifier}}{{$typeName := gotypename . 0}}
-type {{$typeName}} {{gotypedef . 0 false false}}{{$computedViews := .ComputeViews}}{{if gt (len $computedViews) 1}}
+	// template input: MediaTypeTemplateData
+	mediaTypeT = `{{define "Dump"}}` + dumpT + `{{end}}` + `// {{if .MediaType.Description}}{{.MediaType.Description}}{{else}}{{gotypename .MediaType 0}} media type{{end}}
+// Identifier: {{.MediaType.Identifier}}{{$typeName := gotypename .MediaType 0}}
+type {{$typeName}} {{gotypedef .MediaType .Versioned .DefaultPkg 0 false false}}{{$computedViews := .MediaType.ComputeViews}}{{if gt (len $computedViews) 1}}
 
 // {{$typeName}} views
 type {{$typeName}}ViewEnum string
@@ -491,57 +512,56 @@ const (
 {{range $name, $view := $computedViews}}// {{if .Description}}{{.Description}}{{else}}{{$typeName}} {{.Name}} view{{end}}
 	{{$typeName}}{{goify .Name true}}View {{$typeName}}ViewEnum = "{{.Name}}"
 {{end}}){{end}}
-// Load{{$typeName}} loads raw data into an instance of {{$typeName}} running all the
-// validations. Raw data is defined by data that the JSON unmarshaler would create when unmarshaling
+// Load{{$typeName}} loads raw data into an instance of {{$typeName}}
 // into a variable of type interface{}. See https://golang.org/pkg/encoding/json/#Unmarshal for the
 // complete list of supported data types.
-func Load{{$typeName}}(raw interface{}) (res {{gotyperef . 1}}, err error) {
-	{{typeUnmarshaler . "" "raw" "res"}}
+func Load{{$typeName}}(raw interface{}) (res {{gotyperef .MediaType 1}}, err error) {
+	{{typeUnmarshaler .MediaType .Versioned .DefaultPkg "" "raw" "res"}}
 	return
 }
 
 // Dump produces raw data from an instance of {{$typeName}} running all the
 // validations. See Load{{$typeName}} for the definition of raw data.
-func (mt {{gotyperef . 0}}) Dump({{if gt (len $computedViews) 1}}view {{$typeName}}ViewEnum{{end}}) (res {{gonative .}}, err error) {
-{{$mt := .}}{{if gt (len $computedViews) 1}}{{range $computedViews}}	if view == {{gotypename $mt 0}}{{goify .Name true}}View {
-		{{template "Dump" (newDumpData $mt (printf "%s view" .Name) "mt" "res" .Name)}}
+func (mt {{gotyperef .MediaType 0}}) Dump({{if gt (len $computedViews) 1}}view {{$typeName}}ViewEnum{{end}}) (res {{gonative .MediaType}}, err error) {
+{{$mt := .MediaType}}{{$ctx := .}}{{if gt (len $computedViews) 1}}{{range $computedViews}}	if view == {{gotypename $mt 0}}{{goify .Name true}}View {
+		{{template "Dump" (newDumpData $mt $ctx.Versioned $ctx.DefaultPkg (printf "%s view" .Name) "mt" "res" .Name)}}
 	}
-{{end}}{{else}}{{range $mt.ComputeViews}}{{template "Dump" (newDumpData $mt (printf "%s view" .Name) "mt" "res" .Name)}}{{/* ranges over the one element */}}
+{{end}}{{else}}{{range $mt.ComputeViews}}{{template "Dump" (newDumpData $mt $ctx.Versioned $ctx.DefaultPkg (printf "%s view" .Name) "mt" "res" .Name)}}{{/* ranges over the one element */}}
 {{end}}{{end}}	return
 }
 
-{{$validation := recursiveValidate .AttributeDefinition false "mt" "response" 1}}{{if $validation}}// Validate validates the media type instance.
-func (mt {{gotyperef . 0}}) Validate() (err error) {
+{{$validation := recursiveValidate .MediaType.AttributeDefinition false "mt" "response" 1}}{{if $validation}}// Validate validates the media type instance.
+func (mt {{gotyperef .MediaType 0}}) Validate() (err error) {
 {{$validation}}
 	return
 }
 {{end}}{{range $computedViews}}
-{{mediaTypeMarshalerImpl $mt .Name}}
+{{mediaTypeMarshalerImpl $mt $ctx.Versioned $ctx.DefaultPkg .Name}}
 {{end}}
-{{userTypeUnmarshalerImpl .UserTypeDefinition "load"}}
+{{userTypeUnmarshalerImpl .MediaType.UserTypeDefinition .Versioned .DefaultPkg "load"}}
 `
 
 	// dumpT generates the code for dumping a media type or media type collection element.
 	dumpT = `{{if .MediaType.IsArray}}	{{.Target}} = make({{gonative .MediaType}}, len({{.Source}}))
 {{$tmp := tempvar}}	for i, {{$tmp}} := range {{.Source}} {
 {{$tmpel := tempvar}}		var {{$tmpel}} {{gonative .MediaType.ToArray.ElemType.Type}}
-		{{template "Dump" (newDumpData .MediaType.ToArray.ElemType.Type (printf "%s[*]" .Context) $tmp $tmpel .View)}}
+		{{template "Dump" (newDumpData .MediaType.ToArray.ElemType.Type .Versioned .DefaultPkg (printf "%s[*]" .Context) $tmp $tmpel .View)}}
 		{{.Target}}[i] = {{$tmpel}}
-	}{{else}}{{typeMarshaler .MediaType .Context .Source .Target .View}}{{end}}`
+	}{{else}}{{typeMarshaler .MediaType .Versioned .DefaultPkg .Context .Source .Target .View}}{{end}}`
 
 	// userTypeT generates the code for a user type.
-	// template input: *design.UserTypeDefinition
-	userTypeT = `// {{if .Description}}{{.Description}}{{else}}{{gotypename . 0}} type{{end}}
-type {{gotypename . 0}} {{gotypedef . 0 false false}}
+	// template input: UserTypeTemplateData
+	userTypeT = `// {{if .UserType.Description}}{{.UserType.Description}}{{else}}{{gotypename .UserType 0}} type{{end}}
+type {{gotypename .UserType 0}} {{gotypedef .UserType .Versioned .DefaultPkg 0 false false}}
 
-{{$validation := recursiveValidate .AttributeDefinition false "ut" "response" 1}}{{if $validation}}// Validate validates the type instance.
-func (ut {{gotyperef . 0}}) Validate() (err error) {
+{{$validation := recursiveValidate .UserType.AttributeDefinition false "ut" "response" 1}}{{if $validation}}// Validate validates the type instance.
+func (ut {{gotyperef .UserType 0}}) Validate() (err error) {
 {{$validation}}
 	return
 }
 
-{{end}}{{userTypeMarshalerImpl .}}
+{{end}}{{userTypeMarshalerImpl .UserType .Versioned .DefaultPkg}}
 
-{{userTypeUnmarshalerImpl . "load"}}
+{{userTypeUnmarshalerImpl .UserType .Versioned .DefaultPkg "load"}}
 `
 )

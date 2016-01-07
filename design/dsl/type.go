@@ -67,6 +67,9 @@ func Type(name string, dsl func()) *design.UserTypeDefinition {
 //	})
 func ArrayOf(t design.DataType) *design.Array {
 	at := design.AttributeDefinition{Type: t}
+	if ds, ok := t.(design.DataStructure); ok {
+		at.APIVersions = ds.Definition().APIVersions
+	}
 	return &design.Array{ElemType: &at}
 }
 
