@@ -60,6 +60,17 @@ func (ctx *Context) SetValue(key, val interface{}) {
 	ctx.Context = context.WithValue(ctx.Context, key, val)
 }
 
+// SetResponseWriter overrides the context underlying response writer. It returns the response
+// writer that was previously set.
+func (ctx *Context) SetResponseWriter(rw http.ResponseWriter) http.ResponseWriter {
+	rwo := ctx.Value(respKey)
+	ctx.SetValue(respKey, rw)
+	if rwo == nil {
+		return nil
+	}
+	return rwo.(http.ResponseWriter)
+}
+
 // Request returns the underlying HTTP request.
 func (ctx *Context) Request() *http.Request {
 	r := ctx.Value(reqKey)
