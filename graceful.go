@@ -29,6 +29,9 @@ type GracefulApplication struct {
 
 	// Interrupted is true if the application is in the process of shutting down.
 	Interrupted bool
+
+	// CancelOnShutdown tells whether existing requests should be canceled when shutdown is triggered.
+	CancelOnShutdown bool
 }
 
 // InterruptSignals is the list of signals that initiate graceful shutdown.
@@ -41,9 +44,9 @@ var InterruptSignals = []os.Signal{
 }
 
 // NewGraceful returns a goa application that uses a graceful shutdown server.
-func NewGraceful(name string) Service {
+func NewGraceful(name string, cancelOnShutdown bool) Service {
 	app, _ := New(name).(*Application)
-	return &GracefulApplication{Application: app}
+	return &GracefulApplication{Application: app, CancelOnShutdown: cancelOnShutdown}
 }
 
 // ListenAndServe starts the HTTP server and sets up a listener on the given host/port.
@@ -77,7 +80,9 @@ func (gapp *GracefulApplication) Shutdown() bool {
 	}
 	gapp.Interrupted = true
 	gapp.server.Stop(0)
-	Cancel()
+	if gapp.CancelOnShutdown {
+		Cancel()
+	}
 	return true
 }
 
