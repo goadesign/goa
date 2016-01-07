@@ -304,8 +304,8 @@ type gzipResponseWriter struct {
 // header using the net/http library content type detection if the Content-Type
 // header was not set yet.
 func (grw gzipResponseWriter) Write(b []byte) (int, error) {
-	if len(grw.ResponseWriter.Header().Get(headerContentType)) == 0 {
-		grw.ResponseWriter.Header().Set(headerContentType, http.DetectContentType(b))
+	if len(grw.Header().Get(headerContentType)) == 0 {
+		grw.Header().Set(headerContentType, http.DetectContentType(b))
 	}
 	return grw.gzw.Write(b)
 }
@@ -366,7 +366,7 @@ func Gzip(level int) Middleware {
 			}
 
 			// Delete the content length after we know we have been written to.
-			grw.ResponseWriter.Header().Del(headerContentLength)
+			grw.Header().Del(headerContentLength)
 			gz.Close()
 			gzipPool.Put(gz)
 			return
