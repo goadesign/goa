@@ -62,7 +62,8 @@ var _ = Describe("ContextsWriter", func() {
 					Headers:      headers,
 					Responses:    responses,
 					API:          design.Design,
-					Version:      version,
+					Versioned:    version != nil && version.Version != "",
+					DefaultPkg:   "",
 				}
 			})
 
