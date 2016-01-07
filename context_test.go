@@ -37,6 +37,24 @@ var _ = Describe("Context", func() {
 		})
 	})
 
+	Describe("SetResponseWriter", func() {
+		var rw http.ResponseWriter
+
+		BeforeEach(func() {
+			rw = &TestResponseWriter{Status: 42}
+		})
+
+		It("sets the response writer and returns the previous one", func() {
+			rwo := ctx.SetResponseWriter(rw)
+			Ω(rwo).Should(BeNil())
+			rwo = ctx.SetResponseWriter(&TestResponseWriter{Status: 43})
+			Ω(rwo).ShouldNot(BeNil())
+			Ω(rwo).Should(BeAssignableToTypeOf(&TestResponseWriter{}))
+			trw := rwo.(*TestResponseWriter)
+			Ω(trw.Status).Should(Equal(42))
+		})
+	})
+
 	Describe("Request", func() {
 		It("returns nil if not initialized", func() {
 			Ω(ctx.Request()).Should(BeNil())
