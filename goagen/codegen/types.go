@@ -41,6 +41,7 @@ func init() {
 		"validate":           ValidationChecker,
 		"gotypename":         GoTypeName,
 		"gotyperef":          GoTypeRef,
+		"gopkgtyperef":       GoPackageTypeRef,
 		"goify":              Goify,
 		"gonative":           GoNativeType,
 		"tabs":               Tabs,
@@ -94,8 +95,10 @@ func init() {
 // validation that is defined on the type attributes (if the type contains attributes).
 // The generated code assumes that there is a variable called "err" of type error that it can use
 // to record errors.
-func TypeMarshaler(t design.DataType, context, source, target string) string {
-	return typeMarshalerR(t, context, source, target, 1)
+// versioned indicates whether the code is being generated from a version package (true) or from the
+// default package defaultPkg (false).
+func TypeMarshaler(t design.DataType, versioned bool, defaultPkg, context, source, target string) string {
+	return typeMarshalerR(t, versioned, defaultPkg, context, source, target, 1)
 }
 
 // MediaTypeMarshaler produces the Go code that initializes the variable named target which holds a
@@ -105,18 +108,20 @@ func TypeMarshaler(t design.DataType, context, source, target string) string {
 // media types which view to use to render it. The rendering also takes care of following links.
 // The generated code assumes that there is a variable called "err" of type error that it can use
 // to record errors.
-func MediaTypeMarshaler(mt *design.MediaTypeDefinition, context, source, target, view string) string {
-	return mediaTypeMarshalerR(mt, source, target, view, 1)
+// versioned indicates whether the code is being generated from a version package (true) or from the
+// default package defaultPkg (false).
+func MediaTypeMarshaler(mt *design.MediaTypeDefinition, versioned bool, defaultPkg, context, source, target, view string) string {
+	return mediaTypeMarshalerR(mt, versioned, defaultPkg, source, target, view, 1)
 }
 
 // MediaTypeMarshalerImpl returns the Go code for a function that marshals and validates instances
 // of the given media type into raw values using the given view to render the attributes.
-func MediaTypeMarshalerImpl(mt *design.MediaTypeDefinition, view string) string {
+func MediaTypeMarshalerImpl(mt *design.MediaTypeDefinition, versioned bool, defaultPkg, view string) string {
 	var impl string
 	if mt.Type.IsArray() {
-		impl = collectionMediaTypeMarshalerImpl(mt, view)
+		impl = collectionMediaTypeMarshalerImpl(mt, versioned, defaultPkg, view)
 	} else {
-		impl = mediaTypeMarshalerImpl(mt, view)
+		impl = mediaTypeMarshalerImpl(mt, versioned, defaultPkg, view)
 	}
 	data := map[string]interface{}{
 		"Name": mediaTypeMarshalerFuncName(mt, view),
@@ -129,9 +134,9 @@ func MediaTypeMarshalerImpl(mt *design.MediaTypeDefinition, view string) string 
 
 // UserTypeMarshalerImpl returns the Go code for a function that marshals and validates instances
 // of the given user type into raw values using the given view to render the attributes.
-func UserTypeMarshalerImpl(u *design.UserTypeDefinition) string {
+func UserTypeMarshalerImpl(u *design.UserTypeDefinition, versioned bool, defaultPkg string) string {
 	var impl string
-	impl = userTypeMarshalerImpl(u)
+	impl = userTypeMarshalerImpl(u, versioned, defaultPkg)
 	data := map[string]interface{}{
 		"Name": userTypeMarshalerFuncName(u),
 		"Type": u,
@@ -145,11 +150,13 @@ func UserTypeMarshalerImpl(u *design.UserTypeDefinition) string {
 // which contains an instance of the attribute type data structure. The attribute view is used to
 // render child attributes if there are any. As with TypeMarshaler the code renders media type links
 // and runs any validation defined on the type definition.
+// versioned indicates whether the code is being generated from a version package (true) or from the
+// default package defaultPkg (false).
 //
 // The generated code assumes that there is a variable called "err" of type error that it can use
 // to record errors.
-func AttributeMarshaler(att *design.AttributeDefinition, context, source, target string) string {
-	return attributeMarshalerR(att, context, source, target, 1)
+func AttributeMarshaler(att *design.AttributeDefinition, versioned bool, defaultPkg string, context, source, target string) string {
+	return attributeMarshalerR(att, versioned, defaultPkg, context, source, target, 1)
 }
 
 // TypeUnmarshaler produces the Go code that initializes a variable of the given type given
@@ -160,8 +167,10 @@ func AttributeMarshaler(att *design.AttributeDefinition, context, source, target
 // mismatch or validation error.
 // The generated code assumes that there is a variable called "err" of type error that it can use
 // to record errors.
-func TypeUnmarshaler(t design.DataType, context, source, target string) string {
-	return typeUnmarshalerR(t, context, source, target, 1)
+// versioned indicates whether the code is being generated from a version package (true) or from the
+// default package defaultPkg (false).
+func TypeUnmarshaler(t design.DataType, versioned bool, defaultPkg, context, source, target string) string {
+	return typeUnmarshalerR(t, versioned, defaultPkg, context, source, target, 1)
 }
 
 // AttributeUnmarshaler produces the Go code that initializes an attribute given a deserialized
@@ -172,12 +181,14 @@ func TypeUnmarshaler(t design.DataType, context, source, target string) string {
 // mismatch or validation error.
 // The generated code assumes that there is a variable called "err" of type error that it can use
 // to record errors.
-func AttributeUnmarshaler(att *design.AttributeDefinition, context, source, target string) string {
-	return attributeUnmarshalerR(att, context, source, target, 1)
+// versioned indicates whether the code is being generated from a version package (true) or from the
+// default package defaultPkg (false).
+func AttributeUnmarshaler(att *design.AttributeDefinition, versioned bool, defaultPkg, context, source, target string) string {
+	return attributeUnmarshalerR(att, versioned, defaultPkg, context, source, target, 1)
 }
 
 // UserTypeUnmarshalerImpl returns the code implementing the user type unmarshaler function.
-func UserTypeUnmarshalerImpl(u *design.UserTypeDefinition, context string) string {
+func UserTypeUnmarshalerImpl(u *design.UserTypeDefinition, versioned bool, defaultPkg, context string) string {
 	var required []string
 	for _, v := range u.Validations {
 		if r, ok := v.(*design.RequiredValidationDefinition); ok {
@@ -188,11 +199,11 @@ func UserTypeUnmarshalerImpl(u *design.UserTypeDefinition, context string) strin
 	var impl string
 	switch {
 	case u.IsObject():
-		impl = objectUnmarshalerR(u, required, context, "source", "target", 1)
+		impl = objectUnmarshalerR(u, required, versioned, defaultPkg, context, "source", "target", 1)
 	case u.IsArray():
-		impl = arrayUnmarshalerR(u.ToArray(), context, "source", "target", 1)
+		impl = arrayUnmarshalerR(u.ToArray(), versioned, defaultPkg, context, "source", "target", 1)
 	case u.IsHash():
-		impl = hashUnmarshalerR(u.ToHash(), context, "source", "target", 1)
+		impl = hashUnmarshalerR(u.ToHash(), versioned, defaultPkg, context, "source", "target", 1)
 	default:
 		return "" // No function for primitive types - they just get casted
 	}
@@ -206,79 +217,78 @@ func UserTypeUnmarshalerImpl(u *design.UserTypeDefinition, context string) strin
 
 // GoTypeDef returns the Go code that defines a Go type which matches the data structure
 // definition (the part that comes after `type foo`).
-// tabs indicates the number of tab character(s) used to tabulate the definition however the first
+// versioned indicates whether the type is being referenced from a version package (true) or the
+// default package (false).
+// tabs is the number of tab character(s) used to tabulate the definition however the first
 // line is never indented.
 // jsonTags controls whether to produce json tags.
 // inner indicates whether to prefix the struct of an attribute of type object with *.
-func GoTypeDef(ds design.DataStructure, tabs int, jsonTags, inner bool) string {
-	return godef(ds, tabs, jsonTags, inner, false)
+func GoTypeDef(ds design.DataStructure, versioned bool, defPkg string, tabs int, jsonTags, inner bool) string {
+	return godef(ds, versioned, defPkg, tabs, jsonTags, inner, false)
 }
 
 // GoResDef returns the Go code that defines a resource data structure.
-func GoResDef(ds design.DataStructure, tabs int) string {
-	return godef(ds, tabs, false, false, true)
+func GoResDef(ds design.DataStructure, versioned bool, defPkg string, tabs int) string {
+	return godef(ds, versioned, defPkg, tabs, false, false, true)
 }
 
 // GoTypeRef returns the Go code that refers to the Go type which matches the given data type
 // (the part that comes after `var foo`)
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
+// This function assumes the type is in the same package as the code accessing it.
 func GoTypeRef(t design.DataType, tabs int) string {
-	return GoPackageTypeRef(t, "", tabs)
+	return GoPackageTypeRef(t, false, "", tabs)
 }
 
-// GoPackageTypeRef returns the Go code that refers to the Go type which matches the given data type
-// coming from a different package.
-func GoPackageTypeRef(t design.DataType, pkgName string, tabs int) string {
+// GoPackageTypeRef returns the Go code that refers to the Go type which matches the given data type.
+// versioned indicates whether the type is being referenced from a version package (true) or the
+// default package defPkg (false).
+// tabs is used to properly tabulate the object struct fields and only applies to this case.
+func GoPackageTypeRef(t design.DataType, versioned bool, defPkg string, tabs int) string {
 	switch t.(type) {
 	case *design.UserTypeDefinition, *design.MediaTypeDefinition:
 		var prefix string
 		if t.IsObject() {
 			prefix = "*"
 		}
-		return prefix + GoPackageTypeName(t, pkgName, tabs)
+		return prefix + GoPackageTypeName(t, versioned, defPkg, tabs)
 	case design.Object:
-		return "*" + GoPackageTypeName(t, pkgName, tabs)
+		return "*" + GoPackageTypeName(t, versioned, defPkg, tabs)
 	default:
-		return GoPackageTypeName(t, pkgName, tabs)
+		return GoPackageTypeName(t, versioned, defPkg, tabs)
 	}
 }
 
 // GoTypeName returns the Go type name for a data type.
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
+// This function assumes the type is in the same package as the code accessing it.
 func GoTypeName(t design.DataType, tabs int) string {
-	return GoPackageTypeName(t, "", tabs)
+	return GoPackageTypeName(t, false, "", tabs)
 }
 
-// GoPackageTypeName returns the Go type name for a data type in the given package.
-func GoPackageTypeName(t design.DataType, pkgName string, tabs int) string {
-	var pkgPrefix string
-	if pkgName != "" {
-		pkgPrefix = pkgName + "."
-	}
+// GoPackageTypeName returns the Go type name for a data type.
+// versioned indicates whether the type is being referenced from a version package (true) or the
+// default package defPkg (false).
+// tabs is used to properly tabulate the object struct fields and only applies to this case.
+func GoPackageTypeName(t design.DataType, versioned bool, defPkg string, tabs int) string {
 	switch actual := t.(type) {
 	case design.Primitive:
 		return GoNativeType(t)
 	case *design.Array:
-		return "[]" + GoPackageTypeRef(actual.ElemType.Type, pkgName, tabs+1)
+		return "[]" + GoPackageTypeRef(actual.ElemType.Type, versioned, defPkg, tabs+1)
 	case design.Object:
-		return GoTypeDef(&design.AttributeDefinition{Type: actual}, tabs, false, false)
+		return GoTypeDef(&design.AttributeDefinition{Type: actual}, versioned, defPkg, tabs, false, false)
 	case *design.Hash:
 		return fmt.Sprintf(
 			"map[%s]%s",
-			GoPackageTypeRef(actual.KeyType.Type, pkgName, tabs+1),
-			GoPackageTypeRef(actual.ElemType.Type, pkgName, tabs+1),
+			GoPackageTypeRef(actual.KeyType.Type, versioned, defPkg, tabs+1),
+			GoPackageTypeRef(actual.ElemType.Type, versioned, defPkg, tabs+1),
 		)
 	case *design.UserTypeDefinition:
-		if len(actual.APIVersions) > 0 {
-			// This is a versioned type - use the definition from the current package
-			pkgPrefix = ""
-		}
+		pkgPrefix := PackagePrefix(actual, versioned, defPkg)
 		return pkgPrefix + Goify(actual.TypeName, true)
 	case *design.MediaTypeDefinition:
-		if len(actual.APIVersions) > 0 {
-			// This is a versioned type - use the definition from the current package
-			pkgPrefix = ""
-		}
+		pkgPrefix := PackagePrefix(actual.UserTypeDefinition, versioned, defPkg)
 		return pkgPrefix + Goify(actual.TypeName, true)
 	default:
 		panic(fmt.Sprintf("goa bug: unknown type %#v", actual))
@@ -374,6 +384,24 @@ func Tempvar() string {
 	return fmt.Sprintf("tmp%d", TempCount)
 }
 
+// PackagePrefix returns the package prefix to use to access ut from ver given it lives in the
+// package pkg.
+func PackagePrefix(ut *design.UserTypeDefinition, versioned bool, pkg string) string {
+	if !versioned {
+		// If the version is the default version then the user type is in the same package
+		// (otherwise the DSL would not be valid).
+		return ""
+	}
+	if len(ut.APIVersions) == 0 {
+		// If the type is not versioned but we are accessing it from the non-default version
+		// then we need to qualify it with the default version package.
+		return pkg + "."
+	}
+	// If the type is versioned then we must be accessing it from the current version
+	// (unversioned definitions cannot use versioned definitions)
+	return ""
+}
+
 // RunTemplate executs the given template with the given input and returns
 // the rendered string.
 func RunTemplate(tmpl *template.Template, data interface{}) string {
@@ -386,15 +414,15 @@ func RunTemplate(tmpl *template.Template, data interface{}) string {
 }
 
 // attributeMarshalerR is the recursive implementation of AttributeMarshaler.
-func attributeMarshalerR(att *design.AttributeDefinition, context, source, target string, depth int) string {
+func attributeMarshalerR(att *design.AttributeDefinition, versioned bool, defaultPkg, context, source, target string, depth int) string {
 	var marshaler string
 	switch actual := att.Type.(type) {
 	case *design.MediaTypeDefinition:
-		marshaler = mediaTypeMarshalerR(actual, source, target, att.View, depth)
+		marshaler = mediaTypeMarshalerR(actual, versioned, defaultPkg, source, target, att.View, depth)
 	case design.Object:
-		marshaler = objectMarshalerR(actual, att.AllRequired(), context, source, target, depth)
+		marshaler = objectMarshalerR(actual, att.AllRequired(), versioned, defaultPkg, context, source, target, depth)
 	default:
-		marshaler = typeMarshalerR(att.Type, context, source, target, depth)
+		marshaler = typeMarshalerR(att.Type, versioned, defaultPkg, context, source, target, depth)
 	}
 	validation := ValidationChecker(att, false, source, context, 1)
 	if validation != "" {
@@ -417,13 +445,15 @@ func attributeMarshalerR(att *design.AttributeDefinition, context, source, targe
 // variable to initialize.
 // The generated code assumes that there is a variable called "err" of type error that it can use
 // to record errors.
-func arrayMarshalerR(a *design.Array, context, source, target string, depth int) string {
+func arrayMarshalerR(a *design.Array, versioned bool, defaultPkg, context, source, target string, depth int) string {
 	data := map[string]interface{}{
-		"source":   source,
-		"target":   target,
-		"elemType": a.ElemType,
-		"context":  context,
-		"depth":    depth,
+		"source":     source,
+		"target":     target,
+		"elemType":   a.ElemType,
+		"context":    context,
+		"depth":      depth,
+		"versioned":  versioned,
+		"defaultPkg": defaultPkg,
 	}
 	return RunTemplate(mArrayT, data)
 }
@@ -434,13 +464,15 @@ func arrayMarshalerR(a *design.Array, context, source, target string, depth int)
 // attribute definitions.
 // The generated code assumes that there is a variable called "err" of type error that it can use
 // to record errors.
-func hashMarshalerR(h *design.Hash, context, source, target string, depth int) string {
+func hashMarshalerR(h *design.Hash, versioned bool, defaultPkg, context, source, target string, depth int) string {
 	data := map[string]interface{}{
-		"type":    h,
-		"context": context,
-		"source":  source,
-		"target":  target,
-		"depth":   depth,
+		"type":       h,
+		"context":    context,
+		"source":     source,
+		"target":     target,
+		"depth":      depth,
+		"versioned":  versioned,
+		"defaultPkg": defaultPkg,
 	}
 	return RunTemplate(mHashT, data)
 }
@@ -451,33 +483,35 @@ func hashMarshalerR(h *design.Hash, context, source, target string, depth int) s
 // attribute definitions.
 // The generated code assumes that there is a variable called "err" of type error that it can use
 // to record errors.
-func objectMarshalerR(o design.DataType, required []string, context, source, target string, depth int) string {
+func objectMarshalerR(o design.DataType, required []string, versioned bool, defaultPkg, context, source, target string, depth int) string {
 	att := &design.AttributeDefinition{Type: o}
 	att.Validations = append(att.Validations, &design.RequiredValidationDefinition{Names: required})
 	data := map[string]interface{}{
-		"attribute": att,
-		"type":      o,
-		"required":  required,
-		"context":   context,
-		"source":    source,
-		"target":    target,
-		"depth":     depth,
+		"attribute":  att,
+		"versioned":  versioned,
+		"defaultPkg": defaultPkg,
+		"type":       o,
+		"required":   required,
+		"context":    context,
+		"source":     source,
+		"target":     target,
+		"depth":      depth,
 	}
 	return RunTemplate(mObjectT, data)
 }
 
 // typeMarshalerR implements the recursive function that marshals an instance of a type into a raw
 // value.
-func typeMarshalerR(t design.DataType, context, source, target string, depth int) string {
+func typeMarshalerR(t design.DataType, versioned bool, defaultPkg, context, source, target string, depth int) string {
 	switch actual := t.(type) {
 	case design.Primitive:
 		return fmt.Sprintf("%s%s = %s", Tabs(depth), target, source)
 	case *design.Array:
-		return arrayMarshalerR(actual, context, source, target, depth)
+		return arrayMarshalerR(actual, versioned, defaultPkg, context, source, target, depth)
 	case *design.Hash:
-		return hashMarshalerR(actual, context, source, target, depth)
+		return hashMarshalerR(actual, versioned, defaultPkg, context, source, target, depth)
 	case design.Object:
-		return objectMarshalerR(actual.ToObject(), nil, context, source, target, depth)
+		return objectMarshalerR(actual.ToObject(), nil, versioned, defaultPkg, context, source, target, depth)
 	case *design.UserTypeDefinition:
 		if _, ok := actual.Type.(design.Primitive); ok {
 			return fmt.Sprintf("%s%s = %s(%s)", Tabs(depth), target, actual.Name(), source)
@@ -497,24 +531,26 @@ func typeMarshalerR(t design.DataType, context, source, target string, depth int
 }
 
 // mediaTypeMarshalerR produces Go code that calls the media type marshaler function.
-func mediaTypeMarshalerR(mt *design.MediaTypeDefinition, source, target, view string, depth int) string {
+func mediaTypeMarshalerR(mt *design.MediaTypeDefinition, versioned bool, defaultPkg, source, target, view string, depth int) string {
+	prefix := PackagePrefix(mt.UserTypeDefinition, versioned, defaultPkg)
 	return fmt.Sprintf(
-		`%s%s, err = %s(%s, err)`,
+		`%s%s, err = %s%s(%s, err)`,
 		Tabs(depth),
 		target,
+		prefix,
 		mediaTypeMarshalerFuncName(mt, view),
 		source,
 	)
 }
 
 // userTypeMarshalerImpl returns the implementation for the type marshaler function.
-func userTypeMarshalerImpl(u *design.UserTypeDefinition) string {
-	return attributeMarshalerR(u.AttributeDefinition, "", "source", "target", 1)
+func userTypeMarshalerImpl(u *design.UserTypeDefinition, versioned bool, defaultPkg string) string {
+	return attributeMarshalerR(u.AttributeDefinition, versioned, defaultPkg, "", "source", "target", 1)
 }
 
 // mediaTypeMarshalerImpl implements the recursive function that marshals an instance of a media
 // type into a raw value.
-func mediaTypeMarshalerImpl(mt *design.MediaTypeDefinition, view string) string {
+func mediaTypeMarshalerImpl(mt *design.MediaTypeDefinition, versioned bool, defaultPkg, view string) string {
 	rendered := mt.AttributeDefinition
 	if view == "" {
 		view = "default"
@@ -563,12 +599,14 @@ func mediaTypeMarshalerImpl(mt *design.MediaTypeDefinition, view string) string 
 	var linkMarshaler string
 	if renderLinks && len(mt.Links) > 0 {
 		data := map[string]interface{}{
-			"links":   mt.Links,
-			"context": "",
-			"source":  "source",
-			"target":  "target",
-			"view":    view,
-			"depth":   1,
+			"links":      mt.Links,
+			"versioned":  versioned,
+			"defaultPkg": defaultPkg,
+			"context":    "",
+			"source":     "source",
+			"target":     "target",
+			"view":       view,
+			"depth":      1,
 		}
 		linkMarshaler = "\n" + RunTemplate(mLinkT, data)
 	}
@@ -587,11 +625,13 @@ func mediaTypeMarshalerImpl(mt *design.MediaTypeDefinition, view string) string 
 		}
 	}
 	final.Type = newObj
-	return attributeMarshalerR(final, "", "source", "target", 1) + linkMarshaler
+	return attributeMarshalerR(final, versioned, defaultPkg, "", "source", "target", 1) + linkMarshaler
 }
 
-func collectionMediaTypeMarshalerImpl(mt *design.MediaTypeDefinition, view string) string {
+func collectionMediaTypeMarshalerImpl(mt *design.MediaTypeDefinition, versioned bool, defaultPkg, view string) string {
 	data := map[string]interface{}{
+		"versioned":     versioned,
+		"defaultPkg":    defaultPkg,
 		"context":       "",
 		"source":        "source",
 		"target":        "target",
@@ -621,29 +661,31 @@ func userTypeUnmarshalerFuncName(u *design.UserTypeDefinition) string {
 	return fmt.Sprintf("Unmarshal%s", GoTypeName(u, 0))
 }
 
-func typeUnmarshalerR(t design.DataType, context, source, target string, depth int) string {
+func typeUnmarshalerR(t design.DataType, versioned bool, defaultPkg, context, source, target string, depth int) string {
 	switch actual := t.(type) {
 	case design.Primitive:
 		return primitiveUnmarshalerR(actual, context, source, target, depth)
 	case *design.Array:
-		return arrayUnmarshalerR(actual, context, source, target, depth)
+		return arrayUnmarshalerR(actual, versioned, defaultPkg, context, source, target, depth)
 	case *design.Hash:
-		return hashUnmarshalerR(actual, context, source, target, depth)
+		return hashUnmarshalerR(actual, versioned, defaultPkg, context, source, target, depth)
 	case design.Object:
-		return objectUnmarshalerR(actual, nil, context, source, target, depth)
+		return objectUnmarshalerR(actual, nil, versioned, defaultPkg, context, source, target, depth)
 	case *design.UserTypeDefinition:
 		if _, ok := t.(design.Primitive); ok {
 			return userPrimitiveUnmarshalerR(actual, context, source, target, depth)
 		}
+		prefix := PackagePrefix(actual, versioned, defaultPkg)
 		return fmt.Sprintf(
-			`%s%s, err = %s(%s, err)`,
+			`%s%s, err = %s%s(%s, err)`,
 			Tabs(depth),
 			target,
+			prefix,
 			userTypeUnmarshalerFuncName(actual),
 			source,
 		)
 	case *design.MediaTypeDefinition:
-		return typeUnmarshalerR(actual.UserTypeDefinition, context, source, target, depth)
+		return typeUnmarshalerR(actual.UserTypeDefinition, versioned, defaultPkg, context, source, target, depth)
 	default:
 		panic(actual)
 	}
@@ -660,8 +702,8 @@ func userPrimitiveUnmarshalerR(u *design.UserTypeDefinition, context, source, ta
 	return RunTemplate(unmUserPrimitiveT, data)
 }
 
-func attributeUnmarshalerR(att *design.AttributeDefinition, context, source, target string, depth int) string {
-	unmarshaler := typeUnmarshalerR(att.Type, context, source, target, depth)
+func attributeUnmarshalerR(att *design.AttributeDefinition, versioned bool, defaultPkg, context, source, target string, depth int) string {
+	unmarshaler := typeUnmarshalerR(att.Type, versioned, defaultPkg, context, source, target, depth)
 	validation := ValidationChecker(att, false, target, context, depth)
 	if validation == "" {
 		return unmarshaler
@@ -691,13 +733,15 @@ func primitiveUnmarshalerR(p design.Primitive, context, source, target string, d
 // name of the variable to initialize.
 // The generated code assumes that there is a variable called "err" of type error that it can use
 // to record errors.
-func arrayUnmarshalerR(a *design.Array, context, source, target string, depth int) string {
+func arrayUnmarshalerR(a *design.Array, versioned bool, defaultPkg, context, source, target string, depth int) string {
 	data := map[string]interface{}{
-		"source":   source,
-		"target":   target,
-		"elemType": a.ElemType,
-		"context":  context,
-		"depth":    depth,
+		"versioned":  versioned,
+		"defaultPkg": defaultPkg,
+		"source":     source,
+		"target":     target,
+		"elemType":   a.ElemType,
+		"context":    context,
+		"depth":      depth,
 	}
 	return RunTemplate(unmArrayT, data)
 }
@@ -708,13 +752,15 @@ func arrayUnmarshalerR(a *design.Array, context, source, target string, depth in
 // the name of the variable to initialize.
 // The generated code assumes that there is a variable called "err" of type error that it can use
 // to record errors.
-func hashUnmarshalerR(h *design.Hash, context, source, target string, depth int) string {
+func hashUnmarshalerR(h *design.Hash, versioned bool, defaultPkg, context, source, target string, depth int) string {
 	data := map[string]interface{}{
-		"type":    h,
-		"context": context,
-		"source":  source,
-		"target":  target,
-		"depth":   depth,
+		"type":       h,
+		"versioned":  versioned,
+		"defaultPkg": defaultPkg,
+		"context":    context,
+		"source":     source,
+		"target":     target,
+		"depth":      depth,
 	}
 	return RunTemplate(unmHashT, data)
 }
@@ -725,14 +771,16 @@ func hashUnmarshalerR(h *design.Hash, context, source, target string, depth int)
 // name of the variable to initialize.
 // The generated code assumes that there is a variable called "err" of type error that it can use
 // to record errors.
-func objectUnmarshalerR(o design.DataType, required []string, context, source, target string, depth int) string {
+func objectUnmarshalerR(o design.DataType, required []string, versioned bool, defaultPkg, context, source, target string, depth int) string {
 	data := map[string]interface{}{
-		"type":     o,
-		"required": required,
-		"context":  context,
-		"source":   source,
-		"target":   target,
-		"depth":    depth,
+		"type":       o,
+		"versioned":  versioned,
+		"defaultPkg": defaultPkg,
+		"required":   required,
+		"context":    context,
+		"source":     source,
+		"target":     target,
+		"depth":      depth,
 	}
 	return RunTemplate(unmObjectT, data)
 }
@@ -741,7 +789,7 @@ func objectUnmarshalerR(o design.DataType, required []string, context, source, t
 // The only difference between the two is how the type names for fields that refer to a media type
 // is generated: GoTypeDef uses the type name but GoResDef uses the underlying resource name if the
 // type is a media type that corresponds to the canonical representation of a resource.
-func godef(ds design.DataStructure, tabs int, jsonTags, inner, res bool) string {
+func godef(ds design.DataStructure, versioned bool, defPkg string, tabs int, jsonTags, inner, res bool) string {
 	var buffer bytes.Buffer
 	def := ds.Definition()
 	t := def.Type
@@ -749,10 +797,10 @@ func godef(ds design.DataStructure, tabs int, jsonTags, inner, res bool) string 
 	case design.Primitive:
 		return GoTypeName(t, tabs)
 	case *design.Array:
-		return "[]" + godef(actual.ElemType, tabs, jsonTags, true, res)
+		return "[]" + godef(actual.ElemType, versioned, defPkg, tabs, jsonTags, true, res)
 	case *design.Hash:
-		keyDef := godef(actual.KeyType, tabs, jsonTags, true, res)
-		elemDef := godef(actual.ElemType, tabs, jsonTags, true, res)
+		keyDef := godef(actual.KeyType, versioned, defPkg, tabs, jsonTags, true, res)
+		elemDef := godef(actual.ElemType, versioned, defPkg, tabs, jsonTags, true, res)
 		return fmt.Sprintf("map[%s]%s", keyDef, elemDef)
 	case design.Object:
 		if inner {
@@ -768,7 +816,7 @@ func godef(ds design.DataStructure, tabs int, jsonTags, inner, res bool) string 
 		sort.Strings(keys)
 		for _, name := range keys {
 			WriteTabs(&buffer, tabs+1)
-			typedef := godef(actual[name], tabs+1, jsonTags, true, res)
+			typedef := godef(actual[name], versioned, defPkg, tabs+1, jsonTags, true, res)
 			fname := Goify(name, true)
 			var tags string
 			if jsonTags {
@@ -788,7 +836,7 @@ func godef(ds design.DataStructure, tabs int, jsonTags, inner, res bool) string 
 		buffer.WriteString("}")
 		return buffer.String()
 	case *design.UserTypeDefinition:
-		name := GoTypeName(actual, tabs)
+		name := GoPackageTypeName(actual, versioned, defPkg, tabs)
 		if actual.Type.IsObject() {
 			return "*" + name
 		}
@@ -797,7 +845,7 @@ func godef(ds design.DataStructure, tabs int, jsonTags, inner, res bool) string 
 		if res && actual.Resource != nil {
 			return "*" + Goify(actual.Resource.Name, true)
 		}
-		name := GoTypeName(actual, tabs)
+		name := GoPackageTypeName(actual, versioned, defPkg, tabs)
 		if actual.Type.IsObject() {
 			return "*" + name
 		}
@@ -884,7 +932,7 @@ func toSlice(val []interface{}) string {
 const (
 	mArrayTmpl = `{{$tmp := tempvar}}{{tabs .depth}}{{$tmp}} := make([]{{gonative .elemType.Type}}, len({{.source}}))
 {{$tmpIndex := tempvar}}{{$tmpElement := tempvar}}{{tabs .depth}}for {{$tmpIndex}}, {{$tmpElement}} := range {{.source}} {
-{{marshalAttribute .elemType (printf "%s[*]" .context) $tmpElement (printf "%s[%s]" $tmp $tmpIndex) (add .depth 1)}}
+{{marshalAttribute .elemType .versioned .defaultPkg (printf "%s[*]" .context) $tmpElement (printf "%s[%s]" $tmp $tmpIndex) (add .depth 1)}}
 {{tabs .depth}}}
 {{tabs .depth}}{{.target}} = {{$tmp}}`
 
@@ -909,7 +957,7 @@ const (
 {{range $n, $at := .type}}{{if (not $at.Type.IsPrimitive)}}{{/*
 	## Handle objects, user types and media types (they need an extra temporary variable)
 */}}{{tabs $depth}}if {{$ctx.source}}.{{goify $n true}} != nil {
-{{marshalAttribute $at (printf "%s.%s" $ctx.context (goify $n true)) (printf "%s.%s" $ctx.source (goify $n true)) (printf "%s[\"%s\"]" $tmp $n) (add $depth 1)}}
+{{marshalAttribute $at $ctx.versioned $ctx.defaultPkg (printf "%s.%s" $ctx.context (goify $n true)) (printf "%s.%s" $ctx.source (goify $n true)) (printf "%s[\"%s\"]" $tmp $n) (add $depth 1)}}
 {{tabs $depth}}}
 {{end}}{{end}}{{/*
 	## Done
@@ -920,21 +968,21 @@ const (
 	mHashTmpl = `{{tabs .depth}}{{$tmp := tempvar}}{{$tmp}} := make(map[{{gonative .type.ToHash.KeyType.Type}}]{{gonative .type.ToHash.ElemType.Type}}, len({{.source}}))
 {{tabs .depth}}for k, v := range {{.source}} {
 {{tabs .depth}}	var mk {{gonative .type.ToHash.KeyType.Type}}
-{{marshalAttribute .type.ToHash.KeyType (printf "%s.keys[*]" .context) "k" "mk" (add .depth 1)}}
+{{marshalAttribute .type.ToHash.KeyType .versioned .defaultPkg (printf "%s.keys[*]" .context) "k" "mk" (add .depth 1)}}
 {{tabs .depth}}	var mv {{gonative .type.ToHash.ElemType.Type}}
-{{marshalAttribute .type.ToHash.ElemType (printf "%s.values[*]" .context) "v" "mv" (add .depth 1)}}
+{{marshalAttribute .type.ToHash.ElemType .versioned .defaultPkg (printf "%s.values[*]" .context) "v" "mv" (add .depth 1)}}
 {{tabs .depth}}	{{$tmp}}[mk] = mv
 {{tabs .depth}}}
 {{tabs .depth}}{{.target}} = {{$tmp}}`
 
 	mCollectionTmpl = `{{tabs .depth}}{{.target}} = make([]{{gonative .elemMediaType}}, len({{.source}}))
 {{tabs .depth}}for i, res := range {{.source}} {
-{{marshalMediaType .elemMediaType "res" (printf "%s[i]" .target) .view (add .depth 1)}}
+{{marshalMediaType .elemMediaType .versioned .defaultPkg "res" (printf "%s[i]" .target) .view (add .depth 1)}}
 {{tabs .depth}}}`
 
 	mLinkTmpl = `{{if .links}}{{$ctx := .}}{{tabs .depth}}if err == nil {
 {{tabs .depth}}	links := make(map[string]interface{})
-{{range $n, $l := .links}}{{marshalMediaType $l.MediaType (printf "%s.%s" $ctx.source (goify $l.Name true)) (printf "links[\"%s\"]" $n) $l.View $ctx.depth}}
+{{range $n, $l := .links}}{{marshalMediaType $l.MediaType $ctx.versioned $ctx.defaultPkg (printf "%s.%s" $ctx.source (goify $l.Name true)) (printf "links[\"%s\"]" $n) $l.View $ctx.depth}}
 {{end}}{{tabs .depth}}	{{.target}}["links"] = links
 }{{end}}`
 
@@ -947,7 +995,7 @@ func {{.Name}}(source {{gotyperef .Type 0}}, inErr error) (target {{gonative .Ty
 }`
 
 	unmUserPrimitiveTmpl = `{{tabs .depth}}if val, ok := {{.source}}.({{gonative .type}}); ok {
-{{tabs .depth}}	{{.target}} = {{gotyperef .type 0}}(val)
+{{tabs .depth}}	{{.target}} = {{gopkgtyperef .type .versioned .defaultPkg 0}}(val)
 {{tabs .depth}}} else {
 {{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "{{gonative .type}}", err)
 {{tabs .depth}}}`
@@ -961,19 +1009,19 @@ func {{.Name}}(source {{gotyperef .Type 0}}, inErr error) (target {{gonative .Ty
 {{tabs .depth}}}{{end}}`
 
 	unmArrayTmpl = `{{tabs .depth}}if val, ok := {{.source}}.([]interface{}); ok {
-{{tabs .depth}}	{{.target}} = make([]{{gotyperef .elemType.Type (add .depth 2)}}, len(val))
+{{tabs .depth}}	{{.target}} = make([]{{gopkgtyperef .elemType.Type .versioned .defaultPkg (add .depth 2)}}, len(val))
 {{tabs .depth}}	{{$tmp := tempvar}}for {{$tmp}}, v := range val {
-{{unmarshalAttribute .elemType (printf "%s[*]" .context) "v" (printf "%s[%s]" .target $tmp) (add .depth 2)}}{{$ctx := .}}
+{{unmarshalAttribute .elemType .versioned .defaultPkg (printf "%s[*]" .context) "v" (printf "%s[%s]" .target $tmp) (add .depth 2)}}{{$ctx := .}}
 {{tabs .depth}}	}
 {{tabs .depth}}} else {
 {{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "array", err)
 {{tabs .depth}}}`
 
-	unmObjectTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
+	unmObjectTmpl = `{{tabs .depth}}{{$ctx := .}}if val, ok := {{.source}}.(map[string]interface{}); ok {
 {{tabs .depth}}{{$context := .context}}{{$depth := .depth}}{{$target := .target}}{{$required := .required}}	{{$target}} = new({{gotypename .type (add .depth 1)}})
 {{range $name, $att := .type.ToObject}}{{tabs $depth}}	if v, ok := val["{{$name}}"]; ok {
-{{tabs $depth}}		{{$temp := tempvar}}var {{$temp}} {{gotyperef $att.Type (add $depth 2)}}
-{{unmarshalAttribute $att (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}
+{{tabs $depth}}		{{$temp := tempvar}}var {{$temp}} {{gopkgtyperef $att.Type $ctx.versioned $ctx.defaultPkg (add $depth 2)}}
+{{unmarshalAttribute $att $ctx.versioned $ctx.defaultPkg (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}
 {{tabs $depth}}		{{printf "%s.%s" $target (goify $name true)}} = {{$temp}}
 {{tabs $depth}}	}{{if (has $required $name)}} else {
 {{tabs $depth}}		err = goa.MissingAttributeError(` + "`" + `{{$context}}` + "`" + `, "{{$name}}", err)
@@ -992,9 +1040,9 @@ func {{.Name}}(source {{gotyperef .Type 0}}, inErr error) (target {{gonative .Ty
 {{tabs .depth}}			return
 {{tabs .depth}}		}
 {{tabs .depth}}		var {{$k}} {{gotypename .type.KeyType.Type (add .depth 2)}}
-{{tabs .depth}}		{{unmarshalAttribute .type.KeyType (printf "%s.keys[*]" .context) $ki $k (add .depth 2)}}
+{{tabs .depth}}		{{unmarshalAttribute .type.KeyType .versioned .defaultPkg (printf "%s.keys[*]" .context) $ki $k (add .depth 2)}}
 {{end}}{{$v := tempvar}}{{if not (eq .type.ElemType.Type.Kind 5)}}{{tabs .depth}}		var {{$v}} {{gotypename .type.ElemType.Type (add .depth 2)}}
-{{tabs .depth}}		{{unmarshalAttribute .type.ElemType (printf "%s.values[*]" .context) "v" $v (add .depth 2)}}
+{{tabs .depth}}		{{unmarshalAttribute .type.ElemType .versioned .defaultPkg (printf "%s.values[*]" .context) "v" $v (add .depth 2)}}
 {{end}}{{tabs .depth}}		{{$tmp}}[{{if eq .type.KeyType.Type.Kind 4}}k{{else}}{{$k}}{{end}}] = {{if eq .type.ElemType.Type.Kind 5}}v{{else}}{{$v}}{{end}}
 {{tabs .depth}}	}
 {{tabs .depth}}	{{.target}} = {{$tmp}}

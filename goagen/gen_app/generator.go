@@ -64,7 +64,7 @@ func AppPackagePath() (string, error) {
 			if err != nil {
 				return "", err
 			}
-			return path, nil
+			return filepath.ToSlash(path), nil
 		}
 	}
 	return "", fmt.Errorf("output directory outside of Go workspace, make sure to define GOPATH correctly or change output directory")
@@ -169,13 +169,9 @@ func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, v
 		if err != nil {
 			return err
 		}
-		imports = append(imports, codegen.SimpleImport(filepath.ToSlash(appPkg)))
+		imports = append(imports, codegen.SimpleImport(appPkg))
 	}
 	ctxWr.WriteHeader(title, packageName(version), imports)
-	var appPackage string
-	if !version.IsDefault() {
-		appPackage = TargetPackage
-	}
 	err = version.IterateResources(func(r *design.ResourceDefinition) error {
 		if !r.SupportsVersion(version.Version) {
 			return nil
@@ -192,8 +188,8 @@ func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, v
 				Routes:       a.Routes,
 				Responses:    MergeResponses(r.Responses, a.Responses),
 				API:          api,
-				Version:      version,
-				AppPackage:   appPackage,
+				Versioned:    version.Version != "",
+				DefaultPkg:   TargetPackage,
 			}
 			return ctxWr.Execute(&ctxData)
 		})
@@ -223,7 +219,7 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 		if err != nil {
 			return err
 		}
-		imports = append(imports, codegen.SimpleImport(filepath.ToSlash(appPkg)))
+		imports = append(imports, codegen.SimpleImport(appPkg))
 	}
 	ctlWr.WriteHeader(title, packageName(version), imports)
 	var controllersData []*ControllerTemplateData
@@ -317,10 +313,15 @@ func (g *Generator) generateMediaTypes(verdir string, version *design.APIVersion
 		codegen.SimpleImport("github.com/raphael/goa"),
 		codegen.SimpleImport("fmt"),
 	}
-	mtWr.WriteHeader(title, TargetPackage, imports)
+	mtWr.WriteHeader(title, packageName(version), imports)
 	err = version.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
+		data := &MediaTypeTemplateData{
+			MediaType:  mt,
+			Versioned:  version.Version != "",
+			DefaultPkg: TargetPackage,
+		}
 		if mt.Type.IsObject() || mt.Type.IsArray() {
-			return mtWr.Execute(mt)
+			return mtWr.Execute(data)
 		}
 		return nil
 	})
@@ -344,9 +345,14 @@ func (g *Generator) generateUserTypes(verdir string, version *design.APIVersionD
 		codegen.SimpleImport("github.com/raphael/goa"),
 		codegen.SimpleImport("fmt"),
 	}
-	utWr.WriteHeader(title, TargetPackage, imports)
+	utWr.WriteHeader(title, packageName(version), imports)
 	err = version.IterateUserTypes(func(t *design.UserTypeDefinition) error {
-		return utWr.Execute(t)
+		data := &UserTypeTemplateData{
+			UserType:   t,
+			Versioned:  version.Version != "",
+			DefaultPkg: TargetPackage,
+		}
+		return utWr.Execute(data)
 	})
 	g.genfiles = append(g.genfiles, utFile)
 	if err != nil {
