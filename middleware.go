@@ -1,16 +1,19 @@
 package goa
 
 import (
+	"compress/gzip"
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -273,6 +276,99 @@ func RequireHeader(
 			} else {
 				err = h(ctx)
 			}
+			return
+		}
+	}
+}
+
+// These compression constants are copied from the compress/gzip package.
+const (
+	encodingGzip = "gzip"
+
+	headerAcceptEncoding  = "Accept-Encoding"
+	headerContentEncoding = "Content-Encoding"
+	headerContentLength   = "Content-Length"
+	headerContentType     = "Content-Type"
+	headerVary            = "Vary"
+	headerSecWebSocketKey = "Sec-WebSocket-Key"
+)
+
+// gzipResponseWriter wraps the http.ResponseWriter to provide gzip
+// capabilities.
+type gzipResponseWriter struct {
+	http.ResponseWriter
+	gzw *gzip.Writer
+}
+
+// Write writes bytes to the gzip.Writer. It will also set the Content-Type
+// header using the net/http library content type detection if the Content-Type
+// header was not set yet.
+func (grw gzipResponseWriter) Write(b []byte) (int, error) {
+	if len(grw.Header().Get(headerContentType)) == 0 {
+		grw.Header().Set(headerContentType, http.DetectContentType(b))
+	}
+	return grw.gzw.Write(b)
+}
+
+// handler struct contains the ServeHTTP method
+type handler struct {
+	pool sync.Pool
+}
+
+// Gzip encodes the response using Gzip encoding and sets all the appropriate
+// headers. If the Content-Type is not set, it will be set by calling
+// http.DetectContentType on the data being written.
+func Gzip(level int) Middleware {
+	gzipPool := sync.Pool{
+		New: func() interface{} {
+			gz, err := gzip.NewWriterLevel(ioutil.Discard, level)
+			if err != nil {
+				panic(err)
+			}
+			return gz
+		},
+	}
+	return func(h Handler) Handler {
+		return func(ctx *Context) (err error) {
+			w := ctx.Value(respKey).(http.ResponseWriter)
+			r := ctx.Request()
+			// Skip compression if the client doesn't accept gzip encoding, is
+			// requesting a WebSocket or the data is already compressed.
+			if !strings.Contains(r.Header.Get(headerAcceptEncoding), encodingGzip) ||
+				len(r.Header.Get(headerSecWebSocketKey)) > 0 ||
+				w.Header().Get(headerContentEncoding) == encodingGzip {
+				return h(ctx)
+			}
+
+			// Retrieve gzip writer from the pool. Reset it to use the ResponseWriter.
+			// This allows us to re-use an already allocated buffer rather than
+			// allocating a new buffer for every request.
+			gz := gzipPool.Get().(*gzip.Writer)
+			gz.Reset(w)
+
+			// Set the appropriate gzip headers.
+			headers := w.Header()
+			headers.Set(headerContentEncoding, encodingGzip)
+			headers.Set(headerVary, headerAcceptEncoding)
+
+			// Wrap the original http.ResponseWriter with our gzipResponseWriter
+			grw := gzipResponseWriter{
+				ResponseWriter: w,
+				gzw:            gz,
+			}
+			ctx.SetValue(respKey, grw)
+
+			// Call the next handler supplying the gzipResponseWriter instead of
+			// the original.
+			err = h(ctx)
+			if err != nil {
+				return
+			}
+
+			// Delete the content length after we know we have been written to.
+			grw.Header().Del(headerContentLength)
+			gz.Close()
+			gzipPool.Put(gz)
 			return
 		}
 	}

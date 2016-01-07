@@ -1,7 +1,10 @@
 package goa_test
 
 import (
+	"bytes"
+	"compress/gzip"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -337,6 +340,51 @@ var _ = Describe("RequireHeader", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(ctx.ResponseStatus()).Should(Equal(http.StatusNotFound))
 	})
+})
+
+var _ = Describe("Gzip", func() {
+	var handler *testHandler
+	var ctx *goa.Context
+	var req *http.Request
+	var rw *TestResponseWriter
+	params := url.Values{"param": []string{"value"}}
+	payload := map[string]interface{}{"payload": 42}
+
+	BeforeEach(func() {
+		var err error
+		req, err = http.NewRequest("POST", "/foo/bar", strings.NewReader(`{"payload":42}`))
+		req.Header.Set("Accept-Encoding", "gzip")
+		Ω(err).ShouldNot(HaveOccurred())
+		rw = &TestResponseWriter{
+			ParentHeader: http.Header{},
+		}
+
+		ctx = goa.NewContext(nil, req, rw, params, payload)
+		handler = new(testHandler)
+		logger := log15.New("test", "test")
+		logger.SetHandler(handler)
+		ctx.Logger = logger
+	})
+
+	It("encodes response using gzip", func() {
+		h := func(ctx *goa.Context) error {
+			ctx.Write([]byte("gzip me!"))
+			ctx.WriteHeader(http.StatusOK)
+			return nil
+		}
+		t := goa.Gzip(gzip.BestCompression)(h)
+		err := t(ctx)
+		Ω(err).ShouldNot(HaveOccurred())
+		Ω(ctx.ResponseStatus()).Should(Equal(http.StatusOK))
+
+		gzr, err := gzip.NewReader(bytes.NewReader(rw.Body))
+		Ω(err).ShouldNot(HaveOccurred())
+		buf := bytes.NewBuffer(nil)
+		io.Copy(buf, gzr)
+		Ω(err).ShouldNot(HaveOccurred())
+		Ω(buf.String()).Should(Equal("gzip me!"))
+	})
+
 })
 
 type testHandler struct {
