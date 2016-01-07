@@ -359,6 +359,7 @@ func CollectionOf(v interface{}, dsl ...func()) *design.MediaTypeDefinition {
 		if mt, ok := mediaTypeDefinition(true); ok {
 			mt.TypeName = typeName
 			mt.AttributeDefinition = &design.AttributeDefinition{Type: ArrayOf(m)}
+			mt.APIVersions = m.APIVersions
 			if len(dsl) > 0 {
 				executeDSL(dsl[0], mt)
 			}

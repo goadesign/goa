@@ -259,7 +259,7 @@ func main() {
 {{range $name, $res := $api.Resources}}{{if $res.SupportsNoVersion}}{{$name := goify $res.Name true}}	// Mount "{{$res.Name}}" controller
 	{{$tmp := tempvar}}{{$tmp}} := New{{$name}}Controller(service)
 	{{targetPkg}}.Mount{{$name}}Controller(service, {{$tmp}})
-{{end}}{{end}}{{range $ver, $prop := $api.Versions}}
+{{end}}{{end}}{{range $ver, $prop := $api.APIVersions}}
 	// Version {{$ver}}
 {{range $name, $res := $api.Resources}}{{if $res.SupportsVersion $ver}}{{$name := goify (printf "%s%s" $res.Name (or (and $ver (goify (versionPkg $ver) true)) "")) true}}	// Mount "{{$res.Name}}" controller
 	{{$tmp := tempvar}}{{$tmp}} := New{{$name}}Controller(service)
