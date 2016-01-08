@@ -127,7 +127,10 @@ func (m *DefaultMux) Version(version string) VersionMux {
 	if mux, ok := m.muxes[version]; ok {
 		return mux
 	}
-	mux := &defaultVersionMux{router: httprouter.New()}
+	mux := &defaultVersionMux{
+		router:  httprouter.New(),
+		handles: make(map[string]HandleFunc),
+	}
 	m.muxes[version] = mux
 	return mux
 }
