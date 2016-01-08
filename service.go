@@ -3,6 +3,7 @@ package goa
 import (
 	"encoding/json"
 	"fmt"
+	"mime"
 	"net/http"
 	"net/url"
 	"os"
@@ -318,7 +319,9 @@ func (ctrl *ApplicationController) HandleFunc(name string, h Handler) HandleFunc
 		var err error
 		if r.ContentLength > 0 {
 			contentType := r.Header.Get("Content-Type")
-			if contentType == "application/json" || contentType == "" {
+			mediaType, _, err := mime.ParseMediaType(contentType)
+
+			if (err == nil && mediaType == "application/json") || contentType == "" {
 				decoder := json.NewDecoder(r.Body)
 				err = decoder.Decode(&payload)
 			}
