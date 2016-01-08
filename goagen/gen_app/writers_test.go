@@ -581,12 +581,14 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam := c.Get("param")
-	if param, err2 := strconv.Atoi(rawParam); err2 == nil {
-		ctx.Param = int(param)
-	} else {
-		err = goa.InvalidParamTypeError("param", rawParam, "integer", err)
+	if rawParam != "" {
+		if param, err2 := strconv.Atoi(rawParam); err2 == nil {
+			ctx.Param = int(param)
+		} else {
+			err = goa.InvalidParamTypeError("param", rawParam, "integer", err)
+		}
+		ctx.HasParam = true
 	}
-	ctx.HasParam = true
 	return &ctx, err
 }
 `
@@ -605,8 +607,10 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam := c.Get("param")
-	ctx.Param = rawParam
-	ctx.HasParam = true
+	if rawParam != "" {
+		ctx.Param = rawParam
+		ctx.HasParam = true
+	}
 	return &ctx, err
 }
 `
@@ -625,12 +629,14 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam := c.Get("param")
-	if param, err2 := strconv.ParseFloat(rawParam, 64); err2 == nil {
-		ctx.Param = param
-	} else {
-		err = goa.InvalidParamTypeError("param", rawParam, "number", err)
+	if rawParam != "" {
+		if param, err2 := strconv.ParseFloat(rawParam, 64); err2 == nil {
+			ctx.Param = param
+		} else {
+			err = goa.InvalidParamTypeError("param", rawParam, "number", err)
+		}
+		ctx.HasParam = true
 	}
-	ctx.HasParam = true
 	return &ctx, err
 }
 `
@@ -648,12 +654,14 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam := c.Get("param")
-	if param, err2 := strconv.ParseBool(rawParam); err2 == nil {
-		ctx.Param = param
-	} else {
-		err = goa.InvalidParamTypeError("param", rawParam, "boolean", err)
+	if rawParam != "" {
+		if param, err2 := strconv.ParseBool(rawParam); err2 == nil {
+			ctx.Param = param
+		} else {
+			err = goa.InvalidParamTypeError("param", rawParam, "boolean", err)
+		}
+		ctx.HasParam = true
 	}
-	ctx.HasParam = true
 	return &ctx, err
 }
 `
@@ -672,9 +680,11 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam := c.Get("param")
-	elemsParam := strings.Split(rawParam, ",")
-	ctx.Param = elemsParam
-	ctx.HasParam = true
+	if rawParam != "" {
+		elemsParam := strings.Split(rawParam, ",")
+		ctx.Param = elemsParam
+		ctx.HasParam = true
+	}
 	return &ctx, err
 }
 `
@@ -693,17 +703,19 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawParam := c.Get("param")
-	elemsParam := strings.Split(rawParam, ",")
-	elemsParam2 := make([]int, len(elemsParam))
-	for i, rawElem := range elemsParam {
-		if elem, err2 := strconv.Atoi(rawElem); err2 == nil {
-			elemsParam2[i] = int(elem)
-		} else {
-			err = goa.InvalidParamTypeError("elem", rawElem, "integer", err)
+	if rawParam != "" {
+		elemsParam := strings.Split(rawParam, ",")
+		elemsParam2 := make([]int, len(elemsParam))
+		for i, rawElem := range elemsParam {
+			if elem, err2 := strconv.Atoi(rawElem); err2 == nil {
+				elemsParam2[i] = int(elem)
+			} else {
+				err = goa.InvalidParamTypeError("elem", rawElem, "integer", err)
+			}
 		}
+		ctx.Param = elemsParam2
+		ctx.HasParam = true
 	}
-	ctx.Param = elemsParam2
-	ctx.HasParam = true
 	return &ctx, err
 }
 `
@@ -722,12 +734,14 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
 	rawInt := c.Get("int")
-	if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
-		ctx.Int = int(int_)
-	} else {
-		err = goa.InvalidParamTypeError("int", rawInt, "integer", err)
+	if rawInt != "" {
+		if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
+			ctx.Int = int(int_)
+		} else {
+			err = goa.InvalidParamTypeError("int", rawInt, "integer", err)
+		}
+		ctx.HasInt = true
 	}
-	ctx.HasInt = true
 	return &ctx, err
 }
 `

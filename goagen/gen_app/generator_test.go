@@ -282,7 +282,9 @@ func NewGetWidgetContext(c *goa.Context) (*GetWidgetContext, error) {
 	var err error
 	ctx := GetWidgetContext{Context: c}
 	rawID := c.Get("id")
-	ctx.ID = rawID
+	if rawID != "" {
+		ctx.ID = rawID
+	}
 	return &ctx, err
 }
 

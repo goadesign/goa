@@ -414,13 +414,15 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 		err = goa.MissingHeaderError("{{$name}}", err)
 	}{{end}}{{end}}
 {{end}}{{if.Params}}{{$ctx := .}}{{range $name, $att := .Params.Type.ToObject}}	raw{{goify $name true}} := c.Get("{{$name}}")
-{{$mustValidate := $ctx.MustValidate $name}}{{$depth := or (and $mustValidate 2) 1}}{{if $mustValidate}}	if raw{{goify $name true}} == "" {
+{{$mustValidate := $ctx.MustValidate $name}}{{if $mustValidate}}	if raw{{goify $name true}} == "" {
 		err = goa.MissingParamError("{{$name}}", err)
 	} else {
-{{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (goify $name true)) $depth)}}{{if $ctx.MustSetHas $name}}{{tabs $depth}}ctx.Has{{goify $name true}} = true
-{{end}}{{$validation := validationChecker $att ($ctx.Params.IsRequired $name) (printf "ctx.%s" (goify $name true)) $name $depth}}{{if $validation}}{{$validation}}
-{{end}}{{if $mustValidate}}	}
-{{end}}{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	p, err := New{{gotypename .Payload 0}}(c.Payload())
+{{else}}	if raw{{goify $name true}} != "" {
+{{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (goify $name true)) 2)}}{{/*
+*/}}{{if $ctx.MustSetHas $name}}		ctx.Has{{goify $name true}} = true
+{{end}}{{$validation := validationChecker $att ($ctx.Params.IsRequired $name) (printf "ctx.%s" (goify $name true)) $name 2}}{{if $validation}}{{$validation}}
+{{end}}	}
+{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	p, err := New{{gotypename .Payload 0}}(c.Payload())
 	if err != nil {
 		return nil, err
 	}
