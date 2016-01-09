@@ -66,7 +66,7 @@ type (
 		Routes       []*design.RouteDefinition
 		Responses    map[string]*design.ResponseDefinition
 		API          *design.APIDefinition
-		Versioned    bool
+		Version      *design.APIVersionDefinition
 		DefaultPkg   string
 	}
 
@@ -88,9 +88,9 @@ type (
 
 	// ControllerTemplateData contains the information required to generate an action handler.
 	ControllerTemplateData struct {
-		Resource string                   // Lower case plural resource name, e.g. "bottles"
-		Actions  []map[string]interface{} // Array of actions, each action has keys "Name", "Routes" and "Context"
-		Version  string                   // Controller API version
+		Resource string                       // Lower case plural resource name, e.g. "bottles"
+		Actions  []map[string]interface{}     // Array of actions, each action has keys "Name", "Routes" and "Context"
+		Version  *design.APIVersionDefinition // Controller API version
 	}
 
 	// ResourceData contains the information required to generate the resource GoGenerator
@@ -104,6 +104,11 @@ type (
 	}
 )
 
+// Versioned returns true if the context was built from an API version.
+func (c *ContextTemplateData) Versioned() bool {
+	return !c.Version.IsDefault()
+}
+
 // IsPathParam returns true if the given parameter name corresponds to a path parameter for all
 // the context action routes. Such parameter is required but does not need to be validated as
 // httprouter takes care of that.
@@ -113,7 +118,7 @@ func (c *ContextTemplateData) IsPathParam(param string) bool {
 	if params.Type.IsObject() {
 		for _, r := range c.Routes {
 			pp = false
-			for _, p := range r.Params() {
+			for _, p := range r.Params(c.Version) {
 				if p == param {
 					pp = true
 					break
@@ -480,7 +485,7 @@ type {{.Resource}}Controller interface {
 // Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given service.
 func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Controller) {
 	var h goa.Handler
-	mux := service.ServeMux(){{if .Version}}.Version("{{.Version}}"){{end}}
+	mux := service.ServeMux(){{if not .Version.IsDefault}}.Version("{{.Version.Version}}"){{end}}
 {{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
 		ctx, err := New{{.Context}}(c)
 		if err != nil {
@@ -488,8 +493,8 @@ func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Control
 		}
 		return ctrl.{{.Name}}(ctx)
 	}
-{{range .Routes}}	mux.Handle("{{.Verb}}", "{{.FullPath}}", ctrl.HandleFunc("{{$action.Name}}", h))
-	service.Info("mount", "ctrl", "{{$res}}",{{if $ver}} "version", "{{$ver}}",{{end}} "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}")
+{{range .Routes}}	mux.Handle("{{.Verb}}", "{{.FullPath $ver}}", ctrl.HandleFunc("{{$action.Name}}", h))
+	service.Info("mount", "ctrl", "{{$res}}",{{if not $ver.IsDefault}} "version", "{{$ver.Version}}",{{end}} "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath $ver}}")
 {{end}}{{end}}}
 `
 
