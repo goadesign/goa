@@ -179,36 +179,42 @@ func finalizeResource(r *design.ResourceDefinition) {
 		}
 		// 2. Create implicit action parameters for path wildcards that dont' have one
 		for _, r := range a.Routes {
-			wcs := design.ExtractWildcards(r.FullPath())
-			for _, wc := range wcs {
-				found := false
-				var o design.Object
-				if all := a.AllParams(); all != nil {
-					o = all.Type.ToObject()
-				} else {
-					o = design.Object{}
-					a.Params = &design.AttributeDefinition{Type: o}
-				}
-				for n := range o {
-					if n == wc {
-						found = true
-						break
+			design.Design.IterateVersions(func(ver *design.APIVersionDefinition) error {
+				wcs := design.ExtractWildcards(r.FullPath(ver))
+				for _, wc := range wcs {
+					found := false
+					var o design.Object
+					if all := a.AllParams(); all != nil {
+						o = all.Type.ToObject()
+					} else {
+						o = design.Object{}
+						a.Params = &design.AttributeDefinition{Type: o}
+					}
+					for n := range o {
+						if n == wc {
+							found = true
+							break
+						}
+					}
+					if !found {
+						o[wc] = &design.AttributeDefinition{Type: design.String}
 					}
 				}
-				if !found {
-					o[wc] = &design.AttributeDefinition{Type: design.String}
-				}
-			}
+				return nil
+			})
 		}
 		// 3. Compute QueryParams from Params
 		if params := a.Params; params != nil {
 			queryParams := params.Dup()
-			for _, route := range a.Routes {
-				pnames := route.Params()
-				for _, pname := range pnames {
-					delete(queryParams.Type.ToObject(), pname)
+			design.Design.IterateVersions(func(ver *design.APIVersionDefinition) error {
+				for _, route := range a.Routes {
+					pnames := route.Params(ver)
+					for _, pname := range pnames {
+						delete(queryParams.Type.ToObject(), pname)
+					}
 				}
-			}
+				return nil
+			})
 			// (note: we may end up with required attribute names that don't correspond
 			// to actual attributes cos' we just deleted them but that's probably OK.)
 			a.QueryParams = queryParams

@@ -52,6 +52,8 @@ var _ = Describe("ContextsWriter", func() {
 				var version *design.APIVersionDefinition
 				if design.Design != nil {
 					version = design.Design.APIVersionDefinition
+				} else {
+					version = &design.APIVersionDefinition{}
 				}
 				data = &genapp.ContextTemplateData{
 					Name:         "ListBottleContext",
@@ -62,7 +64,7 @@ var _ = Describe("ContextsWriter", func() {
 					Headers:      headers,
 					Responses:    responses,
 					API:          design.Design,
-					Versioned:    version != nil && version.Version != "",
+					Version:      version,
 					DefaultPkg:   "",
 				}
 			})
@@ -366,6 +368,7 @@ var _ = Describe("ControllersWriter", func() {
 			JustBeforeEach(func() {
 				d := &genapp.ControllerTemplateData{
 					Resource: "Bottles",
+					Version:  &design.APIVersionDefinition{},
 				}
 				as := make([]map[string]interface{}, len(actions))
 				for i, a := range actions {

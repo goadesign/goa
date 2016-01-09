@@ -70,16 +70,6 @@ func Action(name string, dsl func()) {
 func Routing(routes ...*design.RouteDefinition) {
 	if a, ok := actionDefinition(true); ok {
 		for _, r := range routes {
-			rwcs := design.ExtractWildcards(a.Parent.FullPath())
-			wcs := design.ExtractWildcards(r.Path)
-			for _, rwc := range rwcs {
-				for _, wc := range wcs {
-					if rwc == wc {
-						ReportError(`duplicate wildcard "%s" in resource base path "%s" and action route "%s"`,
-							wc, a.Parent.FullPath(), r.Path)
-					}
-				}
-			}
 			r.Parent = a
 			a.Routes = append(a.Routes, r)
 		}

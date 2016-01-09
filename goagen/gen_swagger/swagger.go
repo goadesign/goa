@@ -508,7 +508,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	if err != nil {
 		return err
 	}
-	params, err := paramsFromDefinition(action.AllParams(), route.FullPath())
+	params, err := paramsFromDefinition(action.AllParams(), route.FullPath(design.Design.APIVersionDefinition))
 	if err != nil {
 		return err
 	}
@@ -559,7 +559,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		Deprecated:   false,
 	}
 	key := design.WildcardRegex.ReplaceAllStringFunc(
-		route.FullPath(),
+		route.FullPath(design.Design.APIVersionDefinition),
 		func(w string) string {
 			return fmt.Sprintf("/{%s}", w[2:])
 		},

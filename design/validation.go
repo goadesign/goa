@@ -60,8 +60,8 @@ type wildCardInfo struct {
 	Orig DSLDefinition
 }
 
-func newRouteInfo(resource *ResourceDefinition, action *ActionDefinition, route *RouteDefinition) *routeInfo {
-	vars := route.Params()
+func newRouteInfo(version *APIVersionDefinition, resource *ResourceDefinition, action *ActionDefinition, route *RouteDefinition) *routeInfo {
+	vars := route.Params(version)
 	wi := make([]*wildCardInfo, len(vars))
 	for i, v := range vars {
 		var orig DSLDefinition
@@ -74,7 +74,7 @@ func newRouteInfo(resource *ResourceDefinition, action *ActionDefinition, route 
 		}
 		wi[i] = &wildCardInfo{Name: v, Orig: orig}
 	}
-	key := WildcardRegex.ReplaceAllLiteralString(route.FullPath(), "*")
+	key := WildcardRegex.ReplaceAllLiteralString(route.FullPath(version), "*")
 	return &routeInfo{
 		Key:       key,
 		Resource:  resource,
@@ -99,7 +99,6 @@ func (r *routeInfo) DifferentWildcards(other *routeInfo) (res [][2]*wildCardInfo
 // an actual resource.
 func (a *APIDefinition) Validate() *ValidationErrors {
 	verr := new(ValidationErrors)
-	var allRoutes []*routeInfo
 	if a.BaseParams != nil {
 		verr.Merge(a.BaseParams.Validate("base parameters", a))
 	}
@@ -108,59 +107,72 @@ func (a *APIDefinition) Validate() *ValidationErrors {
 	a.validateLicense(verr)
 	a.validateDocs(verr)
 
-	a.IterateResources(func(r *ResourceDefinition) error {
-		verr.Merge(r.Validate())
-		r.IterateActions(func(ac *ActionDefinition) error {
-			if ac.Docs != nil && ac.Docs.URL != "" {
-				if _, err := url.ParseRequestURI(ac.Docs.URL); err != nil {
-					verr.Add(ac, "invalid action docs URL value: %s", err)
+	a.IterateVersions(func(ver *APIVersionDefinition) error {
+		var allRoutes []*routeInfo
+		a.IterateResources(func(r *ResourceDefinition) error {
+			verr.Merge(r.Validate(ver))
+			r.IterateActions(func(ac *ActionDefinition) error {
+				if ac.Docs != nil && ac.Docs.URL != "" {
+					if _, err := url.ParseRequestURI(ac.Docs.URL); err != nil {
+						verr.Add(ac, "invalid action docs URL value: %s", err)
+					}
 				}
-			}
-			for _, ro := range ac.Routes {
-				info := newRouteInfo(r, ac, ro)
-				allRoutes = append(allRoutes, info)
-			}
+				for _, ro := range ac.Routes {
+					info := newRouteInfo(ver, r, ac, ro)
+					allRoutes = append(allRoutes, info)
+					rwcs := ExtractWildcards(ac.Parent.FullPath(ver))
+					wcs := ExtractWildcards(ro.Path)
+					for _, rwc := range rwcs {
+						for _, wc := range wcs {
+							if rwc == wc {
+								verr.Add(ac, `duplicate wildcard "%s" in resource base path "%s" and action route "%s"`,
+									wc, ac.Parent.FullPath(ver), ro.Path)
+							}
+						}
+					}
+				}
+				return nil
+			})
 			return nil
 		})
-		return nil
-	})
-	for _, route := range allRoutes {
-		for _, other := range allRoutes {
-			if route == other {
-				continue
-			}
-			if strings.HasPrefix(route.Key, other.Key) {
-				diffs := route.DifferentWildcards(other)
-				if len(diffs) > 0 {
-					var msg string
-					conflicts := make([]string, len(diffs))
-					for i, d := range diffs {
-						conflicts[i] = fmt.Sprintf(`"%s" from %s and "%s" from %s`, d[0].Name, d[0].Orig.Context(), d[1].Name, d[1].Orig.Context())
+		for _, route := range allRoutes {
+			for _, other := range allRoutes {
+				if route == other {
+					continue
+				}
+				if strings.HasPrefix(route.Key, other.Key) {
+					diffs := route.DifferentWildcards(other)
+					if len(diffs) > 0 {
+						var msg string
+						conflicts := make([]string, len(diffs))
+						for i, d := range diffs {
+							conflicts[i] = fmt.Sprintf(`"%s" from %s and "%s" from %s`, d[0].Name, d[0].Orig.Context(), d[1].Name, d[1].Orig.Context())
+						}
+						msg = fmt.Sprintf("%s", strings.Join(conflicts, ", "))
+						verr.Add(route.Action,
+							`route "%s" conflicts with route "%s" of %s action %s. Make sure wildcards at the same positions have the same name. Conflicting wildcards are %s.`,
+							route.Route.FullPath(ver),
+							other.Route.FullPath(ver),
+							other.Resource.Name,
+							other.Action.Name,
+							msg,
+						)
 					}
-					msg = fmt.Sprintf("%s", strings.Join(conflicts, ", "))
-					verr.Add(route.Action,
-						`route "%s" conflicts with route "%s" of %s action %s. Make sure wildcards at the same positions have the same name. Conflicting wildcards are %s.`,
-						route.Route.FullPath(),
-						other.Route.FullPath(),
-						other.Resource.Name,
-						other.Action.Name,
-						msg,
-					)
 				}
 			}
 		}
-	}
-
-	a.IterateMediaTypes(func(mt *MediaTypeDefinition) error {
-		verr.Merge(mt.Validate())
-		return nil
-	})
-	a.IterateUserTypes(func(t *UserTypeDefinition) error {
-		verr.Merge(t.Validate("", a))
-		return nil
-	})
-	a.IterateResponses(func(r *ResponseDefinition) error {
-		verr.Merge(r.Validate())
+		ver.IterateMediaTypes(func(mt *MediaTypeDefinition) error {
+			verr.Merge(mt.Validate())
+			return nil
+		})
+		ver.IterateUserTypes(func(t *UserTypeDefinition) error {
+			verr.Merge(t.Validate("", a))
+			return nil
+		})
+		ver.IterateResponses(func(r *ResponseDefinition) error {
+			verr.Merge(r.Validate())
+			return nil
+		})
 		return nil
 	})
 
@@ -193,12 +205,12 @@ func (a *APIDefinition) validateDocs(verr *ValidationErrors) {
 
 // Validate tests whether the resource definition is consistent: action names are valid and each action is
 // valid.
-func (r *ResourceDefinition) Validate() *ValidationErrors {
+func (r *ResourceDefinition) Validate(version *APIVersionDefinition) *ValidationErrors {
 	verr := new(ValidationErrors)
 	if r.Name == "" {
 		verr.Add(r, "Resource name cannot be empty")
 	}
-	r.validateActions(verr)
+	r.validateActions(version, verr)
 	if r.BaseParams != nil {
 		r.validateBaseParams(verr)
 	}
@@ -219,13 +231,13 @@ func (r *ResourceDefinition) Validate() *ValidationErrors {
 	return verr.AsError()
 }
 
-func (r *ResourceDefinition) validateActions(verr *ValidationErrors) {
+func (r *ResourceDefinition) validateActions(version *APIVersionDefinition, verr *ValidationErrors) {
 	found := false
 	for _, a := range r.Actions {
 		if a.Name == r.CanonicalActionName {
 			found = true
 		}
-		verr.Merge(a.Validate())
+		verr.Merge(a.Validate(version))
 	}
 	if r.CanonicalActionName != "" && !found {
 		verr.Add(r, `unknown canonical action "%s"`, r.CanonicalActionName)
@@ -278,7 +290,7 @@ func (r *ResourceDefinition) validateParent(verr *ValidationErrors) {
 
 // Validate tests whether the action definition is consistent: parameters have unique names and it has at least
 // one response.
-func (a *ActionDefinition) Validate() *ValidationErrors {
+func (a *ActionDefinition) Validate(version *APIVersionDefinition) *ValidationErrors {
 	verr := new(ValidationErrors)
 	if a.Name == "" {
 		verr.Add(a, "Action name cannot be empty")
@@ -294,7 +306,7 @@ func (a *ActionDefinition) Validate() *ValidationErrors {
 		}
 		verr.Merge(r.Validate())
 	}
-	verr.Merge(a.ValidateParams())
+	verr.Merge(a.ValidateParams(version))
 	if a.Payload != nil {
 		verr.Merge(a.Payload.Validate("action payload", a))
 	}
@@ -305,7 +317,7 @@ func (a *ActionDefinition) Validate() *ValidationErrors {
 }
 
 // ValidateParams checks the action parameters (make sure they have names, members and types).
-func (a *ActionDefinition) ValidateParams() *ValidationErrors {
+func (a *ActionDefinition) ValidateParams(version *APIVersionDefinition) *ValidationErrors {
 	verr := new(ValidationErrors)
 	if a.Params == nil {
 		return nil
@@ -316,7 +328,7 @@ func (a *ActionDefinition) ValidateParams() *ValidationErrors {
 	}
 	var wcs []string
 	for _, r := range a.Routes {
-		rwcs := ExtractWildcards(r.FullPath())
+		rwcs := ExtractWildcards(r.FullPath(version))
 		for _, rwc := range rwcs {
 			found := false
 			for _, wc := range wcs {
