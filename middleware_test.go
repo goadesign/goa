@@ -193,6 +193,39 @@ var _ = Describe("LogRequest", func() {
 	})
 })
 
+var _ = Describe("LogResponse", func() {
+	var handler *testHandler
+	var ctx *goa.Context
+	params := url.Values{"param": []string{"value"}}
+	payload := map[string]interface{}{"payload": 42}
+	responseText := "some response data to be logged"
+
+	BeforeEach(func() {
+		req, err := http.NewRequest("POST", "/goo", strings.NewReader(`{"payload":42}`))
+		Ω(err).ShouldNot(HaveOccurred())
+		rw := new(TestResponseWriter)
+		ctx = goa.NewContext(nil, req, rw, params, payload)
+		handler = new(testHandler)
+		logger := log15.New("test", "test")
+		logger.SetHandler(handler)
+		ctx.Logger = logger
+	})
+
+	It("logs responses", func() {
+		h := func(ctx *goa.Context) error {
+			ctx.Respond(200, []byte(responseText))
+			return nil
+		}
+		lg := goa.LogResponse()(h)
+		Ω(lg(ctx)).ShouldNot(HaveOccurred())
+		Ω(handler.Records).Should(HaveLen(1))
+
+		Ω(handler.Records[0].Ctx).Should(HaveLen(4))
+		Ω(handler.Records[0].Ctx[2]).Should(Equal("raw"))
+		Ω(handler.Records[0].Ctx[3]).Should(Equal(responseText))
+	})
+})
+
 var _ = Describe("RequestID", func() {
 	const reqID = "request id"
 	var ctx *goa.Context
