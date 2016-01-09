@@ -697,17 +697,17 @@ func (r *ResourceDefinition) CanonicalAction() *ActionDefinition {
 // URITemplate returns a httprouter compliant URI template to this resource.
 // The result is the empty string if the resource does not have a "show" action
 // and does not define a different canonical action.
-func (r *ResourceDefinition) URITemplate() string {
+func (r *ResourceDefinition) URITemplate(version *APIVersionDefinition) string {
 	ca := r.CanonicalAction()
 	if ca == nil || len(ca.Routes) == 0 {
 		return ""
 	}
-	return ca.Routes[0].FullPath()
+	return ca.Routes[0].FullPath(version)
 }
 
 // FullPath computes the base path to the resource actions concatenating the API and parent resource
 // base paths as needed.
-func (r *ResourceDefinition) FullPath() string {
+func (r *ResourceDefinition) FullPath(version *APIVersionDefinition) string {
 	var basePath string
 	if p := r.Parent(); p != nil {
 		if ca := p.CanonicalAction(); ca != nil {
@@ -715,11 +715,11 @@ func (r *ResourceDefinition) FullPath() string {
 				// Note: all these tests should be true at code generation time
 				// as DSL validation makes sure that parent resources have a
 				// canonical path.
-				basePath = path.Join(routes[0].FullPath())
+				basePath = path.Join(routes[0].FullPath(version))
 			}
 		}
 	} else {
-		basePath = Design.BasePath
+		basePath = version.BasePath
 	}
 	return httprouter.CleanPath(path.Join(basePath, r.BasePath))
 }
@@ -884,28 +884,6 @@ func (a *ActionDefinition) AllParams() *AttributeDefinition {
 		res = res.Merge(p.CanonicalAction().AllParams())
 	}
 	return res
-}
-
-// AllParamNames returns the path and query string parameter names of the action across all its
-// routes.
-func (a *ActionDefinition) AllParamNames() []string {
-	var params []string
-	for _, r := range a.Routes {
-		for _, p := range r.Params() {
-			found := false
-			for _, pa := range params {
-				if pa == p {
-					found = true
-					break
-				}
-			}
-			if !found {
-				params = append(params, p)
-			}
-		}
-	}
-	sort.Strings(params)
-	return params
 }
 
 // Context returns the generic definition name used in error messages.
@@ -1178,19 +1156,19 @@ func (r *RouteDefinition) Context() string {
 
 // Params returns the route parameters.
 // For example for the route "GET /foo/:fooID" Params returns []string{"fooID"}.
-func (r *RouteDefinition) Params() []string {
-	return ExtractWildcards(r.FullPath())
+func (r *RouteDefinition) Params(version *APIVersionDefinition) []string {
+	return ExtractWildcards(r.FullPath(version))
 }
 
 // FullPath returns the action full path computed by concatenating the API and resource base paths
 // with the action specific path.
-func (r *RouteDefinition) FullPath() string {
+func (r *RouteDefinition) FullPath(version *APIVersionDefinition) string {
 	if strings.HasPrefix(r.Path, "//") {
 		return httprouter.CleanPath(r.Path[1:])
 	}
 	var base string
 	if r.Parent != nil && r.Parent.Parent != nil {
-		base = r.Parent.Parent.FullPath()
+		base = r.Parent.Parent.FullPath(version)
 	}
 	return httprouter.CleanPath(path.Join(base, r.Path))
 }
