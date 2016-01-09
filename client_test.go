@@ -3,7 +3,9 @@ package goa
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"gopkg.in/inconshreveable/log15.v2"
@@ -42,8 +44,6 @@ func ExampleWriteHeaders() {
 	// Key: val1, val2
 }
 
-// FIXME:
-// Cannot find a good way to test Client
 type clientFakeLogger struct {
 	log15.Logger
 	records []string
@@ -53,19 +53,42 @@ func (l *clientFakeLogger) Info(name string, _ ...interface{}) {
 	l.records = append(l.records, name)
 }
 
+type clientFakeHTTPHandler struct {
+	http.Handler
+}
+
+func (clientFakeHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("response"))
+}
+
 func TestClient(t *testing.T) {
-	Convey("Given a new client", t, func() {
+	Convey("Given a server and a client", t, func() {
+		s := httptest.NewServer(clientFakeHTTPHandler{})
 		c := NewClient()
 		l := &clientFakeLogger{}
 		c.Logger = l
 
 		Convey("When request", func() {
-			req, _ := http.NewRequest("", "", nil)
-			c.Do(req)
+			req, _ := http.NewRequest("GET", s.URL, nil)
+			resp, _ := c.Do(req)
 
-			Convey(`Log records should resemble []string{"started"}`, func() {
-				So(l.records, ShouldResemble, []string{"started"})
+			Convey("HTTP status code should be 200", func() {
+				So(resp.StatusCode, ShouldEqual, 200)
 			})
+
+			Convey(`Response body should be "response"`, func() {
+				body, _ := ioutil.ReadAll(resp.Body)
+				So(string(body), ShouldEqual, "response")
+				defer resp.Body.Close()
+			})
+
+			Convey(`Log records should resemble []string{"started", "completed"}`, func() {
+				So(l.records, ShouldResemble, []string{"started", "completed"})
+			})
+		})
+
+		Reset(func() {
+			s.Close()
 		})
 	})
 }
