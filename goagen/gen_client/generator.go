@@ -131,7 +131,12 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 
 	if err := api.IterateResources(func(res *design.ResourceDefinition) error {
 		return res.IterateActions(func(action *design.ActionDefinition) error {
-			return commandsTmpl.Execute(gg, action)
+			data := map[string]interface{}{
+				"Action":   action,
+				"Resource": action.Parent,
+				"Version":  design.Design.APIVersionDefinition,
+			}
+			return commandsTmpl.Execute(gg, data)
 		})
 	}); err != nil {
 		return err
@@ -419,7 +424,7 @@ func enumOptions(att *design.AttributeDefinition) string {
 // empty string if none.
 func defaultPath(action *design.ActionDefinition) string {
 	for _, r := range action.Routes {
-		candidate := r.FullPath()
+		candidate := r.FullPath(design.Design.APIVersionDefinition)
 		if !strings.ContainsRune(candidate, ':') {
 			return candidate
 		}
@@ -542,30 +547,30 @@ const commandTypesTmpl = `{{$cmdName := goify (printf "%s%s%s" .Name (title .Par
 `
 
 const commandsTmpl = `
-{{$cmdName := goify (printf "%s%sCommand" .Name (title .Parent.Name)) true}}// Run makes the HTTP request corresponding to the {{$cmdName}} command.
+{{$cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true}}// Run makes the HTTP request corresponding to the {{$cmdName}} command.
 func (cmd *{{$cmdName}}) Run(c *client.Client) (*http.Response, error) {
-{{if .Payload}}var payload {{gotyperefext .Payload 2 "client"}}
+{{if .Action.Payload}}var payload {{gotyperefext .Action.Payload 2 "client"}}
 	if cmd.Payload != "" {
 		err := json.Unmarshal([]byte(cmd.Payload), &payload)
 		if err != nil {
-{{if eq .Payload.Type.Kind 4}}	payload = cmd.Payload
+{{if eq .Action.Payload.Type.Kind 4}}	payload = cmd.Payload
 {{else}}			return nil, fmt.Errorf("failed to deserialize payload: %s", err)
 {{end}}		}
 	}
-{{end}}	return c.{{goify (printf "%s%s" .Name (title .Parent.Name)) true}}(cmd.Path{{if .Payload}}, {{if .Payload}}{{if .Payload.Type.IsObject}}&{{end}}payload{{else}}nil{{end}}{{end}}{{/*
-	*/}}{{$params := joinNames .QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
-	*/}}{{$headers := joinNames .Headers}}{{if $headers}}, {{$headers}}{{end}})
+{{end}}	return c.{{goify (printf "%s%s" .Action.Name (title .Resource.Name)) true}}(cmd.Path{{if .Action.Payload}}, {{if .Action.Payload}}{{if .Action.Payload.Type.IsObject}}&{{end}}payload{{else}}nil{{end}}{{end}}{{/*
+	*/}}{{$params := joinNames .Action.QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
+	*/}}{{$headers := joinNames .Action.Headers}}{{if $headers}}, {{$headers}}{{end}})
 }
 
 // RegisterFlags registers the command flags with the command line.
 func (cmd *{{$cmdName}}) RegisterFlags(cc *kingpin.CmdClause) {
-{{$default := defaultPath .}}	cc.Arg("path", ` + "`" + `Request path{{if $default}}, default is "{{$default}}"{{else}}, format is {{(index .Routes 0).FullPath}}{{end}}` + "`" + `){{if $default}}.Default("{{$default}}"){{else}}.Required(){{end}}.StringVar(&cmd.Path)
-{{if .Payload}}	cc.Flag("payload", "Request JSON body").StringVar(&cmd.Payload)
-{{end}}{{$params := .QueryParams}}{{if $params}}{{range $name, $param := $params.Type.ToObject}}	cc.Flag("{{$name}}", "{{$param.Description}}"){{/*
+{{$default := defaultPath .Action}}	cc.Arg("path", ` + "`" + `Request path{{if $default}}, default is "{{$default}}"{{else}}, format is {{(index .Action.Routes 0).FullPath .Version}}{{end}}` + "`" + `){{if $default}}.Default("{{$default}}"){{else}}.Required(){{end}}.StringVar(&cmd.Path)
+{{if .Action.Payload}}	cc.Flag("payload", "Request JSON body").StringVar(&cmd.Payload)
+{{end}}{{$params := .Action.QueryParams}}{{if $params}}{{range $name, $param := $params.Type.ToObject}}	cc.Flag("{{$name}}", "{{$param.Description}}"){{/*
 	*/}}{{if $params.IsRequired $name}}.Required(){{end}}{{/*
 	*/}}{{if $param.DefaultValue}}.Default({{printf "%#v" $param.DefaultValue}}){{end}}{{/*
 	*/}}.{{flagType $param}}Var(&cmd.{{goify $name true}}{{enumOptions $param}})
-{{end}}{{end}}{{$headers := .Headers}}{{if $headers}}{{range $name, $header := $headers.Type.ToObject}}	cc.Flag("{{$name}}", "{{$header.Description}}"){{/*
+{{end}}{{end}}{{$headers := .Action.Headers}}{{if $headers}}{{range $name, $header := $headers.Type.ToObject}}	cc.Flag("{{$name}}", "{{$header.Description}}"){{/*
 	*/}}{{if $headers.IsRequired $name}}.Required(){{end}}{{/*
 	*/}}{{if $header.DefaultValue}}.Default({{printf "%#v" $header.DefaultValue}}){{end}}{{/*
 	*/}}.StringVar(&cmd.{{goify $name true}})

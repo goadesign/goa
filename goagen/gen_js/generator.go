@@ -103,7 +103,11 @@ func (g *Generator) generateJS(jsFile string, funcs template.FuncMap, api *desig
 			if exampleAction == nil && a.Routes[0].Verb == "GET" {
 				exampleAction = a
 			}
-			if err = jsFuncsTmpl.Execute(file, a); err != nil {
+			data := map[string]interface{}{
+				"Action":  a,
+				"Version": design.Design.APIVersionDefinition,
+			}
+			if err = jsFuncsTmpl.Execute(file, data); err != nil {
 				return
 			}
 		}
@@ -140,8 +144,8 @@ func (g *Generator) generateIndexHTML(
 		}
 		args = strings.Join(argValues, ", ")
 	}
-	examplePath := exampleAction.Routes[0].FullPath()
-	pathParams := exampleAction.Routes[0].Params()
+	examplePath := exampleAction.Routes[0].FullPath(design.Design.APIVersionDefinition)
+	pathParams := exampleAction.Routes[0].Params(design.Design.APIVersionDefinition)
 	if len(pathParams) > 0 {
 		pathVars := exampleAction.AllParams().Type.ToObject()
 		pathValues := make([]interface{}, len(pathParams))
@@ -306,24 +310,24 @@ const moduleTend = `  return client;
 });
 `
 
-const jsFuncsT = `{{$params := params .}}
-  {{$name := printf "%s%s" .Name (title .Parent.Name)}}// {{if .Description}}{{.Description}}{{else}}{{$name}} calls the {{.Name}} action of the {{.Parent.Name}} resource.{{end}}
-  // path is the request path, the format is "{{(index .Routes 0).FullPath}}"
-  {{if .Payload}}// data contains the action payload (request body)
+const jsFuncsT = `{{$params := params .Action}}
+  {{$name := printf "%s%s" .Action.Name (title .Action.Parent.Name)}}// {{if .Action.Description}}{{.Action.Description}}{{else}}{{$name}} calls the {{.Action.Name}} action of the {{.Action.Parent.Name}} resource.{{end}}
+  // path is the request path, the format is "{{(index .Action.Routes 0).FullPath .Version}}"
+  {{if .Action.Payload}}// data contains the action payload (request body)
   {{end}}{{if $params}}// {{join $params ", "}} {{if gt (len $params) 1}}are{{else}}is{{end}} used to build the request query string.
   {{end}}// config is an optional object to be merged into the config built by the function prior to making the request.
   // The content of the config object is described here: https://github.com/mzabriskie/axios#request-api
   // This function returns a promise which raises an error if the HTTP response is a 4xx or 5xx.
-  client.{{$name}} = function (path{{if .Payload}}, data{{end}}{{if $params}}, {{join $params ", "}}{{end}}, config) {
+  client.{{$name}} = function (path{{if .Action.Payload}}, data{{end}}{{if $params}}, {{join $params ", "}}{{end}}, config) {
     cfg = {
       timeout: timeout,
       url: urlPrefix + path,
-      method: '{{toLower (index .Routes 0).Verb}}',
+      method: '{{toLower (index .Action.Routes 0).Verb}}',
 {{if $params}}      params: {
 {{range $index, $param := $params}}{{if $index}},
 {{end}}        {{$param}}: {{$param}}{{end}}
       },
-{{end}}{{if .Payload}}    data: data,
+{{end}}{{if .Action.Payload}}    data: data,
 {{end}}      responseType: 'json'
     };
     if (config) {

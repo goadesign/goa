@@ -71,7 +71,7 @@ func NewMux() ServeMux {
 			router:  httprouter.New(),
 			handles: make(map[string]HandleFunc),
 		},
-		selectVersion: PathSelectVersionFunc("/:version"),
+		selectVersion: PathSelectVersionFunc("/:version/"),
 	}
 }
 
@@ -79,7 +79,7 @@ func NewMux() ServeMux {
 // version from the request path. Use the same path pattern given in the DSL to define the API base
 // path, e.g. "/api/:version".
 func PathSelectVersionFunc(pattern string) SelectVersionFunc {
-	rgs := design.WildcardRegex.ReplaceAllLiteralString(pattern, `([^/]+)`)
+	rgs := design.WildcardRegex.ReplaceAllLiteralString(pattern, `/([^/]+)`)
 	rg := regexp.MustCompile("^" + rgs)
 	return func(req *http.Request) (version string) {
 		match := rg.FindStringSubmatch(req.URL.Path)

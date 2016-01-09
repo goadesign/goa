@@ -28,7 +28,7 @@ var _ = Describe("Resource", func() {
 	Context("with no DSL and no name", func() {
 		It("produces an invalid resource definition", func() {
 			Ω(res).ShouldNot(BeNil())
-			Ω(res.Validate()).Should(HaveOccurred())
+			Ω(res.Validate(Design.APIVersionDefinition)).Should(HaveOccurred())
 		})
 	})
 
@@ -39,7 +39,7 @@ var _ = Describe("Resource", func() {
 
 		It("produces a valid resource definition and defaults the media type to plain/text", func() {
 			Ω(res).ShouldNot(BeNil())
-			Ω(res.Validate()).ShouldNot(HaveOccurred())
+			Ω(res.Validate(Design.APIVersionDefinition)).ShouldNot(HaveOccurred())
 			Ω(res.MediaType).Should(Equal("plain/text"))
 		})
 	})
@@ -56,7 +56,7 @@ var _ = Describe("Resource", func() {
 
 		It("sets the description", func() {
 			Ω(res).ShouldNot(BeNil())
-			Ω(res.Validate()).ShouldNot(HaveOccurred())
+			Ω(res.Validate(Design.APIVersionDefinition)).ShouldNot(HaveOccurred())
 			Ω(res.Description).Should(Equal(description))
 		})
 	})
@@ -74,7 +74,7 @@ var _ = Describe("Resource", func() {
 		It("sets the parent and produces an invalid resource definition", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.ParentName).Should(Equal(parent))
-			Ω(res.Validate()).Should(HaveOccurred())
+			Ω(res.Validate(Design.APIVersionDefinition)).Should(HaveOccurred())
 		})
 	})
 
@@ -90,7 +90,7 @@ var _ = Describe("Resource", func() {
 
 		It("sets the actions", func() {
 			Ω(res).ShouldNot(BeNil())
-			Ω(res.Validate()).ShouldNot(HaveOccurred())
+			Ω(res.Validate(Design.APIVersionDefinition)).ShouldNot(HaveOccurred())
 			Ω(res.Actions).Should(HaveLen(1))
 			Ω(res.Actions).Should(HaveKey(actionName))
 		})
@@ -109,7 +109,7 @@ var _ = Describe("Resource", func() {
 		It("sets the canonical action and produces an invalid resource definition", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.CanonicalActionName).Should(Equal(can))
-			Ω(res.Validate()).Should(HaveOccurred())
+			Ω(res.Validate(Design.APIVersionDefinition)).Should(HaveOccurred())
 		})
 	})
 
@@ -127,7 +127,7 @@ var _ = Describe("Resource", func() {
 		It("sets the canonical action and produces a valid resource definition", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.CanonicalActionName).Should(Equal(can))
-			Ω(res.Validate()).ShouldNot(HaveOccurred())
+			Ω(res.Validate(Design.APIVersionDefinition)).ShouldNot(HaveOccurred())
 		})
 	})
 
@@ -143,7 +143,7 @@ var _ = Describe("Resource", func() {
 
 		It("sets the base path", func() {
 			Ω(res).ShouldNot(BeNil())
-			Ω(res.Validate()).ShouldNot(HaveOccurred())
+			Ω(res.Validate(Design.APIVersionDefinition)).ShouldNot(HaveOccurred())
 			Ω(res.BasePath).Should(Equal(basePath))
 		})
 	})
@@ -163,7 +163,7 @@ var _ = Describe("Resource", func() {
 
 		It("sets the base path and params", func() {
 			Ω(res).ShouldNot(BeNil())
-			Ω(res.Validate()).ShouldNot(HaveOccurred())
+			Ω(res.Validate(Design.APIVersionDefinition)).ShouldNot(HaveOccurred())
 			Ω(res.BasePath).Should(Equal(basePath))
 			Ω(res.BaseParams).ShouldNot(BeNil())
 			Ω(res.BaseParams.Type).ShouldNot(BeNil())
@@ -183,7 +183,7 @@ var _ = Describe("Resource", func() {
 
 		It("sets the media type", func() {
 			Ω(res).ShouldNot(BeNil())
-			Ω(res.Validate()).ShouldNot(HaveOccurred())
+			Ω(res.Validate(Design.APIVersionDefinition)).ShouldNot(HaveOccurred())
 			Ω(res.MediaType).Should(Equal(mediaType))
 		})
 	})
@@ -223,7 +223,7 @@ var _ = Describe("Resource", func() {
 
 		It("sets the media type", func() {
 			Ω(res).ShouldNot(BeNil())
-			Ω(res.Validate()).ShouldNot(HaveOccurred())
+			Ω(res.Validate(Design.APIVersionDefinition)).ShouldNot(HaveOccurred())
 			Ω(res.MediaType).Should(Equal(identifier))
 		})
 	})
@@ -255,7 +255,7 @@ var _ = Describe("Resource", func() {
 
 		It("runs the trait", func() {
 			Ω(res).ShouldNot(BeNil())
-			Ω(res.Validate()).ShouldNot(HaveOccurred())
+			Ω(res.Validate(Design.APIVersionDefinition)).ShouldNot(HaveOccurred())
 			Ω(res.Description).Should(Equal(description))
 		})
 	})

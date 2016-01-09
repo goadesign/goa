@@ -39,7 +39,7 @@ var _ = Describe("Action", func() {
 		It("produces an invalid action", func() {
 			Ω(Errors).ShouldNot(HaveOccurred())
 			Ω(action).ShouldNot(BeNil())
-			Ω(action.Validate()).Should(HaveOccurred())
+			Ω(action.Validate(Design.APIVersionDefinition)).Should(HaveOccurred())
 		})
 	})
 
@@ -55,7 +55,7 @@ var _ = Describe("Action", func() {
 			Ω(Errors).ShouldNot(HaveOccurred())
 			Ω(action).ShouldNot(BeNil())
 			Ω(action.Name).Should(Equal(name))
-			Ω(action.Validate()).ShouldNot(HaveOccurred())
+			Ω(action.Validate(Design.APIVersionDefinition)).ShouldNot(HaveOccurred())
 			Ω(action.Routes).ShouldNot(BeNil())
 			Ω(action.Routes).Should(HaveLen(1))
 			Ω(action.Routes[0]).Should(Equal(route))
@@ -74,7 +74,7 @@ var _ = Describe("Action", func() {
 		It("produces a valid action with the given properties", func() {
 			Ω(Errors).ShouldNot(HaveOccurred())
 			Ω(action).ShouldNot(BeNil())
-			Ω(action.Validate()).ShouldNot(HaveOccurred())
+			Ω(action.Validate(Design.APIVersionDefinition)).ShouldNot(HaveOccurred())
 			Ω(action.Payload).ShouldNot(BeNil())
 			Ω(action.Payload.Type).Should(Equal(String))
 		})
@@ -102,7 +102,7 @@ var _ = Describe("Action", func() {
 		It("produces a valid action with the given properties", func() {
 			Ω(Errors).ShouldNot(HaveOccurred())
 			Ω(action).ShouldNot(BeNil())
-			Ω(action.Validate()).ShouldNot(HaveOccurred())
+			Ω(action.Validate(Design.APIVersionDefinition)).ShouldNot(HaveOccurred())
 			Ω(action.Name).Should(Equal(name))
 			Ω(action.Description).Should(Equal(description))
 			Ω(action.Routes).Should(HaveLen(1))

@@ -188,7 +188,7 @@ func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, v
 				Routes:       a.Routes,
 				Responses:    MergeResponses(r.Responses, a.Responses),
 				API:          api,
-				Versioned:    version.Version != "",
+				Version:      version,
 				DefaultPkg:   TargetPackage,
 			}
 			return ctxWr.Execute(&ctxData)
@@ -242,7 +242,7 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 			return err
 		}
 		if len(data.Actions) > 0 {
-			data.Version = version.Version
+			data.Version = version
 			controllersData = append(controllersData, data)
 		}
 		return nil
@@ -274,12 +274,12 @@ func (g *Generator) generateHrefs(verdir string, version *design.APIVersionDefin
 		} else {
 			identifier = "plain/text"
 		}
-		canoTemplate := r.URITemplate()
+		canoTemplate := r.URITemplate(version)
 		canoTemplate = design.WildcardRegex.ReplaceAllLiteralString(canoTemplate, "/%v")
 		var canoParams []string
 		if ca := r.CanonicalAction(); ca != nil {
 			if len(ca.Routes) > 0 {
-				canoParams = ca.Routes[0].Params()
+				canoParams = ca.Routes[0].Params(version)
 			}
 		}
 
