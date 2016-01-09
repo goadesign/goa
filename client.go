@@ -95,6 +95,12 @@ type (
 	}
 )
 
+var (
+	_ Signer = &BasicSigner{}
+	_ Signer = &JWTSigner{}
+	_ Signer = &OAuth2Signer{}
+)
+
 // NewClient create a new API client.
 func NewClient() *Client {
 	logger := log15.New()
@@ -105,12 +111,10 @@ func NewClient() *Client {
 // Do wraps the underlying http client Do method and adds logging.
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	req.Header.Set("User-Agent", c.UserAgent)
-	var reqBody []byte
 	startedAt := time.Now()
 	id := shortID()
 	if c.Dump {
-		startedAt = time.Now()
-		reqBody = c.dumpRequest(req)
+		c.dumpRequest(req)
 	} else {
 		c.Info("started", "id", id, req.Method, req.URL.String())
 	}
@@ -119,7 +123,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 	if c.Dump {
-		c.dumpResponse(resp, req, reqBody)
+		c.dumpResponse(resp)
 	} else {
 		c.Info("completed", "id", id, "status", resp.StatusCode, "time", time.Since(startedAt).String())
 	}
@@ -189,11 +193,7 @@ type oauth2RefreshResponse struct {
 // Refresh makes a OAuth2 refresh access token request.
 func (s *OAuth2Signer) Refresh() error {
 	url := fmt.Sprintf(s.RefreshURLFormat, s.RefreshToken)
-	req, err := http.NewRequest("POST", url, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := http.Post(url, "", nil)
 	if err != nil {
 		return err
 	}
@@ -217,8 +217,8 @@ func (s *OAuth2Signer) Refresh() error {
 	return nil
 }
 
-// Dump request if needed.
-func (c *Client) dumpRequest(req *http.Request) []byte {
+// dumpRequest dumps the request.
+func (c *Client) dumpRequest(req *http.Request) {
 	reqBody, err := dumpReqBody(req)
 	if err != nil {
 		c.Error("Failed to load request body for dump", "err", err.Error())
@@ -232,12 +232,14 @@ func (c *Client) dumpRequest(req *http.Request) []byte {
 		buffer.WriteString("\n")
 	}
 	fmt.Fprint(os.Stderr, buffer.String())
-	return nil
 }
 
-// dumpResponse dumps the response and the request.
-func (c *Client) dumpResponse(resp *http.Response, req *http.Request, reqBody []byte) {
-	respBody, _ := dumpRespBody(resp)
+// dumpResponse dumps the response.
+func (c *Client) dumpResponse(resp *http.Response) {
+	respBody, err := dumpRespBody(resp)
+	if err != nil {
+		c.Error("Failed to load response body for dump", "err", err.Error())
+	}
 	var buffer bytes.Buffer
 	buffer.WriteString("==> " + resp.Proto + " " + resp.Status + "\n")
 	writeHeaders(&buffer, resp.Header)
@@ -251,12 +253,9 @@ func (c *Client) dumpResponse(resp *http.Response, req *http.Request, reqBody []
 
 // writeHeaders is a helper function that writes the given HTTP headers to the given buffer as
 // human readable strings. writeHeaders filters out headers that are sensitive.
-func writeHeaders(buffer *bytes.Buffer, headers http.Header) {
+func writeHeaders(w io.Writer, headers http.Header) {
 	filterHeaders(headers, func(name string, value []string) {
-		buffer.WriteString(name)
-		buffer.WriteString(": ")
-		buffer.WriteString(strings.Join(value, ", "))
-		buffer.WriteString("\n")
+		fmt.Fprintf(w, "%s: %s\n", name, strings.Join(value, ", "))
 	})
 }
 
@@ -332,10 +331,15 @@ type headerIterator func(name string, value []string)
 // filterHeaders iterates through the headers skipping hidden headers.
 // It calls the given iterator for each header name/value pair. The values are serialized as
 // strings.
+var sensitiveHeaders = map[string]bool{
+	"Authorization": true,
+	"Cookie":        true,
+}
+
 func filterHeaders(headers http.Header, iterator headerIterator) {
 	for k, v := range headers {
 		// Skip sensitive headers
-		if k == "Authorization" || k == "Cookie" {
+		if sensitiveHeaders[k] {
 			continue
 		}
 		iterator(k, v)
