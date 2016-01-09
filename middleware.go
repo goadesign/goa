@@ -133,6 +133,37 @@ func LogRequest() Middleware {
 	}
 }
 
+// loggingResponseWriter wraps an http.ResponseWriter and writes only raw
+// response data (as text) to the context logger. assumes status and duration
+// are logged elsewhere (i.e. by the LogRequest middleware).
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	ctx *Context
+}
+
+// Write will write raw data to logger and response writer.
+func (lrw *loggingResponseWriter) Write(buf []byte) (int, error) {
+	lrw.ctx.Logger.Debug("response", "raw", string(buf))
+	return lrw.ResponseWriter.Write(buf)
+}
+
+// LogResponse creates a response logger middleware.
+// Only Logs the raw response data without accumulating any statistics.
+func LogResponse() Middleware {
+	return func(h Handler) Handler {
+		return func(ctx *Context) error {
+			// chain a new logging writer to the current response writer.
+			ctx.SetResponseWriter(
+				&loggingResponseWriter{
+					ResponseWriter: ctx.SetResponseWriter(nil),
+					ctx:            ctx})
+
+			// next
+			return h(ctx)
+		}
+	}
+}
+
 // RequestID is a middleware that injects a request ID into the context of each request.
 // Retrieve it using ctx.Value(ReqIDKey). If the incoming request has a RequestIDHeader header then
 // that value is used else a random value is generated.
