@@ -65,25 +65,30 @@ type (
 )
 
 // NewMux creates a top level mux using the default goa mux implementation.
+// The default versioning handling assumes that the base path for the API is "/api" and the
+// base paths for each version "/:version/api". Use SelectVersion to specify a different scheme
+// if the service exposes a versioned API with different base paths.
 func NewMux() ServeMux {
 	return &DefaultMux{
 		defaultVersionMux: &defaultVersionMux{
 			router:  httprouter.New(),
 			handles: make(map[string]HandleFunc),
 		},
-		selectVersion: PathSelectVersionFunc("/:version/"),
+		selectVersion: PathSelectVersionFunc("/:version/", "api"),
 	}
 }
 
 // PathSelectVersionFunc returns a SelectVersionFunc that uses the given path pattern to extract the
 // version from the request path. Use the same path pattern given in the DSL to define the API base
 // path, e.g. "/api/:version".
-func PathSelectVersionFunc(pattern string) SelectVersionFunc {
+// If the pattern matches zeroVersion then the empty version is returned (i.e. the unversioned
+// controller handles the request).
+func PathSelectVersionFunc(pattern, zeroVersion string) SelectVersionFunc {
 	rgs := design.WildcardRegex.ReplaceAllLiteralString(pattern, `/([^/]+)`)
 	rg := regexp.MustCompile("^" + rgs)
 	return func(req *http.Request) (version string) {
 		match := rg.FindStringSubmatch(req.URL.Path)
-		if len(match) > 1 {
+		if len(match) > 1 && match[1] != zeroVersion {
 			version = match[1]
 		}
 		return
