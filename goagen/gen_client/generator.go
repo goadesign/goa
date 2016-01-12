@@ -557,7 +557,7 @@ func (cmd *{{$cmdName}}) Run(c *client.Client) (*http.Response, error) {
 {{else}}			return nil, fmt.Errorf("failed to deserialize payload: %s", err)
 {{end}}		}
 	}
-{{end}}	return c.{{goify (printf "%s%s" .Action.Name (title .Resource.Name)) true}}(cmd.Path{{if .Action.Payload}}, {{if or .Action.Payload.Type.IsObject .Action.Payload.IsPrimitive}}&{{end}}payload{{else}}nil{{end}}{{/*
+{{end}}	return c.{{goify (printf "%s%s" .Action.Name (title .Resource.Name)) true}}(cmd.Path{{if .Action.Payload}}, {{if or .Action.Payload.Type.IsObject .Action.Payload.IsPrimitive}}&{{end}}payload{{else}}{{end}}{{/*
 	*/}}{{$params := joinNames .Action.QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
 	*/}}{{$headers := joinNames .Action.Headers}}{{if $headers}}, {{$headers}}{{end}})
 }
