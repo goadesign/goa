@@ -6,9 +6,9 @@ import (
 	"github.com/go-swagger/go-swagger/spec"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	_ "github.com/raphael/goa-cellar/design"
 	. "github.com/raphael/goa/design"
 	. "github.com/raphael/goa/design/dsl"
-	_ "github.com/raphael/goa/examples/cellar/design"
 	"github.com/raphael/goa/goagen/gen_schema"
 	"github.com/raphael/goa/goagen/gen_swagger"
 )
