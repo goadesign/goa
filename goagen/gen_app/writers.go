@@ -138,11 +138,6 @@ func (c *ContextTemplateData) MustValidate(name string) bool {
 	return c.Params.IsRequired(name) && !c.IsPathParam(name)
 }
 
-// MustSetHas returns true if the "Has" context field for the given parameter must be generated.
-func (c *ContextTemplateData) MustSetHas(name string) bool {
-	return !c.Params.IsRequired(name) && !c.IsPathParam(name)
-}
-
 // NewContextsWriter returns a contexts code writer.
 // Contexts provide the glue between the underlying request data and the user controller.
 func NewContextsWriter(filename string) (*ContextsWriter, error) {
@@ -168,6 +163,7 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 		Funcs(template.FuncMap{
 		"newCoerceData":  newCoerceData,
 		"arrayAttribute": arrayAttribute,
+		"tempvar":        codegen.Tempvar,
 	}).Parse(ctxNewT)
 	if err != nil {
 		return nil, err
@@ -260,7 +256,6 @@ func NewResourcesWriter(filename string) (*ResourcesWriter, error) {
 	cw := codegen.NewGoGenerator(filename)
 	funcMap := cw.FuncMap
 	funcMap["join"] = strings.Join
-	funcMap["goresdef"] = codegen.GoResDef
 	resourceTmpl, err := template.New("resource").Funcs(cw.FuncMap).Parse(resourceT)
 	if err != nil {
 		return nil, err
@@ -339,10 +334,11 @@ func (w *UserTypesWriter) Execute(data *UserTypeTemplateData) error {
 }
 
 // newCoerceData is a helper function that creates a map that can be given to the "Coerce" template.
-func newCoerceData(name string, att *design.AttributeDefinition, pkg string, depth int) map[string]interface{} {
+func newCoerceData(name string, att *design.AttributeDefinition, pointer bool, pkg string, depth int) map[string]interface{} {
 	return map[string]interface{}{
 		"Name":      name,
 		"VarName":   codegen.Goify(name, false),
+		"Pointer":   pointer,
 		"Attribute": att,
 		"Pkg":       pkg,
 		"Depth":     depth,
@@ -373,37 +369,62 @@ const (
 	ctxT = `// {{.Name}} provides the {{.ResourceName}} {{.ActionName}} action context.
 type {{.Name}} struct {
 	*goa.Context
-{{if .Params}}{{$ctx := .}}{{range $name, $att := .Params.Type.ToObject}}	{{goify $name true}} {{gotyperef .Type 0}}
-{{if $ctx.MustSetHas $name}}
-	Has{{goify $name true}} bool
-{{end}}{{end}}{{end}}{{if .Payload}}	Payload {{gotyperef .Payload 0}}
+{{if .Params}}{{$ctx := .}}{{range $name, $att := .Params.Type.ToObject}}{{/*
+*/}}	{{goify $name true}} {{if and $att.Type.IsPrimitive ($ctx.Params.IsPrimitivePointer $name)}}*{{end}}{{gotyperef .Type 0}}
+{{end}}{{end}}{{if .Payload}}	Payload {{gotyperef .Payload 0}}
 {{end}}}
 `
 	// coerceT generates the code that coerces the generic deserialized
 	// data to the actual type.
 	// template input: map[string]interface{} as returned by newCoerceData
-	coerceT = `{{if eq .Attribute.Type.Kind 1}}{{/* BooleanType */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.ParseBool(raw{{goify .Name true}}); err2 == nil {
-{{tabs .Depth}}	{{.Pkg}} = {{.VarName}}
+	coerceT = `{{if eq .Attribute.Type.Kind 1}}{{/*
+
+*/}}{{/* BooleanType */}}{{/*
+*/}}{{$varName := or (and (not .Pointer) .VarName) tempvar}}{{/*
+*/}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.ParseBool(raw{{goify .Name true}}); err2 == nil {
+{{if .Pointer}}{{tabs .Depth}}	{{$varName}} := &{{.VarName}}
+{{end}}{{tabs .Depth}}	{{.Pkg}} = {{$varName}}
 {{tabs .Depth}}} else {
 {{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "boolean", err)
 {{tabs .Depth}}}
-{{end}}{{if eq .Attribute.Type.Kind 2}}{{/* IntegerType */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.Atoi(raw{{goify .Name true}}); err2 == nil {
-{{tabs .Depth}}	{{.Pkg}} = int({{.VarName}})
-{{tabs .Depth}}} else {
+{{end}}{{if eq .Attribute.Type.Kind 2}}{{/*
+
+*/}}{{/* IntegerType */}}{{/*
+*/}}{{$tmp := tempvar}}{{/*
+*/}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.Atoi(raw{{goify .Name true}}); err2 == nil {
+{{if .Pointer}}{{$tmp2 := tempvar}}{{tabs .Depth}}	{{$tmp2}} := int({{.VarName}})
+{{tabs .Depth}}	{{$tmp}} := &{{$tmp2}}
+{{tabs .Depth}}	{{.Pkg}} = {{$tmp}}
+{{else}}{{tabs .Depth}}	{{.Pkg}} = int({{.VarName}})
+{{end}}{{tabs .Depth}}} else {
 {{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "integer", err)
 {{tabs .Depth}}}
-{{end}}{{if eq .Attribute.Type.Kind 3}}{{/* NumberType */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.ParseFloat(raw{{goify .Name true}}, 64); err2 == nil {
-{{tabs .Depth}}	{{.Pkg}} = {{.VarName}}
+{{end}}{{if eq .Attribute.Type.Kind 3}}{{/*
+
+*/}}{{/* NumberType */}}{{/*
+*/}}{{$varName := or (and (not .Pointer) .VarName) tempvar}}{{/*
+*/}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.ParseFloat(raw{{goify .Name true}}, 64); err2 == nil {
+{{if .Pointer}}{{tabs .Depth}}	{{$varName}} := &{{.VarName}}
+{{end}}{{tabs .Depth}}	{{.Pkg}} = {{$varName}}
 {{tabs .Depth}}} else {
 {{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "number", err)
 {{tabs .Depth}}}
-{{end}}{{if eq .Attribute.Type.Kind 4}}{{/* StringType */}}{{tabs .Depth}}{{.Pkg}} = raw{{goify .Name true}}
-{{end}}{{if eq .Attribute.Type.Kind 5}}{{/* AnyType */}}{{tabs .Depth}}{{.Pkg}} = raw{{goify .Name true}}
-{{end}}{{if eq .Attribute.Type.Kind 6}}{{/* ArrayType */}}{{tabs .Depth}}elems{{goify .Name true}} := strings.Split(raw{{goify .Name true}}, ",")
+{{end}}{{if eq .Attribute.Type.Kind 4}}{{/*
+
+*/}}{{/* StringType */}}{{/*
+*/}}{{tabs .Depth}}{{.Pkg}} = {{if .Pointer}}&{{end}}raw{{goify .Name true}}
+{{end}}{{if eq .Attribute.Type.Kind 5}}{{/*
+
+*/}}{{/* AnyType */}}{{/*
+*/}}{{tabs .Depth}}{{.Pkg}} = {{if .Pointer}}&{{end}}raw{{goify .Name true}}
+{{end}}{{if eq .Attribute.Type.Kind 6}}{{/*
+
+*/}}{{/* ArrayType */}}{{/*
+*/}}{{tabs .Depth}}elems{{goify .Name true}} := strings.Split(raw{{goify .Name true}}, ",")
 {{if eq (arrayAttribute .Attribute).Type.Kind 4}}{{tabs .Depth}}{{.Pkg}} = elems{{goify .Name true}}
 {{else}}{{tabs .Depth}}elems{{goify .Name true}}2 := make({{gotyperef .Attribute.Type .Depth}}, len(elems{{goify .Name true}}))
 {{tabs .Depth}}for i, rawElem := range elems{{goify .Name true}} {
-{{template "Coerce" (newCoerceData "elem" (arrayAttribute .Attribute) (printf "elems%s2[i]" (goify .Name true)) (add .Depth 1))}}{{tabs .Depth}}}
+{{template "Coerce" (newCoerceData "elem" (arrayAttribute .Attribute) false (printf "elems%s2[i]" (goify .Name true)) (add .Depth 1))}}{{tabs .Depth}}}
 {{tabs .Depth}}{{.Pkg}} = elems{{goify .Name true}}2
 {{end}}{{end}}`
 
@@ -423,9 +444,9 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 		err = goa.MissingParamError("{{$name}}", err)
 	} else {
 {{else}}	if raw{{goify $name true}} != "" {
-{{end}}{{template "Coerce" (newCoerceData $name $att (printf "ctx.%s" (goify $name true)) 2)}}{{/*
-*/}}{{if $ctx.MustSetHas $name}}		ctx.Has{{goify $name true}} = true
-{{end}}{{$validation := validationChecker $att ($ctx.Params.IsRequired $name) (printf "ctx.%s" (goify $name true)) $name 2}}{{if $validation}}{{$validation}}
+{{end}}{{template "Coerce" (newCoerceData $name $att ($ctx.Params.IsPrimitivePointer $name) (printf "ctx.%s" (goify $name true)) 2)}}{{/*
+*/}}{{$validation := validationChecker $att ($ctx.Params.IsNonZero $name) ($ctx.Params.IsRequired $name) (printf "ctx.%s" (goify $name true)) $name 2}}{{/*
+*/}}{{if $validation}}{{$validation}}
 {{end}}	}
 {{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	p, err := New{{gotypename .Payload 0}}(c.Payload())
 	if err != nil {
@@ -456,7 +477,7 @@ func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{/*
 	// payloadT generates the payload type definition GoGenerator
 	// template input: *ContextTemplateData
 	payloadT = `{{$payload := .Payload}}// {{gotypename .Payload 0}} is the {{.ResourceName}} {{.ActionName}} action payload.
-type {{gotypename .Payload 1}} {{gotypedef .Payload .Versioned .DefaultPkg 0 false false}}
+type {{gotypename .Payload 1}} {{gotypedef .Payload .Versioned .DefaultPkg 0 false}}
 `
 	// newPayloadT generates the code for the payload factory method.
 	// template input: *ContextTemplateData
@@ -510,7 +531,7 @@ func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} interfa
 	// template input: MediaTypeTemplateData
 	mediaTypeT = `{{define "Dump"}}` + dumpT + `{{end}}` + `// {{if .MediaType.Description}}{{.MediaType.Description}}{{else}}{{gotypename .MediaType 0}} media type{{end}}
 // Identifier: {{.MediaType.Identifier}}{{$typeName := gotypename .MediaType 0}}
-type {{$typeName}} {{gotypedef .MediaType .Versioned .DefaultPkg 0 false false}}{{$computedViews := .MediaType.ComputeViews}}{{if gt (len $computedViews) 1}}
+type {{$typeName}} {{gotypedef .MediaType .Versioned .DefaultPkg 0 false}}{{$computedViews := .MediaType.ComputeViews}}{{if gt (len $computedViews) 1}}
 
 // {{$typeName}} views
 type {{$typeName}}ViewEnum string
@@ -537,7 +558,7 @@ func (mt {{gotyperef .MediaType 0}}) Dump({{if gt (len $computedViews) 1}}view {
 {{end}}{{end}}	return
 }
 
-{{$validation := recursiveValidate .MediaType.AttributeDefinition false "mt" "response" 1}}{{if $validation}}// Validate validates the media type instance.
+{{$validation := recursiveValidate .MediaType.AttributeDefinition false false "mt" "response" 1}}{{if $validation}}// Validate validates the media type instance.
 func (mt {{gotyperef .MediaType 0}}) Validate() (err error) {
 {{$validation}}
 	return
@@ -559,9 +580,9 @@ func (mt {{gotyperef .MediaType 0}}) Validate() (err error) {
 	// userTypeT generates the code for a user type.
 	// template input: UserTypeTemplateData
 	userTypeT = `// {{if .UserType.Description}}{{.UserType.Description}}{{else}}{{gotypename .UserType 0}} type{{end}}
-type {{gotypename .UserType 0}} {{gotypedef .UserType .Versioned .DefaultPkg 0 false false}}
+type {{gotypename .UserType 0}} {{gotypedef .UserType .Versioned .DefaultPkg 0 false}}
 
-{{$validation := recursiveValidate .UserType.AttributeDefinition false "ut" "response" 1}}{{if $validation}}// Validate validates the type instance.
+{{$validation := recursiveValidate .UserType.AttributeDefinition false false "ut" "response" 1}}{{if $validation}}// Validate validates the type instance.
 func (ut {{gotyperef .UserType 0}}) Validate() (err error) {
 {{$validation}}
 	return

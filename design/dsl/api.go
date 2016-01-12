@@ -149,6 +149,10 @@ func BaseParams(dsl func()) {
 	if !executeDSL(dsl, params) {
 		return
 	}
+	params.NonZeroAttributes = make(map[string]bool)
+	for n := range params.Type.ToObject() {
+		params.NonZeroAttributes[n] = true
+	}
 	if a, ok := apiDefinition(false); ok {
 		a.BaseParams = params
 	} else if v, ok := versionDefinition(false); ok {

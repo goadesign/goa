@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/raphael/goa/design"
+	"github.com/raphael/goa/goagen/codegen"
 	"github.com/raphael/goa/goagen/gen_app"
 )
 
@@ -18,6 +19,7 @@ var _ = Describe("ContextsWriter", func() {
 		var err error
 		writer, err = genapp.NewContextsWriter(filename)
 		Ω(err).ShouldNot(HaveOccurred())
+		codegen.TempCount = 0
 	})
 
 	Context("correctly configured", func() {
@@ -573,9 +575,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	intContext = `
 type ListBottleContext struct {
 	*goa.Context
-	Param int
-
-	HasParam bool
+	Param *int
 }
 `
 
@@ -586,11 +586,12 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	rawParam := c.Get("param")
 	if rawParam != "" {
 		if param, err2 := strconv.Atoi(rawParam); err2 == nil {
-			ctx.Param = int(param)
+			tmp2 := int(param)
+			tmp1 := &tmp2
+			ctx.Param = tmp1
 		} else {
 			err = goa.InvalidParamTypeError("param", rawParam, "integer", err)
 		}
-		ctx.HasParam = true
 	}
 	return &ctx, err
 }
@@ -599,9 +600,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	strContext = `
 type ListBottleContext struct {
 	*goa.Context
-	Param string
-
-	HasParam bool
+	Param *string
 }
 `
 
@@ -611,8 +610,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	ctx := ListBottleContext{Context: c}
 	rawParam := c.Get("param")
 	if rawParam != "" {
-		ctx.Param = rawParam
-		ctx.HasParam = true
+		ctx.Param = &rawParam
 	}
 	return &ctx, err
 }
@@ -621,9 +619,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	numContext = `
 type ListBottleContext struct {
 	*goa.Context
-	Param float64
-
-	HasParam bool
+	Param *float64
 }
 `
 
@@ -634,11 +630,11 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	rawParam := c.Get("param")
 	if rawParam != "" {
 		if param, err2 := strconv.ParseFloat(rawParam, 64); err2 == nil {
-			ctx.Param = param
+			tmp1 := &param
+			ctx.Param = tmp1
 		} else {
 			err = goa.InvalidParamTypeError("param", rawParam, "number", err)
 		}
-		ctx.HasParam = true
 	}
 	return &ctx, err
 }
@@ -646,9 +642,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	boolContext = `
 type ListBottleContext struct {
 	*goa.Context
-	Param bool
-
-	HasParam bool
+	Param *bool
 }
 `
 
@@ -659,11 +653,11 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	rawParam := c.Get("param")
 	if rawParam != "" {
 		if param, err2 := strconv.ParseBool(rawParam); err2 == nil {
-			ctx.Param = param
+			tmp1 := &param
+			ctx.Param = tmp1
 		} else {
 			err = goa.InvalidParamTypeError("param", rawParam, "boolean", err)
 		}
-		ctx.HasParam = true
 	}
 	return &ctx, err
 }
@@ -673,8 +667,6 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 type ListBottleContext struct {
 	*goa.Context
 	Param []string
-
-	HasParam bool
 }
 `
 
@@ -686,7 +678,6 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	if rawParam != "" {
 		elemsParam := strings.Split(rawParam, ",")
 		ctx.Param = elemsParam
-		ctx.HasParam = true
 	}
 	return &ctx, err
 }
@@ -696,8 +687,6 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 type ListBottleContext struct {
 	*goa.Context
 	Param []int
-
-	HasParam bool
 }
 `
 
@@ -717,7 +706,6 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 			}
 		}
 		ctx.Param = elemsParam2
-		ctx.HasParam = true
 	}
 	return &ctx, err
 }
@@ -726,9 +714,7 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	resContext = `
 type ListBottleContext struct {
 	*goa.Context
-	Int int
-
-	HasInt bool
+	Int *int
 }
 `
 
@@ -739,11 +725,12 @@ func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	rawInt := c.Get("int")
 	if rawInt != "" {
 		if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
-			ctx.Int = int(int_)
+			tmp2 := int(int_)
+			tmp1 := &tmp2
+			ctx.Int = tmp1
 		} else {
 			err = goa.InvalidParamTypeError("int", rawInt, "integer", err)
 		}
-		ctx.HasInt = true
 	}
 	return &ctx, err
 }

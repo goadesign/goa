@@ -242,8 +242,11 @@ type (
 		DefaultValue interface{}
 		// Optional view used to render Attribute (only applies to media type attributes).
 		View string
-		// List of API versions that use the type.
+		// List of API versions that use the attribute.
 		APIVersions []string
+		// NonZeroAttributes lists the names of the child attributes that cannot have a
+		// zero value (and thus whose presence does not need to be validated).
+		NonZeroAttributes map[string]bool
 	}
 
 	// MetadataDefinition is a set of key/value pairs
@@ -870,6 +873,28 @@ func (a *ActionDefinition) Context() string {
 	return prefix + suffix
 }
 
+// PathParams returns the path parameters of the action across all its routes.
+func (a *ActionDefinition) PathParams(version *APIVersionDefinition) *AttributeDefinition {
+	obj := make(Object)
+	for _, r := range a.Routes {
+		for _, p := range r.Params(version) {
+			if _, ok := obj[p]; !ok {
+				obj[p] = a.Params.Type.ToObject()[p]
+			}
+		}
+	}
+	res := &AttributeDefinition{Type: obj}
+	if a.HasAbsoluteRoutes() {
+		return res
+	}
+	res = res.Merge(a.Parent.BaseParams)
+	res = res.Merge(Design.BaseParams)
+	if p := a.Parent.Parent(); p != nil {
+		res = res.Merge(p.CanonicalAction().PathParams(version))
+	}
+	return res
+}
+
 // AllParams returns the path and query string parameters of the action across all its routes.
 func (a *ActionDefinition) AllParams() *AttributeDefinition {
 	var res *AttributeDefinition
@@ -878,12 +903,25 @@ func (a *ActionDefinition) AllParams() *AttributeDefinition {
 	} else {
 		res = &AttributeDefinition{Type: Object{}}
 	}
+	if a.HasAbsoluteRoutes() {
+		return res
+	}
 	res = res.Merge(a.Parent.BaseParams)
 	res = res.Merge(Design.BaseParams)
 	if p := a.Parent.Parent(); p != nil {
 		res = res.Merge(p.CanonicalAction().AllParams())
 	}
 	return res
+}
+
+// HasAbsoluteRoutes returns true if all the action routes are absolute.
+func (a *ActionDefinition) HasAbsoluteRoutes() bool {
+	for _, r := range a.Routes {
+		if !r.IsAbsolute() {
+			return false
+		}
+	}
+	return true
 }
 
 // Context returns the generic definition name used in error messages.
@@ -913,6 +951,39 @@ func (a *AttributeDefinition) IsRequired(attName string) bool {
 	return false
 }
 
+// AllNonZero returns the complete list of all non-zero attribute name.
+func (a *AttributeDefinition) AllNonZero() []string {
+	nzs := make([]string, len(a.NonZeroAttributes))
+	i := 0
+	for n := range a.NonZeroAttributes {
+		nzs[i] = n
+		i++
+	}
+	return nzs
+}
+
+// IsNonZero returns true if the given string matches the name of a non-zero
+// attribute, false otherwise.
+func (a *AttributeDefinition) IsNonZero(attName string) bool {
+	return a.NonZeroAttributes[attName]
+}
+
+// IsPrimitivePointer returns true if the field generated for the given attribute should be a
+// pointer to a primitive type. The target attribute must be an object.
+func (a *AttributeDefinition) IsPrimitivePointer(attName string) bool {
+	if !a.Type.IsObject() {
+		panic("checking pointer field on non-object") // bug
+	}
+	att := a.Type.ToObject()[attName]
+	if att == nil {
+		return false
+	}
+	if att.Type.IsPrimitive() {
+		return !a.IsRequired(attName) && !a.IsNonZero(attName)
+	}
+	return false
+}
+
 // Dup returns a copy of the attribute definition.
 // Note: the primitive underlying types are not duplicated for simplicity.
 func (a *AttributeDefinition) Dup() *AttributeDefinition {
@@ -925,11 +996,13 @@ func (a *AttributeDefinition) Dup() *AttributeDefinition {
 		dupType = dupType.Dup()
 	}
 	dup := AttributeDefinition{
-		Type:         dupType,
-		Description:  a.Description,
-		Validations:  valDup,
-		Metadata:     a.Metadata,
-		DefaultValue: a.DefaultValue,
+		Type:              dupType,
+		Description:       a.Description,
+		APIVersions:       a.APIVersions,
+		Validations:       valDup,
+		Metadata:          a.Metadata,
+		DefaultValue:      a.DefaultValue,
+		NonZeroAttributes: a.NonZeroAttributes,
 	}
 	return &dup
 }
@@ -1163,7 +1236,7 @@ func (r *RouteDefinition) Params(version *APIVersionDefinition) []string {
 // FullPath returns the action full path computed by concatenating the API and resource base paths
 // with the action specific path.
 func (r *RouteDefinition) FullPath(version *APIVersionDefinition) string {
-	if strings.HasPrefix(r.Path, "//") {
+	if r.IsAbsolute() {
 		return httprouter.CleanPath(r.Path[1:])
 	}
 	var base string
@@ -1171,6 +1244,12 @@ func (r *RouteDefinition) FullPath(version *APIVersionDefinition) string {
 		base = r.Parent.Parent.FullPath(version)
 	}
 	return httprouter.CleanPath(path.Join(base, r.Path))
+}
+
+// IsAbsolute returns true if the action path should not be concatenated to the resource and API
+// base paths.
+func (r *RouteDefinition) IsAbsolute() bool {
+	return strings.HasPrefix(r.Path, "//")
 }
 
 // Context returns the generic definition name used in error messages.
