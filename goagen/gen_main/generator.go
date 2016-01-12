@@ -135,7 +135,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		if v.IsDefault() {
 			return nil
 		}
-		imports = append(imports, codegen.SimpleImport(imp+"/"+codegen.Goify(v.Version, false)))
+		imports = append(imports, codegen.SimpleImport(imp+"/"+codegen.VersionPackage(v.Version)))
 		return nil
 	})
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
@@ -191,7 +191,7 @@ func generateSwagger() bool {
 	return codegen.CommandName == "" || codegen.CommandName == "swagger"
 }
 
-func okResp(a *design.ActionDefinition) map[string]interface{} {
+func okResp(a *design.ActionDefinition, v string) map[string]interface{} {
 	var ok *design.ResponseDefinition
 	for _, resp := range a.Responses {
 		if resp.Status == 200 {
@@ -204,14 +204,24 @@ func okResp(a *design.ActionDefinition) map[string]interface{} {
 	}
 	var mt *design.MediaTypeDefinition
 	var ok2 bool
-	if mt, ok2 = design.Design.MediaTypes[ok.MediaType]; !ok2 {
+	if mt, ok2 = design.Design.MediaTypes[design.CanonicalIdentifier(ok.MediaType)]; !ok2 {
 		return nil
 	}
-	typeref := codegen.GoTypeRef(mt, 1)
-	if strings.HasPrefix(typeref, "*") {
-		typeref = "&app." + typeref[1:]
+	var pkg string
+	if v == "" {
+		pkg = TargetPackage
 	} else {
-		typeref = "app." + typeref
+		pkg = codegen.VersionPackage(v)
+	}
+	name := codegen.GoTypeRef(mt, 1)
+	var pointer string
+	if strings.HasPrefix(name, "*") {
+		name = name[1:]
+		pointer = "*"
+	}
+	typeref := fmt.Sprintf("%s%s.%s", pointer, pkg, name)
+	if strings.HasPrefix(typeref, "*") {
+		typeref = "&" + typeref[1:]
 	}
 	return map[string]interface{}{
 		"Name":             ok.Name,
@@ -289,7 +299,7 @@ func New{{$ctrlName}}(service goa.Service) {{if .Version}}{{versionPkg .Version}
 {{$ctrl := .Controller}}{{$version := .Version}}{{range .Controller.Actions}}
 // {{goify .Name true}} runs the {{.Name}} action.
 func (c *{{$ctrlName}}) {{goify .Name true}}(ctx *{{if $version}}{{versionPkg $version}}{{else}}{{targetPkg}}{{end}}.{{goify .Name true}}{{goify $ctrl.Name true}}Context) error {
-{{$ok := okResp .}}{{if $ok}}	res := {{$ok.TypeRef}}{}
+{{$ok := okResp . $version}}{{if $ok}}	res := {{$ok.TypeRef}}{}
 {{end}}	return {{if $ok}}ctx.{{$ok.Name}}(res{{if $ok.HasMultipleViews}}, "default"{{end}}){{else}}nil{{end}}
 }
 {{end}}
