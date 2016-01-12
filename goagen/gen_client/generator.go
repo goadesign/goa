@@ -557,7 +557,7 @@ func (cmd *{{$cmdName}}) Run(c *client.Client) (*http.Response, error) {
 {{else}}			return nil, fmt.Errorf("failed to deserialize payload: %s", err)
 {{end}}		}
 	}
-{{end}}	return c.{{goify (printf "%s%s" .Action.Name (title .Resource.Name)) true}}(cmd.Path{{if .Action.Payload}}, {{if .Action.Payload}}{{if .Action.Payload.Type.IsObject}}&{{end}}payload{{else}}nil{{end}}{{end}}{{/*
+{{end}}	return c.{{goify (printf "%s%s" .Action.Name (title .Resource.Name)) true}}(cmd.Path{{if .Action.Payload}}, {{if or .Action.Payload.Type.IsObject .Action.Payload.IsPrimitive}}&{{end}}payload{{else}}nil{{end}}{{/*
 	*/}}{{$params := joinNames .Action.QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
 	*/}}{{$headers := joinNames .Action.Headers}}{{if $headers}}, {{$headers}}{{end}})
 }
@@ -578,7 +578,7 @@ func (cmd *{{$cmdName}}) RegisterFlags(cc *kingpin.CmdClause) {
 `
 
 const clientsTmpl = `{{$payload := goify (printf "%s%sPayload" .Name (title .Parent.Name)) true}}{{if .Payload}}// {{$payload}} is the data structure used to initialize the {{.Parent.Name}} {{.Name}} request body.
-type {{$payload}} {{gotypedef .Payload false "" 1 true false}}
+type {{$payload}} {{gotypedef .Payload false "" 1 false}}
 
 {{end}}{{$funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true}}{{$desc := .Description}}{{if $desc}}// {{$desc}}{{else}}// {{$funcName}} makes a request to the {{.Name}} action endpoint of the {{.Parent.Name}} resource{{end}}
 func (c *Client) {{$funcName}}(path string{{if .Payload}}, payload {{if .Payload.Type.IsObject}}*{{end}}{{$payload}}{{end}}{{/*

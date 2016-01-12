@@ -184,7 +184,7 @@ func finalizeResource(r *design.ResourceDefinition) {
 				for _, wc := range wcs {
 					found := false
 					var o design.Object
-					if all := a.AllParams(); all != nil {
+					if all := a.Params; all != nil {
 						o = all.Type.ToObject()
 					} else {
 						o = design.Object{}
@@ -203,13 +203,15 @@ func finalizeResource(r *design.ResourceDefinition) {
 				return nil
 			})
 		}
-		// 3. Compute QueryParams from Params
+		// 3. Compute QueryParams from Params and set all path params as non zero attributes
 		if params := a.Params; params != nil {
 			queryParams := params.Dup()
+			a.Params.NonZeroAttributes = make(map[string]bool)
 			design.Design.IterateVersions(func(ver *design.APIVersionDefinition) error {
 				for _, route := range a.Routes {
 					pnames := route.Params(ver)
 					for _, pname := range pnames {
+						a.Params.NonZeroAttributes[pname] = true
 						delete(queryParams.Type.ToObject(), pname)
 					}
 				}
@@ -219,6 +221,7 @@ func finalizeResource(r *design.ResourceDefinition) {
 			// to actual attributes cos' we just deleted them but that's probably OK.)
 			a.QueryParams = queryParams
 		}
+
 		return nil
 	})
 }

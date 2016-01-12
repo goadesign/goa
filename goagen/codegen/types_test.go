@@ -34,7 +34,7 @@ var _ = Describe("code generation", func() {
 				if required != nil {
 					att.Validations = []ValidationDefinition{required}
 				}
-				st = codegen.GoTypeDef(att, false, "", 0, true, false)
+				st = codegen.GoTypeDef(att, false, "", 0, true)
 			})
 
 			Context("of primitive types", func() {
@@ -48,8 +48,8 @@ var _ = Describe("code generation", func() {
 
 				It("produces the struct go code", func() {
 					expected := "struct {\n" +
-						"	Bar string `json:\"bar,omitempty\"`\n" +
-						"	Foo int `json:\"foo,omitempty\"`\n" +
+						"	Bar *string `json:\"bar,omitempty\"`\n" +
+						"	Foo *int `json:\"foo,omitempty\"`\n" +
 						"}"
 					Ω(st).Should(Equal(expected))
 				})
@@ -106,9 +106,9 @@ var _ = Describe("code generation", func() {
 				It("produces the struct go code", func() {
 					expected := "struct {\n" +
 						"	Foo map[*struct {\n" +
-						"		KeyAtt string `json:\"keyAtt,omitempty\"`\n" +
+						"		KeyAtt *string `json:\"keyAtt,omitempty\"`\n" +
 						"	}]*struct {\n" +
-						"		ElemAtt int `json:\"elemAtt,omitempty\"`\n" +
+						"		ElemAtt *int `json:\"elemAtt,omitempty\"`\n" +
 						"	} `json:\"foo,omitempty\"`\n" +
 						"}"
 					Ω(st).Should(Equal(expected))
@@ -131,7 +131,7 @@ var _ = Describe("code generation", func() {
 				It("produces the struct go code", func() {
 					expected := "struct {\n" +
 						"	Foo []*struct {\n" +
-						"		Bar int `json:\"bar,omitempty\"`\n" +
+						"		Bar *int `json:\"bar,omitempty\"`\n" +
 						"	} `json:\"foo,omitempty\"`\n" +
 						"}"
 					Ω(st).Should(Equal(expected))
@@ -165,7 +165,7 @@ var _ = Describe("code generation", func() {
 			JustBeforeEach(func() {
 				array := &Array{ElemType: elemType}
 				att := &AttributeDefinition{Type: array}
-				source = codegen.GoTypeDef(att, false, "", 0, true, false)
+				source = codegen.GoTypeDef(att, false, "", 0, true)
 			})
 
 			Context("of primitive type", func() {
@@ -189,7 +189,7 @@ var _ = Describe("code generation", func() {
 				})
 
 				It("produces the array go code", func() {
-					Ω(source).Should(Equal("[]*struct {\n\tBar string `json:\"bar,omitempty\"`\n\tFoo int `json:\"foo,omitempty\"`\n}"))
+					Ω(source).Should(Equal("[]*struct {\n\tBar *string `json:\"bar,omitempty\"`\n\tFoo *int `json:\"foo,omitempty\"`\n}"))
 				})
 			})
 		})
@@ -645,7 +645,7 @@ const (
 
 	simpleUnmarshaled = `	if val, ok := raw.(map[string]interface{}); ok {
 		p = new(struct {
-			Foo int
+			Foo *int
 		})
 		if v, ok := val["foo"]; ok {
 			var tmp1 int
@@ -654,7 +654,7 @@ const (
 			} else {
 				err = goa.InvalidAttributeTypeError(` + "`" + `.Foo` + "`" + `, v, "int", err)
 			}
-			p.Foo = tmp1
+			p.Foo = &tmp1
 		}
 	} else {
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "dictionary", err)
@@ -686,19 +686,19 @@ const (
 		p = new(struct {
 			Baz *struct {
 				Bar [][]int
-				Foo int
+				Foo *int
 			}
-			Faz int
+			Faz *int
 		})
 		if v, ok := val["baz"]; ok {
 			var tmp1 *struct {
 				Bar [][]int
-				Foo int
+				Foo *int
 			}
 			if val, ok := v.(map[string]interface{}); ok {
 				tmp1 = new(struct {
 					Bar [][]int
-					Foo int
+					Foo *int
 				})
 				if v, ok := val["bar"]; ok {
 					var tmp2 [][]int
@@ -730,7 +730,7 @@ const (
 					} else {
 						err = goa.InvalidAttributeTypeError(` + "`" + `.Baz.Foo` + "`" + `, v, "int", err)
 					}
-					tmp1.Foo = tmp5
+					tmp1.Foo = &tmp5
 				}
 			} else {
 				err = goa.InvalidAttributeTypeError(` + "`" + `.Baz` + "`" + `, v, "dictionary", err)
@@ -744,7 +744,7 @@ const (
 			} else {
 				err = goa.InvalidAttributeTypeError(` + "`" + `.Faz` + "`" + `, v, "int", err)
 			}
-			p.Faz = tmp6
+			p.Faz = &tmp6
 		}
 	} else {
 		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "dictionary", err)

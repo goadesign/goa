@@ -55,16 +55,22 @@ func init() {
 
 // RecursiveChecker produces Go code that runs the validation checks recursively over the given
 // attribute.
-func RecursiveChecker(att *design.AttributeDefinition, required bool, target, context string, depth int) string {
+func RecursiveChecker(att *design.AttributeDefinition, nonzero, required bool, target, context string, depth int) string {
 	var checks []string
-	validation := ValidationChecker(att, required, target, context, depth)
+	validation := ValidationChecker(att, nonzero, required, target, context, depth)
 	if validation != "" {
 		checks = append(checks, validation)
 	}
 	if o := att.Type.ToObject(); o != nil {
+		if mt, ok := att.Type.(*design.MediaTypeDefinition); ok {
+			att = mt.AttributeDefinition
+		} else if ut, ok := att.Type.(*design.UserTypeDefinition); ok {
+			att = ut.AttributeDefinition
+		}
 		o.IterateAttributes(func(n string, catt *design.AttributeDefinition) error {
 			validation := RecursiveChecker(
 				catt,
+				att.IsNonZero(n),
 				att.IsRequired(n),
 				fmt.Sprintf("%s.%s", target, Goify(n, true)),
 				fmt.Sprintf("%s.%s", context, n),
@@ -77,10 +83,10 @@ func RecursiveChecker(att *design.AttributeDefinition, required bool, target, co
 		})
 	} else if a := att.Type.ToArray(); a != nil {
 		data := map[string]interface{}{
-			"attribute": att,
-			"context":   context,
-			"target":    target,
-			"depth":     1,
+			"elemType": a.ElemType,
+			"context":  context,
+			"target":   target,
+			"depth":    1,
 		}
 		validation := RunTemplate(arrayValT, data)
 		if validation != "" {
@@ -97,16 +103,28 @@ func RecursiveChecker(att *design.AttributeDefinition, required bool, target, co
 // The generated code assumes that there is a pre-existing "err" variable of type
 // error. It initializes that variable in case a validation fails.
 // Note: we do not want to recurse here, recursion is done by the marshaler/unmarshaler code.
-func ValidationChecker(att *design.AttributeDefinition, required bool, target, context string, depth int) string {
+func ValidationChecker(att *design.AttributeDefinition, nonzero, required bool, target, context string, depth int) string {
+	t := target
+	isPointer := !required && !nonzero
+	if isPointer && att.Type.IsPrimitive() {
+		t = "*" + t
+	}
 	data := map[string]interface{}{
 		"attribute": att,
-		"required":  required,
+		"isPointer": isPointer,
+		"nonzero":   nonzero,
 		"context":   context,
 		"target":    target,
+		"targetVal": t,
+		"array":     att.Type.IsArray(),
 		"depth":     depth,
 	}
-	var res []string
-	for _, v := range att.Validations {
+	res := validationsCode(att.Validations, data)
+	return strings.Join(res, "\n")
+}
+
+func validationsCode(validations []design.ValidationDefinition, data map[string]interface{}) (res []string) {
+	for _, v := range validations {
 		switch actual := v.(type) {
 		case *design.EnumValidationDefinition:
 			data["values"] = actual.Values
@@ -154,7 +172,7 @@ func ValidationChecker(att *design.AttributeDefinition, required bool, target, c
 			}
 		}
 	}
-	return strings.Join(res, "\n")
+	return
 }
 
 // oneof produces code that compares target with each element of vals and ORs
@@ -193,36 +211,46 @@ func constant(formatName string) string {
 }
 
 const (
-	arrayValTmpl = `{{$validation := recursiveChecker .attribute.Type.ToArray.ElemType false "e" (printf "%s[*]" .context) .depth}}{{if $validation}}{{tabs .depth}}for _, e := range {{.target}} {
+	arrayValTmpl = `{{$validation := recursiveChecker .elemType false false "e" (printf "%s[*]" .context) (add .depth 1)}}{{/*
+*/}}{{if $validation}}{{tabs .depth}}for _, e := range {{.target}} {
 {{$validation}}
 {{tabs .depth}}}{{end}}`
 
-	enumValTmpl = `{{$depth := or (and (and (not .required) (eq .attribute.Type.Kind 4)) (add .depth 1)) .depth}}{{if not .required}}{{if eq .attribute.Type.Kind 4}}{{tabs .depth}}if {{.target}} != "" {
-{{else if (not .attribute.Type.IsPrimitive)}}{{tabs $depth}}if {{.target}} != nil {
-{{end}}{{end}}{{tabs $depth}}if !({{oneof .target .values}}) {
-{{tabs $depth}}	err = goa.InvalidEnumValueError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{slice .values}}, err)
-{{if and (not .required) (or (eq .attribute.Type.Kind 4) (not .attribute.Type.IsPrimitive))}}{{tabs $depth}}	}
+	enumValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
+*/}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
+{{end}}{{tabs $depth}}if !({{oneof .targetVal .values}}) {
+{{tabs $depth}}	err = goa.InvalidEnumValueError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, {{slice .values}}, err)
+{{if .isPointer}}{{tabs $depth}}}
 {{end}}{{tabs .depth}}}`
 
-	patternValTmpl = `{{$depth := or (and (not .required) (add .depth 1)) .depth}}{{if not .required}}{{tabs .depth}}if {{.target}} != "" {
-{{end}}{{tabs $depth}}if ok := goa.ValidatePattern(` + "`{{.pattern}}`" + `, {{.target}}); !ok {
-{{tabs $depth}}	err = goa.InvalidPatternError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, ` + "`{{.pattern}}`" + `, err)
-{{tabs $depth}}}{{if not .required}}
+	patternValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
+*/}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
+{{end}}{{tabs $depth}}if ok := goa.ValidatePattern(` + "`{{.pattern}}`" + `, {{.targetVal}}); !ok {
+{{tabs $depth}}	err = goa.InvalidPatternError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, ` + "`{{.pattern}}`" + `, err)
+{{tabs $depth}}}{{if .isPointer}}
 {{tabs .depth}}}{{end}}`
 
-	formatValTmpl = `{{$depth := or (and (not .required) (add .depth 1)) .depth}}{{ if not .required}}{{tabs .depth}}if {{.target}} != "" {
-{{end}}{{tabs $depth}}if err2 := goa.ValidateFormat({{constant .format}}, {{.target}}); err2 != nil {
-{{tabs $depth}}		err = goa.InvalidFormatError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{constant .format}}, err2, err)
-{{if not .required}}{{tabs $depth}}	}
+	formatValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
+*/}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
+{{end}}{{tabs $depth}}if err2 := goa.ValidateFormat({{constant .format}}, {{.targetVal}}); err2 != nil {
+{{tabs $depth}}		err = goa.InvalidFormatError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, {{constant .format}}, err2, err)
+{{if .isPointer}}{{tabs $depth}}	}
 {{end}}{{tabs .depth}}}`
 
-	minMaxValTmpl = `{{$depth := or (and (not .required) (add .depth 1)) .depth}}{{tabs .depth}}if {{.target}} {{if .min}}<{{else}}>{{end}} {{if .min}}{{.min}}{{else}}{{.max}}{{end}} {
-{{tabs $depth}}	err = goa.InvalidRangeError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, {{if .min}}{{.min}}, true{{else}}{{.max}}, false{{end}}, err)
-{{tabs .depth}}}`
+	minMaxValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
+*/}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
+{{end}}{{tabs .depth}}if {{.targetVal}} {{if .min}}<{{else}}>{{end}} {{if .min}}{{.min}}{{else}}{{.max}}{{end}} {
+{{tabs $depth}}	err = goa.InvalidRangeError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, {{if .min}}{{.min}}, true{{else}}{{.max}}, false{{end}}, err)
+{{if .isPointer}}{{tabs $depth}}	}
+{{end}}{{tabs .depth}}}`
 
-	lengthValTmpl = `{{$depth := or (and (not .required) (add .depth 1)) .depth}}{{tabs .depth}}if len({{.target}}) {{if .minLength}}<{{else}}>{{end}} {{if .minLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
-{{tabs $depth}}	err = goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{.target}}, len({{.target}}), {{if .minLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}, err)
-{{tabs .depth}}}`
+	lengthValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
+*/}}{{$target := or (and (or .array .nonzero) .target) .targetVal}}{{/*
+*/}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
+{{end}}{{tabs .depth}}if len({{$target}}) {{if .minLength}}<{{else}}>{{end}} {{if .minLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
+{{tabs $depth}}	err = goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{$target}}, len({{$target}}), {{if .minLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}, err)
+{{if .isPointer}}{{tabs $depth}}	}
+{{end}}{{tabs .depth}}}`
 
 	requiredValTmpl = `{{$ctx := .}}{{range $r := .required}}{{$catt := index $ctx.attribute.Type.ToObject $r}}{{if eq $catt.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.target}}.{{goify $r true}} == "" {
 {{tabs $ctx.depth}}	err = goa.MissingAttributeError(` + "`" + `{{$ctx.context}}` + "`" + `, "{{$r}}", err)
