@@ -159,7 +159,7 @@ func AttributeMarshaler(att *design.AttributeDefinition, versioned bool, default
 	marshaler := attributeMarshalerR(att, versioned, defaultPkg, context, source, target, 1)
 	if validation != "" {
 		return fmt.Sprintf(
-			"\tif err2 := %s.Validate(); err2 != nil {\n\treturn nil, goa.ReportError(err, err2)\n\t}\n\t%s",
+			"\tif err2 := %s.Validate(); err2 != nil {\n\terr = goa.ReportError(err, err2)\n\treturn\n\t}\n\t%s",
 			source,
 			marshaler,
 		)
@@ -181,31 +181,9 @@ func TypeUnmarshaler(t design.DataType, versioned bool, defaultPkg, context, sou
 	return typeUnmarshalerR(t, nil, nil, versioned, defaultPkg, context, source, target, 1)
 }
 
-// AttributeUnmarshaler produces the Go code that initializes an attribute given a deserialized
-// (interface{}) value.
-// source is the name of the variable that contains the raw interface{} value and target the
-// name of the variable to initialize.
-// context is used to keep track of recursion to produce helpful error messages in case of type
-// mismatch or validation error.
-// The generated code assumes that there is a variable called "err" of type error that it can use
-// to record errors.
-// versioned indicates whether the code is being generated from a version package (true) or from the
-// default package defaultPkg (false).
-func AttributeUnmarshaler(att *design.AttributeDefinition, versioned bool, defaultPkg, context, source, target string) string {
-	validation := RecursiveChecker(att, false, false, source, context, 1)
-	unmarshaler := attributeUnmarshalerR(att, att.AllRequired(), att.AllNonZero(), versioned, defaultPkg, context, source, target, 1)
-	if validation != "" {
-		return fmt.Sprintf(
-			"%s\n\tif err2 := %s.Validate(); err2 != nil {\n\treturn nil, goa.ReportError(err, err2)\n\t}",
-			unmarshaler,
-			target,
-		)
-	}
-	return unmarshaler
-}
-
 // UserTypeUnmarshalerImpl returns the code implementing the user type unmarshaler function.
 func UserTypeUnmarshalerImpl(u *design.UserTypeDefinition, versioned bool, defaultPkg, context string) string {
+	validation := RecursiveChecker(u.AttributeDefinition, false, false, "source", context, 1)
 	var impl string
 	switch {
 	case u.IsObject():
@@ -218,9 +196,10 @@ func UserTypeUnmarshalerImpl(u *design.UserTypeDefinition, versioned bool, defau
 		return "" // No function for primitive types - they just get casted
 	}
 	data := map[string]interface{}{
-		"Name": userTypeUnmarshalerFuncName(u),
-		"Type": u,
-		"Impl": impl,
+		"Name":         userTypeUnmarshalerFuncName(u),
+		"Type":         u,
+		"Impl":         impl,
+		"MustValidate": strings.TrimSpace(validation) != "",
 	}
 	return RunTemplate(unmUserImplT, data)
 }
@@ -1046,6 +1025,9 @@ func {{.Name}}(source {{gotyperef .Type .Type.AllRequired 0}}, inErr error) (tar
 func {{.Name}}(source interface{}, inErr error) (target {{gotyperef .Type .Type.AllRequired 0}}, err error) {
 	err = inErr
 {{.Impl}}
+{{if .MustValidate}}	if err2 := target.Validate(); err2 != nil {
+		err = goa.ReportError(err, err2)
+	}
 	return
-}`
+{{end}}}`
 )
