@@ -22,16 +22,15 @@ type (
 		// Logging methods, configure the log handler using the Logger global variable.
 		log.Logger
 
+		Decoder
+		Unmarshaler
+
 		// Name is the name of the goa application.
 		Name() string
 
-		// Decode uses registered Decoders to unmarshal the request body based on
-		// the request "Content-Type" header. If the Decoder unmarshals into the appropriate
-		// struct itself, defaultUnmarshaler will not be run.
-		Decode(body io.ReadCloser, v interface{}, contentTypes []string, defaultUnmarshaler Unmarshaler)
-
 		// ErrorHandler returns the currently set error handler, useful for middleware.
 		ErrorHandler() ErrorHandler
+
 		// SetErrorHandler allows setting the service-wide error handler.
 		SetErrorHandler(ErrorHandler)
 
@@ -107,6 +106,7 @@ type (
 		errorHandler ErrorHandler // Application error handler
 		middleware   []Middleware // Middleware chain
 		mux          ServeMux     // Application top level mux
+		decoder      Decoder
 	}
 
 	// ApplicationController provides the common state and behavior for generated controllers.
@@ -129,6 +129,23 @@ type (
 
 	// ErrorHandler defines the application error handler signature.
 	ErrorHandler func(*Context, error)
+
+	// Decoder uses registered Decoders to unmarshal the request body based on
+	// the request "Content-Type" header. If the Decoder unmarshals into the appropriate
+	// struct itself, defaultUnmarshaler will not be run.
+	Decoder interface {
+		Decode(body io.ReadCloser, v interface{}, contentTypes []string, defaultUnmarshaler Unmarshaler)
+	}
+
+	// Unmarshaler is the interface implemented by objects that can unmarshal themselves.
+	// The input can be assumed to be a valid encoding that matches the Content-Type request header.
+	// Unmarshal must copy the data if it wishes to retain the data after returning.
+	Unmarshaler interface {
+		Unmarshal([]byte) error
+	}
+
+	// contentType stores Content-Type / Accept mimetypes to map to encoders/decoders
+	contentType string
 )
 
 var (
