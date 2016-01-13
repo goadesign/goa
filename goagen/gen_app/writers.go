@@ -151,6 +151,7 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 	funcMap["typeUnmarshaler"] = codegen.TypeUnmarshaler
 	funcMap["userTypeUnmarshalerImpl"] = codegen.UserTypeUnmarshalerImpl
 	funcMap["validationChecker"] = codegen.ValidationChecker
+	funcMap["recursiveValidate"] = codegen.RecursiveChecker
 	funcMap["tabs"] = codegen.Tabs
 	funcMap["add"] = func(a, b int) int { return a + b }
 	funcMap["gopkgtyperef"] = codegen.GoPackageTypeRef
@@ -489,6 +490,12 @@ func New{{$typeName}}(raw interface{}) (p {{gotyperef .Payload nil 0}}, err erro
 }{{if (not .Payload.IsPrimitive)}}
 
 {{userTypeUnmarshalerImpl .Payload .Versioned .DefaultPkg "payload"}}{{end}}
+
+{{$validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1}}{{if $validation}}// Validate validates the type instance.
+func (payload {{gotyperef .Payload .Payload.AllRequired 0}}) Validate() (err error) {
+{{$validation}}
+	return
+}{{end}}
 `
 
 	// ctrlT generates the controller interface for a given resource.
