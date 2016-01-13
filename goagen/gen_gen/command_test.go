@@ -70,7 +70,7 @@ var _ = Describe("RegisterFlags", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			gengen.GenPkgName = "dummy"
 			codegen.OutputDir = tmpPkg
-			codegen.DesignPackagePath = "github.com/raphael/goa/examples/cellar/design"
+			codegen.DesignPackagePath = "github.com/raphael/goa-cellar/design"
 		})
 
 		It("invokes the generator", func() {
