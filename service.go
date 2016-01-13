@@ -3,6 +3,7 @@ package goa
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"mime"
 	"net/http"
 	"net/url"
@@ -24,6 +25,11 @@ type (
 		// Name is the name of the goa application.
 		Name() string
 
+		// Decode uses registered Decoders to unmarshal the request body based on
+		// the request "Content-Type" header. If the Decoder unmarshals into the appropriate
+		// struct itself, defaultUnmarshaler will not be run.
+		Decode(body io.ReadCloser, v interface{}, contentTypes []string, defaultUnmarshaler Unmarshaler)
+
 		// ErrorHandler returns the currently set error handler, useful for middleware.
 		ErrorHandler() ErrorHandler
 		// SetErrorHandler allows setting the service-wide error handler.
@@ -34,6 +40,7 @@ type (
 
 		// ListenAndServe starts a HTTP server on the given port.
 		ListenAndServe(addr string) error
+
 		// ListenAndServeTLS starts a HTTPS server on the given port.
 		ListenAndServeTLS(add, certFile, keyFile string) error
 		// ServeFiles replies to the request with the contents of the named file or
