@@ -370,8 +370,8 @@ const (
 type {{.Name}} struct {
 	*goa.Context
 {{if .Params}}{{$ctx := .}}{{range $name, $att := .Params.Type.ToObject}}{{/*
-*/}}	{{goify $name true}} {{if and $att.Type.IsPrimitive ($ctx.Params.IsPrimitivePointer $name)}}*{{end}}{{gotyperef .Type 0}}
-{{end}}{{end}}{{if .Payload}}	Payload {{gotyperef .Payload 0}}
+*/}}	{{goify $name true}} {{if and $att.Type.IsPrimitive ($ctx.Params.IsPrimitivePointer $name)}}*{{end}}{{gotyperef .Type nil 0}}
+{{end}}{{end}}{{if .Payload}}	Payload {{gotyperef .Payload nil 0}}
 {{end}}}
 `
 	// coerceT generates the code that coerces the generic deserialized
@@ -422,7 +422,7 @@ type {{.Name}} struct {
 */}}{{/* ArrayType */}}{{/*
 */}}{{tabs .Depth}}elems{{goify .Name true}} := strings.Split(raw{{goify .Name true}}, ",")
 {{if eq (arrayAttribute .Attribute).Type.Kind 4}}{{tabs .Depth}}{{.Pkg}} = elems{{goify .Name true}}
-{{else}}{{tabs .Depth}}elems{{goify .Name true}}2 := make({{gotyperef .Attribute.Type .Depth}}, len(elems{{goify .Name true}}))
+{{else}}{{tabs .Depth}}elems{{goify .Name true}}2 := make({{gotyperef .Attribute.Type nil .Depth}}, len(elems{{goify .Name true}}))
 {{tabs .Depth}}for i, rawElem := range elems{{goify .Name true}} {
 {{template "Coerce" (newCoerceData "elem" (arrayAttribute .Attribute) false (printf "elems%s2[i]" (goify .Name true)) (add .Depth 1))}}{{tabs .Depth}}}
 {{tabs .Depth}}{{.Pkg}} = elems{{goify .Name true}}2
@@ -448,7 +448,7 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 */}}{{$validation := validationChecker $att ($ctx.Params.IsNonZero $name) ($ctx.Params.IsRequired $name) (printf "ctx.%s" (goify $name true)) $name 2}}{{/*
 */}}{{if $validation}}{{$validation}}
 {{end}}	}
-{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	p, err := New{{gotypename .Payload 0}}(c.Payload())
+{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	p, err := New{{gotypename .Payload nil 0}}(c.Payload())
 	if err != nil {
 		return nil, err
 	}
@@ -462,7 +462,7 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 	ctxRespT = `{{$ctx := .}}{{range .Responses}}{{$mt := $ctx.API.MediaTypeWithIdentifier .MediaType}}{{/*
 */}}// {{goify .Name true}} sends a HTTP response with status code {{.Status}}.
 func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{/*
-*/}}{{if $mt}}resp {{gopkgtyperef $mt $ctx.Versioned $ctx.DefaultPkg 0}}{{if gt (len $mt.ComputeViews) 1}}, view {{gopkgtypename $mt $ctx.Versioned $ctx.DefaultPkg 0}}ViewEnum{{end}}{{/*
+*/}}{{if $mt}}resp {{gopkgtyperef $mt $mt.AllRequired $ctx.Versioned $ctx.DefaultPkg 0}}{{if gt (len $mt.ComputeViews) 1}}, view {{gopkgtypename $mt $mt.AllRequired $ctx.Versioned $ctx.DefaultPkg 0}}ViewEnum{{end}}{{/*
 */}}{{else if .MediaType}}resp []byte{{end}}) error {
 {{if $mt}}	r, err := resp.Dump({{if gt (len $mt.ComputeViews) 1}}view{{end}})
 	if err != nil {
@@ -476,14 +476,14 @@ func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{/*
 
 	// payloadT generates the payload type definition GoGenerator
 	// template input: *ContextTemplateData
-	payloadT = `{{$payload := .Payload}}// {{gotypename .Payload 0}} is the {{.ResourceName}} {{.ActionName}} action payload.
-type {{gotypename .Payload 1}} {{gotypedef .Payload .Versioned .DefaultPkg 0 false}}
+	payloadT = `{{$payload := .Payload}}// {{gotypename .Payload nil 0}} is the {{.ResourceName}} {{.ActionName}} action payload.
+type {{gotypename .Payload nil 1}} {{gotypedef .Payload .Versioned .DefaultPkg 0 false}}
 `
 	// newPayloadT generates the code for the payload factory method.
 	// template input: *ContextTemplateData
-	newPayloadT = `// New{{gotypename .Payload 0}} instantiates a {{gotypename .Payload 0}} from a raw request body.
+	newPayloadT = `{{$typeName := gotypename .Payload nil 0}}// New{{$typeName}} instantiates a {{$typeName}} from a raw request body.
 // It validates each field and returns an error if any validation fails.
-func New{{gotypename .Payload 0}}(raw interface{}) (p {{gotyperef .Payload 0}}, err error) {
+func New{{$typeName}}(raw interface{}) (p {{gotyperef .Payload nil 0}}, err error) {
 {{typeUnmarshaler .Payload false "" "payload" "raw" "p"}}
 	return
 }{{if (not .Payload.IsPrimitive)}}
@@ -529,8 +529,8 @@ func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} interfa
 
 	// mediaTypeT generates the code for a media type.
 	// template input: MediaTypeTemplateData
-	mediaTypeT = `{{define "Dump"}}` + dumpT + `{{end}}` + `// {{if .MediaType.Description}}{{.MediaType.Description}}{{else}}{{gotypename .MediaType 0}} media type{{end}}
-// Identifier: {{.MediaType.Identifier}}{{$typeName := gotypename .MediaType 0}}
+	mediaTypeT = `{{define "Dump"}}` + dumpT + `{{end}}` + `// {{if .MediaType.Description}}{{.MediaType.Description}}{{else}}{{gotypename .MediaType .MediaType.AllRequired 0}} media type{{end}}
+// Identifier: {{.MediaType.Identifier}}{{$typeName := gotypename .MediaType .MediaType.AllRequired 0}}
 type {{$typeName}} {{gotypedef .MediaType .Versioned .DefaultPkg 0 false}}{{$computedViews := .MediaType.ComputeViews}}{{if gt (len $computedViews) 1}}
 
 // {{$typeName}} views
@@ -543,15 +543,15 @@ const (
 // Load{{$typeName}} loads raw data into an instance of {{$typeName}}
 // into a variable of type interface{}. See https://golang.org/pkg/encoding/json/#Unmarshal for the
 // complete list of supported data types.
-func Load{{$typeName}}(raw interface{}) (res {{gotyperef .MediaType 1}}, err error) {
+func Load{{$typeName}}(raw interface{}) (res {{gotyperef .MediaType .MediaType.AllRequired 1}}, err error) {
 	{{typeUnmarshaler .MediaType .Versioned .DefaultPkg "" "raw" "res"}}
 	return
 }
 
 // Dump produces raw data from an instance of {{$typeName}} running all the
 // validations. See Load{{$typeName}} for the definition of raw data.
-func (mt {{gotyperef .MediaType 0}}) Dump({{if gt (len $computedViews) 1}}view {{$typeName}}ViewEnum{{end}}) (res {{gonative .MediaType}}, err error) {
-{{$mt := .MediaType}}{{$ctx := .}}{{if gt (len $computedViews) 1}}{{range $computedViews}}	if view == {{gotypename $mt 0}}{{goify .Name true}}View {
+func (mt {{gotyperef .MediaType .MediaType.AllRequired 0}}) Dump({{if gt (len $computedViews) 1}}view {{$typeName}}ViewEnum{{end}}) (res {{gonative .MediaType}}, err error) {
+{{$mt := .MediaType}}{{$ctx := .}}{{if gt (len $computedViews) 1}}{{range $computedViews}}	if view == {{gotypename $mt $mt.AllRequired 0}}{{goify .Name true}}View {
 		{{template "Dump" (newDumpData $mt $ctx.Versioned $ctx.DefaultPkg (printf "%s view" .Name) "mt" "res" .Name)}}
 	}
 {{end}}{{else}}{{range $mt.ComputeViews}}{{template "Dump" (newDumpData $mt $ctx.Versioned $ctx.DefaultPkg (printf "%s view" .Name) "mt" "res" .Name)}}{{/* ranges over the one element */}}
@@ -559,7 +559,7 @@ func (mt {{gotyperef .MediaType 0}}) Dump({{if gt (len $computedViews) 1}}view {
 }
 
 {{$validation := recursiveValidate .MediaType.AttributeDefinition false false "mt" "response" 1}}{{if $validation}}// Validate validates the media type instance.
-func (mt {{gotyperef .MediaType 0}}) Validate() (err error) {
+func (mt {{gotyperef .MediaType .MediaType.AllRequired 0}}) Validate() (err error) {
 {{$validation}}
 	return
 }
@@ -579,11 +579,11 @@ func (mt {{gotyperef .MediaType 0}}) Validate() (err error) {
 
 	// userTypeT generates the code for a user type.
 	// template input: UserTypeTemplateData
-	userTypeT = `// {{if .UserType.Description}}{{.UserType.Description}}{{else}}{{gotypename .UserType 0}} type{{end}}
-type {{gotypename .UserType 0}} {{gotypedef .UserType .Versioned .DefaultPkg 0 false}}
+	userTypeT = `// {{if .UserType.Description}}{{.UserType.Description}}{{else}}{{gotypename .UserType .UserType.AllRequired 0}} type{{end}}
+type {{gotypename .UserType .UserType.AllRequired 0}} {{gotypedef .UserType .Versioned .DefaultPkg 0 false}}
 
 {{$validation := recursiveValidate .UserType.AttributeDefinition false false "ut" "response" 1}}{{if $validation}}// Validate validates the type instance.
-func (ut {{gotyperef .UserType 0}}) Validate() (err error) {
+func (ut {{gotyperef .UserType .UserType.AllRequired 0}}) Validate() (err error) {
 {{$validation}}
 	return
 }

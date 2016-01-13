@@ -430,7 +430,7 @@ var _ = Describe("code generation", func() {
 							})`,
 							"source":     unmarshaler,
 							"target":     target,
-							"targetType": codegen.GoTypeRef(o, 1),
+							"targetType": codegen.GoTypeRef(o, nil, 1),
 						}
 						err := tmpl.Execute(tmpFile, data)
 						Ω(err).ShouldNot(HaveOccurred())

@@ -929,15 +929,20 @@ func (a *AttributeDefinition) Context() string {
 	return ""
 }
 
-// AllRequired returns the complete list of all required attribute names, nil
-// if it doesn't have a RequiredValidationDefinition validation.
-func (a *AttributeDefinition) AllRequired() []string {
+// AllRequired returns the list of all required fields from the underlying object.
+// An attribute type can be itself an attribute (e.g. a MediaTypeDefinition or a UserTypeDefinition)
+// This happens when the DSL uses references for example. So traverse the hierarchy and collect
+// all the required validations.
+func (a *AttributeDefinition) AllRequired() (required []string) {
 	for _, v := range a.Validations {
-		if r, ok := v.(*RequiredValidationDefinition); ok {
-			return r.Names
+		if req, ok := v.(*RequiredValidationDefinition); ok {
+			required = append(required, req.Names...)
 		}
 	}
-	return nil
+	if ds, ok := a.Type.(DataStructure); ok {
+		required = append(required, ds.Definition().AllRequired()...)
+	}
+	return
 }
 
 // IsRequired returns true if the given string matches the name of a required

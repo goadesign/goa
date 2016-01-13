@@ -323,7 +323,7 @@ func join(att *design.AttributeDefinition) string {
 
 // gotTypeRefExt computes the type reference for a type in a different package.
 func goTypeRefExt(t design.DataType, tabs int, pkg string) string {
-	ref := codegen.GoTypeRef(t, tabs)
+	ref := codegen.GoTypeRef(t, nil, tabs)
 	if strings.HasPrefix(ref, "*") {
 		return fmt.Sprintf("%s.%s", pkg, ref[1:])
 	}
