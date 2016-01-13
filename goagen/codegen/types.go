@@ -178,7 +178,7 @@ func AttributeMarshaler(att *design.AttributeDefinition, versioned bool, default
 // versioned indicates whether the code is being generated from a version package (true) or from the
 // default package defaultPkg (false).
 func TypeUnmarshaler(t design.DataType, versioned bool, defaultPkg, context, source, target string) string {
-	return typeUnmarshalerR(t, versioned, defaultPkg, context, source, target, 1)
+	return typeUnmarshalerR(t, nil, nil, versioned, defaultPkg, context, source, target, 1)
 }
 
 // AttributeUnmarshaler produces the Go code that initializes an attribute given a deserialized
@@ -192,22 +192,24 @@ func TypeUnmarshaler(t design.DataType, versioned bool, defaultPkg, context, sou
 // versioned indicates whether the code is being generated from a version package (true) or from the
 // default package defaultPkg (false).
 func AttributeUnmarshaler(att *design.AttributeDefinition, versioned bool, defaultPkg, context, source, target string) string {
-	return attributeUnmarshalerR(att, versioned, defaultPkg, context, source, target, 1)
+	validation := RecursiveChecker(att, false, false, source, context, 1)
+	unmarshaler := attributeUnmarshalerR(att, att.AllRequired(), att.AllNonZero(), versioned, defaultPkg, context, source, target, 1)
+	if validation != "" {
+		return fmt.Sprintf(
+			"%s\n\tif err2 := %s.Validate(); err2 != nil {\n\treturn nil, goa.ReportError(err, err2)\n\t}",
+			unmarshaler,
+			target,
+		)
+	}
+	return unmarshaler
 }
 
 // UserTypeUnmarshalerImpl returns the code implementing the user type unmarshaler function.
 func UserTypeUnmarshalerImpl(u *design.UserTypeDefinition, versioned bool, defaultPkg, context string) string {
-	var required []string
-	for _, v := range u.Validations {
-		if r, ok := v.(*design.RequiredValidationDefinition); ok {
-			required = r.Names
-			break
-		}
-	}
 	var impl string
 	switch {
 	case u.IsObject():
-		impl = objectUnmarshalerR(u, required, versioned, defaultPkg, context, "source", "target", 1)
+		impl = objectUnmarshalerR(u, u.AllRequired(), u.AllNonZero(), versioned, defaultPkg, context, "source", "target", 1)
 	case u.IsArray():
 		impl = arrayUnmarshalerR(u.ToArray(), versioned, defaultPkg, context, "source", "target", 1)
 	case u.IsHash():
@@ -236,7 +238,7 @@ func GoTypeDef(ds design.DataStructure, versioned bool, defPkg string, tabs int,
 	t := def.Type
 	switch actual := t.(type) {
 	case design.Primitive:
-		return GoTypeName(t, tabs)
+		return GoTypeName(t, nil, tabs)
 	case *design.Array:
 		d := GoTypeDef(actual.ElemType, versioned, defPkg, tabs, jsonTags)
 		if actual.ElemType.Type.IsObject() {
@@ -287,8 +289,10 @@ func GoTypeDef(ds design.DataStructure, versioned bool, defPkg string, tabs int,
 		WriteTabs(&buffer, tabs)
 		buffer.WriteString("}")
 		return buffer.String()
-	case *design.UserTypeDefinition, *design.MediaTypeDefinition:
-		return GoPackageTypeName(actual, versioned, defPkg, tabs)
+	case *design.UserTypeDefinition:
+		return GoPackageTypeName(actual, actual.AllRequired(), versioned, defPkg, tabs)
+	case *design.MediaTypeDefinition:
+		return GoPackageTypeName(actual, actual.AllRequired(), versioned, defPkg, tabs)
 	default:
 		panic("goa bug: unknown data structure type")
 	}
@@ -297,55 +301,72 @@ func GoTypeDef(ds design.DataStructure, versioned bool, defPkg string, tabs int,
 
 // GoTypeRef returns the Go code that refers to the Go type which matches the given data type
 // (the part that comes after `var foo`)
+// required only applies when referring to a user type that is an object defined inline. In this
+// case the type (Object) does not carry the required field information defined in the parent
+// (anonymous) attribute.
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
 // This function assumes the type is in the same package as the code accessing it.
-func GoTypeRef(t design.DataType, tabs int) string {
-	return GoPackageTypeRef(t, false, "", tabs)
+func GoTypeRef(t design.DataType, required []string, tabs int) string {
+	return GoPackageTypeRef(t, required, false, "", tabs)
 }
 
 // GoPackageTypeRef returns the Go code that refers to the Go type which matches the given data type.
 // versioned indicates whether the type is being referenced from a version package (true) or the
 // default package defPkg (false).
+// required only applies when referring to a user type that is an object defined inline. In this
+// case the type (Object) does not carry the required field information defined in the parent
+// (anonymous) attribute.
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
-func GoPackageTypeRef(t design.DataType, versioned bool, defPkg string, tabs int) string {
+func GoPackageTypeRef(t design.DataType, required []string, versioned bool, defPkg string, tabs int) string {
 	switch t.(type) {
 	case *design.UserTypeDefinition, *design.MediaTypeDefinition:
 		var prefix string
 		if t.IsObject() {
 			prefix = "*"
 		}
-		return prefix + GoPackageTypeName(t, versioned, defPkg, tabs)
+		return prefix + GoPackageTypeName(t, required, versioned, defPkg, tabs)
 	case design.Object:
-		return "*" + GoPackageTypeName(t, versioned, defPkg, tabs)
+		return "*" + GoPackageTypeName(t, required, versioned, defPkg, tabs)
 	default:
-		return GoPackageTypeName(t, versioned, defPkg, tabs)
+		return GoPackageTypeName(t, required, versioned, defPkg, tabs)
 	}
 }
 
 // GoTypeName returns the Go type name for a data type.
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
 // This function assumes the type is in the same package as the code accessing it.
-func GoTypeName(t design.DataType, tabs int) string {
-	return GoPackageTypeName(t, false, "", tabs)
+// required only applies when referring to a user type that is an object defined inline. In this
+// case the type (Object) does not carry the required field information defined in the parent
+// (anonymous) attribute.
+func GoTypeName(t design.DataType, required []string, tabs int) string {
+	return GoPackageTypeName(t, required, false, "", tabs)
 }
 
 // GoPackageTypeName returns the Go type name for a data type.
 // versioned indicates whether the type is being referenced from a version package (true) or the
 // default package defPkg (false).
+// required only applies when referring to a user type that is an object defined inline. In this
+// case the type (Object) does not carry the required field information defined in the parent
+// (anonymous) attribute.
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
-func GoPackageTypeName(t design.DataType, versioned bool, defPkg string, tabs int) string {
+func GoPackageTypeName(t design.DataType, required []string, versioned bool, defPkg string, tabs int) string {
 	switch actual := t.(type) {
 	case design.Primitive:
 		return GoNativeType(t)
 	case *design.Array:
-		return "[]" + GoPackageTypeRef(actual.ElemType.Type, versioned, defPkg, tabs+1)
+		return "[]" + GoPackageTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), versioned, defPkg, tabs+1)
 	case design.Object:
-		return GoTypeDef(&design.AttributeDefinition{Type: actual}, versioned, defPkg, tabs, false)
+		att := &design.AttributeDefinition{Type: actual}
+		if len(required) > 0 {
+			requiredVal := &design.RequiredValidationDefinition{Names: required}
+			att.Validations = append(att.Validations, requiredVal)
+		}
+		return GoTypeDef(att, versioned, defPkg, tabs, false)
 	case *design.Hash:
 		return fmt.Sprintf(
 			"map[%s]%s",
-			GoPackageTypeRef(actual.KeyType.Type, versioned, defPkg, tabs+1),
-			GoPackageTypeRef(actual.ElemType.Type, versioned, defPkg, tabs+1),
+			GoPackageTypeRef(actual.KeyType.Type, actual.KeyType.AllRequired(), versioned, defPkg, tabs+1),
+			GoPackageTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), versioned, defPkg, tabs+1),
 		)
 	case *design.UserTypeDefinition:
 		pkgPrefix := PackagePrefix(actual, versioned, defPkg)
@@ -675,7 +696,7 @@ func collectionMediaTypeMarshalerImpl(mt *design.MediaTypeDefinition, versioned 
 
 // userTypeMarshalerFuncName returns the name for the given media type marshaler function.
 func userTypeMarshalerFuncName(u *design.UserTypeDefinition) string {
-	return fmt.Sprintf("Marshal%s", GoTypeName(u, 0))
+	return fmt.Sprintf("Marshal%s", GoTypeName(u, u.AllRequired(), 0))
 }
 
 // mediaTypeMarshalerFuncName returns the name for the given user type marshaler function.
@@ -689,10 +710,10 @@ func mediaTypeMarshalerFuncName(mt *design.MediaTypeDefinition, view string) str
 
 // userTypeUnmarshalerFuncName returns the name for the given user type unmarshaler function.
 func userTypeUnmarshalerFuncName(u *design.UserTypeDefinition) string {
-	return fmt.Sprintf("Unmarshal%s", GoTypeName(u, 0))
+	return fmt.Sprintf("Unmarshal%s", GoTypeName(u, u.AllRequired(), 0))
 }
 
-func typeUnmarshalerR(t design.DataType, versioned bool, defaultPkg, context, source, target string, depth int) string {
+func typeUnmarshalerR(t design.DataType, required, nonzero []string, versioned bool, defaultPkg, context, source, target string, depth int) string {
 	switch actual := t.(type) {
 	case design.Primitive:
 		return primitiveUnmarshalerR(actual, context, source, target, depth)
@@ -701,7 +722,7 @@ func typeUnmarshalerR(t design.DataType, versioned bool, defaultPkg, context, so
 	case *design.Hash:
 		return hashUnmarshalerR(actual, versioned, defaultPkg, context, source, target, depth)
 	case design.Object:
-		return objectUnmarshalerR(actual, nil, versioned, defaultPkg, context, source, target, depth)
+		return objectUnmarshalerR(actual, required, nonzero, versioned, defaultPkg, context, source, target, depth)
 	case *design.UserTypeDefinition:
 		if _, ok := t.(design.Primitive); ok {
 			return userPrimitiveUnmarshalerR(actual, context, source, target, depth)
@@ -716,7 +737,7 @@ func typeUnmarshalerR(t design.DataType, versioned bool, defaultPkg, context, so
 			source,
 		)
 	case *design.MediaTypeDefinition:
-		return typeUnmarshalerR(actual.UserTypeDefinition, versioned, defaultPkg, context, source, target, depth)
+		return typeUnmarshalerR(actual.UserTypeDefinition, required, nonzero, versioned, defaultPkg, context, source, target, depth)
 	default:
 		panic(actual)
 	}
@@ -733,13 +754,8 @@ func userPrimitiveUnmarshalerR(u *design.UserTypeDefinition, context, source, ta
 	return RunTemplate(unmUserPrimitiveT, data)
 }
 
-func attributeUnmarshalerR(att *design.AttributeDefinition, versioned bool, defaultPkg, context, source, target string, depth int) string {
-	unmarshaler := typeUnmarshalerR(att.Type, versioned, defaultPkg, context, source, target, depth)
-	validation := ValidationChecker(att, false, true, target, context, depth)
-	if validation == "" {
-		return unmarshaler
-	}
-	return fmt.Sprintf("%s\n%sif err == nil {\n%s\n%s}", unmarshaler, Tabs(depth), strings.Replace(validation, "\n", "\n\t", -1), Tabs(depth))
+func attributeUnmarshalerR(att *design.AttributeDefinition, required, nonzero []string, versioned bool, defaultPkg, context, source, target string, depth int) string {
+	return typeUnmarshalerR(att.Type, required, nonzero, versioned, defaultPkg, context, source, target, depth)
 }
 
 // PrimitiveUnmarshaler produces the Go code that initializes a primitive type from its deserialized
@@ -802,12 +818,13 @@ func hashUnmarshalerR(h *design.Hash, versioned bool, defaultPkg, context, sourc
 // name of the variable to initialize.
 // The generated code assumes that there is a variable called "err" of type error that it can use
 // to record errors.
-func objectUnmarshalerR(o design.DataType, required []string, versioned bool, defaultPkg, context, source, target string, depth int) string {
+func objectUnmarshalerR(o design.DataType, required, nonzero []string, versioned bool, defaultPkg, context, source, target string, depth int) string {
 	data := map[string]interface{}{
 		"type":       o,
 		"versioned":  versioned,
 		"defaultPkg": defaultPkg,
 		"required":   required,
+		"nonzero":    nonzero,
 		"context":    context,
 		"source":     source,
 		"target":     target,
@@ -959,43 +976,44 @@ const (
 {{end}}{{tabs .depth}}	{{.target}}["links"] = links
 }{{end}}`
 
-	mUserImplTmpl = `// {{.Name}} validates and renders an instance of {{gotypename .Type 0}} into a interface{}{{if .View}}
+	mUserImplTmpl = `// {{.Name}} validates and renders an instance of {{gotypename .Type nil 0}} into a interface{}{{if .View}}
 // using view "{{.View}}".{{end}}
-func {{.Name}}(source {{gotyperef .Type 0}}, inErr error) (target {{gonative .Type}}, err error) {
+func {{.Name}}(source {{gotyperef .Type .Type.AllRequired 0}}, inErr error) (target {{gonative .Type}}, err error) {
 	err = inErr
 {{.Impl}}
 	return
 }`
 
 	unmUserPrimitiveTmpl = `{{tabs .depth}}if val, ok := {{.source}}.({{gonative .type}}); ok {
-{{tabs .depth}}	{{.target}} = {{gopkgtyperef .type .versioned .defaultPkg 0}}(val)
+{{tabs .depth}}	{{.target}} = {{gopkgtyperef .type nil .versioned .defaultPkg 0}}(val)
 {{tabs .depth}}} else {
 {{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "{{gonative .type}}", err)
 {{tabs .depth}}}`
 
 	unmPrimitiveTmpl = `{{if eq .type.Kind 2}}{{tabs .depth}}if f, ok := {{.source}}.(float64); ok {
 {{tabs .depth}}	{{.target}} = int(f)
-{{else if or (eq .type.Kind 5) (eq .type.Kind 6)}}{{tabs .depth}}{{.target}} = {{.source}}{{else}}{{tabs .depth}}if val, ok := {{.source}}.({{gotyperef .type (add .depth 1)}}); ok {
+{{else if or (eq .type.Kind 5) (eq .type.Kind 6)}}{{tabs .depth}}{{.target}} = {{.source}}{{else}}{{tabs .depth}}if val, ok := {{.source}}.({{gotyperef .type nil (add .depth 1)}}); ok {
 {{tabs .depth}}	{{.target}} = val
 {{end}}{{if not (or (eq .type.Kind 5) (eq .type.Kind 6))}}{{tabs .depth}}} else {
-{{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "{{gotyperef .type (add .depth 1)}}", err)
+{{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "{{gotyperef .type nil (add .depth 1)}}", err)
 {{tabs .depth}}}{{end}}`
 
 	unmArrayTmpl = `{{tabs .depth}}if val, ok := {{.source}}.([]interface{}); ok {
-{{tabs .depth}}	{{.target}} = make([]{{gopkgtyperef .elemType.Type .versioned .defaultPkg (add .depth 2)}}, len(val))
+{{tabs .depth}}	{{.target}} = make([]{{gopkgtyperef .elemType.Type .elemType.AllRequired .versioned .defaultPkg (add .depth 2)}}, len(val))
 {{tabs .depth}}	{{$tmp := tempvar}}for {{$tmp}}, v := range val {
-{{unmarshalAttribute .elemType .versioned .defaultPkg (printf "%s[*]" .context) "v" (printf "%s[%s]" .target $tmp) (add .depth 2)}}{{$ctx := .}}
+{{unmarshalAttribute .elemType nil nil .versioned .defaultPkg (printf "%s[*]" .context) "v" (printf "%s[%s]" .target $tmp) (add .depth 2)}}{{$ctx := .}}
 {{tabs .depth}}	}
 {{tabs .depth}}} else {
 {{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "array", err)
 {{tabs .depth}}}`
 
 	unmObjectTmpl = `{{tabs .depth}}{{$ctx := .}}if val, ok := {{.source}}.(map[string]interface{}); ok {
-{{tabs .depth}}{{$context := .context}}{{$depth := .depth}}{{$target := .target}}{{$required := .required}}	{{$target}} = new({{gotypename .type (add .depth 1)}})
-{{range $name, $att := .type.ToObject}}{{$pointer := and $att.Type.IsPrimitive (not (has $ctx.required $name))}}{{/*
+{{tabs .depth}}{{$context := .context}}{{$depth := .depth}}{{$target := .target}}{{$required := .required}}{{/*
+*/}}	{{$target}} = new({{gotypename .type .required (add .depth 1)}})
+{{range $name, $att := .type.ToObject}}{{$pointer := and (not (has $ctx.required $name)) (not (has $ctx.nonzero $name)) $att.Type.IsPrimitive}}{{/*
 */}}{{tabs $depth}}	if v, ok := val["{{$name}}"]; ok {
-{{tabs $depth}}		{{$temp := tempvar}}var {{$temp}} {{gopkgtyperef $att.Type $ctx.versioned $ctx.defaultPkg (add $depth 2)}}
-{{unmarshalAttribute $att $ctx.versioned $ctx.defaultPkg (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}
+{{tabs $depth}}		{{$temp := tempvar}}var {{$temp}} {{gopkgtyperef $att.Type $att.AllRequired $ctx.versioned $ctx.defaultPkg (add $depth 2)}}
+{{unmarshalAttribute $att $att.AllRequired $att.AllNonZero $ctx.versioned $ctx.defaultPkg (printf "%s.%s" $context (goify $name true)) "v" $temp (add $depth 2)}}
 {{tabs $depth}}		{{printf "%s.%s" $target (goify $name true)}} = {{if $pointer}}&{{end}}{{$temp}}
 {{tabs $depth}}	}{{if (has $required $name)}} else {
 {{tabs $depth}}		err = goa.MissingAttributeError(` + "`" + `{{$context}}` + "`" + `, "{{$name}}", err)
@@ -1006,17 +1024,17 @@ func {{.Name}}(source {{gotyperef .Type 0}}, inErr error) (target {{gonative .Ty
 
 	unmHashTmpl = `{{tabs .depth}}if val, ok := {{.source}}.(map[string]interface{}); ok {
 {{if and (eq .type.KeyType.Type.Kind 4) (eq .type.ElemType.Type.Kind 5)}}{{tabs .depth}}	{{.target}} = val
-{{else}}{{tabs .depth}}	{{$tmp := tempvar}}{{$tmp}} := make(map[{{gotypename .type.KeyType.Type (add .depth 1)}}]{{gotypename .type.ElemType.Type (add .depth 1)}})
+{{else}}{{tabs .depth}}	{{$tmp := tempvar}}{{$tmp}} := make(map[{{gotypename .type.KeyType.Type .type.KeyType.AllRequired (add .depth 1)}}]{{gotypename .type.ElemType.Type .type.ElemType.AllRequired (add .depth 1)}})
 {{tabs .depth}}	for k, v := range val {
 {{$k := tempvar}}{{if not (eq .type.KeyType.Type.Kind 4)}}{{tabs .depth}}		{{$ki := tempvar}}var {{$ki}} interface{}
 {{tabs .depth}}		err = json.Unmarshal([]byte(k), &{{$ki}})
 {{tabs .depth}}		if err != nil {
 {{tabs .depth}}			return
 {{tabs .depth}}		}
-{{tabs .depth}}		var {{$k}} {{gotypename .type.KeyType.Type (add .depth 2)}}
-{{tabs .depth}}		{{unmarshalAttribute .type.KeyType .versioned .defaultPkg (printf "%s.keys[*]" .context) $ki $k (add .depth 2)}}
-{{end}}{{$v := tempvar}}{{if not (eq .type.ElemType.Type.Kind 5)}}{{tabs .depth}}		var {{$v}} {{gotypename .type.ElemType.Type (add .depth 2)}}
-{{tabs .depth}}		{{unmarshalAttribute .type.ElemType .versioned .defaultPkg (printf "%s.values[*]" .context) "v" $v (add .depth 2)}}
+{{tabs .depth}}		var {{$k}} {{gotypename .type.KeyType.Type .type.KeyType.AllRequired (add .depth 2)}}
+{{tabs .depth}}		{{unmarshalAttribute .type.KeyType .type.KeyType.AllRequired .type.KeyType.AllNonZero .versioned .defaultPkg (printf "%s.keys[*]" .context) $ki $k (add .depth 2)}}
+{{end}}{{$v := tempvar}}{{if not (eq .type.ElemType.Type.Kind 5)}}{{tabs .depth}}		var {{$v}} {{gotypename .type.ElemType.Type .type.ElemType.AllRequired (add .depth 2)}}
+{{tabs .depth}}		{{unmarshalAttribute .type.ElemType .type.ElemType.AllRequired .type.ElemType.AllNonZero .versioned .defaultPkg (printf "%s.values[*]" .context) "v" $v (add .depth 2)}}
 {{end}}{{tabs .depth}}		{{$tmp}}[{{if eq .type.KeyType.Type.Kind 4}}k{{else}}{{$k}}{{end}}] = {{if eq .type.ElemType.Type.Kind 5}}v{{else}}{{$v}}{{end}}
 {{tabs .depth}}	}
 {{tabs .depth}}	{{.target}} = {{$tmp}}
@@ -1024,8 +1042,8 @@ func {{.Name}}(source {{gotyperef .Type 0}}, inErr error) (target {{gonative .Ty
 {{tabs .depth}}	err = goa.InvalidAttributeTypeError(` + "`" + `{{.context}}` + "`" + `, {{.source}}, "hash", err)
 {{tabs .depth}}}`
 
-	unmUserImplTmpl = `// {{.Name}} unmarshals and validates a raw interface{} into an instance of {{gotypename .Type 0}}
-func {{.Name}}(source interface{}, inErr error) (target {{gotyperef .Type 0}}, err error) {
+	unmUserImplTmpl = `// {{.Name}} unmarshals and validates a raw interface{} into an instance of {{gotypename .Type nil 0}}
+func {{.Name}}(source interface{}, inErr error) (target {{gotyperef .Type .Type.AllRequired 0}}, err error) {
 	err = inErr
 {{.Impl}}
 	return
