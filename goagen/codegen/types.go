@@ -1025,9 +1025,9 @@ func {{.Name}}(source {{gotyperef .Type .Type.AllRequired 0}}, inErr error) (tar
 func {{.Name}}(source interface{}, inErr error) (target {{gotyperef .Type .Type.AllRequired 0}}, err error) {
 	err = inErr
 {{.Impl}}
-{{if .MustValidate}}	if err2 := target.Validate(); err2 != nil {
-		err = goa.ReportError(err, err2)
+{{if .MustValidate}}	if target != nil {
+		err = goa.ReportError(err, target.Validate())
 	}
-	return
-{{end}}}`
+{{end}}	return
+}`
 )
