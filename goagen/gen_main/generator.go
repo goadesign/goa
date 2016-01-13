@@ -213,7 +213,7 @@ func okResp(a *design.ActionDefinition, v string) map[string]interface{} {
 	} else {
 		pkg = codegen.VersionPackage(v)
 	}
-	name := codegen.GoTypeRef(mt, 1)
+	name := codegen.GoTypeRef(mt, mt.AllRequired(), 1)
 	var pointer string
 	if strings.HasPrefix(name, "*") {
 		name = name[1:]
