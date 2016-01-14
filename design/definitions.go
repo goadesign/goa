@@ -1008,6 +1008,7 @@ func (a *AttributeDefinition) Dup() *AttributeDefinition {
 		Metadata:          a.Metadata,
 		DefaultValue:      a.DefaultValue,
 		NonZeroAttributes: a.NonZeroAttributes,
+		View:              a.View,
 	}
 	return &dup
 }

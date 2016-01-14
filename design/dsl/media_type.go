@@ -250,9 +250,11 @@ func View(name string, dsl ...func()) {
 				if mto == nil {
 					mto = mt.Type.ToArray().ElemType.Type.ToObject()
 				}
-				for n := range o {
+				for n, cat := range o {
 					if existing, ok := mto[n]; ok {
-						o[n] = existing
+						dup := existing.Dup()
+						dup.View = cat.View
+						o[n] = dup
 					} else if n != "links" {
 						ReportError("unknown attribute %#v", n)
 					}
