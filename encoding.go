@@ -190,7 +190,7 @@ func (p *decoderPool) Put(d Decoder) {
 }
 
 // Encode uses registered Encoders to marshal the response body based on
-// the request "Accpt" header
+// the request "Accept" header
 func (app *Application) Encode(ctx *Context, v interface{}, contentType string) ([]byte, error) {
 	p, ok := app.encoderPools[strings.ToLower(contentType)] // headers are supposed to be case insensitive
 	if !ok {
