@@ -7,8 +7,6 @@ import (
 	"io"
 	"strings"
 	"sync"
-
-	"github.com/raphael/goa"
 )
 
 type (
@@ -117,7 +115,7 @@ func (app *Application) initEncoding() {
 // Decode uses registered Decoders to unmarshal the request body based on
 // the request "Content-Type" header. If the Decode unmarshals into the appropriate
 // struct itself, defaultUnmarshaler will not be run.
-func (app *Application) Decode(ctx *goa.Context, body io.ReadCloser, v interface{}, contentType string) error {
+func (app *Application) Decode(ctx *Context, body io.ReadCloser, v interface{}, contentType string) error {
 	defer body.Close()
 
 	p, ok := app.decoderPools[strings.ToLower(contentType)] // headers are supposed to be case insensitive
@@ -193,7 +191,7 @@ func (p *decoderPool) Put(d Decoder) {
 
 // Encode uses registered Encoders to marshal the response body based on
 // the request "Accpt" header
-func (app *Application) Encode(ctx *goa.Context, v interface{}, contentType string) ([]byte, error) {
+func (app *Application) Encode(ctx *Context, v interface{}, contentType string) ([]byte, error) {
 	p, ok := app.encoderPools[strings.ToLower(contentType)] // headers are supposed to be case insensitive
 	if !ok {
 		p = app.defaultEncoderPool
