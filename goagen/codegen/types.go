@@ -623,7 +623,7 @@ func mediaTypeMarshalerImpl(mt *design.MediaTypeDefinition, versioned bool, defa
 			}
 		}
 		rendered = &design.AttributeDefinition{
-			Type:        design.DataType(v.Type.ToObject()),
+			Type:        v.Type,
 			Validations: vals,
 		}
 	}
@@ -645,13 +645,14 @@ func mediaTypeMarshalerImpl(mt *design.MediaTypeDefinition, versioned bool, defa
 	o := rendered.Type.ToObject()
 	mtObj := mt.Type.ToObject()
 	newObj := make(design.Object)
-	for n := range o {
+	for n, renderedAt := range o {
 		if n != "links" {
-			for an, at := range mtObj {
-				if an == n {
-					newObj[n] = at
-					break
+			if at := mtObj[n]; at != nil {
+				if renderedAt.View != "" {
+					at = at.Dup()
+					at.View = renderedAt.View
 				}
+				newObj[n] = at
 			}
 		}
 	}
