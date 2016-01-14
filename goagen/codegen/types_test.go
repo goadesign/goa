@@ -458,6 +458,44 @@ var _ = Describe("code generation", func() {
 			})
 		})
 
+		Context("with a media type embedding other media types with non default view", func() {
+			var testMediaType *MediaTypeDefinition
+			var marshalerImpl string
+
+			BeforeEach(func() {
+				Design = nil
+				Errors = nil
+				fooMediaType := MediaType("application/fooMT", func() {
+					Attribute("href")
+					View("default", func() {
+						Attribute("href")
+					})
+					View("tiny", func() {
+						Attribute("href")
+					})
+				})
+				Ω(Errors).ShouldNot(HaveOccurred())
+				testMediaType = MediaType("application/test", func() {
+					Attribute("foo", fooMediaType, func() {
+						View("tiny")
+					})
+				})
+				Ω(Errors).ShouldNot(HaveOccurred())
+				RunDSL()
+				Ω(Errors).ShouldNot(HaveOccurred())
+			})
+
+			JustBeforeEach(func() {
+				marshaler = codegen.MediaTypeMarshaler(testMediaType, false, "", context, source, target, "")
+				marshalerImpl = codegen.MediaTypeMarshalerImpl(testMediaType, false, "", "default")
+			})
+
+			It("generates the marshaler code", func() {
+				Ω(marshaler).Should(Equal(mtViewMarshaled))
+				Ω(marshalerImpl).Should(Equal(mtViewMarshaledImpl))
+			})
+		})
+
 		Context("with a media type with links", func() {
 			var testMediaType *MediaTypeDefinition
 			var marshalerImpl string
@@ -751,8 +789,22 @@ const (
 	}`
 
 	mtMarshaled           = `	p, err = MarshalTest(raw, err)`
+	mtViewMarshaled       = `	p, err = MarshalTest(raw, err)`
 	collectionMtMarshaled = `	p, err = MarshalTestmtCollection(raw, err)`
 	mtMarshaled2          = `	p, err = MarshalTest2(raw, err)`
+
+	mtViewMarshaledImpl = `// MarshalTest validates and renders an instance of Test into a interface{}
+// using view "default".
+func MarshalTest(source *Test, inErr error) (target map[string]interface{}, err error) {
+	err = inErr
+	tmp1 := map[string]interface{}{
+	}
+	if source.Foo != nil {
+		tmp1["foo"], err = MarshalFoomtTiny(source.Foo, err)
+	}
+	target = tmp1
+	return
+}`
 
 	mtMarshaledImpl = `// MarshalTest validates and renders an instance of Test into a interface{}
 // using view "default".
