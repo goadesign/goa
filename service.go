@@ -3,6 +3,7 @@ package goa
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"mime"
 	"net/http"
 	"net/url"
@@ -21,9 +22,9 @@ type (
 		// Logging methods, configure the log handler using the Logger global variable.
 		log.Logger
 
-		// GetDecodeFunc returns a func that executes a registered Decoder based on
+		// Decode uses registered Decoders to unmarshal the request body based on
 		// the request "Content-Type" header
-		GetDecodeFunc(contentType string) DecodeFunc
+		Decode(ctx *Context, body io.ReadCloser, v interface{}, contentType string) error
 
 		// Encode uses registered Encoders to marshal the response body based on
 		// the request "Accept" header
@@ -46,7 +47,6 @@ type (
 
 		// ListenAndServeTLS starts a HTTPS server on the given port.
 		ListenAndServeTLS(add, certFile, keyFile string) error
-
 		// ServeFiles replies to the request with the contents of the named file or
 		// directory. The logic // for what to do when the filename points to a file vs. a
 		// directory is the same as the standard http package ServeFile function. The path
