@@ -24,7 +24,7 @@ type (
 	// thus safely reused in a sync.Pool
 	ResettableDecoder interface {
 		Decoder
-		Reset(r io.Reader) error
+		Reset(r io.Reader)
 	}
 
 	// decoderPool smartly determines whether to instantiate a new Decoder or reuse
@@ -48,7 +48,7 @@ type (
 	// thus safely reused in a sync.Pool
 	ResettableEncoder interface {
 		Encoder
-		Reset(w io.Writer) error
+		Reset(w io.Writer)
 	}
 
 	// encoderPool smartly determines whether to instantiate a new Encoder or reuse
@@ -266,22 +266,22 @@ func (p *encoderPool) Put(e Encoder) {
 	p.pool.Put(e)
 }
 
-// NewDecoder returns a new json.Decoder every time because it can't be reset
+// NewDecoder returns a new json.Decoder
 func (f *jsonFactory) NewDecoder(r io.Reader) Decoder {
 	return json.NewDecoder(r)
 }
 
-// NewEncoder returns a new json.Encoder every time because it can't be reset
+// NewEncoder returns a new json.Encoder
 func (f *jsonFactory) NewEncoder(w io.Writer) Encoder {
 	return json.NewEncoder(w)
 }
 
-// NewDecoder returns a new gob.Decoder every time because it can't be reset
+// NewDecoder returns a new gob.Decoder
 func (f *gobFactory) NewDecoder(r io.Reader) Decoder {
 	return gob.NewDecoder(r)
 }
 
-// NewEncoder returns a new gob.Encoder every time because it can't be reset
+// NewEncoder returns a new gob.Encoder
 func (f *gobFactory) NewEncoder(w io.Writer) Encoder {
 	return gob.NewEncoder(w)
 }
