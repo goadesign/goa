@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/raphael/goa"
+
 	"golang.org/x/net/context"
 	log "gopkg.in/inconshreveable/log15.v2"
 )
@@ -25,11 +27,11 @@ type (
 		// Decode uses registered Decoders to unmarshal the request body based on
 		// the request "Content-Type" header. If the Decode unmarshals into the appropriate
 		// struct itself, defaultUnmarshaler will not be run.
-		Decode(body io.ReadCloser, v interface{}, contentType string) error
+		Decode(ctx *goa.Context, body io.ReadCloser, v interface{}, contentType string) error
 
 		// Encode uses registered Encoders to marshal the response body based on
 		// the request "Accept" header
-		Encode(v interface{}, contentType string) ([]byte, error)
+		Encode(ctx *goa.Context, v interface{}, contentType string) ([]byte, error)
 
 		// Name is the name of the goa application.
 		Name() string

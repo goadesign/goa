@@ -7,17 +7,17 @@ import (
 	"io"
 	"strings"
 	"sync"
+
+	"github.com/raphael/goa"
 )
 
 type (
-	// DecoderFactory is necessary to get new instances of custom decoders
+	// A DecoderFactory generates custom decoders
 	DecoderFactory interface {
 		NewDecoder(r io.Reader) Decoder
 	}
 
-	// The Decoder interface needs to be able to decode into an interface{} as well as have a
-	// Reset function so that it can be reused, though never concurrently. If the Decoder does
-	// not need a Reset, it will still need to be wrapped in a no-op function.
+	// A Decoder unmarshals an io.Reader into an interface
 	Decoder interface {
 		Decode(v interface{}) error
 	}
@@ -29,19 +29,19 @@ type (
 		Reset(r io.Reader) error
 	}
 
+	// decoderPool smartly determines whether to instantiate a new Decoder or reuse
+	// one from a sync.Pool
 	decoderPool struct {
 		factory DecoderFactory
 		pool    *sync.Pool
 	}
 
-	// EncoderFactory is necessary to get new instances of custom encoders
+	// A EncoderFactory generates custom encoders
 	EncoderFactory interface {
 		NewEncoder(w io.Writer) Encoder
 	}
 
-	// The Encoder interface needs to be able to decode into an interface{} as well as have a
-	// Reset function so that it can be reused, though never concurrently. If the Encoder does
-	// not need a Reset, it will still need to be wrapped in a no-op function.
+	// An Encoder marshals from an interface into an io.Writer
 	Encoder interface {
 		Encode(v interface{}) error
 	}
@@ -53,6 +53,8 @@ type (
 		Reset(w io.Writer) error
 	}
 
+	// encoderPool smartly determines whether to instantiate a new Encoder or reuse
+	// one from a sync.Pool
 	encoderPool struct {
 		factory EncoderFactory
 		pool    *sync.Pool
@@ -115,7 +117,7 @@ func (app *Application) initEncoding() {
 // Decode uses registered Decoders to unmarshal the request body based on
 // the request "Content-Type" header. If the Decode unmarshals into the appropriate
 // struct itself, defaultUnmarshaler will not be run.
-func (app *Application) Decode(body io.ReadCloser, v interface{}, contentType string) error {
+func (app *Application) Decode(ctx *goa.Context, body io.ReadCloser, v interface{}, contentType string) error {
 	defer body.Close()
 
 	p, ok := app.decoderPools[strings.ToLower(contentType)] // headers are supposed to be case insensitive
@@ -191,7 +193,7 @@ func (p *decoderPool) Put(d Decoder) {
 
 // Encode uses registered Encoders to marshal the response body based on
 // the request "Accpt" header
-func (app *Application) Encode(v interface{}, contentType string) ([]byte, error) {
+func (app *Application) Encode(ctx *goa.Context, v interface{}, contentType string) ([]byte, error) {
 	p, ok := app.encoderPools[strings.ToLower(contentType)] // headers are supposed to be case insensitive
 	if !ok {
 		p = app.defaultEncoderPool
