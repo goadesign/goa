@@ -20,6 +20,9 @@ type (
 		Decode(v interface{}) error
 	}
 
+	// A DecodeFunc unmarshals body into v
+	DecodeFunc func(ctx *Context, body io.ReadCloser, v interface{}) error
+
 	// The ResettableDecoder is used to determine whether or not a Decoder can be reset and
 	// thus safely reused in a sync.Pool
 	ResettableDecoder interface {
@@ -112,26 +115,27 @@ func (app *Application) initEncoding() {
 	app.decoderPools = decoders
 }
 
-// Decode uses registered Decoders to unmarshal the request body based on
-// the request "Content-Type" header. If the Decode unmarshals into the appropriate
-// struct itself, defaultUnmarshaler will not be run.
-func (app *Application) Decode(ctx *Context, body io.ReadCloser, v interface{}, contentType string) error {
-	defer body.Close()
+// GetDecodeFunc returns a func that executes a registered Decoder based on
+// the request "Content-Type" header
+func (app *Application) GetDecodeFunc(contentType string) DecodeFunc {
+	return func(ctx *Context, body io.ReadCloser, v interface{}) error {
+		defer body.Close()
 
-	p, ok := app.decoderPools[strings.ToLower(contentType)] // headers are supposed to be case insensitive
-	if !ok {
-		p = app.defaultDecoderPool
+		p, ok := app.decoderPools[strings.ToLower(contentType)] // headers are supposed to be case insensitive
+		if !ok {
+			p = app.defaultDecoderPool
+		}
+
+		// the decoderPool will handle whether or not a pool is actually in use
+		decoder := p.Get(body)
+		if err := decoder.Decode(v); err != nil {
+			// TODO: log out error details
+			return err
+		}
+		p.Put(decoder)
+
+		return nil
 	}
-
-	// the decoderPool will handle whether or not a pool is actually in use
-	decoder := p.Get(body)
-	if err := decoder.Decode(v); err != nil {
-		// TODO: log out error details
-		return err
-	}
-	p.Put(decoder)
-
-	return nil
 }
 
 // SetDecoder sets a specific decoder to be used for the specified content types. If
