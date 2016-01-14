@@ -55,6 +55,19 @@ var _ = Describe("validation code generation", func() {
 					Ω(code).Should(Equal(patternValCode))
 				})
 			})
+			Context("of min value 0", func() {
+				BeforeEach(func() {
+					attType = design.Integer
+					minVal := &design.MinimumValidationDefinition{
+						Min: 0,
+					}
+					validations = []design.ValidationDefinition{minVal}
+				})
+
+				It("produces the validation go code", func() {
+					Ω(code).Should(Equal(minValCode))
+				})
+			})
 		})
 	})
 })
@@ -69,6 +82,12 @@ const (
 	patternValCode = `	if val != nil {
 		if ok := goa.ValidatePattern(` + "`.*`" + `, *val); !ok {
 			err = goa.InvalidPatternError(` + "`context`" + `, *val, ` + "`.*`" + `, err)
+		}
+	}`
+
+	minValCode = `	if val != nil {
+		if *val < 0 {
+			err = goa.InvalidRangeError(` + "`" + `context` + "`" + `, *val, 0, true, err)
 		}
 	}`
 )

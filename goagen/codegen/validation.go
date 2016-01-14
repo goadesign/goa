@@ -143,24 +143,28 @@ func validationsCode(validations []design.ValidationDefinition, data map[string]
 			}
 		case *design.MinimumValidationDefinition:
 			data["min"] = actual.Min
+			data["isMin"] = true
 			delete(data, "max")
 			if val := RunTemplate(minMaxValT, data); val != "" {
 				res = append(res, val)
 			}
 		case *design.MaximumValidationDefinition:
 			data["max"] = actual.Max
+			data["isMin"] = false
 			delete(data, "min")
 			if val := RunTemplate(minMaxValT, data); val != "" {
 				res = append(res, val)
 			}
 		case *design.MinLengthValidationDefinition:
 			data["minLength"] = actual.MinLength
+			data["isMinLength"] = true
 			delete(data, "maxLength")
 			if val := RunTemplate(lengthValT, data); val != "" {
 				res = append(res, val)
 			}
 		case *design.MaxLengthValidationDefinition:
 			data["maxLength"] = actual.MaxLength
+			data["isMinLength"] = false
 			delete(data, "minLength")
 			if val := RunTemplate(lengthValT, data); val != "" {
 				res = append(res, val)
@@ -234,22 +238,22 @@ const (
 */}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
 {{end}}{{tabs $depth}}if err2 := goa.ValidateFormat({{constant .format}}, {{.targetVal}}); err2 != nil {
 {{tabs $depth}}		err = goa.InvalidFormatError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, {{constant .format}}, err2, err)
-{{if .isPointer}}{{tabs $depth}}	}
+{{if .isPointer}}{{tabs $depth}}}
 {{end}}{{tabs .depth}}}`
 
 	minMaxValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
 */}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
-{{end}}{{tabs .depth}}if {{.targetVal}} {{if .min}}<{{else}}>{{end}} {{if .min}}{{.min}}{{else}}{{.max}}{{end}} {
-{{tabs $depth}}	err = goa.InvalidRangeError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, {{if .min}}{{.min}}, true{{else}}{{.max}}, false{{end}}, err)
-{{if .isPointer}}{{tabs $depth}}	}
+{{end}}{{tabs .depth}}	if {{.targetVal}} {{if .isMin}}<{{else}}>{{end}} {{if .isMin}}{{.min}}{{else}}{{.max}}{{end}} {
+{{tabs $depth}}	err = goa.InvalidRangeError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, {{if .isMin}}{{.min}}, true{{else}}{{.max}}, false{{end}}, err)
+{{if .isPointer}}{{tabs $depth}}}
 {{end}}{{tabs .depth}}}`
 
 	lengthValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
 */}}{{$target := or (and (or .array .nonzero) .target) .targetVal}}{{/*
 */}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
-{{end}}{{tabs .depth}}if len({{$target}}) {{if .minLength}}<{{else}}>{{end}} {{if .minLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
-{{tabs $depth}}	err = goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{$target}}, len({{$target}}), {{if .minLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}, err)
-{{if .isPointer}}{{tabs $depth}}	}
+{{end}}{{tabs .depth}}if len({{$target}}) {{if .isMinLength}}<{{else}}>{{end}} {{if .isMinLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
+{{tabs $depth}}	err = goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{$target}}, len({{$target}}), {{if .isMinLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}, err)
+{{if .isPointer}}{{tabs $depth}}}
 {{end}}{{tabs .depth}}}`
 
 	requiredValTmpl = `{{$ctx := .}}{{range $r := .required}}{{$catt := index $ctx.attribute.Type.ToObject $r}}{{if eq $catt.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.target}}.{{goify $r true}} == "" {
