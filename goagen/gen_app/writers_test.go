@@ -326,7 +326,6 @@ var _ = Describe("ContextsWriter", func() {
 					written := string(b)
 					Ω(written).ShouldNot(BeEmpty())
 					Ω(written).Should(ContainSubstring(payloadObjContext))
-					Ω(written).Should(ContainSubstring(payloadObjContextFactory))
 				})
 			})
 
@@ -356,7 +355,8 @@ var _ = Describe("ControllersWriter", func() {
 		})
 
 		Context("with data", func() {
-			var actions, verbs, paths, contexts []string
+			var actions, verbs, paths, contexts, unmarshals []string
+			var payloads []*design.UserTypeDefinition
 
 			var data []*genapp.ControllerTemplateData
 
@@ -365,6 +365,8 @@ var _ = Describe("ControllersWriter", func() {
 				verbs = nil
 				paths = nil
 				contexts = nil
+				unmarshals = nil
+				payloads = nil
 			})
 
 			JustBeforeEach(func() {
@@ -374,6 +376,14 @@ var _ = Describe("ControllersWriter", func() {
 				}
 				as := make([]map[string]interface{}, len(actions))
 				for i, a := range actions {
+					var unmarshal string
+					var payload *design.UserTypeDefinition
+					if i < len(unmarshals) {
+						unmarshal = unmarshals[i]
+					}
+					if i < len(payloads) {
+						payload = payloads[i]
+					}
 					as[i] = map[string]interface{}{
 						"Name": a,
 						"Routes": []*design.RouteDefinition{
@@ -381,7 +391,9 @@ var _ = Describe("ControllersWriter", func() {
 								Verb: verbs[i],
 								Path: paths[i],
 							}},
-						"Context": contexts[i],
+						"Context":   contexts[i],
+						"Unmarshal": unmarshal,
+						"Payload":   payload,
 					}
 				}
 				if len(as) > 0 {
@@ -420,6 +432,37 @@ var _ = Describe("ControllersWriter", func() {
 					Ω(written).ShouldNot(BeEmpty())
 					Ω(written).Should(ContainSubstring(simpleController))
 					Ω(written).Should(ContainSubstring(simpleMount))
+				})
+			})
+
+			Context("with actions that take a payload", func() {
+				BeforeEach(func() {
+					actions = []string{"list"}
+					verbs = []string{"GET"}
+					paths = []string{"/accounts/:accountID/bottles"}
+					contexts = []string{"ListBottleContext"}
+					unmarshals = []string{"unmarshalListBottlePayload"}
+					payloads = []*design.UserTypeDefinition{
+						&design.UserTypeDefinition{
+							TypeName: "ListBottlePayload",
+							AttributeDefinition: &design.AttributeDefinition{
+								Type: design.Object{
+									"id": &design.AttributeDefinition{
+										Type: design.String,
+									},
+								},
+							},
+						},
+					}
+				})
+
+				It("writes the payload unmarshal function", func() {
+					err := writer.Execute(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).Should(ContainSubstring(payloadObjUnmarshal))
 				})
 			})
 
@@ -772,11 +815,6 @@ type ListBottleContext struct {
 func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
 	var err error
 	ctx := ListBottleContext{Context: c}
-	p, err := NewListBottlePayload(c.Payload())
-	if err != nil {
-		return nil, err
-	}
-	ctx.Payload = p
 	return &ctx, err
 }
 `
@@ -787,16 +825,18 @@ type ListBottleContext struct {
 }
 `
 
-	payloadObjContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
-	var err error
-	ctx := ListBottleContext{Context: c}
-	p, err := NewListBottlePayload(c.Payload())
-	if err != nil {
-		return nil, err
+	payloadObjUnmarshal = `
+func unmarshalListBottlePayload(ctx *goa.Context) error {
+	payload := &ListBottlePayload{}
+	req := ctx.Request()
+	if err := ctx.Service().Decode(ctx, req.Body, payload, req.Header.Get("Content-Type")); err != nil {
+		return err
 	}
-	ctx.Payload = p
-	return &ctx, err
+	if err := payload.Validate(); err != nil {
+		return err
+	}
+	ctx.SetPayload(payload)
+	return nil
 }
 `
 
@@ -817,7 +857,7 @@ type BottlesController interface {
 		}
 		return ctrl.list(ctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.HandleFunc("list", h))
+	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.HandleFunc("list", h, nil))
 	service.Info("mount", "ctrl", "Bottles", "action", "list", "route", "GET /accounts/:accountID/bottles")
 }
 `
@@ -840,7 +880,7 @@ type BottlesController interface {
 		}
 		return ctrl.list(ctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.HandleFunc("list", h))
+	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.HandleFunc("list", h, nil))
 	service.Info("mount", "ctrl", "Bottles", "action", "list", "route", "GET /accounts/:accountID/bottles")
 	h = func(c *goa.Context) error {
 		ctx, err := NewShowBottleContext(c)
@@ -849,7 +889,7 @@ type BottlesController interface {
 		}
 		return ctrl.show(ctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles/:id", ctrl.HandleFunc("show", h))
+	mux.Handle("GET", "/accounts/:accountID/bottles/:id", ctrl.HandleFunc("show", h, nil))
 	service.Info("mount", "ctrl", "Bottles", "action", "show", "route", "GET /accounts/:accountID/bottles/:id")
 }
 `

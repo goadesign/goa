@@ -103,7 +103,7 @@ var _ = Describe("Context", func() {
 		var app goa.Service
 		const resName = "res"
 		const actName = "act"
-		var handler goa.Handler
+		var handler, unmarshaler goa.Handler
 		const reqBody = `"body"`
 		const respStatus = 200
 		var respContent = []byte("response")
@@ -119,6 +119,17 @@ var _ = Describe("Context", func() {
 				c.Respond(respStatus, respContent)
 				return nil
 			}
+			unmarshaler = func(c *goa.Context) error {
+				if req := c.Request(); req != nil {
+					var payload interface{}
+					err := c.Service().Decode(ctx, req.Body, &payload, req.Header.Get("Content-Type"))
+					if err != nil {
+						return err
+					}
+					c.SetPayload(payload)
+				}
+				return nil
+			}
 			var err error
 			reader := strings.NewReader(reqBody)
 			request, err = http.NewRequest("POST", "/foo?filters=one&filters=two&filters=three", reader)
@@ -129,7 +140,7 @@ var _ = Describe("Context", func() {
 
 		JustBeforeEach(func() {
 			ctrl := app.NewController(resName)
-			handleFunc = ctrl.HandleFunc(actName, handler)
+			handleFunc = ctrl.HandleFunc(actName, handler, unmarshaler)
 			handleFunc(rw, request, params)
 		})
 
