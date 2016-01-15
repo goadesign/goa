@@ -513,8 +513,7 @@ func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Control
 // {{.Unmarshal}} unmarshals the request body.
 func {{.Unmarshal}}(ctx *goa.Context) error {
 	payload := &{{gotypename .Payload nil 1}}{}
-	req := ctx.Request()
-	if err := ctx.Service().Decode(ctx, req.Body, payload, req.Header.Get("Content-Type")); err != nil {
+	if err := ctx.Service().DecodeRequest(ctx, payload); err != nil {
 		return err
 	}
 	if err := payload.Validate(); err != nil {

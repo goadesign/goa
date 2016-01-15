@@ -174,15 +174,8 @@ func (ctx *Context) RespondBytes(code int, body []byte) error {
 // Respond serializes the given body matching the request Accept header against the service
 // encoders. It uses the default service encoder if no match is found.
 func (ctx *Context) Respond(code int, body interface{}) error {
-	var b []byte
-	if s := ctx.Service(); s != nil {
-		var err error
-		b, err = s.Encode(ctx, body, ctx.Request().Header.Get("Accept"))
-		if err != nil {
-			return err
-		}
-	}
-	return ctx.RespondBytes(code, b)
+	ctx.WriteHeader(code)
+	return ctx.Service().EncodeResponse(ctx, body)
 }
 
 // BadRequest sends a HTTP response with status code 400 and the given error as body.

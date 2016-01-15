@@ -16,6 +16,7 @@ DEPEND=\
 	github.com/PuerkitoBio/purell \
 	github.com/asaskevich/govalidator \
 	github.com/go-swagger/go-swagger \
+	github.com/golang/gddo/httputil \
 	github.com/golang/lint/golint github.com/onsi/gomega \
 	github.com/julienschmidt/httprouter \
 	github.com/manveru/faker \
@@ -24,10 +25,10 @@ DEPEND=\
 	github.com/raphael/goa-cellar \
 	github.com/zach-klippenstein/goregen \
 	golang.org/x/tools/cmd/cover \
+ 	golang.org/x/tools/cmd/goimports \
 	gopkg.in/alecthomas/kingpin.v2 \
 	gopkg.in/tylerb/graceful.v1 \
-	gopkg.in/yaml.v2 \
- 	golang.org/x/tools/cmd/goimports
+	gopkg.in/yaml.v2
 
 .PHONY: goagen
 
