@@ -23,7 +23,8 @@ type Context struct {
 type key int
 
 const (
-	reqKey key = iota
+	serviceKey = iota
+	reqKey
 	respKey
 	paramsKey
 	payloadKey
@@ -35,20 +36,25 @@ const (
 // NewContext builds a goa context from the given context.Context and request state.
 // If gctx is nil then context.Background is used instead.
 func NewContext(gctx context.Context,
+	service Service,
 	req *http.Request,
 	rw http.ResponseWriter,
-	params url.Values,
-	payload interface{}) *Context {
+	params url.Values) *Context {
 
 	if gctx == nil {
 		gctx = context.Background()
 	}
+	gctx = context.WithValue(gctx, serviceKey, service)
 	gctx = context.WithValue(gctx, reqKey, req)
 	gctx = context.WithValue(gctx, respKey, rw)
 	gctx = context.WithValue(gctx, paramsKey, params)
-	gctx = context.WithValue(gctx, payloadKey, payload)
 
 	return &Context{Context: gctx}
+}
+
+// SetPayload initializes the unmarshaled request body value.
+func (ctx *Context) SetPayload(payload interface{}) {
+	ctx.SetValue(payloadKey, payload)
 }
 
 // SetValue sets the value associated with key in the context.
@@ -69,6 +75,15 @@ func (ctx *Context) SetResponseWriter(rw http.ResponseWriter) http.ResponseWrite
 		return nil
 	}
 	return rwo.(http.ResponseWriter)
+}
+
+// Service returns the underlying service.
+func (ctx *Context) Service() Service {
+	s := ctx.Value(serviceKey)
+	if s != nil {
+		return s.(Service)
+	}
+	return nil
 }
 
 // Request returns the underlying HTTP request.

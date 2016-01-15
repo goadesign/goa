@@ -1,10 +1,8 @@
 package goa
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
-	"mime"
 	"net/http"
 	"net/url"
 	"os"
@@ -21,14 +19,6 @@ type (
 	Service interface {
 		// Logging methods, configure the log handler using the Logger global variable.
 		log.Logger
-
-		// Decode uses registered Decoders to unmarshal the request body based on
-		// the request "Content-Type" header
-		Decode(ctx *Context, body io.ReadCloser, v interface{}, contentType string) error
-
-		// Encode uses registered Encoders to marshal the response body based on
-		// the request "Accept" header
-		Encode(ctx *Context, v interface{}, contentType string) ([]byte, error)
 
 		// Name is the name of the goa application.
 		Name() string
@@ -66,6 +56,14 @@ type (
 		// NewController returns a controller for the resource with the given name.
 		// This method is mainly intended for use by generated code.
 		NewController(resName string) Controller
+
+		// Decode uses registered Decoders to unmarshal the request body based on
+		// the request "Content-Type" header
+		Decode(ctx *Context, body io.ReadCloser, v interface{}, contentType string) error
+
+		// Encode uses registered Encoders to marshal the response body based on
+		// the request "Accept" header
+		Encode(ctx *Context, v interface{}, contentType string) ([]byte, error)
 	}
 
 	// Controller is the interface implemented by all goa controllers.
@@ -87,7 +85,7 @@ type (
 		SetErrorHandler(ErrorHandler)
 		// HandleFunc returns a HandleFunc from the given handler
 		// name is used solely for logging.
-		HandleFunc(name string, h Handler) HandleFunc
+		HandleFunc(name string, h, d Handler) HandleFunc
 	}
 
 	// Application represents a goa application. At the basic level an application consists of
@@ -137,6 +135,9 @@ type (
 
 	// ErrorHandler defines the application error handler signature.
 	ErrorHandler func(*Context, error)
+
+	// DecodeFunc is the function that initialize the unmarshaled payload from the request body.
+	DecodeFunc func(*Context, io.ReadCloser, interface{}) error
 )
 
 var (
@@ -257,7 +258,7 @@ func (app *Application) ServeFiles(path, filename string) error {
 		app.Info("serve", "path", ctx.Request().URL.Path, "filename", fullpath)
 		http.ServeFile(ctx, ctx.Request(), fullpath)
 		return nil
-	})
+	}, nil)
 	app.ServeMux().Handle("GET", path, handle)
 	return nil
 }
@@ -312,12 +313,12 @@ func (ctrl *ApplicationController) HandleError(ctx *Context, err error) {
 	}
 }
 
-// HandleFunc wraps a request handler into a HandleFunc. The HandleFunc initializes the
+// HandleFunc wraps al request handler into a HandleFunc. The HandleFunc initializes the
 // request context by loading the request state, invokes the handler and in case of error invokes
 // the controller (if there is one) or application error handler.
 // This function is intended for the controller generated code. User code should not need to call
 // it directly.
-func (ctrl *ApplicationController) HandleFunc(name string, h Handler) HandleFunc {
+func (ctrl *ApplicationController) HandleFunc(name string, h, d Handler) HandleFunc {
 	// Setup middleware outside of closure
 	middleware := func(ctx *Context) error {
 		if !ctx.ResponseWritten() {
@@ -333,27 +334,17 @@ func (ctrl *ApplicationController) HandleFunc(name string, h Handler) HandleFunc
 		middleware = chain[ml-i-1](middleware)
 	}
 	return func(w http.ResponseWriter, r *http.Request, params url.Values) {
-		// Load body if any
-		var payload interface{}
-		var err error
-		if r.ContentLength > 0 {
-			contentType := r.Header.Get("Content-Type")
-			decodePayload := contentType == ""
-			if !decodePayload {
-				mediaType, _, _ := mime.ParseMediaType(contentType)
-				decodePayload = mediaType == "application/json"
-			}
-			if decodePayload {
-				decoder := json.NewDecoder(r.Body)
-				err = decoder.Decode(&payload)
-			}
-		}
-
 		// Build context
 		gctx, cancel := context.WithCancel(RootContext)
 		defer cancel() // Signal completion of request to any child goroutine
-		ctx := NewContext(gctx, r, w, params, payload)
+		ctx := NewContext(gctx, ctrl.app, r, w, params)
 		ctx.Logger = ctrl.Logger.New("action", name)
+
+		// Load body if any
+		var err error
+		if r.ContentLength > 0 && d != nil {
+			err = d(ctx)
+		}
 
 		// Handle invalid payload
 		handler := middleware

@@ -230,10 +230,13 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 		data := &ControllerTemplateData{Resource: codegen.Goify(r.Name, true)}
 		err := r.IterateActions(func(a *design.ActionDefinition) error {
 			context := fmt.Sprintf("%s%sContext", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
+			unmarshal := fmt.Sprintf("unmarshal%s%sPayload", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			action := map[string]interface{}{
-				"Name":    codegen.Goify(a.Name, true),
-				"Routes":  a.Routes,
-				"Context": context,
+				"Name":      codegen.Goify(a.Name, true),
+				"Routes":    a.Routes,
+				"Context":   context,
+				"Unmarshal": unmarshal,
+				"Payload":   a.Payload,
 			}
 			data.Actions = append(data.Actions, action)
 			return nil

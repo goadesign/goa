@@ -331,7 +331,7 @@ func MountWidgetController(service goa.Service, ctrl WidgetController) {
 		}
 		return ctrl.Get(ctx)
 	}
-	mux.Handle("GET", "/:id", ctrl.HandleFunc("Get", h))
+	mux.Handle("GET", "/:id", ctrl.HandleFunc("Get", h, nil))
 	service.Info("mount", "ctrl", "Widget",{{if .version}} "version", "{{.version}}",{{end}} "action", "Get", "route", "GET /:id")
 }
 `
