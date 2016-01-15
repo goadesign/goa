@@ -60,7 +60,7 @@ var _ = Describe("NewMiddleware", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			rw := new(TestResponseWriter)
 			params := url.Values{"foo": []string{"bar"}}
-			ctx = goa.NewContext(nil, req, rw, params, nil)
+			ctx = goa.NewContext(nil, nil, req, rw, params)
 			Ω(ctx.ResponseStatus()).Should(Equal(0))
 		})
 
@@ -156,7 +156,8 @@ var _ = Describe("LogRequest", func() {
 		req, err := http.NewRequest("POST", "/goo", strings.NewReader(`{"payload":42}`))
 		Ω(err).ShouldNot(HaveOccurred())
 		rw := new(TestResponseWriter)
-		ctx = goa.NewContext(nil, req, rw, params, payload)
+		ctx = goa.NewContext(nil, nil, req, rw, params)
+		ctx.SetPayload(payload)
 		handler = new(testHandler)
 		logger := log15.New("test", "test")
 		logger.SetHandler(handler)
@@ -204,7 +205,8 @@ var _ = Describe("LogResponse", func() {
 		req, err := http.NewRequest("POST", "/goo", strings.NewReader(`{"payload":42}`))
 		Ω(err).ShouldNot(HaveOccurred())
 		rw := new(TestResponseWriter)
-		ctx = goa.NewContext(nil, req, rw, params, payload)
+		ctx = goa.NewContext(nil, nil, req, rw, params)
+		ctx.SetPayload(payload)
 		handler = new(testHandler)
 		logger := log15.New("test", "test")
 		logger.SetHandler(handler)
@@ -234,7 +236,7 @@ var _ = Describe("RequestID", func() {
 		req, err := http.NewRequest("GET", "/goo", nil)
 		Ω(err).ShouldNot(HaveOccurred())
 		req.Header.Set("X-Request-Id", reqID)
-		ctx = goa.NewContext(nil, req, new(TestResponseWriter), nil, nil)
+		ctx = goa.NewContext(nil, nil, req, new(TestResponseWriter), nil)
 	})
 
 	It("sets the request ID in the context", func() {
@@ -288,7 +290,8 @@ var _ = Describe("RequireHeader", func() {
 		req, err = http.NewRequest("POST", "/foo/bar", strings.NewReader(`{"payload":42}`))
 		Ω(err).ShouldNot(HaveOccurred())
 		rw := new(TestResponseWriter)
-		ctx = goa.NewContext(nil, req, rw, params, payload)
+		ctx = goa.NewContext(nil, nil, req, rw, params)
+		ctx.SetPayload(payload)
 		handler = new(testHandler)
 		logger := log15.New("test", "test")
 		logger.SetHandler(handler)
