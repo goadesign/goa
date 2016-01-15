@@ -1,7 +1,6 @@
 package goa
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -162,9 +161,9 @@ func (ctx *Context) Payload() interface{} {
 	return ctx.Value(payloadKey)
 }
 
-// Respond writes the given HTTP status code and response body.
+// RespondBytes writes the given HTTP status code and response body.
 // This method should only be called once per request.
-func (ctx *Context) Respond(code int, body []byte) error {
+func (ctx *Context) RespondBytes(code int, body []byte) error {
 	ctx.WriteHeader(code)
 	if _, err := ctx.Write(body); err != nil {
 		return err
@@ -172,26 +171,30 @@ func (ctx *Context) Respond(code int, body []byte) error {
 	return nil
 }
 
-// JSON serializes the given body into JSON and sends a HTTP response with the given status code
-// and JSON as body.
-func (ctx *Context) JSON(code int, body interface{}) error {
-	js, err := json.Marshal(body)
-	if err != nil {
-		return err
+// Respond serializes the given body matching the request Accept header against the service
+// encoders. It uses the default service encoder if no match is found.
+func (ctx *Context) Respond(code int, body interface{}) error {
+	var b []byte
+	if s := ctx.Service(); s != nil {
+		var err error
+		b, err = s.Encode(ctx, body, ctx.Request().Header.Get("Accept"))
+		if err != nil {
+			return err
+		}
 	}
-	return ctx.Respond(code, js)
+	return ctx.RespondBytes(code, b)
 }
 
 // BadRequest sends a HTTP response with status code 400 and the given error as body.
 func (ctx *Context) BadRequest(err *BadRequestError) error {
-	return ctx.Respond(400, []byte(err.Error()))
+	return ctx.RespondBytes(400, []byte(err.Error()))
 }
 
 // Bug sends a HTTP response with status code 500 and the given body.
 // The body can be set using a format and substituted values a la fmt.Printf.
 func (ctx *Context) Bug(format string, a ...interface{}) error {
 	body := fmt.Sprintf(format, a...)
-	return ctx.Respond(500, []byte(body))
+	return ctx.RespondBytes(500, []byte(body))
 }
 
 // Header returns the response header. It implements the http.ResponseWriter interface.
