@@ -1,10 +1,8 @@
 package goa
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
-	"mime"
 	"net/http"
 	"net/url"
 	"os"
@@ -21,14 +19,6 @@ type (
 	Service interface {
 		// Logging methods, configure the log handler using the Logger global variable.
 		log.Logger
-
-		// Decode uses registered Decoders to unmarshal the request body based on
-		// the request "Content-Type" header
-		Decode(ctx *Context, body io.ReadCloser, v interface{}, contentType string) error
-
-		// Encode uses registered Encoders to marshal the response body based on
-		// the request "Accept" header
-		Encode(ctx *Context, v interface{}, contentType string) ([]byte, error)
 
 		// Name is the name of the goa application.
 		Name() string
@@ -68,8 +58,12 @@ type (
 		NewController(resName string) Controller
 
 		// Decode uses registered Decoders to unmarshal the request body based on
-		// the request "Content-Type" header.
+		// the request "Content-Type" header
 		Decode(ctx *Context, body io.ReadCloser, v interface{}, contentType string) error
+
+		// Encode uses registered Encoders to marshal the response body based on
+		// the request "Accept" header
+		Encode(ctx *Context, v interface{}, contentType string) ([]byte, error)
 	}
 
 	// Controller is the interface implemented by all goa controllers.
@@ -317,20 +311,6 @@ func (ctrl *ApplicationController) HandleError(ctx *Context, err error) {
 	} else if ctrl.app.errorHandler != nil {
 		ctrl.app.errorHandler(ctx, err)
 	}
-}
-
-// Decode only handles JSON at the moment.
-func (app *Application) Decode(ctx *Context, body io.ReadCloser, v interface{}, contentType string) error {
-	decodePayload := contentType == ""
-	if !decodePayload {
-		mediaType, _, _ := mime.ParseMediaType(contentType)
-		decodePayload = mediaType == "application/json"
-	}
-	if decodePayload {
-		decoder := json.NewDecoder(body)
-		return decoder.Decode(v)
-	}
-	return nil
 }
 
 // HandleFunc wraps al request handler into a HandleFunc. The HandleFunc initializes the
