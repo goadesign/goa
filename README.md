@@ -229,13 +229,15 @@ Can't wait to give it a try? the easiest way is to follow the short
 
 ### Middleware
 
-goa includes a number of [built-in middlewares](https://godoc.org/github.com/raphael/goa#Middleware).
-Additional middlewares can be found in the [goa-middleware](https://github.com/raphael/goa-middleware) repo.
+The [goa-middleware](https://github.com/raphael/goa-middleware) repo provides a number of
+middlewares covering most common needs. It also provides a good source of examples for writing new
+middlewares.
 
 ### Examples
 
 The [goa-cellar](https://github.com/raphael/goa-cellar) repo contains the implementation for a
-goa service which demonstrates many aspects of the design language.
+goa service which demonstrates many aspects of the design language. It is kept up-to-date and
+provides a reference for testing functionality.
 
 ## Contributing
 
