@@ -93,9 +93,9 @@ var _ = Describe("Context", func() {
 		})
 	})
 
-	Describe("Payload", func() {
+	Describe("RawPayload", func() {
 		It("returns nil if not initialized", func() {
-			Ω(ctx.Payload()).Should(BeNil())
+			Ω(ctx.RawPayload()).Should(BeNil())
 		})
 	})
 
@@ -160,7 +160,7 @@ var _ = Describe("Context", func() {
 				var payload string
 				err := json.Unmarshal([]byte(reqBody), &payload)
 				Ω(err).ShouldNot(HaveOccurred())
-				Ω(ctx.Payload()).Should(Equal(payload))
+				Ω(ctx.RawPayload()).Should(Equal(payload))
 			})
 		})
 

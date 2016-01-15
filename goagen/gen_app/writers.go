@@ -497,7 +497,8 @@ func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Control
 	mux := service.ServeMux(){{if not .Version.IsDefault}}.Version("{{.Version.Version}}"){{end}}
 {{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
 		ctx, err := New{{.Context}}(c)
-		if err != nil {
+{{if .Payload}}		ctx.Payload = ctx.RawPayload().(*{{gotypename .Payload nil 1}})
+{{end}}		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
 		return ctrl.{{.Name}}(ctx)
