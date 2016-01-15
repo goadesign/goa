@@ -17,11 +17,13 @@ DEPEND=\
 	github.com/asaskevich/govalidator \
 	github.com/go-swagger/go-swagger \
 	github.com/golang/gddo/httputil \
-	github.com/golang/lint/golint github.com/onsi/gomega \
+	github.com/golang/lint/golint \
+	github.com/onsi/gomega \
 	github.com/julienschmidt/httprouter \
 	github.com/manveru/faker \
 	github.com/on99/gocyclo \
-	github.com/onsi/ginkgo github.com/onsi/ginkgo/ginkgo \
+	github.com/onsi/ginkgo \
+	github.com/onsi/ginkgo/ginkgo \
 	github.com/raphael/goa-cellar \
 	github.com/zach-klippenstein/goregen \
 	golang.org/x/tools/cmd/cover \

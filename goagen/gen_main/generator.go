@@ -262,9 +262,9 @@ func main() {
 	service := goa.New("{{.Name}}")
 
 	// Setup middleware
-	service.Use(goa.RequestID())
-	service.Use(goa.LogRequest())
-	service.Use(goa.Recover())
+	service.Use(middleware.RequestID())
+	service.Use(middleware.LogRequest())
+	service.Use(middleware.Recover())
 {{$api := .API}}
 {{range $name, $res := $api.Resources}}{{if $res.SupportsNoVersion}}{{$name := goify $res.Name true}}	// Mount "{{$res.Name}}" controller
 	{{$tmp := tempvar}}{{$tmp}} := New{{$name}}Controller(service)
