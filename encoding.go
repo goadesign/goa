@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"encoding/json"
+	"encoding/xml"
 	"io"
 	"mime"
 	"strings"
@@ -62,6 +63,9 @@ type (
 	// jsonFactory uses encoding/json to act as an DecoderFactory and EncoderFactory
 	jsonFactory struct{}
 
+	// xmlFactory uses encoding/xml to act as an DecoderFactory and EncoderFactory
+	xmlFactory struct{}
+
 	// gobFactory uses encoding/gob to act as an DecoderFactory and EncoderFactory
 	gobFactory struct{}
 
@@ -78,6 +82,10 @@ var (
 	// encoding/json to unmarshal unless overwritten using SetDecoder
 	JSONContentTypes = []string{"application/json", "application/text+json"}
 
+	// XMLContentTypes is a slice of default Content-Type headers that will use stdlib
+	// encoding/xml to unmarshal unless overwritten using SetDecoder
+	XMLContentTypes = []string{"application/xml"}
+
 	// GobContentTypes is a slice of default Content-Type headers that will use stdlib
 	// encoding/gob to unmarshal unless overwritten using SetDecoder
 	GobContentTypes = []string{"application/gob"}
@@ -86,21 +94,31 @@ var (
 // initEncoding initializes all the decoder/encoder pools with the Content-Types found
 // in JSONContentTypes and GobContentTypes. JSON is set as the default decoder.
 func (app *Application) initEncoding() {
+	contentTypeCount := len(JSONContentTypes) + len(XMLContentTypes) + len(GobContentTypes)
+	decoders := make(map[string]*decoderPool, contentTypeCount)
+	encoders := make(map[string]*encoderPool, contentTypeCount)
+
+	// Add json support
 	jf := &jsonFactory{}
 	dp := newDecodePool(jf)
 	ep := newEncodePool(jf)
 	app.defaultDecoderPool = dp
 	app.defaultEncoderPool = ep
-
-	contentTypeCount := len(JSONContentTypes) + len(GobContentTypes)
-	decoders := make(map[string]*decoderPool, contentTypeCount)
-	encoders := make(map[string]*encoderPool, contentTypeCount)
-
 	for _, contentType := range JSONContentTypes {
 		decoders[contentType] = dp
 		encoders[contentType] = ep
 	}
 
+	// Add xml support
+	xf := &xmlFactory{}
+	dp = newDecodePool(xf)
+	ep = newEncodePool(xf)
+	for _, contentType := range GobContentTypes {
+		decoders[contentType] = dp
+		encoders[contentType] = ep
+	}
+
+	// Add gob support
 	gf := &gobFactory{}
 	dp = newDecodePool(gf)
 	ep = newEncodePool(gf)
@@ -285,6 +303,16 @@ func (f *jsonFactory) NewDecoder(r io.Reader) Decoder {
 // NewEncoder returns a new json.Encoder
 func (f *jsonFactory) NewEncoder(w io.Writer) Encoder {
 	return json.NewEncoder(w)
+}
+
+// NewDecoder returns a new xml.Decoder
+func (f *xmlFactory) NewDecoder(r io.Reader) Decoder {
+	return xml.NewDecoder(r)
+}
+
+// NewEncoder returns a new xml.Encoder
+func (f *xmlFactory) NewEncoder(w io.Writer) Encoder {
+	return xml.NewEncoder(w)
 }
 
 // NewDecoder returns a new gob.Decoder
