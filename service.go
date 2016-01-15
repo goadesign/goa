@@ -350,7 +350,7 @@ func (ctrl *ApplicationController) HandleFunc(name string, h, d Handler) HandleF
 		handler := middleware
 		if err != nil {
 			handler = func(ctx *Context) error {
-				ctx.Respond(400, []byte(fmt.Sprintf(`{"kind":"invalid request","msg":"invalid JSON: %s"}`, err)))
+				ctx.RespondBytes(400, []byte(fmt.Sprintf(`{"kind":"invalid request","msg":"invalid JSON: %s"}`, err)))
 				return nil
 			}
 			for i := range chain {
@@ -377,7 +377,7 @@ func DefaultErrorHandler(c *Context, e error) {
 		c.Header().Set("Content-Type", "application/json")
 		status = 400
 	}
-	if err := c.Respond(status, []byte(e.Error())); err != nil {
+	if err := c.RespondBytes(status, []byte(e.Error())); err != nil {
 		Log.Error("failed to send default error handler response", "err", err)
 	}
 }
@@ -392,7 +392,7 @@ func TerseErrorHandler(c *Context, e error) {
 		status = 400
 		body = []byte(e.Error())
 	}
-	if err := c.Respond(status, body); err != nil {
+	if err := c.RespondBytes(status, body); err != nil {
 		Log.Error("failed to send terse error handler response", "err", err)
 	}
 }
