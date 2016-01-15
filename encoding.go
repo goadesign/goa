@@ -2,7 +2,6 @@ package goa
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/gob"
 	"encoding/json"
 	"encoding/xml"
@@ -119,8 +118,7 @@ func (app *Application) initEncoding() {
 }
 
 // DecodeRequest uses registered Decoders to unmarshal the request body based on
-// the request "Content-Type" header. If the Decode unmarshals into the appropriate
-// struct itself, defaultUnmarshaler will not be run.
+// the request `Content-Type` header
 func (app *Application) DecodeRequest(ctx *Context, v interface{}) error {
 	body := ctx.Request().Body
 	contentType := ctx.Request().Header.Get("Content-Type")
@@ -232,24 +230,21 @@ func (p *decoderPool) Put(d Decoder) {
 	p.pool.Put(d)
 }
 
-// EncodeResponse uses registered Encoders to marshal the response body based on
-// the request "Accept" header
-func (app *Application) EncodeResponse(ctx *Context, v interface{}) ([]byte, error) {
+// EncodeResponse uses registered Encoders to marshal the response body based on the request
+// `Accept` header and writes it to the http.ResponseWriter
+func (app *Application) EncodeResponse(ctx *Context, v interface{}) error {
 	contentType := httputil.NegotiateContentType(ctx.Request(), app.encodableContentTypes, "*/*")
 	p := app.encoderPools[contentType]
 
-	// TODO: write directly to ctx.ResponseWriter
-	buf := &bytes.Buffer{}
-
 	// the encoderPool will handle whether or not a pool is actually in use
-	encoder := p.Get(buf)
+	encoder := p.Get(ctx)
 	if err := encoder.Encode(v); err != nil {
 		// TODO: log out error details
-		return nil, err
+		return err
 	}
 	p.Put(encoder)
 
-	return buf.Bytes(), nil
+	return nil
 }
 
 // SetEncoder sets a specific encoder to be used for the specified content types. If

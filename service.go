@@ -58,12 +58,12 @@ type (
 		NewController(resName string) Controller
 
 		// DecodeRequest uses registered Decoders to unmarshal the request body based on
-		// the request "Content-Type" header
+		// the request `Content-Type` header
 		DecodeRequest(ctx *Context, v interface{}) error
 
-		// Encode uses registered Encoders to marshal the response body based on
-		// the request "Accept" header
-		EncodeResponse(ctx *Context, v interface{}) ([]byte, error)
+		// EncodeResponse uses registered Encoders to marshal the response body based on the
+		// request `Accept` header and writes it to the http.ResponseWriter
+		EncodeResponse(ctx *Context, v interface{}) error
 	}
 
 	// Controller is the interface implemented by all goa controllers.
