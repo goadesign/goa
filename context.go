@@ -156,6 +156,12 @@ func (ctx *Context) GetNames() []string {
 	return names
 }
 
+// AllParams return all URL and querystring parameters.
+func (ctx *Context) AllParams() url.Values {
+	iparams := ctx.Value(paramsKey)
+	return iparams.(url.Values)
+}
+
 // RawPayload returns the deserialized request body or nil if body is empty.
 func (ctx *Context) RawPayload() interface{} {
 	return ctx.Value(payloadKey)
