@@ -190,7 +190,7 @@ var _ = Describe("Application", func() {
 				})
 
 				It("should work with application/json and load properly", func() {
-					Ω(ctx.Payload()).Should(Equal(decodedContent))
+					Ω(ctx.RawPayload()).Should(Equal(decodedContent))
 				})
 
 				Context("with an empty Content-Type", func() {
@@ -199,7 +199,7 @@ var _ = Describe("Application", func() {
 					})
 
 					It("defaults to application/json and loads properly for JSON bodies", func() {
-						Ω(ctx.Payload()).Should(Equal(decodedContent))
+						Ω(ctx.RawPayload()).Should(Equal(decodedContent))
 					})
 				})
 
@@ -209,7 +209,7 @@ var _ = Describe("Application", func() {
 					})
 
 					It("should have a nil payload", func() {
-						Ω(ctx.Payload()).Should(BeNil())
+						Ω(ctx.RawPayload()).Should(BeNil())
 					})
 				})
 			})

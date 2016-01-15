@@ -156,8 +156,8 @@ func (ctx *Context) GetNames() []string {
 	return names
 }
 
-// Payload returns the deserialized request body or nil if body is empty.
-func (ctx *Context) Payload() interface{} {
+// RawPayload returns the deserialized request body or nil if body is empty.
+func (ctx *Context) RawPayload() interface{} {
 	return ctx.Value(payloadKey)
 }
 
