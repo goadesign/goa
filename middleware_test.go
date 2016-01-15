@@ -209,7 +209,7 @@ var _ = Describe("LogResponse", func() {
 		req, err := http.NewRequest("POST", "/goo", strings.NewReader(`{"payload":42}`))
 		Ω(err).ShouldNot(HaveOccurred())
 		rw := new(TestResponseWriter)
-		ctx = goa.NewContext(nil, nil, req, rw, params)
+		ctx = goa.NewContext(nil, goa.New("test"), req, rw, params)
 		ctx.SetPayload(payload)
 		handler = new(testHandler)
 		logger := log15.New("test", "test")
@@ -240,7 +240,7 @@ var _ = Describe("RequestID", func() {
 		req, err := http.NewRequest("GET", "/goo", nil)
 		Ω(err).ShouldNot(HaveOccurred())
 		req.Header.Set("X-Request-Id", reqID)
-		ctx = goa.NewContext(nil, nil, req, new(TestResponseWriter), nil)
+		ctx = goa.NewContext(nil, goa.New("test"), req, new(TestResponseWriter), nil)
 	})
 
 	It("sets the request ID in the context", func() {
@@ -260,7 +260,7 @@ var _ = Describe("Recover", func() {
 			panic("boom")
 		}
 		rg := goa.Recover()(h)
-		err := rg(goa.NewContext(nil, nil, nil, nil, nil))
+		err := rg(goa.NewContext(nil, goa.New("test"), nil, nil, nil))
 		Ω(err).Should(HaveOccurred())
 		Ω(err.Error()).Should(Equal("panic: boom"))
 	})
@@ -272,9 +272,11 @@ var _ = Describe("Timeout", func() {
 			ctx.Respond(200, "ok")
 			return nil
 		}
+		req, err := http.NewRequest("POST", "/goo", strings.NewReader(`{"payload":42}`))
+		Ω(err).ShouldNot(HaveOccurred())
 		t := goa.Timeout(time.Duration(1))(h)
-		ctx := goa.NewContext(nil, nil, nil, nil, nil)
-		err := t(ctx)
+		ctx := goa.NewContext(nil, goa.New("test"), req, nil, nil)
+		err = t(ctx)
 		Ω(err).ShouldNot(HaveOccurred())
 		_, ok := ctx.Deadline()
 		Ω(ok).Should(BeTrue())
@@ -294,7 +296,7 @@ var _ = Describe("RequireHeader", func() {
 		req, err = http.NewRequest("POST", "/foo/bar", strings.NewReader(`{"payload":42}`))
 		Ω(err).ShouldNot(HaveOccurred())
 		rw := new(TestResponseWriter)
-		ctx = goa.NewContext(nil, nil, req, rw, params)
+		ctx = goa.NewContext(nil, goa.New("test"), req, rw, params)
 		ctx.SetPayload(payload)
 		handler = new(testHandler)
 		logger := log15.New("test", "test")

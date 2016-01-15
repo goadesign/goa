@@ -20,7 +20,8 @@ var _ = Describe("Context", func() {
 
 	BeforeEach(func() {
 		gctx := context.Background()
-		ctx = &goa.Context{Context: gctx, Logger: logger}
+		ctx = goa.NewContext(gctx, goa.New("test"), nil, nil, nil)
+		ctx.Logger = logger
 	})
 
 	Describe("SetValue", func() {
@@ -120,9 +121,10 @@ var _ = Describe("Context", func() {
 				return nil
 			}
 			unmarshaler = func(c *goa.Context) error {
+				ctx = c
 				if req := c.Request(); req != nil {
 					var payload interface{}
-					err := c.Service().Decode(ctx, req.Body, &payload, req.Header.Get("Content-Type"))
+					err := c.Service().DecodeRequest(ctx, &payload)
 					if err != nil {
 						return err
 					}
@@ -133,6 +135,7 @@ var _ = Describe("Context", func() {
 			var err error
 			reader := strings.NewReader(reqBody)
 			request, err = http.NewRequest("POST", "/foo?filters=one&filters=two&filters=three", reader)
+			request.Header.Set("Content-Type", "application/json")
 			Ω(err).ShouldNot(HaveOccurred())
 			rw = new(TestResponseWriter)
 			params = url.Values{"id": []string{"42"}, "filters": []string{"one", "two", "three"}}
@@ -181,6 +184,9 @@ var _ = Describe("Context", func() {
 			var badReq = &goa.BadRequestError{Actual: err}
 
 			BeforeEach(func() {
+				var err2 error
+				request, err2 = http.NewRequest("POST", "/foo?filters=one&filters=two&filters=three", nil)
+				Ω(err2).ShouldNot(HaveOccurred())
 				handler = func(c *goa.Context) error {
 					ctx = c
 					c.BadRequest(badReq)
