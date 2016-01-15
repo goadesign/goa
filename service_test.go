@@ -199,8 +199,7 @@ var _ = Describe("Application", func() {
 					})
 
 					It("defaults to application/json and loads properly for JSON bodies", func() {
-						// TBD content type detection returns plain text
-						// Ω(ctx.Payload()).Should(Equal(decodedContent))
+						Ω(ctx.Payload()).Should(Equal(decodedContent))
 					})
 				})
 
