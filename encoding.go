@@ -1,14 +1,17 @@
 package goa
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/gob"
 	"encoding/json"
 	"encoding/xml"
 	"io"
 	"mime"
-	"strings"
+	"net/http"
 	"sync"
+
+	"github.com/golang/gddo/httputil"
 )
 
 type (
@@ -94,52 +97,43 @@ var (
 // initEncoding initializes all the decoder/encoder pools with the Content-Types found
 // in JSONContentTypes and GobContentTypes. JSON is set as the default decoder.
 func (app *Application) initEncoding() {
+	// initialize maps
 	contentTypeCount := len(JSONContentTypes) + len(XMLContentTypes) + len(GobContentTypes)
-	decoders := make(map[string]*decoderPool, contentTypeCount)
-	encoders := make(map[string]*encoderPool, contentTypeCount)
+	app.decoderPools = make(map[string]*decoderPool, contentTypeCount)
+	app.encoderPools = make(map[string]*encoderPool, contentTypeCount)
 
 	// Add json support
 	jf := &jsonFactory{}
-	dp := newDecodePool(jf)
-	ep := newEncodePool(jf)
-	app.defaultDecoderPool = dp
-	app.defaultEncoderPool = ep
-	for _, contentType := range JSONContentTypes {
-		decoders[contentType] = dp
-		encoders[contentType] = ep
-	}
+	app.SetDecoder(jf, true, JSONContentTypes...)
+	app.SetEncoder(jf, true, JSONContentTypes...)
 
 	// Add xml support
 	xf := &xmlFactory{}
-	dp = newDecodePool(xf)
-	ep = newEncodePool(xf)
-	for _, contentType := range GobContentTypes {
-		decoders[contentType] = dp
-		encoders[contentType] = ep
-	}
+	app.SetDecoder(xf, false, XMLContentTypes...)
+	app.SetEncoder(xf, false, XMLContentTypes...)
 
 	// Add gob support
 	gf := &gobFactory{}
-	dp = newDecodePool(gf)
-	ep = newEncodePool(gf)
-	for _, contentType := range GobContentTypes {
-		decoders[contentType] = dp
-		encoders[contentType] = ep
-	}
-
-	app.encoderPools = encoders
-	app.decoderPools = decoders
+	app.SetDecoder(gf, false, GobContentTypes...)
+	app.SetEncoder(gf, false, GobContentTypes...)
 }
 
-// Decode uses registered Decoders to unmarshal the request body based on
+// DecodeRequest uses registered Decoders to unmarshal the request body based on
 // the request "Content-Type" header. If the Decode unmarshals into the appropriate
 // struct itself, defaultUnmarshaler will not be run.
-func (app *Application) Decode(ctx *Context, body io.ReadCloser, v interface{}, contentType string) error {
+func (app *Application) DecodeRequest(ctx *Context, v interface{}) error {
+	body := ctx.Request().Body
+	contentType := ctx.Request().Header.Get("Content-Type")
 	defer body.Close()
 
 	var p *decoderPool
 	if contentType == "" {
-		p = app.defaultDecoderPool
+		mediaType := detectContentType(ctx, body)
+		if mediaType != "application/octet-stream" {
+			p = app.decoderPools[mediaType]
+		} else {
+			p = app.decoderPools["*/*"]
+		}
 	} else {
 		mediaType, _, err := mime.ParseMediaType(contentType)
 		if err != nil {
@@ -163,16 +157,36 @@ func (app *Application) Decode(ctx *Context, body io.ReadCloser, v interface{}, 
 	return nil
 }
 
+func detectContentType(ctx *Context, body io.Reader) string {
+	bodyBuf := bufio.NewReader(body)
+	// http.DetectContentType uses a max of 512 bytes
+	peekSize := 512
+	if bodyBuf.Buffered() < peekSize {
+		peekSize = bodyBuf.Buffered()
+	}
+	b, err := bodyBuf.Peek(peekSize)
+	if err != nil {
+		return "*/*"
+	}
+
+	return http.DetectContentType(b)
+}
+
 // SetDecoder sets a specific decoder to be used for the specified content types. If
 // a decoder is already registered, it will be overwritten.
 func (app *Application) SetDecoder(f DecoderFactory, makeDefault bool, contentTypes ...string) {
 	p := newDecodePool(f)
+
 	for _, contentType := range contentTypes {
-		app.decoderPools[strings.ToLower(contentType)] = p
+		mediaType, _, err := mime.ParseMediaType(contentType)
+		if err != nil {
+			mediaType = contentType
+		}
+		app.decoderPools[mediaType] = p
 	}
 
 	if makeDefault {
-		app.defaultDecoderPool = p
+		app.decoderPools["*/*"] = p
 	}
 }
 
@@ -218,13 +232,11 @@ func (p *decoderPool) Put(d Decoder) {
 	p.pool.Put(d)
 }
 
-// Encode uses registered Encoders to marshal the response body based on
+// EncodeResponse uses registered Encoders to marshal the response body based on
 // the request "Accept" header
-func (app *Application) Encode(ctx *Context, v interface{}, contentType string) ([]byte, error) {
-	p, ok := app.encoderPools[strings.ToLower(contentType)] // headers are supposed to be case insensitive
-	if !ok {
-		p = app.defaultEncoderPool
-	}
+func (app *Application) EncodeResponse(ctx *Context, v interface{}) ([]byte, error) {
+	contentType := httputil.NegotiateContentType(ctx.Request(), app.encodableContentTypes, "*/*")
+	p := app.encoderPools[contentType]
 
 	// TODO: write directly to ctx.ResponseWriter
 	buf := &bytes.Buffer{}
@@ -245,12 +257,23 @@ func (app *Application) Encode(ctx *Context, v interface{}, contentType string) 
 func (app *Application) SetEncoder(f EncoderFactory, makeDefault bool, contentTypes ...string) {
 	p := newEncodePool(f)
 	for _, contentType := range contentTypes {
-		app.encoderPools[strings.ToLower(contentType)] = p
+		mediaType, _, err := mime.ParseMediaType(contentType)
+		if err != nil {
+			mediaType = contentType
+		}
+		app.encoderPools[mediaType] = p
 	}
 
 	if makeDefault {
-		app.defaultEncoderPool = p
+		app.encoderPools["*/*"] = p
 	}
+
+	// Rebuild a unique index of registered content encoders to be used in EncodeResponse
+	app.encodableContentTypes = make([]string, 0, len(app.encoderPools))
+	for contentType := range app.encoderPools {
+		app.encodableContentTypes = append(app.encodableContentTypes, contentType)
+	}
+
 }
 
 // newEncodePool checks to see if the EncoderFactory returns reusable encoders
