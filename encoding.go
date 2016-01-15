@@ -1,13 +1,16 @@
 package goa
 
 import (
-	"bytes"
+	"bufio"
 	"encoding/gob"
 	"encoding/json"
+	"encoding/xml"
 	"io"
 	"mime"
-	"strings"
+	"net/http"
 	"sync"
+
+	"github.com/golang/gddo/httputil"
 )
 
 type (
@@ -62,6 +65,9 @@ type (
 	// jsonFactory uses encoding/json to act as an DecoderFactory and EncoderFactory
 	jsonFactory struct{}
 
+	// xmlFactory uses encoding/xml to act as an DecoderFactory and EncoderFactory
+	xmlFactory struct{}
+
 	// gobFactory uses encoding/gob to act as an DecoderFactory and EncoderFactory
 	gobFactory struct{}
 
@@ -78,6 +84,10 @@ var (
 	// encoding/json to unmarshal unless overwritten using SetDecoder
 	JSONContentTypes = []string{"application/json", "application/text+json"}
 
+	// XMLContentTypes is a slice of default Content-Type headers that will use stdlib
+	// encoding/xml to unmarshal unless overwritten using SetDecoder
+	XMLContentTypes = []string{"application/xml"}
+
 	// GobContentTypes is a slice of default Content-Type headers that will use stdlib
 	// encoding/gob to unmarshal unless overwritten using SetDecoder
 	GobContentTypes = []string{"application/gob"}
@@ -86,42 +96,42 @@ var (
 // initEncoding initializes all the decoder/encoder pools with the Content-Types found
 // in JSONContentTypes and GobContentTypes. JSON is set as the default decoder.
 func (app *Application) initEncoding() {
+	// initialize maps
+	contentTypeCount := len(JSONContentTypes) + len(XMLContentTypes) + len(GobContentTypes)
+	app.decoderPools = make(map[string]*decoderPool, contentTypeCount)
+	app.encoderPools = make(map[string]*encoderPool, contentTypeCount)
+
+	// Add json support
 	jf := &jsonFactory{}
-	dp := newDecodePool(jf)
-	ep := newEncodePool(jf)
-	app.defaultDecoderPool = dp
-	app.defaultEncoderPool = ep
+	app.SetDecoder(jf, true, JSONContentTypes...)
+	app.SetEncoder(jf, true, JSONContentTypes...)
 
-	contentTypeCount := len(JSONContentTypes) + len(GobContentTypes)
-	decoders := make(map[string]*decoderPool, contentTypeCount)
-	encoders := make(map[string]*encoderPool, contentTypeCount)
+	// Add xml support
+	xf := &xmlFactory{}
+	app.SetDecoder(xf, false, XMLContentTypes...)
+	app.SetEncoder(xf, false, XMLContentTypes...)
 
-	for _, contentType := range JSONContentTypes {
-		decoders[contentType] = dp
-		encoders[contentType] = ep
-	}
-
+	// Add gob support
 	gf := &gobFactory{}
-	dp = newDecodePool(gf)
-	ep = newEncodePool(gf)
-	for _, contentType := range GobContentTypes {
-		decoders[contentType] = dp
-		encoders[contentType] = ep
-	}
-
-	app.encoderPools = encoders
-	app.decoderPools = decoders
+	app.SetDecoder(gf, false, GobContentTypes...)
+	app.SetEncoder(gf, false, GobContentTypes...)
 }
 
-// Decode uses registered Decoders to unmarshal the request body based on
-// the request "Content-Type" header. If the Decode unmarshals into the appropriate
-// struct itself, defaultUnmarshaler will not be run.
-func (app *Application) Decode(ctx *Context, body io.ReadCloser, v interface{}, contentType string) error {
+// DecodeRequest uses registered Decoders to unmarshal the request body based on
+// the request `Content-Type` header
+func (app *Application) DecodeRequest(ctx *Context, v interface{}) error {
+	body := ctx.Request().Body
+	contentType := ctx.Request().Header.Get("Content-Type")
 	defer body.Close()
 
 	var p *decoderPool
 	if contentType == "" {
-		p = app.defaultDecoderPool
+		mediaType := detectContentType(ctx, body)
+		if mediaType != "application/octet-stream" {
+			p = app.decoderPools[mediaType]
+		} else {
+			p = app.decoderPools["*/*"]
+		}
 	} else {
 		mediaType, _, err := mime.ParseMediaType(contentType)
 		if err != nil {
@@ -145,16 +155,36 @@ func (app *Application) Decode(ctx *Context, body io.ReadCloser, v interface{}, 
 	return nil
 }
 
+func detectContentType(ctx *Context, body io.Reader) string {
+	bodyBuf := bufio.NewReader(body)
+	// http.DetectContentType uses a max of 512 bytes
+	peekSize := 512
+	if bodyBuf.Buffered() < peekSize {
+		peekSize = bodyBuf.Buffered()
+	}
+	b, err := bodyBuf.Peek(peekSize)
+	if err != nil {
+		return "*/*"
+	}
+
+	return http.DetectContentType(b)
+}
+
 // SetDecoder sets a specific decoder to be used for the specified content types. If
 // a decoder is already registered, it will be overwritten.
 func (app *Application) SetDecoder(f DecoderFactory, makeDefault bool, contentTypes ...string) {
 	p := newDecodePool(f)
+
 	for _, contentType := range contentTypes {
-		app.decoderPools[strings.ToLower(contentType)] = p
+		mediaType, _, err := mime.ParseMediaType(contentType)
+		if err != nil {
+			mediaType = contentType
+		}
+		app.decoderPools[mediaType] = p
 	}
 
 	if makeDefault {
-		app.defaultDecoderPool = p
+		app.decoderPools["*/*"] = p
 	}
 }
 
@@ -200,26 +230,21 @@ func (p *decoderPool) Put(d Decoder) {
 	p.pool.Put(d)
 }
 
-// Encode uses registered Encoders to marshal the response body based on
-// the request "Accept" header
-func (app *Application) Encode(ctx *Context, v interface{}, contentType string) ([]byte, error) {
-	p, ok := app.encoderPools[strings.ToLower(contentType)] // headers are supposed to be case insensitive
-	if !ok {
-		p = app.defaultEncoderPool
-	}
-
-	// TODO: write directly to ctx.ResponseWriter
-	buf := &bytes.Buffer{}
+// EncodeResponse uses registered Encoders to marshal the response body based on the request
+// `Accept` header and writes it to the http.ResponseWriter
+func (app *Application) EncodeResponse(ctx *Context, v interface{}) error {
+	contentType := httputil.NegotiateContentType(ctx.Request(), app.encodableContentTypes, "*/*")
+	p := app.encoderPools[contentType]
 
 	// the encoderPool will handle whether or not a pool is actually in use
-	encoder := p.Get(buf)
+	encoder := p.Get(ctx)
 	if err := encoder.Encode(v); err != nil {
 		// TODO: log out error details
-		return nil, err
+		return err
 	}
 	p.Put(encoder)
 
-	return buf.Bytes(), nil
+	return nil
 }
 
 // SetEncoder sets a specific encoder to be used for the specified content types. If
@@ -227,12 +252,23 @@ func (app *Application) Encode(ctx *Context, v interface{}, contentType string) 
 func (app *Application) SetEncoder(f EncoderFactory, makeDefault bool, contentTypes ...string) {
 	p := newEncodePool(f)
 	for _, contentType := range contentTypes {
-		app.encoderPools[strings.ToLower(contentType)] = p
+		mediaType, _, err := mime.ParseMediaType(contentType)
+		if err != nil {
+			mediaType = contentType
+		}
+		app.encoderPools[mediaType] = p
 	}
 
 	if makeDefault {
-		app.defaultEncoderPool = p
+		app.encoderPools["*/*"] = p
 	}
+
+	// Rebuild a unique index of registered content encoders to be used in EncodeResponse
+	app.encodableContentTypes = make([]string, 0, len(app.encoderPools))
+	for contentType := range app.encoderPools {
+		app.encodableContentTypes = append(app.encodableContentTypes, contentType)
+	}
+
 }
 
 // newEncodePool checks to see if the EncoderFactory returns reusable encoders
@@ -285,6 +321,16 @@ func (f *jsonFactory) NewDecoder(r io.Reader) Decoder {
 // NewEncoder returns a new json.Encoder
 func (f *jsonFactory) NewEncoder(w io.Writer) Encoder {
 	return json.NewEncoder(w)
+}
+
+// NewDecoder returns a new xml.Decoder
+func (f *xmlFactory) NewDecoder(r io.Reader) Decoder {
+	return xml.NewDecoder(r)
+}
+
+// NewEncoder returns a new xml.Encoder
+func (f *xmlFactory) NewEncoder(w io.Writer) Encoder {
+	return xml.NewEncoder(w)
 }
 
 // NewDecoder returns a new gob.Decoder
