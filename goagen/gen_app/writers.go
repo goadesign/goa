@@ -16,11 +16,10 @@ type (
 	// ContextsWriter generate codes for a goa application contexts.
 	ContextsWriter struct {
 		*codegen.GoGenerator
-		CtxTmpl        *template.Template
-		CtxNewTmpl     *template.Template
-		CtxRespTmpl    *template.Template
-		PayloadTmpl    *template.Template
-		NewPayloadTmpl *template.Template
+		CtxTmpl     *template.Template
+		CtxNewTmpl  *template.Template
+		CtxRespTmpl *template.Template
+		PayloadTmpl *template.Template
 	}
 
 	// ControllersWriter generate code for a goa application handlers.
@@ -28,8 +27,9 @@ type (
 	// resulting HTTP response.
 	ControllersWriter struct {
 		*codegen.GoGenerator
-		CtrlTmpl  *template.Template
-		MountTmpl *template.Template
+		CtrlTmpl      *template.Template
+		MountTmpl     *template.Template
+		UnmarshalTmpl *template.Template
 	}
 
 	// ResourcesWriter generate code for a goa application resources.
@@ -89,7 +89,7 @@ type (
 	// ControllerTemplateData contains the information required to generate an action handler.
 	ControllerTemplateData struct {
 		Resource string                       // Lower case plural resource name, e.g. "bottles"
-		Actions  []map[string]interface{}     // Array of actions, each action has keys "Name", "Routes" and "Context"
+		Actions  []map[string]interface{}     // Array of actions, each action has keys "Name", "Routes", "Context" and "Unmarshal"
 		Version  *design.APIVersionDefinition // Controller API version
 	}
 
@@ -148,7 +148,6 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 	funcMap["goify"] = codegen.Goify
 	funcMap["gotypename"] = codegen.GoTypeName
 	funcMap["gopkgtypename"] = codegen.GoPackageTypeName
-	funcMap["typeUnmarshaler"] = codegen.TypeUnmarshaler
 	funcMap["userTypeUnmarshalerImpl"] = codegen.UserTypeUnmarshalerImpl
 	funcMap["validationChecker"] = codegen.ValidationChecker
 	funcMap["recursiveValidate"] = codegen.RecursiveChecker
@@ -177,17 +176,12 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 	if err != nil {
 		return nil, err
 	}
-	newPayloadTmpl, err := template.New("newpayload").Funcs(cw.FuncMap).Parse(newPayloadT)
-	if err != nil {
-		return nil, err
-	}
 	w := ContextsWriter{
-		GoGenerator:    cw,
-		CtxTmpl:        ctxTmpl,
-		CtxNewTmpl:     ctxNewTmpl,
-		CtxRespTmpl:    ctxRespTmpl,
-		PayloadTmpl:    payloadTmpl,
-		NewPayloadTmpl: newPayloadTmpl,
+		GoGenerator: cw,
+		CtxTmpl:     ctxTmpl,
+		CtxNewTmpl:  ctxNewTmpl,
+		CtxRespTmpl: ctxRespTmpl,
+		PayloadTmpl: payloadTmpl,
 	}
 	return &w, nil
 }
@@ -202,9 +196,6 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 	}
 	if data.Payload != nil {
 		if err := w.PayloadTmpl.Execute(w, data); err != nil {
-			return err
-		}
-		if err := w.NewPayloadTmpl.Execute(w, data); err != nil {
 			return err
 		}
 	}
@@ -222,6 +213,7 @@ func NewControllersWriter(filename string) (*ControllersWriter, error) {
 	cw := codegen.NewGoGenerator(filename)
 	funcMap := cw.FuncMap
 	funcMap["add"] = func(a, b int) int { return a + b }
+	funcMap["gotypename"] = codegen.GoTypeName
 	ctrlTmpl, err := template.New("controller").Funcs(funcMap).Parse(ctrlT)
 	if err != nil {
 		return nil, err
@@ -230,10 +222,15 @@ func NewControllersWriter(filename string) (*ControllersWriter, error) {
 	if err != nil {
 		return nil, err
 	}
+	unmarshalTmpl, err := template.New("unmarshal").Funcs(funcMap).Parse(unmarshalT)
+	if err != nil {
+		return nil, err
+	}
 	w := ControllersWriter{
-		GoGenerator: cw,
-		CtrlTmpl:    ctrlTmpl,
-		MountTmpl:   mountTmpl,
+		GoGenerator:   cw,
+		CtrlTmpl:      ctrlTmpl,
+		MountTmpl:     mountTmpl,
+		UnmarshalTmpl: unmarshalTmpl,
 	}
 	return &w, nil
 }
@@ -245,6 +242,9 @@ func (w *ControllersWriter) Execute(data []*ControllerTemplateData) error {
 			return err
 		}
 		if err := w.MountTmpl.Execute(w, d); err != nil {
+			return err
+		}
+		if err := w.UnmarshalTmpl.Execute(w, d); err != nil {
 			return err
 		}
 	}
@@ -283,7 +283,6 @@ func NewMediaTypesWriter(filename string) (*MediaTypesWriter, error) {
 	funcMap["goify"] = codegen.Goify
 	funcMap["gotypename"] = codegen.GoTypeName
 	funcMap["gonative"] = codegen.GoNativeType
-	funcMap["typeUnmarshaler"] = codegen.TypeUnmarshaler
 	funcMap["typeMarshaler"] = codegen.MediaTypeMarshaler
 	funcMap["recursiveValidate"] = codegen.RecursiveChecker
 	funcMap["tempvar"] = codegen.Tempvar
@@ -449,14 +448,8 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 */}}{{$validation := validationChecker $att ($ctx.Params.IsNonZero $name) ($ctx.Params.IsRequired $name) (printf "ctx.%s" (goify $name true)) $name 2}}{{/*
 */}}{{if $validation}}{{$validation}}
 {{end}}	}
-{{end}}{{end}}{{/* if .Params */}}{{if .Payload}}	p, err := New{{gotypename .Payload nil 0}}(c.Payload())
-	if err != nil {
-		return nil, err
-	}
-	ctx.Payload = p
-{{end}}	return &ctx, err
+{{end}}{{end}}{{/* if .Params */}}	return &ctx, err
 }
-
 `
 	// ctxRespT generates response helper methods GoGenerator
 	// template input: *ContextTemplateData
@@ -479,25 +472,13 @@ func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{/*
 	// template input: *ContextTemplateData
 	payloadT = `{{$payload := .Payload}}// {{gotypename .Payload nil 0}} is the {{.ResourceName}} {{.ActionName}} action payload.
 type {{gotypename .Payload nil 1}} {{gotypedef .Payload .Versioned .DefaultPkg 0 false}}
-`
-	// newPayloadT generates the code for the payload factory method.
-	// template input: *ContextTemplateData
-	newPayloadT = `{{$typeName := gotypename .Payload nil 0}}// New{{$typeName}} instantiates a {{$typeName}} from a raw request body.
-// It validates each field and returns an error if any validation fails.
-func New{{$typeName}}(raw interface{}) (p {{gotyperef .Payload nil 0}}, err error) {
-{{typeUnmarshaler .Payload false "" "payload" "raw" "p"}}
-	return
-}{{if (not .Payload.IsPrimitive)}}
 
-{{userTypeUnmarshalerImpl .Payload .Versioned .DefaultPkg "payload"}}{{end}}
-
-{{$validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1}}{{if $validation}}// Validate validates the type instance.
+{{$validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1}}{{if $validation}}// Validate runs the validation rules defined in the design.
 func (payload {{gotyperef .Payload .Payload.AllRequired 0}}) Validate() (err error) {
 {{$validation}}
-	return
+       return
 }{{end}}
 `
-
 	// ctrlT generates the controller interface for a given resource.
 	// template input: *ControllerTemplateData
 	ctrlT = `// {{.Resource}}Controller is the controller interface for the {{.Resource}} actions.
@@ -521,10 +502,29 @@ func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Control
 		}
 		return ctrl.{{.Name}}(ctx)
 	}
-{{range .Routes}}	mux.Handle("{{.Verb}}", "{{.FullPath $ver}}", ctrl.HandleFunc("{{$action.Name}}", h))
+{{range .Routes}}	mux.Handle("{{.Verb}}", "{{.FullPath $ver}}", ctrl.HandleFunc("{{$action.Name}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
 	service.Info("mount", "ctrl", "{{$res}}",{{if not $ver.IsDefault}} "version", "{{$ver.Version}}",{{end}} "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath $ver}}")
 {{end}}{{end}}}
 `
+
+	// unmarshalT generates the code for an action payload unmarshal function.
+	// template input: *ControllerTemplateData
+	unmarshalT = `{{range .Actions}}{{if .Payload}}
+// {{.Unmarshal}} unmarshals the request body.
+func {{.Unmarshal}}(ctx *goa.Context) error {
+	payload := &{{gotypename .Payload nil 1}}{}
+	req := ctx.Request()
+	if err := ctx.Service().Decode(ctx, req.Body, payload, req.Header.Get("Content-Type")); err != nil {
+		return err
+	}
+	if err := payload.Validate(); err != nil {
+		return err
+	}
+	ctx.SetPayload(payload)
+	return nil
+}
+{{end}}
+{{end}}`
 
 	// resourceT generates the code for a resource.
 	// template input: *ResourceData
@@ -547,13 +547,6 @@ const (
 {{range $name, $view := $computedViews}}// {{if .Description}}{{.Description}}{{else}}{{$typeName}} {{.Name}} view{{end}}
 	{{$typeName}}{{goify .Name true}}View {{$typeName}}ViewEnum = "{{.Name}}"
 {{end}}){{end}}
-// Load{{$typeName}} loads raw data into an instance of {{$typeName}}
-// into a variable of type interface{}. See https://golang.org/pkg/encoding/json/#Unmarshal for the
-// complete list of supported data types.
-func Load{{$typeName}}(raw interface{}) (res {{gotyperef .MediaType .MediaType.AllRequired 1}}, err error) {
-	{{typeUnmarshaler .MediaType .Versioned .DefaultPkg "" "raw" "res"}}
-	return
-}
 
 // Dump produces raw data from an instance of {{$typeName}} running all the
 // validations. See Load{{$typeName}} for the definition of raw data.
@@ -573,7 +566,6 @@ func (mt {{gotyperef .MediaType .MediaType.AllRequired 0}}) Validate() (err erro
 {{end}}{{range $computedViews}}
 {{mediaTypeMarshalerImpl $mt $ctx.Versioned $ctx.DefaultPkg .Name}}
 {{end}}
-{{userTypeUnmarshalerImpl .MediaType.UserTypeDefinition .Versioned .DefaultPkg "load"}}
 `
 
 	// dumpT generates the code for dumping a media type or media type collection element.
@@ -596,7 +588,5 @@ func (ut {{gotyperef .UserType .UserType.AllRequired 0}}) Validate() (err error)
 }
 
 {{end}}{{userTypeMarshalerImpl .UserType .Versioned .DefaultPkg}}
-
-{{userTypeUnmarshalerImpl .UserType .Versioned .DefaultPkg "load"}}
 `
 )

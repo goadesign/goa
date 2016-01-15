@@ -55,10 +55,10 @@ var _ = Describe("Application", func() {
 		})
 	})
 
-	Describe("NewHTTPRouterHandle", func() {
+	Describe("HandleFunc", func() {
 		const resName = "res"
 		const actName = "act"
-		var handler goa.Handler
+		var handler, unmarshaler goa.Handler
 		const respStatus = 200
 		var respContent = []byte("response")
 
@@ -67,13 +67,24 @@ var _ = Describe("Application", func() {
 
 		JustBeforeEach(func() {
 			ctrl := s.NewController("test")
-			handleFunc = ctrl.HandleFunc(actName, handler)
+			handleFunc = ctrl.HandleFunc(actName, handler, unmarshaler)
 		})
 
 		BeforeEach(func() {
 			handler = func(c *goa.Context) error {
 				ctx = c
 				c.Respond(respStatus, respContent)
+				return nil
+			}
+			unmarshaler = func(c *goa.Context) error {
+				ctx = c
+				req := c.Request()
+				if req != nil {
+					var payload interface{}
+					err := ctx.Service().Decode(ctx, req.Body, &payload, req.Header.Get("Content-Type"))
+					Ω(err).ShouldNot(HaveOccurred())
+					ctx.SetPayload(payload)
+				}
 				return nil
 			}
 		})
