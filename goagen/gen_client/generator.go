@@ -413,9 +413,9 @@ func enumOptions(att *design.AttributeDefinition) string {
 	if enum == nil {
 		return ""
 	}
-	elems := make([]string, len(enum.Values))
+	elems := make([]string, len(enum.Values)+1)
 	for i, e := range enum.Values {
-		elems[i] = fmt.Sprintf("%#v", e)
+		elems[i+1] = fmt.Sprintf("%#v", e)
 	}
 	return strings.Join(elems, ", ")
 }
