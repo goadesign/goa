@@ -126,19 +126,14 @@ func (app *Application) DecodeRequest(ctx *Context, v interface{}) error {
 
 	var p *decoderPool
 	if contentType == "" {
-		mediaType := detectContentType(ctx, body)
-		if mediaType != "application/octet-stream" {
-			p = app.decoderPools[mediaType]
-		} else {
-			p = app.decoderPools["*/*"]
-		}
+		// Default to JSON
+		contentType = "application/json"
 	} else {
-		mediaType, _, err := mime.ParseMediaType(contentType)
-		if err != nil {
-			mediaType = contentType
+		if mediaType, _, err := mime.ParseMediaType(contentType); err == nil {
+			contentType = mediaType
 		}
-		p = app.decoderPools[mediaType]
 	}
+	p = app.decoderPools[contentType]
 
 	// Do not attempt to decode request bodies for which no decoder has been setup.
 	// These may be handled differently by the service.
