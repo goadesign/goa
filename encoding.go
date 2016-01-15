@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"io"
+	"mime"
 	"strings"
 	"sync"
 )
@@ -118,18 +119,28 @@ func (app *Application) initEncoding() {
 func (app *Application) Decode(ctx *Context, body io.ReadCloser, v interface{}, contentType string) error {
 	defer body.Close()
 
-	p, ok := app.decoderPools[strings.ToLower(contentType)] // headers are supposed to be case insensitive
-	if !ok {
+	var p *decoderPool
+	if contentType == "" {
 		p = app.defaultDecoderPool
+	} else {
+		mediaType, _, err := mime.ParseMediaType(contentType)
+		if err != nil {
+			mediaType = contentType
+		}
+		p = app.decoderPools[mediaType]
 	}
 
-	// the decoderPool will handle whether or not a pool is actually in use
-	decoder := p.Get(body)
-	if err := decoder.Decode(v); err != nil {
-		// TODO: log out error details
-		return err
+	// Do not attempt to decode request bodies for which no decoder has been setup.
+	// These may be handled differently by the service.
+	if p != nil {
+		// the decoderPool will handle whether or not a pool is actually in use
+		decoder := p.Get(body)
+		if err := decoder.Decode(v); err != nil {
+			ctx.Error(err.Error(), "ContentType", contentType)
+			return err
+		}
+		p.Put(decoder)
 	}
-	p.Put(decoder)
 
 	return nil
 }
