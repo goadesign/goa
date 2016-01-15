@@ -73,7 +73,7 @@ var _ = Describe("Application", func() {
 		BeforeEach(func() {
 			handler = func(c *goa.Context) error {
 				ctx = c
-				c.Respond(respStatus, respContent)
+				c.RespondBytes(respStatus, respContent)
 				return nil
 			}
 			unmarshaler = func(c *goa.Context) error {

@@ -295,7 +295,7 @@ func (ctx *GetWidgetContext) OK(resp {{if .version}}app.{{end}}ID) error {
 		return fmt.Errorf("invalid response: %s", err)
 	}
 	ctx.Header().Set("Content-Type", "vnd.rightscale.codegen.test.widgets; charset=utf-8")
-	return ctx.JSON(200, r)
+	return ctx.Respond(200, r)
 }
 `
 

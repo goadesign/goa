@@ -223,7 +223,7 @@ func Recover() Middleware {
 							// the source code.
 							message = err.Error()
 						}
-						ctx.Respond(status, []byte(message))
+						ctx.RespondBytes(status, []byte(message))
 					}
 				}
 			}()
@@ -299,7 +299,7 @@ func RequireHeader(
 				if matched {
 					err = h(ctx)
 				} else {
-					err = ctx.Respond(failureStatus, []byte(http.StatusText(failureStatus)))
+					err = ctx.RespondBytes(failureStatus, []byte(http.StatusText(failureStatus)))
 				}
 			} else {
 				err = h(ctx)
