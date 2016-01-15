@@ -116,7 +116,7 @@ var _ = Describe("Context", func() {
 			app = goa.New(appName)
 			handler = func(c *goa.Context) error {
 				ctx = c
-				c.Respond(respStatus, respContent)
+				c.RespondBytes(respStatus, respContent)
 				return nil
 			}
 			unmarshaler = func(c *goa.Context) error {
@@ -144,7 +144,7 @@ var _ = Describe("Context", func() {
 			handleFunc(rw, request, params)
 		})
 
-		Describe("Respond", func() {
+		Describe("RespondBytes", func() {
 			It("sets the context fields", func() {
 				Ω(ctx.Request()).Should(Equal(request))
 				Ω(ctx.Header()).Should(Equal(rw.Header()))
@@ -161,18 +161,18 @@ var _ = Describe("Context", func() {
 			})
 		})
 
-		Context("JSON", func() {
+		Context("Respond", func() {
 			BeforeEach(func() {
 				handler = func(c *goa.Context) error {
 					ctx = c
-					c.JSON(respStatus, string(respContent))
+					c.Respond(respStatus, string(respContent))
 					return nil
 				}
 			})
 
 			It("sets the context response fields with the JSON", func() {
 				Ω(ctx.ResponseStatus()).Should(Equal(respStatus))
-				Ω(ctx.ResponseLength()).Should(Equal(len(respContent) + 2)) // quotes
+				Ω(ctx.ResponseLength()).Should(Equal(len(respContent) + 3)) // quotes and newline
 			})
 		})
 

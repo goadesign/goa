@@ -53,21 +53,23 @@ var _ = Describe("NewMiddleware", func() {
 	})
 
 	Context("with a context", func() {
+		var service goa.Service
 		var ctx *goa.Context
 
 		BeforeEach(func() {
+			service = goa.New("test")
 			req, err := http.NewRequest("GET", "/goo", nil)
 			Ω(err).ShouldNot(HaveOccurred())
 			rw := new(TestResponseWriter)
 			params := url.Values{"foo": []string{"bar"}}
-			ctx = goa.NewContext(nil, nil, req, rw, params)
+			ctx = goa.NewContext(nil, service, req, rw, params)
 			Ω(ctx.ResponseStatus()).Should(Equal(0))
 		})
 
 		Context("using a goa handler", func() {
 			BeforeEach(func() {
 				var goaHandler goa.Handler = func(ctx *goa.Context) error {
-					ctx.JSON(200, "ok")
+					ctx.Respond(200, "ok")
 					return nil
 				}
 				input = goaHandler
@@ -84,7 +86,7 @@ var _ = Describe("NewMiddleware", func() {
 		Context("using a goa handler func", func() {
 			BeforeEach(func() {
 				input = func(ctx *goa.Context) error {
-					ctx.JSON(200, "ok")
+					ctx.Respond(200, "ok")
 					return nil
 				}
 			})
@@ -104,7 +106,7 @@ var _ = Describe("NewMiddleware", func() {
 
 			It("wraps it in a middleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
-				h := func(c *goa.Context) error { c.JSON(200, "ok"); return nil }
+				h := func(c *goa.Context) error { c.Respond(200, "ok"); return nil }
 				Ω(middleware(h)(ctx)).ShouldNot(HaveOccurred())
 				Ω(ctx.ResponseStatus()).Should(Equal(200))
 			})
@@ -149,14 +151,16 @@ var _ = Describe("NewMiddleware", func() {
 var _ = Describe("LogRequest", func() {
 	var handler *testHandler
 	var ctx *goa.Context
+	var service goa.Service
 	params := url.Values{"param": []string{"value"}}
 	payload := map[string]interface{}{"payload": 42}
 
 	BeforeEach(func() {
+		service = goa.New("test")
 		req, err := http.NewRequest("POST", "/goo", strings.NewReader(`{"payload":42}`))
 		Ω(err).ShouldNot(HaveOccurred())
 		rw := new(TestResponseWriter)
-		ctx = goa.NewContext(nil, nil, req, rw, params)
+		ctx = goa.NewContext(nil, service, req, rw, params)
 		ctx.SetPayload(payload)
 		handler = new(testHandler)
 		logger := log15.New("test", "test")
@@ -166,7 +170,7 @@ var _ = Describe("LogRequest", func() {
 
 	It("logs requests", func() {
 		h := func(ctx *goa.Context) error {
-			ctx.JSON(200, "ok")
+			ctx.Respond(200, "ok")
 			return nil
 		}
 		lg := goa.LogRequest()(h)
@@ -189,7 +193,7 @@ var _ = Describe("LogRequest", func() {
 		Ω(handler.Records[3].Ctx[4]).Should(Equal("status"))
 		Ω(handler.Records[3].Ctx[6]).Should(Equal("bytes"))
 		Ω(handler.Records[3].Ctx[5]).Should(Equal(200))
-		Ω(handler.Records[3].Ctx[7]).Should(Equal(4))
+		Ω(handler.Records[3].Ctx[7]).Should(Equal(5))
 		Ω(handler.Records[3].Ctx[8]).Should(Equal("time"))
 	})
 })
@@ -215,7 +219,7 @@ var _ = Describe("LogResponse", func() {
 
 	It("logs responses", func() {
 		h := func(ctx *goa.Context) error {
-			ctx.Respond(200, []byte(responseText))
+			ctx.RespondBytes(200, []byte(responseText))
 			return nil
 		}
 		lg := goa.LogResponse()(h)
@@ -241,7 +245,7 @@ var _ = Describe("RequestID", func() {
 
 	It("sets the request ID in the context", func() {
 		h := func(ctx *goa.Context) error {
-			ctx.JSON(200, "ok")
+			ctx.Respond(200, "ok")
 			return nil
 		}
 		rg := goa.RequestID()(h)
@@ -265,7 +269,7 @@ var _ = Describe("Recover", func() {
 var _ = Describe("Timeout", func() {
 	It("sets a deadline", func() {
 		h := func(ctx *goa.Context) error {
-			ctx.JSON(200, "ok")
+			ctx.Respond(200, "ok")
 			return nil
 		}
 		t := goa.Timeout(time.Duration(1))(h)
@@ -301,7 +305,7 @@ var _ = Describe("RequireHeader", func() {
 	It("matches a header value", func() {
 		req.Header.Set(headerName, "some value")
 		h := func(ctx *goa.Context) error {
-			ctx.JSON(http.StatusOK, "ok")
+			ctx.Respond(http.StatusOK, "ok")
 			return nil
 		}
 		t := goa.RequireHeader(
@@ -346,7 +350,7 @@ var _ = Describe("RequireHeader", func() {
 	It("passes through for a non-matching path", func() {
 		req.Header.Set(headerName, "bogus")
 		h := func(ctx *goa.Context) error {
-			ctx.JSON(http.StatusOK, "ok")
+			ctx.Respond(http.StatusOK, "ok")
 			return nil
 		}
 		t := goa.RequireHeader(

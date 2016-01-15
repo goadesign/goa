@@ -463,7 +463,7 @@ func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{/*
 		return fmt.Errorf("invalid response: %s", err)
 	}
 	ctx.Header().Set("Content-Type", "{{$mt.Identifier}}; charset=utf-8")
-	return ctx.JSON({{.Status}}, r){{else}}	return ctx.Respond({{.Status}}, {{if and (not $mt) .MediaType}}resp{{else}}nil{{end}}){{end}}
+	return ctx.Respond({{.Status}}, r){{else}}	return ctx.RespondBytes({{.Status}}, {{if and (not $mt) .MediaType}}resp{{else}}nil{{end}}){{end}}
 }
 
 {{end}}`
