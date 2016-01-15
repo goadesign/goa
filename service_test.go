@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/raphael/goa"
+	"github.com/raphael/goa-middleware/middleware"
 )
 
 var _ = Describe("Application", func() {
@@ -40,7 +41,7 @@ var _ = Describe("Application", func() {
 			var m goa.Middleware
 
 			BeforeEach(func() {
-				m = goa.RequestID()
+				m = middleware.RequestID()
 			})
 
 			JustBeforeEach(func() {
@@ -50,7 +51,7 @@ var _ = Describe("Application", func() {
 			It("adds the middleware", func() {
 				ctrl := s.NewController("test")
 				Ω(ctrl.MiddlewareChain()).Should(HaveLen(1))
-				Ω(ctrl.MiddlewareChain()[0]).Should(BeAssignableToTypeOf(goa.RequestID()))
+				Ω(ctrl.MiddlewareChain()[0]).Should(BeAssignableToTypeOf(middleware.RequestID()))
 			})
 		})
 	})

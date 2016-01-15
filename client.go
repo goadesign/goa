@@ -2,6 +2,8 @@ package goa
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -340,4 +342,12 @@ func filterHeaders(headers http.Header, iterator headerIterator) {
 		}
 		iterator(k, v)
 	}
+}
+
+// shortID produces a "unique" 6 bytes long string.
+// Do not use as a reliable way to get unique IDs, instead use for things like logging.
+func shortID() string {
+	b := make([]byte, 6)
+	io.ReadFull(rand.Reader, b)
+	return base64.StdEncoding.EncodeToString(b)
 }
