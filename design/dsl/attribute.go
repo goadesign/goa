@@ -31,48 +31,48 @@ import (
 // on where the definition appears. The syntax for all these DSL is the same.
 // Here are some examples:
 //
-//	 Attribute("name")             //  Defines an attribute of type String
+//	Attribute("name")					// Defines an attribute of type String
 //
-//	 Attribute("name", func() {
-//	 	Pattern("^foo")        // Adds a validation rule to the attribute
-//	 })
+//	Attribute("name", func() {
+//		Pattern("^foo")					// Adds a validation rule to the attribute
+//	})
 //
-//	 Attribute("name", Integer)    // Defines an attribute of type Integer
+//	Attribute("name", Integer)				// Defines an attribute of type Integer
 //
-//	 Attribute("name", Integer, func() {
-//	 	Default(42)            // With a default value
-//	 })
+//	Attribute("name", Integer, func() {
+//		Default(42)					// With a default value
+//	})
 //
-//	 Attribute("name", Integer, "description") // Specifies a description
+//	Attribute("name", Integer, "description")		// Specifies a description
 //
-//	 Attribute("name", Integer, "description", func() {
-//	 	Enum(1, 2)             // And validation rules
-//	 })
+//	Attribute("name", Integer, "description", func() {
+//		Enum(1, 2)					// And validation rules
+//	})
 //
 // Nested attributes:
 //
-//	 Attribute("nested", func() {
-//	 	Description("description")
-//	 	Attribute("child")
-//	 	Attribute("child2", func() {
-//	 		// ....
-//	 	})
-//              Required("child")
-//	 })
+//	Attribute("nested", func() {
+//		Description("description")
+//		Attribute("child")
+//		Attribute("child2", func() {
+//			// ....
+//		})
+//		Required("child")
+//	})
 //
 // Here are all the valid usage of the Attribute function:
 //
-//	 Attribute(name string, dataType DataType, description string, dsl func())
+//	Attribute(name string, dataType DataType, description string, dsl func())
 //
-//	 Attribute(name string, dataType DataType, description string)
+//	Attribute(name string, dataType DataType, description string)
 //
-//	 Attribute(name string, dataType DataType, dsl func())
+//	Attribute(name string, dataType DataType, dsl func())
 //
-//	 Attribute(name string, dataType DataType)
+//	Attribute(name string, dataType DataType)
 //
-//	 Attribute(name string, dsl func()) /* dataType is String or Object (if DSL defines child attributes) */
+//	Attribute(name string, dsl func())	// dataType is String or Object (if DSL defines child attributes)
 //
-//	 Attribute(name string) /* dataType is String */
+//	Attribute(name string)			// dataType is String
 func Attribute(name string, args ...interface{}) {
 	var parent *design.AttributeDefinition
 	if at, ok := attributeDefinition(false); ok {

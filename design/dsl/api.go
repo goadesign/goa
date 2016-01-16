@@ -12,9 +12,9 @@ import (
 // default global property values for all API versions. Here is an example showing all the possible
 // API sub-definitions:
 //
-// 	API("API name", func() {
-// 		Title("title")                          // API title used in documentation
-// 		Description("description")              // API description used in documentation
+//	API("API name", func() {
+//		Title("title")				// API title used in documentation
+//		Description("description")		// API description used in documentation
 //		TermsOfService("terms")
 //		Contact(func() {			// API Contact information
 //			Name("contact name")
@@ -29,29 +29,29 @@ import (
 //			Description("doc description")
 //			URL("doc URL")
 //		})
-//		Host("goa.design")                      // API hostname
+//		Host("goa.design")			// API hostname
 //		Scheme("http")
-// 		BasePath("/base/:param")                // Common base path to all API actions
-// 		BaseParams(func() {                     // Common parameters to all API actions
-// 			Param("param")
-// 		})
-// 		ResponseTemplate("static", func() {     // Response template for use by actions
-// 			Description("description")
-// 			Status(404)
-// 			MediaType("application/json")
-// 		})
-// 		ResponseTemplate("dynamic", func(arg1, arg2 string) {
-// 			Description(arg1)
-// 			Status(200)
-// 			MediaType(arg2)
-// 		})
-// 		Trait("Authenticated", func() {         // Traits define DSL that can be run anywhere
-// 			Headers(func() {
-// 				Header("header")
-// 				Required("header")
-// 			})
-// 		})
-// 	}
+//		BasePath("/base/:param")		// Common base path to all API actions
+//		BaseParams(func() {			// Common parameters to all API actions
+//			Param("param")
+//		})
+//		ResponseTemplate("static", func() {	// Response template for use by actions
+//			Description("description")
+//			Status(404)
+//			MediaType("application/json")
+//		})
+//		ResponseTemplate("dynamic", func(arg1, arg2 string) {
+//			Description(arg1)
+//			Status(200)
+//			MediaType(arg2)
+//		})
+//		Trait("Authenticated", func() {		// Traits define DSL that can be run anywhere
+//			Headers(func() {
+//				Header("header")
+//				Required("header")
+//			})
+//		})
+//	}
 //
 func API(name string, dsl func()) *design.APIDefinition {
 	// We can't rely on this being run first, any of the top level DSL could run
@@ -285,13 +285,13 @@ func URL(url string) {
 // media type:
 //
 //	ResponseTemplate(OK, func(mt string) {
-//		Status(200)                             // OK response uses status code 200
-//		Media(mt)                               // Media type name set by action definition
+//		Status(200)				// OK response uses status code 200
+//		Media(mt)				// Media type name set by action definition
 //		Headers(func() {
-//			Header("X-Request-Id", func() { // X-Request-Id header contains a string
-//				Pattern("[0-9A-F]+")    // Regexp used to validate the response header content
+//			Header("X-Request-Id", func() {	// X-Request-Id header contains a string
+//				Pattern("[0-9A-F]+")	// Regexp used to validate the response header content
 //			})
-//			Required("X-Request-Id")        // Header is mandatory
+//			Required("X-Request-Id")	// Header is mandatory
 //		})
 //	})
 //

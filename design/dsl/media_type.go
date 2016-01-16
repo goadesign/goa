@@ -26,7 +26,7 @@ var mediaTypeCount int
 // special "link" view. Media types that are linked to must define that view. Here is an example
 // showing all the possible media type sub-definitions:
 //
-// 	MediaType("application/vnd.goa.example.bottle", func() {
+//	MediaType("application/vnd.goa.example.bottle", func() {
 //		Description("A bottle of wine")
 //		APIVersion("1.0")
 //		Attributes(func() {
@@ -35,22 +35,22 @@ var mediaTypeCount int
 //			Attribute("account", Account, "Owner account")
 //			Attribute("origin", Origin, "Details on wine origin")
 //			Links(func() {
-//				Link("account")        // Defines a link to the Account media type
-//				Link("origin", "tiny") // Overrides the default view used to render links
+//				Link("account")		// Defines a link to the Account media type
+//				Link("origin", "tiny")	// Overrides the default view used to render links
 //			})
-//              	Required("id", "href")
-//     		 })
+//			Required("id", "href")
+//		})
 //		View("default", func() {
 //			Attribute("id")
 //			Attribute("href")
-//			Attribute("links") // Default view renders links
+//			Attribute("links")	// Default view renders links
 //		})
 //		View("extended", func() {
 //			Attribute("id")
 //			Attribute("href")
-//			Attribute("account") // Extended view renders account inline
-//			Attribute("origin")  // Extended view renders origin inline
-//			Attribute("links")   // Extended view also renders links
+//			Attribute("account")	// Extended view renders account inline
+//			Attribute("origin")	// Extended view renders origin inline
+//			Attribute("links")	// Extended view also renders links
 //		})
 // 	})
 //
@@ -125,7 +125,7 @@ func MediaType(identifier string, dsl func()) *design.MediaTypeDefinition {
 
 // Media sets a response media type by name or by reference using a value returned by MediaType:
 //
-// 	Response("NotFound", func() {
+//	Response("NotFound", func() {
 //		Status(404)
 //		Media("application/json")
 //	})
@@ -149,7 +149,7 @@ func Media(val interface{}) {
 // The reference type attributes define the default properties for attributes with the same name in
 // the type using the reference. So for example if a type is defined as such:
 //
-// 	var Bottle = Type("bottle", func() {
+//	var Bottle = Type("bottle", func() {
 //		Attribute("name", func() {
 //			MinLength(3)
 //		})
@@ -161,7 +161,7 @@ func Media(val interface{}) {
 //
 // Declaring the following media type:
 //
-// 	var BottleMedia = MediaType("vnd.goa.bottle", func() {
+//	var BottleMedia = MediaType("vnd.goa.bottle", func() {
 //		Reference(Bottle)
 //		Attributes(func() {
 //			Attribute("id", Integer)
@@ -199,7 +199,7 @@ func TypeName(name string) {
 // specified then the view named "default" is used. Examples:
 //
 //	View("default", func() {
-//		Attribute("id")         // "id" and "name" must be media type attributes
+//		Attribute("id")		// "id" and "name" must be media type attributes
 //		Attribute("name")
 //	})
 //
@@ -207,7 +207,7 @@ func TypeName(name string) {
 //		Attribute("id")
 //		Attribute("name")
 //		Attribute("origin", func() {
-//			View("extended") // Use view "extended" to render attribute "origin"
+//			View("extended")	// Use view "extended" to render attribute "origin"
 //		})
 //	})
 func View(name string, dsl ...func()) {
@@ -289,8 +289,8 @@ func Links(dsl func()) {
 // media type attribute names. A link may also define the view used to render the linked-to
 // attribute. The default view used to render links is "link". Examples:
 //
-// 	Link("origin")           // Use the "link" view of the "origin" attribute
-//	Link("account", "tiny")  // Use the "tiny" view of the "account" attribute
+//	Link("origin")		// Use the "link" view of the "origin" attribute
+//	Link("account", "tiny")	// Use the "tiny" view of the "account" attribute
 func Link(name string, view ...string) {
 	if mt, ok := mediaTypeDefinition(true); ok {
 		if mt.Links == nil {
