@@ -15,34 +15,33 @@ import (
 // identical name in the resource default media type). Action definitions also describe all the
 // possible responses including the HTTP status, headers and body. Here is an example showing all
 // the possible sub-definitions:
-//
-//	 Action("Update", func() {
-//	     Description("Update account")
-//           Docs(func() {
-//               Description("Update docs")
-//               URL("http//cellarapi.com/docs/actions/update")
-//           })
-//           Scheme("http")
-//	     Routing(
-//	         PUT("/:id"),                     // Full action path is built by appending "/:id" to parent resource base path
-//	         PUT("//orgs/:org/accounts/:id"), // The // prefix indicates an absolute path
-//	     )
-//	     Params(func() {                      // Params describe the action parameters
-//	         Param("org", String)             // Parameters may correspond to path wildcards
-//	         Param("id", Integer)
-//	         Param("sort", func() {           // or URL query string values.
-//			Enum("asc", desc")
-//		 })
-//	     })
-//	     Headers(func() {                     // Headers describe relevant action headers
-//	         Header("Authorization", String)
-//	         Header("X-Account", Integer)
-//	         Required("Authorization", "X-Account")
-//	     })
-//	     Payload(UpdatePayload)               // Payload describes the HTTP request body (here using a type)
-//	     Response(NoContent)                  // Each possible HTTP response is described via Response
-//	     Response(NotFound)
-//	 })
+//	Action("Update", func() {
+//		Description("Update account")
+//		Docs(func() {
+//			Description("Update docs")
+//			URL("http//cellarapi.com/docs/actions/update")
+//		})
+//		Scheme("http")
+//		Routing(
+//			PUT("/:id"),				// Full action path is built by appending "/:id" to parent resource base path
+//			PUT("//orgs/:org/accounts/:id"),	// The // prefix indicates an absolute path
+//		)
+//		Params(func() {					// Params describe the action parameters
+//			Param("org", String)			// Parameters may correspond to path wildcards
+//			Param("id", Integer)
+//			Param("sort", func() {			// or URL query string values.
+//				Enum("asc", "desc")
+//			})
+//		})
+//		Headers(func() {				// Headers describe relevant action headers
+//			Header("Authorization", String)
+//			Header("X-Account", Integer)
+//			Required("Authorization", "X-Account")
+//		})
+//		Payload(UpdatePayload)				// Payload describes the HTTP request body (here using a type)
+//		Response(NoContent)				// Each possible HTTP response is described via Response
+//		Response(NotFound)
+//	})
 func Action(name string, dsl func()) {
 	if r, ok := resourceDefinition(true); ok {
 		if r.Actions == nil {
@@ -167,8 +166,8 @@ func Headers(dsl func()) {
 // as the Attribute DSL. Here is an example:
 //
 //	Params(func() {
-//		Param("id", Integer)            // A path parameter defined using e.g. GET("/:id")
-//		Param("sort", String, func() {  // A query string parameter
+//		Param("id", Integer)		// A path parameter defined using e.g. GET("/:id")
+//		Param("sort", String, func() {	// A query string parameter
 //			Enum("asc", "desc")
 //		})
 //	})
@@ -194,15 +193,15 @@ func Params(dsl func()) {
 // using the Member DSL which accepts the same syntax as the Attribute DSL. This function can be
 // called passing in a type, a DSL or both. Examples:
 //
-//	 Payload(BottlePayload)	   // Request payload is described by the BottlePayload type
+//	Payload(BottlePayload)		// Request payload is described by the BottlePayload type
 //
-//	 Payload(func() {          // Request payload is an object and is described inline
-//	 	Member("Name")
-//	 })
+//	Payload(func() {		// Request payload is an object and is described inline
+//		Member("Name")
+//	})
 //
-//	 Payload(BottlePayload, func() { // Request payload is described by merging the inline
-//	 	Required("Name")         // definition into the BottlePayload type.
-//	 })
+//	Payload(BottlePayload, func() {	// Request payload is described by merging the inline
+//		Required("Name")	// definition into the BottlePayload type.
+//	})
 //
 func Payload(p interface{}, dsls ...func()) {
 	if len(dsls) > 1 {
