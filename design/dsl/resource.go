@@ -21,18 +21,18 @@ import "github.com/raphael/goa/design"
 // via CanonicalActionName to override that default. Here is an example of a resource definition:
 //
 //	Resource("bottle", func() {
-//		Description("A wine bottle") // Resource description
-//		DefaultMedia(BottleMedia)    // Resource default media type
-//		BasePath("/bottles")         // Common resource action path prefix if not ""
-//		Parent("account")            // Name of parent resource if any
-//		CanonicalActionName("get")   // Name of action that returns canonical representation if not "show"
-//		UseTrait("Authenticated")    // Included trait if any, can appear more than once
-//		APIVersion("v1")	     // API version exposing this resource, can appear more than once.
+//		Description("A wine bottle")	// Resource description
+//		DefaultMedia(BottleMedia)	// Resource default media type
+//		BasePath("/bottles")		// Common resource action path prefix if not ""
+//		Parent("account")		// Name of parent resource if any
+//		CanonicalActionName("get")	// Name of action that returns canonical representation if not "show"
+//		UseTrait("Authenticated")	// Included trait if any, can appear more than once
+//		APIVersion("v1")		// API version exposing this resource, can appear more than once.
 //
-//	 	Action("show", func() {      // Action definition, can appear more than once
+//		Action("show", func() {		// Action definition, can appear more than once
 //			// ... Action DSL
 //		})
-//	 })
+//	})
 func Resource(name string, dsl func()) *design.ResourceDefinition {
 	if design.Design == nil {
 		InitDesign()
@@ -55,15 +55,15 @@ func Resource(name string, dsl func()) *design.ResourceDefinition {
 // DefaultMedia sets a resource default media type by identifier or by reference using a value
 // returned by MediaType:
 //
-// 	var _ = Resource("bottle", func() {
-// 		DefaultMedia(BottleMedia)
-// 		// ...
-// 	})
+//	var _ = Resource("bottle", func() {
+//		DefaultMedia(BottleMedia)
+//		// ...
+//	})
 //
-// 	var _ = Resource("region", func() {
-// 		DefaultMedia("vnd.goa.region")
-// 		// ...
-// 	})
+//	var _ = Resource("region", func() {
+//		DefaultMedia("vnd.goa.region")
+//		// ...
+//	})
 //
 // The default media type is used to build OK response definitions when no specific media type is
 // given in the Response function call. The default media type is also used to set the default
