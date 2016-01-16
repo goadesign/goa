@@ -12,15 +12,15 @@ import "github.com/raphael/goa/design"
 // status code, media type and headers overriding what the default response or response template
 // specifies:
 //
-// 	Response(OK, "vnd.goa.bottle", func() {  // OK response template accepts one argument: the media type identifier
-// 		Headers(func() {                 // Headers list the response HTTP headers, see Headers
-// 			Header("X-Request-Id")
-// 		})
-// 	})
+//	Response(OK, "vnd.goa.bottle", func() {	// OK response template accepts one argument: the media type identifier
+//		Headers(func() {		// Headers list the response HTTP headers, see Headers
+//			Header("X-Request-Id")
+//		})
+//	})
 //
 //	Response(NotFound, func() {
-//		Status(404)               // Not necessary as defined by default NotFound response.
-//		Media("application/json") // Override NotFound response default of "text/plain"
+//		Status(404)			// Not necessary as defined by default NotFound response.
+//		Media("application/json")	// Override NotFound response default of "text/plain"
 //	})
 //
 //	Response(Created, func() {

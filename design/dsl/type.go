@@ -11,18 +11,18 @@ import "github.com/raphael/goa/design"
 // structure of a request payload. They can also be used by media type definitions as reference, see
 // Reference. Here is an example:
 //
-// Type("createPayload", func() {
-// 	Description("Type of create and upload action payloads")
-//	APIVersion("1.0")
-//	Attribute("name", String, "name of bottle")
-//	Attribute("origin", Origin, "Details on wine origin")  // See Origin definition below
-// 	Required("name")
-// })
+//	Type("createPayload", func() {
+//		Description("Type of create and upload action payloads")
+//		APIVersion("1.0")
+//		Attribute("name", String, "name of bottle")
+//		Attribute("origin", Origin, "Details on wine origin")  // See Origin definition below
+//		Required("name")
+//	})
 //
-// var Origin = Type("origin", func() {
-//	Description("Origin of bottle")
-//	Attribute("Country")
-// })
+//	var Origin = Type("origin", func() {
+//		Description("Origin of bottle")
+//		Attribute("Country")
+//	})
 //
 // This function returns the newly defined type so the value can be used throughout the DSL.
 func Type(name string, dsl func()) *design.UserTypeDefinition {
@@ -84,7 +84,7 @@ func ArrayOf(t design.DataType) *design.Array {
 //
 //	Action("updateRatings", func() {
 //		Payload(func() {
-//			Member("ratings", HashOf(String, Integer)) // Artificial examples...
+//			Member("ratings", HashOf(String, Integer))  // Artificial examples...
 //			Member("bottles", RatedBottles)
 //	})
 func HashOf(k, v design.DataType) *design.Hash {
