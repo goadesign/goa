@@ -15,7 +15,7 @@ var _ = Describe("Validation", func() {
 		var att *AttributeDefinition
 
 		JustBeforeEach(func() {
-			Design = nil
+			InitDesign()
 			Errors = nil
 			Type("bar", func() {
 				dsl()

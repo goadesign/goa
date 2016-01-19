@@ -14,7 +14,7 @@ var _ = Describe("Type", func() {
 	var ut *UserTypeDefinition
 
 	BeforeEach(func() {
-		Design = nil
+		InitDesign()
 		Errors = nil
 		name = ""
 		dsl = nil

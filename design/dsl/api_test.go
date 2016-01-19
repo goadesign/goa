@@ -12,7 +12,7 @@ var _ = Describe("API", func() {
 	var dsl func()
 
 	BeforeEach(func() {
-		Design = nil
+		InitDesign()
 		Errors = nil
 		name = ""
 		dsl = nil

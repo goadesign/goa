@@ -7,6 +7,15 @@ import (
 	regen "github.com/zach-klippenstein/goregen"
 )
 
+// Roots contains the root definition sets built by the DSLs.
+// DSL implementations should append to it to ensure the DSL gets executed by the runner.
+// Note that a root definition is a different concept from a "top level" definition (i.e. a
+// definition that is an entry point in the DSL). In particular a root definition may include
+// an arbitrary number of definition sets forming a tree of definitions.
+// For example the API DSL only has one root definition (the API definition) but many top level
+// definitions (API, Version, Type, MediaType etc.) all defining a definition set.
+var Roots []Root
+
 type (
 	// Definition is the common interface implemented by all definitions.
 	Definition interface {
@@ -15,18 +24,17 @@ type (
 	}
 
 	// DefinitionSet contains DSL definitions that are executed as one unit.
-	// The slice elements may implement the Validate, Source and Parent interfaces to enable the
+	// The slice elements may implement the Validate an, Source interfaces to enable the
 	// corresponding behaviors during DSL execution.
 	DefinitionSet []Definition
 
-	// Root is the interface implemented by the DSL root objects held by the Design variable.
+	// Root is the interface implemented by the DSL root objects held by the Roots variable.
 	// These objects contains all the definition sets created by the DSL and can be passed to
 	// the engine for execution.
 	Root interface {
 		// IterateSets calls the given iterator passing in each definition set sorted in
-		// execution order. Iteration stops if an iterator returns an error and in this case
-		// IterateSets returns that error.
-		IterateSets(SetIterator) error
+		// execution order.
+		IterateSets(SetIterator)
 	}
 
 	// Validate is the interface implemented by definitions that can be validated.
@@ -94,6 +102,8 @@ type (
 		// NonZeroAttributes lists the names of the child attributes that cannot have a
 		// zero value (and thus whose presence does not need to be validated).
 		NonZeroAttributes map[string]bool
+		// DSLFunc contains the initialization DSL. This is used for user types.
+		DSLFunc func()
 	}
 
 	// MetadataDefinition is a set of key/value pairs
@@ -282,6 +292,7 @@ func (a *AttributeDefinition) Dup() *AttributeDefinition {
 		DefaultValue:      a.DefaultValue,
 		NonZeroAttributes: a.NonZeroAttributes,
 		View:              a.View,
+		DSLFunc:           a.DSLFunc,
 	}
 	return &dup
 }
@@ -397,6 +408,11 @@ func (a *AttributeDefinition) Inherit(parent *AttributeDefinition) {
 
 	a.inheritValidations(parent)
 	a.inheritRecursive(parent)
+}
+
+// DSL returns the initialization DSL.
+func (a *AttributeDefinition) DSL() func() {
+	return a.DSLFunc
 }
 
 func (a *AttributeDefinition) inheritRecursive(parent *AttributeDefinition) {

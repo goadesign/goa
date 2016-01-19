@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/raphael/goa/design"
+	"github.com/raphael/goa/design/dsl"
 	"github.com/raphael/goa/goagen/codegen"
 	"github.com/raphael/goa/goagen/gen_app"
 )
@@ -38,7 +39,7 @@ var _ = Describe("NewGenerator", func() {
 		})
 
 		It("instantiates a generator with initialized writers", func() {
-			design.Design = nil
+			dsl.InitDesign()
 			var err error
 			gen, err = genapp.NewGenerator()
 			Ω(err).ShouldNot(HaveOccurred())

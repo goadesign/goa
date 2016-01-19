@@ -86,8 +86,6 @@ type (
 		*AttributeDefinition
 		// Name of type
 		TypeName string
-		// DSLFunc contains the DSL used to create this definition if any.
-		DSLFunc func()
 	}
 
 	// MediaTypeDefinition describes the rendering of a resource using property and link
@@ -451,8 +449,7 @@ func (o Object) IterateAttributes(it AttributeIterator) error {
 func NewUserTypeDefinition(name string, dsl func()) *UserTypeDefinition {
 	return &UserTypeDefinition{
 		TypeName:            name,
-		AttributeDefinition: &AttributeDefinition{},
-		DSLFunc:             dsl,
+		AttributeDefinition: &AttributeDefinition{DSLFunc: dsl},
 	}
 }
 
@@ -493,7 +490,6 @@ func (u *UserTypeDefinition) Dup() DataType {
 	return &UserTypeDefinition{
 		AttributeDefinition: u.AttributeDefinition.Dup(),
 		TypeName:            u.TypeName,
-		DSLFunc:             u.DSL(),
 	}
 }
 
@@ -521,14 +517,22 @@ func (u *UserTypeDefinition) Versions() []string {
 	return u.APIVersions
 }
 
+// Finalize merges base type attributes.
+func (u *UserTypeDefinition) Finalize() {
+	if u.Reference != nil {
+		if bat := u.AttributeDefinition; bat != nil {
+			u.AttributeDefinition.Inherit(bat)
+		}
+	}
+}
+
 // NewMediaTypeDefinition creates a media type definition but does not
 // execute the DSL.
 func NewMediaTypeDefinition(name, identifier string, dsl func()) *MediaTypeDefinition {
 	return &MediaTypeDefinition{
 		UserTypeDefinition: &UserTypeDefinition{
-			AttributeDefinition: &AttributeDefinition{Type: Object{}},
+			AttributeDefinition: &AttributeDefinition{Type: Object{}, DSLFunc: dsl},
 			TypeName:            name,
-			DSLFunc:             dsl,
 		},
 		Identifier: identifier,
 	}

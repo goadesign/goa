@@ -14,7 +14,7 @@ var _ = Describe("Resource", func() {
 	var res *ResourceDefinition
 
 	BeforeEach(func() {
-		Design = nil
+		InitDesign()
 		Errors = nil
 		name = ""
 		dsl = nil

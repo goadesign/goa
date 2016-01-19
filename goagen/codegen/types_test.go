@@ -463,7 +463,7 @@ var _ = Describe("code generation", func() {
 			var marshalerImpl string
 
 			BeforeEach(func() {
-				Design = nil
+				InitDesign()
 				Errors = nil
 				fooMediaType := MediaType("application/fooMT", func() {
 					Attribute("href")
@@ -501,7 +501,7 @@ var _ = Describe("code generation", func() {
 			var marshalerImpl string
 
 			BeforeEach(func() {
-				Design = nil
+				InitDesign()
 				Errors = nil
 				fooMediaType := MediaType("application/fooMT", func() {
 					Attribute("fooAtt", Integer)
@@ -559,7 +559,7 @@ var _ = Describe("code generation", func() {
 			var marshalerImpl string
 
 			BeforeEach(func() {
-				Design = nil
+				InitDesign()
 				Errors = nil
 
 				testMediaType := MediaType("application/testMT", func() {
@@ -593,7 +593,7 @@ var _ = Describe("code generation", func() {
 			var marshaler2 string
 
 			BeforeEach(func() {
-				Design = nil
+				InitDesign()
 				Errors = nil
 				testMediaType = MediaType("application/test", func() {
 					Attribute("id")

@@ -15,7 +15,7 @@ var _ = Describe("DSL execution", func() {
 		const att2Name = "att2Name"
 
 		BeforeEach(func() {
-			Design = nil
+			InitDesign()
 
 			API("foo", func() {})
 
@@ -104,7 +104,7 @@ var _ = Describe("DSL errors", func() {
 		const lineNumber = 111
 
 		BeforeEach(func() {
-			Design = nil
+			InitDesign()
 			API("foo", func() {
 				// NOTE: moving the line below requires updating the
 				// constant above to match its number.
@@ -127,7 +127,7 @@ var _ = Describe("DSL errors", func() {
 		const lineNumber = 134
 
 		BeforeEach(func() {
-			Design = nil
+			InitDesign()
 			Type("bar", func() {
 				// NOTE: moving the line below requires updating the
 				// constant above to match its number.
