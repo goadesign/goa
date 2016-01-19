@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/raphael/goa/design"
+	"github.com/raphael/goa/design/dsl"
 	"github.com/raphael/goa/goagen/codegen"
 	"github.com/raphael/goa/goagen/gen_js"
 )
@@ -36,7 +37,7 @@ var _ = Describe("NewGenerator", func() {
 		})
 
 		It("instantiates a generator even if Design is not initialized", func() {
-			design.Design = nil
+			dsl.InitDesign()
 			var err error
 			gen, err = genjs.NewGenerator()
 			Ω(err).ShouldNot(HaveOccurred())

@@ -36,8 +36,7 @@ func Type(name string, dsl func()) *design.UserTypeDefinition {
 	if topLevelDefinition(true) {
 		t = &design.UserTypeDefinition{
 			TypeName:            name,
-			AttributeDefinition: &design.AttributeDefinition{},
-			DSLFunc:             dsl,
+			AttributeDefinition: &design.AttributeDefinition{DSLFunc: dsl},
 		}
 		if dsl == nil {
 			t.Type = design.String

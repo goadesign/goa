@@ -15,7 +15,7 @@ var _ = Describe("Action", func() {
 	var action *ActionDefinition
 
 	BeforeEach(func() {
-		Design = nil
+		InitDesign()
 		Errors = nil
 		name = ""
 		dsl = nil
@@ -180,7 +180,7 @@ var _ = Describe("Action", func() {
 var _ = Describe("Payload", func() {
 	Context("with a payload definition", func() {
 		BeforeEach(func() {
-			Design = nil
+			InitDesign()
 			Resource("foo", func() {
 				Action("bar", func() {
 					Payload(func() {
@@ -206,7 +206,7 @@ var _ = Describe("Payload", func() {
 
 	Context("with an array", func() {
 		BeforeEach(func() {
-			Design = nil
+			InitDesign()
 			Resource("foo", func() {
 				Action("bar", func() {
 					Payload(ArrayOf(Integer))
@@ -233,7 +233,7 @@ var _ = Describe("Payload", func() {
 
 	Context("with a hash", func() {
 		BeforeEach(func() {
-			Design = nil
+			InitDesign()
 			Resource("foo", func() {
 				Action("bar", func() {
 					Payload(HashOf(String, Integer))

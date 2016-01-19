@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"github.com/raphael/goa/design"
+	"github.com/raphael/goa/design/dsl"
 	"github.com/raphael/goa/goagen/codegen"
 	"github.com/raphael/goa/goagen/gen_client"
 )
@@ -39,7 +40,7 @@ var _ = Describe("NewGenerator", func() {
 		})
 
 		It("instantiates a generator even if Design is not initialized", func() {
-			design.Design = nil
+			dsl.InitDesign()
 			var err error
 			gen, err = genclient.NewGenerator()
 			Ω(err).ShouldNot(HaveOccurred())

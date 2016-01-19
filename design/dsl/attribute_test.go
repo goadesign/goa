@@ -16,7 +16,7 @@ var _ = Describe("Attribute", func() {
 	var parent *AttributeDefinition
 
 	BeforeEach(func() {
-		Design = nil
+		InitDesign()
 		Errors = nil
 		name = ""
 		dataType = nil

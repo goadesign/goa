@@ -17,6 +17,12 @@ var (
 
 	// WildcardRegex is the regular expression used to capture path parameters.
 	WildcardRegex = regexp.MustCompile(`/(?::|\*)([a-zA-Z0-9_]+)`)
+
+	// GeneratedMediaTypes contains DSL definitions that were created by the design DSL and
+	// need to be executed as a second pass.
+	// An example of this are media types defined with CollectionOf: the element media type
+	// must be defined first then the definition created by CollectionOf must execute.
+	GeneratedMediaTypes MediaTypeRoot
 )
 
 type (
@@ -255,6 +261,10 @@ type (
 
 	// ResponseIterator is the type of functions given to IterateResponses.
 	ResponseIterator func(r *ResponseDefinition) error
+
+	// MediaTypeRoot is the data structure that represents the additional DSL definition root
+	// that contains the media type definition set created by CollectionOf.
+	MediaTypeRoot map[string]*MediaTypeDefinition
 )
 
 // Context returns the generic definition name used in error messages.
@@ -382,6 +392,57 @@ func (a *APIDefinition) Versions() (versions []string) {
 		return nil
 	})
 	return
+}
+
+// IterateSets goes over all the definition sets of the API: The API definition itself, each
+// version definition, user types, media types and finally resources.
+func (a *APIDefinition) IterateSets(iterator SetIterator) {
+	// First run the top level API DSL to initialize responses and
+	// response templates needed by resources.
+	iterator([]Definition{a})
+
+	// Then all the versions
+	sortedVersions := make([]Definition, len(a.APIVersions))
+	i := 0
+	a.IterateVersions(func(ver *APIVersionDefinition) error {
+		if !ver.IsDefault() {
+			sortedVersions[i] = ver
+			i++
+		}
+		return nil
+	})
+	iterator(sortedVersions)
+
+	// Then run the user type DSLs
+	typeAttributes := make([]Definition, len(a.Types))
+	i = 0
+	a.IterateUserTypes(func(u *UserTypeDefinition) error {
+		u.AttributeDefinition.DSLFunc = u.DSLFunc
+		typeAttributes[i] = u.AttributeDefinition
+		i++
+		return nil
+	})
+	iterator(typeAttributes)
+
+	// Then the media type DSLs
+	mediaTypes := make([]Definition, len(a.MediaTypes))
+	i = 0
+	a.IterateMediaTypes(func(mt *MediaTypeDefinition) error {
+		mediaTypes[i] = mt
+		i++
+		return nil
+	})
+	iterator(mediaTypes)
+
+	// And now that we have everything the resources.
+	resources := make([]Definition, len(a.Resources))
+	i = 0
+	a.IterateResources(func(res *ResourceDefinition) error {
+		resources[i] = res
+		i++
+		return nil
+	})
+	iterator(resources)
 }
 
 // SupportsVersion returns true if the object supports the given version.
@@ -627,6 +688,71 @@ func (r *ResourceDefinition) DSL() func() {
 	return r.DSLFunc
 }
 
+// Finalize is run post DSL execution. It merges response definitions, creates implicit action
+// parameters, initializes querystring parameters and sets path parameters as non zero attributes.
+func (r *ResourceDefinition) Finalize() {
+	r.IterateActions(func(a *ActionDefinition) error {
+		// 1. Merge response definitions
+		for name, resp := range a.Responses {
+			if pr, ok := a.Parent.Responses[name]; ok {
+				resp.Merge(pr)
+			}
+			if ar, ok := Design.Responses[name]; ok {
+				resp.Merge(ar)
+			}
+			if dr, ok := Design.DefaultResponses[name]; ok {
+				resp.Merge(dr)
+			}
+		}
+		// 2. Create implicit action parameters for path wildcards that dont' have one
+		for _, r := range a.Routes {
+			Design.IterateVersions(func(ver *APIVersionDefinition) error {
+				wcs := ExtractWildcards(r.FullPath(ver))
+				for _, wc := range wcs {
+					found := false
+					var o Object
+					if all := a.Params; all != nil {
+						o = all.Type.ToObject()
+					} else {
+						o = Object{}
+						a.Params = &AttributeDefinition{Type: o}
+					}
+					for n := range o {
+						if n == wc {
+							found = true
+							break
+						}
+					}
+					if !found {
+						o[wc] = &AttributeDefinition{Type: String}
+					}
+				}
+				return nil
+			})
+		}
+		// 3. Compute QueryParams from Params and set all path params as non zero attributes
+		if params := a.Params; params != nil {
+			queryParams := params.Dup()
+			a.Params.NonZeroAttributes = make(map[string]bool)
+			Design.IterateVersions(func(ver *APIVersionDefinition) error {
+				for _, route := range a.Routes {
+					pnames := route.Params(ver)
+					for _, pname := range pnames {
+						a.Params.NonZeroAttributes[pname] = true
+						delete(queryParams.Type.ToObject(), pname)
+					}
+				}
+				return nil
+			})
+			// (note: we may end up with required attribute names that don't correspond
+			// to actual attributes cos' we just deleted them but that's probably OK.)
+			a.QueryParams = queryParams
+		}
+
+		return nil
+	})
+}
+
 // Context returns the generic definition name used in error messages.
 func (c *ContactDefinition) Context() string {
 	if c.Name != "" {
@@ -869,6 +995,24 @@ func (r *RouteDefinition) FullPath(version *APIVersionDefinition) string {
 // base paths.
 func (r *RouteDefinition) IsAbsolute() bool {
 	return strings.HasPrefix(r.Path, "//")
+}
+
+// IterateSets iterates over the one generated media type definition set.
+func (r MediaTypeRoot) IterateSets(iterator SetIterator) {
+	canonicalIDs := make([]string, len(r))
+	i := 0
+	for _, mt := range r {
+		canonicalID := CanonicalIdentifier(mt.Identifier)
+		Design.MediaTypes[canonicalID] = mt
+		canonicalIDs[i] = canonicalID
+		i++
+	}
+	sort.Strings(canonicalIDs)
+	set := make([]Definition, len(canonicalIDs))
+	for i, cid := range canonicalIDs {
+		set[i] = Design.MediaTypes[cid]
+	}
+	iterator(set)
 }
 
 // ExtractWildcards returns the names of the wildcards that appear in path.
