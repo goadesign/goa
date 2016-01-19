@@ -56,9 +56,6 @@ var mediaTypeCount int
 //
 // This function returns the media type definition so it can be referred to throughout the DSL.
 func MediaType(identifier string, dsl func()) *design.MediaTypeDefinition {
-	if design.Design == nil {
-		InitDesign()
-	}
 	if design.Design.MediaTypes == nil {
 		design.Design.MediaTypes = make(map[string]*design.MediaTypeDefinition)
 	}

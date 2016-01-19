@@ -9,7 +9,7 @@ import (
 // ValidationErrors records the errors encountered when running Validate.
 type ValidationErrors struct {
 	Errors      []error
-	Definitions []DSLDefinition
+	Definitions []Definition
 }
 
 // Error implements the error interface.
@@ -33,7 +33,7 @@ func (verr *ValidationErrors) Merge(err *ValidationErrors) {
 // Add adds a validation error to the target.
 // Add "flattens" validation errors so that the recorded errors are never ValidationErrors
 // themselves.
-func (verr *ValidationErrors) Add(def DSLDefinition, format string, vals ...interface{}) {
+func (verr *ValidationErrors) Add(def Definition, format string, vals ...interface{}) {
 	err := fmt.Errorf(format, vals...)
 	verr.Errors = append(verr.Errors, err)
 	verr.Definitions = append(verr.Definitions, def)
@@ -57,14 +57,14 @@ type routeInfo struct {
 
 type wildCardInfo struct {
 	Name string
-	Orig DSLDefinition
+	Orig Definition
 }
 
 func newRouteInfo(version *APIVersionDefinition, resource *ResourceDefinition, action *ActionDefinition, route *RouteDefinition) *routeInfo {
 	vars := route.Params(version)
 	wi := make([]*wildCardInfo, len(vars))
 	for i, v := range vars {
-		var orig DSLDefinition
+		var orig Definition
 		if strings.Contains(route.Path, v) {
 			orig = route
 		} else if strings.Contains(resource.BasePath, v) {
@@ -366,7 +366,7 @@ func (a *ActionDefinition) ValidateParams(version *APIVersionDefinition) *Valida
 // Since attributes are unaware of their context, additional context information can be provided
 // to be used in error messages.
 // The parent definition context is automatically added to error messages.
-func (a *AttributeDefinition) Validate(ctx string, parent DSLDefinition) *ValidationErrors {
+func (a *AttributeDefinition) Validate(ctx string, parent Definition) *ValidationErrors {
 	verr := new(ValidationErrors)
 	if a.Type == nil {
 		verr.Add(parent, "attribute type is nil")
@@ -434,7 +434,7 @@ func (r *RouteDefinition) Validate() *ValidationErrors {
 
 // Validate checks that the user type definition is consistent: it has a name and all user and media
 // types used in fields support the API versions that use the type.
-func (u *UserTypeDefinition) Validate(ctx string, parent DSLDefinition) *ValidationErrors {
+func (u *UserTypeDefinition) Validate(ctx string, parent Definition) *ValidationErrors {
 	verr := new(ValidationErrors)
 	if u.TypeName == "" {
 		verr.Add(parent, "%s - %s", ctx, "User type must have a name")

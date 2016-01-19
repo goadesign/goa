@@ -6,8 +6,13 @@ import (
 	"github.com/raphael/goa/design"
 )
 
+// Call InitDesign by default.
+func init() {
+	InitDesign()
+}
+
 // InitDesign initializes the Design global variable and loads the built-in
-// response templates.
+// response templates. This is a public function mainly so it can be used in tests.
 func InitDesign() {
 	ctxStack = nil // mostly for tests
 	design.Design = &design.APIDefinition{
