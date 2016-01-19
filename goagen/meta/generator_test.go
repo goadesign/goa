@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -104,7 +105,7 @@ var _ = Describe("Run", func() {
 
 		It("fails with a useful error message", func() {
 			path := fmt.Sprintf("%s", filepath.Join(invalidPath, "src", filepath.FromSlash(designPackagePath)))
-			msg := fmt.Sprintf(`cannot find design package in any of the paths [^,]+, %s`, path)
+			msg := fmt.Sprintf(`cannot find design package in any of the paths [^,]+, %s`, regexp.QuoteMeta(path))
 			Ω(compileError).Should(MatchError(MatchRegexp(msg)))
 		})
 
