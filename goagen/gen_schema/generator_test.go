@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/raphael/goa/design"
+	"github.com/raphael/goa/goagen/codegen"
 	"github.com/raphael/goa/goagen/gen_schema"
 )
 
@@ -48,19 +49,19 @@ var _ = Describe("NewGenerator", func() {
 })
 
 var _ = Describe("Generate", func() {
-	const testgenPackagePath = "github.com/raphael/goa/goagen/gen_schema/goatest"
-
 	var gen *genschema.Generator
-	var outDir string
 	var files []string
 	var genErr error
+	var workspace *codegen.Workspace
+	var testPkg *codegen.Package
 
 	BeforeEach(func() {
-		gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
-		outDir = filepath.Join(gopath, "src", testgenPackagePath)
-		err := os.MkdirAll(outDir, 0777)
+		var err error
+		workspace, err = codegen.NewWorkspace("test")
 		Ω(err).ShouldNot(HaveOccurred())
-		os.Args = []string{"codegen", "--out=" + outDir, "--design=foo"}
+		testPkg, err = workspace.NewPackage("schematest")
+		Ω(err).ShouldNot(HaveOccurred())
+		os.Args = []string{"codegen", "--out=" + testPkg.Abs(), "--design=foo"}
 	})
 
 	JustBeforeEach(func() {
@@ -71,7 +72,7 @@ var _ = Describe("Generate", func() {
 	})
 
 	AfterEach(func() {
-		os.RemoveAll(outDir)
+		workspace.Delete()
 	})
 
 	Context("with a dummy API", func() {

@@ -1,0 +1,350 @@
+package codegen
+
+import (
+	"fmt"
+	"go/parser"
+	"go/token"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"text/template"
+)
+
+type (
+	// Workspace represents a temporary Go workspace
+	Workspace struct {
+		// Path is the absolute path to the workspace directory.
+		Path string
+		// gopath is the original GOPATH
+		gopath string
+	}
+
+	// Package represents a temporary Go package
+	Package struct {
+		// (Go) Path of package
+		Path string
+		// Workspace containing package
+		Workspace *Workspace
+	}
+
+	// SourceFile represents a single Go source file
+	SourceFile struct {
+		// Name of the source file
+		Name string
+		// Package containing source file
+		Package *Package
+	}
+)
+
+var (
+	// Template used to render Go source file headers.
+	headerTmpl = template.Must(template.New("header").Funcs(DefaultFuncMap).Parse(headerT))
+
+	// DefaultFuncMap is the FuncMap used to initialize all source file templates.
+	DefaultFuncMap = template.FuncMap{
+		"add":           func(a, b int) int { return a + b },
+		"commandLine":   CommandLine,
+		"comment":       Comment,
+		"goify":         Goify,
+		"gonative":      GoNativeType,
+		"gopkgtypename": GoPackageTypeName,
+		"gopkgtyperef":  GoPackageTypeRef,
+		"gotypedef":     GoTypeDef,
+		"gotypename":    GoTypeName,
+		"gotyperef":     GoTypeRef,
+		"join":          strings.Join,
+		"mediaTypeMarshalerImpl":  MediaTypeMarshalerImpl,
+		"recursiveValidate":       RecursiveChecker,
+		"tabs":                    Tabs,
+		"tempvar":                 Tempvar,
+		"title":                   strings.Title,
+		"toLower":                 strings.ToLower,
+		"typeMarshaler":           MediaTypeMarshaler,
+		"userTypeMarshalerImpl":   UserTypeMarshalerImpl,
+		"userTypeUnmarshalerImpl": UserTypeUnmarshalerImpl,
+		"validationChecker":       ValidationChecker,
+		"versionPkg":              VersionPackage,
+	}
+)
+
+// NewWorkspace returns a newly created temporary Go workspace.
+// Use Delete to delete the corresponding temporary directory when done.
+func NewWorkspace(prefix string) (*Workspace, error) {
+	dir, err := ioutil.TempDir("", prefix)
+	if err != nil {
+		return nil, err
+	}
+	// create workspace layout
+	os.MkdirAll(filepath.Join(dir, "src"), 0755)
+	os.MkdirAll(filepath.Join(dir, "pkg"), 0755)
+	os.MkdirAll(filepath.Join(dir, "bin"), 0755)
+
+	// setup GOPATH
+	gopath := os.Getenv("GOPATH")
+	os.Setenv("GOPATH", fmt.Sprintf("%s%c%s", dir, os.PathListSeparator, gopath))
+
+	// we're done
+	return &Workspace{Path: dir, gopath: gopath}, nil
+}
+
+// WorkspaceFor returns the Go workspace for the given Go source file.
+func WorkspaceFor(source string) (*Workspace, error) {
+	gopaths := os.Getenv("GOPATH")
+	for _, gp := range filepath.SplitList(gopaths) {
+		gopath, err := filepath.Abs(gp)
+		if err != nil {
+			gopath = gp
+		}
+		if strings.HasPrefix(source, gopath) {
+			return &Workspace{
+				gopath: gopaths,
+				Path:   gopath,
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("Go source file not in Go workspace, adjust GOPATH: %s", source)
+}
+
+// Delete deletes the workspace temporary directory.
+func (w *Workspace) Delete() {
+	if w.gopath != "" {
+		os.Setenv("GOPATH", w.gopath)
+	}
+	os.RemoveAll(w.Path)
+}
+
+// Reset removes all content from the workspace.
+func (w *Workspace) Reset() error {
+	d, err := os.Open(w.Path)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	names, err := d.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		err = os.RemoveAll(filepath.Join(w.Path, name))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// NewPackage creates a new package in the workspace. It deletes any pre-existing package.
+// goPath is the go package path used to import the package.
+func (w *Workspace) NewPackage(goPath string) (*Package, error) {
+	pkg := &Package{Path: goPath, Workspace: w}
+	os.RemoveAll(pkg.Abs())
+	if err := os.MkdirAll(pkg.Abs(), 0755); err != nil {
+		return nil, err
+	}
+	return pkg, nil
+}
+
+// PackageFor returns the package for the given source file.
+func PackageFor(source string) (*Package, error) {
+	w, err := WorkspaceFor(source)
+	if err != nil {
+		return nil, err
+	}
+	path, err := filepath.Rel(filepath.Join(w.Path, "src"), filepath.Dir(source))
+	if err != nil {
+		return nil, err
+	}
+	return &Package{Workspace: w, Path: path}, nil
+}
+
+// Abs returns the absolute path to the package source directory
+func (p *Package) Abs() string {
+	return filepath.Join(p.Workspace.Path, "src", p.Path)
+}
+
+// CreateSourceFile creates a Go source file in the given package.
+func (p *Package) CreateSourceFile(name string) *SourceFile {
+	path := filepath.Join(p.Abs(), name)
+	os.Remove(filepath.Join(path, name))
+	return &SourceFile{Name: name, Package: p}
+}
+
+// Compile compiles a package and returns the path to the compiled binary.
+func (p *Package) Compile(bin string) (string, error) {
+	gobin, err := exec.LookPath("go")
+	if err != nil {
+		return "", fmt.Errorf(`failed to find a go compiler, looked in "%s"`, os.Getenv("PATH"))
+	}
+	if runtime.GOOS == "windows" {
+		bin += ".exe"
+	}
+	c := exec.Cmd{
+		Path: gobin,
+		Args: []string{gobin, "build", "-o", bin},
+		Dir:  p.Abs(),
+	}
+	out, err := c.CombinedOutput()
+	if err != nil {
+		if len(out) > 0 {
+			return "", fmt.Errorf(string(out))
+		}
+		return "", fmt.Errorf("failed to compile %s: %s", bin, err)
+	}
+	return filepath.Join(p.Abs(), bin), nil
+}
+
+// SourceFileFor returns a SourceFile for the file at the given path.
+func SourceFileFor(path string) (*SourceFile, error) {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		absPath = path
+	}
+	p, err := PackageFor(absPath)
+	if err != nil {
+		return nil, err
+	}
+	return &SourceFile{
+		Package: p,
+		Name:    filepath.Base(absPath),
+	}, nil
+}
+
+// WriteHeader writes the generic generated code header.
+func (f *SourceFile) WriteHeader(title, pack string, imports []*ImportSpec) error {
+	ctx := map[string]interface{}{
+		"Title":       title,
+		"ToolVersion": Version,
+		"Pkg":         pack,
+		"Imports":     imports,
+	}
+	if err := headerTmpl.Execute(f, ctx); err != nil {
+		return fmt.Errorf("failed to generate contexts: %s", err)
+	}
+	return nil
+}
+
+// Write implements io.Writer so that variables of type *SourceFile can be
+// used in template.Execute.
+func (f *SourceFile) Write(b []byte) (int, error) {
+	file, err := os.OpenFile(f.Abs(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+	return file.Write(b)
+}
+
+// FormatCode runs "goimports -w" on the source file.
+func (f *SourceFile) FormatCode() error {
+	cmd := exec.Command("goimports", "-w", f.Abs())
+	if output, err := cmd.CombinedOutput(); err != nil {
+		if len(output) > 0 {
+			// goimport exits with status code 1 if modifies the code which is not a
+			// failure. Look for an error message to know something bad happened.
+			content, _ := ioutil.ReadFile(f.Abs())
+			return fmt.Errorf("%s\n========\nContent:\n%s", string(output), content)
+		}
+	}
+	return nil
+}
+
+// Abs returne the source file absolute filename
+func (f *SourceFile) Abs() string {
+	return filepath.Join(f.Package.Abs(), f.Name)
+}
+
+// ExecuteTemplate executes the template and writes the output to the file.
+func (f *SourceFile) ExecuteTemplate(name, source string, funcMap template.FuncMap, data interface{}) error {
+	tmpl, err := template.New(name).Funcs(DefaultFuncMap).Funcs(funcMap).Parse(source)
+	if err != nil {
+		panic(err) // bug
+	}
+	return tmpl.Execute(f, data)
+}
+
+// PackagePath returns the Go package path for the directory that lives under the given absolute
+// file path.
+func PackagePath(path string) (string, error) {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		absPath = path
+	}
+	gopaths := filepath.SplitList(os.Getenv("GOPATH"))
+	for _, gopath := range gopaths {
+		if gp, err := filepath.Abs(gopath); err == nil {
+			gopath = gp
+		}
+		if strings.HasPrefix(absPath, gopath) {
+			return filepath.Rel(filepath.Join(gopath, "/src"), absPath)
+		}
+	}
+	return "", fmt.Errorf("%s does not contain a Go package", absPath)
+}
+
+// PackageSourcePath returns the absolute path to the given package source.
+func PackageSourcePath(pkg string) (string, error) {
+	gopaths := os.Getenv("GOPATH")
+	candidates := filepath.SplitList(gopaths)
+	for i, gopath := range candidates {
+		candidates[i] = filepath.Join(gopath, "src", pkg)
+	}
+	var absPath string
+	for _, path := range candidates {
+		if _, err := os.Stat(path); err == nil {
+			absPath = path
+			break
+		}
+	}
+	if absPath == "" {
+		if len(candidates) == 1 {
+			return "", fmt.Errorf(`cannot find design package at path "%s"`, candidates[0])
+		}
+		return "", fmt.Errorf(`cannot find design package in any of the paths %s`, strings.Join(candidates, ", "))
+	}
+	return absPath, nil
+}
+
+// PackageName returns the name of a package at the given path
+func PackageName(path string) (string, error) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, path, nil, parser.PackageClauseOnly)
+	if err != nil {
+		return "", err
+	}
+	pkgNames := make([]string, len(pkgs))
+	i := 0
+	for n := range pkgs {
+		pkgNames[i] = n
+		i++
+	}
+	if len(pkgs) > 1 {
+		return "", fmt.Errorf("more than one Go package found in %s (%s)",
+			path, strings.Join(pkgNames, ","))
+	}
+	if len(pkgs) == 0 {
+		return "", fmt.Errorf("no Go package found in %s", path)
+	}
+	return pkgNames[0], nil
+}
+
+const (
+	headerT = `{{if .Title}}//************************************************************************//
+// {{.Title}}
+//
+// Generated with goagen v{{.ToolVersion}}, command line:
+{{comment commandLine}}
+//
+// The content of this file is auto-generated, DO NOT MODIFY
+//************************************************************************//
+
+{{end}}package {{.Pkg}}
+
+{{if .Imports}}import ({{range .Imports}}
+	{{.Code}}{{end}}
+)
+
+{{end}}`
+)

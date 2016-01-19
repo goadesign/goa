@@ -77,24 +77,19 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	funcs := template.FuncMap{
 		"tempvar":              tempvar,
 		"generateSwagger":      generateSwagger,
-		"goify":                codegen.Goify,
 		"okResp":               okResp,
 		"newControllerVersion": newControllerVersion,
-		"versionPkg":           codegen.VersionPackage,
 		"targetPkg":            func() string { return TargetPackage },
 	}
-	gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
 	if err != nil {
-		var tmpl *template.Template
-		tmpl, err = template.New("main").Funcs(funcs).Parse(mainTmpl)
+		file, err := codegen.SourceFileFor(mainFile)
 		if err != nil {
-			panic(err.Error()) // bug
+			return nil, err
 		}
-		gg := codegen.NewGoGenerator(mainFile)
 		var outPkg string
-		outPkg, err = filepath.Rel(gopath, codegen.OutputDir)
+		outPkg, err = codegen.PackagePath(codegen.OutputDir)
 		if err != nil {
-			return
+			return nil, err
 		}
 		outPkg = strings.TrimPrefix(filepath.ToSlash(outPkg), "src/")
 		appPkg := path.Join(outPkg, "app")
@@ -109,23 +104,19 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 			jsonSchemaPkg := path.Join(outPkg, "schema")
 			imports = append(imports, codegen.SimpleImport(jsonSchemaPkg))
 		}
-		gg.WriteHeader("", "main", imports)
+		file.WriteHeader("", "main", imports)
 		data := map[string]interface{}{
 			"Name": AppName,
 			"API":  api,
 		}
-		if err = tmpl.Execute(gg, data); err != nil {
-			return
+		if err = file.ExecuteTemplate("main", mainT, funcs, data); err != nil {
+			return nil, err
 		}
-		if err = gg.FormatCode(); err != nil {
-			return
+		if err = file.FormatCode(); err != nil {
+			return nil, err
 		}
 	}
-	tmpl, err := template.New("ctrl").Funcs(funcs).Parse(ctrlTmpl)
-	if err != nil {
-		panic(err.Error()) // bug
-	}
-	imp, err := filepath.Rel(filepath.Join(gopath, "src"), codegen.OutputDir)
+	imp, err := codegen.PackagePath(codegen.OutputDir)
 	if err != nil {
 		return
 	}
@@ -147,13 +138,16 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		}
 		g.genfiles = append(g.genfiles, filename)
 		if _, err := os.Stat(filename); err != nil {
-			resGen := codegen.NewGoGenerator(filename)
-			resGen.WriteHeader("", "main", imports)
-			err := tmpl.Execute(resGen, r)
+			file, err := codegen.SourceFileFor(filename)
 			if err != nil {
 				return err
 			}
-			if err := resGen.FormatCode(); err != nil {
+			file.WriteHeader("", "main", imports)
+			err = file.ExecuteTemplate("main", mainT, nil, r)
+			if err != nil {
+				return err
+			}
+			if err := file.FormatCode(); err != nil {
 				return err
 			}
 		}
@@ -256,7 +250,7 @@ func snakeCase(name string) string {
 	return b.String()
 }
 
-const mainTmpl = `
+const mainT = `
 func main() {
 	// Create service
 	service := goa.New("{{.Name}}")
@@ -282,12 +276,12 @@ func main() {
 	service.ListenAndServe(":8080")
 }
 `
-const ctrlTmpl = `{{define "OneVersion"}}` + ctrlVerTmpl + `{{end}}` + `{{$ctrl := .}}{{/*
+const ctrlT = `{{define "OneVersion"}}` + ctrlVerT + `{{end}}` + `{{$ctrl := .}}{{/*
 */}}{{if .APIVersions}}{{range $ver := .APIVersions}}{{template "OneVersion" (newControllerVersion $ctrl $ver)}}
 {{end}}{{else}}{{template "OneVersion" (newControllerVersion $ctrl "")}}
 {{end}}`
 
-const ctrlVerTmpl = `// {{$ctrlName := printf "%s%s" (goify (printf "%s%s" .Controller.Name (or (and .Version (goify (versionPkg .Version) true)) ""))  true) "Controller"}}{{$ctrlName}} implements the{{if .Version}} {{.Version}} {{end}}{{.Controller.Name}} resource.
+const ctrlVerT = `// {{$ctrlName := printf "%s%s" (goify (printf "%s%s" .Controller.Name (or (and .Version (goify (versionPkg .Version) true)) ""))  true) "Controller"}}{{$ctrlName}} implements the{{if .Version}} {{.Version}} {{end}}{{.Controller.Name}} resource.
 type {{$ctrlName}} struct {
 	goa.Controller
 }

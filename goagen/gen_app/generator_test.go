@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/raphael/goa/design"
+	"github.com/raphael/goa/goagen/codegen"
 	"github.com/raphael/goa/goagen/gen_app"
 )
 
@@ -48,14 +49,16 @@ var _ = Describe("NewGenerator", func() {
 
 var _ = Describe("Generate", func() {
 	var gen *genapp.Generator
+	var workspace *codegen.Workspace
 	var outDir string
 	var files []string
 	var genErr error
 
 	BeforeEach(func() {
 		var err error
-		gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
-		outDir, err = ioutil.TempDir(filepath.Join(gopath, "src"), "")
+		workspace, err = codegen.NewWorkspace("test")
+		Ω(err).ShouldNot(HaveOccurred())
+		outDir, err = ioutil.TempDir(filepath.Join(workspace.Path, "src"), "")
 		Ω(err).ShouldNot(HaveOccurred())
 		os.Args = []string{"goagen", "--out=" + outDir, "--design=foo"}
 	})
@@ -68,7 +71,7 @@ var _ = Describe("Generate", func() {
 	})
 
 	AfterEach(func() {
-		os.RemoveAll(outDir)
+		workspace.Delete()
 	})
 
 	Context("with a dummy API", func() {

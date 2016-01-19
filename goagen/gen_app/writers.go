@@ -2,7 +2,6 @@ package genapp
 
 import (
 	"regexp"
-	"strings"
 	"text/template"
 
 	"github.com/raphael/goa/design"
@@ -15,7 +14,7 @@ var WildcardRegex = regexp.MustCompile("(?:[^/]*/:([^/]+))+")
 type (
 	// ContextsWriter generate codes for a goa application contexts.
 	ContextsWriter struct {
-		*codegen.GoGenerator
+		*codegen.SourceFile
 		CtxTmpl     *template.Template
 		CtxNewTmpl  *template.Template
 		CtxRespTmpl *template.Template
@@ -26,7 +25,7 @@ type (
 	// Handlers receive a HTTP request, create the action context, call the action code and send the
 	// resulting HTTP response.
 	ControllersWriter struct {
-		*codegen.GoGenerator
+		*codegen.SourceFile
 		CtrlTmpl      *template.Template
 		MountTmpl     *template.Template
 		UnmarshalTmpl *template.Template
@@ -36,21 +35,21 @@ type (
 	// Resources are data structures initialized by the application handlers and passed to controller
 	// actions.
 	ResourcesWriter struct {
-		*codegen.GoGenerator
+		*codegen.SourceFile
 		ResourceTmpl *template.Template
 	}
 
 	// MediaTypesWriter generate code for a goa application media types.
 	// Media types are data structures used to render the response bodies.
 	MediaTypesWriter struct {
-		*codegen.GoGenerator
+		*codegen.SourceFile
 		MediaTypeTmpl *template.Template
 	}
 
 	// UserTypesWriter generate code for a goa application user types.
 	// User types are data structures defined in the DSL with "Type".
 	UserTypesWriter struct {
-		*codegen.GoGenerator
+		*codegen.SourceFile
 		UserTypeTmpl *template.Template
 	}
 
@@ -141,66 +140,32 @@ func (c *ContextTemplateData) MustValidate(name string) bool {
 // NewContextsWriter returns a contexts code writer.
 // Contexts provide the glue between the underlying request data and the user controller.
 func NewContextsWriter(filename string) (*ContextsWriter, error) {
-	cw := codegen.NewGoGenerator(filename)
-	funcMap := cw.FuncMap
-	funcMap["gotyperef"] = codegen.GoTypeRef
-	funcMap["gotypedef"] = codegen.GoTypeDef
-	funcMap["goify"] = codegen.Goify
-	funcMap["gotypename"] = codegen.GoTypeName
-	funcMap["gopkgtypename"] = codegen.GoPackageTypeName
-	funcMap["userTypeUnmarshalerImpl"] = codegen.UserTypeUnmarshalerImpl
-	funcMap["validationChecker"] = codegen.ValidationChecker
-	funcMap["recursiveValidate"] = codegen.RecursiveChecker
-	funcMap["tabs"] = codegen.Tabs
-	funcMap["add"] = func(a, b int) int { return a + b }
-	funcMap["gopkgtyperef"] = codegen.GoPackageTypeRef
-	ctxTmpl, err := template.New("context").Funcs(funcMap).Parse(ctxT)
+	file, err := codegen.SourceFileFor(filename)
 	if err != nil {
 		return nil, err
 	}
-	ctxNewTmpl, err := template.New("new").
-		Funcs(cw.FuncMap).
-		Funcs(template.FuncMap{
-		"newCoerceData":  newCoerceData,
-		"arrayAttribute": arrayAttribute,
-		"tempvar":        codegen.Tempvar,
-	}).Parse(ctxNewT)
-	if err != nil {
-		return nil, err
-	}
-	ctxRespTmpl, err := template.New("response").Funcs(cw.FuncMap).Parse(ctxRespT)
-	if err != nil {
-		return nil, err
-	}
-	payloadTmpl, err := template.New("payload").Funcs(funcMap).Parse(payloadT)
-	if err != nil {
-		return nil, err
-	}
-	w := ContextsWriter{
-		GoGenerator: cw,
-		CtxTmpl:     ctxTmpl,
-		CtxNewTmpl:  ctxNewTmpl,
-		CtxRespTmpl: ctxRespTmpl,
-		PayloadTmpl: payloadTmpl,
-	}
-	return &w, nil
+	return &ContextsWriter{SourceFile: file}, nil
 }
 
 // Execute writes the code for the context types to the writer.
 func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
-	if err := w.CtxTmpl.Execute(w, data); err != nil {
+	if err := w.ExecuteTemplate("context", ctxT, nil, data); err != nil {
 		return err
 	}
-	if err := w.CtxNewTmpl.Execute(w, data); err != nil {
+	fn := template.FuncMap{
+		"newCoerceData":  newCoerceData,
+		"arrayAttribute": arrayAttribute,
+	}
+	if err := w.ExecuteTemplate("new", ctxNewT, fn, data); err != nil {
 		return err
 	}
 	if data.Payload != nil {
-		if err := w.PayloadTmpl.Execute(w, data); err != nil {
+		if err := w.ExecuteTemplate("payload", payloadT, nil, data); err != nil {
 			return err
 		}
 	}
 	if len(data.Responses) > 0 {
-		if err := w.CtxRespTmpl.Execute(w, data); err != nil {
+		if err := w.ExecuteTemplate("response", ctxRespT, nil, data); err != nil {
 			return err
 		}
 	}
@@ -210,41 +175,23 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 // NewControllersWriter returns a handlers code writer.
 // Handlers provide the glue between the underlying request data and the user controller.
 func NewControllersWriter(filename string) (*ControllersWriter, error) {
-	cw := codegen.NewGoGenerator(filename)
-	funcMap := cw.FuncMap
-	funcMap["add"] = func(a, b int) int { return a + b }
-	funcMap["gotypename"] = codegen.GoTypeName
-	ctrlTmpl, err := template.New("controller").Funcs(funcMap).Parse(ctrlT)
+	file, err := codegen.SourceFileFor(filename)
 	if err != nil {
 		return nil, err
 	}
-	mountTmpl, err := template.New("mount").Funcs(funcMap).Parse(mountT)
-	if err != nil {
-		return nil, err
-	}
-	unmarshalTmpl, err := template.New("unmarshal").Funcs(funcMap).Parse(unmarshalT)
-	if err != nil {
-		return nil, err
-	}
-	w := ControllersWriter{
-		GoGenerator:   cw,
-		CtrlTmpl:      ctrlTmpl,
-		MountTmpl:     mountTmpl,
-		UnmarshalTmpl: unmarshalTmpl,
-	}
-	return &w, nil
+	return &ControllersWriter{SourceFile: file}, nil
 }
 
 // Execute writes the handlers GoGenerator
 func (w *ControllersWriter) Execute(data []*ControllerTemplateData) error {
 	for _, d := range data {
-		if err := w.CtrlTmpl.Execute(w, d); err != nil {
+		if err := w.ExecuteTemplate("controller", ctrlT, nil, d); err != nil {
 			return err
 		}
-		if err := w.MountTmpl.Execute(w, d); err != nil {
+		if err := w.ExecuteTemplate("mount", mountT, nil, d); err != nil {
 			return err
 		}
-		if err := w.UnmarshalTmpl.Execute(w, d); err != nil {
+		if err := w.ExecuteTemplate("unmarshal", unmarshalT, nil, d); err != nil {
 			return err
 		}
 	}
@@ -254,83 +201,47 @@ func (w *ControllersWriter) Execute(data []*ControllerTemplateData) error {
 // NewResourcesWriter returns a contexts code writer.
 // Resources provide the glue between the underlying request data and the user controller.
 func NewResourcesWriter(filename string) (*ResourcesWriter, error) {
-	cw := codegen.NewGoGenerator(filename)
-	funcMap := cw.FuncMap
-	funcMap["join"] = strings.Join
-	resourceTmpl, err := template.New("resource").Funcs(cw.FuncMap).Parse(resourceT)
+	file, err := codegen.SourceFileFor(filename)
 	if err != nil {
 		return nil, err
 	}
-	w := ResourcesWriter{
-		GoGenerator:  cw,
-		ResourceTmpl: resourceTmpl,
-	}
-	return &w, nil
+	return &ResourcesWriter{SourceFile: file}, nil
 }
 
 // Execute writes the code for the context types to the writer.
 func (w *ResourcesWriter) Execute(data *ResourceData) error {
-	return w.ResourceTmpl.Execute(w, data)
+	return w.ExecuteTemplate("resource", resourceT, nil, data)
 }
 
 // NewMediaTypesWriter returns a contexts code writer.
 // Media types contain the data used to render response bodies.
 func NewMediaTypesWriter(filename string) (*MediaTypesWriter, error) {
-	cw := codegen.NewGoGenerator(filename)
-	funcMap := cw.FuncMap
-	funcMap["gotypedef"] = codegen.GoTypeDef
-	funcMap["gotyperef"] = codegen.GoTypeRef
-	funcMap["goify"] = codegen.Goify
-	funcMap["gotypename"] = codegen.GoTypeName
-	funcMap["gonative"] = codegen.GoNativeType
-	funcMap["typeMarshaler"] = codegen.MediaTypeMarshaler
-	funcMap["recursiveValidate"] = codegen.RecursiveChecker
-	funcMap["tempvar"] = codegen.Tempvar
-	funcMap["newDumpData"] = newDumpData
-	funcMap["userTypeUnmarshalerImpl"] = codegen.UserTypeUnmarshalerImpl
-	funcMap["mediaTypeMarshalerImpl"] = codegen.MediaTypeMarshalerImpl
-	mediaTypeTmpl, err := template.New("media type").Funcs(funcMap).Parse(mediaTypeT)
+	file, err := codegen.SourceFileFor(filename)
 	if err != nil {
 		return nil, err
 	}
-	w := MediaTypesWriter{
-		GoGenerator:   cw,
-		MediaTypeTmpl: mediaTypeTmpl,
-	}
-	return &w, nil
+	return &MediaTypesWriter{SourceFile: file}, nil
 }
 
 // Execute writes the code for the context types to the writer.
 func (w *MediaTypesWriter) Execute(data *MediaTypeTemplateData) error {
-	return w.MediaTypeTmpl.Execute(w, data)
+	fn := template.FuncMap{"newDumpData": newDumpData}
+	return w.ExecuteTemplate("new", mediaTypeT, fn, data)
 }
 
 // NewUserTypesWriter returns a contexts code writer.
 // User types contain custom data structured defined in the DSL with "Type".
 func NewUserTypesWriter(filename string) (*UserTypesWriter, error) {
-	cw := codegen.NewGoGenerator(filename)
-	funcMap := cw.FuncMap
-	funcMap["gotypedef"] = codegen.GoTypeDef
-	funcMap["gotyperef"] = codegen.GoTypeRef
-	funcMap["goify"] = codegen.Goify
-	funcMap["gotypename"] = codegen.GoTypeName
-	funcMap["recursiveValidate"] = codegen.RecursiveChecker
-	funcMap["userTypeUnmarshalerImpl"] = codegen.UserTypeUnmarshalerImpl
-	funcMap["userTypeMarshalerImpl"] = codegen.UserTypeMarshalerImpl
-	userTypeTmpl, err := template.New("user type").Funcs(funcMap).Parse(userTypeT)
+	file, err := codegen.SourceFileFor(filename)
 	if err != nil {
 		return nil, err
 	}
-	w := UserTypesWriter{
-		GoGenerator:  cw,
-		UserTypeTmpl: userTypeTmpl,
-	}
-	return &w, nil
+	return &UserTypesWriter{SourceFile: file}, nil
 }
 
 // Execute writes the code for the context types to the writer.
 func (w *UserTypesWriter) Execute(data *UserTypeTemplateData) error {
-	return w.UserTypeTmpl.Execute(w, data)
+	return w.ExecuteTemplate("types", userTypeT, nil, data)
 }
 
 // newCoerceData is a helper function that creates a map that can be given to the "Coerce" template.

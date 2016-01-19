@@ -72,15 +72,18 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	g.genfiles = append(g.genfiles, schemaFile)
 
 	controllerFile := filepath.Join(JSONSchemaDir(), "schema.go")
-	gg := codegen.NewGoGenerator(controllerFile)
+	file, err := codegen.SourceFileFor(controllerFile)
+	if err != nil {
+		return
+	}
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
 		codegen.SimpleImport("github.com/raphael/goa"),
 	}
 	g.genfiles = append(g.genfiles, controllerFile)
-	gg.WriteHeader(fmt.Sprintf("%s JSON Hyper-schema", api.Name), "schema", imports)
-	gg.Write([]byte(jsonSchemaCtrl))
-	if err = gg.FormatCode(); err != nil {
+	file.WriteHeader(fmt.Sprintf("%s JSON Hyper-schema", api.Name), "schema", imports)
+	file.Write([]byte(jsonSchemaCtrl))
+	if err = file.FormatCode(); err != nil {
 		return
 	}
 
