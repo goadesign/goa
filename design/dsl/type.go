@@ -26,9 +26,6 @@ import "github.com/raphael/goa/design"
 //
 // This function returns the newly defined type so the value can be used throughout the DSL.
 func Type(name string, dsl func()) *design.UserTypeDefinition {
-	if design.Design == nil {
-		InitDesign()
-	}
 	if design.Design.Types == nil {
 		design.Design.Types = make(map[string]*design.UserTypeDefinition)
 	} else if _, ok := design.Design.Types[name]; ok {
@@ -40,7 +37,7 @@ func Type(name string, dsl func()) *design.UserTypeDefinition {
 		t = &design.UserTypeDefinition{
 			TypeName:            name,
 			AttributeDefinition: &design.AttributeDefinition{},
-			DSL:                 dsl,
+			DSLFunc:             dsl,
 		}
 		if dsl == nil {
 			t.Type = design.String

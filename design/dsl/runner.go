@@ -40,72 +40,130 @@ type (
 	}
 
 	// DSL evaluation contexts stack
-	contextStack []design.DSLDefinition
+	contextStack []design.Definition
 )
 
-// RunDSL runs all the registered top level DSLs and returns any error.
-// This function is called by the client package init.
-// goagen creates that function during code generation.
-func RunDSL() error {
-	if design.Design == nil {
+// runSet executes the DSL for all definitions in the given set. The definition DSLs may append to
+// the set as they execute.
+func runSet(set design.DefinitionSet) error {
+	executed := 0
+	recursed := 0
+	for executed < len(set) {
+		recursed++
+		for _, def := range set[executed:] {
+			executed++
+			if source, ok := def.(design.Source); ok {
+				executeDSL(source.DSL(), source)
+			}
+		}
+		if recursed > 100 {
+			return fmt.Errorf("too many generated definitions, infinite loop?")
+		}
+	}
+	return nil
+}
+
+// validateSet runs the validation on all the set definitions that define one.
+func validateSet(set design.DefinitionSet) error {
+	for _, def := range set {
+		if validate, ok := def.(design.Validate); ok {
+			validate.Validate()
+		}
+	}
+	return nil
+}
+
+// finalizeSet runs the validation on all the set definitions that define one.
+func finalizeSet(set design.DefinitionSet) error {
+	for _, def := range set {
+		if finalize, ok := def.(design.Finalize); ok {
+			finalize.Finalize()
+		}
+	}
+	return nil
+}
+
+// RunDSL runs the given root definitions. It iterates over the definition sets and execute each set
+// using a breadth-first recursive algorithm where all parent definitions at one level are executed
+// then the children definitions. The executed DSL may append new roots to the Design package
+// variable to have them be executed (last) in the same run.
+func RunDSL(roots ...design.Root) error {
+	if len(roots) == 0 {
 		return nil
 	}
 	Errors = nil
+
+	executed := 0
+	recursed := 0
+	for executed < len(roots) {
+		recursed++
+		for _, root := range roots[executed:] {
+			root.IterateSets(runSet)
+		}
+		if recursed > 100 {
+			// Let's cross that bridge once we get there
+			return fmt.Errorf("too many generated roots, infinite loop?")
+		}
+	}
+	if Errors != nil {
+		return Errors
+	}
+	for _, root := range roots {
+		root.IterateSets(validateSet)
+	}
+	if Errors != nil {
+		return Errors
+	}
+	for _, root := range roots {
+		root.IterateSets(finalizeSet)
+	}
+
 	// First run the top level API DSL to initialize responses and
 	// response templates needed by resources.
-	executeDSL(design.Design.DSL, design.Design)
+	// executeDSL(design.Design.DSL(), design.Design)
 	// Then all the versions
-	for _, v := range design.Design.APIVersions {
-		executeDSL(v.DSL, v)
-	}
+	// for _, v := range design.Design.APIVersions {
+	// 	executeDSL(v.DSL(), v)
+	// }
 	// Then run the user type DSLs
-	for _, t := range design.Design.Types {
-		executeDSL(t.DSL, t.AttributeDefinition)
-	}
+	// for _, t := range design.Design.Types {
+	// 	executeDSL(t.DSL(), t.AttributeDefinition)
+	// }
 	// Then the media type DSLs
-	for _, mt := range design.Design.MediaTypes {
-		executeDSL(mt.DSL, mt)
-	}
+	// for _, mt := range design.Design.MediaTypes {
+	// 	executeDSL(mt.DSL(), mt)
+	// }
 	// And now that we have everything the resources.
-	for _, r := range design.Design.Resources {
-		executeDSL(r.DSL, r)
-	}
+	// for _, r := range design.Design.Resources {
+	// 	executeDSL(r.DSL(), r)
+	// }
 	// Now execute any generated media type definitions.
-	for _, mt := range generatedMediaTypes {
-		canonicalID := design.CanonicalIdentifier(mt.Identifier)
-		design.Design.MediaTypes[canonicalID] = mt
-		executeDSL(mt.DSL, mt)
-	}
-	generatedMediaTypes = make(map[string]*design.MediaTypeDefinition)
+	// for _, mt := range generatedMediaTypes {
+	// 	canonicalID := design.CanonicalIdentifier(mt.Identifier)
+	// 	design.Design.MediaTypes[canonicalID] = mt
+	// 	executeDSL(mt.DSL(), mt)
+	// }
+	// generatedMediaTypes = make(map[string]*design.MediaTypeDefinition)
 
 	// Don't attempt to validate syntactically incorrect DSL
-	if Errors != nil {
-		return Errors
-	}
 	// Validate DSL
-	if err := design.Design.Validate(); err != nil {
-		return err
-	}
-	if Errors != nil {
-		return Errors
-	}
 
 	// Second pass post-validation does final merges with defaults and base types.
-	for _, t := range design.Design.Types {
-		finalizeType(t)
-	}
-	for _, mt := range design.Design.MediaTypes {
-		finalizeMediaType(mt)
-	}
-	for _, r := range design.Design.Resources {
-		finalizeResource(r)
-	}
+	// for _, t := range design.Design.Types {
+	// 	finalizeType(t)
+	// }
+	// for _, mt := range design.Design.MediaTypes {
+	// 	finalizeMediaType(mt)
+	// }
+	// for _, r := range design.Design.Resources {
+	// 	finalizeResource(r)
+	// }
 
 	return nil
 }
 
 // Current evaluation context, i.e. object being currently built by DSL
-func (s contextStack) current() design.DSLDefinition {
+func (s contextStack) current() design.Definition {
 	if len(s) == 0 {
 		return nil
 	}
@@ -131,12 +189,12 @@ func (de *Error) Error() (res string) {
 
 // executeDSL runs DSL in given evaluation context and returns true if successful.
 // It appends to Errors in case of failure (and returns false).
-func executeDSL(dsl func(), ctx design.DSLDefinition) bool {
+func executeDSL(dsl func(), def design.Definition) bool {
 	if dsl == nil {
 		return true
 	}
 	initCount := len(Errors)
-	ctxStack = append(ctxStack, ctx)
+	ctxStack = append(ctxStack, def)
 	dsl()
 	ctxStack = ctxStack[:len(ctxStack)-1]
 	return len(Errors) <= initCount

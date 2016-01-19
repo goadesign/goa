@@ -86,8 +86,8 @@ type (
 		*AttributeDefinition
 		// Name of type
 		TypeName string
-		// DSL contains the DSL used to create this definition if any.
-		DSL func()
+		// DSLFunc contains the DSL used to create this definition if any.
+		DSLFunc func()
 	}
 
 	// MediaTypeDefinition describes the rendering of a resource using property and link
@@ -452,7 +452,7 @@ func NewUserTypeDefinition(name string, dsl func()) *UserTypeDefinition {
 	return &UserTypeDefinition{
 		TypeName:            name,
 		AttributeDefinition: &AttributeDefinition{},
-		DSL:                 dsl,
+		DSLFunc:             dsl,
 	}
 }
 
@@ -493,7 +493,7 @@ func (u *UserTypeDefinition) Dup() DataType {
 	return &UserTypeDefinition{
 		AttributeDefinition: u.AttributeDefinition.Dup(),
 		TypeName:            u.TypeName,
-		DSL:                 u.DSL,
+		DSLFunc:             u.DSL(),
 	}
 }
 
@@ -528,7 +528,7 @@ func NewMediaTypeDefinition(name, identifier string, dsl func()) *MediaTypeDefin
 		UserTypeDefinition: &UserTypeDefinition{
 			AttributeDefinition: &AttributeDefinition{Type: Object{}},
 			TypeName:            name,
-			DSL:                 dsl,
+			DSLFunc:             dsl,
 		},
 		Identifier: identifier,
 	}

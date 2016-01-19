@@ -57,9 +57,6 @@ func API(name string, dsl func()) *design.APIDefinition {
 	// We can't rely on this being run first, any of the top level DSL could run
 	// in any order. The top level DSLs are API, Version, Resource, MediaType and Type.
 	// The first one to be called executes InitDesign.
-	if design.Design == nil {
-		InitDesign()
-	}
 	if design.Design.Name != "" {
 		ReportError("multiple API definitions, only one is allowed")
 		return nil
@@ -71,7 +68,7 @@ func API(name string, dsl func()) *design.APIDefinition {
 		ReportError("API name cannot be empty")
 	}
 	design.Design.Name = name
-	design.Design.DSL = dsl
+	design.Design.DSLFunc = dsl
 	return design.Design
 }
 
@@ -79,10 +76,7 @@ func API(name string, dsl func()) *design.APIDefinition {
 // for a given version. The DSL used to define the property values is identical to the one used by
 // the API function.
 func Version(ver string, dsl func()) *design.APIVersionDefinition {
-	if design.Design == nil {
-		InitDesign()
-	}
-	verdef := &design.APIVersionDefinition{Version: ver, DSL: dsl}
+	verdef := &design.APIVersionDefinition{Version: ver, DSLFunc: dsl}
 	if _, ok := design.Design.APIVersions[ver]; ok {
 		ReportError("API Version %s defined twice", ver)
 		return verdef
@@ -419,7 +413,7 @@ func Trait(name string, val ...func()) {
 		ReportError("multiple definitions for trait %s%s", name, ver.Context())
 		return
 	}
-	trait := &design.TraitDefinition{Name: name, DSL: val[0]}
+	trait := &design.TraitDefinition{Name: name, DSLFunc: val[0]}
 	if ver.Traits == nil {
 		ver.Traits = make(map[string]*design.TraitDefinition)
 	}
@@ -429,7 +423,7 @@ func Trait(name string, val ...func()) {
 // UseTrait executes the API trait with the given name. UseTrait can be used inside a Resource,
 // Action or Attribute DSL.
 func UseTrait(name string) {
-	var def design.DSLDefinition
+	var def design.Definition
 	if r, ok := resourceDefinition(false); ok {
 		def = r
 	} else if a, ok := actionDefinition(false); ok {
@@ -439,7 +433,7 @@ func UseTrait(name string) {
 	}
 	if def != nil {
 		if trait, ok := design.Design.Traits[name]; ok {
-			executeDSL(trait.DSL, def)
+			executeDSL(trait.DSLFunc, def)
 		} else {
 			ReportError("unknown trait %s", name)
 		}
