@@ -278,7 +278,9 @@ func PackagePath(path string) (string, error) {
 			gopath = gp
 		}
 		if strings.HasPrefix(absPath, gopath) {
-			return filepath.Rel(filepath.Join(gopath, "/src"), absPath)
+			base := filepath.FromSlash(gopath + "/src")
+			rel, err := filepath.Rel(base, absPath)
+			return filepath.ToSlash(rel), err
 		}
 	}
 	return "", fmt.Errorf("%s does not contain a Go package", absPath)
