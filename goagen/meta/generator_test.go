@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -17,12 +18,14 @@ import (
 var _ = Describe("Run", func() {
 	var compiledFiles []string
 	var compileError error
+	var outputWorkspace *codegen.Workspace
+	var designWorkspace *codegen.Workspace
 
 	var genfunc string
 	var debug bool
 	var outputDir string
-	var designPackage string
-	var designPackageDir string
+	var designPackage *codegen.Package
+	var designPackagePath string
 	var designPackageSource string
 
 	var m *meta.Generator
@@ -30,36 +33,44 @@ var _ = Describe("Run", func() {
 	BeforeEach(func() {
 		genfunc = ""
 		debug = false
-		outputDir = os.TempDir()
-		designPackage = "github.com/raphael/goa/testgoacodegen"
-		designPackageSource = "foo"
-		gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
-		designPackageDir = filepath.Join(gopath, "src", designPackage)
+		designPackagePath = "design"
+		designPackageSource = "package design"
+		codegen.DesignPackagePath = designPackagePath
+		var err error
+		outputWorkspace, err = codegen.NewWorkspace("output")
+		p, err := outputWorkspace.NewPackage("testOutput")
+		Ω(err).ShouldNot(HaveOccurred())
+		outputDir = p.Abs()
+		designWorkspace, err = codegen.NewWorkspace("test")
+		Ω(err).ShouldNot(HaveOccurred())
 		compiledFiles = nil
 		compileError = nil
 	})
 
 	JustBeforeEach(func() {
-		if designPackageDir != "" && designPackageSource != "" {
-			err := os.MkdirAll(designPackageDir, 0777)
+		if designPackagePath != "" {
+			designPackage, err := designWorkspace.NewPackage(designPackagePath)
 			Ω(err).ShouldNot(HaveOccurred())
-			err = ioutil.WriteFile(filepath.Join(designPackageDir, "design.go"), []byte(designPackageSource), 0655)
-			Ω(err).ShouldNot(HaveOccurred())
+			if designPackageSource != "" {
+				file := designPackage.CreateSourceFile("design.go")
+				err = ioutil.WriteFile(file.Abs(), []byte(designPackageSource), 0655)
+				Ω(err).ShouldNot(HaveOccurred())
+			}
+		} else {
+			designPackage = nil
 		}
 		m = &meta.Generator{
 			Genfunc: genfunc,
-			Imports: []*codegen.ImportSpec{codegen.SimpleImport(designPackage)},
+			Imports: []*codegen.ImportSpec{codegen.SimpleImport(designPackagePath)},
 		}
 		codegen.Debug = debug
 		codegen.OutputDir = outputDir
-		codegen.DesignPackagePath = designPackage
 		compiledFiles, compileError = m.Generate()
 	})
 
 	AfterEach(func() {
-		if designPackageDir != "" {
-			os.RemoveAll(designPackageDir)
-		}
+		designWorkspace.Delete()
+		outputWorkspace.Delete()
 	})
 
 	Context("with no GOPATH environment variable", func() {
@@ -75,7 +86,7 @@ var _ = Describe("Run", func() {
 		})
 
 		It("fails with a useful error message", func() {
-			Ω(compileError).Should(MatchError("$GOPATH not defined"))
+			Ω(compileError).Should(MatchError("GOPATH not set"))
 		})
 	})
 
@@ -93,9 +104,9 @@ var _ = Describe("Run", func() {
 		})
 
 		It("fails with a useful error message", func() {
-			path := fmt.Sprintf("%s", filepath.Join(invalidPath, "src", filepath.FromSlash(designPackage)))
-			msg := fmt.Sprintf(`cannot find design package at path "%s"`, path)
-			Ω(compileError).Should(MatchError(msg))
+			path := fmt.Sprintf("%s", filepath.Join(invalidPath, "src", filepath.FromSlash(designPackagePath)))
+			msg := fmt.Sprintf(`cannot find design package in any of the paths [^,]+, %s`, regexp.QuoteMeta(path))
+			Ω(compileError).Should(MatchError(MatchRegexp(msg)))
 		})
 
 	})
@@ -104,13 +115,13 @@ var _ = Describe("Run", func() {
 		const invalidDesignPackage = "foobar"
 
 		BeforeEach(func() {
-			designPackage = invalidDesignPackage
+			codegen.DesignPackagePath = invalidDesignPackage
 		})
 
 		It("fails with a useful error message", func() {
-			gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
-			path := filepath.Join(gopath, "src", designPackage)
-			Ω(compileError).Should(MatchError(`cannot find design package at path "` + path + `"`))
+			msg := fmt.Sprintf(`cannot find design package in any of the paths`)
+			Ω(compileError).Should(MatchError(HavePrefix(msg)))
+			Ω(compileError).Should(MatchError(ContainSubstring(invalidDesignPackage)))
 		})
 	})
 
@@ -158,7 +169,7 @@ var _ = Describe("Run", func() {
 	Context("with no design package path specified", func() {
 		BeforeEach(func() {
 			genfunc = "foo.Generate"
-			designPackage = ""
+			codegen.DesignPackagePath = ""
 		})
 
 		It("fails with a useful error message", func() {

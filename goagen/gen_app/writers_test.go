@@ -14,12 +14,23 @@ import (
 var _ = Describe("ContextsWriter", func() {
 	var writer *genapp.ContextsWriter
 	var filename string
+	var workspace *codegen.Workspace
 
 	JustBeforeEach(func() {
 		var err error
+		workspace, err = codegen.NewWorkspace("test")
+		Ω(err).ShouldNot(HaveOccurred())
+		pkg, err := workspace.NewPackage("contexts")
+		Ω(err).ShouldNot(HaveOccurred())
+		src := pkg.CreateSourceFile("test.go")
+		filename = src.Abs()
 		writer, err = genapp.NewContextsWriter(filename)
 		Ω(err).ShouldNot(HaveOccurred())
 		codegen.TempCount = 0
+	})
+
+	AfterEach(func() {
+		workspace.Delete()
 	})
 
 	Context("correctly configured", func() {
@@ -335,7 +346,18 @@ var _ = Describe("ContextsWriter", func() {
 
 var _ = Describe("ControllersWriter", func() {
 	var writer *genapp.ControllersWriter
+	var workspace *codegen.Workspace
 	var filename string
+
+	BeforeEach(func() {
+		var err error
+		workspace, err = codegen.NewWorkspace("test")
+		Ω(err).ShouldNot(HaveOccurred())
+		pkg, err := workspace.NewPackage("controllers")
+		Ω(err).ShouldNot(HaveOccurred())
+		src := pkg.CreateSourceFile("test.go")
+		filename = src.Abs()
+	})
 
 	JustBeforeEach(func() {
 		var err error
@@ -343,15 +365,14 @@ var _ = Describe("ControllersWriter", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 	})
 
+	AfterEach(func() {
+		workspace.Delete()
+	})
+
 	Context("correctly configured", func() {
 		var f *os.File
 		BeforeEach(func() {
-			f, _ = ioutil.TempFile("", "")
-			filename = f.Name()
-		})
-
-		AfterEach(func() {
-			os.Remove(filename)
+			f, _ = os.Create(filename)
 		})
 
 		Context("with data", func() {
@@ -491,7 +512,18 @@ var _ = Describe("ControllersWriter", func() {
 
 var _ = Describe("HrefWriter", func() {
 	var writer *genapp.ResourcesWriter
+	var workspace *codegen.Workspace
 	var filename string
+
+	BeforeEach(func() {
+		var err error
+		workspace, err = codegen.NewWorkspace("test")
+		Ω(err).ShouldNot(HaveOccurred())
+		pkg, err := workspace.NewPackage("controllers")
+		Ω(err).ShouldNot(HaveOccurred())
+		src := pkg.CreateSourceFile("test.go")
+		filename = src.Abs()
+	})
 
 	JustBeforeEach(func() {
 		var err error
@@ -499,17 +531,11 @@ var _ = Describe("HrefWriter", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 	})
 
+	AfterEach(func() {
+		workspace.Delete()
+	})
+
 	Context("correctly configured", func() {
-		var f *os.File
-		BeforeEach(func() {
-			f, _ = ioutil.TempFile("", "")
-			filename = f.Name()
-		})
-
-		AfterEach(func() {
-			os.Remove(filename)
-		})
-
 		Context("with data", func() {
 			var canoTemplate string
 			var canoParams []string

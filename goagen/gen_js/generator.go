@@ -56,16 +56,12 @@ func makeOutputDir(g *Generator) error {
 	return nil
 }
 
-func (g *Generator) generateJS(jsFile string, funcs template.FuncMap, api *design.APIDefinition) (_ *design.ActionDefinition, err error) {
-	file, err := os.Create(jsFile)
+func (g *Generator) generateJS(jsFile string, api *design.APIDefinition) (_ *design.ActionDefinition, err error) {
+	file, err := codegen.SourceFileFor(jsFile)
 	if err != nil {
 		return
 	}
-	defer file.Close()
 	g.genfiles = append(g.genfiles, jsFile)
-
-	moduleTmpl := template.Must(template.New("module").Funcs(funcs).Parse(moduleT))
-	jsFuncsTmpl := template.Must(template.New("jsFuncs").Funcs(funcs).Parse(jsFuncsT))
 
 	if Scheme == "" && len(api.Schemes) > 0 {
 		Scheme = api.Schemes[0]
@@ -76,7 +72,7 @@ func (g *Generator) generateJS(jsFile string, funcs template.FuncMap, api *desig
 		"Scheme":  Scheme,
 		"Timeout": int64(Timeout / time.Millisecond),
 	}
-	if err = moduleTmpl.Execute(file, data); err != nil {
+	if err = file.ExecuteTemplate("module", moduleT, nil, data); err != nil {
 		return
 	}
 
@@ -107,7 +103,8 @@ func (g *Generator) generateJS(jsFile string, funcs template.FuncMap, api *desig
 				"Action":  a,
 				"Version": design.Design.APIVersionDefinition,
 			}
-			if err = jsFuncsTmpl.Execute(file, data); err != nil {
+			funcs := template.FuncMap{"params": params}
+			if err = file.ExecuteTemplate("jsFuncs", jsFuncsT, funcs, data); err != nil {
 				return
 			}
 		}
@@ -117,20 +114,12 @@ func (g *Generator) generateJS(jsFile string, funcs template.FuncMap, api *desig
 	return exampleAction, err
 }
 
-func (g *Generator) generateIndexHTML(
-	htmlFile string,
-	api *design.APIDefinition,
-	exampleAction *design.ActionDefinition,
-	funcs template.FuncMap,
-) error {
-	file, err := os.Create(htmlFile)
+func (g *Generator) generateIndexHTML(htmlFile string, api *design.APIDefinition, exampleAction *design.ActionDefinition) error {
+	file, err := codegen.SourceFileFor(htmlFile)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 	g.genfiles = append(g.genfiles, htmlFile)
-
-	htmlTmpl := template.Must(template.New("exampleHTML").Funcs(funcs).Parse(exampleT))
 
 	argNames := params(exampleAction)
 	var args string
@@ -169,7 +158,8 @@ func (g *Generator) generateIndexHTML(
 		"API":         api,
 		"ExampleFunc": exampleFunc,
 	}
-	return htmlTmpl.Execute(file, data)
+
+	return file.ExecuteTemplate("exampleHTML", exampleT, nil, data)
 }
 
 func (g *Generator) generateAxiosJS() error {
@@ -183,28 +173,27 @@ func (g *Generator) generateAxiosJS() error {
 }
 
 func (g *Generator) generateExample(api *design.APIDefinition) error {
-	exampleTmpl := template.Must(template.New("exampleController").Parse(exampleCtrlT))
-
 	controllerFile := filepath.Join(codegen.OutputDir, "example.go")
-	gg := codegen.NewGoGenerator(controllerFile)
+	file, err := codegen.SourceFileFor(controllerFile)
+	if err != nil {
+		return err
+	}
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("net/http"),
 		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
 		codegen.SimpleImport("github.com/raphael/goa"),
 	}
-	if err := gg.WriteHeader(fmt.Sprintf("%s JavaScript Client Example", api.Name), "js", imports); err != nil {
+	if err := file.WriteHeader(fmt.Sprintf("%s JavaScript Client Example", api.Name), "js", imports); err != nil {
 		return err
 	}
 	g.genfiles = append(g.genfiles, controllerFile)
 
-	data := map[string]interface{}{
-		"ServeDir": codegen.OutputDir,
-	}
-	if err := exampleTmpl.Execute(gg, data); err != nil {
+	data := map[string]interface{}{"ServeDir": codegen.OutputDir}
+	if err := file.ExecuteTemplate("examples", exampleCtrlT, nil, data); err != nil {
 		return err
 	}
 
-	return gg.FormatCode()
+	return file.FormatCode()
 }
 
 // Generate produces the skeleton main.
@@ -228,22 +217,15 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		return
 	}
 
-	funcs := template.FuncMap{
-		"title":   strings.Title,
-		"join":    strings.Join,
-		"toLower": strings.ToLower,
-		"params":  params,
-	}
-
 	// Generate client.js
-	exampleAction, err := g.generateJS(filepath.Join(codegen.OutputDir, "client.js"), funcs, api)
+	exampleAction, err := g.generateJS(filepath.Join(codegen.OutputDir, "client.js"), api)
 	if err != nil {
 		return
 	}
 
 	if exampleAction != nil {
 		// Generate index.html
-		if err = g.generateIndexHTML(filepath.Join(codegen.OutputDir, "index.html"), api, exampleAction, funcs); err != nil {
+		if err = g.generateIndexHTML(filepath.Join(codegen.OutputDir, "index.html"), api, exampleAction); err != nil {
 			return
 		}
 

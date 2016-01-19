@@ -21,7 +21,13 @@ func CommandLine() string {
 		gopaths := filepath.SplitList(os.Getenv("GOPATH"))
 		for i, a := range os.Args[1:] {
 			for _, p := range gopaths {
-				args[i] = strings.Replace(a, p, "$(GOPATH)", -1)
+				if strings.Contains(a, p) {
+					args[i] = strings.Replace(a, p, "$(GOPATH)", -1)
+					break
+				}
+			}
+			if args[i] == "" {
+				args[i] = a
 			}
 		}
 		param = strings.Join(args, " ")

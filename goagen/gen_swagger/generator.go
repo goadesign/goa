@@ -62,14 +62,17 @@ func Generate(api *design.APIDefinition) (_ []string, err error) {
 	genfiles = append(genfiles, swaggerFile)
 	controllerFile := filepath.Join(swaggerDir, "swagger.go")
 	genfiles = append(genfiles, controllerFile)
-	gg := codegen.NewGoGenerator(controllerFile)
+	file, err := codegen.SourceFileFor(controllerFile)
+	if err != nil {
+		return
+	}
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
 		codegen.SimpleImport("github.com/raphael/goa"),
 	}
-	gg.WriteHeader(fmt.Sprintf("%s Swagger Spec", api.Name), "swagger", imports)
-	gg.Write([]byte(swagger))
-	if err = gg.FormatCode(); err != nil {
+	file.WriteHeader(fmt.Sprintf("%s Swagger Spec", api.Name), "swagger", imports)
+	file.Write([]byte(swagger))
+	if err = file.FormatCode(); err != nil {
 		return
 	}
 

@@ -15,7 +15,6 @@ import (
 
 // Generator is the application code generator.
 type Generator struct {
-	*codegen.GoGenerator
 	genfiles []string
 }
 
@@ -44,8 +43,7 @@ func NewGenerator() (*Generator, error) {
 		return nil, err
 	}
 	return &Generator{
-		GoGenerator: codegen.NewGoGenerator(outdir),
-		genfiles:    []string{outdir},
+		genfiles: []string{outdir},
 	}, nil
 }
 
