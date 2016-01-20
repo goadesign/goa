@@ -93,30 +93,6 @@ var (
 	GobContentTypes = []string{"application/gob"}
 )
 
-// initEncoding initializes all the decoder/encoder pools with the Content-Types found
-// in JSONContentTypes and GobContentTypes. JSON is set as the default decoder.
-func (app *Application) initEncoding() {
-	// initialize maps
-	contentTypeCount := len(JSONContentTypes) + len(XMLContentTypes) + len(GobContentTypes)
-	app.decoderPools = make(map[string]*decoderPool, contentTypeCount)
-	app.encoderPools = make(map[string]*encoderPool, contentTypeCount)
-
-	// Add json support
-	jf := &jsonFactory{}
-	app.SetDecoder(jf, true, JSONContentTypes...)
-	app.SetEncoder(jf, true, JSONContentTypes...)
-
-	// Add xml support
-	xf := &xmlFactory{}
-	app.SetDecoder(xf, false, XMLContentTypes...)
-	app.SetEncoder(xf, false, XMLContentTypes...)
-
-	// Add gob support
-	gf := &gobFactory{}
-	app.SetDecoder(gf, false, GobContentTypes...)
-	app.SetEncoder(gf, false, GobContentTypes...)
-}
-
 // DecodeRequest uses registered Decoders to unmarshal the request body based on
 // the request `Content-Type` header
 func (app *Application) DecodeRequest(ctx *Context, v interface{}) error {

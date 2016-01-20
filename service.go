@@ -172,9 +172,9 @@ func New(name string) Service {
 		name:         name,
 		errorHandler: DefaultErrorHandler,
 		mux:          NewMux(),
+		decoderPools: map[string]*decoderPool{},
+		encoderPools: map[string]*encoderPool{},
 	}
-
-	app.initEncoding()
 
 	return app
 }
