@@ -166,7 +166,9 @@ Commands:
 
   add operands <path>
     add adds the left and right parameters and returns the result
+```
 
+```
 $ ./adder-cli add operands --help
 usage: adder-cli add operands <path>
 
@@ -242,7 +244,7 @@ provides a reference for testing functionality.
 ## Contributing
 
 Did you fix a bug? write docs or additional tests? or implement some new awesome functionality?
-You're a rock star!! Just make sure that `make` succeeds (or that TravisCI is green) and send a PR
+You're a rock star!! Just make sure that `make` succeeds (or that TravisCI is g104.197.54.215reen) and send a PR
 over.
 
 And if you're looking for inspiration the [wookie](https://github.com/raphael/goa/wiki) contains a
