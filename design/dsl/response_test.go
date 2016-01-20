@@ -14,7 +14,7 @@ var _ = Describe("Response", func() {
 	var res *ResponseDefinition
 
 	BeforeEach(func() {
-		Design = nil
+		InitDesign()
 		Errors = nil
 		name = ""
 		dsl = nil

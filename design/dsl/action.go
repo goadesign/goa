@@ -54,7 +54,7 @@ func Action(name string, dsl func()) {
 				Name:   name,
 			}
 		}
-		if !executeDSL(dsl, action) {
+		if !ExecuteDSL(dsl, action) {
 			return
 		}
 		r.Actions[name] = action
@@ -131,12 +131,12 @@ func PATCH(path string) *design.RouteDefinition {
 func Headers(dsl func()) {
 	if a, ok := actionDefinition(false); ok {
 		headers := newAttribute(a.Parent.MediaType)
-		if executeDSL(dsl, headers) {
+		if ExecuteDSL(dsl, headers) {
 			a.Headers = headers
 		}
 	} else if r, ok := resourceDefinition(false); ok {
 		headers := newAttribute(r.MediaType)
-		if executeDSL(dsl, headers) {
+		if ExecuteDSL(dsl, headers) {
 			r.Headers = headers
 		}
 	} else if r, ok := responseDefinition(true); ok {
@@ -155,7 +155,7 @@ func Headers(dsl func()) {
 		default:
 			ReportError("invalid use of Response or ResponseTemplate")
 		}
-		if executeDSL(dsl, h) {
+		if ExecuteDSL(dsl, h) {
 			r.Headers = h
 		}
 	}
@@ -177,12 +177,12 @@ func Headers(dsl func()) {
 func Params(dsl func()) {
 	if a, ok := actionDefinition(false); ok {
 		params := newAttribute(a.Parent.MediaType)
-		if executeDSL(dsl, params) {
+		if ExecuteDSL(dsl, params) {
 			a.Params = params
 		}
 	} else if r, ok := resourceDefinition(true); ok {
 		params := newAttribute(r.MediaType)
-		if executeDSL(dsl, params) {
+		if ExecuteDSL(dsl, params) {
 			r.Params = params
 		}
 	}
@@ -240,7 +240,7 @@ func Payload(p interface{}, dsls ...func()) {
 			dsl = dsls[0]
 		}
 		if dsl != nil {
-			executeDSL(dsl, att)
+			ExecuteDSL(dsl, att)
 		}
 		rn := inflect.Camelize(a.Parent.Name)
 		an := inflect.Camelize(a.Name)

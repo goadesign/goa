@@ -6,11 +6,16 @@ import (
 	"github.com/raphael/goa/design"
 )
 
+// Call InitDesign by default.
+func init() {
+	InitDesign()
+}
+
 // InitDesign initializes the Design global variable and loads the built-in
-// response templates.
+// response templates. This is a public function mainly so it can be used in tests.
 func InitDesign() {
 	ctxStack = nil // mostly for tests
-	design.Design = &design.APIDefinition{
+	api := &design.APIDefinition{
 		APIVersionDefinition: &design.APIVersionDefinition{
 			DefaultResponseTemplates: make(map[string]*design.ResponseTemplateDefinition),
 		},
@@ -26,12 +31,12 @@ func InitDesign() {
 			MediaType: params[0],
 		}
 	}
-	design.Design.DefaultResponseTemplates[OK] = &design.ResponseTemplateDefinition{
+	api.DefaultResponseTemplates[OK] = &design.ResponseTemplateDefinition{
 		Name:     OK,
 		Template: t,
 	}
 
-	design.Design.DefaultResponses = make(map[string]*design.ResponseDefinition)
+	api.DefaultResponses = make(map[string]*design.ResponseDefinition)
 	for _, p := range []struct {
 		status int
 		name   string
@@ -78,10 +83,15 @@ func InitDesign() {
 		{504, GatewayTimeout},
 		{505, HTTPVersionNotSupported},
 	} {
-		design.Design.DefaultResponses[p.name] = &design.ResponseDefinition{
+		api.DefaultResponses[p.name] = &design.ResponseDefinition{
 			Name:        p.name,
 			Description: http.StatusText(p.status),
 			Status:      p.status,
 		}
 	}
+
+	// Initialize package variables
+	design.Design = api
+	design.Roots = []design.Root{api}
+	design.GeneratedMediaTypes = nil
 }

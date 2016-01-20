@@ -54,12 +54,6 @@ import (
 //	}
 //
 func API(name string, dsl func()) *design.APIDefinition {
-	// We can't rely on this being run first, any of the top level DSL could run
-	// in any order. The top level DSLs are API, Version, Resource, MediaType and Type.
-	// The first one to be called executes InitDesign.
-	if design.Design == nil {
-		InitDesign()
-	}
 	if design.Design.Name != "" {
 		ReportError("multiple API definitions, only one is allowed")
 		return nil
@@ -71,7 +65,7 @@ func API(name string, dsl func()) *design.APIDefinition {
 		ReportError("API name cannot be empty")
 	}
 	design.Design.Name = name
-	design.Design.DSL = dsl
+	design.Design.DSLFunc = dsl
 	return design.Design
 }
 
@@ -79,10 +73,7 @@ func API(name string, dsl func()) *design.APIDefinition {
 // for a given version. The DSL used to define the property values is identical to the one used by
 // the API function.
 func Version(ver string, dsl func()) *design.APIVersionDefinition {
-	if design.Design == nil {
-		InitDesign()
-	}
-	verdef := &design.APIVersionDefinition{Version: ver, DSL: dsl}
+	verdef := &design.APIVersionDefinition{Version: ver, DSLFunc: dsl}
 	if _, ok := design.Design.APIVersions[ver]; ok {
 		ReportError("API Version %s defined twice", ver)
 		return verdef
@@ -146,7 +137,7 @@ func BasePath(val string) {
 // The DSL for describing each Param is the Attribute DSL.
 func BaseParams(dsl func()) {
 	params := new(design.AttributeDefinition)
-	if !executeDSL(dsl, params) {
+	if !ExecuteDSL(dsl, params) {
 		return
 	}
 	params.NonZeroAttributes = make(map[string]bool)
@@ -211,7 +202,7 @@ func Scheme(vals ...string) {
 // Contact sets the API contact information.
 func Contact(dsl func()) {
 	contact := new(design.ContactDefinition)
-	if !executeDSL(dsl, contact) {
+	if !ExecuteDSL(dsl, contact) {
 		return
 	}
 	if a, ok := apiDefinition(false); ok {
@@ -224,7 +215,7 @@ func Contact(dsl func()) {
 // License sets the API license information.
 func License(dsl func()) {
 	license := new(design.LicenseDefinition)
-	if !executeDSL(dsl, license) {
+	if !ExecuteDSL(dsl, license) {
 		return
 	}
 	if a, ok := apiDefinition(false); ok {
@@ -237,7 +228,7 @@ func License(dsl func()) {
 // Docs provides external documentation pointers.
 func Docs(dsl func()) {
 	docs := new(design.DocsDefinition)
-	if !executeDSL(dsl, docs) {
+	if !ExecuteDSL(dsl, docs) {
 		return
 	}
 	if a, ok := apiDefinition(false); ok {
@@ -334,13 +325,13 @@ func ResponseTemplate(name string, p interface{}) {
 func setupResponseTemplate(v *design.APIVersionDefinition, name string, p interface{}) {
 	if f, ok := p.(func()); ok {
 		r := &design.ResponseDefinition{Name: name}
-		if executeDSL(f, r) {
+		if ExecuteDSL(f, r) {
 			v.Responses[name] = r
 		}
 	} else if tmpl, ok := p.(func(...string)); ok {
 		t := func(params ...string) *design.ResponseDefinition {
 			r := &design.ResponseDefinition{Name: name}
-			executeDSL(func() { tmpl(params...) }, r)
+			ExecuteDSL(func() { tmpl(params...) }, r)
 			return r
 		}
 		v.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
@@ -377,7 +368,7 @@ func setupResponseTemplate(v *design.APIVersionDefinition, name string, p interf
 				// append input arguments
 				in[i] = reflect.ValueOf(params[i])
 			}
-			executeDSL(func() { val.Call(in) }, r)
+			ExecuteDSL(func() { val.Call(in) }, r)
 			return r
 		}
 		v.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
@@ -419,7 +410,7 @@ func Trait(name string, val ...func()) {
 		ReportError("multiple definitions for trait %s%s", name, ver.Context())
 		return
 	}
-	trait := &design.TraitDefinition{Name: name, DSL: val[0]}
+	trait := &design.TraitDefinition{Name: name, DSLFunc: val[0]}
 	if ver.Traits == nil {
 		ver.Traits = make(map[string]*design.TraitDefinition)
 	}
@@ -429,7 +420,7 @@ func Trait(name string, val ...func()) {
 // UseTrait executes the API trait with the given name. UseTrait can be used inside a Resource,
 // Action or Attribute DSL.
 func UseTrait(name string) {
-	var def design.DSLDefinition
+	var def design.Definition
 	if r, ok := resourceDefinition(false); ok {
 		def = r
 	} else if a, ok := actionDefinition(false); ok {
@@ -439,9 +430,119 @@ func UseTrait(name string) {
 	}
 	if def != nil {
 		if trait, ok := design.Design.Traits[name]; ok {
-			executeDSL(trait.DSL, def)
+			ExecuteDSL(trait.DSLFunc, def)
 		} else {
 			ReportError("unknown trait %s", name)
 		}
 	}
+}
+
+// apiDefinition returns true and current context if it is an APIDefinition,
+// nil and false otherwise.
+func apiDefinition(failIfNotAPI bool) (*design.APIDefinition, bool) {
+	a, ok := ctxStack.Current().(*design.APIDefinition)
+	if !ok && failIfNotAPI {
+		incompatibleDSL(caller())
+	}
+	return a, ok
+}
+
+// versionDefinition returns true and current context if it is an APIVersionDefinition,
+// nil and false otherwise.
+func versionDefinition(failIfNotVersion bool) (*design.APIVersionDefinition, bool) {
+	a, ok := ctxStack.Current().(*design.APIVersionDefinition)
+	if !ok && failIfNotVersion {
+		incompatibleDSL(caller())
+	}
+	return a, ok
+}
+
+// contactDefinition returns true and current context if it is an ContactDefinition,
+// nil and false otherwise.
+func contactDefinition(failIfNotContact bool) (*design.ContactDefinition, bool) {
+	a, ok := ctxStack.Current().(*design.ContactDefinition)
+	if !ok && failIfNotContact {
+		incompatibleDSL(caller())
+	}
+	return a, ok
+}
+
+// licenseDefinition returns true and current context if it is an APIDefinition,
+// nil and false otherwise.
+func licenseDefinition(failIfNotLicense bool) (*design.LicenseDefinition, bool) {
+	l, ok := ctxStack.Current().(*design.LicenseDefinition)
+	if !ok && failIfNotLicense {
+		incompatibleDSL(caller())
+	}
+	return l, ok
+}
+
+// docsDefinition returns true and current context if it is a DocsDefinition,
+// nil and false otherwise.
+func docsDefinition(failIfNotDocs bool) (*design.DocsDefinition, bool) {
+	a, ok := ctxStack.Current().(*design.DocsDefinition)
+	if !ok && failIfNotDocs {
+		incompatibleDSL(caller())
+	}
+	return a, ok
+}
+
+// mediaTypeDefinition returns true and current context if it is a MediaTypeDefinition,
+// nil and false otherwise.
+func mediaTypeDefinition(failIfNotMT bool) (*design.MediaTypeDefinition, bool) {
+	m, ok := ctxStack.Current().(*design.MediaTypeDefinition)
+	if !ok && failIfNotMT {
+		incompatibleDSL(caller())
+	}
+	return m, ok
+}
+
+// typeDefinition returns true and current context if it is a UserTypeDefinition,
+// nil and false otherwise.
+func typeDefinition(failIfNotMT bool) (*design.UserTypeDefinition, bool) {
+	m, ok := ctxStack.Current().(*design.UserTypeDefinition)
+	if !ok && failIfNotMT {
+		incompatibleDSL(caller())
+	}
+	return m, ok
+}
+
+// attribute returns true and current context if it is an Attribute,
+// nil and false otherwise.
+func attributeDefinition(failIfNotAttribute bool) (*design.AttributeDefinition, bool) {
+	a, ok := ctxStack.Current().(*design.AttributeDefinition)
+	if !ok && failIfNotAttribute {
+		incompatibleDSL(caller())
+	}
+	return a, ok
+}
+
+// resourceDefinition returns true and current context if it is a ResourceDefinition,
+// nil and false otherwise.
+func resourceDefinition(failIfNotResource bool) (*design.ResourceDefinition, bool) {
+	r, ok := ctxStack.Current().(*design.ResourceDefinition)
+	if !ok && failIfNotResource {
+		incompatibleDSL(caller())
+	}
+	return r, ok
+}
+
+// actionDefinition returns true and current context if it is an ActionDefinition,
+// nil and false otherwise.
+func actionDefinition(failIfNotAction bool) (*design.ActionDefinition, bool) {
+	a, ok := ctxStack.Current().(*design.ActionDefinition)
+	if !ok && failIfNotAction {
+		incompatibleDSL(caller())
+	}
+	return a, ok
+}
+
+// responseDefinition returns true and current context if it is a ResponseDefinition,
+// nil and false otherwise.
+func responseDefinition(failIfNotResponse bool) (*design.ResponseDefinition, bool) {
+	r, ok := ctxStack.Current().(*design.ResponseDefinition)
+	if !ok && failIfNotResponse {
+		incompatibleDSL(caller())
+	}
+	return r, ok
 }

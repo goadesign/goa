@@ -130,7 +130,7 @@ func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.Respon
 		}
 	}
 	if dsl != nil {
-		if !executeDSL(dsl, resp) {
+		if !ExecuteDSL(dsl, resp) {
 			return nil
 		}
 		resp.Standard = false

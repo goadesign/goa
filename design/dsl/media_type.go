@@ -56,9 +56,6 @@ var mediaTypeCount int
 //
 // This function returns the media type definition so it can be referred to throughout the DSL.
 func MediaType(identifier string, dsl func()) *design.MediaTypeDefinition {
-	if design.Design == nil {
-		InitDesign()
-	}
 	if design.Design.MediaTypes == nil {
 		design.Design.MediaTypes = make(map[string]*design.MediaTypeDefinition)
 	}
@@ -227,7 +224,7 @@ func View(name string, dsl ...func()) {
 		at := &design.AttributeDefinition{}
 		ok := false
 		if len(dsl) > 0 {
-			ok = executeDSL(dsl[0], at)
+			ok = ExecuteDSL(dsl[0], at)
 		} else if mt.Type.IsArray() {
 			// inherit view from collection element if present
 			elem := mt.Type.ToArray().ElemType
@@ -274,14 +271,14 @@ func View(name string, dsl ...func()) {
 // Attributes implements the media type attributes DSL. See MediaType.
 func Attributes(dsl func()) {
 	if mt, ok := mediaTypeDefinition(true); ok {
-		executeDSL(dsl, mt)
+		ExecuteDSL(dsl, mt)
 	}
 }
 
 // Links implements the media type links DSL. See MediaType.
 func Links(dsl func()) {
 	if mt, ok := mediaTypeDefinition(true); ok {
-		executeDSL(dsl, mt)
+		ExecuteDSL(dsl, mt)
 	}
 }
 
@@ -320,8 +317,9 @@ func Link(name string, view ...string) {
 // The resulting media type identifier is built from the element media type by appending the media
 // type parameter "type" with value "collection".
 func CollectionOf(v interface{}, dsl ...func()) *design.MediaTypeDefinition {
-	if generatedMediaTypes == nil {
-		generatedMediaTypes = make(map[string]*design.MediaTypeDefinition)
+	if design.GeneratedMediaTypes == nil {
+		design.GeneratedMediaTypes = make(design.MediaTypeRoot)
+		design.Roots = append(design.Roots, design.GeneratedMediaTypes)
 	}
 	var m *design.MediaTypeDefinition
 	var ok bool
@@ -353,7 +351,7 @@ func CollectionOf(v interface{}, dsl ...func()) *design.MediaTypeDefinition {
 	}
 	id = mime.FormatMediaType(mediatype, params)
 	typeName := m.TypeName + "Collection"
-	if mt, ok := generatedMediaTypes[typeName]; ok {
+	if mt, ok := design.GeneratedMediaTypes[typeName]; ok {
 		// Already have a type for this collection, reuse it.
 		return mt
 	}
@@ -363,7 +361,7 @@ func CollectionOf(v interface{}, dsl ...func()) *design.MediaTypeDefinition {
 			mt.AttributeDefinition = &design.AttributeDefinition{Type: ArrayOf(m)}
 			mt.APIVersions = m.APIVersions
 			if len(dsl) > 0 {
-				executeDSL(dsl[0], mt)
+				ExecuteDSL(dsl[0], mt)
 			}
 			if mt.Views == nil {
 				// If the DSL didn't create any views (or there is no DSL at all)
@@ -377,6 +375,6 @@ func CollectionOf(v interface{}, dsl ...func()) *design.MediaTypeDefinition {
 	})
 	// Do not execute the DSL right away, will be done last to make sure the element DSL has run
 	// first.
-	generatedMediaTypes[mt.TypeName] = mt
+	design.GeneratedMediaTypes[typeName] = mt
 	return mt
 }

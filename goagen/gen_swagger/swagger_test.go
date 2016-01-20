@@ -39,7 +39,7 @@ var _ = Describe("New", func() {
 	BeforeEach(func() {
 		swagger = nil
 		newErr = nil
-		Design = nil
+		InitDesign()
 		genschema.Definitions = make(map[string]*genschema.JSONSchema)
 	})
 
@@ -143,8 +143,8 @@ var _ = Describe("New", func() {
 			)
 
 			BeforeEach(func() {
-				base := Design.DSL
-				Design.DSL = func() {
+				base := Design.DSLFunc
+				Design.DSLFunc = func() {
 					base()
 					BasePath(basePath)
 					BaseParams(func() {
@@ -251,8 +251,8 @@ var _ = Describe("New", func() {
 						Attribute("links")   // Extended view also renders links
 					})
 				})
-				base := Design.DSL
-				Design.DSL = func() {
+				base := Design.DSLFunc
+				Design.DSLFunc = func() {
 					base()
 					ResponseTemplate(okName, func() {
 						Description(okDesc)
@@ -367,8 +367,8 @@ var _ = Describe("New", func() {
 						Response(NotFound)
 					})
 				})
-				base := Design.DSL
-				Design.DSL = func() {
+				base := Design.DSLFunc
+				Design.DSLFunc = func() {
 					base()
 					Trait("Authenticated", func() {
 						Headers(func() {
