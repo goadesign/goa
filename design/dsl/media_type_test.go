@@ -9,19 +9,19 @@ import (
 
 var _ = Describe("MediaType", func() {
 	var name string
-	var dsl func()
+	var dslFunc func()
 
 	var mt *MediaTypeDefinition
 
 	BeforeEach(func() {
-		Design = nil
+		InitDesign()
 		Errors = nil
 		name = ""
-		dsl = nil
+		dslFunc = nil
 	})
 
 	JustBeforeEach(func() {
-		mt = MediaType(name, dsl)
+		mt = MediaType(name, dslFunc)
 		RunDSL()
 		Ω(Errors).ShouldNot(HaveOccurred())
 	})
@@ -49,7 +49,7 @@ var _ = Describe("MediaType", func() {
 
 		BeforeEach(func() {
 			name = "application/foo"
-			dsl = func() {
+			dslFunc = func() {
 				Attributes(func() {
 					Attribute(attName)
 				})
@@ -73,7 +73,7 @@ var _ = Describe("MediaType", func() {
 
 		BeforeEach(func() {
 			name = "application/foo"
-			dsl = func() {
+			dslFunc = func() {
 				Description(description)
 				Attributes(func() {
 					Attribute("attName")
@@ -111,7 +111,6 @@ var _ = Describe("MediaType", func() {
 					Attribute("foo")
 				})
 			})
-			InitDesign()
 			mt2 = NewMediaTypeDefinition("application/mt2", "application/mt2", func() {
 				Attributes(func() {
 					Attribute("foo")
@@ -126,7 +125,7 @@ var _ = Describe("MediaType", func() {
 			Design.MediaTypes = make(map[string]*MediaTypeDefinition)
 			Design.MediaTypes["application/mt1"] = mt1
 			Design.MediaTypes["application/mt2"] = mt2
-			dsl = func() {
+			dslFunc = func() {
 				Attributes(func() {
 					Attributes(func() {
 						Attribute(link1Name, mt1)
@@ -146,6 +145,7 @@ var _ = Describe("MediaType", func() {
 
 		It("sets the links", func() {
 			Ω(mt).ShouldNot(BeNil())
+			Ω(Errors).Should(BeEmpty())
 			Ω(mt.Validate()).ShouldNot(HaveOccurred())
 			Ω(mt.Links).ShouldNot(BeNil())
 			Ω(mt.Links).Should(HaveLen(2))
@@ -165,7 +165,7 @@ var _ = Describe("MediaType", func() {
 
 		BeforeEach(func() {
 			name = "application/foo"
-			dsl = func() {
+			dslFunc = func() {
 				Attributes(func() {
 					Attribute(viewAtt)
 				})
@@ -203,7 +203,7 @@ var _ = Describe("Duplicate media types", func() {
 	var duplicate *MediaTypeDefinition
 	const id = "application/foo"
 	const attName = "bar"
-	var dsl = func() {
+	var dslFunc = func() {
 		Attributes(func() {
 			Attribute(attName)
 		})
@@ -211,11 +211,11 @@ var _ = Describe("Duplicate media types", func() {
 	}
 
 	BeforeEach(func() {
-		Design = nil
+		InitDesign()
 		Errors = nil
-		mt = MediaType(id, dsl)
+		mt = MediaType(id, dslFunc)
 		Ω(Errors).ShouldNot(HaveOccurred())
-		duplicate = MediaType(id, dsl)
+		duplicate = MediaType(id, dslFunc)
 	})
 
 	It("produces an error", func() {
@@ -244,7 +244,7 @@ var _ = Describe("CollectionOf", func() {
 	Context("used on a global variable", func() {
 		var col *MediaTypeDefinition
 		BeforeEach(func() {
-			Design = nil
+			InitDesign()
 			mt := MediaType("application/vnd.example", func() { Attribute("id") })
 			Errors = nil
 			col = CollectionOf(mt)
@@ -267,7 +267,7 @@ var _ = Describe("CollectionOf", func() {
 	Context("defined with the media type identifier", func() {
 		var col *MediaTypeDefinition
 		BeforeEach(func() {
-			Design = nil
+			InitDesign()
 			MediaType("application/vnd.example+json", func() { Attribute("id") })
 			col = MediaType("application/vnd.parent+json", func() { Attribute("mt", CollectionOf("application/vnd.example")) })
 		})

@@ -34,9 +34,6 @@ import "github.com/raphael/goa/design"
 //		})
 //	})
 func Resource(name string, dsl func()) *design.ResourceDefinition {
-	if design.Design == nil {
-		InitDesign()
-	}
 	if design.Design.Resources == nil {
 		design.Design.Resources = make(map[string]*design.ResourceDefinition)
 	}

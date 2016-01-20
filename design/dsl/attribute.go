@@ -113,7 +113,7 @@ func Attribute(name string, args ...interface{}) {
 		}
 		baseAttr.Reference = parent.Reference
 		if dsl != nil {
-			executeDSL(dsl, baseAttr)
+			ExecuteDSL(dsl, baseAttr)
 		}
 		if baseAttr.Type == nil {
 			// DSL did not contain an "Attribute" declaration
