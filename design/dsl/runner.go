@@ -94,6 +94,11 @@ func ExecuteDSL(dsl func(), def design.Definition) bool {
 	return len(Errors) <= initCount
 }
 
+// CurrentDefinition returns the definition whose initialization DSL is currently being executed.
+func CurrentDefinition() design.Definition {
+	return ctxStack.Current()
+}
+
 // Current evaluation context, i.e. object being currently built by DSL
 func (s contextStack) Current() design.Definition {
 	if len(s) == 0 {
