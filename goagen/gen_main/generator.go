@@ -143,7 +143,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 				return err
 			}
 			file.WriteHeader("", "main", imports)
-			err = file.ExecuteTemplate("main", mainT, nil, r)
+			err = file.ExecuteTemplate("controller", ctrlT, funcs, r)
 			if err != nil {
 				return err
 			}
