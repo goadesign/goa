@@ -1,9 +1,9 @@
 package dsl_test
 
 import (
+	"github.com/goadesign/goa/design/dsl"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/goadesign/goa/design/dsl"
 
 	"testing"
 )

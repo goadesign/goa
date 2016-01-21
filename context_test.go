@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/goadesign/goa"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/goadesign/goa"
 	"golang.org/x/net/context"
 	"gopkg.in/inconshreveable/log15.v2"
 )

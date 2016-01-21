@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/goadesign/goa"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/goadesign/goa"
 )
 
 // allErrorKinds list all the existing goa.ErrorID values.

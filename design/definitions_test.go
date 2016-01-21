@@ -1,9 +1,9 @@
 package design_test
 
 import (
+	"github.com/goadesign/goa/design"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/goadesign/goa/design"
 )
 
 var _ = Describe("IsRequired", func() {

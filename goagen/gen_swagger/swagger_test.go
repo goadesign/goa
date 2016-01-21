@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 
 	"github.com/go-swagger/go-swagger/spec"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	_ "github.com/goadesign/goa-cellar/design"
 	. "github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/dsl"
 	"github.com/goadesign/goa/goagen/gen_schema"
 	"github.com/goadesign/goa/goagen/gen_swagger"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 // Save cellar example API definition for tests.

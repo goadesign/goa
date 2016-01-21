@@ -1,9 +1,9 @@
 package genjs_test
 
 import (
+	"github.com/goadesign/goa/goagen/gen_main"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/goadesign/goa/goagen/gen_main"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 

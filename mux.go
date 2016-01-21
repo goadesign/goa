@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"regexp"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/goadesign/goa/design"
+	"github.com/julienschmidt/httprouter"
 )
 
 type (
