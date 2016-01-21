@@ -2,7 +2,7 @@
 
 goa is a framework for building RESTful microservices in Go.
 
-[![Build Status](https://travis-ci.org/raphael/goa.svg?branch=master)](https://travis-ci.org/raphael/goa)
+[![Build Status](https://travis-ci.org/goadesign/goa.svg?branch=master)](https://travis-ci.org/goadesign/goa)
 [![Windows Build status](https://ci.appveyor.com/api/projects/status/veujsyg4sxod40vw/branch/master?svg=true)](https://ci.appveyor.com/project/RaphaelSimon/goa/branch/master)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/goadesign/goa/blob/master/LICENSE)
 [![Godoc](https://godoc.org/github.com/goadesign/goa?status.svg)](http://godoc.org/github.com/goadesign/goa)
@@ -112,7 +112,7 @@ This produces the following outputs:
 
 * `main.go` and `adder.go` contain scaffolding code to help bootstrap the implementation.
   running `goagen` again does no recreate them so that it's safe to edit their content.
-* an `app` package which contains glue code that binds the low level HTTP server to your 
+* an `app` package which contains glue code that binds the low level HTTP server to your
   implementation.
 * a `client` package with a `Client` struct that implements a `AddOperands` function which calls
   the API with the given arguments and returns the `http.Response`. The `client` directory also
@@ -205,7 +205,7 @@ specification can also be accessed through the service:
 ```
 $ curl localhost:8080/swagger.json
 ```
-For open source services hosted on github [swagger.goa.design](http://swagger.goa.design) provides 
+For open source services hosted on github [swagger.goa.design](http://swagger.goa.design) provides
 a free service that renders the Swagger representation dynamically from goa design packages.
 
 ## Resources
