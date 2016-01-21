@@ -3,9 +3,9 @@ package goa_test
 import (
 	"net/http"
 
+	"github.com/goadesign/goa"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/goadesign/goa"
 )
 
 var _ = Describe("PathSelectVersionFunc", func() {

@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"net/url"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"github.com/goadesign/goa"
 	"github.com/goadesign/goa-middleware/middleware"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Application", func() {
