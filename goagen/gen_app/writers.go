@@ -427,12 +427,10 @@ func {{.Unmarshal}}(ctx *goa.Context) error {
 	payload := &{{gotypename .Payload nil 1}}{}
 	if err := ctx.Service().DecodeRequest(ctx, payload); err != nil {
 		return err
-	}
-	
-{{$validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1}}{{if $validation}}if err := payload.Validate(); err != nil {
+	}{{$validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1}}{{if $validation}}
+	if err := payload.Validate(); err != nil {
 		return err
-	}
-	{{end}}
+	}{{end}}
 	ctx.SetPayload(payload)
 	return nil
 }

@@ -483,6 +483,40 @@ var _ = Describe("ControllersWriter", func() {
 					b, err := ioutil.ReadFile(filename)
 					Ω(err).ShouldNot(HaveOccurred())
 					written := string(b)
+					Ω(written).Should(ContainSubstring(payloadNoValidationsObjUnmarshal))
+				})
+			})
+			Context("with actions that take a payload with a required validation", func() {
+				BeforeEach(func() {
+					actions = []string{"list"}
+					required := design.RequiredValidationDefinition{
+						Names: []string{"id"},
+					}
+					verbs = []string{"GET"}
+					paths = []string{"/accounts/:accountID/bottles"}
+					contexts = []string{"ListBottleContext"}
+					unmarshals = []string{"unmarshalListBottlePayload"}
+					payloads = []*design.UserTypeDefinition{
+						&design.UserTypeDefinition{
+							TypeName: "ListBottlePayload",
+							AttributeDefinition: &design.AttributeDefinition{
+								Type: design.Object{
+									"id": &design.AttributeDefinition{
+										Type: design.String,
+									},
+								},
+								Validations: []design.ValidationDefinition{&required},
+							},
+						},
+					}
+				})
+
+				It("writes the payload unmarshal function", func() {
+					err := writer.Execute(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
 					Ω(written).Should(ContainSubstring(payloadObjUnmarshal))
 				})
 			})
@@ -858,6 +892,16 @@ func unmarshalListBottlePayload(ctx *goa.Context) error {
 		return err
 	}
 	if err := payload.Validate(); err != nil {
+		return err
+	}
+	ctx.SetPayload(payload)
+	return nil
+}
+`
+	payloadNoValidationsObjUnmarshal = `
+func unmarshalListBottlePayload(ctx *goa.Context) error {
+	payload := &ListBottlePayload{}
+	if err := ctx.Service().DecodeRequest(ctx, payload); err != nil {
 		return err
 	}
 	ctx.SetPayload(payload)
