@@ -38,7 +38,7 @@
                         <p>
                                 The best way to experience <em>goa</em> is to develop a service end-to-end, from design to implementation.
                                 So let's write a simplistic service implementing a tiny subset of the "cellar" example that can be found in the
-                                <a href="https://github.com/raphael/goa/blob/master/example/cellar" target="_blank">github repository</a>.
+                                <a href="https://github.com/goadesign/goa/blob/master/example/cellar" target="_blank">github repository</a>.
                                 The code deals with wine bottles, more specifically it makes it possible to retrieve pre-existing wine bottle
                                 models through simple GET requests.
                         </p>
@@ -51,8 +51,8 @@
                         <pre><code class="go">package design
 
 import (
-        . "github.com/raphael/goa/design"
-        . "github.com/raphael/goa/design/dsl"
+        . "github.com/goadesign/goa/design"
+        . "github.com/goadesign/goa/design/dsl"
 )
 
 var _ = API("cellar", func() {
@@ -135,7 +135,7 @@ var BottleMedia = MediaType("application/vnd.goa.example.bottle+json", func() {
                                 </li>
                         </ul>
                         <blockquote>
-                                The <a href="https://godoc.org/github.com/raphael/goa/design/dsl" target="_blank">dsl package GoDoc</a> lists all
+                                The <a href="https://godoc.org/github.com/goadesign/goa/design/dsl" target="_blank">dsl package GoDoc</a> lists all
                                 the goa design language keywords together with a description and example usage.
                         </blockquote>
                         <p>
@@ -175,7 +175,7 @@ swagger/swagger.go
                                 two files are meant to help bootstrap a new development, they won't be re-generated (by default) if
                                 already present (re-run the tool again and note how it only generates the files under the "app", "client" and
                                 "swagger" directories this time). This behavior and many other aspects are configurable via command
-                                line arguments, see the <a href="https://github.com/raphael/goa/blob/master/goagen.md">goagen docs</a> for details.
+                                line arguments, see the <a href="https://github.com/goadesign/goa/blob/master/goagen.md">goagen docs</a> for details.
                         </p>
                         <p>
                                 Back to the list of generated files:
@@ -216,7 +216,7 @@ swagger/swagger.go
                                         <code>hrefs.go</code> provide global functions for building resource hrefs. Resource hrefs make it possible
                                         for responses to link to related resources. goa knows how to build these hrefs by looking at the
                                         request path for the resource "canonical" action (by default the "show" action). See the
-                                        <a href="https://godoc.org/github.com/raphael/goa/design/dsl#Action">Action</a> design language function for
+                                        <a href="https://godoc.org/github.com/goadesign/goa/design/dsl#Action">Action</a> design language function for
                                         additional information.
                                 </li>
                                 <li>
@@ -425,9 +425,9 @@ INFO[11-28|20:49:21] listen                                   app=API addr=:8080
         <footer id="footer">
                 <ul class="icons">
                         <li><a href="mailto:info@goa.design" class="icon fa-envelope"><span class="label">Contact</span></a></li>
-                        <li><a href="https://github.com/raphael/goa" class="icon fa-github" target="_blank"><span class="label">Github</span></a></li>
+                        <li><a href="https://github.com/goadesign/goa" class="icon fa-github" target="_blank"><span class="label">Github</span></a></li>
                 </ul>
-                <p class="copyright">&copy;2015 Raphael Simon. Design: <a href="http://html5up.net">HTML5 UP</a></p>
+                <p class="copyright">&copy;2015 Raphael Simon and goa Contributors. Design: <a href="http://html5up.net">HTML5 UP</a></p>
         </footer>
 
         <!-- Scripts -->

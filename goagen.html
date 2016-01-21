@@ -37,7 +37,7 @@
                 <div class="inner">
                         <p>
                                 <code>goagen</code> is a tool that generates various artifacts from a goa design package.<br/> Install it with:
-                                <code class="bash">go get github.com/raphael/goa/goagen</code><br/>
+                                <code class="bash">go get github.com/goadesign/goa/goagen</code><br/>
                                 goagen relies on <code>goimports</code>:<br/>
                                 <code class="bash">go get golang.org/x/tools/cmd/goimports</code>
                         </p>
@@ -154,10 +154,10 @@
                         <p>
                                 The <code>Client</code> object can be configured to use request signers that get invoked prior to sending the
                                 request. The signers modify the request to include auth headers for example. goa comes with signers that implement
-                                <a href="https://godoc.org/github.com/raphael/goa#BasicSigner">basic auth</a>,
-                                <a href="https://godoc.org/github.com/raphael/goa#JWTSigner">JWT auth</a> and a subset of
-                                <a href="https://godoc.org/github.com/raphael/goa#OAuth2Signer">OAuth2</a>. Custom signers my be used as well, they must
-                                implement the <a href="https://godoc.org/github.com/raphael/goa#Signer">Signer</a> interface.
+                                <a href="https://godoc.org/github.com/goadesign/goa#BasicSigner">basic auth</a>,
+                                <a href="https://godoc.org/github.com/goadesign/goa#JWTSigner">JWT auth</a> and a subset of
+                                <a href="https://godoc.org/github.com/goadesign/goa#OAuth2Signer">OAuth2</a>. Custom signers my be used as well, they must
+                                implement the <a href="https://godoc.org/github.com/goadesign/goa#Signer">Signer</a> interface.
                                 This command accepts three additional flags:
                         </p>
                         <ul>
@@ -328,8 +328,8 @@ import (
 
         "gopkg.in/alecthomas/kingpin.v2"
 
-        "github.com/raphael/goa/design"
-        "github.com/raphael/goa/goagen/codegen"
+        "github.com/goadesign/goa/design"
+        "github.com/goadesign/goa/goagen/codegen"
 )
 
 // Generate is the function called by goagen to generate the names file.
@@ -369,9 +369,9 @@ func Generate(api *design.APIDefinition) ([]string, error) {
         <footer id="footer">
                 <ul class="icons">
                         <li><a href="mailto:info@goa.design" class="icon fa-envelope"><span class="label">Contact</span></a></li>
-                        <li><a href="https://github.com/raphael/goa" class="icon fa-github" target="_blank"><span class="label">Github</span></a></li>
+                        <li><a href="https://github.com/goadesign/goa" class="icon fa-github" target="_blank"><span class="label">Github</span></a></li>
                 </ul>
-                <p class="copyright">&copy;2015 Raphael Simon. Design: <a href="http://html5up.net">HTML5 UP</a></p>
+                <p class="copyright">&copy;2015 Raphael Simon and goa Contributors. Design: <a href="http://html5up.net">HTML5 UP</a></p>
         </footer>
 
         <!-- Scripts -->

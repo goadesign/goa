@@ -83,7 +83,7 @@
                                 As mentioned earlier each controller action context wraps a golang
                                 package context. This means that deadlines and cancelation signals
                                 are available to all action implemetations. The built-in
-                                <a href="https://godoc.org/github.com/raphael/goa#Timeout">Timeout</a> middleware
+                                <a href="https://godoc.org/github.com/goadesign/goa#Timeout">Timeout</a> middleware
                                 takes advantage of this ability to let services or controllers
                                 define a timeout value for all requests.
                         </p>
@@ -134,9 +134,8 @@
                         <h4>Middleware</h4>
                         <p>
                                 goa defines its own type of middleware but also supports "raw" http
-                                middleware. The package comes with a set of
-                                <a href="https://godoc.org/github.com/raphael/goa#Middleware">built-in middleware</a>, additional middleware can be
-                                found in the <a href="https://github.com/raphael/goa-middleware">goa-middleware</a> repo.
+                                middleware. The <a href="https://github.com/goadesign/goa-middleware">goa-middleware</a>
+                                repo contains a number of goa middlewares.
                         </p>
                         <h4>Logging</h4>
                         <p>
@@ -199,8 +198,8 @@
                         <pre><code class="go">package design
 
 import (
-        . "github.com/raphael/goa/design"
-        . "github.com/raphael/goa/design/dsl"
+        . "github.com/goadesign/goa/design"
+        . "github.com/goadesign/goa/design/dsl"
 )
 
 var _ = API("cellar", func() {
@@ -259,9 +258,9 @@ var _ = Resource("bottle", func() {
         <footer id="footer">
                 <ul class="icons">
                         <li><a href="mailto:info@goa.design" class="icon fa-envelope"><span class="label">Contact</span></a></li>
-                        <li><a href="https://github.com/raphael/goa" class="icon fa-github" target="_blank"><span class="label">Github</span></a></li>
+                        <li><a href="https://github.com/goadesign/goa" class="icon fa-github" target="_blank"><span class="label">Github</span></a></li>
                 </ul>
-                <p class="copyright">&copy;2015 Raphael Simon. Design: <a href="http://html5up.net">HTML5 UP</a></p>
+                <p class="copyright">&copy;2015 Raphael Simon and goa Contributors. Design: <a href="http://html5up.net">HTML5 UP</a></p>
         </footer>
 
         <!-- Scripts -->
