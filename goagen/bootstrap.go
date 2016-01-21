@@ -1,11 +1,11 @@
 package main
 
 import (
-	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/gen_app"
-	"github.com/raphael/goa/goagen/gen_client"
-	"github.com/raphael/goa/goagen/gen_main"
-	"github.com/raphael/goa/goagen/gen_swagger"
+	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/goadesign/goa/goagen/gen_app"
+	"github.com/goadesign/goa/goagen/gen_client"
+	"github.com/goadesign/goa/goagen/gen_main"
+	"github.com/goadesign/goa/goagen/gen_swagger"
 )
 
 // BootstrapCommands lists the commands run by default when no sub-command is provided on the

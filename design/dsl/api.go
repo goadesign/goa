@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"regexp"
 
-	"github.com/raphael/goa/design"
+	"github.com/goadesign/goa/design"
 )
 
 // API implements the top level API DSL. It defines the API name, default description and other

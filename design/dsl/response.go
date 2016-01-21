@@ -1,6 +1,6 @@
 package dsl
 
-import "github.com/raphael/goa/design"
+import "github.com/goadesign/goa/design"
 
 // Response implements the response definition DSL. Response takes the name of the response as
 // first parameter. goa defines all the standard HTTP status name as global variables so they can be

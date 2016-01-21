@@ -10,9 +10,9 @@ import (
 	"text/template"
 	"unicode"
 
-	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/utils"
+	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/goadesign/goa/goagen/utils"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -95,7 +95,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		appPkg := path.Join(outPkg, "app")
 		swaggerPkg := path.Join(outPkg, "swagger")
 		imports := []*codegen.ImportSpec{
-			codegen.SimpleImport("github.com/raphael/goa"),
+			codegen.SimpleImport("github.com/goadesign/goa"),
 			codegen.SimpleImport(appPkg),
 			codegen.SimpleImport(swaggerPkg),
 			codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),

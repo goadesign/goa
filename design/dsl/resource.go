@@ -1,6 +1,6 @@
 package dsl
 
-import "github.com/raphael/goa/design"
+import "github.com/goadesign/goa/design"
 
 // Resource implements the resource definition DSL. There is one resource definition per resource
 // exposed by the API. The resource DSL allows setting the resource default media type. This media

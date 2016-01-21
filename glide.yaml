@@ -1,4 +1,4 @@
-package: github.com/raphael/goa
+package: github.com/goadesign/goa
 import:
   - package: golang.org/x/tools
     subpackages:

@@ -10,10 +10,10 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/design/dsl"
-	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/gen_app"
+	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/design/dsl"
+	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/goadesign/goa/goagen/gen_app"
 )
 
 var _ = Describe("NewGenerator", func() {
@@ -271,7 +271,7 @@ import (
 {{if .version}}	"{{.tmpDir}}/app"
 {{end}}	"fmt"
 
-	"github.com/raphael/goa"
+	"github.com/goadesign/goa"
 )
 
 // GetWidgetContext provides the Widget get action context.
@@ -316,7 +316,7 @@ const controllersCodeTmpl = `//*************************************************
 
 package {{if .version}}{{.version}}{{else}}app{{end}}
 
-import "github.com/raphael/goa"
+import "github.com/goadesign/goa"
 
 // WidgetController is the controller interface for the Widget actions.
 type WidgetController interface {

@@ -9,7 +9,7 @@ import (
 	"text/template"
 	"unicode"
 
-	"github.com/raphael/goa/design"
+	"github.com/goadesign/goa/design"
 )
 
 var (

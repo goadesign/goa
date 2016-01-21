@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/raphael/goa/design"
+	"github.com/goadesign/goa/design"
 )
 
 // Attribute implements the attribute definition DSL. An attribute describes a data structure

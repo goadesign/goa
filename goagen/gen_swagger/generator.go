@@ -10,9 +10,9 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/utils"
+	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/goadesign/goa/goagen/utils"
 )
 
 // Generate is the generator entry point called by the meta generator.
@@ -68,7 +68,7 @@ func Generate(api *design.APIDefinition) (_ []string, err error) {
 	}
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
-		codegen.SimpleImport("github.com/raphael/goa"),
+		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
 	file.WriteHeader(fmt.Sprintf("%s Swagger Spec", api.Name), "swagger", imports)
 	file.Write([]byte(swagger))

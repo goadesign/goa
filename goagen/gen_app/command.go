@@ -1,8 +1,8 @@
 package genapp
 
 import (
-	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/meta"
+	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/goadesign/goa/goagen/meta"
 )
 
 var (
@@ -32,7 +32,7 @@ func (c *Command) Run() ([]string, error) {
 	flags := map[string]string{"pkg": TargetPackage}
 	gen := meta.NewGenerator(
 		"genapp.Generate",
-		[]*codegen.ImportSpec{codegen.SimpleImport("github.com/raphael/goa/goagen/gen_app")},
+		[]*codegen.ImportSpec{codegen.SimpleImport("github.com/goadesign/goa/goagen/gen_app")},
 		flags,
 	)
 	return gen.Generate()

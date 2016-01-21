@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/goagen/gen_schema"
+	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/goagen/gen_schema"
 )
 
 type (

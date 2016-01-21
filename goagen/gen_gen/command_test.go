@@ -7,8 +7,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/gen_gen"
+	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/goadesign/goa/goagen/gen_gen"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -70,7 +70,7 @@ var _ = Describe("RegisterFlags", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			gengen.GenPkgName = "dummy"
 			codegen.OutputDir = tmpPkg
-			codegen.DesignPackagePath = "github.com/raphael/goa-cellar/design"
+			codegen.DesignPackagePath = "github.com/goadesign/goa-cellar/design"
 		})
 
 		It("invokes the generator", func() {
@@ -91,7 +91,7 @@ var _ = Describe("RegisterFlags", func() {
 
 const dummyGenSrc = `package dummy
 
-import "github.com/raphael/goa/design"
+import "github.com/goadesign/goa/design"
 
 func Generate(api *design.APIDefinition) ([]string, error) {
 	return []string{"worked"}, nil

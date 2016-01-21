@@ -24,7 +24,7 @@ DEPEND=\
 	github.com/on99/gocyclo \
 	github.com/onsi/ginkgo \
 	github.com/onsi/ginkgo/ginkgo \
-	github.com/raphael/goa-cellar \
+	github.com/goadesign/goa-cellar \
 	github.com/zach-klippenstein/goregen \
 	golang.org/x/tools/cmd/cover \
  	golang.org/x/tools/cmd/goimports \
