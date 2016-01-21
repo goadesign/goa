@@ -167,7 +167,7 @@ func detectContentType(ctx *Context, body io.Reader) string {
 
 // SetDecoder sets a specific decoder to be used for the specified content types. If
 // a decoder is already registered, it will be overwritten.
-func (app *Application) SetDecoder(f DecoderFactory, makeDefault bool, contentTypes ...string) {
+func (app *Application) SetDecoder(f DecoderFactory, version string, makeDefault bool, contentTypes ...string) {
 	p := newDecodePool(f)
 
 	for _, contentType := range contentTypes {
@@ -244,7 +244,7 @@ func (app *Application) EncodeResponse(ctx *Context, v interface{}) error {
 
 // SetEncoder sets a specific encoder to be used for the specified content types. If
 // a encoder is already registered, it will be overwritten.
-func (app *Application) SetEncoder(f EncoderFactory, makeDefault bool, contentTypes ...string) {
+func (app *Application) SetEncoder(f EncoderFactory, version string, makeDefault bool, contentTypes ...string) {
 	p := newEncodePool(f)
 	for _, contentType := range contentTypes {
 		mediaType, _, err := mime.ParseMediaType(contentType)
