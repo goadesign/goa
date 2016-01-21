@@ -384,11 +384,13 @@ func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{/*
 	payloadT = `{{$payload := .Payload}}// {{gotypename .Payload nil 0}} is the {{.ResourceName}} {{.ActionName}} action payload.
 type {{gotypename .Payload nil 1}} {{gotypedef .Payload .Versioned .DefaultPkg 0 false}}
 
-{{$validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1}}{{if $validation}}// Validate runs the validation rules defined in the design.
+{{$validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1}}
+// Validate runs the validation rules defined in the design.
 func (payload {{gotyperef .Payload .Payload.AllRequired 0}}) Validate() (err error) {
-{{$validation}}
+{{if $validation}}{{$validation}}
+{{end}}
        return
-}{{end}}
+}
 `
 	// ctrlT generates the controller interface for a given resource.
 	// template input: *ControllerTemplateData
