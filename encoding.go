@@ -243,7 +243,7 @@ func (app *Application) EncodeResponse(ctx *Context, v interface{}) error {
 }
 
 // SetEncoder sets a specific encoder to be used for the specified content types. If
-// a encoder is already registered, it will be overwritten.
+// an encoder is already registered, it will be overwritten.
 func (app *Application) SetEncoder(f EncoderFactory, version string, makeDefault bool, contentTypes ...string) {
 	p := newEncodePool(f)
 	for _, contentType := range contentTypes {
