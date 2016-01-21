@@ -112,7 +112,7 @@ This produces the following outputs:
 
 * `main.go` and `adder.go` contain scaffolding code to help bootstrap the implementation.
   running `goagen` again does no recreate them so that it's safe to edit their content.
-* an `app` package which contains glue code that binds the low level HTTP server to your 
+* an `app` package which contains glue code that binds the low level HTTP server to your
   implementation.
 * a `client` package with a `Client` struct that implements a `AddOperands` function which calls
   the API with the given arguments and returns the `http.Response`. The `client` directory also
@@ -205,7 +205,7 @@ specification can also be accessed through the service:
 ```
 $ curl localhost:8080/swagger.json
 ```
-For open source services hosted on github [swagger.goa.design](http://swagger.goa.design) provides 
+For open source services hosted on github [swagger.goa.design](http://swagger.goa.design) provides
 a free service that renders the Swagger representation dynamically from goa design packages.
 
 ## Resources
@@ -231,7 +231,7 @@ Can't wait to give it a try? the easiest way is to follow the short
 
 ### Middleware
 
-The [goa-middleware](https://github.com/goadesign/goa-middleware) repo provides a number of
+The [middleware](https://github.com/goadesign/middleware) repo provides a number of
 middlewares covering most common needs. It also provides a good source of examples for writing new
 middlewares.
 
