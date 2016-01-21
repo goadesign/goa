@@ -1,8 +1,8 @@
 package genclient
 
 import (
-	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/meta"
+	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/goadesign/goa/goagen/meta"
 )
 
 var (
@@ -42,7 +42,7 @@ func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
 func (c *Command) Run() ([]string, error) {
 	gen := meta.NewGenerator(
 		"genclient.Generate",
-		[]*codegen.ImportSpec{codegen.SimpleImport("github.com/raphael/goa/goagen/gen_client")},
+		[]*codegen.ImportSpec{codegen.SimpleImport("github.com/goadesign/goa/goagen/gen_client")},
 		nil,
 	)
 	return gen.Generate()

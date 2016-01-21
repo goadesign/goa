@@ -5,7 +5,7 @@ import (
 	"mime"
 	"strings"
 
-	"github.com/raphael/goa/design"
+	"github.com/goadesign/goa/design"
 )
 
 // Counter used to create unique media type names for identifier-less media types.

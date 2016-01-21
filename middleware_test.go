@@ -7,7 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa"
+	"github.com/goadesign/goa"
 )
 
 var _ = Describe("NewMiddleware", func() {

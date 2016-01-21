@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/raphael/goa/design"
+	"github.com/goadesign/goa/design"
 )
 
 type (

@@ -3,7 +3,7 @@ package dsl
 import (
 	"net/http"
 
-	"github.com/raphael/goa/design"
+	"github.com/goadesign/goa/design"
 )
 
 // Call InitDesign by default.

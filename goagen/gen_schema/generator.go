@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/utils"
+	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/goadesign/goa/goagen/utils"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -78,7 +78,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	}
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
-		codegen.SimpleImport("github.com/raphael/goa"),
+		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
 	g.genfiles = append(g.genfiles, controllerFile)
 	file.WriteHeader(fmt.Sprintf("%s JSON Hyper-schema", api.Name), "schema", imports)

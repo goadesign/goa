@@ -3,7 +3,7 @@ package genclient_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa/goagen/gen_main"
+	"github.com/goadesign/goa/goagen/gen_main"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
