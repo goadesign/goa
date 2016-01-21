@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/raphael/goa/design"
+	"github.com/goadesign/goa/design"
 )
 
 var (

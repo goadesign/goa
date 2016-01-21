@@ -1,14 +1,14 @@
 /*
 Package goa provides the runtime support for goa web services. See also http://goa.design.
 
-package design: https://godoc.org/github.com/raphael/goa/design
+package design: https://godoc.org/github.com/goadesign/goa/design
 
-package dsl: https://godoc.org/github.com/raphael/goa/design/dsl
+package dsl: https://godoc.org/github.com/goadesign/goa/design/dsl
 
 Code Generation
 
 goa service development begins with writing the *design* of a service. The design is described using
-the goa language implemented by the github.com/raphael/goa/design/dsl package. The goagen tool
+the goa language implemented by the github.com/goadesign/goa/design/dsl package. The goagen tool
 consumes the metadata produced from executing the design language to generate service specific code
 that glues the underlying HTTP server with action specific code and data structures.
 

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/raphael/goa/goagen/codegen"
+	"github.com/goadesign/goa/goagen/codegen"
 )
 
 // Generator generates the code of, compiles and runs generators.
@@ -111,8 +111,8 @@ func (m *Generator) generateToolSourceCode(pkg *codegen.Package) {
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("os"),
 		codegen.SimpleImport("strings"),
-		codegen.NewImport(".", "github.com/raphael/goa/design"),
-		codegen.NewImport(".", "github.com/raphael/goa/design/dsl"),
+		codegen.NewImport(".", "github.com/goadesign/goa/design"),
+		codegen.NewImport(".", "github.com/goadesign/goa/design/dsl"),
 		codegen.NewImport("_", filepath.ToSlash(codegen.DesignPackagePath)),
 	)
 	file.WriteHeader("Code Generator", "main", imports)

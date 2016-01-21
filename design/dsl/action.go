@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"bitbucket.org/pkg/inflect"
-	"github.com/raphael/goa/design"
+	"github.com/goadesign/goa/design"
 )
 
 // Action implements the action definition DSL. Action definitions describe specific API endpoints

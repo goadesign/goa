@@ -11,9 +11,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/raphael/goa/design"
-	. "github.com/raphael/goa/design/dsl"
-	"github.com/raphael/goa/goagen/codegen"
+	. "github.com/goadesign/goa/design"
+	. "github.com/goadesign/goa/design/dsl"
+	"github.com/goadesign/goa/goagen/codegen"
 )
 
 var _ = Describe("code generation", func() {
@@ -843,7 +843,7 @@ import (
 	"os"
 	"encoding/json"
 
-	"github.com/raphael/goa"
+	"github.com/goadesign/goa"
 )
 
 func main() {

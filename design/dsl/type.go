@@ -1,6 +1,6 @@
 package dsl
 
-import "github.com/raphael/goa/design"
+import "github.com/goadesign/goa/design"
 
 // Type implements the type definition DSL. A type definition describes a data structure consisting
 // of attributes. Each attribute has a type which can also refer to a type definition (or use a

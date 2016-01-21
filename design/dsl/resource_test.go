@@ -3,8 +3,8 @@ package dsl_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/raphael/goa/design"
-	. "github.com/raphael/goa/design/dsl"
+	. "github.com/goadesign/goa/design"
+	. "github.com/goadesign/goa/design/dsl"
 )
 
 var _ = Describe("Resource", func() {

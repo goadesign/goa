@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/raphael/goa/design"
+	"github.com/goadesign/goa/design"
 )
 
 // CommandLine return the command used to run this process.

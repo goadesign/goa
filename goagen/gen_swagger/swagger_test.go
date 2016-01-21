@@ -6,11 +6,11 @@ import (
 	"github.com/go-swagger/go-swagger/spec"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	_ "github.com/raphael/goa-cellar/design"
-	. "github.com/raphael/goa/design"
-	. "github.com/raphael/goa/design/dsl"
-	"github.com/raphael/goa/goagen/gen_schema"
-	"github.com/raphael/goa/goagen/gen_swagger"
+	_ "github.com/goadesign/goa-cellar/design"
+	. "github.com/goadesign/goa/design"
+	. "github.com/goadesign/goa/design/dsl"
+	"github.com/goadesign/goa/goagen/gen_schema"
+	"github.com/goadesign/goa/goagen/gen_swagger"
 )
 
 // Save cellar example API definition for tests.

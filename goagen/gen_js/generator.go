@@ -10,9 +10,9 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/utils"
+	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/goadesign/goa/goagen/utils"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -181,7 +181,7 @@ func (g *Generator) generateExample(api *design.APIDefinition) error {
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("net/http"),
 		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
-		codegen.SimpleImport("github.com/raphael/goa"),
+		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
 	if err := file.WriteHeader(fmt.Sprintf("%s JavaScript Client Example", api.Name), "js", imports); err != nil {
 		return err
