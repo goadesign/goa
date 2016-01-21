@@ -1,8 +1,8 @@
 package genswagger
 
 import (
-	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/meta"
+	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/goadesign/goa/goagen/meta"
 )
 
 // Command is the goa application code generator command line data structure.
@@ -21,7 +21,7 @@ func NewCommand() *Command {
 func (c *Command) Run() ([]string, error) {
 	gen := meta.NewGenerator(
 		"genswagger.Generate",
-		[]*codegen.ImportSpec{codegen.SimpleImport("github.com/raphael/goa/goagen/gen_swagger")},
+		[]*codegen.ImportSpec{codegen.SimpleImport("github.com/goadesign/goa/goagen/gen_swagger")},
 		nil,
 	)
 	return gen.Generate()

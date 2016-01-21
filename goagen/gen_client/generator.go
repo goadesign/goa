@@ -10,9 +10,9 @@ import (
 	"text/template"
 	"unicode"
 
-	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/utils"
+	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/goadesign/goa/goagen/utils"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -112,7 +112,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	commandsTmpl := template.Must(template.New("commands").Funcs(funcs).Parse(commandsTmpl))
 
 	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("github.com/raphael/goa"),
+		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport(clientPkg),
 		codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
 		codegen.SimpleImport("gopkg.in/alecthomas/kingpin.v2"),
@@ -157,7 +157,7 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("net/http"),
-		codegen.SimpleImport("github.com/raphael/goa"),
+		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("gopkg.in/alecthomas/kingpin.v2"),
 	}
 	if err := file.WriteHeader("", "client", imports); err != nil {

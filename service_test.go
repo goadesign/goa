@@ -9,8 +9,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa"
-	"github.com/raphael/goa-middleware/middleware"
+	"github.com/goadesign/goa"
+	"github.com/goadesign/goa-middleware/middleware"
 )
 
 var _ = Describe("Application", func() {

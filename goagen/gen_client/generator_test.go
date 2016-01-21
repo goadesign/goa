@@ -9,10 +9,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/design/dsl"
-	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/gen_client"
+	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/design/dsl"
+	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/goadesign/goa/goagen/gen_client"
 )
 
 var _ = Describe("NewGenerator", func() {
@@ -50,7 +50,7 @@ var _ = Describe("NewGenerator", func() {
 })
 
 var _ = Describe("Generate", func() {
-	const testgenPackagePath = "github.com/raphael/goa/goagen/gen_client/test_"
+	const testgenPackagePath = "github.com/goadesign/goa/goagen/gen_client/test_"
 
 	var gen *genclient.Generator
 	var outDir string

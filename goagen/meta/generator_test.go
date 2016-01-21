@@ -11,8 +11,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/meta"
+	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/goadesign/goa/goagen/meta"
 )
 
 var _ = Describe("Run", func() {
@@ -256,7 +256,7 @@ invalid go code
 `
 
 	panickySource = `package foo
-import . "github.com/raphael/goa/design"
+import . "github.com/goadesign/goa/design"
 var Metadata *APIDefinition
 func Generate(api *APIDefinition) ([]string, error) {
 	return nil, nil
@@ -266,7 +266,7 @@ func init() { panic("kaboom") }
 `
 
 	validSource = `package foo
-import . "github.com/raphael/goa/design"
+import . "github.com/goadesign/goa/design"
 var Metadata *APIDefinition
 func Generate(api *APIDefinition) ([]string, error) {
 	return nil, nil
@@ -275,7 +275,7 @@ func Generate(api *APIDefinition) ([]string, error) {
 
 	validSourceTmpl = `package foo
 import "fmt"
-import . "github.com/raphael/goa/design"
+import . "github.com/goadesign/goa/design"
 var Metadata *APIDefinition
 func Generate(api *APIDefinition) ([]string, error) {
 	{{range .}}fmt.Println("{{.}}")

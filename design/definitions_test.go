@@ -3,7 +3,7 @@ package design_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa/design"
+	"github.com/goadesign/goa/design"
 )
 
 var _ = Describe("IsRequired", func() {

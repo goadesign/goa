@@ -41,8 +41,8 @@
 //
 // 		"gopkg.in/alecthomas/kingpin.v2"
 //
-// 		"github.com/raphael/goa/design"
-// 		"github.com/raphael/goa/goagen/codegen"
+// 		"github.com/goadesign/goa/design"
+// 		"github.com/goadesign/goa/goagen/codegen"
 // 	)
 //
 //	// Generate is the function called by goagen to generate the names file.

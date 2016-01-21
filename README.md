@@ -4,8 +4,8 @@ goa is a framework for building RESTful microservices in Go.
 
 [![Build Status](https://travis-ci.org/raphael/goa.svg?branch=master)](https://travis-ci.org/raphael/goa)
 [![Windows Build status](https://ci.appveyor.com/api/projects/status/veujsyg4sxod40vw/branch/master?svg=true)](https://ci.appveyor.com/project/RaphaelSimon/goa/branch/master)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/raphael/goa/blob/master/LICENSE)
-[![Godoc](https://godoc.org/github.com/raphael/goa?status.svg)](http://godoc.org/github.com/raphael/goa)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/goadesign/goa/blob/master/LICENSE)
+[![Godoc](https://godoc.org/github.com/goadesign/goa?status.svg)](http://godoc.org/github.com/goadesign/goa)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 [![Intro](https://img.shields.io/badge/post-gopheracademy-ff69b4.svg?style=flat)](https://blog.gopheracademy.com/advent-2015/goaUntanglingMicroservices/)
 
@@ -57,7 +57,7 @@ can better take advantage of the framework.
 
 Assuming you have a working Go setup:
 ```
-go get github.com/raphael/goa/goagen
+go get github.com/goadesign/goa/goagen
 ```
 The code generation functionality relies on [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports):
 ```
@@ -73,8 +73,8 @@ Create the file `$GOPATH/src/goa-adder/design/design.go` with the following cont
 package design
 
 import (
-        . "github.com/raphael/goa/design"
-        . "github.com/raphael/goa/design/dsl"
+        . "github.com/goadesign/goa/design"
+        . "github.com/goadesign/goa/design/dsl"
 )
 
 var _ = API("adder", func() {
@@ -212,11 +212,11 @@ a free service that renders the Swagger representation dynamically from goa desi
 
 ### GoDoc
 
-* Package [goa](https://godoc.org/github.com/raphael/goa) contains the data structures and algorithms
+* Package [goa](https://godoc.org/github.com/goadesign/goa) contains the data structures and algorithms
   used at runtime.
-* Package [dsl](https://godoc.org/github.com/raphael/goa/design/dsl) contains the implementation of
+* Package [dsl](https://godoc.org/github.com/goadesign/goa/design/dsl) contains the implementation of
   the goa design language.
-* Package [design](https://godoc.org/github.com/raphael/goa/design) defines the output data
+* Package [design](https://godoc.org/github.com/goadesign/goa/design) defines the output data
   structures of the design language.
 
 ### Website
@@ -231,13 +231,13 @@ Can't wait to give it a try? the easiest way is to follow the short
 
 ### Middleware
 
-The [goa-middleware](https://github.com/raphael/goa-middleware) repo provides a number of
+The [goa-middleware](https://github.com/goadesign/goa-middleware) repo provides a number of
 middlewares covering most common needs. It also provides a good source of examples for writing new
 middlewares.
 
 ### Examples
 
-The [goa-cellar](https://github.com/raphael/goa-cellar) repo contains the implementation for a
+The [goa-cellar](https://github.com/goadesign/goa-cellar) repo contains the implementation for a
 goa service which demonstrates many aspects of the design language. It is kept up-to-date and
 provides a reference for testing functionality.
 
@@ -247,5 +247,5 @@ Did you fix a bug? write docs or additional tests? or implement some new awesome
 You're a rock star!! Just make sure that `make` succeeds (or that TravisCI is g104.197.54.215reen) and send a PR
 over.
 
-And if you're looking for inspiration the [wookie](https://github.com/raphael/goa/wiki) contains a
+And if you're looking for inspiration the [wookie](https://github.com/goadesign/goa/wiki) contains a
 roadmap document with many good suggestions...

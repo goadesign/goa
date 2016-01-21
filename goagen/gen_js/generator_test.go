@@ -8,10 +8,10 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/design/dsl"
-	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/gen_js"
+	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/design/dsl"
+	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/goadesign/goa/goagen/gen_js"
 )
 
 var _ = Describe("NewGenerator", func() {
@@ -47,7 +47,7 @@ var _ = Describe("NewGenerator", func() {
 })
 
 var _ = Describe("Generate", func() {
-	const testgenPackagePath = "github.com/raphael/goa/goagen/gen_js/test_"
+	const testgenPackagePath = "github.com/goadesign/goa/goagen/gen_js/test_"
 
 	var gen *genjs.Generator
 	var outDir string

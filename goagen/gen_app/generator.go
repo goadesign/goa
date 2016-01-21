@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/raphael/goa/design"
-	"github.com/raphael/goa/goagen/codegen"
-	"github.com/raphael/goa/goagen/utils"
+	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/goadesign/goa/goagen/utils"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -160,7 +160,7 @@ func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, v
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("strconv"),
-		codegen.SimpleImport("github.com/raphael/goa"),
+		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
 	if !version.IsDefault() {
 		appPkg, err := AppPackagePath()
@@ -210,7 +210,7 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 	title := fmt.Sprintf("%s: Application Controllers", version.Context())
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
-		codegen.SimpleImport("github.com/raphael/goa"),
+		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
 	if !version.IsDefault() {
 		appPkg, err := AppPackagePath()
@@ -311,7 +311,7 @@ func (g *Generator) generateMediaTypes(verdir string, version *design.APIVersion
 	}
 	title := fmt.Sprintf("%s: Application Media Types", version.Context())
 	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("github.com/raphael/goa"),
+		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("fmt"),
 	}
 	mtWr.WriteHeader(title, packageName(version), imports)
@@ -343,7 +343,7 @@ func (g *Generator) generateUserTypes(verdir string, version *design.APIVersionD
 	}
 	title := fmt.Sprintf("%s: Application User Types", version.Context())
 	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("github.com/raphael/goa"),
+		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("fmt"),
 	}
 	utWr.WriteHeader(title, packageName(version), imports)
