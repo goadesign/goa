@@ -96,7 +96,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		swaggerPkg := path.Join(outPkg, "swagger")
 		imports := []*codegen.ImportSpec{
 			codegen.SimpleImport("github.com/goadesign/goa"),
-			codegen.SimpleImport("github.com/goadesign/middleware/middleware"),
+			codegen.SimpleImport("github.com/goadesign/middleware"),
 			codegen.SimpleImport(appPkg),
 			codegen.SimpleImport(swaggerPkg),
 			codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
