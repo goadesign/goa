@@ -337,7 +337,7 @@ var _ = Describe("BuildEncoderMap", func() {
 			Ω(jd.PackagePath).Should(Equal(packagePath))
 			Ω(jd.PackageName).Should(Equal("design"))
 			Ω(jd.Factory).Should(Equal("DecoderFactory"))
-			Ω(jd.MIMETypes).Should(Equal(mimeTypes))
+			Ω(jd.MIMETypes).Should(ConsistOf(interface{}(mimeTypes[0]), interface{}(mimeTypes[1])))
 		})
 	})
 })

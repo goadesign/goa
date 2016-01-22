@@ -115,8 +115,8 @@ var _ = Describe("New", func() {
 				BasePath: basePath,
 				Schemes:  []string{"https"},
 				Paths:    make(map[string]*genswagger.Path),
-				Consumes: []string{"application/json"},
-				Produces: []string{"application/json"},
+				Consumes: []string{"application/json", "application/xml", "text/xml"},
+				Produces: []string{"application/json", "application/xml", "text/xml"},
 				Tags:     []*genswagger.Tag{{Name: tag}},
 				ExternalDocs: &genswagger.ExternalDocs{
 					Description: docDesc,

@@ -64,6 +64,20 @@ type (
 		// EncodeResponse uses registered Encoders to marshal the response body based on the
 		// request `Accept` header and writes it to the http.ResponseWriter
 		EncodeResponse(ctx *Context, v interface{}) error
+
+		// SetDecoder registers a decoder with the service for a given API version. Set
+		// version to the empty string to register a decoder with unversioned endpoints.
+		// If makeDefault is true then the decoder is used to decode request payloads where
+		// none of the registered decoders support the content type (i.e. match the request
+		// "Content-Type" header).
+		SetDecoder(f DecoderFactory, version string, makeDefault bool, contentTypes ...string)
+
+		// SetEncoder registers an encoder with the service for a given API version. Set
+		// version to the empty string to register an encoder with unversioned endpoints.
+		// If makeDefault is true then the encoder is used to encode request payloads where
+		// none of the registered decoders support any of the accepted content types (i.e.
+		// match the request "Accept" header).
+		SetEncoder(f EncoderFactory, version string, makeDefault bool, contentTypes ...string)
 	}
 
 	// Controller is the interface implemented by all goa controllers.
@@ -172,9 +186,9 @@ func New(name string) Service {
 		name:         name,
 		errorHandler: DefaultErrorHandler,
 		mux:          NewMux(),
+		decoderPools: map[string]*decoderPool{},
+		encoderPools: map[string]*encoderPool{},
 	}
-
-	app.initEncoding()
 
 	return app
 }

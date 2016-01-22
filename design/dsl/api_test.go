@@ -165,11 +165,13 @@ var _ = Describe("API", func() {
 			})
 
 			Context("using a custom encoding package", func() {
-				const pkgPath = "github.com/raphael/goa-middleware/encoding/json"
+				const pkgPath = "github.com/goadesign/middleware/encoding/json"
 
 				BeforeEach(func() {
 					dsl = func() {
-						Consumes("application/json", pkgPath)
+						Consumes("application/json", func() {
+							Package(pkgPath)
+						})
 					}
 				})
 
