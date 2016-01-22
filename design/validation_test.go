@@ -1,4 +1,4 @@
-package dsl_test
+package design_test
 
 import (
 	. "github.com/goadesign/goa/design"

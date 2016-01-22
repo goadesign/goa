@@ -254,6 +254,94 @@ var _ = Describe("Generate", func() {
 	})
 })
 
+var _ = Describe("BuildEncoderMap", func() {
+	var info []*design.EncodingDefinition
+	var encoder bool
+
+	var data map[string]*genapp.EncoderTemplateData
+	var resErr error
+
+	BeforeEach(func() {
+		info = nil
+		encoder = false
+	})
+
+	JustBeforeEach(func() {
+		data, resErr = genapp.BuildEncoderMap(info, encoder)
+	})
+
+	Context("with a single definition using a single known MIME type for encoding", func() {
+		BeforeEach(func() {
+			simple := &design.EncodingDefinition{
+				MIMETypes: []string{"application/json"},
+			}
+			info = append(info, simple)
+			encoder = true
+		})
+
+		It("generates a map with a single entry", func() {
+			Ω(resErr).ShouldNot(HaveOccurred())
+			Ω(data).Should(HaveLen(1))
+			Ω(data).Should(HaveKey(""))
+			jd := data[""]
+			Ω(jd).ShouldNot(BeNil())
+			Ω(jd.PackagePath).Should(BeEmpty())
+			Ω(jd.PackageName).Should(Equal("goa"))
+			Ω(jd.Factory).Should(Equal("JSONFactory"))
+			Ω(jd.MIMETypes).Should(HaveLen(1))
+			Ω(jd.MIMETypes[0]).Should(Equal("application/json"))
+		})
+	})
+
+	Context("with a single definition using a single known MIME type for decoding", func() {
+		BeforeEach(func() {
+			simple := &design.EncodingDefinition{
+				MIMETypes: []string{"application/json"},
+			}
+			info = append(info, simple)
+			encoder = false
+		})
+
+		It("generates a map with a single entry", func() {
+			Ω(resErr).ShouldNot(HaveOccurred())
+			Ω(data).Should(HaveLen(1))
+			Ω(data).Should(HaveKey(""))
+			jd := data[""]
+			Ω(jd).ShouldNot(BeNil())
+			Ω(jd.PackagePath).Should(BeEmpty())
+			Ω(jd.PackageName).Should(Equal("goa"))
+			Ω(jd.Factory).Should(Equal("JSONFactory"))
+			Ω(jd.MIMETypes).Should(HaveLen(1))
+			Ω(jd.MIMETypes[0]).Should(Equal("application/json"))
+		})
+	})
+
+	Context("with a definition using a custom decoding package", func() {
+		const packagePath = "github.com/goadesign/goa/design" // Just to pick something always available
+		var mimeTypes = []string{"application/vnd.custom", "application/vnd.custom2"}
+
+		BeforeEach(func() {
+			simple := &design.EncodingDefinition{
+				PackagePath: packagePath,
+				MIMETypes:   mimeTypes,
+			}
+			info = append(info, simple)
+		})
+
+		It("generates a map with a single entry", func() {
+			Ω(resErr).ShouldNot(HaveOccurred())
+			Ω(data).Should(HaveLen(1))
+			Ω(data).Should(HaveKey(packagePath))
+			jd := data[packagePath]
+			Ω(jd).ShouldNot(BeNil())
+			Ω(jd.PackagePath).Should(Equal(packagePath))
+			Ω(jd.PackageName).Should(Equal("design"))
+			Ω(jd.Factory).Should(Equal("DecoderFactory"))
+			Ω(jd.MIMETypes).Should(Equal(mimeTypes))
+		})
+	})
+})
+
 const contextsCodeTmpl = `//************************************************************************//
 // API "test api"{{if .version}} version {{.version}}{{end}}: Application Contexts
 //
@@ -326,6 +414,7 @@ type WidgetController interface {
 
 // MountWidgetController "mounts" a Widget resource controller on the given service.
 func MountWidgetController(service goa.Service, ctrl WidgetController) {
+	initEncoding(service)
 	var h goa.Handler
 	mux := service.ServeMux(){{if .version}}.Version("{{.version}}"){{end}}
 	h = func(c *goa.Context) error {
@@ -337,6 +426,11 @@ func MountWidgetController(service goa.Service, ctrl WidgetController) {
 	}
 	mux.Handle("GET", "/:id", ctrl.HandleFunc("Get", h, nil))
 	service.Info("mount", "ctrl", "Widget",{{if .version}} "version", "{{.version}}",{{end}} "action", "Get", "route", "GET /:id")
+}
+
+// initEncoding initializes the decoder and encoder pools to support the MIME types defined in the
+// "Consumes" and "Produces" DSL of the API{{if .version}} {{.version}}{{end}}.
+func initEncoding(service goa.Service) {
 }
 `
 

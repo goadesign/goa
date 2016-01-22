@@ -87,9 +87,11 @@ type (
 
 	// ControllerTemplateData contains the information required to generate an action handler.
 	ControllerTemplateData struct {
-		Resource string                       // Lower case plural resource name, e.g. "bottles"
-		Actions  []map[string]interface{}     // Array of actions, each action has keys "Name", "Routes", "Context" and "Unmarshal"
-		Version  *design.APIVersionDefinition // Controller API version
+		Resource   string                          // Lower case plural resource name, e.g. "bottles"
+		Actions    []map[string]interface{}        // Array of actions, each action has keys "Name", "Routes", "Context" and "Unmarshal"
+		Version    *design.APIVersionDefinition    // Controller API version
+		EncoderMap map[string]*EncoderTemplateData // Encoder data indexed by package path
+		DecoderMap map[string]*EncoderTemplateData // Decoder data indexed by package path
 	}
 
 	// ResourceData contains the information required to generate the resource GoGenerator
@@ -100,6 +102,19 @@ type (
 		Type              *design.MediaTypeDefinition // Type of resource media type
 		CanonicalTemplate string                      // CanonicalFormat represents the resource canonical path in the form of a fmt.Sprintf format.
 		CanonicalParams   []string                    // CanonicalParams is the list of parameter names that appear in the resource canonical path in order.
+	}
+
+	// EncoderTemplateData containes the data needed to render the registration code for a single
+	// encoder or decoder package.
+	EncoderTemplateData struct {
+		// PackagePath is the Go package path to the package implmenting the encoder / decoder.
+		PackagePath string
+		// PackageName is the name of the Go package implementing the encoder / decoder.
+		PackageName string
+		// Factory is the name of the package variable implementing the decoder / encoder factory.
+		Factory string
+		// MIMETypes is the list of supported MIME types.
+		MIMETypes []string
 	}
 )
 
@@ -189,6 +204,9 @@ func (w *ControllersWriter) Execute(data []*ControllerTemplateData) error {
 			return err
 		}
 		if err := w.ExecuteTemplate("mount", mountT, nil, d); err != nil {
+			return err
+		}
+		if err := w.ExecuteTemplate("encoding", encodingT, nil, d); err != nil {
 			return err
 		}
 		if err := w.ExecuteTemplate("unmarshal", unmarshalT, nil, d); err != nil {
@@ -404,6 +422,7 @@ type {{.Resource}}Controller interface {
 	mountT = `
 // Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given service.
 func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Controller) {
+	initEncoding(service)
 	var h goa.Handler
 	mux := service.ServeMux(){{if not .Version.IsDefault}}.Version("{{.Version.Version}}"){{end}}
 {{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
@@ -417,6 +436,22 @@ func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Control
 {{range .Routes}}	mux.Handle("{{.Verb}}", "{{.FullPath $ver}}", ctrl.HandleFunc("{{$action.Name}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
 	service.Info("mount", "ctrl", "{{$res}}",{{if not $ver.IsDefault}} "version", "{{$ver.Version}}",{{end}} "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath $ver}}")
 {{end}}{{end}}}
+`
+
+	// encodingT generates the code that initializes the encoders and decoders for a given API
+	// version.
+	// template input: *ControllerTemplateData
+	encodingT = `
+// initEncoding initializes the decoder and encoder pools to support the MIME types defined in the
+// "Consumes" and "Produces" DSL of the API{{if not .Version.IsDefault}} {{.Version.Version}}{{end}}.
+func initEncoding(service goa.Service) {
+{{$ctx := .}}{{$default := "true"}}{{range .EncoderMap}}{{$tmp := tempvar}}{{/*
+*/}}	{{$tmp}} := {{.PackageName}}.{{.Factory}}()
+ 	service.SetEncoder({{$tmp}}, "{{$ctx.Version.Version}}", "{{$default}}", {{join .MIMETypes}}){{$default := "false"}}
+{{end}}{{$default := "true"}}{{range .DecoderMap}}{{$tmp := tempvar}}{{/*
+*/}}	{{$tmp}} := {{.PackageName}}.{{.Factory}}()
+	service.SetDecoder({{$tmp}}, "{{$ctx.Version.Version}}", "{{$default}}", {{join .MIMETypes ", "}}){{$default := "false"}}
+{{end}}}
 `
 
 	// unmarshalT generates the code for an action payload unmarshal function.
@@ -490,7 +525,7 @@ func (mt {{gotyperef .MediaType .MediaType.AllRequired 0}}) Validate() (err erro
 	// userTypeT generates the code for a user type.
 	// template input: UserTypeTemplateData
 	userTypeT = `// {{if .UserType.Description}}{{.UserType.Description}}{{else}}{{gotypename .UserType .UserType.AllRequired 0}} type{{end}}
-type {{gotypename .UserType .UserType.AllRequired 0}} {{gotypedef .UserType .Versioned .DefaultPkg 0 false}}
+type {{gotypename .UserType .UserType.AllRequired 0}} {{gotypedef .UserType .Versioned .DefaultPkg 0 true}}
 
 {{$validation := recursiveValidate .UserType.AttributeDefinition false false "ut" "response" 1}}{{if $validation}}// Validate validates the type instance.
 func (ut {{gotyperef .UserType .UserType.AllRequired 0}}) Validate() (err error) {
