@@ -93,30 +93,6 @@ var (
 	GobContentTypes = []string{"application/gob"}
 )
 
-// initEncoding initializes all the decoder/encoder pools with the Content-Types found
-// in JSONContentTypes and GobContentTypes. JSON is set as the default decoder.
-func (app *Application) initEncoding() {
-	// initialize maps
-	contentTypeCount := len(JSONContentTypes) + len(XMLContentTypes) + len(GobContentTypes)
-	app.decoderPools = make(map[string]*decoderPool, contentTypeCount)
-	app.encoderPools = make(map[string]*encoderPool, contentTypeCount)
-
-	// Add json support
-	jf := &jsonFactory{}
-	app.SetDecoder(jf, true, JSONContentTypes...)
-	app.SetEncoder(jf, true, JSONContentTypes...)
-
-	// Add xml support
-	xf := &xmlFactory{}
-	app.SetDecoder(xf, false, XMLContentTypes...)
-	app.SetEncoder(xf, false, XMLContentTypes...)
-
-	// Add gob support
-	gf := &gobFactory{}
-	app.SetDecoder(gf, false, GobContentTypes...)
-	app.SetEncoder(gf, false, GobContentTypes...)
-}
-
 // DecodeRequest uses registered Decoders to unmarshal the request body based on
 // the request `Content-Type` header
 func (app *Application) DecodeRequest(ctx *Context, v interface{}) error {
@@ -308,9 +284,21 @@ func (p *encoderPool) Put(e Encoder) {
 	p.pool.Put(e)
 }
 
+// encoding/json default encoder/decoder
+
+// JSONDecoderFactory returns a struct that can generate new json.Decoders
+func JSONDecoderFactory() DecoderFactory {
+	return &jsonFactory{}
+}
+
 // NewDecoder returns a new json.Decoder
 func (f *jsonFactory) NewDecoder(r io.Reader) Decoder {
 	return json.NewDecoder(r)
+}
+
+// JSONEncoderFactory returns a struct that can generate new json.Encoders
+func JSONEncoderFactory() EncoderFactory {
+	return &jsonFactory{}
 }
 
 // NewEncoder returns a new json.Encoder
@@ -318,9 +306,21 @@ func (f *jsonFactory) NewEncoder(w io.Writer) Encoder {
 	return json.NewEncoder(w)
 }
 
+// encoding/xml default encoder/decoder
+
+// XMLDecoderFactory returns a struct that can generate new xml.Decoders
+func XMLDecoderFactory() DecoderFactory {
+	return &xmlFactory{}
+}
+
 // NewDecoder returns a new xml.Decoder
 func (f *xmlFactory) NewDecoder(r io.Reader) Decoder {
 	return xml.NewDecoder(r)
+}
+
+// XMLEncoderFactory returns a struct that can generate new xml.Encoders
+func XMLEncoderFactory() EncoderFactory {
+	return &xmlFactory{}
 }
 
 // NewEncoder returns a new xml.Encoder
@@ -328,9 +328,21 @@ func (f *xmlFactory) NewEncoder(w io.Writer) Encoder {
 	return xml.NewEncoder(w)
 }
 
+// encoding/gob default encoder/decoder
+
+// GobDecoderFactory returns a struct that can generate new gob.Decoders
+func GobDecoderFactory() DecoderFactory {
+	return &gobFactory{}
+}
+
 // NewDecoder returns a new gob.Decoder
 func (f *gobFactory) NewDecoder(r io.Reader) Decoder {
 	return gob.NewDecoder(r)
+}
+
+// GobEncoderFactory returns a struct that can generate new gob.Encoders
+func GobEncoderFactory() EncoderFactory {
+	return &gobFactory{}
 }
 
 // NewEncoder returns a new gob.Encoder
