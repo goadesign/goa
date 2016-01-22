@@ -10,8 +10,13 @@ var _ = Describe("SupportingPackages", func() {
 	var enc *design.EncodingDefinition
 	var pkgs map[string][]string
 
-	var packagePath = "github.com/goadesign/goa"
-	var mimeTypes = []string{"application/json"}
+	var packagePath string
+	var mimeTypes []string
+
+	BeforeEach(func() {
+		packagePath = "github.com/goadesign/goa"
+		mimeTypes = []string{"application/json"}
+	})
 
 	JustBeforeEach(func() {
 		enc = &design.EncodingDefinition{
