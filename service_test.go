@@ -8,7 +8,7 @@ import (
 	"net/url"
 
 	"github.com/goadesign/goa"
-	"github.com/goadesign/middleware/middleware"
+	"github.com/goadesign/middleware"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
