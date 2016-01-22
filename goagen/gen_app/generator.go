@@ -199,6 +199,68 @@ func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, v
 	return ctxWr.FormatCode()
 }
 
+// BuildEncoderMap builds the template data needed to render the given encoding definitions.
+// This extra map is needed to handle the case where a single encoding definition maps to multiple
+// encoding packages. The data is indexed by encoder Go package path.
+func BuildEncoderMap(info []*design.EncodingDefinition, encoder bool) (map[string]*EncoderTemplateData, error) {
+	packages := make(map[string]map[string]bool)
+	for _, enc := range info {
+		supporting := enc.SupportingPackages()
+		if supporting == nil {
+			// shouldn't happen - DSL validation shouldn't allow it - be graceful
+			continue
+		}
+		for ppath, mimeTypes := range supporting {
+			if _, ok := packages[ppath]; !ok {
+				packages[ppath] = make(map[string]bool)
+			}
+			for _, m := range mimeTypes {
+				packages[ppath][m] = true
+			}
+		}
+	}
+	data := make(map[string]*EncoderTemplateData, len(packages))
+	for p, ms := range packages {
+		pkgName := "goa"
+		if p != "" {
+			srcPath, err := codegen.PackageSourcePath(p)
+			if err == nil {
+				pkgName, err = codegen.PackageName(srcPath)
+			}
+			if err != nil {
+				return nil, fmt.Errorf("failed to load package %s (%s)", p, err)
+			}
+		}
+		mimeTypes := make([]string, len(ms))
+		i := 0
+		for m := range ms {
+			mimeTypes[i] = m
+			i++
+		}
+		var factory string
+		first := mimeTypes[0]
+		if encoder {
+			factory = design.KnownEncoders[first][1]
+			if factory == "" {
+				factory = "EncoderFactory"
+			}
+		} else {
+			factory = design.KnownEncoders[first][2]
+			if factory == "" {
+				factory = "DecoderFactory"
+			}
+		}
+		d := &EncoderTemplateData{
+			PackagePath: p,
+			PackageName: pkgName,
+			Factory:     factory,
+			MIMETypes:   mimeTypes,
+		}
+		data[p] = d
+	}
+	return data, nil
+}
+
 // generateControllers iterates through the version resources and generates the low level
 // controllers.
 func (g *Generator) generateControllers(verdir string, version *design.APIVersionDefinition) error {
@@ -218,6 +280,24 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 			return err
 		}
 		imports = append(imports, codegen.SimpleImport(appPkg))
+	}
+	encoderMap, err := BuildEncoderMap(version.Produces, true)
+	if err != nil {
+		return err
+	}
+	decoderMap, err := BuildEncoderMap(version.Consumes, false)
+	if err != nil {
+		return err
+	}
+	encoderImports := make(map[string]bool)
+	for _, data := range encoderMap {
+		encoderImports[data.PackagePath] = true
+	}
+	for _, data := range decoderMap {
+		encoderImports[data.PackagePath] = true
+	}
+	for packagePath := range encoderImports {
+		imports = append(imports, codegen.SimpleImport(packagePath))
 	}
 	ctlWr.WriteHeader(title, packageName(version), imports)
 	var controllersData []*ControllerTemplateData
@@ -243,6 +323,8 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 			return err
 		}
 		if len(data.Actions) > 0 {
+			data.EncoderMap = encoderMap
+			data.DecoderMap = decoderMap
 			data.Version = version
 			controllersData = append(controllersData, data)
 		}

@@ -917,6 +917,7 @@ type BottlesController interface {
 `
 
 	simpleMount = `func MountBottlesController(service goa.Service, ctrl BottlesController) {
+	initEncoding(service)
 	var h goa.Handler
 	mux := service.ServeMux()
 	h = func(c *goa.Context) error {
@@ -940,6 +941,7 @@ type BottlesController interface {
 `
 
 	multiMount = `func MountBottlesController(service goa.Service, ctrl BottlesController) {
+	initEncoding(service)
 	var h goa.Handler
 	mux := service.ServeMux()
 	h = func(c *goa.Context) error {
