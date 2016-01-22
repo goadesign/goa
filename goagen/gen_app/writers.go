@@ -382,7 +382,7 @@ func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{/*
 	// payloadT generates the payload type definition GoGenerator
 	// template input: *ContextTemplateData
 	payloadT = `{{$payload := .Payload}}// {{gotypename .Payload nil 0}} is the {{.ResourceName}} {{.ActionName}} action payload.
-type {{gotypename .Payload nil 1}} {{gotypedef .Payload .Versioned .DefaultPkg 0 false}}
+type {{gotypename .Payload nil 1}} {{gotypedef .Payload .Versioned .DefaultPkg 0 true}}
 
 {{$validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1}}{{if $validation}}// Validate runs the validation rules defined in the design.
 func (payload {{gotyperef .Payload .Payload.AllRequired 0}}) Validate() (err error) {
@@ -449,7 +449,7 @@ func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} interfa
 	// template input: MediaTypeTemplateData
 	mediaTypeT = `{{define "Dump"}}` + dumpT + `{{end}}` + `// {{if .MediaType.Description}}{{.MediaType.Description}}{{else}}{{gotypename .MediaType .MediaType.AllRequired 0}} media type{{end}}
 // Identifier: {{.MediaType.Identifier}}{{$typeName := gotypename .MediaType .MediaType.AllRequired 0}}
-type {{$typeName}} {{gotypedef .MediaType .Versioned .DefaultPkg 0 false}}{{$computedViews := .MediaType.ComputeViews}}{{if gt (len $computedViews) 1}}
+type {{$typeName}} {{gotypedef .MediaType .Versioned .DefaultPkg 0 true}}{{$computedViews := .MediaType.ComputeViews}}{{if gt (len $computedViews) 1}}
 
 // {{$typeName}} views
 type {{$typeName}}ViewEnum string
