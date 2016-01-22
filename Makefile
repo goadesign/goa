@@ -16,7 +16,7 @@ DEPEND=\
 	github.com/PuerkitoBio/purell \
 	github.com/asaskevich/govalidator \
 	github.com/go-swagger/go-swagger \
-	github.com/goadesign/middleware/middleware \
+	github.com/goadesign/middleware \
 	github.com/golang/gddo/httputil \
 	github.com/golang/lint/golint \
 	github.com/onsi/gomega \
