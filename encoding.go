@@ -316,9 +316,21 @@ func (p *encoderPool) Put(e Encoder) {
 	p.pool.Put(e)
 }
 
+// encoding/json default encoder/decoder
+
+// JSONDecoderFactory returns a struct that can generate new json.Decoders
+func JSONDecoderFactory() DecoderFactory {
+	return &jsonFactory{}
+}
+
 // NewDecoder returns a new json.Decoder
 func (f *jsonFactory) NewDecoder(r io.Reader) Decoder {
 	return json.NewDecoder(r)
+}
+
+// JSONEncoderFactory returns a struct that can generate new json.Encoders
+func JSONEncoderFactory() EncoderFactory {
+	return &jsonFactory{}
 }
 
 // NewEncoder returns a new json.Encoder
@@ -326,9 +338,21 @@ func (f *jsonFactory) NewEncoder(w io.Writer) Encoder {
 	return json.NewEncoder(w)
 }
 
+// encoding/xml default encoder/decoder
+
+// XMLDecoderFactory returns a struct that can generate new xml.Decoders
+func XMLDecoderFactory() DecoderFactory {
+	return &xmlFactory{}
+}
+
 // NewDecoder returns a new xml.Decoder
 func (f *xmlFactory) NewDecoder(r io.Reader) Decoder {
 	return xml.NewDecoder(r)
+}
+
+// XMLEncoderFactory returns a struct that can generate new xml.Encoders
+func XMLEncoderFactory() EncoderFactory {
+	return &xmlFactory{}
 }
 
 // NewEncoder returns a new xml.Encoder
@@ -336,9 +360,21 @@ func (f *xmlFactory) NewEncoder(w io.Writer) Encoder {
 	return xml.NewEncoder(w)
 }
 
+// encoding/gob default encoder/decoder
+
+// GobDecoderFactory returns a struct that can generate new gob.Decoders
+func GobDecoderFactory() DecoderFactory {
+	return &gobFactory{}
+}
+
 // NewDecoder returns a new gob.Decoder
 func (f *gobFactory) NewDecoder(r io.Reader) Decoder {
 	return gob.NewDecoder(r)
+}
+
+// GobEncoderFactory returns a struct that can generate new gob.Encoders
+func GobEncoderFactory() EncoderFactory {
+	return &gobFactory{}
 }
 
 // NewEncoder returns a new gob.Encoder
