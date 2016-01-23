@@ -297,7 +297,9 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 		encoderImports[data.PackagePath] = true
 	}
 	for packagePath := range encoderImports {
-		imports = append(imports, codegen.SimpleImport(packagePath))
+		if packagePath != "" {
+			imports = append(imports, codegen.SimpleImport(packagePath))
+		}
 	}
 	ctlWr.WriteHeader(title, packageName(version), imports)
 	var controllersData []*ControllerTemplateData
