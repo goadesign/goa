@@ -220,9 +220,10 @@ func BuildEncoderMap(info []*design.EncodingDefinition, encoder bool) (map[strin
 		}
 	}
 	data := make(map[string]*EncoderTemplateData, len(packages))
+	defaultMediaType := info[0].MIMETypes[0]
 	for p, ms := range packages {
 		pkgName := "goa"
-		if p != "" {
+		if !design.IsGoaEncoder(p) {
 			srcPath, err := codegen.PackageSourcePath(p)
 			if err == nil {
 				pkgName, err = codegen.PackageName(srcPath)
@@ -232,8 +233,12 @@ func BuildEncoderMap(info []*design.EncodingDefinition, encoder bool) (map[strin
 			}
 		}
 		mimeTypes := make([]string, len(ms))
+		isDefault := false
 		i := 0
 		for m := range ms {
+			if m == defaultMediaType {
+				isDefault = true
+			}
 			mimeTypes[i] = m
 			i++
 		}
@@ -255,6 +260,7 @@ func BuildEncoderMap(info []*design.EncodingDefinition, encoder bool) (map[strin
 			PackageName: pkgName,
 			Factory:     factory,
 			MIMETypes:   mimeTypes,
+			Default:     isDefault,
 		}
 		data[p] = d
 	}
@@ -297,7 +303,7 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 		encoderImports[data.PackagePath] = true
 	}
 	for packagePath := range encoderImports {
-		if packagePath != "" {
+		if !design.IsGoaEncoder(packagePath) {
 			imports = append(imports, codegen.SimpleImport(packagePath))
 		}
 	}

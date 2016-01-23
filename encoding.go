@@ -8,8 +8,6 @@ import (
 	"io"
 	"mime"
 	"sync"
-
-	"github.com/golang/gddo/httputil"
 )
 
 type (
@@ -69,20 +67,6 @@ type (
 
 	// gobFactory uses encoding/gob to act as an DecoderFactory and EncoderFactory
 	gobFactory struct{}
-)
-
-var (
-	// JSONContentTypes is a slice of default Content-Type headers that will use stdlib
-	// encoding/json to unmarshal unless overwritten using SetDecoder
-	JSONContentTypes = []string{"application/json", "application/text+json"}
-
-	// XMLContentTypes is a slice of default Content-Type headers that will use stdlib
-	// encoding/xml to unmarshal unless overwritten using SetDecoder
-	XMLContentTypes = []string{"application/xml"}
-
-	// GobContentTypes is a slice of default Content-Type headers that will use stdlib
-	// encoding/gob to unmarshal unless overwritten using SetDecoder
-	GobContentTypes = []string{"application/gob"}
 )
 
 // DecodeRequest uses registered Decoders to unmarshal the request body based on
@@ -183,9 +167,19 @@ func (p *decoderPool) Put(d Decoder) {
 // EncodeResponse uses registered Encoders to marshal the response body based on the request
 // `Accept` header and writes it to the http.ResponseWriter
 func (ver *version) EncodeResponse(ctx *Context, v interface{}) error {
-	contentType := httputil.NegotiateContentType(ctx.Request(), ver.encodableContentTypes, "*/*")
+	accept := ctx.Request().Header.Get("Accept")
+	if accept == "" {
+		accept = "*/*"
+	}
+	var contentType string
+	for _, t := range ver.encodableContentTypes {
+		if accept == "*/*" || accept == t {
+			contentType = accept
+			break
+		}
+	}
 	p := ver.encoderPools[contentType]
-	if p == nil {
+	if p == nil && contentType != "*/*" {
 		p = ver.encoderPools["*/*"]
 	}
 	if p == nil {
