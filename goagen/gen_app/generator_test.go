@@ -282,10 +282,10 @@ var _ = Describe("BuildEncoderMap", func() {
 		It("generates a map with a single entry", func() {
 			Ω(resErr).ShouldNot(HaveOccurred())
 			Ω(data).Should(HaveLen(1))
-			Ω(data).Should(HaveKey(""))
-			jd := data[""]
+			Ω(data).Should(HaveKey("json"))
+			jd := data["json"]
 			Ω(jd).ShouldNot(BeNil())
-			Ω(jd.PackagePath).Should(BeEmpty())
+			Ω(jd.PackagePath).Should(Equal("json"))
 			Ω(jd.PackageName).Should(Equal("goa"))
 			Ω(jd.Factory).Should(Equal("JSONEncoderFactory"))
 			Ω(jd.MIMETypes).Should(HaveLen(1))
@@ -305,10 +305,10 @@ var _ = Describe("BuildEncoderMap", func() {
 		It("generates a map with a single entry", func() {
 			Ω(resErr).ShouldNot(HaveOccurred())
 			Ω(data).Should(HaveLen(1))
-			Ω(data).Should(HaveKey(""))
-			jd := data[""]
+			Ω(data).Should(HaveKey("json"))
+			jd := data["json"]
 			Ω(jd).ShouldNot(BeNil())
-			Ω(jd.PackagePath).Should(BeEmpty())
+			Ω(jd.PackagePath).Should(Equal("json"))
 			Ω(jd.PackageName).Should(Equal("goa"))
 			Ω(jd.Factory).Should(Equal("JSONDecoderFactory"))
 			Ω(jd.MIMETypes).Should(HaveLen(1))

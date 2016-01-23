@@ -203,6 +203,9 @@ func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, v
 // This extra map is needed to handle the case where a single encoding definition maps to multiple
 // encoding packages. The data is indexed by encoder Go package path.
 func BuildEncoderMap(info []*design.EncodingDefinition, encoder bool) (map[string]*EncoderTemplateData, error) {
+	if len(info) == 0 {
+		return nil, nil
+	}
 	packages := make(map[string]map[string]bool)
 	for _, enc := range info {
 		supporting := enc.SupportingPackages()
@@ -220,6 +223,9 @@ func BuildEncoderMap(info []*design.EncodingDefinition, encoder bool) (map[strin
 		}
 	}
 	data := make(map[string]*EncoderTemplateData, len(packages))
+	if len(info[0].MIMETypes) == 0 {
+		return nil, fmt.Errorf("No mime type associated with encoding info for package %s", info[0].PackagePath)
+	}
 	defaultMediaType := info[0].MIMETypes[0]
 	for p, ms := range packages {
 		pkgName := "goa"
