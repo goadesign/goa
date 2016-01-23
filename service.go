@@ -39,11 +39,15 @@ type (
 		// Use adds a middleware to the service-wide middleware chain.
 		Use(m Middleware)
 
+		// ServeMux returns the service mux.
+		ServeMux() ServeMux
+
 		// ListenAndServe starts a HTTP server on the given port.
 		ListenAndServe(addr string) error
 
 		// ListenAndServeTLS starts a HTTPS server on the given port.
 		ListenAndServeTLS(add, certFile, keyFile string) error
+
 		// ServeFiles replies to the request with the contents of the named file or
 		// directory. The logic // for what to do when the filename points to a file vs. a
 		// directory is the same as the standard http package ServeFile function. The path
@@ -68,8 +72,8 @@ type (
 		// VersionName returns the version string ID
 		VersionName() string
 
-		// ServeMux returns the version request mux.
-		ServeMux() VersionMux
+		// VersionMux returns the version request mux.
+		VersionMux() VersionMux
 
 		// DecodeRequest uses registered Decoders to unmarshal the request body based on
 		// the request `Content-Type` header
@@ -210,7 +214,11 @@ func New(name string) Service {
 		mux:          NewMux(),
 		errorHandler: DefaultErrorHandler,
 	}
-	app.version = app.newVersion("")
+	app.version = &version{
+		decoderPools:          map[string]*decoderPool{},
+		encoderPools:          map[string]*encoderPool{},
+		encodableContentTypes: []string{},
+	}
 	return app
 }
 
@@ -248,6 +256,11 @@ func (app *Application) ErrorHandler() ErrorHandler {
 // method instead.
 func (app *Application) SetErrorHandler(handler ErrorHandler) {
 	app.errorHandler = handler
+}
+
+// ServeMux returns the top level service mux.
+func (app *Application) ServeMux() ServeMux {
+	return app.mux
 }
 
 // ListenAndServe starts a HTTP server and sets up a listener on the given host/port.
@@ -308,36 +321,27 @@ func (app *Application) Version(name string) ServiceVersion {
 	if ok {
 		return ver
 	}
-
-	ver = app.newVersion(name)
-	app.addVersion(ver)
-	return ver
-}
-
-// newVersion instantiates an version with the given name
-func (app *Application) newVersion(name string) *version {
-	return &version{
+	ver = &version{
 		name:                  name,
 		versionMux:            app.mux.Version(name),
 		decoderPools:          map[string]*decoderPool{},
 		encoderPools:          map[string]*encoderPool{},
 		encodableContentTypes: []string{},
 	}
-}
-
-func (app *Application) addVersion(ver *version) {
 	if app.versions == nil {
 		app.versions = make(map[string]*version, 1)
 	}
 	app.versions[ver.name] = ver
+
+	return ver
 }
 
-// ServeMux returns the top level mux.
-func (ver *version) ServeMux() VersionMux {
+// VersionMux returns the version specific mux.
+func (ver *version) VersionMux() VersionMux {
 	return ver.versionMux
 }
 
-// VersionName returns the version string ID
+// VersionName returns the version name.
 func (ver *version) VersionName() string {
 	return ver.name
 }
