@@ -39,11 +39,11 @@ var (
 	// KnownEncoders contains the list of encoding packages and factories known by goa indexed
 	// by MIME type.
 	KnownEncoders = map[string][3]string{
-		"application/json":      [3]string{"", "JSONFactory", "JSONFactory"},
-		"application/xml":       [3]string{"", "XMLFactory", "XMLFactory"},
-		"text/xml":              [3]string{"", "XMLFactory", "XMLFactory"},
-		"application/gob":       [3]string{"", "GobFactory", "GobFactory"},
-		"application/x-gob":     [3]string{"", "GobFactory", "GobFactory"},
+		"application/json":      [3]string{"", "JSONEncoderFactory", "JSONDecoderFactory"},
+		"application/xml":       [3]string{"", "XMLEncoderFactory", "XMLDecoderFactory"},
+		"text/xml":              [3]string{"", "XMLEncoderFactory", "XMLDecoderFactory"},
+		"application/gob":       [3]string{"", "GobEncoderFactory", "GobDecoderFactory"},
+		"application/x-gob":     [3]string{"", "GobEncoderFactory", "GobDecoderFactory"},
 		"application/binc":      [3]string{"github.com/goadesign/middleware/encoding/binc", "EncoderFactory", "DecoderFactory"},
 		"application/x-binc":    [3]string{"github.com/goadesign/middleware/encoding/binc", "EncoderFactory", "DecoderFactory"},
 		"application/x-cbor":    [3]string{"github.com/goadesign/middleware/encoding/cbor", "EncoderFactory", "DecoderFactory"},

@@ -63,14 +63,14 @@ type (
 		pool    *sync.Pool
 	}
 
-	// JSONFactory uses encoding/json to act as an DecoderFactory and EncoderFactory
-	JSONFactory struct{}
+	// jsonFactory uses encoding/json to act as an DecoderFactory and EncoderFactory
+	jsonFactory struct{}
 
-	// XMLFactory uses encoding/xml to act as an DecoderFactory and EncoderFactory
-	XMLFactory struct{}
+	// xmlFactory uses encoding/xml to act as an DecoderFactory and EncoderFactory
+	xmlFactory struct{}
 
-	// GobFactory uses encoding/gob to act as an DecoderFactory and EncoderFactory
-	GobFactory struct{}
+	// gobFactory uses encoding/gob to act as an DecoderFactory and EncoderFactory
+	gobFactory struct{}
 )
 
 var (
@@ -86,6 +86,36 @@ var (
 	// encoding/gob to unmarshal unless overwritten using SetDecoder
 	GobContentTypes = []string{"application/gob"}
 )
+
+// JSONEncoderFactory returns the default JSON encoder factory.
+func JSONEncoderFactory() EncoderFactory {
+	return &jsonFactory{}
+}
+
+// JSONDecoderFactory returns the default JSON decoder factory.
+func JSONDecoderFactory() DecoderFactory {
+	return &jsonFactory{}
+}
+
+// XMLEncoderFactory returns the default XML encoder factory.
+func XMLEncoderFactory() EncoderFactory {
+	return &xmlFactory{}
+}
+
+// XMLDecoderFactory returns the default XML decoder factory.
+func XMLDecoderFactory() DecoderFactory {
+	return &xmlFactory{}
+}
+
+// GobEncoderFactory returns the default gob encoder factory.
+func GobEncoderFactory() EncoderFactory {
+	return &gobFactory{}
+}
+
+// GobDecoderFactory returns the default gob encoder and decoder factory.
+func GobDecoderFactory() DecoderFactory {
+	return &gobFactory{}
+}
 
 // DecodeRequest uses registered Decoders to unmarshal the request body based on
 // the request `Content-Type` header
@@ -287,31 +317,31 @@ func (p *encoderPool) Put(e Encoder) {
 }
 
 // NewDecoder returns a new json.Decoder
-func (f *JSONFactory) NewDecoder(r io.Reader) Decoder {
+func (f *jsonFactory) NewDecoder(r io.Reader) Decoder {
 	return json.NewDecoder(r)
 }
 
 // NewEncoder returns a new json.Encoder
-func (f *JSONFactory) NewEncoder(w io.Writer) Encoder {
+func (f *jsonFactory) NewEncoder(w io.Writer) Encoder {
 	return json.NewEncoder(w)
 }
 
 // NewDecoder returns a new xml.Decoder
-func (f *XMLFactory) NewDecoder(r io.Reader) Decoder {
+func (f *xmlFactory) NewDecoder(r io.Reader) Decoder {
 	return xml.NewDecoder(r)
 }
 
 // NewEncoder returns a new xml.Encoder
-func (f *XMLFactory) NewEncoder(w io.Writer) Encoder {
+func (f *xmlFactory) NewEncoder(w io.Writer) Encoder {
 	return xml.NewEncoder(w)
 }
 
 // NewDecoder returns a new gob.Decoder
-func (f *GobFactory) NewDecoder(r io.Reader) Decoder {
+func (f *gobFactory) NewDecoder(r io.Reader) Decoder {
 	return gob.NewDecoder(r)
 }
 
 // NewEncoder returns a new gob.Encoder
-func (f *GobFactory) NewEncoder(w io.Writer) Encoder {
+func (f *gobFactory) NewEncoder(w io.Writer) Encoder {
 	return gob.NewEncoder(w)
 }
