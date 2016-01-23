@@ -25,25 +25,19 @@ var (
 	GeneratedMediaTypes MediaTypeRoot
 
 	// DefaultDecoders contains the decoding definitions used when no Consumes DSL is found.
-	DefaultDecoders = []*EncodingDefinition{
-		&EncodingDefinition{MIMETypes: []string{"application/json"}},
-		&EncodingDefinition{MIMETypes: []string{"application/xml", "text/xml"}},
-	}
+	DefaultDecoders []*EncodingDefinition
 
 	// DefaultEncoders contains the encoding definitions used when no Produces DSL is found.
-	DefaultEncoders = []*EncodingDefinition{
-		&EncodingDefinition{MIMETypes: []string{"application/json"}},
-		&EncodingDefinition{MIMETypes: []string{"application/xml", "text/xml"}},
-	}
+	DefaultEncoders []*EncodingDefinition
 
 	// KnownEncoders contains the list of encoding packages and factories known by goa indexed
 	// by MIME type.
 	KnownEncoders = map[string][3]string{
-		"application/json":      [3]string{"", "JSONEncoderFactory", "JSONDecoderFactory"},
-		"application/xml":       [3]string{"", "XMLEncoderFactory", "XMLDecoderFactory"},
-		"text/xml":              [3]string{"", "XMLEncoderFactory", "XMLDecoderFactory"},
-		"application/gob":       [3]string{"", "GobEncoderFactory", "GobDecoderFactory"},
-		"application/x-gob":     [3]string{"", "GobEncoderFactory", "GobDecoderFactory"},
+		"application/json":      [3]string{"json", "JSONEncoderFactory", "JSONDecoderFactory"},
+		"application/xml":       [3]string{"xml", "XMLEncoderFactory", "XMLDecoderFactory"},
+		"text/xml":              [3]string{"xml", "XMLEncoderFactory", "XMLDecoderFactory"},
+		"application/gob":       [3]string{"gob", "GobEncoderFactory", "GobDecoderFactory"},
+		"application/x-gob":     [3]string{"gob", "GobEncoderFactory", "GobDecoderFactory"},
 		"application/binc":      [3]string{"github.com/goadesign/middleware/encoding/binc", "EncoderFactory", "DecoderFactory"},
 		"application/x-binc":    [3]string{"github.com/goadesign/middleware/encoding/binc", "EncoderFactory", "DecoderFactory"},
 		"application/x-cbor":    [3]string{"github.com/goadesign/middleware/encoding/cbor", "EncoderFactory", "DecoderFactory"},
@@ -51,7 +45,28 @@ var (
 		"application/msgpack":   [3]string{"github.com/goadesign/middleware/encoding/msgpack", "EncoderFactory", "DecoderFactory"},
 		"application/x-msgpack": [3]string{"github.com/goadesign/middleware/encoding/msgpack", "EncoderFactory", "DecoderFactory"},
 	}
+
+	// JSONContentTypes is a slice of default Content-Type headers that will use stdlib
+	// encoding/json to unmarshal unless overwritten using SetDecoder
+	JSONContentTypes = []string{"application/json"}
+
+	// XMLContentTypes is a slice of default Content-Type headers that will use stdlib
+	// encoding/xml to unmarshal unless overwritten using SetDecoder
+	XMLContentTypes = []string{"application/xml", "text/xml"}
+
+	// GobContentTypes is a slice of default Content-Type headers that will use stdlib
+	// encoding/gob to unmarshal unless overwritten using SetDecoder
+	GobContentTypes = []string{"application/gob", "application/x-gob"}
 )
+
+func init() {
+	var types []string
+	types = append(types, JSONContentTypes...)
+	types = append(types, XMLContentTypes...)
+	types = append(types, GobContentTypes...)
+	DefaultEncoders = []*EncodingDefinition{&EncodingDefinition{MIMETypes: types}}
+	DefaultDecoders = []*EncodingDefinition{&EncodingDefinition{MIMETypes: types}}
+}
 
 type (
 	// APIDefinition defines the global properties of the API.
@@ -811,10 +826,16 @@ func (enc *EncodingDefinition) Context() string {
 	return fmt.Sprintf("encoding for %s", strings.Join(enc.MIMETypes, ", "))
 }
 
-// hasKnownEncoder returns true if the encoder for the given MIME type is known by goa.
+// HasKnownEncoder returns true if the encoder for the given MIME type is known by goa.
 // MIME types with unknown encoders must be associated with a package path explicitly in the DSL.
-func hasKnownEncoder(mimeType string) bool {
+func HasKnownEncoder(mimeType string) bool {
 	return KnownEncoders[mimeType][1] != ""
+}
+
+// IsGoaEncoder returns true if the encoder for the given MIME type is implemented in the goa
+// package.
+func IsGoaEncoder(pkgPath string) bool {
+	return pkgPath == "json" || pkgPath == "xml" || pkgPath == "gob"
 }
 
 // SupportingPackages returns the package paths to the packages that implements the encoders and
@@ -827,7 +848,7 @@ func (enc *EncodingDefinition) SupportingPackages() map[string][]string {
 		return map[string][]string{enc.PackagePath: enc.MIMETypes}
 	}
 	mimeTypes := enc.MIMETypes
-	if len(mimeTypes) == 0 || !hasKnownEncoder(mimeTypes[0]) {
+	if len(mimeTypes) == 0 || !HasKnownEncoder(mimeTypes[0]) {
 		// invalid definition
 		return nil
 	}
@@ -837,7 +858,7 @@ func (enc *EncodingDefinition) SupportingPackages() map[string][]string {
 		return paths
 	}
 	for _, m := range mimeTypes[1:] {
-		if !hasKnownEncoder(m) {
+		if !HasKnownEncoder(m) {
 			return nil
 		}
 		e := KnownEncoders[m][0]

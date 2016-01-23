@@ -115,6 +115,8 @@ type (
 		Factory string
 		// MIMETypes is the list of supported MIME types.
 		MIMETypes []string
+		// Default is true if this encoder / decoder should be set as the default.
+		Default bool
 	}
 )
 
@@ -420,12 +422,12 @@ type {{.Resource}}Controller interface {
 // Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given service.
 func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Controller) {
 	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
-{{$ctx := .}}{{$default := true}}{{range .EncoderMap}}{{$tmp := tempvar}}{{/*
+{{$ctx := .}}{{range .EncoderMap}}{{$tmp := tempvar}}{{/*
 */}}	{{$tmp}} := {{.PackageName}}.{{.Factory}}()
-	service.{{if not $ctx.Version.IsDefault}}Version("{{$ctx.Version.Version}}").{{end}}SetEncoder({{$tmp}}, {{$default}}, "{{join .MIMETypes "\", \""}}"){{$default := "false"}}
-{{end}}{{$default := true}}{{range .DecoderMap}}{{$tmp := tempvar}}{{/*
+	service.{{if not $ctx.Version.IsDefault}}Version("{{$ctx.Version.Version}}").{{end}}SetEncoder({{$tmp}}, {{.Default}}, "{{join .MIMETypes "\", \""}}")
+{{end}}{{range .DecoderMap}}{{$tmp := tempvar}}{{/*
 */}}	{{$tmp}} := {{.PackageName}}.{{.Factory}}()
-	service.{{if not $ctx.Version.IsDefault}}Version("{{$ctx.Version.Version}}").{{end}}SetDecoder({{$tmp}}, {{$default}}, "{{join .MIMETypes "\", \""}}"){{$default := "false"}}
+	service.{{if not $ctx.Version.IsDefault}}Version("{{$ctx.Version.Version}}").{{end}}SetDecoder({{$tmp}}, {{.Default}}, "{{join .MIMETypes "\", \""}}")
 {{end}}
 	// Setup endpoint handler
 	var h goa.Handler
