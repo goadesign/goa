@@ -19,6 +19,8 @@ var _ = Describe("Application", func() {
 
 	BeforeEach(func() {
 		s = goa.New(appName)
+		s.SetDecoder(goa.JSONDecoderFactory(), true, "*/*")
+		s.SetEncoder(goa.JSONEncoderFactory(), true, "*/*")
 	})
 
 	Describe("New", func() {
@@ -206,10 +208,23 @@ var _ = Describe("Application", func() {
 
 				Context("with a Content-Type of 'application/octet-stream' or any other", func() {
 					BeforeEach(func() {
+						s.SetDecoder(goa.JSONDecoderFactory(), false, "*/*")
 						r.Header.Set("Content-Type", "application/octet-stream")
 					})
 
-					It("should have a nil payload", func() {
+					It("should use the default decoder", func() {
+						Ω(ctx.RawPayload()).Should(Equal(decodedContent))
+					})
+				})
+
+				Context("with a Content-Type of 'application/octet-stream' or any other and no default decoder", func() {
+					BeforeEach(func() {
+						s = goa.New("test")
+						s.SetDecoder(goa.JSONDecoderFactory(), false, "application/json")
+						r.Header.Set("Content-Type", "application/octet-stream")
+					})
+
+					It("should bypass decoding", func() {
 						Ω(ctx.RawPayload()).Should(BeNil())
 					})
 				})

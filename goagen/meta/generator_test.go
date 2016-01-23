@@ -105,7 +105,7 @@ var _ = Describe("Run", func() {
 
 		It("fails with a useful error message", func() {
 			path := fmt.Sprintf("%s", filepath.Join(invalidPath, "src", filepath.FromSlash(designPackagePath)))
-			msg := fmt.Sprintf(`cannot find design package in any of the paths [^,]+, %s`, regexp.QuoteMeta(path))
+			msg := fmt.Sprintf(`[^,]+, %s do not contain a Go package`, regexp.QuoteMeta(path))
 			Ω(compileError).Should(MatchError(MatchRegexp(msg)))
 		})
 
@@ -119,8 +119,8 @@ var _ = Describe("Run", func() {
 		})
 
 		It("fails with a useful error message", func() {
-			msg := fmt.Sprintf(`cannot find design package in any of the paths`)
-			Ω(compileError).Should(MatchError(HavePrefix(msg)))
+			msg := `do not contain a Go package`
+			Ω(compileError).Should(MatchError(HaveSuffix(msg)))
 			Ω(compileError).Should(MatchError(ContainSubstring(invalidDesignPackage)))
 		})
 	})

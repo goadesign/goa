@@ -297,6 +297,14 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 			paramMap[p.Name] = p
 		}
 	}
+	var consumes []string
+	for _, c := range api.Consumes {
+		consumes = append(consumes, c.MIMETypes...)
+	}
+	var produces []string
+	for _, p := range api.Produces {
+		produces = append(produces, p.MIMETypes...)
+	}
 	s := &Swagger{
 		Swagger: "2.0",
 		Info: &Info{
@@ -311,8 +319,8 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 		BasePath:     api.BasePath,
 		Paths:        make(map[string]*Path),
 		Schemes:      api.Schemes,
-		Consumes:     []string{"application/json"},
-		Produces:     []string{"application/json"},
+		Consumes:     consumes,
+		Produces:     produces,
 		Parameters:   paramMap,
 		Tags:         tags,
 		ExternalDocs: docsFromDefinition(api.Docs),
@@ -551,8 +559,6 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		Description:  action.Description,
 		ExternalDocs: docsFromDefinition(action.Docs),
 		OperationID:  operationID,
-		Consumes:     []string{"application/json"},
-		Produces:     []string{"application/json"},
 		Parameters:   params,
 		Responses:    responses,
 		Schemes:      schemes,

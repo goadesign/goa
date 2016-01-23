@@ -87,9 +87,11 @@ type (
 
 	// ControllerTemplateData contains the information required to generate an action handler.
 	ControllerTemplateData struct {
-		Resource string                       // Lower case plural resource name, e.g. "bottles"
-		Actions  []map[string]interface{}     // Array of actions, each action has keys "Name", "Routes", "Context" and "Unmarshal"
-		Version  *design.APIVersionDefinition // Controller API version
+		Resource   string                          // Lower case plural resource name, e.g. "bottles"
+		Actions    []map[string]interface{}        // Array of actions, each action has keys "Name", "Routes", "Context" and "Unmarshal"
+		Version    *design.APIVersionDefinition    // Controller API version
+		EncoderMap map[string]*EncoderTemplateData // Encoder data indexed by package path
+		DecoderMap map[string]*EncoderTemplateData // Decoder data indexed by package path
 	}
 
 	// ResourceData contains the information required to generate the resource GoGenerator
@@ -100,6 +102,21 @@ type (
 		Type              *design.MediaTypeDefinition // Type of resource media type
 		CanonicalTemplate string                      // CanonicalFormat represents the resource canonical path in the form of a fmt.Sprintf format.
 		CanonicalParams   []string                    // CanonicalParams is the list of parameter names that appear in the resource canonical path in order.
+	}
+
+	// EncoderTemplateData containes the data needed to render the registration code for a single
+	// encoder or decoder package.
+	EncoderTemplateData struct {
+		// PackagePath is the Go package path to the package implmenting the encoder / decoder.
+		PackagePath string
+		// PackageName is the name of the Go package implementing the encoder / decoder.
+		PackageName string
+		// Factory is the name of the package variable implementing the decoder / encoder factory.
+		Factory string
+		// MIMETypes is the list of supported MIME types.
+		MIMETypes []string
+		// Default is true if this encoder / decoder should be set as the default.
+		Default bool
 	}
 )
 
@@ -404,11 +421,21 @@ type {{.Resource}}Controller interface {
 	mountT = `
 // Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given service.
 func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Controller) {
+	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
+{{$ctx := .}}{{range .EncoderMap}}{{$tmp := tempvar}}{{/*
+*/}}	{{$tmp}} := {{.PackageName}}.{{.Factory}}()
+	service.{{if not $ctx.Version.IsDefault}}Version("{{$ctx.Version.Version}}").{{end}}SetEncoder({{$tmp}}, {{.Default}}, "{{join .MIMETypes "\", \""}}")
+{{end}}{{range .DecoderMap}}{{$tmp := tempvar}}{{/*
+*/}}	{{$tmp}} := {{.PackageName}}.{{.Factory}}()
+	service.{{if not $ctx.Version.IsDefault}}Version("{{$ctx.Version.Version}}").{{end}}SetDecoder({{$tmp}}, {{.Default}}, "{{join .MIMETypes "\", \""}}")
+{{end}}
+	// Setup endpoint handler
 	var h goa.Handler
-	mux := service.ServeMux(){{if not .Version.IsDefault}}.Version("{{.Version.Version}}"){{end}}
+	mux := service.{{if not .Version.IsDefault}}Version("{{.Version.Version}}").{{end}}ServeMux()
 {{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
 		ctx, err := New{{.Context}}(c)
-{{if .Payload}}		ctx.Payload = ctx.RawPayload().(*{{gotypename .Payload nil 1}})
+{{if not $ver.IsDefault}}		ctx.Version = service.Version("{{$ver.Version}}")
+{{end}}{{if .Payload}}		ctx.Payload = ctx.RawPayload().(*{{gotypename .Payload nil 1}})
 {{end}}		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
