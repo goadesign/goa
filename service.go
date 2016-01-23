@@ -68,8 +68,8 @@ type (
 		// VersionName returns the version string ID
 		VersionName() string
 
-		// ServeMux returns the service request mux.
-		ServeMux() ServeMux
+		// ServeMux returns the version request mux.
+		ServeMux() VersionMux
 
 		// DecodeRequest uses registered Decoders to unmarshal the request body based on
 		// the request `Content-Type` header
@@ -84,14 +84,14 @@ type (
 		// If makeDefault is true then the decoder is used to decode request payloads where
 		// none of the registered decoders support the content type (i.e. match the request
 		// "Content-Type" header).
-		SetDecoder(f DecoderFactory, version string, makeDefault bool, contentTypes ...string)
+		SetDecoder(f DecoderFactory, makeDefault bool, contentTypes ...string)
 
 		// SetEncoder registers an encoder with the service for a given API version. Set
 		// version to the empty string to register an encoder with unversioned endpoints.
 		// If makeDefault is true then the encoder is used to encode request payloads where
 		// none of the registered decoders support any of the accepted content types (i.e.
 		// match the request "Accept" header).
-		SetEncoder(f EncoderFactory, version string, makeDefault bool, contentTypes ...string)
+		SetEncoder(f EncoderFactory, makeDefault bool, contentTypes ...string)
 	}
 
 	// Controller is the interface implemented by all goa controllers.
@@ -137,6 +137,7 @@ type (
 		name         string              // Application name
 		errorHandler ErrorHandler        // Application error handler
 		middleware   []Middleware        // Middleware chain
+		mux          ServeMux            // Root mux
 		versions     map[string]*version // Versions by version string
 	}
 
@@ -144,7 +145,7 @@ type (
 	// data that needs to be different per version lives.
 	version struct {
 		name                  string                  // This is the version string
-		mux                   ServeMux                // Version level mux
+		versionMux            VersionMux              // Version level mux
 		decoderPools          map[string]*decoderPool // Registered decoders for the service
 		encoderPools          map[string]*encoderPool // Registered encoders for the service
 		encodableContentTypes []string                // List of contentTypes for response negotiation
@@ -206,6 +207,7 @@ func New(name string) Service {
 	app := &Application{
 		Logger:       Log.New("app", name),
 		name:         name,
+		mux:          NewMux(),
 		errorHandler: DefaultErrorHandler,
 	}
 	app.version = app.newVersion("")
@@ -316,7 +318,7 @@ func (app *Application) Version(name string) ServiceVersion {
 func (app *Application) newVersion(name string) *version {
 	return &version{
 		name:                  name,
-		mux:                   NewMux(),
+		versionMux:            app.mux.Version(name),
 		decoderPools:          map[string]*decoderPool{},
 		encoderPools:          map[string]*encoderPool{},
 		encodableContentTypes: []string{},
@@ -331,8 +333,8 @@ func (app *Application) addVersion(ver *version) {
 }
 
 // ServeMux returns the top level mux.
-func (ver *version) ServeMux() ServeMux {
-	return ver.mux
+func (ver *version) ServeMux() VersionMux {
+	return ver.versionMux
 }
 
 // VersionName returns the version string ID

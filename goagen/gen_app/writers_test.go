@@ -956,18 +956,33 @@ type BottlesController interface {
 `
 
 	encoderController = `
-// initEncoding initializes the decoder and encoder pools to support the MIME types defined in the
-// "Consumes" and "Produces" DSL of the API.
-func initEncoding(service goa.Service) {
+// MountBottlesController "mounts" a Bottles resource controller on the given service.
+func MountBottlesController(service goa.Service, ctrl BottlesController) {
+	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
 	tmp1 := goa.JSONEncoderFactory()
-	service.SetEncoder(tmp1, "true", "application/json")
+	service.SetEncoder(tmp1, true, "application/json")
 	tmp2 := goa.JSONDecoderFactory()
-	service.SetDecoder(tmp2, "true", "application/json")
+	service.SetDecoder(tmp2, true, "application/json")
+
+	// Setup endpoint handler
+	var h goa.Handler
+	mux := service.ServeMux()
+	h = func(c *goa.Context) error {
+		ctx, err := NewListBottleContext(c)
+		if err != nil {
+			return goa.NewBadRequestError(err)
+		}
+		return ctrl.list(ctx)
+	}
+	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.HandleFunc("list", h, nil))
+	service.Info("mount", "ctrl", "Bottles", "action", "list", "route", "GET /accounts/:accountID/bottles")
 }
 `
 
 	simpleMount = `func MountBottlesController(service goa.Service, ctrl BottlesController) {
-	initEncoding(service)
+	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
+
+	// Setup endpoint handler
 	var h goa.Handler
 	mux := service.ServeMux()
 	h = func(c *goa.Context) error {
@@ -991,7 +1006,9 @@ type BottlesController interface {
 `
 
 	multiMount = `func MountBottlesController(service goa.Service, ctrl BottlesController) {
-	initEncoding(service)
+	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
+
+	// Setup endpoint handler
 	var h goa.Handler
 	mux := service.ServeMux()
 	h = func(c *goa.Context) error {

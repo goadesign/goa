@@ -206,9 +206,6 @@ func (w *ControllersWriter) Execute(data []*ControllerTemplateData) error {
 		if err := w.ExecuteTemplate("mount", mountT, nil, d); err != nil {
 			return err
 		}
-		if err := w.ExecuteTemplate("encoding", encodingT, nil, d); err != nil {
-			return err
-		}
 		if err := w.ExecuteTemplate("unmarshal", unmarshalT, nil, d); err != nil {
 			return err
 		}
@@ -422,7 +419,15 @@ type {{.Resource}}Controller interface {
 	mountT = `
 // Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given service.
 func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Controller) {
-	initEncoding(service)
+	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
+{{$ctx := .}}{{$default := true}}{{range .EncoderMap}}{{$tmp := tempvar}}{{/*
+*/}}	{{$tmp}} := {{.PackageName}}.{{.Factory}}()
+	service.{{if not $ctx.Version.IsDefault}}Version("{{$ctx.Version.Version}}").{{end}}SetEncoder({{$tmp}}, {{$default}}, "{{join .MIMETypes "\", \""}}"){{$default := "false"}}
+{{end}}{{$default := true}}{{range .DecoderMap}}{{$tmp := tempvar}}{{/*
+*/}}	{{$tmp}} := {{.PackageName}}.{{.Factory}}()
+	service.{{if not $ctx.Version.IsDefault}}Version("{{$ctx.Version.Version}}").{{end}}SetDecoder({{$tmp}}, {{$default}}, "{{join .MIMETypes "\", \""}}"){{$default := "false"}}
+{{end}}
+	// Setup endpoint handler
 	var h goa.Handler
 	mux := service.{{if not .Version.IsDefault}}Version("{{.Version.Version}}").{{end}}ServeMux()
 {{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
@@ -437,22 +442,6 @@ func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Control
 {{range .Routes}}	mux.Handle("{{.Verb}}", "{{.FullPath $ver}}", ctrl.HandleFunc("{{$action.Name}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
 	service.Info("mount", "ctrl", "{{$res}}",{{if not $ver.IsDefault}} "version", "{{$ver.Version}}",{{end}} "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath $ver}}")
 {{end}}{{end}}}
-`
-
-	// encodingT generates the code that initializes the encoders and decoders for a given API
-	// version.
-	// template input: *ControllerTemplateData
-	encodingT = `
-// initEncoding initializes the decoder and encoder pools to support the MIME types defined in the
-// "Consumes" and "Produces" DSL of the API{{if not .Version.IsDefault}} {{.Version.Version}}{{end}}.
-func initEncoding(service goa.Service) {
-{{$ctx := .}}{{$default := "true"}}{{range .EncoderMap}}{{$tmp := tempvar}}{{/*
-*/}}	{{$tmp}} := {{.PackageName}}.{{.Factory}}()
-	service.{{if not $ctx.Version.IsDefault}}Version("{{$ctx.Version.Version}}").{{end}}SetEncoder({{$tmp}}, "{{$default}}", "{{join .MIMETypes "\", \""}}"){{$default := "false"}}
-{{end}}{{$default := "true"}}{{range .DecoderMap}}{{$tmp := tempvar}}{{/*
-*/}}	{{$tmp}} := {{.PackageName}}.{{.Factory}}()
-	service.{{if not $ctx.Version.IsDefault}}Version("{{$ctx.Version.Version}}").{{end}}SetDecoder({{$tmp}}, "{{$default}}", "{{join .MIMETypes "\", \""}}"){{$default := "false"}}
-{{end}}}
 `
 
 	// unmarshalT generates the code for an action payload unmarshal function.

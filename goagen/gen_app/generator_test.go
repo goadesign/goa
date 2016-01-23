@@ -414,7 +414,9 @@ type WidgetController interface {
 
 // MountWidgetController "mounts" a Widget resource controller on the given service.
 func MountWidgetController(service goa.Service, ctrl WidgetController) {
-	initEncoding(service)
+	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
+
+	// Setup endpoint handler
 	var h goa.Handler
 	mux := service.{{if .version}}Version("{{.version}}").{{end}}ServeMux()
 	h = func(c *goa.Context) error {
@@ -427,11 +429,6 @@ func MountWidgetController(service goa.Service, ctrl WidgetController) {
 	}
 	mux.Handle("GET", "/:id", ctrl.HandleFunc("Get", h, nil))
 	service.Info("mount", "ctrl", "Widget",{{if .version}} "version", "{{.version}}",{{end}} "action", "Get", "route", "GET /:id")
-}
-
-// initEncoding initializes the decoder and encoder pools to support the MIME types defined in the
-// "Consumes" and "Produces" DSL of the API{{if .version}} {{.version}}{{end}}.
-func initEncoding(service goa.Service) {
 }
 `
 
