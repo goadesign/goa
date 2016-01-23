@@ -20,12 +20,12 @@ type (
 		// Logging methods, configure the log handler using the Logger global variable.
 		log.Logger
 
-		// Version embeds the Version interface
-		Version
+		// ServiceVersion embeds the Version interface
+		ServiceVersion
 
-		// GetVersion returns an object that implements Version based on the version name.
+		// Version returns an object that implements ServiceVersion based on the version name.
 		// If there is no version registered, it will instantiate a new version.
-		GetVersion(name string) Version
+		Version(name string) ServiceVersion
 
 		// Name is the name of the goa application.
 		Name() string
@@ -62,11 +62,11 @@ type (
 		NewController(resName string) Controller
 	}
 
-	// Version is the interface for interacting with individual versions. It is embedded by
+	// ServiceVersion is the interface for interacting with individual versions. It is embedded by
 	// application for default use with versionless apps
-	Version interface {
-		// Version returns the version string ID
-		Version() string
+	ServiceVersion interface {
+		// VersionName returns the version string ID
+		VersionName() string
 
 		// ServeMux returns the service request mux.
 		ServeMux() ServeMux
@@ -295,9 +295,9 @@ func (app *Application) ServeFiles(path, filename string) error {
 	return nil
 }
 
-// GetVersion returns an object that implements Version based on the version name.
+// Version returns an object that implements ServiceVersion based on the version name.
 // If there is no version registered, it will instantiate a new version.
-func (app *Application) GetVersion(name string) Version {
+func (app *Application) Version(name string) ServiceVersion {
 	if app.versions == nil {
 		app.versions = make(map[string]*version, 1)
 	}
@@ -335,8 +335,8 @@ func (ver *version) ServeMux() ServeMux {
 	return ver.mux
 }
 
-// Version returns the version string ID
-func (ver *version) Version() string {
+// VersionName returns the version string ID
+func (ver *version) VersionName() string {
 	return ver.name
 }
 
