@@ -960,9 +960,9 @@ type BottlesController interface {
 func MountBottlesController(service goa.Service, ctrl BottlesController) {
 	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
 	tmp1 := goa.JSONEncoderFactory()
-	service.SetEncoder(tmp1, true, "application/json")
+	service.SetEncoder(tmp1, false, "application/json")
 	tmp2 := goa.JSONDecoderFactory()
-	service.SetDecoder(tmp2, true, "application/json")
+	service.SetDecoder(tmp2, false, "application/json")
 
 	// Setup endpoint handler
 	var h goa.Handler

@@ -36,7 +36,7 @@ var _ = Describe("SupportingPackages", func() {
 
 	Context("with a valid definition with one media type and no package path", func() {
 		BeforeEach(func() {
-			packagePath = ""
+			packagePath = "json"
 		})
 
 		It("returns a map with one element", func() {
@@ -53,7 +53,7 @@ var _ = Describe("SupportingPackages", func() {
 
 		It("returns all encoders", func() {
 			Ω(pkgs).Should(HaveLen(2))
-			Ω(pkgs).Should(HaveKeyWithValue("", []string{"application/xml"}))
+			Ω(pkgs).Should(HaveKeyWithValue("xml", []string{"application/xml"}))
 			Ω(pkgs).Should(HaveKeyWithValue("github.com/goadesign/middleware/encoding/msgpack", []string{"application/msgpack"}))
 		})
 	})
