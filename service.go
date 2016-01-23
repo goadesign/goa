@@ -65,8 +65,8 @@ type (
 	// ServiceVersion is the interface for interacting with individual versions. It is embedded by
 	// application for default use with versionless apps
 	ServiceVersion interface {
-		// VersionID returns the version string ID
-		VersionID() string
+		// VersionName returns the version string ID
+		VersionName() string
 
 		// ServeMux returns the service request mux.
 		ServeMux() ServeMux
@@ -335,8 +335,8 @@ func (ver *version) ServeMux() ServeMux {
 	return ver.mux
 }
 
-// Version returns the version string ID
-func (ver *version) VersionID() string {
+// VersionName returns the version string ID
+func (ver *version) VersionName() string {
 	return ver.name
 }
 
