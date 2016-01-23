@@ -394,6 +394,7 @@ var _ = Describe("ControllersWriter", func() {
 			})
 
 			JustBeforeEach(func() {
+				codegen.TempCount = 0
 				d := &genapp.ControllerTemplateData{
 					Resource: "Bottles",
 					Version:  &design.APIVersionDefinition{},
