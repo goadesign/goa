@@ -115,8 +115,8 @@ var _ = Describe("Context", func() {
 
 		BeforeEach(func() {
 			app = goa.New(appName)
-			app.SetDecoder(&goa.JSONFactory{}, "", true, "*/*")
-			app.SetEncoder(&goa.JSONFactory{}, "", true, "*/*")
+			app.SetDecoder(goa.JSONDecoderFactory(), "", true, "*/*")
+			app.SetEncoder(goa.JSONEncoderFactory(), "", true, "*/*")
 			handler = func(c *goa.Context) error {
 				ctx = c
 				c.RespondBytes(respStatus, respContent)

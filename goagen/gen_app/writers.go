@@ -447,10 +447,10 @@ func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Control
 func initEncoding(service goa.Service) {
 {{$ctx := .}}{{$default := "true"}}{{range .EncoderMap}}{{$tmp := tempvar}}{{/*
 */}}	{{$tmp}} := {{.PackageName}}.{{.Factory}}()
- 	service.SetEncoder({{$tmp}}, "{{$ctx.Version.Version}}", "{{$default}}", {{join .MIMETypes}}){{$default := "false"}}
+	service.SetEncoder({{$tmp}}, "{{$ctx.Version.Version}}", "{{$default}}", "{{join .MIMETypes "\", \""}}"){{$default := "false"}}
 {{end}}{{$default := "true"}}{{range .DecoderMap}}{{$tmp := tempvar}}{{/*
 */}}	{{$tmp}} := {{.PackageName}}.{{.Factory}}()
-	service.SetDecoder({{$tmp}}, "{{$ctx.Version.Version}}", "{{$default}}", {{join .MIMETypes ", "}}){{$default := "false"}}
+	service.SetDecoder({{$tmp}}, "{{$ctx.Version.Version}}", "{{$default}}", "{{join .MIMETypes "\", \""}}"){{$default := "false"}}
 {{end}}}
 `
 
