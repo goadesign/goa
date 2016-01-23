@@ -84,14 +84,14 @@ type (
 		// If makeDefault is true then the decoder is used to decode request payloads where
 		// none of the registered decoders support the content type (i.e. match the request
 		// "Content-Type" header).
-		SetDecoder(f DecoderFactory, version string, makeDefault bool, contentTypes ...string)
+		SetDecoder(f DecoderFactory, makeDefault bool, contentTypes ...string)
 
 		// SetEncoder registers an encoder with the service for a given API version. Set
 		// version to the empty string to register an encoder with unversioned endpoints.
 		// If makeDefault is true then the encoder is used to encode request payloads where
 		// none of the registered decoders support any of the accepted content types (i.e.
 		// match the request "Accept" header).
-		SetEncoder(f EncoderFactory, version string, makeDefault bool, contentTypes ...string)
+		SetEncoder(f EncoderFactory, makeDefault bool, contentTypes ...string)
 	}
 
 	// Controller is the interface implemented by all goa controllers.
