@@ -1,14 +1,12 @@
 package goa
 
 import (
-	"bufio"
 	"encoding/gob"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
 	"mime"
-	"net/http"
 	"sync"
 
 	"github.com/golang/gddo/httputil"
@@ -120,21 +118,6 @@ func (ver *version) DecodeRequest(ctx *Context, v interface{}) error {
 	}
 
 	return nil
-}
-
-func detectContentType(ctx *Context, body io.Reader) string {
-	bodyBuf := bufio.NewReader(body)
-	// http.DetectContentType uses a max of 512 bytes
-	peekSize := 512
-	if bodyBuf.Buffered() < peekSize {
-		peekSize = bodyBuf.Buffered()
-	}
-	b, err := bodyBuf.Peek(peekSize)
-	if err != nil {
-		return "*/*"
-	}
-
-	return http.DetectContentType(b)
 }
 
 // SetDecoder sets a specific decoder to be used for the specified content types. If
