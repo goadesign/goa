@@ -208,7 +208,7 @@ func New(name string) Service {
 		name:         name,
 		errorHandler: DefaultErrorHandler,
 	}
-	app.version = app.newVersion("goaDefault").(*version)
+	app.version = app.newVersion("")
 	return app
 }
 
@@ -307,19 +307,27 @@ func (app *Application) GetVersion(name string) Version {
 		return ver
 	}
 
-	return app.newVersion(name)
+	ver = app.newVersion(name)
+	app.addVersion(ver)
+	return ver
 }
 
-// newVersion instantiates an version with the given name and default decoders/encoders.
-func (app *Application) newVersion(name string) Version {
-	app.versions[name] = &version{
+// newVersion instantiates an version with the given name
+func (app *Application) newVersion(name string) *version {
+	return &version{
 		name:                  name,
 		mux:                   NewMux(),
 		decoderPools:          map[string]*decoderPool{},
 		encoderPools:          map[string]*encoderPool{},
 		encodableContentTypes: []string{},
 	}
-	return app.versions[name]
+}
+
+func (app *Application) addVersion(ver *version) {
+	if app.versions == nil {
+		app.versions = make(map[string]*version, 1)
+	}
+	app.versions[ver.name] = ver
 }
 
 // ServeMux returns the top level mux.
