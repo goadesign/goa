@@ -203,11 +203,13 @@ func init() {
 
 // New instantiates an application with the given name and default decoders/encoders.
 func New(name string) Service {
-	return &Application{
+	app := &Application{
 		Logger:       Log.New("app", name),
 		name:         name,
 		errorHandler: DefaultErrorHandler,
 	}
+	app.version = app.newVersion("goaDefault").(*version)
+	return app
 }
 
 // Cancel sends a cancellation signal to all handlers through the action context.
