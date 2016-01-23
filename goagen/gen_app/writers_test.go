@@ -378,6 +378,7 @@ var _ = Describe("ControllersWriter", func() {
 		Context("with data", func() {
 			var actions, verbs, paths, contexts, unmarshals []string
 			var payloads []*design.UserTypeDefinition
+			var encoderMap, decoderMap map[string]*genapp.EncoderTemplateData
 
 			var data []*genapp.ControllerTemplateData
 
@@ -388,9 +389,12 @@ var _ = Describe("ControllersWriter", func() {
 				contexts = nil
 				unmarshals = nil
 				payloads = nil
+				encoderMap = nil
+				decoderMap = nil
 			})
 
 			JustBeforeEach(func() {
+				codegen.TempCount = 0
 				d := &genapp.ControllerTemplateData{
 					Resource: "Bottles",
 					Version:  &design.APIVersionDefinition{},
@@ -419,6 +423,8 @@ var _ = Describe("ControllersWriter", func() {
 				}
 				if len(as) > 0 {
 					d.Actions = as
+					d.EncoderMap = encoderMap
+					d.DecoderMap = decoderMap
 					data = []*genapp.ControllerTemplateData{d}
 				} else {
 					data = nil
@@ -538,6 +544,39 @@ var _ = Describe("ControllersWriter", func() {
 					Ω(written).ShouldNot(BeEmpty())
 					Ω(written).Should(ContainSubstring(multiController))
 					Ω(written).Should(ContainSubstring(multiMount))
+				})
+			})
+
+			Context("with encoder and decoder maps", func() {
+				BeforeEach(func() {
+					actions = []string{"list"}
+					verbs = []string{"GET"}
+					paths = []string{"/accounts/:accountID/bottles"}
+					contexts = []string{"ListBottleContext"}
+					encoderMap = map[string]*genapp.EncoderTemplateData{
+						"": &genapp.EncoderTemplateData{
+							PackageName: "goa",
+							Factory:     "JSONEncoderFactory",
+							MIMETypes:   []string{"application/json"},
+						},
+					}
+					decoderMap = map[string]*genapp.EncoderTemplateData{
+						"": &genapp.EncoderTemplateData{
+							PackageName: "goa",
+							Factory:     "JSONDecoderFactory",
+							MIMETypes:   []string{"application/json"},
+						},
+					}
+				})
+
+				It("writes the controllers code", func() {
+					err := writer.Execute(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(encoderController))
 				})
 			})
 		})
@@ -916,7 +955,34 @@ type BottlesController interface {
 }
 `
 
+	encoderController = `
+// MountBottlesController "mounts" a Bottles resource controller on the given service.
+func MountBottlesController(service goa.Service, ctrl BottlesController) {
+	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
+	tmp1 := goa.JSONEncoderFactory()
+	service.SetEncoder(tmp1, false, "application/json")
+	tmp2 := goa.JSONDecoderFactory()
+	service.SetDecoder(tmp2, false, "application/json")
+
+	// Setup endpoint handler
+	var h goa.Handler
+	mux := service.ServeMux()
+	h = func(c *goa.Context) error {
+		ctx, err := NewListBottleContext(c)
+		if err != nil {
+			return goa.NewBadRequestError(err)
+		}
+		return ctrl.list(ctx)
+	}
+	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.HandleFunc("list", h, nil))
+	service.Info("mount", "ctrl", "Bottles", "action", "list", "route", "GET /accounts/:accountID/bottles")
+}
+`
+
 	simpleMount = `func MountBottlesController(service goa.Service, ctrl BottlesController) {
+	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
+
+	// Setup endpoint handler
 	var h goa.Handler
 	mux := service.ServeMux()
 	h = func(c *goa.Context) error {
@@ -940,6 +1006,9 @@ type BottlesController interface {
 `
 
 	multiMount = `func MountBottlesController(service goa.Service, ctrl BottlesController) {
+	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
+
+	// Setup endpoint handler
 	var h goa.Handler
 	mux := service.ServeMux()
 	h = func(c *goa.Context) error {

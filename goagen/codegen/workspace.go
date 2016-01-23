@@ -302,9 +302,9 @@ func PackageSourcePath(pkg string) (string, error) {
 	}
 	if absPath == "" {
 		if len(candidates) == 1 {
-			return "", fmt.Errorf(`cannot find design package at path "%s"`, candidates[0])
+			return "", fmt.Errorf(`%s does not contain a Go package`, candidates[0])
 		}
-		return "", fmt.Errorf(`cannot find design package in any of the paths %s`, strings.Join(candidates, ", "))
+		return "", fmt.Errorf(`%s do not contain a Go package`, strings.Join(candidates, ", "))
 	}
 	return absPath, nil
 }
@@ -316,17 +316,17 @@ func PackageName(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	pkgNames := make([]string, len(pkgs))
-	i := 0
+	var pkgNames []string
 	for n := range pkgs {
-		pkgNames[i] = n
-		i++
+		if !strings.HasSuffix(n, "_test") {
+			pkgNames = append(pkgNames, n)
+		}
 	}
-	if len(pkgs) > 1 {
+	if len(pkgNames) > 1 {
 		return "", fmt.Errorf("more than one Go package found in %s (%s)",
 			path, strings.Join(pkgNames, ","))
 	}
-	if len(pkgs) == 0 {
+	if len(pkgNames) == 0 {
 		return "", fmt.Errorf("no Go package found in %s", path)
 	}
 	return pkgNames[0], nil

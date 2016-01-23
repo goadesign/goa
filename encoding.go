@@ -1,16 +1,13 @@
 package goa
 
 import (
-	"bufio"
 	"encoding/gob"
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
 	"io"
 	"mime"
-	"net/http"
 	"sync"
-
-	"github.com/golang/gddo/httputil"
 )
 
 type (
@@ -70,56 +67,11 @@ type (
 
 	// gobFactory uses encoding/gob to act as an DecoderFactory and EncoderFactory
 	gobFactory struct{}
-
-	// // Unmarshaler is the interface implemented by objects that can unmarshal themselves.
-	// // The input can be assumed to be a valid encoding that matches the Content-Type request header.
-	// // Unmarshal must copy the data if it wishes to retain the data after returning.
-	// Unmarshaler interface {
-	// 	Unmarshal(v interface{}, shouldUnmarshal bool) error
-	// }
 )
-
-var (
-	// JSONContentTypes is a slice of default Content-Type headers that will use stdlib
-	// encoding/json to unmarshal unless overwritten using SetDecoder
-	JSONContentTypes = []string{"application/json", "application/text+json"}
-
-	// XMLContentTypes is a slice of default Content-Type headers that will use stdlib
-	// encoding/xml to unmarshal unless overwritten using SetDecoder
-	XMLContentTypes = []string{"application/xml"}
-
-	// GobContentTypes is a slice of default Content-Type headers that will use stdlib
-	// encoding/gob to unmarshal unless overwritten using SetDecoder
-	GobContentTypes = []string{"application/gob"}
-)
-
-// initEncoding initializes all the decoder/encoder pools with the Content-Types found
-// in JSONContentTypes and GobContentTypes. JSON is set as the default decoder.
-func (app *Application) initEncoding() {
-	// initialize maps
-	contentTypeCount := len(JSONContentTypes) + len(XMLContentTypes) + len(GobContentTypes)
-	app.decoderPools = make(map[string]*decoderPool, contentTypeCount)
-	app.encoderPools = make(map[string]*encoderPool, contentTypeCount)
-
-	// Add json support
-	jf := &jsonFactory{}
-	app.SetDecoder(jf, true, JSONContentTypes...)
-	app.SetEncoder(jf, true, JSONContentTypes...)
-
-	// Add xml support
-	xf := &xmlFactory{}
-	app.SetDecoder(xf, false, XMLContentTypes...)
-	app.SetEncoder(xf, false, XMLContentTypes...)
-
-	// Add gob support
-	gf := &gobFactory{}
-	app.SetDecoder(gf, false, GobContentTypes...)
-	app.SetEncoder(gf, false, GobContentTypes...)
-}
 
 // DecodeRequest uses registered Decoders to unmarshal the request body based on
 // the request `Content-Type` header
-func (app *Application) DecodeRequest(ctx *Context, v interface{}) error {
+func (ver *version) DecodeRequest(ctx *Context, v interface{}) error {
 	body := ctx.Request().Body
 	contentType := ctx.Request().Header.Get("Content-Type")
 	defer body.Close()
@@ -133,41 +85,28 @@ func (app *Application) DecodeRequest(ctx *Context, v interface{}) error {
 			contentType = mediaType
 		}
 	}
-	p = app.decoderPools[contentType]
+	p = ver.decoderPools[contentType]
+	if p == nil {
+		p = ver.decoderPools["*/*"]
+	}
+	if p == nil {
+		return nil
+	}
 
-	// Do not attempt to decode request bodies for which no decoder has been setup.
-	// These may be handled differently by the service.
-	if p != nil {
-		// the decoderPool will handle whether or not a pool is actually in use
-		decoder := p.Get(body)
-		if err := decoder.Decode(v); err != nil {
-			ctx.Error(err.Error(), "ContentType", contentType)
-			return err
-		}
-		p.Put(decoder)
+	// the decoderPool will handle whether or not a pool is actually in use
+	decoder := p.Get(body)
+	defer p.Put(decoder)
+	if err := decoder.Decode(v); err != nil {
+		ctx.Error(err.Error(), "ContentType", contentType)
+		return err
 	}
 
 	return nil
 }
 
-func detectContentType(ctx *Context, body io.Reader) string {
-	bodyBuf := bufio.NewReader(body)
-	// http.DetectContentType uses a max of 512 bytes
-	peekSize := 512
-	if bodyBuf.Buffered() < peekSize {
-		peekSize = bodyBuf.Buffered()
-	}
-	b, err := bodyBuf.Peek(peekSize)
-	if err != nil {
-		return "*/*"
-	}
-
-	return http.DetectContentType(b)
-}
-
 // SetDecoder sets a specific decoder to be used for the specified content types. If
 // a decoder is already registered, it will be overwritten.
-func (app *Application) SetDecoder(f DecoderFactory, makeDefault bool, contentTypes ...string) {
+func (ver *version) SetDecoder(f DecoderFactory, makeDefault bool, contentTypes ...string) {
 	p := newDecodePool(f)
 
 	for _, contentType := range contentTypes {
@@ -175,11 +114,11 @@ func (app *Application) SetDecoder(f DecoderFactory, makeDefault bool, contentTy
 		if err != nil {
 			mediaType = contentType
 		}
-		app.decoderPools[mediaType] = p
+		ver.decoderPools[mediaType] = p
 	}
 
 	if makeDefault {
-		app.decoderPools["*/*"] = p
+		ver.decoderPools["*/*"] = p
 	}
 }
 
@@ -227,9 +166,25 @@ func (p *decoderPool) Put(d Decoder) {
 
 // EncodeResponse uses registered Encoders to marshal the response body based on the request
 // `Accept` header and writes it to the http.ResponseWriter
-func (app *Application) EncodeResponse(ctx *Context, v interface{}) error {
-	contentType := httputil.NegotiateContentType(ctx.Request(), app.encodableContentTypes, "*/*")
-	p := app.encoderPools[contentType]
+func (ver *version) EncodeResponse(ctx *Context, v interface{}) error {
+	accept := ctx.Request().Header.Get("Accept")
+	if accept == "" {
+		accept = "*/*"
+	}
+	var contentType string
+	for _, t := range ver.encodableContentTypes {
+		if accept == "*/*" || accept == t {
+			contentType = accept
+			break
+		}
+	}
+	p := ver.encoderPools[contentType]
+	if p == nil && contentType != "*/*" {
+		p = ver.encoderPools["*/*"]
+	}
+	if p == nil {
+		return fmt.Errorf("No encoder registered for %s and no default encoder", contentType)
+	}
 
 	// the encoderPool will handle whether or not a pool is actually in use
 	encoder := p.Get(ctx)
@@ -243,25 +198,25 @@ func (app *Application) EncodeResponse(ctx *Context, v interface{}) error {
 }
 
 // SetEncoder sets a specific encoder to be used for the specified content types. If
-// a encoder is already registered, it will be overwritten.
-func (app *Application) SetEncoder(f EncoderFactory, makeDefault bool, contentTypes ...string) {
+// an encoder is already registered, it will be overwritten.
+func (ver *version) SetEncoder(f EncoderFactory, makeDefault bool, contentTypes ...string) {
 	p := newEncodePool(f)
 	for _, contentType := range contentTypes {
 		mediaType, _, err := mime.ParseMediaType(contentType)
 		if err != nil {
 			mediaType = contentType
 		}
-		app.encoderPools[mediaType] = p
+		ver.encoderPools[mediaType] = p
 	}
 
 	if makeDefault {
-		app.encoderPools["*/*"] = p
+		ver.encoderPools["*/*"] = p
 	}
 
 	// Rebuild a unique index of registered content encoders to be used in EncodeResponse
-	app.encodableContentTypes = make([]string, 0, len(app.encoderPools))
-	for contentType := range app.encoderPools {
-		app.encodableContentTypes = append(app.encodableContentTypes, contentType)
+	ver.encodableContentTypes = make([]string, 0, len(ver.encoderPools))
+	for contentType := range ver.encoderPools {
+		ver.encodableContentTypes = append(ver.encodableContentTypes, contentType)
 	}
 
 }
@@ -308,9 +263,21 @@ func (p *encoderPool) Put(e Encoder) {
 	p.pool.Put(e)
 }
 
+// encoding/json default encoder/decoder
+
+// JSONDecoderFactory returns a struct that can generate new json.Decoders
+func JSONDecoderFactory() DecoderFactory {
+	return &jsonFactory{}
+}
+
 // NewDecoder returns a new json.Decoder
 func (f *jsonFactory) NewDecoder(r io.Reader) Decoder {
 	return json.NewDecoder(r)
+}
+
+// JSONEncoderFactory returns a struct that can generate new json.Encoders
+func JSONEncoderFactory() EncoderFactory {
+	return &jsonFactory{}
 }
 
 // NewEncoder returns a new json.Encoder
@@ -318,9 +285,21 @@ func (f *jsonFactory) NewEncoder(w io.Writer) Encoder {
 	return json.NewEncoder(w)
 }
 
+// encoding/xml default encoder/decoder
+
+// XMLDecoderFactory returns a struct that can generate new xml.Decoders
+func XMLDecoderFactory() DecoderFactory {
+	return &xmlFactory{}
+}
+
 // NewDecoder returns a new xml.Decoder
 func (f *xmlFactory) NewDecoder(r io.Reader) Decoder {
 	return xml.NewDecoder(r)
+}
+
+// XMLEncoderFactory returns a struct that can generate new xml.Encoders
+func XMLEncoderFactory() EncoderFactory {
+	return &xmlFactory{}
 }
 
 // NewEncoder returns a new xml.Encoder
@@ -328,9 +307,21 @@ func (f *xmlFactory) NewEncoder(w io.Writer) Encoder {
 	return xml.NewEncoder(w)
 }
 
+// encoding/gob default encoder/decoder
+
+// GobDecoderFactory returns a struct that can generate new gob.Decoders
+func GobDecoderFactory() DecoderFactory {
+	return &gobFactory{}
+}
+
 // NewDecoder returns a new gob.Decoder
 func (f *gobFactory) NewDecoder(r io.Reader) Decoder {
 	return gob.NewDecoder(r)
+}
+
+// GobEncoderFactory returns a struct that can generate new gob.Encoders
+func GobEncoderFactory() EncoderFactory {
+	return &gobFactory{}
 }
 
 // NewEncoder returns a new gob.Encoder

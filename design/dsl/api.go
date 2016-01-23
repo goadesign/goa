@@ -35,6 +35,14 @@ import (
 //		BaseParams(func() {			// Common parameters to all API actions
 //			Param("param")
 //		})
+//		Consumes("application/xml", "text/xml", func() {
+//			Package("github.com/raphael/goa-middleware/encoding/xml")
+//		})
+//		Consumes("application/json")
+//		Produces("application/vnd.golang.gob", func() {
+//			Package("github.com/raphael/goa-middleware/encoding/gob")
+//		})
+//		Produces("application/json")
 //		ResponseTemplate("static", func() {	// Response template for use by actions
 //			Description("description")
 //			Status(404)
@@ -267,6 +275,84 @@ func URL(url string) {
 	}
 }
 
+// Consumes adds a MIME type to the list of MIME types the APIs supports when accepting requests.
+// Consumes may also specify the path of the decoding package.
+// The package must expose a DecoderFactory method that returns an object which implements
+// goa.DecoderFactory.
+func Consumes(args ...interface{}) {
+	var v *design.APIVersionDefinition
+	if a, ok := apiDefinition(false); ok {
+		v = a.APIVersionDefinition
+	} else if ver, ok := versionDefinition(true); ok {
+		v = ver
+	}
+	if v == nil {
+		return
+	}
+	if def := buildEncodingDefinition(args...); def != nil {
+		v.Consumes = append(v.Consumes, def)
+	}
+}
+
+// Produces adds a MIME type to the list of MIME types the APIs can encode responses with.
+// Produces may also specify the path of the encoding package.
+// The package must expose a EncoderFactory method that returns an object which implements
+// goa.EncoderFactory.
+func Produces(args ...interface{}) {
+	var v *design.APIVersionDefinition
+	if a, ok := apiDefinition(false); ok {
+		v = a.APIVersionDefinition
+	} else if ver, ok := versionDefinition(true); ok {
+		v = ver
+	}
+	if v == nil {
+		return
+	}
+	if def := buildEncodingDefinition(args...); def != nil {
+		v.Produces = append(v.Produces, def)
+	}
+}
+
+// buildEncodingDefinition builds up an encoding definition.
+func buildEncodingDefinition(args ...interface{}) *design.EncodingDefinition {
+	var dsl func()
+	var ok bool
+	if len(args) == 0 {
+		ReportError("missing argument in call to Consumes")
+		return nil
+	}
+	if _, ok := args[0].(string); !ok {
+		ReportError("first argument to Consumes must be a string (MIME type)")
+		return nil
+	}
+	last := len(args)
+	if dsl, ok = args[len(args)-1].(func()); ok {
+		last = len(args) - 1
+	}
+	mimeTypes := make([]string, last)
+	for i := 0; i < last; i++ {
+		var mimeType string
+		if mimeType, ok = args[i].(string); !ok {
+			ReportError("argument #%d of Consumes must be a string (MIME type)", i)
+			return nil
+		}
+		mimeTypes[i] = mimeType
+	}
+	d := &design.EncodingDefinition{MIMETypes: mimeTypes}
+	if dsl != nil {
+		ExecuteDSL(dsl, d)
+	}
+	return d
+}
+
+// Package sets the Go package path to the encoder or decoder. It must be used inside a
+// Consumes or Produces DSL.
+func Package(path string) {
+	if e, ok := encodingDefinition(true); ok {
+		e.PackagePath = path
+	}
+}
+
 // ResponseTemplate defines a response template that action definitions can use to describe their
 // responses. The template may specify the HTTP response status, header specification and body media
 // type. The template consists of a name and an anonymous function. The function is called when an
@@ -445,6 +531,16 @@ func apiDefinition(failIfNotAPI bool) (*design.APIDefinition, bool) {
 		incompatibleDSL(caller())
 	}
 	return a, ok
+}
+
+// encodingDefinition returns true and current context if it is an EncodingDefinition,
+// nil and false otherwise.
+func encodingDefinition(failIfNotEnc bool) (*design.EncodingDefinition, bool) {
+	e, ok := ctxStack.Current().(*design.EncodingDefinition)
+	if !ok && failIfNotEnc {
+		incompatibleDSL(caller())
+	}
+	return e, ok
 }
 
 // versionDefinition returns true and current context if it is an APIVersionDefinition,

@@ -149,6 +149,40 @@ var _ = Describe("API", func() {
 			})
 		})
 
+		Context("with Consumes", func() {
+			const consumesMT = "application/json"
+
+			BeforeEach(func() {
+				dsl = func() {
+					Consumes("application/json")
+				}
+			})
+
+			It("sets the API consumes", func() {
+				Ω(Design.Consumes).Should(HaveLen(1))
+				Ω(Design.Consumes[0].MIMETypes).Should(Equal([]string{consumesMT}))
+				Ω(Design.Consumes[0].PackagePath).Should(BeEmpty())
+			})
+
+			Context("using a custom encoding package", func() {
+				const pkgPath = "github.com/goadesign/middleware/encoding/json"
+
+				BeforeEach(func() {
+					dsl = func() {
+						Consumes("application/json", func() {
+							Package(pkgPath)
+						})
+					}
+				})
+
+				It("sets the API consumes", func() {
+					Ω(Design.Consumes).Should(HaveLen(1))
+					Ω(Design.Consumes[0].MIMETypes).Should(Equal([]string{consumesMT}))
+					Ω(Design.Consumes[0].PackagePath).Should(Equal(pkgPath))
+				})
+			})
+		})
+
 		Context("with a BasePath", func() {
 			const basePath = "basePath"
 

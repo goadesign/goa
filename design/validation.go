@@ -2,7 +2,11 @@ package design
 
 import (
 	"fmt"
+	"mime"
 	"net/url"
+	"os"
+	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -173,6 +177,12 @@ func (a *APIDefinition) Validate() *ValidationErrors {
 			verr.Merge(r.Validate())
 			return nil
 		})
+		for _, dec := range ver.Consumes {
+			verr.Merge(dec.Validate())
+		}
+		for _, enc := range ver.Produces {
+			verr.Merge(enc.Validate())
+		}
 		return nil
 	})
 
@@ -286,6 +296,47 @@ func (r *ResourceDefinition) validateParent(verr *ValidationErrors) {
 			verr.Add(r, err.Error())
 		}
 	}
+}
+
+// Validate validates the encoding MIME type and Go package path if set.
+func (enc *EncodingDefinition) Validate() *ValidationErrors {
+	gopaths := filepath.SplitList(os.Getenv("GOPATH"))
+	verr := new(ValidationErrors)
+	if len(enc.MIMETypes) == 0 {
+		verr.Add(enc, "missing MIME type")
+		return verr
+	}
+	for _, m := range enc.MIMETypes {
+		_, _, err := mime.ParseMediaType(m)
+		if err != nil {
+			verr.Add(enc, "invalid MIME type %#v: %s", m, err)
+		}
+	}
+	if len(enc.PackagePath) > 0 {
+		found := false
+		rel := filepath.FromSlash(enc.PackagePath)
+		for _, gopath := range gopaths {
+			if _, err := os.Stat(filepath.Join(gopath, "src", rel)); err == nil {
+				found = true
+				break
+			}
+		}
+		if !found {
+			verr.Add(enc, "invalid Go package path %#v", enc.PackagePath)
+		}
+	}
+	if enc.SupportingPackages() == nil {
+		knownMIMETypes := make([]string, len(KnownEncoders))
+		i := 0
+		for k := range KnownEncoders {
+			knownMIMETypes[i] = k
+			i++
+		}
+		sort.Strings(knownMIMETypes)
+		verr.Add(enc, "Encoders not known for all MIME types, use Package to specify encoder Go package. MIME types with known encoders are %s",
+			strings.Join(knownMIMETypes, ", "))
+	}
+	return verr
 }
 
 // Validate tests whether the action definition is consistent: parameters have unique names and it has at least
