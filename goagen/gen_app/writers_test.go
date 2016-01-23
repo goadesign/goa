@@ -959,9 +959,9 @@ type BottlesController interface {
 // "Consumes" and "Produces" DSL of the API.
 func initEncoding(service goa.Service) {
 	tmp1 := goa.JSONEncoderFactory()
-	service.SetEncoder(tmp1, "", "true", "application/json")
+	service.SetEncoder(tmp1, "true", "application/json")
 	tmp2 := goa.JSONDecoderFactory()
-	service.SetDecoder(tmp2, "", "true", "application/json")
+	service.SetDecoder(tmp2, "true", "application/json")
 }
 `
 

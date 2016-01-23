@@ -416,10 +416,11 @@ type WidgetController interface {
 func MountWidgetController(service goa.Service, ctrl WidgetController) {
 	initEncoding(service)
 	var h goa.Handler
-	mux := service.ServeMux(){{if .version}}.Version("{{.version}}"){{end}}
+	mux := service.{{if .version}}Version("{{.version}}").{{end}}ServeMux()
 	h = func(c *goa.Context) error {
 		ctx, err := NewGetWidgetContext(c)
-		if err != nil {
+{{if .version}}		ctx.Version = service.Version("{{.version}}")
+{{end}}		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
 		return ctrl.Get(ctx)
