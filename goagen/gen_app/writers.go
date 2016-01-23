@@ -424,10 +424,11 @@ type {{.Resource}}Controller interface {
 func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Controller) {
 	initEncoding(service)
 	var h goa.Handler
-	mux := service.ServeMux(){{if not .Version.IsDefault}}.Version("{{.Version.Version}}"){{end}}
+	mux := service.{{if not .Version.IsDefault}}Version("{{.Version.Version}}").{{end}}ServeMux()
 {{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
 		ctx, err := New{{.Context}}(c)
-{{if .Payload}}		ctx.Payload = ctx.RawPayload().(*{{gotypename .Payload nil 1}})
+{{if not $ver.IsDefault}}		ctx.Version = service.Version("{{$ver.Version}}")
+{{end}}{{if .Payload}}		ctx.Payload = ctx.RawPayload().(*{{gotypename .Payload nil 1}})
 {{end}}		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
@@ -447,10 +448,10 @@ func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Control
 func initEncoding(service goa.Service) {
 {{$ctx := .}}{{$default := "true"}}{{range .EncoderMap}}{{$tmp := tempvar}}{{/*
 */}}	{{$tmp}} := {{.PackageName}}.{{.Factory}}()
-	service.SetEncoder({{$tmp}}, "{{$ctx.Version.Version}}", "{{$default}}", "{{join .MIMETypes "\", \""}}"){{$default := "false"}}
+	service.{{if not $ctx.Version.IsDefault}}Version("{{$ctx.Version.Version}}").{{end}}SetEncoder({{$tmp}}, "{{$default}}", "{{join .MIMETypes "\", \""}}"){{$default := "false"}}
 {{end}}{{$default := "true"}}{{range .DecoderMap}}{{$tmp := tempvar}}{{/*
 */}}	{{$tmp}} := {{.PackageName}}.{{.Factory}}()
-	service.SetDecoder({{$tmp}}, "{{$ctx.Version.Version}}", "{{$default}}", "{{join .MIMETypes "\", \""}}"){{$default := "false"}}
+	service.{{if not $ctx.Version.IsDefault}}Version("{{$ctx.Version.Version}}").{{end}}SetDecoder({{$tmp}}, "{{$default}}", "{{join .MIMETypes "\", \""}}"){{$default := "false"}}
 {{end}}}
 `
 
