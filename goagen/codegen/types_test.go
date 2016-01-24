@@ -1,14 +1,6 @@
 package codegen_test
 
 import (
-	"fmt"
-	"io/ioutil"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"runtime"
-	"text/template"
-
 	. "github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/dsl"
 	"github.com/goadesign/goa/goagen/codegen"
@@ -197,7 +189,7 @@ var _ = Describe("code generation", func() {
 	})
 
 	Describe("Marshaler", func() {
-		var marshaler, unmarshaler string
+		var marshaler string
 		var context, source, target string
 
 		BeforeEach(func() {
@@ -213,7 +205,6 @@ var _ = Describe("code generation", func() {
 			JustBeforeEach(func() {
 				marshaler = codegen.TypeMarshaler(p, false, "", context, source, target)
 				codegen.TempCount = 0
-				unmarshaler = codegen.TypeUnmarshaler(p, false, "", context, source, target)
 			})
 
 			Context("integer", func() {
@@ -224,15 +215,6 @@ var _ = Describe("code generation", func() {
 				It("generates the marshaler code", func() {
 					expected := `	p = raw`
 					Ω(marshaler).Should(Equal(expected))
-				})
-
-				It("generates the unmarshaler code", func() {
-					expected := `	if f, ok := raw.(float64); ok {
-		p = int(f)
-	} else {
-		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "int", err)
-	}`
-					Ω(unmarshaler).Should(Equal(expected))
 				})
 			})
 
@@ -245,15 +227,6 @@ var _ = Describe("code generation", func() {
 					expected := `	p = raw`
 					Ω(marshaler).Should(Equal(expected))
 				})
-
-				It("generates the unmarshaler code", func() {
-					expected := `	if val, ok := raw.(string); ok {
-		p = val
-	} else {
-		err = goa.InvalidAttributeTypeError(` + "``" + `, raw, "string", err)
-	}`
-					Ω(unmarshaler).Should(Equal(expected))
-				})
 			})
 
 			Context("any", func() {
@@ -265,11 +238,6 @@ var _ = Describe("code generation", func() {
 					expected := `	p = raw`
 					Ω(marshaler).Should(Equal(expected))
 				})
-
-				It("generates the unmarshaler code", func() {
-					expected := `	p = raw`
-					Ω(unmarshaler).Should(Equal(expected))
-				})
 			})
 		})
 
@@ -279,7 +247,6 @@ var _ = Describe("code generation", func() {
 			JustBeforeEach(func() {
 				marshaler = codegen.TypeMarshaler(p, false, "", context, source, target)
 				codegen.TempCount = 0
-				unmarshaler = codegen.TypeUnmarshaler(p, false, "", context, source, target)
 			})
 
 			BeforeEach(func() {
@@ -293,10 +260,6 @@ var _ = Describe("code generation", func() {
 			It("generates the marshaler code", func() {
 				Ω(marshaler).Should(Equal(arrayMarshaled))
 			})
-
-			It("generates the unmarshaler code", func() {
-				Ω(unmarshaler).Should(Equal(arrayUnmarshaled))
-			})
 		})
 
 		Context("with an array of hashes", func() {
@@ -305,7 +268,6 @@ var _ = Describe("code generation", func() {
 			JustBeforeEach(func() {
 				marshaler = codegen.TypeMarshaler(p, false, "", context, source, target)
 				codegen.TempCount = 0
-				unmarshaler = codegen.TypeUnmarshaler(p, false, "", context, source, target)
 			})
 
 			BeforeEach(func() {
@@ -322,10 +284,6 @@ var _ = Describe("code generation", func() {
 			It("generates the marshaler code", func() {
 				Ω(marshaler).Should(Equal(hashArrayMarshaled))
 			})
-
-			It("generates the unmarshaler code", func() {
-				Ω(unmarshaler).Should(Equal(hashArrayUnmarshaled))
-			})
 		})
 
 		Context("with a simple object", func() {
@@ -334,7 +292,6 @@ var _ = Describe("code generation", func() {
 			JustBeforeEach(func() {
 				marshaler = codegen.TypeMarshaler(o, false, "", context, source, target)
 				codegen.TempCount = 0
-				unmarshaler = codegen.TypeUnmarshaler(o, false, "", context, source, target)
 			})
 
 			BeforeEach(func() {
@@ -345,10 +302,6 @@ var _ = Describe("code generation", func() {
 			It("generates the marshaler code", func() {
 				Ω(marshaler).Should(Equal(simpleMarshaled))
 			})
-
-			It("generates the unmarshaler code", func() {
-				Ω(unmarshaler).Should(Equal(simpleUnmarshaled))
-			})
 		})
 
 		Context("with a complex object", func() {
@@ -357,7 +310,6 @@ var _ = Describe("code generation", func() {
 			JustBeforeEach(func() {
 				marshaler = codegen.TypeMarshaler(o, false, "", context, source, target)
 				codegen.TempCount = 0
-				unmarshaler = codegen.TypeUnmarshaler(o, false, "", context, source, target)
 			})
 
 			BeforeEach(func() {
@@ -377,84 +329,6 @@ var _ = Describe("code generation", func() {
 
 			It("generates the marshaler code", func() {
 				Ω(marshaler).Should(Equal(complexMarshaled))
-			})
-
-			It("generates the unmarshaler code", func() {
-				Ω(unmarshaler).Should(Equal(complexUnmarshaled))
-			})
-
-			Context("compiling", func() {
-				var gopath, srcDir string
-				var tmpl *template.Template
-				var tmpFile *os.File
-				var out []byte
-
-				JustBeforeEach(func() {
-					bin := "codegen"
-					if runtime.GOOS == "windows" {
-						bin += ".exe"
-					}
-					cmd := exec.Command("go", "build", "-o", bin)
-					cmd.Env = os.Environ()
-					cmd.Env = append(cmd.Env, fmt.Sprintf("GOPATH=%s%s%s", gopath, os.PathListSeparator, os.Getenv("GOPATH")))
-					cmd.Dir = srcDir
-					var err error
-					out, err = cmd.CombinedOutput()
-					Ω(out).Should(BeEmpty())
-					Ω(err).ShouldNot(HaveOccurred())
-				})
-
-				BeforeEach(func() {
-					var err error
-					gopath, err = ioutil.TempDir("", "")
-					Ω(err).ShouldNot(HaveOccurred())
-					tmpl, err = template.New("main").Parse(mainTmpl)
-					Ω(err).ShouldNot(HaveOccurred())
-					srcDir = filepath.Join(gopath, "src", "test")
-					err = os.MkdirAll(srcDir, 0755)
-					Ω(err).ShouldNot(HaveOccurred())
-					tmpFile, err = os.Create(filepath.Join(srcDir, "main.go"))
-					Ω(err).ShouldNot(HaveOccurred())
-				})
-
-				Context("unmarshaler code", func() {
-					BeforeEach(func() {
-						unmarshaler = codegen.TypeUnmarshaler(o, false, "", context, source, target)
-						data := map[string]interface{}{
-							"raw": `interface{}(map[string]interface{}{
-								"baz": map[string]interface{}{
-									"foo": 345.0,
-									"bar":[]interface{}{[]interface{}{1.0,2.0,3.0}},
-								},
-								"faz": 2.0,
-							})`,
-							"source":     unmarshaler,
-							"target":     target,
-							"targetType": codegen.GoTypeRef(o, nil, 1),
-						}
-						err := tmpl.Execute(tmpFile, data)
-						Ω(err).ShouldNot(HaveOccurred())
-					})
-					It("compiles", func() {
-						Ω(string(out)).Should(BeEmpty())
-
-						bin := "codegen"
-						if runtime.GOOS == "windows" {
-							bin += ".exe"
-						}
-						cmd := exec.Command(filepath.FromSlash(fmt.Sprintf("./%s", bin)))
-						cmd.Env = []string{fmt.Sprintf("PATH=%s", filepath.Join(gopath, "bin"))}
-						cmd.Dir = srcDir
-						code, err := cmd.CombinedOutput()
-						Ω(string(code)).Should(Equal(`{"Baz":{"Bar":[[1,2,3]],"Foo":345},"Faz":2}`))
-						Ω(err).ShouldNot(HaveOccurred())
-					})
-				})
-
-				AfterEach(func() {
-					os.RemoveAll(gopath)
-				})
-
 			})
 		})
 
