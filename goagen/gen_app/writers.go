@@ -300,6 +300,7 @@ type {{.Name}} struct {
 {{if .Params}}{{$ctx := .}}{{range $name, $att := .Params.Type.ToObject}}{{/*
 */}}	{{goify $name true}} {{if and $att.Type.IsPrimitive ($ctx.Params.IsPrimitivePointer $name)}}*{{end}}{{gotyperef .Type nil 0}}
 {{end}}{{end}}{{if .Payload}}	Payload {{gotyperef .Payload nil 0}}
+{{end}}{{if not .Version.IsDefault}}	Version string
 {{end}}}
 `
 	// coerceT generates the code that coerces the generic deserialized
@@ -431,10 +432,10 @@ func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Control
 {{end}}
 	// Setup endpoint handler
 	var h goa.Handler
-	mux := service.{{if not .Version.IsDefault}}Version("{{.Version.Version}}").{{end}}ServeMux()
+	mux := service.{{if not .Version.IsDefault}}Version("{{.Version.Version}}").VersionMux(){{else}}ServeMux(){{end}}
 {{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
 		ctx, err := New{{.Context}}(c)
-{{if not $ver.IsDefault}}		ctx.Version = service.Version("{{$ver.Version}}")
+{{if not $ver.IsDefault}}		ctx.Version = service.Version("{{$ver.Version}}").VersionName()
 {{end}}{{if .Payload}}		ctx.Payload = ctx.RawPayload().(*{{gotypename .Payload nil 1}})
 {{end}}		if err != nil {
 			return goa.NewBadRequestError(err)
