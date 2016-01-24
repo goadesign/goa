@@ -1,8 +1,6 @@
 package goa
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -12,25 +10,11 @@ import (
 )
 
 type (
-	// ServeMux is the interface implemented by the goa HTTP request mux. The goa package
-	// provides a default implementation with DefaultMux.
-	//
-	// The goa mux allows for routing to controllers serving different API versions. Each
-	// version has is own mux accessed via Version. Upon receving a HTTP request the ServeMux
-	// ServeHTTP method looks up the targetted API version and dispatches the request to the
-	// corresponding mux.
-	ServeMux interface {
-		VersionMux
-		// Version returns the mux for the given API version.
-		Version(version string) VersionMux
-		// HandleMissingVersion handles requests that specify a non-existing API version.
-		HandleMissingVersion(rw http.ResponseWriter, req *http.Request, version string)
-	}
-
-	// VersionMux is the interface implemented by API version specific request mux.
+	// ServeMux is the interface implemented by the service request muxes. There is one instance
+	// of ServeMux per service version and one for requests targetting no version.
 	// It implements http.Handler and makes it possible to register request handlers for
 	// specific HTTP methods and request path via the Handle method.
-	VersionMux interface {
+	ServeMux interface {
 		http.Handler
 		// Handle sets the HandleFunc for a given HTTP method and path.
 		Handle(method, path string, handle HandleFunc)
@@ -47,8 +31,9 @@ type (
 	// SelectVersion.
 	DefaultMux struct {
 		*defaultVersionMux
-		selectVersion SelectVersionFunc
-		muxes         map[string]VersionMux
+		SelectVersionFunc SelectVersionFunc
+		missingVerFunc    handleMissingVersionFunc
+		muxes             map[string]ServeMux
 	}
 
 	// SelectVersionFunc is used by the default goa mux to compute the API version targetted by
@@ -57,24 +42,31 @@ type (
 	// Alternate implementations can be set using the DefaultMux SelectVersion method.
 	SelectVersionFunc func(*http.Request) string
 
-	// defaultVersionMux is the default goa API version specific mux.
+	// defaultVersionMux is the default API version specific mux implementation.
 	defaultVersionMux struct {
 		router  *httprouter.Router
 		handles map[string]HandleFunc
 	}
+
+	// HandleMissingVersionFunc is the signature of the function called back when requests
+	// target an unsupported API version.
+	handleMissingVersionFunc func(rw http.ResponseWriter, req *http.Request, version string)
 )
 
-// NewMux creates a top level mux using the default goa mux implementation.
-// The default versioning handling assumes that the base path for the API is "/api" and the
-// base paths for each version "/:version/api". Use SelectVersion to specify a different scheme
-// if the service exposes a versioned API with different base paths.
-func NewMux() ServeMux {
+// NewMux returns the default service mux implementation.
+func NewMux(app *Application) ServeMux {
 	return &DefaultMux{
 		defaultVersionMux: &defaultVersionMux{
 			router:  httprouter.New(),
 			handles: make(map[string]HandleFunc),
 		},
-		selectVersion: PathSelectVersionFunc("/:version/", "api"),
+		missingVerFunc: func(rw http.ResponseWriter, req *http.Request, version string) {
+			if app.missingVersionHandler != nil {
+				ctx := NewContext(RootContext, app, req, rw, nil)
+				app.missingVersionHandler(ctx, version)
+			}
+		},
+		SelectVersionFunc: PathSelectVersionFunc("/:version/", "api"),
 	}
 }
 
@@ -124,10 +116,37 @@ func CombineSelectVersionFunc(funcs ...SelectVersionFunc) SelectVersionFunc {
 	}
 }
 
-// Version returns the mux addressing the given version if any.
-func (m *DefaultMux) Version(version string) VersionMux {
+// SelectVersion sets the func used to compute the API version targetted by a request.
+func (m *DefaultMux) SelectVersion(sv SelectVersionFunc) {
+	m.SelectVersionFunc = sv
+}
+
+// ServeHTTP is the function called back by the underlying HTTP server to handle incoming requests.
+func (m *DefaultMux) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	// Optimize the unversionned API case
+	if len(m.muxes) == 0 {
+		m.router.ServeHTTP(rw, req)
+		return
+	}
+	var mux ServeMux
+	version := m.SelectVersionFunc(req)
+	if version == "" {
+		mux = m.defaultVersionMux
+	} else {
+		var ok bool
+		mux, ok = m.muxes[version]
+		if !ok {
+			m.missingVerFunc(rw, req, version)
+			return
+		}
+	}
+	mux.ServeHTTP(rw, req)
+}
+
+// version returns the mux addressing the given version if any.
+func (m *DefaultMux) version(version string) ServeMux {
 	if m.muxes == nil {
-		m.muxes = make(map[string]VersionMux)
+		m.muxes = make(map[string]ServeMux)
 	}
 	if mux, ok := m.muxes[version]; ok {
 		return mux
@@ -138,44 +157,6 @@ func (m *DefaultMux) Version(version string) VersionMux {
 	}
 	m.muxes[version] = mux
 	return mux
-}
-
-// SelectVersion sets the func used to compute the API version targetted by a request.
-func (m *DefaultMux) SelectVersion(sv SelectVersionFunc) {
-	m.selectVersion = sv
-}
-
-// HandleMissingVersion handles requests that specify a non-existing API version.
-func (m *DefaultMux) HandleMissingVersion(rw http.ResponseWriter, req *http.Request, version string) {
-	rw.WriteHeader(400)
-	resp := TypedError{ID: ErrInvalidVersion, Mesg: fmt.Sprintf(`API does not support version %s`, version)}
-	b, err := json.Marshal(resp)
-	if err != nil {
-		b = []byte("API does not support version")
-	}
-	rw.Write(b)
-}
-
-// ServeHTTP is the function called back by the underlying HTTP server to handle incoming requests.
-func (m *DefaultMux) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	// Optimize the unversionned API case
-	if len(m.muxes) == 0 {
-		m.router.ServeHTTP(rw, req)
-		return
-	}
-	var mux VersionMux
-	version := m.selectVersion(req)
-	if version == "" {
-		mux = m.defaultVersionMux
-	} else {
-		var ok bool
-		mux, ok = m.muxes[version]
-		if !ok {
-			m.HandleMissingVersion(rw, req, version)
-			return
-		}
-	}
-	mux.ServeHTTP(rw, req)
 }
 
 // Handle sets the handler for the given verb and path.
