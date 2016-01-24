@@ -14,14 +14,39 @@ import (
 )
 
 type (
+	// Connection contains the encoding and decoding support.
+	Connection interface {
+		// DecodeRequest uses registered Decoders to unmarshal the request body based on
+		// the request `Content-Type` header
+		DecodeRequest(ctx *Context, v interface{}) error
+
+		// EncodeResponse uses registered Encoders to marshal the response body based on the
+		// request `Accept` header and writes it to the http.ResponseWriter
+		EncodeResponse(ctx *Context, v interface{}) error
+
+		// SetDecoder registers a decoder with the service for a given API version. Set
+		// version to the empty string to register a decoder with unversioned endpoints.
+		// If makeDefault is true then the decoder is used to decode request payloads where
+		// none of the registered decoders support the content type (i.e. match the request
+		// "Content-Type" header).
+		SetDecoder(f DecoderFactory, makeDefault bool, contentTypes ...string)
+
+		// SetEncoder registers an encoder with the service for a given API version. Set
+		// version to the empty string to register an encoder with unversioned endpoints.
+		// If makeDefault is true then the encoder is used to encode request payloads where
+		// none of the registered decoders support any of the accepted content types (i.e.
+		// match the request "Accept" header).
+		SetEncoder(f EncoderFactory, makeDefault bool, contentTypes ...string)
+	}
+
 	// Service is the interface implemented by all goa services.
 	// It provides methods for configuring a service and running it.
 	Service interface {
 		// Logging methods, configure the log handler using the Logger global variable.
 		log.Logger
 
-		// ServiceVersion embeds the Version interface
-		ServiceVersion
+		// Connection contains the encoder and decoder management logic.
+		Connection
 
 		// Version returns an object that implements ServiceVersion based on the version name.
 		// If there is no version registered, it will instantiate a new version.
@@ -69,33 +94,14 @@ type (
 	// ServiceVersion is the interface for interacting with individual versions. It is embedded by
 	// application for default use with versionless apps
 	ServiceVersion interface {
+		// Connection contains the encoder and decoder management logic
+		Connection
+
 		// VersionName returns the version string ID
 		VersionName() string
 
-		// VersionMux returns the version request mux.
-		VersionMux() VersionMux
-
-		// DecodeRequest uses registered Decoders to unmarshal the request body based on
-		// the request `Content-Type` header
-		DecodeRequest(ctx *Context, v interface{}) error
-
-		// EncodeResponse uses registered Encoders to marshal the response body based on the
-		// request `Accept` header and writes it to the http.ResponseWriter
-		EncodeResponse(ctx *Context, v interface{}) error
-
-		// SetDecoder registers a decoder with the service for a given API version. Set
-		// version to the empty string to register a decoder with unversioned endpoints.
-		// If makeDefault is true then the decoder is used to decode request payloads where
-		// none of the registered decoders support the content type (i.e. match the request
-		// "Content-Type" header).
-		SetDecoder(f DecoderFactory, makeDefault bool, contentTypes ...string)
-
-		// SetEncoder registers an encoder with the service for a given API version. Set
-		// version to the empty string to register an encoder with unversioned endpoints.
-		// If makeDefault is true then the encoder is used to encode request payloads where
-		// none of the registered decoders support any of the accepted content types (i.e.
-		// match the request "Accept" header).
-		SetEncoder(f EncoderFactory, makeDefault bool, contentTypes ...string)
+		// ServeMux returns the version request mux.
+		ServeMux() VersionMux
 	}
 
 	// Controller is the interface implemented by all goa controllers.
@@ -148,8 +154,8 @@ type (
 	// A version represents a goa version, identified by a version string. This is where application
 	// data that needs to be different per version lives.
 	version struct {
+		app                   *Application            // Parent application
 		name                  string                  // This is the version string
-		versionMux            VersionMux              // Version level mux
 		decoderPools          map[string]*decoderPool // Registered decoders for the service
 		encoderPools          map[string]*encoderPool // Registered encoders for the service
 		encodableContentTypes []string                // List of contentTypes for response negotiation
@@ -322,8 +328,8 @@ func (app *Application) Version(name string) ServiceVersion {
 		return ver
 	}
 	ver = &version{
+		app:                   app,
 		name:                  name,
-		versionMux:            app.mux.Version(name),
 		decoderPools:          map[string]*decoderPool{},
 		encoderPools:          map[string]*encoderPool{},
 		encodableContentTypes: []string{},
@@ -337,8 +343,8 @@ func (app *Application) Version(name string) ServiceVersion {
 }
 
 // VersionMux returns the version specific mux.
-func (ver *version) VersionMux() VersionMux {
-	return ver.versionMux
+func (ver *version) ServeMux() VersionMux {
+	return ver.app.mux.Version(ver.VersionName())
 }
 
 // VersionName returns the version name.
