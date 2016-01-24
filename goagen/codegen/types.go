@@ -16,37 +16,29 @@ var (
 	// TempCount holds the value appended to variable names to make them unique.
 	TempCount int
 
-	mArrayT           *template.Template
-	mObjectT          *template.Template
-	mHashT            *template.Template
-	mLinkT            *template.Template
-	mCollectionT      *template.Template
-	mUserImplT        *template.Template
-	unmPrimitiveT     *template.Template
-	unmUserPrimitiveT *template.Template
-	unmUserT          *template.Template
-	unmArrayT         *template.Template
-	unmObjectT        *template.Template
-	unmHashT          *template.Template
-	unmUserImplT      *template.Template
+	mArrayT      *template.Template
+	mObjectT     *template.Template
+	mHashT       *template.Template
+	mLinkT       *template.Template
+	mCollectionT *template.Template
+	mUserImplT   *template.Template
 )
 
 //  init instantiates the templates.
 func init() {
 	var err error
 	fm := template.FuncMap{
-		"marshalAttribute":   attributeMarshalerR,
-		"marshalMediaType":   mediaTypeMarshalerR,
-		"unmarshalAttribute": attributeUnmarshalerR,
-		"gotypename":         GoTypeName,
-		"gotyperef":          GoTypeRef,
-		"gopkgtyperef":       GoPackageTypeRef,
-		"goify":              Goify,
-		"gonative":           GoNativeType,
-		"tabs":               Tabs,
-		"add":                func(a, b int) int { return a + b },
-		"tempvar":            Tempvar,
-		"has":                has,
+		"marshalAttribute": attributeMarshalerR,
+		"marshalMediaType": mediaTypeMarshalerR,
+		"gotypename":       GoTypeName,
+		"gotyperef":        GoTypeRef,
+		"gopkgtyperef":     GoPackageTypeRef,
+		"goify":            Goify,
+		"gonative":         GoNativeType,
+		"tabs":             Tabs,
+		"add":              func(a, b int) int { return a + b },
+		"tempvar":          Tempvar,
+		"has":              has,
 	}
 	if mArrayT, err = template.New("array marshaler").Funcs(fm).Parse(mArrayTmpl); err != nil {
 		panic(err)
@@ -64,24 +56,6 @@ func init() {
 		panic(err)
 	}
 	if mUserImplT, err = template.New("user marshaler").Funcs(fm).Parse(mUserImplTmpl); err != nil {
-		panic(err)
-	}
-	if unmPrimitiveT, err = template.New("primitive unmarshaler").Funcs(fm).Parse(unmPrimitiveTmpl); err != nil {
-		panic(err)
-	}
-	if unmUserPrimitiveT, err = template.New("user primitive unmarshaler").Funcs(fm).Parse(unmUserPrimitiveTmpl); err != nil {
-		panic(err)
-	}
-	if unmArrayT, err = template.New("array unmarshaler").Funcs(fm).Parse(unmArrayTmpl); err != nil {
-		panic(err)
-	}
-	if unmObjectT, err = template.New("object unmarshaler").Funcs(fm).Parse(unmObjectTmpl); err != nil {
-		panic(err)
-	}
-	if unmHashT, err = template.New("hash unmarshaler").Funcs(fm).Parse(unmHashTmpl); err != nil {
-		panic(err)
-	}
-	if unmUserImplT, err = template.New("user type unmarshaler func").Funcs(fm).Parse(unmUserImplTmpl); err != nil {
 		panic(err)
 	}
 }
@@ -165,43 +139,6 @@ func AttributeMarshaler(att *design.AttributeDefinition, versioned bool, default
 		)
 	}
 	return marshaler
-}
-
-// TypeUnmarshaler produces the Go code that initializes a variable of the given type given
-// a deserialized (interface{}) value.
-// source is the name of the variable that contains the raw interface{} value and target the
-// name of the variable to initialize.
-// context is used to keep track of recursion to produce helpful error messages in case of type
-// mismatch or validation error.
-// The generated code assumes that there is a variable called "err" of type error that it can use
-// to record errors.
-// versioned indicates whether the code is being generated from a version package (true) or from the
-// default package defaultPkg (false).
-func TypeUnmarshaler(t design.DataType, versioned bool, defaultPkg, context, source, target string) string {
-	return typeUnmarshalerR(t, nil, nil, versioned, defaultPkg, context, source, target, 1)
-}
-
-// UserTypeUnmarshalerImpl returns the code implementing the user type unmarshaler function.
-func UserTypeUnmarshalerImpl(u *design.UserTypeDefinition, versioned bool, defaultPkg, context string) string {
-	validation := RecursiveChecker(u.AttributeDefinition, false, false, "source", context, 1)
-	var impl string
-	switch {
-	case u.IsObject():
-		impl = objectUnmarshalerR(u, u.AllRequired(), u.AllNonZero(), versioned, defaultPkg, context, "source", "target", 1)
-	case u.IsArray():
-		impl = arrayUnmarshalerR(u.ToArray(), versioned, defaultPkg, context, "source", "target", 1)
-	case u.IsHash():
-		impl = hashUnmarshalerR(u.ToHash(), versioned, defaultPkg, context, "source", "target", 1)
-	default:
-		return "" // No function for primitive types - they just get casted
-	}
-	data := map[string]interface{}{
-		"Name":         userTypeUnmarshalerFuncName(u),
-		"Type":         u,
-		"Impl":         impl,
-		"MustValidate": strings.TrimSpace(validation) != "",
-	}
-	return RunTemplate(unmUserImplT, data)
 }
 
 // GoTypeDef returns the Go code that defines a Go type which matches the data structure
@@ -686,131 +623,6 @@ func mediaTypeMarshalerFuncName(mt *design.MediaTypeDefinition, view string) str
 		return name
 	}
 	return fmt.Sprintf("%s%s", name, strings.Title(view))
-}
-
-// userTypeUnmarshalerFuncName returns the name for the given user type unmarshaler function.
-func userTypeUnmarshalerFuncName(u *design.UserTypeDefinition) string {
-	return fmt.Sprintf("Unmarshal%s", GoTypeName(u, u.AllRequired(), 0))
-}
-
-func typeUnmarshalerR(t design.DataType, required, nonzero []string, versioned bool, defaultPkg, context, source, target string, depth int) string {
-	switch actual := t.(type) {
-	case design.Primitive:
-		return primitiveUnmarshalerR(actual, context, source, target, depth)
-	case *design.Array:
-		return arrayUnmarshalerR(actual, versioned, defaultPkg, context, source, target, depth)
-	case *design.Hash:
-		return hashUnmarshalerR(actual, versioned, defaultPkg, context, source, target, depth)
-	case design.Object:
-		return objectUnmarshalerR(actual, required, nonzero, versioned, defaultPkg, context, source, target, depth)
-	case *design.UserTypeDefinition:
-		if _, ok := t.(design.Primitive); ok {
-			return userPrimitiveUnmarshalerR(actual, context, source, target, depth)
-		}
-		prefix := PackagePrefix(actual, versioned, defaultPkg)
-		return fmt.Sprintf(
-			`%s%s, err = %s%s(%s, err)`,
-			Tabs(depth),
-			target,
-			prefix,
-			userTypeUnmarshalerFuncName(actual),
-			source,
-		)
-	case *design.MediaTypeDefinition:
-		return typeUnmarshalerR(actual.UserTypeDefinition, required, nonzero, versioned, defaultPkg, context, source, target, depth)
-	default:
-		panic(actual)
-	}
-}
-
-func userPrimitiveUnmarshalerR(u *design.UserTypeDefinition, context, source, target string, depth int) string {
-	data := map[string]interface{}{
-		"source":  source,
-		"target":  target,
-		"type":    u,
-		"context": context,
-		"depth":   depth,
-	}
-	return RunTemplate(unmUserPrimitiveT, data)
-}
-
-func attributeUnmarshalerR(att *design.AttributeDefinition, required, nonzero []string, versioned bool, defaultPkg, context, source, target string, depth int) string {
-	return typeUnmarshalerR(att.Type, required, nonzero, versioned, defaultPkg, context, source, target, depth)
-}
-
-// PrimitiveUnmarshaler produces the Go code that initializes a primitive type from its deserialized
-// representation.
-// source is the name of the variable that contains the raw interface{} value and target the
-// name of the variable to initialize.
-// The generated code assumes that there is a variable called "err" of type error that it can use
-// to record errors.
-func primitiveUnmarshalerR(p design.Primitive, context, source, target string, depth int) string {
-	data := map[string]interface{}{
-		"source":  source,
-		"target":  target,
-		"type":    p,
-		"context": context,
-		"depth":   depth,
-	}
-	return RunTemplate(unmPrimitiveT, data)
-}
-
-// ArrayUnmarshaler produces the Go code that initializes an array from its deserialized epresentation.
-// source is the name of the variable that contains the raw interface{} value and target the
-// name of the variable to initialize.
-// The generated code assumes that there is a variable called "err" of type error that it can use
-// to record errors.
-func arrayUnmarshalerR(a *design.Array, versioned bool, defaultPkg, context, source, target string, depth int) string {
-	data := map[string]interface{}{
-		"versioned":  versioned,
-		"defaultPkg": defaultPkg,
-		"source":     source,
-		"target":     target,
-		"elemType":   a.ElemType,
-		"context":    context,
-		"depth":      depth,
-	}
-	return RunTemplate(unmArrayT, data)
-}
-
-// HashUnmarshaler produces the Go code that initializes a hash map from its deserialized
-// representation.
-// source is the name of the variable that contains the raw map[string]interface{} value and target
-// the name of the variable to initialize.
-// The generated code assumes that there is a variable called "err" of type error that it can use
-// to record errors.
-func hashUnmarshalerR(h *design.Hash, versioned bool, defaultPkg, context, source, target string, depth int) string {
-	data := map[string]interface{}{
-		"type":       h,
-		"versioned":  versioned,
-		"defaultPkg": defaultPkg,
-		"context":    context,
-		"source":     source,
-		"target":     target,
-		"depth":      depth,
-	}
-	return RunTemplate(unmHashT, data)
-}
-
-// ObjectUnmarshaler produces the Go code that initializes an object type from its deserialized
-// representation.
-// source is the name of the variable that contains the raw interface{} value and target the
-// name of the variable to initialize.
-// The generated code assumes that there is a variable called "err" of type error that it can use
-// to record errors.
-func objectUnmarshalerR(o design.DataType, required, nonzero []string, versioned bool, defaultPkg, context, source, target string, depth int) string {
-	data := map[string]interface{}{
-		"type":       o,
-		"versioned":  versioned,
-		"defaultPkg": defaultPkg,
-		"required":   required,
-		"nonzero":    nonzero,
-		"context":    context,
-		"source":     source,
-		"target":     target,
-		"depth":      depth,
-	}
-	return RunTemplate(unmObjectT, data)
 }
 
 // reserved golang keywords
