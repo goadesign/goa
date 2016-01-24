@@ -61,6 +61,10 @@ func Type(name string, dsl func()) *design.UserTypeDefinition {
 //		})
 //		Payload(ArrayOf(Bottle))  // Equivalent to Payload(Bottles)
 //	})
+//
+// If you are looking to return a collection of elements in a Response
+// clause, refer to CollectionOf.  ArrayOf creates a type, where
+// CollectionOf creates a media type.
 func ArrayOf(t design.DataType) *design.Array {
 	at := design.AttributeDefinition{Type: t}
 	if ds, ok := t.(design.DataStructure); ok {
