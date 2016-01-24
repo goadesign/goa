@@ -9,8 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/julienschmidt/httprouter"
-
 	"golang.org/x/net/context"
 	log "gopkg.in/inconshreveable/log15.v2"
 )
@@ -230,21 +228,8 @@ func New(name string) Service {
 		errorHandler:          DefaultErrorHandler,
 		missingVersionHandler: DefaultMissingVersionHandler,
 	}
-	mux := &DefaultMux{
-		defaultVersionMux: &defaultVersionMux{
-			router:  httprouter.New(),
-			handles: make(map[string]HandleFunc),
-		},
-		missingVerFunc: func(rw http.ResponseWriter, req *http.Request, version string) {
-			if app.missingVersionHandler != nil {
-				ctx := NewContext(RootContext, app, req, rw, nil)
-				app.missingVersionHandler(ctx, version)
-			}
-		},
-		SelectVersionFunc: PathSelectVersionFunc("/:version/", "api"),
-	}
 	app.version = &version{
-		mux:                   mux,
+		mux:                   NewMux(app),
 		decoderPools:          map[string]*decoderPool{},
 		encoderPools:          map[string]*encoderPool{},
 		encodableContentTypes: []string{},
