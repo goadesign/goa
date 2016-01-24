@@ -432,7 +432,7 @@ func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Control
 {{end}}
 	// Setup endpoint handler
 	var h goa.Handler
-	mux := service.{{if not .Version.IsDefault}}Version("{{.Version.Version}}").VersionMux(){{else}}ServeMux(){{end}}
+	mux := service.{{if not .Version.IsDefault}}Version("{{.Version.Version}}").ServeMux(){{else}}ServeMux(){{end}}
 {{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
 		ctx, err := New{{.Context}}(c)
 {{if not $ver.IsDefault}}		ctx.Version = service.Version("{{$ver.Version}}").VersionName()

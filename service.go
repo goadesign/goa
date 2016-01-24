@@ -20,24 +20,24 @@ type (
 		// Logging methods, configure the log handler using the Logger global variable.
 		log.Logger
 
-		// ServiceVersion embeds the Version interface
-		ServiceVersion
-
-		// Version returns an object that implements ServiceVersion based on the version name.
-		// If there is no version registered, it will instantiate a new version.
-		Version(name string) ServiceVersion
+		// Encoding manages the service decoders and encoders.
+		Encoding
 
 		// Name is the name of the goa application.
 		Name() string
 
+		// Use adds a middleware to the service-wide middleware chain.
+		Use(m Middleware)
+
 		// ErrorHandler returns the currently set error handler, useful for middleware.
 		ErrorHandler() ErrorHandler
 
-		// SetErrorHandler allows setting the service-wide error handler.
+		// SetErrorHandler registers the service-wide error handler.
 		SetErrorHandler(ErrorHandler)
 
-		// Use adds a middleware to the service-wide middleware chain.
-		Use(m Middleware)
+		// SetMissingVersionHandler registers the handler invoked when a request targets a
+		// non existant API version.
+		SetMissingVersionHandler(MissingVersionHandler)
 
 		// ServeMux returns the service mux.
 		ServeMux() ServeMux
@@ -61,40 +61,45 @@ type (
 		// to "/assets/x/y/z".
 		ServeFiles(path, filename string) error
 
+		// Version returns an object that implements ServiceVersion based on the version name.
+		// If there is no version registered, it will instantiate a new version.
+		Version(name string) ServiceVersion
+
 		// NewController returns a controller for the resource with the given name.
 		// This method is mainly intended for use by generated code.
 		NewController(resName string) Controller
 	}
 
-	// ServiceVersion is the interface for interacting with individual versions. It is embedded by
-	// application for default use with versionless apps
+	// ServiceVersion is the interface for interacting with individual service versions.
 	ServiceVersion interface {
-		// VersionName returns the version string ID
+		// Encoding manages the version decoders and encoders.
+		Encoding
+
+		// VersionName returns the version name.
 		VersionName() string
 
-		// VersionMux returns the version request mux.
-		VersionMux() VersionMux
+		// ServeMux returns the version request mux.
+		ServeMux() ServeMux
+	}
 
+	// Encoding contains the encoding and decoding support.
+	Encoding interface {
 		// DecodeRequest uses registered Decoders to unmarshal the request body based on
-		// the request `Content-Type` header
+		// the request "Content-Type" header.
 		DecodeRequest(ctx *Context, v interface{}) error
 
 		// EncodeResponse uses registered Encoders to marshal the response body based on the
-		// request `Accept` header and writes it to the http.ResponseWriter
+		// request "Accept" header and writes the result to the http.ResponseWriter.
 		EncodeResponse(ctx *Context, v interface{}) error
 
-		// SetDecoder registers a decoder with the service for a given API version. Set
-		// version to the empty string to register a decoder with unversioned endpoints.
-		// If makeDefault is true then the decoder is used to decode request payloads where
-		// none of the registered decoders support the content type (i.e. match the request
-		// "Content-Type" header).
+		// SetDecoder registers a decoder for the given content types.
+		// If makeDefault is true then the decoder is used to decode payloads where none of
+		// the registered decoders support the request content type.
 		SetDecoder(f DecoderFactory, makeDefault bool, contentTypes ...string)
 
-		// SetEncoder registers an encoder with the service for a given API version. Set
-		// version to the empty string to register an encoder with unversioned endpoints.
-		// If makeDefault is true then the encoder is used to encode request payloads where
-		// none of the registered decoders support any of the accepted content types (i.e.
-		// match the request "Accept" header).
+		// SetEncoder registers an encoder for the given content types.
+		// If makeDefault is true then the encoder is used to encode bodies where none of
+		// the registered encoders match the request "Accept" header.
 		SetEncoder(f EncoderFactory, makeDefault bool, contentTypes ...string)
 	}
 
@@ -105,16 +110,21 @@ type (
 	// specific middleware.
 	Controller interface {
 		log.Logger
+
 		// Use adds a middleware to the controller middleware chain.
 		// It is a convenient method for doing append(ctrl.MiddlewareChain(), m)
 		Use(Middleware)
+
 		// MiddlewareChain returns the controller middleware chain including the
 		// service-wide middleware.
 		MiddlewareChain() []Middleware
+
 		// ErrorHandler returns the currently set error handler.
 		ErrorHandler() ErrorHandler
+
 		// SetErrorHandler sets the controller specific error handler.
 		SetErrorHandler(ErrorHandler)
+
 		// HandleFunc returns a HandleFunc from the given handler
 		// name is used solely for logging.
 		HandleFunc(name string, h, d Handler) HandleFunc
@@ -136,23 +146,13 @@ type (
 	// where NewResourceController returns an object that implements the resource actions as
 	// defined by the corresponding interface generated by goagen.
 	Application struct {
-		log.Logger                       // Application logger
-		*version                         // embedded default version
-		name         string              // Application name
-		errorHandler ErrorHandler        // Application error handler
-		middleware   []Middleware        // Middleware chain
-		mux          ServeMux            // Root mux
-		versions     map[string]*version // Versions by version string
-	}
-
-	// A version represents a goa version, identified by a version string. This is where application
-	// data that needs to be different per version lives.
-	version struct {
-		name                  string                  // This is the version string
-		versionMux            VersionMux              // Version level mux
-		decoderPools          map[string]*decoderPool // Registered decoders for the service
-		encoderPools          map[string]*encoderPool // Registered encoders for the service
-		encodableContentTypes []string                // List of contentTypes for response negotiation
+		log.Logger                                  // Application logger
+		*version                                    // Embedded default version
+		name                  string                // Application name
+		errorHandler          ErrorHandler          // Application error handler
+		missingVersionHandler MissingVersionHandler // Missing version handler
+		middleware            []Middleware          // Middleware chain
+		versions              map[string]*version   // Versions by version string
 	}
 
 	// ApplicationController provides the common state and behavior for generated controllers.
@@ -176,8 +176,22 @@ type (
 	// ErrorHandler defines the application error handler signature.
 	ErrorHandler func(*Context, error)
 
+	// MissingVersionHandler defines the function that handles requests targetting a non
+	// existant API version.
+	MissingVersionHandler func(*Context, string)
+
 	// DecodeFunc is the function that initialize the unmarshaled payload from the request body.
 	DecodeFunc func(*Context, io.ReadCloser, interface{}) error
+
+	// A version represents a service version, identified by a version name. This is where
+	// application data that needs to be different per version lives.
+	version struct {
+		name                  string                  // This is the version string
+		mux                   ServeMux                // Request mux
+		decoderPools          map[string]*decoderPool // Registered decoders for the service
+		encoderPools          map[string]*encoderPool // Registered encoders for the service
+		encodableContentTypes []string                // List of contentTypes for response negotiation
+	}
 )
 
 var (
@@ -209,12 +223,13 @@ func init() {
 // New instantiates an application with the given name and default decoders/encoders.
 func New(name string) Service {
 	app := &Application{
-		Logger:       Log.New("app", name),
-		name:         name,
-		mux:          NewMux(),
-		errorHandler: DefaultErrorHandler,
+		Logger:                Log.New("app", name),
+		name:                  name,
+		errorHandler:          DefaultErrorHandler,
+		missingVersionHandler: DefaultMissingVersionHandler,
 	}
 	app.version = &version{
+		mux:                   NewMux(app),
 		decoderPools:          map[string]*decoderPool{},
 		encoderPools:          map[string]*encoderPool{},
 		encodableContentTypes: []string{},
@@ -321,9 +336,15 @@ func (app *Application) Version(name string) ServiceVersion {
 	if ok {
 		return ver
 	}
+	var verMux ServeMux
+	if m, ok := app.mux.(*DefaultMux); ok {
+		verMux = m.version(name)
+	} else {
+		verMux = app.mux
+	}
 	ver = &version{
 		name:                  name,
-		versionMux:            app.mux.Version(name),
+		mux:                   verMux,
 		decoderPools:          map[string]*decoderPool{},
 		encoderPools:          map[string]*encoderPool{},
 		encodableContentTypes: []string{},
@@ -336,9 +357,14 @@ func (app *Application) Version(name string) ServiceVersion {
 	return ver
 }
 
+// SetMissingVersionHandler registers the service missing version handler.
+func (app *Application) SetMissingVersionHandler(handler MissingVersionHandler) {
+	app.missingVersionHandler = handler
+}
+
 // VersionMux returns the version specific mux.
-func (ver *version) VersionMux() VersionMux {
-	return ver.versionMux
+func (ver *version) ServeMux() ServeMux {
+	return ver.mux
 }
 
 // VersionName returns the version name.
@@ -449,30 +475,34 @@ func (ctrl *ApplicationController) HandleFunc(name string, h, d Handler) HandleF
 // DefaultErrorHandler returns a 400 response for request validation errors (instances of
 // BadRequestError) and a 500 response for other errors. It writes the error message to the
 // response body in both cases.
-func DefaultErrorHandler(c *Context, e error) {
+func DefaultErrorHandler(ctx *Context, e error) {
 	status := 500
 	if _, ok := e.(*BadRequestError); ok {
-		c.Header().Set("Content-Type", "application/json")
 		status = 400
 	}
-	if err := c.RespondBytes(status, []byte(e.Error())); err != nil {
-		Log.Error("failed to send default error handler response", "err", err)
-	}
+	ctx.Respond(status, e.Error())
 }
 
-// TerseErrorHandler behaves like DefaultErrorHandler except that it does not set the response
+// TerseErrorHandler behaves like DefaultErrorHandler except that it does not write to the response
 // body for internal errors.
-func TerseErrorHandler(c *Context, e error) {
+func TerseErrorHandler(ctx *Context, e error) {
 	status := 500
-	var body []byte
+	var body interface{}
 	if _, ok := e.(*BadRequestError); ok {
-		c.Header().Set("Content-Type", "application/json")
 		status = 400
-		body = []byte(e.Error())
+		body = e.Error()
 	}
-	if err := c.RespondBytes(status, body); err != nil {
-		Log.Error("failed to send terse error handler response", "err", err)
+	ctx.Respond(status, body)
+}
+
+// DefaultMissingVersionHandler returns a 400 response with a typed error in the body containing
+// the name of the version that was targeted by the request.
+func DefaultMissingVersionHandler(ctx *Context, version string) {
+	resp := TypedError{
+		ID:   ErrInvalidVersion,
+		Mesg: fmt.Sprintf(`API does not support version %s`, version),
 	}
+	ctx.Respond(400, resp)
 }
 
 // Fatal logs a critical message and exits the process with status code 1.
