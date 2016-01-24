@@ -53,6 +53,23 @@ type (
 	handleMissingVersionFunc func(rw http.ResponseWriter, req *http.Request, version string)
 )
 
+// NewMux returns the default service mux implementation.
+func NewMux(app *Application) ServeMux {
+	return &DefaultMux{
+		defaultVersionMux: &defaultVersionMux{
+			router:  httprouter.New(),
+			handles: make(map[string]HandleFunc),
+		},
+		missingVerFunc: func(rw http.ResponseWriter, req *http.Request, version string) {
+			if app.missingVersionHandler != nil {
+				ctx := NewContext(RootContext, app, req, rw, nil)
+				app.missingVersionHandler(ctx, version)
+			}
+		},
+		SelectVersionFunc: PathSelectVersionFunc("/:version/", "api"),
+	}
+}
+
 // PathSelectVersionFunc returns a SelectVersionFunc that uses the given path pattern to extract the
 // version from the request path. Use the same path pattern given in the DSL to define the API base
 // path, e.g. "/api/:version".
