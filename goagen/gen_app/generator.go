@@ -410,6 +410,13 @@ func (g *Generator) generateMediaTypes(verdir string, version *design.APIVersion
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("fmt"),
 	}
+	if !version.IsDefault() {
+		appPkg, err := AppPackagePath()
+		if err != nil {
+			return err
+		}
+		imports = append(imports, codegen.SimpleImport(appPkg))
+	}
 	mtWr.WriteHeader(title, packageName(version), imports)
 	err = version.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
 		data := &MediaTypeTemplateData{
@@ -441,6 +448,13 @@ func (g *Generator) generateUserTypes(verdir string, version *design.APIVersionD
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("fmt"),
+	}
+	if !version.IsDefault() {
+		appPkg, err := AppPackagePath()
+		if err != nil {
+			return err
+		}
+		imports = append(imports, codegen.SimpleImport(appPkg))
 	}
 	utWr.WriteHeader(title, packageName(version), imports)
 	err = version.IterateUserTypes(func(t *design.UserTypeDefinition) error {
