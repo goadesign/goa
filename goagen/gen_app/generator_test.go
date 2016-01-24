@@ -364,8 +364,10 @@ import (
 
 // GetWidgetContext provides the Widget get action context.
 type GetWidgetContext struct {
-	*goa.Context
-	ID string
+	*goa.Context{{if .version}}
+	ID      string
+	Version string{{else}}
+	ID string{{end}}
 }
 
 // NewGetWidgetContext parses the incoming request URL and body, performs validations and creates the
@@ -418,10 +420,10 @@ func MountWidgetController(service goa.Service, ctrl WidgetController) {
 
 	// Setup endpoint handler
 	var h goa.Handler
-	mux := service.{{if .version}}Version("{{.version}}").{{end}}ServeMux()
+	mux := service.{{if .version}}Version("{{.version}}").VersionMux(){{else}}ServeMux(){{end}}
 	h = func(c *goa.Context) error {
 		ctx, err := NewGetWidgetContext(c)
-{{if .version}}		ctx.Version = service.Version("{{.version}}")
+{{if .version}}		ctx.Version = service.Version("{{.version}}").VersionName()
 {{end}}		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
