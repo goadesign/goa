@@ -34,6 +34,7 @@ var _ = Describe("code generation", func() {
 					object = Object{
 						"foo": &AttributeDefinition{Type: Integer},
 						"bar": &AttributeDefinition{Type: String},
+						"baz": &AttributeDefinition{Type: DateTime},
 					}
 					required = nil
 				})
@@ -41,6 +42,7 @@ var _ = Describe("code generation", func() {
 				It("produces the struct go code", func() {
 					expected := "struct {\n" +
 						"	Bar *string `json:\"bar,omitempty\"`\n" +
+						"	Baz *time.Time `json:\"baz,omitempty\"`\n" +
 						"	Foo *int `json:\"foo,omitempty\"`\n" +
 						"}"
 					Ω(st).Should(Equal(expected))
