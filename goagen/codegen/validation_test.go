@@ -25,7 +25,7 @@ var _ = Describe("validation code generation", func() {
 			JustBeforeEach(func() {
 				att.Type = attType
 				att.Validations = validations
-				code = codegen.ValidationChecker(att, false, false, target, context, 1)
+				code = codegen.RecursiveChecker(att, false, false, target, context, 1)
 			})
 
 			Context("of enum", func() {
@@ -55,6 +55,7 @@ var _ = Describe("validation code generation", func() {
 					Ω(code).Should(Equal(patternValCode))
 				})
 			})
+
 			Context("of min value 0", func() {
 				BeforeEach(func() {
 					attType = design.Integer
@@ -68,6 +69,28 @@ var _ = Describe("validation code generation", func() {
 					Ω(code).Should(Equal(minValCode))
 				})
 			})
+
+			Context("of embedded object", func() {
+				BeforeEach(func() {
+					enumVal := &design.EnumValidationDefinition{
+						Values: []interface{}{1, 2, 3},
+					}
+					ccatt := &design.AttributeDefinition{
+						Type:        design.Integer,
+						Validations: []design.ValidationDefinition{enumVal},
+					}
+					catt := &design.AttributeDefinition{
+						Type: design.Object{"bar": ccatt},
+					}
+					attType = design.Object{"foo": catt}
+					validations = nil
+				})
+
+				It("checks the child object is not nil", func() {
+					Ω(code).Should(Equal(embeddedValCode))
+				})
+			})
+
 		})
 	})
 })
@@ -88,6 +111,14 @@ const (
 	minValCode = `	if val != nil {
 		if *val < 0 {
 			err = goa.InvalidRangeError(` + "`" + `context` + "`" + `, *val, 0, true, err)
+		}
+	}`
+
+	embeddedValCode = `	if val.Foo != nil {
+		if val.Foo.Bar != nil {
+			if !(*val.Foo.Bar == 1 || *val.Foo.Bar == 2 || *val.Foo.Bar == 3) {
+				err = goa.InvalidEnumValueError(` + "`" + `context.foo.bar` + "`" + `, *val.Foo.Bar, []interface{}{1, 2, 3}, err)
+			}
 		}
 	}`
 )
