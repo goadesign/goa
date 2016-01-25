@@ -1,6 +1,7 @@
 package dsl
 
 import (
+	"fmt"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -277,9 +278,11 @@ var SupportedValidationFormats = []string{
 // "regexp": RE2 regular expression
 func Format(f string) {
 	if a, ok := attributeDefinition(true); ok {
-		if a.Type != nil && a.Type.Kind() != design.StringKind {
-			incompatibleAttributeType("format", a.Type.Name(), "a string")
+		if a.Type != nil && (a.Type.Kind() != design.StringKind && a.Type.Kind() != design.DateKind) {
+			fmt.Println("skipping")
+			incompatibleAttributeType("format", a.Type.Name(), "a string or date")
 		} else {
+			fmt.Println("Parsing")
 			supported := false
 			for _, s := range SupportedValidationFormats {
 				if s == f {
