@@ -277,8 +277,8 @@ var SupportedValidationFormats = []string{
 // "regexp": RE2 regular expression
 func Format(f string) {
 	if a, ok := attributeDefinition(true); ok {
-		if a.Type != nil && (a.Type.Kind() != design.StringKind && a.Type.Kind() != design.DateKind) {
-			incompatibleAttributeType("format", a.Type.Name(), "a string or date")
+		if a.Type != nil && a.Type.Kind() != design.StringKind {
+			incompatibleAttributeType("format", a.Type.Name(), "a string")
 		} else {
 			supported := false
 			for _, s := range SupportedValidationFormats {
