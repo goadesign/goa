@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"math/rand"
+	"time"
 
 	"github.com/manveru/faker"
 )
@@ -41,9 +42,19 @@ func (r *RandomGenerator) Int() int {
 	return r.rand.Int() % 1000
 }
 
-// String produces a random string of the given
+// String produces a random string.
 func (r *RandomGenerator) String() string {
 	return r.faker.Sentence(2, false)
+
+}
+
+// Date produces a random date.
+func (r *RandomGenerator) Date() time.Time {
+	// get the time now as seconds since epoch
+	// seed the int random generator with it
+	// and convert that back to a time
+	unix := r.rand.Int63n(time.Now().Unix())
+	return time.Unix(unix, 0)
 
 }
 

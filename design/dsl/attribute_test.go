@@ -80,6 +80,22 @@ var _ = Describe("Attribute", func() {
 			Ω(o[name].Type).Should(Equal(Integer))
 		})
 	})
+	Context("with a name and date datatype", func() {
+		BeforeEach(func() {
+			name = "foo"
+			dataType = Date
+		})
+
+		It("produces an attribute of date type", func() {
+			t := parent.Type
+			Ω(t).ShouldNot(BeNil())
+			Ω(t).Should(BeAssignableToTypeOf(Object{}))
+			o := t.(Object)
+			Ω(o).Should(HaveLen(1))
+			Ω(o).Should(HaveKey(name))
+			Ω(o[name].Type).Should(Equal(Date))
+		})
+	})
 
 	Context("with a name, datatype and description", func() {
 		BeforeEach(func() {
@@ -157,6 +173,43 @@ var _ = Describe("Attribute", func() {
 			Ω(o[name].Type).Should(Equal(String))
 			Ω(o[name].Validations).Should(HaveLen(1))
 			Ω(o[name].Validations[0]).Should(BeAssignableToTypeOf(&EnumValidationDefinition{}))
+			Ω(o[name].Description).Should(Equal(description))
+		})
+	})
+	Context("with a name and type date", func() {
+		BeforeEach(func() {
+			name = "birthdate"
+			dataType = Date
+		})
+
+		It("produces an attribute of type date with a validation and the description", func() {
+			t := parent.Type
+			Ω(t).ShouldNot(BeNil())
+			Ω(t).Should(BeAssignableToTypeOf(Object{}))
+			o := t.(Object)
+			Ω(o).Should(HaveLen(1))
+			Ω(o).Should(HaveKey(name))
+			Ω(o[name].Type).Should(Equal(Date))
+		})
+	})
+	Context("with a name, type date, a description and a DSL defining an format", func() {
+		BeforeEach(func() {
+			name = "birthdate"
+			dataType = Date
+			description = "bar"
+			dsl = func() { Format("date-time") }
+		})
+
+		It("produces an attribute of type date with a validation and the description", func() {
+			t := parent.Type
+			Ω(t).ShouldNot(BeNil())
+			Ω(t).Should(BeAssignableToTypeOf(Object{}))
+			o := t.(Object)
+			Ω(o).Should(HaveLen(1))
+			Ω(o).Should(HaveKey(name))
+			Ω(o[name].Type).Should(Equal(Date))
+			Ω(o[name].Validations).Should(HaveLen(1))
+			Ω(o[name].Validations[0]).Should(BeAssignableToTypeOf(&FormatValidationDefinition{}))
 			Ω(o[name].Description).Should(Equal(description))
 		})
 	})
