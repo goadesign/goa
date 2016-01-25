@@ -65,4 +65,24 @@ var _ = Describe("Type", func() {
 			Ω(o).Should(HaveKey(attName))
 		})
 	})
+	Context("with a name and date datatype", func() {
+		const attName = "att"
+		BeforeEach(func() {
+			name = "foo"
+			dsl = func() {
+				Attribute(attName, DateTime)
+			}
+		})
+
+		It("produces an attribute of date type", func() {
+			Ω(ut).ShouldNot(BeNil())
+			Ω(ut.Validate("test", Design)).ShouldNot(HaveOccurred())
+			Ω(ut.AttributeDefinition).ShouldNot(BeNil())
+			Ω(ut.Type).Should(BeAssignableToTypeOf(Object{}))
+			o := ut.Type.(Object)
+			Ω(o).Should(HaveLen(1))
+			Ω(o).Should(HaveKey(attName))
+			Ω(o[attName].Type).Should(Equal(DateTime))
+		})
+	})
 })

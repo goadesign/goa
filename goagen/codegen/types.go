@@ -308,6 +308,8 @@ func GoNativeType(t design.DataType) string {
 			return "float64"
 		case design.StringKind:
 			return "string"
+		case design.DateTimeKind:
+			return "time.Time"
 		case design.AnyKind:
 			return "interface{}"
 		default:
