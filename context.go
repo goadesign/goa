@@ -186,14 +186,14 @@ func (ctx *Context) Respond(code int, body interface{}) error {
 
 // BadRequest sends a HTTP response with status code 400 and the given error as body.
 func (ctx *Context) BadRequest(err *BadRequestError) error {
-	return ctx.RespondBytes(400, []byte(err.Error()))
+	return ctx.Respond(400, err.Error())
 }
 
 // Bug sends a HTTP response with status code 500 and the given body.
 // The body can be set using a format and substituted values a la fmt.Printf.
 func (ctx *Context) Bug(format string, a ...interface{}) error {
 	body := fmt.Sprintf(format, a...)
-	return ctx.RespondBytes(500, []byte(body))
+	return ctx.Respond(500, body)
 }
 
 // Header returns the response header. It implements the http.ResponseWriter interface.
