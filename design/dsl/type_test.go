@@ -70,7 +70,7 @@ var _ = Describe("Type", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
-				Attribute(attName, Date)
+				Attribute(attName, DateTime)
 			}
 		})
 
@@ -82,7 +82,7 @@ var _ = Describe("Type", func() {
 			o := ut.Type.(Object)
 			Ω(o).Should(HaveLen(1))
 			Ω(o).Should(HaveKey(attName))
-			Ω(o[attName].Type).Should(Equal(Date))
+			Ω(o[attName].Type).Should(Equal(DateTime))
 		})
 	})
 })

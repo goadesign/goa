@@ -118,8 +118,8 @@ const (
 	NumberKind
 	// StringKind represents a JSON string.
 	StringKind
-	// DateKind represents a JSON string that is parsed as a Go time.Time
-	DateKind
+	// DateTimeKind represents a JSON string that is parsed as a Go time.Time
+	DateTimeKind
 	// AnyKind represents a generic interface{}.
 	AnyKind
 	// ArrayKind represents a JSON array.
@@ -147,8 +147,9 @@ const (
 	// String is the type for a JSON string.
 	String = Primitive(StringKind)
 
-	// Date is the type for a JSON string parsed as a Go time.Time
-	Date = Primitive(DateKind)
+	// DateTime is the type for a JSON string parsed as a Go time.Time
+	// DateTime expects an RFC3339 formatted value.
+	DateTime = Primitive(DateTimeKind)
 
 	// Any is the type for an arbitrary JSON value (interface{} in Go).
 	Any = Primitive(AnyKind)
@@ -170,7 +171,7 @@ func (p Primitive) Name() string {
 		return "number"
 	case String:
 		return "string"
-	case Date:
+	case DateTime:
 		return "date"
 	case Any:
 		return "any"
@@ -244,7 +245,7 @@ func (p Primitive) IsCompatible(val interface{}) (ok bool) {
 		}
 	case String:
 		_, ok = val.(string)
-	case Date:
+	case DateTime:
 		_, ok = val.(string)
 		if ok {
 			_, err := time.Parse(time.RFC3339, val.(string))
@@ -274,8 +275,8 @@ func (p Primitive) Example(r *RandomGenerator) interface{} {
 		return r.Float64()
 	case String:
 		return r.String()
-	case Date:
-		return r.Date()
+	case DateTime:
+		return r.DateTime()
 	default:
 		panic("unknown primitive type") // bug
 	}

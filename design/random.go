@@ -48,8 +48,8 @@ func (r *RandomGenerator) String() string {
 
 }
 
-// Date produces a random date.
-func (r *RandomGenerator) Date() time.Time {
+// DateTime produces a random date.
+func (r *RandomGenerator) DateTime() time.Time {
 	// get the time now as seconds since epoch
 	// seed the int random generator with it
 	// and convert that back to a time
