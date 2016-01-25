@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/goadesign/goa/design"
@@ -248,8 +249,9 @@ func BuildEncoderMap(info []*design.EncodingDefinition, encoder bool) (map[strin
 			mimeTypes[i] = m
 			i++
 		}
-		var factory string
 		first := mimeTypes[0]
+		sort.Strings(mimeTypes)
+		var factory string
 		if encoder {
 			factory = design.KnownEncoders[first][1]
 			if factory == "" {
