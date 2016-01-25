@@ -68,15 +68,23 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required bool, t
 			att = ut.AttributeDefinition
 		}
 		o.IterateAttributes(func(n string, catt *design.AttributeDefinition) error {
+			actualDepth := depth
+			if !att.IsRequired(n) && catt.Type.IsObject() {
+				actualDepth = depth + 1
+			}
 			validation := RecursiveChecker(
 				catt,
 				att.IsNonZero(n),
 				att.IsRequired(n),
 				fmt.Sprintf("%s.%s", target, Goify(n, true)),
 				fmt.Sprintf("%s.%s", context, n),
-				depth+1,
+				actualDepth,
 			)
 			if validation != "" {
+				if !att.IsRequired(n) && catt.Type.IsObject() {
+					validation = fmt.Sprintf("%sif %s.%s != nil {\n%s\n%s}",
+						Tabs(depth), target, Goify(n, true), validation, Tabs(depth))
+				}
 				checks = append(checks, validation)
 			}
 			return nil
