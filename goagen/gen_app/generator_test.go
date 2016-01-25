@@ -105,6 +105,7 @@ var _ = Describe("Generate", func() {
 
 	Context("with a simple API", func() {
 		var contextsCode, controllersCode, hrefsCode, mediaTypesCode, version string
+		var payload *design.UserTypeDefinition
 
 		isSource := func(filename, content string) {
 			contextsContent, err := ioutil.ReadFile(filepath.Join(outDir, "app", filename))
@@ -147,6 +148,7 @@ var _ = Describe("Generate", func() {
 		}
 
 		BeforeEach(func() {
+			payload = nil
 			required := design.ValidationDefinition(&design.RequiredValidationDefinition{
 				Names: []string{"id"},
 			})
@@ -191,6 +193,7 @@ var _ = Describe("Generate", func() {
 				Routes:      []*design.RouteDefinition{&route},
 				Responses:   map[string]*design.ResponseDefinition{"ok": &resp},
 				Params:      &params,
+				Payload:     payload,
 			}
 			res.Actions = map[string]*design.ActionDefinition{"get": &get}
 			mt := design.MediaTypeDefinition{
@@ -248,6 +251,28 @@ var _ = Describe("Generate", func() {
 				isSource(version+"/controllers.go", controllersCode)
 				isSource(version+"/hrefs.go", hrefsCode)
 				isSource("media_types.go", mediaTypesCode)
+			})
+		})
+
+		Context("with a slice payload", func() {
+			BeforeEach(func() {
+				elemType := &design.AttributeDefinition{Type: design.Integer}
+				payload = &design.UserTypeDefinition{
+					AttributeDefinition: &design.AttributeDefinition{
+						Type: &design.Array{ElemType: elemType},
+					},
+					TypeName: "Collection",
+				}
+				design.Design.Resources["Widget"].Actions["get"].Payload = payload
+				runCodeTemplates(map[string]string{"outDir": outDir, "design": "foo", "version": "", "tmpDir": filepath.Base(outDir)})
+			})
+
+			It("generates the correct payload assignment code", func() {
+				Ω(genErr).Should(BeNil())
+
+				contextsContent, err := ioutil.ReadFile(filepath.Join(outDir, "app", "controllers.go"))
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(string(contextsContent)).Should(ContainSubstring(controllersSlicePayloadCode))
 			})
 		})
 
@@ -467,4 +492,35 @@ const mediaTypesCodeTmpl = `//**************************************************
 //************************************************************************//
 
 package app
+`
+
+const controllersSlicePayloadCode = `
+// MountWidgetController "mounts" a Widget resource controller on the given service.
+func MountWidgetController(service goa.Service, ctrl WidgetController) {
+	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
+
+	// Setup endpoint handler
+	var h goa.Handler
+	mux := service.ServeMux()
+	h = func(c *goa.Context) error {
+		ctx, err := NewGetWidgetContext(c)
+		ctx.Payload = ctx.RawPayload().(Collection)
+		if err != nil {
+			return goa.NewBadRequestError(err)
+		}
+		return ctrl.Get(ctx)
+	}
+	mux.Handle("GET", "/:id", ctrl.HandleFunc("Get", h, unmarshalGetWidgetPayload))
+	service.Info("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
+}
+
+// unmarshalGetWidgetPayload unmarshals the request body.
+func unmarshalGetWidgetPayload(ctx *goa.Context) error {
+	payload := &Collection{}
+	if err := ctx.Service().DecodeRequest(ctx, payload); err != nil {
+		return err
+	}
+	ctx.SetPayload(payload)
+	return nil
+}
 `
