@@ -344,9 +344,19 @@ type {{.Name}} struct {
 */}}{{tabs .Depth}}{{.Pkg}} = {{if .Pointer}}&{{end}}raw{{goify .Name true}}
 {{end}}{{if eq .Attribute.Type.Kind 5}}{{/*
 
+*/}}{{/* DateTimeType */}}{{/*
+*/}}{{$varName := or (and (not .Pointer) .VarName) tempvar}}{{/*
+*/}}{{tabs .Depth}}if {{.VarName}}, err2 := time.Parse("RFC3339", raw{{goify .Name true}}); err2 == nil {
+{{if .Pointer}}{{tabs .Depth}}	{{$varName}} := &{{.VarName}}
+{{end}}{{tabs .Depth}}	{{.Pkg}} = {{$varName}}
+{{tabs .Depth}}} else {
+{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "datetime", err)
+{{tabs .Depth}}}
+{{end}}{{if eq .Attribute.Type.Kind 6}}{{/*
+
 */}}{{/* AnyType */}}{{/*
 */}}{{tabs .Depth}}{{.Pkg}} = {{if .Pointer}}&{{end}}raw{{goify .Name true}}
-{{end}}{{if eq .Attribute.Type.Kind 6}}{{/*
+{{end}}{{if eq .Attribute.Type.Kind 7}}{{/*
 
 */}}{{/* ArrayType */}}{{/*
 */}}{{tabs .Depth}}elems{{goify .Name true}} := strings.Split(raw{{goify .Name true}}, ",")
