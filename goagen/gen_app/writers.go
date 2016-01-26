@@ -434,11 +434,9 @@ type {{.Resource}}Controller interface {
 func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Controller) {
 	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
 {{$ctx := .}}{{range .EncoderMap}}{{$tmp := tempvar}}{{/*
-*/}}	{{$tmp}} := {{.PackageName}}.{{.Factory}}()
-	service.{{if not $ctx.Version.IsDefault}}Version("{{$ctx.Version.Version}}").{{end}}SetEncoder({{$tmp}}, {{.Default}}, "{{join .MIMETypes "\", \""}}")
+*/}}	service.{{if not $ctx.Version.IsDefault}}Version("{{$ctx.Version.Version}}").{{end}}SetEncoder({{.PackageName}}.{{.Factory}}(), {{.Default}}, "{{join .MIMETypes "\", \""}}")
 {{end}}{{range .DecoderMap}}{{$tmp := tempvar}}{{/*
-*/}}	{{$tmp}} := {{.PackageName}}.{{.Factory}}()
-	service.{{if not $ctx.Version.IsDefault}}Version("{{$ctx.Version.Version}}").{{end}}SetDecoder({{$tmp}}, {{.Default}}, "{{join .MIMETypes "\", \""}}")
+*/}}	service.{{if not $ctx.Version.IsDefault}}Version("{{$ctx.Version.Version}}").{{end}}SetDecoder({{.PackageName}}.{{.Factory}}(), {{.Default}}, "{{join .MIMETypes "\", \""}}")
 {{end}}
 	// Setup endpoint handler
 	var h goa.Handler
