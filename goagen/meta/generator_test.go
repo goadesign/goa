@@ -105,7 +105,7 @@ var _ = Describe("Run", func() {
 		It("fails with a useful error message", func() {
 			path := fmt.Sprintf("%s", filepath.Join(invalidPath, "src", filepath.FromSlash(designPackagePath)))
 			msg := fmt.Sprintf(`%s does not contain a Go package`, path)
-			Ω(compileError).Should(MatchError(MatchRegexp(msg)))
+			Ω(compileError.Error()).Should(Equal(msg))
 		})
 
 	})
