@@ -104,7 +104,7 @@ func WorkspaceFor(source string) (*Workspace, error) {
 			}, nil
 		}
 	}
-	return nil, fmt.Errorf("Go source file not in Go workspace, adjust GOPATH: %s", source)
+	return nil, fmt.Errorf(`Go source file "%s" not in Go workspace, adjust GOPATH %s`, source, gopaths)
 }
 
 // Delete deletes the workspace temporary directory.
