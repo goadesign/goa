@@ -71,8 +71,8 @@ var (
 
 // NewWorkspace returns a newly created temporary Go workspace.
 // Use Delete to delete the corresponding temporary directory when done.
-func NewWorkspace(dir, prefix string) (*Workspace, error) {
-	dir, err := ioutil.TempDir(dir, prefix)
+func NewWorkspace(prefix string) (*Workspace, error) {
+	dir, err := ioutil.TempDir("", prefix)
 	if err != nil {
 		return nil, err
 	}

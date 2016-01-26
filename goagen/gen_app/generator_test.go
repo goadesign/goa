@@ -57,7 +57,7 @@ var _ = Describe("Generate", func() {
 
 	BeforeEach(func() {
 		var err error
-		workspace, err = codegen.NewWorkspace("", "test")
+		workspace, err = codegen.NewWorkspace("test")
 		Ω(err).ShouldNot(HaveOccurred())
 		outDir, err = ioutil.TempDir(filepath.Join(workspace.Path, "src"), "")
 		Ω(err).ShouldNot(HaveOccurred())
