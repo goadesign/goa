@@ -58,7 +58,7 @@ var _ = Describe("Generate", func() {
 
 	BeforeEach(func() {
 		var err error
-		workspace, err = codegen.NewWorkspace("test")
+		workspace, err = codegen.NewWorkspace("", "test")
 		Ω(err).ShouldNot(HaveOccurred())
 		testPkg, err = workspace.NewPackage("schematest")
 		Ω(err).ShouldNot(HaveOccurred())
