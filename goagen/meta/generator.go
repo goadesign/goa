@@ -2,7 +2,6 @@ package meta
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -77,7 +76,7 @@ func (m *Generator) Generate() ([]string, error) {
 		}
 	}()
 	if codegen.Debug {
-		fmt.Printf("goagen source dir: %s\n", w.Path)
+		fmt.Printf("** Code generator source dir: %s\n", w.Path)
 	}
 
 	// Figure out design package name from its path
@@ -98,6 +97,9 @@ func (m *Generator) Generate() ([]string, error) {
 	m.generateToolSourceCode(p)
 
 	// Compile and run generated tool.
+	if codegen.Debug {
+		fmt.Printf("** Compiling with:\n%s", strings.Join(os.Environ(), "\n"))
+	}
 	genbin, err := p.Compile("goagen")
 	if err != nil {
 		return nil, err
@@ -132,10 +134,6 @@ func (m *Generator) generateToolSourceCode(pkg *codegen.Package) {
 	err = tmpl.Execute(file, context)
 	if err != nil {
 		panic(err) // bug
-	}
-	if codegen.Debug {
-		src, _ := ioutil.ReadFile(file.Abs())
-		fmt.Printf("goagen source:\n%s\n", src)
 	}
 }
 
