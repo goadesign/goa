@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
 
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/meta"
@@ -37,11 +36,11 @@ var _ = Describe("Run", func() {
 		designPackageSource = "package design"
 		codegen.DesignPackagePath = designPackagePath
 		var err error
-		outputWorkspace, err = codegen.NewWorkspace("", "output")
+		outputWorkspace, err = codegen.NewWorkspace("output")
 		p, err := outputWorkspace.NewPackage("testOutput")
 		Ω(err).ShouldNot(HaveOccurred())
 		outputDir = p.Abs()
-		designWorkspace, err = codegen.NewWorkspace("", "test")
+		designWorkspace, err = codegen.NewWorkspace("test")
 		Ω(err).ShouldNot(HaveOccurred())
 		compiledFiles = nil
 		compileError = nil
@@ -105,7 +104,7 @@ var _ = Describe("Run", func() {
 
 		It("fails with a useful error message", func() {
 			path := fmt.Sprintf("%s", filepath.Join(invalidPath, "src", filepath.FromSlash(designPackagePath)))
-			msg := fmt.Sprintf(`[^,]+, %s do not contain a Go package`, regexp.QuoteMeta(path))
+			msg := fmt.Sprintf(`%s does not contain a Go package`, path)
 			Ω(compileError).Should(MatchError(MatchRegexp(msg)))
 		})
 

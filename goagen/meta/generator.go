@@ -2,6 +2,7 @@ package meta
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -67,7 +68,7 @@ func (m *Generator) Generate() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	w, err := codegen.NewWorkspace(wd, "goagen")
+	tmpDir, err := ioutil.TempDir(wd, "goagen")
 	if err != nil {
 		if _, ok := err.(*os.PathError); ok {
 			err = fmt.Errorf(`invalid output directory path "%s"`, codegen.OutputDir)
@@ -76,11 +77,11 @@ func (m *Generator) Generate() ([]string, error) {
 	}
 	defer func() {
 		if !codegen.Debug {
-			w.Delete()
+			os.RemoveAll(tmpDir)
 		}
 	}()
 	if codegen.Debug {
-		fmt.Printf("** Code generator source dir: %s\n", w.Path)
+		fmt.Printf("** Code generator source dir: %s\n", tmpDir)
 	}
 
 	// Figure out design package name from its path
@@ -94,7 +95,8 @@ func (m *Generator) Generate() ([]string, error) {
 	}
 
 	// Generate tool source code.
-	p, err := w.NewPackage(pkgName)
+	pkgPath := filepath.Join(tmpDir, pkgName)
+	p, err := codegen.PackageFor(pkgPath)
 	if err != nil {
 		return nil, err
 	}

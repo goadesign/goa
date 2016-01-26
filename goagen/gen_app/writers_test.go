@@ -18,7 +18,7 @@ var _ = Describe("ContextsWriter", func() {
 
 	JustBeforeEach(func() {
 		var err error
-		workspace, err = codegen.NewWorkspace("", "test")
+		workspace, err = codegen.NewWorkspace("test")
 		Ω(err).ShouldNot(HaveOccurred())
 		pkg, err := workspace.NewPackage("contexts")
 		Ω(err).ShouldNot(HaveOccurred())
@@ -351,7 +351,7 @@ var _ = Describe("ControllersWriter", func() {
 
 	BeforeEach(func() {
 		var err error
-		workspace, err = codegen.NewWorkspace("", "test")
+		workspace, err = codegen.NewWorkspace("test")
 		Ω(err).ShouldNot(HaveOccurred())
 		pkg, err := workspace.NewPackage("controllers")
 		Ω(err).ShouldNot(HaveOccurred())
@@ -590,7 +590,7 @@ var _ = Describe("HrefWriter", func() {
 
 	BeforeEach(func() {
 		var err error
-		workspace, err = codegen.NewWorkspace("", "test")
+		workspace, err = codegen.NewWorkspace("test")
 		Ω(err).ShouldNot(HaveOccurred())
 		pkg, err := workspace.NewPackage("controllers")
 		Ω(err).ShouldNot(HaveOccurred())
