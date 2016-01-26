@@ -63,7 +63,11 @@ func (m *Generator) Generate() ([]string, error) {
 	}
 
 	// Create temporary workspace used for generation
-	w, err := codegen.NewWorkspace("goagen")
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	w, err := codegen.NewWorkspace(wd, "goagen")
 	if err != nil {
 		if _, ok := err.(*os.PathError); ok {
 			err = fmt.Errorf(`invalid output directory path "%s"`, codegen.OutputDir)

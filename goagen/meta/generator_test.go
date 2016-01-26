@@ -37,11 +37,11 @@ var _ = Describe("Run", func() {
 		designPackageSource = "package design"
 		codegen.DesignPackagePath = designPackagePath
 		var err error
-		outputWorkspace, err = codegen.NewWorkspace("output")
+		outputWorkspace, err = codegen.NewWorkspace("", "output")
 		p, err := outputWorkspace.NewPackage("testOutput")
 		Ω(err).ShouldNot(HaveOccurred())
 		outputDir = p.Abs()
-		designWorkspace, err = codegen.NewWorkspace("test")
+		designWorkspace, err = codegen.NewWorkspace("", "test")
 		Ω(err).ShouldNot(HaveOccurred())
 		compiledFiles = nil
 		compileError = nil
