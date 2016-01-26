@@ -589,7 +589,7 @@ func (cmd *{{$cmdName}}) RegisterFlags(cc *kingpin.CmdClause) {
 `
 
 const clientsTmpl = `{{$payload := goify (printf "%s%sPayload" .Name (title .Parent.Name)) true}}{{if .Payload}}// {{$payload}} is the data structure used to initialize the {{.Parent.Name}} {{.Name}} request body.
-type {{$payload}} {{gotypedef .Payload false "" 1 false}}
+type {{$payload}} {{gotypedef .Payload false "" 1 true}}
 
 {{end}}{{$funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true}}{{$desc := .Description}}{{if $desc}}// {{$desc}}{{else}}// {{$funcName}} makes a request to the {{.Name}} action endpoint of the {{.Parent.Name}} resource{{end}}
 func (c *Client) {{$funcName}}(path string{{if .Payload}}, payload {{if .Payload.Type.IsObject}}*{{end}}{{$payload}}{{end}}{{/*
