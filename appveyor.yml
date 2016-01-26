@@ -3,7 +3,7 @@ version: "{build}"
 os: Windows Server 2012 R2
 
 environment:
-  GOPATH: c:\gopath
+  GOPATH: C:\gopath
 
 clone_folder: c:\gopath\src\github.com\goadesign\goa
 
