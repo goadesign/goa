@@ -132,6 +132,15 @@ func parseAttributeArgs(baseAttr *design.AttributeDefinition, args ...interface{
 	)
 
 	parseDataType := func(expected string, index int) {
+		if name, ok := args[index].(string); ok {
+			// Lookup type by name
+			if dataType, ok = design.Design.Types[name]; !ok {
+				if dataType = design.Design.MediaTypeWithIdentifier(name); dataType == nil {
+					invalidArgError(expected, args[index])
+				}
+			}
+			return
+		}
 		if dataType, ok = args[index].(design.DataType); !ok {
 			invalidArgError(expected, args[index])
 		}
@@ -164,12 +173,12 @@ func parseAttributeArgs(baseAttr *design.AttributeDefinition, args ...interface{
 				dataType = baseAttr.Type
 			}
 		}
-		parseDSL(0, success, func() { parseDataType("DataType or func()", 0) })
+		parseDSL(0, success, func() { parseDataType("type, type name or func()", 0) })
 	case 2:
-		parseDataType("DataType", 0)
+		parseDataType("type or type name", 0)
 		parseDSL(1, success, func() { parseDescription("string or func()", 1) })
 	case 3:
-		parseDataType("DataType", 0)
+		parseDataType("type or type name", 0)
 		parseDescription("string", 1)
 		parseDSL(2, success, func() { invalidArgError("func()", args[2]) })
 	default:

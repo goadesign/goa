@@ -9,7 +9,7 @@ import (
 
 var _ = Describe("Attribute", func() {
 	var name string
-	var dataType DataType
+	var dataType interface{}
 	var description string
 	var dsl func()
 
@@ -190,6 +190,28 @@ var _ = Describe("Attribute", func() {
 			Ω(o).Should(HaveLen(1))
 			Ω(o).Should(HaveKey(name))
 			Ω(o[name].Type).Should(Equal(DateTime))
+		})
+	})
+
+	Context("with a name and a type defined by name", func() {
+		var Foo *UserTypeDefinition
+
+		BeforeEach(func() {
+			name = "fooatt"
+			dataType = "foo"
+			Foo = Type("foo", func() {
+				Attribute("bar")
+			})
+		})
+
+		It("produces an attribute of the corresponding type", func() {
+			t := parent.Type
+			Ω(t).ShouldNot(BeNil())
+			Ω(t).Should(BeAssignableToTypeOf(Object{}))
+			o := t.(Object)
+			Ω(o).Should(HaveLen(1))
+			Ω(o).Should(HaveKey(name))
+			Ω(o[name].Type).Should(Equal(Foo))
 		})
 	})
 
