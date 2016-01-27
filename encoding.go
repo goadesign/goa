@@ -69,13 +69,23 @@ type (
 	gobFactory struct{}
 )
 
-// DecodeRequest uses registered Decoders to unmarshal the request body based on
-// the request `Content-Type` header
+// DecodeRequest retrives the request body and `Content-Type` header and uses Decode
+// to unmarshal into the provided `interface{}`
 func (ver *version) DecodeRequest(ctx *Context, v interface{}) error {
 	body := ctx.Request().Body
 	contentType := ctx.Request().Header.Get("Content-Type")
 	defer body.Close()
 
+	if err := ver.Decode(v, body, contentType); err != nil {
+		ctx.Error(err.Error(), "ContentType", contentType)
+		return err
+	}
+
+	return nil
+}
+
+// Decode uses registered Decoders to unmarshal a body based on the contentType
+func (ver *version) Decode(v interface{}, body io.Reader, contentType string) error {
 	var p *decoderPool
 	if contentType == "" {
 		// Default to JSON
@@ -97,7 +107,6 @@ func (ver *version) DecodeRequest(ctx *Context, v interface{}) error {
 	decoder := p.Get(body)
 	defer p.Put(decoder)
 	if err := decoder.Decode(v); err != nil {
-		ctx.Error(err.Error(), "ContentType", contentType)
 		return err
 	}
 
