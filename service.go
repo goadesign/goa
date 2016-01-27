@@ -65,6 +65,9 @@ type (
 		// If there is no version registered, it will instantiate a new version.
 		Version(name string) ServiceVersion
 
+		// Decode uses registered Decoders to unmarshal a body based on the contentType
+		Decode(v interface{}, body io.Reader, contentType string) error
+
 		// NewController returns a controller for the resource with the given name.
 		// This method is mainly intended for use by generated code.
 		NewController(resName string) Controller
@@ -355,6 +358,11 @@ func (app *Application) Version(name string) ServiceVersion {
 	app.versions[ver.name] = ver
 
 	return ver
+}
+
+// Decode uses the default version decoder to unmarshal a body based on the contentType
+func (app *Application) Decode(v interface{}, body io.Reader, contentType string) error {
+	return app.version.Decode(v, body, contentType)
 }
 
 // SetMissingVersionHandler registers the service missing version handler.
