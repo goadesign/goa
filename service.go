@@ -65,6 +65,9 @@ type (
 		// If there is no version registered, it will instantiate a new version.
 		Version(name string) ServiceVersion
 
+		// Decode uses registered Decoders to unmarshal a body based on the contentType
+		Decode(v interface{}, body io.Reader, contentType string) error
+
 		// NewController returns a controller for the resource with the given name.
 		// This method is mainly intended for use by generated code.
 		NewController(resName string) Controller
