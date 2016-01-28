@@ -238,6 +238,9 @@ func (f *SourceFile) Write(b []byte) (int, error) {
 
 // FormatCode runs "goimports -w" on the source file.
 func (f *SourceFile) FormatCode() error {
+	if NoFormat {
+		return nil
+	}
 	cmd := exec.Command("goimports", "-w", f.Abs())
 	if output, err := cmd.CombinedOutput(); err != nil {
 		if len(output) > 0 {
