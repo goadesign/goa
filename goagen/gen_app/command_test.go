@@ -1,71 +1,55 @@
 package genapp_test
 
 import (
+	"os"
+
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/gen_app"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 )
-
-// FakeRegistry captures flags defined by RegisterFlags.
-type FakeRegistry struct {
-	// Flags keeps track of all registered flags. It indexes their
-	// descriptions by name.
-	Flags map[string]string
-}
-
-// Flag implement FlagRegistry
-func (f *FakeRegistry) Flag(n, h string) *kingpin.FlagClause {
-	f.Flags[n] = h
-	return new(kingpin.FlagClause)
-}
 
 var _ = Describe("RegisterFlags", func() {
 	const testCmd = "testCmd"
 	var appCmd *genapp.Command
+	var root *cobra.Command
 
-	Context("using fake registry", func() {
-		var reg *FakeRegistry
-
+	Context("registering flags", func() {
 		BeforeEach(func() {
-			reg = &FakeRegistry{Flags: make(map[string]string)}
 			appCmd = genapp.NewCommand()
+			root = &cobra.Command{}
 		})
 
 		JustBeforeEach(func() {
-			appCmd.RegisterFlags(reg)
+			appCmd.RegisterFlags(root)
 		})
 
 		It("registers the required flags", func() {
-			_, ok := reg.Flags["pkg"]
-			Ω(ok).Should(BeTrue())
+			f := root.Flags().Lookup("pkg")
+			Ω(f).ShouldNot(BeNil())
 		})
 	})
 
 	Context("with command line flags", func() {
-		var kapp *kingpin.Application
-		var cmd *kingpin.CmdClause
+		var root *cobra.Command
 		const flagVal = "testme"
 		var args []string
-		var parsedCmd string
 
 		BeforeEach(func() {
-			kapp = kingpin.New("test", "test")
-			cmd = kapp.Command("testCmd", "testCmd")
-			args = []string{testCmd, "-o" + flagVal, "-d=design", "--pkg=dummy"}
+			root = &cobra.Command{Use: "testCmd"}
+			args = []string{os.Args[0], testCmd, "-o" + flagVal, "-d=design", "--pkg=dummy"}
 		})
 
 		JustBeforeEach(func() {
-			codegen.RegisterFlags(cmd)
-			appCmd.RegisterFlags(cmd)
-			var err error
-			parsedCmd, err = kapp.Parse(args)
-			Ω(err).ShouldNot(HaveOccurred())
+			codegen.RegisterFlags(root)
+			appCmd.RegisterFlags(root)
+			os.Args = args
 		})
 
 		It("parses the default flags", func() {
-			Ω(parsedCmd).Should(Equal(testCmd))
+			err := root.Execute()
+			Ω(err).ShouldNot(HaveOccurred())
 			Ω(codegen.OutputDir).Should(Equal(flagVal))
 		})
 	})

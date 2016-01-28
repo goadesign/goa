@@ -13,8 +13,7 @@ import (
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/utils"
-
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 )
 
 // Generator is the application code generator.
@@ -23,25 +22,18 @@ type Generator struct {
 }
 
 // Generate is the generator entry point called by the meta generator.
-func Generate(api *design.APIDefinition) ([]string, error) {
-	g, err := NewGenerator()
-	if err != nil {
-		return nil, err
+func Generate(api *design.APIDefinition) (files []string, err error) {
+	g := new(Generator)
+	root := &cobra.Command{
+		Use:   "goagen",
+		Short: "Client generator",
+		Long:  "client tool and package generator",
+		Run:   func(*cobra.Command, []string) { files, err = g.Generate(api) },
 	}
-	return g.Generate(api)
-}
-
-// NewGenerator returns the application code generator.
-func NewGenerator() (*Generator, error) {
-	app := kingpin.New("Client generator", "client tool and package generator")
-	codegen.RegisterFlags(app)
-	NewCommand().RegisterFlags(app)
-	_, err := app.Parse(os.Args[1:])
-	if err != nil {
-		return nil, fmt.Errorf(`invalid command line: %s. Command line was "%s"`,
-			err, strings.Join(os.Args, " "))
-	}
-	return new(Generator), nil
+	codegen.RegisterFlags(root)
+	NewCommand().RegisterFlags(root)
+	root.Execute()
+	return
 }
 
 func makeToolDir(g *Generator, apiName string) (toolDir string, err error) {
@@ -62,7 +54,7 @@ func (g *Generator) generateMain(mainFile string, clientPkg string, funcs templa
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("os"),
 		codegen.SimpleImport(clientPkg),
-		codegen.SimpleImport("gopkg.in/alecthomas/kingpin.v2"),
+		codegen.SimpleImport("github.com/spf13/cobra"),
 	}
 	for _, pkg := range SignerPackages {
 		imports = append(imports, codegen.SimpleImport(pkg))
@@ -115,7 +107,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport(clientPkg),
 		codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
-		codegen.SimpleImport("gopkg.in/alecthomas/kingpin.v2"),
+		codegen.SimpleImport("github.com/spf13/cobra"),
 	}
 	if err := file.WriteHeader("", "main", imports); err != nil {
 		return err
@@ -158,7 +150,7 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("net/http"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
-		codegen.SimpleImport("gopkg.in/alecthomas/kingpin.v2"),
+		codegen.SimpleImport("github.com/spf13/cobra"),
 	}
 	if err := file.WriteHeader("", "client", imports); err != nil {
 		return err
@@ -229,8 +221,8 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		"tempvar":      codegen.Tempvar,
 		"title":        strings.Title,
 		"flagType":     flagType,
-		"enumOptions":  enumOptions,
 		"defaultPath":  defaultPath,
+		"toGo":         toGo,
 	}
 	clientPkg, err := codegen.PackagePath(codegen.OutputDir)
 	if err != nil {
@@ -373,21 +365,8 @@ func toString(name, target string, att *design.AttributeDefinition) string {
 	}
 }
 
-// flagType returns the kingpin flag type for the given (basic type) attribute definition.
+// flagType returns the flag type for the given (basic type) attribute definition.
 func flagType(att *design.AttributeDefinition) string {
-	var enum *design.EnumValidationDefinition
-	for _, v := range att.Validations {
-		if e, ok := v.(*design.EnumValidationDefinition); ok {
-			enum = e
-			break
-		}
-	}
-	if enum != nil {
-		if att.Type.Kind() == design.ArrayKind {
-			return "Enums"
-		}
-		return "Enum"
-	}
 	switch att.Type.Kind() {
 	case design.IntegerKind:
 		return "Int"
@@ -402,7 +381,7 @@ func flagType(att *design.AttributeDefinition) string {
 	case design.AnyKind:
 		return "String"
 	case design.ArrayKind:
-		return flagType(att.Type.(*design.Array).ElemType) + "s"
+		return flagType(att.Type.(*design.Array).ElemType) + "Slice"
 	case design.UserTypeKind:
 		return flagType(att.Type.(*design.UserTypeDefinition).AttributeDefinition)
 	case design.MediaTypeKind:
@@ -410,25 +389,6 @@ func flagType(att *design.AttributeDefinition) string {
 	default:
 		panic("invalid flag attribute type " + att.Type.Name())
 	}
-}
-
-// enumOptions returns the enum values for the given attribute if any, empty string otherwise.
-func enumOptions(att *design.AttributeDefinition) string {
-	var enum *design.EnumValidationDefinition
-	for _, v := range att.Validations {
-		if e, ok := v.(*design.EnumValidationDefinition); ok {
-			enum = e
-			break
-		}
-	}
-	if enum == nil {
-		return ""
-	}
-	elems := make([]string, len(enum.Values)+1)
-	for i, e := range enum.Values {
-		elems[i+1] = fmt.Sprintf("%#v", e)
-	}
-	return strings.Join(elems, ", ")
 }
 
 // defaultPath returns the first route path for the given action that does not take any wildcard,
@@ -443,44 +403,47 @@ func defaultPath(action *design.ActionDefinition) string {
 	return ""
 }
 
+// toGo returns the literal Go representation of the given value.
+// Can't just use Printf("%#v") because nil gives "<nil>" instead of "nil".
+func toGo(val interface{}) string {
+	if val == nil {
+		return "nil"
+	}
+	return fmt.Sprintf("%#v", val)
+}
+
 const mainTmpl = `
 // PrettyPrint is true if the tool output should be formatted for human consumption.
 var PrettyPrint bool
 
 func main() {
 	// Create command line parser
-	app := kingpin.New("{{.API.Name}}-cli", "CLI client for the {{.API.Name}} service{{if .API.Docs}} ({{.API.Docs.URL}}){{end}}")
+	app := &cobra.Command{
+		Use: "{{.API.Name}}-cli",
+		Short: "CLI client for the {{.API.Name}} service{{if .API.Docs}} ({{.API.Docs.URL}}){{end}}",
+	}
 	c := client.New()
 {{if .Signers}}	c.Signers = RegisterSigners(app)
 {{end}}	c.UserAgent = "{{.API.Name}}-cli/{{.Version}}"
-	app.Flag("scheme", "Set the requests scheme").Short('s'){{if .API.Schemes}}.Default("{{index .API.Schemes 0}}"){{end}}.StringVar(&c.Scheme)
-	app.Flag("host", "API hostname").Short('h'){{if .API.Host}}.Default("{{.API.Host}}"){{end}}.StringVar(&c.Host)
-	app.Flag("timeout", "Set the request timeout, defaults to 20s").Short('t').Default("20s").DurationVar(&c.Timeout)
-	app.Flag("dump", "Dump HTTP request and response.").BoolVar(&c.Dump)
-	app.Flag("pp", "Pretty print response body").BoolVar(&PrettyPrint)
-	commands := RegisterCommands(app)
-	// Make "client-cli <action> [<resource>] --help" equivalent to
-	// "client-cli help <action> [<resource>]"
-	if os.Args[len(os.Args) - 1] == "--help" {
-		args := append([]string{os.Args[0], "help"}, os.Args[1:len(os.Args)-1]...)
-		os.Args = args
+	app.PersistentFlags().StringVarP(&c.Scheme, "scheme", "s", "{{if gt (len .API.Schemes) 0}}{{index .API.Schemes 0}}{{end}}", "Set the requests scheme")
+	app.PersistentFlags().StringVarP(&c.Host, "host", "H", "{{.API.Host}}", "API hostname")
+	app.PersistentFlags().DurationVarP(&c.Timeout, "timeout", "t", time.Duration(20) * time.Second, "Set the request timeout, defaults to 20s")
+	app.PersistentFlags().BoolVar(&c.Dump, "dump", false, "Dump HTTP request and response.")
+	app.PersistentFlags().BoolVar(&PrettyPrint, "pp", false, "Pretty print response body")
+	RegisterCommands(app, c)
+	if err := app.Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "request failed: %s", err)
+		os.Exit(-1)
 	}
-	cmdName, err := app.Parse(os.Args[1:])
-	if err != nil {
-		kingpin.Fatalf(err.Error())
-	}
-	cmd, ok := commands[cmdName]
-	if !ok {
-		kingpin.Fatalf("unknown command %s", cmdName)
-	}
-	resp, err := cmd.Run(c)
-	if err != nil {
-		kingpin.Fatalf("request failed: %s", err)
-	}
+}
+
+// HandleResponse unmarshals the response body and analyzes the status code to print then exit.
+func HandleResponse(c *client.Client, resp *http.Response) {
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		kingpin.Fatalf("failed to read body: %s", err)
+		fmt.Fprintf(os.Stderr, "failed to read body: %s", err)
+		os.Exit(-1)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		// Let user know if something went wrong
@@ -529,7 +492,7 @@ func main() {
 }
 
 {{if .Signers}}// RegisterSigners adds the supported signers to the command line.
-func RegisterSigners(app *kingpin.Application) (signers []goa.Signer) {
+func RegisterSigners(app *cobra.Command) (signers []goa.Signer) {
 {{range $signers := .Signers}}{{$tmp := tempvar}}	{{$tmp}} := &{{$signers}}{}
 	{{$tmp}}.RegisterFlags(app)
 	signers = append(signers, {{$tmp}})
@@ -547,44 +510,51 @@ const arrayToStringT = `	{{$tmp := tempvar}}{{$tmp}} := make([]string, len({{.Na
 
 const commandTypesTmpl = `{{$cmdName := goify (printf "%s%s%s" .Name (title .Parent.Name) "Command") true}}	// {{$cmdName}} is the command line data structure for the {{.Name}} action of {{.Parent.Name}}
 	{{$cmdName}} struct {
-		// Path is the HTTP request path.
-		Path string
 {{if .Payload}}		Payload string
 {{end}}{{$params := .QueryParams}}{{if $params}}{{range $name, $att := $params.Type.ToObject}}{{if $att.Description}}		// {{$att.Description}}
 {{end}}		{{goify $name true}} {{nativeType $att.Type}}
 {{end}}{{end}}{{$headers := .Headers}}{{if $headers}}{{range $name, $att := $headers.Type.ToObject}}{{if $att.Description}}		// {{$att.Description}}
 {{end}}		{{goify $name true}} string
 {{end}}{{end}}	}
+
 `
 
 const commandsTmpl = `
 {{$cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true}}// Run makes the HTTP request corresponding to the {{$cmdName}} command.
-func (cmd *{{$cmdName}}) Run(c *client.Client) (*http.Response, error) {
+func (cmd *{{$cmdName}}) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+{{$default := defaultPath .Action}}{{if $default}}	path = "{{$default}}"
+{{else}}	return fmt.Errorf("missing path argument")
+{{end}}	}
 {{if .Action.Payload}}var payload {{gotyperefext .Action.Payload 2 "client"}}
 	if cmd.Payload != "" {
 		err := json.Unmarshal([]byte(cmd.Payload), &payload)
 		if err != nil {
 {{if eq .Action.Payload.Type.Kind 4}}	payload = cmd.Payload
-{{else}}			return nil, fmt.Errorf("failed to deserialize payload: %s", err)
+{{else}}			return fmt.Errorf("failed to deserialize payload: %s", err)
 {{end}}		}
 	}
-{{end}}	return c.{{goify (printf "%s%s" .Action.Name (title .Resource.Name)) true}}(cmd.Path{{if .Action.Payload}}, {{if or .Action.Payload.Type.IsObject .Action.Payload.IsPrimitive}}&{{end}}payload{{else}}{{end}}{{/*
+{{end}}	resp, err := c.{{goify (printf "%s%s" .Action.Name (title .Resource.Name)) true}}(path{{if .Action.Payload}}, {{if or .Action.Payload.Type.IsObject .Action.Payload.IsPrimitive}}&{{end}}payload{{else}}{{end}}{{/*
 	*/}}{{$params := joinNames .Action.QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
 	*/}}{{$headers := joinNames .Action.Headers}}{{if $headers}}, {{$headers}}{{end}})
+	if err != nil {
+		return err
+	}
+	HandleResponse(c, resp)
+	return nil
 }
 
 // RegisterFlags registers the command flags with the command line.
-func (cmd *{{$cmdName}}) RegisterFlags(cc *kingpin.CmdClause) {
-{{$default := defaultPath .Action}}	cc.Arg("path", ` + "`" + `Request path{{if $default}}, default is "{{$default}}"{{else}}, format is {{(index .Action.Routes 0).FullPath .Version}}{{end}}` + "`" + `){{if $default}}.Default("{{$default}}"){{else}}.Required(){{end}}.StringVar(&cmd.Path)
-{{if .Action.Payload}}	cc.Flag("payload", "Request JSON body").StringVar(&cmd.Payload)
-{{end}}{{$params := .Action.QueryParams}}{{if $params}}{{range $name, $param := $params.Type.ToObject}}	cc.Flag("{{$name}}", "{{$param.Description}}"){{/*
-	*/}}{{if $params.IsRequired $name}}.Required(){{end}}{{/*
-	*/}}{{if $param.DefaultValue}}.Default({{printf "%#v" $param.DefaultValue}}){{end}}{{/*
-	*/}}.{{flagType $param}}Var(&cmd.{{goify $name true}}{{enumOptions $param}})
-{{end}}{{end}}{{$headers := .Action.Headers}}{{if $headers}}{{range $name, $header := $headers.Type.ToObject}}	cc.Flag("{{$name}}", "{{$header.Description}}"){{/*
-	*/}}{{if $headers.IsRequired $name}}.Required(){{end}}{{/*
-	*/}}{{if $header.DefaultValue}}.Default({{printf "%#v" $header.DefaultValue}}){{end}}{{/*
-	*/}}.StringVar(&cmd.{{goify $name true}})
+func (cmd *{{$cmdName}}) RegisterFlags(cc *cobra.Command) {
+{{if .Action.Payload}}	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request JSON body")
+{{end}}{{$params := .Action.QueryParams}}{{if $params}}{{range $name, $param := $params.Type.ToObject}}{{/*
+*/}}	cc.Flags().{{flagType $param}}Var(&cmd.{{goify $name true}}, "{{$name}}", {{toGo $param.DefaultValue}}, "{{$param.Description}}")
+{{end}}{{end}}{{/*
+*/}}{{$headers := .Action.Headers}}{{if $headers}}{{range $name, $header := $headers.Type.ToObject}}{{/*
+*/}}	cc.Flags().StringVar(&cmd.{{goify $name true}}, "{{$name}}", {{toGo $header.DefaultValue}}, "{{$header.Description}}")
 {{end}}{{end}}}
 `
 
@@ -631,9 +601,9 @@ const clientTmpl = `type (
 	// call the method passing in arguments computed from the command line.
 	ActionCommand interface {
 		// Run makes the HTTP request and returns the response.
-		Run(c *Client) (*http.Response, error)
+		Run(c *Client) error
 		// RegisterFlags defines the command flags.
-		RegisterFlags(*kingpin.CmdClause)
+		RegisterFlags(*cobra.Command)
 	}
 )
 
@@ -645,14 +615,20 @@ func New() *Client {
 
 // Takes map[string][]*design.ActionDefinition as input
 const registerCmdsT = `// RegisterCommands all the resource action subcommands to the application command line.
-func RegisterCommands(app *kingpin.Application) map[string]client.ActionCommand {
-	res := make(map[string]client.ActionCommand)
-{{if gt (len .) 0}}	var command, sub *kingpin.CmdClause
-{{end}}{{range $name, $actions := .}}	command = app.Command("{{$name}}", "{{if eq (len $actions) 1}}{{$a := index $actions 0}}{{$a.Description}}{{else}}{{$name}} action{{end}}")
+func RegisterCommands(app *cobra.Command, c *client.Client) {
+{{if gt (len .) 0}}	var command, sub *cobra.Command
+{{end}}{{range $name, $actions := .}}	command = &cobra.Command{
+		Use:   "{{$name}}",
+		Short: "{{if eq (len $actions) 1}}{{$a := index $actions 0}}{{$a.Description}}{{else}}{{$name}} action{{end}}",
+	}
 {{range $action := $actions}}{{$cmdName := goify (printf "%s%sCommand" $action.Name (title $action.Parent.Name)) true}}{{$tmp := tempvar}}	{{$tmp}} := new({{$cmdName}})
-	sub = command.Command("{{$action.Parent.Name}}", "{{$action.Parent.Description}}")
+	sub = &cobra.Command{
+		Use:   "{{$action.Parent.Name}}",
+		Short: "{{$action.Parent.Description}}",
+		RunE:  func(cmd *cobra.Command, args []string) error { return {{$tmp}}.Run(c, args) },
+	}
 	{{$tmp}}.RegisterFlags(sub)
-	res["{{printf "%s %s" $name $action.Parent.Name}}"] = {{$tmp}}
-{{end}}{{end}}
-	return res
+	command.AddCommand(sub)
+{{end}}app.AddCommand(command)
+{{end}}
 }`

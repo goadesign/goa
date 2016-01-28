@@ -31,11 +31,9 @@ func NewCommand() *Command {
 
 // RegisterFlags registers the command line flags with the given registry.
 func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
-	r.Flag("signer", `Adds support for the given request signer, e.g. "--signer goa.BasicSigner --signer goa.JWTSigner"`).
-		StringsVar(&Signers)
-	r.Flag("signerPkg", `Adds the given Go package path to the import directive in files using signers`).
-		StringsVar(&SignerPackages)
-	r.Flag("cli-version", "Generated client version").Default("1.0").StringVar(&Version)
+	r.Flags().StringSliceVar(&Signers, "signer", nil, `Adds support for the given request signer, e.g. "--signer goa.BasicSigner --signer goa.JWTSigner"`)
+	r.Flags().StringSliceVar(&SignerPackages, "signerPkg", nil, `Adds the given Go package path to the import directive in files using signers`)
+	r.Flags().StringVar(&Version, "cli-version", "1.0", "Generated client version")
 }
 
 // Run simply calls the meta generator.

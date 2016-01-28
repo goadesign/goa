@@ -9,43 +9,29 @@ import (
 	"github.com/goadesign/goa/goagen/gen_gen"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 )
-
-// FakeRegistry captures flags defined by RegisterFlags.
-type FakeRegistry struct {
-	// Flags keeps track of all registered flags. It indexes their
-	// descriptions by name.
-	Flags map[string]string
-}
-
-// Flag implement FlagRegistry
-func (f *FakeRegistry) Flag(n, h string) *kingpin.FlagClause {
-	f.Flags[n] = h
-	return new(kingpin.FlagClause)
-}
 
 var _ = Describe("RegisterFlags", func() {
 	const testCmd = "testCmd"
 	var genCmd *gengen.Command
+	var root *cobra.Command
 
 	Context("using fake registry", func() {
-		var reg *FakeRegistry
-
 		BeforeEach(func() {
-			reg = &FakeRegistry{Flags: make(map[string]string)}
+			root = &cobra.Command{}
 			genCmd = gengen.NewCommand()
 		})
 
 		JustBeforeEach(func() {
-			genCmd.RegisterFlags(reg)
+			genCmd.RegisterFlags(root)
 		})
 
 		It("registers the flags", func() {
-			_, ok := reg.Flags["pkg-path"]
-			Ω(ok).Should(BeTrue())
-			_, ok = reg.Flags["pkg-name"]
-			Ω(ok).Should(BeTrue())
+			f := root.Flags().Lookup("pkg-path")
+			Ω(f).ShouldNot(BeNil())
+			f = root.Flags().Lookup("pkg-name")
+			Ω(f).ShouldNot(BeNil())
 		})
 	})
 
