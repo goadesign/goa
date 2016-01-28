@@ -23,8 +23,7 @@ func NewCommand() *Command {
 
 // RegisterFlags registers the command line flags with the given registry.
 func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
-	r.Flag("pkg", "Name of generated Go package containing controllers supporting code (contexts, media types, user types etc.)").
-		Default("app").StringVar(&TargetPackage)
+	r.Flags().StringVar(&TargetPackage, "pkg", "app", "Name of generated Go package containing controllers supporting code (contexts, media types, user types etc.)")
 }
 
 // Run simply calls the meta generator.

@@ -9,47 +9,13 @@ import (
 	"text/template"
 
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/design/dsl"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/gen_app"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("NewGenerator", func() {
-	var gen *genapp.Generator
-
-	Context("with dummy command line flags", func() {
-		BeforeEach(func() {
-			os.Args = []string{"goagen", "--out=_foo", "--design=bar"}
-		})
-
-		AfterEach(func() {
-			os.RemoveAll("_foo")
-		})
-
-		It("instantiates a generator", func() {
-			design.Design = &design.APIDefinition{
-				APIVersionDefinition: &design.APIVersionDefinition{Name: "foo"},
-			}
-			var err error
-			gen, err = genapp.NewGenerator()
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(gen).ShouldNot(BeNil())
-		})
-
-		It("instantiates a generator with initialized writers", func() {
-			dsl.InitDesign()
-			var err error
-			gen, err = genapp.NewGenerator()
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(gen).ShouldNot(BeNil())
-		})
-	})
-})
-
 var _ = Describe("Generate", func() {
-	var gen *genapp.Generator
 	var workspace *codegen.Workspace
 	var outDir string
 	var files []string
@@ -65,10 +31,7 @@ var _ = Describe("Generate", func() {
 	})
 
 	JustBeforeEach(func() {
-		var err error
-		gen, err = genapp.NewGenerator()
-		Ω(err).ShouldNot(HaveOccurred())
-		files, genErr = gen.Generate(design.Design)
+		files, genErr = genapp.Generate(design.Design)
 	})
 
 	AfterEach(func() {

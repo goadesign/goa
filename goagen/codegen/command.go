@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/pflag"
 )
 
 var (
@@ -27,11 +27,10 @@ var (
 )
 
 type (
-	// FlagRegistry is the interface implemented by kingpin.Application
-	// and kingpin.CmdClause to register flags.
+	// FlagRegistry is the interface implemented by cobra.Command to register flags.
 	FlagRegistry interface {
-		// Flag defines a new flag with the given long name and help.
-		Flag(name, help string) *kingpin.FlagClause
+		// Flags returns the command flag set
+		Flags() *pflag.FlagSet
 	}
 
 	// Command is the interface implemented by all generation goa commands.
@@ -49,8 +48,7 @@ type (
 
 		// Run generates the generator code then compiles and runs it.
 		// It returns the list of generated files.
-		// Run uses the variables initialized by kingpin.Parse and
-		// defined in RegisterFlags.
+		// Run uses the variables initialized by the command line defined in RegisterFlags.
 		Run() ([]string, error)
 	}
 )
@@ -62,18 +60,9 @@ func RegisterFlags(r FlagRegistry) {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	r.Flag("out", "output directory").
-		Default(cwd).
-		Short('o').
-		StringVar(&OutputDir)
-
-	r.Flag("design", "design package path").
-		Required().
-		Short('d').
-		StringVar(&DesignPackagePath)
-
-	r.Flag("debug", "enable debug mode").
-		BoolVar(&Debug)
+	r.Flags().StringVarP(&OutputDir, "out", "o", cwd, "output directory")
+	r.Flags().StringVarP(&DesignPackagePath, "design", "d", "", "design package path")
+	r.Flags().BoolVar(&Debug, "debug", false, "enable debug mode")
 }
 
 // BaseCommand provides the basic logic for all commands. It implements

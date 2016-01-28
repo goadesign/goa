@@ -30,10 +30,13 @@ func NewCommand() *Command {
 
 // RegisterFlags registers the command line flags with the given registry.
 func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
-	r.Flag("force", "overwrite existing files").BoolVar(&Force)
-	r.Flag("name", "application name").Default("API").StringVar(&AppName)
-	r.Flag("pkg", "Name of generated Go package containing controllers supporting code (contexts, media types, user types etc.)").
-		Default("app").StringVar(&TargetPackage)
+	r.Flags().BoolVar(&Force, "force", false, "overwrite existing files")
+	r.Flags().StringVar(&AppName, "name", "API", "application name")
+	if r.Flags().Lookup("pkg") == nil {
+		// Special case because the bootstrap command calls RegisterFlags on genapp which
+		// already registers that flag.
+		r.Flags().StringVar(&TargetPackage, "pkg", "app", "Name of generated Go package containing controllers supporting code (contexts, media types, user types etc.)")
+	}
 }
 
 // Run simply calls the meta generator.
