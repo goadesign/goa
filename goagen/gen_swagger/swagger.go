@@ -1,7 +1,6 @@
 package genswagger
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -366,10 +365,20 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 }
 
 func tagsFromDefinition(mdata design.MetadataDefinition) (tags []*Tag, err error) {
-	if mtags, found := mdata["tags"]; found {
-		err = json.Unmarshal([]byte(mtags), &tags)
-		if err != nil {
-			return
+	for key, value := range mdata {
+		if len(key) > 12 && strings.HasPrefix(key, "swagger:tag=") {
+			tag := &Tag{Name: key[12:]}
+			if len(value) > 0 {
+				tag.Description = value[0]
+			}
+			if len(value) > 1 {
+				doc := &ExternalDocs{URL: value[1]}
+				if len(value) > 2 {
+					doc.Description = value[2]
+				}
+				tag.ExternalDocs = doc
+			}
+			tags = append(tags, tag)
 		}
 	}
 	return

@@ -70,7 +70,7 @@ var _ = Describe("New", func() {
 		BeforeEach(func() {
 			API("test", func() {
 				Title(title)
-				Metadata("tags", `[{"name": "`+tag+`"}]`)
+				Metadata("swagger:tag=" + tag)
 				Description(description)
 				TermsOfService(terms)
 				Contact(func() {
@@ -333,14 +333,14 @@ var _ = Describe("New", func() {
 					Required("name")
 				})
 				Resource("res", func() {
-					Metadata("tags", `[{"name": "res"}]`)
+					Metadata("swagger:tag=res")
 					Description("A wine bottle")
 					DefaultMedia(BottleMedia)
 					BasePath("/bottles")
 					UseTrait("Authenticated")
 
 					Action("Update", func() {
-						Metadata("tags", `[{"name": "Update"}]`)
+						Metadata("swagger:tag=Update")
 						Description("Update account")
 						Docs(func() {
 							Description("docs")
