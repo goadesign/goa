@@ -107,7 +107,7 @@ type (
 	}
 
 	// MetadataDefinition is a set of key/value pairs
-	MetadataDefinition map[string]string
+	MetadataDefinition map[string][]string
 
 	// TraitDefinition defines a set of reusable properties.
 	TraitDefinition struct {
