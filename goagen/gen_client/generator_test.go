@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/design/dsl"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/gen_client"
 	. "github.com/onsi/ginkgo"
@@ -15,44 +14,9 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("NewGenerator", func() {
-	var gen *genclient.Generator
-
-	Context("with dummy command line flags", func() {
-		BeforeEach(func() {
-			os.Args = []string{"codegen", "--out=_foo", "--design=bar"}
-		})
-
-		AfterEach(func() {
-			os.RemoveAll("_foo")
-		})
-
-		It("instantiates a generator", func() {
-			design.Design = &design.APIDefinition{
-				APIVersionDefinition: &design.APIVersionDefinition{
-					Name: "foo",
-				},
-			}
-			var err error
-			gen, err = genclient.NewGenerator()
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(gen).ShouldNot(BeNil())
-		})
-
-		It("instantiates a generator even if Design is not initialized", func() {
-			dsl.InitDesign()
-			var err error
-			gen, err = genclient.NewGenerator()
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(gen).ShouldNot(BeNil())
-		})
-	})
-})
-
 var _ = Describe("Generate", func() {
 	const testgenPackagePath = "github.com/goadesign/goa/goagen/gen_client/test_"
 
-	var gen *genclient.Generator
 	var outDir string
 	var files []string
 	var genErr error
@@ -70,10 +34,7 @@ var _ = Describe("Generate", func() {
 	})
 
 	JustBeforeEach(func() {
-		var err error
-		gen, err = genclient.NewGenerator()
-		Ω(err).ShouldNot(HaveOccurred())
-		files, genErr = gen.Generate(design.Design)
+		files, genErr = genclient.Generate(design.Design)
 	})
 
 	AfterEach(func() {

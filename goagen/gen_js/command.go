@@ -32,12 +32,9 @@ func NewCommand() *Command {
 
 // RegisterFlags registers the command line flags with the given registry.
 func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
-	r.Flag("timeout", `the duration before the request times out.`).Default("20s").
-		DurationVar(&Timeout)
-	r.Flag("scheme", `the URL scheme used to make requests to the API, defaults to the scheme defined in the API design if any.`).
-		EnumVar(&Scheme, "http", "https")
-	r.Flag("host", `the API hostname, defaults to the hostname defined in the API design if any`).
-		StringVar(&Host)
+	r.Flags().DurationVar(&Timeout, "timeout", time.Duration(20)*time.Second, `the duration before the request times out.`)
+	r.Flags().StringVar(&Scheme, "scheme", "http", `the URL scheme used to make requests to the API, defaults to the scheme defined in the API design if any.`)
+	r.Flags().StringVar(&Host, "host", "", `the API hostname, defaults to the hostname defined in the API design if any`)
 }
 
 // Run simply calls the meta generator.

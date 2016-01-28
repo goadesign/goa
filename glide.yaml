@@ -5,7 +5,7 @@ import:
       - /cmd/goimports
   - package: bitbucket.org/pkg/inflect
   - package: github.com/julienschmidt/httprouter
-  - package: gopkg.in/alecthomas/kingpin.v2
+  - package: github.com/spf13/cobra
   - package: github.com/alecthomas/template
   - package: github.com/alecthomas/units
   - package: golang.org/x/net
