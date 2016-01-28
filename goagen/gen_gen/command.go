@@ -30,8 +30,8 @@ func NewCommand() *Command {
 
 // RegisterFlags registers the command line flags with the given registry.
 func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
-	r.Flag("pkg-path", "Go package path to generator package. The package must implement the Generate global function.").Required().StringVar(&GenPkgPath)
-	r.Flag("pkg-name", "Go package name of generator package. Defaults to name of inner most directory in package path.").StringVar(&GenPkgName)
+	r.Flags().StringVar(&GenPkgPath, "pkg-path", "", "Go package path to generator package. The package must implement the Generate global function.")
+	r.Flags().StringVar(&GenPkgName, "pkg-name", "", "Go package name of generator package. Defaults to name of inner most directory in package path.")
 }
 
 // Run simply calls the meta generator.

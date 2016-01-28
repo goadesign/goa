@@ -22,10 +22,7 @@ func NewCommand() *Command {
 
 // RegisterFlags registers the command line flags with the given registry.
 func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
-	r.Flag("url", "API base URL used to build JSON schema ID, e.g. https://www.myapi.com").
-		Short('u').
-		Default("http://localhost").
-		StringVar(&ServiceURL)
+	r.Flags().StringVarP(&ServiceURL, "url", "u", "http://localhost", "API base URL used to build JSON schema ID, e.g. https://www.myapi.com")
 }
 
 // Run simply calls the meta generator.

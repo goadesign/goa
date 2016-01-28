@@ -14,7 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
+
 	"gopkg.in/inconshreveable/log15.v2"
 )
 
@@ -44,7 +45,7 @@ type (
 		Sign(*http.Request) error
 		// RegisterFlags registers the command line flags that defines the values used to
 		// initialize the signer.
-		RegisterFlags(app *kingpin.Application)
+		RegisterFlags(cmd *cobra.Command)
 	}
 
 	// BasicSigner implements basic auth.
@@ -137,9 +138,9 @@ func (s *BasicSigner) Sign(req *http.Request) error {
 }
 
 // RegisterFlags adds the "--user" and "--pass" flags to the client tool.
-func (s *BasicSigner) RegisterFlags(app *kingpin.Application) {
-	app.Flag("user", "Basic Auth username").StringVar(&s.Username)
-	app.Flag("pass", "Basic Auth password").StringVar(&s.Password)
+func (s *BasicSigner) RegisterFlags(app *cobra.Command) {
+	app.Flags().StringVar(&s.Username, "user", "", "Basic Auth username")
+	app.Flags().StringVar(&s.Password, "pass", "", "Basic Auth password")
 }
 
 // Sign adds the JWT auth header.
@@ -157,8 +158,8 @@ func (s *JWTSigner) Sign(req *http.Request) error {
 }
 
 // RegisterFlags adds the "--jwt" flag to the client tool.
-func (s *JWTSigner) RegisterFlags(app *kingpin.Application) {
-	app.Flag("jwt", "JSON web token").StringVar(&s.token)
+func (s *JWTSigner) RegisterFlags(app *cobra.Command) {
+	app.Flags().StringVar(&s.token, "jwt", "", "JSON web token")
 }
 
 // Sign refreshes the access token if needed and adds the OAuth header.
@@ -173,11 +174,9 @@ func (s *OAuth2Signer) Sign(req *http.Request) error {
 }
 
 // RegisterFlags adds the "--refreshURL" and "--refreshToken" flags to the client tool.
-func (s *OAuth2Signer) RegisterFlags(app *kingpin.Application) {
-	app.Flag("refreshURL", "OAuth2 refresh URL format, e.g. https://somewhere.com/token?grant_type=authorization_code&code=%s&client_id=xxx").
-		StringVar(&s.RefreshURLFormat)
-	app.Flag("refreshToken", "OAuth2 refresh token or authorization code").
-		StringVar(&s.RefreshToken)
+func (s *OAuth2Signer) RegisterFlags(app *cobra.Command) {
+	app.Flags().StringVar(&s.RefreshURLFormat, "refreshURL", "", "OAuth2 refresh URL format, e.g. https://somewhere.com/token?grant_type=authorization_code&code=%s&client_id=xxx")
+	app.Flags().StringVar(&s.RefreshToken, "refreshToken", "", "OAuth2 refresh token or authorization code")
 }
 
 // ouath2RefreshResponse is the data structure representing the interesting subset of a OAuth2

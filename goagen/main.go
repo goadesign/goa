@@ -16,7 +16,7 @@ import (
 	"github.com/goadesign/goa/goagen/gen_schema"
 	"github.com/goadesign/goa/goagen/gen_swagger"
 	"github.com/goadesign/goa/goagen/utils"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 )
 
 // Commands contains the list of all supported sub-commands.
@@ -30,6 +30,22 @@ var Commands = []codegen.Command{
 	genschema.NewCommand(),
 	gengen.NewCommand(),
 }
+
+var cfgFile string
+
+// RootCmd is the base command used when goagen is called with no argument.
+var RootCmd = &cobra.Command{
+	Use:   "goagen",
+	Short: "goa code generation tool",
+	Long: `The goagen tool generates various artifacts from a goa service design package.
+
+Each command supported by the tool produces a specific type of artifacts. For example
+the "app" command generates the code that supports the service controllers.
+
+The "bootstrap" command runs the "app", "main", "client" and "swagger" commands generating the
+controllers supporting code and main skeleton code (if not already present) as well as a client
+package and tool and the Swagger specification for the API.
+`}
 
 func main() {
 	var (
@@ -56,7 +72,19 @@ func main() {
 		terminatedByUser = true
 	})
 
-	files, err = command().Run()
+	for _, command := range Commands {
+		run := command.Run
+		sub := &cobra.Command{
+			Use:   command.Name(),
+			Short: command.Description(),
+			Run:   func(*cobra.Command, []string) { files, err = run() },
+		}
+		command.RegisterFlags(sub)
+		codegen.RegisterFlags(sub)
+		RootCmd.AddCommand(sub)
+	}
+	codegen.RegisterFlags(RootCmd)
+	RootCmd.Execute()
 
 	if terminatedByUser {
 		cleanup()
@@ -81,38 +109,3 @@ func main() {
 	}
 	fmt.Println(strings.Join(rels, "\n"))
 }
-
-// command parses the command line and returns the specified sub-command.
-func command() codegen.Command {
-	app := kingpin.New("goagen", "goa code generation tool")
-	app.Version(codegen.Version)
-	app.Help = help
-	codegen.RegisterFlags(app)
-	for _, c := range Commands {
-		cmd := app.Command(c.Name(), c.Description())
-		c.RegisterFlags(cmd)
-	}
-	if os.Args[len(os.Args)-1] == "--help" {
-		args := append([]string{os.Args[0], "help"}, os.Args[1:len(os.Args)-1]...)
-		os.Args = args
-	}
-	codegen.CommandName = kingpin.MustParse(app.Parse(os.Args[1:]))
-	for _, c := range Commands {
-		if codegen.CommandName == c.Name() {
-			return c
-		}
-	}
-	app.Usage(os.Args[1:])
-	os.Exit(1)
-	return nil
-}
-
-const help = `The goagen tool generates various artifacts from a goa service design package.
-
-Each command supported by the tool produces a specific type of artifacts. For example
-the "app" command generates the code that supports the service controllers.
-
-The "bootstrap" command runs the "app", "main", "client" and "swagger" commands generating the
-controllers supporting code and main skeleton code (if not already present) as well as a client
-package and tool and the Swagger specification for the API.
-`

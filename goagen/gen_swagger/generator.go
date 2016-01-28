@@ -6,17 +6,33 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
-
-	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/utils"
+	"github.com/spf13/cobra"
 )
 
+// Generator is the swagger code generator.
+type Generator struct{}
+
 // Generate is the generator entry point called by the meta generator.
-func Generate(api *design.APIDefinition) (_ []string, err error) {
+func Generate(api *design.APIDefinition) (files []string, err error) {
+	g := new(Generator)
+	root := &cobra.Command{
+		Use:   "goagen",
+		Short: "Swagger generator",
+		Long:  "Swagger generator",
+		Run:   func(*cobra.Command, []string) { files, err = g.Generate(api) },
+	}
+	codegen.RegisterFlags(root)
+	NewCommand().RegisterFlags(root)
+	root.Execute()
+	return
+}
+
+// Generate produces the skeleton main.
+func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) {
 	var genfiles []string
 
 	cleanup := func() {
@@ -33,13 +49,6 @@ func Generate(api *design.APIDefinition) (_ []string, err error) {
 		}
 	}()
 
-	app := kingpin.New("Swagger generator", "Swagger spec generator")
-	codegen.RegisterFlags(app)
-	_, err = app.Parse(os.Args[1:])
-	if err != nil {
-		return nil, fmt.Errorf(`invalid command line: %s. Command line was "%s"`,
-			err, strings.Join(os.Args, " "))
-	}
 	s, err := New(api)
 	if err != nil {
 		return
