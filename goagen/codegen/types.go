@@ -194,7 +194,7 @@ func GoTypeDef(ds design.DataStructure, versioned bool, defPkg string, tabs int,
 				if !def.IsRequired(name) {
 					omit = ",omitempty"
 				}
-				tags = fmt.Sprintf(" `json:\"%s%s\"`", name, omit)
+				tags = fmt.Sprintf(" `json:\"%s%s\" xml:\"%s%s\"`", name, omit, name, omit)
 			}
 			desc := actual[name].Description
 			if desc != "" {

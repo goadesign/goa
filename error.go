@@ -131,9 +131,9 @@ func (k ErrorID) Title() string {
 // MarshalJSON implements the json marshaler interface.
 func (t *TypedError) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		ID    int    `json:"id"`
-		Title string `json:"title"`
-		Msg   string `json:"msg"`
+		ID    int    `json:"id" xml:"id"`
+		Title string `json:"title" xml:"title"`
+		Msg   string `json:"msg" xml:"msg"`
 	}{
 		ID:    int(t.ID),
 		Title: t.ID.Title(),
