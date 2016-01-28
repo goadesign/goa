@@ -150,6 +150,9 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 		fmt.Sprintf("--out=%s", codegen.OutputDir),
 		fmt.Sprintf("--design=%s", codegen.DesignPackagePath),
 	}
+	if codegen.NoFormat {
+		args = append(args, fmt.Sprintf("--noformat"))
+	}
 	for name, value := range m.Flags {
 		if value != "" {
 			args = append(args, fmt.Sprintf("--%s=%s", name, value))

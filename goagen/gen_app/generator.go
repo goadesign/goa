@@ -277,7 +277,6 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 	}
 	title := fmt.Sprintf("%s: Application Controllers", version.Context())
 	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
 	if !version.IsDefault() {

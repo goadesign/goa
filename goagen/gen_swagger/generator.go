@@ -76,7 +76,6 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		return
 	}
 	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
 	file.WriteHeader(fmt.Sprintf("%s Swagger Spec", api.Name), "swagger", imports)

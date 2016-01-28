@@ -22,6 +22,9 @@ var (
 	// Set this flag to true prior to calling Generate.
 	Debug bool
 
+	// NoFormat causes "goimports" to be skipped when true.
+	NoFormat bool
+
 	// CommandName is the name of the command being run.
 	CommandName string
 )
@@ -62,7 +65,8 @@ func RegisterFlags(r FlagRegistry) {
 	}
 	r.Flags().StringVarP(&OutputDir, "out", "o", cwd, "output directory")
 	r.Flags().StringVarP(&DesignPackagePath, "design", "d", "", "design package path")
-	r.Flags().BoolVar(&Debug, "debug", false, "enable debug mode")
+	r.Flags().BoolVar(&Debug, "debug", false, "enable debug mode, does not cleanup temporary files.")
+	r.Flags().BoolVar(&NoFormat, "noformat", false, "disable goimports, useful to goa developers for debugging.")
 }
 
 // BaseCommand provides the basic logic for all commands. It implements
