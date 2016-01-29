@@ -2,6 +2,8 @@ package codegen
 
 import (
 	"fmt"
+	"go/ast"
+	"go/format"
 	"go/parser"
 	"go/token"
 	"io/ioutil"
@@ -11,6 +13,8 @@ import (
 	"runtime"
 	"strings"
 	"text/template"
+
+	"golang.org/x/tools/go/ast/astutil"
 )
 
 type (
@@ -241,16 +245,31 @@ func (f *SourceFile) FormatCode() error {
 	if NoFormat {
 		return nil
 	}
-	cmd := exec.Command("goimports", "-w", f.Abs())
-	if output, err := cmd.CombinedOutput(); err != nil {
-		if len(output) > 0 {
-			// goimport exits with status code 1 if modifies the code which is not a
-			// failure. Look for an error message to know something bad happened.
-			content, _ := ioutil.ReadFile(f.Abs())
-			return fmt.Errorf("%s\n========\nContent:\n%s", string(output), content)
+	// Parse file into AST
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, f.Abs(), nil, parser.ParseComments)
+	if err != nil {
+		return err
+	}
+	// Clean unused imports
+	imports := astutil.Imports(fset, file)
+	for _, group := range imports {
+		for _, imp := range group {
+			path := strings.Trim(imp.Path.Value, `"`)
+			if !astutil.UsesImport(file, path) {
+				astutil.DeleteImport(fset, file, path)
+			}
 		}
 	}
-	return nil
+	ast.SortImports(fset, file)
+	// Open file to be written
+	w, err := os.OpenFile(f.Abs(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+	// Write formatted code without unused imports
+	return format.Node(w, fset, file)
 }
 
 // Abs returne the source file absolute filename
