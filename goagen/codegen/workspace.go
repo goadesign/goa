@@ -346,9 +346,9 @@ const (
 
 {{end}}package {{.Pkg}}
 
-{{if .Imports}}import ({{range .Imports}}
-	{{.Code}}{{end}}
-)
-
-{{end}}`
+{{if .Imports}}import {{if gt (len .Imports) 1}}(
+	{{end}}{{range .Imports}}{{.Code}}
+{{end}}
+{{if gt (len .Imports) 1}})
+{{end}}{{end}}`
 )
