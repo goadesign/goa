@@ -352,7 +352,10 @@ func (g *Generator) generateHrefs(verdir string, version *design.APIVersionDefin
 		panic(err) // bug
 	}
 	title := fmt.Sprintf("%s: Application Resource Href Factories", version.Context())
-	resWr.WriteHeader(title, packageName(version), nil)
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("fmt"),
+	}
+	resWr.WriteHeader(title, packageName(version), imports)
 	err = version.IterateResources(func(r *design.ResourceDefinition) error {
 		if !r.SupportsVersion(version.Version) {
 			return nil
