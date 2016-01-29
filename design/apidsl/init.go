@@ -1,9 +1,10 @@
-package dsl
+package apidsl
 
 import (
 	"net/http"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/dslengine"
 )
 
 // Call InitDesign by default.
@@ -14,7 +15,7 @@ func init() {
 // InitDesign initializes the Design global variable and loads the built-in
 // response templates. This is a public function mainly so it can be used in tests.
 func InitDesign() {
-	ctxStack = nil // mostly for tests
+	//ctxStack = nil // mostly for tests
 	api := &design.APIDefinition{
 		APIVersionDefinition: &design.APIVersionDefinition{
 			DefaultResponseTemplates: make(map[string]*design.ResponseTemplateDefinition),
@@ -22,7 +23,7 @@ func InitDesign() {
 	}
 	t := func(params ...string) *design.ResponseDefinition {
 		if len(params) < 1 {
-			ReportError("expected media type as argument when invoking response template OK")
+			dslengine.ReportError("expected media type as argument when invoking response template OK")
 			return nil
 		}
 		return &design.ResponseDefinition{
@@ -92,6 +93,6 @@ func InitDesign() {
 
 	// Initialize package variables
 	design.Design = api
-	design.Roots = []design.Root{api}
+	dslengine.Roots = []dslengine.Root{api}
 	design.GeneratedMediaTypes = nil
 }

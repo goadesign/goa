@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/gen_app"
 	. "github.com/onsi/ginkgo"
@@ -268,12 +269,12 @@ var _ = Describe("ContextsWriter", func() {
 					dataType := design.Object{
 						"int": intParam,
 					}
-					required := design.RequiredValidationDefinition{
+					required := dslengine.RequiredValidationDefinition{
 						Names: []string{"int"},
 					}
 					params = &design.AttributeDefinition{
 						Type:        dataType,
-						Validations: []design.ValidationDefinition{&required},
+						Validations: []dslengine.ValidationDefinition{&required},
 					}
 				})
 
@@ -317,13 +318,13 @@ var _ = Describe("ContextsWriter", func() {
 						"int": intParam,
 						"str": strParam,
 					}
-					required := design.RequiredValidationDefinition{
+					required := dslengine.RequiredValidationDefinition{
 						Names: []string{"int"},
 					}
 					payload = &design.UserTypeDefinition{
 						AttributeDefinition: &design.AttributeDefinition{
 							Type:        dataType,
-							Validations: []design.ValidationDefinition{&required},
+							Validations: []dslengine.ValidationDefinition{&required},
 						},
 						TypeName: "ListBottlePayload",
 					}
@@ -495,7 +496,7 @@ var _ = Describe("ControllersWriter", func() {
 			Context("with actions that take a payload with a required validation", func() {
 				BeforeEach(func() {
 					actions = []string{"list"}
-					required := design.RequiredValidationDefinition{
+					required := dslengine.RequiredValidationDefinition{
 						Names: []string{"id"},
 					}
 					verbs = []string{"GET"}
@@ -511,7 +512,7 @@ var _ = Describe("ControllersWriter", func() {
 										Type: design.String,
 									},
 								},
-								Validations: []design.ValidationDefinition{&required},
+								Validations: []dslengine.ValidationDefinition{&required},
 							},
 						},
 					}

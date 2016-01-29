@@ -6,6 +6,7 @@ import (
 	"text/template"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/dslengine"
 )
 
 var (
@@ -131,53 +132,53 @@ func ValidationChecker(att *design.AttributeDefinition, nonzero, required bool, 
 	return strings.Join(res, "\n")
 }
 
-func validationsCode(validations []design.ValidationDefinition, data map[string]interface{}) (res []string) {
+func validationsCode(validations []dslengine.ValidationDefinition, data map[string]interface{}) (res []string) {
 	for _, v := range validations {
 		switch actual := v.(type) {
-		case *design.EnumValidationDefinition:
+		case *dslengine.EnumValidationDefinition:
 			data["values"] = actual.Values
 			if val := RunTemplate(enumValT, data); val != "" {
 				res = append(res, val)
 			}
-		case *design.FormatValidationDefinition:
+		case *dslengine.FormatValidationDefinition:
 			data["format"] = actual.Format
 			if val := RunTemplate(formatValT, data); val != "" {
 				res = append(res, val)
 			}
-		case *design.PatternValidationDefinition:
+		case *dslengine.PatternValidationDefinition:
 			data["pattern"] = actual.Pattern
 			if val := RunTemplate(patternValT, data); val != "" {
 				res = append(res, val)
 			}
-		case *design.MinimumValidationDefinition:
+		case *dslengine.MinimumValidationDefinition:
 			data["min"] = actual.Min
 			data["isMin"] = true
 			delete(data, "max")
 			if val := RunTemplate(minMaxValT, data); val != "" {
 				res = append(res, val)
 			}
-		case *design.MaximumValidationDefinition:
+		case *dslengine.MaximumValidationDefinition:
 			data["max"] = actual.Max
 			data["isMin"] = false
 			delete(data, "min")
 			if val := RunTemplate(minMaxValT, data); val != "" {
 				res = append(res, val)
 			}
-		case *design.MinLengthValidationDefinition:
+		case *dslengine.MinLengthValidationDefinition:
 			data["minLength"] = actual.MinLength
 			data["isMinLength"] = true
 			delete(data, "maxLength")
 			if val := RunTemplate(lengthValT, data); val != "" {
 				res = append(res, val)
 			}
-		case *design.MaxLengthValidationDefinition:
+		case *dslengine.MaxLengthValidationDefinition:
 			data["maxLength"] = actual.MaxLength
 			data["isMinLength"] = false
 			delete(data, "minLength")
 			if val := RunTemplate(lengthValT, data); val != "" {
 				res = append(res, val)
 			}
-		case *design.RequiredValidationDefinition:
+		case *dslengine.RequiredValidationDefinition:
 			data["required"] = actual.Names
 			if val := RunTemplate(requiredValT, data); val != "" {
 				res = append(res, val)

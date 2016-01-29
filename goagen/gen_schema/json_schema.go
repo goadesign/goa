@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/dslengine"
 )
 
 type (
@@ -381,21 +382,21 @@ func buildAttributeSchema(api *design.APIDefinition, s *JSONSchema, at *design.A
 	s.Description = at.Description
 	for _, val := range at.Validations {
 		switch actual := val.(type) {
-		case *design.EnumValidationDefinition:
+		case *dslengine.EnumValidationDefinition:
 			s.Enum = actual.Values
-		case *design.FormatValidationDefinition:
+		case *dslengine.FormatValidationDefinition:
 			s.Format = actual.Format
-		case *design.PatternValidationDefinition:
+		case *dslengine.PatternValidationDefinition:
 			s.Pattern = actual.Pattern
-		case *design.MinimumValidationDefinition:
+		case *dslengine.MinimumValidationDefinition:
 			s.Minimum = actual.Min
-		case *design.MaximumValidationDefinition:
+		case *dslengine.MaximumValidationDefinition:
 			s.Maximum = actual.Max
-		case *design.MinLengthValidationDefinition:
+		case *dslengine.MinLengthValidationDefinition:
 			s.MinLength = actual.MinLength
-		case *design.MaxLengthValidationDefinition:
+		case *dslengine.MaxLengthValidationDefinition:
 			s.MaxLength = actual.MaxLength
-		case *design.RequiredValidationDefinition:
+		case *dslengine.RequiredValidationDefinition:
 			s.Required = actual.Names
 		}
 	}

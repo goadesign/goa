@@ -1,8 +1,9 @@
-package dsl_test
+package apidsl_test
 
 import (
 	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/dsl"
+	. "github.com/goadesign/goa/design/apidsl"
+	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -15,26 +16,26 @@ var _ = Describe("Type", func() {
 
 	BeforeEach(func() {
 		InitDesign()
-		Errors = nil
+		dslengine.Errors = nil
 		name = ""
 		dsl = nil
 	})
 
 	JustBeforeEach(func() {
 		Type(name, dsl)
-		RunDSL()
-		Ω(Errors).ShouldNot(HaveOccurred())
+		dslengine.Run()
+		Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 		ut, _ = Design.Types[name]
 	})
 
-	Context("with no DSL and no name", func() {
+	Context("with no dsl and no name", func() {
 		It("produces an invalid type definition", func() {
 			Ω(ut).ShouldNot(BeNil())
 			Ω(ut.Validate("test", Design)).Should(HaveOccurred())
 		})
 	})
 
-	Context("with no DSL", func() {
+	Context("with no dsl", func() {
 		BeforeEach(func() {
 			name = "foo"
 		})

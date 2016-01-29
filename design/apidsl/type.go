@@ -1,11 +1,14 @@
-package dsl
+package apidsl
 
-import "github.com/goadesign/goa/design"
+import (
+	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/dslengine"
+)
 
-// Type implements the type definition DSL. A type definition describes a data structure consisting
+// Type implements the type definition dsl. A type definition describes a data structure consisting
 // of attributes. Each attribute has a type which can also refer to a type definition (or use a
-// primitive type or nested attibutes). The DSL syntax for define a type definition is the
-// Attribute DSL, see Attribute.
+// primitive type or nested attibutes). The dsl syntax for define a type definition is the
+// Attribute dsl, see Attribute.
 //
 // On top of specifying any attribute type, type definitions can also be used to describe the data
 // structure of a request payload. They can also be used by media type definitions as reference, see
@@ -24,16 +27,16 @@ import "github.com/goadesign/goa/design"
 //		Attribute("Country")
 //	})
 //
-// This function returns the newly defined type so the value can be used throughout the DSL.
+// This function returns the newly defined type so the value can be used throughout the dsl.
 func Type(name string, dsl func()) *design.UserTypeDefinition {
 	if design.Design.Types == nil {
 		design.Design.Types = make(map[string]*design.UserTypeDefinition)
 	} else if _, ok := design.Design.Types[name]; ok {
-		ReportError("type %#v defined twice", name)
+		dslengine.ReportError("type %#v defined twice", name)
 		return nil
 	}
 	var t *design.UserTypeDefinition
-	if topLevelDefinition(true) {
+	if dslengine.TopLevelDefinition(true) {
 		t = &design.UserTypeDefinition{
 			TypeName:            name,
 			AttributeDefinition: &design.AttributeDefinition{DSLFunc: dsl},

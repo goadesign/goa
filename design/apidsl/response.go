@@ -1,6 +1,9 @@
-package dsl
+package apidsl
 
-import "github.com/goadesign/goa/design"
+import (
+	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/dslengine"
+)
 
 // Response implements the response definition DSL. Response takes the name of the response as
 // first parameter. goa defines all the standard HTTP status name as global variables so they can be
@@ -55,7 +58,7 @@ func Response(name string, paramsAndDSL ...interface{}) {
 			a.Responses = make(map[string]*design.ResponseDefinition)
 		}
 		if _, ok := a.Responses[name]; ok {
-			ReportError("response %s is defined twice", name)
+			dslengine.ReportError("response %s is defined twice", name)
 			return
 		}
 		if resp := executeResponseDSL(name, paramsAndDSL...); resp != nil {
@@ -70,7 +73,7 @@ func Response(name string, paramsAndDSL ...interface{}) {
 			r.Responses = make(map[string]*design.ResponseDefinition)
 		}
 		if _, ok := r.Responses[name]; ok {
-			ReportError("response %s is defined twice", name)
+			dslengine.ReportError("response %s is defined twice", name)
 			return
 		}
 		if resp := executeResponseDSL(name, paramsAndDSL...); resp != nil {
@@ -103,7 +106,7 @@ func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.Respon
 		for i, p := range paramsAndDSL {
 			params[i], ok = p.(string)
 			if !ok {
-				ReportError("invalid response template parameter %#v, must be a string", p)
+				dslengine.ReportError("invalid response template parameter %#v, must be a string", p)
 				return nil
 			}
 		}
@@ -115,7 +118,7 @@ func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.Respon
 		} else if tmpl, ok := design.Design.DefaultResponseTemplates[name]; ok {
 			resp = tmpl.Template(params...)
 		} else {
-			ReportError("no response template named %#v", name)
+			dslengine.ReportError("no response template named %#v", name)
 			return nil
 		}
 	} else {
@@ -130,7 +133,7 @@ func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.Respon
 		}
 	}
 	if dsl != nil {
-		if !ExecuteDSL(dsl, resp) {
+		if !dslengine.Execute(dsl, resp) {
 			return nil
 		}
 		resp.Standard = false
