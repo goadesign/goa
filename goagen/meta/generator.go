@@ -120,7 +120,7 @@ func (m *Generator) generateToolSourceCode(pkg *codegen.Package) {
 		codegen.SimpleImport("os"),
 		codegen.SimpleImport("strings"),
 		codegen.NewImport(".", "github.com/goadesign/goa/design"),
-		codegen.NewImport(".", "github.com/goadesign/goa/design/dsl"),
+		codegen.NewImport(".", "github.com/goadesign/goa/engine"),
 		codegen.NewImport("_", filepath.ToSlash(codegen.DesignPackagePath)),
 	)
 	file.WriteHeader("Code Generator", "main", imports)

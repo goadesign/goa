@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/engine"
 )
 
 // Counter used to create unique media type names for identifier-less media types.
@@ -60,11 +61,11 @@ func MediaType(identifier string, dsl func()) *design.MediaTypeDefinition {
 	if design.Design.MediaTypes == nil {
 		design.Design.MediaTypes = make(map[string]*design.MediaTypeDefinition)
 	}
-	if topLevelDefinition(true) {
+	if engine.TopLevelDefinition(true) {
 		// Validate Media Type
 		identifier, params, err := mime.ParseMediaType(identifier)
 		if err != nil {
-			ReportError("invalid media type identifier %#v: %s",
+			engine.ReportError("invalid media type identifier %#v: %s",
 				identifier, err)
 			// We don't return so that other errors may be
 			// captured in this one run.
@@ -73,7 +74,7 @@ func MediaType(identifier string, dsl func()) *design.MediaTypeDefinition {
 		canonicalID := design.CanonicalIdentifier(identifier)
 		// Validate that media type identifier doesn't clash
 		if _, ok := design.Design.MediaTypes[canonicalID]; ok {
-			ReportError("media type %#v is defined twice", identifier)
+			engine.ReportError("media type %#v is defined twice", identifier)
 			return nil
 		}
 		parts := strings.Split(identifier, "+")
@@ -138,7 +139,7 @@ func Media(val interface{}) {
 		} else if identifier, ok := val.(string); ok {
 			r.MediaType = identifier
 		} else {
-			ReportError("media type must be a string or a pointer to MediaTypeDefinition, got %#v", val)
+			engine.ReportError("media type must be a string or a pointer to MediaTypeDefinition, got %#v", val)
 		}
 	}
 }
@@ -211,21 +212,21 @@ func TypeName(name string) {
 func View(name string, dsl ...func()) {
 	if mt, ok := mediaTypeDefinition(false); ok {
 		if !mt.Type.IsObject() && !mt.Type.IsArray() {
-			ReportError("cannot define view on non object and non collection media types")
+			engine.ReportError("cannot define view on non object and non collection media types")
 			return
 		}
 		if mt.Views == nil {
 			mt.Views = make(map[string]*design.ViewDefinition)
 		} else {
 			if _, ok = mt.Views[name]; ok {
-				ReportError("multiple definitions for view %#v in media type %#v", name, mt.TypeName)
+				engine.ReportError("multiple definitions for view %#v in media type %#v", name, mt.TypeName)
 				return
 			}
 		}
 		at := &design.AttributeDefinition{}
 		ok := false
 		if len(dsl) > 0 {
-			ok = ExecuteDSL(dsl[0], at)
+			ok = engine.ExecuteDSL(dsl[0], at)
 		} else if mt.Type.IsArray() {
 			// inherit view from collection element if present
 			elem := mt.Type.ToArray().ElemType
@@ -235,7 +236,7 @@ func View(name string, dsl ...func()) {
 						at = v.AttributeDefinition
 						ok = true
 					} else {
-						ReportError("unknown view %#v", name)
+						engine.ReportError("unknown view %#v", name)
 						return
 					}
 				}
@@ -254,7 +255,7 @@ func View(name string, dsl ...func()) {
 						dup.View = cat.View
 						o[n] = dup
 					} else if n != "links" {
-						ReportError("unknown attribute %#v", n)
+						engine.ReportError("unknown attribute %#v", n)
 					}
 				}
 			}
@@ -272,14 +273,14 @@ func View(name string, dsl ...func()) {
 // Attributes implements the media type attributes DSL. See MediaType.
 func Attributes(dsl func()) {
 	if mt, ok := mediaTypeDefinition(true); ok {
-		ExecuteDSL(dsl, mt)
+		engine.ExecuteDSL(dsl, mt)
 	}
 }
 
 // Links implements the media type links DSL. See MediaType.
 func Links(dsl func()) {
 	if mt, ok := mediaTypeDefinition(true); ok {
-		ExecuteDSL(dsl, mt)
+		engine.ExecuteDSL(dsl, mt)
 	}
 }
 
@@ -295,13 +296,13 @@ func Link(name string, view ...string) {
 			mt.Links = make(map[string]*design.LinkDefinition)
 		} else {
 			if _, ok := mt.Links[name]; ok {
-				ReportError("duplicate definition for link %#v", name)
+				engine.ReportError("duplicate definition for link %#v", name)
 				return
 			}
 		}
 		link := &design.LinkDefinition{Name: name, Parent: mt}
 		if len(view) > 1 {
-			ReportError("invalid syntax in Link definition for %#v, allowed syntax is Link(name) or Link(name, view)", name)
+			engine.ReportError("invalid syntax in Link definition for %#v, allowed syntax is Link(name) or Link(name, view)", name)
 		}
 		if len(view) > 0 {
 			link.View = view[0]
@@ -320,7 +321,7 @@ func Link(name string, view ...string) {
 func CollectionOf(v interface{}, dsl ...func()) *design.MediaTypeDefinition {
 	if design.GeneratedMediaTypes == nil {
 		design.GeneratedMediaTypes = make(design.MediaTypeRoot)
-		design.Roots = append(design.Roots, design.GeneratedMediaTypes)
+		engine.Roots = append(engine.Roots, design.GeneratedMediaTypes)
 	}
 	var m *design.MediaTypeDefinition
 	var ok bool
@@ -331,13 +332,13 @@ func CollectionOf(v interface{}, dsl ...func()) *design.MediaTypeDefinition {
 		}
 	}
 	if m == nil {
-		ReportError("invalid CollectionOf argument: not a media type and not a known media type identifier")
+		engine.ReportError("invalid CollectionOf argument: not a media type and not a known media type identifier")
 		return nil
 	}
 	id := m.Identifier
 	mediatype, params, err := mime.ParseMediaType(id)
 	if err != nil {
-		ReportError("invalid media type identifier %#v: %s", id, err)
+		engine.ReportError("invalid media type identifier %#v: %s", id, err)
 		return nil
 	}
 	hasType := false
@@ -362,7 +363,7 @@ func CollectionOf(v interface{}, dsl ...func()) *design.MediaTypeDefinition {
 			mt.AttributeDefinition = &design.AttributeDefinition{Type: ArrayOf(m)}
 			mt.APIVersions = m.APIVersions
 			if len(dsl) > 0 {
-				ExecuteDSL(dsl[0], mt)
+				engine.ExecuteDSL(dsl[0], mt)
 			}
 			if mt.Views == nil {
 				// If the DSL didn't create any views (or there is no DSL at all)

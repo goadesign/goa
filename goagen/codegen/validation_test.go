@@ -2,6 +2,7 @@ package codegen_test
 
 import (
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/engine"
 	"github.com/goadesign/goa/goagen/codegen"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -15,7 +16,7 @@ var _ = Describe("validation code generation", func() {
 	Describe("ValidationChecker", func() {
 		Context("given an attribute definition and validations", func() {
 			var attType design.DataType
-			var validations []design.ValidationDefinition
+			var validations []engine.ValidationDefinition
 
 			att := new(design.AttributeDefinition)
 			target := "val"
@@ -31,10 +32,10 @@ var _ = Describe("validation code generation", func() {
 			Context("of enum", func() {
 				BeforeEach(func() {
 					attType = design.Integer
-					enumVal := &design.EnumValidationDefinition{
+					enumVal := &engine.EnumValidationDefinition{
 						Values: []interface{}{1, 2, 3},
 					}
-					validations = []design.ValidationDefinition{enumVal}
+					validations = []engine.ValidationDefinition{enumVal}
 				})
 
 				It("produces the validation go code", func() {
@@ -45,10 +46,10 @@ var _ = Describe("validation code generation", func() {
 			Context("of pattern", func() {
 				BeforeEach(func() {
 					attType = design.String
-					patternVal := &design.PatternValidationDefinition{
+					patternVal := &engine.PatternValidationDefinition{
 						Pattern: ".*",
 					}
-					validations = []design.ValidationDefinition{patternVal}
+					validations = []engine.ValidationDefinition{patternVal}
 				})
 
 				It("produces the validation go code", func() {
@@ -59,10 +60,10 @@ var _ = Describe("validation code generation", func() {
 			Context("of min value 0", func() {
 				BeforeEach(func() {
 					attType = design.Integer
-					minVal := &design.MinimumValidationDefinition{
+					minVal := &engine.MinimumValidationDefinition{
 						Min: 0,
 					}
-					validations = []design.ValidationDefinition{minVal}
+					validations = []engine.ValidationDefinition{minVal}
 				})
 
 				It("produces the validation go code", func() {
@@ -72,12 +73,12 @@ var _ = Describe("validation code generation", func() {
 
 			Context("of embedded object", func() {
 				BeforeEach(func() {
-					enumVal := &design.EnumValidationDefinition{
+					enumVal := &engine.EnumValidationDefinition{
 						Values: []interface{}{1, 2, 3},
 					}
 					ccatt := &design.AttributeDefinition{
 						Type:        design.Integer,
-						Validations: []design.ValidationDefinition{enumVal},
+						Validations: []engine.ValidationDefinition{enumVal},
 					}
 					catt := &design.AttributeDefinition{
 						Type: design.Object{"bar": ccatt},

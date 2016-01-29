@@ -3,6 +3,7 @@ package dsl_test
 import (
 	. "github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/dsl"
+	"github.com/goadesign/goa/engine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -15,7 +16,7 @@ var _ = Describe("Response", func() {
 
 	BeforeEach(func() {
 		InitDesign()
-		Errors = nil
+		engine.Errors = nil
 		name = ""
 		dsl = nil
 	})
@@ -26,7 +27,7 @@ var _ = Describe("Response", func() {
 				Response(name, dsl)
 			})
 		})
-		RunDSL()
+		engine.RunDSL()
 		if r, ok := Design.Resources["res"]; ok {
 			if a, ok := r.Actions["action"]; ok {
 				res = a.Responses[name]

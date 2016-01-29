@@ -5,6 +5,7 @@ import (
 
 	. "github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/dsl"
+	"github.com/goadesign/goa/engine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -16,7 +17,7 @@ var _ = Describe("Action", func() {
 
 	BeforeEach(func() {
 		InitDesign()
-		Errors = nil
+		engine.Errors = nil
 		name = ""
 		dsl = nil
 	})
@@ -25,7 +26,7 @@ var _ = Describe("Action", func() {
 		Resource("res", func() {
 			Action(name, dsl)
 		})
-		RunDSL()
+		engine.RunDSL()
 		if r, ok := Design.Resources["res"]; ok {
 			action = r.Actions[name]
 		}
@@ -37,7 +38,7 @@ var _ = Describe("Action", func() {
 		})
 
 		It("produces an invalid action", func() {
-			Ω(Errors).ShouldNot(HaveOccurred())
+			Ω(engine.Errors).ShouldNot(HaveOccurred())
 			Ω(action).ShouldNot(BeNil())
 			Ω(action.Validate(Design.APIVersionDefinition)).Should(HaveOccurred())
 		})
@@ -52,7 +53,7 @@ var _ = Describe("Action", func() {
 		})
 
 		It("produces a valid action definition with the route and default status of 200 set", func() {
-			Ω(Errors).ShouldNot(HaveOccurred())
+			Ω(engine.Errors).ShouldNot(HaveOccurred())
 			Ω(action).ShouldNot(BeNil())
 			Ω(action.Name).Should(Equal(name))
 			Ω(action.Validate(Design.APIVersionDefinition)).ShouldNot(HaveOccurred())
@@ -72,7 +73,7 @@ var _ = Describe("Action", func() {
 		})
 
 		It("produces a valid action with the given properties", func() {
-			Ω(Errors).ShouldNot(HaveOccurred())
+			Ω(engine.Errors).ShouldNot(HaveOccurred())
 			Ω(action).ShouldNot(BeNil())
 			Ω(action.Validate(Design.APIVersionDefinition)).ShouldNot(HaveOccurred())
 			Ω(action.Payload).ShouldNot(BeNil())
@@ -100,7 +101,7 @@ var _ = Describe("Action", func() {
 		})
 
 		It("produces a valid action with the given properties", func() {
-			Ω(Errors).ShouldNot(HaveOccurred())
+			Ω(engine.Errors).ShouldNot(HaveOccurred())
 			Ω(action).ShouldNot(BeNil())
 			Ω(action.Validate(Design.APIVersionDefinition)).ShouldNot(HaveOccurred())
 			Ω(action.Name).Should(Equal(name))
@@ -129,7 +130,7 @@ var _ = Describe("Action", func() {
 				ResponseTemplate(tmplName, func(status, name string) {
 					st, err := strconv.Atoi(status)
 					if err != nil {
-						ReportError(err.Error())
+						engine.ReportError(err.Error())
 						return
 					}
 					Status(st)
@@ -148,7 +149,7 @@ var _ = Describe("Action", func() {
 			})
 
 			It("defines the response definition using the template", func() {
-				Ω(Errors).ShouldNot(HaveOccurred())
+				Ω(engine.Errors).ShouldNot(HaveOccurred())
 				Ω(action).ShouldNot(BeNil())
 				Ω(action.Responses).ShouldNot(BeNil())
 				Ω(action.Responses).Should(HaveLen(1))
@@ -171,7 +172,7 @@ var _ = Describe("Action", func() {
 			})
 
 			It("fails", func() {
-				Ω(Errors).Should(HaveOccurred())
+				Ω(engine.Errors).Should(HaveOccurred())
 			})
 		})
 	})
@@ -192,11 +193,11 @@ var _ = Describe("Payload", func() {
 		})
 
 		JustBeforeEach(func() {
-			RunDSL()
+			engine.RunDSL()
 		})
 
 		It("generates the payload type", func() {
-			Ω(Errors).ShouldNot(HaveOccurred())
+			Ω(engine.Errors).ShouldNot(HaveOccurred())
 			Ω(Design).ShouldNot(BeNil())
 			Ω(Design.Resources).Should(HaveKey("foo"))
 			Ω(Design.Resources["foo"].Actions).Should(HaveKey("bar"))
@@ -215,11 +216,11 @@ var _ = Describe("Payload", func() {
 		})
 
 		JustBeforeEach(func() {
-			RunDSL()
+			engine.RunDSL()
 		})
 
 		It("sets the payload type", func() {
-			Ω(Errors).ShouldNot(HaveOccurred())
+			Ω(engine.Errors).ShouldNot(HaveOccurred())
 			Ω(Design).ShouldNot(BeNil())
 			Ω(Design.Resources).Should(HaveKey("foo"))
 			Ω(Design.Resources["foo"].Actions).Should(HaveKey("bar"))
@@ -242,11 +243,11 @@ var _ = Describe("Payload", func() {
 		})
 
 		JustBeforeEach(func() {
-			RunDSL()
+			engine.RunDSL()
 		})
 
 		It("sets the payload type", func() {
-			Ω(Errors).ShouldNot(HaveOccurred())
+			Ω(engine.Errors).ShouldNot(HaveOccurred())
 			Ω(Design).ShouldNot(BeNil())
 			Ω(Design.Resources).Should(HaveKey("foo"))
 			Ω(Design.Resources["foo"].Actions).Should(HaveKey("bar"))

@@ -4,81 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bketelsen/goa/design"
+	"github.com/goadesign/goa/engine"
 	regen "github.com/zach-klippenstein/goregen"
 )
 
-// Roots contains the root definition sets built by the DSLs.
-// DSL implementations should append to it to ensure the DSL gets executed by the runner.
-// Note that a root definition is a different concept from a "top level" definition (i.e. a
-// definition that is an entry point in the DSL). In particular a root definition may include
-// an arbitrary number of definition sets forming a tree of definitions.
-// For example the API DSL only has one root definition (the API definition) but many top level
-// definitions (API, Version, Type, MediaType etc.) all defining a definition set.
-var Roots []Root
-
 type (
-	// Definition is the common interface implemented by all definitions.
-	Definition interface {
-		// Context is used to build error messages that refer to the definition.
-		Context() string
-	}
-
-	// DefinitionSet contains DSL definitions that are executed as one unit.
-	// The slice elements may implement the Validate an, Source interfaces to enable the
-	// corresponding behaviors during DSL execution.
-	DefinitionSet []Definition
-
-	// Root is the interface implemented by the DSL root objects held by the Roots variable.
-	// These objects contains all the definition sets created by the DSL and can be passed to
-	// the engine for execution.
-	Root interface {
-		// IterateSets calls the given iterator passing in each definition set sorted in
-		// execution order.
-		IterateSets(SetIterator)
-	}
-
-	// Validate is the interface implemented by definitions that can be validated.
-	// Validation is done by the DSL engine post execution.
-	Validate interface {
-		Definition
-		// Validate returns nil if the definition contains no validation error.
-		// The Validate implementation may take advantage of ValidationErrors to report
-		// more than one errors at a time.
-		Validate() error
-	}
-
-	// Source is the interface implemented by definitions that can be initialized via DSL.
-	Source interface {
-		Definition
-		// DSL returns the DSL used to initialize the definition if any.
-		DSL() func()
-	}
-
-	// Finalize is the interface implemented by definitions that require an additional pass
-	// after the DSL has executed (e.g. to merge generated definitions or initialize default
-	// values)
-	Finalize interface {
-		Definition
-		// Finalize is run by the DSL runner once the definition DSL has executed and the
-		// definition has been validated.
-		Finalize()
-	}
-
-	// Versioned is implemented by potentially versioned definitions such as API resources.
-	Versioned interface {
-		Definition
-		// Versions returns an array of supported versions if the object is versioned, nil
-		// othewise.
-		Versions() []string
-		// SupportsVersion returns true if the object supports the given version.
-		SupportsVersion(ver string) bool
-		// SupportsNoVersion returns true if the object is unversioned.
-		SupportsNoVersion() bool
-	}
-
-	// SetIterator is the function signature used to iterate over definition sets with
-	// IterateSets.
-	SetIterator func(s DefinitionSet) error
 
 	// AttributeDefinition defines a JSON object member with optional description, default
 	// value and validations.
@@ -90,9 +21,9 @@ type (
 		// Optional description
 		Description string
 		// Optional validation functions
-		Validations []ValidationDefinition
+		Validations []engine.ValidationDefinition
 		// Metadata is a list of key/value pairs
-		Metadata MetadataDefinition
+		Metadata engine.MetadataDefinition
 		// Optional member default value
 		DefaultValue interface{}
 		// Optional view used to render Attribute (only applies to media type attributes).
@@ -106,78 +37,13 @@ type (
 		DSLFunc func()
 	}
 
-	// MetadataDefinition is a set of key/value pairs
-	MetadataDefinition map[string][]string
-
-	// TraitDefinition defines a set of reusable properties.
-	TraitDefinition struct {
-		// Trait name
-		Name string
-		// Trait DSL
-		DSLFunc func()
-	}
-
-	// ValidationDefinition is the common interface for all validation data structures.
-	// It doesn't expose any method and simply exists to help with documentation.
-	ValidationDefinition interface {
-		Definition
-	}
-
-	// EnumValidationDefinition represents an enum validation as described at
-	// http://json-schema.org/latest/json-schema-validation.html#anchor76.
-	EnumValidationDefinition struct {
-		Values []interface{}
-	}
-
-	// FormatValidationDefinition represents a format validation as described at
-	// http://json-schema.org/latest/json-schema-validation.html#anchor104.
-	FormatValidationDefinition struct {
-		Format string
-	}
-
-	// PatternValidationDefinition represents a pattern validation as described at
-	// http://json-schema.org/latest/json-schema-validation.html#anchor33
-	PatternValidationDefinition struct {
-		Pattern string
-	}
-
-	// MinimumValidationDefinition represents an minimum value validation as described at
-	// http://json-schema.org/latest/json-schema-validation.html#anchor21.
-	MinimumValidationDefinition struct {
-		Min float64
-	}
-
-	// MaximumValidationDefinition represents a maximum value validation as described at
-	// http://json-schema.org/latest/json-schema-validation.html#anchor17.
-	MaximumValidationDefinition struct {
-		Max float64
-	}
-
-	// MinLengthValidationDefinition represents an minimum length validation as described at
-	// http://json-schema.org/latest/json-schema-validation.html#anchor29.
-	MinLengthValidationDefinition struct {
-		MinLength int
-	}
-
-	// MaxLengthValidationDefinition represents an maximum length validation as described at
-	// http://json-schema.org/latest/json-schema-validation.html#anchor26.
-	MaxLengthValidationDefinition struct {
-		MaxLength int
-	}
-
-	// RequiredValidationDefinition represents a required validation as described at
-	// http://json-schema.org/latest/json-schema-validation.html#anchor61.
-	RequiredValidationDefinition struct {
-		Names []string
-	}
-
 	// VersionIterator is the type of functions given to IterateVersions.
 	VersionIterator func(v *APIVersionDefinition) error
 )
 
 // CanUse returns nil if the provider supports all the versions supported by the client or if the
 // provider is unversioned.
-func CanUse(client, provider Versioned) error {
+func CanUse(client, provider engine.Versioned) error {
 	if provider.Versions() == nil {
 		return nil
 	}
@@ -218,7 +84,7 @@ func (a *AttributeDefinition) Context() string {
 // all the required validations.
 func (a *AttributeDefinition) AllRequired() (required []string) {
 	for _, v := range a.Validations {
-		if req, ok := v.(*RequiredValidationDefinition); ok {
+		if req, ok := v.(*engine.RequiredValidationDefinition); ok {
 			required = append(required, req.Names...)
 		}
 	}
@@ -275,7 +141,7 @@ func (a *AttributeDefinition) IsPrimitivePointer(attName string) bool {
 // Dup returns a copy of the attribute definition.
 // Note: the primitive underlying types are not duplicated for simplicity.
 func (a *AttributeDefinition) Dup() *AttributeDefinition {
-	valDup := make([]ValidationDefinition, len(a.Validations))
+	valDup := make([]engine.ValidationDefinition, len(a.Validations))
 	for i, v := range a.Validations {
 		valDup[i] = v
 	}
@@ -327,11 +193,11 @@ func (a *AttributeDefinition) Example(r *RandomGenerator) interface{} {
 
 	for _, v := range a.Validations {
 		switch actual := v.(type) {
-		case *EnumValidationDefinition:
+		case *design.EnumValidationDefinition:
 			count := len(actual.Values)
 			i := r.Int() % count
 			return actual.Values[i]
-		case *FormatValidationDefinition:
+		case *engine.FormatValidationDefinition:
 			if res, ok := map[string]interface{}{
 				"email":     r.faker.Email(),
 				"hostname":  r.faker.DomainName() + "." + r.faker.DomainSuffix(),
@@ -352,24 +218,24 @@ func (a *AttributeDefinition) Example(r *RandomGenerator) interface{} {
 				return res
 			}
 			panic("unknown format") // bug
-		case *PatternValidationDefinition:
+		case *engine.PatternValidationDefinition:
 			res, err := regen.Generate(actual.Pattern)
 			if err != nil {
 				return r.faker.Name()
 			}
 			return res
-		case *MinimumValidationDefinition:
+		case *engine.MinimumValidationDefinition:
 			return randomLengthExample(func(res float64) bool {
 				return res >= actual.Min
 			})
-		case *MaximumValidationDefinition:
+		case *engine.MaximumValidationDefinition:
 			return randomLengthExample(func(res float64) bool {
 				return res <= actual.Max
 			})
-		case *MinLengthValidationDefinition:
+		case *engine.MinLengthValidationDefinition:
 			count := actual.MinLength + (r.Int() % 3)
 			return randomValidationLengthExample(count)
-		case *MaxLengthValidationDefinition:
+		case *engine.MaxLengthValidationDefinition:
 			count := actual.MaxLength - (r.Int() % 3)
 			return randomValidationLengthExample(count)
 		}
@@ -461,57 +327,4 @@ func (a *AttributeDefinition) inheritValidations(parent *AttributeDefinition) {
 func (a *AttributeDefinition) shouldInherit(parent *AttributeDefinition) bool {
 	return a != nil && a.Type.ToObject() != nil &&
 		parent != nil && parent.Type.ToObject() != nil
-}
-
-// Context returns the generic definition name used in error messages.
-func (t *TraitDefinition) Context() string {
-	if t.Name != "" {
-		return fmt.Sprintf("trait %#v", t.Name)
-	}
-	return "unnamed trait"
-}
-
-// DSL returns the initialization DSL.
-func (t *TraitDefinition) DSL() func() {
-	return t.DSLFunc
-}
-
-// Context returns the generic definition name used in error messages.
-func (v *EnumValidationDefinition) Context() string {
-	return "enum validation"
-}
-
-// Context returns the generic definition name used in error messages.
-func (f *FormatValidationDefinition) Context() string {
-	return "format validation"
-}
-
-// Context returns the generic definition name used in error messages.
-func (f *PatternValidationDefinition) Context() string {
-	return "pattern validation"
-}
-
-// Context returns the generic definition name used in error messages.
-func (m *MinimumValidationDefinition) Context() string {
-	return "min value validation"
-}
-
-// Context returns the generic definition name used in error messages.
-func (m *MaximumValidationDefinition) Context() string {
-	return "max value validation"
-}
-
-// Context returns the generic definition name used in error messages.
-func (m *MinLengthValidationDefinition) Context() string {
-	return "min length validation"
-}
-
-// Context returns the generic definition name used in error messages.
-func (m *MaxLengthValidationDefinition) Context() string {
-	return "max length validation"
-}
-
-// Context returns the generic definition name used in error messages.
-func (r *RequiredValidationDefinition) Context() string {
-	return "required field validation"
 }
