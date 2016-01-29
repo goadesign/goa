@@ -57,6 +57,7 @@ cyclo:
 
 test:
 	@ginkgo -r --randomizeAllSpecs --failOnPending --randomizeSuites --race -skipPackage vendor
+	go test ./_integration_tests
 
 goagen:
 	@cd goagen && \
