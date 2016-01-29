@@ -1,8 +1,8 @@
-package goadsl_test
+package apidsl_test
 
 import (
 	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/goadsl"
+	. "github.com/goadesign/goa/design/apidsl"
 	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -10,7 +10,7 @@ import (
 
 var _ = Describe("Type", func() {
 	var name string
-	var goadsl func()
+	var dsl func()
 
 	var ut *UserTypeDefinition
 
@@ -18,24 +18,24 @@ var _ = Describe("Type", func() {
 		InitDesign()
 		dslengine.Errors = nil
 		name = ""
-		goadsl = nil
+		dsl = nil
 	})
 
 	JustBeforeEach(func() {
-		Type(name, goadsl)
+		Type(name, dsl)
 		dslengine.Run()
 		Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 		ut, _ = Design.Types[name]
 	})
 
-	Context("with no goadsl and no name", func() {
+	Context("with no dsl and no name", func() {
 		It("produces an invalid type definition", func() {
 			Ω(ut).ShouldNot(BeNil())
 			Ω(ut.Validate("test", Design)).Should(HaveOccurred())
 		})
 	})
 
-	Context("with no goadsl", func() {
+	Context("with no dsl", func() {
 		BeforeEach(func() {
 			name = "foo"
 		})
@@ -51,7 +51,7 @@ var _ = Describe("Type", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			goadsl = func() {
+			dsl = func() {
 				Attribute(attName)
 			}
 		})
@@ -70,7 +70,7 @@ var _ = Describe("Type", func() {
 		const attName = "att"
 		BeforeEach(func() {
 			name = "foo"
-			goadsl = func() {
+			dsl = func() {
 				Attribute(attName, DateTime)
 			}
 		})
