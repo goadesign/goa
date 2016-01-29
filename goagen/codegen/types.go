@@ -212,7 +212,6 @@ func GoTypeDef(ds design.DataStructure, versioned bool, defPkg string, tabs int,
 	default:
 		panic("goa bug: unknown data structure type")
 	}
-	return GoTypeDef(ds, versioned, defPkg, tabs, jsonTags)
 }
 
 // GoTypeRef returns the Go code that refers to the Go type which matches the given data type
