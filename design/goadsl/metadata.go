@@ -1,4 +1,4 @@
-package dsl
+package goadsl
 
 // Metadata is a set of key/value pairs that can be assigned
 // to an object. Each value consists of a slice of stirngs so

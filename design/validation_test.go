@@ -2,8 +2,8 @@ package design_test
 
 import (
 	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/dsl"
-	"github.com/goadesign/goa/engine"
+	. "github.com/goadesign/goa/design/goadsl"
+	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -17,12 +17,12 @@ var _ = Describe("Validation", func() {
 
 		JustBeforeEach(func() {
 			InitDesign()
-			engine.Errors = nil
+			dslengine.Errors = nil
 			Type("bar", func() {
 				dsl()
 			})
-			engine.RunDSL()
-			if engine.Errors == nil {
+			dslengine.Run()
+			if dslengine.Errors == nil {
 				Ω(Design.Types).ShouldNot(BeNil())
 				Ω(Design.Types).Should(HaveKey("bar"))
 				Ω(Design.Types["bar"]).ShouldNot(BeNil())
@@ -43,12 +43,12 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("records the validation", func() {
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 				Ω(att.Validations).Should(HaveLen(1))
 				v := att.Validations[0]
-				Ω(v).Should(BeAssignableToTypeOf(&engine.EnumValidationDefinition{}))
-				expected := &engine.EnumValidationDefinition{Values: []interface{}{"red", "blue"}}
-				Ω(v.(*engine.EnumValidationDefinition)).Should(Equal(expected))
+				Ω(v).Should(BeAssignableToTypeOf(&dslengine.EnumValidationDefinition{}))
+				expected := &dslengine.EnumValidationDefinition{Values: []interface{}{"red", "blue"}}
+				Ω(v.(*dslengine.EnumValidationDefinition)).Should(Equal(expected))
 			})
 		})
 
@@ -62,7 +62,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("produces an error", func() {
-				Ω(engine.Errors).Should(HaveOccurred())
+				Ω(dslengine.Errors).Should(HaveOccurred())
 			})
 		})
 
@@ -76,12 +76,12 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("records the validation", func() {
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 				Ω(att.Validations).Should(HaveLen(1))
 				v := att.Validations[0]
-				Ω(v).Should(BeAssignableToTypeOf(&engine.FormatValidationDefinition{}))
-				expected := &engine.FormatValidationDefinition{Format: "email"}
-				Ω(v.(*engine.FormatValidationDefinition)).Should(Equal(expected))
+				Ω(v).Should(BeAssignableToTypeOf(&dslengine.FormatValidationDefinition{}))
+				expected := &dslengine.FormatValidationDefinition{Format: "email"}
+				Ω(v.(*dslengine.FormatValidationDefinition)).Should(Equal(expected))
 			})
 		})
 
@@ -95,7 +95,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("produces an error", func() {
-				Ω(engine.Errors).Should(HaveOccurred())
+				Ω(dslengine.Errors).Should(HaveOccurred())
 			})
 		})
 
@@ -109,12 +109,12 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("records the validation", func() {
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 				Ω(att.Validations).Should(HaveLen(1))
 				v := att.Validations[0]
-				Ω(v).Should(BeAssignableToTypeOf(&engine.PatternValidationDefinition{}))
-				expected := &engine.PatternValidationDefinition{Pattern: "^foo$"}
-				Ω(v.(*engine.PatternValidationDefinition)).Should(Equal(expected))
+				Ω(v).Should(BeAssignableToTypeOf(&dslengine.PatternValidationDefinition{}))
+				expected := &dslengine.PatternValidationDefinition{Pattern: "^foo$"}
+				Ω(v.(*dslengine.PatternValidationDefinition)).Should(Equal(expected))
 			})
 		})
 
@@ -128,7 +128,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("produces an error", func() {
-				Ω(engine.Errors).Should(HaveOccurred())
+				Ω(dslengine.Errors).Should(HaveOccurred())
 			})
 		})
 
@@ -142,7 +142,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("produces an error", func() {
-				Ω(engine.Errors).Should(HaveOccurred())
+				Ω(dslengine.Errors).Should(HaveOccurred())
 			})
 		})
 
@@ -156,12 +156,12 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("records the validation", func() {
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 				Ω(att.Validations).Should(HaveLen(1))
 				v := att.Validations[0]
-				Ω(v).Should(BeAssignableToTypeOf(&engine.MinimumValidationDefinition{}))
-				expected := &engine.MinimumValidationDefinition{Min: 2}
-				Ω(v.(*engine.MinimumValidationDefinition)).Should(Equal(expected))
+				Ω(v).Should(BeAssignableToTypeOf(&dslengine.MinimumValidationDefinition{}))
+				expected := &dslengine.MinimumValidationDefinition{Min: 2}
+				Ω(v.(*dslengine.MinimumValidationDefinition)).Should(Equal(expected))
 			})
 		})
 
@@ -175,7 +175,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("produces an error", func() {
-				Ω(engine.Errors).Should(HaveOccurred())
+				Ω(dslengine.Errors).Should(HaveOccurred())
 			})
 		})
 
@@ -189,12 +189,12 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("records the validation", func() {
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 				Ω(att.Validations).Should(HaveLen(1))
 				v := att.Validations[0]
-				Ω(v).Should(BeAssignableToTypeOf(&engine.MaximumValidationDefinition{}))
-				expected := &engine.MaximumValidationDefinition{Max: 2}
-				Ω(v.(*engine.MaximumValidationDefinition)).Should(Equal(expected))
+				Ω(v).Should(BeAssignableToTypeOf(&dslengine.MaximumValidationDefinition{}))
+				expected := &dslengine.MaximumValidationDefinition{Max: 2}
+				Ω(v.(*dslengine.MaximumValidationDefinition)).Should(Equal(expected))
 			})
 		})
 
@@ -208,7 +208,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("produces an error", func() {
-				Ω(engine.Errors).Should(HaveOccurred())
+				Ω(dslengine.Errors).Should(HaveOccurred())
 			})
 		})
 
@@ -222,12 +222,12 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("records the validation", func() {
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 				Ω(att.Validations).Should(HaveLen(1))
 				v := att.Validations[0]
-				Ω(v).Should(BeAssignableToTypeOf(&engine.MinLengthValidationDefinition{}))
-				expected := &engine.MinLengthValidationDefinition{MinLength: 2}
-				Ω(v.(*engine.MinLengthValidationDefinition)).Should(Equal(expected))
+				Ω(v).Should(BeAssignableToTypeOf(&dslengine.MinLengthValidationDefinition{}))
+				expected := &dslengine.MinLengthValidationDefinition{MinLength: 2}
+				Ω(v.(*dslengine.MinLengthValidationDefinition)).Should(Equal(expected))
 			})
 		})
 
@@ -241,7 +241,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("produces an error", func() {
-				Ω(engine.Errors).Should(HaveOccurred())
+				Ω(dslengine.Errors).Should(HaveOccurred())
 			})
 		})
 
@@ -255,12 +255,12 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("records the validation", func() {
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 				Ω(att.Validations).Should(HaveLen(1))
 				v := att.Validations[0]
-				Ω(v).Should(BeAssignableToTypeOf(&engine.MaxLengthValidationDefinition{}))
-				expected := &engine.MaxLengthValidationDefinition{MaxLength: 2}
-				Ω(v.(*engine.MaxLengthValidationDefinition)).Should(Equal(expected))
+				Ω(v).Should(BeAssignableToTypeOf(&dslengine.MaxLengthValidationDefinition{}))
+				expected := &dslengine.MaxLengthValidationDefinition{MaxLength: 2}
+				Ω(v.(*dslengine.MaxLengthValidationDefinition)).Should(Equal(expected))
 			})
 		})
 
@@ -274,7 +274,7 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("produces an error", func() {
-				Ω(engine.Errors).Should(HaveOccurred())
+				Ω(dslengine.Errors).Should(HaveOccurred())
 			})
 		})
 
@@ -287,12 +287,12 @@ var _ = Describe("Validation", func() {
 			})
 
 			It("records the validation", func() {
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 				Ω(Design.Types["bar"].Validations).Should(HaveLen(1))
 				v := Design.Types["bar"].Validations[0]
-				Ω(v).Should(BeAssignableToTypeOf(&engine.RequiredValidationDefinition{}))
-				expected := &engine.RequiredValidationDefinition{Names: []string{attName}}
-				Ω(v.(*engine.RequiredValidationDefinition)).Should(Equal(expected))
+				Ω(v).Should(BeAssignableToTypeOf(&dslengine.RequiredValidationDefinition{}))
+				expected := &dslengine.RequiredValidationDefinition{Names: []string{attName}}
+				Ω(v.(*dslengine.RequiredValidationDefinition)).Should(Equal(expected))
 			})
 		})
 	})

@@ -10,7 +10,7 @@ import (
 	"unicode"
 
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/engine"
+	"github.com/goadesign/goa/dslengine"
 )
 
 var (
@@ -274,7 +274,7 @@ func GoPackageTypeName(t design.DataType, required []string, versioned bool, def
 	case design.Object:
 		att := &design.AttributeDefinition{Type: actual}
 		if len(required) > 0 {
-			requiredVal := &engine.RequiredValidationDefinition{Names: required}
+			requiredVal := &dslengine.RequiredValidationDefinition{Names: required}
 			att.Validations = append(att.Validations, requiredVal)
 		}
 		return GoTypeDef(att, versioned, defPkg, tabs, false)
@@ -536,7 +536,7 @@ func mediaTypeMarshalerImpl(mt *design.MediaTypeDefinition, versioned bool, defa
 	}
 	renderLinks := false
 	if v, ok := mt.Views[view]; ok {
-		var vals []engine.ValidationDefinition
+		var vals []dslengine.ValidationDefinition
 		if viewObj := v.Type.ToObject(); viewObj != nil {
 			attNames := make(map[string]bool)
 			for n := range viewObj {
@@ -546,16 +546,16 @@ func mediaTypeMarshalerImpl(mt *design.MediaTypeDefinition, versioned bool, defa
 					attNames[n] = true
 				}
 			}
-			vals = make([]engine.ValidationDefinition, len(mt.Validations))
+			vals = make([]dslengine.ValidationDefinition, len(mt.Validations))
 			for i, va := range mt.Validations {
-				if r, ok := va.(*engine.RequiredValidationDefinition); ok {
+				if r, ok := va.(*dslengine.RequiredValidationDefinition); ok {
 					var required []string
 					for _, n := range r.Names {
 						if attNames[n] {
 							required = append(required, n)
 						}
 					}
-					vals[i] = &engine.RequiredValidationDefinition{Names: required}
+					vals[i] = &dslengine.RequiredValidationDefinition{Names: required}
 				} else {
 					vals[i] = va
 				}

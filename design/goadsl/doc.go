@@ -1,5 +1,5 @@
 /*
-Package dsl implements the goa design language.
+Package goadsl implements the goa design language.
 
 The goa design language provides a simple way to describe an API design. The language consists of
 global Go functions that can be nested to build up *definitions*. The root definition is the API
@@ -25,7 +25,7 @@ can be used to describe the request payloads as a whole or any attribute appeari
 (payloads, media types, headers, params etc.) and as with media type definitions they can include
 validation rules that goa leverages to validate attributes of that type.
 
-Package dsl also provides a generic DSL engine that other DSLs can plug into. Adding a DSL
+Package goadsl also provides a generic DSL engine that other DSLs can plug into. Adding a DSL
 implementation consists of registering the root DSL object in the design package Roots variable.
 The runner iterates through all root DSL definitions and executes the definition sets they expose.
 
@@ -35,4 +35,4 @@ a unit of execution and allows to control the ordering of execution. Each defini
 of a list of definitions. Definitions must implement the design.Definition interface and may
 additionally implement the design.Source and design.Validate interfaces.
 */
-package dsl
+package goadsl

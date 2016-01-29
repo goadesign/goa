@@ -1,11 +1,9 @@
 package design
 
 import (
-	"fmt"
 	"time"
 
-	"github.com/bketelsen/goa/design"
-	"github.com/goadesign/goa/engine"
+	"github.com/goadesign/goa/dslengine"
 	regen "github.com/zach-klippenstein/goregen"
 )
 
@@ -21,9 +19,9 @@ type (
 		// Optional description
 		Description string
 		// Optional validation functions
-		Validations []engine.ValidationDefinition
+		Validations []dslengine.ValidationDefinition
 		// Metadata is a list of key/value pairs
-		Metadata engine.MetadataDefinition
+		Metadata dslengine.MetadataDefinition
 		// Optional member default value
 		DefaultValue interface{}
 		// Optional view used to render Attribute (only applies to media type attributes).
@@ -41,38 +39,6 @@ type (
 	VersionIterator func(v *APIVersionDefinition) error
 )
 
-// CanUse returns nil if the provider supports all the versions supported by the client or if the
-// provider is unversioned.
-func CanUse(client, provider engine.Versioned) error {
-	if provider.Versions() == nil {
-		return nil
-	}
-	versions := client.Versions()
-	if versions == nil {
-		return fmt.Errorf("cannot use versioned %s from unversioned %s", provider.Context(),
-			client.Context())
-	}
-	providerVersions := provider.Versions()
-	if len(versions) > len(providerVersions) {
-		return fmt.Errorf("cannot use %s from %s: incompatible set of supported API versions",
-			provider.Context(), client.Context())
-	}
-	for _, v := range versions {
-		found := false
-		for _, pv := range providerVersions {
-			if v == pv {
-				found = true
-			}
-			break
-		}
-		if !found {
-			return fmt.Errorf("cannot use %s from %s: incompatible set of supported API versions",
-				provider.Context(), client.Context())
-		}
-	}
-	return nil
-}
-
 // Context returns the generic definition name used in error messages.
 func (a *AttributeDefinition) Context() string {
 	return ""
@@ -84,7 +50,7 @@ func (a *AttributeDefinition) Context() string {
 // all the required validations.
 func (a *AttributeDefinition) AllRequired() (required []string) {
 	for _, v := range a.Validations {
-		if req, ok := v.(*engine.RequiredValidationDefinition); ok {
+		if req, ok := v.(*dslengine.RequiredValidationDefinition); ok {
 			required = append(required, req.Names...)
 		}
 	}
@@ -141,7 +107,7 @@ func (a *AttributeDefinition) IsPrimitivePointer(attName string) bool {
 // Dup returns a copy of the attribute definition.
 // Note: the primitive underlying types are not duplicated for simplicity.
 func (a *AttributeDefinition) Dup() *AttributeDefinition {
-	valDup := make([]engine.ValidationDefinition, len(a.Validations))
+	valDup := make([]dslengine.ValidationDefinition, len(a.Validations))
 	for i, v := range a.Validations {
 		valDup[i] = v
 	}
@@ -193,11 +159,11 @@ func (a *AttributeDefinition) Example(r *RandomGenerator) interface{} {
 
 	for _, v := range a.Validations {
 		switch actual := v.(type) {
-		case *design.EnumValidationDefinition:
+		case *dslengine.EnumValidationDefinition:
 			count := len(actual.Values)
 			i := r.Int() % count
 			return actual.Values[i]
-		case *engine.FormatValidationDefinition:
+		case *dslengine.FormatValidationDefinition:
 			if res, ok := map[string]interface{}{
 				"email":     r.faker.Email(),
 				"hostname":  r.faker.DomainName() + "." + r.faker.DomainSuffix(),
@@ -218,24 +184,24 @@ func (a *AttributeDefinition) Example(r *RandomGenerator) interface{} {
 				return res
 			}
 			panic("unknown format") // bug
-		case *engine.PatternValidationDefinition:
+		case *dslengine.PatternValidationDefinition:
 			res, err := regen.Generate(actual.Pattern)
 			if err != nil {
 				return r.faker.Name()
 			}
 			return res
-		case *engine.MinimumValidationDefinition:
+		case *dslengine.MinimumValidationDefinition:
 			return randomLengthExample(func(res float64) bool {
 				return res >= actual.Min
 			})
-		case *engine.MaximumValidationDefinition:
+		case *dslengine.MaximumValidationDefinition:
 			return randomLengthExample(func(res float64) bool {
 				return res <= actual.Max
 			})
-		case *engine.MinLengthValidationDefinition:
+		case *dslengine.MinLengthValidationDefinition:
 			count := actual.MinLength + (r.Int() % 3)
 			return randomValidationLengthExample(count)
-		case *engine.MaxLengthValidationDefinition:
+		case *dslengine.MaxLengthValidationDefinition:
 			count := actual.MaxLength - (r.Int() % 3)
 			return randomValidationLengthExample(count)
 		}

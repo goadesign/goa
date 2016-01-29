@@ -1,20 +1,20 @@
-package dsl
+package goadsl
 
 import (
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/engine"
+	"github.com/goadesign/goa/dslengine"
 )
 
-// Resource implements the resource definition DSL. There is one resource definition per resource
-// exposed by the API. The resource DSL allows setting the resource default media type. This media
+// Resource implements the resource definition goadsl. There is one resource definition per resource
+// exposed by the API. The resource goadsl allows setting the resource default media type. This media
 // type is used to render the response body of actions that return the OK response (unless the
 // action overrides the default). The default media type also sets the properties of the request
 // payload attributes with the same name. See DefaultMedia.
 //
-// The resource DSL also allows listing the supported resource collection and resource collection
+// The resource goadsl also allows listing the supported resource collection and resource collection
 // item actions. Each action corresponds to a specific API endpoint. See Action.
 //
-// The resource DSL can also specify a parent resource. Parent resources have two effects.
+// The resource goadsl can also specify a parent resource. Parent resources have two effects.
 // First, they set the prefix of all resource action paths to the parent resource href. Note that
 // actions can override the path using an absolute path (that is a path starting with "//").
 // Second, goa uses the parent resource href coupled with the resource BasePath if any to build
@@ -33,20 +33,20 @@ import (
 //		APIVersion("v1")		// API version exposing this resource, can appear more than once.
 //
 //		Action("show", func() {		// Action definition, can appear more than once
-//			// ... Action DSL
+//			// ... Action goadsl
 //		})
 //	})
-func Resource(name string, dsl func()) *design.ResourceDefinition {
+func Resource(name string, goadsl func()) *design.ResourceDefinition {
 	if design.Design.Resources == nil {
 		design.Design.Resources = make(map[string]*design.ResourceDefinition)
 	}
 	var resource *design.ResourceDefinition
-	if engine.TopLevelDefinition(true) {
+	if dslengine.TopLevelDefinition(true) {
 		if _, ok := design.Design.Resources[name]; ok {
-			engine.ReportError("resource %#v is defined twice", name)
+			dslengine.ReportError("resource %#v is defined twice", name)
 			return nil
 		}
-		resource = design.NewResourceDefinition(name, dsl)
+		resource = design.NewResourceDefinition(name, goadsl)
 		design.Design.Resources[name] = resource
 	}
 	return resource
@@ -74,7 +74,7 @@ func DefaultMedia(val interface{}) {
 	if r, ok := resourceDefinition(true); ok {
 		if m, ok := val.(*design.MediaTypeDefinition); ok {
 			if m.UserTypeDefinition == nil {
-				engine.ReportError("invalid media type specification, media type is not initialized")
+				dslengine.ReportError("invalid media type specification, media type is not initialized")
 			} else {
 				r.MediaType = design.CanonicalIdentifier(m.Identifier)
 				m.Resource = r
@@ -82,7 +82,7 @@ func DefaultMedia(val interface{}) {
 		} else if identifier, ok := val.(string); ok {
 			r.MediaType = design.CanonicalIdentifier(identifier)
 		} else {
-			engine.ReportError("media type must be a string or a *design.MediaTypeDefinition, got %#v", val)
+			dslengine.ReportError("media type must be a string or a *design.MediaTypeDefinition, got %#v", val)
 		}
 	}
 }

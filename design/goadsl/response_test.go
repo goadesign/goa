@@ -1,33 +1,33 @@
-package dsl_test
+package goadsl_test
 
 import (
 	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/dsl"
-	"github.com/goadesign/goa/engine"
+	. "github.com/goadesign/goa/design/goadsl"
+	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Response", func() {
 	var name string
-	var dsl func()
+	var goadsl func()
 
 	var res *ResponseDefinition
 
 	BeforeEach(func() {
 		InitDesign()
-		engine.Errors = nil
+		dslengine.Errors = nil
 		name = ""
-		dsl = nil
+		goadsl = nil
 	})
 
 	JustBeforeEach(func() {
 		Resource("res", func() {
 			Action("action", func() {
-				Response(name, dsl)
+				Response(name, goadsl)
 			})
 		})
-		engine.RunDSL()
+		dslengine.Run()
 		if r, ok := Design.Resources["res"]; ok {
 			if a, ok := r.Actions["action"]; ok {
 				res = a.Responses[name]
@@ -35,14 +35,14 @@ var _ = Describe("Response", func() {
 		}
 	})
 
-	Context("with no DSL and no name", func() {
+	Context("with no goadsl and no name", func() {
 		It("produces an invalid action definition", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.Validate()).Should(HaveOccurred())
 		})
 	})
 
-	Context("with no DSL", func() {
+	Context("with no goadsl", func() {
 		BeforeEach(func() {
 			name = "foo"
 		})
@@ -58,7 +58,7 @@ var _ = Describe("Response", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() {
+			goadsl = func() {
 				Status(status)
 			}
 		})
@@ -77,7 +77,7 @@ var _ = Describe("Response", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() {
+			goadsl = func() {
 				Status(status)
 				Description(description)
 			}
@@ -96,7 +96,7 @@ var _ = Describe("Response", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() {
+			goadsl = func() {
 				Status(status)
 			}
 		})
@@ -114,7 +114,7 @@ var _ = Describe("Response", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() {
+			goadsl = func() {
 				Status(status)
 				Media(mediaType)
 			}
@@ -134,7 +134,7 @@ var _ = Describe("Response", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() {
+			goadsl = func() {
 				Status(status)
 				Headers(func() {
 					Header(headerName)

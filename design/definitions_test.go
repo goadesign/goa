@@ -2,7 +2,7 @@ package design_test
 
 import (
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/engine"
+	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -18,8 +18,8 @@ var _ = Describe("IsRequired", func() {
 		integer := &design.AttributeDefinition{Type: design.Integer}
 		attribute = &design.AttributeDefinition{
 			Type: design.Object{required: integer},
-			Validations: []engine.ValidationDefinition{
-				&engine.RequiredValidationDefinition{Names: []string{required}},
+			Validations: []dslengine.ValidationDefinition{
+				&dslengine.RequiredValidationDefinition{Names: []string{required}},
 			},
 		}
 		res = attribute.IsRequired(attName)

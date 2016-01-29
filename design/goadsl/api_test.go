@@ -1,9 +1,9 @@
-package dsl_test
+package goadsl_test
 
 import (
 	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/dsl"
-	"github.com/goadesign/goa/engine"
+	. "github.com/goadesign/goa/design/goadsl"
+	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -14,14 +14,14 @@ var _ = Describe("API", func() {
 
 	BeforeEach(func() {
 		InitDesign()
-		engine.Errors = nil
+		dslengine.Errors = nil
 		name = ""
 		dsl = nil
 	})
 
 	JustBeforeEach(func() {
 		API(name, dsl)
-		engine.RunDSL()
+		dslengine.Run()
 	})
 
 	Context("with no DSL", func() {
@@ -42,7 +42,7 @@ var _ = Describe("API", func() {
 
 		It("produces an error", func() {
 			API(name, dsl)
-			Ω(engine.Errors).Should(HaveOccurred())
+			Ω(dslengine.Errors).Should(HaveOccurred())
 		})
 	})
 
@@ -53,13 +53,13 @@ var _ = Describe("API", func() {
 
 		It("returns an error", func() {
 			API("news", dsl)
-			Ω(engine.Errors).Should(HaveOccurred())
+			Ω(dslengine.Errors).Should(HaveOccurred())
 		})
 	})
 
 	Context("with valid DSL", func() {
 		JustBeforeEach(func() {
-			Ω(engine.Errors).ShouldNot(HaveOccurred())
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 			Ω(Design.Validate()).ShouldNot(HaveOccurred())
 		})
 
