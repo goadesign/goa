@@ -2,7 +2,7 @@ package codegen_test
 
 import (
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/engine"
+	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/codegen"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,7 +16,7 @@ var _ = Describe("validation code generation", func() {
 	Describe("ValidationChecker", func() {
 		Context("given an attribute definition and validations", func() {
 			var attType design.DataType
-			var validations []engine.ValidationDefinition
+			var validations []dslengine.ValidationDefinition
 
 			att := new(design.AttributeDefinition)
 			target := "val"
@@ -32,10 +32,10 @@ var _ = Describe("validation code generation", func() {
 			Context("of enum", func() {
 				BeforeEach(func() {
 					attType = design.Integer
-					enumVal := &engine.EnumValidationDefinition{
+					enumVal := &dslengine.EnumValidationDefinition{
 						Values: []interface{}{1, 2, 3},
 					}
-					validations = []engine.ValidationDefinition{enumVal}
+					validations = []dslengine.ValidationDefinition{enumVal}
 				})
 
 				It("produces the validation go code", func() {
@@ -46,10 +46,10 @@ var _ = Describe("validation code generation", func() {
 			Context("of pattern", func() {
 				BeforeEach(func() {
 					attType = design.String
-					patternVal := &engine.PatternValidationDefinition{
+					patternVal := &dslengine.PatternValidationDefinition{
 						Pattern: ".*",
 					}
-					validations = []engine.ValidationDefinition{patternVal}
+					validations = []dslengine.ValidationDefinition{patternVal}
 				})
 
 				It("produces the validation go code", func() {
@@ -60,10 +60,10 @@ var _ = Describe("validation code generation", func() {
 			Context("of min value 0", func() {
 				BeforeEach(func() {
 					attType = design.Integer
-					minVal := &engine.MinimumValidationDefinition{
+					minVal := &dslengine.MinimumValidationDefinition{
 						Min: 0,
 					}
-					validations = []engine.ValidationDefinition{minVal}
+					validations = []dslengine.ValidationDefinition{minVal}
 				})
 
 				It("produces the validation go code", func() {
@@ -73,12 +73,12 @@ var _ = Describe("validation code generation", func() {
 
 			Context("of embedded object", func() {
 				BeforeEach(func() {
-					enumVal := &engine.EnumValidationDefinition{
+					enumVal := &dslengine.EnumValidationDefinition{
 						Values: []interface{}{1, 2, 3},
 					}
 					ccatt := &design.AttributeDefinition{
 						Type:        design.Integer,
-						Validations: []engine.ValidationDefinition{enumVal},
+						Validations: []dslengine.ValidationDefinition{enumVal},
 					}
 					catt := &design.AttributeDefinition{
 						Type: design.Object{"bar": ccatt},

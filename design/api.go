@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/goadesign/goa/engine"
+	"github.com/goadesign/goa/dslengine"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -117,7 +117,7 @@ type (
 		// Docs points to the API external documentation
 		Docs *DocsDefinition
 		// Traits available to all API resources and actions indexed by name
-		Traits map[string]*engine.TraitDefinition
+		Traits map[string]*dslengine.TraitDefinition
 		// Responses available to all API actions indexed by name
 		Responses map[string]*ResponseDefinition
 		// Response template factories available to all API actions indexed by name
@@ -129,7 +129,7 @@ type (
 		// DSLFunc contains the DSL used to create this definition if any.
 		DSLFunc func()
 		// Metadata is a list of key/value pairs
-		Metadata engine.MetadataDefinition
+		Metadata dslengine.MetadataDefinition
 	}
 
 	// ContactDefinition contains the API contact information.
@@ -191,7 +191,7 @@ type (
 		// DSLFunc contains the DSL used to create this definition if any.
 		DSLFunc func()
 		// metadata is a list of key/value pairs
-		Metadata engine.MetadataDefinition
+		Metadata dslengine.MetadataDefinition
 	}
 
 	// EncodingDefinition defines an encoder supported by the API.
@@ -218,9 +218,9 @@ type (
 		// Response header definitions
 		Headers *AttributeDefinition
 		// Parent action or resource
-		Parent engine.Definition
+		Parent dslengine.Definition
 		// Metadata is a list of key/value pairs
-		Metadata engine.MetadataDefinition
+		Metadata dslengine.MetadataDefinition
 		// Standard is true if the response definition comes from the goa default responses
 		Standard bool
 		// Global is true if the response definition comes from the global API properties
@@ -267,7 +267,7 @@ type (
 		// Request headers that need to be made available to action
 		Headers *AttributeDefinition
 		// Metadata is a list of key/value pairs
-		Metadata engine.MetadataDefinition
+		Metadata dslengine.MetadataDefinition
 	}
 
 	// LinkDefinition defines a media type link, it specifies a URL to a related resource.
@@ -455,13 +455,13 @@ func (a *APIDefinition) Versions() (versions []string) {
 
 // IterateSets goes over all the definition sets of the API: The API definition itself, each
 // version definition, user types, media types and finally resources.
-func (a *APIDefinition) IterateSets(iterator engine.SetIterator) {
+func (a *APIDefinition) IterateSets(iterator dslengine.SetIterator) {
 	// First run the top level API DSL to initialize responses and
 	// response templates needed by resources.
-	iterator([]engine.Definition{a})
+	iterator([]dslengine.Definition{a})
 
 	// Then all the versions
-	sortedVersions := make([]engine.Definition, len(a.APIVersions))
+	sortedVersions := make([]dslengine.Definition, len(a.APIVersions))
 	i := 0
 	a.IterateVersions(func(ver *APIVersionDefinition) error {
 		if !ver.IsDefault() {
@@ -473,7 +473,7 @@ func (a *APIDefinition) IterateSets(iterator engine.SetIterator) {
 	iterator(sortedVersions)
 
 	// Then run the user type DSLs
-	typeAttributes := make([]engine.Definition, len(a.Types))
+	typeAttributes := make([]dslengine.Definition, len(a.Types))
 	i = 0
 	a.IterateUserTypes(func(u *UserTypeDefinition) error {
 		u.AttributeDefinition.DSLFunc = u.DSLFunc
@@ -484,7 +484,7 @@ func (a *APIDefinition) IterateSets(iterator engine.SetIterator) {
 	iterator(typeAttributes)
 
 	// Then the media type DSLs
-	mediaTypes := make([]engine.Definition, len(a.MediaTypes))
+	mediaTypes := make([]dslengine.Definition, len(a.MediaTypes))
 	i = 0
 	a.IterateMediaTypes(func(mt *MediaTypeDefinition) error {
 		mediaTypes[i] = mt
@@ -494,7 +494,7 @@ func (a *APIDefinition) IterateSets(iterator engine.SetIterator) {
 	iterator(mediaTypes)
 
 	// And now that we have everything the resources.
-	resources := make([]engine.Definition, len(a.Resources))
+	resources := make([]dslengine.Definition, len(a.Resources))
 	i = 0
 	a.IterateResources(func(res *ResourceDefinition) error {
 		resources[i] = res
@@ -1117,7 +1117,7 @@ func (r *RouteDefinition) IsAbsolute() bool {
 }
 
 // IterateSets iterates over the one generated media type definition set.
-func (r MediaTypeRoot) IterateSets(iterator engine.SetIterator) {
+func (r MediaTypeRoot) IterateSets(iterator dslengine.SetIterator) {
 	canonicalIDs := make([]string, len(r))
 	i := 0
 	for _, mt := range r {
@@ -1127,7 +1127,7 @@ func (r MediaTypeRoot) IterateSets(iterator engine.SetIterator) {
 		i++
 	}
 	sort.Strings(canonicalIDs)
-	set := make([]engine.Definition, len(canonicalIDs))
+	set := make([]dslengine.Definition, len(canonicalIDs))
 	for i, cid := range canonicalIDs {
 		set[i] = Design.MediaTypes[cid]
 	}

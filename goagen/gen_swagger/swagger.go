@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/engine"
+	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/gen_schema"
 )
 
@@ -365,7 +365,7 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 	return s, nil
 }
 
-func tagsFromDefinition(mdata engine.MetadataDefinition) (tags []*Tag, err error) {
+func tagsFromDefinition(mdata dslengine.MetadataDefinition) (tags []*Tag, err error) {
 	for key, value := range mdata {
 		if len(key) > 12 && strings.HasPrefix(key, "swagger:tag=") {
 			tag := &Tag{Name: key[12:]}
@@ -385,7 +385,7 @@ func tagsFromDefinition(mdata engine.MetadataDefinition) (tags []*Tag, err error
 	return
 }
 
-func tagNamesFromDefinition(mdatas []engine.MetadataDefinition) (tagNames []string, err error) {
+func tagNamesFromDefinition(mdatas []dslengine.MetadataDefinition) (tagNames []string, err error) {
 	var tags []*Tag
 	for _, mdata := range mdatas {
 		tags, err = tagsFromDefinition(mdata)
@@ -522,7 +522,7 @@ func headersFromDefinition(headers *design.AttributeDefinition) (map[string]*Hea
 
 func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *design.RouteDefinition) error {
 	action := route.Parent
-	tagNames, err := tagNamesFromDefinition([]engine.MetadataDefinition{action.Parent.Metadata, action.Metadata})
+	tagNames, err := tagNamesFromDefinition([]dslengine.MetadataDefinition{action.Parent.Metadata, action.Metadata})
 	if err != nil {
 		return err
 	}
@@ -705,25 +705,25 @@ func initMaxLengthValidation(def interface{}, max int) {
 func initValidations(attr *design.AttributeDefinition, def interface{}) {
 	for _, v := range attr.Validations {
 		switch val := v.(type) {
-		case *engine.EnumValidationDefinition:
+		case *dslengine.EnumValidationDefinition:
 			initEnumValidation(def, val.Values)
 
-		case *engine.FormatValidationDefinition:
+		case *dslengine.FormatValidationDefinition:
 			initFormatValidation(def, val.Format)
 
-		case *engine.PatternValidationDefinition:
+		case *dslengine.PatternValidationDefinition:
 			initPatternValidation(def, val.Pattern)
 
-		case *engine.MinimumValidationDefinition:
+		case *dslengine.MinimumValidationDefinition:
 			initMinimumValidation(def, val.Min)
 
-		case *engine.MaximumValidationDefinition:
+		case *dslengine.MaximumValidationDefinition:
 			initMaximumValidation(def, val.Max)
 
-		case *engine.MinLengthValidationDefinition:
+		case *dslengine.MinLengthValidationDefinition:
 			initMinLengthValidation(def, val.MinLength)
 
-		case *engine.MaxLengthValidationDefinition:
+		case *dslengine.MaxLengthValidationDefinition:
 			initMaxLengthValidation(def, val.MaxLength)
 		}
 	}

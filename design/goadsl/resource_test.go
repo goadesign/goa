@@ -1,39 +1,39 @@
-package dsl_test
+package goadsl_test
 
 import (
 	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/dsl"
-	"github.com/goadesign/goa/engine"
+	. "github.com/goadesign/goa/design/goadsl"
+	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Resource", func() {
 	var name string
-	var dsl func()
+	var goadsl func()
 
 	var res *ResourceDefinition
 
 	BeforeEach(func() {
 		InitDesign()
-		engine.Errors = nil
+		dslengine.Errors = nil
 		name = ""
-		dsl = nil
+		goadsl = nil
 	})
 
 	JustBeforeEach(func() {
-		res = Resource(name, dsl)
-		engine.RunDSL()
+		res = Resource(name, goadsl)
+		dslengine.Run()
 	})
 
-	Context("with no DSL and no name", func() {
+	Context("with no goadsl and no name", func() {
 		It("produces an invalid resource definition", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.Validate(Design.APIVersionDefinition)).Should(HaveOccurred())
 		})
 	})
 
-	Context("with no DSL", func() {
+	Context("with no goadsl", func() {
 		BeforeEach(func() {
 			name = "foo"
 		})
@@ -50,7 +50,7 @@ var _ = Describe("Resource", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() {
+			goadsl = func() {
 				Description(description)
 			}
 		})
@@ -67,7 +67,7 @@ var _ = Describe("Resource", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() {
+			goadsl = func() {
 				Parent(parent)
 			}
 		})
@@ -84,7 +84,7 @@ var _ = Describe("Resource", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() {
+			goadsl = func() {
 				Action(actionName, func() { Routing(PUT(":/id")) })
 			}
 		})
@@ -102,7 +102,7 @@ var _ = Describe("Resource", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() {
+			goadsl = func() {
 				CanonicalActionName(can)
 			}
 		})
@@ -119,7 +119,7 @@ var _ = Describe("Resource", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() {
+			goadsl = func() {
 				Action(can, func() { Routing(PUT(":/id")) })
 				CanonicalActionName(can)
 			}
@@ -137,7 +137,7 @@ var _ = Describe("Resource", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() {
+			goadsl = func() {
 				BasePath(basePath)
 			}
 		})
@@ -154,7 +154,7 @@ var _ = Describe("Resource", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() {
+			goadsl = func() {
 				BasePath(basePath)
 				BaseParams(func() {
 					Param("paramID")
@@ -177,7 +177,7 @@ var _ = Describe("Resource", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() {
+			goadsl = func() {
 				DefaultMedia(mediaType)
 			}
 		})
@@ -194,13 +194,13 @@ var _ = Describe("Resource", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() {
+			goadsl = func() {
 				DefaultMedia(mediaType)
 			}
 		})
 
 		It("fails", func() {
-			Ω(engine.Errors).Should(HaveOccurred())
+			Ω(dslengine.Errors).Should(HaveOccurred())
 		})
 	})
 
@@ -217,7 +217,7 @@ var _ = Describe("Resource", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() {
+			goadsl = func() {
 				DefaultMedia(mediaType)
 			}
 		})
@@ -232,11 +232,11 @@ var _ = Describe("Resource", func() {
 	Context("with a trait that does not exist", func() {
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() { UseTrait("Authenticated") }
+			goadsl = func() { UseTrait("Authenticated") }
 		})
 
 		It("returns an error", func() {
-			Ω(engine.Errors).Should(HaveOccurred())
+			Ω(dslengine.Errors).Should(HaveOccurred())
 		})
 	})
 
@@ -246,7 +246,7 @@ var _ = Describe("Resource", func() {
 
 		BeforeEach(func() {
 			name = "foo"
-			dsl = func() { UseTrait(traitName) }
+			goadsl = func() { UseTrait(traitName) }
 			API("test", func() {
 				Trait(traitName, func() {
 					Description(description)

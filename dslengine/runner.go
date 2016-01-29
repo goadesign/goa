@@ -1,4 +1,4 @@
-package engine
+package dslengine
 
 import (
 	"fmt"
@@ -44,11 +44,11 @@ type (
 	contextStack []Definition
 )
 
-// RunDSL runs the given root definitions. It iterates over the definition sets multiple times to
+// Run runs the given root definitions. It iterates over the definition sets multiple times to
 // first execute the DSL, the validate the resulting definitions and finally finalize them.
 // The executed DSL may append new roots to the Roots Design package variable to have them be
 // executed (last) in the same run.
-func RunDSL() error {
+func Run() error {
 	if len(Roots) == 0 {
 		return nil
 	}
@@ -84,13 +84,13 @@ func RunDSL() error {
 	return nil
 }
 
-// ExecuteDSL runs the given DSL to initialize the given definition. It returns true on success.
+// Execute runs the given DSL to initialize the given definition. It returns true on success.
 // It returns false and appends to Errors on failure.
-// Note that `RunDSL` takes care of calling `ExecuteDSL` on all definitions that implement Source.
+// Note that `Run` takes care of calling `Execute` on all definitions that implement Source.
 // This function is intended for use by definitions that run the DSL at declaration time rather than
-// store the DSL for execution by the engine (usually simple independent definitions).
+// store the DSL for execution by the dsl (usually simple independent definitions).
 // The DSL should use ReportError to record DSL execution errors.
-func ExecuteDSL(dsl func(), def Definition) bool {
+func Execute(dsl func(), def Definition) bool {
 	if dsl == nil {
 		return true
 	}
@@ -212,7 +212,7 @@ func runSet(set DefinitionSet) error {
 		for _, def := range set[executed:] {
 			executed++
 			if source, ok := def.(Source); ok {
-				ExecuteDSL(source.DSL(), source)
+				Execute(source.DSL(), source)
 			}
 		}
 		if recursed > 100 {

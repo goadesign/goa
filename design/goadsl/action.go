@@ -1,11 +1,11 @@
-package dsl
+package goadsl
 
 import (
 	"fmt"
 
 	"bitbucket.org/pkg/inflect"
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/engine"
+	"github.com/goadesign/goa/dslengine"
 )
 
 // Action implements the action definition DSL. Action definitions describe specific API endpoints
@@ -55,7 +55,7 @@ func Action(name string, dsl func()) {
 				Name:   name,
 			}
 		}
-		if !engine.ExecuteDSL(dsl, action) {
+		if !dslengine.Execute(dsl, action) {
 			return
 		}
 		r.Actions[name] = action
@@ -132,17 +132,17 @@ func PATCH(path string) *design.RouteDefinition {
 func Headers(dsl func()) {
 	if a, ok := actionDefinition(false); ok {
 		headers := newAttribute(a.Parent.MediaType)
-		if engine.ExecuteDSL(dsl, headers) {
+		if dslengine.Execute(dsl, headers) {
 			a.Headers = headers
 		}
 	} else if r, ok := resourceDefinition(false); ok {
 		headers := newAttribute(r.MediaType)
-		if engine.ExecuteDSL(dsl, headers) {
+		if dslengine.Execute(dsl, headers) {
 			r.Headers = headers
 		}
 	} else if r, ok := responseDefinition(true); ok {
 		if r.Headers != nil {
-			engine.ReportError("headers already defined")
+			dslengine.ReportError("headers already defined")
 			return
 		}
 		var h *design.AttributeDefinition
@@ -154,9 +154,9 @@ func Headers(dsl func()) {
 		case nil: // API ResponseTemplate
 			h = &design.AttributeDefinition{}
 		default:
-			engine.ReportError("invalid use of Response or ResponseTemplate")
+			dslengine.ReportError("invalid use of Response or ResponseTemplate")
 		}
-		if engine.ExecuteDSL(dsl, h) {
+		if dslengine.Execute(dsl, h) {
 			r.Headers = h
 		}
 	}
@@ -178,12 +178,12 @@ func Headers(dsl func()) {
 func Params(dsl func()) {
 	if a, ok := actionDefinition(false); ok {
 		params := newAttribute(a.Parent.MediaType)
-		if engine.ExecuteDSL(dsl, params) {
+		if dslengine.Execute(dsl, params) {
 			a.Params = params
 		}
 	} else if r, ok := resourceDefinition(true); ok {
 		params := newAttribute(r.MediaType)
-		if engine.ExecuteDSL(dsl, params) {
+		if dslengine.Execute(dsl, params) {
 			r.Params = params
 		}
 	}
@@ -206,7 +206,7 @@ func Params(dsl func()) {
 //
 func Payload(p interface{}, dsls ...func()) {
 	if len(dsls) > 1 {
-		engine.ReportError("too many arguments given to Payload")
+		dslengine.ReportError("too many arguments given to Payload")
 		return
 	}
 	if a, ok := actionDefinition(true); ok {
@@ -224,7 +224,7 @@ func Payload(p interface{}, dsls ...func()) {
 		case string:
 			ut, ok := design.Design.Types[actual]
 			if !ok {
-				engine.ReportError("unknown payload type %s", actual)
+				dslengine.ReportError("unknown payload type %s", actual)
 			}
 			att = ut.AttributeDefinition.Dup()
 		case *design.Array:
@@ -236,12 +236,12 @@ func Payload(p interface{}, dsls ...func()) {
 		}
 		if len(dsls) == 1 {
 			if dsl != nil {
-				engine.ReportError("invalid arguments in Payload call, must be (type), (dsl) or (type, dsl)")
+				dslengine.ReportError("invalid arguments in Payload call, must be (type), (dsl) or (type, dsl)")
 			}
 			dsl = dsls[0]
 		}
 		if dsl != nil {
-			engine.ExecuteDSL(dsl, att)
+			dslengine.Execute(dsl, att)
 		}
 		rn := inflect.Camelize(a.Parent.Name)
 		an := inflect.Camelize(a.Name)

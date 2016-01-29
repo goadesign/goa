@@ -1,10 +1,10 @@
-package dsl
+package goadsl
 
 import (
 	"net/http"
 
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/engine"
+	"github.com/goadesign/goa/dslengine"
 )
 
 // Call InitDesign by default.
@@ -23,7 +23,7 @@ func InitDesign() {
 	}
 	t := func(params ...string) *design.ResponseDefinition {
 		if len(params) < 1 {
-			engine.ReportError("expected media type as argument when invoking response template OK")
+			dslengine.ReportError("expected media type as argument when invoking response template OK")
 			return nil
 		}
 		return &design.ResponseDefinition{
@@ -93,6 +93,6 @@ func InitDesign() {
 
 	// Initialize package variables
 	design.Design = api
-	engine.Roots = []engine.Root{api}
+	dslengine.Roots = []dslengine.Root{api}
 	design.GeneratedMediaTypes = nil
 }

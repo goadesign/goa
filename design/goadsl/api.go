@@ -1,4 +1,4 @@
-package dsl
+package goadsl
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"regexp"
 
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/engine"
+	"github.com/goadesign/goa/dslengine"
 )
 
 // API implements the top level API DSL. It defines the API name, default description and other
@@ -64,14 +64,14 @@ import (
 //
 func API(name string, dsl func()) *design.APIDefinition {
 	if design.Design.Name != "" {
-		engine.ReportError("multiple API definitions, only one is allowed")
+		dslengine.ReportError("multiple API definitions, only one is allowed")
 		return nil
 	}
-	if !engine.TopLevelDefinition(true) {
+	if !dslengine.TopLevelDefinition(true) {
 		return nil
 	}
 	if name == "" {
-		engine.ReportError("API name cannot be empty")
+		dslengine.ReportError("API name cannot be empty")
 	}
 	design.Design.Name = name
 	design.Design.DSLFunc = dsl
@@ -84,14 +84,14 @@ func API(name string, dsl func()) *design.APIDefinition {
 func Version(ver string, dsl func()) *design.APIVersionDefinition {
 	verdef := &design.APIVersionDefinition{Version: ver, DSLFunc: dsl}
 	if _, ok := design.Design.APIVersions[ver]; ok {
-		engine.ReportError("API Version %s defined twice", ver)
+		dslengine.ReportError("API Version %s defined twice", ver)
 		return verdef
 	}
 	if design.Design.APIVersions == nil {
 		design.Design.APIVersions = make(map[string]*design.APIVersionDefinition)
 	}
 	if ver == "" {
-		engine.ReportError("version cannot be an empty string")
+		dslengine.ReportError("version cannot be an empty string")
 	}
 	design.Design.APIVersions[ver] = verdef
 	return verdef
@@ -134,7 +134,7 @@ func BasePath(val string) {
 		for _, awc := range awcs {
 			for _, wc := range wcs {
 				if awc == wc {
-					engine.ReportError(`duplicate wildcard "%s" in API and resource base paths`, wc)
+					dslengine.ReportError(`duplicate wildcard "%s" in API and resource base paths`, wc)
 				}
 			}
 		}
@@ -146,7 +146,7 @@ func BasePath(val string) {
 // The DSL for describing each Param is the Attribute DSL.
 func BaseParams(dsl func()) {
 	params := new(design.AttributeDefinition)
-	if !engine.ExecuteDSL(dsl, params) {
+	if !dslengine.Execute(dsl, params) {
 		return
 	}
 	params.NonZeroAttributes = make(map[string]bool)
@@ -177,7 +177,7 @@ var hostnameRegex = regexp.MustCompile(`^[[:alnum:]][[:alnum:]\-]{0,61}[[:alnum:
 // Host sets the API hostname.
 func Host(host string) {
 	if !hostnameRegex.MatchString(host) {
-		engine.ReportError(`invalid hostname value "%s"`, host)
+		dslengine.ReportError(`invalid hostname value "%s"`, host)
 		return
 	}
 	if a, ok := apiDefinition(false); ok {
@@ -192,7 +192,7 @@ func Scheme(vals ...string) {
 	ok := true
 	for _, v := range vals {
 		if v != "http" && v != "https" && v != "ws" && v != "wss" {
-			engine.ReportError(`invalid scheme "%s", must be one of "http", "https", "ws" or "wss"`, v)
+			dslengine.ReportError(`invalid scheme "%s", must be one of "http", "https", "ws" or "wss"`, v)
 			ok = false
 		}
 	}
@@ -211,7 +211,7 @@ func Scheme(vals ...string) {
 // Contact sets the API contact information.
 func Contact(dsl func()) {
 	contact := new(design.ContactDefinition)
-	if !engine.ExecuteDSL(dsl, contact) {
+	if !dslengine.Execute(dsl, contact) {
 		return
 	}
 	if a, ok := apiDefinition(false); ok {
@@ -224,7 +224,7 @@ func Contact(dsl func()) {
 // License sets the API license information.
 func License(dsl func()) {
 	license := new(design.LicenseDefinition)
-	if !engine.ExecuteDSL(dsl, license) {
+	if !dslengine.Execute(dsl, license) {
 		return
 	}
 	if a, ok := apiDefinition(false); ok {
@@ -237,7 +237,7 @@ func License(dsl func()) {
 // Docs provides external documentation pointers.
 func Docs(dsl func()) {
 	docs := new(design.DocsDefinition)
-	if !engine.ExecuteDSL(dsl, docs) {
+	if !dslengine.Execute(dsl, docs) {
 		return
 	}
 	if a, ok := apiDefinition(false); ok {
@@ -319,11 +319,11 @@ func buildEncodingDefinition(args ...interface{}) *design.EncodingDefinition {
 	var dsl func()
 	var ok bool
 	if len(args) == 0 {
-		engine.ReportError("missing argument in call to Consumes")
+		dslengine.ReportError("missing argument in call to Consumes")
 		return nil
 	}
 	if _, ok := args[0].(string); !ok {
-		engine.ReportError("first argument to Consumes must be a string (MIME type)")
+		dslengine.ReportError("first argument to Consumes must be a string (MIME type)")
 		return nil
 	}
 	last := len(args)
@@ -334,14 +334,14 @@ func buildEncodingDefinition(args ...interface{}) *design.EncodingDefinition {
 	for i := 0; i < last; i++ {
 		var mimeType string
 		if mimeType, ok = args[i].(string); !ok {
-			engine.ReportError("argument #%d of Consumes must be a string (MIME type)", i)
+			dslengine.ReportError("argument #%d of Consumes must be a string (MIME type)", i)
 			return nil
 		}
 		mimeTypes[i] = mimeType
 	}
 	d := &design.EncodingDefinition{MIMETypes: mimeTypes}
 	if dsl != nil {
-		engine.ExecuteDSL(dsl, d)
+		dslengine.Execute(dsl, d)
 	}
 	return d
 }
@@ -398,11 +398,11 @@ func ResponseTemplate(name string, p interface{}) {
 		v.ResponseTemplates = make(map[string]*design.ResponseTemplateDefinition)
 	}
 	if _, ok := v.Responses[name]; ok {
-		engine.ReportError("multiple definitions for response template %s", name)
+		dslengine.ReportError("multiple definitions for response template %s", name)
 		return
 	}
 	if _, ok := v.ResponseTemplates[name]; ok {
-		engine.ReportError("multiple definitions for response template %s", name)
+		dslengine.ReportError("multiple definitions for response template %s", name)
 		return
 	}
 
@@ -412,13 +412,13 @@ func ResponseTemplate(name string, p interface{}) {
 func setupResponseTemplate(v *design.APIVersionDefinition, name string, p interface{}) {
 	if f, ok := p.(func()); ok {
 		r := &design.ResponseDefinition{Name: name}
-		if engine.ExecuteDSL(f, r) {
+		if dslengine.Execute(f, r) {
 			v.Responses[name] = r
 		}
 	} else if tmpl, ok := p.(func(...string)); ok {
 		t := func(params ...string) *design.ResponseDefinition {
 			r := &design.ResponseDefinition{Name: name}
-			engine.ExecuteDSL(func() { tmpl(params...) }, r)
+			dslengine.Execute(func() { tmpl(params...) }, r)
 			return r
 		}
 		v.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
@@ -428,7 +428,7 @@ func setupResponseTemplate(v *design.APIVersionDefinition, name string, p interf
 	} else {
 		typ := reflect.TypeOf(p)
 		if kind := typ.Kind(); kind != reflect.Func {
-			engine.ReportError("dsl must be a function but got %s", kind)
+			dslengine.ReportError("dsl must be a function but got %s", kind)
 			return
 		}
 
@@ -440,7 +440,7 @@ func setupResponseTemplate(v *design.APIVersionDefinition, name string, p interf
 				if num > 0 {
 					args = fmt.Sprintf("%d arguments", num)
 				}
-				engine.ReportError("expected at least %s when invoking response template %s", args, name)
+				dslengine.ReportError("expected at least %s when invoking response template %s", args, name)
 				return nil
 			}
 			r := &design.ResponseDefinition{Name: name}
@@ -449,13 +449,13 @@ func setupResponseTemplate(v *design.APIVersionDefinition, name string, p interf
 			for i := 0; i < num; i++ {
 				// type checking
 				if t := typ.In(i); t.Kind() != reflect.String {
-					engine.ReportError("ResponseTemplate parameters must be strings but type of parameter at position %d is %s", i, t)
+					dslengine.ReportError("ResponseTemplate parameters must be strings but type of parameter at position %d is %s", i, t)
 					return nil
 				}
 				// append input arguments
 				in[i] = reflect.ValueOf(params[i])
 			}
-			engine.ExecuteDSL(func() { val.Call(in) }, r)
+			dslengine.Execute(func() { val.Call(in) }, r)
 			return r
 		}
 		v.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
@@ -484,22 +484,22 @@ func Trait(name string, val ...func()) {
 		ver = v
 	}
 	if len(val) < 1 {
-		engine.ReportError("missing trait DSL for %s", name)
+		dslengine.ReportError("missing trait DSL for %s", name)
 		return
 	} else if len(val) > 1 {
-		engine.ReportError("too many arguments given to Trait")
+		dslengine.ReportError("too many arguments given to Trait")
 		return
 	}
 	if ver == nil {
 		return
 	}
 	if _, ok := ver.Traits[name]; ok {
-		engine.ReportError("multiple definitions for trait %s%s", name, ver.Context())
+		dslengine.ReportError("multiple definitions for trait %s%s", name, ver.Context())
 		return
 	}
-	trait := &engine.TraitDefinition{Name: name, DSLFunc: val[0]}
+	trait := &dslengine.TraitDefinition{Name: name, DSLFunc: val[0]}
 	if ver.Traits == nil {
-		ver.Traits = make(map[string]*engine.TraitDefinition)
+		ver.Traits = make(map[string]*dslengine.TraitDefinition)
 	}
 	ver.Traits[name] = trait
 }
@@ -507,7 +507,7 @@ func Trait(name string, val ...func()) {
 // UseTrait executes the API trait with the given name. UseTrait can be used inside a Resource,
 // Action or Attribute DSL.
 func UseTrait(name string) {
-	var def engine.Definition
+	var def dslengine.Definition
 	if r, ok := resourceDefinition(false); ok {
 		def = r
 	} else if a, ok := actionDefinition(false); ok {
@@ -517,9 +517,9 @@ func UseTrait(name string) {
 	}
 	if def != nil {
 		if trait, ok := design.Design.Traits[name]; ok {
-			engine.ExecuteDSL(trait.DSLFunc, def)
+			dslengine.Execute(trait.DSLFunc, def)
 		} else {
-			engine.ReportError("unknown trait %s", name)
+			dslengine.ReportError("unknown trait %s", name)
 		}
 	}
 }
@@ -527,9 +527,9 @@ func UseTrait(name string) {
 // apiDefinition returns true and current context if it is an APIDefinition,
 // nil and false otherwise.
 func apiDefinition(failIfNotAPI bool) (*design.APIDefinition, bool) {
-	a, ok := engine.CurrentDefinition().(*design.APIDefinition)
+	a, ok := dslengine.CurrentDefinition().(*design.APIDefinition)
 	if !ok && failIfNotAPI {
-		engine.IncompatibleDSL(engine.Caller())
+		dslengine.IncompatibleDSL(dslengine.Caller())
 	}
 	return a, ok
 }
@@ -537,9 +537,9 @@ func apiDefinition(failIfNotAPI bool) (*design.APIDefinition, bool) {
 // encodingDefinition returns true and current context if it is an EncodingDefinition,
 // nil and false otherwise.
 func encodingDefinition(failIfNotEnc bool) (*design.EncodingDefinition, bool) {
-	e, ok := engine.CurrentDefinition().(*design.EncodingDefinition)
+	e, ok := dslengine.CurrentDefinition().(*design.EncodingDefinition)
 	if !ok && failIfNotEnc {
-		engine.IncompatibleDSL(engine.Caller())
+		dslengine.IncompatibleDSL(dslengine.Caller())
 	}
 	return e, ok
 }
@@ -547,9 +547,9 @@ func encodingDefinition(failIfNotEnc bool) (*design.EncodingDefinition, bool) {
 // versionDefinition returns true and current context if it is an APIVersionDefinition,
 // nil and false otherwise.
 func versionDefinition(failIfNotVersion bool) (*design.APIVersionDefinition, bool) {
-	a, ok := engine.CurrentDefinition().(*design.APIVersionDefinition)
+	a, ok := dslengine.CurrentDefinition().(*design.APIVersionDefinition)
 	if !ok && failIfNotVersion {
-		engine.IncompatibleDSL(engine.Caller())
+		dslengine.IncompatibleDSL(dslengine.Caller())
 	}
 	return a, ok
 }
@@ -557,9 +557,9 @@ func versionDefinition(failIfNotVersion bool) (*design.APIVersionDefinition, boo
 // contactDefinition returns true and current context if it is an ContactDefinition,
 // nil and false otherwise.
 func contactDefinition(failIfNotContact bool) (*design.ContactDefinition, bool) {
-	a, ok := engine.CurrentDefinition().(*design.ContactDefinition)
+	a, ok := dslengine.CurrentDefinition().(*design.ContactDefinition)
 	if !ok && failIfNotContact {
-		engine.IncompatibleDSL(engine.Caller())
+		dslengine.IncompatibleDSL(dslengine.Caller())
 	}
 	return a, ok
 }
@@ -567,9 +567,9 @@ func contactDefinition(failIfNotContact bool) (*design.ContactDefinition, bool) 
 // licenseDefinition returns true and current context if it is an APIDefinition,
 // nil and false otherwise.
 func licenseDefinition(failIfNotLicense bool) (*design.LicenseDefinition, bool) {
-	l, ok := engine.CurrentDefinition().(*design.LicenseDefinition)
+	l, ok := dslengine.CurrentDefinition().(*design.LicenseDefinition)
 	if !ok && failIfNotLicense {
-		engine.IncompatibleDSL(engine.Caller())
+		dslengine.IncompatibleDSL(dslengine.Caller())
 	}
 	return l, ok
 }
@@ -577,9 +577,9 @@ func licenseDefinition(failIfNotLicense bool) (*design.LicenseDefinition, bool) 
 // docsDefinition returns true and current context if it is a DocsDefinition,
 // nil and false otherwise.
 func docsDefinition(failIfNotDocs bool) (*design.DocsDefinition, bool) {
-	a, ok := engine.CurrentDefinition().(*design.DocsDefinition)
+	a, ok := dslengine.CurrentDefinition().(*design.DocsDefinition)
 	if !ok && failIfNotDocs {
-		engine.IncompatibleDSL(engine.Caller())
+		dslengine.IncompatibleDSL(dslengine.Caller())
 	}
 	return a, ok
 }
@@ -587,9 +587,9 @@ func docsDefinition(failIfNotDocs bool) (*design.DocsDefinition, bool) {
 // mediaTypeDefinition returns true and current context if it is a MediaTypeDefinition,
 // nil and false otherwise.
 func mediaTypeDefinition(failIfNotMT bool) (*design.MediaTypeDefinition, bool) {
-	m, ok := engine.CurrentDefinition().(*design.MediaTypeDefinition)
+	m, ok := dslengine.CurrentDefinition().(*design.MediaTypeDefinition)
 	if !ok && failIfNotMT {
-		engine.IncompatibleDSL(engine.Caller())
+		dslengine.IncompatibleDSL(dslengine.Caller())
 	}
 	return m, ok
 }
@@ -597,9 +597,9 @@ func mediaTypeDefinition(failIfNotMT bool) (*design.MediaTypeDefinition, bool) {
 // typeDefinition returns true and current context if it is a UserTypeDefinition,
 // nil and false otherwise.
 func typeDefinition(failIfNotMT bool) (*design.UserTypeDefinition, bool) {
-	m, ok := engine.CurrentDefinition().(*design.UserTypeDefinition)
+	m, ok := dslengine.CurrentDefinition().(*design.UserTypeDefinition)
 	if !ok && failIfNotMT {
-		engine.IncompatibleDSL(engine.Caller())
+		dslengine.IncompatibleDSL(dslengine.Caller())
 	}
 	return m, ok
 }
@@ -607,9 +607,9 @@ func typeDefinition(failIfNotMT bool) (*design.UserTypeDefinition, bool) {
 // attribute returns true and current context if it is an Attribute,
 // nil and false otherwise.
 func attributeDefinition(failIfNotAttribute bool) (*design.AttributeDefinition, bool) {
-	a, ok := engine.CurrentDefinition().(*design.AttributeDefinition)
+	a, ok := dslengine.CurrentDefinition().(*design.AttributeDefinition)
 	if !ok && failIfNotAttribute {
-		engine.IncompatibleDSL(engine.Caller())
+		dslengine.IncompatibleDSL(dslengine.Caller())
 	}
 	return a, ok
 }
@@ -617,9 +617,9 @@ func attributeDefinition(failIfNotAttribute bool) (*design.AttributeDefinition, 
 // resourceDefinition returns true and current context if it is a ResourceDefinition,
 // nil and false otherwise.
 func resourceDefinition(failIfNotResource bool) (*design.ResourceDefinition, bool) {
-	r, ok := engine.CurrentDefinition().(*design.ResourceDefinition)
+	r, ok := dslengine.CurrentDefinition().(*design.ResourceDefinition)
 	if !ok && failIfNotResource {
-		engine.IncompatibleDSL(engine.Caller())
+		dslengine.IncompatibleDSL(dslengine.Caller())
 	}
 	return r, ok
 }
@@ -627,9 +627,9 @@ func resourceDefinition(failIfNotResource bool) (*design.ResourceDefinition, boo
 // actionDefinition returns true and current context if it is an ActionDefinition,
 // nil and false otherwise.
 func actionDefinition(failIfNotAction bool) (*design.ActionDefinition, bool) {
-	a, ok := engine.CurrentDefinition().(*design.ActionDefinition)
+	a, ok := dslengine.CurrentDefinition().(*design.ActionDefinition)
 	if !ok && failIfNotAction {
-		engine.IncompatibleDSL(engine.Caller())
+		dslengine.IncompatibleDSL(dslengine.Caller())
 	}
 	return a, ok
 }
@@ -637,9 +637,9 @@ func actionDefinition(failIfNotAction bool) (*design.ActionDefinition, bool) {
 // responseDefinition returns true and current context if it is a ResponseDefinition,
 // nil and false otherwise.
 func responseDefinition(failIfNotResponse bool) (*design.ResponseDefinition, bool) {
-	r, ok := engine.CurrentDefinition().(*design.ResponseDefinition)
+	r, ok := dslengine.CurrentDefinition().(*design.ResponseDefinition)
 	if !ok && failIfNotResponse {
-		engine.IncompatibleDSL(engine.Caller())
+		dslengine.IncompatibleDSL(dslengine.Caller())
 	}
 	return r, ok
 }

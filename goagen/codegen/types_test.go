@@ -2,8 +2,8 @@ package codegen_test
 
 import (
 	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/dsl"
-	"github.com/goadesign/goa/engine"
+	. "github.com/goadesign/goa/design/goadsl"
+	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/codegen"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -18,14 +18,14 @@ var _ = Describe("code generation", func() {
 		Context("given an attribute definition with fields", func() {
 			var att *AttributeDefinition
 			var object Object
-			var required *engine.RequiredValidationDefinition
+			var required *dslengine.RequiredValidationDefinition
 			var st string
 
 			JustBeforeEach(func() {
 				att = new(AttributeDefinition)
 				att.Type = object
 				if required != nil {
-					att.Validations = []engine.ValidationDefinition{required}
+					att.Validations = []dslengine.ValidationDefinition{required}
 				}
 				st = codegen.GoTypeDef(att, false, "", 0, true)
 			})
@@ -138,7 +138,7 @@ var _ = Describe("code generation", func() {
 					object = Object{
 						"foo": &AttributeDefinition{Type: Integer},
 					}
-					required = &engine.RequiredValidationDefinition{
+					required = &dslengine.RequiredValidationDefinition{
 						Names: []string{"foo"},
 					}
 				})
@@ -341,7 +341,7 @@ var _ = Describe("code generation", func() {
 
 			BeforeEach(func() {
 				InitDesign()
-				engine.Errors = nil
+				dslengine.Errors = nil
 				fooMediaType := MediaType("application/fooMT", func() {
 					Attribute("href")
 					View("default", func() {
@@ -351,15 +351,15 @@ var _ = Describe("code generation", func() {
 						Attribute("href")
 					})
 				})
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 				testMediaType = MediaType("application/test", func() {
 					Attribute("foo", fooMediaType, func() {
 						View("tiny")
 					})
 				})
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
-				engine.RunDSL()
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+				dslengine.Run()
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 			})
 
 			JustBeforeEach(func() {
@@ -379,7 +379,7 @@ var _ = Describe("code generation", func() {
 
 			BeforeEach(func() {
 				InitDesign()
-				engine.Errors = nil
+				dslengine.Errors = nil
 				fooMediaType := MediaType("application/fooMT", func() {
 					Attribute("fooAtt", Integer)
 					Attribute("href")
@@ -387,7 +387,7 @@ var _ = Describe("code generation", func() {
 						Attribute("href")
 					})
 				})
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 				barMediaType := MediaType("application/barMT", func() {
 					Attribute("barAtt", Integer)
 					Attribute("href")
@@ -395,7 +395,7 @@ var _ = Describe("code generation", func() {
 						Attribute("href")
 					})
 				})
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 				bazMediaType := MediaType("application/bazMT", func() {
 					Attribute("bazAtt", Integer)
 					Attribute("href")
@@ -405,7 +405,7 @@ var _ = Describe("code generation", func() {
 						Attribute("name")
 					})
 				})
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 				testMediaType = MediaType("application/test", func() {
 					Attribute("foo", fooMediaType)
 					Attribute("bar", barMediaType)
@@ -415,9 +415,9 @@ var _ = Describe("code generation", func() {
 						Link("baz", "bazLink")
 					})
 				})
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
-				engine.RunDSL()
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+				dslengine.Run()
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 			})
 
 			JustBeforeEach(func() {
@@ -437,20 +437,20 @@ var _ = Describe("code generation", func() {
 
 			BeforeEach(func() {
 				InitDesign()
-				engine.Errors = nil
+				dslengine.Errors = nil
 
 				testMediaType := MediaType("application/testMT", func() {
 					Attributes(func() {
 						Attribute("id")
 					})
 				})
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 
 				collectionMediaType = CollectionOf(testMediaType)
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 
-				engine.RunDSL()
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				dslengine.Run()
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 			})
 
 			JustBeforeEach(func() {
@@ -471,7 +471,7 @@ var _ = Describe("code generation", func() {
 
 			BeforeEach(func() {
 				InitDesign()
-				engine.Errors = nil
+				dslengine.Errors = nil
 				testMediaType = MediaType("application/test", func() {
 					Attribute("id")
 					Attribute("test2", CollectionOf("application/test2"))
@@ -479,7 +479,7 @@ var _ = Describe("code generation", func() {
 						Attribute("id")
 					})
 				})
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 				testMediaType2 = MediaType("application/test2", func() {
 					Attribute("id")
 					Attribute("test", testMediaType)
@@ -487,9 +487,9 @@ var _ = Describe("code generation", func() {
 						Attribute("test")
 					})
 				})
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
-				engine.RunDSL()
-				Ω(engine.Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+				dslengine.Run()
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 			})
 
 			JustBeforeEach(func() {
