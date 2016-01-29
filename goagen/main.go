@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -53,13 +52,6 @@ func main() {
 		err              error
 		terminatedByUser bool
 	)
-
-	// First check for the presence of `goimports`.
-	_, err = exec.LookPath("goimports")
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Command goimports not found. Install with:\ngo get golang.org/x/tools/cmd/goimports")
-		os.Exit(1)
-	}
 
 	// Now proceed with code generation
 	cleanup := func() {

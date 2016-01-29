@@ -53,6 +53,11 @@ func makeToolDir(g *Generator, apiName string) (toolDir string, err error) {
 func (g *Generator) generateMain(mainFile string, clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("os"),
+		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("time"),
+		codegen.SimpleImport("net/http"),
+		codegen.SimpleImport("io/ioutil"),
+		codegen.SimpleImport("encoding/json"),
 		codegen.SimpleImport(clientPkg),
 		codegen.SimpleImport("github.com/spf13/cobra"),
 	}
@@ -105,6 +110,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/goadesign/goa"),
+		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport(clientPkg),
 		codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
 		codegen.SimpleImport("github.com/spf13/cobra"),
@@ -169,6 +175,8 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("bytes"),
 		codegen.SimpleImport("encoding/json"),
+		codegen.SimpleImport("net/url"),
+		codegen.SimpleImport("io"),
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("net/http"),
 	}
