@@ -1,6 +1,9 @@
 package dsl
 
-import "github.com/goadesign/goa/design"
+import (
+	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/engine"
+)
 
 // Resource implements the resource definition DSL. There is one resource definition per resource
 // exposed by the API. The resource DSL allows setting the resource default media type. This media
@@ -38,9 +41,9 @@ func Resource(name string, dsl func()) *design.ResourceDefinition {
 		design.Design.Resources = make(map[string]*design.ResourceDefinition)
 	}
 	var resource *design.ResourceDefinition
-	if topLevelDefinition(true) {
+	if engine.TopLevelDefinition(true) {
 		if _, ok := design.Design.Resources[name]; ok {
-			ReportError("resource %#v is defined twice", name)
+			engine.ReportError("resource %#v is defined twice", name)
 			return nil
 		}
 		resource = design.NewResourceDefinition(name, dsl)
@@ -71,7 +74,7 @@ func DefaultMedia(val interface{}) {
 	if r, ok := resourceDefinition(true); ok {
 		if m, ok := val.(*design.MediaTypeDefinition); ok {
 			if m.UserTypeDefinition == nil {
-				ReportError("invalid media type specification, media type is not initialized")
+				engine.ReportError("invalid media type specification, media type is not initialized")
 			} else {
 				r.MediaType = design.CanonicalIdentifier(m.Identifier)
 				m.Resource = r
@@ -79,7 +82,7 @@ func DefaultMedia(val interface{}) {
 		} else if identifier, ok := val.(string); ok {
 			r.MediaType = design.CanonicalIdentifier(identifier)
 		} else {
-			ReportError("media type must be a string or a *design.MediaTypeDefinition, got %#v", val)
+			engine.ReportError("media type must be a string or a *design.MediaTypeDefinition, got %#v", val)
 		}
 	}
 }

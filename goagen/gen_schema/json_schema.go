@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/engine"
 )
 
 type (
@@ -381,21 +382,21 @@ func buildAttributeSchema(api *design.APIDefinition, s *JSONSchema, at *design.A
 	s.Description = at.Description
 	for _, val := range at.Validations {
 		switch actual := val.(type) {
-		case *design.EnumValidationDefinition:
+		case *engine.EnumValidationDefinition:
 			s.Enum = actual.Values
-		case *design.FormatValidationDefinition:
+		case *engine.FormatValidationDefinition:
 			s.Format = actual.Format
-		case *design.PatternValidationDefinition:
+		case *engine.PatternValidationDefinition:
 			s.Pattern = actual.Pattern
-		case *design.MinimumValidationDefinition:
+		case *engine.MinimumValidationDefinition:
 			s.Minimum = actual.Min
-		case *design.MaximumValidationDefinition:
+		case *engine.MaximumValidationDefinition:
 			s.Maximum = actual.Max
-		case *design.MinLengthValidationDefinition:
+		case *engine.MinLengthValidationDefinition:
 			s.MinLength = actual.MinLength
-		case *design.MaxLengthValidationDefinition:
+		case *engine.MaxLengthValidationDefinition:
 			s.MaxLength = actual.MaxLength
-		case *design.RequiredValidationDefinition:
+		case *engine.RequiredValidationDefinition:
 			s.Required = actual.Names
 		}
 	}

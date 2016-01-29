@@ -1,4 +1,4 @@
-package design_test
+package engine_test
 
 import (
 	. "github.com/goadesign/goa/design"

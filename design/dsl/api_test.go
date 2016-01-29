@@ -3,6 +3,7 @@ package dsl_test
 import (
 	. "github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/dsl"
+	"github.com/goadesign/goa/engine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -13,14 +14,14 @@ var _ = Describe("API", func() {
 
 	BeforeEach(func() {
 		InitDesign()
-		Errors = nil
+		engine.Errors = nil
 		name = ""
 		dsl = nil
 	})
 
 	JustBeforeEach(func() {
 		API(name, dsl)
-		RunDSL()
+		engine.RunDSL()
 	})
 
 	Context("with no DSL", func() {
@@ -41,7 +42,7 @@ var _ = Describe("API", func() {
 
 		It("produces an error", func() {
 			API(name, dsl)
-			Ω(Errors).Should(HaveOccurred())
+			Ω(engine.Errors).Should(HaveOccurred())
 		})
 	})
 
@@ -52,13 +53,13 @@ var _ = Describe("API", func() {
 
 		It("returns an error", func() {
 			API("news", dsl)
-			Ω(Errors).Should(HaveOccurred())
+			Ω(engine.Errors).Should(HaveOccurred())
 		})
 	})
 
 	Context("with valid DSL", func() {
 		JustBeforeEach(func() {
-			Ω(Errors).ShouldNot(HaveOccurred())
+			Ω(engine.Errors).ShouldNot(HaveOccurred())
 			Ω(Design.Validate()).ShouldNot(HaveOccurred())
 		})
 

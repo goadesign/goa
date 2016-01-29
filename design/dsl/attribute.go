@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/engine"
 )
 
 // Attribute implements the attribute definition DSL. An attribute describes a data structure
@@ -86,7 +87,7 @@ func Attribute(name string, args ...interface{}) {
 			parent.Type = design.Object{}
 		}
 		if _, ok := parent.Type.(design.Object); !ok {
-			ReportError("can't define child attributes on attribute of type %s", parent.Type.Name())
+			engine.ReportError("can't define child attributes on attribute of type %s", parent.Type.Name())
 			return
 		}
 
@@ -113,7 +114,7 @@ func Attribute(name string, args ...interface{}) {
 		}
 		baseAttr.Reference = parent.Reference
 		if dsl != nil {
-			ExecuteDSL(dsl, baseAttr)
+			engine.ExecuteDSL(dsl, baseAttr)
 		}
 		if baseAttr.Type == nil {
 			// DSL did not contain an "Attribute" declaration
@@ -136,18 +137,18 @@ func parseAttributeArgs(baseAttr *design.AttributeDefinition, args ...interface{
 			// Lookup type by name
 			if dataType, ok = design.Design.Types[name]; !ok {
 				if dataType = design.Design.MediaTypeWithIdentifier(name); dataType == nil {
-					invalidArgError(expected, args[index])
+					engine.InvalidArgError(expected, args[index])
 				}
 			}
 			return
 		}
 		if dataType, ok = args[index].(design.DataType); !ok {
-			invalidArgError(expected, args[index])
+			engine.InvalidArgError(expected, args[index])
 		}
 	}
 	parseDescription := func(expected string, index int) {
 		if description, ok = args[index].(string); !ok {
-			invalidArgError(expected, args[index])
+			engine.InvalidArgError(expected, args[index])
 		}
 	}
 	parseDSL := func(index int, success, failure func()) {
@@ -180,9 +181,9 @@ func parseAttributeArgs(baseAttr *design.AttributeDefinition, args ...interface{
 	case 3:
 		parseDataType("type or type name", 0)
 		parseDescription("string", 1)
-		parseDSL(2, success, func() { invalidArgError("func()", args[2]) })
+		parseDSL(2, success, func() { engine.InvalidArgError("func()", args[2]) })
 	default:
-		ReportError("too many arguments in call to Attribute")
+		engine.ReportError("too many arguments in call to Attribute")
 	}
 
 	return dataType, description, dsl
@@ -207,7 +208,7 @@ func Param(name string, args ...interface{}) {
 func Default(def interface{}) {
 	if a, ok := attributeDefinition(true); ok {
 		if a.Type != nil && !a.Type.IsCompatible(def) {
-			ReportError("default value %#v is incompatible with attribute of type %s",
+			engine.ReportError("default value %#v is incompatible with attribute of type %s",
 				def, a.Type.Name())
 		} else {
 			a.DefaultValue = def
@@ -240,13 +241,13 @@ func Enum(val ...interface{}) {
 			// one below are really a convenience to the user and not a fundamental feature
 			// - not checking in the case the type is not known yet is OK.
 			if a.Type != nil && !a.Type.IsCompatible(v) {
-				ReportError("value %#v at index #d is incompatible with attribute of type %s",
+				engine.ReportError("value %#v at index #d is incompatible with attribute of type %s",
 					v, i, a.Type.Name())
 				ok = false
 			}
 		}
 		if ok {
-			a.Validations = append(a.Validations, &design.EnumValidationDefinition{Values: val})
+			a.Validations = append(a.Validations, &engine.EnumValidationDefinition{Values: val})
 		}
 	}
 }
@@ -297,10 +298,10 @@ func Format(f string) {
 				}
 			}
 			if !supported {
-				ReportError("unsupported format %#v, supported formats are: %s",
+				engine.ReportError("unsupported format %#v, supported formats are: %s",
 					f, strings.Join(SupportedValidationFormats, ", "))
 			} else {
-				a.Validations = append(a.Validations, &design.FormatValidationDefinition{Format: f})
+				a.Validations = append(a.Validations, &engine.FormatValidationDefinition{Format: f})
 			}
 		}
 	}
@@ -315,9 +316,9 @@ func Pattern(p string) {
 		} else {
 			_, err := regexp.Compile(p)
 			if err != nil {
-				ReportError("invalid pattern %#v, %s", p, err)
+				engine.ReportError("invalid pattern %#v, %s", p, err)
 			} else {
-				a.Validations = append(a.Validations, &design.PatternValidationDefinition{Pattern: p})
+				a.Validations = append(a.Validations, &engine.PatternValidationDefinition{Pattern: p})
 			}
 		}
 	}
@@ -338,14 +339,14 @@ func Minimum(val interface{}) {
 				var err error
 				f, err = strconv.ParseFloat(v, 64)
 				if err != nil {
-					ReportError("invalid number value %#v", v)
+					engine.ReportError("invalid number value %#v", v)
 					return
 				}
 			default:
-				ReportError("invalid number value %#v", v)
+				engine.ReportError("invalid number value %#v", v)
 				return
 			}
-			a.Validations = append(a.Validations, &design.MinimumValidationDefinition{Min: f})
+			a.Validations = append(a.Validations, &engine.MinimumValidationDefinition{Min: f})
 		}
 	}
 }
@@ -365,14 +366,14 @@ func Maximum(val interface{}) {
 				var err error
 				f, err = strconv.ParseFloat(v, 64)
 				if err != nil {
-					ReportError("invalid number value %#v", v)
+					engine.ReportError("invalid number value %#v", v)
 					return
 				}
 			default:
-				ReportError("invalid number value %#v", v)
+				engine.ReportError("invalid number value %#v", v)
 				return
 			}
-			a.Validations = append(a.Validations, &design.MaximumValidationDefinition{Max: f})
+			a.Validations = append(a.Validations, &engine.MaximumValidationDefinition{Max: f})
 		}
 	}
 }
@@ -384,7 +385,7 @@ func MinLength(val int) {
 		if a.Type != nil && a.Type.Kind() != design.StringKind && a.Type.Kind() != design.ArrayKind {
 			incompatibleAttributeType("minimum length", a.Type.Name(), "a string or an array")
 		} else {
-			a.Validations = append(a.Validations, &design.MinLengthValidationDefinition{MinLength: val})
+			a.Validations = append(a.Validations, &engine.MinLengthValidationDefinition{MinLength: val})
 		}
 	}
 }
@@ -396,7 +397,7 @@ func MaxLength(val int) {
 		if a.Type != nil && a.Type.Kind() != design.StringKind && a.Type.Kind() != design.ArrayKind {
 			incompatibleAttributeType("maximum length", a.Type.Name(), "a string or an array")
 		} else {
-			a.Validations = append(a.Validations, &design.MaxLengthValidationDefinition{MaxLength: val})
+			a.Validations = append(a.Validations, &engine.MaxLengthValidationDefinition{MaxLength: val})
 		}
 	}
 }
@@ -415,13 +416,13 @@ func Required(names ...string) {
 	if at.Type != nil && at.Type.Kind() != design.ObjectKind {
 		incompatibleAttributeType("required", at.Type.Name(), "an object")
 	} else {
-		at.Validations = append(at.Validations, &design.RequiredValidationDefinition{Names: names})
+		at.Validations = append(at.Validations, &engine.RequiredValidationDefinition{Names: names})
 	}
 }
 
 // incompatibleAttributeType reports an error for validations defined on
 // incompatible attributes (e.g. max value on string).
 func incompatibleAttributeType(validation, actual, expected string) {
-	ReportError("invalid %s validation definition: attribute must be %s (but type is %s)",
+	engine.ReportError("invalid %s validation definition: attribute must be %s (but type is %s)",
 		validation, expected, actual)
 }

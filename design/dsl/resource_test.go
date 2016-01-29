@@ -3,6 +3,7 @@ package dsl_test
 import (
 	. "github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/dsl"
+	"github.com/goadesign/goa/engine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -15,14 +16,14 @@ var _ = Describe("Resource", func() {
 
 	BeforeEach(func() {
 		InitDesign()
-		Errors = nil
+		engine.Errors = nil
 		name = ""
 		dsl = nil
 	})
 
 	JustBeforeEach(func() {
 		res = Resource(name, dsl)
-		RunDSL()
+		engine.RunDSL()
 	})
 
 	Context("with no DSL and no name", func() {
@@ -199,7 +200,7 @@ var _ = Describe("Resource", func() {
 		})
 
 		It("fails", func() {
-			Ω(Errors).Should(HaveOccurred())
+			Ω(engine.Errors).Should(HaveOccurred())
 		})
 	})
 
@@ -235,7 +236,7 @@ var _ = Describe("Resource", func() {
 		})
 
 		It("returns an error", func() {
-			Ω(Errors).Should(HaveOccurred())
+			Ω(engine.Errors).Should(HaveOccurred())
 		})
 	})
 

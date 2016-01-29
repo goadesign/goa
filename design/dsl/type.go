@@ -1,6 +1,9 @@
 package dsl
 
-import "github.com/goadesign/goa/design"
+import (
+	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/engine"
+)
 
 // Type implements the type definition DSL. A type definition describes a data structure consisting
 // of attributes. Each attribute has a type which can also refer to a type definition (or use a
@@ -29,11 +32,11 @@ func Type(name string, dsl func()) *design.UserTypeDefinition {
 	if design.Design.Types == nil {
 		design.Design.Types = make(map[string]*design.UserTypeDefinition)
 	} else if _, ok := design.Design.Types[name]; ok {
-		ReportError("type %#v defined twice", name)
+		engine.ReportError("type %#v defined twice", name)
 		return nil
 	}
 	var t *design.UserTypeDefinition
-	if topLevelDefinition(true) {
+	if engine.TopLevelDefinition(true) {
 		t = &design.UserTypeDefinition{
 			TypeName:            name,
 			AttributeDefinition: &design.AttributeDefinition{DSLFunc: dsl},

@@ -3,6 +3,7 @@ package dsl_test
 import (
 	. "github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/dsl"
+	"github.com/goadesign/goa/engine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -15,15 +16,15 @@ var _ = Describe("Type", func() {
 
 	BeforeEach(func() {
 		InitDesign()
-		Errors = nil
+		engine.Errors = nil
 		name = ""
 		dsl = nil
 	})
 
 	JustBeforeEach(func() {
 		Type(name, dsl)
-		RunDSL()
-		Ω(Errors).ShouldNot(HaveOccurred())
+		engine.RunDSL()
+		Ω(engine.Errors).ShouldNot(HaveOccurred())
 		ut, _ = Design.Types[name]
 	})
 

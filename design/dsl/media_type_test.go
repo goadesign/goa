@@ -3,6 +3,7 @@ package dsl_test
 import (
 	. "github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/dsl"
+	"github.com/goadesign/goa/engine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -15,15 +16,15 @@ var _ = Describe("MediaType", func() {
 
 	BeforeEach(func() {
 		InitDesign()
-		Errors = nil
+		engine.Errors = nil
 		name = ""
 		dslFunc = nil
 	})
 
 	JustBeforeEach(func() {
 		mt = MediaType(name, dslFunc)
-		RunDSL()
-		Ω(Errors).ShouldNot(HaveOccurred())
+		engine.RunDSL()
+		Ω(engine.Errors).ShouldNot(HaveOccurred())
 	})
 
 	Context("with no DSL and no identifier", func() {
@@ -145,7 +146,7 @@ var _ = Describe("MediaType", func() {
 
 		It("sets the links", func() {
 			Ω(mt).ShouldNot(BeNil())
-			Ω(Errors).Should(BeEmpty())
+			Ω(engine.Errors).Should(BeEmpty())
 			Ω(mt.Validate()).ShouldNot(HaveOccurred())
 			Ω(mt.Links).ShouldNot(BeNil())
 			Ω(mt.Links).Should(HaveLen(2))
@@ -212,14 +213,14 @@ var _ = Describe("Duplicate media types", func() {
 
 	BeforeEach(func() {
 		InitDesign()
-		Errors = nil
+		engine.Errors = nil
 		mt = MediaType(id, dslFunc)
-		Ω(Errors).ShouldNot(HaveOccurred())
+		Ω(engine.Errors).ShouldNot(HaveOccurred())
 		duplicate = MediaType(id, dslFunc)
 	})
 
 	It("produces an error", func() {
-		Ω(Errors).Should(HaveOccurred())
+		Ω(engine.Errors).Should(HaveOccurred())
 	})
 
 	Context("with a response definition using the duplicate", func() {
@@ -235,7 +236,7 @@ var _ = Describe("Duplicate media types", func() {
 		})
 
 		It("does not panic", func() {
-			Ω(func() { RunDSL() }).ShouldNot(Panic())
+			Ω(func() { engine.RunDSL() }).ShouldNot(Panic())
 		})
 	})
 })
@@ -246,14 +247,14 @@ var _ = Describe("CollectionOf", func() {
 		BeforeEach(func() {
 			InitDesign()
 			mt := MediaType("application/vnd.example", func() { Attribute("id") })
-			Errors = nil
+			engine.Errors = nil
 			col = CollectionOf(mt)
-			Ω(Errors).ShouldNot(HaveOccurred())
+			Ω(engine.Errors).ShouldNot(HaveOccurred())
 		})
 
 		JustBeforeEach(func() {
-			RunDSL()
-			Ω(Errors).ShouldNot(HaveOccurred())
+			engine.RunDSL()
+			Ω(engine.Errors).ShouldNot(HaveOccurred())
 		})
 
 		It("produces a media type", func() {
@@ -273,8 +274,8 @@ var _ = Describe("CollectionOf", func() {
 		})
 
 		JustBeforeEach(func() {
-			RunDSL()
-			Ω(Errors).ShouldNot(HaveOccurred())
+			engine.RunDSL()
+			Ω(engine.Errors).ShouldNot(HaveOccurred())
 		})
 
 		It("produces a media type", func() {
