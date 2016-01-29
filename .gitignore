@@ -4,3 +4,4 @@ examples/cellar/client/cellar-cli/cellar-cli
 goagen/goagen
 **/autogen
 vendor
+_integration_tests/*/**/*.*
