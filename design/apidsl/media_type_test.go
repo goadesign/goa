@@ -1,8 +1,9 @@
-package dsl_test
+package apidsl_test
 
 import (
 	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/dsl"
+	. "github.com/goadesign/goa/design/apidsl"
+	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -15,25 +16,25 @@ var _ = Describe("MediaType", func() {
 
 	BeforeEach(func() {
 		InitDesign()
-		Errors = nil
+		dslengine.Errors = nil
 		name = ""
 		dslFunc = nil
 	})
 
 	JustBeforeEach(func() {
 		mt = MediaType(name, dslFunc)
-		RunDSL()
-		Ω(Errors).ShouldNot(HaveOccurred())
+		dslengine.Run()
+		Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 	})
 
-	Context("with no DSL and no identifier", func() {
+	Context("with no dsl and no identifier", func() {
 		It("produces an error", func() {
 			Ω(mt).ShouldNot(BeNil())
 			Ω(mt.Validate()).Should(HaveOccurred())
 		})
 	})
 
-	Context("with no DSL", func() {
+	Context("with no dsl", func() {
 		BeforeEach(func() {
 			name = "application/foo"
 		})
@@ -145,7 +146,7 @@ var _ = Describe("MediaType", func() {
 
 		It("sets the links", func() {
 			Ω(mt).ShouldNot(BeNil())
-			Ω(Errors).Should(BeEmpty())
+			Ω(dslengine.Errors).Should(BeEmpty())
 			Ω(mt.Validate()).ShouldNot(HaveOccurred())
 			Ω(mt.Links).ShouldNot(BeNil())
 			Ω(mt.Links).Should(HaveLen(2))
@@ -212,14 +213,14 @@ var _ = Describe("Duplicate media types", func() {
 
 	BeforeEach(func() {
 		InitDesign()
-		Errors = nil
+		dslengine.Errors = nil
 		mt = MediaType(id, dslFunc)
-		Ω(Errors).ShouldNot(HaveOccurred())
+		Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 		duplicate = MediaType(id, dslFunc)
 	})
 
 	It("produces an error", func() {
-		Ω(Errors).Should(HaveOccurred())
+		Ω(dslengine.Errors).Should(HaveOccurred())
 	})
 
 	Context("with a response definition using the duplicate", func() {
@@ -235,7 +236,7 @@ var _ = Describe("Duplicate media types", func() {
 		})
 
 		It("does not panic", func() {
-			Ω(func() { RunDSL() }).ShouldNot(Panic())
+			Ω(func() { dslengine.Run() }).ShouldNot(Panic())
 		})
 	})
 })
@@ -246,14 +247,14 @@ var _ = Describe("CollectionOf", func() {
 		BeforeEach(func() {
 			InitDesign()
 			mt := MediaType("application/vnd.example", func() { Attribute("id") })
-			Errors = nil
+			dslengine.Errors = nil
 			col = CollectionOf(mt)
-			Ω(Errors).ShouldNot(HaveOccurred())
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 		})
 
 		JustBeforeEach(func() {
-			RunDSL()
-			Ω(Errors).ShouldNot(HaveOccurred())
+			dslengine.Run()
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 		})
 
 		It("produces a media type", func() {
@@ -273,8 +274,8 @@ var _ = Describe("CollectionOf", func() {
 		})
 
 		JustBeforeEach(func() {
-			RunDSL()
-			Ω(Errors).ShouldNot(HaveOccurred())
+			dslengine.Run()
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 		})
 
 		It("produces a media type", func() {

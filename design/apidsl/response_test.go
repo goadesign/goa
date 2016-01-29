@@ -1,8 +1,9 @@
-package dsl_test
+package apidsl_test
 
 import (
 	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/dsl"
+	. "github.com/goadesign/goa/design/apidsl"
+	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -15,7 +16,7 @@ var _ = Describe("Response", func() {
 
 	BeforeEach(func() {
 		InitDesign()
-		Errors = nil
+		dslengine.Errors = nil
 		name = ""
 		dsl = nil
 	})
@@ -26,7 +27,7 @@ var _ = Describe("Response", func() {
 				Response(name, dsl)
 			})
 		})
-		RunDSL()
+		dslengine.Run()
 		if r, ok := Design.Resources["res"]; ok {
 			if a, ok := r.Actions["action"]; ok {
 				res = a.Responses[name]
@@ -34,14 +35,14 @@ var _ = Describe("Response", func() {
 		}
 	})
 
-	Context("with no DSL and no name", func() {
+	Context("with no dsl and no name", func() {
 		It("produces an invalid action definition", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.Validate()).Should(HaveOccurred())
 		})
 	})
 
-	Context("with no DSL", func() {
+	Context("with no dsl", func() {
 		BeforeEach(func() {
 			name = "foo"
 		})

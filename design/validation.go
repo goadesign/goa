@@ -8,48 +8,9 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/goadesign/goa/dslengine"
 )
-
-// ValidationErrors records the errors encountered when running Validate.
-type ValidationErrors struct {
-	Errors      []error
-	Definitions []Definition
-}
-
-// Error implements the error interface.
-func (verr *ValidationErrors) Error() string {
-	msg := make([]string, len(verr.Errors))
-	for i, err := range verr.Errors {
-		msg[i] = fmt.Sprintf("%s: %s", verr.Definitions[i].Context(), err)
-	}
-	return strings.Join(msg, "\n")
-}
-
-// Merge merges validation errors into the target.
-func (verr *ValidationErrors) Merge(err *ValidationErrors) {
-	if err == nil {
-		return
-	}
-	verr.Errors = append(verr.Errors, err.Errors...)
-	verr.Definitions = append(verr.Definitions, err.Definitions...)
-}
-
-// Add adds a validation error to the target.
-// Add "flattens" validation errors so that the recorded errors are never ValidationErrors
-// themselves.
-func (verr *ValidationErrors) Add(def Definition, format string, vals ...interface{}) {
-	err := fmt.Errorf(format, vals...)
-	verr.Errors = append(verr.Errors, err)
-	verr.Definitions = append(verr.Definitions, def)
-}
-
-// AsError returns an error if there are validation errors, nil otherwise.
-func (verr *ValidationErrors) AsError() *ValidationErrors {
-	if len(verr.Errors) > 0 {
-		return verr
-	}
-	return nil
-}
 
 type routeInfo struct {
 	Key       string
@@ -61,14 +22,14 @@ type routeInfo struct {
 
 type wildCardInfo struct {
 	Name string
-	Orig Definition
+	Orig dslengine.Definition
 }
 
 func newRouteInfo(version *APIVersionDefinition, resource *ResourceDefinition, action *ActionDefinition, route *RouteDefinition) *routeInfo {
 	vars := route.Params(version)
 	wi := make([]*wildCardInfo, len(vars))
 	for i, v := range vars {
-		var orig Definition
+		var orig dslengine.Definition
 		if strings.Contains(route.Path, v) {
 			orig = route
 		} else if strings.Contains(resource.BasePath, v) {
@@ -101,8 +62,8 @@ func (r *routeInfo) DifferentWildcards(other *routeInfo) (res [][2]*wildCardInfo
 
 // Validate tests whether the API definition is consistent: all resource parent names resolve to
 // an actual resource.
-func (a *APIDefinition) Validate() *ValidationErrors {
-	verr := new(ValidationErrors)
+func (a *APIDefinition) Validate() *dslengine.ValidationErrors {
+	verr := new(dslengine.ValidationErrors)
 	if a.BaseParams != nil {
 		verr.Merge(a.BaseParams.Validate("base parameters", a))
 	}
@@ -189,7 +150,7 @@ func (a *APIDefinition) Validate() *ValidationErrors {
 	return verr.AsError()
 }
 
-func (a *APIDefinition) validateContact(verr *ValidationErrors) {
+func (a *APIDefinition) validateContact(verr *dslengine.ValidationErrors) {
 	if a.Contact != nil && a.Contact.URL != "" {
 		if _, err := url.ParseRequestURI(a.Contact.URL); err != nil {
 			verr.Add(a, "invalid contact URL value: %s", err)
@@ -197,7 +158,7 @@ func (a *APIDefinition) validateContact(verr *ValidationErrors) {
 	}
 }
 
-func (a *APIDefinition) validateLicense(verr *ValidationErrors) {
+func (a *APIDefinition) validateLicense(verr *dslengine.ValidationErrors) {
 	if a.License != nil && a.License.URL != "" {
 		if _, err := url.ParseRequestURI(a.License.URL); err != nil {
 			verr.Add(a, "invalid license URL value: %s", err)
@@ -205,7 +166,7 @@ func (a *APIDefinition) validateLicense(verr *ValidationErrors) {
 	}
 }
 
-func (a *APIDefinition) validateDocs(verr *ValidationErrors) {
+func (a *APIDefinition) validateDocs(verr *dslengine.ValidationErrors) {
 	if a.Docs != nil && a.Docs.URL != "" {
 		if _, err := url.ParseRequestURI(a.Docs.URL); err != nil {
 			verr.Add(a, "invalid docs URL value: %s", err)
@@ -215,8 +176,8 @@ func (a *APIDefinition) validateDocs(verr *ValidationErrors) {
 
 // Validate tests whether the resource definition is consistent: action names are valid and each action is
 // valid.
-func (r *ResourceDefinition) Validate(version *APIVersionDefinition) *ValidationErrors {
-	verr := new(ValidationErrors)
+func (r *ResourceDefinition) Validate(version *APIVersionDefinition) *dslengine.ValidationErrors {
+	verr := new(dslengine.ValidationErrors)
 	if r.Name == "" {
 		verr.Add(r, "Resource name cannot be empty")
 	}
@@ -234,14 +195,14 @@ func (r *ResourceDefinition) Validate(version *APIVersionDefinition) *Validation
 		verr.Merge(r.Params.Validate("resource parameters", r))
 	}
 	if !r.SupportsNoVersion() {
-		if err := CanUse(r, Design); err != nil {
+		if err := dslengine.CanUse(r, Design); err != nil {
 			verr.Add(r, "Invalid API version in list")
 		}
 	}
 	return verr.AsError()
 }
 
-func (r *ResourceDefinition) validateActions(version *APIVersionDefinition, verr *ValidationErrors) {
+func (r *ResourceDefinition) validateActions(version *APIVersionDefinition, verr *dslengine.ValidationErrors) {
 	found := false
 	for _, a := range r.Actions {
 		if a.Name == r.CanonicalActionName {
@@ -254,7 +215,7 @@ func (r *ResourceDefinition) validateActions(version *APIVersionDefinition, verr
 	}
 }
 
-func (r *ResourceDefinition) validateBaseParams(verr *ValidationErrors) {
+func (r *ResourceDefinition) validateBaseParams(verr *dslengine.ValidationErrors) {
 	baseParams, ok := r.BaseParams.Type.(Object)
 	if !ok {
 		verr.Add(r, "invalid type for BaseParams, must be an Object", r)
@@ -284,7 +245,7 @@ func (r *ResourceDefinition) validateBaseParams(verr *ValidationErrors) {
 	}
 }
 
-func (r *ResourceDefinition) validateParent(verr *ValidationErrors) {
+func (r *ResourceDefinition) validateParent(verr *dslengine.ValidationErrors) {
 	p, ok := Design.Resources[r.ParentName]
 	if !ok {
 		verr.Add(r, "Parent resource named %#v not found", r.ParentName)
@@ -292,16 +253,16 @@ func (r *ResourceDefinition) validateParent(verr *ValidationErrors) {
 		if p.CanonicalAction() == nil {
 			verr.Add(r, "Parent resource %#v has no canonical action", r.ParentName)
 		}
-		if err := CanUse(r, p); err != nil {
+		if err := dslengine.CanUse(r, p); err != nil {
 			verr.Add(r, err.Error())
 		}
 	}
 }
 
 // Validate validates the encoding MIME type and Go package path if set.
-func (enc *EncodingDefinition) Validate() *ValidationErrors {
+func (enc *EncodingDefinition) Validate() *dslengine.ValidationErrors {
 	gopaths := filepath.SplitList(os.Getenv("GOPATH"))
-	verr := new(ValidationErrors)
+	verr := new(dslengine.ValidationErrors)
 	if len(enc.MIMETypes) == 0 {
 		verr.Add(enc, "missing MIME type")
 		return verr
@@ -341,8 +302,8 @@ func (enc *EncodingDefinition) Validate() *ValidationErrors {
 
 // Validate tests whether the action definition is consistent: parameters have unique names and it has at least
 // one response.
-func (a *ActionDefinition) Validate(version *APIVersionDefinition) *ValidationErrors {
-	verr := new(ValidationErrors)
+func (a *ActionDefinition) Validate(version *APIVersionDefinition) *dslengine.ValidationErrors {
+	verr := new(dslengine.ValidationErrors)
 	if a.Name == "" {
 		verr.Add(a, "Action name cannot be empty")
 	}
@@ -368,8 +329,8 @@ func (a *ActionDefinition) Validate(version *APIVersionDefinition) *ValidationEr
 }
 
 // ValidateParams checks the action parameters (make sure they have names, members and types).
-func (a *ActionDefinition) ValidateParams(version *APIVersionDefinition) *ValidationErrors {
-	verr := new(ValidationErrors)
+func (a *ActionDefinition) ValidateParams(version *APIVersionDefinition) *dslengine.ValidationErrors {
+	verr := new(dslengine.ValidationErrors)
 	if a.Params == nil {
 		return nil
 	}
@@ -417,8 +378,8 @@ func (a *ActionDefinition) ValidateParams(version *APIVersionDefinition) *Valida
 // Since attributes are unaware of their context, additional context information can be provided
 // to be used in error messages.
 // The parent definition context is automatically added to error messages.
-func (a *AttributeDefinition) Validate(ctx string, parent Definition) *ValidationErrors {
-	verr := new(ValidationErrors)
+func (a *AttributeDefinition) Validate(ctx string, parent dslengine.Definition) *dslengine.ValidationErrors {
+	verr := new(dslengine.ValidationErrors)
 	if a.Type == nil {
 		verr.Add(parent, "attribute type is nil")
 		return verr
@@ -428,7 +389,7 @@ func (a *AttributeDefinition) Validate(ctx string, parent Definition) *Validatio
 	}
 	o, isObject := a.Type.(Object)
 	for _, v := range a.Validations {
-		if r, ok := v.(*RequiredValidationDefinition); ok {
+		if r, ok := v.(*dslengine.RequiredValidationDefinition); ok {
 			if !isObject {
 				verr.Add(parent, `%sonly objects may define a "Required" validation`, ctx)
 			}
@@ -463,8 +424,8 @@ func (a *AttributeDefinition) Validate(ctx string, parent Definition) *Validatio
 
 // Validate checks that the response definition is consistent: its status is set and the media
 // type definition if any is valid.
-func (r *ResponseDefinition) Validate() *ValidationErrors {
-	verr := new(ValidationErrors)
+func (r *ResponseDefinition) Validate() *dslengine.ValidationErrors {
+	verr := new(dslengine.ValidationErrors)
 	if r.Headers != nil {
 		verr.Merge(r.Headers.Validate("response headers", r))
 	}
@@ -475,8 +436,8 @@ func (r *ResponseDefinition) Validate() *ValidationErrors {
 }
 
 // Validate checks that the route definition is consistent: it has a parent.
-func (r *RouteDefinition) Validate() *ValidationErrors {
-	verr := new(ValidationErrors)
+func (r *RouteDefinition) Validate() *dslengine.ValidationErrors {
+	verr := new(dslengine.ValidationErrors)
 	if r.Parent == nil {
 		verr.Add(r, "missing route parent action")
 	}
@@ -485,8 +446,8 @@ func (r *RouteDefinition) Validate() *ValidationErrors {
 
 // Validate checks that the user type definition is consistent: it has a name and all user and media
 // types used in fields support the API versions that use the type.
-func (u *UserTypeDefinition) Validate(ctx string, parent Definition) *ValidationErrors {
-	verr := new(ValidationErrors)
+func (u *UserTypeDefinition) Validate(ctx string, parent dslengine.Definition) *dslengine.ValidationErrors {
+	verr := new(dslengine.ValidationErrors)
 	if u.TypeName == "" {
 		verr.Add(parent, "%s - %s", ctx, "User type must have a name")
 	}
@@ -501,7 +462,7 @@ func (u *UserTypeDefinition) Validate(ctx string, parent Definition) *Validation
 					ut = ut2
 				}
 				if ut != nil {
-					if err := CanUse(u, ut); err != nil {
+					if err := dslengine.CanUse(u, ut); err != nil {
 						verr.Add(u, err.Error())
 					}
 				}
@@ -515,8 +476,8 @@ func (u *UserTypeDefinition) Validate(ctx string, parent Definition) *Validation
 
 // Validate checks that the media type definition is consistent: its identifier is a valid media
 // type identifier.
-func (m *MediaTypeDefinition) Validate() *ValidationErrors {
-	verr := new(ValidationErrors)
+func (m *MediaTypeDefinition) Validate() *dslengine.ValidationErrors {
+	verr := new(dslengine.ValidationErrors)
 	verr.Merge(m.UserTypeDefinition.Validate("", m))
 	if m.Type == nil { // TBD move this to somewhere else than validation code
 		m.Type = String
@@ -573,8 +534,8 @@ func (m *MediaTypeDefinition) Validate() *ValidationErrors {
 
 // Validate checks that the link definition is consistent: it has a media type or the name of an
 // attribute part of the parent media type.
-func (l *LinkDefinition) Validate() *ValidationErrors {
-	verr := new(ValidationErrors)
+func (l *LinkDefinition) Validate() *dslengine.ValidationErrors {
+	verr := new(dslengine.ValidationErrors)
 	if l.Name == "" {
 		verr.Add(l, "Links must have a name")
 	}
@@ -610,8 +571,8 @@ func (l *LinkDefinition) Validate() *ValidationErrors {
 
 // Validate checks that the view definition is consistent: it has a  parent media type and the
 // underlying definition type is consistent.
-func (v *ViewDefinition) Validate() *ValidationErrors {
-	verr := new(ValidationErrors)
+func (v *ViewDefinition) Validate() *dslengine.ValidationErrors {
+	verr := new(dslengine.ValidationErrors)
 	if v.Parent == nil {
 		verr.Add(v, "View must have a parent media type")
 	}

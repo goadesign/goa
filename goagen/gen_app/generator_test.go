@@ -9,6 +9,7 @@ import (
 	"text/template"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/gen_app"
 	. "github.com/onsi/ginkgo"
@@ -112,7 +113,7 @@ var _ = Describe("Generate", func() {
 
 		BeforeEach(func() {
 			payload = nil
-			required := design.ValidationDefinition(&design.RequiredValidationDefinition{
+			required := dslengine.ValidationDefinition(&dslengine.RequiredValidationDefinition{
 				Names: []string{"id"},
 			})
 			idAt := design.AttributeDefinition{
@@ -123,7 +124,7 @@ var _ = Describe("Generate", func() {
 				Type: design.Object{
 					"id": &idAt,
 				},
-				Validations: []design.ValidationDefinition{required},
+				Validations: []dslengine.ValidationDefinition{required},
 			}
 			resp := design.ResponseDefinition{
 				Name:        "ok",

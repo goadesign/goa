@@ -6,7 +6,8 @@ import (
 	"github.com/go-swagger/go-swagger/spec"
 	_ "github.com/goadesign/goa-cellar/design"
 	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/dsl"
+	. "github.com/goadesign/goa/design/apidsl"
+	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/gen_schema"
 	"github.com/goadesign/goa/goagen/gen_swagger"
 	. "github.com/onsi/ginkgo"
@@ -44,7 +45,7 @@ var _ = Describe("New", func() {
 	})
 
 	JustBeforeEach(func() {
-		err := RunDSL()
+		err := dslengine.Run()
 		Ω(err).ShouldNot(HaveOccurred())
 		swagger, newErr = genswagger.New(Design)
 	})

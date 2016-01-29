@@ -1,8 +1,9 @@
-package dsl_test
+package apidsl_test
 
 import (
 	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/dsl"
+	. "github.com/goadesign/goa/design/apidsl"
+	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -17,7 +18,7 @@ var _ = Describe("Attribute", func() {
 
 	BeforeEach(func() {
 		InitDesign()
-		Errors = nil
+		dslengine.Errors = nil
 		name = ""
 		dataType = nil
 		description = ""
@@ -42,7 +43,7 @@ var _ = Describe("Attribute", func() {
 				Attribute(name, dataType, description, dsl)
 			}
 		})
-		RunDSL()
+		dslengine.Run()
 		if t, ok := Design.Types["type"]; ok {
 			parent = t.AttributeDefinition
 		}
@@ -131,7 +132,7 @@ var _ = Describe("Attribute", func() {
 			Ω(o).Should(HaveKey(name))
 			Ω(o[name].Type).Should(Equal(String))
 			Ω(o[name].Validations).Should(HaveLen(1))
-			Ω(o[name].Validations[0]).Should(BeAssignableToTypeOf(&EnumValidationDefinition{}))
+			Ω(o[name].Validations[0]).Should(BeAssignableToTypeOf(&dslengine.EnumValidationDefinition{}))
 		})
 	})
 
@@ -151,7 +152,7 @@ var _ = Describe("Attribute", func() {
 			Ω(o).Should(HaveKey(name))
 			Ω(o[name].Type).Should(Equal(Integer))
 			Ω(o[name].Validations).Should(HaveLen(1))
-			Ω(o[name].Validations[0]).Should(BeAssignableToTypeOf(&EnumValidationDefinition{}))
+			Ω(o[name].Validations[0]).Should(BeAssignableToTypeOf(&dslengine.EnumValidationDefinition{}))
 		})
 	})
 
@@ -172,7 +173,7 @@ var _ = Describe("Attribute", func() {
 			Ω(o).Should(HaveKey(name))
 			Ω(o[name].Type).Should(Equal(String))
 			Ω(o[name].Validations).Should(HaveLen(1))
-			Ω(o[name].Validations[0]).Should(BeAssignableToTypeOf(&EnumValidationDefinition{}))
+			Ω(o[name].Validations[0]).Should(BeAssignableToTypeOf(&dslengine.EnumValidationDefinition{}))
 			Ω(o[name].Description).Should(Equal(description))
 		})
 	})
@@ -229,7 +230,7 @@ var _ = Describe("Attribute", func() {
 			})
 
 			It("fails", func() {
-				Ω(Errors).Should(HaveOccurred())
+				Ω(dslengine.Errors).Should(HaveOccurred())
 			})
 		})
 
@@ -251,7 +252,7 @@ var _ = Describe("Attribute", func() {
 			})
 
 			It("initializes the object attributes", func() {
-				Ω(Errors).ShouldNot(HaveOccurred())
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 				t := parent.Type
 				Ω(t).ShouldNot(BeNil())
 				Ω(t).Should(BeAssignableToTypeOf(Object{}))

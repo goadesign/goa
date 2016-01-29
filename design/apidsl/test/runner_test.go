@@ -2,7 +2,8 @@ package test
 
 import (
 	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/dsl"
+	. "github.com/goadesign/goa/design/apidsl"
+	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -34,12 +35,12 @@ var _ = MediaType(mediaTypeIdentifier, func() {
 })
 
 func init() {
-	RunDSL()
+	dslengine.Run()
 
 	var _ = Describe("DSL execution", func() {
 		Context("with global DSL definitions", func() {
 			It("runs the DSL", func() {
-				Ω(Errors).Should(BeEmpty())
+				Ω(dslengine.Errors).Should(BeEmpty())
 
 				Ω(Design).ShouldNot(BeNil())
 				Ω(Design.Name).Should(Equal(apiName))

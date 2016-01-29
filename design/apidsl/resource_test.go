@@ -1,8 +1,9 @@
-package dsl_test
+package apidsl_test
 
 import (
 	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/dsl"
+	. "github.com/goadesign/goa/design/apidsl"
+	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -15,24 +16,24 @@ var _ = Describe("Resource", func() {
 
 	BeforeEach(func() {
 		InitDesign()
-		Errors = nil
+		dslengine.Errors = nil
 		name = ""
 		dsl = nil
 	})
 
 	JustBeforeEach(func() {
 		res = Resource(name, dsl)
-		RunDSL()
+		dslengine.Run()
 	})
 
-	Context("with no DSL and no name", func() {
+	Context("with no dsl and no name", func() {
 		It("produces an invalid resource definition", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.Validate(Design.APIVersionDefinition)).Should(HaveOccurred())
 		})
 	})
 
-	Context("with no DSL", func() {
+	Context("with no dsl", func() {
 		BeforeEach(func() {
 			name = "foo"
 		})
@@ -199,7 +200,7 @@ var _ = Describe("Resource", func() {
 		})
 
 		It("fails", func() {
-			Ω(Errors).Should(HaveOccurred())
+			Ω(dslengine.Errors).Should(HaveOccurred())
 		})
 	})
 
@@ -235,7 +236,7 @@ var _ = Describe("Resource", func() {
 		})
 
 		It("returns an error", func() {
-			Ω(Errors).Should(HaveOccurred())
+			Ω(dslengine.Errors).Should(HaveOccurred())
 		})
 	})
 
