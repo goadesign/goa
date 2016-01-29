@@ -114,7 +114,10 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		return
 	}
 	imp = path.Join(filepath.ToSlash(imp), "app")
-	imports := []*codegen.ImportSpec{codegen.SimpleImport(imp)}
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("github.com/goadesign/goa"),
+		codegen.SimpleImport(imp),
+	}
 	api.IterateVersions(func(v *design.APIVersionDefinition) error {
 		if v.IsDefault() {
 			return nil
