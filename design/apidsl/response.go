@@ -1,4 +1,4 @@
-package goadsl
+package apidsl
 
 import (
 	"github.com/goadesign/goa/design"

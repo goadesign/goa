@@ -1,7 +1,7 @@
-package goadsl_test
+package apidsl_test
 
 import (
-	"github.com/goadesign/goa/design/goadsl"
+	"github.com/goadesign/goa/design/apidsl"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -14,5 +14,5 @@ func TestDsl(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	goadsl.InitDesign()
+	apidsl.InitDesign()
 })

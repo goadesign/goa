@@ -1,4 +1,4 @@
-package goadsl
+package apidsl
 
 import (
 	"net/http"

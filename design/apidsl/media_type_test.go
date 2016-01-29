@@ -1,8 +1,8 @@
-package goadsl_test
+package apidsl_test
 
 import (
 	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/goadsl"
+	. "github.com/goadesign/goa/design/apidsl"
 	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -10,7 +10,7 @@ import (
 
 var _ = Describe("MediaType", func() {
 	var name string
-	var goadslFunc func()
+	var dslFunc func()
 
 	var mt *MediaTypeDefinition
 
@@ -18,23 +18,23 @@ var _ = Describe("MediaType", func() {
 		InitDesign()
 		dslengine.Errors = nil
 		name = ""
-		goadslFunc = nil
+		dslFunc = nil
 	})
 
 	JustBeforeEach(func() {
-		mt = MediaType(name, goadslFunc)
+		mt = MediaType(name, dslFunc)
 		dslengine.Run()
 		Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 	})
 
-	Context("with no goadsl and no identifier", func() {
+	Context("with no dsl and no identifier", func() {
 		It("produces an error", func() {
 			Ω(mt).ShouldNot(BeNil())
 			Ω(mt.Validate()).Should(HaveOccurred())
 		})
 	})
 
-	Context("with no goadsl", func() {
+	Context("with no dsl", func() {
 		BeforeEach(func() {
 			name = "application/foo"
 		})
@@ -50,7 +50,7 @@ var _ = Describe("MediaType", func() {
 
 		BeforeEach(func() {
 			name = "application/foo"
-			goadslFunc = func() {
+			dslFunc = func() {
 				Attributes(func() {
 					Attribute(attName)
 				})
@@ -74,7 +74,7 @@ var _ = Describe("MediaType", func() {
 
 		BeforeEach(func() {
 			name = "application/foo"
-			goadslFunc = func() {
+			dslFunc = func() {
 				Description(description)
 				Attributes(func() {
 					Attribute("attName")
@@ -126,7 +126,7 @@ var _ = Describe("MediaType", func() {
 			Design.MediaTypes = make(map[string]*MediaTypeDefinition)
 			Design.MediaTypes["application/mt1"] = mt1
 			Design.MediaTypes["application/mt2"] = mt2
-			goadslFunc = func() {
+			dslFunc = func() {
 				Attributes(func() {
 					Attributes(func() {
 						Attribute(link1Name, mt1)
@@ -166,7 +166,7 @@ var _ = Describe("MediaType", func() {
 
 		BeforeEach(func() {
 			name = "application/foo"
-			goadslFunc = func() {
+			dslFunc = func() {
 				Attributes(func() {
 					Attribute(viewAtt)
 				})
@@ -204,7 +204,7 @@ var _ = Describe("Duplicate media types", func() {
 	var duplicate *MediaTypeDefinition
 	const id = "application/foo"
 	const attName = "bar"
-	var goadslFunc = func() {
+	var dslFunc = func() {
 		Attributes(func() {
 			Attribute(attName)
 		})
@@ -214,9 +214,9 @@ var _ = Describe("Duplicate media types", func() {
 	BeforeEach(func() {
 		InitDesign()
 		dslengine.Errors = nil
-		mt = MediaType(id, goadslFunc)
+		mt = MediaType(id, dslFunc)
 		Ω(dslengine.Errors).ShouldNot(HaveOccurred())
-		duplicate = MediaType(id, goadslFunc)
+		duplicate = MediaType(id, dslFunc)
 	})
 
 	It("produces an error", func() {

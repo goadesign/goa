@@ -6,7 +6,7 @@ import (
 	"github.com/go-swagger/go-swagger/spec"
 	_ "github.com/goadesign/goa-cellar/design"
 	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/goadsl"
+	. "github.com/goadesign/goa/design/apidsl"
 	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/gen_schema"
 	"github.com/goadesign/goa/goagen/gen_swagger"
