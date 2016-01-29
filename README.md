@@ -59,10 +59,6 @@ Assuming you have a working Go setup:
 ```
 go get github.com/goadesign/goa/goagen
 ```
-The code generation functionality relies on [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports):
-```
-go get golang.org/x/tools/cmd/goimports
-```
 
 ## Teaser
 
