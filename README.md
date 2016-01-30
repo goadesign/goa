@@ -70,7 +70,7 @@ package design
 
 import (
         . "github.com/goadesign/goa/design"
-        . "github.com/goadesign/goa/design/dsl"
+        . "github.com/goadesign/goa/design/apidsl"
 )
 
 var _ = API("adder", func() {
@@ -210,10 +210,12 @@ a free service that renders the Swagger representation dynamically from goa desi
 
 * Package [goa](https://godoc.org/github.com/goadesign/goa) contains the data structures and algorithms
   used at runtime.
-* Package [dsl](https://godoc.org/github.com/goadesign/goa/design/dsl) contains the implementation of
+* Package [apidsl](https://godoc.org/github.com/goadesign/goa/design/apidsl) contains the implementation of
   the goa design language.
 * Package [design](https://godoc.org/github.com/goadesign/goa/design) defines the output data
   structures of the design language.
+* Package [dslengine](https://godoc.org/github.com/goadesign/goa/dslengine) is a tool to parse and process any
+  arbitrary DSL
 
 ### Website
 
