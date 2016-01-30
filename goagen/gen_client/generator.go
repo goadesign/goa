@@ -52,12 +52,12 @@ func makeToolDir(g *Generator, apiName string) (toolDir string, err error) {
 
 func (g *Generator) generateMain(mainFile string, clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
 	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("os"),
-		codegen.SimpleImport("fmt"),
-		codegen.SimpleImport("time"),
-		codegen.SimpleImport("net/http"),
-		codegen.SimpleImport("io/ioutil"),
 		codegen.SimpleImport("encoding/json"),
+		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("io/ioutil"),
+		codegen.SimpleImport("net/http"),
+		codegen.SimpleImport("os"),
+		codegen.SimpleImport("time"),
 		codegen.SimpleImport(clientPkg),
 		codegen.SimpleImport("github.com/spf13/cobra"),
 	}
@@ -109,11 +109,12 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	commandsTmpl := template.Must(template.New("commands").Funcs(funcs).Parse(commandsTmpl))
 
 	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("github.com/goadesign/goa"),
+		codegen.SimpleImport("encoding/json"),
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport(clientPkg),
-		codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
+		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("github.com/spf13/cobra"),
+		codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
 	}
 	if err := file.WriteHeader("", "main", imports); err != nil {
 		return err
@@ -175,10 +176,12 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("bytes"),
 		codegen.SimpleImport("encoding/json"),
-		codegen.SimpleImport("net/url"),
-		codegen.SimpleImport("io"),
 		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("io"),
 		codegen.SimpleImport("net/http"),
+		codegen.SimpleImport("net/url"),
+		codegen.SimpleImport("strconv"),
+		codegen.SimpleImport("strings"),
 	}
 
 	return api.IterateResources(func(res *design.ResourceDefinition) error {

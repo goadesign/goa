@@ -153,6 +153,7 @@ func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, v
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("strconv"),
+		codegen.SimpleImport("strings"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
 	if !version.IsDefault() {
