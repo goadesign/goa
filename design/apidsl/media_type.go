@@ -12,7 +12,7 @@ import (
 // Counter used to create unique media type names for identifier-less media types.
 var mediaTypeCount int
 
-// MediaType implements the media type definition apidsl. A media type definition describes the
+// MediaType implements the media type definition dsl. A media type definition describes the
 // representation of a resource used in a response body. This includes listing all the *potential*
 // resource attributes that can appear in the body. Views specify which of the attributes are
 // actually rendered so that the same media type definition may represent multiple rendering of a
@@ -23,7 +23,7 @@ var mediaTypeCount int
 //
 // A media type definition may also define links to other media types. This is done by first
 // defining an attribute for the linked-to media type and then referring to that attribute in the
-// Links apidsl. Views may then elect to render one or the other or both. Links are rendered using the
+// Links dsl. Views may then elect to render one or the other or both. Links are rendered using the
 // special "link" view. Media types that are linked to must define that view. Here is an example
 // showing all the possible media type sub-definitions:
 //
@@ -56,8 +56,8 @@ var mediaTypeCount int
 //		})
 // 	})
 //
-// This function returns the media type definition so it can be referred to throughout the apidsl.
-func MediaType(identifier string, apidsl func()) *design.MediaTypeDefinition {
+// This function returns the media type definition so it can be referred to throughout the dsl.
+func MediaType(identifier string, dsl func()) *design.MediaTypeDefinition {
 	if design.Design.MediaTypes == nil {
 		design.Design.MediaTypes = make(map[string]*design.MediaTypeDefinition)
 	}
@@ -93,8 +93,8 @@ func MediaType(identifier string, apidsl func()) *design.MediaTypeDefinition {
 			}
 		}
 		identifier = mime.FormatMediaType(identifier, params)
-		// Concoct a Go type name from the identifier, should it be possible to set it in the apidsl?
-		// pros: control the type name generated, cons: not needed in apidsl, adds one more thing to worry about
+		// Concoct a Go type name from the identifier, should it be possible to set it in the dsl?
+		// pros: control the type name generated, cons: not needed in dsl, adds one more thing to worry about
 		lastPart := identifier
 		lastPartIndex := strings.LastIndex(identifier, "/")
 		if lastPartIndex > -1 {
@@ -115,7 +115,7 @@ func MediaType(identifier string, apidsl func()) *design.MediaTypeDefinition {
 			typeName = fmt.Sprintf("MediaType%d", mediaTypeCount)
 		}
 		// Now save the type in the API media types map
-		mt := design.NewMediaTypeDefinition(typeName, identifier, apidsl)
+		mt := design.NewMediaTypeDefinition(typeName, identifier, dsl)
 		design.Design.MediaTypes[canonicalID] = mt
 		return mt
 	}
@@ -180,7 +180,7 @@ func Reference(t design.DataType) {
 }
 
 // TypeName makes it possible to set the Go struct name for a type or media type in the generated
-// code. By default goagen uses the name (type) or identifier (media type) given in the apidsl and
+// code. By default goagen uses the name (type) or identifier (media type) given in the dsl and
 // computes a valid Go identifier from it. This function makes it possible to override that and
 // provide a custom name. name must be a valid Go identifier.
 func TypeName(name string) {
@@ -194,7 +194,7 @@ func TypeName(name string) {
 // View adds a new view to a media type. A view has a name and lists attributes that are
 // rendered when the view is used to produce a response. The attribute names must appear in the
 // media type definition. If an attribute is itself a media type then the view may specify which
-// view to use when rendering the attribute using the View function in the View apidsl. If not
+// view to use when rendering the attribute using the View function in the View dsl. If not
 // specified then the view named "default" is used. Examples:
 //
 //	View("default", func() {
@@ -209,7 +209,7 @@ func TypeName(name string) {
 //			View("extended")	// Use view "extended" to render attribute "origin"
 //		})
 //	})
-func View(name string, apidsl ...func()) {
+func View(name string, dsl ...func()) {
 	if mt, ok := mediaTypeDefinition(false); ok {
 		if !mt.Type.IsObject() && !mt.Type.IsArray() {
 			dslengine.ReportError("cannot define view on non object and non collection media types")
@@ -225,8 +225,8 @@ func View(name string, apidsl ...func()) {
 		}
 		at := &design.AttributeDefinition{}
 		ok := false
-		if len(apidsl) > 0 {
-			ok = dslengine.Execute(apidsl[0], at)
+		if len(dsl) > 0 {
+			ok = dslengine.Execute(dsl[0], at)
 		} else if mt.Type.IsArray() {
 			// inherit view from collection element if present
 			elem := mt.Type.ToArray().ElemType
@@ -270,17 +270,17 @@ func View(name string, apidsl ...func()) {
 	}
 }
 
-// Attributes implements the media type attributes apidsl. See MediaType.
-func Attributes(apidsl func()) {
+// Attributes implements the media type attributes dsl. See MediaType.
+func Attributes(dsl func()) {
 	if mt, ok := mediaTypeDefinition(true); ok {
-		dslengine.Execute(apidsl, mt)
+		dslengine.Execute(dsl, mt)
 	}
 }
 
-// Links implements the media type links apidsl. See MediaType.
-func Links(apidsl func()) {
+// Links implements the media type links dsl. See MediaType.
+func Links(dsl func()) {
 	if mt, ok := mediaTypeDefinition(true); ok {
-		dslengine.Execute(apidsl, mt)
+		dslengine.Execute(dsl, mt)
 	}
 }
 
@@ -318,7 +318,7 @@ func Link(name string, view ...string) {
 // actions. This function can be called from any place where a media type can be used.
 // The resulting media type identifier is built from the element media type by appending the media
 // type parameter "type" with value "collection".
-func CollectionOf(v interface{}, apidsl ...func()) *design.MediaTypeDefinition {
+func CollectionOf(v interface{}, dsl ...func()) *design.MediaTypeDefinition {
 	if design.GeneratedMediaTypes == nil {
 		design.GeneratedMediaTypes = make(design.MediaTypeRoot)
 		dslengine.Roots = append(dslengine.Roots, design.GeneratedMediaTypes)
@@ -362,11 +362,11 @@ func CollectionOf(v interface{}, apidsl ...func()) *design.MediaTypeDefinition {
 			mt.TypeName = typeName
 			mt.AttributeDefinition = &design.AttributeDefinition{Type: ArrayOf(m)}
 			mt.APIVersions = m.APIVersions
-			if len(apidsl) > 0 {
-				dslengine.Execute(apidsl[0], mt)
+			if len(dsl) > 0 {
+				dslengine.Execute(dsl[0], mt)
 			}
 			if mt.Views == nil {
-				// If the apidsl didn't create any views (or there is no apidsl at all)
+				// If the dsl didn't create any views (or there is no dsl at all)
 				// then inherit the views from the collection element.
 				mt.Views = make(map[string]*design.ViewDefinition)
 				for n, v := range m.Views {
@@ -375,7 +375,7 @@ func CollectionOf(v interface{}, apidsl ...func()) *design.MediaTypeDefinition {
 			}
 		}
 	})
-	// Do not execute the apidsl right away, will be done last to make sure the element apidsl has run
+	// Do not execute the dsl right away, will be done last to make sure the element dsl has run
 	// first.
 	design.GeneratedMediaTypes[typeName] = mt
 	return mt
