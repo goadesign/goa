@@ -52,7 +52,7 @@
 
 import (
         . "github.com/goadesign/goa/design"
-        . "github.com/goadesign/goa/design/dsl"
+        . "github.com/goadesign/goa/design/apidsl"
 )
 
 var _ = API("cellar", func() {
@@ -135,7 +135,7 @@ var BottleMedia = MediaType("application/vnd.goa.example.bottle+json", func() {
                                 </li>
                         </ul>
                         <blockquote>
-                                The <a href="https://godoc.org/github.com/goadesign/goa/design/dsl" target="_blank">dsl package GoDoc</a> lists all
+                                The <a href="https://godoc.org/github.com/goadesign/goa/design/apidsl" target="_blank">apidsl package GoDoc</a> lists all
                                 the goa design language keywords together with a description and example usage.
                         </blockquote>
                         <p>
@@ -216,7 +216,7 @@ swagger/swagger.go
                                         <code>hrefs.go</code> provide global functions for building resource hrefs. Resource hrefs make it possible
                                         for responses to link to related resources. goa knows how to build these hrefs by looking at the
                                         request path for the resource "canonical" action (by default the "show" action). See the
-                                        <a href="https://godoc.org/github.com/goadesign/goa/design/dsl#Action">Action</a> design language function for
+                                        <a href="https://godoc.org/github.com/goadesign/goa/design/apidsl#Action">Action</a> design language function for
                                         additional information.
                                 </li>
                                 <li>
@@ -326,7 +326,7 @@ func (c *BottleController) Show(ctx *app.ShowBottleContext) error {
                         <blockquote>
                                 The goa router requires that all routes form a tree so that for example using a route
                                 <code>/foo/:id</code> and a route <code>/foo/:fooID/bar/:id</code> in the same application is not
-                                permitted. Instead use </code>/foo/:fooID</code> for the first route for example.
+                                permitted. Instead use <code>/foo/:fooID</code> for the first route for example.
                         </blockquote>
                         <p>
                                 Now compile and run the service:
@@ -398,7 +398,7 @@ INFO[11-28|20:49:21] listen                                   app=API addr=:8080
                         </pre>
                         <p>
                                 The command above shows how to call the <em>show bottle</em> action:
-                        <p>
+                        </p>
                         <pre>
         $ ./cellar-cli --dump show bottle /bottles/1
         GET http://localhost:8080/bottles/1
