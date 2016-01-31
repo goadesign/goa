@@ -8,7 +8,6 @@ import (
 )
 
 type (
-
 	// AttributeDefinition defines a JSON object member with optional description, default
 	// value and validations.
 	AttributeDefinition struct {
@@ -102,31 +101,6 @@ func (a *AttributeDefinition) IsPrimitivePointer(attName string) bool {
 		return !a.IsRequired(attName) && !a.IsNonZero(attName)
 	}
 	return false
-}
-
-// Dup returns a copy of the attribute definition.
-// Note: the primitive underlying types are not duplicated for simplicity.
-func (a *AttributeDefinition) Dup() *AttributeDefinition {
-	valDup := make([]dslengine.ValidationDefinition, len(a.Validations))
-	for i, v := range a.Validations {
-		valDup[i] = v
-	}
-	dupType := a.Type
-	if dupType != nil {
-		dupType = dupType.Dup()
-	}
-	dup := AttributeDefinition{
-		Type:              dupType,
-		Description:       a.Description,
-		APIVersions:       a.APIVersions,
-		Validations:       valDup,
-		Metadata:          a.Metadata,
-		DefaultValue:      a.DefaultValue,
-		NonZeroAttributes: a.NonZeroAttributes,
-		View:              a.View,
-		DSLFunc:           a.DSLFunc,
-	}
-	return &dup
 }
 
 // Example returns a random instance of the attribute that validates.

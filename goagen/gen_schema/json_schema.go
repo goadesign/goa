@@ -169,7 +169,7 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 			requestSchema.Description = a.Name + " payload"
 		}
 		if a.Params != nil {
-			params := a.Params.Dup()
+			params := design.DupAtt(a.Params)
 			// We don't want to keep the path params, these are defined inline in the href
 			for _, r := range a.Routes {
 				for _, p := range r.Params(design.Design.APIVersionDefinition) {
