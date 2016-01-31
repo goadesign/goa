@@ -29,6 +29,9 @@ func TestCellar(t *testing.T) {
 	if err := gobuild("./goa-cellar"); err != nil {
 		t.Error(err.Error())
 	}
+	if err := gobuild("./goa-cellar/client/cellar-cli"); err != nil {
+		t.Error(err.Error())
+	}
 }
 
 func goagen(dir, command string, args ...string) error {
