@@ -26,9 +26,8 @@ type (
 	// resulting HTTP response.
 	ControllersWriter struct {
 		*codegen.SourceFile
-		CtrlTmpl      *template.Template
-		MountTmpl     *template.Template
-		UnmarshalTmpl *template.Template
+		CtrlTmpl  *template.Template
+		MountTmpl *template.Template
 	}
 
 	// ResourcesWriter generate code for a goa application resources.
@@ -181,8 +180,14 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 			return err
 		}
 	}
+	fn = template.FuncMap{
+		"project": func(mt *design.MediaTypeDefinition, v string) *design.MediaTypeDefinition {
+			p, _, _ := mt.Project(v)
+			return p
+		},
+	}
 	if len(data.Responses) > 0 {
-		if err := w.ExecuteTemplate("response", ctxRespT, nil, data); err != nil {
+		if err := w.ExecuteTemplate("response", ctxRespT, fn, data); err != nil {
 			return err
 		}
 	}
@@ -242,8 +247,32 @@ func NewMediaTypesWriter(filename string) (*MediaTypesWriter, error) {
 
 // Execute writes the code for the context types to the writer.
 func (w *MediaTypesWriter) Execute(data *MediaTypeTemplateData) error {
-	fn := template.FuncMap{"newDumpData": newDumpData}
-	return w.ExecuteTemplate("new", mediaTypeT, fn, data)
+	mt := data.MediaType
+	var mLinks *design.UserTypeDefinition
+	for view := range mt.Views {
+		p, links, err := mt.Project(view)
+		if mLinks == nil {
+			mLinks = links
+		}
+		if err != nil {
+			return err
+		}
+		data.MediaType = p
+		if err := w.ExecuteTemplate("mediatype", mediaTypeT, nil, data); err != nil {
+			return err
+		}
+	}
+	if mLinks != nil {
+		lData := &UserTypeTemplateData{
+			UserType:   mLinks,
+			Versioned:  data.Versioned,
+			DefaultPkg: data.DefaultPkg,
+		}
+		if err := w.ExecuteTemplate("usertype", userTypeT, nil, lData); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // NewUserTypesWriter returns a contexts code writer.
@@ -270,19 +299,6 @@ func newCoerceData(name string, att *design.AttributeDefinition, pointer bool, p
 		"Attribute": att,
 		"Pkg":       pkg,
 		"Depth":     depth,
-	}
-}
-
-// newDumpData is a helper function that creates a map that can be given to the "Dump" template.
-func newDumpData(mt *design.MediaTypeDefinition, versioned bool, defaultPkg, context, source, target, view string) map[string]interface{} {
-	return map[string]interface{}{
-		"MediaType":  mt,
-		"Context":    context,
-		"Source":     source,
-		"Target":     target,
-		"View":       view,
-		"Versioned":  versioned,
-		"DefaultPkg": defaultPkg,
 	}
 }
 
@@ -392,19 +408,21 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 `
 	// ctxRespT generates response helper methods GoGenerator
 	// template input: *ContextTemplateData
-	ctxRespT = `{{$ctx := .}}{{range .Responses}}{{$mt := $ctx.API.MediaTypeWithIdentifier .MediaType}}{{/*
-*/}}// {{goify .Name true}} sends a HTTP response with status code {{.Status}}.
-func (ctx *{{$ctx.Name}}) {{goify .Name true}}({{/*
-*/}}{{if $mt}}resp {{gopkgtyperef $mt $mt.AllRequired $ctx.Versioned $ctx.DefaultPkg 0}}{{if gt (len $mt.ComputeViews) 1}}, view {{gopkgtypename $mt $mt.AllRequired $ctx.Versioned $ctx.DefaultPkg 0}}ViewEnum{{end}}{{/*
-*/}}{{else if .MediaType}}resp []byte{{end}}) error {
-{{if $mt}}	r, err := resp.Dump({{if gt (len $mt.ComputeViews) 1}}view{{end}})
-	if err != nil {
-		return fmt.Errorf("invalid response: %s", err)
-	}
-	ctx.Header().Set("Content-Type", "{{$mt.Identifier}}; charset=utf-8")
-	return ctx.Respond({{.Status}}, r){{else}}	return ctx.RespondBytes({{.Status}}, {{if and (not $mt) .MediaType}}resp{{else}}nil{{end}}){{end}}
+	ctxRespT = `{{$ctx := .}}{{range .Responses}}{{$mt := $ctx.API.MediaTypeWithIdentifier .MediaType}}{{$resp := .}}{{/*
+*/}}{{if $mt}}{{range $name, $view := $mt.Views}}{{if not (eq $name "link")}}{{$projected := project $mt $name}}
+// {{if eq $name "default"}}{{goify $resp.Name true}}{{else}}{{goify (printf "%s%s" $resp.Name (title $name)) true}}{{end}} sends a HTTP response with status code {{$resp.Status}}.
+func (ctx *{{$ctx.Name}}) {{if eq $name "default"}}{{goify $resp.Name true}}{{else}}{{goify (printf "%s%s" $resp.Name (title $name)) true}}{{end}}({{/*
+*/}}resp {{gopkgtyperef $projected $projected.AllRequired $ctx.Versioned $ctx.DefaultPkg 0}}) error {
+	ctx.Header().Set("Content-Type", "{{$resp.MediaType}}")
+	return ctx.Respond({{$resp.Status}}, resp)
 }
 
+{{end}}{{end}}{{else}}// {{goify $resp.Name true}} sends a HTTP response with status code {{$resp.Status}}.
+func (ctx *{{$ctx.Name}}) {{goify $resp.Name true}}({{if $resp.MediaType}}resp []byte{{end}}) error {
+{{if $resp.MediaType}}	ctx.Header().Set("Content-Type", "{{$resp.MediaType}}")
+{{end}}	return ctx.RespondBytes({{$resp.Status}}, {{if $resp.MediaType}}resp{{else}}nil{{end}})
+}
+{{end}}
 {{end}}`
 
 	// payloadT generates the payload type definition GoGenerator
@@ -483,45 +501,17 @@ func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} interfa
 
 	// mediaTypeT generates the code for a media type.
 	// template input: MediaTypeTemplateData
-	mediaTypeT = `{{define "Dump"}}` + dumpT + `{{end}}` + `// {{if .MediaType.Description}}{{.MediaType.Description}}{{else}}{{gotypename .MediaType .MediaType.AllRequired 0}} media type{{end}}
+	mediaTypeT = `// {{if .MediaType.Description}}{{.MediaType.Description}}{{else}}{{gotypename .MediaType .MediaType.AllRequired 0}} media type{{end}}
 // Identifier: {{.MediaType.Identifier}}{{$typeName := gotypename .MediaType .MediaType.AllRequired 0}}
-type {{$typeName}} {{gotypedef .MediaType .Versioned .DefaultPkg 0 true}}{{$computedViews := .MediaType.ComputeViews}}{{if gt (len $computedViews) 1}}
-
-// {{$typeName}} views
-type {{$typeName}}ViewEnum string
-
-const (
-{{range $name, $view := $computedViews}}// {{if .Description}}{{.Description}}{{else}}{{$typeName}} {{.Name}} view{{end}}
-	{{$typeName}}{{goify .Name true}}View {{$typeName}}ViewEnum = "{{.Name}}"
-{{end}}){{end}}
-
-// Dump produces raw data from an instance of {{$typeName}} running all the
-// validations. See Load{{$typeName}} for the definition of raw data.
-func (mt {{gotyperef .MediaType .MediaType.AllRequired 0}}) Dump({{if gt (len $computedViews) 1}}view {{$typeName}}ViewEnum{{end}}) (res {{gonative .MediaType}}, err error) {
-{{$mt := .MediaType}}{{$ctx := .}}{{if gt (len $computedViews) 1}}{{range $computedViews}}	if view == {{gotypename $mt $mt.AllRequired 0}}{{goify .Name true}}View {
-		{{template "Dump" (newDumpData $mt $ctx.Versioned $ctx.DefaultPkg (printf "%s view" .Name) "mt" "res" .Name)}}
-	}
-{{end}}{{else}}{{range $mt.ComputeViews}}{{template "Dump" (newDumpData $mt $ctx.Versioned $ctx.DefaultPkg (printf "%s view" .Name) "mt" "res" .Name)}}{{/* ranges over the one element */}}
-{{end}}{{end}}	return
-}
+type {{$typeName}} {{gotypedef .MediaType .Versioned .DefaultPkg 0 true}}
 
 {{$validation := recursiveValidate .MediaType.AttributeDefinition false false "mt" "response" 1}}{{if $validation}}// Validate validates the media type instance.
 func (mt {{gotyperef .MediaType .MediaType.AllRequired 0}}) Validate() (err error) {
 {{$validation}}
 	return
 }
-{{end}}{{range $computedViews}}
-{{mediaTypeMarshalerImpl $mt $ctx.Versioned $ctx.DefaultPkg .Name}}
 {{end}}
 `
-
-	// dumpT generates the code for dumping a media type or media type collection element.
-	dumpT = `{{if .MediaType.IsArray}}	{{.Target}} = make({{gonative .MediaType}}, len({{.Source}}))
-{{$tmp := tempvar}}	for i, {{$tmp}} := range {{.Source}} {
-{{$tmpel := tempvar}}		var {{$tmpel}} {{gonative .MediaType.ToArray.ElemType.Type}}
-		{{template "Dump" (newDumpData .MediaType.ToArray.ElemType.Type .Versioned .DefaultPkg (printf "%s[*]" .Context) $tmp $tmpel .View)}}
-		{{.Target}}[i] = {{$tmpel}}
-	}{{else}}{{typeMarshaler .MediaType .Versioned .DefaultPkg .Context .Source .Target .View}}{{end}}`
 
 	// userTypeT generates the code for a user type.
 	// template input: UserTypeTemplateData
@@ -532,8 +522,6 @@ type {{gotypename .UserType .UserType.AllRequired 0}} {{gotypedef .UserType .Ver
 func (ut {{gotyperef .UserType .UserType.AllRequired 0}}) Validate() (err error) {
 {{$validation}}
 	return
-}
-
-{{end}}{{userTypeMarshalerImpl .UserType .Versioned .DefaultPkg}}
+}{{end}}
 `
 )

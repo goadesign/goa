@@ -214,10 +214,9 @@ func okResp(a *design.ActionDefinition, v string) map[string]interface{} {
 		typeref = "&" + typeref[1:]
 	}
 	return map[string]interface{}{
-		"Name":             ok.Name,
-		"HasMultipleViews": len(mt.Views) > 1,
-		"GoType":           codegen.GoNativeType(mt),
-		"TypeRef":          typeref,
+		"Name":    ok.Name,
+		"GoType":  codegen.GoNativeType(mt),
+		"TypeRef": typeref,
 	}
 }
 
@@ -290,7 +289,7 @@ func New{{$ctrlName}}(service goa.Service) {{if .Version}}{{versionPkg .Version}
 // {{goify .Name true}} runs the {{.Name}} action.
 func (c *{{$ctrlName}}) {{goify .Name true}}(ctx *{{if $version}}{{versionPkg $version}}{{else}}{{targetPkg}}{{end}}.{{goify .Name true}}{{goify $ctrl.Name true}}Context) error {
 {{$ok := okResp . $version}}{{if $ok}}	res := {{$ok.TypeRef}}{}
-{{end}}	return {{if $ok}}ctx.{{$ok.Name}}(res{{if $ok.HasMultipleViews}}, "default"{{end}}){{else}}nil{{end}}
+{{end}}	return {{if $ok}}ctx.{{$ok.Name}}(res){{else}}nil{{end}}
 }
 {{end}}
 `
