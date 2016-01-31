@@ -801,7 +801,7 @@ func (r *ResourceDefinition) Finalize() {
 		}
 		// 3. Compute QueryParams from Params and set all path params as non zero attributes
 		if params := a.Params; params != nil {
-			queryParams := params.Dup()
+			queryParams := DupAtt(params)
 			a.Params.NonZeroAttributes = make(map[string]bool)
 			Design.IterateVersions(func(ver *APIVersionDefinition) error {
 				for _, route := range a.Routes {
@@ -929,7 +929,7 @@ func (r *ResponseDefinition) Dup() *ResponseDefinition {
 		MediaType:   r.MediaType,
 	}
 	if r.Headers != nil {
-		res.Headers = r.Headers.Dup()
+		res.Headers = DupAtt(r.Headers)
 	}
 	return &res
 }
@@ -1015,7 +1015,7 @@ func (a *ActionDefinition) PathParams(version *APIVersionDefinition) *AttributeD
 func (a *ActionDefinition) AllParams() *AttributeDefinition {
 	var res *AttributeDefinition
 	if a.Params != nil {
-		res = a.Params.Dup()
+		res = DupAtt(a.Params)
 	} else {
 		res = &AttributeDefinition{Type: Object{}}
 	}

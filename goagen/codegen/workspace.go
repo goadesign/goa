@@ -1,10 +1,12 @@
 package codegen
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/format"
 	"go/parser"
+	"go/scanner"
 	"go/token"
 	"io/ioutil"
 	"os"
@@ -49,27 +51,24 @@ var (
 
 	// DefaultFuncMap is the FuncMap used to initialize all source file templates.
 	DefaultFuncMap = template.FuncMap{
-		"add":           func(a, b int) int { return a + b },
-		"commandLine":   CommandLine,
-		"comment":       Comment,
-		"goify":         Goify,
-		"gonative":      GoNativeType,
-		"gopkgtypename": GoPackageTypeName,
-		"gopkgtyperef":  GoPackageTypeRef,
-		"gotypedef":     GoTypeDef,
-		"gotypename":    GoTypeName,
-		"gotyperef":     GoTypeRef,
-		"join":          strings.Join,
-		"mediaTypeMarshalerImpl": MediaTypeMarshalerImpl,
-		"recursiveValidate":      RecursiveChecker,
-		"tabs":                   Tabs,
-		"tempvar":                Tempvar,
-		"title":                  strings.Title,
-		"toLower":                strings.ToLower,
-		"typeMarshaler":          MediaTypeMarshaler,
-		"userTypeMarshalerImpl":  UserTypeMarshalerImpl,
-		"validationChecker":      ValidationChecker,
-		"versionPkg":             VersionPackage,
+		"add":               func(a, b int) int { return a + b },
+		"commandLine":       CommandLine,
+		"comment":           Comment,
+		"goify":             Goify,
+		"gonative":          GoNativeType,
+		"gopkgtypename":     GoPackageTypeName,
+		"gopkgtyperef":      GoPackageTypeRef,
+		"gotypedef":         GoTypeDef,
+		"gotypename":        GoTypeName,
+		"gotyperef":         GoTypeRef,
+		"join":              strings.Join,
+		"recursiveValidate": RecursiveChecker,
+		"tabs":              Tabs,
+		"tempvar":           Tempvar,
+		"title":             strings.Title,
+		"toLower":           strings.ToLower,
+		"validationChecker": ValidationChecker,
+		"versionPkg":        VersionPackage,
 	}
 )
 
@@ -249,7 +248,10 @@ func (f *SourceFile) FormatCode() error {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, f.Abs(), nil, parser.ParseComments)
 	if err != nil {
-		return err
+		content, _ := ioutil.ReadFile(f.Abs())
+		var buf bytes.Buffer
+		scanner.PrintError(&buf, err)
+		return fmt.Errorf("%s\n========\nContent:\n%s", buf.String(), content)
 	}
 	// Clean unused imports
 	imports := astutil.Imports(fset, file)

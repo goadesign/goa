@@ -94,7 +94,7 @@ func Attribute(name string, args ...interface{}) {
 		var baseAttr *design.AttributeDefinition
 		if parent.Reference != nil {
 			if att, ok := parent.Reference.ToObject()[name]; ok {
-				baseAttr = att.Dup()
+				baseAttr = design.DupAtt(att)
 			}
 		}
 

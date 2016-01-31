@@ -163,6 +163,12 @@ var _ = Describe("Generate", func() {
 			mt := design.MediaTypeDefinition{
 				UserTypeDefinition: &ut,
 				Identifier:         "vnd.rightscale.codegen.test.widgets",
+				Views: map[string]*design.ViewDefinition{
+					"default": &design.ViewDefinition{
+						AttributeDefinition: ut.AttributeDefinition,
+						Name:                "default",
+					},
+				},
 			}
 			design.Design = &design.APIDefinition{
 				APIVersionDefinition: &design.APIVersionDefinition{
@@ -344,11 +350,10 @@ const contextsCodeTmpl = `//****************************************************
 
 package {{if .version}}{{.version}}{{else}}app{{end}}
 
-import (
-{{if .version}}	"{{.tmpDir}}/app"
-{{end}}	"fmt"
-	"github.com/goadesign/goa"
-)
+import {{if .version}}(
+	"{{.tmpDir}}/app"
+	{{end}}"github.com/goadesign/goa"{{if .version}}
+){{end}}
 
 // GetWidgetContext provides the Widget get action context.
 type GetWidgetContext struct {
@@ -372,12 +377,8 @@ func NewGetWidgetContext(c *goa.Context) (*GetWidgetContext, error) {
 
 // OK sends a HTTP response with status code 200.
 func (ctx *GetWidgetContext) OK(resp {{if .version}}app.{{end}}ID) error {
-	r, err := resp.Dump()
-	if err != nil {
-		return fmt.Errorf("invalid response: %s", err)
-	}
-	ctx.Header().Set("Content-Type", "vnd.rightscale.codegen.test.widgets; charset=utf-8")
-	return ctx.Respond(200, r)
+	ctx.Header().Set("Content-Type", "vnd.rightscale.codegen.test.widgets")
+	return ctx.Respond(200, resp)
 }
 `
 
