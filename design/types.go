@@ -10,9 +10,13 @@
 package design
 
 import (
+	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"time"
+
+	"github.com/goadesign/goa/dslengine"
 )
 
 type (
@@ -48,9 +52,6 @@ type (
 		// IsCompatible checks whether val has a Go type that is
 		// compatible with the data type.
 		IsCompatible(val interface{}) bool
-		// Dup creates a copy of the type. This is only relevant for types that are
-		// DSLDefinition (i.e. have an attribute definition).
-		Dup() DataType
 		// Example returns a random value for the given data type.
 		// If the data type has validations then the example value validates them.
 		Example(r *RandomGenerator) interface{}
@@ -111,7 +112,7 @@ type (
 
 const (
 	// BooleanKind represents a JSON bool.
-	BooleanKind = iota + 1
+	BooleanKind Kind = iota + 1
 	// IntegerKind represents a JSON integer.
 	IntegerKind
 	// NumberKind represents a JSON number including integers.
@@ -259,11 +260,6 @@ func (p Primitive) IsCompatible(val interface{}) (ok bool) {
 	return
 }
 
-// Dup returns the primitive type.
-func (p Primitive) Dup() DataType {
-	return p
-}
-
 // Example returns an instance of the given data type.
 func (p Primitive) Example(r *RandomGenerator) interface{} {
 	switch p {
@@ -317,11 +313,6 @@ func (a *Array) IsCompatible(val interface{}) bool {
 	return k == reflect.Array || k == reflect.Slice
 }
 
-// Dup calls Dup on the array ElemType and creates an array with the result.
-func (a *Array) Dup() DataType {
-	return &Array{ElemType: a.ElemType.Dup()}
-}
-
 // Example produces a random array value.
 func (a *Array) Example(r *RandomGenerator) interface{} {
 	count := r.Int()%3 + 1
@@ -362,7 +353,7 @@ func (o Object) ToHash() *Hash { return nil }
 // Merge copies other's attributes into o overridding any pre-existing attribute with the same name.
 func (o Object) Merge(other Object) {
 	for n, att := range other {
-		o[n] = att.Dup()
+		o[n] = DupAtt(att)
 	}
 }
 
@@ -370,15 +361,6 @@ func (o Object) Merge(other Object) {
 func (o Object) IsCompatible(val interface{}) bool {
 	k := reflect.TypeOf(val).Kind()
 	return k == reflect.Map || k == reflect.Struct
-}
-
-// Dup creates a copy of o.
-func (o Object) Dup() DataType {
-	res := make(Object, len(o))
-	for n, att := range o {
-		res[n] = att.Dup()
-	}
-	return res
 }
 
 // Example returns a random value of the object.
@@ -421,14 +403,6 @@ func (h *Hash) ToHash() *Hash { return h }
 func (h *Hash) IsCompatible(val interface{}) bool {
 	k := reflect.TypeOf(val).Kind()
 	return k == reflect.Map
-}
-
-// Dup creates a copy of h.
-func (h *Hash) Dup() DataType {
-	return &Hash{
-		KeyType:  h.KeyType.Dup(),
-		ElemType: h.ElemType.Dup(),
-	}
 }
 
 // Example returns a random hash value.
@@ -504,14 +478,6 @@ func (u *UserTypeDefinition) IsCompatible(val interface{}) bool {
 	return u.Type.IsCompatible(val)
 }
 
-// Dup returns a copy of u.
-func (u *UserTypeDefinition) Dup() DataType {
-	return &UserTypeDefinition{
-		AttributeDefinition: u.AttributeDefinition.Dup(),
-		TypeName:            u.TypeName,
-	}
-}
-
 // SupportsVersion returns true if the type is exposed by the given API version.
 // An empty string version means no version.
 func (u *UserTypeDefinition) SupportsVersion(version string) bool {
@@ -560,17 +526,6 @@ func NewMediaTypeDefinition(name, identifier string, dsl func()) *MediaTypeDefin
 // Kind implements DataKind.
 func (m *MediaTypeDefinition) Kind() Kind { return MediaTypeKind }
 
-// Dup returns a copy of m.
-func (m *MediaTypeDefinition) Dup() DataType {
-	return &MediaTypeDefinition{
-		UserTypeDefinition: m.UserTypeDefinition.Dup().(*UserTypeDefinition),
-		Identifier:         m.Identifier,
-		Links:              m.Links,
-		Views:              m.Views,
-		Resource:           m.Resource,
-	}
-}
-
 // ComputeViews returns the media type views recursing as necessary if the media type is a
 // collection.
 func (m *MediaTypeDefinition) ComputeViews() map[string]*ViewDefinition {
@@ -583,6 +538,158 @@ func (m *MediaTypeDefinition) ComputeViews() map[string]*ViewDefinition {
 		}
 	}
 	return nil
+}
+
+// Project creates a MediaTypeDefinition derived from the given definition that matches the given
+// view.
+func (m *MediaTypeDefinition) Project(view string) (p *MediaTypeDefinition, links *UserTypeDefinition, err error) {
+	if GeneratedMediaTypes == nil {
+		GeneratedMediaTypes = make(MediaTypeRoot)
+		dslengine.Roots = append(dslengine.Roots, GeneratedMediaTypes)
+	}
+	if _, ok := m.Views[view]; !ok {
+		return nil, nil, fmt.Errorf("unknown view %#v", view)
+	}
+	if m.IsArray() {
+		return m.projectCollection(view)
+	}
+	if m.Type.ToObject() == nil {
+		return m, nil, nil
+	}
+	return m.projectSingle(view)
+}
+
+func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition, links *UserTypeDefinition, err error) {
+	v := m.Views[view]
+	var suffix string
+	if view != "default" {
+		suffix = strings.Title(view)
+	}
+	typeName := fmt.Sprintf("%s%s", m.TypeName, suffix)
+	var ok bool
+	if p, ok = GeneratedMediaTypes[typeName]; ok {
+		mLinks := GeneratedMediaTypes[typeName+":Links"]
+		if mLinks != nil {
+			links = mLinks.UserTypeDefinition
+		}
+		return
+	}
+
+	// Compute validations - view may not have all attributes
+	viewObj := v.Type.ToObject()
+	var vals []dslengine.ValidationDefinition
+	if len(m.Validations) > 0 {
+		vals = make([]dslengine.ValidationDefinition, len(m.Validations))
+		for i, va := range m.Validations {
+			if r, ok := va.(*dslengine.RequiredValidationDefinition); ok {
+				var required []string
+				for _, n := range r.Names {
+					if _, ok := viewObj[n]; ok {
+						required = append(required, n)
+					}
+				}
+				vals[i] = &dslengine.RequiredValidationDefinition{Names: required}
+			} else {
+				vals[i] = va
+			}
+		}
+	}
+	description := m.Description
+	if view != "default" {
+		description += fmt.Sprintf(", %s view", view)
+	}
+	p = &MediaTypeDefinition{
+		Identifier: m.Identifier,
+		UserTypeDefinition: &UserTypeDefinition{
+			TypeName: typeName,
+			AttributeDefinition: &AttributeDefinition{
+				Description: description,
+				Type:        Dup(v.Type),
+				Validations: vals,
+			},
+		},
+	}
+	GeneratedMediaTypes[typeName] = p
+	projectedObj := p.Type.ToObject()
+	mtObj := m.Type.ToObject()
+	for n := range viewObj {
+		if n == "links" {
+			linkObj := make(Object)
+			for n, link := range m.Links {
+				linkView := link.View
+				if linkView == "" {
+					linkView = "link"
+				}
+				mtAtt, ok := mtObj[n]
+				if !ok {
+					return nil, nil, fmt.Errorf("unknown attribute %#v used in links", n)
+				}
+				vl, _, err := mtAtt.Type.(*MediaTypeDefinition).Project(linkView)
+				if err != nil {
+					return nil, nil, err
+				}
+				linkObj[n] = &AttributeDefinition{Type: vl}
+			}
+			lTypeName := fmt.Sprintf("%sLinks", m.TypeName)
+			links = &UserTypeDefinition{
+				AttributeDefinition: &AttributeDefinition{
+					Description: fmt.Sprintf("%s contains links to related resources of %s.", lTypeName, m.TypeName),
+					Type:        linkObj,
+				},
+				TypeName: lTypeName,
+			}
+			projectedObj[n] = &AttributeDefinition{Type: links, Description: "Links to related resources"}
+			GeneratedMediaTypes[m.TypeName+":Links"] = &MediaTypeDefinition{UserTypeDefinition: links}
+		} else {
+			if at := mtObj[n]; at != nil {
+				if at.View != "" {
+					m, ok := at.Type.(*MediaTypeDefinition)
+					if !ok {
+						return nil, nil, fmt.Errorf("View specified on non media type attribute %#v", n)
+					}
+					p, _, err := m.Project(at.View)
+					if err != nil {
+						return nil, nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", at.View, n, err)
+					}
+					at.Type = p
+				}
+				projectedObj[n] = at
+			}
+		}
+	}
+	return
+}
+
+func (m *MediaTypeDefinition) projectCollection(view string) (p *MediaTypeDefinition, links *UserTypeDefinition, err error) {
+	e := m.ToArray().ElemType.Type.(*MediaTypeDefinition) // validation checked this cast would work
+	pe, le, err2 := e.Project(view)
+	if err2 != nil {
+		return nil, nil, fmt.Errorf("collection element: %s", err2)
+	}
+	p = &MediaTypeDefinition{
+		Identifier: m.Identifier,
+		UserTypeDefinition: &UserTypeDefinition{
+			AttributeDefinition: &AttributeDefinition{
+				Type:        &Array{ElemType: &AttributeDefinition{Type: pe}},
+				Description: fmt.Sprintf("%s, %s view", m.Description, view),
+			},
+			TypeName: pe.TypeName + "Collection",
+		},
+	}
+	if !dslengine.Execute(p.DSL(), p) {
+		return nil, nil, dslengine.Errors
+	}
+	if le != nil {
+		lTypeName := le.TypeName + "Array"
+		links = &UserTypeDefinition{
+			AttributeDefinition: &AttributeDefinition{
+				Type:        &Array{ElemType: &AttributeDefinition{Type: le}},
+				Description: fmt.Sprintf("%s contains links to related resources of %s.", lTypeName, m.TypeName),
+			},
+			TypeName: lTypeName,
+		}
+	}
+	return
 }
 
 // DataStructure implementation

@@ -17,7 +17,6 @@ var _ = Describe("Validation", func() {
 
 		JustBeforeEach(func() {
 			InitDesign()
-			dslengine.Errors = nil
 			Type("bar", func() {
 				dsl()
 			})

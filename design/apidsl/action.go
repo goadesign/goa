@@ -218,15 +218,15 @@ func Payload(p interface{}, dsls ...func()) {
 			att = newAttribute(a.Parent.MediaType)
 			att.Type = design.Object{}
 		case *design.AttributeDefinition:
-			att = actual.Dup()
+			att = design.DupAtt(actual)
 		case design.DataStructure:
-			att = actual.Definition().Dup()
+			att = design.DupAtt(actual.Definition())
 		case string:
 			ut, ok := design.Design.Types[actual]
 			if !ok {
 				dslengine.ReportError("unknown payload type %s", actual)
 			}
-			att = ut.AttributeDefinition.Dup()
+			att = design.DupAtt(ut.AttributeDefinition)
 		case *design.Array:
 			att = &design.AttributeDefinition{Type: actual}
 		case *design.Hash:

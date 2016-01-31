@@ -3,6 +3,7 @@ package tests
 import (
 	"fmt"
 	"go/build"
+	"os"
 	"os/exec"
 	"path"
 	"testing"
@@ -13,6 +14,19 @@ func TestBootstrapReadme(t *testing.T) {
 		t.Error(err.Error())
 	}
 	if err := gobuild("./readme"); err != nil {
+		t.Error(err.Error())
+	}
+}
+
+func TestCellar(t *testing.T) {
+	if err := os.MkdirAll("./goa-cellar", 0755); err != nil {
+		t.Error(err.Error())
+	}
+	defer os.RemoveAll("./goa-cellar")
+	if err := goagen("./goa-cellar", "bootstrap", "-d", "github.com/goadesign/goa-cellar/design"); err != nil {
+		t.Error(err.Error())
+	}
+	if err := gobuild("./goa-cellar"); err != nil {
 		t.Error(err.Error())
 	}
 }
