@@ -12,3 +12,9 @@ script:
 notifications:
   slack:
     secure: bMYXaoSEGoNdqR0t1VnMAv/4V9PSOhEWyekdJM7p9WmKjJi2yKy0k77uRmwf+5Mrz5GLs3CkZnDha/8cSFld3KEN9SC6QYmIBF/1Pd/5mKHFQOI81i7sTlhrdMv897+6sofEtbBNq1jffhVGVttbMrMWwCTNZu0NrCGBVsDmb44=
+deploy:
+  provider: gcs
+  access_key_id: GOOGDIIIVPY7O6DG3PSZ
+  secret_access_key:
+    secure: dX5ObpLq4ercxLJNFFqddVht/ToE7zEXsRBxEwLKYfxVw/SEi81wJlZUVyAVgTcWqAJAo7s5aIsvL63wyFGEfX7o/X6PKllcGWhWUi2YdfXbeLKCluwAFsbYWPJigFgzso0aQF+Jg/SwdaF3G+BA7NX7+cWqGdDPfx7sJVtbpyc=
+  bucket: artifacts.goa.design
