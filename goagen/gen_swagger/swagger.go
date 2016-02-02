@@ -110,8 +110,8 @@ type (
 		// Required determines whether this parameter is mandatory.
 		Required bool `json:"required"`
 		// Schema defining the type used for the body parameter, only if "in" is body
-
 		Schema *genschema.JSONSchema `json:"schema,omitempty"`
+
 		// properties below only apply if "in" is not body
 
 		//  Type of the parameter. Since the parameter is not located at the request body,

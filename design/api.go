@@ -372,15 +372,20 @@ func (a *APIDefinition) IterateUserTypes(it UserTypeIterator) error {
 	return nil
 }
 
-// Example returns a random value for the given data type.
+// GenerateExample returns a random value for the given data type.
 // If the data type has validations then the example value validates them.
-// Example returns the same random value for a given api name (the random
-// generator is seeded after the api name).
-func (a *APIDefinition) Example(dt DataType) interface{} {
+// GenerateExample returns the same random value for a given api name
+// (the random generator is seeded after the api name).
+func (a *APIDefinition) GenerateExample(dt DataType) interface{} {
+	return dt.GenerateExample(a.RandomGenerator())
+}
+
+// RandomGenerator is seeded after the api name. It's used to generate examples in the most cases.
+func (a *APIDefinition) RandomGenerator() *RandomGenerator {
 	if a.rand == nil {
 		a.rand = NewRandomGenerator(a.Name)
 	}
-	return dt.Example(a.rand)
+	return a.rand
 }
 
 // MediaTypeWithIdentifier returns the media type with a matching
