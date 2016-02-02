@@ -1,7 +1,9 @@
 package genapp
 
 import (
+	"fmt"
 	"regexp"
+	"strings"
 	"text/template"
 
 	"github.com/goadesign/goa/design"
@@ -186,9 +188,28 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 			return p
 		},
 	}
-	if len(data.Responses) > 0 {
-		if err := w.ExecuteTemplate("response", ctxRespT, fn, data); err != nil {
-			return err
+	for _, resp := range data.Responses {
+		mt := design.Design.MediaTypeWithIdentifier(resp.MediaType)
+		respData := map[string]interface{}{
+			"Context":  data,
+			"Response": resp,
+		}
+		if mt != nil {
+			respData["MediaType"] = mt
+			fn["respName"] = func(resp *design.ResponseDefinition, view string) string {
+				if view == "default" {
+					return codegen.Goify(resp.Name, true)
+				}
+				base := fmt.Sprintf("%s%s", resp.Name, strings.Title(view))
+				return codegen.Goify(base, true)
+			}
+			if err := w.ExecuteTemplate("response", ctxMTRespT, fn, respData); err != nil {
+				return err
+			}
+		} else {
+			if err := w.ExecuteTemplate("response", ctxNoMTRespT, fn, respData); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -406,24 +427,27 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 {{end}}{{end}}{{/* if .Params */}}	return &ctx, err
 }
 `
-	// ctxRespT generates response helper methods GoGenerator
-	// template input: *ContextTemplateData
-	ctxRespT = `{{$ctx := .}}{{range .Responses}}{{$mt := $ctx.API.MediaTypeWithIdentifier .MediaType}}{{$resp := .}}{{/*
-*/}}{{if $mt}}{{range $name, $view := $mt.Views}}{{if not (eq $name "link")}}{{$projected := project $mt $name}}
-// {{if eq $name "default"}}{{goify $resp.Name true}}{{else}}{{goify (printf "%s%s" $resp.Name (title $name)) true}}{{end}} sends a HTTP response with status code {{$resp.Status}}.
-func (ctx *{{$ctx.Name}}) {{if eq $name "default"}}{{goify $resp.Name true}}{{else}}{{goify (printf "%s%s" $resp.Name (title $name)) true}}{{end}}({{/*
-*/}}resp {{gopkgtyperef $projected $projected.AllRequired $ctx.Versioned $ctx.DefaultPkg 0}}) error {
+	// ctxMTRespT generates the response helpers for responses with media types.
+	// template input: map[string]interface{}
+	ctxMTRespT = `{{$ctx := .Context}}{{$resp := .Response}}{{$mt := .MediaType}}{{/*
+*/}}{{range $name, $view := $mt.Views}}{{if not (eq $name "link")}}{{$projected := project $mt $name}}
+// {{respName $resp $name}} sends a HTTP response with status code {{$resp.Status}}.
+func (ctx *{{$ctx.Name}}) {{respName $resp $name}}(resp {{gopkgtyperef $projected $projected.AllRequired $ctx.Versioned $ctx.DefaultPkg 0}}) error {
 	ctx.Header().Set("Content-Type", "{{$resp.MediaType}}")
 	return ctx.Respond({{$resp.Status}}, resp)
 }
+{{end}}{{end}}
+`
 
-{{end}}{{end}}{{else}}// {{goify $resp.Name true}} sends a HTTP response with status code {{$resp.Status}}.
-func (ctx *{{$ctx.Name}}) {{goify $resp.Name true}}({{if $resp.MediaType}}resp []byte{{end}}) error {
-{{if $resp.MediaType}}	ctx.Header().Set("Content-Type", "{{$resp.MediaType}}")
-{{end}}	return ctx.RespondBytes({{$resp.Status}}, {{if $resp.MediaType}}resp{{else}}nil{{end}})
+	// ctxNoMTRespT generates the response helpers for responses with no known media type.
+	// template input: *ContextTemplateData
+	ctxNoMTRespT = `
+// {{goify .Response.Name true}} sends a HTTP response with status code {{.Response.Status}}.
+func (ctx *{{.Context.Name}}) {{goify .Response.Name true}}({{if .Response.MediaType}}resp []byte{{end}}) error {
+{{if .Response.MediaType}}	ctx.Header().Set("Content-Type", "{{.Response.MediaType}}")
+{{end}}	return ctx.RespondBytes({{.Response.Status}}, {{if .Response.MediaType}}resp{{else}}nil{{end}})
 }
-{{end}}
-{{end}}`
+`
 
 	// payloadT generates the payload type definition GoGenerator
 	// template input: *ContextTemplateData
