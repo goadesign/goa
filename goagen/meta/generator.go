@@ -119,8 +119,7 @@ func (m *Generator) generateToolSourceCode(pkg *codegen.Package) {
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("os"),
 		codegen.SimpleImport("strings"),
-		codegen.NewImport(".", "github.com/goadesign/goa/design"),
-		codegen.NewImport(".", "github.com/goadesign/goa/dslengine"),
+		codegen.SimpleImport("github.com/goadesign/goa/dslengine"),
 		codegen.NewImport("_", filepath.ToSlash(codegen.DesignPackagePath)),
 	)
 	file.WriteHeader("Code Generator", "main", imports)
@@ -172,8 +171,12 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 
 const mainTmpl = `
 func main() {
-	failOnError(Run())
-	files, err := {{.Genfunc}}(Design)
+	failOnError(dslengine.Run())
+	roots := make([]interface{}, len(dslengine.Roots))
+	for i, r := range dslengine.Roots {
+		roots[i] = r
+	}
+	files, err := {{.Genfunc}}(roots)
 	failOnError(err)
 	fmt.Println(strings.Join(files, "\n"))
 }

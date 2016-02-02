@@ -34,7 +34,7 @@ var _ = Describe("Generate", func() {
 	})
 
 	JustBeforeEach(func() {
-		files, genErr = genmain.Generate(design.Design)
+		files, genErr = genmain.Generate([]interface{}{design.Design})
 	})
 
 	AfterEach(func() {
