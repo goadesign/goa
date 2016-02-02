@@ -553,8 +553,8 @@ func (cmd *{{$cmdName}}) Run(c *client.Client, args []string) error {
 func (cmd *{{$cmdName}}) RegisterFlags(cc *cobra.Command) {
 {{if .Action.Payload}}	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request JSON body")
 {{end}}{{$params := .Action.QueryParams}}{{if $params}}{{range $name, $param := $params.Type.ToObject}}{{$tmp := tempvar}}{{/*
-*/}}	var {{$tmp}} {{gotypedef $param false "" 1 true}}{{if $param.DefaultValue}} = {{printf "%#v" $param.DefaultValue}}{{end}}
-	cc.Flags().{{flagType $param}}Var(&cmd.{{goify $name true}}, "{{$name}}", {{$tmp}}, "{{$param.Description}}")
+*/}}{{if not $param.DefaultValue}}	var {{$tmp}} {{gotypedef $param false "" 1 true}}
+{{end}}	cc.Flags().{{flagType $param}}Var(&cmd.{{goify $name true}}, "{{$name}}", {{if $param.DefaultValue}}{{printf "%#v" $param.DefaultValue}}{{else}}{{$tmp}}{{end}}, "{{$param.Description}}")
 {{end}}{{end}}{{/*
 */}}{{$headers := .Action.Headers}}{{if $headers}}{{range $name, $header := $headers.Type.ToObject}}{{/*
 */}}
