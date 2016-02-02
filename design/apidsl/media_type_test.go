@@ -296,3 +296,203 @@ var _ = Describe("CollectionOf", func() {
 		})
 	})
 })
+
+var _ = Describe("Example", func() {
+	Context("defined examples in a media type", func() {
+		var mt *MediaTypeDefinition
+
+		BeforeEach(func() {
+			InitDesign()
+
+			mt = MediaType("application/vnd.example+json", func() {
+				Attribute("test1", String, "test1 desc", func() {
+					Example("test1")
+				})
+
+				Attribute("test2", String, "test2 desc", func() {
+					Example(None)
+				})
+
+				Attribute("test3", Integer, "test3 desc", func() {
+					Minimum(1)
+				})
+			})
+		})
+
+		It("produces a media type with examples", func() {
+			dslengine.Run()
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+			Ω(mt).ShouldNot(BeNil())
+			attr := mt.Type.ToObject()["test1"]
+			Ω(attr.Example).Should(Equal("test1"))
+			attr = mt.Type.ToObject()["test2"]
+			Ω(attr.Example).Should(BeNil())
+			attr = mt.Type.ToObject()["test3"]
+			Ω(attr.Example).Should(BeNumerically(">", 0))
+		})
+
+		It("produces media type examples from the linked media type", func() {
+			pmt := MediaType("application/vnd.example.parent+json", func() {
+				Attribute("test1", String, "test1 desc", func() {
+					Example("test1")
+				})
+
+				Attribute("test2", String, "test2 desc", func() {
+					Example(None)
+				})
+
+				Attribute("test3", Integer, "test3 desc", func() {
+					Minimum(1)
+				})
+
+				Attribute("test4", mt, "test4 desc")
+			})
+
+			dslengine.Run()
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+			Ω(mt).ShouldNot(BeNil())
+			attr := mt.Type.ToObject()["test1"]
+			Ω(attr.Example).Should(Equal("test1"))
+			attr = mt.Type.ToObject()["test2"]
+			Ω(attr.Example).Should(BeNil())
+			attr = mt.Type.ToObject()["test3"]
+			Ω(attr.Example).Should(BeNumerically(">", 0))
+
+			Ω(pmt).ShouldNot(BeNil())
+			attr = pmt.Type.ToObject()["test1"]
+			Ω(attr.Example).Should(Equal("test1"))
+			attr = pmt.Type.ToObject()["test2"]
+			Ω(attr.Example).Should(BeNil())
+			attr = pmt.Type.ToObject()["test3"]
+			Ω(attr.Example).Should(BeNumerically(">", 0))
+			attr = pmt.Type.ToObject()["test4"]
+			Ω(attr.Example).ShouldNot(BeNil())
+			attrChild, pass := attr.Example.(map[string]interface{})
+			Ω(pass).Should(BeTrue())
+			Ω(attrChild["test1"]).Should(Equal("test1"))
+			Ω(attrChild["test2"]).Should(BeNil())
+			Ω(attrChild["test3"]).Should(BeNumerically(">", 0))
+		})
+
+		It("produces media type examples from the linked media type collection with custom examples", func() {
+			pmt := MediaType("application/vnd.example.parent+json", func() {
+				Attribute("test1", String, "test1 desc", func() {
+					Example("test1")
+				})
+
+				Attribute("test2", String, "test2 desc", func() {
+					Example(None)
+				})
+
+				Attribute("test3", String, "test3 desc", func() {
+					Pattern("^1$")
+				})
+
+				Attribute("test4", CollectionOf(mt), "test4 desc")
+			})
+
+			dslengine.Run()
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+			Ω(mt).ShouldNot(BeNil())
+			attr := mt.Type.ToObject()["test1"]
+			Ω(attr.Example).Should(Equal("test1"))
+			attr = mt.Type.ToObject()["test2"]
+			Ω(attr.Example).Should(BeNil())
+			attr = mt.Type.ToObject()["test3"]
+			Ω(attr.Example).Should(BeNumerically(">", 0))
+
+			Ω(pmt).ShouldNot(BeNil())
+			attr = pmt.Type.ToObject()["test1"]
+			Ω(attr.Example).Should(Equal("test1"))
+			attr = pmt.Type.ToObject()["test2"]
+			Ω(attr.Example).Should(BeNil())
+			attr = pmt.Type.ToObject()["test3"]
+			Ω(attr.Example).Should(Equal("1"))
+			attr = pmt.Type.ToObject()["test4"]
+			Ω(attr.Example).ShouldNot(BeNil())
+			attrChildren, pass := attr.Example.([]interface{})
+			Ω(pass).Should(BeTrue())
+			Ω(attrChildren).Should(HaveLen(1))
+			attrChild, pass := attrChildren[0].(map[string]interface{})
+			Ω(pass).Should(BeTrue())
+			Ω(attrChild["test1"]).Should(Equal("test1"))
+			Ω(attrChild["test2"]).Should(BeNil())
+			Ω(attrChild["test3"]).Should(BeNumerically(">", 0))
+		})
+
+		It("produces media type examples from the linked media type without custom examples", func() {
+			cmt := MediaType("application/vnd.example.child+json", func() {
+				Attribute("test1", String, "test1 desc")
+			})
+
+			pmt := MediaType("application/vnd.example.parent+json", func() {
+				Attribute("test1", String, "test1 desc", func() {
+					Example("test1")
+				})
+
+				Attribute("test2", String, "test2 desc", func() {
+					Example(None)
+				})
+
+				Attribute("test3", cmt, "test3 desc")
+			})
+
+			dslengine.Run()
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+			Ω(cmt).ShouldNot(BeNil())
+			attr := cmt.Type.ToObject()["test1"]
+			cexample := attr.Example
+			Ω(cexample).ShouldNot(BeEmpty())
+
+			Ω(pmt).ShouldNot(BeNil())
+			attr = pmt.Type.ToObject()["test1"]
+			Ω(attr.Example).Should(Equal("test1"))
+			attr = pmt.Type.ToObject()["test2"]
+			Ω(attr.Example).Should(BeNil())
+			attr = pmt.Type.ToObject()["test3"]
+			Ω(attr.Example).ShouldNot(BeNil())
+			attrChild, pass := attr.Example.(map[string]interface{})
+			Ω(pass).Should(BeTrue())
+			Ω(attrChild["test1"]).ShouldNot(Equal(cexample))
+		})
+
+		It("produces media type examples from the linked media type collection without custom examples", func() {
+			cmt := MediaType("application/vnd.example.child+json", func() {
+				Attribute("test1", String, "test1 desc")
+			})
+
+			pmt := MediaType("application/vnd.example.parent+json", func() {
+				Attribute("test1", String, "test1 desc", func() {
+					Example("test1")
+				})
+
+				Attribute("test2", String, "test2 desc", func() {
+					Example(None)
+				})
+
+				Attribute("test3", CollectionOf(cmt), "test3 desc")
+			})
+
+			dslengine.Run()
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+			Ω(cmt).ShouldNot(BeNil())
+			attr := cmt.Type.ToObject()["test1"]
+			cexample := attr.Example
+			Ω(cexample).ShouldNot(BeEmpty())
+
+			Ω(pmt).ShouldNot(BeNil())
+			attr = pmt.Type.ToObject()["test1"]
+			Ω(attr.Example).Should(Equal("test1"))
+			attr = pmt.Type.ToObject()["test2"]
+			Ω(attr.Example).Should(BeNil())
+			attr = pmt.Type.ToObject()["test3"]
+			Ω(attr.Example).ShouldNot(BeNil())
+			attrChildren, pass := attr.Example.([]interface{})
+			Ω(pass).Should(BeTrue())
+			Ω(len(attrChildren)).Should(BeNumerically(">", 1))
+			attrChild, pass := attrChildren[0].(map[string]interface{})
+			Ω(pass).Should(BeTrue())
+			Ω(attrChild["test1"]).ShouldNot(Equal(cexample))
+		})
+	})
+})

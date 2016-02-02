@@ -23,6 +23,8 @@ type (
 		Metadata dslengine.MetadataDefinition
 		// Optional member default value
 		DefaultValue interface{}
+		// Optional member example value
+		Example interface{}
 		// Optional view used to render Attribute (only applies to media type attributes).
 		View string
 		// List of API versions that use the attribute.
@@ -32,6 +34,9 @@ type (
 		NonZeroAttributes map[string]bool
 		// DSLFunc contains the initialization DSL. This is used for user types.
 		DSLFunc func()
+		// isCustomExample keeps track of whether the example is given by the user, or
+		// should be automatically generated for the user.
+		isCustomExample bool
 	}
 
 	// VersionIterator is the type of functions given to IterateVersions.
@@ -103,13 +108,13 @@ func (a *AttributeDefinition) IsPrimitivePointer(attName string) bool {
 	return false
 }
 
-// Example returns a random instance of the attribute that validates.
-func (a *AttributeDefinition) Example(r *RandomGenerator) interface{} {
+// GenerateExample returns a random instance of the attribute that validates.
+func (a *AttributeDefinition) GenerateExample(r *RandomGenerator) interface{} {
 	randomValidationLengthExample := func(count int) interface{} {
 		if a.Type.IsArray() {
 			res := make([]interface{}, count)
 			for i := 0; i < count; i++ {
-				res[i] = a.Type.ToArray().ElemType.Example(r)
+				res[i] = a.Type.ToArray().ElemType.GenerateExample(r)
 			}
 			return res
 		}
@@ -180,7 +185,87 @@ func (a *AttributeDefinition) Example(r *RandomGenerator) interface{} {
 			return randomValidationLengthExample(count)
 		}
 	}
-	return a.Type.Example(r)
+	return a.Type.GenerateExample(r)
+}
+
+// SetExample sets the custom example. SetExample also handles the case when the user doesn't
+// want any example or any auto-generated example.
+func (a *AttributeDefinition) SetExample(example interface{}) bool {
+	// check whether the user doesn't want any autogen example first:
+	// bypass the compatibility test; we shall avoid generating a random
+	// example in the parent while None is given
+	if exp, ok := example.(Primitive); ok && exp == None {
+		a.Example = nil
+		a.isCustomExample = true
+		return true
+	}
+	if a.Type == nil || a.Type.IsCompatible(example) {
+		a.Example = example
+		a.isCustomExample = true
+		return true
+	}
+	return false
+}
+
+// finalizeExample goes through each Example and conslidate all of the information it knows i.e.
+// a custom example or auto-generate for the user. It also tracks whether we've randomized
+// the entire example; if so, we shall re-generate the random value for Array/Hash
+func (a *AttributeDefinition) finalizeExample(stack []*AttributeDefinition) (interface{}, bool) {
+	if a.Example != nil || a.isCustomExample {
+		return a.Example, a.isCustomExample
+	}
+
+	// note: must traverse each node to finalize the examples unless given
+	switch true {
+	case a.Type.IsArray():
+		example, isCustom := a.Type.ToArray().ElemType.finalizeExample(stack)
+		a.Example, a.isCustomExample = []interface{}{example}, isCustom
+	case a.Type.IsHash():
+		exampleK, isCustomK := a.Type.ToHash().KeyType.finalizeExample(stack)
+		exampleV, isCustomV := a.Type.ToHash().ElemType.finalizeExample(stack)
+		a.Example, a.isCustomExample = map[interface{}]interface{}{exampleK: exampleV}, isCustomK || isCustomV
+	case a.Type.IsObject():
+		// keep track of the type id, in case of a cyclical situation
+		stack = append(stack, a)
+
+		example, hasCustom, isCustom := map[string]interface{}{}, false, false
+		for n, att := range a.Type.ToObject() {
+			// avoid a cyclical dependency
+			if ssize := len(stack); ssize > 0 {
+				aid := ""
+				if mt, ok := att.Type.(*MediaTypeDefinition); ok {
+					aid = mt.Identifier
+				} else if ut, ok := att.Type.(*UserTypeDefinition); ok {
+					aid = ut.TypeName
+				}
+				if aid != "" {
+					for _, sa := range stack[:ssize-1] {
+						said := ""
+						if mt, ok := sa.Type.(*MediaTypeDefinition); ok {
+							said = mt.Identifier
+						} else if ut, ok := sa.Type.(*UserTypeDefinition); ok {
+							said = ut.TypeName
+						}
+						if said == aid {
+							// unable to generate any example and here
+							// we set isCustomExample to avoid touching
+							// this example again i.e. GenerateExample
+							a.isCustomExample = true
+							return a.Example, a.isCustomExample
+						}
+					}
+				}
+			}
+			example[n], isCustom = att.finalizeExample(stack)
+			hasCustom = hasCustom || isCustom
+		}
+		a.Example, a.isCustomExample = example, hasCustom
+	}
+	// while none of the examples is custom, we generate a random value for the entire object
+	if !a.isCustomExample {
+		a.Example = a.GenerateExample(Design.RandomGenerator())
+	}
+	return a.Example, a.isCustomExample
 }
 
 // Merge merges the argument attributes into the target and returns the target overriding existing

@@ -23,6 +23,7 @@ type (
 		Definitions  map[string]*JSONSchema `json:"definitions,omitempty"`
 		Description  string                 `json:"description,omitempty"`
 		DefaultValue interface{}            `json:"defaultValue,omitempty"`
+		Example      interface{}            `json:"example,omitempty"`
 
 		// Hyper schema
 		Media     *JSONMedia  `json:"media,omitempty"`
@@ -380,6 +381,7 @@ func buildAttributeSchema(api *design.APIDefinition, s *JSONSchema, at *design.A
 	s.Merge(TypeSchema(api, at.Type))
 	s.DefaultValue = at.DefaultValue
 	s.Description = at.Description
+	s.Example = at.Example
 	for _, val := range at.Validations {
 		switch actual := val.(type) {
 		case *dslengine.EnumValidationDefinition:
