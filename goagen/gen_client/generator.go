@@ -234,7 +234,6 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		"title":        strings.Title,
 		"flagType":     flagType,
 		"defaultPath":  defaultPath,
-		"toGo":         toGo,
 	}
 	clientPkg, err := codegen.PackagePath(codegen.OutputDir)
 	if err != nil {
@@ -415,15 +414,6 @@ func defaultPath(action *design.ActionDefinition) string {
 	return ""
 }
 
-// toGo returns the literal Go representation of the given value.
-// Can't just use Printf("%#v") because nil gives "<nil>" instead of "nil".
-func toGo(val interface{}) string {
-	if val == nil {
-		return "nil"
-	}
-	return fmt.Sprintf("%#v", val)
-}
-
 const mainTmpl = `
 // PrettyPrint is true if the tool output should be formatted for human consumption.
 var PrettyPrint bool
@@ -562,11 +552,13 @@ func (cmd *{{$cmdName}}) Run(c *client.Client, args []string) error {
 // RegisterFlags registers the command flags with the command line.
 func (cmd *{{$cmdName}}) RegisterFlags(cc *cobra.Command) {
 {{if .Action.Payload}}	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request JSON body")
-{{end}}{{$params := .Action.QueryParams}}{{if $params}}{{range $name, $param := $params.Type.ToObject}}{{/*
-*/}}	cc.Flags().{{flagType $param}}Var(&cmd.{{goify $name true}}, "{{$name}}", {{toGo $param.DefaultValue}}, "{{$param.Description}}")
+{{end}}{{$params := .Action.QueryParams}}{{if $params}}{{range $name, $param := $params.Type.ToObject}}{{$tmp := tempvar}}{{/*
+*/}}	var {{$tmp}} {{gotypedef $param false "" 1 true}}{{if $param.DefaultValue}} = {{printf "%#v" $param.DefaultValue}}{{end}}
+	cc.Flags().{{flagType $param}}Var(&cmd.{{goify $name true}}, "{{$name}}", {{$tmp}}, "{{$param.Description}}")
 {{end}}{{end}}{{/*
 */}}{{$headers := .Action.Headers}}{{if $headers}}{{range $name, $header := $headers.Type.ToObject}}{{/*
-*/}}	cc.Flags().StringVar(&cmd.{{goify $name true}}, "{{$name}}", {{toGo $header.DefaultValue}}, "{{$header.Description}}")
+*/}}
+	cc.Flags().StringVar(&cmd.{{goify $name true}}, "{{$name}}", {{if $header.DefaultValue}}"{{$header.DefaultValue}}"{{else}}""{{end}}, "{{$header.Description}}")
 {{end}}{{end}}}
 `
 
