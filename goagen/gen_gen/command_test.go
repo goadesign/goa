@@ -77,9 +77,7 @@ var _ = Describe("RegisterFlags", func() {
 
 const dummyGenSrc = `package dummy
 
-import "github.com/goadesign/goa/design"
-
-func Generate(api *design.APIDefinition) ([]string, error) {
+func Generate(roots []interface{}) ([]string, error) {
 	return []string{"worked"}, nil
 }
 `
