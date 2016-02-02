@@ -32,7 +32,7 @@ var _ = Describe("Generate", func() {
 	})
 
 	JustBeforeEach(func() {
-		files, genErr = genapp.Generate(design.Design)
+		files, genErr = genapp.Generate([]interface{}{design.Design})
 	})
 
 	AfterEach(func() {

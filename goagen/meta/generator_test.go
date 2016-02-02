@@ -255,9 +255,7 @@ invalid go code
 `
 
 	panickySource = `package foo
-import . "github.com/goadesign/goa/design"
-var Metadata *APIDefinition
-func Generate(api *APIDefinition) ([]string, error) {
+func Generate(roots []interface{}) ([]string, error) {
 	return nil, nil
 }
 
@@ -265,18 +263,14 @@ func init() { panic("kaboom") }
 `
 
 	validSource = `package foo
-import . "github.com/goadesign/goa/design"
-var Metadata *APIDefinition
-func Generate(api *APIDefinition) ([]string, error) {
+func Generate(roots []interface{}) ([]string, error) {
 	return nil, nil
 }
 `
 
 	validSourceTmpl = `package foo
 import "fmt"
-import . "github.com/goadesign/goa/design"
-var Metadata *APIDefinition
-func Generate(api *APIDefinition) ([]string, error) {
+func Generate(roots []interface{}) ([]string, error) {
 	{{range .}}fmt.Println("{{.}}")
 	{{end}}
 	return nil, nil
