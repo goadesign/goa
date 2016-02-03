@@ -36,6 +36,15 @@ DEPEND=\
 
 all: depend lint cyclo goagen test
 
+docs:
+	@git clone https://github.com/goadesign/goa.design
+	@rm -rf goa.design/content/godoc goa.design/public
+	@mdc github.com/goadesign/goa goa.design/content/godoc --exclude goa.design
+	@cd goa.design && hugo --theme goa
+	@rm -rf public
+	@mv goa.design/public public
+	@rm -rf goa.design
+
 depend:
 	@go get $(DEPEND)
 
