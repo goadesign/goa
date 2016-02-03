@@ -13,10 +13,48 @@ import (
 	"github.com/goadesign/goa/dslengine"
 )
 
+// TransformMapKey is the name of the metadata used to specify the key for mapping fields when
+// generating the code that transforms one data structure into another.
+const TransformMapKey = "transform:key"
+
 var (
 	// TempCount holds the value appended to variable names to make them unique.
 	TempCount int
+
+	// Templates used by GoTypeTransform
+	transformT       *template.Template
+	transformArrayT  *template.Template
+	transformHashT   *template.Template
+	transformObjectT *template.Template
 )
+
+// Initialize all templates
+func init() {
+	var err error
+	fn := template.FuncMap{
+		"tabs":               Tabs,
+		"add":                func(a, b int) int { return a + b },
+		"gotyperef":          GoTypeRef,
+		"gotypename":         GoTypeName,
+		"transformAttribute": transformAttribute,
+		"transformArray":     transformArray,
+		"transformHash":      transformHash,
+		"transformObject":    transformObject,
+		"typeName":           typeName,
+	}
+	if transformT, err = template.New("transform").Funcs(fn).Parse(transformTmpl); err != nil {
+		panic(err) // bug
+	}
+	if transformArrayT, err = template.New("transformArray").Funcs(fn).Parse(transformArrayTmpl); err != nil {
+		panic(err) // bug
+	}
+	if transformHashT, err = template.New("transformHash").Funcs(fn).Parse(transformHashTmpl); err != nil {
+		panic(err) // bug
+	}
+	if transformObjectT, err = template.New("transformObject").Funcs(fn).Parse(transformObjectTmpl); err != nil {
+		panic(err) // bug
+	}
+}
 
 // GoTypeDef returns the Go code that defines a Go type which matches the data structure
 // definition (the part that comes after `type foo`).
@@ -249,6 +287,59 @@ func Goify(str string, firstUpper bool) string {
 	return res
 }
 
+// GoTypeTransform produces Go code that initializes the data structure defined by target from an
+// instance of the data structure described by source. The algorithm matches object fields by name
+// or using the value of the "transform:key" attribute metadata when present.
+// The function returns an error if target is not compatible with source (different type, fields of
+// different type etc). It ignores fields in target that don't have a match in source.
+func GoTypeTransform(source, target *design.UserTypeDefinition, targetPkg, funcName string) (string, error) {
+	var impl string
+	var err error
+	switch {
+	case source.IsObject():
+		if !target.IsObject() {
+			return "", fmt.Errorf("source is an object but target type is %s", target.Type.Name())
+		}
+		impl, err = transformObject(source.ToObject(), target.ToObject(), target.TypeName, "source", "target", 1)
+	case source.IsArray():
+		if !target.IsArray() {
+			return "", fmt.Errorf("source is an array but target type is %s", target.Type.Name())
+		}
+		impl, err = transformArray(source.ToArray(), target.ToArray(), "source", "target", 1)
+	case source.IsHash():
+		if !target.IsHash() {
+			return "", fmt.Errorf("source is a hash but target type is %s", target.Type.Name())
+		}
+		impl, err = transformHash(source.ToHash(), target.ToHash(), "source", "target", 1)
+	default:
+		panic("cannot transform primitive types") // bug
+	}
+
+	if err != nil {
+		return "", err
+	}
+	t := GoTypeRef(target, nil, 0)
+	if strings.HasPrefix(t, "*") && len(targetPkg) > 0 {
+		t = fmt.Sprintf("*%s.%s", targetPkg, t[1:])
+	}
+	data := map[string]interface{}{
+		"Name":      funcName,
+		"Source":    source,
+		"Target":    target,
+		"TargetRef": t,
+		"TargetPkg": targetPkg,
+		"Impl":      impl,
+	}
+	return RunTemplate(transformT, data), nil
+}
+
+// GoTypeTransformName generates a valid Go identifer that is adequate for naming the type
+// transform function that creates an instance of the data structure described by target from an
+// instance of the data strucuture described by source.
+func GoTypeTransformName(source, target *design.UserTypeDefinition, suffix string) string {
+	return fmt.Sprintf("%sTo%s%s", Goify(source.TypeName, true), Goify(target.TypeName, true), Goify(suffix, true))
+}
+
 // WriteTabs is a helper function that writes count tabulation characters to buf.
 func WriteTabs(buf *bytes.Buffer, count int) {
 	for i := 0; i < count; i++ {
@@ -289,6 +380,124 @@ func RunTemplate(tmpl *template.Template, data interface{}) string {
 		panic(err) // should never happen, bug if it does.
 	}
 	return b.String()
+}
+
+func transformAttribute(source, target *design.AttributeDefinition, sctx, tctx string, depth int) (string, error) {
+	if source.Type.Kind() != target.Type.Kind() {
+		return "", fmt.Errorf("incompatible attribute types: %s if of type but %s if of type %s",
+			sctx, source.Type.Name(), tctx, target.Type.Name())
+	}
+	switch {
+	case source.Type.IsArray():
+		return transformArray(source.Type.ToArray(), target.Type.ToArray(), sctx, tctx, depth)
+	case source.Type.IsHash():
+		return transformHash(source.Type.ToHash(), target.Type.ToHash(), sctx, tctx, depth)
+	case source.Type.IsObject():
+		return transformObject(source.Type.ToObject(), target.Type.ToObject(), typeName(target), sctx, tctx, depth)
+	default:
+		return fmt.Sprintf("%s%s = %s\n", Tabs(depth), tctx, sctx), nil
+	}
+}
+
+func transformObject(source, target design.Object, targetType, sctx, tctx string, depth int) (string, error) {
+	attributeMap, err := computeMapping(source, target, sctx, tctx)
+	if err != nil {
+		return "", err
+	}
+
+	// First validate that all attributes are compatible - doing that in a template doesn't make
+	// sense.
+	for s, t := range attributeMap {
+		sourceAtt := source[s]
+		targetAtt := target[t]
+		if sourceAtt.Type.Kind() != targetAtt.Type.Kind() {
+			return "", fmt.Errorf("incompatible attribute types: %s.%s is of type %s but %s.%s is of type %s",
+				sctx, source, sourceAtt.Type.Name(), tctx, target, targetAtt.Type.Name())
+		}
+	}
+
+	// We're good - generate
+	data := map[string]interface{}{
+		"AttributeMap": attributeMap,
+		"Source":       source,
+		"Target":       target,
+		"TargetType":   targetType,
+		"SourceCtx":    sctx,
+		"TargetCtx":    tctx,
+		"Depth":        depth,
+	}
+	return RunTemplate(transformObjectT, data), nil
+}
+
+func transformArray(source, target *design.Array, sctx, tctx string, depth int) (string, error) {
+	if source.ElemType.Type.Kind() != target.ElemType.Type.Kind() {
+		return "", fmt.Errorf("incompatible attribute types: %s is an array with elements of type %s but %s is an array with elements of type %s",
+			sctx, source.ElemType.Type.Name(), tctx, target.ElemType.Type.Name())
+	}
+	data := map[string]interface{}{
+		"Source":    source,
+		"Target":    target,
+		"SourceCtx": sctx,
+		"TargetCtx": tctx,
+		"Depth":     depth,
+	}
+	return RunTemplate(transformArrayT, data), nil
+}
+
+func transformHash(source, target *design.Hash, sctx, tctx string, depth int) (string, error) {
+	if source.ElemType.Type.Kind() != target.ElemType.Type.Kind() {
+		return "", fmt.Errorf("incompatible attribute types: %s is a hash with elements of type %s but %s is a hash with elements of type %s",
+			sctx, source.ElemType.Type.Name(), tctx, target.ElemType.Type.Name())
+	}
+	if source.KeyType.Type.Kind() != target.KeyType.Type.Kind() {
+		return "", fmt.Errorf("incompatible attribute types: %s is a hash with keys of type %s but %s is a hash with keys of type %s",
+			sctx, source.KeyType.Type.Name(), tctx, target.KeyType.Type.Name())
+	}
+	data := map[string]interface{}{
+		"Source":    source,
+		"Target":    target,
+		"SourceCtx": sctx,
+		"TargetCtx": tctx,
+		"Depth":     depth,
+	}
+	return RunTemplate(transformHashT, data), nil
+}
+
+// computeMapping returns a map that indexes the target type definition object attributes with the
+// corresponding source type definition object attributes. An attribute is associated with another
+// attribute if their map key match. The map key of an attribute is the value of the TransformMapKey
+// metadata if present, the attribute name otherwise.
+// The function returns an error if the TransformMapKey metadata is malformed (has no value).
+func computeMapping(source, target design.Object, sctx, tctx string) (map[string]string, error) {
+	attributeMap := make(map[string]string)
+	sourceMap := make(map[string]string)
+	targetMap := make(map[string]string)
+	for name, att := range source {
+		key := name
+		if keys, ok := att.Metadata[TransformMapKey]; ok {
+			if len(keys) == 0 {
+				return nil, fmt.Errorf("invalid metadata transform key: missing value on attribte %s of %s", name, sctx)
+			}
+			key = keys[0]
+		}
+		sourceMap[key] = name
+	}
+	for name, att := range target {
+		key := name
+		if keys, ok := att.Metadata[TransformMapKey]; ok {
+			if len(keys) == 0 {
+				return nil, fmt.Errorf("invalid metadata transform key: missing value on attribute %s of %s", name, tctx)
+			}
+			key = keys[0]
+		}
+		targetMap[key] = name
+	}
+	for key, attName := range sourceMap {
+		if targetAtt, ok := targetMap[key]; ok {
+			attributeMap[attName] = targetAtt
+		}
+	}
+	return attributeMap, nil
 }
 
 // reserved golang keywords
@@ -364,3 +573,42 @@ func toSlice(val []interface{}) string {
 	}
 	return fmt.Sprintf("[]interface{}{%s}", strings.Join(elems, ", "))
 }
+
+// typeName returns the type name of the given attribute if it is a named type, empty string otherwise.
+func typeName(att *design.AttributeDefinition) (name string) {
+	if ut, ok := att.Type.(*design.UserTypeDefinition); ok {
+		name = Goify(ut.TypeName, true)
+	} else if mt, ok := att.Type.(*design.MediaTypeDefinition); ok {
+		name = Goify(mt.TypeName, true)
+	}
+	return
+}
+
+const transformTmpl = `func {{.Name}}(source {{gotyperef .Source nil 0}}) (target {{.TargetRef}}) {
+{{.Impl}}}
+`
+
+const transformObjectTmpl = `{{tabs .Depth}}{{.TargetCtx}} = new({{if .TargetType}}{{.TargetType}}{{else}}{{gotyperef .Target.Type .Target.AllRequired 1}}{{end}})
+{{$ctx := .}}{{range $source, $target := .AttributeMap}}{{/*
+*/}}{{$sourceAtt := index $ctx.Source $source}}{{$targetAtt := index $ctx.Target $target}}{{/*
+*/}}{{     if $sourceAtt.Type.IsArray}}{{ transformArray  $sourceAtt.Type.ToArray  $targetAtt.Type.ToArray  (printf "%s.%s" $ctx.SourceCtx $source) (printf "%s.%s" $ctx.TargetCtx $target) $ctx.Depth}}{{/*
+*/}}{{else if $sourceAtt.Type.IsHash}}{{  transformHash   $sourceAtt.Type.ToHash   $targetAtt.Type.ToHash   (printf "%s.%s" $ctx.SourceCtx $source) (printf "%s.%s" $ctx.TargetCtx $target) $ctx.Depth}}{{/*
+*/}}{{else if $sourceAtt.Type.IsObject}}{{transformObject $sourceAtt.Type.ToObject $targetAtt.Type.ToObject (typeName $targetAtt) (printf "%s.%s" $ctx.SourceCtx $source) (printf "%s.%s" $ctx.TargetCtx $target) $ctx.Depth}}{{/*
+*/}}{{else}}{{tabs $ctx.Depth}}{{$ctx.TargetCtx}}.{{$target}} = {{$ctx.SourceCtx}}.{{$source}}
+{{end}}{{end}}`
+
+const transformArrayTmpl = `{{tabs .Depth}}{{.TargetCtx}} = make([]{{gotyperef .Target.ElemType.Type nil 0}}, len({{.SourceCtx}}))
+{{tabs .Depth}}for i, v := range {{.SourceCtx}} {
+{{transformAttribute .Source.ElemType .Target.ElemType (printf "%s[i]" .SourceCtx) (printf "%s[i]" .TargetCtx) (add .Depth 1)}}{{/*
+*/}}{{tabs .Depth}}}
+`
+
+const transformHashTmpl = `{{tabs .Depth}}{{.TargetCtx}} = make(map[{{gotyperef .Target.KeyType.Type nil 0}}]{{gotyperef .Target.ElemType.Type nil 0}}, len({{.SourceCtx}}))
+{{tabs .Depth}}for k, v := range {{.SourceCtx}} {
+{{tabs .Depth}}	var tk {{gotyperef .Target.KeyType.Type nil 0}}
+{{transformAttribute .Source.KeyType .Target.KeyType "k" "tk" (add .Depth 1)}}{{/*
+*/}}{{tabs .Depth}}	var tv {{gotyperef .Target.ElemType.Type nil 0}}
+{{transformAttribute .Source.ElemType .Target.ElemType "v" "tv" (add .Depth 1)}}{{/*
+*/}}{{tabs .Depth}}	{{.TargetCtx}}[tk] = tv
+{{tabs .Depth}}}
+`
