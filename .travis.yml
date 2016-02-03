@@ -21,3 +21,5 @@ deploy:
   bucket: artifacts.goa.design
   skip_cleanup: true
   acl: public-read
+  local_dir: public
+  upload_dir: public
