@@ -274,7 +274,7 @@ func InvalidFormatError(ctx, target string, format Format, formatError, err erro
 func InvalidPatternError(ctx, target string, pattern string, err error) error {
 	terr := TypedError{
 		ID: ErrInvalidPattern,
-		Mesg: fmt.Sprintf("%s must be match the regexp %#v but got value %#v",
+		Mesg: fmt.Sprintf("%s must match the regexp %#v but got value %#v",
 			ctx, pattern, target),
 	}
 	return ReportError(err, &terr)
