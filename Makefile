@@ -18,6 +18,7 @@ DEPEND=\
 	github.com/go-swagger/go-swagger \
 	github.com/goadesign/goa.design/mdc \
 	github.com/goadesign/goa-cellar \
+	github.com/goadesign/godoc2md \
 	github.com/goadesign/middleware \
 	github.com/golang/lint/golint \
 	github.com/julienschmidt/httprouter \
