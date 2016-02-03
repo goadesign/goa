@@ -489,7 +489,7 @@ var _ = Describe("Example", func() {
 			Ω(attr.Example).ShouldNot(BeNil())
 			attrChildren, pass := attr.Example.([]interface{})
 			Ω(pass).Should(BeTrue())
-			Ω(len(attrChildren)).Should(BeNumerically(">", 1))
+			Ω(len(attrChildren)).Should(BeNumerically(">", 0))
 			attrChild, pass := attrChildren[0].(map[string]interface{})
 			Ω(pass).Should(BeTrue())
 			Ω(attrChild["test1"]).ShouldNot(Equal(cexample))

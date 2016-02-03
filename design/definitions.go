@@ -1,10 +1,7 @@
 package design
 
 import (
-	"time"
-
 	"github.com/goadesign/goa/dslengine"
-	regen "github.com/zach-klippenstein/goregen"
 )
 
 type (
@@ -110,80 +107,8 @@ func (a *AttributeDefinition) IsPrimitivePointer(attName string) bool {
 
 // GenerateExample returns a random instance of the attribute that validates.
 func (a *AttributeDefinition) GenerateExample(r *RandomGenerator) interface{} {
-	randomValidationLengthExample := func(count int) interface{} {
-		if a.Type.IsArray() {
-			res := make([]interface{}, count)
-			for i := 0; i < count; i++ {
-				res[i] = a.Type.ToArray().ElemType.GenerateExample(r)
-			}
-			return res
-		}
-		return r.faker.Characters(count)
-	}
-
-	randomLengthExample := func(validExample func(res float64) bool) interface{} {
-		if a.Type.Kind() == IntegerKind {
-			res := r.Int()
-			for !validExample(float64(res)) {
-				res = r.Int()
-			}
-			return res
-		}
-		res := r.Float64()
-		for !validExample(res) {
-			res = r.Float64()
-		}
-		return res
-	}
-
-	for _, v := range a.Validations {
-		switch actual := v.(type) {
-		case *dslengine.EnumValidationDefinition:
-			count := len(actual.Values)
-			i := r.Int() % count
-			return actual.Values[i]
-		case *dslengine.FormatValidationDefinition:
-			if res, ok := map[string]interface{}{
-				"email":     r.faker.Email(),
-				"hostname":  r.faker.DomainName() + "." + r.faker.DomainSuffix(),
-				"date-time": time.Now().Format(time.RFC3339),
-				"ipv4":      r.faker.IPv4Address().String(),
-				"ipv6":      r.faker.IPv6Address().String(),
-				"uri":       r.faker.URL(),
-				"mac": func() string {
-					res, err := regen.Generate(`([0-9A-F]{2}-){5}[0-9A-F]{2}`)
-					if err != nil {
-						return "12-34-56-78-9A-BC"
-					}
-					return res
-				}(),
-				"cidr":   "192.168.100.14/24",
-				"regexp": r.faker.Characters(3) + ".*",
-			}[actual.Format]; ok {
-				return res
-			}
-			panic("unknown format") // bug
-		case *dslengine.PatternValidationDefinition:
-			res, err := regen.Generate(actual.Pattern)
-			if err != nil {
-				return r.faker.Name()
-			}
-			return res
-		case *dslengine.MinimumValidationDefinition:
-			return randomLengthExample(func(res float64) bool {
-				return res >= actual.Min
-			})
-		case *dslengine.MaximumValidationDefinition:
-			return randomLengthExample(func(res float64) bool {
-				return res <= actual.Max
-			})
-		case *dslengine.MinLengthValidationDefinition:
-			count := actual.MinLength + (r.Int() % 3)
-			return randomValidationLengthExample(count)
-		case *dslengine.MaxLengthValidationDefinition:
-			count := actual.MaxLength - (r.Int() % 3)
-			return randomValidationLengthExample(count)
-		}
+	if example := newExampleGenerator(a, r).generate(); example != nil {
+		return example
 	}
 	return a.Type.GenerateExample(r)
 }
