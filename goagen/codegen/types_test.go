@@ -191,3 +191,189 @@ var _ = Describe("code generation", func() {
 
 	})
 })
+
+var _ = Describe("GoTypeTransform", func() {
+	var source, target *UserTypeDefinition
+	var targetPkg, funcName string
+
+	var transform string
+	var transformErr error
+
+	BeforeEach(func() {
+		InitDesign()
+	})
+
+	JustBeforeEach(func() {
+		err := dslengine.Run()
+		Ω(err).ShouldNot(HaveOccurred())
+		transform, transformErr = codegen.GoTypeTransform(source, target, targetPkg, funcName)
+	})
+
+	Context("transforming simple objects", func() {
+		const attName = "att"
+		BeforeEach(func() {
+			source = Type("Source", func() {
+				Attribute(attName)
+			})
+			target = Type("Target", func() {
+				Attribute(attName)
+			})
+			funcName = "Transform"
+		})
+
+		It("generates a simple assignment", func() {
+			Ω(transform).Should(Equal(`func Transform(source *Source) (target *Target) {
+	target = new(Target)
+	target.att = source.att
+	return
+}
+`))
+		})
+	})
+
+	Context("transforming objects with attributes with map key metadata", func() {
+		const mapKey = "key"
+		BeforeEach(func() {
+			source = Type("Source", func() {
+				Attribute("foo", func() {
+					Metadata(codegen.TransformMapKey, mapKey)
+				})
+			})
+			target = Type("Target", func() {
+				Attribute("bar", func() {
+					Metadata(codegen.TransformMapKey, mapKey)
+				})
+			})
+			funcName = "Transform"
+		})
+
+		It("generates a simple assignment", func() {
+			Ω(transform).Should(Equal(`func Transform(source *Source) (target *Target) {
+	target = new(Target)
+	target.bar = source.foo
+	return
+}
+`))
+		})
+	})
+
+	Context("transforming objects with array attributes", func() {
+		const attName = "att"
+		BeforeEach(func() {
+			source = Type("Source", func() {
+				Attribute(attName, ArrayOf(Integer))
+			})
+			target = Type("Target", func() {
+				Attribute(attName, ArrayOf(Integer))
+			})
+			funcName = "Transform"
+		})
+
+		It("generates a simple assignment", func() {
+			Ω(transform).Should(Equal(`func Transform(source *Source) (target *Target) {
+	target = new(Target)
+	target.att = make([]int, len(source.att))
+	for i, v := range source.att {
+		target.att[i] = source.att[i]
+	}
+	return
+}
+`))
+		})
+	})
+
+	Context("transforming objects with hash attributes", func() {
+		const attName = "att"
+		BeforeEach(func() {
+			elem := Type("elem", func() {
+				Attribute("foo", Integer)
+				Attribute("bar")
+			})
+			source = Type("Source", func() {
+				Attribute(attName, HashOf(String, elem))
+			})
+			target = Type("Target", func() {
+				Attribute(attName, HashOf(String, elem))
+			})
+			funcName = "Transform"
+		})
+
+		It("generates a simple assignment", func() {
+			Ω(transform).Should(Equal(`func Transform(source *Source) (target *Target) {
+	target = new(Target)
+	target.att = make(map[string]*Elem, len(source.att))
+	for k, v := range source.att {
+		var tk string
+		tk = k
+		var tv *Elem
+		tv = new(Elem)
+		tv.bar = v.bar
+		tv.foo = v.foo
+		target.att[tk] = tv
+	}
+	return
+}
+`))
+		})
+	})
+
+	Context("transforming objects with recursive attributes", func() {
+		const attName = "att"
+		BeforeEach(func() {
+			inner := Type("inner", func() {
+				Attribute("foo", Integer)
+			})
+			outer := Type("outer", func() {
+				Attribute("in", inner)
+			})
+			array := Type("array", func() {
+				Attribute("elem", ArrayOf(outer))
+			})
+			hash := Type("hash", func() {
+				Attribute("elem", HashOf(outer, outer))
+			})
+			source = Type("Source", func() {
+				Attribute("outer", outer)
+				Attribute("array", array)
+				Attribute("hash", hash)
+			})
+			target = Type("Target", func() {
+				Attribute("outer", outer)
+				Attribute("array", array)
+				Attribute("hash", hash)
+			})
+			funcName = "Transform"
+		})
+
+		It("generates the proper assignments", func() {
+			Ω(transform).Should(Equal(`func Transform(source *Source) (target *Target) {
+	target = new(Target)
+	target.array = new(Array)
+	target.array.elem = make([]*Outer, len(source.array.elem))
+	for i, v := range source.array.elem {
+		target.array.elem[i] = new(Outer)
+		target.array.elem[i].in = new(Inner)
+		target.array.elem[i].in.foo = source.array.elem[i].in.foo
+	}
+	target.hash = new(Hash)
+	target.hash.elem = make(map[*Outer]*Outer, len(source.hash.elem))
+	for k, v := range source.hash.elem {
+		var tk *Outer
+		tk = new(Outer)
+		tk.in = new(Inner)
+		tk.in.foo = k.in.foo
+		var tv *Outer
+		tv = new(Outer)
+		tv.in = new(Inner)
+		tv.in.foo = v.in.foo
+		target.hash.elem[tk] = tv
+	}
+	target.outer = new(Outer)
+	target.outer.in = new(Inner)
+	target.outer.in.foo = source.outer.in.foo
+	return
+}
+`))
+		})
+	})
+})
