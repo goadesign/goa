@@ -21,5 +21,6 @@ deploy:
   bucket: artifacts.goa.design
   local-dir: public/godoc/goa
   upload-dir: public/godoc/goa
+  skip-cleanup: true
   on:
     repo: goadesign/goa
