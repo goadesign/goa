@@ -27,6 +27,7 @@ DEPEND=\
 	github.com/onsi/ginkgo \
 	github.com/onsi/ginkgo/ginkgo \
 	github.com/onsi/gomega \
+	github.com/spf13/hugo \
 	github.com/zach-klippenstein/goregen \
 	golang.org/x/tools/cmd/cover \
  	golang.org/x/tools/cmd/goimports \
