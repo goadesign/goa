@@ -338,6 +338,7 @@ var _ = Describe("GoTypeTransform", func() {
 				Attribute("array", array)
 				Attribute("hash", hash)
 			})
+			funcName = "Transform"
 		})
 
 		It("generates the proper assignments", func() {
