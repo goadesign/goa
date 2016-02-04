@@ -116,10 +116,7 @@ func (a *AttributeDefinition) GenerateExample(r *RandomGenerator) interface{} {
 // SetExample sets the custom example. SetExample also handles the case when the user doesn't
 // want any example or any auto-generated example.
 func (a *AttributeDefinition) SetExample(example interface{}) bool {
-	// check whether the user doesn't want any autogen example first:
-	// bypass the compatibility test; we shall avoid generating a random
-	// example in the parent while None is given
-	if exp, ok := example.(Primitive); ok && exp == None {
+	if example == nil {
 		a.Example = nil
 		a.isCustomExample = true
 		return true
@@ -156,6 +153,7 @@ func (a *AttributeDefinition) finalizeExample(stack []*AttributeDefinition) (int
 		example, hasCustom, isCustom := map[string]interface{}{}, false, false
 		for n, att := range a.Type.ToObject() {
 			// avoid a cyclical dependency
+			isCyclical := false
 			if ssize := len(stack); ssize > 0 {
 				aid := ""
 				if mt, ok := att.Type.(*MediaTypeDefinition); ok {
@@ -165,23 +163,25 @@ func (a *AttributeDefinition) finalizeExample(stack []*AttributeDefinition) (int
 				}
 				if aid != "" {
 					for _, sa := range stack[:ssize-1] {
-						said := ""
 						if mt, ok := sa.Type.(*MediaTypeDefinition); ok {
-							said = mt.Identifier
+							isCyclical = mt.Identifier == aid
 						} else if ut, ok := sa.Type.(*UserTypeDefinition); ok {
-							said = ut.TypeName
+							isCyclical = ut.TypeName == aid
 						}
-						if said == aid {
-							// unable to generate any example and here
-							// we set isCustomExample to avoid touching
-							// this example again i.e. GenerateExample
-							a.isCustomExample = true
-							return a.Example, a.isCustomExample
+						if isCyclical {
+							break
 						}
 					}
 				}
 			}
-			example[n], isCustom = att.finalizeExample(stack)
+			if !isCyclical {
+				example[n], isCustom = att.finalizeExample(stack)
+			} else {
+				// unable to generate any example and here we set
+				// isCustom to avoid touching this example again
+				// i.e. GenerateExample in the end of this func
+				example[n], isCustom = nil, true
+			}
 			hasCustom = hasCustom || isCustom
 		}
 		a.Example, a.isCustomExample = example, hasCustom

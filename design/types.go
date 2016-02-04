@@ -133,8 +133,6 @@ const (
 	UserTypeKind
 	// MediaTypeKind represents a media type.
 	MediaTypeKind
-	// NoneKind represents a nil
-	NoneKind
 )
 
 const (
@@ -156,9 +154,6 @@ const (
 
 	// Any is the type for an arbitrary JSON value (interface{} in Go).
 	Any = Primitive(AnyKind)
-
-	// None is the type to ignore some value
-	None = Primitive(NoneKind)
 )
 
 // DataType implementation
@@ -181,8 +176,6 @@ func (p Primitive) Name() string {
 		return "date"
 	case Any:
 		return "any"
-	case None:
-		return ""
 	default:
 		panic("unknown primitive type") // bug
 	}
