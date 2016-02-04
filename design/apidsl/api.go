@@ -36,14 +36,12 @@ import (
 //		BaseParams(func() {			// Common parameters to all API actions
 //			Param("param")
 //		})
-//		Consumes("application/xml", "text/xml", func() {
-//			Package("github.com/raphael/goa-middleware/encoding/xml")
-//		})
+//		Consumes("application/xml", "text/xml") // Built-in encoders and decoders
 //		Consumes("application/json")
-//		Produces("application/vnd.golang.gob", func() {
-//			Package("github.com/raphael/goa-middleware/encoding/gob")
+//		Produces("application/gob")
+//		Produces("application/json", func() {   // Custom encoder
+//			Package("github.com/goadesign/encoding/json")
 //		})
-//		Produces("application/json")
 //		ResponseTemplate("static", func() {	// Response template for use by actions
 //			Description("description")
 //			Status(404)
