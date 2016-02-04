@@ -20,7 +20,7 @@ deploy:
     secure: JRgLO+aCMRgMEQHujG9Xjxez6CmTiSxE14dNGc+iG16jcgUjmRnyY1adNcp/gxzmi274qRC8OYT10+NVNVRl4lK7HTtCcWuCWOI3N1o77RZqNA+e2k4GrNrsAmfnlbUu2Eg8XCrlQfctwJmN6058oQ8r/hdq36JUk0xDPgA8hws=
   bucket: artifacts.goa.design
   local-dir: public/godoc/goa
-  upload-dir: public/godoc/goa
+  upload-dir: godoc/goa
   skip-cleanup: true
   acl: public-read
   on:
