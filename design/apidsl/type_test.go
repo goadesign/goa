@@ -24,7 +24,6 @@ var _ = Describe("Type", func() {
 	JustBeforeEach(func() {
 		Type(name, dsl)
 		dslengine.Run()
-		Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 		ut, _ = Design.Types[name]
 	})
 

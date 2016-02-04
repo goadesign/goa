@@ -147,7 +147,12 @@ func (a *APIDefinition) Validate() error {
 		return nil
 	})
 
-	return verr.AsError()
+	err := verr.AsError()
+	if err == nil {
+		// *ValidationErrors(nil) != error(nil)
+		return nil
+	}
+	return err
 }
 
 func (a *APIDefinition) validateContact(verr *dslengine.ValidationErrors) {
@@ -374,11 +379,18 @@ func (a *ActionDefinition) ValidateParams(version *APIVersionDefinition) *dsleng
 	return verr.AsError()
 }
 
+// validated keeps track of validated attributes to handle cyclical definitions.
+var validated = make(map[*AttributeDefinition]bool)
+
 // Validate tests whether the attribute definition is consistent: required fields exist.
 // Since attributes are unaware of their context, additional context information can be provided
 // to be used in error messages.
 // The parent definition context is automatically added to error messages.
 func (a *AttributeDefinition) Validate(ctx string, parent dslengine.Definition) *dslengine.ValidationErrors {
+	if validated[a] {
+		return nil
+	}
+	validated[a] = true
 	verr := new(dslengine.ValidationErrors)
 	if a.Type == nil {
 		verr.Add(parent, "attribute type is nil")
