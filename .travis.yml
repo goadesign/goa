@@ -23,5 +23,6 @@ deploy:
   upload-dir: godoc/goa
   skip-cleanup: true
   acl: public-read
+  cache-control: no-cache
   on:
     repo: goadesign/goa
