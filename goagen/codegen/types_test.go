@@ -224,7 +224,7 @@ var _ = Describe("GoTypeTransform", func() {
 		It("generates a simple assignment", func() {
 			Ω(transform).Should(Equal(`func Transform(source *Source) (target *Target) {
 	target = new(Target)
-	target.att = source.att
+	target.Att = source.Att
 }
 `))
 		})
@@ -249,7 +249,7 @@ var _ = Describe("GoTypeTransform", func() {
 		It("generates a simple assignment", func() {
 			Ω(transform).Should(Equal(`func Transform(source *Source) (target *Target) {
 	target = new(Target)
-	target.bar = source.foo
+	target.Bar = source.Foo
 }
 `))
 		})
@@ -270,9 +270,9 @@ var _ = Describe("GoTypeTransform", func() {
 		It("generates a simple assignment", func() {
 			Ω(transform).Should(Equal(`func Transform(source *Source) (target *Target) {
 	target = new(Target)
-	target.att = make([]int, len(source.att))
-	for i, v := range source.att {
-		target.att[i] = source.att[i]
+	target.Att = make([]int, len(source.Att))
+	for i, v := range source.Att {
+		target.Att[i] = source.Att[i]
 	}
 }
 `))
@@ -298,15 +298,15 @@ var _ = Describe("GoTypeTransform", func() {
 		It("generates a simple assignment", func() {
 			Ω(transform).Should(Equal(`func Transform(source *Source) (target *Target) {
 	target = new(Target)
-	target.att = make(map[string]*Elem, len(source.att))
-	for k, v := range source.att {
+	target.Att = make(map[string]*Elem, len(source.Att))
+	for k, v := range source.Att {
 		var tk string
 		tk = k
 		var tv *Elem
 		tv = new(Elem)
-		tv.bar = v.bar
-		tv.foo = v.foo
-		target.att[tk] = tv
+		tv.Bar = v.Bar
+		tv.Foo = v.Foo
+		target.Att[tk] = tv
 	}
 }
 `))
@@ -344,29 +344,29 @@ var _ = Describe("GoTypeTransform", func() {
 		It("generates the proper assignments", func() {
 			Ω(transform).Should(Equal(`func Transform(source *Source) (target *Target) {
 	target = new(Target)
-	target.array = new(Array)
-	target.array.elem = make([]*Outer, len(source.array.elem))
-	for i, v := range source.array.elem {
-		target.array.elem[i] = new(Outer)
-		target.array.elem[i].in = new(Inner)
-		target.array.elem[i].in.foo = source.array.elem[i].in.foo
+	target.Array = new(Array)
+	target.Array.Elem = make([]*Outer, len(source.Array.Elem))
+	for i, v := range source.Array.Elem {
+		target.Array.Elem[i] = new(Outer)
+		target.Array.Elem[i].In = new(Inner)
+		target.Array.Elem[i].In.Foo = source.Array.Elem[i].In.Foo
 	}
-	target.hash = new(Hash)
-	target.hash.elem = make(map[*Outer]*Outer, len(source.hash.elem))
-	for k, v := range source.hash.elem {
+	target.Hash = new(Hash)
+	target.Hash.Elem = make(map[*Outer]*Outer, len(source.Hash.Elem))
+	for k, v := range source.Hash.Elem {
 		var tk *Outer
 		tk = new(Outer)
-		tk.in = new(Inner)
-		tk.in.foo = k.in.foo
+		tk.In = new(Inner)
+		tk.In.Foo = k.In.Foo
 		var tv *Outer
 		tv = new(Outer)
-		tv.in = new(Inner)
-		tv.in.foo = v.in.foo
-		target.hash.elem[tk] = tv
+		tv.In = new(Inner)
+		tv.In.Foo = v.In.Foo
+		target.Hash.Elem[tk] = tv
 	}
-	target.outer = new(Outer)
-	target.outer.in = new(Inner)
-	target.outer.in.foo = source.outer.in.foo
+	target.Outer = new(Outer)
+	target.Outer.In = new(Inner)
+	target.Outer.In.Foo = source.Outer.In.Foo
 }
 `))
 		})
