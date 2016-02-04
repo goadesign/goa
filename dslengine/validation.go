@@ -30,10 +30,19 @@ func (verr *ValidationErrors) Merge(err *ValidationErrors) {
 }
 
 // Add adds a validation error to the target.
-// Add "flattens" validation errors so that the recorded errors are never ValidationErrors
-// themselves.
 func (verr *ValidationErrors) Add(def Definition, format string, vals ...interface{}) {
-	err := fmt.Errorf(format, vals...)
+	verr.AddError(def, fmt.Errorf(format, vals...))
+}
+
+// AddError adds a validation error to the target.
+// AddError "flattens" validation errors so that the recorded errors are never ValidationErrors
+// themselves.
+func (verr *ValidationErrors) AddError(def Definition, err error) {
+	if v, ok := err.(*ValidationErrors); ok {
+		verr.Errors = append(verr.Errors, v.Errors...)
+		verr.Definitions = append(verr.Definitions, v.Definitions...)
+		return
+	}
 	verr.Errors = append(verr.Errors, err)
 	verr.Definitions = append(verr.Definitions, def)
 }
