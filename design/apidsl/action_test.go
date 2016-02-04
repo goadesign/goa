@@ -32,15 +32,13 @@ var _ = Describe("Action", func() {
 		}
 	})
 
-	Context("with only a name", func() {
+	Context("with only a name and a route", func() {
 		BeforeEach(func() {
 			name = "foo"
 		})
 
 		It("produces an invalid action", func() {
-			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
-			Ω(action).ShouldNot(BeNil())
-			Ω(action.Validate(Design.APIVersionDefinition)).Should(HaveOccurred())
+			Ω(dslengine.Errors).Should(HaveOccurred())
 		})
 	})
 
@@ -184,6 +182,7 @@ var _ = Describe("Payload", func() {
 			InitDesign()
 			Resource("foo", func() {
 				Action("bar", func() {
+					Routing(GET(""))
 					Payload(func() {
 						Member("name")
 						Required("name")
@@ -210,6 +209,7 @@ var _ = Describe("Payload", func() {
 			InitDesign()
 			Resource("foo", func() {
 				Action("bar", func() {
+					Routing(GET(""))
 					Payload(ArrayOf(Integer))
 				})
 			})
@@ -237,6 +237,7 @@ var _ = Describe("Payload", func() {
 			InitDesign()
 			Resource("foo", func() {
 				Action("bar", func() {
+					Routing(GET(""))
 					Payload(HashOf(String, Integer))
 				})
 			})
