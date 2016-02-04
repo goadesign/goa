@@ -12,7 +12,7 @@ import (
 
 // Attribute implements the attribute definition DSL. An attribute describes a data structure
 // recursively. Attributes are used for describing request headers, parameters and payloads -
-// response bodies and headers - media types and types. An attribute definition is recursive:
+// response bodies and headers - media types	 and types. An attribute definition is recursive:
 // attributes may include other attributes. At the basic level an attribute has a name,
 // a type and optionally a default value and validation rules. The type of an attribute can be one of:
 //
@@ -78,8 +78,12 @@ func Attribute(name string, args ...interface{}) {
 	var parent *design.AttributeDefinition
 	if at, ok := attributeDefinition(false); ok {
 		parent = at
-	} else if mt, ok := mediaTypeDefinition(true); ok {
+	} else if mt, ok := mediaTypeDefinition(false); ok {
 		parent = mt.AttributeDefinition
+	} else if c, ok := dslengine.CurrentDefinition().(design.ContainerDefinition); ok {
+		parent = c.Attribute()
+	} else {
+		dslengine.IncompatibleDSL(dslengine.Caller())
 	}
 
 	if parent != nil {

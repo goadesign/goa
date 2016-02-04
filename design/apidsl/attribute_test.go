@@ -8,6 +8,52 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+// TestCD is a test container definition.
+type TestCD struct {
+	*AttributeDefinition
+}
+
+// Attribute returns a dummy attribute.
+func (t *TestCD) Attribute() *AttributeDefinition {
+	return t.AttributeDefinition
+}
+
+// DSL implements Source
+func (t *TestCD) DSL() func() {
+	return func() {
+		Attribute("foo")
+	}
+}
+
+// Context implement Definition
+func (t *TestCD) Context() string {
+	return "test"
+}
+
+// IterateSets implement Root
+func (t *TestCD) IterateSets(it dslengine.SetIterator) {
+	it([]dslengine.Definition{t})
+}
+
+var _ = Describe("ContainerDefinition", func() {
+	var att *AttributeDefinition
+	BeforeEach(func() {
+		InitDesign()
+		att = &AttributeDefinition{Type: Object{}}
+		t := &TestCD{AttributeDefinition: att}
+		dslengine.Roots = append(dslengine.Roots, t)
+	})
+
+	JustBeforeEach(func() {
+		err := dslengine.Run()
+		Ω(err).ShouldNot(HaveOccurred())
+	})
+
+	It("contains attributes", func() {
+		Ω(dslengine.Roots[1].(*TestCD).Attribute()).Should(Equal(att))
+	})
+})
+
 var _ = Describe("Attribute", func() {
 	var name string
 	var dataType interface{}
@@ -18,7 +64,6 @@ var _ = Describe("Attribute", func() {
 
 	BeforeEach(func() {
 		InitDesign()
-		dslengine.Errors = nil
 		name = ""
 		dataType = nil
 		description = ""

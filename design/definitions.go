@@ -34,6 +34,13 @@ type (
 		DSLFunc func()
 	}
 
+	// ContainerDefinition defines a generic container definition that contains attributes.
+	// This makes it possible for plugins to use attributes in their own data structures.
+	ContainerDefinition interface {
+		// Attribute returns the container definition embedded attribute.
+		Attribute() *AttributeDefinition
+	}
+
 	// VersionIterator is the type of functions given to IterateVersions.
 	VersionIterator func(v *APIVersionDefinition) error
 )
