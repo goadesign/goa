@@ -585,7 +585,8 @@ func typeName(att *design.AttributeDefinition) (name string) {
 }
 
 const transformTmpl = `func {{.Name}}(source {{gotyperef .Source nil 0}}) (target {{.TargetRef}}) {
-{{.Impl}}}
+{{.Impl}}	return
+}
 `
 
 const transformObjectTmpl = `{{tabs .Depth}}{{.TargetCtx}} = new({{if .TargetType}}{{.TargetType}}{{else}}{{gotyperef .Target.Type .Target.AllRequired 1}}{{end}})

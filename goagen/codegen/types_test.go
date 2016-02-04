@@ -225,6 +225,7 @@ var _ = Describe("GoTypeTransform", func() {
 			Ω(transform).Should(Equal(`func Transform(source *Source) (target *Target) {
 	target = new(Target)
 	target.att = source.att
+	return
 }
 `))
 		})
@@ -250,6 +251,7 @@ var _ = Describe("GoTypeTransform", func() {
 			Ω(transform).Should(Equal(`func Transform(source *Source) (target *Target) {
 	target = new(Target)
 	target.bar = source.foo
+	return
 }
 `))
 		})
@@ -274,6 +276,7 @@ var _ = Describe("GoTypeTransform", func() {
 	for i, v := range source.att {
 		target.att[i] = source.att[i]
 	}
+	return
 }
 `))
 		})
@@ -308,6 +311,7 @@ var _ = Describe("GoTypeTransform", func() {
 		tv.foo = v.foo
 		target.att[tk] = tv
 	}
+	return
 }
 `))
 		})
@@ -367,6 +371,7 @@ var _ = Describe("GoTypeTransform", func() {
 	target.outer = new(Outer)
 	target.outer.in = new(Inner)
 	target.outer.in.foo = source.outer.in.foo
+	return
 }
 `))
 		})
