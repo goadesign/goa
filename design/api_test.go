@@ -54,7 +54,7 @@ var _ = Describe("SupportingPackages", func() {
 		It("returns all encoders", func() {
 			Ω(pkgs).Should(HaveLen(2))
 			Ω(pkgs).Should(HaveKeyWithValue("xml", []string{"application/xml"}))
-			Ω(pkgs).Should(HaveKeyWithValue("github.com/goadesign/middleware/encoding/msgpack", []string{"application/msgpack"}))
+			Ω(pkgs).Should(HaveKeyWithValue("github.com/goadesign/encoding/msgpack", []string{"application/msgpack"}))
 		})
 	})
 
