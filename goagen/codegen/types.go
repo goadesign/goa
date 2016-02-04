@@ -589,7 +589,7 @@ func typeName(att *design.AttributeDefinition) (name string) {
 }
 
 const transformTmpl = `func {{.Name}}(source {{gotyperef .Source nil 0}}) (target {{.TargetRef}}) {
-{{.Impl}}return
+{{.Impl}}	return
 }
 `
 
