@@ -301,17 +301,17 @@ func GoTypeTransform(source, target *design.UserTypeDefinition, targetPkg, funcN
 		if !target.IsObject() {
 			return "", fmt.Errorf("source is an object but target type is %s", target.Type.Name())
 		}
-		impl, err = transformObject(source.ToObject(), target.ToObject(), target.TypeName, "source", "target", 1)
+		impl, err = transformObject(source.ToObject(), target.ToObject(), targetPkg, target.TypeName, "source", "target", 1)
 	case source.IsArray():
 		if !target.IsArray() {
 			return "", fmt.Errorf("source is an array but target type is %s", target.Type.Name())
 		}
-		impl, err = transformArray(source.ToArray(), target.ToArray(), "source", "target", 1)
+		impl, err = transformArray(source.ToArray(), target.ToArray(), targetPkg, "source", "target", 1)
 	case source.IsHash():
 		if !target.IsHash() {
 			return "", fmt.Errorf("source is a hash but target type is %s", target.Type.Name())
 		}
-		impl, err = transformHash(source.ToHash(), target.ToHash(), "source", "target", 1)
+		impl, err = transformHash(source.ToHash(), target.ToHash(), targetPkg, "source", "target", 1)
 	default:
 		panic("cannot transform primitive types") // bug
 	}
@@ -383,24 +383,24 @@ func RunTemplate(tmpl *template.Template, data interface{}) string {
 	return b.String()
 }
 
-func transformAttribute(source, target *design.AttributeDefinition, sctx, tctx string, depth int) (string, error) {
+func transformAttribute(source, target *design.AttributeDefinition, targetPkg, sctx, tctx string, depth int) (string, error) {
 	if source.Type.Kind() != target.Type.Kind() {
 		return "", fmt.Errorf("incompatible attribute types: %s if of type but %s if of type %s",
 			sctx, source.Type.Name(), tctx, target.Type.Name())
 	}
 	switch {
 	case source.Type.IsArray():
-		return transformArray(source.Type.ToArray(), target.Type.ToArray(), sctx, tctx, depth)
+		return transformArray(source.Type.ToArray(), target.Type.ToArray(), targetPkg, sctx, tctx, depth)
 	case source.Type.IsHash():
-		return transformHash(source.Type.ToHash(), target.Type.ToHash(), sctx, tctx, depth)
+		return transformHash(source.Type.ToHash(), target.Type.ToHash(), targetPkg, sctx, tctx, depth)
 	case source.Type.IsObject():
-		return transformObject(source.Type.ToObject(), target.Type.ToObject(), typeName(target), sctx, tctx, depth)
+		return transformObject(source.Type.ToObject(), target.Type.ToObject(), targetPkg, typeName(target), sctx, tctx, depth)
 	default:
 		return fmt.Sprintf("%s%s = %s\n", Tabs(depth), tctx, sctx), nil
 	}
 }
 
-func transformObject(source, target design.Object, targetType, sctx, tctx string, depth int) (string, error) {
+func transformObject(source, target design.Object, targetPkg, targetType, sctx, tctx string, depth int) (string, error) {
 	attributeMap, err := computeMapping(source, target, sctx, tctx)
 	if err != nil {
 		return "", err
@@ -422,6 +422,7 @@ func transformObject(source, target design.Object, targetType, sctx, tctx string
 		"AttributeMap": attributeMap,
 		"Source":       source,
 		"Target":       target,
+		"TargetPkg":    targetPkg,
 		"TargetType":   targetType,
 		"SourceCtx":    sctx,
 		"TargetCtx":    tctx,
@@ -430,7 +431,7 @@ func transformObject(source, target design.Object, targetType, sctx, tctx string
 	return RunTemplate(transformObjectT, data), nil
 }
 
-func transformArray(source, target *design.Array, sctx, tctx string, depth int) (string, error) {
+func transformArray(source, target *design.Array, targetPkg, sctx, tctx string, depth int) (string, error) {
 	if source.ElemType.Type.Kind() != target.ElemType.Type.Kind() {
 		return "", fmt.Errorf("incompatible attribute types: %s is an array with elements of type %s but %s is an array with elements of type %s",
 			sctx, source.ElemType.Type.Name(), tctx, target.ElemType.Type.Name())
@@ -438,6 +439,7 @@ func transformArray(source, target *design.Array, sctx, tctx string, depth int) 
 	data := map[string]interface{}{
 		"Source":    source,
 		"Target":    target,
+		"TargetPkg": targetPkg,
 		"SourceCtx": sctx,
 		"TargetCtx": tctx,
 		"Depth":     depth,
@@ -445,7 +447,7 @@ func transformArray(source, target *design.Array, sctx, tctx string, depth int) 
 	return RunTemplate(transformArrayT, data), nil
 }
 
-func transformHash(source, target *design.Hash, sctx, tctx string, depth int) (string, error) {
+func transformHash(source, target *design.Hash, targetPkg, sctx, tctx string, depth int) (string, error) {
 	if source.ElemType.Type.Kind() != target.ElemType.Type.Kind() {
 		return "", fmt.Errorf("incompatible attribute types: %s is a hash with elements of type %s but %s is a hash with elements of type %s",
 			sctx, source.ElemType.Type.Name(), tctx, target.ElemType.Type.Name())
@@ -457,6 +459,7 @@ func transformHash(source, target *design.Hash, sctx, tctx string, depth int) (s
 	data := map[string]interface{}{
 		"Source":    source,
 		"Target":    target,
+		"TargetPkg": targetPkg,
 		"SourceCtx": sctx,
 		"TargetCtx": tctx,
 		"Depth":     depth,
@@ -589,28 +592,28 @@ const transformTmpl = `func {{.Name}}(source {{gotyperef .Source nil 0}}) (targe
 {{.Impl}}}
 `
 
-const transformObjectTmpl = `{{tabs .Depth}}{{.TargetCtx}} = new({{if .TargetType}}{{.TargetType}}{{else}}{{gotyperef .Target.Type .Target.AllRequired 1}}{{end}})
+const transformObjectTmpl = `{{tabs .Depth}}{{.TargetCtx}} = new({{if .TargetPkg}}{{.TargetPkg}}.{{end}}{{if .TargetType}}{{.TargetType}}{{else}}{{gotyperef .Target.Type .Target.AllRequired 1}}{{end}})
 {{$ctx := .}}{{range $source, $target := .AttributeMap}}{{/*
 */}}{{$sourceAtt := index $ctx.Source $source}}{{$targetAtt := index $ctx.Target $target}}{{/*
 */}}{{$source := goify $source true}}{{$target := goify $target true}}{{/*
-*/}}{{     if $sourceAtt.Type.IsArray}}{{ transformArray  $sourceAtt.Type.ToArray  $targetAtt.Type.ToArray  (printf "%s.%s" $ctx.SourceCtx $source) (printf "%s.%s" $ctx.TargetCtx $target) $ctx.Depth}}{{/*
-*/}}{{else if $sourceAtt.Type.IsHash}}{{  transformHash   $sourceAtt.Type.ToHash   $targetAtt.Type.ToHash   (printf "%s.%s" $ctx.SourceCtx $source) (printf "%s.%s" $ctx.TargetCtx $target) $ctx.Depth}}{{/*
-*/}}{{else if $sourceAtt.Type.IsObject}}{{transformObject $sourceAtt.Type.ToObject $targetAtt.Type.ToObject (typeName $targetAtt) (printf "%s.%s" $ctx.SourceCtx $source) (printf "%s.%s" $ctx.TargetCtx $target) $ctx.Depth}}{{/*
+*/}}{{     if $sourceAtt.Type.IsArray}}{{ transformArray  $sourceAtt.Type.ToArray  $targetAtt.Type.ToArray  $ctx.TargetPkg (printf "%s.%s" $ctx.SourceCtx $source) (printf "%s.%s" $ctx.TargetCtx $target) $ctx.Depth}}{{/*
+*/}}{{else if $sourceAtt.Type.IsHash}}{{  transformHash   $sourceAtt.Type.ToHash   $targetAtt.Type.ToHash   $ctx.TargetPkg (printf "%s.%s" $ctx.SourceCtx $source) (printf "%s.%s" $ctx.TargetCtx $target) $ctx.Depth}}{{/*
+*/}}{{else if $sourceAtt.Type.IsObject}}{{transformObject $sourceAtt.Type.ToObject $targetAtt.Type.ToObject $ctx.TargetPkg (typeName $targetAtt) (printf "%s.%s" $ctx.SourceCtx $source) (printf "%s.%s" $ctx.TargetCtx $target) $ctx.Depth}}{{/*
 */}}{{else}}{{tabs $ctx.Depth}}{{$ctx.TargetCtx}}.{{$target}} = {{$ctx.SourceCtx}}.{{$source}}
 {{end}}{{end}}`
 
 const transformArrayTmpl = `{{tabs .Depth}}{{.TargetCtx}} = make([]{{gotyperef .Target.ElemType.Type nil 0}}, len({{.SourceCtx}}))
 {{tabs .Depth}}for i, v := range {{.SourceCtx}} {
-{{transformAttribute .Source.ElemType .Target.ElemType (printf "%s[i]" .SourceCtx) (printf "%s[i]" .TargetCtx) (add .Depth 1)}}{{/*
+{{transformAttribute .Source.ElemType .Target.ElemType .TargetPkg (printf "%s[i]" .SourceCtx) (printf "%s[i]" .TargetCtx) (add .Depth 1)}}{{/*
 */}}{{tabs .Depth}}}
 `
 
 const transformHashTmpl = `{{tabs .Depth}}{{.TargetCtx}} = make(map[{{gotyperef .Target.KeyType.Type nil 0}}]{{gotyperef .Target.ElemType.Type nil 0}}, len({{.SourceCtx}}))
 {{tabs .Depth}}for k, v := range {{.SourceCtx}} {
 {{tabs .Depth}}	var tk {{gotyperef .Target.KeyType.Type nil 0}}
-{{transformAttribute .Source.KeyType .Target.KeyType "k" "tk" (add .Depth 1)}}{{/*
+{{transformAttribute .Source.KeyType .Target.KeyType .TargetPkg "k" "tk" (add .Depth 1)}}{{/*
 */}}{{tabs .Depth}}	var tv {{gotyperef .Target.ElemType.Type nil 0}}
-{{transformAttribute .Source.ElemType .Target.ElemType "v" "tv" (add .Depth 1)}}{{/*
+{{transformAttribute .Source.ElemType .Target.ElemType .TargetPkg "v" "tv" (add .Depth 1)}}{{/*
 */}}{{tabs .Depth}}	{{.TargetCtx}}[tk] = tv
 {{tabs .Depth}}}
 `
