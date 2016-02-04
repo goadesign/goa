@@ -34,6 +34,7 @@ func init() {
 	fn := template.FuncMap{
 		"tabs":               Tabs,
 		"add":                func(a, b int) int { return a + b },
+		"goify":              Goify,
 		"gotyperef":          GoTypeRef,
 		"gotypename":         GoTypeName,
 		"transformAttribute": transformAttribute,
