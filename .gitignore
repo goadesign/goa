@@ -5,3 +5,4 @@ goagen/goagen
 **/autogen
 vendor
 _integration_tests/*/**/*.*
+public/

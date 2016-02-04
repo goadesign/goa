@@ -16,7 +16,10 @@ DEPEND=\
 	github.com/PuerkitoBio/purell \
 	github.com/asaskevich/govalidator \
 	github.com/go-swagger/go-swagger \
+	github.com/goadesign/encoding \
+	github.com/goadesign/goa.design/mdc \
 	github.com/goadesign/goa-cellar \
+	github.com/goadesign/godoc2md \
 	github.com/goadesign/middleware \
 	github.com/golang/lint/golint \
 	github.com/julienschmidt/httprouter \
@@ -25,6 +28,7 @@ DEPEND=\
 	github.com/onsi/ginkgo \
 	github.com/onsi/ginkgo/ginkgo \
 	github.com/onsi/gomega \
+	github.com/spf13/hugo \
 	github.com/zach-klippenstein/goregen \
 	golang.org/x/tools/cmd/cover \
  	golang.org/x/tools/cmd/goimports \
@@ -35,6 +39,15 @@ DEPEND=\
 .PHONY: goagen
 
 all: depend lint cyclo goagen test
+
+docs:
+	@git clone https://github.com/goadesign/goa.design
+	@rm -rf goa.design/content/godoc goa.design/public
+	@mdc github.com/goadesign/goa goa.design/content/godoc --exclude goa.design
+	@cd goa.design && hugo --theme goa
+	@rm -rf public
+	@mv goa.design/public public
+	@rm -rf goa.design
 
 depend:
 	@go get $(DEPEND)
