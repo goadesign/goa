@@ -86,7 +86,6 @@ func (eg *exampleGenerator) hasLengthValidation() bool {
 }
 
 // generateValidatedLengthExample generates a random size array of examples based on what's given.
-// generateValidatedLengthExample returns false when the example cannot be determined.
 func (eg *exampleGenerator) generateValidatedLengthExample() interface{} {
 	minlength, maxlength := math.Inf(1), math.Inf(-1)
 	for _, v := range eg.a.Validations {
@@ -109,7 +108,7 @@ func (eg *exampleGenerator) generateValidatedLengthExample() interface{} {
 	} else if minlength == maxlength {
 		count = int(minlength)
 	} else {
-		panic("Validation: Minimum > Maximum")
+		panic("Validation: MinLength > MaxLength")
 	}
 	if !eg.a.Type.IsArray() {
 		return eg.r.faker.Characters(count)
@@ -174,7 +173,7 @@ func (eg *exampleGenerator) generateFormatExample() interface{} {
 			}[actual.Format]; ok {
 				return res
 			}
-			panic("Validation: unknown format:" + actual.Format) // bug
+			panic("Validation: unknown format '" + actual.Format + "'") // bug
 		}
 	}
 	return nil
