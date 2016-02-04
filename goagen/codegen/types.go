@@ -34,6 +34,7 @@ func init() {
 	fn := template.FuncMap{
 		"tabs":               Tabs,
 		"add":                func(a, b int) int { return a + b },
+		"goify":              Goify,
 		"gotyperef":          GoTypeRef,
 		"gotypename":         GoTypeName,
 		"transformAttribute": transformAttribute,
@@ -591,6 +592,7 @@ const transformTmpl = `func {{.Name}}(source {{gotyperef .Source nil 0}}) (targe
 const transformObjectTmpl = `{{tabs .Depth}}{{.TargetCtx}} = new({{if .TargetType}}{{.TargetType}}{{else}}{{gotyperef .Target.Type .Target.AllRequired 1}}{{end}})
 {{$ctx := .}}{{range $source, $target := .AttributeMap}}{{/*
 */}}{{$sourceAtt := index $ctx.Source $source}}{{$targetAtt := index $ctx.Target $target}}{{/*
+*/}}{{$source := goify $source true}}{{$target := goify $target true}}{{/*
 */}}{{     if $sourceAtt.Type.IsArray}}{{ transformArray  $sourceAtt.Type.ToArray  $targetAtt.Type.ToArray  (printf "%s.%s" $ctx.SourceCtx $source) (printf "%s.%s" $ctx.TargetCtx $target) $ctx.Depth}}{{/*
 */}}{{else if $sourceAtt.Type.IsHash}}{{  transformHash   $sourceAtt.Type.ToHash   $targetAtt.Type.ToHash   (printf "%s.%s" $ctx.SourceCtx $source) (printf "%s.%s" $ctx.TargetCtx $target) $ctx.Depth}}{{/*
 */}}{{else if $sourceAtt.Type.IsObject}}{{transformObject $sourceAtt.Type.ToObject $targetAtt.Type.ToObject (typeName $targetAtt) (printf "%s.%s" $ctx.SourceCtx $source) (printf "%s.%s" $ctx.TargetCtx $target) $ctx.Depth}}{{/*
