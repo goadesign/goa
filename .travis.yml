@@ -22,5 +22,6 @@ deploy:
   local-dir: public/godoc/goa
   upload-dir: public/godoc/goa
   skip-cleanup: true
+  acl: public-read
   on:
     repo: goadesign/goa
