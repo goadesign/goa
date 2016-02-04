@@ -62,7 +62,7 @@ func (r *routeInfo) DifferentWildcards(other *routeInfo) (res [][2]*wildCardInfo
 
 // Validate tests whether the API definition is consistent: all resource parent names resolve to
 // an actual resource.
-func (a *APIDefinition) Validate() *dslengine.ValidationErrors {
+func (a *APIDefinition) Validate() error {
 	verr := new(dslengine.ValidationErrors)
 	if a.BaseParams != nil {
 		verr.Merge(a.BaseParams.Validate("base parameters", a))
@@ -387,27 +387,20 @@ func (a *AttributeDefinition) Validate(ctx string, parent dslengine.Definition) 
 	if ctx != "" {
 		ctx += " - "
 	}
-	o, isObject := a.Type.(Object)
-	for _, v := range a.Validations {
-		if r, ok := v.(*dslengine.RequiredValidationDefinition); ok {
-			if !isObject {
-				verr.Add(parent, `%sonly objects may define a "Required" validation`, ctx)
+	o := a.Type.ToObject()
+	if o != nil {
+		for _, n := range a.AllRequired() {
+			found := false
+			for an := range o {
+				if n == an {
+					found = true
+					break
+				}
 			}
-			for _, n := range r.Names {
-				var found bool
-				for an := range o {
-					if n == an {
-						found = true
-						break
-					}
-				}
-				if !found {
-					verr.Add(parent, `%srequired field "%s" does not exist`, ctx, n)
-				}
+			if !found {
+				verr.Add(parent, `%srequired field "%s" does not exist`, ctx, n)
 			}
 		}
-	}
-	if isObject {
 		for n, att := range o {
 			ctx = fmt.Sprintf("field %s", n)
 			verr.Merge(att.Validate(ctx, a))

@@ -143,11 +143,14 @@ func (m MultiError) Error() string {
 }
 
 // Error returns the underlying error message.
-func (de *Error) Error() (res string) {
+func (de *Error) Error() string {
 	if err := de.GoError; err != nil {
-		res = fmt.Sprintf("[%s:%d] %s", de.File, de.Line, err.Error())
+		if de.File == "" {
+			return err.Error()
+		}
+		return fmt.Sprintf("[%s:%d] %s", de.File, de.Line, err.Error())
 	}
-	return
+	return ""
 }
 
 // IncompatibleDSL should be called by DSL functions when they are
@@ -224,12 +227,19 @@ func runSet(set DefinitionSet) error {
 
 // validateSet runs the validation on all the set definitions that define one.
 func validateSet(set DefinitionSet) error {
+	errors := &ValidationErrors{}
 	for _, def := range set {
 		if validate, ok := def.(Validate); ok {
-			validate.Validate()
+			if err := validate.Validate(); err != nil {
+				errors.AddError(def, err)
+			}
 		}
 	}
-	return nil
+	err := errors.AsError()
+	if err != nil {
+		Errors = append(Errors, &Error{GoError: err})
+	}
+	return err
 }
 
 // finalizeSet runs the validation on all the set definitions that define one.
