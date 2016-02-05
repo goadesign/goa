@@ -52,9 +52,9 @@ type (
 		// IsCompatible checks whether val has a Go type that is
 		// compatible with the data type.
 		IsCompatible(val interface{}) bool
-		// Example returns a random value for the given data type.
+		// GenerateExample returns a random value for the given data type.
 		// If the data type has validations then the example value validates them.
-		Example(r *RandomGenerator) interface{}
+		GenerateExample(r *RandomGenerator) interface{}
 	}
 
 	// DataStructure is the interface implemented by all data structure types.
@@ -260,8 +260,8 @@ func (p Primitive) IsCompatible(val interface{}) (ok bool) {
 	return
 }
 
-// Example returns an instance of the given data type.
-func (p Primitive) Example(r *RandomGenerator) interface{} {
+// GenerateExample returns an instance of the given data type.
+func (p Primitive) GenerateExample(r *RandomGenerator) interface{} {
 	switch p {
 	case Boolean:
 		return r.Bool()
@@ -313,12 +313,12 @@ func (a *Array) IsCompatible(val interface{}) bool {
 	return k == reflect.Array || k == reflect.Slice
 }
 
-// Example produces a random array value.
-func (a *Array) Example(r *RandomGenerator) interface{} {
+// GenerateExample produces a random array value.
+func (a *Array) GenerateExample(r *RandomGenerator) interface{} {
 	count := r.Int()%3 + 1
 	res := make([]interface{}, count)
 	for i := 0; i < count; i++ {
-		res[i] = a.ElemType.Type.Example(r)
+		res[i] = a.ElemType.Type.GenerateExample(r)
 	}
 	return res
 }
@@ -363,11 +363,11 @@ func (o Object) IsCompatible(val interface{}) bool {
 	return k == reflect.Map || k == reflect.Struct
 }
 
-// Example returns a random value of the object.
-func (o Object) Example(r *RandomGenerator) interface{} {
+// GenerateExample returns a random value of the object.
+func (o Object) GenerateExample(r *RandomGenerator) interface{} {
 	res := make(map[string]interface{})
 	for n, att := range o {
-		res[n] = att.Type.Example(r)
+		res[n] = att.Type.GenerateExample(r)
 	}
 	return res
 }
@@ -405,12 +405,12 @@ func (h *Hash) IsCompatible(val interface{}) bool {
 	return k == reflect.Map
 }
 
-// Example returns a random hash value.
-func (h *Hash) Example(r *RandomGenerator) interface{} {
+// GenerateExample returns a random hash value.
+func (h *Hash) GenerateExample(r *RandomGenerator) interface{} {
 	count := r.Int()%3 + 1
 	res := make(map[interface{}]interface{})
 	for i := 0; i < count; i++ {
-		res[h.KeyType.Type.Example(r)] = h.ElemType.Type.Example(r)
+		res[h.KeyType.Type.GenerateExample(r)] = h.ElemType.Type.GenerateExample(r)
 	}
 	return res
 }
@@ -509,6 +509,8 @@ func (u *UserTypeDefinition) Finalize() {
 			u.AttributeDefinition.Inherit(bat)
 		}
 	}
+
+	u.finalizeExample(nil)
 }
 
 // NewMediaTypeDefinition creates a media type definition but does not

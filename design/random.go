@@ -39,7 +39,7 @@ func NewRandomGenerator(seed string) *RandomGenerator {
 
 // Int produces a random integer.
 func (r *RandomGenerator) Int() int {
-	return r.rand.Int() % 1000
+	return r.rand.Int()
 }
 
 // String produces a random string.
