@@ -62,7 +62,7 @@ func (r *routeInfo) DifferentWildcards(other *routeInfo) (res [][2]*wildCardInfo
 
 // Validate tests whether the API definition is consistent: all resource parent names resolve to
 // an actual resource.
-func (a *APIDefinition) Validate() *dslengine.ValidationErrors {
+func (a *APIDefinition) Validate() error {
 	verr := new(dslengine.ValidationErrors)
 	if a.BaseParams != nil {
 		verr.Merge(a.BaseParams.Validate("base parameters", a))
@@ -147,7 +147,12 @@ func (a *APIDefinition) Validate() *dslengine.ValidationErrors {
 		return nil
 	})
 
-	return verr.AsError()
+	err := verr.AsError()
+	if err == nil {
+		// *ValidationErrors(nil) != error(nil)
+		return nil
+	}
+	return err
 }
 
 func (a *APIDefinition) validateContact(verr *dslengine.ValidationErrors) {
@@ -374,11 +379,18 @@ func (a *ActionDefinition) ValidateParams(version *APIVersionDefinition) *dsleng
 	return verr.AsError()
 }
 
+// validated keeps track of validated attributes to handle cyclical definitions.
+var validated = make(map[*AttributeDefinition]bool)
+
 // Validate tests whether the attribute definition is consistent: required fields exist.
 // Since attributes are unaware of their context, additional context information can be provided
 // to be used in error messages.
 // The parent definition context is automatically added to error messages.
 func (a *AttributeDefinition) Validate(ctx string, parent dslengine.Definition) *dslengine.ValidationErrors {
+	if validated[a] {
+		return nil
+	}
+	validated[a] = true
 	verr := new(dslengine.ValidationErrors)
 	if a.Type == nil {
 		verr.Add(parent, "attribute type is nil")
@@ -387,27 +399,20 @@ func (a *AttributeDefinition) Validate(ctx string, parent dslengine.Definition) 
 	if ctx != "" {
 		ctx += " - "
 	}
-	o, isObject := a.Type.(Object)
-	for _, v := range a.Validations {
-		if r, ok := v.(*dslengine.RequiredValidationDefinition); ok {
-			if !isObject {
-				verr.Add(parent, `%sonly objects may define a "Required" validation`, ctx)
+	o := a.Type.ToObject()
+	if o != nil {
+		for _, n := range a.AllRequired() {
+			found := false
+			for an := range o {
+				if n == an {
+					found = true
+					break
+				}
 			}
-			for _, n := range r.Names {
-				var found bool
-				for an := range o {
-					if n == an {
-						found = true
-						break
-					}
-				}
-				if !found {
-					verr.Add(parent, `%srequired field "%s" does not exist`, ctx, n)
-				}
+			if !found {
+				verr.Add(parent, `%srequired field "%s" does not exist`, ctx, n)
 			}
 		}
-	}
-	if isObject {
 		for n, att := range o {
 			ctx = fmt.Sprintf("field %s", n)
 			verr.Merge(att.Validate(ctx, a))

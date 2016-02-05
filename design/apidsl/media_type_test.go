@@ -24,7 +24,6 @@ var _ = Describe("MediaType", func() {
 	JustBeforeEach(func() {
 		mt = MediaType(name, dslFunc)
 		dslengine.Run()
-		Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 	})
 
 	Context("with no dsl and no identifier", func() {
@@ -246,7 +245,12 @@ var _ = Describe("CollectionOf", func() {
 		var col *MediaTypeDefinition
 		BeforeEach(func() {
 			InitDesign()
-			mt := MediaType("application/vnd.example", func() { Attribute("id") })
+			mt := MediaType("application/vnd.example", func() {
+				Attribute("id")
+				View("default", func() {
+					Attribute("id")
+				})
+			})
 			dslengine.Errors = nil
 			col = CollectionOf(mt)
 			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
@@ -269,8 +273,18 @@ var _ = Describe("CollectionOf", func() {
 		var col *MediaTypeDefinition
 		BeforeEach(func() {
 			InitDesign()
-			MediaType("application/vnd.example+json", func() { Attribute("id") })
-			col = MediaType("application/vnd.parent+json", func() { Attribute("mt", CollectionOf("application/vnd.example")) })
+			MediaType("application/vnd.example+json", func() {
+				Attribute("id")
+				View("default", func() {
+					Attribute("id")
+				})
+			})
+			col = MediaType("application/vnd.parent+json", func() {
+				Attribute("mt", CollectionOf("application/vnd.example"))
+				View("default", func() {
+					Attribute("mt")
+				})
+			})
 		})
 
 		JustBeforeEach(func() {

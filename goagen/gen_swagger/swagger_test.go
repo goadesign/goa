@@ -14,13 +14,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// Save cellar example API definition for tests.
-var cellarDesign *APIDefinition
-
-func init() {
-	cellarDesign = Design
-}
-
 // validateSwagger validates that the given swagger object represents a valid Swagger spec.
 func validateSwagger(swagger *genswagger.Swagger) {
 	b, err := json.Marshal(swagger)
@@ -28,9 +21,6 @@ func validateSwagger(swagger *genswagger.Swagger) {
 	doc, err := spec.New(b, "")
 	Ω(err).ShouldNot(HaveOccurred())
 	Ω(doc).ShouldNot(BeNil())
-	// TBD calling the swagger validator below causes Travis to hang...
-	// err = validate.Spec(doc, strfmt.NewFormats())
-	// Ω(err).ShouldNot(HaveOccurred())
 }
 
 var _ = Describe("New", func() {
@@ -400,13 +390,4 @@ var _ = Describe("New", func() {
 			It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
 		})
 	})
-
-	Context("using the cellar example API definition", func() {
-		BeforeEach(func() {
-			Design = cellarDesign
-		})
-
-		It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
-	})
-
 })
