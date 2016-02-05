@@ -319,16 +319,19 @@ var _ = Describe("Example", func() {
 
 		It("produces a media type with examples", func() {
 			mt := MediaType("application/vnd.example+json", func() {
-				Attribute("test1", String, "test1 desc", func() {
-					Example("test1")
+				Attributes(func() {
+					Attribute("test1", String, "test1 desc", func() {
+						Example("test1")
+					})
+					Attribute("test2", String, "test2 desc", func() {
+						NoExample()
+					})
+					Attribute("test3", Integer, "test3 desc", func() {
+						Minimum(1)
+					})
 				})
-
-				Attribute("test2", String, "test2 desc", func() {
-					NoExample()
-				})
-
-				Attribute("test3", Integer, "test3 desc", func() {
-					Minimum(1)
+				View("default", func() {
+					Attribute("test1")
 				})
 			})
 
@@ -348,22 +351,26 @@ var _ = Describe("Example", func() {
 			mt := MediaType("vnd.application/foo", func() {
 				Attributes(func() {
 					Attribute("foo", "vnd.application/bar")
-
 					Attribute("others", Integer, func() {
 						Minimum(3)
 						Maximum(3)
 					})
+				})
+				View("default", func() {
+					Attribute("foo")
 				})
 			})
 
 			mt2 := MediaType("vnd.application/bar", func() {
 				Attributes(func() {
 					Attribute("bar", mt)
-
 					Attribute("others", Integer, func() {
 						Minimum(1)
 						Maximum(2)
 					})
+				})
+				View("default", func() {
+					Attribute("bar")
 				})
 			})
 
@@ -395,33 +402,38 @@ var _ = Describe("Example", func() {
 
 		It("produces media type examples from the linked media type", func() {
 			mt := MediaType("application/vnd.example+json", func() {
-				Attribute("test1", String, "test1 desc", func() {
-					Example("test1")
+				Attributes(func() {
+					Attribute("test1", String, "test1 desc", func() {
+						Example("test1")
+					})
+					Attribute("test2", String, "test2 desc", func() {
+						NoExample()
+					})
+					Attribute("test3", Integer, "test3 desc", func() {
+						Minimum(1)
+					})
 				})
-
-				Attribute("test2", String, "test2 desc", func() {
-					NoExample()
-				})
-
-				Attribute("test3", Integer, "test3 desc", func() {
-					Minimum(1)
+				View("default", func() {
+					Attribute("test1")
 				})
 			})
 
 			pmt := MediaType("application/vnd.example.parent+json", func() {
-				Attribute("test1", String, "test1 desc", func() {
-					Example("test1")
+				Attributes(func() {
+					Attribute("test1", String, "test1 desc", func() {
+						Example("test1")
+					})
+					Attribute("test2", String, "test2 desc", func() {
+						NoExample()
+					})
+					Attribute("test3", Integer, "test3 desc", func() {
+						Minimum(1)
+					})
+					Attribute("test4", mt, "test4 desc")
 				})
-
-				Attribute("test2", String, "test2 desc", func() {
-					NoExample()
+				View("default", func() {
+					Attribute("test1")
 				})
-
-				Attribute("test3", Integer, "test3 desc", func() {
-					Minimum(1)
-				})
-
-				Attribute("test4", mt, "test4 desc")
 			})
 
 			dslengine.Run()
@@ -453,33 +465,38 @@ var _ = Describe("Example", func() {
 
 		It("produces media type examples from the linked media type collection with custom examples", func() {
 			mt := MediaType("application/vnd.example+json", func() {
-				Attribute("test1", String, "test1 desc", func() {
-					Example("test1")
+				Attributes(func() {
+					Attribute("test1", String, "test1 desc", func() {
+						Example("test1")
+					})
+					Attribute("test2", String, "test2 desc", func() {
+						NoExample()
+					})
+					Attribute("test3", Integer, "test3 desc", func() {
+						Minimum(1)
+					})
 				})
-
-				Attribute("test2", String, "test2 desc", func() {
-					NoExample()
-				})
-
-				Attribute("test3", Integer, "test3 desc", func() {
-					Minimum(1)
+				View("default", func() {
+					Attribute("test1")
 				})
 			})
 
 			pmt := MediaType("application/vnd.example.parent+json", func() {
-				Attribute("test1", String, "test1 desc", func() {
-					Example("test1")
+				Attributes(func() {
+					Attribute("test1", String, "test1 desc", func() {
+						Example("test1")
+					})
+					Attribute("test2", String, "test2 desc", func() {
+						NoExample()
+					})
+					Attribute("test3", String, "test3 desc", func() {
+						Pattern("^1$")
+					})
+					Attribute("test4", CollectionOf(mt), "test4 desc")
 				})
-
-				Attribute("test2", String, "test2 desc", func() {
-					NoExample()
+				View("default", func() {
+					Attribute("test1")
 				})
-
-				Attribute("test3", String, "test3 desc", func() {
-					Pattern("^1$")
-				})
-
-				Attribute("test4", CollectionOf(mt), "test4 desc")
 			})
 
 			dslengine.Run()
@@ -514,19 +531,27 @@ var _ = Describe("Example", func() {
 
 		It("produces media type examples from the linked media type without custom examples", func() {
 			mt := MediaType("application/vnd.example.child+json", func() {
-				Attribute("test1", String, "test1 desc")
+				Attributes(func() {
+					Attribute("test1", String, "test1 desc")
+				})
+				View("default", func() {
+					Attribute("test1")
+				})
 			})
 
 			pmt := MediaType("application/vnd.example.parent+json", func() {
-				Attribute("test1", String, "test1 desc", func() {
-					Example("test1")
+				Attributes(func() {
+					Attribute("test1", String, "test1 desc", func() {
+						Example("test1")
+					})
+					Attribute("test2", String, "test2 desc", func() {
+						NoExample()
+					})
+					Attribute("test3", mt, "test3 desc")
 				})
-
-				Attribute("test2", String, "test2 desc", func() {
-					NoExample()
+				View("default", func() {
+					Attribute("test1")
 				})
-
-				Attribute("test3", mt, "test3 desc")
 			})
 
 			dslengine.Run()
@@ -550,19 +575,27 @@ var _ = Describe("Example", func() {
 
 		It("produces media type examples from the linked media type collection without custom examples", func() {
 			mt := MediaType("application/vnd.example.child+json", func() {
-				Attribute("test1", String, "test1 desc")
+				Attributes(func() {
+					Attribute("test1", String, "test1 desc")
+				})
+				View("default", func() {
+					Attribute("test1")
+				})
 			})
 
 			pmt := MediaType("application/vnd.example.parent+json", func() {
-				Attribute("test1", String, "test1 desc", func() {
-					Example("test1")
+				Attributes(func() {
+					Attribute("test1", String, "test1 desc", func() {
+						Example("test1")
+					})
+					Attribute("test2", String, "test2 desc", func() {
+						NoExample()
+					})
+					Attribute("test3", CollectionOf(mt), "test3 desc")
 				})
-
-				Attribute("test2", String, "test2 desc", func() {
-					NoExample()
+				View("default", func() {
+					Attribute("test1")
 				})
-
-				Attribute("test3", CollectionOf(mt), "test3 desc")
 			})
 
 			dslengine.Run()
