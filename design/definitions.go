@@ -1,10 +1,7 @@
 package design
 
 import (
-	"time"
-
 	"github.com/goadesign/goa/dslengine"
-	regen "github.com/zach-klippenstein/goregen"
 )
 
 type (
@@ -23,6 +20,8 @@ type (
 		Metadata dslengine.MetadataDefinition
 		// Optional member default value
 		DefaultValue interface{}
+		// Optional member example value
+		Example interface{}
 		// Optional view used to render Attribute (only applies to media type attributes).
 		View string
 		// List of API versions that use the attribute.
@@ -32,6 +31,9 @@ type (
 		NonZeroAttributes map[string]bool
 		// DSLFunc contains the initialization DSL. This is used for user types.
 		DSLFunc func()
+		// isCustomExample keeps track of whether the example is given by the user, or
+		// should be automatically generated for the user.
+		isCustomExample bool
 	}
 
 	// ContainerDefinition defines a generic container definition that contains attributes.
@@ -110,84 +112,92 @@ func (a *AttributeDefinition) IsPrimitivePointer(attName string) bool {
 	return false
 }
 
-// Example returns a random instance of the attribute that validates.
-func (a *AttributeDefinition) Example(r *RandomGenerator) interface{} {
-	randomValidationLengthExample := func(count int) interface{} {
-		if a.Type.IsArray() {
-			res := make([]interface{}, count)
-			for i := 0; i < count; i++ {
-				res[i] = a.Type.ToArray().ElemType.Example(r)
-			}
-			return res
-		}
-		return r.faker.Characters(count)
+// GenerateExample returns a random instance of the attribute that validates.
+func (a *AttributeDefinition) GenerateExample(r *RandomGenerator) interface{} {
+	if example := newExampleGenerator(a, r).generate(); example != nil {
+		return example
+	}
+	return a.Type.GenerateExample(r)
+}
+
+// SetExample sets the custom example. SetExample also handles the case when the user doesn't
+// want any example or any auto-generated example.
+func (a *AttributeDefinition) SetExample(example interface{}) bool {
+	if example == nil {
+		a.Example = nil
+		a.isCustomExample = true
+		return true
+	}
+	if a.Type == nil || a.Type.IsCompatible(example) {
+		a.Example = example
+		a.isCustomExample = true
+		return true
+	}
+	return false
+}
+
+// finalizeExample goes through each Example and conslidate all of the information it knows i.e.
+// a custom example or auto-generate for the user. It also tracks whether we've randomized
+// the entire example; if so, we shall re-generate the random value for Array/Hash
+func (a *AttributeDefinition) finalizeExample(stack []*AttributeDefinition) (interface{}, bool) {
+	if a.Example != nil || a.isCustomExample {
+		return a.Example, a.isCustomExample
 	}
 
-	randomLengthExample := func(validExample func(res float64) bool) interface{} {
-		if a.Type.Kind() == IntegerKind {
-			res := r.Int()
-			for !validExample(float64(res)) {
-				res = r.Int()
-			}
-			return res
-		}
-		res := r.Float64()
-		for !validExample(res) {
-			res = r.Float64()
-		}
-		return res
-	}
+	// note: must traverse each node to finalize the examples unless given
+	switch true {
+	case a.Type.IsArray():
+		example, isCustom := a.Type.ToArray().ElemType.finalizeExample(stack)
+		a.Example, a.isCustomExample = []interface{}{example}, isCustom
+	case a.Type.IsHash():
+		exampleK, isCustomK := a.Type.ToHash().KeyType.finalizeExample(stack)
+		exampleV, isCustomV := a.Type.ToHash().ElemType.finalizeExample(stack)
+		a.Example, a.isCustomExample = map[interface{}]interface{}{exampleK: exampleV}, isCustomK || isCustomV
+	case a.Type.IsObject():
+		// keep track of the type id, in case of a cyclical situation
+		stack = append(stack, a)
 
-	for _, v := range a.Validations {
-		switch actual := v.(type) {
-		case *dslengine.EnumValidationDefinition:
-			count := len(actual.Values)
-			i := r.Int() % count
-			return actual.Values[i]
-		case *dslengine.FormatValidationDefinition:
-			if res, ok := map[string]interface{}{
-				"email":     r.faker.Email(),
-				"hostname":  r.faker.DomainName() + "." + r.faker.DomainSuffix(),
-				"date-time": time.Now().Format(time.RFC3339),
-				"ipv4":      r.faker.IPv4Address().String(),
-				"ipv6":      r.faker.IPv6Address().String(),
-				"uri":       r.faker.URL(),
-				"mac": func() string {
-					res, err := regen.Generate(`([0-9A-F]{2}-){5}[0-9A-F]{2}`)
-					if err != nil {
-						return "12-34-56-78-9A-BC"
+		example, hasCustom, isCustom := map[string]interface{}{}, false, false
+		for n, att := range a.Type.ToObject() {
+			// avoid a cyclical dependency
+			isCyclical := false
+			if ssize := len(stack); ssize > 0 {
+				aid := ""
+				if mt, ok := att.Type.(*MediaTypeDefinition); ok {
+					aid = mt.Identifier
+				} else if ut, ok := att.Type.(*UserTypeDefinition); ok {
+					aid = ut.TypeName
+				}
+				if aid != "" {
+					for _, sa := range stack[:ssize-1] {
+						if mt, ok := sa.Type.(*MediaTypeDefinition); ok {
+							isCyclical = mt.Identifier == aid
+						} else if ut, ok := sa.Type.(*UserTypeDefinition); ok {
+							isCyclical = ut.TypeName == aid
+						}
+						if isCyclical {
+							break
+						}
 					}
-					return res
-				}(),
-				"cidr":   "192.168.100.14/24",
-				"regexp": r.faker.Characters(3) + ".*",
-			}[actual.Format]; ok {
-				return res
+				}
 			}
-			panic("unknown format") // bug
-		case *dslengine.PatternValidationDefinition:
-			res, err := regen.Generate(actual.Pattern)
-			if err != nil {
-				return r.faker.Name()
+			if !isCyclical {
+				example[n], isCustom = att.finalizeExample(stack)
+			} else {
+				// unable to generate any example and here we set
+				// isCustom to avoid touching this example again
+				// i.e. GenerateExample in the end of this func
+				example[n], isCustom = nil, true
 			}
-			return res
-		case *dslengine.MinimumValidationDefinition:
-			return randomLengthExample(func(res float64) bool {
-				return res >= actual.Min
-			})
-		case *dslengine.MaximumValidationDefinition:
-			return randomLengthExample(func(res float64) bool {
-				return res <= actual.Max
-			})
-		case *dslengine.MinLengthValidationDefinition:
-			count := actual.MinLength + (r.Int() % 3)
-			return randomValidationLengthExample(count)
-		case *dslengine.MaxLengthValidationDefinition:
-			count := actual.MaxLength - (r.Int() % 3)
-			return randomValidationLengthExample(count)
+			hasCustom = hasCustom || isCustom
 		}
+		a.Example, a.isCustomExample = example, hasCustom
 	}
-	return a.Type.Example(r)
+	// while none of the examples is custom, we generate a random value for the entire object
+	if !a.isCustomExample {
+		a.Example = a.GenerateExample(Design.RandomGenerator())
+	}
+	return a.Example, a.isCustomExample
 }
 
 // Merge merges the argument attributes into the target and returns the target overriding existing

@@ -220,6 +220,24 @@ func Default(def interface{}) {
 	}
 }
 
+// Example sets the example of an attribute to be used for the documentation.
+func Example(exp interface{}) {
+	if a, ok := attributeDefinition(true); ok {
+		if pass := a.SetExample(exp); !pass {
+			dslengine.ReportError("example value %#v is incompatible with attribute of type %s",
+				exp, a.Type.Name())
+		}
+	}
+}
+
+// NoExample sets the example of an attribute to be blank for the documentation. It is used when
+// users don't want any custom or auto-generated example
+func NoExample() {
+	if a, ok := attributeDefinition(true); ok {
+		a.SetExample(nil)
+	}
+}
+
 // Enum adds a "enum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor76.
 func Enum(val ...interface{}) {
