@@ -32,7 +32,7 @@ func (eg *exampleGenerator) generate() interface{} {
 		return eg.generateValidatedEnumExample()
 	}
 	// loop until a satisified example is generated
-	hasFormat := eg.hasFormatValidation()
+	hasFormat, hasPattern, hasMinMax := eg.hasFormatValidation(), eg.hasPatternValidation(), eg.hasMinMaxValidation()
 	for {
 		var example interface{}
 		// Format comes first, since it initiates the example
@@ -40,35 +40,21 @@ func (eg *exampleGenerator) generate() interface{} {
 			example = eg.generateFormatExample()
 		}
 		// now validate with the rest of matchers; if not satisified, redo
-		failed := false
-		for _, v := range eg.a.Validations {
-			switch actual := v.(type) {
-			case *dslengine.PatternValidationDefinition:
-				if example == nil {
-					example = eg.generateValidatedPatternExample(actual.Pattern)
-				} else if !eg.checkPatternValidation(example, actual.Pattern) {
-					failed = true
-				}
-			case *dslengine.MinimumValidationDefinition:
-				if example == nil {
-					example = eg.generateValidatedMinValueExample(actual.Min)
-				} else if !eg.checkMinValueValidation(example, actual.Min) {
-					failed = true
-				}
-			case *dslengine.MaximumValidationDefinition:
-				if example == nil {
-					example = eg.generateValidatedMaxValueExample(actual.Max)
-				} else if !eg.checkMaxValueValidation(example, actual.Max) {
-					failed = true
-				}
-			}
-			if failed {
-				break
+		if hasPattern {
+			if example == nil {
+				example = eg.generateValidatedPatternExample()
+			} else if !eg.checkPatternValidation(example) {
+				continue
 			}
 		}
-		if !failed {
-			return example
+		if hasMinMax {
+			if example == nil {
+				example = eg.generateValidatedMinMaxValueExample()
+			} else if !eg.checkMinMaxValueValidation(example) {
+				continue
+			}
 		}
+		return example
 	}
 	return nil
 }
@@ -129,7 +115,7 @@ func (eg *exampleGenerator) hasEnumValidation() bool {
 	return false
 }
 
-// generateValidatedEnumExample returns a random selected enum value,
+// generateValidatedEnumExample returns a random selected enum value.
 func (eg *exampleGenerator) generateValidatedEnumExample() interface{} {
 	for _, v := range eg.a.Validations {
 		if actual, ok := v.(*dslengine.EnumValidationDefinition); ok {
@@ -179,49 +165,115 @@ func (eg *exampleGenerator) generateFormatExample() interface{} {
 	return nil
 }
 
-func (eg *exampleGenerator) checkPatternValidation(example interface{}, pattern string) bool {
-	if re, err := regexp.Compile(pattern); err == nil {
-		return re.MatchString(fmt.Sprint(example))
+func (eg *exampleGenerator) hasPatternValidation() bool {
+	for _, v := range eg.a.Validations {
+		if _, ok := v.(*dslengine.PatternValidationDefinition); ok {
+			return true
+		}
 	}
 	return false
 }
 
-func (eg *exampleGenerator) generateValidatedPatternExample(pattern string) interface{} {
-	example, err := regen.Generate(pattern)
-	if err != nil {
-		return eg.r.faker.Name()
-	}
-	return example
-}
-
-func (eg *exampleGenerator) checkMinValueValidation(example interface{}, min float64) bool {
-	if v, ok := example.(int); ok && float64(v) < min {
-		return false
-	} else if v, ok := example.(float64); ok && v < min {
-		return false
+func (eg *exampleGenerator) checkPatternValidation(example interface{}) bool {
+	for _, v := range eg.a.Validations {
+		if actual, ok := v.(*dslengine.PatternValidationDefinition); ok {
+			re, err := regexp.Compile(actual.Pattern)
+			if err != nil {
+				panic("Validation: invalid pattern '" + actual.Pattern + "'")
+			}
+			if !re.MatchString(fmt.Sprint(example)) {
+				return false
+			}
+		}
 	}
 	return true
 }
 
-func (eg *exampleGenerator) generateValidatedMinValueExample(min float64) interface{} {
-	if eg.a.Type.Kind() == IntegerKind {
-		return int(min) + eg.r.Int()%int(min)
+// generateValidatedPatternExample generates a random value that satisifies the pattern. Note: if
+// multiple patterns are given, only one of them is used. currently, it doesn't support multiple.
+func (eg *exampleGenerator) generateValidatedPatternExample() interface{} {
+	for _, v := range eg.a.Validations {
+		if actual, ok := v.(*dslengine.PatternValidationDefinition); ok {
+			example, err := regen.Generate(actual.Pattern)
+			if err != nil {
+				return eg.r.faker.Name()
+			}
+			return example
+		}
 	}
-	return min + eg.r.Float64()*min
+	return nil
 }
 
-func (eg *exampleGenerator) checkMaxValueValidation(example interface{}, max float64) bool {
-	if v, ok := example.(int); ok && float64(v) > max {
-		return false
-	} else if v, ok := example.(float64); ok && v > max {
-		return false
+func (eg *exampleGenerator) hasMinMaxValidation() bool {
+	for _, v := range eg.a.Validations {
+		if _, ok := v.(*dslengine.MinimumValidationDefinition); ok {
+			return true
+		}
+		if _, ok := v.(*dslengine.MaximumValidationDefinition); ok {
+			return true
+		}
+	}
+	return false
+}
+
+func (eg *exampleGenerator) checkMinMaxValueValidation(example interface{}) bool {
+	for _, v := range eg.a.Validations {
+		switch actual := v.(type) {
+		case *dslengine.MinimumValidationDefinition:
+			if v, ok := example.(int); ok && float64(v) < actual.Min {
+				return false
+			} else if v, ok := example.(float64); ok && v < actual.Min {
+				return false
+			}
+		case *dslengine.MaximumValidationDefinition:
+			if v, ok := example.(int); ok && float64(v) > actual.Max {
+				return false
+			} else if v, ok := example.(float64); ok && v > actual.Max {
+				return false
+			}
+		}
 	}
 	return true
 }
 
-func (eg *exampleGenerator) generateValidatedMaxValueExample(max float64) interface{} {
-	if eg.a.Type.Kind() == IntegerKind {
-		return eg.r.Int() % int(max)
+func (eg *exampleGenerator) generateValidatedMinMaxValueExample() interface{} {
+	min, max := math.Inf(1), math.Inf(-1)
+	for _, v := range eg.a.Validations {
+		switch actual := v.(type) {
+		case *dslengine.MinimumValidationDefinition:
+			min = math.Min(min, float64(actual.Min))
+		case *dslengine.MaximumValidationDefinition:
+			max = math.Max(max, float64(actual.Max))
+		}
 	}
-	return eg.r.Float64() * max
+	if math.IsInf(min, 1) {
+		if eg.a.Type.Kind() == IntegerKind {
+			if max == 0 {
+				return int(max) - eg.r.Int()%3
+			}
+			return eg.r.Int() % int(max)
+		}
+		return eg.r.Float64() * max
+	} else if math.IsInf(max, -1) {
+		if eg.a.Type.Kind() == IntegerKind {
+			if min == 0 {
+				return int(min) + eg.r.Int()%3
+			}
+			return int(min) + eg.r.Int()%int(min)
+		}
+		return min + eg.r.Float64()*min
+	} else if min < max {
+		if eg.a.Type.Kind() == IntegerKind {
+			return int(min) + eg.r.Int()%int(max-min)
+		}
+		return min + eg.r.Float64()*(max-min)
+	} else if min == max {
+		if eg.a.Type.Kind() == IntegerKind {
+			return int(min)
+		}
+		return min
+	} else {
+		panic("Validation: Min > Max")
+	}
+	return nil
 }
