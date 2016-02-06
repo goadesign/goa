@@ -273,6 +273,8 @@ func (p Primitive) GenerateExample(r *RandomGenerator) interface{} {
 		return r.String()
 	case DateTime:
 		return r.DateTime()
+	case Any:
+		return nil
 	default:
 		panic("unknown primitive type") // bug
 	}
