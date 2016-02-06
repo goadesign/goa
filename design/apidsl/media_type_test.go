@@ -214,12 +214,12 @@ var _ = Describe("Duplicate media types", func() {
 		InitDesign()
 		dslengine.Errors = nil
 		mt = MediaType(id, dslFunc)
-		Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 		duplicate = MediaType(id, dslFunc)
 	})
 
 	It("produces an error", func() {
 		Ω(dslengine.Errors).Should(HaveOccurred())
+		Ω(dslengine.Errors.Error()).Should(ContainSubstring("is defined twice"))
 	})
 
 	Context("with a response definition using the duplicate", func() {
