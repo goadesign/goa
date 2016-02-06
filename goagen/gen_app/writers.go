@@ -167,10 +167,13 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 
 // Execute writes the code for the context types to the writer.
 func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
-	if err := w.ExecuteTemplate("context", ctxT, nil, data); err != nil {
+	fn := template.FuncMap{
+		"hasAPIVersion": hasAPIVersion,
+	}
+	if err := w.ExecuteTemplate("context", ctxT, fn, data); err != nil {
 		return err
 	}
-	fn := template.FuncMap{
+	fn = template.FuncMap{
 		"newCoerceData":  newCoerceData,
 		"arrayAttribute": arrayAttribute,
 	}
@@ -328,6 +331,24 @@ func arrayAttribute(a *design.AttributeDefinition) *design.AttributeDefinition {
 	return a.Type.(*design.Array).ElemType
 }
 
+// hasAPIVersion returns true if the given attribute has a child attribute whose goified name is
+// "APIVersion". This is used to not generate the built in APIVersion when such a field exists.
+func hasAPIVersion(params *design.AttributeDefinition) bool {
+	if params == nil {
+		return false
+	}
+	o := params.Type.ToObject()
+	if o == nil {
+		return false
+	}
+	for n := range o {
+		if codegen.Goify(n, true) == "APIVersion" {
+			return true
+		}
+	}
+	return false
+}
+
 const (
 	// ctxT generates the code for the context data type.
 	// template input: *ContextTemplateData
@@ -337,7 +358,7 @@ type {{.Name}} struct {
 {{if .Params}}{{$ctx := .}}{{range $name, $att := .Params.Type.ToObject}}{{/*
 */}}	{{goify $name true}} {{if and $att.Type.IsPrimitive ($ctx.Params.IsPrimitivePointer $name)}}*{{end}}{{gotyperef .Type nil 0}}
 {{end}}{{end}}{{if .Payload}}	Payload {{gotyperef .Payload nil 0}}
-{{end}}{{if not .Version.IsDefault}}	Version string
+{{end}}{{if and (not .Version.IsDefault) (not (hasAPIVersion .Params))}}	APIVersion string
 {{end}}}
 `
 	// coerceT generates the code that coerces the generic deserialized
@@ -485,7 +506,7 @@ func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Control
 	mux := service.{{if not .Version.IsDefault}}Version("{{.Version.Version}}").ServeMux(){{else}}ServeMux(){{end}}
 {{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
 		ctx, err := New{{.Context}}(c)
-{{if not $ver.IsDefault}}		ctx.Version = service.Version("{{$ver.Version}}").VersionName()
+{{if not $ver.IsDefault}}		ctx.APIVersion = service.Version("{{$ver.Version}}").VersionName()
 {{end}}{{if .Payload}}		ctx.Payload = ctx.RawPayload().({{gotyperef .Payload nil 1}})
 {{end}}		if err != nil {
 			return goa.NewBadRequestError(err)
