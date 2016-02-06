@@ -22,6 +22,7 @@ var _ = Describe("Project", func() {
 
 	Context("with a media type with a default and a tiny view", func() {
 		BeforeEach(func() {
+			GeneratedMediaTypes = nil
 			mt = &MediaTypeDefinition{
 				UserTypeDefinition: &UserTypeDefinition{
 					AttributeDefinition: &AttributeDefinition{
@@ -98,6 +99,27 @@ var _ = Describe("Project", func() {
 				Ω(att.Type.Kind()).Should(Equal(StringKind))
 			})
 		})
+
+		Context("with a versioned media type", func() {
+
+			BeforeEach(func() {
+				view = "default"
+				mt.APIVersions = []string{"v1"}
+			})
+
+			It("sets the version in the projected media type", func() {
+				Ω(prErr).ShouldNot(HaveOccurred())
+				Ω(projected).ShouldNot(BeNil())
+				Ω(projected.Type).Should(BeAssignableToTypeOf(Object{}))
+				Ω(projected.Type.ToObject()).Should(HaveKey("att1"))
+				att := projected.Type.ToObject()["att1"]
+				Ω(att).ShouldNot(BeNil())
+				Ω(att.Type).ShouldNot(BeNil())
+				Ω(att.Type.Kind()).Should(Equal(IntegerKind))
+				Ω(projected.APIVersions).Should(Equal(mt.APIVersions))
+			})
+		})
+
 	})
 
 	Context("with media types with view attributes with a cyclical dependency", func() {
