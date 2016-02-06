@@ -605,6 +605,7 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 		UserTypeDefinition: &UserTypeDefinition{
 			TypeName: typeName,
 			AttributeDefinition: &AttributeDefinition{
+				APIVersions: m.APIVersions,
 				Description: description,
 				Type:        Dup(v.Type),
 				Validations: vals,
@@ -635,6 +636,7 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 			lTypeName := fmt.Sprintf("%sLinks", m.TypeName)
 			links = &UserTypeDefinition{
 				AttributeDefinition: &AttributeDefinition{
+					APIVersions: m.APIVersions,
 					Description: fmt.Sprintf("%s contains links to related resources of %s.", lTypeName, m.TypeName),
 					Type:        linkObj,
 				},
@@ -649,11 +651,11 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 					if !ok {
 						return nil, nil, fmt.Errorf("View specified on non media type attribute %#v", n)
 					}
-					p, _, err := m.Project(at.View)
+					pr, _, err := m.Project(at.View)
 					if err != nil {
 						return nil, nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", at.View, n, err)
 					}
-					at.Type = p
+					at.Type = pr
 				}
 				projectedObj[n] = at
 			}
@@ -672,6 +674,7 @@ func (m *MediaTypeDefinition) projectCollection(view string) (p *MediaTypeDefini
 		Identifier: m.Identifier,
 		UserTypeDefinition: &UserTypeDefinition{
 			AttributeDefinition: &AttributeDefinition{
+				APIVersions: m.APIVersions,
 				Type:        &Array{ElemType: &AttributeDefinition{Type: pe}},
 				Description: fmt.Sprintf("%s, %s view", m.Description, view),
 			},
@@ -685,6 +688,7 @@ func (m *MediaTypeDefinition) projectCollection(view string) (p *MediaTypeDefini
 		lTypeName := le.TypeName + "Array"
 		links = &UserTypeDefinition{
 			AttributeDefinition: &AttributeDefinition{
+				APIVersions: m.APIVersions,
 				Type:        &Array{ElemType: &AttributeDefinition{Type: le}},
 				Description: fmt.Sprintf("%s contains links to related resources of %s.", lTypeName, m.TypeName),
 			},

@@ -171,13 +171,25 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 
 const mainTmpl = `
 func main() {
+	// Check if there were errors while running the first DSL pass
+	var err error
+	if dslengine.Errors != nil {
+		err = dslengine.Errors
+	}
+	failOnError(err)
+
+	// Now run the secondary DSLs
 	failOnError(dslengine.Run())
+
+	// Now take the results and call the generator with it
 	roots := make([]interface{}, len(dslengine.Roots))
 	for i, r := range dslengine.Roots {
 		roots[i] = r
 	}
 	files, err := {{.Genfunc}}(roots)
 	failOnError(err)
+
+	// We're done
 	fmt.Println(strings.Join(files, "\n"))
 }
 

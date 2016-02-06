@@ -7,7 +7,7 @@
 ## Generation Targets
 
 * Angular target that generates angular services for each resource.
-* Client target that generates an API client package and command line tool.
+* [DONE] Client target that generates an API client package and command line tool.
 * [DONE] Docs target that generates swagger and / or praxis JSON docs.
 * Test target that generates API integration tests using gomega's ghttp package.
 * [DONE] Generic target that takes the path to a Go package and the name of the "Generate" method
@@ -21,9 +21,9 @@
 
 ## Enhancements
 
-* Make sure "type overload" works. I.e. Param("foo", Type, func() { Attribute(...) })
+* [DONE] Make sure "type overload" works. I.e. Param("foo", Type, func() { Attribute(...) })
 * Documentation: [DONE] DSL reference, middleware support more examples etc
-* Add examples to DSL including auto-generated examples
+* [DONE] Add examples to DSL including auto-generated examples
 * Praxis JSON to goa metadata generator
 * Implement response inline media type (with resource media type inheritance)
 
@@ -41,11 +41,11 @@
 * [DONE] Handle the case where an action handler did not write a response
 * Before / After filter? (is middleware enough?)
 * Handle attribute default value
-* Examples (same behavior as Load / Dump)
+* [DONE] Examples (same behavior as Load / Dump)
 * [DONE] Default view is required
-* Rendering caching
-* Versioning
-* Encoding handlers (produces, consumes)
+* [WILLNOTDO] Rendering caching
+* [DONE] Versioning
+* [DONE] Encoding handlers (produces, consumes)
 * [DONE] Rename "MediaType" to "DefaultMediaType" in Resource DSL
 * [WILLNOTDO] Remove support for multiple routes?
 * Default base path for resources built after resource name
@@ -56,4 +56,4 @@
 * Parameterize traits
 * Add swagger-like CollectionFormat
 * Add swagger-like support for security definitions
-* Add swagger-like support for deprecated, schemes
+* Add swagger-like support for deprecated, [DONE] schemes
