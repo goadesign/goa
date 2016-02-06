@@ -66,13 +66,13 @@ func NewMux(app *Application) ServeMux {
 				app.missingVersionHandler(ctx, version)
 			}
 		},
-		SelectVersionFunc: PathSelectVersionFunc("/:version/", "api"),
+		SelectVersionFunc: PathSelectVersionFunc("/:api_version/", "api"),
 	}
 }
 
 // PathSelectVersionFunc returns a SelectVersionFunc that uses the given path pattern to extract the
 // version from the request path. Use the same path pattern given in the DSL to define the API base
-// path, e.g. "/api/:version".
+// path, e.g. "/api/:api_version".
 // If the pattern matches zeroVersion then the empty version is returned (i.e. the unversioned
 // controller handles the request).
 func PathSelectVersionFunc(pattern, zeroVersion string) SelectVersionFunc {

@@ -358,8 +358,8 @@ import {{if .version}}(
 // GetWidgetContext provides the Widget get action context.
 type GetWidgetContext struct {
 	*goa.Context{{if .version}}
-	ID      string
-	Version string{{else}}
+	ID         string
+	APIVersion string{{else}}
 	ID string{{end}}
 }
 
@@ -412,7 +412,7 @@ func MountWidgetController(service goa.Service, ctrl WidgetController) {
 	mux := service.{{if .version}}Version("{{.version}}").ServeMux(){{else}}ServeMux(){{end}}
 	h = func(c *goa.Context) error {
 		ctx, err := NewGetWidgetContext(c)
-{{if .version}}		ctx.Version = service.Version("{{.version}}").VersionName()
+{{if .version}}		ctx.APIVersion = service.Version("{{.version}}").VersionName()
 {{end}}		if err != nil {
 			return goa.NewBadRequestError(err)
 		}

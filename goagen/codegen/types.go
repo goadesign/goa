@@ -245,12 +245,32 @@ func GoNativeType(t design.DataType) string {
 	}
 }
 
+// acros is the list of known acronyms for which special casing rules apply.
+var acros = map[string]string{
+	"ok":  "OK",
+	"id":  "ID",
+	"api": "API",
+}
+
 // Goify makes a valid Go identifier out of any string.
 // It does that by removing any non letter and non digit character and by making sure the first
 // character is a letter or "_".
 // Goify produces a "CamelCase" version of the string, if firstUpper is true the first character
 // of the identifier is uppercase otherwise it's lowercase.
 func Goify(str string, firstUpper bool) string {
+	if firstUpper {
+		if val, ok := acros[str]; ok {
+			return val
+		}
+		for a, u := range acros {
+			p := a + "_"
+			if strings.HasPrefix(str, p) {
+				rest := strings.TrimPrefix(str, p)
+				res := Goify(rest, true)
+				return u + res
+			}
+		}
+	}
 	if str == "ok" && firstUpper {
 		return "OK"
 	} else if str == "id" && firstUpper {
