@@ -77,7 +77,7 @@ var _ = Describe("RegisterFlags", func() {
 
 const dummyGenSrc = `package dummy
 
-func Generate(roots []interface{}) ([]string, error) {
+func Generate(roots dslengine.RootDefinitions) ([]string, error) {
 	return []string{"worked"}, nil
 }
 `
