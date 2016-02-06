@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/gen_main"
 	. "github.com/onsi/ginkgo"
@@ -34,7 +35,7 @@ var _ = Describe("Generate", func() {
 	})
 
 	JustBeforeEach(func() {
-		files, genErr = genmain.Generate([]interface{}{design.Design})
+		files, genErr = genmain.Generate(dslengine.NewRootDefinitions(design.Design))
 	})
 
 	AfterEach(func() {
