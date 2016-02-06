@@ -318,6 +318,13 @@ var _ = Describe("Example", func() {
 		})
 
 		It("produces a media type with examples", func() {
+			ut := Type("example", func() {
+				Attribute("test1", Integer, func() {
+					Minimum(-200)
+					Maximum(-100)
+				})
+			})
+
 			mt := MediaType("application/vnd.example+json", func() {
 				Attributes(func() {
 					Attribute("test1", String, "test1 desc", func() {
@@ -328,6 +335,19 @@ var _ = Describe("Example", func() {
 					})
 					Attribute("test3", Integer, "test3 desc", func() {
 						Minimum(1)
+					})
+					Attribute("test4", String, func() {
+						Format("email")
+						Pattern("@")
+					})
+					Attribute("test5", Any)
+					Attribute("test-failure1", Integer, func() {
+						Minimum(0)
+						Maximum(0)
+					})
+					Attribute("test-failure2", ArrayOf(ut), func() {
+						MinLength(0)
+						MaxLength(0)
 					})
 				})
 				View("default", func() {
@@ -344,7 +364,17 @@ var _ = Describe("Example", func() {
 			attr = mt.Type.ToObject()["test2"]
 			Ω(attr.Example).Should(BeNil())
 			attr = mt.Type.ToObject()["test3"]
-			Ω(attr.Example).Should(BeNumerically(">", 0))
+			Ω(attr.Example).Should(BeNumerically(">=", 1))
+			attr = mt.Type.ToObject()["test4"]
+			Ω(attr.Example).Should(MatchRegexp(`\w+@`))
+			attr = mt.Type.ToObject()["test5"]
+			Ω(attr.Example).Should(BeNil())
+			attr = mt.Type.ToObject()["test-failure1"]
+			Ω(attr.Example).Should(Equal(0))
+			attr = mt.Type.ToObject()["test-failure2"]
+			attrArray, pass := attr.Example.([]interface{})
+			Expect(pass).Should(BeTrue())
+			Expect(attrArray).Should(HaveLen(0))
 		})
 
 		It("produces a media type with examples in cyclical dependencies", func() {
