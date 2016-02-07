@@ -6,6 +6,8 @@ import (
 	"strings"
 	"text/template"
 
+	"sort"
+
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/codegen"
 )
@@ -155,6 +157,24 @@ func (c *ContextTemplateData) MustValidate(name string) bool {
 	return c.Params.IsRequired(name) && !c.IsPathParam(name)
 }
 
+// IterateResponses iterates through the responses sorted by status code.
+func (c *ContextTemplateData) IterateResponses(it func(*design.ResponseDefinition) error) error {
+	m := make(map[int]*design.ResponseDefinition, len(c.Responses))
+	var s []int
+	for _, resp := range c.Responses {
+		status := resp.Status
+		m[status] = resp
+		s = append(s, status)
+	}
+	sort.Ints(s)
+	for _, status := range s {
+		if err := it(m[status]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // NewContextsWriter returns a contexts code writer.
 // Contexts provide the glue between the underlying request data and the user controller.
 func NewContextsWriter(filename string) (*ContextsWriter, error) {
@@ -191,7 +211,7 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 			return p
 		},
 	}
-	for _, resp := range data.Responses {
+	data.IterateResponses(func(resp *design.ResponseDefinition) error {
 		mt := design.Design.MediaTypeWithIdentifier(resp.MediaType)
 		respData := map[string]interface{}{
 			"Context":  data,
@@ -214,7 +234,8 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 				return err
 			}
 		}
-	}
+		return nil
+	})
 	return nil
 }
 

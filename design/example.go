@@ -21,6 +21,9 @@ func newExampleGenerator(a *AttributeDefinition, r *RandomGenerator) *exampleGen
 	return &exampleGenerator{a, r}
 }
 
+// Maximum number of tries for generating example.
+const maxAttempts = 500
+
 // generate generates a random value based on the given validations.
 func (eg *exampleGenerator) generate() interface{} {
 	// Randomize array length first, since that's from higher level
@@ -33,7 +36,9 @@ func (eg *exampleGenerator) generate() interface{} {
 	}
 	// loop until a satisified example is generated
 	hasFormat, hasPattern, hasMinMax := eg.hasFormatValidation(), eg.hasPatternValidation(), eg.hasMinMaxValidation()
-	for {
+	attempts := 0
+	for attempts < maxAttempts {
+		attempts++
 		var example interface{}
 		// Format comes first, since it initiates the example
 		if hasFormat {
