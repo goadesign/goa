@@ -335,6 +335,31 @@ var _ = Describe("BuildEncoderMap", func() {
 			Ω(jd.MIMETypes).Should(ConsistOf(interface{}(mimeTypes[0]), interface{}(mimeTypes[1])))
 		})
 	})
+
+	Context("with a definition using a custom decoding package for a known encoding", func() {
+		const packagePath = "github.com/goadesign/goa/design" // Just to pick something always available
+		var mimeTypes = []string{"application/json"}
+
+		BeforeEach(func() {
+			simple := &design.EncodingDefinition{
+				PackagePath: packagePath,
+				MIMETypes:   mimeTypes,
+			}
+			info = append(info, simple)
+		})
+
+		It("generates a map with a single entry using the generic decoder factory name", func() {
+			Ω(resErr).ShouldNot(HaveOccurred())
+			Ω(data).Should(HaveLen(1))
+			Ω(data).Should(HaveKey(packagePath))
+			jd := data[packagePath]
+			Ω(jd).ShouldNot(BeNil())
+			Ω(jd.PackagePath).Should(Equal(packagePath))
+			Ω(jd.PackageName).Should(Equal("design"))
+			Ω(jd.Factory).Should(Equal("DecoderFactory"))
+		})
+
+	})
 })
 
 const contextsCodeTmpl = `//************************************************************************//
