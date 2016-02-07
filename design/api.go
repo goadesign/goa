@@ -380,7 +380,7 @@ func (a *APIDefinition) GenerateExample(dt DataType) interface{} {
 	return dt.GenerateExample(a.RandomGenerator())
 }
 
-// RandomGenerator is seeded after the api name. It's used to generate examples in the most cases.
+// RandomGenerator is seeded after the API name. It's used to generate examples.
 func (a *APIDefinition) RandomGenerator() *RandomGenerator {
 	if a.rand == nil {
 		a.rand = NewRandomGenerator(a.Name)
