@@ -339,8 +339,30 @@ var _ = Describe("ContextsWriter", func() {
 					Ω(written).ShouldNot(BeEmpty())
 					Ω(written).Should(ContainSubstring(payloadObjContext))
 				})
-			})
 
+				var _ = Describe("IterateResponses", func() {
+					var resps []*design.ResponseDefinition
+					var testIt = func(r *design.ResponseDefinition) error {
+						resps = append(resps, r)
+						return nil
+					}
+					Context("with responses", func() {
+						BeforeEach(func() {
+							responses = map[string]*design.ResponseDefinition{
+								"OK":      &design.ResponseDefinition{Status: 200},
+								"Created": &design.ResponseDefinition{Status: 201},
+							}
+						})
+						It("iterates responses in order", func() {
+							data.IterateResponses(testIt)
+							Ω(resps).Should(Equal([]*design.ResponseDefinition{
+								responses["OK"],
+								responses["Created"],
+							}))
+						})
+					})
+				})
+			})
 		})
 	})
 })
