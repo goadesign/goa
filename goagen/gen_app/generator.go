@@ -247,14 +247,16 @@ func BuildEncoderMap(info []*design.EncodingDefinition, encoder bool) (map[strin
 		sort.Strings(mimeTypes)
 		var factory string
 		if encoder {
-			factory = design.KnownEncoders[first][1]
-			if factory == "" {
+			if !design.IsGoaEncoder(p) {
 				factory = "EncoderFactory"
+			} else {
+				factory = design.KnownEncoders[first][1]
 			}
 		} else {
-			factory = design.KnownEncoders[first][2]
-			if factory == "" {
+			if !design.IsGoaEncoder(p) {
 				factory = "DecoderFactory"
+			} else {
+				factory = design.KnownEncoders[first][2]
 			}
 		}
 		d := &EncoderTemplateData{
