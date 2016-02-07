@@ -407,6 +407,7 @@ func (g *Generator) generateMediaTypes(verdir string, version *design.APIVersion
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("time"),
 	}
 	if !version.IsDefault() {
 		appPkg, err := AppPackagePath()
@@ -446,6 +447,7 @@ func (g *Generator) generateUserTypes(verdir string, version *design.APIVersionD
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("time"),
 	}
 	if !version.IsDefault() {
 		appPkg, err := AppPackagePath()
