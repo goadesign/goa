@@ -122,7 +122,11 @@ func (g *Generator) generateIndexHTML(htmlFile string, api *design.APIDefinition
 		for i, n := range argNames {
 			q := query[n].Type.ToArray().ElemType
 			// below works because we deal with simple types in query strings
-			argValues[i] = fmt.Sprintf("%v", q.GenerateExample(api.RandomGenerator()))
+			if q.Example != nil {
+				argValues[i] = fmt.Sprintf("%v", q.Example)
+			} else {
+				argValues[i] = fmt.Sprintf("%v", q.GenerateExample(api.RandomGenerator()))
+			}
 		}
 		args = strings.Join(argValues, ", ")
 	}
@@ -132,10 +136,10 @@ func (g *Generator) generateIndexHTML(htmlFile string, api *design.APIDefinition
 		pathVars := exampleAction.AllParams().Type.ToObject()
 		pathValues := make([]interface{}, len(pathParams))
 		for i, n := range pathParams {
-			if pathVars[n].Example == nil {
-				pathValues[i] = pathVars[n].GenerateExample(api.RandomGenerator())
-			} else {
+			if pathVars[n].Example != nil {
 				pathValues[i] = fmt.Sprintf("%v", pathVars[n].Example)
+			} else {
+				pathValues[i] = pathVars[n].GenerateExample(api.RandomGenerator())
 			}
 		}
 		format := design.WildcardRegex.ReplaceAllLiteralString(examplePath, "/%v")
