@@ -614,13 +614,13 @@ const transformTmpl = `func {{.Name}}(source {{gotyperef .Source nil 0}}) (targe
 `
 
 const transformObjectTmpl = `{{tabs .Depth}}{{.TargetCtx}} = new({{if .TargetPkg}}{{.TargetPkg}}.{{end}}{{if .TargetType}}{{.TargetType}}{{else}}{{gotyperef .Target.Type .Target.AllRequired 1}}{{end}})
-{{$ctx := .}}{{range $source, $target := .AttributeMap}}{{/*
-*/}}{{$sourceAtt := index $ctx.Source $source}}{{$targetAtt := index $ctx.Target $target}}{{/*
+{{range $source, $target := .AttributeMap}}{{/*
+*/}}{{$sourceAtt := index $.Source $source}}{{$targetAtt := index $.Target $target}}{{/*
 */}}{{$source := goify $source true}}{{$target := goify $target true}}{{/*
-*/}}{{     if $sourceAtt.Type.IsArray}}{{ transformArray  $sourceAtt.Type.ToArray  $targetAtt.Type.ToArray  $ctx.TargetPkg (printf "%s.%s" $ctx.SourceCtx $source) (printf "%s.%s" $ctx.TargetCtx $target) $ctx.Depth}}{{/*
-*/}}{{else if $sourceAtt.Type.IsHash}}{{  transformHash   $sourceAtt.Type.ToHash   $targetAtt.Type.ToHash   $ctx.TargetPkg (printf "%s.%s" $ctx.SourceCtx $source) (printf "%s.%s" $ctx.TargetCtx $target) $ctx.Depth}}{{/*
-*/}}{{else if $sourceAtt.Type.IsObject}}{{transformObject $sourceAtt.Type.ToObject $targetAtt.Type.ToObject $ctx.TargetPkg (typeName $targetAtt) (printf "%s.%s" $ctx.SourceCtx $source) (printf "%s.%s" $ctx.TargetCtx $target) $ctx.Depth}}{{/*
-*/}}{{else}}{{tabs $ctx.Depth}}{{$ctx.TargetCtx}}.{{$target}} = {{$ctx.SourceCtx}}.{{$source}}
+*/}}{{     if $sourceAtt.Type.IsArray}}{{ transformArray  $sourceAtt.Type.ToArray  $targetAtt.Type.ToArray  $.TargetPkg (printf "%s.%s" $.SourceCtx $source) (printf "%s.%s" $.TargetCtx $target) $.Depth}}{{/*
+*/}}{{else if $sourceAtt.Type.IsHash}}{{  transformHash   $sourceAtt.Type.ToHash   $targetAtt.Type.ToHash   $.TargetPkg (printf "%s.%s" $.SourceCtx $source) (printf "%s.%s" $.TargetCtx $target) $.Depth}}{{/*
+*/}}{{else if $sourceAtt.Type.IsObject}}{{transformObject $sourceAtt.Type.ToObject $targetAtt.Type.ToObject $.TargetPkg (typeName $targetAtt) (printf "%s.%s" $.SourceCtx $source) (printf "%s.%s" $.TargetCtx $target) $.Depth}}{{/*
+*/}}{{else}}{{tabs $.Depth}}{{$.TargetCtx}}.{{$target}} = {{$.SourceCtx}}.{{$source}}
 {{end}}{{end}}`
 
 const transformArrayTmpl = `{{tabs .Depth}}{{.TargetCtx}} = make([]{{gotyperef .Target.ElemType.Type nil 0}}, len({{.SourceCtx}}))

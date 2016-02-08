@@ -376,8 +376,8 @@ const (
 	ctxT = `// {{.Name}} provides the {{.ResourceName}} {{.ActionName}} action context.
 type {{.Name}} struct {
 	*goa.Context
-{{if .Params}}{{$ctx := .}}{{range $name, $att := .Params.Type.ToObject}}{{/*
-*/}}	{{goify $name true}} {{if and $att.Type.IsPrimitive ($ctx.Params.IsPrimitivePointer $name)}}*{{end}}{{gotyperef .Type nil 0}}
+{{if .Params}}{{range $name, $att := .Params.Type.ToObject}}{{/*
+*/}}	{{goify $name true}} {{if and $att.Type.IsPrimitive ($.Params.IsPrimitivePointer $name)}}*{{end}}{{gotyperef .Type nil 0}}
 {{end}}{{end}}{{if .Payload}}	Payload {{gotyperef .Payload nil 0}}
 {{end}}{{if and (not .Version.IsDefault) (not (hasAPIVersion .Params))}}	APIVersion string
 {{end}}}
@@ -457,13 +457,13 @@ func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
 {{if .Headers}}{{$headers := .Headers}}{{range $name, $_ := $headers.Type.ToObject}}{{if ($headers.IsRequired $name)}}	if c.Request().Header.Get("{{$name}}") == "" {
 		err = goa.MissingHeaderError("{{$name}}", err)
 	}{{end}}{{end}}
-{{end}}{{if.Params}}{{$ctx := .}}{{range $name, $att := .Params.Type.ToObject}}	raw{{goify $name true}} := c.Get("{{$name}}")
-{{$mustValidate := $ctx.MustValidate $name}}{{if $mustValidate}}	if raw{{goify $name true}} == "" {
+{{end}}{{if.Params}}{{range $name, $att := .Params.Type.ToObject}}	raw{{goify $name true}} := c.Get("{{$name}}")
+{{$mustValidate := $.MustValidate $name}}{{if $mustValidate}}	if raw{{goify $name true}} == "" {
 		err = goa.MissingParamError("{{$name}}", err)
 	} else {
 {{else}}	if raw{{goify $name true}} != "" {
-{{end}}{{template "Coerce" (newCoerceData $name $att ($ctx.Params.IsPrimitivePointer $name) (printf "ctx.%s" (goify $name true)) 2)}}{{/*
-*/}}{{$validation := validationChecker $att ($ctx.Params.IsNonZero $name) ($ctx.Params.IsRequired $name) (printf "ctx.%s" (goify $name true)) $name 2}}{{/*
+{{end}}{{template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) (printf "ctx.%s" (goify $name true)) 2)}}{{/*
+*/}}{{$validation := validationChecker $att ($.Params.IsNonZero $name) ($.Params.IsRequired $name) (printf "ctx.%s" (goify $name true)) $name 2}}{{/*
 */}}{{if $validation}}{{$validation}}
 {{end}}	}
 {{end}}{{end}}{{/* if .Params */}}	return &ctx, err
@@ -517,10 +517,10 @@ type {{.Resource}}Controller interface {
 // Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given service.
 func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Controller) {
 	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
-{{$ctx := .}}{{range .EncoderMap}}{{$tmp := tempvar}}{{/*
-*/}}	service.{{if not $ctx.Version.IsDefault}}Version("{{$ctx.Version.Version}}").{{end}}SetEncoder({{.PackageName}}.{{.Factory}}(), {{.Default}}, "{{join .MIMETypes "\", \""}}")
+{{range .EncoderMap}}{{$tmp := tempvar}}{{/*
+*/}}	service.{{if not $.Version.IsDefault}}Version("{{$.Version.Version}}").{{end}}SetEncoder({{.PackageName}}.{{.Factory}}(), {{.Default}}, "{{join .MIMETypes "\", \""}}")
 {{end}}{{range .DecoderMap}}{{$tmp := tempvar}}{{/*
-*/}}	service.{{if not $ctx.Version.IsDefault}}Version("{{$ctx.Version.Version}}").{{end}}SetDecoder({{.PackageName}}.{{.Factory}}(), {{.Default}}, "{{join .MIMETypes "\", \""}}")
+*/}}	service.{{if not $.Version.IsDefault}}Version("{{$.Version.Version}}").{{end}}SetDecoder({{.PackageName}}.{{.Factory}}(), {{.Default}}, "{{join .MIMETypes "\", \""}}")
 {{end}}
 	// Setup endpoint handler
 	var h goa.Handler
