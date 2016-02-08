@@ -367,8 +367,16 @@ func (o Object) IsCompatible(val interface{}) bool {
 
 // GenerateExample returns a random value of the object.
 func (o Object) GenerateExample(r *RandomGenerator) interface{} {
+	// ensure fixed ordering
+	keys := make([]string, 0, len(o))
+	for n := range o {
+		keys = append(keys, n)
+	}
+	sort.Strings(keys)
+
 	res := make(map[string]interface{})
-	for n, att := range o {
+	for _, n := range keys {
+		att := o[n]
 		res[n] = att.Type.GenerateExample(r)
 	}
 	return res
