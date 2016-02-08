@@ -136,9 +136,9 @@ func (a *AttributeDefinition) SetExample(example interface{}) bool {
 	return false
 }
 
-// finalizeExample goes through each Example and conslidate all of the information it knows i.e.
+// finalizeExample goes through each Example and consolidates all of the information it knows i.e.
 // a custom example or auto-generate for the user. It also tracks whether we've randomized
-// the entire example; if so, we shall re-generate the random value for Array/Hash
+// the entire example; if so, we shall re-generate the random value for Array/Hash.
 func (a *AttributeDefinition) finalizeExample(stack []*AttributeDefinition) (interface{}, bool) {
 	if a.Example != nil || a.isCustomExample {
 		return a.Example, a.isCustomExample
