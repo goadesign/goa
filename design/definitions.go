@@ -1,6 +1,8 @@
 package design
 
 import (
+	"sort"
+
 	"github.com/goadesign/goa/dslengine"
 )
 
@@ -157,8 +159,17 @@ func (a *AttributeDefinition) finalizeExample(stack []*AttributeDefinition) (int
 		// keep track of the type id, in case of a cyclical situation
 		stack = append(stack, a)
 
+		// ensure fixed ordering
+		aObj := a.Type.ToObject()
+		keys := make([]string, 0, len(aObj))
+		for n := range aObj {
+			keys = append(keys, n)
+		}
+		sort.Strings(keys)
+
 		example, hasCustom, isCustom := map[string]interface{}{}, false, false
-		for n, att := range a.Type.ToObject() {
+		for _, n := range keys {
+			att := aObj[n]
 			// avoid a cyclical dependency
 			isCyclical := false
 			if ssize := len(stack); ssize > 0 {
