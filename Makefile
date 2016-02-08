@@ -17,7 +17,7 @@ DEPEND=\
 	github.com/asaskevich/govalidator \
 	github.com/go-swagger/go-swagger \
 	github.com/goadesign/encoding \
-	github.com/goadesign/goa.design/mdc \
+	github.com/goadesign/goa.design/tools/mdc \
 	github.com/goadesign/goa-cellar \
 	github.com/goadesign/godoc2md \
 	github.com/goadesign/middleware \
