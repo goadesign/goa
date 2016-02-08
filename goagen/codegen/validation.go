@@ -265,10 +265,10 @@ const (
 {{if .isPointer}}{{tabs $depth}}}
 {{end}}{{tabs .depth}}}`
 
-	requiredValTmpl = `{{$ctx := .}}{{range $r := .required}}{{$catt := index $ctx.attribute.Type.ToObject $r}}{{if eq $catt.Type.Kind 4}}{{tabs $ctx.depth}}if {{$ctx.target}}.{{goify $r true}} == "" {
-{{tabs $ctx.depth}}	err = goa.MissingAttributeError(` + "`" + `{{$ctx.context}}` + "`" + `, "{{$r}}", err)
-{{tabs $ctx.depth}}}{{else if (not $catt.Type.IsPrimitive)}}{{tabs $ctx.depth}}if {{$ctx.target}}.{{goify $r true}} == nil {
-{{tabs $ctx.depth}}	err = goa.MissingAttributeError(` + "`" + `{{$ctx.context}}` + "`" + `, "{{$r}}", err)
-{{tabs $ctx.depth}}}{{end}}
+	requiredValTmpl = `{{range $r := .required}}{{$catt := index $.attribute.Type.ToObject $r}}{{if eq $catt.Type.Kind 4}}{{tabs $.depth}}if {{$.target}}.{{goify $r true}} == "" {
+{{tabs $.depth}}	err = goa.MissingAttributeError(` + "`" + `{{$.context}}` + "`" + `, "{{$r}}", err)
+{{tabs $.depth}}}{{else if (not $catt.Type.IsPrimitive)}}{{tabs $.depth}}if {{$.target}}.{{goify $r true}} == nil {
+{{tabs $.depth}}	err = goa.MissingAttributeError(` + "`" + `{{$.context}}` + "`" + `, "{{$r}}", err)
+{{tabs $.depth}}}{{end}}
 {{end}}`
 )
