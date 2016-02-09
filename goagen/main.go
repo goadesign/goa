@@ -69,7 +69,10 @@ func main() {
 		sub := &cobra.Command{
 			Use:   command.Name(),
 			Short: command.Description(),
-			Run:   func(*cobra.Command, []string) { files, err = run() },
+			Run: func(cmd *cobra.Command, args []string) {
+				codegen.ExtraFlags = args
+				files, err = run()
+			},
 		}
 		command.RegisterFlags(sub)
 		codegen.RegisterFlags(sub)
