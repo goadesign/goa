@@ -70,7 +70,7 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required bool, t
 		}
 		o.IterateAttributes(func(n string, catt *design.AttributeDefinition) error {
 			actualDepth := depth
-			if !att.IsRequired(n) && catt.Type.IsObject() {
+			if catt.Type.IsObject() {
 				actualDepth = depth + 1
 			}
 			validation := RecursiveChecker(
@@ -82,7 +82,7 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required bool, t
 				actualDepth,
 			)
 			if validation != "" {
-				if !att.IsRequired(n) && catt.Type.IsObject() {
+				if catt.Type.IsObject() {
 					validation = fmt.Sprintf("%sif %s.%s != nil {\n%s\n%s}",
 						Tabs(depth), target, Goify(n, true), validation, Tabs(depth))
 				}
