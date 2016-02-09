@@ -83,12 +83,26 @@ var _ = Describe("validation code generation", func() {
 					catt := &design.AttributeDefinition{
 						Type: design.Object{"bar": ccatt},
 					}
-					attType = design.Object{"foo": catt}
-					validations = nil
-				})
 
-				It("checks the child object is not nil", func() {
-					Ω(code).Should(Equal(embeddedValCode))
+					attType = design.Object{"foo": catt}
+				})
+				Context("and the parent is optional", func() {
+					BeforeEach(func() {
+						validations = nil
+					})
+					It("checks the child & parent object are not nil", func() {
+						Ω(code).Should(Equal(embeddedValCode))
+					})
+				})
+				Context("and the parent is required", func() {
+					BeforeEach(func() {
+						validations = []dslengine.ValidationDefinition{&dslengine.RequiredValidationDefinition{
+							Names: []string{"foo"},
+						}}
+					})
+					It("checks the child & parent object are not nil", func() {
+						Ω(code).Should(Equal(embeddedRequiredValCode))
+					})
 				})
 			})
 
@@ -121,5 +135,17 @@ const (
 				err = goa.InvalidEnumValueError(` + "`" + `context.foo.bar` + "`" + `, *val.Foo.Bar, []interface{}{1, 2, 3}, err)
 			}
 		}
+	}`
+
+	embeddedRequiredValCode = `	if val.Foo == nil {
+		err = goa.MissingAttributeError(` + "`context`" + `, "foo", err)
+	}
+
+	if val.Foo != nil {
+	if val.Foo.Bar != nil {
+		if !(*val.Foo.Bar == 1 || *val.Foo.Bar == 2 || *val.Foo.Bar == 3) {
+			err = goa.InvalidEnumValueError(` + "`" + `context.foo.bar` + "`" + `, *val.Foo.Bar, []interface{}{1, 2, 3}, err)
+		}
+	}
 	}`
 )
