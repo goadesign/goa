@@ -142,10 +142,10 @@ const (
 	}
 
 	if val.Foo != nil {
-	if val.Foo.Bar != nil {
-		if !(*val.Foo.Bar == 1 || *val.Foo.Bar == 2 || *val.Foo.Bar == 3) {
-			err = goa.InvalidEnumValueError(` + "`" + `context.foo.bar` + "`" + `, *val.Foo.Bar, []interface{}{1, 2, 3}, err)
+		if val.Foo.Bar != nil {
+			if !(*val.Foo.Bar == 1 || *val.Foo.Bar == 2 || *val.Foo.Bar == 3) {
+				err = goa.InvalidEnumValueError(` + "`" + `context.foo.bar` + "`" + `, *val.Foo.Bar, []interface{}{1, 2, 3}, err)
+			}
 		}
-	}
 	}`
 )
