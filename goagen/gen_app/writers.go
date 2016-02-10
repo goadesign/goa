@@ -529,12 +529,12 @@ func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Control
 		ctx, err := New{{.Context}}(c)
 		if err != nil {
 			return goa.NewBadRequestError(err)
+		}{{if not $ver.IsDefault}}
+		ctx.APIVersion = service.Version("{{$ver.Version}}").VersionName(){{end}}
+{{if .Payload}}if rawPayload := ctx.RawPayload(); rawPayload != nil {
+			ctx.Payload = rawPayload.({{gotyperef .Payload nil 1}})
 		}
-{{if not $ver.IsDefault}}		ctx.APIVersion = service.Version("{{$ver.Version}}").VersionName()
-{{end}}{{if .Payload}}		if rawPayload := ctx.RawPayload(); rawPayload != nil {
-				ctx.Payload = rawPayload.({{gotyperef .Payload nil 1}})
-		}{{end}}
-		return ctrl.{{.Name}}(ctx)
+		{{end}}		return ctrl.{{.Name}}(ctx)
 	}
 {{range .Routes}}	mux.Handle("{{.Verb}}", "{{.FullPath $ver}}", ctrl.HandleFunc("{{$action.Name}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
 	service.Info("mount", "ctrl", "{{$res}}",{{if not $ver.IsDefault}} "version", "{{$ver.Version}}",{{end}} "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath $ver}}")
