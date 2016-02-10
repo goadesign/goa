@@ -29,3 +29,4 @@ deploy:
   cache-control: no-cache
   on:
     repo: goadesign/goa
+    go: '1.5.3'
