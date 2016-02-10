@@ -9,8 +9,14 @@ matrix:
 sudo: false
 install:
 - go get -v ./...
-- export PATH=$PATH:$HOME/gopath/bin
+- export PATH=${PATH}:${HOME}/gopath/bin
+- curl https://bitbucket.org/birkenfeld/pygments-main/get/2.1.tar.gz -L -o 2.1.tar.gz
+- mkdir -p ${HOME}/bin
+- tar -xf 2.1.tar.gz
+- mv birkenfeld-pygments-main-34530db252d3/* ${HOME}/bin
+- rm -rf birkenfeld-pygments-main-34530db252d3
 script:
+- export PATH=${PATH}:${HOME}/bin
 - make
 - make docs
 notifications:
