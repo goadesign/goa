@@ -437,10 +437,11 @@ func MountWidgetController(service goa.Service, ctrl WidgetController) {
 	mux := service.{{if .version}}Version("{{.version}}").ServeMux(){{else}}ServeMux(){{end}}
 	h = func(c *goa.Context) error {
 		ctx, err := NewGetWidgetContext(c)
-{{if .version}}		ctx.APIVersion = service.Version("{{.version}}").VersionName()
-{{end}}		if err != nil {
+		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
+{{if .version}}		ctx.APIVersion = service.Version("{{.version}}").VersionName()
+{{end}}
 		return ctrl.Get(ctx)
 	}
 	mux.Handle("GET", "/:id", ctrl.HandleFunc("Get", h, nil))
@@ -493,11 +494,11 @@ func MountWidgetController(service goa.Service, ctrl WidgetController) {
 	mux := service.ServeMux()
 	h = func(c *goa.Context) error {
 		ctx, err := NewGetWidgetContext(c)
-		if rawPayload := ctx.RawPayload(); rawPayload != nil {
-			ctx.Payload = rawPayload.(Collection)
-		}
 		if err != nil {
 			return goa.NewBadRequestError(err)
+		}
+		if rawPayload := ctx.RawPayload(); rawPayload != nil {
+			ctx.Payload = rawPayload.(Collection)
 		}
 		return ctrl.Get(ctx)
 	}
