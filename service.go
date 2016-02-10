@@ -457,10 +457,8 @@ func (ctrl *ApplicationController) HandleFunc(name string, h, d Handler) HandleF
 		handler := middleware
 		if err != nil {
 			handler = func(ctx *Context) error {
-				ctx.Respond(400, map[string]interface{}{
-					"kind": "invalid request",
-					"msg":  "invalid encoding: " + err.Error(),
-				})
+				msg := "invalid encoding: " + err.Error()
+				ctx.Respond(400, fmt.Sprintf(`{"kind":"invalid request","msg":%q}`, msg))
 				return nil
 			}
 			for i := range chain {
