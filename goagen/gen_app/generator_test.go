@@ -164,7 +164,7 @@ var _ = Describe("Generate", func() {
 				UserTypeDefinition: &ut,
 				Identifier:         "vnd.rightscale.codegen.test.widgets",
 				Views: map[string]*design.ViewDefinition{
-					"default": &design.ViewDefinition{
+					"default": {
 						AttributeDefinition: ut.AttributeDefinition,
 						Name:                "default",
 					},
@@ -493,7 +493,9 @@ func MountWidgetController(service goa.Service, ctrl WidgetController) {
 	mux := service.ServeMux()
 	h = func(c *goa.Context) error {
 		ctx, err := NewGetWidgetContext(c)
-		ctx.Payload = ctx.RawPayload().(Collection)
+		if rawPayload := ctx.RawPayload(); rawPayload != nil {
+			ctx.Payload = rawPayload.(Collection)
+		}
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
