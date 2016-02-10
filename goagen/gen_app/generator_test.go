@@ -439,9 +439,8 @@ func MountWidgetController(service goa.Service, ctrl WidgetController) {
 		ctx, err := NewGetWidgetContext(c)
 		if err != nil {
 			return goa.NewBadRequestError(err)
-		}
-{{if .version}}		ctx.APIVersion = service.Version("{{.version}}").VersionName()
-{{end}}
+		}{{if .version}}
+		ctx.APIVersion = service.Version("{{.version}}").VersionName(){{end}}
 		return ctrl.Get(ctx)
 	}
 	mux.Handle("GET", "/:id", ctrl.HandleFunc("Get", h, nil))

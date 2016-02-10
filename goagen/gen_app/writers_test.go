@@ -993,7 +993,6 @@ func MountBottlesController(service goa.Service, ctrl BottlesController) {
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
-
 		return ctrl.list(ctx)
 	}
 	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.HandleFunc("list", h, nil))
@@ -1012,7 +1011,6 @@ func MountBottlesController(service goa.Service, ctrl BottlesController) {
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
-
 		return ctrl.list(ctx)
 	}
 	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.HandleFunc("list", h, nil))
@@ -1039,7 +1037,6 @@ type BottlesController interface {
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
-
 		return ctrl.list(ctx)
 	}
 	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.HandleFunc("list", h, nil))
@@ -1049,7 +1046,6 @@ type BottlesController interface {
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
-
 		return ctrl.show(ctx)
 	}
 	mux.Handle("GET", "/accounts/:accountID/bottles/:id", ctrl.HandleFunc("show", h, nil))
