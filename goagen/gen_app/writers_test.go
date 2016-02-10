@@ -349,8 +349,8 @@ var _ = Describe("ContextsWriter", func() {
 					Context("with responses", func() {
 						BeforeEach(func() {
 							responses = map[string]*design.ResponseDefinition{
-								"OK":      &design.ResponseDefinition{Status: 200},
-								"Created": &design.ResponseDefinition{Status: 201},
+								"OK":      {Status: 200},
+								"Created": {Status: 201},
 							}
 						})
 						It("iterates responses in order", func() {
@@ -435,7 +435,7 @@ var _ = Describe("ControllersWriter", func() {
 					as[i] = map[string]interface{}{
 						"Name": a,
 						"Routes": []*design.RouteDefinition{
-							&design.RouteDefinition{
+							{
 								Verb: verbs[i],
 								Path: paths[i],
 							}},
@@ -493,7 +493,7 @@ var _ = Describe("ControllersWriter", func() {
 					contexts = []string{"ListBottleContext"}
 					unmarshals = []string{"unmarshalListBottlePayload"}
 					payloads = []*design.UserTypeDefinition{
-						&design.UserTypeDefinition{
+						{
 							TypeName: "ListBottlePayload",
 							AttributeDefinition: &design.AttributeDefinition{
 								Type: design.Object{
@@ -526,7 +526,7 @@ var _ = Describe("ControllersWriter", func() {
 					contexts = []string{"ListBottleContext"}
 					unmarshals = []string{"unmarshalListBottlePayload"}
 					payloads = []*design.UserTypeDefinition{
-						&design.UserTypeDefinition{
+						{
 							TypeName: "ListBottlePayload",
 							AttributeDefinition: &design.AttributeDefinition{
 								Type: design.Object{
@@ -577,14 +577,14 @@ var _ = Describe("ControllersWriter", func() {
 					paths = []string{"/accounts/:accountID/bottles"}
 					contexts = []string{"ListBottleContext"}
 					encoderMap = map[string]*genapp.EncoderTemplateData{
-						"": &genapp.EncoderTemplateData{
+						"": {
 							PackageName: "goa",
 							Factory:     "JSONEncoderFactory",
 							MIMETypes:   []string{"application/json"},
 						},
 					}
 					decoderMap = map[string]*genapp.EncoderTemplateData{
-						"": &genapp.EncoderTemplateData{
+						"": {
 							PackageName: "goa",
 							Factory:     "JSONDecoderFactory",
 							MIMETypes:   []string{"application/json"},
