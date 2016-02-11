@@ -449,7 +449,7 @@ func (ctrl *ApplicationController) HandleFunc(name string, h, d Handler) HandleF
 
 		// Load body if any
 		var err error
-		if r.ContentLength > 0 && d != nil {
+		if d != nil {
 			err = d(ctx)
 		}
 
