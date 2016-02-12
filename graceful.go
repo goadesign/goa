@@ -53,7 +53,7 @@ func NewGraceful(name string, cancelOnShutdown bool) Service {
 // ListenAndServe starts the HTTP server and sets up a listener on the given host/port.
 func (gapp *GracefulApplication) ListenAndServe(addr string) error {
 	gapp.setup(addr)
-	gapp.Info("listen", "addr", addr)
+	fmt.Fprintf(os.Stderr, "listen %s", addr)
 	if err := gapp.server.ListenAndServe(); err != nil {
 		// there may be a final "accept" error after completion of graceful shutdown
 		// which can be safely ignored here.
@@ -67,7 +67,7 @@ func (gapp *GracefulApplication) ListenAndServe(addr string) error {
 // ListenAndServeTLS starts a HTTPS server and sets up a listener on the given host/port.
 func (gapp *GracefulApplication) ListenAndServeTLS(addr, certFile, keyFile string) error {
 	gapp.setup(addr)
-	gapp.Info("listen ssl", "addr", addr)
+	fmt.Fprintf(os.Stderr, "listen ssl %s", addr)
 	return gapp.server.ListenAndServeTLS(certFile, keyFile)
 }
 
@@ -101,9 +101,9 @@ func (gapp *GracefulApplication) setup(addr string) {
 	go func() {
 		for signal := range interruptChannel {
 			if gapp.Shutdown() {
-				gapp.Warn(fmt.Sprintf("Received %v. Initiating graceful shutdown...", signal))
+				fmt.Fprintf(os.Stderr, "Received %v. Initiating graceful shutdown...", signal)
 			} else {
-				gapp.Warn(fmt.Sprintf("Received %v. Already gracefully shutting down.", signal))
+				fmt.Fprintf(os.Stderr, "Received %v. Already gracefully shutting down.", signal)
 			}
 		}
 	}()

@@ -375,7 +375,7 @@ const (
 	// template input: *ContextTemplateData
 	ctxT = `// {{.Name}} provides the {{.ResourceName}} {{.ActionName}} action context.
 type {{.Name}} struct {
-	*goa.Context
+	context.Context
 {{if .Params}}{{range $name, $att := .Params.Type.ToObject}}{{/*
 */}}	{{goify $name true}} {{if and $att.Type.IsPrimitive ($.Params.IsPrimitivePointer $name)}}*{{end}}{{gotyperef .Type nil 0}}
 {{end}}{{end}}{{if .Payload}}	Payload {{gotyperef .Payload nil 0}}
@@ -451,7 +451,7 @@ type {{.Name}} struct {
 	ctxNewT = `{{define "Coerce"}}` + coerceT + `{{end}}` + `
 // New{{goify .Name true}} parses the incoming request URL and body, performs validations and creates the
 // context used by the {{.ResourceName}} controller {{.ActionName}} action.
-func New{{.Name}}(c *goa.Context) (*{{.Name}}, error) {
+func New{{.Name}}(c context.Context) (*{{.Name}}, error) {
 	var err error
 	ctx := {{.Name}}{Context: c}
 {{if .Headers}}{{$headers := .Headers}}{{range $name, $_ := $headers.Type.ToObject}}{{if ($headers.IsRequired $name)}}	if c.Request().Header.Get("{{$name}}") == "" {
@@ -525,7 +525,7 @@ func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Control
 	// Setup endpoint handler
 	var h goa.Handler
 	mux := service.{{if not .Version.IsDefault}}Version("{{.Version.Version}}").ServeMux(){{else}}ServeMux(){{end}}
-{{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(c *goa.Context) error {
+{{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(c context.Context) error {
 		ctx, err := New{{.Context}}(c)
 		if err != nil {
 			return goa.NewBadRequestError(err)
@@ -545,16 +545,15 @@ func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Control
 	// template input: *ControllerTemplateData
 	unmarshalT = `{{range .Actions}}{{if .Payload}}
 // {{.Unmarshal}} unmarshals the request body.
-func {{.Unmarshal}}(ctx *goa.Context) error {
+func {{.Unmarshal}}(ctx context.Context) (*{{gotypename .Payload nil 1}}, error) {
 	payload := &{{gotypename .Payload nil 1}}{}
-	if err := ctx.Service().DecodeRequest(ctx, payload); err != nil {
+	if err := goa.CtxService(ctx).DecodeRequest(ctx, payload); err != nil {
 		return err
 	}{{$validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1}}{{if $validation}}
 	if err := payload.Validate(); err != nil {
 		return err
 	}{{end}}
-	ctx.SetPayload(payload)
-	return nil
+	return payload, nil
 }
 {{end}}
 {{end}}`

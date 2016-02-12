@@ -11,17 +11,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"golang.org/x/net/context"
-	"gopkg.in/inconshreveable/log15.v2"
 )
 
 var _ = Describe("Context", func() {
-	var logger log15.Logger
 	var ctx *goa.Context
 
 	BeforeEach(func() {
 		gctx := context.Background()
 		ctx = goa.NewContext(gctx, goa.New("test"), nil, nil, nil)
-		ctx.Logger = logger
 	})
 
 	Describe("SetValue", func() {
