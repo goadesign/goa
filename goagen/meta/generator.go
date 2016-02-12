@@ -157,6 +157,7 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 			args = append(args, fmt.Sprintf("--%s=%s", name, value))
 		}
 	}
+	args = append(args, codegen.ExtraFlags...)
 	cmd := exec.Command(genbin, args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
