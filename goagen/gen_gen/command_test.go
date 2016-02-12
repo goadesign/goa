@@ -66,8 +66,8 @@ var _ = Describe("RegisterFlags", func() {
 		})
 
 		AfterEach(func() {
-			gengen.GenPkgPath = gengen.GenPkgPath
-			gengen.GenPkgName = gengen.GenPkgName
+			gengen.GenPkgPath = oldPkgPath
+			gengen.GenPkgName = oldPkgName
 			codegen.OutputDir = oldOutputDir
 			codegen.DesignPackagePath = oldDesignPackagePath
 			os.RemoveAll(tmpPkg)
