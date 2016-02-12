@@ -11,7 +11,7 @@ import (
 
 type (
 	// ServeMux is the interface implemented by the service request muxes. There is one instance
-	// of ServeMux per service version and one for requests targetting no version.
+	// of ServeMux per service version and one for requests targeting no version.
 	// It implements http.Handler and makes it possible to register request handlers for
 	// specific HTTP methods and request path via the Handle method.
 	ServeMux interface {
@@ -36,7 +36,7 @@ type (
 		muxes             map[string]ServeMux
 	}
 
-	// SelectVersionFunc is used by the default goa mux to compute the API version targetted by
+	// SelectVersionFunc is used by the default goa mux to compute the API version targeted by
 	// a given request.
 	// The default implementation looks for a version as path prefix.
 	// Alternate implementations can be set using the DefaultMux SelectVersion method.
@@ -116,7 +116,7 @@ func CombineSelectVersionFunc(funcs ...SelectVersionFunc) SelectVersionFunc {
 	}
 }
 
-// SelectVersion sets the func used to compute the API version targetted by a request.
+// SelectVersion sets the func used to compute the API version targeted by a request.
 func (m *DefaultMux) SelectVersion(sv SelectVersionFunc) {
 	m.SelectVersionFunc = sv
 }
