@@ -253,7 +253,7 @@ func Enum(val ...interface{}) {
 			// Why allowing this? because it's not always possible to specify the type of an
 			// object - an object may just be declared inline to represent a substructure.
 			// OK then why not assuming object and not allowing for string? because the DSL
-			// where there's only one argument and the type is string implicitely is very
+			// where there's only one argument and the type is string implicitly is very
 			// useful and common, for example to list attributes that refer to other attributes
 			// such as responses that refer to responses defined at the API level or links that
 			// refer to the media type attributes. So if the form that takes a DSL always ended
