@@ -34,17 +34,17 @@ var (
 	// KnownEncoders contains the list of encoding packages and factories known by goa indexed
 	// by MIME type.
 	KnownEncoders = map[string][3]string{
-		"application/json":      [3]string{"json", "JSONEncoderFactory", "JSONDecoderFactory"},
-		"application/xml":       [3]string{"xml", "XMLEncoderFactory", "XMLDecoderFactory"},
-		"text/xml":              [3]string{"xml", "XMLEncoderFactory", "XMLDecoderFactory"},
-		"application/gob":       [3]string{"gob", "GobEncoderFactory", "GobDecoderFactory"},
-		"application/x-gob":     [3]string{"gob", "GobEncoderFactory", "GobDecoderFactory"},
-		"application/binc":      [3]string{"github.com/goadesign/encoding/binc", "EncoderFactory", "DecoderFactory"},
-		"application/x-binc":    [3]string{"github.com/goadesign/encoding/binc", "EncoderFactory", "DecoderFactory"},
-		"application/x-cbor":    [3]string{"github.com/goadesign/encoding/cbor", "EncoderFactory", "DecoderFactory"},
-		"application/cbor":      [3]string{"github.com/goadesign/encoding/cbor", "EncoderFactory", "DecoderFactory"},
-		"application/msgpack":   [3]string{"github.com/goadesign/encoding/msgpack", "EncoderFactory", "DecoderFactory"},
-		"application/x-msgpack": [3]string{"github.com/goadesign/encoding/msgpack", "EncoderFactory", "DecoderFactory"},
+		"application/json":      {"json", "JSONEncoderFactory", "JSONDecoderFactory"},
+		"application/xml":       {"xml", "XMLEncoderFactory", "XMLDecoderFactory"},
+		"text/xml":              {"xml", "XMLEncoderFactory", "XMLDecoderFactory"},
+		"application/gob":       {"gob", "GobEncoderFactory", "GobDecoderFactory"},
+		"application/x-gob":     {"gob", "GobEncoderFactory", "GobDecoderFactory"},
+		"application/binc":      {"github.com/goadesign/encoding/binc", "EncoderFactory", "DecoderFactory"},
+		"application/x-binc":    {"github.com/goadesign/encoding/binc", "EncoderFactory", "DecoderFactory"},
+		"application/x-cbor":    {"github.com/goadesign/encoding/cbor", "EncoderFactory", "DecoderFactory"},
+		"application/cbor":      {"github.com/goadesign/encoding/cbor", "EncoderFactory", "DecoderFactory"},
+		"application/msgpack":   {"github.com/goadesign/encoding/msgpack", "EncoderFactory", "DecoderFactory"},
+		"application/x-msgpack": {"github.com/goadesign/encoding/msgpack", "EncoderFactory", "DecoderFactory"},
 	}
 
 	// JSONContentTypes is a slice of default Content-Type headers that will use stdlib
@@ -65,8 +65,8 @@ func init() {
 	types = append(types, JSONContentTypes...)
 	types = append(types, XMLContentTypes...)
 	types = append(types, GobContentTypes...)
-	DefaultEncoders = []*EncodingDefinition{&EncodingDefinition{MIMETypes: types}}
-	DefaultDecoders = []*EncodingDefinition{&EncodingDefinition{MIMETypes: types}}
+	DefaultEncoders = []*EncodingDefinition{{MIMETypes: types}}
+	DefaultDecoders = []*EncodingDefinition{{MIMETypes: types}}
 }
 
 type (
@@ -859,7 +859,7 @@ func (enc *EncodingDefinition) SupportingPackages() map[string][]string {
 		return nil
 	}
 	ppath := KnownEncoders[mimeTypes[0]][0]
-	paths := map[string][]string{ppath: []string{mimeTypes[0]}}
+	paths := map[string][]string{ppath: {mimeTypes[0]}}
 	if len(mimeTypes) == 1 {
 		return paths
 	}

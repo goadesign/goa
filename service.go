@@ -36,7 +36,7 @@ type (
 		SetErrorHandler(ErrorHandler)
 
 		// SetMissingVersionHandler registers the handler invoked when a request targets a
-		// non existant API version.
+		// non existent API version.
 		SetMissingVersionHandler(MissingVersionHandler)
 
 		// ServeMux returns the service mux.
@@ -179,8 +179,8 @@ type (
 	// ErrorHandler defines the application error handler signature.
 	ErrorHandler func(*Context, error)
 
-	// MissingVersionHandler defines the function that handles requests targetting a non
-	// existant API version.
+	// MissingVersionHandler defines the function that handles requests targeting a non
+	// existent API version.
 	MissingVersionHandler func(*Context, string)
 
 	// DecodeFunc is the function that initialize the unmarshaled payload from the request body.

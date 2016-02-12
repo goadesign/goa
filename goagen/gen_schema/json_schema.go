@@ -126,11 +126,11 @@ func APISchema(api *design.APIDefinition) *JSONSchema {
 		return nil
 	})
 	links := []*JSONLink{
-		&JSONLink{
+		{
 			Href: ServiceURL,
 			Rel:  "self",
 		},
-		&JSONLink{
+		{
 			Href:   "/schema",
 			Method: "GET",
 			Rel:    "self",
