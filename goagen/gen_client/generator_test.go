@@ -74,10 +74,10 @@ var _ = Describe("Generate", func() {
 					Description: "I told you it's dummy",
 				},
 				Resources: map[string]*design.ResourceDefinition{
-					"foo": &design.ResourceDefinition{
+					"foo": {
 						Name: "foo",
 						Actions: map[string]*design.ActionDefinition{
-							"show": &design.ActionDefinition{
+							"show": {
 								Name: "show",
 								QueryParams: &design.AttributeDefinition{
 									Type: design.Object{
@@ -85,7 +85,7 @@ var _ = Describe("Generate", func() {
 									},
 								},
 								Routes: []*design.RouteDefinition{
-									&design.RouteDefinition{
+									{
 										Verb: "GET",
 										Path: "",
 									},

@@ -35,7 +35,7 @@ var _ = Describe("Project", func() {
 				},
 				Identifier: "vnd.application/foo",
 				Views: map[string]*ViewDefinition{
-					"default": &ViewDefinition{
+					"default": {
 						Name: "default",
 						AttributeDefinition: &AttributeDefinition{
 							Type: Object{
@@ -44,7 +44,7 @@ var _ = Describe("Project", func() {
 							},
 						},
 					},
-					"tiny": &ViewDefinition{
+					"tiny": {
 						Name: "tiny",
 						AttributeDefinition: &AttributeDefinition{
 							Type: Object{
