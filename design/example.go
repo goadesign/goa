@@ -277,8 +277,6 @@ func (eg *exampleGenerator) generateValidatedMinMaxValueExample() interface{} {
 			return int(min)
 		}
 		return min
-	} else {
-		panic("Validation: Min > Max")
 	}
-	return nil
+	panic("Validation: Min > Max")
 }

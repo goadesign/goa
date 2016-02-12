@@ -405,7 +405,7 @@ func RunTemplate(tmpl *template.Template, data interface{}) string {
 
 func transformAttribute(source, target *design.AttributeDefinition, targetPkg, sctx, tctx string, depth int) (string, error) {
 	if source.Type.Kind() != target.Type.Kind() {
-		return "", fmt.Errorf("incompatible attribute types: %s if of type but %s if of type %s",
+		return "", fmt.Errorf("incompatible attribute types: %s is of type %s but %s is of type %s",
 			sctx, source.Type.Name(), tctx, target.Type.Name())
 	}
 	switch {
@@ -433,7 +433,7 @@ func transformObject(source, target design.Object, targetPkg, targetType, sctx, 
 		targetAtt := target[t]
 		if sourceAtt.Type.Kind() != targetAtt.Type.Kind() {
 			return "", fmt.Errorf("incompatible attribute types: %s.%s is of type %s but %s.%s is of type %s",
-				sctx, source, sourceAtt.Type.Name(), tctx, target, targetAtt.Type.Name())
+				sctx, source.Name(), sourceAtt.Type.Name(), tctx, target.Name(), targetAtt.Type.Name())
 		}
 	}
 
