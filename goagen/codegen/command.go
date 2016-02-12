@@ -27,6 +27,11 @@ var (
 
 	// CommandName is the name of the command being run.
 	CommandName string
+
+	// ExtraFlags is the list of extra, arbitrary flags to was read from the
+	// command line.  These flags will be passed as command line flags to the
+	// final generator.
+	ExtraFlags []string
 )
 
 type (
