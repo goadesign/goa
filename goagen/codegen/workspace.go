@@ -14,7 +14,7 @@ import (
 	"strings"
 	"text/template"
 
-	"golang.org/x/tools/imports"
+	"golang.org/x/tools/go/ast/astutil"
 )
 
 type (
@@ -243,25 +243,30 @@ func (f *SourceFile) FormatCode() error {
 		return nil
 	}
 
-	src, err := ioutil.ReadFile(f.Abs())
+	// Parse file into AST
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, f.Abs(), nil, parser.ParseComments)
+	if err != nil {
+		content, _ := ioutil.ReadFile(f.Abs())
+		var buf bytes.Buffer
+		scanner.PrintError(&buf, err)
+		return fmt.Errorf("%s\n========\nContent:\n%s", buf.String(), content)
+	}
+	// Clean unused imports
+	imports := astutil.Imports(fset, file)
+	for _, group := range imports {
+		for _, imp := range group {
+			path := strings.Trim(imp.Path.Value, `"`)
+			if !astutil.UsesImport(file, path) {
+				astutil.DeleteImport(fset, file, path)
+			}
+		}
+	}
+	b, err := FormatFile(fset, file)
 	if err != nil {
 		return err
 	}
-
-	res, err := imports.Process(f.Abs(), src, nil)
-	if err != nil {
-		var buf bytes.Buffer
-		scanner.PrintError(&buf, err)
-		return fmt.Errorf("%s\n========\nContent:\n%s", buf.String(), src)
-	}
-
-	if !bytes.Equal(src, res) {
-		err = ioutil.WriteFile(f.Abs(), res, 0)
-		if err != nil {
-			return err
-		}
-	}
-	return err
+	return ioutil.WriteFile(f.Abs(), b, os.ModePerm)
 }
 
 // Abs returne the source file absolute filename
