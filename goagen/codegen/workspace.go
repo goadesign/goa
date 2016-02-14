@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"go/parser"
+	"go/scanner"
 	"go/token"
 	"io/ioutil"
 	"os"
@@ -249,7 +250,9 @@ func (f *SourceFile) FormatCode() error {
 
 	res, err := imports.Process(f.Abs(), src, nil)
 	if err != nil {
-		return err
+		var buf bytes.Buffer
+		scanner.PrintError(&buf, err)
+		return fmt.Errorf("%s\n========\nContent:\n%s", buf.String(), src)
 	}
 
 	if !bytes.Equal(src, res) {
