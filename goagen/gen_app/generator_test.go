@@ -377,6 +377,7 @@ package {{if .version}}{{.version}}{{else}}app{{end}}
 
 import {{if .version}}(
 	"{{.tmpDir}}/app"
+
 	{{end}}"github.com/goadesign/goa"{{if .version}}
 ){{end}}
 

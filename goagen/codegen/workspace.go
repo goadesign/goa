@@ -3,8 +3,6 @@ package codegen
 import (
 	"bytes"
 	"fmt"
-	"go/ast"
-	"go/format"
 	"go/parser"
 	"go/scanner"
 	"go/token"
@@ -215,12 +213,12 @@ func SourceFileFor(path string) (*SourceFile, error) {
 }
 
 // WriteHeader writes the generic generated code header.
-func (f *SourceFile) WriteHeader(title, pack string, imports []*ImportSpec) error {
+func (f *SourceFile) WriteHeader(title, pack string, imps []*ImportSpec) error {
 	ctx := map[string]interface{}{
 		"Title":       title,
 		"ToolVersion": Version,
 		"Pkg":         pack,
-		"Imports":     imports,
+		"Imports":     imps,
 	}
 	if err := headerTmpl.Execute(f, ctx); err != nil {
 		return fmt.Errorf("failed to generate contexts: %s", err)
@@ -239,11 +237,12 @@ func (f *SourceFile) Write(b []byte) (int, error) {
 	return file.Write(b)
 }
 
-// FormatCode runs "goimports -w" on the source file.
+// FormatCode applies goimports-style formatting on the source file.
 func (f *SourceFile) FormatCode() error {
 	if NoFormat {
 		return nil
 	}
+
 	// Parse file into AST
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, f.Abs(), nil, parser.ParseComments)
@@ -263,15 +262,11 @@ func (f *SourceFile) FormatCode() error {
 			}
 		}
 	}
-	ast.SortImports(fset, file)
-	// Open file to be written
-	w, err := os.OpenFile(f.Abs(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+	b, err := formatFile(fset, file)
 	if err != nil {
 		return err
 	}
-	defer w.Close()
-	// Write formatted code without unused imports
-	return format.Node(w, fset, file)
+	return ioutil.WriteFile(f.Abs(), b, os.ModePerm)
 }
 
 // Abs returne the source file absolute filename
