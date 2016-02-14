@@ -23,7 +23,7 @@ import (
 	"golang.org/x/tools/go/ast/astutil"
 )
 
-func FormatFile(fset *token.FileSet, f *ast.File) ([]byte, error) {
+func formatFile(fset *token.FileSet, f *ast.File) ([]byte, error) {
 	sortImports(fset, f)
 	imps := astutil.Imports(fset, f)
 

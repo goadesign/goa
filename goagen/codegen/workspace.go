@@ -262,7 +262,7 @@ func (f *SourceFile) FormatCode() error {
 			}
 		}
 	}
-	b, err := FormatFile(fset, file)
+	b, err := formatFile(fset, file)
 	if err != nil {
 		return err
 	}
