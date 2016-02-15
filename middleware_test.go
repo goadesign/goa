@@ -3,7 +3,6 @@ package goa_test
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 
 	"golang.org/x/net/context"
 
@@ -51,22 +50,24 @@ var _ = Describe("NewMiddleware", func() {
 
 	Context("with a context", func() {
 		var service goa.Service
+		var req *http.Request
+		var rw http.ResponseWriter
 		var ctx context.Context
 
 		BeforeEach(func() {
 			service = goa.New("test")
-			req, err := http.NewRequest("GET", "/goo", nil)
+			var err error
+			req, err = http.NewRequest("GET", "/goo", nil)
 			Ω(err).ShouldNot(HaveOccurred())
-			rw := new(TestResponseWriter)
-			params := url.Values{"foo": []string{"bar"}}
-			ctx = goa.NewContext(nil, service, req, rw, params)
-			Ω(ctx.ResponseStatus()).Should(Equal(0))
+			rw = new(TestResponseWriter)
+			ctx = goa.NewContext(nil, service, rw, req)
+			Ω(goa.Response(ctx).Status).Should(Equal(0))
 		})
 
 		Context("using a goa handler", func() {
 			BeforeEach(func() {
 				var goaHandler goa.Handler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-					ctx.Respond(200, "ok")
+					goa.Response(ctx).Send(200, "ok")
 					return nil
 				}
 				input = goaHandler
@@ -75,15 +76,15 @@ var _ = Describe("NewMiddleware", func() {
 			It("wraps it in a middleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
 				h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error { return nil }
-				Ω(middleware(h)(ctx)).ShouldNot(HaveOccurred())
-				Ω(ctx.ResponseStatus()).Should(Equal(200))
+				Ω(middleware(h)(ctx, rw, req)).ShouldNot(HaveOccurred())
+				Ω(goa.Response(ctx).Status).Should(Equal(200))
 			})
 		})
 
 		Context("using a goa handler func", func() {
 			BeforeEach(func() {
 				input = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-					ctx.Respond(200, "ok")
+					goa.Response(ctx).Send(200, "ok")
 					return nil
 				}
 			})
@@ -91,8 +92,8 @@ var _ = Describe("NewMiddleware", func() {
 			It("wraps it in a middleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
 				h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error { return nil }
-				Ω(middleware(h)(ctx)).ShouldNot(HaveOccurred())
-				Ω(ctx.ResponseStatus()).Should(Equal(200))
+				Ω(middleware(h)(ctx, rw, req)).ShouldNot(HaveOccurred())
+				Ω(goa.Response(ctx).Status).Should(Equal(200))
 			})
 		})
 
@@ -104,11 +105,11 @@ var _ = Describe("NewMiddleware", func() {
 			It("wraps it in a middleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
 				h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-					c.Respond(200, "ok")
+					goa.Response(ctx).Send(200, "ok")
 					return nil
 				}
-				Ω(middleware(h)(ctx)).ShouldNot(HaveOccurred())
-				Ω(ctx.ResponseStatus()).Should(Equal(200))
+				Ω(middleware(h)(ctx, rw, req)).ShouldNot(HaveOccurred())
+				Ω(goa.Response(ctx).Status).Should(Equal(200))
 			})
 		})
 
@@ -124,8 +125,8 @@ var _ = Describe("NewMiddleware", func() {
 			It("wraps it in a middleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
 				h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error { return nil }
-				Ω(middleware(h)(ctx)).ShouldNot(HaveOccurred())
-				Ω(ctx.ResponseStatus()).Should(Equal(200))
+				Ω(middleware(h)(ctx, rw, req)).ShouldNot(HaveOccurred())
+				Ω(goa.Response(ctx).Status).Should(Equal(200))
 			})
 		})
 
@@ -140,8 +141,8 @@ var _ = Describe("NewMiddleware", func() {
 			It("wraps it in a middleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
 				h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error { return nil }
-				Ω(middleware(h)(ctx)).ShouldNot(HaveOccurred())
-				Ω(ctx.ResponseStatus()).Should(Equal(200))
+				Ω(middleware(h)(ctx, rw, req)).ShouldNot(HaveOccurred())
+				Ω(goa.Response(ctx).Status).Should(Equal(200))
 			})
 		})
 

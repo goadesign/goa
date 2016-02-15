@@ -74,8 +74,8 @@ type (
 // DecodeRequest retrives the request body and `Content-Type` header and uses Decode
 // to unmarshal into the provided `interface{}`
 func (ver *version) DecodeRequest(ctx context.Context, v interface{}) error {
-	body := Request(ctx).Body
-	contentType := Request(ctx).Header.Get("Content-Type")
+	req := Request(ctx)
+	body, contentType := req.Body, req.Header.Get("Content-Type")
 	defer body.Close()
 
 	if err := ver.Decode(v, body, contentType); err != nil {
@@ -199,7 +199,6 @@ func (ver *version) EncodeResponse(ctx context.Context, v interface{}) error {
 	// the encoderPool will handle whether or not a pool is actually in use
 	encoder := p.Get(Response(ctx))
 	if err := encoder.Encode(v); err != nil {
-		// TODO: log out error details
 		return err
 	}
 	p.Put(encoder)
