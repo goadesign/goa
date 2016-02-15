@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"golang.org/x/net/context"
-	log "gopkg.in/inconshreveable/log15.v2"
 )
 
 type (
@@ -187,32 +186,6 @@ type (
 	}
 )
 
-var (
-	// Log is the global logger from which other loggers (e.g. request specific loggers) are
-	// derived. Configure it by setting its handler prior to calling New.
-	// See https://godoc.org/github.com/inconshreveable/log15
-	Log log.Logger
-
-	// RootContext is the root context from which all request contexts are derived.
-	// Set values in the root context prior to starting the server to make these values
-	// available to all request handlers:
-	//
-	//	goa.RootContext = goa.RootContext.WithValue(key, value)
-	//
-	RootContext context.Context
-
-	// cancel is the root context CancelFunc.
-	// Call Cancel to send a cancellation signal to all the active request handlers.
-	cancel context.CancelFunc
-)
-
-// Log to STDOUT by default.
-func init() {
-	Log = log.New()
-	Log.SetHandler(log.StdoutHandler)
-	RootContext, cancel = context.WithCancel(context.Background())
-}
-
 // New instantiates an application with the given name and default decoders/encoders.
 func New(name string) Service {
 	app := &Application{
@@ -227,12 +200,6 @@ func New(name string) Service {
 		encodableContentTypes: []string{},
 	}
 	return app
-}
-
-// Cancel sends a cancellation signal to all handlers through the action context.
-// see https://godoc.org/golang.org/x/net/context for details on how to handle the signal.
-func Cancel() {
-	cancel()
 }
 
 // Name returns the application name.
@@ -272,13 +239,13 @@ func (app *Application) ServeMux() ServeMux {
 
 // ListenAndServe starts a HTTP server and sets up a listener on the given host/port.
 func (app *Application) ListenAndServe(addr string) error {
-	fmt.Fprintf(os.Stderr, "listen %s", addr)
+	Log.Info(RootContext, "listen", KV{"address", addr})
 	return http.ListenAndServe(addr, app.ServeMux())
 }
 
 // ListenAndServeTLS starts a HTTPS server and sets up a listener on the given host/port.
 func (app *Application) ListenAndServeTLS(addr, certFile, keyFile string) error {
-	fmt.Fprintf(os.Stderr, "listen ssl %s", addr)
+	Log.Info(RootContext, "listen ssl", KV{"address", addr})
 	return http.ListenAndServeTLS(addr, certFile, keyFile, app.ServeMux())
 }
 
@@ -300,17 +267,22 @@ func (app *Application) ServeFiles(path, filename string) error {
 	if _, err := os.Stat(filename); err != nil {
 		return fmt.Errorf("ServeFiles: %s", err)
 	}
-	fmt.Fprintf(os.Stderr, "mount file: %s route: %s", filename, fmt.Sprintf("GET %s", path))
+	Log.Info(RootContext, "mount file", KV{"filname", filename}, KV{"path", fmt.Sprintf("GET %s", path)})
 	ctrl := app.NewController("FileServer")
+	var wc string
+	if idx := strings.Index(path, "*"); idx > -1 && idx < len(path)-1 {
+		wc = path[idx+1:]
+	}
 	handle := ctrl.HandleFunc("Serve", func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		fullpath := filename
-		params := GetNames(ctx)
-		if len(params) > 0 {
-			suffix := Get(ctx, params[0])
-			fullpath = filepath.Join(fullpath, suffix)
+		r := Request(ctx)
+		if len(wc) > 0 {
+			if m, ok := r.Params[wc]; ok {
+				fullpath = filepath.Join(fullpath, m[0])
+			}
 		}
-		fmt.Fprintf(os.Stderr, "serve path: %s filename: %s", Request(ctx).URL.Path, fullpath)
-		http.ServeFile(Response(ctx), Request(ctx), fullpath)
+		Log.Info(RootContext, "serve", KV{"path", r.URL.Path}, KV{"filename", fullpath})
+		http.ServeFile(Response(ctx), r.Request, fullpath)
 		return nil
 	}, nil)
 	app.ServeMux().Handle("GET", path, handle)
@@ -430,9 +402,9 @@ func (ctrl *ApplicationController) HandleFunc(name string, h, d Handler) HandleF
 	}
 	return func(rw http.ResponseWriter, req *http.Request, params url.Values) {
 		// Build context
-		gctx, cancel := context.WithCancel(RootContext)
-		defer cancel() // Signal completion of request to any child goroutine
-		ctx := NewContext(gctx, ctrl, name, req, rw, params)
+		ctx := NewLogContext(RootContext,
+			KV{"app", ctrl.app.Name}, KV{"ctrl", ctrl.Name}, KV{"action", name})
+		ctx = NewContext(ctx, ctrl.app, rw, req)
 
 		// Load body if any
 		var err error
@@ -455,11 +427,6 @@ func (ctrl *ApplicationController) HandleFunc(name string, h, d Handler) HandleF
 
 		// Invoke middleware chain
 		handler(ctx, rw, req)
-
-		// Make sure a response is sent back to client.
-		if !Response(ctx).Written() {
-			ctrl.HandleError(ctx, rw, req, fmt.Errorf("unhandled request"))
-		}
 	}
 }
 
@@ -470,6 +437,8 @@ func DefaultErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.
 	status := 500
 	if _, ok := e.(*BadRequestError); ok {
 		status = 400
+	} else {
+		Log.Error(ctx, e.Error())
 	}
 	Response(ctx).Send(status, e.Error())
 }
@@ -482,6 +451,8 @@ func TerseErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.Re
 	if _, ok := e.(*BadRequestError); ok {
 		status = 400
 		body = e.Error()
+	} else {
+		Log.Error(ctx, e.Error())
 	}
 	Response(ctx).Send(status, body)
 }
@@ -494,13 +465,4 @@ func DefaultMissingVersionHandler(ctx context.Context, rw http.ResponseWriter, r
 		Mesg: fmt.Sprintf(`API does not support version %s`, version),
 	}
 	Response(ctx).Send(400, resp)
-}
-
-// Fatal logs a critical message and exits the process with status code 1.
-// This function is meant to be used by initialization code to prevent the application from even
-// starting up when something is obviously wrong.
-// In particular this function should probably not be used when serving requests.
-func Fatal(msg string, ctx ...interface{}) {
-	log.Crit(msg, ctx...)
-	os.Exit(1)
 }
