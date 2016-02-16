@@ -552,6 +552,16 @@ func (m *MediaTypeDefinition) ComputeViews() map[string]*ViewDefinition {
 	return nil
 }
 
+// SortedViews returns view names in alphabetical order.
+func (m *MediaTypeDefinition) SortedViews() []string {
+	views := make([]string, 0, len(m.Views))
+	for view := range m.Views {
+		views = append(views, view)
+	}
+	sort.Strings(views)
+	return views
+}
+
 // Project creates a MediaTypeDefinition derived from the given definition that matches the given
 // view.
 func (m *MediaTypeDefinition) Project(view string) (p *MediaTypeDefinition, links *UserTypeDefinition, err error) {
