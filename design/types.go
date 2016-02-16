@@ -552,14 +552,29 @@ func (m *MediaTypeDefinition) ComputeViews() map[string]*ViewDefinition {
 	return nil
 }
 
-// SortedViews returns view names in alphabetical order.
-func (m *MediaTypeDefinition) SortedViews() []string {
-	views := make([]string, 0, len(m.Views))
-	for view := range m.Views {
-		views = append(views, view)
+// ViewIterator is the type of the function given to IterateViews.
+type ViewIterator func(*ViewDefinition) error
+
+// IterateViews calls the given iterator passing in each attribute sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateViews returns that
+// error.
+func (m *MediaTypeDefinition) IterateViews(it ViewIterator) error {
+	o := m.Views
+	// gather names and sort them
+	names := make([]string, len(o))
+	i := 0
+	for n := range o {
+		names[i] = n
+		i++
 	}
-	sort.Strings(views)
-	return views
+	sort.Strings(names)
+	// iterate
+	for _, n := range names {
+		if err := it(o[n]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Project creates a MediaTypeDefinition derived from the given definition that matches the given

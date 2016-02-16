@@ -1,6 +1,8 @@
 package design_test
 
 import (
+	"errors"
+
 	. "github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/apidsl"
 	"github.com/goadesign/goa/dslengine"
@@ -179,23 +181,53 @@ var _ = Describe("Project", func() {
 	})
 })
 
-var _ = FDescribe("MediaTypeDefinition", func() {
-	Describe("SortedViews", func() {
-		It("works with empty", func() {
-			m := &MediaTypeDefinition{}
-			Expect(m.Views).To(BeEmpty())
-			Expect(m.SortedViews()).To(BeEmpty())
-		})
-		It("sorts views", func() {
-			m := &MediaTypeDefinition{}
-			Expect(m.Views).To(BeEmpty())
-			m.Views = map[string]*ViewDefinition{
-				"d": nil,
-				"c": nil,
-				"a": nil,
-				"b": nil,
+var _ = Describe("MediaTypeDefinition", func() {
+	Describe("IterateViews", func() {
+		var (
+			m  *MediaTypeDefinition
+			it ViewIterator
+
+			iteratedViews []string
+		)
+		BeforeEach(func() {
+			m = &MediaTypeDefinition{}
+
+			// setup iterator that just accumulates view names into iteratedViews
+			iteratedViews = []string{}
+			it = func(v *ViewDefinition) error {
+				iteratedViews = append(iteratedViews, v.Name)
+				return nil
 			}
-			Expect(m.SortedViews()).To(Equal([]string{"a", "b", "c", "d"}))
+		})
+		It("works with empty", func() {
+			Expect(m.Views).To(BeEmpty())
+			Expect(m.IterateViews(it)).To(Succeed())
+			Expect(iteratedViews).To(BeEmpty())
+		})
+		Context("with non-empty views map", func() {
+			BeforeEach(func() {
+				m.Views = map[string]*ViewDefinition{
+					"d": {Name: "d"},
+					"c": {Name: "c"},
+					"a": {Name: "a"},
+					"b": {Name: "b"},
+				}
+			})
+			It("sorts views", func() {
+				Expect(m.IterateViews(it)).To(Succeed())
+				Expect(iteratedViews).To(Equal([]string{"a", "b", "c", "d"}))
+			})
+			It("propagates error", func() {
+				errIterator := func(v *ViewDefinition) error {
+					if len(iteratedViews) > 2 {
+						return errors.New("foo")
+					}
+					iteratedViews = append(iteratedViews, v.Name)
+					return nil
+				}
+				Expect(m.IterateViews(errIterator)).To(MatchError("foo"))
+				Expect(iteratedViews).To(Equal([]string{"a", "b", "c"}))
+			})
 		})
 	})
 })
