@@ -60,7 +60,7 @@ var _ = Describe("NewMiddleware", func() {
 			req, err = http.NewRequest("GET", "/goo", nil)
 			Ω(err).ShouldNot(HaveOccurred())
 			rw = new(TestResponseWriter)
-			ctx = goa.NewContext(nil, service, rw, req)
+			ctx = goa.NewContext(nil, service, rw, req, nil)
 			Ω(goa.Response(ctx).Status).Should(Equal(0))
 		})
 

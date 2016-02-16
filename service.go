@@ -239,13 +239,13 @@ func (app *Application) ServeMux() ServeMux {
 
 // ListenAndServe starts a HTTP server and sets up a listener on the given host/port.
 func (app *Application) ListenAndServe(addr string) error {
-	Log.Info(RootContext, "listen", KV{"address", addr})
+	Info(RootContext, "listen", KV{"address", addr})
 	return http.ListenAndServe(addr, app.ServeMux())
 }
 
 // ListenAndServeTLS starts a HTTPS server and sets up a listener on the given host/port.
 func (app *Application) ListenAndServeTLS(addr, certFile, keyFile string) error {
-	Log.Info(RootContext, "listen ssl", KV{"address", addr})
+	Info(RootContext, "listen ssl", KV{"address", addr})
 	return http.ListenAndServeTLS(addr, certFile, keyFile, app.ServeMux())
 }
 
@@ -267,7 +267,7 @@ func (app *Application) ServeFiles(path, filename string) error {
 	if _, err := os.Stat(filename); err != nil {
 		return fmt.Errorf("ServeFiles: %s", err)
 	}
-	Log.Info(RootContext, "mount file", KV{"filname", filename}, KV{"path", fmt.Sprintf("GET %s", path)})
+	Info(RootContext, "mount file", KV{"filname", filename}, KV{"path", fmt.Sprintf("GET %s", path)})
 	ctrl := app.NewController("FileServer")
 	var wc string
 	if idx := strings.Index(path, "*"); idx > -1 && idx < len(path)-1 {
@@ -281,7 +281,7 @@ func (app *Application) ServeFiles(path, filename string) error {
 				fullpath = filepath.Join(fullpath, m[0])
 			}
 		}
-		Log.Info(RootContext, "serve", KV{"path", r.URL.Path}, KV{"filename", fullpath})
+		Info(RootContext, "serve", KV{"path", r.URL.Path}, KV{"filename", fullpath})
 		http.ServeFile(Response(ctx), r.Request, fullpath)
 		return nil
 	}, nil)
@@ -404,7 +404,7 @@ func (ctrl *ApplicationController) HandleFunc(name string, h, d Handler) HandleF
 		// Build context
 		ctx := NewLogContext(RootContext,
 			KV{"app", ctrl.app.Name}, KV{"ctrl", ctrl.Name}, KV{"action", name})
-		ctx = NewContext(ctx, ctrl.app, rw, req)
+		ctx = NewContext(ctx, ctrl.app, rw, req, params)
 
 		// Load body if any
 		var err error
