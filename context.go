@@ -12,6 +12,7 @@ import (
 const (
 	reqKey key = iota + 1
 	respKey
+	paramsKey
 	serviceKey
 	logContextKey
 )
@@ -21,7 +22,7 @@ var (
 	// Set values in the root context prior to starting the server to make these values
 	// available to all request handlers:
 	//
-	//	goa.RootContext = goa.RootContext.WithValue(key, value)
+	//	goa.RootContext = context.WithValue(goa.RootContext, key, value)
 	//
 	RootContext context.Context
 
@@ -65,15 +66,15 @@ type (
 // NewContext builds a new goa request context. The parent context may include
 // log context data.
 // If parent is nil then RootContext is used.
-func NewContext(parent context.Context, service Service, rw http.ResponseWriter, req *http.Request) context.Context {
+func NewContext(parent context.Context, service Service, rw http.ResponseWriter, req *http.Request, params url.Values) context.Context {
 	if parent == nil {
 		parent = RootContext
 	}
-	request := &RequestData{Request: req}
+	request := &RequestData{Request: req, Params: params}
 	response := &ResponseData{ResponseWriter: rw}
-	ctx := context.WithValue(parent, reqKey, request)
+	ctx := context.WithValue(parent, serviceKey, service)
 	ctx = context.WithValue(ctx, respKey, response)
-	ctx = context.WithValue(ctx, serviceKey, service)
+	ctx = context.WithValue(ctx, reqKey, request)
 	response.ctx = ctx
 
 	return ctx

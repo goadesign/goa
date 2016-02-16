@@ -2,6 +2,7 @@ package goa_test
 
 import (
 	"net/http"
+	"net/url"
 
 	"golang.org/x/net/context"
 
@@ -14,6 +15,7 @@ var _ = Describe("ResponseData", func() {
 	var data *goa.ResponseData
 	var rw http.ResponseWriter
 	var req *http.Request
+	var params url.Values
 
 	BeforeEach(func() {
 		app := goa.New("test")
@@ -21,7 +23,8 @@ var _ = Describe("ResponseData", func() {
 		req, err = http.NewRequest("GET", "google.com", nil)
 		Ω(err).ShouldNot(HaveOccurred())
 		rw = &TestResponseWriter{Status: 42}
-		ctx := goa.NewContext(context.Background(), app, rw, req)
+		params = url.Values{"query": []string{"value"}}
+		ctx := goa.NewContext(context.Background(), app, rw, req, params)
 		data = goa.Response(ctx)
 	})
 
