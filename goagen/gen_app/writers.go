@@ -294,8 +294,8 @@ func NewMediaTypesWriter(filename string) (*MediaTypesWriter, error) {
 func (w *MediaTypesWriter) Execute(data *MediaTypeTemplateData) error {
 	mt := data.MediaType
 	var mLinks *design.UserTypeDefinition
-	for _, view := range mt.SortedViews() {
-		p, links, err := mt.Project(view)
+	err := mt.IterateViews(func(view *design.ViewDefinition) error {
+		p, links, err := mt.Project(view.Name)
 		if mLinks == nil {
 			mLinks = links
 		}
@@ -306,6 +306,10 @@ func (w *MediaTypesWriter) Execute(data *MediaTypeTemplateData) error {
 		if err := w.ExecuteTemplate("mediatype", mediaTypeT, nil, data); err != nil {
 			return err
 		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 	if mLinks != nil {
 		lData := &UserTypeTemplateData{
