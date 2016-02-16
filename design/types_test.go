@@ -178,3 +178,24 @@ var _ = Describe("Project", func() {
 		})
 	})
 })
+
+var _ = FDescribe("MediaTypeDefinition", func() {
+	Describe("SortedViews", func() {
+		It("works with empty", func() {
+			m := &MediaTypeDefinition{}
+			Expect(m.Views).To(BeEmpty())
+			Expect(m.SortedViews()).To(BeEmpty())
+		})
+		It("sorts views", func() {
+			m := &MediaTypeDefinition{}
+			Expect(m.Views).To(BeEmpty())
+			m.Views = map[string]*ViewDefinition{
+				"d": nil,
+				"c": nil,
+				"a": nil,
+				"b": nil,
+			}
+			Expect(m.SortedViews()).To(Equal([]string{"a", "b", "c", "d"}))
+		})
+	})
+})
