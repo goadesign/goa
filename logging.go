@@ -48,6 +48,7 @@ type (
 // Info logs the given informational message and accompanying data.
 func Info(ctx context.Context, msg string, data ...KV) {
 	if Log != nil {
+		data = append(LogContext(ctx), data...)
 		Log.Info(ctx, msg, data...)
 	}
 }
@@ -55,20 +56,19 @@ func Info(ctx context.Context, msg string, data ...KV) {
 // Error logs the given error message and accompanying data.
 func Error(ctx context.Context, msg string, data ...KV) {
 	if Log != nil {
+		data = append(LogContext(ctx), data...)
 		Log.Error(ctx, msg, data...)
 	}
 }
 
 // Info logs informational messages such as service startup
 func (l *DefaultLogger) Info(ctx context.Context, msg string, data ...KV) {
-	data = append(LogContext(ctx), data...)
 	format, v := data2fmt(msg, data...)
 	l.Printf("[INFO] "+format, v...)
 }
 
 // Error logs unhandled errors
 func (l *DefaultLogger) Error(ctx context.Context, msg string, data ...KV) {
-	data = append(LogContext(ctx), data...)
 	format, v := data2fmt(msg, data...)
 	l.Printf("[ERROR] "+format, v...)
 }
