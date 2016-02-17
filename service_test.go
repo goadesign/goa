@@ -168,18 +168,6 @@ var _ = Describe("Application", func() {
 						Ω(errorHandlerCalled).Should(BeTrue())
 					})
 				})
-
-				Context("by not handling the request", func() {
-					BeforeEach(func() {
-						handler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-							return nil
-						}
-					})
-
-					It("triggers the error handler", func() {
-						Ω(errorHandlerCalled).Should(BeTrue())
-					})
-				})
 			})
 
 			Context("with different payload types", func() {
