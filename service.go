@@ -85,7 +85,7 @@ type (
 	Encoding interface {
 		// DecodeRequest uses registered Decoders to unmarshal the request body based on
 		// the request "Content-Type" header.
-		DecodeRequest(ctx context.Context, v interface{}) error
+		DecodeRequest(req *http.Request, v interface{}) error
 
 		// EncodeResponse uses registered Encoders to marshal the response body based on the
 		// request "Accept" header and writes the result to the http.ResponseWriter.
@@ -124,7 +124,7 @@ type (
 
 		// HandleFunc returns a HandleFunc from the given handler
 		// name is used solely for logging.
-		HandleFunc(name string, h, d Handler) HandleFunc
+		HandleFunc(name string, hdlr Handler, unm Unmarshaler) HandleFunc
 	}
 
 	// Application represents a goa application. At the basic level an application consists of
@@ -167,6 +167,9 @@ type (
 
 	// ErrorHandler defines the application error handler signature.
 	ErrorHandler func(context.Context, http.ResponseWriter, *http.Request, error)
+
+	// Unmarshaler defines the request payload unmarshaler signatures.
+	Unmarshaler func(context.Context, *http.Request) error
 
 	// MissingVersionHandler defines the function that handles requests targetting a non
 	// existant API version.
@@ -267,7 +270,15 @@ func (app *Application) ServeFiles(path, filename string) error {
 	if _, err := os.Stat(filename); err != nil {
 		return fmt.Errorf("ServeFiles: %s", err)
 	}
-	Info(RootContext, "mount file", KV{"filname", filename}, KV{"path", fmt.Sprintf("GET %s", path)})
+	rel := filename
+	if wd, err := os.Getwd(); err == nil {
+		if abs, err := filepath.Abs(filename); err == nil {
+			if r, err := filepath.Rel(wd, abs); err == nil {
+				rel = r
+			}
+		}
+	}
+	Info(RootContext, "mount file", KV{"filename", rel}, KV{"path", fmt.Sprintf("GET %s", path)})
 	ctrl := app.NewController("FileServer")
 	var wc string
 	if idx := strings.Index(path, "*"); idx > -1 && idx < len(path)-1 {
@@ -380,16 +391,16 @@ func (ctrl *ApplicationController) HandleError(ctx context.Context, rw http.Resp
 	}
 }
 
-// HandleFunc wraps al request handler into a HandleFunc. The HandleFunc initializes the
+// HandleFunc wraps a request handler into a HandleFunc. The HandleFunc initializes the
 // request context by loading the request state, invokes the handler and in case of error invokes
 // the controller (if there is one) or application error handler.
 // This function is intended for the controller generated code. User code should not need to call
 // it directly.
-func (ctrl *ApplicationController) HandleFunc(name string, h, d Handler) HandleFunc {
+func (ctrl *ApplicationController) HandleFunc(name string, hdlr Handler, unm Unmarshaler) HandleFunc {
 	// Setup middleware outside of closure
 	middleware := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		if !Response(ctx).Written() {
-			if err := h(ctx, rw, req); err != nil {
+			if err := hdlr(ctx, rw, req); err != nil {
 				ctrl.HandleError(ctx, rw, req, err)
 			}
 		}
@@ -403,13 +414,13 @@ func (ctrl *ApplicationController) HandleFunc(name string, h, d Handler) HandleF
 	return func(rw http.ResponseWriter, req *http.Request, params url.Values) {
 		// Build context
 		ctx := NewLogContext(RootContext,
-			KV{"app", ctrl.app.Name}, KV{"ctrl", ctrl.Name}, KV{"action", name})
+			KV{"app", ctrl.app.Name()}, KV{"ctrl", ctrl.Name}, KV{"action", name})
 		ctx = NewContext(ctx, ctrl.app, rw, req, params)
 
 		// Load body if any
 		var err error
-		if req.ContentLength > 0 && d != nil {
-			err = d(ctx, rw, req)
+		if req.ContentLength > 0 && unm != nil {
+			err = unm(ctx, req)
 		}
 
 		// Handle invalid payload
@@ -417,7 +428,7 @@ func (ctrl *ApplicationController) HandleFunc(name string, h, d Handler) HandleF
 		if err != nil {
 			handler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 				msg := "invalid encoding: " + err.Error()
-				Response(ctx).Send(400, fmt.Sprintf(`{"kind":"invalid request","msg":%q}`, msg))
+				Response(ctx).Send(ctx, 400, fmt.Sprintf(`{"kind":"invalid request","msg":%q}`, msg))
 				return nil
 			}
 			for i := range chain {
@@ -425,8 +436,8 @@ func (ctrl *ApplicationController) HandleFunc(name string, h, d Handler) HandleF
 			}
 		}
 
-		// Invoke middleware chain
-		handler(ctx, rw, req)
+		// Invoke middleware chain, wrap writer to capture response status and length
+		handler(ctx, Response(ctx), req)
 	}
 }
 
@@ -440,7 +451,7 @@ func DefaultErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.
 	} else {
 		Log.Error(ctx, e.Error())
 	}
-	Response(ctx).Send(status, e.Error())
+	Response(ctx).Send(ctx, status, e.Error())
 }
 
 // TerseErrorHandler behaves like DefaultErrorHandler except that it does not write to the response
@@ -454,7 +465,7 @@ func TerseErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.Re
 	} else {
 		Log.Error(ctx, e.Error())
 	}
-	Response(ctx).Send(status, body)
+	Response(ctx).Send(ctx, status, body)
 }
 
 // DefaultMissingVersionHandler returns a 400 response with a typed error in the body containing
@@ -464,5 +475,5 @@ func DefaultMissingVersionHandler(ctx context.Context, rw http.ResponseWriter, r
 		ID:   ErrInvalidVersion,
 		Mesg: fmt.Sprintf(`API does not support version %s`, version),
 	}
-	Response(ctx).Send(400, resp)
+	Response(ctx).Send(ctx, 400, resp)
 }

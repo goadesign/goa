@@ -376,6 +376,8 @@ const (
 	ctxT = `// {{.Name}} provides the {{.ResourceName}} {{.ActionName}} action context.
 type {{.Name}} struct {
 	context.Context
+	*goa.ResponseData
+	*goa.RequestData
 {{if .Params}}{{range $name, $att := .Params.Type.ToObject}}{{/*
 */}}	{{goify $name true}} {{if and $att.Type.IsPrimitive ($.Params.IsPrimitivePointer $name)}}*{{end}}{{gotyperef .Type nil 0}}
 {{end}}{{end}}{{if .Payload}}	Payload {{gotyperef .Payload nil 0}}
@@ -451,22 +453,28 @@ type {{.Name}} struct {
 	ctxNewT = `{{define "Coerce"}}` + coerceT + `{{end}}` + `
 // New{{goify .Name true}} parses the incoming request URL and body, performs validations and creates the
 // context used by the {{.ResourceName}} controller {{.ActionName}} action.
-func New{{.Name}}(c context.Context) (*{{.Name}}, error) {
+func New{{.Name}}(ctx context.Context) (*{{.Name}}, error) {
 	var err error
-	ctx := {{.Name}}{Context: c}
-{{if .Headers}}{{$headers := .Headers}}{{range $name, $_ := $headers.Type.ToObject}}{{if ($headers.IsRequired $name)}}	if c.Request().Header.Get("{{$name}}") == "" {
+	req := goa.Request(ctx)
+	rctx := {{.Name}}{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+{{if .Headers}}{{$headers := .Headers}}{{range $name, $att := $headers.Type.ToObject}}	raw{{goify $name true}} := req.Header.Get("{{$name}}")
+{{if $headers.IsRequired $name}}	if raw{{goify $name true}} == "" {
 		err = goa.MissingHeaderError("{{$name}}", err)
-	}{{end}}{{end}}
-{{end}}{{if.Params}}{{range $name, $att := .Params.Type.ToObject}}	raw{{goify $name true}} := c.Get("{{$name}}")
+	} else {
+{{else}}	if raw{{goify $name true}} != "" {
+{{end}}{{$validation := validationChecker $att ($headers.IsNonZero $name) ($headers.IsRequired $name) (printf "raw%s" (goify $name true)) $name 2}}{{/*
+*/}}{{if $validation}}{{$validation}}
+{{end}}	}
+{{end}}{{end}}{{if.Params}}{{range $name, $att := .Params.Type.ToObject}}	raw{{goify $name true}} := req.Params.Get("{{$name}}")
 {{$mustValidate := $.MustValidate $name}}{{if $mustValidate}}	if raw{{goify $name true}} == "" {
 		err = goa.MissingParamError("{{$name}}", err)
 	} else {
 {{else}}	if raw{{goify $name true}} != "" {
-{{end}}{{template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) (printf "ctx.%s" (goify $name true)) 2)}}{{/*
-*/}}{{$validation := validationChecker $att ($.Params.IsNonZero $name) ($.Params.IsRequired $name) (printf "ctx.%s" (goify $name true)) $name 2}}{{/*
+{{end}}{{template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) (printf "rctx.%s" (goify $name true)) 2)}}{{/*
+*/}}{{$validation := validationChecker $att ($.Params.IsNonZero $name) ($.Params.IsRequired $name) (printf "rctx.%s" (goify $name true)) $name 2}}{{/*
 */}}{{if $validation}}{{$validation}}
 {{end}}	}
-{{end}}{{end}}{{/* if .Params */}}	return &ctx, err
+{{end}}{{end}}{{/* if .Params */}}	return &rctx, err
 }
 `
 	// ctxMTRespT generates the response helpers for responses with media types.
@@ -474,9 +482,9 @@ func New{{.Name}}(c context.Context) (*{{.Name}}, error) {
 	ctxMTRespT = `{{$ctx := .Context}}{{$resp := .Response}}{{$mt := .MediaType}}{{/*
 */}}{{range $name, $view := $mt.Views}}{{if not (eq $name "link")}}{{$projected := project $mt $name}}
 // {{respName $resp $name}} sends a HTTP response with status code {{$resp.Status}}.
-func (ctx *{{$ctx.Name}}) {{respName $resp $name}}(resp {{gopkgtyperef $projected $projected.AllRequired $ctx.Versioned $ctx.DefaultPkg 0}}) error {
-	ctx.Header().Set("Content-Type", "{{$resp.MediaType}}")
-	return ctx.Respond({{$resp.Status}}, resp)
+func (ctx *{{$ctx.Name}}) {{respName $resp $name}}(r {{gopkgtyperef $projected $projected.AllRequired $ctx.Versioned $ctx.DefaultPkg 0}}) error {
+	ctx.ResponseData.Header().Set("Content-Type", "{{$resp.MediaType}}")
+	return ctx.ResponseData.Send(ctx.Context, {{$resp.Status}}, r)
 }
 {{end}}{{end}}
 `
@@ -486,8 +494,10 @@ func (ctx *{{$ctx.Name}}) {{respName $resp $name}}(resp {{gopkgtyperef $projecte
 	ctxNoMTRespT = `
 // {{goify .Response.Name true}} sends a HTTP response with status code {{.Response.Status}}.
 func (ctx *{{.Context.Name}}) {{goify .Response.Name true}}({{if .Response.MediaType}}resp []byte{{end}}) error {
-{{if .Response.MediaType}}	ctx.Header().Set("Content-Type", "{{.Response.MediaType}}")
-{{end}}	return ctx.RespondBytes({{.Response.Status}}, {{if .Response.MediaType}}resp{{else}}nil{{end}})
+{{if .Response.MediaType}}	ctx.ResponseData.Header().Set("Content-Type", "{{.Response.MediaType}}")
+{{end}}	ctx.ResponseData.WriteHeader({{.Response.Status}}){{if .Response.MediaType}}
+	ctx.ResponseData.Write(resp){{end}}
+	return nil
 }
 `
 
@@ -525,35 +535,36 @@ func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Control
 	// Setup endpoint handler
 	var h goa.Handler
 	mux := service.{{if not .Version.IsDefault}}Version("{{.Version.Version}}").ServeMux(){{else}}ServeMux(){{end}}
-{{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(c context.Context) error {
-		ctx, err := New{{.Context}}(c)
+{{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		rctx, err := New{{.Context}}(ctx)
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}{{if not $ver.IsDefault}}
-		ctx.APIVersion = service.Version("{{$ver.Version}}").VersionName(){{end}}
-{{if .Payload}}if rawPayload := ctx.RawPayload(); rawPayload != nil {
-			ctx.Payload = rawPayload.({{gotyperef .Payload nil 1}})
+		rctx.APIVersion = service.Version("{{$ver.Version}}").VersionName(){{end}}
+{{if .Payload}}if rawPayload := goa.Request(ctx).Payload; rawPayload != nil {
+			rctx.Payload = rawPayload.({{gotyperef .Payload nil 1}})
 		}
-		{{end}}		return ctrl.{{.Name}}(ctx)
+		{{end}}		return ctrl.{{.Name}}(rctx)
 	}
 {{range .Routes}}	mux.Handle("{{.Verb}}", "{{.FullPath $ver}}", ctrl.HandleFunc("{{$action.Name}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
-	service.Info("mount", "ctrl", "{{$res}}",{{if not $ver.IsDefault}} "version", "{{$ver.Version}}",{{end}} "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath $ver}}")
+	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "{{$res}}"},{{if not $ver.IsDefault}} goa.KV{"version", "{{$ver.Version}}"},{{end}} goa.KV{"action", "{{$action.Name}}"}, goa.KV{"route", "{{.Verb}} {{.FullPath $ver}}"})
 {{end}}{{end}}}
 `
 
 	// unmarshalT generates the code for an action payload unmarshal function.
 	// template input: *ControllerTemplateData
 	unmarshalT = `{{range .Actions}}{{if .Payload}}
-// {{.Unmarshal}} unmarshals the request body.
-func {{.Unmarshal}}(ctx context.Context) (*{{gotypename .Payload nil 1}}, error) {
+// {{.Unmarshal}} unmarshals the request body into the context request data Payload field.
+func {{.Unmarshal}}(ctx context.Context, req *http.Request) error {
 	payload := &{{gotypename .Payload nil 1}}{}
-	if err := goa.CtxService(ctx).DecodeRequest(ctx, payload); err != nil {
+	if err := goa.RequestService(ctx).DecodeRequest(req, payload); err != nil {
 		return err
 	}{{$validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1}}{{if $validation}}
 	if err := payload.Validate(); err != nil {
 		return err
 	}{{end}}
-	return payload, nil
+	goa.Request(ctx).Payload = payload
+	return nil
 }
 {{end}}
 {{end}}`

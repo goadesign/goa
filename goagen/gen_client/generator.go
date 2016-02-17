@@ -115,7 +115,6 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 		codegen.SimpleImport(clientPkg),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("github.com/spf13/cobra"),
-		codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
 	}
 	if err := file.WriteHeader("", "main", imports); err != nil {
 		return err

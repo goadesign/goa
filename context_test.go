@@ -31,10 +31,6 @@ var _ = Describe("ResponseData", func() {
 	Context("SwitchWriter", func() {
 		var rwo http.ResponseWriter
 
-		BeforeEach(func() {
-			rwo = data.SwitchWriter(rw)
-		})
-
 		It("sets the response writer and returns the previous one", func() {
 			Ω(rwo).Should(BeNil())
 			rwo = data.SwitchWriter(&TestResponseWriter{Status: 43})

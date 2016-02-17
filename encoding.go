@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"mime"
+	"net/http"
 	"sync"
 
 	"golang.org/x/net/context"
@@ -73,8 +74,7 @@ type (
 
 // DecodeRequest retrives the request body and `Content-Type` header and uses Decode
 // to unmarshal into the provided `interface{}`
-func (ver *version) DecodeRequest(ctx context.Context, v interface{}) error {
-	req := Request(ctx)
+func (ver *version) DecodeRequest(req *http.Request, v interface{}) error {
 	body, contentType := req.Body, req.Header.Get("Content-Type")
 	defer body.Close()
 

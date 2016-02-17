@@ -375,14 +375,17 @@ const contextsCodeTmpl = `//****************************************************
 
 package {{if .version}}{{.version}}{{else}}app{{end}}
 
-import {{if .version}}(
-	"{{.tmpDir}}/app"
-	{{end}}"github.com/goadesign/goa"{{if .version}}
-){{end}}
+import (
+{{if .version}}	"{{.tmpDir}}/app"
+{{end}}	"github.com/goadesign/goa"
+	"golang.org/x/net/context"
+)
 
 // GetWidgetContext provides the Widget get action context.
 type GetWidgetContext struct {
-	*goa.Context{{if .version}}
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData{{if .version}}
 	ID         string
 	APIVersion string{{else}}
 	ID string{{end}}
@@ -390,20 +393,21 @@ type GetWidgetContext struct {
 
 // NewGetWidgetContext parses the incoming request URL and body, performs validations and creates the
 // context used by the Widget controller get action.
-func NewGetWidgetContext(c *goa.Context) (*GetWidgetContext, error) {
+func NewGetWidgetContext(ctx context.Context) (*GetWidgetContext, error) {
 	var err error
-	ctx := GetWidgetContext{Context: c}
-	rawID := c.Get("id")
+	req := goa.Request(ctx)
+	rctx := GetWidgetContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	rawID := req.Params.Get("id")
 	if rawID != "" {
-		ctx.ID = rawID
+		rctx.ID = rawID
 	}
-	return &ctx, err
+	return &rctx, err
 }
 
 // OK sends a HTTP response with status code 200.
-func (ctx *GetWidgetContext) OK(resp {{if .version}}app.{{end}}ID) error {
-	ctx.Header().Set("Content-Type", "vnd.rightscale.codegen.test.widgets")
-	return ctx.Respond(200, resp)
+func (ctx *GetWidgetContext) OK(r {{if .version}}app.{{end}}ID) error {
+	ctx.ResponseData.Header().Set("Content-Type", "vnd.rightscale.codegen.test.widgets")
+	return ctx.ResponseData.Send(ctx.Context, 200, r)
 }
 `
 
@@ -420,7 +424,11 @@ const controllersCodeTmpl = `//*************************************************
 
 package {{if .version}}{{.version}}{{else}}app{{end}}
 
-import "github.com/goadesign/goa"
+import (
+	"github.com/goadesign/goa"
+	"golang.org/x/net/context"
+	"net/http"
+)
 
 // WidgetController is the controller interface for the Widget actions.
 type WidgetController interface {
@@ -435,16 +443,16 @@ func MountWidgetController(service goa.Service, ctrl WidgetController) {
 	// Setup endpoint handler
 	var h goa.Handler
 	mux := service.{{if .version}}Version("{{.version}}").ServeMux(){{else}}ServeMux(){{end}}
-	h = func(c *goa.Context) error {
-		ctx, err := NewGetWidgetContext(c)
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		rctx, err := NewGetWidgetContext(ctx)
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}{{if .version}}
-		ctx.APIVersion = service.Version("{{.version}}").VersionName(){{end}}
-		return ctrl.Get(ctx)
+		rctx.APIVersion = service.Version("{{.version}}").VersionName(){{end}}
+		return ctrl.Get(rctx)
 	}
 	mux.Handle("GET", "/:id", ctrl.HandleFunc("Get", h, nil))
-	service.Info("mount", "ctrl", "Widget",{{if .version}} "version", "{{.version}}",{{end}} "action", "Get", "route", "GET /:id")
+	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Widget"},{{if .version}} goa.KV{"version", "{{.version}}"},{{end}} goa.KV{"action", "Get"}, goa.KV{"route", "GET /:id"})
 }
 `
 
@@ -491,27 +499,27 @@ func MountWidgetController(service goa.Service, ctrl WidgetController) {
 	// Setup endpoint handler
 	var h goa.Handler
 	mux := service.ServeMux()
-	h = func(c *goa.Context) error {
-		ctx, err := NewGetWidgetContext(c)
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		rctx, err := NewGetWidgetContext(ctx)
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
-		if rawPayload := ctx.RawPayload(); rawPayload != nil {
-			ctx.Payload = rawPayload.(Collection)
+		if rawPayload := goa.Request(ctx).Payload; rawPayload != nil {
+			rctx.Payload = rawPayload.(Collection)
 		}
-		return ctrl.Get(ctx)
+		return ctrl.Get(rctx)
 	}
 	mux.Handle("GET", "/:id", ctrl.HandleFunc("Get", h, unmarshalGetWidgetPayload))
-	service.Info("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
+	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Widget"}, goa.KV{"action", "Get"}, goa.KV{"route", "GET /:id"})
 }
 
-// unmarshalGetWidgetPayload unmarshals the request body.
-func unmarshalGetWidgetPayload(ctx *goa.Context) error {
+// unmarshalGetWidgetPayload unmarshals the request body into the context request data Payload field.
+func unmarshalGetWidgetPayload(ctx context.Context, req *http.Request) error {
 	payload := &Collection{}
-	if err := ctx.Service().DecodeRequest(ctx, payload); err != nil {
+	if err := goa.RequestService(ctx).DecodeRequest(req, payload); err != nil {
 		return err
 	}
-	ctx.SetPayload(payload)
+	goa.Request(ctx).Payload = payload
 	return nil
 }
 `
