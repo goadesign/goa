@@ -156,6 +156,7 @@ func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, v
 		codegen.SimpleImport("golang.org/x/net/context"),
 		codegen.SimpleImport("strconv"),
 		codegen.SimpleImport("strings"),
+		codegen.SimpleImport("time"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
 	if !version.IsDefault() {

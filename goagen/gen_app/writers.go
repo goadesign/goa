@@ -107,7 +107,7 @@ type (
 		CanonicalParams   []string                    // CanonicalParams is the list of parameter names that appear in the resource canonical path in order.
 	}
 
-	// EncoderTemplateData containes the data needed to render the registration code for a single
+	// EncoderTemplateData contains the data needed to render the registration code for a single
 	// encoder or decoder package.
 	EncoderTemplateData struct {
 		// PackagePath is the Go package path to the package implmenting the encoder / decoder.
@@ -294,8 +294,8 @@ func NewMediaTypesWriter(filename string) (*MediaTypesWriter, error) {
 func (w *MediaTypesWriter) Execute(data *MediaTypeTemplateData) error {
 	mt := data.MediaType
 	var mLinks *design.UserTypeDefinition
-	for view := range mt.Views {
-		p, links, err := mt.Project(view)
+	err := mt.IterateViews(func(view *design.ViewDefinition) error {
+		p, links, err := mt.Project(view.Name)
 		if mLinks == nil {
 			mLinks = links
 		}
@@ -306,6 +306,10 @@ func (w *MediaTypesWriter) Execute(data *MediaTypeTemplateData) error {
 		if err := w.ExecuteTemplate("mediatype", mediaTypeT, nil, data); err != nil {
 			return err
 		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 	if mLinks != nil {
 		lData := &UserTypeTemplateData{

@@ -32,7 +32,7 @@ type (
 		SetErrorHandler(ErrorHandler)
 
 		// SetMissingVersionHandler registers the handler invoked when a request targets a
-		// non existant API version.
+		// non existent API version.
 		SetMissingVersionHandler(MissingVersionHandler)
 
 		// ServeMux returns the service mux.
