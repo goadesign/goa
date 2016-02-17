@@ -106,7 +106,7 @@ $ goagen bootstrap -d goa-adder/design
 ```
 This produces the following outputs:
 
-* `main.go` and `adder.go` contain scaffolding code to help bootstrap the implementation.
+* `main.go` and `operands.go` contain scaffolding code to help bootstrap the implementation.
   running `goagen` again does no recreate them so that it's safe to edit their content.
 * an `app` package which contains glue code that binds the low level HTTP server to your
   implementation.
@@ -132,9 +132,9 @@ Now let's compile and run the service:
 $ cd $GOPATH/src/goa-adder
 $ go build
 $ ./goa-adder
-INFO[01-04|08:24:06] mount                                    app=API ctrl=Operands action=Add route="GET /add/:left/:right"
-INFO[01-04|08:24:06] mount                                    app=API file=swagger/swagger.json route="GET /swagger.json"
-INFO[01-04|08:24:06] listen                                   app=API addr=:8080
+2016/02/16 16:39:27 [INFO] mount        ctrl: Operands  action: Add     route: GET /add/:left/:right
+2016/02/16 16:39:27 [INFO] mount file   filename: swagger/swagger.json  path: GET /swagger.json
+2016/02/16 16:39:27 [INFO] listen       address: :8080
 ```
 Open a new console and compile the generated CLI tool:
 ```
@@ -144,32 +144,35 @@ go build
 The tool includes contextual help:
 ```
 $ ./adder-cli --help
-usage: adder-cli [<flags>] <command> [<args> ...]
-
 CLI client for the adder service
 
+Usage:
+  adder-cli [command]
+
+Available Commands:
+  add         add returns the sum of the left and right parameters in the response body
+
 Flags:
-      --help           Show context-sensitive help (also try --help-long and --help-man).
-  -s, --scheme="http"  Set the requests scheme
-  -h, --host=HOST      API hostname
-  -t, --timeout=20s    Set the request timeout, defaults to 20s
-      --dump           Dump HTTP request and response.
-      --pp             Pretty print response body
+      --dump[=false]: Dump HTTP request and response.
+  -H, --host="localhost:8080": API hostname
+      --pp[=false]: Pretty print response body
+  -s, --scheme="http": Set the requests scheme
+  -t, --timeout=20s: Set the request timeout, defaults to 20s
 
-Commands:
-  help [<command>...]
-    Show help.
-
-  add operands <path>
-    add adds the left and right parameters and returns the result
+Use "adder-cli [command] --help" for more information about a command.
 ```
 
 ```
 $ ./adder-cli add operands --help
-usage: adder-cli add operands <path>
+Usage:
+  adder-cli add operands [flags]
 
-Args:
-  <path>  Request path, format is /add/:left/:right
+Global Flags:
+      --dump[=false]: Dump HTTP request and response.
+  -H, --host="localhost:8080": API hostname
+      --pp[=false]: Pretty print response body
+  -s, --scheme="http": Set the requests scheme
+  -t, --timeout=20s: Set the request timeout, defaults to 20s
 ```
 Now let's run it:
 ```
@@ -180,9 +183,9 @@ INFO[01-04|08:30:43] completed                                id=+LG8rvid status
 ```
 The console running the service shows the request that was just handled:
 ```
-INFO[01-04|08:30:43] started                                  app=API ctrl=OperandsController action=Add id=k5QShkGsd5-1 GET=/add/1/2
-DBUG[01-04|08:30:43] params                                   app=API ctrl=OperandsController action=Add id=k5QShkGsd5-1 right=2 left=1
-INFO[01-04|08:30:43] completed                                app=API ctrl=OperandsController action=Add id=k5QShkGsd5-1 status=200 bytes=1 time=61.176µs
+2016/02/16 16:42:01 [INFO] started      app: API        ctrl: operands  action: Add     id: FloJa8uAbm-1        GET: /add/1/2
+2016/02/16 16:42:01 [INFO] params       app: API        ctrl: operands  action: Add     id: FloJa8uAbm-1        left: 1 right: 2
+2016/02/16 16:42:01 [INFO] completed    app: API        ctrl: operands  action: Add     id: FloJa8uAbm-1        status: 200     bytes: 1        time: 91.858µs
 ```
 Now let's see how robust our service is and try to use non integer values:
 ```
@@ -208,13 +211,13 @@ a free service that renders the Swagger representation dynamically from goa desi
 
 ### GoDoc
 
-* Package [goa](https://godoc.org/github.com/goadesign/goa) contains the data structures and algorithms
+* Package [goa](http://goa.design/reference/goa.html) contains the data structures and algorithms
   used at runtime.
-* Package [apidsl](https://godoc.org/github.com/goadesign/goa/design/apidsl) contains the implementation of
+* Package [apidsl](http://goa.design/reference/goa/design/apidsl.html) contains the implementation of
   the goa design language.
-* Package [design](https://godoc.org/github.com/goadesign/goa/design) defines the output data
+* Package [design](http://goa.design/goa/design.html) defines the output data
   structures of the design language.
-* Package [dslengine](https://godoc.org/github.com/goadesign/goa/dslengine) is a tool to parse and process any
+* Package [dslengine](http://goa.design/goa/dslengine.html) is a tool to parse and process any
   arbitrary DSL
 
 ### Website
@@ -224,7 +227,7 @@ a free service that renders the Swagger representation dynamically from goa desi
 ### Getting Started
 
 Can't wait to give it a try? the easiest way is to follow the short
-[getting started](http://www.goa.design/getting-started.html) guide.
+[getting started](http://goa.design/getting-started.html) guide.
 
 
 ### Middleware
@@ -242,8 +245,8 @@ provides a reference for testing functionality.
 ## Contributing
 
 Did you fix a bug? write docs or additional tests? or implement some new awesome functionality?
-You're a rock star!! Just make sure that `make` succeeds (or that TravisCI is g104.197.54.215reen) and send a PR
+You're a rock star!! Just make sure that `make` succeeds (or that TravisCI is green) and send a PR
 over.
 
-And if you're looking for inspiration the [wookie](https://github.com/goadesign/goa/wiki) contains a
-roadmap document with many good suggestions...
+The [issues](https://github.com/goadesign/goa/issues) contain entries tagged with
+[help wanted: beginners](https://github.com/goadesign/goa/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%3A+beginners%22) which provide a great way to get started!

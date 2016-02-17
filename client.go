@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -15,15 +16,13 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-
-	"gopkg.in/inconshreveable/log15.v2"
 )
 
 type (
 	// Client is the command client data structure for all goa service clients.
 	Client struct {
 		// Logger is the logger used to log client requests.
-		log15.Logger
+		Logger
 		// Client is the underlying http client.
 		*http.Client
 		// Signers contains the ordered list of request signers. A signer may add headers,
@@ -100,9 +99,10 @@ type (
 
 // NewClient create a new API client.
 func NewClient() *Client {
-	logger := log15.New()
-	logger.SetHandler(log15.StdoutHandler)
-	return &Client{Logger: logger, Client: http.DefaultClient}
+	return &Client{
+		Logger: &DefaultLogger{Logger: log.New(os.Stderr, "", log.LstdFlags)},
+		Client: http.DefaultClient,
+	}
 }
 
 // Do wraps the underlying http client Do method and adds logging.
@@ -115,7 +115,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		startedAt = time.Now()
 		reqBody = c.dumpRequest(req)
 	} else {
-		c.Info("started", "id", id, req.Method, req.URL.String())
+		c.Info(nil, "started", KV{"id", id}, KV{req.Method, req.URL.String()})
 	}
 	resp, err := c.Client.Do(req)
 	if err != nil {
@@ -124,7 +124,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	if c.Dump {
 		c.dumpResponse(resp, req, reqBody)
 	} else {
-		c.Info("completed", "id", id, "status", resp.StatusCode, "time", time.Since(startedAt).String())
+		c.Info(nil, "completed", KV{"id", id}, KV{"status", resp.StatusCode}, KV{"time", time.Since(startedAt).String()})
 	}
 	return resp, err
 }
@@ -222,7 +222,7 @@ func (s *OAuth2Signer) Refresh() error {
 func (c *Client) dumpRequest(req *http.Request) []byte {
 	reqBody, err := dumpReqBody(req)
 	if err != nil {
-		c.Error("Failed to load request body for dump", "err", err.Error())
+		c.Error(nil, "Failed to load request body for dump", KV{"err", err.Error()})
 	}
 	var buffer bytes.Buffer
 	buffer.WriteString(req.Method + " " + req.URL.String() + "\n")

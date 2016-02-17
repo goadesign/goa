@@ -7,7 +7,10 @@ import (
 	"fmt"
 	"io"
 	"mime"
+	"net/http"
 	"sync"
+
+	"golang.org/x/net/context"
 )
 
 type (
@@ -71,14 +74,12 @@ type (
 
 // DecodeRequest retrives the request body and `Content-Type` header and uses Decode
 // to unmarshal into the provided `interface{}`
-func (ver *version) DecodeRequest(ctx *Context, v interface{}) error {
-	body := ctx.Request().Body
-	contentType := ctx.Request().Header.Get("Content-Type")
+func (ver *version) DecodeRequest(req *http.Request, v interface{}) error {
+	body, contentType := req.Body, req.Header.Get("Content-Type")
 	defer body.Close()
 
 	if err := ver.Decode(v, body, contentType); err != nil {
-		ctx.Error(err.Error(), "ContentType", contentType)
-		return err
+		return fmt.Errorf("failed to decode request body with content type %#v: %s", contentType, err)
 	}
 
 	return nil
@@ -175,8 +176,8 @@ func (p *decoderPool) Put(d Decoder) {
 
 // EncodeResponse uses registered Encoders to marshal the response body based on the request
 // `Accept` header and writes it to the http.ResponseWriter
-func (ver *version) EncodeResponse(ctx *Context, v interface{}) error {
-	accept := ctx.Request().Header.Get("Accept")
+func (ver *version) EncodeResponse(ctx context.Context, v interface{}) error {
+	accept := Request(ctx).Header.Get("Accept")
 	if accept == "" {
 		accept = "*/*"
 	}
@@ -196,9 +197,8 @@ func (ver *version) EncodeResponse(ctx *Context, v interface{}) error {
 	}
 
 	// the encoderPool will handle whether or not a pool is actually in use
-	encoder := p.Get(ctx)
+	encoder := p.Get(Response(ctx))
 	if err := encoder.Encode(v); err != nil {
-		// TODO: log out error details
 		return err
 	}
 	p.Put(encoder)

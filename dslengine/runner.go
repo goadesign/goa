@@ -178,6 +178,9 @@ func computeErrorLocation() (file string, line int) {
 	ok := strings.HasSuffix(file, "_test.go") // Be nice with tests
 	if !ok {
 		nok, _ := regexp.MatchString(`/goa/design/.+\.go$`, file)
+		if !nok {
+			nok, _ = regexp.MatchString(`/goa/dslengine/.+\.go$`, file)
+		}
 		ok = !nok
 	}
 	for !ok {
@@ -186,6 +189,9 @@ func computeErrorLocation() (file string, line int) {
 		ok = strings.HasSuffix(file, "_test.go")
 		if !ok {
 			nok, _ := regexp.MatchString(`/goa/design/.+\.go$`, file)
+			if !nok {
+				nok, _ = regexp.MatchString(`/goa/dslengine/.+\.go$`, file)
+			}
 			ok = !nok
 		}
 	}
