@@ -428,7 +428,9 @@ func (ctrl *ApplicationController) HandleFunc(name string, hdlr Handler, unm Unm
 		if err != nil {
 			handler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 				msg := "invalid encoding: " + err.Error()
-				Response(ctx).Send(ctx, 400, fmt.Sprintf(`{"kind":"invalid request","msg":%q}`, msg))
+				rw.Header().Set("Content-Type", "application/json")
+				rw.WriteHeader(400)
+				rw.Write([]byte(fmt.Sprintf(`{"kind":"invalid request","msg":%q}`, msg)))
 				return nil
 			}
 			for i := range chain {
