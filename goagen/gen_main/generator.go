@@ -92,7 +92,6 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 			codegen.SimpleImport("github.com/goadesign/middleware"),
 			codegen.SimpleImport(appPkg),
 			codegen.SimpleImport(swaggerPkg),
-			codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
 		}
 		if generateSwagger() {
 			jsonSchemaPkg := path.Join(outPkg, "schema")
@@ -253,7 +252,7 @@ func main() {
 
 	// Setup middleware
 	service.Use(middleware.RequestID())
-	service.Use(middleware.LogRequest())
+	service.Use(middleware.LogRequest(true))
 	service.Use(middleware.Recover())
 {{$api := .API}}
 {{range $name, $res := $api.Resources}}{{if $res.SupportsNoVersion}}{{$name := goify $res.Name true}}	// Mount "{{$res.Name}}" controller

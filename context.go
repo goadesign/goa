@@ -50,7 +50,6 @@ type (
 	// ResponseData provides access to the underlying HTTP response.
 	ResponseData struct {
 		http.ResponseWriter
-		ctx context.Context // for access to the encoder
 
 		// Status is the response HTTP status code
 		Status int
@@ -75,7 +74,6 @@ func NewContext(parent context.Context, service Service, rw http.ResponseWriter,
 	ctx := context.WithValue(parent, serviceKey, service)
 	ctx = context.WithValue(ctx, respKey, response)
 	ctx = context.WithValue(ctx, reqKey, request)
-	response.ctx = ctx
 
 	return ctx
 }
@@ -151,21 +149,21 @@ func (r *ResponseData) Written() bool {
 
 // Send serializes the given body matching the request Accept header against the service
 // encoders. It uses the default service encoder if no match is found.
-func (r *ResponseData) Send(code int, body interface{}) error {
+func (r *ResponseData) Send(ctx context.Context, code int, body interface{}) error {
 	r.WriteHeader(code)
-	return RequestService(r.ctx).EncodeResponse(r.ctx, body)
+	return RequestService(ctx).EncodeResponse(ctx, body)
 }
 
 // BadRequest sends a HTTP response with status code 400 and the given error as body.
-func (r *ResponseData) BadRequest(err *BadRequestError) error {
-	return r.Send(400, err.Error())
+func (r *ResponseData) BadRequest(ctx context.Context, err *BadRequestError) error {
+	return r.Send(ctx, 400, err.Error())
 }
 
 // Bug sends a HTTP response with status code 500 and the given body.
 // The body can be set using a format and substituted values a la fmt.Printf.
-func (r *ResponseData) Bug(format string, a ...interface{}) error {
+func (r *ResponseData) Bug(ctx context.Context, format string, a ...interface{}) error {
 	body := fmt.Sprintf(format, a...)
-	return r.Send(500, body)
+	return r.Send(ctx, 500, body)
 }
 
 // WriteHeader records the response status code and calls the underlying writer.

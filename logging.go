@@ -77,7 +77,7 @@ func data2fmt(msg string, data ...KV) (format string, v []interface{}) {
 	format = msg
 	v = make([]interface{}, len(data))
 	for i := 0; i < len(data); i++ {
-		format += fmt.Sprintf(" - %v: %%v", data[i].Key)
+		format += fmt.Sprintf("\t%v: %%v", data[i].Key)
 		v[i] = data[i].Value
 	}
 	return

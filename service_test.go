@@ -60,7 +60,8 @@ var _ = Describe("Application", func() {
 	})
 
 	Describe("HandleFunc", func() {
-		var handler, unmarshaler goa.Handler
+		var handler goa.Handler
+		var unmarshaler goa.Unmarshaler
 		const respStatus = 200
 		var respContent = []byte("response")
 
@@ -79,11 +80,11 @@ var _ = Describe("Application", func() {
 				rw.Write(respContent)
 				return nil
 			}
-			unmarshaler = func(c context.Context, rw http.ResponseWriter, req *http.Request) error {
+			unmarshaler = func(c context.Context, req *http.Request) error {
 				ctx = c
 				if req != nil {
 					var payload interface{}
-					err := goa.RequestService(ctx).DecodeRequest(ctx, &payload)
+					err := goa.RequestService(ctx).DecodeRequest(req, &payload)
 					Ω(err).ShouldNot(HaveOccurred())
 					goa.Request(ctx).Payload = payload
 				}
