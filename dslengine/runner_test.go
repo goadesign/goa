@@ -68,7 +68,7 @@ var _ = Describe("DSL errors", func() {
 		const errMsg = "err"
 
 		// See NOTE below.
-		const lineNumber = 75
+		const lineNumber = 76
 
 		BeforeEach(func() {
 			// NOTE: moving the line below requires updating the
@@ -102,7 +102,7 @@ var _ = Describe("DSL errors", func() {
 
 	Context("with invalid DSL", func() {
 		// See NOTE below.
-		const lineNumber = 111
+		const lineNumber = 112
 
 		BeforeEach(func() {
 			InitDesign()
@@ -125,7 +125,7 @@ var _ = Describe("DSL errors", func() {
 
 	Context("with DSL calling a function with an invalid argument type", func() {
 		// See NOTE below.
-		const lineNumber = 134
+		const lineNumber = 135
 
 		BeforeEach(func() {
 			InitDesign()

@@ -62,8 +62,7 @@ func NewMux(app *Application) ServeMux {
 		},
 		missingVerFunc: func(rw http.ResponseWriter, req *http.Request, version string) {
 			if app.missingVersionHandler != nil {
-				ctx := NewContext(RootContext, app, req, rw, nil)
-				app.missingVersionHandler(ctx, version)
+				app.missingVersionHandler(RootContext, rw, req, version)
 			}
 		},
 		SelectVersionFunc: PathSelectVersionFunc("/:api_version/", "api"),

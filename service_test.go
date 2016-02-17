@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/url"
 
+	"golang.org/x/net/context"
+
 	"github.com/goadesign/goa"
 	"github.com/goadesign/middleware"
 	. "github.com/onsi/ginkgo"
@@ -33,7 +35,6 @@ var _ = Describe("Application", func() {
 			Ω(s).Should(BeAssignableToTypeOf(&goa.Application{}))
 			app, _ := s.(*goa.Application)
 			Ω(app.Name()).Should(Equal(appName))
-			Ω(app.Logger).ShouldNot(BeNil())
 			Ω(app.ServeMux).ShouldNot(BeNil())
 		})
 	})
@@ -59,34 +60,33 @@ var _ = Describe("Application", func() {
 	})
 
 	Describe("HandleFunc", func() {
-		const resName = "res"
-		const actName = "act"
-		var handler, unmarshaler goa.Handler
+		var handler goa.Handler
+		var unmarshaler goa.Unmarshaler
 		const respStatus = 200
 		var respContent = []byte("response")
 
 		var handleFunc goa.HandleFunc
-		var ctx *goa.Context
+		var ctx context.Context
 
 		JustBeforeEach(func() {
 			ctrl := s.NewController("test")
-			handleFunc = ctrl.HandleFunc(actName, handler, unmarshaler)
+			handleFunc = ctrl.HandleFunc("testAct", handler, unmarshaler)
 		})
 
 		BeforeEach(func() {
-			handler = func(c *goa.Context) error {
+			handler = func(c context.Context, rw http.ResponseWriter, req *http.Request) error {
 				ctx = c
-				c.RespondBytes(respStatus, respContent)
+				rw.WriteHeader(respStatus)
+				rw.Write(respContent)
 				return nil
 			}
-			unmarshaler = func(c *goa.Context) error {
+			unmarshaler = func(c context.Context, req *http.Request) error {
 				ctx = c
-				req := c.Request()
 				if req != nil {
 					var payload interface{}
-					err := ctx.Service().DecodeRequest(ctx, &payload)
+					err := goa.RequestService(ctx).DecodeRequest(req, &payload)
 					Ω(err).ShouldNot(HaveOccurred())
-					ctx.SetPayload(payload)
+					goa.Request(ctx).Payload = payload
 				}
 				return nil
 			}
@@ -114,9 +114,9 @@ var _ = Describe("Application", func() {
 			})
 
 			It("creates a handle that handles the request", func() {
-				i := ctx.Get("id")
+				i := goa.Request(ctx).Params.Get("id")
 				Ω(i).Should(Equal("42"))
-				s := ctx.Get("sort")
+				s := goa.Request(ctx).Params.Get("sort")
 				Ω(s).Should(Equal("asc"))
 				tw := rw.(*TestResponseWriter)
 				Ω(tw.Status).Should(Equal(respStatus))
@@ -159,7 +159,7 @@ var _ = Describe("Application", func() {
 
 				Context("by returning an error", func() {
 					BeforeEach(func() {
-						handler = func(ctx *goa.Context) error {
+						handler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 							return fmt.Errorf("boom")
 						}
 					})
@@ -171,7 +171,7 @@ var _ = Describe("Application", func() {
 
 				Context("by not handling the request", func() {
 					BeforeEach(func() {
-						handler = func(ctx *goa.Context) error {
+						handler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 							return nil
 						}
 					})
@@ -193,7 +193,7 @@ var _ = Describe("Application", func() {
 				})
 
 				It("should work with application/json and load properly", func() {
-					Ω(ctx.RawPayload()).Should(Equal(decodedContent))
+					Ω(goa.Request(ctx).Payload).Should(Equal(decodedContent))
 				})
 
 				Context("with an empty Content-Type", func() {
@@ -202,7 +202,7 @@ var _ = Describe("Application", func() {
 					})
 
 					It("defaults to application/json and loads properly for JSON bodies", func() {
-						Ω(ctx.RawPayload()).Should(Equal(decodedContent))
+						Ω(goa.Request(ctx).Payload).Should(Equal(decodedContent))
 					})
 				})
 
@@ -213,7 +213,7 @@ var _ = Describe("Application", func() {
 					})
 
 					It("should use the default decoder", func() {
-						Ω(ctx.RawPayload()).Should(Equal(decodedContent))
+						Ω(goa.Request(ctx).Payload).Should(Equal(decodedContent))
 					})
 				})
 
@@ -225,7 +225,7 @@ var _ = Describe("Application", func() {
 					})
 
 					It("should bypass decoding", func() {
-						Ω(ctx.RawPayload()).Should(BeNil())
+						Ω(goa.Request(ctx).Payload).Should(BeNil())
 					})
 				})
 			})
@@ -234,28 +234,28 @@ var _ = Describe("Application", func() {
 })
 
 func TErrorHandler(witness *bool) goa.ErrorHandler {
-	return func(ctx *goa.Context, err error) {
+	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request, err error) {
 		*witness = true
 	}
 }
 
 func TMiddleware(witness *bool) goa.Middleware {
 	return func(h goa.Handler) goa.Handler {
-		return func(ctx *goa.Context) error {
+		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 			*witness = true
-			return h(ctx)
+			return h(ctx, rw, req)
 		}
 	}
 }
 
 func SecondMiddleware(witness1, witness2 *bool) goa.Middleware {
 	return func(h goa.Handler) goa.Handler {
-		return func(ctx *goa.Context) error {
+		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 			if !*witness1 {
 				panic("middleware called in wrong order")
 			}
 			*witness2 = true
-			return h(ctx)
+			return h(ctx, rw, req)
 		}
 	}
 }

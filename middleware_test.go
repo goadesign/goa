@@ -3,7 +3,8 @@ package goa_test
 import (
 	"fmt"
 	"net/http"
-	"net/url"
+
+	"golang.org/x/net/context"
 
 	"github.com/goadesign/goa"
 	. "github.com/onsi/ginkgo"
@@ -49,22 +50,24 @@ var _ = Describe("NewMiddleware", func() {
 
 	Context("with a context", func() {
 		var service goa.Service
-		var ctx *goa.Context
+		var req *http.Request
+		var rw http.ResponseWriter
+		var ctx context.Context
 
 		BeforeEach(func() {
 			service = goa.New("test")
-			req, err := http.NewRequest("GET", "/goo", nil)
+			var err error
+			req, err = http.NewRequest("GET", "/goo", nil)
 			Ω(err).ShouldNot(HaveOccurred())
-			rw := new(TestResponseWriter)
-			params := url.Values{"foo": []string{"bar"}}
-			ctx = goa.NewContext(nil, service, req, rw, params)
-			Ω(ctx.ResponseStatus()).Should(Equal(0))
+			rw = new(TestResponseWriter)
+			ctx = goa.NewContext(nil, service, rw, req, nil)
+			Ω(goa.Response(ctx).Status).Should(Equal(0))
 		})
 
 		Context("using a goa handler", func() {
 			BeforeEach(func() {
-				var goaHandler goa.Handler = func(ctx *goa.Context) error {
-					ctx.Respond(200, "ok")
+				var goaHandler goa.Handler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+					goa.Response(ctx).Send(ctx, 200, "ok")
 					return nil
 				}
 				input = goaHandler
@@ -72,25 +75,25 @@ var _ = Describe("NewMiddleware", func() {
 
 			It("wraps it in a middleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
-				h := func(ctx *goa.Context) error { return nil }
-				Ω(middleware(h)(ctx)).ShouldNot(HaveOccurred())
-				Ω(ctx.ResponseStatus()).Should(Equal(200))
+				h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error { return nil }
+				Ω(middleware(h)(ctx, rw, req)).ShouldNot(HaveOccurred())
+				Ω(goa.Response(ctx).Status).Should(Equal(200))
 			})
 		})
 
 		Context("using a goa handler func", func() {
 			BeforeEach(func() {
-				input = func(ctx *goa.Context) error {
-					ctx.Respond(200, "ok")
+				input = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+					goa.Response(ctx).Send(ctx, 200, "ok")
 					return nil
 				}
 			})
 
 			It("wraps it in a middleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
-				h := func(ctx *goa.Context) error { return nil }
-				Ω(middleware(h)(ctx)).ShouldNot(HaveOccurred())
-				Ω(ctx.ResponseStatus()).Should(Equal(200))
+				h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error { return nil }
+				Ω(middleware(h)(ctx, rw, req)).ShouldNot(HaveOccurred())
+				Ω(goa.Response(ctx).Status).Should(Equal(200))
 			})
 		})
 
@@ -101,42 +104,48 @@ var _ = Describe("NewMiddleware", func() {
 
 			It("wraps it in a middleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
-				h := func(c *goa.Context) error { c.Respond(200, "ok"); return nil }
-				Ω(middleware(h)(ctx)).ShouldNot(HaveOccurred())
-				Ω(ctx.ResponseStatus()).Should(Equal(200))
+				h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+					goa.Response(ctx).Send(ctx, 200, "ok")
+					return nil
+				}
+				Ω(middleware(h)(ctx, rw, req)).ShouldNot(HaveOccurred())
+				Ω(goa.Response(ctx).Status).Should(Equal(200))
 			})
 		})
 
 		Context("using a http handler", func() {
 			BeforeEach(func() {
-				var httpHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					w.Write([]byte("ok"))
+				input = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(200)
+					w.Write([]byte("ok"))
 				})
-				input = httpHandler
 			})
 
 			It("wraps it in a middleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
-				h := func(ctx *goa.Context) error { return nil }
-				Ω(middleware(h)(ctx)).ShouldNot(HaveOccurred())
-				Ω(ctx.ResponseStatus()).Should(Equal(200))
+				h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+					return nil
+				}
+				Ω(middleware(h)(ctx, rw, req)).ShouldNot(HaveOccurred())
+				Ω(rw.(*TestResponseWriter).Status).Should(Equal(200))
 			})
 		})
 
 		Context("using a http handler func", func() {
 			BeforeEach(func() {
 				input = func(w http.ResponseWriter, r *http.Request) {
-					w.Write([]byte("ok"))
 					w.WriteHeader(200)
+					w.Write([]byte("ok"))
 				}
 			})
 
 			It("wraps it in a middleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
-				h := func(ctx *goa.Context) error { return nil }
-				Ω(middleware(h)(ctx)).ShouldNot(HaveOccurred())
-				Ω(ctx.ResponseStatus()).Should(Equal(200))
+				h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+					return nil
+				}
+				Ω(middleware(h)(ctx, rw, req)).ShouldNot(HaveOccurred())
+				Ω(rw.(*TestResponseWriter).Status).Should(Equal(200))
 			})
 		})
 

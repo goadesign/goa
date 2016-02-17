@@ -153,6 +153,7 @@ func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, v
 	title := fmt.Sprintf("%s: Application Contexts", version.Context())
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("golang.org/x/net/context"),
 		codegen.SimpleImport("strconv"),
 		codegen.SimpleImport("strings"),
 		codegen.SimpleImport("time"),
@@ -172,13 +173,21 @@ func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, v
 		}
 		return r.IterateActions(func(a *design.ActionDefinition) error {
 			ctxName := codegen.Goify(a.Name, true) + codegen.Goify(a.Parent.Name, true) + "Context"
+			headers := r.Headers.Merge(a.Headers)
+			if headers != nil && len(headers.Type.ToObject()) == 0 {
+				headers = nil // So that {{if .Headers}} returns false in templates
+			}
+			params := a.AllParams()
+			if params != nil && len(params.Type.ToObject()) == 0 {
+				params = nil // So that {{if .Params}} returns false in templates
+			}
 			ctxData := ContextTemplateData{
 				Name:         ctxName,
 				ResourceName: r.Name,
 				ActionName:   a.Name,
 				Payload:      a.Payload,
-				Params:       a.AllParams(),
-				Headers:      r.Headers.Merge(a.Headers),
+				Params:       params,
+				Headers:      headers,
 				Routes:       a.Routes,
 				Responses:    MergeResponses(r.Responses, a.Responses),
 				API:          api,
@@ -282,6 +291,8 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 	}
 	title := fmt.Sprintf("%s: Application Controllers", version.Context())
 	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("net/http"),
+		codegen.SimpleImport("golang.org/x/net/context"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
 	if !version.IsDefault() {

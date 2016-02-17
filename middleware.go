@@ -3,6 +3,8 @@ package goa
 import (
 	"fmt"
 	"net/http"
+
+	"golang.org/x/net/context"
 )
 
 type (
@@ -30,15 +32,14 @@ func NewMiddleware(m interface{}) (mw Middleware, err error) {
 		mw = m
 	case Handler:
 		mw = handlerToMiddleware(m)
-	case func(*Context) error:
+	case func(context.Context, http.ResponseWriter, *http.Request) error:
 		mw = handlerToMiddleware(m)
 	case func(http.Handler) http.Handler:
 		mw = func(h Handler) Handler {
-			return func(ctx *Context) (err error) {
-				rw := ctx.Value(respKey).(http.ResponseWriter)
+			return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) (err error) {
 				m(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					err = h(ctx)
-				})).ServeHTTP(rw, ctx.Request())
+					err = h(ctx, w, r)
+				})).ServeHTTP(rw, req)
 				return
 			}
 		}
@@ -57,11 +58,11 @@ func NewMiddleware(m interface{}) (mw Middleware, err error) {
 // an error by also returning the error or calls the next handler in the chain otherwise.
 func handlerToMiddleware(m Handler) Middleware {
 	return func(h Handler) Handler {
-		return func(ctx *Context) error {
-			if err := m(ctx); err != nil {
+		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+			if err := m(ctx, rw, req); err != nil {
 				return err
 			}
-			return h(ctx)
+			return h(ctx, rw, req)
 		}
 	}
 }
@@ -71,9 +72,9 @@ func handlerToMiddleware(m Handler) Middleware {
 // middleware in the chain.
 func httpHandlerToMiddleware(m http.HandlerFunc) Middleware {
 	return func(h Handler) Handler {
-		return func(ctx *Context) error {
-			m.ServeHTTP(ctx, ctx.Request())
-			return h(ctx)
+		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+			m.ServeHTTP(rw, req)
+			return h(ctx, rw, req)
 		}
 	}
 }
