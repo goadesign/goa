@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"golang.org/x/net/context"
@@ -453,6 +454,7 @@ func DefaultErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.
 	} else {
 		Log.Error(ctx, e.Error())
 	}
+	go IncrCounter([]string{"goa", "handler", "default", "error", strconv.Itoa(status)}, 1.0)
 	Response(ctx).Send(ctx, status, e.Error())
 }
 
@@ -467,6 +469,7 @@ func TerseErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.Re
 	} else {
 		Log.Error(ctx, e.Error())
 	}
+	go IncrCounter([]string{"goa", "handler", "terse", "error", strconv.Itoa(status)}, 1.0)
 	Response(ctx).Send(ctx, status, body)
 }
 
@@ -477,5 +480,6 @@ func DefaultMissingVersionHandler(ctx context.Context, rw http.ResponseWriter, r
 		ID:   ErrInvalidVersion,
 		Mesg: fmt.Sprintf(`API does not support version %s`, version),
 	}
+	go IncrCounter([]string{"goa", "handler", "missingversion", version}, 1.0)
 	Response(ctx).Send(ctx, 400, resp)
 }
