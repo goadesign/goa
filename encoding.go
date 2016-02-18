@@ -9,6 +9,7 @@ import (
 	"mime"
 	"net/http"
 	"sync"
+	"time"
 
 	"golang.org/x/net/context"
 )
@@ -87,6 +88,8 @@ func (ver *version) DecodeRequest(req *http.Request, v interface{}) error {
 
 // Decode uses registered Decoders to unmarshal a body based on the contentType
 func (ver *version) Decode(v interface{}, body io.Reader, contentType string) error {
+	now := time.Now()
+	defer MeasureSince([]string{"goa", "decode", contentType}, now)
 	var p *decoderPool
 	if contentType == "" {
 		// Default to JSON
@@ -177,6 +180,7 @@ func (p *decoderPool) Put(d Decoder) {
 // EncodeResponse uses registered Encoders to marshal the response body based on the request
 // `Accept` header and writes it to the http.ResponseWriter
 func (ver *version) EncodeResponse(ctx context.Context, v interface{}) error {
+	now := time.Now()
 	accept := Request(ctx).Header.Get("Accept")
 	if accept == "" {
 		accept = "*/*"
@@ -188,6 +192,7 @@ func (ver *version) EncodeResponse(ctx context.Context, v interface{}) error {
 			break
 		}
 	}
+	defer MeasureSince([]string{"goa", "encode", contentType}, now)
 	p := ver.encoderPools[contentType]
 	if p == nil && contentType != "*/*" {
 		p = ver.encoderPools["*/*"]

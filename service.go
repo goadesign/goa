@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"golang.org/x/net/context"
@@ -384,6 +385,11 @@ func (ctrl *ApplicationController) SetErrorHandler(handler ErrorHandler) {
 // HandleError invokes the controller error handler or - if there isn't one - the service error
 // handler.
 func (ctrl *ApplicationController) HandleError(ctx context.Context, rw http.ResponseWriter, req *http.Request, err error) {
+	status := 500
+	if _, ok := err.(*BadRequestError); ok {
+		status = 400
+	}
+	go IncrCounter([]string{"goa", "handler", "error", strconv.Itoa(status)}, 1.0)
 	if ctrl.errorHandler != nil {
 		ctrl.errorHandler(ctx, rw, req, err)
 	} else if ctrl.app.errorHandler != nil {
@@ -477,5 +483,6 @@ func DefaultMissingVersionHandler(ctx context.Context, rw http.ResponseWriter, r
 		ID:   ErrInvalidVersion,
 		Mesg: fmt.Sprintf(`API does not support version %s`, version),
 	}
+	go IncrCounter([]string{"goa", "handler", "missingversion", version}, 1.0)
 	Response(ctx).Send(ctx, 400, resp)
 }
