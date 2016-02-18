@@ -36,12 +36,9 @@ func (d *dupper) DupUserType(ut *UserTypeDefinition) *UserTypeDefinition {
 
 // DupAttribute creates a copy of the given attribute.
 func (d *dupper) DupAttribute(att *AttributeDefinition) *AttributeDefinition {
-	var valDup []dslengine.ValidationDefinition
-	if len(att.Validations) > 0 {
-		valDup = make([]dslengine.ValidationDefinition, len(att.Validations))
-		for i, v := range att.Validations {
-			valDup[i] = v
-		}
+	var valDup *dslengine.ValidationDefinition
+	if att.Validation != nil {
+		valDup = att.Validation.Dup()
 	}
 	var dupType DataType
 	if att.Type != nil {
@@ -51,7 +48,7 @@ func (d *dupper) DupAttribute(att *AttributeDefinition) *AttributeDefinition {
 		Type:              dupType,
 		Description:       att.Description,
 		APIVersions:       att.APIVersions,
-		Validations:       valDup,
+		Validation:        valDup,
 		Metadata:          att.Metadata,
 		DefaultValue:      att.DefaultValue,
 		NonZeroAttributes: att.NonZeroAttributes,

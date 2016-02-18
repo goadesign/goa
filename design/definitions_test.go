@@ -17,10 +17,8 @@ var _ = Describe("IsRequired", func() {
 	JustBeforeEach(func() {
 		integer := &design.AttributeDefinition{Type: design.Integer}
 		attribute = &design.AttributeDefinition{
-			Type: design.Object{required: integer},
-			Validations: []dslengine.ValidationDefinition{
-				&dslengine.RequiredValidationDefinition{Names: []string{required}},
-			},
+			Type:       design.Object{required: integer},
+			Validation: &dslengine.ValidationDefinition{Required: []string{required}},
 		}
 		res = attribute.IsRequired(attName)
 	})

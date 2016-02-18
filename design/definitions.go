@@ -16,8 +16,8 @@ type (
 		Reference DataType
 		// Optional description
 		Description string
-		// Optional validation functions
-		Validations []dslengine.ValidationDefinition
+		// Optional validations
+		Validation *dslengine.ValidationDefinition
 		// Metadata is a list of key/value pairs
 		Metadata dslengine.MetadataDefinition
 		// Optional member default value
@@ -59,11 +59,10 @@ func (a *AttributeDefinition) Context() string {
 // This happens when the DSL uses references for example. So traverse the hierarchy and collect
 // all the required validations.
 func (a *AttributeDefinition) AllRequired() (required []string) {
-	for _, v := range a.Validations {
-		if req, ok := v.(*dslengine.RequiredValidationDefinition); ok {
-			required = append(required, req.Names...)
-		}
+	if a.Validation == nil {
+		return
 	}
+	required = a.Validation.Required
 	if ds, ok := a.Type.(DataStructure); ok {
 		required = append(required, ds.Definition().AllRequired()...)
 	}
@@ -278,18 +277,13 @@ func (a *AttributeDefinition) inheritRecursive(parent *AttributeDefinition) {
 }
 
 func (a *AttributeDefinition) inheritValidations(parent *AttributeDefinition) {
-	for _, v := range parent.Validations {
-		found := false
-		for _, vc := range a.Validations {
-			if v == vc {
-				found = true
-				break
-			}
-		}
-		if !found {
-			a.Validations = append(a.Validations, parent)
-		}
+	if parent.Validation == nil {
+		return
 	}
+	if a.Validation == nil {
+		a.Validation = &dslengine.ValidationDefinition{}
+	}
+	a.Validation.AddRequired(parent.Validation.Required)
 }
 
 func (a *AttributeDefinition) shouldInherit(parent *AttributeDefinition) bool {

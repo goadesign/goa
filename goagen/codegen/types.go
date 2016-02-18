@@ -189,8 +189,8 @@ func GoPackageTypeName(t design.DataType, required []string, versioned bool, def
 	case design.Object:
 		att := &design.AttributeDefinition{Type: actual}
 		if len(required) > 0 {
-			requiredVal := &dslengine.RequiredValidationDefinition{Names: required}
-			att.Validations = append(att.Validations, requiredVal)
+			requiredVal := &dslengine.ValidationDefinition{Required: required}
+			att.Validation.Merge(requiredVal)
 		}
 		return GoTypeDef(att, versioned, defPkg, tabs, false)
 	case *design.Hash:
