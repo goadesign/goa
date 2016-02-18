@@ -614,22 +614,17 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 
 	// Compute validations - view may not have all attributes
 	viewObj := v.Type.ToObject()
-	var vals []dslengine.ValidationDefinition
-	if len(m.Validations) > 0 {
-		vals = make([]dslengine.ValidationDefinition, len(m.Validations))
-		for i, va := range m.Validations {
-			if r, ok := va.(*dslengine.RequiredValidationDefinition); ok {
-				var required []string
-				for _, n := range r.Names {
-					if _, ok := viewObj[n]; ok {
-						required = append(required, n)
-					}
-				}
-				vals[i] = &dslengine.RequiredValidationDefinition{Names: required}
-			} else {
-				vals[i] = va
+	var val *dslengine.ValidationDefinition
+	if m.Validation != nil {
+		names := m.Validation.Required
+		var required []string
+		for _, n := range names {
+			if _, ok := viewObj[n]; ok {
+				required = append(required, n)
 			}
 		}
+		val = m.Validation.Dup()
+		val.Required = required
 	}
 	description := m.Description
 	if view != "default" {
@@ -643,7 +638,7 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 				APIVersions: m.APIVersions,
 				Description: description,
 				Type:        Dup(v.Type),
-				Validations: vals,
+				Validation:  val,
 			},
 		},
 	}

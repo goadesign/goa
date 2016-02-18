@@ -128,61 +128,68 @@ func ValidationChecker(att *design.AttributeDefinition, nonzero, required bool, 
 		"array":     att.Type.IsArray(),
 		"depth":     depth,
 	}
-	res := validationsCode(att.Validations, data)
+	res := validationsCode(att.Validation, data)
 	return strings.Join(res, "\n")
 }
 
-func validationsCode(validations []dslengine.ValidationDefinition, data map[string]interface{}) (res []string) {
-	for _, v := range validations {
-		switch actual := v.(type) {
-		case *dslengine.EnumValidationDefinition:
-			data["values"] = actual.Values
-			if val := RunTemplate(enumValT, data); val != "" {
-				res = append(res, val)
-			}
-		case *dslengine.FormatValidationDefinition:
-			data["format"] = actual.Format
-			if val := RunTemplate(formatValT, data); val != "" {
-				res = append(res, val)
-			}
-		case *dslengine.PatternValidationDefinition:
-			data["pattern"] = actual.Pattern
-			if val := RunTemplate(patternValT, data); val != "" {
-				res = append(res, val)
-			}
-		case *dslengine.MinimumValidationDefinition:
-			data["min"] = actual.Min
-			data["isMin"] = true
-			delete(data, "max")
-			if val := RunTemplate(minMaxValT, data); val != "" {
-				res = append(res, val)
-			}
-		case *dslengine.MaximumValidationDefinition:
-			data["max"] = actual.Max
-			data["isMin"] = false
-			delete(data, "min")
-			if val := RunTemplate(minMaxValT, data); val != "" {
-				res = append(res, val)
-			}
-		case *dslengine.MinLengthValidationDefinition:
-			data["minLength"] = actual.MinLength
-			data["isMinLength"] = true
-			delete(data, "maxLength")
-			if val := RunTemplate(lengthValT, data); val != "" {
-				res = append(res, val)
-			}
-		case *dslengine.MaxLengthValidationDefinition:
-			data["maxLength"] = actual.MaxLength
-			data["isMinLength"] = false
-			delete(data, "minLength")
-			if val := RunTemplate(lengthValT, data); val != "" {
-				res = append(res, val)
-			}
-		case *dslengine.RequiredValidationDefinition:
-			data["required"] = actual.Names
-			if val := RunTemplate(requiredValT, data); val != "" {
-				res = append(res, val)
-			}
+func validationsCode(validation *dslengine.ValidationDefinition, data map[string]interface{}) (res []string) {
+	if validation == nil {
+		return nil
+	}
+	if values := validation.Values; values != nil {
+		data["values"] = values
+		if val := RunTemplate(enumValT, data); val != "" {
+			res = append(res, val)
+		}
+	}
+	if format := validation.Format; format != "" {
+		data["format"] = format
+		if val := RunTemplate(formatValT, data); val != "" {
+			res = append(res, val)
+		}
+	}
+	if pattern := validation.Pattern; pattern != "" {
+		data["pattern"] = pattern
+		if val := RunTemplate(patternValT, data); val != "" {
+			res = append(res, val)
+		}
+	}
+	if min := validation.Minimum; min != nil {
+		data["min"] = *min
+		data["isMin"] = true
+		delete(data, "max")
+		if val := RunTemplate(minMaxValT, data); val != "" {
+			res = append(res, val)
+		}
+	}
+	if max := validation.Maximum; max != nil {
+		data["max"] = *max
+		data["isMin"] = false
+		delete(data, "min")
+		if val := RunTemplate(minMaxValT, data); val != "" {
+			res = append(res, val)
+		}
+	}
+	if minLength := validation.MinLength; minLength != nil {
+		data["minLength"] = minLength
+		data["isMinLength"] = true
+		delete(data, "maxLength")
+		if val := RunTemplate(lengthValT, data); val != "" {
+			res = append(res, val)
+		}
+	}
+	if maxLength := validation.MaxLength; maxLength != nil {
+		data["maxLength"] = maxLength
+		data["isMinLength"] = false
+		delete(data, "minLength")
+		if val := RunTemplate(lengthValT, data); val != "" {
+			res = append(res, val)
+		}
+	}
+	if required := validation.Required; len(required) > 0 {
+		data["required"] = required
+		if val := RunTemplate(requiredValT, data); val != "" {
+			res = append(res, val)
 		}
 	}
 	return

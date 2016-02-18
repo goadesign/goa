@@ -269,12 +269,12 @@ var _ = Describe("ContextsWriter", func() {
 					dataType := design.Object{
 						"int": intParam,
 					}
-					required := dslengine.RequiredValidationDefinition{
-						Names: []string{"int"},
+					required := &dslengine.ValidationDefinition{
+						Required: []string{"int"},
 					}
 					params = &design.AttributeDefinition{
-						Type:        dataType,
-						Validations: []dslengine.ValidationDefinition{&required},
+						Type:       dataType,
+						Validation: required,
 					}
 				})
 
@@ -318,13 +318,13 @@ var _ = Describe("ContextsWriter", func() {
 						"int": intParam,
 						"str": strParam,
 					}
-					required := dslengine.RequiredValidationDefinition{
-						Names: []string{"int"},
+					required := &dslengine.ValidationDefinition{
+						Required: []string{"int"},
 					}
 					payload = &design.UserTypeDefinition{
 						AttributeDefinition: &design.AttributeDefinition{
-							Type:        dataType,
-							Validations: []dslengine.ValidationDefinition{&required},
+							Type:       dataType,
+							Validation: required,
 						},
 						TypeName: "ListBottlePayload",
 					}
@@ -518,8 +518,8 @@ var _ = Describe("ControllersWriter", func() {
 			Context("with actions that take a payload with a required validation", func() {
 				BeforeEach(func() {
 					actions = []string{"List"}
-					required := dslengine.RequiredValidationDefinition{
-						Names: []string{"id"},
+					required := &dslengine.ValidationDefinition{
+						Required: []string{"id"},
 					}
 					verbs = []string{"GET"}
 					paths = []string{"/accounts/:accountID/bottles"}
@@ -534,7 +534,7 @@ var _ = Describe("ControllersWriter", func() {
 										Type: design.String,
 									},
 								},
-								Validations: []dslengine.ValidationDefinition{&required},
+								Validation: required,
 							},
 						},
 					}
