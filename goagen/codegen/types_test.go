@@ -18,14 +18,14 @@ var _ = Describe("code generation", func() {
 		Context("given an attribute definition with fields", func() {
 			var att *AttributeDefinition
 			var object Object
-			var required *dslengine.RequiredValidationDefinition
+			var required *dslengine.ValidationDefinition
 			var st string
 
 			JustBeforeEach(func() {
 				att = new(AttributeDefinition)
 				att.Type = object
 				if required != nil {
-					att.Validations = []dslengine.ValidationDefinition{required}
+					att.Validation = required
 				}
 				st = codegen.GoTypeDef(att, false, "", 0, true)
 			})
@@ -138,8 +138,8 @@ var _ = Describe("code generation", func() {
 					object = Object{
 						"foo": &AttributeDefinition{Type: Integer},
 					}
-					required = &dslengine.RequiredValidationDefinition{
-						Names: []string{"foo"},
+					required = &dslengine.ValidationDefinition{
+						Required: []string{"foo"},
 					}
 				})
 

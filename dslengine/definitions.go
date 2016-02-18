@@ -78,58 +78,32 @@ type (
 		DSLFunc func()
 	}
 
-	// ValidationDefinition is the common interface for all validation data structures.
-	// It doesn't expose any method and simply exists to help with documentation.
-	ValidationDefinition interface {
-		Definition
-	}
-
-	// EnumValidationDefinition represents an enum validation as described at
-	// http://json-schema.org/latest/json-schema-validation.html#anchor76.
-	EnumValidationDefinition struct {
+	// ValidationDefinition contains validation rules for an attribute.
+	ValidationDefinition struct {
+		// Values represents an enum validation as described at
+		// http://json-schema.org/latest/json-schema-validation.html#anchor76.
 		Values []interface{}
-	}
-
-	// FormatValidationDefinition represents a format validation as described at
-	// http://json-schema.org/latest/json-schema-validation.html#anchor104.
-	FormatValidationDefinition struct {
+		// Format represents a format validation as described at
+		// http://json-schema.org/latest/json-schema-validation.html#anchor104.
 		Format string
-	}
-
-	// PatternValidationDefinition represents a pattern validation as described at
-	// http://json-schema.org/latest/json-schema-validation.html#anchor33
-	PatternValidationDefinition struct {
+		// PatternValidationDefinition represents a pattern validation as described at
+		// http://json-schema.org/latest/json-schema-validation.html#anchor33
 		Pattern string
-	}
-
-	// MinimumValidationDefinition represents an minimum value validation as described at
-	// http://json-schema.org/latest/json-schema-validation.html#anchor21.
-	MinimumValidationDefinition struct {
-		Min float64
-	}
-
-	// MaximumValidationDefinition represents a maximum value validation as described at
-	// http://json-schema.org/latest/json-schema-validation.html#anchor17.
-	MaximumValidationDefinition struct {
-		Max float64
-	}
-
-	// MinLengthValidationDefinition represents an minimum length validation as described at
-	// http://json-schema.org/latest/json-schema-validation.html#anchor29.
-	MinLengthValidationDefinition struct {
-		MinLength int
-	}
-
-	// MaxLengthValidationDefinition represents an maximum length validation as described at
-	// http://json-schema.org/latest/json-schema-validation.html#anchor26.
-	MaxLengthValidationDefinition struct {
-		MaxLength int
-	}
-
-	// RequiredValidationDefinition represents a required validation as described at
-	// http://json-schema.org/latest/json-schema-validation.html#anchor61.
-	RequiredValidationDefinition struct {
-		Names []string
+		// Minimum represents an minimum value validation as described at
+		// http://json-schema.org/latest/json-schema-validation.html#anchor21.
+		Minimum *float64
+		// Maximum represents a maximum value validation as described at
+		// http://json-schema.org/latest/json-schema-validation.html#anchor17.
+		Maximum *float64
+		// MinLength represents an minimum length validation as described at
+		// http://json-schema.org/latest/json-schema-validation.html#anchor29.
+		MinLength *int
+		// MaxLength represents an maximum length validation as described at
+		// http://json-schema.org/latest/json-schema-validation.html#anchor26.
+		MaxLength *int
+		// Required list the required fields of object attributes as described at
+		// http://json-schema.org/latest/json-schema-validation.html#anchor61.
+		Required []string
 	}
 )
 
@@ -147,41 +121,62 @@ func (t *TraitDefinition) DSL() func() {
 }
 
 // Context returns the generic definition name used in error messages.
-func (v *EnumValidationDefinition) Context() string {
-	return "enum validation"
+func (v *ValidationDefinition) Context() string {
+	return "validation"
 }
 
-// Context returns the generic definition name used in error messages.
-func (f *FormatValidationDefinition) Context() string {
-	return "format validation"
+// Merge merges other into v.
+func (v *ValidationDefinition) Merge(other *ValidationDefinition) {
+	if v.Values == nil {
+		v.Values = other.Values
+	}
+	if v.Format == "" {
+		v.Format = other.Format
+	}
+	if v.Pattern == "" {
+		v.Pattern = other.Pattern
+	}
+	if v.Minimum == nil || (other.Minimum != nil && *v.Minimum > *other.Minimum) {
+		v.Minimum = other.Minimum
+	}
+	if v.Maximum == nil || (other.Maximum != nil && *v.Maximum < *other.Maximum) {
+		v.Maximum = other.Maximum
+	}
+	if v.MinLength == nil || (other.MinLength != nil && *v.MinLength > *other.MinLength) {
+		v.MinLength = other.MinLength
+	}
+	if v.MaxLength == nil || (other.MaxLength != nil && *v.MaxLength < *other.MaxLength) {
+		v.MaxLength = other.MaxLength
+	}
+	v.AddRequired(other.Required)
 }
 
-// Context returns the generic definition name used in error messages.
-func (f *PatternValidationDefinition) Context() string {
-	return "pattern validation"
+// AddRequired merges the required fields from other into v
+func (v *ValidationDefinition) AddRequired(required []string) {
+	for _, r := range required {
+		found := false
+		for _, rr := range v.Required {
+			if r == rr {
+				found = true
+				break
+			}
+		}
+		if !found {
+			v.Required = append(v.Required, r)
+		}
+	}
 }
 
-// Context returns the generic definition name used in error messages.
-func (m *MinimumValidationDefinition) Context() string {
-	return "min value validation"
-}
-
-// Context returns the generic definition name used in error messages.
-func (m *MaximumValidationDefinition) Context() string {
-	return "max value validation"
-}
-
-// Context returns the generic definition name used in error messages.
-func (m *MinLengthValidationDefinition) Context() string {
-	return "min length validation"
-}
-
-// Context returns the generic definition name used in error messages.
-func (m *MaxLengthValidationDefinition) Context() string {
-	return "max length validation"
-}
-
-// Context returns the generic definition name used in error messages.
-func (r *RequiredValidationDefinition) Context() string {
-	return "required field validation"
+// Dup makes a shallow dup of the validation.
+func (v *ValidationDefinition) Dup() *ValidationDefinition {
+	return &ValidationDefinition{
+		Values:    v.Values,
+		Format:    v.Format,
+		Pattern:   v.Pattern,
+		Minimum:   v.Minimum,
+		Maximum:   v.Maximum,
+		MinLength: v.MinLength,
+		MaxLength: v.MaxLength,
+		Required:  v.Required,
+	}
 }

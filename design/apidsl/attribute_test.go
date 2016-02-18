@@ -176,8 +176,8 @@ var _ = Describe("Attribute", func() {
 			Ω(o).Should(HaveLen(1))
 			Ω(o).Should(HaveKey(name))
 			Ω(o[name].Type).Should(Equal(String))
-			Ω(o[name].Validations).Should(HaveLen(1))
-			Ω(o[name].Validations[0]).Should(BeAssignableToTypeOf(&dslengine.EnumValidationDefinition{}))
+			Ω(o[name].Validation).ShouldNot(BeNil())
+			Ω(o[name].Validation.Values).Should(Equal([]interface{}{"one", "two"}))
 		})
 	})
 
@@ -196,8 +196,8 @@ var _ = Describe("Attribute", func() {
 			Ω(o).Should(HaveLen(1))
 			Ω(o).Should(HaveKey(name))
 			Ω(o[name].Type).Should(Equal(Integer))
-			Ω(o[name].Validations).Should(HaveLen(1))
-			Ω(o[name].Validations[0]).Should(BeAssignableToTypeOf(&dslengine.EnumValidationDefinition{}))
+			Ω(o[name].Validation).ShouldNot(BeNil())
+			Ω(o[name].Validation.Values).Should(Equal([]interface{}{1, 2}))
 		})
 	})
 
@@ -217,9 +217,8 @@ var _ = Describe("Attribute", func() {
 			Ω(o).Should(HaveLen(1))
 			Ω(o).Should(HaveKey(name))
 			Ω(o[name].Type).Should(Equal(String))
-			Ω(o[name].Validations).Should(HaveLen(1))
-			Ω(o[name].Validations[0]).Should(BeAssignableToTypeOf(&dslengine.EnumValidationDefinition{}))
-			Ω(o[name].Description).Should(Equal(description))
+			Ω(o[name].Validation).ShouldNot(BeNil())
+			Ω(o[name].Validation.Values).Should(Equal([]interface{}{"one", "two"}))
 		})
 	})
 	Context("with a name and type date", func() {
