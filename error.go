@@ -23,6 +23,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -143,6 +144,7 @@ func (t *TypedError) MarshalJSON() ([]byte, error) {
 
 // Error builds an error message from the typed error details.
 func (t *TypedError) Error() string {
+	IncrCounter([]string{"goa", "error", strconv.Itoa(int(t.ID))}, 1.0)
 	js, err := json.Marshal(t)
 	if err != nil {
 		return `{"id":0,"title":"generic","msg":"failed to serialize error"}`

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"golang.org/x/net/context"
 )
@@ -168,6 +169,7 @@ func (r *ResponseData) Bug(ctx context.Context, format string, a ...interface{})
 
 // WriteHeader records the response status code and calls the underlying writer.
 func (r *ResponseData) WriteHeader(status int) {
+	go IncrCounter([]string{"goa", "response", strconv.Itoa(status)}, 1.0)
 	r.Status = status
 	r.ResponseWriter.WriteHeader(status)
 }

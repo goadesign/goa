@@ -73,6 +73,7 @@ func (gapp *GracefulApplication) ListenAndServeTLS(addr, certFile, keyFile strin
 // Shutdown initiates graceful shutdown of the running server once. Returns true on
 // initial shutdown and false if already shutting down.
 func (gapp *GracefulApplication) Shutdown() bool {
+	IncrCounter([]string{"goa", "graceful", "restart"}, 1.0)
 	gapp.Lock()
 	defer gapp.Unlock()
 	if gapp.Interrupted {
