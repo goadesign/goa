@@ -16,7 +16,7 @@ var _ = Describe("validation code generation", func() {
 	Describe("ValidationChecker", func() {
 		Context("given an attribute definition and validations", func() {
 			var attType design.DataType
-			var validations []dslengine.ValidationDefinition
+			var validation *dslengine.ValidationDefinition
 
 			att := new(design.AttributeDefinition)
 			target := "val"
@@ -25,17 +25,16 @@ var _ = Describe("validation code generation", func() {
 
 			JustBeforeEach(func() {
 				att.Type = attType
-				att.Validations = validations
+				att.Validation = validation
 				code = codegen.RecursiveChecker(att, false, false, target, context, 1)
 			})
 
 			Context("of enum", func() {
 				BeforeEach(func() {
 					attType = design.Integer
-					enumVal := &dslengine.EnumValidationDefinition{
+					validation = &dslengine.ValidationDefinition{
 						Values: []interface{}{1, 2, 3},
 					}
-					validations = []dslengine.ValidationDefinition{enumVal}
 				})
 
 				It("produces the validation go code", func() {
@@ -46,10 +45,9 @@ var _ = Describe("validation code generation", func() {
 			Context("of pattern", func() {
 				BeforeEach(func() {
 					attType = design.String
-					patternVal := &dslengine.PatternValidationDefinition{
+					validation = &dslengine.ValidationDefinition{
 						Pattern: ".*",
 					}
-					validations = []dslengine.ValidationDefinition{patternVal}
 				})
 
 				It("produces the validation go code", func() {
@@ -60,10 +58,10 @@ var _ = Describe("validation code generation", func() {
 			Context("of min value 0", func() {
 				BeforeEach(func() {
 					attType = design.Integer
-					minVal := &dslengine.MinimumValidationDefinition{
-						Min: 0,
+					min := 0.0
+					validation = &dslengine.ValidationDefinition{
+						Minimum: &min,
 					}
-					validations = []dslengine.ValidationDefinition{minVal}
 				})
 
 				It("produces the validation go code", func() {
@@ -73,12 +71,12 @@ var _ = Describe("validation code generation", func() {
 
 			Context("of embedded object", func() {
 				BeforeEach(func() {
-					enumVal := &dslengine.EnumValidationDefinition{
+					enumVal := &dslengine.ValidationDefinition{
 						Values: []interface{}{1, 2, 3},
 					}
 					ccatt := &design.AttributeDefinition{
-						Type:        design.Integer,
-						Validations: []dslengine.ValidationDefinition{enumVal},
+						Type:       design.Integer,
+						Validation: enumVal,
 					}
 					catt := &design.AttributeDefinition{
 						Type: design.Object{"bar": ccatt},
@@ -88,7 +86,7 @@ var _ = Describe("validation code generation", func() {
 				})
 				Context("and the parent is optional", func() {
 					BeforeEach(func() {
-						validations = nil
+						validation = nil
 					})
 					It("checks the child & parent object are not nil", func() {
 						Ω(code).Should(Equal(embeddedValCode))
@@ -96,9 +94,9 @@ var _ = Describe("validation code generation", func() {
 				})
 				Context("and the parent is required", func() {
 					BeforeEach(func() {
-						validations = []dslengine.ValidationDefinition{&dslengine.RequiredValidationDefinition{
-							Names: []string{"foo"},
-						}}
+						validation = &dslengine.ValidationDefinition{
+							Required: []string{"foo"},
+						}
 					})
 					It("checks the child & parent object are not nil", func() {
 						Ω(code).Should(Equal(embeddedRequiredValCode))

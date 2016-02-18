@@ -113,9 +113,9 @@ var _ = Describe("Generate", func() {
 
 		BeforeEach(func() {
 			payload = nil
-			required := dslengine.ValidationDefinition(&dslengine.RequiredValidationDefinition{
-				Names: []string{"id"},
-			})
+			required := &dslengine.ValidationDefinition{
+				Required: []string{"id"},
+			}
 			idAt := design.AttributeDefinition{
 				Type:        design.String,
 				Description: "widget id",
@@ -124,7 +124,7 @@ var _ = Describe("Generate", func() {
 				Type: design.Object{
 					"id": &idAt,
 				},
-				Validations: []dslengine.ValidationDefinition{required},
+				Validation: required,
 			}
 			resp := design.ResponseDefinition{
 				Name:        "ok",

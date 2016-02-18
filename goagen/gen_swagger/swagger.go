@@ -703,28 +703,23 @@ func initMaxLengthValidation(def interface{}, max int) {
 }
 
 func initValidations(attr *design.AttributeDefinition, def interface{}) {
-	for _, v := range attr.Validations {
-		switch val := v.(type) {
-		case *dslengine.EnumValidationDefinition:
-			initEnumValidation(def, val.Values)
-
-		case *dslengine.FormatValidationDefinition:
-			initFormatValidation(def, val.Format)
-
-		case *dslengine.PatternValidationDefinition:
-			initPatternValidation(def, val.Pattern)
-
-		case *dslengine.MinimumValidationDefinition:
-			initMinimumValidation(def, val.Min)
-
-		case *dslengine.MaximumValidationDefinition:
-			initMaximumValidation(def, val.Max)
-
-		case *dslengine.MinLengthValidationDefinition:
-			initMinLengthValidation(def, val.MinLength)
-
-		case *dslengine.MaxLengthValidationDefinition:
-			initMaxLengthValidation(def, val.MaxLength)
-		}
+	val := attr.Validation
+	if val == nil {
+		return
+	}
+	initEnumValidation(def, val.Values)
+	initFormatValidation(def, val.Format)
+	initPatternValidation(def, val.Pattern)
+	if val.Minimum != nil {
+		initMinimumValidation(def, *val.Minimum)
+	}
+	if val.Maximum != nil {
+		initMaximumValidation(def, *val.Maximum)
+	}
+	if val.MinLength != nil {
+		initMinLengthValidation(def, *val.MinLength)
+	}
+	if val.MaxLength != nil {
+		initMaxLengthValidation(def, *val.MaxLength)
 	}
 }
