@@ -7,9 +7,10 @@ import (
 
 // Response implements the response definition DSL. Response takes the name of the response as
 // first parameter. goa defines all the standard HTTP status name as global variables so they can be
-// readily used as response names. Response also accepts optional arguments that correspond to the
-// arguments defined by the corresponding response template (the response template with the same
-// name) if there is one, see ResponseTemplate.
+// readily used as response names. The response body data type can be specified as second argument.
+// If a type is specified it overrides any type defined by in the response media type. Response also
+// accepts optional arguments that correspond to the arguments defined by the corresponding response
+// template (the response template with the same name) if there is one, see ResponseTemplate.
 //
 // A response may also optionally use an anonymous function as last argument to specify the response
 // status code, media type and headers overriding what the default response or response template
@@ -21,13 +22,16 @@ import (
 //		})
 //	})
 //
+//	Response(OK, "application/json",        // The body of the OK response consists of a hash of any type indexed
+//		HashOf(String, Any))            // by strings.
+//
 //	Response(NotFound, func() {
 //		Status(404)			// Not necessary as defined by default NotFound response.
 //		Media("application/json")	// Override NotFound response default of "text/plain"
 //	})
 //
 //	Response(Created, func() {
-//		Media(BottleMedia)
+//		Media(BottleMedia)	        // Specifies a media type defined in the design.
 //	})
 //
 // goa defines a default response for all the HTTP status code. The default response simply sets
@@ -97,10 +101,17 @@ func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.Respon
 	var params []string
 	var dsl func()
 	var ok bool
+	var dt design.DataType
 	if len(paramsAndDSL) > 0 {
 		d := paramsAndDSL[len(paramsAndDSL)-1]
 		if dsl, ok = d.(func()); ok {
 			paramsAndDSL = paramsAndDSL[:len(paramsAndDSL)-1]
+		}
+		if len(paramsAndDSL) > 0 {
+			t := paramsAndDSL[0]
+			if dt, ok = t.(design.DataType); ok {
+				paramsAndDSL = paramsAndDSL[1:]
+			}
 		}
 		params = make([]string, len(paramsAndDSL))
 		for i, p := range paramsAndDSL {
@@ -138,6 +149,9 @@ func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.Respon
 		}
 		resp.Standard = false
 		resp.Global = false
+	}
+	if dt != nil {
+		resp.Type = dt
 	}
 	return resp
 }
