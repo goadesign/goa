@@ -573,14 +573,14 @@ func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Control
 	unmarshalT = `{{range .Actions}}{{if .Payload}}
 // {{.Unmarshal}} unmarshals the request body into the context request data Payload field.
 func {{.Unmarshal}}(ctx context.Context, req *http.Request) error {
-	payload := &{{gotypename .Payload nil 1}}{}
-	if err := goa.RequestService(ctx).DecodeRequest(req, payload); err != nil {
+	var payload {{gotypename .Payload nil 1}}
+	if err := goa.RequestService(ctx).DecodeRequest(req, &payload); err != nil {
 		return err
 	}{{$validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1}}{{if $validation}}
 	if err := payload.Validate(); err != nil {
 		return err
 	}{{end}}
-	goa.Request(ctx).Payload = payload
+	goa.Request(ctx).Payload = {{if .Payload.IsObject}}&{{end}}payload
 	return nil
 }
 {{end}}
