@@ -10,6 +10,7 @@ import (
 
 var _ = Describe("Response", func() {
 	var name string
+	var dt DataType
 	var dsl func()
 
 	var res *ResponseDefinition
@@ -19,12 +20,17 @@ var _ = Describe("Response", func() {
 		dslengine.Errors = nil
 		name = ""
 		dsl = nil
+		dt = nil
 	})
 
 	JustBeforeEach(func() {
 		Resource("res", func() {
 			Action("action", func() {
-				Response(name, dsl)
+				if dt != nil {
+					Response(name, dt, dsl)
+				} else {
+					Response(name, dsl)
+				}
 			})
 		})
 		dslengine.Run()
@@ -68,6 +74,24 @@ var _ = Describe("Response", func() {
 			Ω(res.Validate()).ShouldNot(HaveOccurred())
 			Ω(res.Status).Should(Equal(status))
 			Ω(res.Parent).ShouldNot(BeNil())
+		})
+	})
+
+	Context("with a type override", func() {
+		const status = 201
+
+		BeforeEach(func() {
+			name = "foo"
+			dsl = func() {
+				Status(status)
+			}
+			dt = HashOf(String, Any)
+		})
+
+		It("produces a response definition with the given type", func() {
+			Ω(res).ShouldNot(BeNil())
+			Ω(res.Type).Should(Equal(dt))
+			Ω(res.Validate()).ShouldNot(HaveOccurred())
 		})
 	})
 

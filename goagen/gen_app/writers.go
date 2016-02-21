@@ -212,12 +212,16 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 		},
 	}
 	data.IterateResponses(func(resp *design.ResponseDefinition) error {
-		mt := design.Design.MediaTypeWithIdentifier(resp.MediaType)
 		respData := map[string]interface{}{
 			"Context":  data,
 			"Response": resp,
 		}
-		if mt != nil {
+		if resp.Type != nil {
+			respData["Type"] = resp.Type
+			if err := w.ExecuteTemplate("response", ctxTRespT, fn, respData); err != nil {
+				return err
+			}
+		} else if mt := design.Design.MediaTypeWithIdentifier(resp.MediaType); mt != nil {
 			respData["MediaType"] = mt
 			fn["respName"] = func(resp *design.ResponseDefinition, view string) string {
 				if view == "default" {
@@ -491,6 +495,15 @@ func (ctx *{{$ctx.Name}}) {{respName $resp $name}}(r {{gopkgtyperef $projected $
 	return ctx.ResponseData.Send(ctx.Context, {{$resp.Status}}, r)
 }
 {{end}}{{end}}
+`
+
+	// ctxTRespT generates the response helpers for responses with overridden types.
+	// template input: map[string]interface{}
+	ctxTRespT = `// {{goify .Response.Name true}} sends a HTTP response with status code {{.Response.Status}}.
+func (ctx *{{.Context.Name}}) {{goify .Response.Name true}}(r {{gopkgtyperef .Type nil .Context.Versioned .Context.DefaultPkg 0}}) error {
+	ctx.ResponseData.Header().Set("Content-Type", "{{.Response.MediaType}}")
+	return ctx.ResponseData.Send(ctx.Context, {{.Response.Status}}, r)
+}
 `
 
 	// ctxNoMTRespT generates the response helpers for responses with no known media type.
