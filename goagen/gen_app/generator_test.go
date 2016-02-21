@@ -515,8 +515,8 @@ func MountWidgetController(service goa.Service, ctrl WidgetController) {
 
 // unmarshalGetWidgetPayload unmarshals the request body into the context request data Payload field.
 func unmarshalGetWidgetPayload(ctx context.Context, req *http.Request) error {
-	payload := &Collection{}
-	if err := goa.RequestService(ctx).DecodeRequest(req, payload); err != nil {
+	var payload Collection
+	if err := goa.RequestService(ctx).DecodeRequest(req, &payload); err != nil {
 		return err
 	}
 	goa.Request(ctx).Payload = payload
