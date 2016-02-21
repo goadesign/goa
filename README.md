@@ -1,4 +1,4 @@
-# goa
+# <img src="http://goa.design/img/goa-logo.svg"> 
 
 goa is a framework for building RESTful microservices in Go.
 
