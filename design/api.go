@@ -213,6 +213,8 @@ type (
 		Status int
 		// Response description
 		Description string
+		// Response body type if any
+		Type DataType
 		// Response body media type if any
 		MediaType string
 		// Response header definitions
