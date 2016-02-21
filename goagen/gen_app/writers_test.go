@@ -981,24 +981,24 @@ type ListBottleContext struct {
 
 	payloadObjUnmarshal = `
 func unmarshalListBottlePayload(ctx context.Context, req *http.Request) error {
-	payload := &ListBottlePayload{}
-	if err := goa.RequestService(ctx).DecodeRequest(req, payload); err != nil {
+	var payload ListBottlePayload
+	if err := goa.RequestService(ctx).DecodeRequest(req, &payload); err != nil {
 		return err
 	}
 	if err := payload.Validate(); err != nil {
 		return err
 	}
-	goa.Request(ctx).Payload = payload
+	goa.Request(ctx).Payload = &payload
 	return nil
 }
 `
 	payloadNoValidationsObjUnmarshal = `
 func unmarshalListBottlePayload(ctx context.Context, req *http.Request) error {
-	payload := &ListBottlePayload{}
-	if err := goa.RequestService(ctx).DecodeRequest(req, payload); err != nil {
+	var payload ListBottlePayload
+	if err := goa.RequestService(ctx).DecodeRequest(req, &payload); err != nil {
 		return err
 	}
-	goa.Request(ctx).Payload = payload
+	goa.Request(ctx).Payload = &payload
 	return nil
 }
 `
