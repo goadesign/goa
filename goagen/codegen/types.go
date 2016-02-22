@@ -104,7 +104,7 @@ func GoTypeDef(ds design.DataStructure, tabs int, jsonTags bool) string {
 			var tags string
 			if jsonTags {
 				var omit string
-				if !def.IsRequired(name) {
+				if !def.IsRequired(name) && !def.HasDefaultValue(name) {
 					omit = ",omitempty"
 				}
 				tags = fmt.Sprintf(" `json:\"%s%s\" xml:\"%s%s\"`", name, omit, name, omit)

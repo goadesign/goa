@@ -49,6 +49,8 @@ type (
 		// ToHash returns the underlying hash map if any (i.e. if IsHash returns true),
 		// nil otherwise.
 		ToHash() *Hash
+		// CanHaveDefault returns whether the data type can have a default value.
+		CanHaveDefault() bool
 		// IsCompatible checks whether val has a Go type that is
 		// compatible with the data type.
 		IsCompatible(val interface{}) bool
@@ -72,6 +74,8 @@ type (
 		ElemType *AttributeDefinition
 	}
 
+	ArrayVal []interface{}
+
 	// Object is the type for a JSON object.
 	Object map[string]*AttributeDefinition
 
@@ -80,6 +84,8 @@ type (
 		KeyType  *AttributeDefinition
 		ElemType *AttributeDefinition
 	}
+
+	HashVal map[interface{}]interface{}
 
 	// UserTypeDefinition is the type for user defined types that are not media types
 	// (e.g. payload types).
@@ -202,6 +208,14 @@ func (p Primitive) ToArray() *Array { return nil }
 // ToHash returns nil.
 func (p Primitive) ToHash() *Hash { return nil }
 
+func (p Primitive) CanHaveDefault() (ok bool) {
+	switch p {
+	case Boolean, Integer, Number, String, DateTime:
+		ok = true
+	}
+	return
+}
+
 // IsCompatible returns true if val is compatible with p.
 func (p Primitive) IsCompatible(val interface{}) (ok bool) {
 	switch p {
@@ -288,7 +302,7 @@ func (a *Array) Kind() Kind { return ArrayKind }
 
 // Name returns the type name.
 func (a *Array) Name() string {
-	return "array"
+	return fmt.Sprintf("array<%s>", a.ElemType.Type.Name())
 }
 
 // IsPrimitive returns false.
@@ -312,10 +326,23 @@ func (a *Array) ToArray() *Array { return a }
 // ToHash returns nil.
 func (a *Array) ToHash() *Hash { return nil }
 
+func (a *Array) CanHaveDefault() bool {
+	return a.ElemType.Type.CanHaveDefault()
+}
+
 // IsCompatible returns true if val is compatible with p.
 func (a *Array) IsCompatible(val interface{}) bool {
 	k := reflect.TypeOf(val).Kind()
-	return k == reflect.Array || k == reflect.Slice
+	if k != reflect.Array && k != reflect.Slice {
+		return false
+	}
+	v := reflect.ValueOf(val)
+	for i := 0; i < v.Len(); i++ {
+		if !a.ElemType.Type.IsCompatible(v.Index(i).Interface()) {
+			return false
+		}
+	}
+	return true
 }
 
 // GenerateExample produces a random array value.
@@ -333,7 +360,7 @@ func (a *Array) GenerateExample(r *RandomGenerator) interface{} {
 func (a *Array) MakeSlice(s []interface{}) interface{} {
 	slice := reflect.MakeSlice(toReflectType(a), 0, len(s))
 	for _, item := range s {
-		slice = reflect.Append(slice, reflect.ValueOf(item))
+		slice = reflect.Append(slice, toReflectValue(item)) //reflect.ValueOf(item))
 	}
 	return slice.Interface()
 }
@@ -364,6 +391,8 @@ func (o Object) ToArray() *Array { return nil }
 
 // ToHash returns nil.
 func (o Object) ToHash() *Hash { return nil }
+
+func (o Object) CanHaveDefault() bool { return false }
 
 // Merge copies other's attributes into o overridding any pre-existing attribute with the same name.
 func (o Object) Merge(other Object) {
@@ -399,7 +428,9 @@ func (o Object) GenerateExample(r *RandomGenerator) interface{} {
 func (h *Hash) Kind() Kind { return HashKind }
 
 // Name returns the type name.
-func (h *Hash) Name() string { return "hash" }
+func (h *Hash) Name() string {
+	return fmt.Sprintf("hash<%s, %s>", h.KeyType.Type.Name(), h.ElemType.Type.Name())
+}
 
 // IsPrimitive returns false.
 func (h *Hash) IsPrimitive() bool { return false }
@@ -422,10 +453,23 @@ func (h *Hash) ToArray() *Array { return nil }
 // ToHash returns the underlying hash map.
 func (h *Hash) ToHash() *Hash { return h }
 
+func (h *Hash) CanHaveDefault() bool {
+	return h.KeyType.Type.CanHaveDefault() && h.ElemType.Type.CanHaveDefault()
+}
+
 // IsCompatible returns true if val is compatible with p.
 func (h *Hash) IsCompatible(val interface{}) bool {
 	k := reflect.TypeOf(val).Kind()
-	return k == reflect.Map
+	if k != reflect.Map {
+		return false
+	}
+	v := reflect.ValueOf(val)
+	for _, key := range v.MapKeys() {
+		if !h.KeyType.Type.IsCompatible(key.Interface()) || !h.ElemType.Type.IsCompatible(v.MapIndex(key).Interface()) {
+			return false
+		}
+	}
+	return true
 }
 
 // GenerateExample returns a random hash value.
@@ -443,7 +487,8 @@ func (h *Hash) GenerateExample(r *RandomGenerator) interface{} {
 func (h *Hash) MakeMap(m map[interface{}]interface{}) interface{} {
 	hash := reflect.MakeMap(toReflectType(h))
 	for key, value := range m {
-		hash.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
+		hash.SetMapIndex(reflect.ValueOf(key), toReflectValue(value))
+		//reflect.ValueOf(value))
 	}
 	return hash.Interface()
 }
@@ -468,6 +513,36 @@ func (o Object) IterateAttributes(it AttributeIterator) error {
 		}
 	}
 	return nil
+}
+
+func (a ArrayVal) ToSlice() []interface{} {
+	arr := make([]interface{}, len(a))
+	for i, elem := range a {
+		switch elem.(type) {
+		case ArrayVal:
+			arr[i] = elem.(ArrayVal).ToSlice()
+		case HashVal:
+			arr[i] = elem.(HashVal).ToMap()
+		default:
+			arr[i] = elem
+		}
+	}
+	return arr
+}
+
+func (h HashVal) ToMap() map[interface{}]interface{} {
+	mp := make(map[interface{}]interface{}, len(h))
+	for k, v := range h {
+		switch v.(type) {
+		case ArrayVal:
+			mp[k] = v.(ArrayVal).ToSlice()
+		case HashVal:
+			mp[k] = v.(HashVal).ToMap()
+		default:
+			mp[k] = v
+		}
+	}
+	return mp
 }
 
 // NewUserTypeDefinition creates a user type definition but does not
@@ -505,6 +580,8 @@ func (u *UserTypeDefinition) ToArray() *Array { return u.Type.ToArray() }
 
 // ToHash calls ToHash on the user type underlying data type.
 func (u *UserTypeDefinition) ToHash() *Hash { return u.Type.ToHash() }
+
+func (u *UserTypeDefinition) CanHaveDefault() bool { return false }
 
 // IsCompatible returns true if val is compatible with p.
 func (u *UserTypeDefinition) IsCompatible(val interface{}) bool {
@@ -757,5 +834,82 @@ func toReflectType(dtype DataType) reflect.Type {
 		return reflect.MapOf(ktype, toReflectType(hash.ElemType.Type))
 	default:
 		return reflect.TypeOf([]interface{}{}).Elem()
+	}
+}
+
+func toReflectValue(val interface{}) reflect.Value {
+	switch reflect.TypeOf(val).Kind() {
+	case reflect.Bool:
+		return reflect.ValueOf(val.(bool))
+	case reflect.Int:
+		return reflect.ValueOf(val.(int))
+	case reflect.Int8:
+		return reflect.ValueOf(val.(int8))
+	case reflect.Int16:
+		return reflect.ValueOf(val.(int16))
+	case reflect.Int32:
+		return reflect.ValueOf(val.(int32))
+	case reflect.Int64:
+		return reflect.ValueOf(val.(int64))
+	case reflect.Float32:
+		return reflect.ValueOf(val.(float32))
+	case reflect.Float64:
+		return reflect.ValueOf(val.(float64))
+	case reflect.String:
+		return reflect.ValueOf(val.(string))
+	case reflect.Array, reflect.Slice:
+		fmt.Printf("processing slice: %#v\n", val)
+		arr := reflect.ValueOf(val)
+		if arr.Len() > 0 {
+			var sliceType reflect.Type
+			// Identify the slice type -- if all elements are the same type use it otherwise use interface{}
+			sliceType = reflect.TypeOf(val.([]interface{})[0])
+			for _, elem := range val.([]interface{})[1:] {
+				if sliceType != reflect.TypeOf(elem) {
+					sliceType = reflect.TypeOf((*interface{})(nil)).Elem()
+				}
+			}
+			slice := reflect.MakeSlice(reflect.SliceOf(sliceType), 0, arr.Len())
+			fmt.Printf("created typed slice: %#v\n", slice)
+			for i := 0; i < arr.Len(); i++ {
+				slice = reflect.Append(slice, toReflectValue(arr.Index(i).Interface()))
+			}
+			return slice
+		} else {
+			return arr
+		}
+	case reflect.Map:
+		fmt.Printf("processing map: %#v\n", val)
+		mp := reflect.ValueOf(val)
+		if mp.Len() > 0 {
+			var keyType, valType reflect.Type
+			keys := mp.MapKeys()
+			// Identify key type -- if all keys are the same type use it otherwise use interface{}
+			keyType = reflect.TypeOf(keys[0].Interface())
+			for _, key := range keys[1:] {
+				if keyType != reflect.TypeOf(key.Interface()) {
+					keyType = reflect.TypeOf((*interface{})(nil)).Elem()
+				}
+			}
+			// Identify value type -- of all values are the same type use it otherwise use interface{}
+			valType = reflect.TypeOf(toReflectValue(mp.MapIndex(keys[0]).Interface()).Interface())
+			for _, key := range keys[1:] {
+				if valType != reflect.TypeOf(toReflectValue(mp.MapIndex(key).Interface()).Interface()) {
+					valType = reflect.TypeOf((*interface{})(nil)).Elem()
+				}
+			}
+			typedMap := reflect.MakeMap(reflect.MapOf(keyType, valType))
+			fmt.Printf("Creaetd typed map: %#v\n", typedMap)
+			for _, key := range keys {
+				vall := toReflectValue(mp.MapIndex(key).Interface())
+				fmt.Printf("map val: %#v\n", vall)
+				typedMap.SetMapIndex(toReflectValue(key.Interface()), toReflectValue(mp.MapIndex(key).Interface()))
+			}
+			return typedMap
+		} else {
+			return mp
+		}
+	default:
+		return reflect.ValueOf(val)
 	}
 }

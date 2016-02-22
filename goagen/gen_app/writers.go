@@ -529,6 +529,11 @@ func (ctx *{{ .Context.Name }}) {{ goify .Response.Name true }}({{ if .Response.
 	payloadT = `{{ $payload := .Payload }}// {{ gotypename .Payload nil 0 }} is the {{ .ResourceName }} {{ .ActionName }} action payload.
 type {{ gotypename .Payload nil 1 }} {{ gotypedef .Payload 0 true }}
 
+{{ $assignment := recursiveAssigner .Payload.AttributeDefinition "payload" "raw" 1 }}{{ if $assignment }}// SetDefaults sets the default values defined in the design.
+func (ut {{ gotyperef .Payload .Payload.AllRequired 0 }}) SetDefaults() {
+{{ $assignment }}
+}{{ end }}
+
 {{ $validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1 }}{{ if $validation }}// Validate runs the validation rules defined in the design.
 func (payload {{ gotyperef .Payload .Payload.AllRequired 0 }}) Validate() error {
 	var err error
@@ -636,7 +641,9 @@ func {{ .Unmarshal }}(ctx context.Context, service *goa.Service, req *http.Reque
 	var payload {{ gotypename .Payload nil 1 }}
 	if err := service.DecodeRequest(req, &payload); err != nil {
 		return err
-	}{{ $validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1 }}{{ if $validation }}
+	}{{ $assignment := recursiveAssigner .Payload.AttributeDefinition "payload" "raw" 1 }}{{ if $assignment }}
+	payload.SetDefaults()
+	{{ end }}{{ $validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1 }}{{ if $validation }}
 	if err := payload.Validate(); err != nil {
 		return err
 	}{{ end }}
@@ -661,9 +668,13 @@ func {{ .Name }}Href({{ if .CanonicalParams }}{{ join .CanonicalParams ", " }} i
 // Identifier: {{ .Identifier }}{{ $typeName := gotypename . .AllRequired 0 }}
 type {{ $typeName }} {{ gotypedef . 0 true }}
 
-{{ $validation := recursiveValidate .AttributeDefinition false false "mt" "response" 1 }}{{ if $validation }}// Validate validates the {{ $typeName }} media type instance.
-func (mt {{ gotyperef . .AllRequired 0 }}) Validate() error {
-	var err error
+{{ $assignment := recursiveAssigner .AttributeDefinition "mt" "response" 1 }}{{ if $assignment }}// SetDefaults sets the default values for {{$typeName}} type instance.
+func (ut {{ gotyperef . .AllRequired 0 }}) SetDefaults() {
+{{ $assignment }}
+}{{ end }}
+
+{{ $validation := recursiveValidate .AttributeDefinition false false "mt" "response" 1 }}{{ if $validation }}// Validate validates the {{$typeName}} media type instance.
+func (mt {{ gotyperef . .AllRequired 0 }}) Validate() (err error) {
 {{ $validation }}
 	return err
 }
@@ -675,9 +686,13 @@ func (mt {{ gotyperef . .AllRequired 0 }}) Validate() error {
 	userTypeT = `// {{ gotypedesc . true }}{{ $typeName := gotypename . .AllRequired 0 }}
 type {{ $typeName }} {{ gotypedef . 0 true }}
 
-{{ $validation := recursiveValidate .AttributeDefinition false false "ut" "response" 1 }}{{ if $validation }}// Validate validates the {{ $typeName }} type instance.
-func (ut {{ gotyperef . .AllRequired 0 }}) Validate() error {
-	var err error
+{{ $assignment := recursiveAssigner .AttributeDefinition "ut" "response" 1 }}{{ if $assignment }}// SetDefaults sets the default values for {{$typeName}} type instance.
+func (ut {{gotyperef . .AllRequired 0}}) SetDefaults() {
+{{ $assignment }}
+}{{ end }}
+
+{{ $validation := recursiveValidate .AttributeDefinition false false "ut" "response" 1 }}{{ if $validation }}// Validate validates the {{$typeName}} type instance.
+func (ut {{ gotyperef . .AllRequired 0 }}) Validate() (err error) {
 {{ $validation }}
 	return err
 }{{ end }}

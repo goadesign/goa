@@ -61,6 +61,7 @@ var (
 		"gotypedesc":        GoTypeDesc,
 		"gotyperef":         GoTypeRef,
 		"join":              strings.Join,
+		"recursiveAssigner": RecursiveAssigner,
 		"recursiveValidate": RecursiveChecker,
 		"tabs":              Tabs,
 		"tempvar":           Tempvar,

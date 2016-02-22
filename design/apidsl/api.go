@@ -644,7 +644,7 @@ func typeDefinition() (*design.UserTypeDefinition, bool) {
 	return m, ok
 }
 
-// attribute returns true and current context if it is an Attribute,
+// attributeDefinition returns true and current context if it is an Attribute,
 // nil and false otherwise.
 func attributeDefinition() (*design.AttributeDefinition, bool) {
 	a, ok := dslengine.CurrentDefinition().(*design.AttributeDefinition)
