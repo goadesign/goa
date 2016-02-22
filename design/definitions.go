@@ -867,6 +867,14 @@ func (a *AttributeDefinition) IsRequired(attName string) bool {
 	return false
 }
 
+func (a *AttributeDefinition) HasDefaultValue(attName string) bool {
+	if a.Type.IsObject() {
+		att := a.Type.ToObject()[attName]
+		return att.DefaultValue != nil
+	}
+	return false
+}
+
 // AllNonZero returns the complete list of all non-zero attribute name.
 func (a *AttributeDefinition) AllNonZero() []string {
 	nzs := make([]string, len(a.NonZeroAttributes))
@@ -895,7 +903,7 @@ func (a *AttributeDefinition) IsPrimitivePointer(attName string) bool {
 		return false
 	}
 	if att.Type.IsPrimitive() {
-		return !a.IsRequired(attName) && !a.IsNonZero(attName)
+		return !a.IsRequired(attName) && !a.HasDefaultValue(attName) && !a.IsNonZero(attName)
 	}
 	return false
 }
@@ -922,6 +930,19 @@ func (a *AttributeDefinition) SetExample(example interface{}) bool {
 		return true
 	}
 	return false
+}
+
+// SetDefault sets the default value for the attribute. The compatibility check
+// is already performed at this point.
+func (a *AttributeDefinition) SetDefault(def interface{}) {
+	if h := a.Type.ToHash(); h != nil {
+		fmt.Printf("HashVal: %#v\n", def.(HashVal).ToMap())
+		a.DefaultValue = h.MakeMap(def.(HashVal).ToMap())
+	} else if arr := a.Type.ToArray(); arr != nil {
+		a.DefaultValue = arr.MakeSlice(def.(ArrayVal).ToSlice())
+	} else {
+		a.DefaultValue = def
+	}
 }
 
 // finalizeExample goes through each Example and consolidates all of the information it knows i.e.

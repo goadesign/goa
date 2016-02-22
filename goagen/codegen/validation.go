@@ -28,7 +28,7 @@ func init() {
 		"oneof":            oneof,
 		"constant":         constant,
 		"goify":            Goify,
-		"add":              func(a, b int) int { return a + b },
+		"add":              Add,
 		"recursiveChecker": RecursiveChecker,
 	}
 	if arrayValT, err = template.New("array").Funcs(fm).Parse(arrayValTmpl); err != nil {

@@ -225,12 +225,16 @@ func Param(name string, args ...interface{}) {
 
 // Default sets the default value for an attribute.
 func Default(def interface{}) {
-	if a, ok := attributeDefinition(); ok {
-		if a.Type != nil && !a.Type.IsCompatible(def) {
-			dslengine.ReportError("default value %#v is incompatible with attribute of type %s",
-				def, a.Type.Name())
-		} else {
-			a.DefaultValue = def
+	if a, ok := attributeDefinition(true); ok {
+		if a.Type != nil {
+			if !a.Type.CanHaveDefault() {
+				dslengine.ReportError("%s type cannot have a default value", a.Type.Name())
+			} else if !a.Type.IsCompatible(def) {
+				dslengine.ReportError("default value %#v is incompatible with attribute of type %s",
+					def, a.Type.Name())
+			} else {
+				a.SetDefault(def)
+			}
 		}
 	}
 }

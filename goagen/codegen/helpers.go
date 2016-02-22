@@ -79,3 +79,6 @@ func Tabs(depth int) string {
 	//	return fmt.Sprintf("%d%s", depth, tabs)
 	return tabs
 }
+
+// Add adds two integers and returns the sum of the two.
+func Add(a, b int) int { return a + b }
