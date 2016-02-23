@@ -418,11 +418,46 @@ func (h *Hash) IsCompatible(val interface{}) bool {
 // GenerateExample returns a random hash value.
 func (h *Hash) GenerateExample(r *RandomGenerator) interface{} {
 	count := r.Int()%3 + 1
-	res := make(map[interface{}]interface{})
+	pair := map[interface{}]interface{}{}
 	for i := 0; i < count; i++ {
-		res[h.KeyType.Type.GenerateExample(r)] = h.ElemType.Type.GenerateExample(r)
+		pair[h.KeyType.Type.GenerateExample(r)] = h.ElemType.Type.GenerateExample(r)
 	}
-	return res
+	return h.MakeMap(pair)
+}
+
+// MakeMap examines the key type from a Hash and create a map with builtin type if possible.
+// The idea is to avoid generating map[interface{}]interface{}, which cannot be handled by json.Marshal.
+func (h *Hash) MakeMap(pair map[interface{}]interface{}) interface{} {
+	if !h.KeyType.Type.IsPrimitive() {
+		// well, a type can't be handled by json.Marshal... not much we can do
+		return pair
+	}
+	if len(pair) == 0 {
+		// figure out the map type manually
+		switch h.KeyType.Type.Kind() {
+		case BooleanKind:
+			return map[bool]interface{}{}
+		case IntegerKind:
+			return map[int]interface{}{}
+		case NumberKind:
+			return map[float64]interface{}{}
+		case StringKind:
+			return map[string]interface{}{}
+		case DateTimeKind:
+			return map[time.Time]interface{}{}
+		default:
+			return pair
+		}
+	}
+	var newMap reflect.Value
+	for key, value := range pair {
+		rkey, rvalue := reflect.ValueOf(key), reflect.ValueOf(value)
+		if !newMap.IsValid() {
+			newMap = reflect.MakeMap(reflect.MapOf(rkey.Type(), rvalue.Type()))
+		}
+		newMap.SetMapIndex(rkey, rvalue)
+	}
+	return newMap.Interface()
 }
 
 // AttributeIterator is the type of the function given to IterateAttributes.
