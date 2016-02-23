@@ -341,6 +341,13 @@ var _ = Describe("Example", func() {
 						Pattern("@")
 					})
 					Attribute("test5", Any)
+					Attribute("test6", HashOf(String, Integer))
+					Attribute("test7", HashOf(String, ArrayOf(ut)))
+					Attribute("test8", HashOf(Integer, ut))
+					Attribute("test9", HashOf(String, Boolean), func() {
+						Example(map[string]bool{})
+					})
+
 					Attribute("test-failure1", Integer, func() {
 						Minimum(0)
 						Maximum(0)
@@ -369,6 +376,26 @@ var _ = Describe("Example", func() {
 			Ω(attr.Example).Should(MatchRegexp(`\w+@`))
 			attr = mt.Type.ToObject()["test5"]
 			Ω(attr.Example).Should(BeNil())
+			attr = mt.Type.ToObject()["test6"]
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string]int{}))
+			attr = mt.Type.ToObject()["test7"]
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string][]interface{}{}))
+			attrHash := attr.Example.(map[string][]interface{})
+			Expect(attrHash).ShouldNot(HaveLen(0))
+			for _, aryValue := range attrHash {
+				Expect(aryValue).ShouldNot(HaveLen(0))
+				for _, itemIface := range aryValue {
+					Expect(itemIface).Should(BeAssignableToTypeOf(map[string]interface{}{}))
+					item := itemIface.(map[string]interface{})
+					Expect(item).Should(HaveKey("test1"))
+					Expect(item["test1"]).Should(BeAssignableToTypeOf(int(0)))
+				}
+			}
+			attr = mt.Type.ToObject()["test8"]
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[int]map[string]interface{}{}))
+			attr = mt.Type.ToObject()["test9"]
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string]bool{}))
+			Expect(attr.Example.(map[string]bool)).Should(HaveLen(0))
 			attr = mt.Type.ToObject()["test-failure1"]
 			Ω(attr.Example).Should(Equal(0))
 			attr = mt.Type.ToObject()["test-failure2"]

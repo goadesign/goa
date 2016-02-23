@@ -151,9 +151,10 @@ func (a *AttributeDefinition) finalizeExample(stack []*AttributeDefinition) (int
 		example, isCustom := a.Type.ToArray().ElemType.finalizeExample(stack)
 		a.Example, a.isCustomExample = []interface{}{example}, isCustom
 	case a.Type.IsHash():
-		exampleK, isCustomK := a.Type.ToHash().KeyType.finalizeExample(stack)
-		exampleV, isCustomV := a.Type.ToHash().ElemType.finalizeExample(stack)
-		a.Example, a.isCustomExample = map[interface{}]interface{}{exampleK: exampleV}, isCustomK || isCustomV
+		h := a.Type.ToHash()
+		exampleK, isCustomK := h.KeyType.finalizeExample(stack)
+		exampleV, isCustomV := h.ElemType.finalizeExample(stack)
+		a.Example, a.isCustomExample = h.MakeMap(map[interface{}]interface{}{exampleK: exampleV}), isCustomK || isCustomV
 	case a.Type.IsObject():
 		// keep track of the type id, in case of a cyclical situation
 		stack = append(stack, a)
