@@ -1,71 +1,79 @@
 package goa
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"regexp"
+
+	"golang.org/x/net/context"
 
 	"github.com/goadesign/goa/design"
 	"github.com/julienschmidt/httprouter"
 )
 
 type (
+	// MuxHandler provides the low level implementation for an API endpoint.
+	// The values argument includes both the querystring and path parameter values.
+	MuxHandler func(http.ResponseWriter, *http.Request, url.Values)
+
 	// ServeMux is the interface implemented by the service request muxes. There is one instance
 	// of ServeMux per service version and one for requests targeting no version.
 	// It implements http.Handler and makes it possible to register request handlers for
 	// specific HTTP methods and request path via the Handle method.
 	ServeMux interface {
 		http.Handler
-		// Handle sets the HandleFunc for a given HTTP method and path.
-		Handle(method, path string, handle HandleFunc)
-		// Lookup returns the HandleFunc associated with the given HTTP method and path.
-		Lookup(method, path string) HandleFunc
+		// Handle sets the MuxHandler for a given HTTP method and path.
+		Handle(method, path string, handle MuxHandler)
+		// Lookup returns the MuxHandler associated with the given HTTP method and path.
+		Lookup(method, path string) MuxHandler
 	}
 
-	// HandleFunc provides the implementation for an API endpoint.
-	// The values include both the querystring and path parameter values.
-	HandleFunc func(http.ResponseWriter, *http.Request, url.Values)
+	// VersionMux is implemented by muxes that back versioned APIs.
+	VersionMux interface {
+		// Mux returns the mux for the version with given name.
+		Mux(version string) ServeMux
+		// VersionName returns the name of the version targeted by the given request.
+		VersionName(req *http.Request) string
+		// HandleMissingVersion handles requests that target a non-existant API version (that
+		// is requests for which RequestMux returns nil).
+		// The context request data object contains the name of the targeted version.
+		HandleMissingVersion(ctx context.Context, rw http.ResponseWriter, req *http.Request)
+	}
 
-	// DefaultMux is the default goa mux. It dispatches requests to the appropriate version mux
-	// using a SelectVersionFunc. The default func is DefaultVersionFunc, change it with
-	// SelectVersion.
-	DefaultMux struct {
-		*defaultVersionMux
+	// Muxer implements an adapter that given a request handler can produce a mux handler.
+	Muxer interface {
+		MuxHandler(name string, hdlr Handler, unm Unmarshaler) MuxHandler
+	}
+
+	// RootMux is the default VersionMux and ServeMux implementation. It dispatches requests to the
+	// appropriate version mux using a SelectVersionFunc. There is one and exactly one root mux per
+	// service.
+	RootMux struct {
+		*mux
 		SelectVersionFunc SelectVersionFunc
-		missingVerFunc    handleMissingVersionFunc
 		muxes             map[string]ServeMux
+		service           *Service // Keep reference to service for encoding missing version responses
 	}
 
-	// SelectVersionFunc is used by the default goa mux to compute the API version targeted by
-	// a given request.
-	// The default implementation looks for a version as path prefix.
-	// Alternate implementations can be set using the DefaultMux SelectVersion method.
+	// SelectVersionFunc computes the API version targeted by a given request.
 	SelectVersionFunc func(*http.Request) string
 
-	// defaultVersionMux is the default API version specific mux implementation.
-	defaultVersionMux struct {
+	// mux is the default ServeMux implementation.
+	mux struct {
 		router  *httprouter.Router
-		handles map[string]HandleFunc
+		handles map[string]MuxHandler
 	}
-
-	// HandleMissingVersionFunc is the signature of the function called back when requests
-	// target an unsupported API version.
-	handleMissingVersionFunc func(rw http.ResponseWriter, req *http.Request, version string)
 )
 
-// NewMux returns the default service mux implementation.
-func NewMux(app *Application) ServeMux {
-	return &DefaultMux{
-		defaultVersionMux: &defaultVersionMux{
+// NewMux returns a RootMux.
+func NewMux(service *Service) *RootMux {
+	return &RootMux{
+		mux: &mux{
 			router:  httprouter.New(),
-			handles: make(map[string]HandleFunc),
+			handles: make(map[string]MuxHandler),
 		},
-		missingVerFunc: func(rw http.ResponseWriter, req *http.Request, version string) {
-			if app.missingVersionHandler != nil {
-				app.missingVersionHandler(RootContext, rw, req, version)
-			}
-		},
-		SelectVersionFunc: PathSelectVersionFunc("/:api_version/", "api"),
+		service: service,
 	}
 }
 
@@ -115,51 +123,58 @@ func CombineSelectVersionFunc(funcs ...SelectVersionFunc) SelectVersionFunc {
 	}
 }
 
-// SelectVersion sets the func used to compute the API version targeted by a request.
-func (m *DefaultMux) SelectVersion(sv SelectVersionFunc) {
-	m.SelectVersionFunc = sv
-}
-
 // ServeHTTP is the function called back by the underlying HTTP server to handle incoming requests.
-func (m *DefaultMux) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (m *RootMux) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// Optimize the unversionned API case
-	if len(m.muxes) == 0 {
+	if m.SelectVersionFunc == nil || len(m.muxes) == 0 {
 		m.router.ServeHTTP(rw, req)
 		return
 	}
 	var mux ServeMux
-	version := m.SelectVersionFunc(req)
+	version := m.VersionName(req)
 	if version == "" {
-		mux = m.defaultVersionMux
+		mux = m.mux
 	} else {
 		var ok bool
 		mux, ok = m.muxes[version]
 		if !ok {
-			m.missingVerFunc(rw, req, version)
+			ctx := NewContext(RootContext, m.service, rw, req, nil)
+			go IncrCounter([]string{"goa", "handler", "missingversion", version}, 1.0)
+			resp := TypedError{
+				ID:   ErrInvalidVersion,
+				Mesg: fmt.Sprintf(`API does not support version %s`, version),
+			}
+			Response(ctx).Send(ctx, 400, resp)
 			return
 		}
 	}
 	mux.ServeHTTP(rw, req)
 }
 
-// version returns the mux addressing the given version if any.
-func (m *DefaultMux) version(version string) ServeMux {
+// Mux returns the mux addressing the given version.
+func (m *RootMux) Mux(version string) ServeMux {
 	if m.muxes == nil {
 		m.muxes = make(map[string]ServeMux)
 	}
 	if mux, ok := m.muxes[version]; ok {
 		return mux
 	}
-	mux := &defaultVersionMux{
+	mux := &mux{
 		router:  httprouter.New(),
-		handles: make(map[string]HandleFunc),
+		handles: make(map[string]MuxHandler),
 	}
 	m.muxes[version] = mux
 	return mux
 }
 
+// VersionName returns the name of the version targeted by the request if any, emoty string
+// otherwise.
+func (m *RootMux) VersionName(req *http.Request) string {
+	return m.SelectVersionFunc(req)
+}
+
 // Handle sets the handler for the given verb and path.
-func (m *defaultVersionMux) Handle(method, path string, handle HandleFunc) {
+func (m *mux) Handle(method, path string, handle MuxHandler) {
 	hthandle := func(rw http.ResponseWriter, req *http.Request, htparams httprouter.Params) {
 		params := req.URL.Query()
 		for _, p := range htparams {
@@ -171,12 +186,12 @@ func (m *defaultVersionMux) Handle(method, path string, handle HandleFunc) {
 	m.router.Handle(method, path, hthandle)
 }
 
-// Lookup returns the HandleFunc associated with the given method and path.
-func (m *defaultVersionMux) Lookup(method, path string) HandleFunc {
+// Lookup returns the MuxHandler associated with the given method and path.
+func (m *mux) Lookup(method, path string) MuxHandler {
 	return m.handles[method+path]
 }
 
 // ServeHTTP is the function called back by the underlying HTTP server to handle incoming requests.
-func (m *defaultVersionMux) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (m *mux) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	m.router.ServeHTTP(rw, req)
 }

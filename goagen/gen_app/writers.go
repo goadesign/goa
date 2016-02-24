@@ -533,7 +533,7 @@ func (payload {{gotyperef .Payload .Payload.AllRequired 0}}) Validate() (err err
 	// template input: *ControllerTemplateData
 	ctrlT = `// {{.Resource}}Controller is the controller interface for the {{.Resource}} actions.
 type {{.Resource}}Controller interface {
-	goa.Controller
+	goa.Muxer
 {{range .Actions}}	{{.Name}}(*{{.Context}}) error
 {{end}}}
 `
@@ -542,7 +542,7 @@ type {{.Resource}}Controller interface {
 	// template input: *ControllerTemplateData
 	mountT = `
 // Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given service.
-func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Controller) {
+func Mount{{.Resource}}Controller(service *goa.Service, ctrl {{.Resource}}Controller) {
 	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
 {{range .EncoderMap}}{{$tmp := tempvar}}{{/*
 */}}	service.{{if not $.Version.IsDefault}}Version("{{$.Version.Version}}").{{end}}SetEncoder({{.PackageName}}.{{.Factory}}(), {{.Default}}, "{{join .MIMETypes "\", \""}}")
@@ -551,19 +551,19 @@ func Mount{{.Resource}}Controller(service goa.Service, ctrl {{.Resource}}Control
 {{end}}
 	// Setup endpoint handler
 	var h goa.Handler
-	mux := service.{{if not .Version.IsDefault}}Version("{{.Version.Version}}").ServeMux(){{else}}ServeMux(){{end}}
+	mux := service.{{if not .Version.IsDefault}}Version("{{.Version.Version}}").Mux{{else}}Mux{{end}}
 {{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := New{{.Context}}(ctx)
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}{{if not $ver.IsDefault}}
-		rctx.APIVersion = service.Version("{{$ver.Version}}").VersionName(){{end}}
+		rctx.APIVersion = service.Version("{{$ver.Version}}").VersionName{{end}}
 {{if .Payload}}if rawPayload := goa.Request(ctx).Payload; rawPayload != nil {
 			rctx.Payload = rawPayload.({{gotyperef .Payload nil 1}})
 		}
 		{{end}}		return ctrl.{{.Name}}(rctx)
 	}
-{{range .Routes}}	mux.Handle("{{.Verb}}", "{{.FullPath $ver}}", ctrl.HandleFunc("{{$action.Name}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
+{{range .Routes}}	mux.Handle("{{.Verb}}", "{{.FullPath $ver}}", ctrl.MuxHandler("{{$action.Name}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "{{$res}}"},{{if not $ver.IsDefault}} goa.KV{"version", "{{$ver.Version}}"},{{end}} goa.KV{"action", "{{$action.Name}}"}, goa.KV{"route", "{{.Verb}} {{.FullPath $ver}}"})
 {{end}}{{end}}}
 `
