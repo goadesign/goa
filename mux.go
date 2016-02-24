@@ -35,7 +35,7 @@ type (
 		Mux(version string) ServeMux
 		// VersionName returns the name of the version targeted by the given request.
 		VersionName(req *http.Request) string
-		// HandleMissingVersion handles requests that target a non-existant API version (that
+		// HandleMissingVersion handles requests that target a non-existent API version (that
 		// is requests for which RequestMux returns nil).
 		// The context request data object contains the name of the targeted version.
 		HandleMissingVersion(ctx context.Context, rw http.ResponseWriter, req *http.Request)
