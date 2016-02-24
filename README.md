@@ -177,9 +177,9 @@ Global Flags:
 Now let's run it:
 ```
 $ ./adder-cli add operands /add/1/2
-INFO[01-04|08:30:43] started                                  id=+LG8rvid GET=http://localhost:8080/add/1/2
-INFO[01-04|08:30:43] completed                                id=+LG8rvid status=200 time=842.472µs
-3
+2016/02/16 11:04:30 [INFO] started  id: fHAaZ9tx  GET: http://localhost:8080/add/1/2
+2016/02/16 11:04:30 [INFO] completed  id: fHAaZ9tx  status: 200 time: 811.575µs
+3⏎
 ```
 The console running the service shows the request that was just handled:
 ```
@@ -190,9 +190,9 @@ The console running the service shows the request that was just handled:
 Now let's see how robust our service is and try to use non integer values:
 ```
 ./adder-cli add operands add/1/d
-INFO[01-04|08:32:53] started                                  id=hq3zYwXp GET=http://localhost:8080/add/1/d
-INFO[01-04|08:32:53] completed                                id=hq3zYwXp status=400 time=847.297µs
-error: 400: [{"id":1,"title":"invalid parameter value","msg":"invalid value \"d\" for parameter \"right\", must be a integer"}]
+2016/02/24 11:05:15 [INFO] started  id: 3F1FKVRR  GET: http://localhost:8080/add/1/d
+2016/02/24 11:05:15 [INFO] completed  id: 3F1FKVRR  status: 400 time: 1.044759ms
+error: 400: "[{\"id\":1,\"title\":\"invalid parameter value\",\"msg\":\"invalid value \\\"d\\\" for parameter \\\"right\\\", must be a integer\"}]"
 ```
 As you can see the generated code validated the incoming request state against the types defined
 in the design.
