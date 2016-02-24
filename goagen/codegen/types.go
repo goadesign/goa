@@ -340,6 +340,10 @@ func Goify(str string, firstUpper bool) string {
 		} else if w == 0 && strings.ToLower(word) == word && firstUpper {
 			runes[w] = unicode.ToUpper(runes[w])
 		}
+		if w == 0 && !firstUpper {
+			runes[w] = unicode.ToLower(runes[w])
+		}
+		//advance to next word
 		w = i
 	}
 
