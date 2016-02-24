@@ -90,7 +90,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 
 const swagger = `
 // MountController mounts the swagger spec controller under "/swagger.json".
-func MountController(service goa.Service) {
+func MountController(service *goa.Service) {
 	service.ServeFiles("/swagger.json", "swagger/swagger.json")
 }
 `

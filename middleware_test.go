@@ -49,7 +49,7 @@ var _ = Describe("NewMiddleware", func() {
 	})
 
 	Context("with a context", func() {
-		var service goa.Service
+		var service *goa.Service
 		var req *http.Request
 		var rw http.ResponseWriter
 		var ctx context.Context
