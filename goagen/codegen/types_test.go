@@ -14,6 +14,79 @@ var _ = Describe("code generation", func() {
 		codegen.TempCount = 0
 	})
 
+	Describe("Goify", func() {
+		Context("given a string with an initialism", func() {
+			var str, goified, expected string
+			var firstUpper bool
+			JustBeforeEach(func() {
+				goified = codegen.Goify(str, firstUpper)
+			})
+
+			Context("with first upper false", func() {
+				BeforeEach(func() {
+					firstUpper = false
+					str = "blue_id"
+					expected = "blueID"
+				})
+				It("creates a lowercased camelcased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+			Context("with first upper false normal identifier", func() {
+				BeforeEach(func() {
+					firstUpper = false
+					str = "blue"
+					expected = "blue"
+				})
+				It("creates an uppercased camelcased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+			Context("with first upper false and UUID", func() {
+				BeforeEach(func() {
+					firstUpper = false
+					str = "blue_uuid"
+					expected = "blueUUID"
+				})
+				It("creates an uppercased camelcased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+			Context("with first upper true", func() {
+				BeforeEach(func() {
+					firstUpper = true
+					str = "blue_id"
+					expected = "BlueID"
+				})
+				It("creates an uppercased camelcased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+			Context("with first upper true and UUID", func() {
+				BeforeEach(func() {
+					firstUpper = true
+					str = "blue_uuid"
+					expected = "BlueUUID"
+				})
+				It("creates an uppercased camelcased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+			Context("with first upper true normal identifier", func() {
+				BeforeEach(func() {
+					firstUpper = true
+					str = "blue"
+					expected = "Blue"
+				})
+				It("creates an uppercased camelcased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+
+		})
+
+	})
+
 	Describe("GoTypeDef", func() {
 		Context("given an attribute definition with fields", func() {
 			var att *AttributeDefinition
