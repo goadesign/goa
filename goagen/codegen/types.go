@@ -252,56 +252,98 @@ var acros = map[string]string{
 	"api": "API",
 }
 
+var commonInitialisms = map[string]bool{
+	"API":   true,
+	"ASCII": true,
+	"CPU":   true,
+	"CSS":   true,
+	"DNS":   true,
+	"EOF":   true,
+	"GUID":  true,
+	"HTML":  true,
+	"HTTP":  true,
+	"HTTPS": true,
+	"ID":    true,
+	"IP":    true,
+	"JSON":  true,
+	"LHS":   true,
+	"OK":    true,
+	"QPS":   true,
+	"RAM":   true,
+	"RHS":   true,
+	"RPC":   true,
+	"SLA":   true,
+	"SMTP":  true,
+	"SQL":   true,
+	"SSH":   true,
+	"TCP":   true,
+	"TLS":   true,
+	"TTL":   true,
+	"UDP":   true,
+	"UI":    true,
+	"UID":   true,
+	"UUID":  true,
+	"URI":   true,
+	"URL":   true,
+	"UTF8":  true,
+	"VM":    true,
+	"XML":   true,
+	"XSRF":  true,
+	"XSS":   true,
+}
+
 // Goify makes a valid Go identifier out of any string.
 // It does that by removing any non letter and non digit character and by making sure the first
 // character is a letter or "_".
 // Goify produces a "CamelCase" version of the string, if firstUpper is true the first character
 // of the identifier is uppercase otherwise it's lowercase.
 func Goify(str string, firstUpper bool) string {
-	if firstUpper {
-		if val, ok := acros[str]; ok {
-			return val
-		}
-		for a, u := range acros {
-			p := a + "_"
-			if strings.HasPrefix(str, p) {
-				rest := strings.TrimPrefix(str, p)
-				res := Goify(rest, true)
-				return u + res
+
+	runes := []rune(str)
+	w, i := 0, 0 // index of start of word, scan
+	for i+1 <= len(runes) {
+		eow := false // whether we hit the end of a word
+		if i+1 == len(runes) {
+			eow = true
+		} else if runes[i+1] == '_' {
+			// underscore; shift the remainder forward over any run of underscores
+			eow = true
+			n := 1
+			for i+n+1 < len(runes) && runes[i+n+1] == '_' {
+				n++
 			}
+			copy(runes[i+1:], runes[i+n+1:])
+			runes = runes[:len(runes)-n]
+		} else if unicode.IsLower(runes[i]) && !unicode.IsLower(runes[i+1]) {
+			// lower->non-lower
+			eow = true
 		}
-	}
-	if str == "ok" && firstUpper {
-		return "OK"
-	} else if str == "id" && firstUpper {
-		return "ID"
-	}
-	var b bytes.Buffer
-	var firstWritten, nextUpper bool
-	for i := 0; i < len(str); i++ {
-		r := rune(str[i])
-		if r == '_' {
-			nextUpper = true
-		} else if unicode.IsLetter(r) || unicode.IsDigit(r) {
-			if !firstWritten {
-				if firstUpper {
-					r = unicode.ToUpper(r)
-				} else {
-					r = unicode.ToLower(r)
-				}
-				firstWritten = true
-				nextUpper = false
-			} else if nextUpper {
-				r = unicode.ToUpper(r)
-				nextUpper = false
+		i++
+		if !eow {
+			continue
+		}
+
+		// [w,i] is a word.
+		word := string(runes[w:i])
+		// is it one of our initialisms?
+		if u := strings.ToUpper(word); commonInitialisms[u] {
+			if firstUpper {
+				u = strings.ToUpper(u)
 			}
-			b.WriteRune(r)
+
+			// All the common initialisms are ASCII,
+			// so we can replace the bytes exactly.
+			copy(runes[w:], []rune(u))
+		} else if w > 0 && strings.ToLower(word) == word {
+			// already all lowercase, and not the first word, so uppercase the first character.
+			runes[w] = unicode.ToUpper(runes[w])
+		} else if w == 0 && strings.ToLower(word) == word && firstUpper {
+			runes[w] = unicode.ToUpper(runes[w])
 		}
+		w = i
 	}
-	if b.Len() == 0 {
-		return "_v" // you have a better idea?
-	}
-	res := b.String()
+
+	res := string(runes)
 	if _, ok := reserved[res]; ok {
 		res += "_"
 	}
