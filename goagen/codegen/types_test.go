@@ -82,6 +82,26 @@ var _ = Describe("code generation", func() {
 					Ω(goified).Should(Equal(expected))
 				})
 			})
+			Context("with first upper false normal identifier", func() {
+				BeforeEach(func() {
+					firstUpper = false
+					str = "Blue"
+					expected = "blue"
+				})
+				It("creates a lowercased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+			Context("with first upper true normal identifier", func() {
+				BeforeEach(func() {
+					firstUpper = true
+					str = "Blue"
+					expected = "Blue"
+				})
+				It("creates an uppercased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
 
 		})
 
