@@ -359,10 +359,7 @@ func Goify(str string, firstUpper bool) string {
 
 // validIdentifier returns true if the rune is a letter or number
 func validIdentifier(r rune) bool {
-	if unicode.IsLetter(r) || unicode.IsDigit(r) {
-		return true
-	}
-	return false
+	return unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
 // GoTypeTransform produces Go code that initializes the data structure defined by target from an
