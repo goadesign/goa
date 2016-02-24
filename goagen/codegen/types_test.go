@@ -102,6 +102,27 @@ var _ = Describe("code generation", func() {
 					Ω(goified).Should(Equal(expected))
 				})
 			})
+			Context("with invalid identifier", func() {
+				BeforeEach(func() {
+					firstUpper = true
+					str = "Blue%50"
+					expected = "Blue50"
+				})
+				It("creates an uppercased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+
+			Context("with invalid identifier firstupper false", func() {
+				BeforeEach(func() {
+					firstUpper = false
+					str = "Blue%50"
+					expected = "blue50"
+				})
+				It("creates an uppercased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
 
 		})
 
