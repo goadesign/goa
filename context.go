@@ -46,6 +46,8 @@ type (
 		Payload interface{}
 		// Params is the path and querystring request parameters.
 		Params url.Values
+		// Version is the name of the targeted version if any, empty string otherwise.
+		Version string
 	}
 
 	// ResponseData provides access to the underlying HTTP response.
@@ -66,7 +68,7 @@ type (
 // NewContext builds a new goa request context. The parent context may include
 // log context data.
 // If parent is nil then RootContext is used.
-func NewContext(parent context.Context, service Service, rw http.ResponseWriter, req *http.Request, params url.Values) context.Context {
+func NewContext(parent context.Context, service *Service, rw http.ResponseWriter, req *http.Request, params url.Values) context.Context {
 	if parent == nil {
 		parent = RootContext
 	}
@@ -98,10 +100,10 @@ func Response(ctx context.Context) *ResponseData {
 }
 
 // RequestService returns the service tageted by the request with the given context.
-func RequestService(ctx context.Context) Service {
+func RequestService(ctx context.Context) *Service {
 	r := ctx.Value(serviceKey)
 	if r != nil {
-		return r.(Service)
+		return r.(*Service)
 	}
 	return nil
 }
