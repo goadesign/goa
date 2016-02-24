@@ -17,7 +17,7 @@ import (
 
 var _ = Describe("Application", func() {
 	const appName = "foo"
-	var s goa.Service
+	var s *goa.Service
 
 	BeforeEach(func() {
 		s = goa.New(appName)
@@ -31,11 +31,8 @@ var _ = Describe("Application", func() {
 		})
 
 		It("initializes the application fields", func() {
-			Ω(s.Name()).Should(Equal(appName))
-			Ω(s).Should(BeAssignableToTypeOf(&goa.Application{}))
-			app, _ := s.(*goa.Application)
-			Ω(app.Name()).Should(Equal(appName))
-			Ω(app.ServeMux).ShouldNot(BeNil())
+			Ω(s.Name).Should(Equal(appName))
+			Ω(s.Mux).ShouldNot(BeNil())
 		})
 	})
 
@@ -59,18 +56,18 @@ var _ = Describe("Application", func() {
 		})
 	})
 
-	Describe("HandleFunc", func() {
+	Describe("MuxHandler", func() {
 		var handler goa.Handler
 		var unmarshaler goa.Unmarshaler
 		const respStatus = 200
 		var respContent = []byte("response")
 
-		var handleFunc goa.HandleFunc
+		var muxHandler goa.MuxHandler
 		var ctx context.Context
 
 		JustBeforeEach(func() {
 			ctrl := s.NewController("test")
-			handleFunc = ctrl.HandleFunc("testAct", handler, unmarshaler)
+			muxHandler = ctrl.MuxHandler("testAct", handler, unmarshaler)
 		})
 
 		BeforeEach(func() {
@@ -93,7 +90,7 @@ var _ = Describe("Application", func() {
 		})
 
 		It("creates a handle", func() {
-			Ω(handleFunc).ShouldNot(BeNil())
+			Ω(muxHandler).ShouldNot(BeNil())
 		})
 
 		Context("with a request", func() {
@@ -110,7 +107,7 @@ var _ = Describe("Application", func() {
 			})
 
 			JustBeforeEach(func() {
-				handleFunc(rw, r, p)
+				muxHandler(rw, r, p)
 			})
 
 			It("creates a handle that handles the request", func() {
@@ -154,7 +151,7 @@ var _ = Describe("Application", func() {
 				errorHandlerCalled := false
 
 				BeforeEach(func() {
-					s.SetErrorHandler(TErrorHandler(&errorHandlerCalled))
+					s.ErrorHandler = TErrorHandler(&errorHandlerCalled)
 				})
 
 				Context("by returning an error", func() {

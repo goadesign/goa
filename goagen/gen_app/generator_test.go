@@ -432,26 +432,26 @@ import (
 
 // WidgetController is the controller interface for the Widget actions.
 type WidgetController interface {
-	goa.Controller
+	goa.Muxer
 	Get(*GetWidgetContext) error
 }
 
 // MountWidgetController "mounts" a Widget resource controller on the given service.
-func MountWidgetController(service goa.Service, ctrl WidgetController) {
+func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
 
 	// Setup endpoint handler
 	var h goa.Handler
-	mux := service.{{if .version}}Version("{{.version}}").ServeMux(){{else}}ServeMux(){{end}}
+	mux := service.{{if .version}}Version("{{.version}}").Mux{{else}}Mux{{end}}
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewGetWidgetContext(ctx)
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}{{if .version}}
-		rctx.APIVersion = service.Version("{{.version}}").VersionName(){{end}}
+		rctx.APIVersion = service.Version("{{.version}}").VersionName{{end}}
 		return ctrl.Get(rctx)
 	}
-	mux.Handle("GET", "/:id", ctrl.HandleFunc("Get", h, nil))
+	mux.Handle("GET", "/:id", ctrl.MuxHandler("Get", h, nil))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Widget"},{{if .version}} goa.KV{"version", "{{.version}}"},{{end}} goa.KV{"action", "Get"}, goa.KV{"route", "GET /:id"})
 }
 `
@@ -493,12 +493,12 @@ package app
 
 const controllersSlicePayloadCode = `
 // MountWidgetController "mounts" a Widget resource controller on the given service.
-func MountWidgetController(service goa.Service, ctrl WidgetController) {
+func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
 
 	// Setup endpoint handler
 	var h goa.Handler
-	mux := service.ServeMux()
+	mux := service.Mux
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewGetWidgetContext(ctx)
 		if err != nil {
@@ -509,7 +509,7 @@ func MountWidgetController(service goa.Service, ctrl WidgetController) {
 		}
 		return ctrl.Get(rctx)
 	}
-	mux.Handle("GET", "/:id", ctrl.HandleFunc("Get", h, unmarshalGetWidgetPayload))
+	mux.Handle("GET", "/:id", ctrl.MuxHandler("Get", h, unmarshalGetWidgetPayload))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Widget"}, goa.KV{"action", "Get"}, goa.KV{"route", "GET /:id"})
 }
 

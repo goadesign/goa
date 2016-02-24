@@ -351,7 +351,7 @@ const exampleT = `<!doctype html>
 `
 
 const exampleCtrlT = `// MountController mounts the JavaScript example controller under "/js".
-func MountController(service goa.Service) {
+func MountController(service *goa.Service) {
 	// Serve static files under js
 	service.ServeFiles("/js/*filepath", "{{.ServeDir}}")
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "JS"}, goa.KV{"action", "ServeFiles"}, goa.KV{"route", "GET /js/*"})
