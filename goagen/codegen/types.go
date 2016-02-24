@@ -305,6 +305,9 @@ func Goify(str string, firstUpper bool) string {
 		eow := false // whether we hit the end of a word
 		if i+1 == len(runes) {
 			eow = true
+		} else if !validIdentifier(runes[i]) {
+			// get rid of it
+			runes = append(runes[:i], runes[i+1:]...)
 		} else if runes[i+1] == '_' {
 			// underscore; shift the remainder forward over any run of underscores
 			eow = true
@@ -352,6 +355,11 @@ func Goify(str string, firstUpper bool) string {
 		res += "_"
 	}
 	return res
+}
+
+// validIdentifier returns true if the rune is a letter or number
+func validIdentifier(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
 // GoTypeTransform produces Go code that initializes the data structure defined by target from an
