@@ -1005,21 +1005,21 @@ func unmarshalListBottlePayload(ctx context.Context, req *http.Request) error {
 
 	simpleController = `// BottlesController is the controller interface for the Bottles actions.
 type BottlesController interface {
-	goa.Controller
+	goa.Muxer
 	List(*ListBottleContext) error
 }
 `
 
 	encoderController = `
 // MountBottlesController "mounts" a Bottles resource controller on the given service.
-func MountBottlesController(service goa.Service, ctrl BottlesController) {
+func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
 	service.SetEncoder(goa.JSONEncoderFactory(), false, "application/json")
 	service.SetDecoder(goa.JSONDecoderFactory(), false, "application/json")
 
 	// Setup endpoint handler
 	var h goa.Handler
-	mux := service.ServeMux()
+	mux := service.Mux
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
@@ -1027,17 +1027,17 @@ func MountBottlesController(service goa.Service, ctrl BottlesController) {
 		}
 		return ctrl.List(rctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.HandleFunc("List", h, nil))
+	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "List"}, goa.KV{"route", "GET /accounts/:accountID/bottles"})
 }
 `
 
-	simpleMount = `func MountBottlesController(service goa.Service, ctrl BottlesController) {
+	simpleMount = `func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
 
 	// Setup endpoint handler
 	var h goa.Handler
-	mux := service.ServeMux()
+	mux := service.Mux
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
@@ -1045,25 +1045,25 @@ func MountBottlesController(service goa.Service, ctrl BottlesController) {
 		}
 		return ctrl.List(rctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.HandleFunc("List", h, nil))
+	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "List"}, goa.KV{"route", "GET /accounts/:accountID/bottles"})
 }
 `
 
 	multiController = `// BottlesController is the controller interface for the Bottles actions.
 type BottlesController interface {
-	goa.Controller
+	goa.Muxer
 	List(*ListBottleContext) error
 	Show(*ShowBottleContext) error
 }
 `
 
-	multiMount = `func MountBottlesController(service goa.Service, ctrl BottlesController) {
+	multiMount = `func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
 
 	// Setup endpoint handler
 	var h goa.Handler
-	mux := service.ServeMux()
+	mux := service.Mux
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
@@ -1071,7 +1071,7 @@ type BottlesController interface {
 		}
 		return ctrl.List(rctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.HandleFunc("List", h, nil))
+	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "List"}, goa.KV{"route", "GET /accounts/:accountID/bottles"})
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewShowBottleContext(ctx)
@@ -1080,7 +1080,7 @@ type BottlesController interface {
 		}
 		return ctrl.Show(rctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles/:id", ctrl.HandleFunc("Show", h, nil))
+	mux.Handle("GET", "/accounts/:accountID/bottles/:id", ctrl.MuxHandler("Show", h, nil))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "Show"}, goa.KV{"route", "GET /accounts/:accountID/bottles/:id"})
 }
 `

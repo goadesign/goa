@@ -4,7 +4,7 @@ Package goa provides the runtime support for goa microservices.
 Code Generation
 
 goa service development begins with writing the *design* of a service. The design is described using
-the goa language implemented by the github.com/goadesign/goa/design/apidsl package. The `goagen`` tool
+the goa language implemented by the github.com/goadesign/goa/design/apidsl package. The `goagen` tool
 consumes the metadata produced from executing the design language to generate service specific code
 that glues the underlying HTTP server with action specific code and data structures.
 
@@ -72,8 +72,8 @@ There is one controller interface generated per resource defined via the design 
 interface exposes the controller actions as well as methods to set controller specific middleware
 and error handlers (see below). User code must provide data structures that implement these
 interfaces when mounting a controller onto a service. The controller data structure should include
-an anonymous field of type *goa.ApplicationController which takes care of implementing the
-middleware and error handler handling.
+an anonymous field of type *goa.Controller which takes care of implementing the middleware and
+error handler handling.
 
 Error Handling
 

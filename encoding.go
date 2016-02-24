@@ -75,7 +75,7 @@ type (
 
 // DecodeRequest retrives the request body and `Content-Type` header and uses Decode
 // to unmarshal into the provided `interface{}`
-func (ver *version) DecodeRequest(req *http.Request, v interface{}) error {
+func (ver *ServiceVersion) DecodeRequest(req *http.Request, v interface{}) error {
 	body, contentType := req.Body, req.Header.Get("Content-Type")
 	defer body.Close()
 
@@ -87,7 +87,7 @@ func (ver *version) DecodeRequest(req *http.Request, v interface{}) error {
 }
 
 // Decode uses registered Decoders to unmarshal a body based on the contentType
-func (ver *version) Decode(v interface{}, body io.Reader, contentType string) error {
+func (ver *ServiceVersion) Decode(v interface{}, body io.Reader, contentType string) error {
 	now := time.Now()
 	defer MeasureSince([]string{"goa", "decode", contentType}, now)
 	var p *decoderPool
@@ -119,7 +119,7 @@ func (ver *version) Decode(v interface{}, body io.Reader, contentType string) er
 
 // SetDecoder sets a specific decoder to be used for the specified content types. If
 // a decoder is already registered, it will be overwritten.
-func (ver *version) SetDecoder(f DecoderFactory, makeDefault bool, contentTypes ...string) {
+func (ver *ServiceVersion) SetDecoder(f DecoderFactory, makeDefault bool, contentTypes ...string) {
 	p := newDecodePool(f)
 
 	for _, contentType := range contentTypes {
@@ -179,7 +179,7 @@ func (p *decoderPool) Put(d Decoder) {
 
 // EncodeResponse uses registered Encoders to marshal the response body based on the request
 // `Accept` header and writes it to the http.ResponseWriter
-func (ver *version) EncodeResponse(ctx context.Context, v interface{}) error {
+func (ver *ServiceVersion) EncodeResponse(ctx context.Context, v interface{}) error {
 	now := time.Now()
 	accept := Request(ctx).Header.Get("Accept")
 	if accept == "" {
@@ -213,7 +213,7 @@ func (ver *version) EncodeResponse(ctx context.Context, v interface{}) error {
 
 // SetEncoder sets a specific encoder to be used for the specified content types. If
 // an encoder is already registered, it will be overwritten.
-func (ver *version) SetEncoder(f EncoderFactory, makeDefault bool, contentTypes ...string) {
+func (ver *ServiceVersion) SetEncoder(f EncoderFactory, makeDefault bool, contentTypes ...string) {
 	p := newEncodePool(f)
 	for _, contentType := range contentTypes {
 		mediaType, _, err := mime.ParseMediaType(contentType)

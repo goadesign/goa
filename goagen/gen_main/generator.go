@@ -278,11 +278,11 @@ const ctrlT = `{{define "OneVersion"}}` + ctrlVerT + `{{end}}` + `{{$ctrl := .}}
 
 const ctrlVerT = `// {{$ctrlName := printf "%s%s" (goify (printf "%s%s" .Controller.Name (or (and .Version (goify (versionPkg .Version) true)) ""))  true) "Controller"}}{{$ctrlName}} implements the{{if .Version}} {{.Version}} {{end}}{{.Controller.Name}} resource.
 type {{$ctrlName}} struct {
-	goa.Controller
+	*goa.Controller
 }
 
 // New{{$ctrlName}} creates a {{.Controller.Name}} controller.
-func New{{$ctrlName}}(service goa.Service) {{if .Version}}{{versionPkg .Version}}{{else}}{{targetPkg}}{{end}}.{{goify .Controller.Name true}}Controller {
+func New{{$ctrlName}}(service *goa.Service) {{if .Version}}{{versionPkg .Version}}{{else}}{{targetPkg}}{{end}}.{{goify .Controller.Name true}}Controller {
 	return &{{$ctrlName}}{Controller: service.NewController("{{.Controller.Name}}{{if .Version}} {{.Version}}{{end}}")}
 }
 {{$ctrl := .Controller}}{{$version := .Version}}{{range .Controller.Actions}}
