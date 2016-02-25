@@ -71,6 +71,7 @@ func (a *APIDefinition) Validate() error {
 	a.validateContact(verr)
 	a.validateLicense(verr)
 	a.validateDocs(verr)
+	a.validateVersionParams(verr)
 
 	a.IterateVersions(func(ver *APIVersionDefinition) error {
 		var allRoutes []*routeInfo
@@ -175,6 +176,23 @@ func (a *APIDefinition) validateDocs(verr *dslengine.ValidationErrors) {
 	if a.Docs != nil && a.Docs.URL != "" {
 		if _, err := url.ParseRequestURI(a.Docs.URL); err != nil {
 			verr.Add(a, "invalid docs URL value: %s", err)
+		}
+	}
+}
+
+func (a *APIDefinition) validateVersionParams(verr *dslengine.ValidationErrors) {
+	bwcs := ExtractWildcards(a.BasePath)
+	for _, param := range a.VersionParams {
+		found := false
+		for _, wc := range bwcs {
+			if wc == param {
+				found = true
+				break
+			}
+		}
+		if !found {
+			verr.Add(a, "invalid version param, %s is not an API base path param (base path is %#v)",
+				param, a.BasePath)
 		}
 	}
 }

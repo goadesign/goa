@@ -90,6 +90,7 @@ type (
 
 	// ControllerTemplateData contains the information required to generate an action handler.
 	ControllerTemplateData struct {
+		API        *design.APIDefinition           // API definition
 		Resource   string                          // Lower case plural resource name, e.g. "bottles"
 		Actions    []map[string]interface{}        // Array of actions, each action has keys "Name", "Routes", "Context" and "Unmarshal"
 		Version    *design.APIVersionDefinition    // Controller API version
@@ -255,6 +256,13 @@ func NewControllersWriter(filename string) (*ControllersWriter, error) {
 
 // Execute writes the handlers GoGenerator
 func (w *ControllersWriter) Execute(data []*ControllerTemplateData) error {
+	if len(data) == 0 {
+		return nil
+	}
+	fn := template.FuncMap{"versionFuncs": versionFuncs}
+	if err := w.ExecuteTemplate("service", serviceT, fn, data[0]); err != nil {
+		return err
+	}
 	for _, d := range data {
 		if err := w.ExecuteTemplate("controller", ctrlT, nil, d); err != nil {
 			return err
@@ -376,6 +384,22 @@ func hasAPIVersion(params *design.AttributeDefinition) bool {
 		}
 	}
 	return false
+}
+
+// versionFuncs returns an array of code snippets that invoke the select version func corresponding
+// to the version params, headers and querystrings defined in the design.
+func versionFuncs(api *design.APIDefinition) []string {
+	var funcs []string
+	for _, param := range api.VersionParams {
+		funcs = append(funcs, fmt.Sprintf(`goa.PathSelectVersionFunc("%s", "%s")`, api.BasePath, param))
+	}
+	for _, header := range api.VersionHeaders {
+		funcs = append(funcs, fmt.Sprintf(`goa.HeaderSelectVersionFunc("%s")`, header))
+	}
+	for _, query := range api.VersionQueries {
+		funcs = append(funcs, fmt.Sprintf(`goa.QuerySelectVersionFunc("%s")`, query))
+	}
+	return funcs
 }
 
 const (
@@ -538,18 +562,40 @@ type {{.Resource}}Controller interface {
 {{end}}}
 `
 
-	// mountT generates the code for a resource "Mount" function.
+	// serviceT generates the service initialization code.
 	// template input: *ControllerTemplateData
-	mountT = `
-// Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given service.
-func Mount{{.Resource}}Controller(service *goa.Service, ctrl {{.Resource}}Controller) {
-	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
+	serviceT = `
+// inited is true if initService has been called
+var inited = false
+
+// initService sets up the service encoders, decoders and mux.
+func initService(service *goa.Service) {
+	if inited {
+		return
+	}
+	inited = true
+	// Setup encoders and decoders
 {{range .EncoderMap}}{{$tmp := tempvar}}{{/*
 */}}	service.{{if not $.Version.IsDefault}}Version("{{$.Version.Version}}").{{end}}SetEncoder({{.PackageName}}.{{.Factory}}(), {{.Default}}, "{{join .MIMETypes "\", \""}}")
 {{end}}{{range .DecoderMap}}{{$tmp := tempvar}}{{/*
 */}}	service.{{if not $.Version.IsDefault}}Version("{{$.Version.Version}}").{{end}}SetDecoder({{.PackageName}}.{{.Factory}}(), {{.Default}}, "{{join .MIMETypes "\", \""}}")
 {{end}}
-	// Setup endpoint handler
+{{if .API.APIVersions}}{{$versionFuncs := versionFuncs .API}}{{if gt (len $versionFuncs) 0}}	// Configure mux for versioning.
+	if mux, ok := service.Mux.(*goa.RootMux); ok {
+{{if gt (len $versionFuncs) 1}}{{range $i, $f := $versionFuncs}}		func{{$i}} := {{$f}}
+{{end}}		mux.SelectVersionFunc = goa.CombineSelectVersionFunc({{range $i, $_ := $versionFuncs}}func{{$i}}, {{end}})
+{{else}}		mux.SelectVersionFunc = {{index $versionFuncs 0}}
+{{end}}	}
+{{end}}{{end}}}
+
+`
+
+	// mountT generates the code for a resource "Mount" function.
+	// template input: *ControllerTemplateData
+	mountT = `
+// Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given service.
+func Mount{{.Resource}}Controller(service *goa.Service, ctrl {{.Resource}}Controller) {
+	initService(service)
 	var h goa.Handler
 	mux := service.{{if not .Version.IsDefault}}Version("{{.Version.Version}}").Mux{{else}}Mux{{end}}
 {{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
@@ -557,7 +603,7 @@ func Mount{{.Resource}}Controller(service *goa.Service, ctrl {{.Resource}}Contro
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}{{if not $ver.IsDefault}}
-		rctx.APIVersion = service.Version("{{$ver.Version}}").VersionName{{end}}
+		rctx.APIVersion = "{{$ver.Version}}"{{end}}
 {{if .Payload}}if rawPayload := goa.Request(ctx).Payload; rawPayload != nil {
 			rctx.Payload = rawPayload.({{gotyperef .Payload nil 1}})
 		}

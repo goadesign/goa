@@ -9,21 +9,23 @@ import (
 )
 
 var _ = Describe("PathSelectVersionFunc", func() {
-	var pattern, zeroVersion string
+	var pattern, param string
 	var request *http.Request
 
 	var fn goa.SelectVersionFunc
 	var version string
 
 	JustBeforeEach(func() {
-		fn = goa.PathSelectVersionFunc(pattern, zeroVersion)
+		var err error
+		fn, err = goa.PathSelectVersionFunc(pattern, param)
+		Ω(err).ShouldNot(HaveOccurred())
 		version = fn(request)
 	})
 
-	Context("using the default settings", func() {
+	Context("using path versioning", func() {
 		BeforeEach(func() {
 			pattern = "/:version/"
-			zeroVersion = "api"
+			param = "version"
 		})
 
 		Context("and a versioned request", func() {
@@ -35,18 +37,6 @@ var _ = Describe("PathSelectVersionFunc", func() {
 
 			It("routes to the versioned controller", func() {
 				Ω(version).Should(Equal("v1"))
-			})
-		})
-
-		Context("and an unversioned request", func() {
-			BeforeEach(func() {
-				var err error
-				request, err = http.NewRequest("GET", "/api/foo", nil)
-				Ω(err).ShouldNot(HaveOccurred())
-			})
-
-			It("routes to the unversioned controller", func() {
-				Ω(version).Should(Equal(""))
 			})
 		})
 	})

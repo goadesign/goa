@@ -315,4 +315,110 @@ var _ = Describe("API", func() {
 			})
 		})
 	})
+
+	Context("using VersionParam", func() {
+		const vparam = "version"
+		BeforeEach(func() {
+			name = "v1"
+			dsl = func() {
+				BasePath("/api/:" + vparam)
+				VersionParam(vparam)
+			}
+		})
+
+		It("stores the version header name", func() {
+			Ω(Design.Validate()).ShouldNot(HaveOccurred())
+			Ω(Design.VersionParams).Should(Equal([]string{vparam}))
+		})
+	})
+
+	Context("using VersionHeader", func() {
+		const vheader = "X-Api-Version"
+		BeforeEach(func() {
+			name = "v1"
+			dsl = func() {
+				VersionHeader(vheader)
+			}
+		})
+
+		It("stores the version header name", func() {
+			Ω(Design.Validate()).ShouldNot(HaveOccurred())
+			Ω(Design.VersionHeaders).Should(Equal([]string{vheader}))
+		})
+	})
+
+	Context("using VersionQuery", func() {
+		const vquery = "version"
+		BeforeEach(func() {
+			name = "v1"
+			dsl = func() {
+				VersionQuery(vquery)
+			}
+		})
+
+		It("stores the version query name", func() {
+			Ω(Design.Validate()).ShouldNot(HaveOccurred())
+			Ω(Design.VersionQueries).Should(Equal([]string{vquery}))
+		})
+	})
+
+	Context("using VersionHeader to specify duplicates", func() {
+		const vheader = "X-Api-Version"
+		BeforeEach(func() {
+			name = "v1"
+			dsl = func() {
+				VersionHeader(vheader)
+				VersionHeader(vheader)
+			}
+		})
+
+		It("stores the version header name only once", func() {
+			Ω(Design.Validate()).ShouldNot(HaveOccurred())
+			Ω(Design.VersionHeaders).Should(Equal([]string{vheader}))
+		})
+	})
+
+	Context("using VersionQuery to specify duplicates", func() {
+		const vquery = "version"
+		BeforeEach(func() {
+			name = "v1"
+			dsl = func() {
+				VersionQuery(vquery, vquery)
+			}
+		})
+
+		It("stores the version query name only once", func() {
+			Ω(Design.Validate()).ShouldNot(HaveOccurred())
+			Ω(Design.VersionQueries).Should(Equal([]string{vquery}))
+		})
+	})
+})
+
+var _ = Describe("Version", func() {
+	var name string
+	var dsl func()
+
+	BeforeEach(func() {
+		InitDesign()
+		dslengine.Errors = nil
+		name = ""
+		dsl = nil
+	})
+
+	JustBeforeEach(func() {
+		Version(name, dsl)
+		dslengine.Run()
+	})
+
+	Context("with no DSL", func() {
+		BeforeEach(func() {
+			name = "v1"
+		})
+
+		It("produces a valid version definition", func() {
+			Ω(Design.Validate()).ShouldNot(HaveOccurred())
+			Ω(Design.Versions()).Should(HaveLen(1))
+			Ω(Design.Versions()[0]).Should(Equal(name))
+		})
+	})
 })

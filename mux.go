@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
 
 	"golang.org/x/net/context"
 
@@ -77,21 +78,30 @@ func NewMux(service *Service) *RootMux {
 	}
 }
 
-// PathSelectVersionFunc returns a SelectVersionFunc that uses the given path pattern to extract the
-// version from the request path. Use the same path pattern given in the DSL to define the API base
-// path, e.g. "/api/:api_version".
-// If the pattern matches zeroVersion then the empty version is returned (i.e. the unversioned
-// controller handles the request).
-func PathSelectVersionFunc(pattern, zeroVersion string) SelectVersionFunc {
-	rgs := design.WildcardRegex.ReplaceAllLiteralString(pattern, `/([^/]+)`)
+// PathSelectVersionFunc returns a SelectVersionFunc that uses the given path pattern and param to
+// extract the version from the request path. Use the same path pattern given in the DSL to define
+// the API base path, e.g. "/api/:api_version".
+func PathSelectVersionFunc(pattern, param string) (SelectVersionFunc, error) {
+	params := design.ExtractWildcards(pattern)
+	index := -1
+	for i, p := range params {
+		if p == param {
+			index = i
+			break
+		}
+	}
+	if index == -1 {
+		return nil, fmt.Errorf("Mux versioning setup: no param %s in pattern %s", param, pattern)
+	}
+	rgs := strings.Replace(pattern, ":"+param, `([^/]+)`, 1)
 	rg := regexp.MustCompile("^" + rgs)
 	return func(req *http.Request) (version string) {
 		match := rg.FindStringSubmatch(req.URL.Path)
-		if len(match) > 1 && match[1] != zeroVersion {
+		if len(match) > 1 {
 			version = match[1]
 		}
 		return
-	}
+	}, nil
 }
 
 // HeaderSelectVersionFunc returns a SelectVersionFunc that looks for the version in the header with
@@ -113,13 +123,20 @@ func QuerySelectVersionFunc(query string) SelectVersionFunc {
 // CombineSelectVersionFunc returns a SelectVersionFunc that tries each func passed as argument
 // in order and returns the first non-empty string version.
 func CombineSelectVersionFunc(funcs ...SelectVersionFunc) SelectVersionFunc {
-	return func(req *http.Request) string {
-		for _, f := range funcs {
-			if version := f(req); version != "" {
-				return version
+	switch len(funcs) {
+	case 0:
+		return nil
+	case 1:
+		return funcs[0]
+	default:
+		return func(req *http.Request) string {
+			for _, f := range funcs {
+				if version := f(req); version != "" {
+					return version
+				}
 			}
+			return ""
 		}
-		return ""
 	}
 }
 
