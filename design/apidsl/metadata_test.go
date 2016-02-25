@@ -59,7 +59,7 @@ var _ = Describe("Metadata", func() {
 			})
 
 			It("has metadata", func() {
-				expected := dslengine.MetadataDefinition{"": []string{""}}
+				expected := dslengine.MetadataDefinition{"": {""}}
 				Ω(api.Metadata).To(Equal(expected))
 				Ω(rd.Metadata).To(Equal(expected))
 				Ω(rd.Actions["Example Action"].Metadata).To(Equal(expected))
@@ -81,7 +81,7 @@ var _ = Describe("Metadata", func() {
 			})
 
 			It("has metadata", func() {
-				expected := dslengine.MetadataDefinition{"struct:tag=json": []string{"myName,omitempty"}}
+				expected := dslengine.MetadataDefinition{"struct:tag=json": {"myName,omitempty"}}
 				Ω(api.Metadata).To(Equal(expected))
 				Ω(rd.Metadata).To(Equal(expected))
 				Ω(rd.Actions["Example Action"].Metadata).To(Equal(expected))
@@ -103,7 +103,7 @@ var _ = Describe("Metadata", func() {
 			})
 
 			It("has metadata", func() {
-				expected := dslengine.MetadataDefinition{"abc123一二三": []string{"˜µ≤≈ç√"}}
+				expected := dslengine.MetadataDefinition{"abc123一二三": {"˜µ≤≈ç√"}}
 				Ω(api.Metadata).To(Equal(expected))
 				Ω(rd.Metadata).To(Equal(expected))
 				Ω(rd.Actions["Example Action"].Metadata).To(Equal(expected))
