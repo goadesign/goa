@@ -328,7 +328,7 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 		if !r.SupportsVersion(version.Version) {
 			return nil
 		}
-		data := &ControllerTemplateData{Resource: codegen.Goify(r.Name, true)}
+		data := &ControllerTemplateData{API: design.Design, Resource: codegen.Goify(r.Name, true)}
 		err := r.IterateActions(func(a *design.ActionDefinition) error {
 			context := fmt.Sprintf("%s%sContext", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			unmarshal := fmt.Sprintf("unmarshal%s%sPayload", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))

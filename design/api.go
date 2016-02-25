@@ -82,6 +82,15 @@ type (
 		Types map[string]*UserTypeDefinition
 		// MediaTypes indexes the API media types by canonical identifier.
 		MediaTypes map[string]*MediaTypeDefinition
+		// VersionParams list the names of the path parameter wildcards that may contain
+		// the name of the targeted API version.
+		VersionParams []string
+		// VersionHeaders list the names of the HTTP request headers that may contain the
+		// name of the targeted API version.
+		VersionHeaders []string
+		// VersionQueries list the names of the HTTP request querystrings that may contain
+		// the name of the targeted API version.
+		VersionQueries []string
 		// rand is the random generator used to generate examples.
 		rand *RandomGenerator
 	}
