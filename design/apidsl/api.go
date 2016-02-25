@@ -16,6 +16,9 @@ import (
 //	API("API name", func() {
 //		Title("title")				// API title used in documentation
 //		Description("description")		// API description used in documentation
+//		VersionParam("version")			// Path param that captures targeted version, can appear 0 or more times
+//		VersionHeader("X-Api-Version") 		// Request header that captures targeted version, can appear 0 or more times
+//		VersionQuery("version")			// Querystring value that captures targeted version, can appear 0 or more times
 //		TermsOfService("terms")
 //		Contact(func() {			// API Contact information
 //			Name("contact name")
@@ -32,7 +35,7 @@ import (
 //		})
 //		Host("goa.design")			// API hostname
 //		Scheme("http")
-//		BasePath("/base/:param")		// Common base path to all API actions
+//		BasePath("/base/:version/:param")	// Common base path to all API actions
 //		BaseParams(func() {			// Common parameters to all API actions
 //			Param("param")
 //		})
@@ -78,7 +81,22 @@ func API(name string, dsl func()) *design.APIDefinition {
 
 // Version is the top level design language function which defines the API global property values
 // for a given version. The DSL used to define the property values is identical to the one used by
-// the API function.
+// the API function. Here is an example that shows a *subset* of the Version
+// DSL (see the API function for all the other possible functions).
+//
+//	Version("2.0", func() {
+//		Title("API v2")		       // API version 2.0 title used in documentation
+//		Description("This is v2")      // API version description used in documentation
+//	 	Docs(func() {
+//			Description("v2 docs")
+//			URL("v2 doc URL")
+//		})
+//		BasePath("/v2")		       // Common base path to all actions exposed by this API version
+//		VersionHeader("X-Api-Version") // Usually only useful if BasePath is same as API
+//		VersionQuery("version")        // Generated code considers header first if specified then querystring
+//		VersionQuery("v")	       // Multiple version headers or querystrings may be specified
+//              VersionQuery("version", "v")   // Equivalent to the two lines above
+//	})
 func Version(ver string, dsl func()) *design.APIVersionDefinition {
 	verdef := &design.APIVersionDefinition{Version: ver, DSLFunc: dsl}
 	if _, ok := design.Design.APIVersions[ver]; ok {
@@ -93,6 +111,66 @@ func Version(ver string, dsl func()) *design.APIVersionDefinition {
 	}
 	design.Design.APIVersions[ver] = verdef
 	return verdef
+}
+
+// VersionParam defines the name of the request path parameter that contains the targeted API version.
+// Multiple names may be specified in which case the value of the first to correspond to the name
+// of a param is used.
+func VersionParam(names ...string) {
+	if api, ok := apiDefinition(true); ok {
+		for _, n := range names {
+			found := false
+			for _, n2 := range api.VersionParams {
+				if n == n2 {
+					found = true
+					break
+				}
+			}
+			if !found {
+				api.VersionParams = append(api.VersionParams, n)
+			}
+		}
+	}
+}
+
+// VersionHeader defines the name of the HTTP request header that contains the targeted API version.
+// Multiple names may be specified in which case the value of the first to correspond to the name
+// of a header is used.
+func VersionHeader(names ...string) {
+	if api, ok := apiDefinition(true); ok {
+		for _, n := range names {
+			found := false
+			for _, n2 := range api.VersionHeaders {
+				if n == n2 {
+					found = true
+					break
+				}
+			}
+			if !found {
+				api.VersionHeaders = append(api.VersionHeaders, n)
+			}
+		}
+	}
+}
+
+// VersionQuery defines the name of the querystring that contains the targeted API version.
+// Multiple names may be specified in which case the value of the first to correspond to the name
+// of a querystring is used.
+func VersionQuery(names ...string) {
+	if api, ok := apiDefinition(true); ok {
+		for _, n := range names {
+			found := false
+			for _, n2 := range api.VersionQueries {
+				if n == n2 {
+					found = true
+					break
+				}
+			}
+			if !found {
+				api.VersionQueries = append(api.VersionQueries, n)
+			}
+		}
+	}
 }
 
 // Description sets the definition description.

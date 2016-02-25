@@ -430,6 +430,19 @@ import (
 	"net/http"
 )
 
+// inited is true if initService has been called
+var inited = false
+
+// initService sets up the service encoders, decoders and mux.
+func initService(service *goa.Service) {
+	if inited {
+		return
+	}
+	inited = true
+	// Setup encoders and decoders
+
+}
+
 // WidgetController is the controller interface for the Widget actions.
 type WidgetController interface {
 	goa.Muxer
@@ -438,9 +451,7 @@ type WidgetController interface {
 
 // MountWidgetController "mounts" a Widget resource controller on the given service.
 func MountWidgetController(service *goa.Service, ctrl WidgetController) {
-	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
-
-	// Setup endpoint handler
+	initService(service)
 	var h goa.Handler
 	mux := service.{{if .version}}Version("{{.version}}").Mux{{else}}Mux{{end}}
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
@@ -448,7 +459,7 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}{{if .version}}
-		rctx.APIVersion = service.Version("{{.version}}").VersionName{{end}}
+		rctx.APIVersion = "{{.version}}"{{end}}
 		return ctrl.Get(rctx)
 	}
 	mux.Handle("GET", "/:id", ctrl.MuxHandler("Get", h, nil))
@@ -494,9 +505,7 @@ package app
 const controllersSlicePayloadCode = `
 // MountWidgetController "mounts" a Widget resource controller on the given service.
 func MountWidgetController(service *goa.Service, ctrl WidgetController) {
-	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
-
-	// Setup endpoint handler
+	initService(service)
 	var h goa.Handler
 	mux := service.Mux
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {

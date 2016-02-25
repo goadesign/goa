@@ -398,6 +398,65 @@ var _ = Describe("ControllersWriter", func() {
 			f, _ = os.Create(filename)
 		})
 
+		Context("with a versioned API", func() {
+			var data []*genapp.ControllerTemplateData
+
+			BeforeEach(func() {
+				version := &design.APIVersionDefinition{Name: "", BasePath: "/api/:vp"}
+				v1 := &design.APIVersionDefinition{Name: "v1"}
+				v2 := &design.APIVersionDefinition{Name: "v2"}
+				versions := map[string]*design.APIVersionDefinition{
+					"1.0": v1,
+					"2.0": v2,
+				}
+				api := &design.APIDefinition{
+					APIVersionDefinition: version,
+					APIVersions:          versions,
+					Resources:            nil,
+					Types:                nil,
+					MediaTypes:           nil,
+					VersionParams:        []string{"vp"},
+					VersionHeaders:       []string{"vh"},
+					VersionQueries:       []string{"vq"},
+				}
+				encoderMap := map[string]*genapp.EncoderTemplateData{
+					"github.com/goadesign/goa": &genapp.EncoderTemplateData{
+						PackagePath: "github.com/goadesign/goa",
+						PackageName: "goa",
+						Factory:     "NewEncoder",
+						MIMETypes:   []string{"application/json"},
+						Default:     true,
+					},
+				}
+				decoderMap := map[string]*genapp.EncoderTemplateData{
+					"github.com/goadesign/goa": &genapp.EncoderTemplateData{
+						PackagePath: "github.com/goadesign/goa",
+						PackageName: "goa",
+						Factory:     "NewDecoder",
+						MIMETypes:   []string{"application/json"},
+						Default:     true,
+					},
+				}
+				data = []*genapp.ControllerTemplateData{&genapp.ControllerTemplateData{
+					API:        api,
+					Resource:   "resource",
+					Actions:    []map[string]interface{}{},
+					Version:    api.APIVersionDefinition,
+					EncoderMap: encoderMap,
+					DecoderMap: decoderMap,
+				}}
+			})
+
+			It("generates the service initialization code", func() {
+				err := writer.Execute(data)
+				Ω(err).ShouldNot(HaveOccurred())
+				b, err := ioutil.ReadFile(filename)
+				Ω(err).ShouldNot(HaveOccurred())
+				written := string(b)
+				Ω(written).Should(Equal(initController))
+			})
+		})
+
 		Context("with data", func() {
 			var actions, verbs, paths, contexts, unmarshals []string
 			var payloads []*design.UserTypeDefinition
@@ -418,6 +477,7 @@ var _ = Describe("ControllersWriter", func() {
 
 			JustBeforeEach(func() {
 				codegen.TempCount = 0
+				api := &design.APIDefinition{}
 				d := &genapp.ControllerTemplateData{
 					Resource: "Bottles",
 					Version:  &design.APIVersionDefinition{},
@@ -445,6 +505,7 @@ var _ = Describe("ControllersWriter", func() {
 					}
 				}
 				if len(as) > 0 {
+					d.API = api
 					d.Actions = as
 					d.EncoderMap = encoderMap
 					d.DecoderMap = decoderMap
@@ -1010,14 +1071,46 @@ type BottlesController interface {
 }
 `
 
+	initController = `
+// inited is true if initService has been called
+var inited = false
+
+// initService sets up the service encoders, decoders and mux.
+func initService(service *goa.Service) {
+	if inited {
+		return
+	}
+	inited = true
+	// Setup encoders and decoders
+	service.SetEncoder(goa.NewEncoder(), true, "application/json")
+	service.SetDecoder(goa.NewDecoder(), true, "application/json")
+
+	// Configure mux for versioning.
+	if mux, ok := service.Mux.(*goa.RootMux); ok {
+		func0 := goa.PathSelectVersionFunc("/api/:vp", "vp")
+		func1 := goa.HeaderSelectVersionFunc("vh")
+		func2 := goa.QuerySelectVersionFunc("vq")
+		mux.SelectVersionFunc = goa.CombineSelectVersionFunc(func0, func1, func2, )
+	}
+}
+
+// resourceController is the controller interface for the resource actions.
+type resourceController interface {
+	goa.Muxer
+}
+
+// MountresourceController "mounts" a resource resource controller on the given service.
+func MountresourceController(service *goa.Service, ctrl resourceController) {
+	initService(service)
+	var h goa.Handler
+	mux := service.Mux
+}
+`
+
 	encoderController = `
 // MountBottlesController "mounts" a Bottles resource controller on the given service.
 func MountBottlesController(service *goa.Service, ctrl BottlesController) {
-	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
-	service.SetEncoder(goa.JSONEncoderFactory(), false, "application/json")
-	service.SetDecoder(goa.JSONDecoderFactory(), false, "application/json")
-
-	// Setup endpoint handler
+	initService(service)
 	var h goa.Handler
 	mux := service.Mux
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
@@ -1033,9 +1126,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 `
 
 	simpleMount = `func MountBottlesController(service *goa.Service, ctrl BottlesController) {
-	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
-
-	// Setup endpoint handler
+	initService(service)
 	var h goa.Handler
 	mux := service.Mux
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
@@ -1059,9 +1150,7 @@ type BottlesController interface {
 `
 
 	multiMount = `func MountBottlesController(service *goa.Service, ctrl BottlesController) {
-	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
-
-	// Setup endpoint handler
+	initService(service)
 	var h goa.Handler
 	mux := service.Mux
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
