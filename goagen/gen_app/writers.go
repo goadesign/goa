@@ -434,10 +434,10 @@ type {{.Name}} struct {
 */}}{{/* IntegerType */}}{{/*
 */}}{{$tmp := tempvar}}{{/*
 */}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.Atoi(raw{{goify .Name true}}); err2 == nil {
-{{if .Pointer}}{{$tmp2 := tempvar}}{{tabs .Depth}}	{{$tmp2}} := int({{.VarName}})
+{{if .Pointer}}{{$tmp2 := tempvar}}{{tabs .Depth}}	{{$tmp2}} := {{.VarName}}
 {{tabs .Depth}}	{{$tmp}} := &{{$tmp2}}
 {{tabs .Depth}}	{{.Pkg}} = {{$tmp}}
-{{else}}{{tabs .Depth}}	{{.Pkg}} = int({{.VarName}})
+{{else}}{{tabs .Depth}}	{{.Pkg}} = {{.VarName}}
 {{end}}{{tabs .Depth}}} else {
 {{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "integer", err)
 {{tabs .Depth}}}
@@ -537,8 +537,9 @@ func (ctx *{{.Context.Name}}) {{goify .Response.Name true}}(r {{gopkgtyperef .Ty
 func (ctx *{{.Context.Name}}) {{goify .Response.Name true}}({{if .Response.MediaType}}resp []byte{{end}}) error {
 {{if .Response.MediaType}}	ctx.ResponseData.Header().Set("Content-Type", "{{.Response.MediaType}}")
 {{end}}	ctx.ResponseData.WriteHeader({{.Response.Status}}){{if .Response.MediaType}}
-	ctx.ResponseData.Write(resp){{end}}
-	return nil
+	_, err := ctx.ResponseData.Write(resp)
+	return err{{else}}
+	return nil{{end}}
 }
 `
 

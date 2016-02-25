@@ -818,7 +818,7 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	rawParam := req.Params.Get("param")
 	if rawParam != "" {
 		if param, err2 := strconv.Atoi(rawParam); err2 == nil {
-			tmp2 := int(param)
+			tmp2 := param
 			tmp1 := &tmp2
 			rctx.Param = tmp1
 		} else {
@@ -947,7 +947,7 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 		elemsParam2 := make([]int, len(elemsParam))
 		for i, rawElem := range elemsParam {
 			if elem, err2 := strconv.Atoi(rawElem); err2 == nil {
-				elemsParam2[i] = int(elem)
+				elemsParam2[i] = elem
 			} else {
 				err = goa.InvalidParamTypeError("elem", rawElem, "integer", err)
 			}
@@ -975,7 +975,7 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	rawInt := req.Params.Get("int")
 	if rawInt != "" {
 		if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
-			tmp2 := int(int_)
+			tmp2 := int_
 			tmp1 := &tmp2
 			rctx.Int = tmp1
 		} else {
@@ -1005,7 +1005,7 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 		err = goa.MissingParamError("int", err)
 	} else {
 		if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
-			rctx.Int = int(int_)
+			rctx.Int = int_
 		} else {
 			err = goa.InvalidParamTypeError("int", rawInt, "integer", err)
 		}
