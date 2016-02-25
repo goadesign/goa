@@ -66,11 +66,8 @@ var _ = Describe("Metadata", func() {
 				Ω(rd.Responses["Example Response"].Metadata).To(Equal(expected))
 				Ω(mtd.Metadata).To(Equal(expected))
 
-				var mtdAttribute AttributeDefinition
-				mtd.Type.ToObject().IterateAttributes(func(s string, ad *AttributeDefinition) error {
-					mtdAttribute = *ad
-					return nil
-				})
+				var mtdAttribute *AttributeDefinition
+				mtdAttribute = mtd.Type.ToObject()["Example Attribute"]
 				Ω(mtdAttribute.Metadata).To(Equal(expected))
 			})
 		})
@@ -88,11 +85,8 @@ var _ = Describe("Metadata", func() {
 				Ω(rd.Responses["Example Response"].Metadata).To(Equal(expected))
 				Ω(mtd.Metadata).To(Equal(expected))
 
-				var mtdAttribute AttributeDefinition
-				mtd.Type.ToObject().IterateAttributes(func(s string, ad *AttributeDefinition) error {
-					mtdAttribute = *ad
-					return nil
-				})
+				var mtdAttribute *AttributeDefinition
+				mtdAttribute = mtd.Type.ToObject()["Example Attribute"]
 				Ω(mtdAttribute.Metadata).To(Equal(expected))
 			})
 		})
@@ -110,11 +104,8 @@ var _ = Describe("Metadata", func() {
 				Ω(rd.Responses["Example Response"].Metadata).To(Equal(expected))
 				Ω(mtd.Metadata).To(Equal(expected))
 
-				var mtdAttribute AttributeDefinition
-				mtd.Type.ToObject().IterateAttributes(func(s string, ad *AttributeDefinition) error {
-					mtdAttribute = *ad
-					return nil
-				})
+				var mtdAttribute *AttributeDefinition
+				mtdAttribute = mtd.Type.ToObject()["Example Attribute"]
 				Ω(mtdAttribute.Metadata).To(Equal(expected))
 			})
 		})
@@ -143,12 +134,6 @@ var _ = Describe("Metadata", func() {
 			Ω(api.Metadata).To(BeNil())
 			Ω(rd.Metadata).To(BeNil())
 			Ω(mtd.Metadata).To(BeNil())
-			var mtdAttribute AttributeDefinition
-			mtd.Type.ToObject().IterateAttributes(func(s string, ad *AttributeDefinition) error {
-				mtdAttribute = *ad
-				return nil
-			})
-			Ω(mtdAttribute.Metadata).To(BeNil())
 		})
 	})
 
