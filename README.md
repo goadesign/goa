@@ -215,9 +215,9 @@ a free service that renders the Swagger representation dynamically from goa desi
   used at runtime.
 * Package [apidsl](http://goa.design/reference/goa/design/apidsl.html) contains the implementation of
   the goa design language.
-* Package [design](http://goa.design/goa/design.html) defines the output data
+* Package [design](http://goa.design/reference/goa/design.html) defines the output data
   structures of the design language.
-* Package [dslengine](http://goa.design/goa/dslengine.html) is a tool to parse and process any
+* Package [dslengine](http://goa.design/reference/goa/dslengine.html) is a tool to parse and process any
   arbitrary DSL
 
 ### Website
@@ -227,7 +227,7 @@ a free service that renders the Swagger representation dynamically from goa desi
 ### Getting Started
 
 Can't wait to give it a try? the easiest way is to follow the short
-[getting started](http://goa.design/getting-started.html) guide.
+[getting started](http://goa.design/learn/guide.html) guide.
 
 
 ### Middleware
