@@ -90,7 +90,7 @@ var _ = Describe("Metadata", func() {
 				Ω(mtdAttribute.Metadata).To(Equal(expected))
 			})
 		})
-		Context("with invalid metadata string", func() {
+		Context("with unicode metadata string", func() {
 			BeforeEach(func() {
 				metadataKey = "abc123一二三"
 				metadataValue = "˜µ≤≈ç√"
