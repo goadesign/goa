@@ -245,13 +245,6 @@ func GoNativeType(t design.DataType) string {
 	}
 }
 
-// acros is the list of known acronyms for which special casing rules apply.
-var acros = map[string]string{
-	"ok":  "OK",
-	"id":  "ID",
-	"api": "API",
-}
-
 var commonInitialisms = map[string]bool{
 	"API":   true,
 	"ASCII": true,
@@ -332,6 +325,8 @@ func Goify(str string, firstUpper bool) string {
 		if u := strings.ToUpper(word); commonInitialisms[u] {
 			if firstUpper {
 				u = strings.ToUpper(u)
+			} else if w == 0 {
+				u = strings.ToLower(u)
 			}
 
 			// All the common initialisms are ASCII,
@@ -350,16 +345,20 @@ func Goify(str string, firstUpper bool) string {
 		w = i
 	}
 
-	res := string(runes)
-	if _, ok := reserved[res]; ok {
-		res += "_"
-	}
-	return res
+	return fixReserved(string(runes))
 }
 
 // validIdentifier returns true if the rune is a letter or number
 func validIdentifier(r rune) bool {
 	return unicode.IsLetter(r) || unicode.IsDigit(r)
+}
+
+// fixReserved appends an underscore on to Go reserved keywords.
+func fixReserved(w string) string {
+	if _, ok := reserved[w]; ok {
+		w += "_"
+	}
+	return w
 }
 
 // GoTypeTransform produces Go code that initializes the data structure defined by target from an
