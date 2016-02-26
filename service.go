@@ -142,7 +142,7 @@ func (service *Service) ServeFiles(path, filename string) error {
 	if idx := strings.Index(path, "*"); idx > -1 && idx < len(path)-1 {
 		wc = path[idx+1:]
 	}
-	handle := ctrl.MuxHandler("Serve", func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+	handle := ctrl.MuxHandler("Serve", "", func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		fullpath := filename
 		r := Request(ctx)
 		if len(wc) > 0 {
@@ -163,7 +163,6 @@ func (service *Service) Version(name string) *ServiceVersion {
 	if service.versions == nil {
 		service.versions = make(map[string]*ServiceVersion, 1)
 	}
-
 	ver, ok := service.versions[name]
 	if ok {
 		return ver
@@ -228,7 +227,7 @@ func (ctrl *Controller) HandleError(ctx context.Context, rw http.ResponseWriter,
 // the controller (if there is one) or Service error handler.
 // This function is intended for the controller generated code. User code should not need to call
 // it directly.
-func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) MuxHandler {
+func (ctrl *Controller) MuxHandler(name, version string, hdlr Handler, unm Unmarshaler) MuxHandler {
 	// Setup middleware outside of closure
 	middleware := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		if !Response(ctx).Written() {
@@ -243,11 +242,13 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 	for i := range chain {
 		middleware = chain[ml-i-1](middleware)
 	}
+	baseCtx := NewLogContext(RootContext, KV{"service", ctrl.Service.Name}, KV{"ctrl", ctrl.Name}, KV{"action", name})
+	if version != "" {
+		baseCtx = NewLogContext(baseCtx, KV{"version", version})
+	}
 	return func(rw http.ResponseWriter, req *http.Request, params url.Values) {
 		// Build context
-		ctx := NewLogContext(RootContext,
-			KV{"service", ctrl.Service.Name}, KV{"ctrl", ctrl.Name}, KV{"action", name})
-		ctx = NewContext(ctx, ctrl.Service, rw, req, params)
+		ctx := NewContext(baseCtx, ctrl.Service, rw, req, params)
 
 		// Load body if any
 		var err error

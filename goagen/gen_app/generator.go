@@ -323,6 +323,7 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 		}
 	}
 	ctlWr.WriteHeader(title, packageName(version), imports)
+	ctlWr.WriteInitService(version, encoderMap, decoderMap)
 	var controllersData []*ControllerTemplateData
 	version.IterateResources(func(r *design.ResourceDefinition) error {
 		if !r.SupportsVersion(version.Version) {

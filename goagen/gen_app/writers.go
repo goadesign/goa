@@ -254,14 +254,27 @@ func NewControllersWriter(filename string) (*ControllersWriter, error) {
 	return &ControllersWriter{SourceFile: file}, nil
 }
 
+// WriteInitService writes the initService function for the given version
+func (w *ControllersWriter) WriteInitService(version *design.APIVersionDefinition,
+	encoderMap, decoderMap map[string]*EncoderTemplateData) error {
+
+	fn := template.FuncMap{"versionFuncs": versionFuncs}
+	ctx := map[string]interface{}{
+		"API":        design.Design,
+		"Version":    version,
+		"EncoderMap": encoderMap,
+		"DecoderMap": decoderMap,
+	}
+	if err := w.ExecuteTemplate("service", serviceT, fn, ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Execute writes the handlers GoGenerator
 func (w *ControllersWriter) Execute(data []*ControllerTemplateData) error {
 	if len(data) == 0 {
 		return nil
-	}
-	fn := template.FuncMap{"versionFuncs": versionFuncs}
-	if err := w.ExecuteTemplate("service", serviceT, fn, data[0]); err != nil {
-		return err
 	}
 	for _, d := range data {
 		if err := w.ExecuteTemplate("controller", ctrlT, nil, d); err != nil {
@@ -580,8 +593,8 @@ func initService(service *goa.Service) {
 */}}	service.{{if not $.Version.IsDefault}}Version("{{$.Version.Version}}").{{end}}SetEncoder({{.PackageName}}.{{.Factory}}(), {{.Default}}, "{{join .MIMETypes "\", \""}}")
 {{end}}{{range .DecoderMap}}{{$tmp := tempvar}}{{/*
 */}}	service.{{if not $.Version.IsDefault}}Version("{{$.Version.Version}}").{{end}}SetDecoder({{.PackageName}}.{{.Factory}}(), {{.Default}}, "{{join .MIMETypes "\", \""}}")
-{{end}}
-{{if .API.APIVersions}}{{$versionFuncs := versionFuncs .API}}{{if gt (len $versionFuncs) 0}}	// Configure mux for versioning.
+{{end}}{{if .Version.IsDefault}}{{$versionFuncs := versionFuncs .API}}{{if gt (len $versionFuncs) 0}}
+	// Configure mux for versioning.
 	if mux, ok := service.Mux.(*goa.RootMux); ok {
 {{if gt (len $versionFuncs) 1}}{{range $i, $f := $versionFuncs}}		func{{$i}} := {{$f}}
 {{end}}		mux.SelectVersionFunc = goa.CombineSelectVersionFunc({{range $i, $_ := $versionFuncs}}func{{$i}}, {{end}})
@@ -610,7 +623,7 @@ func Mount{{.Resource}}Controller(service *goa.Service, ctrl {{.Resource}}Contro
 		}
 		{{end}}		return ctrl.{{.Name}}(rctx)
 	}
-{{range .Routes}}	mux.Handle("{{.Verb}}", "{{.FullPath $ver}}", ctrl.MuxHandler("{{$action.Name}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
+{{range .Routes}}	mux.Handle("{{.Verb}}", "{{.FullPath $ver}}", ctrl.MuxHandler("{{$action.Name}}", "{{$ver.Version}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "{{$res}}"},{{if not $ver.IsDefault}} goa.KV{"version", "{{$ver.Version}}"},{{end}} goa.KV{"action", "{{$action.Name}}"}, goa.KV{"route", "{{.Verb}} {{.FullPath $ver}}"})
 {{end}}{{end}}}
 `

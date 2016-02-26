@@ -66,7 +66,6 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		os.Remove(mainFile)
 	}
 	g.genfiles = append(g.genfiles, mainFile)
-	_, err = os.Stat(mainFile)
 	funcs := template.FuncMap{
 		"tempvar":              tempvar,
 		"generateSwagger":      generateSwagger,
@@ -74,6 +73,12 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		"newControllerVersion": newControllerVersion,
 		"targetPkg":            func() string { return TargetPackage },
 	}
+	imp, err := codegen.PackagePath(codegen.OutputDir)
+	if err != nil {
+		return nil, err
+	}
+	imp = path.Join(filepath.ToSlash(imp), "app")
+	_, err = os.Stat(mainFile)
 	if err != nil {
 		file, err := codegen.SourceFileFor(mainFile)
 		if err != nil {
@@ -93,6 +98,13 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 			codegen.SimpleImport(appPkg),
 			codegen.SimpleImport(swaggerPkg),
 		}
+		api.IterateVersions(func(v *design.APIVersionDefinition) error {
+			if v.IsDefault() {
+				return nil
+			}
+			imports = append(imports, codegen.SimpleImport(imp+"/"+codegen.VersionPackage(v.Version)))
+			return nil
+		})
 		if generateSwagger() {
 			jsonSchemaPkg := path.Join(outPkg, "schema")
 			imports = append(imports, codegen.SimpleImport(jsonSchemaPkg))
@@ -109,11 +121,6 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 			return nil, err
 		}
 	}
-	imp, err := codegen.PackagePath(codegen.OutputDir)
-	if err != nil {
-		return
-	}
-	imp = path.Join(filepath.ToSlash(imp), "app")
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport(imp),
@@ -283,7 +290,7 @@ type {{$ctrlName}} struct {
 
 // New{{$ctrlName}} creates a {{.Controller.Name}} controller.
 func New{{$ctrlName}}(service *goa.Service) {{if .Version}}{{versionPkg .Version}}{{else}}{{targetPkg}}{{end}}.{{goify .Controller.Name true}}Controller {
-	return &{{$ctrlName}}{Controller: service.NewController("{{.Controller.Name}}{{if .Version}} {{.Version}}{{end}}")}
+	return &{{$ctrlName}}{Controller: service.NewController("{{.Controller.Name}}")}
 }
 {{$ctrl := .Controller}}{{$version := .Version}}{{range .Controller.Actions}}
 // {{goify .Name true}} runs the {{.Name}} action.
