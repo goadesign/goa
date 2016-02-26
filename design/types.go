@@ -325,7 +325,17 @@ func (a *Array) GenerateExample(r *RandomGenerator) interface{} {
 	for i := 0; i < count; i++ {
 		res[i] = a.ElemType.Type.GenerateExample(r)
 	}
-	return toOriginalType(a, res)
+	return a.MakeSlice(res)
+}
+
+// MakeSlice examines the key type from the Array and create a slice with builtin type if possible.
+// The idea is to avoid generating []interface{} and produce more known types.
+func (a *Array) MakeSlice(s []interface{}) interface{} {
+	slice := reflect.MakeSlice(toReflectType(a), 0, len(s))
+	for _, item := range s {
+		slice = reflect.Append(slice, reflect.ValueOf(item))
+	}
+	return slice.Interface()
 }
 
 // Kind implements DataKind.
@@ -425,7 +435,17 @@ func (h *Hash) GenerateExample(r *RandomGenerator) interface{} {
 	for i := 0; i < count; i++ {
 		pair[h.KeyType.Type.GenerateExample(r)] = h.ElemType.Type.GenerateExample(r)
 	}
-	return toOriginalType(h, pair)
+	return h.MakeMap(pair)
+}
+
+// MakeMap examines the key type from a Hash and create a map with builtin type if possible.
+// The idea is to avoid generating map[interface{}]interface{}, which cannot be handled by json.Marshal.
+func (h *Hash) MakeMap(m map[interface{}]interface{}) interface{} {
+	hash := reflect.MakeMap(toReflectType(h))
+	for key, value := range m {
+		hash.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
+	}
+	return hash.Interface()
 }
 
 // AttributeIterator is the type of the function given to IterateAttributes.
@@ -769,46 +789,5 @@ func toReflectType(dtype DataType) reflect.Type {
 		return reflect.MapOf(ktype, toReflectType(hash.ElemType.Type))
 	default:
 		return reflect.TypeOf([]interface{}{}).Elem()
-	}
-}
-
-// toOriginalType converts the data to the data type that's specified by the dsl.
-func toOriginalType(dtype DataType, data interface{}) interface{} {
-	switch dtype.Kind() {
-	case BooleanKind:
-		return data.(bool)
-	case IntegerKind:
-		return data.(int)
-	case NumberKind:
-		return data.(float64)
-	case StringKind:
-		return data.(string)
-	case DateTimeKind:
-		return data.(time.Time)
-	case ObjectKind, UserTypeKind, MediaTypeKind:
-		return data.(map[string]interface{})
-	case ArrayKind:
-		slice := reflect.ValueOf(data)
-		origSlice := reflect.MakeSlice(toReflectType(dtype), 0, slice.Len())
-		for i, iLen := 0, slice.Len(); i < iLen; i++ {
-			origValue := toOriginalType(dtype.ToArray().ElemType.Type, slice.Index(i).Interface())
-			origSlice = reflect.Append(origSlice, reflect.ValueOf(origValue))
-		}
-		return origSlice.Interface()
-	case HashKind:
-		htype := dtype.ToHash()
-		ktype := htype.KeyType.Type
-		vtype := htype.ElemType.Type
-
-		hash := reflect.ValueOf(data)
-		origHash := reflect.MakeMap(toReflectType(dtype))
-		for _, key := range hash.MapKeys() {
-			origKey := toOriginalType(ktype, key.Interface())
-			origValue := toOriginalType(vtype, hash.MapIndex(key).Interface())
-			origHash.SetMapIndex(reflect.ValueOf(origKey), reflect.ValueOf(origValue))
-		}
-		return origHash.Interface()
-	default:
-		return data
 	}
 }
