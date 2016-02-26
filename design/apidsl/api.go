@@ -98,7 +98,13 @@ func API(name string, dsl func()) *design.APIDefinition {
 //              VersionQuery("version", "v")   // Equivalent to the two lines above
 //	})
 func Version(ver string, dsl func()) *design.APIVersionDefinition {
-	verdef := &design.APIVersionDefinition{Version: ver, DSLFunc: dsl}
+	verdef := &design.APIVersionDefinition{Version: ver}
+	verdef.DSLFunc = func() {
+		verdef.Init()
+		if dsl != nil {
+			dsl()
+		}
+	}
 	if _, ok := design.Design.APIVersions[ver]; ok {
 		dslengine.ReportError("API Version %s defined twice", ver)
 		return verdef

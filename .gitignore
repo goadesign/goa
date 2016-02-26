@@ -3,6 +3,8 @@ examples/cellar/client/cellar-cli/cellar-cli
 **/*.coverprofile
 goagen/goagen
 **/autogen
+**/*.test
 vendor
 _integration_tests/*/**/*.*
 public/
+.vscode/
