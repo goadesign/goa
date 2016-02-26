@@ -124,6 +124,17 @@ var _ = Describe("code generation", func() {
 				})
 			})
 
+			Context("with only UUID and firstupper false", func() {
+				BeforeEach(func() {
+					firstUpper = false
+					str = "UUID"
+					expected = "uuid"
+				})
+				It("creates a lowercased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+
 		})
 
 	})

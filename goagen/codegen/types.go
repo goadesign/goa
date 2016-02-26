@@ -245,13 +245,6 @@ func GoNativeType(t design.DataType) string {
 	}
 }
 
-// acros is the list of known acronyms for which special casing rules apply.
-var acros = map[string]string{
-	"ok":  "OK",
-	"id":  "ID",
-	"api": "API",
-}
-
 var commonInitialisms = map[string]bool{
 	"API":   true,
 	"ASCII": true,
@@ -332,6 +325,8 @@ func Goify(str string, firstUpper bool) string {
 		if u := strings.ToUpper(word); commonInitialisms[u] {
 			if firstUpper {
 				u = strings.ToUpper(u)
+			} else if w == 0 {
+				u = strings.ToLower(u)
 			}
 
 			// All the common initialisms are ASCII,
