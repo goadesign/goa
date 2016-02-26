@@ -318,13 +318,6 @@ var _ = Describe("Example", func() {
 		})
 
 		It("produces a media type with examples", func() {
-			ut := Type("example", func() {
-				Attribute("test1", Integer, func() {
-					Minimum(-200)
-					Maximum(-100)
-				})
-			})
-
 			mt := MediaType("application/vnd.example+json", func() {
 				Attributes(func() {
 					Attribute("test1", String, "test1 desc", func() {
@@ -341,20 +334,10 @@ var _ = Describe("Example", func() {
 						Pattern("@")
 					})
 					Attribute("test5", Any)
-					Attribute("test6", HashOf(String, Integer))
-					Attribute("test7", HashOf(String, ArrayOf(ut)))
-					Attribute("test8", HashOf(Integer, ut))
-					Attribute("test9", HashOf(String, Boolean), func() {
-						Example(map[string]bool{})
-					})
 
 					Attribute("test-failure1", Integer, func() {
 						Minimum(0)
 						Maximum(0)
-					})
-					Attribute("test-failure2", ArrayOf(ut), func() {
-						MinLength(0)
-						MaxLength(0)
 					})
 				})
 				View("default", func() {
@@ -375,33 +358,91 @@ var _ = Describe("Example", func() {
 			attr = mt.Type.ToObject()["test4"]
 			Ω(attr.Example).Should(MatchRegexp(`\w+@`))
 			attr = mt.Type.ToObject()["test5"]
-			Ω(attr.Example).Should(BeNil())
-			attr = mt.Type.ToObject()["test6"]
-			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string]int{}))
-			attr = mt.Type.ToObject()["test7"]
-			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string][]interface{}{}))
-			attrHash := attr.Example.(map[string][]interface{})
-			Expect(attrHash).ShouldNot(HaveLen(0))
-			for _, aryValue := range attrHash {
-				Expect(aryValue).ShouldNot(HaveLen(0))
-				for _, itemIface := range aryValue {
-					Expect(itemIface).Should(BeAssignableToTypeOf(map[string]interface{}{}))
-					item := itemIface.(map[string]interface{})
-					Expect(item).Should(HaveKey("test1"))
-					Expect(item["test1"]).Should(BeAssignableToTypeOf(int(0)))
-				}
-			}
-			attr = mt.Type.ToObject()["test8"]
-			Expect(attr.Example).Should(BeAssignableToTypeOf(map[int]map[string]interface{}{}))
-			attr = mt.Type.ToObject()["test9"]
-			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string]bool{}))
-			Expect(attr.Example.(map[string]bool)).Should(HaveLen(0))
+			Ω(attr.Example).ShouldNot(BeNil())
 			attr = mt.Type.ToObject()["test-failure1"]
 			Ω(attr.Example).Should(Equal(0))
-			attr = mt.Type.ToObject()["test-failure2"]
-			attrArray, pass := attr.Example.([]interface{})
-			Expect(pass).Should(BeTrue())
-			Expect(attrArray).Should(HaveLen(0))
+		})
+
+		It("produces a media type with HashOf examples", func() {
+			ut := Type("example", func() {
+				Attribute("test1", Integer)
+				Attribute("test2", Any)
+			})
+
+			mt := MediaType("application/vnd.example+json", func() {
+				Attributes(func() {
+					Attribute("test1", HashOf(String, Integer))
+					Attribute("test2", HashOf(Any, String))
+					Attribute("test3", HashOf(String, Any))
+					Attribute("test4", HashOf(Any, Any))
+
+					Attribute("test-with-user-type-1", HashOf(String, ut))
+					Attribute("test-with-user-type-2", HashOf(Any, ut))
+
+					Attribute("test-with-array-1", HashOf(String, ArrayOf(Integer)))
+					Attribute("test-with-array-2", HashOf(String, ArrayOf(Any)))
+					Attribute("test-with-array-3", HashOf(String, ArrayOf(ut)))
+					Attribute("test-with-array-4", HashOf(Any, ArrayOf(String)))
+					Attribute("test-with-array-5", HashOf(Any, ArrayOf(Any)))
+					Attribute("test-with-array-6", HashOf(Any, ArrayOf(ut)))
+
+					Attribute("test-with-example-1", HashOf(String, Boolean), func() {
+						Example(map[string]bool{})
+					})
+					Attribute("test-with-example-2", HashOf(Any, Boolean), func() {
+						Example(map[string]int{})
+					})
+				})
+				View("default", func() {
+					Attribute("test1")
+				})
+			})
+
+			dslengine.Run()
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+			Ω(mt).ShouldNot(BeNil())
+
+			attr := mt.Type.ToObject()["test1"]
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string]int{}))
+			attr = mt.Type.ToObject()["test2"]
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[interface{}]string{}))
+			attr = mt.Type.ToObject()["test3"]
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string]interface{}{}))
+			attr = mt.Type.ToObject()["test4"]
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[interface{}]interface{}{}))
+
+			attr = mt.Type.ToObject()["test-with-user-type-1"]
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string]map[string]interface{}{}))
+			for _, utattr := range attr.Example.(map[string]map[string]interface{}) {
+				Expect(utattr).Should(HaveKey("test1"))
+				Expect(utattr).Should(HaveKey("test2"))
+				Expect(utattr["test1"]).Should(BeAssignableToTypeOf(int(0)))
+			}
+			attr = mt.Type.ToObject()["test-with-user-type-2"]
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[interface{}]map[string]interface{}{}))
+			for _, utattr := range attr.Example.(map[interface{}]map[string]interface{}) {
+				Expect(utattr).Should(HaveKey("test1"))
+				Expect(utattr).Should(HaveKey("test2"))
+				Expect(utattr["test1"]).Should(BeAssignableToTypeOf(int(0)))
+			}
+
+			attr = mt.Type.ToObject()["test-with-array-1"]
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string][]int{}))
+			attr = mt.Type.ToObject()["test-with-array-2"]
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string][]interface{}{}))
+			attr = mt.Type.ToObject()["test-with-array-3"]
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string][]map[string]interface{}{}))
+			attr = mt.Type.ToObject()["test-with-array-4"]
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[interface{}][]string{}))
+			attr = mt.Type.ToObject()["test-with-array-5"]
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[interface{}][]interface{}{}))
+			attr = mt.Type.ToObject()["test-with-array-6"]
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[interface{}][]map[string]interface{}{}))
+
+			attr = mt.Type.ToObject()["test-with-example-1"]
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string]bool{}))
+			attr = mt.Type.ToObject()["test-with-example-2"]
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string]int{}))
 		})
 
 		It("produces a media type with examples in cyclical dependencies", func() {
@@ -437,8 +478,8 @@ var _ = Describe("Example", func() {
 			Ω(mt).ShouldNot(BeNil())
 			attr := mt.Type.ToObject()["foo"]
 			Ω(attr.Example).ShouldNot(BeNil())
-			attrChild, pass := attr.Example.(map[string]interface{})
-			Ω(pass).Should(BeTrue())
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string]interface{}{}))
+			attrChild := attr.Example.(map[string]interface{})
 			Ω(attrChild).Should(HaveKey("bar"))
 			Ω(attrChild["others"]).Should(BeNumerically(">=", 1))
 			Ω(attrChild["others"]).Should(BeNumerically("<=", 2))
@@ -448,8 +489,8 @@ var _ = Describe("Example", func() {
 			Ω(mt2).ShouldNot(BeNil())
 			attr = mt2.Type.ToObject()["bar"]
 			Ω(attr.Example).ShouldNot(BeNil())
-			attrChild, pass = attr.Example.(map[string]interface{})
-			Ω(pass).Should(BeTrue())
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string]interface{}{}))
+			attrChild = attr.Example.(map[string]interface{})
 			Ω(attrChild).Should(HaveKey("foo"))
 			Ω(attrChild["others"]).Should(Equal(3))
 			attr = mt2.Type.ToObject()["others"]
@@ -513,8 +554,8 @@ var _ = Describe("Example", func() {
 			Ω(attr.Example).Should(BeNumerically(">=", 1))
 			attr = pmt.Type.ToObject()["test4"]
 			Ω(attr.Example).ShouldNot(BeNil())
-			attrChild, pass := attr.Example.(map[string]interface{})
-			Ω(pass).Should(BeTrue())
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string]interface{}{}))
+			attrChild := attr.Example.(map[string]interface{})
 			Ω(attrChild["test1"]).Should(Equal("test1"))
 			Ω(attrChild["test2"]).Should(BeNil())
 			Ω(attrChild["test3"]).Should(BeNumerically(">=", 1))
@@ -576,14 +617,13 @@ var _ = Describe("Example", func() {
 			Ω(attr.Example).Should(Equal("1"))
 			attr = pmt.Type.ToObject()["test4"]
 			Ω(attr.Example).ShouldNot(BeNil())
-			attrChildren, pass := attr.Example.([]interface{})
-			Ω(pass).Should(BeTrue())
+			Expect(attr.Example).Should(BeAssignableToTypeOf([]map[string]interface{}{}))
+			attrChildren := attr.Example.([]map[string]interface{})
 			Ω(attrChildren).Should(HaveLen(1))
-			attrChild, pass := attrChildren[0].(map[string]interface{})
-			Ω(pass).Should(BeTrue())
-			Ω(attrChild["test1"]).Should(Equal("test1"))
-			Ω(attrChild["test2"]).Should(BeNil())
-			Ω(attrChild["test3"]).Should(BeNumerically(">=", 1))
+			Ω(attrChildren[0]).Should(BeAssignableToTypeOf(map[string]interface{}{}))
+			Ω(attrChildren[0]["test1"]).Should(Equal("test1"))
+			Ω(attrChildren[0]["test2"]).Should(BeNil())
+			Ω(attrChildren[0]["test3"]).Should(BeNumerically(">=", 1))
 		})
 
 		It("produces media type examples from the linked media type without custom examples", func() {
@@ -625,8 +665,8 @@ var _ = Describe("Example", func() {
 			Ω(attr.Example).Should(BeNil())
 			attr = pmt.Type.ToObject()["test3"]
 			Ω(attr.Example).ShouldNot(BeNil())
-			attrChild, pass := attr.Example.(map[string]interface{})
-			Ω(pass).Should(BeTrue())
+			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string]interface{}{}))
+			attrChild := attr.Example.(map[string]interface{})
 			Ω(attrChild["test1"]).ShouldNot(Equal(cexample))
 		})
 
@@ -670,12 +710,61 @@ var _ = Describe("Example", func() {
 			Ω(attr.Example).Should(BeNil())
 			attr = pmt.Type.ToObject()["test3"]
 			Ω(attr.Example).ShouldNot(BeNil())
-			attrChildren, pass := attr.Example.([]interface{})
-			Ω(pass).Should(BeTrue())
+			Expect(attr.Example).Should(BeAssignableToTypeOf([]map[string]interface{}{}))
+			attrChildren := attr.Example.([]map[string]interface{})
 			Ω(len(attrChildren)).Should(BeNumerically(">=", 1))
-			attrChild, pass := attrChildren[0].(map[string]interface{})
-			Ω(pass).Should(BeTrue())
-			Ω(attrChild["test1"]).ShouldNot(Equal(cexample))
+			Ω(attrChildren[0]["test1"]).ShouldNot(Equal(cexample))
+		})
+
+		It("produces a media type with appropriate MinLength and MaxLength examples", func() {
+			ut := Type("example", func() {
+				Attribute("test1", Integer, func() {
+					Minimum(-200)
+					Maximum(-100)
+				})
+			})
+
+			mt := MediaType("application/vnd.example+json", func() {
+				Attributes(func() {
+					Attribute("test1", ArrayOf(Any), func() {
+						MinLength(0)
+						MaxLength(10)
+					})
+					Attribute("test2", ArrayOf(Any), func() {
+						MinLength(1000)
+						MaxLength(2000)
+					})
+					Attribute("test3", ArrayOf(Any), func() {
+						MinLength(1000)
+						MaxLength(1000)
+					})
+
+					Attribute("test-failure1", ArrayOf(ut), func() {
+						MinLength(0)
+						MaxLength(0)
+					})
+				})
+				View("default", func() {
+					Attribute("test1")
+				})
+			})
+
+			dslengine.Run()
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+
+			Ω(mt).ShouldNot(BeNil())
+			attr := mt.Type.ToObject()["test1"]
+			Ω(attr.Example).Should(BeAssignableToTypeOf([]interface{}{}))
+			Ω(len(attr.Example.([]interface{}))).Should(BeNumerically("<=", 10))
+			attr = mt.Type.ToObject()["test2"]
+			Ω(attr.Example).Should(BeAssignableToTypeOf([]interface{}{}))
+			Ω(attr.Example.([]interface{})).Should(HaveLen(10))
+			attr = mt.Type.ToObject()["test3"]
+			Ω(attr.Example).Should(BeAssignableToTypeOf([]interface{}{}))
+			Ω(attr.Example.([]interface{})).Should(HaveLen(10))
+			attr = mt.Type.ToObject()["test-failure1"]
+			Ω(attr.Example).Should(BeAssignableToTypeOf([]interface{}{}))
+			Ω(attr.Example.([]interface{})).Should(HaveLen(0))
 		})
 	})
 })
