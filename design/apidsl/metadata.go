@@ -1,7 +1,7 @@
 package apidsl
 
 // Metadata is a set of key/value pairs that can be assigned
-// to an object. Each value consists of a slice of stirngs so
+// to an object. Each value consists of a slice of strings so
 // that multiple invocation of the Metadata function on the
 // same target using the same key builds up the slice.
 //
