@@ -7,8 +7,6 @@ import (
 	"regexp"
 	"strings"
 
-	"golang.org/x/net/context"
-
 	"github.com/goadesign/goa/design"
 	"github.com/julienschmidt/httprouter"
 )
@@ -36,15 +34,11 @@ type (
 		Mux(version string) ServeMux
 		// VersionName returns the name of the version targeted by the given request.
 		VersionName(req *http.Request) string
-		// HandleMissingVersion handles requests that target a non-existent API version (that
-		// is requests for which RequestMux returns nil).
-		// The context request data object contains the name of the targeted version.
-		HandleMissingVersion(ctx context.Context, rw http.ResponseWriter, req *http.Request)
 	}
 
 	// Muxer implements an adapter that given a request handler can produce a mux handler.
 	Muxer interface {
-		MuxHandler(name string, hdlr Handler, unm Unmarshaler) MuxHandler
+		MuxHandler(name, version string, hdlr Handler, unm Unmarshaler) MuxHandler
 	}
 
 	// RootMux is the default VersionMux and ServeMux implementation. It dispatches requests to the

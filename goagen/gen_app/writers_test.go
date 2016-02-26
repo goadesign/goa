@@ -446,15 +446,6 @@ var _ = Describe("ControllersWriter", func() {
 					DecoderMap: decoderMap,
 				}}
 			})
-
-			It("generates the service initialization code", func() {
-				err := writer.Execute(data)
-				Ω(err).ShouldNot(HaveOccurred())
-				b, err := ioutil.ReadFile(filename)
-				Ω(err).ShouldNot(HaveOccurred())
-				written := string(b)
-				Ω(written).Should(Equal(initController))
-			})
 		})
 
 		Context("with data", func() {
@@ -1071,42 +1062,6 @@ type BottlesController interface {
 }
 `
 
-	initController = `
-// inited is true if initService has been called
-var inited = false
-
-// initService sets up the service encoders, decoders and mux.
-func initService(service *goa.Service) {
-	if inited {
-		return
-	}
-	inited = true
-	// Setup encoders and decoders
-	service.SetEncoder(goa.NewEncoder(), true, "application/json")
-	service.SetDecoder(goa.NewDecoder(), true, "application/json")
-
-	// Configure mux for versioning.
-	if mux, ok := service.Mux.(*goa.RootMux); ok {
-		func0 := goa.PathSelectVersionFunc("/api/:vp", "vp")
-		func1 := goa.HeaderSelectVersionFunc("vh")
-		func2 := goa.QuerySelectVersionFunc("vq")
-		mux.SelectVersionFunc = goa.CombineSelectVersionFunc(func0, func1, func2, )
-	}
-}
-
-// resourceController is the controller interface for the resource actions.
-type resourceController interface {
-	goa.Muxer
-}
-
-// MountresourceController "mounts" a resource resource controller on the given service.
-func MountresourceController(service *goa.Service, ctrl resourceController) {
-	initService(service)
-	var h goa.Handler
-	mux := service.Mux
-}
-`
-
 	encoderController = `
 // MountBottlesController "mounts" a Bottles resource controller on the given service.
 func MountBottlesController(service *goa.Service, ctrl BottlesController) {
@@ -1120,7 +1075,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 		}
 		return ctrl.List(rctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
+	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", "", h, nil))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "List"}, goa.KV{"route", "GET /accounts/:accountID/bottles"})
 }
 `
@@ -1136,7 +1091,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 		}
 		return ctrl.List(rctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
+	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", "", h, nil))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "List"}, goa.KV{"route", "GET /accounts/:accountID/bottles"})
 }
 `
@@ -1160,7 +1115,7 @@ type BottlesController interface {
 		}
 		return ctrl.List(rctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
+	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", "", h, nil))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "List"}, goa.KV{"route", "GET /accounts/:accountID/bottles"})
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewShowBottleContext(ctx)
@@ -1169,7 +1124,7 @@ type BottlesController interface {
 		}
 		return ctrl.Show(rctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles/:id", ctrl.MuxHandler("Show", h, nil))
+	mux.Handle("GET", "/accounts/:accountID/bottles/:id", ctrl.MuxHandler("Show", "", h, nil))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "Show"}, goa.KV{"route", "GET /accounts/:accountID/bottles/:id"})
 }
 `
