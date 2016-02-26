@@ -345,16 +345,20 @@ func Goify(str string, firstUpper bool) string {
 		w = i
 	}
 
-	res := string(runes)
-	if _, ok := reserved[res]; ok {
-		res += "_"
-	}
-	return res
+	return fixReserved(string(runes))
 }
 
 // validIdentifier returns true if the rune is a letter or number
 func validIdentifier(r rune) bool {
 	return unicode.IsLetter(r) || unicode.IsDigit(r)
+}
+
+// fixReserved appends an underscore on to Go reserved keywords.
+func fixReserved(w string) string {
+	if _, ok := reserved[w]; ok {
+		w += "_"
+	}
+	return w
 }
 
 // GoTypeTransform produces Go code that initializes the data structure defined by target from an
