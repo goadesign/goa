@@ -174,8 +174,8 @@ func Media(val interface{}) {
 func Reference(t design.DataType) {
 	if mt, ok := mediaTypeDefinition(false); ok {
 		mt.Reference = t
-	} else if ut, ok := typeDefinition(true); ok {
-		ut.Reference = t
+	} else if at, ok := attributeDefinition(true); ok {
+		at.Reference = t
 	}
 }
 

@@ -97,17 +97,17 @@ type (
 
 	// APIVersionDefinition defines the properties of the API for a given version.
 	APIVersionDefinition struct {
-		// API name
+		// Version API name
 		Name string
-		// API Title
+		// Version Title
 		Title string
-		// API description
+		// Version description
 		Description string
-		// API version if any
+		// Version identifier if any
 		Version string
-		// API hostname
+		// Version hostname
 		Host string
-		// API URL schemes
+		// Version URL schemes
 		Schemes []string
 		// Common base path to all API actions
 		BasePath string
@@ -640,6 +640,24 @@ func (v *APIVersionDefinition) IterateResponses(it ResponseIterator) error {
 // DSL returns the initialization DSL.
 func (v *APIVersionDefinition) DSL() func() {
 	return v.DSLFunc
+}
+
+// Init inializes the fields of the version definition from the fields of the API definition.
+// This method is called after the API definition DSL has executed and before the version DSL
+// executes.
+func (v *APIVersionDefinition) Init() {
+	v.Title = Design.Title
+	v.Description = Design.Description
+	v.Host = Design.Host
+	v.Schemes = Design.Schemes
+	v.BasePath = Design.BasePath
+	v.BaseParams = Design.BaseParams
+	v.Consumes = Design.Consumes
+	v.Produces = Design.Produces
+	v.TermsOfService = Design.TermsOfService
+	v.Contact = Design.Contact
+	v.License = Design.License
+	v.Docs = Design.Docs
 }
 
 // CanonicalIdentifier returns the media type identifier sans suffix
