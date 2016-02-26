@@ -70,6 +70,8 @@ func (eg *exampleGenerator) hasLengthValidation() bool {
 	return eg.a.Validation.MinLength != nil || eg.a.Validation.MaxLength != nil
 }
 
+const maxExampleLength = 10
+
 // generateValidatedLengthExample generates a random size array of examples based on what's given.
 func (eg *exampleGenerator) generateValidatedLengthExample() interface{} {
 	minlength, maxlength := math.Inf(1), math.Inf(-1)
@@ -78,7 +80,7 @@ func (eg *exampleGenerator) generateValidatedLengthExample() interface{} {
 			minlength = float64(*eg.a.Validation.MinLength)
 		}
 		if eg.a.Validation.MaxLength != nil {
-			minlength = float64(*eg.a.Validation.MaxLength)
+			maxlength = float64(*eg.a.Validation.MaxLength)
 		}
 	}
 	count := 0
@@ -87,11 +89,18 @@ func (eg *exampleGenerator) generateValidatedLengthExample() interface{} {
 	} else if math.IsInf(maxlength, -1) {
 		count = int(minlength) + (eg.r.Int() % 3)
 	} else if minlength < maxlength {
-		count = int(minlength) + (eg.r.Int() % int(maxlength-minlength))
+		diff := int(maxlength - minlength)
+		if diff > maxExampleLength {
+			diff = maxExampleLength
+		}
+		count = int(minlength) + (eg.r.Int() % diff)
 	} else if minlength == maxlength {
 		count = int(minlength)
 	} else {
 		panic("Validation: MinLength > MaxLength")
+	}
+	if count > maxExampleLength {
+		count = maxExampleLength
 	}
 	if !eg.a.Type.IsArray() {
 		return eg.r.faker.Characters(count)
