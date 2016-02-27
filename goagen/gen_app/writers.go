@@ -577,11 +577,12 @@ func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} interfa
 
 	// mediaTypeT generates the code for a media type.
 	// template input: MediaTypeTemplateData
-	mediaTypeT = `// {{if .Description}}{{.Description}}{{else}}{{gotypename . .AllRequired 0}} media type{{end}}
+	mediaTypeT = `// {{gotypedesc . true}}
+//
 // Identifier: {{.Identifier}}{{$typeName := gotypename . .AllRequired 0}}
 type {{$typeName}} {{gotypedef . 0 true}}
 
-{{$validation := recursiveValidate .AttributeDefinition false false "mt" "response" 1}}{{if $validation}}// Validate validates the media type instance.
+{{$validation := recursiveValidate .AttributeDefinition false false "mt" "response" 1}}{{if $validation}}// Validate validates the {{$typeName}} media type instance.
 func (mt {{gotyperef . .AllRequired 0}}) Validate() (err error) {
 {{$validation}}
 	return
@@ -591,10 +592,10 @@ func (mt {{gotyperef . .AllRequired 0}}) Validate() (err error) {
 
 	// userTypeT generates the code for a user type.
 	// template input: UserTypeTemplateData
-	userTypeT = `// {{if .Description}}{{.Description}}{{else}}{{gotypename . .AllRequired 0}} type{{end}}
-type {{gotypename . .AllRequired 0}} {{gotypedef . 0 true}}
+	userTypeT = `// {{gotypedesc . true}}{{$typeName := gotypename . .AllRequired 0}}
+type {{$typeName}} {{gotypedef . 0 true}}
 
-{{$validation := recursiveValidate .AttributeDefinition false false "ut" "response" 1}}{{if $validation}}// Validate validates the type instance.
+{{$validation := recursiveValidate .AttributeDefinition false false "ut" "response" 1}}{{if $validation}}// Validate validates the {{$typeName}} type instance.
 func (ut {{gotyperef . .AllRequired 0}}) Validate() (err error) {
 {{$validation}}
 	return
