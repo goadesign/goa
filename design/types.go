@@ -625,18 +625,13 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 		val = m.Validation.Dup()
 		val.Required = required
 	}
-	description := m.Description
-	if view != "default" {
-		description += fmt.Sprintf(", %s view", view)
-	}
 	p = &MediaTypeDefinition{
 		Identifier: m.Identifier,
 		UserTypeDefinition: &UserTypeDefinition{
 			TypeName: typeName,
 			AttributeDefinition: &AttributeDefinition{
-				Description: description,
-				Type:        Dup(v.Type),
-				Validation:  val,
+				Type:       Dup(v.Type),
+				Validation: val,
 			},
 		},
 	}
@@ -701,8 +696,7 @@ func (m *MediaTypeDefinition) projectCollection(view string) (p *MediaTypeDefini
 		Identifier: m.Identifier,
 		UserTypeDefinition: &UserTypeDefinition{
 			AttributeDefinition: &AttributeDefinition{
-				Type:        &Array{ElemType: &AttributeDefinition{Type: pe}},
-				Description: fmt.Sprintf("%s, %s view", m.Description, view),
+				Type: &Array{ElemType: &AttributeDefinition{Type: pe}},
 			},
 			TypeName: pe.TypeName + "Collection",
 		},
