@@ -63,7 +63,7 @@ lint:
 	fi
 
 cyclo:
-	@if [ "`gocyclo -over 20 . | grep -v examples/cellar | tee /dev/stderr`" ]; then \
+	@if [ "`gocyclo -over 20 . | grep -v _integration_tests | tee /dev/stderr`" ]; then \
 		echo "^ - Cyclomatic complexity exceeds 20, refactor the code!" && echo && exit 1; \
 	fi
 

@@ -67,7 +67,7 @@ var _ = Describe("Application", func() {
 
 		JustBeforeEach(func() {
 			ctrl := s.NewController("test")
-			muxHandler = ctrl.MuxHandler("testAct", "", handler, unmarshaler)
+			muxHandler = ctrl.MuxHandler("testAct", handler, unmarshaler)
 		})
 
 		BeforeEach(func() {
