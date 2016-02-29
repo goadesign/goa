@@ -400,7 +400,7 @@ func tagsFromDefinition(mdata dslengine.MetadataDefinition) (tags []*Tag, err er
 			hasDocs = true
 		}
 
-		if hasDocs  {
+		if hasDocs {
 			tag.ExternalDocs = docs
 		}
 
