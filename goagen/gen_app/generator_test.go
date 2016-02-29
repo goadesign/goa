@@ -461,7 +461,7 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 		rctx.APIVersion = "{{.version}}"{{end}}
 		return ctrl.Get(rctx)
 	}
-	mux.Handle("GET", "/:id", ctrl.MuxHandler("Get", "{{.version}}", h, nil))
+	mux.Handle("GET", "/:id", ctrl.MuxHandler("Get", h, nil))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Widget"},{{if .version}} goa.KV{"version", "{{.version}}"},{{end}} goa.KV{"action", "Get"}, goa.KV{"route", "GET /:id"})
 }
 `
@@ -517,7 +517,7 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 		}
 		return ctrl.Get(rctx)
 	}
-	mux.Handle("GET", "/:id", ctrl.MuxHandler("Get", "", h, unmarshalGetWidgetPayload))
+	mux.Handle("GET", "/:id", ctrl.MuxHandler("Get", h, unmarshalGetWidgetPayload))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Widget"}, goa.KV{"action", "Get"}, goa.KV{"route", "GET /:id"})
 }
 

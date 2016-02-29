@@ -37,7 +37,7 @@ type (
 
 	// Muxer implements an adapter that given a request handler can produce a mux handler.
 	Muxer interface {
-		MuxHandler(name, version string, hdlr Handler, unm Unmarshaler) MuxHandler
+		MuxHandler(name string, hdlr Handler, unm Unmarshaler) MuxHandler
 	}
 
 	// RootMux is the default VersionMux and ServeMux implementation. It dispatches requests to the

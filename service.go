@@ -46,8 +46,9 @@ type (
 		VersionName string   // VersionName is the version string
 		Mux         ServeMux // Mux is the version request mux
 
-		decoderPools          map[string]*decoderPool // Registered decoders for the service
-		encoderPools          map[string]*encoderPool // Registered encoders for the service
+		service               *Service                // Parent service
+		decoderPools          map[string]*decoderPool // Registered decoders for the version
+		encoderPools          map[string]*encoderPool // Registered encoders for the version
 		encodableContentTypes []string                // List of contentTypes for response negotiation
 	}
 
@@ -57,6 +58,8 @@ type (
 		Service      *Service     // Service which exposes controller
 		ErrorHandler ErrorHandler // Controller specific error handler if any
 		Middleware   []Middleware // Controller specific middleware if any
+
+		version *ServiceVersion // Version controller is mounted on
 	}
 
 	// Handler defines the controller handler signatures.
@@ -83,6 +86,7 @@ func New(name string) *Service {
 	}
 	service.ServiceVersion = &ServiceVersion{
 		Mux:                   NewMux(service),
+		service:               service,
 		decoderPools:          map[string]*decoderPool{},
 		encoderPools:          map[string]*encoderPool{},
 		encodableContentTypes: []string{},
@@ -110,54 +114,6 @@ func (service *Service) ListenAndServeTLS(addr, certFile, keyFile string) error 
 	return http.ListenAndServeTLS(addr, certFile, keyFile, service.Mux)
 }
 
-// ServeFiles replies to the request with the contents of the named file or directory. The logic
-// for what to do when the filename points to a file vs. a directory is the same as the standard
-// http package ServeFile function. The path may end with a wildcard that matches the rest of the
-// URL (e.g. *filepath). If it does the matching path is appended to filename to form the full file
-// path, so:
-// 	ServeFiles("/index.html", "/www/data/index.html")
-// Returns the content of the file "/www/data/index.html" when requests are sent to "/index.html"
-// and:
-//	ServeFiles("/assets/*filepath", "/www/data/assets")
-// returns the content of the file "/www/data/assets/x/y/z" when requests are sent to
-// "/assets/x/y/z".
-func (service *Service) ServeFiles(path, filename string) error {
-	if strings.Contains(path, ":") {
-		return fmt.Errorf("path may only include wildcards that match the entire end of the URL (e.g. *filepath)")
-	}
-	if _, err := os.Stat(filename); err != nil {
-		return fmt.Errorf("ServeFiles: %s", err)
-	}
-	rel := filename
-	if wd, err := os.Getwd(); err == nil {
-		if abs, err := filepath.Abs(filename); err == nil {
-			if r, err := filepath.Rel(wd, abs); err == nil {
-				rel = r
-			}
-		}
-	}
-	Info(RootContext, "mount file", KV{"filename", rel}, KV{"path", fmt.Sprintf("GET %s", path)})
-	ctrl := service.NewController("FileServer")
-	var wc string
-	if idx := strings.Index(path, "*"); idx > -1 && idx < len(path)-1 {
-		wc = path[idx+1:]
-	}
-	handle := ctrl.MuxHandler("Serve", "", func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-		fullpath := filename
-		r := Request(ctx)
-		if len(wc) > 0 {
-			if m, ok := r.Params[wc]; ok {
-				fullpath = filepath.Join(fullpath, m[0])
-			}
-		}
-		Info(RootContext, "serve", KV{"path", r.URL.Path}, KV{"filename", fullpath})
-		http.ServeFile(Response(ctx), r.Request, fullpath)
-		return nil
-	}, nil)
-	service.Mux.Handle("GET", path, handle)
-	return nil
-}
-
 // Version instantiates a new - or returns the existing - ServiceVersion based on the version name.
 func (service *Service) Version(name string) *ServiceVersion {
 	if service.versions == nil {
@@ -176,6 +132,7 @@ func (service *Service) Version(name string) *ServiceVersion {
 	ver = &ServiceVersion{
 		VersionName:           name,
 		Mux:                   verMux,
+		service:               service,
 		decoderPools:          map[string]*decoderPool{},
 		encoderPools:          map[string]*encoderPool{},
 		encodableContentTypes: []string{},
@@ -187,11 +144,64 @@ func (service *Service) Version(name string) *ServiceVersion {
 
 // NewController returns a controller for the given resource. This method is mainly intended for
 // use by the generated code. User code shouldn't have to call it directly.
-func (service *Service) NewController(resName string) *Controller {
+func (ver *ServiceVersion) NewController(resName string) *Controller {
 	return &Controller{
 		Name:    resName,
-		Service: service,
+		Service: ver.service,
+		version: ver,
 	}
+}
+
+// ServeFiles replies to the request with the contents of the named file or directory. The logic
+// for what to do when the filename points to a file vs. a directory is the same as the standard
+// http package ServeFile function. The path may end with a wildcard that matches the rest of the
+// URL (e.g. *filepath). If it does the matching path is appended to filename to form the full file
+// path, so:
+// 	ServeFiles("/index.html", "/www/data/index.html")
+// Returns the content of the file "/www/data/index.html" when requests are sent to "/index.html"
+// and:
+//	ServeFiles("/assets/*filepath", "/www/data/assets")
+// returns the content of the file "/www/data/assets/x/y/z" when requests are sent to
+// "/assets/x/y/z".
+func (ver *ServiceVersion) ServeFiles(path, filename string) error {
+	if strings.Contains(path, ":") {
+		return fmt.Errorf("path may only include wildcards that match the entire end of the URL (e.g. *filepath)")
+	}
+	if _, err := os.Stat(filename); err != nil {
+		return fmt.Errorf("ServeFiles: %s", err)
+	}
+	rel := filename
+	if wd, err := os.Getwd(); err == nil {
+		if abs, err := filepath.Abs(filename); err == nil {
+			if r, err := filepath.Rel(wd, abs); err == nil {
+				rel = r
+			}
+		}
+	}
+	logFields := []KV{{"filename", rel}, {"path", fmt.Sprintf("GET %s", path)}}
+	if ver.VersionName != "" {
+		logFields = append(logFields, KV{"version", ver.VersionName})
+	}
+	Info(RootContext, "mount file", logFields...)
+	ctrl := ver.service.NewController("FileServer")
+	var wc string
+	if idx := strings.Index(path, "*"); idx > -1 && idx < len(path)-1 {
+		wc = path[idx+1:]
+	}
+	handle := ctrl.MuxHandler("Serve", func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		fullpath := filename
+		r := Request(ctx)
+		if len(wc) > 0 {
+			if m, ok := r.Params[wc]; ok {
+				fullpath = filepath.Join(fullpath, m[0])
+			}
+		}
+		Info(RootContext, "serve", KV{"path", r.URL.Path}, KV{"filename", fullpath})
+		http.ServeFile(Response(ctx), r.Request, fullpath)
+		return nil
+	}, nil)
+	ver.Mux.Handle("GET", path, handle)
+	return nil
 }
 
 // Use adds a middleware to the controller.
@@ -227,7 +237,7 @@ func (ctrl *Controller) HandleError(ctx context.Context, rw http.ResponseWriter,
 // the controller (if there is one) or Service error handler.
 // This function is intended for the controller generated code. User code should not need to call
 // it directly.
-func (ctrl *Controller) MuxHandler(name, version string, hdlr Handler, unm Unmarshaler) MuxHandler {
+func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) MuxHandler {
 	// Setup middleware outside of closure
 	middleware := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		if !Response(ctx).Written() {
@@ -243,6 +253,7 @@ func (ctrl *Controller) MuxHandler(name, version string, hdlr Handler, unm Unmar
 		middleware = chain[ml-i-1](middleware)
 	}
 	baseCtx := NewLogContext(RootContext, KV{"service", ctrl.Service.Name}, KV{"ctrl", ctrl.Name}, KV{"action", name})
+	version := ctrl.version.VersionName
 	if version != "" {
 		baseCtx = NewLogContext(baseCtx, KV{"version", version})
 	}
@@ -261,7 +272,7 @@ func (ctrl *Controller) MuxHandler(name, version string, hdlr Handler, unm Unmar
 		if err != nil {
 			handler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 				msg := "invalid encoding: " + err.Error()
-				rw.Header().Set("Content-Type", "Service/json")
+				rw.Header().Set("Content-Type", "application/json")
 				rw.WriteHeader(400)
 				rw.Write([]byte(fmt.Sprintf(`{"kind":"invalid request","msg":%q}`, msg)))
 				return nil

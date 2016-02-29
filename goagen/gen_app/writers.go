@@ -623,7 +623,7 @@ func Mount{{.Resource}}Controller(service *goa.Service, ctrl {{.Resource}}Contro
 		}
 		{{end}}		return ctrl.{{.Name}}(rctx)
 	}
-{{range .Routes}}	mux.Handle("{{.Verb}}", "{{.FullPath $ver}}", ctrl.MuxHandler("{{$action.Name}}", "{{$ver.Version}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
+{{range .Routes}}	mux.Handle("{{.Verb}}", "{{.FullPath $ver}}", ctrl.MuxHandler("{{$action.Name}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "{{$res}}"},{{if not $ver.IsDefault}} goa.KV{"version", "{{$ver.Version}}"},{{end}} goa.KV{"action", "{{$action.Name}}"}, goa.KV{"route", "{{.Verb}} {{.FullPath $ver}}"})
 {{end}}{{end}}}
 `
