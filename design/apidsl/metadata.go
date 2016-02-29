@@ -20,11 +20,10 @@ package apidsl
 // "swagger:tag:xxx": sets the Swagger object field tag xxx.
 //
 //    Example:
-//        Metadata("swagger:tag:backend") // or:
-//        Metadata("swagger:tag:backend", "Backend")
-//        Metadata("swagger:tag:backend:desc", "Quick description of what 'backend' is")
-//        Metadata("swagger:tag:backend:url", "http://example.com")
-//        Metadata("swagger:tag:backend:url:desc", "See more docs here")
+//        Metadata("swagger:tag:Backend")
+//        Metadata("swagger:tag:Backend:desc", "Quick description of what 'Backend' is")
+//        Metadata("swagger:tag:Backend:url", "http://example.com")
+//        Metadata("swagger:tag:Backend:url:desc", "See more docs here")
 //
 func Metadata(name string, value ...string) {
 	if at, ok := attributeDefinition(false); ok {

@@ -379,9 +379,6 @@ func tagsFromDefinition(mdata dslengine.MetadataDefinition) (tags []*Tag, err er
 		}
 
 		tag := &Tag{Name: chunks[2]}
-		if len(value) != 0 {
-			tag.Name = value[0]
-		}
 
 		value = mdata[fmt.Sprintf("%s:desc", key)]
 		if len(value) != 0 {
