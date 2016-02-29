@@ -37,7 +37,7 @@ var _ = Describe("New", func() {
 	JustBeforeEach(func() {
 		err := dslengine.Run()
 		Ω(err).ShouldNot(HaveOccurred())
-		swagger, newErr = genswagger.New(Design)
+		swagger, newErr = genswagger.New(Design, Design.APIVersionDefinition)
 	})
 
 	Context("with a valid API definition", func() {
