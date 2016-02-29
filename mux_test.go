@@ -16,9 +16,7 @@ var _ = Describe("PathSelectVersionFunc", func() {
 	var version string
 
 	JustBeforeEach(func() {
-		var err error
-		fn, err = goa.PathSelectVersionFunc(pattern, param)
-		Ω(err).ShouldNot(HaveOccurred())
+		fn = goa.PathSelectVersionFunc(pattern, param)
 		version = fn(request)
 	})
 
