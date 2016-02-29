@@ -61,7 +61,10 @@ var _ = Describe("New", func() {
 		BeforeEach(func() {
 			API("test", func() {
 				Title(title)
-				Metadata("swagger:tag=" + tag)
+				Metadata("swagger:tag:" + tag)
+				Metadata("swagger:tag:"+tag+":desc", "Tag desc.")
+				Metadata("swagger:tag:"+tag+":url", "http://example.com/tag")
+				Metadata("swagger:tag:"+tag+":url:desc", "Huge docs")
 				Description(description)
 				TermsOfService(terms)
 				Contact(func() {
@@ -108,7 +111,9 @@ var _ = Describe("New", func() {
 				Paths:    make(map[string]*genswagger.Path),
 				Consumes: []string{"application/json", "application/xml", "text/xml", "application/gob", "application/x-gob"},
 				Produces: []string{"application/json", "application/xml", "text/xml", "application/gob", "application/x-gob"},
-				Tags:     []*genswagger.Tag{{Name: tag}},
+				Tags: []*genswagger.Tag{{Name: tag, Description: "Tag desc.", ExternalDocs: &genswagger.ExternalDocs{
+					URL: "http://example.com/tag", Description: "Huge docs",
+				}}},
 				ExternalDocs: &genswagger.ExternalDocs{
 					Description: docDesc,
 					URL:         docURL,
@@ -324,14 +329,14 @@ var _ = Describe("New", func() {
 					Required("name")
 				})
 				Resource("res", func() {
-					Metadata("swagger:tag=res")
+					Metadata("swagger:tag:res")
 					Description("A wine bottle")
 					DefaultMedia(BottleMedia)
 					BasePath("/bottles")
 					UseTrait("Authenticated")
 
 					Action("Update", func() {
-						Metadata("swagger:tag=Update")
+						Metadata("swagger:tag:Update")
 						Description("Update account")
 						Docs(func() {
 							Description("docs")

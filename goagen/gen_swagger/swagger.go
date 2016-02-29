@@ -282,7 +282,7 @@ func New(api *design.APIDefinition, ver *design.APIVersionDefinition) (*Swagger,
 	if api == nil {
 		return nil, nil
 	}
-	tags, err := tagsFromDefinition(ver.Metadata)
+	tags, err := tagsFromDefinition(api.Metadata)
 	if err != nil {
 		return nil, err
 	}
@@ -370,21 +370,46 @@ func New(api *design.APIDefinition, ver *design.APIVersionDefinition) (*Swagger,
 
 func tagsFromDefinition(mdata dslengine.MetadataDefinition) (tags []*Tag, err error) {
 	for key, value := range mdata {
-		if len(key) > 12 && strings.HasPrefix(key, "swagger:tag=") {
-			tag := &Tag{Name: key[12:]}
-			if len(value) > 0 {
-				tag.Description = value[0]
-			}
-			if len(value) > 1 {
-				doc := &ExternalDocs{URL: value[1]}
-				if len(value) > 2 {
-					doc.Description = value[2]
-				}
-				tag.ExternalDocs = doc
-			}
-			tags = append(tags, tag)
+		chunks := strings.Split(key, ":")
+		if len(chunks) != 3 {
+			continue
 		}
+		if chunks[0] != "swagger" && chunks[1] != "tag" {
+			continue
+		}
+
+		tag := &Tag{Name: chunks[2]}
+		if len(value) != 0 {
+			tag.Name = value[0]
+		}
+
+		value = mdata[fmt.Sprintf("%s:desc", key)]
+		if len(value) != 0 {
+			tag.Description = value[0]
+		}
+
+		hasDocs := false
+		docs := &ExternalDocs{}
+
+		value = mdata[fmt.Sprintf("%s:url", key)]
+		if len(value) != 0 {
+			docs.URL = value[0]
+			hasDocs = true
+		}
+
+		value = mdata[fmt.Sprintf("%s:url:desc", key)]
+		if len(value) != 0 {
+			docs.Description = value[0]
+			hasDocs = true
+		}
+
+		if hasDocs  {
+			tag.ExternalDocs = docs
+		}
+
+		tags = append(tags, tag)
 	}
+
 	return
 }
 

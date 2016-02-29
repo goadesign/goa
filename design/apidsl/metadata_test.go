@@ -73,12 +73,12 @@ var _ = Describe("Metadata", func() {
 		})
 		Context("with valid metadata string", func() {
 			BeforeEach(func() {
-				metadataKey = "struct:tag=json"
+				metadataKey = "struct:tag:json"
 				metadataValue = "myName,omitempty"
 			})
 
 			It("has metadata", func() {
-				expected := dslengine.MetadataDefinition{"struct:tag=json": {"myName,omitempty"}}
+				expected := dslengine.MetadataDefinition{"struct:tag:json": {"myName,omitempty"}}
 				Ω(api.Metadata).To(Equal(expected))
 				Ω(rd.Metadata).To(Equal(expected))
 				Ω(rd.Actions["Example Action"].Metadata).To(Equal(expected))
