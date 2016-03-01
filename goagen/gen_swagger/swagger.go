@@ -313,7 +313,7 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 			TermsOfService: api.TermsOfService,
 			Contact:        api.Contact,
 			License:        api.License,
-			Version:        "",
+			Version:        api.Version,
 		},
 		Host:         api.Host,
 		BasePath:     api.BasePath,
@@ -367,21 +367,43 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 
 func tagsFromDefinition(mdata dslengine.MetadataDefinition) (tags []*Tag, err error) {
 	for key, value := range mdata {
-		if len(key) > 12 && strings.HasPrefix(key, "swagger:tag=") {
-			tag := &Tag{Name: key[12:]}
-			if len(value) > 0 {
-				tag.Description = value[0]
-			}
-			if len(value) > 1 {
-				doc := &ExternalDocs{URL: value[1]}
-				if len(value) > 2 {
-					doc.Description = value[2]
-				}
-				tag.ExternalDocs = doc
-			}
-			tags = append(tags, tag)
+		chunks := strings.Split(key, ":")
+		if len(chunks) != 3 {
+			continue
 		}
+		if chunks[0] != "swagger" && chunks[1] != "tag" {
+			continue
+		}
+
+		tag := &Tag{Name: chunks[2]}
+
+		value = mdata[fmt.Sprintf("%s:desc", key)]
+		if len(value) != 0 {
+			tag.Description = value[0]
+		}
+
+		hasDocs := false
+		docs := &ExternalDocs{}
+
+		value = mdata[fmt.Sprintf("%s:url", key)]
+		if len(value) != 0 {
+			docs.URL = value[0]
+			hasDocs = true
+		}
+
+		value = mdata[fmt.Sprintf("%s:url:desc", key)]
+		if len(value) != 0 {
+			docs.Description = value[0]
+			hasDocs = true
+		}
+
+		if hasDocs {
+			tag.ExternalDocs = docs
+		}
+
+		tags = append(tags, tag)
 	}
+
 	return
 }
 
@@ -526,7 +548,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	if err != nil {
 		return err
 	}
-	params, err := paramsFromDefinition(action.AllParams(), route.FullPath(design.Design.APIVersionDefinition))
+	params, err := paramsFromDefinition(action.AllParams(), route.FullPath())
 	if err != nil {
 		return err
 	}
@@ -575,7 +597,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		Deprecated:   false,
 	}
 	key := design.WildcardRegex.ReplaceAllStringFunc(
-		route.FullPath(design.Design.APIVersionDefinition),
+		route.FullPath(),
 		func(w string) string {
 			return fmt.Sprintf("/{%s}", w[2:])
 		},
@@ -703,28 +725,23 @@ func initMaxLengthValidation(def interface{}, max int) {
 }
 
 func initValidations(attr *design.AttributeDefinition, def interface{}) {
-	for _, v := range attr.Validations {
-		switch val := v.(type) {
-		case *dslengine.EnumValidationDefinition:
-			initEnumValidation(def, val.Values)
-
-		case *dslengine.FormatValidationDefinition:
-			initFormatValidation(def, val.Format)
-
-		case *dslengine.PatternValidationDefinition:
-			initPatternValidation(def, val.Pattern)
-
-		case *dslengine.MinimumValidationDefinition:
-			initMinimumValidation(def, val.Min)
-
-		case *dslengine.MaximumValidationDefinition:
-			initMaximumValidation(def, val.Max)
-
-		case *dslengine.MinLengthValidationDefinition:
-			initMinLengthValidation(def, val.MinLength)
-
-		case *dslengine.MaxLengthValidationDefinition:
-			initMaxLengthValidation(def, val.MaxLength)
-		}
+	val := attr.Validation
+	if val == nil {
+		return
+	}
+	initEnumValidation(def, val.Values)
+	initFormatValidation(def, val.Format)
+	initPatternValidation(def, val.Pattern)
+	if val.Minimum != nil {
+		initMinimumValidation(def, *val.Minimum)
+	}
+	if val.Maximum != nil {
+		initMaximumValidation(def, *val.Maximum)
+	}
+	if val.MinLength != nil {
+		initMinLengthValidation(def, *val.MinLength)
+	}
+	if val.MaxLength != nil {
+		initMaxLengthValidation(def, *val.MaxLength)
 	}
 }

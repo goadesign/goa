@@ -46,11 +46,9 @@ var _ = Describe("Generate", func() {
 	Context("with a dummy API", func() {
 		BeforeEach(func() {
 			design.Design = &design.APIDefinition{
-				APIVersionDefinition: &design.APIVersionDefinition{
-					Name:        "testapi",
-					Title:       "dummy API with no resource",
-					Description: "I told you it's dummy",
-				},
+				Name:        "testapi",
+				Title:       "dummy API with no resource",
+				Description: "I told you it's dummy",
 			}
 		})
 
@@ -69,16 +67,14 @@ var _ = Describe("Generate", func() {
 		BeforeEach(func() {
 			codegen.TempCount = 0
 			design.Design = &design.APIDefinition{
-				APIVersionDefinition: &design.APIVersionDefinition{
-					Name:        "testapi",
-					Title:       "dummy API with no resource",
-					Description: "I told you it's dummy",
-				},
+				Name:        "testapi",
+				Title:       "dummy API with no resource",
+				Description: "I told you it's dummy",
 				Resources: map[string]*design.ResourceDefinition{
-					"foo": &design.ResourceDefinition{
+					"foo": {
 						Name: "foo",
 						Actions: map[string]*design.ActionDefinition{
-							"show": &design.ActionDefinition{
+							"show": {
 								Name: "show",
 								QueryParams: &design.AttributeDefinition{
 									Type: design.Object{
@@ -86,7 +82,7 @@ var _ = Describe("Generate", func() {
 									},
 								},
 								Routes: []*design.RouteDefinition{
-									&design.RouteDefinition{
+									{
 										Verb: "GET",
 										Path: "",
 									},

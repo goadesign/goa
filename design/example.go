@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/goadesign/goa/dslengine"
 	regen "github.com/zach-klippenstein/goregen"
 )
 
@@ -21,6 +20,9 @@ func newExampleGenerator(a *AttributeDefinition, r *RandomGenerator) *exampleGen
 	return &exampleGenerator{a, r}
 }
 
+// Maximum number of tries for generating example.
+const maxAttempts = 500
+
 // generate generates a random value based on the given validations.
 func (eg *exampleGenerator) generate() interface{} {
 	// Randomize array length first, since that's from higher level
@@ -33,7 +35,9 @@ func (eg *exampleGenerator) generate() interface{} {
 	}
 	// loop until a satisified example is generated
 	hasFormat, hasPattern, hasMinMax := eg.hasFormatValidation(), eg.hasPatternValidation(), eg.hasMinMaxValidation()
-	for {
+	attempts := 0
+	for attempts < maxAttempts {
+		attempts++
 		var example interface{}
 		// Format comes first, since it initiates the example
 		if hasFormat {
@@ -60,28 +64,23 @@ func (eg *exampleGenerator) generate() interface{} {
 }
 
 func (eg *exampleGenerator) hasLengthValidation() bool {
-	for _, v := range eg.a.Validations {
-		switch v.(type) {
-		case *dslengine.MinLengthValidationDefinition:
-			return true
-		case *dslengine.MaxLengthValidationDefinition:
-			return true
-		}
+	if eg.a.Validation == nil {
+		return false
 	}
-	return false
+	return eg.a.Validation.MinLength != nil || eg.a.Validation.MaxLength != nil
 }
+
+const maxExampleLength = 10
 
 // generateValidatedLengthExample generates a random size array of examples based on what's given.
 func (eg *exampleGenerator) generateValidatedLengthExample() interface{} {
 	minlength, maxlength := math.Inf(1), math.Inf(-1)
-	for _, v := range eg.a.Validations {
-		switch actual := v.(type) {
-		case *dslengine.MinLengthValidationDefinition:
-			minlength = math.Min(minlength, float64(actual.MinLength))
-			maxlength = math.Max(maxlength, float64(actual.MinLength))
-		case *dslengine.MaxLengthValidationDefinition:
-			minlength = math.Min(minlength, float64(actual.MaxLength))
-			maxlength = math.Max(maxlength, float64(actual.MaxLength))
+	if eg.a.Validation != nil {
+		if eg.a.Validation.MinLength != nil {
+			minlength = float64(*eg.a.Validation.MinLength)
+		}
+		if eg.a.Validation.MaxLength != nil {
+			maxlength = float64(*eg.a.Validation.MaxLength)
 		}
 	}
 	count := 0
@@ -90,11 +89,18 @@ func (eg *exampleGenerator) generateValidatedLengthExample() interface{} {
 	} else if math.IsInf(maxlength, -1) {
 		count = int(minlength) + (eg.r.Int() % 3)
 	} else if minlength < maxlength {
-		count = int(minlength) + (eg.r.Int() % int(maxlength-minlength))
+		diff := int(maxlength - minlength)
+		if diff > maxExampleLength {
+			diff = maxExampleLength
+		}
+		count = int(minlength) + (eg.r.Int() % diff)
 	} else if minlength == maxlength {
 		count = int(minlength)
 	} else {
 		panic("Validation: MinLength > MaxLength")
+	}
+	if count > maxExampleLength {
+		count = maxExampleLength
 	}
 	if !eg.a.Type.IsArray() {
 		return eg.r.faker.Characters(count)
@@ -107,84 +113,67 @@ func (eg *exampleGenerator) generateValidatedLengthExample() interface{} {
 }
 
 func (eg *exampleGenerator) hasEnumValidation() bool {
-	for _, v := range eg.a.Validations {
-		if _, ok := v.(*dslengine.EnumValidationDefinition); ok {
-			return true
-		}
-	}
-	return false
+	return eg.a.Validation != nil && len(eg.a.Validation.Values) > 0
 }
 
 // generateValidatedEnumExample returns a random selected enum value.
 func (eg *exampleGenerator) generateValidatedEnumExample() interface{} {
-	for _, v := range eg.a.Validations {
-		if actual, ok := v.(*dslengine.EnumValidationDefinition); ok {
-			count := len(actual.Values)
-			i := eg.r.Int() % count
-			return actual.Values[i]
-		}
+	if !eg.hasEnumValidation() {
+		return nil
 	}
-	return nil
+	values := eg.a.Validation.Values
+	count := len(values)
+	i := eg.r.Int() % count
+	return values[i]
 }
 
 func (eg *exampleGenerator) hasFormatValidation() bool {
-	for _, v := range eg.a.Validations {
-		if _, ok := v.(*dslengine.FormatValidationDefinition); ok {
-			return true
-		}
-	}
-	return false
+	return eg.a.Validation != nil && eg.a.Validation.Format != ""
 }
 
 // generateFormatExample returns a random example based on the format the user asks.
 func (eg *exampleGenerator) generateFormatExample() interface{} {
-	for _, v := range eg.a.Validations {
-		if actual, ok := v.(*dslengine.FormatValidationDefinition); ok {
-			if res, ok := map[string]interface{}{
-				"email":     eg.r.faker.Email(),
-				"hostname":  eg.r.faker.DomainName() + "." + eg.r.faker.DomainSuffix(),
-				"date-time": time.Now().Format(time.RFC3339),
-				"ipv4":      eg.r.faker.IPv4Address().String(),
-				"ipv6":      eg.r.faker.IPv6Address().String(),
-				"uri":       eg.r.faker.URL(),
-				"mac": func() string {
-					res, err := regen.Generate(`([0-9A-F]{2}-){5}[0-9A-F]{2}`)
-					if err != nil {
-						return "12-34-56-78-9A-BC"
-					}
-					return res
-				}(),
-				"cidr":   "192.168.100.14/24",
-				"regexp": eg.r.faker.Characters(3) + ".*",
-			}[actual.Format]; ok {
-				return res
-			}
-			panic("Validation: unknown format '" + actual.Format + "'") // bug
-		}
+	if !eg.hasFormatValidation() {
+		return nil
 	}
-	return nil
+	format := eg.a.Validation.Format
+	if res, ok := map[string]interface{}{
+		"email":     eg.r.faker.Email(),
+		"hostname":  eg.r.faker.DomainName() + "." + eg.r.faker.DomainSuffix(),
+		"date-time": time.Unix(int64(eg.r.Int())%1454957045, 0).Format(time.RFC3339), // to obtain a "fixed" rand
+		"ipv4":      eg.r.faker.IPv4Address().String(),
+		"ipv6":      eg.r.faker.IPv6Address().String(),
+		"uri":       eg.r.faker.URL(),
+		"mac": func() string {
+			res, err := regen.Generate(`([0-9A-F]{2}-){5}[0-9A-F]{2}`)
+			if err != nil {
+				return "12-34-56-78-9A-BC"
+			}
+			return res
+		}(),
+		"cidr":   "192.168.100.14/24",
+		"regexp": eg.r.faker.Characters(3) + ".*",
+	}[format]; ok {
+		return res
+	}
+	panic("Validation: unknown format '" + format + "'") // bug
 }
 
 func (eg *exampleGenerator) hasPatternValidation() bool {
-	for _, v := range eg.a.Validations {
-		if _, ok := v.(*dslengine.PatternValidationDefinition); ok {
-			return true
-		}
-	}
-	return false
+	return eg.a.Validation != nil && eg.a.Validation.Pattern != ""
 }
 
 func (eg *exampleGenerator) checkPatternValidation(example interface{}) bool {
-	for _, v := range eg.a.Validations {
-		if actual, ok := v.(*dslengine.PatternValidationDefinition); ok {
-			re, err := regexp.Compile(actual.Pattern)
-			if err != nil {
-				panic("Validation: invalid pattern '" + actual.Pattern + "'")
-			}
-			if !re.MatchString(fmt.Sprint(example)) {
-				return false
-			}
-		}
+	if !eg.hasPatternValidation() {
+		return true
+	}
+	pattern := eg.a.Validation.Pattern
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		panic("Validation: invalid pattern '" + pattern + "'")
+	}
+	if !re.MatchString(fmt.Sprint(example)) {
+		return false
 	}
 	return true
 }
@@ -192,59 +181,59 @@ func (eg *exampleGenerator) checkPatternValidation(example interface{}) bool {
 // generateValidatedPatternExample generates a random value that satisifies the pattern. Note: if
 // multiple patterns are given, only one of them is used. currently, it doesn't support multiple.
 func (eg *exampleGenerator) generateValidatedPatternExample() interface{} {
-	for _, v := range eg.a.Validations {
-		if actual, ok := v.(*dslengine.PatternValidationDefinition); ok {
-			example, err := regen.Generate(actual.Pattern)
-			if err != nil {
-				return eg.r.faker.Name()
-			}
-			return example
-		}
+	if !eg.hasPatternValidation() {
+		return false
 	}
-	return nil
+	pattern := eg.a.Validation.Pattern
+	example, err := regen.Generate(pattern)
+	if err != nil {
+		return eg.r.faker.Name()
+	}
+	return example
 }
 
 func (eg *exampleGenerator) hasMinMaxValidation() bool {
-	for _, v := range eg.a.Validations {
-		if _, ok := v.(*dslengine.MinimumValidationDefinition); ok {
-			return true
-		}
-		if _, ok := v.(*dslengine.MaximumValidationDefinition); ok {
-			return true
-		}
+	if eg.a.Validation == nil {
+		return false
 	}
-	return false
+	return eg.a.Validation.Minimum != nil || eg.a.Validation.Maximum != nil
 }
 
 func (eg *exampleGenerator) checkMinMaxValueValidation(example interface{}) bool {
-	for _, v := range eg.a.Validations {
-		switch actual := v.(type) {
-		case *dslengine.MinimumValidationDefinition:
-			if v, ok := example.(int); ok && float64(v) < actual.Min {
-				return false
-			} else if v, ok := example.(float64); ok && v < actual.Min {
-				return false
-			}
-		case *dslengine.MaximumValidationDefinition:
-			if v, ok := example.(int); ok && float64(v) > actual.Max {
-				return false
-			} else if v, ok := example.(float64); ok && v > actual.Max {
-				return false
-			}
+	if !eg.hasMinMaxValidation() {
+		return true
+	}
+	valid := true
+	if min := eg.a.Validation.Minimum; min != nil {
+		if v, ok := example.(int); ok && float64(v) < *min {
+			valid = false
+		} else if v, ok := example.(float64); ok && v < *min {
+			valid = false
+		}
+	}
+	if !valid {
+		return false
+	}
+	if max := eg.a.Validation.Maximum; max != nil {
+		if v, ok := example.(int); ok && float64(v) > *max {
+			return false
+		} else if v, ok := example.(float64); ok && v > *max {
+			return false
 		}
 	}
 	return true
 }
 
 func (eg *exampleGenerator) generateValidatedMinMaxValueExample() interface{} {
+	if !eg.hasMinMaxValidation() {
+		return nil
+	}
 	min, max := math.Inf(1), math.Inf(-1)
-	for _, v := range eg.a.Validations {
-		switch actual := v.(type) {
-		case *dslengine.MinimumValidationDefinition:
-			min = math.Min(min, float64(actual.Min))
-		case *dslengine.MaximumValidationDefinition:
-			max = math.Max(max, float64(actual.Max))
-		}
+	if eg.a.Validation.Minimum != nil {
+		min = *eg.a.Validation.Minimum
+	}
+	if eg.a.Validation.Maximum != nil {
+		max = *eg.a.Validation.Maximum
 	}
 	if math.IsInf(min, 1) {
 		if eg.a.Type.Kind() == IntegerKind {
@@ -272,8 +261,6 @@ func (eg *exampleGenerator) generateValidatedMinMaxValueExample() interface{} {
 			return int(min)
 		}
 		return min
-	} else {
-		panic("Validation: Min > Max")
 	}
-	return nil
+	panic("Validation: Min > Max")
 }

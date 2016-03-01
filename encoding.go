@@ -7,7 +7,11 @@ import (
 	"fmt"
 	"io"
 	"mime"
+	"net/http"
 	"sync"
+	"time"
+
+	"golang.org/x/net/context"
 )
 
 type (
@@ -71,21 +75,21 @@ type (
 
 // DecodeRequest retrives the request body and `Content-Type` header and uses Decode
 // to unmarshal into the provided `interface{}`
-func (ver *version) DecodeRequest(ctx *Context, v interface{}) error {
-	body := ctx.Request().Body
-	contentType := ctx.Request().Header.Get("Content-Type")
+func (service *Service) DecodeRequest(req *http.Request, v interface{}) error {
+	body, contentType := req.Body, req.Header.Get("Content-Type")
 	defer body.Close()
 
-	if err := ver.Decode(v, body, contentType); err != nil {
-		ctx.Error(err.Error(), "ContentType", contentType)
-		return err
+	if err := service.Decode(v, body, contentType); err != nil {
+		return fmt.Errorf("failed to decode request body with content type %#v: %s", contentType, err)
 	}
 
 	return nil
 }
 
 // Decode uses registered Decoders to unmarshal a body based on the contentType
-func (ver *version) Decode(v interface{}, body io.Reader, contentType string) error {
+func (service *Service) Decode(v interface{}, body io.Reader, contentType string) error {
+	now := time.Now()
+	defer MeasureSince([]string{"goa", "decode", contentType}, now)
 	var p *decoderPool
 	if contentType == "" {
 		// Default to JSON
@@ -95,9 +99,9 @@ func (ver *version) Decode(v interface{}, body io.Reader, contentType string) er
 			contentType = mediaType
 		}
 	}
-	p = ver.decoderPools[contentType]
+	p = service.decoderPools[contentType]
 	if p == nil {
-		p = ver.decoderPools["*/*"]
+		p = service.decoderPools["*/*"]
 	}
 	if p == nil {
 		return nil
@@ -115,7 +119,7 @@ func (ver *version) Decode(v interface{}, body io.Reader, contentType string) er
 
 // SetDecoder sets a specific decoder to be used for the specified content types. If
 // a decoder is already registered, it will be overwritten.
-func (ver *version) SetDecoder(f DecoderFactory, makeDefault bool, contentTypes ...string) {
+func (service *Service) SetDecoder(f DecoderFactory, makeDefault bool, contentTypes ...string) {
 	p := newDecodePool(f)
 
 	for _, contentType := range contentTypes {
@@ -123,11 +127,11 @@ func (ver *version) SetDecoder(f DecoderFactory, makeDefault bool, contentTypes 
 		if err != nil {
 			mediaType = contentType
 		}
-		ver.decoderPools[mediaType] = p
+		service.decoderPools[mediaType] = p
 	}
 
 	if makeDefault {
-		ver.decoderPools["*/*"] = p
+		service.decoderPools["*/*"] = p
 	}
 }
 
@@ -175,30 +179,31 @@ func (p *decoderPool) Put(d Decoder) {
 
 // EncodeResponse uses registered Encoders to marshal the response body based on the request
 // `Accept` header and writes it to the http.ResponseWriter
-func (ver *version) EncodeResponse(ctx *Context, v interface{}) error {
-	accept := ctx.Request().Header.Get("Accept")
+func (service *Service) EncodeResponse(ctx context.Context, v interface{}) error {
+	now := time.Now()
+	accept := Request(ctx).Header.Get("Accept")
 	if accept == "" {
 		accept = "*/*"
 	}
 	var contentType string
-	for _, t := range ver.encodableContentTypes {
+	for _, t := range service.encodableContentTypes {
 		if accept == "*/*" || accept == t {
 			contentType = accept
 			break
 		}
 	}
-	p := ver.encoderPools[contentType]
+	defer MeasureSince([]string{"goa", "encode", contentType}, now)
+	p := service.encoderPools[contentType]
 	if p == nil && contentType != "*/*" {
-		p = ver.encoderPools["*/*"]
+		p = service.encoderPools["*/*"]
 	}
 	if p == nil {
 		return fmt.Errorf("No encoder registered for %s and no default encoder", contentType)
 	}
 
 	// the encoderPool will handle whether or not a pool is actually in use
-	encoder := p.Get(ctx)
+	encoder := p.Get(Response(ctx))
 	if err := encoder.Encode(v); err != nil {
-		// TODO: log out error details
 		return err
 	}
 	p.Put(encoder)
@@ -208,24 +213,24 @@ func (ver *version) EncodeResponse(ctx *Context, v interface{}) error {
 
 // SetEncoder sets a specific encoder to be used for the specified content types. If
 // an encoder is already registered, it will be overwritten.
-func (ver *version) SetEncoder(f EncoderFactory, makeDefault bool, contentTypes ...string) {
+func (service *Service) SetEncoder(f EncoderFactory, makeDefault bool, contentTypes ...string) {
 	p := newEncodePool(f)
 	for _, contentType := range contentTypes {
 		mediaType, _, err := mime.ParseMediaType(contentType)
 		if err != nil {
 			mediaType = contentType
 		}
-		ver.encoderPools[mediaType] = p
+		service.encoderPools[mediaType] = p
 	}
 
 	if makeDefault {
-		ver.encoderPools["*/*"] = p
+		service.encoderPools["*/*"] = p
 	}
 
 	// Rebuild a unique index of registered content encoders to be used in EncodeResponse
-	ver.encodableContentTypes = make([]string, 0, len(ver.encoderPools))
-	for contentType := range ver.encoderPools {
-		ver.encodableContentTypes = append(ver.encodableContentTypes, contentType)
+	service.encodableContentTypes = make([]string, 0, len(service.encoderPools))
+	for contentType := range service.encoderPools {
+		service.encodableContentTypes = append(service.encodableContentTypes, contentType)
 	}
 
 }

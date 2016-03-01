@@ -4,10 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
-
-	"github.com/goadesign/goa/design"
 )
 
 // CommandLine return the command used to run this process.
@@ -81,46 +78,4 @@ func Tabs(depth int) string {
 	}
 	//	return fmt.Sprintf("%d%s", depth, tabs)
 	return tabs
-}
-
-var (
-	majorRegex       = regexp.MustCompile(`([0-9]+)\.`)
-	digitPrefixRegex = regexp.MustCompile(`^[0-9]`)
-)
-
-// VersionPackage computes a given version package name.
-// v1 => v1, V1 => v1, 1 => v1, 1.0 => v1 if unique - v1dot0 otherwise.
-func VersionPackage(version string) string {
-	var others []string
-	design.Design.IterateVersions(func(v *design.APIVersionDefinition) error {
-		others = append(others, v.Version)
-		return nil
-	})
-	idx := strings.Index(version, ".")
-	if idx == 0 {
-		// weird but OK
-		version = strings.Replace(version, ".", "dot", -1)
-	} else if idx > 0 {
-		uniqueMajor := true
-		match := majorRegex.FindStringSubmatch(version)
-		if len(match) > 1 {
-			major := match[1]
-			for _, o := range others {
-				match = majorRegex.FindStringSubmatch(o)
-				if len(match) > 1 && major != match[1] {
-					uniqueMajor = false
-					break
-				}
-			}
-		}
-		if uniqueMajor {
-			version = version[:idx]
-		} else {
-			strings.Replace(version, ".", "dot", -1)
-		}
-	}
-	if digitPrefixRegex.MatchString(version) {
-		version = "v" + version
-	}
-	return Goify(version, false)
 }

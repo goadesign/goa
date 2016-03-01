@@ -59,12 +59,10 @@ func init() {
 
 // GoTypeDef returns the Go code that defines a Go type which matches the data structure
 // definition (the part that comes after `type foo`).
-// versioned indicates whether the type is being referenced from a version package (true) or the
-// default package (false).
 // tabs is the number of tab character(s) used to tabulate the definition however the first
 // line is never indented.
 // jsonTags controls whether to produce json tags.
-func GoTypeDef(ds design.DataStructure, versioned bool, defPkg string, tabs int, jsonTags bool) string {
+func GoTypeDef(ds design.DataStructure, tabs int, jsonTags bool) string {
 	var buffer bytes.Buffer
 	def := ds.Definition()
 	t := def.Type
@@ -72,17 +70,17 @@ func GoTypeDef(ds design.DataStructure, versioned bool, defPkg string, tabs int,
 	case design.Primitive:
 		return GoTypeName(t, nil, tabs)
 	case *design.Array:
-		d := GoTypeDef(actual.ElemType, versioned, defPkg, tabs, jsonTags)
+		d := GoTypeDef(actual.ElemType, tabs, jsonTags)
 		if actual.ElemType.Type.IsObject() {
 			d = "*" + d
 		}
 		return "[]" + d
 	case *design.Hash:
-		keyDef := GoTypeDef(actual.KeyType, versioned, defPkg, tabs, jsonTags)
+		keyDef := GoTypeDef(actual.KeyType, tabs, jsonTags)
 		if actual.KeyType.Type.IsObject() {
 			keyDef = "*" + keyDef
 		}
-		elemDef := GoTypeDef(actual.ElemType, versioned, defPkg, tabs, jsonTags)
+		elemDef := GoTypeDef(actual.ElemType, tabs, jsonTags)
 		if actual.ElemType.Type.IsObject() {
 			elemDef = "*" + elemDef
 		}
@@ -99,7 +97,7 @@ func GoTypeDef(ds design.DataStructure, versioned bool, defPkg string, tabs int,
 		for _, name := range keys {
 			WriteTabs(&buffer, tabs+1)
 			field := actual[name]
-			typedef := GoTypeDef(field, versioned, defPkg, tabs+1, jsonTags)
+			typedef := GoTypeDef(field, tabs+1, jsonTags)
 			if field.Type.IsObject() || def.IsPrimitivePointer(name) {
 				typedef = "*" + typedef
 			}
@@ -122,9 +120,9 @@ func GoTypeDef(ds design.DataStructure, versioned bool, defPkg string, tabs int,
 		buffer.WriteString("}")
 		return buffer.String()
 	case *design.UserTypeDefinition:
-		return GoPackageTypeName(actual, actual.AllRequired(), versioned, defPkg, tabs)
+		return GoPackageTypeName(actual, actual.AllRequired(), tabs)
 	case *design.MediaTypeDefinition:
-		return GoPackageTypeName(actual, actual.AllRequired(), versioned, defPkg, tabs)
+		return GoPackageTypeName(actual, actual.AllRequired(), tabs)
 	default:
 		panic("goa bug: unknown data structure type")
 	}
@@ -138,28 +136,26 @@ func GoTypeDef(ds design.DataStructure, versioned bool, defPkg string, tabs int,
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
 // This function assumes the type is in the same package as the code accessing it.
 func GoTypeRef(t design.DataType, required []string, tabs int) string {
-	return GoPackageTypeRef(t, required, false, "", tabs)
+	return GoPackageTypeRef(t, required, tabs)
 }
 
 // GoPackageTypeRef returns the Go code that refers to the Go type which matches the given data type.
-// versioned indicates whether the type is being referenced from a version package (true) or the
-// default package defPkg (false).
 // required only applies when referring to a user type that is an object defined inline. In this
 // case the type (Object) does not carry the required field information defined in the parent
 // (anonymous) attribute.
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
-func GoPackageTypeRef(t design.DataType, required []string, versioned bool, defPkg string, tabs int) string {
+func GoPackageTypeRef(t design.DataType, required []string, tabs int) string {
 	switch t.(type) {
 	case *design.UserTypeDefinition, *design.MediaTypeDefinition:
 		var prefix string
 		if t.IsObject() {
 			prefix = "*"
 		}
-		return prefix + GoPackageTypeName(t, required, versioned, defPkg, tabs)
+		return prefix + GoPackageTypeName(t, required, tabs)
 	case design.Object:
-		return "*" + GoPackageTypeName(t, required, versioned, defPkg, tabs)
+		return "*" + GoPackageTypeName(t, required, tabs)
 	default:
-		return GoPackageTypeName(t, required, versioned, defPkg, tabs)
+		return GoPackageTypeName(t, required, tabs)
 	}
 }
 
@@ -170,41 +166,37 @@ func GoPackageTypeRef(t design.DataType, required []string, versioned bool, defP
 // case the type (Object) does not carry the required field information defined in the parent
 // (anonymous) attribute.
 func GoTypeName(t design.DataType, required []string, tabs int) string {
-	return GoPackageTypeName(t, required, false, "", tabs)
+	return GoPackageTypeName(t, required, tabs)
 }
 
 // GoPackageTypeName returns the Go type name for a data type.
-// versioned indicates whether the type is being referenced from a version package (true) or the
-// default package defPkg (false).
 // required only applies when referring to a user type that is an object defined inline. In this
 // case the type (Object) does not carry the required field information defined in the parent
 // (anonymous) attribute.
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
-func GoPackageTypeName(t design.DataType, required []string, versioned bool, defPkg string, tabs int) string {
+func GoPackageTypeName(t design.DataType, required []string, tabs int) string {
 	switch actual := t.(type) {
 	case design.Primitive:
 		return GoNativeType(t)
 	case *design.Array:
-		return "[]" + GoPackageTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), versioned, defPkg, tabs+1)
+		return "[]" + GoPackageTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), tabs+1)
 	case design.Object:
 		att := &design.AttributeDefinition{Type: actual}
 		if len(required) > 0 {
-			requiredVal := &dslengine.RequiredValidationDefinition{Names: required}
-			att.Validations = append(att.Validations, requiredVal)
+			requiredVal := &dslengine.ValidationDefinition{Required: required}
+			att.Validation.Merge(requiredVal)
 		}
-		return GoTypeDef(att, versioned, defPkg, tabs, false)
+		return GoTypeDef(att, tabs, false)
 	case *design.Hash:
 		return fmt.Sprintf(
 			"map[%s]%s",
-			GoPackageTypeRef(actual.KeyType.Type, actual.KeyType.AllRequired(), versioned, defPkg, tabs+1),
-			GoPackageTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), versioned, defPkg, tabs+1),
+			GoPackageTypeRef(actual.KeyType.Type, actual.KeyType.AllRequired(), tabs+1),
+			GoPackageTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), tabs+1),
 		)
 	case *design.UserTypeDefinition:
-		pkgPrefix := PackagePrefix(actual, versioned, defPkg)
-		return pkgPrefix + Goify(actual.TypeName, true)
+		return Goify(actual.TypeName, true)
 	case *design.MediaTypeDefinition:
-		pkgPrefix := PackagePrefix(actual.UserTypeDefinition, versioned, defPkg)
-		return pkgPrefix + Goify(actual.TypeName, true)
+		return Goify(actual.TypeName, true)
 	default:
 		panic(fmt.Sprintf("goa bug: unknown type %#v", actual))
 	}
@@ -245,11 +237,44 @@ func GoNativeType(t design.DataType) string {
 	}
 }
 
-// acros is the list of known acronyms for which special casing rules apply.
-var acros = map[string]string{
-	"ok":  "OK",
-	"id":  "ID",
-	"api": "API",
+var commonInitialisms = map[string]bool{
+	"API":   true,
+	"ASCII": true,
+	"CPU":   true,
+	"CSS":   true,
+	"DNS":   true,
+	"EOF":   true,
+	"GUID":  true,
+	"HTML":  true,
+	"HTTP":  true,
+	"HTTPS": true,
+	"ID":    true,
+	"IP":    true,
+	"JSON":  true,
+	"LHS":   true,
+	"OK":    true,
+	"QPS":   true,
+	"RAM":   true,
+	"RHS":   true,
+	"RPC":   true,
+	"SLA":   true,
+	"SMTP":  true,
+	"SQL":   true,
+	"SSH":   true,
+	"TCP":   true,
+	"TLS":   true,
+	"TTL":   true,
+	"UDP":   true,
+	"UI":    true,
+	"UID":   true,
+	"UUID":  true,
+	"URI":   true,
+	"URL":   true,
+	"UTF8":  true,
+	"VM":    true,
+	"XML":   true,
+	"XSRF":  true,
+	"XSS":   true,
 }
 
 // Goify makes a valid Go identifier out of any string.
@@ -258,54 +283,74 @@ var acros = map[string]string{
 // Goify produces a "CamelCase" version of the string, if firstUpper is true the first character
 // of the identifier is uppercase otherwise it's lowercase.
 func Goify(str string, firstUpper bool) string {
-	if firstUpper {
-		if val, ok := acros[str]; ok {
-			return val
-		}
-		for a, u := range acros {
-			p := a + "_"
-			if strings.HasPrefix(str, p) {
-				rest := strings.TrimPrefix(str, p)
-				res := Goify(rest, true)
-				return u + res
+
+	runes := []rune(str)
+	w, i := 0, 0 // index of start of word, scan
+	for i+1 <= len(runes) {
+		eow := false // whether we hit the end of a word
+		if i+1 == len(runes) {
+			eow = true
+		} else if !validIdentifier(runes[i]) {
+			// get rid of it
+			runes = append(runes[:i], runes[i+1:]...)
+		} else if runes[i+1] == '_' {
+			// underscore; shift the remainder forward over any run of underscores
+			eow = true
+			n := 1
+			for i+n+1 < len(runes) && runes[i+n+1] == '_' {
+				n++
 			}
+			copy(runes[i+1:], runes[i+n+1:])
+			runes = runes[:len(runes)-n]
+		} else if unicode.IsLower(runes[i]) && !unicode.IsLower(runes[i+1]) {
+			// lower->non-lower
+			eow = true
 		}
-	}
-	if str == "ok" && firstUpper {
-		return "OK"
-	} else if str == "id" && firstUpper {
-		return "ID"
-	}
-	var b bytes.Buffer
-	var firstWritten, nextUpper bool
-	for i := 0; i < len(str); i++ {
-		r := rune(str[i])
-		if r == '_' {
-			nextUpper = true
-		} else if unicode.IsLetter(r) || unicode.IsDigit(r) {
-			if !firstWritten {
-				if firstUpper {
-					r = unicode.ToUpper(r)
-				} else {
-					r = unicode.ToLower(r)
-				}
-				firstWritten = true
-				nextUpper = false
-			} else if nextUpper {
-				r = unicode.ToUpper(r)
-				nextUpper = false
+		i++
+		if !eow {
+			continue
+		}
+
+		// [w,i] is a word.
+		word := string(runes[w:i])
+		// is it one of our initialisms?
+		if u := strings.ToUpper(word); commonInitialisms[u] {
+			if firstUpper {
+				u = strings.ToUpper(u)
+			} else if w == 0 {
+				u = strings.ToLower(u)
 			}
-			b.WriteRune(r)
+
+			// All the common initialisms are ASCII,
+			// so we can replace the bytes exactly.
+			copy(runes[w:], []rune(u))
+		} else if w > 0 && strings.ToLower(word) == word {
+			// already all lowercase, and not the first word, so uppercase the first character.
+			runes[w] = unicode.ToUpper(runes[w])
+		} else if w == 0 && strings.ToLower(word) == word && firstUpper {
+			runes[w] = unicode.ToUpper(runes[w])
 		}
+		if w == 0 && !firstUpper {
+			runes[w] = unicode.ToLower(runes[w])
+		}
+		//advance to next word
+		w = i
 	}
-	if b.Len() == 0 {
-		return "_v" // you have a better idea?
+
+	return fixReserved(string(runes))
+}
+
+// validIdentifier returns true if the rune is a letter or number
+func validIdentifier(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r)
+}
+
+// fixReserved appends an underscore on to Go reserved keywords.
+func fixReserved(w string) string {
+	if _, ok := reserved[w]; ok {
+		w += "_"
 	}
-	res := b.String()
-	if _, ok := reserved[res]; ok {
-		res += "_"
-	}
-	return res
+	return w
 }
 
 // GoTypeTransform produces Go code that initializes the data structure defined by target from an
@@ -374,24 +419,6 @@ func Tempvar() string {
 	return fmt.Sprintf("tmp%d", TempCount)
 }
 
-// PackagePrefix returns the package prefix to use to access ut from ver given it lives in the
-// package pkg.
-func PackagePrefix(ut *design.UserTypeDefinition, versioned bool, pkg string) string {
-	if !versioned {
-		// If the version is the default version then the user type is in the same package
-		// (otherwise the DSL would not be valid).
-		return ""
-	}
-	if len(ut.APIVersions) == 0 {
-		// If the type is not versioned but we are accessing it from the non-default version
-		// then we need to qualify it with the default version package.
-		return pkg + "."
-	}
-	// If the type is versioned then we must be accessing it from the current version
-	// (unversioned definitions cannot use versioned definitions)
-	return ""
-}
-
 // RunTemplate executs the given template with the given input and returns
 // the rendered string.
 func RunTemplate(tmpl *template.Template, data interface{}) string {
@@ -405,7 +432,7 @@ func RunTemplate(tmpl *template.Template, data interface{}) string {
 
 func transformAttribute(source, target *design.AttributeDefinition, targetPkg, sctx, tctx string, depth int) (string, error) {
 	if source.Type.Kind() != target.Type.Kind() {
-		return "", fmt.Errorf("incompatible attribute types: %s if of type but %s if of type %s",
+		return "", fmt.Errorf("incompatible attribute types: %s is of type %s but %s is of type %s",
 			sctx, source.Type.Name(), tctx, target.Type.Name())
 	}
 	switch {
@@ -433,7 +460,7 @@ func transformObject(source, target design.Object, targetPkg, targetType, sctx, 
 		targetAtt := target[t]
 		if sourceAtt.Type.Kind() != targetAtt.Type.Kind() {
 			return "", fmt.Errorf("incompatible attribute types: %s.%s is of type %s but %s.%s is of type %s",
-				sctx, source, sourceAtt.Type.Name(), tctx, target, targetAtt.Type.Name())
+				sctx, source.Name(), sourceAtt.Type.Name(), tctx, target.Name(), targetAtt.Type.Name())
 		}
 	}
 
@@ -614,13 +641,13 @@ const transformTmpl = `func {{.Name}}(source {{gotyperef .Source nil 0}}) (targe
 `
 
 const transformObjectTmpl = `{{tabs .Depth}}{{.TargetCtx}} = new({{if .TargetPkg}}{{.TargetPkg}}.{{end}}{{if .TargetType}}{{.TargetType}}{{else}}{{gotyperef .Target.Type .Target.AllRequired 1}}{{end}})
-{{$ctx := .}}{{range $source, $target := .AttributeMap}}{{/*
-*/}}{{$sourceAtt := index $ctx.Source $source}}{{$targetAtt := index $ctx.Target $target}}{{/*
+{{range $source, $target := .AttributeMap}}{{/*
+*/}}{{$sourceAtt := index $.Source $source}}{{$targetAtt := index $.Target $target}}{{/*
 */}}{{$source := goify $source true}}{{$target := goify $target true}}{{/*
-*/}}{{     if $sourceAtt.Type.IsArray}}{{ transformArray  $sourceAtt.Type.ToArray  $targetAtt.Type.ToArray  $ctx.TargetPkg (printf "%s.%s" $ctx.SourceCtx $source) (printf "%s.%s" $ctx.TargetCtx $target) $ctx.Depth}}{{/*
-*/}}{{else if $sourceAtt.Type.IsHash}}{{  transformHash   $sourceAtt.Type.ToHash   $targetAtt.Type.ToHash   $ctx.TargetPkg (printf "%s.%s" $ctx.SourceCtx $source) (printf "%s.%s" $ctx.TargetCtx $target) $ctx.Depth}}{{/*
-*/}}{{else if $sourceAtt.Type.IsObject}}{{transformObject $sourceAtt.Type.ToObject $targetAtt.Type.ToObject $ctx.TargetPkg (typeName $targetAtt) (printf "%s.%s" $ctx.SourceCtx $source) (printf "%s.%s" $ctx.TargetCtx $target) $ctx.Depth}}{{/*
-*/}}{{else}}{{tabs $ctx.Depth}}{{$ctx.TargetCtx}}.{{$target}} = {{$ctx.SourceCtx}}.{{$source}}
+*/}}{{     if $sourceAtt.Type.IsArray}}{{ transformArray  $sourceAtt.Type.ToArray  $targetAtt.Type.ToArray  $.TargetPkg (printf "%s.%s" $.SourceCtx $source) (printf "%s.%s" $.TargetCtx $target) $.Depth}}{{/*
+*/}}{{else if $sourceAtt.Type.IsHash}}{{  transformHash   $sourceAtt.Type.ToHash   $targetAtt.Type.ToHash   $.TargetPkg (printf "%s.%s" $.SourceCtx $source) (printf "%s.%s" $.TargetCtx $target) $.Depth}}{{/*
+*/}}{{else if $sourceAtt.Type.IsObject}}{{transformObject $sourceAtt.Type.ToObject $targetAtt.Type.ToObject $.TargetPkg (typeName $targetAtt) (printf "%s.%s" $.SourceCtx $source) (printf "%s.%s" $.TargetCtx $target) $.Depth}}{{/*
+*/}}{{else}}{{tabs $.Depth}}{{$.TargetCtx}}.{{$target}} = {{$.SourceCtx}}.{{$source}}
 {{end}}{{end}}`
 
 const transformArrayTmpl = `{{tabs .Depth}}{{.TargetCtx}} = make([]{{gotyperef .Target.ElemType.Type nil 0}}, len({{.SourceCtx}}))

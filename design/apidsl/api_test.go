@@ -91,6 +91,20 @@ var _ = Describe("API", func() {
 			})
 		})
 
+		Context("with a version", func() {
+			const version = "2.0"
+
+			BeforeEach(func() {
+				dsl = func() {
+					Version(version)
+				}
+			})
+
+			It("sets the API version", func() {
+				Ω(Design.Version).Should(Equal(version))
+			})
+		})
+
 		Context("with a terms of service", func() {
 			const terms = "terms"
 
@@ -315,4 +329,5 @@ var _ = Describe("API", func() {
 			})
 		})
 	})
+
 })

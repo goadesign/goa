@@ -135,6 +135,22 @@ func (m MultiError) Error() string {
 	return strings.Join(msgs, "\n")
 }
 
+// FailOnError will exit with code 1 if `err != nil`. This function
+// will handle properly the MultiError this dslengine provides.
+func FailOnError(err error) {
+	if merr, ok := err.(MultiError); ok {
+		if len(merr) == 0 {
+			return
+		}
+		fmt.Fprintf(os.Stderr, merr.Error())
+		os.Exit(1)
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+}
+
 // Error returns the underlying error message.
 func (de *Error) Error() string {
 	if err := de.GoError; err != nil {
@@ -171,6 +187,9 @@ func computeErrorLocation() (file string, line int) {
 	ok := strings.HasSuffix(file, "_test.go") // Be nice with tests
 	if !ok {
 		nok, _ := regexp.MatchString(`/goa/design/.+\.go$`, file)
+		if !nok {
+			nok, _ = regexp.MatchString(`/goa/dslengine/.+\.go$`, file)
+		}
 		ok = !nok
 	}
 	for !ok {
@@ -179,6 +198,9 @@ func computeErrorLocation() (file string, line int) {
 		ok = strings.HasSuffix(file, "_test.go")
 		if !ok {
 			nok, _ := regexp.MatchString(`/goa/design/.+\.go$`, file)
+			if !nok {
+				nok, _ = regexp.MatchString(`/goa/dslengine/.+\.go$`, file)
+			}
 			ok = !nok
 		}
 	}

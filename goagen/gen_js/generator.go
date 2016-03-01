@@ -96,10 +96,7 @@ func (g *Generator) generateJS(jsFile string, api *design.APIDefinition) (_ *des
 			if exampleAction == nil && a.Routes[0].Verb == "GET" {
 				exampleAction = a
 			}
-			data := map[string]interface{}{
-				"Action":  a,
-				"Version": design.Design.APIVersionDefinition,
-			}
+			data := map[string]interface{}{"Action": a}
 			funcs := template.FuncMap{"params": params}
 			if err = file.ExecuteTemplate("jsFuncs", jsFuncsT, funcs, data); err != nil {
 				return
@@ -126,20 +123,24 @@ func (g *Generator) generateIndexHTML(htmlFile string, api *design.APIDefinition
 		for i, n := range argNames {
 			q := query[n].Type.ToArray().ElemType
 			// below works because we deal with simple types in query strings
-			argValues[i] = fmt.Sprintf("%v", q.GenerateExample(api.RandomGenerator()))
+			if q.Example != nil {
+				argValues[i] = fmt.Sprintf("%v", q.Example)
+			} else {
+				argValues[i] = fmt.Sprintf("%v", q.GenerateExample(api.RandomGenerator()))
+			}
 		}
 		args = strings.Join(argValues, ", ")
 	}
-	examplePath := exampleAction.Routes[0].FullPath(design.Design.APIVersionDefinition)
-	pathParams := exampleAction.Routes[0].Params(design.Design.APIVersionDefinition)
+	examplePath := exampleAction.Routes[0].FullPath()
+	pathParams := exampleAction.Routes[0].Params()
 	if len(pathParams) > 0 {
 		pathVars := exampleAction.AllParams().Type.ToObject()
 		pathValues := make([]interface{}, len(pathParams))
 		for i, n := range pathParams {
-			if pathVars[n].Example == nil {
-				pathValues[i] = pathVars[n].GenerateExample(api.RandomGenerator())
-			} else {
+			if pathVars[n].Example != nil {
 				pathValues[i] = fmt.Sprintf("%v", pathVars[n].Example)
+			} else {
+				pathValues[i] = pathVars[n].GenerateExample(api.RandomGenerator())
 			}
 		}
 		format := design.WildcardRegex.ReplaceAllLiteralString(examplePath, "/%v")
@@ -295,7 +296,7 @@ const moduleTend = `  return client;
 
 const jsFuncsT = `{{$params := params .Action}}
   {{$name := printf "%s%s" .Action.Name (title .Action.Parent.Name)}}// {{if .Action.Description}}{{.Action.Description}}{{else}}{{$name}} calls the {{.Action.Name}} action of the {{.Action.Parent.Name}} resource.{{end}}
-  // path is the request path, the format is "{{(index .Action.Routes 0).FullPath .Version}}"
+  // path is the request path, the format is "{{(index .Action.Routes 0).FullPath}}"
   {{if .Action.Payload}}// data contains the action payload (request body)
   {{end}}{{if $params}}// {{join $params ", "}} {{if gt (len $params) 1}}are{{else}}is{{end}} used to build the request query string.
   {{end}}// config is an optional object to be merged into the config built by the function prior to making the request.
@@ -351,10 +352,10 @@ const exampleT = `<!doctype html>
 `
 
 const exampleCtrlT = `// MountController mounts the JavaScript example controller under "/js".
-func MountController(service goa.Service) {
+func MountController(service *goa.Service) {
 	// Serve static files under js
 	service.ServeFiles("/js/*filepath", "{{.ServeDir}}")
-	service.Info("mount", "ctrl", "JS", "action", "ServeFiles", "route", "GET /js/*")
+	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "JS"}, goa.KV{"action", "ServeFiles"}, goa.KV{"route", "GET /js/*"})
 }
 `
 

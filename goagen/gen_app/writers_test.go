@@ -63,12 +63,6 @@ var _ = Describe("ContextsWriter", func() {
 			})
 
 			JustBeforeEach(func() {
-				var version *design.APIVersionDefinition
-				if design.Design != nil {
-					version = design.Design.APIVersionDefinition
-				} else {
-					version = &design.APIVersionDefinition{}
-				}
 				data = &genapp.ContextTemplateData{
 					Name:         "ListBottleContext",
 					ResourceName: "bottles",
@@ -78,7 +72,6 @@ var _ = Describe("ContextsWriter", func() {
 					Headers:      headers,
 					Responses:    responses,
 					API:          design.Design,
-					Version:      version,
 					DefaultPkg:   "",
 				}
 			})
@@ -269,12 +262,12 @@ var _ = Describe("ContextsWriter", func() {
 					dataType := design.Object{
 						"int": intParam,
 					}
-					required := dslengine.RequiredValidationDefinition{
-						Names: []string{"int"},
+					required := &dslengine.ValidationDefinition{
+						Required: []string{"int"},
 					}
 					params = &design.AttributeDefinition{
-						Type:        dataType,
-						Validations: []dslengine.ValidationDefinition{&required},
+						Type:       dataType,
+						Validation: required,
 					}
 				})
 
@@ -318,13 +311,13 @@ var _ = Describe("ContextsWriter", func() {
 						"int": intParam,
 						"str": strParam,
 					}
-					required := dslengine.RequiredValidationDefinition{
-						Names: []string{"int"},
+					required := &dslengine.ValidationDefinition{
+						Required: []string{"int"},
 					}
 					payload = &design.UserTypeDefinition{
 						AttributeDefinition: &design.AttributeDefinition{
-							Type:        dataType,
-							Validations: []dslengine.ValidationDefinition{&required},
+							Type:       dataType,
+							Validation: required,
 						},
 						TypeName: "ListBottlePayload",
 					}
@@ -339,8 +332,30 @@ var _ = Describe("ContextsWriter", func() {
 					Ω(written).ShouldNot(BeEmpty())
 					Ω(written).Should(ContainSubstring(payloadObjContext))
 				})
-			})
 
+				var _ = Describe("IterateResponses", func() {
+					var resps []*design.ResponseDefinition
+					var testIt = func(r *design.ResponseDefinition) error {
+						resps = append(resps, r)
+						return nil
+					}
+					Context("with responses", func() {
+						BeforeEach(func() {
+							responses = map[string]*design.ResponseDefinition{
+								"OK":      {Status: 200},
+								"Created": {Status: 201},
+							}
+						})
+						It("iterates responses in order", func() {
+							data.IterateResponses(testIt)
+							Ω(resps).Should(Equal([]*design.ResponseDefinition{
+								responses["OK"],
+								responses["Created"],
+							}))
+						})
+					})
+				})
+			})
 		})
 	})
 })
@@ -396,10 +411,8 @@ var _ = Describe("ControllersWriter", func() {
 
 			JustBeforeEach(func() {
 				codegen.TempCount = 0
-				d := &genapp.ControllerTemplateData{
-					Resource: "Bottles",
-					Version:  &design.APIVersionDefinition{},
-				}
+				api := &design.APIDefinition{}
+				d := &genapp.ControllerTemplateData{Resource: "Bottles"}
 				as := make([]map[string]interface{}, len(actions))
 				for i, a := range actions {
 					var unmarshal string
@@ -413,7 +426,7 @@ var _ = Describe("ControllersWriter", func() {
 					as[i] = map[string]interface{}{
 						"Name": a,
 						"Routes": []*design.RouteDefinition{
-							&design.RouteDefinition{
+							{
 								Verb: verbs[i],
 								Path: paths[i],
 							}},
@@ -423,6 +436,7 @@ var _ = Describe("ControllersWriter", func() {
 					}
 				}
 				if len(as) > 0 {
+					d.API = api
 					d.Actions = as
 					d.EncoderMap = encoderMap
 					d.DecoderMap = decoderMap
@@ -445,7 +459,7 @@ var _ = Describe("ControllersWriter", func() {
 
 			Context("with a simple controller", func() {
 				BeforeEach(func() {
-					actions = []string{"list"}
+					actions = []string{"List"}
 					verbs = []string{"GET"}
 					paths = []string{"/accounts/:accountID/bottles"}
 					contexts = []string{"ListBottleContext"}
@@ -465,13 +479,13 @@ var _ = Describe("ControllersWriter", func() {
 
 			Context("with actions that take a payload", func() {
 				BeforeEach(func() {
-					actions = []string{"list"}
+					actions = []string{"List"}
 					verbs = []string{"GET"}
 					paths = []string{"/accounts/:accountID/bottles"}
 					contexts = []string{"ListBottleContext"}
 					unmarshals = []string{"unmarshalListBottlePayload"}
 					payloads = []*design.UserTypeDefinition{
-						&design.UserTypeDefinition{
+						{
 							TypeName: "ListBottlePayload",
 							AttributeDefinition: &design.AttributeDefinition{
 								Type: design.Object{
@@ -495,16 +509,16 @@ var _ = Describe("ControllersWriter", func() {
 			})
 			Context("with actions that take a payload with a required validation", func() {
 				BeforeEach(func() {
-					actions = []string{"list"}
-					required := dslengine.RequiredValidationDefinition{
-						Names: []string{"id"},
+					actions = []string{"List"}
+					required := &dslengine.ValidationDefinition{
+						Required: []string{"id"},
 					}
 					verbs = []string{"GET"}
 					paths = []string{"/accounts/:accountID/bottles"}
 					contexts = []string{"ListBottleContext"}
 					unmarshals = []string{"unmarshalListBottlePayload"}
 					payloads = []*design.UserTypeDefinition{
-						&design.UserTypeDefinition{
+						{
 							TypeName: "ListBottlePayload",
 							AttributeDefinition: &design.AttributeDefinition{
 								Type: design.Object{
@@ -512,7 +526,7 @@ var _ = Describe("ControllersWriter", func() {
 										Type: design.String,
 									},
 								},
-								Validations: []dslengine.ValidationDefinition{&required},
+								Validation: required,
 							},
 						},
 					}
@@ -530,7 +544,7 @@ var _ = Describe("ControllersWriter", func() {
 
 			Context("with multiple controllers", func() {
 				BeforeEach(func() {
-					actions = []string{"list", "show"}
+					actions = []string{"List", "Show"}
 					verbs = []string{"GET", "GET"}
 					paths = []string{"/accounts/:accountID/bottles", "/accounts/:accountID/bottles/:id"}
 					contexts = []string{"ListBottleContext", "ShowBottleContext"}
@@ -550,19 +564,19 @@ var _ = Describe("ControllersWriter", func() {
 
 			Context("with encoder and decoder maps", func() {
 				BeforeEach(func() {
-					actions = []string{"list"}
+					actions = []string{"List"}
 					verbs = []string{"GET"}
 					paths = []string{"/accounts/:accountID/bottles"}
 					contexts = []string{"ListBottleContext"}
 					encoderMap = map[string]*genapp.EncoderTemplateData{
-						"": &genapp.EncoderTemplateData{
+						"": {
 							PackageName: "goa",
 							Factory:     "JSONEncoderFactory",
 							MIMETypes:   []string{"application/json"},
 						},
 					}
 					decoderMap = map[string]*genapp.EncoderTemplateData{
-						"": &genapp.EncoderTemplateData{
+						"": {
 							PackageName: "goa",
 							Factory:     "JSONDecoderFactory",
 							MIMETypes:   []string{"application/json"},
@@ -703,331 +717,352 @@ var _ = Describe("HrefWriter", func() {
 const (
 	emptyContext = `
 type ListBottleContext struct {
-	*goa.Context
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
 }
 `
 
 	emptyContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err error
-	ctx := ListBottleContext{Context: c}
-	return &ctx, err
+	req := goa.Request(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	return &rctx, err
 }
 `
 
 	intContext = `
 type ListBottleContext struct {
-	*goa.Context
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
 	Param *int
 }
 `
 
 	intContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err error
-	ctx := ListBottleContext{Context: c}
-	rawParam := c.Get("param")
+	req := goa.Request(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	rawParam := req.Params.Get("param")
 	if rawParam != "" {
 		if param, err2 := strconv.Atoi(rawParam); err2 == nil {
-			tmp2 := int(param)
+			tmp2 := param
 			tmp1 := &tmp2
-			ctx.Param = tmp1
+			rctx.Param = tmp1
 		} else {
 			err = goa.InvalidParamTypeError("param", rawParam, "integer", err)
 		}
 	}
-	return &ctx, err
+	return &rctx, err
 }
 `
 
 	strContext = `
 type ListBottleContext struct {
-	*goa.Context
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
 	Param *string
 }
 `
 
 	strContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err error
-	ctx := ListBottleContext{Context: c}
-	rawParam := c.Get("param")
+	req := goa.Request(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	rawParam := req.Params.Get("param")
 	if rawParam != "" {
-		ctx.Param = &rawParam
+		rctx.Param = &rawParam
 	}
-	return &ctx, err
+	return &rctx, err
 }
 `
 
 	numContext = `
 type ListBottleContext struct {
-	*goa.Context
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
 	Param *float64
 }
 `
 
 	numContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err error
-	ctx := ListBottleContext{Context: c}
-	rawParam := c.Get("param")
+	req := goa.Request(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	rawParam := req.Params.Get("param")
 	if rawParam != "" {
 		if param, err2 := strconv.ParseFloat(rawParam, 64); err2 == nil {
 			tmp1 := &param
-			ctx.Param = tmp1
+			rctx.Param = tmp1
 		} else {
 			err = goa.InvalidParamTypeError("param", rawParam, "number", err)
 		}
 	}
-	return &ctx, err
+	return &rctx, err
 }
 `
 	boolContext = `
 type ListBottleContext struct {
-	*goa.Context
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
 	Param *bool
 }
 `
 
 	boolContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err error
-	ctx := ListBottleContext{Context: c}
-	rawParam := c.Get("param")
+	req := goa.Request(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	rawParam := req.Params.Get("param")
 	if rawParam != "" {
 		if param, err2 := strconv.ParseBool(rawParam); err2 == nil {
 			tmp1 := &param
-			ctx.Param = tmp1
+			rctx.Param = tmp1
 		} else {
 			err = goa.InvalidParamTypeError("param", rawParam, "boolean", err)
 		}
 	}
-	return &ctx, err
+	return &rctx, err
 }
 `
 
 	arrayContext = `
 type ListBottleContext struct {
-	*goa.Context
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
 	Param []string
 }
 `
 
 	arrayContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err error
-	ctx := ListBottleContext{Context: c}
-	rawParam := c.Get("param")
+	req := goa.Request(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	rawParam := req.Params.Get("param")
 	if rawParam != "" {
 		elemsParam := strings.Split(rawParam, ",")
-		ctx.Param = elemsParam
+		rctx.Param = elemsParam
 	}
-	return &ctx, err
+	return &rctx, err
 }
 `
 
 	intArrayContext = `
 type ListBottleContext struct {
-	*goa.Context
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
 	Param []int
 }
 `
 
 	intArrayContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err error
-	ctx := ListBottleContext{Context: c}
-	rawParam := c.Get("param")
+	req := goa.Request(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	rawParam := req.Params.Get("param")
 	if rawParam != "" {
 		elemsParam := strings.Split(rawParam, ",")
 		elemsParam2 := make([]int, len(elemsParam))
 		for i, rawElem := range elemsParam {
 			if elem, err2 := strconv.Atoi(rawElem); err2 == nil {
-				elemsParam2[i] = int(elem)
+				elemsParam2[i] = elem
 			} else {
 				err = goa.InvalidParamTypeError("elem", rawElem, "integer", err)
 			}
 		}
-		ctx.Param = elemsParam2
+		rctx.Param = elemsParam2
 	}
-	return &ctx, err
+	return &rctx, err
 }
 `
 
 	resContext = `
 type ListBottleContext struct {
-	*goa.Context
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
 	Int *int
 }
 `
 
 	resContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err error
-	ctx := ListBottleContext{Context: c}
-	rawInt := c.Get("int")
+	req := goa.Request(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	rawInt := req.Params.Get("int")
 	if rawInt != "" {
 		if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
-			tmp2 := int(int_)
+			tmp2 := int_
 			tmp1 := &tmp2
-			ctx.Int = tmp1
+			rctx.Int = tmp1
 		} else {
 			err = goa.InvalidParamTypeError("int", rawInt, "integer", err)
 		}
 	}
-	return &ctx, err
+	return &rctx, err
 }
 `
 
 	requiredContext = `
 type ListBottleContext struct {
-	*goa.Context
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
 	Int int
 }
 `
 
 	requiredContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err error
-	ctx := ListBottleContext{Context: c}
-	rawInt := c.Get("int")
+	req := goa.Request(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	rawInt := req.Params.Get("int")
 	if rawInt == "" {
 		err = goa.MissingParamError("int", err)
 	} else {
 		if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
-			ctx.Int = int(int_)
+			rctx.Int = int_
 		} else {
 			err = goa.InvalidParamTypeError("int", rawInt, "integer", err)
 		}
 	}
-	return &ctx, err
+	return &rctx, err
 }
 `
 
 	payloadContext = `
 type ListBottleContext struct {
-	*goa.Context
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
 	Payload ListBottlePayload
 }
 `
 
 	payloadContextFactory = `
-func NewListBottleContext(c *goa.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err error
-	ctx := ListBottleContext{Context: c}
-	return &ctx, err
+	req := goa.Request(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	return &rctx, err
 }
 `
 	payloadObjContext = `
 type ListBottleContext struct {
-	*goa.Context
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
 	Payload *ListBottlePayload
 }
 `
 
 	payloadObjUnmarshal = `
-func unmarshalListBottlePayload(ctx *goa.Context) error {
-	payload := &ListBottlePayload{}
-	if err := ctx.Service().DecodeRequest(ctx, payload); err != nil {
+func unmarshalListBottlePayload(ctx context.Context, req *http.Request) error {
+	var payload ListBottlePayload
+	if err := goa.RequestService(ctx).DecodeRequest(req, &payload); err != nil {
 		return err
 	}
 	if err := payload.Validate(); err != nil {
 		return err
 	}
-	ctx.SetPayload(payload)
+	goa.Request(ctx).Payload = &payload
 	return nil
 }
 `
 	payloadNoValidationsObjUnmarshal = `
-func unmarshalListBottlePayload(ctx *goa.Context) error {
-	payload := &ListBottlePayload{}
-	if err := ctx.Service().DecodeRequest(ctx, payload); err != nil {
+func unmarshalListBottlePayload(ctx context.Context, req *http.Request) error {
+	var payload ListBottlePayload
+	if err := goa.RequestService(ctx).DecodeRequest(req, &payload); err != nil {
 		return err
 	}
-	ctx.SetPayload(payload)
+	goa.Request(ctx).Payload = &payload
 	return nil
 }
 `
 
 	simpleController = `// BottlesController is the controller interface for the Bottles actions.
 type BottlesController interface {
-	goa.Controller
-	list(*ListBottleContext) error
+	goa.Muxer
+	List(*ListBottleContext) error
 }
 `
 
 	encoderController = `
 // MountBottlesController "mounts" a Bottles resource controller on the given service.
-func MountBottlesController(service goa.Service, ctrl BottlesController) {
-	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
-	service.SetEncoder(goa.JSONEncoderFactory(), false, "application/json")
-	service.SetDecoder(goa.JSONDecoderFactory(), false, "application/json")
-
-	// Setup endpoint handler
+func MountBottlesController(service *goa.Service, ctrl BottlesController) {
+	initService(service)
 	var h goa.Handler
-	mux := service.ServeMux()
-	h = func(c *goa.Context) error {
-		ctx, err := NewListBottleContext(c)
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
-		return ctrl.list(ctx)
+		return ctrl.List(rctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.HandleFunc("list", h, nil))
-	service.Info("mount", "ctrl", "Bottles", "action", "list", "route", "GET /accounts/:accountID/bottles")
+	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
+	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "List"}, goa.KV{"route", "GET /accounts/:accountID/bottles"})
 }
 `
 
-	simpleMount = `func MountBottlesController(service goa.Service, ctrl BottlesController) {
-	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
-
-	// Setup endpoint handler
+	simpleMount = `func MountBottlesController(service *goa.Service, ctrl BottlesController) {
+	initService(service)
 	var h goa.Handler
-	mux := service.ServeMux()
-	h = func(c *goa.Context) error {
-		ctx, err := NewListBottleContext(c)
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
-		return ctrl.list(ctx)
+		return ctrl.List(rctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.HandleFunc("list", h, nil))
-	service.Info("mount", "ctrl", "Bottles", "action", "list", "route", "GET /accounts/:accountID/bottles")
+	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
+	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "List"}, goa.KV{"route", "GET /accounts/:accountID/bottles"})
 }
 `
 
 	multiController = `// BottlesController is the controller interface for the Bottles actions.
 type BottlesController interface {
-	goa.Controller
-	list(*ListBottleContext) error
-	show(*ShowBottleContext) error
+	goa.Muxer
+	List(*ListBottleContext) error
+	Show(*ShowBottleContext) error
 }
 `
 
-	multiMount = `func MountBottlesController(service goa.Service, ctrl BottlesController) {
-	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
-
-	// Setup endpoint handler
+	multiMount = `func MountBottlesController(service *goa.Service, ctrl BottlesController) {
+	initService(service)
 	var h goa.Handler
-	mux := service.ServeMux()
-	h = func(c *goa.Context) error {
-		ctx, err := NewListBottleContext(c)
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
-		return ctrl.list(ctx)
+		return ctrl.List(rctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.HandleFunc("list", h, nil))
-	service.Info("mount", "ctrl", "Bottles", "action", "list", "route", "GET /accounts/:accountID/bottles")
-	h = func(c *goa.Context) error {
-		ctx, err := NewShowBottleContext(c)
+	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
+	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "List"}, goa.KV{"route", "GET /accounts/:accountID/bottles"})
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		rctx, err := NewShowBottleContext(ctx)
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
-		return ctrl.show(ctx)
+		return ctrl.Show(rctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles/:id", ctrl.HandleFunc("show", h, nil))
-	service.Info("mount", "ctrl", "Bottles", "action", "show", "route", "GET /accounts/:accountID/bottles/:id")
+	service.Mux.Handle("GET", "/accounts/:accountID/bottles/:id", ctrl.MuxHandler("Show", h, nil))
+	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "Show"}, goa.KV{"route", "GET /accounts/:accountID/bottles/:id"})
 }
 `
 

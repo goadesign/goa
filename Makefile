@@ -17,9 +17,9 @@ DEPEND=\
 	github.com/asaskevich/govalidator \
 	github.com/go-swagger/go-swagger \
 	github.com/goadesign/encoding \
-	github.com/goadesign/goa.design/mdc \
+	github.com/goadesign/goa.design/tools/godoc2md \
+	github.com/goadesign/goa.design/tools/mdc \
 	github.com/goadesign/goa-cellar \
-	github.com/goadesign/godoc2md \
 	github.com/goadesign/middleware \
 	github.com/golang/lint/golint \
 	github.com/julienschmidt/httprouter \
@@ -63,7 +63,7 @@ lint:
 	fi
 
 cyclo:
-	@if [ "`gocyclo -over 20 . | grep -v examples/cellar | tee /dev/stderr`" ]; then \
+	@if [ "`gocyclo -over 20 . | grep -v _integration_tests | tee /dev/stderr`" ]; then \
 		echo "^ - Cyclomatic complexity exceeds 20, refactor the code!" && echo && exit 1; \
 	fi
 

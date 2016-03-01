@@ -253,7 +253,7 @@ func Enum(val ...interface{}) {
 			// Why allowing this? because it's not always possible to specify the type of an
 			// object - an object may just be declared inline to represent a substructure.
 			// OK then why not assuming object and not allowing for string? because the DSL
-			// where there's only one argument and the type is string implicitely is very
+			// where there's only one argument and the type is string implicitly is very
 			// useful and common, for example to list attributes that refer to other attributes
 			// such as responses that refer to responses defined at the API level or links that
 			// refer to the media type attributes. So if the form that takes a DSL always ended
@@ -269,7 +269,10 @@ func Enum(val ...interface{}) {
 			}
 		}
 		if ok {
-			a.Validations = append(a.Validations, &dslengine.EnumValidationDefinition{Values: val})
+			if a.Validation == nil {
+				a.Validation = &dslengine.ValidationDefinition{}
+			}
+			a.Validation.Values = val
 		}
 	}
 }
@@ -323,7 +326,10 @@ func Format(f string) {
 				dslengine.ReportError("unsupported format %#v, supported formats are: %s",
 					f, strings.Join(SupportedValidationFormats, ", "))
 			} else {
-				a.Validations = append(a.Validations, &dslengine.FormatValidationDefinition{Format: f})
+				if a.Validation == nil {
+					a.Validation = &dslengine.ValidationDefinition{}
+				}
+				a.Validation.Format = f
 			}
 		}
 	}
@@ -340,7 +346,10 @@ func Pattern(p string) {
 			if err != nil {
 				dslengine.ReportError("invalid pattern %#v, %s", p, err)
 			} else {
-				a.Validations = append(a.Validations, &dslengine.PatternValidationDefinition{Pattern: p})
+				if a.Validation == nil {
+					a.Validation = &dslengine.ValidationDefinition{}
+				}
+				a.Validation.Pattern = p
 			}
 		}
 	}
@@ -368,7 +377,10 @@ func Minimum(val interface{}) {
 				dslengine.ReportError("invalid number value %#v", v)
 				return
 			}
-			a.Validations = append(a.Validations, &dslengine.MinimumValidationDefinition{Min: f})
+			if a.Validation == nil {
+				a.Validation = &dslengine.ValidationDefinition{}
+			}
+			a.Validation.Minimum = &f
 		}
 	}
 }
@@ -395,7 +407,10 @@ func Maximum(val interface{}) {
 				dslengine.ReportError("invalid number value %#v", v)
 				return
 			}
-			a.Validations = append(a.Validations, &dslengine.MaximumValidationDefinition{Max: f})
+			if a.Validation == nil {
+				a.Validation = &dslengine.ValidationDefinition{}
+			}
+			a.Validation.Maximum = &f
 		}
 	}
 }
@@ -407,7 +422,10 @@ func MinLength(val int) {
 		if a.Type != nil && a.Type.Kind() != design.StringKind && a.Type.Kind() != design.ArrayKind {
 			incompatibleAttributeType("minimum length", a.Type.Name(), "a string or an array")
 		} else {
-			a.Validations = append(a.Validations, &dslengine.MinLengthValidationDefinition{MinLength: val})
+			if a.Validation == nil {
+				a.Validation = &dslengine.ValidationDefinition{}
+			}
+			a.Validation.MinLength = &val
 		}
 	}
 }
@@ -419,7 +437,10 @@ func MaxLength(val int) {
 		if a.Type != nil && a.Type.Kind() != design.StringKind && a.Type.Kind() != design.ArrayKind {
 			incompatibleAttributeType("maximum length", a.Type.Name(), "a string or an array")
 		} else {
-			a.Validations = append(a.Validations, &dslengine.MaxLengthValidationDefinition{MaxLength: val})
+			if a.Validation == nil {
+				a.Validation = &dslengine.ValidationDefinition{}
+			}
+			a.Validation.MaxLength = &val
 		}
 	}
 }
@@ -438,7 +459,10 @@ func Required(names ...string) {
 	if at.Type != nil && at.Type.Kind() != design.ObjectKind {
 		incompatibleAttributeType("required", at.Type.Name(), "an object")
 	} else {
-		at.Validations = append(at.Validations, &dslengine.RequiredValidationDefinition{Names: names})
+		if at.Validation == nil {
+			at.Validation = &dslengine.ValidationDefinition{}
+		}
+		at.Validation.AddRequired(names)
 	}
 }
 

@@ -174,8 +174,8 @@ func Media(val interface{}) {
 func Reference(t design.DataType) {
 	if mt, ok := mediaTypeDefinition(false); ok {
 		mt.Reference = t
-	} else if ut, ok := typeDefinition(true); ok {
-		ut.Reference = t
+	} else if at, ok := attributeDefinition(true); ok {
+		at.Reference = t
 	}
 }
 
@@ -365,7 +365,6 @@ func CollectionOf(v interface{}, apidsl ...func()) *design.MediaTypeDefinition {
 		if mt, ok := mediaTypeDefinition(true); ok {
 			mt.TypeName = typeName
 			mt.AttributeDefinition = &design.AttributeDefinition{Type: ArrayOf(m)}
-			mt.APIVersions = m.APIVersions
 			if len(apidsl) > 0 {
 				dslengine.Execute(apidsl[0], mt)
 			}

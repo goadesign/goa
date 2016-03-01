@@ -56,8 +56,6 @@ var (
 		"comment":           Comment,
 		"goify":             Goify,
 		"gonative":          GoNativeType,
-		"gopkgtypename":     GoPackageTypeName,
-		"gopkgtyperef":      GoPackageTypeRef,
 		"gotypedef":         GoTypeDef,
 		"gotypename":        GoTypeName,
 		"gotyperef":         GoTypeRef,
@@ -68,7 +66,6 @@ var (
 		"title":             strings.Title,
 		"toLower":           strings.ToLower,
 		"validationChecker": ValidationChecker,
-		"versionPkg":        VersionPackage,
 	}
 )
 

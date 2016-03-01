@@ -260,6 +260,8 @@ func (p Primitive) IsCompatible(val interface{}) (ok bool) {
 	return
 }
 
+var anyPrimitive = []Primitive{Boolean, Integer, Number, DateTime}
+
 // GenerateExample returns an instance of the given data type.
 func (p Primitive) GenerateExample(r *RandomGenerator) interface{} {
 	switch p {
@@ -274,7 +276,8 @@ func (p Primitive) GenerateExample(r *RandomGenerator) interface{} {
 	case DateTime:
 		return r.DateTime()
 	case Any:
-		return nil
+		// to not make it too complicated, pick one of the primitive types
+		return anyPrimitive[r.Int()%len(anyPrimitive)].GenerateExample(r)
 	default:
 		panic("unknown primitive type") // bug
 	}
@@ -322,7 +325,17 @@ func (a *Array) GenerateExample(r *RandomGenerator) interface{} {
 	for i := 0; i < count; i++ {
 		res[i] = a.ElemType.Type.GenerateExample(r)
 	}
-	return res
+	return a.MakeSlice(res)
+}
+
+// MakeSlice examines the key type from the Array and create a slice with builtin type if possible.
+// The idea is to avoid generating []interface{} and produce more known types.
+func (a *Array) MakeSlice(s []interface{}) interface{} {
+	slice := reflect.MakeSlice(toReflectType(a), 0, len(s))
+	for _, item := range s {
+		slice = reflect.Append(slice, reflect.ValueOf(item))
+	}
+	return slice.Interface()
 }
 
 // Kind implements DataKind.
@@ -367,8 +380,16 @@ func (o Object) IsCompatible(val interface{}) bool {
 
 // GenerateExample returns a random value of the object.
 func (o Object) GenerateExample(r *RandomGenerator) interface{} {
+	// ensure fixed ordering
+	keys := make([]string, 0, len(o))
+	for n := range o {
+		keys = append(keys, n)
+	}
+	sort.Strings(keys)
+
 	res := make(map[string]interface{})
-	for n, att := range o {
+	for _, n := range keys {
+		att := o[n]
 		res[n] = att.Type.GenerateExample(r)
 	}
 	return res
@@ -410,11 +431,21 @@ func (h *Hash) IsCompatible(val interface{}) bool {
 // GenerateExample returns a random hash value.
 func (h *Hash) GenerateExample(r *RandomGenerator) interface{} {
 	count := r.Int()%3 + 1
-	res := make(map[interface{}]interface{})
+	pair := map[interface{}]interface{}{}
 	for i := 0; i < count; i++ {
-		res[h.KeyType.Type.GenerateExample(r)] = h.ElemType.Type.GenerateExample(r)
+		pair[h.KeyType.Type.GenerateExample(r)] = h.ElemType.Type.GenerateExample(r)
 	}
-	return res
+	return h.MakeMap(pair)
+}
+
+// MakeMap examines the key type from a Hash and create a map with builtin type if possible.
+// The idea is to avoid generating map[interface{}]interface{}, which cannot be handled by json.Marshal.
+func (h *Hash) MakeMap(m map[interface{}]interface{}) interface{} {
+	hash := reflect.MakeMap(toReflectType(h))
+	for key, value := range m {
+		hash.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
+	}
+	return hash.Interface()
 }
 
 // AttributeIterator is the type of the function given to IterateAttributes.
@@ -480,30 +511,6 @@ func (u *UserTypeDefinition) IsCompatible(val interface{}) bool {
 	return u.Type.IsCompatible(val)
 }
 
-// SupportsVersion returns true if the type is exposed by the given API version.
-// An empty string version means no version.
-func (u *UserTypeDefinition) SupportsVersion(version string) bool {
-	if version == "" {
-		return u.SupportsNoVersion()
-	}
-	for _, v := range u.APIVersions {
-		if v == version {
-			return true
-		}
-	}
-	return false
-}
-
-// SupportsNoVersion returns true if the resource is exposed by an unversioned API.
-func (u *UserTypeDefinition) SupportsNoVersion() bool {
-	return len(u.APIVersions) == 0
-}
-
-// Versions returns all the API versions that use the type.
-func (u *UserTypeDefinition) Versions() []string {
-	return u.APIVersions
-}
-
 // Finalize merges base type attributes.
 func (u *UserTypeDefinition) Finalize() {
 	if u.Reference != nil {
@@ -539,6 +546,31 @@ func (m *MediaTypeDefinition) ComputeViews() map[string]*ViewDefinition {
 	if m.IsArray() {
 		if mt, ok := m.ToArray().ElemType.Type.(*MediaTypeDefinition); ok {
 			return mt.ComputeViews()
+		}
+	}
+	return nil
+}
+
+// ViewIterator is the type of the function given to IterateViews.
+type ViewIterator func(*ViewDefinition) error
+
+// IterateViews calls the given iterator passing in each attribute sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateViews returns that
+// error.
+func (m *MediaTypeDefinition) IterateViews(it ViewIterator) error {
+	o := m.Views
+	// gather names and sort them
+	names := make([]string, len(o))
+	i := 0
+	for n := range o {
+		names[i] = n
+		i++
+	}
+	sort.Strings(names)
+	// iterate
+	for _, n := range names {
+		if err := it(o[n]); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -581,22 +613,17 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 
 	// Compute validations - view may not have all attributes
 	viewObj := v.Type.ToObject()
-	var vals []dslengine.ValidationDefinition
-	if len(m.Validations) > 0 {
-		vals = make([]dslengine.ValidationDefinition, len(m.Validations))
-		for i, va := range m.Validations {
-			if r, ok := va.(*dslengine.RequiredValidationDefinition); ok {
-				var required []string
-				for _, n := range r.Names {
-					if _, ok := viewObj[n]; ok {
-						required = append(required, n)
-					}
-				}
-				vals[i] = &dslengine.RequiredValidationDefinition{Names: required}
-			} else {
-				vals[i] = va
+	var val *dslengine.ValidationDefinition
+	if m.Validation != nil {
+		names := m.Validation.Required
+		var required []string
+		for _, n := range names {
+			if _, ok := viewObj[n]; ok {
+				required = append(required, n)
 			}
 		}
+		val = m.Validation.Dup()
+		val.Required = required
 	}
 	description := m.Description
 	if view != "default" {
@@ -607,10 +634,9 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 		UserTypeDefinition: &UserTypeDefinition{
 			TypeName: typeName,
 			AttributeDefinition: &AttributeDefinition{
-				APIVersions: m.APIVersions,
 				Description: description,
 				Type:        Dup(v.Type),
-				Validations: vals,
+				Validation:  val,
 			},
 		},
 	}
@@ -638,7 +664,6 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 			lTypeName := fmt.Sprintf("%sLinks", m.TypeName)
 			links = &UserTypeDefinition{
 				AttributeDefinition: &AttributeDefinition{
-					APIVersions: m.APIVersions,
 					Description: fmt.Sprintf("%s contains links to related resources of %s.", lTypeName, m.TypeName),
 					Type:        linkObj,
 				},
@@ -676,7 +701,6 @@ func (m *MediaTypeDefinition) projectCollection(view string) (p *MediaTypeDefini
 		Identifier: m.Identifier,
 		UserTypeDefinition: &UserTypeDefinition{
 			AttributeDefinition: &AttributeDefinition{
-				APIVersions: m.APIVersions,
 				Type:        &Array{ElemType: &AttributeDefinition{Type: pe}},
 				Description: fmt.Sprintf("%s, %s view", m.Description, view),
 			},
@@ -690,7 +714,6 @@ func (m *MediaTypeDefinition) projectCollection(view string) (p *MediaTypeDefini
 		lTypeName := le.TypeName + "Array"
 		links = &UserTypeDefinition{
 			AttributeDefinition: &AttributeDefinition{
-				APIVersions: m.APIVersions,
 				Type:        &Array{ElemType: &AttributeDefinition{Type: le}},
 				Description: fmt.Sprintf("%s contains links to related resources of %s.", lTypeName, m.TypeName),
 			},
@@ -707,4 +730,36 @@ func (m *MediaTypeDefinition) projectCollection(view string) (p *MediaTypeDefini
 // MediaTypeDefinition.
 func (a *AttributeDefinition) Definition() *AttributeDefinition {
 	return a
+}
+
+// toReflectType converts the DataType to reflect.Type.
+func toReflectType(dtype DataType) reflect.Type {
+	switch dtype.Kind() {
+	case BooleanKind:
+		return reflect.TypeOf(true)
+	case IntegerKind:
+		return reflect.TypeOf(int(0))
+	case NumberKind:
+		return reflect.TypeOf(float64(0))
+	case StringKind:
+		return reflect.TypeOf("")
+	case DateTimeKind:
+		return reflect.TypeOf(time.Time{})
+	case ObjectKind, UserTypeKind, MediaTypeKind:
+		return reflect.TypeOf(map[string]interface{}{})
+	case ArrayKind:
+		return reflect.SliceOf(toReflectType(dtype.ToArray().ElemType.Type))
+	case HashKind:
+		hash := dtype.ToHash()
+		// avoid complication: not allow object as the hash key
+		var ktype reflect.Type
+		if !hash.KeyType.Type.IsObject() {
+			ktype = toReflectType(hash.KeyType.Type)
+		} else {
+			ktype = reflect.TypeOf([]interface{}{}).Elem()
+		}
+		return reflect.MapOf(ktype, toReflectType(hash.ElemType.Type))
+	default:
+		return reflect.TypeOf([]interface{}{}).Elem()
+	}
 }

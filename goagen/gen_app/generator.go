@@ -69,7 +69,7 @@ func AppPackagePath() (string, error) {
 // Generate the application code, implement codegen.Generator.
 func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) {
 	if api == nil {
-		return nil, fmt.Errorf("missing API definition, make sure design.Design is properly initialized")
+		return nil, fmt.Errorf("missing API definition, make sure design is properly initialized")
 	}
 
 	go utils.Catch(nil, func() { g.Cleanup() })
@@ -80,33 +80,24 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		}
 	}()
 
-	outdir := AppOutputDir()
-	err = api.IterateVersions(func(v *design.APIVersionDefinition) error {
-		verdir := outdir
-		if v.Version != "" {
-			verdir = filepath.Join(verdir, codegen.VersionPackage(v.Version))
-		}
-		if err := os.MkdirAll(verdir, 0755); err != nil {
-			return err
-		}
-		if err := g.generateContexts(verdir, api, v); err != nil {
-			return err
-		}
-		if err := g.generateControllers(verdir, v); err != nil {
-			return err
-		}
-		if err := g.generateHrefs(verdir, v); err != nil {
-			return err
-		}
-		if err := g.generateMediaTypes(verdir, v); err != nil {
-			return err
-		}
-		if err := g.generateUserTypes(verdir, v); err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
+	os.RemoveAll(AppOutputDir())
+
+	if err := os.MkdirAll(AppOutputDir(), 0755); err != nil {
+		return nil, err
+	}
+	if err := g.generateContexts(api); err != nil {
+		return nil, err
+	}
+	if err := g.generateControllers(api); err != nil {
+		return nil, err
+	}
+	if err := g.generateHrefs(api); err != nil {
+		return nil, err
+	}
+	if err := g.generateMediaTypes(api); err != nil {
+		return nil, err
+	}
+	if err := g.generateUserTypes(api); err != nil {
 		return nil, err
 	}
 
@@ -137,55 +128,45 @@ func MergeResponses(l, r map[string]*design.ResponseDefinition) map[string]*desi
 	return l
 }
 
-// Generated package name for resources supporting the given version.
-func packageName(version *design.APIVersionDefinition) (pack string) {
-	pack = TargetPackage
-	if version.Version != "" {
-		pack = codegen.Goify(codegen.VersionPackage(version.Version), false)
-	}
-	return
-}
-
-// generateContexts iterates through the version resources and actions and generates the action
+// generateContexts iterates through the API resources and actions and generates the action
 // contexts.
-func (g *Generator) generateContexts(verdir string, api *design.APIDefinition, version *design.APIVersionDefinition) error {
-	ctxFile := filepath.Join(verdir, "contexts.go")
+func (g *Generator) generateContexts(api *design.APIDefinition) error {
+	ctxFile := filepath.Join(AppOutputDir(), "contexts.go")
 	ctxWr, err := NewContextsWriter(ctxFile)
 	if err != nil {
 		panic(err) // bug
 	}
-	title := fmt.Sprintf("%s: Application Contexts", version.Context())
+	title := fmt.Sprintf("%s: Application Contexts", api.Context())
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("golang.org/x/net/context"),
 		codegen.SimpleImport("strconv"),
 		codegen.SimpleImport("strings"),
+		codegen.SimpleImport("time"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
-	if !version.IsDefault() {
-		appPkg, err := AppPackagePath()
-		if err != nil {
-			return err
-		}
-		imports = append(imports, codegen.SimpleImport(appPkg))
-	}
-	ctxWr.WriteHeader(title, packageName(version), imports)
-	err = version.IterateResources(func(r *design.ResourceDefinition) error {
-		if !r.SupportsVersion(version.Version) {
-			return nil
-		}
+	ctxWr.WriteHeader(title, TargetPackage, imports)
+	err = api.IterateResources(func(r *design.ResourceDefinition) error {
 		return r.IterateActions(func(a *design.ActionDefinition) error {
 			ctxName := codegen.Goify(a.Name, true) + codegen.Goify(a.Parent.Name, true) + "Context"
+			headers := r.Headers.Merge(a.Headers)
+			if headers != nil && len(headers.Type.ToObject()) == 0 {
+				headers = nil // So that {{if .Headers}} returns false in templates
+			}
+			params := a.AllParams()
+			if params != nil && len(params.Type.ToObject()) == 0 {
+				params = nil // So that {{if .Params}} returns false in templates
+			}
 			ctxData := ContextTemplateData{
 				Name:         ctxName,
 				ResourceName: r.Name,
 				ActionName:   a.Name,
 				Payload:      a.Payload,
-				Params:       a.AllParams(),
-				Headers:      r.Headers.Merge(a.Headers),
+				Params:       params,
+				Headers:      headers,
 				Routes:       a.Routes,
 				Responses:    MergeResponses(r.Responses, a.Responses),
 				API:          api,
-				Version:      version,
 				DefaultPkg:   TargetPackage,
 			}
 			return ctxWr.Execute(&ctxData)
@@ -251,14 +232,16 @@ func BuildEncoderMap(info []*design.EncodingDefinition, encoder bool) (map[strin
 		sort.Strings(mimeTypes)
 		var factory string
 		if encoder {
-			factory = design.KnownEncoders[first][1]
-			if factory == "" {
+			if !design.IsGoaEncoder(p) {
 				factory = "EncoderFactory"
+			} else {
+				factory = design.KnownEncoders[first][1]
 			}
 		} else {
-			factory = design.KnownEncoders[first][2]
-			if factory == "" {
+			if !design.IsGoaEncoder(p) {
 				factory = "DecoderFactory"
+			} else {
+				factory = design.KnownEncoders[first][2]
 			}
 		}
 		d := &EncoderTemplateData{
@@ -273,30 +256,25 @@ func BuildEncoderMap(info []*design.EncodingDefinition, encoder bool) (map[strin
 	return data, nil
 }
 
-// generateControllers iterates through the version resources and generates the low level
+// generateControllers iterates through the API resources and generates the low level
 // controllers.
-func (g *Generator) generateControllers(verdir string, version *design.APIVersionDefinition) error {
-	ctlFile := filepath.Join(verdir, "controllers.go")
+func (g *Generator) generateControllers(api *design.APIDefinition) error {
+	ctlFile := filepath.Join(AppOutputDir(), "controllers.go")
 	ctlWr, err := NewControllersWriter(ctlFile)
 	if err != nil {
 		panic(err) // bug
 	}
-	title := fmt.Sprintf("%s: Application Controllers", version.Context())
+	title := fmt.Sprintf("%s: Application Controllers", api.Context())
 	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("net/http"),
+		codegen.SimpleImport("golang.org/x/net/context"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
-	if !version.IsDefault() {
-		appPkg, err := AppPackagePath()
-		if err != nil {
-			return err
-		}
-		imports = append(imports, codegen.SimpleImport(appPkg))
-	}
-	encoderMap, err := BuildEncoderMap(version.Produces, true)
+	encoderMap, err := BuildEncoderMap(api.Produces, true)
 	if err != nil {
 		return err
 	}
-	decoderMap, err := BuildEncoderMap(version.Consumes, false)
+	decoderMap, err := BuildEncoderMap(api.Consumes, false)
 	if err != nil {
 		return err
 	}
@@ -312,13 +290,11 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 			imports = append(imports, codegen.SimpleImport(packagePath))
 		}
 	}
-	ctlWr.WriteHeader(title, packageName(version), imports)
+	ctlWr.WriteHeader(title, TargetPackage, imports)
+	ctlWr.WriteInitService(encoderMap, decoderMap)
 	var controllersData []*ControllerTemplateData
-	version.IterateResources(func(r *design.ResourceDefinition) error {
-		if !r.SupportsVersion(version.Version) {
-			return nil
-		}
-		data := &ControllerTemplateData{Resource: codegen.Goify(r.Name, true)}
+	api.IterateResources(func(r *design.ResourceDefinition) error {
+		data := &ControllerTemplateData{API: api, Resource: codegen.Goify(r.Name, true)}
 		err := r.IterateActions(func(a *design.ActionDefinition) error {
 			context := fmt.Sprintf("%s%sContext", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			unmarshal := fmt.Sprintf("unmarshal%s%sPayload", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
@@ -338,7 +314,6 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 		if len(data.Actions) > 0 {
 			data.EncoderMap = encoderMap
 			data.DecoderMap = decoderMap
-			data.Version = version
 			controllersData = append(controllersData, data)
 		}
 		return nil
@@ -350,38 +325,34 @@ func (g *Generator) generateControllers(verdir string, version *design.APIVersio
 	return ctlWr.FormatCode()
 }
 
-// generateHrefs iterates through the version resources and generates the href factory methods.
-func (g *Generator) generateHrefs(verdir string, version *design.APIVersionDefinition) error {
-	hrefFile := filepath.Join(verdir, "hrefs.go")
+// generateHrefs iterates through the API resources and generates the href factory methods.
+func (g *Generator) generateHrefs(api *design.APIDefinition) error {
+	hrefFile := filepath.Join(AppOutputDir(), "hrefs.go")
 	resWr, err := NewResourcesWriter(hrefFile)
 	if err != nil {
 		panic(err) // bug
 	}
-	title := fmt.Sprintf("%s: Application Resource Href Factories", version.Context())
+	title := fmt.Sprintf("%s: Application Resource Href Factories", api.Context())
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("fmt"),
 	}
-	resWr.WriteHeader(title, packageName(version), imports)
-	err = version.IterateResources(func(r *design.ResourceDefinition) error {
-		if !r.SupportsVersion(version.Version) {
-			return nil
-		}
-		m := design.Design.MediaTypeWithIdentifier(r.MediaType)
+	resWr.WriteHeader(title, TargetPackage, imports)
+	err = api.IterateResources(func(r *design.ResourceDefinition) error {
+		m := api.MediaTypeWithIdentifier(r.MediaType)
 		var identifier string
 		if m != nil {
 			identifier = m.Identifier
 		} else {
 			identifier = "plain/text"
 		}
-		canoTemplate := r.URITemplate(version)
+		canoTemplate := r.URITemplate()
 		canoTemplate = design.WildcardRegex.ReplaceAllLiteralString(canoTemplate, "/%v")
 		var canoParams []string
 		if ca := r.CanonicalAction(); ca != nil {
 			if len(ca.Routes) > 0 {
-				canoParams = ca.Routes[0].Params(version)
+				canoParams = ca.Routes[0].Params()
 			}
 		}
-
 		data := ResourceData{
 			Name:              codegen.Goify(r.Name, true),
 			Identifier:        identifier,
@@ -401,33 +372,22 @@ func (g *Generator) generateHrefs(verdir string, version *design.APIVersionDefin
 
 // generateMediaTypes iterates through the media types and generate the data structures and
 // marshaling code.
-func (g *Generator) generateMediaTypes(verdir string, version *design.APIVersionDefinition) error {
-	mtFile := filepath.Join(verdir, "media_types.go")
+func (g *Generator) generateMediaTypes(api *design.APIDefinition) error {
+	mtFile := filepath.Join(AppOutputDir(), "media_types.go")
 	mtWr, err := NewMediaTypesWriter(mtFile)
 	if err != nil {
 		panic(err) // bug
 	}
-	title := fmt.Sprintf("%s: Application Media Types", version.Context())
+	title := fmt.Sprintf("%s: Application Media Types", api.Context())
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("time"),
 	}
-	if !version.IsDefault() {
-		appPkg, err := AppPackagePath()
-		if err != nil {
-			return err
-		}
-		imports = append(imports, codegen.SimpleImport(appPkg))
-	}
-	mtWr.WriteHeader(title, packageName(version), imports)
-	err = version.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
-		data := &MediaTypeTemplateData{
-			MediaType:  mt,
-			Versioned:  version.Version != "",
-			DefaultPkg: TargetPackage,
-		}
+	mtWr.WriteHeader(title, TargetPackage, imports)
+	err = api.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
 		if mt.Type.IsObject() || mt.Type.IsArray() {
-			return mtWr.Execute(data)
+			return mtWr.Execute(mt)
 		}
 		return nil
 	})
@@ -440,32 +400,21 @@ func (g *Generator) generateMediaTypes(verdir string, version *design.APIVersion
 
 // generateUserTypes iterates through the user types and generates the data structures and
 // marshaling code.
-func (g *Generator) generateUserTypes(verdir string, version *design.APIVersionDefinition) error {
-	utFile := filepath.Join(verdir, "user_types.go")
+func (g *Generator) generateUserTypes(api *design.APIDefinition) error {
+	utFile := filepath.Join(AppOutputDir(), "user_types.go")
 	utWr, err := NewUserTypesWriter(utFile)
 	if err != nil {
 		panic(err) // bug
 	}
-	title := fmt.Sprintf("%s: Application User Types", version.Context())
+	title := fmt.Sprintf("%s: Application User Types", api.Context())
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("time"),
 	}
-	if !version.IsDefault() {
-		appPkg, err := AppPackagePath()
-		if err != nil {
-			return err
-		}
-		imports = append(imports, codegen.SimpleImport(appPkg))
-	}
-	utWr.WriteHeader(title, packageName(version), imports)
-	err = version.IterateUserTypes(func(t *design.UserTypeDefinition) error {
-		data := &UserTypeTemplateData{
-			UserType:   t,
-			Versioned:  version.Version != "",
-			DefaultPkg: TargetPackage,
-		}
-		return utWr.Execute(data)
+	utWr.WriteHeader(title, TargetPackage, imports)
+	err = api.IterateUserTypes(func(t *design.UserTypeDefinition) error {
+		return utWr.Execute(t)
 	})
 	g.genfiles = append(g.genfiles, utFile)
 	if err != nil {
