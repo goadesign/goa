@@ -90,6 +90,6 @@ func InitDesign() {
 
 	// Initialize package variables
 	design.Design = api
-	dslengine.Roots = []dslengine.Root{api}
+	dslengine.Register(api)
 	design.GeneratedMediaTypes = nil
 }

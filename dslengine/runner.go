@@ -17,14 +17,7 @@ var (
 	// Global DSL evaluation stack
 	ctxStack contextStack
 
-	// Roots contains the root definition sets built by the DSLs.
-	// DSL implementations should append to it to ensure the DSL gets executed by the runner.
-	// Note that a root definition is a different concept from a "top level" definition (i.e. a
-	// definition that is an entry point in the DSL). In particular a root definition may include
-	// an arbitrary number of definition sets forming a tree of definitions.
-	// For example the API DSL only has one root definition (the API definition) but many top level
-	// definitions (API, Version, Type, MediaType etc.) all defining a definition set.
-	Roots []Root
+	roots *rootDefinitions
 )
 
 type (
@@ -44,23 +37,23 @@ type (
 	contextStack []Definition
 )
 
-// Run runs the given root definitions. It iterates over the definition sets multiple times to
-// first execute the DSL, the validate the resulting definitions and finally finalize them.
-// The executed DSL may append new roots to the Roots Design package variable to have them be
-// executed (last) in the same run.
+// Run runs the given root definitions. It iterates over the definition sets
+// multiple times to first execute the DSL, the validate the resulting
+// definitions and finally finalize them. The executed DSL may register new
+// roots to have them be executed (last) in the same run.
 func Run() error {
-	if len(Roots) == 0 {
+	if len(roots.roots) == 0 {
 		return nil
 	}
 	Errors = nil
 
 	executed := 0
 	recursed := 0
-	for executed < len(Roots) {
+	for executed < len(roots.roots) {
 		recursed++
 		start := executed
-		executed = len(Roots)
-		for _, root := range Roots[start:] {
+		executed = len(roots.roots)
+		for _, root := range roots.roots[start:] {
 			root.IterateSets(runSet)
 		}
 		if recursed > 100 {
@@ -71,13 +64,13 @@ func Run() error {
 	if Errors != nil {
 		return Errors
 	}
-	for _, root := range Roots {
+	for _, root := range roots.roots {
 		root.IterateSets(validateSet)
 	}
 	if Errors != nil {
 		return Errors
 	}
-	for _, root := range Roots {
+	for _, root := range roots.roots {
 		root.IterateSets(finalizeSet)
 	}
 

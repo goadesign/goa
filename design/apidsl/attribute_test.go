@@ -41,7 +41,7 @@ var _ = Describe("ContainerDefinition", func() {
 		InitDesign()
 		att = &AttributeDefinition{Type: Object{}}
 		t := &TestCD{AttributeDefinition: att}
-		dslengine.Roots = append(dslengine.Roots, t)
+		dslengine.Register(t)
 	})
 
 	JustBeforeEach(func() {
@@ -50,7 +50,14 @@ var _ = Describe("ContainerDefinition", func() {
 	})
 
 	It("contains attributes", func() {
-		Ω(dslengine.Roots[1].(*TestCD).Attribute()).Should(Equal(att))
+		var t *TestCD
+		dslengine.Roots().IterateRoots(func(root dslengine.Root) error {
+			if r, ok := root.(*TestCD); ok {
+				t = r
+			}
+			return nil
+		})
+		Ω(t.Attribute()).Should(Equal(att))
 	})
 })
 

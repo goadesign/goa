@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/utils"
 	"github.com/spf13/cobra"
@@ -22,8 +23,11 @@ type Generator struct {
 }
 
 // Generate is the generator entry point called by the meta generator.
-func Generate(roots []interface{}) (files []string, err error) {
-	api := roots[0].(*design.APIDefinition)
+func Generate(roots dslengine.RootDefinitions) (files []string, err error) {
+	api, err := design.FindAPIDefinition(roots)
+	if err != nil {
+		return nil, err
+	}
 	g := new(Generator)
 	root := &cobra.Command{
 		Use:   "goagen",

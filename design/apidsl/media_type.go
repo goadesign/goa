@@ -325,7 +325,7 @@ func Link(name string, view ...string) {
 func CollectionOf(v interface{}, apidsl ...func()) *design.MediaTypeDefinition {
 	if design.GeneratedMediaTypes == nil {
 		design.GeneratedMediaTypes = make(design.MediaTypeRoot)
-		dslengine.Roots = append(dslengine.Roots, design.GeneratedMediaTypes)
+		dslengine.Register(design.GeneratedMediaTypes)
 	}
 	var m *design.MediaTypeDefinition
 	var ok bool
