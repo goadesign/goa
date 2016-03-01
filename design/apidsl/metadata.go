@@ -8,23 +8,23 @@ package apidsl
 // While keys can have any value the following names are
 // handled explicitly by goagen:
 //
-// "struct:tag=xxx": sets the struct field tag xxx on generated structs.
+// "struct:tag:xxx": sets the struct field tag xxx on generated structs.
 //               Overrides tags that goagen would otherwise set.
 //               If the metadata value is a slice then the
 //               strings are joined with the space character as
 //               separator.
+//    Example:
+//        Metadata("struct:tag:json", "myName,omitempty")
+//        Metadata("struct:tag:xml", "myName,attr")
 //
-// "swagger:tag=xxx": sets the Swagger object field tag xxx. The value
-//               must be one to three strings. The first string is
-//               the tag description while the second and third strings
-//               are the documentation url and description for the tag.
-//               Subsequent calls to Metadata on the same attribute
-//               with key "swagger:tag" builds up the Swagger tag list.
+// "swagger:tag:xxx": sets the Swagger object field tag xxx.
 //
-// Usage:
-//        Metadata("struct:tag=json", "myName,omitempty")
-//        Metadata("struct:tag=xml", "myName,attr")
-//        Metadata("swagger:tag=backend")
+//    Example:
+//        Metadata("swagger:tag:Backend")
+//        Metadata("swagger:tag:Backend:desc", "Quick description of what 'Backend' is")
+//        Metadata("swagger:tag:Backend:url", "http://example.com")
+//        Metadata("swagger:tag:Backend:url:desc", "See more docs here")
+//
 func Metadata(name string, value ...string) {
 	if at, ok := attributeDefinition(false); ok {
 		if at.Metadata == nil {
