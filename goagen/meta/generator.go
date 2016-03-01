@@ -117,7 +117,6 @@ func (m *Generator) generateToolSourceCode(pkg *codegen.Package) {
 	file := pkg.CreateSourceFile("main.go")
 	imports := append(m.Imports,
 		codegen.SimpleImport("fmt"),
-		codegen.SimpleImport("os"),
 		codegen.SimpleImport("strings"),
 		codegen.SimpleImport("github.com/goadesign/goa/dslengine"),
 		codegen.NewImport("_", filepath.ToSlash(codegen.DesignPackagePath)),
@@ -177,10 +176,10 @@ func main() {
 	if dslengine.Errors != nil {
 		err = dslengine.Errors
 	}
-	failOnError(err)
+	dslengine.FailOnError(err)
 
 	// Now run the secondary DSLs
-	failOnError(dslengine.Run())
+	dslengine.FailOnError(dslengine.Run())
 
 	// Now take the results and call the generator with it
 	roots := make([]interface{}, len(dslengine.Roots))
@@ -188,15 +187,8 @@ func main() {
 		roots[i] = r
 	}
 	files, err := {{.Genfunc}}(roots)
-	failOnError(err)
+	dslengine.FailOnError(err)
 
 	// We're done
 	fmt.Println(strings.Join(files, "\n"))
-}
-
-func failOnError(err error) {
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err)
-		os.Exit(1)
-	}
 }`
