@@ -453,7 +453,20 @@ func (h *Hash) MakeMap(pair map[interface{}]interface{}) interface{} {
 	for key, value := range pair {
 		rkey, rvalue := reflect.ValueOf(key), reflect.ValueOf(value)
 		if !newMap.IsValid() {
-			newMap = reflect.MakeMap(reflect.MapOf(rkey.Type(), rvalue.Type()))
+			var keyType reflect.Type
+			var valType reflect.Type
+			if rkey.IsValid() {
+				keyType = rkey.Type()
+			} else {
+				// This seems to be the only way to get an interface{} Type
+				valType = reflect.TypeOf((*interface{})(nil)).Elem()
+			}
+			if rvalue.IsValid() {
+				valType = rvalue.Type()
+			} else {
+				valType = reflect.TypeOf((*interface{})(nil)).Elem()
+			}
+			newMap = reflect.MakeMap(reflect.MapOf(keyType, valType))
 		}
 		newMap.SetMapIndex(rkey, rvalue)
 	}
