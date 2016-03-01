@@ -142,6 +142,20 @@ func (m MultiError) Error() string {
 	return strings.Join(msgs, "\n")
 }
 
+func FailOnError(err error) {
+	if merr, ok := err.(MultiError); ok {
+		if len(merr) == 0 {
+			return
+		}
+		fmt.Fprintf(os.Stderr, merr.Error())
+		os.Exit(1)
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+}
+
 // Error returns the underlying error message.
 func (de *Error) Error() string {
 	if err := de.GoError; err != nil {
