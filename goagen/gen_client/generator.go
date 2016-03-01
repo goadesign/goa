@@ -195,6 +195,22 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 		g.genfiles = append(g.genfiles, filename)
 
 		if err := res.IterateActions(func(action *design.ActionDefinition) error {
+			if action.Params != nil {
+				params := make(design.Object, len(action.QueryParams.Type.ToObject()))
+				for n, param := range action.QueryParams.Type.ToObject() {
+					name := codegen.Goify(n, false)
+					params[name] = param
+				}
+				action.QueryParams.Type = params
+			}
+			if action.Headers != nil {
+				headers := make(design.Object, len(action.Headers.Type.ToObject()))
+				for n, header := range action.Headers.Type.ToObject() {
+					name := codegen.Goify(n, false)
+					headers[name] = header
+				}
+				action.Headers.Type = headers
+			}
 			return clientsTmpl.Execute(file, action)
 		}); err != nil {
 			return err
