@@ -46,11 +46,9 @@ var _ = Describe("Generate", func() {
 	Context("with a dummy API", func() {
 		BeforeEach(func() {
 			design.Design = &design.APIDefinition{
-				APIVersionDefinition: &design.APIVersionDefinition{
-					Name:        "test api",
-					Title:       "dummy API with no resource",
-					Description: "I told you it's dummy",
-				},
+				Name:        "test api",
+				Title:       "dummy API with no resource",
+				Description: "I told you it's dummy",
 			}
 		})
 

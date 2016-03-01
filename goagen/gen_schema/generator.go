@@ -96,7 +96,7 @@ func (g *Generator) Cleanup() {
 
 const jsonSchemaCtrl = `
 // MountController mounts the API JSON schema controller under "/schema.json".
-func MountController(service goa.Service) {
+func MountController(service *goa.Service) {
 	service.ServeFiles("/schema.json", "schema/schema.json")
 }
 `

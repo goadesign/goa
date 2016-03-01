@@ -42,11 +42,9 @@ var _ = Describe("Generate", func() {
 	Context("with a dummy API", func() {
 		BeforeEach(func() {
 			design.Design = &design.APIDefinition{
-				APIVersionDefinition: &design.APIVersionDefinition{
-					Name:        "test api",
-					Title:       "dummy API with no resource",
-					Description: "I told you it's dummy",
-				},
+				Name:        "test api",
+				Title:       "dummy API with no resource",
+				Description: "I told you it's dummy",
 			}
 		})
 
@@ -68,7 +66,7 @@ var _ = Describe("Generate", func() {
 	})
 
 	Context("with a simple API", func() {
-		var contextsCode, controllersCode, hrefsCode, mediaTypesCode, version string
+		var contextsCode, controllersCode, hrefsCode, mediaTypesCode string
 		var payload *design.UserTypeDefinition
 
 		isSource := func(filename, content string) {
@@ -113,9 +111,9 @@ var _ = Describe("Generate", func() {
 
 		BeforeEach(func() {
 			payload = nil
-			required := dslengine.ValidationDefinition(&dslengine.RequiredValidationDefinition{
-				Names: []string{"id"},
-			})
+			required := &dslengine.ValidationDefinition{
+				Required: []string{"id"},
+			}
 			idAt := design.AttributeDefinition{
 				Type:        design.String,
 				Description: "widget id",
@@ -124,7 +122,7 @@ var _ = Describe("Generate", func() {
 				Type: design.Object{
 					"id": &idAt,
 				},
-				Validations: []dslengine.ValidationDefinition{required},
+				Validation: required,
 			}
 			resp := design.ResponseDefinition{
 				Name:        "ok",
@@ -164,26 +162,24 @@ var _ = Describe("Generate", func() {
 				UserTypeDefinition: &ut,
 				Identifier:         "vnd.rightscale.codegen.test.widgets",
 				Views: map[string]*design.ViewDefinition{
-					"default": &design.ViewDefinition{
+					"default": {
 						AttributeDefinition: ut.AttributeDefinition,
 						Name:                "default",
 					},
 				},
 			}
 			design.Design = &design.APIDefinition{
-				APIVersionDefinition: &design.APIVersionDefinition{
-					Name:        "test api",
-					Title:       "dummy API with no resource",
-					Description: "I told you it's dummy",
-				},
-				Resources:  map[string]*design.ResourceDefinition{"Widget": &res},
-				MediaTypes: map[string]*design.MediaTypeDefinition{"vnd.rightscale.codegen.test.widgets": &mt},
+				Name:        "test api",
+				Title:       "dummy API with no resource",
+				Description: "I told you it's dummy",
+				Resources:   map[string]*design.ResourceDefinition{"Widget": &res},
+				MediaTypes:  map[string]*design.MediaTypeDefinition{"vnd.rightscale.codegen.test.widgets": &mt},
 			}
 		})
 
 		Context("", func() {
 			BeforeEach(func() {
-				runCodeTemplates(map[string]string{"outDir": outDir, "design": "foo", "version": "", "tmpDir": filepath.Base(outDir)})
+				runCodeTemplates(map[string]string{"outDir": outDir, "design": "foo", "tmpDir": filepath.Base(outDir)})
 			})
 
 			It("generates the corresponding code", func() {
@@ -193,33 +189,6 @@ var _ = Describe("Generate", func() {
 				isSource("contexts.go", contextsCode)
 				isSource("controllers.go", controllersCode)
 				isSource("hrefs.go", hrefsCode)
-				isSource("media_types.go", mediaTypesCode)
-			})
-		})
-
-		Context("that is versioned", func() {
-			BeforeEach(func() {
-				version = "v1"
-				design.Design.APIVersions = make(map[string]*design.APIVersionDefinition)
-				verDef := &design.APIVersionDefinition{}
-				verDef.Version = version
-				design.Design.APIVersions[version] = verDef
-				design.Design.Resources["Widget"].APIVersions = []string{version}
-				runCodeTemplates(map[string]string{
-					"outDir":  outDir,
-					"tmpDir":  filepath.Base(outDir),
-					"design":  "foo",
-					"version": version,
-				})
-			})
-
-			It("generates the versioned code", func() {
-				Ω(genErr).Should(BeNil())
-				Ω(files).Should(HaveLen(11))
-
-				isSource(version+"/contexts.go", contextsCode)
-				isSource(version+"/controllers.go", controllersCode)
-				isSource(version+"/hrefs.go", hrefsCode)
 				isSource("media_types.go", mediaTypesCode)
 			})
 		})
@@ -234,7 +203,7 @@ var _ = Describe("Generate", func() {
 					TypeName: "Collection",
 				}
 				design.Design.Resources["Widget"].Actions["get"].Payload = payload
-				runCodeTemplates(map[string]string{"outDir": outDir, "design": "foo", "version": "", "tmpDir": filepath.Base(outDir)})
+				runCodeTemplates(map[string]string{"outDir": outDir, "design": "foo", "tmpDir": filepath.Base(outDir)})
 			})
 
 			It("generates the correct payload assignment code", func() {
@@ -335,10 +304,35 @@ var _ = Describe("BuildEncoderMap", func() {
 			Ω(jd.MIMETypes).Should(ConsistOf(interface{}(mimeTypes[0]), interface{}(mimeTypes[1])))
 		})
 	})
+
+	Context("with a definition using a custom decoding package for a known encoding", func() {
+		const packagePath = "github.com/goadesign/goa/design" // Just to pick something always available
+		var mimeTypes = []string{"application/json"}
+
+		BeforeEach(func() {
+			simple := &design.EncodingDefinition{
+				PackagePath: packagePath,
+				MIMETypes:   mimeTypes,
+			}
+			info = append(info, simple)
+		})
+
+		It("generates a map with a single entry using the generic decoder factory name", func() {
+			Ω(resErr).ShouldNot(HaveOccurred())
+			Ω(data).Should(HaveLen(1))
+			Ω(data).Should(HaveKey(packagePath))
+			jd := data[packagePath]
+			Ω(jd).ShouldNot(BeNil())
+			Ω(jd.PackagePath).Should(Equal(packagePath))
+			Ω(jd.PackageName).Should(Equal("design"))
+			Ω(jd.Factory).Should(Equal("DecoderFactory"))
+		})
+
+	})
 })
 
 const contextsCodeTmpl = `//************************************************************************//
-// API "test api"{{if .version}} version {{.version}}{{end}}: Application Contexts
+// API "test api": Application Contexts
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
@@ -348,42 +342,43 @@ const contextsCodeTmpl = `//****************************************************
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
-package {{if .version}}{{.version}}{{else}}app{{end}}
+package app
 
-import {{if .version}}(
-	"{{.tmpDir}}/app"
-	{{end}}"github.com/goadesign/goa"{{if .version}}
-){{end}}
+import (
+	"github.com/goadesign/goa"
+	"golang.org/x/net/context"
+)
 
 // GetWidgetContext provides the Widget get action context.
 type GetWidgetContext struct {
-	*goa.Context{{if .version}}
-	ID         string
-	APIVersion string{{else}}
-	ID string{{end}}
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	ID string
 }
 
 // NewGetWidgetContext parses the incoming request URL and body, performs validations and creates the
 // context used by the Widget controller get action.
-func NewGetWidgetContext(c *goa.Context) (*GetWidgetContext, error) {
+func NewGetWidgetContext(ctx context.Context) (*GetWidgetContext, error) {
 	var err error
-	ctx := GetWidgetContext{Context: c}
-	rawID := c.Get("id")
+	req := goa.Request(ctx)
+	rctx := GetWidgetContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	rawID := req.Params.Get("id")
 	if rawID != "" {
-		ctx.ID = rawID
+		rctx.ID = rawID
 	}
-	return &ctx, err
+	return &rctx, err
 }
 
 // OK sends a HTTP response with status code 200.
-func (ctx *GetWidgetContext) OK(resp {{if .version}}app.{{end}}ID) error {
-	ctx.Header().Set("Content-Type", "vnd.rightscale.codegen.test.widgets")
-	return ctx.Respond(200, resp)
+func (ctx *GetWidgetContext) OK(r ID) error {
+	ctx.ResponseData.Header().Set("Content-Type", "vnd.rightscale.codegen.test.widgets")
+	return ctx.ResponseData.Send(ctx.Context, 200, r)
 }
 `
 
 const controllersCodeTmpl = `//************************************************************************//
-// API "test api"{{if .version}} version {{.version}}{{end}}: Application Controllers
+// API "test api": Application Controllers
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
@@ -393,38 +388,50 @@ const controllersCodeTmpl = `//*************************************************
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
-package {{if .version}}{{.version}}{{else}}app{{end}}
+package app
 
-import "github.com/goadesign/goa"
+import (
+	"github.com/goadesign/goa"
+	"golang.org/x/net/context"
+	"net/http"
+)
+
+// inited is true if initService has been called
+var inited = false
+
+// initService sets up the service encoders, decoders and mux.
+func initService(service *goa.Service) {
+	if inited {
+		return
+	}
+	inited = true
+	// Setup encoders and decoders
+}
 
 // WidgetController is the controller interface for the Widget actions.
 type WidgetController interface {
-	goa.Controller
+	goa.Muxer
 	Get(*GetWidgetContext) error
 }
 
 // MountWidgetController "mounts" a Widget resource controller on the given service.
-func MountWidgetController(service goa.Service, ctrl WidgetController) {
-	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
-
-	// Setup endpoint handler
+func MountWidgetController(service *goa.Service, ctrl WidgetController) {
+	initService(service)
 	var h goa.Handler
-	mux := service.{{if .version}}Version("{{.version}}").ServeMux(){{else}}ServeMux(){{end}}
-	h = func(c *goa.Context) error {
-		ctx, err := NewGetWidgetContext(c)
-{{if .version}}		ctx.APIVersion = service.Version("{{.version}}").VersionName()
-{{end}}		if err != nil {
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		rctx, err := NewGetWidgetContext(ctx)
+		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
-		return ctrl.Get(ctx)
+		return ctrl.Get(rctx)
 	}
-	mux.Handle("GET", "/:id", ctrl.HandleFunc("Get", h, nil))
-	service.Info("mount", "ctrl", "Widget",{{if .version}} "version", "{{.version}}",{{end}} "action", "Get", "route", "GET /:id")
+	service.Mux.Handle("GET", "/:id", ctrl.MuxHandler("Get", h, nil))
+	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Widget"}, goa.KV{"action", "Get"}, goa.KV{"route", "GET /:id"})
 }
 `
 
 const hrefsCodeTmpl = `//************************************************************************//
-// API "test api"{{if .version}} version {{.version}}{{end}}: Application Resource Href Factories
+// API "test api": Application Resource Href Factories
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
@@ -434,7 +441,7 @@ const hrefsCodeTmpl = `//*******************************************************
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
-package {{if .version}}{{.version}}{{else}}app{{end}}
+package app
 
 import "fmt"
 
@@ -460,31 +467,30 @@ package app
 
 const controllersSlicePayloadCode = `
 // MountWidgetController "mounts" a Widget resource controller on the given service.
-func MountWidgetController(service goa.Service, ctrl WidgetController) {
-	// Setup encoders and decoders. This is idempotent and is done by each MountXXX function.
-
-	// Setup endpoint handler
+func MountWidgetController(service *goa.Service, ctrl WidgetController) {
+	initService(service)
 	var h goa.Handler
-	mux := service.ServeMux()
-	h = func(c *goa.Context) error {
-		ctx, err := NewGetWidgetContext(c)
-		ctx.Payload = ctx.RawPayload().(Collection)
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		rctx, err := NewGetWidgetContext(ctx)
 		if err != nil {
 			return goa.NewBadRequestError(err)
 		}
-		return ctrl.Get(ctx)
+		if rawPayload := goa.Request(ctx).Payload; rawPayload != nil {
+			rctx.Payload = rawPayload.(Collection)
+		}
+		return ctrl.Get(rctx)
 	}
-	mux.Handle("GET", "/:id", ctrl.HandleFunc("Get", h, unmarshalGetWidgetPayload))
-	service.Info("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
+	service.Mux.Handle("GET", "/:id", ctrl.MuxHandler("Get", h, unmarshalGetWidgetPayload))
+	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Widget"}, goa.KV{"action", "Get"}, goa.KV{"route", "GET /:id"})
 }
 
-// unmarshalGetWidgetPayload unmarshals the request body.
-func unmarshalGetWidgetPayload(ctx *goa.Context) error {
-	payload := &Collection{}
-	if err := ctx.Service().DecodeRequest(ctx, payload); err != nil {
+// unmarshalGetWidgetPayload unmarshals the request body into the context request data Payload field.
+func unmarshalGetWidgetPayload(ctx context.Context, req *http.Request) error {
+	var payload Collection
+	if err := goa.RequestService(ctx).DecodeRequest(req, &payload); err != nil {
 		return err
 	}
-	ctx.SetPayload(payload)
+	goa.Request(ctx).Payload = payload
 	return nil
 }
 `

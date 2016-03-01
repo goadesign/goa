@@ -23,6 +23,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -93,10 +94,6 @@ const (
 	// specified in the design definition or more elements than the
 	// maximum length.
 	ErrInvalidLength
-
-	// ErrInvalidVersion is the error rendered by the default mux when a
-	// request specifies an invalid version.
-	ErrInvalidVersion
 )
 
 // Title returns a human friendly error title
@@ -122,8 +119,6 @@ func (k ErrorID) Title() string {
 		return "invalid value range"
 	case ErrInvalidLength:
 		return "invalid value length"
-	case ErrInvalidVersion:
-		return "invalid version"
 	}
 	return "unknown error"
 }
@@ -143,6 +138,7 @@ func (t *TypedError) MarshalJSON() ([]byte, error) {
 
 // Error builds an error message from the typed error details.
 func (t *TypedError) Error() string {
+	IncrCounter([]string{"goa", "error", strconv.Itoa(int(t.ID))}, 1.0)
 	js, err := json.Marshal(t)
 	if err != nil {
 		return `{"id":0,"title":"generic","msg":"failed to serialize error"}`

@@ -1,6 +1,8 @@
 package design
 
 import (
+	"sort"
+
 	"github.com/goadesign/goa/dslengine"
 )
 
@@ -14,8 +16,8 @@ type (
 		Reference DataType
 		// Optional description
 		Description string
-		// Optional validation functions
-		Validations []dslengine.ValidationDefinition
+		// Optional validations
+		Validation *dslengine.ValidationDefinition
 		// Metadata is a list of key/value pairs
 		Metadata dslengine.MetadataDefinition
 		// Optional member default value
@@ -24,8 +26,6 @@ type (
 		Example interface{}
 		// Optional view used to render Attribute (only applies to media type attributes).
 		View string
-		// List of API versions that use the attribute.
-		APIVersions []string
 		// NonZeroAttributes lists the names of the child attributes that cannot have a
 		// zero value (and thus whose presence does not need to be validated).
 		NonZeroAttributes map[string]bool
@@ -42,9 +42,6 @@ type (
 		// Attribute returns the container definition embedded attribute.
 		Attribute() *AttributeDefinition
 	}
-
-	// VersionIterator is the type of functions given to IterateVersions.
-	VersionIterator func(v *APIVersionDefinition) error
 )
 
 // Context returns the generic definition name used in error messages.
@@ -57,11 +54,10 @@ func (a *AttributeDefinition) Context() string {
 // This happens when the DSL uses references for example. So traverse the hierarchy and collect
 // all the required validations.
 func (a *AttributeDefinition) AllRequired() (required []string) {
-	for _, v := range a.Validations {
-		if req, ok := v.(*dslengine.RequiredValidationDefinition); ok {
-			required = append(required, req.Names...)
-		}
+	if a.Validation == nil {
+		return
 	}
+	required = a.Validation.Required
 	if ds, ok := a.Type.(DataStructure); ok {
 		required = append(required, ds.Definition().AllRequired()...)
 	}
@@ -136,9 +132,9 @@ func (a *AttributeDefinition) SetExample(example interface{}) bool {
 	return false
 }
 
-// finalizeExample goes through each Example and conslidate all of the information it knows i.e.
+// finalizeExample goes through each Example and consolidates all of the information it knows i.e.
 // a custom example or auto-generate for the user. It also tracks whether we've randomized
-// the entire example; if so, we shall re-generate the random value for Array/Hash
+// the entire example; if so, we shall re-generate the random value for Array/Hash.
 func (a *AttributeDefinition) finalizeExample(stack []*AttributeDefinition) (interface{}, bool) {
 	if a.Example != nil || a.isCustomExample {
 		return a.Example, a.isCustomExample
@@ -147,18 +143,29 @@ func (a *AttributeDefinition) finalizeExample(stack []*AttributeDefinition) (int
 	// note: must traverse each node to finalize the examples unless given
 	switch true {
 	case a.Type.IsArray():
-		example, isCustom := a.Type.ToArray().ElemType.finalizeExample(stack)
-		a.Example, a.isCustomExample = []interface{}{example}, isCustom
+		ary := a.Type.ToArray()
+		example, isCustom := ary.ElemType.finalizeExample(stack)
+		a.Example, a.isCustomExample = ary.MakeSlice([]interface{}{example}), isCustom
 	case a.Type.IsHash():
-		exampleK, isCustomK := a.Type.ToHash().KeyType.finalizeExample(stack)
-		exampleV, isCustomV := a.Type.ToHash().ElemType.finalizeExample(stack)
-		a.Example, a.isCustomExample = map[interface{}]interface{}{exampleK: exampleV}, isCustomK || isCustomV
+		h := a.Type.ToHash()
+		exampleK, isCustomK := h.KeyType.finalizeExample(stack)
+		exampleV, isCustomV := h.ElemType.finalizeExample(stack)
+		a.Example, a.isCustomExample = h.MakeMap(map[interface{}]interface{}{exampleK: exampleV}), isCustomK || isCustomV
 	case a.Type.IsObject():
 		// keep track of the type id, in case of a cyclical situation
 		stack = append(stack, a)
 
+		// ensure fixed ordering
+		aObj := a.Type.ToObject()
+		keys := make([]string, 0, len(aObj))
+		for n := range aObj {
+			keys = append(keys, n)
+		}
+		sort.Strings(keys)
+
 		example, hasCustom, isCustom := map[string]interface{}{}, false, false
-		for n, att := range a.Type.ToObject() {
+		for _, n := range keys {
+			att := aObj[n]
 			// avoid a cyclical dependency
 			isCyclical := false
 			if ssize := len(stack); ssize > 0 {
@@ -267,18 +274,13 @@ func (a *AttributeDefinition) inheritRecursive(parent *AttributeDefinition) {
 }
 
 func (a *AttributeDefinition) inheritValidations(parent *AttributeDefinition) {
-	for _, v := range parent.Validations {
-		found := false
-		for _, vc := range a.Validations {
-			if v == vc {
-				found = true
-				break
-			}
-		}
-		if !found {
-			a.Validations = append(a.Validations, parent)
-		}
+	if parent.Validation == nil {
+		return
 	}
+	if a.Validation == nil {
+		a.Validation = &dslengine.ValidationDefinition{}
+	}
+	a.Validation.AddRequired(parent.Validation.Required)
 }
 
 func (a *AttributeDefinition) shouldInherit(parent *AttributeDefinition) bool {

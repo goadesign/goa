@@ -14,20 +14,145 @@ var _ = Describe("code generation", func() {
 		codegen.TempCount = 0
 	})
 
+	Describe("Goify", func() {
+		Context("given a string with an initialism", func() {
+			var str, goified, expected string
+			var firstUpper bool
+			JustBeforeEach(func() {
+				goified = codegen.Goify(str, firstUpper)
+			})
+
+			Context("with first upper false", func() {
+				BeforeEach(func() {
+					firstUpper = false
+					str = "blue_id"
+					expected = "blueID"
+				})
+				It("creates a lowercased camelcased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+			Context("with first upper false normal identifier", func() {
+				BeforeEach(func() {
+					firstUpper = false
+					str = "blue"
+					expected = "blue"
+				})
+				It("creates an uppercased camelcased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+			Context("with first upper false and UUID", func() {
+				BeforeEach(func() {
+					firstUpper = false
+					str = "blue_uuid"
+					expected = "blueUUID"
+				})
+				It("creates an uppercased camelcased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+			Context("with first upper true", func() {
+				BeforeEach(func() {
+					firstUpper = true
+					str = "blue_id"
+					expected = "BlueID"
+				})
+				It("creates an uppercased camelcased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+			Context("with first upper true and UUID", func() {
+				BeforeEach(func() {
+					firstUpper = true
+					str = "blue_uuid"
+					expected = "BlueUUID"
+				})
+				It("creates an uppercased camelcased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+			Context("with first upper true normal identifier", func() {
+				BeforeEach(func() {
+					firstUpper = true
+					str = "blue"
+					expected = "Blue"
+				})
+				It("creates an uppercased camelcased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+			Context("with first upper false normal identifier", func() {
+				BeforeEach(func() {
+					firstUpper = false
+					str = "Blue"
+					expected = "blue"
+				})
+				It("creates a lowercased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+			Context("with first upper true normal identifier", func() {
+				BeforeEach(func() {
+					firstUpper = true
+					str = "Blue"
+					expected = "Blue"
+				})
+				It("creates an uppercased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+			Context("with invalid identifier", func() {
+				BeforeEach(func() {
+					firstUpper = true
+					str = "Blue%50"
+					expected = "Blue50"
+				})
+				It("creates an uppercased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+
+			Context("with invalid identifier firstupper false", func() {
+				BeforeEach(func() {
+					firstUpper = false
+					str = "Blue%50"
+					expected = "blue50"
+				})
+				It("creates an uppercased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+
+			Context("with only UUID and firstupper false", func() {
+				BeforeEach(func() {
+					firstUpper = false
+					str = "UUID"
+					expected = "uuid"
+				})
+				It("creates a lowercased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+
+		})
+
+	})
+
 	Describe("GoTypeDef", func() {
 		Context("given an attribute definition with fields", func() {
 			var att *AttributeDefinition
 			var object Object
-			var required *dslengine.RequiredValidationDefinition
+			var required *dslengine.ValidationDefinition
 			var st string
 
 			JustBeforeEach(func() {
 				att = new(AttributeDefinition)
 				att.Type = object
 				if required != nil {
-					att.Validations = []dslengine.ValidationDefinition{required}
+					att.Validation = required
 				}
-				st = codegen.GoTypeDef(att, false, "", 0, true)
+				st = codegen.GoTypeDef(att, 0, true)
 			})
 
 			Context("of primitive types", func() {
@@ -138,8 +263,8 @@ var _ = Describe("code generation", func() {
 					object = Object{
 						"foo": &AttributeDefinition{Type: Integer},
 					}
-					required = &dslengine.RequiredValidationDefinition{
-						Names: []string{"foo"},
+					required = &dslengine.ValidationDefinition{
+						Required: []string{"foo"},
 					}
 				})
 
@@ -160,7 +285,7 @@ var _ = Describe("code generation", func() {
 			JustBeforeEach(func() {
 				array := &Array{ElemType: elemType}
 				att := &AttributeDefinition{Type: array}
-				source = codegen.GoTypeDef(att, false, "", 0, true)
+				source = codegen.GoTypeDef(att, 0, true)
 			})
 
 			Context("of primitive type", func() {

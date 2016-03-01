@@ -54,47 +54,53 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		}
 	}()
 
-	s, err := New(api)
-	if err != nil {
-		return
-	}
-	b, err := json.Marshal(s)
-	if err != nil {
-		return
-	}
 	swaggerDir := filepath.Join(codegen.OutputDir, "swagger")
 	os.RemoveAll(swaggerDir)
 	if err = os.MkdirAll(swaggerDir, 0755); err != nil {
-		return
+		return nil, err
 	}
 	genfiles = append(genfiles, swaggerDir)
+	s, err := New(api)
+	if err != nil {
+		return nil, err
+	}
+	b, err := json.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
 	swaggerFile := filepath.Join(swaggerDir, "swagger.json")
 	err = ioutil.WriteFile(swaggerFile, b, 0644)
 	if err != nil {
-		return
+		return nil, err
 	}
 	genfiles = append(genfiles, swaggerFile)
+	if err != nil {
+		return nil, err
+	}
 	controllerFile := filepath.Join(swaggerDir, "swagger.go")
 	genfiles = append(genfiles, controllerFile)
 	file, err := codegen.SourceFileFor(controllerFile)
 	if err != nil {
-		return
+		return nil, err
 	}
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
 	file.WriteHeader(fmt.Sprintf("%s Swagger Spec", api.Name), "swagger", imports)
-	file.Write([]byte(swagger))
+	err = file.ExecuteTemplate("swagger", swaggerT, nil, api)
+	if err != nil {
+		return nil, err
+	}
 	if err = file.FormatCode(); err != nil {
-		return
+		return nil, err
 	}
 
 	return genfiles, nil
 }
 
-const swagger = `
-// MountController mounts the swagger spec controller under "/swagger.json".
-func MountController(service goa.Service) {
+const swaggerT = `
+// MountController mounts the swagger spec controller.
+func MountController(service *goa.Service) {
 	service.ServeFiles("/swagger.json", "swagger/swagger.json")
 }
 `

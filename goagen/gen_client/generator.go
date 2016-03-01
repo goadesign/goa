@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -116,10 +117,10 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("encoding/json"),
 		codegen.SimpleImport("fmt"),
-		codegen.SimpleImport(clientPkg),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("github.com/spf13/cobra"),
-		codegen.NewImport("log", "gopkg.in/inconshreveable/log15.v2"),
+		codegen.SimpleImport(AppPkg),
+		codegen.SimpleImport(clientPkg),
 	}
 	if err := file.WriteHeader("", "main", imports); err != nil {
 		return err
@@ -141,7 +142,6 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 			data := map[string]interface{}{
 				"Action":   action,
 				"Resource": action.Parent,
-				"Version":  design.Design.APIVersionDefinition,
 			}
 			return commandsTmpl.Execute(file, data)
 		})
@@ -187,6 +187,7 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 		codegen.SimpleImport("net/url"),
 		codegen.SimpleImport("strconv"),
 		codegen.SimpleImport("strings"),
+		codegen.SimpleImport(AppPkg),
 	}
 
 	return api.IterateResources(func(res *design.ResourceDefinition) error {
@@ -201,6 +202,22 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 		g.genfiles = append(g.genfiles, filename)
 
 		if err := res.IterateActions(func(action *design.ActionDefinition) error {
+			if action.Params != nil {
+				params := make(design.Object, len(action.QueryParams.Type.ToObject()))
+				for n, param := range action.QueryParams.Type.ToObject() {
+					name := codegen.Goify(n, false)
+					params[name] = param
+				}
+				action.QueryParams.Type = params
+			}
+			if action.Headers != nil {
+				headers := make(design.Object, len(action.Headers.Type.ToObject()))
+				for n, header := range action.Headers.Type.ToObject() {
+					name := codegen.Goify(n, false)
+					headers[name] = header
+				}
+				action.Headers.Type = headers
+			}
 			return clientsTmpl.Execute(file, action)
 		}); err != nil {
 			return err
@@ -238,6 +255,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		"title":        strings.Title,
 		"flagType":     flagType,
 		"defaultPath":  defaultPath,
+		"appPkg":       appPkg,
 	}
 	clientPkg, err := codegen.PackagePath(codegen.OutputDir)
 	if err != nil {
@@ -410,12 +428,17 @@ func flagType(att *design.AttributeDefinition) string {
 // empty string if none.
 func defaultPath(action *design.ActionDefinition) string {
 	for _, r := range action.Routes {
-		candidate := r.FullPath(design.Design.APIVersionDefinition)
+		candidate := r.FullPath()
 		if !strings.ContainsRune(candidate, ':') {
 			return candidate
 		}
 	}
 	return ""
+}
+
+// appPkg returns the name of the generated application package
+func appPkg() string {
+	return path.Base(AppPkg)
 }
 
 const mainTmpl = `
@@ -535,7 +558,7 @@ func (cmd *{{$cmdName}}) Run(c *client.Client, args []string) error {
 {{$default := defaultPath .Action}}{{if $default}}	path = "{{$default}}"
 {{else}}	return fmt.Errorf("missing path argument")
 {{end}}	}
-{{if .Action.Payload}}var payload {{gotyperefext .Action.Payload 2 "client"}}
+{{if .Action.Payload}}var payload {{gotyperefext .Action.Payload 2 appPkg}}
 	if cmd.Payload != "" {
 		err := json.Unmarshal([]byte(cmd.Payload), &payload)
 		if err != nil {
@@ -557,7 +580,7 @@ func (cmd *{{$cmdName}}) Run(c *client.Client, args []string) error {
 func (cmd *{{$cmdName}}) RegisterFlags(cc *cobra.Command) {
 {{if .Action.Payload}}	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request JSON body")
 {{end}}{{$params := .Action.QueryParams}}{{if $params}}{{range $name, $param := $params.Type.ToObject}}{{$tmp := tempvar}}{{/*
-*/}}{{if not $param.DefaultValue}}	var {{$tmp}} {{gotypedef $param false "" 1 true}}
+*/}}{{if not $param.DefaultValue}}	var {{$tmp}} {{gotypedef $param 1 true}}
 {{end}}	cc.Flags().{{flagType $param}}Var(&cmd.{{goify $name true}}, "{{$name}}", {{if $param.DefaultValue}}{{printf "%#v" $param.DefaultValue}}{{else}}{{$tmp}}{{end}}, "{{$param.Description}}")
 {{end}}{{end}}{{/*
 */}}{{$headers := .Action.Headers}}{{if $headers}}{{range $name, $header := $headers.Type.ToObject}}{{/*
@@ -566,11 +589,8 @@ func (cmd *{{$cmdName}}) RegisterFlags(cc *cobra.Command) {
 {{end}}{{end}}}
 `
 
-const clientsTmpl = `{{$payload := goify (printf "%s%sPayload" .Name (title .Parent.Name)) true}}{{if .Payload}}// {{$payload}} is the data structure used to initialize the {{.Parent.Name}} {{.Name}} request body.
-type {{$payload}} {{gotypedef .Payload false "" 1 true}}
-
-{{end}}{{$funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true}}{{$desc := .Description}}{{if $desc}}// {{$desc}}{{else}}// {{$funcName}} makes a request to the {{.Name}} action endpoint of the {{.Parent.Name}} resource{{end}}
-func (c *Client) {{$funcName}}(path string{{if .Payload}}, payload {{if .Payload.Type.IsObject}}*{{end}}{{$payload}}{{end}}{{/*
+const clientsTmpl = `{{$funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true}}{{$desc := .Description}}{{if $desc}}// {{$desc}}{{else}}// {{$funcName}} makes a request to the {{.Name}} action endpoint of the {{.Parent.Name}} resource{{end}}
+func (c *Client) {{$funcName}}(path string{{if .Payload}}, payload {{if .Payload.Type.IsObject}}*{{end}}{{gotyperefext .Payload 1 appPkg}}{{end}}{{/*
 	*/}}{{$params := join .QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
 	*/}}{{$headers := join .Headers}}{{if $headers}}, {{$headers}}{{end}}) (*http.Response, error) {
 	var body io.Reader

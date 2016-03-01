@@ -6,7 +6,6 @@ import (
 	"reflect"
 
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/dslengine"
 )
 
 type (
@@ -126,11 +125,11 @@ func APISchema(api *design.APIDefinition) *JSONSchema {
 		return nil
 	})
 	links := []*JSONLink{
-		&JSONLink{
+		{
 			Href: ServiceURL,
 			Rel:  "self",
 		},
-		&JSONLink{
+		{
 			Href:   "/schema",
 			Method: "GET",
 			Rel:    "self",
@@ -173,7 +172,7 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 			params := design.DupAtt(a.Params)
 			// We don't want to keep the path params, these are defined inline in the href
 			for _, r := range a.Routes {
-				for _, p := range r.Params(design.Design.APIVersionDefinition) {
+				for _, p := range r.Params() {
 					delete(params.Type.ToObject(), p)
 				}
 			}
@@ -382,38 +381,38 @@ func buildAttributeSchema(api *design.APIDefinition, s *JSONSchema, at *design.A
 	s.DefaultValue = at.DefaultValue
 	s.Description = at.Description
 	s.Example = at.Example
-	for _, val := range at.Validations {
-		switch actual := val.(type) {
-		case *dslengine.EnumValidationDefinition:
-			s.Enum = actual.Values
-		case *dslengine.FormatValidationDefinition:
-			s.Format = actual.Format
-		case *dslengine.PatternValidationDefinition:
-			s.Pattern = actual.Pattern
-		case *dslengine.MinimumValidationDefinition:
-			s.Minimum = actual.Min
-		case *dslengine.MaximumValidationDefinition:
-			s.Maximum = actual.Max
-		case *dslengine.MinLengthValidationDefinition:
-			s.MinLength = actual.MinLength
-		case *dslengine.MaxLengthValidationDefinition:
-			s.MaxLength = actual.MaxLength
-		case *dslengine.RequiredValidationDefinition:
-			s.Required = actual.Names
-		}
+	val := at.Validation
+	if val == nil {
+		return s
 	}
+	s.Enum = val.Values
+	s.Format = val.Format
+	s.Pattern = val.Pattern
+	if val.Minimum != nil {
+		s.Minimum = *val.Minimum
+	}
+	if val.Maximum != nil {
+		s.Maximum = *val.Maximum
+	}
+	if val.MinLength != nil {
+		s.MinLength = *val.MinLength
+	}
+	if val.MaxLength != nil {
+		s.MaxLength = *val.MaxLength
+	}
+	s.Required = val.Required
 	return s
 }
 
 // toSchemaHref produces a href that replaces the path wildcards with JSON schema references when
 // appropriate.
 func toSchemaHref(api *design.APIDefinition, r *design.RouteDefinition) string {
-	params := r.Params(design.Design.APIVersionDefinition)
+	params := r.Params()
 	args := make([]interface{}, len(params))
 	for i, p := range params {
 		args[i] = fmt.Sprintf("/{%s}", p)
 	}
-	tmpl := design.WildcardRegex.ReplaceAllLiteralString(r.FullPath(design.Design.APIVersionDefinition), "%s")
+	tmpl := design.WildcardRegex.ReplaceAllLiteralString(r.FullPath(), "%s")
 	return fmt.Sprintf(tmpl, args...)
 }
 

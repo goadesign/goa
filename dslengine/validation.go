@@ -54,35 +54,3 @@ func (verr *ValidationErrors) AsError() *ValidationErrors {
 	}
 	return nil
 }
-
-// CanUse returns nil if the provider supports all the versions supported by the client or if the
-// provider is unversioned.
-func CanUse(client, provider Versioned) error {
-	if provider.Versions() == nil {
-		return nil
-	}
-	versions := client.Versions()
-	if versions == nil {
-		return fmt.Errorf("cannot use versioned %s from unversioned %s", provider.Context(),
-			client.Context())
-	}
-	providerVersions := provider.Versions()
-	if len(versions) > len(providerVersions) {
-		return fmt.Errorf("cannot use %s from %s: incompatible set of supported API versions",
-			provider.Context(), client.Context())
-	}
-	for _, v := range versions {
-		found := false
-		for _, pv := range providerVersions {
-			if v == pv {
-				found = true
-			}
-			break
-		}
-		if !found {
-			return fmt.Errorf("cannot use %s from %s: incompatible set of supported API versions",
-				provider.Context(), client.Context())
-		}
-	}
-	return nil
-}

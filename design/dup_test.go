@@ -86,10 +86,10 @@ var _ = Describe("Dup", func() {
 		}
 		const identifier = "vnd.application/test"
 		var links = map[string]*LinkDefinition{
-			"link": &LinkDefinition{Name: "att", View: "default"},
+			"link": {Name: "att", View: "default"},
 		}
 		var views = map[string]*ViewDefinition{
-			"default": &ViewDefinition{
+			"default": {
 				Name:                "default",
 				AttributeDefinition: &AttributeDefinition{Type: obj},
 			},
