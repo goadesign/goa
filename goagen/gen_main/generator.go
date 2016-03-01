@@ -37,20 +37,6 @@ func Generate(roots []interface{}) (files []string, err error) {
 	return
 }
 
-// controllerVersion is the data structure used to render a specific version of the controller
-// mounting code.
-type controllerVersion struct {
-	Controller *design.ResourceDefinition
-	Version    string
-}
-
-func newControllerVersion(ctrl *design.ResourceDefinition, version string) *controllerVersion {
-	return &controllerVersion{
-		Controller: ctrl,
-		Version:    version,
-	}
-}
-
 // Generate produces the skeleton main.
 func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) {
 	go utils.Catch(nil, func() { g.Cleanup() })
@@ -67,11 +53,10 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	}
 	g.genfiles = append(g.genfiles, mainFile)
 	funcs := template.FuncMap{
-		"tempvar":              tempvar,
-		"generateSwagger":      generateSwagger,
-		"okResp":               okResp,
-		"newControllerVersion": newControllerVersion,
-		"targetPkg":            func() string { return TargetPackage },
+		"tempvar":         tempvar,
+		"generateSwagger": generateSwagger,
+		"okResp":          okResp,
+		"targetPkg":       func() string { return TargetPackage },
 	}
 	imp, err := codegen.PackagePath(codegen.OutputDir)
 	if err != nil {
@@ -98,13 +83,6 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 			codegen.SimpleImport(appPkg),
 			codegen.SimpleImport(swaggerPkg),
 		}
-		api.IterateVersions(func(v *design.APIVersionDefinition) error {
-			if v.IsDefault() {
-				return nil
-			}
-			imports = append(imports, codegen.SimpleImport(imp+"/"+codegen.VersionPackage(v.Version)))
-			return nil
-		})
 		if generateSwagger() {
 			jsonSchemaPkg := path.Join(outPkg, "schema")
 			imports = append(imports, codegen.SimpleImport(jsonSchemaPkg))
@@ -125,13 +103,6 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport(imp),
 	}
-	api.IterateVersions(func(v *design.APIVersionDefinition) error {
-		if v.IsDefault() {
-			return nil
-		}
-		imports = append(imports, codegen.SimpleImport(imp+"/"+codegen.VersionPackage(v.Version)))
-		return nil
-	})
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
 		filename := filepath.Join(codegen.OutputDir, snakeCase(r.Name)+".go")
 		if Force {
@@ -188,7 +159,7 @@ func generateSwagger() bool {
 	return codegen.CommandName == "" || codegen.CommandName == "swagger"
 }
 
-func okResp(a *design.ActionDefinition, v string) map[string]interface{} {
+func okResp(a *design.ActionDefinition) map[string]interface{} {
 	var ok *design.ResponseDefinition
 	for _, resp := range a.Responses {
 		if resp.Status == 200 {
@@ -204,19 +175,13 @@ func okResp(a *design.ActionDefinition, v string) map[string]interface{} {
 	if mt, ok2 = design.Design.MediaTypes[design.CanonicalIdentifier(ok.MediaType)]; !ok2 {
 		return nil
 	}
-	var pkg string
-	if v == "" {
-		pkg = TargetPackage
-	} else {
-		pkg = codegen.VersionPackage(v)
-	}
 	name := codegen.GoTypeRef(mt, mt.AllRequired(), 1)
 	var pointer string
 	if strings.HasPrefix(name, "*") {
 		name = name[1:]
 		pointer = "*"
 	}
-	typeref := fmt.Sprintf("%s%s.%s", pointer, pkg, name)
+	typeref := fmt.Sprintf("%s%s.%s", pointer, TargetPackage, name)
 	if strings.HasPrefix(typeref, "*") {
 		typeref = "&" + typeref[1:]
 	}
@@ -262,15 +227,9 @@ func main() {
 	service.Use(middleware.LogRequest(true))
 	service.Use(middleware.Recover())
 {{$api := .API}}
-{{range $name, $res := $api.Resources}}{{if $res.SupportsNoVersion}}{{$name := goify $res.Name true}}	// Mount "{{$res.Name}}" controller
+{{range $name, $res := $api.Resources}}{{$name := goify $res.Name true}}	// Mount "{{$res.Name}}" controller
 	{{$tmp := tempvar}}{{$tmp}} := New{{$name}}Controller(service)
 	{{targetPkg}}.Mount{{$name}}Controller(service, {{$tmp}})
-{{end}}{{end}}{{range $ver, $prop := $api.APIVersions}}
-	// Version {{$ver}}
-{{range $name, $res := $api.Resources}}{{if $res.SupportsVersion $ver}}{{$name := goify (printf "%s%s" $res.Name (or (and $ver (goify (versionPkg $ver) true)) "")) true}}	// Mount "{{$res.Name}}" controller
-	{{$tmp := tempvar}}{{$tmp}} := New{{$name}}Controller(service)
-	{{versionPkg $ver}}.Mount{{goify $res.Name true}}Controller(service, {{$tmp}})
-{{end}}{{end}}
 {{end}}{{if generateSwagger}}// Mount Swagger spec provider controller
 	swagger.MountController(service)
 {{end}}
@@ -278,24 +237,19 @@ func main() {
 	service.ListenAndServe(":8080")
 }
 `
-const ctrlT = `{{define "OneVersion"}}` + ctrlVerT + `{{end}}` + `{{$ctrl := .}}{{/*
-*/}}{{if .APIVersions}}{{range $ver := .APIVersions}}{{template "OneVersion" (newControllerVersion $ctrl $ver)}}
-{{end}}{{else}}{{template "OneVersion" (newControllerVersion $ctrl "")}}
-{{end}}`
-
-const ctrlVerT = `// {{$ctrlName := printf "%s%s" (goify (printf "%s%s" .Controller.Name (or (and .Version (goify (versionPkg .Version) true)) ""))  true) "Controller"}}{{$ctrlName}} implements the{{if .Version}} {{.Version}} {{end}}{{.Controller.Name}} resource.
+const ctrlT = `// {{$ctrlName := printf "%s%s" (goify .Name true) "Controller"}}{{$ctrlName}} implements the {{.Name}} resource.
 type {{$ctrlName}} struct {
 	*goa.Controller
 }
 
-// New{{$ctrlName}} creates a {{.Controller.Name}} controller.
-func New{{$ctrlName}}(service *goa.Service) {{if .Version}}{{versionPkg .Version}}{{else}}{{targetPkg}}{{end}}.{{goify .Controller.Name true}}Controller {
-	return &{{$ctrlName}}{Controller: service.NewController("{{.Controller.Name}}")}
+// New{{$ctrlName}} creates a {{.Name}} controller.
+func New{{$ctrlName}}(service *goa.Service) {{targetPkg}}.{{goify .Name true}}Controller {
+	return &{{$ctrlName}}{Controller: service.NewController("{{.Name}}")}
 }
-{{$ctrl := .Controller}}{{$version := .Version}}{{range .Controller.Actions}}
+{{$ctrl := .}}{{range .Actions}}
 // {{goify .Name true}} runs the {{.Name}} action.
-func (c *{{$ctrlName}}) {{goify .Name true}}(ctx *{{if $version}}{{versionPkg $version}}{{else}}{{targetPkg}}{{end}}.{{goify .Name true}}{{goify $ctrl.Name true}}Context) error {
-{{$ok := okResp . $version}}{{if $ok}}	res := {{$ok.TypeRef}}{}
+func (c *{{$ctrlName}}) {{goify .Name true}}(ctx *{{targetPkg}}.{{goify .Name true}}{{goify $ctrl.Name true}}Context) error {
+{{$ok := okResp .}}{{if $ok}}	res := {{$ok.TypeRef}}{}
 {{end}}	return {{if $ok}}ctx.{{$ok.Name}}(res){{else}}nil{{end}}
 }
 {{end}}

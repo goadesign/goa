@@ -26,8 +26,6 @@ type (
 		Example interface{}
 		// Optional view used to render Attribute (only applies to media type attributes).
 		View string
-		// List of API versions that use the attribute.
-		APIVersions []string
 		// NonZeroAttributes lists the names of the child attributes that cannot have a
 		// zero value (and thus whose presence does not need to be validated).
 		NonZeroAttributes map[string]bool
@@ -44,9 +42,6 @@ type (
 		// Attribute returns the container definition embedded attribute.
 		Attribute() *AttributeDefinition
 	}
-
-	// VersionIterator is the type of functions given to IterateVersions.
-	VersionIterator func(v *APIVersionDefinition) error
 )
 
 // Context returns the generic definition name used in error messages.

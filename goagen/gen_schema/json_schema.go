@@ -172,7 +172,7 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 			params := design.DupAtt(a.Params)
 			// We don't want to keep the path params, these are defined inline in the href
 			for _, r := range a.Routes {
-				for _, p := range r.Params(design.Design.APIVersionDefinition) {
+				for _, p := range r.Params() {
 					delete(params.Type.ToObject(), p)
 				}
 			}
@@ -407,12 +407,12 @@ func buildAttributeSchema(api *design.APIDefinition, s *JSONSchema, at *design.A
 // toSchemaHref produces a href that replaces the path wildcards with JSON schema references when
 // appropriate.
 func toSchemaHref(api *design.APIDefinition, r *design.RouteDefinition) string {
-	params := r.Params(design.Design.APIVersionDefinition)
+	params := r.Params()
 	args := make([]interface{}, len(params))
 	for i, p := range params {
 		args[i] = fmt.Sprintf("/{%s}", p)
 	}
-	tmpl := design.WildcardRegex.ReplaceAllLiteralString(r.FullPath(design.Design.APIVersionDefinition), "%s")
+	tmpl := design.WildcardRegex.ReplaceAllLiteralString(r.FullPath(), "%s")
 	return fmt.Sprintf(tmpl, args...)
 }
 

@@ -112,12 +112,5 @@ input (Consumes) and output (Produces). goagen uses that information to registed
 packages with the service encoders and decoders via the SetEncoder and SetDecoder methods. The
 service exposes the Decode, DecodeRequest, Encode and EncodeResponse that implement a simple content
 type negotiation algorithm for picking the right encoder for the "Accept" request header.
-
-Versioning
-
-The VersionMux interface implemented by the RootMux struct exposes methods used by the generated
-code to setup the routing to versioned endpoints. The DSL defines how the API handles versioning:
-via request path, header, querystring or a combination. The generated code uses the VersionMux
-interface to setup the root mux accordingly.
 */
 package goa

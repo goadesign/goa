@@ -10,15 +10,12 @@ import (
 )
 
 // API implements the top level API DSL. It defines the API name, default description and other
-// default global property values for all API versions. Here is an example showing all the possible
-// API sub-definitions:
+// default global property values. Here is an example showing all the possible API sub-definitions:
 //
 //	API("API name", func() {
 //		Title("title")				// API title used in documentation
 //		Description("description")		// API description used in documentation
-//		VersionParam("version")			// Path param that captures targeted version, can appear 0 or more times
-//		VersionHeader("X-Api-Version") 		// Request header that captures targeted version, can appear 0 or more times
-//		VersionQuery("version")			// Querystring value that captures targeted version, can appear 0 or more times
+//		Version("2.0")				// API version being described
 //		TermsOfService("terms")
 //		Contact(func() {			// API Contact information
 //			Name("contact name")
@@ -35,7 +32,7 @@ import (
 //		})
 //		Host("goa.design")			// API hostname
 //		Scheme("http")
-//		BasePath("/base/:version/:param")	// Common base path to all API actions
+//		BasePath("/base/:param")		// Common base path to all API actions
 //		BaseParams(func() {			// Common parameters to all API actions
 //			Param("param")
 //		})
@@ -79,103 +76,10 @@ func API(name string, dsl func()) *design.APIDefinition {
 	return design.Design
 }
 
-// Version is the top level design language function which defines the API global property values
-// for a given version. The DSL used to define the property values is identical to the one used by
-// the API function. Here is an example that shows a *subset* of the Version
-// DSL (see the API function for all the other possible functions).
-//
-//	Version("2.0", func() {
-//		Title("API v2")		       // API version 2.0 title used in documentation
-//		Description("This is v2")      // API version description used in documentation
-//	 	Docs(func() {
-//			Description("v2 docs")
-//			URL("v2 doc URL")
-//		})
-//		BasePath("/v2")		       // Common base path to all actions exposed by this API version
-//		VersionHeader("X-Api-Version") // Usually only useful if BasePath is same as API
-//		VersionQuery("version")        // Generated code considers header first if specified then querystring
-//		VersionQuery("v")	       // Multiple version headers or querystrings may be specified
-//              VersionQuery("version", "v")   // Equivalent to the two lines above
-//	})
-func Version(ver string, dsl func()) *design.APIVersionDefinition {
-	verdef := &design.APIVersionDefinition{Version: ver}
-	verdef.DSLFunc = func() {
-		verdef.Init()
-		if dsl != nil {
-			dsl()
-		}
-	}
-	if _, ok := design.Design.APIVersions[ver]; ok {
-		dslengine.ReportError("API Version %s defined twice", ver)
-		return verdef
-	}
-	if design.Design.APIVersions == nil {
-		design.Design.APIVersions = make(map[string]*design.APIVersionDefinition)
-	}
-	if ver == "" {
-		dslengine.ReportError("version cannot be an empty string")
-	}
-	design.Design.APIVersions[ver] = verdef
-	return verdef
-}
-
-// VersionParam defines the name of the request path parameter that contains the targeted API version.
-// Multiple names may be specified in which case the value of the first to correspond to the name
-// of a param is used.
-func VersionParam(names ...string) {
+// Version specifies the API version. One design describes one version.
+func Version(ver string) {
 	if api, ok := apiDefinition(true); ok {
-		for _, n := range names {
-			found := false
-			for _, n2 := range api.VersionParams {
-				if n == n2 {
-					found = true
-					break
-				}
-			}
-			if !found {
-				api.VersionParams = append(api.VersionParams, n)
-			}
-		}
-	}
-}
-
-// VersionHeader defines the name of the HTTP request header that contains the targeted API version.
-// Multiple names may be specified in which case the value of the first to correspond to the name
-// of a header is used.
-func VersionHeader(names ...string) {
-	if api, ok := apiDefinition(true); ok {
-		for _, n := range names {
-			found := false
-			for _, n2 := range api.VersionHeaders {
-				if n == n2 {
-					found = true
-					break
-				}
-			}
-			if !found {
-				api.VersionHeaders = append(api.VersionHeaders, n)
-			}
-		}
-	}
-}
-
-// VersionQuery defines the name of the querystring that contains the targeted API version.
-// Multiple names may be specified in which case the value of the first to correspond to the name
-// of a querystring is used.
-func VersionQuery(names ...string) {
-	if api, ok := apiDefinition(true); ok {
-		for _, n := range names {
-			found := false
-			for _, n2 := range api.VersionQueries {
-				if n == n2 {
-					found = true
-					break
-				}
-			}
-			if !found {
-				api.VersionQueries = append(api.VersionQueries, n)
-			}
-		}
+		api.Version = ver
 	}
 }
 
@@ -184,8 +88,6 @@ func VersionQuery(names ...string) {
 func Description(d string) {
 	if a, ok := apiDefinition(false); ok {
 		a.Description = d
-	} else if v, ok := versionDefinition(false); ok {
-		v.Description = d
 	} else if r, ok := resourceDefinition(false); ok {
 		r.Description = d
 	} else if a, ok := actionDefinition(false); ok {
@@ -207,8 +109,6 @@ func Description(d string) {
 func BasePath(val string) {
 	if a, ok := apiDefinition(false); ok {
 		a.BasePath = val
-	} else if v, ok := versionDefinition(false); ok {
-		v.BasePath = val
 	} else if r, ok := resourceDefinition(true); ok {
 		r.BasePath = val
 		awcs := design.ExtractWildcards(design.Design.BasePath)
@@ -237,8 +137,6 @@ func BaseParams(dsl func()) {
 	}
 	if a, ok := apiDefinition(false); ok {
 		a.BaseParams = params
-	} else if v, ok := versionDefinition(false); ok {
-		v.BaseParams = params
 	} else if r, ok := resourceDefinition(true); ok {
 		r.BaseParams = params
 	}
@@ -246,10 +144,8 @@ func BaseParams(dsl func()) {
 
 // TermsOfService describes the API terms of services or links to them.
 func TermsOfService(terms string) {
-	if a, ok := apiDefinition(false); ok {
+	if a, ok := apiDefinition(true); ok {
 		a.TermsOfService = terms
-	} else if v, ok := versionDefinition(true); ok {
-		v.TermsOfService = terms
 	}
 }
 
@@ -262,10 +158,8 @@ func Host(host string) {
 		dslengine.ReportError(`invalid hostname value "%s"`, host)
 		return
 	}
-	if a, ok := apiDefinition(false); ok {
+	if a, ok := apiDefinition(true); ok {
 		a.Host = host
-	} else if v, ok := versionDefinition(true); ok {
-		v.Host = host
 	}
 }
 
@@ -283,8 +177,6 @@ func Scheme(vals ...string) {
 	}
 	if a, ok := apiDefinition(false); ok {
 		a.Schemes = append(a.Schemes, vals...)
-	} else if v, ok := versionDefinition(false); ok {
-		v.Schemes = append(v.Schemes, vals...)
 	} else if a, ok := actionDefinition(true); ok {
 		a.Schemes = append(a.Schemes, vals...)
 	}
@@ -296,10 +188,8 @@ func Contact(dsl func()) {
 	if !dslengine.Execute(dsl, contact) {
 		return
 	}
-	if a, ok := apiDefinition(false); ok {
+	if a, ok := apiDefinition(true); ok {
 		a.Contact = contact
-	} else if v, ok := versionDefinition(true); ok {
-		v.Contact = contact
 	}
 }
 
@@ -309,10 +199,8 @@ func License(dsl func()) {
 	if !dslengine.Execute(dsl, license) {
 		return
 	}
-	if a, ok := apiDefinition(false); ok {
+	if a, ok := apiDefinition(true); ok {
 		a.License = license
-	} else if v, ok := versionDefinition(true); ok {
-		v.License = license
 	}
 }
 
@@ -324,8 +212,6 @@ func Docs(dsl func()) {
 	}
 	if a, ok := apiDefinition(false); ok {
 		a.Docs = docs
-	} else if v, ok := versionDefinition(false); ok {
-		v.Docs = docs
 	} else if a, ok := actionDefinition(true); ok {
 		a.Docs = docs
 	}
@@ -363,17 +249,10 @@ func URL(url string) {
 // The package must expose a DecoderFactory method that returns an object which implements
 // goa.DecoderFactory.
 func Consumes(args ...interface{}) {
-	var v *design.APIVersionDefinition
-	if a, ok := apiDefinition(false); ok {
-		v = a.APIVersionDefinition
-	} else if ver, ok := versionDefinition(true); ok {
-		v = ver
-	}
-	if v == nil {
-		return
-	}
-	if def := buildEncodingDefinition(args...); def != nil {
-		v.Consumes = append(v.Consumes, def)
+	if a, ok := apiDefinition(true); ok {
+		if def := buildEncodingDefinition(args...); def != nil {
+			a.Consumes = append(a.Consumes, def)
+		}
 	}
 }
 
@@ -382,17 +261,10 @@ func Consumes(args ...interface{}) {
 // The package must expose a EncoderFactory method that returns an object which implements
 // goa.EncoderFactory.
 func Produces(args ...interface{}) {
-	var v *design.APIVersionDefinition
-	if a, ok := apiDefinition(false); ok {
-		v = a.APIVersionDefinition
-	} else if ver, ok := versionDefinition(true); ok {
-		v = ver
-	}
-	if v == nil {
-		return
-	}
-	if def := buildEncodingDefinition(args...); def != nil {
-		v.Produces = append(v.Produces, def)
+	if a, ok := apiDefinition(true); ok {
+		if def := buildEncodingDefinition(args...); def != nil {
+			a.Produces = append(a.Produces, def)
+		}
 	}
 }
 
@@ -464,38 +336,30 @@ func Package(path string) {
 // set the response media type. Other predefined templates do not use arguments. ResponseTemplate
 // makes it possible to define additional response templates specific to the API.
 func ResponseTemplate(name string, p interface{}) {
-	var v *design.APIVersionDefinition
-	if a, ok := apiDefinition(false); ok {
-		v = a.APIVersionDefinition
-	} else if ver, ok := versionDefinition(true); ok {
-		v = ver
+	if a, ok := apiDefinition(true); ok {
+		if a.Responses == nil {
+			a.Responses = make(map[string]*design.ResponseDefinition)
+		}
+		if a.ResponseTemplates == nil {
+			a.ResponseTemplates = make(map[string]*design.ResponseTemplateDefinition)
+		}
+		if _, ok := a.Responses[name]; ok {
+			dslengine.ReportError("multiple definitions for response template %s", name)
+			return
+		}
+		if _, ok := a.ResponseTemplates[name]; ok {
+			dslengine.ReportError("multiple definitions for response template %s", name)
+			return
+		}
+		setupResponseTemplate(a, name, p)
 	}
-	if v == nil {
-		return
-	}
-	if v.Responses == nil {
-		v.Responses = make(map[string]*design.ResponseDefinition)
-	}
-	if v.ResponseTemplates == nil {
-		v.ResponseTemplates = make(map[string]*design.ResponseTemplateDefinition)
-	}
-	if _, ok := v.Responses[name]; ok {
-		dslengine.ReportError("multiple definitions for response template %s", name)
-		return
-	}
-	if _, ok := v.ResponseTemplates[name]; ok {
-		dslengine.ReportError("multiple definitions for response template %s", name)
-		return
-	}
-
-	setupResponseTemplate(v, name, p)
 }
 
-func setupResponseTemplate(v *design.APIVersionDefinition, name string, p interface{}) {
+func setupResponseTemplate(a *design.APIDefinition, name string, p interface{}) {
 	if f, ok := p.(func()); ok {
 		r := &design.ResponseDefinition{Name: name}
 		if dslengine.Execute(f, r) {
-			v.Responses[name] = r
+			a.Responses[name] = r
 		}
 	} else if tmpl, ok := p.(func(...string)); ok {
 		t := func(params ...string) *design.ResponseDefinition {
@@ -503,7 +367,7 @@ func setupResponseTemplate(v *design.APIVersionDefinition, name string, p interf
 			dslengine.Execute(func() { tmpl(params...) }, r)
 			return r
 		}
-		v.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
+		a.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
 			Name:     name,
 			Template: t,
 		}
@@ -540,7 +404,7 @@ func setupResponseTemplate(v *design.APIVersionDefinition, name string, p interf
 			dslengine.Execute(func() { val.Call(in) }, r)
 			return r
 		}
-		v.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
+		a.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
 			Name:     name,
 			Template: t,
 		}
@@ -551,39 +415,30 @@ func setupResponseTemplate(v *design.APIVersionDefinition, name string, p interf
 func Title(val string) {
 	if a, ok := apiDefinition(false); ok {
 		a.Title = val
-	} else if v, ok := versionDefinition(true); ok {
-		v.Title = val
 	}
 }
 
 // Trait defines an API trait. A trait encapsulates arbitrary DSL that gets executed wherever the
 // trait is called via the UseTrait function.
 func Trait(name string, val ...func()) {
-	var ver *design.APIVersionDefinition
-	if a, ok := apiDefinition(false); ok {
-		ver = a.APIVersionDefinition
-	} else if v, ok := versionDefinition(true); ok {
-		ver = v
+	if a, ok := apiDefinition(true); ok {
+		if len(val) < 1 {
+			dslengine.ReportError("missing trait DSL for %s", name)
+			return
+		} else if len(val) > 1 {
+			dslengine.ReportError("too many arguments given to Trait")
+			return
+		}
+		if _, ok := design.Design.Traits[name]; ok {
+			dslengine.ReportError("multiple definitions for trait %s%s", name, design.Design.Context())
+			return
+		}
+		trait := &dslengine.TraitDefinition{Name: name, DSLFunc: val[0]}
+		if a.Traits == nil {
+			a.Traits = make(map[string]*dslengine.TraitDefinition)
+		}
+		a.Traits[name] = trait
 	}
-	if len(val) < 1 {
-		dslengine.ReportError("missing trait DSL for %s", name)
-		return
-	} else if len(val) > 1 {
-		dslengine.ReportError("too many arguments given to Trait")
-		return
-	}
-	if ver == nil {
-		return
-	}
-	if _, ok := ver.Traits[name]; ok {
-		dslengine.ReportError("multiple definitions for trait %s%s", name, ver.Context())
-		return
-	}
-	trait := &dslengine.TraitDefinition{Name: name, DSLFunc: val[0]}
-	if ver.Traits == nil {
-		ver.Traits = make(map[string]*dslengine.TraitDefinition)
-	}
-	ver.Traits[name] = trait
 }
 
 // UseTrait executes the API trait with the given name. UseTrait can be used inside a Resource,
@@ -624,16 +479,6 @@ func encodingDefinition(failIfNotEnc bool) (*design.EncodingDefinition, bool) {
 		dslengine.IncompatibleDSL(dslengine.Caller())
 	}
 	return e, ok
-}
-
-// versionDefinition returns true and current context if it is an APIVersionDefinition,
-// nil and false otherwise.
-func versionDefinition(failIfNotVersion bool) (*design.APIVersionDefinition, bool) {
-	a, ok := dslengine.CurrentDefinition().(*design.APIVersionDefinition)
-	if !ok && failIfNotVersion {
-		dslengine.IncompatibleDSL(dslengine.Caller())
-	}
-	return a, ok
 }
 
 // contactDefinition returns true and current context if it is an ContactDefinition,

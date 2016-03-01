@@ -63,12 +63,6 @@ var _ = Describe("ContextsWriter", func() {
 			})
 
 			JustBeforeEach(func() {
-				var version *design.APIVersionDefinition
-				if design.Design != nil {
-					version = design.Design.APIVersionDefinition
-				} else {
-					version = &design.APIVersionDefinition{}
-				}
 				data = &genapp.ContextTemplateData{
 					Name:         "ListBottleContext",
 					ResourceName: "bottles",
@@ -78,7 +72,6 @@ var _ = Describe("ContextsWriter", func() {
 					Headers:      headers,
 					Responses:    responses,
 					API:          design.Design,
-					Version:      version,
 					DefaultPkg:   "",
 				}
 			})
@@ -398,56 +391,6 @@ var _ = Describe("ControllersWriter", func() {
 			f, _ = os.Create(filename)
 		})
 
-		Context("with a versioned API", func() {
-			var data []*genapp.ControllerTemplateData
-
-			BeforeEach(func() {
-				version := &design.APIVersionDefinition{Name: "", BasePath: "/api/:vp"}
-				v1 := &design.APIVersionDefinition{Name: "v1"}
-				v2 := &design.APIVersionDefinition{Name: "v2"}
-				versions := map[string]*design.APIVersionDefinition{
-					"1.0": v1,
-					"2.0": v2,
-				}
-				api := &design.APIDefinition{
-					APIVersionDefinition: version,
-					APIVersions:          versions,
-					Resources:            nil,
-					Types:                nil,
-					MediaTypes:           nil,
-					VersionParams:        []string{"vp"},
-					VersionHeaders:       []string{"vh"},
-					VersionQueries:       []string{"vq"},
-				}
-				encoderMap := map[string]*genapp.EncoderTemplateData{
-					"github.com/goadesign/goa": &genapp.EncoderTemplateData{
-						PackagePath: "github.com/goadesign/goa",
-						PackageName: "goa",
-						Factory:     "NewEncoder",
-						MIMETypes:   []string{"application/json"},
-						Default:     true,
-					},
-				}
-				decoderMap := map[string]*genapp.EncoderTemplateData{
-					"github.com/goadesign/goa": &genapp.EncoderTemplateData{
-						PackagePath: "github.com/goadesign/goa",
-						PackageName: "goa",
-						Factory:     "NewDecoder",
-						MIMETypes:   []string{"application/json"},
-						Default:     true,
-					},
-				}
-				data = []*genapp.ControllerTemplateData{&genapp.ControllerTemplateData{
-					API:        api,
-					Resource:   "resource",
-					Actions:    []map[string]interface{}{},
-					Version:    api.APIVersionDefinition,
-					EncoderMap: encoderMap,
-					DecoderMap: decoderMap,
-				}}
-			})
-		})
-
 		Context("with data", func() {
 			var actions, verbs, paths, contexts, unmarshals []string
 			var payloads []*design.UserTypeDefinition
@@ -469,10 +412,7 @@ var _ = Describe("ControllersWriter", func() {
 			JustBeforeEach(func() {
 				codegen.TempCount = 0
 				api := &design.APIDefinition{}
-				d := &genapp.ControllerTemplateData{
-					Resource: "Bottles",
-					Version:  &design.APIVersionDefinition{},
-				}
+				d := &genapp.ControllerTemplateData{Resource: "Bottles"}
 				as := make([]map[string]interface{}, len(actions))
 				for i, a := range actions {
 					var unmarshal string
@@ -1067,7 +1007,6 @@ type BottlesController interface {
 func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	initService(service)
 	var h goa.Handler
-	mux := service.Mux
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
@@ -1075,7 +1014,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 		}
 		return ctrl.List(rctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
+	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "List"}, goa.KV{"route", "GET /accounts/:accountID/bottles"})
 }
 `
@@ -1083,7 +1022,6 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	simpleMount = `func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	initService(service)
 	var h goa.Handler
-	mux := service.Mux
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
@@ -1091,7 +1029,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 		}
 		return ctrl.List(rctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
+	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "List"}, goa.KV{"route", "GET /accounts/:accountID/bottles"})
 }
 `
@@ -1107,7 +1045,6 @@ type BottlesController interface {
 	multiMount = `func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	initService(service)
 	var h goa.Handler
-	mux := service.Mux
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
@@ -1115,7 +1052,7 @@ type BottlesController interface {
 		}
 		return ctrl.List(rctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
+	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "List"}, goa.KV{"route", "GET /accounts/:accountID/bottles"})
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewShowBottleContext(ctx)
@@ -1124,7 +1061,7 @@ type BottlesController interface {
 		}
 		return ctrl.Show(rctx)
 	}
-	mux.Handle("GET", "/accounts/:accountID/bottles/:id", ctrl.MuxHandler("Show", h, nil))
+	service.Mux.Handle("GET", "/accounts/:accountID/bottles/:id", ctrl.MuxHandler("Show", h, nil))
 	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "Show"}, goa.KV{"route", "GET /accounts/:accountID/bottles/:id"})
 }
 `
