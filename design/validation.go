@@ -25,8 +25,8 @@ type wildCardInfo struct {
 	Orig dslengine.Definition
 }
 
-func newRouteInfo(version *APIVersionDefinition, resource *ResourceDefinition, action *ActionDefinition, route *RouteDefinition) *routeInfo {
-	vars := route.Params(version)
+func newRouteInfo(resource *ResourceDefinition, action *ActionDefinition, route *RouteDefinition) *routeInfo {
+	vars := route.Params()
 	wi := make([]*wildCardInfo, len(vars))
 	for i, v := range vars {
 		var orig dslengine.Definition
@@ -39,7 +39,7 @@ func newRouteInfo(version *APIVersionDefinition, resource *ResourceDefinition, a
 		}
 		wi[i] = &wildCardInfo{Name: v, Orig: orig}
 	}
-	key := WildcardRegex.ReplaceAllLiteralString(route.FullPath(version), "*")
+	key := WildcardRegex.ReplaceAllLiteralString(route.FullPath(), "*")
 	return &routeInfo{
 		Key:       key,
 		Resource:  resource,
@@ -71,82 +71,78 @@ func (a *APIDefinition) Validate() error {
 	a.validateContact(verr)
 	a.validateLicense(verr)
 	a.validateDocs(verr)
-	a.validateVersionParams(verr)
 
-	a.IterateVersions(func(ver *APIVersionDefinition) error {
-		var allRoutes []*routeInfo
-		a.IterateResources(func(r *ResourceDefinition) error {
-			verr.Merge(r.Validate(ver))
-			r.IterateActions(func(ac *ActionDefinition) error {
-				if ac.Docs != nil && ac.Docs.URL != "" {
-					if _, err := url.ParseRequestURI(ac.Docs.URL); err != nil {
-						verr.Add(ac, "invalid action docs URL value: %s", err)
-					}
+	var allRoutes []*routeInfo
+	a.IterateResources(func(r *ResourceDefinition) error {
+		verr.Merge(r.Validate())
+		r.IterateActions(func(ac *ActionDefinition) error {
+			if ac.Docs != nil && ac.Docs.URL != "" {
+				if _, err := url.ParseRequestURI(ac.Docs.URL); err != nil {
+					verr.Add(ac, "invalid action docs URL value: %s", err)
 				}
-				for _, ro := range ac.Routes {
-					info := newRouteInfo(ver, r, ac, ro)
-					allRoutes = append(allRoutes, info)
-					rwcs := ExtractWildcards(ac.Parent.FullPath(ver))
-					wcs := ExtractWildcards(ro.Path)
-					for _, rwc := range rwcs {
-						for _, wc := range wcs {
-							if rwc == wc {
-								verr.Add(ac, `duplicate wildcard "%s" in resource base path "%s" and action route "%s"`,
-									wc, ac.Parent.FullPath(ver), ro.Path)
-							}
+			}
+			for _, ro := range ac.Routes {
+				info := newRouteInfo(r, ac, ro)
+				allRoutes = append(allRoutes, info)
+				rwcs := ExtractWildcards(ac.Parent.FullPath())
+				wcs := ExtractWildcards(ro.Path)
+				for _, rwc := range rwcs {
+					for _, wc := range wcs {
+						if rwc == wc {
+							verr.Add(ac, `duplicate wildcard "%s" in resource base path "%s" and action route "%s"`,
+								wc, ac.Parent.FullPath(), ro.Path)
 						}
-					}
-				}
-				return nil
-			})
-			return nil
-		})
-		for _, route := range allRoutes {
-			for _, other := range allRoutes {
-				if route == other {
-					continue
-				}
-				if strings.HasPrefix(route.Key, other.Key) {
-					diffs := route.DifferentWildcards(other)
-					if len(diffs) > 0 {
-						var msg string
-						conflicts := make([]string, len(diffs))
-						for i, d := range diffs {
-							conflicts[i] = fmt.Sprintf(`"%s" from %s and "%s" from %s`, d[0].Name, d[0].Orig.Context(), d[1].Name, d[1].Orig.Context())
-						}
-						msg = fmt.Sprintf("%s", strings.Join(conflicts, ", "))
-						verr.Add(route.Action,
-							`route "%s" conflicts with route "%s" of %s action %s. Make sure wildcards at the same positions have the same name. Conflicting wildcards are %s.`,
-							route.Route.FullPath(ver),
-							other.Route.FullPath(ver),
-							other.Resource.Name,
-							other.Action.Name,
-							msg,
-						)
 					}
 				}
 			}
-		}
-		ver.IterateMediaTypes(func(mt *MediaTypeDefinition) error {
-			verr.Merge(mt.Validate())
 			return nil
 		})
-		ver.IterateUserTypes(func(t *UserTypeDefinition) error {
-			verr.Merge(t.Validate("", a))
-			return nil
-		})
-		ver.IterateResponses(func(r *ResponseDefinition) error {
-			verr.Merge(r.Validate())
-			return nil
-		})
-		for _, dec := range ver.Consumes {
-			verr.Merge(dec.Validate())
-		}
-		for _, enc := range ver.Produces {
-			verr.Merge(enc.Validate())
-		}
 		return nil
 	})
+	for _, route := range allRoutes {
+		for _, other := range allRoutes {
+			if route == other {
+				continue
+			}
+			if strings.HasPrefix(route.Key, other.Key) {
+				diffs := route.DifferentWildcards(other)
+				if len(diffs) > 0 {
+					var msg string
+					conflicts := make([]string, len(diffs))
+					for i, d := range diffs {
+						conflicts[i] = fmt.Sprintf(`"%s" from %s and "%s" from %s`, d[0].Name, d[0].Orig.Context(), d[1].Name, d[1].Orig.Context())
+					}
+					msg = fmt.Sprintf("%s", strings.Join(conflicts, ", "))
+					verr.Add(route.Action,
+						`route "%s" conflicts with route "%s" of %s action %s. Make sure wildcards at the same positions have the same name. Conflicting wildcards are %s.`,
+						route.Route.FullPath(),
+						other.Route.FullPath(),
+						other.Resource.Name,
+						other.Action.Name,
+						msg,
+					)
+				}
+			}
+		}
+	}
+	a.IterateMediaTypes(func(mt *MediaTypeDefinition) error {
+		verr.Merge(mt.Validate())
+		return nil
+	})
+	a.IterateUserTypes(func(t *UserTypeDefinition) error {
+		verr.Merge(t.Validate("", a))
+		return nil
+	})
+	a.IterateResponses(func(r *ResponseDefinition) error {
+		verr.Merge(r.Validate())
+		return nil
+	})
+	for _, dec := range a.Consumes {
+		verr.Merge(dec.Validate())
+	}
+	for _, enc := range a.Produces {
+		verr.Merge(enc.Validate())
+	}
 
 	err := verr.AsError()
 	if err == nil {
@@ -180,31 +176,14 @@ func (a *APIDefinition) validateDocs(verr *dslengine.ValidationErrors) {
 	}
 }
 
-func (a *APIDefinition) validateVersionParams(verr *dslengine.ValidationErrors) {
-	bwcs := ExtractWildcards(a.BasePath)
-	for _, param := range a.VersionParams {
-		found := false
-		for _, wc := range bwcs {
-			if wc == param {
-				found = true
-				break
-			}
-		}
-		if !found {
-			verr.Add(a, "invalid version param, %s is not an API base path param (base path is %#v)",
-				param, a.BasePath)
-		}
-	}
-}
-
 // Validate tests whether the resource definition is consistent: action names are valid and each action is
 // valid.
-func (r *ResourceDefinition) Validate(version *APIVersionDefinition) *dslengine.ValidationErrors {
+func (r *ResourceDefinition) Validate() *dslengine.ValidationErrors {
 	verr := new(dslengine.ValidationErrors)
 	if r.Name == "" {
 		verr.Add(r, "Resource name cannot be empty")
 	}
-	r.validateActions(version, verr)
+	r.validateActions(verr)
 	if r.BaseParams != nil {
 		r.validateBaseParams(verr)
 	}
@@ -217,21 +196,16 @@ func (r *ResourceDefinition) Validate(version *APIVersionDefinition) *dslengine.
 	if r.Params != nil {
 		verr.Merge(r.Params.Validate("resource parameters", r))
 	}
-	if !r.SupportsNoVersion() {
-		if err := dslengine.CanUse(r, Design); err != nil {
-			verr.Add(r, "Invalid API version in list")
-		}
-	}
 	return verr.AsError()
 }
 
-func (r *ResourceDefinition) validateActions(version *APIVersionDefinition, verr *dslengine.ValidationErrors) {
+func (r *ResourceDefinition) validateActions(verr *dslengine.ValidationErrors) {
 	found := false
 	for _, a := range r.Actions {
 		if a.Name == r.CanonicalActionName {
 			found = true
 		}
-		verr.Merge(a.Validate(version))
+		verr.Merge(a.Validate())
 	}
 	if r.CanonicalActionName != "" && !found {
 		verr.Add(r, `unknown canonical action "%s"`, r.CanonicalActionName)
@@ -275,9 +249,6 @@ func (r *ResourceDefinition) validateParent(verr *dslengine.ValidationErrors) {
 	} else {
 		if p.CanonicalAction() == nil {
 			verr.Add(r, "Parent resource %#v has no canonical action", r.ParentName)
-		}
-		if err := dslengine.CanUse(r, p); err != nil {
-			verr.Add(r, err.Error())
 		}
 	}
 }
@@ -325,7 +296,7 @@ func (enc *EncodingDefinition) Validate() *dslengine.ValidationErrors {
 
 // Validate tests whether the action definition is consistent: parameters have unique names and it has at least
 // one response.
-func (a *ActionDefinition) Validate(version *APIVersionDefinition) *dslengine.ValidationErrors {
+func (a *ActionDefinition) Validate() *dslengine.ValidationErrors {
 	verr := new(dslengine.ValidationErrors)
 	if a.Name == "" {
 		verr.Add(a, "Action name cannot be empty")
@@ -341,7 +312,7 @@ func (a *ActionDefinition) Validate(version *APIVersionDefinition) *dslengine.Va
 		}
 		verr.Merge(r.Validate())
 	}
-	verr.Merge(a.ValidateParams(version))
+	verr.Merge(a.ValidateParams())
 	if a.Payload != nil {
 		verr.Merge(a.Payload.Validate("action payload", a))
 	}
@@ -352,7 +323,7 @@ func (a *ActionDefinition) Validate(version *APIVersionDefinition) *dslengine.Va
 }
 
 // ValidateParams checks the action parameters (make sure they have names, members and types).
-func (a *ActionDefinition) ValidateParams(version *APIVersionDefinition) *dslengine.ValidationErrors {
+func (a *ActionDefinition) ValidateParams() *dslengine.ValidationErrors {
 	verr := new(dslengine.ValidationErrors)
 	if a.Params == nil {
 		return nil
@@ -363,7 +334,7 @@ func (a *ActionDefinition) ValidateParams(version *APIVersionDefinition) *dsleng
 	}
 	var wcs []string
 	for _, r := range a.Routes {
-		rwcs := ExtractWildcards(r.FullPath(version))
+		rwcs := ExtractWildcards(r.FullPath())
 		for _, rwc := range rwcs {
 			found := false
 			for _, wc := range wcs {
@@ -467,31 +438,12 @@ func (r *RouteDefinition) Validate() *dslengine.ValidationErrors {
 	return verr.AsError()
 }
 
-// Validate checks that the user type definition is consistent: it has a name and all user and media
-// types used in fields support the API versions that use the type.
+// Validate checks that the user type definition is consistent: it has a name and the attribute
+// backing the type is valid.
 func (u *UserTypeDefinition) Validate(ctx string, parent dslengine.Definition) *dslengine.ValidationErrors {
 	verr := new(dslengine.ValidationErrors)
 	if u.TypeName == "" {
 		verr.Add(parent, "%s - %s", ctx, "User type must have a name")
-	}
-	if u.Type != nil {
-		// u.Type can be nil when types refer to each other.
-		if o := u.ToObject(); o != nil {
-			o.IterateAttributes(func(name string, at *AttributeDefinition) error {
-				var ut *UserTypeDefinition
-				if mt, ok := at.Type.(*MediaTypeDefinition); ok {
-					ut = mt.UserTypeDefinition
-				} else if ut2, ok := at.Type.(*UserTypeDefinition); ok {
-					ut = ut2
-				}
-				if ut != nil {
-					if err := dslengine.CanUse(u, ut); err != nil {
-						verr.Add(u, err.Error())
-					}
-				}
-				return nil
-			})
-		}
 	}
 	verr.Merge(u.AttributeDefinition.Validate(ctx, parent))
 	return verr.AsError()

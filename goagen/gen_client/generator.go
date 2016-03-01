@@ -136,7 +136,6 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 			data := map[string]interface{}{
 				"Action":   action,
 				"Resource": action.Parent,
-				"Version":  design.Design.APIVersionDefinition,
 			}
 			return commandsTmpl.Execute(file, data)
 		})
@@ -405,7 +404,7 @@ func flagType(att *design.AttributeDefinition) string {
 // empty string if none.
 func defaultPath(action *design.ActionDefinition) string {
 	for _, r := range action.Routes {
-		candidate := r.FullPath(design.Design.APIVersionDefinition)
+		candidate := r.FullPath()
 		if !strings.ContainsRune(candidate, ':') {
 			return candidate
 		}
@@ -552,7 +551,7 @@ func (cmd *{{$cmdName}}) Run(c *client.Client, args []string) error {
 func (cmd *{{$cmdName}}) RegisterFlags(cc *cobra.Command) {
 {{if .Action.Payload}}	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request JSON body")
 {{end}}{{$params := .Action.QueryParams}}{{if $params}}{{range $name, $param := $params.Type.ToObject}}{{$tmp := tempvar}}{{/*
-*/}}{{if not $param.DefaultValue}}	var {{$tmp}} {{gotypedef $param false "" 1 true}}
+*/}}{{if not $param.DefaultValue}}	var {{$tmp}} {{gotypedef $param 1 true}}
 {{end}}	cc.Flags().{{flagType $param}}Var(&cmd.{{goify $name true}}, "{{$name}}", {{if $param.DefaultValue}}{{printf "%#v" $param.DefaultValue}}{{else}}{{$tmp}}{{end}}, "{{$param.Description}}")
 {{end}}{{end}}{{/*
 */}}{{$headers := .Action.Headers}}{{if $headers}}{{range $name, $header := $headers.Type.ToObject}}{{/*
@@ -562,7 +561,7 @@ func (cmd *{{$cmdName}}) RegisterFlags(cc *cobra.Command) {
 `
 
 const clientsTmpl = `{{$payload := goify (printf "%s%sPayload" .Name (title .Parent.Name)) true}}{{if .Payload}}// {{$payload}} is the data structure used to initialize the {{.Parent.Name}} {{.Name}} request body.
-type {{$payload}} {{gotypedef .Payload false "" 1 true}}
+type {{$payload}} {{gotypedef .Payload 1 true}}
 
 {{end}}{{$funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true}}{{$desc := .Description}}{{if $desc}}// {{$desc}}{{else}}// {{$funcName}} makes a request to the {{.Name}} action endpoint of the {{.Parent.Name}} resource{{end}}
 func (c *Client) {{$funcName}}(path string{{if .Payload}}, payload {{if .Payload.Type.IsObject}}*{{end}}{{$payload}}{{end}}{{/*

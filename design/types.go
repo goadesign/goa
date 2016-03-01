@@ -511,30 +511,6 @@ func (u *UserTypeDefinition) IsCompatible(val interface{}) bool {
 	return u.Type.IsCompatible(val)
 }
 
-// SupportsVersion returns true if the type is exposed by the given API version.
-// An empty string version means no version.
-func (u *UserTypeDefinition) SupportsVersion(version string) bool {
-	if version == "" {
-		return u.SupportsNoVersion()
-	}
-	for _, v := range u.APIVersions {
-		if v == version {
-			return true
-		}
-	}
-	return false
-}
-
-// SupportsNoVersion returns true if the resource is exposed by an unversioned API.
-func (u *UserTypeDefinition) SupportsNoVersion() bool {
-	return len(u.APIVersions) == 0
-}
-
-// Versions returns all the API versions that use the type.
-func (u *UserTypeDefinition) Versions() []string {
-	return u.APIVersions
-}
-
 // Finalize merges base type attributes.
 func (u *UserTypeDefinition) Finalize() {
 	if u.Reference != nil {
@@ -658,7 +634,6 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 		UserTypeDefinition: &UserTypeDefinition{
 			TypeName: typeName,
 			AttributeDefinition: &AttributeDefinition{
-				APIVersions: m.APIVersions,
 				Description: description,
 				Type:        Dup(v.Type),
 				Validation:  val,
@@ -689,7 +664,6 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 			lTypeName := fmt.Sprintf("%sLinks", m.TypeName)
 			links = &UserTypeDefinition{
 				AttributeDefinition: &AttributeDefinition{
-					APIVersions: m.APIVersions,
 					Description: fmt.Sprintf("%s contains links to related resources of %s.", lTypeName, m.TypeName),
 					Type:        linkObj,
 				},
@@ -727,7 +701,6 @@ func (m *MediaTypeDefinition) projectCollection(view string) (p *MediaTypeDefini
 		Identifier: m.Identifier,
 		UserTypeDefinition: &UserTypeDefinition{
 			AttributeDefinition: &AttributeDefinition{
-				APIVersions: m.APIVersions,
 				Type:        &Array{ElemType: &AttributeDefinition{Type: pe}},
 				Description: fmt.Sprintf("%s, %s view", m.Description, view),
 			},
@@ -741,7 +714,6 @@ func (m *MediaTypeDefinition) projectCollection(view string) (p *MediaTypeDefini
 		lTypeName := le.TypeName + "Array"
 		links = &UserTypeDefinition{
 			AttributeDefinition: &AttributeDefinition{
-				APIVersions: m.APIVersions,
 				Type:        &Array{ElemType: &AttributeDefinition{Type: le}},
 				Description: fmt.Sprintf("%s contains links to related resources of %s.", lTypeName, m.TypeName),
 			},

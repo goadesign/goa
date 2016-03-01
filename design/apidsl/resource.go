@@ -30,7 +30,6 @@ import (
 //		Parent("account")		// Name of parent resource if any
 //		CanonicalActionName("get")	// Name of action that returns canonical representation if not "show"
 //		UseTrait("Authenticated")	// Included trait if any, can appear more than once
-//		APIVersion("v1")		// API version exposing this resource, can appear more than once.
 //
 //		Action("show", func() {		// Action definition, can appear more than once
 //			// ... Action dsl
@@ -100,16 +99,5 @@ func Parent(p string) {
 func CanonicalActionName(a string) {
 	if r, ok := resourceDefinition(true); ok {
 		r.CanonicalActionName = a
-	}
-}
-
-// APIVersion define the API version(s) that expose this resource.
-func APIVersion(versions ...string) {
-	if r, ok := resourceDefinition(false); ok {
-		r.APIVersions = append(r.APIVersions, versions...)
-	} else if m, ok := mediaTypeDefinition(false); ok {
-		m.APIVersions = append(m.APIVersions, versions...)
-	} else if t, ok := attributeDefinition(true); ok {
-		t.APIVersions = append(t.APIVersions, versions...)
 	}
 }

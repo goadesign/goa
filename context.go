@@ -46,8 +46,6 @@ type (
 		Payload interface{}
 		// Params is the path and querystring request parameters.
 		Params url.Values
-		// Version is the name of the targeted version if any, empty string otherwise.
-		Version string
 	}
 
 	// ResponseData provides access to the underlying HTTP response.

@@ -56,32 +56,20 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		return nil, err
 	}
 	genfiles = append(genfiles, swaggerDir)
-
-	err = api.IterateVersions(func(ver *design.APIVersionDefinition) error {
-		s, err := New(api, ver)
-		if err != nil {
-			return err
-		}
-		b, err := json.Marshal(s)
-		if err != nil {
-			return err
-		}
-		verDir := swaggerDir
-		if ver.Version != "" {
-			verDir = filepath.Join(swaggerDir, ver.Version)
-			if err = os.MkdirAll(verDir, 0755); err != nil {
-				return err
-			}
-			genfiles = append(genfiles, verDir)
-		}
-		swaggerFile := filepath.Join(verDir, "swagger.json")
-		err = ioutil.WriteFile(swaggerFile, b, 0644)
-		if err != nil {
-			return err
-		}
-		genfiles = append(genfiles, swaggerFile)
-		return nil
-	})
+	s, err := New(api)
+	if err != nil {
+		return nil, err
+	}
+	b, err := json.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+	swaggerFile := filepath.Join(swaggerDir, "swagger.json")
+	err = ioutil.WriteFile(swaggerFile, b, 0644)
+	if err != nil {
+		return nil, err
+	}
+	genfiles = append(genfiles, swaggerFile)
 	if err != nil {
 		return nil, err
 	}
@@ -95,12 +83,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
 	file.WriteHeader(fmt.Sprintf("%s Swagger Spec", api.Name), "swagger", imports)
-	var versions []*design.APIVersionDefinition
-	api.IterateVersions(func(ver *design.APIVersionDefinition) error {
-		versions = append(versions, ver)
-		return nil
-	})
-	err = file.ExecuteTemplate("swagger", swaggerT, nil, map[string]interface{}{"Versions": versions})
+	err = file.ExecuteTemplate("swagger", swaggerT, nil, api)
 	if err != nil {
 		return nil, err
 	}
@@ -112,10 +95,8 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 }
 
 const swaggerT = `
-// MountController mounts the swagger spec controllers (one per API version) under "/swagger.json".
+// MountController mounts the swagger spec controller.
 func MountController(service *goa.Service) {
-{{range .Versions}}	service{{if .Version}}.Version("{{.Version}}"){{end}}{{/*
-*/}}.ServeFiles("/swagger.json", "swagger/{{if .Version}}{{.Version}}/{{end}}swagger.json")
-{{end}}
+	service.ServeFiles("/swagger.json", "swagger/swagger.json")
 }
 `
