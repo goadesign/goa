@@ -51,18 +51,6 @@ type (
 		Finalize()
 	}
 
-	// Versioned is implemented by potentially versioned definitions such as API resources.
-	Versioned interface {
-		Definition
-		// Versions returns an array of supported versions if the object is versioned, nil
-		// othewise.
-		Versions() []string
-		// SupportsVersion returns true if the object supports the given version.
-		SupportsVersion(ver string) bool
-		// SupportsNoVersion returns true if the object is unversioned.
-		SupportsNoVersion() bool
-	}
-
 	// SetIterator is the function signature used to iterate over definition sets with
 	// IterateSets.
 	SetIterator func(s DefinitionSet) error

@@ -68,24 +68,7 @@ type (
 		Routes       []*design.RouteDefinition
 		Responses    map[string]*design.ResponseDefinition
 		API          *design.APIDefinition
-		Version      *design.APIVersionDefinition
 		DefaultPkg   string
-	}
-
-	// MediaTypeTemplateData contains all the information used by the template to redner the
-	// media types code.
-	MediaTypeTemplateData struct {
-		MediaType  *design.MediaTypeDefinition
-		Versioned  bool
-		DefaultPkg string
-	}
-
-	// UserTypeTemplateData contains all the information used by the template to redner the
-	// media types code.
-	UserTypeTemplateData struct {
-		UserType   *design.UserTypeDefinition
-		Versioned  bool
-		DefaultPkg string
 	}
 
 	// ControllerTemplateData contains the information required to generate an action handler.
@@ -93,7 +76,6 @@ type (
 		API        *design.APIDefinition           // API definition
 		Resource   string                          // Lower case plural resource name, e.g. "bottles"
 		Actions    []map[string]interface{}        // Array of actions, each action has keys "Name", "Routes", "Context" and "Unmarshal"
-		Version    *design.APIVersionDefinition    // Controller API version
 		EncoderMap map[string]*EncoderTemplateData // Encoder data indexed by package path
 		DecoderMap map[string]*EncoderTemplateData // Decoder data indexed by package path
 	}
@@ -124,11 +106,6 @@ type (
 	}
 )
 
-// Versioned returns true if the context was built from an API version.
-func (c *ContextTemplateData) Versioned() bool {
-	return !c.Version.IsDefault()
-}
-
 // IsPathParam returns true if the given parameter name corresponds to a path parameter for all
 // the context action routes. Such parameter is required but does not need to be validated as
 // httprouter takes care of that.
@@ -138,7 +115,7 @@ func (c *ContextTemplateData) IsPathParam(param string) bool {
 	if params.Type.IsObject() {
 		for _, r := range c.Routes {
 			pp = false
-			for _, p := range r.Params(c.Version) {
+			for _, p := range r.Params() {
 				if p == param {
 					pp = true
 					break
@@ -188,13 +165,10 @@ func NewContextsWriter(filename string) (*ContextsWriter, error) {
 
 // Execute writes the code for the context types to the writer.
 func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
-	fn := template.FuncMap{
-		"hasAPIVersion": hasAPIVersion,
-	}
-	if err := w.ExecuteTemplate("context", ctxT, fn, data); err != nil {
+	if err := w.ExecuteTemplate("context", ctxT, nil, data); err != nil {
 		return err
 	}
-	fn = template.FuncMap{
+	fn := template.FuncMap{
 		"newCoerceData":  newCoerceData,
 		"arrayAttribute": arrayAttribute,
 	}
@@ -254,18 +228,14 @@ func NewControllersWriter(filename string) (*ControllersWriter, error) {
 	return &ControllersWriter{SourceFile: file}, nil
 }
 
-// WriteInitService writes the initService function for the given version
-func (w *ControllersWriter) WriteInitService(version *design.APIVersionDefinition,
-	encoderMap, decoderMap map[string]*EncoderTemplateData) error {
-
-	fn := template.FuncMap{"versionFuncs": versionFuncs}
+// WriteInitService writes the initService function
+func (w *ControllersWriter) WriteInitService(encoderMap, decoderMap map[string]*EncoderTemplateData) error {
 	ctx := map[string]interface{}{
 		"API":        design.Design,
-		"Version":    version,
 		"EncoderMap": encoderMap,
 		"DecoderMap": decoderMap,
 	}
-	if err := w.ExecuteTemplate("service", serviceT, fn, ctx); err != nil {
+	if err := w.ExecuteTemplate("service", serviceT, nil, ctx); err != nil {
 		return err
 	}
 	return nil
@@ -316,9 +286,9 @@ func NewMediaTypesWriter(filename string) (*MediaTypesWriter, error) {
 }
 
 // Execute writes the code for the context types to the writer.
-func (w *MediaTypesWriter) Execute(data *MediaTypeTemplateData) error {
-	mt := data.MediaType
+func (w *MediaTypesWriter) Execute(mt *design.MediaTypeDefinition) error {
 	var mLinks *design.UserTypeDefinition
+	viewMT := mt
 	err := mt.IterateViews(func(view *design.ViewDefinition) error {
 		p, links, err := mt.Project(view.Name)
 		if mLinks == nil {
@@ -327,8 +297,8 @@ func (w *MediaTypesWriter) Execute(data *MediaTypeTemplateData) error {
 		if err != nil {
 			return err
 		}
-		data.MediaType = p
-		if err := w.ExecuteTemplate("mediatype", mediaTypeT, nil, data); err != nil {
+		viewMT = p
+		if err := w.ExecuteTemplate("mediatype", mediaTypeT, nil, viewMT); err != nil {
 			return err
 		}
 		return nil
@@ -337,12 +307,7 @@ func (w *MediaTypesWriter) Execute(data *MediaTypeTemplateData) error {
 		return err
 	}
 	if mLinks != nil {
-		lData := &UserTypeTemplateData{
-			UserType:   mLinks,
-			Versioned:  data.Versioned,
-			DefaultPkg: data.DefaultPkg,
-		}
-		if err := w.ExecuteTemplate("usertype", userTypeT, nil, lData); err != nil {
+		if err := w.ExecuteTemplate("usertype", userTypeT, nil, mLinks); err != nil {
 			return err
 		}
 	}
@@ -360,8 +325,8 @@ func NewUserTypesWriter(filename string) (*UserTypesWriter, error) {
 }
 
 // Execute writes the code for the context types to the writer.
-func (w *UserTypesWriter) Execute(data *UserTypeTemplateData) error {
-	return w.ExecuteTemplate("types", userTypeT, nil, data)
+func (w *UserTypesWriter) Execute(t *design.UserTypeDefinition) error {
+	return w.ExecuteTemplate("types", userTypeT, nil, t)
 }
 
 // newCoerceData is a helper function that creates a map that can be given to the "Coerce" template.
@@ -381,40 +346,6 @@ func arrayAttribute(a *design.AttributeDefinition) *design.AttributeDefinition {
 	return a.Type.(*design.Array).ElemType
 }
 
-// hasAPIVersion returns true if the given attribute has a child attribute whose goified name is
-// "APIVersion". This is used to not generate the built in APIVersion when such a field exists.
-func hasAPIVersion(params *design.AttributeDefinition) bool {
-	if params == nil {
-		return false
-	}
-	o := params.Type.ToObject()
-	if o == nil {
-		return false
-	}
-	for n := range o {
-		if codegen.Goify(n, true) == "APIVersion" {
-			return true
-		}
-	}
-	return false
-}
-
-// versionFuncs returns an array of code snippets that invoke the select version func corresponding
-// to the version params, headers and querystrings defined in the design.
-func versionFuncs(api *design.APIDefinition) []string {
-	var funcs []string
-	for _, param := range api.VersionParams {
-		funcs = append(funcs, fmt.Sprintf(`goa.PathSelectVersionFunc("%s", "%s")`, api.BasePath, param))
-	}
-	for _, header := range api.VersionHeaders {
-		funcs = append(funcs, fmt.Sprintf(`goa.HeaderSelectVersionFunc("%s")`, header))
-	}
-	for _, query := range api.VersionQueries {
-		funcs = append(funcs, fmt.Sprintf(`goa.QuerySelectVersionFunc("%s")`, query))
-	}
-	return funcs
-}
-
 const (
 	// ctxT generates the code for the context data type.
 	// template input: *ContextTemplateData
@@ -426,7 +357,6 @@ type {{.Name}} struct {
 {{if .Params}}{{range $name, $att := .Params.Type.ToObject}}{{/*
 */}}	{{goify $name true}} {{if and $att.Type.IsPrimitive ($.Params.IsPrimitivePointer $name)}}*{{end}}{{gotyperef .Type nil 0}}
 {{end}}{{end}}{{if .Payload}}	Payload {{gotyperef .Payload nil 0}}
-{{end}}{{if and (not .Version.IsDefault) (not (hasAPIVersion .Params))}}	APIVersion string
 {{end}}}
 `
 	// coerceT generates the code that coerces the generic deserialized
@@ -527,7 +457,7 @@ func New{{.Name}}(ctx context.Context) (*{{.Name}}, error) {
 	ctxMTRespT = `{{$ctx := .Context}}{{$resp := .Response}}{{$mt := .MediaType}}{{/*
 */}}{{range $name, $view := $mt.Views}}{{if not (eq $name "link")}}{{$projected := project $mt $name}}
 // {{respName $resp $name}} sends a HTTP response with status code {{$resp.Status}}.
-func (ctx *{{$ctx.Name}}) {{respName $resp $name}}(r {{gopkgtyperef $projected $projected.AllRequired $ctx.Versioned $ctx.DefaultPkg 0}}) error {
+func (ctx *{{$ctx.Name}}) {{respName $resp $name}}(r {{gotyperef $projected $projected.AllRequired 0}}) error {
 	ctx.ResponseData.Header().Set("Content-Type", "{{$resp.MediaType}}")
 	return ctx.ResponseData.Send(ctx.Context, {{$resp.Status}}, r)
 }
@@ -537,7 +467,7 @@ func (ctx *{{$ctx.Name}}) {{respName $resp $name}}(r {{gopkgtyperef $projected $
 	// ctxTRespT generates the response helpers for responses with overridden types.
 	// template input: map[string]interface{}
 	ctxTRespT = `// {{goify .Response.Name true}} sends a HTTP response with status code {{.Response.Status}}.
-func (ctx *{{.Context.Name}}) {{goify .Response.Name true}}(r {{gopkgtyperef .Type nil .Context.Versioned .Context.DefaultPkg 0}}) error {
+func (ctx *{{.Context.Name}}) {{goify .Response.Name true}}(r {{gotyperef .Type nil 0}}) error {
 	ctx.ResponseData.Header().Set("Content-Type", "{{.Response.MediaType}}")
 	return ctx.ResponseData.Send(ctx.Context, {{.Response.Status}}, r)
 }
@@ -559,7 +489,7 @@ func (ctx *{{.Context.Name}}) {{goify .Response.Name true}}({{if .Response.Media
 	// payloadT generates the payload type definition GoGenerator
 	// template input: *ContextTemplateData
 	payloadT = `{{$payload := .Payload}}// {{gotypename .Payload nil 0}} is the {{.ResourceName}} {{.ActionName}} action payload.
-type {{gotypename .Payload nil 1}} {{gotypedef .Payload .Versioned .DefaultPkg 0 true}}
+type {{gotypename .Payload nil 1}} {{gotypedef .Payload 0 true}}
 
 {{$validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1}}{{if $validation}}// Validate runs the validation rules defined in the design.
 func (payload {{gotyperef .Payload .Payload.AllRequired 0}}) Validate() (err error) {
@@ -590,17 +520,10 @@ func initService(service *goa.Service) {
 	inited = true
 	// Setup encoders and decoders
 {{range .EncoderMap}}{{$tmp := tempvar}}{{/*
-*/}}	service.{{if not $.Version.IsDefault}}Version("{{$.Version.Version}}").{{end}}SetEncoder({{.PackageName}}.{{.Factory}}(), {{.Default}}, "{{join .MIMETypes "\", \""}}")
+*/}}	service.SetEncoder({{.PackageName}}.{{.Factory}}(), {{.Default}}, "{{join .MIMETypes "\", \""}}")
 {{end}}{{range .DecoderMap}}{{$tmp := tempvar}}{{/*
-*/}}	service.{{if not $.Version.IsDefault}}Version("{{$.Version.Version}}").{{end}}SetDecoder({{.PackageName}}.{{.Factory}}(), {{.Default}}, "{{join .MIMETypes "\", \""}}")
-{{end}}{{if .Version.IsDefault}}{{$versionFuncs := versionFuncs .API}}{{if gt (len $versionFuncs) 0}}
-	// Configure mux for versioning.
-	if mux, ok := service.Mux.(*goa.RootMux); ok {
-{{if gt (len $versionFuncs) 1}}{{range $i, $f := $versionFuncs}}		func{{$i}} := {{$f}}
-{{end}}		mux.SelectVersionFunc = goa.CombineSelectVersionFunc({{range $i, $_ := $versionFuncs}}func{{$i}}, {{end}})
-{{else}}		mux.SelectVersionFunc = {{index $versionFuncs 0}}
-{{end}}	}
-{{end}}{{end}}}
+*/}}	service.SetDecoder({{.PackageName}}.{{.Factory}}(), {{.Default}}, "{{join .MIMETypes "\", \""}}")
+{{end}}}
 
 `
 
@@ -611,20 +534,18 @@ func initService(service *goa.Service) {
 func Mount{{.Resource}}Controller(service *goa.Service, ctrl {{.Resource}}Controller) {
 	initService(service)
 	var h goa.Handler
-	mux := service.{{if not .Version.IsDefault}}Version("{{.Version.Version}}").Mux{{else}}Mux{{end}}
-{{$res := .Resource}}{{$ver := .Version}}{{range .Actions}}{{$action := .}}	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+{{$res := .Resource}}{{range .Actions}}{{$action := .}}	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := New{{.Context}}(ctx)
 		if err != nil {
 			return goa.NewBadRequestError(err)
-		}{{if not $ver.IsDefault}}
-		rctx.APIVersion = "{{$ver.Version}}"{{end}}
+		}
 {{if .Payload}}if rawPayload := goa.Request(ctx).Payload; rawPayload != nil {
 			rctx.Payload = rawPayload.({{gotyperef .Payload nil 1}})
 		}
 		{{end}}		return ctrl.{{.Name}}(rctx)
 	}
-{{range .Routes}}	mux.Handle("{{.Verb}}", "{{.FullPath $ver}}", ctrl.MuxHandler("{{$action.Name}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
-	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "{{$res}}"},{{if not $ver.IsDefault}} goa.KV{"version", "{{$ver.Version}}"},{{end}} goa.KV{"action", "{{$action.Name}}"}, goa.KV{"route", "{{.Verb}} {{.FullPath $ver}}"})
+{{range .Routes}}	service.Mux.Handle("{{.Verb}}", "{{.FullPath}}", ctrl.MuxHandler("{{$action.Name}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
+	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "{{$res}}"}, goa.KV{"action", "{{$action.Name}}"}, goa.KV{"route", "{{.Verb}} {{.FullPath}}"})
 {{end}}{{end}}}
 `
 
@@ -656,12 +577,12 @@ func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} interfa
 
 	// mediaTypeT generates the code for a media type.
 	// template input: MediaTypeTemplateData
-	mediaTypeT = `// {{if .MediaType.Description}}{{.MediaType.Description}}{{else}}{{gotypename .MediaType .MediaType.AllRequired 0}} media type{{end}}
-// Identifier: {{.MediaType.Identifier}}{{$typeName := gotypename .MediaType .MediaType.AllRequired 0}}
-type {{$typeName}} {{gotypedef .MediaType .Versioned .DefaultPkg 0 true}}
+	mediaTypeT = `// {{if .Description}}{{.Description}}{{else}}{{gotypename . .AllRequired 0}} media type{{end}}
+// Identifier: {{.Identifier}}{{$typeName := gotypename . .AllRequired 0}}
+type {{$typeName}} {{gotypedef . 0 true}}
 
-{{$validation := recursiveValidate .MediaType.AttributeDefinition false false "mt" "response" 1}}{{if $validation}}// Validate validates the media type instance.
-func (mt {{gotyperef .MediaType .MediaType.AllRequired 0}}) Validate() (err error) {
+{{$validation := recursiveValidate .AttributeDefinition false false "mt" "response" 1}}{{if $validation}}// Validate validates the media type instance.
+func (mt {{gotyperef . .AllRequired 0}}) Validate() (err error) {
 {{$validation}}
 	return
 }
@@ -670,11 +591,11 @@ func (mt {{gotyperef .MediaType .MediaType.AllRequired 0}}) Validate() (err erro
 
 	// userTypeT generates the code for a user type.
 	// template input: UserTypeTemplateData
-	userTypeT = `// {{if .UserType.Description}}{{.UserType.Description}}{{else}}{{gotypename .UserType .UserType.AllRequired 0}} type{{end}}
-type {{gotypename .UserType .UserType.AllRequired 0}} {{gotypedef .UserType .Versioned .DefaultPkg 0 true}}
+	userTypeT = `// {{if .Description}}{{.Description}}{{else}}{{gotypename . .AllRequired 0}} type{{end}}
+type {{gotypename . .AllRequired 0}} {{gotypedef . 0 true}}
 
-{{$validation := recursiveValidate .UserType.AttributeDefinition false false "ut" "response" 1}}{{if $validation}}// Validate validates the type instance.
-func (ut {{gotyperef .UserType .UserType.AllRequired 0}}) Validate() (err error) {
+{{$validation := recursiveValidate .AttributeDefinition false false "ut" "response" 1}}{{if $validation}}// Validate validates the type instance.
+func (ut {{gotyperef . .AllRequired 0}}) Validate() (err error) {
 {{$validation}}
 	return
 }{{end}}

@@ -47,7 +47,6 @@ func (d *dupper) DupAttribute(att *AttributeDefinition) *AttributeDefinition {
 	dup := AttributeDefinition{
 		Type:              dupType,
 		Description:       att.Description,
-		APIVersions:       att.APIVersions,
 		Validation:        valDup,
 		Metadata:          att.Metadata,
 		DefaultValue:      att.DefaultValue,
