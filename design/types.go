@@ -260,6 +260,8 @@ func (p Primitive) IsCompatible(val interface{}) (ok bool) {
 	return
 }
 
+var anyPrimitive = []Primitive{Boolean, Integer, Number, DateTime}
+
 // GenerateExample returns an instance of the given data type.
 func (p Primitive) GenerateExample(r *RandomGenerator) interface{} {
 	switch p {
@@ -274,7 +276,8 @@ func (p Primitive) GenerateExample(r *RandomGenerator) interface{} {
 	case DateTime:
 		return r.DateTime()
 	case Any:
-		return nil
+		// to not make it too complicated, pick one of the primitive types
+		return anyPrimitive[r.Int()%len(anyPrimitive)].GenerateExample(r)
 	default:
 		panic("unknown primitive type") // bug
 	}
@@ -322,7 +325,17 @@ func (a *Array) GenerateExample(r *RandomGenerator) interface{} {
 	for i := 0; i < count; i++ {
 		res[i] = a.ElemType.Type.GenerateExample(r)
 	}
-	return res
+	return a.MakeSlice(res)
+}
+
+// MakeSlice examines the key type from the Array and create a slice with builtin type if possible.
+// The idea is to avoid generating []interface{} and produce more known types.
+func (a *Array) MakeSlice(s []interface{}) interface{} {
+	slice := reflect.MakeSlice(toReflectType(a), 0, len(s))
+	for _, item := range s {
+		slice = reflect.Append(slice, reflect.ValueOf(item))
+	}
+	return slice.Interface()
 }
 
 // Kind implements DataKind.
@@ -427,37 +440,12 @@ func (h *Hash) GenerateExample(r *RandomGenerator) interface{} {
 
 // MakeMap examines the key type from a Hash and create a map with builtin type if possible.
 // The idea is to avoid generating map[interface{}]interface{}, which cannot be handled by json.Marshal.
-func (h *Hash) MakeMap(pair map[interface{}]interface{}) interface{} {
-	if !h.KeyType.Type.IsPrimitive() {
-		// well, a type can't be handled by json.Marshal... not much we can do
-		return pair
+func (h *Hash) MakeMap(m map[interface{}]interface{}) interface{} {
+	hash := reflect.MakeMap(toReflectType(h))
+	for key, value := range m {
+		hash.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
 	}
-	if len(pair) == 0 {
-		// figure out the map type manually
-		switch h.KeyType.Type.Kind() {
-		case BooleanKind:
-			return map[bool]interface{}{}
-		case IntegerKind:
-			return map[int]interface{}{}
-		case NumberKind:
-			return map[float64]interface{}{}
-		case StringKind:
-			return map[string]interface{}{}
-		case DateTimeKind:
-			return map[time.Time]interface{}{}
-		default:
-			return pair
-		}
-	}
-	var newMap reflect.Value
-	for key, value := range pair {
-		rkey, rvalue := reflect.ValueOf(key), reflect.ValueOf(value)
-		if !newMap.IsValid() {
-			newMap = reflect.MakeMap(reflect.MapOf(rkey.Type(), rvalue.Type()))
-		}
-		newMap.SetMapIndex(rkey, rvalue)
-	}
-	return newMap.Interface()
+	return hash.Interface()
 }
 
 // AttributeIterator is the type of the function given to IterateAttributes.
@@ -770,4 +758,36 @@ func (m *MediaTypeDefinition) projectCollection(view string) (p *MediaTypeDefini
 // MediaTypeDefinition.
 func (a *AttributeDefinition) Definition() *AttributeDefinition {
 	return a
+}
+
+// toReflectType converts the DataType to reflect.Type.
+func toReflectType(dtype DataType) reflect.Type {
+	switch dtype.Kind() {
+	case BooleanKind:
+		return reflect.TypeOf(true)
+	case IntegerKind:
+		return reflect.TypeOf(int(0))
+	case NumberKind:
+		return reflect.TypeOf(float64(0))
+	case StringKind:
+		return reflect.TypeOf("")
+	case DateTimeKind:
+		return reflect.TypeOf(time.Time{})
+	case ObjectKind, UserTypeKind, MediaTypeKind:
+		return reflect.TypeOf(map[string]interface{}{})
+	case ArrayKind:
+		return reflect.SliceOf(toReflectType(dtype.ToArray().ElemType.Type))
+	case HashKind:
+		hash := dtype.ToHash()
+		// avoid complication: not allow object as the hash key
+		var ktype reflect.Type
+		if !hash.KeyType.Type.IsObject() {
+			ktype = toReflectType(hash.KeyType.Type)
+		} else {
+			ktype = reflect.TypeOf([]interface{}{}).Elem()
+		}
+		return reflect.MapOf(ktype, toReflectType(hash.ElemType.Type))
+	default:
+		return reflect.TypeOf([]interface{}{}).Elem()
+	}
 }
