@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -112,9 +113,10 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("encoding/json"),
 		codegen.SimpleImport("fmt"),
-		codegen.SimpleImport(clientPkg),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("github.com/spf13/cobra"),
+		codegen.SimpleImport(AppPkg),
+		codegen.SimpleImport(clientPkg),
 	}
 	if err := file.WriteHeader("", "main", imports); err != nil {
 		return err
@@ -181,6 +183,7 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 		codegen.SimpleImport("net/url"),
 		codegen.SimpleImport("strconv"),
 		codegen.SimpleImport("strings"),
+		codegen.SimpleImport(AppPkg),
 	}
 
 	return api.IterateResources(func(res *design.ResourceDefinition) error {
@@ -248,6 +251,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		"title":        strings.Title,
 		"flagType":     flagType,
 		"defaultPath":  defaultPath,
+		"appPkg":       appPkg,
 	}
 	clientPkg, err := codegen.PackagePath(codegen.OutputDir)
 	if err != nil {
@@ -428,6 +432,11 @@ func defaultPath(action *design.ActionDefinition) string {
 	return ""
 }
 
+// appPkg returns the name of the generated application package
+func appPkg() string {
+	return path.Base(AppPkg)
+}
+
 const mainTmpl = `
 // PrettyPrint is true if the tool output should be formatted for human consumption.
 var PrettyPrint bool
@@ -545,7 +554,7 @@ func (cmd *{{$cmdName}}) Run(c *client.Client, args []string) error {
 {{$default := defaultPath .Action}}{{if $default}}	path = "{{$default}}"
 {{else}}	return fmt.Errorf("missing path argument")
 {{end}}	}
-{{if .Action.Payload}}var payload {{gotyperefext .Action.Payload 2 "client"}}
+{{if .Action.Payload}}var payload {{gotyperefext .Action.Payload 2 appPkg}}
 	if cmd.Payload != "" {
 		err := json.Unmarshal([]byte(cmd.Payload), &payload)
 		if err != nil {
@@ -576,11 +585,8 @@ func (cmd *{{$cmdName}}) RegisterFlags(cc *cobra.Command) {
 {{end}}{{end}}}
 `
 
-const clientsTmpl = `{{$payload := goify (printf "%s%sPayload" .Name (title .Parent.Name)) true}}{{if .Payload}}// {{$payload}} is the data structure used to initialize the {{.Parent.Name}} {{.Name}} request body.
-type {{$payload}} {{gotypedef .Payload 1 true}}
-
-{{end}}{{$funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true}}{{$desc := .Description}}{{if $desc}}// {{$desc}}{{else}}// {{$funcName}} makes a request to the {{.Name}} action endpoint of the {{.Parent.Name}} resource{{end}}
-func (c *Client) {{$funcName}}(path string{{if .Payload}}, payload {{if .Payload.Type.IsObject}}*{{end}}{{$payload}}{{end}}{{/*
+const clientsTmpl = `{{$funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true}}{{$desc := .Description}}{{if $desc}}// {{$desc}}{{else}}// {{$funcName}} makes a request to the {{.Name}} action endpoint of the {{.Parent.Name}} resource{{end}}
+func (c *Client) {{$funcName}}(path string{{if .Payload}}, payload {{if .Payload.Type.IsObject}}*{{end}}{{gotyperefext .Payload 1 appPkg}}{{end}}{{/*
 	*/}}{{$params := join .QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
 	*/}}{{$headers := join .Headers}}{{if $headers}}, {{$headers}}{{end}}) (*http.Response, error) {
 	var body io.Reader
