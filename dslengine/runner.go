@@ -142,6 +142,8 @@ func (m MultiError) Error() string {
 	return strings.Join(msgs, "\n")
 }
 
+// FailOnError will exit with code 1 if `err != nil`. This function
+// will handle properly the MultiError this dslengine provides.
 func FailOnError(err error) {
 	if merr, ok := err.(MultiError); ok {
 		if len(merr) == 0 {
