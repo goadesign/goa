@@ -76,6 +76,8 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		}
 	}()
 
+	os.RemoveAll(AppOutputDir())
+
 	if err := os.MkdirAll(AppOutputDir(), 0755); err != nil {
 		return nil, err
 	}
