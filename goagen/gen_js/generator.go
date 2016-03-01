@@ -92,10 +92,7 @@ func (g *Generator) generateJS(jsFile string, api *design.APIDefinition) (_ *des
 			if exampleAction == nil && a.Routes[0].Verb == "GET" {
 				exampleAction = a
 			}
-			data := map[string]interface{}{
-				"Action":  a,
-				"Version": design.Design.APIVersionDefinition,
-			}
+			data := map[string]interface{}{"Action": a}
 			funcs := template.FuncMap{"params": params}
 			if err = file.ExecuteTemplate("jsFuncs", jsFuncsT, funcs, data); err != nil {
 				return
@@ -130,8 +127,8 @@ func (g *Generator) generateIndexHTML(htmlFile string, api *design.APIDefinition
 		}
 		args = strings.Join(argValues, ", ")
 	}
-	examplePath := exampleAction.Routes[0].FullPath(design.Design.APIVersionDefinition)
-	pathParams := exampleAction.Routes[0].Params(design.Design.APIVersionDefinition)
+	examplePath := exampleAction.Routes[0].FullPath()
+	pathParams := exampleAction.Routes[0].Params()
 	if len(pathParams) > 0 {
 		pathVars := exampleAction.AllParams().Type.ToObject()
 		pathValues := make([]interface{}, len(pathParams))
@@ -295,7 +292,7 @@ const moduleTend = `  return client;
 
 const jsFuncsT = `{{$params := params .Action}}
   {{$name := printf "%s%s" .Action.Name (title .Action.Parent.Name)}}// {{if .Action.Description}}{{.Action.Description}}{{else}}{{$name}} calls the {{.Action.Name}} action of the {{.Action.Parent.Name}} resource.{{end}}
-  // path is the request path, the format is "{{(index .Action.Routes 0).FullPath .Version}}"
+  // path is the request path, the format is "{{(index .Action.Routes 0).FullPath}}"
   {{if .Action.Payload}}// data contains the action payload (request body)
   {{end}}{{if $params}}// {{join $params ", "}} {{if gt (len $params) 1}}are{{else}}is{{end}} used to build the request query string.
   {{end}}// config is an optional object to be merged into the config built by the function prior to making the request.

@@ -59,12 +59,10 @@ func init() {
 
 // GoTypeDef returns the Go code that defines a Go type which matches the data structure
 // definition (the part that comes after `type foo`).
-// versioned indicates whether the type is being referenced from a version package (true) or the
-// default package (false).
 // tabs is the number of tab character(s) used to tabulate the definition however the first
 // line is never indented.
 // jsonTags controls whether to produce json tags.
-func GoTypeDef(ds design.DataStructure, versioned bool, defPkg string, tabs int, jsonTags bool) string {
+func GoTypeDef(ds design.DataStructure, tabs int, jsonTags bool) string {
 	var buffer bytes.Buffer
 	def := ds.Definition()
 	t := def.Type
@@ -72,17 +70,17 @@ func GoTypeDef(ds design.DataStructure, versioned bool, defPkg string, tabs int,
 	case design.Primitive:
 		return GoTypeName(t, nil, tabs)
 	case *design.Array:
-		d := GoTypeDef(actual.ElemType, versioned, defPkg, tabs, jsonTags)
+		d := GoTypeDef(actual.ElemType, tabs, jsonTags)
 		if actual.ElemType.Type.IsObject() {
 			d = "*" + d
 		}
 		return "[]" + d
 	case *design.Hash:
-		keyDef := GoTypeDef(actual.KeyType, versioned, defPkg, tabs, jsonTags)
+		keyDef := GoTypeDef(actual.KeyType, tabs, jsonTags)
 		if actual.KeyType.Type.IsObject() {
 			keyDef = "*" + keyDef
 		}
-		elemDef := GoTypeDef(actual.ElemType, versioned, defPkg, tabs, jsonTags)
+		elemDef := GoTypeDef(actual.ElemType, tabs, jsonTags)
 		if actual.ElemType.Type.IsObject() {
 			elemDef = "*" + elemDef
 		}
@@ -99,7 +97,7 @@ func GoTypeDef(ds design.DataStructure, versioned bool, defPkg string, tabs int,
 		for _, name := range keys {
 			WriteTabs(&buffer, tabs+1)
 			field := actual[name]
-			typedef := GoTypeDef(field, versioned, defPkg, tabs+1, jsonTags)
+			typedef := GoTypeDef(field, tabs+1, jsonTags)
 			if field.Type.IsObject() || def.IsPrimitivePointer(name) {
 				typedef = "*" + typedef
 			}
@@ -122,9 +120,9 @@ func GoTypeDef(ds design.DataStructure, versioned bool, defPkg string, tabs int,
 		buffer.WriteString("}")
 		return buffer.String()
 	case *design.UserTypeDefinition:
-		return GoPackageTypeName(actual, actual.AllRequired(), versioned, defPkg, tabs)
+		return GoPackageTypeName(actual, actual.AllRequired(), tabs)
 	case *design.MediaTypeDefinition:
-		return GoPackageTypeName(actual, actual.AllRequired(), versioned, defPkg, tabs)
+		return GoPackageTypeName(actual, actual.AllRequired(), tabs)
 	default:
 		panic("goa bug: unknown data structure type")
 	}
@@ -138,28 +136,26 @@ func GoTypeDef(ds design.DataStructure, versioned bool, defPkg string, tabs int,
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
 // This function assumes the type is in the same package as the code accessing it.
 func GoTypeRef(t design.DataType, required []string, tabs int) string {
-	return GoPackageTypeRef(t, required, false, "", tabs)
+	return GoPackageTypeRef(t, required, tabs)
 }
 
 // GoPackageTypeRef returns the Go code that refers to the Go type which matches the given data type.
-// versioned indicates whether the type is being referenced from a version package (true) or the
-// default package defPkg (false).
 // required only applies when referring to a user type that is an object defined inline. In this
 // case the type (Object) does not carry the required field information defined in the parent
 // (anonymous) attribute.
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
-func GoPackageTypeRef(t design.DataType, required []string, versioned bool, defPkg string, tabs int) string {
+func GoPackageTypeRef(t design.DataType, required []string, tabs int) string {
 	switch t.(type) {
 	case *design.UserTypeDefinition, *design.MediaTypeDefinition:
 		var prefix string
 		if t.IsObject() {
 			prefix = "*"
 		}
-		return prefix + GoPackageTypeName(t, required, versioned, defPkg, tabs)
+		return prefix + GoPackageTypeName(t, required, tabs)
 	case design.Object:
-		return "*" + GoPackageTypeName(t, required, versioned, defPkg, tabs)
+		return "*" + GoPackageTypeName(t, required, tabs)
 	default:
-		return GoPackageTypeName(t, required, versioned, defPkg, tabs)
+		return GoPackageTypeName(t, required, tabs)
 	}
 }
 
@@ -170,41 +166,37 @@ func GoPackageTypeRef(t design.DataType, required []string, versioned bool, defP
 // case the type (Object) does not carry the required field information defined in the parent
 // (anonymous) attribute.
 func GoTypeName(t design.DataType, required []string, tabs int) string {
-	return GoPackageTypeName(t, required, false, "", tabs)
+	return GoPackageTypeName(t, required, tabs)
 }
 
 // GoPackageTypeName returns the Go type name for a data type.
-// versioned indicates whether the type is being referenced from a version package (true) or the
-// default package defPkg (false).
 // required only applies when referring to a user type that is an object defined inline. In this
 // case the type (Object) does not carry the required field information defined in the parent
 // (anonymous) attribute.
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
-func GoPackageTypeName(t design.DataType, required []string, versioned bool, defPkg string, tabs int) string {
+func GoPackageTypeName(t design.DataType, required []string, tabs int) string {
 	switch actual := t.(type) {
 	case design.Primitive:
 		return GoNativeType(t)
 	case *design.Array:
-		return "[]" + GoPackageTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), versioned, defPkg, tabs+1)
+		return "[]" + GoPackageTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), tabs+1)
 	case design.Object:
 		att := &design.AttributeDefinition{Type: actual}
 		if len(required) > 0 {
 			requiredVal := &dslengine.ValidationDefinition{Required: required}
 			att.Validation.Merge(requiredVal)
 		}
-		return GoTypeDef(att, versioned, defPkg, tabs, false)
+		return GoTypeDef(att, tabs, false)
 	case *design.Hash:
 		return fmt.Sprintf(
 			"map[%s]%s",
-			GoPackageTypeRef(actual.KeyType.Type, actual.KeyType.AllRequired(), versioned, defPkg, tabs+1),
-			GoPackageTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), versioned, defPkg, tabs+1),
+			GoPackageTypeRef(actual.KeyType.Type, actual.KeyType.AllRequired(), tabs+1),
+			GoPackageTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), tabs+1),
 		)
 	case *design.UserTypeDefinition:
-		pkgPrefix := PackagePrefix(actual, versioned, defPkg)
-		return pkgPrefix + Goify(actual.TypeName, true)
+		return Goify(actual.TypeName, true)
 	case *design.MediaTypeDefinition:
-		pkgPrefix := PackagePrefix(actual.UserTypeDefinition, versioned, defPkg)
-		return pkgPrefix + Goify(actual.TypeName, true)
+		return Goify(actual.TypeName, true)
 	default:
 		panic(fmt.Sprintf("goa bug: unknown type %#v", actual))
 	}
@@ -425,24 +417,6 @@ func WriteTabs(buf *bytes.Buffer, count int) {
 func Tempvar() string {
 	TempCount++
 	return fmt.Sprintf("tmp%d", TempCount)
-}
-
-// PackagePrefix returns the package prefix to use to access ut from ver given it lives in the
-// package pkg.
-func PackagePrefix(ut *design.UserTypeDefinition, versioned bool, pkg string) string {
-	if !versioned {
-		// If the version is the default version then the user type is in the same package
-		// (otherwise the DSL would not be valid).
-		return ""
-	}
-	if len(ut.APIVersions) == 0 {
-		// If the type is not versioned but we are accessing it from the non-default version
-		// then we need to qualify it with the default version package.
-		return pkg + "."
-	}
-	// If the type is versioned then we must be accessing it from the current version
-	// (unversioned definitions cannot use versioned definitions)
-	return ""
 }
 
 // RunTemplate executs the given template with the given input and returns

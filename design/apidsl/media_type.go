@@ -365,7 +365,6 @@ func CollectionOf(v interface{}, apidsl ...func()) *design.MediaTypeDefinition {
 		if mt, ok := mediaTypeDefinition(true); ok {
 			mt.TypeName = typeName
 			mt.AttributeDefinition = &design.AttributeDefinition{Type: ArrayOf(m)}
-			mt.APIVersions = m.APIVersions
 			if len(apidsl) > 0 {
 				dslengine.Execute(apidsl[0], mt)
 			}

@@ -278,7 +278,7 @@ type (
 )
 
 // New creates a Swagger spec from an API definition.
-func New(api *design.APIDefinition, ver *design.APIVersionDefinition) (*Swagger, error) {
+func New(api *design.APIDefinition) (*Swagger, error) {
 	if api == nil {
 		return nil, nil
 	}
@@ -286,7 +286,7 @@ func New(api *design.APIDefinition, ver *design.APIVersionDefinition) (*Swagger,
 	if err != nil {
 		return nil, err
 	}
-	params, err := paramsFromDefinition(ver.BaseParams, ver.BasePath)
+	params, err := paramsFromDefinition(api.BaseParams, api.BasePath)
 	if err != nil {
 		return nil, err
 	}
@@ -298,35 +298,35 @@ func New(api *design.APIDefinition, ver *design.APIVersionDefinition) (*Swagger,
 		}
 	}
 	var consumes []string
-	for _, c := range ver.Consumes {
+	for _, c := range api.Consumes {
 		consumes = append(consumes, c.MIMETypes...)
 	}
 	var produces []string
-	for _, p := range ver.Produces {
+	for _, p := range api.Produces {
 		produces = append(produces, p.MIMETypes...)
 	}
 	s := &Swagger{
 		Swagger: "2.0",
 		Info: &Info{
-			Title:          ver.Title,
-			Description:    ver.Description,
-			TermsOfService: ver.TermsOfService,
-			Contact:        ver.Contact,
-			License:        ver.License,
-			Version:        ver.Version,
+			Title:          api.Title,
+			Description:    api.Description,
+			TermsOfService: api.TermsOfService,
+			Contact:        api.Contact,
+			License:        api.License,
+			Version:        api.Version,
 		},
-		Host:         ver.Host,
-		BasePath:     ver.BasePath,
+		Host:         api.Host,
+		BasePath:     api.BasePath,
 		Paths:        make(map[string]*Path),
-		Schemes:      ver.Schemes,
+		Schemes:      api.Schemes,
 		Consumes:     consumes,
 		Produces:     produces,
 		Parameters:   paramMap,
 		Tags:         tags,
-		ExternalDocs: docsFromDefinition(ver.Docs),
+		ExternalDocs: docsFromDefinition(api.Docs),
 	}
 
-	err = ver.IterateResponses(func(r *design.ResponseDefinition) error {
+	err = api.IterateResponses(func(r *design.ResponseDefinition) error {
 		res, err := responseSpecFromDefinition(s, api, r)
 		if err != nil {
 			return err
@@ -341,9 +341,6 @@ func New(api *design.APIDefinition, ver *design.APIVersionDefinition) (*Swagger,
 		return nil, err
 	}
 	err = api.IterateResources(func(res *design.ResourceDefinition) error {
-		if !res.SupportsVersion(ver.Version) {
-			return nil
-		}
 		return res.IterateActions(func(a *design.ActionDefinition) error {
 			for _, route := range a.Routes {
 				if err := buildPathFromDefinition(s, api, route); err != nil {
@@ -551,7 +548,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	if err != nil {
 		return err
 	}
-	params, err := paramsFromDefinition(action.AllParams(), route.FullPath(design.Design.APIVersionDefinition))
+	params, err := paramsFromDefinition(action.AllParams(), route.FullPath())
 	if err != nil {
 		return err
 	}
@@ -600,7 +597,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		Deprecated:   false,
 	}
 	key := design.WildcardRegex.ReplaceAllStringFunc(
-		route.FullPath(design.Design.APIVersionDefinition),
+		route.FullPath(),
 		func(w string) string {
 			return fmt.Sprintf("/{%s}", w[2:])
 		},

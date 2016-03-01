@@ -75,11 +75,11 @@ type (
 
 // DecodeRequest retrives the request body and `Content-Type` header and uses Decode
 // to unmarshal into the provided `interface{}`
-func (ver *ServiceVersion) DecodeRequest(req *http.Request, v interface{}) error {
+func (service *Service) DecodeRequest(req *http.Request, v interface{}) error {
 	body, contentType := req.Body, req.Header.Get("Content-Type")
 	defer body.Close()
 
-	if err := ver.Decode(v, body, contentType); err != nil {
+	if err := service.Decode(v, body, contentType); err != nil {
 		return fmt.Errorf("failed to decode request body with content type %#v: %s", contentType, err)
 	}
 
@@ -87,7 +87,7 @@ func (ver *ServiceVersion) DecodeRequest(req *http.Request, v interface{}) error
 }
 
 // Decode uses registered Decoders to unmarshal a body based on the contentType
-func (ver *ServiceVersion) Decode(v interface{}, body io.Reader, contentType string) error {
+func (service *Service) Decode(v interface{}, body io.Reader, contentType string) error {
 	now := time.Now()
 	defer MeasureSince([]string{"goa", "decode", contentType}, now)
 	var p *decoderPool
@@ -99,9 +99,9 @@ func (ver *ServiceVersion) Decode(v interface{}, body io.Reader, contentType str
 			contentType = mediaType
 		}
 	}
-	p = ver.decoderPools[contentType]
+	p = service.decoderPools[contentType]
 	if p == nil {
-		p = ver.decoderPools["*/*"]
+		p = service.decoderPools["*/*"]
 	}
 	if p == nil {
 		return nil
@@ -119,7 +119,7 @@ func (ver *ServiceVersion) Decode(v interface{}, body io.Reader, contentType str
 
 // SetDecoder sets a specific decoder to be used for the specified content types. If
 // a decoder is already registered, it will be overwritten.
-func (ver *ServiceVersion) SetDecoder(f DecoderFactory, makeDefault bool, contentTypes ...string) {
+func (service *Service) SetDecoder(f DecoderFactory, makeDefault bool, contentTypes ...string) {
 	p := newDecodePool(f)
 
 	for _, contentType := range contentTypes {
@@ -127,11 +127,11 @@ func (ver *ServiceVersion) SetDecoder(f DecoderFactory, makeDefault bool, conten
 		if err != nil {
 			mediaType = contentType
 		}
-		ver.decoderPools[mediaType] = p
+		service.decoderPools[mediaType] = p
 	}
 
 	if makeDefault {
-		ver.decoderPools["*/*"] = p
+		service.decoderPools["*/*"] = p
 	}
 }
 
@@ -179,23 +179,23 @@ func (p *decoderPool) Put(d Decoder) {
 
 // EncodeResponse uses registered Encoders to marshal the response body based on the request
 // `Accept` header and writes it to the http.ResponseWriter
-func (ver *ServiceVersion) EncodeResponse(ctx context.Context, v interface{}) error {
+func (service *Service) EncodeResponse(ctx context.Context, v interface{}) error {
 	now := time.Now()
 	accept := Request(ctx).Header.Get("Accept")
 	if accept == "" {
 		accept = "*/*"
 	}
 	var contentType string
-	for _, t := range ver.encodableContentTypes {
+	for _, t := range service.encodableContentTypes {
 		if accept == "*/*" || accept == t {
 			contentType = accept
 			break
 		}
 	}
 	defer MeasureSince([]string{"goa", "encode", contentType}, now)
-	p := ver.encoderPools[contentType]
+	p := service.encoderPools[contentType]
 	if p == nil && contentType != "*/*" {
-		p = ver.encoderPools["*/*"]
+		p = service.encoderPools["*/*"]
 	}
 	if p == nil {
 		return fmt.Errorf("No encoder registered for %s and no default encoder", contentType)
@@ -213,24 +213,24 @@ func (ver *ServiceVersion) EncodeResponse(ctx context.Context, v interface{}) er
 
 // SetEncoder sets a specific encoder to be used for the specified content types. If
 // an encoder is already registered, it will be overwritten.
-func (ver *ServiceVersion) SetEncoder(f EncoderFactory, makeDefault bool, contentTypes ...string) {
+func (service *Service) SetEncoder(f EncoderFactory, makeDefault bool, contentTypes ...string) {
 	p := newEncodePool(f)
 	for _, contentType := range contentTypes {
 		mediaType, _, err := mime.ParseMediaType(contentType)
 		if err != nil {
 			mediaType = contentType
 		}
-		ver.encoderPools[mediaType] = p
+		service.encoderPools[mediaType] = p
 	}
 
 	if makeDefault {
-		ver.encoderPools["*/*"] = p
+		service.encoderPools["*/*"] = p
 	}
 
 	// Rebuild a unique index of registered content encoders to be used in EncodeResponse
-	ver.encodableContentTypes = make([]string, 0, len(ver.encoderPools))
-	for contentType := range ver.encoderPools {
-		ver.encodableContentTypes = append(ver.encodableContentTypes, contentType)
+	service.encodableContentTypes = make([]string, 0, len(service.encoderPools))
+	for contentType := range service.encoderPools {
+		service.encodableContentTypes = append(service.encodableContentTypes, contentType)
 	}
 
 }

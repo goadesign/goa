@@ -94,10 +94,6 @@ const (
 	// specified in the design definition or more elements than the
 	// maximum length.
 	ErrInvalidLength
-
-	// ErrInvalidVersion is the error rendered by the default mux when a
-	// request specifies an invalid version.
-	ErrInvalidVersion
 )
 
 // Title returns a human friendly error title
@@ -123,8 +119,6 @@ func (k ErrorID) Title() string {
 		return "invalid value range"
 	case ErrInvalidLength:
 		return "invalid value length"
-	case ErrInvalidVersion:
-		return "invalid version"
 	}
 	return "unknown error"
 }

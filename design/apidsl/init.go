@@ -15,11 +15,8 @@ func init() {
 // InitDesign initializes the Design global variable and loads the built-in
 // response templates. This is a public function mainly so it can be used in tests.
 func InitDesign() {
-	//ctxStack = nil // mostly for tests
 	api := &design.APIDefinition{
-		APIVersionDefinition: &design.APIVersionDefinition{
-			DefaultResponseTemplates: make(map[string]*design.ResponseTemplateDefinition),
-		},
+		DefaultResponseTemplates: make(map[string]*design.ResponseTemplateDefinition),
 	}
 	t := func(params ...string) *design.ResponseDefinition {
 		if len(params) < 1 {
