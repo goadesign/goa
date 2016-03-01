@@ -148,8 +148,9 @@ func (a *AttributeDefinition) finalizeExample(stack []*AttributeDefinition) (int
 	// note: must traverse each node to finalize the examples unless given
 	switch true {
 	case a.Type.IsArray():
-		example, isCustom := a.Type.ToArray().ElemType.finalizeExample(stack)
-		a.Example, a.isCustomExample = []interface{}{example}, isCustom
+		ary := a.Type.ToArray()
+		example, isCustom := ary.ElemType.finalizeExample(stack)
+		a.Example, a.isCustomExample = ary.MakeSlice([]interface{}{example}), isCustom
 	case a.Type.IsHash():
 		h := a.Type.ToHash()
 		exampleK, isCustomK := h.KeyType.finalizeExample(stack)
