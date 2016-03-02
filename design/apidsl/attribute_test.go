@@ -35,13 +35,17 @@ func (t *TestCD) IterateSets(it dslengine.SetIterator) {
 	it([]dslengine.Definition{t})
 }
 
+// Reset is a no-op
+func (t *TestCD) Reset() {}
+
 var _ = Describe("ContainerDefinition", func() {
 	var att *AttributeDefinition
+	var testCD *TestCD
 	BeforeEach(func() {
-		Reset()
+		dslengine.Reset()
 		att = &AttributeDefinition{Type: Object{}}
-		t := &TestCD{AttributeDefinition: att}
-		dslengine.Register(t)
+		testCD = &TestCD{AttributeDefinition: att}
+		dslengine.Register(testCD)
 	})
 
 	JustBeforeEach(func() {
@@ -50,13 +54,7 @@ var _ = Describe("ContainerDefinition", func() {
 	})
 
 	It("contains attributes", func() {
-		var t *TestCD
-		for _, root := range dslengine.Roots() {
-			if r, ok := root.(*TestCD); ok {
-				t = r
-			}
-		}
-		Ω(t.Attribute()).Should(Equal(att))
+		Ω(testCD.Attribute()).Should(Equal(att))
 	})
 })
 
@@ -69,7 +67,7 @@ var _ = Describe("Attribute", func() {
 	var parent *AttributeDefinition
 
 	BeforeEach(func() {
-		Reset()
+		dslengine.Reset()
 		name = ""
 		dataType = nil
 		description = ""

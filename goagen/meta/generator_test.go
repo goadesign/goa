@@ -255,8 +255,7 @@ invalid go code
 `
 
 	panickySource = `package foo
-import "github.com/goadesign/goa/dslengine"
-func Generate(roots []dslengine.Root) ([]string, error) {
+func Generate() ([]string, error) {
 	return nil, nil
 }
 
@@ -264,16 +263,14 @@ func init() { panic("kaboom") }
 `
 
 	validSource = `package foo
-import "github.com/goadesign/goa/dslengine"
-func Generate(roots []dslengine.Root) ([]string, error) {
+func Generate() ([]string, error) {
 	return nil, nil
 }
 `
 
 	validSourceTmpl = `package foo
 import "fmt"
-import "github.com/goadesign/goa/dslengine"
-func Generate(roots []dslengine.Root) ([]string, error) {
+func Generate() ([]string, error) {
 	{{range .}}fmt.Println("{{.}}")
 	{{end}}
 	return nil, nil

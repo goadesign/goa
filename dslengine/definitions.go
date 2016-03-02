@@ -22,6 +22,8 @@ type (
 		// IterateSets calls the given iterator passing in each definition set
 		// sorted in execution order.
 		IterateSets(SetIterator)
+		// Reset restores the root to pre DSL execution state.
+		Reset()
 	}
 
 	// Validate is the interface implemented by definitions that can be validated.
