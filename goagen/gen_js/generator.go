@@ -23,8 +23,8 @@ type Generator struct {
 }
 
 // Generate is the generator entry point called by the meta generator.
-func Generate(roots dslengine.RootDefinitions) (files []string, err error) {
-	api, err := design.FindAPIDefinition(roots)
+func Generate(roots []dslengine.Root) (files []string, err error) {
+	api := design.Design
 	if err != nil {
 		return nil, err
 	}

@@ -15,25 +15,13 @@ type (
 	// corresponding behaviors during DSL execution.
 	DefinitionSet []Definition
 
-	// Root is the interface implemented by the DSL root objects held by
-	// RootDefinitions.
+	// Root is the interface implemented by the DSL root objects.
 	// These objects contains all the definition sets created by the DSL and can
-	// be passed to the dsl for execution.
+	// be passed to the dsl engine for execution.
 	Root interface {
 		// IterateSets calls the given iterator passing in each definition set
 		// sorted in execution order.
 		IterateSets(SetIterator)
-	}
-
-	// RootDefinitions is the interface for the object containging all the Roots
-	// registered by DSLs and can be passed to the dsl for execution.
-	RootDefinitions interface {
-		// Register a new root into the list of definitions.
-		Register(Root)
-		// IterateRoots takes a handler function that will be called with each of the
-		// registered Roots. If the handler returns an error the walk will be
-		// stopped and the error will be returned by IterateRoots.
-		IterateRoots(func(Root) error) error
 	}
 
 	// Validate is the interface implemented by definitions that can be validated.

@@ -35,7 +35,7 @@ var _ = Describe("Generate", func() {
 	})
 
 	JustBeforeEach(func() {
-		files, genErr = genclient.Generate(dslengine.NewRootDefinitions(design.Design))
+		files, genErr = genclient.Generate(dslengine.Roots())
 	})
 
 	AfterEach(func() {

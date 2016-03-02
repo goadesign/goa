@@ -15,7 +15,7 @@ var _ = Describe("Resource", func() {
 	var res *ResourceDefinition
 
 	BeforeEach(func() {
-		InitDesign()
+		Reset()
 		dslengine.Errors = nil
 		name = ""
 		dsl = nil

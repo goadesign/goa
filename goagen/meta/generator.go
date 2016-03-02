@@ -19,7 +19,7 @@ type Generator struct {
 	// Genfunc contains the name of the generator entry point function.
 	// The function signature must be:
 	//
-	// func <Genfunc>(dslengine.RootDefinitions) ([]string, error)
+	// func <Genfunc>([]dslengine.Root) ([]string, error)
 	Genfunc string
 
 	// Imports list the imports that are specific for that generator that
@@ -169,11 +169,7 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 const mainTmpl = `
 func main() {
 	// Check if there were errors while running the first DSL pass
-	var err error
-	if dslengine.Errors != nil {
-		err = dslengine.Errors
-	}
-	dslengine.FailOnError(err)
+	dslengine.FailOnError(dslengine.Errors)
 
 	// Now run the secondary DSLs
 	dslengine.FailOnError(dslengine.Run())

@@ -325,7 +325,7 @@ var _ = Describe("GoTypeTransform", func() {
 	var transformErr error
 
 	BeforeEach(func() {
-		InitDesign()
+		Reset()
 	})
 
 	JustBeforeEach(func() {
