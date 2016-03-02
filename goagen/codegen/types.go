@@ -237,6 +237,32 @@ func GoNativeType(t design.DataType) string {
 	}
 }
 
+// GoTypeDesc returns the description of a type.  If no description is defined
+// for the type, one will be generated.
+func GoTypeDesc(t design.DataType, upper bool) string {
+	switch actual := t.(type) {
+	case *design.UserTypeDefinition:
+		if actual.Description != "" {
+			return actual.Description
+		}
+
+		return Goify(actual.TypeName, upper) + " user type."
+	case *design.MediaTypeDefinition:
+		if actual.Description != "" {
+			return actual.Description
+		}
+
+		switch elem := actual.UserTypeDefinition.AttributeDefinition.Type.(type) {
+		case *design.Array:
+			return fmt.Sprintf("%s media type is a collection of %s.", Goify(actual.TypeName, upper), GoPackageTypeName(elem.ElemType.Type, nil, 0))
+		default:
+			return Goify(actual.TypeName, upper) + " media type."
+		}
+	default:
+		return ""
+	}
+}
+
 var commonInitialisms = map[string]bool{
 	"API":   true,
 	"ASCII": true,

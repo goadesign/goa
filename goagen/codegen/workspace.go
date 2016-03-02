@@ -58,6 +58,7 @@ var (
 		"gonative":          GoNativeType,
 		"gotypedef":         GoTypeDef,
 		"gotypename":        GoTypeName,
+		"gotypedesc":        GoTypeDesc,
 		"gotyperef":         GoTypeRef,
 		"join":              strings.Join,
 		"recursiveValidate": RecursiveChecker,
