@@ -7,14 +7,23 @@ import (
 	"github.com/goadesign/goa/dslengine"
 )
 
-// Call InitDesign by default.
+// Setup API DSL roots.
 func init() {
-	InitDesign()
+	Reset()
 }
 
-// InitDesign initializes the Design global variable and loads the built-in
-// response templates. This is a public function mainly so it can be used in tests.
-func InitDesign() {
+// Reset creates new DSL roots and discards the previous ones.
+// This is useful to tests.
+func Reset() {
+	design.Design, design.GeneratedMediaTypes = newDesign()
+	dslengine.Reset()
+	dslengine.Register(design.Design)
+	dslengine.Register(design.GeneratedMediaTypes)
+}
+
+// newDesign returns a new design with built-in response templates.
+// This is a public function mainly so it can be used in tests.
+func newDesign() (*design.APIDefinition, design.MediaTypeRoot) {
 	api := &design.APIDefinition{
 		DefaultResponseTemplates: make(map[string]*design.ResponseTemplateDefinition),
 	}
@@ -87,9 +96,5 @@ func InitDesign() {
 			Status:      p.status,
 		}
 	}
-
-	// Initialize package variables
-	design.Design = api
-	dslengine.Register(api)
-	design.GeneratedMediaTypes = nil
+	return api, make(design.MediaTypeRoot)
 }

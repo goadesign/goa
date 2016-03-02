@@ -1,6 +1,6 @@
 # <img src="http://goa.design/img/goa-logo.svg"> 
 
-goa is a framework for building RESTful microservices in Go.
+goa is a framework for building microservices in Go using a unique design-first approach.
 
 [![Build Status](https://travis-ci.org/goadesign/goa.svg?branch=master)](https://travis-ci.org/goadesign/goa)
 [![Windows Build status](https://ci.appveyor.com/api/projects/status/vixp37loj5i6qmaf/branch/master?svg=true)](https://ci.appveyor.com/project/RaphaelSimon/goa-oqtis/branch/master)
@@ -21,7 +21,7 @@ problems that any non trivial API implementation must address. Things like reque
 response media type definitions or documentation are hard to do in a way that stays consistent and
 flexible as the API surface evolves.
 
-goa takes a different approach to building web applications: instead of focusing solely on helping
+goa takes a different approach to building these applications: instead of focusing solely on helping
 with implementation, goa makes it possible to describe the *design* of an API in an holistic way.
 goa then uses that description to provide specialized helper code to the implementation and to
 generate documentation, API clients, tests, even custom artifacts.

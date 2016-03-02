@@ -16,7 +16,7 @@ var _ = Describe("DSL execution", func() {
 		const att2Name = "att2Name"
 
 		BeforeEach(func() {
-			InitDesign()
+			Reset()
 
 			API("foo", func() {})
 
@@ -105,7 +105,7 @@ var _ = Describe("DSL errors", func() {
 		const lineNumber = 112
 
 		BeforeEach(func() {
-			InitDesign()
+			Reset()
 			API("foo", func() {
 				// NOTE: moving the line below requires updating the
 				// constant above to match its number.
@@ -128,7 +128,7 @@ var _ = Describe("DSL errors", func() {
 		const lineNumber = 135
 
 		BeforeEach(func() {
-			InitDesign()
+			Reset()
 			Type("bar", func() {
 				// NOTE: moving the line below requires updating the
 				// constant above to match its number.

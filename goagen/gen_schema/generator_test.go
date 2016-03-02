@@ -31,7 +31,7 @@ var _ = Describe("Generate", func() {
 	})
 
 	JustBeforeEach(func() {
-		files, genErr = genschema.Generate(dslengine.NewRootDefinitions(design.Design))
+		files, genErr = genschema.Generate(dslengine.Roots())
 	})
 
 	AfterEach(func() {

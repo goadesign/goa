@@ -16,7 +16,7 @@ var _ = Describe("Action", func() {
 	var action *ActionDefinition
 
 	BeforeEach(func() {
-		InitDesign()
+		Reset()
 		dslengine.Errors = nil
 		name = ""
 		dsl = nil
@@ -179,7 +179,7 @@ var _ = Describe("Action", func() {
 var _ = Describe("Payload", func() {
 	Context("with a payload definition", func() {
 		BeforeEach(func() {
-			InitDesign()
+			Reset()
 			Resource("foo", func() {
 				Action("bar", func() {
 					Routing(GET(""))
@@ -206,7 +206,7 @@ var _ = Describe("Payload", func() {
 
 	Context("with an array", func() {
 		BeforeEach(func() {
-			InitDesign()
+			Reset()
 			Resource("foo", func() {
 				Action("bar", func() {
 					Routing(GET(""))
@@ -234,7 +234,7 @@ var _ = Describe("Payload", func() {
 
 	Context("with a hash", func() {
 		BeforeEach(func() {
-			InitDesign()
+			Reset()
 			Resource("foo", func() {
 				Action("bar", func() {
 					Routing(GET(""))

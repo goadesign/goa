@@ -16,7 +16,7 @@ var _ = Describe("Response", func() {
 	var res *ResponseDefinition
 
 	BeforeEach(func() {
-		InitDesign()
+		Reset()
 		dslengine.Errors = nil
 		name = ""
 		dsl = nil

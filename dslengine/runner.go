@@ -17,13 +17,10 @@ var (
 	// Global DSL evaluation stack
 	ctxStack contextStack
 
-	roots *rootDefinitions
+	roots []Root
 )
 
 type (
-	// MultiError collects all DSL errors. It implements error.
-	MultiError []*Error
-
 	// Error represents an error that occurred while running the API DSL.
 	// It contains the name of the file and line number of where the error
 	// occurred as well as the original Go error.
@@ -33,27 +30,46 @@ type (
 		Line    int
 	}
 
+	// MultiError collects all DSL errors. It implements error.
+	MultiError []*Error
+
 	// DSL evaluation contexts stack
 	contextStack []Definition
 )
+
+// Roots returns the registered DSL roots.
+func Roots() []Root {
+	return roots
+}
+
+// Register adds a Root to the registered roots.
+func Register(r Root) {
+	roots = append(roots, r)
+}
+
+// Reset reset the set of DSL roots.
+// This is useful to tests.
+func Reset() {
+	roots = nil
+}
 
 // Run runs the given root definitions. It iterates over the definition sets
 // multiple times to first execute the DSL, the validate the resulting
 // definitions and finally finalize them. The executed DSL may register new
 // roots to have them be executed (last) in the same run.
 func Run() error {
-	if len(roots.roots) == 0 {
+	if len(roots) == 0 {
 		return nil
 	}
 	Errors = nil
 
 	executed := 0
 	recursed := 0
-	for executed < len(roots.roots) {
+	for executed < len(roots) {
 		recursed++
 		start := executed
-		executed = len(roots.roots)
-		for _, root := range roots.roots[start:] {
+		executed = len(roots)
+		for _, root := range roots[start:] {
 			root.IterateSets(runSet)
 		}
 		if recursed > 100 {
@@ -64,13 +80,13 @@ func Run() error {
 	if Errors != nil {
 		return Errors
 	}
-	for _, root := range roots.roots {
+	for _, root := range roots {
 		root.IterateSets(validateSet)
 	}
 	if Errors != nil {
 		return Errors
 	}
-	for _, root := range roots.roots {
+	for _, root := range roots {
 		root.IterateSets(finalizeSet)
 	}
 
@@ -81,7 +97,7 @@ func Run() error {
 // It returns false and appends to Errors on failure.
 // Note that `Run` takes care of calling `Execute` on all definitions that implement Source.
 // This function is intended for use by definitions that run the DSL at declaration time rather than
-// store the DSL for execution by the dsl (usually simple independent definitions).
+// store the DSL for execution by the dsl engine (usually simple independent definitions).
 // The DSL should use ReportError to record DSL execution errors.
 func Execute(dsl func(), def Definition) bool {
 	if dsl == nil {
@@ -99,12 +115,14 @@ func CurrentDefinition() Definition {
 	return ctxStack.Current()
 }
 
-// Current evaluation context, i.e. object being currently built by DSL
-func (s contextStack) Current() Definition {
-	if len(s) == 0 {
-		return nil
+// TopLevelDefinition returns true if the currently evaluated DSL is a root
+// DSL (i.e. is not being run in the context of another definition).
+func TopLevelDefinition(failItNotTopLevel bool) bool {
+	top := ctxStack.Current() == nil
+	if failItNotTopLevel && !top {
+		IncompatibleDSL()
 	}
-	return s[len(s)-1]
+	return top
 }
 
 // ReportError records a DSL error for reporting post DSL execution.
@@ -126,15 +144,6 @@ func ReportError(fm string, vals ...interface{}) {
 	})
 }
 
-// Error returns the error message.
-func (m MultiError) Error() string {
-	msgs := make([]string, len(m))
-	for i, de := range m {
-		msgs[i] = de.Error()
-	}
-	return strings.Join(msgs, "\n")
-}
-
 // FailOnError will exit with code 1 if `err != nil`. This function
 // will handle properly the MultiError this dslengine provides.
 func FailOnError(err error) {
@@ -151,6 +160,29 @@ func FailOnError(err error) {
 	}
 }
 
+// IncompatibleDSL should be called by DSL functions when they are
+// invoked in an incorrect context (e.g. "Params" in "Resource").
+func IncompatibleDSL() {
+	elems := strings.Split(caller(), ".")
+	ReportError("invalid use of %s", elems[len(elems)-1])
+}
+
+// InvalidArgError records an invalid argument error.
+// It is used by DSL functions that take dynamic arguments.
+func InvalidArgError(expected string, actual interface{}) {
+	ReportError("cannot use %#v (type %s) as type %s",
+		actual, reflect.TypeOf(actual), expected)
+}
+
+// Error returns the error message.
+func (m MultiError) Error() string {
+	msgs := make([]string, len(m))
+	for i, de := range m {
+		msgs[i] = de.Error()
+	}
+	return strings.Join(msgs, "\n")
+}
+
 // Error returns the underlying error message.
 func (de *Error) Error() string {
 	if err := de.GoError; err != nil {
@@ -162,18 +194,12 @@ func (de *Error) Error() string {
 	return ""
 }
 
-// IncompatibleDSL should be called by DSL functions when they are
-// invoked in an incorrect context (e.g. "Params" in "Resource").
-func IncompatibleDSL(dslFunc string) {
-	elems := strings.Split(dslFunc, ".")
-	ReportError("invalid use of %s", elems[len(elems)-1])
-}
-
-// InvalidArgError records an invalid argument error.
-// It is used by DSL functions that take dynamic arguments.
-func InvalidArgError(expected string, actual interface{}) {
-	ReportError("cannot use %#v (type %s) as type %s",
-		actual, reflect.TypeOf(actual), expected)
+// Current evaluation context, i.e. object being currently built by DSL
+func (s contextStack) Current() Definition {
+	if len(s) == 0 {
+		return nil
+	}
+	return s[len(s)-1]
 }
 
 // computeErrorLocation implements a heuristic to find the location in the user
@@ -267,19 +293,9 @@ func finalizeSet(set DefinitionSet) error {
 	return nil
 }
 
-// TopLevelDefinition returns true if the currently evaluated DSL is a root
-// DSL (i.e. is not being run in the context of another definition).
-func TopLevelDefinition(failItNotTopLevel bool) bool {
-	top := ctxStack.Current() == nil
-	if failItNotTopLevel && !top {
-		IncompatibleDSL(Caller())
-	}
-	return top
-}
-
-// Caller returns the name of calling function.
-func Caller() string {
-	pc, _, _, ok := runtime.Caller(2)
+// caller returns the name of calling function.
+func caller() string {
+	pc, _, _, ok := runtime.Caller(3)
 	if !ok {
 		return "<unknown>"
 	}
