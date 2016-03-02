@@ -16,8 +16,7 @@ var _ = Describe("Validation", func() {
 		var att *AttributeDefinition
 
 		JustBeforeEach(func() {
-			Reset()
-			dslengine.Errors = nil
+			dslengine.Reset()
 			Type("bar", func() {
 				dsl()
 			})

@@ -109,7 +109,7 @@ var _ = Describe("Project", func() {
 		var mt2 *MediaTypeDefinition
 
 		BeforeEach(func() {
-			Reset()
+			dslengine.Reset()
 			API("test", func() {})
 			mt = MediaType(id, func() {
 				TypeName(typeName)

@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/utils"
 	"github.com/spf13/cobra"
@@ -18,7 +17,7 @@ import (
 type Generator struct{}
 
 // Generate is the generator entry point called by the meta generator.
-func Generate(roots []dslengine.Root) (files []string, err error) {
+func Generate() (files []string, err error) {
 	api := design.Design
 	if err != nil {
 		return nil, err

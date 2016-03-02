@@ -77,9 +77,7 @@ var _ = Describe("RegisterFlags", func() {
 
 const dummyGenSrc = `package dummy
 
-import "github.com/goadesign/goa/dslengine"
-
-func Generate(roots []dslengine.Root) ([]string, error) {
+func Generate() ([]string, error) {
 	return []string{"worked"}, nil
 }
 `

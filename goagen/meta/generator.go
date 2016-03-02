@@ -174,7 +174,7 @@ func main() {
 	// Now run the secondary DSLs
 	dslengine.FailOnError(dslengine.Run())
 
-	files, err := {{.Genfunc}}(dslengine.Roots())
+	files, err := {{.Genfunc}}()
 	dslengine.FailOnError(err)
 
 	// We're done

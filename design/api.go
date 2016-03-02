@@ -13,6 +13,56 @@ import (
 // that contains the media type definition set created by CollectionOf.
 type MediaTypeRoot map[string]*MediaTypeDefinition
 
+// List of all built-in response names.
+const (
+	Continue           = "Continue"
+	SwitchingProtocols = "SwitchingProtocols"
+
+	OK                   = "OK"
+	Created              = "Created"
+	Accepted             = "Accepted"
+	NonAuthoritativeInfo = "NonAuthoritativeInfo"
+	NoContent            = "NoContent"
+	ResetContent         = "ResetContent"
+	PartialContent       = "PartialContent"
+
+	MultipleChoices   = "MultipleChoices"
+	MovedPermanently  = "MovedPermanently"
+	Found             = "Found"
+	SeeOther          = "SeeOther"
+	NotModified       = "NotModified"
+	UseProxy          = "UseProxy"
+	TemporaryRedirect = "TemporaryRedirect"
+
+	BadRequest                   = "BadRequest"
+	Unauthorized                 = "Unauthorized"
+	PaymentRequired              = "PaymentRequired"
+	Forbidden                    = "Forbidden"
+	NotFound                     = "NotFound"
+	MethodNotAllowed             = "MethodNotAllowed"
+	NotAcceptable                = "NotAcceptable"
+	ProxyAuthRequired            = "ProxyAuthRequired"
+	RequestTimeout               = "RequestTimeout"
+	Conflict                     = "Conflict"
+	Gone                         = "Gone"
+	LengthRequired               = "LengthRequired"
+	PreconditionFailed           = "PreconditionFailed"
+	RequestEntityTooLarge        = "RequestEntityTooLarge"
+	RequestURITooLong            = "RequestURITooLong"
+	UnsupportedMediaType         = "UnsupportedMediaType"
+	RequestedRangeNotSatisfiable = "RequestedRangeNotSatisfiable"
+	ExpectationFailed            = "ExpectationFailed"
+	Teapot                       = "Teapot"
+	UnprocessableEntity          = "UnprocessableEntity"
+
+	InternalServerError     = "InternalServerError"
+	NotImplemented          = "NotImplemented"
+	BadGateway              = "BadGateway"
+	ServiceUnavailable      = "ServiceUnavailable"
+	GatewayTimeout          = "GatewayTimeout"
+	HTTPVersionNotSupported = "HTTPVersionNotSupported"
+)
+
 var (
 	// Design being built by DSL.
 	Design *APIDefinition
@@ -122,4 +172,11 @@ func (r MediaTypeRoot) IterateSets(iterator dslengine.SetIterator) {
 		set[i] = Design.MediaTypes[cid]
 	}
 	iterator(set)
+}
+
+// Reset deletes all the keys.
+func (r MediaTypeRoot) Reset() {
+	for k := range r {
+		delete(r, k)
+	}
 }

@@ -17,6 +17,7 @@ var (
 	// Global DSL evaluation stack
 	ctxStack contextStack
 
+	// Registered DSL roots
 	roots []Root
 )
 
@@ -37,20 +38,18 @@ type (
 	contextStack []Definition
 )
 
-// Roots returns the registered DSL roots.
-func Roots() []Root {
-	return roots
-}
-
-// Register adds a Root to the registered roots.
+// Register adds a DSL Root to be executed by Run.
 func Register(r Root) {
 	roots = append(roots, r)
 }
 
-// Reset reset the set of DSL roots.
+// Reset uses the registered RootFuncs to re-initialize the DSL roots.
 // This is useful to tests.
 func Reset() {
-	roots = nil
+	for _, r := range roots {
+		r.Reset()
+	}
+	Errors = nil
 }
 
 // Run runs the given root definitions. It iterates over the definition sets
@@ -62,7 +61,6 @@ func Run() error {
 		return nil
 	}
 	Errors = nil
-
 	executed := 0
 	recursed := 0
 	for executed < len(roots) {
