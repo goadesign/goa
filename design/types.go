@@ -579,10 +579,6 @@ func (m *MediaTypeDefinition) IterateViews(it ViewIterator) error {
 // Project creates a MediaTypeDefinition derived from the given definition that matches the given
 // view.
 func (m *MediaTypeDefinition) Project(view string) (p *MediaTypeDefinition, links *UserTypeDefinition, err error) {
-	if GeneratedMediaTypes == nil {
-		GeneratedMediaTypes = make(MediaTypeRoot)
-		dslengine.Roots = append(dslengine.Roots, GeneratedMediaTypes)
-	}
 	if _, ok := m.Views[view]; !ok {
 		return nil, nil, fmt.Errorf("unknown view %#v", view)
 	}

@@ -13,8 +13,7 @@ var _ = Describe("API", func() {
 	var dsl func()
 
 	BeforeEach(func() {
-		InitDesign()
-		dslengine.Errors = nil
+		dslengine.Reset()
 		name = ""
 		dsl = nil
 	})

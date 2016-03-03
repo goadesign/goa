@@ -33,7 +33,7 @@ var _ = Describe("Generate", func() {
 	})
 
 	JustBeforeEach(func() {
-		files, genErr = genjs.Generate([]interface{}{design.Design})
+		files, genErr = genjs.Generate()
 	})
 
 	AfterEach(func() {

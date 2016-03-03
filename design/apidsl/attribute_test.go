@@ -30,18 +30,32 @@ func (t *TestCD) Context() string {
 	return "test"
 }
 
+// DSLName returns the DSL name.
+func (t *TestCD) DSLName() string {
+	return "TestCD"
+}
+
+// DependsOn returns the DSL dependencies.
+func (t *TestCD) DependsOn() []dslengine.Root {
+	return nil
+}
+
 // IterateSets implement Root
 func (t *TestCD) IterateSets(it dslengine.SetIterator) {
 	it([]dslengine.Definition{t})
 }
 
+// Reset is a no-op
+func (t *TestCD) Reset() {}
+
 var _ = Describe("ContainerDefinition", func() {
 	var att *AttributeDefinition
+	var testCD *TestCD
 	BeforeEach(func() {
-		InitDesign()
+		dslengine.Reset()
 		att = &AttributeDefinition{Type: Object{}}
-		t := &TestCD{AttributeDefinition: att}
-		dslengine.Roots = append(dslengine.Roots, t)
+		testCD = &TestCD{AttributeDefinition: att}
+		dslengine.Register(testCD)
 	})
 
 	JustBeforeEach(func() {
@@ -50,7 +64,7 @@ var _ = Describe("ContainerDefinition", func() {
 	})
 
 	It("contains attributes", func() {
-		Ω(dslengine.Roots[1].(*TestCD).Attribute()).Should(Equal(att))
+		Ω(testCD.Attribute()).Should(Equal(att))
 	})
 })
 
@@ -63,7 +77,7 @@ var _ = Describe("Attribute", func() {
 	var parent *AttributeDefinition
 
 	BeforeEach(func() {
-		InitDesign()
+		dslengine.Reset()
 		name = ""
 		dataType = nil
 		description = ""

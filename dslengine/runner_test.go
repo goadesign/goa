@@ -16,7 +16,7 @@ var _ = Describe("DSL execution", func() {
 		const att2Name = "att2Name"
 
 		BeforeEach(func() {
-			InitDesign()
+			dslengine.Reset()
 
 			API("foo", func() {})
 
@@ -57,7 +57,7 @@ var _ = Describe("DSL errors", func() {
 	var ErrorMsg string
 
 	BeforeEach(func() {
-		dslengine.Errors = nil
+		dslengine.Reset()
 	})
 
 	JustBeforeEach(func() {
@@ -102,10 +102,9 @@ var _ = Describe("DSL errors", func() {
 
 	Context("with invalid DSL", func() {
 		// See NOTE below.
-		const lineNumber = 112
+		const lineNumber = 111
 
 		BeforeEach(func() {
-			InitDesign()
 			API("foo", func() {
 				// NOTE: moving the line below requires updating the
 				// constant above to match its number.
@@ -125,10 +124,9 @@ var _ = Describe("DSL errors", func() {
 
 	Context("with DSL calling a function with an invalid argument type", func() {
 		// See NOTE below.
-		const lineNumber = 135
+		const lineNumber = 133
 
 		BeforeEach(func() {
-			InitDesign()
 			Type("bar", func() {
 				// NOTE: moving the line below requires updating the
 				// constant above to match its number.

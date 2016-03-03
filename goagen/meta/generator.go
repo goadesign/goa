@@ -19,10 +19,7 @@ type Generator struct {
 	// Genfunc contains the name of the generator entry point function.
 	// The function signature must be:
 	//
-	// func <Genfunc>(api *design.APIDefinition) ([]string, error)
-	//
-	// where "api" contains the DSL generated metadata and the returned
-	// string array lists the generated filenames.
+	// func <Genfunc>([]dslengine.Root) ([]string, error)
 	Genfunc string
 
 	// Imports list the imports that are specific for that generator that
@@ -172,21 +169,12 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 const mainTmpl = `
 func main() {
 	// Check if there were errors while running the first DSL pass
-	var err error
-	if dslengine.Errors != nil {
-		err = dslengine.Errors
-	}
-	dslengine.FailOnError(err)
+	dslengine.FailOnError(dslengine.Errors)
 
 	// Now run the secondary DSLs
 	dslengine.FailOnError(dslengine.Run())
 
-	// Now take the results and call the generator with it
-	roots := make([]interface{}, len(dslengine.Roots))
-	for i, r := range dslengine.Roots {
-		roots[i] = r
-	}
-	files, err := {{.Genfunc}}(roots)
+	files, err := {{.Genfunc}}()
 	dslengine.FailOnError(err)
 
 	// We're done

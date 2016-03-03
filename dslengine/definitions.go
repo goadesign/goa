@@ -15,13 +15,24 @@ type (
 	// corresponding behaviors during DSL execution.
 	DefinitionSet []Definition
 
-	// Root is the interface implemented by the DSL root objects held by the Roots variable.
-	// These objects contains all the definition sets created by the DSL and can be passed to
-	// the dsl for execution.
+	// Root is the interface implemented by the DSL root objects.
+	// These objects contains all the definition sets created by the DSL and can
+	// be passed to the dsl engine for execution.
 	Root interface {
-		// IterateSets calls the given iterator passing in each definition set sorted in
-		// execution order.
+		// DSLName is displayed by the runner upon executing the DSL.
+		// Registered DSL roots must have unique names.
+		DSLName() string
+		// DependsOn returns the list of other DSL roots this root depends on.
+		// The DSL engine uses this function to order execution of the DSLs.
+		DependsOn() []Root
+		// IterateSets implements the visitor pattern: is is called by the engine so the
+		// DSL can control the order of execution. IterateSets calls back the engine via
+		// the given iterator as many times as needed providing the DSL definitions that
+		// must be run for each callback.
 		IterateSets(SetIterator)
+		// Reset restores the root to pre DSL execution state.
+		// This is mainly used by tests.
+		Reset()
 	}
 
 	// Validate is the interface implemented by definitions that can be validated.

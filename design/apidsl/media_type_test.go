@@ -15,8 +15,7 @@ var _ = Describe("MediaType", func() {
 	var mt *MediaTypeDefinition
 
 	BeforeEach(func() {
-		InitDesign()
-		dslengine.Errors = nil
+		dslengine.Reset()
 		name = ""
 		dslFunc = nil
 	})
@@ -211,8 +210,7 @@ var _ = Describe("Duplicate media types", func() {
 	}
 
 	BeforeEach(func() {
-		InitDesign()
-		dslengine.Errors = nil
+		dslengine.Reset()
 		mt = MediaType(id, dslFunc)
 		duplicate = MediaType(id, dslFunc)
 	})
@@ -244,14 +242,13 @@ var _ = Describe("CollectionOf", func() {
 	Context("used on a global variable", func() {
 		var col *MediaTypeDefinition
 		BeforeEach(func() {
-			InitDesign()
+			dslengine.Reset()
 			mt := MediaType("application/vnd.example", func() {
 				Attribute("id")
 				View("default", func() {
 					Attribute("id")
 				})
 			})
-			dslengine.Errors = nil
 			col = CollectionOf(mt)
 			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 		})
@@ -272,7 +269,7 @@ var _ = Describe("CollectionOf", func() {
 	Context("defined with the media type identifier", func() {
 		var col *MediaTypeDefinition
 		BeforeEach(func() {
-			InitDesign()
+			dslengine.Reset()
 			MediaType("application/vnd.example+json", func() {
 				Attribute("id")
 				View("default", func() {
@@ -314,9 +311,8 @@ var _ = Describe("CollectionOf", func() {
 var _ = Describe("Example", func() {
 	Context("defined examples in a media type", func() {
 		BeforeEach(func() {
-			InitDesign()
+			dslengine.Reset()
 		})
-
 		It("produces a media type with examples", func() {
 			mt := MediaType("application/vnd.example+json", func() {
 				Attributes(func() {

@@ -466,7 +466,7 @@ func UseTrait(name string) {
 func apiDefinition(failIfNotAPI bool) (*design.APIDefinition, bool) {
 	a, ok := dslengine.CurrentDefinition().(*design.APIDefinition)
 	if !ok && failIfNotAPI {
-		dslengine.IncompatibleDSL(dslengine.Caller())
+		dslengine.IncompatibleDSL()
 	}
 	return a, ok
 }
@@ -476,7 +476,7 @@ func apiDefinition(failIfNotAPI bool) (*design.APIDefinition, bool) {
 func encodingDefinition(failIfNotEnc bool) (*design.EncodingDefinition, bool) {
 	e, ok := dslengine.CurrentDefinition().(*design.EncodingDefinition)
 	if !ok && failIfNotEnc {
-		dslengine.IncompatibleDSL(dslengine.Caller())
+		dslengine.IncompatibleDSL()
 	}
 	return e, ok
 }
@@ -486,7 +486,7 @@ func encodingDefinition(failIfNotEnc bool) (*design.EncodingDefinition, bool) {
 func contactDefinition(failIfNotContact bool) (*design.ContactDefinition, bool) {
 	a, ok := dslengine.CurrentDefinition().(*design.ContactDefinition)
 	if !ok && failIfNotContact {
-		dslengine.IncompatibleDSL(dslengine.Caller())
+		dslengine.IncompatibleDSL()
 	}
 	return a, ok
 }
@@ -496,7 +496,7 @@ func contactDefinition(failIfNotContact bool) (*design.ContactDefinition, bool) 
 func licenseDefinition(failIfNotLicense bool) (*design.LicenseDefinition, bool) {
 	l, ok := dslengine.CurrentDefinition().(*design.LicenseDefinition)
 	if !ok && failIfNotLicense {
-		dslengine.IncompatibleDSL(dslengine.Caller())
+		dslengine.IncompatibleDSL()
 	}
 	return l, ok
 }
@@ -506,7 +506,7 @@ func licenseDefinition(failIfNotLicense bool) (*design.LicenseDefinition, bool) 
 func docsDefinition(failIfNotDocs bool) (*design.DocsDefinition, bool) {
 	a, ok := dslengine.CurrentDefinition().(*design.DocsDefinition)
 	if !ok && failIfNotDocs {
-		dslengine.IncompatibleDSL(dslengine.Caller())
+		dslengine.IncompatibleDSL()
 	}
 	return a, ok
 }
@@ -516,7 +516,7 @@ func docsDefinition(failIfNotDocs bool) (*design.DocsDefinition, bool) {
 func mediaTypeDefinition(failIfNotMT bool) (*design.MediaTypeDefinition, bool) {
 	m, ok := dslengine.CurrentDefinition().(*design.MediaTypeDefinition)
 	if !ok && failIfNotMT {
-		dslengine.IncompatibleDSL(dslengine.Caller())
+		dslengine.IncompatibleDSL()
 	}
 	return m, ok
 }
@@ -526,7 +526,7 @@ func mediaTypeDefinition(failIfNotMT bool) (*design.MediaTypeDefinition, bool) {
 func typeDefinition(failIfNotMT bool) (*design.UserTypeDefinition, bool) {
 	m, ok := dslengine.CurrentDefinition().(*design.UserTypeDefinition)
 	if !ok && failIfNotMT {
-		dslengine.IncompatibleDSL(dslengine.Caller())
+		dslengine.IncompatibleDSL()
 	}
 	return m, ok
 }
@@ -536,7 +536,7 @@ func typeDefinition(failIfNotMT bool) (*design.UserTypeDefinition, bool) {
 func attributeDefinition(failIfNotAttribute bool) (*design.AttributeDefinition, bool) {
 	a, ok := dslengine.CurrentDefinition().(*design.AttributeDefinition)
 	if !ok && failIfNotAttribute {
-		dslengine.IncompatibleDSL(dslengine.Caller())
+		dslengine.IncompatibleDSL()
 	}
 	return a, ok
 }
@@ -546,7 +546,7 @@ func attributeDefinition(failIfNotAttribute bool) (*design.AttributeDefinition, 
 func resourceDefinition(failIfNotResource bool) (*design.ResourceDefinition, bool) {
 	r, ok := dslengine.CurrentDefinition().(*design.ResourceDefinition)
 	if !ok && failIfNotResource {
-		dslengine.IncompatibleDSL(dslengine.Caller())
+		dslengine.IncompatibleDSL()
 	}
 	return r, ok
 }
@@ -556,7 +556,7 @@ func resourceDefinition(failIfNotResource bool) (*design.ResourceDefinition, boo
 func actionDefinition(failIfNotAction bool) (*design.ActionDefinition, bool) {
 	a, ok := dslengine.CurrentDefinition().(*design.ActionDefinition)
 	if !ok && failIfNotAction {
-		dslengine.IncompatibleDSL(dslengine.Caller())
+		dslengine.IncompatibleDSL()
 	}
 	return a, ok
 }
@@ -566,7 +566,7 @@ func actionDefinition(failIfNotAction bool) (*design.ActionDefinition, bool) {
 func responseDefinition(failIfNotResponse bool) (*design.ResponseDefinition, bool) {
 	r, ok := dslengine.CurrentDefinition().(*design.ResponseDefinition)
 	if !ok && failIfNotResponse {
-		dslengine.IncompatibleDSL(dslengine.Caller())
+		dslengine.IncompatibleDSL()
 	}
 	return r, ok
 }

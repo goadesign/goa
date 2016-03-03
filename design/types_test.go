@@ -24,7 +24,6 @@ var _ = Describe("Project", func() {
 
 	Context("with a media type with a default and a tiny view", func() {
 		BeforeEach(func() {
-			GeneratedMediaTypes = nil
 			mt = &MediaTypeDefinition{
 				UserTypeDefinition: &UserTypeDefinition{
 					AttributeDefinition: &AttributeDefinition{
@@ -110,7 +109,7 @@ var _ = Describe("Project", func() {
 		var mt2 *MediaTypeDefinition
 
 		BeforeEach(func() {
-			InitDesign()
+			dslengine.Reset()
 			API("test", func() {})
 			mt = MediaType(id, func() {
 				TypeName(typeName)

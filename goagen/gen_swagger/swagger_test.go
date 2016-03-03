@@ -30,7 +30,7 @@ var _ = Describe("New", func() {
 	BeforeEach(func() {
 		swagger = nil
 		newErr = nil
-		InitDesign()
+		dslengine.Reset()
 		genschema.Definitions = make(map[string]*genschema.JSONSchema)
 	})
 

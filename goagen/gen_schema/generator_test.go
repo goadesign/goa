@@ -30,7 +30,7 @@ var _ = Describe("Generate", func() {
 	})
 
 	JustBeforeEach(func() {
-		files, genErr = genschema.Generate([]interface{}{design.Design})
+		files, genErr = genschema.Generate()
 	})
 
 	AfterEach(func() {

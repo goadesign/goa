@@ -83,7 +83,7 @@ func Attribute(name string, args ...interface{}) {
 	} else if c, ok := dslengine.CurrentDefinition().(design.ContainerDefinition); ok {
 		parent = c.Attribute()
 	} else {
-		dslengine.IncompatibleDSL(dslengine.Caller())
+		dslengine.IncompatibleDSL()
 	}
 
 	if parent != nil {
