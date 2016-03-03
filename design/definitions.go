@@ -295,6 +295,7 @@ type (
 func NewAPIDefinition() *APIDefinition {
 	api := &APIDefinition{
 		DefaultResponseTemplates: make(map[string]*ResponseTemplateDefinition),
+		DefaultResponses:         make(map[string]*ResponseDefinition),
 	}
 	t := func(params ...string) *ResponseDefinition {
 		if len(params) < 1 {
@@ -311,8 +312,6 @@ func NewAPIDefinition() *APIDefinition {
 		Name:     OK,
 		Template: t,
 	}
-
-	api.DefaultResponses = make(map[string]*ResponseDefinition)
 	for _, p := range []struct {
 		status int
 		name   string
@@ -511,14 +510,12 @@ func (a *APIDefinition) RandomGenerator() *RandomGenerator {
 // "application/vnd.foo+json" and "application/vnd.foo" all match.
 func (a *APIDefinition) MediaTypeWithIdentifier(id string) *MediaTypeDefinition {
 	canonicalID := CanonicalIdentifier(id)
-	var mtwi *MediaTypeDefinition
 	for _, mt := range a.MediaTypes {
 		if canonicalID == CanonicalIdentifier(mt.Identifier) {
-			mtwi = mt
-			break
+			return mt
 		}
 	}
-	return mtwi
+	return nil
 }
 
 // IterateResources calls the given iterator passing in each resource sorted in alphabetical order.
@@ -654,6 +651,7 @@ func (r *ResourceDefinition) Finalize() {
 	r.IterateActions(func(a *ActionDefinition) error {
 		// 1. Merge response definitions
 		for name, resp := range a.Responses {
+			resp.Finalize()
 			if pr, ok := a.Parent.Responses[name]; ok {
 				resp.Merge(pr)
 			}
@@ -1035,6 +1033,22 @@ func (r *ResponseDefinition) Context() string {
 		suffix = fmt.Sprintf(" of %s", r.Parent.Context())
 	}
 	return prefix + suffix
+}
+
+// Finalize sets the response media type from its type if the type is a media type and no media
+// type is already specified.
+func (r *ResponseDefinition) Finalize() {
+	if r.Type == nil {
+		return
+	}
+	if r.MediaType != "" && r.MediaType != "plain/text" {
+		return
+	}
+	mt, ok := r.Type.(*MediaTypeDefinition)
+	if !ok {
+		return
+	}
+	r.MediaType = mt.Identifier
 }
 
 // Dup returns a copy of the response definition.
