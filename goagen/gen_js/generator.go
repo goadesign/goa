@@ -22,8 +22,11 @@ type Generator struct {
 }
 
 // Generate is the generator entry point called by the meta generator.
-func Generate(roots []interface{}) (files []string, err error) {
-	api := roots[0].(*design.APIDefinition)
+func Generate() (files []string, err error) {
+	api := design.Design
+	if err != nil {
+		return nil, err
+	}
 	g := new(Generator)
 	root := &cobra.Command{
 		Use:   "goagen",

@@ -255,7 +255,7 @@ invalid go code
 `
 
 	panickySource = `package foo
-func Generate(roots []interface{}) ([]string, error) {
+func Generate() ([]string, error) {
 	return nil, nil
 }
 
@@ -263,14 +263,14 @@ func init() { panic("kaboom") }
 `
 
 	validSource = `package foo
-func Generate(roots []interface{}) ([]string, error) {
+func Generate() ([]string, error) {
 	return nil, nil
 }
 `
 
 	validSourceTmpl = `package foo
 import "fmt"
-func Generate(roots []interface{}) ([]string, error) {
+func Generate() ([]string, error) {
 	{{range .}}fmt.Println("{{.}}")
 	{{end}}
 	return nil, nil

@@ -15,8 +15,7 @@ var _ = Describe("Type", func() {
 	var ut *UserTypeDefinition
 
 	BeforeEach(func() {
-		InitDesign()
-		dslengine.Errors = nil
+		dslengine.Reset()
 		name = ""
 		dsl = nil
 	})

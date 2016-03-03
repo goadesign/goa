@@ -19,8 +19,7 @@ var _ = Describe("Metadata", func() {
 	var metadataValue string
 
 	BeforeEach(func() {
-		InitDesign()
-		dslengine.Errors = nil
+		dslengine.Reset()
 		name = ""
 		dsl = nil
 		dt = nil

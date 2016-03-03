@@ -325,9 +325,8 @@ var _ = Describe("GoTypeTransform", func() {
 	var transformErr error
 
 	BeforeEach(func() {
-		InitDesign()
+		dslengine.Reset()
 	})
-
 	JustBeforeEach(func() {
 		err := dslengine.Run()
 		Ω(err).ShouldNot(HaveOccurred())

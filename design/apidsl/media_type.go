@@ -323,10 +323,6 @@ func Link(name string, view ...string) {
 // The resulting media type identifier is built from the element media type by appending the media
 // type parameter "type" with value "collection".
 func CollectionOf(v interface{}, apidsl ...func()) *design.MediaTypeDefinition {
-	if design.GeneratedMediaTypes == nil {
-		design.GeneratedMediaTypes = make(design.MediaTypeRoot)
-		dslengine.Roots = append(dslengine.Roots, design.GeneratedMediaTypes)
-	}
 	var m *design.MediaTypeDefinition
 	var ok bool
 	m, ok = v.(*design.MediaTypeDefinition)
