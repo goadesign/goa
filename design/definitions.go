@@ -367,6 +367,62 @@ func NewAPIDefinition() *APIDefinition {
 	return api
 }
 
+// DSLName is the name of the DSL as displayed to the user during execution.
+func (a *APIDefinition) DSLName() string {
+	return "goa API"
+}
+
+// DependsOn returns the other roots this root depends on, nothing for APIDefinition.
+func (a *APIDefinition) DependsOn() []dslengine.Root {
+	return nil
+}
+
+// IterateSets calls the given iterator possing in the API definition, user types, media types and
+// finally resources.
+func (a *APIDefinition) IterateSets(iterator dslengine.SetIterator) {
+	// First run the top level API DSL to initialize responses and
+	// response templates needed by resources.
+	iterator([]dslengine.Definition{a})
+
+	// Then run the user type DSLs
+	typeAttributes := make([]dslengine.Definition, len(a.Types))
+	i := 0
+	a.IterateUserTypes(func(u *UserTypeDefinition) error {
+		u.AttributeDefinition.DSLFunc = u.DSLFunc
+		typeAttributes[i] = u.AttributeDefinition
+		i++
+		return nil
+	})
+	iterator(typeAttributes)
+
+	// Then the media type DSLs
+	mediaTypes := make([]dslengine.Definition, len(a.MediaTypes))
+	i = 0
+	a.IterateMediaTypes(func(mt *MediaTypeDefinition) error {
+		mediaTypes[i] = mt
+		i++
+		return nil
+	})
+	iterator(mediaTypes)
+
+	// And now that we have everything the resources.
+	resources := make([]dslengine.Definition, len(a.Resources))
+	i = 0
+	a.IterateResources(func(res *ResourceDefinition) error {
+		resources[i] = res
+		i++
+		return nil
+	})
+	iterator(resources)
+}
+
+// Reset sets all the API definition fields to their zero value except the default responses and
+// default response templates.
+func (a *APIDefinition) Reset() {
+	n := NewAPIDefinition()
+	*a = *n
+}
+
 // Context returns the generic definition name used in error messages.
 func (a *APIDefinition) Context() string {
 	if a.Name != "" {
@@ -481,52 +537,6 @@ func (a *APIDefinition) IterateResources(it ResourceIterator) error {
 		}
 	}
 	return nil
-}
-
-// IterateSets calls the given iterator possing in the API definition, user types, media types and
-// finally resources.
-func (a *APIDefinition) IterateSets(iterator dslengine.SetIterator) {
-	// First run the top level API DSL to initialize responses and
-	// response templates needed by resources.
-	iterator([]dslengine.Definition{a})
-
-	// Then run the user type DSLs
-	typeAttributes := make([]dslengine.Definition, len(a.Types))
-	i := 0
-	a.IterateUserTypes(func(u *UserTypeDefinition) error {
-		u.AttributeDefinition.DSLFunc = u.DSLFunc
-		typeAttributes[i] = u.AttributeDefinition
-		i++
-		return nil
-	})
-	iterator(typeAttributes)
-
-	// Then the media type DSLs
-	mediaTypes := make([]dslengine.Definition, len(a.MediaTypes))
-	i = 0
-	a.IterateMediaTypes(func(mt *MediaTypeDefinition) error {
-		mediaTypes[i] = mt
-		i++
-		return nil
-	})
-	iterator(mediaTypes)
-
-	// And now that we have everything the resources.
-	resources := make([]dslengine.Definition, len(a.Resources))
-	i = 0
-	a.IterateResources(func(res *ResourceDefinition) error {
-		resources[i] = res
-		i++
-		return nil
-	})
-	iterator(resources)
-}
-
-// Reset sets all the API definition fields to their zero value except the default responses and
-// default response templates.
-func (a *APIDefinition) Reset() {
-	n := NewAPIDefinition()
-	*a = *n
 }
 
 // DSL returns the initialization DSL.

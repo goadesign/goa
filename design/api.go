@@ -156,6 +156,16 @@ func ExtractWildcards(path string) []string {
 	return wcs
 }
 
+// DSLName is displayed to the user when the DSL executes.
+func (r MediaTypeRoot) DSLName() string {
+	return "Generated Media Types"
+}
+
+// DependsOn return the DSL roots the generated media types DSL root depends on, that's the API DSL.
+func (r MediaTypeRoot) DependsOn() []dslengine.Root {
+	return []dslengine.Root{Design}
+}
+
 // IterateSets iterates over the one generated media type definition set.
 func (r MediaTypeRoot) IterateSets(iterator dslengine.SetIterator) {
 	canonicalIDs := make([]string, len(r))
