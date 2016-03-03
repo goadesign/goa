@@ -30,6 +30,16 @@ func (t *TestCD) Context() string {
 	return "test"
 }
 
+// DSLName returns the DSL name.
+func (t *TestCD) DSLName() string {
+	return "TestCD"
+}
+
+// DependsOn returns the DSL dependencies.
+func (t *TestCD) DependsOn() []dslengine.Root {
+	return nil
+}
+
 // IterateSets implement Root
 func (t *TestCD) IterateSets(it dslengine.SetIterator) {
 	it([]dslengine.Definition{t})

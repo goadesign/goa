@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"regexp"
 	"runtime"
 	"strings"
 )
@@ -19,6 +18,9 @@ var (
 
 	// Registered DSL roots
 	roots []Root
+
+	// DSL package paths used to compute error locations (skip the frames in these packages)
+	dslPackages map[string]bool
 )
 
 type (
@@ -38,8 +40,25 @@ type (
 	contextStack []Definition
 )
 
+func init() {
+	dslPackages = map[string]bool{
+		"github.com/goadesign/": true,
+	}
+}
+
 // Register adds a DSL Root to be executed by Run.
 func Register(r Root) {
+	for _, o := range roots {
+		if r.DSLName() == o.DSLName() {
+			fmt.Fprintf(os.Stderr, "goagen: duplicate DSL %s", r.DSLName())
+			os.Exit(1)
+		}
+	}
+	t := reflect.TypeOf(r)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	dslPackages[t.PkgPath()] = true
 	roots = append(roots, r)
 }
 
@@ -59,6 +78,10 @@ func Reset() {
 func Run() error {
 	if len(roots) == 0 {
 		return nil
+	}
+	roots, err := SortRoots()
+	if err != nil {
+		return err
 	}
 	Errors = nil
 	executed := 0
@@ -202,31 +225,27 @@ func (s contextStack) Current() Definition {
 
 // computeErrorLocation implements a heuristic to find the location in the user
 // code where the error occurred. It walks back the callstack until the file
-// doesn't match "/goa/design/*.go".
+// doesn't match "/goa/design/*.go" or one of the DSL package paths.
 // When successful it returns the file name and line number, empty string and
 // 0 otherwise.
 func computeErrorLocation() (file string, line int) {
+	skipFunc := func(file string) bool {
+		if strings.HasSuffix(file, "_test.go") { // Be nice with tests
+			return false
+		}
+		file = filepath.ToSlash(file)
+		for pkg := range dslPackages {
+			if strings.Contains(file, pkg) {
+				return true
+			}
+		}
+		return false
+	}
 	depth := 2
 	_, file, line, _ = runtime.Caller(depth)
-	ok := strings.HasSuffix(file, "_test.go") // Be nice with tests
-	if !ok {
-		nok, _ := regexp.MatchString(`/goa/design/.+\.go$`, file)
-		if !nok {
-			nok, _ = regexp.MatchString(`/goa/dslengine/.+\.go$`, file)
-		}
-		ok = !nok
-	}
-	for !ok {
+	for skipFunc(file) {
 		depth++
 		_, file, line, _ = runtime.Caller(depth)
-		ok = strings.HasSuffix(file, "_test.go")
-		if !ok {
-			nok, _ := regexp.MatchString(`/goa/design/.+\.go$`, file)
-			if !nok {
-				nok, _ = regexp.MatchString(`/goa/dslengine/.+\.go$`, file)
-			}
-			ok = !nok
-		}
 	}
 	wd, err := os.Getwd()
 	if err != nil {
@@ -289,6 +308,88 @@ func finalizeSet(set DefinitionSet) error {
 		}
 	}
 	return nil
+}
+
+// SortRoots orders the DSL roots making sure dependencies are last. It returns an error if there
+// is a dependency cycle.
+func SortRoots() ([]Root, error) {
+	if len(roots) == 0 {
+		return nil, nil
+	}
+	// First flatten dependencies for each root
+	rootDeps := make(map[string][]Root, len(roots))
+	rootByName := make(map[string]Root, len(roots))
+	for _, r := range roots {
+		sorted := sortDependencies(r, func(r Root) []Root { return r.DependsOn() })
+		length := len(sorted)
+		for i := 0; i < length/2; i++ {
+			sorted[i], sorted[length-i-1] = sorted[length-i-1], sorted[i]
+		}
+		rootDeps[r.DSLName()] = sorted
+		rootByName[r.DSLName()] = r
+	}
+	// Now check for cycles
+	for name, deps := range rootDeps {
+		root := rootByName[name]
+		for otherName, otherdeps := range rootDeps {
+			other := rootByName[otherName]
+			if root.DSLName() == other.DSLName() {
+				continue
+			}
+			dependsOnOther := false
+			for _, dep := range deps {
+				if dep.DSLName() == other.DSLName() {
+					dependsOnOther = true
+					break
+				}
+			}
+			if dependsOnOther {
+				for _, dep := range otherdeps {
+					if dep.DSLName() == root.DSLName() {
+						return nil, fmt.Errorf("dependency cycle: %s and %s depend on each other (directly or not)",
+							root.DSLName(), other.DSLName())
+					}
+				}
+			}
+		}
+	}
+	// Now sort top level DSLs
+	var sorted []Root
+	for _, r := range roots {
+		s := sortDependencies(r, func(r Root) []Root { return rootDeps[r.DSLName()] })
+		for _, s := range s {
+			found := false
+			for _, r := range sorted {
+				if r.DSLName() == s.DSLName() {
+					found = true
+					break
+				}
+			}
+			if !found {
+				sorted = append(sorted, s)
+			}
+		}
+	}
+	return sorted, nil
+}
+
+// sortDependencies sorts the depencies of the given root in the given slice.
+func sortDependencies(root Root, depFunc func(Root) []Root) []Root {
+	seen := make(map[string]bool, len(roots))
+	var sorted []Root
+	sortDependenciesR(root, seen, &sorted, depFunc)
+	return sorted
+}
+
+// sortDependenciesR sorts the depencies of the given root in the given slice.
+func sortDependenciesR(root Root, seen map[string]bool, sorted *[]Root, depFunc func(Root) []Root) {
+	for _, dep := range depFunc(root) {
+		if !seen[dep.DSLName()] {
+			seen[root.DSLName()] = true
+			sortDependenciesR(dep, seen, sorted, depFunc)
+		}
+	}
+	*sorted = append(*sorted, root)
 }
 
 // caller returns the name of calling function.
