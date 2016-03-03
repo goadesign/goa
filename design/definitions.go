@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/goadesign/goa/dslengine"
+	"github.com/julienschmidt/httprouter"
 )
 
 type (
@@ -629,7 +630,7 @@ func (r *ResourceDefinition) FullPath() string {
 	} else {
 		basePath = Design.BasePath
 	}
-	return path.Join(basePath, r.BasePath)
+	return httprouter.CleanPath(path.Join(basePath, r.BasePath))
 }
 
 // Parent returns the parent resource if any, nil otherwise.
@@ -1217,13 +1218,13 @@ func (r *RouteDefinition) Params() []string {
 // with the action specific path.
 func (r *RouteDefinition) FullPath() string {
 	if r.IsAbsolute() {
-		return r.Path[1:]
+		return httprouter.CleanPath(r.Path[1:])
 	}
 	var base string
 	if r.Parent != nil && r.Parent.Parent != nil {
 		base = r.Parent.Parent.FullPath()
 	}
-	return path.Join(base, r.Path)
+	return httprouter.CleanPath(path.Join(base, r.Path))
 }
 
 // IsAbsolute returns true if the action path should not be concatenated to the resource and API
