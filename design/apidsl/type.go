@@ -16,7 +16,6 @@ import (
 //
 //	Type("createPayload", func() {
 //		Description("Type of create and upload action payloads")
-//		APIVersion("1.0")
 //		Attribute("name", String, "name of bottle")
 //		Attribute("origin", Origin, "Details on wine origin")  // See Origin definition below
 //		Required("name")
