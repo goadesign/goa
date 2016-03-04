@@ -73,11 +73,11 @@ type (
 
 	// ControllerTemplateData contains the information required to generate an action handler.
 	ControllerTemplateData struct {
-		API        *design.APIDefinition           // API definition
-		Resource   string                          // Lower case plural resource name, e.g. "bottles"
-		Actions    []map[string]interface{}        // Array of actions, each action has keys "Name", "Routes", "Context" and "Unmarshal"
-		EncoderMap map[string]*EncoderTemplateData // Encoder data indexed by package path
-		DecoderMap map[string]*EncoderTemplateData // Decoder data indexed by package path
+		API      *design.APIDefinition    // API definition
+		Resource string                   // Lower case plural resource name, e.g. "bottles"
+		Actions  []map[string]interface{} // Array of actions, each action has keys "Name", "Routes", "Context" and "Unmarshal"
+		Encoders []*EncoderTemplateData   // Encoder data
+		Decoders []*EncoderTemplateData   // Decoder data
 	}
 
 	// ResourceData contains the information required to generate the resource GoGenerator
@@ -93,15 +93,15 @@ type (
 	// EncoderTemplateData contains the data needed to render the registration code for a single
 	// encoder or decoder package.
 	EncoderTemplateData struct {
-		// PackagePath is the Go package path to the package implmenting the encoder / decoder.
+		// PackagePath is the Go package path to the package implmenting the encoder/decoder.
 		PackagePath string
-		// PackageName is the name of the Go package implementing the encoder / decoder.
+		// PackageName is the name of the Go package implementing the encoder/decoder.
 		PackageName string
-		// Factory is the name of the package variable implementing the decoder / encoder factory.
-		Factory string
+		// Function is the name of the package function implementing the decoder/encoder factory.
+		Function string
 		// MIMETypes is the list of supported MIME types.
 		MIMETypes []string
-		// Default is true if this encoder / decoder should be set as the default.
+		// Default is true if this encoder/decoder should be set as the default.
 		Default bool
 	}
 )
@@ -229,11 +229,11 @@ func NewControllersWriter(filename string) (*ControllersWriter, error) {
 }
 
 // WriteInitService writes the initService function
-func (w *ControllersWriter) WriteInitService(encoderMap, decoderMap map[string]*EncoderTemplateData) error {
+func (w *ControllersWriter) WriteInitService(encoders, decoders []*EncoderTemplateData) error {
 	ctx := map[string]interface{}{
-		"API":        design.Design,
-		"EncoderMap": encoderMap,
-		"DecoderMap": decoderMap,
+		"API":      design.Design,
+		"Encoders": encoders,
+		"Decoders": decoders,
 	}
 	if err := w.ExecuteTemplate("service", serviceT, nil, ctx); err != nil {
 		return err
@@ -518,13 +518,20 @@ func initService(service *goa.Service) {
 		return
 	}
 	inited = true
-	// Setup encoders and decoders
-{{range .EncoderMap}}{{$tmp := tempvar}}{{/*
-*/}}	service.SetEncoder({{.PackageName}}.{{.Factory}}(), {{.Default}}, "{{join .MIMETypes "\", \""}}")
-{{end}}{{range .DecoderMap}}{{$tmp := tempvar}}{{/*
-*/}}	service.SetDecoder({{.PackageName}}.{{.Factory}}(), {{.Default}}, "{{join .MIMETypes "\", \""}}")
-{{end}}}
 
+	// Setup encoders and decoders
+{{range .Encoders}}{{/*
+*/}}	service.Encoder({{.PackageName}}.{{.Function}}, "{{join .MIMETypes "\", \""}}")
+{{end}}{{range .Decoders}}{{/*
+*/}}	service.Decoder({{.PackageName}}.{{.Function}}, "{{join .MIMETypes "\", \""}}")
+{{end}}
+
+	// Setup default encoder and decoder
+{{range .Encoders}}{{if .Default}}{{/*
+*/}}	service.Encoder({{.PackageName}}.{{.Function}}, "{{join .MIMETypes "\", \""}}")
+{{end}}{{end}}{{range .Decoders}}{{if .Default}}{{/*
+*/}}	service.Decoder({{.PackageName}}.{{.Function}}, "{{join .MIMETypes "\", \""}}")
+{{end}}{{end}}}
 `
 
 	// mountT generates the code for a resource "Mount" function.

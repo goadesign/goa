@@ -36,7 +36,7 @@ import (
 //		BaseParams(func() {			// Common parameters to all API actions
 //			Param("param")
 //		})
-//		Consumes("application/xml", "text/xml") // Built-in encoders and decoders
+//		Consumes("application/xml") // Built-in encoders and decoders
 //		Consumes("application/json")
 //		Produces("application/gob")
 //		Produces("application/json", func() {   // Custom encoder
@@ -250,7 +250,7 @@ func URL(url string) {
 // goa.DecoderFactory.
 func Consumes(args ...interface{}) {
 	if a, ok := apiDefinition(true); ok {
-		if def := buildEncodingDefinition(args...); def != nil {
+		if def := buildEncodingDefinition(false, args...); def != nil {
 			a.Consumes = append(a.Consumes, def)
 		}
 	}
@@ -262,22 +262,26 @@ func Consumes(args ...interface{}) {
 // goa.EncoderFactory.
 func Produces(args ...interface{}) {
 	if a, ok := apiDefinition(true); ok {
-		if def := buildEncodingDefinition(args...); def != nil {
+		if def := buildEncodingDefinition(true, args...); def != nil {
 			a.Produces = append(a.Produces, def)
 		}
 	}
 }
 
 // buildEncodingDefinition builds up an encoding definition.
-func buildEncodingDefinition(args ...interface{}) *design.EncodingDefinition {
+func buildEncodingDefinition(encoding bool, args ...interface{}) *design.EncodingDefinition {
 	var dsl func()
 	var ok bool
+	funcName := "Consumes"
+	if encoding {
+		funcName = "Produces"
+	}
 	if len(args) == 0 {
-		dslengine.ReportError("missing argument in call to Consumes")
+		dslengine.ReportError("missing argument in call to %s", funcName)
 		return nil
 	}
 	if _, ok := args[0].(string); !ok {
-		dslengine.ReportError("first argument to Consumes must be a string (MIME type)")
+		dslengine.ReportError("first argument to %s must be a string (MIME type)", funcName)
 		return nil
 	}
 	last := len(args)
@@ -288,12 +292,12 @@ func buildEncodingDefinition(args ...interface{}) *design.EncodingDefinition {
 	for i := 0; i < last; i++ {
 		var mimeType string
 		if mimeType, ok = args[i].(string); !ok {
-			dslengine.ReportError("argument #%d of Consumes must be a string (MIME type)", i)
+			dslengine.ReportError("argument #%d of %s must be a string (MIME type)", i, funcName)
 			return nil
 		}
 		mimeTypes[i] = mimeType
 	}
-	d := &design.EncodingDefinition{MIMETypes: mimeTypes}
+	d := &design.EncodingDefinition{MIMETypes: mimeTypes, Encoder: encoding}
 	if dsl != nil {
 		dslengine.Execute(dsl, d)
 	}
@@ -305,6 +309,14 @@ func buildEncodingDefinition(args ...interface{}) *design.EncodingDefinition {
 func Package(path string) {
 	if e, ok := encodingDefinition(true); ok {
 		e.PackagePath = path
+	}
+}
+
+// Function sets the Go function name used to instantiate the encoder or decoder. Defaults to
+// NewEncoder / NewDecoder.
+func Function(fn string) {
+	if e, ok := encodingDefinition(true); ok {
+		e.Function = fn
 	}
 }
 

@@ -394,7 +394,7 @@ var _ = Describe("ControllersWriter", func() {
 		Context("with data", func() {
 			var actions, verbs, paths, contexts, unmarshals []string
 			var payloads []*design.UserTypeDefinition
-			var encoderMap, decoderMap map[string]*genapp.EncoderTemplateData
+			var encoders, decoders []*genapp.EncoderTemplateData
 
 			var data []*genapp.ControllerTemplateData
 
@@ -405,8 +405,8 @@ var _ = Describe("ControllersWriter", func() {
 				contexts = nil
 				unmarshals = nil
 				payloads = nil
-				encoderMap = nil
-				decoderMap = nil
+				encoders = nil
+				decoders = nil
 			})
 
 			JustBeforeEach(func() {
@@ -438,8 +438,8 @@ var _ = Describe("ControllersWriter", func() {
 				if len(as) > 0 {
 					d.API = api
 					d.Actions = as
-					d.EncoderMap = encoderMap
-					d.DecoderMap = decoderMap
+					d.Encoders = encoders
+					d.Decoders = decoders
 					data = []*genapp.ControllerTemplateData{d}
 				} else {
 					data = nil
@@ -568,17 +568,17 @@ var _ = Describe("ControllersWriter", func() {
 					verbs = []string{"GET"}
 					paths = []string{"/accounts/:accountID/bottles"}
 					contexts = []string{"ListBottleContext"}
-					encoderMap = map[string]*genapp.EncoderTemplateData{
-						"": {
+					encoders = []*genapp.EncoderTemplateData{
+						{
 							PackageName: "goa",
-							Factory:     "JSONEncoderFactory",
+							Function:    "NewEncoder",
 							MIMETypes:   []string{"application/json"},
 						},
 					}
-					decoderMap = map[string]*genapp.EncoderTemplateData{
-						"": {
+					decoders = []*genapp.EncoderTemplateData{
+						{
 							PackageName: "goa",
-							Factory:     "JSONDecoderFactory",
+							Function:    "NewDecoder",
 							MIMETypes:   []string{"application/json"},
 						},
 					}
