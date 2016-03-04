@@ -528,9 +528,9 @@ func initService(service *goa.Service) {
 
 	// Setup default encoder and decoder
 {{range .Encoders}}{{if .Default}}{{/*
-*/}}	service.Encoder({{.PackageName}}.{{.Function}}, "{{join .MIMETypes "\", \""}}")
+*/}}	service.Encoder({{.PackageName}}.{{.Function}}, "*/*")
 {{end}}{{end}}{{range .Decoders}}{{if .Default}}{{/*
-*/}}	service.Decoder({{.PackageName}}.{{.Function}}, "{{join .MIMETypes "\", \""}}")
+*/}}	service.Decoder({{.PackageName}}.{{.Function}}, "*/*")
 {{end}}{{end}}}
 `
 
