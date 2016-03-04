@@ -109,8 +109,8 @@ Encoding
 
 The goa design language makes it possible to specify the encodings supported by the API both as
 input (Consumes) and output (Produces). goagen uses that information to registed the corresponding
-packages with the service encoders and decoders via the SetEncoder and SetDecoder methods. The
-service exposes the Decode, DecodeRequest, Encode and EncodeResponse that implement a simple content
-type negotiation algorithm for picking the right encoder for the "Accept" request header.
+packages with the service encoders and decoders via the Encoder and Decoder methods. The service
+exposes the Decode, DecodeRequest, Encode and EncodeResponse that implement a simple content type
+negotiation algorithm for picking the right encoder for the "Accept" request header.
 */
 package goa
