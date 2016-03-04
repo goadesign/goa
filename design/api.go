@@ -84,40 +84,59 @@ var (
 
 	// KnownEncoders contains the list of encoding packages and factories known by goa indexed
 	// by MIME type.
-	KnownEncoders = map[string][3]string{
-		"application/json":      {"json", "JSONEncoderFactory", "JSONDecoderFactory"},
-		"application/xml":       {"xml", "XMLEncoderFactory", "XMLDecoderFactory"},
-		"text/xml":              {"xml", "XMLEncoderFactory", "XMLDecoderFactory"},
-		"application/gob":       {"gob", "GobEncoderFactory", "GobDecoderFactory"},
-		"application/x-gob":     {"gob", "GobEncoderFactory", "GobDecoderFactory"},
-		"application/binc":      {"github.com/goadesign/encoding/binc", "EncoderFactory", "DecoderFactory"},
-		"application/x-binc":    {"github.com/goadesign/encoding/binc", "EncoderFactory", "DecoderFactory"},
-		"application/x-cbor":    {"github.com/goadesign/encoding/cbor", "EncoderFactory", "DecoderFactory"},
-		"application/cbor":      {"github.com/goadesign/encoding/cbor", "EncoderFactory", "DecoderFactory"},
-		"application/msgpack":   {"github.com/goadesign/encoding/msgpack", "EncoderFactory", "DecoderFactory"},
-		"application/x-msgpack": {"github.com/goadesign/encoding/msgpack", "EncoderFactory", "DecoderFactory"},
+	KnownEncoders = map[string]string{
+		"application/json":      "github.com/goadesign/goa",
+		"application/xml":       "github.com/goadesign/goa",
+		"application/gob":       "github.com/goadesign/goa",
+		"application/x-gob":     "github.com/goadesign/goa",
+		"application/binc":      "github.com/goadesign/encoding/binc",
+		"application/x-binc":    "github.com/goadesign/encoding/binc",
+		"application/cbor":      "github.com/goadesign/encoding/cbor",
+		"application/x-cbor":    "github.com/goadesign/encoding/cbor",
+		"application/msgpack":   "github.com/goadesign/encoding/msgpack",
+		"application/x-msgpack": "github.com/goadesign/encoding/msgpack",
 	}
 
-	// JSONContentTypes is a slice of default Content-Type headers that will use stdlib
-	// encoding/json to unmarshal unless overwritten using SetDecoder
+	// KnownEncoderFunctions contains the list of encoding encoder and decoder functions known
+	// by goa indexed by MIME type.
+	KnownEncoderFunctions = map[string][2]string{
+		"application/json":      {"NewJSONEncoder", "NewJSONDecoder"},
+		"application/xml":       {"NewXMLEncoder", "NewXMLDecoder"},
+		"application/gob":       {"NewGobEncoder", "NewGobDecoder"},
+		"application/x-gob":     {"NewGobEncoder", "NewGobDecoder"},
+		"application/binc":      {"NewEncoder", "NewDecoder"},
+		"application/x-binc":    {"NewEncoder", "NewDecoder"},
+		"application/cbor":      {"NewEncoder", "NewDecoder"},
+		"application/x-cbor":    {"NewEncoder", "NewDecoder"},
+		"application/msgpack":   {"NewEncoder", "NewDecoder"},
+		"application/x-msgpack": {"NewEncoder", "NewDecoder"},
+	}
+
+	// JSONContentTypes list the Content-Type header values that cause goa to encode or decode
+	// JSON by default.
 	JSONContentTypes = []string{"application/json"}
 
-	// XMLContentTypes is a slice of default Content-Type headers that will use stdlib
-	// encoding/xml to unmarshal unless overwritten using SetDecoder
-	XMLContentTypes = []string{"application/xml", "text/xml"}
+	// XMLContentTypes list the Content-Type header values that cause goa to encode or decode
+	// XML by default.
+	XMLContentTypes = []string{"application/xml"}
 
-	// GobContentTypes is a slice of default Content-Type headers that will use stdlib
-	// encoding/gob to unmarshal unless overwritten using SetDecoder
+	// GobContentTypes list the Content-Type header values that cause goa to encode or decode
+	// Gob by default.
 	GobContentTypes = []string{"application/gob", "application/x-gob"}
 )
 
 func init() {
-	var types []string
-	types = append(types, JSONContentTypes...)
-	types = append(types, XMLContentTypes...)
-	types = append(types, GobContentTypes...)
-	DefaultEncoders = []*EncodingDefinition{{MIMETypes: types}}
-	DefaultDecoders = []*EncodingDefinition{{MIMETypes: types}}
+	goa := "github.com/goadesign/goa"
+	DefaultEncoders = []*EncodingDefinition{
+		{MIMETypes: JSONContentTypes, PackagePath: goa, Function: "NewJSONEncoder"},
+		{MIMETypes: XMLContentTypes, PackagePath: goa, Function: "NewXMLEncoder"},
+		{MIMETypes: GobContentTypes, PackagePath: goa, Function: "NewGobEncoder"},
+	}
+	DefaultDecoders = []*EncodingDefinition{
+		{MIMETypes: JSONContentTypes, PackagePath: goa, Function: "NewJSONDecoder"},
+		{MIMETypes: XMLContentTypes, PackagePath: goa, Function: "NewXMLDecoder"},
+		{MIMETypes: GobContentTypes, PackagePath: goa, Function: "NewGobDecoder"},
+	}
 }
 
 // CanonicalIdentifier returns the media type identifier sans suffix
@@ -137,13 +156,7 @@ func CanonicalIdentifier(identifier string) string {
 // HasKnownEncoder returns true if the encoder for the given MIME type is known by goa.
 // MIME types with unknown encoders must be associated with a package path explicitly in the DSL.
 func HasKnownEncoder(mimeType string) bool {
-	return KnownEncoders[mimeType][1] != ""
-}
-
-// IsGoaEncoder returns true if the encoder for the given MIME type is implemented in the goa
-// package.
-func IsGoaEncoder(pkgPath string) bool {
-	return pkgPath == "json" || pkgPath == "xml" || pkgPath == "gob"
+	return KnownEncoders[mimeType] != ""
 }
 
 // ExtractWildcards returns the names of the wildcards that appear in path.

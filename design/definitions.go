@@ -129,11 +129,16 @@ type (
 	EncodingDefinition struct {
 		// MIMETypes is the set of possible MIME types for the content being encoded or decoded.
 		MIMETypes []string
-		// PackagePath is the path to the Go package that implements the encoder / decoder.
+		// PackagePath is the path to the Go package that implements the encoder/decoder.
 		// The package must expose a `EncoderFactory` or `DecoderFactory` function
 		// that the generated code calls. The methods must return objects that implement
 		// the goa.EncoderFactory or goa.DecoderFactory interface respectively.
 		PackagePath string
+		// Function is the name of the Go function used to instantiate the encoder/decoder.
+		// Defaults to NewEncoder and NewDecoder respecitively.
+		Function string
+		// Encoder is true if the definition is for a encoder, false if it's for a decoder.
+		Encoder bool
 	}
 
 	// ResponseDefinition defines a HTTP response status and optional validation rules.
@@ -954,39 +959,6 @@ func (a *AttributeDefinition) inheritValidations(parent *AttributeDefinition) {
 func (a *AttributeDefinition) shouldInherit(parent *AttributeDefinition) bool {
 	return a != nil && a.Type.ToObject() != nil &&
 		parent != nil && parent.Type.ToObject() != nil
-}
-
-// SupportingPackages returns the package paths to the packages that implements the encoders and
-// decoders that support the MIME types in the definition.
-// The return value maps the package path to the corresponding list of supported MIME types.
-// It is nil if no package could be found for *any* of the MIME types in the definition (in which
-// case the definition is invalid).
-func (enc *EncodingDefinition) SupportingPackages() map[string][]string {
-	if enc.PackagePath != "" {
-		return map[string][]string{enc.PackagePath: enc.MIMETypes}
-	}
-	mimeTypes := enc.MIMETypes
-	if len(mimeTypes) == 0 || !HasKnownEncoder(mimeTypes[0]) {
-		// invalid definition
-		return nil
-	}
-	ppath := KnownEncoders[mimeTypes[0]][0]
-	paths := map[string][]string{ppath: {mimeTypes[0]}}
-	if len(mimeTypes) == 1 {
-		return paths
-	}
-	for _, m := range mimeTypes[1:] {
-		if !HasKnownEncoder(m) {
-			return nil
-		}
-		e := KnownEncoders[m][0]
-		if existing, ok := paths[e]; ok {
-			paths[e] = append(existing, m)
-		} else {
-			paths[e] = []string{m}
-		}
-	}
-	return paths
 }
 
 // Context returns the generic definition name used in error messages.

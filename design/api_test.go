@@ -2,81 +2,121 @@ package design_test
 
 import (
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/dslengine"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("SupportingPackages", func() {
-	var enc *design.EncodingDefinition
-	var pkgs map[string][]string
-
-	var packagePath string
-	var mimeTypes []string
-
-	BeforeEach(func() {
-		packagePath = "github.com/goadesign/goa"
-		mimeTypes = []string{"application/json"}
-	})
+var _ = Describe("CanonicalIdentifier", func() {
+	var id string
+	var canonical string
 
 	JustBeforeEach(func() {
-		enc = &design.EncodingDefinition{
-			PackagePath: packagePath,
-			MIMETypes:   mimeTypes,
+		canonical = design.CanonicalIdentifier(id)
+	})
+
+	Context("with a canonical identifier", func() {
+		BeforeEach(func() {
+			id = "application/json"
+		})
+
+		It("returns it", func() {
+			Ω(canonical).Should(Equal(id))
+		})
+	})
+
+	Context("with a non canonical identifier", func() {
+		BeforeEach(func() {
+			id = "application/json+xml; foo=bar"
+		})
+
+		It("canonicalizes it", func() {
+			Ω(canonical).Should(Equal("application/json; foo=bar"))
+		})
+	})
+})
+
+var _ = Describe("ExtractWildcards", func() {
+	var path string
+	var wcs []string
+
+	JustBeforeEach(func() {
+		wcs = design.ExtractWildcards(path)
+	})
+
+	Context("with a path with no wildcard", func() {
+		BeforeEach(func() {
+			path = "/foo"
+		})
+
+		It("returns the empty slice", func() {
+			Ω(wcs).Should(HaveLen(0))
+		})
+	})
+
+	Context("with a path with wildcards", func() {
+		BeforeEach(func() {
+			path = "/a/:foo/:bar/b/:baz/c"
+		})
+
+		It("extracts them", func() {
+			Ω(wcs).Should(Equal([]string{"foo", "bar", "baz"}))
+		})
+	})
+})
+
+var _ = Describe("MediaTypeRoot", func() {
+	var root design.MediaTypeRoot
+
+	BeforeEach(func() {
+		design.Design.MediaTypes = make(map[string]*design.MediaTypeDefinition)
+		root = design.MediaTypeRoot{}
+	})
+
+	It("has a non empty DSL name", func() {
+		Ω(root.DSLName()).ShouldNot(BeEmpty())
+	})
+
+	It("depends on the goa API design root", func() {
+		Ω(root.DependsOn()).Should(Equal([]dslengine.Root{design.Design}))
+	})
+
+	It("iterates over the generated media types when it's empty", func() {
+		var sets []dslengine.DefinitionSet
+		it := func(s dslengine.DefinitionSet) error {
+			sets = append(sets, s)
+			return nil
 		}
-		pkgs = enc.SupportingPackages()
+		root.IterateSets(it)
+		Ω(sets).Should(HaveLen(1))
+		Ω(sets[0]).Should(BeEmpty())
 	})
 
-	Context("with a valid definition with one media type and a package path", func() {
-		It("returns a map with one element", func() {
-			Ω(pkgs).Should(HaveLen(1))
-			Ω(pkgs).Should(HaveKeyWithValue(packagePath, mimeTypes))
-		})
-
+	It("iterates over the generated media types", func() {
+		var sets []dslengine.DefinitionSet
+		it := func(s dslengine.DefinitionSet) error {
+			sets = append(sets, s)
+			return nil
+		}
+		root["foo"] = &design.MediaTypeDefinition{Identifier: "application/json"}
+		root.IterateSets(it)
+		Ω(sets).Should(HaveLen(1))
+		Ω(sets[0]).Should(HaveLen(1))
+		Ω(sets[0][0]).Should(Equal(root["foo"]))
 	})
 
-	Context("with a valid definition with one media type and no package path", func() {
-		BeforeEach(func() {
-			packagePath = "json"
-		})
-
-		It("returns a map with one element", func() {
-			Ω(pkgs).Should(HaveLen(1))
-			Ω(pkgs).Should(HaveKeyWithValue(packagePath, mimeTypes))
-		})
-	})
-
-	Context("with mime types using different known encoder packages", func() {
-		BeforeEach(func() {
-			packagePath = ""
-			mimeTypes = []string{"application/xml", "application/msgpack"}
-		})
-
-		It("returns all encoders", func() {
-			Ω(pkgs).Should(HaveLen(2))
-			Ω(pkgs).Should(HaveKeyWithValue("xml", []string{"application/xml"}))
-			Ω(pkgs).Should(HaveKeyWithValue("github.com/goadesign/encoding/msgpack", []string{"application/msgpack"}))
-		})
-	})
-
-	Context("with a unknown mime type and a package path", func() {
-		BeforeEach(func() {
-			packagePath = ""
-			mimeTypes = []string{"application/vmd.custom"}
-		})
-
-		It("returns nil", func() {
-			Ω(pkgs).Should(BeNil())
-		})
-	})
-
-	Context("with known media types and a unknown mime type and a package path", func() {
-		BeforeEach(func() {
-			packagePath = ""
-			mimeTypes = []string{"application/json", "application/xml", "application/vmd.custom"}
-		})
-
-		It("returns nil", func() {
-			Ω(pkgs).Should(BeNil())
-		})
+	It("iterates over the generated media types in order", func() {
+		var sets []dslengine.DefinitionSet
+		it := func(s dslengine.DefinitionSet) error {
+			sets = append(sets, s)
+			return nil
+		}
+		root["foo"] = &design.MediaTypeDefinition{Identifier: "application/json"}
+		root["bar"] = &design.MediaTypeDefinition{Identifier: "application/xml"}
+		root.IterateSets(it)
+		Ω(sets).Should(HaveLen(1))
+		Ω(sets[0]).Should(HaveLen(2))
+		Ω(sets[0][0]).Should(Equal(root["foo"]))
+		Ω(sets[0][1]).Should(Equal(root["bar"]))
 	})
 })

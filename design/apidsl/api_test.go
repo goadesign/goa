@@ -180,11 +180,13 @@ var _ = Describe("API", func() {
 
 			Context("using a custom encoding package", func() {
 				const pkgPath = "github.com/goadesign/encoding/json"
+				const fn = "NewFoo"
 
 				BeforeEach(func() {
 					dsl = func() {
 						Consumes("application/json", func() {
 							Package(pkgPath)
+							Function(fn)
 						})
 					}
 				})
@@ -193,6 +195,7 @@ var _ = Describe("API", func() {
 					Ω(Design.Consumes).Should(HaveLen(1))
 					Ω(Design.Consumes[0].MIMETypes).Should(Equal([]string{consumesMT}))
 					Ω(Design.Consumes[0].PackagePath).Should(Equal(pkgPath))
+					Ω(Design.Consumes[0].Function).Should(Equal(fn))
 				})
 			})
 		})

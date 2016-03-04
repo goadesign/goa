@@ -246,7 +246,7 @@ type {{$ctrlName}} struct {
 }
 
 // New{{$ctrlName}} creates a {{.Name}} controller.
-func New{{$ctrlName}}(service *goa.Service) {{targetPkg}}.{{goify .Name true}}Controller {
+func New{{$ctrlName}}(service *goa.Service) *{{$ctrlName}} {
 	return &{{$ctrlName}}{Controller: service.NewController("{{.Name}}")}
 }
 {{$ctrl := .}}{{range .Actions}}

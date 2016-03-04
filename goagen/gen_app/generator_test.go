@@ -218,11 +218,11 @@ var _ = Describe("Generate", func() {
 	})
 })
 
-var _ = Describe("BuildEncoderMap", func() {
+var _ = Describe("BuildEncoders", func() {
 	var info []*design.EncodingDefinition
 	var encoder bool
 
-	var data map[string]*genapp.EncoderTemplateData
+	var data []*genapp.EncoderTemplateData
 	var resErr error
 
 	BeforeEach(func() {
@@ -231,13 +231,14 @@ var _ = Describe("BuildEncoderMap", func() {
 	})
 
 	JustBeforeEach(func() {
-		data, resErr = genapp.BuildEncoderMap(info, encoder)
+		data, resErr = genapp.BuildEncoders(info, encoder)
 	})
 
 	Context("with a single definition using a single known MIME type for encoding", func() {
 		BeforeEach(func() {
 			simple := &design.EncodingDefinition{
 				MIMETypes: []string{"application/json"},
+				Encoder:   true,
 			}
 			info = append(info, simple)
 			encoder = true
@@ -246,12 +247,11 @@ var _ = Describe("BuildEncoderMap", func() {
 		It("generates a map with a single entry", func() {
 			Ω(resErr).ShouldNot(HaveOccurred())
 			Ω(data).Should(HaveLen(1))
-			Ω(data).Should(HaveKey("json"))
-			jd := data["json"]
+			jd := data[0]
 			Ω(jd).ShouldNot(BeNil())
-			Ω(jd.PackagePath).Should(Equal("json"))
+			Ω(jd.PackagePath).Should(Equal("github.com/goadesign/goa"))
 			Ω(jd.PackageName).Should(Equal("goa"))
-			Ω(jd.Factory).Should(Equal("JSONEncoderFactory"))
+			Ω(jd.Function).Should(Equal("NewJSONEncoder"))
 			Ω(jd.MIMETypes).Should(HaveLen(1))
 			Ω(jd.MIMETypes[0]).Should(Equal("application/json"))
 		})
@@ -269,12 +269,11 @@ var _ = Describe("BuildEncoderMap", func() {
 		It("generates a map with a single entry", func() {
 			Ω(resErr).ShouldNot(HaveOccurred())
 			Ω(data).Should(HaveLen(1))
-			Ω(data).Should(HaveKey("json"))
-			jd := data["json"]
+			jd := data[0]
 			Ω(jd).ShouldNot(BeNil())
-			Ω(jd.PackagePath).Should(Equal("json"))
+			Ω(jd.PackagePath).Should(Equal("github.com/goadesign/goa"))
 			Ω(jd.PackageName).Should(Equal("goa"))
-			Ω(jd.Factory).Should(Equal("JSONDecoderFactory"))
+			Ω(jd.Function).Should(Equal("NewJSONDecoder"))
 			Ω(jd.MIMETypes).Should(HaveLen(1))
 			Ω(jd.MIMETypes[0]).Should(Equal("application/json"))
 		})
@@ -287,6 +286,7 @@ var _ = Describe("BuildEncoderMap", func() {
 		BeforeEach(func() {
 			simple := &design.EncodingDefinition{
 				PackagePath: packagePath,
+				Function:    "NewDecoder",
 				MIMETypes:   mimeTypes,
 			}
 			info = append(info, simple)
@@ -295,12 +295,11 @@ var _ = Describe("BuildEncoderMap", func() {
 		It("generates a map with a single entry", func() {
 			Ω(resErr).ShouldNot(HaveOccurred())
 			Ω(data).Should(HaveLen(1))
-			Ω(data).Should(HaveKey(packagePath))
-			jd := data[packagePath]
+			jd := data[0]
 			Ω(jd).ShouldNot(BeNil())
 			Ω(jd.PackagePath).Should(Equal(packagePath))
 			Ω(jd.PackageName).Should(Equal("design"))
-			Ω(jd.Factory).Should(Equal("DecoderFactory"))
+			Ω(jd.Function).Should(Equal("NewDecoder"))
 			Ω(jd.MIMETypes).Should(ConsistOf(interface{}(mimeTypes[0]), interface{}(mimeTypes[1])))
 		})
 	})
@@ -312,6 +311,7 @@ var _ = Describe("BuildEncoderMap", func() {
 		BeforeEach(func() {
 			simple := &design.EncodingDefinition{
 				PackagePath: packagePath,
+				Function:    "NewDecoder",
 				MIMETypes:   mimeTypes,
 			}
 			info = append(info, simple)
@@ -320,12 +320,11 @@ var _ = Describe("BuildEncoderMap", func() {
 		It("generates a map with a single entry using the generic decoder factory name", func() {
 			Ω(resErr).ShouldNot(HaveOccurred())
 			Ω(data).Should(HaveLen(1))
-			Ω(data).Should(HaveKey(packagePath))
-			jd := data[packagePath]
+			jd := data[0]
 			Ω(jd).ShouldNot(BeNil())
 			Ω(jd.PackagePath).Should(Equal(packagePath))
 			Ω(jd.PackageName).Should(Equal("design"))
-			Ω(jd.Factory).Should(Equal("DecoderFactory"))
+			Ω(jd.Function).Should(Equal("NewDecoder"))
 		})
 
 	})
@@ -405,7 +404,10 @@ func initService(service *goa.Service) {
 		return
 	}
 	inited = true
+
 	// Setup encoders and decoders
+
+	// Setup default encoder and decoder
 }
 
 // WidgetController is the controller interface for the Widget actions.
