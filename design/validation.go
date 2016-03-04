@@ -279,17 +279,23 @@ func (enc *EncodingDefinition) Validate() *dslengine.ValidationErrors {
 		if !found {
 			verr.Add(enc, "invalid Go package path %#v", enc.PackagePath)
 		}
-	}
-	if enc.SupportingPackages() == nil {
-		knownMIMETypes := make([]string, len(KnownEncoders))
-		i := 0
-		for k := range KnownEncoders {
-			knownMIMETypes[i] = k
-			i++
+	} else {
+		for _, m := range enc.MIMETypes {
+			if _, ok := KnownEncoders[m]; !ok {
+				knownMIMETypes := make([]string, len(KnownEncoders))
+				i := 0
+				for k := range KnownEncoders {
+					knownMIMETypes[i] = k
+					i++
+				}
+				sort.Strings(knownMIMETypes)
+				verr.Add(enc, "Encoders not known for all MIME types, use Package to specify encoder Go package. MIME types with known encoders are %s",
+					strings.Join(knownMIMETypes, ", "))
+			}
 		}
-		sort.Strings(knownMIMETypes)
-		verr.Add(enc, "Encoders not known for all MIME types, use Package to specify encoder Go package. MIME types with known encoders are %s",
-			strings.Join(knownMIMETypes, ", "))
+	}
+	if enc.Function != "" && enc.PackagePath == "" {
+		verr.Add(enc, "Must specify encoder package page with PackagePath")
 	}
 	return verr
 }

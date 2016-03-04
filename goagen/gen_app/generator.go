@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/goadesign/goa/design"
@@ -178,81 +177,131 @@ func (g *Generator) generateContexts(api *design.APIDefinition) error {
 	return ctxWr.FormatCode()
 }
 
-// BuildEncoderMap builds the template data needed to render the given encoding definitions.
+// BuildEncoders builds the template data needed to render the given encoding definitions.
 // This extra map is needed to handle the case where a single encoding definition maps to multiple
-// encoding packages. The data is indexed by encoder Go package path.
-func BuildEncoderMap(info []*design.EncodingDefinition, encoder bool) (map[string]*EncoderTemplateData, error) {
+// encoding packages. The data is indexed by mime type.
+func BuildEncoders(info []*design.EncodingDefinition, encoder bool) ([]*EncoderTemplateData, error) {
 	if len(info) == 0 {
 		return nil, nil
 	}
-	packages := make(map[string]map[string]bool)
-	for _, enc := range info {
-		supporting := enc.SupportingPackages()
-		if supporting == nil {
-			// shouldn't happen - DSL validation shouldn't allow it - be graceful
-			continue
-		}
-		for ppath, mimeTypes := range supporting {
-			if _, ok := packages[ppath]; !ok {
-				packages[ppath] = make(map[string]bool)
-			}
-			for _, m := range mimeTypes {
-				packages[ppath][m] = true
-			}
-		}
+	// knownStdPackages lists the stdlib packages known by BuildEncoders
+	var knownStdPackages = map[string]string{
+		"encoding/json": "json",
+		"encoding/xml":  "xml",
+		"encoding/gob":  "gob",
 	}
-	data := make(map[string]*EncoderTemplateData, len(packages))
-	if len(info[0].MIMETypes) == 0 {
-		return nil, fmt.Errorf("No mime type associated with encoding info for package %s", info[0].PackagePath)
-	}
+	encs := normalizeEncodingDefinitions(info)
+	data := make([]*EncoderTemplateData, len(encs))
 	defaultMediaType := info[0].MIMETypes[0]
-	for p, ms := range packages {
-		pkgName := "goa"
-		if !design.IsGoaEncoder(p) {
-			srcPath, err := codegen.PackageSourcePath(p)
-			if err == nil {
-				pkgName, err = codegen.PackageName(srcPath)
-			}
+	for i, enc := range encs {
+		var pkgName string
+		if name, ok := knownStdPackages[enc.PackagePath]; ok {
+			pkgName = name
+		} else {
+			srcPath, err := codegen.PackageSourcePath(enc.PackagePath)
 			if err != nil {
-				return nil, fmt.Errorf("failed to load package %s (%s)", p, err)
+				return nil, fmt.Errorf("failed to locate package source of %s (%s)",
+					enc.PackagePath, err)
+			}
+			pkgName, err = codegen.PackageName(srcPath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load package %s (%s)",
+					enc.PackagePath, err)
 			}
 		}
-		mimeTypes := make([]string, len(ms))
 		isDefault := false
-		i := 0
-		for m := range ms {
+		for _, m := range enc.MIMETypes {
 			if m == defaultMediaType {
 				isDefault = true
 			}
-			mimeTypes[i] = m
-			i++
-		}
-		first := mimeTypes[0]
-		sort.Strings(mimeTypes)
-		var factory string
-		if encoder {
-			if !design.IsGoaEncoder(p) {
-				factory = "EncoderFactory"
-			} else {
-				factory = design.KnownEncoders[first][1]
-			}
-		} else {
-			if !design.IsGoaEncoder(p) {
-				factory = "DecoderFactory"
-			} else {
-				factory = design.KnownEncoders[first][2]
-			}
 		}
 		d := &EncoderTemplateData{
-			PackagePath: p,
+			PackagePath: enc.PackagePath,
 			PackageName: pkgName,
-			Factory:     factory,
-			MIMETypes:   mimeTypes,
+			Function:    enc.Function,
+			MIMETypes:   enc.MIMETypes,
 			Default:     isDefault,
 		}
-		data[p] = d
+		data[i] = d
 	}
 	return data, nil
+}
+
+// normalizeEncodingDefinitions figures out the package path and function of all encoding definitions
+// and groups them by package and function name.
+// We're going for simple rather than efficient (this is codegen after all)
+// Also we assume that the encoding definitions have been validated: they have at least
+// one mime type and definitions with no package path use known encoders.
+func normalizeEncodingDefinitions(defs []*design.EncodingDefinition) []*design.EncodingDefinition {
+	// First splat all definitions so each only have one mime type
+	var encs []*design.EncodingDefinition
+	for _, enc := range defs {
+		if len(enc.MIMETypes) == 1 {
+			encs = append(encs, enc)
+			continue
+		}
+		for _, m := range enc.MIMETypes {
+			encs = append(encs, &design.EncodingDefinition{
+				MIMETypes:   []string{m},
+				PackagePath: enc.PackagePath,
+				Function:    enc.Function,
+				Encoder:     enc.Encoder,
+			})
+		}
+	}
+
+	// Next make sure all definitions have a package path
+	for _, enc := range encs {
+		if enc.PackagePath == "" {
+			enc.PackagePath = design.KnownEncoders[enc.MIMETypes[0]]
+		}
+		if enc.Function == "" {
+			idx := 0
+			if !enc.Encoder {
+				idx = 1
+			}
+			enc.Function = design.KnownEncoderFunctions[enc.MIMETypes[0]][idx]
+		}
+	}
+
+	// Finally regroup by package and function name
+	byfn := make(map[string][]*design.EncodingDefinition)
+	for _, enc := range encs {
+		key := enc.PackagePath + "#" + enc.Function
+		if _, ok := byfn[key]; ok {
+			byfn[key] = append(byfn[key], enc)
+		} else {
+			byfn[key] = []*design.EncodingDefinition{enc}
+		}
+	}
+	res := make([]*design.EncodingDefinition, len(byfn))
+	i := 0
+	for _, encs := range byfn {
+		res[i] = &design.EncodingDefinition{
+			MIMETypes:   encs[0].MIMETypes,
+			PackagePath: encs[0].PackagePath,
+			Function:    encs[0].Function,
+		}
+		if len(encs) > 0 {
+			encs = encs[1:]
+			for _, enc := range encs {
+				for _, m := range enc.MIMETypes {
+					found := false
+					for _, rm := range res[i].MIMETypes {
+						if m == rm {
+							found = true
+							break
+						}
+					}
+					if !found {
+						res[i].MIMETypes = append(res[i].MIMETypes, m)
+					}
+				}
+			}
+		}
+		i++
+	}
+	return res
 }
 
 // generateControllers iterates through the API resources and generates the low level
@@ -269,28 +318,28 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 		codegen.SimpleImport("golang.org/x/net/context"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
-	encoderMap, err := BuildEncoderMap(api.Produces, true)
+	encoders, err := BuildEncoders(api.Produces, true)
 	if err != nil {
 		return err
 	}
-	decoderMap, err := BuildEncoderMap(api.Consumes, false)
+	decoders, err := BuildEncoders(api.Consumes, false)
 	if err != nil {
 		return err
 	}
 	encoderImports := make(map[string]bool)
-	for _, data := range encoderMap {
+	for _, data := range encoders {
 		encoderImports[data.PackagePath] = true
 	}
-	for _, data := range decoderMap {
+	for _, data := range decoders {
 		encoderImports[data.PackagePath] = true
 	}
 	for packagePath := range encoderImports {
-		if !design.IsGoaEncoder(packagePath) {
+		if !strings.Contains(packagePath, "/goadesign/goa/") {
 			imports = append(imports, codegen.SimpleImport(packagePath))
 		}
 	}
 	ctlWr.WriteHeader(title, TargetPackage, imports)
-	ctlWr.WriteInitService(encoderMap, decoderMap)
+	ctlWr.WriteInitService(encoders, decoders)
 	var controllersData []*ControllerTemplateData
 	api.IterateResources(func(r *design.ResourceDefinition) error {
 		data := &ControllerTemplateData{API: api, Resource: codegen.Goify(r.Name, true)}
@@ -311,8 +360,8 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 			return err
 		}
 		if len(data.Actions) > 0 {
-			data.EncoderMap = encoderMap
-			data.DecoderMap = decoderMap
+			data.Encoders = encoders
+			data.Decoders = decoders
 			controllersData = append(controllersData, data)
 		}
 		return nil
