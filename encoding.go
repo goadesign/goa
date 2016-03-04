@@ -15,10 +15,8 @@ import (
 )
 
 type (
-	// A DecoderFactory generates custom decoders
-	DecoderFactory interface {
-		NewDecoder(r io.Reader) Decoder
-	}
+	// DecoderFunc instantiates a decoder that decodes data read from the given io reader.
+	DecoderFunc func(r io.Reader) Decoder
 
 	// A Decoder unmarshals an io.Reader into an interface
 	Decoder interface {
@@ -35,14 +33,12 @@ type (
 	// decoderPool smartly determines whether to instantiate a new Decoder or reuse
 	// one from a sync.Pool
 	decoderPool struct {
-		factory DecoderFactory
-		pool    *sync.Pool
+		fn   DecoderFunc
+		pool *sync.Pool
 	}
 
-	// A EncoderFactory generates custom encoders
-	EncoderFactory interface {
-		NewEncoder(w io.Writer) Encoder
-	}
+	// EncoderFunc instantiates an encoder that encodes data into the given writer.
+	EncoderFunc func(w io.Writer) Encoder
 
 	// An Encoder marshals from an interface into an io.Writer
 	Encoder interface {
@@ -59,19 +55,28 @@ type (
 	// encoderPool smartly determines whether to instantiate a new Encoder or reuse
 	// one from a sync.Pool
 	encoderPool struct {
-		factory EncoderFactory
-		pool    *sync.Pool
+		fn   EncoderFunc
+		pool *sync.Pool
 	}
-
-	// jsonFactory uses encoding/json to act as an DecoderFactory and EncoderFactory
-	jsonFactory struct{}
-
-	// xmlFactory uses encoding/xml to act as an DecoderFactory and EncoderFactory
-	xmlFactory struct{}
-
-	// gobFactory uses encoding/gob to act as an DecoderFactory and EncoderFactory
-	gobFactory struct{}
 )
+
+// NewJSONEncoder is an adapter for the encoding package JSON encoder.
+func NewJSONEncoder(w io.Writer) Encoder { return json.NewEncoder(w) }
+
+// NewJSONDecoder is an adapter for the encoding package JSON decoder.
+func NewJSONDecoder(r io.Reader) Decoder { return json.NewDecoder(r) }
+
+// NewXMLEncoder is an adapter for the encoding package XML encoder.
+func NewXMLEncoder(w io.Writer) Encoder { return xml.NewEncoder(w) }
+
+// NewXMLDecoder is an adapter for the encoding package XML decoder.
+func NewXMLDecoder(r io.Reader) Decoder { return xml.NewDecoder(r) }
+
+// NewGobEncoder is an adapter for the encoding package gob encoder.
+func NewGobEncoder(w io.Writer) Encoder { return gob.NewEncoder(w) }
+
+// NewGobDecoder is an adapter for the encoding package gob decoder.
+func NewGobDecoder(r io.Reader) Decoder { return gob.NewDecoder(r) }
 
 // DecodeRequest retrives the request body and `Content-Type` header and uses Decode
 // to unmarshal into the provided `interface{}`
@@ -117,9 +122,9 @@ func (service *Service) Decode(v interface{}, body io.Reader, contentType string
 	return nil
 }
 
-// SetDecoder sets a specific decoder to be used for the specified content types. If
+// Decoder sets a specific decoder to be used for the specified content types. If
 // a decoder is already registered, it will be overwritten.
-func (service *Service) SetDecoder(f DecoderFactory, makeDefault bool, contentTypes ...string) {
+func (service *Service) Decoder(f DecoderFunc, contentTypes ...string) {
 	p := newDecodePool(f)
 
 	for _, contentType := range contentTypes {
@@ -129,27 +134,21 @@ func (service *Service) SetDecoder(f DecoderFactory, makeDefault bool, contentTy
 		}
 		service.decoderPools[mediaType] = p
 	}
-
-	if makeDefault {
-		service.decoderPools["*/*"] = p
-	}
 }
 
-// newDecodePool checks to see if the DecoderFactory returns reusable decoders
+// newDecodePool checks to see if the DecoderFunc returns reusable decoders
 // and if so, creates a pool
-func newDecodePool(f DecoderFactory) *decoderPool {
+func newDecodePool(f DecoderFunc) *decoderPool {
 	// get a new decoder and type assert to see if it can be reset
-	decoder := f.NewDecoder(nil)
+	decoder := f(nil)
 	rd, ok := decoder.(ResettableDecoder)
 
-	p := &decoderPool{
-		factory: f,
-	}
+	p := &decoderPool{fn: f}
 
 	// if the decoder can be reset, create a pool and put the typed decoder in
 	if ok {
 		p.pool = &sync.Pool{
-			New: func() interface{} { return f.NewDecoder(nil) },
+			New: func() interface{} { return f(nil) },
 		}
 		p.pool.Put(rd)
 	}
@@ -161,7 +160,7 @@ func newDecodePool(f DecoderFactory) *decoderPool {
 // or creates a new one if necessary
 func (p *decoderPool) Get(r io.Reader) Decoder {
 	if p.pool == nil {
-		return p.factory.NewDecoder(r)
+		return p.fn(r)
 	}
 
 	decoder := p.pool.Get().(ResettableDecoder)
@@ -211,9 +210,9 @@ func (service *Service) EncodeResponse(ctx context.Context, v interface{}) error
 	return nil
 }
 
-// SetEncoder sets a specific encoder to be used for the specified content types. If
+// Encoder sets a specific encoder to be used for the specified content types. If
 // an encoder is already registered, it will be overwritten.
-func (service *Service) SetEncoder(f EncoderFactory, makeDefault bool, contentTypes ...string) {
+func (service *Service) Encoder(f EncoderFunc, contentTypes ...string) {
 	p := newEncodePool(f)
 	for _, contentType := range contentTypes {
 		mediaType, _, err := mime.ParseMediaType(contentType)
@@ -221,10 +220,6 @@ func (service *Service) SetEncoder(f EncoderFactory, makeDefault bool, contentTy
 			mediaType = contentType
 		}
 		service.encoderPools[mediaType] = p
-	}
-
-	if makeDefault {
-		service.encoderPools["*/*"] = p
 	}
 
 	// Rebuild a unique index of registered content encoders to be used in EncodeResponse
@@ -237,19 +232,17 @@ func (service *Service) SetEncoder(f EncoderFactory, makeDefault bool, contentTy
 
 // newEncodePool checks to see if the EncoderFactory returns reusable encoders
 // and if so, creates a pool
-func newEncodePool(f EncoderFactory) *encoderPool {
+func newEncodePool(f EncoderFunc) *encoderPool {
 	// get a new encoder and type assert to see if it can be reset
-	encoder := f.NewEncoder(nil)
+	encoder := f(nil)
 	re, ok := encoder.(ResettableEncoder)
 
-	p := &encoderPool{
-		factory: f,
-	}
+	p := &encoderPool{fn: f}
 
 	// if the encoder can be reset, create a pool and put the typed encoder in
 	if ok {
 		p.pool = &sync.Pool{
-			New: func() interface{} { return f.NewEncoder(nil) },
+			New: func() interface{} { return f(nil) },
 		}
 		p.pool.Put(re)
 	}
@@ -261,7 +254,7 @@ func newEncodePool(f EncoderFactory) *encoderPool {
 // or creates a new one if necessary
 func (p *encoderPool) Get(w io.Writer) Encoder {
 	if p.pool == nil {
-		return p.factory.NewEncoder(w)
+		return p.fn(w)
 	}
 
 	encoder := p.pool.Get().(ResettableEncoder)
@@ -275,70 +268,4 @@ func (p *encoderPool) Put(e Encoder) {
 		return
 	}
 	p.pool.Put(e)
-}
-
-// encoding/json default encoder/decoder
-
-// JSONDecoderFactory returns a struct that can generate new json.Decoders
-func JSONDecoderFactory() DecoderFactory {
-	return &jsonFactory{}
-}
-
-// NewDecoder returns a new json.Decoder
-func (f *jsonFactory) NewDecoder(r io.Reader) Decoder {
-	return json.NewDecoder(r)
-}
-
-// JSONEncoderFactory returns a struct that can generate new json.Encoders
-func JSONEncoderFactory() EncoderFactory {
-	return &jsonFactory{}
-}
-
-// NewEncoder returns a new json.Encoder
-func (f *jsonFactory) NewEncoder(w io.Writer) Encoder {
-	return json.NewEncoder(w)
-}
-
-// encoding/xml default encoder/decoder
-
-// XMLDecoderFactory returns a struct that can generate new xml.Decoders
-func XMLDecoderFactory() DecoderFactory {
-	return &xmlFactory{}
-}
-
-// NewDecoder returns a new xml.Decoder
-func (f *xmlFactory) NewDecoder(r io.Reader) Decoder {
-	return xml.NewDecoder(r)
-}
-
-// XMLEncoderFactory returns a struct that can generate new xml.Encoders
-func XMLEncoderFactory() EncoderFactory {
-	return &xmlFactory{}
-}
-
-// NewEncoder returns a new xml.Encoder
-func (f *xmlFactory) NewEncoder(w io.Writer) Encoder {
-	return xml.NewEncoder(w)
-}
-
-// encoding/gob default encoder/decoder
-
-// GobDecoderFactory returns a struct that can generate new gob.Decoders
-func GobDecoderFactory() DecoderFactory {
-	return &gobFactory{}
-}
-
-// NewDecoder returns a new gob.Decoder
-func (f *gobFactory) NewDecoder(r io.Reader) Decoder {
-	return gob.NewDecoder(r)
-}
-
-// GobEncoderFactory returns a struct that can generate new gob.Encoders
-func GobEncoderFactory() EncoderFactory {
-	return &gobFactory{}
-}
-
-// NewEncoder returns a new gob.Encoder
-func (f *gobFactory) NewEncoder(w io.Writer) Encoder {
-	return gob.NewEncoder(w)
 }
