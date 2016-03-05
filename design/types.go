@@ -161,7 +161,7 @@ const (
 // Kind implements DataKind.
 func (p Primitive) Kind() Kind { return Kind(p) }
 
-// Name returns the type name.
+// Name returns the JSON type name.
 func (p Primitive) Name() string {
 	switch p {
 	case Boolean:
@@ -173,7 +173,7 @@ func (p Primitive) Name() string {
 	case String:
 		return "string"
 	case DateTime:
-		return "date"
+		return "string"
 	case Any:
 		return "any"
 	default:
