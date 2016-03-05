@@ -264,6 +264,14 @@ func TypeSchema(api *design.APIDefinition, t design.DataType) *JSONSchema {
 	switch actual := t.(type) {
 	case design.Primitive:
 		s.Type = JSONType(actual.Name())
+		switch actual.Kind() {
+		case design.DateTimeKind:
+			s.Format = "date-time"
+		case design.NumberKind:
+			s.Format = "double"
+		case design.IntegerKind:
+			s.Format = "int64"
+		}
 	case *design.Array:
 		s.Type = JSONArray
 		s.Items = NewJSONSchema()
@@ -377,7 +385,11 @@ func (s *JSONSchema) Dup() *JSONSchema {
 
 // buildAttributeSchema initializes the given JSON schema that corresponds to the given attribute.
 func buildAttributeSchema(api *design.APIDefinition, s *JSONSchema, at *design.AttributeDefinition) *JSONSchema {
-	s.Merge(TypeSchema(api, at.Type))
+	if ds, ok := at.Type.(design.DataStructure); ok {
+		buildAttributeSchema(api, s, ds.Definition())
+	} else {
+		s.Merge(TypeSchema(api, at.Type))
+	}
 	s.DefaultValue = at.DefaultValue
 	s.Description = at.Description
 	s.Example = at.Example
