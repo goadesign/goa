@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/goadesign/goa/design"
@@ -264,19 +265,46 @@ func normalizeEncodingDefinitions(defs []*design.EncodingDefinition) []*design.E
 		}
 	}
 
-	// Finally regroup by package and function name
+	// Regroup by package and function name
 	byfn := make(map[string][]*design.EncodingDefinition)
+	var first string
 	for _, enc := range encs {
 		key := enc.PackagePath + "#" + enc.Function
+		if first == "" {
+			first = key
+		}
 		if _, ok := byfn[key]; ok {
 			byfn[key] = append(byfn[key], enc)
 		} else {
 			byfn[key] = []*design.EncodingDefinition{enc}
 		}
 	}
+
+	// Reserialize into array keeping the first element identical since it's the default
+	// encoder.
+	return serialize(byfn, first)
+}
+
+func serialize(byfn map[string][]*design.EncodingDefinition, first string) []*design.EncodingDefinition {
 	res := make([]*design.EncodingDefinition, len(byfn))
 	i := 0
-	for _, encs := range byfn {
+	keys := make([]string, len(byfn))
+	for k := range byfn {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys)
+	var idx int
+	for j, k := range keys {
+		if k == first {
+			idx = j
+			break
+		}
+	}
+	keys[0], keys[idx] = keys[idx], keys[0]
+	i = 0
+	for _, key := range keys {
+		encs := byfn[key]
 		res[i] = &design.EncodingDefinition{
 			MIMETypes:   encs[0].MIMETypes,
 			PackagePath: encs[0].PackagePath,
