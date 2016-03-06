@@ -495,13 +495,7 @@ func responseFromDefinition(s *Swagger, api *design.APIDefinition, r *design.Res
 		response *Response
 		err      error
 	)
-	if r.Global || r.Standard {
-		response = &Response{
-			Ref: fmt.Sprintf("#/responses/%s", r.Name),
-		}
-	} else {
-		response, err = responseSpecFromDefinition(s, api, r)
-	}
+	response, err = responseSpecFromDefinition(s, api, r)
 	if err != nil {
 		return nil, err
 	}
