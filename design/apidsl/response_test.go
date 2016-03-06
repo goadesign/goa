@@ -197,28 +197,4 @@ var _ = Describe("Response", func() {
 		})
 	})
 
-	Context("not from the API global definitions", func() {
-		BeforeEach(func() {
-			name = "foo"
-		})
-
-		It("does not set the Global flag", func() {
-			Ω(res.Global).Should(BeFalse())
-		})
-	})
-
-	Context("from the API global definitions", func() {
-		BeforeEach(func() {
-			name = "global"
-			API("bar", func() {
-				ResponseTemplate(name, func() {})
-			})
-
-		})
-
-		It("sets the global flag", func() {
-			Ω(res.Global).Should(BeTrue())
-		})
-	})
-
 })

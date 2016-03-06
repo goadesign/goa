@@ -135,7 +135,6 @@ func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.Respon
 	} else {
 		if ar, ok := design.Design.Responses[name]; ok {
 			resp = ar.Dup()
-			resp.Global = true
 		} else if ar, ok := design.Design.DefaultResponses[name]; ok {
 			resp = ar.Dup()
 			resp.Standard = true
@@ -148,12 +147,10 @@ func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.Respon
 			return nil
 		}
 		resp.Standard = false
-		resp.Global = false
 	}
 	if dt != nil {
 		resp.Type = dt
 		resp.Standard = false
-		resp.Global = false
 	}
 	return resp
 }
