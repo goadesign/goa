@@ -152,6 +152,8 @@ func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.Respon
 	}
 	if dt != nil {
 		resp.Type = dt
+		resp.Standard = false
+		resp.Global = false
 	}
 	return resp
 }
