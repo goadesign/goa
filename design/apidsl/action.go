@@ -178,11 +178,13 @@ func Headers(dsl func()) {
 func Params(dsl func()) {
 	if a, ok := actionDefinition(false); ok {
 		params := newAttribute(a.Parent.MediaType)
+		params.Type = make(design.Object)
 		if dslengine.Execute(dsl, params) {
 			a.Params = params
 		}
 	} else if r, ok := resourceDefinition(true); ok {
 		params := newAttribute(r.MediaType)
+		params.Type = make(design.Object)
 		if dslengine.Execute(dsl, params) {
 			r.Params = params
 		}

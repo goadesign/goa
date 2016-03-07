@@ -406,6 +406,7 @@ func (a *APIDefinition) IterateSets(iterator dslengine.SetIterator) {
 		i++
 		return nil
 	})
+
 	iterator(mediaTypes)
 
 	// And now that we have everything the resources.

@@ -58,6 +58,19 @@ var _ = Describe("Action", func() {
 			Ω(action.Routes).Should(HaveLen(1))
 			Ω(action.Routes[0]).Should(Equal(route))
 		})
+
+		Context("with an empty params DSL", func() {
+			BeforeEach(func() {
+				olddsl := dsl
+				dsl = func() { olddsl(); Params(func() {}) }
+				name = "foo"
+			})
+
+			It("produces a valid action", func() {
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+			})
+		})
+
 	})
 
 	Context("with a string payload", func() {
