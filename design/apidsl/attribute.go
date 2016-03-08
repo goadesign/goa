@@ -233,7 +233,7 @@ func Default(def interface{}) {
 				dslengine.ReportError("default value %#v is incompatible with attribute of type %s",
 					def, a.Type.Name())
 			} else {
-				a.SetDefault(def)
+				a.DefaultValue = def
 			}
 		}
 	}

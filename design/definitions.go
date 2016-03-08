@@ -932,19 +932,6 @@ func (a *AttributeDefinition) SetExample(example interface{}) bool {
 	return false
 }
 
-// SetDefault sets the default value for the attribute. The compatibility check
-// is already performed at this point.
-func (a *AttributeDefinition) SetDefault(def interface{}) {
-	if h := a.Type.ToHash(); h != nil {
-		fmt.Printf("HashVal: %#v\n", def.(HashVal).ToMap())
-		a.DefaultValue = h.MakeMap(def.(HashVal).ToMap())
-	} else if arr := a.Type.ToArray(); arr != nil {
-		a.DefaultValue = arr.MakeSlice(def.(ArrayVal).ToSlice())
-	} else {
-		a.DefaultValue = def
-	}
-}
-
 // finalizeExample goes through each Example and consolidates all of the information it knows i.e.
 // a custom example or auto-generate for the user. It also tracks whether we've randomized
 // the entire example; if so, we shall re-generate the random value for Array/Hash.

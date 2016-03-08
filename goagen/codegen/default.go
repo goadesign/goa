@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 	"text/template"
@@ -31,6 +32,59 @@ func init() {
 	}
 }
 
+func printVal(t design.DataType, val interface{}) string {
+	switch {
+	case t.IsPrimitive():
+		// For primitive types, simply print the value
+		return fmt.Sprintf("%#v", val)
+	case t.IsHash():
+		// The input is a hash
+		h := t.ToHash()
+		var hval map[interface{}]interface{}
+		switch val.(type) {
+		case design.HashVal:
+			hval = map[interface{}]interface{}(val.(design.HashVal))
+		default:
+			hval = val.(map[interface{}]interface{})
+		}
+		if len(hval) == 0 {
+			return fmt.Sprintf("%s{}", GoPackageTypeName(t, nil, 0))
+		} else {
+			var buffer bytes.Buffer
+			buffer.WriteString(fmt.Sprintf("%s{", GoPackageTypeName(t, nil, 0)))
+			for k, v := range hval {
+				buffer.WriteString(fmt.Sprintf("%s: %s, ", printVal(h.KeyType.Type, k), printVal(h.ElemType.Type, v)))
+			}
+			buffer.WriteString("}")
+			return buffer.String()
+		}
+	case t.IsArray():
+		// Input is an array
+		a := t.ToArray()
+		var aval []interface{}
+		switch val.(type) {
+		case design.ArrayVal:
+			aval = []interface{}(val.(design.ArrayVal))
+		default:
+			aval = val.([]interface{})
+		}
+		if len(aval) == 0 {
+			return fmt.Sprintf("%s{}", GoPackageTypeName(t, nil, 0))
+		} else {
+			var buffer bytes.Buffer
+			buffer.WriteString(fmt.Sprintf("%s{", GoPackageTypeName(t, nil, 0)))
+			for _, e := range aval {
+				buffer.WriteString(fmt.Sprintf("%s, ", printVal(a.ElemType.Type, e)))
+			}
+			buffer.WriteString("}")
+			return buffer.String()
+		}
+	default:
+		// shouldn't happen as the value's compatibility is already checked.
+		panic("unknown type")
+	}
+}
+
 func RecursiveAssigner(att *design.AttributeDefinition, target, context string, depth int) string {
 	var assignments []string
 	if o := att.Type.ToObject(); o != nil {
@@ -46,7 +100,7 @@ func RecursiveAssigner(att *design.AttributeDefinition, target, context string, 
 					"field":      n,
 					"catt":       catt,
 					"depth":      depth,
-					"defaultVal": fmt.Sprintf("%#v", catt.DefaultValue),
+					"defaultVal": printVal(catt.Type, catt.DefaultValue),
 				}
 				assignments = append(assignments, RunTemplate(assignmentT, data))
 			}
