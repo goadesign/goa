@@ -224,6 +224,7 @@ func Param(name string, args ...interface{}) {
 }
 
 // Default sets the default value for an attribute.
+// See http://json-schema.org/latest/json-schema-validation.html#anchor10.
 func Default(def interface{}) {
 	if a, ok := attributeDefinition(true); ok {
 		if a.Type != nil {
@@ -233,7 +234,7 @@ func Default(def interface{}) {
 				dslengine.ReportError("default value %#v is incompatible with attribute of type %s",
 					def, a.Type.Name())
 			} else {
-				a.DefaultValue = def
+				a.SetDefault(def)
 			}
 		}
 	}

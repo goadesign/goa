@@ -208,6 +208,7 @@ func (p Primitive) ToArray() *Array { return nil }
 // ToHash returns nil.
 func (p Primitive) ToHash() *Hash { return nil }
 
+// CanHaveDefault returns whether the primitive can have a default value.
 func (p Primitive) CanHaveDefault() (ok bool) {
 	switch p {
 	case Boolean, Integer, Number, String, DateTime:
@@ -326,6 +327,9 @@ func (a *Array) ToArray() *Array { return a }
 // ToHash returns nil.
 func (a *Array) ToHash() *Hash { return nil }
 
+// CanHaveDefault returns true if the array type can have a default value.
+// The array type can have a default value only if the element type can
+// have a default value.
 func (a *Array) CanHaveDefault() bool {
 	return a.ElemType.Type.CanHaveDefault()
 }
@@ -392,6 +396,7 @@ func (o Object) ToArray() *Array { return nil }
 // ToHash returns nil.
 func (o Object) ToHash() *Hash { return nil }
 
+// CanHaveDefault returns false.
 func (o Object) CanHaveDefault() bool { return false }
 
 // Merge copies other's attributes into o overridding any pre-existing attribute with the same name.
@@ -453,6 +458,9 @@ func (h *Hash) ToArray() *Array { return nil }
 // ToHash returns the underlying hash map.
 func (h *Hash) ToHash() *Hash { return h }
 
+// CanHaveDefault returns true if the hash type can have a default value.
+// The hash type can have a default value only if both the key type and
+// the element type can have a default value.
 func (h *Hash) CanHaveDefault() bool {
 	return h.KeyType.Type.CanHaveDefault() && h.ElemType.Type.CanHaveDefault()
 }
@@ -514,6 +522,7 @@ func (o Object) IterateAttributes(it AttributeIterator) error {
 	return nil
 }
 
+// ToSlice converts an ArrayVal to a slice.
 func (a ArrayVal) ToSlice() []interface{} {
 	arr := make([]interface{}, len(a))
 	for i, elem := range a {
@@ -529,6 +538,7 @@ func (a ArrayVal) ToSlice() []interface{} {
 	return arr
 }
 
+// ToMap converts a HashVal to a map.
 func (h HashVal) ToMap() map[interface{}]interface{} {
 	mp := make(map[interface{}]interface{}, len(h))
 	for k, v := range h {
