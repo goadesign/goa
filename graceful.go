@@ -52,7 +52,7 @@ func NewGraceful(name string, cancelOnShutdown bool) *GracefulService {
 // ListenAndServe starts the HTTP server and sets up a listener on the given host/port.
 func (serv *GracefulService) ListenAndServe(addr string) error {
 	serv.setup(addr)
-	Info(RootContext, "listen", KV{"address", addr})
+	serv.Info("started", "transport", "http", "addr", addr)
 	if err := serv.server.ListenAndServe(); err != nil {
 		// there may be a final "accept" error after completion of graceful shutdown
 		// which can be safely ignored here.
@@ -66,7 +66,7 @@ func (serv *GracefulService) ListenAndServe(addr string) error {
 // ListenAndServeTLS starts a HTTPS server and sets up a listener on the given host/port.
 func (serv *GracefulService) ListenAndServeTLS(addr, certFile, keyFile string) error {
 	serv.setup(addr)
-	Info(RootContext, "listen ssl", KV{"address", addr})
+	serv.Info("started", "transport", "https", "addr", addr)
 	return serv.server.ListenAndServeTLS(certFile, keyFile)
 }
 
@@ -82,7 +82,7 @@ func (serv *GracefulService) Shutdown() bool {
 	serv.Interrupted = true
 	serv.server.Stop(0)
 	if serv.CancelOnShutdown {
-		CancelAll()
+		serv.CancelAll()
 	}
 	return true
 }
@@ -101,9 +101,9 @@ func (serv *GracefulService) setup(addr string) {
 	go func() {
 		for signal := range interruptChannel {
 			if serv.Shutdown() {
-				Info(RootContext, "Received signal. Initiating graceful shutdown...", KV{"signal", signal})
+				serv.Info("shutting down", "signal", signal)
 			} else {
-				Info(RootContext, "Received signal. Already gracefully shutting down.", KV{"signal", signal})
+				serv.Info("duplicate", "signal", signal)
 			}
 		}
 	}()

@@ -100,7 +100,7 @@ type (
 // NewClient create a new API client.
 func NewClient() *Client {
 	return &Client{
-		Logger: &DefaultLogger{Logger: log.New(os.Stderr, "", log.LstdFlags)},
+		Logger: NewStdLogger(log.New(os.Stderr, "", log.LstdFlags)),
 		Client: http.DefaultClient,
 	}
 }
@@ -115,7 +115,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		startedAt = time.Now()
 		reqBody = c.dumpRequest(req)
 	} else {
-		c.Info(nil, "started", KV{"id", id}, KV{req.Method, req.URL.String()})
+		c.Info("started", "id", id, req.Method, req.URL.String())
 	}
 	resp, err := c.Client.Do(req)
 	if err != nil {
@@ -124,7 +124,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	if c.Dump {
 		c.dumpResponse(resp, req, reqBody)
 	} else {
-		c.Info(nil, "completed", KV{"id", id}, KV{"status", resp.StatusCode}, KV{"time", time.Since(startedAt).String()})
+		c.Info("completed", "id", id, "status", resp.StatusCode, "time", time.Since(startedAt).String())
 	}
 	return resp, err
 }
@@ -222,7 +222,7 @@ func (s *OAuth2Signer) Refresh() error {
 func (c *Client) dumpRequest(req *http.Request) []byte {
 	reqBody, err := dumpReqBody(req)
 	if err != nil {
-		c.Error(nil, "Failed to load request body for dump", KV{"err", err.Error()})
+		c.Error("Failed to load request body for dump", "err", err.Error())
 	}
 	var buffer bytes.Buffer
 	buffer.WriteString(req.Method + " " + req.URL.String() + "\n")

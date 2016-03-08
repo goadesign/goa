@@ -428,7 +428,7 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 		return ctrl.Get(rctx)
 	}
 	service.Mux.Handle("GET", "/:id", ctrl.MuxHandler("Get", h, nil))
-	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Widget"}, goa.KV{"action", "Get"}, goa.KV{"route", "GET /:id"})
+	service.Info("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
 }
 `
 
@@ -483,7 +483,7 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 		return ctrl.Get(rctx)
 	}
 	service.Mux.Handle("GET", "/:id", ctrl.MuxHandler("Get", h, unmarshalGetWidgetPayload))
-	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Widget"}, goa.KV{"action", "Get"}, goa.KV{"route", "GET /:id"})
+	service.Info("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
 }
 
 // unmarshalGetWidgetPayload unmarshals the request body into the context request data Payload field.
