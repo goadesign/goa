@@ -18,13 +18,12 @@ var _ = Describe("ResponseData", func() {
 	var params url.Values
 
 	BeforeEach(func() {
-		app := goa.New("test")
 		var err error
 		req, err = http.NewRequest("GET", "google.com", nil)
 		Ω(err).ShouldNot(HaveOccurred())
 		rw = &TestResponseWriter{Status: 42}
 		params = url.Values{"query": []string{"value"}}
-		ctx := goa.NewContext(context.Background(), app, rw, req, params)
+		ctx := goa.NewContext(context.Background(), rw, req, params)
 		data = goa.Response(ctx)
 	})
 

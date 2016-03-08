@@ -1,84 +1,99 @@
 package goa
 
 import (
+	"bytes"
 	"fmt"
 	"log"
-	"os"
 
 	"golang.org/x/net/context"
 )
-
-var (
-	// Log is the logger used by goa to log informational and error messages.
-	// The default logger logs to Stderr.
-	Log Logger
-)
-
-// Initialize default logger
-func init() {
-	Log = &DefaultLogger{Logger: log.New(os.Stderr, "", log.LstdFlags)}
-}
 
 type (
 	// Logger is the logger interface used by goa to log informational and error messages.
 	// Adapters to different logging backends are provided in the logging package.
 	Logger interface {
-		// Info logs a message with optional contextual data.
-		// The contextual data consists of key/value pairs (so the size of data is always an even number).
-		Info(ctx context.Context, msg string, data ...KV)
-		// Info logs a message with optional contextual data.
-		// The contextual data consists of key/value pairs (so the size of data is always an even number).
-		Error(ctx context.Context, msg string, data ...KV)
+		// Info logs an informational message.
+		Info(msg string, keyvals ...interface{})
+		// Error logs an error.
+		Error(msg string, keyvals ...interface{})
 	}
 
-	// KV is a key/value pair to be logged
-	KV struct {
-		// Key of pair
-		Key string
-		// Value of pair
-		Value interface{}
-	}
-
-	// DefaultLogger is the default goa logger implementation
-	DefaultLogger struct {
+	// stdLogger uses the stdlib logger.
+	stdLogger struct {
 		*log.Logger
 	}
 )
 
-// Info logs the given informational message and accompanying data.
-func Info(ctx context.Context, msg string, data ...KV) {
-	if Log != nil {
-		data = append(LogContext(ctx), data...)
-		Log.Info(ctx, msg, data...)
+// ErrMissingLogValue is the value used to log keys with missing values
+const ErrMissingLogValue = "MISSING"
+
+// Info extracts the logger from the given context and calls Info on it.
+// In general this shouldn't be needed (the client code should already have a handle on the logger)
+// This is mainly useful for "out-of-band" code like middleware.
+func Info(ctx context.Context, msg string, keyvals ...interface{}) {
+	logit(ctx, msg, keyvals, false)
+}
+
+// Error extracts the logger from the given context and calls Error on it.
+// In general this shouldn't be needed (the client code should already have a handle on the logger)
+// This is mainly useful for "out-of-band" code like middleware.
+func Error(ctx context.Context, msg string, keyvals ...interface{}) {
+	logit(ctx, msg, keyvals, true)
+}
+
+func logit(ctx context.Context, msg string, keyvals []interface{}, aserror bool) {
+	if l := ctx.Value(logKey); l != nil {
+		if logger, ok := l.(Logger); ok {
+			var logctx []interface{}
+			if lctx := ctx.Value(logContextKey); lctx != nil {
+				logctx = lctx.([]interface{})
+			}
+			data := append(logctx, keyvals...)
+			if aserror {
+				logger.Error(msg, data...)
+			} else {
+				logger.Info(msg, data...)
+			}
+		}
 	}
 }
 
-// Error logs the given error message and accompanying data.
-func Error(ctx context.Context, msg string, data ...KV) {
-	if Log != nil {
-		data = append(LogContext(ctx), data...)
-		Log.Error(ctx, msg, data...)
+// LogWith stores logging context to be used by all Log invocations using the returned context.
+func LogWith(ctx context.Context, keyvals ...interface{}) context.Context {
+	return context.WithValue(ctx, logContextKey, keyvals)
+}
+
+// NewStdLogger returns an implementation of Logger backed by a stdlib Logger.
+func NewStdLogger(logger *log.Logger) Logger {
+	return &stdLogger{Logger: logger}
+}
+
+func (l *stdLogger) Info(msg string, keyvals ...interface{}) {
+	l.logit(msg, keyvals, false)
+}
+
+func (l *stdLogger) Error(msg string, keyvals ...interface{}) {
+	l.logit(msg, keyvals, true)
+}
+
+func (l *stdLogger) logit(msg string, keyvals []interface{}, iserror bool) {
+	n := (len(keyvals) + 1) / 2
+	var fm bytes.Buffer
+	lvl := "INFO"
+	if iserror {
+		lvl = "ERROR"
 	}
-}
-
-// Info logs informational messages such as service startup
-func (l *DefaultLogger) Info(ctx context.Context, msg string, data ...KV) {
-	format, v := data2fmt(msg, data...)
-	l.Printf("[INFO] "+format, v...)
-}
-
-// Error logs unhandled errors
-func (l *DefaultLogger) Error(ctx context.Context, msg string, data ...KV) {
-	format, v := data2fmt(msg, data...)
-	l.Printf("[ERROR] "+format, v...)
-}
-
-func data2fmt(msg string, data ...KV) (format string, v []interface{}) {
-	format = msg
-	v = make([]interface{}, len(data))
-	for i := 0; i < len(data); i++ {
-		format += fmt.Sprintf("\t%v: %%v", data[i].Key)
-		v[i] = data[i].Value
+	fm.WriteString(fmt.Sprintf("[%s] %s", lvl, msg))
+	vals := make([]interface{}, n)
+	for i := 0; i < len(keyvals); i += 2 {
+		k := keyvals[i]
+		var v interface{} = ErrMissingLogValue
+		if i+1 < len(keyvals) {
+			v = keyvals[i+1]
+		}
+		vals[i] = v
+		fm.WriteString(" ")
+		fm.WriteString(fmt.Sprintf("%s=%%v", k))
 	}
-	return
+	l.Logger.Printf(fm.String(), vals...)
 }

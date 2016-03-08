@@ -15,27 +15,9 @@ const (
 	respKey
 	paramsKey
 	serviceKey
+	logKey
 	logContextKey
 )
-
-var (
-	// RootContext is the root context from which all request contexts are derived.
-	// Set values in the root context prior to starting the server to make these values
-	// available to all request handlers:
-	//
-	//	goa.RootContext = context.WithValue(goa.RootContext, key, value)
-	//
-	RootContext context.Context
-
-	// cancel is the root context CancelFunc.
-	// Call Cancel to send a cancellation signal to all the active request handlers.
-	cancel context.CancelFunc
-)
-
-// Initialize default logger
-func init() {
-	RootContext, cancel = context.WithCancel(context.Background())
-}
 
 type (
 	// RequestData provides access to the underlying HTTP request.
@@ -66,13 +48,12 @@ type (
 // NewContext builds a new goa request context. The parent context may include
 // log context data.
 // If parent is nil then RootContext is used.
-func NewContext(parent context.Context, service *Service, rw http.ResponseWriter, req *http.Request, params url.Values) context.Context {
-	if parent == nil {
-		parent = RootContext
+func NewContext(ctx context.Context, rw http.ResponseWriter, req *http.Request, params url.Values) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
 	}
 	request := &RequestData{Request: req, Params: params}
 	response := &ResponseData{ResponseWriter: rw}
-	ctx := context.WithValue(parent, serviceKey, service)
 	ctx = context.WithValue(ctx, respKey, response)
 	ctx = context.WithValue(ctx, reqKey, request)
 
@@ -104,35 +85,6 @@ func RequestService(ctx context.Context) *Service {
 		return r.(*Service)
 	}
 	return nil
-}
-
-// LogContext returns the data prepended to all log entries.
-func LogContext(ctx context.Context) []KV {
-	if ctx == nil {
-		return nil
-	}
-	data := ctx.Value(logContextKey)
-	if data == nil {
-		return nil
-	}
-	return data.([]KV)
-}
-
-// NewLogContext creates a duplicate context where the data prepended to all log entries is
-// augmented with the given data.
-func NewLogContext(ctx context.Context, data ...KV) context.Context {
-	return context.WithValue(ctx, logContextKey, append(LogContext(ctx), data...))
-}
-
-// ResetLogContext creates a duplicate context where no data is prefixed to all log entries.
-func ResetLogContext(ctx context.Context) context.Context {
-	return context.WithValue(ctx, logContextKey, nil)
-}
-
-// CancelAll sends a cancellation signal to all handlers through the context.
-// see https://godoc.org/golang.org/x/net/context for details on how to handle the signal.
-func CancelAll() {
-	cancel()
 }
 
 // SwitchWriter overrides the underlying response writer. It returns the response

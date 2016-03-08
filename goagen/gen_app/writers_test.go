@@ -1015,7 +1015,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 		return ctrl.List(rctx)
 	}
 	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
-	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "List"}, goa.KV{"route", "GET /accounts/:accountID/bottles"})
+	service.Info("mount", "ctrl", "Bottles", "action", "List", "route", "GET /accounts/:accountID/bottles")
 }
 `
 
@@ -1030,7 +1030,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 		return ctrl.List(rctx)
 	}
 	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
-	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "List"}, goa.KV{"route", "GET /accounts/:accountID/bottles"})
+	service.Info("mount", "ctrl", "Bottles", "action", "List", "route", "GET /accounts/:accountID/bottles")
 }
 `
 
@@ -1053,7 +1053,7 @@ type BottlesController interface {
 		return ctrl.List(rctx)
 	}
 	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
-	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "List"}, goa.KV{"route", "GET /accounts/:accountID/bottles"})
+	service.Info("mount", "ctrl", "Bottles", "action", "List", "route", "GET /accounts/:accountID/bottles")
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewShowBottleContext(ctx)
 		if err != nil {
@@ -1062,7 +1062,7 @@ type BottlesController interface {
 		return ctrl.Show(rctx)
 	}
 	service.Mux.Handle("GET", "/accounts/:accountID/bottles/:id", ctrl.MuxHandler("Show", h, nil))
-	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "Bottles"}, goa.KV{"action", "Show"}, goa.KV{"route", "GET /accounts/:accountID/bottles/:id"})
+	service.Info("mount", "ctrl", "Bottles", "action", "Show", "route", "GET /accounts/:accountID/bottles/:id")
 }
 `
 
