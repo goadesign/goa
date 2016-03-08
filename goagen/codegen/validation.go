@@ -58,15 +58,15 @@ func init() {
 // attribute.
 func RecursiveChecker(att *design.AttributeDefinition, nonzero, required bool, target, context string, depth int) string {
 	var checks []string
-	validation := ValidationChecker(att, nonzero, required, target, context, depth)
-	if validation != "" {
-		checks = append(checks, validation)
-	}
 	if o := att.Type.ToObject(); o != nil {
 		if mt, ok := att.Type.(*design.MediaTypeDefinition); ok {
 			att = mt.AttributeDefinition
 		} else if ut, ok := att.Type.(*design.UserTypeDefinition); ok {
 			att = ut.AttributeDefinition
+		}
+		validation := ValidationChecker(att, nonzero, required, target, context, depth)
+		if validation != "" {
+			checks = append(checks, validation)
 		}
 		o.IterateAttributes(func(n string, catt *design.AttributeDefinition) error {
 			actualDepth := depth
@@ -98,6 +98,11 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required bool, t
 			"depth":    1,
 		}
 		validation := RunTemplate(arrayValT, data)
+		if validation != "" {
+			checks = append(checks, validation)
+		}
+	} else {
+		validation := ValidationChecker(att, nonzero, required, target, context, depth)
 		if validation != "" {
 			checks = append(checks, validation)
 		}
