@@ -867,12 +867,26 @@ func (a *AttributeDefinition) IsRequired(attName string) bool {
 	return false
 }
 
+// HasDefaultValue returns true if the given attribute has a default value.
 func (a *AttributeDefinition) HasDefaultValue(attName string) bool {
 	if a.Type.IsObject() {
 		att := a.Type.ToObject()[attName]
 		return att.DefaultValue != nil
 	}
 	return false
+}
+
+// SetDefault sets the default for the attribute. It also converts HashVal
+// and ArrayVal to map and slice respectively.
+func (a *AttributeDefinition) SetDefault(def interface{}) {
+	switch def.(type) {
+	case HashVal:
+		a.DefaultValue = def.(HashVal).ToMap()
+	case ArrayVal:
+		a.DefaultValue = def.(ArrayVal).ToSlice()
+	default:
+		a.DefaultValue = def
+	}
 }
 
 // AllNonZero returns the complete list of all non-zero attribute name.
