@@ -360,7 +360,7 @@ func (a *Array) GenerateExample(r *RandomGenerator) interface{} {
 func (a *Array) MakeSlice(s []interface{}) interface{} {
 	slice := reflect.MakeSlice(toReflectType(a), 0, len(s))
 	for _, item := range s {
-		slice = reflect.Append(slice, toReflectValue(item)) //reflect.ValueOf(item))
+		slice = reflect.Append(slice, reflect.ValueOf(item))
 	}
 	return slice.Interface()
 }
@@ -487,8 +487,7 @@ func (h *Hash) GenerateExample(r *RandomGenerator) interface{} {
 func (h *Hash) MakeMap(m map[interface{}]interface{}) interface{} {
 	hash := reflect.MakeMap(toReflectType(h))
 	for key, value := range m {
-		hash.SetMapIndex(reflect.ValueOf(key), toReflectValue(value))
-		//reflect.ValueOf(value))
+		hash.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
 	}
 	return hash.Interface()
 }
@@ -834,82 +833,5 @@ func toReflectType(dtype DataType) reflect.Type {
 		return reflect.MapOf(ktype, toReflectType(hash.ElemType.Type))
 	default:
 		return reflect.TypeOf([]interface{}{}).Elem()
-	}
-}
-
-func toReflectValue(val interface{}) reflect.Value {
-	switch reflect.TypeOf(val).Kind() {
-	case reflect.Bool:
-		return reflect.ValueOf(val.(bool))
-	case reflect.Int:
-		return reflect.ValueOf(val.(int))
-	case reflect.Int8:
-		return reflect.ValueOf(val.(int8))
-	case reflect.Int16:
-		return reflect.ValueOf(val.(int16))
-	case reflect.Int32:
-		return reflect.ValueOf(val.(int32))
-	case reflect.Int64:
-		return reflect.ValueOf(val.(int64))
-	case reflect.Float32:
-		return reflect.ValueOf(val.(float32))
-	case reflect.Float64:
-		return reflect.ValueOf(val.(float64))
-	case reflect.String:
-		return reflect.ValueOf(val.(string))
-	case reflect.Array, reflect.Slice:
-		fmt.Printf("processing slice: %#v\n", val)
-		arr := reflect.ValueOf(val)
-		if arr.Len() > 0 {
-			var sliceType reflect.Type
-			// Identify the slice type -- if all elements are the same type use it otherwise use interface{}
-			sliceType = reflect.TypeOf(val.([]interface{})[0])
-			for _, elem := range val.([]interface{})[1:] {
-				if sliceType != reflect.TypeOf(elem) {
-					sliceType = reflect.TypeOf((*interface{})(nil)).Elem()
-				}
-			}
-			slice := reflect.MakeSlice(reflect.SliceOf(sliceType), 0, arr.Len())
-			fmt.Printf("created typed slice: %#v\n", slice)
-			for i := 0; i < arr.Len(); i++ {
-				slice = reflect.Append(slice, toReflectValue(arr.Index(i).Interface()))
-			}
-			return slice
-		} else {
-			return arr
-		}
-	case reflect.Map:
-		fmt.Printf("processing map: %#v\n", val)
-		mp := reflect.ValueOf(val)
-		if mp.Len() > 0 {
-			var keyType, valType reflect.Type
-			keys := mp.MapKeys()
-			// Identify key type -- if all keys are the same type use it otherwise use interface{}
-			keyType = reflect.TypeOf(keys[0].Interface())
-			for _, key := range keys[1:] {
-				if keyType != reflect.TypeOf(key.Interface()) {
-					keyType = reflect.TypeOf((*interface{})(nil)).Elem()
-				}
-			}
-			// Identify value type -- of all values are the same type use it otherwise use interface{}
-			valType = reflect.TypeOf(toReflectValue(mp.MapIndex(keys[0]).Interface()).Interface())
-			for _, key := range keys[1:] {
-				if valType != reflect.TypeOf(toReflectValue(mp.MapIndex(key).Interface()).Interface()) {
-					valType = reflect.TypeOf((*interface{})(nil)).Elem()
-				}
-			}
-			typedMap := reflect.MakeMap(reflect.MapOf(keyType, valType))
-			fmt.Printf("Creaetd typed map: %#v\n", typedMap)
-			for _, key := range keys {
-				vall := toReflectValue(mp.MapIndex(key).Interface())
-				fmt.Printf("map val: %#v\n", vall)
-				typedMap.SetMapIndex(toReflectValue(key.Interface()), toReflectValue(mp.MapIndex(key).Interface()))
-			}
-			return typedMap
-		} else {
-			return mp
-		}
-	default:
-		return reflect.ValueOf(val)
 	}
 }
