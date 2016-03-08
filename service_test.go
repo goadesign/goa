@@ -50,8 +50,8 @@ var _ = Describe("Application", func() {
 
 			It("adds the middleware", func() {
 				ctrl := s.NewController("test")
-				Ω(ctrl.MiddlewareChain()).Should(HaveLen(1))
-				Ω(ctrl.MiddlewareChain()[0]).Should(BeAssignableToTypeOf(middleware.RequestID()))
+				Ω(ctrl.Middleware).Should(HaveLen(1))
+				Ω(ctrl.Middleware[0]).Should(BeAssignableToTypeOf(middleware.RequestID()))
 			})
 		})
 	})

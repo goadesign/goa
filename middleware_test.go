@@ -56,11 +56,12 @@ var _ = Describe("NewMiddleware", func() {
 
 		BeforeEach(func() {
 			service = goa.New("test")
+			ctrl := service.NewController("foo")
 			var err error
 			req, err = http.NewRequest("GET", "/goo", nil)
 			Ω(err).ShouldNot(HaveOccurred())
 			rw = new(TestResponseWriter)
-			ctx = goa.NewContext(nil, service, rw, req, nil)
+			ctx = goa.NewContext(ctrl.Context, rw, req, nil)
 			Ω(goa.Response(ctx).Status).Should(Equal(0))
 		})
 
