@@ -552,7 +552,7 @@ func Mount{{.Resource}}Controller(service *goa.Service, ctrl {{.Resource}}Contro
 		{{end}}		return ctrl.{{.Name}}(rctx)
 	}
 {{range .Routes}}	service.Mux.Handle("{{.Verb}}", "{{.FullPath}}", ctrl.MuxHandler("{{$action.Name}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
-	goa.Info(goa.RootContext, "mount", goa.KV{"ctrl", "{{$res}}"}, goa.KV{"action", "{{$action.Name}}"}, goa.KV{"route", "{{.Verb}} {{.FullPath}}"})
+	service.Info("mount", "ctrl", "{{$res}}", "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}")
 {{end}}{{end}}}
 `
 
