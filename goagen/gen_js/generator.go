@@ -181,7 +181,7 @@ func (g *Generator) generateExample(api *design.APIDefinition) error {
 	}
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("net/http"),
-		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
+		codegen.SimpleImport("github.com/dimfeld/httptreemux"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
 	if err := file.WriteHeader(fmt.Sprintf("%s JavaScript Client Example", api.Name), "js", imports); err != nil {
