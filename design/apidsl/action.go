@@ -64,7 +64,7 @@ func Action(name string, dsl func()) {
 
 // Routing lists the action route. Each route is defined with a function named after the HTTP method.
 // The route function takes the path as argument. Route paths may use wildcards as described in the
-// [httprouter](https://godoc.org/github.com/julienschmidt/httprouter) package documentation. These
+// [httptreemux](https://godoc.org/github.com/dimfeld/httptreemux) package documentation. These
 // wildcards define parameters using the `:name` or `*name` syntax where `:name` matches a path
 // segment and `*name` is a catch-all that matches the path until the end.
 func Routing(routes ...*design.RouteDefinition) {

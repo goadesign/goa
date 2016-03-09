@@ -28,10 +28,13 @@ var _ = Resource(resourceName, func() {
 
 var _ = Type(typeName, func() {
 	Description(typeDescription)
+	Attribute("bar")
 })
 
 var _ = MediaType(mediaTypeIdentifier, func() {
 	Description(mediaTypeDescription)
+	Attributes(func() { Attribute("foo") })
+	View("default", func() { Attribute("foo") })
 })
 
 func init() {
