@@ -72,7 +72,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		return
 	}
 	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("github.com/julienschmidt/httprouter"),
+		codegen.SimpleImport("github.com/dimfeld/httptreemux"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
 	g.genfiles = append(g.genfiles, controllerFile)
