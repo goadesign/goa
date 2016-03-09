@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/dimfeld/httptreemux"
 )
 
 type (
@@ -30,7 +30,7 @@ type (
 
 	// mux is the default ServeMux implementation.
 	mux struct {
-		router  *httprouter.Router
+		router  *httptreemux.TreeMux
 		handles map[string]MuxHandler
 	}
 )
@@ -38,17 +38,17 @@ type (
 // NewMux returns a Mux.
 func NewMux() ServeMux {
 	return &mux{
-		router:  httprouter.New(),
+		router:  httptreemux.New(),
 		handles: make(map[string]MuxHandler),
 	}
 }
 
 // Handle sets the handler for the given verb and path.
 func (m *mux) Handle(method, path string, handle MuxHandler) {
-	hthandle := func(rw http.ResponseWriter, req *http.Request, htparams httprouter.Params) {
+	hthandle := func(rw http.ResponseWriter, req *http.Request, htparams map[string]string) {
 		params := req.URL.Query()
-		for _, p := range htparams {
-			params.Set(p.Key, p.Value)
+		for n, p := range htparams {
+			params.Set(n, p)
 		}
 		handle(rw, req, params)
 	}
