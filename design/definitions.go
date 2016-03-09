@@ -99,6 +99,8 @@ type (
 	ResourceDefinition struct {
 		// Resource name
 		Name string
+		// Schemes is the supported API URL schemes
+		Schemes []string
 		// Common URL prefix to all resource action HTTP requests
 		BasePath string
 		// Object describing each parameter that appears in BasePath if any
