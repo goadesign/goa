@@ -108,7 +108,7 @@ type (
 
 // IsPathParam returns true if the given parameter name corresponds to a path parameter for all
 // the context action routes. Such parameter is required but does not need to be validated as
-// httprouter takes care of that.
+// httptreemux takes care of that.
 func (c *ContextTemplateData) IsPathParam(param string) bool {
 	params := c.Params
 	pp := false

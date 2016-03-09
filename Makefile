@@ -22,7 +22,7 @@ DEPEND=\
 	github.com/goadesign/goa-cellar \
 	github.com/goadesign/middleware \
 	github.com/golang/lint/golint \
-	github.com/julienschmidt/httprouter \
+	github.com/dimfeld/httptreemux \
 	github.com/manveru/faker \
 	github.com/on99/gocyclo \
 	github.com/onsi/ginkgo \
