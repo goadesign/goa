@@ -3,14 +3,13 @@ package goa
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	"github.com/go-kit/kit/log"
 
 	"golang.org/x/net/context"
 )
@@ -82,7 +81,8 @@ type (
 
 // New instantiates an service with the given name and default decoders/encoders.
 func New(name string) *Service {
-	ctx := context.WithValue(context.Background(), logKey, log.NewLogfmtLogger(os.Stderr))
+	stdlog := log.New(os.Stderr, "", log.LstdFlags)
+	ctx := context.WithValue(context.Background(), logKey, NewStdLogger(stdlog))
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		Name:         name,
