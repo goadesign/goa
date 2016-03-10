@@ -82,7 +82,7 @@ type (
 // New instantiates an service with the given name and default decoders/encoders.
 func New(name string) *Service {
 	stdlog := log.New(os.Stderr, "", log.LstdFlags)
-	ctx := context.WithValue(context.Background(), logKey, NewStdLogger(stdlog))
+	ctx := UseLogger(context.Background(), NewStdLogger(stdlog))
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		Name:         name,
@@ -113,7 +113,7 @@ func (service *Service) Use(m Middleware) {
 
 // UseLogger sets the logger used internally by the service and by Log.
 func (service *Service) UseLogger(logger Logger) {
-	service.Context = context.WithValue(service.Context, logKey, logger)
+	service.Context = UseLogger(service.Context, logger)
 }
 
 // Info logs the message and values at odd indeces using the keys at even indeces of the keyvals slice.

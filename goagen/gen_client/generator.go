@@ -112,14 +112,23 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	}
 	commandTypesTmpl := template.Must(template.New("commandTypes").Funcs(funcs).Parse(commandTypesTmpl))
 	commandsTmpl := template.Must(template.New("commands").Funcs(funcs).Parse(commandsTmpl))
+	commandsTmplWS := template.Must(template.New("commandsWS").Funcs(funcs).Parse(commandsTmplWS))
+	registerTmpl := template.Must(template.New("register").Funcs(funcs).Parse(registerTmpl))
 
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("encoding/json"),
 		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("log"),
+		codegen.SimpleImport("os"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("github.com/spf13/cobra"),
 		codegen.SimpleImport(AppPkg),
 		codegen.SimpleImport(clientPkg),
+		codegen.SimpleImport("golang.org/x/net/context"),
+		codegen.SimpleImport("golang.org/x/net/websocket"),
+	}
+	if len(api.Resources) > 0 {
+		imports = append(imports, codegen.NewImport("goaclient", "github.com/goadesign/goa/client"))
 	}
 	if err := file.WriteHeader("", "main", imports); err != nil {
 		return err
@@ -142,7 +151,16 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 				"Action":   action,
 				"Resource": action.Parent,
 			}
-			return commandsTmpl.Execute(file, data)
+			var err error
+			if action.WebSocket() {
+				err = commandsTmplWS.Execute(file, data)
+			} else {
+				err = commandsTmpl.Execute(file, data)
+			}
+			if err != nil {
+				return err
+			}
+			return registerTmpl.Execute(file, data)
 		})
 	}); err != nil {
 		return err
@@ -160,8 +178,7 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("net/http"),
-		codegen.SimpleImport("github.com/goadesign/goa"),
-		codegen.SimpleImport("github.com/spf13/cobra"),
+		codegen.NewImport("goaclient", "github.com/goadesign/goa/client"),
 	}
 	if err := file.WriteHeader("", "client", imports); err != nil {
 		return err
@@ -177,6 +194,7 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 
 func (g *Generator) generateClientResources(clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
 	clientsTmpl := template.Must(template.New("clients").Funcs(funcs).Parse(clientsTmpl))
+	clientsWSTmpl := template.Must(template.New("clients").Funcs(funcs).Parse(clientsWSTmpl))
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("bytes"),
 		codegen.SimpleImport("encoding/json"),
@@ -187,6 +205,8 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 		codegen.SimpleImport("strconv"),
 		codegen.SimpleImport("strings"),
 		codegen.SimpleImport(AppPkg),
+		codegen.SimpleImport("golang.org/x/net/context"),
+		codegen.SimpleImport("golang.org/x/net/websocket"),
 	}
 
 	return api.IterateResources(func(res *design.ResourceDefinition) error {
@@ -216,6 +236,9 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 					headers[name] = header
 				}
 				action.Headers.Type = headers
+			}
+			if action.WebSocket() {
+				return clientsWSTmpl.Execute(file, action)
 			}
 			return clientsTmpl.Execute(file, action)
 		}); err != nil {
@@ -450,10 +473,10 @@ func main() {
 		Use: "{{.API.Name}}-cli",
 		Short: "CLI client for the {{.API.Name}} service{{if .API.Docs}} ({{.API.Docs.URL}}){{end}}",
 	}
-	c := client.New()
+	c := client.New(nil)
 {{if .Signers}}	c.Signers = RegisterSigners(app)
 {{end}}	c.UserAgent = "{{.API.Name}}-cli/{{.Version}}"
-	app.PersistentFlags().StringVarP(&c.Scheme, "scheme", "s", "{{if gt (len .API.Schemes) 0}}{{index .API.Schemes 0}}{{end}}", "Set the requests scheme")
+	app.PersistentFlags().StringVarP(&c.Scheme, "scheme", "s", "", "Set the requests scheme")
 	app.PersistentFlags().StringVarP(&c.Host, "host", "H", "{{.API.Host}}", "API hostname")
 	app.PersistentFlags().DurationVarP(&c.Timeout, "timeout", "t", time.Duration(20) * time.Second, "Set the request timeout, defaults to 20s")
 	app.PersistentFlags().BoolVar(&c.Dump, "dump", false, "Dump HTTP request and response.")
@@ -463,60 +486,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, "request failed: %s", err)
 		os.Exit(-1)
 	}
-}
-
-// HandleResponse unmarshals the response body and analyzes the status code to print then exit.
-func HandleResponse(c *client.Client, resp *http.Response) {
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to read body: %s", err)
-		os.Exit(-1)
-	}
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		// Let user know if something went wrong
-		var sbody string
-		if len(body) > 0 {
-			sbody = ": " + string(body)
-		}
-		fmt.Printf("error: %d%s", resp.StatusCode, sbody)
-	} else if !c.Dump && len(body) > 0 {
-		var out string
-		if PrettyPrint {
-			var jbody interface{}
-			err = json.Unmarshal(body, &jbody)
-			if err != nil {
-				out = string(body)
-			} else {
-				var b []byte
-				b, err = json.MarshalIndent(jbody, "", "    ")
-				if err == nil {
-					out = string(b)
-				} else {
-					out = string(body)
-				}
-			}
-		} else {
-			out = string(body)
-		}
-		fmt.Print(out)
-	}
-
-	// Figure out exit code
-	exitStatus := 0
-	switch {
-	case resp.StatusCode == 401:
-		exitStatus = 1
-	case resp.StatusCode == 403:
-		exitStatus = 3
-	case resp.StatusCode == 404:
-		exitStatus = 4
-	case resp.StatusCode > 399 && resp.StatusCode < 500:
-		exitStatus = 2
-	case resp.StatusCode > 499:
-		exitStatus = 5
-	}
-	os.Exit(exitStatus)
 }
 
 {{if .Signers}}// RegisterSigners adds the supported signers to the command line.
@@ -544,7 +513,45 @@ const commandTypesTmpl = `{{$cmdName := goify (printf "%s%s%s" .Name (title .Par
 {{end}}{{end}}{{$headers := .Headers}}{{if $headers}}{{range $name, $att := $headers.Type.ToObject}}{{if $att.Description}}		// {{$att.Description}}
 {{end}}		{{goify $name true}} string
 {{end}}{{end}}	}
+`
 
+const commandsTmplWS = `
+{{$cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true}}// Run establishes a websocket connection for the {{$cmdName}} command.
+func (cmd *{{$cmdName}}) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+{{$default := defaultPath .Action}}{{if $default}}	path = "{{$default}}"
+{{else}}	return fmt.Errorf("missing path argument")
+{{end}}	}
+	logger := goa.NewStdLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.UseLogger(context.Background(), logger)
+	ws, err := c.{{goify (printf "%s%s" .Action.Name (title .Resource.Name)) true}}(ctx, path{{/*
+	*/}}{{$params := joinNames .Action.QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
+	*/}}{{$headers := joinNames .Action.Headers}}{{if $headers}}, {{$headers}}{{end}})
+	if err != nil {
+		goa.Error(ctx, "failed", "err", err)
+		return err
+	}
+	go goaclient.WSWrite(ws)
+	goaclient.WSRead(ws)
+
+	return nil
+}
+`
+
+const registerTmpl = `{{$cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true}}// RegisterFlags registers the command flags with the command line.
+func (cmd *{{$cmdName}}) RegisterFlags(cc *cobra.Command) {
+{{if .Action.Payload}}	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request JSON body")
+{{end}}{{$params := .Action.QueryParams}}{{if $params}}{{range $name, $param := $params.Type.ToObject}}{{$tmp := tempvar}}{{/*
+*/}}{{if not $param.DefaultValue}}	var {{$tmp}} {{gotypedef $param 1 true}}
+{{end}}	cc.Flags().{{flagType $param}}Var(&cmd.{{goify $name true}}, "{{$name}}", {{if $param.DefaultValue}}{{printf "%#v" $param.DefaultValue}}{{else}}{{$tmp}}{{end}}, "{{$param.Description}}")
+{{end}}{{end}}{{/*
+*/}}{{$headers := .Action.Headers}}{{if $headers}}{{range $name, $header := $headers.Type.ToObject}}{{/*
+*/}}
+	cc.Flags().StringVar(&cmd.{{goify $name true}}, "{{$name}}", {{if $header.DefaultValue}}"{{$header.DefaultValue}}"{{else}}""{{end}}, "{{$header.Description}}")
+{{end}}{{end}}}
 `
 
 const commandsTmpl = `
@@ -565,31 +572,42 @@ func (cmd *{{$cmdName}}) Run(c *client.Client, args []string) error {
 {{else}}			return fmt.Errorf("failed to deserialize payload: %s", err)
 {{end}}		}
 	}
-{{end}}	resp, err := c.{{goify (printf "%s%s" .Action.Name (title .Resource.Name)) true}}(path{{if .Action.Payload}}, {{if or .Action.Payload.Type.IsObject .Action.Payload.IsPrimitive}}&{{end}}payload{{else}}{{end}}{{/*
+{{end}} logger := goa.NewStdLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.UseLogger(context.Background(), logger)
+	resp, err := c.{{goify (printf "%s%s" .Action.Name (title .Resource.Name)) true}}(ctx, path{{if .Action.Payload}}, {{if or .Action.Payload.Type.IsObject .Action.Payload.IsPrimitive}}&{{end}}payload{{else}}{{end}}{{/*
 	*/}}{{$params := joinNames .Action.QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
 	*/}}{{$headers := joinNames .Action.Headers}}{{if $headers}}, {{$headers}}{{end}})
 	if err != nil {
+		goa.Error(ctx, "failed", "err", err)
 		return err
 	}
-	HandleResponse(c, resp)
+
+	goaclient.HandleResponse(c.Client, resp, PrettyPrint)
 	return nil
 }
+`
 
-// RegisterFlags registers the command flags with the command line.
-func (cmd *{{$cmdName}}) RegisterFlags(cc *cobra.Command) {
-{{if .Action.Payload}}	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request JSON body")
-{{end}}{{$params := .Action.QueryParams}}{{if $params}}{{range $name, $param := $params.Type.ToObject}}{{$tmp := tempvar}}{{/*
-*/}}{{if not $param.DefaultValue}}	var {{$tmp}} {{gotypedef $param 1 true}}
-{{end}}	cc.Flags().{{flagType $param}}Var(&cmd.{{goify $name true}}, "{{$name}}", {{if $param.DefaultValue}}{{printf "%#v" $param.DefaultValue}}{{else}}{{$tmp}}{{end}}, "{{$param.Description}}")
-{{end}}{{end}}{{/*
-*/}}{{$headers := .Action.Headers}}{{if $headers}}{{range $name, $header := $headers.Type.ToObject}}{{/*
-*/}}
-	cc.Flags().StringVar(&cmd.{{goify $name true}}, "{{$name}}", {{if $header.DefaultValue}}"{{$header.DefaultValue}}"{{else}}""{{end}}, "{{$header.Description}}")
-{{end}}{{end}}}
+const clientsWSTmpl = `{{$funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true}}{{/*
+*/}}{{$desc := .Description}}{{if $desc}}// {{$desc}}{{else}}// {{$funcName}} establishes a websocket connection to the {{.Name}} action endpoint of the {{.Parent.Name}} resource{{end}}
+func (c *Client) {{$funcName}}(ctx context.Context, path string{{/*
+	*/}}{{$params := join .QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
+	*/}}{{$headers := join .Headers}}{{if $headers}}, {{$headers}}{{end}}) (*websocket.Conn, error) {
+	scheme := c.Scheme
+	if scheme == "" {
+		scheme = "{{.CanonicalScheme}}"
+	}
+	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
+{{$params := .QueryParams}}{{if $params}}{{if gt (len $params.Type.ToObject) 0}}	values := u.Query()
+{{range $name, $att := $params.Type.ToObject}}{{if (eq $att.Type.Kind 4)}}	values.Set("{{$name}}", {{goify $name false}})
+{{else}}{{$tmp := tempvar}}{{toString (goify $name false) $tmp $att}}
+	values.Set("{{$name}}", {{$tmp}})
+{{end}}{{end}}	u.RawQuery = values.Encode()
+{{end}}{{end}}	return websocket.Dial(u.String(), "", u.String())
+}
 `
 
 const clientsTmpl = `{{$funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true}}{{$desc := .Description}}{{if $desc}}// {{$desc}}{{else}}// {{$funcName}} makes a request to the {{.Name}} action endpoint of the {{.Parent.Name}} resource{{end}}
-func (c *Client) {{$funcName}}(path string{{if .Payload}}, payload {{if .Payload.Type.IsObject}}*{{end}}{{gotyperefext .Payload 1 appPkg}}{{end}}{{/*
+func (c *Client) {{$funcName}}(ctx context.Context, path string{{if .Payload}}, payload {{if .Payload.Type.IsObject}}*{{end}}{{gotyperefext .Payload 1 appPkg}}{{end}}{{/*
 	*/}}{{$params := join .QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
 	*/}}{{$headers := join .Headers}}{{if $headers}}, {{$headers}}{{end}}) (*http.Response, error) {
 	var body io.Reader
@@ -598,7 +616,11 @@ func (c *Client) {{$funcName}}(path string{{if .Payload}}, payload {{if .Payload
 		return nil, fmt.Errorf("failed to serialize body: %s", err)
 	}
 	body = bytes.NewBuffer(b)
-{{end}}	u := url.URL{Host: c.Host, Scheme: c.Scheme, Path: path}
+{{end}}	scheme := c.Scheme
+	if scheme == "" {
+		scheme = "{{.CanonicalScheme}}"
+	}
+	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
 {{$params := .QueryParams}}{{if $params}}{{if gt (len $params.Type.ToObject) 0}}	values := u.Query()
 {{range $name, $att := $params.Type.ToObject}}{{if (eq $att.Type.Kind 4)}}	values.Set("{{$name}}", {{goify $name false}})
 {{else}}{{$tmp := tempvar}}{{toString (goify $name false) $tmp $att}}
@@ -613,30 +635,18 @@ func (c *Client) {{$funcName}}(path string{{if .Payload}}, payload {{if .Payload
 {{else}}{{$tmp := tempvar}}{{toString (goify $name false) $tmp $att}}
 	header.Set("{{$name}}", {{$tmp}})
 {{end}}{{end}}{{end}}	header.Set("Content-Type", "application/json")
-	return c.Client.Do(req)
+	return c.Client.Do(ctx, req)
 }
 `
 
-const clientTmpl = `type (
-	// Client is the {{.Name}} service client.
-	Client struct {
-		*goa.Client
-	}
-
-	// ActionCommand represents a single action command as defined on the command line.
-	// Each command is associated with a generated client method and contains the logic to
-	// call the method passing in arguments computed from the command line.
-	ActionCommand interface {
-		// Run makes the HTTP request and returns the response.
-		Run(c *Client) error
-		// RegisterFlags defines the command flags.
-		RegisterFlags(*cobra.Command)
-	}
-)
+const clientTmpl = `// Client is the {{.Name}} service client.
+type Client struct {
+	*goaclient.Client
+}
 
 // New instantiates the client.
-func New() *Client {
-	return &Client{Client: goa.NewClient()}
+func New(c *http.Client) *Client {
+	return &Client{Client: goaclient.New(c)}
 }
 `
 
@@ -648,7 +658,8 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 		Use:   "{{$name}}",
 		Short: "{{if eq (len $actions) 1}}{{$a := index $actions 0}}{{$a.Description}}{{else}}{{$name}} action{{end}}",
 	}
-{{range $action := $actions}}{{$cmdName := goify (printf "%s%sCommand" $action.Name (title $action.Parent.Name)) true}}{{$tmp := tempvar}}	{{$tmp}} := new({{$cmdName}})
+{{range $action := $actions}}{{$cmdName := goify (printf "%s%sCommand" $action.Name (title $action.Parent.Name)) true}}{{/*
+*/}}{{$tmp := tempvar}}	{{$tmp}} := new({{$cmdName}})
 	sub = &cobra.Command{
 		Use:   "{{$action.Parent.Name}}",
 		Short: "{{$action.Parent.Description}}",

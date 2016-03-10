@@ -177,6 +177,8 @@ func Scheme(vals ...string) {
 	}
 	if a, ok := apiDefinition(false); ok {
 		a.Schemes = append(a.Schemes, vals...)
+	} else if r, ok := resourceDefinition(false); ok {
+		r.Schemes = append(r.Schemes, vals...)
 	} else if a, ok := actionDefinition(true); ok {
 		a.Schemes = append(a.Schemes, vals...)
 	}

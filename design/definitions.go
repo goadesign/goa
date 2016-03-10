@@ -99,6 +99,8 @@ type (
 	ResourceDefinition struct {
 		// Resource name
 		Name string
+		// Schemes is the supported API URL schemes
+		Schemes []string
 		// Common URL prefix to all resource action HTTP requests
 		BasePath string
 		// Object describing each parameter that appears in BasePath if any
@@ -1136,6 +1138,59 @@ func (a *ActionDefinition) AllParams() *AttributeDefinition {
 func (a *ActionDefinition) HasAbsoluteRoutes() bool {
 	for _, r := range a.Routes {
 		if !r.IsAbsolute() {
+			return false
+		}
+	}
+	return true
+}
+
+// CanonicalScheme returns the preferred scheme for making requests. Favor secure schemes.
+func (a *ActionDefinition) CanonicalScheme() string {
+	if a.WebSocket() {
+		for _, s := range a.EffectiveSchemes() {
+			if s == "wss" {
+				return s
+			}
+		}
+		return "ws"
+	}
+	for _, s := range a.EffectiveSchemes() {
+		if s == "https" {
+			return s
+		}
+	}
+	return "http"
+}
+
+// EffectiveSchemes return the URL schemes that apply to the action. Looks recursively into action
+// resource, parent resources and API.
+func (a *ActionDefinition) EffectiveSchemes() []string {
+	// Compute the schemes
+	schemes := a.Schemes
+	if len(schemes) == 0 {
+		res := a.Parent
+		schemes = res.Schemes
+		parent := res.Parent()
+		for len(schemes) == 0 && parent != nil {
+			schemes = parent.Schemes
+			parent = parent.Parent()
+		}
+		if len(schemes) == 0 {
+			schemes = Design.Schemes
+		}
+	}
+	return schemes
+}
+
+// WebSocket returns true if the action scheme is "ws" or "wss" or both (directly or inherited
+// from the resource or API)
+func (a *ActionDefinition) WebSocket() bool {
+	schemes := a.EffectiveSchemes()
+	if len(schemes) == 0 {
+		return false
+	}
+	for _, s := range schemes {
+		if s != "ws" && s != "wss" {
 			return false
 		}
 	}
