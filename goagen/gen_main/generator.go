@@ -103,8 +103,10 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		}
 	}
 	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("io"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport(imp),
+		codegen.SimpleImport("golang.org/x/net/websocket"),
 	}
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
 		filename := filepath.Join(codegen.OutputDir, snakeCase(r.Name)+".go")
@@ -120,7 +122,15 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 				return err
 			}
 			file.WriteHeader("", "main", imports)
-			err = file.ExecuteTemplate("controller", ctrlT, funcs, r)
+			if err = file.ExecuteTemplate("controller", ctrlT, funcs, r); err != nil {
+				return err
+			}
+			err = r.IterateActions(func(a *design.ActionDefinition) error {
+				if a.WebSocket() {
+					return file.ExecuteTemplate("actionWS", actionWST, funcs, a)
+				}
+				return file.ExecuteTemplate("action", actionT, funcs, a)
+			})
 			if err != nil {
 				return err
 			}
@@ -240,6 +250,7 @@ func main() {
 	service.ListenAndServe(":8080")
 }
 `
+
 const ctrlT = `// {{$ctrlName := printf "%s%s" (goify .Name true) "Controller"}}{{$ctrlName}} implements the {{.Name}} resource.
 type {{$ctrlName}} struct {
 	*goa.Controller
@@ -249,11 +260,29 @@ type {{$ctrlName}} struct {
 func New{{$ctrlName}}(service *goa.Service) *{{$ctrlName}} {
 	return &{{$ctrlName}}{Controller: service.NewController("{{.Name}}")}
 }
-{{$ctrl := .}}{{range .Actions}}
-// {{goify .Name true}} runs the {{.Name}} action.
-func (c *{{$ctrlName}}) {{goify .Name true}}(ctx *{{targetPkg}}.{{goify .Name true}}{{goify $ctrl.Name true}}Context) error {
+`
+
+const actionT = `{{$ctrlName := printf "%s%s" (goify .Parent.Name true) "Controller"}}// {{goify .Name true}} runs the {{.Name}} action.
+func (c *{{$ctrlName}}) {{goify .Name true}}(ctx *{{targetPkg}}.{{goify .Name true}}{{goify .Parent.Name true}}Context) error {
+	// TBD: implement
 {{$ok := okResp .}}{{if $ok}}	res := {{$ok.TypeRef}}{}
 {{end}}	return {{if $ok}}ctx.{{$ok.Name}}(res){{else}}nil{{end}}
 }
-{{end}}
+`
+
+const actionWST = `{{$ctrlName := printf "%s%s" (goify .Parent.Name true) "Controller"}}// {{goify .Name true}} runs the {{.Name}} action.
+func (c *{{$ctrlName}}) {{goify .Name true}}(ctx *{{targetPkg}}.{{goify .Name true}}{{goify .Parent.Name true}}Context) error {
+	c.{{goify .Name true}}WSHandler(ctx).ServeHTTP(ctx.ResponseWriter, ctx.Request)
+	return nil
+}
+
+// {{goify .Name true}}WSHandler establishes a websocket connection to run the {{.Name}} action.
+func (c *{{$ctrlName}}) {{goify .Name true}}WSHandler(ctx *{{targetPkg}}.{{goify .Name true}}{{goify .Parent.Name true}}Context) websocket.Handler {
+	return func(ws *websocket.Conn) {
+		// TBD: implement
+		ws.Write([]byte("{{.Name}} {{.Parent.Name}}"))
+		// Dummy echo websocket server
+		io.Copy(ws, ws)
+	}
+}
 `
