@@ -60,10 +60,14 @@ func NewContext(ctx context.Context, rw http.ResponseWriter, req *http.Request, 
 	return ctx
 }
 
+// UseLogger sets the request context logger and returns the resulting new context.
+func UseLogger(ctx context.Context, logger Logger) context.Context {
+	return context.WithValue(ctx, logKey, logger)
+}
+
 // Request gives access to the underlying HTTP request.
 func Request(ctx context.Context) *RequestData {
-	r := ctx.Value(reqKey)
-	if r != nil {
+	if r := ctx.Value(reqKey); r != nil {
 		return r.(*RequestData)
 	}
 	return nil
@@ -71,8 +75,7 @@ func Request(ctx context.Context) *RequestData {
 
 // Response gives access to the underlying HTTP response.
 func Response(ctx context.Context) *ResponseData {
-	r := ctx.Value(respKey)
-	if r != nil {
+	if r := ctx.Value(respKey); r != nil {
 		return r.(*ResponseData)
 	}
 	return nil
@@ -80,9 +83,16 @@ func Response(ctx context.Context) *ResponseData {
 
 // RequestService returns the service tageted by the request with the given context.
 func RequestService(ctx context.Context) *Service {
-	r := ctx.Value(serviceKey)
-	if r != nil {
+	if r := ctx.Value(serviceKey); r != nil {
 		return r.(*Service)
+	}
+	return nil
+}
+
+// RequestLogger returns the logger used by the request context.
+func RequestLogger(ctx context.Context) Logger {
+	if v := ctx.Value(logKey); v != nil {
+		return v.(Logger)
 	}
 	return nil
 }
