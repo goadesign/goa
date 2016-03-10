@@ -181,6 +181,14 @@ func FailOnError(err error) {
 	}
 }
 
+// PrintFilesOrFail will print the file list. Use it with a
+// generator's `Generate()` function to output the generated list of
+// files or quit on error.
+func PrintFilesOrFail(files []string, err error) {
+	FailOnError(err)
+	fmt.Println(strings.Join(files, "\n"))
+}
+
 // IncompatibleDSL should be called by DSL functions when they are
 // invoked in an incorrect context (e.g. "Params" in "Resource").
 func IncompatibleDSL() {
