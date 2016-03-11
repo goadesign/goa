@@ -20,36 +20,37 @@
 package goa
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 )
 
 type (
-	// ErrorID is an enum listing the possible types of errors.
-	ErrorID int
-
-	// TypedError describes an error that can be returned in a HTTP response.
-	TypedError struct {
-		ID   ErrorID
-		Mesg string
+	// HTTPError describes an error that can be returned in a response.
+	HTTPError struct {
+		// Class of error
+		*HTTPErrorClass
+		// Err describes the specific error occurrence.
+		Err string `json:"err" xml:"err"`
 	}
 
-	// MultiError records multiple errors.
+	// HTTPErrorClass contains information sent together with the error message in responses.
+	HTTPErrorClass struct {
+		// ID identifies the class of errors for clients.
+		ID int `json:"id" xml:"id"`
+		// Title is a human friendly title for the class of errors.
+		Title string `json:"title" xml:"title"`
+		// Status is the HTTP status code used by responses that cary the error.
+		Status int `json:"status" xml:"status"`
+	}
+
+	// MultiError is an error composed of potentially multiple errors.
 	MultiError []error
-
-	// BadRequestError is the type of errors that result in a response with status code 400.
-	BadRequestError struct {
-		Actual error
-	}
 )
 
 const (
 	// ErrInvalidParamType is the error produced by the generated code when
 	// a request parameter type does not match the design.
-	ErrInvalidParamType = iota + 1
+	ErrInvalidParamType = iota
 
 	// ErrMissingParam is the error produced by the generated code when a
 	// required request parameter is missing.
@@ -94,221 +95,167 @@ const (
 	// specified in the design definition or more elements than the
 	// maximum length.
 	ErrInvalidLength
+
+	// ErrInvalidEncoding is the error produced when a request body fails
+	// to be decoded.
+	ErrInvalidEncoding
+
+	// ErrInternal is the error produced when unexpected conditions
+	// occur (i.e. bug).
+	ErrInternal
 )
 
-// Title returns a human friendly error title
-func (k ErrorID) Title() string {
-	switch k {
-	case ErrInvalidParamType:
-		return "invalid parameter value"
-	case ErrMissingParam:
-		return "missing required parameter"
-	case ErrInvalidAttributeType:
-		return "invalid attribute type"
-	case ErrMissingAttribute:
-		return "missing required attribute"
-	case ErrMissingHeader:
-		return "missing required HTTP header"
-	case ErrInvalidEnumValue:
-		return "invalid value"
-	case ErrInvalidFormat:
-		return "value does not match validation format"
-	case ErrInvalidPattern:
-		return "value does not match validation pattern"
-	case ErrInvalidRange:
-		return "invalid value range"
-	case ErrInvalidLength:
-		return "invalid value length"
-	}
-	return "unknown error"
+// CAUTION: classes must be listed in the order as the constants above.
+var classes = []*HTTPErrorClass{
+	{ErrInvalidParamType, "invalid parameter value", 400},
+	{ErrMissingParam, "missing required parameter", 400},
+	{ErrInvalidAttributeType, "invalid attribute type", 400},
+	{ErrMissingAttribute, "missing required attribute", 400},
+	{ErrInvalidEnumValue, "invalid value", 400},
+	{ErrMissingHeader, "missing required HTTP header", 400},
+	{ErrInvalidFormat, "value does not match validation format", 400},
+	{ErrInvalidPattern, "value does not match validation pattern", 400},
+	{ErrInvalidRange, "invalid value range", 400},
+	{ErrInvalidLength, "invalid value length", 400},
+	{ErrInvalidEncoding, "invalid request encoding", 400},
+	{ErrInternal, "internal error", 500},
 }
 
-// MarshalJSON implements the json marshaler interface.
-func (t *TypedError) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		ID    int    `json:"id" xml:"id"`
-		Title string `json:"title" xml:"title"`
-		Msg   string `json:"msg" xml:"msg"`
-	}{
-		ID:    int(t.ID),
-		Title: t.ID.Title(),
-		Msg:   t.Mesg,
-	})
-}
-
-// Error builds an error message from the typed error details.
-func (t *TypedError) Error() string {
-	IncrCounter([]string{"goa", "error", strconv.Itoa(int(t.ID))}, 1.0)
-	js, err := json.Marshal(t)
-	if err != nil {
-		return `{"id":0,"title":"generic","msg":"failed to serialize error"}`
-	}
-	return string(js)
-}
-
-// Error summarizes all the underlying error messages in one JSON array.
-func (m MultiError) Error() string {
-	var buffer bytes.Buffer
-	buffer.WriteString("[")
-	for i, err := range m {
-		txt := err.Error()
-		if _, ok := err.(*TypedError); !ok {
-			b, err := json.Marshal(txt)
-			txt = `{"id":0,"title":"generic","msg":`
-			if err != nil {
-				txt += `"unknown error"}`
-			} else {
-				txt += string(b) + "}"
-			}
-		}
-		buffer.WriteString(txt)
-		if i < len(m)-1 {
-			buffer.WriteString(",")
-		}
-	}
-	buffer.WriteString("]")
-
-	// you can blame rsc for that: https://code.google.com/p/go/issues/detail?id=8592#c3
-	txt := buffer.String()
-	txt = strings.Replace(txt, "\\u0026", "&", -1)
-	txt = strings.Replace(txt, "\\u003c", "<", -1)
-	txt = strings.Replace(txt, "\\u003e", ">", -1)
-
-	return txt
-}
-
-// NewBadRequestError wraps the given error into a BadRequestError.
-func NewBadRequestError(err error) *BadRequestError {
-	return &BadRequestError{Actual: err}
-}
-
-// Error implements error.
-func (b *BadRequestError) Error() string {
-	return b.Actual.Error()
-}
-
-// InvalidParamTypeError appends a typed error of id ErrInvalidParamType to
-// err and returns it.
+// InvalidParamTypeError creates a HTTPError with class ID ErrInvalidParamType
 func InvalidParamTypeError(name string, val interface{}, expected string, err error) error {
-	terr := TypedError{
-		ID: ErrInvalidParamType,
-		Mesg: fmt.Sprintf("invalid value %#v for parameter %#v, must be a %s",
+	herr := &HTTPError{
+		HTTPErrorClass: classes[ErrInvalidParamType],
+		Err: fmt.Sprintf("invalid value %#v for parameter %#v, must be a %s",
 			val, name, expected),
 	}
-	return ReportError(err, &terr)
+	return BuildError(err, herr)
 }
 
-// MissingParamError appends a typed error of id ErrMissingParam to err and
-// returns it.
+// MissingParamError creates a HTTPError with class ID ErrMissingParam
 func MissingParamError(name string, err error) error {
-	terr := TypedError{
-		ID:   ErrMissingParam,
-		Mesg: fmt.Sprintf("missing required parameter %#v", name),
+	herr := &HTTPError{
+		HTTPErrorClass: classes[ErrMissingParam],
+		Err:            fmt.Sprintf("missing required parameter %#v", name),
 	}
-	return ReportError(err, &terr)
+	return BuildError(err, herr)
 }
 
-// InvalidAttributeTypeError appends a typed error of id ErrIncompatibleType
-// to err and returns it.
+// InvalidAttributeTypeError creates a HTTPError with class ID ErrInvalidAttributeType
 func InvalidAttributeTypeError(ctx string, val interface{}, expected string, err error) error {
-	terr := TypedError{
-		ID: ErrInvalidAttributeType,
-		Mesg: fmt.Sprintf("type of %s must be %s but got value %#v", ctx,
+	herr := &HTTPError{
+		HTTPErrorClass: classes[ErrInvalidAttributeType],
+		Err: fmt.Sprintf("type of %s must be %s but got value %#v", ctx,
 			expected, val),
 	}
-	return ReportError(err, &terr)
+	return BuildError(err, herr)
 }
 
-// MissingAttributeError appends a typed error of id ErrMissingAttribute to
-// err and returns it.
+// MissingAttributeError creates a HTTPError with class ID ErrMissingAttribute
 func MissingAttributeError(ctx, name string, err error) error {
-	terr := TypedError{
-		ID:   ErrMissingAttribute,
-		Mesg: fmt.Sprintf("attribute %#v of %s is missing and required", name, ctx),
+	herr := &HTTPError{
+		HTTPErrorClass: classes[ErrMissingAttribute],
+		Err:            fmt.Sprintf("attribute %#v of %s is missing and required", name, ctx),
 	}
-	return ReportError(err, &terr)
+	return BuildError(err, herr)
 }
 
-// MissingHeaderError appends a typed error of id ErrMissingHeader to err and
-// returns it.
+// MissingHeaderError creates a HTTPError with class ID ErrMissingHeader
 func MissingHeaderError(name string, err error) error {
-	terr := TypedError{
-		ID:   ErrMissingHeader,
-		Mesg: fmt.Sprintf("missing required HTTP header %#v", name),
+	herr := &HTTPError{
+		HTTPErrorClass: classes[ErrMissingHeader],
+		Err:            fmt.Sprintf("missing required HTTP header %#v", name),
 	}
-	return ReportError(err, &terr)
+	return BuildError(err, herr)
 }
 
-// InvalidEnumValueError appends a typed error of id ErrInvalidEnumValue to
-// err and returns it.
+// InvalidEnumValueError creates a HTTPError with class ID ErrInvalidEnumValue
 func InvalidEnumValueError(ctx string, val interface{}, allowed []interface{}, err error) error {
 	elems := make([]string, len(allowed))
 	for i, a := range allowed {
 		elems[i] = fmt.Sprintf("%#v", a)
 	}
-	terr := TypedError{
-		ID: ErrInvalidEnumValue,
-		Mesg: fmt.Sprintf("value of %s must be one of %s but got value %#v", ctx,
+	herr := &HTTPError{
+		HTTPErrorClass: classes[ErrInvalidEnumValue],
+		Err: fmt.Sprintf("value of %s must be one of %s but got value %#v", ctx,
 			strings.Join(elems, ", "), val),
 	}
-	return ReportError(err, &terr)
+	return BuildError(err, herr)
 }
 
-// InvalidFormatError appends a typed error of id ErrInvalidFormat to err and
-// returns it.
+// InvalidFormatError creates a HTTPError with class ID ErrInvalidFormat
 func InvalidFormatError(ctx, target string, format Format, formatError, err error) error {
-	terr := TypedError{
-		ID: ErrInvalidFormat,
-		Mesg: fmt.Sprintf("%s must be formatted as a %s but got value %#v, %s",
+	herr := &HTTPError{
+		HTTPErrorClass: classes[ErrInvalidFormat],
+		Err: fmt.Sprintf("%s must be formatted as a %s but got value %#v, %s",
 			ctx, format, target, formatError.Error()),
 	}
-	return ReportError(err, &terr)
+	return BuildError(err, herr)
 }
 
-// InvalidPatternError appends a typed error of id ErrInvalidPattern to err and
-// returns it.
+// InvalidPatternError creates a HTTPError with class ID ErrInvalidPattern
 func InvalidPatternError(ctx, target string, pattern string, err error) error {
-	terr := TypedError{
-		ID: ErrInvalidPattern,
-		Mesg: fmt.Sprintf("%s must match the regexp %#v but got value %#v",
+	herr := &HTTPError{
+		HTTPErrorClass: classes[ErrInvalidPattern],
+		Err: fmt.Sprintf("%s must match the regexp %#v but got value %#v",
 			ctx, pattern, target),
 	}
-	return ReportError(err, &terr)
+	return BuildError(err, herr)
 }
 
-// InvalidRangeError appends a typed error of id ErrInvalidRange to err and
-// returns it.
+// InvalidRangeError creates a HTTPError with class ID ErrInvalidRange
 func InvalidRangeError(ctx string, target interface{}, value int, min bool, err error) error {
 	comp := "greater or equal"
 	if !min {
 		comp = "lesser or equal"
 	}
-	terr := TypedError{
-		ID: ErrInvalidRange,
-		Mesg: fmt.Sprintf("%s must be %s than %d but got value %#v",
+	herr := &HTTPError{
+		HTTPErrorClass: classes[ErrInvalidRange],
+		Err: fmt.Sprintf("%s must be %s than %d but got value %#v",
 			ctx, comp, value, target),
 	}
-	return ReportError(err, &terr)
+	return BuildError(err, herr)
 }
 
-// InvalidLengthError appends a typed error of id ErrInvalidLength to err and
-// returns it.
+// InvalidLengthError creates a HTTPError with class ID ErrInvalidLength
 func InvalidLengthError(ctx string, target interface{}, ln, value int, min bool, err error) error {
 	comp := "greater or equal"
 	if !min {
 		comp = "lesser or equal"
 	}
-	terr := TypedError{
-		ID: ErrInvalidLength,
-		Mesg: fmt.Sprintf("length of %s must be %s than %d but got value %#v (len=%d)",
+	herr := &HTTPError{
+		HTTPErrorClass: classes[ErrInvalidLength],
+		Err: fmt.Sprintf("length of %s must be %s than %d but got value %#v (len=%d)",
 			ctx, comp, value, target, ln),
 	}
-	return ReportError(err, &terr)
+	return BuildError(err, herr)
 }
 
-// ReportError coerces the first argument into a MultiError then appends the second argument and
+// InvalidEncoding creates a HTTPError with class ID ErrInvalidEncoding
+func InvalidEncoding(err error) error {
+	herr := &HTTPError{
+		HTTPErrorClass: classes[ErrInvalidEncoding],
+		Err:            err.Error(),
+	}
+	return BuildError(err, herr)
+}
+
+// Error returns the error occurrence details.
+func (e *HTTPError) Error() string {
+	return e.Err
+}
+
+// Error returns the multiple error messages.
+func (m MultiError) Error() string {
+	errs := make([]string, len(m))
+	for i, err := range m {
+		errs[i] = err.Error()
+	}
+	return strings.Join(errs, ", ")
+}
+
+// BuildError coerces the first argument into a MultiError then appends the second argument and
 // returns the resulting MultiError.
-func ReportError(err error, err2 error) error {
+func BuildError(err error, err2 error) error {
 	if err == nil {
 		if err2 == nil {
 			return MultiError{}
@@ -321,7 +268,7 @@ func ReportError(err error, err2 error) error {
 	merr, ok := err.(MultiError)
 	if err2 == nil {
 		if ok {
-			return err
+			return merr
 		}
 		return MultiError{err}
 	}

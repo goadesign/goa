@@ -209,12 +209,16 @@ func (ctrl *Controller) Use(m Middleware) {
 // handler.
 func (ctrl *Controller) HandleError(ctx context.Context, rw http.ResponseWriter, req *http.Request, err error) {
 	status := 500
-	if _, ok := err.(*BadRequestError); ok {
-		status = 400
+	if e, ok := err.(*HTTPError); ok {
+		status = e.Status
 	}
 	go IncrCounter([]string{"goa", "handler", "error", strconv.Itoa(status)}, 1.0)
 	if ctrl.ErrorHandler != nil {
 		ctrl.ErrorHandler(ctx, rw, req, err)
+		return
+	}
+	if h := RequestService(ctx).ErrorHandler; h != nil {
+		h(ctx, rw, req, err)
 	}
 }
 
@@ -253,10 +257,7 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 		handler := middleware
 		if err != nil {
 			handler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-				msg := "invalid encoding: " + err.Error()
-				rw.Header().Set("Content-Type", "application/json")
-				rw.WriteHeader(400)
-				rw.Write([]byte(fmt.Sprintf(`{"kind":"invalid request","msg":%q}`, msg)))
+				ctrl.ErrorHandler(ctx, rw, req, InvalidEncoding(err))
 				return nil
 			}
 			for i := range chain {
@@ -269,29 +270,40 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 	}
 }
 
-// DefaultErrorHandler returns a 400 response for request validation errors (instances of
-// BadRequestError) and a 500 response for other errors. It writes the error message to the
-// response body in both cases.
+// DefaultErrorHandler returns a response with status 500 or the status specified in the error if
+// an instance of HTTPStatusError.
+// It writes the error message to the response body in both cases.
 func DefaultErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.Request, e error) {
 	status := 500
-	if _, ok := e.(*BadRequestError); ok {
-		status = 400
+	var respBody interface{}
+	if err, ok := e.(*HTTPError); ok {
+		status = err.Status
+		respBody = err
 	} else {
+		respBody = e.Error()
+	}
+	if status == 500 {
 		Error(ctx, e.Error())
 	}
-	Response(ctx).Send(ctx, status, e.Error())
+	Response(ctx).Send(ctx, status, respBody)
 }
 
 // TerseErrorHandler behaves like DefaultErrorHandler except that it does not write to the response
 // body for internal errors.
 func TerseErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.Request, e error) {
 	status := 500
-	var body interface{}
-	if _, ok := e.(*BadRequestError); ok {
-		status = 400
-		body = e.Error()
-	} else {
+	var respBody interface{}
+	if err, ok := e.(*HTTPError); ok {
+		status = err.Status
+		if status != 500 {
+			respBody = err
+		}
+	}
+	if respBody == nil {
+		respBody = "internal error"
+	}
+	if status == 500 {
 		Error(ctx, e.Error())
 	}
-	Response(ctx).Send(ctx, status, body)
+	Response(ctx).Send(ctx, status, respBody)
 }

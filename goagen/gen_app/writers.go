@@ -544,7 +544,7 @@ func Mount{{.Resource}}Controller(service *goa.Service, ctrl {{.Resource}}Contro
 {{$res := .Resource}}{{range .Actions}}{{$action := .}}	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := New{{.Context}}(ctx)
 		if err != nil {
-			return goa.NewBadRequestError(err)
+			return err
 		}
 {{if .Payload}}if rawPayload := goa.Request(ctx).Payload; rawPayload != nil {
 			rctx.Payload = rawPayload.({{gotyperef .Payload nil 1}})
