@@ -423,7 +423,7 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewGetWidgetContext(ctx)
 		if err != nil {
-			return goa.NewBadRequestError(err)
+			return err
 		}
 		return ctrl.Get(rctx)
 	}
@@ -475,7 +475,7 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewGetWidgetContext(ctx)
 		if err != nil {
-			return goa.NewBadRequestError(err)
+			return err
 		}
 		if rawPayload := goa.Request(ctx).Payload; rawPayload != nil {
 			rctx.Payload = rawPayload.(Collection)

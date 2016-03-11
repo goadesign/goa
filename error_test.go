@@ -10,84 +10,301 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// allErrorKinds list all the existing goa.ErrorID values.
-var allErrorKinds = [10]goa.ErrorID{
-	goa.ErrInvalidParamType,
-	goa.ErrMissingParam,
-	goa.ErrInvalidAttributeType,
-	goa.ErrMissingAttribute,
-	goa.ErrInvalidEnumValue,
-	goa.ErrMissingHeader,
-	goa.ErrInvalidFormat,
-	goa.ErrInvalidPattern,
-	goa.ErrInvalidRange,
-	goa.ErrInvalidLength,
-}
+var _ = Describe("HTTPError", func() {
+	const (
+		id     = 1
+		title  = "title"
+		status = 400
+		err    = "error"
+	)
 
-var _ = Describe("ErrorKind", func() {
-	for _, kind := range allErrorKinds {
-		It(fmt.Sprintf("Kind %#v has a title", kind), func() {
-			Ω(kind.Title()).ShouldNot(BeEmpty())
-		})
-	}
+	var httpError *goa.HTTPError
+
+	BeforeEach(func() {
+		httpError = &goa.HTTPError{&goa.HTTPErrorClass{id, title, status}, err}
+	})
+
+	It("serializes to JSON", func() {
+		b, err := json.Marshal(httpError)
+		Ω(err).ShouldNot(HaveOccurred())
+		Ω(string(b)).Should(Equal(`{"id":1,"title":"title","status":400,"err":"error"}`))
+	})
 })
 
-var _ = Describe("TypedError", func() {
-	var kind goa.ErrorID
-	var msg string
-
-	var typedError *goa.TypedError
+var _ = Describe("InvalidParamTypeError", func() {
+	var valErr error
+	name := "param"
+	val := 42
+	expected := "43"
 
 	JustBeforeEach(func() {
-		typedError = &goa.TypedError{ID: kind, Mesg: msg}
+		valErr = goa.InvalidParamTypeError(name, val, expected, nil)
 	})
 
-	Context("of kind ErrInvalidParamType", func() {
+	It("creates a http error", func() {
+		Ω(valErr).ShouldNot(BeNil())
+		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
+		merr := valErr.(goa.MultiError)
+		Ω(merr).Should(HaveLen(1))
+		e := merr[0]
+		Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+		err := e.(*goa.HTTPError)
+		Ω(err.ID).Should(Equal(goa.ErrInvalidParamType))
+		Ω(err.Err).Should(ContainSubstring(name))
+		Ω(err.Err).Should(ContainSubstring("%d", val))
+		Ω(err.Err).Should(ContainSubstring(expected))
+	})
+})
+
+var _ = Describe("MissingParaerror", func() {
+	var valErr error
+	name := "param"
+
+	JustBeforeEach(func() {
+		valErr = goa.MissingParamError(name, nil)
+	})
+
+	It("creates a http error", func() {
+		Ω(valErr).ShouldNot(BeNil())
+		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
+		merr := valErr.(goa.MultiError)
+		Ω(merr).Should(HaveLen(1))
+		e := merr[0]
+		Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+		err := e.(*goa.HTTPError)
+		Ω(err.ID).Should(Equal(goa.ErrMissingParam))
+		Ω(err.Err).Should(ContainSubstring(name))
+	})
+})
+
+var _ = Describe("InvalidAttributeTypeError", func() {
+	var valErr error
+	ctx := "ctx"
+	val := 42
+	expected := "43"
+
+	JustBeforeEach(func() {
+		valErr = goa.InvalidAttributeTypeError(ctx, val, expected, nil)
+	})
+
+	It("creates a http error", func() {
+		Ω(valErr).ShouldNot(BeNil())
+		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
+		merr := valErr.(goa.MultiError)
+		Ω(merr).Should(HaveLen(1))
+		e := merr[0]
+		Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+		err := e.(*goa.HTTPError)
+		Ω(err.ID).Should(Equal((goa.ErrInvalidAttributeType)))
+		Ω(err.Err).Should(ContainSubstring(ctx))
+		Ω(err.Err).Should(ContainSubstring("%d", val))
+		Ω(err.Err).Should(ContainSubstring(expected))
+	})
+})
+
+var _ = Describe("MissingAttributeError", func() {
+	var valErr error
+	ctx := "ctx"
+	name := "param"
+
+	JustBeforeEach(func() {
+		valErr = goa.MissingAttributeError(ctx, name, nil)
+	})
+
+	It("creates a http error", func() {
+		Ω(valErr).ShouldNot(BeNil())
+		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
+		merr := valErr.(goa.MultiError)
+		Ω(merr).Should(HaveLen(1))
+		e := merr[0]
+		Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+		err := e.(*goa.HTTPError)
+		Ω(err.ID).Should(Equal((goa.ErrMissingAttribute)))
+		Ω(err.Err).Should(ContainSubstring(ctx))
+		Ω(err.Err).Should(ContainSubstring(name))
+	})
+})
+
+var _ = Describe("MissingHeaderError", func() {
+	var valErr error
+	name := "param"
+
+	JustBeforeEach(func() {
+		valErr = goa.MissingHeaderError(name, nil)
+	})
+
+	It("creates a http error", func() {
+		Ω(valErr).ShouldNot(BeNil())
+		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
+		merr := valErr.(goa.MultiError)
+		Ω(merr).Should(HaveLen(1))
+		e := merr[0]
+		Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+		err := e.(*goa.HTTPError)
+		Ω(err.ID).Should(Equal((goa.ErrMissingHeader)))
+		Ω(err.Err).Should(ContainSubstring(name))
+	})
+})
+
+var _ = Describe("InvalidEnumValueError", func() {
+	var valErr error
+	ctx := "ctx"
+	val := 42
+	allowed := []interface{}{"43", "44"}
+
+	JustBeforeEach(func() {
+		valErr = goa.InvalidEnumValueError(ctx, val, allowed, nil)
+	})
+
+	It("creates a http error", func() {
+		Ω(valErr).ShouldNot(BeNil())
+		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
+		merr := valErr.(goa.MultiError)
+		Ω(merr).Should(HaveLen(1))
+		e := merr[0]
+		Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+		err := e.(*goa.HTTPError)
+		Ω(err.ID).Should(Equal((goa.ErrInvalidEnumValue)))
+		Ω(err.Err).Should(ContainSubstring(ctx))
+		Ω(err.Err).Should(ContainSubstring("%d", val))
+		Ω(err.Err).Should(ContainSubstring(`"43", "44"`))
+	})
+})
+
+var _ = Describe("InvalidFormaerror", func() {
+	var valErr error
+	ctx := "ctx"
+	target := "target"
+	format := goa.FormatDateTime
+	formatError := errors.New("boo")
+
+	JustBeforeEach(func() {
+		valErr = goa.InvalidFormatError(ctx, target, format, formatError, nil)
+	})
+
+	It("creates a http error", func() {
+		Ω(valErr).ShouldNot(BeNil())
+		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
+		merr := valErr.(goa.MultiError)
+		Ω(merr).Should(HaveLen(1))
+		e := merr[0]
+		Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+		err := e.(*goa.HTTPError)
+		Ω(err.ID).Should(Equal((goa.ErrInvalidFormat)))
+		Ω(err.Err).Should(ContainSubstring(ctx))
+		Ω(err.Err).Should(ContainSubstring(target))
+		Ω(err.Err).Should(ContainSubstring("date-time"))
+		Ω(err.Err).Should(ContainSubstring(formatError.Error()))
+	})
+})
+
+var _ = Describe("InvalidPatternError", func() {
+	var valErr error
+	ctx := "ctx"
+	target := "target"
+	pattern := "pattern"
+
+	JustBeforeEach(func() {
+		valErr = goa.InvalidPatternError(ctx, target, pattern, nil)
+	})
+
+	It("creates a http error", func() {
+		Ω(valErr).ShouldNot(BeNil())
+		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
+		merr := valErr.(goa.MultiError)
+		Ω(merr).Should(HaveLen(1))
+		e := merr[0]
+		Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+		err := e.(*goa.HTTPError)
+		Ω(err.ID).Should(Equal((goa.ErrInvalidPattern)))
+		Ω(err.Err).Should(ContainSubstring(ctx))
+		Ω(err.Err).Should(ContainSubstring(target))
+		Ω(err.Err).Should(ContainSubstring(pattern))
+	})
+})
+
+var _ = Describe("InvalidRangeError", func() {
+	var valErr error
+	ctx := "ctx"
+	target := "target"
+	value := 42
+	min := true
+
+	JustBeforeEach(func() {
+		valErr = goa.InvalidRangeError(ctx, target, value, min, nil)
+	})
+
+	It("creates a http error", func() {
+		Ω(valErr).ShouldNot(BeNil())
+		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
+		merr := valErr.(goa.MultiError)
+		Ω(merr).Should(HaveLen(1))
+		e := merr[0]
+		Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+		err := e.(*goa.HTTPError)
+		Ω(err.ID).Should(Equal((goa.ErrInvalidRange)))
+		Ω(err.Err).Should(ContainSubstring(ctx))
+		Ω(err.Err).Should(ContainSubstring("greater or equal"))
+		Ω(err.Err).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
+		Ω(err.Err).Should(ContainSubstring(target))
+	})
+})
+
+var _ = Describe("InvalidLengthError", func() {
+	const ctx = "ctx"
+	const value = 42
+	const min = true
+
+	var target interface{}
+	var ln int
+
+	var valErr error
+
+	JustBeforeEach(func() {
+		valErr = goa.InvalidLengthError(ctx, target, ln, value, min, nil)
+	})
+
+	Context("on strings", func() {
 		BeforeEach(func() {
-			kind = goa.ErrInvalidParamType
-			msg = "some error message"
+			target = "target"
+			ln = len("target")
 		})
 
-		It("builds an error message that is valid JSON and contains the kind title and user message", func() {
-			errMsg := typedError.Error()
-			Ω(errMsg).ShouldNot(BeEmpty())
-			var data map[string]interface{}
-			err := json.Unmarshal([]byte(errMsg), &data)
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(data).Should(HaveKey("id"))
-			Ω(data["id"]).Should(Equal(float64(kind)))
-			Ω(data).Should(HaveKey("title"))
-			Ω(data["title"]).Should(Equal(kind.Title()))
-			Ω(data).Should(HaveKey("msg"))
-			Ω(data["msg"]).Should(Equal(msg))
+		It("creates a http error", func() {
+			Ω(valErr).ShouldNot(BeNil())
+			Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
+			merr := valErr.(goa.MultiError)
+			Ω(merr).Should(HaveLen(1))
+			e := merr[0]
+			Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+			err := e.(*goa.HTTPError)
+			Ω(err.ID).Should(Equal((goa.ErrInvalidLength)))
+			Ω(err.Err).Should(ContainSubstring(ctx))
+			Ω(err.Err).Should(ContainSubstring("greater or equal"))
+			Ω(err.Err).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
+			Ω(err.Err).Should(ContainSubstring(target.(string)))
 		})
 	})
 
-	Context("in a multi-error", func() {
-		var multiError goa.MultiError
-
+	Context("on slices", func() {
 		BeforeEach(func() {
-			kind = goa.ErrInvalidParamType
-			msg = "some error message"
+			target = []string{"target1", "target2"}
+			ln = 2
 		})
 
-		JustBeforeEach(func() {
-			multiError = append(multiError, typedError)
-		})
-
-		It("Error creates a slice of one element", func() {
-			errMsg := multiError.Error()
-			Ω(errMsg).ShouldNot(BeEmpty())
-			var data []map[string]interface{}
-			err := json.Unmarshal([]byte(errMsg), &data)
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(data).Should(HaveLen(1))
-			Ω(data[0]).Should(HaveKey("id"))
-			Ω(data[0]["id"]).Should(Equal(float64(kind)))
-			Ω(data[0]).Should(HaveKey("title"))
-			Ω(data[0]["title"]).Should(Equal(kind.Title()))
-			Ω(data[0]).Should(HaveKey("msg"))
-			Ω(data[0]["msg"]).Should(Equal(msg))
+		It("creates a http error", func() {
+			Ω(valErr).ShouldNot(BeNil())
+			Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
+			merr := valErr.(goa.MultiError)
+			Ω(merr).Should(HaveLen(1))
+			e := merr[0]
+			Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+			err := e.(*goa.HTTPError)
+			Ω(err.ID).Should(Equal((goa.ErrInvalidLength)))
+			Ω(err.Err).Should(ContainSubstring(ctx))
+			Ω(err.Err).Should(ContainSubstring("greater or equal"))
+			Ω(err.Err).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
+			Ω(err.Err).Should(ContainSubstring(fmt.Sprintf("%#v", target)))
 		})
 	})
 })
@@ -108,550 +325,12 @@ var _ = Describe("MultiError", func() {
 	It("lists all error messages in its error message", func() {
 		errMsg := multiError.Error()
 		Ω(errMsg).ShouldNot(BeEmpty())
-		var data []map[string]interface{}
-		err := json.Unmarshal([]byte(errMsg), &data)
-		Ω(err).ShouldNot(HaveOccurred())
-		Ω(data).Should(HaveLen(2))
-		Ω(data[0]).Should(HaveKey("id"))
-		Ω(data[0]["id"]).Should(Equal(float64(0)))
-		Ω(data[0]).Should(HaveKey("title"))
-		Ω(data[0]["title"]).Should(Equal("generic"))
-		Ω(data[0]).Should(HaveKey("msg"))
-		Ω(data[0]["msg"]).Should(Equal(err1.Error()))
-		Ω(data[0]).Should(HaveKey("id"))
-		Ω(data[1]["id"]).Should(Equal(float64(0)))
-		Ω(data[1]).Should(HaveKey("title"))
-		Ω(data[1]["title"]).Should(Equal("generic"))
-		Ω(data[1]).Should(HaveKey("msg"))
-		Ω(data[1]["msg"]).Should(Equal(err2.Error()))
+		Ω(errMsg).Should(ContainSubstring(err1.Error()))
+		Ω(errMsg).Should(ContainSubstring(err2.Error()))
 	})
 })
 
-var _ = Describe("BadRequestError", func() {
-	var rawErr error
-	var badReq *goa.BadRequestError
-
-	BeforeEach(func() {
-		rawErr = errors.New("raw error")
-	})
-
-	JustBeforeEach(func() {
-		badReq = goa.NewBadRequestError(rawErr)
-	})
-
-	It("builds a bad request error that reports the inner error message", func() {
-		Ω(badReq).ShouldNot(BeNil())
-		Ω(badReq.Error()).Should(Equal(rawErr.Error()))
-	})
-})
-
-var _ = Describe("InvalidParamTypeError", func() {
-	var valErr, err error
-	name := "param"
-	val := 42
-	expected := "43"
-
-	BeforeEach(func() {
-		err = nil
-	})
-
-	JustBeforeEach(func() {
-		valErr = goa.InvalidParamTypeError(name, val, expected, err)
-	})
-
-	It("creates a multi error", func() {
-		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		mErr := valErr.(goa.MultiError)
-		Ω(mErr).Should(HaveLen(1))
-		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidParamType))))
-		Ω(tErr.Mesg).Should(ContainSubstring(name))
-		Ω(tErr.Mesg).Should(ContainSubstring("%d", val))
-		Ω(tErr.Mesg).Should(ContainSubstring(expected))
-	})
-
-	Context("with a pre-existing error", func() {
-		BeforeEach(func() {
-			err = errors.New("pre-existing")
-		})
-
-		It("appends to the multi-error", func() {
-			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-			mErr := valErr.(goa.MultiError)
-			Ω(mErr).Should(HaveLen(2))
-			Ω(mErr[0]).Should(Equal(err))
-			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidParamType))))
-			Ω(tErr.Mesg).Should(ContainSubstring(name))
-			Ω(tErr.Mesg).Should(ContainSubstring("%d", val))
-			Ω(tErr.Mesg).Should(ContainSubstring(expected))
-		})
-	})
-})
-
-var _ = Describe("MissingParamError", func() {
-	var valErr, err error
-	name := "param"
-
-	BeforeEach(func() {
-		err = nil
-	})
-
-	JustBeforeEach(func() {
-		valErr = goa.MissingParamError(name, err)
-	})
-
-	It("creates a multi error", func() {
-		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		mErr := valErr.(goa.MultiError)
-		Ω(mErr).Should(HaveLen(1))
-		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrMissingParam))))
-		Ω(tErr.Mesg).Should(ContainSubstring(name))
-	})
-
-	Context("with a pre-existing error", func() {
-		BeforeEach(func() {
-			err = errors.New("pre-existing")
-		})
-
-		It("appends to the multi-error", func() {
-			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-			mErr := valErr.(goa.MultiError)
-			Ω(mErr).Should(HaveLen(2))
-			Ω(mErr[0]).Should(Equal(err))
-			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrMissingParam))))
-			Ω(tErr.Mesg).Should(ContainSubstring(name))
-		})
-	})
-})
-
-var _ = Describe("InvalidAttributeTypeError", func() {
-	var valErr, err error
-	ctx := "ctx"
-	val := 42
-	expected := "43"
-
-	BeforeEach(func() {
-		err = nil
-	})
-
-	JustBeforeEach(func() {
-		valErr = goa.InvalidAttributeTypeError(ctx, val, expected, err)
-	})
-
-	It("creates a multi error", func() {
-		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		mErr := valErr.(goa.MultiError)
-		Ω(mErr).Should(HaveLen(1))
-		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidAttributeType))))
-		Ω(tErr.Mesg).Should(ContainSubstring(ctx))
-		Ω(tErr.Mesg).Should(ContainSubstring("%d", val))
-		Ω(tErr.Mesg).Should(ContainSubstring(expected))
-	})
-
-	Context("with a pre-existing error", func() {
-		BeforeEach(func() {
-			err = errors.New("pre-existing")
-		})
-
-		It("appends to the multi-error", func() {
-			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-			mErr := valErr.(goa.MultiError)
-			Ω(mErr).Should(HaveLen(2))
-			Ω(mErr[0]).Should(Equal(err))
-			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidAttributeType))))
-			Ω(tErr.Mesg).Should(ContainSubstring(ctx))
-			Ω(tErr.Mesg).Should(ContainSubstring("%d", val))
-			Ω(tErr.Mesg).Should(ContainSubstring(expected))
-		})
-	})
-})
-
-var _ = Describe("MissingAttributeError", func() {
-	var valErr, err error
-	ctx := "ctx"
-	name := "param"
-
-	BeforeEach(func() {
-		err = nil
-	})
-
-	JustBeforeEach(func() {
-		valErr = goa.MissingAttributeError(ctx, name, err)
-	})
-
-	It("creates a multi error", func() {
-		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		mErr := valErr.(goa.MultiError)
-		Ω(mErr).Should(HaveLen(1))
-		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrMissingAttribute))))
-		Ω(tErr.Mesg).Should(ContainSubstring(ctx))
-		Ω(tErr.Mesg).Should(ContainSubstring(name))
-	})
-
-	Context("with a pre-existing error", func() {
-		BeforeEach(func() {
-			err = errors.New("pre-existing")
-		})
-
-		It("appends to the multi-error", func() {
-			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-			mErr := valErr.(goa.MultiError)
-			Ω(mErr).Should(HaveLen(2))
-			Ω(mErr[0]).Should(Equal(err))
-			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrMissingAttribute))))
-			Ω(tErr.Mesg).Should(ContainSubstring(ctx))
-			Ω(tErr.Mesg).Should(ContainSubstring(name))
-		})
-	})
-})
-
-var _ = Describe("MissingHeaderError", func() {
-	var valErr, err error
-	name := "param"
-
-	BeforeEach(func() {
-		err = nil
-	})
-
-	JustBeforeEach(func() {
-		valErr = goa.MissingHeaderError(name, err)
-	})
-
-	It("creates a multi error", func() {
-		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		mErr := valErr.(goa.MultiError)
-		Ω(mErr).Should(HaveLen(1))
-		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrMissingHeader))))
-		Ω(tErr.Mesg).Should(ContainSubstring(name))
-	})
-
-	Context("with a pre-existing error", func() {
-		BeforeEach(func() {
-			err = errors.New("pre-existing")
-		})
-
-		It("appends to the multi-error", func() {
-			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-			mErr := valErr.(goa.MultiError)
-			Ω(mErr).Should(HaveLen(2))
-			Ω(mErr[0]).Should(Equal(err))
-			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrMissingHeader))))
-			Ω(tErr.Mesg).Should(ContainSubstring(name))
-		})
-	})
-})
-
-var _ = Describe("InvalidEnumValueError", func() {
-	var valErr, err error
-	ctx := "ctx"
-	val := 42
-	allowed := []interface{}{"43", "44"}
-
-	BeforeEach(func() {
-		err = nil
-	})
-
-	JustBeforeEach(func() {
-		valErr = goa.InvalidEnumValueError(ctx, val, allowed, err)
-	})
-
-	It("creates a multi error", func() {
-		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		mErr := valErr.(goa.MultiError)
-		Ω(mErr).Should(HaveLen(1))
-		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidEnumValue))))
-		Ω(tErr.Mesg).Should(ContainSubstring(ctx))
-		Ω(tErr.Mesg).Should(ContainSubstring("%d", val))
-		Ω(tErr.Mesg).Should(ContainSubstring(`"43", "44"`))
-	})
-
-	Context("with a pre-existing error", func() {
-		BeforeEach(func() {
-			err = errors.New("pre-existing")
-		})
-
-		It("appends to the multi-error", func() {
-			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-			mErr := valErr.(goa.MultiError)
-			Ω(mErr).Should(HaveLen(2))
-			Ω(mErr[0]).Should(Equal(err))
-			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidEnumValue))))
-			Ω(tErr.Mesg).Should(ContainSubstring(ctx))
-			Ω(tErr.Mesg).Should(ContainSubstring("%d", val))
-			Ω(tErr.Mesg).Should(ContainSubstring(`"43", "44"`))
-		})
-	})
-})
-
-var _ = Describe("InvalidFormatError", func() {
-	var valErr, err error
-	ctx := "ctx"
-	target := "target"
-	format := goa.FormatDateTime
-	formatError := errors.New("boo")
-
-	BeforeEach(func() {
-		err = nil
-	})
-
-	JustBeforeEach(func() {
-		valErr = goa.InvalidFormatError(ctx, target, format, formatError, err)
-	})
-
-	It("creates a multi error", func() {
-		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		mErr := valErr.(goa.MultiError)
-		Ω(mErr).Should(HaveLen(1))
-		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidFormat))))
-		Ω(tErr.Mesg).Should(ContainSubstring(ctx))
-		Ω(tErr.Mesg).Should(ContainSubstring(target))
-		Ω(tErr.Mesg).Should(ContainSubstring("date-time"))
-		Ω(tErr.Mesg).Should(ContainSubstring(formatError.Error()))
-	})
-
-	Context("with a pre-existing error", func() {
-		BeforeEach(func() {
-			err = errors.New("pre-existing")
-		})
-
-		It("appends to the multi-error", func() {
-			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-			mErr := valErr.(goa.MultiError)
-			Ω(mErr).Should(HaveLen(2))
-			Ω(mErr[0]).Should(Equal(err))
-			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidFormat))))
-			Ω(tErr.Mesg).Should(ContainSubstring(ctx))
-			Ω(tErr.Mesg).Should(ContainSubstring(target))
-			Ω(tErr.Mesg).Should(ContainSubstring("date-time"))
-			Ω(tErr.Mesg).Should(ContainSubstring(formatError.Error()))
-		})
-	})
-})
-
-var _ = Describe("InvalidPatternError", func() {
-	var valErr, err error
-	ctx := "ctx"
-	target := "target"
-	pattern := "pattern"
-
-	BeforeEach(func() {
-		err = nil
-	})
-
-	JustBeforeEach(func() {
-		valErr = goa.InvalidPatternError(ctx, target, pattern, err)
-	})
-
-	It("creates a multi error", func() {
-		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		mErr := valErr.(goa.MultiError)
-		Ω(mErr).Should(HaveLen(1))
-		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidPattern))))
-		Ω(tErr.Mesg).Should(ContainSubstring(ctx))
-		Ω(tErr.Mesg).Should(ContainSubstring(target))
-		Ω(tErr.Mesg).Should(ContainSubstring(pattern))
-	})
-
-	Context("with a pre-existing error", func() {
-		BeforeEach(func() {
-			err = errors.New("pre-existing")
-		})
-
-		It("appends to the multi-error", func() {
-			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-			mErr := valErr.(goa.MultiError)
-			Ω(mErr).Should(HaveLen(2))
-			Ω(mErr[0]).Should(Equal(err))
-			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidPattern))))
-			Ω(tErr.Mesg).Should(ContainSubstring(ctx))
-			Ω(tErr.Mesg).Should(ContainSubstring(target))
-			Ω(tErr.Mesg).Should(ContainSubstring(pattern))
-		})
-	})
-})
-
-var _ = Describe("InvalidRangeError", func() {
-	var valErr, err error
-	ctx := "ctx"
-	target := "target"
-	value := 42
-	min := true
-
-	BeforeEach(func() {
-		err = nil
-	})
-
-	JustBeforeEach(func() {
-		valErr = goa.InvalidRangeError(ctx, target, value, min, err)
-	})
-
-	It("creates a multi error", func() {
-		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		mErr := valErr.(goa.MultiError)
-		Ω(mErr).Should(HaveLen(1))
-		Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-		tErr := mErr[0].(*goa.TypedError)
-		Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidRange))))
-		Ω(tErr.Mesg).Should(ContainSubstring(ctx))
-		Ω(tErr.Mesg).Should(ContainSubstring("greater or equal"))
-		Ω(tErr.Mesg).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
-		Ω(tErr.Mesg).Should(ContainSubstring(target))
-	})
-
-	Context("with a pre-existing error", func() {
-		BeforeEach(func() {
-			err = errors.New("pre-existing")
-		})
-
-		It("appends to the multi-error", func() {
-			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-			mErr := valErr.(goa.MultiError)
-			Ω(mErr).Should(HaveLen(2))
-			Ω(mErr[0]).Should(Equal(err))
-			Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-			tErr := mErr[1].(*goa.TypedError)
-			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidRange))))
-			Ω(tErr.Mesg).Should(ContainSubstring(ctx))
-			Ω(tErr.Mesg).Should(ContainSubstring("greater or equal"))
-			Ω(tErr.Mesg).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
-			Ω(tErr.Mesg).Should(ContainSubstring(target))
-		})
-	})
-})
-
-var _ = Describe("InvalidLengthError", func() {
-	const ctx = "ctx"
-	const value = 42
-	const min = true
-
-	var target interface{}
-	var ln int
-	var err error
-
-	var valErr error
-
-	BeforeEach(func() {
-		err = nil
-	})
-
-	JustBeforeEach(func() {
-		valErr = goa.InvalidLengthError(ctx, target, ln, value, min, err)
-	})
-
-	Context("on strings", func() {
-		BeforeEach(func() {
-			target = "target"
-			ln = len("target")
-		})
-
-		It("creates a multi error", func() {
-			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-			mErr := valErr.(goa.MultiError)
-			Ω(mErr).Should(HaveLen(1))
-			Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-			tErr := mErr[0].(*goa.TypedError)
-			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidLength))))
-			Ω(tErr.Mesg).Should(ContainSubstring(ctx))
-			Ω(tErr.Mesg).Should(ContainSubstring("greater or equal"))
-			Ω(tErr.Mesg).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
-			Ω(tErr.Mesg).Should(ContainSubstring(target.(string)))
-		})
-
-		Context("with a pre-existing error", func() {
-			BeforeEach(func() {
-				err = errors.New("pre-existing")
-			})
-
-			It("appends to the multi-error", func() {
-				Ω(valErr).ShouldNot(BeNil())
-				Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-				mErr := valErr.(goa.MultiError)
-				Ω(mErr).Should(HaveLen(2))
-				Ω(mErr[0]).Should(Equal(err))
-				Ω(mErr[1]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-				tErr := mErr[1].(*goa.TypedError)
-				Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidLength))))
-				Ω(tErr.Mesg).Should(ContainSubstring(ctx))
-				Ω(tErr.Mesg).Should(ContainSubstring("greater or equal"))
-				Ω(tErr.Mesg).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
-				Ω(tErr.Mesg).Should(ContainSubstring(target.(string)))
-			})
-		})
-	})
-
-	Context("on slices", func() {
-		BeforeEach(func() {
-			target = []string{"target1", "target2"}
-			ln = 2
-		})
-
-		It("creates a multi error", func() {
-			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-			mErr := valErr.(goa.MultiError)
-			Ω(mErr).Should(HaveLen(1))
-			Ω(mErr[0]).Should(BeAssignableToTypeOf(&goa.TypedError{}))
-			tErr := mErr[0].(*goa.TypedError)
-			Ω(tErr.ID).Should(Equal(goa.ErrorID((goa.ErrInvalidLength))))
-			Ω(tErr.Mesg).Should(ContainSubstring(ctx))
-			Ω(tErr.Mesg).Should(ContainSubstring("greater or equal"))
-			Ω(tErr.Mesg).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
-			Ω(tErr.Mesg).Should(ContainSubstring(fmt.Sprintf("%#v", target)))
-		})
-	})
-})
-
-var _ = Describe("ReportError", func() {
+var _ = Describe("BuildError", func() {
 	var err, err2 error
 	var mErr error
 
@@ -661,7 +340,7 @@ var _ = Describe("ReportError", func() {
 	})
 
 	JustBeforeEach(func() {
-		mErr = goa.ReportError(err, err2)
+		mErr = goa.BuildError(err, err2)
 	})
 
 	Context("with two nil errors", func() {

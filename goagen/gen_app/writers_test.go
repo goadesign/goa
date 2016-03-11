@@ -1010,7 +1010,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
-			return goa.NewBadRequestError(err)
+			return err
 		}
 		return ctrl.List(rctx)
 	}
@@ -1025,7 +1025,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
-			return goa.NewBadRequestError(err)
+			return err
 		}
 		return ctrl.List(rctx)
 	}
@@ -1048,7 +1048,7 @@ type BottlesController interface {
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
-			return goa.NewBadRequestError(err)
+			return err
 		}
 		return ctrl.List(rctx)
 	}
@@ -1057,7 +1057,7 @@ type BottlesController interface {
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewShowBottleContext(ctx)
 		if err != nil {
-			return goa.NewBadRequestError(err)
+			return err
 		}
 		return ctrl.Show(rctx)
 	}
