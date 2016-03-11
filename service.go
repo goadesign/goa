@@ -276,8 +276,8 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 func DefaultErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.Request, e error) {
 	status := 500
 	var respBody interface{}
-	if err, ok := e.(*HTTPError); ok {
-		status = err.Status
+	if err, ok := e.(MultiError); ok {
+		status = err.Status()
 		respBody = err
 	} else {
 		respBody = e.Error()
@@ -293,8 +293,8 @@ func DefaultErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.
 func TerseErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.Request, e error) {
 	status := 500
 	var respBody interface{}
-	if err, ok := e.(*HTTPError); ok {
-		status = err.Status
+	if err, ok := e.(MultiError); ok {
+		status = err.Status()
 		if status != 500 {
 			respBody = err
 		}
