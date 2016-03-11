@@ -40,7 +40,7 @@ type (
 		// Title is a human friendly title for the class of errors.
 		Title string `json:"title" xml:"title"`
 		// Status is the HTTP status code used by responses that cary the error.
-		Status int `json:"status" xml:"status"`
+		Status int `json:"-" xml:"-"`
 	}
 
 	// MultiError is an error composed of potentially multiple errors.
@@ -251,6 +251,38 @@ func (m MultiError) Error() string {
 		errs[i] = err.Error()
 	}
 	return strings.Join(errs, ", ")
+}
+
+// Status computes a status from all the HTTP errors.
+// The algorithms returns 500 if any error in the multi error is not a HTTPError or has status 500.
+// If all errors are http errors and they all have the same status that status is returned.
+// Otherwise Status returns 400.
+func (m MultiError) Status() int {
+	if len(m) == 0 {
+		return 500 // bug
+	}
+	var status int
+	if he, ok := m[0].(*HTTPError); ok {
+		status = he.Status
+	} else {
+		return 500
+	}
+	if len(m) == 1 {
+		return status
+	}
+	for _, e := range m[1:] {
+		if he, ok := e.(*HTTPError); ok {
+			if he.Status == 500 {
+				return 500
+			}
+			if he.Status != status {
+				status = 400
+			}
+		} else {
+			return 500
+		}
+	}
+	return status
 }
 
 // BuildError coerces the first argument into a MultiError then appends the second argument and
