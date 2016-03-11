@@ -57,42 +57,47 @@ import (
 // generate helper response methods. These methods know how to render the views defined on the media
 // type and run the validations defined in the media type during rendering.
 func Response(name string, paramsAndDSL ...interface{}) {
-	if a, ok := actionDefinition(false); ok {
-		if a.Responses == nil {
-			a.Responses = make(map[string]*design.ResponseDefinition)
+	switch def := dslengine.CurrentDefinition().(type) {
+	case *design.ActionDefinition:
+		if def.Responses == nil {
+			def.Responses = make(map[string]*design.ResponseDefinition)
 		}
-		if _, ok := a.Responses[name]; ok {
+		if _, ok := def.Responses[name]; ok {
 			dslengine.ReportError("response %s is defined twice", name)
 			return
 		}
 		if resp := executeResponseDSL(name, paramsAndDSL...); resp != nil {
 			if resp.Status == 200 && resp.MediaType == "" {
-				resp.MediaType = a.Parent.MediaType
+				resp.MediaType = def.Parent.MediaType
 			}
-			resp.Parent = a
-			a.Responses[name] = resp
+			resp.Parent = def
+			def.Responses[name] = resp
 		}
-	} else if r, ok := resourceDefinition(true); ok {
-		if r.Responses == nil {
-			r.Responses = make(map[string]*design.ResponseDefinition)
+
+	case *design.ResourceDefinition:
+		if def.Responses == nil {
+			def.Responses = make(map[string]*design.ResponseDefinition)
 		}
-		if _, ok := r.Responses[name]; ok {
+		if _, ok := def.Responses[name]; ok {
 			dslengine.ReportError("response %s is defined twice", name)
 			return
 		}
 		if resp := executeResponseDSL(name, paramsAndDSL...); resp != nil {
 			if resp.Status == 200 && resp.MediaType == "" {
-				resp.MediaType = r.MediaType
+				resp.MediaType = def.MediaType
 			}
-			resp.Parent = r
-			r.Responses[name] = resp
+			resp.Parent = def
+			def.Responses[name] = resp
 		}
+
+	default:
+		dslengine.IncompatibleDSL()
 	}
 }
 
 // Status sets the Response status.
 func Status(status int) {
-	if r, ok := responseDefinition(true); ok {
+	if r, ok := responseDefinition(); ok {
 		r.Status = status
 	}
 }

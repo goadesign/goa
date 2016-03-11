@@ -70,7 +70,7 @@ func Resource(name string, dsl func()) *design.ResourceDefinition {
 // "name" with associated validations then simply calling Attribute("name") inside a request
 // Payload defines the payload attribute with the same type and validations.
 func DefaultMedia(val interface{}) {
-	if r, ok := resourceDefinition(true); ok {
+	if r, ok := resourceDefinition(); ok {
 		if m, ok := val.(*design.MediaTypeDefinition); ok {
 			if m.UserTypeDefinition == nil {
 				dslengine.ReportError("invalid media type specification, media type is not initialized")
@@ -89,7 +89,7 @@ func DefaultMedia(val interface{}) {
 // Parent sets the resource parent. The parent resource is used to compute the path to the resource
 // actions as well as resource collection item hrefs. See Resource.
 func Parent(p string) {
-	if r, ok := resourceDefinition(true); ok {
+	if r, ok := resourceDefinition(); ok {
 		r.ParentName = p
 	}
 }
@@ -97,7 +97,7 @@ func Parent(p string) {
 // CanonicalActionName sets the name of the action used to compute the resource collection and
 // resource collection items hrefs. See Resource.
 func CanonicalActionName(a string) {
-	if r, ok := resourceDefinition(true); ok {
+	if r, ok := resourceDefinition(); ok {
 		r.CanonicalActionName = a
 	}
 }

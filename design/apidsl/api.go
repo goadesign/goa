@@ -78,7 +78,7 @@ func API(name string, dsl func()) *design.APIDefinition {
 
 // Version specifies the API version. One design describes one version.
 func Version(ver string) {
-	if api, ok := apiDefinition(true); ok {
+	if api, ok := apiDefinition(); ok {
 		api.Version = ver
 	}
 }
@@ -86,20 +86,23 @@ func Version(ver string) {
 // Description sets the definition description.
 // Description can be called inside API, Resource, Action or MediaType.
 func Description(d string) {
-	if a, ok := apiDefinition(false); ok {
-		a.Description = d
-	} else if r, ok := resourceDefinition(false); ok {
-		r.Description = d
-	} else if a, ok := actionDefinition(false); ok {
-		a.Description = d
-	} else if m, ok := mediaTypeDefinition(false); ok {
-		m.Description = d
-	} else if a, ok := attributeDefinition(false); ok {
-		a.Description = d
-	} else if r, ok := responseDefinition(false); ok {
-		r.Description = d
-	} else if do, ok := docsDefinition(true); ok {
-		do.Description = d
+	switch def := dslengine.CurrentDefinition().(type) {
+	case *design.APIDefinition:
+		def.Description = d
+	case *design.ResourceDefinition:
+		def.Description = d
+	case *design.ActionDefinition:
+		def.Description = d
+	case *design.MediaTypeDefinition:
+		def.Description = d
+	case *design.AttributeDefinition:
+		def.Description = d
+	case *design.ResponseDefinition:
+		def.Description = d
+	case *design.DocsDefinition:
+		def.Description = d
+	default:
+		dslengine.IncompatibleDSL()
 	}
 }
 
@@ -107,10 +110,11 @@ func Description(d string) {
 // The path may define wildcards (see Routing for a description of the wildcard syntax).
 // The corresponding parameters must be described using BaseParams.
 func BasePath(val string) {
-	if a, ok := apiDefinition(false); ok {
-		a.BasePath = val
-	} else if r, ok := resourceDefinition(true); ok {
-		r.BasePath = val
+	switch def := dslengine.CurrentDefinition().(type) {
+	case *design.APIDefinition:
+		def.BasePath = val
+	case *design.ResourceDefinition:
+		def.BasePath = val
 		awcs := design.ExtractWildcards(design.Design.BasePath)
 		wcs := design.ExtractWildcards(val)
 		for _, awc := range awcs {
@@ -120,6 +124,8 @@ func BasePath(val string) {
 				}
 			}
 		}
+	default:
+		dslengine.IncompatibleDSL()
 	}
 }
 
@@ -135,16 +141,20 @@ func BaseParams(dsl func()) {
 	for n := range params.Type.ToObject() {
 		params.NonZeroAttributes[n] = true
 	}
-	if a, ok := apiDefinition(false); ok {
-		a.BaseParams = params
-	} else if r, ok := resourceDefinition(true); ok {
-		r.BaseParams = params
+
+	switch def := dslengine.CurrentDefinition().(type) {
+	case *design.APIDefinition:
+		def.BaseParams = params
+	case *design.ResourceDefinition:
+		def.BaseParams = params
+	default:
+		dslengine.IncompatibleDSL()
 	}
 }
 
 // TermsOfService describes the API terms of services or links to them.
 func TermsOfService(terms string) {
-	if a, ok := apiDefinition(true); ok {
+	if a, ok := apiDefinition(); ok {
 		a.TermsOfService = terms
 	}
 }
@@ -158,7 +168,8 @@ func Host(host string) {
 		dslengine.ReportError(`invalid hostname value "%s"`, host)
 		return
 	}
-	if a, ok := apiDefinition(true); ok {
+
+	if a, ok := apiDefinition(); ok {
 		a.Host = host
 	}
 }
@@ -175,12 +186,16 @@ func Scheme(vals ...string) {
 	if !ok {
 		return
 	}
-	if a, ok := apiDefinition(false); ok {
-		a.Schemes = append(a.Schemes, vals...)
-	} else if r, ok := resourceDefinition(false); ok {
-		r.Schemes = append(r.Schemes, vals...)
-	} else if a, ok := actionDefinition(true); ok {
-		a.Schemes = append(a.Schemes, vals...)
+
+	switch def := dslengine.CurrentDefinition().(type) {
+	case *design.APIDefinition:
+		def.Schemes = append(def.Schemes, vals...)
+	case *design.ResourceDefinition:
+		def.Schemes = append(def.Schemes, vals...)
+	case *design.ActionDefinition:
+		def.Schemes = append(def.Schemes, vals...)
+	default:
+		dslengine.IncompatibleDSL()
 	}
 }
 
@@ -190,7 +205,7 @@ func Contact(dsl func()) {
 	if !dslengine.Execute(dsl, contact) {
 		return
 	}
-	if a, ok := apiDefinition(true); ok {
+	if a, ok := apiDefinition(); ok {
 		a.Contact = contact
 	}
 }
@@ -201,7 +216,7 @@ func License(dsl func()) {
 	if !dslengine.Execute(dsl, license) {
 		return
 	}
-	if a, ok := apiDefinition(true); ok {
+	if a, ok := apiDefinition(); ok {
 		a.License = license
 	}
 }
@@ -212,37 +227,47 @@ func Docs(dsl func()) {
 	if !dslengine.Execute(dsl, docs) {
 		return
 	}
-	if a, ok := apiDefinition(false); ok {
-		a.Docs = docs
-	} else if a, ok := actionDefinition(true); ok {
-		a.Docs = docs
+
+	switch def := dslengine.CurrentDefinition().(type) {
+	case *design.APIDefinition:
+		def.Docs = docs
+	case *design.ActionDefinition:
+		def.Docs = docs
+	default:
+		dslengine.IncompatibleDSL()
 	}
 }
 
 // Name sets the contact or license name.
 func Name(name string) {
-	if c, ok := contactDefinition(false); ok {
-		c.Name = name
-	} else if l, ok := licenseDefinition(true); ok {
-		l.Name = name
+	switch def := dslengine.CurrentDefinition().(type) {
+	case *design.ContactDefinition:
+		def.Name = name
+	case *design.LicenseDefinition:
+		def.Name = name
+	default:
+		dslengine.IncompatibleDSL()
 	}
 }
 
 // Email sets the contact email.
 func Email(email string) {
-	if c, ok := contactDefinition(true); ok {
+	if c, ok := contactDefinition(); ok {
 		c.Email = email
 	}
 }
 
 // URL sets the contact or license URL.
 func URL(url string) {
-	if c, ok := contactDefinition(false); ok {
-		c.URL = url
-	} else if l, ok := licenseDefinition(false); ok {
-		l.URL = url
-	} else if d, ok := docsDefinition(true); ok {
-		d.URL = url
+	switch def := dslengine.CurrentDefinition().(type) {
+	case *design.ContactDefinition:
+		def.URL = url
+	case *design.LicenseDefinition:
+		def.URL = url
+	case *design.DocsDefinition:
+		def.URL = url
+	default:
+		dslengine.IncompatibleDSL()
 	}
 }
 
@@ -251,7 +276,7 @@ func URL(url string) {
 // The package must expose a DecoderFactory method that returns an object which implements
 // goa.DecoderFactory.
 func Consumes(args ...interface{}) {
-	if a, ok := apiDefinition(true); ok {
+	if a, ok := apiDefinition(); ok {
 		if def := buildEncodingDefinition(false, args...); def != nil {
 			a.Consumes = append(a.Consumes, def)
 		}
@@ -263,7 +288,7 @@ func Consumes(args ...interface{}) {
 // The package must expose a EncoderFactory method that returns an object which implements
 // goa.EncoderFactory.
 func Produces(args ...interface{}) {
-	if a, ok := apiDefinition(true); ok {
+	if a, ok := apiDefinition(); ok {
 		if def := buildEncodingDefinition(true, args...); def != nil {
 			a.Produces = append(a.Produces, def)
 		}
@@ -309,7 +334,7 @@ func buildEncodingDefinition(encoding bool, args ...interface{}) *design.Encodin
 // Package sets the Go package path to the encoder or decoder. It must be used inside a
 // Consumes or Produces DSL.
 func Package(path string) {
-	if e, ok := encodingDefinition(true); ok {
+	if e, ok := encodingDefinition(); ok {
 		e.PackagePath = path
 	}
 }
@@ -317,7 +342,7 @@ func Package(path string) {
 // Function sets the Go function name used to instantiate the encoder or decoder. Defaults to
 // NewEncoder / NewDecoder.
 func Function(fn string) {
-	if e, ok := encodingDefinition(true); ok {
+	if e, ok := encodingDefinition(); ok {
 		e.Function = fn
 	}
 }
@@ -350,7 +375,7 @@ func Function(fn string) {
 // set the response media type. Other predefined templates do not use arguments. ResponseTemplate
 // makes it possible to define additional response templates specific to the API.
 func ResponseTemplate(name string, p interface{}) {
-	if a, ok := apiDefinition(true); ok {
+	if a, ok := apiDefinition(); ok {
 		if a.Responses == nil {
 			a.Responses = make(map[string]*design.ResponseDefinition)
 		}
@@ -427,7 +452,7 @@ func setupResponseTemplate(a *design.APIDefinition, name string, p interface{}) 
 
 // Title sets the API title used by generated documentation, JSON Hyper-schema, code comments etc.
 func Title(val string) {
-	if a, ok := apiDefinition(false); ok {
+	if a, ok := apiDefinition(); ok {
 		a.Title = val
 	}
 }
@@ -435,7 +460,7 @@ func Title(val string) {
 // Trait defines an API trait. A trait encapsulates arbitrary DSL that gets executed wherever the
 // trait is called via the UseTrait function.
 func Trait(name string, val ...func()) {
-	if a, ok := apiDefinition(true); ok {
+	if a, ok := apiDefinition(); ok {
 		if len(val) < 1 {
 			dslengine.ReportError("missing trait DSL for %s", name)
 			return
@@ -459,13 +484,18 @@ func Trait(name string, val ...func()) {
 // Action or Attribute DSL.
 func UseTrait(name string) {
 	var def dslengine.Definition
-	if r, ok := resourceDefinition(false); ok {
-		def = r
-	} else if a, ok := actionDefinition(false); ok {
-		def = a
-	} else if a, ok := attributeDefinition(true); ok {
-		def = a
+
+	switch typedDef := dslengine.CurrentDefinition().(type) {
+	case *design.ResourceDefinition:
+		def = typedDef
+	case *design.ActionDefinition:
+		def = typedDef
+	case *design.AttributeDefinition:
+		def = typedDef
+	default:
+		dslengine.IncompatibleDSL()
 	}
+
 	if def != nil {
 		if trait, ok := design.Design.Traits[name]; ok {
 			dslengine.Execute(trait.DSLFunc, def)
@@ -477,9 +507,9 @@ func UseTrait(name string) {
 
 // apiDefinition returns true and current context if it is an APIDefinition,
 // nil and false otherwise.
-func apiDefinition(failIfNotAPI bool) (*design.APIDefinition, bool) {
+func apiDefinition() (*design.APIDefinition, bool) {
 	a, ok := dslengine.CurrentDefinition().(*design.APIDefinition)
-	if !ok && failIfNotAPI {
+	if !ok {
 		dslengine.IncompatibleDSL()
 	}
 	return a, ok
@@ -487,9 +517,9 @@ func apiDefinition(failIfNotAPI bool) (*design.APIDefinition, bool) {
 
 // encodingDefinition returns true and current context if it is an EncodingDefinition,
 // nil and false otherwise.
-func encodingDefinition(failIfNotEnc bool) (*design.EncodingDefinition, bool) {
+func encodingDefinition() (*design.EncodingDefinition, bool) {
 	e, ok := dslengine.CurrentDefinition().(*design.EncodingDefinition)
-	if !ok && failIfNotEnc {
+	if !ok {
 		dslengine.IncompatibleDSL()
 	}
 	return e, ok
@@ -497,9 +527,9 @@ func encodingDefinition(failIfNotEnc bool) (*design.EncodingDefinition, bool) {
 
 // contactDefinition returns true and current context if it is an ContactDefinition,
 // nil and false otherwise.
-func contactDefinition(failIfNotContact bool) (*design.ContactDefinition, bool) {
+func contactDefinition() (*design.ContactDefinition, bool) {
 	a, ok := dslengine.CurrentDefinition().(*design.ContactDefinition)
-	if !ok && failIfNotContact {
+	if !ok {
 		dslengine.IncompatibleDSL()
 	}
 	return a, ok
@@ -507,9 +537,9 @@ func contactDefinition(failIfNotContact bool) (*design.ContactDefinition, bool) 
 
 // licenseDefinition returns true and current context if it is an APIDefinition,
 // nil and false otherwise.
-func licenseDefinition(failIfNotLicense bool) (*design.LicenseDefinition, bool) {
+func licenseDefinition() (*design.LicenseDefinition, bool) {
 	l, ok := dslengine.CurrentDefinition().(*design.LicenseDefinition)
-	if !ok && failIfNotLicense {
+	if !ok {
 		dslengine.IncompatibleDSL()
 	}
 	return l, ok
@@ -517,9 +547,9 @@ func licenseDefinition(failIfNotLicense bool) (*design.LicenseDefinition, bool) 
 
 // docsDefinition returns true and current context if it is a DocsDefinition,
 // nil and false otherwise.
-func docsDefinition(failIfNotDocs bool) (*design.DocsDefinition, bool) {
+func docsDefinition() (*design.DocsDefinition, bool) {
 	a, ok := dslengine.CurrentDefinition().(*design.DocsDefinition)
-	if !ok && failIfNotDocs {
+	if !ok {
 		dslengine.IncompatibleDSL()
 	}
 	return a, ok
@@ -527,9 +557,9 @@ func docsDefinition(failIfNotDocs bool) (*design.DocsDefinition, bool) {
 
 // mediaTypeDefinition returns true and current context if it is a MediaTypeDefinition,
 // nil and false otherwise.
-func mediaTypeDefinition(failIfNotMT bool) (*design.MediaTypeDefinition, bool) {
+func mediaTypeDefinition() (*design.MediaTypeDefinition, bool) {
 	m, ok := dslengine.CurrentDefinition().(*design.MediaTypeDefinition)
-	if !ok && failIfNotMT {
+	if !ok {
 		dslengine.IncompatibleDSL()
 	}
 	return m, ok
@@ -537,9 +567,9 @@ func mediaTypeDefinition(failIfNotMT bool) (*design.MediaTypeDefinition, bool) {
 
 // typeDefinition returns true and current context if it is a UserTypeDefinition,
 // nil and false otherwise.
-func typeDefinition(failIfNotMT bool) (*design.UserTypeDefinition, bool) {
+func typeDefinition() (*design.UserTypeDefinition, bool) {
 	m, ok := dslengine.CurrentDefinition().(*design.UserTypeDefinition)
-	if !ok && failIfNotMT {
+	if !ok {
 		dslengine.IncompatibleDSL()
 	}
 	return m, ok
@@ -547,9 +577,9 @@ func typeDefinition(failIfNotMT bool) (*design.UserTypeDefinition, bool) {
 
 // attribute returns true and current context if it is an Attribute,
 // nil and false otherwise.
-func attributeDefinition(failIfNotAttribute bool) (*design.AttributeDefinition, bool) {
+func attributeDefinition() (*design.AttributeDefinition, bool) {
 	a, ok := dslengine.CurrentDefinition().(*design.AttributeDefinition)
-	if !ok && failIfNotAttribute {
+	if !ok {
 		dslengine.IncompatibleDSL()
 	}
 	return a, ok
@@ -557,9 +587,9 @@ func attributeDefinition(failIfNotAttribute bool) (*design.AttributeDefinition, 
 
 // resourceDefinition returns true and current context if it is a ResourceDefinition,
 // nil and false otherwise.
-func resourceDefinition(failIfNotResource bool) (*design.ResourceDefinition, bool) {
+func resourceDefinition() (*design.ResourceDefinition, bool) {
 	r, ok := dslengine.CurrentDefinition().(*design.ResourceDefinition)
-	if !ok && failIfNotResource {
+	if !ok {
 		dslengine.IncompatibleDSL()
 	}
 	return r, ok
@@ -567,9 +597,9 @@ func resourceDefinition(failIfNotResource bool) (*design.ResourceDefinition, boo
 
 // actionDefinition returns true and current context if it is an ActionDefinition,
 // nil and false otherwise.
-func actionDefinition(failIfNotAction bool) (*design.ActionDefinition, bool) {
+func actionDefinition() (*design.ActionDefinition, bool) {
 	a, ok := dslengine.CurrentDefinition().(*design.ActionDefinition)
-	if !ok && failIfNotAction {
+	if !ok {
 		dslengine.IncompatibleDSL()
 	}
 	return a, ok
@@ -577,9 +607,9 @@ func actionDefinition(failIfNotAction bool) (*design.ActionDefinition, bool) {
 
 // responseDefinition returns true and current context if it is a ResponseDefinition,
 // nil and false otherwise.
-func responseDefinition(failIfNotResponse bool) (*design.ResponseDefinition, bool) {
+func responseDefinition() (*design.ResponseDefinition, bool) {
 	r, ok := dslengine.CurrentDefinition().(*design.ResponseDefinition)
-	if !ok && failIfNotResponse {
+	if !ok {
 		dslengine.IncompatibleDSL()
 	}
 	return r, ok

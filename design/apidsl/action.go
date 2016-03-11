@@ -44,7 +44,7 @@ import (
 //		Response(NotFound)
 //	})
 func Action(name string, dsl func()) {
-	if r, ok := resourceDefinition(true); ok {
+	if r, ok := resourceDefinition(); ok {
 		if r.Actions == nil {
 			r.Actions = make(map[string]*design.ActionDefinition)
 		}
@@ -68,7 +68,7 @@ func Action(name string, dsl func()) {
 // wildcards define parameters using the `:name` or `*name` syntax where `:name` matches a path
 // segment and `*name` is a catch-all that matches the path until the end.
 func Routing(routes ...*design.RouteDefinition) {
-	if a, ok := actionDefinition(true); ok {
+	if a, ok := actionDefinition(); ok {
 		for _, r := range routes {
 			r.Parent = a
 			a.Routes = append(a.Routes, r)
@@ -135,23 +135,26 @@ func PATCH(path string) *design.RouteDefinition {
 // Headers can be used inside Action to define the action request headers, Response to define the
 // response headers or Resource to define common request headers to all the resource actions.
 func Headers(dsl func()) {
-	if a, ok := actionDefinition(false); ok {
-		headers := newAttribute(a.Parent.MediaType)
+	switch def := dslengine.CurrentDefinition().(type) {
+	case *design.ActionDefinition:
+		headers := newAttribute(def.Parent.MediaType)
 		if dslengine.Execute(dsl, headers) {
-			a.Headers = headers
+			def.Headers = headers
 		}
-	} else if r, ok := resourceDefinition(false); ok {
-		headers := newAttribute(r.MediaType)
+
+	case *design.ResourceDefinition:
+		headers := newAttribute(def.MediaType)
 		if dslengine.Execute(dsl, headers) {
-			r.Headers = headers
+			def.Headers = headers
 		}
-	} else if r, ok := responseDefinition(true); ok {
-		if r.Headers != nil {
+
+	case *design.ResponseDefinition:
+		if def.Headers != nil {
 			dslengine.ReportError("headers already defined")
 			return
 		}
 		var h *design.AttributeDefinition
-		switch actual := r.Parent.(type) {
+		switch actual := def.Parent.(type) {
 		case *design.ResourceDefinition:
 			h = newAttribute(actual.MediaType)
 		case *design.ActionDefinition:
@@ -162,8 +165,11 @@ func Headers(dsl func()) {
 			dslengine.ReportError("invalid use of Response or ResponseTemplate")
 		}
 		if dslengine.Execute(dsl, h) {
-			r.Headers = h
+			def.Headers = h
 		}
+
+	default:
+		dslengine.IncompatibleDSL()
 	}
 }
 
@@ -181,18 +187,23 @@ func Headers(dsl func()) {
 // Params can be used inside Action to define the action parameters or Resource to define common
 // parameters to all the resource actions.
 func Params(dsl func()) {
-	if a, ok := actionDefinition(false); ok {
-		params := newAttribute(a.Parent.MediaType)
+	switch def := dslengine.CurrentDefinition().(type) {
+	case *design.ActionDefinition:
+		params := newAttribute(def.Parent.MediaType)
 		params.Type = make(design.Object)
 		if dslengine.Execute(dsl, params) {
-			a.Params = params
+			def.Params = params
 		}
-	} else if r, ok := resourceDefinition(true); ok {
-		params := newAttribute(r.MediaType)
+
+	case *design.ResourceDefinition:
+		params := newAttribute(def.MediaType)
 		params.Type = make(design.Object)
 		if dslengine.Execute(dsl, params) {
-			r.Params = params
+			def.Params = params
 		}
+
+	default:
+		dslengine.IncompatibleDSL()
 	}
 }
 
@@ -216,7 +227,7 @@ func Payload(p interface{}, dsls ...func()) {
 		dslengine.ReportError("too many arguments given to Payload")
 		return
 	}
-	if a, ok := actionDefinition(true); ok {
+	if a, ok := actionDefinition(); ok {
 		var att *design.AttributeDefinition
 		var dsl func()
 		switch actual := p.(type) {
