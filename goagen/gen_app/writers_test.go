@@ -753,7 +753,7 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 			tmp1 := &tmp2
 			rctx.Param = tmp1
 		} else {
-			err = goa.InvalidParamTypeError("param", rawParam, "integer", err)
+			err = goa.BuildError(err, goa.InvalidParamTypeError("param", rawParam, "integer"))
 		}
 	}
 	return &rctx, err
@@ -802,7 +802,7 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 			tmp1 := &param
 			rctx.Param = tmp1
 		} else {
-			err = goa.InvalidParamTypeError("param", rawParam, "number", err)
+			err = goa.BuildError(err, goa.InvalidParamTypeError("param", rawParam, "number"))
 		}
 	}
 	return &rctx, err
@@ -828,7 +828,7 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 			tmp1 := &param
 			rctx.Param = tmp1
 		} else {
-			err = goa.InvalidParamTypeError("param", rawParam, "boolean", err)
+			err = goa.BuildError(err, goa.InvalidParamTypeError("param", rawParam, "boolean"))
 		}
 	}
 	return &rctx, err
@@ -880,7 +880,7 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 			if elem, err2 := strconv.Atoi(rawElem); err2 == nil {
 				elemsParam2[i] = elem
 			} else {
-				err = goa.InvalidParamTypeError("elem", rawElem, "integer", err)
+				err = goa.BuildError(err, goa.InvalidParamTypeError("elem", rawElem, "integer"))
 			}
 		}
 		rctx.Param = elemsParam2
@@ -910,7 +910,7 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 			tmp1 := &tmp2
 			rctx.Int = tmp1
 		} else {
-			err = goa.InvalidParamTypeError("int", rawInt, "integer", err)
+			err = goa.BuildError(err, goa.InvalidParamTypeError("int", rawInt, "integer"))
 		}
 	}
 	return &rctx, err
@@ -933,12 +933,12 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
 	rawInt := req.Params.Get("int")
 	if rawInt == "" {
-		err = goa.MissingParamError("int", err)
+		err = goa.BuildError(err, goa.MissingParamError("int"))
 	} else {
 		if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
 			rctx.Int = int_
 		} else {
-			err = goa.InvalidParamTypeError("int", rawInt, "integer", err)
+			err = goa.BuildError(err, goa.InvalidParamTypeError("int", rawInt, "integer"))
 		}
 	}
 	return &rctx, err
@@ -1010,7 +1010,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
-			return goa.NewBadRequestError(err)
+			return err
 		}
 		return ctrl.List(rctx)
 	}
@@ -1025,7 +1025,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
-			return goa.NewBadRequestError(err)
+			return err
 		}
 		return ctrl.List(rctx)
 	}
@@ -1048,7 +1048,7 @@ type BottlesController interface {
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
-			return goa.NewBadRequestError(err)
+			return err
 		}
 		return ctrl.List(rctx)
 	}
@@ -1057,7 +1057,7 @@ type BottlesController interface {
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewShowBottleContext(ctx)
 		if err != nil {
-			return goa.NewBadRequestError(err)
+			return err
 		}
 		return ctrl.Show(rctx)
 	}

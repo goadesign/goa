@@ -244,28 +244,28 @@ const (
 	enumValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
 */}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
 {{end}}{{tabs $depth}}if !({{oneof .targetVal .values}}) {
-{{tabs $depth}}	err = goa.InvalidEnumValueError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, {{slice .values}}, err)
+{{tabs $depth}}	err = goa.BuildError(err, goa.InvalidEnumValueError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, {{slice .values}}))
 {{if .isPointer}}{{tabs $depth}}}
 {{end}}{{tabs .depth}}}`
 
 	patternValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
 */}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
 {{end}}{{tabs $depth}}if ok := goa.ValidatePattern(` + "`{{.pattern}}`" + `, {{.targetVal}}); !ok {
-{{tabs $depth}}	err = goa.InvalidPatternError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, ` + "`{{.pattern}}`" + `, err)
+{{tabs $depth}}	err = goa.BuildError(err, goa.InvalidPatternError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, ` + "`{{.pattern}}`" + `))
 {{tabs $depth}}}{{if .isPointer}}
 {{tabs .depth}}}{{end}}`
 
 	formatValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
 */}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
 {{end}}{{tabs $depth}}if err2 := goa.ValidateFormat({{constant .format}}, {{.targetVal}}); err2 != nil {
-{{tabs $depth}}		err = goa.InvalidFormatError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, {{constant .format}}, err2, err)
+{{tabs $depth}}		err = goa.BuildError(err, goa.InvalidFormatError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, {{constant .format}}, err2))
 {{if .isPointer}}{{tabs $depth}}}
 {{end}}{{tabs .depth}}}`
 
 	minMaxValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
 */}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
 {{end}}{{tabs .depth}}	if {{.targetVal}} {{if .isMin}}<{{else}}>{{end}} {{if .isMin}}{{.min}}{{else}}{{.max}}{{end}} {
-{{tabs $depth}}	err = goa.InvalidRangeError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, {{if .isMin}}{{.min}}, true{{else}}{{.max}}, false{{end}}, err)
+{{tabs $depth}}	err = goa.BuildError(err, goa.InvalidRangeError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, {{if .isMin}}{{.min}}, true{{else}}{{.max}}, false{{end}}))
 {{if .isPointer}}{{tabs $depth}}}
 {{end}}{{tabs .depth}}}`
 
@@ -273,14 +273,14 @@ const (
 */}}{{$target := or (and (or .array .nonzero) .target) .targetVal}}{{/*
 */}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
 {{end}}{{tabs .depth}}if len({{$target}}) {{if .isMinLength}}<{{else}}>{{end}} {{if .isMinLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
-{{tabs $depth}}	err = goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{$target}}, len({{$target}}), {{if .isMinLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}, err)
+{{tabs $depth}}	err = goa.BuildError(err, goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{$target}}, len({{$target}}), {{if .isMinLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}))
 {{if .isPointer}}{{tabs $depth}}}
 {{end}}{{tabs .depth}}}`
 
 	requiredValTmpl = `{{range $r := .required}}{{$catt := index $.attribute.Type.ToObject $r}}{{if eq $catt.Type.Kind 4}}{{tabs $.depth}}if {{$.target}}.{{goify $r true}} == "" {
-{{tabs $.depth}}	err = goa.MissingAttributeError(` + "`" + `{{$.context}}` + "`" + `, "{{$r}}", err)
+{{tabs $.depth}}	err = goa.BuildError(err, goa.MissingAttributeError(` + "`" + `{{$.context}}` + "`" + `, "{{$r}}"))
 {{tabs $.depth}}}{{else if (not $catt.Type.IsPrimitive)}}{{tabs $.depth}}if {{$.target}}.{{goify $r true}} == nil {
-{{tabs $.depth}}	err = goa.MissingAttributeError(` + "`" + `{{$.context}}` + "`" + `, "{{$r}}", err)
+{{tabs $.depth}}	err = goa.BuildError(err, goa.MissingAttributeError(` + "`" + `{{$.context}}` + "`" + `, "{{$r}}"))
 {{tabs $.depth}}}{{end}}
 {{end}}`
 )

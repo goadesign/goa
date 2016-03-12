@@ -118,15 +118,15 @@ func (r *ResponseData) Send(ctx context.Context, code int, body interface{}) err
 }
 
 // BadRequest sends a HTTP response with status code 400 and the given error as body.
-func (r *ResponseData) BadRequest(ctx context.Context, err *BadRequestError) error {
-	return r.Send(ctx, 400, err.Error())
+func (r *ResponseData) BadRequest(ctx context.Context, err *HTTPError) error {
+	return r.Send(ctx, 400, err)
 }
 
 // Bug sends a HTTP response with status code 500 and the given body.
 // The body can be set using a format and substituted values a la fmt.Printf.
 func (r *ResponseData) Bug(ctx context.Context, format string, a ...interface{}) error {
-	body := fmt.Sprintf(format, a...)
-	return r.Send(ctx, 500, body)
+	msg := fmt.Sprintf(format, a...)
+	return r.Send(ctx, 500, &HTTPError{ErrInternal, msg})
 }
 
 // WriteHeader records the response status code and calls the underlying writer.
