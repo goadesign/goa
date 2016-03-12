@@ -420,6 +420,7 @@ type WidgetController interface {
 func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 	initService(service)
 	var h goa.Handler
+
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewGetWidgetContext(ctx)
 		if err != nil {
@@ -472,6 +473,7 @@ const controllersSlicePayloadCode = `
 func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 	initService(service)
 	var h goa.Handler
+
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewGetWidgetContext(ctx)
 		if err != nil {

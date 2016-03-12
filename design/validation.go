@@ -325,6 +325,19 @@ func (a *ActionDefinition) Validate() *dslengine.ValidationErrors {
 	if a.Parent == nil {
 		verr.Add(a, "missing parent resource")
 	}
+
+	if a.Security != nil && !a.Security.NoSecurity {
+		secMethodFound := false
+		for _, method := range Design.SecurityMethods {
+			if a.Security.Method == method.Method {
+				secMethodFound = true
+			}
+		}
+		if !secMethodFound {
+			verr.Add(a, "missing security method %q", a.Security.Method)
+		}
+	}
+
 	return verr.AsError()
 }
 

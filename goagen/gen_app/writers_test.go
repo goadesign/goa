@@ -1007,6 +1007,7 @@ type BottlesController interface {
 func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	initService(service)
 	var h goa.Handler
+
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
@@ -1022,6 +1023,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	simpleMount = `func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	initService(service)
 	var h goa.Handler
+
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
@@ -1045,6 +1047,7 @@ type BottlesController interface {
 	multiMount = `func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	initService(service)
 	var h goa.Handler
+
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
