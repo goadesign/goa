@@ -12,7 +12,7 @@ import (
 
 var _ = Describe("HTTPError", func() {
 	const (
-		id     = 1
+		id     = "goa.1"
 		title  = "title"
 		status = 400
 		err    = "error"
@@ -21,13 +21,13 @@ var _ = Describe("HTTPError", func() {
 	var httpError *goa.HTTPError
 
 	BeforeEach(func() {
-		httpError = &goa.HTTPError{&goa.HTTPErrorClass{id, title, status}, err}
+		httpError = &goa.HTTPError{&goa.ErrorClass{id, title, status}, err}
 	})
 
 	It("serializes to JSON", func() {
 		b, err := json.Marshal(httpError)
 		Ω(err).ShouldNot(HaveOccurred())
-		Ω(string(b)).Should(Equal(`{"id":1,"title":"title","err":"error"}`))
+		Ω(string(b)).Should(Equal(`{"id":"goa.1","title":"title","err":"error"}`))
 	})
 })
 
@@ -38,18 +38,13 @@ var _ = Describe("InvalidParamTypeError", func() {
 	expected := "43"
 
 	JustBeforeEach(func() {
-		valErr = goa.InvalidParamTypeError(name, val, expected, nil)
+		valErr = goa.InvalidParamTypeError(name, val, expected)
 	})
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		merr := valErr.(goa.MultiError)
-		Ω(merr).Should(HaveLen(1))
-		e := merr[0]
-		Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-		err := e.(*goa.HTTPError)
-		Ω(err.ID).Should(Equal(goa.ErrInvalidParamType))
+		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+		err := valErr.(*goa.HTTPError)
 		Ω(err.Err).Should(ContainSubstring(name))
 		Ω(err.Err).Should(ContainSubstring("%d", val))
 		Ω(err.Err).Should(ContainSubstring(expected))
@@ -61,18 +56,13 @@ var _ = Describe("MissingParaerror", func() {
 	name := "param"
 
 	JustBeforeEach(func() {
-		valErr = goa.MissingParamError(name, nil)
+		valErr = goa.MissingParamError(name)
 	})
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		merr := valErr.(goa.MultiError)
-		Ω(merr).Should(HaveLen(1))
-		e := merr[0]
-		Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-		err := e.(*goa.HTTPError)
-		Ω(err.ID).Should(Equal(goa.ErrMissingParam))
+		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+		err := valErr.(*goa.HTTPError)
 		Ω(err.Err).Should(ContainSubstring(name))
 	})
 })
@@ -84,18 +74,13 @@ var _ = Describe("InvalidAttributeTypeError", func() {
 	expected := "43"
 
 	JustBeforeEach(func() {
-		valErr = goa.InvalidAttributeTypeError(ctx, val, expected, nil)
+		valErr = goa.InvalidAttributeTypeError(ctx, val, expected)
 	})
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		merr := valErr.(goa.MultiError)
-		Ω(merr).Should(HaveLen(1))
-		e := merr[0]
-		Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-		err := e.(*goa.HTTPError)
-		Ω(err.ID).Should(Equal((goa.ErrInvalidAttributeType)))
+		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+		err := valErr.(*goa.HTTPError)
 		Ω(err.Err).Should(ContainSubstring(ctx))
 		Ω(err.Err).Should(ContainSubstring("%d", val))
 		Ω(err.Err).Should(ContainSubstring(expected))
@@ -108,18 +93,13 @@ var _ = Describe("MissingAttributeError", func() {
 	name := "param"
 
 	JustBeforeEach(func() {
-		valErr = goa.MissingAttributeError(ctx, name, nil)
+		valErr = goa.MissingAttributeError(ctx, name)
 	})
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		merr := valErr.(goa.MultiError)
-		Ω(merr).Should(HaveLen(1))
-		e := merr[0]
-		Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-		err := e.(*goa.HTTPError)
-		Ω(err.ID).Should(Equal((goa.ErrMissingAttribute)))
+		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+		err := valErr.(*goa.HTTPError)
 		Ω(err.Err).Should(ContainSubstring(ctx))
 		Ω(err.Err).Should(ContainSubstring(name))
 	})
@@ -130,18 +110,13 @@ var _ = Describe("MissingHeaderError", func() {
 	name := "param"
 
 	JustBeforeEach(func() {
-		valErr = goa.MissingHeaderError(name, nil)
+		valErr = goa.MissingHeaderError(name)
 	})
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		merr := valErr.(goa.MultiError)
-		Ω(merr).Should(HaveLen(1))
-		e := merr[0]
-		Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-		err := e.(*goa.HTTPError)
-		Ω(err.ID).Should(Equal((goa.ErrMissingHeader)))
+		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+		err := valErr.(*goa.HTTPError)
 		Ω(err.Err).Should(ContainSubstring(name))
 	})
 })
@@ -153,18 +128,13 @@ var _ = Describe("InvalidEnumValueError", func() {
 	allowed := []interface{}{"43", "44"}
 
 	JustBeforeEach(func() {
-		valErr = goa.InvalidEnumValueError(ctx, val, allowed, nil)
+		valErr = goa.InvalidEnumValueError(ctx, val, allowed)
 	})
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		merr := valErr.(goa.MultiError)
-		Ω(merr).Should(HaveLen(1))
-		e := merr[0]
-		Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-		err := e.(*goa.HTTPError)
-		Ω(err.ID).Should(Equal((goa.ErrInvalidEnumValue)))
+		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+		err := valErr.(*goa.HTTPError)
 		Ω(err.Err).Should(ContainSubstring(ctx))
 		Ω(err.Err).Should(ContainSubstring("%d", val))
 		Ω(err.Err).Should(ContainSubstring(`"43", "44"`))
@@ -179,18 +149,13 @@ var _ = Describe("InvalidFormaerror", func() {
 	formatError := errors.New("boo")
 
 	JustBeforeEach(func() {
-		valErr = goa.InvalidFormatError(ctx, target, format, formatError, nil)
+		valErr = goa.InvalidFormatError(ctx, target, format, formatError)
 	})
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		merr := valErr.(goa.MultiError)
-		Ω(merr).Should(HaveLen(1))
-		e := merr[0]
-		Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-		err := e.(*goa.HTTPError)
-		Ω(err.ID).Should(Equal((goa.ErrInvalidFormat)))
+		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+		err := valErr.(*goa.HTTPError)
 		Ω(err.Err).Should(ContainSubstring(ctx))
 		Ω(err.Err).Should(ContainSubstring(target))
 		Ω(err.Err).Should(ContainSubstring("date-time"))
@@ -205,18 +170,13 @@ var _ = Describe("InvalidPatternError", func() {
 	pattern := "pattern"
 
 	JustBeforeEach(func() {
-		valErr = goa.InvalidPatternError(ctx, target, pattern, nil)
+		valErr = goa.InvalidPatternError(ctx, target, pattern)
 	})
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		merr := valErr.(goa.MultiError)
-		Ω(merr).Should(HaveLen(1))
-		e := merr[0]
-		Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-		err := e.(*goa.HTTPError)
-		Ω(err.ID).Should(Equal((goa.ErrInvalidPattern)))
+		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+		err := valErr.(*goa.HTTPError)
 		Ω(err.Err).Should(ContainSubstring(ctx))
 		Ω(err.Err).Should(ContainSubstring(target))
 		Ω(err.Err).Should(ContainSubstring(pattern))
@@ -231,18 +191,13 @@ var _ = Describe("InvalidRangeError", func() {
 	min := true
 
 	JustBeforeEach(func() {
-		valErr = goa.InvalidRangeError(ctx, target, value, min, nil)
+		valErr = goa.InvalidRangeError(ctx, target, value, min)
 	})
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-		merr := valErr.(goa.MultiError)
-		Ω(merr).Should(HaveLen(1))
-		e := merr[0]
-		Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-		err := e.(*goa.HTTPError)
-		Ω(err.ID).Should(Equal((goa.ErrInvalidRange)))
+		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+		err := valErr.(*goa.HTTPError)
 		Ω(err.Err).Should(ContainSubstring(ctx))
 		Ω(err.Err).Should(ContainSubstring("greater or equal"))
 		Ω(err.Err).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
@@ -261,7 +216,7 @@ var _ = Describe("InvalidLengthError", func() {
 	var valErr error
 
 	JustBeforeEach(func() {
-		valErr = goa.InvalidLengthError(ctx, target, ln, value, min, nil)
+		valErr = goa.InvalidLengthError(ctx, target, ln, value, min)
 	})
 
 	Context("on strings", func() {
@@ -272,13 +227,8 @@ var _ = Describe("InvalidLengthError", func() {
 
 		It("creates a http error", func() {
 			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-			merr := valErr.(goa.MultiError)
-			Ω(merr).Should(HaveLen(1))
-			e := merr[0]
-			Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-			err := e.(*goa.HTTPError)
-			Ω(err.ID).Should(Equal((goa.ErrInvalidLength)))
+			Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+			err := valErr.(*goa.HTTPError)
 			Ω(err.Err).Should(ContainSubstring(ctx))
 			Ω(err.Err).Should(ContainSubstring("greater or equal"))
 			Ω(err.Err).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
@@ -294,13 +244,8 @@ var _ = Describe("InvalidLengthError", func() {
 
 		It("creates a http error", func() {
 			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-			merr := valErr.(goa.MultiError)
-			Ω(merr).Should(HaveLen(1))
-			e := merr[0]
-			Ω(e).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-			err := e.(*goa.HTTPError)
-			Ω(err.ID).Should(Equal((goa.ErrInvalidLength)))
+			Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
+			err := valErr.(*goa.HTTPError)
 			Ω(err.Err).Should(ContainSubstring(ctx))
 			Ω(err.Err).Should(ContainSubstring("greater or equal"))
 			Ω(err.Err).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
