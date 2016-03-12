@@ -353,7 +353,7 @@ const exampleT = `<!doctype html>
 const exampleCtrlT = `// MountController mounts the JavaScript example controller under "/js".
 func MountController(service *goa.Service) {
 	// Serve static files under js
-	service.ServeFiles("/js/*filepath", "{{.ServeDir}}")
+	service.ServeFiles("/js/*filepath", {{printf "%q" .ServeDir}})
 	service.Info("mount", "ctrl", "JS", "action", "ServeFiles", "route", "GET /js/*")
 }
 `
