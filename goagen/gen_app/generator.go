@@ -90,6 +90,9 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	if err := g.generateControllers(api); err != nil {
 		return nil, err
 	}
+	if err := g.generateSecurity(api); err != nil {
+		return nil, err
+	}
 	if err := g.generateHrefs(api); err != nil {
 		return nil, err
 	}
@@ -156,6 +159,7 @@ func (g *Generator) generateContexts(api *design.APIDefinition) error {
 			if params != nil && len(params.Type.ToObject()) == 0 {
 				params = nil // So that {{if .Params}} returns false in templates
 			}
+
 			ctxData := ContextTemplateData{
 				Name:         ctxName,
 				ResourceName: r.Name,
@@ -167,6 +171,7 @@ func (g *Generator) generateContexts(api *design.APIDefinition) error {
 				Responses:    MergeResponses(r.Responses, a.Responses),
 				API:          api,
 				DefaultPkg:   TargetPackage,
+				Security:     a.Security,
 			}
 			return ctxWr.Execute(&ctxData)
 		})
@@ -343,6 +348,7 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 	title := fmt.Sprintf("%s: Application Controllers", api.Context())
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("net/http"),
+		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("golang.org/x/net/context"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
@@ -368,6 +374,7 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 	}
 	ctlWr.WriteHeader(title, TargetPackage, imports)
 	ctlWr.WriteInitService(encoders, decoders)
+
 	var controllersData []*ControllerTemplateData
 	api.IterateResources(func(r *design.ResourceDefinition) error {
 		data := &ControllerTemplateData{API: api, Resource: codegen.Goify(r.Name, true)}
@@ -380,6 +387,7 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 				"Context":   context,
 				"Unmarshal": unmarshal,
 				"Payload":   a.Payload,
+				"Security":  a.Security,
 			}
 			data.Actions = append(data.Actions, action)
 			return nil
@@ -399,6 +407,37 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 		return err
 	}
 	return ctlWr.FormatCode()
+}
+
+// generateControllers iterates through the API resources and generates the low level
+// controllers.
+func (g *Generator) generateSecurity(api *design.APIDefinition) error {
+	if len(api.SecurityMethods) == 0 {
+		return nil
+	}
+
+	secFile := filepath.Join(AppOutputDir(), "security.go")
+	secWr, err := NewSecurityWriter(secFile)
+	if err != nil {
+		panic(err) // bug
+	}
+
+	title := fmt.Sprintf("%s: Application Security", api.Context())
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("net/http"),
+		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("golang.org/x/net/context"),
+		codegen.SimpleImport("github.com/goadesign/goa"),
+	}
+	secWr.WriteHeader(title, TargetPackage, imports)
+
+	g.genfiles = append(g.genfiles, secFile)
+
+	if err = secWr.Execute(design.Design.SecurityMethods); err != nil {
+		return err
+	}
+
+	return secWr.FormatCode()
 }
 
 // generateHrefs iterates through the API resources and generates the href factory methods.

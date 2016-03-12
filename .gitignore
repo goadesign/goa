@@ -8,3 +8,5 @@ vendor
 _integration_tests/*/**/*.*
 public/
 .vscode/
+*~
+*.orig

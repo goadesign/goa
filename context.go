@@ -17,6 +17,8 @@ const (
 	serviceKey
 	logKey
 	logContextKey
+	securityMethodKey
+	securityScopesKey
 )
 
 type (

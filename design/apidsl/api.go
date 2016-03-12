@@ -101,6 +101,8 @@ func Description(d string) {
 		def.Description = d
 	case *design.DocsDefinition:
 		def.Description = d
+	case *design.SecurityMethodDefinition:
+		def.Description = d
 	default:
 		dslengine.IncompatibleDSL()
 	}
