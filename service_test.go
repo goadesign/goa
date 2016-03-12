@@ -15,7 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Application", func() {
+var _ = Describe("Service", func() {
 	const appName = "foo"
 	var s *goa.Service
 
@@ -26,11 +26,11 @@ var _ = Describe("Application", func() {
 	})
 
 	Describe("New", func() {
-		It("creates an application", func() {
+		It("creates a service", func() {
 			Ω(s).ShouldNot(BeNil())
 		})
 
-		It("initializes the application fields", func() {
+		It("initializes the service fields", func() {
 			Ω(s.Name).Should(Equal(appName))
 			Ω(s.Mux).ShouldNot(BeNil())
 		})

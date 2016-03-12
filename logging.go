@@ -64,7 +64,7 @@ func LogWith(ctx context.Context, keyvals ...interface{}) context.Context {
 	if v := ctx.Value(logContextKey); v != nil {
 		lctx = v.([]interface{})
 	}
-	return context.WithValue(ctx, logContextKey, append(lctx, keyvals))
+	return context.WithValue(ctx, logContextKey, append(lctx, keyvals...))
 }
 
 // NewStdLogger returns an implementation of Logger backed by a stdlib Logger.

@@ -370,7 +370,7 @@ type {{.Name}} struct {
 {{if .Pointer}}{{tabs .Depth}}	{{$varName}} := &{{.VarName}}
 {{end}}{{tabs .Depth}}	{{.Pkg}} = {{$varName}}
 {{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "boolean", err)
+{{tabs .Depth}}	err = goa.BuildError(err, goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "boolean"))
 {{tabs .Depth}}}
 {{end}}{{if eq .Attribute.Type.Kind 2}}{{/*
 
@@ -382,7 +382,7 @@ type {{.Name}} struct {
 {{tabs .Depth}}	{{.Pkg}} = {{$tmp}}
 {{else}}{{tabs .Depth}}	{{.Pkg}} = {{.VarName}}
 {{end}}{{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "integer", err)
+{{tabs .Depth}}	err = goa.BuildError(err, goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "integer"))
 {{tabs .Depth}}}
 {{end}}{{if eq .Attribute.Type.Kind 3}}{{/*
 
@@ -392,7 +392,7 @@ type {{.Name}} struct {
 {{if .Pointer}}{{tabs .Depth}}	{{$varName}} := &{{.VarName}}
 {{end}}{{tabs .Depth}}	{{.Pkg}} = {{$varName}}
 {{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "number", err)
+{{tabs .Depth}}	err = goa.BuildError(err, goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "number"))
 {{tabs .Depth}}}
 {{end}}{{if eq .Attribute.Type.Kind 4}}{{/*
 
@@ -406,7 +406,7 @@ type {{.Name}} struct {
 {{if .Pointer}}{{tabs .Depth}}	{{$varName}} := &{{.VarName}}
 {{end}}{{tabs .Depth}}	{{.Pkg}} = {{$varName}}
 {{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "datetime", err)
+{{tabs .Depth}}	err = goa.BuildError(err, goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "datetime"))
 {{tabs .Depth}}}
 {{end}}{{if eq .Attribute.Type.Kind 6}}{{/*
 
@@ -434,7 +434,7 @@ func New{{.Name}}(ctx context.Context) (*{{.Name}}, error) {
 	rctx := {{.Name}}{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
 {{if .Headers}}{{$headers := .Headers}}{{range $name, $att := $headers.Type.ToObject}}	raw{{goify $name true}} := req.Header.Get("{{$name}}")
 {{if $headers.IsRequired $name}}	if raw{{goify $name true}} == "" {
-		err = goa.MissingHeaderError("{{$name}}", err)
+		err = goa.BuildError(err, goa.MissingHeaderError("{{$name}}"))
 	} else {
 {{else}}	if raw{{goify $name true}} != "" {
 {{end}}{{$validation := validationChecker $att ($headers.IsNonZero $name) ($headers.IsRequired $name) (printf "raw%s" (goify $name true)) $name 2}}{{/*
@@ -442,7 +442,7 @@ func New{{.Name}}(ctx context.Context) (*{{.Name}}, error) {
 {{end}}	}
 {{end}}{{end}}{{if.Params}}{{range $name, $att := .Params.Type.ToObject}}	raw{{goify $name true}} := req.Params.Get("{{$name}}")
 {{$mustValidate := $.MustValidate $name}}{{if $mustValidate}}	if raw{{goify $name true}} == "" {
-		err = goa.MissingParamError("{{$name}}", err)
+		err = goa.BuildError(err, goa.MissingParamError("{{$name}}"))
 	} else {
 {{else}}	if raw{{goify $name true}} != "" {
 {{end}}{{template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) (printf "rctx.%s" (goify $name true)) 2)}}{{/*
@@ -544,7 +544,7 @@ func Mount{{.Resource}}Controller(service *goa.Service, ctrl {{.Resource}}Contro
 {{$res := .Resource}}{{range .Actions}}{{$action := .}}	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := New{{.Context}}(ctx)
 		if err != nil {
-			return goa.NewBadRequestError(err)
+			return err
 		}
 {{if .Payload}}if rawPayload := goa.Request(ctx).Payload; rawPayload != nil {
 			rctx.Payload = rawPayload.({{gotyperef .Payload nil 1}})
