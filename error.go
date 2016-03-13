@@ -244,9 +244,9 @@ func (m MultiError) Status() int {
 	return status
 }
 
-// BuildError coerces the first argument into a MultiError then appends the second argument and
+// StackErrors coerces the first argument into a MultiError then appends the second argument and
 // returns the resulting MultiError.
-func BuildError(err error, err2 error) error {
+func StackErrors(err error, err2 error) error {
 	if err == nil {
 		if err2 == nil {
 			return MultiError{}
