@@ -275,7 +275,7 @@ var _ = Describe("MultiError", func() {
 	})
 })
 
-var _ = Describe("BuildError", func() {
+var _ = Describe("StackErrors", func() {
 	var err, err2 error
 	var mErr error
 
@@ -285,7 +285,7 @@ var _ = Describe("BuildError", func() {
 	})
 
 	JustBeforeEach(func() {
-		mErr = goa.BuildError(err, err2)
+		mErr = goa.StackErrors(err, err2)
 	})
 
 	Context("with two nil errors", func() {
