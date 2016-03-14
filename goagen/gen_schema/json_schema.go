@@ -21,7 +21,7 @@ type (
 		Properties   map[string]*JSONSchema `json:"properties,omitempty"`
 		Definitions  map[string]*JSONSchema `json:"definitions,omitempty"`
 		Description  string                 `json:"description,omitempty"`
-		DefaultValue interface{}            `json:"defaultValue,omitempty"`
+		DefaultValue interface{}            `json:"default,omitempty"`
 		Example      interface{}            `json:"example,omitempty"`
 
 		// Hyper schema
