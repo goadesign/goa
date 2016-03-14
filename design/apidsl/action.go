@@ -101,6 +101,11 @@ func DELETE(path string) *design.RouteDefinition {
 	return &design.RouteDefinition{Verb: "DELETE", Path: path}
 }
 
+// OPTIONS creates a route using the OPTIONS HTTP method.
+func OPTIONS(path string) *design.RouteDefinition {
+	return &design.RouteDefinition{Verb: "OPTIONS", Path: path}
+}
+
 // TRACE creates a route using the TRACE HTTP method.
 func TRACE(path string) *design.RouteDefinition {
 	return &design.RouteDefinition{Verb: "TRACE", Path: path}
