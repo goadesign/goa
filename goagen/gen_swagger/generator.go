@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"gopkg.in/yaml.v2"
+
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/utils"
@@ -63,19 +65,35 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	if err != nil {
 		return nil, err
 	}
-	b, err := json.Marshal(s)
+
+	// JSON
+	rawJSON, err := json.Marshal(s)
 	if err != nil {
 		return nil, err
 	}
 	swaggerFile := filepath.Join(swaggerDir, "swagger.json")
-	err = ioutil.WriteFile(swaggerFile, b, 0644)
-	if err != nil {
+	if err := ioutil.WriteFile(swaggerFile, rawJSON, 0644); err != nil {
 		return nil, err
 	}
 	genfiles = append(genfiles, swaggerFile)
+
+	// YAML
+	var yamlSource interface{}
+	if err = json.Unmarshal(rawJSON, &yamlSource); err != nil {
+		return nil, err
+	}
+
+	rawYAML, err := yaml.Marshal(yamlSource)
 	if err != nil {
 		return nil, err
 	}
+	swaggerFile = filepath.Join(swaggerDir, "swagger.yaml")
+	if err := ioutil.WriteFile(swaggerFile, rawYAML, 0644); err != nil {
+		return nil, err
+	}
+	genfiles = append(genfiles, swaggerFile)
+
+	// Go endpoint
 	controllerFile := filepath.Join(swaggerDir, "swagger.go")
 	genfiles = append(genfiles, controllerFile)
 	file, err := codegen.SourceFileFor(controllerFile)
