@@ -75,7 +75,7 @@ var _ = Describe("ContextsWriter", func() {
 			})
 
 			Context("with simple data", func() {
-				It("writes the contexts code", func() {
+				It("writes the simple contexts code", func() {
 					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
@@ -98,7 +98,7 @@ var _ = Describe("ContextsWriter", func() {
 					}
 				})
 
-				It("writes the contexts code", func() {
+				It("writes the integer contexts code", func() {
 					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
@@ -1054,6 +1054,7 @@ type BottlesController interface {
 	}
 	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
 	service.Info("mount", "ctrl", "Bottles", "action", "List", "route", "GET /accounts/:accountID/bottles")
+
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewShowBottleContext(ctx)
 		if err != nil {

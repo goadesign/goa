@@ -77,6 +77,10 @@ var (
 	// to be decoded.
 	ErrInvalidEncoding = NewErrorClass("invalid_encoding", 400)
 
+	// ErrNoSecurityScheme is the error produced when no security scheme can
+	// be found with the given name.
+	ErrNoSecurityScheme = NewErrorClass("no_security_scheme", 500)
+
 	// ErrInternal is the class of error used for non HTTPError.
 	ErrInternal = NewErrorClass("internal", 500)
 )
@@ -125,32 +129,32 @@ func NewErrorClass(code string, status int) ErrorClass {
 }
 
 // InvalidParamTypeError creates a HTTPError with class ID ErrInvalidParamType
-func InvalidParamTypeError(name string, val interface{}, expected string) error {
+func InvalidParamTypeError(name string, val interface{}, expected string) *HTTPError {
 	return ErrInvalidParamType("invalid value %#v for parameter %#v, must be a %s", val, name, expected)
 }
 
 // MissingParamError creates a HTTPError with class ID ErrMissingParam
-func MissingParamError(name string) error {
+func MissingParamError(name string) *HTTPError {
 	return ErrMissingParam("missing required parameter %#v", name)
 }
 
 // InvalidAttributeTypeError creates a HTTPError with class ID ErrInvalidAttributeType
-func InvalidAttributeTypeError(ctx string, val interface{}, expected string) error {
+func InvalidAttributeTypeError(ctx string, val interface{}, expected string) *HTTPError {
 	return ErrInvalidAttributeType("type of %s must be %s but got value %#v", ctx, expected, val)
 }
 
 // MissingAttributeError creates a HTTPError with class ID ErrMissingAttribute
-func MissingAttributeError(ctx, name string) error {
+func MissingAttributeError(ctx, name string) *HTTPError {
 	return ErrMissingAttribute("attribute %#v of %s is missing and required", name, ctx)
 }
 
 // MissingHeaderError creates a HTTPError with class ID ErrMissingHeader
-func MissingHeaderError(name string) error {
+func MissingHeaderError(name string) *HTTPError {
 	return ErrMissingHeader("missing required HTTP header %#v", name)
 }
 
 // InvalidEnumValueError creates a HTTPError with class ID ErrInvalidEnumValue
-func InvalidEnumValueError(ctx string, val interface{}, allowed []interface{}) error {
+func InvalidEnumValueError(ctx string, val interface{}, allowed []interface{}) *HTTPError {
 	elems := make([]string, len(allowed))
 	for i, a := range allowed {
 		elems[i] = fmt.Sprintf("%#v", a)
@@ -159,17 +163,17 @@ func InvalidEnumValueError(ctx string, val interface{}, allowed []interface{}) e
 }
 
 // InvalidFormatError creates a HTTPError with class ID ErrInvalidFormat
-func InvalidFormatError(ctx, target string, format Format, formatError error) error {
+func InvalidFormatError(ctx, target string, format Format, formatError error) *HTTPError {
 	return ErrInvalidFormat("%s must be formatted as a %s but got value %#v, %s", ctx, format, target, formatError.Error())
 }
 
 // InvalidPatternError creates a HTTPError with class ID ErrInvalidPattern
-func InvalidPatternError(ctx, target string, pattern string) error {
+func InvalidPatternError(ctx, target string, pattern string) *HTTPError {
 	return ErrInvalidPattern("%s must match the regexp %#v but got value %#v", ctx, pattern, target)
 }
 
 // InvalidRangeError creates a HTTPError with class ID ErrInvalidRange
-func InvalidRangeError(ctx string, target interface{}, value int, min bool) error {
+func InvalidRangeError(ctx string, target interface{}, value int, min bool) *HTTPError {
 	comp := "greater or equal"
 	if !min {
 		comp = "lesser or equal"
@@ -178,12 +182,17 @@ func InvalidRangeError(ctx string, target interface{}, value int, min bool) erro
 }
 
 // InvalidLengthError creates a HTTPError with class ID ErrInvalidLength
-func InvalidLengthError(ctx string, target interface{}, ln, value int, min bool) error {
+func InvalidLengthError(ctx string, target interface{}, ln, value int, min bool) *HTTPError {
 	comp := "greater or equal"
 	if !min {
 		comp = "lesser or equal"
 	}
 	return ErrInvalidLength("length of %s must be %s than %d but got value %#v (len=%d)", ctx, comp, value, target, ln)
+}
+
+// NoSecurityScheme creates a HTTPError with class ID ErrNoSecurityScheme
+func NoSecurityScheme(schemeName string) *HTTPError {
+	return ErrNoSecurityScheme("invalid security scheme %s", schemeName)
 }
 
 // Error returns the error occurrence details.

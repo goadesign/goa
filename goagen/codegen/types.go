@@ -2,7 +2,6 @@ package codegen
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -622,25 +621,6 @@ var reserved = map[string]bool{
 	"switch":      true,
 	"type":        true,
 	"var":         true,
-}
-
-// has returns true is slice contains val, false otherwise.
-func has(slice []string, val string) bool {
-	for _, s := range slice {
-		if s == val {
-			return true
-		}
-	}
-	return false
-}
-
-// toJSON returns the JSON representation of the given value.
-func toJSON(val interface{}) string {
-	js, err := json.Marshal(val)
-	if err != nil {
-		return "<error serializing value>"
-	}
-	return string(js)
 }
 
 // toSlice returns Go code that represents the given slice.
