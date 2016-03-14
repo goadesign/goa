@@ -30,8 +30,9 @@ type (
 	// resulting HTTP response.
 	ControllersWriter struct {
 		*codegen.SourceFile
-		CtrlTmpl  *template.Template
-		MountTmpl *template.Template
+		CtrlTmpl    *template.Template
+		MountTmpl   *template.Template
+		handleCORST *template.Template
 	}
 
 	// SecurityWriter generate code for action-level security handlers.
@@ -82,9 +83,10 @@ type (
 	ControllerTemplateData struct {
 		API      *design.APIDefinition    // API definition
 		Resource string                   // Lower case plural resource name, e.g. "bottles"
-		Actions  []map[string]interface{} // Array of actions, each action has keys "Name", "Routes", "Context" and "Unmarshal"
+		Actions  []map[string]interface{} // Array of actions, each action has keys "Name", "Routes", "Context", "PreflightPaths" and "Unmarshal"
 		Encoders []*EncoderTemplateData   // Encoder data
 		Decoders []*EncoderTemplateData   // Decoder data
+		Origins  []*design.CORSDefinition // CORS policies
 	}
 
 	// ResourceData contains the information required to generate the resource GoGenerator
@@ -260,6 +262,11 @@ func (w *ControllersWriter) Execute(data []*ControllerTemplateData) error {
 		if err := w.ExecuteTemplate("mount", mountT, nil, d); err != nil {
 			return err
 		}
+		if len(d.Origins) > 0 {
+			if err := w.ExecuteTemplate("handleCORS", handleCORST, nil, d); err != nil {
+				return err
+			}
+		}
 		if err := w.ExecuteTemplate("unmarshal", unmarshalT, nil, d); err != nil {
 			return err
 		}
@@ -371,161 +378,161 @@ func arrayAttribute(a *design.AttributeDefinition) *design.AttributeDefinition {
 const (
 	// ctxT generates the code for the context data type.
 	// template input: *ContextTemplateData
-	ctxT = `// {{.Name}} provides the {{.ResourceName}} {{.ActionName}} action context.
-type {{.Name}} struct {
+	ctxT = `// {{ .Name }} provides the {{ .ResourceName }} {{ .ActionName }} action context.
+type {{ .Name }} struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
-{{if .Params}}{{range $name, $att := .Params.Type.ToObject}}{{/*
-*/}}	{{goify $name true}} {{if and $att.Type.IsPrimitive ($.Params.IsPrimitivePointer $name)}}*{{end}}{{gotyperef .Type nil 0}}
-{{end}}{{end}}{{if .Payload}}	Payload {{gotyperef .Payload nil 0}}
-{{end}}}
+{{ if .Params }}{{ range $name, $att := .Params.Type.ToObject }}{{/*
+*/}}	{{ goify $name true }} {{ if and $att.Type.IsPrimitive ($.Params.IsPrimitivePointer $name) }}*{{ end }}{{ gotyperef .Type nil 0 }}
+{{ end }}{{ end }}{{ if .Payload }}	Payload {{ gotyperef .Payload nil 0 }}
+{{ end }}}
 `
 	// coerceT generates the code that coerces the generic deserialized
 	// data to the actual type.
 	// template input: map[string]interface{} as returned by newCoerceData
-	coerceT = `{{if eq .Attribute.Type.Kind 1}}{{/*
+	coerceT = `{{ if eq .Attribute.Type.Kind 1 }}{{/*
 
 */}}{{/* BooleanType */}}{{/*
-*/}}{{$varName := or (and (not .Pointer) .VarName) tempvar}}{{/*
-*/}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.ParseBool(raw{{goify .Name true}}); err2 == nil {
-{{if .Pointer}}{{tabs .Depth}}	{{$varName}} := &{{.VarName}}
-{{end}}{{tabs .Depth}}	{{.Pkg}} = {{$varName}}
-{{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.StackErrors(err, goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "boolean"))
-{{tabs .Depth}}}
-{{end}}{{if eq .Attribute.Type.Kind 2}}{{/*
+*/}}{{ $varName := or (and (not .Pointer) .VarName) tempvar }}{{/*
+*/}}{{ tabs .Depth }}if {{ .VarName }}, err2 := strconv.ParseBool(raw{{ goify .Name true }}); err2 == nil {
+{{ if .Pointer }}{{ tabs .Depth }}	{{ $varName }} := &{{ .VarName }}
+{{ end }}{{ tabs .Depth }}	{{ .Pkg }} = {{ $varName }}
+{{ tabs .Depth }}} else {
+{{ tabs .Depth }}	err = goa.StackErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "boolean"))
+{{ tabs .Depth }}}
+{{ end }}{{ if eq .Attribute.Type.Kind 2 }}{{/*
 
 */}}{{/* IntegerType */}}{{/*
-*/}}{{$tmp := tempvar}}{{/*
-*/}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.Atoi(raw{{goify .Name true}}); err2 == nil {
-{{if .Pointer}}{{$tmp2 := tempvar}}{{tabs .Depth}}	{{$tmp2}} := {{.VarName}}
-{{tabs .Depth}}	{{$tmp}} := &{{$tmp2}}
-{{tabs .Depth}}	{{.Pkg}} = {{$tmp}}
-{{else}}{{tabs .Depth}}	{{.Pkg}} = {{.VarName}}
-{{end}}{{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.StackErrors(err, goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "integer"))
-{{tabs .Depth}}}
-{{end}}{{if eq .Attribute.Type.Kind 3}}{{/*
+*/}}{{ $tmp := tempvar }}{{/*
+*/}}{{ tabs .Depth }}if {{ .VarName }}, err2 := strconv.Atoi(raw{{ goify .Name true }}); err2 == nil {
+{{ if .Pointer }}{{ $tmp2 := tempvar }}{{ tabs .Depth }}	{{ $tmp2 }} := {{ .VarName }}
+{{ tabs .Depth }}	{{ $tmp }} := &{{ $tmp2 }}
+{{ tabs .Depth }}	{{ .Pkg }} = {{ $tmp }}
+{{ else }}{{ tabs .Depth }}	{{ .Pkg }} = {{ .VarName }}
+{{ end }}{{ tabs .Depth }}} else {
+{{ tabs .Depth }}	err = goa.StackErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "integer"))
+{{ tabs .Depth }}}
+{{ end }}{{ if eq .Attribute.Type.Kind 3 }}{{/*
 
 */}}{{/* NumberType */}}{{/*
-*/}}{{$varName := or (and (not .Pointer) .VarName) tempvar}}{{/*
-*/}}{{tabs .Depth}}if {{.VarName}}, err2 := strconv.ParseFloat(raw{{goify .Name true}}, 64); err2 == nil {
-{{if .Pointer}}{{tabs .Depth}}	{{$varName}} := &{{.VarName}}
-{{end}}{{tabs .Depth}}	{{.Pkg}} = {{$varName}}
-{{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.StackErrors(err, goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "number"))
-{{tabs .Depth}}}
-{{end}}{{if eq .Attribute.Type.Kind 4}}{{/*
+*/}}{{ $varName := or (and (not .Pointer) .VarName) tempvar }}{{/*
+*/}}{{ tabs .Depth }}if {{ .VarName }}, err2 := strconv.ParseFloat(raw{{ goify .Name true }}, 64); err2 == nil {
+{{ if .Pointer }}{{ tabs .Depth }}	{{ $varName }} := &{{ .VarName }}
+{{ end }}{{ tabs .Depth }}	{{ .Pkg }} = {{ $varName }}
+{{ tabs .Depth }}} else {
+{{ tabs .Depth }}	err = goa.StackErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "number"))
+{{ tabs .Depth }}}
+{{ end }}{{ if eq .Attribute.Type.Kind 4 }}{{/*
 
 */}}{{/* StringType */}}{{/*
-*/}}{{tabs .Depth}}{{.Pkg}} = {{if .Pointer}}&{{end}}raw{{goify .Name true}}
-{{end}}{{if eq .Attribute.Type.Kind 5}}{{/*
+*/}}{{ tabs .Depth }}{{ .Pkg }} = {{ if .Pointer }}&{{ end }}raw{{ goify .Name true }}
+{{ end }}{{ if eq .Attribute.Type.Kind 5 }}{{/*
 
 */}}{{/* DateTimeType */}}{{/*
-*/}}{{$varName := or (and (not .Pointer) .VarName) tempvar}}{{/*
-*/}}{{tabs .Depth}}if {{.VarName}}, err2 := time.Parse("RFC3339", raw{{goify .Name true}}); err2 == nil {
-{{if .Pointer}}{{tabs .Depth}}	{{$varName}} := &{{.VarName}}
-{{end}}{{tabs .Depth}}	{{.Pkg}} = {{$varName}}
-{{tabs .Depth}}} else {
-{{tabs .Depth}}	err = goa.StackErrors(err, goa.InvalidParamTypeError("{{.Name}}", raw{{goify .Name true}}, "datetime"))
-{{tabs .Depth}}}
-{{end}}{{if eq .Attribute.Type.Kind 6}}{{/*
+*/}}{{ $varName := or (and (not .Pointer) .VarName) tempvar }}{{/*
+*/}}{{ tabs .Depth }}if {{ .VarName }}, err2 := time.Parse("RFC3339", raw{{ goify .Name true }}); err2 == nil {
+{{ if .Pointer }}{{ tabs .Depth }}	{{ $varName }} := &{{ .VarName }}
+{{ end }}{{ tabs .Depth }}	{{ .Pkg }} = {{ $varName }}
+{{ tabs .Depth }}} else {
+{{ tabs .Depth }}	err = goa.StackErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "datetime"))
+{{ tabs .Depth }}}
+{{ end }}{{ if eq .Attribute.Type.Kind 6 }}{{/*
 
 */}}{{/* AnyType */}}{{/*
-*/}}{{tabs .Depth}}{{.Pkg}} = {{if .Pointer}}&{{end}}raw{{goify .Name true}}
-{{end}}{{if eq .Attribute.Type.Kind 7}}{{/*
+*/}}{{ tabs .Depth }}{{ .Pkg }} = {{ if .Pointer }}&{{ end }}raw{{ goify .Name true }}
+{{ end }}{{ if eq .Attribute.Type.Kind 7 }}{{/*
 
 */}}{{/* ArrayType */}}{{/*
-*/}}{{tabs .Depth}}elems{{goify .Name true}} := strings.Split(raw{{goify .Name true}}, ",")
-{{if eq (arrayAttribute .Attribute).Type.Kind 4}}{{tabs .Depth}}{{.Pkg}} = elems{{goify .Name true}}
-{{else}}{{tabs .Depth}}elems{{goify .Name true}}2 := make({{gotyperef .Attribute.Type nil .Depth}}, len(elems{{goify .Name true}}))
-{{tabs .Depth}}for i, rawElem := range elems{{goify .Name true}} {
-{{template "Coerce" (newCoerceData "elem" (arrayAttribute .Attribute) false (printf "elems%s2[i]" (goify .Name true)) (add .Depth 1))}}{{tabs .Depth}}}
-{{tabs .Depth}}{{.Pkg}} = elems{{goify .Name true}}2
-{{end}}{{end}}`
+*/}}{{ tabs .Depth }}elems{{ goify .Name true }} := strings.Split(raw{{ goify .Name true }}, ",")
+{{ if eq (arrayAttribute .Attribute).Type.Kind 4 }}{{ tabs .Depth }}{{ .Pkg }} = elems{{ goify .Name true }}
+{{ else }}{{ tabs .Depth }}elems{{ goify .Name true }}2 := make({{ gotyperef .Attribute.Type nil .Depth }}, len(elems{{ goify .Name true }}))
+{{ tabs .Depth }}for i, rawElem := range elems{{ goify .Name true }} {
+{{ template "Coerce" (newCoerceData "elem" (arrayAttribute .Attribute) false (printf "elems%s2[i]" (goify .Name true)) (add .Depth 1)) }}{{ tabs .Depth }}}
+{{ tabs .Depth }}{{ .Pkg }} = elems{{ goify .Name true }}2
+{{ end }}{{ end }}`
 
 	// ctxNewT generates the code for the context factory method.
 	// template input: *ContextTemplateData
-	ctxNewT = `{{define "Coerce"}}` + coerceT + `{{end}}` + `
-// New{{goify .Name true}} parses the incoming request URL and body, performs validations and creates the
-// context used by the {{.ResourceName}} controller {{.ActionName}} action.
-func New{{.Name}}(ctx context.Context) (*{{.Name}}, error) {
+	ctxNewT = `{{ define "Coerce" }}` + coerceT + `{{ end }}` + `
+// New{{ goify .Name true }} parses the incoming request URL and body, performs validations and creates the
+// context used by the {{ .ResourceName }} controller {{ .ActionName }} action.
+func New{{ .Name }}(ctx context.Context) (*{{ .Name }}, error) {
 	var err error
 	req := goa.Request(ctx)
-	rctx := {{.Name}}{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
-{{if .Headers}}{{$headers := .Headers}}{{range $name, $att := $headers.Type.ToObject}}	raw{{goify $name true}} := req.Header.Get("{{$name}}")
-{{if $headers.IsRequired $name}}	if raw{{goify $name true}} == "" {
-		err = goa.StackErrors(err, goa.MissingHeaderError("{{$name}}"))
+	rctx := {{ .Name }}{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+{{ if .Headers }}{{ $headers := .Headers }}{{ range $name, $att := $headers.Type.ToObject }}	raw{{ goify $name true }} := req.Header.Get("{{ $name }}")
+{{ if $headers.IsRequired $name }}	if raw{{ goify $name true }} == "" {
+		err = goa.StackErrors(err, goa.MissingHeaderError("{{ $name }}"))
 	} else {
-{{else}}	if raw{{goify $name true}} != "" {
-{{end}}{{$validation := validationChecker $att ($headers.IsNonZero $name) ($headers.IsRequired $name) (printf "raw%s" (goify $name true)) $name 2}}{{/*
-*/}}{{if $validation}}{{$validation}}
-{{end}}	}
-{{end}}{{end}}{{if.Params}}{{range $name, $att := .Params.Type.ToObject}}	raw{{goify $name true}} := req.Params.Get("{{$name}}")
-{{$mustValidate := $.MustValidate $name}}{{if $mustValidate}}	if raw{{goify $name true}} == "" {
-		err = goa.StackErrors(err, goa.MissingParamError("{{$name}}"))
+{{ else }}	if raw{{ goify $name true }} != "" {
+{{ end }}{{ $validation := validationChecker $att ($headers.IsNonZero $name) ($headers.IsRequired $name) (printf "raw%s" (goify $name true)) $name 2 }}{{/*
+*/}}{{ if $validation }}{{ $validation }}
+{{ end }}	}
+{{ end }}{{ end }}{{ if.Params }}{{ range $name, $att := .Params.Type.ToObject }}	raw{{ goify $name true }} := req.Params.Get("{{ $name }}")
+{{ $mustValidate := $.MustValidate $name }}{{ if $mustValidate }}	if raw{{ goify $name true }} == "" {
+		err = goa.StackErrors(err, goa.MissingParamError("{{ $name }}"))
 	} else {
-{{else}}	if raw{{goify $name true}} != "" {
-{{end}}{{template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) (printf "rctx.%s" (goify $name true)) 2)}}{{/*
-*/}}{{$validation := validationChecker $att ($.Params.IsNonZero $name) ($.Params.IsRequired $name) (printf "rctx.%s" (goify $name true)) $name 2}}{{/*
-*/}}{{if $validation}}{{$validation}}
-{{end}}	}
-{{end}}{{end}}{{/* if .Params */}}	return &rctx, err
+{{ else }}	if raw{{ goify $name true }} != "" {
+{{ end }}{{ template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) (printf "rctx.%s" (goify $name true)) 2) }}{{/*
+*/}}{{ $validation := validationChecker $att ($.Params.IsNonZero $name) ($.Params.IsRequired $name) (printf "rctx.%s" (goify $name true)) $name 2 }}{{/*
+*/}}{{ if $validation }}{{ $validation }}
+{{ end }}	}
+{{ end }}{{ end }}{{/* if .Params */}}	return &rctx, err
 }
 `
 	// ctxMTRespT generates the response helpers for responses with media types.
 	// template input: map[string]interface{}
-	ctxMTRespT = `{{$ctx := .Context}}{{$resp := .Response}}{{$mt := .MediaType}}{{/*
-*/}}{{range $name, $view := $mt.Views}}{{if not (eq $name "link")}}{{$projected := project $mt $name}}
-// {{respName $resp $name}} sends a HTTP response with status code {{$resp.Status}}.
-func (ctx *{{$ctx.Name}}) {{respName $resp $name}}(r {{gotyperef $projected $projected.AllRequired 0}}) error {
-	ctx.ResponseData.Header().Set("Content-Type", "{{$resp.MediaType}}")
-	return ctx.ResponseData.Send(ctx.Context, {{$resp.Status}}, r)
+	ctxMTRespT = `{{ $ctx := .Context }}{{ $resp := .Response }}{{ $mt := .MediaType }}{{/*
+*/}}{{ range $name, $view := $mt.Views }}{{ if not (eq $name "link") }}{{ $projected := project $mt $name }}
+// {{ respName $resp $name }} sends a HTTP response with status code {{ $resp.Status }}.
+func (ctx *{{ $ctx.Name }}) {{ respName $resp $name }}(r {{ gotyperef $projected $projected.AllRequired 0 }}) error {
+	ctx.ResponseData.Header().Set("Content-Type", "{{ $resp.MediaType }}")
+	return ctx.ResponseData.Send(ctx.Context, {{ $resp.Status }}, r)
 }
-{{end}}{{end}}
+{{ end }}{{ end }}
 `
 
 	// ctxTRespT generates the response helpers for responses with overridden types.
 	// template input: map[string]interface{}
-	ctxTRespT = `// {{goify .Response.Name true}} sends a HTTP response with status code {{.Response.Status}}.
-func (ctx *{{.Context.Name}}) {{goify .Response.Name true}}(r {{gotyperef .Type nil 0}}) error {
-	ctx.ResponseData.Header().Set("Content-Type", "{{.Response.MediaType}}")
-	return ctx.ResponseData.Send(ctx.Context, {{.Response.Status}}, r)
+	ctxTRespT = `// {{ goify .Response.Name true }} sends a HTTP response with status code {{ .Response.Status }}.
+func (ctx *{{ .Context.Name }}) {{ goify .Response.Name true }}(r {{ gotyperef .Type nil 0 }}) error {
+	ctx.ResponseData.Header().Set("Content-Type", "{{ .Response.MediaType }}")
+	return ctx.ResponseData.Send(ctx.Context, {{ .Response.Status }}, r)
 }
 `
 
 	// ctxNoMTRespT generates the response helpers for responses with no known media type.
 	// template input: *ContextTemplateData
 	ctxNoMTRespT = `
-// {{goify .Response.Name true}} sends a HTTP response with status code {{.Response.Status}}.
-func (ctx *{{.Context.Name}}) {{goify .Response.Name true}}({{if .Response.MediaType}}resp []byte{{end}}) error {
-{{if .Response.MediaType}}	ctx.ResponseData.Header().Set("Content-Type", "{{.Response.MediaType}}")
-{{end}}	ctx.ResponseData.WriteHeader({{.Response.Status}}){{if .Response.MediaType}}
+// {{ goify .Response.Name true }} sends a HTTP response with status code {{ .Response.Status }}.
+func (ctx *{{ .Context.Name }}) {{ goify .Response.Name true }}({{ if .Response.MediaType }}resp []byte{{ end }}) error {
+{{ if .Response.MediaType }}	ctx.ResponseData.Header().Set("Content-Type", "{{ .Response.MediaType }}")
+{{ end }}	ctx.ResponseData.WriteHeader({{ .Response.Status }}){{ if .Response.MediaType }}
 	_, err := ctx.ResponseData.Write(resp)
-	return err{{else}}
-	return nil{{end}}
+	return err{{ else }}
+	return nil{{ end }}
 }
 `
 
 	// payloadT generates the payload type definition GoGenerator
 	// template input: *ContextTemplateData
-	payloadT = `{{$payload := .Payload}}// {{gotypename .Payload nil 0}} is the {{.ResourceName}} {{.ActionName}} action payload.
-type {{gotypename .Payload nil 1}} {{gotypedef .Payload 0 true}}
+	payloadT = `{{ $payload := .Payload }}// {{ gotypename .Payload nil 0 }} is the {{ .ResourceName }} {{ .ActionName }} action payload.
+type {{ gotypename .Payload nil 1 }} {{ gotypedef .Payload 0 true }}
 
-{{$validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1}}{{if $validation}}// Validate runs the validation rules defined in the design.
-func (payload {{gotyperef .Payload .Payload.AllRequired 0}}) Validate() (err error) {
-{{$validation}}
+{{ $validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1 }}{{ if $validation }}// Validate runs the validation rules defined in the design.
+func (payload {{ gotyperef .Payload .Payload.AllRequired 0 }}) Validate() (err error) {
+{{ $validation }}
        return
-}{{end}}
+}{{ end }}
 `
 	// ctrlT generates the controller interface for a given resource.
 	// template input: *ControllerTemplateData
-	ctrlT = `// {{.Resource}}Controller is the controller interface for the {{.Resource}} actions.
-type {{.Resource}}Controller interface {
+	ctrlT = `// {{ .Resource }}Controller is the controller interface for the {{ .Resource }} actions.
+type {{ .Resource }}Controller interface {
 	goa.Muxer
-{{range .Actions}}	{{.Name}}(*{{.Context}}) error
-{{end}}}
+{{ range .Actions }}	{{ .Name }}(*{{ .Context }}) error
+{{ end }}}
 `
 
 	// serviceT generates the service initialization code.
@@ -542,97 +549,130 @@ func initService(service *goa.Service) {
 	inited = true
 
 	// Setup encoders and decoders
-{{range .Encoders}}{{/*
-*/}}	service.Encoder({{.PackageName}}.{{.Function}}, "{{join .MIMETypes "\", \""}}")
-{{end}}{{range .Decoders}}{{/*
-*/}}	service.Decoder({{.PackageName}}.{{.Function}}, "{{join .MIMETypes "\", \""}}")
-{{end}}
+{{ range .Encoders }}{{/*
+*/}}	service.Encoder({{ .PackageName }}.{{ .Function }}, "{{ join .MIMETypes "\", \"" }}")
+{{ end }}{{ range .Decoders }}{{/*
+*/}}	service.Decoder({{ .PackageName }}.{{ .Function }}, "{{ join .MIMETypes "\", \"" }}")
+{{ end }}
 
 	// Setup default encoder and decoder
-{{range .Encoders}}{{if .Default}}{{/*
-*/}}	service.Encoder({{.PackageName}}.{{.Function}}, "*/*")
-{{end}}{{end}}{{range .Decoders}}{{if .Default}}{{/*
-*/}}	service.Decoder({{.PackageName}}.{{.Function}}, "*/*")
-{{end}}{{end}}}
+{{ range .Encoders }}{{ if .Default }}{{/*
+*/}}	service.Encoder({{ .PackageName }}.{{ .Function }}, "*/*")
+{{ end }}{{ end }}{{ range .Decoders }}{{ if .Default }}{{/*
+*/}}	service.Decoder({{ .PackageName }}.{{ .Function }}, "*/*")
+{{ end }}{{ end }}}
 `
 
 	// mountT generates the code for a resource "Mount" function.
 	// template input: *ControllerTemplateData
 	mountT = `
-// Mount{{.Resource}}Controller "mounts" a {{.Resource}} resource controller on the given service.
-func Mount{{.Resource}}Controller(service *goa.Service, ctrl {{.Resource}}Controller) {
+// Mount{{ .Resource }}Controller "mounts" a {{ .Resource }} resource controller on the given service.
+func Mount{{ .Resource }}Controller(service *goa.Service, ctrl {{ .Resource }}Controller) {
 	initService(service)
 	var h goa.Handler
-
-{{$res := .Resource}}{{range .Actions}}{{$action := .}}	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-		rctx, err := New{{.Context}}(ctx)
+{{ $res := .Resource }}{{ range .Actions }}{{ $action := . }}
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		rctx, err := New{{ .Context }}(ctx)
 		if err != nil {
 			return err
 		}
-{{if .Payload}}if rawPayload := goa.Request(ctx).Payload; rawPayload != nil {
-			rctx.Payload = rawPayload.({{gotyperef .Payload nil 1}})
+{{ if .Payload }}if rawPayload := goa.Request(ctx).Payload; rawPayload != nil {
+			rctx.Payload = rawPayload.({{ gotyperef .Payload nil 1 }})
 		}
-		{{end}}		return ctrl.{{.Name}}(rctx)
-	}{{ if .Security }}
-	h = handleSecurity(service, {{ printf "%q" .Security.Scheme.SchemeName }}, h{{ range .Security.Scopes }}, {{ printf "%q" . }}{{end}}){{end}}
-{{range .Routes}}	service.Mux.Handle("{{.Verb}}", "{{.FullPath}}", ctrl.MuxHandler("{{$action.Name}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
-	service.Info("mount", "ctrl", "{{$res}}", "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}"{{ with $action.Security }}, "security", {{ printf "%q" .Scheme.SchemeName }}{{end}})
-{{end}}{{end}}}
+		{{ end }}		return ctrl.{{ .Name }}(rctx)
+	}
+{{ if $.Origins }}	h = handle{{ $res }}Origin(h)
+{{ range .PreflightPaths }}	service.Mux.Handle("OPTIONS", "{{ . }}", cors.HandlePreflight(service.Context, handle{{ $res }}Origin))
+{{ end }}{{ end }}{{ if .Security }}	h = handleSecurity({{ printf "%q" .Security.Scheme.SchemeName }}, h{{ range .Security.Scopes }}, {{ printf "%q" . }}{{ end }})
+{{ end }}{{ range .Routes }}	service.Mux.Handle("{{ .Verb }}", "{{ .FullPath }}", ctrl.MuxHandler("{{ $action.Name }}", h, {{ if $action.Payload }}{{ $action.Unmarshal }}{{ else }}nil{{ end }}))
+	service.Info("mount", "ctrl", "{{ $res }}", "action", "{{ $action.Name }}", "route", "{{ .Verb }} {{ .FullPath }}"{{ with $action.Security }}, "security", {{ printf "%q" .Scheme.SchemeName }}{{ end }})
+{{ end }}{{ end }}}
+`
+
+	// handleCORST generates the code that checks whether a CORS request is authorized
+	// template input: *ControllerTemplateData
+	handleCORST = `// handle{{ .Resource }}Origin applies the CORS response headers corresponding to the origin.
+func handle{{ .Resource }}Origin(h goa.Handler) goa.Handler {
+	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		origin := req.Header.Get("Origin")
+		if origin == "" {
+			// Not a CORS request
+			return h(ctx, rw, req)
+		}
+{{ range $policy := .Origins }}		if cors.MatchOrigin(origin, {{ printf "%q" $policy.Origin }}) {
+			ctx = goa.LogWith(ctx, "origin", origin)
+			rw.Header().Set("Access-Control-Allow-Origin", "{{ $policy.Origin }}")
+{{ if not (eq $policy.Origin "*") }}			rw.Header().Set("Vary", "Origin")
+{{ end }}{{ if $policy.Exposed }}			rw.Header().Set("Access-Control-Expose-Headers", "{{ join $policy.Exposed ", " }}")
+{{ end }}{{ if gt $policy.MaxAge 0 }}			rw.Header().Set("Access-Control-Max-Age", "{{ $policy.MaxAge }}")
+{{ end }}			rw.Header().Set("Access-Control-Allow-Credentials", "{{ $policy.Credentials }}")
+			if acrm := req.Header.Get("Access-Control-Request-Method"); acrm != "" {
+				// We are handling a preflight request
+{{ if $policy.Methods }}				rw.Header().Set("Access-Control-Allow-Methods", "{{ join $policy.Methods ", " }}")
+{{ end }}{{ if $policy.Headers }}				rw.Header().Set("Access-Control-Allow-Headers", "{{ join $policy.Headers ", " }}")
+{{ end }}			}
+			return h(ctx, rw, req)
+		}
+		return h(ctx, rw, req)
+	}
+{{ end }}}
 `
 
 	// unmarshalT generates the code for an action payload unmarshal function.
 	// template input: *ControllerTemplateData
-	unmarshalT = `{{range .Actions}}{{if .Payload}}
-// {{.Unmarshal}} unmarshals the request body into the context request data Payload field.
-func {{.Unmarshal}}(ctx context.Context, req *http.Request) error {
-	var payload {{gotypename .Payload nil 1}}
+	unmarshalT = `{{ range .Actions }}{{ if .Payload }}
+// {{ .Unmarshal }} unmarshals the request body into the context request data Payload field.
+func {{ .Unmarshal }}(ctx context.Context, req *http.Request) error {
+	var payload {{ gotypename .Payload nil 1 }}
 	if err := goa.RequestService(ctx).DecodeRequest(req, &payload); err != nil {
 		return err
-	}{{$validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1}}{{if $validation}}
+	}{{ $validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1 }}{{ if $validation }}
 	if err := payload.Validate(); err != nil {
 		return err
-	}{{end}}
-	goa.Request(ctx).Payload = {{if .Payload.IsObject}}&{{end}}payload
+	}{{ end }}
+	goa.Request(ctx).Payload = {{ if .Payload.IsObject }}&{{ end }}payload
 	return nil
 }
-{{end}}
-{{end}}`
+{{ end }}
+{{ end }}`
 
 	// resourceT generates the code for a resource.
 	// template input: *ResourceData
-	resourceT = `{{if .CanonicalTemplate}}// {{.Name}}Href returns the resource href.
-func {{.Name}}Href({{if .CanonicalParams}}{{join .CanonicalParams ", "}} interface{}{{end}}) string {
-	return fmt.Sprintf("{{.CanonicalTemplate}}", {{join .CanonicalParams ", "}})
+	resourceT = `{{ if .CanonicalTemplate }}// {{ .Name }}Href returns the resource href.
+func {{ .Name }}Href({{ if .CanonicalParams }}{{ join .CanonicalParams ", " }} interface{}{{ end }}) string {
+	return fmt.Sprintf("{{ .CanonicalTemplate }}", {{ join .CanonicalParams ", " }})
 }
-{{end}}`
+{{ end }}`
 
 	// mediaTypeT generates the code for a media type.
 	// template input: MediaTypeTemplateData
-	mediaTypeT = `// {{gotypedesc . true}}
+	mediaTypeT = `// {{ gotypedesc . true }}
 //
-// Identifier: {{.Identifier}}{{$typeName := gotypename . .AllRequired 0}}
-type {{$typeName}} {{gotypedef . 0 true}}
+// Identifier: {{ .Identifier }}{{ $typeName := gotypename . .AllRequired 0 }}
+type {{ $typeName }} {{ gotypedef . 0 true }}
 
-{{$validation := recursiveValidate .AttributeDefinition false false "mt" "response" 1}}{{if $validation}}// Validate validates the {{$typeName}} media type instance.
-func (mt {{gotyperef . .AllRequired 0}}) Validate() (err error) {
-{{$validation}}
+{{ $validation := recursiveValidate .AttributeDefinition false false "mt" "response" 1 }}{{ if $validation }}// Validate validates the {{ $typeName }} media type instance.
+func (mt {{ gotyperef . .AllRequired 0 }}) Validate() (err error) {
+{{ $validation }}
 	return
 }
-{{end}}
+{{ end }}
 `
 
 	// userTypeT generates the code for a user type.
 	// template input: UserTypeTemplateData
-	userTypeT = `// {{gotypedesc . true}}{{$typeName := gotypename . .AllRequired 0}}
-type {{$typeName}} {{gotypedef . 0 true}}
+	userTypeT = `// {{ gotypedesc . true }}{{ $typeName := gotypename . .AllRequired 0 }}
+type {{ $typeName }} {{ gotypedef . 0 true }}
 
-{{$validation := recursiveValidate .AttributeDefinition false false "ut" "response" 1}}{{if $validation}}// Validate validates the {{$typeName}} type instance.
-func (ut {{gotyperef . .AllRequired 0}}) Validate() (err error) {
-{{$validation}}
+{{ $validation := recursiveValidate .AttributeDefinition false false "ut" "response" 1 }}{{ if $validation }}// Validate validates the {{ $typeName }} type instance.
+func (ut {{ gotyperef . .AllRequired 0 }}) Validate() (err error) {
+{{ $validation }}
 	return
-}{{end}}
+}{{ end }}
 `
 
+	// securitySchemesT generates the code for the security module.
+	// template input: []*design.SecuritySchemeDefinition
 	securitySchemesT = `
 type securitySchemeKey string
 type key int
@@ -651,7 +691,7 @@ func Configure{{ goify .SchemeName true }}Security(service *goa.Service, f goa.{
 		Scopes: map[string]string{
 {{ range $k, $v := . }}			{{ printf "%q" $k }}: {{ printf "%q" $v }},
 {{ end }}
-		},{{end}}
+		},{{ end }}
 {{ else if eq .Context "BasicAuthSecurity" }}
 {{ else if eq .Context "JWTSecurity" }}
 		In:               {{ printf "%q" .In }},
@@ -662,7 +702,7 @@ func Configure{{ goify .SchemeName true }}Security(service *goa.Service, f goa.{
 {{ end }}
 		},{{ end }}
 {{ end }}
-	}{{if .Description}}
+	}{{ if .Description }}
 	def.Description = {{ printf "%q" .Description }}
 {{ end }}
 {{ if or (eq .Context "JWTSecurity") (eq .Context "OAuth2Security") }}
@@ -677,13 +717,12 @@ func Configure{{ goify .SchemeName true }}Security(service *goa.Service, f goa.{
 }
 {{ end }}
 
-func handleSecurity(service *goa.Service, schemeName string, h goa.Handler, scopes ...string) goa.Handler {
+func handleSecurity(schemeName string, h goa.Handler, scopes ...string) goa.Handler {
 	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-		scheme := service.Context.Value(securitySchemeKey(schemeName))
+		scheme := ctx.Value(securitySchemeKey(schemeName))
 		middleware, ok := scheme.(goa.Middleware)
 		if !ok {
-			goa.RequestService(ctx).Error("security scheme not configured")
-			return errors.New("security scheme not configured")
+			return goa.NoSecurityScheme(schemeName)
 		}
 
 		if len(scopes) != 0 {

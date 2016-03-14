@@ -351,6 +351,7 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("golang.org/x/net/context"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
+		codegen.SimpleImport("github.com/goadesign/goa/cors"),
 	}
 	encoders, err := BuildEncoders(api.Produces, true)
 	if err != nil {
@@ -382,12 +383,13 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 			context := fmt.Sprintf("%s%sContext", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			unmarshal := fmt.Sprintf("unmarshal%s%sPayload", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			action := map[string]interface{}{
-				"Name":      codegen.Goify(a.Name, true),
-				"Routes":    a.Routes,
-				"Context":   context,
-				"Unmarshal": unmarshal,
-				"Payload":   a.Payload,
-				"Security":  a.Security,
+				"Name":           codegen.Goify(a.Name, true),
+				"Routes":         a.Routes,
+				"Context":        context,
+				"Unmarshal":      unmarshal,
+				"Payload":        a.Payload,
+				"Security":       a.Security,
+				"PreflightPaths": a.PreflightPaths(),
 			}
 			data.Actions = append(data.Actions, action)
 			return nil
@@ -398,6 +400,7 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 		if len(data.Actions) > 0 {
 			data.Encoders = encoders
 			data.Decoders = decoders
+			data.Origins = r.AllOrigins()
 			controllersData = append(controllersData, data)
 		}
 		return nil
