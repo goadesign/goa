@@ -26,7 +26,6 @@ type (
 		Parameters          map[string]*Parameter            `json:"parameters,omitempty"`
 		Responses           map[string]*Response             `json:"responses,omitempty"`
 		SecurityDefinitions map[string]*SecurityDefinition   `json:"securityDefinitions,omitempty"`
-		Security            []map[string][]string            `json:"security,omitempty"`
 		Tags                []*Tag                           `json:"tags,omitempty"`
 		ExternalDocs        *ExternalDocs                    `json:"externalDocs,omitempty"`
 	}
@@ -94,7 +93,7 @@ type (
 		// Deprecated declares this operation to be deprecated.
 		Deprecated bool `json:"deprecated,omitempty"`
 		// Secury is a declaration of which security schemes are applied for this operation.
-		Security []map[string][]string `json:"security,omitempty"`
+		Security map[string][]string `json:"security,omitempty"`
 	}
 
 	// Parameter describes a single operation parameter.
@@ -216,7 +215,7 @@ type (
 		// TokenURL  is the token URL to be used for this flow.
 		TokenURL string `json:"tokenUrl,omitempty"`
 		// Scopes list the  available scopes for the OAuth2 security scheme.
-		Scopes map[string]*Scope `json:"scopes,omitempty"`
+		Scopes map[string]string `json:"scopes,omitempty"`
 	}
 
 	// Scope corresponds to an available scope for an OAuth2 security scheme.
@@ -315,15 +314,16 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 			License:        api.License,
 			Version:        api.Version,
 		},
-		Host:         api.Host,
-		BasePath:     api.BasePath,
-		Paths:        make(map[string]*Path),
-		Schemes:      api.Schemes,
-		Consumes:     consumes,
-		Produces:     produces,
-		Parameters:   paramMap,
-		Tags:         tags,
-		ExternalDocs: docsFromDefinition(api.Docs),
+		Host:                api.Host,
+		BasePath:            api.BasePath,
+		Paths:               make(map[string]*Path),
+		Schemes:             api.Schemes,
+		Consumes:            consumes,
+		Produces:            produces,
+		Parameters:          paramMap,
+		Tags:                tags,
+		ExternalDocs:        docsFromDefinition(api.Docs),
+		SecurityDefinitions: securityDefsFromDefinition(api.SecurityMethods),
 	}
 
 	err = api.IterateResponses(func(r *design.ResponseDefinition) error {
@@ -363,6 +363,27 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 		}
 	}
 	return s, nil
+}
+
+func securityDefsFromDefinition(methods []*design.SecurityMethodDefinition) map[string]*SecurityDefinition {
+	if len(methods) == 0 {
+		return nil
+	}
+
+	defs := make(map[string]*SecurityDefinition)
+	for _, method := range methods {
+		defs[method.Method] = &SecurityDefinition{
+			Type:             method.Type,
+			Description:      method.Description,
+			Name:             method.Name,
+			In:               method.In,
+			Flow:             method.Flow,
+			AuthorizationURL: method.AuthorizationURL,
+			TokenURL:         method.TokenURL,
+			Scopes:           method.Scopes,
+		}
+	}
+	return defs
 }
 
 func tagsFromDefinition(mdata dslengine.MetadataDefinition) (tags []*Tag, err error) {
@@ -538,14 +559,17 @@ func headersFromDefinition(headers *design.AttributeDefinition) (map[string]*Hea
 
 func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *design.RouteDefinition) error {
 	action := route.Parent
+
 	tagNames, err := tagNamesFromDefinition([]dslengine.MetadataDefinition{action.Parent.Metadata, action.Metadata})
 	if err != nil {
 		return err
 	}
+
 	params, err := paramsFromDefinition(action.AllParams(), route.FullPath())
 	if err != nil {
 		return err
 	}
+
 	responses := make(map[string]*Response, len(action.Responses))
 	for _, r := range action.Responses {
 		resp, err := responseFromDefinition(s, api, r)
@@ -554,6 +578,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		}
 		responses[strconv.Itoa(r.Status)] = resp
 	}
+
 	if action.Payload != nil {
 		payloadSchema := genschema.TypeSchema(api, action.Payload)
 		pp := &Parameter{
@@ -565,6 +590,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		}
 		params = append(params, pp)
 	}
+
 	operationID := fmt.Sprintf("%s#%s", action.Parent.Name, action.Name)
 	index := 0
 	for i, rt := range action.Routes {
@@ -576,10 +602,17 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	if index > 0 {
 		operationID = fmt.Sprintf("%s#%d", operationID, index)
 	}
+
 	schemes := action.Schemes
 	if len(schemes) == 0 {
 		schemes = api.Schemes
 	}
+
+	var security map[string][]string
+	if action.Security != nil && !action.Security.NoSecurity {
+		security[action.Security.Method] = action.Security.Scopes
+	}
+
 	operation := &Operation{
 		Tags:         tagNames,
 		Description:  action.Description,
