@@ -198,7 +198,6 @@ var _ = Describe("MediaType", func() {
 })
 
 var _ = Describe("Duplicate media types", func() {
-	var mt *MediaTypeDefinition
 	var duplicate *MediaTypeDefinition
 	const id = "application/foo"
 	const attName = "bar"
@@ -211,7 +210,7 @@ var _ = Describe("Duplicate media types", func() {
 
 	BeforeEach(func() {
 		dslengine.Reset()
-		mt = MediaType(id, dslFunc)
+		MediaType(id, dslFunc)
 		duplicate = MediaType(id, dslFunc)
 	})
 

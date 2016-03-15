@@ -76,13 +76,15 @@ import (
 //	Attribute(name string)			// dataType is String
 func Attribute(name string, args ...interface{}) {
 	var parent *design.AttributeDefinition
-	if at, ok := attributeDefinition(false); ok {
-		parent = at
-	} else if mt, ok := mediaTypeDefinition(false); ok {
-		parent = mt.AttributeDefinition
-	} else if c, ok := dslengine.CurrentDefinition().(design.ContainerDefinition); ok {
-		parent = c.Attribute()
-	} else {
+
+	switch def := dslengine.CurrentDefinition().(type) {
+	case *design.AttributeDefinition:
+		parent = def
+	case *design.MediaTypeDefinition:
+		parent = def.AttributeDefinition
+	case design.ContainerDefinition:
+		parent = def.Attribute()
+	default:
 		dslengine.IncompatibleDSL()
 	}
 
@@ -193,8 +195,21 @@ func parseAttributeArgs(baseAttr *design.AttributeDefinition, args ...interface{
 	return dataType, description, dsl
 }
 
-// Header is an alias of Attribute.
+// Header is an alias of Attribute for the most part.
+//
+// Within an APIKeySecurity or JWTSecurity definition, Header
+// defines that an implementation must check the given header to get
+// the API Key.  In this case, no `args` parameter is necessary.
 func Header(name string, args ...interface{}) {
+	if _, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
+		if len(args) != 0 {
+			dslengine.ReportError("do not specify args")
+			return
+		}
+		inHeader(name)
+		return
+	}
+
 	Attribute(name, args...)
 }
 
@@ -210,7 +225,7 @@ func Param(name string, args ...interface{}) {
 
 // Default sets the default value for an attribute.
 func Default(def interface{}) {
-	if a, ok := attributeDefinition(true); ok {
+	if a, ok := attributeDefinition(); ok {
 		if a.Type != nil && !a.Type.IsCompatible(def) {
 			dslengine.ReportError("default value %#v is incompatible with attribute of type %s",
 				def, a.Type.Name())
@@ -222,7 +237,7 @@ func Default(def interface{}) {
 
 // Example sets the example of an attribute to be used for the documentation.
 func Example(exp interface{}) {
-	if a, ok := attributeDefinition(true); ok {
+	if a, ok := attributeDefinition(); ok {
 		if pass := a.SetExample(exp); !pass {
 			dslengine.ReportError("example value %#v is incompatible with attribute of type %s",
 				exp, a.Type.Name())
@@ -233,7 +248,7 @@ func Example(exp interface{}) {
 // NoExample sets the example of an attribute to be blank for the documentation. It is used when
 // users don't want any custom or auto-generated example
 func NoExample() {
-	if a, ok := attributeDefinition(true); ok {
+	if a, ok := attributeDefinition(); ok {
 		a.SetExample(nil)
 	}
 }
@@ -241,7 +256,7 @@ func NoExample() {
 // Enum adds a "enum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor76.
 func Enum(val ...interface{}) {
-	if a, ok := attributeDefinition(true); ok {
+	if a, ok := attributeDefinition(); ok {
 		ok := true
 		for i, v := range val {
 			// When can a.Type be nil? glad you asked
@@ -311,7 +326,7 @@ var SupportedValidationFormats = []string{
 //
 // "regexp": RE2 regular expression
 func Format(f string) {
-	if a, ok := attributeDefinition(true); ok {
+	if a, ok := attributeDefinition(); ok {
 		if a.Type != nil && a.Type.Kind() != design.StringKind {
 			incompatibleAttributeType("format", a.Type.Name(), "a string")
 		} else {
@@ -338,7 +353,7 @@ func Format(f string) {
 // Pattern adds a "pattern" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor33.
 func Pattern(p string) {
-	if a, ok := attributeDefinition(true); ok {
+	if a, ok := attributeDefinition(); ok {
 		if a.Type != nil && a.Type.Kind() != design.StringKind {
 			incompatibleAttributeType("pattern", a.Type.Name(), "a string")
 		} else {
@@ -358,7 +373,7 @@ func Pattern(p string) {
 // Minimum adds a "minimum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor21.
 func Minimum(val interface{}) {
-	if a, ok := attributeDefinition(true); ok {
+	if a, ok := attributeDefinition(); ok {
 		if a.Type != nil && a.Type.Kind() != design.IntegerKind && a.Type.Kind() != design.NumberKind {
 			incompatibleAttributeType("minimum", a.Type.Name(), "an integer or a number")
 		} else {
@@ -388,7 +403,7 @@ func Minimum(val interface{}) {
 // Maximum adds a "maximum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor17.
 func Maximum(val interface{}) {
-	if a, ok := attributeDefinition(true); ok {
+	if a, ok := attributeDefinition(); ok {
 		if a.Type != nil && a.Type.Kind() != design.IntegerKind && a.Type.Kind() != design.NumberKind {
 			incompatibleAttributeType("maximum", a.Type.Name(), "an integer or a number")
 		} else {
@@ -418,7 +433,7 @@ func Maximum(val interface{}) {
 // MinLength adss a "minItems" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor45.
 func MinLength(val int) {
-	if a, ok := attributeDefinition(true); ok {
+	if a, ok := attributeDefinition(); ok {
 		if a.Type != nil && a.Type.Kind() != design.StringKind && a.Type.Kind() != design.ArrayKind {
 			incompatibleAttributeType("minimum length", a.Type.Name(), "a string or an array")
 		} else {
@@ -433,7 +448,7 @@ func MinLength(val int) {
 // MaxLength adss a "maxItems" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor42.
 func MaxLength(val int) {
-	if a, ok := attributeDefinition(true); ok {
+	if a, ok := attributeDefinition(); ok {
 		if a.Type != nil && a.Type.Kind() != design.StringKind && a.Type.Kind() != design.ArrayKind {
 			incompatibleAttributeType("maximum length", a.Type.Name(), "a string or an array")
 		} else {
@@ -449,13 +464,16 @@ func MaxLength(val int) {
 // See http://json-schema.org/latest/json-schema-validation.html#anchor61.
 func Required(names ...string) {
 	var at *design.AttributeDefinition
-	if a, ok := attributeDefinition(false); ok {
-		at = a
-	} else if mt, ok := mediaTypeDefinition(true); ok {
-		at = mt.AttributeDefinition
-	} else {
+
+	switch def := dslengine.CurrentDefinition().(type) {
+	case *design.AttributeDefinition:
+		at = def
+	case *design.MediaTypeDefinition:
+		at = def.AttributeDefinition
+	default:
 		return
 	}
+
 	if at.Type != nil && at.Type.Kind() != design.ObjectKind {
 		incompatibleAttributeType("required", at.Type.Name(), "an object")
 	} else {

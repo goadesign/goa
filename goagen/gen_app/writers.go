@@ -34,6 +34,12 @@ type (
 		MountTmpl *template.Template
 	}
 
+	// SecurityWriter generate code for action-level security handlers.
+	SecurityWriter struct {
+		*codegen.SourceFile
+		SecurityTmpl *template.Template
+	}
+
 	// ResourcesWriter generate code for a goa application resources.
 	// Resources are data structures initialized by the application handlers and passed to controller
 	// actions.
@@ -69,6 +75,7 @@ type (
 		Responses    map[string]*design.ResponseDefinition
 		API          *design.APIDefinition
 		DefaultPkg   string
+		Security     *design.SecurityDefinition
 	}
 
 	// ControllerTemplateData contains the information required to generate an action handler.
@@ -258,6 +265,21 @@ func (w *ControllersWriter) Execute(data []*ControllerTemplateData) error {
 		}
 	}
 	return nil
+}
+
+// NewSecurityWriter returns a security functionality code writer.
+// Those functionalities are there to support action-middleware related to security.
+func NewSecurityWriter(filename string) (*SecurityWriter, error) {
+	file, err := codegen.SourceFileFor(filename)
+	if err != nil {
+		return nil, err
+	}
+	return &SecurityWriter{SourceFile: file}, nil
+}
+
+// Execute adds the different security schemes and middleware supporting functions.
+func (w *SecurityWriter) Execute(schemes []*design.SecuritySchemeDefinition) error {
+	return w.ExecuteTemplate("security_schemes", securitySchemesT, nil, schemes)
 }
 
 // NewResourcesWriter returns a contexts code writer.
@@ -541,6 +563,7 @@ func initService(service *goa.Service) {
 func Mount{{.Resource}}Controller(service *goa.Service, ctrl {{.Resource}}Controller) {
 	initService(service)
 	var h goa.Handler
+
 {{$res := .Resource}}{{range .Actions}}{{$action := .}}	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := New{{.Context}}(ctx)
 		if err != nil {
@@ -550,9 +573,10 @@ func Mount{{.Resource}}Controller(service *goa.Service, ctrl {{.Resource}}Contro
 			rctx.Payload = rawPayload.({{gotyperef .Payload nil 1}})
 		}
 		{{end}}		return ctrl.{{.Name}}(rctx)
-	}
+	}{{ if .Security }}
+	h = {{ goify .Security.Scheme.SchemeName true }}Security.Dispatch(h{{ range .Security.Scopes }}, {{ printf "%q" . }}{{end}}){{end}}
 {{range .Routes}}	service.Mux.Handle("{{.Verb}}", "{{.FullPath}}", ctrl.MuxHandler("{{$action.Name}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
-	service.Info("mount", "ctrl", "{{$res}}", "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}")
+	service.Info("mount", "ctrl", "{{$res}}", "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}"{{ with $action.Security }}, "security", {{ printf "%q" .Scheme.SchemeName }}{{end}})
 {{end}}{{end}}}
 `
 
@@ -607,5 +631,41 @@ func (ut {{gotyperef . .AllRequired 0}}) Validate() (err error) {
 {{$validation}}
 	return
 }{{end}}
+`
+
+	securitySchemesT = `
+{{ range . }}
+{{ if eq .Context "APIKeySecurity" }}
+var {{ goify .SchemeName true }}Security = &goa.APIKeySecurity{
+		In:   {{ printf "%q" .In }},
+		Name: {{ printf "%q" .Name }},
+}
+{{ else if eq .Context "OAuth2Security" }}
+var {{ goify .SchemeName true }}Security = &goa.OAuth2Security{
+		Flow:             {{ printf "%q" .Flow }},
+		TokenURL:         {{ printf "%q" .TokenURL }},
+		AuthorizationURL: {{ printf "%q" .AuthorizationURL }},{{ with .Scopes }}
+		Scopes: map[string]string{
+{{ range $k, $v := . }}			{{ printf "%q" $k }}: {{ printf "%q" $v }},
+{{ end }}
+		},{{end}}
+}
+{{ else if eq .Context "BasicAuthSecurity" }}
+var {{ goify .SchemeName true }}Security = &goa.BasicAuthSecurity{}
+{{ else if eq .Context "JWTSecurity" }}
+var {{ goify .SchemeName true }}Security = &goa.JWTSecurity{
+		In:               {{ printf "%q" .In }},
+		Name:             {{ printf "%q" .Name }},
+		TokenURL:         {{ printf "%q" .TokenURL }},{{ with .Scopes }}
+		Scopes: map[string]string{
+{{ range $k, $v := . }}			{{ printf "%q" $k }}: {{ printf "%q" $v }},
+{{ end }}
+		},{{ end }}
+}
+{{ end }}{{ end }}
+
+func init() { {{ range . }}{{if .Description}}
+	{{ goify .SchemeName true }}Security.Description = {{ printf "%q" .Description }}
+{{end}}{{end}} }
 `
 )

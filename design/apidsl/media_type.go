@@ -60,65 +60,69 @@ func MediaType(identifier string, apidsl func()) *design.MediaTypeDefinition {
 	if design.Design.MediaTypes == nil {
 		design.Design.MediaTypes = make(map[string]*design.MediaTypeDefinition)
 	}
-	if dslengine.TopLevelDefinition(true) {
-		// Validate Media Type
-		identifier, params, err := mime.ParseMediaType(identifier)
-		if err != nil {
-			dslengine.ReportError("invalid media type identifier %#v: %s",
-				identifier, err)
-			// We don't return so that other errors may be
-			// captured in this one run.
-			identifier = "plain/text"
-		}
-		canonicalID := design.CanonicalIdentifier(identifier)
-		// Validate that media type identifier doesn't clash
-		if _, ok := design.Design.MediaTypes[canonicalID]; ok {
-			dslengine.ReportError("media type %#v is defined twice", identifier)
-			return nil
-		}
-		parts := strings.Split(identifier, "+")
-		// Make sure it has the `+json` suffix (TBD update when goa supports other encodings)
-		if len(parts) > 1 {
-			parts = parts[1:]
-			found := false
-			for _, part := range parts {
-				if part == "json" {
-					found = true
-					break
-				}
-			}
-			if !found {
-				identifier += "+json"
-			}
-		}
-		identifier = mime.FormatMediaType(identifier, params)
-		// Concoct a Go type name from the identifier, should it be possible to set it in the apidsl?
-		// pros: control the type name generated, cons: not needed in apidsl, adds one more thing to worry about
-		lastPart := identifier
-		lastPartIndex := strings.LastIndex(identifier, "/")
-		if lastPartIndex > -1 {
-			lastPart = identifier[lastPartIndex+1:]
-		}
-		plusIndex := strings.Index(lastPart, "+")
-		if plusIndex > 0 {
-			lastPart = lastPart[:plusIndex]
-		}
-		lastPart = strings.TrimPrefix(lastPart, "vnd.")
-		elems := strings.Split(lastPart, ".")
-		for i, e := range elems {
-			elems[i] = strings.Title(e)
-		}
-		typeName := strings.Join(elems, "")
-		if typeName == "" {
-			mediaTypeCount++
-			typeName = fmt.Sprintf("MediaType%d", mediaTypeCount)
-		}
-		// Now save the type in the API media types map
-		mt := design.NewMediaTypeDefinition(typeName, identifier, apidsl)
-		design.Design.MediaTypes[canonicalID] = mt
-		return mt
+
+	if !dslengine.IsTopLevelDefinition() {
+		dslengine.IncompatibleDSL()
+		return nil
 	}
-	return nil
+
+	// Validate Media Type
+	identifier, params, err := mime.ParseMediaType(identifier)
+	if err != nil {
+		dslengine.ReportError("invalid media type identifier %#v: %s",
+			identifier, err)
+		// We don't return so that other errors may be
+		// captured in this one run.
+		identifier = "plain/text"
+	}
+	canonicalID := design.CanonicalIdentifier(identifier)
+	// Validate that media type identifier doesn't clash
+	if _, ok := design.Design.MediaTypes[canonicalID]; ok {
+		dslengine.ReportError("media type %#v is defined twice", identifier)
+		return nil
+	}
+	parts := strings.Split(identifier, "+")
+	// Make sure it has the `+json` suffix (TBD update when goa supports other encodings)
+	if len(parts) > 1 {
+		parts = parts[1:]
+		found := false
+		for _, part := range parts {
+			if part == "json" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			identifier += "+json"
+		}
+	}
+	identifier = mime.FormatMediaType(identifier, params)
+	// Concoct a Go type name from the identifier, should it be possible to set it in the apidsl?
+	// pros: control the type name generated, cons: not needed in apidsl, adds one more thing to worry about
+	lastPart := identifier
+	lastPartIndex := strings.LastIndex(identifier, "/")
+	if lastPartIndex > -1 {
+		lastPart = identifier[lastPartIndex+1:]
+	}
+	plusIndex := strings.Index(lastPart, "+")
+	if plusIndex > 0 {
+		lastPart = lastPart[:plusIndex]
+	}
+	lastPart = strings.TrimPrefix(lastPart, "vnd.")
+	elems := strings.Split(lastPart, ".")
+	for i, e := range elems {
+		elems[i] = strings.Title(e)
+	}
+	typeName := strings.Join(elems, "")
+	if typeName == "" {
+		mediaTypeCount++
+		typeName = fmt.Sprintf("MediaType%d", mediaTypeCount)
+	}
+	// Now save the type in the API media types map
+	mt := design.NewMediaTypeDefinition(typeName, identifier, apidsl)
+	design.Design.MediaTypes[canonicalID] = mt
+	return mt
+
 }
 
 // Media sets a response media type by name or by reference using a value returned by MediaType:
@@ -130,7 +134,7 @@ func MediaType(identifier string, apidsl func()) *design.MediaTypeDefinition {
 //
 // Media can be used inside Response or ResponseTemplate.
 func Media(val interface{}) {
-	if r, ok := responseDefinition(true); ok {
+	if r, ok := responseDefinition(); ok {
 		if m, ok := val.(*design.MediaTypeDefinition); ok {
 			if m != nil {
 				r.MediaType = m.Identifier
@@ -171,10 +175,13 @@ func Media(val interface{}) {
 // defines the "name" and "vintage" attributes with the same type and validations as defined in
 // the Bottle type.
 func Reference(t design.DataType) {
-	if mt, ok := mediaTypeDefinition(false); ok {
-		mt.Reference = t
-	} else if at, ok := attributeDefinition(true); ok {
-		at.Reference = t
+	switch def := dslengine.CurrentDefinition().(type) {
+	case *design.MediaTypeDefinition:
+		def.Reference = t
+	case *design.AttributeDefinition:
+		def.Reference = t
+	default:
+		dslengine.IncompatibleDSL()
 	}
 }
 
@@ -183,10 +190,13 @@ func Reference(t design.DataType) {
 // computes a valid Go identifier from it. This function makes it possible to override that and
 // provide a custom name. name must be a valid Go identifier.
 func TypeName(name string) {
-	if mt, ok := mediaTypeDefinition(false); ok {
-		mt.TypeName = name
-	} else if ut, ok := typeDefinition(true); ok {
-		ut.TypeName = name
+	switch def := dslengine.CurrentDefinition().(type) {
+	case *design.MediaTypeDefinition:
+		def.TypeName = name
+	case *design.UserTypeDefinition:
+		def.TypeName = name
+	default:
+		dslengine.IncompatibleDSL()
 	}
 }
 
@@ -209,7 +219,10 @@ func TypeName(name string) {
 //		})
 //	})
 func View(name string, apidsl ...func()) {
-	if mt, ok := mediaTypeDefinition(false); ok {
+	switch def := dslengine.CurrentDefinition().(type) {
+	case *design.MediaTypeDefinition:
+		mt := def
+
 		if !mt.Type.IsObject() && !mt.Type.IsArray() {
 			dslengine.ReportError("cannot define view on non object and non collection media types")
 			return
@@ -217,7 +230,7 @@ func View(name string, apidsl ...func()) {
 		if mt.Views == nil {
 			mt.Views = make(map[string]*design.ViewDefinition)
 		} else {
-			if _, ok = mt.Views[name]; ok {
+			if _, ok := mt.Views[name]; ok {
 				dslengine.ReportError("multiple definitions for view %#v in media type %#v", name, mt.TypeName)
 				return
 			}
@@ -242,47 +255,60 @@ func View(name string, apidsl ...func()) {
 			}
 		}
 		if ok {
-			if at.Type == nil || !at.Type.IsObject() {
-				dslengine.ReportError("invalid view DSL")
+			view, err := buildView(name, mt, at)
+			if err != nil {
+				dslengine.ReportError(err.Error())
 				return
 			}
-			o := at.Type.ToObject()
-			if o != nil {
-				mto := mt.Type.ToObject()
-				if mto == nil {
-					mto = mt.Type.ToArray().ElemType.Type.ToObject()
-				}
-				for n, cat := range o {
-					if existing, ok := mto[n]; ok {
-						dup := design.DupAtt(existing)
-						dup.View = cat.View
-						o[n] = dup
-					} else if n != "links" {
-						dslengine.ReportError("unknown attribute %#v", n)
-					}
-				}
-			}
-			mt.Views[name] = &design.ViewDefinition{
-				AttributeDefinition: at,
-				Name:                name,
-				Parent:              mt,
+			mt.Views[name] = view
+		}
+
+	case *design.AttributeDefinition:
+		def.View = name
+
+	default:
+		dslengine.IncompatibleDSL()
+	}
+}
+
+// buildView builds a view definition given an attribute and a corresponding media type.
+func buildView(name string, mt *design.MediaTypeDefinition, at *design.AttributeDefinition) (*design.ViewDefinition, error) {
+	if at.Type == nil || !at.Type.IsObject() {
+		return nil, fmt.Errorf("invalid view DSL")
+	}
+	o := at.Type.ToObject()
+	if o != nil {
+		mto := mt.Type.ToObject()
+		if mto == nil {
+			mto = mt.Type.ToArray().ElemType.Type.ToObject()
+		}
+		for n, cat := range o {
+			if existing, ok := mto[n]; ok {
+				dup := design.DupAtt(existing)
+				dup.View = cat.View
+				o[n] = dup
+			} else if n != "links" {
+				return nil, fmt.Errorf("unknown attribute %#v", n)
 			}
 		}
-	} else if a, ok := attributeDefinition(true); ok {
-		a.View = name
 	}
+	return &design.ViewDefinition{
+		AttributeDefinition: at,
+		Name:                name,
+		Parent:              mt,
+	}, nil
 }
 
 // Attributes implements the media type attributes apidsl. See MediaType.
 func Attributes(apidsl func()) {
-	if mt, ok := mediaTypeDefinition(true); ok {
+	if mt, ok := mediaTypeDefinition(); ok {
 		dslengine.Execute(apidsl, mt)
 	}
 }
 
 // Links implements the media type links apidsl. See MediaType.
 func Links(apidsl func()) {
-	if mt, ok := mediaTypeDefinition(true); ok {
+	if mt, ok := mediaTypeDefinition(); ok {
 		dslengine.Execute(apidsl, mt)
 	}
 }
@@ -294,7 +320,7 @@ func Links(apidsl func()) {
 //	Link("origin")		// Use the "link" view of the "origin" attribute
 //	Link("account", "tiny")	// Use the "tiny" view of the "account" attribute
 func Link(name string, view ...string) {
-	if mt, ok := mediaTypeDefinition(true); ok {
+	if mt, ok := mediaTypeDefinition(); ok {
 		if mt.Links == nil {
 			mt.Links = make(map[string]*design.LinkDefinition)
 		} else {
@@ -357,7 +383,7 @@ func CollectionOf(v interface{}, apidsl ...func()) *design.MediaTypeDefinition {
 		return mt
 	}
 	mt := design.NewMediaTypeDefinition(typeName, id, func() {
-		if mt, ok := mediaTypeDefinition(true); ok {
+		if mt, ok := mediaTypeDefinition(); ok {
 			mt.TypeName = typeName
 			mt.AttributeDefinition = &design.AttributeDefinition{Type: ArrayOf(m)}
 			if len(apidsl) > 0 {
