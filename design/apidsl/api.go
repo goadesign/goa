@@ -65,9 +65,11 @@ func API(name string, dsl func()) *design.APIDefinition {
 		dslengine.ReportError("multiple API definitions, only one is allowed")
 		return nil
 	}
-	if !dslengine.TopLevelDefinition(true) {
+	if !dslengine.IsTopLevelDefinition() {
+		dslengine.IncompatibleDSL()
 		return nil
 	}
+
 	if name == "" {
 		dslengine.ReportError("API name cannot be empty")
 	}

@@ -28,32 +28,28 @@ var _ = Describe("Security", func() {
 
 			OAuth2Security("googAuthz", func() {
 				Description("desc")
-				AuthorizationURL("http://example.com/auth")
-				TokenURL("http://example.com/token")
-			})
-
-			APIKeySecurity("jwt", func() {
-				Description("desc")
-				InHeader("Authorization")
+				AccessCodeFlow("http://example.com/auth", "http://example.com/token")
+				Scope("user:read", "Read users")
 			})
 
 			APIKeySecurity("a_key", func() {
 				Description("desc")
-				InQuery("access_token")
+				Query("access_token")
 			})
 
-			OtherSecurity("custom", "apiKey", func() {
+			JWTSecurity("jwt", func() {
 				Description("desc")
-				OAuth2Flow("whatever")
-				AuthorizationURL("http://example.com/auth")
+				Header("Authorization")
 				TokenURL("http://example.com/token")
+				Scope("user:read", "Read users")
+				Scope("user:write", "Write users")
 			})
 		})
 
 		dslengine.Run()
 
 		Ω(dslengine.Errors).ShouldNot(HaveOccurred())
-		Ω(Design.SecurityMethods).Should(HaveLen(5))
+		Ω(Design.SecurityMethods).Should(HaveLen(4))
 
 		Ω(Design.SecurityMethods[0].Kind).Should(Equal(BasicAuthSecurityKind))
 		Ω(Design.SecurityMethods[0].Description).Should(Equal("desc"))
@@ -61,19 +57,15 @@ var _ = Describe("Security", func() {
 		Ω(Design.SecurityMethods[1].Kind).Should(Equal(OAuth2SecurityKind))
 		Ω(Design.SecurityMethods[1].AuthorizationURL).Should(Equal("http://example.com/auth"))
 		Ω(Design.SecurityMethods[1].TokenURL).Should(Equal("http://example.com/token"))
+		Ω(Design.SecurityMethods[1].Flow).Should(Equal("accessCode"))
 
 		Ω(Design.SecurityMethods[2].Kind).Should(Equal(APIKeySecurityKind))
-		Ω(Design.SecurityMethods[2].In).Should(Equal("header"))
-		Ω(Design.SecurityMethods[2].Name).Should(Equal("Authorization"))
+		Ω(Design.SecurityMethods[2].In).Should(Equal("query"))
+		Ω(Design.SecurityMethods[2].Name).Should(Equal("access_token"))
 
-		Ω(Design.SecurityMethods[3].Kind).Should(Equal(APIKeySecurityKind))
-		Ω(Design.SecurityMethods[3].In).Should(Equal("query"))
-		Ω(Design.SecurityMethods[3].Name).Should(Equal("access_token"))
-
-		Ω(Design.SecurityMethods[4].Kind).Should(Equal(OtherSecurityKind))
-		Ω(Design.SecurityMethods[4].Flow).Should(Equal("whatever"))
-		Ω(Design.SecurityMethods[4].AuthorizationURL).Should(Equal("http://example.com/auth"))
-		Ω(Design.SecurityMethods[4].TokenURL).Should(Equal("http://example.com/token"))
+		Ω(Design.SecurityMethods[3].Kind).Should(Equal(JWTSecurityKind))
+		Ω(Design.SecurityMethods[3].TokenURL).Should(Equal("http://example.com/token"))
+		Ω(Design.SecurityMethods[3].Scopes).Should(HaveLen(2))
 	})
 
 	Context("with basic security", func() {
@@ -81,8 +73,8 @@ var _ = Describe("Security", func() {
 			API("", func() {
 				BasicAuthSecurity("broken_basic_authz", func() {
 					Description("desc")
-					InHeader("Authorization")
-					InQuery("access_token")
+					Header("Authorization")
+					Query("access_token")
 				})
 			})
 			dslengine.Run()
@@ -93,7 +85,7 @@ var _ = Describe("Security", func() {
 			API("", func() {
 				BasicAuthSecurity("broken_basic_authz", func() {
 					Description("desc")
-					OAuth2Flow("invalid")
+					ImplicitFlow("invalid")
 				})
 			})
 			dslengine.Run()
@@ -104,7 +96,7 @@ var _ = Describe("Security", func() {
 			API("", func() {
 				BasicAuthSecurity("broken_basic_authz", func() {
 					Description("desc")
-					AuthorizationURL("invalid")
+					TokenURL("http://example.com/token")
 				})
 			})
 			dslengine.Run()
@@ -122,11 +114,11 @@ var _ = Describe("Security", func() {
 			Ω(dslengine.Errors).Should(HaveOccurred())
 		})
 
-		It("should fail because of invalid declaration of InHeader", func() {
+		It("should fail because of invalid declaration of Header", func() {
 			API("", func() {
 				BasicAuthSecurity("broken_basic_authz", func() {
 					Description("desc")
-					InHeader("invalid")
+					Header("invalid")
 				})
 			})
 			dslengine.Run()
@@ -139,8 +131,7 @@ var _ = Describe("Security", func() {
 			API("", func() {
 				OAuth2Security("googAuthz", func() {
 					Description("Use Goog's Auth")
-					AuthorizationURL("https://example.com/auth")
-					TokenURL("https://example.com/token")
+					AccessCodeFlow("http://example.com/auth", "http://example.com/token")
 					Scope("scope:1", "Desc 1")
 					Scope("scope:2", "Desc 2")
 				})
@@ -160,16 +151,17 @@ var _ = Describe("Security", func() {
 			Ω(Design.SecurityMethods).Should(HaveLen(1))
 			method := Design.SecurityMethods[0]
 			Ω(method.Description).Should(Equal("Use Goog's Auth"))
-			Ω(method.AuthorizationURL).Should(Equal("https://example.com/auth"))
-			Ω(method.TokenURL).Should(Equal("https://example.com/token"))
+			Ω(method.AuthorizationURL).Should(Equal("http://example.com/auth"))
+			Ω(method.TokenURL).Should(Equal("http://example.com/token"))
+			Ω(method.Flow).Should(Equal("accessCode"))
 			Ω(method.Scopes["scope:1"]).Should(Equal("Desc 1"))
 			Ω(method.Scopes["scope:2"]).Should(Equal("Desc 2"))
 		})
 
-		It("should fail because of invalid declaration of InHeader", func() {
+		It("should fail because of invalid declaration of Header", func() {
 			API("", func() {
 				OAuth2Security("googAuthz", func() {
-					InHeader("invalid")
+					Header("invalid")
 				})
 			})
 			dslengine.Run()
@@ -181,7 +173,11 @@ var _ = Describe("Security", func() {
 	Context("with resources and actions", func() {
 		It("should fallback properly to lower-level security", func() {
 			API("", func() {
-				OtherSecurity("jwt", "apiKey")
+				JWTSecurity("jwt", func() {
+					TokenURL("http://example.com/token")
+					Scope("read", "Read")
+					Scope("write", "Write")
+				})
 				BasicAuthSecurity("password")
 
 				Security("jwt")
@@ -236,26 +232,4 @@ var _ = Describe("Security", func() {
 			Ω(Design.Resources["auth"].Actions["refresh"].Security.Method).Should(Equal("jwt"))
 		})
 	})
-
-	// Test APIKEySecurity
-	// Test OtherSecurity
-
-	Context("with some defined API", func() {
-		var name string
-		var dsl func()
-
-		BeforeEach(func() {
-			dslengine.Reset()
-			name = ""
-			dsl = nil
-		})
-
-		JustBeforeEach(func() {
-			API("secure", dsl)
-			dslengine.Run()
-		})
-
-		// Add more context/it blocks here
-	})
-
 })

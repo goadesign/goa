@@ -608,7 +608,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		schemes = api.Schemes
 	}
 
-	var security map[string][]string
+	security := make(map[string][]string)
 	if action.Security != nil && !action.Security.NoSecurity {
 		security[action.Security.Method] = action.Security.Scopes
 	}

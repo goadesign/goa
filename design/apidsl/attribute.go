@@ -195,8 +195,21 @@ func parseAttributeArgs(baseAttr *design.AttributeDefinition, args ...interface{
 	return dataType, description, dsl
 }
 
-// Header is an alias of Attribute.
+// Header is an alias of Attribute for the most part.
+//
+// Within an APIKeySecurity or JWTSecurity definition, Header
+// defines that an implementation must check the given header to get
+// the API Key.  In this case, no `args` parameter is necessary.
 func Header(name string, args ...interface{}) {
+	if _, ok := dslengine.CurrentDefinition().(*design.SecurityMethodDefinition); ok {
+		if len(args) != 0 {
+			dslengine.ReportError("do not specify args")
+			return
+		}
+		inHeader(name)
+		return
+	}
+
 	Attribute(name, args...)
 }
 
