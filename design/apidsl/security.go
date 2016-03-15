@@ -11,29 +11,29 @@ import (
 // level, it will apply to all resources by default, following the
 // same logic.
 //
-// The method refers to previous definitions of either
+// The scheme refers to previous definitions of either
 // OAuth2Security(), BasicAuthSecurity(), APIKeySecurity() or
 // JWTSecurity().  It can be a string, corresponding to the first
-// parameter of those definitions, or a SecurityMethodDefinition,
+// parameter of those definitions, or a SecuritySchemeDefinition,
 // returned by those same functions.
-func Security(method interface{}, dsl ...func()) {
+func Security(scheme interface{}, dsl ...func()) {
 	var def *design.SecurityDefinition
-	switch val := method.(type) {
+	switch val := scheme.(type) {
 	case string:
 		def = &design.SecurityDefinition{}
-		for _, method := range design.Design.SecurityMethods {
-			if method.Method == val {
-				def.Method = method
+		for _, scheme := range design.Design.SecuritySchemes {
+			if scheme.SchemeName == val {
+				def.Scheme = scheme
 			}
 		}
-		if def.Method == nil {
-			dslengine.ReportError("security method %q not found", val)
+		if def.Scheme == nil {
+			dslengine.ReportError("security scheme %q not found", val)
 			return
 		}
-	case *design.SecurityMethodDefinition:
-		def = &design.SecurityDefinition{Method: val}
+	case *design.SecuritySchemeDefinition:
+		def = &design.SecurityDefinition{Scheme: val}
 	default:
-		dslengine.ReportError("invalid value for 'method' parameter, specify a string or a *SecurityMethodDefinition")
+		dslengine.ReportError("invalid value for 'scheme' parameter, specify a string or a *SecuritySchemeDefinition")
 		return
 	}
 
@@ -57,12 +57,12 @@ func Security(method interface{}, dsl ...func()) {
 	}
 }
 
-// NoSecurity resets the authentication methods for an Action or a
+// NoSecurity resets the authentication schemes for an Action or a
 // Resource. It also prevents fallback to Resource or API-defined
 // Security().
 func NoSecurity() {
 	def := &design.SecurityDefinition{
-		Method: &design.SecurityMethodDefinition{Kind: design.NoSecurityKind},
+		Scheme: &design.SecuritySchemeDefinition{Kind: design.NoSecurityKind},
 	}
 
 	parentDef := dslengine.CurrentDefinition()
@@ -77,7 +77,7 @@ func NoSecurity() {
 	}
 }
 
-// BasicAuthSecurity defines a "basic" security method for the API.
+// BasicAuthSecurity defines a "basic" security scheme for the API.
 //
 // Example:
 //
@@ -85,7 +85,7 @@ func NoSecurity() {
 //         Description("Use your own password!")
 //     })
 //
-func BasicAuthSecurity(name string, dsl ...func()) *design.SecurityMethodDefinition {
+func BasicAuthSecurity(name string, dsl ...func()) *design.SecuritySchemeDefinition {
 	switch dslengine.CurrentDefinition().(type) {
 	case *design.APIDefinition, *dslengine.TopLevelDefinition:
 	default:
@@ -93,36 +93,36 @@ func BasicAuthSecurity(name string, dsl ...func()) *design.SecurityMethodDefinit
 		return nil
 	}
 
-	if securityMethodRedefined(name) {
+	if securitySchemeRedefined(name) {
 		return nil
 	}
 
-	def := &design.SecurityMethodDefinition{
-		Kind:   design.BasicAuthSecurityKind,
-		Method: name,
-		Type:   "basic",
+	def := &design.SecuritySchemeDefinition{
+		Kind:       design.BasicAuthSecurityKind,
+		SchemeName: name,
+		Type:       "basic",
 	}
 
 	if len(dsl) != 0 {
 		def.DSLFunc = dsl[0]
 	}
 
-	design.Design.SecurityMethods = append(design.Design.SecurityMethods, def)
+	design.Design.SecuritySchemes = append(design.Design.SecuritySchemes, def)
 
 	return def
 }
 
-func securityMethodRedefined(name string) bool {
-	for _, previousMethod := range design.Design.SecurityMethods {
-		if previousMethod.Method == name {
-			dslengine.ReportError("cannot redefine SecurityMethod with name %q", name)
+func securitySchemeRedefined(name string) bool {
+	for _, previousScheme := range design.Design.SecuritySchemes {
+		if previousScheme.SchemeName == name {
+			dslengine.ReportError("cannot redefine SecurityScheme with name %q", name)
 			return true
 		}
 	}
 	return false
 }
 
-// APIKeySecurity defines an "apiKey" security method available throughout the API.
+// APIKeySecurity defines an "apiKey" security scheme available throughout the API.
 //
 // Example:
 //
@@ -131,7 +131,7 @@ func securityMethodRedefined(name string) bool {
 //    		Header("Authorization")
 //     })
 //
-func APIKeySecurity(name string, dsl ...func()) *design.SecurityMethodDefinition {
+func APIKeySecurity(name string, dsl ...func()) *design.SecuritySchemeDefinition {
 	switch dslengine.CurrentDefinition().(type) {
 	case *design.APIDefinition, *dslengine.TopLevelDefinition:
 	default:
@@ -139,26 +139,26 @@ func APIKeySecurity(name string, dsl ...func()) *design.SecurityMethodDefinition
 		return nil
 	}
 
-	if securityMethodRedefined(name) {
+	if securitySchemeRedefined(name) {
 		return nil
 	}
 
-	def := &design.SecurityMethodDefinition{
-		Kind:   design.APIKeySecurityKind,
-		Method: name,
-		Type:   "apiKey",
+	def := &design.SecuritySchemeDefinition{
+		Kind:       design.APIKeySecurityKind,
+		SchemeName: name,
+		Type:       "apiKey",
 	}
 
 	if len(dsl) != 0 {
 		def.DSLFunc = dsl[0]
 	}
 
-	design.Design.SecurityMethods = append(design.Design.SecurityMethods, def)
+	design.Design.SecuritySchemes = append(design.Design.SecuritySchemes, def)
 
 	return def
 }
 
-// OAuth2Security defines the different Security methods that are
+// OAuth2Security defines the different Security schemes that are
 // available throughout the API.
 //
 // Example:
@@ -173,7 +173,7 @@ func APIKeySecurity(name string, dsl ...func()) *design.SecurityMethodDefinition
 //	    	Scope("my_system:read", "Read anything in there")
 //     })
 //
-func OAuth2Security(name string, dsl ...func()) *design.SecurityMethodDefinition {
+func OAuth2Security(name string, dsl ...func()) *design.SecuritySchemeDefinition {
 	switch dslengine.CurrentDefinition().(type) {
 	case *design.APIDefinition, *dslengine.TopLevelDefinition:
 	default:
@@ -181,26 +181,26 @@ func OAuth2Security(name string, dsl ...func()) *design.SecurityMethodDefinition
 		return nil
 	}
 
-	if securityMethodRedefined(name) {
+	if securitySchemeRedefined(name) {
 		return nil
 	}
 
-	def := &design.SecurityMethodDefinition{
-		Method: name,
-		Kind:   design.OAuth2SecurityKind,
-		Type:   "oauth2",
+	def := &design.SecuritySchemeDefinition{
+		SchemeName: name,
+		Kind:       design.OAuth2SecurityKind,
+		Type:       "oauth2",
 	}
 
 	if len(dsl) != 0 {
 		def.DSLFunc = dsl[0]
 	}
 
-	design.Design.SecurityMethods = append(design.Design.SecurityMethods, def)
+	design.Design.SecuritySchemes = append(design.Design.SecuritySchemes, def)
 
 	return def
 }
 
-// JWTSecurity defines an APIKey security method, with support for
+// JWTSecurity defines an APIKey security scheme, with support for
 // Scopes and a TokenURL.
 //
 // Since Scopes and TokenURLs are not compatible with the Swagger specification,
@@ -216,7 +216,7 @@ func OAuth2Security(name string, dsl ...func()) *design.SecurityMethodDefinition
 //	    	Scope("my_system:read", "Read anything in there")
 //     })
 //
-func JWTSecurity(name string, dsl ...func()) *design.SecurityMethodDefinition {
+func JWTSecurity(name string, dsl ...func()) *design.SecuritySchemeDefinition {
 	switch dslengine.CurrentDefinition().(type) {
 	case *design.APIDefinition, *dslengine.TopLevelDefinition:
 	default:
@@ -224,26 +224,26 @@ func JWTSecurity(name string, dsl ...func()) *design.SecurityMethodDefinition {
 		return nil
 	}
 
-	if securityMethodRedefined(name) {
+	if securitySchemeRedefined(name) {
 		return nil
 	}
 
-	def := &design.SecurityMethodDefinition{
-		Method: name,
-		Kind:   design.JWTSecurityKind,
-		Type:   "apiKey",
+	def := &design.SecuritySchemeDefinition{
+		SchemeName: name,
+		Kind:       design.JWTSecurityKind,
+		Type:       "apiKey",
 	}
 
 	if len(dsl) != 0 {
 		def.DSLFunc = dsl[0]
 	}
 
-	design.Design.SecurityMethods = append(design.Design.SecurityMethods, def)
+	design.Design.SecuritySchemes = append(design.Design.SecuritySchemes, def)
 
 	return def
 }
 
-// Scope defines an authorization scope. Used within SecurityMethod,
+// Scope defines an authorization scope. Used within SecurityScheme,
 // the description is required, explaining what the scope
 // means. Within a Security block, only a scope is needed.
 func Scope(name string, desc ...string) {
@@ -254,7 +254,7 @@ func Scope(name string, desc ...string) {
 			return
 		}
 		parent.Scopes = append(parent.Scopes, name)
-	case *design.SecurityMethodDefinition:
+	case *design.SecuritySchemeDefinition:
 		if len(desc) == 0 {
 			dslengine.ReportError("missing description")
 			return
@@ -270,7 +270,7 @@ func Scope(name string, desc ...string) {
 
 // inHeader is called by `Header()`, see documentation there.
 func inHeader(headerName string) {
-	if parent, ok := dslengine.CurrentDefinition().(*design.SecurityMethodDefinition); ok {
+	if parent, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
 		if parent.Kind == design.APIKeySecurityKind || parent.Kind == design.JWTSecurityKind {
 			if parent.In != "" {
 				dslengine.ReportError("'In' previously defined through Header or Query")
@@ -288,7 +288,7 @@ func inHeader(headerName string) {
 // must check in the query parameter named "parameterName" to get the
 // api key.
 func Query(parameterName string) {
-	if parent, ok := dslengine.CurrentDefinition().(*design.SecurityMethodDefinition); ok {
+	if parent, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
 		if parent.Kind == design.APIKeySecurityKind || parent.Kind == design.JWTSecurityKind {
 			if parent.In != "" {
 				dslengine.ReportError("'In' previously defined through Header or Query")
@@ -305,7 +305,7 @@ func Query(parameterName string) {
 // AccessCodeFlow defines an "access code" OAuth2 flow.  Use
 // within an OAuth2Security definition.
 func AccessCodeFlow(authorizationURL, tokenURL string) {
-	if parent, ok := dslengine.CurrentDefinition().(*design.SecurityMethodDefinition); ok {
+	if parent, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
 		if parent.Kind == design.OAuth2SecurityKind {
 			parent.Flow = "accessCode"
 			parent.AuthorizationURL = authorizationURL
@@ -319,7 +319,7 @@ func AccessCodeFlow(authorizationURL, tokenURL string) {
 // ApplicationFlow defines an "application" OAuth2 flow.  Use
 // within an OAuth2Security definition.
 func ApplicationFlow(tokenURL string) {
-	if parent, ok := dslengine.CurrentDefinition().(*design.SecurityMethodDefinition); ok {
+	if parent, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
 		if parent.Kind == design.OAuth2SecurityKind {
 			parent.Flow = "application"
 			parent.TokenURL = tokenURL
@@ -332,7 +332,7 @@ func ApplicationFlow(tokenURL string) {
 // PasswordFlow defines a "password" OAuth2 flow.  Use within an
 // OAuth2Security definition.
 func PasswordFlow(tokenURL string) {
-	if parent, ok := dslengine.CurrentDefinition().(*design.SecurityMethodDefinition); ok {
+	if parent, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
 		if parent.Kind == design.OAuth2SecurityKind {
 			parent.Flow = "password"
 			parent.TokenURL = tokenURL
@@ -345,7 +345,7 @@ func PasswordFlow(tokenURL string) {
 // ImplicitFlow defines an "implicit" OAuth2 flow.  Use within an
 // OAuth2Security definition.
 func ImplicitFlow(authorizationURL string) {
-	if parent, ok := dslengine.CurrentDefinition().(*design.SecurityMethodDefinition); ok {
+	if parent, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
 		if parent.Kind == design.OAuth2SecurityKind {
 			parent.Flow = "implicit"
 			parent.AuthorizationURL = authorizationURL
@@ -358,9 +358,9 @@ func ImplicitFlow(authorizationURL string) {
 // TokenURL defines a URL to get an access token.  If you are defining
 // OAuth2 flows, please use `ImplicitFlow`, `PasswordFlow`,
 // `AccessCodeFlow` or `ApplicationFlow` instead. This will set an
-// endpoint where you can obtain a JWT with the JWTSecurity method.
+// endpoint where you can obtain a JWT with the JWTSecurity scheme.
 func TokenURL(tokenURL string) {
-	if parent, ok := dslengine.CurrentDefinition().(*design.SecurityMethodDefinition); ok {
+	if parent, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
 		if parent.Kind == design.JWTSecurityKind {
 			parent.TokenURL = tokenURL
 			return

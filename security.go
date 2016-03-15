@@ -7,16 +7,16 @@ import (
 	"golang.org/x/net/context"
 )
 
-// SecurityMethod extracts the security method (OAuth2Security,
+// SecurityScheme extracts the security scheme (OAuth2Security,
 // BasicAuthSecurity, APIKeySecurity or JWTSecurity) from the
 // request context.
 //
 // This is to be used from within a security middleware
 // implementation. If you do get into your middleware code, it is
-// guaranteed that the request will hold a valid SecurityMethod.  You
+// guaranteed that the request will hold a valid SecurityScheme.  You
 // can then typecast it and validate the proper credentials.
-func SecurityMethod(ctx context.Context) interface{} {
-	return ctx.Value(securityMethodKey)
+func SecurityScheme(ctx context.Context) interface{} {
+	return ctx.Value(securitySchemeKey)
 }
 
 // Scopes extracts from a request the scopes relevant to the action
@@ -33,13 +33,13 @@ func Scopes(ctx context.Context) (out []string) {
 	return scopes
 }
 
-// securityMiddleware represents a security method middleware, used
-// for deduplicating the different security method's methods!
+// securityMiddleware represents a security scheme middleware, used
+// for deduplicating the different security scheme's methods!
 type securityMiddleware struct {
 	middleware Middleware
-	method     interface{}
+	scheme     interface{}
 
-	// Description of the security method
+	// Description of the security scheme
 	Description string
 
 	// Metadata is some data passed on from the DSL.
@@ -54,11 +54,11 @@ type securityMiddleware struct {
 func (sec *securityMiddleware) Dispatch(h Handler, scopes ...string) Handler {
 	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		if sec.middleware == nil {
-			RequestService(ctx).Error("security method not implemented")
-			return errors.New("security method not implemented")
+			RequestService(ctx).Error("security scheme not implemented")
+			return errors.New("security scheme not implemented")
 		}
 
-		ctx = context.WithValue(ctx, securityMethodKey, sec.method)
+		ctx = context.WithValue(ctx, securitySchemeKey, sec.scheme)
 		if len(scopes) != 0 {
 			ctx = context.WithValue(ctx, securityScopesKey, scopes)
 		}
@@ -69,7 +69,7 @@ func (sec *securityMiddleware) Dispatch(h Handler, scopes ...string) Handler {
 
 ///////////////////////////////////////////////////////////////////
 
-// OAuth2Security represents the `oauth2` security method. It is
+// OAuth2Security represents the `oauth2` security scheme. It is
 // automatically instantiated in your generated code when you use the
 // different `*Security()` DSL functions and `Security()` in your
 // design.
@@ -82,7 +82,7 @@ type OAuth2Security struct {
 	TokenURL string
 	// AuthenticationURL defines the OAuth2 authenticationUrl.  See http://swagger.io/specification/#securitySchemeObject
 	AuthenticationURL string
-	// Scopes defines a list of scopes for the security method.
+	// Scopes defines a list of scopes for the security scheme.
 	Scopes []string
 }
 
@@ -90,12 +90,12 @@ type OAuth2Security struct {
 // mechanisms, most probably in user code or in some shared packages.
 func (sec *OAuth2Security) Use(m Middleware) {
 	sec.middleware = m
-	sec.method = sec
+	sec.scheme = sec
 }
 
 ///////////////////////////////////////////////////////////////////
 
-// BasicAuthSecurity represents the `Basic` security method, which
+// BasicAuthSecurity represents the `Basic` security scheme, which
 // consists of a simple login/pass, accessible through
 // Request.BasicAuth().
 type BasicAuthSecurity struct {
@@ -106,12 +106,12 @@ type BasicAuthSecurity struct {
 // mechanisms, most probably in user code or in some shared packages.
 func (sec *BasicAuthSecurity) Use(m Middleware) {
 	sec.middleware = m
-	sec.method = sec
+	sec.scheme = sec
 }
 
 ///////////////////////////////////////////////////////////////////
 
-// APIKeySecurity represents the `apiKey` security method. It handles
+// APIKeySecurity represents the `apiKey` security scheme. It handles
 // a key that can be in the headers or in the query parameters, and
 // does authentication based on that.  The Name field represents the
 // key of either the query string parameter or the header, depending
@@ -129,12 +129,12 @@ type APIKeySecurity struct {
 // mechanisms, most probably in user code or in some shared packages.
 func (sec *APIKeySecurity) Use(m Middleware) {
 	sec.middleware = m
-	sec.method = sec
+	sec.scheme = sec
 }
 
 ///////////////////////////////////////////////////////////////////
 
-// JWTSecurity represents an api key based method, with support for
+// JWTSecurity represents an api key based scheme, with support for
 // scopes and a token URL.
 type JWTSecurity struct {
 	securityMiddleware
@@ -145,7 +145,7 @@ type JWTSecurity struct {
 	Name string
 	// TokenURL defines the URL where you'd get the JWT tokens.
 	TokenURL string
-	// Scopes defines a list of scopes for the security method.
+	// Scopes defines a list of scopes for the security scheme.
 	Scopes []string
 }
 
@@ -153,5 +153,5 @@ type JWTSecurity struct {
 // mechanisms, most probably in user code or in some shared packages.
 func (sec *JWTSecurity) Use(m Middleware) {
 	sec.middleware = m
-	sec.method = sec
+	sec.scheme = sec
 }

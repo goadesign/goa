@@ -16,7 +16,7 @@ var _ = Describe("Security", func() {
 	It("should have no security DSL when none are defined", func() {
 		API("secure", nil)
 		dslengine.Run()
-		Ω(Design.SecurityMethods).Should(BeNil())
+		Ω(Design.SecuritySchemes).Should(BeNil())
 		Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 	})
 
@@ -49,23 +49,23 @@ var _ = Describe("Security", func() {
 		dslengine.Run()
 
 		Ω(dslengine.Errors).ShouldNot(HaveOccurred())
-		Ω(Design.SecurityMethods).Should(HaveLen(4))
+		Ω(Design.SecuritySchemes).Should(HaveLen(4))
 
-		Ω(Design.SecurityMethods[0].Kind).Should(Equal(BasicAuthSecurityKind))
-		Ω(Design.SecurityMethods[0].Description).Should(Equal("desc"))
+		Ω(Design.SecuritySchemes[0].Kind).Should(Equal(BasicAuthSecurityKind))
+		Ω(Design.SecuritySchemes[0].Description).Should(Equal("desc"))
 
-		Ω(Design.SecurityMethods[1].Kind).Should(Equal(OAuth2SecurityKind))
-		Ω(Design.SecurityMethods[1].AuthorizationURL).Should(Equal("http://example.com/auth"))
-		Ω(Design.SecurityMethods[1].TokenURL).Should(Equal("http://example.com/token"))
-		Ω(Design.SecurityMethods[1].Flow).Should(Equal("accessCode"))
+		Ω(Design.SecuritySchemes[1].Kind).Should(Equal(OAuth2SecurityKind))
+		Ω(Design.SecuritySchemes[1].AuthorizationURL).Should(Equal("http://example.com/auth"))
+		Ω(Design.SecuritySchemes[1].TokenURL).Should(Equal("http://example.com/token"))
+		Ω(Design.SecuritySchemes[1].Flow).Should(Equal("accessCode"))
 
-		Ω(Design.SecurityMethods[2].Kind).Should(Equal(APIKeySecurityKind))
-		Ω(Design.SecurityMethods[2].In).Should(Equal("query"))
-		Ω(Design.SecurityMethods[2].Name).Should(Equal("access_token"))
+		Ω(Design.SecuritySchemes[2].Kind).Should(Equal(APIKeySecurityKind))
+		Ω(Design.SecuritySchemes[2].In).Should(Equal("query"))
+		Ω(Design.SecuritySchemes[2].Name).Should(Equal("access_token"))
 
-		Ω(Design.SecurityMethods[3].Kind).Should(Equal(JWTSecurityKind))
-		Ω(Design.SecurityMethods[3].TokenURL).Should(Equal("http://example.com/token"))
-		Ω(Design.SecurityMethods[3].Scopes).Should(HaveLen(2))
+		Ω(Design.SecuritySchemes[3].Kind).Should(Equal(JWTSecurityKind))
+		Ω(Design.SecuritySchemes[3].TokenURL).Should(Equal("http://example.com/token"))
+		Ω(Design.SecuritySchemes[3].Scopes).Should(HaveLen(2))
 	})
 
 	Context("with basic security", func() {
@@ -148,14 +148,14 @@ var _ = Describe("Security", func() {
 			dslengine.Run()
 
 			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
-			Ω(Design.SecurityMethods).Should(HaveLen(1))
-			method := Design.SecurityMethods[0]
-			Ω(method.Description).Should(Equal("Use Goog's Auth"))
-			Ω(method.AuthorizationURL).Should(Equal("http://example.com/auth"))
-			Ω(method.TokenURL).Should(Equal("http://example.com/token"))
-			Ω(method.Flow).Should(Equal("accessCode"))
-			Ω(method.Scopes["scope:1"]).Should(Equal("Desc 1"))
-			Ω(method.Scopes["scope:2"]).Should(Equal("Desc 2"))
+			Ω(Design.SecuritySchemes).Should(HaveLen(1))
+			scheme := Design.SecuritySchemes[0]
+			Ω(scheme.Description).Should(Equal("Use Goog's Auth"))
+			Ω(scheme.AuthorizationURL).Should(Equal("http://example.com/auth"))
+			Ω(scheme.TokenURL).Should(Equal("http://example.com/token"))
+			Ω(scheme.Flow).Should(Equal("accessCode"))
+			Ω(scheme.Scopes["scope:1"]).Should(Equal("Desc 1"))
+			Ω(scheme.Scopes["scope:2"]).Should(Equal("Desc 2"))
 		})
 
 		It("should fail because of invalid declaration of Header", func() {
@@ -222,14 +222,14 @@ var _ = Describe("Security", func() {
 			dslengine.Run()
 
 			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
-			Ω(Design.SecurityMethods).Should(HaveLen(2))
+			Ω(Design.SecuritySchemes).Should(HaveLen(2))
 			Ω(Design.Resources["one"].Actions["first"].Security).Should(BeNil())
-			Ω(Design.Resources["one"].Actions["second"].Security.Method.Method).Should(Equal("jwt"))
-			Ω(Design.Resources["two"].Actions["third"].Security.Method.Method).Should(Equal("password"))
-			Ω(Design.Resources["two"].Actions["fourth"].Security.Method.Method).Should(Equal("jwt"))
-			Ω(Design.Resources["three"].Actions["fifth"].Security.Method.Method).Should(Equal("jwt"))
+			Ω(Design.Resources["one"].Actions["second"].Security.Scheme.SchemeName).Should(Equal("jwt"))
+			Ω(Design.Resources["two"].Actions["third"].Security.Scheme.SchemeName).Should(Equal("password"))
+			Ω(Design.Resources["two"].Actions["fourth"].Security.Scheme.SchemeName).Should(Equal("jwt"))
+			Ω(Design.Resources["three"].Actions["fifth"].Security.Scheme.SchemeName).Should(Equal("jwt"))
 			Ω(Design.Resources["auth"].Actions["auth"].Security).Should(BeNil())
-			Ω(Design.Resources["auth"].Actions["refresh"].Security.Method.Method).Should(Equal("jwt"))
+			Ω(Design.Resources["auth"].Actions["refresh"].Security.Scheme.SchemeName).Should(Equal("jwt"))
 		})
 	})
 })
