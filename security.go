@@ -8,7 +8,7 @@ import (
 )
 
 // SecurityMethod extracts the security method (OAuth2Security,
-// BasicAuthSecurity, APIKeySecurity or OtherSecurity) from the
+// BasicAuthSecurity, APIKeySecurity or JWTSecurity) from the
 // request context.
 //
 // This is to be used from within a security middleware
@@ -39,10 +39,6 @@ type securityMiddleware struct {
 	middleware Middleware
 	method     interface{}
 
-	// MethodName is the name specified for this authentication method
-	// which will appear in the Swagger file.
-	MethodName string
-
 	// Description of the security method
 	Description string
 
@@ -58,7 +54,7 @@ type securityMiddleware struct {
 func (sec *securityMiddleware) Dispatch(h Handler, scopes ...string) Handler {
 	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		if sec.middleware == nil {
-			RequestService(ctx).Error("security method not implemented", "method", sec.MethodName)
+			RequestService(ctx).Error("security method not implemented")
 			return errors.New("security method not implemented")
 		}
 
@@ -90,11 +86,6 @@ type OAuth2Security struct {
 	Scopes []string
 }
 
-// Type returns the security method type.
-func (sec *OAuth2Security) Type() string {
-	return "oauth2"
-}
-
 // Use sets the middleware that will implement the actual security
 // mechanisms, most probably in user code or in some shared packages.
 func (sec *OAuth2Security) Use(m Middleware) {
@@ -109,11 +100,6 @@ func (sec *OAuth2Security) Use(m Middleware) {
 // Request.BasicAuth().
 type BasicAuthSecurity struct {
 	securityMiddleware
-}
-
-// Type returns the security method type.
-func (sec *BasicAuthSecurity) Type() string {
-	return "basic"
 }
 
 // Use sets the middleware that will implement the actual security
@@ -139,11 +125,6 @@ type APIKeySecurity struct {
 	Name string
 }
 
-// Type returns the security method type.
-func (sec *APIKeySecurity) Type() string {
-	return "apiKey"
-}
-
 // Use sets the middleware that will implement the actual security
 // mechanisms, most probably in user code or in some shared packages.
 func (sec *APIKeySecurity) Use(m Middleware) {
@@ -153,34 +134,24 @@ func (sec *APIKeySecurity) Use(m Middleware) {
 
 ///////////////////////////////////////////////////////////////////
 
-// OtherSecurity represents other methods that are more freeform, and
-// includes all the fields of the more rigorous methods
-// OAuth2Security, BasicAuthSecurity and APIKeySecurity.
-type OtherSecurity struct {
+// JWTSecurity represents an api key based method, with support for
+// scopes and a token URL.
+type JWTSecurity struct {
 	securityMiddleware
 
-	// In represents where to check for some data, `query` or `header`
+	// In represents where to check for the JWT, `query` or `header`
 	In string
 	// Name is the name of the `header` or `query` parameter to check for data.
 	Name string
-	// Flow defines the OAuth2 flow type. See http://swagger.io/specification/#securitySchemeObject
-	Flow string
-	// TokenURL defines the OAuth2 tokenUrl.  See http://swagger.io/specification/#securitySchemeObject
+	// TokenURL defines the URL where you'd get the JWT tokens.
 	TokenURL string
-	// AuthenticationURL defines the OAuth2 authenticationUrl.  See http://swagger.io/specification/#securitySchemeObject
-	AuthenticationURL string
 	// Scopes defines a list of scopes for the security method.
 	Scopes []string
 }
 
-// Type returns the security method type.
-func (sec *OtherSecurity) Type() string {
-	return "other"
-}
-
 // Use sets the middleware that will implement the actual security
 // mechanisms, most probably in user code or in some shared packages.
-func (sec *OtherSecurity) Use(m Middleware) {
+func (sec *JWTSecurity) Use(m Middleware) {
 	sec.middleware = m
 	sec.method = sec
 }

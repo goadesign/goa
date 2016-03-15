@@ -635,12 +635,12 @@ func (ut {{gotyperef . .AllRequired 0}}) Validate() (err error) {
 
 	securityMethodsT = `
 {{ range . }}
-{{ if eq .Type "apiKey" }}
+{{ if eq .Context "APIKeySecurity" }}
 var {{ goify .Method true }}Security = &goa.APIKeySecurity{
 		In:   {{ printf "%q" .In }},
 		Name: {{ printf "%q" .Name }},
 }
-{{ else if eq .Type "oauth2" }}
+{{ else if eq .Context "OAuth2Security" }}
 var {{ goify .Method true }}Security = &goa.OAuth2Security{
 		Flow:             {{ printf "%q" .Flow }},
 		TokenURL:         {{ printf "%q" .TokenURL }},
@@ -650,27 +650,22 @@ var {{ goify .Method true }}Security = &goa.OAuth2Security{
 {{ end }}
 		},{{end}}
 }
-{{ else if eq .Type "basic" }}
+{{ else if eq .Context "BasicAuthSecurity" }}
 var {{ goify .Method true }}Security = &goa.BasicAuthSecurity{}
-{{ else if eq .Type "other" }}
-var {{ goify .Method true }}Security = &goa.OtherSecurity{
+{{ else if eq .Context "JWTSecurity" }}
+var {{ goify .Method true }}Security = &goa.JWTSecurity{
 		In:               {{ printf "%q" .In }},
 		Name:             {{ printf "%q" .Name }},
 		TokenURL:         {{ printf "%q" .TokenURL }},
-		AuthorizationURL: {{ printf "%q" .AuthorizationURL }},{{ with .Scopes }}
 		Scopes: map[string]string{
 {{ range $k, $v := . }}			{{ printf "%q" $k }}: {{ printf "%q" $v }},
 {{ end }}
-		},{{end}}
+		},
 }
 {{ end }}{{ end }}
 
-func init() {
-{{ range . }}
-	{{ goify .Method true }}Security.MethodName = {{ printf "%q" .Method }}{{if .Description}}
+func init() { {{ range . }}{{if .Description}}
 	{{ goify .Method true }}Security.Description = {{ printf "%q" .Description }}
-{{end}}
-{{ end }}
-}
+{{end}}{{end}} }
 `
 )

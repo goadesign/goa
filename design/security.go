@@ -11,9 +11,8 @@ const (
 	BasicAuthSecurityKind
 	// APIKeySecurityKind means "apiKey" security type.
 	APIKeySecurityKind
-	// OtherSecurityKind is for custom security types, when you want to above
-	// and beyond Swagger.
-	OtherSecurityKind
+	// JWTSecurityKind means an "apiKey" security type, with support for TokenURL and Scopes.
+	JWTSecurityKind
 )
 
 // SecurityDefinition defines security requirements for an Action
@@ -63,7 +62,7 @@ type SecurityMethodDefinition struct {
 
 // Context returns the generic definition name used in error messages.
 func (s *SecurityMethodDefinition) Context() string {
-	dslFunc := "OtherSecurity"
+	dslFunc := "[unknown]"
 	switch s.Kind {
 	case OAuth2SecurityKind:
 		dslFunc = "OAuth2Security"
@@ -71,6 +70,8 @@ func (s *SecurityMethodDefinition) Context() string {
 		dslFunc = "BasicAuthSecurity"
 	case APIKeySecurityKind:
 		dslFunc = "APIKeySecurity"
+	case JWTSecurityKind:
+		dslFunc = "JWTSecurity"
 	}
 	return dslFunc
 }

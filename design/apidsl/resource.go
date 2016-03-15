@@ -39,15 +39,17 @@ func Resource(name string, dsl func()) *design.ResourceDefinition {
 	if design.Design.Resources == nil {
 		design.Design.Resources = make(map[string]*design.ResourceDefinition)
 	}
-	var resource *design.ResourceDefinition
-	if dslengine.TopLevelDefinition(true) {
-		if _, ok := design.Design.Resources[name]; ok {
-			dslengine.ReportError("resource %#v is defined twice", name)
-			return nil
-		}
-		resource = design.NewResourceDefinition(name, dsl)
-		design.Design.Resources[name] = resource
+	if !dslengine.IsTopLevelDefinition() {
+		dslengine.IncompatibleDSL()
+		return nil
 	}
+
+	if _, ok := design.Design.Resources[name]; ok {
+		dslengine.ReportError("resource %#v is defined twice", name)
+		return nil
+	}
+	resource := design.NewResourceDefinition(name, dsl)
+	design.Design.Resources[name] = resource
 	return resource
 }
 

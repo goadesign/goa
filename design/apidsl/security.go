@@ -5,17 +5,28 @@ import (
 	"github.com/goadesign/goa/dslengine"
 )
 
-// Security defines an authentication method required to access a goa
+// Security defines an authentication requirements to access a goa
 // Action.  When defined on a Resource, it applies to all Actions,
 // unless overriden by individual actions.  When defined at the API
 // level, it will apply to all resources by default, following the
 // same logic.
 //
-// The method name refers to what you have passed to the different
-// OAuth2Security(), BasicAuthSecurity() and APIKeySecurity()
-// declarations.
-func Security(method string, dsl ...func()) {
-	def := &design.SecurityDefinition{Method: method}
+// The method refers to previous definitions of either
+// OAuth2Security(), BasicAuthSecurity(), APIKeySecurity() or
+// JWTSecurity().  It can be a string, corresponding to the first
+// parameter of those definitions, or a SecurityMethodDefinition,
+// returned by those same functions.
+func Security(method interface{}, dsl ...func()) {
+	var def *design.SecurityDefinition
+	switch val := method.(type) {
+	case string:
+		def = &design.SecurityDefinition{Method: val}
+	case *design.SecurityMethodDefinition:
+		def = &design.SecurityDefinition{Method: val.Method}
+	default:
+		dslengine.ReportError("invalid value for 'method' parameter, specify a string or a *SecurityMethodDefinition")
+		return
+	}
 
 	if len(dsl) != 0 {
 		if !dslengine.Execute(dsl[0], def) {
@@ -63,14 +74,16 @@ func NoSecurity() {
 //         Description("Use your own password!")
 //     })
 //
-func BasicAuthSecurity(name string, dsl ...func()) {
-	if _, ok := dslengine.CurrentDefinition().(*design.APIDefinition); !ok {
+func BasicAuthSecurity(name string, dsl ...func()) *design.SecurityMethodDefinition {
+	switch dslengine.CurrentDefinition().(type) {
+	case *design.APIDefinition, *dslengine.TopLevelDefinition:
+	default:
 		dslengine.IncompatibleDSL()
-		return
+		return nil
 	}
 
 	if securityMethodRedefined(name) {
-		return
+		return nil
 	}
 
 	def := &design.SecurityMethodDefinition{
@@ -81,11 +94,13 @@ func BasicAuthSecurity(name string, dsl ...func()) {
 
 	if len(dsl) != 0 {
 		if !dslengine.Execute(dsl[0], def) {
-			return
+			return nil
 		}
 	}
 
 	design.Design.SecurityMethods = append(design.Design.SecurityMethods, def)
+
+	return def
 }
 
 func securityMethodRedefined(name string) bool {
@@ -104,17 +119,19 @@ func securityMethodRedefined(name string) bool {
 //
 //     APIKeySecurity("jwt", func() {
 //			Description("Use your own password!")
-//    		InHeader("Authorization")
+//    		Header("Authorization")
 //     })
 //
-func APIKeySecurity(name string, dsl ...func()) {
-	if _, ok := dslengine.CurrentDefinition().(*design.APIDefinition); !ok {
+func APIKeySecurity(name string, dsl ...func()) *design.SecurityMethodDefinition {
+	switch dslengine.CurrentDefinition().(type) {
+	case *design.APIDefinition, *dslengine.TopLevelDefinition:
+	default:
 		dslengine.IncompatibleDSL()
-		return
+		return nil
 	}
 
 	if securityMethodRedefined(name) {
-		return
+		return nil
 	}
 
 	def := &design.SecurityMethodDefinition{
@@ -125,11 +142,13 @@ func APIKeySecurity(name string, dsl ...func()) {
 
 	if len(dsl) != 0 {
 		if !dslengine.Execute(dsl[0], def) {
-			return
+			return nil
 		}
 	}
 
 	design.Design.SecurityMethods = append(design.Design.SecurityMethods, def)
+
+	return def
 }
 
 // OAuth2Security defines the different Security methods that are
@@ -138,21 +157,25 @@ func APIKeySecurity(name string, dsl ...func()) {
 // Example:
 //
 //     OAuth2Security("googAuth", func() {
-//	    	OAuth2Flow("accessCode")
-//	    	AuthorizationURL("http://example.com/authorization")
-//	    	TokenURL("http://example.com/token")
+//	    	AccessCodeFlow(...)
+//	    	// ImplicitFlow(...)
+//	    	// PasswordFlow(...)
+//	    	// ApplicationFlow(...)
+//
 //	    	Scope("my_system:write", "Write to the system")
 //	    	Scope("my_system:read", "Read anything in there")
 //     })
 //
-func OAuth2Security(name string, dsl ...func()) {
-	if _, ok := dslengine.CurrentDefinition().(*design.APIDefinition); !ok {
+func OAuth2Security(name string, dsl ...func()) *design.SecurityMethodDefinition {
+	switch dslengine.CurrentDefinition().(type) {
+	case *design.APIDefinition, *dslengine.TopLevelDefinition:
+	default:
 		dslengine.IncompatibleDSL()
-		return
+		return nil
 	}
 
 	if securityMethodRedefined(name) {
-		return
+		return nil
 	}
 
 	def := &design.SecurityMethodDefinition{
@@ -163,50 +186,58 @@ func OAuth2Security(name string, dsl ...func()) {
 
 	if len(dsl) != 0 {
 		if !dslengine.Execute(dsl[0], def) {
-			return
+			return nil
 		}
 	}
 
 	design.Design.SecurityMethods = append(design.Design.SecurityMethods, def)
+
+	return def
 }
 
-// OtherSecurity defines a free-form security method, going above and
-// beyond the Swagger specs. If you want to benefit from Swagger UIs,
-// make sure the "securityType" is one of "apiKey", "oauth2" or
-// "basic".
+// JWTSecurity defines an APIKey security method, with support for
+// Scopes and a TokenURL.
+//
+// Since Scopes and TokenURLs are not compatible with the Swagger specification,
+// the swagger generator inserts comments in the description of the different
+// elements on which they are defined.
 //
 // Example:
 //
-//     OtherSecurity("jwt", "apiKey", func() {
-//	    	InHeader("Authorization")
-//	    	AuthorizationURL("http://example.com/authorization")
+//     JWTSecurity("jwt", func() {
+//          Header("Authorization")
+//	    	TokenURL("http://example.com/token")
 //	    	Scope("my_system:write", "Write to the system")
 //	    	Scope("my_system:read", "Read anything in there")
 //     })
 //
-func OtherSecurity(name string, securityType string, dsl ...func()) {
-	if _, ok := dslengine.CurrentDefinition().(*design.APIDefinition); !ok {
+func JWTSecurity(name string, dsl ...func()) *design.SecurityMethodDefinition {
+	switch dslengine.CurrentDefinition().(type) {
+	case *design.APIDefinition, *dslengine.TopLevelDefinition:
+	default:
 		dslengine.IncompatibleDSL()
-		return
+		return nil
 	}
 
 	if securityMethodRedefined(name) {
-		return
+		return nil
 	}
 
 	def := &design.SecurityMethodDefinition{
-		Kind:   design.OtherSecurityKind,
 		Method: name,
-		Type:   securityType,
+		Kind:   design.JWTSecurityKind,
+		Type:   "apiKey",
 	}
 
 	if len(dsl) != 0 {
 		if !dslengine.Execute(dsl[0], def) {
-			return
+			return nil
 		}
 	}
 
 	design.Design.SecurityMethods = append(design.Design.SecurityMethods, def)
+
+	return def
 }
 
 // Scope defines an authorization scope. Used within SecurityMethod,
@@ -216,13 +247,13 @@ func Scope(name string, desc ...string) {
 	switch parent := dslengine.CurrentDefinition().(type) {
 	case *design.SecurityDefinition:
 		if len(desc) == 1 {
-			dslengine.ReportError("must not pass description to Scope()")
+			dslengine.ReportError("too many arguments")
 			return
 		}
 		parent.Scopes = append(parent.Scopes, name)
 	case *design.SecurityMethodDefinition:
 		if len(desc) == 0 {
-			dslengine.ReportError("no description provided for Scope()")
+			dslengine.ReportError("missing description")
 			return
 		}
 		if parent.Scopes == nil {
@@ -234,13 +265,12 @@ func Scope(name string, desc ...string) {
 	}
 }
 
-// InHeader defines both `in` and `name` of a SecurityMethod.  See
-// http://swagger.io/specification/#securitySchemeObject for details.
-func InHeader(headerName string) {
+// inHeader is called by `Header()`, see documentation there.
+func inHeader(headerName string) {
 	if parent, ok := dslengine.CurrentDefinition().(*design.SecurityMethodDefinition); ok {
-		if parent.Kind == design.APIKeySecurityKind || parent.Kind == design.OtherSecurityKind {
+		if parent.Kind == design.APIKeySecurityKind || parent.Kind == design.JWTSecurityKind {
 			if parent.In != "" {
-				dslengine.ReportError("'In' previously defined through InHeader or InQuery")
+				dslengine.ReportError("'In' previously defined through Header or Query")
 				return
 			}
 			parent.In = "header"
@@ -251,13 +281,14 @@ func InHeader(headerName string) {
 	dslengine.IncompatibleDSL()
 }
 
-// InQuery defines both `in` and `name` of a SecurityMethod. See
-// http://swagger.io/specification/#securitySchemeObject for details.
-func InQuery(parameterName string) {
+// Query defines that an APIKeySecurity or JWTSecurity implementation
+// must check in the query parameter named "parameterName" to get the
+// api key.
+func Query(parameterName string) {
 	if parent, ok := dslengine.CurrentDefinition().(*design.SecurityMethodDefinition); ok {
-		if parent.Kind == design.APIKeySecurityKind || parent.Kind == design.OtherSecurityKind {
+		if parent.Kind == design.APIKeySecurityKind || parent.Kind == design.JWTSecurityKind {
 			if parent.In != "" {
-				dslengine.ReportError("'In' previously defined through InHeader or InQuery")
+				dslengine.ReportError("'In' previously defined through Header or Query")
 				return
 			}
 			parent.In = "query"
@@ -268,39 +299,68 @@ func InQuery(parameterName string) {
 	dslengine.IncompatibleDSL()
 }
 
-// OAuth2Flow defines the `flow` for a SecurityMethod.  See
-// http://swagger.io/specification/#securitySchemeObject for details.
-func OAuth2Flow(flow string) {
+// AccessCodeFlow defines an "access code" OAuth2 flow.  Use
+// within an OAuth2Security definition.
+func AccessCodeFlow(authorizationURL, tokenURL string) {
 	if parent, ok := dslengine.CurrentDefinition().(*design.SecurityMethodDefinition); ok {
-		if parent.Kind == design.OAuth2SecurityKind || parent.Kind == design.OtherSecurityKind {
-			parent.Flow = flow
-			return
-		}
-	}
-	dslengine.IncompatibleDSL()
-}
-
-// TokenURL defines the `tokenUrl` for a SecurityMethod.  See
-// http://swagger.io/specification/#securitySchemeObject for details.
-func TokenURL(tokenURL string) {
-	if parent, ok := dslengine.CurrentDefinition().(*design.SecurityMethodDefinition); ok {
-		if parent.Kind == design.OAuth2SecurityKind || parent.Kind == design.OtherSecurityKind {
+		if parent.Kind == design.OAuth2SecurityKind {
+			parent.Flow = "accessCode"
+			parent.AuthorizationURL = authorizationURL
 			parent.TokenURL = tokenURL
 			return
 		}
 	}
-
-	// TODO: we'll need to check consistency of Flow/AuthorizationURL/TargetURL in
-	// a later validation step.. probablyin `Validate()` then.
 	dslengine.IncompatibleDSL()
 }
 
-// AuthorizationURL defines the `authorizationUrl` for a SecurityMethod.  See
-// http://swagger.io/specification/#securitySchemeObject for details.
-func AuthorizationURL(authorizationURL string) {
+// ApplicationFlow defines an "application" OAuth2 flow.  Use
+// within an OAuth2Security definition.
+func ApplicationFlow(tokenURL string) {
 	if parent, ok := dslengine.CurrentDefinition().(*design.SecurityMethodDefinition); ok {
-		if parent.Kind == design.OAuth2SecurityKind || parent.Kind == design.OtherSecurityKind {
+		if parent.Kind == design.OAuth2SecurityKind {
+			parent.Flow = "application"
+			parent.TokenURL = tokenURL
+			return
+		}
+	}
+	dslengine.IncompatibleDSL()
+}
+
+
+// PasswordFlow defines a "password" OAuth2 flow.  Use within an
+// OAuth2Security definition.
+func PasswordFlow(tokenURL string) {
+	if parent, ok := dslengine.CurrentDefinition().(*design.SecurityMethodDefinition); ok {
+		if parent.Kind == design.OAuth2SecurityKind {
+			parent.Flow = "password"
+			parent.TokenURL = tokenURL
+			return
+		}
+	}
+	dslengine.IncompatibleDSL()
+}
+
+// ImplicitFlow defines an "implicit" OAuth2 flow.  Use within an
+// OAuth2Security definition.
+func ImplicitFlow(authorizationURL string) {
+	if parent, ok := dslengine.CurrentDefinition().(*design.SecurityMethodDefinition); ok {
+		if parent.Kind == design.OAuth2SecurityKind {
+			parent.Flow = "implicit"
 			parent.AuthorizationURL = authorizationURL
+			return
+		}
+	}
+	dslengine.IncompatibleDSL()
+}
+
+// TokenURL defines a URL to get an access token.  If you are defining
+// OAuth2 flows, please use `ImplicitFlow`, `PasswordFlow`,
+// `AccessCodeFlow` or `ApplicationFlow` instead. This will set an
+// endpoint where you can obtain a JWT with the JWTSecurity method.
+func TokenURL(tokenURL string) {
+	if parent, ok := dslengine.CurrentDefinition().(*design.SecurityMethodDefinition); ok {
+		if parent.Kind == design.JWTSecurityKind {
+			parent.TokenURL = tokenURL
 			return
 		}
 	}

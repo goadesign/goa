@@ -60,65 +60,69 @@ func MediaType(identifier string, apidsl func()) *design.MediaTypeDefinition {
 	if design.Design.MediaTypes == nil {
 		design.Design.MediaTypes = make(map[string]*design.MediaTypeDefinition)
 	}
-	if dslengine.TopLevelDefinition(true) {
-		// Validate Media Type
-		identifier, params, err := mime.ParseMediaType(identifier)
-		if err != nil {
-			dslengine.ReportError("invalid media type identifier %#v: %s",
-				identifier, err)
-			// We don't return so that other errors may be
-			// captured in this one run.
-			identifier = "plain/text"
-		}
-		canonicalID := design.CanonicalIdentifier(identifier)
-		// Validate that media type identifier doesn't clash
-		if _, ok := design.Design.MediaTypes[canonicalID]; ok {
-			dslengine.ReportError("media type %#v is defined twice", identifier)
-			return nil
-		}
-		parts := strings.Split(identifier, "+")
-		// Make sure it has the `+json` suffix (TBD update when goa supports other encodings)
-		if len(parts) > 1 {
-			parts = parts[1:]
-			found := false
-			for _, part := range parts {
-				if part == "json" {
-					found = true
-					break
-				}
-			}
-			if !found {
-				identifier += "+json"
-			}
-		}
-		identifier = mime.FormatMediaType(identifier, params)
-		// Concoct a Go type name from the identifier, should it be possible to set it in the apidsl?
-		// pros: control the type name generated, cons: not needed in apidsl, adds one more thing to worry about
-		lastPart := identifier
-		lastPartIndex := strings.LastIndex(identifier, "/")
-		if lastPartIndex > -1 {
-			lastPart = identifier[lastPartIndex+1:]
-		}
-		plusIndex := strings.Index(lastPart, "+")
-		if plusIndex > 0 {
-			lastPart = lastPart[:plusIndex]
-		}
-		lastPart = strings.TrimPrefix(lastPart, "vnd.")
-		elems := strings.Split(lastPart, ".")
-		for i, e := range elems {
-			elems[i] = strings.Title(e)
-		}
-		typeName := strings.Join(elems, "")
-		if typeName == "" {
-			mediaTypeCount++
-			typeName = fmt.Sprintf("MediaType%d", mediaTypeCount)
-		}
-		// Now save the type in the API media types map
-		mt := design.NewMediaTypeDefinition(typeName, identifier, apidsl)
-		design.Design.MediaTypes[canonicalID] = mt
-		return mt
+
+	if !dslengine.IsTopLevelDefinition() {
+		dslengine.IncompatibleDSL()
+		return nil
 	}
-	return nil
+
+	// Validate Media Type
+	identifier, params, err := mime.ParseMediaType(identifier)
+	if err != nil {
+		dslengine.ReportError("invalid media type identifier %#v: %s",
+			identifier, err)
+		// We don't return so that other errors may be
+		// captured in this one run.
+		identifier = "plain/text"
+	}
+	canonicalID := design.CanonicalIdentifier(identifier)
+	// Validate that media type identifier doesn't clash
+	if _, ok := design.Design.MediaTypes[canonicalID]; ok {
+		dslengine.ReportError("media type %#v is defined twice", identifier)
+		return nil
+	}
+	parts := strings.Split(identifier, "+")
+	// Make sure it has the `+json` suffix (TBD update when goa supports other encodings)
+	if len(parts) > 1 {
+		parts = parts[1:]
+		found := false
+		for _, part := range parts {
+			if part == "json" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			identifier += "+json"
+		}
+	}
+	identifier = mime.FormatMediaType(identifier, params)
+	// Concoct a Go type name from the identifier, should it be possible to set it in the apidsl?
+	// pros: control the type name generated, cons: not needed in apidsl, adds one more thing to worry about
+	lastPart := identifier
+	lastPartIndex := strings.LastIndex(identifier, "/")
+	if lastPartIndex > -1 {
+		lastPart = identifier[lastPartIndex+1:]
+	}
+	plusIndex := strings.Index(lastPart, "+")
+	if plusIndex > 0 {
+		lastPart = lastPart[:plusIndex]
+	}
+	lastPart = strings.TrimPrefix(lastPart, "vnd.")
+	elems := strings.Split(lastPart, ".")
+	for i, e := range elems {
+		elems[i] = strings.Title(e)
+	}
+	typeName := strings.Join(elems, "")
+	if typeName == "" {
+		mediaTypeCount++
+		typeName = fmt.Sprintf("MediaType%d", mediaTypeCount)
+	}
+	// Now save the type in the API media types map
+	mt := design.NewMediaTypeDefinition(typeName, identifier, apidsl)
+	design.Design.MediaTypes[canonicalID] = mt
+	return mt
+
 }
 
 // Media sets a response media type by name or by reference using a value returned by MediaType:
