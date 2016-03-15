@@ -94,7 +94,7 @@ type (
 		// Deprecated declares this operation to be deprecated.
 		Deprecated bool `json:"deprecated,omitempty"`
 		// Secury is a declaration of which security schemes are applied for this operation.
-		Security map[string][]string `json:"security,omitempty"`
+		Security []map[string][]string `json:"security,omitempty"`
 	}
 
 	// Parameter describes a single operation parameter.
@@ -385,11 +385,11 @@ func securityDefsFromDefinition(schemes []*design.SecuritySchemeDefinition) map[
 		}
 		if scheme.Kind == design.JWTSecurityKind {
 			if def.TokenURL != "" {
-				def.Description += fmt.Sprintf("\n\n**Token URL**: %s\n", def.TokenURL)
+				def.Description += fmt.Sprintf("\n**Token URL**: %s\n", def.TokenURL)
 				def.TokenURL = ""
 			}
 			if len(def.Scopes) != 0 {
-				def.Description += fmt.Sprintf("\n\n**Security Scopes**:\n%s\n", scopesList(def.Scopes))
+				def.Description += fmt.Sprintf("\n**Security Scopes**:\n%s\n", scopesList(def.Scopes))
 				def.Scopes = nil
 			}
 		}
@@ -682,15 +682,17 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	return nil
 }
 
-func securityForAction(action *design.ActionDefinition) map[string][]string {
+func securityForAction(action *design.ActionDefinition) []map[string][]string {
 	if action.Security != nil && action.Security.Scheme.Kind != design.NoSecurityKind {
 		scopes := action.Security.Scopes
 		if scopes == nil {
 			scopes = make([]string, 0)
 		}
-		security := make(map[string][]string)
-		security[action.Security.Scheme.SchemeName] = scopes
-		return security
+		return []map[string][]string{
+			map[string][]string{
+				action.Security.Scheme.SchemeName: scopes,
+			},
+		}
 	}
 	return nil
 }
