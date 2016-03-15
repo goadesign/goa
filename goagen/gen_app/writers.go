@@ -656,11 +656,11 @@ var {{ goify .SchemeName true }}Security = &goa.BasicAuthSecurity{}
 var {{ goify .SchemeName true }}Security = &goa.JWTSecurity{
 		In:               {{ printf "%q" .In }},
 		Name:             {{ printf "%q" .Name }},
-		TokenURL:         {{ printf "%q" .TokenURL }},
+		TokenURL:         {{ printf "%q" .TokenURL }},{{ with .Scopes }}
 		Scopes: map[string]string{
 {{ range $k, $v := . }}			{{ printf "%q" $k }}: {{ printf "%q" $v }},
 {{ end }}
-		},
+		},{{ end }}
 }
 {{ end }}{{ end }}
 
