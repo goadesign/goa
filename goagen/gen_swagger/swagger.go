@@ -2,6 +2,7 @@ package genswagger
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -26,7 +27,6 @@ type (
 		Parameters          map[string]*Parameter            `json:"parameters,omitempty"`
 		Responses           map[string]*Response             `json:"responses,omitempty"`
 		SecurityDefinitions map[string]*SecurityDefinition   `json:"securityDefinitions,omitempty"`
-		Security            []map[string][]string            `json:"security,omitempty"`
 		Tags                []*Tag                           `json:"tags,omitempty"`
 		ExternalDocs        *ExternalDocs                    `json:"externalDocs,omitempty"`
 	}
@@ -207,7 +207,7 @@ type (
 		Name string `json:"name,omitempty"`
 		// In is the location of the API key when type is "apiKey".
 		// Valid values are "query" or "header".
-		In string `json:"in"`
+		In string `json:"in,omitempty"`
 		// Flow is the flow used by the OAuth2 security scheme when type is "oauth2"
 		// Valid values are "implicit", "password", "application" or "accessCode".
 		Flow string `json:"flow,omitempty"`
@@ -216,7 +216,7 @@ type (
 		// TokenURL  is the token URL to be used for this flow.
 		TokenURL string `json:"tokenUrl,omitempty"`
 		// Scopes list the  available scopes for the OAuth2 security scheme.
-		Scopes map[string]*Scope `json:"scopes,omitempty"`
+		Scopes map[string]string `json:"scopes,omitempty"`
 	}
 
 	// Scope corresponds to an available scope for an OAuth2 security scheme.
@@ -315,15 +315,16 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 			License:        api.License,
 			Version:        api.Version,
 		},
-		Host:         api.Host,
-		BasePath:     api.BasePath,
-		Paths:        make(map[string]*Path),
-		Schemes:      api.Schemes,
-		Consumes:     consumes,
-		Produces:     produces,
-		Parameters:   paramMap,
-		Tags:         tags,
-		ExternalDocs: docsFromDefinition(api.Docs),
+		Host:                api.Host,
+		BasePath:            api.BasePath,
+		Paths:               make(map[string]*Path),
+		Schemes:             api.Schemes,
+		Consumes:            consumes,
+		Produces:            produces,
+		Parameters:          paramMap,
+		Tags:                tags,
+		ExternalDocs:        docsFromDefinition(api.Docs),
+		SecurityDefinitions: securityDefsFromDefinition(api.SecuritySchemes),
 	}
 
 	err = api.IterateResponses(func(r *design.ResponseDefinition) error {
@@ -363,6 +364,52 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 		}
 	}
 	return s, nil
+}
+
+func securityDefsFromDefinition(schemes []*design.SecuritySchemeDefinition) map[string]*SecurityDefinition {
+	if len(schemes) == 0 {
+		return nil
+	}
+
+	defs := make(map[string]*SecurityDefinition)
+	for _, scheme := range schemes {
+		def := &SecurityDefinition{
+			Type:             scheme.Type,
+			Description:      scheme.Description,
+			Name:             scheme.Name,
+			In:               scheme.In,
+			Flow:             scheme.Flow,
+			AuthorizationURL: scheme.AuthorizationURL,
+			TokenURL:         scheme.TokenURL,
+			Scopes:           scheme.Scopes,
+		}
+		if scheme.Kind == design.JWTSecurityKind {
+			if def.TokenURL != "" {
+				def.Description += fmt.Sprintf("\n\n**Token URL**: %s", def.TokenURL)
+				def.TokenURL = ""
+			}
+			if len(def.Scopes) != 0 {
+				def.Description += fmt.Sprintf("\n\n**Security Scopes**:\n%s", scopesMapList(def.Scopes))
+				def.Scopes = nil
+			}
+		}
+		defs[scheme.SchemeName] = def
+	}
+	return defs
+}
+
+func scopesMapList(scopes map[string]string) string {
+	names := []string{}
+	for name := range scopes {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	lines := []string{}
+	for _, name := range names {
+		lines = append(lines, fmt.Sprintf("  * `%s`: %s", name, scopes[name]))
+	}
+	return strings.Join(lines, "\n")
 }
 
 func tagsFromDefinition(mdata dslengine.MetadataDefinition) (tags []*Tag, err error) {
@@ -538,14 +585,17 @@ func headersFromDefinition(headers *design.AttributeDefinition) (map[string]*Hea
 
 func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *design.RouteDefinition) error {
 	action := route.Parent
+
 	tagNames, err := tagNamesFromDefinition([]dslengine.MetadataDefinition{action.Parent.Metadata, action.Metadata})
 	if err != nil {
 		return err
 	}
+
 	params, err := paramsFromDefinition(action.AllParams(), route.FullPath())
 	if err != nil {
 		return err
 	}
+
 	responses := make(map[string]*Response, len(action.Responses))
 	for _, r := range action.Responses {
 		resp, err := responseFromDefinition(s, api, r)
@@ -554,6 +604,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		}
 		responses[strconv.Itoa(r.Status)] = resp
 	}
+
 	if action.Payload != nil {
 		payloadSchema := genschema.TypeSchema(api, action.Payload)
 		pp := &Parameter{
@@ -565,6 +616,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		}
 		params = append(params, pp)
 	}
+
 	operationID := fmt.Sprintf("%s#%s", action.Parent.Name, action.Name)
 	index := 0
 	for i, rt := range action.Routes {
@@ -576,10 +628,12 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	if index > 0 {
 		operationID = fmt.Sprintf("%s#%d", operationID, index)
 	}
+
 	schemes := action.Schemes
 	if len(schemes) == 0 {
 		schemes = api.Schemes
 	}
+
 	operation := &Operation{
 		Tags:         tagNames,
 		Description:  action.Description,
@@ -590,6 +644,11 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		Schemes:      schemes,
 		Deprecated:   false,
 	}
+
+	if action.Security != nil {
+		applySecurityForAction(operation, action)
+	}
+
 	key := design.WildcardRegex.ReplaceAllStringFunc(
 		route.FullPath(),
 		func(w string) string {
@@ -623,6 +682,37 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		path.Patch = operation
 	}
 	return nil
+}
+
+func applySecurityForAction(operation *Operation, action *design.ActionDefinition) {
+	if action.Security != nil && action.Security.Scheme.Kind != design.NoSecurityKind {
+		if action.Security.Scheme.Kind == design.JWTSecurityKind {
+			operation.Description += fmt.Sprintf("\n\n** Required security scopes**:\n%s", scopesList(action.Security.Scopes))
+
+		} else {
+
+			scopes := action.Security.Scopes
+			if scopes == nil {
+				scopes = make([]string, 0)
+			}
+			security := []map[string][]string{
+				map[string][]string{
+					action.Security.Scheme.SchemeName: scopes,
+				},
+			}
+			operation.Security = security
+		}
+	}
+}
+
+func scopesList(scopes []string) string {
+	sort.Strings(scopes)
+
+	var lines []string
+	for _, scope := range scopes {
+		lines = append(lines, fmt.Sprintf("  * `%s`", scope))
+	}
+	return strings.Join(lines, "\n")
 }
 
 func docsFromDefinition(docs *design.DocsDefinition) *ExternalDocs {

@@ -34,17 +34,20 @@ func Type(name string, dsl func()) *design.UserTypeDefinition {
 		dslengine.ReportError("type %#v defined twice", name)
 		return nil
 	}
-	var t *design.UserTypeDefinition
-	if dslengine.TopLevelDefinition(true) {
-		t = &design.UserTypeDefinition{
-			TypeName:            name,
-			AttributeDefinition: &design.AttributeDefinition{DSLFunc: dsl},
-		}
-		if dsl == nil {
-			t.Type = design.String
-		}
-		design.Design.Types[name] = t
+
+	if !dslengine.IsTopLevelDefinition() {
+		dslengine.IncompatibleDSL()
+		return nil
 	}
+
+	t := &design.UserTypeDefinition{
+		TypeName:            name,
+		AttributeDefinition: &design.AttributeDefinition{DSLFunc: dsl},
+	}
+	if dsl == nil {
+		t.Type = design.String
+	}
+	design.Design.Types[name] = t
 	return t
 }
 

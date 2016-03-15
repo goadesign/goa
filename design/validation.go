@@ -325,6 +325,7 @@ func (a *ActionDefinition) Validate() *dslengine.ValidationErrors {
 	if a.Parent == nil {
 		verr.Add(a, "missing parent resource")
 	}
+
 	return verr.AsError()
 }
 

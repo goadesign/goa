@@ -322,7 +322,6 @@ var _ = Describe("GoTypeTransform", func() {
 	var targetPkg, funcName string
 
 	var transform string
-	var transformErr error
 
 	BeforeEach(func() {
 		dslengine.Reset()
@@ -330,7 +329,7 @@ var _ = Describe("GoTypeTransform", func() {
 	JustBeforeEach(func() {
 		err := dslengine.Run()
 		Ω(err).ShouldNot(HaveOccurred())
-		transform, transformErr = codegen.GoTypeTransform(source, target, targetPkg, funcName)
+		transform, _ = codegen.GoTypeTransform(source, target, targetPkg, funcName)
 	})
 
 	Context("transforming simple objects", func() {

@@ -136,18 +136,28 @@ func Execute(dsl func(), def Definition) bool {
 
 // CurrentDefinition returns the definition whose initialization DSL is currently being executed.
 func CurrentDefinition() Definition {
-	return ctxStack.Current()
+	current := ctxStack.Current()
+	if current == nil {
+		return &TopLevelDefinition{}
+	}
+	return current
 }
 
-// TopLevelDefinition returns true if the currently evaluated DSL is a root
+// IsTopLevelDefinition returns true if the currently evaluated DSL is a root
 // DSL (i.e. is not being run in the context of another definition).
-func TopLevelDefinition(failItNotTopLevel bool) bool {
-	top := ctxStack.Current() == nil
-	if failItNotTopLevel && !top {
-		IncompatibleDSL()
-	}
-	return top
+func IsTopLevelDefinition() bool {
+	_, ok := CurrentDefinition().(*TopLevelDefinition)
+	return ok
 }
+
+// TopLevelDefinition represents the top-level file definitions, done
+// with `var _ = `.  An instance of this object is returned by
+// `CurrentDefinition()` when at the top-level.
+type TopLevelDefinition struct{}
+
+// Context tells the DSL engine which context we're in when showing
+// errors.
+func (t *TopLevelDefinition) Context() string { return "top-level" }
 
 // ReportError records a DSL error for reporting post DSL execution.
 func ReportError(fm string, vals ...interface{}) {

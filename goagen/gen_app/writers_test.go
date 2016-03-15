@@ -49,7 +49,6 @@ var _ = Describe("ContextsWriter", func() {
 			var params, headers *design.AttributeDefinition
 			var payload *design.UserTypeDefinition
 			var responses map[string]*design.ResponseDefinition
-			var mediaTypes map[string]*design.MediaTypeDefinition
 
 			var data *genapp.ContextTemplateData
 
@@ -58,7 +57,6 @@ var _ = Describe("ContextsWriter", func() {
 				headers = nil
 				payload = nil
 				responses = nil
-				mediaTypes = nil
 				data = nil
 			})
 
@@ -386,9 +384,8 @@ var _ = Describe("ControllersWriter", func() {
 	})
 
 	Context("correctly configured", func() {
-		var f *os.File
 		BeforeEach(func() {
-			f, _ = os.Create(filename)
+			os.Create(filename)
 		})
 
 		Context("with data", func() {
@@ -1007,6 +1004,7 @@ type BottlesController interface {
 func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	initService(service)
 	var h goa.Handler
+
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
@@ -1022,6 +1020,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	simpleMount = `func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	initService(service)
 	var h goa.Handler
+
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewListBottleContext(ctx)
 		if err != nil {
@@ -1045,6 +1044,7 @@ type BottlesController interface {
 	multiMount = `func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	initService(service)
 	var h goa.Handler
+
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewListBottleContext(ctx)
 		if err != nil {

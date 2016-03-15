@@ -62,6 +62,13 @@ type (
 		DSLFunc func()
 		// Metadata is a list of key/value pairs
 		Metadata dslengine.MetadataDefinition
+		// SecuritySchemes lists the available security schemes available
+		// to the API.
+		SecuritySchemes []*SecuritySchemeDefinition
+		// Security defines security requirements for all the
+		// resources and actions, unless overridden by Resource or
+		// Action-level Security() calls.
+		Security *SecurityDefinition
 
 		// rand is the random generator used to generate examples.
 		rand *RandomGenerator
@@ -125,6 +132,9 @@ type (
 		DSLFunc func()
 		// metadata is a list of key/value pairs
 		Metadata dslengine.MetadataDefinition
+		// Security defines security requirements for the Resource,
+		// for actions that don't define one themselves.
+		Security *SecurityDefinition
 	}
 
 	// EncodingDefinition defines an encoder supported by the API.
@@ -206,6 +216,8 @@ type (
 		Headers *AttributeDefinition
 		// Metadata is a list of key/value pairs
 		Metadata dslengine.MetadataDefinition
+		// Security defines security requirements for the action
+		Security *SecurityDefinition
 	}
 
 	// LinkDefinition defines a media type link, it specifies a URL to a related resource.
@@ -408,10 +420,18 @@ func (a *APIDefinition) IterateSets(iterator dslengine.SetIterator) {
 		i++
 		return nil
 	})
-
 	iterator(mediaTypes)
 
-	// And now that we have everything the resources.
+	// Then, the Security schemes definitions
+	var securitySchemes []dslengine.Definition
+	for _, scheme := range a.SecuritySchemes {
+		securitySchemes = append(securitySchemes, dslengine.Definition(scheme))
+	}
+	iterator(securitySchemes)
+
+	// And now that we have everything the resources.  The resource
+	// lifecycle handlers dispatch to their children elements, like
+	// Actions, etc..
 	resources := make([]dslengine.Definition, len(a.Resources))
 	i = 0
 	a.IterateResources(func(res *ResourceDefinition) error {
@@ -652,9 +672,12 @@ func (r *ResourceDefinition) DSL() func() {
 }
 
 // Finalize is run post DSL execution. It merges response definitions, creates implicit action
-// parameters, initializes querystring parameters and sets path parameters as non zero attributes.
+// parameters, initializes querystring parameters, sets path parameters as non zero attributes
+// and sets the fallbacks for security schemes.
 func (r *ResourceDefinition) Finalize() {
 	r.IterateActions(func(a *ActionDefinition) error {
+		a.Finalize()
+
 		// 1. Merge response definitions
 		for name, resp := range a.Responses {
 			resp.Finalize()
@@ -1195,6 +1218,20 @@ func (a *ActionDefinition) WebSocket() bool {
 		}
 	}
 	return true
+}
+
+// Finalize creates fallback security schemes and links before rendering.
+func (a *ActionDefinition) Finalize() {
+	if a.Security == nil {
+		a.Security = a.Parent.Security // ResourceDefinition
+		if a.Security == nil {
+			a.Security = Design.Security
+		}
+	}
+
+	if a.Security != nil && a.Security.Scheme.Kind == NoSecurityKind {
+		a.Security = nil
+	}
 }
 
 // Context returns the generic definition name used in error messages.

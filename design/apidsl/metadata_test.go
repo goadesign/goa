@@ -9,9 +9,6 @@ import (
 )
 
 var _ = Describe("Metadata", func() {
-	var name string
-	var dt DataType
-	var dsl func()
 	var mtd *MediaTypeDefinition
 	var api *APIDefinition
 	var rd *ResourceDefinition
@@ -20,9 +17,6 @@ var _ = Describe("Metadata", func() {
 
 	BeforeEach(func() {
 		dslengine.Reset()
-		name = ""
-		dsl = nil
-		dt = nil
 	})
 
 	Context("with Metadata declaration", func() {
