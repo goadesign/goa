@@ -155,6 +155,8 @@ func IsTopLevelDefinition() bool {
 // `CurrentDefinition()` when at the top-level.
 type TopLevelDefinition struct{}
 
+// Context tells the DSL engine which context we're in when showing
+// errors.
 func (t *TopLevelDefinition) Context() string { return "top-level" }
 
 // ReportError records a DSL error for reporting post DSL execution.
