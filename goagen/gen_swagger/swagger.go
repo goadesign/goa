@@ -385,11 +385,11 @@ func securityDefsFromDefinition(schemes []*design.SecuritySchemeDefinition) map[
 		}
 		if scheme.Kind == design.JWTSecurityKind {
 			if def.TokenURL != "" {
-				def.Description += fmt.Sprintf("\n**Token URL**: %s\n", def.TokenURL)
+				def.Description += fmt.Sprintf("\n\n**Token URL**: %s", def.TokenURL)
 				def.TokenURL = ""
 			}
 			if len(def.Scopes) != 0 {
-				def.Description += fmt.Sprintf("\n**Security Scopes**:\n%s\n", scopesList(def.Scopes))
+				def.Description += fmt.Sprintf("\n\n**Security Scopes**:\n%s", scopesMapList(def.Scopes))
 				def.Scopes = nil
 			}
 		}
@@ -398,7 +398,7 @@ func securityDefsFromDefinition(schemes []*design.SecuritySchemeDefinition) map[
 	return defs
 }
 
-func scopesList(scopes map[string]string) string {
+func scopesMapList(scopes map[string]string) string {
 	names := []string{}
 	for name := range scopes {
 		names = append(names, name)
@@ -634,8 +634,6 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		schemes = api.Schemes
 	}
 
-	security := securityForAction(action)
-
 	operation := &Operation{
 		Tags:         tagNames,
 		Description:  action.Description,
@@ -645,8 +643,12 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		Responses:    responses,
 		Schemes:      schemes,
 		Deprecated:   false,
-		Security:     security,
 	}
+
+	if action.Security != nil {
+		applySecurityForAction(operation, action)
+	}
+
 	key := design.WildcardRegex.ReplaceAllStringFunc(
 		route.FullPath(),
 		func(w string) string {
@@ -682,19 +684,35 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	return nil
 }
 
-func securityForAction(action *design.ActionDefinition) []map[string][]string {
+func applySecurityForAction(operation *Operation, action *design.ActionDefinition) {
 	if action.Security != nil && action.Security.Scheme.Kind != design.NoSecurityKind {
-		scopes := action.Security.Scopes
-		if scopes == nil {
-			scopes = make([]string, 0)
-		}
-		return []map[string][]string{
-			map[string][]string{
-				action.Security.Scheme.SchemeName: scopes,
-			},
+		if action.Security.Scheme.Kind == design.JWTSecurityKind {
+			operation.Description += fmt.Sprintf("\n\n** Required security scopes**:\n%s", scopesList(action.Security.Scopes))
+
+		} else {
+
+			scopes := action.Security.Scopes
+			if scopes == nil {
+				scopes = make([]string, 0)
+			}
+			security := []map[string][]string{
+				map[string][]string{
+					action.Security.Scheme.SchemeName: scopes,
+				},
+			}
+			operation.Security = security
 		}
 	}
-	return nil
+}
+
+func scopesList(scopes []string) string {
+	sort.Strings(scopes)
+
+	var lines []string
+	for _, scope := range scopes {
+		lines = append(lines, fmt.Sprintf("  * `%s`", scope))
+	}
+	return strings.Join(lines, "\n")
 }
 
 func docsFromDefinition(docs *design.DocsDefinition) *ExternalDocs {

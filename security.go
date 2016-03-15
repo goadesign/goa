@@ -82,8 +82,8 @@ type OAuth2Security struct {
 	TokenURL string
 	// AuthenticationURL defines the OAuth2 authenticationUrl.  See http://swagger.io/specification/#securitySchemeObject
 	AuthenticationURL string
-	// Scopes defines a list of scopes for the security scheme.
-	Scopes []string
+	// Scopes defines a list of scopes for the security scheme, along with their description.
+	Scopes map[string]string
 }
 
 // Use sets the middleware that will implement the actual security
@@ -145,8 +145,8 @@ type JWTSecurity struct {
 	Name string
 	// TokenURL defines the URL where you'd get the JWT tokens.
 	TokenURL string
-	// Scopes defines a list of scopes for the security scheme.
-	Scopes []string
+	// Scopes defines a list of scopes for the security scheme, along with their description.
+	Scopes map[string]string
 }
 
 // Use sets the middleware that will implement the actual security
