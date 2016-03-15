@@ -103,6 +103,8 @@ type (
 		*ErrorClass
 		// Err describes the specific error occurrence.
 		Err string `json:"err" xml:"err"`
+		// Details is any key-value pairs you want to report with the errors
+		Details map[string]interface{} `json:"details,omitempty" xml:"details,omitempty"`
 	}
 
 	// ErrorClass contains information sent together with the error message in responses.
@@ -128,6 +130,20 @@ func NewErrorClass(id, title string, status int) *ErrorClass {
 // Error wraps an error into a HTTP error of the given class.
 func (class *ErrorClass) Error(err error) *HTTPError {
 	return &HTTPError{ErrorClass: class, Err: err.Error()}
+}
+
+// DetailedError wraps an error into a HTTP error of the given class.
+func (class *ErrorClass) DetailedError(msg string, keyvals ...interface{}) *HTTPError {
+	details := make(map[string]interface{})
+	for i := 0; i < len(keyvals); i += 2 {
+		k := keyvals[i]
+		var v interface{} = "MISSING"
+		if i+1 < len(keyvals) {
+			v = keyvals[i+1]
+		}
+		details[fmt.Sprintf("%s", k)] = v
+	}
+	return &HTTPError{ErrorClass: class, Err: msg, Details: details}
 }
 
 // Errorf builds an HTTP error given a format and values.
