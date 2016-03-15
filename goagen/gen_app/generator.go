@@ -412,7 +412,7 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 // generateControllers iterates through the API resources and generates the low level
 // controllers.
 func (g *Generator) generateSecurity(api *design.APIDefinition) error {
-	if len(api.SecurityMethods) == 0 {
+	if len(api.SecuritySchemes) == 0 {
 		return nil
 	}
 
@@ -433,7 +433,7 @@ func (g *Generator) generateSecurity(api *design.APIDefinition) error {
 
 	g.genfiles = append(g.genfiles, secFile)
 
-	if err = secWr.Execute(design.Design.SecurityMethods); err != nil {
+	if err = secWr.Execute(design.Design.SecuritySchemes); err != nil {
 		return err
 	}
 

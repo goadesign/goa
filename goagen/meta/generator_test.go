@@ -23,7 +23,6 @@ var _ = Describe("Run", func() {
 	var genfunc string
 	var debug bool
 	var outputDir string
-	var designPackage *codegen.Package
 	var designPackagePath string
 	var designPackageSource string
 
@@ -55,8 +54,6 @@ var _ = Describe("Run", func() {
 				err = ioutil.WriteFile(file.Abs(), []byte(designPackageSource), 0655)
 				Ω(err).ShouldNot(HaveOccurred())
 			}
-		} else {
-			designPackage = nil
 		}
 		m = &meta.Generator{
 			Genfunc: genfunc,

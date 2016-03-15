@@ -106,7 +106,6 @@ var _ = Describe("Project", func() {
 	Context("with media types with view attributes with a cyclical dependency", func() {
 		const id = "vnd.application/MT1"
 		const typeName = "Mt1"
-		var mt2 *MediaTypeDefinition
 
 		BeforeEach(func() {
 			dslengine.Reset()
@@ -124,7 +123,7 @@ var _ = Describe("Project", func() {
 					Attribute("links")
 				})
 			})
-			mt2 = MediaType("vnd.application/MT2", func() {
+			MediaType("vnd.application/MT2", func() {
 				TypeName("Mt2")
 				Attributes(func() {
 					Attribute("att2", mt)

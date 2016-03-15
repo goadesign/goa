@@ -324,7 +324,7 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 		Parameters:          paramMap,
 		Tags:                tags,
 		ExternalDocs:        docsFromDefinition(api.Docs),
-		SecurityDefinitions: securityDefsFromDefinition(api.SecurityMethods),
+		SecurityDefinitions: securityDefsFromDefinition(api.SecuritySchemes),
 	}
 
 	err = api.IterateResponses(func(r *design.ResponseDefinition) error {
@@ -366,24 +366,24 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 	return s, nil
 }
 
-func securityDefsFromDefinition(methods []*design.SecurityMethodDefinition) map[string]*SecurityDefinition {
-	if len(methods) == 0 {
+func securityDefsFromDefinition(schemes []*design.SecuritySchemeDefinition) map[string]*SecurityDefinition {
+	if len(schemes) == 0 {
 		return nil
 	}
 
 	defs := make(map[string]*SecurityDefinition)
-	for _, method := range methods {
+	for _, scheme := range schemes {
 		def := &SecurityDefinition{
-			Type:             method.Type,
-			Description:      method.Description,
-			Name:             method.Name,
-			In:               method.In,
-			Flow:             method.Flow,
-			AuthorizationURL: method.AuthorizationURL,
-			TokenURL:         method.TokenURL,
-			Scopes:           method.Scopes,
+			Type:             scheme.Type,
+			Description:      scheme.Description,
+			Name:             scheme.Name,
+			In:               scheme.In,
+			Flow:             scheme.Flow,
+			AuthorizationURL: scheme.AuthorizationURL,
+			TokenURL:         scheme.TokenURL,
+			Scopes:           scheme.Scopes,
 		}
-		if method.Kind == design.JWTSecurityKind {
+		if scheme.Kind == design.JWTSecurityKind {
 			if def.TokenURL != "" {
 				def.Description += fmt.Sprintf("\n\n**Token URL**: %s\n", def.TokenURL)
 				def.TokenURL = ""
@@ -393,7 +393,7 @@ func securityDefsFromDefinition(methods []*design.SecurityMethodDefinition) map[
 				def.Scopes = nil
 			}
 		}
-		defs[method.Method] = def
+		defs[scheme.SchemeName] = def
 	}
 	return defs
 }
@@ -683,13 +683,13 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 }
 
 func securityForAction(action *design.ActionDefinition) map[string][]string {
-	if action.Security != nil && action.Security.Method.Kind != design.NoSecurityKind {
+	if action.Security != nil && action.Security.Scheme.Kind != design.NoSecurityKind {
 		scopes := action.Security.Scopes
 		if scopes == nil {
 			scopes = make([]string, 0)
 		}
 		security := make(map[string][]string)
-		security[action.Security.Method.Method] = scopes
+		security[action.Security.Scheme.SchemeName] = scopes
 		return security
 	}
 	return nil

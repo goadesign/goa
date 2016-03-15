@@ -277,9 +277,9 @@ func NewSecurityWriter(filename string) (*SecurityWriter, error) {
 	return &SecurityWriter{SourceFile: file}, nil
 }
 
-// Execute adds the different security methods and middleware supporting functions.
-func (w *SecurityWriter) Execute(methods []*design.SecurityMethodDefinition) error {
-	return w.ExecuteTemplate("security_methods", securityMethodsT, nil, methods)
+// Execute adds the different security schemes and middleware supporting functions.
+func (w *SecurityWriter) Execute(schemes []*design.SecuritySchemeDefinition) error {
+	return w.ExecuteTemplate("security_schemes", securitySchemesT, nil, schemes)
 }
 
 // NewResourcesWriter returns a contexts code writer.
@@ -574,9 +574,9 @@ func Mount{{.Resource}}Controller(service *goa.Service, ctrl {{.Resource}}Contro
 		}
 		{{end}}		return ctrl.{{.Name}}(rctx)
 	}{{ if .Security }}
-	h = {{ goify .Security.Method.Method true }}Security.Dispatch(h{{ range .Security.Scopes }}, {{ printf "%q" . }}{{end}}){{end}}
+	h = {{ goify .Security.Scheme.SchemeName true }}Security.Dispatch(h{{ range .Security.Scopes }}, {{ printf "%q" . }}{{end}}){{end}}
 {{range .Routes}}	service.Mux.Handle("{{.Verb}}", "{{.FullPath}}", ctrl.MuxHandler("{{$action.Name}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
-	service.Info("mount", "ctrl", "{{$res}}", "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}"{{ with $action.Security }}, "security", {{ printf "%q" .Method.Method }}{{end}})
+	service.Info("mount", "ctrl", "{{$res}}", "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}"{{ with $action.Security }}, "security", {{ printf "%q" .Scheme.SchemeName }}{{end}})
 {{end}}{{end}}}
 `
 
@@ -633,15 +633,15 @@ func (ut {{gotyperef . .AllRequired 0}}) Validate() (err error) {
 }{{end}}
 `
 
-	securityMethodsT = `
+	securitySchemesT = `
 {{ range . }}
 {{ if eq .Context "APIKeySecurity" }}
-var {{ goify .Method true }}Security = &goa.APIKeySecurity{
+var {{ goify .SchemeName true }}Security = &goa.APIKeySecurity{
 		In:   {{ printf "%q" .In }},
 		Name: {{ printf "%q" .Name }},
 }
 {{ else if eq .Context "OAuth2Security" }}
-var {{ goify .Method true }}Security = &goa.OAuth2Security{
+var {{ goify .SchemeName true }}Security = &goa.OAuth2Security{
 		Flow:             {{ printf "%q" .Flow }},
 		TokenURL:         {{ printf "%q" .TokenURL }},
 		AuthorizationURL: {{ printf "%q" .AuthorizationURL }},{{ with .Scopes }}
@@ -651,9 +651,9 @@ var {{ goify .Method true }}Security = &goa.OAuth2Security{
 		},{{end}}
 }
 {{ else if eq .Context "BasicAuthSecurity" }}
-var {{ goify .Method true }}Security = &goa.BasicAuthSecurity{}
+var {{ goify .SchemeName true }}Security = &goa.BasicAuthSecurity{}
 {{ else if eq .Context "JWTSecurity" }}
-var {{ goify .Method true }}Security = &goa.JWTSecurity{
+var {{ goify .SchemeName true }}Security = &goa.JWTSecurity{
 		In:               {{ printf "%q" .In }},
 		Name:             {{ printf "%q" .Name }},
 		TokenURL:         {{ printf "%q" .TokenURL }},
@@ -665,7 +665,7 @@ var {{ goify .Method true }}Security = &goa.JWTSecurity{
 {{ end }}{{ end }}
 
 func init() { {{ range . }}{{if .Description}}
-	{{ goify .Method true }}Security.Description = {{ printf "%q" .Description }}
+	{{ goify .SchemeName true }}Security.Description = {{ printf "%q" .Description }}
 {{end}}{{end}} }
 `
 )

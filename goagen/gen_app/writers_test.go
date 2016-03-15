@@ -49,7 +49,6 @@ var _ = Describe("ContextsWriter", func() {
 			var params, headers *design.AttributeDefinition
 			var payload *design.UserTypeDefinition
 			var responses map[string]*design.ResponseDefinition
-			var mediaTypes map[string]*design.MediaTypeDefinition
 
 			var data *genapp.ContextTemplateData
 
@@ -58,7 +57,6 @@ var _ = Describe("ContextsWriter", func() {
 				headers = nil
 				payload = nil
 				responses = nil
-				mediaTypes = nil
 				data = nil
 			})
 
@@ -386,9 +384,8 @@ var _ = Describe("ControllersWriter", func() {
 	})
 
 	Context("correctly configured", func() {
-		var f *os.File
 		BeforeEach(func() {
-			f, _ = os.Create(filename)
+			os.Create(filename)
 		})
 
 		Context("with data", func() {
