@@ -2,6 +2,7 @@ package genswagger
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -206,7 +207,7 @@ type (
 		Name string `json:"name,omitempty"`
 		// In is the location of the API key when type is "apiKey".
 		// Valid values are "query" or "header".
-		In string `json:"in"`
+		In string `json:"in,omitempty"`
 		// Flow is the flow used by the OAuth2 security scheme when type is "oauth2"
 		// Valid values are "implicit", "password", "application" or "accessCode".
 		Flow string `json:"flow,omitempty"`
@@ -372,7 +373,7 @@ func securityDefsFromDefinition(methods []*design.SecurityMethodDefinition) map[
 
 	defs := make(map[string]*SecurityDefinition)
 	for _, method := range methods {
-		defs[method.Method] = &SecurityDefinition{
+		def := &SecurityDefinition{
 			Type:             method.Type,
 			Description:      method.Description,
 			Name:             method.Name,
@@ -382,8 +383,33 @@ func securityDefsFromDefinition(methods []*design.SecurityMethodDefinition) map[
 			TokenURL:         method.TokenURL,
 			Scopes:           method.Scopes,
 		}
+		if method.Kind == design.JWTSecurityKind {
+			if def.TokenURL != "" {
+				def.Description += fmt.Sprintf("\n\n**Token URL**: %s\n", def.TokenURL)
+				def.TokenURL = ""
+			}
+			if len(def.Scopes) != 0 {
+				def.Description += fmt.Sprintf("\n\n**Security Scopes**:\n%s\n", scopesList(def.Scopes))
+				def.Scopes = nil
+			}
+		}
+		defs[method.Method] = def
 	}
 	return defs
+}
+
+func scopesList(scopes map[string]string) string {
+	names := []string{}
+	for name := range scopes {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	lines := []string{}
+	for _, name := range names {
+		lines = append(lines, fmt.Sprintf("  * `%s`: %s", name, scopes[name]))
+	}
+	return strings.Join(lines, "\n")
 }
 
 func tagsFromDefinition(mdata dslengine.MetadataDefinition) (tags []*Tag, err error) {
@@ -608,10 +634,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		schemes = api.Schemes
 	}
 
-	security := make(map[string][]string)
-	if action.Security != nil && !action.Security.NoSecurity {
-		security[action.Security.Method] = action.Security.Scopes
-	}
+	security := securityForAction(action)
 
 	operation := &Operation{
 		Tags:         tagNames,
@@ -622,6 +645,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		Responses:    responses,
 		Schemes:      schemes,
 		Deprecated:   false,
+		Security:     security,
 	}
 	key := design.WildcardRegex.ReplaceAllStringFunc(
 		route.FullPath(),
@@ -654,6 +678,19 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		path.Head = operation
 	case "PATCH":
 		path.Patch = operation
+	}
+	return nil
+}
+
+func securityForAction(action *design.ActionDefinition) map[string][]string {
+	if action.Security != nil && action.Security.Method.Kind != design.NoSecurityKind {
+		scopes := action.Security.Scopes
+		if scopes == nil {
+			scopes = make([]string, 0)
+		}
+		security := make(map[string][]string)
+		security[action.Security.Method.Method] = scopes
+		return security
 	}
 	return nil
 }

@@ -420,10 +420,18 @@ func (a *APIDefinition) IterateSets(iterator dslengine.SetIterator) {
 		i++
 		return nil
 	})
-
 	iterator(mediaTypes)
 
-	// And now that we have everything the resources.
+	// Then, the Security methods definitions
+	var securityMethods []dslengine.Definition
+	for _, method := range a.SecurityMethods {
+		securityMethods = append(securityMethods, dslengine.Definition(method))
+	}
+	iterator(securityMethods)
+
+	// And now that we have everything the resources.  The resource
+	// lifecycle handlers dispatch to their children elements, like
+	// Actions, etc..
 	resources := make([]dslengine.Definition, len(a.Resources))
 	i = 0
 	a.IterateResources(func(res *ResourceDefinition) error {
@@ -1221,7 +1229,7 @@ func (a *ActionDefinition) Finalize() {
 		}
 	}
 
-	if a.Security != nil && a.Security.NoSecurity {
+	if a.Security != nil && a.Security.Method.Kind == NoSecurityKind {
 		a.Security = nil
 	}
 }

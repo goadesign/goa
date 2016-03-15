@@ -13,15 +13,16 @@ const (
 	APIKeySecurityKind
 	// JWTSecurityKind means an "apiKey" security type, with support for TokenURL and Scopes.
 	JWTSecurityKind
+	// NoSecurityKind means to have no security for this endpoint.
+	NoSecurityKind
 )
 
 // SecurityDefinition defines security requirements for an Action
 type SecurityDefinition struct {
-	// NoSecurity is true when you don't want to inherit the resource
-	// (or API-level) security requirements.
-	NoSecurity bool
+	// Method defines the Security Method used for this action.
+	Method *SecurityMethodDefinition
 
-	Method string   `json:"method"`
+	// Scopes are scopes required for this action
 	Scopes []string `json:"scopes,omitempty"`
 }
 
@@ -33,7 +34,10 @@ func (s *SecurityDefinition) Context() string { return "Security" }
 // http://swagger.io/specification/#securityDefinitionsObject for more
 // information.
 type SecurityMethodDefinition struct {
+	// Kind is the sort of security method this object represents
 	Kind SecurityMethodKind
+	// DSLFunc is an optional DSL function
+	DSLFunc func()
 
 	// Method is the name of the security method, referenced in
 	// Security() declarations. Ex: "googAuth", "my_big_token", "jwt".
@@ -58,6 +62,11 @@ type SecurityMethodDefinition struct {
 	TokenURL string `json:"token_url,omitempty"`
 	// AuthorizationURL holds the authorizationUrl for the oauth2 flow
 	AuthorizationURL string `json:"authorization_url,omitempty"`
+}
+
+// DSL returns the DSL function
+func (s *SecurityMethodDefinition) DSL() func() {
+	return s.DSLFunc
 }
 
 // Context returns the generic definition name used in error messages.

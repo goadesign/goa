@@ -574,9 +574,9 @@ func Mount{{.Resource}}Controller(service *goa.Service, ctrl {{.Resource}}Contro
 		}
 		{{end}}		return ctrl.{{.Name}}(rctx)
 	}{{ if .Security }}
-	h = {{ goify .Security.Method true }}Security.Dispatch(h{{ range .Security.Scopes }}, {{ printf "%q" . }}{{end}}){{end}}
+	h = {{ goify .Security.Method.Method true }}Security.Dispatch(h{{ range .Security.Scopes }}, {{ printf "%q" . }}{{end}}){{end}}
 {{range .Routes}}	service.Mux.Handle("{{.Verb}}", "{{.FullPath}}", ctrl.MuxHandler("{{$action.Name}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
-	service.Info("mount", "ctrl", "{{$res}}", "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}"{{ with $action.Security }}, "security", {{ printf "%q" .Method }}{{end}})
+	service.Info("mount", "ctrl", "{{$res}}", "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}"{{ with $action.Security }}, "security", {{ printf "%q" .Method.Method }}{{end}})
 {{end}}{{end}}}
 `
 

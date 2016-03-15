@@ -20,9 +20,18 @@ func Security(method interface{}, dsl ...func()) {
 	var def *design.SecurityDefinition
 	switch val := method.(type) {
 	case string:
-		def = &design.SecurityDefinition{Method: val}
+		def = &design.SecurityDefinition{}
+		for _, method := range design.Design.SecurityMethods {
+			if method.Method == val {
+				def.Method = method
+			}
+		}
+		if def.Method == nil {
+			dslengine.ReportError("security method %q not found", val)
+			return
+		}
 	case *design.SecurityMethodDefinition:
-		def = &design.SecurityDefinition{Method: val.Method}
+		def = &design.SecurityDefinition{Method: val}
 	default:
 		dslengine.ReportError("invalid value for 'method' parameter, specify a string or a *SecurityMethodDefinition")
 		return
@@ -52,7 +61,9 @@ func Security(method interface{}, dsl ...func()) {
 // Resource. It also prevents fallback to Resource or API-defined
 // Security().
 func NoSecurity() {
-	def := &design.SecurityDefinition{NoSecurity: true}
+	def := &design.SecurityDefinition{
+		Method: &design.SecurityMethodDefinition{Kind: design.NoSecurityKind},
+	}
 
 	parentDef := dslengine.CurrentDefinition()
 	switch parent := parentDef.(type) {
@@ -93,9 +104,7 @@ func BasicAuthSecurity(name string, dsl ...func()) *design.SecurityMethodDefinit
 	}
 
 	if len(dsl) != 0 {
-		if !dslengine.Execute(dsl[0], def) {
-			return nil
-		}
+		def.DSLFunc = dsl[0]
 	}
 
 	design.Design.SecurityMethods = append(design.Design.SecurityMethods, def)
@@ -141,9 +150,7 @@ func APIKeySecurity(name string, dsl ...func()) *design.SecurityMethodDefinition
 	}
 
 	if len(dsl) != 0 {
-		if !dslengine.Execute(dsl[0], def) {
-			return nil
-		}
+		def.DSLFunc = dsl[0]
 	}
 
 	design.Design.SecurityMethods = append(design.Design.SecurityMethods, def)
@@ -185,9 +192,7 @@ func OAuth2Security(name string, dsl ...func()) *design.SecurityMethodDefinition
 	}
 
 	if len(dsl) != 0 {
-		if !dslengine.Execute(dsl[0], def) {
-			return nil
-		}
+		def.DSLFunc = dsl[0]
 	}
 
 	design.Design.SecurityMethods = append(design.Design.SecurityMethods, def)
@@ -230,9 +235,7 @@ func JWTSecurity(name string, dsl ...func()) *design.SecurityMethodDefinition {
 	}
 
 	if len(dsl) != 0 {
-		if !dslengine.Execute(dsl[0], def) {
-			return nil
-		}
+		def.DSLFunc = dsl[0]
 	}
 
 	design.Design.SecurityMethods = append(design.Design.SecurityMethods, def)
@@ -325,7 +328,6 @@ func ApplicationFlow(tokenURL string) {
 	}
 	dslengine.IncompatibleDSL()
 }
-
 
 // PasswordFlow defines a "password" OAuth2 flow.  Use within an
 // OAuth2Security definition.
