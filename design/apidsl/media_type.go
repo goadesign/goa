@@ -255,31 +255,12 @@ func View(name string, apidsl ...func()) {
 			}
 		}
 		if ok {
-			if at.Type == nil || !at.Type.IsObject() {
-				dslengine.ReportError("invalid view DSL")
+			view, err := buildView(name, mt, at)
+			if err != nil {
+				dslengine.ReportError(err.Error())
 				return
 			}
-			o := at.Type.ToObject()
-			if o != nil {
-				mto := mt.Type.ToObject()
-				if mto == nil {
-					mto = mt.Type.ToArray().ElemType.Type.ToObject()
-				}
-				for n, cat := range o {
-					if existing, ok := mto[n]; ok {
-						dup := design.DupAtt(existing)
-						dup.View = cat.View
-						o[n] = dup
-					} else if n != "links" {
-						dslengine.ReportError("unknown attribute %#v", n)
-					}
-				}
-			}
-			mt.Views[name] = &design.ViewDefinition{
-				AttributeDefinition: at,
-				Name:                name,
-				Parent:              mt,
-			}
+			mt.Views[name] = view
 		}
 
 	case *design.AttributeDefinition:
@@ -288,6 +269,34 @@ func View(name string, apidsl ...func()) {
 	default:
 		dslengine.IncompatibleDSL()
 	}
+}
+
+// buildView builds a view definition given an attribute and a corresponding media type.
+func buildView(name string, mt *design.MediaTypeDefinition, at *design.AttributeDefinition) (*design.ViewDefinition, error) {
+	if at.Type == nil || !at.Type.IsObject() {
+		return nil, fmt.Errorf("invalid view DSL")
+	}
+	o := at.Type.ToObject()
+	if o != nil {
+		mto := mt.Type.ToObject()
+		if mto == nil {
+			mto = mt.Type.ToArray().ElemType.Type.ToObject()
+		}
+		for n, cat := range o {
+			if existing, ok := mto[n]; ok {
+				dup := design.DupAtt(existing)
+				dup.View = cat.View
+				o[n] = dup
+			} else if n != "links" {
+				return nil, fmt.Errorf("unknown attribute %#v", n)
+			}
+		}
+	}
+	return &design.ViewDefinition{
+		AttributeDefinition: at,
+		Name:                name,
+		Parent:              mt,
+	}, nil
 }
 
 // Attributes implements the media type attributes apidsl. See MediaType.
