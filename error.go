@@ -94,7 +94,11 @@ type (
 		Details map[string]interface{} `json:"details,omitempty" xml:"details,omitempty"`
 	}
 
-	// ErrorClass contains information sent together with the error message in responses.
+	// ErrorClass is an error generating function.
+	// It accepts a format and values and produces errors with the resulting string.
+	// If the format is a string or a Stringer then the string value is used.
+	// If the format is an error then the string returned by Error() is used.
+	// Otherwise the string produced using fmt.Sprintf("%v") is used.
 	ErrorClass func(fm interface{}, v ...interface{}) *HTTPError
 
 	// MultiError is an error composed of potentially multiple errors.
@@ -187,8 +191,8 @@ func (e *HTTPError) Error() string {
 	return e.Err
 }
 
-// KV adds to the error details.
-func (e *HTTPError) KV(keyvals ...interface{}) {
+// WithFields adds to the error details.
+func (e *HTTPError) WithFields(keyvals ...interface{}) {
 	for i := 0; i < len(keyvals); i += 2 {
 		k := keyvals[i]
 		var v interface{} = "MISSING"
