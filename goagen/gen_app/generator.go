@@ -425,7 +425,7 @@ func (g *Generator) generateSecurity(api *design.APIDefinition) error {
 	title := fmt.Sprintf("%s: Application Security", api.Context())
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("net/http"),
-		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("errors"),
 		codegen.SimpleImport("golang.org/x/net/context"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
