@@ -257,7 +257,7 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 		handler := middleware
 		if err != nil {
 			handler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-				ctrl.ErrorHandler(ctx, rw, req, ErrInvalidEncoding.Error(err))
+				ctrl.ErrorHandler(ctx, rw, req, ErrInvalidEncoding(err))
 				return nil
 			}
 			for i := range chain {

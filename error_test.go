@@ -12,22 +12,22 @@ import (
 
 var _ = Describe("HTTPError", func() {
 	const (
-		id     = "goa.1"
-		title  = "title"
+		id     = "invalid"
 		status = 400
 		err    = "error"
 	)
+	var details = map[string]interface{}{"what": 42}
 
 	var httpError *goa.HTTPError
 
 	BeforeEach(func() {
-		httpError = &goa.HTTPError{&goa.ErrorClass{id, title, status}, err}
+		httpError = &goa.HTTPError{id, status, err, details}
 	})
 
 	It("serializes to JSON", func() {
 		b, err := json.Marshal(httpError)
 		Ω(err).ShouldNot(HaveOccurred())
-		Ω(string(b)).Should(Equal(`{"id":"goa.1","title":"title","err":"error"}`))
+		Ω(string(b)).Should(Equal(`{"id":"invalid","err":"error","details":{"what":42}}`))
 	})
 })
 

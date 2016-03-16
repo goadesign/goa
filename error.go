@@ -24,96 +24,78 @@ import (
 	"strings"
 )
 
-const (
-	errInvalidParamTypeID     = "goa.ipt"
-	errMissingParamID         = "goa.mpa"
-	errInvalidAttributeTypeID = "goa.iat"
-	errMissingAttributeID     = "goa.mat"
-	errInvalidEnumValueID     = "goa.iev"
-	errMissingHeaderID        = "goa.mhe"
-	errInvalidFormatID        = "goa.ifo"
-	errInvalidPatternID       = "goa.ipa"
-	errInvalidRangeID         = "goa.ira"
-	errInvalidLengthID        = "goa.ile"
-	errInvalidEncodingID      = "goa.ien"
-	errInternalID             = "goa.int"
-)
-
 var (
 	// ErrInvalidParamType is the class of errors produced by the generated code when
 	// a request parameter type does not match the design.
-	ErrInvalidParamType = &ErrorClass{errInvalidParamTypeID, "invalid parameter type", 400}
+	ErrInvalidParamType = NewErrorClass("invalid_parameter_type", 400)
 
 	// ErrMissingParam is the error produced by the generated code when a
 	// required request parameter is missing.
-	ErrMissingParam = &ErrorClass{errInvalidParamTypeID, "missing required parameter", 400}
+	ErrMissingParam = NewErrorClass("missing_parameter", 400)
 
 	// ErrInvalidAttributeType is the error produced by the generated
 	// code when a data structure attribute type does not match the design
 	// definition.
-	ErrInvalidAttributeType = &ErrorClass{errInvalidAttributeTypeID, "invalid attribute type", 400}
+	ErrInvalidAttributeType = NewErrorClass("invalid_attribute", 400)
 
 	// ErrMissingAttribute is the error produced by the generated
 	// code when a data structure attribute required by the design
 	// definition is missing.
-	ErrMissingAttribute = &ErrorClass{errMissingAttributeID, "missing required attribute", 400}
+	ErrMissingAttribute = NewErrorClass("missing_attribute", 400)
 
 	// ErrInvalidEnumValue is the error produced by the generated code when
 	// a values does not match one of the values listed in the attribute
 	// definition as being valid (i.e. not part of the enum).
-	ErrInvalidEnumValue = &ErrorClass{errInvalidEnumValueID, "invalid value", 400}
+	ErrInvalidEnumValue = NewErrorClass("invalid_value", 400)
 
 	// ErrMissingHeader is the error produced by the generated code when a
 	// required header is missing.
-	ErrMissingHeader = &ErrorClass{errMissingHeaderID, "missing required HTTP header", 400}
+	ErrMissingHeader = NewErrorClass("missing_header", 400)
 
 	// ErrInvalidFormat is the error produced by the generated code when
 	// a value does not match the format specified in the attribute
 	// definition.
-	ErrInvalidFormat = &ErrorClass{errInvalidFormatID, "value does not match validation format", 400}
+	ErrInvalidFormat = NewErrorClass("invalid_format", 400)
 
 	// ErrInvalidPattern is the error produced by the generated code when
 	// a value does not match the regular expression specified in the
 	// attribute definition.
-	ErrInvalidPattern = &ErrorClass{errInvalidPatternID, "value does not match validation pattern", 400}
+	ErrInvalidPattern = NewErrorClass("invalid_pattern", 400)
 
 	// ErrInvalidRange is the error produced by the generated code when
 	// a value is less than the minimum specified in the design definition
 	// or more than the maximum.
-	ErrInvalidRange = &ErrorClass{errInvalidRangeID, "invalid value range", 400}
+	ErrInvalidRange = NewErrorClass("invalid_range", 400)
 
 	// ErrInvalidLength is the error produced by the generated code when
 	// a value is a slice with less elements than the minimum length
 	// specified in the design definition or more elements than the
 	// maximum length.
-	ErrInvalidLength = &ErrorClass{errInvalidLengthID, "invalid value length", 400}
+	ErrInvalidLength = NewErrorClass("invalid_length", 400)
 
 	// ErrInvalidEncoding is the error produced when a request body fails
 	// to be decoded.
-	ErrInvalidEncoding = &ErrorClass{errInvalidEncodingID, "invalid request encoding", 400}
+	ErrInvalidEncoding = NewErrorClass("invalid_encoding", 400)
 
 	// ErrInternal is the class of error used for non HTTPError.
-	ErrInternal = &ErrorClass{errInternalID, "internal error", 500}
+	ErrInternal = NewErrorClass("internal", 500)
 )
 
 type (
 	// HTTPError describes an error that can be returned in a response.
 	HTTPError struct {
-		// ErrorClass defines static properties for all error instances that use it.
-		*ErrorClass
+		// ID identifies the class of errors for client programs.
+		ID string `json:"id" xml:"id"`
+		// Status is the HTTP status code used by responses that cary the error.
+		Status int `json:"-" xml:"-"`
 		// Err describes the specific error occurrence.
 		Err string `json:"err" xml:"err"`
+		// Details contains additional key/value pairs useful to clients.
+		Details map[string]interface{} `json:"details,omitempty" xml:"details,omitempty"`
 	}
 
 	// ErrorClass contains information sent together with the error message in responses.
-	ErrorClass struct {
-		// ID identifies the class of errors for client programs.
-		ID string `json:"id" xml:"id"`
-		// Title is a human friendly title for the class of errors.
-		Title string `json:"title" xml:"title"`
-		// Status is the HTTP status code used by responses that cary the error.
-		Status int `json:"-" xml:"-"`
-	}
+	ErrorClass func(fm interface{}, v ...interface{}) *HTTPError
 
 	// MultiError is an error composed of potentially multiple errors.
 	MultiError []error
@@ -121,44 +103,46 @@ type (
 
 // NewErrorClass creates a new error class.
 // It is the responsability of the client to guarantee uniqueness of id.
-func NewErrorClass(id, title string, status int) *ErrorClass {
-	return &ErrorClass{ID: id, Title: title, Status: status}
-}
-
-// Error wraps an error into a HTTP error of the given class.
-func (class *ErrorClass) Error(err error) *HTTPError {
-	return &HTTPError{ErrorClass: class, Err: err.Error()}
-}
-
-// Errorf builds an HTTP error given a format and values.
-func (class *ErrorClass) Errorf(fm string, v ...interface{}) *HTTPError {
-	msg := fmt.Sprintf(fm, v...)
-	return &HTTPError{ErrorClass: class, Err: msg}
+func NewErrorClass(id string, status int) ErrorClass {
+	return func(fm interface{}, v ...interface{}) *HTTPError {
+		var f string
+		switch actual := fm.(type) {
+		case string:
+			f = actual
+		case error:
+			f = actual.Error()
+		case fmt.Stringer:
+			f = actual.String()
+		default:
+			f = fmt.Sprintf("%v", actual)
+		}
+		return &HTTPError{ID: id, Status: status, Err: fmt.Sprintf(f, v...)}
+	}
 }
 
 // InvalidParamTypeError creates a HTTPError with class ID ErrInvalidParamType
 func InvalidParamTypeError(name string, val interface{}, expected string) error {
-	return ErrInvalidParamType.Errorf("invalid value %#v for parameter %#v, must be a %s", val, name, expected)
+	return ErrInvalidParamType("invalid value %#v for parameter %#v, must be a %s", val, name, expected)
 }
 
 // MissingParamError creates a HTTPError with class ID ErrMissingParam
 func MissingParamError(name string) error {
-	return ErrMissingParam.Errorf("missing required parameter %#v", name)
+	return ErrMissingParam("missing required parameter %#v", name)
 }
 
 // InvalidAttributeTypeError creates a HTTPError with class ID ErrInvalidAttributeType
 func InvalidAttributeTypeError(ctx string, val interface{}, expected string) error {
-	return ErrInvalidAttributeType.Errorf("type of %s must be %s but got value %#v", ctx, expected, val)
+	return ErrInvalidAttributeType("type of %s must be %s but got value %#v", ctx, expected, val)
 }
 
 // MissingAttributeError creates a HTTPError with class ID ErrMissingAttribute
 func MissingAttributeError(ctx, name string) error {
-	return ErrMissingAttribute.Errorf("attribute %#v of %s is missing and required", name, ctx)
+	return ErrMissingAttribute("attribute %#v of %s is missing and required", name, ctx)
 }
 
 // MissingHeaderError creates a HTTPError with class ID ErrMissingHeader
 func MissingHeaderError(name string) error {
-	return ErrMissingHeader.Errorf("missing required HTTP header %#v", name)
+	return ErrMissingHeader("missing required HTTP header %#v", name)
 }
 
 // InvalidEnumValueError creates a HTTPError with class ID ErrInvalidEnumValue
@@ -167,17 +151,17 @@ func InvalidEnumValueError(ctx string, val interface{}, allowed []interface{}) e
 	for i, a := range allowed {
 		elems[i] = fmt.Sprintf("%#v", a)
 	}
-	return ErrInvalidEnumValue.Errorf("value of %s must be one of %s but got value %#v", ctx, strings.Join(elems, ", "), val)
+	return ErrInvalidEnumValue("value of %s must be one of %s but got value %#v", ctx, strings.Join(elems, ", "), val)
 }
 
 // InvalidFormatError creates a HTTPError with class ID ErrInvalidFormat
 func InvalidFormatError(ctx, target string, format Format, formatError error) error {
-	return ErrInvalidFormat.Errorf("%s must be formatted as a %s but got value %#v, %s", ctx, format, target, formatError.Error())
+	return ErrInvalidFormat("%s must be formatted as a %s but got value %#v, %s", ctx, format, target, formatError.Error())
 }
 
 // InvalidPatternError creates a HTTPError with class ID ErrInvalidPattern
 func InvalidPatternError(ctx, target string, pattern string) error {
-	return ErrInvalidPattern.Errorf("%s must match the regexp %#v but got value %#v", ctx, pattern, target)
+	return ErrInvalidPattern("%s must match the regexp %#v but got value %#v", ctx, pattern, target)
 }
 
 // InvalidRangeError creates a HTTPError with class ID ErrInvalidRange
@@ -186,7 +170,7 @@ func InvalidRangeError(ctx string, target interface{}, value int, min bool) erro
 	if !min {
 		comp = "lesser or equal"
 	}
-	return ErrInvalidRange.Errorf("%s must be %s than %d but got value %#v", ctx, comp, value, target)
+	return ErrInvalidRange("%s must be %s than %d but got value %#v", ctx, comp, value, target)
 }
 
 // InvalidLengthError creates a HTTPError with class ID ErrInvalidLength
@@ -195,12 +179,24 @@ func InvalidLengthError(ctx string, target interface{}, ln, value int, min bool)
 	if !min {
 		comp = "lesser or equal"
 	}
-	return ErrInvalidLength.Errorf("length of %s must be %s than %d but got value %#v (len=%d)", ctx, comp, value, target, ln)
+	return ErrInvalidLength("length of %s must be %s than %d but got value %#v (len=%d)", ctx, comp, value, target, ln)
 }
 
 // Error returns the error occurrence details.
 func (e *HTTPError) Error() string {
 	return e.Err
+}
+
+// KV adds to the error details.
+func (e *HTTPError) KV(keyvals ...interface{}) {
+	for i := 0; i < len(keyvals); i += 2 {
+		k := keyvals[i]
+		var v interface{} = "MISSING"
+		if i+1 < len(keyvals) {
+			v = keyvals[i+1]
+		}
+		e.Details[fmt.Sprintf("%v", k)] = v
+	}
 }
 
 // Error returns the multiple error messages.
