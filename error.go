@@ -192,7 +192,7 @@ func (e *HTTPError) Error() string {
 }
 
 // Meta adds to the error metadata.
-func (e *HTTPError) Meta(keyvals ...interface{}) {
+func (e *HTTPError) Meta(keyvals ...interface{}) *HTTPError {
 	for i := 0; i < len(keyvals); i += 2 {
 		k := keyvals[i]
 		var v interface{} = "MISSING"
@@ -201,6 +201,7 @@ func (e *HTTPError) Meta(keyvals ...interface{}) {
 		}
 		e.MetaValues[fmt.Sprintf("%v", k)] = v
 	}
+	return e
 }
 
 // Error returns the multiple error messages.
