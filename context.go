@@ -128,7 +128,7 @@ func (r *ResponseData) BadRequest(ctx context.Context, err *HTTPError) error {
 // The body can be set using a format and substituted values a la fmt.Printf.
 func (r *ResponseData) Bug(ctx context.Context, format string, a ...interface{}) error {
 	msg := fmt.Sprintf(format, a...)
-	return r.Send(ctx, 500, &HTTPError{ErrInternal, msg})
+	return r.Send(ctx, 500, ErrInternal(msg))
 }
 
 // WriteHeader records the response status code and calls the underlying writer.

@@ -12,22 +12,22 @@ import (
 
 var _ = Describe("HTTPError", func() {
 	const (
-		id     = "goa.1"
-		title  = "title"
+		code   = "invalid"
 		status = 400
-		err    = "error"
+		detail = "error"
 	)
+	var meta = map[string]interface{}{"what": 42}
 
 	var httpError *goa.HTTPError
 
 	BeforeEach(func() {
-		httpError = &goa.HTTPError{&goa.ErrorClass{id, title, status}, err}
+		httpError = &goa.HTTPError{code, status, detail, meta}
 	})
 
 	It("serializes to JSON", func() {
 		b, err := json.Marshal(httpError)
 		Ω(err).ShouldNot(HaveOccurred())
-		Ω(string(b)).Should(Equal(`{"id":"goa.1","title":"title","err":"error"}`))
+		Ω(string(b)).Should(Equal(`{"code":"invalid","status":400,"detail":"error","meta":{"what":42}}`))
 	})
 })
 
@@ -45,9 +45,9 @@ var _ = Describe("InvalidParamTypeError", func() {
 		Ω(valErr).ShouldNot(BeNil())
 		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
 		err := valErr.(*goa.HTTPError)
-		Ω(err.Err).Should(ContainSubstring(name))
-		Ω(err.Err).Should(ContainSubstring("%d", val))
-		Ω(err.Err).Should(ContainSubstring(expected))
+		Ω(err.Detail).Should(ContainSubstring(name))
+		Ω(err.Detail).Should(ContainSubstring("%d", val))
+		Ω(err.Detail).Should(ContainSubstring(expected))
 	})
 })
 
@@ -63,7 +63,7 @@ var _ = Describe("MissingParaerror", func() {
 		Ω(valErr).ShouldNot(BeNil())
 		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
 		err := valErr.(*goa.HTTPError)
-		Ω(err.Err).Should(ContainSubstring(name))
+		Ω(err.Detail).Should(ContainSubstring(name))
 	})
 })
 
@@ -81,9 +81,9 @@ var _ = Describe("InvalidAttributeTypeError", func() {
 		Ω(valErr).ShouldNot(BeNil())
 		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
 		err := valErr.(*goa.HTTPError)
-		Ω(err.Err).Should(ContainSubstring(ctx))
-		Ω(err.Err).Should(ContainSubstring("%d", val))
-		Ω(err.Err).Should(ContainSubstring(expected))
+		Ω(err.Detail).Should(ContainSubstring(ctx))
+		Ω(err.Detail).Should(ContainSubstring("%d", val))
+		Ω(err.Detail).Should(ContainSubstring(expected))
 	})
 })
 
@@ -100,8 +100,8 @@ var _ = Describe("MissingAttributeError", func() {
 		Ω(valErr).ShouldNot(BeNil())
 		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
 		err := valErr.(*goa.HTTPError)
-		Ω(err.Err).Should(ContainSubstring(ctx))
-		Ω(err.Err).Should(ContainSubstring(name))
+		Ω(err.Detail).Should(ContainSubstring(ctx))
+		Ω(err.Detail).Should(ContainSubstring(name))
 	})
 })
 
@@ -117,7 +117,7 @@ var _ = Describe("MissingHeaderError", func() {
 		Ω(valErr).ShouldNot(BeNil())
 		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
 		err := valErr.(*goa.HTTPError)
-		Ω(err.Err).Should(ContainSubstring(name))
+		Ω(err.Detail).Should(ContainSubstring(name))
 	})
 })
 
@@ -135,9 +135,9 @@ var _ = Describe("InvalidEnumValueError", func() {
 		Ω(valErr).ShouldNot(BeNil())
 		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
 		err := valErr.(*goa.HTTPError)
-		Ω(err.Err).Should(ContainSubstring(ctx))
-		Ω(err.Err).Should(ContainSubstring("%d", val))
-		Ω(err.Err).Should(ContainSubstring(`"43", "44"`))
+		Ω(err.Detail).Should(ContainSubstring(ctx))
+		Ω(err.Detail).Should(ContainSubstring("%d", val))
+		Ω(err.Detail).Should(ContainSubstring(`"43", "44"`))
 	})
 })
 
@@ -156,10 +156,10 @@ var _ = Describe("InvalidFormaerror", func() {
 		Ω(valErr).ShouldNot(BeNil())
 		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
 		err := valErr.(*goa.HTTPError)
-		Ω(err.Err).Should(ContainSubstring(ctx))
-		Ω(err.Err).Should(ContainSubstring(target))
-		Ω(err.Err).Should(ContainSubstring("date-time"))
-		Ω(err.Err).Should(ContainSubstring(formatError.Error()))
+		Ω(err.Detail).Should(ContainSubstring(ctx))
+		Ω(err.Detail).Should(ContainSubstring(target))
+		Ω(err.Detail).Should(ContainSubstring("date-time"))
+		Ω(err.Detail).Should(ContainSubstring(formatError.Error()))
 	})
 })
 
@@ -177,9 +177,9 @@ var _ = Describe("InvalidPatternError", func() {
 		Ω(valErr).ShouldNot(BeNil())
 		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
 		err := valErr.(*goa.HTTPError)
-		Ω(err.Err).Should(ContainSubstring(ctx))
-		Ω(err.Err).Should(ContainSubstring(target))
-		Ω(err.Err).Should(ContainSubstring(pattern))
+		Ω(err.Detail).Should(ContainSubstring(ctx))
+		Ω(err.Detail).Should(ContainSubstring(target))
+		Ω(err.Detail).Should(ContainSubstring(pattern))
 	})
 })
 
@@ -198,10 +198,10 @@ var _ = Describe("InvalidRangeError", func() {
 		Ω(valErr).ShouldNot(BeNil())
 		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
 		err := valErr.(*goa.HTTPError)
-		Ω(err.Err).Should(ContainSubstring(ctx))
-		Ω(err.Err).Should(ContainSubstring("greater or equal"))
-		Ω(err.Err).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
-		Ω(err.Err).Should(ContainSubstring(target))
+		Ω(err.Detail).Should(ContainSubstring(ctx))
+		Ω(err.Detail).Should(ContainSubstring("greater or equal"))
+		Ω(err.Detail).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
+		Ω(err.Detail).Should(ContainSubstring(target))
 	})
 })
 
@@ -229,10 +229,10 @@ var _ = Describe("InvalidLengthError", func() {
 			Ω(valErr).ShouldNot(BeNil())
 			Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
 			err := valErr.(*goa.HTTPError)
-			Ω(err.Err).Should(ContainSubstring(ctx))
-			Ω(err.Err).Should(ContainSubstring("greater or equal"))
-			Ω(err.Err).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
-			Ω(err.Err).Should(ContainSubstring(target.(string)))
+			Ω(err.Detail).Should(ContainSubstring(ctx))
+			Ω(err.Detail).Should(ContainSubstring("greater or equal"))
+			Ω(err.Detail).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
+			Ω(err.Detail).Should(ContainSubstring(target.(string)))
 		})
 	})
 
@@ -246,10 +246,10 @@ var _ = Describe("InvalidLengthError", func() {
 			Ω(valErr).ShouldNot(BeNil())
 			Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
 			err := valErr.(*goa.HTTPError)
-			Ω(err.Err).Should(ContainSubstring(ctx))
-			Ω(err.Err).Should(ContainSubstring("greater or equal"))
-			Ω(err.Err).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
-			Ω(err.Err).Should(ContainSubstring(fmt.Sprintf("%#v", target)))
+			Ω(err.Detail).Should(ContainSubstring(ctx))
+			Ω(err.Detail).Should(ContainSubstring("greater or equal"))
+			Ω(err.Detail).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
+			Ω(err.Detail).Should(ContainSubstring(fmt.Sprintf("%#v", target)))
 		})
 	})
 })

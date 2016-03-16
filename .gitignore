@@ -10,3 +10,4 @@ public/
 .vscode/
 *~
 *.orig
+.DS_Store
