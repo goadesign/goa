@@ -84,14 +84,14 @@ var (
 type (
 	// HTTPError describes an error that can be returned in a response.
 	HTTPError struct {
-		// ID identifies the class of errors for client programs.
-		ID string `json:"id" xml:"id"`
+		// Code identifies the class of errors for client programs.
+		Code string `json:"code" xml:"code"`
 		// Status is the HTTP status code used by responses that cary the error.
-		Status int `json:"-" xml:"-"`
-		// Err describes the specific error occurrence.
-		Err string `json:"err" xml:"err"`
-		// Details contains additional key/value pairs useful to clients.
-		Details map[string]interface{} `json:"details,omitempty" xml:"details,omitempty"`
+		Status int `json:"status" xml:"status"`
+		// Detail describes the specific error occurrence.
+		Detail string `json:"detail" xml:"detail"`
+		// MetaValues contains additional key/value pairs useful to clients.
+		MetaValues map[string]interface{} `json:"meta,omitempty" xml:"meta,omitempty"`
 	}
 
 	// ErrorClass is an error generating function.
@@ -106,8 +106,8 @@ type (
 )
 
 // NewErrorClass creates a new error class.
-// It is the responsability of the client to guarantee uniqueness of id.
-func NewErrorClass(id string, status int) ErrorClass {
+// It is the responsability of the client to guarantee uniqueness of code.
+func NewErrorClass(code string, status int) ErrorClass {
 	return func(fm interface{}, v ...interface{}) *HTTPError {
 		var f string
 		switch actual := fm.(type) {
@@ -120,7 +120,7 @@ func NewErrorClass(id string, status int) ErrorClass {
 		default:
 			f = fmt.Sprintf("%v", actual)
 		}
-		return &HTTPError{ID: id, Status: status, Err: fmt.Sprintf(f, v...)}
+		return &HTTPError{Code: code, Status: status, Detail: fmt.Sprintf(f, v...)}
 	}
 }
 
@@ -188,18 +188,18 @@ func InvalidLengthError(ctx string, target interface{}, ln, value int, min bool)
 
 // Error returns the error occurrence details.
 func (e *HTTPError) Error() string {
-	return e.Err
+	return e.Detail
 }
 
-// WithFields adds to the error details.
-func (e *HTTPError) WithFields(keyvals ...interface{}) {
+// Meta adds to the error metadata.
+func (e *HTTPError) Meta(keyvals ...interface{}) {
 	for i := 0; i < len(keyvals); i += 2 {
 		k := keyvals[i]
 		var v interface{} = "MISSING"
 		if i+1 < len(keyvals) {
 			v = keyvals[i+1]
 		}
-		e.Details[fmt.Sprintf("%v", k)] = v
+		e.MetaValues[fmt.Sprintf("%v", k)] = v
 	}
 }
 
