@@ -665,10 +665,10 @@ func Configure{{ goify .SchemeName true }}Security(service *goa.Service, f goa.{
 	}{{if .Description}}
 	def.Description = {{ printf "%q" .Description }}
 {{ end }}
+{{ if or (eq .Context "JWTSecurity") (eq .Context "OAuth2Security") }}
 	fetchScopes := func(ctx context.Context) []string {
 		return ctx.Value(securityScopesKey).([]string)
 	}
-{{ if or (eq .Context "JWTSecurity") (eq .Context "OAuth2Security") }}
 	middleware := f(def, fetchScopes)
 {{ else }}
 	middleware := f(def)
