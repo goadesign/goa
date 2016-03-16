@@ -574,7 +574,7 @@ func Mount{{.Resource}}Controller(service *goa.Service, ctrl {{.Resource}}Contro
 		}
 		{{end}}		return ctrl.{{.Name}}(rctx)
 	}{{ if .Security }}
-	h = {{ goify .Security.Scheme.SchemeName true }}Security.Dispatch(h{{ range .Security.Scopes }}, {{ printf "%q" . }}{{end}}){{end}}
+	h = handleSecurity(service, {{ printf "%q" .Security.Scheme.SchemeName }}, h{{ range .Security.Scopes }}, {{ printf "%q" . }}{{end}}){{end}}
 {{range .Routes}}	service.Mux.Handle("{{.Verb}}", "{{.FullPath}}", ctrl.MuxHandler("{{$action.Name}}", h, {{if $action.Payload}}{{$action.Unmarshal}}{{else}}nil{{end}}))
 	service.Info("mount", "ctrl", "{{$res}}", "action", "{{$action.Name}}", "route", "{{.Verb}} {{.FullPath}}"{{ with $action.Security }}, "security", {{ printf "%q" .Scheme.SchemeName }}{{end}})
 {{end}}{{end}}}
@@ -634,14 +634,17 @@ func (ut {{gotyperef . .AllRequired 0}}) Validate() (err error) {
 `
 
 	securitySchemesT = `
+type securitySchemeKey string
+type key int
+const securityScopesKey key = 1
+
 {{ range . }}
+func Configure{{ goify .SchemeName true }}Security(service *goa.Service, f func(scheme *goa.{{ .Context }}, fetchScopes func(context.Context) []string) goa.Middleware) {
+	def := &goa.{{ .Context }}{
 {{ if eq .Context "APIKeySecurity" }}
-var {{ goify .SchemeName true }}Security = &goa.APIKeySecurity{
 		In:   {{ printf "%q" .In }},
 		Name: {{ printf "%q" .Name }},
-}
 {{ else if eq .Context "OAuth2Security" }}
-var {{ goify .SchemeName true }}Security = &goa.OAuth2Security{
 		Flow:             {{ printf "%q" .Flow }},
 		TokenURL:         {{ printf "%q" .TokenURL }},
 		AuthorizationURL: {{ printf "%q" .AuthorizationURL }},{{ with .Scopes }}
@@ -649,11 +652,8 @@ var {{ goify .SchemeName true }}Security = &goa.OAuth2Security{
 {{ range $k, $v := . }}			{{ printf "%q" $k }}: {{ printf "%q" $v }},
 {{ end }}
 		},{{end}}
-}
 {{ else if eq .Context "BasicAuthSecurity" }}
-var {{ goify .SchemeName true }}Security = &goa.BasicAuthSecurity{}
 {{ else if eq .Context "JWTSecurity" }}
-var {{ goify .SchemeName true }}Security = &goa.JWTSecurity{
 		In:               {{ printf "%q" .In }},
 		Name:             {{ printf "%q" .Name }},
 		TokenURL:         {{ printf "%q" .TokenURL }},{{ with .Scopes }}
@@ -661,11 +661,33 @@ var {{ goify .SchemeName true }}Security = &goa.JWTSecurity{
 {{ range $k, $v := . }}			{{ printf "%q" $k }}: {{ printf "%q" $v }},
 {{ end }}
 		},{{ end }}
+{{ end }}
+	}{{if .Description}}
+	def.Description = {{ printf "%q" .Description }}
+{{ end }}
+	fetchScopes := func(ctx context.Context) []string {
+		return ctx.Value(securityScopesKey).([]string)
+	}
+	middleware := f(def, fetchScopes)
+	service.Context = context.WithValue(service.Context, securitySchemeKey({{ printf "%q" .SchemeName }}), middleware)
 }
-{{ end }}{{ end }}
+{{ end }}
 
-func init() { {{ range . }}{{if .Description}}
-	{{ goify .SchemeName true }}Security.Description = {{ printf "%q" .Description }}
-{{end}}{{end}} }
+func handleSecurity(service *goa.Service, schemeName string, h goa.Handler, scopes ...string) goa.Handler {
+	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		scheme := service.Context.Value(securitySchemeKey(schemeName))
+		middleware, ok := scheme.(goa.Middleware)
+		if !ok {
+			goa.RequestService(ctx).Error("security scheme not configured")
+			return errors.New("security scheme not configured")
+		}
+
+		if len(scopes) != 0 {
+			ctx = context.WithValue(ctx, securityScopesKey, scopes)
+		}
+
+		return middleware(h)(ctx, rw, req)
+	}
+}
 `
 )
