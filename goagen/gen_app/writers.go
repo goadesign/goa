@@ -639,7 +639,7 @@ type key int
 const securityScopesKey key = 1
 
 {{ range . }}
-func Configure{{ goify .SchemeName true }}Security(service *goa.Service, f func(scheme *goa.{{ .Context }}, fetchScopes func(context.Context) []string) goa.Middleware) {
+func Configure{{ goify .SchemeName true }}Security(service *goa.Service, f goa.{{ .Context }}ConfigFunc) {
 	def := &goa.{{ .Context }}{
 {{ if eq .Context "APIKeySecurity" }}
 		In:   {{ printf "%q" .In }},
@@ -665,10 +665,14 @@ func Configure{{ goify .SchemeName true }}Security(service *goa.Service, f func(
 	}{{if .Description}}
 	def.Description = {{ printf "%q" .Description }}
 {{ end }}
+{{ if or (eq .Context "JWTSecurity") (eq .Context "OAuth2Security") }}
 	fetchScopes := func(ctx context.Context) []string {
 		return ctx.Value(securityScopesKey).([]string)
 	}
 	middleware := f(def, fetchScopes)
+{{ else }}
+	middleware := f(def)
+{{ end }}
 	service.Context = context.WithValue(service.Context, securitySchemeKey({{ printf "%q" .SchemeName }}), middleware)
 }
 {{ end }}

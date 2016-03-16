@@ -1,5 +1,7 @@
 package goa
 
+import "golang.org/x/net/context"
+
 ///////////////////////////////////////////////////////////////////
 
 // OAuth2Security represents the `oauth2` security scheme. It is
@@ -19,6 +21,12 @@ type OAuth2Security struct {
 	Scopes map[string]string
 }
 
+// OAuth2SecurityConfigFunc is what you need to pass to the generated
+// `ConfigureYourOwnOAuth2Security` functions in your `app`.
+//
+// The `goa/middleware/security` middlewares implement this for you.
+type OAuth2SecurityConfigFunc func(scheme *OAuth2Security, getScopes func(context.Context) []string) Middleware
+
 ///////////////////////////////////////////////////////////////////
 
 // BasicAuthSecurity represents the `Basic` security scheme, which
@@ -28,6 +36,10 @@ type BasicAuthSecurity struct {
 	// Description of the security scheme
 	Description string
 }
+
+// BasicAuthSecurityConfigFunc is what you need to pass to the generated
+// `ConfigureYourBasicAuthSecurity` functions in your `app`.
+type BasicAuthSecurityConfigFunc func(scheme *BasicAuthSecurity) Middleware
 
 ///////////////////////////////////////////////////////////////////
 
@@ -45,6 +57,10 @@ type APIKeySecurity struct {
 	Name string
 }
 
+// APIKeySecurityConfigFunc is what you need to pass to the generated
+// `ConfigureYourAPIKeySecurity` functions in your `app`.
+type APIKeySecurityConfigFunc func(scheme *APIKeySecurity) Middleware
+
 ///////////////////////////////////////////////////////////////////
 
 // JWTSecurity represents an api key based scheme, with support for
@@ -61,3 +77,9 @@ type JWTSecurity struct {
 	// Scopes defines a list of scopes for the security scheme, along with their description.
 	Scopes map[string]string
 }
+
+// JWTSecurityConfigFunc is what you need to pass to the generated
+// `ConfigureYourOwnJWTSecurity` functions in your `app`.
+//
+// The `goa/middleware/security` middlewares implement this for you.
+type JWTSecurityConfigFunc func(scheme *JWTSecurity, getScopes func(context.Context) []string) Middleware
