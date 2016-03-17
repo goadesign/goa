@@ -279,8 +279,9 @@ const (
 
 	requiredValTmpl = `{{range $r := .required}}{{$catt := index $.attribute.Type.ToObject $r}}{{if eq $catt.Type.Kind 4}}{{tabs $.depth}}if {{$.target}}.{{goify $r true}} == "" {
 {{tabs $.depth}}	err = goa.StackErrors(err, goa.MissingAttributeError(` + "`" + `{{$.context}}` + "`" + `, "{{$r}}"))
-{{tabs $.depth}}}{{else if (not $catt.Type.IsPrimitive)}}{{tabs $.depth}}if {{$.target}}.{{goify $r true}} == nil {
+{{tabs $.depth}}}
+{{else if (not $catt.Type.IsPrimitive)}}{{tabs $.depth}}if {{$.target}}.{{goify $r true}} == nil {
 {{tabs $.depth}}	err = goa.StackErrors(err, goa.MissingAttributeError(` + "`" + `{{$.context}}` + "`" + `, "{{$r}}"))
-{{tabs $.depth}}}{{end}}
-{{end}}`
+{{tabs $.depth}}}
+{{end}}{{end}}`
 )
