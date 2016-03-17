@@ -50,10 +50,10 @@ func (r *RandomGenerator) String() string {
 
 // DateTime produces a random date.
 func (r *RandomGenerator) DateTime() time.Time {
-	// get the time now as seconds since epoch
-	// seed the int random generator with it
-	// and convert that back to a time
-	unix := r.rand.Int63n(time.Now().Unix())
+	// Use a constant max value to make sure the same pseudo random
+	// values get generated for a given API.
+	max := time.Date(2016, time.July, 11, 23, 0, 0, 0, time.UTC).Unix()
+	unix := r.rand.Int63n(max)
 	return time.Unix(unix, 0)
 
 }
