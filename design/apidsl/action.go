@@ -251,6 +251,9 @@ func Payload(p interface{}, dsls ...func()) {
 			att = &design.AttributeDefinition{Type: actual}
 		case design.Primitive:
 			att = &design.AttributeDefinition{Type: actual}
+		default:
+			dslengine.ReportError("invalid Payload argument, must be a type, a media type or a DSL building a type")
+			return
 		}
 		if len(dsls) == 1 {
 			if dsl != nil {
