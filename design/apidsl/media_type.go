@@ -358,13 +358,15 @@ func CollectionOf(v interface{}, apidsl ...func()) *design.MediaTypeDefinition {
 	}
 	if m == nil {
 		dslengine.ReportError("invalid CollectionOf argument: not a media type and not a known media type identifier")
-		return nil
+		// don't return nil to avoid panics, the error will get reported at the end
+		return design.NewMediaTypeDefinition("InvalidCollection", "text/plain", nil)
 	}
 	id := m.Identifier
 	mediatype, params, err := mime.ParseMediaType(id)
 	if err != nil {
 		dslengine.ReportError("invalid media type identifier %#v: %s", id, err)
-		return nil
+		// don't return nil to avoid panics, the error will get reported at the end
+		return design.NewMediaTypeDefinition("InvalidCollection", "text/plain", nil)
 	}
 	hasType := false
 	for param := range params {
