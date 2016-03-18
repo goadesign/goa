@@ -81,6 +81,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		appPkg := path.Join(outPkg, "app")
 		swaggerPkg := path.Join(outPkg, "swagger")
 		imports := []*codegen.ImportSpec{
+			codegen.SimpleImport("time"),
 			codegen.SimpleImport("github.com/goadesign/goa"),
 			codegen.SimpleImport("github.com/goadesign/middleware"),
 			codegen.SimpleImport(appPkg),
@@ -232,8 +233,13 @@ func snakeCase(name string) string {
 
 const mainT = `
 func main() {
+	server := goa.NewGraceful(newService(), true, 5 * time.Second)
+	server.ListenAndServe(":8080")
+}
+
+func newService() *goa.Service {
 	// Create service
-	service := goa.New("{{.Name}}")
+	service := goa.New({{ printf "%q" .Name }})
 
 	// Setup middleware
 	service.Use(middleware.RequestID())
@@ -246,8 +252,8 @@ func main() {
 {{end}}{{if generateSwagger}}// Mount Swagger spec provider controller
 	swagger.MountController(service)
 {{end}}
-	// Start service, listen on port 8080
-	service.ListenAndServe(":8080")
+
+	return service
 }
 `
 
