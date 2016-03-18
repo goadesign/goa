@@ -9,22 +9,24 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"gopkg.in/tylerb/graceful.v1"
 )
 
-// GracefulService is a goa application using a graceful shutdown server.
-// When sending any of the signals listed in InterruptSignals to the process GracefulService:
+// GracefulServer is a goa application using a graceful shutdown server.
+// When sending any of the signals listed in InterruptSignals to the process GracefulServer:
 //
 // * disables keepalive connections.
 //
 // * closes the listening socket, allowing another process to listen on that port immediately.
 //
 // * calls Cancel, signaling all active handlers.
-type GracefulService struct {
+type GracefulServer struct {
 	*Service
 	sync.Mutex
-	server *graceful.Server
+	server  *graceful.Server
+	timeout time.Duration
 
 	// Interrupted is true if the application is in the process of shutting down.
 	Interrupted bool
@@ -44,13 +46,12 @@ var InterruptSignals = []os.Signal{
 }
 
 // NewGraceful returns a goa application that uses a graceful shutdown server.
-func NewGraceful(name string, cancelOnShutdown bool) *GracefulService {
-	service := New(name)
-	return &GracefulService{Service: service, CancelOnShutdown: cancelOnShutdown}
+func NewGraceful(service *Service, cancelOnShutdown bool, timeout time.Duration) *GracefulServer {
+	return &GracefulServer{Service: service, CancelOnShutdown: cancelOnShutdown, timeout: timeout}
 }
 
 // ListenAndServe starts the HTTP server and sets up a listener on the given host/port.
-func (serv *GracefulService) ListenAndServe(addr string) error {
+func (serv *GracefulServer) ListenAndServe(addr string) error {
 	serv.setup(addr)
 	serv.Info("started", "transport", "http", "addr", addr)
 	if err := serv.server.ListenAndServe(); err != nil {
@@ -64,7 +65,7 @@ func (serv *GracefulService) ListenAndServe(addr string) error {
 }
 
 // ListenAndServeTLS starts a HTTPS server and sets up a listener on the given host/port.
-func (serv *GracefulService) ListenAndServeTLS(addr, certFile, keyFile string) error {
+func (serv *GracefulServer) ListenAndServeTLS(addr, certFile, keyFile string) error {
 	serv.setup(addr)
 	serv.Info("started", "transport", "https", "addr", addr)
 	return serv.server.ListenAndServeTLS(certFile, keyFile)
@@ -72,7 +73,7 @@ func (serv *GracefulService) ListenAndServeTLS(addr, certFile, keyFile string) e
 
 // Shutdown initiates graceful shutdown of the running server once. Returns true on
 // initial shutdown and false if already shutting down.
-func (serv *GracefulService) Shutdown() bool {
+func (serv *GracefulServer) Shutdown() bool {
 	IncrCounter([]string{"goa", "graceful", "restart"}, 1.0)
 	serv.Lock()
 	defer serv.Unlock()
@@ -80,7 +81,7 @@ func (serv *GracefulService) Shutdown() bool {
 		return false
 	}
 	serv.Interrupted = true
-	serv.server.Stop(0)
+	serv.server.Stop(serv.timeout)
 	if serv.CancelOnShutdown {
 		serv.CancelAll()
 	}
@@ -88,7 +89,7 @@ func (serv *GracefulService) Shutdown() bool {
 }
 
 // setup initializes the interrupt handler and the underlying graceful server.
-func (serv *GracefulService) setup(addr string) {
+func (serv *GracefulServer) setup(addr string) {
 	// we will trap interrupts here instead of allowing the graceful package to do
 	// it for us. the graceful package has the odd behavior of stopping the
 	// interrupt handler after first interrupt. this leads to the dreaded double-
