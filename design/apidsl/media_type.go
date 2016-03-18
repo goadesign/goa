@@ -379,14 +379,16 @@ func CollectionOf(v interface{}, apidsl ...func()) *design.MediaTypeDefinition {
 		params["type"] = "collection"
 	}
 	id = mime.FormatMediaType(mediatype, params)
-	typeName := m.TypeName + "Collection"
-	if mt, ok := design.GeneratedMediaTypes[typeName]; ok {
+	canonical := design.CanonicalIdentifier(id)
+	if mt, ok := design.GeneratedMediaTypes[canonical]; ok {
 		// Already have a type for this collection, reuse it.
 		return mt
 	}
-	mt := design.NewMediaTypeDefinition(typeName, id, func() {
+	mt := design.NewMediaTypeDefinition("", id, func() {
 		if mt, ok := mediaTypeDefinition(); ok {
-			mt.TypeName = typeName
+			// Cannot compute collection type name before element media type DSL has executed
+			// since the DSL may modify element type name via the TypeName function.
+			mt.TypeName = m.TypeName + "Collection"
 			mt.AttributeDefinition = &design.AttributeDefinition{Type: ArrayOf(m)}
 			if len(apidsl) > 0 {
 				dslengine.Execute(apidsl[0], mt)
@@ -403,6 +405,6 @@ func CollectionOf(v interface{}, apidsl ...func()) *design.MediaTypeDefinition {
 	})
 	// Do not execute the apidsl right away, will be done last to make sure the element apidsl has run
 	// first.
-	design.GeneratedMediaTypes[typeName] = mt
+	design.GeneratedMediaTypes[canonical] = mt
 	return mt
 }
