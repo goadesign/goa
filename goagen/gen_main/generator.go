@@ -233,8 +233,8 @@ func snakeCase(name string) string {
 
 const mainT = `
 func main() {
-	server := goa.NewGraceful(newService(), true)
-	server.ListenAndServe(":8080", 5 * time.Second)
+	server := goa.NewGraceful(newService(), true, 5 * time.Second)
+	server.ListenAndServe(":8080")
 }
 
 func newService() *goa.Service {
