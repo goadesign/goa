@@ -51,9 +51,6 @@ func NewGraceful(name string, cancelOnShutdown bool) *GracefulService {
 	return &GracefulService{Service: service, CancelOnShutdown: cancelOnShutdown}
 }
 
-func (serv *GracefulService) SetTimeout(timeout time.Duration) {
-}
-
 // ListenAndServe starts the HTTP server and sets up a listener on the given host/port.
 func (serv *GracefulService) ListenAndServe(addr string, timeout time.Duration) error {
 	serv.setup(addr, timeout)
@@ -85,7 +82,7 @@ func (serv *GracefulService) Shutdown() bool {
 		return false
 	}
 	serv.Interrupted = true
-	serv.server.Stop(0)
+	serv.server.Stop(serv.timeout)
 	if serv.CancelOnShutdown {
 		serv.CancelAll()
 	}
@@ -94,6 +91,8 @@ func (serv *GracefulService) Shutdown() bool {
 
 // setup initializes the interrupt handler and the underlying graceful server.
 func (serv *GracefulService) setup(addr string, timeout time.Duration) {
+	serv.timeout = timeout
+
 	// we will trap interrupts here instead of allowing the graceful package to do
 	// it for us. the graceful package has the odd behavior of stopping the
 	// interrupt handler after first interrupt. this leads to the dreaded double-
@@ -119,7 +118,7 @@ func (serv *GracefulService) setup(addr string, timeout time.Duration) {
 	// the handler should implement some kind of internal timeout (e.g. the go
 	// context deadline) instead of relying on a shutdown timeout.
 	serv.server = &graceful.Server{
-		Timeout:          timeout,
+		Timeout:          0,
 		Server:           &http.Server{Addr: addr, Handler: serv.Mux},
 		NoSignalHandling: true,
 	}
