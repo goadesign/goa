@@ -51,15 +51,12 @@ func NewGraceful(name string, cancelOnShutdown bool) *GracefulService {
 	return &GracefulService{Service: service, CancelOnShutdown: cancelOnShutdown}
 }
 
-// SetTimeout sets the amount of time we should keep the service running after a
-// shutdown, to allow in-flight requests to drain out.
 func (serv *GracefulService) SetTimeout(timeout time.Duration) {
-	serv.timeout = timeout
 }
 
 // ListenAndServe starts the HTTP server and sets up a listener on the given host/port.
-func (serv *GracefulService) ListenAndServe(addr string) error {
-	serv.setup(addr)
+func (serv *GracefulService) ListenAndServe(addr string, timeout time.Duration) error {
+	serv.setup(addr, timeout)
 	serv.Info("started", "transport", "http", "addr", addr)
 	if err := serv.server.ListenAndServe(); err != nil {
 		// there may be a final "accept" error after completion of graceful shutdown
@@ -72,8 +69,8 @@ func (serv *GracefulService) ListenAndServe(addr string) error {
 }
 
 // ListenAndServeTLS starts a HTTPS server and sets up a listener on the given host/port.
-func (serv *GracefulService) ListenAndServeTLS(addr, certFile, keyFile string) error {
-	serv.setup(addr)
+func (serv *GracefulService) ListenAndServeTLS(addr, certFile, keyFile string, timeout time.Duration) error {
+	serv.setup(addr, timeout)
 	serv.Info("started", "transport", "https", "addr", addr)
 	return serv.server.ListenAndServeTLS(certFile, keyFile)
 }
@@ -96,7 +93,7 @@ func (serv *GracefulService) Shutdown() bool {
 }
 
 // setup initializes the interrupt handler and the underlying graceful server.
-func (serv *GracefulService) setup(addr string) {
+func (serv *GracefulService) setup(addr string, timeout time.Duration) {
 	// we will trap interrupts here instead of allowing the graceful package to do
 	// it for us. the graceful package has the odd behavior of stopping the
 	// interrupt handler after first interrupt. this leads to the dreaded double-
@@ -122,7 +119,7 @@ func (serv *GracefulService) setup(addr string) {
 	// the handler should implement some kind of internal timeout (e.g. the go
 	// context deadline) instead of relying on a shutdown timeout.
 	serv.server = &graceful.Server{
-		Timeout:          serv.timeout,
+		Timeout:          timeout,
 		Server:           &http.Server{Addr: addr, Handler: serv.Mux},
 		NoSignalHandling: true,
 	}
