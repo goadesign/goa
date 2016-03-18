@@ -134,42 +134,60 @@ func PATCH(path string) *design.RouteDefinition {
 //
 // Headers can be used inside Action to define the action request headers, Response to define the
 // response headers or Resource to define common request headers to all the resource actions.
-func Headers(dsl func()) {
-	switch def := dslengine.CurrentDefinition().(type) {
-	case *design.ActionDefinition:
-		headers := newAttribute(def.Parent.MediaType)
-		if dslengine.Execute(dsl, headers) {
-			def.Headers = headers
-		}
-
-	case *design.ResourceDefinition:
-		headers := newAttribute(def.MediaType)
-		if dslengine.Execute(dsl, headers) {
-			def.Headers = headers
-		}
-
-	case *design.ResponseDefinition:
-		if def.Headers != nil {
-			dslengine.ReportError("headers already defined")
-			return
-		}
-		var h *design.AttributeDefinition
-		switch actual := def.Parent.(type) {
-		case *design.ResourceDefinition:
-			h = newAttribute(actual.MediaType)
+func Headers(params ...interface{}) {
+	if len(params) == 0 {
+		dslengine.ReportError("missing parameter")
+		return
+	}
+	dsl, ok := params[0].(func())
+	if ok {
+		switch def := dslengine.CurrentDefinition().(type) {
 		case *design.ActionDefinition:
-			h = newAttribute(actual.Parent.MediaType)
-		case nil: // API ResponseTemplate
-			h = &design.AttributeDefinition{}
-		default:
-			dslengine.ReportError("invalid use of Response or ResponseTemplate")
-		}
-		if dslengine.Execute(dsl, h) {
-			def.Headers = h
-		}
+			headers := newAttribute(def.Parent.MediaType)
+			if dslengine.Execute(dsl, headers) {
+				def.Headers = headers
+			}
 
-	default:
-		dslengine.IncompatibleDSL()
+		case *design.ResourceDefinition:
+			headers := newAttribute(def.MediaType)
+			if dslengine.Execute(dsl, headers) {
+				def.Headers = headers
+			}
+
+		case *design.ResponseDefinition:
+			if def.Headers != nil {
+				dslengine.ReportError("headers already defined")
+				return
+			}
+			var h *design.AttributeDefinition
+			switch actual := def.Parent.(type) {
+			case *design.ResourceDefinition:
+				h = newAttribute(actual.MediaType)
+			case *design.ActionDefinition:
+				h = newAttribute(actual.Parent.MediaType)
+			case nil: // API ResponseTemplate
+				h = &design.AttributeDefinition{}
+			default:
+				dslengine.ReportError("invalid use of Response or ResponseTemplate")
+			}
+			if dslengine.Execute(dsl, h) {
+				def.Headers = h
+			}
+
+		default:
+			dslengine.IncompatibleDSL()
+		}
+	} else if cors, ok := corsDefinition(); ok {
+		vals := make([]string, len(params))
+		for i, p := range params {
+			if v, ok := p.(string); ok {
+				vals[i] = v
+			} else {
+				dslengine.ReportError("invalid parameter at position %d: must be a string", i)
+				return
+			}
+		}
+		cors.Headers = vals
 	}
 }
 

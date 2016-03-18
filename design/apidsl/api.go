@@ -36,6 +36,13 @@ import (
 //		BaseParams(func() {			// Common parameters to all API actions
 //			Param("param")
 //		})
+//		Origin("http://swagger.goa.design", func() { // Define CORS policy, may be prefixed with "*" wildcard
+//			Headers("X-Shared-Secret")           // One or more authorized headers, use "*" to authorize all
+//			Methods("GET", "POST")               // One or more authorized HTTP methods
+//			Expose("X-Time")                     // One or more headers exposed to clients
+//			MaxAge(600)                          // How long to cache a prefligh request response
+//			Credentials()                        // Sets Access-Control-Allow-Credentials header
+//		})
 //		Consumes("application/xml") // Built-in encoders and decoders
 //		Consumes("application/json")
 //		Produces("application/gob")
@@ -153,6 +160,64 @@ func BaseParams(dsl func()) {
 		def.BaseParams = params
 	default:
 		dslengine.IncompatibleDSL()
+	}
+}
+
+// Origin defines the CORS policy for a given origin. The origin can use a wildcard prefix
+// such as "https://*.mydomain.com". The special value "*" defines the policy for all origins
+// (in which case there should be only one Origin DSL in the parent resource).
+// See API for examples.
+func Origin(origin string, dsl func()) {
+	cors := &design.CORSDefinition{Origin: origin}
+	if !dslengine.Execute(dsl, cors) {
+		return
+	}
+	var parent dslengine.Definition
+	switch def := dslengine.CurrentDefinition().(type) {
+	case *design.APIDefinition:
+		parent = def
+		if def.Origins == nil {
+			def.Origins = make(map[string]*design.CORSDefinition)
+		}
+		def.Origins[origin] = cors
+	case *design.ResourceDefinition:
+		parent = def
+		if def.Origins == nil {
+			def.Origins = make(map[string]*design.CORSDefinition)
+		}
+		def.Origins[origin] = cors
+	default:
+		dslengine.IncompatibleDSL()
+		return
+	}
+	cors.Parent = parent
+}
+
+// Methods sets the origin allowed methods. Used in Origin DSL.
+func Methods(vals ...string) {
+	if cors, ok := corsDefinition(); ok {
+		cors.Methods = vals
+	}
+}
+
+// Expose sets the origin exposed headers. Used in Origin DSL.
+func Expose(vals ...string) {
+	if cors, ok := corsDefinition(); ok {
+		cors.Exposed = vals
+	}
+}
+
+// MaxAge sets the cache expiry for preflight request responses. Used in Origin DSL.
+func MaxAge(val uint) {
+	if cors, ok := corsDefinition(); ok {
+		cors.MaxAge = val
+	}
+}
+
+// Credentials sets the allow credentials response header. Used in Origin DSL.
+func Credentials() {
+	if cors, ok := corsDefinition(); ok {
+		cors.Credentials = true
 	}
 }
 
@@ -597,6 +662,16 @@ func resourceDefinition() (*design.ResourceDefinition, bool) {
 		dslengine.IncompatibleDSL()
 	}
 	return r, ok
+}
+
+// corsDefinition returns true and current context if it is a CORSDefinition, nil And
+// false otherwise.
+func corsDefinition() (*design.CORSDefinition, bool) {
+	cors, ok := dslengine.CurrentDefinition().(*design.CORSDefinition)
+	if !ok {
+		dslengine.IncompatibleDSL()
+	}
+	return cors, ok
 }
 
 // actionDefinition returns true and current context if it is an ActionDefinition,

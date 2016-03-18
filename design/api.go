@@ -10,7 +10,7 @@ import (
 )
 
 // MediaTypeRoot is the data structure that represents the additional DSL definition root
-// that contains the media type definition set created by CollectionOf.
+// that contains the media type definition set created by CollectionOf index by canonical id.
 type MediaTypeRoot map[string]*MediaTypeDefinition
 
 // List of all built-in response names.
