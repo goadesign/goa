@@ -71,6 +71,7 @@ func (a *APIDefinition) Validate() error {
 	a.validateContact(verr)
 	a.validateLicense(verr)
 	a.validateDocs(verr)
+	a.validateOrigins(verr)
 
 	var allRoutes []*routeInfo
 	a.IterateResources(func(r *ResourceDefinition) error {
@@ -176,6 +177,12 @@ func (a *APIDefinition) validateDocs(verr *dslengine.ValidationErrors) {
 	}
 }
 
+func (a *APIDefinition) validateOrigins(verr *dslengine.ValidationErrors) {
+	for _, origin := range a.Origins {
+		verr.Merge(origin.Validate())
+	}
+}
+
 // Validate tests whether the resource definition is consistent: action names are valid and each action is
 // valid.
 func (r *ResourceDefinition) Validate() *dslengine.ValidationErrors {
@@ -195,6 +202,9 @@ func (r *ResourceDefinition) Validate() *dslengine.ValidationErrors {
 	}
 	if r.Params != nil {
 		verr.Merge(r.Params.Validate("resource parameters", r))
+	}
+	for _, origin := range r.Origins {
+		verr.Merge(origin.Validate())
 	}
 	return verr.AsError()
 }
@@ -251,6 +261,15 @@ func (r *ResourceDefinition) validateParent(verr *dslengine.ValidationErrors) {
 			verr.Add(r, "Parent resource %#v has no canonical action", r.ParentName)
 		}
 	}
+}
+
+// Validate makes sure the CORS definition origin is valid.
+func (cors *CORSDefinition) Validate() *dslengine.ValidationErrors {
+	verr := new(dslengine.ValidationErrors)
+	if strings.Count(cors.Origin, "*") > 1 {
+		verr.Add(cors, "invalid origin, can only contain one wildcard character")
+	}
+	return verr
 }
 
 // Validate validates the encoding MIME type and Go package path if set.

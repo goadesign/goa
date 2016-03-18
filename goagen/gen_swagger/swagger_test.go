@@ -283,7 +283,7 @@ var _ = Describe("New", func() {
 
 		Context("with resources", func() {
 			BeforeEach(func() {
-				Origin := MediaType("application/vnd.goa.example.origin", func() {
+				Country := MediaType("application/vnd.goa.example.origin", func() {
 					Description("Origin of bottle")
 					Attributes(func() {
 						Attribute("id")
@@ -304,7 +304,7 @@ var _ = Describe("New", func() {
 					Attributes(func() {
 						Attribute("id", Integer, "ID of bottle")
 						Attribute("href", String, "API href of bottle")
-						Attribute("origin", Origin, "Details on wine origin")
+						Attribute("origin", Country, "Details on wine origin")
 						Links(func() {
 							Link("origin", "tiny")
 						})
@@ -325,7 +325,7 @@ var _ = Describe("New", func() {
 				UpdatePayload := Type("UpdatePayload", func() {
 					Description("Type of create and upload action payloads")
 					Attribute("name", String, "name of bottle")
-					Attribute("origin", Origin, "Details on wine origin")
+					Attribute("origin", Country, "Details on wine origin")
 					Required("name")
 				})
 				Resource("res", func() {

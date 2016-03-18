@@ -31,6 +31,14 @@ import (
 //		CanonicalActionName("get")	// Name of action that returns canonical representation if not "show"
 //		UseTrait("Authenticated")	// Included trait if any, can appear more than once
 //
+//		Origin("http://swagger.goa.design", func() { // Define CORS policy, may be prefixed with "*" wildcard
+//			Headers("X-Shared-Secret")           // One or more authorized headers, use "*" to authorize all
+//			Methods("GET", "POST")               // One or more authorized HTTP methods
+//			Expose("X-Time")                     // One or more headers exposed to clients
+//			MaxAge(600)                          // How long to cache a prefligh request response
+//			Credentials()                        // Sets Access-Control-Allow-Credentials header
+//		})
+//
 //		Action("show", func() {		// Action definition, can appear more than once
 //			// ... Action dsl
 //		})
