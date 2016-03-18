@@ -46,8 +46,7 @@ var InterruptSignals = []os.Signal{
 }
 
 // NewGraceful returns a goa application that uses a graceful shutdown server.
-func NewGraceful(name string, cancelOnShutdown bool) *GracefulService {
-	service := New(name)
+func NewGraceful(service *Service, cancelOnShutdown bool) *GracefulService {
 	return &GracefulService{Service: service, CancelOnShutdown: cancelOnShutdown}
 }
 
