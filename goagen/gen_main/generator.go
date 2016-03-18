@@ -233,9 +233,13 @@ func snakeCase(name string) string {
 
 const mainT = `
 func main() {
+	server := goa.NewGraceful(newService(), true)
+	server.ListenAndServe(":8080", 5 * time.Second)
+}
+
+func newService() *goa.Service {
 	// Create service
-	graceful := goa.NewGraceful({{ printf "%q" .Name }}, true)
-	service := graceful.Service
+	service := goa.New({{ printf "%q" .Name }})
 
 	// Setup middleware
 	service.Use(middleware.RequestID())
@@ -248,8 +252,8 @@ func main() {
 {{end}}{{if generateSwagger}}// Mount Swagger spec provider controller
 	swagger.MountController(service)
 {{end}}
-	// Start service, listen on port 8080
-	graceful.ListenAndServe(":8080", 5 * time.Second)
+
+	return service
 }
 `
 
