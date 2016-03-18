@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"gopkg.in/tylerb/graceful.v1"
 )
@@ -24,7 +25,8 @@ import (
 type GracefulService struct {
 	*Service
 	sync.Mutex
-	server *graceful.Server
+	server  *graceful.Server
+	timeout time.Duration
 
 	// Interrupted is true if the application is in the process of shutting down.
 	Interrupted bool
@@ -47,6 +49,12 @@ var InterruptSignals = []os.Signal{
 func NewGraceful(name string, cancelOnShutdown bool) *GracefulService {
 	service := New(name)
 	return &GracefulService{Service: service, CancelOnShutdown: cancelOnShutdown}
+}
+
+// SetTimeout sets the amount of time we should keep the service running after a
+// shutdown, to allow in-flight requests to drain out.
+func (serv *GracefulService) SetTimeout(timeout time.Duration) {
+	serv.timeout = timeout
 }
 
 // ListenAndServe starts the HTTP server and sets up a listener on the given host/port.
@@ -114,7 +122,7 @@ func (serv *GracefulService) setup(addr string) {
 	// the handler should implement some kind of internal timeout (e.g. the go
 	// context deadline) instead of relying on a shutdown timeout.
 	serv.server = &graceful.Server{
-		Timeout:          0,
+		Timeout:          serv.timeout,
 		Server:           &http.Server{Addr: addr, Handler: serv.Mux},
 		NoSignalHandling: true,
 	}
