@@ -593,14 +593,15 @@ func (m *MediaTypeDefinition) Project(view string) (p *MediaTypeDefinition, link
 
 func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition, links *UserTypeDefinition, err error) {
 	v := m.Views[view]
-	var suffix string
+	canonical := CanonicalIdentifier(m.Identifier)
+	typeName := m.TypeName
 	if view != "default" {
-		suffix = strings.Title(view)
+		typeName += strings.Title(view)
+		canonical += "; view=" + view
 	}
-	typeName := fmt.Sprintf("%s%s", m.TypeName, suffix)
 	var ok bool
-	if p, ok = GeneratedMediaTypes[typeName]; ok {
-		mLinks := GeneratedMediaTypes[typeName+":Links"]
+	if p, ok = GeneratedMediaTypes[canonical]; ok {
+		mLinks := GeneratedMediaTypes[canonical+"; links"]
 		if mLinks != nil {
 			links = mLinks.UserTypeDefinition
 		}
@@ -631,7 +632,7 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 			},
 		},
 	}
-	GeneratedMediaTypes[typeName] = p
+	GeneratedMediaTypes[canonical] = p
 	projectedObj := p.Type.ToObject()
 	mtObj := m.Type.ToObject()
 	for n := range viewObj {
@@ -661,7 +662,7 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 				TypeName: lTypeName,
 			}
 			projectedObj[n] = &AttributeDefinition{Type: links, Description: "Links to related resources"}
-			GeneratedMediaTypes[m.TypeName+":Links"] = &MediaTypeDefinition{UserTypeDefinition: links}
+			GeneratedMediaTypes[canonical+"; links"] = &MediaTypeDefinition{UserTypeDefinition: links}
 		} else {
 			if at := mtObj[n]; at != nil {
 				if at.View != "" {
