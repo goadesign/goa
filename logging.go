@@ -102,7 +102,7 @@ func (l *stdLogger) logit(msg string, keyvals []interface{}, iserror bool) {
 		}
 		vals[i/2] = v
 		fm.WriteString(" ")
-		fm.WriteString(fmt.Sprintf("%s=%%#v", k))
+		fm.WriteString(fmt.Sprintf("%s=%%v", k))
 	}
 	l.Logger.Printf(fm.String(), vals...)
 }
