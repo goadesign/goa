@@ -115,19 +115,30 @@ func (g *Generator) Cleanup() {
 	g.genfiles = nil
 }
 
-// MergeResponses merge the response maps overriding the first argument map entries with the
-// second argument map entries in case of collision.
-func MergeResponses(l, r map[string]*design.ResponseDefinition) map[string]*design.ResponseDefinition {
+// BuildResponses builds the set of responses given API level and action level responses.
+// It merges the action level responses into the API level responses and filters out
+// SwitchingProtocols responses since these should not trigger code generation.
+func BuildResponses(l, r map[string]*design.ResponseDefinition) map[string]*design.ResponseDefinition {
+	var all map[string]*design.ResponseDefinition
 	if l == nil {
-		return r
+		all = r
+	} else if r == nil {
+		all = l
+	} else {
+		all = make(map[string]*design.ResponseDefinition, len(l)+len(r))
+		for n, r := range l {
+			all[n] = r
+		}
+		for n, r := range r {
+			all[n] = r
+		}
 	}
-	if r == nil {
-		return l
+	for n, r := range all {
+		if r.Status == 101 {
+			delete(all, n)
+		}
 	}
-	for n, r := range r {
-		l[n] = r
-	}
-	return l
+	return all
 }
 
 // generateContexts iterates through the API resources and actions and generates the action
@@ -168,7 +179,7 @@ func (g *Generator) generateContexts(api *design.APIDefinition) error {
 				Params:       params,
 				Headers:      headers,
 				Routes:       a.Routes,
-				Responses:    MergeResponses(r.Responses, a.Responses),
+				Responses:    BuildResponses(r.Responses, a.Responses),
 				API:          api,
 				DefaultPkg:   TargetPackage,
 				Security:     a.Security,
