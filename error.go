@@ -81,6 +81,9 @@ var (
 	// be found with the given name.
 	ErrNoSecurityScheme = NewErrorClass("no_security_scheme", 500)
 
+	// ErrBadRequest is a generic bad request error.
+	ErrBadRequest = NewErrorClass("bad_request", 400)
+
 	// ErrInternal is the class of error used for non HTTPError.
 	ErrInternal = NewErrorClass("internal", 500)
 )
