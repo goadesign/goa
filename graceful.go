@@ -5,10 +5,7 @@ package goa
 import (
 	"net"
 	"net/http"
-	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 
 	"gopkg.in/tylerb/graceful.v1"
@@ -28,21 +25,9 @@ type GracefulServer struct {
 	server  *graceful.Server
 	timeout time.Duration
 
-	// Interrupted is true if the application is in the process of shutting down.
-	Interrupted bool
-
 	// CancelOnShutdown tells whether existing requests should be canceled when shutdown is
 	// triggered (true) or whether to wait until the requests complete (false).
 	CancelOnShutdown bool
-}
-
-// InterruptSignals is the list of signals that initiate graceful shutdown.
-// Note that only SIGINT is supported on Windows so this list should be
-// overridden by the caller when running on that platform.
-var InterruptSignals = []os.Signal{
-	os.Signal(syscall.SIGINT),
-	os.Signal(syscall.SIGTERM),
-	os.Signal(syscall.SIGQUIT),
 }
 
 // NewGraceful returns a goa application that uses a graceful shutdown server.
@@ -75,12 +60,6 @@ func (serv *GracefulServer) ListenAndServeTLS(addr, certFile, keyFile string) er
 // initial shutdown and false if already shutting down.
 func (serv *GracefulServer) Shutdown() bool {
 	IncrCounter([]string{"goa", "graceful", "restart"}, 1.0)
-	serv.Lock()
-	defer serv.Unlock()
-	if serv.Interrupted {
-		return false
-	}
-	serv.Interrupted = true
 	serv.server.Stop(serv.timeout)
 	if serv.CancelOnShutdown {
 		serv.CancelAll()
@@ -88,35 +67,10 @@ func (serv *GracefulServer) Shutdown() bool {
 	return true
 }
 
-// setup initializes the interrupt handler and the underlying graceful server.
+// setup initializes the underlying graceful server.
 func (serv *GracefulServer) setup(addr string) {
-	// we will trap interrupts here instead of allowing the graceful package to do
-	// it for us. the graceful package has the odd behavior of stopping the
-	// interrupt handler after first interrupt. this leads to the dreaded double-
-	// tap because the lack of any viable custom handler means that golang's
-	// default handler will kill the process on a second interrupt.
-	interruptChannel := make(chan os.Signal, 1)
-	signal.Notify(interruptChannel, InterruptSignals...)
-
-	// Start interrupt handler goroutine
-	go func() {
-		for signal := range interruptChannel {
-			if serv.Shutdown() {
-				serv.Info("shutting down", "signal", signal)
-			} else {
-				serv.Info("duplicate", "signal", signal)
-			}
-		}
-	}()
-
-	// note the use of zero timeout (i.e. no forced shutdown timeout) so requests
-	// can run as long as they want. there is usually a hard limit to when the
-	// response must come back (e.g. the nginx timeout) before being abandoned so
-	// the handler should implement some kind of internal timeout (e.g. the go
-	// context deadline) instead of relying on a shutdown timeout.
 	serv.server = &graceful.Server{
-		Timeout:          0,
-		Server:           &http.Server{Addr: addr, Handler: serv.Mux},
-		NoSignalHandling: true,
+		Timeout: serv.timeout,
+		Server:  &http.Server{Addr: addr, Handler: serv.Mux},
 	}
 }
