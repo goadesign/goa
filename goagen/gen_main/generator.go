@@ -233,11 +233,6 @@ func snakeCase(name string) string {
 
 const mainT = `
 func main() {
-	server := goa.NewGraceful(newService(), true, 5 * time.Second)
-	server.ListenAndServe(":8080")
-}
-
-func newService() *goa.Service {
 	// Create service
 	service := goa.New({{ printf "%q" .Name }})
 
@@ -253,7 +248,7 @@ func newService() *goa.Service {
 	swagger.MountController(service)
 {{end}}
 
-	return service
+	service.ListenAndServe(":8080")
 }
 `
 
