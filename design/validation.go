@@ -384,6 +384,8 @@ func (a *ActionDefinition) ValidateParams() *dslengine.ValidationErrors {
 		}
 		if p.Type.Kind() == ObjectKind {
 			verr.Add(a, `parameter %s cannot be an object, only action payloads may be of type object`, n)
+		} else if p.Type.Kind() == HashKind {
+			verr.Add(a, `parameter %s cannot be a hash, only action payloads may be of type hash`, n)
 		}
 		ctx := fmt.Sprintf("parameter %s", n)
 		verr.Merge(p.Validate(ctx, a))
