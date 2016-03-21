@@ -188,6 +188,8 @@ func Headers(params ...interface{}) {
 			}
 		}
 		cors.Headers = vals
+	} else {
+		dslengine.IncompatibleDSL()
 	}
 }
 
