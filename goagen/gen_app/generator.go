@@ -515,6 +515,9 @@ func (g *Generator) generateMediaTypes(api *design.APIDefinition) error {
 	}
 	mtWr.WriteHeader(title, TargetPackage, imports)
 	err = api.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
+		if mt.IsBuiltIn() {
+			return nil
+		}
 		if mt.Type.IsObject() || mt.Type.IsArray() {
 			return mtWr.Execute(mt)
 		}

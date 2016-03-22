@@ -27,7 +27,7 @@ var _ = Describe("HTTPError", func() {
 	It("serializes to JSON", func() {
 		b, err := json.Marshal(httpError)
 		Ω(err).ShouldNot(HaveOccurred())
-		Ω(string(b)).Should(Equal(`{"code":"invalid","status":400,"detail":"error","meta":{"what":42}}`))
+		Ω(string(b)).Should(Equal(`{"errors":[{"code":"invalid","detail":"error","meta":{"what":42},"status":400}]}`))
 	})
 })
 

@@ -20,6 +20,7 @@
 package goa
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -216,6 +217,23 @@ func (e *HTTPError) Meta(keyvals ...interface{}) *HTTPError {
 	return e
 }
 
+// MarshalJSON adds the top level "errors" key as defined by JSON API.
+func (e *HTTPError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"errors": []map[string]interface{}{e.toMap()},
+	})
+}
+
+// toMap builds a map from the error fields.
+func (e *HTTPError) toMap() map[string]interface{} {
+	return map[string]interface{}{
+		"code":   e.Code,
+		"status": e.Status,
+		"detail": e.Detail,
+		"meta":   e.MetaValues,
+	}
+}
+
 // Error returns the multiple error messages.
 func (m MultiError) Error() string {
 	errs := make([]string, len(m))
@@ -223,6 +241,21 @@ func (m MultiError) Error() string {
 		errs[i] = err.Error()
 	}
 	return strings.Join(errs, ", ")
+}
+
+// MarshalJSON adds the top level "errors" key as defined by JSON API.
+func (m MultiError) MarshalJSON() ([]byte, error) {
+	errs := make([]map[string]interface{}, len(m))
+	for i, err := range m {
+		if he, ok := err.(*HTTPError); ok {
+			errs[i] = he.toMap()
+		} else {
+			errs[i] = map[string]interface{}{"detail": err.Error()}
+		}
+	}
+	return json.Marshal(map[string]interface{}{
+		"errors": errs,
+	})
 }
 
 // Status computes a status from all the HTTP errors.
