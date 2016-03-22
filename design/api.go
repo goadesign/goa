@@ -123,6 +123,73 @@ var (
 	// GobContentTypes list the Content-Type header values that cause goa to encode or decode
 	// Gob by default.
 	GobContentTypes = []string{"application/gob", "application/x-gob"}
+
+	// ErrorMediaIdentifier is the media type identifier used for error responses.
+	ErrorMediaIdentifier = "application/vnd.api.error+json"
+	// ErrorMedia is the built-in media type for error responses.
+	ErrorMedia = &MediaTypeDefinition{
+		UserTypeDefinition: &UserTypeDefinition{
+			AttributeDefinition: &AttributeDefinition{
+				Type: &Hash{
+					KeyType: &AttributeDefinition{Type: String},
+					ElemType: &AttributeDefinition{
+						Type: &Array{
+							ElemType: &AttributeDefinition{Type: errorMediaType},
+						},
+					},
+				},
+				Description: "Error response media type as defined by JSON API",
+				Example: map[string][]map[string]interface{}{
+					"errors": []map[string]interface{}{{
+						"id":     "3F1FKVRR",
+						"status": "400",
+						"code":   "invalid_value",
+						"detail": "Value of ID must be an integer",
+						"meta":   map[string]interface{}{"timestamp": 1458609066},
+					}},
+				},
+			},
+			TypeName: "JSONError",
+		},
+		Identifier: ErrorMediaIdentifier,
+		Views:      map[string]*ViewDefinition{"default": errorMediaView},
+	}
+
+	errorMediaType = Object{
+		"id": &AttributeDefinition{
+			Type:        String,
+			Description: "a unique identifier for this particular occurrence of the problem.",
+			Example:     "3F1FKVRR",
+		},
+		"status": &AttributeDefinition{
+			Type:        String,
+			Description: "the HTTP status code applicable to this problem, expressed as a string value.",
+			Example:     "400",
+		},
+		"code": &AttributeDefinition{
+			Type:        String,
+			Description: "an application-specific error code, expressed as a string value.",
+			Example:     "invalid_value",
+		},
+		"detail": &AttributeDefinition{
+			Type:        String,
+			Description: "a human-readable explanation specific to this occurrence of the problem.",
+			Example:     "Value of ID must be an integer",
+		},
+		"meta": &AttributeDefinition{
+			Type: &Hash{
+				KeyType:  &AttributeDefinition{Type: String},
+				ElemType: &AttributeDefinition{Type: Any},
+			},
+			Description: "a meta object containing non-standard meta-information about the error.",
+			Example:     map[string]interface{}{"timestamp": 1458609066},
+		},
+	}
+
+	errorMediaView = &ViewDefinition{
+		AttributeDefinition: &AttributeDefinition{Type: errorMediaType},
+		Name:                "default",
+	}
 )
 
 func init() {
@@ -137,6 +204,7 @@ func init() {
 		{MIMETypes: XMLContentTypes, PackagePath: goa, Function: "NewXMLDecoder"},
 		{MIMETypes: GobContentTypes, PackagePath: goa, Function: "NewGobDecoder"},
 	}
+	errorMediaView.Parent = ErrorMedia
 }
 
 // CanonicalIdentifier returns the media type identifier sans suffix

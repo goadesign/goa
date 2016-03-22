@@ -591,6 +591,7 @@ func (a *APIDefinition) DSL() func() {
 }
 
 // Finalize sets the Consumes and Produces fields to the defaults if empty.
+// Also it records built-in media types that are used by the user design.
 func (a *APIDefinition) Finalize() {
 	if len(a.Consumes) == 0 {
 		a.Consumes = DefaultDecoders
@@ -598,6 +599,25 @@ func (a *APIDefinition) Finalize() {
 	if len(a.Produces) == 0 {
 		a.Produces = DefaultEncoders
 	}
+	found := false
+	a.IterateResources(func(r *ResourceDefinition) error {
+		if found {
+			return nil
+		}
+		return r.IterateActions(func(action *ActionDefinition) error {
+			if found {
+				return nil
+			}
+			for _, resp := range action.Responses {
+				if resp.MediaType == ErrorMediaIdentifier {
+					a.MediaTypes[CanonicalIdentifier(ErrorMediaIdentifier)] = ErrorMedia
+					found = true
+					break
+				}
+			}
+			return nil
+		})
+	})
 }
 
 // NewResourceDefinition creates a resource definition but does not

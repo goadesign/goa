@@ -154,6 +154,9 @@ func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.Respon
 		resp.Standard = false
 	}
 	if dt != nil {
+		if mt, ok := dt.(*design.MediaTypeDefinition); ok {
+			resp.MediaType = mt.Identifier
+		}
 		resp.Type = dt
 		resp.Standard = false
 	}
