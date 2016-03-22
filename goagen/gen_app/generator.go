@@ -481,6 +481,9 @@ func (g *Generator) generateHrefs(api *design.APIDefinition) error {
 			if len(ca.Routes) > 0 {
 				canoParams = ca.Routes[0].Params()
 			}
+			for i, p := range canoParams {
+				canoParams[i] = codegen.Goify(p, false)
+			}
 		}
 		data := ResourceData{
 			Name:              codegen.Goify(r.Name, true),
