@@ -531,7 +531,7 @@ func (cmd *{{$cmdName}}) Run(c *client.Client, args []string) error {
 	*/}}{{$params := joinNames .Action.QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
 	*/}}{{$headers := joinNames .Action.Headers}}{{if $headers}}, {{$headers}}{{end}})
 	if err != nil {
-		goa.Error(ctx, "failed", "err", err)
+		goa.LogError(ctx, "failed", "err", err)
 		return err
 	}
 	go goaclient.WSWrite(ws)
@@ -578,7 +578,7 @@ func (cmd *{{$cmdName}}) Run(c *client.Client, args []string) error {
 	*/}}{{$params := joinNames .Action.QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
 	*/}}{{$headers := joinNames .Action.Headers}}{{if $headers}}, {{$headers}}{{end}})
 	if err != nil {
-		goa.Error(ctx, "failed", "err", err)
+		goa.LogError(ctx, "failed", "err", err)
 		return err
 	}
 
