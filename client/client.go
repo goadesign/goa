@@ -49,16 +49,16 @@ func (c *Client) Do(ctx context.Context, req *http.Request) (*http.Response, err
 	req.Header.Set("User-Agent", c.UserAgent)
 	startedAt := time.Now()
 	id := shortID()
-	goa.Info(ctx, "started", "id", id, req.Method, req.URL.String())
+	goa.LogInfo(ctx, "started", "id", id, req.Method, req.URL.String())
 	if c.Dump {
 		c.dumpRequest(ctx, req)
 	}
 	resp, err := c.Client.Do(req)
 	if err != nil {
-		goa.Error(ctx, "failed", "err", err)
+		goa.LogError(ctx, "failed", "err", err)
 		return nil, err
 	}
-	goa.Info(ctx, "completed", "id", id, "status", resp.StatusCode, "time", time.Since(startedAt).String())
+	goa.LogInfo(ctx, "completed", "id", id, "status", resp.StatusCode, "time", time.Since(startedAt).String())
 	if c.Dump {
 		c.dumpResponse(ctx, resp)
 	}
@@ -69,20 +69,20 @@ func (c *Client) Do(ctx context.Context, req *http.Request) (*http.Response, err
 func (c *Client) dumpRequest(ctx context.Context, req *http.Request) {
 	reqBody, err := dumpReqBody(req)
 	if err != nil {
-		goa.Error(ctx, "Failed to load request body for dump", "err", err.Error())
+		goa.LogError(ctx, "Failed to load request body for dump", "err", err.Error())
 	}
-	goa.Info(ctx, "request headers", headersToSlice(req.Header)...)
+	goa.LogInfo(ctx, "request headers", headersToSlice(req.Header)...)
 	if reqBody != nil {
-		goa.Info(ctx, "request", "body", string(reqBody))
+		goa.LogInfo(ctx, "request", "body", string(reqBody))
 	}
 }
 
 // dumpResponse dumps the response and the request.
 func (c *Client) dumpResponse(ctx context.Context, resp *http.Response) {
 	respBody, _ := dumpRespBody(resp)
-	goa.Info(ctx, "response headers", headersToSlice(resp.Header)...)
+	goa.LogInfo(ctx, "response headers", headersToSlice(resp.Header)...)
 	if respBody != nil {
-		goa.Info(ctx, "response", "body", string(respBody))
+		goa.LogInfo(ctx, "response", "body", string(respBody))
 	}
 }
 

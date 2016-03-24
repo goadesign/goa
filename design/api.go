@@ -126,6 +126,7 @@ var (
 
 	// ErrorMediaIdentifier is the media type identifier used for error responses.
 	ErrorMediaIdentifier = "application/vnd.api.error+json"
+
 	// ErrorMedia is the built-in media type for error responses.
 	ErrorMedia = &MediaTypeDefinition{
 		UserTypeDefinition: &UserTypeDefinition{
