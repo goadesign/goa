@@ -390,6 +390,7 @@ func NewAPIDefinition() *APIDefinition {
 		{416, RequestedRangeNotSatisfiable},
 		{417, ExpectationFailed},
 		{418, Teapot},
+		{422, UnprocessableEntity},
 		{500, InternalServerError},
 		{501, NotImplemented},
 		{502, BadGateway},
