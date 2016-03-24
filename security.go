@@ -15,8 +15,8 @@ type OAuth2Security struct {
 	Flow string
 	// TokenURL defines the OAuth2 tokenUrl.  See http://swagger.io/specification/#securitySchemeObject
 	TokenURL string
-	// AuthenticationURL defines the OAuth2 authenticationUrl.  See http://swagger.io/specification/#securitySchemeObject
-	AuthenticationURL string
+	// AuthorizationURL defines the OAuth2 authorizationUrl.  See http://swagger.io/specification/#securitySchemeObject
+	AuthorizationURL string
 	// Scopes defines a list of scopes for the security scheme, along with their description.
 	Scopes map[string]string
 }
