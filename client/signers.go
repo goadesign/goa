@@ -139,13 +139,13 @@ func (s *OAuth2Signer) Refresh(ctx context.Context) error {
 		return err
 	}
 	id := shortID()
-	goa.Info(ctx, "refresh", "id", id, "url", fmt.Sprintf(s.RefreshURLFormat, "*****"))
+	goa.LogInfo(ctx, "refresh", "id", id, "url", fmt.Sprintf(s.RefreshURLFormat, "*****"))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		goa.Error(ctx, "failed", "id", id, "err", err)
+		goa.LogError(ctx, "failed", "id", id, "err", err)
 		return err
 	}
-	goa.Info(ctx, "completed", "id", id, "status", resp.Status)
+	goa.LogInfo(ctx, "completed", "id", id, "status", resp.Status)
 	defer resp.Body.Close()
 	var r oauth2RefreshResponse
 	respBody, err := ioutil.ReadAll(resp.Body)
@@ -159,7 +159,7 @@ func (s *OAuth2Signer) Refresh(ctx context.Context) error {
 	s.accessToken = r.AccessToken
 	if r.ExpiresIn > 0 {
 		s.expiresAt = time.Now().Add(time.Duration(r.ExpiresIn) * time.Second)
-		goa.Info(ctx, "refreshed", "expires", s.expiresAt)
+		goa.LogInfo(ctx, "refreshed", "expires", s.expiresAt)
 	}
 	if r.RefreshToken != "" {
 		s.RefreshToken = r.RefreshToken

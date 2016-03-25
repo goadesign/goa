@@ -722,7 +722,7 @@ type ListBottleContext struct {
 
 	emptyContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
-	var err error
+	var err *goa.Error
 	req := goa.Request(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
 	return &rctx, err
@@ -740,7 +740,7 @@ type ListBottleContext struct {
 
 	intContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
-	var err error
+	var err *goa.Error
 	req := goa.Request(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
 	rawParam := req.Params.Get("param")
@@ -750,7 +750,7 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 			tmp1 := &tmp2
 			rctx.Param = tmp1
 		} else {
-			err = goa.StackErrors(err, goa.InvalidParamTypeError("param", rawParam, "integer"))
+			err = err.Merge(goa.InvalidParamTypeError("param", rawParam, "integer"))
 		}
 	}
 	return &rctx, err
@@ -768,7 +768,7 @@ type ListBottleContext struct {
 
 	strContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
-	var err error
+	var err *goa.Error
 	req := goa.Request(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
 	rawParam := req.Params.Get("param")
@@ -790,7 +790,7 @@ type ListBottleContext struct {
 
 	numContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
-	var err error
+	var err *goa.Error
 	req := goa.Request(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
 	rawParam := req.Params.Get("param")
@@ -799,7 +799,7 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 			tmp1 := &param
 			rctx.Param = tmp1
 		} else {
-			err = goa.StackErrors(err, goa.InvalidParamTypeError("param", rawParam, "number"))
+			err = err.Merge(goa.InvalidParamTypeError("param", rawParam, "number"))
 		}
 	}
 	return &rctx, err
@@ -816,7 +816,7 @@ type ListBottleContext struct {
 
 	boolContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
-	var err error
+	var err *goa.Error
 	req := goa.Request(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
 	rawParam := req.Params.Get("param")
@@ -825,7 +825,7 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 			tmp1 := &param
 			rctx.Param = tmp1
 		} else {
-			err = goa.StackErrors(err, goa.InvalidParamTypeError("param", rawParam, "boolean"))
+			err = err.Merge(goa.InvalidParamTypeError("param", rawParam, "boolean"))
 		}
 	}
 	return &rctx, err
@@ -843,7 +843,7 @@ type ListBottleContext struct {
 
 	arrayContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
-	var err error
+	var err *goa.Error
 	req := goa.Request(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
 	rawParam := req.Params.Get("param")
@@ -866,7 +866,7 @@ type ListBottleContext struct {
 
 	intArrayContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
-	var err error
+	var err *goa.Error
 	req := goa.Request(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
 	rawParam := req.Params.Get("param")
@@ -877,7 +877,7 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 			if elem, err2 := strconv.Atoi(rawElem); err2 == nil {
 				elemsParam2[i] = elem
 			} else {
-				err = goa.StackErrors(err, goa.InvalidParamTypeError("elem", rawElem, "integer"))
+				err = err.Merge(goa.InvalidParamTypeError("elem", rawElem, "integer"))
 			}
 		}
 		rctx.Param = elemsParam2
@@ -897,7 +897,7 @@ type ListBottleContext struct {
 
 	resContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
-	var err error
+	var err *goa.Error
 	req := goa.Request(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
 	rawInt := req.Params.Get("int")
@@ -907,7 +907,7 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 			tmp1 := &tmp2
 			rctx.Int = tmp1
 		} else {
-			err = goa.StackErrors(err, goa.InvalidParamTypeError("int", rawInt, "integer"))
+			err = err.Merge(goa.InvalidParamTypeError("int", rawInt, "integer"))
 		}
 	}
 	return &rctx, err
@@ -925,17 +925,17 @@ type ListBottleContext struct {
 
 	requiredContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
-	var err error
+	var err *goa.Error
 	req := goa.Request(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
 	rawInt := req.Params.Get("int")
 	if rawInt == "" {
-		err = goa.StackErrors(err, goa.MissingParamError("int"))
+		err = err.Merge(goa.MissingParamError("int"))
 	} else {
 		if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
 			rctx.Int = int_
 		} else {
-			err = goa.StackErrors(err, goa.InvalidParamTypeError("int", rawInt, "integer"))
+			err = err.Merge(goa.InvalidParamTypeError("int", rawInt, "integer"))
 		}
 	}
 	return &rctx, err
@@ -953,7 +953,7 @@ type ListBottleContext struct {
 
 	payloadContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
-	var err error
+	var err *goa.Error
 	req := goa.Request(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
 	return &rctx, err
@@ -1013,7 +1013,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 		return ctrl.List(rctx)
 	}
 	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
-	service.Info("mount", "ctrl", "Bottles", "action", "List", "route", "GET /accounts/:accountID/bottles")
+	service.LogInfo("mount", "ctrl", "Bottles", "action", "List", "route", "GET /accounts/:accountID/bottles")
 }
 `
 
@@ -1029,7 +1029,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 		return ctrl.List(rctx)
 	}
 	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
-	service.Info("mount", "ctrl", "Bottles", "action", "List", "route", "GET /accounts/:accountID/bottles")
+	service.LogInfo("mount", "ctrl", "Bottles", "action", "List", "route", "GET /accounts/:accountID/bottles")
 }
 `
 
@@ -1053,7 +1053,7 @@ type BottlesController interface {
 		return ctrl.List(rctx)
 	}
 	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
-	service.Info("mount", "ctrl", "Bottles", "action", "List", "route", "GET /accounts/:accountID/bottles")
+	service.LogInfo("mount", "ctrl", "Bottles", "action", "List", "route", "GET /accounts/:accountID/bottles")
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := NewShowBottleContext(ctx)
@@ -1063,7 +1063,7 @@ type BottlesController interface {
 		return ctrl.Show(rctx)
 	}
 	service.Mux.Handle("GET", "/accounts/:accountID/bottles/:id", ctrl.MuxHandler("Show", h, nil))
-	service.Info("mount", "ctrl", "Bottles", "action", "Show", "route", "GET /accounts/:accountID/bottles/:id")
+	service.LogInfo("mount", "ctrl", "Bottles", "action", "Show", "route", "GET /accounts/:accountID/bottles/:id")
 }
 `
 

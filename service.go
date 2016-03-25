@@ -116,25 +116,25 @@ func (service *Service) UseLogger(logger Logger) {
 	service.Context = UseLogger(service.Context, logger)
 }
 
-// Info logs the message and values at odd indeces using the keys at even indeces of the keyvals slice.
-func (service *Service) Info(msg string, keyvals ...interface{}) {
-	Info(service.Context, msg, keyvals...)
+// LogInfo logs the message and values at odd indeces using the keys at even indeces of the keyvals slice.
+func (service *Service) LogInfo(msg string, keyvals ...interface{}) {
+	LogInfo(service.Context, msg, keyvals...)
 }
 
-// Error logs the error and values at odd indeces using the keys at even indeces of the keyvals slice.
-func (service *Service) Error(msg string, keyvals ...interface{}) {
-	Error(service.Context, msg, keyvals...)
+// LogError logs the error and values at odd indeces using the keys at even indeces of the keyvals slice.
+func (service *Service) LogError(msg string, keyvals ...interface{}) {
+	LogError(service.Context, msg, keyvals...)
 }
 
 // ListenAndServe starts a HTTP server and sets up a listener on the given host/port.
 func (service *Service) ListenAndServe(addr string) error {
-	service.Info("listen", "transport", "http", "addr", addr)
+	service.LogInfo("listen", "transport", "http", "addr", addr)
 	return http.ListenAndServe(addr, service.Mux)
 }
 
 // ListenAndServeTLS starts a HTTPS server and sets up a listener on the given host/port.
 func (service *Service) ListenAndServeTLS(addr, certFile, keyFile string) error {
-	service.Info("listen", "transport", "https", "addr", addr)
+	service.LogInfo("listen", "transport", "https", "addr", addr)
 	return http.ListenAndServeTLS(addr, certFile, keyFile, service.Mux)
 }
 
@@ -176,7 +176,7 @@ func (service *Service) ServeFiles(path, filename string) error {
 			}
 		}
 	}
-	service.Info("mount file", "filepath", rel, "route", fmt.Sprintf("GET %s", path))
+	service.LogInfo("mount file", "filepath", rel, "route", fmt.Sprintf("GET %s", path))
 	ctrl := service.NewController("FileServer")
 	var wc string
 	if idx := strings.Index(path, "*"); idx > -1 && idx < len(path)-1 {
@@ -190,7 +190,7 @@ func (service *Service) ServeFiles(path, filename string) error {
 				fullpath = filepath.Join(fullpath, m[0])
 			}
 		}
-		service.Info("serve file", "filepath", fullpath, "path", r.URL.Path)
+		service.LogInfo("serve file", "filepath", fullpath, "path", r.URL.Path)
 		http.ServeFile(Response(ctx), r.Request, fullpath)
 		return nil
 	}, nil)
@@ -209,7 +209,7 @@ func (ctrl *Controller) Use(m Middleware) {
 // handler.
 func (ctrl *Controller) HandleError(ctx context.Context, rw http.ResponseWriter, req *http.Request, err error) {
 	status := 500
-	if e, ok := err.(*HTTPError); ok {
+	if e, ok := err.(*Error); ok {
 		status = e.Status
 	}
 	go IncrCounter([]string{"goa", "handler", "error", strconv.Itoa(status)}, 1.0)
@@ -277,17 +277,14 @@ func DefaultErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.
 	status := 500
 	var respBody interface{}
 	switch err := e.(type) {
-	case MultiError:
-		status = err.Status()
-		respBody = err
-	case *HTTPError:
+	case *Error:
 		status = err.Status
 		respBody = err
 	default:
 		respBody = e.Error()
 	}
 	if status == 500 {
-		Error(ctx, e.Error())
+		LogError(ctx, e.Error())
 	}
 	Response(ctx).Send(ctx, status, respBody)
 }
@@ -298,12 +295,7 @@ func TerseErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.Re
 	status := 500
 	var respBody interface{}
 	switch err := e.(type) {
-	case MultiError:
-		status = err.Status()
-		if status != 500 {
-			respBody = err
-		}
-	case *HTTPError:
+	case *Error:
 		status = err.Status
 		if status != 500 {
 			respBody = err
@@ -313,7 +305,7 @@ func TerseErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.Re
 		respBody = "internal error"
 	}
 	if status == 500 {
-		Error(ctx, e.Error())
+		LogError(ctx, e.Error())
 	}
 	Response(ctx).Send(ctx, status, respBody)
 }

@@ -195,6 +195,9 @@ func GoPackageTypeName(t design.DataType, required []string, tabs int) string {
 	case *design.UserTypeDefinition:
 		return Goify(actual.TypeName, true)
 	case *design.MediaTypeDefinition:
+		if builtin := GoaMediaTypeName(actual); builtin != "" {
+			return builtin
+		}
 		return Goify(actual.TypeName, true)
 	default:
 		panic(fmt.Sprintf("goa bug: unknown type %#v", actual))
@@ -260,6 +263,15 @@ func GoTypeDesc(t design.DataType, upper bool) string {
 	default:
 		return ""
 	}
+}
+
+// GoaMediaTypeName returns the name of the goa strut corresponding to the media type definition
+// or the empty string if there isn't one.
+func GoaMediaTypeName(mt *design.MediaTypeDefinition) string {
+	if mt == design.ErrorMedia {
+		return "*goa.HTTPError"
+	}
+	return ""
 }
 
 var commonInitialisms = map[string]bool{

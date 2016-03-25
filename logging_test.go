@@ -13,7 +13,7 @@ import (
 var _ = Describe("Info", func() {
 	Context("with a nil Log", func() {
 		It("doesn't log and doesn't crash", func() {
-			Ω(func() { goa.Info(context.Background(), "foo", "bar") }).ShouldNot(Panic())
+			Ω(func() { goa.LogInfo(context.Background(), "foo", "bar") }).ShouldNot(Panic())
 		})
 	})
 })
@@ -21,7 +21,7 @@ var _ = Describe("Info", func() {
 var _ = Describe("Error", func() {
 	Context("with a nil Log", func() {
 		It("doesn't log and doesn't crash", func() {
-			Ω(func() { goa.Error(context.Background(), "foo", "bar") }).ShouldNot(Panic())
+			Ω(func() { goa.LogError(context.Background(), "foo", "bar") }).ShouldNot(Panic())
 		})
 	})
 })

@@ -537,6 +537,11 @@ func NewMediaTypeDefinition(name, identifier string, dsl func()) *MediaTypeDefin
 // Kind implements DataKind.
 func (m *MediaTypeDefinition) Kind() Kind { return MediaTypeKind }
 
+// IsBuiltIn returns true if the media type is implemented via a goa struct.
+func (m *MediaTypeDefinition) IsBuiltIn() bool {
+	return m == ErrorMedia
+}
+
 // ComputeViews returns the media type views recursing as necessary if the media type is a
 // collection.
 func (m *MediaTypeDefinition) ComputeViews() map[string]*ViewDefinition {
