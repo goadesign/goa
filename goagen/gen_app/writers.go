@@ -81,12 +81,13 @@ type (
 
 	// ControllerTemplateData contains the information required to generate an action handler.
 	ControllerTemplateData struct {
-		API      *design.APIDefinition    // API definition
-		Resource string                   // Lower case plural resource name, e.g. "bottles"
-		Actions  []map[string]interface{} // Array of actions, each action has keys "Name", "Routes", "Context", "PreflightPaths" and "Unmarshal"
-		Encoders []*EncoderTemplateData   // Encoder data
-		Decoders []*EncoderTemplateData   // Decoder data
-		Origins  []*design.CORSDefinition // CORS policies
+		API            *design.APIDefinition    // API definition
+		Resource       string                   // Lower case plural resource name, e.g. "bottles"
+		Actions        []map[string]interface{} // Array of actions, each action has keys "Name", "Routes", "Context" and "Unmarshal"
+		Encoders       []*EncoderTemplateData   // Encoder data
+		Decoders       []*EncoderTemplateData   // Decoder data
+		Origins        []*design.CORSDefinition // CORS policies
+		PreflightPaths []string
 	}
 
 	// ResourceData contains the information required to generate the resource GoGenerator
@@ -399,7 +400,7 @@ type {{ .Name }} struct {
 {{ if .Pointer }}{{ tabs .Depth }}	{{ $varName }} := &{{ .VarName }}
 {{ end }}{{ tabs .Depth }}	{{ .Pkg }} = {{ $varName }}
 {{ tabs .Depth }}} else {
-{{ tabs .Depth }}	err = goa.StackErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "boolean"))
+{{ tabs .Depth }}	err = err.Merge(goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "boolean"))
 {{ tabs .Depth }}}
 {{ end }}{{ if eq .Attribute.Type.Kind 2 }}{{/*
 
@@ -411,7 +412,7 @@ type {{ .Name }} struct {
 {{ tabs .Depth }}	{{ .Pkg }} = {{ $tmp }}
 {{ else }}{{ tabs .Depth }}	{{ .Pkg }} = {{ .VarName }}
 {{ end }}{{ tabs .Depth }}} else {
-{{ tabs .Depth }}	err = goa.StackErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "integer"))
+{{ tabs .Depth }}	err = err.Merge(goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "integer"))
 {{ tabs .Depth }}}
 {{ end }}{{ if eq .Attribute.Type.Kind 3 }}{{/*
 
@@ -421,7 +422,7 @@ type {{ .Name }} struct {
 {{ if .Pointer }}{{ tabs .Depth }}	{{ $varName }} := &{{ .VarName }}
 {{ end }}{{ tabs .Depth }}	{{ .Pkg }} = {{ $varName }}
 {{ tabs .Depth }}} else {
-{{ tabs .Depth }}	err = goa.StackErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "number"))
+{{ tabs .Depth }}	err = err.Merge(goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "number"))
 {{ tabs .Depth }}}
 {{ end }}{{ if eq .Attribute.Type.Kind 4 }}{{/*
 
@@ -435,7 +436,7 @@ type {{ .Name }} struct {
 {{ if .Pointer }}{{ tabs .Depth }}	{{ $varName }} := &{{ .VarName }}
 {{ end }}{{ tabs .Depth }}	{{ .Pkg }} = {{ $varName }}
 {{ tabs .Depth }}} else {
-{{ tabs .Depth }}	err = goa.StackErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "datetime"))
+{{ tabs .Depth }}	err = err.Merge(goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "datetime"))
 {{ tabs .Depth }}}
 {{ end }}{{ if eq .Attribute.Type.Kind 6 }}{{/*
 
@@ -458,12 +459,12 @@ type {{ .Name }} struct {
 // New{{ goify .Name true }} parses the incoming request URL and body, performs validations and creates the
 // context used by the {{ .ResourceName }} controller {{ .ActionName }} action.
 func New{{ .Name }}(ctx context.Context) (*{{ .Name }}, error) {
-	var err error
+	var err *goa.Error
 	req := goa.Request(ctx)
 	rctx := {{ .Name }}{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
 {{ if .Headers }}{{ $headers := .Headers }}{{ range $name, $att := $headers.Type.ToObject }}	raw{{ goify $name true }} := req.Header.Get("{{ $name }}")
 {{ if $headers.IsRequired $name }}	if raw{{ goify $name true }} == "" {
-		err = goa.StackErrors(err, goa.MissingHeaderError("{{ $name }}"))
+		err = err.Merge(goa.MissingHeaderError("{{ $name }}"))
 	} else {
 {{ else }}	if raw{{ goify $name true }} != "" {
 {{ end }}{{ $validation := validationChecker $att ($headers.IsNonZero $name) ($headers.IsRequired $name) (printf "raw%s" (goify $name true)) $name 2 }}{{/*
@@ -471,7 +472,7 @@ func New{{ .Name }}(ctx context.Context) (*{{ .Name }}, error) {
 {{ end }}	}
 {{ end }}{{ end }}{{ if.Params }}{{ range $name, $att := .Params.Type.ToObject }}	raw{{ goify $name true }} := req.Params.Get("{{ $name }}")
 {{ $mustValidate := $.MustValidate $name }}{{ if $mustValidate }}	if raw{{ goify $name true }} == "" {
-		err = goa.StackErrors(err, goa.MissingParamError("{{ $name }}"))
+		err = err.Merge(goa.MissingParamError("{{ $name }}"))
 	} else {
 {{ else }}	if raw{{ goify $name true }} != "" {
 {{ end }}{{ template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) (printf "rctx.%s" (goify $name true)) 2) }}{{/*
@@ -521,9 +522,10 @@ func (ctx *{{ .Context.Name }}) {{ goify .Response.Name true }}({{ if .Response.
 type {{ gotypename .Payload nil 1 }} {{ gotypedef .Payload 0 true }}
 
 {{ $validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1 }}{{ if $validation }}// Validate runs the validation rules defined in the design.
-func (payload {{ gotyperef .Payload .Payload.AllRequired 0 }}) Validate() (err error) {
+func (payload {{ gotyperef .Payload .Payload.AllRequired 0 }}) Validate() error {
+	var err *goa.Error
 {{ $validation }}
-       return
+       return err
 }{{ end }}
 `
 	// ctrlT generates the controller interface for a given resource.
@@ -570,7 +572,8 @@ func initService(service *goa.Service) {
 func Mount{{ .Resource }}Controller(service *goa.Service, ctrl {{ .Resource }}Controller) {
 	initService(service)
 	var h goa.Handler
-{{ $res := .Resource }}{{ range .Actions }}{{ $action := . }}
+{{ $res := .Resource }}{{ if .Origins }}{{ range .PreflightPaths }}	service.Mux.Handle("OPTIONS", "{{ . }}", cors.HandlePreflight(service.Context, handle{{ $res }}Origin))
+{{ end }}{{ end }}{{ range .Actions }}{{ $action := . }}
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := New{{ .Context }}(ctx)
 		if err != nil {
@@ -582,10 +585,9 @@ func Mount{{ .Resource }}Controller(service *goa.Service, ctrl {{ .Resource }}Co
 		{{ end }}		return ctrl.{{ .Name }}(rctx)
 	}
 {{ if $.Origins }}	h = handle{{ $res }}Origin(h)
-{{ range .PreflightPaths }}	service.Mux.Handle("OPTIONS", "{{ . }}", cors.HandlePreflight(service.Context, handle{{ $res }}Origin))
-{{ end }}{{ end }}{{ if .Security }}	h = handleSecurity({{ printf "%q" .Security.Scheme.SchemeName }}, h{{ range .Security.Scopes }}, {{ printf "%q" . }}{{ end }})
+{{ end }}{{ if .Security }}	h = handleSecurity({{ printf "%q" .Security.Scheme.SchemeName }}, h{{ range .Security.Scopes }}, {{ printf "%q" . }}{{ end }})
 {{ end }}{{ range .Routes }}	service.Mux.Handle("{{ .Verb }}", "{{ .FullPath }}", ctrl.MuxHandler("{{ $action.Name }}", h, {{ if $action.Payload }}{{ $action.Unmarshal }}{{ else }}nil{{ end }}))
-	service.Info("mount", "ctrl", "{{ $res }}", "action", "{{ $action.Name }}", "route", "{{ .Verb }} {{ .FullPath }}"{{ with $action.Security }}, "security", {{ printf "%q" .Scheme.SchemeName }}{{ end }})
+	service.LogInfo("mount", "ctrl", "{{ $res }}", "action", "{{ $action.Name }}", "route", "{{ .Verb }} {{ .FullPath }}"{{ with $action.Security }}, "security", {{ printf "%q" .Scheme.SchemeName }}{{ end }})
 {{ end }}{{ end }}}
 `
 
@@ -652,9 +654,10 @@ func {{ .Name }}Href({{ if .CanonicalParams }}{{ join .CanonicalParams ", " }} i
 type {{ $typeName }} {{ gotypedef . 0 true }}
 
 {{ $validation := recursiveValidate .AttributeDefinition false false "mt" "response" 1 }}{{ if $validation }}// Validate validates the {{ $typeName }} media type instance.
-func (mt {{ gotyperef . .AllRequired 0 }}) Validate() (err error) {
+func (mt {{ gotyperef . .AllRequired 0 }}) Validate() error {
+	var err *goa.Error
 {{ $validation }}
-	return
+	return err
 }
 {{ end }}
 `
@@ -665,9 +668,10 @@ func (mt {{ gotyperef . .AllRequired 0 }}) Validate() (err error) {
 type {{ $typeName }} {{ gotypedef . 0 true }}
 
 {{ $validation := recursiveValidate .AttributeDefinition false false "ut" "response" 1 }}{{ if $validation }}// Validate validates the {{ $typeName }} type instance.
-func (ut {{ gotyperef . .AllRequired 0 }}) Validate() (err error) {
+func (ut {{ gotyperef . .AllRequired 0 }}) Validate() error {
+	var err *goa.Error
 {{ $validation }}
-	return
+	return err
 }{{ end }}
 `
 
