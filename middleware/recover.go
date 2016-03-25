@@ -34,7 +34,7 @@ func Recover() goa.Middleware {
 						stack := lines[3:]
 						status := http.StatusInternalServerError
 						var message string
-						reqID := ctx.Value(ReqIDKey)
+						reqID := ctx.Value(reqIDKey)
 						if reqID != nil {
 							message = fmt.Sprintf(
 								"%s\nRefer to the following token when contacting support: %s",
