@@ -180,7 +180,7 @@ func (p *decoderPool) Put(d Decoder) {
 // `Accept` header and writes it to the http.ResponseWriter
 func (service *Service) EncodeResponse(ctx context.Context, v interface{}) error {
 	now := time.Now()
-	accept := Request(ctx).Header.Get("Accept")
+	accept := ContextRequest(ctx).Header.Get("Accept")
 	if accept == "" {
 		accept = "*/*"
 	}
@@ -201,7 +201,7 @@ func (service *Service) EncodeResponse(ctx context.Context, v interface{}) error
 	}
 
 	// the encoderPool will handle whether or not a pool is actually in use
-	encoder := p.Get(Response(ctx))
+	encoder := p.Get(ContextResponse(ctx))
 	if err := encoder.Encode(v); err != nil {
 		return err
 	}

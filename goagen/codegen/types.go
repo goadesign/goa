@@ -269,7 +269,7 @@ func GoTypeDesc(t design.DataType, upper bool) string {
 // or the empty string if there isn't one.
 func GoaMediaTypeName(mt *design.MediaTypeDefinition) string {
 	if mt == design.ErrorMedia {
-		return "*goa.HTTPError"
+		return "*goa.Error"
 	}
 	return ""
 }
