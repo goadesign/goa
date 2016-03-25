@@ -2,10 +2,8 @@ package jwt_test
 
 import (
 	"crypto/rsa"
-	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 
 	jwtpkg "github.com/dgrijalva/jwt-go"
 	"github.com/goadesign/goa"
@@ -19,7 +17,6 @@ var _ = Describe("Middleware", func() {
 	var securityScheme *goa.JWTSecurity
 	var respRecord *httptest.ResponseRecorder
 	var request *http.Request
-	var requestCtx context.Context
 	var handler goa.Handler
 	var configFunc func(*goa.JWTSecurity, func(context.Context) []string) goa.Middleware
 	var scopesFetcher func(context.Context) []string
@@ -29,8 +26,6 @@ var _ = Describe("Middleware", func() {
 	var fetchedToken *jwtpkg.Token
 
 	BeforeEach(func() {
-		requestCtx = goa.UseLogger(context.Background(), goa.NewStdLogger(log.New(os.Stdout, "jwt_test", 0)))
-
 		securityScheme = &goa.JWTSecurity{
 			In:   "header",
 			Name: "Authorization",
@@ -48,9 +43,10 @@ var _ = Describe("Middleware", func() {
 			return requiredScopes
 		}
 	})
+
 	JustBeforeEach(func() {
 		middleware = configFunc(securityScheme, scopesFetcher)
-		dispatchResult = middleware(handler)(requestCtx, respRecord, request)
+		dispatchResult = middleware(handler)(context.Background(), respRecord, request)
 	})
 
 	Context("HMAC keys signed token", func() {
