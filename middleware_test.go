@@ -62,13 +62,13 @@ var _ = Describe("NewMiddleware", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			rw = new(TestResponseWriter)
 			ctx = goa.NewContext(ctrl.Context, rw, req, nil)
-			Ω(goa.Response(ctx).Status).Should(Equal(0))
+			Ω(goa.ContextResponse(ctx).Status).Should(Equal(0))
 		})
 
 		Context("using a goa handler", func() {
 			BeforeEach(func() {
 				var goaHandler goa.Handler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-					goa.Response(ctx).Send(ctx, 200, "ok")
+					goa.ContextResponse(ctx).Send(ctx, 200, "ok")
 					return nil
 				}
 				input = goaHandler
@@ -78,14 +78,14 @@ var _ = Describe("NewMiddleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
 				h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error { return nil }
 				Ω(middleware(h)(ctx, rw, req)).ShouldNot(HaveOccurred())
-				Ω(goa.Response(ctx).Status).Should(Equal(200))
+				Ω(goa.ContextResponse(ctx).Status).Should(Equal(200))
 			})
 		})
 
 		Context("using a goa handler func", func() {
 			BeforeEach(func() {
 				input = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-					goa.Response(ctx).Send(ctx, 200, "ok")
+					goa.ContextResponse(ctx).Send(ctx, 200, "ok")
 					return nil
 				}
 			})
@@ -94,7 +94,7 @@ var _ = Describe("NewMiddleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
 				h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error { return nil }
 				Ω(middleware(h)(ctx, rw, req)).ShouldNot(HaveOccurred())
-				Ω(goa.Response(ctx).Status).Should(Equal(200))
+				Ω(goa.ContextResponse(ctx).Status).Should(Equal(200))
 			})
 		})
 
@@ -106,11 +106,11 @@ var _ = Describe("NewMiddleware", func() {
 			It("wraps it in a middleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
 				h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-					goa.Response(ctx).Send(ctx, 200, "ok")
+					goa.ContextResponse(ctx).Send(ctx, 200, "ok")
 					return nil
 				}
 				Ω(middleware(h)(ctx, rw, req)).ShouldNot(HaveOccurred())
-				Ω(goa.Response(ctx).Status).Should(Equal(200))
+				Ω(goa.ContextResponse(ctx).Status).Should(Equal(200))
 			})
 		})
 

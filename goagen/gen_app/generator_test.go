@@ -360,8 +360,8 @@ type GetWidgetContext struct {
 // context used by the Widget controller get action.
 func NewGetWidgetContext(ctx context.Context) (*GetWidgetContext, error) {
 	var err *goa.Error
-	req := goa.Request(ctx)
-	rctx := GetWidgetContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	req := goa.ContextRequest(ctx)
+	rctx := GetWidgetContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
 	rawID := req.Params.Get("id")
 	if rawID != "" {
 		rctx.ID = rawID
@@ -479,7 +479,7 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 		if err != nil {
 			return err
 		}
-		if rawPayload := goa.Request(ctx).Payload; rawPayload != nil {
+		if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
 			rctx.Payload = rawPayload.(Collection)
 		}
 		return ctrl.Get(rctx)
@@ -491,10 +491,10 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 // unmarshalGetWidgetPayload unmarshals the request body into the context request data Payload field.
 func unmarshalGetWidgetPayload(ctx context.Context, req *http.Request) error {
 	var payload Collection
-	if err := goa.RequestService(ctx).DecodeRequest(req, &payload); err != nil {
+	if err := goa.ContextService(ctx).DecodeRequest(req, &payload); err != nil {
 		return err
 	}
-	goa.Request(ctx).Payload = payload
+	goa.ContextRequest(ctx).Payload = payload
 	return nil
 }
 `

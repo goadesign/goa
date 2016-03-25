@@ -723,8 +723,8 @@ type ListBottleContext struct {
 	emptyContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err *goa.Error
-	req := goa.Request(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	req := goa.ContextRequest(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
 	return &rctx, err
 }
 `
@@ -741,8 +741,8 @@ type ListBottleContext struct {
 	intContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err *goa.Error
-	req := goa.Request(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	req := goa.ContextRequest(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
 	rawParam := req.Params.Get("param")
 	if rawParam != "" {
 		if param, err2 := strconv.Atoi(rawParam); err2 == nil {
@@ -769,8 +769,8 @@ type ListBottleContext struct {
 	strContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err *goa.Error
-	req := goa.Request(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	req := goa.ContextRequest(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
 	rawParam := req.Params.Get("param")
 	if rawParam != "" {
 		rctx.Param = &rawParam
@@ -791,8 +791,8 @@ type ListBottleContext struct {
 	numContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err *goa.Error
-	req := goa.Request(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	req := goa.ContextRequest(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
 	rawParam := req.Params.Get("param")
 	if rawParam != "" {
 		if param, err2 := strconv.ParseFloat(rawParam, 64); err2 == nil {
@@ -817,8 +817,8 @@ type ListBottleContext struct {
 	boolContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err *goa.Error
-	req := goa.Request(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	req := goa.ContextRequest(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
 	rawParam := req.Params.Get("param")
 	if rawParam != "" {
 		if param, err2 := strconv.ParseBool(rawParam); err2 == nil {
@@ -844,8 +844,8 @@ type ListBottleContext struct {
 	arrayContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err *goa.Error
-	req := goa.Request(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	req := goa.ContextRequest(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
 	rawParam := req.Params.Get("param")
 	if rawParam != "" {
 		elemsParam := strings.Split(rawParam, ",")
@@ -867,8 +867,8 @@ type ListBottleContext struct {
 	intArrayContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err *goa.Error
-	req := goa.Request(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	req := goa.ContextRequest(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
 	rawParam := req.Params.Get("param")
 	if rawParam != "" {
 		elemsParam := strings.Split(rawParam, ",")
@@ -898,8 +898,8 @@ type ListBottleContext struct {
 	resContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err *goa.Error
-	req := goa.Request(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	req := goa.ContextRequest(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
 	rawInt := req.Params.Get("int")
 	if rawInt != "" {
 		if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
@@ -926,8 +926,8 @@ type ListBottleContext struct {
 	requiredContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err *goa.Error
-	req := goa.Request(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	req := goa.ContextRequest(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
 	rawInt := req.Params.Get("int")
 	if rawInt == "" {
 		err = err.Merge(goa.MissingParamError("int"))
@@ -954,8 +954,8 @@ type ListBottleContext struct {
 	payloadContextFactory = `
 func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err *goa.Error
-	req := goa.Request(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	req := goa.ContextRequest(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
 	return &rctx, err
 }
 `
@@ -971,23 +971,23 @@ type ListBottleContext struct {
 	payloadObjUnmarshal = `
 func unmarshalListBottlePayload(ctx context.Context, req *http.Request) error {
 	var payload ListBottlePayload
-	if err := goa.RequestService(ctx).DecodeRequest(req, &payload); err != nil {
+	if err := goa.ContextService(ctx).DecodeRequest(req, &payload); err != nil {
 		return err
 	}
 	if err := payload.Validate(); err != nil {
 		return err
 	}
-	goa.Request(ctx).Payload = &payload
+	goa.ContextRequest(ctx).Payload = &payload
 	return nil
 }
 `
 	payloadNoValidationsObjUnmarshal = `
 func unmarshalListBottlePayload(ctx context.Context, req *http.Request) error {
 	var payload ListBottlePayload
-	if err := goa.RequestService(ctx).DecodeRequest(req, &payload); err != nil {
+	if err := goa.ContextService(ctx).DecodeRequest(req, &payload); err != nil {
 		return err
 	}
-	goa.Request(ctx).Payload = &payload
+	goa.ContextRequest(ctx).Payload = &payload
 	return nil
 }
 `

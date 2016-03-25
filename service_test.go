@@ -81,9 +81,9 @@ var _ = Describe("Service", func() {
 				ctx = c
 				if req != nil {
 					var payload interface{}
-					err := goa.RequestService(ctx).DecodeRequest(req, &payload)
+					err := goa.ContextService(ctx).DecodeRequest(req, &payload)
 					Ω(err).ShouldNot(HaveOccurred())
-					goa.Request(ctx).Payload = payload
+					goa.ContextRequest(ctx).Payload = payload
 				}
 				return nil
 			}
@@ -111,9 +111,9 @@ var _ = Describe("Service", func() {
 			})
 
 			It("creates a handle that handles the request", func() {
-				i := goa.Request(ctx).Params.Get("id")
+				i := goa.ContextRequest(ctx).Params.Get("id")
 				Ω(i).Should(Equal("42"))
-				s := goa.Request(ctx).Params.Get("sort")
+				s := goa.ContextRequest(ctx).Params.Get("sort")
 				Ω(s).Should(Equal("asc"))
 				tw := rw.(*TestResponseWriter)
 				Ω(tw.Status).Should(Equal(respStatus))
@@ -178,7 +178,7 @@ var _ = Describe("Service", func() {
 				})
 
 				It("should work with application/json and load properly", func() {
-					Ω(goa.Request(ctx).Payload).Should(Equal(decodedContent))
+					Ω(goa.ContextRequest(ctx).Payload).Should(Equal(decodedContent))
 				})
 
 				Context("with an empty Content-Type", func() {
@@ -187,7 +187,7 @@ var _ = Describe("Service", func() {
 					})
 
 					It("defaults to application/json and loads properly for JSON bodies", func() {
-						Ω(goa.Request(ctx).Payload).Should(Equal(decodedContent))
+						Ω(goa.ContextRequest(ctx).Payload).Should(Equal(decodedContent))
 					})
 				})
 
@@ -198,7 +198,7 @@ var _ = Describe("Service", func() {
 					})
 
 					It("should use the default decoder", func() {
-						Ω(goa.Request(ctx).Payload).Should(Equal(decodedContent))
+						Ω(goa.ContextRequest(ctx).Payload).Should(Equal(decodedContent))
 					})
 				})
 
@@ -210,7 +210,7 @@ var _ = Describe("Service", func() {
 					})
 
 					It("should bypass decoding", func() {
-						Ω(goa.Request(ctx).Payload).Should(BeNil())
+						Ω(goa.ContextRequest(ctx).Payload).Should(BeNil())
 					})
 				})
 			})
