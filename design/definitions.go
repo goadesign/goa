@@ -592,6 +592,7 @@ func (a *APIDefinition) DSL() func() {
 }
 
 // Finalize sets the Consumes and Produces fields to the defaults if empty.
+// Also it records built-in media types that are used by the user design.
 func (a *APIDefinition) Finalize() {
 	if len(a.Consumes) == 0 {
 		a.Consumes = DefaultDecoders
@@ -599,6 +600,25 @@ func (a *APIDefinition) Finalize() {
 	if len(a.Produces) == 0 {
 		a.Produces = DefaultEncoders
 	}
+	found := false
+	a.IterateResources(func(r *ResourceDefinition) error {
+		if found {
+			return nil
+		}
+		return r.IterateActions(func(action *ActionDefinition) error {
+			if found {
+				return nil
+			}
+			for _, resp := range action.Responses {
+				if resp.MediaType == ErrorMediaIdentifier {
+					a.MediaTypes[CanonicalIdentifier(ErrorMediaIdentifier)] = ErrorMedia
+					found = true
+					break
+				}
+			}
+			return nil
+		})
+	})
 }
 
 // NewResourceDefinition creates a resource definition but does not
@@ -711,6 +731,31 @@ func (r *ResourceDefinition) AllOrigins() []*CORSDefinition {
 		cors[i] = all[n]
 	}
 	return cors
+}
+
+// PreflightPaths returns the paths that should handle OPTIONS requests.
+func (r *ResourceDefinition) PreflightPaths() []string {
+	var paths []string
+	r.IterateActions(func(a *ActionDefinition) error {
+		for _, r := range a.Routes {
+			if r.Verb == "OPTIONS" {
+				continue
+			}
+			found := false
+			fp := r.FullPath()
+			for _, p := range paths {
+				if fp == p {
+					found = true
+					break
+				}
+			}
+			if !found {
+				paths = append(paths, fp)
+			}
+		}
+		return nil
+	})
+	return paths
 }
 
 // DSL returns the initialization DSL.
@@ -1270,27 +1315,6 @@ func (a *ActionDefinition) WebSocket() bool {
 		}
 	}
 	return true
-}
-
-// PreflightPaths returns the action paths that should handle OPTIONS requests.
-func (a *ActionDefinition) PreflightPaths() []string {
-	var paths []string
-	for _, r := range a.Routes {
-		if r.Verb == "OPTIONS" {
-			continue
-		}
-		found := false
-		for _, p := range paths {
-			if r.FullPath() == p {
-				found = true
-				break
-			}
-		}
-		if !found {
-			paths = append(paths, r.FullPath())
-		}
-	}
-	return paths
 }
 
 // Finalize creates fallback security schemes and links before rendering.

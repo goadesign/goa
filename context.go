@@ -119,7 +119,7 @@ func (r *ResponseData) Send(ctx context.Context, code int, body interface{}) err
 }
 
 // BadRequest sends a HTTP response with status code 400 and the given error as body.
-func (r *ResponseData) BadRequest(ctx context.Context, err *HTTPError) error {
+func (r *ResponseData) BadRequest(ctx context.Context, err *Error) error {
 	return r.Send(ctx, 400, err)
 }
 

@@ -27,17 +27,17 @@ type (
 // ErrMissingLogValue is the value used to log keys with missing values
 const ErrMissingLogValue = "MISSING"
 
-// Info extracts the logger from the given context and calls Info on it.
+// LogInfo extracts the logger from the given context and calls Info on it.
 // In general this shouldn't be needed (the client code should already have a handle on the logger)
 // This is mainly useful for "out-of-band" code like middleware.
-func Info(ctx context.Context, msg string, keyvals ...interface{}) {
+func LogInfo(ctx context.Context, msg string, keyvals ...interface{}) {
 	logit(ctx, msg, keyvals, false)
 }
 
-// Error extracts the logger from the given context and calls Error on it.
+// LogError extracts the logger from the given context and calls Error on it.
 // In general this shouldn't be needed (the client code should already have a handle on the logger)
 // This is mainly useful for "out-of-band" code like middleware.
-func Error(ctx context.Context, msg string, keyvals ...interface{}) {
+func LogError(ctx context.Context, msg string, keyvals ...interface{}) {
 	logit(ctx, msg, keyvals, true)
 }
 

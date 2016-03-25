@@ -359,7 +359,7 @@ type GetWidgetContext struct {
 // NewGetWidgetContext parses the incoming request URL and body, performs validations and creates the
 // context used by the Widget controller get action.
 func NewGetWidgetContext(ctx context.Context) (*GetWidgetContext, error) {
-	var err error
+	var err *goa.Error
 	req := goa.Request(ctx)
 	rctx := GetWidgetContext{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
 	rawID := req.Params.Get("id")
@@ -429,7 +429,7 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 		return ctrl.Get(rctx)
 	}
 	service.Mux.Handle("GET", "/:id", ctrl.MuxHandler("Get", h, nil))
-	service.Info("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
+	service.LogInfo("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
 }
 `
 
@@ -485,7 +485,7 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 		return ctrl.Get(rctx)
 	}
 	service.Mux.Handle("GET", "/:id", ctrl.MuxHandler("Get", h, unmarshalGetWidgetPayload))
-	service.Info("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
+	service.LogInfo("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
 }
 
 // unmarshalGetWidgetPayload unmarshals the request body into the context request data Payload field.

@@ -388,25 +388,28 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 	ctlWr.WriteInitService(encoders, decoders)
 
 	var controllersData []*ControllerTemplateData
-	api.IterateResources(func(r *design.ResourceDefinition) error {
-		data := &ControllerTemplateData{API: api, Resource: codegen.Goify(r.Name, true)}
-		err := r.IterateActions(func(a *design.ActionDefinition) error {
+	err = api.IterateResources(func(r *design.ResourceDefinition) error {
+		data := &ControllerTemplateData{
+			API:            api,
+			Resource:       codegen.Goify(r.Name, true),
+			PreflightPaths: r.PreflightPaths(),
+		}
+		ierr := r.IterateActions(func(a *design.ActionDefinition) error {
 			context := fmt.Sprintf("%s%sContext", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			unmarshal := fmt.Sprintf("unmarshal%s%sPayload", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			action := map[string]interface{}{
-				"Name":           codegen.Goify(a.Name, true),
-				"Routes":         a.Routes,
-				"Context":        context,
-				"Unmarshal":      unmarshal,
-				"Payload":        a.Payload,
-				"Security":       a.Security,
-				"PreflightPaths": a.PreflightPaths(),
+				"Name":      codegen.Goify(a.Name, true),
+				"Routes":    a.Routes,
+				"Context":   context,
+				"Unmarshal": unmarshal,
+				"Payload":   a.Payload,
+				"Security":  a.Security,
 			}
 			data.Actions = append(data.Actions, action)
 			return nil
 		})
-		if err != nil {
-			return err
+		if ierr != nil {
+			return ierr
 		}
 		if len(data.Actions) > 0 {
 			data.Encoders = encoders
@@ -416,6 +419,9 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 	g.genfiles = append(g.genfiles, ctlFile)
 	if err = ctlWr.Execute(controllersData); err != nil {
 		return err
@@ -481,6 +487,9 @@ func (g *Generator) generateHrefs(api *design.APIDefinition) error {
 			if len(ca.Routes) > 0 {
 				canoParams = ca.Routes[0].Params()
 			}
+			for i, p := range canoParams {
+				canoParams[i] = codegen.Goify(p, false)
+			}
 		}
 		data := ResourceData{
 			Name:              codegen.Goify(r.Name, true),
@@ -515,6 +524,9 @@ func (g *Generator) generateMediaTypes(api *design.APIDefinition) error {
 	}
 	mtWr.WriteHeader(title, TargetPackage, imports)
 	err = api.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
+		if mt.IsBuiltIn() {
+			return nil
+		}
 		if mt.Type.IsObject() || mt.Type.IsArray() {
 			return mtWr.Execute(mt)
 		}
