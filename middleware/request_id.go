@@ -45,9 +45,18 @@ func RequestID() goa.Middleware {
 			if id == "" {
 				id = fmt.Sprintf("%s-%d", reqPrefix, atomic.AddInt64(&reqID, 1))
 			}
-			ctx = context.WithValue(ctx, ReqIDKey, id)
+			ctx = context.WithValue(ctx, reqIDKey, id)
 
 			return h(ctx, rw, req)
 		}
 	}
+}
+
+// ContextRequestID extracts the Request ID from the context.
+func ContextRequestID(ctx context.Context) (reqID string) {
+	id := ctx.Value(reqIDKey)
+	if id != nil {
+		reqID = id.(string)
+	}
+	return
 }

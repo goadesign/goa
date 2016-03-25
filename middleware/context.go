@@ -5,4 +5,4 @@ package middleware
 type middlewareKey int
 
 // ReqIDKey is the context key used by the RequestID middleware to store the request ID value.
-const ReqIDKey middlewareKey = 1
+const reqIDKey middlewareKey = 1

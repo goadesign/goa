@@ -40,6 +40,6 @@ var _ = Describe("RequestID", func() {
 		}
 		rg := middleware.RequestID()(h)
 		Ω(rg(ctx, rw, req)).ShouldNot(HaveOccurred())
-		Ω(newCtx.Value(middleware.ReqIDKey)).Should(Equal(reqID))
+		Ω(middleware.ContextRequestID(newCtx)).Should(Equal(reqID))
 	})
 })

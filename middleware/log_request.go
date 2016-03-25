@@ -21,7 +21,7 @@ import (
 func LogRequest(verbose bool) goa.Middleware {
 	return func(h goa.Handler) goa.Handler {
 		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-			reqID := ctx.Value(ReqIDKey)
+			reqID := ctx.Value(reqIDKey)
 			if reqID == nil {
 				reqID = shortID()
 			}
