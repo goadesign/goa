@@ -68,14 +68,14 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	imp = path.Join(filepath.ToSlash(imp), "app")
 	_, err = os.Stat(mainFile)
 	if err != nil {
-		file, err := codegen.SourceFileFor(mainFile)
-		if err != nil {
-			return nil, err
+		file, err2 := codegen.SourceFileFor(mainFile)
+		if err2 != nil {
+			return nil, err2
 		}
 		var outPkg string
-		outPkg, err = codegen.PackagePath(codegen.OutputDir)
-		if err != nil {
-			return nil, err
+		outPkg, err2 = codegen.PackagePath(codegen.OutputDir)
+		if err2 != nil {
+			return nil, err2
 		}
 		outPkg = strings.TrimPrefix(filepath.ToSlash(outPkg), "src/")
 		appPkg := path.Join(outPkg, "app")
@@ -83,7 +83,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		imports := []*codegen.ImportSpec{
 			codegen.SimpleImport("time"),
 			codegen.SimpleImport("github.com/goadesign/goa"),
-			codegen.SimpleImport("github.com/goadesign/middleware"),
+			codegen.SimpleImport("github.com/goadesign/goa/middleware"),
 			codegen.SimpleImport(appPkg),
 			codegen.SimpleImport(swaggerPkg),
 		}
@@ -96,11 +96,11 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 			"Name": AppName,
 			"API":  api,
 		}
-		if err = file.ExecuteTemplate("main", mainT, funcs, data); err != nil {
-			return nil, err
+		if err2 = file.ExecuteTemplate("main", mainT, funcs, data); err2 != nil {
+			return nil, err2
 		}
-		if err = file.FormatCode(); err != nil {
-			return nil, err
+		if err2 = file.FormatCode(); err2 != nil {
+			return nil, err2
 		}
 	}
 	imports := []*codegen.ImportSpec{
@@ -112,31 +112,31 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
 		filename := filepath.Join(codegen.OutputDir, snakeCase(r.Name)+".go")
 		if Force {
-			if err := os.Remove(filename); err != nil {
-				return err
+			if err2 := os.Remove(filename); err2 != nil {
+				return err2
 			}
 		}
 		g.genfiles = append(g.genfiles, filename)
-		if _, err := os.Stat(filename); err != nil {
-			file, err := codegen.SourceFileFor(filename)
-			if err != nil {
+		if _, e := os.Stat(filename); e != nil {
+			file, err2 := codegen.SourceFileFor(filename)
+			if err2 != nil {
 				return err
 			}
 			file.WriteHeader("", "main", imports)
-			if err = file.ExecuteTemplate("controller", ctrlT, funcs, r); err != nil {
+			if err2 = file.ExecuteTemplate("controller", ctrlT, funcs, r); err2 != nil {
 				return err
 			}
-			err = r.IterateActions(func(a *design.ActionDefinition) error {
+			err2 = r.IterateActions(func(a *design.ActionDefinition) error {
 				if a.WebSocket() {
 					return file.ExecuteTemplate("actionWS", actionWST, funcs, a)
 				}
 				return file.ExecuteTemplate("action", actionT, funcs, a)
 			})
-			if err != nil {
+			if err2 != nil {
 				return err
 			}
-			if err := file.FormatCode(); err != nil {
-				return err
+			if err2 = file.FormatCode(); err2 != nil {
+				return err2
 			}
 		}
 		return nil
