@@ -24,7 +24,7 @@ var _ = Describe("ResponseData", func() {
 		rw = &TestResponseWriter{Status: 42}
 		params = url.Values{"query": []string{"value"}}
 		ctx := goa.NewContext(context.Background(), rw, req, params)
-		data = goa.Response(ctx)
+		data = goa.ContextResponse(ctx)
 	})
 
 	Context("SwitchWriter", func() {

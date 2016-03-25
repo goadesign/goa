@@ -66,32 +66,32 @@ func UseLogger(ctx context.Context, logger Logger) context.Context {
 	return context.WithValue(ctx, logKey, logger)
 }
 
-// Request gives access to the underlying HTTP request.
-func Request(ctx context.Context) *RequestData {
+// ContextRequest gives access to the underlying HTTP request.
+func ContextRequest(ctx context.Context) *RequestData {
 	if r := ctx.Value(reqKey); r != nil {
 		return r.(*RequestData)
 	}
 	return nil
 }
 
-// Response gives access to the underlying HTTP response.
-func Response(ctx context.Context) *ResponseData {
+// ContextResponse gives access to the underlying HTTP response.
+func ContextResponse(ctx context.Context) *ResponseData {
 	if r := ctx.Value(respKey); r != nil {
 		return r.(*ResponseData)
 	}
 	return nil
 }
 
-// RequestService returns the service tageted by the request with the given context.
-func RequestService(ctx context.Context) *Service {
+// ContextService returns the service tageted by the request with the given context.
+func ContextService(ctx context.Context) *Service {
 	if r := ctx.Value(serviceKey); r != nil {
 		return r.(*Service)
 	}
 	return nil
 }
 
-// RequestLogger returns the logger used by the request context.
-func RequestLogger(ctx context.Context) Logger {
+// ContextLogger returns the logger used by the request context.
+func ContextLogger(ctx context.Context) Logger {
 	if v := ctx.Value(logKey); v != nil {
 		return v.(Logger)
 	}
@@ -115,7 +115,7 @@ func (r *ResponseData) Written() bool {
 // encoders. It uses the default service encoder if no match is found.
 func (r *ResponseData) Send(ctx context.Context, code int, body interface{}) error {
 	r.WriteHeader(code)
-	return RequestService(ctx).EncodeResponse(ctx, body)
+	return ContextService(ctx).EncodeResponse(ctx, body)
 }
 
 // BadRequest sends a HTTP response with status code 400 and the given error as body.

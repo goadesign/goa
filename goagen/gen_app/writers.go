@@ -460,8 +460,8 @@ type {{ .Name }} struct {
 // context used by the {{ .ResourceName }} controller {{ .ActionName }} action.
 func New{{ .Name }}(ctx context.Context) (*{{ .Name }}, error) {
 	var err *goa.Error
-	req := goa.Request(ctx)
-	rctx := {{ .Name }}{Context: ctx, ResponseData: goa.Response(ctx), RequestData: req}
+	req := goa.ContextRequest(ctx)
+	rctx := {{ .Name }}{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
 {{ if .Headers }}{{ $headers := .Headers }}{{ range $name, $att := $headers.Type.ToObject }}	raw{{ goify $name true }} := req.Header.Get("{{ $name }}")
 {{ if $headers.IsRequired $name }}	if raw{{ goify $name true }} == "" {
 		err = err.Merge(goa.MissingHeaderError("{{ $name }}"))
@@ -579,7 +579,7 @@ func Mount{{ .Resource }}Controller(service *goa.Service, ctrl {{ .Resource }}Co
 		if err != nil {
 			return err
 		}
-{{ if .Payload }}if rawPayload := goa.Request(ctx).Payload; rawPayload != nil {
+{{ if .Payload }}if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
 			rctx.Payload = rawPayload.({{ gotyperef .Payload nil 1 }})
 		}
 		{{ end }}		return ctrl.{{ .Name }}(rctx)
@@ -626,13 +626,13 @@ func handle{{ .Resource }}Origin(h goa.Handler) goa.Handler {
 // {{ .Unmarshal }} unmarshals the request body into the context request data Payload field.
 func {{ .Unmarshal }}(ctx context.Context, req *http.Request) error {
 	var payload {{ gotypename .Payload nil 1 }}
-	if err := goa.RequestService(ctx).DecodeRequest(req, &payload); err != nil {
+	if err := goa.ContextService(ctx).DecodeRequest(req, &payload); err != nil {
 		return err
 	}{{ $validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1 }}{{ if $validation }}
 	if err := payload.Validate(); err != nil {
 		return err
 	}{{ end }}
-	goa.Request(ctx).Payload = {{ if .Payload.IsObject }}&{{ end }}payload
+	goa.ContextRequest(ctx).Payload = {{ if .Payload.IsObject }}&{{ end }}payload
 	return nil
 }
 {{ end }}

@@ -184,14 +184,14 @@ func (service *Service) ServeFiles(path, filename string) error {
 	}
 	handle := ctrl.MuxHandler("Serve", func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		fullpath := filename
-		r := Request(ctx)
+		r := ContextRequest(ctx)
 		if len(wc) > 0 {
 			if m, ok := r.Params[wc]; ok {
 				fullpath = filepath.Join(fullpath, m[0])
 			}
 		}
 		service.LogInfo("serve file", "filepath", fullpath, "path", r.URL.Path)
-		http.ServeFile(Response(ctx), r.Request, fullpath)
+		http.ServeFile(ContextResponse(ctx), r.Request, fullpath)
 		return nil
 	}, nil)
 	service.Mux.Handle("GET", path, handle)
@@ -217,7 +217,7 @@ func (ctrl *Controller) HandleError(ctx context.Context, rw http.ResponseWriter,
 		ctrl.ErrorHandler(ctx, rw, req, err)
 		return
 	}
-	if h := RequestService(ctx).ErrorHandler; h != nil {
+	if h := ContextService(ctx).ErrorHandler; h != nil {
 		h(ctx, rw, req, err)
 	}
 }
@@ -230,7 +230,7 @@ func (ctrl *Controller) HandleError(ctx context.Context, rw http.ResponseWriter,
 func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) MuxHandler {
 	// Setup middleware outside of closure
 	middleware := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-		if !Response(ctx).Written() {
+		if !ContextResponse(ctx).Written() {
 			if err := hdlr(ctx, rw, req); err != nil {
 				ctrl.HandleError(ctx, rw, req, err)
 			}
@@ -266,7 +266,7 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 		}
 
 		// Invoke middleware chain, wrap writer to capture response status and length
-		handler(ctx, Response(ctx), req)
+		handler(ctx, ContextResponse(ctx), req)
 	}
 }
 
@@ -286,7 +286,7 @@ func DefaultErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.
 	if status == 500 {
 		LogError(ctx, e.Error())
 	}
-	Response(ctx).Send(ctx, status, respBody)
+	ContextResponse(ctx).Send(ctx, status, respBody)
 }
 
 // TerseErrorHandler behaves like DefaultErrorHandler except that it does not write to the response
@@ -307,5 +307,5 @@ func TerseErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.Re
 	if status == 500 {
 		LogError(ctx, e.Error())
 	}
-	Response(ctx).Send(ctx, status, respBody)
+	ContextResponse(ctx).Send(ctx, status, respBody)
 }
