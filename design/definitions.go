@@ -733,6 +733,31 @@ func (r *ResourceDefinition) AllOrigins() []*CORSDefinition {
 	return cors
 }
 
+// PreflightPaths returns the paths that should handle OPTIONS requests.
+func (r *ResourceDefinition) PreflightPaths() []string {
+	var paths []string
+	r.IterateActions(func(a *ActionDefinition) error {
+		for _, r := range a.Routes {
+			if r.Verb == "OPTIONS" {
+				continue
+			}
+			found := false
+			fp := r.FullPath()
+			for _, p := range paths {
+				if fp == p {
+					found = true
+					break
+				}
+			}
+			if !found {
+				paths = append(paths, fp)
+			}
+		}
+		return nil
+	})
+	return paths
+}
+
 // DSL returns the initialization DSL.
 func (r *ResourceDefinition) DSL() func() {
 	return r.DSLFunc
@@ -1290,27 +1315,6 @@ func (a *ActionDefinition) WebSocket() bool {
 		}
 	}
 	return true
-}
-
-// PreflightPaths returns the action paths that should handle OPTIONS requests.
-func (a *ActionDefinition) PreflightPaths() []string {
-	var paths []string
-	for _, r := range a.Routes {
-		if r.Verb == "OPTIONS" {
-			continue
-		}
-		found := false
-		for _, p := range paths {
-			if r.FullPath() == p {
-				found = true
-				break
-			}
-		}
-		if !found {
-			paths = append(paths, r.FullPath())
-		}
-	}
-	return paths
 }
 
 // Finalize creates fallback security schemes and links before rendering.

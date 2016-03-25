@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("HTTPError", func() {
+var _ = Describe("Error", func() {
 	const (
 		code   = "invalid"
 		status = 400
@@ -18,16 +18,16 @@ var _ = Describe("HTTPError", func() {
 	)
 	var meta = map[string]interface{}{"what": 42}
 
-	var httpError *goa.HTTPError
+	var gerr *goa.Error
 
 	BeforeEach(func() {
-		httpError = &goa.HTTPError{code, status, detail, meta}
+		gerr = &goa.Error{Code: code, Status: status, Detail: detail, MetaValues: meta}
 	})
 
 	It("serializes to JSON", func() {
-		b, err := json.Marshal(httpError)
+		b, err := json.Marshal(gerr)
 		Ω(err).ShouldNot(HaveOccurred())
-		Ω(string(b)).Should(Equal(`{"errors":[{"code":"invalid","detail":"error","meta":{"what":42},"status":400}]}`))
+		Ω(string(b)).Should(Equal(`{"code":"invalid","status":400,"detail":"error","meta":{"what":42}}`))
 	})
 })
 
@@ -43,8 +43,8 @@ var _ = Describe("InvalidParamTypeError", func() {
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-		err := valErr.(*goa.HTTPError)
+		Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
+		err := valErr.(*goa.Error)
 		Ω(err.Detail).Should(ContainSubstring(name))
 		Ω(err.Detail).Should(ContainSubstring("%d", val))
 		Ω(err.Detail).Should(ContainSubstring(expected))
@@ -61,8 +61,8 @@ var _ = Describe("MissingParaerror", func() {
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-		err := valErr.(*goa.HTTPError)
+		Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
+		err := valErr.(*goa.Error)
 		Ω(err.Detail).Should(ContainSubstring(name))
 	})
 })
@@ -79,8 +79,8 @@ var _ = Describe("InvalidAttributeTypeError", func() {
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-		err := valErr.(*goa.HTTPError)
+		Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
+		err := valErr.(*goa.Error)
 		Ω(err.Detail).Should(ContainSubstring(ctx))
 		Ω(err.Detail).Should(ContainSubstring("%d", val))
 		Ω(err.Detail).Should(ContainSubstring(expected))
@@ -98,8 +98,8 @@ var _ = Describe("MissingAttributeError", func() {
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-		err := valErr.(*goa.HTTPError)
+		Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
+		err := valErr.(*goa.Error)
 		Ω(err.Detail).Should(ContainSubstring(ctx))
 		Ω(err.Detail).Should(ContainSubstring(name))
 	})
@@ -115,8 +115,8 @@ var _ = Describe("MissingHeaderError", func() {
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-		err := valErr.(*goa.HTTPError)
+		Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
+		err := valErr.(*goa.Error)
 		Ω(err.Detail).Should(ContainSubstring(name))
 	})
 })
@@ -133,8 +133,8 @@ var _ = Describe("InvalidEnumValueError", func() {
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-		err := valErr.(*goa.HTTPError)
+		Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
+		err := valErr.(*goa.Error)
 		Ω(err.Detail).Should(ContainSubstring(ctx))
 		Ω(err.Detail).Should(ContainSubstring("%d", val))
 		Ω(err.Detail).Should(ContainSubstring(`"43", "44"`))
@@ -154,8 +154,8 @@ var _ = Describe("InvalidFormaerror", func() {
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-		err := valErr.(*goa.HTTPError)
+		Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
+		err := valErr.(*goa.Error)
 		Ω(err.Detail).Should(ContainSubstring(ctx))
 		Ω(err.Detail).Should(ContainSubstring(target))
 		Ω(err.Detail).Should(ContainSubstring("date-time"))
@@ -175,8 +175,8 @@ var _ = Describe("InvalidPatternError", func() {
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-		err := valErr.(*goa.HTTPError)
+		Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
+		err := valErr.(*goa.Error)
 		Ω(err.Detail).Should(ContainSubstring(ctx))
 		Ω(err.Detail).Should(ContainSubstring(target))
 		Ω(err.Detail).Should(ContainSubstring(pattern))
@@ -196,8 +196,8 @@ var _ = Describe("InvalidRangeError", func() {
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-		err := valErr.(*goa.HTTPError)
+		Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
+		err := valErr.(*goa.Error)
 		Ω(err.Detail).Should(ContainSubstring(ctx))
 		Ω(err.Detail).Should(ContainSubstring("greater or equal"))
 		Ω(err.Detail).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
@@ -227,8 +227,8 @@ var _ = Describe("InvalidLengthError", func() {
 
 		It("creates a http error", func() {
 			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-			err := valErr.(*goa.HTTPError)
+			Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
+			err := valErr.(*goa.Error)
 			Ω(err.Detail).Should(ContainSubstring(ctx))
 			Ω(err.Detail).Should(ContainSubstring("greater or equal"))
 			Ω(err.Detail).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
@@ -244,8 +244,8 @@ var _ = Describe("InvalidLengthError", func() {
 
 		It("creates a http error", func() {
 			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(&goa.HTTPError{}))
-			err := valErr.(*goa.HTTPError)
+			Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
+			err := valErr.(*goa.Error)
 			Ω(err.Detail).Should(ContainSubstring(ctx))
 			Ω(err.Detail).Should(ContainSubstring("greater or equal"))
 			Ω(err.Detail).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
@@ -254,30 +254,10 @@ var _ = Describe("InvalidLengthError", func() {
 	})
 })
 
-var _ = Describe("MultiError", func() {
-	var err1, err2 error
-	var multiError goa.MultiError
-
-	JustBeforeEach(func() {
-		multiError = goa.MultiError{err1, err2}
-	})
-
-	BeforeEach(func() {
-		err1 = errors.New("error 1")
-		err2 = errors.New("error 2")
-	})
-
-	It("lists all error messages in its error message", func() {
-		errMsg := multiError.Error()
-		Ω(errMsg).ShouldNot(BeEmpty())
-		Ω(errMsg).Should(ContainSubstring(err1.Error()))
-		Ω(errMsg).Should(ContainSubstring(err2.Error()))
-	})
-})
-
-var _ = Describe("StackErrors", func() {
-	var err, err2 error
-	var mErr error
+var _ = Describe("Merge", func() {
+	var err *goa.Error
+	var err2 error
+	var mErr *goa.Error
 
 	BeforeEach(func() {
 		err = nil
@@ -285,47 +265,34 @@ var _ = Describe("StackErrors", func() {
 	})
 
 	JustBeforeEach(func() {
-		mErr = goa.StackErrors(err, err2)
+		mErr = err.Merge(err2)
 	})
 
 	Context("with two nil errors", func() {
-		It("returns an empty error", func() {
-			Ω(mErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-			Ω(mErr).Should(BeEmpty())
+		It("returns a nil error", func() {
+			Ω(mErr).Should(BeAssignableToTypeOf(&goa.Error{}))
+			Ω(mErr).Should(BeNil())
 		})
 	})
 
-	Context("with the second error nil", func() {
-		Context("with the first argument a MultiError", func() {
-			BeforeEach(func() {
-				err = goa.MultiError{errors.New("foo")}
-			})
+	Context("with a nil argument", func() {
+		const code = "foo"
 
-			It("returns it", func() {
-				Ω(mErr).Should(Equal(err))
-			})
+		BeforeEach(func() {
+			err = &goa.Error{Code: code}
 		})
 
-		Context("with the first argument not a MultiError", func() {
-			BeforeEach(func() {
-				err = errors.New("foo")
-			})
-
-			It("wraps it into a MultiError", func() {
-				Ω(mErr).ShouldNot(BeNil())
-				Ω(mErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-				mmErr := mErr.(goa.MultiError)
-				Ω(mmErr).Should(HaveLen(1))
-				Ω(mmErr[0]).Should(Equal(err))
-			})
+		It("returns the target", func() {
+			Ω(mErr).Should(Equal(err))
 		})
-
 	})
 
-	Context("with the first error nil", func() {
-		Context("with the second argument a MultiError", func() {
+	Context("with a nil target", func() {
+		Context("with the second argument a Error", func() {
+			const detail = "foo"
+
 			BeforeEach(func() {
-				err2 = goa.MultiError{errors.New("foo")}
+				err2 = &goa.Error{Detail: detail}
 			})
 
 			It("returns it", func() {
@@ -333,100 +300,109 @@ var _ = Describe("StackErrors", func() {
 			})
 		})
 
-		Context("with the second argument not a MultiError", func() {
+		Context("with the second argument not a Error", func() {
+			const detail = "foo"
 			BeforeEach(func() {
-				err2 = errors.New("foo")
+				err2 = errors.New(detail)
 			})
 
-			It("wraps it into a MultiError", func() {
+			It("wraps it into a Error", func() {
 				Ω(mErr).ShouldNot(BeNil())
-				Ω(mErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-				mmErr := mErr.(goa.MultiError)
-				Ω(mmErr).Should(HaveLen(1))
-				Ω(mmErr[0]).Should(Equal(err2))
+				Ω(mErr.Detail).Should(Equal(detail))
 			})
 		})
 
 	})
 
-	Context("with the first error a MultiError", func() {
-		var merr goa.MultiError
+	Context("with a non-nil target", func() {
+		const detail = "foo"
+		var status = 42
+		var code = "common"
+		var metaValues map[string]interface{}
 
 		BeforeEach(func() {
-			merr = goa.MultiError{errors.New("foo")}
-			err = merr
+			err = &goa.Error{Detail: detail, Status: status, Code: code, MetaValues: metaValues}
 		})
 
-		Context("with the second error a MultiError", func() {
-			var merr2 goa.MultiError
+		Context("with another Error", func() {
+			const detail2 = "foo2"
+			var status2 = status
+			var code2 = code
+			var metaValues2 map[string]interface{}
+			var mErr2 *goa.Error
 
 			BeforeEach(func() {
-				merr2 = goa.MultiError{errors.New("foo2")}
-				err2 = merr2
+				mErr2 = &goa.Error{Detail: detail2, Status: status2, Code: code2, MetaValues: metaValues2}
+				err2 = mErr2
 			})
 
-			It("concatenates both errors", func() {
-				Ω(mErr).ShouldNot(BeNil())
-				Ω(mErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-				mmErr := mErr.(goa.MultiError)
-				Ω(mmErr).Should(HaveLen(2))
-				Ω(mmErr[0]).Should(Equal(merr[0]))
-				Ω(mmErr[1]).Should(Equal(merr2[0]))
-			})
-		})
-
-		Context("with the second not a MultiError", func() {
-			BeforeEach(func() {
-				err2 = errors.New("foo2")
+			It("concatenates both error details", func() {
+				Ω(mErr.Detail).Should(Equal(detail + "\n" + mErr2.Detail))
 			})
 
-			It("concatenates both errors", func() {
-				Ω(mErr).ShouldNot(BeNil())
-				Ω(mErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-				mmErr := mErr.(goa.MultiError)
-				Ω(mmErr).Should(HaveLen(2))
-				Ω(mmErr[0]).Should(Equal(merr[0]))
-				Ω(mmErr[1]).Should(Equal(err2))
+			It("uses the common status", func() {
+				Ω(mErr.Status).Should(Equal(status))
+			})
+
+			It("uses the common code", func() {
+				Ω(mErr.Code).Should(Equal(code))
+			})
+
+			Context("with different code", func() {
+				BeforeEach(func() {
+					mErr2.Code = code + code
+				})
+
+				It("produces a bad_request error", func() {
+					Ω(mErr.Code).Should(Equal("bad_request"))
+					Ω(mErr.Status).Should(Equal(400))
+					Ω(mErr.Detail).Should(Equal(detail + "\n" + mErr2.Detail))
+				})
+			})
+
+			Context("with different status", func() {
+				BeforeEach(func() {
+					mErr2.Status = status + status
+				})
+
+				It("produces a bad_request error", func() {
+					Ω(mErr.Code).Should(Equal("bad_request"))
+					Ω(mErr.Status).Should(Equal(400))
+					Ω(mErr.Detail).Should(Equal(detail + "\n" + mErr2.Detail))
+				})
+			})
+
+			Context("with metadata with a common key", func() {
+				const commonKey = "foo"
+
+				var metaValues = map[string]interface{}{commonKey: "bar", "foo2": 44}
+				var metaValues2 = map[string]interface{}{commonKey: 43, "baz": 42}
+
+				BeforeEach(func() {
+					mv := make(map[string]interface{}, len(metaValues))
+					for k, v := range metaValues {
+						mv[k] = v
+					}
+					err.MetaValues = mv
+					mErr2.MetaValues = metaValues2
+				})
+
+				It("merges the metadata", func() {
+					Ω(mErr.MetaValues).Should(HaveLen(len(metaValues) + len(metaValues2) - 1))
+					for k, v := range metaValues {
+						if k != commonKey {
+							Ω(mErr.MetaValues).Should(HaveKeyWithValue(k, v))
+						}
+					}
+					for k, v := range metaValues2 {
+						if k != commonKey {
+							Ω(mErr.MetaValues).Should(HaveKeyWithValue(k, v))
+						}
+					}
+					Ω(mErr.MetaValues[commonKey]).Should(Equal(metaValues2[commonKey]))
+				})
 			})
 		})
 	})
 
-	Context("with the first error not a MultiError", func() {
-		BeforeEach(func() {
-			err = errors.New("foo")
-		})
-
-		Context("with the second error a MultiError", func() {
-			var merr2 goa.MultiError
-
-			BeforeEach(func() {
-				merr2 = goa.MultiError{errors.New("foo2")}
-				err2 = merr2
-			})
-
-			It("concatenates both errors", func() {
-				Ω(mErr).ShouldNot(BeNil())
-				Ω(mErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-				mmErr := mErr.(goa.MultiError)
-				Ω(mmErr).Should(HaveLen(2))
-				Ω(mmErr[0]).Should(Equal(err))
-				Ω(mmErr[1]).Should(Equal(merr2[0]))
-			})
-		})
-
-		Context("with the second not a MultiError", func() {
-			BeforeEach(func() {
-				err2 = errors.New("foo2")
-			})
-
-			It("concatenates both errors", func() {
-				Ω(mErr).ShouldNot(BeNil())
-				Ω(mErr).Should(BeAssignableToTypeOf(goa.MultiError{}))
-				mmErr := mErr.(goa.MultiError)
-				Ω(mmErr).Should(HaveLen(2))
-				Ω(mmErr[0]).Should(Equal(err))
-				Ω(mmErr[1]).Should(Equal(err2))
-			})
-		})
-	})
 })

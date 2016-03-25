@@ -153,7 +153,7 @@ func NoSecurityScheme(schemeName string) *Error {
 
 // Error returns the error occurrence details.
 func (e *Error) Error() string {
-	return e.Detail
+	return fmt.Sprintf("%d %s: %s", e.Status, e.Code, e.Detail)
 }
 
 // Meta adds to the error metadata.
@@ -165,6 +165,47 @@ func (e *Error) Meta(keyvals ...interface{}) *Error {
 			v = keyvals[i+1]
 		}
 		e.MetaValues[fmt.Sprintf("%v", k)] = v
+	}
+	return e
+}
+
+// Merge updates an error by merging another into it. It first converts other into an Error
+// if not already one - producing an internal error in that case. The merge algorithm is then:
+//
+// * If any of e or other is an internal error then the result is an internal error
+//
+// * If the status or code of e and other don't match then the result is a 400 "bad_request"
+//
+// The Detail field is updated by concatenating the Detail fields of e and other separated
+// by a newline. The MetaValues field of is updated by merging the map of other MetaValues
+// into e's where values in e with identical keys to values in other get overwritten.
+//
+// Merge returns the updated error. This is useful in case the error was initially nil in
+// which case other is returned.
+func (e *Error) Merge(other error) *Error {
+	if other == nil {
+		return e
+	}
+	o, ok := other.(*Error)
+	if !ok {
+		o = &Error{Status: 500, Code: "internal_error", Detail: other.Error()}
+	}
+	if e == nil {
+		return o
+	}
+	switch {
+	case e.Status == 500 || o.Status == 500:
+		if e.Status != 500 {
+			e.Status = 500
+			e.Code = "internal_error"
+		}
+	case e.Status != o.Status || e.Code != o.Code:
+		e.Status = 400
+		e.Code = "bad_request"
+	}
+	e.Detail = e.Detail + "\n" + o.Detail
+	for n, v := range o.MetaValues {
+		e.MetaValues[n] = v
 	}
 	return e
 }
