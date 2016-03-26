@@ -47,7 +47,7 @@ import (
 //		Consumes("application/json")
 //		Produces("application/gob")
 //		Produces("application/json", func() {   // Custom encoder
-//			Package("github.com/goadesign/encoding/json")
+//			Package("github.com/goadesign/goa/encoding/json")
 //		})
 //		ResponseTemplate("static", func() {	// Response template for use by actions
 //			Description("description")
