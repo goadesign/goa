@@ -17,11 +17,9 @@ DEPEND=\
 	github.com/dgrijalva/jwt-go \
 	github.com/dimfeld/httptreemux \
 	github.com/go-swagger/go-swagger \
-	github.com/goadesign/goa/encoding \
 	github.com/goadesign/goa-cellar \
 	github.com/goadesign/goa.design/tools/godoc2md \
 	github.com/goadesign/goa.design/tools/mdc \
-	github.com/goadesign/middleware \
 	github.com/golang/lint/golint \
 	github.com/manveru/faker \
 	github.com/on99/gocyclo \

@@ -10,7 +10,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/goadesign/goa"
-	gzm "github.com/goadesign/middleware/gzip"
+	gzm "github.com/goadesign/goa/middleware/gzip"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
