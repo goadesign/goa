@@ -400,7 +400,7 @@ type {{ .Name }} struct {
 {{ if .Pointer }}{{ tabs .Depth }}	{{ $varName }} := &{{ .VarName }}
 {{ end }}{{ tabs .Depth }}	{{ .Pkg }} = {{ $varName }}
 {{ tabs .Depth }}} else {
-{{ tabs .Depth }}	err = err.Merge(goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "boolean"))
+{{ tabs .Depth }}	err = goa.MergeErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "boolean"))
 {{ tabs .Depth }}}
 {{ end }}{{ if eq .Attribute.Type.Kind 2 }}{{/*
 
@@ -412,7 +412,7 @@ type {{ .Name }} struct {
 {{ tabs .Depth }}	{{ .Pkg }} = {{ $tmp }}
 {{ else }}{{ tabs .Depth }}	{{ .Pkg }} = {{ .VarName }}
 {{ end }}{{ tabs .Depth }}} else {
-{{ tabs .Depth }}	err = err.Merge(goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "integer"))
+{{ tabs .Depth }}	err = goa.MergeErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "integer"))
 {{ tabs .Depth }}}
 {{ end }}{{ if eq .Attribute.Type.Kind 3 }}{{/*
 
@@ -422,7 +422,7 @@ type {{ .Name }} struct {
 {{ if .Pointer }}{{ tabs .Depth }}	{{ $varName }} := &{{ .VarName }}
 {{ end }}{{ tabs .Depth }}	{{ .Pkg }} = {{ $varName }}
 {{ tabs .Depth }}} else {
-{{ tabs .Depth }}	err = err.Merge(goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "number"))
+{{ tabs .Depth }}	err = goa.MergeErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "number"))
 {{ tabs .Depth }}}
 {{ end }}{{ if eq .Attribute.Type.Kind 4 }}{{/*
 
@@ -436,7 +436,7 @@ type {{ .Name }} struct {
 {{ if .Pointer }}{{ tabs .Depth }}	{{ $varName }} := &{{ .VarName }}
 {{ end }}{{ tabs .Depth }}	{{ .Pkg }} = {{ $varName }}
 {{ tabs .Depth }}} else {
-{{ tabs .Depth }}	err = err.Merge(goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "datetime"))
+{{ tabs .Depth }}	err = goa.MergeErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "datetime"))
 {{ tabs .Depth }}}
 {{ end }}{{ if eq .Attribute.Type.Kind 6 }}{{/*
 
@@ -459,12 +459,12 @@ type {{ .Name }} struct {
 // New{{ goify .Name true }} parses the incoming request URL and body, performs validations and creates the
 // context used by the {{ .ResourceName }} controller {{ .ActionName }} action.
 func New{{ .Name }}(ctx context.Context) (*{{ .Name }}, error) {
-	var err *goa.Error
+	var err error
 	req := goa.ContextRequest(ctx)
 	rctx := {{ .Name }}{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
 {{ if .Headers }}{{ $headers := .Headers }}{{ range $name, $att := $headers.Type.ToObject }}	raw{{ goify $name true }} := req.Header.Get("{{ $name }}")
 {{ if $headers.IsRequired $name }}	if raw{{ goify $name true }} == "" {
-		err = err.Merge(goa.MissingHeaderError("{{ $name }}"))
+		err = goa.MergeErrors(err, goa.MissingHeaderError("{{ $name }}"))
 	} else {
 {{ else }}	if raw{{ goify $name true }} != "" {
 {{ end }}{{ $validation := validationChecker $att ($headers.IsNonZero $name) ($headers.IsRequired $name) (printf "raw%s" (goify $name true)) $name 2 }}{{/*
@@ -472,7 +472,7 @@ func New{{ .Name }}(ctx context.Context) (*{{ .Name }}, error) {
 {{ end }}	}
 {{ end }}{{ end }}{{ if.Params }}{{ range $name, $att := .Params.Type.ToObject }}	raw{{ goify $name true }} := req.Params.Get("{{ $name }}")
 {{ $mustValidate := $.MustValidate $name }}{{ if $mustValidate }}	if raw{{ goify $name true }} == "" {
-		err = err.Merge(goa.MissingParamError("{{ $name }}"))
+		err = goa.MergeErrors(err, goa.MissingParamError("{{ $name }}"))
 	} else {
 {{ else }}	if raw{{ goify $name true }} != "" {
 {{ end }}{{ template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) (printf "rctx.%s" (goify $name true)) 2) }}{{/*
@@ -523,7 +523,7 @@ type {{ gotypename .Payload nil 1 }} {{ gotypedef .Payload 0 true }}
 
 {{ $validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1 }}{{ if $validation }}// Validate runs the validation rules defined in the design.
 func (payload {{ gotyperef .Payload .Payload.AllRequired 0 }}) Validate() error {
-	var err *goa.Error
+	var err error
 {{ $validation }}
        return err
 }{{ end }}
@@ -655,7 +655,7 @@ type {{ $typeName }} {{ gotypedef . 0 true }}
 
 {{ $validation := recursiveValidate .AttributeDefinition false false "mt" "response" 1 }}{{ if $validation }}// Validate validates the {{ $typeName }} media type instance.
 func (mt {{ gotyperef . .AllRequired 0 }}) Validate() error {
-	var err *goa.Error
+	var err error
 {{ $validation }}
 	return err
 }
@@ -669,7 +669,7 @@ type {{ $typeName }} {{ gotypedef . 0 true }}
 
 {{ $validation := recursiveValidate .AttributeDefinition false false "ut" "response" 1 }}{{ if $validation }}// Validate validates the {{ $typeName }} type instance.
 func (ut {{ gotyperef . .AllRequired 0 }}) Validate() error {
-	var err *goa.Error
+	var err error
 {{ $validation }}
 	return err
 }{{ end }}

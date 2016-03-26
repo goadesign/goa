@@ -359,7 +359,7 @@ type GetWidgetContext struct {
 // NewGetWidgetContext parses the incoming request URL and body, performs validations and creates the
 // context used by the Widget controller get action.
 func NewGetWidgetContext(ctx context.Context) (*GetWidgetContext, error) {
-	var err *goa.Error
+	var err error
 	req := goa.ContextRequest(ctx)
 	rctx := GetWidgetContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
 	rawID := req.Params.Get("id")

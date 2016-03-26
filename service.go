@@ -232,6 +232,7 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 	middleware := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		if !ContextResponse(ctx).Written() {
 			if err := hdlr(ctx, rw, req); err != nil {
+				ContextService(ctx).LogInfo("ERROR", "err", err)
 				ctrl.HandleError(ctx, rw, req, err)
 			}
 		}

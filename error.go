@@ -170,7 +170,7 @@ func (e *Error) Meta(keyvals ...interface{}) *Error {
 	return e
 }
 
-// Merge updates an error by merging another into it. It first converts other into an Error
+// MergeErrors updates an error by merging another into it. It first converts other into an Error
 // if not already one - producing an internal error in that case. The merge algorithm is then:
 //
 // * If any of e or other is an internal error then the result is an internal error
@@ -183,17 +183,18 @@ func (e *Error) Meta(keyvals ...interface{}) *Error {
 //
 // Merge returns the updated error. This is useful in case the error was initially nil in
 // which case other is returned.
-func (e *Error) Merge(other error) *Error {
+func MergeErrors(err, other error) error {
+	if err == nil {
+		if other == nil {
+			return nil
+		}
+		return asError(other)
+	}
 	if other == nil {
-		return e
+		return asError(err)
 	}
-	o, ok := other.(*Error)
-	if !ok {
-		o = &Error{Status: 500, Code: "internal_error", Detail: other.Error()}
-	}
-	if e == nil {
-		return o
-	}
+	e := asError(err)
+	o := asError(other)
 	switch {
 	case e.Status == 500 || o.Status == 500:
 		if e.Status != 500 {
@@ -207,6 +208,14 @@ func (e *Error) Merge(other error) *Error {
 	e.Detail = e.Detail + "\n" + o.Detail
 	for n, v := range o.MetaValues {
 		e.MetaValues[n] = v
+	}
+	return e
+}
+
+func asError(err error) *Error {
+	e, ok := err.(*Error)
+	if !ok {
+		return &Error{Status: 500, Code: "internal_error", Detail: err.Error()}
 	}
 	return e
 }

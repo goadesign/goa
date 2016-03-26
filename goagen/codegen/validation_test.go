@@ -111,38 +111,38 @@ var _ = Describe("validation code generation", func() {
 const (
 	enumValCode = `	if val != nil {
 		if !(*val == 1 || *val == 2 || *val == 3) {
-			err = err.Merge(goa.InvalidEnumValueError(` + "`context`" + `, *val, []interface{}{1, 2, 3}))
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(` + "`context`" + `, *val, []interface{}{1, 2, 3}))
 		}
 	}`
 
 	patternValCode = `	if val != nil {
 		if ok := goa.ValidatePattern(` + "`.*`" + `, *val); !ok {
-			err = err.Merge(goa.InvalidPatternError(` + "`context`" + `, *val, ` + "`.*`" + `))
+			err = goa.MergeErrors(err, goa.InvalidPatternError(` + "`context`" + `, *val, ` + "`.*`" + `))
 		}
 	}`
 
 	minValCode = `	if val != nil {
 		if *val < 0 {
-			err = err.Merge(goa.InvalidRangeError(` + "`" + `context` + "`" + `, *val, 0, true))
+			err = goa.MergeErrors(err, goa.InvalidRangeError(` + "`" + `context` + "`" + `, *val, 0, true))
 		}
 	}`
 
 	embeddedValCode = `	if val.Foo != nil {
 		if val.Foo.Bar != nil {
 			if !(*val.Foo.Bar == 1 || *val.Foo.Bar == 2 || *val.Foo.Bar == 3) {
-				err = err.Merge(goa.InvalidEnumValueError(` + "`" + `context.foo.bar` + "`" + `, *val.Foo.Bar, []interface{}{1, 2, 3}))
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError(` + "`" + `context.foo.bar` + "`" + `, *val.Foo.Bar, []interface{}{1, 2, 3}))
 			}
 		}
 	}`
 
 	embeddedRequiredValCode = `	if val.Foo == nil {
-		err = err.Merge(goa.MissingAttributeError(` + "`context`" + `, "foo"))
+		err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`context`" + `, "foo"))
 	}
 
 	if val.Foo != nil {
 		if val.Foo.Bar != nil {
 			if !(*val.Foo.Bar == 1 || *val.Foo.Bar == 2 || *val.Foo.Bar == 3) {
-				err = err.Merge(goa.InvalidEnumValueError(` + "`" + `context.foo.bar` + "`" + `, *val.Foo.Bar, []interface{}{1, 2, 3}))
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError(` + "`" + `context.foo.bar` + "`" + `, *val.Foo.Bar, []interface{}{1, 2, 3}))
 			}
 		}
 	}`
