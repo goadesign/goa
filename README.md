@@ -1,4 +1,4 @@
-# <img src="http://goa.design/img/goa-logo.svg"> 
+# <img src="http://goa.design/img/goa-logo.svg">
 
 goa is a framework for building microservices in Go using a unique design-first approach.
 
@@ -232,8 +232,8 @@ Can't wait to give it a try? the easiest way is to follow the short
 
 ### Middleware
 
-The [middleware](https://github.com/goadesign/middleware) repo provides a number of
-middlewares covering most common needs. It also provides a good source of examples for writing new
+The [middleware](https://github.com/goadesign/goa/tree/master/middleware) package provides a number
+of middlewares covering common needs. It also provides a good source of examples for writing new
 middlewares.
 
 ### Examples

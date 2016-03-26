@@ -10,7 +10,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/goadesign/goa"
-	"github.com/goadesign/middleware"
+	"github.com/goadesign/goa/middleware"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
