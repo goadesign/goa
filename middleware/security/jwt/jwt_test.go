@@ -36,7 +36,7 @@ var _ = Describe("Middleware", func() {
 		// HS256 {"scopes":"scope1","admin":true}, signed with "keys"
 		request.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzY29wZXMiOiJzY29wZTEiLCJhZG1pbiI6dHJ1ZX0.UCvEfbD_yuS5dCZidxZgogVi2yF0ZVecMsQQbY1HJy0")
 		handler = func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-			fetchedToken = jwt.RequestJWT(ctx)
+			fetchedToken = jwt.ContextJWT(ctx)
 			return nil
 		}
 		scopesFetcher = func(ctx context.Context) []string {
