@@ -151,7 +151,7 @@ var _ = Describe("Service", func() {
 				errorHandlerCalled := false
 
 				BeforeEach(func() {
-					s.ErrorHandler = TErrorHandler(&errorHandlerCalled)
+					s.Use(TErrorHandler(&errorHandlerCalled))
 				})
 
 				Context("by returning an error", func() {
@@ -219,10 +219,12 @@ var _ = Describe("Service", func() {
 	})
 })
 
-func TErrorHandler(witness *bool) goa.ErrorHandler {
-	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request, err error) {
+func TErrorHandler(witness *bool) goa.Middleware {
+	m, _ := goa.NewMiddleware(func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		*witness = true
-	}
+		return nil
+	})
+	return m
 }
 
 func TMiddleware(witness *bool) goa.Middleware {
