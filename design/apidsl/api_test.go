@@ -179,7 +179,7 @@ var _ = Describe("API", func() {
 			})
 
 			Context("using a custom encoding package", func() {
-				const pkgPath = "github.com/goadesign/encoding/json"
+				const pkgPath = "github.com/goadesign/goa/encoding/json"
 				const fn = "NewFoo"
 
 				BeforeEach(func() {
