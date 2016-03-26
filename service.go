@@ -8,10 +8,14 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"golang.org/x/net/context"
+)
+
+const (
+	// ErrorMediaIdentifier is the media type identifier used for error responses.
+	ErrorMediaIdentifier = "application/vnd.api.error+json"
 )
 
 type (
@@ -46,10 +50,8 @@ type (
 		Context context.Context
 		// Middleware chain
 		Middleware []Middleware
-		// Service-wide error handler
-		ErrorHandler ErrorHandler
 
-		cancel                context.CancelFunc
+		cancel                context.CancelFunc      // Service context cancel signal trigger
 		decoderPools          map[string]*decoderPool // Registered decoders for the service
 		encoderPools          map[string]*encoderPool // Registered encoders for the service
 		encodableContentTypes []string                // List of contentTypes for response negotiation
@@ -57,10 +59,9 @@ type (
 
 	// Controller provides the common state and behavior for generated controllers.
 	Controller struct {
-		Name         string          // Controller resource name
-		Context      context.Context // Controller root context
-		ErrorHandler ErrorHandler    // Controller specific error handler if any
-		Middleware   []Middleware    // Controller specific middleware if any
+		Name       string          // Controller resource name
+		Context    context.Context // Controller root context
+		Middleware []Middleware    // Controller specific middleware if any
 	}
 
 	// Handler defines the controller handler signatures.
@@ -85,10 +86,9 @@ func New(name string) *Service {
 	ctx := UseLogger(context.Background(), NewStdLogger(stdlog))
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		Name:         name,
-		ErrorHandler: DefaultErrorHandler,
-		Context:      ctx,
-		Mux:          NewMux(),
+		Name:    name,
+		Context: ctx,
+		Mux:     NewMux(),
 
 		cancel:                cancel,
 		decoderPools:          map[string]*decoderPool{},
@@ -143,10 +143,9 @@ func (service *Service) ListenAndServeTLS(addr, certFile, keyFile string) error 
 func (service *Service) NewController(resName string) *Controller {
 	ctx := context.WithValue(service.Context, serviceKey, service)
 	return &Controller{
-		Name:         resName,
-		Middleware:   service.Middleware,
-		ErrorHandler: service.ErrorHandler,
-		Context:      context.WithValue(ctx, "ctrl", resName),
+		Name:       resName,
+		Middleware: service.Middleware,
+		Context:    context.WithValue(ctx, "ctrl", resName),
 	}
 }
 
@@ -205,23 +204,6 @@ func (ctrl *Controller) Use(m Middleware) {
 	ctrl.Middleware = append(ctrl.Middleware, m)
 }
 
-// HandleError invokes the controller error handler or - if there isn't one - the service error
-// handler.
-func (ctrl *Controller) HandleError(ctx context.Context, rw http.ResponseWriter, req *http.Request, err error) {
-	status := 500
-	if e, ok := err.(*Error); ok {
-		status = e.Status
-	}
-	go IncrCounter([]string{"goa", "handler", "error", strconv.Itoa(status)}, 1.0)
-	if ctrl.ErrorHandler != nil {
-		ctrl.ErrorHandler(ctx, rw, req, err)
-		return
-	}
-	if h := ContextService(ctx).ErrorHandler; h != nil {
-		h(ctx, rw, req, err)
-	}
-}
-
 // MuxHandler wraps a request handler into a MuxHandler. The MuxHandler initializes the
 // request context by loading the request state, invokes the handler and in case of error invokes
 // the controller (if there is one) or Service error handler.
@@ -231,10 +213,7 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 	// Setup middleware outside of closure
 	middleware := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		if !ContextResponse(ctx).Written() {
-			if err := hdlr(ctx, rw, req); err != nil {
-				ContextService(ctx).LogInfo("ERROR", "err", err)
-				ctrl.HandleError(ctx, rw, req, err)
-			}
+			return hdlr(ctx, rw, req)
 		}
 		return nil
 	}
@@ -258,8 +237,8 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 		handler := middleware
 		if err != nil {
 			handler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-				ctrl.ErrorHandler(ctx, rw, req, ErrInvalidEncoding(err))
-				return nil
+				rw.Header().Set("Content-Type", ErrorMediaIdentifier)
+				return ContextResponse(ctx).Send(ctx, 400, ErrInvalidEncoding(err))
 			}
 			for i := range chain {
 				handler = chain[ml-i-1](handler)
@@ -267,46 +246,18 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 		}
 
 		// Invoke middleware chain, wrap writer to capture response status and length
-		handler(ctx, ContextResponse(ctx), req)
-	}
-}
-
-// DefaultErrorHandler returns a response with status 500 or the status specified in the error if
-// an instance of HTTPStatusError.
-// It writes the error message to the response body in both cases.
-func DefaultErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.Request, e error) {
-	status := 500
-	var respBody interface{}
-	switch err := e.(type) {
-	case *Error:
-		status = err.Status
-		respBody = err
-	default:
-		respBody = e.Error()
-	}
-	if status == 500 {
-		LogError(ctx, e.Error())
-	}
-	ContextResponse(ctx).Send(ctx, status, respBody)
-}
-
-// TerseErrorHandler behaves like DefaultErrorHandler except that it does not write to the response
-// body for internal errors.
-func TerseErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.Request, e error) {
-	status := 500
-	var respBody interface{}
-	switch err := e.(type) {
-	case *Error:
-		status = err.Status
-		if status != 500 {
-			respBody = err
+		if err := handler(ctx, ContextResponse(ctx), req); err != nil {
+			LastResortErrorHandler(ctx, rw, req, err)
 		}
 	}
-	if respBody == nil {
-		respBody = "internal error"
-	}
-	if status == 500 {
-		LogError(ctx, e.Error())
-	}
-	ContextResponse(ctx).Send(ctx, status, respBody)
+}
+
+// LastResortErrorHandler is the last thing that can handle an error propagating up the middleware
+// chain and turns all errors into a response indicating an internal error.
+// Ideally all errors are handled at a lower level in the middleware chain so they
+// can be logged properly.
+func LastResortErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.Request, e error) {
+	LogError(ctx, "Last resort error handler", "err", e)
+	respBody := fmt.Sprintf("Internal error: %s", e) // Sprintf catches panics
+	ContextResponse(ctx).Send(ctx, 500, respBody)
 }

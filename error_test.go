@@ -273,7 +273,6 @@ var _ = Describe("Merge", func() {
 
 	Context("with two nil errors", func() {
 		It("returns a nil error", func() {
-			Ω(mErr).Should(BeAssignableToTypeOf(&goa.Error{}))
 			Ω(mErr).Should(BeNil())
 		})
 	})

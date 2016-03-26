@@ -45,9 +45,7 @@ var _ = Describe("Gzip", func() {
 		req, err = http.NewRequest("POST", "/foo/bar", strings.NewReader(`{"payload":42}`))
 		req.Header.Set("Accept-Encoding", "gzip")
 		Ω(err).ShouldNot(HaveOccurred())
-		rw = &TestResponseWriter{
-			ParentHeader: http.Header{},
-		}
+		rw = &TestResponseWriter{ParentHeader: make(http.Header)}
 
 		ctx = goa.NewContext(nil, rw, req, nil)
 		goa.ContextRequest(ctx).Payload = payload

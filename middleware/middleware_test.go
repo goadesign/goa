@@ -12,6 +12,7 @@ import (
 func newService(logger goa.Logger) *goa.Service {
 	service := goa.New("test")
 	service.Encoder(goa.NewJSONEncoder, "*/*")
+	service.Decoder(goa.NewJSONDecoder, "*/*")
 	service.UseLogger(logger)
 	return service
 }
@@ -46,6 +47,11 @@ type testResponseWriter struct {
 	ParentHeader http.Header
 	Body         []byte
 	Status       int
+}
+
+func newTestResponseWriter() *testResponseWriter {
+	h := make(http.Header)
+	return &testResponseWriter{ParentHeader: h}
 }
 
 func (t *testResponseWriter) Header() http.Header {
