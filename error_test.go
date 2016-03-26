@@ -255,17 +255,20 @@ var _ = Describe("InvalidLengthError", func() {
 })
 
 var _ = Describe("Merge", func() {
-	var err *goa.Error
-	var err2 error
+	var err, err2 error
 	var mErr *goa.Error
 
 	BeforeEach(func() {
 		err = nil
 		err2 = nil
+		mErr = nil
 	})
 
 	JustBeforeEach(func() {
-		mErr = err.Merge(err2)
+		e := goa.MergeErrors(err, err2)
+		if e != nil {
+			mErr = e.(*goa.Error)
+		}
 	})
 
 	Context("with two nil errors", func() {
@@ -383,7 +386,7 @@ var _ = Describe("Merge", func() {
 					for k, v := range metaValues {
 						mv[k] = v
 					}
-					err.MetaValues = mv
+					err.(*goa.Error).MetaValues = mv
 					mErr2.MetaValues = metaValues2
 				})
 
