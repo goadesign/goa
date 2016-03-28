@@ -41,6 +41,10 @@ var (
 	// ErrBadRequest is a generic bad request error.
 	ErrBadRequest = NewErrorClass("bad_request", 400)
 
+	// ErrInvalidFile is the error produced by ServeFiles when requested to serve non-existant
+	// or non-readable files.
+	ErrInvalidFile = NewErrorClass("invalid_file", 400)
+
 	// ErrInternal is the class of error used for non Error.
 	ErrInternal = NewErrorClass("internal", 500)
 )

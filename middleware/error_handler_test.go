@@ -19,20 +19,20 @@ import (
 var _ = Describe("ErrorHandler", func() {
 	var service *goa.Service
 	var h goa.Handler
-	var suppressInternal bool
+	var verbose bool
 
 	var rw *testResponseWriter
 
 	BeforeEach(func() {
 		service = nil
 		h = nil
-		suppressInternal = false
+		verbose = true
 		rw = nil
 	})
 
 	JustBeforeEach(func() {
 		rw = newTestResponseWriter()
-		eh := middleware.ErrorHandler(suppressInternal)(h)
+		eh := middleware.ErrorHandler(verbose)(h)
 		req, err := http.NewRequest("GET", "/foo", nil)
 		Ω(err).ShouldNot(HaveOccurred())
 		ctx := newContext(service, rw, req, nil)
@@ -57,12 +57,12 @@ var _ = Describe("ErrorHandler", func() {
 			Ω(string(rw.Body)).Should(Equal(`"boom"` + "\n"))
 		})
 
-		Context("suppressing internal errors", func() {
+		Context("not verbose", func() {
 			BeforeEach(func() {
-				suppressInternal = true
+				verbose = false
 			})
 
-			It("suppresses the error details", func() {
+			It("hides the error details", func() {
 				var decoded goa.Error
 				Ω(rw.Status).Should(Equal(500))
 				Ω(rw.ParentHeader["Content-Type"]).Should(Equal([]string{goa.ErrorMediaIdentifier}))
