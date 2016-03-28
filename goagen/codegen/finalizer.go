@@ -131,10 +131,8 @@ func printVal(t design.DataType, val interface{}) string {
 }
 
 const (
-	// assignmentTmpl = `if {{ .target }}.{{ goify .field true }} == nil {
-	// {{ tabs .depth }}{{ .target }}.{{ goify .field true }} = {{ .defaultVal }}
-	// }`
-	assignmentTmpl = `{{ if .catt.Type.IsPrimitive }}{{ $defaultName := (print "default" (goify .field true)) }}{{ tabs .depth }}var {{ $defaultName }} = {{ .defaultVal }}
+	assignmentTmpl = `{{ if .catt.Type.IsPrimitive }}{{ $defaultName := (print "default" (goify .field true)) }}{{/*
+*/}}{{ tabs .depth }}var {{ $defaultName }} = {{ .defaultVal }}
 {{ tabs .depth }}if {{ .target }}.{{ goify .field true }} == nil {
 {{ tabs .depth }}{{ .target }}.{{ goify .field true }} = &{{ $defaultName }}}{{ else }}{{ tabs .depth }}if {{ .target }}.{{ goify .field true }} == nil {
 {{ tabs .depth }}{{ .target }}.{{ goify .field true }} = {{ .defaultVal }}
