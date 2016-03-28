@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"golang.org/x/net/context"
@@ -149,6 +150,12 @@ func (service *Service) NewController(resName string) *Controller {
 	}
 }
 
+// ServeFiles create a "FileServer" controller and calls ServerFiles on it.
+func (service *Service) ServeFiles(path, filename string) error {
+	ctrl := service.NewController("FileServer")
+	return ctrl.ServeFiles(path, filename)
+}
+
 // ServeFiles replies to the request with the contents of the named file or directory. The logic
 // for what to do when the filename points to a file vs. a directory is the same as the standard
 // http package ServeFile function. The path may end with a wildcard that matches the rest of the
@@ -160,40 +167,33 @@ func (service *Service) NewController(resName string) *Controller {
 //	ServeFiles("/assets/*filepath", "/www/data/assets")
 // returns the content of the file "/www/data/assets/x/y/z" when requests are sent to
 // "/assets/x/y/z".
-func (service *Service) ServeFiles(path, filename string) error {
+func (ctrl *Controller) ServeFiles(path, filename string) error {
 	if strings.Contains(path, ":") {
 		return fmt.Errorf("path may only include wildcards that match the entire end of the URL (e.g. *filepath)")
 	}
-	if _, err := os.Stat(filename); err != nil {
-		return fmt.Errorf("ServeFiles: %s", err)
-	}
-	rel := filename
-	if wd, err := os.Getwd(); err == nil {
-		if abs, err := filepath.Abs(filename); err == nil {
-			if r, err := filepath.Rel(wd, abs); err == nil {
-				rel = r
-			}
+	LogInfo(ctrl.Context, "mount file", "name", filename, "route", fmt.Sprintf("GET %s", path))
+	handler := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		if !ContextResponse(ctx).Written() {
+			return ctrl.fileServer(filename, path)(ctx, rw, req)
 		}
-	}
-	service.LogInfo("mount file", "filepath", rel, "route", fmt.Sprintf("GET %s", path))
-	ctrl := service.NewController("FileServer")
-	var wc string
-	if idx := strings.Index(path, "*"); idx > -1 && idx < len(path)-1 {
-		wc = path[idx+1:]
-	}
-	handle := ctrl.MuxHandler("Serve", func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-		fullpath := filename
-		r := ContextRequest(ctx)
-		if len(wc) > 0 {
-			if m, ok := r.Params[wc]; ok {
-				fullpath = filepath.Join(fullpath, m[0])
-			}
-		}
-		service.LogInfo("serve file", "filepath", fullpath, "path", r.URL.Path)
-		http.ServeFile(ContextResponse(ctx), r.Request, fullpath)
 		return nil
-	}, nil)
-	service.Mux.Handle("GET", path, handle)
+	}
+	chain := ctrl.Middleware
+	ml := len(chain)
+	for i := range chain {
+		handler = chain[ml-i-1](handler)
+	}
+	handle := func(rw http.ResponseWriter, req *http.Request, params url.Values) {
+		baseCtx := LogWith(ctrl.Context, "action", "serve")
+		ctx := NewContext(baseCtx, rw, req, params)
+		// Invoke middleware chain, errors should be caught earlier, e.g. by ErrorHandler middleware
+		if err := handler(ctx, rw, req); err != nil {
+			LogError(ctx, "uncaught error", "err", err)
+			respBody := fmt.Sprintf("internal error: %s", err) // Sprintf catches panics
+			ContextResponse(ctx).Send(ctx, 500, respBody)
+		}
+	}
+	ContextService(ctrl.Context).Mux.Handle("GET", path, handle)
 	return nil
 }
 
@@ -247,9 +247,99 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 
 		// Invoke middleware chain, errors should be caught earlier, e.g. by ErrorHandler middleware
 		if err := handler(ctx, ContextResponse(ctx), req); err != nil {
-			LogError(ctx, "Last resort error handler", "err", err)
+			LogError(ctx, "uncaught error", "err", err)
 			respBody := fmt.Sprintf("Internal error: %s", err) // Sprintf catches panics
 			ContextResponse(ctx).Send(ctx, 500, respBody)
 		}
 	}
 }
+
+// fileServer returns a handler that serves files under the given filename for the given route path
+func (ctrl *Controller) fileServer(filename, path string) Handler {
+	var wc string
+	if idx := strings.Index(path, "*"); idx > -1 && idx < len(path)-1 {
+		wc = path[idx+1:]
+	}
+	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		fname := filename
+		if len(wc) > 0 {
+			if m, ok := ContextRequest(ctx).Params[wc]; ok {
+				fname = filepath.Join(filename, m[0])
+			}
+		}
+		LogInfo(ctrl.Context, "serve file", "name", fname, "route", req.URL.Path)
+		dir, name := filepath.Split(fname)
+		fs := http.Dir(dir)
+		f, err := fs.Open(name)
+		if err != nil {
+			return ErrInvalidFile(err)
+		}
+		defer f.Close()
+		d, err := f.Stat()
+		if err != nil {
+			return ErrInvalidFile(err)
+		}
+		// use contents of index.html for directory, if present
+		if d.IsDir() {
+			index := strings.TrimSuffix(name, "/") + "/index.html"
+			ff, err := fs.Open(index)
+			if err == nil {
+				defer ff.Close()
+				dd, err := ff.Stat()
+				if err == nil {
+					name = index
+					d = dd
+					f = ff
+				}
+			}
+		}
+
+		// serveContent will check modification time
+		// Still a directory? (we didn't find an index.html file)
+		if d.IsDir() {
+			return dirList(rw, f)
+		}
+		http.ServeContent(rw, req, d.Name(), d.ModTime(), f)
+		return nil
+	}
+}
+
+var replacer = strings.NewReplacer(
+	"&", "&amp;",
+	"<", "&lt;",
+	">", "&gt;",
+	// "&#34;" is shorter than "&quot;".
+	`"`, "&#34;",
+	// "&#39;" is shorter than "&apos;" and apos was not in HTML until HTML5.
+	"'", "&#39;",
+)
+
+func dirList(w http.ResponseWriter, f http.File) error {
+	dirs, err := f.Readdir(-1)
+	if err != nil {
+		return err
+	}
+	sort.Sort(byName(dirs))
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprintf(w, "<pre>\n")
+	for _, d := range dirs {
+		name := d.Name()
+		if d.IsDir() {
+			name += "/"
+		}
+		// name may contain '?' or '#', which must be escaped to remain
+		// part of the URL path, and not indicate the start of a query
+		// string or fragment.
+		url := url.URL{Path: name}
+		fmt.Fprintf(w, "<a href=\"%s\">%s</a>\n", url.String(), replacer.Replace(name))
+	}
+	fmt.Fprintf(w, "</pre>\n")
+	return nil
+}
+
+type byName []os.FileInfo
+
+func (s byName) Len() int           { return len(s) }
+func (s byName) Less(i, j int) bool { return s[i].Name() < s[j].Name() }
+func (s byName) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
