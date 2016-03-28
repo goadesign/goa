@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"golang.org/x/net/context"
 
@@ -39,9 +41,12 @@ var _ = Describe("ErrorHandler", func() {
 	})
 
 	Context("with a handler returning a Go error", func() {
+		var requestCtx context.Context
+
 		BeforeEach(func() {
 			service = newService(nil)
 			h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+				requestCtx = ctx
 				return errors.New("boom")
 			}
 		})
@@ -63,9 +68,11 @@ var _ = Describe("ErrorHandler", func() {
 				Ω(rw.ParentHeader["Content-Type"]).Should(Equal([]string{goa.ErrorMediaIdentifier}))
 				err := service.Decode(&decoded, bytes.NewBuffer(rw.Body), "application/json")
 				Ω(err).ShouldNot(HaveOccurred())
-				Ω(fmt.Sprintf("%v", decoded)).Should(Equal(fmt.Sprintf("%v", *goa.ErrInternal("internal error, detail suppressed"))))
+				msg := fmt.Sprintf("%v", *goa.ErrInternal(`internal error [zzz]`))
+				msg = regexp.QuoteMeta(msg)
+				msg = strings.Replace(msg, "zzz", ".+", 1)
+				Ω(fmt.Sprintf("%v", decoded)).Should(MatchRegexp(msg))
 			})
-
 		})
 	})
 

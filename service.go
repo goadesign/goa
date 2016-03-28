@@ -245,19 +245,11 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 			}
 		}
 
-		// Invoke middleware chain, wrap writer to capture response status and length
+		// Invoke middleware chain, errors should be caught earlier, e.g. by ErrorHandler middleware
 		if err := handler(ctx, ContextResponse(ctx), req); err != nil {
-			LastResortErrorHandler(ctx, rw, req, err)
+			LogError(ctx, "Last resort error handler", "err", err)
+			respBody := fmt.Sprintf("Internal error: %s", err) // Sprintf catches panics
+			ContextResponse(ctx).Send(ctx, 500, respBody)
 		}
 	}
-}
-
-// LastResortErrorHandler is the last thing that can handle an error propagating up the middleware
-// chain and turns all errors into a response indicating an internal error.
-// Ideally all errors are handled at a lower level in the middleware chain so they
-// can be logged properly.
-func LastResortErrorHandler(ctx context.Context, rw http.ResponseWriter, req *http.Request, e error) {
-	LogError(ctx, "Last resort error handler", "err", e)
-	respBody := fmt.Sprintf("Internal error: %s", e) // Sprintf catches panics
-	ContextResponse(ctx).Send(ctx, 500, respBody)
 }

@@ -20,8 +20,7 @@ func ErrorHandler(suppressInternal bool) goa.Middleware {
 				return nil
 			}
 
-			goa.LogInfo(ctx, "Default error handler", "err", e)
-			status := 500
+			status := http.StatusInternalServerError
 			var respBody interface{}
 			if err, ok := e.(*goa.Error); ok {
 				status = err.Status
@@ -32,10 +31,15 @@ func ErrorHandler(suppressInternal bool) goa.Middleware {
 				rw.Header().Set("Content-Type", "text/plain")
 			}
 			if status >= 500 && status < 600 {
-				goa.LogError(ctx, e.Error())
+				reqID := ctx.Value(reqIDKey)
+				if reqID == nil {
+					reqID = shortID()
+					ctx = context.WithValue(ctx, reqIDKey, reqID)
+				}
+				goa.LogError(ctx, "uncaught error", "id", reqID, "msg", respBody)
 				if suppressInternal {
 					rw.Header().Set("Content-Type", goa.ErrorMediaIdentifier)
-					respBody = goa.ErrInternal("internal error, detail suppressed")
+					respBody = goa.ErrInternal("internal error [%s]", reqID)
 				}
 			}
 			return goa.ContextResponse(ctx).Send(ctx, status, respBody)
