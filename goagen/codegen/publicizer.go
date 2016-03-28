@@ -60,7 +60,7 @@ func RecursivePublicizer(att *design.AttributeDefinition, source, target string,
 				depth,
 				false,
 			)
-			publication = fmt.Sprintf("if %s.%s != nil {\n%s\n}", target, Goify(n, true), publication)
+			publication = fmt.Sprintf("if %s.%s != nil {\n%s\n}", source, Goify(n, true), publication)
 			publications = append(publications, publication)
 			return nil
 		})
@@ -109,12 +109,14 @@ const (
 
 	objectPublicizeTmpl = `{{ tabs .depth }}{{ .targetField }} {{ if .init }}:{{ end }}= {{ .sourceField }}.Publicize()`
 
-	arrayPublicizeTmpl = `{{ tabs .depth }}{{ .targetField }} = make({{ gotyperef .att.Type .att.AllRequired .depth false }}, len({{ .sourceField }})){{ $i := printf "%s%d" "i" .depth }}{{ $elem := printf "%s%d" "elem" .depth }}
+	arrayPublicizeTmpl = `{{ tabs .depth }}{{ .targetField }} {{ if .init }}:{{ end }}= make({{ gotyperef .att.Type .att.AllRequired .depth false }}, len({{ .sourceField }})){{/*
+*/}}{{ $i := printf "%s%d" "i" .depth }}{{ $elem := printf "%s%d" "elem" .depth }}
 {{ tabs .depth }}for {{ $i }}, {{ $elem }} := range {{ .sourceField }} {
 {{ tabs .depth }}	{{ publicizer .elemType $elem (printf "%s[%s]" .targetField $i) .dereference (add .depth 1) false }}
 {{ tabs .depth }}}`
 
-	hashPublicizeTmpl = `{{ tabs .depth }}{{ .targetField }} = make({{ gotyperef .att.Type .att.AllRequired .depth false }}, len({{ .sourceField }})){{ $k := printf "%s%d" "k" .depth }}{{ $v := printf "%s%d" "v" .depth }}
+	hashPublicizeTmpl = `{{ tabs .depth }}{{ .targetField }} {{ if .init }}:{{ end }}= make({{ gotyperef .att.Type .att.AllRequired .depth false }}, len({{ .sourceField }})){{/*
+*/}}{{ $k := printf "%s%d" "k" .depth }}{{ $v := printf "%s%d" "v" .depth }}
 {{ tabs .depth }}for {{ $k }}, {{ $v }} := range {{ .sourceField }} { {{ $pubk := printf "%s%s" "pub" $k }}{{ $pubv := printf "%s%s" "pub" $v }}
 {{ tabs .depth }}	{{ publicizer .keyType $k $pubk .dereference (add .depth 1) true }}
 {{ tabs .depth }}	{{ publicizer .elemType $v $pubv .dereference (add .depth 1) true }}

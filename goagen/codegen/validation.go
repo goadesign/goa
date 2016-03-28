@@ -122,12 +122,12 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required bool, t
 func ValidationChecker(att *design.AttributeDefinition, nonzero, required bool, target, context string, depth int, private bool) string {
 	t := target
 	isPointer := !required && !nonzero
-	if isPointer && att.Type.IsPrimitive() {
+	if private || (isPointer && att.Type.IsPrimitive()) {
 		t = "*" + t
 	}
 	data := map[string]interface{}{
 		"attribute": att,
-		"isPointer": isPointer,
+		"isPointer": private || isPointer,
 		"nonzero":   nonzero,
 		"context":   context,
 		"target":    target,
@@ -196,6 +196,7 @@ func validationsCode(validation *dslengine.ValidationDefinition, data map[string
 	}
 	if required := validation.Required; len(required) > 0 {
 		data["required"] = required
+		fmt.Printf("Evaluating required: %#v\n", data)
 		if val := RunTemplate(requiredValT, data); val != "" {
 			res = append(res, val)
 		}
@@ -280,10 +281,11 @@ const (
 {{if .isPointer}}{{tabs $depth}}}
 {{end}}{{tabs .depth}}}`
 
-	requiredValTmpl = `{{range $r := .required}}{{$catt := index $.attribute.Type.ToObject $r}}{{if eq $catt.Type.Kind 4}}{{tabs $.depth}}if {{$.target}}.{{goify $r true}} == "" {
+	requiredValTmpl = `{{range $r := .required}}{{$catt := index $.attribute.Type.ToObject $r}}{{/*
+*/}}{{if and (not $.private) (eq $catt.Type.Kind 4)}}{{tabs $.depth}}if {{$.target}}.{{goify $r true}} == "" {
 {{tabs $.depth}}	err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`" + `{{$.context}}` + "`" + `, "{{$r}}"))
 {{tabs $.depth}}}
-{{else if (not $catt.Type.IsPrimitive)}}{{tabs $.depth}}if {{$.target}}.{{goify $r true}} == nil {
+{{else if or $.private (not $catt.Type.IsPrimitive)}}{{tabs $.depth}}if {{$.target}}.{{goify $r true}} == nil {
 {{tabs $.depth}}	err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`" + `{{$.context}}` + "`" + `, "{{$r}}"))
 {{tabs $.depth}}}
 {{end}}{{end}}`
