@@ -1,6 +1,7 @@
 package middleware_test
 
 import (
+	"fmt"
 	"net/http"
 
 	"golang.org/x/net/context"
@@ -12,17 +13,50 @@ import (
 )
 
 var _ = Describe("Recover", func() {
-	It("recovers", func() {
-		service := newService(nil)
-		h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-			panic("boom")
-		}
+	var h goa.Handler
+	var err error
+
+	JustBeforeEach(func() {
 		rg := middleware.Recover()(h)
-		service.Encoder(goa.NewJSONEncoder, "*/*")
-		rw := new(testResponseWriter)
-		ctx := newContext(service, rw, nil, nil)
-		err := rg(ctx, rw, nil)
-		Ω(err).Should(HaveOccurred())
-		Ω(err.Error()).Should(Equal("panic: boom"))
+		err = rg(nil, nil, nil)
+	})
+
+	Context("with a handler that panics with a string", func() {
+		BeforeEach(func() {
+			h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+				panic("boom")
+			}
+		})
+
+		It("creates an error from the panic message", func() {
+			Ω(err).Should(HaveOccurred())
+			Ω(err.Error()).Should(HavePrefix("panic: boom\n"))
+		})
+	})
+
+	Context("with a handler that panics with an error", func() {
+		BeforeEach(func() {
+			h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+				panic(fmt.Errorf("boom"))
+			}
+		})
+
+		It("creates an error from the panic error message", func() {
+			Ω(err).Should(HaveOccurred())
+			Ω(err.Error()).Should(HavePrefix("panic: boom\n"))
+		})
+	})
+
+	Context("with a handler that panics with something else", func() {
+		BeforeEach(func() {
+			h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+				panic(42)
+			}
+		})
+
+		It("creates a generic error message", func() {
+			Ω(err).Should(HaveOccurred())
+			Ω(err.Error()).Should(HavePrefix("unknown panic\n"))
+		})
 	})
 })
