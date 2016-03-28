@@ -152,7 +152,7 @@ var _ = Describe("code generation", func() {
 				if required != nil {
 					att.Validation = required
 				}
-				st = codegen.GoTypeDef(att, 0, true)
+				st = codegen.GoTypeDef(att, 0, true, false)
 			})
 
 			Context("of primitive types", func() {
@@ -302,7 +302,7 @@ var _ = Describe("code generation", func() {
 			JustBeforeEach(func() {
 				array := &Array{ElemType: elemType}
 				att := &AttributeDefinition{Type: array}
-				source = codegen.GoTypeDef(att, 0, true)
+				source = codegen.GoTypeDef(att, 0, true, false)
 			})
 
 			Context("of primitive type", func() {
