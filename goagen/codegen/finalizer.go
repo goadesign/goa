@@ -18,11 +18,11 @@ var (
 func init() {
 	var err error
 	fm := template.FuncMap{
-		"tabs":              Tabs,
-		"goify":             Goify,
-		"gotyperef":         GoTypeRef,
-		"add":               Add,
-		"recursiveAssigner": RecursiveAssigner,
+		"tabs":               Tabs,
+		"goify":              Goify,
+		"gotyperef":          GoTypeRef,
+		"add":                Add,
+		"recursiveFinalizer": RecursiveFinalizer,
 	}
 	if assignmentT, err = template.New("assignment").Funcs(fm).Parse(assignmentTmpl); err != nil {
 		panic(err)
@@ -32,9 +32,9 @@ func init() {
 	}
 }
 
-// RecursiveAssigner produces Go code that sets the default values for fields recursively for the
+// RecursiveFinalizer produces Go code that sets the default values for fields recursively for the
 // given attribute.
-func RecursiveAssigner(att *design.AttributeDefinition, target, context string, depth int) string {
+func RecursiveFinalizer(att *design.AttributeDefinition, target, context string, depth int) string {
 	var assignments []string
 	if o := att.Type.ToObject(); o != nil {
 		if mt, ok := att.Type.(*design.MediaTypeDefinition); ok {
@@ -57,7 +57,7 @@ func RecursiveAssigner(att *design.AttributeDefinition, target, context string, 
 			if catt.Type.IsObject() {
 				actualDepth = depth + 1
 			}
-			assignment := RecursiveAssigner(
+			assignment := RecursiveFinalizer(
 				catt,
 				fmt.Sprintf("%s.%s", target, Goify(n, true)),
 				fmt.Sprintf("%s.%s", context, n),
@@ -99,10 +99,10 @@ func printVal(t design.DataType, val interface{}) string {
 		h := t.ToHash()
 		hval := val.(map[interface{}]interface{})
 		if len(hval) == 0 {
-			return fmt.Sprintf("%s{}", GoPackageTypeName(t, nil, 0))
+			return fmt.Sprintf("%s{}", GoPackageTypeName(t, nil, 0, false))
 		} else {
 			var buffer bytes.Buffer
-			buffer.WriteString(fmt.Sprintf("%s{", GoPackageTypeName(t, nil, 0)))
+			buffer.WriteString(fmt.Sprintf("%s{", GoPackageTypeName(t, nil, 0, false)))
 			for k, v := range hval {
 				buffer.WriteString(fmt.Sprintf("%s: %s, ", printVal(h.KeyType.Type, k), printVal(h.ElemType.Type, v)))
 			}
@@ -114,10 +114,10 @@ func printVal(t design.DataType, val interface{}) string {
 		a := t.ToArray()
 		aval := val.([]interface{})
 		if len(aval) == 0 {
-			return fmt.Sprintf("%s{}", GoPackageTypeName(t, nil, 0))
+			return fmt.Sprintf("%s{}", GoPackageTypeName(t, nil, 0, false))
 		} else {
 			var buffer bytes.Buffer
-			buffer.WriteString(fmt.Sprintf("%s{", GoPackageTypeName(t, nil, 0)))
+			buffer.WriteString(fmt.Sprintf("%s{", GoPackageTypeName(t, nil, 0, false)))
 			for _, e := range aval {
 				buffer.WriteString(fmt.Sprintf("%s, ", printVal(a.ElemType.Type, e)))
 			}
@@ -131,14 +131,17 @@ func printVal(t design.DataType, val interface{}) string {
 }
 
 const (
-	assignmentTmpl = `{{if .catt.Type.IsPrimitive}}{{$defaultName := (print "default" (goify .field true))}}{{tabs .depth}}var {{$defaultName}} {{gotyperef .catt.Type nil 0}}
-{{tabs .depth}}if {{.target}}.{{goify .field true}} == {{$defaultName}} {
-{{tabs .depth}}{{.target}}.{{goify .field true}} = {{.defaultVal}}}{{else}}{{tabs .depth}}if {{.target}}.{{goify .field true}} == nil {
-{{tabs .depth}}{{.target}}.{{goify .field true}} = {{.defaultVal}}
-}{{end}}`
+	// assignmentTmpl = `if {{ .target }}.{{ goify .field true }} == nil {
+	// {{ tabs .depth }}{{ .target }}.{{ goify .field true }} = {{ .defaultVal }}
+	// }`
+	assignmentTmpl = `{{ if .catt.Type.IsPrimitive }}{{ $defaultName := (print "default" (goify .field true)) }}{{ tabs .depth }}var {{ $defaultName }} = {{ .defaultVal }}
+{{ tabs .depth }}if {{ .target }}.{{ goify .field true }} == nil {
+{{ tabs .depth }}{{ .target }}.{{ goify .field true }} = &{{ $defaultName }}}{{ else }}{{ tabs .depth }}if {{ .target }}.{{ goify .field true }} == nil {
+{{ tabs .depth }}{{ .target }}.{{ goify .field true }} = {{ .defaultVal }}
+}{{ end }}`
 
-	arrayAssignmentTmpl = `{{$assignment := recursiveAssigner .elemType "e" (printf "%s[*]" .context) (add .depth 1)}}{{/*
-*/}}{{if $assignment}}{{tabs .depth}}for _, e := range {{.target}} {
-{{$assignment}}
-{{tabs .depth}}}{{end}}`
+	arrayAssignmentTmpl = `{{ $assignment := recursiveFinalizer .elemType "e" (printf "%s[*]" .context) (add .depth 1) }}{{/*
+*/}}{{ if $assignment }}{{ tabs .depth }}for _, e := range {{ .target }} {
+{{ $assignment }}
+{{ tabs .depth }}}{{ end }}`
 )

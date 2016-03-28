@@ -56,7 +56,7 @@ func init() {
 
 // RecursiveChecker produces Go code that runs the validation checks recursively over the given
 // attribute.
-func RecursiveChecker(att *design.AttributeDefinition, nonzero, required bool, target, context string, depth int) string {
+func RecursiveChecker(att *design.AttributeDefinition, nonzero, required bool, target, context string, depth int, private bool) string {
 	var checks []string
 	if o := att.Type.ToObject(); o != nil {
 		if mt, ok := att.Type.(*design.MediaTypeDefinition); ok {
@@ -64,7 +64,7 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required bool, t
 		} else if ut, ok := att.Type.(*design.UserTypeDefinition); ok {
 			att = ut.AttributeDefinition
 		}
-		validation := ValidationChecker(att, nonzero, required, target, context, depth)
+		validation := ValidationChecker(att, nonzero, required, target, context, depth, private)
 		if validation != "" {
 			checks = append(checks, validation)
 		}
@@ -80,6 +80,7 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required bool, t
 				fmt.Sprintf("%s.%s", target, Goify(n, true)),
 				fmt.Sprintf("%s.%s", context, n),
 				actualDepth,
+				private,
 			)
 			if validation != "" {
 				if catt.Type.IsObject() {
@@ -96,13 +97,14 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required bool, t
 			"context":  context,
 			"target":   target,
 			"depth":    1,
+			"private":  private,
 		}
 		validation := RunTemplate(arrayValT, data)
 		if validation != "" {
 			checks = append(checks, validation)
 		}
 	} else {
-		validation := ValidationChecker(att, nonzero, required, target, context, depth)
+		validation := ValidationChecker(att, nonzero, required, target, context, depth, private)
 		if validation != "" {
 			checks = append(checks, validation)
 		}
@@ -117,7 +119,7 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required bool, t
 // The generated code assumes that there is a pre-existing "err" variable of type
 // error. It initializes that variable in case a validation fails.
 // Note: we do not want to recurse here, recursion is done by the marshaler/unmarshaler code.
-func ValidationChecker(att *design.AttributeDefinition, nonzero, required bool, target, context string, depth int) string {
+func ValidationChecker(att *design.AttributeDefinition, nonzero, required bool, target, context string, depth int, private bool) string {
 	t := target
 	isPointer := !required && !nonzero
 	if isPointer && att.Type.IsPrimitive() {
@@ -132,6 +134,7 @@ func ValidationChecker(att *design.AttributeDefinition, nonzero, required bool, 
 		"targetVal": t,
 		"array":     att.Type.IsArray(),
 		"depth":     depth,
+		"private":   private,
 	}
 	res := validationsCode(att.Validation, data)
 	return strings.Join(res, "\n")
@@ -236,7 +239,7 @@ func constant(formatName string) string {
 }
 
 const (
-	arrayValTmpl = `{{$validation := recursiveChecker .elemType false false "e" (printf "%s[*]" .context) (add .depth 1)}}{{/*
+	arrayValTmpl = `{{$validation := recursiveChecker .elemType false false "e" (printf "%s[*]" .context) (add .depth 1) .private}}{{/*
 */}}{{if $validation}}{{tabs .depth}}for _, e := range {{.target}} {
 {{$validation}}
 {{tabs .depth}}}{{end}}`
