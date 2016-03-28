@@ -196,7 +196,6 @@ func validationsCode(validation *dslengine.ValidationDefinition, data map[string
 	}
 	if required := validation.Required; len(required) > 0 {
 		data["required"] = required
-		fmt.Printf("Evaluating required: %#v\n", data)
 		if val := RunTemplate(requiredValT, data); val != "" {
 			res = append(res, val)
 		}

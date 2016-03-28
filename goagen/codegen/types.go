@@ -656,33 +656,33 @@ func typeName(att *design.AttributeDefinition) (name string) {
 	return
 }
 
-const transformTmpl = `func {{.Name}}(source {{gotyperef .Source nil 0}}) (target {{.TargetRef}}) {
-{{.Impl}}	return
+const transformTmpl = `func {{ .Name }}(source {{ gotyperef .Source nil 0 false }}) (target {{ .TargetRef }}) {
+{{ .Impl }}	return
 }
 `
 
-const transformObjectTmpl = `{{tabs .Depth}}{{.TargetCtx}} = new({{if .TargetPkg}}{{.TargetPkg}}.{{end}}{{if .TargetType}}{{.TargetType}}{{else}}{{gotyperef .Target.Type .Target.AllRequired 1}}{{end}})
-{{range $source, $target := .AttributeMap}}{{/*
-*/}}{{$sourceAtt := index $.Source $source}}{{$targetAtt := index $.Target $target}}{{/*
-*/}}{{$source := goify $source true}}{{$target := goify $target true}}{{/*
-*/}}{{     if $sourceAtt.Type.IsArray}}{{ transformArray  $sourceAtt.Type.ToArray  $targetAtt.Type.ToArray  $.TargetPkg (printf "%s.%s" $.SourceCtx $source) (printf "%s.%s" $.TargetCtx $target) $.Depth}}{{/*
-*/}}{{else if $sourceAtt.Type.IsHash}}{{  transformHash   $sourceAtt.Type.ToHash   $targetAtt.Type.ToHash   $.TargetPkg (printf "%s.%s" $.SourceCtx $source) (printf "%s.%s" $.TargetCtx $target) $.Depth}}{{/*
-*/}}{{else if $sourceAtt.Type.IsObject}}{{transformObject $sourceAtt.Type.ToObject $targetAtt.Type.ToObject $.TargetPkg (typeName $targetAtt) (printf "%s.%s" $.SourceCtx $source) (printf "%s.%s" $.TargetCtx $target) $.Depth}}{{/*
-*/}}{{else}}{{tabs $.Depth}}{{$.TargetCtx}}.{{$target}} = {{$.SourceCtx}}.{{$source}}
-{{end}}{{end}}`
+const transformObjectTmpl = `{{ tabs .Depth }}{{ .TargetCtx }} = new({{ if .TargetPkg }}{{ .TargetPkg }}.{{ end }}{{ if .TargetType }}{{ .TargetType }}{{ else }}{{ gotyperef .Target.Type .Target.AllRequired 1 false }}{{ end }})
+{{ range $source, $target := .AttributeMap }}{{/*
+*/}}{{ $sourceAtt := index $.Source $source }}{{ $targetAtt := index $.Target $target }}{{/*
+*/}}{{ $source := goify $source true }}{{ $target := goify $target true }}{{/*
+*/}}{{     if $sourceAtt.Type.IsArray }}{{ transformArray  $sourceAtt.Type.ToArray  $targetAtt.Type.ToArray  $.TargetPkg (printf "%s.%s" $.SourceCtx $source) (printf "%s.%s" $.TargetCtx $target) $.Depth }}{{/*
+*/}}{{ else if $sourceAtt.Type.IsHash }}{{  transformHash   $sourceAtt.Type.ToHash   $targetAtt.Type.ToHash   $.TargetPkg (printf "%s.%s" $.SourceCtx $source) (printf "%s.%s" $.TargetCtx $target) $.Depth }}{{/*
+*/}}{{ else if $sourceAtt.Type.IsObject }}{{ transformObject $sourceAtt.Type.ToObject $targetAtt.Type.ToObject $.TargetPkg (typeName $targetAtt) (printf "%s.%s" $.SourceCtx $source) (printf "%s.%s" $.TargetCtx $target) $.Depth }}{{/*
+*/}}{{ else }}{{ tabs $.Depth }}{{ $.TargetCtx }}.{{ $target }} = {{ $.SourceCtx }}.{{ $source }}
+{{ end }}{{ end }}`
 
-const transformArrayTmpl = `{{tabs .Depth}}{{.TargetCtx}} = make([]{{gotyperef .Target.ElemType.Type nil 0}}, len({{.SourceCtx}}))
-{{tabs .Depth}}for i, v := range {{.SourceCtx}} {
-{{transformAttribute .Source.ElemType .Target.ElemType .TargetPkg (printf "%s[i]" .SourceCtx) (printf "%s[i]" .TargetCtx) (add .Depth 1)}}{{/*
-*/}}{{tabs .Depth}}}
+const transformArrayTmpl = `{{ tabs .Depth }}{{ .TargetCtx}} = make([]{{ gotyperef .Target.ElemType.Type nil 0 false }}, len({{ .SourceCtx }}))
+{{ tabs .Depth }}for i, v := range {{ .SourceCtx }} {
+{{ transformAttribute .Source.ElemType .Target.ElemType .TargetPkg (printf "%s[i]" .SourceCtx) (printf "%s[i]" .TargetCtx) (add .Depth 1) }}{{/*
+*/}}{{ tabs .Depth }}}
 `
 
-const transformHashTmpl = `{{tabs .Depth}}{{.TargetCtx}} = make(map[{{gotyperef .Target.KeyType.Type nil 0}}]{{gotyperef .Target.ElemType.Type nil 0}}, len({{.SourceCtx}}))
-{{tabs .Depth}}for k, v := range {{.SourceCtx}} {
-{{tabs .Depth}}	var tk {{gotyperef .Target.KeyType.Type nil 0}}
-{{transformAttribute .Source.KeyType .Target.KeyType .TargetPkg "k" "tk" (add .Depth 1)}}{{/*
-*/}}{{tabs .Depth}}	var tv {{gotyperef .Target.ElemType.Type nil 0}}
-{{transformAttribute .Source.ElemType .Target.ElemType .TargetPkg "v" "tv" (add .Depth 1)}}{{/*
-*/}}{{tabs .Depth}}	{{.TargetCtx}}[tk] = tv
-{{tabs .Depth}}}
+const transformHashTmpl = `{{ tabs .Depth }}{{ .TargetCtx }} = make(map[{{ gotyperef .Target.KeyType.Type nil 0 false }}]{{ gotyperef .Target.ElemType.Type nil 0 false }}, len({{ .SourceCtx }}))
+{{ tabs .Depth }}for k, v := range {{ .SourceCtx }} {
+{{ tabs .Depth }}	var tk {{ gotyperef .Target.KeyType.Type nil 0 false }}
+{{ transformAttribute .Source.KeyType .Target.KeyType .TargetPkg "k" "tk" (add .Depth 1) }}{{/*
+*/}}{{ tabs .Depth }}	var tv {{ gotyperef .Target.ElemType.Type nil 0 false }}
+{{ transformAttribute .Source.ElemType .Target.ElemType .TargetPkg "v" "tv" (add .Depth 1) }}{{/*
+*/}}{{ tabs .Depth }}	{{ .TargetCtx }}[tk] = tv
+{{ tabs .Depth }}}
 `
