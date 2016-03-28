@@ -11,8 +11,8 @@ import (
 // below the logger middleware so the logger properly logs the HTTP response. ErrorHandler
 // understands instances of goa.Error and returns the status and response body embodied in them,
 // it turns other Go error types into a 500 internal error response.
-// If suppressInternal is true the details of internal errors is not included in HTTP responses.
-func ErrorHandler(suppressInternal bool) goa.Middleware {
+// If verbose is false the details of internal errors is not included in HTTP responses.
+func ErrorHandler(verbose bool) goa.Middleware {
 	return func(h goa.Handler) goa.Handler {
 		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 			e := h(ctx, rw, req)
@@ -37,7 +37,7 @@ func ErrorHandler(suppressInternal bool) goa.Middleware {
 					ctx = context.WithValue(ctx, reqIDKey, reqID)
 				}
 				goa.LogError(ctx, "uncaught error", "id", reqID, "msg", respBody)
-				if suppressInternal {
+				if !verbose {
 					rw.Header().Set("Content-Type", goa.ErrorMediaIdentifier)
 					respBody = goa.ErrInternal("internal error [%s]", reqID)
 				}
