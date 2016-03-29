@@ -19,6 +19,12 @@ const (
 	ErrorMediaIdentifier = "application/vnd.api.error+json"
 )
 
+var (
+	// MaxRequestBodyLength is the maximum length read from request bodies.
+	// Set to 0 to remove the limit altogether.
+	MaxRequestBodyLength int64 = 1073741824 // 1 GB
+)
+
 type (
 	// Service is the data structure supporting goa services.
 	// It provides methods for configuring a service and running it.
@@ -226,6 +232,11 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 	return func(rw http.ResponseWriter, req *http.Request, params url.Values) {
 		// Build context
 		ctx := NewContext(baseCtx, rw, req, params)
+
+		// Protect against request bodies with unreasonable length
+		if MaxRequestBodyLength > 0 {
+			req.Body = http.MaxBytesReader(rw, req.Body, MaxRequestBodyLength)
+		}
 
 		// Load body if any
 		var err error

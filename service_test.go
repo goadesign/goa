@@ -56,6 +56,39 @@ var _ = Describe("Service", func() {
 		})
 	})
 
+	Describe("MaxRequestBodyLength", func() {
+		var oldMax int64
+		var rw *TestResponseWriter
+		var req *http.Request
+		var muxHandler goa.MuxHandler
+
+		BeforeEach(func() {
+			oldMax = goa.MaxRequestBodyLength
+			goa.MaxRequestBodyLength = 4
+			body := bytes.NewBuffer([]byte{'"', '2', '3', '4', '"'})
+			req, _ = http.NewRequest("GET", "/foo", body)
+			rw = &TestResponseWriter{ParentHeader: make(http.Header)}
+			ctrl := s.NewController("test")
+			unmarshaler := func(ctx context.Context, req *http.Request) error {
+				_, err := ioutil.ReadAll(req.Body)
+				return err
+			}
+			muxHandler = ctrl.MuxHandler("testMax", nil, unmarshaler)
+		})
+
+		JustBeforeEach(func() {
+			muxHandler(rw, req, nil)
+		})
+
+		AfterEach(func() {
+			goa.MaxRequestBodyLength = oldMax
+		})
+
+		It("prevents reading more bytes", func() {
+			Ω(string(rw.Body)).Should(Equal(`{"code":"invalid_encoding","status":400,"detail":"http: request body too large"}` + "\n"))
+		})
+	})
+
 	Describe("MuxHandler", func() {
 		var handler goa.Handler
 		var unmarshaler goa.Unmarshaler
