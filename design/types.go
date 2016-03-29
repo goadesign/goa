@@ -303,7 +303,7 @@ func (a *Array) Kind() Kind { return ArrayKind }
 
 // Name returns the type name.
 func (a *Array) Name() string {
-	return fmt.Sprintf("array<%s>", a.ElemType.Type.Name())
+	return fmt.Sprintf("array")
 }
 
 // IsPrimitive returns false.
@@ -434,7 +434,7 @@ func (h *Hash) Kind() Kind { return HashKind }
 
 // Name returns the type name.
 func (h *Hash) Name() string {
-	return fmt.Sprintf("hash<%s, %s>", h.KeyType.Type.Name(), h.ElemType.Type.Name())
+	return fmt.Sprintf("hash")
 }
 
 // IsPrimitive returns false.

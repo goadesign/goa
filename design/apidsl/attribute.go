@@ -236,6 +236,8 @@ func Default(def interface{}) {
 			} else {
 				a.SetDefault(def)
 			}
+		} else {
+			a.SetDefault(def)
 		}
 	}
 }
