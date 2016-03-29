@@ -517,18 +517,17 @@ func (m *MediaTypeDefinition) Validate() *dslengine.ValidationErrors {
 			}
 		}
 	}
-	if !m.Type.IsArray() {
-		hasDefaultView := false
-		for n, v := range m.Views {
-			if n == "default" {
-				hasDefaultView = true
-			}
-			verr.Merge(v.Validate())
+	hasDefaultView := false
+	for n, v := range m.Views {
+		if n == "default" {
+			hasDefaultView = true
 		}
-		if !hasDefaultView {
-			verr.Add(m, `media type does not define the default view, use View("default", ...) to define it.`)
-		}
+		verr.Merge(v.Validate())
 	}
+	if !hasDefaultView {
+		verr.Add(m, `media type does not define the default view, use View("default", ...) to define it.`)
+	}
+
 	for _, l := range m.Links {
 		verr.Merge(l.Validate())
 	}

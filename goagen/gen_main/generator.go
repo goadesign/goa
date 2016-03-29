@@ -189,7 +189,15 @@ func okResp(a *design.ActionDefinition) map[string]interface{} {
 	if mt, ok2 = design.Design.MediaTypes[design.CanonicalIdentifier(ok.MediaType)]; !ok2 {
 		return nil
 	}
-	name := codegen.GoTypeRef(mt, mt.AllRequired(), 1)
+	viewName := ok.ViewName
+	if viewName == "" {
+		viewName = "default"
+	}
+	p, _, err := mt.Project(viewName)
+	if err != nil {
+		return nil
+	}
+	name := codegen.GoTypeRef(p, p.AllRequired(), 1)
 	var pointer string
 	if strings.HasPrefix(name, "*") {
 		name = name[1:]

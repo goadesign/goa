@@ -79,7 +79,7 @@ func Resource(name string, dsl func()) *design.ResourceDefinition {
 // properties of attributes listed in action payloads. So if a media type defines an attribute
 // "name" with associated validations then simply calling Attribute("name") inside a request
 // Payload defines the payload attribute with the same type and validations.
-func DefaultMedia(val interface{}) {
+func DefaultMedia(val interface{}, viewName ...string) {
 	if r, ok := resourceDefinition(); ok {
 		if m, ok := val.(*design.MediaTypeDefinition); ok {
 			if m.UserTypeDefinition == nil {
@@ -92,6 +92,12 @@ func DefaultMedia(val interface{}) {
 			r.MediaType = design.CanonicalIdentifier(identifier)
 		} else {
 			dslengine.ReportError("media type must be a string or a *design.MediaTypeDefinition, got %#v", val)
+			return
+		}
+		if len(viewName) == 1 {
+			r.ViewName = viewName[0]
+		} else if len(viewName) > 1 {
+			dslengine.ReportError("too many arguments given to DefaultMedia")
 		}
 	}
 }
