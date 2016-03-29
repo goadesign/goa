@@ -402,7 +402,7 @@ func toString(name, target string, att *design.AttributeDefinition) string {
 		case design.StringKind:
 			return fmt.Sprintf("%s := %s", target, name)
 		case design.DateTimeKind:
-			return fmt.Sprintf("%s, err  := time.Parse(time.RFC3339, '%s')", target, name)
+			return fmt.Sprintf("%s, err  := time.Parse(time.RFC3339, %s)", target, name)
 		case design.AnyKind:
 			return fmt.Sprintf("%s := fmt.Sprintf(\"%%v\", %s)", target, name)
 		default:
