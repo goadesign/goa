@@ -199,7 +199,10 @@ func (g *Generator) okResp(a *design.ActionDefinition) map[string]interface{} {
 	if mt, ok2 = design.Design.MediaTypes[design.CanonicalIdentifier(ok.MediaType)]; !ok2 {
 		return nil
 	}
-	view := mt.DefaultView()
+	view := ok.ViewName
+	if view == "" {
+		view = mt.DefaultView()
+	}
 	pmt, _, err := mt.Project(view)
 	if err != nil {
 		return nil

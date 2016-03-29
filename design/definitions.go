@@ -121,6 +121,8 @@ type (
 		Description string
 		// Default media type, describes the resource attributes
 		MediaType string
+		// Default view name if default media type is MediaTypeDefinition
+		ViewName string
 		// Exposed resource actions indexed by name
 		Actions map[string]*ActionDefinition
 		// FileServers is the list of static asset serving endpoints
@@ -188,6 +190,8 @@ type (
 		Type DataType
 		// Response body media type if any
 		MediaType string
+		// Response view name if MediaType is MediaTypeDefinition
+		ViewName string
 		// Response header definitions
 		Headers *AttributeDefinition
 		// Parent action or resource
@@ -1253,6 +1257,7 @@ func (r *ResponseDefinition) Dup() *ResponseDefinition {
 		Status:      r.Status,
 		Description: r.Description,
 		MediaType:   r.MediaType,
+		ViewName:    r.ViewName,
 	}
 	if r.Headers != nil {
 		res.Headers = DupAtt(r.Headers)
@@ -1276,6 +1281,7 @@ func (r *ResponseDefinition) Merge(other *ResponseDefinition) {
 	}
 	if r.MediaType == "" {
 		r.MediaType = other.MediaType
+		r.ViewName = other.ViewName
 	}
 	if other.Headers != nil {
 		otherHeaders := other.Headers.Type.ToObject()

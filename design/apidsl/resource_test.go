@@ -185,6 +185,25 @@ var _ = Describe("Resource", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.Validate()).ShouldNot(HaveOccurred())
 			Ω(res.MediaType).Should(Equal(mediaType))
+			Ω(res.ViewName).Should(Equal("default"))
+		})
+	})
+
+	Context("with a view name", func() {
+		const mediaType = "application/mt"
+
+		BeforeEach(func() {
+			name = "foo"
+			dsl = func() {
+				DefaultMedia(mediaType, "compact")
+			}
+		})
+
+		It("sets the media type", func() {
+			Ω(res).ShouldNot(BeNil())
+			Ω(res.Validate()).ShouldNot(HaveOccurred())
+			Ω(res.MediaType).Should(Equal(mediaType))
+			Ω(res.ViewName).Should(Equal("compact"))
 		})
 	})
 
@@ -225,6 +244,7 @@ var _ = Describe("Resource", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.Validate()).ShouldNot(HaveOccurred())
 			Ω(res.MediaType).Should(Equal(identifier))
+			Ω(res.ViewName).Should(Equal("default"))
 		})
 	})
 
