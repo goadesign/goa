@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	primitivePublicizeT *template.Template
-	objectPublicizeT    *template.Template
+	simplePublicizeT    *template.Template
+	recursivePublicizeT *template.Template
 	arrayPublicizeT     *template.Template
 	hashPublicizeT      *template.Template
 )
@@ -24,10 +24,10 @@ func init() {
 		"add":        Add,
 		"publicizer": Publicizer,
 	}
-	if primitivePublicizeT, err = template.New("primitivePublicize").Funcs(fm).Parse(primitivePublicizeTmpl); err != nil {
+	if simplePublicizeT, err = template.New("simplePublicize").Funcs(fm).Parse(simplePublicizeTmpl); err != nil {
 		panic(err)
 	}
-	if objectPublicizeT, err = template.New("objectPublicize").Funcs(fm).Parse(objectPublicizeTmpl); err != nil {
+	if recursivePublicizeT, err = template.New("recursivePublicize").Funcs(fm).Parse(recursivePublicizeTmpl); err != nil {
 		panic(err)
 	}
 	if arrayPublicizeT, err = template.New("arrPublicize").Funcs(fm).Parse(arrayPublicizeTmpl); err != nil {
@@ -79,20 +79,28 @@ func Publicizer(att *design.AttributeDefinition, sourceField, targetField string
 	}
 	switch {
 	case att.Type.IsPrimitive():
-		publication = RunTemplate(primitivePublicizeT, data)
+		publication = RunTemplate(simplePublicizeT, data)
 	case att.Type.IsObject():
-		publication = RunTemplate(objectPublicizeT, data)
+		fmt.Printf("object type: %#v\n", att.Type)
+		if _, ok := att.Type.(*design.MediaTypeDefinition); ok {
+			publication = RunTemplate(recursivePublicizeT, data)
+		} else if _, ok := att.Type.(*design.UserTypeDefinition); ok {
+			publication = RunTemplate(recursivePublicizeT, data)
+		} else {
+			publication = RecursivePublicizer(att, sourceField, targetField, depth+1)
+			publication = fmt.Sprintf("%s = &%s{}\n%s", targetField, GoTypeDef(att, depth+1, true, false), publication)
+		}
 	case att.Type.IsArray():
 		// If the array element is primitive type, we can simply copy the elements over (i.e) []string
 		if arr := att.Type.ToArray(); arr.ElemType.Type.IsPrimitive() {
-			publication = RunTemplate(primitivePublicizeT, data)
+			publication = RunTemplate(simplePublicizeT, data)
 		} else {
 			data["elemType"] = arr.ElemType
 			publication = RunTemplate(arrayPublicizeT, data)
 		}
 	case att.Type.IsHash():
 		if h := att.Type.ToHash(); h.KeyType.Type.IsPrimitive() && h.ElemType.Type.IsPrimitive() {
-			publication = RunTemplate(primitivePublicizeT, data)
+			publication = RunTemplate(simplePublicizeT, data)
 		} else {
 			data["keyType"] = h.KeyType
 			data["elemType"] = h.ElemType
@@ -103,9 +111,9 @@ func Publicizer(att *design.AttributeDefinition, sourceField, targetField string
 }
 
 const (
-	primitivePublicizeTmpl = `{{ tabs .depth }}{{ .targetField }} {{ if .init }}:{{ end }}= {{ if .dereference }}*{{ end }}{{ .sourceField }}`
+	simplePublicizeTmpl = `{{ tabs .depth }}{{ .targetField }} {{ if .init }}:{{ end }}= {{ if .dereference }}*{{ end }}{{ .sourceField }}`
 
-	objectPublicizeTmpl = `{{ tabs .depth }}{{ .targetField }} {{ if .init }}:{{ end }}= {{ .sourceField }}.Publicize()`
+	recursivePublicizeTmpl = `{{ tabs .depth }}{{ .targetField }} {{ if .init }}:{{ end }}= {{ .sourceField }}.Publicize()`
 
 	arrayPublicizeTmpl = `{{ tabs .depth }}{{ .targetField }} {{ if .init }}:{{ end }}= make({{ gotyperef .att.Type .att.AllRequired .depth false }}, len({{ .sourceField }})){{/*
 */}}{{ $i := printf "%s%d" "i" .depth }}{{ $elem := printf "%s%d" "elem" .depth }}

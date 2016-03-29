@@ -468,7 +468,7 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 		err = goa.MergeErrors(err, goa.MissingHeaderError("{{ $name }}"))
 	} else {
 {{ else }}	if raw{{ goify $name true }} != "" {
-{{ end }}{{ $validation := validationChecker $att ($headers.IsNonZero $name) ($headers.IsRequired $name) (printf "raw%s" (goify $name true)) $name 2 false }}{{/*
+{{ end }}{{ $validation := validationChecker $att ($headers.IsNonZero $name) ($headers.IsRequired $name) ($headers.HasDefaultValue $name) (printf "raw%s" (goify $name true)) $name 2 false }}{{/*
 */}}{{ if $validation }}{{ $validation }}
 {{ end }}	}
 {{ end }}{{ end }}{{/*
@@ -484,7 +484,7 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 		}
 {{ else }}		raw{{ goify $name true}} := param{{ goify $name true}}[0]
 {{ template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) (printf "rctx.%s" (goify $name true)) 2) }}{{ end }}{{/*
-*/}}{{ $validation := validationChecker $att ($.Params.IsNonZero $name) ($.Params.IsRequired $name) (printf "rctx.%s" (goify $name true)) $name 2 false }}{{/*
+*/}}{{ $validation := validationChecker $att ($.Params.IsNonZero $name) ($.Params.IsRequired $name) ($.Params.HasDefaultValue $name) (printf "rctx.%s" (goify $name true)) $name 2 false }}{{/*
 */}}{{ if $validation }}{{ $validation }}
 {{ end }}	}
 {{ end }}{{ end }}{{/* if .Params */}}	return &rctx, err
@@ -535,7 +535,7 @@ func (payload {{ gotyperef .Payload .Payload.AllRequired 0 true }}) Finalize() {
 {{ $assignment }}
 }{{ end }}
 
-{{ $validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1 true }}{{ if $validation }}// Validate runs the validation rules defined in the design.
+{{ $validation := recursiveValidate .Payload.AttributeDefinition false false false "payload" "raw" 1 true }}{{ if $validation }}// Validate runs the validation rules defined in the design.
 func (payload {{ gotyperef .Payload .Payload.AllRequired 0 true }}) Validate() (err error) {
 {{ $validation }}
 	return err
@@ -551,7 +551,7 @@ func (payload {{ gotyperef .Payload .Payload.AllRequired 0 true }}) Publicize() 
 	// {{ gotypename .Payload nil 0 false }} is the {{ .ResourceName }} {{ .ActionName }} action payload.
 type {{ gotypename .Payload nil 1 false }} {{ gotypedef .Payload 0 true false }}
 
-{{ $validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1 false }}{{ if $validation }}// Validate runs the validation rules defined in the design.
+{{ $validation := recursiveValidate .Payload.AttributeDefinition false false false "payload" "raw" 1 false }}{{ if $validation }}// Validate runs the validation rules defined in the design.
 func (payload {{ gotyperef .Payload .Payload.AllRequired 0 false }}) Validate() (err error) {
 {{ $validation }}
        return err
@@ -654,19 +654,18 @@ func handle{{ .Resource }}Origin(h goa.Handler) goa.Handler {
 	unmarshalT = `{{ range .Actions }}{{ if .Payload }}
 // {{ .Unmarshal }} unmarshals the request body into the context request data Payload field.
 func {{ .Unmarshal }}(ctx context.Context, service *goa.Service, req *http.Request) error {
-	{{ if .Payload.IsObject }}var payload {{ gotypename .Payload nil 1 true }}
-	if err := service.DecodeRequest(req, &payload); err != nil {
+	{{ if .Payload.IsObject }}payload := &{{ gotypename .Payload nil 1 true }}{}
+	if err := service.DecodeRequest(req, payload); err != nil {
 		return err
 	}{{ $assignment := recursiveFinalizer .Payload.AttributeDefinition "payload" "raw" 1 }}{{ if $assignment }}
 	payload.Finalize(){{ end }}{{ else }}var payload {{ gotypename .Payload nil 1 false }}
 	if err := goa.ContextService(ctx).DecodeRequest(req, &payload); err != nil {
 		return err
-	}{{ end }}{{ $validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1 false }}{{ if $validation }}
+	}{{ end }}{{ $validation := recursiveValidate .Payload.AttributeDefinition false false false "payload" "raw" 1 false }}{{ if $validation }}
 	if err := payload.Validate(); err != nil {
 		return err
 	}{{ end }}
-	{{ if .Payload.IsObject }}goa.ContextRequest(ctx).Payload = (&payload).Publicize(){{ else }}{{/*
-    */}}goa.ContextRequest(ctx).Payload = payload{{ end }}
+	goa.ContextRequest(ctx).Payload = payload{{ if .Payload.IsObject }}.Publicize(){{ end }}
 	return nil
 }
 {{ end }}
@@ -687,12 +686,7 @@ func {{ .Name }}Href({{ if .CanonicalParams }}{{ join .CanonicalParams ", " }} i
 // Identifier: {{ .Identifier }}{{ $typeName := gotypename . .AllRequired 0 false }}
 type {{ $typeName }} {{ gotypedef . 0 true false }}
 
-{{ $assignment := recursiveFinalizer .AttributeDefinition "mt" "response" 1 }}{{ if $assignment }}// Finalize sets the default values for {{$typeName}} type instance.
-func (ut {{ gotyperef . .AllRequired 0 false }}) Finalize() {
-{{ $assignment }}
-}{{ end }}
-
-{{ $validation := recursiveValidate .AttributeDefinition false false "mt" "response" 1 false }}{{ if $validation }}// Validate validates the {{$typeName}} media type instance.
+{{ $validation := recursiveValidate .AttributeDefinition false false false "mt" "response" 1 false }}{{ if $validation }}// Validate validates the {{$typeName}} media type instance.
 func (mt {{ gotyperef . .AllRequired 0 false }}) Validate() (err error) {
 {{ $validation }}
 	return err
@@ -704,7 +698,7 @@ func (mt {{ gotyperef . .AllRequired 0 false }}) Validate() (err error) {
 	// template input: MediaTypeLinkTemplateData
 	mediaTypeLinkT = `// {{ gotypedesc . true }}{{ $typeName := gotypename . .AllRequired 0 false }}
 type {{ $typeName }} {{ gotypedef . 0 true false }}
-{{ $validation := recursiveValidate .AttributeDefinition false false "ut" "response" 1 false }}{{ if $validation }}// Validate validates the {{$typeName}} type instance.
+{{ $validation := recursiveValidate .AttributeDefinition false false false "ut" "response" 1 false }}{{ if $validation }}// Validate validates the {{$typeName}} type instance.
 func (ut {{ gotyperef . .AllRequired 0 false }}) Validate() (err error) {
 {{ $validation }}
 	return err
@@ -719,7 +713,7 @@ type {{ $privateTypeName }} {{ gotypedef . 0 true true }}
 func (ut {{ gotyperef . .AllRequired 0 true }}) Finalize() {
 {{ $assignment }}
 }{{ end }}
-{{ $validation := recursiveValidate .AttributeDefinition false false "ut" "response" 1 true }}{{ if $validation }}// Validate validates the {{$privateTypeName}} type instance.
+{{ $validation := recursiveValidate .AttributeDefinition false false false "ut" "response" 1 true }}{{ if $validation }}// Validate validates the {{$privateTypeName}} type instance.
 func (ut {{ gotyperef . .AllRequired 0 true }}) Validate() (err error) {
 {{ $validation }}
 	return
@@ -734,7 +728,7 @@ func (ut {{ gotyperef . .AllRequired 0 true }}) Publicize() {{ gotyperef . .AllR
 
 // {{ gotypedesc . true }}
 type {{ $typeName }} {{ gotypedef . 0 true false }}
-{{ $validation := recursiveValidate .AttributeDefinition false false "ut" "response" 1 false }}{{ if $validation }}// Validate validates the {{$typeName}} type instance.
+{{ $validation := recursiveValidate .AttributeDefinition false false false "ut" "response" 1 false }}{{ if $validation }}// Validate validates the {{$typeName}} type instance.
 func (ut {{ gotyperef . .AllRequired 0 false }}) Validate() (err error) {
 {{ $validation }}
 	return err
