@@ -249,7 +249,13 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 		if err != nil {
 			handler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 				rw.Header().Set("Content-Type", ErrorMediaIdentifier)
-				return ContextResponse(ctx).Send(ctx, 400, ErrInvalidEncoding(err))
+				status := 400
+				body := ErrInvalidEncoding(err)
+				if err.Error() == "http: request body too large" {
+					status = 413
+					body = ErrRequestBodyTooLarge("body length exceeds %d bytes", MaxRequestBodyLength)
+				}
+				return ContextResponse(ctx).Send(ctx, status, body)
 			}
 			for i := range chain {
 				handler = chain[ml-i-1](handler)
