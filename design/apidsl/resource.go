@@ -98,7 +98,7 @@ func DefaultMedia(val interface{}, viewName ...string) {
 			return
 		}
 		if len(viewName) == 1 {
-			r.ViewName = viewName[0]
+			r.DefaultViewName = viewName[0]
 		} else if len(viewName) > 1 {
 			dslengine.ReportError("too many arguments given to DefaultMedia")
 		}

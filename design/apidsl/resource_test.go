@@ -185,7 +185,7 @@ var _ = Describe("Resource", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.Validate()).ShouldNot(HaveOccurred())
 			Ω(res.MediaType).Should(Equal(mediaType))
-			Ω(res.ViewName).Should(Equal("default"))
+			Ω(res.DefaultViewName).Should(Equal("default"))
 		})
 	})
 
@@ -203,7 +203,7 @@ var _ = Describe("Resource", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.Validate()).ShouldNot(HaveOccurred())
 			Ω(res.MediaType).Should(Equal(mediaType))
-			Ω(res.ViewName).Should(Equal("compact"))
+			Ω(res.DefaultViewName).Should(Equal("compact"))
 		})
 	})
 
@@ -244,7 +244,7 @@ var _ = Describe("Resource", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.Validate()).ShouldNot(HaveOccurred())
 			Ω(res.MediaType).Should(Equal(identifier))
-			Ω(res.ViewName).Should(Equal("default"))
+			Ω(res.DefaultViewName).Should(Equal("default"))
 		})
 	})
 
