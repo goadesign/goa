@@ -256,6 +256,23 @@ var _ = Describe("code generation", func() {
 						"}"
 					Ω(st).Should(Equal(expected))
 				})
+
+				Context("that are required", func() {
+					BeforeEach(func() {
+						required = &dslengine.ValidationDefinition{
+							Required: []string{"foo"},
+						}
+					})
+
+					It("produces the struct go code", func() {
+						expected := "struct {\n" +
+							"	Foo []*struct {\n" +
+							"		Bar *int `json:\"bar,omitempty\" xml:\"bar,omitempty\"`\n" +
+							"	} `json:\"foo\" xml:\"foo\"`\n" +
+							"}"
+						Ω(st).Should(Equal(expected))
+					})
+				})
 			})
 
 			Context("that are required", func() {
