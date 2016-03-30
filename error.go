@@ -34,6 +34,10 @@ var (
 	// to be decoded.
 	ErrInvalidEncoding = NewErrorClass("invalid_encoding", 400)
 
+	// ErrRequestBodyTooLarge is the error produced when the size of a request body exceeds
+	// MaxRequestBodyLength bytes.
+	ErrRequestBodyTooLarge = NewErrorClass("request_too_large", 413)
+
 	// ErrNoSecurityScheme is the error produced when no security scheme has been
 	// registered for a name defined in the design.
 	ErrNoSecurityScheme = NewErrorClass("no_security_scheme", 500)
