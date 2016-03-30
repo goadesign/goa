@@ -85,7 +85,7 @@ var _ = Describe("Service", func() {
 		})
 
 		It("prevents reading more bytes", func() {
-			Ω(string(rw.Body)).Should(Equal(`{"code":"invalid_encoding","status":400,"detail":"http: request body too large"}` + "\n"))
+			Ω(string(rw.Body)).Should(Equal(`{"code":"request_too_large","status":413,"detail":"body length exceeds 4 bytes"}` + "\n"))
 		})
 	})
 
