@@ -189,11 +189,7 @@ func okResp(a *design.ActionDefinition) map[string]interface{} {
 	if mt, ok2 = design.Design.MediaTypes[design.CanonicalIdentifier(ok.MediaType)]; !ok2 {
 		return nil
 	}
-	viewName := ok.ViewName
-	if viewName == "" {
-		viewName = "default"
-	}
-	p, _, err := mt.Project(viewName)
+	p, _, err := mt.Project(ok.ViewName)
 	if err != nil {
 		return nil
 	}

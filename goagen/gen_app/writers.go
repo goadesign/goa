@@ -200,11 +200,7 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 			}
 		} else if mt := design.Design.MediaTypeWithIdentifier(resp.MediaType); mt != nil {
 			respData["MediaType"] = mt
-			viewName := resp.ViewName
-			if viewName == "" {
-				viewName = "default"
-			}
-			p, _, err := mt.Project(viewName)
+			p, _, err := mt.Project(resp.ViewName)
 			if err != nil {
 				return err
 			}

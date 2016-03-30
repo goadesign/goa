@@ -121,7 +121,7 @@ type (
 		// Default media type, describes the resource attributes
 		MediaType string
 		// Default view name if default media type is MediaTypeDefinition
-		ViewName string
+		DefaultViewName string
 		// Exposed resource actions indexed by name
 		Actions map[string]*ActionDefinition
 		// Action with canonical resource path
@@ -1135,6 +1135,9 @@ func (r *ResponseDefinition) Context() string {
 // Finalize sets the response media type from its type if the type is a media type and no media
 // type is already specified.
 func (r *ResponseDefinition) Finalize() {
+	if r.ViewName == "" {
+		r.ViewName = "default"
+	}
 	if r.Type == nil {
 		return
 	}

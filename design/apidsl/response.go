@@ -69,7 +69,7 @@ func Response(name string, paramsAndDSL ...interface{}) {
 		if resp := executeResponseDSL(name, paramsAndDSL...); resp != nil {
 			if resp.Status == 200 && resp.MediaType == "" {
 				resp.MediaType = def.Parent.MediaType
-				resp.ViewName = def.Parent.ViewName
+				resp.ViewName = def.Parent.DefaultViewName
 			}
 			resp.Parent = def
 			def.Responses[name] = resp
@@ -86,7 +86,7 @@ func Response(name string, paramsAndDSL ...interface{}) {
 		if resp := executeResponseDSL(name, paramsAndDSL...); resp != nil {
 			if resp.Status == 200 && resp.MediaType == "" {
 				resp.MediaType = def.MediaType
-				resp.ViewName = def.ViewName
+				resp.ViewName = def.DefaultViewName
 			}
 			resp.Parent = def
 			def.Responses[name] = resp
