@@ -470,12 +470,19 @@ func New{{ .Name }}(ctx context.Context) (*{{ .Name }}, error) {
 {{ end }}{{ $validation := validationChecker $att ($headers.IsNonZero $name) ($headers.IsRequired $name) (printf "raw%s" (goify $name true)) $name 2 }}{{/*
 */}}{{ if $validation }}{{ $validation }}
 {{ end }}	}
-{{ end }}{{ end }}{{ if.Params }}{{ range $name, $att := .Params.Type.ToObject }}	raw{{ goify $name true }} := req.Params.Get("{{ $name }}")
-{{ $mustValidate := $.MustValidate $name }}{{ if $mustValidate }}	if raw{{ goify $name true }} == "" {
+{{ end }}{{ end }}{{/*
+*/}}{{ if.Params }}{{ range $name, $att := .Params.Type.ToObject }}	param{{ goify $name true }} := req.Params["{{ $name }}"]
+{{ $mustValidate := $.MustValidate $name }}{{ if $mustValidate }}	if len(param{{ goify $name true }}) == 0 {
 		err = goa.MergeErrors(err, goa.MissingParamError("{{ $name }}"))
 	} else {
-{{ else }}	if raw{{ goify $name true }} != "" {
-{{ end }}{{ template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) (printf "rctx.%s" (goify $name true)) 2) }}{{/*
+{{ else }}	if len(param{{ goify $name true }}) > 0 {
+{{ end }}{{/* if $mustValidate */}}{{ if $att.Type.IsArray }}		var params {{ gotypedef $att 2 true }}
+		for _, raw{{ goify $name true}} := range param{{ goify $name true}} {
+{{ template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) "params" 3) }}{{/*
+*/}}			{{ printf "rctx.%s" (goify $name true) }} = append({{ printf "rctx.%s" (goify $name true) }}, params...)
+		}
+{{ else }}		raw{{ goify $name true}} := param{{ goify $name true}}[0]
+{{ template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) (printf "rctx.%s" (goify $name true)) 2) }}{{ end }}{{/*
 */}}{{ $validation := validationChecker $att ($.Params.IsNonZero $name) ($.Params.IsRequired $name) (printf "rctx.%s" (goify $name true)) $name 2 }}{{/*
 */}}{{ if $validation }}{{ $validation }}
 {{ end }}	}
