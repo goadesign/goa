@@ -362,8 +362,9 @@ func NewGetWidgetContext(ctx context.Context) (*GetWidgetContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
 	rctx := GetWidgetContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
-	rawID := req.Params.Get("id")
-	if rawID != "" {
+	paramID := req.Params["id"]
+	if len(paramID) > 0 {
+		rawID := paramID[0]
 		rctx.ID = rawID
 	}
 	return &rctx, err

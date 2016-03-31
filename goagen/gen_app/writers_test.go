@@ -743,8 +743,9 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
-	rawParam := req.Params.Get("param")
-	if rawParam != "" {
+	paramParam := req.Params["param"]
+	if len(paramParam) > 0 {
+		rawParam := paramParam[0]
 		if param, err2 := strconv.Atoi(rawParam); err2 == nil {
 			tmp2 := param
 			tmp1 := &tmp2
@@ -771,8 +772,9 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
-	rawParam := req.Params.Get("param")
-	if rawParam != "" {
+	paramParam := req.Params["param"]
+	if len(paramParam) > 0 {
+		rawParam := paramParam[0]
 		rctx.Param = &rawParam
 	}
 	return &rctx, err
@@ -793,8 +795,9 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
-	rawParam := req.Params.Get("param")
-	if rawParam != "" {
+	paramParam := req.Params["param"]
+	if len(paramParam) > 0 {
+		rawParam := paramParam[0]
 		if param, err2 := strconv.ParseFloat(rawParam, 64); err2 == nil {
 			tmp1 := &param
 			rctx.Param = tmp1
@@ -819,8 +822,9 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
-	rawParam := req.Params.Get("param")
-	if rawParam != "" {
+	paramParam := req.Params["param"]
+	if len(paramParam) > 0 {
+		rawParam := paramParam[0]
 		if param, err2 := strconv.ParseBool(rawParam); err2 == nil {
 			tmp1 := &param
 			rctx.Param = tmp1
@@ -846,10 +850,14 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
-	rawParam := req.Params.Get("param")
-	if rawParam != "" {
-		elemsParam := strings.Split(rawParam, ",")
-		rctx.Param = elemsParam
+	paramParam := req.Params["param"]
+	if len(paramParam) > 0 {
+		var params []string
+		for _, rawParam := range paramParam {
+			elemsParam := strings.Split(rawParam, ",")
+			params = elemsParam
+			rctx.Param = append(rctx.Param, params...)
+		}
 	}
 	return &rctx, err
 }
@@ -869,18 +877,22 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
-	rawParam := req.Params.Get("param")
-	if rawParam != "" {
-		elemsParam := strings.Split(rawParam, ",")
-		elemsParam2 := make([]int, len(elemsParam))
-		for i, rawElem := range elemsParam {
-			if elem, err2 := strconv.Atoi(rawElem); err2 == nil {
-				elemsParam2[i] = elem
-			} else {
-				err = goa.MergeErrors(err, goa.InvalidParamTypeError("elem", rawElem, "integer"))
+	paramParam := req.Params["param"]
+	if len(paramParam) > 0 {
+		var params []int
+		for _, rawParam := range paramParam {
+			elemsParam := strings.Split(rawParam, ",")
+			elemsParam2 := make([]int, len(elemsParam))
+			for i, rawElem := range elemsParam {
+				if elem, err2 := strconv.Atoi(rawElem); err2 == nil {
+					elemsParam2[i] = elem
+				} else {
+					err = goa.MergeErrors(err, goa.InvalidParamTypeError("elem", rawElem, "integer"))
+				}
 			}
+			params = elemsParam2
+			rctx.Param = append(rctx.Param, params...)
 		}
-		rctx.Param = elemsParam2
 	}
 	return &rctx, err
 }
@@ -900,8 +912,9 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
-	rawInt := req.Params.Get("int")
-	if rawInt != "" {
+	paramInt := req.Params["int"]
+	if len(paramInt) > 0 {
+		rawInt := paramInt[0]
 		if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
 			tmp2 := int_
 			tmp1 := &tmp2
@@ -928,10 +941,11 @@ func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
-	rawInt := req.Params.Get("int")
-	if rawInt == "" {
+	paramInt := req.Params["int"]
+	if len(paramInt) == 0 {
 		err = goa.MergeErrors(err, goa.MissingParamError("int"))
 	} else {
+		rawInt := paramInt[0]
 		if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
 			rctx.Int = int_
 		} else {
