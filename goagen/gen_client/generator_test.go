@@ -109,5 +109,38 @@ var _ = Describe("Generate", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 
 		})
+
+		Context("with an action with a multiline description", func() {
+			const multiline = "multi\nline"
+
+			BeforeEach(func() {
+				design.Design.Resources["foo"].Actions["show"].Description = multiline
+			})
+
+			It("properly escapes the multi-line string used in the short description", func() {
+				Ω(genErr).Should(BeNil())
+				Ω(files).Should(HaveLen(6))
+				content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "testapi-cli", "main.go"))
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(string(content)).Should(ContainSubstring(multiline))
+			})
+		})
+
+		Context("with an action with a description containing backticks", func() {
+			const pre = "pre"
+			const post = "post"
+
+			BeforeEach(func() {
+				design.Design.Resources["foo"].Actions["show"].Description = pre + "`" + post
+			})
+
+			It("properly escapes the multi-line string used in the short description", func() {
+				Ω(genErr).Should(BeNil())
+				Ω(files).Should(HaveLen(6))
+				content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "testapi-cli", "main.go"))
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(string(content)).Should(ContainSubstring(pre + "` + \"`\" + `" + post))
+			})
+		})
 	})
 })

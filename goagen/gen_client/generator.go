@@ -83,7 +83,7 @@ func (g *Generator) generateMain(mainFile string, clientPkg string, funcs templa
 		"Signers": Signers,
 		"Version": Version,
 	}
-	if err := file.ExecuteTemplate("main", mainTmpl, nil, data); err != nil {
+	if err := file.ExecuteTemplate("main", mainTmpl, funcs, data); err != nil {
 		return err
 	}
 
@@ -98,7 +98,7 @@ func (g *Generator) generateMain(mainFile string, clientPkg string, funcs templa
 			return nil
 		})
 	})
-	if err := file.ExecuteTemplate("registerCmds", registerCmdsT, nil, actions); err != nil {
+	if err := file.ExecuteTemplate("registerCmds", registerCmdsT, funcs, actions); err != nil {
 		return err
 	}
 
@@ -266,18 +266,20 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	}
 
 	funcs := template.FuncMap{
-		"goify":        codegen.Goify,
-		"gotypedef":    codegen.GoTypeDef,
-		"gotyperefext": goTypeRefExt,
-		"nativeType":   codegen.GoNativeType,
-		"joinNames":    joinNames,
-		"join":         join,
-		"toString":     toString,
-		"tempvar":      codegen.Tempvar,
-		"title":        strings.Title,
-		"flagType":     flagType,
-		"defaultPath":  defaultPath,
-		"appPkg":       appPkg,
+		"goify":           codegen.Goify,
+		"gotypedef":       codegen.GoTypeDef,
+		"gotyperefext":    goTypeRefExt,
+		"nativeType":      codegen.GoNativeType,
+		"joinNames":       joinNames,
+		"join":            join,
+		"toString":        toString,
+		"tempvar":         codegen.Tempvar,
+		"title":           strings.Title,
+		"flagType":        flagType,
+		"defaultPath":     defaultPath,
+		"appPkg":          appPkg,
+		"escapeBackticks": escapeBackticks,
+		"multiComment":    multiComment,
 	}
 	clientPkg, err := codegen.PackagePath(codegen.OutputDir)
 	if err != nil {
@@ -373,6 +375,21 @@ func join(att *design.AttributeDefinition) string {
 	}
 	sort.Strings(elems)
 	return strings.Join(elems, ", ")
+}
+
+// escapeBackticks is a code generation helper that escapes backticks in a string.
+func escapeBackticks(text string) string {
+	return strings.Replace(text, "`", "`+\"`\"+`", -1)
+}
+
+// multiComment produces a Go comment containing the given string taking into account newlines.
+func multiComment(text string) string {
+	lines := strings.Split(text, "\n")
+	nl := make([]string, len(lines))
+	for i, l := range lines {
+		nl[i] = "// " + l
+	}
+	return strings.Join(nl, "\n")
 }
 
 // gotTypeRefExt computes the type reference for a type in a different package.
@@ -471,7 +488,7 @@ func main() {
 	// Create command line parser
 	app := &cobra.Command{
 		Use: "{{.API.Name}}-cli",
-		Short: "CLI client for the {{.API.Name}} service{{if .API.Docs}} ({{.API.Docs.URL}}){{end}}",
+		Short: ` + "`" + `CLI client for the {{.API.Name}} service{{if .API.Docs}} ({{escapeBackticks .API.Docs.URL}}){{end}}` + "`" + `,
 	}
 	c := client.New(nil)
 {{if .Signers}}	c.Signers = RegisterSigners(app)
@@ -588,7 +605,7 @@ func (cmd *{{$cmdName}}) Run(c *client.Client, args []string) error {
 `
 
 const clientsWSTmpl = `{{$funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true}}{{/*
-*/}}{{$desc := .Description}}{{if $desc}}// {{$desc}}{{else}}// {{$funcName}} establishes a websocket connection to the {{.Name}} action endpoint of the {{.Parent.Name}} resource{{end}}
+*/}}{{$desc := .Description}}{{if $desc}}{{multiComment $desc}}{{else}}// {{$funcName}} establishes a websocket connection to the {{.Name}} action endpoint of the {{.Parent.Name}} resource{{end}}
 func (c *Client) {{$funcName}}(ctx context.Context, path string{{/*
 	*/}}{{$params := join .QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
 	*/}}{{$headers := join .Headers}}{{if $headers}}, {{$headers}}{{end}}) (*websocket.Conn, error) {
@@ -606,7 +623,7 @@ func (c *Client) {{$funcName}}(ctx context.Context, path string{{/*
 }
 `
 
-const clientsTmpl = `{{$funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true}}{{$desc := .Description}}{{if $desc}}// {{$desc}}{{else}}// {{$funcName}} makes a request to the {{.Name}} action endpoint of the {{.Parent.Name}} resource{{end}}
+const clientsTmpl = `{{$funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true}}{{$desc := .Description}}{{if $desc}}{{multiComment $desc}}{{else}}// {{$funcName}} makes a request to the {{.Name}} action endpoint of the {{.Parent.Name}} resource{{end}}
 func (c *Client) {{$funcName}}(ctx context.Context, path string{{if .Payload}}, payload {{if .Payload.Type.IsObject}}*{{end}}{{gotyperefext .Payload 1 appPkg}}{{end}}{{/*
 	*/}}{{$params := join .QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
 	*/}}{{$headers := join .Headers}}{{if $headers}}, {{$headers}}{{end}}) (*http.Response, error) {
@@ -656,13 +673,13 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 {{if gt (len .) 0}}	var command, sub *cobra.Command
 {{end}}{{range $name, $actions := .}}	command = &cobra.Command{
 		Use:   "{{$name}}",
-		Short: "{{if eq (len $actions) 1}}{{$a := index $actions 0}}{{$a.Description}}{{else}}{{$name}} action{{end}}",
+		Short: ` + "`" + `{{if eq (len $actions) 1}}{{$a := index $actions 0}}{{escapeBackticks $a.Description}}{{else}}{{$name}} action{{end}}` + "`" + `,
 	}
 {{range $action := $actions}}{{$cmdName := goify (printf "%s%sCommand" $action.Name (title $action.Parent.Name)) true}}{{/*
 */}}{{$tmp := tempvar}}	{{$tmp}} := new({{$cmdName}})
 	sub = &cobra.Command{
 		Use:   "{{$action.Parent.Name}}",
-		Short: "{{$action.Parent.Description}}",
+		Short: ` + "`" + `{{escapeBackticks $action.Parent.Description}}` + "`" + `,
 		RunE:  func(cmd *cobra.Command, args []string) error { return {{$tmp}}.Run(c, args) },
 	}
 	{{$tmp}}.RegisterFlags(sub)
