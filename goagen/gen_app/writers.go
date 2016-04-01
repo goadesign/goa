@@ -526,7 +526,7 @@ func (ctx *{{ .Context.Name }}) {{ goify .Response.Name true }}({{ if .Response.
 
 	// payloadT generates the payload type definition GoGenerator
 	// template input: *ContextTemplateData
-	payloadT = `{{ $payload := .Payload }}// {{ gotypename .Payload nil 0 true }} is the {{ .ResourceName }} {{ .ActionName }} action payload.{{/*
+	payloadT = `{{ $payload := .Payload }}{{ if .Payload.IsObject }}// {{ gotypename .Payload nil 0 true }} is the {{ .ResourceName }} {{ .ActionName }} action payload.{{/*
 */}}{{ $privateTypeName := gotypename .Payload nil 1 true }}
 type {{ $privateTypeName }} {{ gotypedef .Payload 0 true true }}
 
@@ -546,7 +546,7 @@ func (payload {{ gotyperef .Payload .Payload.AllRequired 0 true }}) Publicize() 
 	var pub {{ $typeName }}
 	{{ recursivePublicizer .Payload.AttributeDefinition "payload" "pub" 1 }}
 	return &pub
-}
+}{{ end }}
 
 	// {{ gotypename .Payload nil 0 false }} is the {{ .ResourceName }} {{ .ActionName }} action payload.
 type {{ gotypename .Payload nil 1 false }} {{ gotypedef .Payload 0 true false }}
