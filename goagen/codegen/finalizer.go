@@ -94,32 +94,30 @@ func printVal(t design.DataType, val interface{}) string {
 		hval := val.(map[interface{}]interface{})
 		if len(hval) == 0 {
 			return fmt.Sprintf("%s{}", GoPackageTypeName(t, nil, 0, false))
-		} else {
-			var buffer bytes.Buffer
-			buffer.WriteString(fmt.Sprintf("%s{", GoPackageTypeName(t, nil, 0, false)))
-			for k, v := range hval {
-				buffer.WriteString(fmt.Sprintf("%s: %s, ", printVal(h.KeyType.Type, k), printVal(h.ElemType.Type, v)))
-			}
-			buffer.Truncate(buffer.Len() - 2) // remove ", "
-			buffer.WriteString("}")
-			return buffer.String()
 		}
+		var buffer bytes.Buffer
+		buffer.WriteString(fmt.Sprintf("%s{", GoPackageTypeName(t, nil, 0, false)))
+		for k, v := range hval {
+			buffer.WriteString(fmt.Sprintf("%s: %s, ", printVal(h.KeyType.Type, k), printVal(h.ElemType.Type, v)))
+		}
+		buffer.Truncate(buffer.Len() - 2) // remove ", "
+		buffer.WriteString("}")
+		return buffer.String()
 	case t.IsArray():
 		// Input is an array
 		a := t.ToArray()
 		aval := val.([]interface{})
 		if len(aval) == 0 {
 			return fmt.Sprintf("%s{}", GoPackageTypeName(t, nil, 0, false))
-		} else {
-			var buffer bytes.Buffer
-			buffer.WriteString(fmt.Sprintf("%s{", GoPackageTypeName(t, nil, 0, false)))
-			for _, e := range aval {
-				buffer.WriteString(fmt.Sprintf("%s, ", printVal(a.ElemType.Type, e)))
-			}
-			buffer.Truncate(buffer.Len() - 2) // remove ", "
-			buffer.WriteString("}")
-			return buffer.String()
 		}
+		var buffer bytes.Buffer
+		buffer.WriteString(fmt.Sprintf("%s{", GoPackageTypeName(t, nil, 0, false)))
+		for _, e := range aval {
+			buffer.WriteString(fmt.Sprintf("%s, ", printVal(a.ElemType.Type, e)))
+		}
+		buffer.Truncate(buffer.Len() - 2) // remove ", "
+		buffer.WriteString("}")
+		return buffer.String()
 	default:
 		// shouldn't happen as the value's compatibility is already checked.
 		panic("unknown type")

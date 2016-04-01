@@ -44,7 +44,7 @@ func init() {
 	}
 }
 
-// Recursive publicizer produces code that copies fields from the private struct to the
+// RecursivePublicizer produces code that copies fields from the private struct to the
 // public struct
 func RecursivePublicizer(att *design.AttributeDefinition, source, target string, depth int) string {
 	var publications []string

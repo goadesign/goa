@@ -76,6 +76,7 @@ type (
 		ElemType *AttributeDefinition
 	}
 
+	// ArrayVal is the value of an array used to specify the default value.
 	ArrayVal []interface{}
 
 	// Object is the type for a JSON object.
@@ -87,6 +88,7 @@ type (
 		ElemType *AttributeDefinition
 	}
 
+	// HashVal is the value of a hash used to specify the default value.
 	HashVal map[interface{}]interface{}
 
 	// UserTypeDefinition is the type for user defined types that are not media types
@@ -308,7 +310,7 @@ func (a *Array) Kind() Kind { return ArrayKind }
 
 // Name returns the type name.
 func (a *Array) Name() string {
-	return fmt.Sprintf("array")
+	return "array"
 }
 
 // IsPrimitive returns false.
@@ -446,9 +448,7 @@ func (o Object) GenerateExample(r *RandomGenerator) interface{} {
 func (h *Hash) Kind() Kind { return HashKind }
 
 // Name returns the type name.
-func (h *Hash) Name() string {
-	return fmt.Sprintf("hash")
-}
+func (h *Hash) Name() string { return "hash" }
 
 // IsPrimitive returns false.
 func (h *Hash) IsPrimitive() bool { return false }
@@ -612,7 +612,8 @@ func (u *UserTypeDefinition) ToArray() *Array { return u.Type.ToArray() }
 // ToHash calls ToHash on the user type underlying data type.
 func (u *UserTypeDefinition) ToHash() *Hash { return u.Type.ToHash() }
 
-func (u *UserTypeDefinition) CanHaveDefault() bool { return false }
+// CanHaveDefault calls CanHaveDefault on the user type underlying data type.
+func (u *UserTypeDefinition) CanHaveDefault() bool { return u.Type.CanHaveDefault() }
 
 // IsCompatible returns true if val is compatible with p.
 func (u *UserTypeDefinition) IsCompatible(val interface{}) bool {
