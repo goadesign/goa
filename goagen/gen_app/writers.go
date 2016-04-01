@@ -593,8 +593,8 @@ func Mount{{ .Resource }}Controller(service *goa.Service, ctrl {{ .Resource }}Co
 	}
 {{ if $.Origins }}	h = handle{{ $res }}Origin(h)
 {{ end }}{{ if .Security }}	h = handleSecurity({{ printf "%q" .Security.Scheme.SchemeName }}, h{{ range .Security.Scopes }}, {{ printf "%q" . }}{{ end }})
-{{ end }}{{ range .Routes }}	service.Mux.Handle("{{ .Verb }}", "{{ .FullPath }}", ctrl.MuxHandler("{{ $action.Name }}", h, {{ if $action.Payload }}{{ $action.Unmarshal }}{{ else }}nil{{ end }}))
-	service.LogInfo("mount", "ctrl", "{{ $res }}", "action", "{{ $action.Name }}", "route", "{{ .Verb }} {{ .FullPath }}"{{ with $action.Security }}, "security", {{ printf "%q" .Scheme.SchemeName }}{{ end }})
+{{ end }}{{ range .Routes }}	service.Mux.Handle("{{ .Verb }}", {{ printf "%q" .FullPath }}, ctrl.MuxHandler({{ printf "%q" $action.Name }}, h, {{ if $action.Payload }}{{ $action.Unmarshal }}{{ else }}nil{{ end }}))
+	service.LogInfo("mount", "ctrl", {{ printf "%q" $res }}, "action", {{ printf "%q" $action.Name }}, "route", {{ printf "%q" (printf "%s %s" .Verb .FullPath) }}{{ with $action.Security }}, "security", {{ printf "%q" .Scheme.SchemeName }}{{ end }})
 {{ end }}{{ end }}}
 `
 
