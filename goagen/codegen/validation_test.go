@@ -26,7 +26,7 @@ var _ = Describe("validation code generation", func() {
 			JustBeforeEach(func() {
 				att.Type = attType
 				att.Validation = validation
-				code = codegen.RecursiveChecker(att, false, false, target, context, 1, false)
+				code = codegen.RecursiveChecker(att, false, false, false, target, context, 1, false)
 			})
 
 			Context("of enum", func() {

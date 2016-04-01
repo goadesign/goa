@@ -477,7 +477,7 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 		err = goa.MergeErrors(err, goa.MissingParamError("{{ $name }}"))
 	} else {
 {{ else }}	if len(param{{ goify $name true }}) > 0 {
-{{ end }}{{/* if $mustValidate */}}{{ if $att.Type.IsArray }}		var params {{ gotypedef $att 2 true }}
+{{ end }}{{/* if $mustValidate */}}{{ if $att.Type.IsArray }}		var params {{ gotypedef $att 2 true false }}
 		for _, raw{{ goify $name true}} := range param{{ goify $name true}} {
 {{ template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) "params" 3) }}{{/*
 */}}			{{ printf "rctx.%s" (goify $name true) }} = append({{ printf "rctx.%s" (goify $name true) }}, params...)
@@ -530,7 +530,7 @@ func (ctx *{{ .Context.Name }}) {{ goify .Response.Name true }}({{ if .Response.
 */}}{{ $privateTypeName := gotypename .Payload nil 1 true }}
 type {{ $privateTypeName }} {{ gotypedef .Payload 0 true true }}
 
-{{ $assignment := recursiveFinalizer .Payload.AttributeDefinition "payload" "raw" 1 }}{{ if $assignment }}// Finalize sets the default values defined in the design.
+{{ $assignment := recursiveFinalizer .Payload.AttributeDefinition "payload" 1 }}{{ if $assignment }}// Finalize sets the default values defined in the design.
 func (payload {{ gotyperef .Payload .Payload.AllRequired 0 true }}) Finalize() {
 {{ $assignment }}
 }{{ end }}
@@ -657,7 +657,7 @@ func {{ .Unmarshal }}(ctx context.Context, service *goa.Service, req *http.Reque
 	{{ if .Payload.IsObject }}payload := &{{ gotypename .Payload nil 1 true }}{}
 	if err := service.DecodeRequest(req, payload); err != nil {
 		return err
-	}{{ $assignment := recursiveFinalizer .Payload.AttributeDefinition "payload" "raw" 1 }}{{ if $assignment }}
+	}{{ $assignment := recursiveFinalizer .Payload.AttributeDefinition "payload" 1 }}{{ if $assignment }}
 	payload.Finalize(){{ end }}{{ else }}var payload {{ gotypename .Payload nil 1 false }}
 	if err := goa.ContextService(ctx).DecodeRequest(req, &payload); err != nil {
 		return err
@@ -709,7 +709,7 @@ func (ut {{ gotyperef . .AllRequired 0 false }}) Validate() (err error) {
 	// template input: UserTypeTemplateData
 	userTypeT = `// {{ gotypedesc . true }}{{ $privateTypeName := gotypename . .AllRequired 0 true }}
 type {{ $privateTypeName }} {{ gotypedef . 0 true true }}
-{{ $assignment := recursiveFinalizer .AttributeDefinition "ut" "response" 1 }}{{ if $assignment }}// Finalize sets the default values for {{$privateTypeName}} type instance.
+{{ $assignment := recursiveFinalizer .AttributeDefinition "ut" 1 }}{{ if $assignment }}// Finalize sets the default values for {{$privateTypeName}} type instance.
 func (ut {{ gotyperef . .AllRequired 0 true }}) Finalize() {
 {{ $assignment }}
 }{{ end }}

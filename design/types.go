@@ -31,6 +31,8 @@ type (
 		Name() string
 		// IsPrimitive returns true if the underlying type is one of the primitive types.
 		IsPrimitive() bool
+		// IsUserDefined returns true if the underlying type is one of the user defined types.
+		IsUserDefined() bool
 		// IsObject returns true if the underlying type is an object, a user type which
 		// is an object or a media type whose type is an object.
 		IsObject() bool
@@ -190,6 +192,9 @@ func (p Primitive) Name() string {
 // IsPrimitive returns true.
 func (p Primitive) IsPrimitive() bool { return true }
 
+// IsUserDefined returns false.
+func (p Primitive) IsUserDefined() bool { return false }
+
 // IsObject returns false.
 func (p Primitive) IsObject() bool { return false }
 
@@ -309,6 +314,11 @@ func (a *Array) Name() string {
 // IsPrimitive returns false.
 func (a *Array) IsPrimitive() bool { return false }
 
+// IsUserDefined returns true if the array's element type is user defined.
+func (a *Array) IsUserDefined() bool {
+	return a.ElemType.Type.IsUserDefined()
+}
+
 // IsObject returns false.
 func (a *Array) IsObject() bool { return false }
 
@@ -378,6 +388,9 @@ func (o Object) Name() string { return "object" }
 // IsPrimitive returns false.
 func (o Object) IsPrimitive() bool { return false }
 
+// IsUserDefined returns true.
+func (o Object) IsUserDefined() bool { return true }
+
 // IsObject returns true.
 func (o Object) IsObject() bool { return true }
 
@@ -439,6 +452,12 @@ func (h *Hash) Name() string {
 
 // IsPrimitive returns false.
 func (h *Hash) IsPrimitive() bool { return false }
+
+// IsUserDefined returns true if the either hash's key type is user defined
+// or the element type is user defined.
+func (h *Hash) IsUserDefined() bool {
+	return h.KeyType.Type.IsUserDefined() || h.ElemType.Type.IsUserDefined()
+}
 
 // IsObject returns false.
 func (h *Hash) IsObject() bool { return false }
@@ -571,6 +590,9 @@ func (u *UserTypeDefinition) Name() string { return u.Type.Name() }
 
 // IsPrimitive calls IsPrimitive on the user type underlying data type.
 func (u *UserTypeDefinition) IsPrimitive() bool { return u.Type.IsPrimitive() }
+
+// IsUserDefined calls the IsUserDefined on the user type underlying data type.
+func (u *UserTypeDefinition) IsUserDefined() bool { return u.Type.IsUserDefined() }
 
 // IsObject calls IsObject on the user type underlying data type.
 func (u *UserTypeDefinition) IsObject() bool { return u.Type.IsObject() }
