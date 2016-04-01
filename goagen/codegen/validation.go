@@ -134,6 +134,7 @@ func ValidationChecker(att *design.AttributeDefinition, nonzero, required, hasDe
 		"target":    target,
 		"targetVal": t,
 		"array":     att.Type.IsArray(),
+		"hash":      att.Type.IsHash(),
 		"depth":     depth,
 		"private":   private,
 	}
@@ -274,7 +275,7 @@ const (
 {{end}}{{tabs .depth}}}`
 
 	lengthValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
-*/}}{{$target := or (and (or .array .nonzero) .target) .targetVal}}{{/*
+*/}}{{$target := or (and (or (or .array .hash) .nonzero) .target) .targetVal}}{{/*
 */}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
 {{end}}{{tabs .depth}}if len({{$target}}) {{if .isMinLength}}<{{else}}>{{end}} {{if .isMinLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
 {{tabs $depth}}	err = goa.MergeErrors(err, goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{$target}}, len({{$target}}), {{if .isMinLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}))
