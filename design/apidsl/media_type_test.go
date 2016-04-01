@@ -298,7 +298,7 @@ var _ = Describe("CollectionOf", func() {
 			mt := col.Type.ToObject()["mt"]
 			Ω(mt.Type).ShouldNot(BeNil())
 			Ω(mt.Type).Should(BeAssignableToTypeOf(&MediaTypeDefinition{}))
-			Ω(mt.Type.Name()).Should(Equal("array<object>"))
+			Ω(mt.Type.Name()).Should(Equal("array"))
 			et := mt.Type.ToArray().ElemType
 			Ω(et).ShouldNot(BeNil())
 			Ω(et.Type).Should(BeAssignableToTypeOf(&MediaTypeDefinition{}))

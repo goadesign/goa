@@ -11,6 +11,7 @@ import (
 var (
 	simplePublicizeT    *template.Template
 	recursivePublicizeT *template.Template
+	objectPublicizeT    *template.Template
 	arrayPublicizeT     *template.Template
 	hashPublicizeT      *template.Template
 )
@@ -18,16 +19,21 @@ var (
 func init() {
 	var err error
 	fm := template.FuncMap{
-		"tabs":       Tabs,
-		"goify":      Goify,
-		"gotyperef":  GoTypeRef,
-		"add":        Add,
-		"publicizer": Publicizer,
+		"tabs":                Tabs,
+		"goify":               Goify,
+		"gotyperef":           GoTypeRef,
+		"gotypedef":           GoTypeDef,
+		"add":                 Add,
+		"publicizer":          Publicizer,
+		"recursivePublicizer": RecursivePublicizer,
 	}
 	if simplePublicizeT, err = template.New("simplePublicize").Funcs(fm).Parse(simplePublicizeTmpl); err != nil {
 		panic(err)
 	}
 	if recursivePublicizeT, err = template.New("recursivePublicize").Funcs(fm).Parse(recursivePublicizeTmpl); err != nil {
+		panic(err)
+	}
+	if objectPublicizeT, err = template.New("objectPublicize").Funcs(fm).Parse(objectPublicizeTmpl); err != nil {
 		panic(err)
 	}
 	if arrayPublicizeT, err = template.New("arrPublicize").Funcs(fm).Parse(arrayPublicizeTmpl); err != nil {
@@ -55,10 +61,11 @@ func RecursivePublicizer(att *design.AttributeDefinition, source, target string,
 				fmt.Sprintf("%s.%s", source, Goify(n, true)),
 				fmt.Sprintf("%s.%s", target, Goify(n, true)),
 				catt.Type.IsPrimitive() && !att.IsPrimitivePointer(n),
-				depth,
+				depth+1,
 				false,
 			)
-			publication = fmt.Sprintf("if %s.%s != nil {\n%s\n}", source, Goify(n, true), publication)
+			publication = fmt.Sprintf("%sif %s.%s != nil {\n%s\n%s}",
+				Tabs(depth), source, Goify(n, true), publication, Tabs(depth))
 			publications = append(publications, publication)
 			return nil
 		})
@@ -81,30 +88,29 @@ func Publicizer(att *design.AttributeDefinition, sourceField, targetField string
 	case att.Type.IsPrimitive():
 		publication = RunTemplate(simplePublicizeT, data)
 	case att.Type.IsObject():
-		fmt.Printf("object type: %#v\n", att.Type)
 		if _, ok := att.Type.(*design.MediaTypeDefinition); ok {
 			publication = RunTemplate(recursivePublicizeT, data)
 		} else if _, ok := att.Type.(*design.UserTypeDefinition); ok {
 			publication = RunTemplate(recursivePublicizeT, data)
 		} else {
-			publication = RecursivePublicizer(att, sourceField, targetField, depth+1)
-			publication = fmt.Sprintf("%s = &%s{}\n%s", targetField, GoTypeDef(att, depth+1, true, false), publication)
+			publication = RunTemplate(objectPublicizeT, data)
 		}
 	case att.Type.IsArray():
 		// If the array element is primitive type, we can simply copy the elements over (i.e) []string
-		if arr := att.Type.ToArray(); arr.ElemType.Type.IsPrimitive() {
-			publication = RunTemplate(simplePublicizeT, data)
-		} else {
-			data["elemType"] = arr.ElemType
+		if att.Type.IsUserDefined() {
+			data["elemType"] = att.Type.ToArray().ElemType
 			publication = RunTemplate(arrayPublicizeT, data)
+		} else {
+			publication = RunTemplate(simplePublicizeT, data)
 		}
 	case att.Type.IsHash():
-		if h := att.Type.ToHash(); h.KeyType.Type.IsPrimitive() && h.ElemType.Type.IsPrimitive() {
-			publication = RunTemplate(simplePublicizeT, data)
-		} else {
+		if att.Type.IsUserDefined() {
+			h := att.Type.ToHash()
 			data["keyType"] = h.KeyType
 			data["elemType"] = h.ElemType
 			publication = RunTemplate(hashPublicizeT, data)
+		} else {
+			publication = RunTemplate(simplePublicizeT, data)
 		}
 	}
 	return publication
@@ -115,17 +121,21 @@ const (
 
 	recursivePublicizeTmpl = `{{ tabs .depth }}{{ .targetField }} {{ if .init }}:{{ end }}= {{ .sourceField }}.Publicize()`
 
+	objectPublicizeTmpl = `{{ tabs .depth }}{{ .targetField }} = &{{ gotypedef .att .depth true false }}{}
+{{ recursivePublicizer .att .sourceField .targetField .depth }}`
+
 	arrayPublicizeTmpl = `{{ tabs .depth }}{{ .targetField }} {{ if .init }}:{{ end }}= make({{ gotyperef .att.Type .att.AllRequired .depth false }}, len({{ .sourceField }})){{/*
 */}}{{ $i := printf "%s%d" "i" .depth }}{{ $elem := printf "%s%d" "elem" .depth }}
 {{ tabs .depth }}for {{ $i }}, {{ $elem }} := range {{ .sourceField }} {
-{{ tabs .depth }}	{{ publicizer .elemType $elem (printf "%s[%s]" .targetField $i) .dereference (add .depth 1) false }}
+{{ tabs .depth }}{{ publicizer .elemType $elem (printf "%s[%s]" .targetField $i) .dereference (add .depth 1) false }}
 {{ tabs .depth }}}`
 
 	hashPublicizeTmpl = `{{ tabs .depth }}{{ .targetField }} {{ if .init }}:{{ end }}= make({{ gotyperef .att.Type .att.AllRequired .depth false }}, len({{ .sourceField }})){{/*
 */}}{{ $k := printf "%s%d" "k" .depth }}{{ $v := printf "%s%d" "v" .depth }}
-{{ tabs .depth }}for {{ $k }}, {{ $v }} := range {{ .sourceField }} { {{ $pubk := printf "%s%s" "pub" $k }}{{ $pubv := printf "%s%s" "pub" $v }}
-{{ tabs .depth }}	{{ publicizer .keyType $k $pubk .dereference (add .depth 1) true }}
-{{ tabs .depth }}	{{ publicizer .elemType $v $pubv .dereference (add .depth 1) true }}
+{{ tabs .depth }}for {{ $k }}, {{ $v }} := range {{ .sourceField }} {
+{{ $pubk := printf "%s%s" "pub" $k }}{{ $pubv := printf "%s%s" "pub" $v }}{{/*
+*/}}{{ tabs .depth }}{{ publicizer .keyType $k $pubk .dereference (add .depth 1) true }}
+{{ tabs .depth }}{{ publicizer .elemType $v $pubv .dereference (add .depth 1) true }}
 {{ tabs .depth }}	{{ printf "%s[%s]" .targetField $pubk }} = {{ $pubv }}
 {{ tabs .depth }}}`
 )

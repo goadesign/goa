@@ -1,6 +1,7 @@
 package apidsl
 
 import (
+	"fmt"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -229,10 +230,10 @@ func Default(def interface{}) {
 	if a, ok := attributeDefinition(); ok {
 		if a.Type != nil {
 			if !a.Type.CanHaveDefault() {
-				dslengine.ReportError("%s type cannot have a default value", a.Type.Name())
+				dslengine.ReportError("%s type cannot have a default value", qualifiedTypeName(a.Type))
 			} else if !a.Type.IsCompatible(def) {
 				dslengine.ReportError("default value %#v is incompatible with attribute of type %s",
-					def, a.Type.Name())
+					def, qualifiedTypeName(a.Type))
 			} else {
 				a.SetDefault(def)
 			}
@@ -496,4 +497,22 @@ func Required(names ...string) {
 func incompatibleAttributeType(validation, actual, expected string) {
 	dslengine.ReportError("invalid %s validation definition: attribute must be %s (but type is %s)",
 		validation, expected, actual)
+}
+
+// qualifiedTypeName returns the qualified type name for the given data type.
+// This is useful in reporting types in error messages.
+// (e.g) array<string>, hash<string, string>, hash<string, array<int>>
+func qualifiedTypeName(t design.DataType) string {
+	switch t.Kind() {
+	case design.ArrayKind:
+		return fmt.Sprintf("%s<%s>", t.Name(), qualifiedTypeName(t.ToArray().ElemType.Type))
+	case design.HashKind:
+		h := t.ToHash()
+		return fmt.Sprintf("%s<%s, %s>",
+			t.Name(),
+			qualifiedTypeName(h.KeyType.Type),
+			qualifiedTypeName(h.ElemType.Type),
+		)
+	}
+	return t.Name()
 }
