@@ -239,7 +239,7 @@ func main() {
 	// Setup middleware
 	service.Use(middleware.RequestID())
 	service.Use(middleware.LogRequest(true))
-	service.Use(middleware.ErrorHandler(true))
+	service.Use(middleware.ErrorHandler(service, true))
 	service.Use(middleware.Recover())
 {{$api := .API}}
 {{range $name, $res := $api.Resources}}{{$name := goify $res.Name true}}	// Mount "{{$res.Name}}" controller

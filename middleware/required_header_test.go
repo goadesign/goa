@@ -17,11 +17,12 @@ var _ = Describe("RequireHeader", func() {
 	var ctx context.Context
 	var req *http.Request
 	var rw http.ResponseWriter
+	var service *goa.Service
 	headerName := "Some-Header"
 
 	BeforeEach(func() {
 		var err error
-		service := newService(nil)
+		service = newService(nil)
 		req, err = http.NewRequest("POST", "/foo/bar", strings.NewReader(`{"payload":42}`))
 		Ω(err).ShouldNot(HaveOccurred())
 		rw = new(testResponseWriter)
@@ -33,9 +34,10 @@ var _ = Describe("RequireHeader", func() {
 		var newCtx context.Context
 		h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 			newCtx = ctx
-			return goa.ContextResponse(ctx).Send(ctx, http.StatusOK, "ok")
+			return service.Send(ctx, http.StatusOK, "ok")
 		}
 		t := middleware.RequireHeader(
+			service,
 			regexp.MustCompile("^/foo"),
 			headerName,
 			regexp.MustCompile("^some value$"),
@@ -51,6 +53,7 @@ var _ = Describe("RequireHeader", func() {
 			panic("unreachable")
 		}
 		t := middleware.RequireHeader(
+			service,
 			regexp.MustCompile("^/foo"),
 			headerName,
 			regexp.MustCompile("^some value$"),
@@ -65,6 +68,7 @@ var _ = Describe("RequireHeader", func() {
 			panic("unreachable")
 		}
 		t := middleware.RequireHeader(
+			service,
 			regexp.MustCompile("^/foo"),
 			headerName,
 			regexp.MustCompile("^some value$"),
@@ -79,9 +83,10 @@ var _ = Describe("RequireHeader", func() {
 		req.Header.Set(headerName, "bogus")
 		h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 			newCtx = ctx
-			return goa.ContextResponse(ctx).Send(ctx, http.StatusOK, "ok")
+			return service.Send(ctx, http.StatusOK, "ok")
 		}
 		t := middleware.RequireHeader(
+			service,
 			regexp.MustCompile("^/baz"),
 			headerName,
 			regexp.MustCompile("^some value$"),
@@ -97,6 +102,7 @@ var _ = Describe("RequireHeader", func() {
 			panic("unreachable")
 		}
 		t := middleware.RequireHeader(
+			service,
 			nil,
 			headerName,
 			regexp.MustCompile("^some value$"),

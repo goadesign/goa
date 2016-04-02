@@ -15,6 +15,7 @@ import (
 // included. If requiredHeaderValue is nil then any value is accepted so long as
 // the header is non-empty.
 func RequireHeader(
+	service *goa.Service,
 	pathPattern *regexp.Regexp,
 	requiredHeaderName string,
 	requiredHeaderValue *regexp.Regexp,
@@ -35,8 +36,7 @@ func RequireHeader(
 				if matched {
 					err = h(ctx, rw, req)
 				} else {
-					resp := goa.ContextResponse(ctx)
-					err = resp.Send(ctx, failureStatus, http.StatusText(failureStatus))
+					err = service.Send(ctx, failureStatus, http.StatusText(failureStatus))
 				}
 			} else {
 				err = h(ctx, rw, req)
