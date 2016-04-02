@@ -68,7 +68,7 @@ var _ = Describe("NewMiddleware", func() {
 		Context("using a goa handler", func() {
 			BeforeEach(func() {
 				var goaHandler goa.Handler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-					goa.ContextResponse(ctx).Send(ctx, 200, "ok")
+					service.Send(ctx, 200, "ok")
 					return nil
 				}
 				input = goaHandler
@@ -85,7 +85,7 @@ var _ = Describe("NewMiddleware", func() {
 		Context("using a goa handler func", func() {
 			BeforeEach(func() {
 				input = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-					goa.ContextResponse(ctx).Send(ctx, 200, "ok")
+					service.Send(ctx, 200, "ok")
 					return nil
 				}
 			})
@@ -106,7 +106,7 @@ var _ = Describe("NewMiddleware", func() {
 			It("wraps it in a middleware", func() {
 				Ω(mErr).ShouldNot(HaveOccurred())
 				h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-					goa.ContextResponse(ctx).Send(ctx, 200, "ok")
+					service.Send(ctx, 200, "ok")
 					return nil
 				}
 				Ω(middleware(h)(ctx, rw, req)).ShouldNot(HaveOccurred())

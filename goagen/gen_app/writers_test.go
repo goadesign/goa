@@ -717,14 +717,15 @@ type ListBottleContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
+	Service *goa.Service
 }
 `
 
 	emptyContextFactory = `
-func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottleContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req, Service: service}
 	return &rctx, err
 }
 `
@@ -734,15 +735,16 @@ type ListBottleContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
+	Service *goa.Service
 	Param *int
 }
 `
 
 	intContextFactory = `
-func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottleContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req, Service: service}
 	paramParam := req.Params["param"]
 	if len(paramParam) > 0 {
 		rawParam := paramParam[0]
@@ -763,15 +765,16 @@ type ListBottleContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
+	Service *goa.Service
 	Param *string
 }
 `
 
 	strContextFactory = `
-func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottleContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req, Service: service}
 	paramParam := req.Params["param"]
 	if len(paramParam) > 0 {
 		rawParam := paramParam[0]
@@ -786,15 +789,16 @@ type ListBottleContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
+	Service *goa.Service
 	Param *float64
 }
 `
 
 	numContextFactory = `
-func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottleContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req, Service: service}
 	paramParam := req.Params["param"]
 	if len(paramParam) > 0 {
 		rawParam := paramParam[0]
@@ -813,15 +817,16 @@ type ListBottleContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
+	Service *goa.Service
 	Param *bool
 }
 `
 
 	boolContextFactory = `
-func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottleContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req, Service: service}
 	paramParam := req.Params["param"]
 	if len(paramParam) > 0 {
 		rawParam := paramParam[0]
@@ -841,15 +846,16 @@ type ListBottleContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
+	Service *goa.Service
 	Param []string
 }
 `
 
 	arrayContextFactory = `
-func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottleContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req, Service: service}
 	paramParam := req.Params["param"]
 	if len(paramParam) > 0 {
 		var params []string
@@ -868,15 +874,16 @@ type ListBottleContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
+	Service *goa.Service
 	Param []int
 }
 `
 
 	intArrayContextFactory = `
-func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottleContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req, Service: service}
 	paramParam := req.Params["param"]
 	if len(paramParam) > 0 {
 		var params []int
@@ -903,15 +910,16 @@ type ListBottleContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
+	Service *goa.Service
 	Int *int
 }
 `
 
 	resContextFactory = `
-func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottleContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req, Service: service}
 	paramInt := req.Params["int"]
 	if len(paramInt) > 0 {
 		rawInt := paramInt[0]
@@ -932,15 +940,16 @@ type ListBottleContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
+	Service *goa.Service
 	Int int
 }
 `
 
 	requiredContextFactory = `
-func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottleContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req, Service: service}
 	paramInt := req.Params["int"]
 	if len(paramInt) == 0 {
 		err = goa.MergeErrors(err, goa.MissingParamError("int"))
@@ -961,15 +970,16 @@ type ListBottleContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
+	Service *goa.Service
 	Payload ListBottlePayload
 }
 `
 
 	payloadContextFactory = `
-func NewListBottleContext(ctx context.Context) (*ListBottleContext, error) {
+func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottleContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
-	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
+	rctx := ListBottleContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req, Service: service}
 	return &rctx, err
 }
 `
@@ -978,14 +988,15 @@ type ListBottleContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
+	Service *goa.Service
 	Payload *ListBottlePayload
 }
 `
 
 	payloadObjUnmarshal = `
-func unmarshalListBottlePayload(ctx context.Context, req *http.Request) error {
+func unmarshalListBottlePayload(ctx context.Context, service *goa.Service, req *http.Request) error {
 	var payload ListBottlePayload
-	if err := goa.ContextService(ctx).DecodeRequest(req, &payload); err != nil {
+	if err := service.DecodeRequest(req, &payload); err != nil {
 		return err
 	}
 	if err := payload.Validate(); err != nil {
@@ -996,9 +1007,9 @@ func unmarshalListBottlePayload(ctx context.Context, req *http.Request) error {
 }
 `
 	payloadNoValidationsObjUnmarshal = `
-func unmarshalListBottlePayload(ctx context.Context, req *http.Request) error {
+func unmarshalListBottlePayload(ctx context.Context, service *goa.Service, req *http.Request) error {
 	var payload ListBottlePayload
-	if err := goa.ContextService(ctx).DecodeRequest(req, &payload); err != nil {
+	if err := service.DecodeRequest(req, &payload); err != nil {
 		return err
 	}
 	goa.ContextRequest(ctx).Payload = &payload
@@ -1020,7 +1031,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	var h goa.Handler
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-		rctx, err := NewListBottleContext(ctx)
+		rctx, err := NewListBottleContext(ctx, service)
 		if err != nil {
 			return err
 		}
@@ -1036,7 +1047,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	var h goa.Handler
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-		rctx, err := NewListBottleContext(ctx)
+		rctx, err := NewListBottleContext(ctx, service)
 		if err != nil {
 			return err
 		}
@@ -1060,7 +1071,7 @@ type BottlesController interface {
 	var h goa.Handler
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-		rctx, err := NewListBottleContext(ctx)
+		rctx, err := NewListBottleContext(ctx, service)
 		if err != nil {
 			return err
 		}
@@ -1070,7 +1081,7 @@ type BottlesController interface {
 	service.LogInfo("mount", "ctrl", "Bottles", "action", "List", "route", "GET /accounts/:accountID/bottles")
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-		rctx, err := NewShowBottleContext(ctx)
+		rctx, err := NewShowBottleContext(ctx, service)
 		if err != nil {
 			return err
 		}

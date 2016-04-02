@@ -67,21 +67,16 @@ type (
 	// Controller provides the common state and behavior for generated controllers.
 	Controller struct {
 		Name       string          // Controller resource name
+		Service    *Service        // Service that exposes the controller
 		Context    context.Context // Controller root context
 		Middleware []Middleware    // Controller specific middleware if any
 	}
 
 	// Handler defines the controller handler signatures.
-	// If a controller handler returns an error then the service error handler is invoked
-	// with the request context and the error. The error handler is responsible for writing the
-	// HTTP response. See DefaultErrorHandler and TerseErrorHandler.
 	Handler func(context.Context, http.ResponseWriter, *http.Request) error
 
-	// ErrorHandler defines the service error handler signature.
-	ErrorHandler func(context.Context, http.ResponseWriter, *http.Request, error)
-
 	// Unmarshaler defines the request payload unmarshaler signatures.
-	Unmarshaler func(context.Context, *http.Request) error
+	Unmarshaler func(context.Context, *Service, *http.Request) error
 
 	// DecodeFunc is the function that initialize the unmarshaled payload from the request body.
 	DecodeFunc func(context.Context, io.ReadCloser, interface{}) error
@@ -112,8 +107,8 @@ func (service *Service) CancelAll() {
 
 // Use adds a middleware to the service wide middleware chain.
 // See NewMiddleware for wrapping goa and http handlers into goa middleware.
-// goa comes with a set of commonly used middleware, see middleware.go.
-// Controller specific middleware should be mounted using the Controller type Use method instead.
+// goa comes with a set of commonly used middleware, see the middleware package.
+// Controller specific middleware should be mounted using the Controller struct Use method instead.
 func (service *Service) Use(m Middleware) {
 	service.Middleware = append(service.Middleware, m)
 }
@@ -148,12 +143,34 @@ func (service *Service) ListenAndServeTLS(addr, certFile, keyFile string) error 
 // NewController returns a controller for the given resource. This method is mainly intended for
 // use by the generated code. User code shouldn't have to call it directly.
 func (service *Service) NewController(resName string) *Controller {
-	ctx := context.WithValue(service.Context, serviceKey, service)
 	return &Controller{
-		Name:       resName,
-		Middleware: service.Middleware,
-		Context:    context.WithValue(ctx, "ctrl", resName),
+		Name:    resName,
+		Service: service,
+		Context: context.WithValue(service.Context, "ctrl", resName),
 	}
+}
+
+// Send serializes the given body matching the request Accept header against the service
+// encoders. It uses the default service encoder if no match is found.
+func (service *Service) Send(ctx context.Context, code int, body interface{}) error {
+	r := ContextResponse(ctx)
+	if r == nil {
+		return fmt.Errorf("no response data in context")
+	}
+	r.WriteHeader(code)
+	return service.EncodeResponse(ctx, body)
+}
+
+// BadRequest sends a HTTP response with status code 400 and the given error as body.
+func (service *Service) BadRequest(ctx context.Context, err *Error) error {
+	return service.Send(ctx, 400, err)
+}
+
+// Bug sends a HTTP response with status code 500 and the given body.
+// The body can be set using a format and substituted values a la fmt.Printf.
+func (service *Service) Bug(ctx context.Context, format string, a ...interface{}) error {
+	msg := fmt.Sprintf(format, a...)
+	return service.Send(ctx, 500, ErrInternal(msg))
 }
 
 // ServeFiles create a "FileServer" controller and calls ServerFiles on it.
@@ -196,10 +213,10 @@ func (ctrl *Controller) ServeFiles(path, filename string) error {
 		if err := handler(ctx, rw, req); err != nil {
 			LogError(ctx, "uncaught error", "err", err)
 			respBody := fmt.Sprintf("internal error: %s", err) // Sprintf catches panics
-			ContextResponse(ctx).Send(ctx, 500, respBody)
+			ctrl.Service.Send(ctx, 500, respBody)
 		}
 	}
-	ContextService(ctrl.Context).Mux.Handle("GET", path, handle)
+	ctrl.Service.Mux.Handle("GET", path, handle)
 	return nil
 }
 
@@ -223,7 +240,7 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 		}
 		return nil
 	}
-	chain := ctrl.Middleware
+	chain := append(ctrl.Service.Middleware, ctrl.Middleware...)
 	ml := len(chain)
 	for i := range chain {
 		middleware = chain[ml-i-1](middleware)
@@ -241,7 +258,7 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 		// Load body if any
 		var err error
 		if req.ContentLength > 0 && unm != nil {
-			err = unm(ctx, req)
+			err = unm(ctx, ctrl.Service, req)
 		}
 
 		// Handle invalid payload
@@ -255,7 +272,7 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 					status = 413
 					body = ErrRequestBodyTooLarge("body length exceeds %d bytes", MaxRequestBodyLength)
 				}
-				return ContextResponse(ctx).Send(ctx, status, body)
+				return ctrl.Service.Send(ctx, status, body)
 			}
 			for i := range chain {
 				handler = chain[ml-i-1](handler)
@@ -266,7 +283,7 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 		if err := handler(ctx, ContextResponse(ctx), req); err != nil {
 			LogError(ctx, "uncaught error", "err", err)
 			respBody := fmt.Sprintf("Internal error: %s", err) // Sprintf catches panics
-			ContextResponse(ctx).Send(ctx, 500, respBody)
+			ctrl.Service.Send(ctx, 500, respBody)
 		}
 	}
 }

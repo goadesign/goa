@@ -49,9 +49,8 @@ var _ = Describe("Service", func() {
 			})
 
 			It("adds the middleware", func() {
-				ctrl := s.NewController("test")
-				Ω(ctrl.Middleware).Should(HaveLen(1))
-				Ω(ctrl.Middleware[0]).Should(BeAssignableToTypeOf(middleware.RequestID()))
+				Ω(s.Middleware).Should(HaveLen(1))
+				Ω(s.Middleware[0]).Should(BeAssignableToTypeOf(middleware.RequestID()))
 			})
 		})
 	})
@@ -69,7 +68,7 @@ var _ = Describe("Service", func() {
 			req, _ = http.NewRequest("GET", "/foo", body)
 			rw = &TestResponseWriter{ParentHeader: make(http.Header)}
 			ctrl := s.NewController("test")
-			unmarshaler := func(ctx context.Context, req *http.Request) error {
+			unmarshaler := func(ctx context.Context, service *goa.Service, req *http.Request) error {
 				_, err := ioutil.ReadAll(req.Body)
 				return err
 			}
@@ -110,11 +109,11 @@ var _ = Describe("Service", func() {
 				rw.Write(respContent)
 				return nil
 			}
-			unmarshaler = func(c context.Context, req *http.Request) error {
+			unmarshaler = func(c context.Context, service *goa.Service, req *http.Request) error {
 				ctx = c
 				if req != nil {
 					var payload interface{}
-					err := goa.ContextService(ctx).DecodeRequest(req, &payload)
+					err := service.DecodeRequest(req, &payload)
 					Ω(err).ShouldNot(HaveOccurred())
 					goa.ContextRequest(ctx).Payload = payload
 				}
