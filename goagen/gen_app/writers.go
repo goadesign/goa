@@ -384,6 +384,7 @@ type {{ .Name }} struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
+	Service *goa.Service
 {{ if .Params }}{{ range $name, $att := .Params.Type.ToObject }}{{/*
 */}}	{{ goify $name true }} {{ if and $att.Type.IsPrimitive ($.Params.IsPrimitivePointer $name) }}*{{ end }}{{ gotyperef .Type nil 0 }}
 {{ end }}{{ end }}{{ if .Payload }}	Payload {{ gotyperef .Payload nil 0 }}
@@ -458,10 +459,10 @@ type {{ .Name }} struct {
 	ctxNewT = `{{ define "Coerce" }}` + coerceT + `{{ end }}` + `
 // New{{ goify .Name true }} parses the incoming request URL and body, performs validations and creates the
 // context used by the {{ .ResourceName }} controller {{ .ActionName }} action.
-func New{{ .Name }}(ctx context.Context) (*{{ .Name }}, error) {
+func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
-	rctx := {{ .Name }}{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
+	rctx := {{ .Name }}{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req, Service: service}
 {{ if .Headers }}{{ $headers := .Headers }}{{ range $name, $att := $headers.Type.ToObject }}	raw{{ goify $name true }} := req.Header.Get("{{ $name }}")
 {{ if $headers.IsRequired $name }}	if raw{{ goify $name true }} == "" {
 		err = goa.MergeErrors(err, goa.MissingHeaderError("{{ $name }}"))
@@ -496,7 +497,7 @@ func New{{ .Name }}(ctx context.Context) (*{{ .Name }}, error) {
 // {{ respName $resp $name }} sends a HTTP response with status code {{ $resp.Status }}.
 func (ctx *{{ $ctx.Name }}) {{ respName $resp $name }}(r {{ gotyperef $projected $projected.AllRequired 0 }}) error {
 	ctx.ResponseData.Header().Set("Content-Type", "{{ $resp.MediaType }}")
-	return ctx.ResponseData.Send(ctx.Context, {{ $resp.Status }}, r)
+	return ctx.Service.Send(ctx.Context, {{ $resp.Status }}, r)
 }
 {{ end }}{{ end }}
 `
@@ -506,7 +507,7 @@ func (ctx *{{ $ctx.Name }}) {{ respName $resp $name }}(r {{ gotyperef $projected
 	ctxTRespT = `// {{ goify .Response.Name true }} sends a HTTP response with status code {{ .Response.Status }}.
 func (ctx *{{ .Context.Name }}) {{ goify .Response.Name true }}(r {{ gotyperef .Type nil 0 }}) error {
 	ctx.ResponseData.Header().Set("Content-Type", "{{ .Response.MediaType }}")
-	return ctx.ResponseData.Send(ctx.Context, {{ .Response.Status }}, r)
+	return ctx.Service.Send(ctx.Context, {{ .Response.Status }}, r)
 }
 `
 
@@ -582,7 +583,7 @@ func Mount{{ .Resource }}Controller(service *goa.Service, ctrl {{ .Resource }}Co
 {{ $res := .Resource }}{{ if .Origins }}{{ range .PreflightPaths }}	service.Mux.Handle("OPTIONS", "{{ . }}", cors.HandlePreflight(service.Context, handle{{ $res }}Origin))
 {{ end }}{{ end }}{{ range .Actions }}{{ $action := . }}
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-		rctx, err := New{{ .Context }}(ctx)
+		rctx, err := New{{ .Context }}(ctx, service)
 		if err != nil {
 			return err
 		}
@@ -631,9 +632,9 @@ func handle{{ .Resource }}Origin(h goa.Handler) goa.Handler {
 	// template input: *ControllerTemplateData
 	unmarshalT = `{{ range .Actions }}{{ if .Payload }}
 // {{ .Unmarshal }} unmarshals the request body into the context request data Payload field.
-func {{ .Unmarshal }}(ctx context.Context, req *http.Request) error {
+func {{ .Unmarshal }}(ctx context.Context, service *goa.Service, req *http.Request) error {
 	var payload {{ gotypename .Payload nil 1 }}
-	if err := goa.ContextService(ctx).DecodeRequest(req, &payload); err != nil {
+	if err := service.DecodeRequest(req, &payload); err != nil {
 		return err
 	}{{ $validation := recursiveValidate .Payload.AttributeDefinition false false "payload" "raw" 1 }}{{ if $validation }}
 	if err := payload.Validate(); err != nil {

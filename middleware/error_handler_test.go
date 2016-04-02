@@ -32,7 +32,7 @@ var _ = Describe("ErrorHandler", func() {
 
 	JustBeforeEach(func() {
 		rw = newTestResponseWriter()
-		eh := middleware.ErrorHandler(verbose)(h)
+		eh := middleware.ErrorHandler(service, verbose)(h)
 		req, err := http.NewRequest("GET", "/foo", nil)
 		Ω(err).ShouldNot(HaveOccurred())
 		ctx := newContext(service, rw, req, nil)

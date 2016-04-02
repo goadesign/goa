@@ -7,7 +7,6 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/middleware"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -24,7 +23,7 @@ var _ = Describe("Timeout", func() {
 		var newCtx context.Context
 		h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 			newCtx = ctx
-			return goa.ContextResponse(ctx).Send(ctx, 200, "ok")
+			return service.Send(ctx, 200, "ok")
 		}
 		t := middleware.Timeout(time.Duration(1))(h)
 		err = t(ctx, rw, req)

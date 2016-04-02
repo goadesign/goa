@@ -18,9 +18,10 @@ var _ = Describe("RequestID", func() {
 	var rw http.ResponseWriter
 	var req *http.Request
 	var params url.Values
+	var service *goa.Service
 
 	BeforeEach(func() {
-		service := newService(nil)
+		service = newService(nil)
 
 		var err error
 		req, err = http.NewRequest("GET", "/goo", nil)
@@ -36,7 +37,7 @@ var _ = Describe("RequestID", func() {
 		var newCtx context.Context
 		h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 			newCtx = ctx
-			return goa.ContextResponse(ctx).Send(ctx, 200, "ok")
+			return service.Send(ctx, 200, "ok")
 		}
 		rg := middleware.RequestID()(h)
 		Ω(rg(ctx, rw, req)).ShouldNot(HaveOccurred())
