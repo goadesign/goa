@@ -1,7 +1,6 @@
 package goa
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -14,7 +13,6 @@ const (
 	reqKey key = iota + 1
 	respKey
 	paramsKey
-	serviceKey
 	logKey
 	logContextKey
 	securityScopesKey
@@ -82,14 +80,6 @@ func ContextResponse(ctx context.Context) *ResponseData {
 	return nil
 }
 
-// ContextService returns the service tageted by the request with the given context.
-func ContextService(ctx context.Context) *Service {
-	if r := ctx.Value(serviceKey); r != nil {
-		return r.(*Service)
-	}
-	return nil
-}
-
 // ContextLogger returns the logger used by the request context.
 func ContextLogger(ctx context.Context) Logger {
 	if v := ctx.Value(logKey); v != nil {
@@ -109,25 +99,6 @@ func (r *ResponseData) SwitchWriter(rw http.ResponseWriter) http.ResponseWriter 
 // Written returns true if the response was written.
 func (r *ResponseData) Written() bool {
 	return r.Status != 0
-}
-
-// Send serializes the given body matching the request Accept header against the service
-// encoders. It uses the default service encoder if no match is found.
-func (r *ResponseData) Send(ctx context.Context, code int, body interface{}) error {
-	r.WriteHeader(code)
-	return ContextService(ctx).EncodeResponse(ctx, body)
-}
-
-// BadRequest sends a HTTP response with status code 400 and the given error as body.
-func (r *ResponseData) BadRequest(ctx context.Context, err *Error) error {
-	return r.Send(ctx, 400, err)
-}
-
-// Bug sends a HTTP response with status code 500 and the given body.
-// The body can be set using a format and substituted values a la fmt.Printf.
-func (r *ResponseData) Bug(ctx context.Context, format string, a ...interface{}) error {
-	msg := fmt.Sprintf(format, a...)
-	return r.Send(ctx, 500, ErrInternal(msg))
 }
 
 // WriteHeader records the response status code and calls the underlying writer.

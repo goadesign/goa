@@ -353,15 +353,16 @@ type GetWidgetContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
-	ID string
+	Service *goa.Service
+	ID      string
 }
 
 // NewGetWidgetContext parses the incoming request URL and body, performs validations and creates the
 // context used by the Widget controller get action.
-func NewGetWidgetContext(ctx context.Context) (*GetWidgetContext, error) {
+func NewGetWidgetContext(ctx context.Context, service *goa.Service) (*GetWidgetContext, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
-	rctx := GetWidgetContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req}
+	rctx := GetWidgetContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req, Service: service}
 	paramID := req.Params["id"]
 	if len(paramID) > 0 {
 		rawID := paramID[0]
@@ -373,7 +374,7 @@ func NewGetWidgetContext(ctx context.Context) (*GetWidgetContext, error) {
 // OK sends a HTTP response with status code 200.
 func (ctx *GetWidgetContext) OK(r ID) error {
 	ctx.ResponseData.Header().Set("Content-Type", "vnd.rightscale.codegen.test.widgets")
-	return ctx.ResponseData.Send(ctx.Context, 200, r)
+	return ctx.Service.Send(ctx.Context, 200, r)
 }
 `
 
@@ -423,7 +424,7 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 	var h goa.Handler
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-		rctx, err := NewGetWidgetContext(ctx)
+		rctx, err := NewGetWidgetContext(ctx, service)
 		if err != nil {
 			return err
 		}
@@ -476,7 +477,7 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 	var h goa.Handler
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-		rctx, err := NewGetWidgetContext(ctx)
+		rctx, err := NewGetWidgetContext(ctx, service)
 		if err != nil {
 			return err
 		}
@@ -490,9 +491,9 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 }
 
 // unmarshalGetWidgetPayload unmarshals the request body into the context request data Payload field.
-func unmarshalGetWidgetPayload(ctx context.Context, req *http.Request) error {
+func unmarshalGetWidgetPayload(ctx context.Context, service *goa.Service, req *http.Request) error {
 	var payload Collection
-	if err := goa.ContextService(ctx).DecodeRequest(req, &payload); err != nil {
+	if err := service.DecodeRequest(req, &payload); err != nil {
 		return err
 	}
 	goa.ContextRequest(ctx).Payload = payload
