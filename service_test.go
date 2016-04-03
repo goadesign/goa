@@ -66,6 +66,21 @@ var _ = Describe("Service", func() {
 				Ω(middlewareCalled).Should(BeTrue())
 			})
 		})
+
+		Context("middleware and multiple controllers", func() {
+			middlewareCalled := 0
+
+			BeforeEach(func() {
+				s.Use(CMiddleware(&middlewareCalled))
+				ctrl := s.NewController("test")
+				ctrl.MuxHandler("/foo", nil, nil)
+				ctrl.MuxHandler("/bar", nil, nil)
+			})
+
+			It("calls the middleware once", func() {
+				Ω(middlewareCalled).Should(Equal(1))
+			})
+		})
 	})
 
 	Describe("MaxRequestBodyLength", func() {
@@ -276,6 +291,15 @@ func TMiddleware(witness *bool) goa.Middleware {
 	return func(h goa.Handler) goa.Handler {
 		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 			*witness = true
+			return h(ctx, rw, req)
+		}
+	}
+}
+
+func CMiddleware(witness *int) goa.Middleware {
+	return func(h goa.Handler) goa.Handler {
+		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+			*witness += 1
 			return h(ctx, rw, req)
 		}
 	}
