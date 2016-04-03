@@ -200,6 +200,9 @@ func (service *Service) ServeFiles(path, filename string) error {
 // finalize wraps the NotFound handler with the final middleware chain.
 // Use cannot be called after finalize has.
 func (service *Service) finalize() {
+	if service.finalized {
+		return
+	}
 	notFound := service.notFound
 	handler := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		if !ContextResponse(ctx).Written() {
