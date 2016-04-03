@@ -49,6 +49,9 @@ var (
 	// or non-readable files.
 	ErrInvalidFile = NewErrorClass("invalid_file", 400)
 
+	// ErrNotFound is the error returned to requests that don't match a registered handler.
+	ErrNotFound = NewErrorClass("not_found", 404)
+
 	// ErrInternal is the class of error used for non Error.
 	ErrInternal = NewErrorClass("internal", 500)
 )

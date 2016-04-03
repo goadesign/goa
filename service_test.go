@@ -10,7 +10,6 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/goadesign/goa"
-	"github.com/goadesign/goa/middleware"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -36,21 +35,35 @@ var _ = Describe("Service", func() {
 		})
 	})
 
-	Describe("Use", func() {
-		Context("with a valid middleware", func() {
-			var m goa.Middleware
+	Describe("NotFound", func() {
+		var rw *TestResponseWriter
+		var req *http.Request
+
+		BeforeEach(func() {
+			req, _ = http.NewRequest("GET", "/foo", nil)
+			rw = &TestResponseWriter{ParentHeader: make(http.Header)}
+		})
+
+		JustBeforeEach(func() {
+			s.Mux.ServeHTTP(rw, req)
+		})
+
+		It("handles requests with no registered handlers", func() {
+			Ω(string(rw.Body)).Should(Equal(`{"code":"not_found","status":404,"detail":"/foo"}` + "\n"))
+		})
+
+		Context("with middleware", func() {
+			middlewareCalled := false
 
 			BeforeEach(func() {
-				m = middleware.RequestID()
+				s.Use(TMiddleware(&middlewareCalled))
+				// trigger finalize
+				ctrl := s.NewController("test")
+				ctrl.MuxHandler("", nil, nil)
 			})
 
-			JustBeforeEach(func() {
-				s.Use(m)
-			})
-
-			It("adds the middleware", func() {
-				Ω(s.Middleware).Should(HaveLen(1))
-				Ω(s.Middleware[0]).Should(BeAssignableToTypeOf(middleware.RequestID()))
+			It("calls the middleware", func() {
+				Ω(middlewareCalled).Should(BeTrue())
 			})
 		})
 	})
