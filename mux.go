@@ -19,6 +19,10 @@ type (
 		http.Handler
 		// Handle sets the MuxHandler for a given HTTP method and path.
 		Handle(method, path string, handle MuxHandler)
+		// HandleNotFound sets the MuxHandler invoked for requests that don't match any
+		// handler registered with Handle. The values argument given to the handler is
+		// always nil.
+		HandleNotFound(handle MuxHandler)
 		// Lookup returns the MuxHandler associated with the given HTTP method and path.
 		Lookup(method, path string) MuxHandler
 	}
@@ -54,6 +58,19 @@ func (m *mux) Handle(method, path string, handle MuxHandler) {
 	}
 	m.handles[method+path] = handle
 	m.router.Handle(method, path, hthandle)
+}
+
+// HandleNotFound sets the MuxHandler invoked for requests that don't match any
+// handler registered with Handle.
+func (m *mux) HandleNotFound(handle MuxHandler) {
+	nfh := func(rw http.ResponseWriter, req *http.Request) {
+		handle(rw, req, nil)
+	}
+	m.router.NotFoundHandler = nfh
+	mna := func(rw http.ResponseWriter, req *http.Request, methods map[string]httptreemux.HandlerFunc) {
+		handle(rw, req, nil)
+	}
+	m.router.MethodNotAllowedHandler = mna
 }
 
 // Lookup returns the MuxHandler associated with the given method and path.
