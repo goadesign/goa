@@ -50,14 +50,12 @@ type (
 		Mux ServeMux
 		// Context is the root context from which all request contexts are derived.
 		// Set values in the root context prior to starting the server to make these values
-		// available to all request handlers:
-		//
-		//	service.Context = context.WithValue(service.Context, key, value)
-		//
+		// available to all request handlers.
 		Context context.Context
-		// Middleware chain
-		Middleware []Middleware
 
+		finalized             bool                    // Whether controllers have been mounted
+		middleware            []Middleware            // Middleware chain
+		notFound              Handler                 // Handler of requests that don't match registered mux handlers
 		cancel                context.CancelFunc      // Service context cancel signal trigger
 		decoderPools          map[string]*decoderPool // Registered decoders for the service
 		encoderPools          map[string]*encoderPool // Registered encoders for the service
@@ -66,10 +64,11 @@ type (
 
 	// Controller provides the common state and behavior for generated controllers.
 	Controller struct {
-		Name       string          // Controller resource name
-		Service    *Service        // Service that exposes the controller
-		Context    context.Context // Controller root context
-		Middleware []Middleware    // Controller specific middleware if any
+		Name    string          // Controller resource name
+		Service *Service        // Service that exposes the controller
+		Context context.Context // Controller root context
+
+		middleware []Middleware // Controller specific middleware if any
 	}
 
 	// Handler defines the controller handler signatures.
@@ -84,19 +83,35 @@ type (
 
 // New instantiates an service with the given name and default decoders/encoders.
 func New(name string) *Service {
-	stdlog := log.New(os.Stderr, "", log.LstdFlags)
-	ctx := UseLogger(context.Background(), NewStdLogger(stdlog))
-	ctx, cancel := context.WithCancel(ctx)
-	return &Service{
-		Name:    name,
-		Context: ctx,
-		Mux:     NewMux(),
+	var (
+		stdlog       = log.New(os.Stderr, "", log.LstdFlags)
+		ctx          = UseLogger(context.Background(), NewStdLogger(stdlog))
+		cctx, cancel = context.WithCancel(ctx)
+		mux          = NewMux()
+		service      = &Service{
+			Name:    name,
+			Context: cctx,
+			Mux:     mux,
 
-		cancel:                cancel,
-		decoderPools:          map[string]*decoderPool{},
-		encoderPools:          map[string]*encoderPool{},
-		encodableContentTypes: []string{},
-	}
+			cancel:                cancel,
+			decoderPools:          map[string]*decoderPool{},
+			encoderPools:          map[string]*encoderPool{},
+			encodableContentTypes: []string{},
+			notFound: func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+				return ErrNotFound(req.URL.Path)
+			},
+		}
+	)
+
+	mux.HandleNotFound(func(rw http.ResponseWriter, req *http.Request, params url.Values) {
+		ctx := NewContext(cctx, rw, req, params)
+		err := service.notFound(ctx, rw, req)
+		if !ContextResponse(ctx).Written() {
+			service.Send(ctx, 404, err)
+		}
+	})
+
+	return service
 }
 
 // CancelAll sends a cancel signals to all request handlers via the context.
@@ -110,7 +125,10 @@ func (service *Service) CancelAll() {
 // goa comes with a set of commonly used middleware, see the middleware package.
 // Controller specific middleware should be mounted using the Controller struct Use method instead.
 func (service *Service) Use(m Middleware) {
-	service.Middleware = append(service.Middleware, m)
+	if service.finalized {
+		panic("goa: cannot mount middleware after controller")
+	}
+	service.middleware = append(service.middleware, m)
 }
 
 // UseLogger sets the logger used internally by the service and by Log.
@@ -179,6 +197,24 @@ func (service *Service) ServeFiles(path, filename string) error {
 	return ctrl.ServeFiles(path, filename)
 }
 
+// finalize wraps the NotFound handler with the final middleware chain.
+// Use cannot be called after finalize has.
+func (service *Service) finalize() {
+	notFound := service.notFound
+	handler := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		if !ContextResponse(ctx).Written() {
+			return notFound(ctx, rw, req)
+		}
+		return nil
+	}
+	ml := len(service.middleware)
+	for i := range service.middleware {
+		handler = service.middleware[ml-i-1](handler)
+	}
+	service.notFound = handler
+	service.finalized = true
+}
+
 // ServeFiles replies to the request with the contents of the named file or directory. The logic
 // for what to do when the filename points to a file vs. a directory is the same as the standard
 // http package ServeFile function. The path may end with a wildcard that matches the rest of the
@@ -201,7 +237,7 @@ func (ctrl *Controller) ServeFiles(path, filename string) error {
 		}
 		return nil
 	}
-	chain := ctrl.Middleware
+	chain := ctrl.middleware
 	ml := len(chain)
 	for i := range chain {
 		handler = chain[ml-i-1](handler)
@@ -224,7 +260,10 @@ func (ctrl *Controller) ServeFiles(path, filename string) error {
 // See NewMiddleware for wrapping goa and http handlers into goa middleware.
 // goa comes with a set of commonly used middleware, see middleware.go.
 func (ctrl *Controller) Use(m Middleware) {
-	ctrl.Middleware = append(ctrl.Middleware, m)
+	if ctrl.Service.finalized {
+		panic("goa: cannot mount middleware after controller")
+	}
+	ctrl.middleware = append(ctrl.middleware, m)
 }
 
 // MuxHandler wraps a request handler into a MuxHandler. The MuxHandler initializes the
@@ -233,6 +272,9 @@ func (ctrl *Controller) Use(m Middleware) {
 // This function is intended for the controller generated code. User code should not need to call
 // it directly.
 func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) MuxHandler {
+	// Make sure middleware doesn't get mounted later
+	ctrl.Service.finalize()
+
 	// Setup middleware outside of closure
 	middleware := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		if !ContextResponse(ctx).Written() {
@@ -240,7 +282,7 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 		}
 		return nil
 	}
-	chain := append(ctrl.Service.Middleware, ctrl.Middleware...)
+	chain := append(ctrl.Service.middleware, ctrl.middleware...)
 	ml := len(chain)
 	for i := range chain {
 		middleware = chain[ml-i-1](middleware)
