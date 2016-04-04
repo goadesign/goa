@@ -504,6 +504,8 @@ func incompatibleAttributeType(validation, actual, expected string) {
 // (e.g) array<string>, hash<string, string>, hash<string, array<int>>
 func qualifiedTypeName(t design.DataType) string {
 	switch t.Kind() {
+	case design.DateTimeKind:
+		return "datetime"
 	case design.ArrayKind:
 		return fmt.Sprintf("%s<%s>", t.Name(), qualifiedTypeName(t.ToArray().ElemType.Type))
 	case design.HashKind:

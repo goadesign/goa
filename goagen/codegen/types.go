@@ -63,8 +63,7 @@ func init() {
 // jsonTags controls whether to produce json tags.
 // private controls whether the field is a pointer or not. All fields in the struct are
 //   pointers for a private struct.
-func GoTypeDef(ds design.DataStructure, tabs int, jsonTags bool, private bool) string {
-	var buffer bytes.Buffer
+func GoTypeDef(ds design.DataStructure, tabs int, jsonTags, private bool) string {
 	def := ds.Definition()
 	t := def.Type
 	switch actual := t.(type) {
@@ -87,39 +86,7 @@ func GoTypeDef(ds design.DataStructure, tabs int, jsonTags bool, private bool) s
 		}
 		return fmt.Sprintf("map[%s]%s", keyDef, elemDef)
 	case design.Object:
-		buffer.WriteString("struct {\n")
-		keys := make([]string, len(actual))
-		i := 0
-		for n := range actual {
-			keys[i] = n
-			i++
-		}
-		sort.Strings(keys)
-		for _, name := range keys {
-			WriteTabs(&buffer, tabs+1)
-			field := actual[name]
-			typedef := GoTypeDef(field, tabs+1, jsonTags, private)
-			if (field.Type.IsPrimitive() && private) || field.Type.IsObject() || def.IsPrimitivePointer(name) {
-				typedef = "*" + typedef
-			}
-			fname := Goify(name, true)
-			var tags string
-			if jsonTags {
-				var omit string
-				if private || (!def.IsRequired(name) && !def.HasDefaultValue(name)) {
-					omit = ",omitempty"
-				}
-				tags = fmt.Sprintf(" `json:\"%s%s\" xml:\"%s%s\"`", name, omit, name, omit)
-			}
-			desc := actual[name].Description
-			if desc != "" {
-				desc = fmt.Sprintf("// %s\n", desc)
-			}
-			buffer.WriteString(fmt.Sprintf("%s%s %s%s\n", desc, fname, typedef, tags))
-		}
-		WriteTabs(&buffer, tabs)
-		buffer.WriteString("}")
-		return buffer.String()
+		return goTypeDefObject(actual, def, tabs, jsonTags, private)
 	case *design.UserTypeDefinition:
 		return GoPackageTypeName(actual, actual.AllRequired(), tabs, private)
 	case *design.MediaTypeDefinition:
@@ -127,6 +94,44 @@ func GoTypeDef(ds design.DataStructure, tabs int, jsonTags bool, private bool) s
 	default:
 		panic("goa bug: unknown data structure type")
 	}
+}
+
+// goTypeDefObject returns the Go code that defines a Go struct.
+func goTypeDefObject(actual design.Object, def *design.AttributeDefinition, tabs int, jsonTags, private bool) string {
+	var buffer bytes.Buffer
+	buffer.WriteString("struct {\n")
+	keys := make([]string, len(actual))
+	i := 0
+	for n := range actual {
+		keys[i] = n
+		i++
+	}
+	sort.Strings(keys)
+	for _, name := range keys {
+		WriteTabs(&buffer, tabs+1)
+		field := actual[name]
+		typedef := GoTypeDef(field, tabs+1, jsonTags, private)
+		if (field.Type.IsPrimitive() && private) || field.Type.IsObject() || def.IsPrimitivePointer(name) {
+			typedef = "*" + typedef
+		}
+		fname := Goify(name, true)
+		var tags string
+		if jsonTags {
+			var omit string
+			if private || (!def.IsRequired(name) && !def.HasDefaultValue(name)) {
+				omit = ",omitempty"
+			}
+			tags = fmt.Sprintf(" `json:\"%s%s\" xml:\"%s%s\"`", name, omit, name, omit)
+		}
+		desc := actual[name].Description
+		if desc != "" {
+			desc = fmt.Sprintf("// %s\n", desc)
+		}
+		buffer.WriteString(fmt.Sprintf("%s%s %s%s\n", desc, fname, typedef, tags))
+	}
+	WriteTabs(&buffer, tabs)
+	buffer.WriteString("}")
+	return buffer.String()
 }
 
 // GoTypeRef returns the Go code that refers to the Go type which matches the given data type
