@@ -626,7 +626,7 @@ func (a *APIDefinition) Finalize() {
 func NewResourceDefinition(name string, dsl func()) *ResourceDefinition {
 	return &ResourceDefinition{
 		Name:      name,
-		MediaType: "plain/text",
+		MediaType: "text/plain",
 		DSLFunc:   dsl,
 	}
 }
@@ -1134,7 +1134,7 @@ func (r *ResponseDefinition) Finalize() {
 	if r.Type == nil {
 		return
 	}
-	if r.MediaType != "" && r.MediaType != "plain/text" {
+	if r.MediaType != "" && r.MediaType != "text/plain" {
 		return
 	}
 	mt, ok := r.Type.(*MediaTypeDefinition)
