@@ -478,7 +478,7 @@ func (g *Generator) generateHrefs(api *design.APIDefinition) error {
 		if m != nil {
 			identifier = m.Identifier
 		} else {
-			identifier = "plain/text"
+			identifier = "text/plain"
 		}
 		canoTemplate := r.URITemplate()
 		canoTemplate = design.WildcardRegex.ReplaceAllLiteralString(canoTemplate, "/%v")
