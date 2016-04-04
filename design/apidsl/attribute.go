@@ -139,7 +139,7 @@ func parseAttributeArgs(baseAttr *design.AttributeDefinition, args ...interface{
 	)
 
 	parseDataType := func(expected string, index int) {
-		if name, ok := args[index].(string); ok {
+		if name, ok2 := args[index].(string); ok2 {
 			// Lookup type by name
 			if dataType, ok = design.Design.Types[name]; !ok {
 				if dataType = design.Design.MediaTypeWithIdentifier(name); dataType == nil {
