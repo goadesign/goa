@@ -90,9 +90,6 @@ func ArrayOf(t design.DataType) *design.Array {
 //			Member("bottles", RatedBottles)
 //	})
 func HashOf(k, v design.DataType) *design.Hash {
-	if k.IsHash() || k.IsObject() {
-		dslengine.ReportError("invalid Hash key type, cannot be Hash or Object")
-	}
 	kat := design.AttributeDefinition{Type: k}
 	vat := design.AttributeDefinition{Type: v}
 	return &design.Hash{KeyType: &kat, ElemType: &vat}
