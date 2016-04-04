@@ -376,7 +376,7 @@ func buildEncodingDefinition(encoding bool, args ...interface{}) *design.Encodin
 		dslengine.ReportError("missing argument in call to %s", funcName)
 		return nil
 	}
-	if _, ok := args[0].(string); !ok {
+	if _, ok = args[0].(string); !ok {
 		dslengine.ReportError("first argument to %s must be a string (MIME type)", funcName)
 		return nil
 	}

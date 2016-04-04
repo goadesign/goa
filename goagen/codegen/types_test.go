@@ -470,7 +470,7 @@ var _ = Describe("GoTypeTransform", func() {
 				Attribute("elem", ArrayOf(outer))
 			})
 			hash := Type("hash", func() {
-				Attribute("elem", HashOf(outer, outer))
+				Attribute("elem", HashOf(Integer, outer))
 			})
 			source = Type("Source", func() {
 				Attribute("outer", outer)
@@ -496,12 +496,10 @@ var _ = Describe("GoTypeTransform", func() {
 		target.Array.Elem[i].In.Foo = source.Array.Elem[i].In.Foo
 	}
 	target.Hash = new(Hash)
-	target.Hash.Elem = make(map[*Outer]*Outer, len(source.Hash.Elem))
+	target.Hash.Elem = make(map[int]*Outer, len(source.Hash.Elem))
 	for k, v := range source.Hash.Elem {
-		var tk *Outer
-		tk = new(Outer)
-		tk.In = new(Inner)
-		tk.In.Foo = k.In.Foo
+		var tk int
+		tk = k
 		var tv *Outer
 		tv = new(Outer)
 		tv.In = new(Inner)
