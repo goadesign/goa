@@ -659,7 +659,7 @@ func {{ .Unmarshal }}(ctx context.Context, service *goa.Service, req *http.Reque
 		return err
 	}{{ $assignment := recursiveFinalizer .Payload.AttributeDefinition "payload" 1 }}{{ if $assignment }}
 	payload.Finalize(){{ end }}{{ else }}var payload {{ gotypename .Payload nil 1 false }}
-	if err := goa.ContextService(ctx).DecodeRequest(req, &payload); err != nil {
+	if err := service.DecodeRequest(req, &payload); err != nil {
 		return err
 	}{{ end }}{{ $validation := recursiveValidate .Payload.AttributeDefinition false false false "payload" "raw" 1 false }}{{ if $validation }}
 	if err := payload.Validate(); err != nil {
