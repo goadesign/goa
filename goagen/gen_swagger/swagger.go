@@ -491,7 +491,7 @@ func paramsFromDefinition(params *design.AttributeDefinition, path string) ([]*P
 		}
 		param := &Parameter{
 			Name:        n,
-			Default:     at.DefaultValue,
+			Default:     toStringMap(at.DefaultValue),
 			Description: at.Description,
 			Required:    required,
 			In:          in,
@@ -508,6 +508,36 @@ func paramsFromDefinition(params *design.AttributeDefinition, path string) ([]*P
 		return nil
 	})
 	return res, nil
+}
+
+// toStringMap converts map[interface{}]interface{} to a map[string]interface{} when possible.
+func toStringMap(val interface{}) interface{} {
+	var m map[string]interface{}
+	switch val.(type) {
+	case map[interface{}]interface{}:
+		for k, v := range val.(map[interface{}]interface{}) {
+			m[toString(k)] = toStringMap(v)
+		}
+		return m
+	default:
+		return val
+	}
+}
+
+// toString returns the string representation of the given type.
+func toString(val interface{}) string {
+	switch val.(type) {
+	case string:
+		return val.(string)
+	case int:
+		return strconv.Itoa(val.(int))
+	case float64:
+		return strconv.FormatFloat(val.(float64), 'f', -1, 64)
+	case bool:
+		return strconv.FormatBool(val.(bool))
+	default:
+		panic("unexpected key type")
+	}
 }
 
 func itemsFromDefinition(at *design.AttributeDefinition) *Items {
