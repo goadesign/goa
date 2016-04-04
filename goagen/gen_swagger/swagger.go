@@ -512,29 +512,35 @@ func paramsFromDefinition(params *design.AttributeDefinition, path string) ([]*P
 
 // toStringMap converts map[interface{}]interface{} to a map[string]interface{} when possible.
 func toStringMap(val interface{}) interface{} {
-	var m map[string]interface{}
-	switch val.(type) {
+	switch actual := val.(type) {
 	case map[interface{}]interface{}:
-		for k, v := range val.(map[interface{}]interface{}) {
+		m := make(map[string]interface{})
+		for k, v := range actual {
 			m[toString(k)] = toStringMap(v)
 		}
 		return m
+	case []interface{}:
+		mapSlice := make([]interface{}, len(actual))
+		for i, e := range actual {
+			mapSlice[i] = toStringMap(e)
+		}
+		return mapSlice
 	default:
-		return val
+		return actual
 	}
 }
 
 // toString returns the string representation of the given type.
 func toString(val interface{}) string {
-	switch val.(type) {
+	switch actual := val.(type) {
 	case string:
-		return val.(string)
+		return actual
 	case int:
-		return strconv.Itoa(val.(int))
+		return strconv.Itoa(actual)
 	case float64:
-		return strconv.FormatFloat(val.(float64), 'f', -1, 64)
+		return strconv.FormatFloat(actual, 'f', -1, 64)
 	case bool:
-		return strconv.FormatBool(val.(bool))
+		return strconv.FormatBool(actual)
 	default:
 		panic("unexpected key type")
 	}

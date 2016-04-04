@@ -97,14 +97,14 @@ func Publicizer(att *design.AttributeDefinition, sourceField, targetField string
 		}
 	case att.Type.IsArray():
 		// If the array element is primitive type, we can simply copy the elements over (i.e) []string
-		if att.Type.IsUserDefined() {
+		if att.Type.HasAttributes() {
 			data["elemType"] = att.Type.ToArray().ElemType
 			publication = RunTemplate(arrayPublicizeT, data)
 		} else {
 			publication = RunTemplate(simplePublicizeT, data)
 		}
 	case att.Type.IsHash():
-		if att.Type.IsUserDefined() {
+		if att.Type.HasAttributes() {
 			h := att.Type.ToHash()
 			data["keyType"] = h.KeyType
 			data["elemType"] = h.ElemType
