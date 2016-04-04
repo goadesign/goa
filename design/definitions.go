@@ -879,13 +879,13 @@ func (a *AttributeDefinition) HasDefaultValue(attName string) bool {
 // SetDefault sets the default for the attribute. It also converts HashVal
 // and ArrayVal to map and slice respectively.
 func (a *AttributeDefinition) SetDefault(def interface{}) {
-	switch def.(type) {
+	switch actual := def.(type) {
 	case HashVal:
-		a.DefaultValue = def.(HashVal).ToMap()
+		a.DefaultValue = actual.ToMap()
 	case ArrayVal:
-		a.DefaultValue = def.(ArrayVal).ToSlice()
+		a.DefaultValue = actual.ToSlice()
 	default:
-		a.DefaultValue = def
+		a.DefaultValue = actual
 	}
 }
 

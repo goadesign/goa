@@ -31,8 +31,8 @@ type (
 		Name() string
 		// IsPrimitive returns true if the underlying type is one of the primitive types.
 		IsPrimitive() bool
-		// IsUserDefined returns true if the underlying type is one of the user defined types.
-		IsUserDefined() bool
+		// HasAttributes returns true if the underlying type has any attributes.
+		HasAttributes() bool
 		// IsObject returns true if the underlying type is an object, a user type which
 		// is an object or a media type whose type is an object.
 		IsObject() bool
@@ -194,8 +194,8 @@ func (p Primitive) Name() string {
 // IsPrimitive returns true.
 func (p Primitive) IsPrimitive() bool { return true }
 
-// IsUserDefined returns false.
-func (p Primitive) IsUserDefined() bool { return false }
+// HasAttributes returns false.
+func (p Primitive) HasAttributes() bool { return false }
 
 // IsObject returns false.
 func (p Primitive) IsObject() bool { return false }
@@ -316,9 +316,9 @@ func (a *Array) Name() string {
 // IsPrimitive returns false.
 func (a *Array) IsPrimitive() bool { return false }
 
-// IsUserDefined returns true if the array's element type is user defined.
-func (a *Array) IsUserDefined() bool {
-	return a.ElemType.Type.IsUserDefined()
+// HasAttributes returns true if the array's element type is user defined.
+func (a *Array) HasAttributes() bool {
+	return a.ElemType.Type.HasAttributes()
 }
 
 // IsObject returns false.
@@ -390,8 +390,8 @@ func (o Object) Name() string { return "object" }
 // IsPrimitive returns false.
 func (o Object) IsPrimitive() bool { return false }
 
-// IsUserDefined returns true.
-func (o Object) IsUserDefined() bool { return true }
+// HasAttributes returns true.
+func (o Object) HasAttributes() bool { return true }
 
 // IsObject returns true.
 func (o Object) IsObject() bool { return true }
@@ -453,10 +453,10 @@ func (h *Hash) Name() string { return "hash" }
 // IsPrimitive returns false.
 func (h *Hash) IsPrimitive() bool { return false }
 
-// IsUserDefined returns true if the either hash's key type is user defined
+// HasAttributes returns true if the either hash's key type is user defined
 // or the element type is user defined.
-func (h *Hash) IsUserDefined() bool {
-	return h.KeyType.Type.IsUserDefined() || h.ElemType.Type.IsUserDefined()
+func (h *Hash) HasAttributes() bool {
+	return h.KeyType.Type.HasAttributes() || h.ElemType.Type.HasAttributes()
 }
 
 // IsObject returns false.
@@ -545,13 +545,13 @@ func (o Object) IterateAttributes(it AttributeIterator) error {
 func (a ArrayVal) ToSlice() []interface{} {
 	arr := make([]interface{}, len(a))
 	for i, elem := range a {
-		switch elem.(type) {
+		switch actual := elem.(type) {
 		case ArrayVal:
-			arr[i] = elem.(ArrayVal).ToSlice()
+			arr[i] = actual.ToSlice()
 		case HashVal:
-			arr[i] = elem.(HashVal).ToMap()
+			arr[i] = actual.ToMap()
 		default:
-			arr[i] = elem
+			arr[i] = actual
 		}
 	}
 	return arr
@@ -561,13 +561,13 @@ func (a ArrayVal) ToSlice() []interface{} {
 func (h HashVal) ToMap() map[interface{}]interface{} {
 	mp := make(map[interface{}]interface{}, len(h))
 	for k, v := range h {
-		switch v.(type) {
+		switch actual := v.(type) {
 		case ArrayVal:
-			mp[k] = v.(ArrayVal).ToSlice()
+			mp[k] = actual.ToSlice()
 		case HashVal:
-			mp[k] = v.(HashVal).ToMap()
+			mp[k] = actual.ToMap()
 		default:
-			mp[k] = v
+			mp[k] = actual
 		}
 	}
 	return mp
@@ -591,8 +591,8 @@ func (u *UserTypeDefinition) Name() string { return u.Type.Name() }
 // IsPrimitive calls IsPrimitive on the user type underlying data type.
 func (u *UserTypeDefinition) IsPrimitive() bool { return u.Type.IsPrimitive() }
 
-// IsUserDefined calls the IsUserDefined on the user type underlying data type.
-func (u *UserTypeDefinition) IsUserDefined() bool { return u.Type.IsUserDefined() }
+// HasAttributes calls the HasAttributes on the user type underlying data type.
+func (u *UserTypeDefinition) HasAttributes() bool { return u.Type.HasAttributes() }
 
 // IsObject calls IsObject on the user type underlying data type.
 func (u *UserTypeDefinition) IsObject() bool { return u.Type.IsObject() }
