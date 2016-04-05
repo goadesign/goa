@@ -72,8 +72,7 @@ Controllers
 There is one controller interface generated per resource defined via the design language. The
 interface exposes the controller actions. User code must provide data structures that implement these
 interfaces when mounting a controller onto a service. The controller data structure should include
-an anonymous field of type *goa.Controller which takes care of implementing the middleware and
-error handler handling.
+an anonymous field of type *goa.Controller which takes care of implementing the middleware handling.
 
 Middleware
 
@@ -81,9 +80,9 @@ A goa middleware is a function that takes and returns a Handler. A Handler is a 
 function which handles incoming HTTP requests. goagen generates the handlers code so each handler
 creates the action specific context and calls the controller action with it.
 
-Middleware can be added to a goa service or a specific controller using the Service type Use method.
-goa comes with a few stock middleware that handle common needs such as logging, panic recovery or
-using the RequestID header to trace requests across multiple services.
+Middleware can be added to a goa service or a specific controller using the corresponding Use
+methods. goa comes with a few stock middleware that handle common needs such as logging, panic
+recovery or using the RequestID header to trace requests across multiple services.
 
 Error Handling
 

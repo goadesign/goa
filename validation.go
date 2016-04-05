@@ -54,14 +54,15 @@ var (
 // The format specification follows the json schema draft 4 validation extension.
 // see http://json-schema.org/latest/json-schema-validation.html#anchor105
 // Supported formats are:
-// - "date-time": RFC3339 date time value
-// - "email": RFC5322 email address
-// - "hostname": RFC1035 Internet host name
-// - "ipv4" and "ipv6": RFC2673 and RFC2373 IP address values
-// - "uri": RFC3986 URI value
-// - "mac": IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address value
-// - "cidr": RFC4632 and RFC4291 CIDR notation IP address value
-// - "regexp": Regular expression syntax accepted by RE2
+//
+//     - "date-time": RFC3339 date time value
+//     - "email": RFC5322 email address
+//     - "hostname": RFC1035 Internet host name
+//     - "ipv4" and "ipv6": RFC2673 and RFC2373 IP address values
+//     - "uri": RFC3986 URI value
+//     - "mac": IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address value
+//     - "cidr": RFC4632 and RFC4291 CIDR notation IP address value
+//     - "regexp": Regular expression syntax accepted by RE2
 func ValidateFormat(f Format, val string) error {
 	var err error
 	switch f {

@@ -73,7 +73,7 @@ func HandleResponse(c *Client, resp *http.Response, pretty bool) {
 	os.Exit(exitStatus)
 }
 
-// WSWrite STDIN lines to websocket server.
+// WSWrite sends STDIN lines to a websocket server.
 func WSWrite(ws *websocket.Conn) {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
@@ -83,7 +83,7 @@ func WSWrite(ws *websocket.Conn) {
 	}
 }
 
-// WSRead from websocket and print messages to STDOUT
+// WSRead reads from a websocket and print the read messages to STDOUT.
 func WSRead(ws *websocket.Conn) {
 	msg := make([]byte, 512)
 	for {

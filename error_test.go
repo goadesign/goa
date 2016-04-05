@@ -339,7 +339,7 @@ var _ = Describe("Merge", func() {
 			})
 
 			It("concatenates both error details", func() {
-				Ω(mErr.Detail).Should(Equal(detail + "\n" + mErr2.Detail))
+				Ω(mErr.Detail).Should(Equal(detail + "; " + mErr2.Detail))
 			})
 
 			It("uses the common status", func() {
@@ -358,7 +358,7 @@ var _ = Describe("Merge", func() {
 				It("produces a bad_request error", func() {
 					Ω(mErr.Code).Should(Equal("bad_request"))
 					Ω(mErr.Status).Should(Equal(400))
-					Ω(mErr.Detail).Should(Equal(detail + "\n" + mErr2.Detail))
+					Ω(mErr.Detail).Should(Equal(detail + "; " + mErr2.Detail))
 				})
 			})
 
@@ -370,7 +370,7 @@ var _ = Describe("Merge", func() {
 				It("produces a bad_request error", func() {
 					Ω(mErr.Code).Should(Equal("bad_request"))
 					Ω(mErr.Status).Should(Equal(400))
-					Ω(mErr.Detail).Should(Equal(detail + "\n" + mErr2.Detail))
+					Ω(mErr.Detail).Should(Equal(detail + "; " + mErr2.Detail))
 				})
 			})
 
