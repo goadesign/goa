@@ -694,7 +694,7 @@ const securityScopesKey key = 1
 func Configure{{ goify .SchemeName true }}Security(service *goa.Service, f goa.{{ .Context }}ConfigFunc) {
 	def := &goa.{{ .Context }}{
 {{ if eq .Context "APIKeySecurity" }}
-		In:   {{ printf "%q" .In }},
+		In:   {{ if eq .In "header" }}goa.LocHeader{{ else }}goa.LocQuery{{ end }},
 		Name: {{ printf "%q" .Name }},
 {{ else if eq .Context "OAuth2Security" }}
 		Flow:             {{ printf "%q" .Flow }},
@@ -706,7 +706,7 @@ func Configure{{ goify .SchemeName true }}Security(service *goa.Service, f goa.{
 		},{{ end }}
 {{ else if eq .Context "BasicAuthSecurity" }}
 {{ else if eq .Context "JWTSecurity" }}
-		In:               {{ printf "%q" .In }},
+		In:   {{ if eq .In "header" }}goa.LocHeader{{ else }}goa.LocQuery{{ end }},
 		Name:             {{ printf "%q" .Name }},
 		TokenURL:         {{ printf "%q" .TokenURL }},{{ with .Scopes }}
 		Scopes: map[string]string{
