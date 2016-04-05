@@ -18,20 +18,20 @@ type (
 	// DecoderFunc instantiates a decoder that decodes data read from the given io reader.
 	DecoderFunc func(r io.Reader) Decoder
 
-	// A Decoder unmarshals an io.Reader into an interface
+	// A Decoder unmarshals an io.Reader into an interface.
 	Decoder interface {
 		Decode(v interface{}) error
 	}
 
-	// The ResettableDecoder is used to determine whether or not a Decoder can be reset and
-	// thus safely reused in a sync.Pool
+	// ResettableDecoder is used to determine whether or not a Decoder can be reset and thus
+	// safely reused in a sync.Pool.
 	ResettableDecoder interface {
 		Decoder
 		Reset(r io.Reader)
 	}
 
-	// decoderPool smartly determines whether to instantiate a new Decoder or reuse
-	// one from a sync.Pool
+	// decoderPool smartly determines whether to instantiate a new Decoder or reuse one from a
+	// sync.Pool.
 	decoderPool struct {
 		fn   DecoderFunc
 		pool *sync.Pool
@@ -40,20 +40,20 @@ type (
 	// EncoderFunc instantiates an encoder that encodes data into the given writer.
 	EncoderFunc func(w io.Writer) Encoder
 
-	// An Encoder marshals from an interface into an io.Writer
+	// An Encoder marshals from an interface into an io.Writer.
 	Encoder interface {
 		Encode(v interface{}) error
 	}
 
 	// The ResettableEncoder is used to determine whether or not a Encoder can be reset and
-	// thus safely reused in a sync.Pool
+	// thus safely reused in a sync.Pool.
 	ResettableEncoder interface {
 		Encoder
 		Reset(w io.Writer)
 	}
 
-	// encoderPool smartly determines whether to instantiate a new Encoder or reuse
-	// one from a sync.Pool
+	// encoderPool smartly determines whether to instantiate a new Encoder or reuse one from a
+	// sync.Pool.
 	encoderPool struct {
 		fn   EncoderFunc
 		pool *sync.Pool
@@ -78,8 +78,8 @@ func NewGobEncoder(w io.Writer) Encoder { return gob.NewEncoder(w) }
 // NewGobDecoder is an adapter for the encoding package gob decoder.
 func NewGobDecoder(r io.Reader) Decoder { return gob.NewDecoder(r) }
 
-// DecodeRequest retrives the request body and `Content-Type` header and uses Decode
-// to unmarshal into the provided `interface{}`
+// DecodeRequest retrieves the request body and `Content-Type` header and uses Decode to unmarshal
+// into the provided value.
 func (service *Service) DecodeRequest(req *http.Request, v interface{}) error {
 	body, contentType := req.Body, req.Header.Get("Content-Type")
 	defer body.Close()
@@ -91,7 +91,7 @@ func (service *Service) DecodeRequest(req *http.Request, v interface{}) error {
 	return nil
 }
 
-// Decode uses registered Decoders to unmarshal a body based on the contentType
+// Decode uses registered Decoders to unmarshal a body based on the contentType.
 func (service *Service) Decode(v interface{}, body io.Reader, contentType string) error {
 	now := time.Now()
 	defer MeasureSince([]string{"goa", "decode", contentType}, now)
@@ -122,8 +122,8 @@ func (service *Service) Decode(v interface{}, body io.Reader, contentType string
 	return nil
 }
 
-// Decoder sets a specific decoder to be used for the specified content types. If
-// a decoder is already registered, it will be overwritten.
+// Decoder sets a specific decoder to be used for the specified content types. If a decoder is
+// already registered, it is overwritten.
 func (service *Service) Decoder(f DecoderFunc, contentTypes ...string) {
 	p := newDecodePool(f)
 
@@ -136,8 +136,8 @@ func (service *Service) Decoder(f DecoderFunc, contentTypes ...string) {
 	}
 }
 
-// newDecodePool checks to see if the DecoderFunc returns reusable decoders
-// and if so, creates a pool
+// newDecodePool checks to see if the DecoderFunc returns reusable decoders and if so, creates a
+// pool.
 func newDecodePool(f DecoderFunc) *decoderPool {
 	// get a new decoder and type assert to see if it can be reset
 	decoder := f(nil)
@@ -156,8 +156,7 @@ func newDecodePool(f DecoderFunc) *decoderPool {
 	return p
 }
 
-// Get returns an already reset Decoder from the pool if possible
-// or creates a new one if necessary
+// Get returns an already reset Decoder from the pool or creates a new one if necessary.
 func (p *decoderPool) Get(r io.Reader) Decoder {
 	if p.pool == nil {
 		return p.fn(r)
@@ -168,7 +167,7 @@ func (p *decoderPool) Get(r io.Reader) Decoder {
 	return decoder
 }
 
-// Put returns a Decoder into the pool if possible
+// Put returns a Decoder into the pool if possible.
 func (p *decoderPool) Put(d Decoder) {
 	if p.pool == nil {
 		return
@@ -176,8 +175,8 @@ func (p *decoderPool) Put(d Decoder) {
 	p.pool.Put(d)
 }
 
-// EncodeResponse uses registered Encoders to marshal the response body based on the request
-// `Accept` header and writes it to the http.ResponseWriter
+// EncodeResponse uses registered Encoders to marshal the response body based on the request Accept
+// header and writes it to the http.ResponseWriter
 func (service *Service) EncodeResponse(ctx context.Context, v interface{}) error {
 	now := time.Now()
 	accept := ContextRequest(ctx).Header.Get("Accept")
@@ -210,8 +209,8 @@ func (service *Service) EncodeResponse(ctx context.Context, v interface{}) error
 	return nil
 }
 
-// Encoder sets a specific encoder to be used for the specified content types. If
-// an encoder is already registered, it will be overwritten.
+// Encoder sets a specific encoder to be used for the specified content types. If an encoder is
+// already registered, it is overwritten.
 func (service *Service) Encoder(f EncoderFunc, contentTypes ...string) {
 	p := newEncodePool(f)
 	for _, contentType := range contentTypes {
@@ -227,11 +226,10 @@ func (service *Service) Encoder(f EncoderFunc, contentTypes ...string) {
 	for contentType := range service.encoderPools {
 		service.encodableContentTypes = append(service.encodableContentTypes, contentType)
 	}
-
 }
 
-// newEncodePool checks to see if the EncoderFactory returns reusable encoders
-// and if so, creates a pool
+// newEncodePool checks to see if the EncoderFactory returns reusable encoders and if so, creates
+// a pool.
 func newEncodePool(f EncoderFunc) *encoderPool {
 	// get a new encoder and type assert to see if it can be reset
 	encoder := f(nil)
@@ -250,8 +248,7 @@ func newEncodePool(f EncoderFunc) *encoderPool {
 	return p
 }
 
-// Get returns an already reset Encoder from the pool if possible
-// or creates a new one if necessary
+// Get returns an already reset Encoder from the pool or creates a new one if necessary.
 func (p *encoderPool) Get(w io.Writer) Encoder {
 	if p.pool == nil {
 		return p.fn(w)
@@ -262,7 +259,7 @@ func (p *encoderPool) Get(w io.Writer) Encoder {
 	return encoder
 }
 
-// Put returns a Decoder into the pool if possible
+// Put returns a Decoder into the pool if possible.
 func (p *encoderPool) Put(e Encoder) {
 	if p.pool == nil {
 		return
