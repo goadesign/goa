@@ -62,6 +62,22 @@ var _ = Describe("Validation", func() {
 			})
 		})
 
+		Context("with a default value that doesn't exist in enum", func() {
+			BeforeEach(func() {
+				dsl = func() {
+					Attribute(attName, Integer, func() {
+						Enum(1, 2, 3)
+						Default(4)
+					})
+				}
+			})
+			It("produces an error", func() {
+				Ω(dslengine.Errors).Should(HaveOccurred())
+				Ω(dslengine.Errors.Error()).Should(Equal(
+					`type "bar": field attName - default value 4 is not one of the accepted values: []interface {}{1, 2, 3}`))
+			})
+		})
+
 		Context("with a valid format validation", func() {
 			BeforeEach(func() {
 				dsl = func() {

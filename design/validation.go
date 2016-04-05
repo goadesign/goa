@@ -416,6 +416,19 @@ func (a *AttributeDefinition) Validate(ctx string, parent dslengine.Definition) 
 	if ctx != "" {
 		ctx += " - "
 	}
+	// If both Default and Enum are given, make sure the Default value is one of Enum values.
+	if a.DefaultValue != nil && a.Validation != nil && a.Validation.Values != nil {
+		var found bool
+		for _, e := range a.Validation.Values {
+			if e == a.DefaultValue {
+				found = true
+				break
+			}
+		}
+		if !found {
+			verr.Add(parent, "%sdefault value %#v is not one of the accepted values: %#v", ctx, a.DefaultValue, a.Validation.Values)
+		}
+	}
 	o := a.Type.ToObject()
 	if o != nil {
 		for _, n := range a.AllRequired() {
@@ -432,7 +445,7 @@ func (a *AttributeDefinition) Validate(ctx string, parent dslengine.Definition) 
 		}
 		for n, att := range o {
 			ctx = fmt.Sprintf("field %s", n)
-			verr.Merge(att.Validate(ctx, a))
+			verr.Merge(att.Validate(ctx, parent))
 		}
 	} else {
 		if a.Type.IsArray() {
@@ -473,7 +486,7 @@ func (u *UserTypeDefinition) Validate(ctx string, parent dslengine.Definition) *
 	if u.TypeName == "" {
 		verr.Add(parent, "%s - %s", ctx, "User type must have a name")
 	}
-	verr.Merge(u.AttributeDefinition.Validate(ctx, parent))
+	verr.Merge(u.AttributeDefinition.Validate(ctx, u))
 	return verr.AsError()
 }
 
