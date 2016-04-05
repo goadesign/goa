@@ -889,6 +889,25 @@ func (a *AttributeDefinition) SetDefault(def interface{}) {
 	}
 }
 
+// AddValues adds the Enum values to the attribute's validation definition.
+// It also performs any conversion needed for HashVal and ArrayVal types.
+func (a *AttributeDefinition) AddValues(values []interface{}) {
+	if a.Validation == nil {
+		a.Validation = &dslengine.ValidationDefinition{}
+	}
+	a.Validation.Values = make([]interface{}, len(values))
+	for i, v := range values {
+		switch actual := v.(type) {
+		case HashVal:
+			a.Validation.Values[i] = actual.ToMap()
+		case ArrayVal:
+			a.Validation.Values[i] = actual.ToSlice()
+		default:
+			a.Validation.Values[i] = actual
+		}
+	}
+}
+
 // AllNonZero returns the complete list of all non-zero attribute name.
 func (a *AttributeDefinition) AllNonZero() []string {
 	nzs := make([]string, len(a.NonZeroAttributes))

@@ -122,8 +122,8 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDef
 // Note: we do not want to recurse here, recursion is done by the marshaler/unmarshaler code.
 func ValidationChecker(att *design.AttributeDefinition, nonzero, required, hasDefault bool, target, context string, depth int, private bool) string {
 	t := target
-	isPointer := !required && !hasDefault && !nonzero
-	if private || (isPointer && att.Type.IsPrimitive()) {
+	isPointer := private || (!required && !hasDefault && !nonzero)
+	if isPointer && att.Type.IsPrimitive() {
 		t = "*" + t
 	}
 	data := map[string]interface{}{

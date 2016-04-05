@@ -292,10 +292,7 @@ func Enum(val ...interface{}) {
 			}
 		}
 		if ok {
-			if a.Validation == nil {
-				a.Validation = &dslengine.ValidationDefinition{}
-			}
-			a.Validation.Values = val
+			a.AddValues(val)
 		}
 	}
 }
