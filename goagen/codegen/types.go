@@ -328,7 +328,6 @@ var commonInitialisms = map[string]bool{
 // Goify produces a "CamelCase" version of the string, if firstUpper is true the first character
 // of the identifier is uppercase otherwise it's lowercase.
 func Goify(str string, firstUpper bool) string {
-
 	runes := []rune(str)
 	w, i := 0, 0 // index of start of word, scan
 	for i+1 <= len(runes) {

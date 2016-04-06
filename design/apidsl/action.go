@@ -2,8 +2,8 @@ package apidsl
 
 import (
 	"fmt"
+	"unicode"
 
-	"bitbucket.org/pkg/inflect"
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/dslengine"
 )
@@ -284,8 +284,8 @@ func Payload(p interface{}, dsls ...func()) {
 		if dsl != nil {
 			dslengine.Execute(dsl, att)
 		}
-		rn := inflect.Camelize(a.Parent.Name)
-		an := inflect.Camelize(a.Name)
+		rn := camelize(a.Parent.Name)
+		an := camelize(a.Name)
 		a.Payload = &design.UserTypeDefinition{
 			AttributeDefinition: att,
 			TypeName:            fmt.Sprintf("%s%sPayload", an, rn),
@@ -301,4 +301,47 @@ func newAttribute(baseMT string) *design.AttributeDefinition {
 		base = mt.Type
 	}
 	return &design.AttributeDefinition{Reference: base}
+}
+
+func camelize(str string) string {
+	runes := []rune(str)
+	w, i := 0, 0
+	for i+1 <= len(runes) {
+		eow := false
+		if i+1 == len(runes) {
+			eow = true
+		} else if !validIdentifier(runes[i]) {
+			runes = append(runes[:i], runes[i+1:]...)
+		} else if spacer(runes[i+1]) {
+			eow = true
+			n := 1
+			for i+n+1 < len(runes) && spacer(runes[i+n+1]) {
+				n++
+			}
+			copy(runes[i+1:], runes[i+n+1:])
+			runes = runes[:len(runes)-n]
+		} else if unicode.IsLower(runes[i]) && !unicode.IsLower(runes[i+1]) {
+			eow = true
+		}
+		i++
+		if !eow {
+			continue
+		}
+		runes[w] = unicode.ToUpper(runes[w])
+		w = i
+	}
+	return string(runes)
+}
+
+// validIdentifier returns true if the rune is a letter or number
+func validIdentifier(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r)
+}
+
+func spacer(c rune) bool {
+	switch c {
+	case '_', ' ', ':', '-':
+		return true
+	}
+	return false
 }
