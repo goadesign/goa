@@ -12,7 +12,6 @@
 #
 DIRS=$(shell go list -f {{.Dir}} ./...)
 DEPEND=\
-	bitbucket.org/pkg/inflect \
 	github.com/asaskevich/govalidator \
 	github.com/dgrijalva/jwt-go \
 	github.com/dimfeld/httptreemux \
