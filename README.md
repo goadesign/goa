@@ -240,7 +240,7 @@ middlewares.
 
 ### Examples
 
-The [example](https://github.com/goadesign/example) repo contains simple examples illustrating basic concepts.
+The [examples](https://github.com/goadesign/examples) repo contains simple examples illustrating basic concepts.
 
 The [goa-cellar](https://github.com/goadesign/goa-cellar) repo contains the implementation for a
 goa service which demonstrates many aspects of the design language. It is kept up-to-date and
