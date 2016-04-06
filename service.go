@@ -269,7 +269,7 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 	for i := range chain {
 		middleware = chain[ml-i-1](middleware)
 	}
-	baseCtx := LogWith(ctrl.Context, "action", name)
+	baseCtx := LogWith(ctrl.Context, "ctrl", ctrl.Name, "action", name)
 	return func(rw http.ResponseWriter, req *http.Request, params url.Values) {
 		// Build context
 		ctx := NewContext(baseCtx, rw, req, params)
