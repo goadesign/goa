@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
 
 	"github.com/goadesign/goa/design"
 )
@@ -390,7 +391,7 @@ func buildAttributeSchema(api *design.APIDefinition, s *JSONSchema, at *design.A
 	} else {
 		s.Merge(TypeSchema(api, at.Type))
 	}
-	s.DefaultValue = at.DefaultValue
+	s.DefaultValue = toStringMap(at.DefaultValue)
 	s.Description = at.Description
 	s.Example = at.Example
 	val := at.Validation
@@ -414,6 +415,42 @@ func buildAttributeSchema(api *design.APIDefinition, s *JSONSchema, at *design.A
 	}
 	s.Required = val.Required
 	return s
+}
+
+// toStringMap converts map[interface{}]interface{} to a map[string]interface{} when possible.
+func toStringMap(val interface{}) interface{} {
+	switch actual := val.(type) {
+	case map[interface{}]interface{}:
+		m := make(map[string]interface{})
+		for k, v := range actual {
+			m[toString(k)] = toStringMap(v)
+		}
+		return m
+	case []interface{}:
+		mapSlice := make([]interface{}, len(actual))
+		for i, e := range actual {
+			mapSlice[i] = toStringMap(e)
+		}
+		return mapSlice
+	default:
+		return actual
+	}
+}
+
+// toString returns the string representation of the given type.
+func toString(val interface{}) string {
+	switch actual := val.(type) {
+	case string:
+		return actual
+	case int:
+		return strconv.Itoa(actual)
+	case float64:
+		return strconv.FormatFloat(actual, 'f', -1, 64)
+	case bool:
+		return strconv.FormatBool(actual)
+	default:
+		panic("unexpected key type")
+	}
 }
 
 // toSchemaHref produces a href that replaces the path wildcards with JSON schema references when

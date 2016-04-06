@@ -394,7 +394,7 @@ func multiComment(text string) string {
 
 // gotTypeRefExt computes the type reference for a type in a different package.
 func goTypeRefExt(t design.DataType, tabs int, pkg string) string {
-	ref := codegen.GoTypeRef(t, nil, tabs)
+	ref := codegen.GoTypeRef(t, nil, tabs, false)
 	if strings.HasPrefix(ref, "*") {
 		return fmt.Sprintf("%s.%s", pkg, ref[1:])
 	}
@@ -562,7 +562,7 @@ const registerTmpl = `{{ $cmdName := goify (printf "%s%sCommand" .Action.Name (t
 func (cmd *{{ $cmdName }}) RegisterFlags(cc *cobra.Command) {
 {{ if .Action.Payload }}	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request JSON body")
 {{ end }}{{ $params := .Action.QueryParams }}{{ if $params }}{{ range $name, $param := $params.Type.ToObject }}{{ $tmp := tempvar }}{{/*
-*/}}{{ if not $param.DefaultValue }}	var {{ $tmp }} {{ gotypedef $param 1 true }}
+*/}}{{ if not $param.DefaultValue }}	var {{ $tmp }} {{ gotypedef $param 1 true false }}
 {{ end }}	cc.Flags().{{ flagType $param }}Var(&cmd.{{ goify $name true }}, "{{ $name }}", {{ if $param.DefaultValue }}{{ printf "%#v" $param.DefaultValue }}{{ else }}{{ $tmp }}{{ end }}, ` + "`" + `{{ escapeBackticks $param.Description }}` + "`" + `)
 {{ end }}{{ end }}{{/*
 */}}{{ $headers := .Action.Headers }}{{ if $headers }}{{ range $name, $header := $headers.Type.ToObject }}{{/*
