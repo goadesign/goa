@@ -485,7 +485,7 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 	ctxMTRespT = `// {{ goify .Response.Name true }} sends a HTTP response with status code {{ .Response.Status }}.
 func (ctx *{{ .Context.Name }}) {{ goify .Response.Name true }}(r {{ gotyperef .Projected .Projected.AllRequired 0 false }}) error {
 	ctx.ResponseData.Header().Set("Content-Type", "{{ .Response.MediaType }}")
-	return ctx.ResponseData.Send(ctx.Context, {{ .Response.Status }}, r)
+	return ctx.Service.Send(ctx.Context, {{ .Response.Status }}, r)
 }
 `
 
