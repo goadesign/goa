@@ -61,70 +61,77 @@ func init() {
 // tabs is the number of tab character(s) used to tabulate the definition however the first
 // line is never indented.
 // jsonTags controls whether to produce json tags.
-func GoTypeDef(ds design.DataStructure, tabs int, jsonTags bool) string {
-	var buffer bytes.Buffer
+// private controls whether the field is a pointer or not. All fields in the struct are
+//   pointers for a private struct.
+func GoTypeDef(ds design.DataStructure, tabs int, jsonTags, private bool) string {
 	def := ds.Definition()
 	t := def.Type
 	switch actual := t.(type) {
 	case design.Primitive:
-		return GoTypeName(t, nil, tabs)
+		return GoTypeName(t, nil, tabs, private)
 	case *design.Array:
-		d := GoTypeDef(actual.ElemType, tabs, jsonTags)
+		d := GoTypeDef(actual.ElemType, tabs, jsonTags, private)
 		if actual.ElemType.Type.IsObject() {
 			d = "*" + d
 		}
 		return "[]" + d
 	case *design.Hash:
-		keyDef := GoTypeDef(actual.KeyType, tabs, jsonTags)
+		keyDef := GoTypeDef(actual.KeyType, tabs, jsonTags, private)
 		if actual.KeyType.Type.IsObject() {
 			keyDef = "*" + keyDef
 		}
-		elemDef := GoTypeDef(actual.ElemType, tabs, jsonTags)
+		elemDef := GoTypeDef(actual.ElemType, tabs, jsonTags, private)
 		if actual.ElemType.Type.IsObject() {
 			elemDef = "*" + elemDef
 		}
 		return fmt.Sprintf("map[%s]%s", keyDef, elemDef)
 	case design.Object:
-		buffer.WriteString("struct {\n")
-		keys := make([]string, len(actual))
-		i := 0
-		for n := range actual {
-			keys[i] = n
-			i++
-		}
-		sort.Strings(keys)
-		for _, name := range keys {
-			WriteTabs(&buffer, tabs+1)
-			field := actual[name]
-			typedef := GoTypeDef(field, tabs+1, jsonTags)
-			if field.Type.IsObject() || def.IsPrimitivePointer(name) {
-				typedef = "*" + typedef
-			}
-			fname := Goify(name, true)
-			var tags string
-			if jsonTags {
-				var omit string
-				if !def.IsRequired(name) {
-					omit = ",omitempty"
-				}
-				tags = fmt.Sprintf(" `json:\"%s%s\" xml:\"%s%s\"`", name, omit, name, omit)
-			}
-			desc := actual[name].Description
-			if desc != "" {
-				desc = fmt.Sprintf("// %s\n", desc)
-			}
-			buffer.WriteString(fmt.Sprintf("%s%s %s%s\n", desc, fname, typedef, tags))
-		}
-		WriteTabs(&buffer, tabs)
-		buffer.WriteString("}")
-		return buffer.String()
+		return goTypeDefObject(actual, def, tabs, jsonTags, private)
 	case *design.UserTypeDefinition:
-		return GoPackageTypeName(actual, actual.AllRequired(), tabs)
+		return GoPackageTypeName(actual, actual.AllRequired(), tabs, private)
 	case *design.MediaTypeDefinition:
-		return GoPackageTypeName(actual, actual.AllRequired(), tabs)
+		return GoPackageTypeName(actual, actual.AllRequired(), tabs, private)
 	default:
 		panic("goa bug: unknown data structure type")
 	}
+}
+
+// goTypeDefObject returns the Go code that defines a Go struct.
+func goTypeDefObject(actual design.Object, def *design.AttributeDefinition, tabs int, jsonTags, private bool) string {
+	var buffer bytes.Buffer
+	buffer.WriteString("struct {\n")
+	keys := make([]string, len(actual))
+	i := 0
+	for n := range actual {
+		keys[i] = n
+		i++
+	}
+	sort.Strings(keys)
+	for _, name := range keys {
+		WriteTabs(&buffer, tabs+1)
+		field := actual[name]
+		typedef := GoTypeDef(field, tabs+1, jsonTags, private)
+		if (field.Type.IsPrimitive() && private) || field.Type.IsObject() || def.IsPrimitivePointer(name) {
+			typedef = "*" + typedef
+		}
+		fname := Goify(name, true)
+		var tags string
+		if jsonTags {
+			var omit string
+			if private || (!def.IsRequired(name) && !def.HasDefaultValue(name)) {
+				omit = ",omitempty"
+			}
+			tags = fmt.Sprintf(" `json:\"%s%s\" xml:\"%s%s\"`", name, omit, name, omit)
+		}
+		desc := actual[name].Description
+		if desc != "" {
+			desc = fmt.Sprintf("// %s\n", desc)
+		}
+		buffer.WriteString(fmt.Sprintf("%s%s %s%s\n", desc, fname, typedef, tags))
+	}
+	WriteTabs(&buffer, tabs)
+	buffer.WriteString("}")
+	return buffer.String()
 }
 
 // GoTypeRef returns the Go code that refers to the Go type which matches the given data type
@@ -134,8 +141,8 @@ func GoTypeDef(ds design.DataStructure, tabs int, jsonTags bool) string {
 // (anonymous) attribute.
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
 // This function assumes the type is in the same package as the code accessing it.
-func GoTypeRef(t design.DataType, required []string, tabs int) string {
-	return GoPackageTypeRef(t, required, tabs)
+func GoTypeRef(t design.DataType, required []string, tabs int, private bool) string {
+	return GoPackageTypeRef(t, required, tabs, private)
 }
 
 // GoPackageTypeRef returns the Go code that refers to the Go type which matches the given data type.
@@ -143,18 +150,18 @@ func GoTypeRef(t design.DataType, required []string, tabs int) string {
 // case the type (Object) does not carry the required field information defined in the parent
 // (anonymous) attribute.
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
-func GoPackageTypeRef(t design.DataType, required []string, tabs int) string {
+func GoPackageTypeRef(t design.DataType, required []string, tabs int, private bool) string {
 	switch t.(type) {
 	case *design.UserTypeDefinition, *design.MediaTypeDefinition:
 		var prefix string
 		if t.IsObject() {
 			prefix = "*"
 		}
-		return prefix + GoPackageTypeName(t, required, tabs)
+		return prefix + GoPackageTypeName(t, required, tabs, private)
 	case design.Object:
-		return "*" + GoPackageTypeName(t, required, tabs)
+		return "*" + GoPackageTypeName(t, required, tabs, private)
 	default:
-		return GoPackageTypeName(t, required, tabs)
+		return GoPackageTypeName(t, required, tabs, private)
 	}
 }
 
@@ -164,8 +171,8 @@ func GoPackageTypeRef(t design.DataType, required []string, tabs int) string {
 // required only applies when referring to a user type that is an object defined inline. In this
 // case the type (Object) does not carry the required field information defined in the parent
 // (anonymous) attribute.
-func GoTypeName(t design.DataType, required []string, tabs int) string {
-	return GoPackageTypeName(t, required, tabs)
+func GoTypeName(t design.DataType, required []string, tabs int, private bool) string {
+	return GoPackageTypeName(t, required, tabs, private)
 }
 
 // GoPackageTypeName returns the Go type name for a data type.
@@ -173,32 +180,32 @@ func GoTypeName(t design.DataType, required []string, tabs int) string {
 // case the type (Object) does not carry the required field information defined in the parent
 // (anonymous) attribute.
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
-func GoPackageTypeName(t design.DataType, required []string, tabs int) string {
+func GoPackageTypeName(t design.DataType, required []string, tabs int, private bool) string {
 	switch actual := t.(type) {
 	case design.Primitive:
 		return GoNativeType(t)
 	case *design.Array:
-		return "[]" + GoPackageTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), tabs+1)
+		return "[]" + GoPackageTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), tabs+1, private)
 	case design.Object:
 		att := &design.AttributeDefinition{Type: actual}
 		if len(required) > 0 {
 			requiredVal := &dslengine.ValidationDefinition{Required: required}
 			att.Validation.Merge(requiredVal)
 		}
-		return GoTypeDef(att, tabs, false)
+		return GoTypeDef(att, tabs, false, private)
 	case *design.Hash:
 		return fmt.Sprintf(
 			"map[%s]%s",
-			GoPackageTypeRef(actual.KeyType.Type, actual.KeyType.AllRequired(), tabs+1),
-			GoPackageTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), tabs+1),
+			GoPackageTypeRef(actual.KeyType.Type, actual.KeyType.AllRequired(), tabs+1, private),
+			GoPackageTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), tabs+1, private),
 		)
 	case *design.UserTypeDefinition:
-		return Goify(actual.TypeName, true)
+		return Goify(actual.TypeName, !private)
 	case *design.MediaTypeDefinition:
 		if builtin := GoaMediaTypeName(actual); builtin != "" {
 			return builtin
 		}
-		return Goify(actual.TypeName, true)
+		return Goify(actual.TypeName, !private)
 	default:
 		panic(fmt.Sprintf("goa bug: unknown type %#v", actual))
 	}
@@ -256,7 +263,7 @@ func GoTypeDesc(t design.DataType, upper bool) string {
 
 		switch elem := actual.UserTypeDefinition.AttributeDefinition.Type.(type) {
 		case *design.Array:
-			return fmt.Sprintf("%s media type is a collection of %s.", Goify(actual.TypeName, upper), GoPackageTypeName(elem.ElemType.Type, nil, 0))
+			return fmt.Sprintf("%s media type is a collection of %s.", Goify(actual.TypeName, upper), GoPackageTypeName(elem.ElemType.Type, nil, 0, !upper))
 		default:
 			return Goify(actual.TypeName, upper) + " media type."
 		}
@@ -321,7 +328,6 @@ var commonInitialisms = map[string]bool{
 // Goify produces a "CamelCase" version of the string, if firstUpper is true the first character
 // of the identifier is uppercase otherwise it's lowercase.
 func Goify(str string, firstUpper bool) string {
-
 	runes := []rune(str)
 	w, i := 0, 0 // index of start of word, scan
 	for i+1 <= len(runes) {
@@ -422,7 +428,7 @@ func GoTypeTransform(source, target *design.UserTypeDefinition, targetPkg, funcN
 	if err != nil {
 		return "", err
 	}
-	t := GoTypeRef(target, nil, 0)
+	t := GoTypeRef(target, nil, 0, false)
 	if strings.HasPrefix(t, "*") && len(targetPkg) > 0 {
 		t = fmt.Sprintf("*%s.%s", targetPkg, t[1:])
 	}
@@ -654,33 +660,33 @@ func typeName(att *design.AttributeDefinition) (name string) {
 	return
 }
 
-const transformTmpl = `func {{.Name}}(source {{gotyperef .Source nil 0}}) (target {{.TargetRef}}) {
-{{.Impl}}	return
+const transformTmpl = `func {{ .Name }}(source {{ gotyperef .Source nil 0 false }}) (target {{ .TargetRef }}) {
+{{ .Impl }}	return
 }
 `
 
-const transformObjectTmpl = `{{tabs .Depth}}{{.TargetCtx}} = new({{if .TargetPkg}}{{.TargetPkg}}.{{end}}{{if .TargetType}}{{.TargetType}}{{else}}{{gotyperef .Target.Type .Target.AllRequired 1}}{{end}})
-{{range $source, $target := .AttributeMap}}{{/*
-*/}}{{$sourceAtt := index $.Source $source}}{{$targetAtt := index $.Target $target}}{{/*
-*/}}{{$source := goify $source true}}{{$target := goify $target true}}{{/*
-*/}}{{     if $sourceAtt.Type.IsArray}}{{ transformArray  $sourceAtt.Type.ToArray  $targetAtt.Type.ToArray  $.TargetPkg (printf "%s.%s" $.SourceCtx $source) (printf "%s.%s" $.TargetCtx $target) $.Depth}}{{/*
-*/}}{{else if $sourceAtt.Type.IsHash}}{{  transformHash   $sourceAtt.Type.ToHash   $targetAtt.Type.ToHash   $.TargetPkg (printf "%s.%s" $.SourceCtx $source) (printf "%s.%s" $.TargetCtx $target) $.Depth}}{{/*
-*/}}{{else if $sourceAtt.Type.IsObject}}{{transformObject $sourceAtt.Type.ToObject $targetAtt.Type.ToObject $.TargetPkg (typeName $targetAtt) (printf "%s.%s" $.SourceCtx $source) (printf "%s.%s" $.TargetCtx $target) $.Depth}}{{/*
-*/}}{{else}}{{tabs $.Depth}}{{$.TargetCtx}}.{{$target}} = {{$.SourceCtx}}.{{$source}}
-{{end}}{{end}}`
+const transformObjectTmpl = `{{ tabs .Depth }}{{ .TargetCtx }} = new({{ if .TargetPkg }}{{ .TargetPkg }}.{{ end }}{{ if .TargetType }}{{ .TargetType }}{{ else }}{{ gotyperef .Target.Type .Target.AllRequired 1 false }}{{ end }})
+{{ range $source, $target := .AttributeMap }}{{/*
+*/}}{{ $sourceAtt := index $.Source $source }}{{ $targetAtt := index $.Target $target }}{{/*
+*/}}{{ $source := goify $source true }}{{ $target := goify $target true }}{{/*
+*/}}{{     if $sourceAtt.Type.IsArray }}{{ transformArray  $sourceAtt.Type.ToArray  $targetAtt.Type.ToArray  $.TargetPkg (printf "%s.%s" $.SourceCtx $source) (printf "%s.%s" $.TargetCtx $target) $.Depth }}{{/*
+*/}}{{ else if $sourceAtt.Type.IsHash }}{{  transformHash   $sourceAtt.Type.ToHash   $targetAtt.Type.ToHash   $.TargetPkg (printf "%s.%s" $.SourceCtx $source) (printf "%s.%s" $.TargetCtx $target) $.Depth }}{{/*
+*/}}{{ else if $sourceAtt.Type.IsObject }}{{ transformObject $sourceAtt.Type.ToObject $targetAtt.Type.ToObject $.TargetPkg (typeName $targetAtt) (printf "%s.%s" $.SourceCtx $source) (printf "%s.%s" $.TargetCtx $target) $.Depth }}{{/*
+*/}}{{ else }}{{ tabs $.Depth }}{{ $.TargetCtx }}.{{ $target }} = {{ $.SourceCtx }}.{{ $source }}
+{{ end }}{{ end }}`
 
-const transformArrayTmpl = `{{tabs .Depth}}{{.TargetCtx}} = make([]{{gotyperef .Target.ElemType.Type nil 0}}, len({{.SourceCtx}}))
-{{tabs .Depth}}for i, v := range {{.SourceCtx}} {
-{{transformAttribute .Source.ElemType .Target.ElemType .TargetPkg (printf "%s[i]" .SourceCtx) (printf "%s[i]" .TargetCtx) (add .Depth 1)}}{{/*
-*/}}{{tabs .Depth}}}
+const transformArrayTmpl = `{{ tabs .Depth }}{{ .TargetCtx}} = make([]{{ gotyperef .Target.ElemType.Type nil 0 false }}, len({{ .SourceCtx }}))
+{{ tabs .Depth }}for i, v := range {{ .SourceCtx }} {
+{{ transformAttribute .Source.ElemType .Target.ElemType .TargetPkg (printf "%s[i]" .SourceCtx) (printf "%s[i]" .TargetCtx) (add .Depth 1) }}{{/*
+*/}}{{ tabs .Depth }}}
 `
 
-const transformHashTmpl = `{{tabs .Depth}}{{.TargetCtx}} = make(map[{{gotyperef .Target.KeyType.Type nil 0}}]{{gotyperef .Target.ElemType.Type nil 0}}, len({{.SourceCtx}}))
-{{tabs .Depth}}for k, v := range {{.SourceCtx}} {
-{{tabs .Depth}}	var tk {{gotyperef .Target.KeyType.Type nil 0}}
-{{transformAttribute .Source.KeyType .Target.KeyType .TargetPkg "k" "tk" (add .Depth 1)}}{{/*
-*/}}{{tabs .Depth}}	var tv {{gotyperef .Target.ElemType.Type nil 0}}
-{{transformAttribute .Source.ElemType .Target.ElemType .TargetPkg "v" "tv" (add .Depth 1)}}{{/*
-*/}}{{tabs .Depth}}	{{.TargetCtx}}[tk] = tv
-{{tabs .Depth}}}
+const transformHashTmpl = `{{ tabs .Depth }}{{ .TargetCtx }} = make(map[{{ gotyperef .Target.KeyType.Type nil 0 false }}]{{ gotyperef .Target.ElemType.Type nil 0 false }}, len({{ .SourceCtx }}))
+{{ tabs .Depth }}for k, v := range {{ .SourceCtx }} {
+{{ tabs .Depth }}	var tk {{ gotyperef .Target.KeyType.Type nil 0 false }}
+{{ transformAttribute .Source.KeyType .Target.KeyType .TargetPkg "k" "tk" (add .Depth 1) }}{{/*
+*/}}{{ tabs .Depth }}	var tv {{ gotyperef .Target.ElemType.Type nil 0 false }}
+{{ transformAttribute .Source.ElemType .Target.ElemType .TargetPkg "v" "tv" (add .Depth 1) }}{{/*
+*/}}{{ tabs .Depth }}	{{ .TargetCtx }}[tk] = tv
+{{ tabs .Depth }}}
 `

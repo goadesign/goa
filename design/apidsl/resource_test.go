@@ -37,10 +37,10 @@ var _ = Describe("Resource", func() {
 			name = "foo"
 		})
 
-		It("produces a valid resource definition and defaults the media type to plain/text", func() {
+		It("produces a valid resource definition and defaults the media type to text/plain", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.Validate()).ShouldNot(HaveOccurred())
-			Ω(res.MediaType).Should(Equal("plain/text"))
+			Ω(res.MediaType).Should(Equal("text/plain"))
 		})
 	})
 

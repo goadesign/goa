@@ -630,7 +630,7 @@ func (a *APIDefinition) Finalize() {
 func NewResourceDefinition(name string, dsl func()) *ResourceDefinition {
 	return &ResourceDefinition{
 		Name:      name,
-		MediaType: "plain/text",
+		MediaType: "text/plain",
 		DSLFunc:   dsl,
 	}
 }
@@ -871,6 +871,47 @@ func (a *AttributeDefinition) IsRequired(attName string) bool {
 	return false
 }
 
+// HasDefaultValue returns true if the given attribute has a default value.
+func (a *AttributeDefinition) HasDefaultValue(attName string) bool {
+	if a.Type.IsObject() {
+		att := a.Type.ToObject()[attName]
+		return att.DefaultValue != nil
+	}
+	return false
+}
+
+// SetDefault sets the default for the attribute. It also converts HashVal
+// and ArrayVal to map and slice respectively.
+func (a *AttributeDefinition) SetDefault(def interface{}) {
+	switch actual := def.(type) {
+	case HashVal:
+		a.DefaultValue = actual.ToMap()
+	case ArrayVal:
+		a.DefaultValue = actual.ToSlice()
+	default:
+		a.DefaultValue = actual
+	}
+}
+
+// AddValues adds the Enum values to the attribute's validation definition.
+// It also performs any conversion needed for HashVal and ArrayVal types.
+func (a *AttributeDefinition) AddValues(values []interface{}) {
+	if a.Validation == nil {
+		a.Validation = &dslengine.ValidationDefinition{}
+	}
+	a.Validation.Values = make([]interface{}, len(values))
+	for i, v := range values {
+		switch actual := v.(type) {
+		case HashVal:
+			a.Validation.Values[i] = actual.ToMap()
+		case ArrayVal:
+			a.Validation.Values[i] = actual.ToSlice()
+		default:
+			a.Validation.Values[i] = actual
+		}
+	}
+}
+
 // AllNonZero returns the complete list of all non-zero attribute name.
 func (a *AttributeDefinition) AllNonZero() []string {
 	nzs := make([]string, len(a.NonZeroAttributes))
@@ -899,7 +940,7 @@ func (a *AttributeDefinition) IsPrimitivePointer(attName string) bool {
 		return false
 	}
 	if att.Type.IsPrimitive() {
-		return !a.IsRequired(attName) && !a.IsNonZero(attName)
+		return !a.IsRequired(attName) && !a.HasDefaultValue(attName) && !a.IsNonZero(attName)
 	}
 	return false
 }
@@ -1141,7 +1182,7 @@ func (r *ResponseDefinition) Finalize() {
 	if r.Type == nil {
 		return
 	}
-	if r.MediaType != "" && r.MediaType != "plain/text" {
+	if r.MediaType != "" && r.MediaType != "text/plain" {
 		return
 	}
 	mt, ok := r.Type.(*MediaTypeDefinition)

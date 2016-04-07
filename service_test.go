@@ -10,7 +10,6 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/goadesign/goa"
-	"github.com/goadesign/goa/middleware"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -36,22 +35,50 @@ var _ = Describe("Service", func() {
 		})
 	})
 
-	Describe("Use", func() {
-		Context("with a valid middleware", func() {
-			var m goa.Middleware
+	Describe("NotFound", func() {
+		var rw *TestResponseWriter
+		var req *http.Request
+
+		BeforeEach(func() {
+			req, _ = http.NewRequest("GET", "/foo", nil)
+			rw = &TestResponseWriter{ParentHeader: make(http.Header)}
+		})
+
+		JustBeforeEach(func() {
+			s.Mux.ServeHTTP(rw, req)
+		})
+
+		It("handles requests with no registered handlers", func() {
+			Ω(string(rw.Body)).Should(Equal(`{"code":"not_found","status":404,"detail":"/foo"}` + "\n"))
+		})
+
+		Context("with middleware", func() {
+			middlewareCalled := false
 
 			BeforeEach(func() {
-				m = middleware.RequestID()
-			})
-
-			JustBeforeEach(func() {
-				s.Use(m)
-			})
-
-			It("adds the middleware", func() {
+				s.Use(TMiddleware(&middlewareCalled))
+				// trigger finalize
 				ctrl := s.NewController("test")
-				Ω(ctrl.Middleware).Should(HaveLen(1))
-				Ω(ctrl.Middleware[0]).Should(BeAssignableToTypeOf(middleware.RequestID()))
+				ctrl.MuxHandler("", nil, nil)
+			})
+
+			It("calls the middleware", func() {
+				Ω(middlewareCalled).Should(BeTrue())
+			})
+		})
+
+		Context("middleware and multiple controllers", func() {
+			middlewareCalled := 0
+
+			BeforeEach(func() {
+				s.Use(CMiddleware(&middlewareCalled))
+				ctrl := s.NewController("test")
+				ctrl.MuxHandler("/foo", nil, nil)
+				ctrl.MuxHandler("/bar", nil, nil)
+			})
+
+			It("calls the middleware once", func() {
+				Ω(middlewareCalled).Should(Equal(1))
 			})
 		})
 	})
@@ -69,7 +96,7 @@ var _ = Describe("Service", func() {
 			req, _ = http.NewRequest("GET", "/foo", body)
 			rw = &TestResponseWriter{ParentHeader: make(http.Header)}
 			ctrl := s.NewController("test")
-			unmarshaler := func(ctx context.Context, req *http.Request) error {
+			unmarshaler := func(ctx context.Context, service *goa.Service, req *http.Request) error {
 				_, err := ioutil.ReadAll(req.Body)
 				return err
 			}
@@ -85,7 +112,7 @@ var _ = Describe("Service", func() {
 		})
 
 		It("prevents reading more bytes", func() {
-			Ω(string(rw.Body)).Should(Equal(`{"code":"invalid_encoding","status":400,"detail":"http: request body too large"}` + "\n"))
+			Ω(string(rw.Body)).Should(Equal(`{"code":"request_too_large","status":413,"detail":"body length exceeds 4 bytes"}` + "\n"))
 		})
 	})
 
@@ -110,11 +137,11 @@ var _ = Describe("Service", func() {
 				rw.Write(respContent)
 				return nil
 			}
-			unmarshaler = func(c context.Context, req *http.Request) error {
+			unmarshaler = func(c context.Context, service *goa.Service, req *http.Request) error {
 				ctx = c
 				if req != nil {
 					var payload interface{}
-					err := goa.ContextService(ctx).DecodeRequest(req, &payload)
+					err := service.DecodeRequest(req, &payload)
 					Ω(err).ShouldNot(HaveOccurred())
 					goa.ContextRequest(ctx).Payload = payload
 				}
@@ -264,6 +291,15 @@ func TMiddleware(witness *bool) goa.Middleware {
 	return func(h goa.Handler) goa.Handler {
 		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 			*witness = true
+			return h(ctx, rw, req)
+		}
+	}
+}
+
+func CMiddleware(witness *int) goa.Middleware {
+	return func(h goa.Handler) goa.Handler {
+		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+			*witness += 1
 			return h(ctx, rw, req)
 		}
 	}

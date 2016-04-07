@@ -1,6 +1,7 @@
 package apidsl
 
 import (
+	"fmt"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -139,7 +140,7 @@ func parseAttributeArgs(baseAttr *design.AttributeDefinition, args ...interface{
 	)
 
 	parseDataType := func(expected string, index int) {
-		if name, ok := args[index].(string); ok {
+		if name, ok2 := args[index].(string); ok2 {
 			// Lookup type by name
 			if dataType, ok = design.Design.Types[name]; !ok {
 				if dataType = design.Design.MediaTypeWithIdentifier(name); dataType == nil {
@@ -224,13 +225,20 @@ func Param(name string, args ...interface{}) {
 }
 
 // Default sets the default value for an attribute.
+// See http://json-schema.org/latest/json-schema-validation.html#anchor10.
 func Default(def interface{}) {
 	if a, ok := attributeDefinition(); ok {
-		if a.Type != nil && !a.Type.IsCompatible(def) {
-			dslengine.ReportError("default value %#v is incompatible with attribute of type %s",
-				def, a.Type.Name())
+		if a.Type != nil {
+			if !a.Type.CanHaveDefault() {
+				dslengine.ReportError("%s type cannot have a default value", qualifiedTypeName(a.Type))
+			} else if !a.Type.IsCompatible(def) {
+				dslengine.ReportError("default value %#v is incompatible with attribute of type %s",
+					def, qualifiedTypeName(a.Type))
+			} else {
+				a.SetDefault(def)
+			}
 		} else {
-			a.DefaultValue = def
+			a.SetDefault(def)
 		}
 	}
 }
@@ -284,10 +292,7 @@ func Enum(val ...interface{}) {
 			}
 		}
 		if ok {
-			if a.Validation == nil {
-				a.Validation = &dslengine.ValidationDefinition{}
-			}
-			a.Validation.Values = val
+			a.AddValues(val)
 		}
 	}
 }
@@ -434,7 +439,7 @@ func Maximum(val interface{}) {
 // See http://json-schema.org/latest/json-schema-validation.html#anchor45.
 func MinLength(val int) {
 	if a, ok := attributeDefinition(); ok {
-		if a.Type != nil && a.Type.Kind() != design.StringKind && a.Type.Kind() != design.ArrayKind {
+		if a.Type != nil && a.Type.Kind() != design.StringKind && a.Type.Kind() != design.ArrayKind && a.Type.Kind() != design.HashKind {
 			incompatibleAttributeType("minimum length", a.Type.Name(), "a string or an array")
 		} else {
 			if a.Validation == nil {
@@ -489,4 +494,24 @@ func Required(names ...string) {
 func incompatibleAttributeType(validation, actual, expected string) {
 	dslengine.ReportError("invalid %s validation definition: attribute must be %s (but type is %s)",
 		validation, expected, actual)
+}
+
+// qualifiedTypeName returns the qualified type name for the given data type.
+// This is useful in reporting types in error messages.
+// (e.g) array<string>, hash<string, string>, hash<string, array<int>>
+func qualifiedTypeName(t design.DataType) string {
+	switch t.Kind() {
+	case design.DateTimeKind:
+		return "datetime"
+	case design.ArrayKind:
+		return fmt.Sprintf("%s<%s>", t.Name(), qualifiedTypeName(t.ToArray().ElemType.Type))
+	case design.HashKind:
+		h := t.ToHash()
+		return fmt.Sprintf("%s<%s, %s>",
+			t.Name(),
+			qualifiedTypeName(h.KeyType.Type),
+			qualifiedTypeName(h.ElemType.Type),
+		)
+	}
+	return t.Name()
 }

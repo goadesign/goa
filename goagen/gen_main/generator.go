@@ -189,11 +189,13 @@ func okResp(a *design.ActionDefinition) map[string]interface{} {
 	if mt, ok2 = design.Design.MediaTypes[design.CanonicalIdentifier(ok.MediaType)]; !ok2 {
 		return nil
 	}
+
 	p, _, err := mt.Project(ok.ViewName)
 	if err != nil {
 		return nil
 	}
-	name := codegen.GoTypeRef(p, p.AllRequired(), 1)
+	name := codegen.GoTypeRef(p, p.AllRequired(), 1, false)
+
 	var pointer string
 	if strings.HasPrefix(name, "*") {
 		name = name[1:]
@@ -243,50 +245,50 @@ func main() {
 	// Setup middleware
 	service.Use(middleware.RequestID())
 	service.Use(middleware.LogRequest(true))
-	service.Use(middleware.ErrorHandler(true))
+	service.Use(middleware.ErrorHandler(service, true))
 	service.Use(middleware.Recover())
-{{$api := .API}}
-{{range $name, $res := $api.Resources}}{{$name := goify $res.Name true}}	// Mount "{{$res.Name}}" controller
-	{{$tmp := tempvar}}{{$tmp}} := New{{$name}}Controller(service)
-	{{targetPkg}}.Mount{{$name}}Controller(service, {{$tmp}})
-{{end}}{{if generateSwagger}}// Mount Swagger spec provider controller
+{{ $api := .API }}
+{{ range $name, $res := $api.Resources }}{{ $name := goify $res.Name true }} // Mount "{{$res.Name}}" controller
+	{{ $tmp := tempvar }}{{ $tmp }} := New{{ $name }}Controller(service)
+	{{ targetPkg }}.Mount{{ $name }}Controller(service, {{ $tmp }})
+{{ end }}{{ if generateSwagger }}// Mount Swagger spec provider controller
 	swagger.MountController(service)
-{{end}}
+{{ end }}
 
 	service.ListenAndServe(":8080")
 }
 `
 
-const ctrlT = `// {{$ctrlName := printf "%s%s" (goify .Name true) "Controller"}}{{$ctrlName}} implements the {{.Name}} resource.
-type {{$ctrlName}} struct {
+const ctrlT = `// {{ $ctrlName := printf "%s%s" (goify .Name true) "Controller" }}{{ $ctrlName }} implements the {{ .Name }} resource.
+type {{ $ctrlName }} struct {
 	*goa.Controller
 }
 
-// New{{$ctrlName}} creates a {{.Name}} controller.
-func New{{$ctrlName}}(service *goa.Service) *{{$ctrlName}} {
-	return &{{$ctrlName}}{Controller: service.NewController("{{.Name}}")}
+// New{{ $ctrlName }} creates a {{ .Name }} controller.
+func New{{ $ctrlName }}(service *goa.Service) *{{ $ctrlName }} {
+	return &{{ $ctrlName }}{Controller: service.NewController("{{ .Name }}")}
 }
 `
 
-const actionT = `{{$ctrlName := printf "%s%s" (goify .Parent.Name true) "Controller"}}// {{goify .Name true}} runs the {{.Name}} action.
-func (c *{{$ctrlName}}) {{goify .Name true}}(ctx *{{targetPkg}}.{{goify .Name true}}{{goify .Parent.Name true}}Context) error {
+const actionT = `{{ $ctrlName := printf "%s%s" (goify .Parent.Name true) "Controller" }}// {{ goify .Name true }} runs the {{ .Name }} action.
+func (c *{{ $ctrlName }}) {{ goify .Name true }}(ctx *{{ targetPkg }}.{{ goify .Name true }}{{ goify .Parent.Name true }}Context) error {
 	// TBD: implement
-{{$ok := okResp .}}{{if $ok}}	res := {{$ok.TypeRef}}{}
-{{end}}	return {{if $ok}}ctx.{{$ok.Name}}(res){{else}}nil{{end}}
+{{ $ok := okResp . }}{{ if $ok }} res := {{ $ok.TypeRef }}{}
+{{ end }} return {{ if $ok }}ctx.{{ $ok.Name }}(res){{ else }}nil{{ end }}
 }
 `
 
-const actionWST = `{{$ctrlName := printf "%s%s" (goify .Parent.Name true) "Controller"}}// {{goify .Name true}} runs the {{.Name}} action.
-func (c *{{$ctrlName}}) {{goify .Name true}}(ctx *{{targetPkg}}.{{goify .Name true}}{{goify .Parent.Name true}}Context) error {
-	c.{{goify .Name true}}WSHandler(ctx).ServeHTTP(ctx.ResponseWriter, ctx.Request)
+const actionWST = `{{ $ctrlName := printf "%s%s" (goify .Parent.Name true) "Controller" }}// {{ goify .Name true }} runs the {{ .Name }} action.
+func (c *{{ $ctrlName }}) {{ goify .Name true }}(ctx *{{ targetPkg }}.{{ goify .Name true }}{{ goify .Parent.Name true }}Context) error {
+	c.{{ goify .Name true }}WSHandler(ctx).ServeHTTP(ctx.ResponseWriter, ctx.Request)
 	return nil
 }
 
-// {{goify .Name true}}WSHandler establishes a websocket connection to run the {{.Name}} action.
-func (c *{{$ctrlName}}) {{goify .Name true}}WSHandler(ctx *{{targetPkg}}.{{goify .Name true}}{{goify .Parent.Name true}}Context) websocket.Handler {
+// {{ goify .Name true }}WSHandler establishes a websocket connection to run the {{ .Name }} action.
+func (c *{{ $ctrlName }}) {{ goify .Name true }}WSHandler(ctx *{{ targetPkg }}.{{ goify .Name true }}{{ goify .Parent.Name true }}Context) websocket.Handler {
 	return func(ws *websocket.Conn) {
 		// TBD: implement
-		ws.Write([]byte("{{.Name}} {{.Parent.Name}}"))
+		ws.Write([]byte("{{ .Name }} {{ .Parent.Name }}"))
 		// Dummy echo websocket server
 		io.Copy(ws, ws)
 	}

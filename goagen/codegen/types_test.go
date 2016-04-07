@@ -152,7 +152,7 @@ var _ = Describe("code generation", func() {
 				if required != nil {
 					att.Validation = required
 				}
-				st = codegen.GoTypeDef(att, 0, true)
+				st = codegen.GoTypeDef(att, 0, true, false)
 			})
 
 			Context("of primitive types", func() {
@@ -256,6 +256,23 @@ var _ = Describe("code generation", func() {
 						"}"
 					Ω(st).Should(Equal(expected))
 				})
+
+				Context("that are required", func() {
+					BeforeEach(func() {
+						required = &dslengine.ValidationDefinition{
+							Required: []string{"foo"},
+						}
+					})
+
+					It("produces the struct go code", func() {
+						expected := "struct {\n" +
+							"	Foo []*struct {\n" +
+							"		Bar *int `json:\"bar,omitempty\" xml:\"bar,omitempty\"`\n" +
+							"	} `json:\"foo\" xml:\"foo\"`\n" +
+							"}"
+						Ω(st).Should(Equal(expected))
+					})
+				})
 			})
 
 			Context("that are required", func() {
@@ -285,7 +302,7 @@ var _ = Describe("code generation", func() {
 			JustBeforeEach(func() {
 				array := &Array{ElemType: elemType}
 				att := &AttributeDefinition{Type: array}
-				source = codegen.GoTypeDef(att, 0, true)
+				source = codegen.GoTypeDef(att, 0, true, false)
 			})
 
 			Context("of primitive type", func() {
@@ -453,7 +470,7 @@ var _ = Describe("GoTypeTransform", func() {
 				Attribute("elem", ArrayOf(outer))
 			})
 			hash := Type("hash", func() {
-				Attribute("elem", HashOf(outer, outer))
+				Attribute("elem", HashOf(Integer, outer))
 			})
 			source = Type("Source", func() {
 				Attribute("outer", outer)
@@ -479,12 +496,10 @@ var _ = Describe("GoTypeTransform", func() {
 		target.Array.Elem[i].In.Foo = source.Array.Elem[i].In.Foo
 	}
 	target.Hash = new(Hash)
-	target.Hash.Elem = make(map[*Outer]*Outer, len(source.Hash.Elem))
+	target.Hash.Elem = make(map[int]*Outer, len(source.Hash.Elem))
 	for k, v := range source.Hash.Elem {
-		var tk *Outer
-		tk = new(Outer)
-		tk.In = new(Inner)
-		tk.In.Foo = k.In.Foo
+		var tk int
+		tk = k
 		var tv *Outer
 		tv = new(Outer)
 		tv.In = new(Inner)

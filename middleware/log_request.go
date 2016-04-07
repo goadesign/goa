@@ -53,7 +53,7 @@ func LogRequest(verbose bool) goa.Middleware {
 					} else {
 						// Not the most efficient but this is used for debugging
 						js, err := json.Marshal(r.Payload)
-						if err == nil {
+						if err != nil {
 							js = []byte("<invalid JSON>")
 						}
 						goa.LogInfo(ctx, "payload", "raw", string(js))

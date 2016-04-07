@@ -83,7 +83,7 @@ func (g *Generator) generateMain(mainFile string, clientPkg string, funcs templa
 		"Signers": Signers,
 		"Version": Version,
 	}
-	if err := file.ExecuteTemplate("main", mainTmpl, nil, data); err != nil {
+	if err := file.ExecuteTemplate("main", mainTmpl, funcs, data); err != nil {
 		return err
 	}
 
@@ -98,7 +98,7 @@ func (g *Generator) generateMain(mainFile string, clientPkg string, funcs templa
 			return nil
 		})
 	})
-	if err := file.ExecuteTemplate("registerCmds", registerCmdsT, nil, actions); err != nil {
+	if err := file.ExecuteTemplate("registerCmds", registerCmdsT, funcs, actions); err != nil {
 		return err
 	}
 
@@ -266,18 +266,20 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	}
 
 	funcs := template.FuncMap{
-		"goify":        codegen.Goify,
-		"gotypedef":    codegen.GoTypeDef,
-		"gotyperefext": goTypeRefExt,
-		"nativeType":   codegen.GoNativeType,
-		"joinNames":    joinNames,
-		"join":         join,
-		"toString":     toString,
-		"tempvar":      codegen.Tempvar,
-		"title":        strings.Title,
-		"flagType":     flagType,
-		"defaultPath":  defaultPath,
-		"appPkg":       appPkg,
+		"goify":           codegen.Goify,
+		"gotypedef":       codegen.GoTypeDef,
+		"gotyperefext":    goTypeRefExt,
+		"nativeType":      codegen.GoNativeType,
+		"joinNames":       joinNames,
+		"join":            join,
+		"toString":        toString,
+		"tempvar":         codegen.Tempvar,
+		"title":           strings.Title,
+		"flagType":        flagType,
+		"defaultPath":     defaultPath,
+		"appPkg":          appPkg,
+		"escapeBackticks": escapeBackticks,
+		"multiComment":    multiComment,
 	}
 	clientPkg, err := codegen.PackagePath(codegen.OutputDir)
 	if err != nil {
@@ -375,9 +377,24 @@ func join(att *design.AttributeDefinition) string {
 	return strings.Join(elems, ", ")
 }
 
+// escapeBackticks is a code generation helper that escapes backticks in a string.
+func escapeBackticks(text string) string {
+	return strings.Replace(text, "`", "`+\"`\"+`", -1)
+}
+
+// multiComment produces a Go comment containing the given string taking into account newlines.
+func multiComment(text string) string {
+	lines := strings.Split(text, "\n")
+	nl := make([]string, len(lines))
+	for i, l := range lines {
+		nl[i] = "// " + strings.TrimSpace(l)
+	}
+	return strings.Join(nl, "\n")
+}
+
 // gotTypeRefExt computes the type reference for a type in a different package.
 func goTypeRefExt(t design.DataType, tabs int, pkg string) string {
-	ref := codegen.GoTypeRef(t, nil, tabs)
+	ref := codegen.GoTypeRef(t, nil, tabs, false)
 	if strings.HasPrefix(ref, "*") {
 		return fmt.Sprintf("%s.%s", pkg, ref[1:])
 	}
@@ -470,15 +487,15 @@ var PrettyPrint bool
 func main() {
 	// Create command line parser
 	app := &cobra.Command{
-		Use: "{{.API.Name}}-cli",
-		Short: "CLI client for the {{.API.Name}} service{{if .API.Docs}} ({{.API.Docs.URL}}){{end}}",
+		Use: "{{ .API.Name }}-cli",
+		Short: ` + "`" + `CLI client for the {{ .API.Name }} service{{ if .API.Docs }} ({{ escapeBackticks .API.Docs.URL }}){{ end }}` + "`" + `,
 	}
 	c := client.New(nil)
-{{if .Signers}}	c.Signers = RegisterSigners(app)
-{{end}}	c.UserAgent = "{{.API.Name}}-cli/{{.Version}}"
+{{ if .Signers }}	c.Signers = RegisterSigners(app)
+{{ end }}	c.UserAgent = "{{ .API.Name }}-cli/{{ .Version }}"
 	app.PersistentFlags().StringVarP(&c.Scheme, "scheme", "s", "", "Set the requests scheme")
-	app.PersistentFlags().StringVarP(&c.Host, "host", "H", "{{.API.Host}}", "API hostname")
-	app.PersistentFlags().DurationVarP(&c.Timeout, "timeout", "t", time.Duration(20) * time.Second, "Set the request timeout, defaults to 20s")
+	app.PersistentFlags().StringVarP(&c.Host, "host", "H", "{{ .API.Host }}", "API hostname")
+	app.PersistentFlags().DurationVarP(&c.Timeout, "timeout", "t", time.Duration(20) * time.Second, "Set the request timeout")
 	app.PersistentFlags().BoolVar(&c.Dump, "dump", false, "Dump HTTP request and response.")
 	app.PersistentFlags().BoolVar(&PrettyPrint, "pp", false, "Pretty print response body")
 	RegisterCommands(app, c)
@@ -488,48 +505,48 @@ func main() {
 	}
 }
 
-{{if .Signers}}// RegisterSigners adds the supported signers to the command line.
+{{ if .Signers }}// RegisterSigners adds the supported signers to the command line.
 func RegisterSigners(app *cobra.Command) (signers []goa.Signer) {
-{{range $signers := .Signers}}{{$tmp := tempvar}}	{{$tmp}} := &{{$signers}}{}
-	{{$tmp}}.RegisterFlags(app)
-	signers = append(signers, {{$tmp}})
-{{end}}	return
+{{ range $signers := .Signers }}{{ $tmp := tempvar }}	{{ $tmp }} := &{{ $signers }}{}
+	{{ $tmp }}.RegisterFlags(app)
+	signers = append(signers, {{ $tmp }})
+{{ end }}	return
 }
-{{end}}
+{{ end }}
 `
 
-const arrayToStringT = `	{{$tmp := tempvar}}{{$tmp}} := make([]string, len({{.Name}}))
-	for i, e := range {{.Name}} {
-		{{$tmp2 := tempvar}}{{toString "e" $tmp2 .ElemType}}
-		{{$tmp}}[i] = {{$tmp2}}
+const arrayToStringT = `	{{ $tmp := tempvar }}{{ $tmp }} := make([]string, len({{ .Name }}))
+	for i, e := range {{ .Name }} {
+		{{ $tmp2 := tempvar }}{{ toString "e" $tmp2 .ElemType }}
+		{{ $tmp }}[i] = {{ $tmp2 }}
 	}
-	{{.Target}} := strings.Join({{$tmp}}, ",")`
+	{{ .Target }} := strings.Join({{ $tmp }}, ",")`
 
-const commandTypesTmpl = `{{$cmdName := goify (printf "%s%s%s" .Name (title .Parent.Name) "Command") true}}	// {{$cmdName}} is the command line data structure for the {{.Name}} action of {{.Parent.Name}}
-	{{$cmdName}} struct {
-{{if .Payload}}		Payload string
-{{end}}{{$params := .QueryParams}}{{if $params}}{{range $name, $att := $params.Type.ToObject}}{{if $att.Description}}		// {{$att.Description}}
-{{end}}		{{goify $name true}} {{nativeType $att.Type}}
-{{end}}{{end}}{{$headers := .Headers}}{{if $headers}}{{range $name, $att := $headers.Type.ToObject}}{{if $att.Description}}		// {{$att.Description}}
-{{end}}		{{goify $name true}} string
-{{end}}{{end}}	}
+const commandTypesTmpl = `{{ $cmdName := goify (printf "%s%s%s" .Name (title .Parent.Name) "Command") true }}	// {{ $cmdName }} is the command line data structure for the {{ .Name }} action of {{ .Parent.Name }}
+	{{ $cmdName }} struct {
+{{ if .Payload }}		Payload string
+{{ end }}{{ $params := .QueryParams }}{{ if $params }}{{ range $name, $att := $params.Type.ToObject }}{{ if $att.Description }}		{{ multiComment $att.Description }}
+{{ end }}		{{ goify $name true }} {{ nativeType $att.Type }}
+{{ end }}{{ end }}{{ $headers := .Headers }}{{ if $headers }}{{ range $name, $att := $headers.Type.ToObject }}{{ if $att.Description }}		{{ multiComment $att.Description }}
+{{ end }}		{{ goify $name true }} string
+{{ end }}{{ end }}	}
 `
 
 const commandsTmplWS = `
-{{$cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true}}// Run establishes a websocket connection for the {{$cmdName}} command.
-func (cmd *{{$cmdName}}) Run(c *client.Client, args []string) error {
+{{ $cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true }}// Run establishes a websocket connection for the {{ $cmdName }} command.
+func (cmd *{{ $cmdName }}) Run(c *client.Client, args []string) error {
 	var path string
 	if len(args) > 0 {
 		path = args[0]
 	} else {
-{{$default := defaultPath .Action}}{{if $default}}	path = "{{$default}}"
-{{else}}	return fmt.Errorf("missing path argument")
-{{end}}	}
+{{ $default := defaultPath .Action }}{{ if $default }}	path = "{{ $default }}"
+{{ else }}	return fmt.Errorf("missing path argument")
+{{ end }}	}
 	logger := goa.NewStdLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.UseLogger(context.Background(), logger)
-	ws, err := c.{{goify (printf "%s%s" .Action.Name (title .Resource.Name)) true}}(ctx, path{{/*
-	*/}}{{$params := joinNames .Action.QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
-	*/}}{{$headers := joinNames .Action.Headers}}{{if $headers}}, {{$headers}}{{end}})
+	ws, err := c.{{ goify (printf "%s%s" .Action.Name (title .Resource.Name)) true }}(ctx, path{{/*
+	*/}}{{ $params := joinNames .Action.QueryParams }}{{ if $params }}, {{ $params }}{{ end }}{{/*
+	*/}}{{ $headers := joinNames .Action.Headers }}{{ if $headers }}, {{ $headers }}{{ end }})
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
@@ -541,42 +558,42 @@ func (cmd *{{$cmdName}}) Run(c *client.Client, args []string) error {
 }
 `
 
-const registerTmpl = `{{$cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true}}// RegisterFlags registers the command flags with the command line.
-func (cmd *{{$cmdName}}) RegisterFlags(cc *cobra.Command) {
-{{if .Action.Payload}}	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request JSON body")
-{{end}}{{$params := .Action.QueryParams}}{{if $params}}{{range $name, $param := $params.Type.ToObject}}{{$tmp := tempvar}}{{/*
-*/}}{{if not $param.DefaultValue}}	var {{$tmp}} {{gotypedef $param 1 true}}
-{{end}}	cc.Flags().{{flagType $param}}Var(&cmd.{{goify $name true}}, "{{$name}}", {{if $param.DefaultValue}}{{printf "%#v" $param.DefaultValue}}{{else}}{{$tmp}}{{end}}, "{{$param.Description}}")
-{{end}}{{end}}{{/*
-*/}}{{$headers := .Action.Headers}}{{if $headers}}{{range $name, $header := $headers.Type.ToObject}}{{/*
+const registerTmpl = `{{ $cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true }}// RegisterFlags registers the command flags with the command line.
+func (cmd *{{ $cmdName }}) RegisterFlags(cc *cobra.Command) {
+{{ if .Action.Payload }}	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request JSON body")
+{{ end }}{{ $params := .Action.QueryParams }}{{ if $params }}{{ range $name, $param := $params.Type.ToObject }}{{ $tmp := tempvar }}{{/*
+*/}}{{ if not $param.DefaultValue }}	var {{ $tmp }} {{ gotypedef $param 1 true false }}
+{{ end }}	cc.Flags().{{ flagType $param }}Var(&cmd.{{ goify $name true }}, "{{ $name }}", {{ if $param.DefaultValue }}{{ printf "%#v" $param.DefaultValue }}{{ else }}{{ $tmp }}{{ end }}, ` + "`" + `{{ escapeBackticks $param.Description }}` + "`" + `)
+{{ end }}{{ end }}{{/*
+*/}}{{ $headers := .Action.Headers }}{{ if $headers }}{{ range $name, $header := $headers.Type.ToObject }}{{/*
 */}}
-	cc.Flags().StringVar(&cmd.{{goify $name true}}, "{{$name}}", {{if $header.DefaultValue}}"{{$header.DefaultValue}}"{{else}}""{{end}}, "{{$header.Description}}")
-{{end}}{{end}}}
+	cc.Flags().StringVar(&cmd.{{ goify $name true }}, "{{ $name }}", {{ if $header.DefaultValue }}"{{ $header.DefaultValue }}"{{ else }}""{{ end }}, ` + "`" + `{{ escapeBackticks $header.Description }}` + "`" + `)
+{{ end }}{{ end }}}
 `
 
 const commandsTmpl = `
-{{$cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true}}// Run makes the HTTP request corresponding to the {{$cmdName}} command.
-func (cmd *{{$cmdName}}) Run(c *client.Client, args []string) error {
+{{ $cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true }}// Run makes the HTTP request corresponding to the {{ $cmdName }} command.
+func (cmd *{{ $cmdName }}) Run(c *client.Client, args []string) error {
 	var path string
 	if len(args) > 0 {
 		path = args[0]
 	} else {
-{{$default := defaultPath .Action}}{{if $default}}	path = "{{$default}}"
-{{else}}	return fmt.Errorf("missing path argument")
-{{end}}	}
-{{if .Action.Payload}}var payload {{gotyperefext .Action.Payload 2 appPkg}}
+{{ $default := defaultPath .Action }}{{ if $default }}	path = "{{ $default }}"
+{{ else }}	return fmt.Errorf("missing path argument")
+{{ end }}	}
+{{ if .Action.Payload }}var payload {{ gotyperefext .Action.Payload 2 appPkg }}
 	if cmd.Payload != "" {
 		err := json.Unmarshal([]byte(cmd.Payload), &payload)
 		if err != nil {
-{{if eq .Action.Payload.Type.Kind 4}}	payload = cmd.Payload
-{{else}}			return fmt.Errorf("failed to deserialize payload: %s", err)
-{{end}}		}
+{{ if eq .Action.Payload.Type.Kind 4 }}	payload = cmd.Payload
+{{ else }}			return fmt.Errorf("failed to deserialize payload: %s", err)
+{{ end }}		}
 	}
-{{end}} logger := goa.NewStdLogger(log.New(os.Stderr, "", log.LstdFlags))
+{{ end }}	logger := goa.NewStdLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.UseLogger(context.Background(), logger)
-	resp, err := c.{{goify (printf "%s%s" .Action.Name (title .Resource.Name)) true}}(ctx, path{{if .Action.Payload}}, {{if or .Action.Payload.Type.IsObject .Action.Payload.IsPrimitive}}&{{end}}payload{{else}}{{end}}{{/*
-	*/}}{{$params := joinNames .Action.QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
-	*/}}{{$headers := joinNames .Action.Headers}}{{if $headers}}, {{$headers}}{{end}})
+	resp, err := c.{{ goify (printf "%s%s" .Action.Name (title .Resource.Name)) true }}(ctx, path{{ if .Action.Payload }}, {{ if or .Action.Payload.Type.IsObject .Action.Payload.IsPrimitive }}&{{ end }}payload{{ else }}{{ end }}{{/*
+	*/}}{{ $params := joinNames .Action.QueryParams }}{{ if $params }}, {{ $params }}{{ end }}{{/*
+	*/}}{{ $headers := joinNames .Action.Headers }}{{ if $headers }}, {{ $headers }}{{ end }})
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
@@ -587,59 +604,59 @@ func (cmd *{{$cmdName}}) Run(c *client.Client, args []string) error {
 }
 `
 
-const clientsWSTmpl = `{{$funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true}}{{/*
-*/}}{{$desc := .Description}}{{if $desc}}// {{$desc}}{{else}}// {{$funcName}} establishes a websocket connection to the {{.Name}} action endpoint of the {{.Parent.Name}} resource{{end}}
-func (c *Client) {{$funcName}}(ctx context.Context, path string{{/*
-	*/}}{{$params := join .QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
-	*/}}{{$headers := join .Headers}}{{if $headers}}, {{$headers}}{{end}}) (*websocket.Conn, error) {
+const clientsWSTmpl = `{{ $funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true }}{{/*
+*/}}{{ $desc := .Description }}{{ if $desc }}{{ multiComment $desc }}{{ else }}// {{ $funcName }} establishes a websocket connection to the {{ .Name }} action endpoint of the {{ .Parent.Name }} resource{{ end }}
+func (c *Client) {{ $funcName }}(ctx context.Context, path string{{/*
+	*/}}{{ $params := join .QueryParams }}{{ if $params }}, {{ $params }}{{ end }}{{/*
+	*/}}{{ $headers := join .Headers }}{{ if $headers }}, {{ $headers }}{{ end }}) (*websocket.Conn, error) {
 	scheme := c.Scheme
 	if scheme == "" {
-		scheme = "{{.CanonicalScheme}}"
+		scheme = "{{ .CanonicalScheme }}"
 	}
 	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
-{{$params := .QueryParams}}{{if $params}}{{if gt (len $params.Type.ToObject) 0}}	values := u.Query()
-{{range $name, $att := $params.Type.ToObject}}{{if (eq $att.Type.Kind 4)}}	values.Set("{{$name}}", {{goify $name false}})
-{{else}}{{$tmp := tempvar}}{{toString (goify $name false) $tmp $att}}
-	values.Set("{{$name}}", {{$tmp}})
-{{end}}{{end}}	u.RawQuery = values.Encode()
-{{end}}{{end}}	return websocket.Dial(u.String(), "", u.String())
+{{ $params := .QueryParams }}{{ if $params }}{{ if gt (len $params.Type.ToObject) 0 }}	values := u.Query()
+{{ range $name, $att := $params.Type.ToObject }}{{ if (eq $att.Type.Kind 4) }}	values.Set("{{ $name }}", {{ goify $name false }})
+{{ else }}{{ $tmp := tempvar }}{{ toString (goify $name false) $tmp $att }}
+	values.Set("{{ $name }}", {{ $tmp }})
+{{ end }}{{ end }}	u.RawQuery = values.Encode()
+{{ end }}{{ end }}	return websocket.Dial(u.String(), "", u.String())
 }
 `
 
-const clientsTmpl = `{{$funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true}}{{$desc := .Description}}{{if $desc}}// {{$desc}}{{else}}// {{$funcName}} makes a request to the {{.Name}} action endpoint of the {{.Parent.Name}} resource{{end}}
-func (c *Client) {{$funcName}}(ctx context.Context, path string{{if .Payload}}, payload {{if .Payload.Type.IsObject}}*{{end}}{{gotyperefext .Payload 1 appPkg}}{{end}}{{/*
-	*/}}{{$params := join .QueryParams}}{{if $params}}, {{$params}}{{end}}{{/*
-	*/}}{{$headers := join .Headers}}{{if $headers}}, {{$headers}}{{end}}) (*http.Response, error) {
+const clientsTmpl = `{{ $funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true }}{{ $desc := .Description }}{{ if $desc }}{{ multiComment $desc }}{{ else }}// {{ $funcName }} makes a request to the {{ .Name }} action endpoint of the {{ .Parent.Name }} resource{{ end }}
+func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Payload }}, payload {{ if .Payload.Type.IsObject }}*{{ end }}{{ gotyperefext .Payload 1 appPkg }}{{ end }}{{/*
+	*/}}{{ $params := join .QueryParams }}{{ if $params }}, {{ $params }}{{ end }}{{/*
+	*/}}{{ $headers := join .Headers }}{{ if $headers }}, {{ $headers }}{{ end }}) (*http.Response, error) {
 	var body io.Reader
-{{if .Payload}}	b, err := json.Marshal(payload)
+{{ if .Payload }}	b, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize body: %s", err)
 	}
 	body = bytes.NewBuffer(b)
-{{end}}	scheme := c.Scheme
+{{ end }}	scheme := c.Scheme
 	if scheme == "" {
-		scheme = "{{.CanonicalScheme}}"
+		scheme = "{{ .CanonicalScheme }}"
 	}
 	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
-{{$params := .QueryParams}}{{if $params}}{{if gt (len $params.Type.ToObject) 0}}	values := u.Query()
-{{range $name, $att := $params.Type.ToObject}}{{if (eq $att.Type.Kind 4)}}	values.Set("{{$name}}", {{goify $name false}})
-{{else}}{{$tmp := tempvar}}{{toString (goify $name false) $tmp $att}}
-	values.Set("{{$name}}", {{$tmp}})
-{{end}}{{end}}	u.RawQuery = values.Encode()
-{{end}}{{end}}	req, err := http.NewRequest({{$route := index .Routes 0}}"{{$route.Verb}}", u.String(), body)
+{{ $params := .QueryParams }}{{ if $params }}{{ if gt (len $params.Type.ToObject) 0 }}	values := u.Query()
+{{ range $name, $att := $params.Type.ToObject }}{{ if (eq $att.Type.Kind 4) }}	values.Set("{{ $name }}", {{ goify $name false }})
+{{ else }}{{ $tmp := tempvar }}{{ toString (goify $name false) $tmp $att }}
+	values.Set("{{ $name }}", {{ $tmp }})
+{{ end }}{{ end }}	u.RawQuery = values.Encode()
+{{ end }}{{ end }}	req, err := http.NewRequest({{ $route := index .Routes 0 }}"{{ $route.Verb }}", u.String(), body)
 	if err != nil {
 		return nil, err
 	}
-{{$headers := .Headers}}	header := req.Header
-{{if $headers}}{{range $name, $att := $params.Type.ToObject}}{{if (eq $att.Type.Kind 4)}}	header.Set("{{$name}}", {{goify $name false}})
-{{else}}{{$tmp := tempvar}}{{toString (goify $name false) $tmp $att}}
-	header.Set("{{$name}}", {{$tmp}})
-{{end}}{{end}}{{end}}	header.Set("Content-Type", "application/json")
+{{ $headers := .Headers }}	header := req.Header
+{{ if $headers }}{{ range $name, $att := $params.Type.ToObject }}{{ if (eq $att.Type.Kind 4) }}	header.Set("{{ $name }}", {{ goify $name false }})
+{{ else }}{{ $tmp := tempvar }}{{ toString (goify $name false) $tmp $att }}
+	header.Set("{{ $name }}", {{ $tmp }})
+{{ end }}{{ end }}{{ end }}	header.Set("Content-Type", "application/json")
 	return c.Client.Do(ctx, req)
 }
 `
 
-const clientTmpl = `// Client is the {{.Name}} service client.
+const clientTmpl = `// Client is the {{ .Name }} service client.
 type Client struct {
 	*goaclient.Client
 }
@@ -653,20 +670,20 @@ func New(c *http.Client) *Client {
 // Takes map[string][]*design.ActionDefinition as input
 const registerCmdsT = `// RegisterCommands all the resource action subcommands to the application command line.
 func RegisterCommands(app *cobra.Command, c *client.Client) {
-{{if gt (len .) 0}}	var command, sub *cobra.Command
-{{end}}{{range $name, $actions := .}}	command = &cobra.Command{
-		Use:   "{{$name}}",
-		Short: "{{if eq (len $actions) 1}}{{$a := index $actions 0}}{{$a.Description}}{{else}}{{$name}} action{{end}}",
+{{ if gt (len .) 0 }}	var command, sub *cobra.Command
+{{ end }}{{ range $name, $actions := . }}	command = &cobra.Command{
+		Use:   "{{ $name }}",
+		Short: ` + "`" + `{{ if eq (len $actions) 1 }}{{ $a := index $actions 0 }}{{ escapeBackticks $a.Description }}{{ else }}{{ $name }} action{{ end }}` + "`" + `,
 	}
-{{range $action := $actions}}{{$cmdName := goify (printf "%s%sCommand" $action.Name (title $action.Parent.Name)) true}}{{/*
-*/}}{{$tmp := tempvar}}	{{$tmp}} := new({{$cmdName}})
+{{ range $action := $actions }}{{ $cmdName := goify (printf "%s%sCommand" $action.Name (title $action.Parent.Name)) true }}{{/*
+*/}}{{ $tmp := tempvar }}	{{ $tmp }} := new({{ $cmdName }})
 	sub = &cobra.Command{
-		Use:   "{{$action.Parent.Name}}",
-		Short: "{{$action.Parent.Description}}",
-		RunE:  func(cmd *cobra.Command, args []string) error { return {{$tmp}}.Run(c, args) },
+		Use:   "{{ $action.Parent.Name }}",
+		Short: ` + "`" + `{{ escapeBackticks $action.Parent.Description }}` + "`" + `,
+		RunE:  func(cmd *cobra.Command, args []string) error { return {{ $tmp }}.Run(c, args) },
 	}
-	{{$tmp}}.RegisterFlags(sub)
+	{{ $tmp }}.RegisterFlags(sub)
 	command.AddCommand(sub)
-{{end}}app.AddCommand(command)
-{{end}}
+{{ end }}app.AddCommand(command)
+{{ end }}
 }`

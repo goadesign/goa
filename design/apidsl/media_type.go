@@ -73,7 +73,7 @@ func MediaType(identifier string, apidsl func()) *design.MediaTypeDefinition {
 			identifier, err)
 		// We don't return so that other errors may be
 		// captured in this one run.
-		identifier = "plain/text"
+		identifier = "text/plain"
 	}
 	canonicalID := design.CanonicalIdentifier(identifier)
 	// Validate that media type identifier doesn't clash

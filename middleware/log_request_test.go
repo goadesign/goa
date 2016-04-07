@@ -19,12 +19,13 @@ var _ = Describe("LogRequest", func() {
 	var req *http.Request
 	var params url.Values
 	var logger *testLogger
+	var service *goa.Service
 
 	payload := map[string]interface{}{"payload": 42}
 
 	BeforeEach(func() {
 		logger = new(testLogger)
-		service := newService(logger)
+		service = newService(logger)
 
 		var err error
 		req, err = http.NewRequest("POST", "/goo?param=value", strings.NewReader(`{"payload":42}`))
@@ -38,7 +39,7 @@ var _ = Describe("LogRequest", func() {
 
 	It("logs requests", func() {
 		h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-			return goa.ContextResponse(ctx).Send(ctx, 200, "ok")
+			return service.Send(ctx, 200, "ok")
 		}
 		lg := middleware.LogRequest(true)(h)
 		Ω(lg(ctx, rw, req)).ShouldNot(HaveOccurred())

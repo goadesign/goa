@@ -88,7 +88,7 @@ var _ = Resource("operands", func() {
                         Param("left", Integer, "Left operand")
                         Param("right", Integer, "Right operand")
                 })
-                Response(OK, "plain/text")
+                Response(OK, "text/plain")
         })
 
 })
@@ -132,9 +132,9 @@ Now let's compile and run the service:
 $ cd $GOPATH/src/goa-adder
 $ go build
 $ ./goa-adder
-2016/02/16 16:39:27 [INFO] mount        ctrl: Operands  action: Add     route: GET /add/:left/:right
-2016/02/16 16:39:27 [INFO] mount file   filename: swagger/swagger.json  path: GET /swagger.json
-2016/02/16 16:39:27 [INFO] listen       address: :8080
+2016/04/05 20:39:10 [INFO] mount ctrl=Operands action=Add route=GET /add/:left/:right
+2016/04/05 20:39:10 [INFO] mount file name=swagger/swagger.json route=GET /swagger.json
+2016/04/05 20:39:10 [INFO] listen transport=http addr=:8080
 ```
 Open a new console and compile the generated CLI tool:
 ```
@@ -168,33 +168,34 @@ Usage:
   adder-cli add operands [flags]
 
 Global Flags:
-      --dump[=false]: Dump HTTP request and response.
-  -H, --host="localhost:8080": API hostname
-      --pp[=false]: Pretty print response body
-  -s, --scheme="http": Set the requests scheme
-  -t, --timeout=20s: Set the request timeout, defaults to 20s
+      --dump               Dump HTTP request and response.
+  -H, --host string        API hostname (default "localhost:8080")
+      --pp                 Pretty print response body
+  -s, --scheme string      Set the requests scheme
+  -t, --timeout duration   Set the request timeout (default 20s)
+      --dump: Dump HTTP request and response.
 ```
 Now let's run it:
 ```
 $ ./adder-cli add operands /add/1/2
-2016/02/16 11:04:30 [INFO] started  id: fHAaZ9tx  GET: http://localhost:8080/add/1/2
-2016/02/16 11:04:30 [INFO] completed  id: fHAaZ9tx  status: 200 time: 811.575µs
+2016/04/05 20:43:18 [INFO] started id=HffVaGiH GET=http://localhost:8080/add/1/2
+2016/04/05 20:43:18 [INFO] completed id=HffVaGiH status=200 time=1.028827ms
 3⏎
 ```
 The console running the service shows the request that was just handled:
 ```
-2016/02/16 16:42:01 [INFO] started      app: API        ctrl: operands  action: Add     id: FloJa8uAbm-1        GET: /add/1/2
-2016/02/16 16:42:01 [INFO] params       app: API        ctrl: operands  action: Add     id: FloJa8uAbm-1        left: 1 right: 2
-2016/02/16 16:42:01 [INFO] completed    app: API        ctrl: operands  action: Add     id: FloJa8uAbm-1        status: 200     bytes: 1        time: 91.858µs
+2016/04/05 20:43:18 [INFO] started action=Add id=cASjgqGiCP-1 GET=/add/1/2
+2016/04/05 20:43:18 [INFO] params action=Add id=cASjgqGiCP-1 right=2 left=1
+2016/04/05 20:43:18 [INFO] completed action=Add id=cASjgqGiCP-1 status=0 bytes=0 time=36.615µs
 ```
 Now let's see how robust our service is and try to use non integer values:
 ```
 ./adder-cli add operands add/1/d
-2016/02/24 11:05:15 [INFO] started  id: 3F1FKVRR  GET: http://localhost:8080/add/1/d
-2016/02/24 11:05:15 [INFO] completed  id: 3F1FKVRR  status: 400 time: 1.044759ms
-error: 400: "[{\"id\":1,\"title\":\"invalid parameter value\",\"msg\":\"invalid value \\\"d\\\" for parameter \\\"right\\\", must be a integer\"}]"
+2016/04/05 20:44:56 [INFO] started id=5254tL8j GET=http://localhost:8080/add/1/d
+2016/04/05 20:44:56 [INFO] completed id=5254tL8j status=500 time=840.12µs
+error: 500: "Internal error: 400 invalid_request: invalid value \"d\" for parameter \"right\", must be a integer"
 ```
-As you can see the generated code validated the incoming request state against the types defined
+As you can see the generated code validated the incoming request against the types defined
 in the design.
 
 ### 4. Document
@@ -209,6 +210,10 @@ a free service that renders the Swagger representation dynamically from goa desi
 
 ## Resources
 
+### goa.design
+
+[http://goa.design](http://goa.design) contains further information on goa.
+
 ### GoDoc
 
 * Package [goa](http://goa.design/reference/goa.html) contains the data structures and algorithms
@@ -220,9 +225,6 @@ a free service that renders the Swagger representation dynamically from goa desi
 * Package [dslengine](http://goa.design/reference/goa/dslengine.html) is a tool to parse and process any
   arbitrary DSL
 
-### Website
-
-[http://goa.design](http://goa.design) contains further information on goa.
 
 ### Getting Started
 
@@ -237,6 +239,8 @@ of middlewares covering common needs. It also provides a good source of examples
 middlewares.
 
 ### Examples
+
+The [examples](https://github.com/goadesign/examples) repo contains simple examples illustrating basic concepts.
 
 The [goa-cellar](https://github.com/goadesign/goa-cellar) repo contains the implementation for a
 goa service which demonstrates many aspects of the design language. It is kept up-to-date and

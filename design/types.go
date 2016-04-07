@@ -31,6 +31,8 @@ type (
 		Name() string
 		// IsPrimitive returns true if the underlying type is one of the primitive types.
 		IsPrimitive() bool
+		// HasAttributes returns true if the underlying type has any attributes.
+		HasAttributes() bool
 		// IsObject returns true if the underlying type is an object, a user type which
 		// is an object or a media type whose type is an object.
 		IsObject() bool
@@ -49,6 +51,8 @@ type (
 		// ToHash returns the underlying hash map if any (i.e. if IsHash returns true),
 		// nil otherwise.
 		ToHash() *Hash
+		// CanHaveDefault returns whether the data type can have a default value.
+		CanHaveDefault() bool
 		// IsCompatible checks whether val has a Go type that is
 		// compatible with the data type.
 		IsCompatible(val interface{}) bool
@@ -72,6 +76,9 @@ type (
 		ElemType *AttributeDefinition
 	}
 
+	// ArrayVal is the value of an array used to specify the default value.
+	ArrayVal []interface{}
+
 	// Object is the type for a JSON object.
 	Object map[string]*AttributeDefinition
 
@@ -80,6 +87,9 @@ type (
 		KeyType  *AttributeDefinition
 		ElemType *AttributeDefinition
 	}
+
+	// HashVal is the value of a hash used to specify the default value.
+	HashVal map[interface{}]interface{}
 
 	// UserTypeDefinition is the type for user defined types that are not media types
 	// (e.g. payload types).
@@ -184,6 +194,9 @@ func (p Primitive) Name() string {
 // IsPrimitive returns true.
 func (p Primitive) IsPrimitive() bool { return true }
 
+// HasAttributes returns false.
+func (p Primitive) HasAttributes() bool { return false }
+
 // IsObject returns false.
 func (p Primitive) IsObject() bool { return false }
 
@@ -201,6 +214,15 @@ func (p Primitive) ToArray() *Array { return nil }
 
 // ToHash returns nil.
 func (p Primitive) ToHash() *Hash { return nil }
+
+// CanHaveDefault returns whether the primitive can have a default value.
+func (p Primitive) CanHaveDefault() (ok bool) {
+	switch p {
+	case Boolean, Integer, Number, String:
+		ok = true
+	}
+	return
+}
 
 // IsCompatible returns true if val is compatible with p.
 func (p Primitive) IsCompatible(val interface{}) (ok bool) {
@@ -294,6 +316,11 @@ func (a *Array) Name() string {
 // IsPrimitive returns false.
 func (a *Array) IsPrimitive() bool { return false }
 
+// HasAttributes returns true if the array's element type is user defined.
+func (a *Array) HasAttributes() bool {
+	return a.ElemType.Type.HasAttributes()
+}
+
 // IsObject returns false.
 func (a *Array) IsObject() bool { return false }
 
@@ -312,10 +339,26 @@ func (a *Array) ToArray() *Array { return a }
 // ToHash returns nil.
 func (a *Array) ToHash() *Hash { return nil }
 
+// CanHaveDefault returns true if the array type can have a default value.
+// The array type can have a default value only if the element type can
+// have a default value.
+func (a *Array) CanHaveDefault() bool {
+	return a.ElemType.Type.CanHaveDefault()
+}
+
 // IsCompatible returns true if val is compatible with p.
 func (a *Array) IsCompatible(val interface{}) bool {
 	k := reflect.TypeOf(val).Kind()
-	return k == reflect.Array || k == reflect.Slice
+	if k != reflect.Array && k != reflect.Slice {
+		return false
+	}
+	v := reflect.ValueOf(val)
+	for i := 0; i < v.Len(); i++ {
+		if !a.ElemType.Type.IsCompatible(v.Index(i).Interface()) {
+			return false
+		}
+	}
+	return true
 }
 
 // GenerateExample produces a random array value.
@@ -347,6 +390,9 @@ func (o Object) Name() string { return "object" }
 // IsPrimitive returns false.
 func (o Object) IsPrimitive() bool { return false }
 
+// HasAttributes returns true.
+func (o Object) HasAttributes() bool { return true }
+
 // IsObject returns true.
 func (o Object) IsObject() bool { return true }
 
@@ -364,6 +410,9 @@ func (o Object) ToArray() *Array { return nil }
 
 // ToHash returns nil.
 func (o Object) ToHash() *Hash { return nil }
+
+// CanHaveDefault returns false.
+func (o Object) CanHaveDefault() bool { return false }
 
 // Merge copies other's attributes into o overridding any pre-existing attribute with the same name.
 func (o Object) Merge(other Object) {
@@ -404,6 +453,12 @@ func (h *Hash) Name() string { return "hash" }
 // IsPrimitive returns false.
 func (h *Hash) IsPrimitive() bool { return false }
 
+// HasAttributes returns true if the either hash's key type is user defined
+// or the element type is user defined.
+func (h *Hash) HasAttributes() bool {
+	return h.KeyType.Type.HasAttributes() || h.ElemType.Type.HasAttributes()
+}
+
 // IsObject returns false.
 func (h *Hash) IsObject() bool { return false }
 
@@ -422,10 +477,26 @@ func (h *Hash) ToArray() *Array { return nil }
 // ToHash returns the underlying hash map.
 func (h *Hash) ToHash() *Hash { return h }
 
+// CanHaveDefault returns true if the hash type can have a default value.
+// The hash type can have a default value only if both the key type and
+// the element type can have a default value.
+func (h *Hash) CanHaveDefault() bool {
+	return h.KeyType.Type.CanHaveDefault() && h.ElemType.Type.CanHaveDefault()
+}
+
 // IsCompatible returns true if val is compatible with p.
 func (h *Hash) IsCompatible(val interface{}) bool {
 	k := reflect.TypeOf(val).Kind()
-	return k == reflect.Map
+	if k != reflect.Map {
+		return false
+	}
+	v := reflect.ValueOf(val)
+	for _, key := range v.MapKeys() {
+		if !h.KeyType.Type.IsCompatible(key.Interface()) || !h.ElemType.Type.IsCompatible(v.MapIndex(key).Interface()) {
+			return false
+		}
+	}
+	return true
 }
 
 // GenerateExample returns a random hash value.
@@ -470,6 +541,38 @@ func (o Object) IterateAttributes(it AttributeIterator) error {
 	return nil
 }
 
+// ToSlice converts an ArrayVal to a slice.
+func (a ArrayVal) ToSlice() []interface{} {
+	arr := make([]interface{}, len(a))
+	for i, elem := range a {
+		switch actual := elem.(type) {
+		case ArrayVal:
+			arr[i] = actual.ToSlice()
+		case HashVal:
+			arr[i] = actual.ToMap()
+		default:
+			arr[i] = actual
+		}
+	}
+	return arr
+}
+
+// ToMap converts a HashVal to a map.
+func (h HashVal) ToMap() map[interface{}]interface{} {
+	mp := make(map[interface{}]interface{}, len(h))
+	for k, v := range h {
+		switch actual := v.(type) {
+		case ArrayVal:
+			mp[k] = actual.ToSlice()
+		case HashVal:
+			mp[k] = actual.ToMap()
+		default:
+			mp[k] = actual
+		}
+	}
+	return mp
+}
+
 // NewUserTypeDefinition creates a user type definition but does not
 // execute the DSL.
 func NewUserTypeDefinition(name string, dsl func()) *UserTypeDefinition {
@@ -488,6 +591,9 @@ func (u *UserTypeDefinition) Name() string { return u.Type.Name() }
 // IsPrimitive calls IsPrimitive on the user type underlying data type.
 func (u *UserTypeDefinition) IsPrimitive() bool { return u.Type.IsPrimitive() }
 
+// HasAttributes calls the HasAttributes on the user type underlying data type.
+func (u *UserTypeDefinition) HasAttributes() bool { return u.Type.HasAttributes() }
+
 // IsObject calls IsObject on the user type underlying data type.
 func (u *UserTypeDefinition) IsObject() bool { return u.Type.IsObject() }
 
@@ -505,6 +611,9 @@ func (u *UserTypeDefinition) ToArray() *Array { return u.Type.ToArray() }
 
 // ToHash calls ToHash on the user type underlying data type.
 func (u *UserTypeDefinition) ToHash() *Hash { return u.Type.ToHash() }
+
+// CanHaveDefault calls CanHaveDefault on the user type underlying data type.
+func (u *UserTypeDefinition) CanHaveDefault() bool { return u.Type.CanHaveDefault() }
 
 // IsCompatible returns true if val is compatible with p.
 func (u *UserTypeDefinition) IsCompatible(val interface{}) bool {

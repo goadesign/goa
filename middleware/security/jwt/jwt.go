@@ -70,7 +70,7 @@ func New(validationKeys interface{}, validationFunc goa.Middleware) goa.JWTSecur
 		return func(nextHandler goa.Handler) goa.Handler {
 			return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 				// TODO: implement the QUERY string handler too
-				if scheme.In != "header" {
+				if scheme.In != goa.LocHeader {
 					return fmt.Errorf("whoops, security scheme with in = %q not supported", scheme.In)
 				}
 

@@ -28,7 +28,7 @@ func init() {
 		"oneof":            oneof,
 		"constant":         constant,
 		"goify":            Goify,
-		"add":              func(a, b int) int { return a + b },
+		"add":              Add,
 		"recursiveChecker": RecursiveChecker,
 	}
 	if arrayValT, err = template.New("array").Funcs(fm).Parse(arrayValTmpl); err != nil {
@@ -56,7 +56,7 @@ func init() {
 
 // RecursiveChecker produces Go code that runs the validation checks recursively over the given
 // attribute.
-func RecursiveChecker(att *design.AttributeDefinition, nonzero, required bool, target, context string, depth int) string {
+func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDefault bool, target, context string, depth int, private bool) string {
 	var checks []string
 	if o := att.Type.ToObject(); o != nil {
 		if mt, ok := att.Type.(*design.MediaTypeDefinition); ok {
@@ -64,7 +64,7 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required bool, t
 		} else if ut, ok := att.Type.(*design.UserTypeDefinition); ok {
 			att = ut.AttributeDefinition
 		}
-		validation := ValidationChecker(att, nonzero, required, target, context, depth)
+		validation := ValidationChecker(att, nonzero, required, hasDefault, target, context, depth, private)
 		if validation != "" {
 			checks = append(checks, validation)
 		}
@@ -77,9 +77,11 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required bool, t
 				catt,
 				att.IsNonZero(n),
 				att.IsRequired(n),
+				att.HasDefaultValue(n),
 				fmt.Sprintf("%s.%s", target, Goify(n, true)),
 				fmt.Sprintf("%s.%s", context, n),
 				actualDepth,
+				private,
 			)
 			if validation != "" {
 				if catt.Type.IsObject() {
@@ -96,13 +98,14 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required bool, t
 			"context":  context,
 			"target":   target,
 			"depth":    1,
+			"private":  private,
 		}
 		validation := RunTemplate(arrayValT, data)
 		if validation != "" {
 			checks = append(checks, validation)
 		}
 	} else {
-		validation := ValidationChecker(att, nonzero, required, target, context, depth)
+		validation := ValidationChecker(att, nonzero, required, hasDefault, target, context, depth, private)
 		if validation != "" {
 			checks = append(checks, validation)
 		}
@@ -117,21 +120,23 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required bool, t
 // The generated code assumes that there is a pre-existing "err" variable of type
 // error. It initializes that variable in case a validation fails.
 // Note: we do not want to recurse here, recursion is done by the marshaler/unmarshaler code.
-func ValidationChecker(att *design.AttributeDefinition, nonzero, required bool, target, context string, depth int) string {
+func ValidationChecker(att *design.AttributeDefinition, nonzero, required, hasDefault bool, target, context string, depth int, private bool) string {
 	t := target
-	isPointer := !required && !nonzero
+	isPointer := private || (!required && !hasDefault && !nonzero)
 	if isPointer && att.Type.IsPrimitive() {
 		t = "*" + t
 	}
 	data := map[string]interface{}{
 		"attribute": att,
-		"isPointer": isPointer,
+		"isPointer": private || isPointer,
 		"nonzero":   nonzero,
 		"context":   context,
 		"target":    target,
 		"targetVal": t,
 		"array":     att.Type.IsArray(),
+		"hash":      att.Type.IsHash(),
 		"depth":     depth,
+		"private":   private,
 	}
 	res := validationsCode(att.Validation, data)
 	return strings.Join(res, "\n")
@@ -236,7 +241,7 @@ func constant(formatName string) string {
 }
 
 const (
-	arrayValTmpl = `{{$validation := recursiveChecker .elemType false false "e" (printf "%s[*]" .context) (add .depth 1)}}{{/*
+	arrayValTmpl = `{{$validation := recursiveChecker .elemType false false false "e" (printf "%s[*]" .context) (add .depth 1) .private}}{{/*
 */}}{{if $validation}}{{tabs .depth}}for _, e := range {{.target}} {
 {{$validation}}
 {{tabs .depth}}}{{end}}`
@@ -270,17 +275,18 @@ const (
 {{end}}{{tabs .depth}}}`
 
 	lengthValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
-*/}}{{$target := or (and (or .array .nonzero) .target) .targetVal}}{{/*
+*/}}{{$target := or (and (or (or .array .hash) .nonzero) .target) .targetVal}}{{/*
 */}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
 {{end}}{{tabs .depth}}if len({{$target}}) {{if .isMinLength}}<{{else}}>{{end}} {{if .isMinLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
 {{tabs $depth}}	err = goa.MergeErrors(err, goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{$target}}, len({{$target}}), {{if .isMinLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}))
 {{if .isPointer}}{{tabs $depth}}}
 {{end}}{{tabs .depth}}}`
 
-	requiredValTmpl = `{{range $r := .required}}{{$catt := index $.attribute.Type.ToObject $r}}{{if eq $catt.Type.Kind 4}}{{tabs $.depth}}if {{$.target}}.{{goify $r true}} == "" {
+	requiredValTmpl = `{{range $r := .required}}{{$catt := index $.attribute.Type.ToObject $r}}{{/*
+*/}}{{if and (not $.private) (eq $catt.Type.Kind 4)}}{{tabs $.depth}}if {{$.target}}.{{goify $r true}} == "" {
 {{tabs $.depth}}	err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`" + `{{$.context}}` + "`" + `, "{{$r}}"))
 {{tabs $.depth}}}
-{{else if (not $catt.Type.IsPrimitive)}}{{tabs $.depth}}if {{$.target}}.{{goify $r true}} == nil {
+{{else if or $.private (not $catt.Type.IsPrimitive)}}{{tabs $.depth}}if {{$.target}}.{{goify $r true}} == nil {
 {{tabs $.depth}}	err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`" + `{{$.context}}` + "`" + `, "{{$r}}"))
 {{tabs $.depth}}}
 {{end}}{{end}}`

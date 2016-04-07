@@ -27,7 +27,7 @@ var _ = Describe("Middleware", func() {
 
 	BeforeEach(func() {
 		securityScheme = &goa.JWTSecurity{
-			In:   "header",
+			In:   goa.LocHeader,
 			Name: "Authorization",
 		}
 		respRecord = httptest.NewRecorder()
