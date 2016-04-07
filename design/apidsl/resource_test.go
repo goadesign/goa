@@ -185,7 +185,6 @@ var _ = Describe("Resource", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.Validate()).ShouldNot(HaveOccurred())
 			Ω(res.MediaType).Should(Equal(mediaType))
-			Ω(res.DefaultViewName).Should(Equal("default"))
 		})
 	})
 
@@ -244,7 +243,6 @@ var _ = Describe("Resource", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.Validate()).ShouldNot(HaveOccurred())
 			Ω(res.MediaType).Should(Equal(identifier))
-			Ω(res.DefaultViewName).Should(Equal("default"))
 		})
 	})
 

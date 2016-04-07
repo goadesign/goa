@@ -232,10 +232,11 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 			if resp.ViewName != "" {
 				views = []string{resp.ViewName}
 			} else {
-				views := make([]string, len(mt.Views))
+				views = make([]string, len(mt.Views))
 				i := 0
 				for name := range mt.Views {
 					views[i] = name
+					i++
 				}
 				sort.Strings(views)
 			}
@@ -548,9 +549,9 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 
 	// ctxMTRespT generates the response helpers for responses with media types.
 	// template input: map[string]interface{}
-	ctxMTRespT = `{{ $projected := project .MediaType .ViewName }}// {{ respName .Response .ViewName }} sends a HTTP response with status code {{ .Response.Status }}.
-func (ctx *{{ .Context.Name }}) {{ .RespName }}(r {{ gotyperef .Projected .Projected.AllRequired 0 false }}) error {
-	ctx.ResponseData.Header().Set("Content-Type", "{{ .ContentType }}")
+	ctxMTRespT = `// {{ goify .RespName true }} sends a HTTP response with status code {{ .Response.Status }}.
+func (ctx *{{ .Context.Name }}) {{ goify .RespName true }}(r {{ gotyperef .Projected .Projected.AllRequired 0 false }}) error {
+	ctx.ResponseData.Header().Set("Content-Type", "{{ .Response.MediaType }}")
 	return ctx.ResponseData.Service.Send(ctx.Context, {{ .Response.Status }}, r)
 }
 `

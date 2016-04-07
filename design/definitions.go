@@ -1237,9 +1237,6 @@ func (r *ResponseDefinition) Context() string {
 // Finalize sets the response media type from its type if the type is a media type and no media
 // type is already specified.
 func (r *ResponseDefinition) Finalize() {
-	if r.ViewName == "" {
-		r.ViewName = "default"
-	}
 	if r.Type == nil {
 		return
 	}
