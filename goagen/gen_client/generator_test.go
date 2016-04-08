@@ -78,6 +78,7 @@ var _ = Describe("Generate", func() {
 								QueryParams: &design.AttributeDefinition{
 									Type: design.Object{
 										"param": &design.AttributeDefinition{Type: design.Integer},
+										"time":  &design.AttributeDefinition{Type: design.DateTime},
 									},
 								},
 								Routes: []*design.RouteDefinition{
@@ -104,6 +105,7 @@ var _ = Describe("Generate", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically(">=", 3))
 			Ω(content).Should(ContainSubstring("var tmp2 int"))
+			Ω(content).Should(ContainSubstring("var tmp3 string"))
 			Ω(content).Should(ContainSubstring(".Flags()"))
 			_, err = gexec.Build(filepath.Join(testgenPackagePath, "client", "testapi-cli"))
 			Ω(err).ShouldNot(HaveOccurred())
