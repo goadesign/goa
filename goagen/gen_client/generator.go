@@ -120,6 +120,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("log"),
 		codegen.SimpleImport("os"),
+		codegen.SimpleImport("time"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("github.com/spf13/cobra"),
 		codegen.SimpleImport(AppPkg),
@@ -204,6 +205,7 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 		codegen.SimpleImport("net/url"),
 		codegen.SimpleImport("strconv"),
 		codegen.SimpleImport("strings"),
+		codegen.SimpleImport("time"),
 		codegen.SimpleImport(AppPkg),
 		codegen.SimpleImport("golang.org/x/net/context"),
 		codegen.SimpleImport("golang.org/x/net/websocket"),
@@ -266,20 +268,21 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	}
 
 	funcs := template.FuncMap{
+		"appPkg":          appPkg,
+		"cmdFieldType":    cmdFieldType,
+		"defaultPath":     defaultPath,
+		"escapeBackticks": escapeBackticks,
+		"flagType":        flagType,
 		"goify":           codegen.Goify,
 		"gotypedef":       codegen.GoTypeDef,
 		"gotyperefext":    goTypeRefExt,
-		"nativeType":      codegen.GoNativeType,
-		"joinNames":       joinNames,
 		"join":            join,
-		"toString":        toString,
+		"joinNames":       joinNames,
+		"multiComment":    multiComment,
+		"routes":          routes,
 		"tempvar":         codegen.Tempvar,
 		"title":           strings.Title,
-		"flagType":        flagType,
-		"defaultPath":     defaultPath,
-		"appPkg":          appPkg,
-		"escapeBackticks": escapeBackticks,
-		"multiComment":    multiComment,
+		"toString":        toString,
 	}
 	clientPkg, err := codegen.PackagePath(codegen.OutputDir)
 	if err != nil {
@@ -370,7 +373,7 @@ func join(att *design.AttributeDefinition) string {
 	elems := make([]string, len(obj))
 	i := 0
 	for n, a := range obj {
-		elems[i] = fmt.Sprintf("%s %s", n, codegen.GoNativeType(a.Type))
+		elems[i] = fmt.Sprintf("%s %s", codegen.Goify(n, false), cmdFieldType(a.Type))
 		i++
 	}
 	sort.Strings(elems)
@@ -392,6 +395,24 @@ func multiComment(text string) string {
 	return strings.Join(nl, "\n")
 }
 
+// routes create the action command "Use" suffix.
+func routes(action *design.ActionDefinition) string {
+	var buf bytes.Buffer
+	routes := action.Routes
+	if len(routes) > 1 {
+		buf.WriteRune('(')
+	}
+	paths := make([]string, len(routes))
+	for i, r := range routes {
+		paths[i] = fmt.Sprintf("%q", r.FullPath())
+	}
+	buf.WriteString(strings.Join(paths, "|"))
+	if len(routes) > 1 {
+		buf.WriteRune(')')
+	}
+	return buf.String()
+}
+
 // gotTypeRefExt computes the type reference for a type in a different package.
 func goTypeRefExt(t design.DataType, tabs int, pkg string) string {
 	ref := codegen.GoTypeRef(t, nil, tabs, false)
@@ -399,6 +420,14 @@ func goTypeRefExt(t design.DataType, tabs int, pkg string) string {
 		return fmt.Sprintf("%s.%s", pkg, ref[1:])
 	}
 	return fmt.Sprintf("%s.%s", pkg, ref)
+}
+
+// cmdFieldType computes the Go type name used to store command flags of the given design type.
+func cmdFieldType(t design.DataType) string {
+	if t.Kind() == design.DateTimeKind {
+		return "string"
+	}
+	return codegen.GoNativeType(t)
 }
 
 // template used to produce code that serializes arrays of simple values into comma separated
@@ -416,10 +445,8 @@ func toString(name, target string, att *design.AttributeDefinition) string {
 			return fmt.Sprintf("%s := strconv.FormatBool(%s)", target, name)
 		case design.NumberKind:
 			return fmt.Sprintf("%s := strconv.FormatFloat(%s, 'f', -1, 64)", target, name)
-		case design.StringKind:
+		case design.StringKind, design.DateTimeKind:
 			return fmt.Sprintf("%s := %s", target, name)
-		case design.DateTimeKind:
-			return fmt.Sprintf("%s, err  := time.Parse(time.RFC3339, %s)", target, name)
 		case design.AnyKind:
 			return fmt.Sprintf("%s := fmt.Sprintf(\"%%v\", %s)", target, name)
 		default:
@@ -526,9 +553,9 @@ const commandTypesTmpl = `{{ $cmdName := goify (printf "%s%s%s" .Name (title .Pa
 	{{ $cmdName }} struct {
 {{ if .Payload }}		Payload string
 {{ end }}{{ $params := .QueryParams }}{{ if $params }}{{ range $name, $att := $params.Type.ToObject }}{{ if $att.Description }}		{{ multiComment $att.Description }}
-{{ end }}		{{ goify $name true }} {{ nativeType $att.Type }}
+{{ end }}		{{ goify $name true }} {{ cmdFieldType $att.Type }}
 {{ end }}{{ end }}{{ $headers := .Headers }}{{ if $headers }}{{ range $name, $att := $headers.Type.ToObject }}{{ if $att.Description }}		{{ multiComment $att.Description }}
-{{ end }}		{{ goify $name true }} string
+{{ end }}		{{ goify $name true }} {{ cmdFieldType $att.Type }}
 {{ end }}{{ end }}	}
 `
 
@@ -562,7 +589,7 @@ const registerTmpl = `{{ $cmdName := goify (printf "%s%sCommand" .Action.Name (t
 func (cmd *{{ $cmdName }}) RegisterFlags(cc *cobra.Command) {
 {{ if .Action.Payload }}	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request JSON body")
 {{ end }}{{ $params := .Action.QueryParams }}{{ if $params }}{{ range $name, $param := $params.Type.ToObject }}{{ $tmp := tempvar }}{{/*
-*/}}{{ if not $param.DefaultValue }}	var {{ $tmp }} {{ gotypedef $param 1 true false }}
+*/}}{{ if not $param.DefaultValue }}	var {{ $tmp }} {{ cmdFieldType $param.Type }}
 {{ end }}	cc.Flags().{{ flagType $param }}Var(&cmd.{{ goify $name true }}, "{{ $name }}", {{ if $param.DefaultValue }}{{ printf "%#v" $param.DefaultValue }}{{ else }}{{ $tmp }}{{ end }}, ` + "`" + `{{ escapeBackticks $param.Description }}` + "`" + `)
 {{ end }}{{ end }}{{/*
 */}}{{ $headers := .Action.Headers }}{{ if $headers }}{{ range $name, $header := $headers.Type.ToObject }}{{/*
@@ -678,7 +705,7 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 {{ range $action := $actions }}{{ $cmdName := goify (printf "%s%sCommand" $action.Name (title $action.Parent.Name)) true }}{{/*
 */}}{{ $tmp := tempvar }}	{{ $tmp }} := new({{ $cmdName }})
 	sub = &cobra.Command{
-		Use:   "{{ $action.Parent.Name }}",
+		Use:   ` + "`" + `{{ $action.Parent.Name }} {{ routes $action }}` + "`" + `,
 		Short: ` + "`" + `{{ escapeBackticks $action.Parent.Description }}` + "`" + `,
 		RunE:  func(cmd *cobra.Command, args []string) error { return {{ $tmp }}.Run(c, args) },
 	}
