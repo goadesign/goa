@@ -69,7 +69,7 @@ func RegisterFlags(r FlagRegistry) {
 		os.Exit(1)
 	}
 	r.Flags().StringVarP(&OutputDir, "out", "o", cwd, "output directory")
-	r.Flags().StringVarP(&DesignPackagePath, "design", "d", "", "design package path")
+	r.Flags().StringVarP(&DesignPackagePath, "design", "d", "", "design package import path")
 	r.Flags().BoolVar(&Debug, "debug", false, "enable debug mode, does not cleanup temporary files.")
 	r.Flags().BoolVar(&NoFormat, "noformat", false, "disable goimports, useful to goa developers for debugging.")
 	r.Flags().MarkHidden("noformat")
