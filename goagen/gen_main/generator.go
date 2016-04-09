@@ -260,7 +260,7 @@ type {{ $ctrlName }} struct {
 
 // New{{ $ctrlName }} creates a {{ .Name }} controller.
 func New{{ $ctrlName }}(service *goa.Service) *{{ $ctrlName }} {
-	return &{{ $ctrlName }}{Controller: service.NewController("{{ .Name }}")}
+	return &{{ $ctrlName }}{Controller: service.NewController("{{ $ctrlName }}")}
 }
 `
 

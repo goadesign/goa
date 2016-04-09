@@ -12,6 +12,8 @@ import (
 const (
 	reqKey key = iota + 1
 	respKey
+	ctrlKey
+	actionKey
 	paramsKey
 	logKey
 	logContextKey
@@ -58,9 +60,30 @@ func NewContext(ctx context.Context, rw http.ResponseWriter, req *http.Request, 
 	return ctx
 }
 
+// ActionContext creates a context with the given action name.
+func ActionContext(ctx context.Context, action string) context.Context {
+	return context.WithValue(ctx, actionKey, action)
+}
+
 // UseLogger sets the request context logger and returns the resulting new context.
 func UseLogger(ctx context.Context, logger Logger) context.Context {
 	return context.WithValue(ctx, logKey, logger)
+}
+
+// ContextController extracts the controller name from the given context.
+func ContextController(ctx context.Context) string {
+	if c := ctx.Value(ctrlKey); c != nil {
+		return c.(string)
+	}
+	return "<unknown>"
+}
+
+// ContextAction extracts the action name from the given context.
+func ContextAction(ctx context.Context) string {
+	if a := ctx.Value(actionKey); a != nil {
+		return a.(string)
+	}
+	return "<unknown>"
 }
 
 // ContextRequest extracts the request data from the given context.
