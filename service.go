@@ -148,11 +148,11 @@ func (service *Service) ListenAndServeTLS(addr, certFile, keyFile string) error 
 
 // NewController returns a controller for the given resource. This method is mainly intended for
 // use by the generated code. User code shouldn't have to call it directly.
-func (service *Service) NewController(resName string) *Controller {
+func (service *Service) NewController(name string) *Controller {
 	return &Controller{
-		Name:    resName,
+		Name:    name,
 		Service: service,
-		Context: context.WithValue(service.Context, "ctrl", resName),
+		Context: context.WithValue(service.Context, ctrlKey, name),
 	}
 }
 
@@ -269,10 +269,9 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 	for i := range chain {
 		middleware = chain[ml-i-1](middleware)
 	}
-	baseCtx := LogWith(ctrl.Context, "ctrl", ctrl.Name, "action", name)
 	return func(rw http.ResponseWriter, req *http.Request, params url.Values) {
 		// Build context
-		ctx := NewContext(baseCtx, rw, req, params)
+		ctx := NewContext(ActionContext(ctrl.Context, name), rw, req, params)
 
 		// Protect against request bodies with unreasonable length
 		if MaxRequestBodyLength > 0 {

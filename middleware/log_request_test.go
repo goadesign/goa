@@ -45,7 +45,7 @@ var _ = Describe("LogRequest", func() {
 		Ω(lg(ctx, rw, req)).ShouldNot(HaveOccurred())
 		Ω(logger.InfoEntries).Should(HaveLen(4))
 
-		Ω(logger.InfoEntries[0].Data).Should(HaveLen(4))
+		Ω(logger.InfoEntries[0].Data).Should(HaveLen(10))
 		Ω(logger.InfoEntries[0].Data[0]).Should(Equal("req_id"))
 		Ω(logger.InfoEntries[0].Data[2]).Should(Equal("POST"))
 		Ω(logger.InfoEntries[0].Data[3]).Should(Equal("/goo?param=value"))

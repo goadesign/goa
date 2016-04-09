@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -28,7 +29,8 @@ func LogRequest(verbose bool) goa.Middleware {
 			ctx = goa.LogWith(ctx, "req_id", reqID)
 			startedAt := time.Now()
 			r := goa.ContextRequest(ctx)
-			goa.LogInfo(ctx, "started", r.Method, r.URL.String())
+			goa.LogInfo(ctx, "started", r.Method, r.URL.String(), "from", from(req),
+				"ctrl", goa.ContextController(ctx), "action", goa.ContextAction(ctx))
 			if verbose {
 				if len(r.Params) > 0 {
 					logCtx := make([]interface{}, 2*len(r.Params))
@@ -75,4 +77,17 @@ func shortID() string {
 	b := make([]byte, 6)
 	io.ReadFull(rand.Reader, b)
 	return base64.StdEncoding.EncodeToString(b)
+}
+
+// from makes a best effort to compute the request client IP.
+func from(req *http.Request) string {
+	if f := req.Header.Get("X-Forwarded-For"); f != "" {
+		return f
+	}
+	f := req.RemoteAddr
+	ip, _, err := net.SplitHostPort(f)
+	if err != nil {
+		return f
+	}
+	return ip
 }
