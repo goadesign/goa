@@ -93,7 +93,7 @@ func New(name string) *Service {
 	)
 
 	mux.HandleNotFound(func(rw http.ResponseWriter, req *http.Request, params url.Values) {
-		ctx := NewContext(cctx, rw, req, params)
+		ctx := NewContext(service.Context, rw, req, params)
 		err := service.notFound(ctx, rw, req)
 		if !ContextResponse(ctx).Written() {
 			service.Send(ctx, 404, err)
