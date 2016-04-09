@@ -397,16 +397,8 @@ import (
 	"net/http"
 )
 
-// inited is true if initService has been called
-var inited = false
-
 // initService sets up the service encoders, decoders and mux.
 func initService(service *goa.Service) {
-	if inited {
-		return
-	}
-	inited = true
-
 	// Setup encoders and decoders
 
 	// Setup default encoder and decoder
