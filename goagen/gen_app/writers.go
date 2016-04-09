@@ -571,16 +571,8 @@ type {{ .Resource }}Controller interface {
 	// serviceT generates the service initialization code.
 	// template input: *ControllerTemplateData
 	serviceT = `
-// inited is true if initService has been called
-var inited = false
-
 // initService sets up the service encoders, decoders and mux.
 func initService(service *goa.Service) {
-	if inited {
-		return
-	}
-	inited = true
-
 	// Setup encoders and decoders
 {{ range .Encoders }}{{/*
 */}}	service.Encoder({{ .PackageName }}.{{ .Function }}, "{{ join .MIMETypes "\", \"" }}")
