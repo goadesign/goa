@@ -46,22 +46,22 @@ var _ = Describe("LogRequest", func() {
 		Ω(logger.InfoEntries).Should(HaveLen(4))
 
 		Ω(logger.InfoEntries[0].Data).Should(HaveLen(4))
-		Ω(logger.InfoEntries[0].Data[0]).Should(Equal("id"))
+		Ω(logger.InfoEntries[0].Data[0]).Should(Equal("req_id"))
 		Ω(logger.InfoEntries[0].Data[2]).Should(Equal("POST"))
 		Ω(logger.InfoEntries[0].Data[3]).Should(Equal("/goo?param=value"))
 
 		Ω(logger.InfoEntries[1].Data).Should(HaveLen(4))
-		Ω(logger.InfoEntries[0].Data[0]).Should(Equal("id"))
+		Ω(logger.InfoEntries[0].Data[0]).Should(Equal("req_id"))
 		Ω(logger.InfoEntries[1].Data[2]).Should(Equal("query"))
 		Ω(logger.InfoEntries[1].Data[3]).Should(Equal("value"))
 
 		Ω(logger.InfoEntries[2].Data).Should(HaveLen(4))
-		Ω(logger.InfoEntries[0].Data[0]).Should(Equal("id"))
+		Ω(logger.InfoEntries[0].Data[0]).Should(Equal("req_id"))
 		Ω(logger.InfoEntries[2].Data[2]).Should(Equal("payload"))
 		Ω(logger.InfoEntries[2].Data[3]).Should(Equal(42))
 
 		Ω(logger.InfoEntries[3].Data).Should(HaveLen(8))
-		Ω(logger.InfoEntries[0].Data[0]).Should(Equal("id"))
+		Ω(logger.InfoEntries[0].Data[0]).Should(Equal("req_id"))
 		Ω(logger.InfoEntries[3].Data[2]).Should(Equal("status"))
 		Ω(logger.InfoEntries[3].Data[3]).Should(Equal(200))
 		Ω(logger.InfoEntries[3].Data[4]).Should(Equal("bytes"))
