@@ -442,8 +442,10 @@ type {{ .Name }} struct {
 {{ end }}{{ if eq .Attribute.Type.Kind 6 }}{{/*
 
 */}}{{/* AnyType */}}{{/*
-*/}}{{ tabs .Depth }}{{ .Pkg }} = {{ if .Pointer }}&{{ end }}raw{{ goify .Name true }}
-{{ end }}{{ if eq .Attribute.Type.Kind 7 }}{{/*
+*/}}{{ if .Pointer }}{{ $tmp := tempvar }}{{ tabs .Depth }}{{ $tmp }} := interface{}(raw{{ goify .Name true }})
+{{ tabs .Depth }}{{ .Pkg }} = &{{ $tmp }}
+{{ else }}{{ tabs .Depth }}{{ .Pkg }} = raw{{ goify .Name true }}
+{{ end }}{{ end }}{{ if eq .Attribute.Type.Kind 7 }}{{/*
 
 */}}{{/* ArrayType */}}{{/*
 */}}{{ tabs .Depth }}elems{{ goify .Name true }} := strings.Split(raw{{ goify .Name true }}, ",")
