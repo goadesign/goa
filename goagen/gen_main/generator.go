@@ -249,7 +249,9 @@ func main() {
 	swagger.MountController(service)
 {{ end }}
 
-	service.ListenAndServe(":8080")
+	if err := service.ListenAndServe(":8080"); err != nil {
+		service.LogError("startup", "err", err)
+	}
 }
 `
 
