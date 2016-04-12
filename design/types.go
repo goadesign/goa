@@ -276,6 +276,8 @@ func (p Primitive) IsCompatible(val interface{}) (ok bool) {
 				ok = true
 			}
 		}
+	case Any:
+		return true
 	default:
 		panic("unknown primitive type") // bug
 	}
