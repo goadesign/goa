@@ -35,9 +35,11 @@ type (
 	ResponseData struct {
 		http.ResponseWriter
 
-		// Status is the response HTTP status code
+		// ErrorCode is the code of the error returned by the action if any.
+		ErrorCode string
+		// Status is the response HTTP status code.
 		Status int
-		// Length is the response body length
+		// Length is the response body length.
 		Length int
 	}
 
