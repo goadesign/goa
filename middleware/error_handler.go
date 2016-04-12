@@ -25,6 +25,7 @@ func ErrorHandler(service *goa.Service, verbose bool) goa.Middleware {
 			if err, ok := e.(*goa.Error); ok {
 				status = err.Status
 				respBody = err
+				goa.ContextResponse(ctx).ErrorCode = err.Code
 				rw.Header().Set("Content-Type", goa.ErrorMediaIdentifier)
 			} else {
 				respBody = e.Error()
