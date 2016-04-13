@@ -28,6 +28,7 @@ DEPEND=\
 	github.com/PuerkitoBio/purell \
 	github.com/spf13/hugo \
 	github.com/zach-klippenstein/goregen \
+        github.com/Sirupsen/logrus \
 	golang.org/x/tools/cmd/cover \
 	golang.org/x/tools/cmd/goimports \
 	gopkg.in/alecthomas/kingpin.v2 \
