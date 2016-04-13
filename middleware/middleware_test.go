@@ -13,7 +13,7 @@ func newService(logger goa.Logger) *goa.Service {
 	service := goa.New("test")
 	service.Encoder(goa.NewJSONEncoder, "*/*")
 	service.Decoder(goa.NewJSONDecoder, "*/*")
-	service.UseLogger(logger)
+	service.WithLogger(logger)
 	return service
 }
 

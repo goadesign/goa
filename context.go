@@ -62,13 +62,13 @@ func NewContext(ctx context.Context, rw http.ResponseWriter, req *http.Request, 
 	return ctx
 }
 
-// ActionContext creates a context with the given action name.
-func ActionContext(ctx context.Context, action string) context.Context {
+// WithAction creates a context with the given action name.
+func WithAction(ctx context.Context, action string) context.Context {
 	return context.WithValue(ctx, actionKey, action)
 }
 
-// UseLogger sets the request context logger and returns the resulting new context.
-func UseLogger(ctx context.Context, logger Logger) context.Context {
+// WithLogger sets the request context logger and returns the resulting new context.
+func WithLogger(ctx context.Context, logger Logger) context.Context {
 	return context.WithValue(ctx, logKey, logger)
 }
 
