@@ -226,60 +226,26 @@ func (p Primitive) CanHaveDefault() (ok bool) {
 
 // IsCompatible returns true if val is compatible with p.
 func (p Primitive) IsCompatible(val interface{}) (ok bool) {
-	switch p {
-	case Boolean:
-		_, ok = val.(bool)
-	case Integer:
-		_, ok = val.(int)
-		if !ok {
-			_, ok = val.(int8)
-		}
-		if !ok {
-			_, ok = val.(int16)
-		}
-		if !ok {
-			_, ok = val.(int32)
-		}
-		if !ok {
-			_, ok = val.(int64)
-		}
-		if !ok {
-			_, ok = val.(uint)
-		}
-		if !ok {
-			_, ok = val.(uint8)
-		}
-		if !ok {
-			_, ok = val.(uint16)
-		}
-		if !ok {
-			_, ok = val.(uint32)
-		}
-		if !ok {
-			_, ok = val.(uint64)
-		}
-	case Number:
-		ok = Integer.IsCompatible(val)
-		if !ok {
-			_, ok = val.(float32)
-		}
-		if !ok {
-			_, ok = val.(float64)
-		}
-	case String:
-		_, ok = val.(string)
-	case DateTime:
-		_, ok = val.(string)
-		if ok {
-			_, err := time.Parse(time.RFC3339, val.(string))
-			if err == nil {
-				ok = true
-			}
-		}
-	default:
-		panic("unknown primitive type") // bug
+	if p == Any {
+		return true
 	}
-	return
+	switch val.(type) {
+	case bool:
+		return p == Boolean
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		return p == Integer || p == Number
+	case float32, float64:
+		return p == Number
+	case string:
+		if p == String {
+			return true
+		}
+		if p == DateTime {
+			_, err := time.Parse(time.RFC3339, val.(string))
+			return err == nil
+		}
+	}
+	return false
 }
 
 var anyPrimitive = []Primitive{Boolean, Integer, Number, DateTime}
