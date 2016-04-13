@@ -6,7 +6,7 @@ Usage:
     // Initialize logger using github.com/go-kit/kit/log package
     logger := log.NewLogfmtLogger(w)
     // Initialize goa service logger using adapter
-    service.UseLogger(goakit.New(logger))
+    service.WithLogger(goakit.New(logger))
     // ... Proceed with configuring and starting the goa service
 */
 package goakit

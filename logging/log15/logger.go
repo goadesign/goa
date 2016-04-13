@@ -5,7 +5,7 @@ Usage:
 
     logger := log15.New()
     // ... Initialize logger handler using log15 package
-    service.UseLogger(goalog15.New(logger))
+    service.WithLogger(goalog15.New(logger))
     // ... Proceed with configuring and starting the goa service
 */
 package goalog15
