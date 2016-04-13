@@ -570,7 +570,7 @@ func (cmd *{{ $cmdName }}) Run(c *client.Client, args []string) error {
 {{ else }}	return fmt.Errorf("missing path argument")
 {{ end }}	}
 	logger := goa.NewStdLogger(log.New(os.Stderr, "", log.LstdFlags))
-	ctx := goa.UseLogger(context.Background(), logger)
+	ctx := goa.WithLogger(context.Background(), logger)
 	ws, err := c.{{ goify (printf "%s%s" .Action.Name (title .Resource.Name)) true }}(ctx, path{{/*
 	*/}}{{ $params := joinNames .Action.QueryParams }}{{ if $params }}, {{ $params }}{{ end }}{{/*
 	*/}}{{ $headers := joinNames .Action.Headers }}{{ if $headers }}, {{ $headers }}{{ end }})
@@ -617,7 +617,7 @@ func (cmd *{{ $cmdName }}) Run(c *client.Client, args []string) error {
 {{ end }}		}
 	}
 {{ end }}	logger := goa.NewStdLogger(log.New(os.Stderr, "", log.LstdFlags))
-	ctx := goa.UseLogger(context.Background(), logger)
+	ctx := goa.WithLogger(context.Background(), logger)
 	resp, err := c.{{ goify (printf "%s%s" .Action.Name (title .Resource.Name)) true }}(ctx, path{{ if .Action.Payload }}, {{ if or .Action.Payload.Type.IsObject .Action.Payload.IsPrimitive }}&{{ end }}payload{{ else }}{{ end }}{{/*
 	*/}}{{ $params := joinNames .Action.QueryParams }}{{ if $params }}, {{ $params }}{{ end }}{{/*
 	*/}}{{ $headers := joinNames .Action.Headers }}{{ if $headers }}, {{ $headers }}{{ end }})

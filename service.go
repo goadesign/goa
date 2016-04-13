@@ -74,7 +74,7 @@ type (
 func New(name string) *Service {
 	var (
 		stdlog       = log.New(os.Stderr, "", log.LstdFlags)
-		ctx          = UseLogger(context.Background(), NewStdLogger(stdlog))
+		ctx          = WithLogger(context.Background(), NewStdLogger(stdlog))
 		cctx, cancel = context.WithCancel(ctx)
 		mux          = NewMux()
 		service      = &Service{
@@ -119,9 +119,9 @@ func (service *Service) Use(m Middleware) {
 	service.middleware = append(service.middleware, m)
 }
 
-// UseLogger sets the logger used internally by the service and by Log.
-func (service *Service) UseLogger(logger Logger) {
-	service.Context = UseLogger(service.Context, logger)
+// WithLogger sets the logger used internally by the service and by Log.
+func (service *Service) WithLogger(logger Logger) {
+	service.Context = WithLogger(service.Context, logger)
 }
 
 // LogInfo logs the message and values at odd indeces using the keys at even indeces of the keyvals slice.
@@ -226,7 +226,7 @@ func (ctrl *Controller) ServeFiles(path, filename string) error {
 		handler = chain[ml-i-1](handler)
 	}
 	handle := func(rw http.ResponseWriter, req *http.Request, params url.Values) {
-		baseCtx := LogWith(ctrl.Context, "action", "serve")
+		baseCtx := WithLog(ctrl.Context, "action", "serve")
 		ctx := NewContext(baseCtx, rw, req, params)
 		// Invoke middleware chain, errors should be caught earlier, e.g. by ErrorHandler middleware
 		if err := handler(ctx, rw, req); err != nil {
@@ -271,7 +271,7 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 	}
 	return func(rw http.ResponseWriter, req *http.Request, params url.Values) {
 		// Build context
-		ctx := NewContext(ActionContext(ctrl.Context, name), rw, req, params)
+		ctx := NewContext(WithAction(ctrl.Context, name), rw, req, params)
 
 		// Protect against request bodies with unreasonable length
 		if MaxRequestBodyLength > 0 {
