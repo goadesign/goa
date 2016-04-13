@@ -58,12 +58,12 @@ func logit(ctx context.Context, msg string, keyvals []interface{}, aserror bool)
 	}
 }
 
-// LogWith stores logging context to be used by all Log invocations using the returned context.
-func LogWith(ctx context.Context, keyvals ...interface{}) context.Context {
+// WithLog stores logging context to be used by all Log invocations using the returned context.
+func WithLog(ctx context.Context, keyvals ...interface{}) context.Context {
 	return context.WithValue(ctx, logContextKey, append(LogContext(ctx), keyvals...))
 }
 
-// LogContext returns the logging context initialized via LogWith.
+// LogContext returns the logging context initialized via WithLog.
 func LogContext(ctx context.Context) []interface{} {
 	var lctx []interface{}
 	if v := ctx.Value(logContextKey); v != nil {

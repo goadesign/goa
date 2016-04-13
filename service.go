@@ -226,7 +226,7 @@ func (ctrl *Controller) ServeFiles(path, filename string) error {
 		handler = chain[ml-i-1](handler)
 	}
 	handle := func(rw http.ResponseWriter, req *http.Request, params url.Values) {
-		baseCtx := LogWith(ctrl.Context, "action", "serve")
+		baseCtx := WithLog(ctrl.Context, "action", "serve")
 		ctx := NewContext(baseCtx, rw, req, params)
 		// Invoke middleware chain, errors should be caught earlier, e.g. by ErrorHandler middleware
 		if err := handler(ctx, rw, req); err != nil {
