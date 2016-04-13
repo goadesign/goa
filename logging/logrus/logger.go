@@ -5,7 +5,7 @@ Usage:
 
     logger := logrus.New()
     // Initialize logger handler using logrus package
-    service.UseLogger(goalogrus.New(logger))
+    service.WithLogger(goalogrus.New(logger))
     // ... Proceed with configuring and starting the goa service
 */
 package goalogrus

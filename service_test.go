@@ -219,7 +219,7 @@ var _ = Describe("Service", func() {
 						handler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 							return fmt.Errorf("boom")
 						}
-						s.UseLogger(nil)
+						s.WithLogger(nil)
 					})
 
 					It("triggers the error handler", func() {
