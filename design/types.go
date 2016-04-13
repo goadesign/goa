@@ -225,7 +225,7 @@ func (p Primitive) CanHaveDefault() (ok bool) {
 }
 
 // IsCompatible returns true if val is compatible with p.
-func (p Primitive) IsCompatible(val interface{}) (ok bool) {
+func (p Primitive) IsCompatible(val interface{}) bool {
 	if p == Any {
 		return true
 	}
@@ -244,6 +244,8 @@ func (p Primitive) IsCompatible(val interface{}) (ok bool) {
 			_, err := time.Parse(time.RFC3339, val.(string))
 			return err == nil
 		}
+	default:
+		panic("unknown primitive type") // bug
 	}
 	return false
 }
