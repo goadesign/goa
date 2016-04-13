@@ -29,6 +29,20 @@ var _ = Describe("Error", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 		Ω(string(b)).Should(Equal(`{"code":"invalid","status":400,"detail":"error","meta":{"what":42}}`))
 	})
+
+	Context("with no initial metadata", func() {
+		const name = "meta"
+		const val = 42
+
+		BeforeEach(func() {
+			gerr = &goa.Error{Code: code, Status: status, Detail: detail}
+		})
+
+		It("initializes the Metadata field lazily", func() {
+			Ω(func() { gerr.Meta(name, val) }).ShouldNot(Panic())
+			Ω(gerr.MetaValues).Should(HaveKeyWithValue(name, val))
+		})
+	})
 })
 
 var _ = Describe("InvalidParamTypeError", func() {
