@@ -182,6 +182,9 @@ func (e *Error) Error() string {
 
 // Meta adds key/value pairs to the error metadata.
 func (e *Error) Meta(keyvals ...interface{}) *Error {
+	if e.MetaValues == nil {
+		e.MetaValues = make(map[string]interface{})
+	}
 	for i := 0; i < len(keyvals); i += 2 {
 		k := keyvals[i]
 		var v interface{} = "MISSING"
