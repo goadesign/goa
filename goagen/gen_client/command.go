@@ -10,13 +10,6 @@ import (
 )
 
 var (
-	// Signers contains the names of the request signers supported by the client.
-	Signers []string
-
-	// SignerPackages contains the Go package path to external packages containing custom
-	// signers.
-	SignerPackages []string
-
 	// Version is the generated client version.
 	Version string
 
@@ -44,8 +37,6 @@ func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
 		fmt.Printf("** %s\n", err.Error())
 		os.Exit(1)
 	}
-	r.Flags().StringSliceVar(&Signers, "signer", nil, `Adds support for the given request signer, e.g. "--signer goa.BasicSigner --signer goa.JWTSigner"`)
-	r.Flags().StringSliceVar(&SignerPackages, "signerPkg", nil, `Adds the given Go package path to the import directive in files using signers`)
 	r.Flags().StringVar(&Version, "cli-version", "1.0", "Generated client version")
 	r.Flags().StringVar(&AppPkg, "appPkg", appPkg, "Package path to generated application code")
 }

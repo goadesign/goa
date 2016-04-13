@@ -66,9 +66,6 @@ func (g *Generator) generateMain(mainFile string, clientPkg string, funcs templa
 		codegen.SimpleImport(clientPkg),
 		codegen.SimpleImport("github.com/spf13/cobra"),
 	}
-	for _, pkg := range SignerPackages {
-		imports = append(imports, codegen.SimpleImport(pkg))
-	}
 	file, err := codegen.SourceFileFor(mainFile)
 	if err != nil {
 		return err
@@ -80,7 +77,6 @@ func (g *Generator) generateMain(mainFile string, clientPkg string, funcs templa
 
 	data := map[string]interface{}{
 		"API":     api,
-		"Signers": Signers,
 		"Version": Version,
 	}
 	if err := file.ExecuteTemplate("main", mainTmpl, funcs, data); err != nil {
@@ -283,6 +279,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		"tempvar":         codegen.Tempvar,
 		"title":           strings.Title,
 		"toString":        toString,
+		"signerType":      signerType,
 	}
 	clientPkg, err := codegen.PackagePath(codegen.OutputDir)
 	if err != nil {
@@ -507,6 +504,19 @@ func appPkg() string {
 	return path.Base(AppPkg)
 }
 
+// signerType returns the name of the client signer used for the defined security model on the Action
+func signerType(scheme *design.SecuritySchemeDefinition) string {
+	switch scheme.Kind {
+	case design.JWTSecurityKind:
+		return "goaclient.JWTSigner" // goa client package imported under goaclient
+	case design.OAuth2SecurityKind:
+		return "goaclient.OAuth2Signer"
+	case design.BasicAuthSecurityKind:
+		return "goaclient.BasicSigner"
+	}
+	return ""
+}
+
 const mainTmpl = `
 // PrettyPrint is true if the tool output should be formatted for human consumption.
 var PrettyPrint bool
@@ -518,8 +528,7 @@ func main() {
 		Short: ` + "`" + `CLI client for the {{ .API.Name }} service{{ if .API.Docs }} ({{ escapeBackticks .API.Docs.URL }}){{ end }}` + "`" + `,
 	}
 	c := client.New(nil)
-{{ if .Signers }}	c.Signers = RegisterSigners(app)
-{{ end }}	c.UserAgent = "{{ .API.Name }}-cli/{{ .Version }}"
+	c.UserAgent = "{{ .API.Name }}-cli/{{ .Version }}"
 	app.PersistentFlags().StringVarP(&c.Scheme, "scheme", "s", "", "Set the requests scheme")
 	app.PersistentFlags().StringVarP(&c.Host, "host", "H", "{{ .API.Host }}", "API hostname")
 	app.PersistentFlags().DurationVarP(&c.Timeout, "timeout", "t", time.Duration(20) * time.Second, "Set the request timeout")
@@ -531,15 +540,6 @@ func main() {
 		os.Exit(-1)
 	}
 }
-
-{{ if .Signers }}// RegisterSigners adds the supported signers to the command line.
-func RegisterSigners(app *cobra.Command) (signers []goa.Signer) {
-{{ range $signers := .Signers }}{{ $tmp := tempvar }}	{{ $tmp }} := &{{ $signers }}{}
-	{{ $tmp }}.RegisterFlags(app)
-	signers = append(signers, {{ $tmp }})
-{{ end }}	return
-}
-{{ end }}
 `
 
 const arrayToStringT = `	{{ $tmp := tempvar }}{{ $tmp }} := make([]string, len({{ .Name }}))
@@ -586,7 +586,7 @@ func (cmd *{{ $cmdName }}) Run(c *client.Client, args []string) error {
 `
 
 const registerTmpl = `{{ $cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true }}// RegisterFlags registers the command flags with the command line.
-func (cmd *{{ $cmdName }}) RegisterFlags(cc *cobra.Command) {
+func (cmd *{{ $cmdName }}) RegisterFlags(cc *cobra.Command, c *client.Client) {
 {{ if .Action.Payload }}	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request JSON body")
 {{ end }}{{ $params := .Action.QueryParams }}{{ if $params }}{{ range $name, $param := $params.Type.ToObject }}{{ $tmp := tempvar }}{{/*
 */}}{{ if not $param.DefaultValue }}	var {{ $tmp }} {{ cmdFieldType $param.Type }}
@@ -595,8 +595,7 @@ func (cmd *{{ $cmdName }}) RegisterFlags(cc *cobra.Command) {
 */}}{{ $headers := .Action.Headers }}{{ if $headers }}{{ range $name, $header := $headers.Type.ToObject }}{{/*
 */}}
 	cc.Flags().StringVar(&cmd.{{ goify $name true }}, "{{ $name }}", {{ if $header.DefaultValue }}"{{ $header.DefaultValue }}"{{ else }}""{{ end }}, ` + "`" + `{{ escapeBackticks $header.Description }}` + "`" + `)
-{{ end }}{{ end }}}
-`
+{{ end }}{{ end }}{{ if .Action.Security }}   c.Signer{{ goify .Action.Security.Scheme.SchemeName true }}.RegisterFlags(cc){{ end }}}`
 
 const commandsTmpl = `
 {{ $cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true }}// Run makes the HTTP request corresponding to the {{ $cmdName }} command.
@@ -678,19 +677,24 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Payload 
 {{ if $headers }}{{ range $name, $att := $params.Type.ToObject }}{{ if (eq $att.Type.Kind 4) }}	header.Set("{{ $name }}", {{ goify $name false }})
 {{ else }}{{ $tmp := tempvar }}{{ toString (goify $name false) $tmp $att }}
 	header.Set("{{ $name }}", {{ $tmp }})
-{{ end }}{{ end }}{{ end }}	header.Set("Content-Type", "application/json")
+{{ end }}{{ end }}{{ end }}	header.Set("Content-Type", "application/json"){{ if .Security }}
+    c.Signer{{ goify .Security.Scheme.SchemeName true }}.Sign(ctx, req){{ end }}
 	return c.Client.Do(ctx, req)
 }
 `
 
 const clientTmpl = `// Client is the {{ .Name }} service client.
 type Client struct {
-	*goaclient.Client
+	*goaclient.Client{{range $security := .SecuritySchemes }}
+    Signer{{ goify $security.SchemeName true }} goaclient.Signer{{ end }}
 }
 
 // New instantiates the client.
 func New(c *http.Client) *Client {
-	return &Client{Client: goaclient.New(c)}
+	return &Client{
+        Client: goaclient.New(c),{{range $security := .SecuritySchemes }}
+        Signer{{ goify $security.SchemeName true }}: &{{ signerType ($security) }}{},{{ end }}
+    }
 }
 `
 
@@ -709,7 +713,7 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 		Short: ` + "`" + `{{ escapeBackticks $action.Parent.Description }}` + "`" + `,
 		RunE:  func(cmd *cobra.Command, args []string) error { return {{ $tmp }}.Run(c, args) },
 	}
-	{{ $tmp }}.RegisterFlags(sub)
+	{{ $tmp }}.RegisterFlags(sub, c)
 	command.AddCommand(sub)
 {{ end }}app.AddCommand(command)
 {{ end }}
