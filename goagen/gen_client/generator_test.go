@@ -145,4 +145,76 @@ var _ = Describe("Generate", func() {
 			})
 		})
 	})
+
+	Context("with an action with security configured", func() {
+		BeforeEach(func() {
+			codegen.TempCount = 0
+			securitySchemeDef := &design.SecuritySchemeDefinition{
+				SchemeName: "jwt-1",
+				Kind:       design.JWTSecurityKind,
+			}
+			design.Design = &design.APIDefinition{
+				Name:        "testapi",
+				Title:       "dummy API with no resource",
+				Description: "I told you it's dummy",
+				SecuritySchemes: []*design.SecuritySchemeDefinition{
+					securitySchemeDef,
+				},
+				Resources: map[string]*design.ResourceDefinition{
+					"foo": {
+						Name: "foo",
+						Actions: map[string]*design.ActionDefinition{
+							"show": {
+								Name: "show",
+								QueryParams: &design.AttributeDefinition{
+									Type: design.Object{
+										"param": &design.AttributeDefinition{Type: design.Integer},
+										"time":  &design.AttributeDefinition{Type: design.DateTime},
+									},
+								},
+								Routes: []*design.RouteDefinition{
+									{
+										Verb: "GET",
+										Path: "",
+									},
+								},
+								Security: &design.SecurityDefinition{
+									Scheme: securitySchemeDef,
+								},
+							},
+						},
+					},
+				},
+			}
+			fooRes := design.Design.Resources["foo"]
+			showAct := fooRes.Actions["show"]
+			showAct.Parent = fooRes
+			showAct.Routes[0].Parent = showAct
+		})
+
+		It("generates the correct client Fields", func() {
+			Ω(genErr).Should(BeNil())
+			Ω(files).Should(HaveLen(6))
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "client.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring("SignerJWT1 goaclient.Signer"))
+			Ω(content).Should(ContainSubstring("SignerJWT1: &goaclient.JWTSigner{},"))
+		})
+
+		It("generates the Signer.Sign call from Action", func() {
+			Ω(genErr).Should(BeNil())
+			Ω(files).Should(HaveLen(6))
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring("c.SignerJWT1.Sign(ctx, req)"))
+		})
+
+		It("generates the Signer.RegisterFlags call from Command", func() {
+			Ω(genErr).Should(BeNil())
+			Ω(files).Should(HaveLen(6))
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "testapi-cli", "commands.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring("c.SignerJWT1.RegisterFlags(cc)"))
+		})
+	})
 })
