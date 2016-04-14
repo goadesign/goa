@@ -20,9 +20,6 @@ type (
 	Client struct {
 		// Client is the underlying http client.
 		*http.Client
-		// Signers contains the ordered list of request signers. A signer may add headers,
-		// cookies etc. to a request generally to perform auth.
-		Signers []Signer
 		// Scheme overrides the default action scheme.
 		Scheme string
 		// Host is the service hostname.
