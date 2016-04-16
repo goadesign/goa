@@ -58,4 +58,48 @@ var _ = Describe("Generate", func() {
 			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically(">=", 13))
 		})
 	})
+
+	Context("with an example action with query parameters", func() {
+		BeforeEach(func() {
+			action := &design.ActionDefinition{
+				Name: "show",
+				Routes: []*design.RouteDefinition{{
+					Verb: "GET",
+					Path: "/",
+				}},
+				Params: &design.AttributeDefinition{
+					Type: design.Object{
+						"query": {Type: design.String},
+					},
+				},
+				QueryParams: &design.AttributeDefinition{
+					Type: design.Object{
+						"query": {Type: design.String},
+					},
+				},
+			}
+			design.Design = &design.APIDefinition{
+				Name:        "testapi",
+				Title:       "dummy API with no resource",
+				Description: "I told you it's dummy",
+				Resources: map[string]*design.ResourceDefinition{
+					"bottle": {
+						Name: "bottle",
+						Actions: map[string]*design.ActionDefinition{
+							"show": action,
+						},
+					},
+				},
+			}
+			action.Parent = design.Design.Resources["bottle"]
+		})
+
+		It("generates an example HTML", func() {
+			Ω(genErr).Should(BeNil())
+			Ω(files).Should(HaveLen(5))
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "js", "index.html"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically(">=", 13))
+		})
+	})
 })

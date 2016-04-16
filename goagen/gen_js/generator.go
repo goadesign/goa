@@ -120,8 +120,7 @@ func (g *Generator) generateIndexHTML(htmlFile string, api *design.APIDefinition
 		query := exampleAction.QueryParams.Type.ToObject()
 		argValues := make([]string, len(argNames))
 		for i, n := range argNames {
-			q := query[n].Type.ToArray().ElemType
-			// below works because we deal with simple types in query strings
+			q := query[n]
 			if q.Example != nil {
 				argValues[i] = fmt.Sprintf("%v", q.Example)
 			} else {
