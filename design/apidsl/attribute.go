@@ -243,7 +243,20 @@ func Default(def interface{}) {
 	}
 }
 
-// Example sets the example of an attribute to be used for the documentation.
+// Example sets the example of an attribute to be used for the documentation:
+//
+//	Attributes(func(){
+//     	  Attribute("ID", Integer, func(){
+//	    Example(1)
+//        })
+//     	  Attribute("name", String, func(){
+//	    Example("Cabernet Sauvignon")
+//        })
+//     	  Attribute("price", String)  //If no Example() is provided, goa generates one that fits your specification
+//      })
+//
+// If you do not want an auto-generated example for an attribute, add NoExample() to it.
+
 func Example(exp interface{}) {
 	if a, ok := attributeDefinition(); ok {
 		if pass := a.SetExample(exp); !pass {
