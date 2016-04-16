@@ -245,15 +245,15 @@ func Default(def interface{}) {
 
 // Example sets the example of an attribute to be used for the documentation:
 //
-//	Attributes(func(){
-//     	        Attribute("ID", Integer, func(){
+//	Attributes(func() {
+//		Attribute("ID", Integer, func() {
 //			Example(1)
-//      	})
-//     		Attribute("name", String, func(){
+//		})
+//		Attribute("name", String, func() {
 //			Example("Cabernet Sauvignon")
-//      	})
-//     		Attribute("price", String)  //If no Example() is provided, goa generates one that fits your specification
-//      })
+//		})
+//		Attribute("price", String) //If no Example() is provided, goa generates one that fits your specification
+//	})
 //
 // If you do not want an auto-generated example for an attribute, add NoExample() to it.
 func Example(exp interface{}) {
