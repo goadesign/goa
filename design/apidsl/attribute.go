@@ -256,7 +256,6 @@ func Default(def interface{}) {
 //      })
 //
 // If you do not want an auto-generated example for an attribute, add NoExample() to it.
-
 func Example(exp interface{}) {
 	if a, ok := attributeDefinition(); ok {
 		if pass := a.SetExample(exp); !pass {
