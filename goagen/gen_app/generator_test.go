@@ -326,7 +326,29 @@ var _ = Describe("BuildEncoders", func() {
 			Ω(jd.PackageName).Should(Equal("design"))
 			Ω(jd.Function).Should(Equal("NewDecoder"))
 		})
+	})
 
+	Context("with a definition using a custom decoding package from goadesign", func() {
+		const packagePath = "github.com/goadesign/goa/encoding/gogoprotobuf"
+		var mimeTypes = []string{"application/x-protobuf"}
+
+		BeforeEach(func() {
+			simple := &design.EncodingDefinition{
+				PackagePath: packagePath,
+				MIMETypes:   mimeTypes,
+			}
+			info = append(info, simple)
+		})
+
+		It("generates a map with a single entry using the generic decoder factory name", func() {
+			Ω(resErr).ShouldNot(HaveOccurred())
+			Ω(data).Should(HaveLen(1))
+			jd := data[0]
+			Ω(jd).ShouldNot(BeNil())
+			Ω(jd.PackagePath).Should(Equal(packagePath))
+			Ω(jd.PackageName).Should(Equal("gogoprotobuf"))
+			Ω(jd.Function).Should(Equal("NewDecoder"))
+		})
 	})
 })
 

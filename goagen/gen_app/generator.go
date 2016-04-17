@@ -244,8 +244,8 @@ func BuildEncoders(info []*design.EncodingDefinition, encoder bool) ([]*EncoderT
 	return data, nil
 }
 
-// normalizeEncodingDefinitions figures out the package path and function of all encoding definitions
-// and groups them by package and function name.
+// normalizeEncodingDefinitions figures out the package path and function of all encoding
+// definitions and groups them by package and function name.
 // We're going for simple rather than efficient (this is codegen after all)
 // Also we assume that the encoding definitions have been validated: they have at least
 // one mime type and definitions with no package path use known encoders.
@@ -270,14 +270,19 @@ func normalizeEncodingDefinitions(defs []*design.EncodingDefinition) []*design.E
 	// Next make sure all definitions have a package path
 	for _, enc := range encs {
 		if enc.PackagePath == "" {
-			enc.PackagePath = design.KnownEncoders[enc.MIMETypes[0]]
-		}
-		if enc.Function == "" {
+			mt := enc.MIMETypes[0]
+			enc.PackagePath = design.KnownEncoders[mt]
 			idx := 0
 			if !enc.Encoder {
 				idx = 1
 			}
-			enc.Function = design.KnownEncoderFunctions[enc.MIMETypes[0]][idx]
+			enc.Function = design.KnownEncoderFunctions[mt][idx]
+		} else if enc.Function == "" {
+			if enc.Encoder {
+				enc.Function = "NewEncoder"
+			} else {
+				enc.Function = "NewDecoder"
+			}
 		}
 	}
 
@@ -380,7 +385,7 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 		encoderImports[data.PackagePath] = true
 	}
 	for packagePath := range encoderImports {
-		if !strings.Contains(packagePath, "/goadesign/goa/") {
+		if packagePath != "github.com/goadesign/goa" {
 			imports = append(imports, codegen.SimpleImport(packagePath))
 		}
 	}
