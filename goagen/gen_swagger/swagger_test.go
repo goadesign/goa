@@ -3,7 +3,7 @@ package genswagger_test
 import (
 	"encoding/json"
 
-	"github.com/go-swagger/go-swagger/spec"
+	"github.com/go-swagger/go-swagger/loads"
 	_ "github.com/goadesign/goa-cellar/design"
 	. "github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/apidsl"
@@ -18,7 +18,7 @@ import (
 func validateSwagger(swagger *genswagger.Swagger) {
 	b, err := json.Marshal(swagger)
 	Ω(err).ShouldNot(HaveOccurred())
-	doc, err := spec.New(b, "")
+	doc, err := loads.Analyzed(json.RawMessage(b), "")
 	Ω(err).ShouldNot(HaveOccurred())
 	Ω(doc).ShouldNot(BeNil())
 }
