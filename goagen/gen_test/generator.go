@@ -28,8 +28,8 @@ func Generate() (files []string, err error) {
 	g := new(Generator)
 	root := &cobra.Command{
 		Use:   "goagen",
-		Short: "Test generator",
-		Long:  "controller test and package generator",
+		Short: "Test helper generator",
+		Long:  "generate controller test helpers",
 		Run:   func(*cobra.Command, []string) { files, err = g.Generate(api) },
 	}
 	codegen.RegisterFlags(root)
