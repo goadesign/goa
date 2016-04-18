@@ -48,7 +48,7 @@ docs:
 	@rm -rf goa.design
 
 depend:
-	@go get $(DEPEND)
+	go get -v $(DEPEND)
 
 lint:
 	@for d in $(DIRS) ; do \
