@@ -103,7 +103,7 @@ func (g *Generator) generateResourceTest(clientPkg string, funcs template.FuncMa
 
 		for _, action := range res.Actions {
 			for _, response := range action.Responses {
-				if response.Name == design.SwitchingProtocols {
+				if response.Status == 101 { // SwitchingProtocols, Don't currently handle WebSocket endpoints
 					continue
 				}
 				for routeIndex, route := range action.Routes {
