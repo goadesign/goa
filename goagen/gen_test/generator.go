@@ -186,7 +186,9 @@ func createTestMethod(resource *design.ResourceDefinition, action *design.Action
 		payload := ObjectType{}
 		payload.Name = "payload"
 		payload.Type = fmt.Sprintf("%s.%s", TargetPackage, codegen.Goify(action.Payload.TypeName, true))
-		payload.Pointer = "*"
+		if !action.Payload.IsPrimitive() && !action.Payload.IsArray() && !action.Payload.IsHash() {
+			payload.Pointer = "*"
+		}
 
 		validate := codegen.RecursiveChecker(action.Payload.AttributeDefinition, false, false, false, "payload", "raw", 1, true)
 		if validate != "" {
