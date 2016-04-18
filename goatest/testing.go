@@ -12,13 +12,13 @@ import (
 // ResponseSetterFunc func
 type ResponseSetterFunc func(resp interface{})
 
-// Encode xyz
+// Encode implements a dummy encoder that returns the value being encoded
 func (r ResponseSetterFunc) Encode(v interface{}) error {
 	r(v)
 	return nil
 }
 
-// Service a
+// Service provide a general goa.Service used for testing purposes
 func Service(logBuf *bytes.Buffer, respSetter ResponseSetterFunc) *goa.Service {
 	s := goa.New("test")
 	logger := log.New(logBuf, "", log.Ltime)
