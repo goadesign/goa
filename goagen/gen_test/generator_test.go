@@ -43,6 +43,12 @@ var _ = Describe("Generate", func() {
 	Context("with an basic action", func() {
 		BeforeEach(func() {
 			codegen.TempCount = 0
+
+			userType := &design.UserTypeDefinition{
+				AttributeDefinition: &design.AttributeDefinition{Type: &design.Array{ElemType: &design.AttributeDefinition{Type: design.String}}},
+				TypeName:            "CustomName",
+			}
+
 			design.Design = &design.APIDefinition{
 				Name:        "testapi",
 				Title:       "dummy API with no resource",
@@ -69,6 +75,27 @@ var _ = Describe("Generate", func() {
 										Path: "",
 									},
 								},
+								Responses: map[string]*design.ResponseDefinition{
+									"ok": {
+										Name: "ok",
+									},
+								},
+							},
+							"get": {
+								Name: "get",
+								Params: &design.AttributeDefinition{
+									Type: design.Object{
+										"param": &design.AttributeDefinition{Type: design.Integer},
+										"time":  &design.AttributeDefinition{Type: design.DateTime},
+									},
+								},
+								Routes: []*design.RouteDefinition{
+									{
+										Verb: "GET",
+										Path: "",
+									},
+								},
+								Payload: userType,
 								Responses: map[string]*design.ResponseDefinition{
 									"ok": {
 										Name: "ok",
@@ -110,6 +137,13 @@ var _ = Describe("Generate", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 
 			Ω(content).Should(ContainSubstring("ctrl.Show("))
+		})
+
+		It("generates non pointer references to primitive/array/hash payloads", func() {
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "test", "foo.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+
+			Ω(content).Should(ContainSubstring("payload app.CustomName) {"))
 		})
 
 	})
