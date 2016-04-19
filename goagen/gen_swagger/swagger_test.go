@@ -3,7 +3,7 @@ package genswagger_test
 import (
 	"encoding/json"
 
-	"github.com/go-swagger/go-swagger/loads"
+	"github.com/go-openapi/loads"
 	_ "github.com/goadesign/goa-cellar/design"
 	. "github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/apidsl"
