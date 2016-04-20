@@ -9,7 +9,7 @@ import (
 )
 
 // Helper that sets up a "working" service
-func newService(logger goa.Logger) *goa.Service {
+func newService(logger goa.LogAdapter) *goa.Service {
 	service := goa.New("test")
 	service.Encoder(goa.NewJSONEncoder, "*/*")
 	service.Decoder(goa.NewJSONDecoder, "*/*")
@@ -29,18 +29,24 @@ type logEntry struct {
 }
 
 type testLogger struct {
+	Context      []interface{}
 	InfoEntries  []logEntry
 	ErrorEntries []logEntry
 }
 
 func (t *testLogger) Info(msg string, data ...interface{}) {
-	e := logEntry{msg, data}
+	e := logEntry{msg, append(t.Context, data...)}
 	t.InfoEntries = append(t.InfoEntries, e)
 }
 
 func (t *testLogger) Error(msg string, data ...interface{}) {
-	e := logEntry{msg, data}
+	e := logEntry{msg, append(t.Context, data...)}
 	t.ErrorEntries = append(t.ErrorEntries, e)
+}
+
+func (t *testLogger) New(data ...interface{}) goa.LogAdapter {
+	t.Context = append(t.Context, data...)
+	return t
 }
 
 type testResponseWriter struct {

@@ -13,7 +13,7 @@ import (
 var _ = Describe("goakit", func() {
 	var buf bytes.Buffer
 	var logger log.Logger
-	var adapter goa.Logger
+	var adapter goa.LogAdapter
 	const msg = "msg"
 
 	BeforeEach(func() {

@@ -9,18 +9,23 @@ import (
 )
 
 type (
-	// Logger is the logger interface used by goa to log informational and error messages.
+	// LogAdapter is the logger interface used by goa to log informational and error messages.
 	// Adapters to different logging backends are provided in the logging package.
-	Logger interface {
+	// goa takes care of initializing the logging context with the service, controller and
+	// action name. Additional logging context values may be set via WithValue.
+	LogAdapter interface {
 		// Info logs an informational message.
 		Info(msg string, keyvals ...interface{})
 		// Error logs an error.
 		Error(msg string, keyvals ...interface{})
+		// New appends to the logger context and returns the updated logger adapter.
+		New(keyvals ...interface{}) LogAdapter
 	}
 
 	// stdLogger uses the stdlib logger.
 	stdLogger struct {
 		*log.Logger
+		keyvals []interface{}
 	}
 )
 
@@ -43,37 +48,18 @@ func LogError(ctx context.Context, msg string, keyvals ...interface{}) {
 
 func logit(ctx context.Context, msg string, keyvals []interface{}, aserror bool) {
 	if l := ctx.Value(logKey); l != nil {
-		if logger, ok := l.(Logger); ok {
-			var logctx []interface{}
-			if lctx := ctx.Value(logContextKey); lctx != nil {
-				logctx = lctx.([]interface{})
-			}
-			data := append(logctx, keyvals...)
+		if logger, ok := l.(LogAdapter); ok {
 			if aserror {
-				logger.Error(msg, data...)
+				logger.Error(msg, keyvals...)
 			} else {
-				logger.Info(msg, data...)
+				logger.Info(msg, keyvals...)
 			}
 		}
 	}
 }
 
-// WithLog stores logging context to be used by all Log invocations using the returned context.
-func WithLog(ctx context.Context, keyvals ...interface{}) context.Context {
-	return context.WithValue(ctx, logContextKey, append(LogContext(ctx), keyvals...))
-}
-
-// LogContext returns the logging context initialized via WithLog.
-func LogContext(ctx context.Context) []interface{} {
-	var lctx []interface{}
-	if v := ctx.Value(logContextKey); v != nil {
-		lctx = v.([]interface{})
-	}
-	return lctx
-}
-
 // NewStdLogger returns an implementation of Logger backed by a stdlib Logger.
-func NewStdLogger(logger *log.Logger) Logger {
+func NewStdLogger(logger *log.Logger) LogAdapter {
 	return &stdLogger{Logger: logger}
 }
 
@@ -85,8 +71,27 @@ func (l *stdLogger) Error(msg string, keyvals ...interface{}) {
 	l.logit(msg, keyvals, true)
 }
 
+func (l *stdLogger) New(keyvals ...interface{}) LogAdapter {
+	if len(keyvals) == 0 {
+		return l
+	}
+	kvs := append(l.keyvals, keyvals...)
+	if len(kvs)%2 != 0 {
+		kvs = append(kvs, ErrMissingLogValue)
+	}
+	return &stdLogger{
+		Logger: l.Logger,
+		// Limiting the capacity of the stored keyvals ensures that a new
+		// backing array is created if the slice must grow.
+		keyvals: kvs[:len(kvs):len(kvs)],
+	}
+}
+
 func (l *stdLogger) logit(msg string, keyvals []interface{}, iserror bool) {
 	n := (len(keyvals) + 1) / 2
+	if len(keyvals)%2 != 0 {
+		keyvals = append(keyvals, ErrMissingLogValue)
+	}
 	var fm bytes.Buffer
 	lvl := "INFO"
 	if iserror {
@@ -94,15 +99,18 @@ func (l *stdLogger) logit(msg string, keyvals []interface{}, iserror bool) {
 	}
 	fm.WriteString(fmt.Sprintf("[%s] %s", lvl, msg))
 	vals := make([]interface{}, n)
+	offset := len(l.keyvals)
+	for i := 0; i < offset; i += 2 {
+		k := l.keyvals[i]
+		v := l.keyvals[i+1]
+		vals[i/2] = v
+		fm.WriteString(fmt.Sprintf(" %s=%%+v", k))
+	}
 	for i := 0; i < len(keyvals); i += 2 {
 		k := keyvals[i]
-		var v interface{} = ErrMissingLogValue
-		if i+1 < len(keyvals) {
-			v = keyvals[i+1]
-		}
-		vals[i/2] = v
-		fm.WriteString(" ")
-		fm.WriteString(fmt.Sprintf("%s=%%+v", k))
+		v := keyvals[i+1]
+		vals[i/2+offset/2] = v
+		fm.WriteString(fmt.Sprintf(" %s=%%+v", k))
 	}
 	l.Logger.Printf(fm.String(), vals...)
 }
