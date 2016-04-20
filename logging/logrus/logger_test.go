@@ -12,7 +12,7 @@ import (
 
 var _ = Describe("goalogrus", func() {
 	var logger *logrus.Logger
-	var adapter goa.Logger
+	var adapter goa.LogAdapter
 	const msg = "msg"
 	var buffer *bytes.Buffer
 

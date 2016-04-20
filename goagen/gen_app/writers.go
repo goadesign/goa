@@ -625,7 +625,7 @@ func handle{{ .Resource }}Origin(h goa.Handler) goa.Handler {
 			return h(ctx, rw, req)
 		}
 {{ range $policy := .Origins }}		if cors.MatchOrigin(origin, {{ printf "%q" $policy.Origin }}) {
-			ctx = goa.WithLog(ctx, "origin", origin)
+			ctx = goa.WithLogContext(ctx, "origin", origin)
 			rw.Header().Set("Access-Control-Allow-Origin", "{{ $policy.Origin }}")
 {{ if not (eq $policy.Origin "*") }}			rw.Header().Set("Vary", "Origin")
 {{ end }}{{ if $policy.Exposed }}			rw.Header().Set("Access-Control-Expose-Headers", "{{ join $policy.Exposed ", " }}")

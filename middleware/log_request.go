@@ -26,7 +26,7 @@ func LogRequest(verbose bool) goa.Middleware {
 			if reqID == nil {
 				reqID = shortID()
 			}
-			ctx = goa.WithLog(ctx, "req_id", reqID)
+			ctx = goa.WithLogContext(ctx, "req_id", reqID)
 			startedAt := time.Now()
 			r := goa.ContextRequest(ctx)
 			goa.LogInfo(ctx, "started", r.Method, r.URL.String(), "from", from(req),
