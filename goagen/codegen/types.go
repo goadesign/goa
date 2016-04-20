@@ -272,7 +272,7 @@ func GoTypeDesc(t design.DataType, upper bool) string {
 	}
 }
 
-// GoaMediaTypeName returns the name of the goa strut corresponding to the media type definition
+// GoaMediaTypeName returns the name of the goa struct corresponding to the media type definition
 // or the empty string if there isn't one.
 func GoaMediaTypeName(mt *design.MediaTypeDefinition) string {
 	if mt == design.ErrorMedia {
