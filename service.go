@@ -120,7 +120,7 @@ func (service *Service) Use(m Middleware) {
 }
 
 // WithLogger sets the logger used internally by the service and by Log.
-func (service *Service) WithLogger(logger Logger) {
+func (service *Service) WithLogger(logger LogAdapter) {
 	service.Context = WithLogger(service.Context, logger)
 }
 
@@ -226,7 +226,7 @@ func (ctrl *Controller) ServeFiles(path, filename string) error {
 		handler = chain[ml-i-1](handler)
 	}
 	handle := func(rw http.ResponseWriter, req *http.Request, params url.Values) {
-		baseCtx := WithLog(ctrl.Context, "action", "serve")
+		baseCtx := WithLogContext(ctrl.Context, "action", "serve")
 		ctx := NewContext(baseCtx, rw, req, params)
 		// Invoke middleware chain, errors should be caught earlier, e.g. by ErrorHandler middleware
 		if err := handler(ctx, rw, req); err != nil {
