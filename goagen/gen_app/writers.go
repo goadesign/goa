@@ -638,9 +638,10 @@ func handle{{ .Resource }}Origin(h goa.Handler) goa.Handler {
 {{ end }}			}
 			return h(ctx, rw, req)
 		}
+{{ end }}
 		return h(ctx, rw, req)
 	}
-{{ end }}}
+}
 `
 
 	// unmarshalT generates the code for an action payload unmarshal function.
