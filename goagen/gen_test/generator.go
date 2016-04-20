@@ -153,12 +153,17 @@ func createTestMethod(resource *design.ResourceDefinition, action *design.Action
 		if err != nil {
 			panic(err)
 		}
-		tmp := fmt.Sprintf("%s.%s", TargetPackage, codegen.GoTypeName(p, nil, 0, false))
+		tmp := codegen.GoTypeName(p, nil, 0, false)
+		if !p.IsBuiltIn() {
+			tmp = fmt.Sprintf("%s.%s", TargetPackage, tmp)
+		}
 		validate := codegen.RecursiveChecker(p.AttributeDefinition, false, false, false, "payload", "raw", 1, true)
 
 		returnType := ObjectType{}
 		returnType.Type = tmp
-		returnType.Pointer = "*"
+		if !p.IsBuiltIn() {
+			returnType.Pointer = "*"
+		}
 		returnType.Validatable = validate != ""
 
 		method.ReturnType = &returnType
@@ -251,12 +256,20 @@ func suffixRoute(routes []*design.RouteDefinition, currIndex int) string {
 var resourceTestContext = `
 {{ range $test := . }}
 // {{ $test.Name }} {{ $test.Comment }}
-func {{ $test.Name }}(t *testing.T, ctrl {{ $test.ControllerName}}{{ range $param := $test.Params }}, {{ $param.Name }} {{ $param.Pointer }}{{ $param.Type }}{{ end }}{{ if $test.Payload }}, {{ $test.Payload.Name }} {{ $test.Payload.Pointer }}{{ $test.Payload.Type }}{{ end }}){{if $test.ReturnType }}{{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}{{ end }} {
-	{{ if $test.ReturnType }}return {{ end }}{{ $test.Name }}Ctx(t, context.Background(), ctrl{{ range $param := $test.Params }}, {{ $param.Name }}{{ end }}{{ if $test.Payload }}, {{ $test.Payload.Name }}{{ end }})
+func {{ $test.Name }}(t *testing.T, ctrl {{ $test.ControllerName}}{{/*
+*/}}{{ range $param := $test.Params }}, {{ $param.Name }} {{ $param.Pointer }}{{ $param.Type }}{{ end }}{{/*
+*/}}{{ if $test.Payload }}, {{ $test.Payload.Name }} {{ $test.Payload.Pointer }}{{ $test.Payload.Type }}{{ end }}){{/*
+*/}}{{ if $test.ReturnType }} {{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}{{ end }} {
+	{{ if $test.ReturnType }}return {{ end }}{{ $test.Name }}Ctx(t, context.Background(), ctrl{{/*
+*/}}{{ range $param := $test.Params }}, {{ $param.Name }}{{ end }}{{ if $test.Payload }}, {{ $test.Payload.Name }}{{ end }})
 }
 
 // {{ $test.Name }}Ctx {{ $test.Comment }}
-func {{ $test.Name }}Ctx(t *testing.T, ctx context.Context, ctrl {{ $test.ControllerName}}{{ range $param := $test.Params }}, {{ $param.Name }} {{ $param.Pointer }}{{ $param.Type }}{{ end }}{{ if $test.Payload }}, {{ $test.Payload.Name }} {{ $test.Payload.Pointer }}{{ $test.Payload.Type }}{{ end }}){{if $test.ReturnType }}{{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}{{ end }} { {{ if $test.Payload }}{{ if $test.Payload.Validatable }}
+func {{ $test.Name }}Ctx(t *testing.T, ctx context.Context, ctrl {{ $test.ControllerName}}{{/*
+*/}}{{ range $param := $test.Params }}, {{ $param.Name }} {{ $param.Pointer }}{{ $param.Type }}{{ end }}{{/*
+*/}}{{ if $test.Payload }}, {{ $test.Payload.Name }} {{ $test.Payload.Pointer }}{{ $test.Payload.Type }}{{ end }}){{/*
+*/}}{{ if $test.ReturnType }} {{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}{{ end }} { {{/*
+*/}}{{ if $test.Payload }}{{ if $test.Payload.Validatable }}
 	err := {{ $test.Payload.Name }}.Validate()
 	if err != nil {
 		panic(err)

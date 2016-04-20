@@ -53,6 +53,9 @@ var _ = Describe("Generate", func() {
 				Name:        "testapi",
 				Title:       "dummy API with no resource",
 				Description: "I told you it's dummy",
+				MediaTypes: map[string]*design.MediaTypeDefinition{
+					design.ErrorMedia.Identifier: design.ErrorMedia,
+				},
 				Resources: map[string]*design.ResourceDefinition{
 					"foo": {
 						Name: "foo",
@@ -98,7 +101,9 @@ var _ = Describe("Generate", func() {
 								Payload: userType,
 								Responses: map[string]*design.ResponseDefinition{
 									"ok": {
-										Name: "ok",
+										Name:      "ok",
+										Type:      design.ErrorMedia,
+										MediaType: "application/vnd.api.error+json",
 									},
 								},
 							},
@@ -123,6 +128,8 @@ var _ = Describe("Generate", func() {
 			// Multiple Routes
 			Ω(content).Should(ContainSubstring("ShowFooOK1("))
 			Ω(content).Should(ContainSubstring("ShowFooOK1Ctx("))
+			// Get returns an error media type
+			Ω(content).Should(ContainSubstring("GetFooOK(t *testing.T, ctrl app.FooController, payload app.CustomName) *goa.Error"))
 		})
 
 		It("generates calls to new Context ", func() {
@@ -143,7 +150,7 @@ var _ = Describe("Generate", func() {
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "test", "foo.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 
-			Ω(content).Should(ContainSubstring("payload app.CustomName) {"))
+			Ω(content).Should(ContainSubstring(", payload app.CustomName)"))
 		})
 
 	})
