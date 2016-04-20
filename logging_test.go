@@ -28,7 +28,7 @@ var _ = Describe("Error", func() {
 
 var _ = Describe("StdLogger", func() {
 	Context("with a valid Log", func() {
-		var logger goa.Logger
+		var logger goa.LogAdapter
 		const msg = "message"
 		data := []interface{}{"data", "foo"}
 

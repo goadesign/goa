@@ -19,7 +19,7 @@ func (h *TestHandler) Log(r *log15.Record) error {
 
 var _ = Describe("goalog15", func() {
 	var logger log15.Logger
-	var adapter goa.Logger
+	var adapter goa.LogAdapter
 	var handler *TestHandler
 	const msg = "msg"
 

@@ -1078,7 +1078,7 @@ func handleBottlesOrigin(h goa.Handler) goa.Handler {
 			return h(ctx, rw, req)
 		}
 		if cors.MatchOrigin(origin, "here.example.com") {
-			ctx = goa.WithLog(ctx, "origin", origin)
+			ctx = goa.WithLogContext(ctx, "origin", origin)
 			rw.Header().Set("Access-Control-Allow-Origin", "here.example.com")
 			rw.Header().Set("Vary", "Origin")
 			rw.Header().Set("Access-Control-Expose-Headers", "X-Three")
@@ -1091,7 +1091,7 @@ func handleBottlesOrigin(h goa.Handler) goa.Handler {
 			return h(ctx, rw, req)
 		}
 		if cors.MatchOrigin(origin, "there.example.com") {
-			ctx = goa.WithLog(ctx, "origin", origin)
+			ctx = goa.WithLogContext(ctx, "origin", origin)
 			rw.Header().Set("Access-Control-Allow-Origin", "there.example.com")
 			rw.Header().Set("Vary", "Origin")
 			rw.Header().Set("Access-Control-Allow-Credentials", "false")

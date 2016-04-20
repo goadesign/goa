@@ -21,7 +21,7 @@ type Logger struct {
 }
 
 // New wraps a log15 logger into a goa logger.
-func New(logger log15.Logger) goa.Logger {
+func New(logger log15.Logger) goa.LogAdapter {
 	return &Logger{Logger: logger}
 }
 
@@ -33,4 +33,9 @@ func (l *Logger) Info(msg string, data ...interface{}) {
 // Error logs error messages using log15.
 func (l *Logger) Error(msg string, data ...interface{}) {
 	l.Logger.Error(msg, data...)
+}
+
+// New creates a new logger given a context.
+func (l *Logger) New(data ...interface{}) goa.LogAdapter {
+	return &Logger{Logger: l.Logger.New(data...)}
 }

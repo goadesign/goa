@@ -68,8 +68,19 @@ func WithAction(ctx context.Context, action string) context.Context {
 }
 
 // WithLogger sets the request context logger and returns the resulting new context.
-func WithLogger(ctx context.Context, logger Logger) context.Context {
+func WithLogger(ctx context.Context, logger LogAdapter) context.Context {
 	return context.WithValue(ctx, logKey, logger)
+}
+
+// WithLogContext instantiates a new logger by appending the given key/value pairs to the context
+// logger and setting the resulting logger in the context.
+func WithLogContext(ctx context.Context, keyvals ...interface{}) context.Context {
+	logger := ContextLogger(ctx)
+	if logger == nil {
+		return ctx
+	}
+	nl := logger.New(keyvals...)
+	return WithLogger(ctx, nl)
 }
 
 // ContextController extracts the controller name from the given context.
@@ -105,9 +116,9 @@ func ContextResponse(ctx context.Context) *ResponseData {
 }
 
 // ContextLogger extracts the logger from the given context.
-func ContextLogger(ctx context.Context) Logger {
+func ContextLogger(ctx context.Context) LogAdapter {
 	if v := ctx.Value(logKey); v != nil {
-		return v.(Logger)
+		return v.(LogAdapter)
 	}
 	return nil
 }
