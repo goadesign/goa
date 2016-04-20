@@ -392,6 +392,7 @@ var _ = Describe("ControllersWriter", func() {
 			var actions, verbs, paths, contexts, unmarshals []string
 			var payloads []*design.UserTypeDefinition
 			var encoders, decoders []*genapp.EncoderTemplateData
+			var origins []*design.CORSDefinition
 
 			var data []*genapp.ControllerTemplateData
 
@@ -404,12 +405,16 @@ var _ = Describe("ControllersWriter", func() {
 				payloads = nil
 				encoders = nil
 				decoders = nil
+				origins = nil
 			})
 
 			JustBeforeEach(func() {
 				codegen.TempCount = 0
 				api := &design.APIDefinition{}
-				d := &genapp.ControllerTemplateData{Resource: "Bottles"}
+				d := &genapp.ControllerTemplateData{
+					Resource: "Bottles",
+					Origins:  origins,
+				}
 				as := make([]map[string]interface{}, len(actions))
 				for i, a := range actions {
 					var unmarshal string
@@ -591,6 +596,42 @@ var _ = Describe("ControllersWriter", func() {
 					Ω(written).Should(ContainSubstring(encoderController))
 				})
 			})
+
+			Context("with multiple origins", func() {
+				BeforeEach(func() {
+					actions = []string{"List"}
+					verbs = []string{"GET"}
+					paths = []string{"/accounts"}
+					contexts = []string{"ListBottleContext"}
+					origins = []*design.CORSDefinition{
+						{
+							Origin:      "here.example.com",
+							Headers:     []string{"X-One", "X-Two"},
+							Methods:     []string{"GET", "POST"},
+							Exposed:     []string{"X-Three"},
+							Credentials: true,
+						},
+						{
+							Origin:  "there.example.com",
+							Headers: []string{"*"},
+							Methods: []string{"*"},
+						},
+					}
+
+				})
+
+				It("writes the controller code", func() {
+					err := writer.Execute(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(originsIntegration))
+					Ω(written).Should(ContainSubstring(originsHandler))
+				})
+			})
+
 		})
 	})
 })
@@ -1021,6 +1062,49 @@ func unmarshalListBottlePayload(ctx context.Context, service *goa.Service, req *
 type BottlesController interface {
 	goa.Muxer
 	List(*ListBottleContext) error
+}
+`
+
+	originsIntegration = `}
+	h = handleBottlesOrigin(h)
+	service.Mux.Handle`
+
+	originsHandler = `// handleBottlesOrigin applies the CORS response headers corresponding to the origin.
+func handleBottlesOrigin(h goa.Handler) goa.Handler {
+	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		origin := req.Header.Get("Origin")
+		if origin == "" {
+			// Not a CORS request
+			return h(ctx, rw, req)
+		}
+		if cors.MatchOrigin(origin, "here.example.com") {
+			ctx = goa.WithLog(ctx, "origin", origin)
+			rw.Header().Set("Access-Control-Allow-Origin", "here.example.com")
+			rw.Header().Set("Vary", "Origin")
+			rw.Header().Set("Access-Control-Expose-Headers", "X-Three")
+			rw.Header().Set("Access-Control-Allow-Credentials", "true")
+			if acrm := req.Header.Get("Access-Control-Request-Method"); acrm != "" {
+				// We are handling a preflight request
+				rw.Header().Set("Access-Control-Allow-Methods", "GET, POST")
+				rw.Header().Set("Access-Control-Allow-Headers", "X-One, X-Two")
+			}
+			return h(ctx, rw, req)
+		}
+		if cors.MatchOrigin(origin, "there.example.com") {
+			ctx = goa.WithLog(ctx, "origin", origin)
+			rw.Header().Set("Access-Control-Allow-Origin", "there.example.com")
+			rw.Header().Set("Vary", "Origin")
+			rw.Header().Set("Access-Control-Allow-Credentials", "false")
+			if acrm := req.Header.Get("Access-Control-Request-Method"); acrm != "" {
+				// We are handling a preflight request
+				rw.Header().Set("Access-Control-Allow-Methods", "*")
+				rw.Header().Set("Access-Control-Allow-Headers", "*")
+			}
+			return h(ctx, rw, req)
+		}
+
+		return h(ctx, rw, req)
+	}
 }
 `
 
