@@ -119,7 +119,6 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("github.com/spf13/cobra"),
-		codegen.SimpleImport(AppPkg),
 		codegen.SimpleImport(clientPkg),
 		codegen.SimpleImport("golang.org/x/net/context"),
 		codegen.SimpleImport("golang.org/x/net/websocket"),
@@ -191,6 +190,7 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 
 func (g *Generator) generateClientResources(clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
 	clientsTmpl := template.Must(template.New("clients").Funcs(funcs).Parse(clientsTmpl))
+	payloadTmpl := template.Must(template.New("payload").Funcs(funcs).Parse(payloadTmpl))
 	clientsWSTmpl := template.Must(template.New("clients").Funcs(funcs).Parse(clientsWSTmpl))
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("bytes"),
@@ -202,7 +202,6 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 		codegen.SimpleImport("strconv"),
 		codegen.SimpleImport("strings"),
 		codegen.SimpleImport("time"),
-		codegen.SimpleImport(AppPkg),
 		codegen.SimpleImport("golang.org/x/net/context"),
 		codegen.SimpleImport("golang.org/x/net/websocket"),
 	}
@@ -219,6 +218,11 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 		g.genfiles = append(g.genfiles, filename)
 
 		if err := res.IterateActions(func(action *design.ActionDefinition) error {
+			if action.Payload != nil {
+				if err := payloadTmpl.Execute(file, action); err != nil {
+					return err
+				}
+			}
 			if action.Params != nil {
 				params := make(design.Object, len(action.QueryParams.Type.ToObject()))
 				for n, param := range action.QueryParams.Type.ToObject() {
@@ -271,6 +275,8 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		"flagType":        flagType,
 		"goify":           codegen.Goify,
 		"gotypedef":       codegen.GoTypeDef,
+		"gotyperef":       codegen.GoTypeRef,
+		"gotypename":      codegen.GoTypeName,
 		"gotyperefext":    goTypeRefExt,
 		"join":            join,
 		"joinNames":       joinNames,
@@ -607,7 +613,7 @@ func (cmd *{{ $cmdName }}) Run(c *client.Client, args []string) error {
 {{ $default := defaultPath .Action }}{{ if $default }}	path = "{{ $default }}"
 {{ else }}	return fmt.Errorf("missing path argument")
 {{ end }}	}
-{{ if .Action.Payload }}var payload {{ gotyperefext .Action.Payload 2 appPkg }}
+{{ if .Action.Payload }}var payload {{ gotyperefext .Action.Payload 2 "client" }}
 	if cmd.Payload != "" {
 		err := json.Unmarshal([]byte(cmd.Payload), &payload)
 		if err != nil {
@@ -649,8 +655,12 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{/*
 }
 `
 
+const payloadTmpl = `// {{ gotypename .Payload nil 0 false }} is the {{ .Parent.Name }} {{ .Name }} action payload.
+type {{ gotypename .Payload nil 1 false }} {{ gotypedef .Payload 0 true false }}
+`
+
 const clientsTmpl = `{{ $funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true }}{{ $desc := .Description }}{{ if $desc }}{{ multiComment $desc }}{{ else }}// {{ $funcName }} makes a request to the {{ .Name }} action endpoint of the {{ .Parent.Name }} resource{{ end }}
-func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Payload }}, payload {{ if .Payload.Type.IsObject }}*{{ end }}{{ gotyperefext .Payload 1 appPkg }}{{ end }}{{/*
+func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Payload }}, payload {{ gotyperef .Payload .Payload.AllRequired 1 false }}{{ end }}{{/*
 	*/}}{{ $params := join .QueryParams }}{{ if $params }}, {{ $params }}{{ end }}{{/*
 	*/}}{{ $headers := join .Headers }}{{ if $headers }}, {{ $headers }}{{ end }}) (*http.Response, error) {
 	var body io.Reader
