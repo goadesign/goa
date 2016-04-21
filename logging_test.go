@@ -26,7 +26,7 @@ var _ = Describe("Error", func() {
 	})
 })
 
-var _ = Describe("StdLogger", func() {
+var _ = Describe("LogAdapter", func() {
 	Context("with a valid Log", func() {
 		var logger goa.LogAdapter
 		const msg = "message"
@@ -36,7 +36,7 @@ var _ = Describe("StdLogger", func() {
 
 		BeforeEach(func() {
 			stdlogger := log.New(&out, "", log.LstdFlags)
-			logger = goa.NewStdLogger(stdlogger)
+			logger = goa.NewLogger(stdlogger)
 		})
 
 		It("Info logs", func() {

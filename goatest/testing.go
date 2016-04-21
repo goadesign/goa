@@ -22,7 +22,7 @@ func (r ResponseSetterFunc) Encode(v interface{}) error {
 func Service(logBuf *bytes.Buffer, respSetter ResponseSetterFunc) *goa.Service {
 	s := goa.New("test")
 	logger := log.New(logBuf, "", log.Ltime)
-	s.WithLogger(goa.NewStdLogger(logger))
+	s.WithLogger(goa.NewLogger(logger))
 	s.Use(middleware.LogRequest(true))
 	s.Use(middleware.LogResponse())
 	newEncoder := func(io.Writer) goa.Encoder {

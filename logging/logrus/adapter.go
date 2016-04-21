@@ -7,18 +7,23 @@ Usage:
     // Initialize logger handler using logrus package
     service.WithLogger(goalogrus.New(logger))
     // ... Proceed with configuring and starting the goa service
+
+    // In handlers:
+    goalogrus.Entry(ctx).Info("foo", "bar")
 */
 package goalogrus
 
 import (
 	"fmt"
 
+	"golang.org/x/net/context"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/goadesign/goa"
 )
 
-// Logger is the logrus goa adapter logger.
-type Logger struct {
+// adapter is the logrus goa logger adapter.
+type adapter struct {
 	*logrus.Entry
 }
 
@@ -29,22 +34,31 @@ func New(logger *logrus.Logger) goa.LogAdapter {
 
 // FromEntry wraps a logrus log entry into a goa logger.
 func FromEntry(entry *logrus.Entry) goa.LogAdapter {
-	return &Logger{Entry: entry}
+	return &adapter{Entry: entry}
+}
+
+// Entry returns the logrus log entry stored in the given context if any, nil otherwise.
+func Entry(ctx context.Context) *logrus.Entry {
+	logger := goa.ContextLogger(ctx)
+	if a, ok := logger.(*adapter); ok {
+		return a.Entry
+	}
+	return nil
 }
 
 // Info logs messages using logrus.
-func (l *Logger) Info(msg string, data ...interface{}) {
-	l.Entry.WithFields(data2rus(data)).Info(msg)
+func (a *adapter) Info(msg string, data ...interface{}) {
+	a.Entry.WithFields(data2rus(data)).Info(msg)
 }
 
 // Error logs errors using logrus.
-func (l *Logger) Error(msg string, data ...interface{}) {
-	l.Entry.WithFields(data2rus(data)).Error(msg)
+func (a *adapter) Error(msg string, data ...interface{}) {
+	a.Entry.WithFields(data2rus(data)).Error(msg)
 }
 
 // New creates a new logger given a context.
-func (l *Logger) New(data ...interface{}) goa.LogAdapter {
-	return &Logger{Entry: l.Entry.WithFields(data2rus(data))}
+func (a *adapter) New(data ...interface{}) goa.LogAdapter {
+	return &adapter{Entry: a.Entry.WithFields(data2rus(data))}
 }
 
 func data2rus(keyvals []interface{}) logrus.Fields {
