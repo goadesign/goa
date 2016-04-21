@@ -1,6 +1,7 @@
 /*
 Package logging contains logger adapters that make it possible for goa to log messages to various
-logger backends. Each adapter exists in its own package named after the corresponding logger package.
+logger backends. Each adapter exists in its own sub-package named after the corresponding logger
+package.
 
 Once instantiated adapters can be used by setting the goa service logger with WithLogger:
 

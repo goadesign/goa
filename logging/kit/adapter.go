@@ -20,8 +20,8 @@ import (
 	"golang.org/x/net/context"
 )
 
-// Adapter is the go-kit log goa logger adapter.
-type Adapter struct {
+// adapter is the go-kit log goa logger adapter.
+type adapter struct {
 	*log.Context
 }
 
@@ -32,33 +32,33 @@ func New(logger log.Logger) goa.LogAdapter {
 
 // FromContext wraps a go-kit log context into a goa logger.
 func FromContext(ctx *log.Context) goa.LogAdapter {
-	return &Adapter{Context: ctx}
+	return &adapter{Context: ctx}
 }
 
 // Context returns the go-kit log context stored in the given context if any, nil otherwise.
 func Context(ctx context.Context) *log.Context {
 	logger := goa.ContextLogger(ctx)
-	if a, ok := logger.(*Adapter); ok {
+	if a, ok := logger.(*adapter); ok {
 		return a.Context
 	}
 	return nil
 }
 
 // Info logs informational messages using go-kit.
-func (l *Adapter) Info(msg string, data ...interface{}) {
+func (a *adapter) Info(msg string, data ...interface{}) {
 	ctx := []interface{}{"lvl", "info", "msg", msg}
 	ctx = append(ctx, data...)
-	l.Context.Log(ctx...)
+	a.Context.Log(ctx...)
 }
 
 // Error logs error messages using go-kit.
-func (l *Adapter) Error(msg string, data ...interface{}) {
+func (a *adapter) Error(msg string, data ...interface{}) {
 	ctx := []interface{}{"lvl", "error", "msg", msg}
 	ctx = append(ctx, data...)
-	l.Context.Log(ctx...)
+	a.Context.Log(ctx...)
 }
 
 // New instantiates a new logger from the given context.
-func (l *Adapter) New(data ...interface{}) goa.LogAdapter {
-	return &Adapter{Context: l.Context.With(data...)}
+func (a *adapter) New(data ...interface{}) goa.LogAdapter {
+	return &adapter{Context: a.Context.With(data...)}
 }

@@ -19,36 +19,36 @@ import (
 	"gopkg.in/inconshreveable/log15.v2"
 )
 
-// Adapter is the log15 goa adapter logger.
-type Adapter struct {
+// adapter is the log15 goa adapter logger.
+type adapter struct {
 	log15.Logger
 }
 
 // New wraps a log15 logger into a goa logger adapter.
 func New(logger log15.Logger) goa.LogAdapter {
-	return &Adapter{Logger: logger}
+	return &adapter{Logger: logger}
 }
 
 // Logger returns the log15 logger stored in the given context if any, nil otherwise.
 func Logger(ctx context.Context) log15.Logger {
 	logger := goa.ContextLogger(ctx)
-	if a, ok := logger.(*Adapter); ok {
+	if a, ok := logger.(*adapter); ok {
 		return a.Logger
 	}
 	return nil
 }
 
 // Info logs informational messages using log15.
-func (l *Adapter) Info(msg string, data ...interface{}) {
-	l.Logger.Info(msg, data...)
+func (a *adapter) Info(msg string, data ...interface{}) {
+	a.Logger.Info(msg, data...)
 }
 
 // Error logs error messages using log15.
-func (l *Adapter) Error(msg string, data ...interface{}) {
-	l.Logger.Error(msg, data...)
+func (a *adapter) Error(msg string, data ...interface{}) {
+	a.Logger.Error(msg, data...)
 }
 
 // New creates a new logger given a context.
-func (l *Adapter) New(data ...interface{}) goa.LogAdapter {
-	return &Adapter{Logger: l.Logger.New(data...)}
+func (a *adapter) New(data ...interface{}) goa.LogAdapter {
+	return &adapter{Logger: a.Logger.New(data...)}
 }
