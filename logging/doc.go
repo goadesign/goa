@@ -18,5 +18,7 @@ Once instantiated adapters can be used by setting the goa service logger with Wi
     // ...
 }
 ```
+
+See http://goa.design/implement/logging/ for details.
 */
 package logging
