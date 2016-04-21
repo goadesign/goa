@@ -74,7 +74,7 @@ type (
 func New(name string) *Service {
 	var (
 		stdlog       = log.New(os.Stderr, "", log.LstdFlags)
-		ctx          = WithLogger(context.Background(), NewStdLogger(stdlog))
+		ctx          = WithLogger(context.Background(), NewLogger(stdlog))
 		cctx, cancel = context.WithCancel(ctx)
 		mux          = NewMux()
 		service      = &Service{

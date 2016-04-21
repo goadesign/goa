@@ -575,7 +575,7 @@ func (cmd *{{ $cmdName }}) Run(c *client.Client, args []string) error {
 {{ $default := defaultPath .Action }}{{ if $default }}	path = "{{ $default }}"
 {{ else }}	return fmt.Errorf("missing path argument")
 {{ end }}	}
-	logger := goa.NewStdLogger(log.New(os.Stderr, "", log.LstdFlags))
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
 	ws, err := c.{{ goify (printf "%s%s" .Action.Name (title .Resource.Name)) true }}(ctx, path{{/*
 	*/}}{{ $params := joinNames .Action.QueryParams }}{{ if $params }}, {{ $params }}{{ end }}{{/*
@@ -621,7 +621,7 @@ func (cmd *{{ $cmdName }}) Run(c *client.Client, args []string) error {
 {{ else }}			return fmt.Errorf("failed to deserialize payload: %s", err)
 {{ end }}		}
 	}
-{{ end }}	logger := goa.NewStdLogger(log.New(os.Stderr, "", log.LstdFlags))
+{{ end }}	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
 	resp, err := c.{{ goify (printf "%s%s" .Action.Name (title .Resource.Name)) true }}(ctx, path{{ if .Action.Payload }}, {{ if or .Action.Payload.Type.IsObject .Action.Payload.IsPrimitive }}&{{ end }}payload{{ else }}{{ end }}{{/*
 	*/}}{{ $params := joinNames .Action.QueryParams }}{{ if $params }}, {{ $params }}{{ end }}{{/*

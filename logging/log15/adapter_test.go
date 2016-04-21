@@ -5,6 +5,7 @@ import (
 	"github.com/goadesign/goa/logging/log15"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"golang.org/x/net/context"
 	"gopkg.in/inconshreveable/log15.v2"
 )
 
@@ -17,25 +18,34 @@ func (h *TestHandler) Log(r *log15.Record) error {
 	return nil
 }
 
-var _ = Describe("goalog15", func() {
+var _ = Describe("New", func() {
 	var logger log15.Logger
 	var adapter goa.LogAdapter
 	var handler *TestHandler
-	const msg = "msg"
 
 	BeforeEach(func() {
 		logger = log15.New()
 		handler = new(TestHandler)
 		logger.SetHandler(handler)
-	})
-
-	JustBeforeEach(func() {
 		adapter = goalog15.New(logger)
-		adapter.Info(msg)
 	})
 
-	It("adapts info messages", func() {
+	It("creates an adapter that logs", func() {
+		msg := "msg"
+		adapter.Info(msg)
 		Ω(handler.records).Should(HaveLen(1))
 		Ω(handler.records[0].Msg).Should(ContainSubstring(msg))
+	})
+
+	Context("Logger", func() {
+		var ctx context.Context
+
+		BeforeEach(func() {
+			ctx = goa.WithLogger(context.Background(), adapter)
+		})
+
+		It("extracts the logger", func() {
+			Ω(goalog15.Logger(ctx)).Should(Equal(logger))
+		})
 	})
 })
