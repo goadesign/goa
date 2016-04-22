@@ -191,6 +191,7 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 func (g *Generator) generateClientResources(clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
 	clientsTmpl := template.Must(template.New("clients").Funcs(funcs).Parse(clientsTmpl))
 	payloadTmpl := template.Must(template.New("payload").Funcs(funcs).Parse(payloadTmpl))
+	userTypeTmpl := template.Must(template.New("userType").Funcs(funcs).Parse(userTypeTmpl))
 	clientsWSTmpl := template.Must(template.New("clients").Funcs(funcs).Parse(clientsWSTmpl))
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("bytes"),
@@ -206,7 +207,8 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 		codegen.SimpleImport("golang.org/x/net/websocket"),
 	}
 
-	return api.IterateResources(func(res *design.ResourceDefinition) error {
+	payloadTypes := make(map[string]bool)
+	outErr := api.IterateResources(func(res *design.ResourceDefinition) error {
 		filename := filepath.Join(codegen.OutputDir, snakeCase(res.Name)+".go")
 		file, err := codegen.SourceFileFor(filename)
 		if err != nil {
@@ -217,11 +219,12 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 		}
 		g.genfiles = append(g.genfiles, filename)
 
-		if err := res.IterateActions(func(action *design.ActionDefinition) error {
+		err = res.IterateActions(func(action *design.ActionDefinition) error {
 			if action.Payload != nil {
 				if err := payloadTmpl.Execute(file, action); err != nil {
 					return err
 				}
+				payloadTypes[action.Payload.TypeName] = true
 			}
 			if action.Params != nil {
 				params := make(design.Object, len(action.QueryParams.Type.ToObject()))
@@ -243,12 +246,45 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 				return clientsWSTmpl.Execute(file, action)
 			}
 			return clientsTmpl.Execute(file, action)
-		}); err != nil {
+		})
+		if err != nil {
 			return err
 		}
 
 		return file.FormatCode()
 	})
+	if outErr != nil {
+		return outErr
+	}
+	generateUTs := false
+	for _, ut := range api.Types {
+		if _, ok := payloadTypes[ut.TypeName]; !ok {
+			generateUTs = true
+			break
+		}
+	}
+	if !generateUTs {
+		return nil
+	}
+	filename := filepath.Join(codegen.OutputDir, "user_types.go")
+	file, err := codegen.SourceFileFor(filename)
+	if err != nil {
+		return err
+	}
+	if err := file.WriteHeader("User Types", "client", imports); err != nil {
+		return err
+	}
+	g.genfiles = append(g.genfiles, filename)
+	err = api.IterateUserTypes(func(userType *design.UserTypeDefinition) error {
+		if _, ok := payloadTypes[userType.TypeName]; ok {
+			return nil
+		}
+		return userTypeTmpl.Execute(file, userType)
+	})
+	if err != nil {
+		return err
+	}
+	return file.FormatCode()
 }
 
 // Generate produces the skeleton main.
@@ -275,6 +311,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		"flagType":        flagType,
 		"goify":           codegen.Goify,
 		"gotypedef":       codegen.GoTypeDef,
+		"gotypedesc":      codegen.GoTypeDesc,
 		"gotyperef":       codegen.GoTypeRef,
 		"gotypename":      codegen.GoTypeName,
 		"gotyperefext":    goTypeRefExt,
@@ -657,6 +694,10 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{/*
 
 const payloadTmpl = `// {{ gotypename .Payload nil 0 false }} is the {{ .Parent.Name }} {{ .Name }} action payload.
 type {{ gotypename .Payload nil 1 false }} {{ gotypedef .Payload 0 true false }}
+`
+
+const userTypeTmpl = `// {{ gotypedesc . true }}
+type {{ gotypename . .AllRequired 0 false }} {{ gotypedef . 0 true false }}
 `
 
 const clientsTmpl = `{{ $funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true }}{{ $desc := .Description }}{{ if $desc }}{{ multiComment $desc }}{{ else }}// {{ $funcName }} makes a request to the {{ .Name }} action endpoint of the {{ .Parent.Name }} resource{{ end }}
