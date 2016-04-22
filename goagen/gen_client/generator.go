@@ -188,8 +188,8 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 	return file.FormatCode()
 }
 
-func (g *Generator) generateHrefs(clientPkg string, api *design.APIDefinition) error {
-	hrefTmpl := template.Must(template.New("href").Parse(hrefTmpl))
+func (g *Generator) generateHrefs(clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
+	hrefTmpl := template.Must(template.New("href").Funcs(funcs).Parse(hrefTmpl))
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("fmt"),
 	}
@@ -349,6 +349,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		"gotyperefext":    goTypeRefExt,
 		"join":            join,
 		"joinNames":       joinNames,
+		"joinStrings":     strings.Join,
 		"multiComment":    multiComment,
 		"routes":          routes,
 		"tempvar":         codegen.Tempvar,
@@ -377,8 +378,13 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		return
 	}
 
-	// Generate client/$res.go
+	// Generate client/$res.go and user_types.go
 	if err = g.generateClientResources(clientPkg, funcs, api); err != nil {
+		return
+	}
+
+	// Generate client/hrefs.go
+	if err = g.generateHrefs(clientPkg, funcs, api); err != nil {
 		return
 	}
 
@@ -733,10 +739,10 @@ type {{ gotypename . .AllRequired 0 false }} {{ gotypedef . 0 true false }}
 `
 
 const hrefTmpl = `// {{ .Name }}Href returns the {{.Name}} resource href.
-func {{ .Name }}Href({{ if .CanonicalParams }}{{ join .CanonicalParams ", " }} interface{}{{ end }}) string {
-	return fmt.Sprintf("{{ .CanonicalTemplate }}", {{ join .CanonicalParams ", " }})
+func {{ .Name }}Href({{ if .CanonicalParams }}{{ joinStrings .CanonicalParams ", " }} interface{}{{ end }}) string {
+	return fmt.Sprintf("{{ .CanonicalTemplate }}", {{ joinStrings .CanonicalParams ", " }})
 }
-{{ end }}`
+`
 
 const clientsTmpl = `{{ $funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true }}{{ $desc := .Description }}{{ if $desc }}{{ multiComment $desc }}{{ else }}// {{ $funcName }} makes a request to the {{ .Name }} action endpoint of the {{ .Parent.Name }} resource{{ end }}
 func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Payload }}, payload {{ gotyperef .Payload .Payload.AllRequired 1 false }}{{ end }}{{/*
