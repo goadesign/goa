@@ -1,6 +1,8 @@
 package codegen_test
 
 import (
+	"fmt"
+
 	. "github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/apidsl"
 	"github.com/goadesign/goa/dslengine"
@@ -172,6 +174,47 @@ var _ = Describe("code generation", func() {
 						"	Foo *int `json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n" +
 						"}"
 					Ω(st).Should(Equal(expected))
+				})
+
+				Context("using struct tags metadata", func() {
+					tn1 := "struct:tag:foo"
+					tv11 := "bar"
+					tv12 := "baz"
+					tn2 := "struct:tag:foo2"
+					tv21 := "bar2"
+
+					BeforeEach(func() {
+						object["foo"].Metadata = dslengine.MetadataDefinition{
+							tn1: []string{tv11, tv12},
+							tn2: []string{tv21},
+						}
+					})
+
+					It("produces the struct tags", func() {
+						expected := fmt.Sprintf("struct {\n"+
+							"	Bar *string `json:\"bar,omitempty\" xml:\"bar,omitempty\"`\n"+
+							"	Baz *time.Time `json:\"baz,omitempty\" xml:\"baz,omitempty\"`\n"+
+							"	Foo *int `%s:\"%s,%s\" %s:\"%s\"`\n"+
+							"}", tn1[11:], tv11, tv12, tn2[11:], tv21)
+						Ω(st).Should(Equal(expected))
+					})
+				})
+
+				Context("using struct field name metadata", func() {
+					BeforeEach(func() {
+						object["foo"].Metadata = dslengine.MetadataDefinition{
+							"struct:field:name": []string{"serviceName", "unused"},
+						}
+					})
+
+					It("produces the struct tags", func() {
+						expected := "struct {\n" +
+							"	Bar *string `json:\"bar,omitempty\" xml:\"bar,omitempty\"`\n" +
+							"	Baz *time.Time `json:\"baz,omitempty\" xml:\"baz,omitempty\"`\n" +
+							"	ServiceName *int `json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n" +
+							"}"
+						Ω(st).Should(Equal(expected))
+					})
 				})
 			})
 
