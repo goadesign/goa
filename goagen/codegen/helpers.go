@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/goadesign/goa/design"
 )
 
 // CommandLine return the command used to run this process.
@@ -82,3 +84,24 @@ func Tabs(depth int) string {
 
 // Add adds two integers and returns the sum of the two.
 func Add(a, b int) int { return a + b }
+
+// CanonicalTemplate returns the resource URI template as a format string suitable for use in the
+// fmt.Printf function family.
+func CanonicalTemplate(r *design.ResourceDefinition) string {
+	return design.WildcardRegex.ReplaceAllLiteralString(r.URITemplate(), "/%v")
+}
+
+// CanonicalParams returns the list of parameter names needed to build the canonical href to the
+// resource. It returns nil if the resource does not have a canonical action.
+func CanonicalParams(r *design.ResourceDefinition) []string {
+	var params []string
+	if ca := r.CanonicalAction(); ca != nil {
+		if len(ca.Routes) > 0 {
+			params = ca.Routes[0].Params()
+		}
+		for i, p := range params {
+			params[i] = Goify(p, false)
+		}
+	}
+	return params
+}
