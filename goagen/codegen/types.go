@@ -114,14 +114,18 @@ func goTypeDefObject(actual design.Object, def *design.AttributeDefinition, tabs
 		if (field.Type.IsPrimitive() && private) || field.Type.IsObject() || def.IsPrimitivePointer(name) {
 			typedef = "*" + typedef
 		}
-		fname := Goify(name, true)
+		fname := name
+		if field.Metadata != nil {
+			if tname, ok := field.Metadata["struct:field:name"]; ok {
+				if len(tname) > 0 {
+					fname = tname[0]
+				}
+			}
+		}
+		fname = Goify(fname, true)
 		var tags string
 		if jsonTags {
-			var omit string
-			if private || (!def.IsRequired(name) && !def.HasDefaultValue(name)) {
-				omit = ",omitempty"
-			}
-			tags = fmt.Sprintf(" `json:\"%s%s\" xml:\"%s%s\"`", name, omit, name, omit)
+			tags = attributeTags(def, field, name, private)
 		}
 		desc := actual[name].Description
 		if desc != "" {
@@ -132,6 +136,27 @@ func goTypeDefObject(actual design.Object, def *design.AttributeDefinition, tabs
 	WriteTabs(&buffer, tabs)
 	buffer.WriteString("}")
 	return buffer.String()
+}
+
+// attributeTags computes the struct field tags.
+func attributeTags(parent, att *design.AttributeDefinition, name string, private bool) string {
+	var elems []string
+	for key, val := range att.Metadata {
+		if strings.HasPrefix(key, "struct:tag:") {
+			name := key[11:]
+			value := strings.Join(val, ",")
+			elems = append(elems, fmt.Sprintf("%s:\"%s\"", name, value))
+		}
+	}
+	if len(elems) > 0 {
+		return " `" + strings.Join(elems, " ") + "`"
+	}
+	// Default algorithm
+	var omit string
+	if private || (!parent.IsRequired(name) && !parent.HasDefaultValue(name)) {
+		omit = ",omitempty"
+	}
+	return fmt.Sprintf(" `json:\"%s%s\" xml:\"%s%s\"`", name, omit, name, omit)
 }
 
 // GoTypeRef returns the Go code that refers to the Go type which matches the given data type
