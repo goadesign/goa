@@ -53,7 +53,7 @@ var _ = Describe("Generate", func() {
 
 		It("generates a dummy app", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(5))
+			Ω(files).Should(HaveLen(6))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "testapi-cli", "main.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically(">=", 16))
@@ -100,7 +100,7 @@ var _ = Describe("Generate", func() {
 
 		It("generates the correct command flag initialization code", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(6))
+			Ω(files).Should(HaveLen(7))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "testapi-cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically(">=", 3))
@@ -121,7 +121,7 @@ var _ = Describe("Generate", func() {
 
 			It("properly escapes the multi-line string used in the short description", func() {
 				Ω(genErr).Should(BeNil())
-				Ω(files).Should(HaveLen(6))
+				Ω(files).Should(HaveLen(7))
 				content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "testapi-cli", "main.go"))
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(string(content)).Should(ContainSubstring(multiline))
@@ -138,7 +138,7 @@ var _ = Describe("Generate", func() {
 
 			It("properly escapes the multi-line string used in the short description", func() {
 				Ω(genErr).Should(BeNil())
-				Ω(files).Should(HaveLen(6))
+				Ω(files).Should(HaveLen(7))
 				content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "testapi-cli", "main.go"))
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(string(content)).Should(ContainSubstring(pre + "` + \"`\" + `" + post))
@@ -194,7 +194,7 @@ var _ = Describe("Generate", func() {
 
 		It("generates the correct client Fields", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(6))
+			Ω(files).Should(HaveLen(7))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "client.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("SignerJWT1 goaclient.Signer"))
@@ -203,7 +203,7 @@ var _ = Describe("Generate", func() {
 
 		It("generates the Signer.Sign call from Action", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(6))
+			Ω(files).Should(HaveLen(7))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("c.SignerJWT1.Sign(ctx, req)"))
@@ -211,7 +211,7 @@ var _ = Describe("Generate", func() {
 
 		It("generates the Signer.RegisterFlags call from Command", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(6))
+			Ω(files).Should(HaveLen(7))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "testapi-cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("c.SignerJWT1.RegisterFlags(cc)"))

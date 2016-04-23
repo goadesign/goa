@@ -485,24 +485,13 @@ func (g *Generator) generateHrefs(api *design.APIDefinition) error {
 		} else {
 			identifier = "text/plain"
 		}
-		canoTemplate := r.URITemplate()
-		canoTemplate = design.WildcardRegex.ReplaceAllLiteralString(canoTemplate, "/%v")
-		var canoParams []string
-		if ca := r.CanonicalAction(); ca != nil {
-			if len(ca.Routes) > 0 {
-				canoParams = ca.Routes[0].Params()
-			}
-			for i, p := range canoParams {
-				canoParams[i] = codegen.Goify(p, false)
-			}
-		}
 		data := ResourceData{
 			Name:              codegen.Goify(r.Name, true),
 			Identifier:        identifier,
 			Description:       r.Description,
 			Type:              m,
-			CanonicalTemplate: canoTemplate,
-			CanonicalParams:   canoParams,
+			CanonicalTemplate: codegen.CanonicalTemplate(r),
+			CanonicalParams:   codegen.CanonicalParams(r),
 		}
 		return resWr.Execute(&data)
 	})

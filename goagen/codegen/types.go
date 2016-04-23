@@ -141,7 +141,15 @@ func goTypeDefObject(actual design.Object, def *design.AttributeDefinition, tabs
 // attributeTags computes the struct field tags.
 func attributeTags(parent, att *design.AttributeDefinition, name string, private bool) string {
 	var elems []string
-	for key, val := range att.Metadata {
+	keys := make([]string, len(att.Metadata))
+	i := 0
+	for k := range att.Metadata {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		val := att.Metadata[key]
 		if strings.HasPrefix(key, "struct:tag:") {
 			name := key[11:]
 			value := strings.Join(val, ",")
