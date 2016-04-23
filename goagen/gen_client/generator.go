@@ -188,6 +188,38 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 	return file.FormatCode()
 }
 
+func (g *Generator) generateHrefs(clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
+	hrefTmpl := template.Must(template.New("href").Funcs(funcs).Parse(hrefTmpl))
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("fmt"),
+	}
+	filename := filepath.Join(codegen.OutputDir, "hrefs.go")
+	file, err := codegen.SourceFileFor(filename)
+	if err != nil {
+		return err
+	}
+	if err := file.WriteHeader("Resource Hrefs", "client", imports); err != nil {
+		return err
+	}
+	g.genfiles = append(g.genfiles, filename)
+	err = api.IterateResources(func(r *design.ResourceDefinition) error {
+		ca := r.CanonicalAction()
+		if ca == nil {
+			return nil
+		}
+		data := map[string]interface{}{
+			"Name":              r.Name,
+			"CanonicalTemplate": codegen.CanonicalTemplate(r),
+			"CanonicalParams":   codegen.CanonicalParams(r),
+		}
+		return hrefTmpl.Execute(file, data)
+	})
+	if err != nil {
+		return err
+	}
+	return file.FormatCode()
+}
+
 func (g *Generator) generateClientResources(clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
 	clientsTmpl := template.Must(template.New("clients").Funcs(funcs).Parse(clientsTmpl))
 	payloadTmpl := template.Must(template.New("payload").Funcs(funcs).Parse(payloadTmpl))
@@ -317,6 +349,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		"gotyperefext":    goTypeRefExt,
 		"join":            join,
 		"joinNames":       joinNames,
+		"joinStrings":     strings.Join,
 		"multiComment":    multiComment,
 		"routes":          routes,
 		"tempvar":         codegen.Tempvar,
@@ -345,8 +378,13 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		return
 	}
 
-	// Generate client/$res.go
+	// Generate client/$res.go and user_types.go
 	if err = g.generateClientResources(clientPkg, funcs, api); err != nil {
+		return
+	}
+
+	// Generate client/hrefs.go
+	if err = g.generateHrefs(clientPkg, funcs, api); err != nil {
 		return
 	}
 
@@ -698,6 +736,12 @@ type {{ gotypename .Payload nil 1 false }} {{ gotypedef .Payload 0 true false }}
 
 const userTypeTmpl = `// {{ gotypedesc . true }}
 type {{ gotypename . .AllRequired 0 false }} {{ gotypedef . 0 true false }}
+`
+
+const hrefTmpl = `// {{ .Name }}Href returns the {{.Name}} resource href.
+func {{ .Name }}Href({{ if .CanonicalParams }}{{ joinStrings .CanonicalParams ", " }} interface{}{{ end }}) string {
+	return fmt.Sprintf("{{ .CanonicalTemplate }}", {{ joinStrings .CanonicalParams ", " }})
+}
 `
 
 const clientsTmpl = `{{ $funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true }}{{ $desc := .Description }}{{ if $desc }}{{ multiComment $desc }}{{ else }}// {{ $funcName }} makes a request to the {{ .Name }} action endpoint of the {{ .Parent.Name }} resource{{ end }}
