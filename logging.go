@@ -75,6 +75,11 @@ func (a *adapter) logit(msg string, keyvals []interface{}, iserror bool) {
 	if len(keyvals)%2 != 0 {
 		keyvals = append(keyvals, ErrMissingLogValue)
 	}
+	m := (len(a.keyvals) + 1) / 2
+	if len(a.keyvals)%2 != 0 {
+		a.keyvals = append(a.keyvals, ErrMissingLogValue)
+	}
+	n += m
 	var fm bytes.Buffer
 	lvl := "INFO"
 	if iserror {
