@@ -57,6 +57,7 @@ can better take advantage of the framework.
 
 Assuming you have a working Go setup:
 ```
+go get github.com/goadesign/goa
 go get github.com/goadesign/goa/goagen
 ```
 
@@ -161,11 +162,11 @@ Flags:
 
 Use "adder-cli [command] --help" for more information about a command.
 ```
-
+To get information on how to call a specific API use:
 ```
 $ ./adder-cli add operands --help
 Usage:
-  adder-cli add operands [flags]
+  adder-cli add operands ["/add/:left/:right"] [flags]
 
 Global Flags:
       --dump               Dump HTTP request and response.
@@ -173,7 +174,6 @@ Global Flags:
       --pp                 Pretty print response body
   -s, --scheme string      Set the requests scheme
   -t, --timeout duration   Set the request timeout (default 20s)
-      --dump: Dump HTTP request and response.
 ```
 Now let's run it:
 ```
@@ -181,6 +181,13 @@ $ ./adder-cli add operands /add/1/2
 2016/04/05 20:43:18 [INFO] started id=HffVaGiH GET=http://localhost:8080/add/1/2
 2016/04/05 20:43:18 [INFO] completed id=HffVaGiH status=200 time=1.028827ms
 3⏎
+```
+This also works:
+```
+$ ./adder-cli add operands --left=1 --right=2
+2016/04/25 00:08:59 [INFO] started id=ouKmwdWp GET=http://localhost:8080/add/1/2
+2016/04/25 00:08:59 [INFO] completed id=ouKmwdWp status=200 time=1.097749ms
+3⏎     
 ```
 The console running the service shows the request that was just handled:
 ```
