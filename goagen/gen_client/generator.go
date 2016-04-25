@@ -436,7 +436,12 @@ func pathParams(r *design.RouteDefinition) string {
 
 // pathParams return the names of the parameters of the path factory function for the given route.
 func pathParamNames(r *design.RouteDefinition) string {
-	return strings.Join(r.Params(), ", ")
+	params := r.Params()
+	goified := make([]string, len(params))
+	for i, p := range params {
+		goified[i] = codegen.Goify(p, false)
+	}
+	return strings.Join(goified, ", ")
 }
 
 const arrayToStringT = `	{{ $tmp := tempvar }}{{ $tmp }} := make([]string, len({{ .Name }}))
