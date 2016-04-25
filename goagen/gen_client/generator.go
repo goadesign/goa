@@ -19,7 +19,8 @@ import (
 
 // Generator is the application code generator.
 type Generator struct {
-	genfiles []string
+	genfiles     []string
+	payloadTypes map[string]bool // Keeps track of names of user types that correspond to action payloads.
 }
 
 // Generate is the generator entry point called by the meta generator.
@@ -188,31 +189,44 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 	return file.FormatCode()
 }
 
-func (g *Generator) generateHrefs(clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
-	hrefTmpl := template.Must(template.New("href").Funcs(funcs).Parse(hrefTmpl))
-	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("fmt"),
+func (g *Generator) generateClientResources(clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
+	userTypeTmpl := template.Must(template.New("userType").Funcs(funcs).Parse(userTypeTmpl))
+
+	outErr := api.IterateResources(func(res *design.ResourceDefinition) error {
+		return g.generateResourceClient(res, funcs)
+	})
+	if outErr != nil {
+		return outErr
 	}
-	filename := filepath.Join(codegen.OutputDir, "hrefs.go")
+	generateUTs := false
+	for _, ut := range api.Types {
+		if _, ok := g.payloadTypes[ut.TypeName]; !ok {
+			generateUTs = true
+			break
+		}
+	}
+	if !generateUTs {
+		return nil
+	}
+	filename := filepath.Join(codegen.OutputDir, "user_types.go")
 	file, err := codegen.SourceFileFor(filename)
 	if err != nil {
 		return err
 	}
-	if err := file.WriteHeader("Resource Hrefs", "client", imports); err != nil {
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("github.com/goadesign/goa"),
+		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("time"),
+	}
+	if err := file.WriteHeader("User Types", "client", imports); err != nil {
 		return err
 	}
 	g.genfiles = append(g.genfiles, filename)
-	err = api.IterateResources(func(r *design.ResourceDefinition) error {
-		ca := r.CanonicalAction()
-		if ca == nil {
+	err = api.IterateUserTypes(func(userType *design.UserTypeDefinition) error {
+		if _, ok := g.payloadTypes[userType.TypeName]; ok {
 			return nil
 		}
-		data := map[string]interface{}{
-			"Name":              r.Name,
-			"CanonicalTemplate": codegen.CanonicalTemplate(r),
-			"CanonicalParams":   codegen.CanonicalParams(r),
-		}
-		return hrefTmpl.Execute(file, data)
+		return userTypeTmpl.Execute(file, userType)
 	})
 	if err != nil {
 		return err
@@ -220,11 +234,17 @@ func (g *Generator) generateHrefs(clientPkg string, funcs template.FuncMap, api 
 	return file.FormatCode()
 }
 
-func (g *Generator) generateClientResources(clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
-	clientsTmpl := template.Must(template.New("clients").Funcs(funcs).Parse(clientsTmpl))
+func (g *Generator) generateResourceClient(res *design.ResourceDefinition, funcs template.FuncMap) error {
 	payloadTmpl := template.Must(template.New("payload").Funcs(funcs).Parse(payloadTmpl))
-	userTypeTmpl := template.Must(template.New("userType").Funcs(funcs).Parse(userTypeTmpl))
+	clientsTmpl := template.Must(template.New("clients").Funcs(funcs).Parse(clientsTmpl))
 	clientsWSTmpl := template.Must(template.New("clients").Funcs(funcs).Parse(clientsWSTmpl))
+	pathTmpl := template.Must(template.New("pathTemplate").Funcs(funcs).Parse(pathTmpl))
+
+	filename := filepath.Join(codegen.OutputDir, snakeCase(res.Name)+".go")
+	file, err := codegen.SourceFileFor(filename)
+	if err != nil {
+		return err
+	}
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("bytes"),
 		codegen.SimpleImport("encoding/json"),
@@ -238,84 +258,48 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 		codegen.SimpleImport("golang.org/x/net/context"),
 		codegen.SimpleImport("golang.org/x/net/websocket"),
 	}
-
-	payloadTypes := make(map[string]bool)
-	outErr := api.IterateResources(func(res *design.ResourceDefinition) error {
-		filename := filepath.Join(codegen.OutputDir, snakeCase(res.Name)+".go")
-		file, err := codegen.SourceFileFor(filename)
-		if err != nil {
-			return err
-		}
-		if err := file.WriteHeader("", "client", imports); err != nil {
-			return err
-		}
-		g.genfiles = append(g.genfiles, filename)
-
-		err = res.IterateActions(func(action *design.ActionDefinition) error {
-			if action.Payload != nil {
-				if err := payloadTmpl.Execute(file, action); err != nil {
-					return err
-				}
-				payloadTypes[action.Payload.TypeName] = true
-			}
-			if action.Params != nil {
-				params := make(design.Object, len(action.QueryParams.Type.ToObject()))
-				for n, param := range action.QueryParams.Type.ToObject() {
-					name := codegen.Goify(n, false)
-					params[name] = param
-				}
-				action.QueryParams.Type = params
-			}
-			if action.Headers != nil {
-				headers := make(design.Object, len(action.Headers.Type.ToObject()))
-				for n, header := range action.Headers.Type.ToObject() {
-					name := codegen.Goify(n, false)
-					headers[name] = header
-				}
-				action.Headers.Type = headers
-			}
-			if action.WebSocket() {
-				return clientsWSTmpl.Execute(file, action)
-			}
-			return clientsTmpl.Execute(file, action)
-		})
-		if err != nil {
-			return err
-		}
-
-		return file.FormatCode()
-	})
-	if outErr != nil {
-		return outErr
-	}
-	generateUTs := false
-	for _, ut := range api.Types {
-		if _, ok := payloadTypes[ut.TypeName]; !ok {
-			generateUTs = true
-			break
-		}
-	}
-	if !generateUTs {
-		return nil
-	}
-	filename := filepath.Join(codegen.OutputDir, "user_types.go")
-	file, err := codegen.SourceFileFor(filename)
-	if err != nil {
-		return err
-	}
-	if err := file.WriteHeader("User Types", "client", imports); err != nil {
+	if err := file.WriteHeader("", "client", imports); err != nil {
 		return err
 	}
 	g.genfiles = append(g.genfiles, filename)
-	err = api.IterateUserTypes(func(userType *design.UserTypeDefinition) error {
-		if _, ok := payloadTypes[userType.TypeName]; ok {
-			return nil
+	g.payloadTypes = make(map[string]bool)
+	err = res.IterateActions(func(action *design.ActionDefinition) error {
+		if action.Payload != nil {
+			if err := payloadTmpl.Execute(file, action); err != nil {
+				return err
+			}
+			g.payloadTypes[action.Payload.TypeName] = true
 		}
-		return userTypeTmpl.Execute(file, userType)
+		if action.Params != nil {
+			params := make(design.Object, len(action.QueryParams.Type.ToObject()))
+			for n, param := range action.QueryParams.Type.ToObject() {
+				name := codegen.Goify(n, false)
+				params[name] = param
+			}
+			action.QueryParams.Type = params
+		}
+		if action.Headers != nil {
+			headers := make(design.Object, len(action.Headers.Type.ToObject()))
+			for n, header := range action.Headers.Type.ToObject() {
+				name := codegen.Goify(n, false)
+				headers[name] = header
+			}
+			action.Headers.Type = headers
+		}
+		if action.WebSocket() {
+			return clientsWSTmpl.Execute(file, action)
+		}
+		for _, r := range action.Routes {
+			if err := pathTmpl.Execute(file, r); err != nil {
+				return err
+			}
+		}
+		return clientsTmpl.Execute(file, action)
 	})
 	if err != nil {
 		return err
 	}
+
 	return file.FormatCode()
 }
 
@@ -351,6 +335,9 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		"joinNames":       joinNames,
 		"joinStrings":     strings.Join,
 		"multiComment":    multiComment,
+		"pathParams":      pathParams,
+		"pathParamNames":  pathParamNames,
+		"pathTemplate":    pathTemplate,
 		"routes":          routes,
 		"tempvar":         codegen.Tempvar,
 		"title":           strings.Title,
@@ -380,11 +367,6 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 
 	// Generate client/$res.go and user_types.go
 	if err = g.generateClientResources(clientPkg, funcs, api); err != nil {
-		return
-	}
-
-	// Generate client/hrefs.go
-	if err = g.generateHrefs(clientPkg, funcs, api); err != nil {
 		return
 	}
 
@@ -598,6 +580,26 @@ func signerType(scheme *design.SecuritySchemeDefinition) string {
 	return ""
 }
 
+// pathTemplate returns a fmt format suitable to build a request path to the reoute.
+func pathTemplate(r *design.RouteDefinition) string {
+	return design.WildcardRegex.ReplaceAllLiteralString(r.FullPath(), "/%v")
+}
+
+// pathParams return the function signature of the path factory function for the given route.
+func pathParams(r *design.RouteDefinition) string {
+	pnames := r.Params()
+	params := make(design.Object, len(pnames))
+	for _, p := range pnames {
+		params[p] = r.Parent.Params.Type.ToObject()[p]
+	}
+	return join(&design.AttributeDefinition{Type: params})
+}
+
+// pathParams return the names of the parameters of the path factory function for the given route.
+func pathParamNames(r *design.RouteDefinition) string {
+	return strings.Join(r.Params(), ", ")
+}
+
 const mainTmpl = `
 // PrettyPrint is true if the tool output should be formatted for human consumption.
 var PrettyPrint bool
@@ -738,9 +740,10 @@ const userTypeTmpl = `// {{ gotypedesc . true }}
 type {{ gotypename . .AllRequired 0 false }} {{ gotypedef . 0 true false }}
 `
 
-const hrefTmpl = `// {{ .Name }}Href returns the {{.Name}} resource href.
-func {{ .Name }}Href({{ if .CanonicalParams }}{{ joinStrings .CanonicalParams ", " }} interface{}{{ end }}) string {
-	return fmt.Sprintf("{{ .CanonicalTemplate }}", {{ joinStrings .CanonicalParams ", " }})
+const pathTmpl = `{{ $funcName := printf "%sPath" (goify (printf "%s%s" .Parent.Name (title .Parent.Parent.Name)) true) }}{{/*
+*/}}// {{ $funcName }} computes a request path to the {{ .Parent.Name }} action of {{ .Parent.Parent.Name }}.
+func {{ $funcName }}({{ pathParams . }}) string {
+	return fmt.Sprintf("{{ pathTemplate . }}", {{ pathParamNames . }})
 }
 `
 
@@ -773,7 +776,7 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Payload 
 {{ else }}{{ $tmp := tempvar }}{{ toString (goify $name false) $tmp $att }}
 	header.Set("{{ $name }}", {{ $tmp }})
 {{ end }}{{ end }}{{ end }}	header.Set("Content-Type", "application/json"){{ if .Security }}
-    c.Signer{{ goify .Security.Scheme.SchemeName true }}.Sign(ctx, req){{ end }}
+	c.Signer{{ goify .Security.Scheme.SchemeName true }}.Sign(ctx, req){{ end }}
 	return c.Client.Do(ctx, req)
 }
 `
@@ -781,15 +784,15 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Payload 
 const clientTmpl = `// Client is the {{ .Name }} service client.
 type Client struct {
 	*goaclient.Client{{range $security := .SecuritySchemes }}
-    Signer{{ goify $security.SchemeName true }} goaclient.Signer{{ end }}
+	Signer{{ goify $security.SchemeName true }} goaclient.Signer{{ end }}
 }
 
 // New instantiates the client.
 func New(c *http.Client) *Client {
 	return &Client{
-        Client: goaclient.New(c),{{range $security := .SecuritySchemes }}
-        Signer{{ goify $security.SchemeName true }}: &{{ signerType ($security) }}{},{{ end }}
-    }
+		Client: goaclient.New(c),{{range $security := .SecuritySchemes }}
+		Signer{{ goify $security.SchemeName true }}: &{{ signerType ($security) }}{},{{ end }}
+	}
 }
 `
 
