@@ -337,6 +337,7 @@ var _ = Describe("New", func() {
 
 					Action("Update", func() {
 						Metadata("swagger:tag:Update")
+						Metadata("swagger:summary", "a summary")
 						Description("Update account")
 						Docs(func() {
 							Description("docs")
@@ -390,6 +391,10 @@ var _ = Describe("New", func() {
 				tags := []string{"res", "Update"}
 				Ω(swagger.Paths["/orgs/{org}/accounts/{id}"].Put.Tags).Should(Equal(tags))
 				Ω(swagger.Paths["/bottles/{id}"].Put.Tags).Should(Equal(tags))
+			})
+
+			It("should set the summary from the summary tag", func() {
+				Ω(swagger.Paths["/orgs/{org}/accounts/{id}"].Put.Summary).Should(Equal("a summary"))
 			})
 
 			It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })

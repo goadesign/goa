@@ -282,10 +282,7 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 	if api == nil {
 		return nil, nil
 	}
-	tags, err := tagsFromDefinition(api.Metadata)
-	if err != nil {
-		return nil, err
-	}
+	tags := tagsFromDefinition(api.Metadata)
 	params, err := paramsFromDefinition(api.BaseParams, api.BasePath)
 	if err != nil {
 		return nil, err
@@ -412,7 +409,7 @@ func scopesMapList(scopes map[string]string) string {
 	return strings.Join(lines, "\n")
 }
 
-func tagsFromDefinition(mdata dslengine.MetadataDefinition) (tags []*Tag, err error) {
+func tagsFromDefinition(mdata dslengine.MetadataDefinition) (tags []*Tag) {
 	for key, value := range mdata {
 		chunks := strings.Split(key, ":")
 		if len(chunks) != 3 {
@@ -454,18 +451,23 @@ func tagsFromDefinition(mdata dslengine.MetadataDefinition) (tags []*Tag, err er
 	return
 }
 
-func tagNamesFromDefinition(mdatas []dslengine.MetadataDefinition) (tagNames []string, err error) {
-	var tags []*Tag
+func tagNamesFromDefinitions(mdatas ...dslengine.MetadataDefinition) (tagNames []string) {
 	for _, mdata := range mdatas {
-		tags, err = tagsFromDefinition(mdata)
-		if err != nil {
-			return
-		}
+		tags := tagsFromDefinition(mdata)
 		for _, tag := range tags {
 			tagNames = append(tagNames, tag.Name)
 		}
 	}
 	return
+}
+
+func summaryFromDefinition(action *design.ActionDefinition) string {
+	for n, mdata := range action.Metadata {
+		if n == "swagger:summary" && len(mdata) > 0 {
+			return mdata[0]
+		}
+	}
+	return ""
 }
 
 func paramsFromDefinition(params *design.AttributeDefinition, path string) ([]*Parameter, error) {
@@ -622,11 +624,7 @@ func headersFromDefinition(headers *design.AttributeDefinition) (map[string]*Hea
 func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *design.RouteDefinition) error {
 	action := route.Parent
 
-	tagNames, err := tagNamesFromDefinition([]dslengine.MetadataDefinition{action.Parent.Metadata, action.Metadata})
-	if err != nil {
-		return err
-	}
-
+	tagNames := tagNamesFromDefinitions(action.Parent.Metadata, action.Metadata)
 	params, err := paramsFromDefinition(action.AllParams(), route.FullPath())
 	if err != nil {
 		return err
@@ -673,6 +671,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	operation := &Operation{
 		Tags:         tagNames,
 		Description:  action.Description,
+		Summary:      summaryFromDefinition(action),
 		ExternalDocs: docsFromDefinition(action.Docs),
 		OperationID:  operationID,
 		Parameters:   params,
