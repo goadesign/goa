@@ -14,7 +14,6 @@ import (
 	"github.com/goadesign/goa/goagen/gen_main"
 	"github.com/goadesign/goa/goagen/gen_schema"
 	"github.com/goadesign/goa/goagen/gen_swagger"
-	"github.com/goadesign/goa/goagen/gen_test"
 	"github.com/goadesign/goa/goagen/utils"
 	"github.com/spf13/cobra"
 )
@@ -29,7 +28,6 @@ var Commands = []codegen.Command{
 	genjs.NewCommand(),
 	genschema.NewCommand(),
 	gengen.NewCommand(),
-	gentest.NewCommand(),
 }
 
 func main() {

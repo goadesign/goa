@@ -1,4 +1,4 @@
-package gentest_test
+package genapp_test
 
 import (
 	"io/ioutil"
@@ -7,13 +7,13 @@ import (
 
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/codegen"
-	"github.com/goadesign/goa/goagen/gen_test"
+	"github.com/goadesign/goa/goagen/gen_app"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Generate", func() {
-	const testgenPackagePath = "github.com/goadesign/goa/goagen/gen_test/test_"
+	const testgenPackagePath = "github.com/goadesign/goa/goagen/gen_app/test_"
 
 	var outDir string
 	var files []string
@@ -32,7 +32,7 @@ var _ = Describe("Generate", func() {
 	})
 
 	JustBeforeEach(func() {
-		files, genErr = gentest.Generate()
+		files, genErr = genapp.Generate()
 	})
 
 	AfterEach(func() {
@@ -112,14 +112,15 @@ var _ = Describe("Generate", func() {
 				},
 			}
 			fooRes := design.Design.Resources["foo"]
-			showAct := fooRes.Actions["show"]
-			showAct.Parent = fooRes
-			showAct.Routes[0].Parent = showAct
+			for _, a := range fooRes.Actions {
+				a.Parent = fooRes
+				a.Routes[0].Parent = a
+			}
 		})
 
 		It("generates the ActionRouteResponse test methods ", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(2))
+			Ω(files).Should(HaveLen(8))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "test", "foo.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 
