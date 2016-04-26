@@ -18,8 +18,8 @@ import (
 
 // Generator is the application code generator.
 type Generator struct {
-	genfiles     []string
-	payloadTypes map[string]bool // Keeps track of names of user types that correspond to action payloads.
+	genfiles       []string
+	generatedTypes map[string]bool // Keeps track of names of user types that correspond to action payloads.
 }
 
 // Generate is the generator entry point called by the meta generator.
@@ -66,6 +66,7 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 
 func (g *Generator) generateClientResources(clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
 	userTypeTmpl := template.Must(template.New("userType").Funcs(funcs).Parse(userTypeTmpl))
+	typeDecodeTmpl := template.Must(template.New("typeDecode").Funcs(funcs).Parse(typeDecodeTmpl))
 
 	err := api.IterateResources(func(res *design.ResourceDefinition) error {
 		return g.generateResourceClient(res, funcs)
@@ -81,7 +82,7 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 	}
 	generateUTs := false
 	for _, ut := range types {
-		if _, ok := g.payloadTypes[ut.TypeName]; !ok {
+		if _, ok := g.generatedTypes[ut.TypeName]; !ok {
 			generateUTs = true
 			break
 		}
@@ -89,7 +90,7 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 	if !generateUTs {
 		return nil
 	}
-	filename := filepath.Join(codegen.OutputDir, "user_types.go")
+	filename := filepath.Join(codegen.OutputDir, "types.go")
 	file, err := codegen.SourceFileFor(filename)
 	if err != nil {
 		return err
@@ -97,26 +98,59 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("io"),
 		codegen.SimpleImport("time"),
 	}
 	if err := file.WriteHeader("User Types", "client", imports); err != nil {
 		return err
 	}
 	g.genfiles = append(g.genfiles, filename)
+
+	// Generate user and media types used by action payloads and parameters
 	err = api.IterateUserTypes(func(userType *design.UserTypeDefinition) error {
-		if _, ok := g.payloadTypes[userType.TypeName]; ok {
+		if _, ok := g.generatedTypes[userType.TypeName]; ok {
 			return nil
 		}
 		if _, ok := types[userType.TypeName]; ok {
+			g.generatedTypes[userType.TypeName] = true
 			return userTypeTmpl.Execute(file, userType)
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	// Generate media types used by action responses and their load helpers
+	err = api.IterateResources(func(res *design.ResourceDefinition) error {
+		return res.IterateActions(func(a *design.ActionDefinition) error {
+			return a.IterateResponses(func(r *design.ResponseDefinition) error {
+				if mt := api.MediaTypeWithIdentifier(r.MediaType); mt != nil {
+					if _, ok := g.generatedTypes[mt.TypeName]; !ok {
+						g.generatedTypes[mt.TypeName] = true
+						if err := userTypeTmpl.Execute(file, mt); err != nil {
+							return err
+						}
+						if err := typeDecodeTmpl.Execute(file, mt); err != nil {
+							return err
+						}
+					}
+				}
+				return nil
+			})
+		})
+	})
+	if err != nil {
+		return err
+	}
+
+	// Generate media types used in payloads but not in responses
 	err = api.IterateMediaTypes(func(mediaType *design.MediaTypeDefinition) error {
-		if _, ok := g.payloadTypes[mediaType.TypeName]; ok {
+		if _, ok := g.generatedTypes[mediaType.TypeName]; ok {
 			return nil
 		}
 		if _, ok := types[mediaType.TypeName]; ok {
+			g.generatedTypes[mediaType.TypeName] = true
 			return userTypeTmpl.Execute(file, mediaType)
 		}
 		return nil
@@ -124,6 +158,7 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 	if err != nil {
 		return err
 	}
+
 	return file.FormatCode()
 }
 
@@ -155,13 +190,13 @@ func (g *Generator) generateResourceClient(res *design.ResourceDefinition, funcs
 		return err
 	}
 	g.genfiles = append(g.genfiles, filename)
-	g.payloadTypes = make(map[string]bool)
+	g.generatedTypes = make(map[string]bool)
 	err = res.IterateActions(func(action *design.ActionDefinition) error {
 		if action.Payload != nil {
 			if err := payloadTmpl.Execute(file, action); err != nil {
 				return err
 			}
-			g.payloadTypes[action.Payload.TypeName] = true
+			g.generatedTypes[action.Payload.TypeName] = true
 		}
 		if action.Params != nil {
 			params := make(design.Object, len(action.QueryParams.Type.ToObject()))
@@ -255,7 +290,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		return
 	}
 
-	// Generate client/$res.go and user_types.go
+	// Generate client/$res.go and types.go
 	if err = g.generateClientResources(clientPkg, funcs, api); err != nil {
 		return
 	}
@@ -487,6 +522,14 @@ type {{ gotypename .Payload nil 1 false }} {{ gotypedef .Payload 0 true false }}
 
 const userTypeTmpl = `// {{ gotypedesc . true }}
 type {{ gotypename . .AllRequired 0 false }} {{ gotypedef . 0 true false }}
+`
+
+const typeDecodeTmpl = `{{ $typeName := gotypename . .AllRequired 0 false }}{{ $funcName := printf "Decode%s" $typeName }}// {{ $funcName }} decodes the {{ $typeName }} instance encoded in r.
+func {{ $funcName }}(r io.Reader, decoderFn goa.DecoderFunc) ({{ gotyperef . .AllRequired 0 false }}, error) {
+	var decoded {{ $typeName }}
+	err := decoderFn(r).Decode(&decoded)
+	return {{ if .IsObject }}&{{ end }}decoded, err
+}
 `
 
 const pathTmpl = `{{ $funcName := printf "%sPath" (goify (printf "%s%s" .Parent.Name (title .Parent.Parent.Name)) true) }}{{/*
