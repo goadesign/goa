@@ -826,6 +826,21 @@ func (r *ResourceDefinition) Finalize() {
 	})
 }
 
+// UserTypes returns all the user types used by the resource action payloads and parameters.
+func (r *ResourceDefinition) UserTypes() map[string]*UserTypeDefinition {
+	types := make(map[string]*UserTypeDefinition)
+	for _, a := range r.Actions {
+		atypes := a.UserTypes()
+		for n, ut := range atypes {
+			types[n] = ut
+		}
+	}
+	if len(types) == 0 {
+		return nil
+	}
+	return types
+}
+
 // Context returns the generic definition name used in error messages.
 func (cors *CORSDefinition) Context() string {
 	return fmt.Sprintf("CORS policy for resource %s origin %s", cors.Parent.Context(), cors.Origin)
@@ -1370,6 +1385,22 @@ func (a *ActionDefinition) Finalize() {
 	if a.Security != nil && a.Security.Scheme.Kind == NoSecurityKind {
 		a.Security = nil
 	}
+}
+
+// UserTypes returns all the user types used by the action payload and parameters.
+func (a *ActionDefinition) UserTypes() map[string]*UserTypeDefinition {
+	types := make(map[string]*UserTypeDefinition)
+	allp := a.AllParams().Type.ToObject()
+	if a.Payload != nil {
+		allp["__payload__"] = &AttributeDefinition{Type: a.Payload}
+	}
+	for n, ut := range UserTypes(allp) {
+		types[n] = ut
+	}
+	if len(types) == 0 {
+		return nil
+	}
+	return types
 }
 
 // Context returns the generic definition name used in error messages.

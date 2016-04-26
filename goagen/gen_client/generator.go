@@ -68,14 +68,20 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 func (g *Generator) generateClientResources(clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
 	userTypeTmpl := template.Must(template.New("userType").Funcs(funcs).Parse(userTypeTmpl))
 
-	outErr := api.IterateResources(func(res *design.ResourceDefinition) error {
+	err := api.IterateResources(func(res *design.ResourceDefinition) error {
 		return g.generateResourceClient(res, funcs)
 	})
-	if outErr != nil {
-		return outErr
+	if err != nil {
+		return err
+	}
+	types := make(map[string]*design.UserTypeDefinition)
+	for _, res := range api.Resources {
+		for n, ut := range res.UserTypes() {
+			types[n] = ut
+		}
 	}
 	generateUTs := false
-	for _, ut := range api.Types {
+	for _, ut := range types {
 		if _, ok := g.payloadTypes[ut.TypeName]; !ok {
 			generateUTs = true
 			break
@@ -102,7 +108,19 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 		if _, ok := g.payloadTypes[userType.TypeName]; ok {
 			return nil
 		}
-		return userTypeTmpl.Execute(file, userType)
+		if _, ok := types[userType.TypeName]; ok {
+			return userTypeTmpl.Execute(file, userType)
+		}
+		return nil
+	})
+	err = api.IterateMediaTypes(func(mediaType *design.MediaTypeDefinition) error {
+		if _, ok := g.payloadTypes[mediaType.TypeName]; ok {
+			return nil
+		}
+		if _, ok := types[mediaType.TypeName]; ok {
+			return userTypeTmpl.Execute(file, mediaType)
+		}
+		return nil
 	})
 	if err != nil {
 		return err
