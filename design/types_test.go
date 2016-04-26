@@ -159,6 +159,68 @@ var _ = Describe("Project", func() {
 	})
 })
 
+var _ = Describe("UserTypes", func() {
+	var (
+		o         Object
+		userTypes map[string]*UserTypeDefinition
+	)
+
+	JustBeforeEach(func() {
+		userTypes = UserTypes(o)
+	})
+
+	Context("with an object not using user types", func() {
+		BeforeEach(func() {
+			o = Object{"foo": &AttributeDefinition{Type: String}}
+		})
+
+		It("returns nil", func() {
+			Ω(userTypes).Should(BeNil())
+		})
+	})
+
+	Context("with an object with an attribute using a user type", func() {
+		var ut *UserTypeDefinition
+		BeforeEach(func() {
+			ut = &UserTypeDefinition{
+				TypeName:            "foo",
+				AttributeDefinition: &AttributeDefinition{Type: String},
+			}
+
+			o = Object{"foo": &AttributeDefinition{Type: ut}}
+		})
+
+		It("returns the user type", func() {
+			Ω(userTypes).Should(HaveLen(1))
+			Ω(userTypes[ut.TypeName]).Should(Equal(ut))
+		})
+	})
+
+	Context("with an object with an attribute using recursive user types", func() {
+		var ut, childut *UserTypeDefinition
+
+		BeforeEach(func() {
+			childut = &UserTypeDefinition{
+				TypeName:            "child",
+				AttributeDefinition: &AttributeDefinition{Type: String},
+			}
+			child := Object{"child": &AttributeDefinition{Type: childut}}
+			ut = &UserTypeDefinition{
+				TypeName:            "parent",
+				AttributeDefinition: &AttributeDefinition{Type: child},
+			}
+
+			o = Object{"foo": &AttributeDefinition{Type: ut}}
+		})
+
+		It("returns the user types", func() {
+			Ω(userTypes).Should(HaveLen(2))
+			Ω(userTypes[ut.TypeName]).Should(Equal(ut))
+			Ω(userTypes[childut.TypeName]).Should(Equal(childut))
+		})
+	})
+})
+
 var _ = Describe("MediaTypeDefinition", func() {
 	Describe("IterateViews", func() {
 		var (
