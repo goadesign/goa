@@ -510,6 +510,72 @@ func (o Object) IterateAttributes(it AttributeIterator) error {
 	return nil
 }
 
+// UserTypes traverses the data type recursively and collects all the user types used to
+// define it. The returned map is indexed by type name.
+func UserTypes(dt DataType) map[string]*UserTypeDefinition {
+	switch actual := dt.(type) {
+	case Primitive:
+		return nil
+	case *Array:
+		return UserTypes(actual.ElemType.Type)
+	case *Hash:
+		ktypes := UserTypes(actual.KeyType.Type)
+		vtypes := UserTypes(actual.ElemType.Type)
+		if vtypes == nil {
+			vtypes = make(map[string]*UserTypeDefinition)
+		}
+		for n, ut := range ktypes {
+			vtypes[n] = ut
+		}
+		return vtypes
+	case Object:
+		types := make(map[string]*UserTypeDefinition)
+		recurseUT(actual, types)
+		if len(types) == 0 {
+			return nil
+		}
+		return types
+	case *UserTypeDefinition:
+		types := map[string]*UserTypeDefinition{actual.TypeName: actual}
+		for n, ut := range UserTypes(actual.Type) {
+			types[n] = ut
+		}
+		return types
+	case *MediaTypeDefinition:
+		types := map[string]*UserTypeDefinition{actual.TypeName: actual.UserTypeDefinition}
+		for n, ut := range UserTypes(actual.Type) {
+			types[n] = ut
+		}
+		return types
+	default:
+		panic("unknown type") // bug
+	}
+}
+
+// (recursive) implementation of UserTypes.
+func recurseUT(o Object, types map[string]*UserTypeDefinition) {
+	for _, att := range o {
+		ut, ok := att.Type.(*UserTypeDefinition)
+		if !ok {
+			if mt, ok := att.Type.(*MediaTypeDefinition); ok {
+				ut = mt.UserTypeDefinition
+			}
+		}
+		seen := false
+		if ut != nil {
+			_, seen = types[ut.TypeName]
+			if !seen {
+				types[ut.TypeName] = ut
+			}
+		}
+		if !seen {
+			for n, ut := range UserTypes(att.Type) {
+				types[n] = ut
+			}
+		}
+	}
+}
+
 // ToSlice converts an ArrayVal to a slice.
 func (a ArrayVal) ToSlice() []interface{} {
 	arr := make([]interface{}, len(a))
