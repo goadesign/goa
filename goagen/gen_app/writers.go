@@ -550,13 +550,13 @@ func (payload {{ gotyperef .Payload .Payload.AllRequired 0 true }}) Publicize() 
 	return &pub
 }{{ end }}
 
-	// {{ gotypename .Payload nil 0 false }} is the {{ .ResourceName }} {{ .ActionName }} action payload.
+// {{ gotypename .Payload nil 0 false }} is the {{ .ResourceName }} {{ .ActionName }} action payload.
 type {{ gotypename .Payload nil 1 false }} {{ gotypedef .Payload 0 true false }}
 
 {{ $validation := recursiveValidate .Payload.AttributeDefinition false false false "payload" "raw" 1 false }}{{ if $validation }}// Validate runs the validation rules defined in the design.
 func (payload {{ gotyperef .Payload .Payload.AllRequired 0 false }}) Validate() (err error) {
 {{ $validation }}
-       return err
+	return err
 }{{ end }}
 `
 	// ctrlT generates the controller interface for a given resource.
