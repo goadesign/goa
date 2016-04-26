@@ -14,7 +14,6 @@ import (
 	"github.com/goadesign/goa/goagen/gen_main"
 	"github.com/goadesign/goa/goagen/gen_schema"
 	"github.com/goadesign/goa/goagen/gen_swagger"
-	"github.com/goadesign/goa/goagen/gen_test"
 	"github.com/goadesign/goa/goagen/utils"
 	"github.com/spf13/cobra"
 )
@@ -29,16 +28,19 @@ var Commands = []codegen.Command{
 	genjs.NewCommand(),
 	genschema.NewCommand(),
 	gengen.NewCommand(),
-	gentest.NewCommand(),
 }
 
-var cfgFile string
+func main() {
+	var (
+		files            []string
+		err              error
+		terminatedByUser bool
 
-// RootCmd is the base command used when goagen is called with no argument.
-var RootCmd = &cobra.Command{
-	Use:   "goagen",
-	Short: "goa code generation tool",
-	Long: `The goagen tool generates various artifacts from a goa service design package.
+		// RootCmd is the base command used when goagen is called with no argument.
+		RootCmd = &cobra.Command{
+			Use:   "goagen",
+			Short: "goa code generation tool",
+			Long: `The goagen tool generates various artifacts from a goa service design package.
 
 Each command supported by the tool produces a specific type of artifacts. For example
 the "app" command generates the code that supports the service controllers.
@@ -47,12 +49,6 @@ The "bootstrap" command runs the "app", "main", "client" and "swagger" commands 
 controllers supporting code and main skeleton code (if not already present) as well as a client
 package and tool and the Swagger specification for the API.
 `}
-
-func main() {
-	var (
-		files            []string
-		err              error
-		terminatedByUser bool
 	)
 
 	// Now proceed with code generation
