@@ -8,6 +8,9 @@ import (
 var (
 	// TargetPackage is the name of the generated Go package.
 	TargetPackage string
+
+	// NoGenTest indicates whether to not generate the test helpers.
+	NoGenTest bool
 )
 
 // Command is the goa application code generator command line data structure.
@@ -24,6 +27,7 @@ func NewCommand() *Command {
 // RegisterFlags registers the command line flags with the given registry.
 func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
 	r.Flags().StringVar(&TargetPackage, "pkg", "app", "Name of generated Go package containing controllers supporting code (contexts, media types, user types etc.)")
+	r.Flags().BoolVar(&NoGenTest, "notest", false, "Prevent generation of test helpers")
 }
 
 // Run simply calls the meta generator.

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -215,7 +214,6 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	}
 
 	funcs := template.FuncMap{
-		"appPkg":          appPkg,
 		"cmdFieldType":    cmdFieldType,
 		"defaultPath":     defaultPath,
 		"escapeBackticks": escapeBackticks,
@@ -417,11 +415,6 @@ func defaultPath(action *design.ActionDefinition) string {
 		}
 	}
 	return ""
-}
-
-// appPkg returns the name of the generated application package
-func appPkg() string {
-	return path.Base(AppPkg)
 }
 
 // signerType returns the name of the client signer used for the defined security model on the Action

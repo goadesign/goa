@@ -102,6 +102,11 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	if err := g.generateUserTypes(api); err != nil {
 		return nil, err
 	}
+	if !NoGenTest {
+		if err := g.generateResourceTest(api); err != nil {
+			return nil, err
+		}
+	}
 
 	return g.genfiles, nil
 }

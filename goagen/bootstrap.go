@@ -6,7 +6,6 @@ import (
 	"github.com/goadesign/goa/goagen/gen_client"
 	"github.com/goadesign/goa/goagen/gen_main"
 	"github.com/goadesign/goa/goagen/gen_swagger"
-	"github.com/goadesign/goa/goagen/gen_test"
 )
 
 // BootstrapCommands lists the commands run by default when no sub-command is provided on the
@@ -14,7 +13,6 @@ import (
 var BootstrapCommands = []codegen.Command{
 	genapp.NewCommand(),
 	genmain.NewCommand(),
-	gentest.NewCommand(),
 	genclient.NewCommand(),
 	genswagger.NewCommand(),
 }
@@ -28,7 +26,7 @@ func (a *BootstrapCommand) Name() string { return "bootstrap" }
 
 // Description returns the command description.
 func (a *BootstrapCommand) Description() string {
-	return `Bootstrap command, equivalent to running "app", "main", "client", test" and "swagger" commands sequentially.`
+	return `Bootstrap command, equivalent to running "app", "main", "client" and "swagger" commands sequentially.`
 }
 
 // RegisterFlags registers all the sub-commands flags.

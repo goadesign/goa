@@ -184,7 +184,7 @@ var _ = Describe("Generate", func() {
 
 			It("generates the corresponding code", func() {
 				Ω(genErr).Should(BeNil())
-				Ω(files).Should(HaveLen(6))
+				Ω(files).Should(HaveLen(8))
 
 				isSource("contexts.go", contextsCode)
 				isSource("controllers.go", controllersCode)
