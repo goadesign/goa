@@ -1403,6 +1403,25 @@ func (a *ActionDefinition) UserTypes() map[string]*UserTypeDefinition {
 	return types
 }
 
+// IterateResponses calls the given iterator passing in each response sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateResponses returns that
+// error.
+func (a *ActionDefinition) IterateResponses(it ResponseIterator) error {
+	names := make([]string, len(a.Responses))
+	i := 0
+	for n := range a.Responses {
+		names[i] = n
+		i++
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		if err := it(a.Responses[n]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Context returns the generic definition name used in error messages.
 func (l *LinkDefinition) Context() string {
 	var prefix, suffix string
