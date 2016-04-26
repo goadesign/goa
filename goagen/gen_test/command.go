@@ -1,10 +1,6 @@
 package gentest
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/meta"
 )
@@ -32,13 +28,8 @@ func NewCommand() *Command {
 
 // RegisterFlags registers the command line flags with the given registry.
 func (c *Command) RegisterFlags(r codegen.FlagRegistry) {
-	appPkg, err := codegen.PackagePath(filepath.Join(codegen.OutputDir, "app"))
-	if err != nil {
-		fmt.Printf("** %s\n", err.Error())
-		os.Exit(1)
-	}
 	if r.Flags().Lookup("appPkg") == nil {
-		r.Flags().StringVar(&AppPkg, "appPkg", appPkg, "Package path to generated application code")
+		r.Flags().StringVar(&AppPkg, "appPkg", "app", "Package path to generated application code")
 	}
 	if r.Flags().Lookup("pkg") == nil {
 		// Special case because the bootstrap command calls RegisterFlags on genapp which

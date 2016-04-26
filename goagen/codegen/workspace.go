@@ -325,9 +325,9 @@ func PackageSourcePath(pkg string) (string, error) {
 	}
 	if absPath == "" {
 		if len(candidates) == 1 {
-			return "", fmt.Errorf(`%s does not contain a Go package`, candidates[0])
+			return "", fmt.Errorf(`%s does not contain the %s Go package`, candidates[0], pkg)
 		}
-		return "", fmt.Errorf(`%s do not contain a Go package`, strings.Join(candidates, ", "))
+		return "", fmt.Errorf(`%s do not contain the %s Go package`, strings.Join(candidates, ", "), pkg)
 	}
 	return absPath, nil
 }
