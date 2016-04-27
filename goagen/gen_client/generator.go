@@ -81,6 +81,10 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 		}
 	}
 	generateUTs := false
+
+	// TBD properly handle ErrorMedia, skip it for now
+	g.generatedTypes[design.ErrorMedia.TypeName] = true
+
 	for _, ut := range types {
 		if _, ok := g.generatedTypes[ut.TypeName]; !ok {
 			generateUTs = true
@@ -517,11 +521,11 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{/*
 `
 
 const payloadTmpl = `// {{ gotypename .Payload nil 0 false }} is the {{ .Parent.Name }} {{ .Name }} action payload.
-type {{ gotypename .Payload nil 1 false }} {{ gotypedef .Payload 0 true false }}
+type {{ gotypename .Payload nil 1 false }} {{ gotypedef .Payload 1 true false }}
 `
 
 const userTypeTmpl = `// {{ gotypedesc . true }}
-type {{ gotypename . .AllRequired 0 false }} {{ gotypedef . 0 true false }}
+type {{ gotypename . .AllRequired 0 false }} {{ gotypedef . 1 true false }}
 `
 
 const typeDecodeTmpl = `{{ $typeName := gotypename . .AllRequired 0 false }}{{ $funcName := printf "Decode%s" $typeName }}// {{ $funcName }} decodes the {{ $typeName }} instance encoded in r.
