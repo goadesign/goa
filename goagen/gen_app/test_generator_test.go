@@ -29,6 +29,7 @@ var _ = Describe("Generate", func() {
 		os.Args = []string{"codegen", "--out=" + outDir, "--design=foo"}
 		oldCommand = codegen.CommandName
 		codegen.CommandName = "app"
+		design.GeneratedMediaTypes = make(design.MediaTypeRoot)
 	})
 
 	JustBeforeEach(func() {

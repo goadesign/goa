@@ -80,21 +80,7 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 			types[n] = ut
 		}
 	}
-	generateUTs := false
-
-	// TBD properly handle ErrorMedia, skip it for now
-	g.generatedTypes[design.ErrorMedia.TypeName] = true
-
-	for _, ut := range types {
-		if _, ok := g.generatedTypes[ut.TypeName]; !ok {
-			generateUTs = true
-			break
-		}
-	}
-	if !generateUTs {
-		return nil
-	}
-	filename := filepath.Join(codegen.OutputDir, "types.go")
+	filename := filepath.Join(codegen.OutputDir, "datatypes.go")
 	file, err := codegen.SourceFileFor(filename)
 	if err != nil {
 		return err
@@ -132,8 +118,15 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 				if mt := api.MediaTypeWithIdentifier(r.MediaType); mt != nil {
 					if _, ok := g.generatedTypes[mt.TypeName]; !ok {
 						g.generatedTypes[mt.TypeName] = true
-						if err := userTypeTmpl.Execute(file, mt); err != nil {
-							return err
+						if !mt.IsBuiltIn() {
+							if err := userTypeTmpl.Execute(file, mt); err != nil {
+								return err
+							}
+						}
+						typeName := mt.TypeName
+						if mt.IsBuiltIn() {
+							elems := strings.Split(typeName, ".")
+							typeName = elems[len(elems)-1]
 						}
 						if err := typeDecodeTmpl.Execute(file, mt); err != nil {
 							return err
@@ -150,6 +143,9 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 
 	// Generate media types used in payloads but not in responses
 	err = api.IterateMediaTypes(func(mediaType *design.MediaTypeDefinition) error {
+		if mediaType.IsBuiltIn() {
+			return nil
+		}
 		if _, ok := g.generatedTypes[mediaType.TypeName]; ok {
 			return nil
 		}
@@ -172,7 +168,7 @@ func (g *Generator) generateResourceClient(res *design.ResourceDefinition, funcs
 	clientsWSTmpl := template.Must(template.New("clients").Funcs(funcs).Parse(clientsWSTmpl))
 	pathTmpl := template.Must(template.New("pathTemplate").Funcs(funcs).Parse(pathTmpl))
 
-	filename := filepath.Join(codegen.OutputDir, snakeCase(res.Name)+".go")
+	filename := filepath.Join(codegen.OutputDir, snakeCase(res.Name)+"_client.go")
 	file, err := codegen.SourceFileFor(filename)
 	if err != nil {
 		return err
@@ -271,6 +267,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		"tempvar":         codegen.Tempvar,
 		"title":           strings.Title,
 		"toString":        toString,
+		"typeName":        typeName,
 		"signerType":      signerType,
 	}
 	clientPkg, err := codegen.PackagePath(codegen.OutputDir)
@@ -494,6 +491,14 @@ func pathParamNames(r *design.RouteDefinition) string {
 	return strings.Join(goified, ", ")
 }
 
+func typeName(mt *design.MediaTypeDefinition) string {
+	name := codegen.GoTypeName(mt, mt.AllRequired(), 1, false)
+	if mt.IsBuiltIn() {
+		return strings.Split(name, ".")[1]
+	}
+	return name
+}
+
 const arrayToStringT = `	{{ $tmp := tempvar }}{{ $tmp }} := make([]string, len({{ .Name }}))
 	for i, e := range {{ .Name }} {
 		{{ $tmp2 := tempvar }}{{ toString "e" $tmp2 .ElemType }}
@@ -521,16 +526,16 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{/*
 `
 
 const payloadTmpl = `// {{ gotypename .Payload nil 0 false }} is the {{ .Parent.Name }} {{ .Name }} action payload.
-type {{ gotypename .Payload nil 1 false }} {{ gotypedef .Payload 1 true false }}
+type {{ gotypename .Payload nil 1 false }} {{ gotypedef .Payload 0 true false }}
 `
 
 const userTypeTmpl = `// {{ gotypedesc . true }}
-type {{ gotypename . .AllRequired 0 false }} {{ gotypedef . 1 true false }}
+type {{ gotypename . .AllRequired 1 false }} {{ gotypedef . 0 true false }}
 `
 
-const typeDecodeTmpl = `{{ $typeName := gotypename . .AllRequired 0 false }}{{ $funcName := printf "Decode%s" $typeName }}// {{ $funcName }} decodes the {{ $typeName }} instance encoded in r.
+const typeDecodeTmpl = `{{ $typeName := typeName . }}{{ $funcName := printf "Decode%s" $typeName }}// {{ $funcName }} decodes the {{ $typeName }} instance encoded in r.
 func {{ $funcName }}(r io.Reader, decoderFn goa.DecoderFunc) ({{ gotyperef . .AllRequired 0 false }}, error) {
-	var decoded {{ $typeName }}
+	var decoded {{ gotypename . .AllRequired 0 false }}
 	err := decoderFn(r).Decode(&decoded)
 	return {{ if .IsObject }}&{{ end }}decoded, err
 }

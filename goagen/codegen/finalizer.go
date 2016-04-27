@@ -93,10 +93,10 @@ func printVal(t design.DataType, val interface{}) string {
 		h := t.ToHash()
 		hval := val.(map[interface{}]interface{})
 		if len(hval) == 0 {
-			return fmt.Sprintf("%s{}", GoPackageTypeName(t, nil, 0, false))
+			return fmt.Sprintf("%s{}", GoTypeName(t, nil, 0, false))
 		}
 		var buffer bytes.Buffer
-		buffer.WriteString(fmt.Sprintf("%s{", GoPackageTypeName(t, nil, 0, false)))
+		buffer.WriteString(fmt.Sprintf("%s{", GoTypeName(t, nil, 0, false)))
 		for k, v := range hval {
 			buffer.WriteString(fmt.Sprintf("%s: %s, ", printVal(h.KeyType.Type, k), printVal(h.ElemType.Type, v)))
 		}
@@ -108,10 +108,10 @@ func printVal(t design.DataType, val interface{}) string {
 		a := t.ToArray()
 		aval := val.([]interface{})
 		if len(aval) == 0 {
-			return fmt.Sprintf("%s{}", GoPackageTypeName(t, nil, 0, false))
+			return fmt.Sprintf("%s{}", GoTypeName(t, nil, 0, false))
 		}
 		var buffer bytes.Buffer
-		buffer.WriteString(fmt.Sprintf("%s{", GoPackageTypeName(t, nil, 0, false)))
+		buffer.WriteString(fmt.Sprintf("%s{", GoTypeName(t, nil, 0, false)))
 		for _, e := range aval {
 			buffer.WriteString(fmt.Sprintf("%s, ", printVal(a.ElemType.Type, e)))
 		}
