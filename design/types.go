@@ -683,7 +683,7 @@ func (m *MediaTypeDefinition) Kind() Kind { return MediaTypeKind }
 
 // IsBuiltIn returns true if the media type is implemented via a goa struct.
 func (m *MediaTypeDefinition) IsBuiltIn() bool {
-	return m == ErrorMedia
+	return m.Identifier == ErrorMedia.Identifier
 }
 
 // ComputeViews returns the media type views recursing as necessary if the media type is a

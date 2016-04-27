@@ -146,9 +146,7 @@ func createTestMethod(resource *design.ResourceDefinition, action *design.Action
 
 		returnType := ObjectType{}
 		returnType.Type = tmp
-		if !p.IsBuiltIn() {
-			returnType.Pointer = "*"
-		}
+		returnType.Pointer = "*"
 		returnType.Validatable = validate != ""
 
 		method.ReturnType = &returnType

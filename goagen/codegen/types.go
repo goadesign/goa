@@ -88,9 +88,9 @@ func GoTypeDef(ds design.DataStructure, tabs int, jsonTags, private bool) string
 	case design.Object:
 		return goTypeDefObject(actual, def, tabs, jsonTags, private)
 	case *design.UserTypeDefinition:
-		return GoPackageTypeName(actual, actual.AllRequired(), tabs, private)
+		return GoTypeName(actual, actual.AllRequired(), tabs, private)
 	case *design.MediaTypeDefinition:
-		return GoPackageTypeName(actual, actual.AllRequired(), tabs, private)
+		return GoTypeName(actual, actual.AllRequired(), tabs, private)
 	default:
 		panic("goa bug: unknown data structure type")
 	}
@@ -129,7 +129,7 @@ func goTypeDefObject(actual design.Object, def *design.AttributeDefinition, tabs
 		}
 		desc := actual[name].Description
 		if desc != "" {
-			desc = fmt.Sprintf("// %s\n", desc)
+			desc = fmt.Sprintf("// %s\n\t", desc)
 		}
 		buffer.WriteString(fmt.Sprintf("%s%s %s%s\n", desc, fname, typedef, tags))
 	}
@@ -175,27 +175,11 @@ func attributeTags(parent, att *design.AttributeDefinition, name string, private
 // tabs is used to properly tabulate the object struct fields and only applies to this case.
 // This function assumes the type is in the same package as the code accessing it.
 func GoTypeRef(t design.DataType, required []string, tabs int, private bool) string {
-	return GoPackageTypeRef(t, required, tabs, private)
-}
-
-// GoPackageTypeRef returns the Go code that refers to the Go type which matches the given data type.
-// required only applies when referring to a user type that is an object defined inline. In this
-// case the type (Object) does not carry the required field information defined in the parent
-// (anonymous) attribute.
-// tabs is used to properly tabulate the object struct fields and only applies to this case.
-func GoPackageTypeRef(t design.DataType, required []string, tabs int, private bool) string {
-	switch t.(type) {
-	case *design.UserTypeDefinition, *design.MediaTypeDefinition:
-		var prefix string
-		if t.IsObject() {
-			prefix = "*"
-		}
-		return prefix + GoPackageTypeName(t, required, tabs, private)
-	case design.Object:
-		return "*" + GoPackageTypeName(t, required, tabs, private)
-	default:
-		return GoPackageTypeName(t, required, tabs, private)
+	tname := GoTypeName(t, required, tabs, private)
+	if t.IsObject() {
+		return "*" + tname
 	}
+	return tname
 }
 
 // GoTypeName returns the Go type name for a data type.
@@ -205,20 +189,11 @@ func GoPackageTypeRef(t design.DataType, required []string, tabs int, private bo
 // case the type (Object) does not carry the required field information defined in the parent
 // (anonymous) attribute.
 func GoTypeName(t design.DataType, required []string, tabs int, private bool) string {
-	return GoPackageTypeName(t, required, tabs, private)
-}
-
-// GoPackageTypeName returns the Go type name for a data type.
-// required only applies when referring to a user type that is an object defined inline. In this
-// case the type (Object) does not carry the required field information defined in the parent
-// (anonymous) attribute.
-// tabs is used to properly tabulate the object struct fields and only applies to this case.
-func GoPackageTypeName(t design.DataType, required []string, tabs int, private bool) string {
 	switch actual := t.(type) {
 	case design.Primitive:
 		return GoNativeType(t)
 	case *design.Array:
-		return "[]" + GoPackageTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), tabs+1, private)
+		return "[]" + GoTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), tabs+1, private)
 	case design.Object:
 		att := &design.AttributeDefinition{Type: actual}
 		if len(required) > 0 {
@@ -229,13 +204,13 @@ func GoPackageTypeName(t design.DataType, required []string, tabs int, private b
 	case *design.Hash:
 		return fmt.Sprintf(
 			"map[%s]%s",
-			GoPackageTypeRef(actual.KeyType.Type, actual.KeyType.AllRequired(), tabs+1, private),
-			GoPackageTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), tabs+1, private),
+			GoTypeRef(actual.KeyType.Type, actual.KeyType.AllRequired(), tabs+1, private),
+			GoTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), tabs+1, private),
 		)
 	case *design.UserTypeDefinition:
 		return Goify(actual.TypeName, !private)
 	case *design.MediaTypeDefinition:
-		if builtin := GoaMediaTypeName(actual); builtin != "" {
+		if builtin := BuiltInTypeName(actual); builtin != "" {
 			return builtin
 		}
 		return Goify(actual.TypeName, !private)
@@ -296,7 +271,7 @@ func GoTypeDesc(t design.DataType, upper bool) string {
 
 		switch elem := actual.UserTypeDefinition.AttributeDefinition.Type.(type) {
 		case *design.Array:
-			return fmt.Sprintf("%s media type is a collection of %s.", Goify(actual.TypeName, upper), GoPackageTypeName(elem.ElemType.Type, nil, 0, !upper))
+			return fmt.Sprintf("%s media type is a collection of %s.", Goify(actual.TypeName, upper), GoTypeName(elem.ElemType.Type, nil, 0, !upper))
 		default:
 			return Goify(actual.TypeName, upper) + " media type."
 		}
@@ -305,11 +280,11 @@ func GoTypeDesc(t design.DataType, upper bool) string {
 	}
 }
 
-// GoaMediaTypeName returns the name of the goa struct corresponding to the media type definition
+// BuiltInTypeName returns the name of the goa struct corresponding to the media type definition
 // or the empty string if there isn't one.
-func GoaMediaTypeName(mt *design.MediaTypeDefinition) string {
-	if mt == design.ErrorMedia {
-		return "*goa.Error"
+func BuiltInTypeName(mt *design.MediaTypeDefinition) string {
+	if mt.Identifier == design.ErrorMedia.Identifier {
+		return "goa.Error"
 	}
 	return ""
 }

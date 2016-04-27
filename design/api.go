@@ -131,26 +131,17 @@ var (
 	ErrorMedia = &MediaTypeDefinition{
 		UserTypeDefinition: &UserTypeDefinition{
 			AttributeDefinition: &AttributeDefinition{
-				Type: &Hash{
-					KeyType: &AttributeDefinition{Type: String},
-					ElemType: &AttributeDefinition{
-						Type: &Array{
-							ElemType: &AttributeDefinition{Type: errorMediaType},
-						},
-					},
-				},
-				Description: "Error response media type as defined by JSON API",
-				Example: map[string][]map[string]interface{}{
-					"errors": []map[string]interface{}{{
-						"id":     "3F1FKVRR",
-						"status": "400",
-						"code":   "invalid_value",
-						"detail": "Value of ID must be an integer",
-						"meta":   map[string]interface{}{"timestamp": 1458609066},
-					}},
+				Type:        errorMediaType,
+				Description: "Error response media type",
+				Example: map[string]interface{}{
+					"id":     "3F1FKVRR",
+					"status": "400",
+					"code":   "invalid_value",
+					"detail": "Value of ID must be an integer",
+					"meta":   map[string]interface{}{"timestamp": 1458609066},
 				},
 			},
-			TypeName: "JSONError",
+			TypeName: "Error",
 		},
 		Identifier: ErrorMediaIdentifier,
 		Views:      map[string]*ViewDefinition{"default": errorMediaView},
