@@ -13,7 +13,7 @@ import (
 )
 
 func makeTestDir(g *Generator, apiName string) (outDir string, err error) {
-	outDir = filepath.Join(codegen.OutputDir, "test")
+	outDir = filepath.Join(AppOutputDir(), "test")
 	if err = os.RemoveAll(outDir); err != nil {
 		return
 	}
