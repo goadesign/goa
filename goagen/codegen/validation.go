@@ -93,6 +93,11 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDef
 			return nil
 		})
 	} else if a := att.Type.ToArray(); a != nil {
+		// Perform any validation on the array type such as MinLength, MaxLength, etc.
+		validation := ValidationChecker(att, nonzero, required, hasDefault, target, context, depth, private)
+		if validation != "" {
+			checks = append(checks, validation)
+		}
 		data := map[string]interface{}{
 			"elemType": a.ElemType,
 			"context":  context,
@@ -100,7 +105,7 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDef
 			"depth":    1,
 			"private":  private,
 		}
-		validation := RunTemplate(arrayValT, data)
+		validation = RunTemplate(arrayValT, data)
 		if validation != "" {
 			checks = append(checks, validation)
 		}
@@ -277,7 +282,7 @@ const (
 	lengthValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
 */}}{{$target := or (and (or (or .array .hash) .nonzero) .target) .targetVal}}{{/*
 */}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
-{{end}}{{tabs .depth}}if len({{$target}}) {{if .isMinLength}}<{{else}}>{{end}} {{if .isMinLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
+{{end}}{{tabs .depth}}	if len({{$target}}) {{if .isMinLength}}<{{else}}>{{end}} {{if .isMinLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
 {{tabs $depth}}	err = goa.MergeErrors(err, goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{$target}}, len({{$target}}), {{if .isMinLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}))
 {{if .isPointer}}{{tabs $depth}}}
 {{end}}{{tabs .depth}}}`
