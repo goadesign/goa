@@ -781,6 +781,12 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 			},
 		},
 	}
+	p.Views = map[string]*ViewDefinition{view: {
+		Name:                view,
+		AttributeDefinition: v.AttributeDefinition,
+		Parent:              p,
+	}}
+
 	GeneratedMediaTypes[canonical] = p
 	projectedObj := p.Type.ToObject()
 	mtObj := m.Type.ToObject()
@@ -814,15 +820,16 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 			GeneratedMediaTypes[canonical+"; links"] = &MediaTypeDefinition{UserTypeDefinition: links}
 		} else {
 			if at := mtObj[n]; at != nil {
-				if at.View != "" {
-					m, ok := at.Type.(*MediaTypeDefinition)
-					if !ok {
-						return nil, nil, fmt.Errorf("View specified on non media type attribute %#v", n)
+				if m, ok := at.Type.(*MediaTypeDefinition); ok {
+					view := at.View
+					if view == "" {
+						view = "default"
 					}
-					pr, _, err := m.Project(at.View)
+					pr, _, err := m.Project(view)
 					if err != nil {
-						return nil, nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", at.View, n, err)
+						return nil, nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", view, n, err)
 					}
+					at = DupAtt(at)
 					at.Type = pr
 				}
 				projectedObj[n] = at

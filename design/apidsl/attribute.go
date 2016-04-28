@@ -17,7 +17,7 @@ import (
 // attributes may include other attributes. At the basic level an attribute has a name,
 // a type and optionally a default value and validation rules. The type of an attribute can be one of:
 //
-// * The primitive types Boolean, Integer, Number or String.
+// * The primitive types Boolean, Integer, Number, DateTime, UUID or String.
 //
 // * A type defined via the Type function.
 //
