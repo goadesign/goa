@@ -259,6 +259,8 @@ func GoNativeType(t design.DataType) string {
 			return "string"
 		case design.DateTimeKind:
 			return "time.Time"
+		case design.UUIDKind:
+			return "uuid.UUID"
 		case design.AnyKind:
 			return "interface{}"
 		default:
