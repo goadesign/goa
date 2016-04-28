@@ -69,6 +69,24 @@ var _ = Describe("validation code generation", func() {
 				})
 			})
 
+			Context("of min length 1", func() {
+				BeforeEach(func() {
+					attType = &design.Array{
+						ElemType: &design.AttributeDefinition{
+							Type: design.String,
+						},
+					}
+					min := 1
+					validation = &dslengine.ValidationDefinition{
+						MinLength: &min,
+					}
+				})
+
+				It("produces the validation go code", func() {
+					Ω(code).Should(Equal(minLengthValCode))
+				})
+			})
+
 			Context("of embedded object", func() {
 				BeforeEach(func() {
 					enumVal := &dslengine.ValidationDefinition{
@@ -124,6 +142,12 @@ const (
 	minValCode = `	if val != nil {
 		if *val < 0 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError(` + "`" + `context` + "`" + `, *val, 0, true))
+		}
+	}`
+
+	minLengthValCode = `	if val != nil {
+		if len(val) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(` + "`" + `context` + "`" + `, val, len(val), 1, true))
 		}
 	}`
 
