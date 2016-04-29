@@ -336,18 +336,34 @@ func snakeCase(name string) string {
 
 // join is a code generation helper function that generates a function signature built from
 // concatenating the properties (name type) of the given attribute type (assuming it's an object).
-func join(att *design.AttributeDefinition) string {
+// join accepts an optional slice of strings which indicates the order in which the parameters
+// should appear in the signature. If pos is specified then it must list all the parameters. If
+// it's not specified then parameters are sorted alphabetically.
+func join(att *design.AttributeDefinition, pos ...[]string) string {
 	if att == nil {
 		return ""
 	}
 	obj := att.Type.ToObject()
 	elems := make([]string, len(obj))
-	i := 0
-	for n, a := range obj {
-		elems[i] = fmt.Sprintf("%s %s", codegen.Goify(n, false), cmdFieldType(a.Type))
-		i++
+	var keys []string
+	if len(pos) > 0 {
+		keys = pos[0]
+		if len(keys) != len(obj) {
+			panic("invalid position slice, lenght does not match attribute field count") // bug
+		}
+	} else {
+		keys = make([]string, len(obj))
+		i := 0
+		for n := range obj {
+			keys[i] = n
+			i++
+		}
+		sort.Strings(keys)
 	}
-	sort.Strings(elems)
+	for i, n := range keys {
+		a := obj[n]
+		elems[i] = fmt.Sprintf("%s %s", codegen.Goify(n, false), cmdFieldType(a.Type))
+	}
 	return strings.Join(elems, ", ")
 }
 
@@ -482,7 +498,7 @@ func pathParams(r *design.RouteDefinition) string {
 	for _, p := range pnames {
 		params[p] = r.Parent.Params.Type.ToObject()[p]
 	}
-	return join(&design.AttributeDefinition{Type: params})
+	return join(&design.AttributeDefinition{Type: params}, pnames)
 }
 
 // pathParams return the names of the parameters of the path factory function for the given route.
@@ -509,25 +525,6 @@ const arrayToStringT = `	{{ $tmp := tempvar }}{{ $tmp }} := make([]string, len({
 		{{ $tmp }}[i] = {{ $tmp2 }}
 	}
 	{{ .Target }} := strings.Join({{ $tmp }}, ",")`
-
-const clientsWSTmpl = `{{ $funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true }}{{/*
-*/}}{{ $desc := .Description }}{{ if $desc }}{{ multiComment $desc }}{{ else }}// {{ $funcName }} establishes a websocket connection to the {{ .Name }} action endpoint of the {{ .Parent.Name }} resource{{ end }}
-func (c *Client) {{ $funcName }}(ctx context.Context, path string{{/*
-	*/}}{{ $params := join .QueryParams }}{{ if $params }}, {{ $params }}{{ end }}{{/*
-	*/}}{{ $headers := join .Headers }}{{ if $headers }}, {{ $headers }}{{ end }}) (*websocket.Conn, error) {
-	scheme := c.Scheme
-	if scheme == "" {
-		scheme = "{{ .CanonicalScheme }}"
-	}
-	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
-{{ $params := .QueryParams }}{{ if $params }}{{ if gt (len $params.Type.ToObject) 0 }}	values := u.Query()
-{{ range $name, $att := $params.Type.ToObject }}{{ if (eq $att.Type.Kind 4) }}	values.Set("{{ $name }}", {{ goify $name false }})
-{{ else }}{{ $tmp := tempvar }}{{ toString (goify $name false) $tmp $att }}
-	values.Set("{{ $name }}", {{ $tmp }})
-{{ end }}{{ end }}	u.RawQuery = values.Encode()
-{{ end }}{{ end }}	return websocket.Dial(u.String(), "", u.String())
-}
-`
 
 const payloadTmpl = `// {{ gotypename .Payload nil 0 false }} is the {{ .Parent.Name }} {{ .Name }} action payload.
 type {{ gotypename .Payload nil 1 false }} {{ gotypedef .Payload 0 true false }}
@@ -585,6 +582,25 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Payload 
 {{ end }}{{ end }}{{ end }}	header.Set("Content-Type", "application/json"){{ if .Security }}
 	c.Signer{{ goify .Security.Scheme.SchemeName true }}.Sign(ctx, req){{ end }}
 	return c.Client.Do(ctx, req)
+}
+`
+
+const clientsWSTmpl = `{{ $funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true }}{{/*
+*/}}{{ $desc := .Description }}{{ if $desc }}{{ multiComment $desc }}{{ else }}// {{ $funcName }} establishes a websocket connection to the {{ .Name }} action endpoint of the {{ .Parent.Name }} resource{{ end }}
+func (c *Client) {{ $funcName }}(ctx context.Context, path string{{/*
+	*/}}{{ $params := join .QueryParams }}{{ if $params }}, {{ $params }}{{ end }}{{/*
+	*/}}{{ $headers := join .Headers }}{{ if $headers }}, {{ $headers }}{{ end }}) (*websocket.Conn, error) {
+	scheme := c.Scheme
+	if scheme == "" {
+		scheme = "{{ .CanonicalScheme }}"
+	}
+	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
+{{ $params := .QueryParams }}{{ if $params }}{{ if gt (len $params.Type.ToObject) 0 }}	values := u.Query()
+{{ range $name, $att := $params.Type.ToObject }}{{ if (eq $att.Type.Kind 4) }}	values.Set("{{ $name }}", {{ goify $name false }})
+{{ else }}{{ $tmp := tempvar }}{{ toString (goify $name false) $tmp $att }}
+	values.Set("{{ $name }}", {{ $tmp }})
+{{ end }}{{ end }}	u.RawQuery = values.Encode()
+{{ end }}{{ end }}	return websocket.Dial(u.String(), "", u.String())
 }
 `
 
