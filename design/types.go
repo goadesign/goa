@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/goadesign/goa/dslengine"
+	"github.com/satori/go.uuid"
 )
 
 type (
@@ -131,6 +132,8 @@ const (
 	StringKind
 	// DateTimeKind represents a JSON string that is parsed as a Go time.Time
 	DateTimeKind
+	// UUIDKind represents a JSON string that is parsed as a Go uuid.UUID
+	UUIDKind
 	// AnyKind represents a generic interface{}.
 	AnyKind
 	// ArrayKind represents a JSON array.
@@ -162,6 +165,10 @@ const (
 	// DateTime expects an RFC3339 formatted value.
 	DateTime = Primitive(DateTimeKind)
 
+	// UUID is the type for a JSON string parsed as a Go uuid.UUID
+	// UUID expects an RFC4122 formatted value.
+	UUID = Primitive(UUIDKind)
+
 	// Any is the type for an arbitrary JSON value (interface{} in Go).
 	Any = Primitive(AnyKind)
 )
@@ -180,9 +187,7 @@ func (p Primitive) Name() string {
 		return "integer"
 	case Number:
 		return "number"
-	case String:
-		return "string"
-	case DateTime:
+	case String, DateTime, UUID:
 		return "string"
 	case Any:
 		return "any"
@@ -226,7 +231,7 @@ func (p Primitive) CanHaveDefault() (ok bool) {
 
 // IsCompatible returns true if val is compatible with p.
 func (p Primitive) IsCompatible(val interface{}) bool {
-	if p != Boolean && p != Integer && p != Number && p != String && p != DateTime && p != Any {
+	if p != Boolean && p != Integer && p != Number && p != String && p != DateTime && p != UUID && p != Any {
 		panic("unknown primitive type") // bug
 	}
 	if p == Any {
@@ -247,11 +252,15 @@ func (p Primitive) IsCompatible(val interface{}) bool {
 			_, err := time.Parse(time.RFC3339, val.(string))
 			return err == nil
 		}
+		if p == UUID {
+			_, err := uuid.FromString(val.(string))
+			return err == nil
+		}
 	}
 	return false
 }
 
-var anyPrimitive = []Primitive{Boolean, Integer, Number, DateTime}
+var anyPrimitive = []Primitive{Boolean, Integer, Number, DateTime, UUID}
 
 // GenerateExample returns an instance of the given data type.
 func (p Primitive) GenerateExample(r *RandomGenerator) interface{} {
@@ -266,6 +275,8 @@ func (p Primitive) GenerateExample(r *RandomGenerator) interface{} {
 		return r.String()
 	case DateTime:
 		return r.DateTime()
+	case UUID:
+		return r.UUID()
 	case Any:
 		// to not make it too complicated, pick one of the primitive types
 		return anyPrimitive[r.Int()%len(anyPrimitive)].GenerateExample(r)

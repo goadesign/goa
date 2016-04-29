@@ -266,6 +266,8 @@ func TypeSchema(api *design.APIDefinition, t design.DataType) *JSONSchema {
 	case design.Primitive:
 		s.Type = JSONType(actual.Name())
 		switch actual.Kind() {
+		case design.UUIDKind:
+			s.Format = "uuid"
 		case design.DateTimeKind:
 			s.Format = "date-time"
 		case design.NumberKind:

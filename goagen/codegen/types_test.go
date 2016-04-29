@@ -163,6 +163,7 @@ var _ = Describe("code generation", func() {
 						"foo": &AttributeDefinition{Type: Integer},
 						"bar": &AttributeDefinition{Type: String},
 						"baz": &AttributeDefinition{Type: DateTime},
+						"qux": &AttributeDefinition{Type: UUID},
 					}
 					required = nil
 				})
@@ -172,6 +173,7 @@ var _ = Describe("code generation", func() {
 						"	Bar *string `json:\"bar,omitempty\" xml:\"bar,omitempty\"`\n" +
 						"	Baz *time.Time `json:\"baz,omitempty\" xml:\"baz,omitempty\"`\n" +
 						"	Foo *int `json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n" +
+						"	Qux *uuid.UUID `json:\"qux,omitempty\" xml:\"qux,omitempty\"`\n" +
 						"}"
 					Ω(st).Should(Equal(expected))
 				})
@@ -195,6 +197,7 @@ var _ = Describe("code generation", func() {
 							"	Bar *string `json:\"bar,omitempty\" xml:\"bar,omitempty\"`\n"+
 							"	Baz *time.Time `json:\"baz,omitempty\" xml:\"baz,omitempty\"`\n"+
 							"	Foo *int `%s:\"%s,%s\" %s:\"%s\"`\n"+
+							"	Qux *uuid.UUID `json:\"qux,omitempty\" xml:\"qux,omitempty\"`\n"+
 							"}", tn1[11:], tv11, tv12, tn2[11:], tv21)
 						Ω(st).Should(Equal(expected))
 					})
@@ -212,6 +215,7 @@ var _ = Describe("code generation", func() {
 							"	Bar *string `json:\"bar,omitempty\" xml:\"bar,omitempty\"`\n" +
 							"	Baz *time.Time `json:\"baz,omitempty\" xml:\"baz,omitempty\"`\n" +
 							"	ServiceName *int `json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n" +
+							"	Qux *uuid.UUID `json:\"qux,omitempty\" xml:\"qux,omitempty\"`\n" +
 							"}"
 						Ω(st).Should(Equal(expected))
 					})

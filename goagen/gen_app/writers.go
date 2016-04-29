@@ -441,11 +441,21 @@ type {{ .Name }} struct {
 {{ tabs .Depth }}}
 {{ end }}{{ if eq .Attribute.Type.Kind 6 }}{{/*
 
+*/}}{{/* UUIDType */}}{{/*
+*/}}{{ $varName := or (and (not .Pointer) .VarName) tempvar }}{{/*
+*/}}{{ tabs .Depth }}if {{ .VarName }}, err2 := uuid.FromString(raw{{ goify .Name true }}); err2 == nil {
+{{ if .Pointer }}{{ tabs .Depth }}	{{ $varName }} := &{{ .VarName }}
+{{ end }}{{ tabs .Depth }}	{{ .Pkg }} = {{ $varName }}
+{{ tabs .Depth }}} else {
+{{ tabs .Depth }}	err = goa.MergeErrors(err, goa.InvalidParamTypeError("{{ .Name }}", raw{{ goify .Name true }}, "uuid"))
+{{ tabs .Depth }}}
+{{ end }}{{ if eq .Attribute.Type.Kind 7 }}{{/*
+
 */}}{{/* AnyType */}}{{/*
 */}}{{ if .Pointer }}{{ $tmp := tempvar }}{{ tabs .Depth }}{{ $tmp }} := interface{}(raw{{ goify .Name true }})
 {{ tabs .Depth }}{{ .Pkg }} = &{{ $tmp }}
 {{ else }}{{ tabs .Depth }}{{ .Pkg }} = raw{{ goify .Name true }}
-{{ end }}{{ end }}{{ if eq .Attribute.Type.Kind 7 }}{{/*
+{{ end }}{{ end }}{{ if eq .Attribute.Type.Kind 8 }}{{/*
 
 */}}{{/* ArrayType */}}{{/*
 */}}{{ tabs .Depth }}elems{{ goify .Name true }} := strings.Split(raw{{ goify .Name true }}, ",")

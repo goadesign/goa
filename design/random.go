@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/manveru/faker"
+	"github.com/satori/go.uuid"
 )
 
 // RandomGenerator generates consistent random values of different types given a seed.
@@ -55,7 +56,11 @@ func (r *RandomGenerator) DateTime() time.Time {
 	max := time.Date(2016, time.July, 11, 23, 0, 0, 0, time.UTC).Unix()
 	unix := r.rand.Int63n(max)
 	return time.Unix(unix, 0)
+}
 
+// UUID produces a random UUID.
+func (r *RandomGenerator) UUID() uuid.UUID {
+	return uuid.NewV4()
 }
 
 // Bool produces a random boolean.
