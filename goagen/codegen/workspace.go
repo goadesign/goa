@@ -259,7 +259,11 @@ func (f *SourceFile) FormatCode() error {
 		for _, imp := range group {
 			path := strings.Trim(imp.Path.Value, `"`)
 			if !astutil.UsesImport(file, path) {
-				astutil.DeleteImport(fset, file, path)
+				if imp.Name != nil {
+					astutil.DeleteNamedImport(fset, file, imp.Name.Name, path)
+				} else {
+					astutil.DeleteImport(fset, file, path)
+				}
 			}
 		}
 	}

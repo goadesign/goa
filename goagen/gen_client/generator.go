@@ -90,6 +90,7 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("io"),
 		codegen.SimpleImport("time"),
+		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
 	if err := file.WriteHeader("User Types", "client", imports); err != nil {
 		return err
@@ -185,6 +186,7 @@ func (g *Generator) generateResourceClient(res *design.ResourceDefinition, funcs
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport("golang.org/x/net/context"),
 		codegen.SimpleImport("golang.org/x/net/websocket"),
+		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
 	if err := file.WriteHeader("", "client", imports); err != nil {
 		return err
@@ -375,7 +377,7 @@ func goTypeRefExt(t design.DataType, tabs int, pkg string) string {
 
 // cmdFieldType computes the Go type name used to store command flags of the given design type.
 func cmdFieldType(t design.DataType) string {
-	if t.Kind() == design.DateTimeKind {
+	if t.Kind() == design.DateTimeKind || t.Kind() == design.UUIDKind {
 		return "string"
 	}
 	return codegen.GoNativeType(t)
@@ -396,7 +398,7 @@ func toString(name, target string, att *design.AttributeDefinition) string {
 			return fmt.Sprintf("%s := strconv.FormatBool(%s)", target, name)
 		case design.NumberKind:
 			return fmt.Sprintf("%s := strconv.FormatFloat(%s, 'f', -1, 64)", target, name)
-		case design.StringKind, design.DateTimeKind:
+		case design.StringKind, design.DateTimeKind, design.UUIDKind:
 			return fmt.Sprintf("%s := %s", target, name)
 		case design.AnyKind:
 			return fmt.Sprintf("%s := fmt.Sprintf(\"%%v\", %s)", target, name)
@@ -427,6 +429,8 @@ func flagType(att *design.AttributeDefinition) string {
 	case design.StringKind:
 		return "String"
 	case design.DateTimeKind:
+		return "String"
+	case design.UUIDKind:
 		return "String"
 	case design.AnyKind:
 		return "String"

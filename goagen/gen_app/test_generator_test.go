@@ -67,6 +67,7 @@ var _ = Describe("Generate", func() {
 									Type: design.Object{
 										"param": &design.AttributeDefinition{Type: design.Integer},
 										"time":  &design.AttributeDefinition{Type: design.DateTime},
+										"uuid":  &design.AttributeDefinition{Type: design.UUID},
 									},
 								},
 								Routes: []*design.RouteDefinition{
@@ -91,6 +92,7 @@ var _ = Describe("Generate", func() {
 									Type: design.Object{
 										"param": &design.AttributeDefinition{Type: design.Integer},
 										"time":  &design.AttributeDefinition{Type: design.DateTime},
+										"uuid":  &design.AttributeDefinition{Type: design.UUID},
 									},
 								},
 								Routes: []*design.RouteDefinition{

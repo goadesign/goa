@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"regexp"
 	"time"
+
+	"github.com/satori/go.uuid"
 )
 
 // Format defines a validation format.
@@ -15,6 +17,9 @@ type Format string
 const (
 	// FormatDateTime defines RFC3339 date time values.
 	FormatDateTime Format = "date-time"
+
+	// FormatUUID defines RFC4122 uuid values.
+	FormatUUID Format = "uuid"
 
 	// FormatEmail defines RFC5322 email addresses.
 	FormatEmail = "email"
@@ -68,6 +73,8 @@ func ValidateFormat(f Format, val string) error {
 	switch f {
 	case FormatDateTime:
 		_, err = time.Parse(time.RFC3339, val)
+	case FormatUUID:
+		_, err = uuid.FromString(val)
 	case FormatEmail:
 		_, err = mail.ParseAddress(val)
 	case FormatHostname:

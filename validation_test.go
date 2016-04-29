@@ -43,7 +43,32 @@ var _ = Describe("ValidateFormat", func() {
 				Ω(valErr).ShouldNot(HaveOccurred())
 			})
 		})
+	})
 
+	Context("UUID", func() {
+		BeforeEach(func() {
+			f = goa.FormatUUID
+		})
+
+		Context("with an invalid value", func() {
+			BeforeEach(func() {
+				val = "96054a62-a9e45ed26688389b"
+			})
+
+			It("does not validate", func() {
+				Ω(valErr).Should(HaveOccurred())
+			})
+		})
+
+		Context("with an valid value", func() {
+			BeforeEach(func() {
+				val = "0f14d0ab-9605-4a62-a9e45ed26688389b"
+			})
+
+			It("validates", func() {
+				Ω(valErr).ShouldNot(HaveOccurred())
+			})
+		})
 	})
 
 	Context("Email", func() {
