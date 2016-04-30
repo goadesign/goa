@@ -12,29 +12,33 @@ import (
 	"golang.org/x/net/context"
 )
 
-// New returns a middleware to be used with the `JWTSecurity()` DSL
-// definitions of `goa`.  It supports the `scopes` claim in the JWT
-// and ensures goa-defined `Security()` DSLs are properly validated.
+// New returns a middleware to be used with the JWTSecurity DSL definitions of goa.  It supports the
+// scopes claim in the JWT and ensures goa-defined Security DSLs are properly validated.
 //
-// The `exp` (expiration) and `nbf` (not before) date checks are
-// validated by the JWT library.
+// The steps taken by the middleware are:
+//
+//     1. Validate the "Bearer" token present in the "Authorization" header against the key(s)
+//        given to New
+//     2. If scopes are defined in the design for the action validate them against the "scopes" JWT
+//        claim
+//
+// The `exp` (expiration) and `nbf` (not before) date checks are validated by the JWT library.
 //
 // validationKeys can be one of these:
 //
-//   * a single string
-//   * a single []byte
-//   * a list of string
-//   * a list of []byte
-//   * a single *rsa.PublicKey
-//   * a list of *rsa.PublicKey
+//     * a single string
+//     * a single []byte
+//     * a list of string
+//     * a list of []byte
+//     * a single rsa.PublicKey
+//     * a list of rsa.PublicKey
 //
-// The type of the keys determine the algorithms that will be checked.
-// The goal of having lists of keys is to allow for key rotation,
-// still check the previous keys until rotation has been completed.
+// The type of the keys determine the algorithms that will be used to do the check.  The goal of
+// having lists of keys is to allow for key rotation, still check the previous keys until rotation
+// has been completed.
 //
-// You can define an optional function to do additional validations on
-// the token once the signature and the claims requirements are proven
-// to be valid.  Example:
+// You can define an optional function to do additional validations on the token once the signature
+// and the claims requirements are proven to be valid.  Example:
 //
 //    validationHandler, _ := goa.NewMiddleware(func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 //        token := jwt.ContextJWT(ctx)
@@ -96,7 +100,6 @@ func New(validationKeys interface{}, validationFunc goa.Middleware) goa.JWTSecur
 					panic("how did this happen ? unsupported algo in jwt middleware")
 				}
 				if err != nil {
-					goa.LogInfo(ctx, "JWT token validation failed", "err", err)
 					return ErrJWTError("JWT validation failed")
 				}
 
@@ -110,7 +113,6 @@ func New(validationKeys interface{}, validationFunc goa.Middleware) goa.JWTSecur
 
 				for _, scope := range requiredScopes {
 					if !scopesInClaim[scope] {
-						goa.LogInfo(ctx, "missing required scope in JWT token", "missing_scope", scope, "required_scopes", requiredScopes, "scopes_in_claim", scopesInClaimList)
 						return ErrJWTError("authorization failed: required 'scopes' not present in JWT claim").Meta("required_scopes", requiredScopes, "scopes_in_claim", scopesInClaimList)
 					}
 				}
