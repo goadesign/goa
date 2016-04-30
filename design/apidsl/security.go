@@ -5,17 +5,13 @@ import (
 	"github.com/goadesign/goa/dslengine"
 )
 
-// Security defines an authentication requirements to access a goa
-// Action.  When defined on a Resource, it applies to all Actions,
-// unless overriden by individual actions.  When defined at the API
-// level, it will apply to all resources by default, following the
-// same logic.
+// Security defines an authentication requirements to access a goa Action.  When defined on a
+// Resource, it applies to all Actions, unless overriden by individual actions.  When defined at the
+// API level, it will apply to all resources by default, following the same logic.
 //
-// The scheme refers to previous definitions of either
-// OAuth2Security(), BasicAuthSecurity(), APIKeySecurity() or
-// JWTSecurity().  It can be a string, corresponding to the first
-// parameter of those definitions, or a SecuritySchemeDefinition,
-// returned by those same functions.
+// The scheme refers to previous definitions of either OAuth2Security, BasicAuthSecurity,
+// APIKeySecurity or JWTSecurity.  It can be a string, corresponding to the first parameter of
+// those definitions, or a SecuritySchemeDefinition, returned by those same functions.
 func Security(scheme interface{}, dsl ...func()) {
 	var def *design.SecurityDefinition
 	switch val := scheme.(type) {
@@ -57,9 +53,8 @@ func Security(scheme interface{}, dsl ...func()) {
 	}
 }
 
-// NoSecurity resets the authentication schemes for an Action or a
-// Resource. It also prevents fallback to Resource or API-defined
-// Security().
+// NoSecurity resets the authentication schemes for an Action or a Resource. It also prevents
+// fallback to Resource or API-defined Security.
 func NoSecurity() {
 	def := &design.SecurityDefinition{
 		Scheme: &design.SecuritySchemeDefinition{Kind: design.NoSecurityKind},
@@ -126,10 +121,10 @@ func securitySchemeRedefined(name string) bool {
 //
 // Example:
 //
-//     APIKeySecurity("jwt", func() {
-//			Description("Use your own password!")
-//    		Header("Authorization")
-//     })
+//     APIKeySecurity("key", func() {
+//          Description("Shared secret")
+//          Header("Authorization")
+//    })
 //
 func APIKeySecurity(name string, dsl ...func()) *design.SecuritySchemeDefinition {
 	switch dslengine.CurrentDefinition().(type) {
@@ -158,20 +153,19 @@ func APIKeySecurity(name string, dsl ...func()) *design.SecuritySchemeDefinition
 	return def
 }
 
-// OAuth2Security defines the different Security schemes that are
-// available throughout the API.
+// OAuth2Security defines the different Security schemes that are available throughout the API.
 //
 // Example:
 //
-//     OAuth2Security("googAuth", func() {
-//	    	AccessCodeFlow(...)
-//	    	// ImplicitFlow(...)
-//	    	// PasswordFlow(...)
-//	    	// ApplicationFlow(...)
+//    OAuth2Security("googAuth", func() {
+//        AccessCodeFlow(...)
+//     // ImplicitFlow(...)
+//     // PasswordFlow(...)
+//     // ApplicationFlow(...)
 //
-//	    	Scope("my_system:write", "Write to the system")
-//	    	Scope("my_system:read", "Read anything in there")
-//     })
+//        Scope("my_system:write", "Write to the system")
+//        Scope("my_system:read", "Read anything in there")
+//    })
 //
 func OAuth2Security(name string, dsl ...func()) *design.SecuritySchemeDefinition {
 	switch dslengine.CurrentDefinition().(type) {
@@ -200,21 +194,20 @@ func OAuth2Security(name string, dsl ...func()) *design.SecuritySchemeDefinition
 	return def
 }
 
-// JWTSecurity defines an APIKey security scheme, with support for
-// Scopes and a TokenURL.
+// JWTSecurity defines an APIKey security scheme, with support for Scopes and a TokenURL.
 //
-// Since Scopes and TokenURLs are not compatible with the Swagger specification,
-// the swagger generator inserts comments in the description of the different
-// elements on which they are defined.
+// Since Scopes and TokenURLs are not compatible with the Swagger specification, the swagger
+// generator inserts comments in the description of the different elements on which they are
+// defined.
 //
 // Example:
 //
-//     JWTSecurity("jwt", func() {
-//          Header("Authorization")
-//	    	TokenURL("http://example.com/token")
-//	    	Scope("my_system:write", "Write to the system")
-//	    	Scope("my_system:read", "Read anything in there")
-//     })
+//    JWTSecurity("jwt", func() {
+//        Header("Authorization")
+//        TokenURL("http://example.com/token")
+//        Scope("my_system:write", "Write to the system")
+//        Scope("my_system:read", "Read anything in there")
+//    })
 //
 func JWTSecurity(name string, dsl ...func()) *design.SecuritySchemeDefinition {
 	switch dslengine.CurrentDefinition().(type) {
@@ -243,9 +236,8 @@ func JWTSecurity(name string, dsl ...func()) *design.SecuritySchemeDefinition {
 	return def
 }
 
-// Scope defines an authorization scope. Used within SecurityScheme,
-// the description is required, explaining what the scope
-// means. Within a Security block, only a scope is needed.
+// Scope defines an authorization scope. Used within SecurityScheme, the description is required,
+// explaining what the scope means. Within a Security block, only a scope is needed.
 func Scope(name string, desc ...string) {
 	switch parent := dslengine.CurrentDefinition().(type) {
 	case *design.SecurityDefinition:
@@ -284,9 +276,8 @@ func inHeader(headerName string) {
 	dslengine.IncompatibleDSL()
 }
 
-// Query defines that an APIKeySecurity or JWTSecurity implementation
-// must check in the query parameter named "parameterName" to get the
-// api key.
+// Query defines that an APIKeySecurity or JWTSecurity implementation must check in the query
+// parameter named "parameterName" to get the api key.
 func Query(parameterName string) {
 	if parent, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
 		if parent.Kind == design.APIKeySecurityKind || parent.Kind == design.JWTSecurityKind {
@@ -302,8 +293,7 @@ func Query(parameterName string) {
 	dslengine.IncompatibleDSL()
 }
 
-// AccessCodeFlow defines an "access code" OAuth2 flow.  Use
-// within an OAuth2Security definition.
+// AccessCodeFlow defines an "access code" OAuth2 flow.  Use within an OAuth2Security definition.
 func AccessCodeFlow(authorizationURL, tokenURL string) {
 	if parent, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
 		if parent.Kind == design.OAuth2SecurityKind {
@@ -316,8 +306,7 @@ func AccessCodeFlow(authorizationURL, tokenURL string) {
 	dslengine.IncompatibleDSL()
 }
 
-// ApplicationFlow defines an "application" OAuth2 flow.  Use
-// within an OAuth2Security definition.
+// ApplicationFlow defines an "application" OAuth2 flow.  Use within an OAuth2Security definition.
 func ApplicationFlow(tokenURL string) {
 	if parent, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
 		if parent.Kind == design.OAuth2SecurityKind {
@@ -329,8 +318,7 @@ func ApplicationFlow(tokenURL string) {
 	dslengine.IncompatibleDSL()
 }
 
-// PasswordFlow defines a "password" OAuth2 flow.  Use within an
-// OAuth2Security definition.
+// PasswordFlow defines a "password" OAuth2 flow.  Use within an OAuth2Security definition.
 func PasswordFlow(tokenURL string) {
 	if parent, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
 		if parent.Kind == design.OAuth2SecurityKind {
@@ -342,8 +330,7 @@ func PasswordFlow(tokenURL string) {
 	dslengine.IncompatibleDSL()
 }
 
-// ImplicitFlow defines an "implicit" OAuth2 flow.  Use within an
-// OAuth2Security definition.
+// ImplicitFlow defines an "implicit" OAuth2 flow.  Use within an OAuth2Security definition.
 func ImplicitFlow(authorizationURL string) {
 	if parent, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
 		if parent.Kind == design.OAuth2SecurityKind {
@@ -355,9 +342,8 @@ func ImplicitFlow(authorizationURL string) {
 	dslengine.IncompatibleDSL()
 }
 
-// TokenURL defines a URL to get an access token.  If you are defining
-// OAuth2 flows, please use `ImplicitFlow`, `PasswordFlow`,
-// `AccessCodeFlow` or `ApplicationFlow` instead. This will set an
+// TokenURL defines a URL to get an access token.  If you are defining OAuth2 flows, use
+// `ImplicitFlow`, `PasswordFlow`, `AccessCodeFlow` or `ApplicationFlow` instead. This will set an
 // endpoint where you can obtain a JWT with the JWTSecurity scheme.
 func TokenURL(tokenURL string) {
 	if parent, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {

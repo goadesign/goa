@@ -36,6 +36,7 @@ import (
 //		BaseParams(func() {			// Common parameters to all API actions
 //			Param("param")
 //		})
+//		Security("JWT")
 //		Origin("http://swagger.goa.design", func() { // Define CORS policy, may be prefixed with "*" wildcard
 //			Headers("X-Shared-Secret")           // One or more authorized headers, use "*" to authorize all
 //			Methods("GET", "POST")               // One or more authorized HTTP methods
