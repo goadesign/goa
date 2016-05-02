@@ -830,8 +830,7 @@ func (r *ResourceDefinition) Finalize() {
 func (r *ResourceDefinition) UserTypes() map[string]*UserTypeDefinition {
 	types := make(map[string]*UserTypeDefinition)
 	for _, a := range r.Actions {
-		atypes := a.UserTypes()
-		for n, ut := range atypes {
+		for n, ut := range a.UserTypes() {
 			types[n] = ut
 		}
 	}
@@ -1396,6 +1395,14 @@ func (a *ActionDefinition) UserTypes() map[string]*UserTypeDefinition {
 	}
 	for n, ut := range UserTypes(allp) {
 		types[n] = ut
+	}
+	for _, r := range a.Responses {
+		if mt := Design.MediaTypeWithIdentifier(r.MediaType); mt != nil {
+			types[mt.TypeName] = mt.UserTypeDefinition
+			for n, ut := range UserTypes(mt.UserTypeDefinition) {
+				types[n] = ut
+			}
+		}
 	}
 	if len(types) == 0 {
 		return nil
