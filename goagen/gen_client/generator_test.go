@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/codegen"
@@ -38,6 +39,50 @@ var _ = Describe("Generate", func() {
 	AfterEach(func() {
 		codegen.CommandName = oldCommand
 		os.RemoveAll(outDir)
+	})
+
+	Context("with an action with multiple routes", func() {
+		BeforeEach(func() {
+			design.Design = &design.APIDefinition{
+				Name: "testapi",
+				Resources: map[string]*design.ResourceDefinition{
+					"foo": {
+						Name: "foo",
+						Actions: map[string]*design.ActionDefinition{
+							"show": {
+								Name: "show",
+								Routes: []*design.RouteDefinition{
+									{
+										Verb: "GET",
+										Path: "",
+									},
+									{
+										Verb: "GET",
+										Path: "/foo",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			fooRes := design.Design.Resources["foo"]
+			showAct := fooRes.Actions["show"]
+			showAct.Parent = fooRes
+			showAct.Routes[0].Parent = showAct
+			showAct.Routes[1].Parent = showAct
+		})
+
+		It("generates Path function with unique names", func() {
+			Ω(genErr).Should(BeNil())
+			Ω(files).Should(HaveLen(7))
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring("func ShowFooPath("))
+			Ω(strings.Count(string(content), "func ShowFooPath(")).Should(Equal(1))
+			Ω(content).Should(ContainSubstring("func ShowFooPath2("))
+			Ω(strings.Count(string(content), "func ShowFooPath2(")).Should(Equal(1))
+		})
 	})
 
 	Context("with an action with security configured", func() {
