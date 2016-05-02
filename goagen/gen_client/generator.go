@@ -533,7 +533,7 @@ func {{ $funcName }}(r io.Reader, decoderFn goa.DecoderFunc) ({{ gotyperef . .Al
 }
 `
 
-const pathTmpl = `{{ $funcName := printf "%sPath" (goify (printf "%s%s" .Route.Parent.Name (title .Route.Parent.Parent.Name)) true) }}{{ if .Index }}{{ add .Index 1 }}{{ end }}{{/*
+const pathTmpl = `{{ $funcName := printf "%sPath%s" (goify (printf "%s%s" .Route.Parent.Name (title .Route.Parent.Parent.Name)) true) ((or (and .Index (add .Index 1)) "") | printf "%v") }}{{/*
 */}}{{ with .Route }}// {{ $funcName }} computes a request path to the {{ .Parent.Name }} action of {{ .Parent.Parent.Name }}.
 func {{ $funcName }}({{ pathParams . }}) string {
 	return fmt.Sprintf("{{ pathTemplate . }}", {{ pathParamNames . }})
