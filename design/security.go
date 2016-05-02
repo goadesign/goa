@@ -1,5 +1,10 @@
 package design
 
+import (
+	"fmt"
+	"net/url"
+)
+
 // SecuritySchemeKind is a type of security scheme, according to the
 // swagger specs.
 type SecuritySchemeKind int
@@ -11,7 +16,7 @@ const (
 	BasicAuthSecurityKind
 	// APIKeySecurityKind means "apiKey" security type.
 	APIKeySecurityKind
-	// JWTSecurityKind means an "apiKey" security type, with support for TokenURL and Scopes.
+	// JWTSecurityKind means an "apiKey" security type, with support for TokenPath and Scopes.
 	JWTSecurityKind
 	// NoSecurityKind means to have no security for this endpoint.
 	NoSecurityKind
@@ -58,9 +63,9 @@ type SecuritySchemeDefinition struct {
 	Scopes map[string]string `json:"scopes,omitempty"`
 	// Flow determines the oauth2 flow to use for this scheme.
 	Flow string `json:"flow,omitempty"`
-	// TokenURL holds the tokenUrl for the oauth2 flow
+	// TokenURL holds the URL for refreshing tokens with oauth2 or JWT
 	TokenURL string `json:"token_url,omitempty"`
-	// AuthorizationURL holds the authorizationUrl for the oauth2 flow
+	// AuthorizationURL holds URL for retrieving authorization codes with oauth2
 	AuthorizationURL string `json:"authorization_url,omitempty"`
 }
 
@@ -83,4 +88,42 @@ func (s *SecuritySchemeDefinition) Context() string {
 		dslFunc = "JWTSecurity"
 	}
 	return dslFunc
+}
+
+// Validate ensures that TokenURL and AuthorizationURL are valid URLs.
+func (s *SecuritySchemeDefinition) Validate() error {
+	_, err := url.Parse(s.TokenURL)
+	if err != nil {
+		return fmt.Errorf("invalid token URL %#v: %s", s.TokenURL, err)
+	}
+	_, err = url.Parse(s.AuthorizationURL)
+	if err != nil {
+		return fmt.Errorf("invalid authorization URL %#v: %s", s.AuthorizationURL, err)
+	}
+	return nil
+}
+
+// Finalize makes the TokenURL and AuthorizationURL complete if needed.
+func (s *SecuritySchemeDefinition) Finalize() {
+	tu, _ := url.Parse(s.TokenURL)         // validated in Validate
+	au, _ := url.Parse(s.AuthorizationURL) // validated in Validate
+	tokenOK := tu.IsAbs()
+	authOK := au.IsAbs()
+	if tokenOK && authOK {
+		return
+	}
+	scheme := "http"
+	if len(Design.Schemes) > 0 {
+		scheme = Design.Schemes[0]
+	}
+	if !tokenOK {
+		tu.Scheme = scheme
+		tu.Host = Design.Host
+		s.TokenURL = tu.String()
+	}
+	if !authOK {
+		au.Scheme = scheme
+		au.Host = Design.Host
+		s.AuthorizationURL = au.String()
+	}
 }
