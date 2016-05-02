@@ -1,14 +1,12 @@
 package genmain
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
-	"unicode"
 
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/codegen"
@@ -110,7 +108,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		codegen.SimpleImport("golang.org/x/net/websocket"),
 	}
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
-		filename := filepath.Join(codegen.OutputDir, snakeCase(r.Name)+".go")
+		filename := filepath.Join(codegen.OutputDir, codegen.SnakeCase(r.Name)+".go")
 		if Force {
 			if err2 := os.Remove(filename); err2 != nil {
 				return err2
@@ -204,31 +202,6 @@ func okResp(a *design.ActionDefinition) map[string]interface{} {
 		"GoType":  codegen.GoNativeType(mt),
 		"TypeRef": typeref,
 	}
-}
-
-// snakeCase produces the snake_case version of the given CamelCase string.
-func snakeCase(name string) string {
-	var b bytes.Buffer
-	var lastUnderscore bool
-	ln := len(name)
-	if ln == 0 {
-		return ""
-	}
-	b.WriteRune(unicode.ToLower(rune(name[0])))
-	for i := 1; i < ln; i++ {
-		r := rune(name[i])
-		if unicode.IsUpper(r) {
-			if !lastUnderscore {
-				b.WriteRune('_')
-				lastUnderscore = true
-			}
-			b.WriteRune(unicode.ToLower(r))
-		} else {
-			b.WriteRune(r)
-			lastUnderscore = false
-		}
-	}
-	return b.String()
 }
 
 const mainT = `

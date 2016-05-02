@@ -1,10 +1,12 @@
 package codegen
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 
 	"github.com/goadesign/goa/design"
 )
@@ -104,4 +106,40 @@ func CanonicalParams(r *design.ResourceDefinition) []string {
 		}
 	}
 	return params
+}
+
+// Casing exceptions
+var toLower = map[string]string{"OAuth": "oauth"}
+
+// SnakeCase produces the snake_case version of the given CamelCase string.
+func SnakeCase(name string) string {
+	for u, l := range toLower {
+		name = strings.Replace(name, u, l, -1)
+	}
+	var b bytes.Buffer
+	var lastUnderscore bool
+	ln := len(name)
+	if ln == 0 {
+		return ""
+	}
+	b.WriteRune(unicode.ToLower(rune(name[0])))
+	for i := 1; i < ln; i++ {
+		r := rune(name[i])
+		nextIsLower := false
+		if i < ln-1 {
+			n := rune(name[i+1])
+			nextIsLower = unicode.IsLower(n) && unicode.IsLetter(n)
+		}
+		if unicode.IsUpper(r) {
+			if !lastUnderscore && nextIsLower {
+				b.WriteRune('_')
+				lastUnderscore = true
+			}
+			b.WriteRune(unicode.ToLower(r))
+		} else {
+			b.WriteRune(r)
+			lastUnderscore = false
+		}
+	}
+	return b.String()
 }
