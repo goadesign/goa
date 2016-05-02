@@ -14,6 +14,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Filename used to generate all data types (without the ".go" extension)
+const typesFileName = "datatypes"
+
 // Generator is the application code generator.
 type Generator struct {
 	genfiles       []string
@@ -78,7 +81,7 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 			types[n] = ut
 		}
 	}
-	filename := filepath.Join(codegen.OutputDir, "datatypes.go")
+	filename := filepath.Join(codegen.OutputDir, typesFileName+".go")
 	file, err := codegen.SourceFileFor(filename)
 	if err != nil {
 		return err
@@ -167,7 +170,12 @@ func (g *Generator) generateResourceClient(res *design.ResourceDefinition, funcs
 	clientsWSTmpl := template.Must(template.New("clients").Funcs(funcs).Parse(clientsWSTmpl))
 	pathTmpl := template.Must(template.New("pathTemplate").Funcs(funcs).Parse(pathTmpl))
 
-	filename := filepath.Join(codegen.OutputDir, codegen.SnakeCase(res.Name)+".go")
+	resFilename := codegen.SnakeCase(res.Name)
+	if resFilename == typesFileName {
+		// Avoid clash with datatypes.go
+		resFilename += "_client"
+	}
+	filename := filepath.Join(codegen.OutputDir, resFilename+".go")
 	file, err := codegen.SourceFileFor(filename)
 	if err != nil {
 		return err
