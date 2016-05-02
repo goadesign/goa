@@ -178,7 +178,7 @@ func createTestMethod(resource *design.ResourceDefinition, action *design.Action
 			payload.Pointer = "*"
 		}
 
-		validate := codegen.RecursiveChecker(action.Payload.AttributeDefinition, false, false, false, "payload", "raw", 1, true)
+		validate := codegen.RecursiveChecker(action.Payload.AttributeDefinition, false, false, false, "payload", "raw", 1, false)
 		if validate != "" {
 			payload.Validatable = true
 		}
