@@ -1,14 +1,12 @@
 package genclient
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"text/template"
-	"unicode"
 
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/codegen"
@@ -169,7 +167,7 @@ func (g *Generator) generateResourceClient(res *design.ResourceDefinition, funcs
 	clientsWSTmpl := template.Must(template.New("clients").Funcs(funcs).Parse(clientsWSTmpl))
 	pathTmpl := template.Must(template.New("pathTemplate").Funcs(funcs).Parse(pathTmpl))
 
-	filename := filepath.Join(codegen.OutputDir, snakeCase(res.Name)+"_client.go")
+	filename := filepath.Join(codegen.OutputDir, codegen.SnakeCase(res.Name)+"_client.go")
 	file, err := codegen.SourceFileFor(filename)
 	if err != nil {
 		return err
@@ -307,31 +305,6 @@ func (g *Generator) Cleanup() {
 		os.Remove(f)
 	}
 	g.genfiles = nil
-}
-
-// snakeCase produces the snake_case version of the given CamelCase string.
-func snakeCase(name string) string {
-	var b bytes.Buffer
-	var lastUnderscore bool
-	ln := len(name)
-	if ln == 0 {
-		return ""
-	}
-	b.WriteRune(unicode.ToLower(rune(name[0])))
-	for i := 1; i < ln; i++ {
-		r := rune(name[i])
-		if unicode.IsUpper(r) {
-			if !lastUnderscore {
-				b.WriteRune('_')
-				lastUnderscore = true
-			}
-			b.WriteRune(unicode.ToLower(r))
-		} else {
-			b.WriteRune(r)
-			lastUnderscore = false
-		}
-	}
-	return b.String()
 }
 
 // join is a code generation helper function that generates a function signature built from
