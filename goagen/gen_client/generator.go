@@ -217,8 +217,15 @@ func (g *Generator) generateResourceClient(res *design.ResourceDefinition, funcs
 		if action.WebSocket() {
 			return clientsWSTmpl.Execute(file, action)
 		}
-		for _, r := range action.Routes {
-			if err := pathTmpl.Execute(file, r); err != nil {
+		for i, r := range action.Routes {
+			data := struct {
+				Route *design.RouteDefinition
+				Index int
+			}{
+				Route: r,
+				Index: i,
+			}
+			if err := pathTmpl.Execute(file, data); err != nil {
 				return err
 			}
 		}
@@ -249,6 +256,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	}
 
 	funcs := template.FuncMap{
+		"add":             func(a, b int) int { return a + b },
 		"cmdFieldType":    cmdFieldType,
 		"defaultPath":     defaultPath,
 		"escapeBackticks": escapeBackticks,
@@ -517,12 +525,12 @@ func {{ $funcName }}(r io.Reader, decoderFn goa.DecoderFunc) ({{ gotyperef . .Al
 }
 `
 
-const pathTmpl = `{{ $funcName := printf "%sPath" (goify (printf "%s%s" .Parent.Name (title .Parent.Parent.Name)) true) }}{{/*
-*/}}// {{ $funcName }} computes a request path to the {{ .Parent.Name }} action of {{ .Parent.Parent.Name }}.
+const pathTmpl = `{{ $funcName := printf "%sPath" (goify (printf "%s%s" .Route.Parent.Name (title .Route.Parent.Parent.Name)) true) }}{{ if .Index }}{{ add .Index 1 }}{{ end }}{{/*
+*/}}{{ with .Route }}// {{ $funcName }} computes a request path to the {{ .Parent.Name }} action of {{ .Parent.Parent.Name }}.
 func {{ $funcName }}({{ pathParams . }}) string {
 	return fmt.Sprintf("{{ pathTemplate . }}", {{ pathParamNames . }})
 }
-`
+{{ end }}`
 
 const clientsTmpl = `{{ $funcName := goify (printf "%s%s" .Name (title .Parent.Name)) true }}{{ $desc := .Description }}{{ if $desc }}{{ multiComment $desc }}{{ else }}// {{ $funcName }} makes a request to the {{ .Name }} action endpoint of the {{ .Parent.Name }} resource{{ end }}
 func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Payload }}, payload {{ gotyperef .Payload .Payload.AllRequired 1 false }}{{ end }}{{/*
