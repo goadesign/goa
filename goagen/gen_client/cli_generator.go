@@ -19,7 +19,8 @@ func makeToolDir(g *Generator, apiName string) (toolDir string, err error) {
 		return
 	}
 	g.genfiles = append(g.genfiles, codegen.OutputDir)
-	toolDir = filepath.Join(codegen.OutputDir, fmt.Sprintf("%s-cli", apiName))
+	apiName = strings.Replace(apiName, " ", "-", -1)
+	toolDir = filepath.Join(codegen.OutputDir, fmt.Sprintf("%s-cli", codegen.SnakeCase(apiName)))
 	if err = os.MkdirAll(toolDir, 0755); err != nil {
 		return
 	}

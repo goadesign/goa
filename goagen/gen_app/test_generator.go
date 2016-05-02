@@ -75,7 +75,7 @@ func (g *Generator) generateResourceTest(api *design.APIDefinition) error {
 	}
 
 	return api.IterateResources(func(res *design.ResourceDefinition) error {
-		filename := filepath.Join(outDir, res.Name+".go")
+		filename := filepath.Join(outDir, codegen.SnakeCase(res.Name)+".go")
 		file, err := codegen.SourceFileFor(filename)
 		if err != nil {
 			return err
