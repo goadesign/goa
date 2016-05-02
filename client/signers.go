@@ -31,6 +31,15 @@ type (
 		Password string
 	}
 
+	// APIKeySigner implements API Key auth.
+	APIKeySigner struct {
+		// Header is the name of the HTTP header that contains the API key.
+		Header string
+
+		// key stores the actual key.
+		key string
+	}
+
 	// JWTSigner implements JSON Web Token auth.
 	JWTSigner struct {
 		// Header is the name of the HTTP header which contains the JWT.
@@ -85,6 +94,22 @@ func (s *BasicSigner) Sign(ctx context.Context, req *http.Request) error {
 func (s *BasicSigner) RegisterFlags(app *cobra.Command) {
 	app.Flags().StringVar(&s.Username, "user", "", "Basic Auth username")
 	app.Flags().StringVar(&s.Password, "pass", "", "Basic Auth password")
+}
+
+// Sign adds the API key header to the request.
+func (s *APIKeySigner) Sign(ctx context.Context, req *http.Request) error {
+	header := s.Header
+	if header == "" {
+		header = "Authorization"
+	}
+	req.Header.Set(s.Header, s.key)
+	return nil
+}
+
+// RegisterFlags adds the "--key" and "--key-header" flags to the client tool.
+func (s *APIKeySigner) RegisterFlags(app *cobra.Command) {
+	app.Flags().StringVar(&s.Header, "key-header", "Authorization", "API key header name")
+	app.Flags().StringVar(&s.key, "key", "", "API key")
 }
 
 // Sign adds the JWT auth header.

@@ -453,6 +453,8 @@ func signerType(scheme *design.SecuritySchemeDefinition) string {
 		return "goaclient.JWTSigner" // goa client package imported under goaclient
 	case design.OAuth2SecurityKind:
 		return "goaclient.OAuth2Signer"
+	case design.APIKeySecurityKind:
+		return "goaclient.APIKeySigner"
 	case design.BasicAuthSecurityKind:
 		return "goaclient.BasicSigner"
 	}
@@ -586,8 +588,8 @@ type Client struct {
 // New instantiates the client.
 func New(c *http.Client) *Client {
 	return &Client{
-		Client: goaclient.New(c),{{range $security := .SecuritySchemes }}
-		Signer{{ goify $security.SchemeName true }}: &{{ signerType ($security) }}{},{{ end }}
+		Client: goaclient.New(c),{{range $security := .SecuritySchemes }}{{ $signer := signerType $security }}{{ if $signer }}
+		Signer{{ goify $security.SchemeName true }}: &{{ $signer }}{},{{ end }}{{ end }}
 	}
 }
 `
