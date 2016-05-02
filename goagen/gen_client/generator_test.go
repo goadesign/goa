@@ -99,7 +99,7 @@ var _ = Describe("Generate", func() {
 		It("generates the Signer.Sign call from Action", func() {
 			Ω(genErr).Should(BeNil())
 			Ω(files).Should(HaveLen(7))
-			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo_client.go"))
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("c.SignerJWT1.Sign(ctx, req)"))
 		})

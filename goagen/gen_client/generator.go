@@ -167,7 +167,7 @@ func (g *Generator) generateResourceClient(res *design.ResourceDefinition, funcs
 	clientsWSTmpl := template.Must(template.New("clients").Funcs(funcs).Parse(clientsWSTmpl))
 	pathTmpl := template.Must(template.New("pathTemplate").Funcs(funcs).Parse(pathTmpl))
 
-	filename := filepath.Join(codegen.OutputDir, codegen.SnakeCase(res.Name)+"_client.go")
+	filename := filepath.Join(codegen.OutputDir, codegen.SnakeCase(res.Name)+".go")
 	file, err := codegen.SourceFileFor(filename)
 	if err != nil {
 		return err
