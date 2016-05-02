@@ -153,15 +153,24 @@ func APIKeySecurity(name string, dsl ...func()) *design.SecuritySchemeDefinition
 	return def
 }
 
-// OAuth2Security defines the different Security schemes that are available throughout the API.
+// OAuth2Security defines an OAuth2 security scheme. The child DSL must define one and exactly one
+// flow. One of AccessCodeFlow, ImplicitFlow, PasswordFlow or ApplicationFlow. Each flow defines
+// endpoints for retrieving OAuth2 authorization codes and/or refresh and access tokens. The
+// endpoint URLs may be complete or may be just a path in which case the API scheme and host are
+// used to build the full URL. See for example [Aaron Parecki's
+// writeup](https://aaronparecki.com/2012/07/29/2/oauth2-simplified) for additional details on
+// OAuth2 flows.
+//
+// The OAuth2 DSL also allows for defining scopes that must be associated with the incoming request
+// token for successful authorization.
 //
 // Example:
 //
 //    OAuth2Security("googAuth", func() {
-//        AccessCodeFlow(...)
-//     // ImplicitFlow(...)
-//     // PasswordFlow(...)
-//     // ApplicationFlow(...)
+//        AccessCodeFlow("/authorization", "/token")
+//     // ImplicitFlow("/authorization")
+//     // PasswordFlow("/token"...)
+//     // ApplicationFlow("/token")
 //
 //        Scope("my_system:write", "Write to the system")
 //        Scope("my_system:read", "Read anything in there")
@@ -204,7 +213,7 @@ func OAuth2Security(name string, dsl ...func()) *design.SecuritySchemeDefinition
 //
 //    JWTSecurity("jwt", func() {
 //        Header("Authorization")
-//        TokenURL("http://example.com/token")
+//        TokenURL("https://example.com/token")
 //        Scope("my_system:write", "Write to the system")
 //        Scope("my_system:read", "Read anything in there")
 //    })
@@ -236,25 +245,29 @@ func JWTSecurity(name string, dsl ...func()) *design.SecuritySchemeDefinition {
 	return def
 }
 
-// Scope defines an authorization scope. Used within SecurityScheme, the description is required,
+// Scope defines an authorization scope. Used within SecurityScheme, a description may be provided
 // explaining what the scope means. Within a Security block, only a scope is needed.
 func Scope(name string, desc ...string) {
-	switch parent := dslengine.CurrentDefinition().(type) {
+	switch current := dslengine.CurrentDefinition().(type) {
 	case *design.SecurityDefinition:
-		if len(desc) == 1 {
+		if len(desc) >= 1 {
 			dslengine.ReportError("too many arguments")
 			return
 		}
-		parent.Scopes = append(parent.Scopes, name)
+		current.Scopes = append(current.Scopes, name)
 	case *design.SecuritySchemeDefinition:
-		if len(desc) == 0 {
-			dslengine.ReportError("missing description")
+		if len(desc) > 1 {
+			dslengine.ReportError("too many arguments")
 			return
 		}
-		if parent.Scopes == nil {
-			parent.Scopes = make(map[string]string)
+		if current.Scopes == nil {
+			current.Scopes = make(map[string]string)
 		}
-		parent.Scopes[name] = desc[0]
+		d := "no description"
+		if len(desc) == 1 {
+			d = desc[0]
+		}
+		current.Scopes[name] = d
 	default:
 		dslengine.IncompatibleDSL()
 	}
@@ -344,7 +357,8 @@ func ImplicitFlow(authorizationURL string) {
 
 // TokenURL defines a URL to get an access token.  If you are defining OAuth2 flows, use
 // `ImplicitFlow`, `PasswordFlow`, `AccessCodeFlow` or `ApplicationFlow` instead. This will set an
-// endpoint where you can obtain a JWT with the JWTSecurity scheme.
+// endpoint where you can obtain a JWT with the JWTSecurity scheme. The URL may be a complete URL
+// or just a path in which case the API scheme and host are used to build the full URL.
 func TokenURL(tokenURL string) {
 	if parent, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
 		if parent.Kind == design.JWTSecurityKind {

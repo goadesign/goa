@@ -22,13 +22,15 @@ var _ = Describe("Security", func() {
 
 	It("should be the fully valid and well defined, live on the happy path", func() {
 		API("secure", func() {
+			Host("example.com")
+
 			BasicAuthSecurity("basic_authz", func() {
 				Description("desc")
 			})
 
 			OAuth2Security("googAuthz", func() {
 				Description("desc")
-				AccessCodeFlow("http://example.com/auth", "http://example.com/token")
+				AccessCodeFlow("/auth", "/token")
 				Scope("user:read", "Read users")
 			})
 
@@ -40,7 +42,7 @@ var _ = Describe("Security", func() {
 			JWTSecurity("jwt", func() {
 				Description("desc")
 				Header("Authorization")
-				TokenURL("http://example.com/token")
+				TokenURL("/token")
 				Scope("user:read", "Read users")
 				Scope("user:write", "Write users")
 			})
@@ -92,11 +94,11 @@ var _ = Describe("Security", func() {
 			Ω(dslengine.Errors).Should(HaveOccurred())
 		})
 
-		It("should fail because of invalid declaration of AuthorizationURL", func() {
+		It("should fail because of invalid declaration of TokenURL", func() {
 			API("", func() {
 				BasicAuthSecurity("broken_basic_authz", func() {
 					Description("desc")
-					TokenURL("http://example.com/token")
+					TokenURL("/token")
 				})
 			})
 			dslengine.Run()
@@ -107,7 +109,7 @@ var _ = Describe("Security", func() {
 			API("", func() {
 				BasicAuthSecurity("broken_basic_authz", func() {
 					Description("desc")
-					TokenURL("invalid")
+					TokenURL("in valid")
 				})
 			})
 			dslengine.Run()
@@ -129,9 +131,10 @@ var _ = Describe("Security", func() {
 	Context("with oauth2 security", func() {
 		It("should pass with valid values when well defined", func() {
 			API("", func() {
+				Host("example.com")
 				OAuth2Security("googAuthz", func() {
 					Description("Use Goog's Auth")
-					AccessCodeFlow("http://example.com/auth", "http://example.com/token")
+					AccessCodeFlow("/auth", "/token")
 					Scope("scope:1", "Desc 1")
 					Scope("scope:2", "Desc 2")
 				})
@@ -174,7 +177,7 @@ var _ = Describe("Security", func() {
 		It("should fallback properly to lower-level security", func() {
 			API("", func() {
 				JWTSecurity("jwt", func() {
-					TokenURL("http://example.com/token")
+					TokenURL("/token")
 					Scope("read", "Read")
 					Scope("write", "Write")
 				})
