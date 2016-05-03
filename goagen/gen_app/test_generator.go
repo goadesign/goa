@@ -86,24 +86,32 @@ func (g *Generator) generateResourceTest(api *design.APIDefinition) error {
 
 		var methods = []TestMethod{}
 
-		for _, action := range res.Actions {
-			for _, response := range action.Responses {
+		if err := res.IterateActions(func(action *design.ActionDefinition) error {
+			if err := action.IterateResponses(func(response *design.ResponseDefinition) error {
 				if response.Status == 101 { // SwitchingProtocols, Don't currently handle WebSocket endpoints
-					continue
+					return nil
 				}
 				for routeIndex, route := range action.Routes {
 					mediaType := design.Design.MediaTypeWithIdentifier(response.MediaType)
 					if mediaType == nil {
 						methods = append(methods, createTestMethod(res, action, response, route, routeIndex, nil, nil))
 					} else {
-						for _, view := range mediaType.Views {
+						if err := mediaType.IterateViews(func(view *design.ViewDefinition) error {
 							methods = append(methods, createTestMethod(res, action, response, route, routeIndex, mediaType, view))
+							return nil
+						}); err != nil {
+							return err
 						}
 					}
 				}
+				return nil
+			}); err != nil {
+				return err
 			}
+			return nil
+		}); err != nil {
+			return err
 		}
-
 		g.genfiles = append(g.genfiles, filename)
 		err = testTmpl.Execute(file, methods)
 		if err != nil {
