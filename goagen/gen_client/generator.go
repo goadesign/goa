@@ -492,7 +492,7 @@ func pathParams(r *design.RouteDefinition) string {
 	return join(&design.AttributeDefinition{Type: params}, pnames)
 }
 
-// pathParams return the names of the parameters of the path factory function for the given route.
+// pathParamNames return the names of the parameters of the path factory function for the given route.
 func pathParamNames(r *design.RouteDefinition) string {
 	params := r.Params()
 	goified := make([]string, len(params))
