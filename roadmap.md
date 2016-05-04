@@ -116,3 +116,8 @@ generation. Integrate the generated code with the generated data structures.
 This also requires the ability to specify the bit length of numerical values. The proposal here
 would be to add support for the `Format` DSL to the `Integer` and `Number` primitive types. The
 format would indicate bitness and whether the generated integer should be signed.
+
+## Client Improvements
+
+Try to remove the signers from the client package and instead make it possible to integrate with 3rd
+party client packages. Make the client function generate http.Request to enable that integration.
