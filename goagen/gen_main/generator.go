@@ -52,7 +52,6 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	if Force {
 		os.Remove(mainFile)
 	}
-	g.genfiles = append(g.genfiles, mainFile)
 	funcs := template.FuncMap{
 		"tempvar":         tempvar,
 		"generateSwagger": generateSwagger,
@@ -66,6 +65,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	imp = path.Join(filepath.ToSlash(imp), "app")
 	_, err = os.Stat(mainFile)
 	if err != nil {
+		g.genfiles = append(g.genfiles, mainFile)
 		file, err2 := codegen.SourceFileFor(mainFile)
 		if err2 != nil {
 			return nil, err2
@@ -114,8 +114,8 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 				return err2
 			}
 		}
-		g.genfiles = append(g.genfiles, filename)
 		if _, e := os.Stat(filename); e != nil {
+			g.genfiles = append(g.genfiles, filename)
 			file, err2 := codegen.SourceFileFor(filename)
 			if err2 != nil {
 				return err
@@ -187,7 +187,18 @@ func okResp(a *design.ActionDefinition) map[string]interface{} {
 	if mt, ok2 = design.Design.MediaTypes[design.CanonicalIdentifier(ok.MediaType)]; !ok2 {
 		return nil
 	}
-	name := codegen.GoTypeRef(mt, mt.AllRequired(), 1, false)
+	view := "default"
+	if _, ok := mt.Views["default"]; !ok {
+		for v := range mt.Views {
+			view = v
+			break
+		}
+	}
+	pmt, _, err := mt.Project(view)
+	if err != nil {
+		return nil
+	}
+	name := codegen.GoTypeRef(pmt, pmt.AllRequired(), 1, false)
 	var pointer string
 	if strings.HasPrefix(name, "*") {
 		name = name[1:]
@@ -197,9 +208,13 @@ func okResp(a *design.ActionDefinition) map[string]interface{} {
 	if strings.HasPrefix(typeref, "*") {
 		typeref = "&" + typeref[1:]
 	}
+	var nameSuffix string
+	if view != "default" {
+		nameSuffix = codegen.Goify(view, true)
+	}
 	return map[string]interface{}{
-		"Name":    ok.Name,
-		"GoType":  codegen.GoNativeType(mt),
+		"Name":    ok.Name + nameSuffix,
+		"GoType":  codegen.GoNativeType(pmt),
 		"TypeRef": typeref,
 	}
 }
