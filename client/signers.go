@@ -35,9 +35,10 @@ type (
 	APIKeySigner struct {
 		// Header is the name of the HTTP header that contains the API key.
 		Header string
-
-		// key stores the actual key.
-		key string
+		// Key stores the actual key.
+		Key string
+		// Format is the format used to render the key, defaults to "Bearer %s"
+		Format string
 	}
 
 	// JWTSigner implements JSON Web Token auth.
@@ -48,9 +49,8 @@ type (
 		// Format represents the format used to render the JWT.
 		// The default is "Bearer %s"
 		Format string
-
-		// token stores the actual JWT.
-		token string
+		// Token stores the actual JWT.
+		Token string
 	}
 
 	// OAuth2Signer enables the use of OAuth2 refresh tokens. It takes care of creating access
@@ -102,14 +102,19 @@ func (s *APIKeySigner) Sign(ctx context.Context, req *http.Request) error {
 	if header == "" {
 		header = "Authorization"
 	}
-	req.Header.Set(s.Header, s.key)
+	format := s.Format
+	if format == "" {
+		format = "Bearer %s"
+	}
+	req.Header.Set(header, fmt.Sprintf(format, s.Key))
 	return nil
 }
 
 // RegisterFlags adds the "--key" and "--key-header" flags to the client tool.
 func (s *APIKeySigner) RegisterFlags(app *cobra.Command) {
-	app.Flags().StringVar(&s.Header, "key-header", "Authorization", "API key header name")
-	app.Flags().StringVar(&s.key, "key", "", "API key")
+	app.Flags().StringVar(&s.Key, "key", "", "API key")
+	app.Flags().StringVar(&s.Header, "header", "Authorization", "API key header name")
+	app.Flags().StringVar(&s.Format, "format", "Bearer %s", "Format used to render header value from key")
 }
 
 // Sign adds the JWT auth header.
@@ -122,13 +127,15 @@ func (s *JWTSigner) Sign(ctx context.Context, req *http.Request) error {
 	if format == "" {
 		format = "Bearer %s"
 	}
-	req.Header.Set(header, fmt.Sprintf(format, s.token))
+	req.Header.Set(header, fmt.Sprintf(format, s.Token))
 	return nil
 }
 
 // RegisterFlags adds the "--jwt" flag to the client tool.
 func (s *JWTSigner) RegisterFlags(app *cobra.Command) {
-	app.Flags().StringVar(&s.token, "jwt", "", "JSON web token")
+	app.Flags().StringVar(&s.Token, "jwt", "", "JWT value")
+	app.Flags().StringVar(&s.Header, "header", "Authorization", "JWT header name")
+	app.Flags().StringVar(&s.Format, "format", "Bearer %s", "Format used to render header value from JWT")
 }
 
 // Sign refreshes the access token if needed and adds the OAuth header.
