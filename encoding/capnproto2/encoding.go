@@ -4,7 +4,7 @@ import (
 	"errors"
 	"io"
 
-	"zombiezen.com/go/capnproto2"
+	capnp "zombiezen.com/go/capnproto2"
 
 	"github.com/goadesign/goa"
 )

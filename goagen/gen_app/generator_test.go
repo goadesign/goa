@@ -129,6 +129,7 @@ var _ = Describe("Generate", func() {
 				Status:      200,
 				Description: "get of widgets",
 				MediaType:   "vnd.rightscale.codegen.test.widgets",
+				ViewName:    "default",
 			}
 			route := design.RouteDefinition{
 				Verb: "GET",

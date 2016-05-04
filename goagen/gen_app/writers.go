@@ -1,9 +1,7 @@
 package genapp
 
 import (
-	"fmt"
 	"regexp"
-	"strings"
 	"text/template"
 
 	"sort"
@@ -190,42 +188,33 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 			return err
 		}
 	}
-	fn = template.FuncMap{
-		"project": func(mt *design.MediaTypeDefinition, v string) *design.MediaTypeDefinition {
-			p, _, _ := mt.Project(v)
-			return p
-		},
-	}
-	data.IterateResponses(func(resp *design.ResponseDefinition) error {
+	return data.IterateResponses(func(resp *design.ResponseDefinition) error {
 		respData := map[string]interface{}{
 			"Context":  data,
 			"Response": resp,
 		}
 		if resp.Type != nil {
 			respData["Type"] = resp.Type
-			if err := w.ExecuteTemplate("response", ctxTRespT, fn, respData); err != nil {
+			if err := w.ExecuteTemplate("response", ctxTRespT, nil, respData); err != nil {
 				return err
 			}
 		} else if mt := design.Design.MediaTypeWithIdentifier(resp.MediaType); mt != nil {
 			respData["MediaType"] = mt
-			fn["respName"] = func(resp *design.ResponseDefinition, view string) string {
-				if view == "default" {
-					return codegen.Goify(resp.Name, true)
-				}
-				base := fmt.Sprintf("%s%s", resp.Name, strings.Title(view))
-				return codegen.Goify(base, true)
+			p, _, err := mt.Project(resp.ViewName)
+			if err != nil {
+				return err
 			}
-			if err := w.ExecuteTemplate("response", ctxMTRespT, fn, respData); err != nil {
+			respData["Projected"] = p
+			if err := w.ExecuteTemplate("response", ctxMTRespT, nil, respData); err != nil {
 				return err
 			}
 		} else {
-			if err := w.ExecuteTemplate("response", ctxNoMTRespT, fn, respData); err != nil {
+			if err := w.ExecuteTemplate("response", ctxNoMTRespT, nil, respData); err != nil {
 				return err
 			}
 		}
 		return nil
 	})
-	return nil
 }
 
 // NewControllersWriter returns a handlers code writer.
@@ -504,14 +493,12 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 `
 	// ctxMTRespT generates the response helpers for responses with media types.
 	// template input: map[string]interface{}
-	ctxMTRespT = `{{ $ctx := .Context }}{{ $resp := .Response }}{{ $mt := .MediaType }}{{/*
-*/}}{{ range $name, $view := $mt.Views }}{{ if not (eq $name "link") }}{{ $projected := project $mt $name }}
-// {{ respName $resp $name }} sends a HTTP response with status code {{ $resp.Status }}.
-func (ctx *{{ $ctx.Name }}) {{ respName $resp $name }}(r {{ gotyperef $projected $projected.AllRequired 0 false }}) error {
-	ctx.ResponseData.Header().Set("Content-Type", "{{ $resp.MediaType }}")
-	return ctx.Service.Send(ctx.Context, {{ $resp.Status }}, r)
+
+	ctxMTRespT = `// {{ goify .Response.Name true }} sends a HTTP response with status code {{ .Response.Status }}.
+func (ctx *{{ .Context.Name }}) {{ goify .Response.Name true }}(r {{ gotyperef .Projected .Projected.AllRequired 0 false }}) error {
+	ctx.ResponseData.Header().Set("Content-Type", "{{ .Response.MediaType }}")
+	return ctx.Service.Send(ctx.Context, {{ .Response.Status }}, r)
 }
-{{ end }}{{ end }}
 `
 
 	// ctxTRespT generates the response helpers for responses with overridden types.

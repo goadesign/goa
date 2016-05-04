@@ -120,6 +120,8 @@ type (
 		Description string
 		// Default media type, describes the resource attributes
 		MediaType string
+		// Default view name if default media type is MediaTypeDefinition
+		DefaultViewName string
 		// Exposed resource actions indexed by name
 		Actions map[string]*ActionDefinition
 		// Action with canonical resource path
@@ -187,6 +189,8 @@ type (
 		Type DataType
 		// Response body media type if any
 		MediaType string
+		// Response view name if MediaType is MediaTypeDefinition
+		ViewName string
 		// Response header definitions
 		Headers *AttributeDefinition
 		// Parent action or resource
@@ -1186,6 +1190,9 @@ func (r *ResponseDefinition) Context() string {
 // Finalize sets the response media type from its type if the type is a media type and no media
 // type is already specified.
 func (r *ResponseDefinition) Finalize() {
+	if r.ViewName == "" {
+		r.ViewName = "default"
+	}
 	if r.Type == nil {
 		return
 	}
@@ -1206,6 +1213,7 @@ func (r *ResponseDefinition) Dup() *ResponseDefinition {
 		Status:      r.Status,
 		Description: r.Description,
 		MediaType:   r.MediaType,
+		ViewName:    r.ViewName,
 	}
 	if r.Headers != nil {
 		res.Headers = DupAtt(r.Headers)
@@ -1229,6 +1237,7 @@ func (r *ResponseDefinition) Merge(other *ResponseDefinition) {
 	}
 	if r.MediaType == "" {
 		r.MediaType = other.MediaType
+		r.ViewName = other.ViewName
 	}
 	if other.Headers != nil {
 		otherHeaders := other.Headers.Type.ToObject()

@@ -133,7 +133,7 @@ func MediaType(identifier string, apidsl func()) *design.MediaTypeDefinition {
 //	})
 //
 // Media can be used inside Response or ResponseTemplate.
-func Media(val interface{}) {
+func Media(val interface{}, viewName ...string) {
 	if r, ok := responseDefinition(); ok {
 		if m, ok := val.(*design.MediaTypeDefinition); ok {
 			if m != nil {
@@ -143,6 +143,11 @@ func Media(val interface{}) {
 			r.MediaType = identifier
 		} else {
 			dslengine.ReportError("media type must be a string or a pointer to MediaTypeDefinition, got %#v", val)
+		}
+		if len(viewName) == 1 {
+			r.ViewName = viewName[0]
+		} else if len(viewName) > 1 {
+			dslengine.ReportError("too many arguments given to DefaultMedia")
 		}
 	}
 }
