@@ -746,47 +746,47 @@ func (ut {{ gotyperef . .AllRequired 0 false }}) Validate() (err error) {
 type securitySchemeKey string
 type key int
 const securityScopesKey key = 1
-
 {{ range . }}
 func Configure{{ goify .SchemeName true }}Security(service *goa.Service, f goa.{{ .Context }}ConfigFunc) {
 	def := &goa.{{ .Context }}{
-{{ if eq .Context "APIKeySecurity" }}
-		In:   {{ if eq .In "header" }}goa.LocHeader{{ else }}goa.LocQuery{{ end }},
+{{ if eq .Context "APIKeySecurity" }}{{/*
+*/}}		In:   {{ if eq .In "header" }}goa.LocHeader{{ else }}goa.LocQuery{{ end }},
 		Name: {{ printf "%q" .Name }},
-{{ else if eq .Context "OAuth2Security" }}
-		Flow:             {{ printf "%q" .Flow }},
+{{ else if eq .Context "OAuth2Security" }}{{/*
+*/}}		Flow:             {{ printf "%q" .Flow }},
 		TokenURL:         {{ printf "%q" .TokenURL }},
 		AuthorizationURL: {{ printf "%q" .AuthorizationURL }},{{ with .Scopes }}
 		Scopes: map[string]string{
 {{ range $k, $v := . }}			{{ printf "%q" $k }}: {{ printf "%q" $v }},
-{{ end }}
-		},{{ end }}
-{{ else if eq .Context "BasicAuthSecurity" }}
-{{ else if eq .Context "JWTSecurity" }}
-		In:   {{ if eq .In "header" }}goa.LocHeader{{ else }}goa.LocQuery{{ end }},
+{{ end }}{{/*
+*/}}		},{{ end }}{{/*
+*/}}{{ else if eq .Context "BasicAuthSecurity" }}{{/*
+*/}}{{ else if eq .Context "JWTSecurity" }}{{/*
+*/}}		In:   {{ if eq .In "header" }}goa.LocHeader{{ else }}goa.LocQuery{{ end }},
 		Name:             {{ printf "%q" .Name }},
 		TokenURL:         {{ printf "%q" .TokenURL }},{{ with .Scopes }}
 		Scopes: map[string]string{
 {{ range $k, $v := . }}			{{ printf "%q" $k }}: {{ printf "%q" $v }},
-{{ end }}
-		},{{ end }}
-{{ end }}
-	}{{ if .Description }}
+{{ end }}{{/*
+*/}}		},{{ end }}
+{{ end }}{{/*
+*/}}	}{{ if .Description }}
 	def.Description = {{ printf "%q" .Description }}
-{{ end }}
-{{ if or (eq .Context "JWTSecurity") (eq .Context "OAuth2Security") }}
+{{ end }}{{/*
+*/}}{{ if or (eq .Context "JWTSecurity") (eq .Context "OAuth2Security") }}
 	fetchScopes := func(ctx context.Context) []string {
 		scopes, _ := ctx.Value(securityScopesKey).([]string)
 		return scopes
 	}
 	middleware := f(def, fetchScopes)
-{{ else }}
-	middleware := f(def)
-{{ end }}
-	service.Context = context.WithValue(service.Context, securitySchemeKey({{ printf "%q" .SchemeName }}), middleware)
-}
-{{ end }}
+{{ else }}{{/*
+*/}}	middleware := f(def)
+{{ end }}{{/*
+*/}}	service.Context = context.WithValue(service.Context, securitySchemeKey({{ printf "%q" .SchemeName }}), middleware)
+}{{ end }}
 
+// handleSecurity creates a goa request handler that takes care of executing the security middleware
+// registered via the ConfigureXXXSecurity functions.
 func handleSecurity(schemeName string, h goa.Handler, scopes ...string) goa.Handler {
 	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		scheme := ctx.Value(securitySchemeKey(schemeName))
