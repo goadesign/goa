@@ -137,7 +137,7 @@ var _ = Describe("Generate", func() {
 			Ω(files).Should(HaveLen(7))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "client.go"))
 			Ω(err).ShouldNot(HaveOccurred())
-			Ω(content).Should(ContainSubstring("SignerJWT1 goaclient.Signer"))
+			Ω(content).Should(ContainSubstring("SignerJWT1 *goaclient.JWTSigner"))
 			Ω(content).Should(ContainSubstring("SignerJWT1: &goaclient.JWTSigner{},"))
 		})
 
