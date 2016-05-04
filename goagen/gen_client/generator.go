@@ -597,8 +597,8 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{/*
 
 const clientTmpl = `// Client is the {{ .Name }} service client.
 type Client struct {
-	*goaclient.Client{{range $security := .SecuritySchemes }}
-	Signer{{ goify $security.SchemeName true }} goaclient.Signer{{ end }}
+	*goaclient.Client{{range $security := .SecuritySchemes }}{{ $signer := signerType $security }}{{ if $signer }}
+	Signer{{ goify $security.SchemeName true }} *{{ $signer }}{{ end }}{{ end }}
 }
 
 // New instantiates the client.
