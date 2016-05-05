@@ -12,27 +12,17 @@
 #
 DIRS=$(shell go list -f {{.Dir}} ./...)
 DEPEND=\
-	github.com/asaskevich/govalidator \
-	github.com/dgrijalva/jwt-go \
-	github.com/dimfeld/httptreemux \
-	github.com/go-openapi/loads \
 	github.com/goadesign/goa-cellar \
 	github.com/goadesign/goa.design/tools/godoc2md \
 	github.com/goadesign/goa.design/tools/mdc \
 	github.com/golang/lint/golint \
-	github.com/manveru/faker \
 	github.com/on99/gocyclo \
 	github.com/onsi/ginkgo \
 	github.com/onsi/ginkgo/ginkgo \
 	github.com/onsi/gomega \
-	github.com/PuerkitoBio/purell \
 	github.com/spf13/hugo \
-	github.com/zach-klippenstein/goregen \
 	golang.org/x/tools/cmd/cover \
-	golang.org/x/tools/cmd/goimports \
-	gopkg.in/alecthomas/kingpin.v2 \
-	gopkg.in/tylerb/graceful.v1 \
-	gopkg.in/yaml.v2
+	golang.org/x/tools/cmd/goimports
 
 .PHONY: goagen
 
@@ -48,10 +38,11 @@ docs:
 	@rm -rf goa.design
 
 depend:
-	go get -v ./...
+	@go get -v ./...
+	@go get -v $(DEPEND)
 
 lint:
-	for d in $(DIRS) ; do \
+	@for d in $(DIRS) ; do \
 		if [ "`goimports -l $$d/*.go | tee /dev/stderr`" ]; then \
 			echo "^ - Repo contains improperly formatted go files" && echo && exit 1; \
 		fi \
