@@ -4,9 +4,8 @@ import (
 	"errors"
 	"io"
 
-	"zombiezen.com/go/capnproto2"
-
 	"github.com/goadesign/goa"
+	"zombiezen.com/go/capnproto2"
 )
 
 // Enforce that codec.Decoder satisfies goa.Decoder at compile time
