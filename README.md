@@ -166,7 +166,11 @@ To get information on how to call a specific API use:
 ```
 $ ./adder-cli add operands --help
 Usage:
-  adder-cli add operands ["/add/:left/:right"] [flags]
+  adder-cli add operands [/add/LEFT/RIGHT] or [flags]
+
+Flags:
+      --left int    Left operand
+      --right int   Right operand
 
 Global Flags:
       --dump               Dump HTTP request and response.
@@ -219,35 +223,13 @@ a free service that renders the Swagger representation dynamically from goa desi
 
 ### goa.design
 
-[http://goa.design](http://goa.design) contains further information on goa.
-
-### GoDoc
-
-* Package [goa](http://goa.design/reference/goa.html) contains the data structures and algorithms
-  used at runtime.
-* Package [apidsl](http://goa.design/reference/goa/design/apidsl.html) contains the implementation of
-  the goa design language.
-* Package [design](http://goa.design/reference/goa/design.html) defines the output data
-  structures of the design language.
-* Package [dslengine](http://goa.design/reference/goa/dslengine.html) is a tool to parse and process any
-  arbitrary DSL
-
-
-### Getting Started
-
-Can't wait to give it a try? the easiest way is to follow the short
-[getting started](http://goa.design/learn/guide.html) guide.
-
-
-### Middleware
-
-The [middleware](https://github.com/goadesign/goa/tree/master/middleware) package provides a number
-of middlewares covering common needs. It also provides a good source of examples for writing new
-middlewares.
+[http://goa.design](http://goa.design) contains further information on goa including a getting
+started guide, detailed DSL documentation as well as information on how to implement a goa service.
 
 ### Examples
 
-The [examples](https://github.com/goadesign/examples) repo contains simple examples illustrating basic concepts.
+The [examples](https://github.com/goadesign/examples) repo contains simple examples illustrating
+basic concepts.
 
 The [goa-cellar](https://github.com/goadesign/goa-cellar) repo contains the implementation for a
 goa service which demonstrates many aspects of the design language. It is kept up-to-date and
@@ -260,4 +242,6 @@ You're a rock star!! Just make sure that `make` succeeds (or that TravisCI is gr
 over.
 
 The [issues](https://github.com/goadesign/goa/issues) contain entries tagged with
-[help wanted: beginners](https://github.com/goadesign/goa/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%3A+beginners%22) which provide a great way to get started!
+[help wanted:
+beginners](https://github.com/goadesign/goa/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
+which provide a great way to get started!
