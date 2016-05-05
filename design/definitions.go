@@ -1116,6 +1116,9 @@ func (a *AttributeDefinition) inheritRecursive(parent *AttributeDefinition) {
 					att.Inherit(patt.Type.ToObject()[n])
 				}
 			}
+			if att.Example == nil {
+				att.Example = patt.Example
+			}
 		}
 	}
 }
