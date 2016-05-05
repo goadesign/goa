@@ -48,10 +48,10 @@ docs:
 	@rm -rf goa.design
 
 depend:
-	@go get -v $(DEPEND)
+	go get -v ./...
 
 lint:
-	@for d in $(DIRS) ; do \
+	for d in $(DIRS) ; do \
 		if [ "`goimports -l $$d/*.go | tee /dev/stderr`" ]; then \
 			echo "^ - Repo contains improperly formatted go files" && echo && exit 1; \
 		fi \
