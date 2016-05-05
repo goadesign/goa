@@ -189,7 +189,13 @@ func routes(action *design.ActionDefinition) string {
 	}
 	paths := make([]string, len(routes))
 	for i, r := range routes {
-		paths[i] = fmt.Sprintf("%q", r.FullPath())
+		path := r.FullPath()
+		matches := design.WildcardRegex.FindAllStringSubmatch(path, -1)
+		for _, match := range matches {
+			paramName := match[1]
+			path = strings.Replace(path, ":"+paramName, strings.ToUpper(paramName), 1)
+		}
+		paths[i] = path
 	}
 	buf.WriteString(strings.Join(paths, "|"))
 	if len(routes) > 1 {
@@ -322,7 +328,7 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 {{ range $action := $actions }}{{ $cmdName := goify (printf "%s%sCommand" $action.Name (title $action.Parent.Name)) true }}{{/*
 */}}{{ $tmp := tempvar }}	{{ $tmp }} := new({{ $cmdName }})
 	sub = &cobra.Command{
-		Use:   ` + "`" + `{{ $action.Parent.Name }} {{ routes $action }}` + "`" + `,
+		Use:   ` + "`" + `{{ $action.Parent.Name }} {{ routes $action }} or` + "`" + `,
 		Short: ` + "`" + `{{ escapeBackticks $action.Parent.Description }}` + "`" + `,
 		RunE:  func(cmd *cobra.Command, args []string) error { return {{ $tmp }}.Run(c, args) },
 	}
