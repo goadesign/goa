@@ -11,7 +11,9 @@
 # - "all" is the default target, it runs all the targets in the order above.
 #
 DIRS=$(shell go list -f {{.Dir}} ./...)
+
 DEPEND=\
+	github.com/go-openapi/loads \
 	github.com/goadesign/goa-cellar \
 	github.com/goadesign/goa.design/tools/godoc2md \
 	github.com/goadesign/goa.design/tools/mdc \
