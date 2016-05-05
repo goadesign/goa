@@ -11,37 +11,14 @@
 # - "all" is the default target, it runs all the targets in the order above.
 #
 DIRS=$(shell go list -f {{.Dir}} ./...)
-# Temporary skip building the docs as godoc2md brings in kr/text which is currently broken
-# See https://github.com/kr/text/issues/6
-#DEPEND=\
-	#github.com/asaskevich/govalidator \
-	#github.com/dgrijalva/jwt-go \
-	#github.com/dimfeld/httptreemux \
-	#github.com/go-openapi/loads \
-	#github.com/goadesign/goa-cellar \
-	#github.com/goadesign/goa.design/tools/godoc2md \
-	#github.com/goadesign/goa.design/tools/mdc \
-	#github.com/golang/lint/golint \
-	#github.com/manveru/faker \
-	#github.com/on99/gocyclo \
-	#github.com/onsi/ginkgo \
-	#github.com/onsi/ginkgo/ginkgo \
-	#github.com/onsi/gomega \
-	#github.com/PuerkitoBio/purell \
-	#github.com/spf13/hugo \
-	#github.com/zach-klippenstein/goregen \
-	#golang.org/x/tools/cmd/cover \
-	#golang.org/x/tools/cmd/goimports \
-	#gopkg.in/alecthomas/kingpin.v2 \
-	#gopkg.in/tylerb/graceful.v1 \
-	#gopkg.in/yaml.v2
-
 DEPEND=\
 	github.com/asaskevich/govalidator \
 	github.com/dgrijalva/jwt-go \
 	github.com/dimfeld/httptreemux \
 	github.com/go-openapi/loads \
 	github.com/goadesign/goa-cellar \
+	github.com/goadesign/goa.design/tools/godoc2md \
+	github.com/goadesign/goa.design/tools/mdc \
 	github.com/golang/lint/golint \
 	github.com/manveru/faker \
 	github.com/on99/gocyclo \
@@ -62,14 +39,13 @@ DEPEND=\
 all: depend lint cyclo goagen test
 
 docs:
-	@echo Skipping build of docs
-	#@git clone https://github.com/goadesign/goa.design
-	#@rm -rf goa.design/content/reference goa.design/public
-	#@mdc github.com/goadesign/goa goa.design/content/reference --exclude goa.design
-	#@cd goa.design && hugo
-	#@rm -rf public
-	#@mv goa.design/public public
-	#@rm -rf goa.design
+	@git clone https://github.com/goadesign/goa.design
+	@rm -rf goa.design/content/reference goa.design/public
+	@mdc github.com/goadesign/goa goa.design/content/reference --exclude goa.design
+	@cd goa.design && hugo
+	@rm -rf public
+	@mv goa.design/public public
+	@rm -rf goa.design
 
 depend:
 	@go get -v $(DEPEND)
