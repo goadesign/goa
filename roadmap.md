@@ -37,6 +37,7 @@ type UpdateBottleContext struct {
 	AccountID int
 	BottleID  int
 	Payload   *UpdateBottlePayload
+	service *goa.Service
 }
 ```
 
@@ -54,6 +55,7 @@ type UpdateBottleContext struct {
 // UpdateBottleResponse provides the bottle update action response context.
 type UpdateBottleResponse struct {
 	*goa.ResponseData
+	service *goa.Service
 }
 ```
 
