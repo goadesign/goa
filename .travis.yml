@@ -7,17 +7,16 @@ go:
 #     - go: tip
 sudo: false
 install:
-- go get -v ./...
 - export PATH=${PATH}:${HOME}/gopath/bin
 - curl https://bitbucket.org/birkenfeld/pygments-main/get/2.1.tar.gz -L -o 2.1.tar.gz
 - mkdir -p ${HOME}/bin
 - tar -xf 2.1.tar.gz
 - mv birkenfeld-pygments-main-34530db252d3/* ${HOME}/bin
 - rm -rf birkenfeld-pygments-main-34530db252d3
+- cd ${HOME}/gopath/src && mkdir -p github.com/kr && cd github.com/kr && git clone https://github.com/kr/text && cd ${TRAVIS_BUILD_DIR}
 script:
 - export PATH=${PATH}:${HOME}/bin
-- make
-- make docs
+- make && make docs
 notifications:
   slack:
     secure: bMYXaoSEGoNdqR0t1VnMAv/4V9PSOhEWyekdJM7p9WmKjJi2yKy0k77uRmwf+5Mrz5GLs3CkZnDha/8cSFld3KEN9SC6QYmIBF/1Pd/5mKHFQOI81i7sTlhrdMv897+6sofEtbBNq1jffhVGVttbMrMWwCTNZu0NrCGBVsDmb44=
