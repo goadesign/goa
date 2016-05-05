@@ -168,6 +168,7 @@ func (g *Generator) generateContexts(api *design.APIDefinition) error {
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
 		return r.IterateActions(func(a *design.ActionDefinition) error {
 			ctxName := codegen.Goify(a.Name, true) + codegen.Goify(a.Parent.Name, true) + "Context"
+			respName := codegen.Goify(a.Name, true) + codegen.Goify(a.Parent.Name, true) + "Response"
 			headers := r.Headers.Merge(a.Headers)
 			if headers != nil && len(headers.Type.ToObject()) == 0 {
 				headers = nil // So that {{if .Headers}} returns false in templates
@@ -179,6 +180,7 @@ func (g *Generator) generateContexts(api *design.APIDefinition) error {
 
 			ctxData := ContextTemplateData{
 				Name:         ctxName,
+				ResponseName: respName,
 				ResourceName: r.Name,
 				ActionName:   a.Name,
 				Payload:      a.Payload,
@@ -407,11 +409,13 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 		}
 		ierr := r.IterateActions(func(a *design.ActionDefinition) error {
 			context := fmt.Sprintf("%s%sContext", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
+			response := fmt.Sprintf("%s%sResponse", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			unmarshal := fmt.Sprintf("unmarshal%s%sPayload", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			action := map[string]interface{}{
 				"Name":      codegen.Goify(a.Name, true),
 				"Routes":    a.Routes,
 				"Context":   context,
+				"Response":  response,
 				"Unmarshal": unmarshal,
 				"Payload":   a.Payload,
 				"Security":  a.Security,

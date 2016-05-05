@@ -26,19 +26,21 @@ func makeTestDir(g *Generator, apiName string) (outDir string, err error) {
 
 // TestMethod structure
 type TestMethod struct {
-	Name           string
-	Comment        string
-	ResourceName   string
-	ActionName     string
-	ControllerName string
-	ContextVarName string
-	ContextType    string
-	RouteVerb      string
-	FullPath       string
-	Status         int
-	ReturnType     *ObjectType
-	Params         []ObjectType
-	Payload        *ObjectType
+	Name            string
+	Comment         string
+	ResourceName    string
+	ActionName      string
+	ControllerName  string
+	ContextVarName  string
+	ContextType     string
+	ResponseVarName string
+	ResponseType    string
+	RouteVerb       string
+	FullPath        string
+	Status          int
+	ReturnType      *ObjectType
+	Params          []ObjectType
+	Payload         *ObjectType
 }
 
 // ObjectType structure
@@ -137,6 +139,8 @@ func createTestMethod(resource *design.ResourceDefinition, action *design.Action
 	method.ControllerName = fmt.Sprintf("%s.%sController", TargetPackage, codegen.Goify(resource.Name, true))
 	method.ContextVarName = fmt.Sprintf("%sCtx", codegen.Goify(action.Name, false))
 	method.ContextType = fmt.Sprintf("%s.New%s%sContext", TargetPackage, codegen.Goify(action.Name, true), codegen.Goify(resource.Name, true))
+	method.ResponseVarName = fmt.Sprintf("%sResp", codegen.Goify(action.Name, false))
+	method.ResponseType = fmt.Sprintf("%s.New%s%sResponse", TargetPackage, codegen.Goify(action.Name, true), codegen.Goify(resource.Name, true))
 	method.RouteVerb = route.Verb
 	method.Status = response.Status
 	method.FullPath = goPathFormat(route.FullPath())
@@ -238,13 +242,17 @@ func {{ $test.Name }}Ctx(t *testing.T, ctx context.Context, ctrl {{ $test.Contro
 		panic("invalid test " + err.Error()) // bug
 	}
 	goaCtx := goa.NewContext(goa.WithAction(ctx, "{{ $test.ResourceName }}Test"), rw, req, nil)
-	{{ $test.ContextVarName }}, err := {{ $test.ContextType }}(goaCtx, service){{ if $test.Payload }}
+	{{ $test.ContextVarName }}, err := {{ $test.ContextType }}(goaCtx){{ if $test.Payload }}
 	{{ $test.ContextVarName }}.Payload = {{ $test.Payload.Name }}
 	{{ end }}
 	if err != nil {
 		panic("invalid test data " + err.Error()) // bug
 	}
-	err = ctrl.{{ $test.ActionName}}({{ $test.ContextVarName }})
+	{{ $test.ResponseVarName }}, err := {{ $test.ResponseType }}(goaCtx, service)
+	if err != nil {
+		panic("invalid test data " + err.Error()) // bug
+	}
+	err = ctrl.{{ $test.ActionName}}(goaCtx, {{ $test.ContextVarName }}, {{ $test.ResponseVarName }})
 	if err != nil {
 		t.Fatalf("controller returned %s, logs:\n%s", err, logBuf.String())
 	}
