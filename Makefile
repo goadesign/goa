@@ -12,6 +12,8 @@
 #
 DIRS=$(shell go list -f {{.Dir}} ./...)
 
+# Only list test and build dependencies
+# Standard dependencies are installed via go get
 DEPEND=\
 	github.com/go-openapi/loads \
 	github.com/goadesign/goa-cellar \
