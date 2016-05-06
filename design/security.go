@@ -107,8 +107,8 @@ func (s *SecuritySchemeDefinition) Validate() error {
 func (s *SecuritySchemeDefinition) Finalize() {
 	tu, _ := url.Parse(s.TokenURL)         // validated in Validate
 	au, _ := url.Parse(s.AuthorizationURL) // validated in Validate
-	tokenOK := tu.IsAbs()
-	authOK := au.IsAbs()
+	tokenOK := s.TokenURL == "" || tu.IsAbs()
+	authOK := s.AuthorizationURL == "" || au.IsAbs()
 	if tokenOK && authOK {
 		return
 	}
