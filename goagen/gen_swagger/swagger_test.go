@@ -357,6 +357,23 @@ var _ = Describe("New", func() {
 						Headers(func() {
 							Header("Authorization", String)
 							Header("X-Account", Integer)
+							Header("OptionalBoolWithDefault", Boolean, "defaults true", func() {
+								Default(true)
+							})
+							Header("OptionalRegex", String, func() {
+								Pattern(`[a-z]\d+`)
+								MinLength(1)
+								MaxLength(10)
+							})
+							Header("OptionalInt", Integer, func() {
+								Minimum(-2)
+								Maximum(2)
+							})
+							Header("OptionalArray", ArrayOf(String), func() {
+								// interpreted as MinItems & MaxItems:
+								MinLength(1)
+								MaxLength(5)
+							})
 							Required("Authorization", "X-Account")
 						})
 						Payload(UpdatePayload)
@@ -370,6 +387,9 @@ var _ = Describe("New", func() {
 					Trait("Authenticated", func() {
 						Headers(func() {
 							Header("header")
+							Header("OptionalResourceHeaderWithEnum", func() {
+								Enum("a", "b")
+							})
 							Required("header")
 						})
 					})
@@ -381,10 +401,24 @@ var _ = Describe("New", func() {
 				Ω(swagger.Paths).Should(HaveLen(2))
 				Ω(swagger.Paths["/orgs/{org}/accounts/{id}"]).ShouldNot(BeNil())
 				Ω(swagger.Paths["/orgs/{org}/accounts/{id}"].Put).ShouldNot(BeNil())
-				Ω(swagger.Paths["/orgs/{org}/accounts/{id}"].Put.Parameters).Should(HaveLen(4))
+				ps := swagger.Paths["/orgs/{org}/accounts/{id}"].Put.Parameters
+				Ω(ps).Should(HaveLen(12))
+				// check Headers in detail
+				Ω(ps[3]).Should(Equal(&genswagger.Parameter{In: "header", Name: "OptionalResourceHeaderWithEnum", Type: "string",
+					Enum: []interface{}{"a", "b"}}))
+				Ω(ps[4]).Should(Equal(&genswagger.Parameter{In: "header", Name: "header", Type: "string", Required: true}))
+				Ω(ps[5]).Should(Equal(&genswagger.Parameter{In: "header", Name: "Authorization", Type: "string", Required: true}))
+				Ω(ps[6]).Should(Equal(&genswagger.Parameter{In: "header", Name: "OptionalArray", Type: "array",
+					Items: &genswagger.Items{Type: "string"}, MinItems: 1, MaxItems: 5}))
+				Ω(ps[7]).Should(Equal(&genswagger.Parameter{In: "header", Name: "OptionalBoolWithDefault", Type: "boolean",
+					Description: "defaults true", Default: true}))
+				Ω(ps[8]).Should(Equal(&genswagger.Parameter{In: "header", Name: "OptionalInt", Type: "integer", Minimum: -2, Maximum: 2}))
+				Ω(ps[9]).Should(Equal(&genswagger.Parameter{In: "header", Name: "OptionalRegex", Type: "string",
+					Pattern: `[a-z]\d+`, MinLength: 1, MaxLength: 10}))
+				Ω(ps[10]).Should(Equal(&genswagger.Parameter{In: "header", Name: "X-Account", Type: "integer", Required: true}))
 				Ω(swagger.Paths["/bottles/{id}"]).ShouldNot(BeNil())
 				Ω(swagger.Paths["/bottles/{id}"].Put).ShouldNot(BeNil())
-				Ω(swagger.Paths["/bottles/{id}"].Put.Parameters).Should(HaveLen(4))
+				Ω(swagger.Paths["/bottles/{id}"].Put.Parameters).Should(HaveLen(12))
 			})
 
 			It("should set the inherited tag and the action tag", func() {

@@ -326,6 +326,9 @@ type (
 	// ActionIterator is the type of functions given to IterateActions.
 	ActionIterator func(a *ActionDefinition) error
 
+	// HeaderIterator is the type of functions given to IterateHeaders.
+	HeaderIterator func(name string, isRequired bool, h *AttributeDefinition) error
+
 	// ResponseIterator is the type of functions given to IterateResponses.
 	ResponseIterator func(r *ResponseDefinition) error
 )
@@ -656,6 +659,13 @@ func (r *ResourceDefinition) IterateActions(it ActionIterator) error {
 		}
 	}
 	return nil
+}
+
+// IterateHeaders calls the given iterator passing in each response sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateHeaders returns that
+// error.
+func (r *ResourceDefinition) IterateHeaders(it HeaderIterator) error {
+	return iterateHeaders(r.Headers, it)
 }
 
 // CanonicalAction returns the canonical action of the resource if any.
@@ -1413,6 +1423,20 @@ func (a *ActionDefinition) UserTypes() map[string]*UserTypeDefinition {
 	return types
 }
 
+// IterateHeaders iterates over the resource-level headers and then action-level headers,
+// calling the given iterator passing in each response sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateHeaders returns that
+// error.
+func (a *ActionDefinition) IterateHeaders(it HeaderIterator) error {
+	// resource-level headers
+	err := iterateHeaders(a.Parent.Headers, it)
+	if err != nil {
+		return err
+	}
+	// action-level headers
+	return iterateHeaders(a.Headers, it)
+}
+
 // IterateResponses calls the given iterator passing in each response sorted in alphabetical order.
 // Iteration stops if an iterator returns an error and in this case IterateResponses returns that
 // error.
@@ -1506,4 +1530,26 @@ func (r *RouteDefinition) FullPath() string {
 // base paths.
 func (r *RouteDefinition) IsAbsolute() bool {
 	return strings.HasPrefix(r.Path, "//")
+}
+
+func iterateHeaders(headers *AttributeDefinition, it HeaderIterator) error {
+	if headers == nil || !headers.Type.IsObject() {
+		return nil
+	}
+	headersMap := headers.Type.ToObject()
+	names := make([]string, len(headersMap))
+	i := 0
+	for n := range headersMap {
+		names[i] = n
+		i++
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		header := headersMap[n]
+		isRequired := headers.IsRequired(n)
+		if err := it(n, isRequired, header); err != nil {
+			return err
+		}
+	}
+	return nil
 }

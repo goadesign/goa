@@ -491,25 +491,38 @@ func paramsFromDefinition(params *design.AttributeDefinition, path string) ([]*P
 				break
 			}
 		}
-		param := &Parameter{
-			Name:        n,
-			Default:     toStringMap(at.DefaultValue),
-			Description: at.Description,
-			Required:    required,
-			In:          in,
-			Type:        at.Type.Name(),
-		}
-		var items *Items
-		if at.Type.IsArray() {
-			items = itemsFromDefinition(at)
-		}
-		param.Items = items
-		initValidations(at, param)
+		param := paramFor(at, n, in, required)
 		res[i] = param
 		i++
 		return nil
 	})
 	return res, nil
+}
+
+func paramsFromHeaders(action *design.ActionDefinition) []*Parameter {
+	params := []*Parameter{}
+	action.IterateHeaders(func(name string, required bool, header *design.AttributeDefinition) error {
+		p := paramFor(header, name, "header", required)
+		params = append(params, p)
+		return nil
+	})
+	return params
+}
+
+func paramFor(at *design.AttributeDefinition, name, in string, required bool) *Parameter {
+	p := &Parameter{
+		In:          in,
+		Name:        name,
+		Default:     toStringMap(at.DefaultValue),
+		Description: at.Description,
+		Required:    required,
+		Type:        at.Type.Name(),
+	}
+	if at.Type.IsArray() {
+		p.Items = itemsFromDefinition(at.Type.ToArray().ElemType)
+	}
+	initValidations(at, p)
+	return p
 }
 
 // toStringMap converts map[interface{}]interface{} to a map[string]interface{} when possible.
@@ -629,6 +642,8 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	if err != nil {
 		return err
 	}
+
+	params = append(params, paramsFromHeaders(action)...)
 
 	responses := make(map[string]*Response, len(action.Responses))
 	for _, r := range action.Responses {
