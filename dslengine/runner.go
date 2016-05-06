@@ -415,9 +415,13 @@ func sortDependenciesR(root Root, seen map[string]bool, sorted *[]Root, depFunc 
 
 // caller returns the name of calling function.
 func caller() string {
-	pc, _, _, ok := runtime.Caller(3)
+	pc, file, _, ok := runtime.Caller(2)
+	if ok && filepath.Base(file) == "current.go" {
+		pc, _, _, ok = runtime.Caller(3)
+	}
 	if !ok {
 		return "<unknown>"
 	}
+
 	return runtime.FuncForPC(pc).Name()
 }
