@@ -743,11 +743,21 @@ func (ut {{ gotyperef . .AllRequired 0 false }}) Validate() (err error) {
 	// securitySchemesT generates the code for the security module.
 	// template input: []*design.SecuritySchemeDefinition
 	securitySchemesT = `
-type securitySchemeKey string
-type key int
+type (
+	// Private type used to store scheme info in request context
+	securitySchemeKey string
+	// Private type used to store scopes in request context
+	key int
+)
+
+// Scopes context key
 const securityScopesKey key = 1
 {{ range . }}
-func Configure{{ goify .SchemeName true }}Security(service *goa.Service, f goa.{{ .Context }}ConfigFunc) {
+{{ $funcName := printf "Configure%sSecurity" (goify .SchemeName true) }}// {{ $funcName }} configures the {{ .SchemeName }} security scheme.
+// It accepts a {{ .Context }}ConfigFunc and calls it giving it the scheme definition as defined in
+// the DSL as well as a fetchScopes function object that allows retrieving the request scopes. The
+// function should return a middleware that the generated code invokes on every request.
+func {{ $funcName }}(service *goa.Service, f goa.{{ .Context }}ConfigFunc) {
 	def := &goa.{{ .Context }}{
 {{ if eq .Context "APIKeySecurity" }}{{/*
 */}}		In:   {{ if eq .In "header" }}goa.LocHeader{{ else }}goa.LocQuery{{ end }},
@@ -783,9 +793,9 @@ func Configure{{ goify .SchemeName true }}Security(service *goa.Service, f goa.{
 	middleware := f(def)
 {{ end }}{{/*
 */}}	service.Context = context.WithValue(service.Context, securitySchemeKey({{ printf "%q" .SchemeName }}), middleware)
-}{{ end }}
+}
 
-// handleSecurity creates a goa request handler that takes care of executing the security middleware
+{{ end }}// handleSecurity creates a goa request handler that takes care of executing the security middleware
 // registered via the ConfigureXXXSecurity functions.
 func handleSecurity(schemeName string, h goa.Handler, scopes ...string) goa.Handler {
 	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
