@@ -137,8 +137,8 @@ var _ = Describe("Generate", func() {
 			Ω(files).Should(HaveLen(7))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "client.go"))
 			Ω(err).ShouldNot(HaveOccurred())
-			Ω(content).Should(ContainSubstring("SignerJWT1 *goaclient.JWTSigner"))
-			Ω(content).Should(ContainSubstring("SignerJWT1: &goaclient.JWTSigner{},"))
+			Ω(content).Should(ContainSubstring("JWT1Signer *goaclient.JWTSigner"))
+			Ω(content).Should(ContainSubstring("JWT1Signer: &goaclient.JWTSigner{},"))
 		})
 
 		It("generates the Signer.Sign call from Action", func() {
@@ -146,7 +146,7 @@ var _ = Describe("Generate", func() {
 			Ω(files).Should(HaveLen(7))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
 			Ω(err).ShouldNot(HaveOccurred())
-			Ω(content).Should(ContainSubstring("c.SignerJWT1.Sign(ctx, req)"))
+			Ω(content).Should(ContainSubstring("c.JWT1Signer.Sign(ctx, req)"))
 		})
 	})
 })
