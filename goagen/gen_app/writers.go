@@ -779,8 +779,8 @@ func Configure{{ goify .SchemeName true }}Security(service *goa.Service, f goa.{
 		return scopes
 	}
 	middleware := f(def, fetchScopes)
-{{ else }}{{/*
-*/}}	middleware := f(def)
+{{ else }}
+	middleware := f(def)
 {{ end }}{{/*
 */}}	service.Context = context.WithValue(service.Context, securitySchemeKey({{ printf "%q" .SchemeName }}), middleware)
 }{{ end }}
