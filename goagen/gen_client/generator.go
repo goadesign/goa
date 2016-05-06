@@ -571,7 +571,7 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Payload 
 {{ else }}{{ $tmp := tempvar }}{{ toString (goify $name false) $tmp $att }}
 	header.Set("{{ $name }}", {{ $tmp }})
 {{ end }}{{ end }}{{ end }}	header.Set("Content-Type", "application/json"){{ if .Security }}
-	c.Signer{{ goify .Security.Scheme.SchemeName true }}.Sign(ctx, req){{ end }}
+	c.{{ goify .Security.Scheme.SchemeName true }}Signer.Sign(ctx, req){{ end }}
 	return c.Client.Do(ctx, req)
 }
 `
@@ -598,14 +598,14 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{/*
 const clientTmpl = `// Client is the {{ .Name }} service client.
 type Client struct {
 	*goaclient.Client{{range $security := .SecuritySchemes }}{{ $signer := signerType $security }}{{ if $signer }}
-	Signer{{ goify $security.SchemeName true }} *{{ $signer }}{{ end }}{{ end }}
+	{{ goify $security.SchemeName true }}Signer *{{ $signer }}{{ end }}{{ end }}
 }
 
 // New instantiates the client.
 func New(c *http.Client) *Client {
 	return &Client{
 		Client: goaclient.New(c),{{range $security := .SecuritySchemes }}{{ $signer := signerType $security }}{{ if $signer }}
-		Signer{{ goify $security.SchemeName true }}: &{{ $signer }}{},{{ end }}{{ end }}
+		{{ goify $security.SchemeName true }}Signer: &{{ $signer }}{},{{ end }}{{ end }}
 	}
 }
 `

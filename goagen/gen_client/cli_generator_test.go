@@ -197,7 +197,7 @@ var _ = Describe("Generate", func() {
 			Ω(files).Should(HaveLen(7))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "testapi-cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
-			Ω(content).Should(ContainSubstring("c.SignerJWT1.RegisterFlags(cc)"))
+			Ω(content).Should(ContainSubstring("c.JWT1Signer.RegisterFlags(cc)"))
 		})
 	})
 })
