@@ -167,6 +167,7 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 func (g *Generator) generateResourceClient(res *design.ResourceDefinition, funcs template.FuncMap) error {
 	payloadTmpl := template.Must(template.New("payload").Funcs(funcs).Parse(payloadTmpl))
 	clientsTmpl := template.Must(template.New("clients").Funcs(funcs).Parse(clientsTmpl))
+	requestsTmpl := template.Must(template.New("clients").Funcs(funcs).Parse(requestsTmpl))
 	clientsWSTmpl := template.Must(template.New("clients").Funcs(funcs).Parse(clientsWSTmpl))
 	pathTmpl := template.Must(template.New("pathTemplate").Funcs(funcs).Parse(pathTmpl))
 
@@ -237,7 +238,10 @@ func (g *Generator) generateResourceClient(res *design.ResourceDefinition, funcs
 				return err
 			}
 		}
-		return clientsTmpl.Execute(file, action)
+		if err := clientsTmpl.Execute(file, action); err != nil {
+			return err
+		}
+		return requestsTmpl.Execute(file, action)
 	})
 	if err != nil {
 		return err
@@ -544,6 +548,21 @@ const clientsTmpl = `{{ $funcName := goify (printf "%s%s" .Name (title .Parent.N
 func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Payload }}, payload {{ gotyperef .Payload .Payload.AllRequired 1 false }}{{ end }}{{/*
 	*/}}{{ $params := join .QueryParams }}{{ if $params }}, {{ $params }}{{ end }}{{/*
 	*/}}{{ $headers := join .Headers }}{{ if $headers }}, {{ $headers }}{{ end }}) (*http.Response, error) {
+	req, err := c.New{{ $funcName }}Request(ctx, path{{ if .Payload }}, payload {{ end }}{{/*
+*/}}{{ $params := .QueryParams }}{{ if $params }}{{ range $name, $att := $params.Type.ToObject }}, {{ goify $name false }}{{ end }}{{ end }}{{/*
+*/}}{{ $headers := join .Headers }}{{ if $headers }}, {{ $headers }}{{ end }})
+	if err != nil {
+		return nil, err
+	}
+	return c.Client.Do(ctx, req)
+}
+`
+
+const requestsTmpl = `{{ $funcName := goify (printf "New%s%sRequest" (title .Name) (title .Parent.Name)) true }}{{/*
+*/}}// {{ $funcName }} create the request corresponding to the {{ .Name }} action endpoint of the {{ .Parent.Name }} resource
+func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Payload }}, payload {{ gotyperef .Payload .Payload.AllRequired 1 false }}{{ end }}{{/*
+	*/}}{{ $params := join .QueryParams }}{{ if $params }}, {{ $params }}{{ end }}{{/*
+	*/}}{{ $headers := join .Headers }}{{ if $headers }}, {{ $headers }}{{ end }}) (*http.Request, error) {
 	var body io.Reader
 {{ if .Payload }}	b, err := json.Marshal(payload)
 	if err != nil {
@@ -572,7 +591,7 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Payload 
 	header.Set("{{ $name }}", {{ $tmp }})
 {{ end }}{{ end }}{{ end }}	header.Set("Content-Type", "application/json"){{ if .Security }}
 	c.{{ goify .Security.Scheme.SchemeName true }}Signer.Sign(ctx, req){{ end }}
-	return c.Client.Do(ctx, req)
+	return req, nil
 }
 `
 
