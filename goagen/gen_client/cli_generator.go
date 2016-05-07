@@ -282,7 +282,7 @@ func (cmd *{{ $cmdName }}) RegisterFlags(cc *cobra.Command, c *client.Client) {
 {{ end }}{{ end }}{{ $headers := .Action.Headers }}{{ if $headers }}{{ range $name, $header := $headers.Type.ToObject }}{{/*
 */}} cc.Flags().StringVar(&cmd.{{ goify $name true }}, "{{ $name }}", {{/*
 */}}{{ if $header.DefaultValue }}{{ printf "%q" $header.DefaultValue }}{{ else }}""{{ end }}, ` + "`" + `{{ escapeBackticks $header.Description }}` + "`" + `)
-{{ end }}{{ end }}{{ if .Action.Security }}   c.Signer{{ goify .Action.Security.Scheme.SchemeName true }}.RegisterFlags(cc){{ end }}}`
+{{ end }}{{ end }}{{ if .Action.Security }}   c.{{ goify .Action.Security.Scheme.SchemeName true }}Signer.RegisterFlags(cc){{ end }}}`
 
 const commandsTmpl = `
 {{ $cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true }}// Run makes the HTTP request corresponding to the {{ $cmdName }} command.

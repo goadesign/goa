@@ -712,7 +712,7 @@ func (ut {{ gotyperef . .AllRequired 0 false }}) Validate() (err error) {
 
 	// userTypeT generates the code for a user type.
 	// template input: UserTypeTemplateData
-	userTypeT = `// {{ gotypedesc . true }}{{ $privateTypeName := gotypename . .AllRequired 0 true }}
+	userTypeT = `// {{ gotypedesc . false }}{{ $privateTypeName := gotypename . .AllRequired 0 true }}
 type {{ $privateTypeName }} {{ gotypedef . 0 true true }}
 {{ $assignment := recursiveFinalizer .AttributeDefinition "ut" 1 }}{{ if $assignment }}// Finalize sets the default values for {{$privateTypeName}} type instance.
 func (ut {{ gotyperef . .AllRequired 0 true }}) Finalize() {

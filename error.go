@@ -172,7 +172,7 @@ func InvalidLengthError(ctx string, target interface{}, ln, value int, min bool)
 // NoSecurityScheme is the error produced when goa is unable to lookup a security scheme defined in
 // the design.
 func NoSecurityScheme(schemeName string) *Error {
-	return ErrNoSecurityScheme("invalid security scheme %s", schemeName)
+	return ErrNoSecurityScheme("security scheme %s is not configured", schemeName)
 }
 
 // Error returns the error occurrence details.
