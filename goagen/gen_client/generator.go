@@ -549,7 +549,7 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Payload 
 	*/}}{{ $params := join .QueryParams }}{{ if $params }}, {{ $params }}{{ end }}{{/*
 	*/}}{{ $headers := join .Headers }}{{ if $headers }}, {{ $headers }}{{ end }}) (*http.Response, error) {
 	req, err := c.New{{ $funcName }}Request(ctx, path{{ if .Payload }}, payload {{ end }}{{/*
-*/}}{{ $params := .QueryParams }}{{ if $params }}{{ range $name, $att := $params.Type.ToObject }}, {{ $name }}{{ end }}{{ end }}{{/*
+*/}}{{ $params := .QueryParams }}{{ if $params }}{{ range $name, $att := $params.Type.ToObject }}, {{ goify $name false }}{{ end }}{{ end }}{{/*
 */}}{{ $headers := join .Headers }}{{ if $headers }}, {{ $headers }}{{ end }})
 	if err != nil {
 		return nil, err
