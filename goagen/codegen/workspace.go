@@ -320,6 +320,13 @@ func PackageSourcePath(pkg string) (string, error) {
 	for i, gopath := range candidates {
 		candidates[i] = filepath.Join(gopath, "src", pkg)
 	}
+
+	// add vendor directory to the available source paths, this can
+	// probably be more idomatic
+	if dir, err := filepath.Abs(filepath.Base(DesignPackagePath)); err == nil {
+		candidates = append(candidates, filepath.Join(dir, "/../vendor/", pkg))
+	}
+
 	var absPath string
 	for _, path := range candidates {
 		if _, err := os.Stat(path); err == nil {
