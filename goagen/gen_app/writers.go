@@ -67,6 +67,7 @@ type (
 	// code for an action.
 	ContextTemplateData struct {
 		Name         string // e.g. "ListBottleContext"
+		ResponseName string // e.g. "ListBottleResponse"
 		ResourceName string // e.g. "bottles"
 		ActionName   string // e.g. "list"
 		Params       *design.AttributeDefinition
@@ -379,16 +380,19 @@ func arrayAttribute(a *design.AttributeDefinition) *design.AttributeDefinition {
 const (
 	// ctxT generates the code for the context data type.
 	// template input: *ContextTemplateData
-	ctxT = `// {{ .Name }} provides the {{ .ResourceName }} {{ .ActionName }} action context.
+	ctxT = `// {{ .Name }} provides the {{ .ResourceName }} {{ .ActionName }} action request context.
 type {{ .Name }} struct {
-	context.Context
-	*goa.ResponseData
 	*goa.RequestData
-	Service *goa.Service
 {{ if .Params }}{{ range $name, $att := .Params.Type.ToObject }}{{/*
 */}}	{{ goify $name true }} {{ if and $att.Type.IsPrimitive ($.Params.IsPrimitivePointer $name) }}*{{ end }}{{ gotyperef .Type nil 0 false }}
 {{ end }}{{ end }}{{ if .Payload }}	Payload {{ gotyperef .Payload nil 0 false }}
 {{ end }}}
+
+// {{ .ResponseName }} provides the {{ .ResourceName }} {{ .ActionName }} action response.
+type {{ .ResponseName }} struct {
+	*goa.ResponseData
+	Service *goa.Service
+}
 `
 	// coerceT generates the code that coerces the generic deserialized
 	// data to the actual type.
@@ -471,10 +475,10 @@ type {{ .Name }} struct {
 	ctxNewT = `{{ define "Coerce" }}` + coerceT + `{{ end }}` + `
 // New{{ goify .Name true }} parses the incoming request URL and body, performs validations and creates the
 // context used by the {{ .ResourceName }} controller {{ .ActionName }} action.
-func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, error) {
+func New{{ .Name }}(ctx context.Context) (*{{ .Name }}, error) {
 	var err error
 	req := goa.ContextRequest(ctx)
-	rctx := {{ .Name }}{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req, Service: service}
+	rctx := {{ .Name }}{RequestData: req}
 {{ if .Headers }}{{ $headers := .Headers }}{{ range $name, $att := $headers.Type.ToObject }}	raw{{ goify $name true }} := req.Header.Get("{{ $name }}")
 {{ if $headers.IsRequired $name }}	if raw{{ goify $name true }} == "" {
 		err = goa.MergeErrors(err, goa.MissingHeaderError("{{ $name }}"))
@@ -501,15 +505,22 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 {{ end }}	}
 {{ end }}{{ end }}{{/* if .Params */}}	return &rctx, err
 }
-`
+
+// New{{ goify .ResponseName true }} parses the incoming request URL and body, performs validations and creates the
+// context used by the {{ .ResourceName }} controller {{ .ActionName }} action.
+func New{{ .ResponseName }}(ctx context.Context, service *goa.Service) (*{{ .ResponseName }}, error) {
+	var err error
+	rctx := {{ .ResponseName }}{ResponseData: goa.ContextResponse(ctx), Service: service}
+	return &rctx, err
+}`
 	// ctxMTRespT generates the response helpers for responses with media types.
 	// template input: map[string]interface{}
 	ctxMTRespT = `{{ $ctx := .Context }}{{ $resp := .Response }}{{ $mt := .MediaType }}{{/*
 */}}{{ range $name, $view := $mt.Views }}{{ if not (eq $name "link") }}{{ $projected := project $mt $name }}
 // {{ respName $resp $name }} sends a HTTP response with status code {{ $resp.Status }}.
-func (ctx *{{ $ctx.Name }}) {{ respName $resp $name }}(r {{ gotyperef $projected $projected.AllRequired 0 false }}) error {
-	ctx.ResponseData.Header().Set("Content-Type", "{{ $resp.MediaType }}")
-	return ctx.Service.Send(ctx.Context, {{ $resp.Status }}, r)
+func (resp *{{ $ctx.ResponseName }}) {{ respName $resp $name }}(ctx context.Context, r {{ gotyperef $projected $projected.AllRequired 0 false }}) error {
+	resp.ResponseData.Header().Set("Content-Type", "{{ $resp.MediaType }}")
+	return resp.Service.Send(ctx, {{ $resp.Status }}, r)
 }
 {{ end }}{{ end }}
 `
@@ -517,9 +528,9 @@ func (ctx *{{ $ctx.Name }}) {{ respName $resp $name }}(r {{ gotyperef $projected
 	// ctxTRespT generates the response helpers for responses with overridden types.
 	// template input: map[string]interface{}
 	ctxTRespT = `// {{ goify .Response.Name true }} sends a HTTP response with status code {{ .Response.Status }}.
-func (ctx *{{ .Context.Name }}) {{ goify .Response.Name true }}(r {{ gotyperef .Type nil 0 false }}) error {
-	ctx.ResponseData.Header().Set("Content-Type", "{{ .Response.MediaType }}")
-	return ctx.Service.Send(ctx.Context, {{ .Response.Status }}, r)
+func (resp *{{ .Context.ResponseName }}) {{ goify .Response.Name true }}(ctx context.Context, r {{ gotyperef .Type nil 0 false }}) error {
+	resp.ResponseData.Header().Set("Content-Type", "{{ .Response.MediaType }}")
+	return resp.Service.Send(ctx, {{ .Response.Status }}, r)
 }
 `
 
@@ -527,10 +538,10 @@ func (ctx *{{ .Context.Name }}) {{ goify .Response.Name true }}(r {{ gotyperef .
 	// template input: *ContextTemplateData
 	ctxNoMTRespT = `
 // {{ goify .Response.Name true }} sends a HTTP response with status code {{ .Response.Status }}.
-func (ctx *{{ .Context.Name }}) {{ goify .Response.Name true }}({{ if .Response.MediaType }}resp []byte{{ end }}) error {
+func (resp *{{ .Context.ResponseName }}) {{ goify .Response.Name true }}({{ if .Response.MediaType }}resp []byte{{ end }}) error {
 {{ if .Response.MediaType }}	ctx.ResponseData.Header().Set("Content-Type", "{{ .Response.MediaType }}")
-{{ end }}	ctx.ResponseData.WriteHeader({{ .Response.Status }}){{ if .Response.MediaType }}
-	_, err := ctx.ResponseData.Write(resp)
+{{ end }}	resp.ResponseData.WriteHeader({{ .Response.Status }}){{ if .Response.MediaType }}
+	_, err := resp.ResponseData.Write(resp)
 	return err{{ else }}
 	return nil{{ end }}
 }
@@ -574,7 +585,7 @@ func (payload {{ gotyperef .Payload .Payload.AllRequired 0 false }}) Validate() 
 	ctrlT = `// {{ .Resource }}Controller is the controller interface for the {{ .Resource }} actions.
 type {{ .Resource }}Controller interface {
 	goa.Muxer
-{{ range .Actions }}	{{ .Name }}(*{{ .Context }}) error
+{{ range .Actions }}	{{ .Name }}(context.Context, *{{ .Context }}, *{{ .Response }}) error
 {{ end }}}
 `
 
@@ -608,14 +619,19 @@ func Mount{{ .Resource }}Controller(service *goa.Service, ctrl {{ .Resource }}Co
 {{ $res := .Resource }}{{ if .Origins }}{{ range .PreflightPaths }}	service.Mux.Handle("OPTIONS", "{{ . }}", cors.HandlePreflight(service.Context, handle{{ $res }}Origin))
 {{ end }}{{ end }}{{ range .Actions }}{{ $action := . }}
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-		rctx, err := New{{ .Context }}(ctx, service)
+		rctx, err := New{{ .Context }}(ctx)
 		if err != nil {
 			return err
 		}
+		resctx, err := New{{ .Response }}(ctx, service)
+		if err != nil {
+			return err
+		}
+
 {{ if .Payload }}if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
 			rctx.Payload = rawPayload.({{ gotyperef .Payload nil 1 false }})
 		}
-		{{ end }}		return ctrl.{{ .Name }}(rctx)
+		{{ end }}		return ctrl.{{ .Name }}(ctx, rctx, resctx)
 	}
 {{ if $.Origins }}	h = handle{{ $res }}Origin(h)
 {{ end }}{{ if .Security }}	h = handleSecurity({{ printf "%q" .Security.Scheme.SchemeName }}, h{{ range .Security.Scopes }}, {{ printf "%q" . }}{{ end }})

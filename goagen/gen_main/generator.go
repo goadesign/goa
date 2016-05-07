@@ -106,6 +106,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport(imp),
 		codegen.SimpleImport("golang.org/x/net/websocket"),
+		codegen.SimpleImport("golang.org/x/net/context"),
 	}
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
 		filename := filepath.Join(codegen.OutputDir, codegen.SnakeCase(r.Name)+".go")
@@ -255,10 +256,10 @@ func New{{ $ctrlName }}(service *goa.Service) *{{ $ctrlName }} {
 `
 
 const actionT = `{{ $ctrlName := printf "%s%s" (goify .Parent.Name true) "Controller" }}// {{ goify .Name true }} runs the {{ .Name }} action.
-func (c *{{ $ctrlName }}) {{ goify .Name true }}(ctx *{{ targetPkg }}.{{ goify .Name true }}{{ goify .Parent.Name true }}Context) error {
+func (c *{{ $ctrlName }}) {{ goify .Name true }}(ctx context.Context, req *{{ targetPkg }}.{{ goify .Name true }}{{ goify .Parent.Name true }}Context, resp *{{ targetPkg }}.{{ goify .Name true }}{{ goify .Parent.Name true }}Response) error {
 	// TBD: implement
-{{ $ok := okResp . }}{{ if $ok }} res := {{ $ok.TypeRef }}{}
-{{ end }} return {{ if $ok }}ctx.{{ $ok.Name }}(res){{ else }}nil{{ end }}
+{{ $ok := okResp . }}{{ if $ok }} r := {{ $ok.TypeRef }}{}
+{{ end }} return {{ if $ok }}resp.{{ $ok.Name }}(ctx, r){{ else }}nil{{ end }}
 }
 `
 
