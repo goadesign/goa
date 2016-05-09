@@ -836,10 +836,14 @@ func initMaximumValidation(def interface{}, max float64) {
 	}
 }
 
-func initMinLengthValidation(def interface{}, min int) {
+func initMinLengthValidation(def interface{}, isArray bool, min int) {
 	switch actual := def.(type) {
 	case *Parameter:
-		actual.MinLength = min
+		if isArray {
+			actual.MinItems = min
+		} else {
+			actual.MinLength = min
+		}
 	case *Header:
 		actual.MinLength = min
 	case *Items:
@@ -847,10 +851,14 @@ func initMinLengthValidation(def interface{}, min int) {
 	}
 }
 
-func initMaxLengthValidation(def interface{}, max int) {
+func initMaxLengthValidation(def interface{}, isArray bool, max int) {
 	switch actual := def.(type) {
 	case *Parameter:
-		actual.MaxLength = max
+		if isArray {
+			actual.MaxItems = max
+		} else {
+			actual.MaxLength = max
+		}
 	case *Header:
 		actual.MaxLength = max
 	case *Items:
@@ -873,9 +881,9 @@ func initValidations(attr *design.AttributeDefinition, def interface{}) {
 		initMaximumValidation(def, *val.Maximum)
 	}
 	if val.MinLength != nil {
-		initMinLengthValidation(def, *val.MinLength)
+		initMinLengthValidation(def, attr.Type.IsArray(), *val.MinLength)
 	}
 	if val.MaxLength != nil {
-		initMaxLengthValidation(def, *val.MaxLength)
+		initMaxLengthValidation(def, attr.Type.IsArray(), *val.MaxLength)
 	}
 }
