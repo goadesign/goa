@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"go/ast"
+	"go/build"
 	"go/format"
 	"go/parser"
 	"go/scanner"
@@ -315,25 +316,17 @@ func PackagePath(path string) (string, error) {
 
 // PackageSourcePath returns the absolute path to the given package source.
 func PackageSourcePath(pkg string) (string, error) {
-	gopaths := os.Getenv("GOPATH")
-	candidates := filepath.SplitList(gopaths)
-	for i, gopath := range candidates {
-		candidates[i] = filepath.Join(gopath, "src", pkg)
+	buildCtx := build.Default
+	buildCtx.GOPATH = os.Getenv("GOPATH") // Reevaluate each time to be nice to tests
+	wd, err := os.Getwd()
+	if err != nil {
+		wd = "."
 	}
-	var absPath string
-	for _, path := range candidates {
-		if _, err := os.Stat(path); err == nil {
-			absPath = path
-			break
-		}
+	p, err := buildCtx.Import(pkg, wd, 0)
+	if err != nil {
+		return "", err
 	}
-	if absPath == "" {
-		if len(candidates) == 1 {
-			return "", fmt.Errorf(`%s does not contain the %s Go package`, candidates[0], pkg)
-		}
-		return "", fmt.Errorf(`%s do not contain the %s Go package`, strings.Join(candidates, ", "), pkg)
-	}
-	return absPath, nil
+	return p.Dir, nil
 }
 
 // PackageName returns the name of a package at the given path
