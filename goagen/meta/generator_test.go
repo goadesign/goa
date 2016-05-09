@@ -6,7 +6,6 @@ import (
 	"html/template"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/meta"
@@ -100,9 +99,8 @@ var _ = Describe("Run", func() {
 		})
 
 		It("fails with a useful error message", func() {
-			path := fmt.Sprintf("%s", filepath.Join(invalidPath, "src", filepath.FromSlash(designPackagePath)))
-			msg := fmt.Sprintf(`%s does not contain the design Go package`, path)
-			Ω(compileError.Error()).Should(Equal(msg))
+			Ω(compileError).Should(MatchError(HavePrefix(`cannot find package "design" in any of:`)))
+			Ω(compileError).Should(MatchError(HaveSuffix(fmt.Sprintf(`%s/src/design (from $GOPATH)`, invalidPath))))
 		})
 
 	})
@@ -115,8 +113,7 @@ var _ = Describe("Run", func() {
 		})
 
 		It("fails with a useful error message", func() {
-			msg := "do not contain the " + invalidDesignPackage + " Go package"
-			Ω(compileError).Should(MatchError(HaveSuffix(msg)))
+			Ω(compileError).Should(MatchError(HavePrefix("cannot find package")))
 			Ω(compileError).Should(MatchError(ContainSubstring(invalidDesignPackage)))
 		})
 	})
