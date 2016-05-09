@@ -812,13 +812,13 @@ func initMinimumValidation(def interface{}, min float64) {
 	switch actual := def.(type) {
 	case *Parameter:
 		actual.Minimum = min
-		actual.ExclusiveMinimum = true
+		actual.ExclusiveMinimum = false
 	case *Header:
 		actual.Minimum = min
-		actual.ExclusiveMinimum = true
+		actual.ExclusiveMinimum = false
 	case *Items:
 		actual.Minimum = min
-		actual.ExclusiveMinimum = true
+		actual.ExclusiveMinimum = false
 	}
 }
 
@@ -826,13 +826,13 @@ func initMaximumValidation(def interface{}, max float64) {
 	switch actual := def.(type) {
 	case *Parameter:
 		actual.Maximum = max
-		actual.ExclusiveMaximum = true
+		actual.ExclusiveMaximum = false
 	case *Header:
 		actual.Maximum = max
-		actual.ExclusiveMaximum = true
+		actual.ExclusiveMaximum = false
 	case *Items:
 		actual.Maximum = max
-		actual.ExclusiveMaximum = true
+		actual.ExclusiveMaximum = false
 	}
 }
 
