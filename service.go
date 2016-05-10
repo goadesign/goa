@@ -231,8 +231,9 @@ func (ctrl *Controller) ServeFiles(path, filename string) error {
 		// Invoke middleware chain, errors should be caught earlier, e.g. by ErrorHandler middleware
 		if err := handler(ctx, rw, req); err != nil {
 			LogError(ctx, "uncaught error", "err", err)
-			respBody := fmt.Sprintf("internal error: %s", err) // Sprintf catches panics
-			ctrl.Service.Send(ctx, 500, respBody)
+			code := http.StatusInternalServerError
+			respBody := fmt.Sprintf("%s: %s", http.StatusText(code), err) // Sprintf catches panics
+			ctrl.Service.Send(ctx, code, respBody)
 		}
 	}
 	ctrl.Service.Mux.Handle("GET", path, handle)
