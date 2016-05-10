@@ -45,3 +45,26 @@ var _ = Describe("IsRequired", func() {
 		})
 	})
 })
+
+var _ = Describe("IterateHeaders", func() {
+	It("works when Parent.Headers is nil", func() {
+		// create a Resource with no headers, Action with one header
+		resource := &design.ResourceDefinition{}
+		action := &design.ActionDefinition{
+			Parent: resource,
+			Headers: &design.AttributeDefinition{
+				Type: design.Object{
+					"a": &design.AttributeDefinition{Type: design.String},
+				},
+			},
+		}
+		names := []string{}
+		// iterator that collects header names
+		it := func(name string, _ bool, _ *design.AttributeDefinition) error {
+			names = append(names, name)
+			return nil
+		}
+		Ω(action.IterateHeaders(it)).Should(Succeed(), "despite action.Parent.Headers being nil")
+		Ω(names).Should(ConsistOf("a"))
+	})
+})
