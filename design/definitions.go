@@ -870,7 +870,7 @@ func (a *AttributeDefinition) Context() string {
 // This happens when the DSL uses references for example. So traverse the hierarchy and collect
 // all the required validations.
 func (a *AttributeDefinition) AllRequired() (required []string) {
-	if a.Validation == nil {
+	if a == nil || a.Validation == nil {
 		return
 	}
 	required = a.Validation.Required
