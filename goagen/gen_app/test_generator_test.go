@@ -73,7 +73,7 @@ var _ = Describe("Generate", func() {
 								Routes: []*design.RouteDefinition{
 									{
 										Verb: "GET",
-										Path: "",
+										Path: "p/:param/u/:uuid",
 									},
 									{
 										Verb: "POST",
@@ -134,6 +134,15 @@ var _ = Describe("Generate", func() {
 			Ω(content).Should(ContainSubstring("ShowFooOK1Ctx("))
 			// Get returns an error media type
 			Ω(content).Should(ContainSubstring("GetFooOK(t *testing.T, ctrl app.FooController, payload app.CustomName) *goa.Error"))
+		})
+
+		It("generates the route path parameters", func() {
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "app", "test", "foo.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+
+			Ω(content).Should(ContainSubstring(`["param"] = []string{`))
+			Ω(content).Should(ContainSubstring(`["uuid"] = []string{`))
+			Ω(content).ShouldNot(ContainSubstring(`["time"] = []string{`))
 		})
 
 		It("generates calls to new Context ", func() {
