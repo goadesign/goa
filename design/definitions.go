@@ -665,7 +665,7 @@ func (r *ResourceDefinition) IterateActions(it ActionIterator) error {
 // Iteration stops if an iterator returns an error and in this case IterateHeaders returns that
 // error.
 func (r *ResourceDefinition) IterateHeaders(it HeaderIterator) error {
-	return iterateHeaders(r.Headers, it)
+	return iterateHeaders(r.Headers, r.Headers.IsRequired, it)
 }
 
 // CanonicalAction returns the canonical action of the resource if any.
@@ -1423,18 +1423,19 @@ func (a *ActionDefinition) UserTypes() map[string]*UserTypeDefinition {
 	return types
 }
 
-// IterateHeaders iterates over the resource-level headers and then action-level headers,
+// IterateHeaders iterates over the resource-level and action-level headers,
 // calling the given iterator passing in each response sorted in alphabetical order.
 // Iteration stops if an iterator returns an error and in this case IterateHeaders returns that
 // error.
 func (a *ActionDefinition) IterateHeaders(it HeaderIterator) error {
-	// resource-level headers
-	err := iterateHeaders(a.Parent.Headers, it)
-	if err != nil {
-		return err
+	mergedHeaders := a.Parent.Headers.Merge(a.Headers)
+
+	isRequired := func(name string) bool {
+		// header required in either the Resource or Action scope?
+		return a.Parent.Headers.IsRequired(name) || a.Headers.IsRequired(name)
 	}
-	// action-level headers
-	return iterateHeaders(a.Headers, it)
+
+	return iterateHeaders(mergedHeaders, isRequired, it)
 }
 
 // IterateResponses calls the given iterator passing in each response sorted in alphabetical order.
@@ -1532,7 +1533,7 @@ func (r *RouteDefinition) IsAbsolute() bool {
 	return strings.HasPrefix(r.Path, "//")
 }
 
-func iterateHeaders(headers *AttributeDefinition, it HeaderIterator) error {
+func iterateHeaders(headers *AttributeDefinition, isRequired func(name string) bool, it HeaderIterator) error {
 	if headers == nil || !headers.Type.IsObject() {
 		return nil
 	}
@@ -1546,8 +1547,7 @@ func iterateHeaders(headers *AttributeDefinition, it HeaderIterator) error {
 	sort.Strings(names)
 	for _, n := range names {
 		header := headersMap[n]
-		isRequired := headers.IsRequired(n)
-		if err := it(n, isRequired, header); err != nil {
+		if err := it(n, isRequired(n), header); err != nil {
 			return err
 		}
 	}
