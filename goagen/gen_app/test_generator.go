@@ -43,6 +43,7 @@ type TestMethod struct {
 
 // ObjectType structure
 type ObjectType struct {
+	Label       string
 	Name        string
 	Type        string
 	Pointer     string
@@ -67,6 +68,7 @@ func (g *Generator) generateResourceTest(api *design.APIDefinition) error {
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("net/http"),
 		codegen.SimpleImport("net/http/httptest"),
+		codegen.SimpleImport("net/url"),
 		codegen.SimpleImport("testing"),
 		codegen.SimpleImport(appPkg),
 		codegen.SimpleImport("github.com/goadesign/goa"),
@@ -166,6 +168,7 @@ func createTestMethod(resource *design.ResourceDefinition, action *design.Action
 			for name, att := range action.Params.Type.ToObject() {
 				if name == paramName {
 					param := ObjectType{}
+					param.Label = name
 					param.Name = codegen.Goify(name, false)
 					param.Type = codegen.GoTypeRef(att.Type, nil, 0, false)
 					if att.Type.IsPrimitive() && action.Params.IsPrimitivePointer(name) {
@@ -237,7 +240,10 @@ func {{ $test.Name }}Ctx(t *testing.T, ctx context.Context, ctrl {{ $test.Contro
 	if err != nil {
 		panic("invalid test " + err.Error()) // bug
 	}
-	goaCtx := goa.NewContext(goa.WithAction(ctx, "{{ $test.ResourceName }}Test"), rw, req, nil)
+	prms := url.Values{}
+	{{ range $param := $test.Params }}prms["{{ $param.Label }}"] = []string{fmt.Sprintf("%v",{{ $param.Name}})}
+	{{ end }}
+	goaCtx := goa.NewContext(goa.WithAction(ctx, "{{ $test.ResourceName }}Test"), rw, req, prms)
 	{{ $test.ContextVarName }}, err := {{ $test.ContextType }}(goaCtx, service){{ if $test.Payload }}
 	{{ $test.ContextVarName }}.Payload = {{ $test.Payload.Name }}
 	{{ end }}

@@ -326,6 +326,9 @@ type (
 	// ActionIterator is the type of functions given to IterateActions.
 	ActionIterator func(a *ActionDefinition) error
 
+	// HeaderIterator is the type of functions given to IterateHeaders.
+	HeaderIterator func(name string, isRequired bool, h *AttributeDefinition) error
+
 	// ResponseIterator is the type of functions given to IterateResponses.
 	ResponseIterator func(r *ResponseDefinition) error
 )
@@ -658,6 +661,13 @@ func (r *ResourceDefinition) IterateActions(it ActionIterator) error {
 	return nil
 }
 
+// IterateHeaders calls the given iterator passing in each response sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateHeaders returns that
+// error.
+func (r *ResourceDefinition) IterateHeaders(it HeaderIterator) error {
+	return iterateHeaders(r.Headers, r.Headers.IsRequired, it)
+}
+
 // CanonicalAction returns the canonical action of the resource if any.
 // The canonical action is used to compute hrefs to resources.
 func (r *ResourceDefinition) CanonicalAction() *ActionDefinition {
@@ -860,7 +870,7 @@ func (a *AttributeDefinition) Context() string {
 // This happens when the DSL uses references for example. So traverse the hierarchy and collect
 // all the required validations.
 func (a *AttributeDefinition) AllRequired() (required []string) {
-	if a.Validation == nil {
+	if a == nil || a.Validation == nil {
 		return
 	}
 	required = a.Validation.Required
@@ -1413,6 +1423,21 @@ func (a *ActionDefinition) UserTypes() map[string]*UserTypeDefinition {
 	return types
 }
 
+// IterateHeaders iterates over the resource-level and action-level headers,
+// calling the given iterator passing in each response sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateHeaders returns that
+// error.
+func (a *ActionDefinition) IterateHeaders(it HeaderIterator) error {
+	mergedHeaders := a.Parent.Headers.Merge(a.Headers)
+
+	isRequired := func(name string) bool {
+		// header required in either the Resource or Action scope?
+		return a.Parent.Headers.IsRequired(name) || a.Headers.IsRequired(name)
+	}
+
+	return iterateHeaders(mergedHeaders, isRequired, it)
+}
+
 // IterateResponses calls the given iterator passing in each response sorted in alphabetical order.
 // Iteration stops if an iterator returns an error and in this case IterateResponses returns that
 // error.
@@ -1506,4 +1531,25 @@ func (r *RouteDefinition) FullPath() string {
 // base paths.
 func (r *RouteDefinition) IsAbsolute() bool {
 	return strings.HasPrefix(r.Path, "//")
+}
+
+func iterateHeaders(headers *AttributeDefinition, isRequired func(name string) bool, it HeaderIterator) error {
+	if headers == nil || !headers.Type.IsObject() {
+		return nil
+	}
+	headersMap := headers.Type.ToObject()
+	names := make([]string, len(headersMap))
+	i := 0
+	for n := range headersMap {
+		names[i] = n
+		i++
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		header := headersMap[n]
+		if err := it(n, isRequired(n), header); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -491,25 +491,38 @@ func paramsFromDefinition(params *design.AttributeDefinition, path string) ([]*P
 				break
 			}
 		}
-		param := &Parameter{
-			Name:        n,
-			Default:     toStringMap(at.DefaultValue),
-			Description: at.Description,
-			Required:    required,
-			In:          in,
-			Type:        at.Type.Name(),
-		}
-		var items *Items
-		if at.Type.IsArray() {
-			items = itemsFromDefinition(at)
-		}
-		param.Items = items
-		initValidations(at, param)
+		param := paramFor(at, n, in, required)
 		res[i] = param
 		i++
 		return nil
 	})
 	return res, nil
+}
+
+func paramsFromHeaders(action *design.ActionDefinition) []*Parameter {
+	params := []*Parameter{}
+	action.IterateHeaders(func(name string, required bool, header *design.AttributeDefinition) error {
+		p := paramFor(header, name, "header", required)
+		params = append(params, p)
+		return nil
+	})
+	return params
+}
+
+func paramFor(at *design.AttributeDefinition, name, in string, required bool) *Parameter {
+	p := &Parameter{
+		In:          in,
+		Name:        name,
+		Default:     toStringMap(at.DefaultValue),
+		Description: at.Description,
+		Required:    required,
+		Type:        at.Type.Name(),
+	}
+	if at.Type.IsArray() {
+		p.Items = itemsFromDefinition(at.Type.ToArray().ElemType)
+	}
+	initValidations(at, p)
+	return p
 }
 
 // toStringMap converts map[interface{}]interface{} to a map[string]interface{} when possible.
@@ -629,6 +642,8 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	if err != nil {
 		return err
 	}
+
+	params = append(params, paramsFromHeaders(action)...)
 
 	responses := make(map[string]*Response, len(action.Responses))
 	for _, r := range action.Responses {
@@ -797,13 +812,13 @@ func initMinimumValidation(def interface{}, min float64) {
 	switch actual := def.(type) {
 	case *Parameter:
 		actual.Minimum = min
-		actual.ExclusiveMinimum = true
+		actual.ExclusiveMinimum = false
 	case *Header:
 		actual.Minimum = min
-		actual.ExclusiveMinimum = true
+		actual.ExclusiveMinimum = false
 	case *Items:
 		actual.Minimum = min
-		actual.ExclusiveMinimum = true
+		actual.ExclusiveMinimum = false
 	}
 }
 
@@ -811,20 +826,24 @@ func initMaximumValidation(def interface{}, max float64) {
 	switch actual := def.(type) {
 	case *Parameter:
 		actual.Maximum = max
-		actual.ExclusiveMaximum = true
+		actual.ExclusiveMaximum = false
 	case *Header:
 		actual.Maximum = max
-		actual.ExclusiveMaximum = true
+		actual.ExclusiveMaximum = false
 	case *Items:
 		actual.Maximum = max
-		actual.ExclusiveMaximum = true
+		actual.ExclusiveMaximum = false
 	}
 }
 
-func initMinLengthValidation(def interface{}, min int) {
+func initMinLengthValidation(def interface{}, isArray bool, min int) {
 	switch actual := def.(type) {
 	case *Parameter:
-		actual.MinLength = min
+		if isArray {
+			actual.MinItems = min
+		} else {
+			actual.MinLength = min
+		}
 	case *Header:
 		actual.MinLength = min
 	case *Items:
@@ -832,10 +851,14 @@ func initMinLengthValidation(def interface{}, min int) {
 	}
 }
 
-func initMaxLengthValidation(def interface{}, max int) {
+func initMaxLengthValidation(def interface{}, isArray bool, max int) {
 	switch actual := def.(type) {
 	case *Parameter:
-		actual.MaxLength = max
+		if isArray {
+			actual.MaxItems = max
+		} else {
+			actual.MaxLength = max
+		}
 	case *Header:
 		actual.MaxLength = max
 	case *Items:
@@ -858,9 +881,9 @@ func initValidations(attr *design.AttributeDefinition, def interface{}) {
 		initMaximumValidation(def, *val.Maximum)
 	}
 	if val.MinLength != nil {
-		initMinLengthValidation(def, *val.MinLength)
+		initMinLengthValidation(def, attr.Type.IsArray(), *val.MinLength)
 	}
 	if val.MaxLength != nil {
-		initMaxLengthValidation(def, *val.MaxLength)
+		initMaxLengthValidation(def, attr.Type.IsArray(), *val.MaxLength)
 	}
 }
