@@ -68,7 +68,7 @@ var _ = Describe("ErrorHandler", func() {
 				Ω(rw.ParentHeader["Content-Type"]).Should(Equal([]string{goa.ErrorMediaIdentifier}))
 				err := service.Decode(&decoded, bytes.NewBuffer(rw.Body), "application/json")
 				Ω(err).ShouldNot(HaveOccurred())
-				msg := fmt.Sprintf("%v", *goa.ErrInternal(`internal error [zzz]`))
+				msg := fmt.Sprintf("%v", *goa.ErrInternal(`Internal Server Error [zzz]`))
 				msg = regexp.QuoteMeta(msg)
 				msg = strings.Replace(msg, "zzz", ".+", 1)
 				Ω(fmt.Sprintf("%v", decoded)).Should(MatchRegexp(msg))
