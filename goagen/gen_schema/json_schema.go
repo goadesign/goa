@@ -3,6 +3,7 @@ package genschema
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"reflect"
 	"strconv"
 
@@ -125,9 +126,15 @@ func APISchema(api *design.APIDefinition) *JSONSchema {
 		GenerateResourceDefinition(api, r)
 		return nil
 	})
+	scheme := "http"
+	if len(api.Schemes) > 0 {
+		scheme = api.Schemes[0]
+	}
+	u := url.URL{Scheme: scheme, Host: api.Host}
+	href := u.String()
 	links := []*JSONLink{
 		{
-			Href: ServiceURL,
+			Href: href,
 			Rel:  "self",
 		},
 		{
@@ -141,7 +148,7 @@ func APISchema(api *design.APIDefinition) *JSONSchema {
 		},
 	}
 	s := JSONSchema{
-		ID:          fmt.Sprintf("%s/schema", ServiceURL),
+		ID:          fmt.Sprintf("%s/schema", href),
 		Title:       api.Title,
 		Description: api.Description,
 		Type:        JSONObject,

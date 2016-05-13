@@ -1,6 +1,7 @@
 package genschema
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -9,36 +10,25 @@ import (
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/utils"
-	"github.com/spf13/cobra"
 )
 
 // Generator is the application code generator.
 type Generator struct {
 	genfiles []string
+	outDir   string // Path to output directory
 }
 
 // Generate is the generator entry point called by the meta generator.
 func Generate() (files []string, err error) {
-	api := design.Design
-	if err != nil {
-		return nil, err
-	}
-	g := new(Generator)
-	root := &cobra.Command{
-		Use:   "goagen",
-		Short: "JSON schema generator",
-		Long:  "JSON schema generator",
-		Run:   func(*cobra.Command, []string) { files, err = g.Generate(api) },
-	}
-	codegen.RegisterFlags(root)
-	NewCommand().RegisterFlags(root)
-	root.Execute()
-	return
-}
+	var outDir string
+	set := flag.NewFlagSet("app", flag.PanicOnError)
+	set.StringVar(&outDir, "out", "", "")
+	set.String("design", "", "")
+	set.Parse(os.Args[2:])
 
-// JSONSchemaDir is the path to the directory where the schema controller is generated.
-func JSONSchemaDir() string {
-	return filepath.Join(codegen.OutputDir, "schema")
+	g := &Generator{outDir: outDir}
+
+	return g.Generate(design.Design)
 }
 
 // Generate produces the skeleton main.
@@ -51,22 +41,23 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		}
 	}()
 
-	os.RemoveAll(JSONSchemaDir())
-	os.MkdirAll(JSONSchemaDir(), 0755)
-	g.genfiles = append(g.genfiles, JSONSchemaDir())
+	g.outDir = filepath.Join(g.outDir, "schema")
+	os.RemoveAll(g.outDir)
+	os.MkdirAll(g.outDir, 0755)
+	g.genfiles = append(g.genfiles, g.outDir)
 	s := APISchema(api)
 	js, err := s.JSON()
 	if err != nil {
 		return
 	}
 
-	schemaFile := filepath.Join(JSONSchemaDir(), "schema.json")
+	schemaFile := filepath.Join(g.outDir, "schema.json")
 	if err = ioutil.WriteFile(schemaFile, js, 0644); err != nil {
 		return
 	}
 	g.genfiles = append(g.genfiles, schemaFile)
 
-	controllerFile := filepath.Join(JSONSchemaDir(), "schema.go")
+	controllerFile := filepath.Join(g.outDir, "schema.go")
 	file, err := codegen.SourceFileFor(controllerFile)
 	if err != nil {
 		return

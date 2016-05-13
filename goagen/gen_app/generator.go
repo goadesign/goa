@@ -1,68 +1,42 @@
 package genapp
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
-	"strings"
 
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/utils"
-	"github.com/spf13/cobra"
 )
 
 // Generator is the application code generator.
 type Generator struct {
-	genfiles []string
+	outDir   string   // Path to output directory
+	target   string   // Name of generated package
+	notest   bool     // Whether to skip test generation
+	genfiles []string // Generated files
 }
 
 // Generate is the generator entry point called by the meta generator.
 func Generate() (files []string, err error) {
-	api := design.Design
-	if err != nil {
-		return nil, err
-	}
-	g := new(Generator)
-	root := &cobra.Command{
-		Use:   "goagen",
-		Short: "Code generator",
-		Long:  "application code generator",
-		PreRunE: func(*cobra.Command, []string) error {
-			outdir := AppOutputDir()
-			os.RemoveAll(outdir)
-			g.genfiles = []string{outdir}
-			err = os.MkdirAll(outdir, 0777)
-			return err
-		},
-		Run: func(*cobra.Command, []string) { files, err = g.Generate(api) },
-	}
-	codegen.RegisterFlags(root)
-	NewCommand().RegisterFlags(root)
-	root.Execute()
-	return
-}
+	var (
+		outDir, target string
+		notest         bool
+	)
 
-// AppOutputDir returns the directory containing the generated files.
-func AppOutputDir() string {
-	return filepath.Join(codegen.OutputDir, TargetPackage)
-}
+	set := flag.NewFlagSet("app", flag.PanicOnError)
+	set.String("design", "", "")
+	set.StringVar(&outDir, "out", "", "")
+	set.StringVar(&target, "pkg", "app", "")
+	set.BoolVar(&notest, "notest", false, "")
+	set.Parse(os.Args[2:])
+	outDir = filepath.Join(outDir, target)
 
-// AppPackagePath returns the Go package path to the generated package.
-func AppPackagePath() (string, error) {
-	outputDir := AppOutputDir()
-	gopaths := filepath.SplitList(os.Getenv("GOPATH"))
-	for _, gopath := range gopaths {
-		if strings.HasPrefix(outputDir, gopath) {
-			path, err := filepath.Rel(filepath.Join(gopath, "src"), outputDir)
-			if err != nil {
-				return "", err
-			}
-			return filepath.ToSlash(path), nil
-		}
-	}
-	return "", fmt.Errorf("output directory outside of Go workspace, make sure to define GOPATH correctly or change output directory")
+	g := &Generator{outDir: outDir, target: target, notest: notest}
+
+	return g.Generate(design.Design)
 }
 
 // Generate the application code, implement codegen.Generator.
@@ -79,11 +53,12 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		}
 	}()
 
-	os.RemoveAll(AppOutputDir())
+	os.RemoveAll(g.outDir)
 
-	if err := os.MkdirAll(AppOutputDir(), 0755); err != nil {
+	if err := os.MkdirAll(g.outDir, 0755); err != nil {
 		return nil, err
 	}
+	g.genfiles = []string{g.outDir}
 	if err := g.generateContexts(api); err != nil {
 		return nil, err
 	}
@@ -102,7 +77,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	if err := g.generateUserTypes(api); err != nil {
 		return nil, err
 	}
-	if !NoGenTest {
+	if !g.notest {
 		if err := g.generateResourceTest(api); err != nil {
 			return nil, err
 		}
@@ -116,40 +91,14 @@ func (g *Generator) Cleanup() {
 	if len(g.genfiles) == 0 {
 		return
 	}
-	os.RemoveAll(AppOutputDir())
+	os.RemoveAll(g.outDir)
 	g.genfiles = nil
-}
-
-// BuildResponses builds the set of responses given API level and action level responses.
-// It merges the action level responses into the API level responses and filters out
-// SwitchingProtocols responses since these should not trigger code generation.
-func BuildResponses(l, r map[string]*design.ResponseDefinition) map[string]*design.ResponseDefinition {
-	var all map[string]*design.ResponseDefinition
-	if l == nil {
-		all = r
-	} else if r == nil {
-		all = l
-	} else {
-		all = make(map[string]*design.ResponseDefinition, len(l)+len(r))
-		for n, r := range l {
-			all[n] = r
-		}
-		for n, r := range r {
-			all[n] = r
-		}
-	}
-	for n, r := range all {
-		if r.Status == 101 {
-			delete(all, n)
-		}
-	}
-	return all
 }
 
 // generateContexts iterates through the API resources and actions and generates the action
 // contexts.
 func (g *Generator) generateContexts(api *design.APIDefinition) error {
-	ctxFile := filepath.Join(AppOutputDir(), "contexts.go")
+	ctxFile := filepath.Join(g.outDir, "contexts.go")
 	ctxWr, err := NewContextsWriter(ctxFile)
 	if err != nil {
 		panic(err) // bug
@@ -164,7 +113,7 @@ func (g *Generator) generateContexts(api *design.APIDefinition) error {
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
-	ctxWr.WriteHeader(title, TargetPackage, imports)
+	ctxWr.WriteHeader(title, g.target, imports)
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
 		return r.IterateActions(func(a *design.ActionDefinition) error {
 			ctxName := codegen.Goify(a.Name, true) + codegen.Goify(a.Parent.Name, true) + "Context"
@@ -177,6 +126,12 @@ func (g *Generator) generateContexts(api *design.APIDefinition) error {
 				params = nil // So that {{if .Params}} returns false in templates
 			}
 
+			non101 := make(map[string]*design.ResponseDefinition)
+			for k, v := range a.Responses {
+				if v.Status != 101 {
+					non101[k] = v
+				}
+			}
 			ctxData := ContextTemplateData{
 				Name:         ctxName,
 				ResourceName: r.Name,
@@ -185,9 +140,9 @@ func (g *Generator) generateContexts(api *design.APIDefinition) error {
 				Params:       params,
 				Headers:      headers,
 				Routes:       a.Routes,
-				Responses:    BuildResponses(r.Responses, a.Responses),
+				Responses:    non101,
 				API:          api,
-				DefaultPkg:   TargetPackage,
+				DefaultPkg:   g.target,
 				Security:     a.Security,
 			}
 			return ctxWr.Execute(&ctxData)
@@ -200,169 +155,10 @@ func (g *Generator) generateContexts(api *design.APIDefinition) error {
 	return ctxWr.FormatCode()
 }
 
-// BuildEncoders builds the template data needed to render the given encoding definitions.
-// This extra map is needed to handle the case where a single encoding definition maps to multiple
-// encoding packages. The data is indexed by mime type.
-func BuildEncoders(info []*design.EncodingDefinition, encoder bool) ([]*EncoderTemplateData, error) {
-	if len(info) == 0 {
-		return nil, nil
-	}
-	// knownStdPackages lists the stdlib packages known by BuildEncoders
-	var knownStdPackages = map[string]string{
-		"encoding/json": "json",
-		"encoding/xml":  "xml",
-		"encoding/gob":  "gob",
-	}
-	encs := normalizeEncodingDefinitions(info)
-	data := make([]*EncoderTemplateData, len(encs))
-	defaultMediaType := info[0].MIMETypes[0]
-	for i, enc := range encs {
-		var pkgName string
-		if name, ok := knownStdPackages[enc.PackagePath]; ok {
-			pkgName = name
-		} else {
-			srcPath, err := codegen.PackageSourcePath(enc.PackagePath)
-			if err != nil {
-				return nil, fmt.Errorf("failed to locate package source of %s (%s)",
-					enc.PackagePath, err)
-			}
-			pkgName, err = codegen.PackageName(srcPath)
-			if err != nil {
-				return nil, fmt.Errorf("failed to load package %s (%s)",
-					enc.PackagePath, err)
-			}
-		}
-		isDefault := false
-		for _, m := range enc.MIMETypes {
-			if m == defaultMediaType {
-				isDefault = true
-			}
-		}
-		d := &EncoderTemplateData{
-			PackagePath: enc.PackagePath,
-			PackageName: pkgName,
-			Function:    enc.Function,
-			MIMETypes:   enc.MIMETypes,
-			Default:     isDefault,
-		}
-		data[i] = d
-	}
-	return data, nil
-}
-
-// normalizeEncodingDefinitions figures out the package path and function of all encoding
-// definitions and groups them by package and function name.
-// We're going for simple rather than efficient (this is codegen after all)
-// Also we assume that the encoding definitions have been validated: they have at least
-// one mime type and definitions with no package path use known encoders.
-func normalizeEncodingDefinitions(defs []*design.EncodingDefinition) []*design.EncodingDefinition {
-	// First splat all definitions so each only have one mime type
-	var encs []*design.EncodingDefinition
-	for _, enc := range defs {
-		if len(enc.MIMETypes) == 1 {
-			encs = append(encs, enc)
-			continue
-		}
-		for _, m := range enc.MIMETypes {
-			encs = append(encs, &design.EncodingDefinition{
-				MIMETypes:   []string{m},
-				PackagePath: enc.PackagePath,
-				Function:    enc.Function,
-				Encoder:     enc.Encoder,
-			})
-		}
-	}
-
-	// Next make sure all definitions have a package path
-	for _, enc := range encs {
-		if enc.PackagePath == "" {
-			mt := enc.MIMETypes[0]
-			enc.PackagePath = design.KnownEncoders[mt]
-			idx := 0
-			if !enc.Encoder {
-				idx = 1
-			}
-			enc.Function = design.KnownEncoderFunctions[mt][idx]
-		} else if enc.Function == "" {
-			if enc.Encoder {
-				enc.Function = "NewEncoder"
-			} else {
-				enc.Function = "NewDecoder"
-			}
-		}
-	}
-
-	// Regroup by package and function name
-	byfn := make(map[string][]*design.EncodingDefinition)
-	var first string
-	for _, enc := range encs {
-		key := enc.PackagePath + "#" + enc.Function
-		if first == "" {
-			first = key
-		}
-		if _, ok := byfn[key]; ok {
-			byfn[key] = append(byfn[key], enc)
-		} else {
-			byfn[key] = []*design.EncodingDefinition{enc}
-		}
-	}
-
-	// Reserialize into array keeping the first element identical since it's the default
-	// encoder.
-	return serialize(byfn, first)
-}
-
-func serialize(byfn map[string][]*design.EncodingDefinition, first string) []*design.EncodingDefinition {
-	res := make([]*design.EncodingDefinition, len(byfn))
-	i := 0
-	keys := make([]string, len(byfn))
-	for k := range byfn {
-		keys[i] = k
-		i++
-	}
-	sort.Strings(keys)
-	var idx int
-	for j, k := range keys {
-		if k == first {
-			idx = j
-			break
-		}
-	}
-	keys[0], keys[idx] = keys[idx], keys[0]
-	i = 0
-	for _, key := range keys {
-		encs := byfn[key]
-		res[i] = &design.EncodingDefinition{
-			MIMETypes:   encs[0].MIMETypes,
-			PackagePath: encs[0].PackagePath,
-			Function:    encs[0].Function,
-		}
-		if len(encs) > 0 {
-			encs = encs[1:]
-			for _, enc := range encs {
-				for _, m := range enc.MIMETypes {
-					found := false
-					for _, rm := range res[i].MIMETypes {
-						if m == rm {
-							found = true
-							break
-						}
-					}
-					if !found {
-						res[i].MIMETypes = append(res[i].MIMETypes, m)
-					}
-				}
-			}
-		}
-		i++
-	}
-	return res
-}
-
 // generateControllers iterates through the API resources and generates the low level
 // controllers.
 func (g *Generator) generateControllers(api *design.APIDefinition) error {
-	ctlFile := filepath.Join(AppOutputDir(), "controllers.go")
+	ctlFile := filepath.Join(g.outDir, "controllers.go")
 	ctlWr, err := NewControllersWriter(ctlFile)
 	if err != nil {
 		panic(err) // bug
@@ -395,7 +191,7 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 			imports = append(imports, codegen.SimpleImport(packagePath))
 		}
 	}
-	ctlWr.WriteHeader(title, TargetPackage, imports)
+	ctlWr.WriteHeader(title, g.target, imports)
 	ctlWr.WriteInitService(encoders, decoders)
 
 	var controllersData []*ControllerTemplateData
@@ -447,7 +243,7 @@ func (g *Generator) generateSecurity(api *design.APIDefinition) error {
 		return nil
 	}
 
-	secFile := filepath.Join(AppOutputDir(), "security.go")
+	secFile := filepath.Join(g.outDir, "security.go")
 	secWr, err := NewSecurityWriter(secFile)
 	if err != nil {
 		panic(err) // bug
@@ -460,7 +256,7 @@ func (g *Generator) generateSecurity(api *design.APIDefinition) error {
 		codegen.SimpleImport("golang.org/x/net/context"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
-	secWr.WriteHeader(title, TargetPackage, imports)
+	secWr.WriteHeader(title, g.target, imports)
 
 	g.genfiles = append(g.genfiles, secFile)
 
@@ -473,7 +269,7 @@ func (g *Generator) generateSecurity(api *design.APIDefinition) error {
 
 // generateHrefs iterates through the API resources and generates the href factory methods.
 func (g *Generator) generateHrefs(api *design.APIDefinition) error {
-	hrefFile := filepath.Join(AppOutputDir(), "hrefs.go")
+	hrefFile := filepath.Join(g.outDir, "hrefs.go")
 	resWr, err := NewResourcesWriter(hrefFile)
 	if err != nil {
 		panic(err) // bug
@@ -482,7 +278,7 @@ func (g *Generator) generateHrefs(api *design.APIDefinition) error {
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("fmt"),
 	}
-	resWr.WriteHeader(title, TargetPackage, imports)
+	resWr.WriteHeader(title, g.target, imports)
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
 		m := api.MediaTypeWithIdentifier(r.MediaType)
 		var identifier string
@@ -511,7 +307,7 @@ func (g *Generator) generateHrefs(api *design.APIDefinition) error {
 // generateMediaTypes iterates through the media types and generate the data structures and
 // marshaling code.
 func (g *Generator) generateMediaTypes(api *design.APIDefinition) error {
-	mtFile := filepath.Join(AppOutputDir(), "media_types.go")
+	mtFile := filepath.Join(g.outDir, "media_types.go")
 	mtWr, err := NewMediaTypesWriter(mtFile)
 	if err != nil {
 		panic(err) // bug
@@ -523,7 +319,7 @@ func (g *Generator) generateMediaTypes(api *design.APIDefinition) error {
 		codegen.SimpleImport("time"),
 		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
-	mtWr.WriteHeader(title, TargetPackage, imports)
+	mtWr.WriteHeader(title, g.target, imports)
 	err = api.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
 		if mt.IsBuiltIn() {
 			return nil
@@ -543,7 +339,7 @@ func (g *Generator) generateMediaTypes(api *design.APIDefinition) error {
 // generateUserTypes iterates through the user types and generates the data structures and
 // marshaling code.
 func (g *Generator) generateUserTypes(api *design.APIDefinition) error {
-	utFile := filepath.Join(AppOutputDir(), "user_types.go")
+	utFile := filepath.Join(g.outDir, "user_types.go")
 	utWr, err := NewUserTypesWriter(utFile)
 	if err != nil {
 		panic(err) // bug
@@ -554,7 +350,7 @@ func (g *Generator) generateUserTypes(api *design.APIDefinition) error {
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("time"),
 	}
-	utWr.WriteHeader(title, TargetPackage, imports)
+	utWr.WriteHeader(title, g.target, imports)
 	err = api.IterateUserTypes(func(t *design.UserTypeDefinition) error {
 		return utWr.Execute(t)
 	})

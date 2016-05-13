@@ -13,7 +13,7 @@ import (
 )
 
 func makeTestDir(g *Generator, apiName string) (outDir string, err error) {
-	outDir = filepath.Join(AppOutputDir(), "test")
+	outDir = filepath.Join(g.outDir, "test")
 	if err = os.RemoveAll(outDir); err != nil {
 		return
 	}
@@ -59,7 +59,7 @@ func (g *Generator) generateResourceTest(api *design.APIDefinition) error {
 	if err != nil {
 		return err
 	}
-	appPkg, err := AppPackagePath()
+	appPkg, err := codegen.PackagePath(g.outDir)
 	if err != nil {
 		return err
 	}
@@ -96,10 +96,10 @@ func (g *Generator) generateResourceTest(api *design.APIDefinition) error {
 				for routeIndex, route := range action.Routes {
 					mediaType := design.Design.MediaTypeWithIdentifier(response.MediaType)
 					if mediaType == nil {
-						methods = append(methods, createTestMethod(res, action, response, route, routeIndex, nil, nil))
+						methods = append(methods, g.createTestMethod(res, action, response, route, routeIndex, nil, nil))
 					} else {
 						if err := mediaType.IterateViews(func(view *design.ViewDefinition) error {
-							methods = append(methods, createTestMethod(res, action, response, route, routeIndex, mediaType, view))
+							methods = append(methods, g.createTestMethod(res, action, response, route, routeIndex, mediaType, view))
 							return nil
 						}); err != nil {
 							return err
@@ -123,7 +123,7 @@ func (g *Generator) generateResourceTest(api *design.APIDefinition) error {
 	})
 }
 
-func createTestMethod(resource *design.ResourceDefinition, action *design.ActionDefinition, response *design.ResponseDefinition, route *design.RouteDefinition, routeIndex int, mediaType *design.MediaTypeDefinition, view *design.ViewDefinition) TestMethod {
+func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action *design.ActionDefinition, response *design.ResponseDefinition, route *design.RouteDefinition, routeIndex int, mediaType *design.MediaTypeDefinition, view *design.ViewDefinition) TestMethod {
 	routeNameQualifier := suffixRoute(action.Routes, routeIndex)
 	viewNameQualifier := func() string {
 		if view != nil && view.Name != "default" {
@@ -136,9 +136,9 @@ func createTestMethod(resource *design.ResourceDefinition, action *design.Action
 	method.ActionName = codegen.Goify(action.Name, true)
 	method.ResourceName = codegen.Goify(resource.Name, true)
 	method.Comment = fmt.Sprintf("test setup")
-	method.ControllerName = fmt.Sprintf("%s.%sController", TargetPackage, codegen.Goify(resource.Name, true))
+	method.ControllerName = fmt.Sprintf("%s.%sController", g.target, codegen.Goify(resource.Name, true))
 	method.ContextVarName = fmt.Sprintf("%sCtx", codegen.Goify(action.Name, false))
-	method.ContextType = fmt.Sprintf("%s.New%s%sContext", TargetPackage, codegen.Goify(action.Name, true), codegen.Goify(resource.Name, true))
+	method.ContextType = fmt.Sprintf("%s.New%s%sContext", g.target, codegen.Goify(action.Name, true), codegen.Goify(resource.Name, true))
 	method.RouteVerb = route.Verb
 	method.Status = response.Status
 	method.FullPath = goPathFormat(route.FullPath())
@@ -150,7 +150,7 @@ func createTestMethod(resource *design.ResourceDefinition, action *design.Action
 		}
 		tmp := codegen.GoTypeName(p, nil, 0, false)
 		if !p.IsBuiltIn() {
-			tmp = fmt.Sprintf("%s.%s", TargetPackage, tmp)
+			tmp = fmt.Sprintf("%s.%s", g.target, tmp)
 		}
 		validate := codegen.RecursiveChecker(p.AttributeDefinition, false, false, false, "payload", "raw", 1, true)
 
@@ -184,7 +184,7 @@ func createTestMethod(resource *design.ResourceDefinition, action *design.Action
 	if action.Payload != nil {
 		payload := ObjectType{}
 		payload.Name = "payload"
-		payload.Type = fmt.Sprintf("%s.%s", TargetPackage, codegen.Goify(action.Payload.TypeName, true))
+		payload.Type = fmt.Sprintf("%s.%s", g.target, codegen.Goify(action.Payload.TypeName, true))
 		if !action.Payload.IsPrimitive() && !action.Payload.IsArray() && !action.Payload.IsHash() {
 			payload.Pointer = "*"
 		}

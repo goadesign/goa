@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/gen_js"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -20,16 +19,12 @@ var _ = Describe("Generate", func() {
 	var files []string
 	var genErr error
 
-	var oldCommand string
-
 	BeforeEach(func() {
 		gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
 		outDir = filepath.Join(gopath, "src", testgenPackagePath)
 		err := os.MkdirAll(outDir, 0777)
 		Ω(err).ShouldNot(HaveOccurred())
-		os.Args = []string{"codegen", "--out=" + outDir, "--design=foo", "--host=baz"}
-		oldCommand = codegen.CommandName
-		codegen.CommandName = "app"
+		os.Args = []string{"goagen", "js", "--out=" + outDir, "--design=foo", "--host=baz"}
 	})
 
 	JustBeforeEach(func() {
@@ -37,7 +32,6 @@ var _ = Describe("Generate", func() {
 	})
 
 	AfterEach(func() {
-		codegen.CommandName = oldCommand
 		os.RemoveAll(outDir)
 	})
 

@@ -242,9 +242,6 @@ func (f *SourceFile) Write(b []byte) (int, error) {
 
 // FormatCode runs "goimports -w" on the source file.
 func (f *SourceFile) FormatCode() error {
-	if NoFormat {
-		return nil
-	}
 	// Parse file into AST
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, f.Abs(), nil, parser.ParseComments)

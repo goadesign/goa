@@ -2,6 +2,7 @@ package genswagger
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,29 +13,24 @@ import (
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/utils"
-	"github.com/spf13/cobra"
 )
 
 // Generator is the swagger code generator.
-type Generator struct{}
+type Generator struct {
+	outDir string // Path to output directory
+}
 
 // Generate is the generator entry point called by the meta generator.
 func Generate() (files []string, err error) {
-	api := design.Design
-	if err != nil {
-		return nil, err
-	}
-	g := new(Generator)
-	root := &cobra.Command{
-		Use:   "goagen",
-		Short: "Swagger generator",
-		Long:  "Swagger generator",
-		Run:   func(*cobra.Command, []string) { files, err = g.Generate(api) },
-	}
-	codegen.RegisterFlags(root)
-	NewCommand().RegisterFlags(root)
-	root.Execute()
-	return
+	var outDir string
+	set := flag.NewFlagSet("app", flag.PanicOnError)
+	set.StringVar(&outDir, "out", "", "")
+	set.String("design", "", "")
+	set.Parse(os.Args[2:])
+
+	g := &Generator{outDir: outDir}
+
+	return g.Generate(design.Design)
 }
 
 // Generate produces the skeleton main.
@@ -55,7 +51,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		}
 	}()
 
-	swaggerDir := filepath.Join(codegen.OutputDir, "swagger")
+	swaggerDir := filepath.Join(g.outDir, "swagger")
 	os.RemoveAll(swaggerDir)
 	if err = os.MkdirAll(swaggerDir, 0755); err != nil {
 		return nil, err
