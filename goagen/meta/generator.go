@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -176,6 +177,7 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 		args[i] = fmt.Sprintf("--%s=%s", k, v)
 		i++
 	}
+	sort.Strings(args)
 	cmd := exec.Command(genbin, args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {

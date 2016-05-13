@@ -51,10 +51,14 @@ func (g *Generator) generateMain(mainFile string, clientPkg string, funcs templa
 		return err
 	}
 	g.genfiles = append(g.genfiles, mainFile)
+	version := design.Design.Version
+	if version == "" {
+		version = "0"
+	}
 
 	data := map[string]interface{}{
 		"API":     api,
-		"Version": design.Design.Version,
+		"Version": version,
 	}
 	if err := file.ExecuteTemplate("main", mainTmpl, funcs, data); err != nil {
 		return err
