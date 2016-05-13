@@ -13,14 +13,14 @@ import (
 	"github.com/goadesign/goa/goagen/codegen"
 )
 
-func makeToolDir(g *Generator, apiName string) (toolDir string, err error) {
-	codegen.OutputDir = filepath.Join(codegen.OutputDir, "client")
-	if err = os.RemoveAll(codegen.OutputDir); err != nil {
+func (g *Generator) makeToolDir(apiName string) (toolDir string, err error) {
+	g.outDir = filepath.Join(g.outDir, "client")
+	if err = os.RemoveAll(g.outDir); err != nil {
 		return
 	}
-	g.genfiles = append(g.genfiles, codegen.OutputDir)
+	g.genfiles = append(g.genfiles, g.outDir)
 	apiName = strings.Replace(apiName, " ", "-", -1)
-	toolDir = filepath.Join(codegen.OutputDir, fmt.Sprintf("%s-cli", codegen.SnakeCase(apiName)))
+	toolDir = filepath.Join(g.outDir, fmt.Sprintf("%s-cli", codegen.SnakeCase(apiName)))
 	if err = os.MkdirAll(toolDir, 0755); err != nil {
 		return
 	}
@@ -54,7 +54,7 @@ func (g *Generator) generateMain(mainFile string, clientPkg string, funcs templa
 
 	data := map[string]interface{}{
 		"API":     api,
-		"Version": Version,
+		"Version": design.Design.Version,
 	}
 	if err := file.ExecuteTemplate("main", mainTmpl, funcs, data); err != nil {
 		return err

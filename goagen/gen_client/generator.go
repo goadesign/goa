@@ -1,6 +1,7 @@
 package genclient
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,7 +12,6 @@ import (
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/utils"
-	"github.com/spf13/cobra"
 )
 
 // Filename used to generate all data types (without the ".go" extension)
@@ -19,27 +19,23 @@ const typesFileName = "datatypes"
 
 // Generator is the application code generator.
 type Generator struct {
+	outDir         string // Path to output directory
 	genfiles       []string
 	generatedTypes map[string]bool // Keeps track of names of user types that correspond to action payloads.
 }
 
 // Generate is the generator entry point called by the meta generator.
 func Generate() (files []string, err error) {
-	api := design.Design
-	if err != nil {
-		return nil, err
-	}
-	g := new(Generator)
-	root := &cobra.Command{
-		Use:   "goagen",
-		Short: "Client generator",
-		Long:  "client tool and package generator",
-		Run:   func(*cobra.Command, []string) { files, err = g.Generate(api) },
-	}
-	codegen.RegisterFlags(root)
-	NewCommand().RegisterFlags(root)
-	root.Execute()
-	return
+	var outDir string
+
+	set := flag.NewFlagSet("client", flag.PanicOnError)
+	set.String("design", "", "")
+	set.StringVar(&outDir, "out", "", "")
+	set.Parse(os.Args[2:])
+
+	g := &Generator{outDir: outDir}
+
+	return g.Generate(design.Design)
 }
 
 func (g *Generator) generateClient(clientFile string, clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
@@ -81,7 +77,7 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 			types[n] = ut
 		}
 	}
-	filename := filepath.Join(codegen.OutputDir, typesFileName+".go")
+	filename := filepath.Join(g.outDir, typesFileName+".go")
 	file, err := codegen.SourceFileFor(filename)
 	if err != nil {
 		return err
@@ -176,7 +172,7 @@ func (g *Generator) generateResourceClient(res *design.ResourceDefinition, funcs
 		// Avoid clash with datatypes.go
 		resFilename += "_client"
 	}
-	filename := filepath.Join(codegen.OutputDir, resFilename+".go")
+	filename := filepath.Join(g.outDir, resFilename+".go")
 	file, err := codegen.SourceFileFor(filename)
 	if err != nil {
 		return err
@@ -262,7 +258,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 
 	// Make tool directory
 	var toolDir string
-	toolDir, err = makeToolDir(g, api.Name)
+	toolDir, err = g.makeToolDir(api.Name)
 	if err != nil {
 		return
 	}
@@ -290,7 +286,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		"typeName":        typeName,
 		"signerType":      signerType,
 	}
-	clientPkg, err := codegen.PackagePath(codegen.OutputDir)
+	clientPkg, err := codegen.PackagePath(g.outDir)
 	if err != nil {
 		return
 	}
@@ -307,7 +303,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	}
 
 	// Generate client/client.go
-	if err = g.generateClient(filepath.Join(codegen.OutputDir, "client.go"), clientPkg, funcs, api); err != nil {
+	if err = g.generateClient(filepath.Join(g.outDir, "client.go"), clientPkg, funcs, api); err != nil {
 		return
 	}
 

@@ -26,7 +26,7 @@ var _ = Describe("Generate", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 		testPkg, err = workspace.NewPackage("schematest")
 		Ω(err).ShouldNot(HaveOccurred())
-		os.Args = []string{"codegen", "--out=" + testPkg.Abs(), "--design=foo"}
+		os.Args = []string{"goagen", "schema", "--out=" + testPkg.Abs(), "--design=foo"}
 	})
 
 	JustBeforeEach(func() {
@@ -49,7 +49,7 @@ var _ = Describe("Generate", func() {
 		It("generates a dummy schema", func() {
 			Ω(genErr).Should(BeNil())
 			Ω(files).Should(HaveLen(3))
-			content, err := ioutil.ReadFile(filepath.Join(genschema.JSONSchemaDir(), "schema.json"))
+			content, err := ioutil.ReadFile(filepath.Join(testPkg.Abs(), "schema", "schema.json"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically("==", 1))
 			var s genschema.JSONSchema

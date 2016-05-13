@@ -21,19 +21,17 @@ var _ = Describe("Run", func() {
 	var designWorkspace *codegen.Workspace
 
 	var genfunc string
-	var debug bool
 	var outputDir string
-	var designPackagePath string
+	var designPkgPath, setDesignPkgPath string
 	var designPackageSource string
 
 	var m *meta.Generator
 
 	BeforeEach(func() {
 		genfunc = ""
-		debug = false
-		designPackagePath = "design"
+		designPkgPath = "design"
+		setDesignPkgPath = designPkgPath
 		designPackageSource = "package design"
-		codegen.DesignPackagePath = designPackagePath
 		var err error
 		outputWorkspace, err = codegen.NewWorkspace("output")
 		p, err := outputWorkspace.NewPackage("testOutput")
@@ -46,8 +44,8 @@ var _ = Describe("Run", func() {
 	})
 
 	JustBeforeEach(func() {
-		if designPackagePath != "" {
-			designPackage, err := designWorkspace.NewPackage(designPackagePath)
+		if designPkgPath != "" {
+			designPackage, err := designWorkspace.NewPackage(designPkgPath)
 			Ω(err).ShouldNot(HaveOccurred())
 			if designPackageSource != "" {
 				file := designPackage.CreateSourceFile("design.go")
@@ -56,11 +54,11 @@ var _ = Describe("Run", func() {
 			}
 		}
 		m = &meta.Generator{
-			Genfunc: genfunc,
-			Imports: []*codegen.ImportSpec{codegen.SimpleImport(designPackagePath)},
+			Genfunc:       genfunc,
+			Imports:       []*codegen.ImportSpec{codegen.SimpleImport(designPkgPath)},
+			OutDir:        outputDir,
+			DesignPkgPath: setDesignPkgPath,
 		}
-		codegen.Debug = debug
-		codegen.OutputDir = outputDir
 		compiledFiles, compileError = m.Generate()
 	})
 
@@ -100,7 +98,7 @@ var _ = Describe("Run", func() {
 		})
 
 		It("fails with a useful error message", func() {
-			Ω(compileError).Should(MatchError(HavePrefix(`cannot find package "design" in any of:`)))
+			Ω(compileError).Should(MatchError(HavePrefix(`invalid design package import path: cannot find package "design" in any of:`)))
 			Ω(compileError).Should(MatchError(HaveSuffix(filepath.Join(invalidPath, "src", "design") + " (from $GOPATH)")))
 		})
 
@@ -110,11 +108,11 @@ var _ = Describe("Run", func() {
 		const invalidDesignPackage = "foobar"
 
 		BeforeEach(func() {
-			codegen.DesignPackagePath = invalidDesignPackage
+			setDesignPkgPath = invalidDesignPackage
 		})
 
 		It("fails with a useful error message", func() {
-			Ω(compileError).Should(MatchError(HavePrefix("cannot find package")))
+			Ω(compileError).Should(MatchError(HavePrefix("invalid design package import path: cannot find package")))
 			Ω(compileError).Should(MatchError(ContainSubstring(invalidDesignPackage)))
 		})
 	})
@@ -145,7 +143,7 @@ var _ = Describe("Run", func() {
 		})
 
 		It("fails with a useful error message", func() {
-			Ω(compileError).Should(MatchError("missing output directory specification"))
+			Ω(compileError).Should(MatchError("missing output directory flag"))
 		})
 	})
 
@@ -156,18 +154,19 @@ var _ = Describe("Run", func() {
 		})
 
 		It("fails with a useful error message", func() {
-			Ω(compileError).Should(MatchError("missing output directory specification"))
+			Ω(compileError).Should(MatchError("missing output directory flag"))
 		})
 	})
 
 	Context("with no design package path specified", func() {
 		BeforeEach(func() {
 			genfunc = "foo.Generate"
-			codegen.DesignPackagePath = ""
+			designPkgPath = ""
+			setDesignPkgPath = ""
 		})
 
 		It("fails with a useful error message", func() {
-			Ω(compileError).Should(MatchError("missing design package path specification"))
+			Ω(compileError).Should(MatchError("missing design package flag"))
 		})
 	})
 
