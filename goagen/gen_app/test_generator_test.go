@@ -19,16 +19,12 @@ var _ = Describe("Generate", func() {
 	var files []string
 	var genErr error
 
-	var oldCommand string
-
 	BeforeEach(func() {
 		gopath := filepath.SplitList(os.Getenv("GOPATH"))[0]
 		outDir = filepath.Join(gopath, "src", testgenPackagePath)
 		err := os.MkdirAll(outDir, 0777)
 		Ω(err).ShouldNot(HaveOccurred())
-		os.Args = []string{"codegen", "--out=" + outDir, "--design=foo"}
-		oldCommand = codegen.CommandName
-		codegen.CommandName = "app"
+		os.Args = []string{"goagen", "app", "--out=" + outDir, "--design=foo"}
 		design.GeneratedMediaTypes = make(design.MediaTypeRoot)
 	})
 
@@ -37,7 +33,6 @@ var _ = Describe("Generate", func() {
 	})
 
 	AfterEach(func() {
-		codegen.CommandName = oldCommand
 		os.RemoveAll(outDir)
 	})
 

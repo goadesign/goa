@@ -1,6 +1,7 @@
 package genmain
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path"
@@ -11,31 +12,35 @@ import (
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/utils"
-	"github.com/spf13/cobra"
 )
 
 // Generator is the application code generator.
 type Generator struct {
-	genfiles []string
+	outDir   string   //Path to output directory
+	target   string   // Name of generated "app" package
+	force    bool     // Whether to override existing files
+	mainOnly bool     // Whether the generator is running the "main" command
+	genfiles []string // Generated files
 }
 
 // Generate is the generator entry point called by the meta generator.
 func Generate() (files []string, err error) {
-	api := design.Design
-	if err != nil {
-		return nil, err
-	}
-	g := new(Generator)
-	root := &cobra.Command{
-		Use:   "goagen",
-		Short: "Main generator",
-		Long:  "application main generator",
-		Run:   func(*cobra.Command, []string) { files, err = g.Generate(api) },
-	}
-	codegen.RegisterFlags(root)
-	NewCommand().RegisterFlags(root)
-	root.Execute()
-	return
+	var (
+		outDir, target string
+		force          bool
+	)
+
+	set := flag.NewFlagSet("main", flag.PanicOnError)
+	set.StringVar(&outDir, "out", "", "")
+	set.String("design", "", "")
+	set.StringVar(&target, "pkg", "app", "")
+	set.BoolVar(&force, "force", false, "")
+	set.Parse(os.Args[2:])
+
+	g := &Generator{outDir: outDir, target: target, force: force}
+	g.mainOnly = os.Args[1] == "main"
+
+	return g.Generate(design.Design)
 }
 
 // Generate produces the skeleton main.
@@ -48,57 +53,24 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		}
 	}()
 
-	mainFile := filepath.Join(codegen.OutputDir, "main.go")
-	if Force {
+	mainFile := filepath.Join(g.outDir, "main.go")
+	if g.force {
 		os.Remove(mainFile)
 	}
 	funcs := template.FuncMap{
-		"tempvar":         tempvar,
-		"generateSwagger": generateSwagger,
-		"okResp":          okResp,
-		"targetPkg":       func() string { return TargetPackage },
+		"tempvar":   tempvar,
+		"okResp":    g.okResp,
+		"targetPkg": func() string { return g.target },
 	}
-	imp, err := codegen.PackagePath(codegen.OutputDir)
+	imp, err := codegen.PackagePath(g.outDir)
 	if err != nil {
 		return nil, err
 	}
 	imp = path.Join(filepath.ToSlash(imp), "app")
 	_, err = os.Stat(mainFile)
 	if err != nil {
-		g.genfiles = append(g.genfiles, mainFile)
-		file, err2 := codegen.SourceFileFor(mainFile)
-		if err2 != nil {
-			return nil, err2
-		}
-		var outPkg string
-		outPkg, err2 = codegen.PackagePath(codegen.OutputDir)
-		if err2 != nil {
-			return nil, err2
-		}
-		outPkg = strings.TrimPrefix(filepath.ToSlash(outPkg), "src/")
-		appPkg := path.Join(outPkg, "app")
-		swaggerPkg := path.Join(outPkg, "swagger")
-		imports := []*codegen.ImportSpec{
-			codegen.SimpleImport("time"),
-			codegen.SimpleImport("github.com/goadesign/goa"),
-			codegen.SimpleImport("github.com/goadesign/goa/middleware"),
-			codegen.SimpleImport(appPkg),
-			codegen.SimpleImport(swaggerPkg),
-		}
-		if generateSwagger() {
-			jsonSchemaPkg := path.Join(outPkg, "schema")
-			imports = append(imports, codegen.SimpleImport(jsonSchemaPkg))
-		}
-		file.WriteHeader("", "main", imports)
-		data := map[string]interface{}{
-			"Name": AppName,
-			"API":  api,
-		}
-		if err2 = file.ExecuteTemplate("main", mainT, funcs, data); err2 != nil {
-			return nil, err2
-		}
-		if err2 = file.FormatCode(); err2 != nil {
-			return nil, err2
+		if err = g.createMainFile(mainFile, api, funcs); err != nil {
+			return nil, err
 		}
 	}
 	imports := []*codegen.ImportSpec{
@@ -108,8 +80,8 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		codegen.SimpleImport("golang.org/x/net/websocket"),
 	}
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
-		filename := filepath.Join(codegen.OutputDir, codegen.SnakeCase(r.Name)+".go")
-		if Force {
+		filename := filepath.Join(g.outDir, codegen.SnakeCase(r.Name)+".go")
+		if g.force {
 			if err2 := os.Remove(filename); err2 != nil {
 				return err2
 			}
@@ -166,12 +138,40 @@ func tempvar() string {
 	return fmt.Sprintf("c%d", tempCount)
 }
 
-// generateSwagger returns true if the API Swagger spec should be generated.
-func generateSwagger() bool {
-	return codegen.CommandName == "" || codegen.CommandName == "swagger"
+func (g *Generator) createMainFile(mainFile string, api *design.APIDefinition, funcs template.FuncMap) error {
+	g.genfiles = append(g.genfiles, mainFile)
+	file, err := codegen.SourceFileFor(mainFile)
+	if err != nil {
+		return err
+	}
+	outPkg, err := codegen.PackagePath(g.outDir)
+	if err != nil {
+		return err
+	}
+	appPkg := path.Join(outPkg, "app")
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("time"),
+		codegen.SimpleImport("github.com/goadesign/goa"),
+		codegen.SimpleImport("github.com/goadesign/goa/middleware"),
+		codegen.SimpleImport(appPkg),
+	}
+	if !g.mainOnly {
+		swaggerPkg := path.Join(outPkg, "swagger")
+		imports = append(imports, codegen.SimpleImport(swaggerPkg))
+	}
+	file.WriteHeader("", "main", imports)
+	data := map[string]interface{}{
+		"Name":            api.Name,
+		"API":             api,
+		"GenerateSwagger": !g.mainOnly,
+	}
+	if err = file.ExecuteTemplate("main", mainT, funcs, data); err != nil {
+		return err
+	}
+	return file.FormatCode()
 }
 
-func okResp(a *design.ActionDefinition) map[string]interface{} {
+func (g *Generator) okResp(a *design.ActionDefinition) map[string]interface{} {
 	var ok *design.ResponseDefinition
 	for _, resp := range a.Responses {
 		if resp.Status == 200 {
@@ -204,7 +204,7 @@ func okResp(a *design.ActionDefinition) map[string]interface{} {
 		name = name[1:]
 		pointer = "*"
 	}
-	typeref := fmt.Sprintf("%s%s.%s", pointer, TargetPackage, name)
+	typeref := fmt.Sprintf("%s%s.%s", pointer, g.target, name)
 	if strings.HasPrefix(typeref, "*") {
 		typeref = "&" + typeref[1:]
 	}
@@ -233,7 +233,7 @@ func main() {
 {{ range $name, $res := $api.Resources }}{{ $name := goify $res.Name true }} // Mount "{{$res.Name}}" controller
 	{{ $tmp := tempvar }}{{ $tmp }} := New{{ $name }}Controller(service)
 	{{ targetPkg }}.Mount{{ $name }}Controller(service, {{ $tmp }})
-{{ end }}{{ if generateSwagger }}// Mount Swagger spec provider controller
+{{ end }}{{ if .GenerateSwagger }}// Mount Swagger spec provider controller
 	swagger.MountController(service)
 {{ end }}
 

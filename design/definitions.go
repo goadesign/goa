@@ -1385,8 +1385,9 @@ func (a *ActionDefinition) WebSocket() bool {
 	return true
 }
 
-// Finalize creates fallback security schemes and links before rendering.
+// Finalize inherits security scheme and action responses from parent and top level design.
 func (a *ActionDefinition) Finalize() {
+	// Inherit security scheme
 	if a.Security == nil {
 		a.Security = a.Parent.Security // ResourceDefinition
 		if a.Security == nil {
@@ -1397,6 +1398,16 @@ func (a *ActionDefinition) Finalize() {
 	if a.Security != nil && a.Security.Scheme.Kind == NoSecurityKind {
 		a.Security = nil
 	}
+
+	// Inherit responses
+	merged := make(map[string]*ResponseDefinition, len(a.Responses)+len(Design.Responses))
+	for n, r := range Design.Responses {
+		merged[n] = r
+	}
+	for n, r := range a.Responses {
+		merged[n] = r
+	}
+	a.Responses = merged
 }
 
 // UserTypes returns all the user types used by the action payload and parameters.
