@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/codegen"
@@ -94,21 +93,6 @@ func (g *Generator) Cleanup() {
 	}
 	os.RemoveAll(g.outDir)
 	g.genfiles = nil
-}
-
-// targetPackagePath returns the Go package path to the generated package.
-func (g *Generator) targetPackagePath() (string, error) {
-	gopaths := filepath.SplitList(os.Getenv("GOPATH"))
-	for _, gopath := range gopaths {
-		if strings.HasPrefix(g.outDir, gopath) {
-			path, err := filepath.Rel(filepath.Join(gopath, "src"), g.outDir)
-			if err != nil {
-				return "", err
-			}
-			return filepath.ToSlash(path), nil
-		}
-	}
-	return "", fmt.Errorf("output directory outside of Go workspace, make sure to define GOPATH correctly or change output directory")
 }
 
 // generateContexts iterates through the API resources and actions and generates the action

@@ -59,7 +59,7 @@ func (g *Generator) generateResourceTest(api *design.APIDefinition) error {
 	if err != nil {
 		return err
 	}
-	appPkg, err := g.targetPackagePath()
+	appPkg, err := codegen.PackagePath(g.outDir)
 	if err != nil {
 		return err
 	}
