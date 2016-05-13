@@ -650,12 +650,13 @@ var reserved = map[string]bool{
 	"type":        true,
 	"var":         true,
 
-	// stdlib packages used by generated code
-	"fmt":  true,
-	"http": true,
-	"json": true,
-	"os":   true,
-	"time": true,
+	// stdlib and goa packages used by generated code
+	"fmt":    true,
+	"http":   true,
+	"json":   true,
+	"os":     true,
+	"time":   true,
+	"client": true,
 }
 
 // toSlice returns Go code that represents the given slice.
