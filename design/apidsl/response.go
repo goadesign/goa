@@ -16,25 +16,38 @@ import (
 // status code, media type and headers overriding what the default response or response template
 // specifies:
 //
-//	Response(OK, "vnd.goa.bottle", func() {	// OK response template accepts one argument: the media type identifier
-//		Headers(func() {		// Headers list the response HTTP headers, see Headers
-//			Header("X-Request-Id")
-//		})
-//	})
+//        Response(OK, "text/plain")              // OK response template accepts one argument:
+//                                                // the media type identifier
 //
-//	Response(OK, "application/json",        // The body of the OK response consists of a hash of any type indexed
-//		HashOf(String, Any))            // by strings.
+//        Response(OK, BottleMedia)               // or a media type defined in the design
 //
-//	Response(NotFound, func() {
-//		Status(404)			// Not necessary as defined by default NotFound response.
-//		Media("application/json")	// Override NotFound response default of "text/plain"
-//	})
+//        Response(OK, "application/vnd.bottle")  // optionally referred to by identifier
 //
-//	Response(Created, func() {
-//		Media(BottleMedia)	        // Specifies a media type defined in the design.
-//	})
+//        Response(OK, func() {
+//                Media("application/vnd.bottle") // Alternatively media type is set with Media
+//        })
 //
-// goa defines a default response for all the HTTP status code. The default response simply sets
+//        Response(OK, BottleMedia, func() {
+//                Headers(func() {                // Headers list the response HTTP headers
+//                        Header("X-Request-Id")  // Header syntax is identical to Attribute's
+//                })
+//        })
+//
+//        Response(OK, BottleMedia, func() {
+//                Status(201)                     // Set response status (overrides template's)
+//        })
+//
+//        Response("MyResponse", func() {         // Define custom response (using no template)
+//                Media(BottleMedia)
+//                Headers(func() {
+//                        Header("X-Request-Id", func() {
+//                                Pattern("[a-f0-9]+")
+//                        })
+//                })
+//                Status(200)
+//        })
+//
+// goa defines a default response template for all the HTTP status code. The default template simply sets
 // the status code. So if an action can return NotFound for example all it has to do is specify
 // Response(NotFound) - there is no need to specify the status code as the default response already
 // does it, in other words:
