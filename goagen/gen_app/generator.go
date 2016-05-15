@@ -113,6 +113,7 @@ func (g *Generator) generateContexts(api *design.APIDefinition) error {
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
+	g.genfiles = append(g.genfiles, ctxFile)
 	ctxWr.WriteHeader(title, g.target, imports)
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
 		return r.IterateActions(func(a *design.ActionDefinition) error {
@@ -148,7 +149,6 @@ func (g *Generator) generateContexts(api *design.APIDefinition) error {
 			return ctxWr.Execute(&ctxData)
 		})
 	})
-	g.genfiles = append(g.genfiles, ctxFile)
 	if err != nil {
 		return err
 	}
@@ -200,6 +200,7 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 			API:            api,
 			Resource:       codegen.Goify(r.Name, true),
 			PreflightPaths: r.PreflightPaths(),
+			FileServers:    r.FileServers,
 		}
 		ierr := r.IterateActions(func(a *design.ActionDefinition) error {
 			context := fmt.Sprintf("%s%sContext", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
@@ -218,7 +219,7 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 		if ierr != nil {
 			return ierr
 		}
-		if len(data.Actions) > 0 {
+		if len(data.Actions) > 0 || len(data.FileServers) > 0 {
 			data.Encoders = encoders
 			data.Decoders = decoders
 			data.Origins = r.AllOrigins()

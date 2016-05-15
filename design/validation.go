@@ -217,6 +217,9 @@ func (r *ResourceDefinition) validateActions(verr *dslengine.ValidationErrors) {
 		}
 		verr.Merge(a.Validate())
 	}
+	for _, f := range r.FileServers {
+		verr.Merge(f.Validate())
+	}
 	if r.CanonicalActionName != "" && !found {
 		verr.Add(r, `unknown canonical action "%s"`, r.CanonicalActionName)
 	}
@@ -343,6 +346,22 @@ func (a *ActionDefinition) Validate() *dslengine.ValidationErrors {
 	}
 	if a.Parent == nil {
 		verr.Add(a, "missing parent resource")
+	}
+
+	return verr.AsError()
+}
+
+// Validate checks the file server is properly initialized.
+func (f *FileServerDefinition) Validate() *dslengine.ValidationErrors {
+	verr := new(dslengine.ValidationErrors)
+	if f.FilePath == "" {
+		verr.Add(f, "File server must have a non empty file path")
+	}
+	if f.RequestPath == "" {
+		verr.Add(f, "File server must have a non empty route path")
+	}
+	if f.Parent == nil {
+		verr.Add(f, "missing parent resource")
 	}
 
 	return verr.AsError()

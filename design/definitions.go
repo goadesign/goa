@@ -122,6 +122,8 @@ type (
 		MediaType string
 		// Exposed resource actions indexed by name
 		Actions map[string]*ActionDefinition
+		// FileServers is the list of static asset serving endpoints
+		FileServers []*FileServerDefinition
 		// Action with canonical resource path
 		CanonicalActionName string
 		// Map of response definitions that apply to all actions indexed by name.
@@ -242,6 +244,18 @@ type (
 		Security *SecurityDefinition
 	}
 
+	// FileServerDefinition defines an endpoint that servers static assets.
+	FileServerDefinition struct {
+		// Parent resource
+		Parent *ResourceDefinition
+		// FilePath is the file path to the static asset(s)
+		FilePath string
+		// RequestPath is the HTTP path that servers the assets.
+		RequestPath string
+		// Security defines security requirements for the file server.
+		Security *SecurityDefinition
+	}
+
 	// LinkDefinition defines a media type link, it specifies a URL to a related resource.
 	LinkDefinition struct {
 		// Link name
@@ -325,6 +339,9 @@ type (
 
 	// ActionIterator is the type of functions given to IterateActions.
 	ActionIterator func(a *ActionDefinition) error
+
+	// FileServerIterator is the type of functions given to IterateFileServers.
+	FileServerIterator func(f *FileServerDefinition) error
 
 	// HeaderIterator is the type of functions given to IterateHeaders.
 	HeaderIterator func(name string, isRequired bool, h *AttributeDefinition) error
@@ -661,6 +678,19 @@ func (r *ResourceDefinition) IterateActions(it ActionIterator) error {
 	return nil
 }
 
+// IterateFileServers calls the given iterator passing each resource file server sorted by file
+// path. Iteration stops if an iterator returns an error and in this case IterateFileServers returns
+// that error.
+func (r *ResourceDefinition) IterateFileServers(it FileServerIterator) error {
+	sort.Sort(ByFilePath(r.FileServers))
+	for _, f := range r.FileServers {
+		if err := it(f); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // IterateHeaders calls the given iterator passing in each response sorted in alphabetical order.
 // Iteration stops if an iterator returns an error and in this case IterateHeaders returns that
 // error.
@@ -777,6 +807,10 @@ func (r *ResourceDefinition) DSL() func() {
 // parameters, initializes querystring parameters, sets path parameters as non zero attributes
 // and sets the fallbacks for security schemes.
 func (r *ResourceDefinition) Finalize() {
+	r.IterateFileServers(func(f *FileServerDefinition) error {
+		f.Finalize()
+		return nil
+	})
 	r.IterateActions(func(a *ActionDefinition) error {
 		a.Finalize()
 
@@ -1271,12 +1305,12 @@ func (r *ResponseTemplateDefinition) Context() string {
 func (a *ActionDefinition) Context() string {
 	var prefix, suffix string
 	if a.Name != "" {
-		suffix = fmt.Sprintf(" action %#v", a.Name)
+		suffix = fmt.Sprintf("action %#v", a.Name)
 	} else {
-		suffix = " unnamed action"
+		suffix = "unnamed action"
 	}
 	if a.Parent != nil {
-		prefix = a.Parent.Context()
+		prefix = a.Parent.Context() + " "
 	}
 	return prefix + suffix
 }
@@ -1467,6 +1501,36 @@ func (a *ActionDefinition) IterateResponses(it ResponseIterator) error {
 	}
 	return nil
 }
+
+// Context returns the generic definition name used in error messages.
+func (f *FileServerDefinition) Context() string {
+	suffix := fmt.Sprintf("file server %s", f.FilePath)
+	var prefix string
+	if f.Parent != nil {
+		prefix = f.Parent.Context() + " "
+	}
+	return prefix + suffix
+}
+
+// Finalize inherits security scheme from parent and top level design.
+func (f *FileServerDefinition) Finalize() {
+	if f.Security == nil {
+		f.Security = f.Parent.Security // ResourceDefinition
+		if f.Security == nil {
+			f.Security = Design.Security
+		}
+	}
+	if f.Security != nil && f.Security.Scheme.Kind == NoSecurityKind {
+		f.Security = nil
+	}
+}
+
+// ByFilePath makes FileServerDefinition sortable for code generators.
+type ByFilePath []*FileServerDefinition
+
+func (b ByFilePath) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
+func (b ByFilePath) Len() int           { return len(b) }
+func (b ByFilePath) Less(i, j int) bool { return b[i].FilePath < b[j].FilePath }
 
 // Context returns the generic definition name used in error messages.
 func (l *LinkDefinition) Context() string {

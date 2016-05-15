@@ -93,6 +93,7 @@ package and tool and the Swagger specification for the API.
 	var (
 		timeout      = time.Duration(20) * time.Second
 		scheme, host string
+		noexample    bool
 	)
 	jsCmd := &cobra.Command{
 		Use:   "js",
@@ -102,6 +103,7 @@ package and tool and the Swagger specification for the API.
 	jsCmd.Flags().DurationVar(&timeout, "timeout", timeout, `the duration before the request times out.`)
 	jsCmd.Flags().StringVar(&scheme, "scheme", "", `the URL scheme used to make requests to the API, defaults to the scheme defined in the API design if any.`)
 	jsCmd.Flags().StringVar(&host, "host", "", `the API hostname, defaults to the hostname defined in the API design if any`)
+	jsCmd.Flags().BoolVar(&noexample, "noexample", false, `Skip generation of example HTML and controller`)
 	rootCmd.AddCommand(jsCmd)
 
 	// schemaCmd implements the "schema" command.
