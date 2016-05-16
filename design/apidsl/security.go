@@ -43,6 +43,8 @@ func Security(scheme interface{}, dsl ...func()) {
 	switch parent := parentDef.(type) {
 	case *design.ActionDefinition:
 		parent.Security = def
+	case *design.FileServerDefinition:
+		parent.Security = def
 	case *design.ResourceDefinition:
 		parent.Security = def
 	case *design.APIDefinition:
@@ -63,6 +65,8 @@ func NoSecurity() {
 	parentDef := dslengine.CurrentDefinition()
 	switch parent := parentDef.(type) {
 	case *design.ActionDefinition:
+		parent.Security = def
+	case *design.FileServerDefinition:
 		parent.Security = def
 	case *design.ResourceDefinition:
 		parent.Security = def

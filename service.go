@@ -60,6 +60,12 @@ type (
 		middleware []Middleware // Controller specific middleware if any
 	}
 
+	// FileServer is the interface implemented by controllers that can serve static files.
+	FileServer interface {
+		// FileHandler returns a handler that serves files under the given request path.
+		FileHandler(path, filename string) Handler
+	}
+
 	// Handler defines the request handler signatures.
 	Handler func(context.Context, http.ResponseWriter, *http.Request) error
 
@@ -194,21 +200,8 @@ func (service *Service) finalize() {
 	service.finalized = true
 }
 
-// ServeFiles replies to the request with the contents of the named file or directory. The logic
-// for what to do when the filename points to a file vs. a directory is the same as the standard
-// http package ServeFile function. The path may end with a wildcard that matches the rest of the
-// URL (e.g. *filepath). If it does the matching path is appended to filename to form the full file
-// path, so:
-//
-// 	ServeFiles("/index.html", "/www/data/index.html")
-//
-// Returns the content of the file "/www/data/index.html" when requests are sent to "/index.html"
-// and:
-//
-//	ServeFiles("/assets/*filepath", "/www/data/assets")
-//
-// returns the content of the file "/www/data/assets/x/y/z" when requests are sent to
-// "/assets/x/y/z".
+// ServeFiles replies to the request with the contents of the named file or directory. See
+// FileHandler for details.
 func (ctrl *Controller) ServeFiles(path, filename string) error {
 	if strings.Contains(path, ":") {
 		return fmt.Errorf("path may only include wildcards that match the entire end of the URL (e.g. *filepath)")
@@ -216,27 +209,11 @@ func (ctrl *Controller) ServeFiles(path, filename string) error {
 	LogInfo(ctrl.Context, "mount file", "name", filename, "route", fmt.Sprintf("GET %s", path))
 	handler := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		if !ContextResponse(ctx).Written() {
-			return ctrl.fileServer(filename, path)(ctx, rw, req)
+			return ctrl.FileHandler(filename, path)(ctx, rw, req)
 		}
 		return nil
 	}
-	chain := ctrl.middleware
-	ml := len(chain)
-	for i := range chain {
-		handler = chain[ml-i-1](handler)
-	}
-	handle := func(rw http.ResponseWriter, req *http.Request, params url.Values) {
-		baseCtx := WithLogContext(ctrl.Context, "action", "serve")
-		ctx := NewContext(baseCtx, rw, req, params)
-		// Invoke middleware chain, errors should be caught earlier, e.g. by ErrorHandler middleware
-		if err := handler(ctx, rw, req); err != nil {
-			LogError(ctx, "uncaught error", "err", err)
-			code := http.StatusInternalServerError
-			respBody := fmt.Sprintf("%s: %s", http.StatusText(code), err) // Sprintf catches panics
-			ctrl.Service.Send(ctx, code, respBody)
-		}
-	}
-	ctrl.Service.Mux.Handle("GET", path, handle)
+	ctrl.Service.Mux.Handle("GET", path, ctrl.MuxHandler("serve", handler, nil))
 	return nil
 }
 
@@ -312,8 +289,22 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 	}
 }
 
-// fileServer returns a handler that serves files under the given filename for the given route path
-func (ctrl *Controller) fileServer(filename, path string) Handler {
+// FileHandler returns a handler that serves files under the given filename for the given route path.
+// The logic for what to do when the filename points to a file vs. a directory is the same as the
+// standard http package ServeFile function. The path may end with a wildcard that matches the rest
+// of the URL (e.g. *filepath). If it does the matching path is appended to filename to form the
+// full file path, so:
+//
+// 	c.FileHandler("/index.html", "/www/data/index.html")
+//
+// Returns the content of the file "/www/data/index.html" when requests are sent to "/index.html"
+// and:
+//
+//	c.FileHandler("/assets/*filepath", "/www/data/assets")
+//
+// returns the content of the file "/www/data/assets/x/y/z" when requests are sent to
+// "/assets/x/y/z".
+func (ctrl *Controller) FileHandler(path, filename string) Handler {
 	var wc string
 	if idx := strings.Index(path, "*"); idx > -1 && idx < len(path)-1 {
 		wc = path[idx+1:]

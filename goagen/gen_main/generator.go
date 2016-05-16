@@ -19,7 +19,6 @@ type Generator struct {
 	outDir   string   //Path to output directory
 	target   string   // Name of generated "app" package
 	force    bool     // Whether to override existing files
-	mainOnly bool     // Whether the generator is running the "main" command
 	genfiles []string // Generated files
 }
 
@@ -38,7 +37,6 @@ func Generate() (files []string, err error) {
 	set.Parse(os.Args[2:])
 
 	g := &Generator{outDir: outDir, target: target, force: force}
-	g.mainOnly = os.Args[1] == "main"
 
 	return g.Generate(design.Design)
 }
@@ -155,15 +153,10 @@ func (g *Generator) createMainFile(mainFile string, api *design.APIDefinition, f
 		codegen.SimpleImport("github.com/goadesign/goa/middleware"),
 		codegen.SimpleImport(appPkg),
 	}
-	if !g.mainOnly {
-		swaggerPkg := path.Join(outPkg, "swagger")
-		imports = append(imports, codegen.SimpleImport(swaggerPkg))
-	}
 	file.WriteHeader("", "main", imports)
 	data := map[string]interface{}{
-		"Name":            api.Name,
-		"API":             api,
-		"GenerateSwagger": !g.mainOnly,
+		"Name": api.Name,
+		"API":  api,
 	}
 	if err = file.ExecuteTemplate("main", mainT, funcs, data); err != nil {
 		return err
@@ -233,8 +226,6 @@ func main() {
 {{ range $name, $res := $api.Resources }}{{ $name := goify $res.Name true }} // Mount "{{$res.Name}}" controller
 	{{ $tmp := tempvar }}{{ $tmp }} := New{{ $name }}Controller(service)
 	{{ targetPkg }}.Mount{{ $name }}Controller(service, {{ $tmp }})
-{{ end }}{{ if .GenerateSwagger }}// Mount Swagger spec provider controller
-	swagger.MountController(service)
 {{ end }}
 
 	if err := service.ListenAndServe(":8080"); err != nil {

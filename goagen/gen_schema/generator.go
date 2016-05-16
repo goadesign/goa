@@ -2,20 +2,18 @@ package genschema
 
 import (
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/utils"
 )
 
 // Generator is the application code generator.
 type Generator struct {
-	genfiles []string
-	outDir   string // Path to output directory
+	genfiles []string // Generated files
+	outDir   string   // Path to output directory
 }
 
 // Generate is the generator entry point called by the meta generator.
@@ -41,37 +39,21 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		}
 	}()
 
-	g.outDir = filepath.Join(g.outDir, "schema")
-	os.RemoveAll(g.outDir)
-	os.MkdirAll(g.outDir, 0755)
-	g.genfiles = append(g.genfiles, g.outDir)
 	s := APISchema(api)
 	js, err := s.JSON()
 	if err != nil {
 		return
 	}
 
+	g.outDir = filepath.Join(g.outDir, "schema")
+	os.RemoveAll(g.outDir)
+	os.MkdirAll(g.outDir, 0755)
+	g.genfiles = append(g.genfiles, g.outDir)
 	schemaFile := filepath.Join(g.outDir, "schema.json")
 	if err = ioutil.WriteFile(schemaFile, js, 0644); err != nil {
 		return
 	}
 	g.genfiles = append(g.genfiles, schemaFile)
-
-	controllerFile := filepath.Join(g.outDir, "schema.go")
-	file, err := codegen.SourceFileFor(controllerFile)
-	if err != nil {
-		return
-	}
-	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("github.com/dimfeld/httptreemux"),
-		codegen.SimpleImport("github.com/goadesign/goa"),
-	}
-	g.genfiles = append(g.genfiles, controllerFile)
-	file.WriteHeader(fmt.Sprintf("%s JSON Hyper-schema", api.Name), "schema", imports)
-	file.Write([]byte(jsonSchemaCtrl))
-	if err = file.FormatCode(); err != nil {
-		return
-	}
 
 	return g.genfiles, nil
 }
@@ -83,10 +65,3 @@ func (g *Generator) Cleanup() {
 	}
 	g.genfiles = nil
 }
-
-const jsonSchemaCtrl = `
-// MountController mounts the API JSON schema controller under "/schema.json".
-func MountController(service *goa.Service) {
-	service.ServeFiles("/schema.json", "schema/schema.json")
-}
-`

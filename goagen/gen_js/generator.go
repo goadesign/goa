@@ -18,11 +18,12 @@ import (
 
 // Generator is the application code generator.
 type Generator struct {
-	genfiles []string
-	outDir   string
-	timeout  time.Duration
-	scheme   string
-	host     string
+	genfiles  []string      // Generated files
+	outDir    string        // Destination directory
+	timeout   time.Duration // Timeout used by JavaScript client when making requests
+	scheme    string        // Scheme used by JavaScript client
+	host      string        // Host addressed by JavaScript client
+	noexample bool          // Do not generate an HTML example file
 }
 
 // Generate is the generator entry point called by the meta generator.
@@ -31,6 +32,7 @@ func Generate() (files []string, err error) {
 		outDir       string
 		timeout      time.Duration
 		scheme, host string
+		noexample    bool
 	)
 
 	set := flag.NewFlagSet("client", flag.PanicOnError)
@@ -39,9 +41,10 @@ func Generate() (files []string, err error) {
 	set.DurationVar(&timeout, "timeout", time.Duration(20)*time.Second, "")
 	set.StringVar(&scheme, "scheme", "", "")
 	set.StringVar(&host, "host", "", "")
+	set.BoolVar(&noexample, "noexample", false, "")
 	set.Parse(os.Args[2:])
 
-	g := &Generator{outDir: outDir, timeout: timeout, scheme: scheme, host: host}
+	g := &Generator{outDir: outDir, timeout: timeout, scheme: scheme, host: host, noexample: noexample}
 
 	return g.Generate(design.Design)
 }
@@ -84,14 +87,14 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		return
 	}
 
-	if exampleAction != nil {
+	// Generate axios.html
+	if err = g.generateAxiosJS(); err != nil {
+		return
+	}
+
+	if exampleAction != nil && !g.noexample {
 		// Generate index.html
 		if err = g.generateIndexHTML(filepath.Join(g.outDir, "index.html"), api, exampleAction); err != nil {
-			return
-		}
-
-		// Generate axios.html
-		if err = g.generateAxiosJS(); err != nil {
 			return
 		}
 
@@ -352,6 +355,9 @@ const exampleT = `<!doctype html>
 `
 
 const exampleCtrlT = `// MountController mounts the JavaScript example controller under "/js".
+// This is just an example, not the best way to do this. A better way would be to specify a file
+// server using the Files DSL in the design.
+// Use --noexample to prevent this file from being generated.
 func MountController(service *goa.Service) {
 	// Serve static files under js
 	service.ServeFiles("/js/*filepath", {{printf "%q" .ServeDir}})
