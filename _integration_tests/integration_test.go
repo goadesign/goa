@@ -10,6 +10,7 @@ import (
 )
 
 func TestBootstrapReadme(t *testing.T) {
+	defer os.RemoveAll("./main.go")
 	if err := goagen("./readme", "bootstrap", "-d", "github.com/goadesign/goa/_integration_tests/readme/design"); err != nil {
 		t.Error(err.Error())
 	}

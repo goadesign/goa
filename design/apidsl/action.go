@@ -8,6 +8,37 @@ import (
 	"github.com/goadesign/goa/dslengine"
 )
 
+// Files defines an API endpoint that serves static assets. The logic for what to do when the
+// filename points to a file vs. a directory is the same as the standard http package ServeFile
+// function. The path may end with a wildcard that matches the rest of the URL (e.g. *filepath). If
+// it does the matching path is appended to filename to form the full file path, so:
+//
+// 	Files("/index.html", "/www/data/index.html")
+//
+// Returns the content of the file "/www/data/index.html" when requests are sent to "/index.html"
+// and:
+//
+//	Files("/assets/*filepath", "/www/data/assets")
+//
+// returns the content of the file "/www/data/assets/x/y/z" when requests are sent to
+// "/assets/x/y/z".
+// The file path may be specified as a relative path to the current path of the process.
+func Files(path, filename string, dsls ...func()) {
+	if r, ok := resourceDefinition(); ok {
+		server := &design.FileServerDefinition{
+			Parent:      r,
+			RequestPath: path,
+			FilePath:    filename,
+		}
+		if len(dsls) > 0 {
+			if !dslengine.Execute(dsls[0], server) {
+				return
+			}
+		}
+		r.FileServers = append(r.FileServers, server)
+	}
+}
+
 // Action implements the action definition DSL. Action definitions describe specific API endpoints
 // including the URL, HTTP method and request parameters (via path wildcards or query strings) and
 // payload (data structure describing the request HTTP body). An action belongs to a resource and

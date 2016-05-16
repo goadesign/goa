@@ -81,12 +81,13 @@ type (
 
 	// ControllerTemplateData contains the information required to generate an action handler.
 	ControllerTemplateData struct {
-		API            *design.APIDefinition    // API definition
-		Resource       string                   // Lower case plural resource name, e.g. "bottles"
-		Actions        []map[string]interface{} // Array of actions, each action has keys "Name", "Routes", "Context" and "Unmarshal"
-		Encoders       []*EncoderTemplateData   // Encoder data
-		Decoders       []*EncoderTemplateData   // Decoder data
-		Origins        []*design.CORSDefinition // CORS policies
+		API            *design.APIDefinition          // API definition
+		Resource       string                         // Lower case plural resource name, e.g. "bottles"
+		Actions        []map[string]interface{}       // Array of actions, each action has keys "Name", "Routes", "Context" and "Unmarshal"
+		FileServers    []*design.FileServerDefinition // File servers
+		Encoders       []*EncoderTemplateData         // Encoder data
+		Decoders       []*EncoderTemplateData         // Decoder data
+		Origins        []*design.CORSDefinition       // CORS policies
 		PreflightPaths []string
 	}
 
@@ -502,6 +503,7 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 {{ end }}{{ end }}{{/* if .Params */}}	return &rctx, err
 }
 `
+
 	// ctxMTRespT generates the response helpers for responses with media types.
 	// template input: map[string]interface{}
 	ctxMTRespT = `{{ $ctx := .Context }}{{ $resp := .Response }}{{ $mt := .MediaType }}{{/*
@@ -574,7 +576,8 @@ func (payload {{ gotyperef .Payload .Payload.AllRequired 0 false }}) Validate() 
 	ctrlT = `// {{ .Resource }}Controller is the controller interface for the {{ .Resource }} actions.
 type {{ .Resource }}Controller interface {
 	goa.Muxer
-{{ range .Actions }}	{{ .Name }}(*{{ .Context }}) error
+{{ if .FileServers }}	goa.FileServer
+{{ end }}{{ range .Actions }}	{{ .Name }}(*{{ .Context }}) error
 {{ end }}}
 `
 
@@ -621,7 +624,13 @@ func Mount{{ .Resource }}Controller(service *goa.Service, ctrl {{ .Resource }}Co
 {{ end }}{{ if .Security }}	h = handleSecurity({{ printf "%q" .Security.Scheme.SchemeName }}, h{{ range .Security.Scopes }}, {{ printf "%q" . }}{{ end }})
 {{ end }}{{ range .Routes }}	service.Mux.Handle("{{ .Verb }}", {{ printf "%q" .FullPath }}, ctrl.MuxHandler({{ printf "%q" $action.Name }}, h, {{ if $action.Payload }}{{ $action.Unmarshal }}{{ else }}nil{{ end }}))
 	service.LogInfo("mount", "ctrl", {{ printf "%q" $res }}, "action", {{ printf "%q" $action.Name }}, "route", {{ printf "%q" (printf "%s %s" .Verb .FullPath) }}{{ with $action.Security }}, "security", {{ printf "%q" .Scheme.SchemeName }}{{ end }})
-{{ end }}{{ end }}}
+{{ end }}{{ end }}{{ range .FileServers }}
+	h = ctrl.FileHandler("{{ .RequestPath }}", "{{ .FilePath }}")
+{{ if $.Origins }}	h = handle{{ $res }}Origin(h)
+{{ end }}{{ if .Security }}	h = handleSecurity({{ printf "%q" .Security.Scheme.SchemeName }}, h{{ range .Security.Scopes }}, {{ printf "%q" . }}{{ end }})
+{{ end }}	service.Mux.Handle("GET", "{{ .RequestPath }}", ctrl.MuxHandler("serve", h, nil))
+	service.LogInfo("mount", "ctrl", {{ printf "%q" $res }}, "files", {{ printf "%q" .FilePath }}, "route", {{ printf "%q" (printf "GET %s" .RequestPath) }}{{ with .Security }}, "security", {{ printf "%q" .Scheme.SchemeName }}{{ end }})
+{{ end }}}
 `
 
 	// handleCORST generates the code that checks whether a CORS request is authorized
