@@ -110,6 +110,12 @@ that doesn't force generators to use it (some simple generators may not have a n
 but it should encourage it. For example there could be an additional optional interface that
 generators could implement that would get called by the generation engine.
 
+## Cleanup Type System
+
+Move `DateTime` and `UUID` to formats on the `String` type. This is to keep the set of basic types
+small and remain consistent with how `Integer` support formats for various underlying Go data types
+(see below).
+
 ## Protobuf / gRPC
 
 Look into generating .proto files from the design and invoke `protoc` on them during code
