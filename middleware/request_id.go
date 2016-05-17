@@ -35,13 +35,12 @@ func init() {
 	reqPrefix = string(b64[0:10])
 }
 
-// RequestID is a middleware that injects a request ID into the context of each request.
-// Retrieve it using ctx.Value(ReqIDKey). If the incoming request has a RequestIDHeader header then
-// that value is used else a random value is generated.
-func RequestID() goa.Middleware {
+// RequestIDWithHeader behaves like the middleware RequestID, but it takes the request id header
+// as the (first) argument.
+func RequestIDWithHeader(requestIDHeader string) goa.Middleware {
 	return func(h goa.Handler) goa.Handler {
 		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-			id := req.Header.Get(RequestIDHeader)
+			id := req.Header.Get(requestIDHeader)
 			if id == "" {
 				id = fmt.Sprintf("%s-%d", reqPrefix, atomic.AddInt64(&reqID, 1))
 			}
@@ -50,6 +49,13 @@ func RequestID() goa.Middleware {
 			return h(ctx, rw, req)
 		}
 	}
+}
+
+// RequestID is a middleware that injects a request ID into the context of each request.
+// Retrieve it using ctx.Value(ReqIDKey). If the incoming request has a RequestIDHeader header then
+// that value is used else a random value is generated.
+func RequestID() goa.Middleware {
+	return RequestIDWithHeader(RequestIDHeader)
 }
 
 // ContextRequestID extracts the Request ID from the context.
