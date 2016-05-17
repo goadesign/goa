@@ -221,7 +221,9 @@ func runGen(c *cobra.Command) ([]string, error) {
 func generate(pkgName, pkgPath string, c *cobra.Command) ([]string, error) {
 	m := make(map[string]string)
 	c.Flags().Visit(func(f *pflag.Flag) {
-		m[f.Name] = f.Value.String()
+		if f.Name != "pkg-path" {
+			m[f.Name] = f.Value.String()
+		}
 	})
 	if _, ok := m["out"]; !ok {
 		m["out"] = c.Flag("out").DefValue
