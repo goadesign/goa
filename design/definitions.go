@@ -631,6 +631,9 @@ func (a *APIDefinition) Finalize() {
 			}
 			for _, resp := range action.Responses {
 				if resp.MediaType == ErrorMediaIdentifier {
+					if a.MediaTypes == nil {
+						a.MediaTypes = make(map[string]*MediaTypeDefinition)
+					}
 					a.MediaTypes[CanonicalIdentifier(ErrorMediaIdentifier)] = ErrorMedia
 					found = true
 					break
