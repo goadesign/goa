@@ -209,7 +209,7 @@ func (ctrl *Controller) ServeFiles(path, filename string) error {
 	LogInfo(ctrl.Context, "mount file", "name", filename, "route", fmt.Sprintf("GET %s", path))
 	handler := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		if !ContextResponse(ctx).Written() {
-			return ctrl.FileHandler(filename, path)(ctx, rw, req)
+			return ctrl.FileHandler(path, filename)(ctx, rw, req)
 		}
 		return nil
 	}
