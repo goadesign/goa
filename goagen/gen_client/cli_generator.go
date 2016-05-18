@@ -154,11 +154,13 @@ func defaultRouteParams(a *design.ActionDefinition) *design.AttributeDefinition 
 	r := a.Routes[0]
 	params := r.Params()
 	o := make(design.Object, len(params))
+	nz := make(map[string]bool, len(params))
 	pparams := a.PathParams()
 	for _, p := range params {
 		o[p] = pparams.Type.ToObject()[p]
+		nz[p] = true
 	}
-	return &design.AttributeDefinition{Type: o}
+	return &design.AttributeDefinition{Type: o, NonZeroAttributes: nz}
 }
 
 // produces a fmt template to render the first route of action.
@@ -168,19 +170,36 @@ func defaultRouteTemplate(a *design.ActionDefinition) string {
 
 // joinNames is a code generation helper function that generates a string built from concatenating
 // the keys of the given attribute type (assuming it's an object).
-func joinNames(att *design.AttributeDefinition) string {
-	if att == nil {
-		return ""
+func joinNames(atts ...*design.AttributeDefinition) string {
+	var elems []string
+	for _, att := range atts {
+		if att == nil {
+			continue
+		}
+		obj := att.Type.ToObject()
+		var names []string
+		var optNames []string
+		for n, a := range obj {
+			field := fmt.Sprintf("cmd.%s", codegen.Goify(n, true))
+			if !a.Type.IsArray() && !att.IsRequired(n) && !att.IsNonZero(n) {
+				field = "&" + field
+			}
+			if att.IsRequired(n) {
+				names = append(names, field)
+			} else {
+				optNames = append(optNames, field)
+			}
+		}
+		if len(names) > 0 {
+			sort.Strings(names)
+			elems = append(elems, names...)
+		}
+		if len(optNames) > 0 {
+			sort.Strings(optNames)
+			elems = append(elems, optNames...)
+		}
 	}
-	obj := att.Type.ToObject()
-	names := make([]string, len(obj))
-	i := 0
-	for n := range obj {
-		names[i] = fmt.Sprintf("cmd.%s", codegen.Goify(n, true))
-		i++
-	}
-	sort.Strings(names)
-	return strings.Join(names, ", ")
+	return strings.Join(elems, ", ")
 }
 
 // routes create the action command "Use" suffix.
@@ -238,11 +257,11 @@ const commandTypesTmpl = `{{ $cmdName := goify (printf "%s%s%s" .Name (title .Pa
 	{{ $cmdName }} struct {
 {{ if .Payload }}		Payload string
 {{ end }}{{ $params := defaultRouteParams . }}{{ if $params }}{{ range $name, $att := $params.Type.ToObject }}{{ if $att.Description }}		{{ multiComment $att.Description }}
-{{ end }}		{{ goify $name true }} {{ cmdFieldType $att.Type }}
+{{ end }}		{{ goify $name true }} {{ cmdFieldType $att.Type false }}
 {{ end }}{{ end }}{{ $params := .QueryParams }}{{ if $params }}{{ range $name, $att := $params.Type.ToObject }}{{ if $att.Description }}		{{ multiComment $att.Description }}
-{{ end }}		{{ goify $name true }} {{ cmdFieldType $att.Type }}
+{{ end }}		{{ goify $name true }} {{ cmdFieldType $att.Type false}}
 {{ end }}{{ end }}{{ $headers := .Headers }}{{ if $headers }}{{ range $name, $att := $headers.Type.ToObject }}{{ if $att.Description }}		{{ multiComment $att.Description }}
-{{ end }}		{{ goify $name true }} {{ cmdFieldType $att.Type }}
+{{ end }}		{{ goify $name true }} {{ cmdFieldType $att.Type false}}
 {{ end }}{{ end }}	}
 `
 
@@ -259,8 +278,7 @@ func (cmd *{{ $cmdName }}) Run(c *client.Client, args []string) error {
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
 	ws, err := c.{{ goify (printf "%s%s" .Action.Name (title .Resource.Name)) true }}(ctx, path{{/*
-	*/}}{{ $params := joinNames .Action.QueryParams }}{{ if $params }}, {{ $params }}{{ end }}{{/*
-	*/}}{{ $headers := joinNames .Action.Headers }}{{ if $headers }}, {{ $headers }}{{ end }})
+	*/}}{{ $params := joinNames .Action.QueryParams .Action.Headers }}{{ if $params }}, {{ $params }}{{ end }})
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
@@ -276,11 +294,11 @@ const registerTmpl = `{{ $cmdName := goify (printf "%s%sCommand" .Action.Name (t
 func (cmd *{{ $cmdName }}) RegisterFlags(cc *cobra.Command, c *client.Client) {
 {{ if .Action.Payload }}	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request JSON body")
 {{ end }}{{ $pparams := defaultRouteParams .Action }}{{ if $pparams }}{{ range $pname, $pparam := $pparams.Type.ToObject }}{{ $tmp := goify $pname false }}{{/*
-*/}}{{ if not $pparam.DefaultValue }}	var {{ $tmp }} {{ cmdFieldType $pparam.Type }}
+*/}}{{ if not $pparam.DefaultValue }}	var {{ $tmp }} {{ cmdFieldType $pparam.Type false }}
 {{ end }}	cc.Flags().{{ flagType $pparam }}Var(&cmd.{{ goify $pname true }}, "{{ $pname }}", {{/*
 */}}{{ if $pparam.DefaultValue }}{{ printf "%#v" $pparam.DefaultValue }}{{ else }}{{ $tmp }}{{ end }}, ` + "`" + `{{ escapeBackticks $pparam.Description }}` + "`" + `)
 {{ end }}{{ end }}{{ $params := .Action.QueryParams }}{{ if $params }}{{ range $name, $param := $params.Type.ToObject }}{{ $tmp := goify $name false }}{{/*
-*/}}{{ if not $param.DefaultValue }}	var {{ $tmp }} {{ cmdFieldType $param.Type }}
+*/}}{{ if not $param.DefaultValue }}	var {{ $tmp }} {{ cmdFieldType $param.Type false }}
 {{ end }}	cc.Flags().{{ flagType $param }}Var(&cmd.{{ goify $name true }}, "{{ $name }}", {{/*
 */}}{{ if $param.DefaultValue }}{{ printf "%#v" $param.DefaultValue }}{{ else }}{{ $tmp }}{{ end }}, ` + "`" + `{{ escapeBackticks $param.Description }}` + "`" + `)
 {{ end }}{{ end }}{{ $headers := .Action.Headers }}{{ if $headers }}{{ range $name, $header := $headers.Type.ToObject }}{{/*
@@ -308,9 +326,9 @@ func (cmd *{{ $cmdName }}) Run(c *client.Client, args []string) error {
 	}
 {{ end }}	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
-	resp, err := c.{{ goify (printf "%s%s" .Action.Name (title .Resource.Name)) true }}(ctx, path{{ if .Action.Payload }}, {{ if or .Action.Payload.Type.IsObject .Action.Payload.IsPrimitive }}&{{ end }}payload{{ else }}{{ end }}{{/*
-	*/}}{{ $params := joinNames .Action.QueryParams }}{{ if $params }}, {{ $params }}{{ end }}{{/*
-	*/}}{{ $headers := joinNames .Action.Headers }}{{ if $headers }}, {{ $headers }}{{ end }})
+	resp, err := c.{{ goify (printf "%s%s" .Action.Name (title .Resource.Name)) true }}(ctx, path{{ if .Action.Payload }}, {{/*
+	*/}}{{ if or .Action.Payload.Type.IsObject .Action.Payload.IsPrimitive }}&{{ end }}payload{{ else }}{{ end }}{{/*
+	*/}}{{ $params := joinNames .Action.QueryParams .Action.Headers }}{{ if $params }}, {{ $params }}{{ end }})
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err

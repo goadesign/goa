@@ -20,8 +20,8 @@ var _ = Describe("Service", func() {
 
 	BeforeEach(func() {
 		s = goa.New(appName)
-		s.Decoder(goa.NewJSONDecoder, "*/*")
-		s.Encoder(goa.NewJSONEncoder, "*/*")
+		s.Decoder.Register(goa.NewJSONDecoder, "*/*")
+		s.Encoder.Register(goa.NewJSONEncoder, "*/*")
 	})
 
 	Describe("New", func() {
@@ -254,7 +254,7 @@ var _ = Describe("Service", func() {
 
 				Context("with a Content-Type of 'application/octet-stream' or any other", func() {
 					BeforeEach(func() {
-						s.Decoder(goa.NewJSONDecoder, "*/*")
+						s.Decoder.Register(goa.NewJSONDecoder, "*/*")
 						r.Header.Set("Content-Type", "application/octet-stream")
 					})
 
@@ -266,7 +266,7 @@ var _ = Describe("Service", func() {
 				Context("with a Content-Type of 'application/octet-stream' or any other and no default decoder", func() {
 					BeforeEach(func() {
 						s = goa.New("test")
-						s.Decoder(goa.NewJSONDecoder, "application/json")
+						s.Decoder.Register(goa.NewJSONDecoder, "application/json")
 						r.Header.Set("Content-Type", "application/octet-stream")
 					})
 
