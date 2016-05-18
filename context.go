@@ -17,6 +17,7 @@ const (
 	paramsKey
 	logKey
 	logContextKey
+	errKey
 	securityScopesKey
 )
 
@@ -83,6 +84,11 @@ func WithLogContext(ctx context.Context, keyvals ...interface{}) context.Context
 	return WithLogger(ctx, nl)
 }
 
+// WithError creates a context with the given error.
+func WithError(ctx context.Context, err error) context.Context {
+	return context.WithValue(ctx, errKey, err)
+}
+
 // ContextController extracts the controller name from the given context.
 func ContextController(ctx context.Context) string {
 	if c := ctx.Value(ctrlKey); c != nil {
@@ -119,6 +125,14 @@ func ContextResponse(ctx context.Context) *ResponseData {
 func ContextLogger(ctx context.Context) LogAdapter {
 	if v := ctx.Value(logKey); v != nil {
 		return v.(LogAdapter)
+	}
+	return nil
+}
+
+// ContextError extracts the error from the given context.
+func ContextError(ctx context.Context) error {
+	if err := ctx.Value(errKey); err != nil {
+		return err.(error)
 	}
 	return nil
 }

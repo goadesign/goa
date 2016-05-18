@@ -42,9 +42,7 @@ type (
 		// available to all request handlers.
 		Context context.Context
 
-		finalized             bool                    // Whether controllers have been mounted
 		middleware            []Middleware            // Middleware chain
-		notFound              Handler                 // Handler of requests that don't match registered mux handlers
 		cancel                context.CancelFunc      // Service context cancel signal trigger
 		decoderPools          map[string]*decoderPool // Registered decoders for the service
 		encoderPools          map[string]*encoderPool // Registered encoders for the service
@@ -53,9 +51,12 @@ type (
 
 	// Controller defines the common fields and behavior of generated controllers.
 	Controller struct {
-		Name    string          // Controller resource name
-		Service *Service        // Service that exposes the controller
-		Context context.Context // Controller root context
+		// Controller resource name
+		Name string
+		// Service that exposes the controller
+		Service *Service
+		// Controller root context
+		Context context.Context
 
 		middleware []Middleware // Controller specific middleware if any
 	}
@@ -92,15 +93,26 @@ func New(name string) *Service {
 			decoderPools:          map[string]*decoderPool{},
 			encoderPools:          map[string]*encoderPool{},
 			encodableContentTypes: []string{},
-			notFound: func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-				return ErrNotFound(req.URL.Path)
-			},
 		}
+		notFoundHandler Handler
 	)
 
+	// Setup default NotFound handler
 	mux.HandleNotFound(func(rw http.ResponseWriter, req *http.Request, params url.Values) {
+		// Use closure to do lazy computation of middleware chain so all middlewares are
+		// registered.
+		if notFoundHandler == nil {
+			notFoundHandler = func(_ context.Context, _ http.ResponseWriter, req *http.Request) error {
+				return ErrNotFound(req.URL.Path)
+			}
+			chain := service.middleware
+			ml := len(chain)
+			for i := range chain {
+				notFoundHandler = chain[ml-i-1](notFoundHandler)
+			}
+		}
 		ctx := NewContext(service.Context, rw, req, params)
-		err := service.notFound(ctx, rw, req)
+		err := notFoundHandler(ctx, ContextResponse(ctx), req)
 		if !ContextResponse(ctx).Written() {
 			service.Send(ctx, 404, err)
 		}
@@ -119,9 +131,6 @@ func (service *Service) CancelAll() {
 // goa comes with a set of commonly used middleware, see the middleware package.
 // Controller specific middleware should be mounted using the Controller struct Use method instead.
 func (service *Service) Use(m Middleware) {
-	if service.finalized {
-		panic("goa: cannot mount middleware after controller")
-	}
 	service.middleware = append(service.middleware, m)
 }
 
@@ -179,27 +188,6 @@ func (service *Service) ServeFiles(path, filename string) error {
 	return ctrl.ServeFiles(path, filename)
 }
 
-// finalize wraps the NotFound handler with the final middleware chain.
-// Use cannot be called after finalize has.
-func (service *Service) finalize() {
-	if service.finalized {
-		return
-	}
-	notFound := service.notFound
-	handler := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-		if !ContextResponse(ctx).Written() {
-			return notFound(ctx, rw, req)
-		}
-		return nil
-	}
-	ml := len(service.middleware)
-	for i := range service.middleware {
-		handler = service.middleware[ml-i-1](handler)
-	}
-	service.notFound = handler
-	service.finalized = true
-}
-
 // ServeFiles replies to the request with the contents of the named file or directory. See
 // FileHandler for details.
 func (ctrl *Controller) ServeFiles(path, filename string) error {
@@ -220,9 +208,6 @@ func (ctrl *Controller) ServeFiles(path, filename string) error {
 // Use adds a middleware to the controller.
 // Service-wide middleware should be added via the Service Use method instead.
 func (ctrl *Controller) Use(m Middleware) {
-	if ctrl.Service.finalized {
-		panic("goa: cannot mount middleware after controller")
-	}
 	ctrl.middleware = append(ctrl.middleware, m)
 }
 
@@ -232,22 +217,41 @@ func (ctrl *Controller) Use(m Middleware) {
 // This function is intended for the controller generated code. User code should not need to call
 // it directly.
 func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) MuxHandler {
-	// Make sure middleware doesn't get mounted later
-	ctrl.Service.finalize()
+	// Use closure to enable late computation of handlers to ensure all middleware has been
+	// registered.
+	var handler, invalidPayloadHandler Handler
 
-	// Setup middleware outside of closure
-	middleware := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-		if !ContextResponse(ctx).Written() {
-			return hdlr(ctx, rw, req)
-		}
-		return nil
-	}
-	chain := append(ctrl.Service.middleware, ctrl.middleware...)
-	ml := len(chain)
-	for i := range chain {
-		middleware = chain[ml-i-1](middleware)
-	}
 	return func(rw http.ResponseWriter, req *http.Request, params url.Values) {
+		// Build handler middleware chains on first invocation
+		if handler == nil {
+			handler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+				if !ContextResponse(ctx).Written() {
+					return hdlr(ctx, rw, req)
+				}
+				return nil
+			}
+			invalidPayloadHandler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+				rw.Header().Set("Content-Type", ErrorMediaIdentifier)
+				status := 400
+				err := ContextError(ctx)
+				if err == nil {
+					err = fmt.Errorf("unknown error")
+				}
+				body := ErrInvalidEncoding(err)
+				if err.Error() == "http: request body too large" {
+					status = 413
+					body = ErrRequestBodyTooLarge("body length exceeds %d bytes", MaxRequestBodyLength)
+				}
+				return ctrl.Service.Send(ctx, status, body)
+			}
+			chain := append(ctrl.Service.middleware, ctrl.middleware...)
+			ml := len(chain)
+			for i := range chain {
+				handler = chain[ml-i-1](handler)
+				invalidPayloadHandler = chain[ml-i-1](invalidPayloadHandler)
+			}
+		}
+
 		// Build context
 		ctx := NewContext(WithAction(ctrl.Context, name), rw, req, params)
 
@@ -263,24 +267,12 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 		}
 
 		// Handle invalid payload
-		handler := middleware
 		if err != nil {
-			handler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-				rw.Header().Set("Content-Type", ErrorMediaIdentifier)
-				status := 400
-				body := ErrInvalidEncoding(err)
-				if err.Error() == "http: request body too large" {
-					status = 413
-					body = ErrRequestBodyTooLarge("body length exceeds %d bytes", MaxRequestBodyLength)
-				}
-				return ctrl.Service.Send(ctx, status, body)
-			}
-			for i := range chain {
-				handler = chain[ml-i-1](handler)
-			}
+			ctx = WithError(ctx, err)
+			handler = invalidPayloadHandler
 		}
 
-		// Invoke middleware chain, errors should be caught earlier, e.g. by ErrorHandler middleware
+		// Invoke handler
 		if err := handler(ctx, ContextResponse(ctx), req); err != nil {
 			LogError(ctx, "uncaught error", "err", err)
 			respBody := fmt.Sprintf("Internal error: %s", err) // Sprintf catches panics
