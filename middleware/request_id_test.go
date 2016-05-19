@@ -29,7 +29,7 @@ var _ = Describe("RequestID", func() {
 		req.Header.Set("X-Request-Id", reqID)
 		rw = new(testResponseWriter)
 		params = url.Values{"query": []string{"value"}}
-		service.Encoder(goa.NewJSONEncoder, "*/*")
+		service.Encoder.Register(goa.NewJSONEncoder, "*/*")
 		ctx = newContext(service, rw, req, params)
 	})
 

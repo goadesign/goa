@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/codegen"
@@ -186,10 +187,15 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 	for _, data := range decoders {
 		encoderImports[data.PackagePath] = true
 	}
+	var packagePaths []string
 	for packagePath := range encoderImports {
 		if packagePath != "github.com/goadesign/goa" {
-			imports = append(imports, codegen.SimpleImport(packagePath))
+			packagePaths = append(packagePaths, packagePath)
 		}
+	}
+	sort.Strings(packagePaths)
+	for _, packagePath := range packagePaths {
+		imports = append(imports, codegen.SimpleImport(packagePath))
 	}
 	ctlWr.WriteHeader(title, g.target, imports)
 	ctlWr.WriteInitService(encoders, decoders)

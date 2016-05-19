@@ -588,16 +588,16 @@ type {{ .Resource }}Controller interface {
 func initService(service *goa.Service) {
 	// Setup encoders and decoders
 {{ range .Encoders }}{{/*
-*/}}	service.Encoder({{ .PackageName }}.{{ .Function }}, "{{ join .MIMETypes "\", \"" }}")
+*/}}	service.Encoder.Register({{ .PackageName }}.{{ .Function }}, "{{ join .MIMETypes "\", \"" }}")
 {{ end }}{{ range .Decoders }}{{/*
-*/}}	service.Decoder({{ .PackageName }}.{{ .Function }}, "{{ join .MIMETypes "\", \"" }}")
+*/}}	service.Decoder.Register({{ .PackageName }}.{{ .Function }}, "{{ join .MIMETypes "\", \"" }}")
 {{ end }}
 
 	// Setup default encoder and decoder
 {{ range .Encoders }}{{ if .Default }}{{/*
-*/}}	service.Encoder({{ .PackageName }}.{{ .Function }}, "*/*")
+*/}}	service.Encoder.Register({{ .PackageName }}.{{ .Function }}, "*/*")
 {{ end }}{{ end }}{{ range .Decoders }}{{ if .Default }}{{/*
-*/}}	service.Decoder({{ .PackageName }}.{{ .Function }}, "*/*")
+*/}}	service.Decoder.Register({{ .PackageName }}.{{ .Function }}, "*/*")
 {{ end }}{{ end }}}
 `
 

@@ -28,7 +28,7 @@ func Service(logBuf *bytes.Buffer, respSetter ResponseSetterFunc) *goa.Service {
 	newEncoder := func(io.Writer) goa.Encoder {
 		return respSetter
 	}
-	s.Decoder(goa.NewJSONDecoder, "*/*")
-	s.Encoder(newEncoder, "*/*")
+	s.Decoder.Register(goa.NewJSONDecoder, "*/*")
+	s.Encoder.Register(newEncoder, "*/*")
 	return s
 }
