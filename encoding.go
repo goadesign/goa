@@ -7,11 +7,8 @@ import (
 	"fmt"
 	"io"
 	"mime"
-	"net/http"
 	"sync"
 	"time"
-
-	"golang.org/x/net/context"
 )
 
 type (
@@ -58,6 +55,19 @@ type (
 		fn   EncoderFunc
 		pool *sync.Pool
 	}
+
+	// HTTPDecoder is a Decoder that decodes HTTP request or response bodies given a set of
+	// known Content-Type to decoder mapping.
+	HTTPDecoder struct {
+		pools map[string]*decoderPool // Registered decoders
+	}
+
+	// HTTPEncoder is a Encoder that encodes HTTP request or response bodies given a set of
+	// known Content-Type to encoder mapping.
+	HTTPEncoder struct {
+		pools        map[string]*encoderPool // Registered encoders
+		contentTypes []string                // List of content types for type negotiation
+	}
 )
 
 // NewJSONEncoder is an adapter for the encoding package JSON encoder.
@@ -78,21 +88,22 @@ func NewGobEncoder(w io.Writer) Encoder { return gob.NewEncoder(w) }
 // NewGobDecoder is an adapter for the encoding package gob decoder.
 func NewGobDecoder(r io.Reader) Decoder { return gob.NewDecoder(r) }
 
-// DecodeRequest retrieves the request body and `Content-Type` header and uses Decode to unmarshal
-// into the provided value.
-func (service *Service) DecodeRequest(req *http.Request, v interface{}) error {
-	body, contentType := req.Body, req.Header.Get("Content-Type")
-	defer body.Close()
-
-	if err := service.Decode(v, body, contentType); err != nil {
-		return fmt.Errorf("failed to decode request body with content type %#v: %s", contentType, err)
+// NewHTTPEncoder creates an encoder that maps HTTP content types to low level encoders.
+func NewHTTPEncoder() *HTTPEncoder {
+	return &HTTPEncoder{
+		pools: make(map[string]*encoderPool),
 	}
+}
 
-	return nil
+// NewHTTPDecoder creates a decoder that maps HTTP content types to low level decoders.
+func NewHTTPDecoder() *HTTPDecoder {
+	return &HTTPDecoder{
+		pools: make(map[string]*decoderPool),
+	}
 }
 
 // Decode uses registered Decoders to unmarshal a body based on the contentType.
-func (service *Service) Decode(v interface{}, body io.Reader, contentType string) error {
+func (decoder *HTTPDecoder) Decode(v interface{}, body io.Reader, contentType string) error {
 	now := time.Now()
 	defer MeasureSince([]string{"goa", "decode", contentType}, now)
 	var p *decoderPool
@@ -104,27 +115,27 @@ func (service *Service) Decode(v interface{}, body io.Reader, contentType string
 			contentType = mediaType
 		}
 	}
-	p = service.decoderPools[contentType]
+	p = decoder.pools[contentType]
 	if p == nil {
-		p = service.decoderPools["*/*"]
+		p = decoder.pools["*/*"]
 	}
 	if p == nil {
 		return nil
 	}
 
 	// the decoderPool will handle whether or not a pool is actually in use
-	decoder := p.Get(body)
-	defer p.Put(decoder)
-	if err := decoder.Decode(v); err != nil {
+	d := p.Get(body)
+	defer p.Put(d)
+	if err := d.Decode(v); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// Decoder sets a specific decoder to be used for the specified content types. If a decoder is
+// Register sets a specific decoder to be used for the specified content types. If a decoder is
 // already registered, it is overwritten.
-func (service *Service) Decoder(f DecoderFunc, contentTypes ...string) {
+func (decoder *HTTPDecoder) Register(f DecoderFunc, contentTypes ...string) {
 	p := newDecodePool(f)
 
 	for _, contentType := range contentTypes {
@@ -132,7 +143,7 @@ func (service *Service) Decoder(f DecoderFunc, contentTypes ...string) {
 		if err != nil {
 			mediaType = contentType
 		}
-		service.decoderPools[mediaType] = p
+		decoder.pools[mediaType] = p
 	}
 }
 
@@ -140,8 +151,8 @@ func (service *Service) Decoder(f DecoderFunc, contentTypes ...string) {
 // pool.
 func newDecodePool(f DecoderFunc) *decoderPool {
 	// get a new decoder and type assert to see if it can be reset
-	decoder := f(nil)
-	rd, ok := decoder.(ResettableDecoder)
+	d := f(nil)
+	rd, ok := d.(ResettableDecoder)
 
 	p := &decoderPool{fn: f}
 
@@ -162,9 +173,9 @@ func (p *decoderPool) Get(r io.Reader) Decoder {
 		return p.fn(r)
 	}
 
-	decoder := p.pool.Get().(ResettableDecoder)
-	decoder.Reset(r)
-	return decoder
+	d := p.pool.Get().(ResettableDecoder)
+	d.Reset(r)
+	return d
 }
 
 // Put returns a Decoder into the pool if possible.
@@ -175,56 +186,55 @@ func (p *decoderPool) Put(d Decoder) {
 	p.pool.Put(d)
 }
 
-// EncodeResponse uses registered Encoders to marshal the response body based on the request Accept
-// header and writes it to the http.ResponseWriter
-func (service *Service) EncodeResponse(ctx context.Context, v interface{}) error {
+// Encode uses the registered encoders and given content type to marshal and write the given value
+// using the given writer.
+func (encoder *HTTPEncoder) Encode(v interface{}, resp io.Writer, accept string) error {
 	now := time.Now()
-	accept := ContextRequest(ctx).Header.Get("Accept")
 	if accept == "" {
 		accept = "*/*"
 	}
 	var contentType string
-	for _, t := range service.encodableContentTypes {
+	for _, t := range encoder.contentTypes {
 		if accept == "*/*" || accept == t {
 			contentType = accept
 			break
 		}
 	}
 	defer MeasureSince([]string{"goa", "encode", contentType}, now)
-	p := service.encoderPools[contentType]
+	p := encoder.pools[contentType]
 	if p == nil && contentType != "*/*" {
-		p = service.encoderPools["*/*"]
+		p = encoder.pools["*/*"]
 	}
 	if p == nil {
 		return fmt.Errorf("No encoder registered for %s and no default encoder", contentType)
 	}
 
 	// the encoderPool will handle whether or not a pool is actually in use
-	encoder := p.Get(ContextResponse(ctx))
-	if err := encoder.Encode(v); err != nil {
+	e := p.Get(resp)
+	if err := e.Encode(v); err != nil {
 		return err
 	}
-	p.Put(encoder)
+	p.Put(e)
 
 	return nil
 }
 
-// Encoder sets a specific encoder to be used for the specified content types. If an encoder is
+// Register sets a specific encoder to be used for the specified content types. If an encoder is
 // already registered, it is overwritten.
-func (service *Service) Encoder(f EncoderFunc, contentTypes ...string) {
+func (encoder *HTTPEncoder) Register(f EncoderFunc, contentTypes ...string) {
 	p := newEncodePool(f)
 	for _, contentType := range contentTypes {
 		mediaType, _, err := mime.ParseMediaType(contentType)
 		if err != nil {
 			mediaType = contentType
 		}
-		service.encoderPools[mediaType] = p
+		encoder.pools[mediaType] = p
 	}
 
 	// Rebuild a unique index of registered content encoders to be used in EncodeResponse
-	service.encodableContentTypes = make([]string, 0, len(service.encoderPools))
-	for contentType := range service.encoderPools {
-		service.encodableContentTypes = append(service.encodableContentTypes, contentType)
+	encoder.contentTypes = make([]string, 0, len(encoder.pools))
+	for contentType := range encoder.pools {
+		encoder.contentTypes = append(encoder.contentTypes, contentType)
 	}
 }
 
@@ -232,8 +242,8 @@ func (service *Service) Encoder(f EncoderFunc, contentTypes ...string) {
 // a pool.
 func newEncodePool(f EncoderFunc) *encoderPool {
 	// get a new encoder and type assert to see if it can be reset
-	encoder := f(nil)
-	re, ok := encoder.(ResettableEncoder)
+	e := f(nil)
+	re, ok := e.(ResettableEncoder)
 
 	p := &encoderPool{fn: f}
 
@@ -254,9 +264,9 @@ func (p *encoderPool) Get(w io.Writer) Encoder {
 		return p.fn(w)
 	}
 
-	encoder := p.pool.Get().(ResettableEncoder)
-	encoder.Reset(w)
-	return encoder
+	e := p.pool.Get().(ResettableEncoder)
+	e.Reset(w)
+	return e
 }
 
 // Put returns a Decoder into the pool if possible.

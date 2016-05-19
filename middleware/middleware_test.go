@@ -11,8 +11,8 @@ import (
 // Helper that sets up a "working" service
 func newService(logger goa.LogAdapter) *goa.Service {
 	service := goa.New("test")
-	service.Encoder(goa.NewJSONEncoder, "*/*")
-	service.Decoder(goa.NewJSONDecoder, "*/*")
+	service.Encoder.Register(goa.NewJSONEncoder, "*/*")
+	service.Decoder.Register(goa.NewJSONDecoder, "*/*")
 	service.WithLogger(logger)
 	return service
 }

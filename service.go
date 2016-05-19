@@ -41,12 +41,13 @@ type (
 		// Set values in the root context prior to starting the server to make these values
 		// available to all request handlers.
 		Context context.Context
+		// Request body decoder
+		Decoder *HTTPDecoder
+		// Response body encoder
+		Encoder *HTTPEncoder
 
-		middleware            []Middleware            // Middleware chain
-		cancel                context.CancelFunc      // Service context cancel signal trigger
-		decoderPools          map[string]*decoderPool // Registered decoders for the service
-		encoderPools          map[string]*encoderPool // Registered encoders for the service
-		encodableContentTypes []string                // List of contentTypes for response negotiation
+		middleware []Middleware       // Middleware chain
+		cancel     context.CancelFunc // Service context cancel signal trigger
 	}
 
 	// Controller defines the common fields and behavior of generated controllers.
@@ -88,11 +89,10 @@ func New(name string) *Service {
 			Name:    name,
 			Context: cctx,
 			Mux:     mux,
+			Decoder: NewHTTPDecoder(),
+			Encoder: NewHTTPEncoder(),
 
-			cancel:                cancel,
-			decoderPools:          map[string]*decoderPool{},
-			encoderPools:          map[string]*encoderPool{},
-			encodableContentTypes: []string{},
+			cancel: cancel,
 		}
 		notFoundHandler Handler
 	)
@@ -186,6 +186,26 @@ func (service *Service) Send(ctx context.Context, code int, body interface{}) er
 func (service *Service) ServeFiles(path, filename string) error {
 	ctrl := service.NewController("FileServer")
 	return ctrl.ServeFiles(path, filename)
+}
+
+// DecodeRequest uses the HTTP decoder to unmarshal the request body into the provided value based
+// on the request Content-Type header.
+func (service *Service) DecodeRequest(req *http.Request, v interface{}) error {
+	body, contentType := req.Body, req.Header.Get("Content-Type")
+	defer body.Close()
+
+	if err := service.Decoder.Decode(v, body, contentType); err != nil {
+		return fmt.Errorf("failed to decode request body with content type %#v: %s", contentType, err)
+	}
+
+	return nil
+}
+
+// EncodeResponse uses the HTTP encoder to marshal and write the response body based on the request
+// Accept header.
+func (service *Service) EncodeResponse(ctx context.Context, v interface{}) error {
+	accept := ContextRequest(ctx).Header.Get("Accept")
+	return service.Encoder.Encode(v, ContextResponse(ctx), accept)
 }
 
 // ServeFiles replies to the request with the contents of the named file or directory. See
