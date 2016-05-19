@@ -229,7 +229,16 @@ func {{ $test.Name }}Ctx(t *testing.T, ctx context.Context, ctrl {{ $test.Contro
 */}}{{ if $test.Payload }}{{ if $test.Payload.Validatable }}
 	err := {{ $test.Payload.Name }}.Validate()
 	if err != nil {
-		panic(err)
+		e, ok := err.(*goa.Error)
+		if !ok {
+			panic(err) //bug
+		}
+		if e.Status != {{ $test.Status }} {
+			t.Errorf("unexpected payload validation error: %+v", e)
+		}
+		{{ if $test.ReturnType }}{{ if $test.ReturnType.Pointer }}return nil{{/*
+                                     */}}{{ else }}return {{ $test.ReturnType.Type }}{}{{ end }}{{/*
+            */}}{{ else }}return{{ end }}
 	}{{ end }}{{ end }}
 	var logBuf bytes.Buffer
 	var resp interface{}
