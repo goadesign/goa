@@ -467,7 +467,7 @@ func summaryFromDefinition(action *design.ActionDefinition) string {
 			return mdata[0]
 		}
 	}
-	return ""
+	return action.Name
 }
 
 func paramsFromDefinition(params *design.AttributeDefinition, path string) ([]*Parameter, error) {
