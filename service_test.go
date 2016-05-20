@@ -142,7 +142,9 @@ var _ = Describe("Service", func() {
 				if req != nil {
 					var payload interface{}
 					err := service.DecodeRequest(req, &payload)
-					Ω(err).ShouldNot(HaveOccurred())
+					if err != nil {
+						return err
+					}
 					goa.ContextRequest(ctx).Payload = payload
 				}
 				return nil
@@ -162,7 +164,7 @@ var _ = Describe("Service", func() {
 				var err error
 				r, err = http.NewRequest("GET", "/foo", nil)
 				Ω(err).ShouldNot(HaveOccurred())
-				rw = new(TestResponseWriter)
+				rw = &TestResponseWriter{ParentHeader: make(http.Header)}
 				p = url.Values{"id": []string{"42"}, "sort": []string{"asc"}}
 			})
 
@@ -178,6 +180,29 @@ var _ = Describe("Service", func() {
 				tw := rw.(*TestResponseWriter)
 				Ω(tw.Status).Should(Equal(respStatus))
 				Ω(tw.Body).Should(Equal(respContent))
+			})
+
+			Context("with an invalid payload", func() {
+				BeforeEach(func() {
+					r.Body = ioutil.NopCloser(bytes.NewBuffer([]byte("not json")))
+					r.ContentLength = 8
+				})
+
+				It("triggers the error handler", func() {
+					Ω(rw.(*TestResponseWriter).Status).Should(Equal(400))
+					Ω(string(rw.(*TestResponseWriter).Body)).Should(ContainSubstring("failed to decode"))
+				})
+
+				Context("then a valid payload", func() {
+					It("then succeeds", func() {
+						var err error
+						r, err = http.NewRequest("GET", "/foo2", nil)
+						Ω(err).ShouldNot(HaveOccurred())
+						rw = &TestResponseWriter{ParentHeader: make(http.Header)}
+						muxHandler(rw, r, p)
+						Ω(rw.(*TestResponseWriter).Status).Should(Equal(200))
+					})
+				})
 			})
 
 			Context("and middleware", func() {
@@ -280,11 +305,15 @@ var _ = Describe("Service", func() {
 })
 
 func TErrorHandler(witness *bool) goa.Middleware {
-	m, _ := goa.NewMiddleware(func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-		*witness = true
-		return nil
-	})
-	return m
+	return func(h goa.Handler) goa.Handler {
+		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+			err := h(ctx, rw, req)
+			if err != nil {
+				*witness = true
+			}
+			return nil
+		}
+	}
 }
 
 func TMiddleware(witness *bool) goa.Middleware {
@@ -299,7 +328,7 @@ func TMiddleware(witness *bool) goa.Middleware {
 func CMiddleware(witness *int) goa.Middleware {
 	return func(h goa.Handler) goa.Handler {
 		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-			*witness += 1
+			*witness++
 			return h(ctx, rw, req)
 		}
 	}
