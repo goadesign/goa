@@ -211,13 +211,40 @@ in the design.
 
 ### 4. Document
 
-The `swagger` directory contains the entire Swagger specification in the `swagger.json` file. The
-specification can also be accessed through the service:
+The `swagger` directory contains the API Swagger specification in both YAML and JSON format.
+
+For open source projects hosted on github [swagger.goa.design](http://swagger.goa.design) provides a
+free service that renders the Swagger representation dynamically from goa design packages. Simply
+set the `url` query string with the import path to the design package. For example displaying the
+docs for `github.com/goadesign/goa-cellar/design` is done by browsing to:
+
+[http://swagger.goa.design/?url=goadesign%2Fgoa-cellar%2Fdesign]
+
+Note that the above generates the swagger spec dynamically and does not require it to be present in
+the Github repo.
+
+The Swagger JSON can also easily be served from the documented service itself using a simple
+[Files](http://goa.design/reference/goa/design/apidsl/#func-files-a-name-apidsl-files-a)
+definition in the design, for example:
+
+```go
+var _ = Resource("public", func() {
+        Origin("*", func() {
+               Methods("GET") // Allow all origins to retrieve the Swagger JSON (CORS)
+        })
+        Files("/swagger.json", "swagger/swagger.json")
+})
 ```
-$ curl localhost:8080/swagger.json
+
+The generated controller is then mounted as follows in the `main` function for example:
+
+```go
+app.MountSwaggerController(service, service.NewController("swagger"))
 ```
-For open source services hosted on github [swagger.goa.design](http://swagger.goa.design) provides
-a free service that renders the Swagger representation dynamically from goa design packages.
+
+Requests made to `/swagger.json` now return the Swagger specification. The generated controller
+also takes care of adding the proper CORS headers so that for example the JSON may be retrieved from
+anywhere e.g. via Swagger UI.
 
 ## Resources
 
