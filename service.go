@@ -287,13 +287,14 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 		}
 
 		// Handle invalid payload
+		h := handler
 		if err != nil {
 			ctx = WithError(ctx, err)
-			handler = invalidPayloadHandler
+			h = invalidPayloadHandler
 		}
 
 		// Invoke handler
-		if err := handler(ctx, ContextResponse(ctx), req); err != nil {
+		if err := h(ctx, ContextResponse(ctx), req); err != nil {
 			LogError(ctx, "uncaught error", "err", err)
 			respBody := fmt.Sprintf("Internal error: %s", err) // Sprintf catches panics
 			ctrl.Service.Send(ctx, 500, respBody)
