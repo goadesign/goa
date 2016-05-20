@@ -218,7 +218,7 @@ free service that renders the Swagger representation dynamically from goa design
 set the `url` query string with the import path to the design package. For example displaying the
 docs for `github.com/goadesign/goa-cellar/design` is done by browsing to:
 
-[http://swagger.goa.design/?url=goadesign%2Fgoa-cellar%2Fdesign]
+http://swagger.goa.design/?url=goadesign%2Fgoa-cellar%2Fdesign
 
 Note that the above generates the swagger spec dynamically and does not require it to be present in
 the Github repo.
@@ -228,7 +228,7 @@ The Swagger JSON can also easily be served from the documented service itself us
 definition in the design, for example:
 
 ```go
-var _ = Resource("public", func() {
+var _ = Resource("swagger", func() {
         Origin("*", func() {
                Methods("GET") // Allow all origins to retrieve the Swagger JSON (CORS)
         })
