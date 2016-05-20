@@ -242,9 +242,9 @@ The generated controller is then mounted as follows in the `main` function for e
 app.MountSwaggerController(service, service.NewController("swagger"))
 ```
 
-Requests made to `/swagger.json` now return the Swagger specification. The generated controller
-also takes care of adding the proper CORS headers so that for example the JSON may be retrieved from
-anywhere e.g. via Swagger UI.
+Requests made to `/swagger.json` now return the Swagger specification. The generated controller also
+takes care of adding the proper CORS headers so that the JSON may be retrieved from anywhere e.g.
+via Swagger UI.
 
 ## Resources
 
