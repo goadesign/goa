@@ -229,7 +229,16 @@ func {{ $test.Name }}Ctx(t *testing.T, ctx context.Context, ctrl {{ $test.Contro
 */}}{{ if $test.Payload }}{{ if $test.Payload.Validatable }}
 	err := {{ $test.Payload.Name }}.Validate()
 	if err != nil {
-		panic(err)
+		e, ok := err.(*goa.Error)
+		if !ok {
+			panic(err) //bug
+		}
+		if e.Status != {{ $test.Status }} {
+			t.Errorf("unexpected payload validation error: %+v", e)
+		}
+		{{ if $test.ReturnType }}{{ if $test.ReturnType.Pointer }}return nil{{/*
+                                     */}}{{ else }}return {{ $test.ReturnType.Type }}{}{{ end }}{{/*
+            */}}{{ else }}return{{ end }}
 	}{{ end }}{{ end }}
 	var logBuf bytes.Buffer
 	var resp interface{}
@@ -244,12 +253,12 @@ func {{ $test.Name }}Ctx(t *testing.T, ctx context.Context, ctrl {{ $test.Contro
 	{{ range $param := $test.Params }}prms["{{ $param.Label }}"] = []string{fmt.Sprintf("%v",{{ $param.Name}})}
 	{{ end }}
 	goaCtx := goa.NewContext(goa.WithAction(ctx, "{{ $test.ResourceName }}Test"), rw, req, prms)
-	{{ $test.ContextVarName }}, err := {{ $test.ContextType }}(goaCtx, service){{ if $test.Payload }}
-	{{ $test.ContextVarName }}.Payload = {{ $test.Payload.Name }}
-	{{ end }}
+	{{ $test.ContextVarName }}, err := {{ $test.ContextType }}(goaCtx, service)
 	if err != nil {
 		panic("invalid test data " + err.Error()) // bug
 	}
+	{{ if $test.Payload }}{{ $test.ContextVarName }}.Payload = {{ $test.Payload.Name }}{{ end }}
+
 	err = ctrl.{{ $test.ActionName}}({{ $test.ContextVarName }})
 	if err != nil {
 		t.Fatalf("controller returned %s, logs:\n%s", err, logBuf.String())
