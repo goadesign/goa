@@ -552,7 +552,7 @@ func (payload {{ gotyperef .Payload .Payload.AllRequired 0 true }}) Finalize() {
 {{ $validation := recursiveValidate .Payload.AttributeDefinition false false false "payload" "raw" 1 true }}{{ if $validation }}// Validate runs the validation rules defined in the design.
 func (payload {{ gotyperef .Payload .Payload.AllRequired 0 true }}) Validate() (err error) {
 {{ $validation }}
-	return err
+	return
 }{{ end }}
 {{ $typeName := gotypename .Payload .Payload.AllRequired 1 false }}
 // Publicize creates {{ $typeName }} from {{ $privateTypeName }}
@@ -568,7 +568,7 @@ type {{ gotypename .Payload nil 1 false }} {{ gotypedef .Payload 0 true false }}
 {{ $validation := recursiveValidate .Payload.AttributeDefinition false false false "payload" "raw" 1 false }}{{ if $validation }}// Validate runs the validation rules defined in the design.
 func (payload {{ gotyperef .Payload .Payload.AllRequired 0 false }}) Validate() (err error) {
 {{ $validation }}
-	return err
+	return
 }{{ end }}
 `
 	// ctrlT generates the controller interface for a given resource.
