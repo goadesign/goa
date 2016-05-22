@@ -217,7 +217,7 @@ func main() {
 	// Create service
 	service := goa.New({{ printf "%q" .Name }})
 
-	// Setup middleware
+	// Mount middleware
 	service.Use(middleware.RequestID())
 	service.Use(middleware.LogRequest(true))
 	service.Use(middleware.ErrorHandler(service, true))
