@@ -703,7 +703,7 @@ type {{ $typeName }} {{ gotypedef . 0 true false }}
 {{ $validation := recursiveValidate .AttributeDefinition false false false "mt" "response" 1 false }}{{ if $validation }}// Validate validates the {{$typeName}} media type instance.
 func (mt {{ gotyperef . .AllRequired 0 false }}) Validate() (err error) {
 {{ $validation }}
-	return err
+	return
 }
 {{ end }}
 `
@@ -715,7 +715,7 @@ type {{ $typeName }} {{ gotypedef . 0 true false }}
 {{ $validation := recursiveValidate .AttributeDefinition false false false "ut" "response" 1 false }}{{ if $validation }}// Validate validates the {{$typeName}} type instance.
 func (ut {{ gotyperef . .AllRequired 0 false }}) Validate() (err error) {
 {{ $validation }}
-	return err
+	return
 }{{ end }}
 `
 
@@ -745,7 +745,7 @@ type {{ $typeName }} {{ gotypedef . 0 true false }}
 {{ $validation := recursiveValidate .AttributeDefinition false false false "ut" "response" 1 false }}{{ if $validation }}// Validate validates the {{$typeName}} type instance.
 func (ut {{ gotyperef . .AllRequired 0 false }}) Validate() (err error) {
 {{ $validation }}
-	return err
+	return
 }{{ end }}
 `
 
