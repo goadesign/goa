@@ -75,6 +75,23 @@ Under this proposal the generated code would be:
 Update(ctx context.Context, resp *UpdateBottleResponse, req *UpdateBottleRequest) error
 ```
 
+### Move Errors to Response Object
+
+Consider changing the goa request handler signature from:
+
+```go
+func (context.Context, http.ResponseWriter, *http.Request) error
+```
+
+to the standard:
+
+```go
+func (context.Context, http.ResponseWriter, *http.Request)
+```
+
+And keep the error in the response struct instead. This means tweaking how error handling is done so
+tha the error handler middleware knows where to look for errors.
+
 ## Code Generation Improvements
 
 ### Generator Hooks
