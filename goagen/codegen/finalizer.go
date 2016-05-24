@@ -34,12 +34,24 @@ func init() {
 
 // RecursiveFinalizer produces Go code that sets the default values for fields recursively for the
 // given attribute.
-func RecursiveFinalizer(att *design.AttributeDefinition, target string, depth int) string {
+func RecursiveFinalizer(att *design.AttributeDefinition, target string, depth int, vs ...map[string]bool) string {
 	var assignments []string
 	if o := att.Type.ToObject(); o != nil {
 		if mt, ok := att.Type.(*design.MediaTypeDefinition); ok {
+			if len(vs) == 0 {
+				vs = []map[string]bool{make(map[string]bool)}
+			} else if _, ok := vs[0][mt.TypeName]; ok {
+				return ""
+			}
+			vs[0][mt.TypeName] = true
 			att = mt.AttributeDefinition
 		} else if ut, ok := att.Type.(*design.UserTypeDefinition); ok {
+			if len(vs) == 0 {
+				vs = []map[string]bool{make(map[string]bool)}
+			} else if _, ok := vs[0][ut.TypeName]; ok {
+				return ""
+			}
+			vs[0][ut.TypeName] = true
 			att = ut.AttributeDefinition
 		}
 		o.IterateAttributes(func(n string, catt *design.AttributeDefinition) error {
@@ -57,6 +69,7 @@ func RecursiveFinalizer(att *design.AttributeDefinition, target string, depth in
 				catt,
 				fmt.Sprintf("%s.%s", target, Goify(n, true)),
 				depth+1,
+				vs...,
 			)
 			if assignment != "" {
 				if catt.Type.IsObject() {
