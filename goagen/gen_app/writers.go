@@ -753,21 +753,19 @@ func (ut {{ gotyperef . .AllRequired 0 false }}) Validate() (err error) {
 	// template input: []*design.SecuritySchemeDefinition
 	securitySchemesT = `
 type (
-	// Private type used to store scheme info in request context
-	securitySchemeKey string
-	// Private type used to store scopes in request context
-	key int
+	// Private type used to store auth handler info in request context
+	authMiddlewareKey string
 )
 
-// Scopes context key
-const securityScopesKey key = 1
 {{ range . }}
-{{ $funcName := printf "Configure%sSecurity" (goify .SchemeName true) }}// {{ $funcName }} configures the {{ .SchemeName }} security scheme.
-// It accepts a {{ .Context }}ConfigFunc and calls it giving it the scheme definition as defined in
-// the DSL as well as a fetchScopes function object that allows retrieving the request scopes. The
-// function should return a middleware that the generated code invokes on every request.
-func {{ $funcName }}(service *goa.Service, f goa.{{ .Context }}ConfigFunc) {
-	def := &goa.{{ .Context }}{
+{{ $funcName := printf "Use%s" (goify .SchemeName true) }}// {{ $funcName }} mounts the {{ .SchemeName }} auth middleware onto the service.
+func {{ $funcName }}(service *goa.Service, middleware goa.Middleware) {
+	service.Context = context.WithValue(service.Context, authMiddlewareKey({{ printf "%q" .SchemeName }}), middleware)
+}
+
+{{ $funcName := printf "New%sSecurity" (goify .SchemeName true) }}// {{ $funcName }} creates a {{ .SchemeName }} security definition.
+func {{ $funcName }}() *goa.{{ .Context }} {
+	def := goa.{{ .Context }}{
 {{ if eq .Context "APIKeySecurity" }}{{/*
 */}}		In:   {{ if eq .In "header" }}goa.LocHeader{{ else }}goa.LocQuery{{ end }},
 		Name: {{ printf "%q" .Name }},
@@ -791,34 +789,19 @@ func {{ $funcName }}(service *goa.Service, f goa.{{ .Context }}ConfigFunc) {
 {{ end }}{{/*
 */}}	}{{ if .Description }}
 	def.Description = {{ printf "%q" .Description }}
-{{ end }}{{/*
-*/}}{{ if or (eq .Context "JWTSecurity") (eq .Context "OAuth2Security") }}
-	fetchScopes := func(ctx context.Context) []string {
-		scopes, _ := ctx.Value(securityScopesKey).([]string)
-		return scopes
-	}
-	middleware := f(def, fetchScopes)
-{{ else }}
-	middleware := f(def)
-{{ end }}{{/*
-*/}}	service.Context = context.WithValue(service.Context, securitySchemeKey({{ printf "%q" .SchemeName }}), middleware)
+{{ end }}	return &def
 }
 
-{{ end }}// handleSecurity creates a goa request handler that takes care of executing the security middleware
-// registered via the ConfigureXXXSecurity functions.
+{{ end }}// handleSecurity creates a handler that runs the auth middleware for the security scheme.
 func handleSecurity(schemeName string, h goa.Handler, scopes ...string) goa.Handler {
 	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-		scheme := ctx.Value(securitySchemeKey(schemeName))
-		middleware, ok := scheme.(goa.Middleware)
+		scheme := ctx.Value(authMiddlewareKey(schemeName))
+		am, ok := scheme.(goa.Middleware)
 		if !ok {
-			return goa.NoSecurityScheme(schemeName)
+			return goa.NoAuthMiddleware(schemeName)
 		}
-
-		if len(scopes) != 0 {
-			ctx = context.WithValue(ctx, securityScopesKey, scopes)
-		}
-
-		return middleware(h)(ctx, rw, req)
+		ctx = goa.WithRequiredScopes(ctx, scopes)
+		return am(h)(ctx, rw, req)
 	}
 }
 `
