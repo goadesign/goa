@@ -129,6 +129,7 @@ func goTypeDefObject(actual design.Object, def *design.AttributeDefinition, tabs
 		}
 		desc := actual[name].Description
 		if desc != "" {
+			desc = strings.Replace(desc, "\n", "\n\t// ", -1)
 			desc = fmt.Sprintf("// %s\n\t", desc)
 		}
 		buffer.WriteString(fmt.Sprintf("%s%s %s%s\n", desc, fname, typedef, tags))
