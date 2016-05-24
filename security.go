@@ -12,6 +12,21 @@ const LocHeader Location = "header"
 // LocQuery indicates the secret value should be loaded from the request URL querystring.
 const LocQuery Location = "query"
 
+// ContextRequiredScopes extracts the security scopes from the given context.
+// This should be used in auth handlers to validate that the required scopes are present in the
+// JWT or OAuth2 token.
+func ContextRequiredScopes(ctx context.Context) []string {
+	if s := ctx.Value(securityScopesKey); s != nil {
+		return s.([]string)
+	}
+	return nil
+}
+
+// WithRequiredScopes builds a context containing the given required scopes.
+func WithRequiredScopes(ctx context.Context, scopes []string) context.Context {
+	return context.WithValue(ctx, securityScopesKey, scopes)
+}
+
 // OAuth2Security represents the `oauth2` security scheme. It is instantiated by the generated code
 // accordingly to the use of the different `*Security()` DSL functions and `Security()` in the
 // design.
@@ -28,21 +43,12 @@ type OAuth2Security struct {
 	Scopes map[string]string
 }
 
-// OAuth2SecurityConfigFunc is the callback given to the generated security configuration function
-// in charge of setting up the security scheme.
-// The `goa/middleware/security` middlewares provides standard implementations for the callback.
-type OAuth2SecurityConfigFunc func(scheme *OAuth2Security, getScopes func(context.Context) []string) Middleware
-
 // BasicAuthSecurity represents the `Basic` security scheme, which consists of a simple login/pass,
 // accessible through Request.BasicAuth().
 type BasicAuthSecurity struct {
 	// Description of the security scheme
 	Description string
 }
-
-// BasicAuthSecurityConfigFunc is the callback given to the generated security configuration
-// function in charge of setting up the security scheme.
-type BasicAuthSecurityConfigFunc func(scheme *BasicAuthSecurity) Middleware
 
 // APIKeySecurity represents the `apiKey` security scheme. It handles a key that can be in the
 // headers or in the query parameters, and does authentication based on that.  The Name field
@@ -55,10 +61,6 @@ type APIKeySecurity struct {
 	// Name is the name of the `header` or `query` parameter to check for data.
 	Name string
 }
-
-// APIKeySecurityConfigFunc is the callback given to the generated security configuration function
-// in charge of setting up the security scheme.
-type APIKeySecurityConfigFunc func(scheme *APIKeySecurity) Middleware
 
 // JWTSecurity represents an api key based scheme, with support for scopes and a token URL.
 type JWTSecurity struct {
@@ -73,8 +75,3 @@ type JWTSecurity struct {
 	// Scopes defines a list of scopes for the security scheme, along with their description.
 	Scopes map[string]string
 }
-
-// JWTSecurityConfigFunc is the callback given to the generated security configuration function in
-// charge of setting up the security scheme.
-// The `goa/middleware/security` middlewares provides standard implementations of the callback.
-type JWTSecurityConfigFunc func(scheme *JWTSecurity, getScopes func(context.Context) []string) Middleware

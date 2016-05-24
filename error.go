@@ -44,9 +44,9 @@ var (
 	// MaxRequestBodyLength bytes.
 	ErrRequestBodyTooLarge = NewErrorClass("request_too_large", 413)
 
-	// ErrNoSecurityScheme is the error produced when no security scheme has been registered
-	// for a name defined in the design.
-	ErrNoSecurityScheme = NewErrorClass("no_security_scheme", 500)
+	// ErrNoAuthMiddleware is the error produced when no auth middleware is mounted for a
+	// security scheme defined in the design.
+	ErrNoAuthMiddleware = NewErrorClass("no_auth_middleware", 500)
 
 	// ErrInvalidFile is the error produced by ServeFiles when requested to serve non-existant
 	// or non-readable files.
@@ -169,10 +169,10 @@ func InvalidLengthError(ctx string, target interface{}, ln, value int, min bool)
 	return ErrInvalidRequest("length of %s must be %s than %d but got value %#v (len=%d)", ctx, comp, value, target, ln)
 }
 
-// NoSecurityScheme is the error produced when goa is unable to lookup a security scheme defined in
-// the design.
-func NoSecurityScheme(schemeName string) *Error {
-	return ErrNoSecurityScheme("security scheme %s is not configured", schemeName)
+// NoAuthMiddleware is the error produced when goa is unable to lookup a auth middleware for a
+// security scheme defined in the design.
+func NoAuthMiddleware(schemeName string) *Error {
+	return ErrNoAuthMiddleware("Auth middleware for security scheme %s is not mounted", schemeName)
 }
 
 // Error returns the error occurrence details.
