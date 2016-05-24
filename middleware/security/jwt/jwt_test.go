@@ -18,7 +18,6 @@ var _ = Describe("Middleware", func() {
 	var respRecord *httptest.ResponseRecorder
 	var request *http.Request
 	var handler goa.Handler
-	var configFunc func(*goa.JWTSecurity, func(context.Context) []string) goa.Middleware
 	var scopesFetcher func(context.Context) []string
 	var middleware goa.Middleware
 	var requiredScopes []string
@@ -45,7 +44,6 @@ var _ = Describe("Middleware", func() {
 	})
 
 	JustBeforeEach(func() {
-		middleware = configFunc(securityScheme, scopesFetcher)
 		dispatchResult = middleware(handler)(context.Background(), respRecord, request)
 	})
 
@@ -58,7 +56,7 @@ var _ = Describe("Middleware", func() {
 
 		Context("with a single key", func() {
 			BeforeEach(func() {
-				configFunc = jwt.New("keys", nil)
+				middleware = jwt.New("keys", nil, securityScheme)
 			})
 
 			It("should go through", func() {
@@ -69,7 +67,7 @@ var _ = Describe("Middleware", func() {
 
 		Context("with keys that didn't the JWT", func() {
 			BeforeEach(func() {
-				configFunc = jwt.New("otherkey", nil)
+				middleware = jwt.New("otherkey", nil, securityScheme)
 			})
 
 			It("should fail with an error", func() {
@@ -80,7 +78,7 @@ var _ = Describe("Middleware", func() {
 
 		Context("with multiple keys", func() {
 			BeforeEach(func() {
-				configFunc = jwt.New([]string{"firstkey", "keys"}, nil)
+				middleware = jwt.New([]string{"firstkey", "keys"}, nil, securityScheme)
 			})
 
 			It("should go through", func() {
@@ -98,7 +96,7 @@ var _ = Describe("Middleware", func() {
 
 		Context("with a single key", func() {
 			BeforeEach(func() {
-				configFunc = jwt.New(rsaPubKey1, nil)
+				middleware = jwt.New(rsaPubKey1, nil, securityScheme)
 			})
 
 			It("should go through", func() {
@@ -109,7 +107,7 @@ var _ = Describe("Middleware", func() {
 
 		Context("with keys that didn't the JWT", func() {
 			BeforeEach(func() {
-				configFunc = jwt.New(rsaPubKey2, nil)
+				middleware = jwt.New(rsaPubKey2, nil, securityScheme)
 			})
 
 			It("should fail with an error", func() {
@@ -120,7 +118,7 @@ var _ = Describe("Middleware", func() {
 
 		Context("with multiple keys", func() {
 			BeforeEach(func() {
-				configFunc = jwt.New([]*rsa.PublicKey{rsaPubKey1}, nil)
+				middleware = jwt.New([]*rsa.PublicKey{rsaPubKey1}, nil, securityScheme)
 			})
 
 			It("should go through", func() {

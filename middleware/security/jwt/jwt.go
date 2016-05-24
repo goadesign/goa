@@ -46,83 +46,84 @@ import (
 //            return jwt.ErrJWTError.Errorf("you are not uncle ben's")
 //        }
 //    })
-//    app.MyJWTSecurity.Use(jwt.New("secret", validationHandler))
 //
-func New(validationKeys interface{}, validationFunc goa.Middleware) goa.JWTSecurityConfigFunc {
-	return func(scheme *goa.JWTSecurity, getScopes func(context.Context) []string) goa.Middleware {
-		var algo string
-		var rsaKeys []*rsa.PublicKey
-		var hmacKeys []string
+// Mount the middleware with the generated UseXX function where XX is the name of the scheme as
+// defined in the design, e.g.:
+//
+//    app.UseJWT(jwt.New("secret", validationHandler, app.NewJWTSecurity()))
+//
+func New(validationKeys interface{}, validationFunc goa.Middleware, scheme *goa.JWTSecurity) goa.Middleware {
+	var algo string
+	var rsaKeys []*rsa.PublicKey
+	var hmacKeys []string
 
-		switch keys := validationKeys.(type) {
-		case []*rsa.PublicKey:
-			rsaKeys = keys
-			algo = "RS"
-		case *rsa.PublicKey:
-			rsaKeys = []*rsa.PublicKey{keys}
-			algo = "RS"
-		case string:
-			hmacKeys = []string{keys}
-			algo = "HS"
-		case []string:
-			hmacKeys = keys
-			algo = "HS"
-		default:
-			panic("invalid parameter to `jwt.New()`, only accepts *rsa.publicKey, []*rsa.PublicKey (for RSA-based algorithms) or a signing secret string (for HS algorithms)")
-		}
+	switch keys := validationKeys.(type) {
+	case []*rsa.PublicKey:
+		rsaKeys = keys
+		algo = "RS"
+	case *rsa.PublicKey:
+		rsaKeys = []*rsa.PublicKey{keys}
+		algo = "RS"
+	case string:
+		hmacKeys = []string{keys}
+		algo = "HS"
+	case []string:
+		hmacKeys = keys
+		algo = "HS"
+	default:
+		panic("invalid parameter to `jwt.New()`, only accepts *rsa.publicKey, []*rsa.PublicKey (for RSA-based algorithms) or a signing secret string (for HS algorithms)")
+	}
 
-		return func(nextHandler goa.Handler) goa.Handler {
-			return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-				// TODO: implement the QUERY string handler too
-				if scheme.In != goa.LocHeader {
-					return fmt.Errorf("whoops, security scheme with in = %q not supported", scheme.In)
-				}
-
-				val := req.Header.Get(scheme.Name)
-				if val == "" {
-					return ErrJWTError("missing header %q", scheme.Name)
-				}
-
-				if !strings.HasPrefix(strings.ToLower(val), "bearer ") {
-					return ErrJWTError("invalid or malformed %q header, expected 'Authorization: Bearer JWT-token...'", val)
-				}
-
-				incomingToken := strings.Split(val, " ")[1]
-
-				var token *jwt.Token
-				var err error
-				switch algo {
-				case "RS":
-					token, err = validateRSAKeys(rsaKeys, algo, incomingToken)
-				case "HS":
-					token, err = validateHMACKeys(hmacKeys, algo, incomingToken)
-				default:
-					panic("how did this happen ? unsupported algo in jwt middleware")
-				}
-				if err != nil {
-					return ErrJWTError("JWT validation failed")
-				}
-
-				scopesInClaim, scopesInClaimList, err := parseClaimScopes(token)
-				if err != nil {
-					goa.LogError(ctx, err.Error())
-					return ErrJWTError(err)
-				}
-
-				requiredScopes := getScopes(ctx)
-
-				for _, scope := range requiredScopes {
-					if !scopesInClaim[scope] {
-						return ErrJWTError("authorization failed: required 'scopes' not present in JWT claim").Meta("required_scopes", requiredScopes, "scopes_in_claim", scopesInClaimList)
-					}
-				}
-
-				ctx = context.WithValue(ctx, jwtKey, token)
-				if validationFunc != nil {
-					nextHandler = validationFunc(nextHandler)
-				}
-				return nextHandler(ctx, rw, req)
+	return func(nextHandler goa.Handler) goa.Handler {
+		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+			// TODO: implement the QUERY string handler too
+			if scheme.In != goa.LocHeader {
+				return fmt.Errorf("whoops, security scheme with location (in) %q not supported", scheme.In)
 			}
+			val := req.Header.Get(scheme.Name)
+			if val == "" {
+				return ErrJWTError("missing header %q", scheme.Name)
+			}
+
+			if !strings.HasPrefix(strings.ToLower(val), "bearer ") {
+				return ErrJWTError("invalid or malformed %q header, expected 'Authorization: Bearer JWT-token...'", val)
+			}
+
+			incomingToken := strings.Split(val, " ")[1]
+
+			var token *jwt.Token
+			var err error
+			switch algo {
+			case "RS":
+				token, err = validateRSAKeys(rsaKeys, algo, incomingToken)
+			case "HS":
+				token, err = validateHMACKeys(hmacKeys, algo, incomingToken)
+			default:
+				panic("how did this happen ? unsupported algo in jwt middleware")
+			}
+			if err != nil {
+				return ErrJWTError("JWT validation failed")
+			}
+
+			scopesInClaim, scopesInClaimList, err := parseClaimScopes(token)
+			if err != nil {
+				goa.LogError(ctx, err.Error())
+				return ErrJWTError(err)
+			}
+
+			requiredScopes := goa.ContextRequiredScopes(ctx)
+
+			for _, scope := range requiredScopes {
+				if !scopesInClaim[scope] {
+					return ErrJWTError("authorization failed: required 'scopes' not present in JWT claim").Meta("required_scopes", requiredScopes, "scopes_in_claim", scopesInClaimList)
+				}
+			}
+
+			ctx = context.WithValue(ctx, jwtKey, token)
+			if validationFunc != nil {
+				nextHandler = validationFunc(nextHandler)
+			}
+			return nextHandler(ctx, rw, req)
 		}
 	}
 }
