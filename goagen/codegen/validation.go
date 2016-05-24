@@ -59,30 +59,34 @@ func init() {
 func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDefault bool, target, context string, depth int, private bool) string {
 	var checks []string
 	if o := att.Type.ToObject(); o != nil {
-		if mt, ok := att.Type.(*design.MediaTypeDefinition); ok {
-			att = mt.AttributeDefinition
-		} else if ut, ok := att.Type.(*design.UserTypeDefinition); ok {
-			att = ut.AttributeDefinition
+		if ds, ok := att.Type.(design.DataStructure); ok {
+			att = ds.Definition()
 		}
 		validation := ValidationChecker(att, nonzero, required, hasDefault, target, context, depth, private)
 		if validation != "" {
 			checks = append(checks, validation)
 		}
 		o.IterateAttributes(func(n string, catt *design.AttributeDefinition) error {
-			actualDepth := depth
-			if catt.Type.IsObject() {
-				actualDepth = depth + 1
-			}
-			validation := RecursiveChecker(
-				catt,
-				att.IsNonZero(n),
-				att.IsRequired(n),
-				att.HasDefaultValue(n),
-				fmt.Sprintf("%s.%s", target, Goify(n, true)),
-				fmt.Sprintf("%s.%s", context, n),
-				actualDepth,
-				private,
+			var (
+				dp  = depth
+				nz  = att.IsNonZero(n)
+				req = att.IsRequired(n)
+				def = att.HasDefaultValue(n)
+				tgt = fmt.Sprintf("%s.%s", target, Goify(n, true))
+				ctx = fmt.Sprintf("%s.%s", context, n)
+
+				validation string
 			)
+			if _, ok := catt.Type.(design.DataStructure); ok {
+				// Avoid potential infinite recursion if type has attribute whose
+				// type is itself.
+				validation = ValidationChecker(catt, nz, req, def, tgt, ctx, dp, private)
+			} else {
+				if catt.Type.IsObject() {
+					dp++
+				}
+				validation = RecursiveChecker(catt, nz, req, def, tgt, ctx, dp, private)
+			}
 			if validation != "" {
 				if catt.Type.IsObject() {
 					validation = fmt.Sprintf("%sif %s.%s != nil {\n%s\n%s}",

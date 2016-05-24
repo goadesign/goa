@@ -49,11 +49,8 @@ func init() {
 func RecursivePublicizer(att *design.AttributeDefinition, source, target string, depth int) string {
 	var publications []string
 	if o := att.Type.ToObject(); o != nil {
-		if mt, ok := att.Type.(*design.MediaTypeDefinition); ok {
-			// Hmm media types should never get here
-			att = mt.AttributeDefinition
-		} else if ut, ok := att.Type.(*design.UserTypeDefinition); ok {
-			att = ut.AttributeDefinition
+		if ds, ok := att.Type.(design.DataStructure); ok {
+			att = ds.Definition()
 		}
 		o.IterateAttributes(func(n string, catt *design.AttributeDefinition) error {
 			publication := Publicizer(
