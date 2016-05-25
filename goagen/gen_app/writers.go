@@ -787,8 +787,8 @@ func {{ $funcName }}() *goa.{{ .Context }} {
 {{ end }}{{/*
 */}}		},{{ end }}
 {{ end }}{{/*
-*/}}	}{{ if .Description }}
-	def.Description = {{ printf "%q" .Description }}
+*/}}	}
+{{ if .Description }} def.Description = {{ printf "%q" .Description }}
 {{ end }}	return &def
 }
 
