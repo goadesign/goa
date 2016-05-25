@@ -271,3 +271,96 @@ var _ = Describe("MediaTypeDefinition", func() {
 		})
 	})
 })
+
+var _ = Describe("Walk", func() {
+	var target DataStructure
+	var matchedName string
+	var count int
+	var matched bool
+
+	counter := func(*AttributeDefinition) {
+		count++
+	}
+
+	matcher := func(name string) func(*AttributeDefinition) {
+		return func(att *AttributeDefinition) {
+			if u, ok := att.Type.(*UserTypeDefinition); ok {
+				if u.TypeName == name {
+					matched = true
+				}
+			} else if m, ok := att.Type.(*MediaTypeDefinition); ok {
+				if m.TypeName == name {
+					matched = true
+				}
+			}
+		}
+	}
+
+	BeforeEach(func() {
+		matchedName = ""
+		count = 0
+		matched = false
+	})
+
+	JustBeforeEach(func() {
+		target.Walk(counter)
+		if matchedName != "" {
+			target.Walk(matcher(matchedName))
+		}
+	})
+
+	Context("with simple attribute", func() {
+		BeforeEach(func() {
+			target = &AttributeDefinition{Type: String}
+		})
+
+		It("walks it", func() {
+			Ω(count).Should(Equal(1))
+		})
+	})
+
+	Context("with an object attribute", func() {
+		BeforeEach(func() {
+			o := Object{"foo": &AttributeDefinition{Type: String}}
+			target = &AttributeDefinition{Type: o}
+		})
+
+		It("walks it", func() {
+			Ω(count).Should(Equal(2))
+		})
+	})
+
+	Context("with an object attribute containing user types", func() {
+		const typeName = "foo"
+		BeforeEach(func() {
+			matchedName = typeName
+			at := &AttributeDefinition{Type: String}
+			ut := &UserTypeDefinition{AttributeDefinition: at, TypeName: typeName}
+			o := Object{"foo": &AttributeDefinition{Type: ut}}
+			target = &AttributeDefinition{Type: o}
+		})
+
+		It("walks it", func() {
+			Ω(count).Should(Equal(3))
+			Ω(matched).Should(BeTrue())
+		})
+	})
+
+	Context("with an object attribute containing recursive user types", func() {
+		const typeName = "foo"
+		BeforeEach(func() {
+			matchedName = typeName
+			co := Object{}
+			at := &AttributeDefinition{Type: co}
+			ut := &UserTypeDefinition{AttributeDefinition: at, TypeName: typeName}
+			co["recurse"] = &AttributeDefinition{Type: ut}
+			o := Object{"foo": &AttributeDefinition{Type: ut}}
+			target = &AttributeDefinition{Type: o}
+		})
+
+		It("walks it", func() {
+			Ω(count).Should(Equal(4))
+			Ω(matched).Should(BeTrue())
+		})
+	})
+})

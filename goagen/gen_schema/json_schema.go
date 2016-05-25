@@ -395,10 +395,10 @@ func (s *JSONSchema) Dup() *JSONSchema {
 
 // buildAttributeSchema initializes the given JSON schema that corresponds to the given attribute.
 func buildAttributeSchema(api *design.APIDefinition, s *JSONSchema, at *design.AttributeDefinition) *JSONSchema {
-	if ds, ok := at.Type.(design.DataStructure); ok {
-		buildAttributeSchema(api, s, ds.Definition())
-	} else {
-		s.Merge(TypeSchema(api, at.Type))
+	s.Merge(TypeSchema(api, at.Type))
+	if s.Ref != "" {
+		// Ref is exclusive with other fields
+		return s
 	}
 	s.DefaultValue = toStringMap(at.DefaultValue)
 	s.Description = at.Description
