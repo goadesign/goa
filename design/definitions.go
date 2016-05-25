@@ -1435,16 +1435,6 @@ func (a *ActionDefinition) Finalize() {
 	if a.Security != nil && a.Security.Scheme.Kind == NoSecurityKind {
 		a.Security = nil
 	}
-
-	// Inherit responses
-	merged := make(map[string]*ResponseDefinition, len(a.Responses)+len(Design.Responses))
-	for n, r := range Design.Responses {
-		merged[n] = r
-	}
-	for n, r := range a.Responses {
-		merged[n] = r
-	}
-	a.Responses = merged
 }
 
 // UserTypes returns all the user types used by the action payload and parameters.
