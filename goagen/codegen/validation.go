@@ -73,14 +73,12 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDef
 		o.IterateAttributes(func(n string, catt *design.AttributeDefinition) error {
 			var validation string
 			if ds, ok := catt.Type.(design.DataStructure); ok {
-				hasValidations := catt.Validation != nil
-				if !hasValidations {
-					ds.Walk(func(a *design.AttributeDefinition) {
-						if att.Validation != nil {
-							hasValidations = true
-						}
-					})
-				}
+				hasValidations := false
+				ds.Walk(func(a *design.AttributeDefinition) {
+					if a.Validation != nil {
+						hasValidations = true
+					}
+				})
 				if hasValidations {
 					validation = RunTemplate(
 						userValT,
