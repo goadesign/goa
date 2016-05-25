@@ -11,6 +11,7 @@ import (
 
 var (
 	arrayValT    *template.Template
+	userValT     *template.Template
 	enumValT     *template.Template
 	formatValT   *template.Template
 	patternValT  *template.Template
@@ -32,6 +33,9 @@ func init() {
 		"recursiveChecker": RecursiveChecker,
 	}
 	if arrayValT, err = template.New("array").Funcs(fm).Parse(arrayValTmpl); err != nil {
+		panic(err)
+	}
+	if userValT, err = template.New("user").Funcs(fm).Parse(userValTmpl); err != nil {
 		panic(err)
 	}
 	if enumValT, err = template.New("enum").Funcs(fm).Parse(enumValTmpl); err != nil {
@@ -67,25 +71,40 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDef
 			checks = append(checks, validation)
 		}
 		o.IterateAttributes(func(n string, catt *design.AttributeDefinition) error {
-			var (
-				dp  = depth
-				nz  = att.IsNonZero(n)
-				req = att.IsRequired(n)
-				def = att.HasDefaultValue(n)
-				tgt = fmt.Sprintf("%s.%s", target, Goify(n, true))
-				ctx = fmt.Sprintf("%s.%s", context, n)
-
-				validation string
-			)
-			if _, ok := catt.Type.(design.DataStructure); ok {
-				// Avoid potential infinite recursion if type has attribute whose
-				// type is itself.
-				validation = ValidationChecker(catt, nz, req, def, tgt, ctx, dp, private)
+			var validation string
+			if ds, ok := catt.Type.(design.DataStructure); ok {
+				hasValidations := catt.Validation != nil
+				if !hasValidations {
+					ds.Walk(func(a *design.AttributeDefinition) {
+						if att.Validation != nil {
+							hasValidations = true
+						}
+					})
+				}
+				if hasValidations {
+					validation = RunTemplate(
+						userValT,
+						map[string]interface{}{
+							"depth":  depth,
+							"target": fmt.Sprintf("%s.%s", target, Goify(n, true)),
+						},
+					)
+				}
 			} else {
+				dp := depth
 				if catt.Type.IsObject() {
 					dp++
 				}
-				validation = RecursiveChecker(catt, nz, req, def, tgt, ctx, dp, private)
+				validation = RecursiveChecker(
+					catt,
+					att.IsNonZero(n),
+					att.IsRequired(n),
+					att.HasDefaultValue(n),
+					fmt.Sprintf("%s.%s", target, Goify(n, true)),
+					fmt.Sprintf("%s.%s", context, n),
+					dp,
+					private,
+				)
 			}
 			if validation != "" {
 				if catt.Type.IsObject() {
@@ -254,6 +273,10 @@ const (
 */}}{{if $validation}}{{tabs .depth}}for _, e := range {{.target}} {
 {{$validation}}
 {{tabs .depth}}}{{end}}`
+
+	userValTmpl = `{{tabs .depth}}if err2 := {{.target}}.Validate(); err2 != nil {
+{{tabs .depth}}	err = goa.MergeErrors(err, err2)
+{{tabs .depth}}}`
 
 	enumValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
 */}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {

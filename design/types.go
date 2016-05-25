@@ -67,6 +67,11 @@ type (
 	DataStructure interface {
 		// Definition returns the data structure definition.
 		Definition() *AttributeDefinition
+		// Walk traverses the data structure recursively and calls the given function once
+		// on each attribute starting with the attribute returned by Definition.
+		// User type and media type attributes are traversed once even for recursive
+		// definitions to avoid infinite recursion.
+		Walk(func(*AttributeDefinition))
 	}
 
 	// Primitive is the type for null, boolean, integer, number, string, and time.
@@ -524,6 +529,15 @@ func (o Object) IterateAttributes(it AttributeIterator) error {
 // UserTypes traverses the data type recursively and collects all the user types used to
 // define it. The returned map is indexed by type name.
 func UserTypes(dt DataType) map[string]*UserTypeDefinition {
+	collect := func(types map[string]*UserTypeDefinition) func(*AttributeDefinition) {
+		return func(at *AttributeDefinition) {
+			if u, ok := at.Type.(*UserTypeDefinition); ok {
+				types[u.TypeName] = u
+			} else if m, ok := at.Type.(*MediaTypeDefinition); ok {
+				types[m.TypeName] = m.UserTypeDefinition
+			}
+		}
+	}
 	switch actual := dt.(type) {
 	case Primitive:
 		return nil
@@ -533,7 +547,7 @@ func UserTypes(dt DataType) map[string]*UserTypeDefinition {
 		ktypes := UserTypes(actual.KeyType.Type)
 		vtypes := UserTypes(actual.ElemType.Type)
 		if vtypes == nil {
-			vtypes = make(map[string]*UserTypeDefinition)
+			return ktypes
 		}
 		for n, ut := range ktypes {
 			vtypes[n] = ut
@@ -541,49 +555,23 @@ func UserTypes(dt DataType) map[string]*UserTypeDefinition {
 		return vtypes
 	case Object:
 		types := make(map[string]*UserTypeDefinition)
-		recurseUT(actual, types)
+		for _, att := range actual {
+			att.Walk(collect(types))
+		}
 		if len(types) == 0 {
 			return nil
 		}
 		return types
 	case *UserTypeDefinition:
 		types := map[string]*UserTypeDefinition{actual.TypeName: actual}
-		for n, ut := range UserTypes(actual.Type) {
-			types[n] = ut
-		}
+		actual.Walk(collect(types))
 		return types
 	case *MediaTypeDefinition:
 		types := map[string]*UserTypeDefinition{actual.TypeName: actual.UserTypeDefinition}
-		for n, ut := range UserTypes(actual.Type) {
-			types[n] = ut
-		}
+		actual.Walk(collect(types))
 		return types
 	default:
 		panic("unknown type") // bug
-	}
-}
-
-// (recursive) implementation of UserTypes.
-func recurseUT(o Object, types map[string]*UserTypeDefinition) {
-	for _, att := range o {
-		ut, ok := att.Type.(*UserTypeDefinition)
-		if !ok {
-			if mt, ok := att.Type.(*MediaTypeDefinition); ok {
-				ut = mt.UserTypeDefinition
-			}
-		}
-		seen := false
-		if ut != nil {
-			_, seen = types[ut.TypeName]
-			if !seen {
-				types[ut.TypeName] = ut
-			}
-		}
-		if !seen {
-			for n, ut := range UserTypes(att.Type) {
-				types[n] = ut
-			}
-		}
 	}
 }
 
@@ -813,11 +801,12 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 				if !ok {
 					return nil, nil, fmt.Errorf("unknown attribute %#v used in links", n)
 				}
-				vl, _, err := mtAtt.Type.(*MediaTypeDefinition).Project(linkView)
+				mtt := mtAtt.Type.(*MediaTypeDefinition)
+				vl, _, err := mtt.Project(linkView)
 				if err != nil {
 					return nil, nil, err
 				}
-				linkObj[n] = &AttributeDefinition{Type: vl}
+				linkObj[n] = &AttributeDefinition{Type: vl, Validation: mtt.Validation}
 			}
 			lTypeName := fmt.Sprintf("%sLinks", m.TypeName)
 			links = &UserTypeDefinition{
@@ -888,6 +877,50 @@ func (m *MediaTypeDefinition) projectCollection(view string) (p *MediaTypeDefini
 // MediaTypeDefinition.
 func (a *AttributeDefinition) Definition() *AttributeDefinition {
 	return a
+}
+
+// Walk traverses the data structure recursively and calls the given function once
+// on each attribute starting with the attribute returned by Definition.
+func (a *AttributeDefinition) Walk(walker func(*AttributeDefinition)) {
+	walk(a, walker, make(map[string]bool))
+}
+
+// Walk traverses the data structure recursively and calls the given function once
+// on each attribute starting with the attribute returned by Definition.
+func (u *UserTypeDefinition) Walk(walker func(*AttributeDefinition)) {
+	walk(u.AttributeDefinition, walker, map[string]bool{u.TypeName: true})
+}
+
+// Recursive implementation of the Walk methods. Takes care of avoiding infinite recursions by
+// keeping track of types that have already been walked.
+func walk(at *AttributeDefinition, walker func(*AttributeDefinition), seen map[string]bool) {
+	walker(at)
+	walkUt := func(ut *UserTypeDefinition) {
+		if _, ok := seen[ut.TypeName]; ok {
+			return
+		}
+		seen[ut.TypeName] = true
+		walk(ut.AttributeDefinition, walker, seen)
+	}
+	switch actual := at.Type.(type) {
+	case Primitive:
+		return
+	case *Array:
+		walk(actual.ElemType, walker, seen)
+	case *Hash:
+		walk(actual.KeyType, walker, seen)
+		walk(actual.ElemType, walker, seen)
+	case Object:
+		for _, cat := range actual {
+			walk(cat, walker, seen)
+		}
+	case *UserTypeDefinition:
+		walkUt(actual)
+	case *MediaTypeDefinition:
+		walkUt(actual.UserTypeDefinition)
+	default:
+		panic("unknown attribute type") // bug
+	}
 }
 
 // toReflectType converts the DataType to reflect.Type.
