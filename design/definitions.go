@@ -831,26 +831,42 @@ func (r *ResourceDefinition) Finalize() {
 			}
 		}
 		// 2. Create implicit action parameters for path wildcards that dont' have one
-		for _, r := range a.Routes {
-			wcs := ExtractWildcards(r.FullPath())
-			for _, wc := range wcs {
+		for _, ro := range a.Routes {
+			for _, wc := range ro.Params() {
 				found := false
-				var o Object
-				if all := a.Params; all != nil {
-					o = all.Type.ToObject()
-				} else {
-					o = Object{}
-					a.Params = &AttributeDefinition{Type: o}
-				}
-				for n := range o {
-					if n == wc {
-						found = true
-						break
+				search := func(params *AttributeDefinition) {
+					if params == nil {
+						return
+					}
+					for n, att := range params.Type.ToObject() {
+						if n == wc {
+							if a.Params == nil {
+								a.Params = &AttributeDefinition{Type: Object{}}
+							}
+							a.Params.Type.ToObject()[wc] = att
+							found = true
+							break
+						}
 					}
 				}
-				if !found {
-					o[wc] = &AttributeDefinition{Type: String}
+				search(a.Params)
+				parent := r
+				for !found && parent != nil {
+					bp := parent.BaseParams
+					parent = parent.Parent()
+					search(bp)
 				}
+				if found {
+					continue
+				}
+				search(Design.BaseParams)
+				if found {
+					continue
+				}
+				if a.Params == nil {
+					a.Params = &AttributeDefinition{Type: Object{}}
+				}
+				a.Params.Type.ToObject()[wc] = &AttributeDefinition{Type: String}
 			}
 		}
 		// 3. Compute QueryParams from Params and set all path params as non zero attributes
