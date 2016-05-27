@@ -183,9 +183,18 @@ func joinNames(atts ...*design.AttributeDefinition) string {
 			continue
 		}
 		obj := att.Type.ToObject()
-		var names []string
-		var optNames []string
-		for n, a := range obj {
+		var names, optNames []string
+
+		keys := make([]string, len(obj))
+		i := 0
+		for n := range obj {
+			keys[i] = n
+			i++
+		}
+		sort.Strings(keys)
+
+		for _, n := range keys {
+			a := obj[n]
 			field := fmt.Sprintf("cmd.%s", codegen.Goify(n, true))
 			if !a.Type.IsArray() && !att.IsRequired(n) && !att.IsNonZero(n) {
 				field = "&" + field
@@ -196,14 +205,8 @@ func joinNames(atts ...*design.AttributeDefinition) string {
 				optNames = append(optNames, field)
 			}
 		}
-		if len(names) > 0 {
-			sort.Strings(names)
-			elems = append(elems, names...)
-		}
-		if len(optNames) > 0 {
-			sort.Strings(optNames)
-			elems = append(elems, optNames...)
-		}
+		elems = append(elems, names...)
+		elems = append(elems, optNames...)
 	}
 	return strings.Join(elems, ", ")
 }

@@ -878,10 +878,17 @@ func (r *ResourceDefinition) Finalize() {
 				for _, pname := range pnames {
 					a.Params.NonZeroAttributes[pname] = true
 					delete(queryParams.Type.ToObject(), pname)
+					if queryParams.Validation != nil {
+						req := queryParams.Validation.Required
+						for i, n := range req {
+							if n == pname {
+								queryParams.Validation.Required = append(req[:i], req[i+1:]...)
+								break
+							}
+						}
+					}
 				}
 			}
-			// (note: we may end up with required attribute names that don't correspond
-			// to actual attributes cos' we just deleted them but that's probably OK.)
 			a.QueryParams = queryParams
 		}
 
