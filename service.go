@@ -96,6 +96,9 @@ func New(name string) *Service {
 
 	// Setup default NotFound handler
 	mux.HandleNotFound(func(rw http.ResponseWriter, req *http.Request, params url.Values) {
+		if resp := ContextResponse(ctx); resp != nil && resp.Written() {
+			return
+		}
 		// Use closure to do lazy computation of middleware chain so all middlewares are
 		// registered.
 		if notFoundHandler == nil {
@@ -110,9 +113,7 @@ func New(name string) *Service {
 		}
 		ctx := NewContext(service.Context, rw, req, params)
 		err := notFoundHandler(ctx, ContextResponse(ctx), req)
-		if !ContextResponse(ctx).Written() {
-			service.Send(ctx, 404, err)
-		}
+		service.Send(ctx, 404, err)
 	})
 
 	return service
