@@ -16,7 +16,7 @@ import (
 )
 
 type (
-	// Client is the command client data structure for all goa service clients.
+	// Client is the common client data structure for all goa service clients.
 	Client struct {
 		// Client is the underlying http client.
 		*http.Client

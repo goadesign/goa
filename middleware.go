@@ -17,7 +17,7 @@ type (
 //
 // - a goa middleware: goa.Middleware or func(goa.Handler) goa.Handler
 //
-// - a goa handler: goa.Handler or func(*goa.Context) error
+// - a goa handler: goa.Handler or func(context.Context, http.ResponseWriter, *http.Request) error
 //
 // - an http middleware: func(http.Handler) http.Handler
 //
