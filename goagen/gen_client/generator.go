@@ -386,8 +386,6 @@ func (g *Generator) generateActionClient(action *design.ActionDefinition, file *
 		obj := att.Type.ToObject()
 		var pdata []*paramData
 		var optData []*paramData
-		var pnames, pparams []string
-		var optNames, optParams []string
 		for n, q := range obj {
 			varName := codegen.Goify(n, false)
 			param := &paramData{
@@ -400,14 +398,10 @@ func (g *Generator) generateActionClient(action *design.ActionDefinition, file *
 				if att.IsRequired(n) {
 					param.ValueName = varName
 					pdata = append(pdata, param)
-					pparams = append(pparams, varName+" "+cmdFieldType(q.Type, false))
-					pnames = append(pnames, varName)
 				} else {
 					param.ValueName = "*" + varName
 					param.CheckNil = true
 					optData = append(optData, param)
-					optParams = append(optParams, varName+" "+cmdFieldType(q.Type, true))
-					optNames = append(optNames, varName)
 				}
 			} else {
 				param.MustToString = true
@@ -415,28 +409,25 @@ func (g *Generator) generateActionClient(action *design.ActionDefinition, file *
 				param.CheckNil = true
 				if att.IsRequired(n) {
 					pdata = append(pdata, param)
-					pparams = append(params, varName+" "+cmdFieldType(q.Type, false))
-					pnames = append(pnames, varName)
 				} else {
 					optData = append(optData, param)
-					optParams = append(optParams, varName+" "+cmdFieldType(q.Type, false))
-					optNames = append(optNames, varName)
 				}
 			}
 		}
-		sort.Strings(pparams)
-		sort.Strings(optParams)
-		sort.Strings(pnames)
-		sort.Strings(optNames)
-
-		// Update closure
-		names = append(names, pnames...)
-		names = append(names, optNames...)
-		params = append(params, pparams...)
-		params = append(params, optParams...)
 
 		sort.Sort(byParamName(pdata))
 		sort.Sort(byParamName(optData))
+
+		// Update closure
+		for _, p := range pdata {
+			names = append(names, p.VarName)
+			params = append(params, p.VarName+" "+cmdFieldType(p.Attribute.Type, false))
+		}
+		for _, p := range optData {
+			names = append(names, p.VarName)
+			params = append(params, p.VarName+" "+cmdFieldType(p.Attribute.Type, p.Attribute.Type.IsPrimitive()))
+		}
+
 		return append(pdata, optData...)
 	}
 	queryParams = initParams(action.QueryParams)

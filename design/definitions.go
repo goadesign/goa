@@ -816,75 +816,6 @@ func (r *ResourceDefinition) Finalize() {
 	})
 	r.IterateActions(func(a *ActionDefinition) error {
 		a.Finalize()
-
-		// 1. Merge response definitions
-		for name, resp := range a.Responses {
-			resp.Finalize()
-			if pr, ok := a.Parent.Responses[name]; ok {
-				resp.Merge(pr)
-			}
-			if ar, ok := Design.Responses[name]; ok {
-				resp.Merge(ar)
-			}
-			if dr, ok := Design.DefaultResponses[name]; ok {
-				resp.Merge(dr)
-			}
-		}
-		// 2. Create implicit action parameters for path wildcards that dont' have one
-		for _, ro := range a.Routes {
-			for _, wc := range ro.Params() {
-				found := false
-				search := func(params *AttributeDefinition) {
-					if params == nil {
-						return
-					}
-					for n, att := range params.Type.ToObject() {
-						if n == wc {
-							if a.Params == nil {
-								a.Params = &AttributeDefinition{Type: Object{}}
-							}
-							a.Params.Type.ToObject()[wc] = att
-							found = true
-							break
-						}
-					}
-				}
-				search(a.Params)
-				parent := r
-				for !found && parent != nil {
-					bp := parent.BaseParams
-					parent = parent.Parent()
-					search(bp)
-				}
-				if found {
-					continue
-				}
-				search(Design.BaseParams)
-				if found {
-					continue
-				}
-				if a.Params == nil {
-					a.Params = &AttributeDefinition{Type: Object{}}
-				}
-				a.Params.Type.ToObject()[wc] = &AttributeDefinition{Type: String}
-			}
-		}
-		// 3. Compute QueryParams from Params and set all path params as non zero attributes
-		if params := a.Params; params != nil {
-			queryParams := DupAtt(params)
-			a.Params.NonZeroAttributes = make(map[string]bool)
-			for _, route := range a.Routes {
-				pnames := route.Params()
-				for _, pname := range pnames {
-					a.Params.NonZeroAttributes[pname] = true
-					delete(queryParams.Type.ToObject(), pname)
-				}
-			}
-			// (note: we may end up with required attribute names that don't correspond
-			// to actual attributes cos' we just deleted them but that's probably OK.)
-			a.QueryParams = queryParams
-		}
-
 		return nil
 	})
 }
@@ -1451,6 +1382,10 @@ func (a *ActionDefinition) Finalize() {
 	if a.Security != nil && a.Security.Scheme.Kind == NoSecurityKind {
 		a.Security = nil
 	}
+
+	a.mergeResponses()
+	a.initImplicitParams()
+	a.initQueryParams()
 }
 
 // UserTypes returns all the user types used by the action payload and parameters.
@@ -1509,6 +1444,90 @@ func (a *ActionDefinition) IterateResponses(it ResponseIterator) error {
 		}
 	}
 	return nil
+}
+
+// mergeResponses merges the parent resource and design responses.
+func (a *ActionDefinition) mergeResponses() {
+	for name, resp := range a.Responses {
+		resp.Finalize()
+		if pr, ok := a.Parent.Responses[name]; ok {
+			resp.Merge(pr)
+		}
+		if ar, ok := Design.Responses[name]; ok {
+			resp.Merge(ar)
+		}
+		if dr, ok := Design.DefaultResponses[name]; ok {
+			resp.Merge(dr)
+		}
+	}
+}
+
+// initImplicitParams creates params for path segments that don't have one.
+func (a *ActionDefinition) initImplicitParams() {
+	for _, ro := range a.Routes {
+		for _, wc := range ro.Params() {
+			found := false
+			search := func(params *AttributeDefinition) {
+				if params == nil {
+					return
+				}
+				for n, att := range params.Type.ToObject() {
+					if n == wc {
+						if a.Params == nil {
+							a.Params = &AttributeDefinition{Type: Object{}}
+						}
+						a.Params.Type.ToObject()[wc] = att
+						found = true
+						break
+					}
+				}
+			}
+			search(a.Params)
+			parent := a.Parent
+			for !found && parent != nil {
+				bp := parent.BaseParams
+				parent = parent.Parent()
+				search(bp)
+			}
+			if found {
+				continue
+			}
+			search(Design.BaseParams)
+			if found {
+				continue
+			}
+			if a.Params == nil {
+				a.Params = &AttributeDefinition{Type: Object{}}
+			}
+			a.Params.Type.ToObject()[wc] = &AttributeDefinition{Type: String}
+		}
+	}
+}
+
+// initQueryParams extract the query parameters from the action params.
+func (a *ActionDefinition) initQueryParams() {
+	// 3. Compute QueryParams from Params and set all path params as non zero attributes
+	if params := a.Params; params != nil {
+		queryParams := DupAtt(params)
+		a.Params.NonZeroAttributes = make(map[string]bool)
+		for _, route := range a.Routes {
+			pnames := route.Params()
+			for _, pname := range pnames {
+				a.Params.NonZeroAttributes[pname] = true
+				delete(queryParams.Type.ToObject(), pname)
+				if queryParams.Validation != nil {
+					req := queryParams.Validation.Required
+					for i, n := range req {
+						if n == pname {
+							queryParams.Validation.Required = append(req[:i], req[i+1:]...)
+							break
+						}
+					}
+				}
+			}
+		}
+		a.QueryParams = queryParams
+	}
 }
 
 // Context returns the generic definition name used in error messages.
