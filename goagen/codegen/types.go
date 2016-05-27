@@ -395,6 +395,59 @@ func Goify(str string, firstUpper bool) string {
 	return fixReserved(string(runes))
 }
 
+// Reserved golang keywords and package names
+var Reserved = map[string]bool{
+	"byte":       true,
+	"complex128": true,
+	"complex64":  true,
+	"float32":    true,
+	"float64":    true,
+	"int":        true,
+	"int16":      true,
+	"int32":      true,
+	"int64":      true,
+	"int8":       true,
+	"rune":       true,
+	"string":     true,
+	"uint16":     true,
+	"uint32":     true,
+	"uint64":     true,
+	"uint8":      true,
+
+	"break":       true,
+	"case":        true,
+	"chan":        true,
+	"const":       true,
+	"continue":    true,
+	"default":     true,
+	"defer":       true,
+	"else":        true,
+	"fallthrough": true,
+	"for":         true,
+	"func":        true,
+	"go":          true,
+	"goto":        true,
+	"if":          true,
+	"import":      true,
+	"interface":   true,
+	"map":         true,
+	"package":     true,
+	"range":       true,
+	"return":      true,
+	"select":      true,
+	"struct":      true,
+	"switch":      true,
+	"type":        true,
+	"var":         true,
+
+	// stdlib and goa packages used by generated code
+	"fmt":  true,
+	"http": true,
+	"json": true,
+	"os":   true,
+	"time": true,
+}
+
 // validIdentifier returns true if the rune is a letter or number
 func validIdentifier(r rune) bool {
 	return unicode.IsLetter(r) || unicode.IsDigit(r)
@@ -402,7 +455,7 @@ func validIdentifier(r rune) bool {
 
 // fixReserved appends an underscore on to Go reserved keywords.
 func fixReserved(w string) string {
-	if _, ok := reserved[w]; ok {
+	if _, ok := Reserved[w]; ok {
 		w += "_"
 	}
 	return w
@@ -604,60 +657,6 @@ func computeMapping(source, target design.Object, sctx, tctx string) (map[string
 		}
 	}
 	return attributeMap, nil
-}
-
-// reserved golang keywords
-var reserved = map[string]bool{
-	"byte":       true,
-	"complex128": true,
-	"complex64":  true,
-	"float32":    true,
-	"float64":    true,
-	"int":        true,
-	"int16":      true,
-	"int32":      true,
-	"int64":      true,
-	"int8":       true,
-	"rune":       true,
-	"string":     true,
-	"uint16":     true,
-	"uint32":     true,
-	"uint64":     true,
-	"uint8":      true,
-
-	"break":       true,
-	"case":        true,
-	"chan":        true,
-	"const":       true,
-	"continue":    true,
-	"default":     true,
-	"defer":       true,
-	"else":        true,
-	"fallthrough": true,
-	"for":         true,
-	"func":        true,
-	"go":          true,
-	"goto":        true,
-	"if":          true,
-	"import":      true,
-	"interface":   true,
-	"map":         true,
-	"package":     true,
-	"range":       true,
-	"return":      true,
-	"select":      true,
-	"struct":      true,
-	"switch":      true,
-	"type":        true,
-	"var":         true,
-
-	// stdlib and goa packages used by generated code
-	"fmt":    true,
-	"http":   true,
-	"json":   true,
-	"os":     true,
-	"time":   true,
-	"client": true,
 }
 
 // toSlice returns Go code that represents the given slice.

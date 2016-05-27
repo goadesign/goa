@@ -21,6 +21,7 @@ const typesFileName = "datatypes"
 // Generator is the application code generator.
 type Generator struct {
 	outDir         string // Path to output directory
+	target         string // Name of generated package
 	genfiles       []string
 	generatedTypes map[string]bool // Keeps track of names of user types that correspond to action payloads.
 	encoders       []*genapp.EncoderTemplateData
@@ -30,14 +31,17 @@ type Generator struct {
 
 // Generate is the generator entry point called by the meta generator.
 func Generate() (files []string, err error) {
-	var outDir string
+	var outDir, target string
 
 	set := flag.NewFlagSet("client", flag.PanicOnError)
 	set.String("design", "", "")
 	set.StringVar(&outDir, "out", "", "")
+	set.StringVar(&target, "pkg", "client", "")
 	set.Parse(os.Args[2:])
 
-	g := &Generator{outDir: outDir}
+	target = codegen.Goify(target, false)
+	g := &Generator{outDir: outDir, target: target}
+	codegen.Reserved[target] = true
 
 	return g.Generate(design.Design)
 }
@@ -161,7 +165,7 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 	for _, packagePath := range packagePaths {
 		imports = append(imports, codegen.SimpleImport(packagePath))
 	}
-	if err := file.WriteHeader("", "client", imports); err != nil {
+	if err := file.WriteHeader("", g.target, imports); err != nil {
 		return err
 	}
 	g.genfiles = append(g.genfiles, clientFile)
@@ -212,7 +216,7 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 		codegen.SimpleImport("time"),
 		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
-	if err := file.WriteHeader("User Types", "client", imports); err != nil {
+	if err := file.WriteHeader("User Types", g.target, imports); err != nil {
 		return err
 	}
 	g.genfiles = append(g.genfiles, filename)
@@ -311,7 +315,7 @@ func (g *Generator) generateResourceClient(res *design.ResourceDefinition, funcs
 		codegen.SimpleImport("golang.org/x/net/websocket"),
 		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
-	if err := file.WriteHeader("", "client", imports); err != nil {
+	if err := file.WriteHeader("", g.target, imports); err != nil {
 		return err
 	}
 	g.genfiles = append(g.genfiles, filename)
