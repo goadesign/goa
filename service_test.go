@@ -84,18 +84,16 @@ var _ = Describe("Service", func() {
 	})
 
 	Describe("MaxRequestBodyLength", func() {
-		var oldMax int64
 		var rw *TestResponseWriter
 		var req *http.Request
 		var muxHandler goa.MuxHandler
 
 		BeforeEach(func() {
-			oldMax = goa.MaxRequestBodyLength
-			goa.MaxRequestBodyLength = 4
 			body := bytes.NewBuffer([]byte{'"', '2', '3', '4', '"'})
 			req, _ = http.NewRequest("GET", "/foo", body)
 			rw = &TestResponseWriter{ParentHeader: make(http.Header)}
 			ctrl := s.NewController("test")
+			ctrl.MaxRequestBodyLength = 4
 			unmarshaler := func(ctx context.Context, service *goa.Service, req *http.Request) error {
 				_, err := ioutil.ReadAll(req.Body)
 				return err
@@ -105,10 +103,6 @@ var _ = Describe("Service", func() {
 
 		JustBeforeEach(func() {
 			muxHandler(rw, req, nil)
-		})
-
-		AfterEach(func() {
-			goa.MaxRequestBodyLength = oldMax
 		})
 
 		It("prevents reading more bytes", func() {
