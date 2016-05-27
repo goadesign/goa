@@ -34,6 +34,7 @@ var _ = Describe("Generate", func() {
 
 	AfterEach(func() {
 		os.RemoveAll(outDir)
+		delete(codegen.Reserved, "client")
 	})
 
 	Context("with an action with multiple routes", func() {
