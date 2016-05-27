@@ -59,6 +59,7 @@ func (g *Generator) generateMain(mainFile string, clientPkg string, funcs templa
 	data := map[string]interface{}{
 		"API":     api,
 		"Version": version,
+		"Package": g.target,
 	}
 	if err := file.ExecuteTemplate("main", mainTmpl, funcs, data); err != nil {
 		return err
@@ -75,7 +76,11 @@ func (g *Generator) generateMain(mainFile string, clientPkg string, funcs templa
 			return nil
 		})
 	})
-	if err := file.ExecuteTemplate("registerCmds", registerCmdsT, funcs, actions); err != nil {
+	data = map[string]interface{}{
+		"Actions": actions,
+		"Package": g.target,
+	}
+	if err := file.ExecuteTemplate("registerCmds", registerCmdsT, funcs, data); err != nil {
 		return err
 	}
 
@@ -239,7 +244,7 @@ func main() {
 		Use: "{{ .API.Name }}-cli",
 		Short: ` + "`" + `CLI client for the {{ .API.Name }} service{{ if .API.Docs }} ({{ escapeBackticks .API.Docs.URL }}){{ end }}` + "`" + `,
 	}
-	c := client.New(nil)
+	c := {{ .Package }}.New(nil)
 	c.UserAgent = "{{ .API.Name }}-cli/{{ .Version }}"
 	app.PersistentFlags().StringVarP(&c.Scheme, "scheme", "s", "", "Set the requests scheme")
 	app.PersistentFlags().StringVarP(&c.Host, "host", "H", "{{ .API.Host }}", "API hostname")
@@ -268,7 +273,7 @@ const commandTypesTmpl = `{{ $cmdName := goify (printf "%s%s%s" .Name (title .Pa
 
 const commandsTmplWS = `
 {{ $cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true }}// Run establishes a websocket connection for the {{ $cmdName }} command.
-func (cmd *{{ $cmdName }}) Run(c *client.Client, args []string) error {
+func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 	var path string
 	if len(args) > 0 {
 		path = args[0]
@@ -292,7 +297,7 @@ func (cmd *{{ $cmdName }}) Run(c *client.Client, args []string) error {
 `
 
 const registerTmpl = `{{ $cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true }}// RegisterFlags registers the command flags with the command line.
-func (cmd *{{ $cmdName }}) RegisterFlags(cc *cobra.Command, c *client.Client) {
+func (cmd *{{ $cmdName }}) RegisterFlags(cc *cobra.Command, c *{{ .Package }}.Client) {
 {{ if .Action.Payload }}	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request JSON body")
 {{ end }}{{ $pparams := defaultRouteParams .Action }}{{ if $pparams }}{{ range $pname, $pparam := $pparams.Type.ToObject }}{{ $tmp := goify $pname false }}{{/*
 */}}{{ if not $pparam.DefaultValue }}	var {{ $tmp }} {{ cmdFieldType $pparam.Type false }}
@@ -309,7 +314,7 @@ func (cmd *{{ $cmdName }}) RegisterFlags(cc *cobra.Command, c *client.Client) {
 
 const commandsTmpl = `
 {{ $cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true }}// Run makes the HTTP request corresponding to the {{ $cmdName }} command.
-func (cmd *{{ $cmdName }}) Run(c *client.Client, args []string) error {
+func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 	var path string
 	if len(args) > 0 {
 		path = args[0]
@@ -342,8 +347,8 @@ func (cmd *{{ $cmdName }}) Run(c *client.Client, args []string) error {
 
 // Takes map[string][]*design.ActionDefinition as input
 const registerCmdsT = `// RegisterCommands all the resource action subcommands to the application command line.
-func RegisterCommands(app *cobra.Command, c *client.Client) {
-{{ if gt (len .) 0 }}	var command, sub *cobra.Command
+func RegisterCommands(app *cobra.Command, c *{{ .Package }}.Client) {
+{{ with .Actions }}{{ if gt (len .) 0 }}	var command, sub *cobra.Command
 {{ end }}{{ range $name, $actions := . }}	command = &cobra.Command{
 		Use:   "{{ $name }}",
 		Short: ` + "`" + `{{ if eq (len $actions) 1 }}{{ $a := index $actions 0 }}{{ escapeBackticks $a.Description }}{{ else }}{{ $name }} action{{ end }}` + "`" + `,
@@ -358,5 +363,5 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	{{ $tmp }}.RegisterFlags(sub, c)
 	command.AddCommand(sub)
 {{ end }}app.AddCommand(command)
-{{ end }}
+{{ end }}{{ end }}
 }`
