@@ -19,12 +19,6 @@ const (
 	ErrorMediaIdentifier = "application/vnd.api.error+json"
 )
 
-var (
-	// MaxRequestBodyLength is the maximum length read from request bodies.
-	// Set to 0 to remove the limit altogether.
-	MaxRequestBodyLength int64 = 1073741824 // 1 GB
-)
-
 type (
 	// Service is the data structure supporting goa services.
 	// It provides methods for configuring a service and running it.
@@ -58,6 +52,9 @@ type (
 		Service *Service
 		// Controller root context
 		Context context.Context
+		// MaxRequestBodyLength is the maximum length read from request bodies.
+		// Set to 0 to remove the limit altogether. Defaults to 1GB.
+		MaxRequestBodyLength int64
 
 		middleware []Middleware // Controller specific middleware if any
 	}
@@ -165,9 +162,10 @@ func (service *Service) ListenAndServeTLS(addr, certFile, keyFile string) error 
 // use by the generated code. User code shouldn't have to call it directly.
 func (service *Service) NewController(name string) *Controller {
 	return &Controller{
-		Name:    name,
-		Service: service,
-		Context: context.WithValue(service.Context, ctrlKey, name),
+		Name:                 name,
+		Service:              service,
+		Context:              context.WithValue(service.Context, ctrlKey, name),
+		MaxRequestBodyLength: 1073741824, // 1 GB
 	}
 }
 
@@ -260,7 +258,7 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 				body := ErrInvalidEncoding(err)
 				if err.Error() == "http: request body too large" {
 					status = 413
-					body = ErrRequestBodyTooLarge("body length exceeds %d bytes", MaxRequestBodyLength)
+					body = ErrRequestBodyTooLarge("body length exceeds %d bytes", ctrl.MaxRequestBodyLength)
 				}
 				return ctrl.Service.Send(ctx, status, body)
 			}
@@ -276,8 +274,8 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 		ctx := NewContext(WithAction(ctrl.Context, name), rw, req, params)
 
 		// Protect against request bodies with unreasonable length
-		if MaxRequestBodyLength > 0 {
-			req.Body = http.MaxBytesReader(rw, req.Body, MaxRequestBodyLength)
+		if ctrl.MaxRequestBodyLength > 0 {
+			req.Body = http.MaxBytesReader(rw, req.Body, ctrl.MaxRequestBodyLength)
 		}
 
 		// Load body if any
