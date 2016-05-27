@@ -14,7 +14,7 @@ import (
 )
 
 func (g *Generator) makeToolDir(apiName string) (toolDir string, err error) {
-	g.outDir = filepath.Join(g.outDir, "client")
+	g.outDir = filepath.Join(g.outDir, g.target)
 	if err = os.RemoveAll(g.outDir); err != nil {
 		return
 	}
@@ -127,6 +127,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 			data := map[string]interface{}{
 				"Action":   action,
 				"Resource": action.Parent,
+				"Package":  g.target,
 			}
 			var err error
 			if action.WebSocket() {
@@ -316,7 +317,7 @@ func (cmd *{{ $cmdName }}) Run(c *client.Client, args []string) error {
 {{ $default := defaultPath .Action }}{{ if $default }}	path = "{{ $default }}"
 {{ else }}{{ $pparams := defaultRouteParams .Action }}	path = fmt.Sprintf("{{ defaultRouteTemplate .Action }}", {{ joinNames $pparams }})
 {{ end }}	}
-{{ if .Action.Payload }}var payload {{ gotyperefext .Action.Payload 2 "client" }}
+{{ if .Action.Payload }}var payload {{ gotyperefext .Action.Payload 2 .Package }}
 	if cmd.Payload != "" {
 		err := json.Unmarshal([]byte(cmd.Payload), &payload)
 		if err != nil {

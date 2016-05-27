@@ -35,7 +35,9 @@ func Generate() (files []string, err error) {
 	set.Parse(os.Args[2:])
 	outDir = filepath.Join(outDir, target)
 
+	target = codegen.Goify(target, false)
 	g := &Generator{outDir: outDir, target: target, notest: notest}
+	codegen.Reserved[target] = true
 
 	return g.Generate(design.Design)
 }

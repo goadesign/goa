@@ -36,7 +36,9 @@ func Generate() (files []string, err error) {
 	set.BoolVar(&force, "force", false, "")
 	set.Parse(os.Args[2:])
 
+	target = codegen.Goify(target, false)
 	g := &Generator{outDir: outDir, target: target, force: force}
+	codegen.Reserved[target] = true
 
 	return g.Generate(design.Design)
 }

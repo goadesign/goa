@@ -37,6 +37,7 @@ var _ = Describe("Generate", func() {
 
 	AfterEach(func() {
 		workspace.Delete()
+		delete(codegen.Reserved, "app")
 	})
 
 	Context("with a dummy API", func() {
