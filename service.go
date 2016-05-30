@@ -328,7 +328,7 @@ func (ctrl *Controller) FileHandler(path, filename string) Handler {
 				fname = filepath.Join(filename, m[0])
 			}
 		}
-		LogInfo(ctrl.Context, "serve file", "name", fname, "route", req.URL.Path)
+		LogInfo(ctx, "serve file", "name", fname, "route", req.URL.Path)
 		dir, name := filepath.Split(fname)
 		fs := http.Dir(dir)
 		f, err := fs.Open(name)

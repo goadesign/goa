@@ -79,6 +79,28 @@ var _ = Describe("Generate", func() {
 			Ω(content).Should(ContainSubstring("func ShowFooPath2("))
 			Ω(strings.Count(string(content), "func ShowFooPath2(")).Should(Equal(1))
 		})
+
+		Context("with a file server", func() {
+			BeforeEach(func() {
+				res := design.Design.Resources["foo"]
+				res.FileServers = []*design.FileServerDefinition{
+					{
+						Parent:      res,
+						FilePath:    "/swagger/swagger.json",
+						RequestPath: "/swagger.json",
+					},
+				}
+			})
+
+			It("generates a Download function", func() {
+				Ω(genErr).Should(BeNil())
+				Ω(files).Should(HaveLen(7))
+				content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(content).Should(ContainSubstring("func (c *Client) DownloadSwagger("))
+			})
+
+		})
 	})
 
 	Context("with an action with security configured", func() {
