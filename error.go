@@ -50,7 +50,7 @@ var (
 
 	// ErrInvalidFile is the error produced by ServeFiles when requested to serve non-existant
 	// or non-readable files.
-	ErrInvalidFile = NewErrorClass("invalid_file", 400)
+	ErrInvalidFile = NewErrorClass("invalid_file", 404)
 
 	// ErrNotFound is the error returned to requests that don't match a registered handler.
 	ErrNotFound = NewErrorClass("not_found", 404)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -66,7 +67,11 @@ func (g *Generator) generateMain(mainFile string, clientPkg string, funcs templa
 	}
 
 	actions := make(map[string][]*design.ActionDefinition)
+	hasDownloads := false
 	api.IterateResources(func(res *design.ResourceDefinition) error {
+		if len(res.FileServers) > 0 {
+			hasDownloads = true
+		}
 		return res.IterateActions(func(action *design.ActionDefinition) error {
 			if as, ok := actions[action.Name]; ok {
 				actions[action.Name] = append(as, action)
@@ -77,8 +82,9 @@ func (g *Generator) generateMain(mainFile string, clientPkg string, funcs templa
 		})
 	})
 	data = map[string]interface{}{
-		"Actions": actions,
-		"Package": g.target,
+		"Actions":      actions,
+		"Package":      g.target,
+		"HasDownloads": hasDownloads,
 	}
 	if err := file.ExecuteTemplate("registerCmds", registerCmdsT, funcs, data); err != nil {
 		return err
@@ -95,6 +101,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	commandTypesTmpl := template.Must(template.New("commandTypes").Funcs(funcs).Parse(commandTypesTmpl))
 	commandsTmpl := template.Must(template.New("commands").Funcs(funcs).Parse(commandsTmpl))
 	commandsTmplWS := template.Must(template.New("commandsWS").Funcs(funcs).Parse(commandsTmplWS))
+	downloadCommandTmpl := template.Must(template.New("download").Funcs(funcs).Parse(downloadCommandTmpl))
 	registerTmpl := template.Must(template.New("register").Funcs(funcs).Parse(registerTmpl))
 
 	imports := []*codegen.ImportSpec{
@@ -102,6 +109,9 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("log"),
 		codegen.SimpleImport("os"),
+		codegen.SimpleImport("path"),
+		codegen.SimpleImport("path/filepath"),
+		codegen.SimpleImport("strings"),
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("github.com/spf13/cobra"),
@@ -118,16 +128,53 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	g.genfiles = append(g.genfiles, commandsFile)
 
 	file.Write([]byte("type (\n"))
+	var fs []*design.FileServerDefinition
 	if err := api.IterateResources(func(res *design.ResourceDefinition) error {
+		fs = append(fs, res.FileServers...)
 		return res.IterateActions(func(action *design.ActionDefinition) error {
 			return commandTypesTmpl.Execute(file, action)
 		})
 	}); err != nil {
 		return err
 	}
+	if len(fs) > 0 {
+		file.Write([]byte(downloadCommandType))
+	}
 	file.Write([]byte(")\n\n"))
 
 	err = api.IterateResources(func(res *design.ResourceDefinition) error {
+		if res.FileServers != nil {
+			var fsdata []map[string]interface{}
+			res.IterateFileServers(func(fs *design.FileServerDefinition) error {
+				wcs := design.ExtractWildcards(fs.RequestPath)
+				isDir := len(wcs) > 0
+				var reqDir, filename string
+				if isDir {
+					reqDir, _ = path.Split(fs.RequestPath)
+				} else {
+					_, filename = filepath.Split(fs.FilePath)
+				}
+				fsdata = append(fsdata, map[string]interface{}{
+					"IsDir":       isDir,
+					"RequestPath": fs.RequestPath,
+					"FilePath":    fs.FilePath,
+					"FileName":    filename,
+					"Name":        g.fileServerMethod(fs),
+					"RequestDir":  reqDir,
+				})
+				return nil
+			})
+			data := struct {
+				Package     string
+				FileServers []map[string]interface{}
+			}{
+				Package:     g.target,
+				FileServers: fsdata,
+			}
+			if err := downloadCommandTmpl.Execute(file, data); err != nil {
+				return err
+			}
+		}
 		return res.IterateActions(func(action *design.ActionDefinition) error {
 			data := map[string]interface{}{
 				"Action":   action,
@@ -272,6 +319,15 @@ const commandTypesTmpl = `{{ $cmdName := goify (printf "%s%s%s" .Name (title .Pa
 {{ end }}{{ end }}{{ $headers := .Headers }}{{ if $headers }}{{ range $name, $att := $headers.Type.ToObject }}{{ if $att.Description }}		{{ multiComment $att.Description }}
 {{ end }}		{{ goify $name true }} {{ cmdFieldType $att.Type false}}
 {{ end }}{{ end }}	}
+
+`
+
+const downloadCommandType = `// DownloadCommand is the command line data structure for the download command.
+	DownloadCommand struct {
+		// OutFile is the path to the download output file.
+		OutFile string
+	}
+
 `
 
 const commandsTmplWS = `
@@ -294,6 +350,55 @@ func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 	}
 	go goaclient.WSWrite(ws)
 	goaclient.WSRead(ws)
+
+	return nil
+}
+`
+
+const downloadCommandTmpl = `
+// Run downloads files with given paths.
+func (cmd *DownloadCommand) Run(c *{{ .Package }}.Client, args []string) error {
+	var (
+		fnf func (context.Context, string) (int64, error)
+		fnd func (context.Context, string, string) (int64, error)
+
+		rpath = args[0]
+		outfile = cmd.OutFile
+		logger = goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+		ctx = goa.WithLogger(context.Background(), logger)
+		err error
+	)
+	
+	if rpath[0] != '/' {
+		rpath = "/" + rpath
+	}
+{{ range .FileServers }}{{ if not .IsDir }}	if rpath == "{{ .RequestPath }}" {
+		fnf = c.{{ .Name }}
+		if outfile == "" {
+			outfile = "{{ .FileName }}"
+		}
+		goto found
+	}
+{{ end }}{{ end }}{{ range .FileServers }}{{ if .IsDir }}	if strings.HasPrefix(rpath, "{{ .RequestDir }}") {
+		fnd = c.{{ .Name }}
+		rpath = rpath[{{ len .RequestDir }}:]
+		if outfile == "" {
+			_, outfile = path.Split(rpath)
+		}
+		goto found
+	}
+{{ end }}{{ end }}	return fmt.Errorf("don't know how to download %s", rpath)
+found:	
+	ctx = goa.WithLogContext(ctx, "file", outfile)
+	if fnf != nil {
+		_, err = fnf(ctx, outfile) 
+	} else {
+		_, err = fnd(ctx, rpath, outfile)
+	}
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
 
 	return nil
 }
@@ -366,5 +471,15 @@ func RegisterCommands(app *cobra.Command, c *{{ .Package }}.Client) {
 	{{ $tmp }}.RegisterFlags(sub, c)
 	command.AddCommand(sub)
 {{ end }}app.AddCommand(command)
-{{ end }}{{ end }}
-}`
+{{ end }}{{ end }}{{ if .HasDownloads }}
+	dl := new(DownloadCommand)
+	dlc := &cobra.Command{
+		Use:	"download [PATH]",
+		Short: "Download file with given path",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return dl.Run(c, args)
+		},
+	}
+	dlc.Flags().StringVar(&dl.OutFile, "out", "", "Output file")
+	app.AddCommand(dlc)
+{{ end }}}`
