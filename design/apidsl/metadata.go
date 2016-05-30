@@ -50,6 +50,12 @@ import (
 //
 func Metadata(name string, value ...string) {
 	switch def := dslengine.CurrentDefinition().(type) {
+	case design.ContainerDefinition:
+		att := def.Attribute()
+		if att.Metadata == nil {
+			att.Metadata = make(map[string][]string)
+		}
+		att.Metadata[name] = append(att.Metadata[name], value...)
 	case *design.AttributeDefinition:
 		if def.Metadata == nil {
 			def.Metadata = make(map[string][]string)
