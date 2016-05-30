@@ -274,6 +274,20 @@ func Params(dsl func()) {
 //	})
 //
 func Payload(p interface{}, dsls ...func()) {
+	payload(false, p, dsls...)
+}
+
+// OptionalPayload implements the action optional payload DSL. The function works identically to the
+// Payload DSL except it would set a bit in the action definition to denote that the payload is not
+// required. Examples:
+//
+//	OptionalPayload(BottlePayload)		// Request payload is described by the BottlePayload type
+//
+func OptionalPayload(p interface{}, dsls ...func()) {
+	payload(true, p, dsls...)
+}
+
+func payload(isOptional bool, p interface{}, dsls ...func()) {
 	if len(dsls) > 1 {
 		dslengine.ReportError("too many arguments given to Payload")
 		return
@@ -320,6 +334,9 @@ func Payload(p interface{}, dsls ...func()) {
 		a.Payload = &design.UserTypeDefinition{
 			AttributeDefinition: att,
 			TypeName:            fmt.Sprintf("%s%sPayload", an, rn),
+		}
+		if isOptional {
+			a.PayloadOptional = true
 		}
 	}
 }

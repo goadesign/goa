@@ -216,6 +216,29 @@ var _ = Describe("Generate", func() {
 			})
 		})
 
+		Context("with a optional payload", func() {
+			BeforeEach(func() {
+				elemType := &design.AttributeDefinition{Type: design.Integer}
+				payload = &design.UserTypeDefinition{
+					AttributeDefinition: &design.AttributeDefinition{
+						Type: &design.Array{ElemType: elemType},
+					},
+					TypeName: "Collection",
+				}
+				design.Design.Resources["Widget"].Actions["get"].Payload = payload
+				design.Design.Resources["Widget"].Actions["get"].PayloadOptional = true
+				runCodeTemplates(map[string]string{"outDir": outDir, "design": "foo", "tmpDir": filepath.Base(outDir)})
+			})
+
+			It("generates the no payloads assignment code", func() {
+				Ω(genErr).Should(BeNil())
+
+				contextsContent, err := ioutil.ReadFile(filepath.Join(outDir, "app", "controllers.go"))
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(string(contextsContent)).Should(ContainSubstring(controllersOptionalPayloadCode))
+			})
+		})
+
 	})
 })
 
@@ -366,6 +389,37 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 			rctx.Payload = rawPayload.(Collection)
 		} else {
 			return goa.ErrInvalidEncoding(goa.MissingPayloadError())
+		}
+		return ctrl.Get(rctx)
+	}
+	service.Mux.Handle("GET", "/:id", ctrl.MuxHandler("Get", h, unmarshalGetWidgetPayload))
+	service.LogInfo("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
+}
+
+// unmarshalGetWidgetPayload unmarshals the request body into the context request data Payload field.
+func unmarshalGetWidgetPayload(ctx context.Context, service *goa.Service, req *http.Request) error {
+	var payload Collection
+	if err := service.DecodeRequest(req, &payload); err != nil {
+		return err
+	}
+	goa.ContextRequest(ctx).Payload = payload
+	return nil
+}
+`
+
+const controllersOptionalPayloadCode = `
+// MountWidgetController "mounts" a Widget resource controller on the given service.
+func MountWidgetController(service *goa.Service, ctrl WidgetController) {
+	initService(service)
+	var h goa.Handler
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		rctx, err := NewGetWidgetContext(ctx, service)
+		if err != nil {
+			return err
+		}
+		if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
+			rctx.Payload = rawPayload.(Collection)
 		}
 		return ctrl.Get(rctx)
 	}

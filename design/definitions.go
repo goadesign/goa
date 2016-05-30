@@ -236,6 +236,8 @@ type (
 		QueryParams *AttributeDefinition
 		// Payload blueprint (request body) if any
 		Payload *UserTypeDefinition
+		// PayloadOptional describes Payload is optional or not
+		PayloadOptional bool
 		// Request headers that need to be made available to action
 		Headers *AttributeDefinition
 		// Metadata is a list of key/value pairs
