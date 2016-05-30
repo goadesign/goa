@@ -1542,6 +1542,11 @@ func (f *FileServerDefinition) Context() string {
 
 // Finalize inherits security scheme from parent and top level design.
 func (f *FileServerDefinition) Finalize() {
+	// Make sure request path starts with a "/" so codegen can rely on it.
+	if !strings.HasPrefix(f.RequestPath, "/") {
+		f.RequestPath = "/" + f.RequestPath
+	}
+	// Inherit security
 	if f.Security == nil {
 		f.Security = f.Parent.Security // ResourceDefinition
 		if f.Security == nil {

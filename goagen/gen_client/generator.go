@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -306,8 +307,11 @@ func (g *Generator) generateResourceClient(res *design.ResourceDefinition, funcs
 		codegen.SimpleImport("encoding/json"),
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("io"),
+		codegen.SimpleImport("io/ioutil"),
 		codegen.SimpleImport("net/http"),
 		codegen.SimpleImport("net/url"),
+		codegen.SimpleImport("os"),
+		codegen.SimpleImport("path"),
 		codegen.SimpleImport("strconv"),
 		codegen.SimpleImport("strings"),
 		codegen.SimpleImport("time"),
@@ -320,6 +324,11 @@ func (g *Generator) generateResourceClient(res *design.ResourceDefinition, funcs
 	}
 	g.genfiles = append(g.genfiles, filename)
 	g.generatedTypes = make(map[string]bool)
+
+	err = res.IterateFileServers(func(fs *design.FileServerDefinition) error {
+		return g.generateFileServer(file, fs, funcs)
+	})
+
 	err = res.IterateActions(func(action *design.ActionDefinition) error {
 		if action.Payload != nil {
 			if err := payloadTmpl.Execute(file, action); err != nil {
@@ -362,6 +371,48 @@ func (g *Generator) generateResourceClient(res *design.ResourceDefinition, funcs
 	}
 
 	return file.FormatCode()
+}
+
+func (g *Generator) generateFileServer(file *codegen.SourceFile, fs *design.FileServerDefinition, funcs template.FuncMap) error {
+	var (
+		dir string
+
+		fsTmpl = template.Must(template.New("fileserver").Funcs(funcs).Parse(fsTmpl))
+		name   = g.fileServerMethod(fs)
+		wcs    = design.ExtractWildcards(fs.RequestPath)
+		scheme = "http"
+	)
+
+	if len(wcs) > 0 {
+		dir = "/"
+		fileElems := filepath.SplitList(fs.FilePath)
+		if len(fileElems) > 1 {
+			dir = fileElems[len(fileElems)-2]
+		}
+	}
+	if len(design.Design.Schemes) > 0 {
+		scheme = design.Design.Schemes[0]
+	}
+	requestDir, _ := path.Split(fs.RequestPath)
+
+	data := struct {
+		Name            string // Download functionn name
+		RequestPath     string // File server request path
+		FilePath        string // File server file path
+		FileName        string // Filename being download if request path has no wildcard
+		DirName         string // Parent directory name if request path has wildcard
+		RequestDir      string // Request path without wildcard suffix
+		CanonicalScheme string // HTTP scheme
+	}{
+		Name:            name,
+		RequestPath:     fs.RequestPath,
+		FilePath:        fs.FilePath,
+		FileName:        filepath.Base(fs.FilePath),
+		DirName:         dir,
+		RequestDir:      requestDir,
+		CanonicalScheme: scheme,
+	}
+	return fsTmpl.Execute(file, data)
 }
 
 func (g *Generator) generateActionClient(action *design.ActionDefinition, file *codegen.SourceFile, funcs template.FuncMap) error {
@@ -467,6 +518,34 @@ func (g *Generator) generateActionClient(action *design.ActionDefinition, file *
 		return err
 	}
 	return requestsTmpl.Execute(file, data)
+}
+
+// fileServerMethod returns the name of the client method for downloading assets served by the given
+// file server.
+// Note: the implementation opts for generating good names rather than names that are guaranteed to
+// be unique. This means that the generated code could be potentially incorrect in the rare cases
+// where it produces the same names for two different file servers. This should be addressed later
+// (when it comes up?) using metadata to let users override the default.
+func (g *Generator) fileServerMethod(fs *design.FileServerDefinition) string {
+	var (
+		suffix string
+
+		wcs      = design.ExtractWildcards(fs.RequestPath)
+		reqElems = strings.Split(fs.RequestPath, "/")
+	)
+
+	if len(wcs) == 0 {
+		suffix = path.Base(fs.RequestPath)
+		suffix = strings.TrimSuffix(suffix, filepath.Ext(suffix))
+	} else {
+		if len(reqElems) == 1 {
+			suffix = filepath.Base(fs.RequestPath)
+			suffix = suffix[1:] // remove "*" prefix
+		} else {
+			suffix = reqElems[len(reqElems)-2] // should work most of the time
+		}
+	}
+	return "Download" + codegen.Goify(suffix, true)
 }
 
 // join is a code generation helper function that generates a function signature built from
@@ -737,6 +816,42 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 {{ end }}{{ if .CheckNil }}	}
 {{ end }}{{ end }}	u.RawQuery = values.Encode()
 {{ end }}	return websocket.Dial(u.String(), "", u.String())
+}
+`
+
+const fsTmpl = `// {{ .Name }} downloads {{ if .DirName }}{{ .DirName }}files with the given filename{{ else }}{{ .FileName }}{{ end }} and writes it to the file dest.
+// It returns the number of bytes downloaded in case of success.
+func (c * Client) {{ .Name }}(ctx context.Context, {{ if .DirName }}filename, {{ end }}dest string) (int64, error) {
+	scheme := c.Scheme
+	if scheme == "" {
+		scheme = "{{ .CanonicalScheme }}"
+	}
+{{ if .DirName }}	p := path.Join("{{ .RequestDir }}", filename)
+{{ end }}	u := url.URL{Host: c.Host, Scheme: scheme, Path: {{ if .DirName }}p{{ else }}"{{ .RequestPath }}"{{ end }}}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return 0, err
+	}
+	resp, err := c.Client.Do(ctx, req)
+	if err != nil {
+		return 0, err
+	}
+	if resp.StatusCode != 200 {
+		var body string
+		if b, err := ioutil.ReadAll(resp.Body); err != nil {
+			if len(b) > 0 {
+				body = ": "+ string(b)
+			}
+		}
+		return 0, fmt.Errorf("%s%s", resp.Status, body)
+	}
+	defer resp.Body.Close()
+	out, err := os.Create(dest)
+	if err != nil {
+		return 0, err
+	}
+	defer out.Close()
+	return io.Copy(out, resp.Body)
 }
 `
 
