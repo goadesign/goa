@@ -364,6 +364,8 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 		}
 		if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
 			rctx.Payload = rawPayload.(Collection)
+		} else {
+			return goa.ErrInvalidEncoding(goa.MissingPayloadError())
 		}
 		return ctrl.Get(rctx)
 	}

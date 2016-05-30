@@ -617,6 +617,8 @@ func Mount{{ .Resource }}Controller(service *goa.Service, ctrl {{ .Resource }}Co
 		}
 {{ if .Payload }}if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
 			rctx.Payload = rawPayload.({{ gotyperef .Payload nil 1 false }})
+		} else {
+			return goa.ErrInvalidEncoding(goa.MissingPayloadError())
 		}
 		{{ end }}		return ctrl.{{ .Name }}(rctx)
 	}
