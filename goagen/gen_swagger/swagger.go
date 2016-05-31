@@ -339,6 +339,12 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 		return nil, err
 	}
 	err = api.IterateResources(func(res *design.ResourceDefinition) error {
+		err := res.IterateFileServers(func(fs *design.FileServerDefinition) error {
+			return buildPathFromFileServer(s, api, fs)
+		})
+		if err != nil {
+			return err
+		}
 		return res.IterateActions(func(a *design.ActionDefinition) error {
 			for _, route := range a.Routes {
 				if err := buildPathFromDefinition(s, api, route); err != nil {
@@ -461,13 +467,13 @@ func tagNamesFromDefinitions(mdatas ...dslengine.MetadataDefinition) (tagNames [
 	return
 }
 
-func summaryFromDefinition(action *design.ActionDefinition) string {
-	for n, mdata := range action.Metadata {
+func summaryFromDefinition(name string, metadata dslengine.MetadataDefinition) string {
+	for n, mdata := range metadata {
 		if n == "swagger:summary" && len(mdata) > 0 {
 			return mdata[0]
 		}
 	}
-	return action.Name
+	return name
 }
 
 func paramsFromDefinition(params *design.AttributeDefinition, path string) ([]*Parameter, error) {
@@ -634,6 +640,66 @@ func headersFromDefinition(headers *design.AttributeDefinition) (map[string]*Hea
 	return res, nil
 }
 
+func buildPathFromFileServer(s *Swagger, api *design.APIDefinition, fs *design.FileServerDefinition) error {
+	wcs := design.ExtractWildcards(fs.RequestPath)
+	var param []*Parameter
+	if len(wcs) > 0 {
+		param = []*Parameter{{
+			In:          "path",
+			Name:        wcs[0],
+			Description: "Relative file path",
+			Required:    true,
+			Type:        "string",
+		}}
+	}
+
+	responses := map[string]*Response{
+		"200": {
+			Description: "File downloaded",
+			Schema:      &genschema.JSONSchema{Type: genschema.JSONFile},
+		},
+	}
+	if len(wcs) > 0 {
+		schema := genschema.TypeSchema(api, design.ErrorMedia)
+		responses["404"] = &Response{Description: "File not found", Schema: schema}
+	}
+
+	operationID := fmt.Sprintf("%s#%s", fs.Parent.Name, fs.RequestPath)
+	schemes := api.Schemes
+
+	operation := &Operation{
+		Description:  fs.Description,
+		Summary:      summaryFromDefinition(fmt.Sprintf("Download %s", fs.FilePath), fs.Metadata),
+		ExternalDocs: docsFromDefinition(fs.Docs),
+		OperationID:  operationID,
+		Parameters:   param,
+		Responses:    responses,
+		Schemes:      schemes,
+	}
+
+	applySecurity(operation, fs.Security)
+
+	key := design.WildcardRegex.ReplaceAllStringFunc(
+		fs.FullPath(),
+		func(w string) string {
+			return fmt.Sprintf("/{%s}", w[2:])
+		},
+	)
+	if key == "" {
+		key = "/"
+	}
+	key = strings.TrimPrefix(key, api.BasePath)
+	var path *Path
+	var ok bool
+	if path, ok = s.Paths[key]; !ok {
+		path = new(Path)
+		s.Paths[key] = path
+	}
+	path.Get = operation
+
+	return nil
+}
+
 func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *design.RouteDefinition) error {
 	action := route.Parent
 
@@ -686,7 +752,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	operation := &Operation{
 		Tags:         tagNames,
 		Description:  action.Description,
-		Summary:      summaryFromDefinition(action),
+		Summary:      summaryFromDefinition(action.Name, action.Metadata),
 		ExternalDocs: docsFromDefinition(action.Docs),
 		OperationID:  operationID,
 		Parameters:   params,
@@ -695,9 +761,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		Deprecated:   false,
 	}
 
-	if action.Security != nil {
-		applySecurityForAction(operation, action)
-	}
+	applySecurity(operation, action.Security)
 
 	key := design.WildcardRegex.ReplaceAllStringFunc(
 		route.FullPath(),
@@ -734,23 +798,17 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	return nil
 }
 
-func applySecurityForAction(operation *Operation, action *design.ActionDefinition) {
-	if action.Security != nil && action.Security.Scheme.Kind != design.NoSecurityKind {
-		if action.Security.Scheme.Kind == design.JWTSecurityKind {
-			operation.Description += fmt.Sprintf("\n\n** Required security scopes**:\n%s", scopesList(action.Security.Scopes))
-
+func applySecurity(operation *Operation, security *design.SecurityDefinition) {
+	if security != nil && security.Scheme.Kind != design.NoSecurityKind {
+		if security.Scheme.Kind == design.JWTSecurityKind {
+			operation.Description += fmt.Sprintf("\n\n** Required security scopes**:\n%s", scopesList(security.Scopes))
 		} else {
-
-			scopes := action.Security.Scopes
+			scopes := security.Scopes
 			if scopes == nil {
 				scopes = make([]string, 0)
 			}
-			security := []map[string][]string{
-				map[string][]string{
-					action.Security.Scheme.SchemeName: scopes,
-				},
-			}
-			operation.Security = security
+			sec := []map[string][]string{{security.Scheme.SchemeName: scopes}}
+			operation.Security = sec
 		}
 	}
 }

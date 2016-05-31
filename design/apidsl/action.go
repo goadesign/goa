@@ -23,6 +23,18 @@ import (
 // returns the content of the file "/www/data/assets/x/y/z" when requests are sent to
 // "/assets/x/y/z".
 // The file path may be specified as a relative path to the current path of the process.
+// Files support setting a description, security scheme and doc links via additional DSL:
+//
+//    Files("/index.html", "/www/data/index.html", func() {
+//        Description("Serve home page")
+//        Docs(func() {
+//            Description("Download docs")
+//            URL("http//cellarapi.com/docs/actions/download")
+//        })
+//        Security("oauth2", func() {
+//            Scope("api:read")
+//        })
+//    })
 func Files(path, filename string, dsls ...func()) {
 	if r, ok := resourceDefinition(); ok {
 		server := &design.FileServerDefinition{
@@ -64,6 +76,10 @@ func Files(path, filename string, dsls ...func()) {
 //			Param("sort", func() {			// or URL query string values.
 //				Enum("asc", "desc")
 //			})
+//		})
+//		Security("oauth2", func() {
+//			Scope("api:read")
+//			Scope("api:write")
 //		})
 //		Headers(func() {				// Headers describe relevant action headers
 //			Header("Authorization", String)
