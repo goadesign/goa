@@ -128,6 +128,33 @@ var _ = Describe("Action", func() {
 		})
 	})
 
+	Context("using a response with a media type modifier", func() {
+		const mtID = "application/vnd.app.foo+json"
+
+		BeforeEach(func() {
+			MediaType(mtID, func() {
+				Attributes(func() { Attribute("foo") })
+				View("default", func() { Attribute("foo") })
+			})
+			name = "foo"
+			dsl = func() {
+				Routing(GET("/:id"))
+				Response(OK, mtID)
+			}
+		})
+
+		It("produces a response that keeps the modifier", func() {
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+			Ω(action).ShouldNot(BeNil())
+			Ω(action.Validate()).ShouldNot(HaveOccurred())
+			Ω(action.Responses).ShouldNot(BeNil())
+			Ω(action.Responses).Should(HaveLen(1))
+			Ω(action.Responses).Should(HaveKey("OK"))
+			resp := action.Responses["OK"]
+			Ω(resp.MediaType).Should(Equal(mtID))
+		})
+	})
+
 	Context("using a response template", func() {
 		const tmplName = "tmpl"
 		const respMediaType = "media"

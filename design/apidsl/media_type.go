@@ -81,24 +81,7 @@ func MediaType(identifier string, apidsl func()) *design.MediaTypeDefinition {
 		dslengine.ReportError("media type %#v is defined twice", identifier)
 		return nil
 	}
-	parts := strings.Split(identifier, "+")
-	// Make sure it has the `+json` suffix (TBD update when goa supports other encodings)
-	if len(parts) > 1 {
-		parts = parts[1:]
-		found := false
-		for _, part := range parts {
-			if part == "json" {
-				found = true
-				break
-			}
-		}
-		if !found {
-			identifier += "+json"
-		}
-	}
 	identifier = mime.FormatMediaType(identifier, params)
-	// Concoct a Go type name from the identifier, should it be possible to set it in the apidsl?
-	// pros: control the type name generated, cons: not needed in apidsl, adds one more thing to worry about
 	lastPart := identifier
 	lastPartIndex := strings.LastIndex(identifier, "/")
 	if lastPartIndex > -1 {
