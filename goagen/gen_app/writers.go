@@ -760,7 +760,7 @@ type (
 )
 
 {{ range . }}
-{{ $funcName := printf "Use%s" (goify .SchemeName true) }}// {{ $funcName }} mounts the {{ .SchemeName }} auth middleware onto the service.
+{{ $funcName := printf "Use%sMiddleware" (goify .SchemeName true) }}// {{ $funcName }} mounts the {{ .SchemeName }} auth middleware onto the service.
 func {{ $funcName }}(service *goa.Service, middleware goa.Middleware) {
 	service.Context = context.WithValue(service.Context, authMiddlewareKey({{ printf "%q" .SchemeName }}), middleware)
 }
