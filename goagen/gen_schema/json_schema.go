@@ -86,6 +86,8 @@ const (
 	JSONObject = "object"
 	// JSONString represents a JSON string.
 	JSONString = "string"
+	// JSONFile is an extension used by Swagger to represent a file download.
+	JSONFile = "file"
 )
 
 // SchemaRef is the JSON Hyper-schema standard href.
