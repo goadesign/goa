@@ -99,6 +99,11 @@ func NewErrorClass(code string, status int) ErrorClass {
 	}
 }
 
+// MissingPayloadError is the error produced when a request is missing a required payload.
+func MissingPayloadError() *Error {
+	return ErrInvalidRequest("missing required payload")
+}
+
 // InvalidParamTypeError is the error produced when the type of a parameter does not match the type
 // defined in the design.
 func InvalidParamTypeError(name string, val interface{}, expected string) *Error {

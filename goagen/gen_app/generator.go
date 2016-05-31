@@ -214,12 +214,13 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 			context := fmt.Sprintf("%s%sContext", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			unmarshal := fmt.Sprintf("unmarshal%s%sPayload", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			action := map[string]interface{}{
-				"Name":      codegen.Goify(a.Name, true),
-				"Routes":    a.Routes,
-				"Context":   context,
-				"Unmarshal": unmarshal,
-				"Payload":   a.Payload,
-				"Security":  a.Security,
+				"Name":            codegen.Goify(a.Name, true),
+				"Routes":          a.Routes,
+				"Context":         context,
+				"Unmarshal":       unmarshal,
+				"Payload":         a.Payload,
+				"PayloadOptional": a.PayloadOptional,
+				"Security":        a.Security,
 			}
 			data.Actions = append(data.Actions, action)
 			return nil
