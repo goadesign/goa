@@ -71,6 +71,7 @@ func Files(path, filename string, dsls ...func()) {
 //			Required("Authorization", "X-Account")
 //		})
 //		Payload(UpdatePayload)				// Payload describes the HTTP request body (here using a type)
+//		OptionalPayload(UpdatePayload)			// You can use OptionalPayload instead of Payload
 //		Response(NoContent)				// Each possible HTTP response is described via Response
 //		Response(NotFound)
 //	})
@@ -278,10 +279,10 @@ func Payload(p interface{}, dsls ...func()) {
 }
 
 // OptionalPayload implements the action optional payload DSL. The function works identically to the
-// Payload DSL except it would set a bit in the action definition to denote that the payload is not
-// required. Examples:
+// Payload DSL except it sets a bit in the action definition to denote that the payload is not
+// required. Example:
 //
-//	OptionalPayload(BottlePayload)		// Request payload is described by the BottlePayload type
+//	OptionalPayload(BottlePayload)		// Request payload is described by the BottlePayload type and is optional
 //
 func OptionalPayload(p interface{}, dsls ...func()) {
 	payload(true, p, dsls...)
@@ -335,9 +336,7 @@ func payload(isOptional bool, p interface{}, dsls ...func()) {
 			AttributeDefinition: att,
 			TypeName:            fmt.Sprintf("%s%sPayload", an, rn),
 		}
-		if isOptional {
-			a.PayloadOptional = true
-		}
+		a.PayloadOptional = isOptional
 	}
 }
 
