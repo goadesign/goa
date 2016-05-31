@@ -228,6 +228,31 @@ var _ = Describe("Resource", func() {
 		})
 	})
 
+	Context("with a valid media type using a modifier", func() {
+		const typeName = "typeName"
+		const identifier = "application/vnd.raphael.goa.test+json"
+
+		var mediaType = &MediaTypeDefinition{
+			UserTypeDefinition: &UserTypeDefinition{
+				TypeName: typeName,
+			},
+			Identifier: identifier,
+		}
+
+		BeforeEach(func() {
+			name = "foo"
+			dsl = func() {
+				DefaultMedia(mediaType)
+			}
+		})
+
+		It("sets the media type and keeps the modifier", func() {
+			Ω(res).ShouldNot(BeNil())
+			Ω(res.Validate()).ShouldNot(HaveOccurred())
+			Ω(res.MediaType).Should(Equal(identifier))
+		})
+	})
+
 	Context("with a trait that does not exist", func() {
 		BeforeEach(func() {
 			name = "foo"
