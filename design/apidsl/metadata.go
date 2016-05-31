@@ -74,6 +74,12 @@ func Metadata(name string, value ...string) {
 		}
 		def.Metadata[name] = append(def.Metadata[name], value...)
 
+	case *design.FileServerDefinition:
+		if def.Metadata == nil {
+			def.Metadata = make(map[string][]string)
+		}
+		def.Metadata[name] = append(def.Metadata[name], value...)
+
 	case *design.ResourceDefinition:
 		if def.Metadata == nil {
 			def.Metadata = make(map[string][]string)

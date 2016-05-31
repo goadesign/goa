@@ -248,10 +248,16 @@ type (
 	FileServerDefinition struct {
 		// Parent resource
 		Parent *ResourceDefinition
+		// Description for docs
+		Description string
+		// Docs points to the API external documentation
+		Docs *DocsDefinition
 		// FilePath is the file path to the static asset(s)
 		FilePath string
 		// RequestPath is the HTTP path that servers the assets.
 		RequestPath string
+		// Metadata is a list of key/value pairs
+		Metadata dslengine.MetadataDefinition
 		// Security defines security requirements for the file server.
 		Security *SecurityDefinition
 	}
@@ -1556,6 +1562,17 @@ func (f *FileServerDefinition) Finalize() {
 	if f.Security != nil && f.Security.Scheme.Kind == NoSecurityKind {
 		f.Security = nil
 	}
+}
+
+// FullPath computes the full request path recursively.
+// FullPath returns the file server request full path computed by concatenating the API and resource
+// base paths with the file server specific path.
+func (f *FileServerDefinition) FullPath() string {
+	var base string
+	if f.Parent != nil {
+		base = f.Parent.FullPath()
+	}
+	return httppath.Clean(path.Join(base, f.RequestPath))
 }
 
 // ByFilePath makes FileServerDefinition sortable for code generators.

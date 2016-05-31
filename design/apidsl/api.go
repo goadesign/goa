@@ -101,6 +101,8 @@ func Description(d string) {
 		def.Description = d
 	case *design.ResourceDefinition:
 		def.Description = d
+	case *design.FileServerDefinition:
+		def.Description = d
 	case *design.ActionDefinition:
 		def.Description = d
 	case *design.MediaTypeDefinition:
@@ -302,6 +304,8 @@ func Docs(dsl func()) {
 	case *design.APIDefinition:
 		def.Docs = docs
 	case *design.ActionDefinition:
+		def.Docs = docs
+	case *design.FileServerDefinition:
 		def.Docs = docs
 	default:
 		dslengine.IncompatibleDSL()
