@@ -113,7 +113,7 @@ func New(name string) *Service {
 		}
 		ctx := NewContext(service.Context, rw, req, params)
 		err := notFoundHandler(ctx, ContextResponse(ctx), req)
-		if err != nil {
+		if !ContextResponse(ctx).Written() {
 			service.Send(ctx, 404, err)
 		}
 	})
