@@ -1566,17 +1566,6 @@ func (f *FileServerDefinition) Finalize() {
 	}
 }
 
-// FullPath computes the full request path recursively.
-// FullPath returns the file server request full path computed by concatenating the API and resource
-// base paths with the file server specific path.
-func (f *FileServerDefinition) FullPath() string {
-	var base string
-	if f.Parent != nil {
-		base = f.Parent.FullPath()
-	}
-	return httppath.Clean(path.Join(base, f.RequestPath))
-}
-
 // ByFilePath makes FileServerDefinition sortable for code generators.
 type ByFilePath []*FileServerDefinition
 
