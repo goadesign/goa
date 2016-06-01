@@ -283,7 +283,11 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 		return nil, nil
 	}
 	tags := tagsFromDefinition(api.Metadata)
-	params, err := paramsFromDefinition(api.BaseParams, api.BasePath)
+	basePath := api.BasePath
+	if hasAbsoluteRoutes(api) {
+		basePath = ""
+	}
+	params, err := paramsFromDefinition(api.BaseParams, basePath)
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +317,7 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 			Version:        api.Version,
 		},
 		Host:                api.Host,
-		BasePath:            api.BasePath,
+		BasePath:            basePath,
 		Paths:               make(map[string]*Path),
 		Schemes:             api.Schemes,
 		Consumes:            consumes,
@@ -347,7 +351,7 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 		}
 		return res.IterateActions(func(a *design.ActionDefinition) error {
 			for _, route := range a.Routes {
-				if err := buildPathFromDefinition(s, api, route); err != nil {
+				if err := buildPathFromDefinition(s, api, route, basePath); err != nil {
 					return err
 				}
 			}
@@ -367,6 +371,34 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 		}
 	}
 	return s, nil
+}
+
+// hasAbsoluteRoutes returns true if any action exposed by the API uses an absolute route of if the
+// API has file servers. This is needed as Swagger does not support exceptions to the base path so
+// if the API has any absolute route the base path must be "/" and all routes must be absolutes.
+func hasAbsoluteRoutes(api *design.APIDefinition) bool {
+	hasAbsoluteRoutes := false
+	for _, res := range api.Resources {
+		if len(res.FileServers) > 0 {
+			hasAbsoluteRoutes = true
+			break
+		}
+		for _, a := range res.Actions {
+			for _, ro := range a.Routes {
+				if ro.IsAbsolute() {
+					hasAbsoluteRoutes = true
+					break
+				}
+			}
+			if hasAbsoluteRoutes {
+				break
+			}
+		}
+		if hasAbsoluteRoutes {
+			break
+		}
+	}
+	return hasAbsoluteRoutes
 }
 
 func securityDefsFromDefinition(schemes []*design.SecuritySchemeDefinition) map[string]*SecurityDefinition {
@@ -680,7 +712,7 @@ func buildPathFromFileServer(s *Swagger, api *design.APIDefinition, fs *design.F
 	applySecurity(operation, fs.Security)
 
 	key := design.WildcardRegex.ReplaceAllStringFunc(
-		fs.FullPath(),
+		fs.RequestPath,
 		func(w string) string {
 			return fmt.Sprintf("/{%s}", w[2:])
 		},
@@ -688,7 +720,6 @@ func buildPathFromFileServer(s *Swagger, api *design.APIDefinition, fs *design.F
 	if key == "" {
 		key = "/"
 	}
-	key = strings.TrimPrefix(key, api.BasePath)
 	var path *Path
 	var ok bool
 	if path, ok = s.Paths[key]; !ok {
@@ -700,7 +731,7 @@ func buildPathFromFileServer(s *Swagger, api *design.APIDefinition, fs *design.F
 	return nil
 }
 
-func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *design.RouteDefinition) error {
+func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *design.RouteDefinition, basePath string) error {
 	action := route.Parent
 
 	tagNames := tagNamesFromDefinitions(action.Parent.Metadata, action.Metadata)
@@ -772,7 +803,13 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	if key == "" {
 		key = "/"
 	}
-	key = strings.TrimPrefix(key, api.BasePath)
+	bp := design.WildcardRegex.ReplaceAllStringFunc(
+		basePath,
+		func(w string) string {
+			return fmt.Sprintf("/{%s}", w[2:])
+		},
+	)
+	key = strings.TrimPrefix(key, bp)
 	var path *Path
 	var ok bool
 	if path, ok = s.Paths[key]; !ok {

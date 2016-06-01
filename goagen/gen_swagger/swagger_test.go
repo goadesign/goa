@@ -422,15 +422,15 @@ var _ = Describe("New", func() {
 				Ω(ps[10]).Should(Equal(&genswagger.Parameter{In: "header", Name: "OverrideRequiredHeader", Type: "string", Required: true}))
 				Ω(ps[11]).Should(Equal(&genswagger.Parameter{In: "header", Name: "X-Account", Type: "integer", Required: true}))
 				Ω(ps[12]).Should(Equal(&genswagger.Parameter{In: "header", Name: "header", Type: "string", Required: true}))
-				Ω(swagger.Paths["/bottles/{id}"]).ShouldNot(BeNil())
-				Ω(swagger.Paths["/bottles/{id}"].Put).ShouldNot(BeNil())
-				Ω(swagger.Paths["/bottles/{id}"].Put.Parameters).Should(HaveLen(14))
+				Ω(swagger.Paths["/base/bottles/{id}"]).ShouldNot(BeNil())
+				Ω(swagger.Paths["/base/bottles/{id}"].Put).ShouldNot(BeNil())
+				Ω(swagger.Paths["/base/bottles/{id}"].Put.Parameters).Should(HaveLen(14))
 			})
 
 			It("should set the inherited tag and the action tag", func() {
 				tags := []string{"res", "Update"}
 				Ω(swagger.Paths["/orgs/{org}/accounts/{id}"].Put.Tags).Should(Equal(tags))
-				Ω(swagger.Paths["/bottles/{id}"].Put.Tags).Should(Equal(tags))
+				Ω(swagger.Paths["/base/bottles/{id}"].Put.Tags).Should(Equal(tags))
 			})
 
 			It("should set the summary from the summary tag", func() {
