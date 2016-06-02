@@ -278,21 +278,26 @@ var _ = Describe("Walk", func() {
 	var count int
 	var matched bool
 
-	counter := func(*AttributeDefinition) {
+	counter := func(*AttributeDefinition) error {
 		count++
+		return nil
 	}
 
-	matcher := func(name string) func(*AttributeDefinition) {
-		return func(att *AttributeDefinition) {
+	matcher := func(name string) func(*AttributeDefinition) error {
+		done := errors.New("done")
+		return func(att *AttributeDefinition) error {
 			if u, ok := att.Type.(*UserTypeDefinition); ok {
 				if u.TypeName == name {
 					matched = true
+					return done
 				}
 			} else if m, ok := att.Type.(*MediaTypeDefinition); ok {
 				if m.TypeName == name {
 					matched = true
+					return done
 				}
 			}
+			return nil
 		}
 	}
 

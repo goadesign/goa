@@ -166,6 +166,20 @@ func (v *ValidationDefinition) AddRequired(required []string) {
 	}
 }
 
+// HasRequiredOnly returns true if the validation only has the Required field with a non-zero value.
+func (v *ValidationDefinition) HasRequiredOnly() bool {
+	if len(v.Values) > 0 {
+		return false
+	}
+	if v.Format != "" || v.Pattern != "" {
+		return false
+	}
+	if (v.Minimum != nil) || (v.Maximum != nil) || (v.MaxLength != nil) {
+		return false
+	}
+	return true
+}
+
 // Dup makes a shallow dup of the validation.
 func (v *ValidationDefinition) Dup() *ValidationDefinition {
 	return &ValidationDefinition{
