@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"text/template"
@@ -73,11 +74,36 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDef
 		o.IterateAttributes(func(n string, catt *design.AttributeDefinition) error {
 			var validation string
 			if ds, ok := catt.Type.(design.DataStructure); ok {
+				// We need to check empirically whether there are validations to be
+				// generated, we can't just generate and check whether something was
+				// generated to avoid infinite recursions.
 				hasValidations := false
-				ds.Walk(func(a *design.AttributeDefinition) {
+				done := errors.New("done")
+				ds.Walk(func(a *design.AttributeDefinition) error {
 					if a.Validation != nil {
-						hasValidations = true
+						if private {
+							hasValidations = true
+							return done
+						}
+						// For public data structures there is a case where
+						// there is validation but no actual validation
+						// code: if the validation is a required validation
+						// that applies to attributes that cannot be nil or
+						// empty string i.e. primitive types other than
+						// string.
+						if !a.Validation.HasRequiredOnly() {
+							hasValidations = true
+							return done
+						}
+						for _, name := range a.Validation.Required {
+							att := a.Type.ToObject()[name]
+							if att != nil && (!att.Type.IsPrimitive() || att.Type.Kind() == design.StringKind) {
+								hasValidations = true
+								return done
+							}
+						}
 					}
+					return nil
 				})
 				if hasValidations {
 					validation = RunTemplate(

@@ -71,7 +71,8 @@ type (
 		// on each attribute starting with the attribute returned by Definition.
 		// User type and media type attributes are traversed once even for recursive
 		// definitions to avoid infinite recursion.
-		Walk(func(*AttributeDefinition))
+		// Walk stops and returns the error if the function returns a non-nil error.
+		Walk(func(*AttributeDefinition) error) error
 	}
 
 	// Primitive is the type for null, boolean, integer, number, string, and time.
@@ -529,13 +530,14 @@ func (o Object) IterateAttributes(it AttributeIterator) error {
 // UserTypes traverses the data type recursively and collects all the user types used to
 // define it. The returned map is indexed by type name.
 func UserTypes(dt DataType) map[string]*UserTypeDefinition {
-	collect := func(types map[string]*UserTypeDefinition) func(*AttributeDefinition) {
-		return func(at *AttributeDefinition) {
+	collect := func(types map[string]*UserTypeDefinition) func(*AttributeDefinition) error {
+		return func(at *AttributeDefinition) error {
 			if u, ok := at.Type.(*UserTypeDefinition); ok {
 				types[u.TypeName] = u
 			} else if m, ok := at.Type.(*MediaTypeDefinition); ok {
 				types[m.TypeName] = m.UserTypeDefinition
 			}
+			return nil
 		}
 	}
 	switch actual := dt.(type) {
@@ -881,46 +883,53 @@ func (a *AttributeDefinition) Definition() *AttributeDefinition {
 
 // Walk traverses the data structure recursively and calls the given function once
 // on each attribute starting with the attribute returned by Definition.
-func (a *AttributeDefinition) Walk(walker func(*AttributeDefinition)) {
-	walk(a, walker, make(map[string]bool))
+func (a *AttributeDefinition) Walk(walker func(*AttributeDefinition) error) error {
+	return walk(a, walker, make(map[string]bool))
 }
 
 // Walk traverses the data structure recursively and calls the given function once
 // on each attribute starting with the attribute returned by Definition.
-func (u *UserTypeDefinition) Walk(walker func(*AttributeDefinition)) {
-	walk(u.AttributeDefinition, walker, map[string]bool{u.TypeName: true})
+func (u *UserTypeDefinition) Walk(walker func(*AttributeDefinition) error) error {
+	return walk(u.AttributeDefinition, walker, map[string]bool{u.TypeName: true})
 }
 
 // Recursive implementation of the Walk methods. Takes care of avoiding infinite recursions by
 // keeping track of types that have already been walked.
-func walk(at *AttributeDefinition, walker func(*AttributeDefinition), seen map[string]bool) {
-	walker(at)
-	walkUt := func(ut *UserTypeDefinition) {
+func walk(at *AttributeDefinition, walker func(*AttributeDefinition) error, seen map[string]bool) error {
+	if err := walker(at); err != nil {
+		return err
+	}
+	walkUt := func(ut *UserTypeDefinition) error {
 		if _, ok := seen[ut.TypeName]; ok {
-			return
+			return nil
 		}
 		seen[ut.TypeName] = true
-		walk(ut.AttributeDefinition, walker, seen)
+		return walk(ut.AttributeDefinition, walker, seen)
 	}
 	switch actual := at.Type.(type) {
 	case Primitive:
-		return
+		return nil
 	case *Array:
-		walk(actual.ElemType, walker, seen)
+		return walk(actual.ElemType, walker, seen)
 	case *Hash:
-		walk(actual.KeyType, walker, seen)
-		walk(actual.ElemType, walker, seen)
+		if err := walk(actual.KeyType, walker, seen); err != nil {
+			return err
+		}
+		return walk(actual.ElemType, walker, seen)
 	case Object:
 		for _, cat := range actual {
-			walk(cat, walker, seen)
+			if err := walk(cat, walker, seen); err != nil {
+				return err
+			}
 		}
 	case *UserTypeDefinition:
-		walkUt(actual)
+		return walkUt(actual)
 	case *MediaTypeDefinition:
-		walkUt(actual.UserTypeDefinition)
+		return walkUt(actual.UserTypeDefinition)
 	default:
 		panic("unknown attribute type") // bug
 	}
+	return nil
 }
 
 // toReflectType converts the DataType to reflect.Type.
