@@ -341,9 +341,22 @@ var commonInitialisms = map[string]bool{
 // of the identifier is uppercase otherwise it's lowercase.
 func Goify(str string, firstUpper bool) string {
 	runes := []rune(str)
+
+	// remove trailing invalid identifiers (makes code below simpler)
+	valid := len(runes) - 1
+	for ; valid >= 0 && !validIdentifier(runes[valid]); valid-- {
+	}
+	runes = runes[0 : valid+1]
+
 	w, i := 0, 0 // index of start of word, scan
 	for i+1 <= len(runes) {
 		eow := false // whether we hit the end of a word
+
+		// remove leading invalid identifiers
+		for valid = i; valid < len(runes) && !validIdentifier(runes[valid]); valid++ {
+		}
+		runes = append(runes[:i], runes[valid:]...)
+
 		if i+1 == len(runes) {
 			eow = true
 		} else if !validIdentifier(runes[i]) {
@@ -456,7 +469,7 @@ func validIdentifier(r rune) bool {
 
 // fixReserved appends an underscore on to Go reserved keywords.
 func fixReserved(w string) string {
-	if _, ok := Reserved[w]; ok {
+	if Reserved[w] {
 		w += "_"
 	}
 	return w
