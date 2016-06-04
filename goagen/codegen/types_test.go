@@ -137,6 +137,39 @@ var _ = Describe("code generation", func() {
 				})
 			})
 
+			Context("with consecutives invalid identifiers", func() {
+				BeforeEach(func() {
+					firstUpper = false
+					str = "[[fields___type]]"
+					expected = "fieldsType"
+				})
+				It("creates a camelcased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+
+			Context("with consecutives invalid identifiers", func() {
+				BeforeEach(func() {
+					firstUpper = true
+					str = "[[fields___type]]"
+					expected = "FieldsType"
+				})
+				It("creates a camelcased string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+
+			Context("with all invalid identifiers", func() {
+				BeforeEach(func() {
+					firstUpper = false
+					str = "[["
+					expected = ""
+				})
+				It("creates an empty string", func() {
+					Ω(goified).Should(Equal(expected))
+				})
+			})
+
 		})
 
 	})

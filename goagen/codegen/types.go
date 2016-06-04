@@ -334,16 +334,46 @@ var commonInitialisms = map[string]bool{
 	"XSS":   true,
 }
 
+// removeTrailingInvalid removes trailing invalid identifiers from runes.
+func removeTrailingInvalid(runes []rune) []rune {
+	valid := len(runes) - 1
+	for ; valid >= 0 && !validIdentifier(runes[valid]); valid-- {
+	}
+
+	return runes[0 : valid+1]
+}
+
+// removeInvalidAtIndex removes consecutive invalid identifiers from runes starting at index i.
+func removeInvalidAtIndex(i int, runes []rune) []rune {
+	valid := i
+	for ; valid < len(runes) && !validIdentifier(runes[valid]); valid++ {
+	}
+
+	return append(runes[:i], runes[valid:]...)
+}
+
 // Goify makes a valid Go identifier out of any string.
 // It does that by removing any non letter and non digit character and by making sure the first
 // character is a letter or "_".
 // Goify produces a "CamelCase" version of the string, if firstUpper is true the first character
 // of the identifier is uppercase otherwise it's lowercase.
 func Goify(str string, firstUpper bool) string {
+	// Dev note: this func is probably in need of a rewrite, gocyclo is already at the
+	//           upper limit of 20, further changes may cause the cyclomatic complexity
+	//           check to fail.
+
 	runes := []rune(str)
+
+	// remove trailing invalid identifiers (makes code below simpler)
+	runes = removeTrailingInvalid(runes)
+
 	w, i := 0, 0 // index of start of word, scan
 	for i+1 <= len(runes) {
 		eow := false // whether we hit the end of a word
+
+		// remove leading invalid identifiers
+		runes = removeInvalidAtIndex(i, runes)
+
 		if i+1 == len(runes) {
 			eow = true
 		} else if !validIdentifier(runes[i]) {
@@ -456,7 +486,7 @@ func validIdentifier(r rune) bool {
 
 // fixReserved appends an underscore on to Go reserved keywords.
 func fixReserved(w string) string {
-	if _, ok := Reserved[w]; ok {
+	if Reserved[w] {
 		w += "_"
 	}
 	return w
