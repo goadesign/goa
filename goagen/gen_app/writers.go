@@ -434,7 +434,7 @@ type {{ .Name }} struct {
 
 */}}{{/* DateTimeType */}}{{/*
 */}}{{ $varName := or (and (not .Pointer) .VarName) tempvar }}{{/*
-*/}}{{ tabs .Depth }}if {{ .VarName }}, err2 := time.Parse("RFC3339", raw{{ goify .Name true }}); err2 == nil {
+*/}}{{ tabs .Depth }}if {{ .VarName }}, err2 := time.Parse(time.RFC3339, raw{{ goify .Name true }}); err2 == nil {
 {{ if .Pointer }}{{ tabs .Depth }}	{{ $varName }} := &{{ .VarName }}
 {{ end }}{{ tabs .Depth }}	{{ .Pkg }} = {{ $varName }}
 {{ tabs .Depth }}} else {
