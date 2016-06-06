@@ -70,7 +70,6 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 			if err = os.MkdirAll(toolDir, 0755); err != nil {
 				return
 			}
-			g.genfiles = append(g.genfiles, toolDir)
 		}
 
 		cliDir = filepath.Join(g.outDir, g.toolDirName, "cli")
@@ -80,7 +79,6 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		if err = os.MkdirAll(cliDir, 0755); err != nil {
 			return
 		}
-		g.genfiles = append(g.genfiles, cliDir)
 
 		pkgDir = filepath.Join(g.outDir, g.target)
 		if err = os.RemoveAll(pkgDir); err != nil {
@@ -89,7 +87,6 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		if err = os.MkdirAll(pkgDir, 0755); err != nil {
 			return
 		}
-		g.genfiles = append(g.genfiles, pkgDir, pkgDir)
 	}
 
 	// Setup generation
@@ -132,6 +129,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	}
 
 	// Generate tool/main.go (only once)
+	g.genfiles = append(g.genfiles, toolDir)
 	mainFile := filepath.Join(toolDir, "main.go")
 	if _, err := os.Stat(mainFile); err != nil {
 		if err = g.generateMain(mainFile, clientPkg, cliPkg, funcs, api); err != nil {
@@ -139,12 +137,14 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		}
 	}
 
-	// Generate client/cli/commands.go
+	// Generate tool/cli/commands.go
+	g.genfiles = append(g.genfiles, cliDir)
 	if err = g.generateCommands(filepath.Join(cliDir, "commands.go"), clientPkg, funcs, api); err != nil {
 		return
 	}
 
 	// Generate client/client.go
+	g.genfiles = append(g.genfiles, pkgDir)
 	if err = g.generateClient(filepath.Join(pkgDir, "client.go"), clientPkg, funcs, api); err != nil {
 		return
 	}

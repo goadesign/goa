@@ -49,7 +49,7 @@ var _ = Describe("Generate", func() {
 
 		It("generates a dummy app", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(8))
+			Ω(files).Should(HaveLen(7))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "testapi-cli", "main.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically(">=", 16))
@@ -96,7 +96,7 @@ var _ = Describe("Generate", func() {
 
 		It("generates the correct command flag initialization code", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(9))
+			Ω(files).Should(HaveLen(8))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically(">=", 3))
@@ -117,7 +117,7 @@ var _ = Describe("Generate", func() {
 
 			It("properly escapes the multi-line string used in the short description", func() {
 				Ω(genErr).Should(BeNil())
-				Ω(files).Should(HaveLen(9))
+				Ω(files).Should(HaveLen(8))
 				content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(string(content)).Should(ContainSubstring(multiline))
@@ -134,7 +134,7 @@ var _ = Describe("Generate", func() {
 
 			It("properly escapes the multi-line string used in the short description", func() {
 				Ω(genErr).Should(BeNil())
-				Ω(files).Should(HaveLen(9))
+				Ω(files).Should(HaveLen(8))
 				content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(string(content)).Should(ContainSubstring(pre + "` + \"`\" + `" + post))
@@ -190,7 +190,7 @@ var _ = Describe("Generate", func() {
 
 		It("generates registers the signer flags from main", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(9))
+			Ω(files).Should(HaveLen(8))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "testapi-cli", "main.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("jwt1Signer := newJWT1Signer()"))
