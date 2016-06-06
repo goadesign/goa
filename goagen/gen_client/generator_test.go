@@ -37,6 +37,47 @@ var _ = Describe("Generate", func() {
 		delete(codegen.Reserved, "client")
 	})
 
+	Context("with jsonapi like querystring params", func() {
+		BeforeEach(func() {
+			o := design.Object{
+				"fields[foo]": &design.AttributeDefinition{Type: design.String},
+			}
+			design.Design = &design.APIDefinition{
+				Name: "testapi",
+				Resources: map[string]*design.ResourceDefinition{
+					"foo": {
+						Name: "foo",
+						Actions: map[string]*design.ActionDefinition{
+							"show": {
+								Name: "show",
+								Routes: []*design.RouteDefinition{
+									{
+										Verb: "GET",
+										Path: "",
+									},
+								},
+								QueryParams: &design.AttributeDefinition{Type: o},
+							},
+						},
+					},
+				},
+			}
+			fooRes := design.Design.Resources["foo"]
+			showAct := fooRes.Actions["show"]
+			showAct.Parent = fooRes
+			showAct.Routes[0].Parent = showAct
+		})
+
+		It("generates param initialization code that uses the param name given in the design", func() {
+			Ω(genErr).Should(BeNil())
+			Ω(files).Should(HaveLen(9))
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring("func ShowFooPath("))
+			Ω(content).Should(ContainSubstring(`values.Set("fields[foo]", *fieldsFoo)`))
+		})
+	})
+
 	Context("with an action with multiple routes", func() {
 		BeforeEach(func() {
 			design.Design = &design.APIDefinition{
