@@ -1,14 +1,18 @@
-examples/cellar/cellar
-examples/cellar/client/cellar-cli/cellar-cli
+# Golang tools artifacts
 **/*.coverprofile
-goagen/goagen
-**/autogen
 **/*.test
 vendor
+
+# Executables and test outputs
+goagen/goagen
 _integration_tests/*/**/*.*
-public/
+
+# Editor / IDEs cruft
 .idea/
+*.iml
 .vscode/
 *~
 *.orig
+
+# OSes cruft
 .DS_Store

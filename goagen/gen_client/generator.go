@@ -375,22 +375,6 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 			}
 			g.generatedTypes[action.Payload.TypeName] = true
 		}
-		if action.Params != nil {
-			params := make(design.Object, len(action.QueryParams.Type.ToObject()))
-			for n, param := range action.QueryParams.Type.ToObject() {
-				name := codegen.Goify(n, false)
-				params[name] = param
-			}
-			action.QueryParams.Type = params
-		}
-		if action.Headers != nil {
-			headers := make(design.Object, len(action.Headers.Type.ToObject()))
-			for n, header := range action.Headers.Type.ToObject() {
-				name := codegen.Goify(n, false)
-				headers[name] = header
-			}
-			action.Headers.Type = headers
-		}
 		for i, r := range action.Routes {
 			data := struct {
 				Route *design.RouteDefinition
