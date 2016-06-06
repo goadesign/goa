@@ -48,14 +48,14 @@ framework from RightScale follows the same pattern and was an inspiration to goa
 
 ## Other Whys and Hows
 
-If you are new to goa I can't recommend enough that you read the
+You should start by reading the
 [Gopher Academy blog post](https://blog.gopheracademy.com/advent-2015/goaUntanglingMicroservices/).
-goa may look a little bit different at first, the post explains the thinking behind it so that you
-can better take advantage of the framework.
+goa may look a little bit different at first and the post explains the rationale for it in greather
+depth.
 
 ## Installation
 
-Assuming you have a working Go setup:
+Assuming you have a working [Go](https://golang.org) setup:
 ```
 go get github.com/goadesign/goa
 go get github.com/goadesign/goa/goagen
@@ -102,8 +102,8 @@ its body.
 
 Now that the design is done, let's run `goagen` on the design package:
 ```
-$ cd $GOPATH/src/goa-adder
-$ goagen bootstrap -d goa-adder/design
+cd $GOPATH/src/goa-adder
+goagen bootstrap -d goa-adder/design
 ```
 This produces the following outputs:
 
@@ -112,8 +112,8 @@ This produces the following outputs:
 * an `app` package which contains glue code that binds the low level HTTP server to your
   implementation.
 * a `client` package with a `Client` struct that implements a `AddOperands` function which calls
-  the API with the given arguments and returns the `http.Response`. The `client` directory also
-  contains the complete source for a client CLI tool (see below).
+  the API with the given arguments and returns the `http.Response`.
+* a `tool` directory that contains the complete source for a client CLI tool.
 * a `swagger` package with implements the `GET /swagger.json` API endpoint. The response contains
   the full Swagger specificiation of the API.
 
@@ -130,21 +130,20 @@ func (c *OperandsController) Add(ctx *app.AddOperandsContext) error {
 ```
 Now let's compile and run the service:
 ```
-$ cd $GOPATH/src/goa-adder
-$ go build
-$ ./goa-adder
+cd $GOPATH/src/goa-adder
+go build
+./goa-adder
 2016/04/05 20:39:10 [INFO] mount ctrl=Operands action=Add route=GET /add/:left/:right
-2016/04/05 20:39:10 [INFO] mount file name=swagger/swagger.json route=GET /swagger.json
 2016/04/05 20:39:10 [INFO] listen transport=http addr=:8080
 ```
 Open a new console and compile the generated CLI tool:
 ```
-cd $GOPATH/src/goa-adder/client/adder-cli
+cd $GOPATH/src/goa-adder/tool/adder-cli
 go build
 ```
 The tool includes contextual help:
 ```
-$ ./adder-cli --help
+./adder-cli --help
 CLI client for the adder service
 
 Usage:
@@ -154,34 +153,33 @@ Available Commands:
   add         add returns the sum of the left and right parameters in the response body
 
 Flags:
-      --dump[=false]: Dump HTTP request and response.
-  -H, --host="localhost:8080": API hostname
-      --pp[=false]: Pretty print response body
-  -s, --scheme="http": Set the requests scheme
-  -t, --timeout=20s: Set the request timeout, defaults to 20s
+      --dump               Dump HTTP request and response.
+  -H, --host string        API hostname (default "localhost:8080")
+  -s, --scheme string      Set the requests scheme
+  -t, --timeout duration   Set the request timeout (default 20s)
 
 Use "adder-cli [command] --help" for more information about a command.
 ```
 To get information on how to call a specific API use:
 ```
-$ ./adder-cli add operands --help
+./adder-cli add operands --help
 Usage:
-  adder-cli add operands [/add/LEFT/RIGHT] or [flags]
+  adder-cli add operands [/add/LEFT/RIGHT] [flags]
 
 Flags:
       --left int    Left operand
+      --pp          Pretty print response body
       --right int   Right operand
 
 Global Flags:
       --dump               Dump HTTP request and response.
   -H, --host string        API hostname (default "localhost:8080")
-      --pp                 Pretty print response body
   -s, --scheme string      Set the requests scheme
   -t, --timeout duration   Set the request timeout (default 20s)
 ```
 Now let's run it:
 ```
-$ ./adder-cli add operands /add/1/2
+./adder-cli add operands /add/1/2
 2016/04/05 20:43:18 [INFO] started id=HffVaGiH GET=http://localhost:8080/add/1/2
 2016/04/05 20:43:18 [INFO] completed id=HffVaGiH status=200 time=1.028827ms
 3⏎
@@ -195,19 +193,19 @@ $ ./adder-cli add operands --left=1 --right=2
 ```
 The console running the service shows the request that was just handled:
 ```
-2016/04/05 20:43:18 [INFO] started action=Add id=cASjgqGiCP-1 GET=/add/1/2
-2016/04/05 20:43:18 [INFO] params action=Add id=cASjgqGiCP-1 right=2 left=1
-2016/04/05 20:43:18 [INFO] completed action=Add id=cASjgqGiCP-1 status=0 bytes=0 time=36.615µs
+2016/06/06 10:23:03 [INFO] started req_id=rLAtsSThLD-1 GET=/add/1/2 from=::1 ctrl=OperandsController action=Add
+2016/06/06 10:23:03 [INFO] params req_id=rLAtsSThLD-1 right=2 left=1
+2016/06/06 10:23:03 [INFO] completed req_id=rLAtsSThLD-1 status=200 bytes=1 time=66.25µs
 ```
 Now let's see how robust our service is and try to use non integer values:
 ```
 ./adder-cli add operands add/1/d
-2016/04/05 20:44:56 [INFO] started id=5254tL8j GET=http://localhost:8080/add/1/d
-2016/04/05 20:44:56 [INFO] completed id=5254tL8j status=500 time=840.12µs
-error: 500: "Internal error: 400 invalid_request: invalid value \"d\" for parameter \"right\", must be a integer"
+2016/06/06 10:24:22 [INFO] started id=Q2u/lPUc GET=http://localhost:8080/add/1/d
+2016/06/06 10:24:22 [INFO] completed id=Q2u/lPUc status=400 time=1.301083ms
+error: 400: {"code":"invalid_request","status":400,"detail":"invalid value \"d\" for parameter \"right\", must be a integer"}
 ```
-As you can see the generated code validated the incoming request against the types defined
-in the design.
+As you can see the generated code validated the incoming request against the types defined in the
+design.
 
 ### 4. Document
 
@@ -225,7 +223,7 @@ the Github repo.
 
 The Swagger JSON can also easily be served from the documented service itself using a simple
 [Files](http://goa.design/reference/goa/design/apidsl/#func-files-a-name-apidsl-files-a)
-definition in the design, for example:
+definition in the design. Edit the file `design/design.go` and add:
 
 ```go
 var _ = Resource("swagger", func() {
@@ -236,17 +234,67 @@ var _ = Resource("swagger", func() {
 })
 ```
 
-The generated controller is then mounted as follows in the `main` function for example:
+Re-run `goagen bootstrap -d goa-adder/design` and note the new file
+`swagger.go` containing the implementation for a controller that serves the
+`swagger.json` file.
+
+Mount the newly generated controller by adding the following two lines to the `main` function in
+`main.go`:
 
 ```go
-app.MountSwaggerController(service, service.NewController("swagger"))
+cs := NewSwaggerController(service)
+app.MountSwaggerController(service, cs)
 ```
 
-Requests made to `/swagger.json` now return the Swagger specification. The generated controller also
-takes care of adding the proper CORS headers so that the JSON may be retrieved from anywhere e.g.
-via Swagger UI.
+Recompile and restart the service:
+
+```
+^C
+go build
+./goa-adder
+2016/06/06 10:31:14 [INFO] mount ctrl=Operands action=Add route=GET /add/:left/:right
+2016/06/06 10:31:14 [INFO] mount ctrl=Swagger files=swagger/swagger.json route=GET /swagger.json
+2016/06/06 10:31:14 [INFO] listen transport=http addr=:8080
+```
+
+Note the new route `/swagger.json`.  Requests made to it return the Swagger specification. The
+generated controller also takes care of adding the proper CORS headers so that the JSON may be
+retrieved from browsers using JavaScript served from a different origin (e.g. via Swagger UI). The
+client also has a new `download` action:
+
+```
+cd tool/adder-cli
+go build
+./adder-cli download --help
+Download file with given path
+
+Usage:
+  adder-cli download [PATH] [flags]
+
+Flags:
+      --out string   Output file
+
+Global Flags:
+      --dump               Dump HTTP request and response.
+  -H, --host string        API hostname (default "localhost:8080")
+  -s, --scheme string      Set the requests scheme
+  -t, --timeout duration   Set the request timeout (default 20s)
+```
+
+Which can be used like this to download the file `swagger.json` in the current directory:
+
+```
+./adder-cli download swagger.json
+2016/06/06 10:36:24 [INFO] started file=swagger.json id=ciHL2VLt GET=http://localhost:8080/swagger.json
+2016/06/06 10:36:24 [INFO] completed file=swagger.json id=ciHL2VLt status=200 time=1.013307ms
+```
+
+We now have a self-documenting API and best of all the documentation is automatically updated as the
+API design changes.
 
 ## Resources
+
+Consult the following resources to learn more about goa.
 
 ### goa.design
 
