@@ -49,11 +49,11 @@ var _ = Describe("Generate", func() {
 
 		It("generates a dummy app", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(6))
-			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "testapi-cli", "main.go"))
+			Ω(files).Should(HaveLen(8))
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "testapi-cli", "main.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically(">=", 16))
-			_, err = gexec.Build(filepath.Join(testgenPackagePath, "client", "testapi-cli"))
+			_, err = gexec.Build(filepath.Join(testgenPackagePath, "tool", "testapi-cli"))
 			Ω(err).ShouldNot(HaveOccurred())
 		})
 	})
@@ -96,14 +96,14 @@ var _ = Describe("Generate", func() {
 
 		It("generates the correct command flag initialization code", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(7))
-			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "testapi-cli", "commands.go"))
+			Ω(files).Should(HaveLen(9))
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically(">=", 3))
 			Ω(content).Should(ContainSubstring("var param int"))
 			Ω(content).Should(ContainSubstring("var time_ string"))
 			Ω(content).Should(ContainSubstring(".Flags()"))
-			_, err = gexec.Build(filepath.Join(testgenPackagePath, "client", "testapi-cli"))
+			_, err = gexec.Build(filepath.Join(testgenPackagePath, "tool", "testapi-cli"))
 			Ω(err).ShouldNot(HaveOccurred())
 
 		})
@@ -117,8 +117,8 @@ var _ = Describe("Generate", func() {
 
 			It("properly escapes the multi-line string used in the short description", func() {
 				Ω(genErr).Should(BeNil())
-				Ω(files).Should(HaveLen(7))
-				content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "testapi-cli", "main.go"))
+				Ω(files).Should(HaveLen(9))
+				content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(string(content)).Should(ContainSubstring(multiline))
 			})
@@ -134,8 +134,8 @@ var _ = Describe("Generate", func() {
 
 			It("properly escapes the multi-line string used in the short description", func() {
 				Ω(genErr).Should(BeNil())
-				Ω(files).Should(HaveLen(7))
-				content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "testapi-cli", "main.go"))
+				Ω(files).Should(HaveLen(9))
+				content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(string(content)).Should(ContainSubstring(pre + "` + \"`\" + `" + post))
 			})
@@ -188,12 +188,13 @@ var _ = Describe("Generate", func() {
 			showAct.Routes[0].Parent = showAct
 		})
 
-		It("generates the Signer.RegisterFlags call from Command", func() {
+		It("generates registers the signer flags from main", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(7))
-			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "testapi-cli", "commands.go"))
+			Ω(files).Should(HaveLen(9))
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "testapi-cli", "main.go"))
 			Ω(err).ShouldNot(HaveOccurred())
-			Ω(content).Should(ContainSubstring("c.JWT1Signer.RegisterFlags(cc)"))
+			Ω(content).Should(ContainSubstring("jwt1Signer := newJWT1Signer()"))
+			Ω(content).Should(ContainSubstring("c.SetJWT1Signer(jwt1Signer)"))
 		})
 	})
 })

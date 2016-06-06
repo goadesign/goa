@@ -49,7 +49,7 @@ type SecuritySchemeDefinition struct {
 	SchemeName string `json:"scheme"`
 
 	// Type is one of "apiKey", "oauth2" or "basic", according to the
-	// Swagger specs.
+	// Swagger specs. We also support "jwt".
 	Type string `json:"type"`
 	// Description describes the security scheme. Ex: "Google OAuth2"
 	Description string `json:"description"`

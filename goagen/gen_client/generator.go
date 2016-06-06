@@ -23,6 +23,8 @@ const typesFileName = "datatypes"
 type Generator struct {
 	outDir         string // Path to output directory
 	target         string // Name of generated package
+	toolDirName    string // Name of tool directory where CLI main is generated once
+	tool           string // Name of CLI tool
 	genfiles       []string
 	generatedTypes map[string]bool // Keeps track of names of user types that correspond to action payloads.
 	encoders       []*genapp.EncoderTemplateData
@@ -32,16 +34,19 @@ type Generator struct {
 
 // Generate is the generator entry point called by the meta generator.
 func Generate() (files []string, err error) {
-	var outDir, target string
+	var outDir, target, toolDir, tool string
+	dtool := strings.Replace(design.Design.Name, " ", "-", -1) + "-cli"
 
 	set := flag.NewFlagSet("client", flag.PanicOnError)
 	set.String("design", "", "")
 	set.StringVar(&outDir, "out", "", "")
 	set.StringVar(&target, "pkg", "client", "")
+	set.StringVar(&toolDir, "tooldir", "tool", "")
+	set.StringVar(&tool, "tool", dtool, "")
 	set.Parse(os.Args[2:])
 
 	target = codegen.Goify(target, false)
-	g := &Generator{outDir: outDir, target: target}
+	g := &Generator{outDir: outDir, target: target, toolDirName: toolDir, tool: tool}
 	codegen.Reserved[target] = true
 
 	return g.Generate(design.Design)
@@ -57,61 +62,95 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		}
 	}()
 
-	// Make tool directory
-	var toolDir string
-	toolDir, err = g.makeToolDir(api.Name)
-	if err != nil {
-		return
+	// Setup output directories as needed
+	var pkgDir, toolDir, cliDir string
+	{
+		toolDir = filepath.Join(g.outDir, g.toolDirName, g.tool)
+		if _, err = os.Stat(toolDir); err != nil {
+			if err = os.MkdirAll(toolDir, 0755); err != nil {
+				return
+			}
+			g.genfiles = append(g.genfiles, toolDir)
+		}
+
+		cliDir = filepath.Join(g.outDir, g.toolDirName, "cli")
+		if err = os.RemoveAll(cliDir); err != nil {
+			return
+		}
+		if err = os.MkdirAll(cliDir, 0755); err != nil {
+			return
+		}
+		g.genfiles = append(g.genfiles, cliDir)
+
+		pkgDir = filepath.Join(g.outDir, g.target)
+		if err = os.RemoveAll(pkgDir); err != nil {
+			return
+		}
+		if err = os.MkdirAll(pkgDir, 0755); err != nil {
+			return
+		}
+		g.genfiles = append(g.genfiles, pkgDir, pkgDir)
 	}
 
 	// Setup generation
-	funcs := template.FuncMap{
-		"add":             func(a, b int) int { return a + b },
-		"cmdFieldType":    cmdFieldType,
-		"defaultPath":     defaultPath,
-		"escapeBackticks": escapeBackticks,
-		"flagType":        flagType,
-		"goify":           codegen.Goify,
-		"gotypedef":       codegen.GoTypeDef,
-		"gotypedesc":      codegen.GoTypeDesc,
-		"gotyperef":       codegen.GoTypeRef,
-		"gotypename":      codegen.GoTypeName,
-		"gotyperefext":    goTypeRefExt,
-		"join":            join,
-		"joinStrings":     strings.Join,
-		"multiComment":    multiComment,
-		"pathParams":      pathParams,
-		"pathParamNames":  pathParamNames,
-		"pathTemplate":    pathTemplate,
-		"tempvar":         codegen.Tempvar,
-		"title":           strings.Title,
-		"toString":        toString,
-		"typeName":        typeName,
-		"signerType":      signerType,
+	var funcs template.FuncMap
+	var clientPkg, cliPkg string
+	{
+		funcs = template.FuncMap{
+			"add":             func(a, b int) int { return a + b },
+			"cmdFieldType":    cmdFieldType,
+			"defaultPath":     defaultPath,
+			"escapeBackticks": escapeBackticks,
+			"flagType":        flagType,
+			"goify":           codegen.Goify,
+			"gotypedef":       codegen.GoTypeDef,
+			"gotypedesc":      codegen.GoTypeDesc,
+			"gotypename":      codegen.GoTypeName,
+			"gotyperef":       codegen.GoTypeRef,
+			"gotyperefext":    goTypeRefExt,
+			"join":            join,
+			"joinStrings":     strings.Join,
+			"multiComment":    multiComment,
+			"pathParamNames":  pathParamNames,
+			"pathParams":      pathParams,
+			"pathTemplate":    pathTemplate,
+			"signerType":      signerType,
+			"tempvar":         codegen.Tempvar,
+			"title":           strings.Title,
+			"toString":        toString,
+			"typeName":        typeName,
+		}
+		clientPkg, err = codegen.PackagePath(pkgDir)
+		if err != nil {
+			return
+		}
+		cliPkg, err = codegen.PackagePath(cliDir)
+		if err != nil {
+			return
+		}
+		arrayToStringTmpl = template.Must(template.New("client").Funcs(funcs).Parse(arrayToStringT))
 	}
-	clientPkg, err := codegen.PackagePath(g.outDir)
-	if err != nil {
-		return
-	}
-	arrayToStringTmpl = template.Must(template.New("client").Funcs(funcs).Parse(arrayToStringT))
 
-	// Generate client/client-cli/main.go
-	if err = g.generateMain(filepath.Join(toolDir, "main.go"), clientPkg, funcs, api); err != nil {
-		return
+	// Generate tool/main.go (only once)
+	mainFile := filepath.Join(toolDir, "main.go")
+	if _, err := os.Stat(mainFile); err != nil {
+		if err = g.generateMain(mainFile, clientPkg, cliPkg, funcs, api); err != nil {
+			return nil, err
+		}
 	}
 
-	// Generate client/client-cli/commands.go
-	if err = g.generateCommands(filepath.Join(toolDir, "commands.go"), clientPkg, funcs, api); err != nil {
+	// Generate client/cli/commands.go
+	if err = g.generateCommands(filepath.Join(cliDir, "commands.go"), clientPkg, funcs, api); err != nil {
 		return
 	}
 
 	// Generate client/client.go
-	if err = g.generateClient(filepath.Join(g.outDir, "client.go"), clientPkg, funcs, api); err != nil {
+	if err = g.generateClient(filepath.Join(pkgDir, "client.go"), clientPkg, funcs, api); err != nil {
 		return
 	}
 
 	// Generate client/$res.go and types.go
-	if err = g.generateClientResources(clientPkg, funcs, api); err != nil {
+	if err = g.generateClientResources(pkgDir, clientPkg, funcs, api); err != nil {
 		return
 	}
 
@@ -188,12 +227,12 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 	return file.FormatCode()
 }
 
-func (g *Generator) generateClientResources(clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
+func (g *Generator) generateClientResources(pkgDir, clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
 	userTypeTmpl := template.Must(template.New("userType").Funcs(funcs).Parse(userTypeTmpl))
 	typeDecodeTmpl := template.Must(template.New("typeDecode").Funcs(funcs).Parse(typeDecodeTmpl))
 
 	err := api.IterateResources(func(res *design.ResourceDefinition) error {
-		return g.generateResourceClient(res, funcs)
+		return g.generateResourceClient(pkgDir, res, funcs)
 	})
 	if err != nil {
 		return err
@@ -204,7 +243,7 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 			types[n] = ut
 		}
 	}
-	filename := filepath.Join(g.outDir, typesFileName+".go")
+	filename := filepath.Join(pkgDir, typesFileName+".go")
 	file, err := codegen.SourceFileFor(filename)
 	if err != nil {
 		return err
@@ -288,7 +327,7 @@ func (g *Generator) generateClientResources(clientPkg string, funcs template.Fun
 	return file.FormatCode()
 }
 
-func (g *Generator) generateResourceClient(res *design.ResourceDefinition, funcs template.FuncMap) error {
+func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDefinition, funcs template.FuncMap) error {
 	payloadTmpl := template.Must(template.New("payload").Funcs(funcs).Parse(payloadTmpl))
 	pathTmpl := template.Must(template.New("pathTemplate").Funcs(funcs).Parse(pathTmpl))
 
@@ -297,7 +336,7 @@ func (g *Generator) generateResourceClient(res *design.ResourceDefinition, funcs
 		// Avoid clash with datatypes.go
 		resFilename += "_client"
 	}
-	filename := filepath.Join(g.outDir, resFilename+".go")
+	filename := filepath.Join(pkgDir, resFilename+".go")
 	file, err := codegen.SourceFileFor(filename)
 	if err != nil {
 		return err
@@ -886,7 +925,9 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 	header.Set("{{ .Name }}", {{ $tmp }}){{ else }}
 	header.Set("{{ .Name }}", {{ .ValueName }})
 {{ end }}{{ if .CheckNil }}	}
-{{ end }}{{ end }}{{ end }}{{ if .Signer }}	c.{{ .Signer }}Signer.Sign(ctx, req)
+{{ end }}{{ end }}{{ end }}{{ if .Signer }}	if c.{{ .Signer }}Signer != nil {
+		c.{{ .Signer }}Signer.Sign(req)
+	}
 {{ end }}	return req, nil
 }
 `
@@ -894,7 +935,7 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 const clientTmpl = `// Client is the {{ .API.Name }} service client.
 type Client struct {
 	*goaclient.Client{{range $security := .API.SecuritySchemes }}{{ $signer := signerType $security }}{{ if $signer }}
-	{{ goify $security.SchemeName true }}Signer *{{ $signer }}{{ end }}{{ end }}
+	{{ goify $security.SchemeName true }}Signer goaclient.Signer{{ end }}{{ end }}
 	Encoder *goa.HTTPEncoder
 	Decoder *goa.HTTPDecoder
 }
@@ -902,8 +943,7 @@ type Client struct {
 // New instantiates the client.
 func New(c *http.Client) *Client {
 	client := &Client{
-		Client: goaclient.New(c),{{range $security := .API.SecuritySchemes }}{{ $signer := signerType $security }}{{ if $signer }}
-		{{ goify $security.SchemeName true }}Signer: &{{ $signer }}{},{{ end }}{{ end }}
+		Client: goaclient.New(c),
 		Encoder: goa.NewHTTPEncoder(),
 		Decoder: goa.NewHTTPDecoder(),
 	}
@@ -923,4 +963,12 @@ func New(c *http.Client) *Client {
 {{ end }}{{ end }}
 {{ end }}	return client
 }
+
+{{range $security := .API.SecuritySchemes }}{{ $signer := signerType $security }}{{ if $signer }}{{/*
+*/}}{{ $name := printf "%sSigner" (goify $security.SchemeName true) }}{{/*
+*/}}// Set{{ $name }} sets the request signer for the {{ $security.SchemeName }} security scheme.
+func (c *Client) Set{{ $name }}(signer goaclient.Signer) {
+	c.{{ $name }} = signer
+}
+{{ end }}{{ end }}
 `

@@ -3,20 +3,13 @@ package client
 import (
 	"fmt"
 	"net/http"
-
-	"golang.org/x/net/context"
-
-	"github.com/spf13/cobra"
 )
 
 type (
 	// Signer is the common interface implemented by all signers.
 	Signer interface {
 		// Sign adds required headers, cookies etc.
-		Sign(context.Context, *http.Request) error
-		// RegisterFlags registers the command line flags that defines the values used to
-		// initialize the signer.
-		RegisterFlags(cmd *cobra.Command)
+		Sign(*http.Request) error
 	}
 
 	// BasicSigner implements basic auth.
@@ -36,18 +29,12 @@ type (
 		KeyName string
 		// KeyValue stores the actual key.
 		KeyValue string
-		// Format is the format used to render the key, defaults to "Bearer %s"
+		// Format is the format used to render the key, e.g. "Bearer %s"
 		Format string
 	}
 
 	// JWTSigner implements JSON Web Token auth.
 	JWTSigner struct {
-		// Header is the name of the HTTP header which contains the JWT.
-		// The default is "Authentication"
-		Header string
-		// Format represents the format used to render the JWT.
-		// The default is "Bearer %s"
-		Format string
 		// TokenSource is a JWT token source.
 		// See https://godoc.org/golang.org/x/oauth2/jwt#Config.TokenSource for an example
 		// of an implementation.
@@ -63,17 +50,39 @@ type (
 		TokenSource TokenSource
 	}
 
+	// Token is the interface to an OAuth2 token implementation.
+	// It can be implemented with https://godoc.org/golang.org/x/oauth2#Token.
+	Token interface {
+		// SetAuthHeader sets the Authorization header to r.
+		SetAuthHeader(r *http.Request)
+		// Valid reports whether Token can be used to properly sign requests.
+		Valid() bool
+	}
+
 	// A TokenSource is anything that can return a token.
 	TokenSource interface {
 		// Token returns a token or an error.
 		// Token must be safe for concurrent use by multiple goroutines.
 		// The returned Token must not be modified.
-		Token() (*Token, error)
+		Token() (Token, error)
+	}
+
+	// StaticTokenSource implements a token source that always returns the same token.
+	StaticTokenSource struct {
+		StaticToken *StaticToken
+	}
+
+	// StaticToken implements a token that sets the auth header with a given static value.
+	StaticToken struct {
+		// Value used to set the auth header.
+		Value string
+		// OAuth type, defaults to "Bearer".
+		Type string
 	}
 )
 
 // Sign adds the basic auth header to the request.
-func (s *BasicSigner) Sign(ctx context.Context, req *http.Request) error {
+func (s *BasicSigner) Sign(req *http.Request) error {
 	if s.Username != "" && s.Password != "" {
 		req.SetBasicAuth(s.Username, s.Password)
 	}
@@ -81,7 +90,7 @@ func (s *BasicSigner) Sign(ctx context.Context, req *http.Request) error {
 }
 
 // Sign adds the API key header to the request.
-func (s *APIKeySigner) Sign(ctx context.Context, req *http.Request) error {
+func (s *APIKeySigner) Sign(req *http.Request) error {
 	if s.KeyName == "" {
 		s.KeyName = "Authorization"
 	}
@@ -100,29 +109,41 @@ func (s *APIKeySigner) Sign(ctx context.Context, req *http.Request) error {
 }
 
 // Sign adds the JWT auth header.
-func (s *JWTSigner) Sign(ctx context.Context, req *http.Request) error {
-	header := s.Header
-	if header == "" {
-		header = "Authorization"
-	}
-	format := s.Format
-	if format == "" {
-		format = "Bearer %s"
-	}
-	token, err := s.TokenSource()
-	if err != nil {
-		return err
-	}
-	req.Header.Set(header, token)
-	return nil
+func (s *JWTSigner) Sign(req *http.Request) error {
+	return signFromSource(s.TokenSource, req)
 }
 
 // Sign refreshes the access token if needed and adds the OAuth header.
-func (s *OAuth2Signer) Sign(ctx context.Context, req *http.Request) error {
-	token, err := s.TokenSource.Token()
+func (s *OAuth2Signer) Sign(req *http.Request) error {
+	return signFromSource(s.TokenSource, req)
+}
+
+// signFromSource generates a token using the given source and uses it to sign the request.
+func signFromSource(source TokenSource, req *http.Request) error {
+	token, err := source.Token()
 	if err != nil {
 		return err
+	}
+	if !token.Valid() {
+		return fmt.Errorf("token expired or invalid")
 	}
 	token.SetAuthHeader(req)
 	return nil
 }
+
+// Token returns the static token.
+func (s *StaticTokenSource) Token() (Token, error) {
+	return s.StaticToken, nil
+}
+
+// SetAuthHeader sets the Authorization header to r.
+func (t *StaticToken) SetAuthHeader(r *http.Request) {
+	typ := t.Type
+	if typ == "" {
+		typ = "Bearer"
+	}
+	r.Header.Set("Authorization", typ+" "+t.Value)
+}
+
+// Valid reports whether Token can be used to properly sign requests.
+func (t *StaticToken) Valid() bool { return true }
