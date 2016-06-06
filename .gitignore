@@ -8,6 +8,7 @@ vendor
 _integration_tests/*/**/*.*
 public/
 .idea/
+*.iml
 .vscode/
 *~
 *.orig

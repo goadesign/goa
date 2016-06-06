@@ -149,7 +149,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		return
 	}
 
-	// Generate client/$res.go and types.go
+	// Generate client/$res.go and client/datatypes.go
 	if err = g.generateClientResources(pkgDir, clientPkg, funcs, api); err != nil {
 		return
 	}
@@ -479,7 +479,7 @@ func (g *Generator) generateActionClient(action *design.ActionDefinition, file *
 		for n, q := range obj {
 			varName := codegen.Goify(n, false)
 			param := &paramData{
-				Name:      n,
+				Name:      q.Description,
 				VarName:   varName,
 				Attribute: q,
 			}
