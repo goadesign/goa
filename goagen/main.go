@@ -74,12 +74,17 @@ package and tool and the Swagger specification for the API.
 	rootCmd.AddCommand(mainCmd)
 
 	// clientCmd implements the "client" command.
+	var (
+		toolDir, tool string
+	)
 	clientCmd := &cobra.Command{
 		Use:   "client",
 		Short: "Generate client package and tool",
 		Run:   func(c *cobra.Command, _ []string) { files, err = run("genclient", c) },
 	}
 	clientCmd.Flags().StringVar(&pkg, "pkg", "client", "Name of generated client Go package")
+	clientCmd.Flags().StringVar(&toolDir, "tooldir", "tool", "Name of generated tool directory")
+	clientCmd.Flags().StringVar(&tool, "tool", "[API-name]-cli", "Name of generated tool")
 	rootCmd.AddCommand(clientCmd)
 
 	// swaggerCmd implements the "swagger" command.

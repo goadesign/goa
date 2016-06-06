@@ -10,7 +10,8 @@ import (
 )
 
 func TestBootstrapReadme(t *testing.T) {
-	defer os.RemoveAll("./main.go")
+	defer os.RemoveAll("./readme/main.go")
+	defer os.RemoveAll("./readme/tool")
 	if err := goagen("./readme", "bootstrap", "-d", "github.com/goadesign/goa/_integration_tests/readme/design"); err != nil {
 		t.Error(err.Error())
 	}
@@ -30,7 +31,7 @@ func TestCellar(t *testing.T) {
 	if err := gobuild("./goa-cellar"); err != nil {
 		t.Error(err.Error())
 	}
-	if err := gobuild("./goa-cellar/client/cellar-cli"); err != nil {
+	if err := gobuild("./goa-cellar/tool/cellar-cli"); err != nil {
 		t.Error(err.Error())
 	}
 }
