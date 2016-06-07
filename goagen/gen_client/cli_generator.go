@@ -415,7 +415,7 @@ func new{{ goify $security.SchemeName true }}Signer({{ signerSignature $security
 		Password: pass,
 	}
 {{ else if eq .Type "apiKey" }}	return &goaclient.APIKeySigner{
-		SignHeader: {{ if eq $security.In "header" }}true{{ else }}false{{ end }},
+		SignQuery: {{ if eq $security.In "query" }}true{{ else }}false{{ end }},
 		KeyName: "{{ $security.Name }}",
 		KeyValue: key,
 		Format: format,
