@@ -22,9 +22,9 @@ type (
 
 	// APIKeySigner implements API Key auth.
 	APIKeySigner struct {
-		// SignHeader indicates whether to set the API key in the header with name KeyName
-		// or whether to use a query string with name KeyName.
-		SignHeader bool
+		// SignQuery indicates whether to set the API key in the URL query with key KeyName
+		// or whether to use a header with name KeyName.
+		SignQuery bool
 		// KeyName is the name of the HTTP header or query string that contains the API key.
 		KeyName string
 		// KeyValue stores the actual key.
@@ -100,10 +100,10 @@ func (s *APIKeySigner) Sign(req *http.Request) error {
 	name := s.KeyName
 	format := s.Format
 	val := fmt.Sprintf(format, s.KeyValue)
-	if s.SignHeader {
-		req.Header.Set(name, val)
-	} else {
+	if s.SignQuery {
 		req.URL.Query().Set(name, val)
+	} else {
+		req.Header.Set(name, val)
 	}
 	return nil
 }
