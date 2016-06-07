@@ -159,7 +159,7 @@ func TRACE(path string) *design.RouteDefinition {
 	return &design.RouteDefinition{Verb: "TRACE", Path: path}
 }
 
-// CONNECT creates a route using the GET HTTP method.
+// CONNECT creates a route using the CONNECT HTTP method.
 func CONNECT(path string) *design.RouteDefinition {
 	return &design.RouteDefinition{Verb: "CONNECT", Path: path}
 }
