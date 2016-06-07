@@ -555,7 +555,7 @@ func Trait(name string, val ...func()) {
 }
 
 // UseTrait executes the API trait with the given name. UseTrait can be used inside a Resource,
-// Action or Attribute DSL.
+// Action, Type, MediaType or Attribute DSL.
 func UseTrait(name string) {
 	var def dslengine.Definition
 
@@ -565,6 +565,8 @@ func UseTrait(name string) {
 	case *design.ActionDefinition:
 		def = typedDef
 	case *design.AttributeDefinition:
+		def = typedDef
+	case *design.MediaTypeDefinition:
 		def = typedDef
 	default:
 		dslengine.IncompatibleDSL()

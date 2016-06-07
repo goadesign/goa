@@ -330,6 +330,46 @@ var _ = Describe("API", func() {
 				Ω(Design.Traits).Should(HaveKey(traitName))
 			})
 		})
+
+		Context("using Traits", func() {
+			const traitName = "Authenticated"
+
+			BeforeEach(func() {
+				dsl = func() {
+					Trait(traitName, func() {
+						Attributes(func() {
+							Attribute("foo")
+						})
+					})
+				}
+			})
+
+			JustBeforeEach(func() {
+				API(name, dsl)
+				MediaType("application/vnd.foo", func() {
+					UseTrait(traitName)
+					Attributes(func() {
+						Attribute("bar")
+					})
+					View("default", func() {
+						Attribute("bar")
+						Attribute("foo")
+					})
+				})
+				dslengine.Run()
+			})
+
+			It("sets the API traits", func() {
+				Ω(Design.Traits).Should(HaveLen(1))
+				Ω(Design.Traits).Should(HaveKey(traitName))
+				Ω(Design.MediaTypes).Should(HaveKey("application/vnd.foo"))
+				foo := Design.MediaTypes["application/vnd.foo"]
+				Ω(foo.Type.ToObject()).ShouldNot(BeNil())
+				o := foo.Type.ToObject()
+				Ω(o).Should(HaveKey("foo"))
+				Ω(o).Should(HaveKey("bar"))
+			})
+		})
 	})
 
 })
