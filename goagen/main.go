@@ -76,6 +76,7 @@ package and tool and the Swagger specification for the API.
 	// clientCmd implements the "client" command.
 	var (
 		toolDir, tool string
+		notool        bool
 	)
 	clientCmd := &cobra.Command{
 		Use:   "client",
@@ -85,6 +86,7 @@ package and tool and the Swagger specification for the API.
 	clientCmd.Flags().StringVar(&pkg, "pkg", "client", "Name of generated client Go package")
 	clientCmd.Flags().StringVar(&toolDir, "tooldir", "tool", "Name of generated tool directory")
 	clientCmd.Flags().StringVar(&tool, "tool", "[API-name]-cli", "Name of generated tool")
+	clientCmd.Flags().BoolVar(&notool, "notool", false, "Prevent generation of cli tool")
 	rootCmd.AddCommand(clientCmd)
 
 	// swaggerCmd implements the "swagger" command.
