@@ -62,7 +62,7 @@ var _ = Describe("ValidateFormat", func() {
 
 		Context("with an valid value", func() {
 			BeforeEach(func() {
-				val = "0f14d0ab-9605-4a62-a9e45ed26688389b"
+				val = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
 			})
 
 			It("validates", func() {
