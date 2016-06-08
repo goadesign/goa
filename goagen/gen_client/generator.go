@@ -35,7 +35,7 @@ type Generator struct {
 // Generate is the generator entry point called by the meta generator.
 func Generate() (files []string, err error) {
 	var outDir, target, toolDir, tool string
-	dtool := strings.Replace(design.Design.Name, " ", "-", -1) + "-cli"
+	dtool := strings.Replace(strings.ToLower(design.Design.Name), " ", "-", -1) + "-cli"
 
 	set := flag.NewFlagSet("client", flag.PanicOnError)
 	set.String("design", "", "")
