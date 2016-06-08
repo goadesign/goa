@@ -279,14 +279,14 @@ func Scope(name string, desc ...string) {
 
 // inHeader is called by `Header()`, see documentation there.
 func inHeader(headerName string) {
-	if parent, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
-		if parent.Kind == design.APIKeySecurityKind || parent.Kind == design.JWTSecurityKind {
-			if parent.In != "" {
+	if current, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
+		if current.Kind == design.APIKeySecurityKind || current.Kind == design.JWTSecurityKind {
+			if current.In != "" {
 				dslengine.ReportError("'In' previously defined through Header or Query")
 				return
 			}
-			parent.In = "header"
-			parent.Name = headerName
+			current.In = "header"
+			current.Name = headerName
 			return
 		}
 	}
@@ -296,14 +296,14 @@ func inHeader(headerName string) {
 // Query defines that an APIKeySecurity or JWTSecurity implementation must check in the query
 // parameter named "parameterName" to get the api key.
 func Query(parameterName string) {
-	if parent, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
-		if parent.Kind == design.APIKeySecurityKind || parent.Kind == design.JWTSecurityKind {
-			if parent.In != "" {
+	if current, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
+		if current.Kind == design.APIKeySecurityKind || current.Kind == design.JWTSecurityKind {
+			if current.In != "" {
 				dslengine.ReportError("'In' previously defined through Header or Query")
 				return
 			}
-			parent.In = "query"
-			parent.Name = parameterName
+			current.In = "query"
+			current.Name = parameterName
 			return
 		}
 	}
@@ -312,11 +312,11 @@ func Query(parameterName string) {
 
 // AccessCodeFlow defines an "access code" OAuth2 flow.  Use within an OAuth2Security definition.
 func AccessCodeFlow(authorizationURL, tokenURL string) {
-	if parent, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
-		if parent.Kind == design.OAuth2SecurityKind {
-			parent.Flow = "accessCode"
-			parent.AuthorizationURL = authorizationURL
-			parent.TokenURL = tokenURL
+	if current, ok := dslengine.CurrentDefinition().(*design.SecuritySchemeDefinition); ok {
+		if current.Kind == design.OAuth2SecurityKind {
+			current.Flow = "accessCode"
+			current.AuthorizationURL = authorizationURL
+			current.TokenURL = tokenURL
 			return
 		}
 	}
