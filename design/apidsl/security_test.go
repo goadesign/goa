@@ -23,6 +23,7 @@ var _ = Describe("Security", func() {
 	It("should be the fully valid and well defined, live on the happy path", func() {
 		API("secure", func() {
 			Host("example.com")
+			Scheme("http")
 
 			BasicAuthSecurity("basic_authz", func() {
 				Description("desc")
@@ -132,6 +133,7 @@ var _ = Describe("Security", func() {
 		It("should pass with valid values when well defined", func() {
 			API("", func() {
 				Host("example.com")
+				Scheme("http")
 				OAuth2Security("googAuthz", func() {
 					Description("Use Goog's Auth")
 					AccessCodeFlow("/auth", "/token")
