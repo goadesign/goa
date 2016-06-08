@@ -112,7 +112,7 @@ func (s *SecuritySchemeDefinition) Finalize() {
 	if tokenOK && authOK {
 		return
 	}
-	scheme := "http"
+	var scheme string
 	if len(Design.Schemes) > 0 {
 		scheme = Design.Schemes[0]
 	}
