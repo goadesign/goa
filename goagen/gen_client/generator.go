@@ -129,9 +129,9 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	}
 
 	// Generate tool/main.go (only once)
-	g.genfiles = append(g.genfiles, toolDir)
 	mainFile := filepath.Join(toolDir, "main.go")
 	if _, err := os.Stat(mainFile); err != nil {
+		g.genfiles = append(g.genfiles, toolDir)
 		if err = g.generateMain(mainFile, clientPkg, cliPkg, funcs, api); err != nil {
 			return nil, err
 		}
