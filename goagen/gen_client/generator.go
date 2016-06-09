@@ -25,6 +25,7 @@ type Generator struct {
 	target         string // Name of generated package
 	toolDirName    string // Name of tool directory where CLI main is generated once
 	tool           string // Name of CLI tool
+	notool         bool   // Whether to skip tool generation
 	genfiles       []string
 	generatedTypes map[string]bool // Keeps track of names of user types that correspond to action payloads.
 	encoders       []*genapp.EncoderTemplateData
@@ -34,7 +35,10 @@ type Generator struct {
 
 // Generate is the generator entry point called by the meta generator.
 func Generate() (files []string, err error) {
-	var outDir, target, toolDir, tool string
+	var (
+		outDir, target, toolDir, tool string
+		notool                        bool
+	)
 	dtool := strings.Replace(strings.ToLower(design.Design.Name), " ", "-", -1) + "-cli"
 
 	set := flag.NewFlagSet("client", flag.PanicOnError)
@@ -43,10 +47,11 @@ func Generate() (files []string, err error) {
 	set.StringVar(&target, "pkg", "client", "")
 	set.StringVar(&toolDir, "tooldir", "tool", "")
 	set.StringVar(&tool, "tool", dtool, "")
+	set.BoolVar(&notool, "notool", false, "")
 	set.Parse(os.Args[2:])
 
 	target = codegen.Goify(target, false)
-	g := &Generator{outDir: outDir, target: target, toolDirName: toolDir, tool: tool}
+	g := &Generator{outDir: outDir, target: target, toolDirName: toolDir, tool: tool, notool: notool}
 	codegen.Reserved[target] = true
 
 	return g.Generate(design.Design)
@@ -65,19 +70,21 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	// Setup output directories as needed
 	var pkgDir, toolDir, cliDir string
 	{
-		toolDir = filepath.Join(g.outDir, g.toolDirName, g.tool)
-		if _, err = os.Stat(toolDir); err != nil {
-			if err = os.MkdirAll(toolDir, 0755); err != nil {
+		if !g.notool {
+			toolDir = filepath.Join(g.outDir, g.toolDirName, g.tool)
+			if _, err = os.Stat(toolDir); err != nil {
+				if err = os.MkdirAll(toolDir, 0755); err != nil {
+					return
+				}
+			}
+
+			cliDir = filepath.Join(g.outDir, g.toolDirName, "cli")
+			if err = os.RemoveAll(cliDir); err != nil {
 				return
 			}
-		}
-
-		cliDir = filepath.Join(g.outDir, g.toolDirName, "cli")
-		if err = os.RemoveAll(cliDir); err != nil {
-			return
-		}
-		if err = os.MkdirAll(cliDir, 0755); err != nil {
-			return
+			if err = os.MkdirAll(cliDir, 0755); err != nil {
+				return
+			}
 		}
 
 		pkgDir = filepath.Join(g.outDir, g.target)
@@ -128,19 +135,21 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		arrayToStringTmpl = template.Must(template.New("client").Funcs(funcs).Parse(arrayToStringT))
 	}
 
-	// Generate tool/main.go (only once)
-	mainFile := filepath.Join(toolDir, "main.go")
-	if _, err := os.Stat(mainFile); err != nil {
-		g.genfiles = append(g.genfiles, toolDir)
-		if err = g.generateMain(mainFile, clientPkg, cliPkg, funcs, api); err != nil {
-			return nil, err
+	if !g.notool {
+		// Generate tool/main.go (only once)
+		mainFile := filepath.Join(toolDir, "main.go")
+		if _, err := os.Stat(mainFile); err != nil {
+			g.genfiles = append(g.genfiles, toolDir)
+			if err = g.generateMain(mainFile, clientPkg, cliPkg, funcs, api); err != nil {
+				return nil, err
+			}
 		}
-	}
 
-	// Generate tool/cli/commands.go
-	g.genfiles = append(g.genfiles, cliDir)
-	if err = g.generateCommands(filepath.Join(cliDir, "commands.go"), clientPkg, funcs, api); err != nil {
-		return
+		// Generate tool/cli/commands.go
+		g.genfiles = append(g.genfiles, cliDir)
+		if err = g.generateCommands(filepath.Join(cliDir, "commands.go"), clientPkg, funcs, api); err != nil {
+			return
+		}
 	}
 
 	// Generate client/client.go
