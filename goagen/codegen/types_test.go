@@ -595,35 +595,35 @@ var _ = Describe("GoTypeTransform", func() {
 `))
 		})
 	})
+})
 
-	Describe("GoTypeDesc", func() {
-		Context("With a type with a description", func() {
-			var description string
-			var ut *UserTypeDefinition
+var _ = Describe("GoTypeDesc", func() {
+	Context("With a type with a description", func() {
+		var description string
+		var ut *UserTypeDefinition
 
-			var desc string
+		var desc string
 
+		BeforeEach(func() {
+			description = "foo"
+		})
+
+		JustBeforeEach(func() {
+			ut = &UserTypeDefinition{AttributeDefinition: &AttributeDefinition{Description: description}}
+			desc = codegen.GoTypeDesc(ut, false)
+		})
+
+		It("uses the description", func() {
+			Ω(desc).Should(Equal(description))
+		})
+
+		Context("containing newlines", func() {
 			BeforeEach(func() {
-				description = "foo"
+				description = "foo\nbar"
 			})
 
-			JustBeforeEach(func() {
-				ut = &UserTypeDefinition{AttributeDefinition: &AttributeDefinition{Description: description}}
-				desc = codegen.GoTypeDesc(ut, false)
-			})
-
-			It("uses the description", func() {
-				Ω(desc).Should(Equal(description))
-			})
-
-			Context("containing newlines", func() {
-				BeforeEach(func() {
-					description = "foo\nbar"
-				})
-
-				It("escapes the new lines", func() {
-					Ω(desc).Should(Equal(strings.Replace(description, "\n", "\n// ", -1)))
-				})
+			It("escapes the new lines", func() {
+				Ω(desc).Should(Equal(strings.Replace(description, "\n", "\n// ", -1)))
 			})
 		})
 	})
