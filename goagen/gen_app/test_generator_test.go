@@ -37,6 +37,18 @@ var _ = Describe("Generate", func() {
 		delete(codegen.Reserved, "app")
 	})
 
+	Context("with notest flag", func() {
+		BeforeEach(func() {
+			os.Args = []string{"goagen", "app", "--out=" + outDir, "--design=foo", "--notest"}
+		})
+
+		It("does not generate tests", func() {
+			_, err := os.Stat(filepath.Join(outDir, "app", "test"))
+			Expect(err).To(HaveOccurred())
+			Expect(os.IsNotExist(err)).To(BeTrue())
+		})
+	})
+
 	Context("with an basic action", func() {
 		BeforeEach(func() {
 			codegen.TempCount = 0
