@@ -263,13 +263,13 @@ func GoTypeDesc(t design.DataType, upper bool) string {
 	switch actual := t.(type) {
 	case *design.UserTypeDefinition:
 		if actual.Description != "" {
-			return actual.Description
+			return strings.Replace(actual.Description, "\n", "\n// ", -1)
 		}
 
 		return Goify(actual.TypeName, upper) + " user type."
 	case *design.MediaTypeDefinition:
 		if actual.Description != "" {
-			return actual.Description
+			return strings.Replace(actual.Description, "\n", "\n// ", -1)
 		}
 
 		switch elem := actual.UserTypeDefinition.AttributeDefinition.Type.(type) {
