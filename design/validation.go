@@ -83,6 +83,9 @@ func (a *APIDefinition) Validate() error {
 				}
 			}
 			for _, ro := range ac.Routes {
+				if ro.IsAbsolute() {
+					continue
+				}
 				info := newRouteInfo(r, ac, ro)
 				allRoutes = append(allRoutes, info)
 				rwcs := ExtractWildcards(ac.Parent.FullPath())
