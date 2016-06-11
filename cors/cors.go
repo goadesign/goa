@@ -6,7 +6,6 @@ package cors
 
 import (
 	"net/http"
-	"net/url"
 	"strings"
 
 	"golang.org/x/net/context"
@@ -39,14 +38,10 @@ func MatchOrigin(origin, spec string) bool {
 	return true
 }
 
-// HandlePreflight calls the given cors middleware and returns a simple 200 response.
-func HandlePreflight(ctx context.Context, middleware goa.Middleware) goa.MuxHandler {
-	return func(rw http.ResponseWriter, req *http.Request, params url.Values) {
-		h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-			rw.WriteHeader(200)
-			return nil
-		}
-		ctx = goa.NewContext(ctx, rw, req, params)
-		middleware(h)(ctx, rw, req)
+// HandlePreflight returns a simple 200 response. The middleware takes care of handling CORS.
+func HandlePreflight() goa.Handler {
+	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		rw.WriteHeader(200)
+		return nil
 	}
 }

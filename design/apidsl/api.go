@@ -168,8 +168,16 @@ func BaseParams(dsl func()) {
 
 // Origin defines the CORS policy for a given origin. The origin can use a wildcard prefix
 // such as "https://*.mydomain.com". The special value "*" defines the policy for all origins
-// (in which case there should be only one Origin DSL in the parent resource).
-// See API for examples.
+// (in which case there should be only one Origin DSL in the parent resource). Example:
+//
+//        Origin("http://swagger.goa.design", func() { // Define CORS policy, may be prefixed with "*" wildcard
+//                Headers("X-Shared-Secret")           // One or more authorized headers, use "*" to authorize all
+//                Methods("GET", "POST")               // One or more authorized HTTP methods
+//                Expose("X-Time")                     // One or more headers exposed to clients
+//                MaxAge(600)                          // How long to cache a prefligh request response
+//                Credentials()                        // Sets Access-Control-Allow-Credentials header
+//        })
+//
 func Origin(origin string, dsl func()) {
 	cors := &design.CORSDefinition{Origin: origin}
 	if !dslengine.Execute(dsl, cors) {
