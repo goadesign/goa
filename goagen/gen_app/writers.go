@@ -608,7 +608,8 @@ func initService(service *goa.Service) {
 func Mount{{ .Resource }}Controller(service *goa.Service, ctrl {{ .Resource }}Controller) {
 	initService(service)
 	var h goa.Handler
-{{ $res := .Resource }}{{ if .Origins }}{{ range .PreflightPaths }}	service.Mux.Handle("OPTIONS", "{{ . }}", cors.HandlePreflight(service.Context, handle{{ $res }}Origin))
+{{ $res := .Resource }}{{ if .Origins }}{{ range .PreflightPaths }}{{/*
+*/}}	service.Mux.Handle("OPTIONS", "{{ . }}", ctrl.MuxHandler("preflight", handle{{ $res }}Origin(cors.HandlePreflight()), nil))
 {{ end }}{{ end }}{{ range .Actions }}{{ $action := . }}
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		rctx, err := New{{ .Context }}(ctx, service)
