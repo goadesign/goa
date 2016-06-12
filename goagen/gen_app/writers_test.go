@@ -1115,6 +1115,11 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	var h goa.Handler
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
 		rctx, err := NewListBottleContext(ctx, service)
 		if err != nil {
 			return err
@@ -1131,6 +1136,11 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 	var h goa.Handler
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
 		rctx, err := NewListBottleContext(ctx, service)
 		if err != nil {
 			return err
@@ -1155,6 +1165,11 @@ type BottlesController interface {
 	var h goa.Handler
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
 		rctx, err := NewListBottleContext(ctx, service)
 		if err != nil {
 			return err
@@ -1165,6 +1180,11 @@ type BottlesController interface {
 	service.LogInfo("mount", "ctrl", "Bottles", "action", "List", "route", "GET /accounts/:accountID/bottles")
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
 		rctx, err := NewShowBottleContext(ctx, service)
 		if err != nil {
 			return err

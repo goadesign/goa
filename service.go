@@ -240,7 +240,7 @@ func (ctrl *Controller) Use(m Middleware) {
 func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) MuxHandler {
 	// Use closure to enable late computation of handlers to ensure all middleware has been
 	// registered.
-	var handler, invalidPayloadHandler Handler
+	var handler Handler
 
 	return func(rw http.ResponseWriter, req *http.Request, params url.Values) {
 		// Build handler middleware chains on first invocation
@@ -251,25 +251,10 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 				}
 				return nil
 			}
-			invalidPayloadHandler = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-				rw.Header().Set("Content-Type", ErrorMediaIdentifier)
-				status := 400
-				err := ContextError(ctx)
-				if err == nil {
-					err = fmt.Errorf("unknown error")
-				}
-				body := ErrInvalidEncoding(err)
-				if err.Error() == "http: request body too large" {
-					status = 413
-					body = ErrRequestBodyTooLarge("body length exceeds %d bytes", ctrl.MaxRequestBodyLength)
-				}
-				return ctrl.Service.Send(ctx, status, body)
-			}
 			chain := append(ctrl.Service.middleware, ctrl.middleware...)
 			ml := len(chain)
 			for i := range chain {
 				handler = chain[ml-i-1](handler)
-				invalidPayloadHandler = chain[ml-i-1](invalidPayloadHandler)
 			}
 		}
 
@@ -282,20 +267,19 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 		}
 
 		// Load body if any
-		var err error
 		if req.ContentLength > 0 && unm != nil {
-			err = unm(ctx, ctrl.Service, req)
-		}
-
-		// Handle invalid payload
-		h := handler
-		if err != nil {
-			ctx = WithError(ctx, err)
-			h = invalidPayloadHandler
+			if err := unm(ctx, ctrl.Service, req); err != nil {
+				if err.Error() == "http: request body too large" {
+					err = ErrRequestBodyTooLarge("request body length exceeds %d bytes", ctrl.MaxRequestBodyLength)
+				} else {
+					err = ErrBadRequest(err)
+				}
+				ctx = WithError(ctx, err)
+			}
 		}
 
 		// Invoke handler
-		if err := h(ctx, ContextResponse(ctx), req); err != nil {
+		if err := handler(ctx, ContextResponse(ctx), req); err != nil {
 			LogError(ctx, "uncaught error", "err", err)
 			respBody := fmt.Sprintf("Internal error: %s", err) // Sprintf catches panics
 			ctrl.Service.Send(ctx, 500, respBody)
