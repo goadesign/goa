@@ -12,48 +12,54 @@ import (
 // Counter used to create unique media type names for identifier-less media types.
 var mediaTypeCount int
 
-// MediaType implements the media type definition apidsl. A media type definition describes the
-// representation of a resource used in a response body. This includes listing all the *potential*
-// resource attributes that can appear in the body. Views specify which of the attributes are
-// actually rendered so that the same media type definition may represent multiple rendering of a
-// given resource representation.
+// MediaType implements the media type definition DSL. A media type definition describes the
+// representation of a resource used in a response body.
+//
+// Media types are defined with a unique identifier as defined by RFC6838. The identifier also
+// defines the default value for the Content-Type header of responses. The ContentType DSL allows
+// overridding the default as shown in the example below.
+//
+// The media type definition includes a listing of all the potential attributes that can appear in
+// the body. Views specify which of the attributes are actually rendered so that the same media type
+// definition may represent multiple rendering of a given resource representation.
 //
 // All media types must define a view named "default". This view is used to render the media type in
 // response bodies when no other view is specified.
 //
 // A media type definition may also define links to other media types. This is done by first
 // defining an attribute for the linked-to media type and then referring to that attribute in the
-// Links apidsl. Views may then elect to render one or the other or both. Links are rendered using the
+// Links DSL. Views may then elect to render one or the other or both. Links are rendered using the
 // special "link" view. Media types that are linked to must define that view. Here is an example
 // showing all the possible media type sub-definitions:
 //
-//	MediaType("application/vnd.goa.example.bottle", func() {
-//		Description("A bottle of wine")
-//		TypeName("BottleMedia") 		// Optionally override the default generated name
-//		Attributes(func() {
-//			Attribute("id", Integer, "ID of bottle")
-//			Attribute("href", String, "API href of bottle")
-//			Attribute("account", Account, "Owner account")
-//			Attribute("origin", Origin, "Details on wine origin")
-//			Links(func() {
-//				Link("account")		// Defines a link to the Account media type
-//				Link("origin", "tiny")	// Overrides the default view used to render links
-//			})
-//			Required("id", "href")
-//		})
-//		View("default", func() {
-//			Attribute("id")
-//			Attribute("href")
-//			Attribute("links")	// Default view renders links
-//		})
-//		View("extended", func() {
-//			Attribute("id")
-//			Attribute("href")
-//			Attribute("account")	// Extended view renders account inline
-//			Attribute("origin")	// Extended view renders origin inline
-//			Attribute("links")	// Extended view also renders links
-//		})
-// 	})
+//    MediaType("application/vnd.goa.example.bottle", func() {
+//        Description("A bottle of wine")
+//        TypeName("BottleMedia")         // Override default generated name
+//        ContentType("application/json") // Override default Content-Type header value
+//        Attributes(func() {
+//            Attribute("id", Integer, "ID of bottle")
+//            Attribute("href", String, "API href of bottle")
+//            Attribute("account", Account, "Owner account")
+//            Attribute("origin", Origin, "Details on wine origin")
+//            Links(func() {
+//                Link("account")         // Defines link to Account media type
+//                Link("origin", "tiny")  // Set view used to render link if not "link"
+//            })
+//            Required("id", "href")
+//        })
+//        View("default", func() {
+//            Attribute("id")
+//            Attribute("href")
+//            Attribute("links")          // Renders links
+//        })
+//        View("extended", func() {
+//            Attribute("id")
+//            Attribute("href")
+//            Attribute("account")        // Renders account inline
+//            Attribute("origin")         // Renders origin inline
+//            Attribute("links")          // Renders links
+//        })
+//     })
 //
 // This function returns the media type definition so it can be referred to throughout the apidsl.
 func MediaType(identifier string, apidsl func()) *design.MediaTypeDefinition {
@@ -180,6 +186,17 @@ func TypeName(name string) {
 		def.TypeName = name
 	default:
 		dslengine.IncompatibleDSL()
+	}
+}
+
+// ContentType sets the value of the Content-Type response header. By default the ID of the media
+// type is used.
+//
+//    ContentType("application/json")
+//
+func ContentType(typ string) {
+	if mt, ok := mediaTypeDefinition(); ok {
+		mt.ContentType = typ
 	}
 }
 
