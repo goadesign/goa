@@ -328,6 +328,11 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 	var h goa.Handler
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
 		rctx, err := NewGetWidgetContext(ctx, service)
 		if err != nil {
 			return err
@@ -381,14 +386,20 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 	var h goa.Handler
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
 		rctx, err := NewGetWidgetContext(ctx, service)
 		if err != nil {
 			return err
 		}
+		// Build the payload
 		if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
 			rctx.Payload = rawPayload.(Collection)
 		} else {
-			return goa.ErrInvalidEncoding(goa.MissingPayloadError())
+			return goa.MissingPayloadError()
 		}
 		return ctrl.Get(rctx)
 	}
@@ -414,10 +425,16 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 	var h goa.Handler
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
 		rctx, err := NewGetWidgetContext(ctx, service)
 		if err != nil {
 			return err
 		}
+		// Build the payload
 		if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
 			rctx.Payload = rawPayload.(Collection)
 		}
