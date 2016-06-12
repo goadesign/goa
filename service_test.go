@@ -98,7 +98,12 @@ var _ = Describe("Service", func() {
 				_, err := ioutil.ReadAll(req.Body)
 				return err
 			}
-			muxHandler = ctrl.MuxHandler("testMax", nil, unmarshaler)
+			handler := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+				rw.WriteHeader(400)
+				rw.Write([]byte(goa.ContextError(ctx).Error()))
+				return nil
+			}
+			muxHandler = ctrl.MuxHandler("testMax", handler, unmarshaler)
 		})
 
 		JustBeforeEach(func() {
@@ -106,7 +111,7 @@ var _ = Describe("Service", func() {
 		})
 
 		It("prevents reading more bytes", func() {
-			Ω(string(rw.Body)).Should(Equal(`{"code":"request_too_large","status":413,"detail":"body length exceeds 4 bytes"}` + "\n"))
+			Ω(string(rw.Body)).Should(Equal(`413 request_too_large: request body length exceeds 4 bytes`))
 		})
 	})
 
@@ -126,6 +131,11 @@ var _ = Describe("Service", func() {
 
 		BeforeEach(func() {
 			handler = func(c context.Context, rw http.ResponseWriter, req *http.Request) error {
+				if err := goa.ContextError(c); err != nil {
+					rw.WriteHeader(400)
+					rw.Write([]byte(err.Error()))
+					return nil
+				}
 				ctx = c
 				rw.WriteHeader(respStatus)
 				rw.Write(respContent)

@@ -612,16 +612,22 @@ func Mount{{ .Resource }}Controller(service *goa.Service, ctrl {{ .Resource }}Co
 */}}	service.Mux.Handle("OPTIONS", "{{ . }}", ctrl.MuxHandler("preflight", handle{{ $res }}Origin(cors.HandlePreflight()), nil))
 {{ end }}{{ end }}{{ range .Actions }}{{ $action := . }}
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
 		rctx, err := New{{ .Context }}(ctx, service)
 		if err != nil {
 			return err
 		}
-{{ if .Payload }}if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
+{{ if .Payload }}		// Build the payload
+		if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
 			rctx.Payload = rawPayload.({{ gotyperef .Payload nil 1 false }})
-{{ if not .PayloadOptional }}} else {
-			return goa.ErrInvalidEncoding(goa.MissingPayloadError())
-{{ end }}}
-		{{ end }}		return ctrl.{{ .Name }}(rctx)
+{{ if not .PayloadOptional }}		} else {
+			return goa.MissingPayloadError()
+{{ end }}		}
+{{ end }}		return ctrl.{{ .Name }}(rctx)
 	}
 {{ if $.Origins }}	h = handle{{ $res }}Origin(h)
 {{ end }}{{ if .Security }}	h = handleSecurity({{ printf "%q" .Security.Scheme.SchemeName }}, h{{ range .Security.Scopes }}, {{ printf "%q" . }}{{ end }})
