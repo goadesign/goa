@@ -63,13 +63,13 @@ type (
 	// Error contains the details of a error response.
 	Error struct {
 		// Code identifies the class of errors.
-		Code string `json:"code" xml:"code"`
+		Code string `json:"code" xml:"code" form:"code"`
 		// Status is the HTTP status code used by responses that cary the error.
-		Status int `json:"status" xml:"status"`
+		Status int `json:"status" xml:"status" form:"status"`
 		// Detail describes the specific error occurrence.
-		Detail string `json:"detail" xml:"detail"`
+		Detail string `json:"detail" xml:"detail" form:"detail"`
 		// MetaValues contains additional key/value pairs useful to clients.
-		MetaValues map[string]interface{} `json:"meta,omitempty" xml:"meta,omitempty"`
+		MetaValues map[string]interface{} `json:"meta,omitempty" xml:"meta,omitempty" form:"meta,omitempty"`
 	}
 
 	// ErrorClass is an error generating function.
