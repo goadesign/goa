@@ -162,6 +162,7 @@ var _ = Describe("Generate", func() {
 			mt := design.MediaTypeDefinition{
 				UserTypeDefinition: &ut,
 				Identifier:         "vnd.rightscale.codegen.test.widgets",
+				ContentType:        "vnd.rightscale.codegen.test.widgets",
 				Views: map[string]*design.ViewDefinition{
 					"default": {
 						AttributeDefinition: ut.AttributeDefinition,

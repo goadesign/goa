@@ -67,6 +67,28 @@ var _ = Describe("MediaType", func() {
 		})
 	})
 
+	Context("with a content type", func() {
+		const attName = "att"
+		const contentType = "application/json"
+
+		BeforeEach(func() {
+			name = "application/foo"
+			dslFunc = func() {
+				ContentType(contentType)
+				Attributes(func() {
+					Attribute(attName)
+				})
+				View("default", func() { Attribute(attName) })
+			}
+		})
+
+		It("sets the content type", func() {
+			Ω(mt).ShouldNot(BeNil())
+			Ω(mt.Validate()).ShouldNot(HaveOccurred())
+			Ω(mt.ContentType).Should(Equal(contentType))
+		})
+	})
+
 	Context("with a description", func() {
 		const description = "desc"
 
