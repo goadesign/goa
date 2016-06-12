@@ -204,11 +204,16 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 		}
 		if resp.Type != nil {
 			respData["Type"] = resp.Type
+			respData["ContentType"] = resp.MediaType
+			if mt, ok := resp.Type.(*design.MediaTypeDefinition); ok {
+				respData["ContentType"] = mt.ContentType
+			}
 			if err := w.ExecuteTemplate("response", ctxTRespT, fn, respData); err != nil {
 				return err
 			}
 		} else if mt := design.Design.MediaTypeWithIdentifier(resp.MediaType); mt != nil {
 			respData["MediaType"] = mt
+			respData["ContentType"] = mt.ContentType
 			fn["respName"] = func(resp *design.ResponseDefinition, view string) string {
 				if view == "default" {
 					return codegen.Goify(resp.Name, true)
@@ -506,11 +511,11 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 
 	// ctxMTRespT generates the response helpers for responses with media types.
 	// template input: map[string]interface{}
-	ctxMTRespT = `{{ $ctx := .Context }}{{ $resp := .Response }}{{ $mt := .MediaType }}{{/*
+	ctxMTRespT = `{{ $ctx := .Context }}{{ $resp := .Response }}{{ $mt := .MediaType }}{{ $ct := .ContentType }}{{/*
 */}}{{ range $name, $view := $mt.Views }}{{ if not (eq $name "link") }}{{ $projected := project $mt $name }}
 // {{ respName $resp $name }} sends a HTTP response with status code {{ $resp.Status }}.
 func (ctx *{{ $ctx.Name }}) {{ respName $resp $name }}(r {{ gotyperef $projected $projected.AllRequired 0 false }}) error {
-	ctx.ResponseData.Header().Set("Content-Type", "{{ $resp.MediaType }}")
+	ctx.ResponseData.Header().Set("Content-Type", "{{ $ct }}")
 	return ctx.Service.Send(ctx.Context, {{ $resp.Status }}, r)
 }
 {{ end }}{{ end }}
@@ -520,7 +525,7 @@ func (ctx *{{ $ctx.Name }}) {{ respName $resp $name }}(r {{ gotyperef $projected
 	// template input: map[string]interface{}
 	ctxTRespT = `// {{ goify .Response.Name true }} sends a HTTP response with status code {{ .Response.Status }}.
 func (ctx *{{ .Context.Name }}) {{ goify .Response.Name true }}(r {{ gotyperef .Type nil 0 false }}) error {
-	ctx.ResponseData.Header().Set("Content-Type", "{{ .Response.MediaType }}")
+	ctx.ResponseData.Header().Set("Content-Type", "{{ .ContentType }}")
 	return ctx.Service.Send(ctx.Context, {{ .Response.Status }}, r)
 }
 `

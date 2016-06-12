@@ -118,6 +118,9 @@ type (
 		*UserTypeDefinition
 		// Identifier is the RFC 6838 media type identifier.
 		Identifier string
+		// ContentType identifies the value written to the response "Content-Type" header.
+		// Defaults to Identifier.
+		ContentType string
 		// Links list the rendered links indexed by name.
 		Links map[string]*LinkDefinition
 		// Views list the supported views indexed by name.
@@ -699,6 +702,14 @@ func (m *MediaTypeDefinition) ComputeViews() map[string]*ViewDefinition {
 		}
 	}
 	return nil
+}
+
+// Finalize sets the value of ContentType to the identifier if not set.
+func (m *MediaTypeDefinition) Finalize() {
+	if m.ContentType == "" {
+		m.ContentType = m.Identifier
+	}
+	m.UserTypeDefinition.Finalize()
 }
 
 // ViewIterator is the type of the function given to IterateViews.
