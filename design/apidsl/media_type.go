@@ -84,7 +84,7 @@ func MediaType(identifier string, apidsl func()) *design.MediaTypeDefinition {
 	canonicalID := design.CanonicalIdentifier(identifier)
 	// Validate that media type identifier doesn't clash
 	if _, ok := design.Design.MediaTypes[canonicalID]; ok {
-		dslengine.ReportError("media type %#v is defined twice", identifier)
+		dslengine.ReportError("media type %#v with canonical identifier %#v is defined twice", identifier, canonicalID)
 		return nil
 	}
 	identifier = mime.FormatMediaType(identifier, params)
