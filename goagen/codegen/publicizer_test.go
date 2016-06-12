@@ -171,7 +171,7 @@ var _ = Describe("Struct publicize code generation", func() {
 
 const (
 	objectPublicizeCode = `target = &struct {
-	Foo *string ` + "`" + `json:"foo,omitempty" xml:"foo,omitempty"` + "`" + `
+	Foo *string ` + "`" + `json:"foo,omitempty" xml:"foo,omitempty" form:"foo,omitempty"` + "`" + `
 }{}
 if source.Foo != nil {
 	target.Foo = source.Foo
