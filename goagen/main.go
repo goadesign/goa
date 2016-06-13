@@ -12,6 +12,10 @@ import (
 	"github.com/goadesign/goa/goagen/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
+	// These are packages required by the generated code but not by goagen.
+	// We list them here so that `go get` picks them up.
+	_ "gopkg.in/yaml.v2"
 )
 
 func main() {
