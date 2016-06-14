@@ -9,11 +9,13 @@ import (
 	"github.com/satori/go.uuid"
 )
 
+// FromString Wrapper around the real FromString
 func FromString(input string) (UUID, error) {
 	u, err := uuid.FromString(input)
 	return UUID(u), err
 }
 
+// NewV4 Wrapper over the real NewV4 method
 func NewV4() UUID {
 	return UUID(uuid.NewV4())
 }
