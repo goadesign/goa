@@ -823,8 +823,8 @@ func {{ $funcName }}({{ pathParams . }}) string {
 const clientsTmpl = `{{ $funcName := goify (printf "%s%s" .Name (title .ResourceName)) true }}{{ $desc := .Description }}{{/*
 */}}{{ if $desc }}{{ multiComment $desc }}{{ else }}{{/*
 */}}// {{ $funcName }} makes a request to the {{ .Name }} action endpoint of the {{ .ResourceName }} resource{{ end }}
-func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params}},  {{ .Params }}{{ end }}) (*http.Response, error) {
-	req, err := c.New{{ $funcName }}Request(ctx, path{{ if .ParamNames }}, {{ .ParamNames }}{{ end }})
+func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params}},  {{ .Params }}{{ end }}{{ if .HasPayload }}, contentType string{{ end }}) (*http.Response, error) {
+	req, err := c.New{{ $funcName }}Request(ctx, path{{ if .ParamNames }}, {{ .ParamNames }}{{ end }}{{ if .HasPayload }}, contentType{{ end }})
 	if err != nil {
 		return nil, err
 	}
@@ -889,9 +889,12 @@ func (c * Client) {{ .Name }}(ctx context.Context, {{ if .DirName }}filename, {{
 
 const requestsTmpl = `{{ $funcName := goify (printf "New%s%sRequest" (title .Name) (title .ResourceName)) true }}{{/*
 */}}// {{ $funcName }} create the request corresponding to the {{ .Name }} action endpoint of the {{ .ResourceName }} resource.
-func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }}, {{ .Params }}{{ end }}) (*http.Request, error) {
+func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }}, {{ .Params }}{{ end }}{{ if .HasPayload }}, contentType string{{ end }}) (*http.Request, error) {
 {{ if .HasPayload }}	var body bytes.Buffer
-	err := c.Encoder.Encode(payload, &body, "*/*") // Use default encoder
+	if contentType == "" {
+		contentType = "*/*" // Use default encoder
+	}
+	err := c.Encoder.Encode(payload, &body, contentType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode body: %s", err)
 	}
@@ -912,8 +915,11 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 {{ end }}	if err != nil {
 		return nil, err
 	}
-{{ if .Headers }}	header := req.Header
-{{ range .Headers }}{{ if .CheckNil }}	if {{ .VarName }} != nil {
+{{ if or .Headers .HasPayload }}	header := req.Header
+{{ if .HasPayload }}	if contentType != "*/*" {
+		header.Set("Content-Type", contentType)
+	}
+{{ end }}{{ range .Headers }}{{ if .CheckNil }}	if {{ .VarName }} != nil {
 	{{ end }}{{ if .MustToString }}{{ $tmp := tempvar }}	{{ toString .ValueName $tmp .Attribute }}
 	header.Set("{{ .Name }}", {{ $tmp }}){{ else }}
 	header.Set("{{ .Name }}", {{ .ValueName }})

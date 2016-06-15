@@ -374,13 +374,13 @@ func main() {
 {{ end }}{{ if .HasTokenSigners }} var token, typ string
 	app.PersistentFlags().StringVar(&token, "token", "", "Token used for authentication")
 	app.PersistentFlags().StringVar(&typ, "token-type", "Bearer", "Token type used for authentication")
-	source := &goaclient.StaticTokenSource{
-		StaticToken: &goaclient.StaticToken{Type: typ, Value: token},
-	}
 {{ end }}
 	// Parse flags and setup signers
 	app.ParseFlags(os.Args)
-{{ end }}{{ range $security := .API.SecuritySchemes }}{{ $signer := signerType $security }}{{ if $signer }}{{/*
+{{ if .HasTokenSigners }}	source := &goaclient.StaticTokenSource{
+		StaticToken: &goaclient.StaticToken{Type: typ, Value: token},
+	}
+{{ end }}{{ end }}{{ range $security := .API.SecuritySchemes }}{{ $signer := signerType $security }}{{ if $signer }}{{/*
 */}}	{{ goify $security.SchemeName false }}Signer := new{{ goify $security.SchemeName true }}Signer({{ signerArgs $security }}){{ end }}
 {{ end }}
 
@@ -389,7 +389,7 @@ func main() {
 */}}	c.Set{{ goify $security.SchemeName true }}Signer({{ goify $security.SchemeName false }}Signer)
 {{ end }}{{ end }} c.UserAgent = "{{ .API.Name }}-cli/{{ .Version }}"
 
-	// Register API commands 
+	// Register API commands
 	cli.RegisterCommands(app, c)
 
 	// Execute!
@@ -434,6 +434,7 @@ func new{{ goify $security.SchemeName true }}Signer({{ signerSignature $security
 const commandTypesTmpl = `{{ $cmdName := goify (printf "%s%s%s" .Name (title .Parent.Name) "Command") true }}	// {{ $cmdName }} is the command line data structure for the {{ .Name }} action of {{ .Parent.Name }}
 	{{ $cmdName }} struct {
 {{ if .Payload }}		Payload string
+		ContentType string
 {{ end }}{{ $params := defaultRouteParams . }}{{ if $params }}{{ range $name, $att := $params.Type.ToObject }}{{ if $att.Description }}		{{ multiComment $att.Description }}
 {{ end }}		{{ goify $name true }} {{ cmdFieldType $att.Type false }}
 {{ end }}{{ end }}{{ $params := .QueryParams }}{{ if $params }}{{ range $name, $att := $params.Type.ToObject }}{{ if $att.Description }}		{{ multiComment $att.Description }}
@@ -491,7 +492,7 @@ func (cmd *DownloadCommand) Run(c *{{ .Package }}.Client, args []string) error {
 		ctx = goa.WithLogger(context.Background(), logger)
 		err error
 	)
-	
+
 	if rpath[0] != '/' {
 		rpath = "/" + rpath
 	}
@@ -511,10 +512,10 @@ func (cmd *DownloadCommand) Run(c *{{ .Package }}.Client, args []string) error {
 		goto found
 	}
 {{ end }}{{ end }}	return fmt.Errorf("don't know how to download %s", rpath)
-found:	
+found:
 	ctx = goa.WithLogContext(ctx, "file", outfile)
 	if fnf != nil {
-		_, err = fnf(ctx, outfile) 
+		_, err = fnf(ctx, outfile)
 	} else {
 		_, err = fnd(ctx, rpath, outfile)
 	}
@@ -529,7 +530,8 @@ found:
 
 const registerTmpl = `{{ $cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true }}// RegisterFlags registers the command flags with the command line.
 func (cmd *{{ $cmdName }}) RegisterFlags(cc *cobra.Command, c *{{ .Package }}.Client) {
-{{ if .Action.Payload }}	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request JSON body")
+{{ if .Action.Payload }}	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
+	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
 {{ end }}{{ $pparams := defaultRouteParams .Action }}{{ if $pparams }}{{ range $pname, $pparam := $pparams.Type.ToObject }}{{ $tmp := goify $pname false }}{{/*
 */}}{{ if not $pparam.DefaultValue }}	var {{ $tmp }} {{ cmdFieldType $pparam.Type false }}
 {{ end }}	cc.Flags().{{ flagType $pparam }}Var(&cmd.{{ goify $pname true }}, "{{ $pname }}", {{/*
@@ -565,7 +567,8 @@ func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 	ctx := goa.WithLogger(context.Background(), logger)
 	resp, err := c.{{ goify (printf "%s%s" .Action.Name (title .Resource.Name)) true }}(ctx, path{{ if .Action.Payload }}, {{/*
 	*/}}{{ if or .Action.Payload.Type.IsObject .Action.Payload.IsPrimitive }}&{{ end }}payload{{ else }}{{ end }}{{/*
-	*/}}{{ $params := joinNames .Action.QueryParams .Action.Headers }}{{ if $params }}, {{ $params }}{{ end }})
+	*/}}{{ $params := joinNames .Action.QueryParams .Action.Headers }}{{ if $params }}, {{ $params }}{{ end }}{{/*
+	*/}}{{ if .Action.Payload }}, cmd.ContentType{{ end }})
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
