@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/goadesign/goa/dslengine"
-	"github.com/satori/go.uuid"
+	"github.com/goadesign/goa/uuid"
 )
 
 type (
