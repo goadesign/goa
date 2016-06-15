@@ -75,7 +75,10 @@ Under this proposal the generated code would be:
 Update(ctx context.Context, resp *UpdateBottleResponse, req *UpdateBottleRequest) error
 ```
 
-### Move Errors to Response Object
+### Error Handling Improvements
+
+Move from a model using structs to implement goa errors and check for them to a model using checking
+for behavior.
 
 Consider changing the goa request handler signature from:
 
@@ -90,7 +93,7 @@ func (context.Context, http.ResponseWriter, *http.Request)
 ```
 
 And keep the error in the response struct instead. This means tweaking how error handling is done so
-tha the error handler middleware knows where to look for errors.
+that the error handler middleware knows where to look for errors.
 
 ## Code Generation Improvements
 

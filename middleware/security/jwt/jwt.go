@@ -102,7 +102,7 @@ func New(validationKeys interface{}, validationFunc goa.Middleware, scheme *goa.
 				panic("how did this happen ? unsupported algo in jwt middleware")
 			}
 			if err != nil {
-				return ErrJWTError("JWT validation failed")
+				return ErrJWTError("JWT validation failed: %s", err)
 			}
 
 			scopesInClaim, scopesInClaimList, err := parseClaimScopes(token)
@@ -129,7 +129,9 @@ func New(validationKeys interface{}, validationFunc goa.Middleware, scheme *goa.
 }
 
 // parseClaimScopes parses the "scopes" parameter in the Claims. It supports two formats:
+//
 // * a list of string
+//
 // * a single string with space-separated scopes (akin to OAuth2's "scope").
 func parseClaimScopes(token *jwt.Token) (map[string]bool, []string, error) {
 	scopesInClaim := make(map[string]bool)
@@ -156,8 +158,8 @@ func parseClaimScopes(token *jwt.Token) (map[string]bool, []string, error) {
 	return scopesInClaim, scopesInClaimList, nil
 }
 
-// ErrJWTError is the error returned by this middleware when any sort
-// of validation or assertion fails during processing.
+// ErrJWTError is the error returned by this middleware when any sort of validation or assertion
+// fails during processing.
 var ErrJWTError = goa.NewErrorClass("jwt_security_error", 401)
 
 type contextKey int
@@ -166,8 +168,7 @@ const (
 	jwtKey contextKey = iota + 1
 )
 
-// ContextJWT retrieves the JWT token from a `context` that went through our security
-// middleware.
+// ContextJWT retrieves the JWT token from a `context` that went through our security middleware.
 func ContextJWT(ctx context.Context) *jwt.Token {
 	token, ok := ctx.Value(jwtKey).(*jwt.Token)
 	if !ok {
