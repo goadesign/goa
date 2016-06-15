@@ -43,7 +43,9 @@ func New(c *http.Client) *Client {
 // Do wraps the underlying http client Do method and adds logging.
 // The logger should be in the context.
 func (c *Client) Do(ctx context.Context, req *http.Request) (*http.Response, error) {
-	req.Header.Set("User-Agent", c.UserAgent)
+	if c.UserAgent != "" {
+		req.Header.Set("User-Agent", c.UserAgent)
+	}
 	startedAt := time.Now()
 	id := shortID()
 	goa.LogInfo(ctx, "started", "id", id, req.Method, req.URL.String())

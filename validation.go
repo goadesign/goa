@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/satori/go.uuid"
+	"github.com/goadesign/goa/uuid"
 )
 
 // Format defines a validation format.
