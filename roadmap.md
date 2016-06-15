@@ -134,7 +134,9 @@ generators could implement that would get called by the generation engine.
 
 Move `DateTime` and `UUID` to formats on the `String` type. This is to keep the set of basic types
 small and remain consistent with how `Integer` support formats for various underlying Go data types
-(see below).
+(see below). This also will allow removing a lot of cruft that supporting these types introduced.
+From the need to "alias" them to string in code generators to the special cases they introduce with
+gopherjs support.
 
 ## Protobuf / gRPC
 
