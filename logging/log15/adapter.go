@@ -15,8 +15,8 @@ package goalog15
 
 import (
 	"github.com/goadesign/goa"
+	"github.com/inconshreveable/log15"
 	"golang.org/x/net/context"
-	"gopkg.in/inconshreveable/log15.v2"
 )
 
 // adapter is the log15 goa adapter logger.
