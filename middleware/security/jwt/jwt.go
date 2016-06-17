@@ -136,8 +136,12 @@ func New(validationKeys interface{}, validationFunc goa.Middleware, scheme *goa.
 func parseClaimScopes(token *jwt.Token) (map[string]bool, []string, error) {
 	scopesInClaim := make(map[string]bool)
 	var scopesInClaimList []string
-	if token.Claims["scopes"] != nil {
-		switch scopes := token.Claims["scopes"].(type) {
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, nil, fmt.Errorf("unsupport claims shape")
+	}
+	if claims["scopes"] != nil {
+		switch scopes := claims["scopes"].(type) {
 		case string:
 			for _, scope := range strings.Split(scopes, " ") {
 				scopesInClaim[scope] = true
