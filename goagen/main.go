@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -165,7 +166,20 @@ package and tool and the Swagger specification for the API.
 			files = append(prev, files...)
 		},
 	}
+	bootCmd.Flags().AddFlagSet(appCmd.Flags())
+	bootCmd.Flags().AddFlagSet(mainCmd.Flags())
+	bootCmd.Flags().AddFlagSet(clientCmd.Flags())
+	bootCmd.Flags().AddFlagSet(swaggerCmd.Flags())
 	rootCmd.AddCommand(bootCmd)
+
+	// cmdsCmd implements the commands command
+	// It lists all the commands and flags in JSON to enable shell integrations.
+	cmdsCmd := &cobra.Command{
+		Use:   "commands",
+		Short: "Lists all commands and flags in JSON",
+		Run:   func(c *cobra.Command, _ []string) { runCommands(rootCmd) },
+	}
+	rootCmd.AddCommand(cmdsCmd)
 
 	// Now proceed with code generation
 	cleanup := func() {
@@ -249,4 +263,79 @@ func generate(pkgName, pkgPath string, c *cobra.Command) ([]string, error) {
 		return nil, err
 	}
 	return gen.Generate()
+}
+
+type (
+	rootCommand struct {
+		Name     string     `json:"name"`
+		Commands []*command `json:"commands"`
+		Flags    []*flag    `json:"flags"`
+	}
+
+	flag struct {
+		Long        string `json:"long,omitempty"`
+		Short       string `json:"short,omitempty"`
+		Description string `json:"description,omitempty"`
+		Argument    string `json:"argument,omitempty"`
+		Required    bool   `json:"required"`
+	}
+
+	command struct {
+		Name  string  `json:"name"`
+		Flags []*flag `json:"flags,omitempty"`
+	}
+)
+
+func runCommands(root *cobra.Command) {
+	var (
+		gblFlags []*flag
+		cmds     []*command
+	)
+	root.Flags().VisitAll(func(fl *pflag.Flag) {
+		gblFlags = append(gblFlags, flagJSON(fl))
+	})
+	cmds = make([]*command, len(root.Commands())-2)
+	j := 0
+	for _, cm := range root.Commands() {
+		if cm.Name() == "help" || cm.Name() == "commands" {
+			continue
+		}
+		cmds[j] = cmdJSON(cm, gblFlags)
+		j++
+	}
+	rc := rootCommand{os.Args[0], cmds, gblFlags}
+	b, _ := json.MarshalIndent(rc, "", "    ")
+	fmt.Println(string(b))
+}
+
+// Lots of assumptions in here, it's OK for what we are doing
+// Remember to update as goagen commands and flags evolve
+//
+// The flag argument values use variable names that cary semantic:
+// $DIR for file system directories, $DESIGN_PKG for import path to Go goa design Go packages, $PKG
+// for import path to any Go package.
+func flagJSON(fl *pflag.Flag) *flag {
+	f := &flag{Long: fl.Name, Short: fl.Shorthand, Description: fl.Usage}
+	f.Required = fl.Name == "pkg-path" || fl.Name == "design"
+	switch fl.Name {
+	case "out":
+		f.Argument = "$DIR"
+	case "design":
+		f.Argument = "$DESIGN_PKG"
+	case "pkg-path":
+		f.Argument = "$PKG"
+	}
+	return f
+}
+
+func cmdJSON(cm *cobra.Command, flags []*flag) *command {
+	res := make([]*flag, len(flags))
+	for i, fl := range flags {
+		f := *fl
+		res[i] = &f
+	}
+	cm.Flags().VisitAll(func(fl *pflag.Flag) {
+		res = append(res, flagJSON(fl))
+	})
+	return &command{cm.Name(), res}
 }
