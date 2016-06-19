@@ -36,8 +36,8 @@ type Generator struct {
 // Generate is the generator entry point called by the meta generator.
 func Generate() (files []string, err error) {
 	var (
-		outDir, target, toolDir, tool string
-		notool                        bool
+		outDir, target, toolDir, tool, ver string
+		notool                             bool
 	)
 	dtool := strings.Replace(strings.ToLower(design.Design.Name), " ", "-", -1) + "-cli"
 
@@ -47,9 +47,16 @@ func Generate() (files []string, err error) {
 	set.StringVar(&target, "pkg", "client", "")
 	set.StringVar(&toolDir, "tooldir", "tool", "")
 	set.StringVar(&tool, "tool", dtool, "")
+	set.StringVar(&ver, "version", "", "")
 	set.BoolVar(&notool, "notool", false, "")
 	set.Parse(os.Args[2:])
 
+	// First check compatibility
+	if err := codegen.CheckVersion(ver); err != nil {
+		return nil, err
+	}
+
+	// Now proceed
 	target = codegen.Goify(target, false)
 	g := &Generator{outDir: outDir, target: target, toolDirName: toolDir, tool: tool, notool: notool}
 	codegen.Reserved[target] = true

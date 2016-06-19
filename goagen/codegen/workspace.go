@@ -17,6 +17,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/goadesign/goa/version"
+
 	"golang.org/x/tools/go/ast/astutil"
 )
 
@@ -219,7 +221,7 @@ func SourceFileFor(path string) (*SourceFile, error) {
 func (f *SourceFile) WriteHeader(title, pack string, imports []*ImportSpec) error {
 	ctx := map[string]interface{}{
 		"Title":       title,
-		"ToolVersion": Version,
+		"ToolVersion": version.String(),
 		"Pkg":         pack,
 		"Imports":     imports,
 	}
@@ -353,7 +355,7 @@ const (
 	headerT = `{{if .Title}}//************************************************************************//
 // {{.Title}}
 //
-// Generated with goagen v{{.ToolVersion}}, command line:
+// Generated with goagen {{.ToolVersion}}, command line:
 {{comment commandLine}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY

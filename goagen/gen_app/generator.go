@@ -23,18 +23,25 @@ type Generator struct {
 // Generate is the generator entry point called by the meta generator.
 func Generate() (files []string, err error) {
 	var (
-		outDir, target string
-		notest         bool
+		outDir, target, ver string
+		notest              bool
 	)
 
 	set := flag.NewFlagSet("app", flag.PanicOnError)
 	set.String("design", "", "")
 	set.StringVar(&outDir, "out", "", "")
 	set.StringVar(&target, "pkg", "app", "")
+	set.StringVar(&ver, "version", "", "")
 	set.BoolVar(&notest, "notest", false, "")
 	set.Parse(os.Args[2:])
 	outDir = filepath.Join(outDir, target)
 
+	// First check compatibility
+	if err := codegen.CheckVersion(ver); err != nil {
+		return nil, err
+	}
+
+	// Now proceed
 	target = codegen.Goify(target, false)
 	g := &Generator{outDir: outDir, target: target, notest: notest}
 	codegen.Reserved[target] = true

@@ -12,6 +12,7 @@ import (
 	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/gen_app"
+	"github.com/goadesign/goa/version"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -28,7 +29,7 @@ var _ = Describe("Generate", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 		outDir, err = ioutil.TempDir(filepath.Join(workspace.Path, "src"), "")
 		Ω(err).ShouldNot(HaveOccurred())
-		os.Args = []string{"goagen", "app", "--out=" + outDir, "--design=foo"}
+		os.Args = []string{"goagen", "app", "--out=" + outDir, "--design=foo", "--version=" + version.String()}
 	})
 
 	JustBeforeEach(func() {
@@ -181,7 +182,7 @@ var _ = Describe("Generate", func() {
 
 		Context("", func() {
 			BeforeEach(func() {
-				runCodeTemplates(map[string]string{"outDir": outDir, "design": "foo", "tmpDir": filepath.Base(outDir)})
+				runCodeTemplates(map[string]string{"outDir": outDir, "design": "foo", "tmpDir": filepath.Base(outDir), "version": version.String()})
 			})
 
 			It("generates the corresponding code", func() {
@@ -205,7 +206,7 @@ var _ = Describe("Generate", func() {
 					TypeName: "Collection",
 				}
 				design.Design.Resources["Widget"].Actions["get"].Payload = payload
-				runCodeTemplates(map[string]string{"outDir": outDir, "design": "foo", "tmpDir": filepath.Base(outDir)})
+				runCodeTemplates(map[string]string{"outDir": outDir, "design": "foo", "tmpDir": filepath.Base(outDir), "version": version.String()})
 			})
 
 			It("generates the correct payload assignment code", func() {
@@ -228,7 +229,7 @@ var _ = Describe("Generate", func() {
 				}
 				design.Design.Resources["Widget"].Actions["get"].Payload = payload
 				design.Design.Resources["Widget"].Actions["get"].PayloadOptional = true
-				runCodeTemplates(map[string]string{"outDir": outDir, "design": "foo", "tmpDir": filepath.Base(outDir)})
+				runCodeTemplates(map[string]string{"outDir": outDir, "design": "foo", "tmpDir": filepath.Base(outDir), "version": version.String()})
 			})
 
 			It("generates the no payloads assignment code", func() {
@@ -246,10 +247,11 @@ var _ = Describe("Generate", func() {
 const contextsCodeTmpl = `//************************************************************************//
 // API "test api": Application Contexts
 //
-// Generated with goagen v0.0.1, command line:
+// Generated with goagen {{ .version }}, command line:
 // $ goagen app
 // --out=$(GOPATH){{sep}}src{{sep}}{{.tmpDir}}
 // --design={{.design}}
+// --version={{.version}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
@@ -294,10 +296,11 @@ func (ctx *GetWidgetContext) OK(r ID) error {
 const controllersCodeTmpl = `//************************************************************************//
 // API "test api": Application Controllers
 //
-// Generated with goagen v0.0.1, command line:
+// Generated with goagen {{ .version }}, command line:
 // $ goagen app
 // --out=$(GOPATH){{sep}}src{{sep}}{{.tmpDir}}
 // --design={{.design}}
+// --version={{.version}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
@@ -348,10 +351,11 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 const hrefsCodeTmpl = `//************************************************************************//
 // API "test api": Application Resource Href Factories
 //
-// Generated with goagen v0.0.1, command line:
+// Generated with goagen {{.version}}, command line:
 // $ goagen app
 // --out=$(GOPATH){{sep}}src{{sep}}{{.tmpDir}}
 // --design={{.design}}
+// --version={{.version}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
@@ -369,10 +373,11 @@ func WidgetHref(id interface{}) string {
 const mediaTypesCodeTmpl = `//************************************************************************//
 // API "test api": Application Media Types
 //
-// Generated with goagen v0.0.1, command line:
+// Generated with goagen {{ .version }}, command line:
 // $ goagen app
 // --out=$(GOPATH){{sep}}src{{sep}}{{.tmpDir}}
 // --design={{.design}}
+// --version={{.version}}
 //
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//

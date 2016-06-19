@@ -8,6 +8,7 @@ import (
 
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/gen_js"
+	"github.com/goadesign/goa/version"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -24,7 +25,7 @@ var _ = Describe("Generate", func() {
 		outDir = filepath.Join(gopath, "src", testgenPackagePath)
 		err := os.MkdirAll(outDir, 0777)
 		Ω(err).ShouldNot(HaveOccurred())
-		os.Args = []string{"goagen", "js", "--out=" + outDir, "--design=foo", "--host=baz"}
+		os.Args = []string{"goagen", "js", "--out=" + outDir, "--design=foo", "--host=baz", "--version=" + version.String()}
 	})
 
 	JustBeforeEach(func() {
