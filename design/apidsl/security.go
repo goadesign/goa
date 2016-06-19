@@ -11,7 +11,14 @@ import (
 //
 // The scheme refers to previous definitions of either OAuth2Security, BasicAuthSecurity,
 // APIKeySecurity or JWTSecurity.  It can be a string, corresponding to the first parameter of
-// those definitions, or a SecuritySchemeDefinition, returned by those same functions.
+// those definitions, or a SecuritySchemeDefinition, returned by those same functions. Examples:
+//
+//    Security(BasicAuth)
+//
+//    Security("oauth2", func() {
+//        Scope("api:read")  // Requires "api:read" oauth2 scope
+//    })
+//
 func Security(scheme interface{}, dsl ...func()) {
 	var def *design.SecurityDefinition
 	switch val := scheme.(type) {
