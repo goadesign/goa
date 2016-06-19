@@ -11,6 +11,7 @@ import (
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/meta"
 	"github.com/goadesign/goa/goagen/utils"
+	"github.com/goadesign/goa/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -51,6 +52,16 @@ package and tool and the Swagger specification for the API.
 	rootCmd.PersistentFlags().StringVarP(&cwd, "out", "o", cwd, "output directory")
 	rootCmd.PersistentFlags().StringVarP(&designPkg, "design", "d", "", "design package import path")
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "enable debug mode, does not cleanup temporary files.")
+
+	// versionCmd implements the "version" command
+	versionCmd := &cobra.Command{
+		Use:   "version",
+		Short: "Print the version number of goagen",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println("goagen " + version.String() + "\nThe goa generation tool.")
+		},
+	}
+	rootCmd.AddCommand(versionCmd)
 
 	// appCmd implements the "app" command.
 	var (

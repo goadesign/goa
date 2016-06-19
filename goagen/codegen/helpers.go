@@ -9,7 +9,22 @@ import (
 	"unicode"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/version"
 )
+
+// CheckVersion returns an error if the ver is empty, contains an incorrect value or
+// a version number that is not compatible with the version of this repo.
+func CheckVersion(ver string) error {
+	compat, err := version.Compatible(ver)
+	if err != nil {
+		return err
+	}
+	if !compat {
+		return fmt.Errorf("version mismatch: using goagen %s to generate code that compiles with goa %s",
+			ver, version.String())
+	}
+	return nil
+}
 
 // CommandLine return the command used to run this process.
 func CommandLine() string {
