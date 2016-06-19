@@ -33,6 +33,9 @@ var (
 	// ErrBadRequest is a generic bad request error.
 	ErrBadRequest = NewErrorClass("bad_request", 400)
 
+	// ErrUnauthorized is a generic unauthorized error.
+	ErrUnauthorized = NewErrorClass("unauthorized", 401)
+
 	// ErrInvalidRequest is the class of errors produced by the generated code when a request
 	// parameter or payload fails to validate.
 	ErrInvalidRequest = NewErrorClass("invalid_request", 400)
