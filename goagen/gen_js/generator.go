@@ -29,7 +29,7 @@ type Generator struct {
 // Generate is the generator entry point called by the meta generator.
 func Generate() (files []string, err error) {
 	var (
-		outDir       string
+		outDir, ver  string
 		timeout      time.Duration
 		scheme, host string
 		noexample    bool
@@ -41,9 +41,16 @@ func Generate() (files []string, err error) {
 	set.DurationVar(&timeout, "timeout", time.Duration(20)*time.Second, "")
 	set.StringVar(&scheme, "scheme", "", "")
 	set.StringVar(&host, "host", "", "")
+	set.StringVar(&ver, "version", "", "")
 	set.BoolVar(&noexample, "noexample", false, "")
 	set.Parse(os.Args[2:])
 
+	// First check compatibility
+	if err := codegen.CheckVersion(ver); err != nil {
+		return nil, err
+	}
+
+	// Now proceed
 	g := &Generator{outDir: outDir, timeout: timeout, scheme: scheme, host: host, noexample: noexample}
 
 	return g.Generate(design.Design)

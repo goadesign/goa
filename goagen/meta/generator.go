@@ -12,6 +12,7 @@ import (
 	"text/template"
 
 	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/goadesign/goa/version"
 )
 
 // Generator generates the code of, compiles and runs generators.
@@ -178,6 +179,7 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 		i++
 	}
 	sort.Strings(args)
+	args = append(args, "--version="+version.String())
 	cmd := exec.Command(genbin, args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {

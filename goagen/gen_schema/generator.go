@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/utils"
 )
 
@@ -18,12 +19,19 @@ type Generator struct {
 
 // Generate is the generator entry point called by the meta generator.
 func Generate() (files []string, err error) {
-	var outDir string
+	var outDir, ver string
 	set := flag.NewFlagSet("app", flag.PanicOnError)
 	set.StringVar(&outDir, "out", "", "")
+	set.StringVar(&ver, "version", "", "")
 	set.String("design", "", "")
 	set.Parse(os.Args[2:])
 
+	// First check compatibility
+	if err := codegen.CheckVersion(ver); err != nil {
+		return nil, err
+	}
+
+	// Now proceed
 	g := &Generator{outDir: outDir}
 
 	return g.Generate(design.Design)
