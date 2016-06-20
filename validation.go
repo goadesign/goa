@@ -6,6 +6,7 @@ import (
 	"net/mail"
 	"net/url"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/goadesign/goa/uuid"
@@ -111,15 +112,24 @@ func ValidateFormat(f Format, val string) error {
 }
 
 // knownPatterns records the compiled patterns.
+// TBD: refactor all this so that the generated code initializes the map on start to get rid of the
+// need for a RW mutex.
 var knownPatterns = make(map[string]*regexp.Regexp)
+
+// knownPatternsLock is the mutex used to access knownPatterns
+var knownPatternsLock = &sync.RWMutex{}
 
 // ValidatePattern returns an error if val does not match the regular expression p.
 // It makes an effort to minimize the number of times the regular expression needs to be compiled.
 func ValidatePattern(p string, val string) bool {
+	knownPatternsLock.RLock()
 	r, ok := knownPatterns[p]
+	knownPatternsLock.RUnlock()
 	if !ok {
 		r = regexp.MustCompile(p) // DSL validation makes sure regexp is valid
+		knownPatternsLock.Lock()
 		knownPatterns[p] = r
+		knownPatternsLock.Unlock()
 	}
 	return r.MatchString(val)
 }
