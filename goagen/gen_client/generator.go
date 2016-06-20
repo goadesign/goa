@@ -947,7 +947,7 @@ type Client struct {
 }
 
 // New instantiates the client.
-func New(c *http.Client) *Client {
+func New(c goaclient.Doer) *Client {
 	client := &Client{
 		Client: goaclient.New(c),
 		Encoder: goa.NewHTTPEncoder(),
