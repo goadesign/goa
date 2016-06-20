@@ -16,10 +16,15 @@ import (
 )
 
 type (
+	// Doer defines the Do method of the http client.
+	Doer interface {
+		Do(*http.Request) (*http.Response, error)
+	}
+
 	// Client is the common client data structure for all goa service clients.
 	Client struct {
-		// Client is the underlying http client.
-		*http.Client
+		// Doer is the underlying http client.
+		Doer
 		// Scheme overrides the default action scheme.
 		Scheme string
 		// Host is the service hostname.
@@ -33,11 +38,11 @@ type (
 
 // New creates a new API client that wraps c.
 // If c is nil the returned client wraps the default http client.
-func New(c *http.Client) *Client {
+func New(c Doer) *Client {
 	if c == nil {
 		c = http.DefaultClient
 	}
-	return &Client{Client: c}
+	return &Client{Doer: c}
 }
 
 // Do wraps the underlying http client Do method and adds logging.
@@ -52,7 +57,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request) (*http.Response, err
 	if c.Dump {
 		c.dumpRequest(ctx, req)
 	}
-	resp, err := c.Client.Do(req)
+	resp, err := c.Doer.Do(req)
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return nil, err
