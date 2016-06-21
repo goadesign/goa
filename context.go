@@ -36,6 +36,8 @@ type (
 	ResponseData struct {
 		http.ResponseWriter
 
+		// The service used to encode the response.
+		Service *Service
 		// ErrorCode is the code of the error returned by the action if any.
 		ErrorCode string
 		// Status is the response HTTP status code.

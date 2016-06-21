@@ -268,16 +268,17 @@ type GetWidgetContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
-	Service *goa.Service
-	ID      string
+	ID string
 }
 
 // NewGetWidgetContext parses the incoming request URL and body, performs validations and creates the
 // context used by the Widget controller get action.
 func NewGetWidgetContext(ctx context.Context, service *goa.Service) (*GetWidgetContext, error) {
 	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
 	req := goa.ContextRequest(ctx)
-	rctx := GetWidgetContext{Context: ctx, ResponseData: goa.ContextResponse(ctx), RequestData: req, Service: service}
+	rctx := GetWidgetContext{Context: ctx, ResponseData: resp, RequestData: req}
 	paramID := req.Params["id"]
 	if len(paramID) > 0 {
 		rawID := paramID[0]
@@ -289,7 +290,7 @@ func NewGetWidgetContext(ctx context.Context, service *goa.Service) (*GetWidgetC
 // OK sends a HTTP response with status code 200.
 func (ctx *GetWidgetContext) OK(r ID) error {
 	ctx.ResponseData.Header().Set("Content-Type", "vnd.rightscale.codegen.test.widgets")
-	return ctx.Service.Send(ctx.Context, 200, r)
+	return ctx.ResponseData.Service.Send(ctx.Context, 200, r)
 }
 `
 
