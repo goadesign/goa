@@ -156,7 +156,9 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 
 		returnType := ObjectType{}
 		returnType.Type = tmp
-		returnType.Pointer = "*"
+		if p.IsObject() {
+			returnType.Pointer = "*"
+		}
 		returnType.Validatable = validate != ""
 
 		method.ReturnType = &returnType
