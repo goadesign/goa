@@ -137,12 +137,12 @@ var _ = Describe("Generate", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 
 			Ω(content).Should(ContainSubstring("ShowFooOK("))
-			Ω(content).Should(ContainSubstring("ShowFooOKCtx("))
+			Ω(content).Should(ContainSubstring("ShowFooOKWithContext("))
 			// Multiple Routes
 			Ω(content).Should(ContainSubstring("ShowFooOK1("))
-			Ω(content).Should(ContainSubstring("ShowFooOK1Ctx("))
+			Ω(content).Should(ContainSubstring("ShowFooOK1WithContext("))
 			// Get returns an error media type
-			Ω(content).Should(ContainSubstring("GetFooOK(t *testing.T, ctrl app.FooController, payload app.CustomName) *goa.Error"))
+			Ω(content).Should(ContainSubstring("GetFooOK(t *testing.T, ctrl app.FooController, payload app.CustomName) (http.ResponseWriter, *goa.Error)"))
 		})
 
 		It("generates the route path parameters", func() {

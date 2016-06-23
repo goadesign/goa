@@ -86,7 +86,7 @@ func (g *Generator) generateResourceTest(api *design.APIDefinition) error {
 			return err
 		}
 
-		var methods = []TestMethod{}
+		var methods []*TestMethod
 
 		if err := res.IterateActions(func(action *design.ActionDefinition) error {
 			if err := action.IterateResponses(func(response *design.ResponseDefinition) error {
@@ -123,68 +123,70 @@ func (g *Generator) generateResourceTest(api *design.APIDefinition) error {
 	})
 }
 
-func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action *design.ActionDefinition, response *design.ResponseDefinition, route *design.RouteDefinition, routeIndex int, mediaType *design.MediaTypeDefinition, view *design.ViewDefinition) TestMethod {
-	routeNameQualifier := suffixRoute(action.Routes, routeIndex)
-	viewNameQualifier := func() string {
-		if view != nil && view.Name != "default" {
-			return view.Name
-		}
-		return ""
-	}()
-	method := TestMethod{}
-	method.Name = fmt.Sprintf("%s%s%s%s%s", codegen.Goify(action.Name, true), codegen.Goify(resource.Name, true), codegen.Goify(response.Name, true), routeNameQualifier, codegen.Goify(viewNameQualifier, true))
-	method.ActionName = codegen.Goify(action.Name, true)
-	method.ResourceName = codegen.Goify(resource.Name, true)
-	method.Comment = fmt.Sprintf("test setup")
-	method.ControllerName = fmt.Sprintf("%s.%sController", g.target, codegen.Goify(resource.Name, true))
-	method.ContextVarName = fmt.Sprintf("%sCtx", codegen.Goify(action.Name, false))
-	method.ContextType = fmt.Sprintf("%s.New%s%sContext", g.target, codegen.Goify(action.Name, true), codegen.Goify(resource.Name, true))
-	method.RouteVerb = route.Verb
-	method.Status = response.Status
-	method.FullPath = goPathFormat(route.FullPath())
+func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action *design.ActionDefinition,
+	response *design.ResponseDefinition, route *design.RouteDefinition, routeIndex int,
+	mediaType *design.MediaTypeDefinition, view *design.ViewDefinition) *TestMethod {
 
-	if view != nil && mediaType != nil {
+	var (
+		actionName, ctrlName                         string
+		routeQualifier, viewQualifier, respQualifier string
+		comment                                      string
+		returnType                                   *ObjectType
+		params                                       []ObjectType
+		payload                                      *ObjectType
+	)
+
+	actionName = codegen.Goify(action.Name, true)
+	ctrlName = codegen.Goify(resource.Name, true)
+	routeQualifier = suffixRoute(action.Routes, routeIndex)
+	if view != nil && view.Name != "default" {
+		viewQualifier = codegen.Goify(view.Name, true)
+	}
+	respQualifier = codegen.Goify(response.Name, true)
+	hasReturnValue := view != nil && mediaType != nil
+
+	if hasReturnValue {
 		p, _, err := mediaType.Project(view.Name)
 		if err != nil {
-			panic(err)
+			panic(err) // bug
 		}
 		tmp := codegen.GoTypeName(p, nil, 0, false)
 		if !p.IsBuiltIn() {
 			tmp = fmt.Sprintf("%s.%s", g.target, tmp)
 		}
 		validate := codegen.RecursiveChecker(p.AttributeDefinition, false, false, false, "payload", "raw", 1, true)
-
-		returnType := ObjectType{}
+		returnType = &ObjectType{}
 		returnType.Type = tmp
-		if p.IsObject() {
-			returnType.Pointer = "*"
-		}
 		returnType.Validatable = validate != ""
-
-		method.ReturnType = &returnType
 	}
 
-	if len(route.Params()) > 0 {
-		var params = []ObjectType{}
-		for _, paramName := range route.Params() {
-			for name, att := range action.Params.Type.ToObject() {
-				if name == paramName {
-					param := ObjectType{}
-					param.Label = name
-					param.Name = codegen.Goify(name, false)
-					param.Type = codegen.GoTypeRef(att.Type, nil, 0, false)
-					if att.Type.IsPrimitive() && action.Params.IsPrimitivePointer(name) {
-						param.Pointer = "*"
-					}
-					params = append(params, param)
+	comment = "runs the method " + actionName + " of the given controller with the given parameters"
+	if action.Payload != nil {
+		comment += " and payload"
+	}
+	comment += ".\n// It returns the response writer so it's possible to inspect the response headers"
+	if hasReturnValue {
+		comment += " and the media type struct written to the response"
+	}
+	comment += "."
+
+	for _, paramName := range route.Params() {
+		for name, att := range action.Params.Type.ToObject() {
+			if name == paramName {
+				param := ObjectType{}
+				param.Label = name
+				param.Name = codegen.Goify(name, false)
+				param.Type = codegen.GoTypeRef(att.Type, nil, 0, false)
+				if att.Type.IsPrimitive() && action.Params.IsPrimitivePointer(name) {
+					param.Pointer = "*"
 				}
+				params = append(params, param)
 			}
 		}
-		method.Params = params
 	}
 
 	if action.Payload != nil {
-		payload := ObjectType{}
+		payload = &ObjectType{}
 		payload.Name = "payload"
 		payload.Type = fmt.Sprintf("%s.%s", g.target, codegen.Goify(action.Payload.TypeName, true))
 		if !action.Payload.IsPrimitive() && !action.Payload.IsArray() && !action.Payload.IsHash() {
@@ -195,9 +197,23 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		if validate != "" {
 			payload.Validatable = true
 		}
-		method.Payload = &payload
 	}
-	return method
+
+	return &TestMethod{
+		Name:           fmt.Sprintf("%s%s%s%s%s", actionName, ctrlName, respQualifier, routeQualifier, viewQualifier),
+		ActionName:     actionName,
+		ResourceName:   ctrlName,
+		Comment:        fmt.Sprintf("%s %s", actionName, comment),
+		Params:         params,
+		Payload:        payload,
+		ReturnType:     returnType,
+		ControllerName: fmt.Sprintf("%s.%sController", g.target, ctrlName),
+		ContextVarName: fmt.Sprintf("%sCtx", action.Name),
+		ContextType:    fmt.Sprintf("%s.New%s%sContext", g.target, actionName, ctrlName),
+		RouteVerb:      route.Verb,
+		Status:         response.Status,
+		FullPath:       goPathFormat(route.FullPath()),
+	}
 }
 
 func goPathFormat(path string) string {
@@ -218,16 +234,16 @@ var testTmpl = `
 func {{ $test.Name }}(t *testing.T, ctrl {{ $test.ControllerName}}{{/*
 */}}{{ range $param := $test.Params }}, {{ $param.Name }} {{ $param.Pointer }}{{ $param.Type }}{{ end }}{{/*
 */}}{{ if $test.Payload }}, {{ $test.Payload.Name }} {{ $test.Payload.Pointer }}{{ $test.Payload.Type }}{{ end }}){{/*
-*/}}{{ if $test.ReturnType }} {{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}{{ end }} {
-	{{ if $test.ReturnType }}return {{ end }}{{ $test.Name }}Ctx(t, context.Background(), ctrl{{/*
+*/}} (http.ResponseWriter{{ if $test.ReturnType }}, *{{ $test.ReturnType.Type }}{{ end }}) {
+	return {{ $test.Name }}WithContext(t, context.Background(), ctrl{{/*
 */}}{{ range $param := $test.Params }}, {{ $param.Name }}{{ end }}{{ if $test.Payload }}, {{ $test.Payload.Name }}{{ end }})
 }
 
-// {{ $test.Name }}Ctx {{ $test.Comment }}
-func {{ $test.Name }}Ctx(t *testing.T, ctx context.Context, ctrl {{ $test.ControllerName}}{{/*
+// {{ $test.Name }}WithContext {{ $test.Comment }}
+func {{ $test.Name }}WithContext(t *testing.T, ctx context.Context, ctrl {{ $test.ControllerName}}{{/*
 */}}{{ range $param := $test.Params }}, {{ $param.Name }} {{ $param.Pointer }}{{ $param.Type }}{{ end }}{{/*
 */}}{{ if $test.Payload }}, {{ $test.Payload.Name }} {{ $test.Payload.Pointer }}{{ $test.Payload.Type }}{{ end }}){{/*
-*/}}{{ if $test.ReturnType }} {{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}{{ end }} { {{/*
+*/}} (http.ResponseWriter{{ if $test.ReturnType }}, *{{ $test.ReturnType.Type }}{{ end }}) { {{/*
 */}}{{ if $test.Payload }}{{ if $test.Payload.Validatable }}
 	err := {{ $test.Payload.Name }}.Validate()
 	if err != nil {
@@ -238,9 +254,7 @@ func {{ $test.Name }}Ctx(t *testing.T, ctx context.Context, ctrl {{ $test.Contro
 		if e.Status != {{ $test.Status }} {
 			t.Errorf("unexpected payload validation error: %+v", e)
 		}
-		{{ if $test.ReturnType }}{{ if $test.ReturnType.Pointer }}return nil{{/*
-                                     */}}{{ else }}return {{ $test.ReturnType.Type }}{}{{ end }}{{/*
-            */}}{{ else }}return{{ end }}
+		{{ if $test.ReturnType }}return nil, nil{{ else }}return nil{{ end }}
 	}{{ end }}{{ end }}
 	var logBuf bytes.Buffer
 	var resp interface{}
@@ -265,21 +279,22 @@ func {{ $test.Name }}Ctx(t *testing.T, ctx context.Context, ctrl {{ $test.Contro
 	if err != nil {
 		t.Fatalf("controller returned %s, logs:\n%s", err, logBuf.String())
 	}
-	{{if $test.ReturnType }}
-	a, ok := resp.({{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }})
-	if !ok {
-		t.Errorf("invalid response media: got %+v, expected instance of {{ $test.ReturnType.Type }}", resp)
-	}
-	{{ end }}
-	if rw.Code != {{ $test.Status }} {
-		t.Errorf("invalid response status code: got %+v, expected {{ $test.Status }}", rw.Code)
-	}
-	{{ if $test.ReturnType }}{{ if $test.ReturnType.Validatable }}
-	err = a.Validate()
-	if err != nil {
-		t.Errorf("invalid response payload: got %v", err)
-	}
-	{{ end }}return a
-	{{ end }}
+	if rw.Code != {{ $test.Status }} { 
+		t.Errorf("invalid response status code: got %+v, expected {{ $test.Status }}", rw.Code) 
+	} 
+{{ if $test.ReturnType }}	var mt *{{ $test.ReturnType.Type }}
+	if resp != nil {
+		var ok bool
+		mt, ok = resp.(*{{ $test.ReturnType.Type }})
+		if !ok {
+			t.Errorf("invalid response media: got %+v, expected instance of {{ $test.ReturnType.Type }}", resp)
+		}
+{{ if $test.ReturnType.Validatable }}		err = mt.Validate()
+		if err != nil {
+			t.Errorf("invalid response media type: %s", err)
+		}
+{{ end }}	}
+{{ end }}
+	return rw{{ if $test.ReturnType }}, mt{{ end }}
 }
 {{ end }}`
