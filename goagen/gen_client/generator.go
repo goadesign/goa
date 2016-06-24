@@ -823,7 +823,7 @@ func (c *Client) {{ $funcName }}(resp *http.Response) ({{ gotyperef . .AllRequir
 const pathTmpl = `{{ $funcName := printf "%sPath%s" (goify (printf "%s%s" .Route.Parent.Name (title .Route.Parent.Parent.Name)) true) ((or (and .Index (add .Index 1)) "") | printf "%v") }}{{/*
 */}}{{ with .Route }}// {{ $funcName }} computes a request path to the {{ .Parent.Name }} action of {{ .Parent.Parent.Name }}.
 func {{ $funcName }}({{ pathParams . }}) string {
-	return fmt.Sprintf("{{ pathTemplate . }}", {{ pathParamNames . }})
+	return fmt.Sprintf({{ printf "%q" (pathTemplate .) }}, {{ pathParamNames . }})
 }
 {{ end }}`
 

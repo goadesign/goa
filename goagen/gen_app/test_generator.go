@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"text/template"
 
@@ -217,8 +216,7 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 }
 
 func goPathFormat(path string) string {
-	re := regexp.MustCompile(":[a-zA-Z]+")
-	return re.ReplaceAllString(path, "%v")
+	return design.WildcardRegex.ReplaceAllLiteralString(path, "/%v")
 }
 
 func suffixRoute(routes []*design.RouteDefinition, currIndex int) string {
@@ -261,7 +259,7 @@ func {{ $test.Name }}WithContext(t *testing.T, ctx context.Context, ctrl {{ $tes
 	respSetter := func(r interface{}) { resp = r }
 	service := goatest.Service(&logBuf, respSetter)
 	rw := httptest.NewRecorder()
-	req, err := http.NewRequest("{{ $test.RouteVerb }}", fmt.Sprintf("{{ $test.FullPath }}"{{ range $param := $test.Params }}, {{ $param.Name }}{{ end }}), nil)
+	req, err := http.NewRequest("{{ $test.RouteVerb }}", fmt.Sprintf({{ printf "%q" $test.FullPath }}{{ range $param := $test.Params }}, {{ $param.Name }}{{ end }}), nil)
 	if err != nil {
 		panic("invalid test " + err.Error()) // bug
 	}
