@@ -303,7 +303,7 @@ func routes(action *design.ActionDefinition) string {
 			paramName := match[1]
 			path = strings.Replace(path, ":"+paramName, strings.ToUpper(paramName), 1)
 		}
-		paths[i] = path
+		paths[i] = fmt.Sprintf("%q", path)
 	}
 	buf.WriteString(strings.Join(paths, "|"))
 	if len(routes) > 1 {
@@ -463,7 +463,7 @@ func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 		path = args[0]
 	} else {
 {{ $default := defaultPath .Action }}{{ if $default }}	path = "{{ $default }}"
-{{ else }}{{ $pparams := defaultRouteParams .Action }}	path = fmt.Sprintf("{{ defaultRouteTemplate .Action}}", {{ joinNames $pparams }})
+{{ else }}{{ $pparams := defaultRouteParams .Action }}	path = fmt.Sprintf({{ printf "%q" (defaultRouteTemplate .Action)}}, {{ joinNames $pparams }})
 {{ end }}	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
@@ -554,7 +554,7 @@ func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 		path = args[0]
 	} else {
 {{ $default := defaultPath .Action }}{{ if $default }}	path = "{{ $default }}"
-{{ else }}{{ $pparams := defaultRouteParams .Action }}	path = fmt.Sprintf("{{ defaultRouteTemplate .Action }}", {{ joinNames $pparams }})
+{{ else }}{{ $pparams := defaultRouteParams .Action }}	path = fmt.Sprintf({{ printf "%q" (defaultRouteTemplate .Action) }}, {{ joinNames $pparams }})
 {{ end }}	}
 {{ if .Action.Payload }}var payload {{ gotyperefext .Action.Payload 2 .Package }}
 	if cmd.Payload != "" {
