@@ -128,7 +128,7 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 	mediaType *design.MediaTypeDefinition, view *design.ViewDefinition) *TestMethod {
 
 	var (
-		actionName, ctrlName                         string
+		actionName, ctrlName, varName                string
 		routeQualifier, viewQualifier, respQualifier string
 		comment                                      string
 		returnType                                   *ObjectType
@@ -138,6 +138,7 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 
 	actionName = codegen.Goify(action.Name, true)
 	ctrlName = codegen.Goify(resource.Name, true)
+	varName = codegen.Goify(action.Name, false)
 	routeQualifier = suffixRoute(action.Routes, routeIndex)
 	if view != nil && view.Name != "default" {
 		viewQualifier = codegen.Goify(view.Name, true)
@@ -208,7 +209,7 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		Payload:        payload,
 		ReturnType:     returnType,
 		ControllerName: fmt.Sprintf("%s.%sController", g.target, ctrlName),
-		ContextVarName: fmt.Sprintf("%sCtx", action.Name),
+		ContextVarName: fmt.Sprintf("%sCtx", varName),
 		ContextType:    fmt.Sprintf("%s.New%s%sContext", g.target, actionName, ctrlName),
 		RouteVerb:      route.Verb,
 		Status:         response.Status,
