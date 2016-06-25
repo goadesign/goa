@@ -266,6 +266,32 @@ var _ = Describe("API", func() {
 					Ω(params[param2Name].Description).Should(Equal(param2Desc))
 					Ω(Design.BasePath).Should(Equal(basePath))
 				})
+
+				Context("with conflicting resource and API base params", func() {
+					JustBeforeEach(func() {
+						Resource("foo", func() {
+							BasePath("/:accountID")
+						})
+						dslengine.Run()
+					})
+
+					It("returns an error", func() {
+						Ω(dslengine.Errors).Should(HaveOccurred())
+					})
+				})
+
+				Context("with an absolute resource base path", func() {
+					JustBeforeEach(func() {
+						Resource("foo", func() {
+							BasePath("//:accountID")
+						})
+						dslengine.Run()
+					})
+
+					It("does not return an error", func() {
+						Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+					})
+				})
 			})
 		})
 

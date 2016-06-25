@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strings"
 
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/dslengine"
@@ -129,12 +130,14 @@ func BasePath(val string) {
 		def.BasePath = val
 	case *design.ResourceDefinition:
 		def.BasePath = val
-		awcs := design.ExtractWildcards(design.Design.BasePath)
-		wcs := design.ExtractWildcards(val)
-		for _, awc := range awcs {
-			for _, wc := range wcs {
-				if awc == wc {
-					dslengine.ReportError(`duplicate wildcard "%s" in API and resource base paths`, wc)
+		if !strings.HasPrefix(val, "//") {
+			awcs := design.ExtractWildcards(design.Design.BasePath)
+			wcs := design.ExtractWildcards(val)
+			for _, awc := range awcs {
+				for _, wc := range wcs {
+					if awc == wc {
+						dslengine.ReportError(`duplicate wildcard "%s" in API and resource base paths`, wc)
+					}
 				}
 			}
 		}
