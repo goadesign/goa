@@ -65,6 +65,8 @@ func (g *Generator) generateResourceTest(api *design.APIDefinition) error {
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("bytes"),
 		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("io"),
+		codegen.SimpleImport("log"),
 		codegen.SimpleImport("net/http"),
 		codegen.SimpleImport("net/http/httptest"),
 		codegen.SimpleImport("net/url"),
@@ -230,35 +232,43 @@ func suffixRoute(routes []*design.RouteDefinition, currIndex int) string {
 var testTmpl = `
 {{ range $test := . }}
 // {{ $test.Name }} {{ $test.Comment }}
-func {{ $test.Name }}(t *testing.T, ctrl {{ $test.ControllerName}}{{/*
+// If ctx is nil then context.Background() is used.
+// If service is nil then a default service is created.
+func {{ $test.Name }}(t *testing.T, ctx context.Context, service *goa.Service, ctrl {{ $test.ControllerName}}{{/*
 */}}{{ range $param := $test.Params }}, {{ $param.Name }} {{ $param.Pointer }}{{ $param.Type }}{{ end }}{{/*
 */}}{{ if $test.Payload }}, {{ $test.Payload.Name }} {{ $test.Payload.Pointer }}{{ $test.Payload.Type }}{{ end }}){{/*
 */}} (http.ResponseWriter{{ if $test.ReturnType }}, *{{ $test.ReturnType.Type }}{{ end }}) {
-	return {{ $test.Name }}WithContext(t, context.Background(), ctrl{{/*
-*/}}{{ range $param := $test.Params }}, {{ $param.Name }}{{ end }}{{ if $test.Payload }}, {{ $test.Payload.Name }}{{ end }})
-}
+	// Setup service
+	var (
+		logBuf bytes.Buffer
+		resp   interface{}
 
-// {{ $test.Name }}WithContext {{ $test.Comment }}
-func {{ $test.Name }}WithContext(t *testing.T, ctx context.Context, ctrl {{ $test.ControllerName}}{{/*
-*/}}{{ range $param := $test.Params }}, {{ $param.Name }} {{ $param.Pointer }}{{ $param.Type }}{{ end }}{{/*
-*/}}{{ if $test.Payload }}, {{ $test.Payload.Name }} {{ $test.Payload.Pointer }}{{ $test.Payload.Type }}{{ end }}){{/*
-*/}} (http.ResponseWriter{{ if $test.ReturnType }}, *{{ $test.ReturnType.Type }}{{ end }}) { {{/*
-*/}}{{ if $test.Payload }}{{ if $test.Payload.Validatable }}
+		respSetter goatest.ResponseSetterFunc = func(r interface{}) { resp = r }
+	)
+	if service == nil {
+		service = goatest.Service(&logBuf, respSetter)
+	} else {
+		logger := log.New(&logBuf, "", log.Ltime)
+		service.WithLogger(goa.NewLogger(logger))
+		newEncoder := func(io.Writer) goa.Encoder { return  respSetter }
+		service.Encoder = goa.NewHTTPEncoder() // Make sure the code ends up using this decoder
+		service.Encoder.Register(newEncoder, "*/*")
+	}
+{{ if $test.Payload }}{{ if $test.Payload.Validatable }}
+	// Validate payload
 	err := {{ $test.Payload.Name }}.Validate()
 	if err != nil {
 		e, ok := err.(*goa.Error)
 		if !ok {
-			panic(err) //bug
+			panic(err) // bug
 		}
 		if e.Status != {{ $test.Status }} {
 			t.Errorf("unexpected payload validation error: %+v", e)
 		}
 		{{ if $test.ReturnType }}return nil, nil{{ else }}return nil{{ end }}
-	}{{ end }}{{ end }}
-	var logBuf bytes.Buffer
-	var resp interface{}
-	respSetter := func(r interface{}) { resp = r }
-	service := goatest.Service(&logBuf, respSetter)
+	}
+{{ end }}{{ end }}
+	// Setup request context
 	rw := httptest.NewRecorder()
 	req, err := http.NewRequest("{{ $test.RouteVerb }}", fmt.Sprintf({{ printf "%q" $test.FullPath }}{{ range $param := $test.Params }}, {{ $param.Name }}{{ end }}), nil)
 	if err != nil {
@@ -267,6 +277,9 @@ func {{ $test.Name }}WithContext(t *testing.T, ctx context.Context, ctrl {{ $tes
 	prms := url.Values{}
 	{{ range $param := $test.Params }}prms["{{ $param.Label }}"] = []string{fmt.Sprintf("%v",{{ $param.Name}})}
 	{{ end }}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	goaCtx := goa.NewContext(goa.WithAction(ctx, "{{ $test.ResourceName }}Test"), rw, req, prms)
 	{{ $test.ContextVarName }}, err := {{ $test.ContextType }}(goaCtx, service)
 	if err != nil {
@@ -274,7 +287,10 @@ func {{ $test.Name }}WithContext(t *testing.T, ctx context.Context, ctrl {{ $tes
 	}
 	{{ if $test.Payload }}{{ $test.ContextVarName }}.Payload = {{ $test.Payload.Name }}{{ end }}
 
+	// Perform action
 	err = ctrl.{{ $test.ActionName}}({{ $test.ContextVarName }})
+
+	// Validate response
 	if err != nil {
 		t.Fatalf("controller returned %s, logs:\n%s", err, logBuf.String())
 	}
@@ -294,6 +310,7 @@ func {{ $test.Name }}WithContext(t *testing.T, ctx context.Context, ctrl {{ $tes
 		}
 {{ end }}	}
 {{ end }}
+	// Return results
 	return rw{{ if $test.ReturnType }}, mt{{ end }}
 }
 {{ end }}`
