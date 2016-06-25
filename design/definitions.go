@@ -734,6 +734,9 @@ func (r *ResourceDefinition) URITemplate() string {
 // FullPath computes the base path to the resource actions concatenating the API and parent resource
 // base paths as needed.
 func (r *ResourceDefinition) FullPath() string {
+	if strings.HasPrefix(r.BasePath, "//") {
+		return httppath.Clean(r.BasePath)
+	}
 	var basePath string
 	if p := r.Parent(); p != nil {
 		if ca := p.CanonicalAction(); ca != nil {
