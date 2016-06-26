@@ -1569,6 +1569,11 @@ func (f *FileServerDefinition) Finalize() {
 	}
 }
 
+// IsDir returns true if the file server serves a directory, false otherwise.
+func (f *FileServerDefinition) IsDir() bool {
+	return WildcardRegex.MatchString(f.RequestPath)
+}
+
 // ByFilePath makes FileServerDefinition sortable for code generators.
 type ByFilePath []*FileServerDefinition
 

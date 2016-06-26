@@ -735,6 +735,10 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	action := route.Parent
 
 	tagNames := tagNamesFromDefinitions(action.Parent.Metadata, action.Metadata)
+	if len(tagNames) == 0 {
+		// By default tag with resource name
+		tagNames = []string{route.Parent.Parent.Name}
+	}
 	params, err := paramsFromDefinition(action.AllParams(), route.FullPath())
 	if err != nil {
 		return err
@@ -783,7 +787,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	operation := &Operation{
 		Tags:         tagNames,
 		Description:  action.Description,
-		Summary:      summaryFromDefinition(action.Name, action.Metadata),
+		Summary:      summaryFromDefinition(action.Name+" "+action.Parent.Name, action.Metadata),
 		ExternalDocs: docsFromDefinition(action.Docs),
 		OperationID:  operationID,
 		Parameters:   params,
