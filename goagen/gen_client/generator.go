@@ -575,7 +575,9 @@ func (g *Generator) fileServerMethod(fs *design.FileServerDefinition) string {
 
 	if len(wcs) == 0 {
 		suffix = path.Base(fs.RequestPath)
-		suffix = strings.TrimSuffix(suffix, filepath.Ext(suffix))
+		ext := filepath.Ext(suffix)
+		suffix = strings.TrimSuffix(suffix, ext)
+		suffix += codegen.Goify(ext, true)
 	} else {
 		if len(reqElems) == 1 {
 			suffix = filepath.Base(fs.RequestPath)
