@@ -150,10 +150,11 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 			hasDownloads = true
 		}
 		return res.IterateActions(func(action *design.ActionDefinition) error {
-			if as, ok := actions[action.Name]; ok {
-				actions[action.Name] = append(as, action)
+			name := codegen.Goify(action.Name, false)
+			if as, ok := actions[name]; ok {
+				actions[name] = append(as, action)
 			} else {
-				actions[action.Name] = []*design.ActionDefinition{action}
+				actions[name] = []*design.ActionDefinition{action}
 			}
 			return nil
 		})

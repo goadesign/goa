@@ -139,7 +139,7 @@ var _ = Describe("Generate", func() {
 				Ω(files).Should(HaveLen(8))
 				content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
 				Ω(err).ShouldNot(HaveOccurred())
-				Ω(content).Should(ContainSubstring("func (c *Client) DownloadSwagger("))
+				Ω(content).Should(ContainSubstring("func (c *Client) DownloadSwaggerJSON("))
 			})
 
 		})
