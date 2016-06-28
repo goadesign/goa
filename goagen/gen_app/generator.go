@@ -211,11 +211,28 @@ func (g *Generator) generateControllers(api *design.APIDefinition) error {
 
 	var controllersData []*ControllerTemplateData
 	err = api.IterateResources(func(r *design.ResourceDefinition) error {
+		// Create file servers for all directory file servers that serve index.html.
+		fileServers := r.FileServers
+		for _, fs := range r.FileServers {
+			if fs.IsDir() {
+				rpath := design.WildcardRegex.ReplaceAllLiteralString(fs.RequestPath, "")
+				rpath += "/"
+				fileServers = append(fileServers, &design.FileServerDefinition{
+					Parent:      fs.Parent,
+					Description: fs.Description,
+					Docs:        fs.Docs,
+					FilePath:    filepath.Join(fs.FilePath, "index.html"),
+					RequestPath: rpath,
+					Metadata:    fs.Metadata,
+					Security:    fs.Security,
+				})
+			}
+		}
 		data := &ControllerTemplateData{
 			API:            api,
 			Resource:       codegen.Goify(r.Name, true),
 			PreflightPaths: r.PreflightPaths(),
-			FileServers:    r.FileServers,
+			FileServers:    fileServers,
 		}
 		ierr := r.IterateActions(func(a *design.ActionDefinition) error {
 			context := fmt.Sprintf("%s%sContext", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))

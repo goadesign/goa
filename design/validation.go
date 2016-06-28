@@ -366,6 +366,15 @@ func (f *FileServerDefinition) Validate() *dslengine.ValidationErrors {
 	if f.Parent == nil {
 		verr.Add(f, "missing parent resource")
 	}
+	matches := WildcardRegex.FindAllString(f.RequestPath, -1)
+	if len(matches) == 1 {
+		if !strings.HasSuffix(f.RequestPath, matches[0]) {
+			verr.Add(f, "invalid request path %s, must end with a wildcard starting with *", f.RequestPath)
+		}
+	}
+	if len(matches) > 2 {
+		verr.Add(f, "invalid request path, may only contain one wildcard")
+	}
 
 	return verr.AsError()
 }

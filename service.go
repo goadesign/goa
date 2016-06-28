@@ -304,8 +304,11 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 // "/assets/x/y/z".
 func (ctrl *Controller) FileHandler(path, filename string) Handler {
 	var wc string
-	if idx := strings.Index(path, "*"); idx > -1 && idx < len(path)-1 {
-		wc = path[idx+1:]
+	if idx := strings.LastIndex(path, "/*"); idx > -1 && idx < len(path)-1 {
+		wc = path[idx+2:]
+		if strings.Contains(wc, "/") {
+			wc = ""
+		}
 	}
 	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		fname := filename
