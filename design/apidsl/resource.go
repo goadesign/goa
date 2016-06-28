@@ -39,6 +39,9 @@ import (
 //			Credentials()                        // Sets Access-Control-Allow-Credentials header
 //		})
 //
+//		Response(Unauthorized, ErrorMedia) // Common responses to all actions
+//		Response(BadRequest, ErrorMedia)
+//
 //		Action("show", func() {		// Action definition, can appear more than once
 //			// ... Action dsl
 //		})

@@ -1459,6 +1459,11 @@ func (a *ActionDefinition) IterateResponses(it ResponseIterator) error {
 
 // mergeResponses merges the parent resource and design responses.
 func (a *ActionDefinition) mergeResponses() {
+	for name, resp := range a.Parent.Responses {
+		if _, ok := a.Responses[name]; !ok {
+			a.Responses[name] = resp.Dup()
+		}
+	}
 	for name, resp := range a.Responses {
 		resp.Finalize()
 		if pr, ok := a.Parent.Responses[name]; ok {
