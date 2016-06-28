@@ -265,7 +265,7 @@ func {{ $test.Name }}(t *testing.T, ctx context.Context, service *goa.Service, c
 		if e.Status != {{ $test.Status }} {
 			t.Errorf("unexpected payload validation error: %+v", e)
 		}
-		{{ if $test.ReturnType }}return nil, nil{{ else }}return nil{{ end }}
+		{{ if $test.ReturnType }}return nil, {{ if eq $test.Status 400 }}e{{ else }}nil{{ end }}{{ else }}return nil{{ end }}
 	}
 {{ end }}{{ end }}
 	// Setup request context
