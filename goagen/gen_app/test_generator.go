@@ -159,6 +159,9 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		validate := codegen.RecursiveChecker(p.AttributeDefinition, false, false, false, "payload", "raw", 1, true)
 		returnType = &ObjectType{}
 		returnType.Type = tmp
+		if p.IsObject() {
+			returnType.Pointer = "*"
+		}
 		returnType.Validatable = validate != ""
 	}
 
@@ -237,7 +240,7 @@ var testTmpl = `
 func {{ $test.Name }}(t *testing.T, ctx context.Context, service *goa.Service, ctrl {{ $test.ControllerName}}{{/*
 */}}{{ range $param := $test.Params }}, {{ $param.Name }} {{ $param.Pointer }}{{ $param.Type }}{{ end }}{{/*
 */}}{{ if $test.Payload }}, {{ $test.Payload.Name }} {{ $test.Payload.Pointer }}{{ $test.Payload.Type }}{{ end }}){{/*
-*/}} (http.ResponseWriter{{ if $test.ReturnType }}, *{{ $test.ReturnType.Type }}{{ end }}) {
+*/}} (http.ResponseWriter{{ if $test.ReturnType }}, {{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}{{ end }}) {
 	// Setup service
 	var (
 		logBuf bytes.Buffer
@@ -297,10 +300,10 @@ func {{ $test.Name }}(t *testing.T, ctx context.Context, service *goa.Service, c
 	if rw.Code != {{ $test.Status }} { 
 		t.Errorf("invalid response status code: got %+v, expected {{ $test.Status }}", rw.Code) 
 	} 
-{{ if $test.ReturnType }}	var mt *{{ $test.ReturnType.Type }}
+{{ if $test.ReturnType }}	var mt {{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}
 	if resp != nil {
 		var ok bool
-		mt, ok = resp.(*{{ $test.ReturnType.Type }})
+		mt, ok = resp.({{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }})
 		if !ok {
 			t.Errorf("invalid response media: got %+v, expected instance of {{ $test.ReturnType.Type }}", resp)
 		}
