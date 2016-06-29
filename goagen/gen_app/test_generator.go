@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
+	"strings"
 	"text/template"
 
 	"github.com/goadesign/goa/design"
@@ -36,7 +38,8 @@ type TestMethod struct {
 	FullPath       string
 	Status         int
 	ReturnType     *ObjectType
-	Params         []ObjectType
+	Params         []*ObjectType
+	QueryParams    []*ObjectType
 	Payload        *ObjectType
 }
 
@@ -53,7 +56,8 @@ func (g *Generator) generateResourceTest(api *design.APIDefinition) error {
 	if len(api.Resources) == 0 {
 		return nil
 	}
-	testTmpl := template.Must(template.New("resources").Parse(testTmpl))
+	funcs := template.FuncMap{"isSlice": isSlice}
+	testTmpl := template.Must(template.New("test").Funcs(funcs).Parse(testTmpl))
 	outDir, err := makeTestDir(g, api.Name)
 	if err != nil {
 		return err
@@ -70,6 +74,8 @@ func (g *Generator) generateResourceTest(api *design.APIDefinition) error {
 		codegen.SimpleImport("net/http"),
 		codegen.SimpleImport("net/http/httptest"),
 		codegen.SimpleImport("net/url"),
+		codegen.SimpleImport("strconv"),
+		codegen.SimpleImport("strings"),
 		codegen.SimpleImport("testing"),
 		codegen.SimpleImport(appPkg),
 		codegen.SimpleImport("github.com/goadesign/goa"),
@@ -133,7 +139,6 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		routeQualifier, viewQualifier, respQualifier string
 		comment                                      string
 		returnType                                   *ObjectType
-		params                                       []ObjectType
 		payload                                      *ObjectType
 	)
 
@@ -175,21 +180,6 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 	}
 	comment += "."
 
-	for _, paramName := range route.Params() {
-		for name, att := range action.Params.Type.ToObject() {
-			if name == paramName {
-				param := ObjectType{}
-				param.Label = name
-				param.Name = codegen.Goify(name, false)
-				param.Type = codegen.GoTypeRef(att.Type, nil, 0, false)
-				if att.Type.IsPrimitive() && action.Params.IsPrimitivePointer(name) {
-					param.Pointer = "*"
-				}
-				params = append(params, param)
-			}
-		}
-	}
-
 	if action.Payload != nil {
 		payload = &ObjectType{}
 		payload.Name = "payload"
@@ -209,7 +199,8 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		ActionName:     actionName,
 		ResourceName:   ctrlName,
 		Comment:        fmt.Sprintf("%s %s", actionName, comment),
-		Params:         params,
+		Params:         pathParams(action, route),
+		QueryParams:    queryParams(action),
 		Payload:        payload,
 		ReturnType:     returnType,
 		ControllerName: fmt.Sprintf("%s.%sController", g.target, ctrlName),
@@ -219,6 +210,41 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		Status:         response.Status,
 		FullPath:       goPathFormat(route.FullPath()),
 	}
+}
+
+// pathParams returns the path params for the given action and route.
+func pathParams(action *design.ActionDefinition, route *design.RouteDefinition) []*ObjectType {
+	return paramFromNames(action, route.Params())
+}
+
+// queryParams returns the query string params for the given action.
+func queryParams(action *design.ActionDefinition) []*ObjectType {
+	var qparams []string
+	if qps := action.QueryParams; qps != nil {
+		for pname := range qps.Type.ToObject() {
+			qparams = append(qparams, pname)
+		}
+	}
+	sort.Strings(qparams)
+	return paramFromNames(action, qparams)
+}
+
+func paramFromNames(action *design.ActionDefinition, names []string) (params []*ObjectType) {
+	for _, paramName := range names {
+		for name, att := range action.Params.Type.ToObject() {
+			if name == paramName {
+				param := &ObjectType{}
+				param.Label = name
+				param.Name = codegen.Goify(name, false)
+				param.Type = codegen.GoTypeRef(att.Type, nil, 0, false)
+				if att.Type.IsPrimitive() && action.Params.IsPrimitivePointer(name) {
+					param.Pointer = "*"
+				}
+				params = append(params, param)
+			}
+		}
+	}
+	return
 }
 
 func goPathFormat(path string) string {
@@ -232,13 +258,28 @@ func suffixRoute(routes []*design.RouteDefinition, currIndex int) string {
 	return ""
 }
 
-var testTmpl = `
+func isSlice(typeName string) bool {
+	return strings.HasPrefix(typeName, "[]")
+}
+
+var convertParamTmpl = `{{ if eq .Type "string" }}		sliceVal := []string{*{{ .Name }}}{{/*
+*/}}{{ else if eq .Type "int" }}		sliceVal := []string{strconv.Itoa(*{{ .Name }})}{{/*
+*/}}{{ else if eq .Type "[]string" }}		sliceVal := {{ .Name }}
+*/}}{{ else if (isSlice .Type) }}		sliceVal := make([]string, len({{ .Name }}))
+		for i, v := range {{ .Name }} {
+			sliceVal[i] = fmt.Sprintf("%v", v)
+		}{{/*
+*/}}{{ else }}		sliceVal := fmt.Sprintf("%v", *{{ .Name }})
+{{ end }}`
+
+var testTmpl = `{{ define "convertParam" }}` + convertParamTmpl + `{{ end }}` + `
 {{ range $test := . }}
 // {{ $test.Name }} {{ $test.Comment }}
 // If ctx is nil then context.Background() is used.
 // If service is nil then a default service is created.
 func {{ $test.Name }}(t *testing.T, ctx context.Context, service *goa.Service, ctrl {{ $test.ControllerName}}{{/*
 */}}{{ range $param := $test.Params }}, {{ $param.Name }} {{ $param.Pointer }}{{ $param.Type }}{{ end }}{{/*
+*/}}{{ range $param := $test.QueryParams }}, {{ $param.Name }} {{ $param.Pointer }}{{ $param.Type }}{{ end }}{{/*
 */}}{{ if $test.Payload }}, {{ $test.Payload.Name }} {{ $test.Payload.Pointer }}{{ $test.Payload.Type }}{{ end }}){{/*
 */}} (http.ResponseWriter{{ if $test.ReturnType }}, {{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}{{ end }}) {
 	// Setup service
@@ -273,14 +314,26 @@ func {{ $test.Name }}(t *testing.T, ctx context.Context, service *goa.Service, c
 {{ end }}{{ end }}
 	// Setup request context
 	rw := httptest.NewRecorder()
-	req, err := http.NewRequest("{{ $test.RouteVerb }}", fmt.Sprintf({{ printf "%q" $test.FullPath }}{{ range $param := $test.Params }}, {{ $param.Name }}{{ end }}), nil)
+{{ if $test.QueryParams}}	query := url.Values{}
+{{ range $param := $test.QueryParams }}	if {{ $param.Name }} != nil {
+{{ template "convertParam" $param }}
+		query[{{ printf "%q" $param.Label }}] = sliceVal
+	}
+{{ end }}{{ end }}	u := &url.URL{
+		Path: fmt.Sprintf({{ printf "%q" $test.FullPath }}{{ range $param := $test.Params }}, {{ $param.Name }}{{ end }}),
+{{ if $test.QueryParams }}		RawQuery: query.Encode(),
+{{ end }}	}
+	req, err := http.NewRequest("{{ $test.RouteVerb }}", u.String(), nil)
 	if err != nil {
 		panic("invalid test " + err.Error()) // bug
 	}
 	prms := url.Values{}
-	{{ range $param := $test.Params }}prms["{{ $param.Label }}"] = []string{fmt.Sprintf("%v",{{ $param.Name}})}
-	{{ end }}
-	if ctx == nil {
+{{ range $param := $test.Params }}	prms["{{ $param.Label }}"] = []string{fmt.Sprintf("%v",{{ $param.Name}})}
+{{ end }}{{ range $param := $test.QueryParams }} if {{ $param.Name }} != nil {
+{{ template "convertParam" $param }}
+		prms[{{ printf "%q" $param.Label }}] = sliceVal
+	}
+{{ end }} if ctx == nil {
 		ctx = context.Background()
 	}
 	goaCtx := goa.NewContext(goa.WithAction(ctx, "{{ $test.ResourceName }}Test"), rw, req, prms)
@@ -297,9 +350,9 @@ func {{ $test.Name }}(t *testing.T, ctx context.Context, service *goa.Service, c
 	if err != nil {
 		t.Fatalf("controller returned %s, logs:\n%s", err, logBuf.String())
 	}
-	if rw.Code != {{ $test.Status }} { 
-		t.Errorf("invalid response status code: got %+v, expected {{ $test.Status }}", rw.Code) 
-	} 
+	if rw.Code != {{ $test.Status }} {
+		t.Errorf("invalid response status code: got %+v, expected {{ $test.Status }}", rw.Code)
+	}
 {{ if $test.ReturnType }}	var mt {{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}
 	if resp != nil {
 		var ok bool
