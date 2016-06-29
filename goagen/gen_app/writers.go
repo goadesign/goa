@@ -203,35 +203,34 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 			"Response": resp,
 		}
 		if resp.Type != nil {
+			if mt, ok := resp.Type.(*design.MediaTypeDefinition); ok {
+				return w.executeRespMT(mt, respData, fn)
+			}
 			respData["Type"] = resp.Type
 			respData["ContentType"] = resp.MediaType
-			if mt, ok := resp.Type.(*design.MediaTypeDefinition); ok {
-				respData["ContentType"] = mt.ContentType
-			}
-			if err := w.ExecuteTemplate("response", ctxTRespT, fn, respData); err != nil {
-				return err
-			}
+			return w.ExecuteTemplate("response", ctxTRespT, fn, respData)
 		} else if mt := design.Design.MediaTypeWithIdentifier(resp.MediaType); mt != nil {
-			respData["MediaType"] = mt
-			respData["ContentType"] = mt.ContentType
-			fn["respName"] = func(resp *design.ResponseDefinition, view string) string {
-				if view == "default" {
-					return codegen.Goify(resp.Name, true)
-				}
-				base := fmt.Sprintf("%s%s", resp.Name, strings.Title(view))
-				return codegen.Goify(base, true)
-			}
-			if err := w.ExecuteTemplate("response", ctxMTRespT, fn, respData); err != nil {
-				return err
-			}
+			return w.executeRespMT(mt, respData, fn)
 		} else {
-			if err := w.ExecuteTemplate("response", ctxNoMTRespT, fn, respData); err != nil {
-				return err
-			}
+			return w.ExecuteTemplate("response", ctxNoMTRespT, fn, respData)
 		}
-		return nil
 	})
 	return nil
+}
+
+// executeRespMT executes the template that generates the response functions for the given media
+// type.
+func (w *ContextsWriter) executeRespMT(mt *design.MediaTypeDefinition, data map[string]interface{}, fn template.FuncMap) error {
+	data["MediaType"] = mt
+	data["ContentType"] = mt.ContentType
+	fn["respName"] = func(resp *design.ResponseDefinition, view string) string {
+		if view == "default" {
+			return codegen.Goify(resp.Name, true)
+		}
+		base := fmt.Sprintf("%s%s", resp.Name, strings.Title(view))
+		return codegen.Goify(base, true)
+	}
+	return w.ExecuteTemplate("response", ctxMTRespT, fn, data)
 }
 
 // NewControllersWriter returns a handlers code writer.
