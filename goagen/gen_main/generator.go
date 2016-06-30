@@ -3,6 +3,7 @@ package genmain
 import (
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"path"
 	"path/filepath"
@@ -151,6 +152,13 @@ func (g *Generator) createMainFile(mainFile string, api *design.APIDefinition, f
 	if err != nil {
 		return err
 	}
+	funcs["getPort"] = func(hostport string) string {
+		_, port, err := net.SplitHostPort(hostport)
+		if err != nil {
+			return "8080"
+		}
+		return port
+	}
 	outPkg, err := codegen.PackagePath(g.outDir)
 	if err != nil {
 		return err
@@ -238,7 +246,7 @@ func main() {
 {{ end }}
 
 	// Start service
-	if err := service.ListenAndServe(":8080"); err != nil {
+	if err := service.ListenAndServe(":{{ getPort .API.Host }}"); err != nil {
 		service.LogError("startup", "err", err)
 	}
 }
