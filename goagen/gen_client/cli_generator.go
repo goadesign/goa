@@ -98,6 +98,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	funcs["defaultRouteTemplate"] = defaultRouteTemplate
 	funcs["joinNames"] = joinNames
 	funcs["routes"] = routes
+	funcs["flagType"] = flagType
 
 	commandTypesTmpl := template.Must(template.New("commandTypes").Funcs(funcs).Parse(commandTypesTmpl))
 	commandsTmpl := template.Must(template.New("commands").Funcs(funcs).Parse(commandsTmpl))
@@ -345,6 +346,34 @@ func signerArgs(sec *design.SecuritySchemeDefinition) string {
 		return "source"
 	default:
 		return ""
+	}
+}
+
+// flagType returns the flag type for the given (basic type) attribute definition.
+func flagType(att *design.AttributeDefinition) string {
+	switch att.Type.Kind() {
+	case design.IntegerKind:
+		return "Int"
+	case design.NumberKind:
+		return "Float64"
+	case design.BooleanKind:
+		return "Bool"
+	case design.StringKind:
+		return "String"
+	case design.DateTimeKind:
+		return "String"
+	case design.UUIDKind:
+		return "String"
+	case design.AnyKind:
+		return "String"
+	case design.ArrayKind:
+		return flagType(att.Type.(*design.Array).ElemType) + "Slice"
+	case design.UserTypeKind:
+		return flagType(att.Type.(*design.UserTypeDefinition).AttributeDefinition)
+	case design.MediaTypeKind:
+		return flagType(att.Type.(*design.MediaTypeDefinition).AttributeDefinition)
+	default:
+		panic("invalid flag attribute type " + att.Type.Name())
 	}
 }
 
