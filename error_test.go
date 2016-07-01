@@ -388,6 +388,39 @@ var _ = Describe("Merge", func() {
 				})
 			})
 
+			Context("with nil target metadata", func() {
+				BeforeEach(func() {
+					err.(*goa.Error).MetaValues = nil
+					mErr2.MetaValues = metaValues2
+				})
+
+				Context("with nil/empty other metadata", func() {
+					BeforeEach(func() {
+						mErr2.MetaValues = nil
+					})
+
+					It("keeps nil target metadata if no other metadata", func() {
+						Ω(mErr.MetaValues).Should(BeNil())
+					})
+				})
+
+				Context("with other metadata", func() {
+					var metaValues2 = map[string]interface{}{"foo": 1, "bar": 2}
+
+					BeforeEach(func() {
+						err.(*goa.Error).MetaValues = nil
+						mErr2.MetaValues = metaValues2
+					})
+
+					It("merges the metadata", func() {
+						Ω(mErr.MetaValues).Should(HaveLen(len(metaValues2)))
+						for k, v := range metaValues2 {
+							Ω(mErr.MetaValues).Should(HaveKeyWithValue(k, v))
+						}
+					})
+				})
+			})
+
 			Context("with metadata with a common key", func() {
 				const commonKey = "foo"
 
