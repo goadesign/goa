@@ -391,7 +391,6 @@ var _ = Describe("Merge", func() {
 			Context("with nil target metadata", func() {
 				BeforeEach(func() {
 					err.(*goa.Error).MetaValues = nil
-					mErr2.MetaValues = metaValues2
 				})
 
 				Context("with nil/empty other metadata", func() {
