@@ -112,7 +112,6 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 			"cmdFieldType":    cmdFieldType,
 			"defaultPath":     defaultPath,
 			"escapeBackticks": escapeBackticks,
-			"flagType":        flagType,
 			"goify":           codegen.Goify,
 			"gotypedef":       codegen.GoTypeDef,
 			"gotypedesc":      codegen.GoTypeDesc,
@@ -691,34 +690,6 @@ func toString(name, target string, att *design.AttributeDefinition) string {
 		return codegen.RunTemplate(arrayToStringTmpl, data)
 	default:
 		panic("cannot convert non simple type " + att.Type.Name() + " to string") // bug
-	}
-}
-
-// flagType returns the flag type for the given (basic type) attribute definition.
-func flagType(att *design.AttributeDefinition) string {
-	switch att.Type.Kind() {
-	case design.IntegerKind:
-		return "Int"
-	case design.NumberKind:
-		return "Float64"
-	case design.BooleanKind:
-		return "Bool"
-	case design.StringKind:
-		return "String"
-	case design.DateTimeKind:
-		return "String"
-	case design.UUIDKind:
-		return "String"
-	case design.AnyKind:
-		return "String"
-	case design.ArrayKind:
-		return flagType(att.Type.(*design.Array).ElemType) + "Slice"
-	case design.UserTypeKind:
-		return flagType(att.Type.(*design.UserTypeDefinition).AttributeDefinition)
-	case design.MediaTypeKind:
-		return flagType(att.Type.(*design.MediaTypeDefinition).AttributeDefinition)
-	default:
-		panic("invalid flag attribute type " + att.Type.Name())
 	}
 }
 
