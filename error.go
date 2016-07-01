@@ -240,6 +240,10 @@ func MergeErrors(err, other error) error {
 		e.Code = "bad_request"
 	}
 	e.Detail = e.Detail + "; " + o.Detail
+
+	if e.MetaValues == nil && len(o.MetaValues) > 0 {
+		e.MetaValues = make(map[string]interface{})
+	}
 	for n, v := range o.MetaValues {
 		e.MetaValues[n] = v
 	}
