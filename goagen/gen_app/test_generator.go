@@ -264,7 +264,7 @@ func isSlice(typeName string) bool {
 
 var convertParamTmpl = `{{ if eq .Type "string" }}		sliceVal := []string{*{{ .Name }}}{{/*
 */}}{{ else if eq .Type "int" }}		sliceVal := []string{strconv.Itoa(*{{ .Name }})}{{/*
-*/}}{{ else if eq .Type "[]string" }}		sliceVal := {{ .Name }}
+*/}}{{ else if eq .Type "[]string" }}		sliceVal := {{ .Name }}{{/*
 */}}{{ else if (isSlice .Type) }}		sliceVal := make([]string, len({{ .Name }}))
 		for i, v := range {{ .Name }} {
 			sliceVal[i] = fmt.Sprintf("%v", v)
