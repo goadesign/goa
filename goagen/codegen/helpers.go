@@ -32,6 +32,7 @@ func CommandLine() string {
 	// end up creating different command line comments (because of the temporary directory it
 	// runs in).
 	var param string
+
 	if len(os.Args) > 1 {
 		args := make([]string, len(os.Args)-1)
 		gopaths := filepath.SplitList(os.Getenv("GOPATH"))
@@ -48,7 +49,12 @@ func CommandLine() string {
 		}
 		param = strings.Join(args, " ")
 	}
-	cmd := fmt.Sprintf("$ %s %s", filepath.Base(os.Args[0]), param)
+	rawcmd := filepath.Base(os.Args[0])
+	// Remove possible .exe suffix to not create different ouptut just because
+	// you ran goagen on Windows.
+	rawcmd = strings.TrimSuffix(rawcmd, ".exe")
+
+	cmd := fmt.Sprintf("$ %s %s", rawcmd, param)
 	return strings.Replace(cmd, " --", "\n\t--", -1)
 }
 
