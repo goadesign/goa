@@ -254,7 +254,7 @@ func defaultRouteTemplate(a *design.ActionDefinition) string {
 
 // joinNames is a code generation helper function that generates a string built from concatenating
 // the keys of the given attribute type (assuming it's an object).
-func joinNames(atts ...*design.AttributeDefinition) string {
+func joinNames(useNil bool, atts ...*design.AttributeDefinition) string {
 	var elems []string
 	for _, att := range atts {
 		if att == nil {
@@ -275,7 +275,22 @@ func joinNames(atts ...*design.AttributeDefinition) string {
 			a := obj[n]
 			field := fmt.Sprintf("cmd.%s", codegen.Goify(n, true))
 			if !a.Type.IsArray() && !att.IsRequired(n) && !att.IsNonZero(n) {
-				field = "&" + field
+				if useNil {
+					switch a.Type {
+					case design.Integer:
+						field = `intFlagVal("` + n + `", ` + field + ")"
+					case design.Number:
+						field = `float64FlagVal("` + n + `", ` + field + ")"
+					case design.Boolean:
+						field = `boolFlagVal("` + n + `", ` + field + ")"
+					case design.String:
+						field = `stringFlagVal("` + n + `", ` + field + ")"
+					default:
+						field = "&" + field
+					}
+				} else {
+					field = "&" + field
+				}
 			}
 			if att.IsRequired(n) {
 				names = append(names, field)
@@ -493,12 +508,12 @@ func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 		path = args[0]
 	} else {
 {{ $default := defaultPath .Action }}{{ if $default }}	path = "{{ $default }}"
-{{ else }}{{ $pparams := defaultRouteParams .Action }}	path = fmt.Sprintf({{ printf "%q" (defaultRouteTemplate .Action)}}, {{ joinNames $pparams }})
+{{ else }}{{ $pparams := defaultRouteParams .Action }}	path = fmt.Sprintf({{ printf "%q" (defaultRouteTemplate .Action)}}, {{ joinNames false $pparams }})
 {{ end }}	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
 	ws, err := c.{{ goify (printf "%s%s" .Action.Name (title .Resource.Name)) true }}(ctx, path{{/*
-	*/}}{{ $params := joinNames .Action.QueryParams .Action.Headers }}{{ if $params }}, {{ $params }}{{ end }})
+	*/}}{{ $params := joinNames true .Action.QueryParams .Action.Headers }}{{ if $params }}, {{ $params }}{{ end }})
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
@@ -584,7 +599,7 @@ func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 		path = args[0]
 	} else {
 {{ $default := defaultPath .Action }}{{ if $default }}	path = "{{ $default }}"
-{{ else }}{{ $pparams := defaultRouteParams .Action }}	path = fmt.Sprintf({{ printf "%q" (defaultRouteTemplate .Action) }}, {{ joinNames $pparams }})
+{{ else }}{{ $pparams := defaultRouteParams .Action }}	path = fmt.Sprintf({{ printf "%q" (defaultRouteTemplate .Action) }}, {{ joinNames false $pparams }})
 {{ end }}	}
 {{ if .Action.Payload }}var payload {{ gotyperefext .Action.Payload 2 .Package }}
 	if cmd.Payload != "" {
@@ -598,7 +613,7 @@ func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 	ctx := goa.WithLogger(context.Background(), logger)
 	resp, err := c.{{ goify (printf "%s%s" .Action.Name (title .Resource.Name)) true }}(ctx, path{{ if .Action.Payload }}, {{/*
 	*/}}{{ if or .Action.Payload.Type.IsObject .Action.Payload.IsPrimitive }}&{{ end }}payload{{ else }}{{ end }}{{/*
-	*/}}{{ $params := joinNames .Action.QueryParams .Action.Headers }}{{ if $params }}, {{ $params }}{{ end }}{{/*
+	*/}}{{ $params := joinNames true .Action.QueryParams .Action.Headers }}{{ if $params }}, {{ $params }}{{ end }}{{/*
 	*/}}{{ if .Action.Payload }}, cmd.ContentType{{ end }})
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
@@ -640,4 +655,42 @@ func RegisterCommands(app *cobra.Command, c *{{ .Package }}.Client) {
 	}
 	dlc.Flags().StringVar(&dl.OutFile, "out", "", "Output file")
 	app.AddCommand(dlc)
-{{ end }}}`
+{{ end }}}
+
+func intFlagVal(name string, parsed int) *int {
+	if hasFlag(name) {
+		return &parsed
+	}
+	return nil
+}
+
+func float64FlagVal(name string, parsed float64) *float64 {
+	if hasFlag(name) {
+		return &parsed
+	}
+	return nil
+}
+
+func boolFlagVal(name string, parsed bool) *bool {
+	if hasFlag(name) {
+		return &parsed
+	}
+	return nil
+}
+
+func stringFlagVal(name string, parsed string) *string {
+	if hasFlag(name) {
+		return &parsed
+	}
+	return nil
+}
+
+func hasFlag(name string) bool {
+	for _, arg := range os.Args[1:] {
+		if strings.HasPrefix(arg, "--"+name) {
+			return true
+		}
+	}
+	return false
+}
+`
