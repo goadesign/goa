@@ -231,6 +231,12 @@ func (g *Generator) okResp(a *design.ActionDefinition) map[string]interface{} {
 
 const mainT = `
 func main() {
+	// main_init start_implement
+	
+	// Put any upfront code here
+
+	// main_init end_implement
+	
 	// Create service
 	service := goa.New({{ printf "%q" .Name }})
 
@@ -244,6 +250,12 @@ func main() {
 	{{ $tmp := tempvar }}{{ $tmp }} := New{{ $name }}Controller(service)
 	{{ targetPkg }}.Mount{{ $name }}Controller(service, {{ $tmp }})
 {{ end }}
+
+	// main_post start_implement
+	
+	// Put additional code here
+
+	// main_post end_implement
 
 	// Start service
 	if err := service.ListenAndServe(":{{ getPort .API.Host }}"); err != nil {
