@@ -230,7 +230,19 @@ func (g *Generator) okResp(a *design.ActionDefinition) map[string]interface{} {
 }
 
 const mainT = `
+// main_init start_implement
+func init() {
+	// Put any initialization code here
+}
+// main_init end_implement
+
 func main() {
+	// main_pre start_implement
+	
+	// Put any upfront code here
+
+	// main_post end_implement
+	
 	// Create service
 	service := goa.New({{ printf "%q" .Name }})
 
@@ -244,6 +256,12 @@ func main() {
 	{{ $tmp := tempvar }}{{ $tmp }} := New{{ $name }}Controller(service)
 	{{ targetPkg }}.Mount{{ $name }}Controller(service, {{ $tmp }})
 {{ end }}
+
+	// main_post start_implement
+	
+	// Put additional code here
+
+	// main_post end_implement
 
 	// Start service
 	if err := service.ListenAndServe(":{{ getPort .API.Host }}"); err != nil {
@@ -265,7 +283,11 @@ func New{{ $ctrlName }}(service *goa.Service) *{{ $ctrlName }} {
 
 const actionT = `{{ $ctrlName := printf "%s%s" (goify .Parent.Name true) "Controller" }}// {{ goify .Name true }} runs the {{ .Name }} action.
 func (c *{{ $ctrlName }}) {{ goify .Name true }}(ctx *{{ targetPkg }}.{{ goify .Name true }}{{ goify .Parent.Name true }}Context) error {
-	// TBD: implement
+	// {{ $ctrlName -}}_{{- goify .Name true }}: start_implement
+	
+	// Put your logic here
+	
+	// {{ $ctrlName -}}_{{- goify .Name true }}: end_implement
 {{ $ok := okResp . }}{{ if $ok }} res := {{ $ok.TypeRef }}{}
 {{ end }} return {{ if $ok }}ctx.{{ $ok.Name }}(res){{ else }}nil{{ end }}
 }
@@ -280,7 +302,11 @@ func (c *{{ $ctrlName }}) {{ goify .Name true }}(ctx *{{ targetPkg }}.{{ goify .
 // {{ goify .Name true }}WSHandler establishes a websocket connection to run the {{ .Name }} action.
 func (c *{{ $ctrlName }}) {{ goify .Name true }}WSHandler(ctx *{{ targetPkg }}.{{ goify .Name true }}{{ goify .Parent.Name true }}Context) websocket.Handler {
 	return func(ws *websocket.Conn) {
-		// TBD: implement
+		// {{ $ctrlName -}}_{{- goify .Name true }}: start_implement
+		
+		// Put your logic here
+		
+		// {{ $ctrlName -}}_{{- goify .Name true }}: end_implement
 		ws.Write([]byte("{{ .Name }} {{ .Parent.Name }}"))
 		// Dummy echo websocket server
 		io.Copy(ws, ws)
