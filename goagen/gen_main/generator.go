@@ -265,7 +265,7 @@ func New{{ $ctrlName }}(service *goa.Service) *{{ $ctrlName }} {
 
 const actionT = `{{ $ctrlName := printf "%s%s" (goify .Parent.Name true) "Controller" }}// {{ goify .Name true }} runs the {{ .Name }} action.
 func (c *{{ $ctrlName }}) {{ goify .Name true }}(ctx *{{ targetPkg }}.{{ goify .Name true }}{{ goify .Parent.Name true }}Context) error {
-	// {{ $ctrlName -}}_{{- goify .Name true }}: start_implement
+	// {{ $ctrlName }}_{{ goify .Name true }}: start_implement
 	
 	// Put your logic here
 	
@@ -284,7 +284,7 @@ func (c *{{ $ctrlName }}) {{ goify .Name true }}(ctx *{{ targetPkg }}.{{ goify .
 // {{ goify .Name true }}WSHandler establishes a websocket connection to run the {{ .Name }} action.
 func (c *{{ $ctrlName }}) {{ goify .Name true }}WSHandler(ctx *{{ targetPkg }}.{{ goify .Name true }}{{ goify .Parent.Name true }}Context) websocket.Handler {
 	return func(ws *websocket.Conn) {
-		// {{ $ctrlName -}}_{{- goify .Name true }}: start_implement
+		// {{ $ctrlName }}_{{ goify .Name true }}: start_implement
 		
 		// Put your logic here
 		
