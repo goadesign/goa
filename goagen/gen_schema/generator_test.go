@@ -27,7 +27,7 @@ var _ = Describe("Generate", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 		testPkg, err = workspace.NewPackage("schematest")
 		Ω(err).ShouldNot(HaveOccurred())
-		os.Args = []string{"goagen", "schema", "--out=" + testPkg.Abs(), "--design=foo", "--version=" + version.String()}
+		os.Args = []string{"goagen", "--out=" + testPkg.Abs(), "--design=foo", "--version=" + version.String()}
 	})
 
 	JustBeforeEach(func() {

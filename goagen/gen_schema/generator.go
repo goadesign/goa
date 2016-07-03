@@ -24,7 +24,7 @@ func Generate() (files []string, err error) {
 	set.StringVar(&outDir, "out", "", "")
 	set.StringVar(&ver, "version", "", "")
 	set.String("design", "", "")
-	set.Parse(os.Args[2:])
+	set.Parse(os.Args[1:])
 
 	// First check compatibility
 	if err := codegen.CheckVersion(ver); err != nil {

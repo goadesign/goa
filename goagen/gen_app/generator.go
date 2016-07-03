@@ -33,7 +33,7 @@ func Generate() (files []string, err error) {
 	set.StringVar(&target, "pkg", "app", "")
 	set.StringVar(&ver, "version", "", "")
 	set.BoolVar(&notest, "notest", false, "")
-	set.Parse(os.Args[2:])
+	set.Parse(os.Args[1:])
 	outDir = filepath.Join(outDir, target)
 
 	// First check compatibility

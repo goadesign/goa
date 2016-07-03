@@ -17,26 +17,27 @@ import (
 
 // Generator is the application code generator.
 type Generator struct {
-	outDir   string   //Path to output directory
-	target   string   // Name of generated "app" package
-	force    bool     // Whether to override existing files
-	genfiles []string // Generated files
+	outDir    string   //Path to output directory
+	designPkg string   // Path to design package
+	target    string   // Name of generated "app" package
+	force     bool     // Whether to override existing files
+	genfiles  []string // Generated files
 }
 
 // Generate is the generator entry point called by the meta generator.
 func Generate() (files []string, err error) {
 	var (
-		outDir, target, ver string
-		force               bool
+		outDir, designPkg, target, ver string
+		force                          bool
 	)
 
 	set := flag.NewFlagSet("main", flag.PanicOnError)
 	set.StringVar(&outDir, "out", "", "")
-	set.String("design", "", "")
+	set.StringVar(&designPkg, "design", "", "")
 	set.StringVar(&target, "pkg", "app", "")
 	set.StringVar(&ver, "version", "", "")
 	set.BoolVar(&force, "force", false, "")
-	set.Parse(os.Args[2:])
+	set.Parse(os.Args[1:])
 
 	// First check compatibility
 	if err := codegen.CheckVersion(ver); err != nil {
@@ -45,7 +46,7 @@ func Generate() (files []string, err error) {
 
 	// Now proceed
 	target = codegen.Goify(target, false)
-	g := &Generator{outDir: outDir, target: target, force: force}
+	g := &Generator{outDir: outDir, designPkg: designPkg, target: target, force: force}
 	codegen.Reserved[target] = true
 
 	return g.Generate(design.Design)
@@ -170,6 +171,7 @@ func (g *Generator) createMainFile(mainFile string, api *design.APIDefinition, f
 		codegen.SimpleImport("github.com/goadesign/goa/middleware"),
 		codegen.SimpleImport(appPkg),
 	}
+	file.Write([]byte("//go:generate goagen bootstrap -d " + g.designPkg + "\n\n"))
 	file.WriteHeader("", "main", imports)
 	data := map[string]interface{}{
 		"Name": api.Name,

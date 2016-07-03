@@ -43,7 +43,7 @@ func Generate() (files []string, err error) {
 	set.StringVar(&host, "host", "", "")
 	set.StringVar(&ver, "version", "", "")
 	set.BoolVar(&noexample, "noexample", false, "")
-	set.Parse(os.Args[2:])
+	set.Parse(os.Args[1:])
 
 	// First check compatibility
 	if err := codegen.CheckVersion(ver); err != nil {
