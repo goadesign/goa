@@ -49,7 +49,7 @@ func Generate() (files []string, err error) {
 	set.StringVar(&tool, "tool", dtool, "")
 	set.StringVar(&ver, "version", "", "")
 	set.BoolVar(&notool, "notool", false, "")
-	set.Parse(os.Args[2:])
+	set.Parse(os.Args[1:])
 
 	// First check compatibility
 	if err := codegen.CheckVersion(ver); err != nil {

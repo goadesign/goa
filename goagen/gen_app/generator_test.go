@@ -29,7 +29,7 @@ var _ = Describe("Generate", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 		outDir, err = ioutil.TempDir(filepath.Join(workspace.Path, "src"), "")
 		Ω(err).ShouldNot(HaveOccurred())
-		os.Args = []string{"goagen", "app", "--out=" + outDir, "--design=foo", "--version=" + version.String()}
+		os.Args = []string{"goagen", "--out=" + outDir, "--design=foo", "--version=" + version.String()}
 	})
 
 	JustBeforeEach(func() {
@@ -248,7 +248,7 @@ const contextsCodeTmpl = `//****************************************************
 // API "test api": Application Contexts
 //
 // Generated with goagen {{ .version }}, command line:
-// $ goagen app
+// $ goagen
 // --out=$(GOPATH){{sep}}src{{sep}}{{.tmpDir}}
 // --design={{.design}}
 // --version={{.version}}
@@ -298,7 +298,7 @@ const controllersCodeTmpl = `//*************************************************
 // API "test api": Application Controllers
 //
 // Generated with goagen {{ .version }}, command line:
-// $ goagen app
+// $ goagen
 // --out=$(GOPATH){{sep}}src{{sep}}{{.tmpDir}}
 // --design={{.design}}
 // --version={{.version}}
@@ -353,7 +353,7 @@ const hrefsCodeTmpl = `//*******************************************************
 // API "test api": Application Resource Href Factories
 //
 // Generated with goagen {{.version}}, command line:
-// $ goagen app
+// $ goagen
 // --out=$(GOPATH){{sep}}src{{sep}}{{.tmpDir}}
 // --design={{.design}}
 // --version={{.version}}
@@ -375,7 +375,7 @@ const mediaTypesCodeTmpl = `//**************************************************
 // API "test api": Application Media Types
 //
 // Generated with goagen {{ .version }}, command line:
-// $ goagen app
+// $ goagen
 // --out=$(GOPATH){{sep}}src{{sep}}{{.tmpDir}}
 // --design={{.design}}
 // --version={{.version}}
