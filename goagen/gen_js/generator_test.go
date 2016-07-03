@@ -25,7 +25,7 @@ var _ = Describe("Generate", func() {
 		outDir = filepath.Join(gopath, "src", testgenPackagePath)
 		err := os.MkdirAll(outDir, 0777)
 		Ω(err).ShouldNot(HaveOccurred())
-		os.Args = []string{"goagen", "js", "--out=" + outDir, "--design=foo", "--host=baz", "--version=" + version.String()}
+		os.Args = []string{"goagen", "--out=" + outDir, "--design=foo", "--host=baz", "--version=" + version.String()}
 	})
 
 	JustBeforeEach(func() {
