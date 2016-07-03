@@ -230,12 +230,18 @@ func (g *Generator) okResp(a *design.ActionDefinition) map[string]interface{} {
 }
 
 const mainT = `
+// main_init start_implement
+func init() {
+	// Put any initialization code here
+}
+// main_init end_implement
+
 func main() {
-	// main_init start_implement
+	// main_pre start_implement
 	
 	// Put any upfront code here
 
-	// main_init end_implement
+	// main_post end_implement
 	
 	// Create service
 	service := goa.New({{ printf "%q" .Name }})
