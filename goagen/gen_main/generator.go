@@ -269,7 +269,7 @@ func (c *{{ $ctrlName }}) {{ goify .Name true }}(ctx *{{ targetPkg }}.{{ goify .
 	
 	// Put your logic here
 	
-	// {{ $ctrlName -}}_{{- goify .Name true }}: end_implement
+	// {{ $ctrlName }}_{{ goify .Name true }}: end_implement
 {{ $ok := okResp . }}{{ if $ok }} res := {{ $ok.TypeRef }}{}
 {{ end }} return {{ if $ok }}ctx.{{ $ok.Name }}(res){{ else }}nil{{ end }}
 }
@@ -288,7 +288,7 @@ func (c *{{ $ctrlName }}) {{ goify .Name true }}WSHandler(ctx *{{ targetPkg }}.{
 		
 		// Put your logic here
 		
-		// {{ $ctrlName -}}_{{- goify .Name true }}: end_implement
+		// {{ $ctrlName }}_{{ goify .Name true }}: end_implement
 		ws.Write([]byte("{{ .Name }} {{ .Parent.Name }}"))
 		// Dummy echo websocket server
 		io.Copy(ws, ws)
