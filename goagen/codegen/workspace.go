@@ -98,12 +98,17 @@ func NewWorkspace(prefix string) (*Workspace, error) {
 // WorkspaceFor returns the Go workspace for the given Go source file.
 func WorkspaceFor(source string) (*Workspace, error) {
 	gopaths := os.Getenv("GOPATH")
+	// We use absolute paths so that in particular on Windows the case gets normalized
+	sourcePath, err := filepath.Abs(source)
+	if err != nil {
+		sourcePath = source
+	}
 	for _, gp := range filepath.SplitList(gopaths) {
 		gopath, err := filepath.Abs(gp)
 		if err != nil {
 			gopath = gp
 		}
-		if strings.HasPrefix(source, gopath) {
+		if filepath.HasPrefix(sourcePath, gopath) {
 			return &Workspace{
 				gopath: gopaths,
 				Path:   gopath,
