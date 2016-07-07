@@ -77,6 +77,7 @@ func (g *Generator) generateResourceTest(api *design.APIDefinition) error {
 		codegen.SimpleImport("strconv"),
 		codegen.SimpleImport("strings"),
 		codegen.SimpleImport("testing"),
+		codegen.SimpleImport("time"),
 		codegen.SimpleImport(appPkg),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("github.com/goadesign/goa/goatest"),
