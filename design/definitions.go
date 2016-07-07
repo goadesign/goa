@@ -1279,23 +1279,15 @@ func (a *ActionDefinition) Context() string {
 // PathParams returns the path parameters of the action across all its routes.
 func (a *ActionDefinition) PathParams() *AttributeDefinition {
 	obj := make(Object)
+	allParams := a.AllParams().Type.ToObject()
 	for _, r := range a.Routes {
 		for _, p := range r.Params() {
 			if _, ok := obj[p]; !ok {
-				obj[p] = a.Params.Type.ToObject()[p]
+				obj[p] = allParams[p]
 			}
 		}
 	}
-	res := &AttributeDefinition{Type: obj}
-	if a.HasAbsoluteRoutes() {
-		return res
-	}
-	res = res.Merge(a.Parent.BaseParams)
-	res = res.Merge(Design.BaseParams)
-	if p := a.Parent.Parent(); p != nil {
-		res = res.Merge(p.CanonicalAction().PathParams())
-	}
-	return res
+	return &AttributeDefinition{Type: obj}
 }
 
 // AllParams returns the path and query string parameters of the action across all its routes.
@@ -1523,8 +1515,11 @@ func (a *ActionDefinition) initImplicitParams() {
 // initQueryParams extract the query parameters from the action params.
 func (a *ActionDefinition) initQueryParams() {
 	// 3. Compute QueryParams from Params and set all path params as non zero attributes
-	if params := a.Params; params != nil {
+	if params := a.AllParams(); params != nil {
 		queryParams := DupAtt(params)
+		if a.Params == nil {
+			a.Params = &AttributeDefinition{Type: Object{}}
+		}
 		a.Params.NonZeroAttributes = make(map[string]bool)
 		for _, route := range a.Routes {
 			pnames := route.Params()
