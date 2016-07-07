@@ -29,7 +29,7 @@ func init() {
 		"slice":            toSlice,
 		"oneof":            oneof,
 		"constant":         constant,
-		"goify":            Goify,
+		"goifyAtt":         GoifyAtt,
 		"add":              Add,
 		"recursiveChecker": RecursiveChecker,
 	}
@@ -110,7 +110,7 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDef
 						userValT,
 						map[string]interface{}{
 							"depth":  depth,
-							"target": fmt.Sprintf("%s.%s", target, Goify(n, true)),
+							"target": fmt.Sprintf("%s.%s", target, GoifyAtt(catt, n, true)),
 						},
 					)
 				}
@@ -124,7 +124,7 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDef
 					att.IsNonZero(n),
 					att.IsRequired(n),
 					att.HasDefaultValue(n),
-					fmt.Sprintf("%s.%s", target, Goify(n, true)),
+					fmt.Sprintf("%s.%s", target, GoifyAtt(catt, n, true)),
 					fmt.Sprintf("%s.%s", context, n),
 					dp,
 					private,
@@ -133,7 +133,7 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDef
 			if validation != "" {
 				if catt.Type.IsObject() {
 					validation = fmt.Sprintf("%sif %s.%s != nil {\n%s\n%s}",
-						Tabs(depth), target, Goify(n, true), validation, Tabs(depth))
+						Tabs(depth), target, GoifyAtt(catt, n, true), validation, Tabs(depth))
 				}
 				checks = append(checks, validation)
 			}
@@ -339,10 +339,10 @@ const (
 {{end}}{{tabs .depth}}}`
 
 	requiredValTmpl = `{{range $r := .required}}{{$catt := index $.attribute.Type.ToObject $r}}{{/*
-*/}}{{if and (not $.private) (eq $catt.Type.Kind 4)}}{{tabs $.depth}}if {{$.target}}.{{goify $r true}} == "" {
+*/}}{{if and (not $.private) (eq $catt.Type.Kind 4)}}{{tabs $.depth}}if {{$.target}}.{{goifyAtt $catt $r true}} == "" {
 {{tabs $.depth}}	err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`" + `{{$.context}}` + "`" + `, "{{$r}}"))
 {{tabs $.depth}}}
-{{else if or $.private (not $catt.Type.IsPrimitive)}}{{tabs $.depth}}if {{$.target}}.{{goify $r true}} == nil {
+{{else if or $.private (not $catt.Type.IsPrimitive)}}{{tabs $.depth}}if {{$.target}}.{{goifyAtt $catt $r true}} == nil {
 {{tabs $.depth}}	err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`" + `{{$.context}}` + "`" + `, "{{$r}}"))
 {{tabs $.depth}}}
 {{end}}{{end}}`

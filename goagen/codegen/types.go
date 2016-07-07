@@ -352,6 +352,17 @@ func removeInvalidAtIndex(i int, runes []rune) []rune {
 	return append(runes[:i], runes[valid:]...)
 }
 
+// GoifyAtt honors any struct:field:name metadata set on the attribute and calls Goify with the tag
+// value if present or the given name otherwise.
+func GoifyAtt(att *design.AttributeDefinition, name string, firstUpper bool) string {
+	if tname, ok := att.Metadata["struct:field:name"]; ok {
+		if len(tname) > 0 {
+			name = tname[0]
+		}
+	}
+	return Goify(name, firstUpper)
+}
+
 // Goify makes a valid Go identifier out of any string.
 // It does that by removing any non letter and non digit character and by making sure the first
 // character is a letter or "_".
