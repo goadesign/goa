@@ -154,10 +154,6 @@ func BaseParams(dsl func()) {
 	if !dslengine.Execute(dsl, params) {
 		return
 	}
-	params.NonZeroAttributes = make(map[string]bool)
-	for n := range params.Type.ToObject() {
-		params.NonZeroAttributes[n] = true
-	}
 
 	switch def := dslengine.CurrentDefinition().(type) {
 	case *design.APIDefinition:
