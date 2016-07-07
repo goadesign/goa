@@ -262,15 +262,15 @@ func isSlice(typeName string) bool {
 	return strings.HasPrefix(typeName, "[]")
 }
 
-var convertParamTmpl = `{{ if eq .Type "string" }}		sliceVal := []string{*{{ .Name }}}{{/*
-*/}}{{ else if eq .Type "int" }}		sliceVal := []string{strconv.Itoa(*{{ .Name }})}{{/*
+var convertParamTmpl = `{{ if eq .Type "string" }}		sliceVal := []string{ {{ if .Pointer }}*{{ end }}{{ .Name }}}{{/*
+*/}}{{ else if eq .Type "int" }}		sliceVal := []string{strconv.Itoa({{ if .Pointer }}*{{ end }}{{ .Name }})}{{/*
 */}}{{ else if eq .Type "[]string" }}		sliceVal := {{ .Name }}{{/*
 */}}{{ else if (isSlice .Type) }}		sliceVal := make([]string, len({{ .Name }}))
 		for i, v := range {{ .Name }} {
 			sliceVal[i] = fmt.Sprintf("%v", v)
 		}{{/*
-*/}}{{ else }}		sliceVal := fmt.Sprintf("%v", *{{ .Name }})
-{{ end }}`
+*/}}{{ else if eq .Type "time.Time" }}		sliceVal := []string{ {{ if .Pointer }}*{{ end }}{{ .Name }}.Format(time.RFC3339)}{{/*
+*/}}{{ else }}		sliceVal := []string{fmt.Sprintf("%v", {{ if .Pointer }}*{{ end }}{{ .Name }})}{{ end }}`
 
 var testTmpl = `{{ define "convertParam" }}` + convertParamTmpl + `{{ end }}` + `
 {{ range $test := . }}
@@ -315,7 +315,7 @@ func {{ $test.Name }}(t *testing.T, ctx context.Context, service *goa.Service, c
 	// Setup request context
 	rw := httptest.NewRecorder()
 {{ if $test.QueryParams}}	query := url.Values{}
-{{ range $param := $test.QueryParams }}	if {{ $param.Name }} != nil {
+{{ range $param := $test.QueryParams }}{{ if $param.Pointer }}	if {{ $param.Name }} != nil {{ end }}{
 {{ template "convertParam" $param }}
 		query[{{ printf "%q" $param.Label }}] = sliceVal
 	}
@@ -329,11 +329,11 @@ func {{ $test.Name }}(t *testing.T, ctx context.Context, service *goa.Service, c
 	}
 	prms := url.Values{}
 {{ range $param := $test.Params }}	prms["{{ $param.Label }}"] = []string{fmt.Sprintf("%v",{{ $param.Name}})}
-{{ end }}{{ range $param := $test.QueryParams }} if {{ $param.Name }} != nil {
+{{ end }}{{ range $param := $test.QueryParams }}{{ if $param.Pointer }} if {{ $param.Name }} != nil {{ end }} {
 {{ template "convertParam" $param }}
 		prms[{{ printf "%q" $param.Label }}] = sliceVal
 	}
-{{ end }} if ctx == nil {
+{{ end }}	if ctx == nil {
 		ctx = context.Background()
 	}
 	goaCtx := goa.NewContext(goa.WithAction(ctx, "{{ $test.ResourceName }}Test"), rw, req, prms)
