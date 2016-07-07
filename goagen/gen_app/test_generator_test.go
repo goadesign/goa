@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/gen_app"
 	"github.com/goadesign/goa/version"
@@ -74,15 +75,25 @@ var _ = Describe("Generate", func() {
 								Name: "show",
 								Params: &design.AttributeDefinition{
 									Type: design.Object{
-										"param": &design.AttributeDefinition{Type: design.Integer},
-										"time":  &design.AttributeDefinition{Type: design.DateTime},
-										"uuid":  &design.AttributeDefinition{Type: design.UUID},
+										"param":    &design.AttributeDefinition{Type: design.Integer},
+										"time":     &design.AttributeDefinition{Type: design.DateTime},
+										"uuid":     &design.AttributeDefinition{Type: design.UUID},
+										"optional": &design.AttributeDefinition{Type: design.Integer},
+										"required": &design.AttributeDefinition{Type: design.DateTime},
 									},
+									Validation: &dslengine.ValidationDefinition{Required: []string{"required"}},
+								},
+								QueryParams: &design.AttributeDefinition{
+									Type: design.Object{
+										"optional": &design.AttributeDefinition{Type: design.Integer},
+										"required": &design.AttributeDefinition{Type: design.DateTime},
+									},
+									Validation: &dslengine.ValidationDefinition{Required: []string{"required"}},
 								},
 								Routes: []*design.RouteDefinition{
 									{
 										Verb: "GET",
-										Path: "p/:param/u/:uuid",
+										Path: "p/:param/u/:uuid/:required",
 									},
 									{
 										Verb: "POST",
@@ -149,7 +160,16 @@ var _ = Describe("Generate", func() {
 
 			Ω(content).Should(ContainSubstring(`["param"] = []string{`))
 			Ω(content).Should(ContainSubstring(`["uuid"] = []string{`))
+			Ω(content).Should(ContainSubstring(`["required"] = []string{`))
 			Ω(content).ShouldNot(ContainSubstring(`["time"] = []string{`))
+		})
+
+		It("properly handles query parameters", func() {
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "app", "test", "foo_testing.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+
+			Ω(content).Should(ContainSubstring(`if optional != nil`))
+			Ω(content).ShouldNot(ContainSubstring(`if required != nil`))
 		})
 
 		It("generates calls to new Context ", func() {
