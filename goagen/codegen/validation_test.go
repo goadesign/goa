@@ -1,6 +1,8 @@
 package codegen_test
 
 import (
+	"strings"
+
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/codegen"
@@ -88,15 +90,17 @@ var _ = Describe("validation code generation", func() {
 			})
 
 			Context("of embedded object", func() {
+				var catt, ccatt *design.AttributeDefinition
+
 				BeforeEach(func() {
 					enumVal := &dslengine.ValidationDefinition{
 						Values: []interface{}{1, 2, 3},
 					}
-					ccatt := &design.AttributeDefinition{
+					ccatt = &design.AttributeDefinition{
 						Type:       design.Integer,
 						Validation: enumVal,
 					}
-					catt := &design.AttributeDefinition{
+					catt = &design.AttributeDefinition{
 						Type: design.Object{"bar": ccatt},
 					}
 
@@ -120,6 +124,33 @@ var _ = Describe("validation code generation", func() {
 						Ω(code).Should(Equal(embeddedRequiredValCode))
 					})
 				})
+				Context("with a child attribute with struct:tag:name metadata", func() {
+					const fieldTag = "FOO"
+
+					BeforeEach(func() {
+						catt.Metadata = dslengine.MetadataDefinition{"struct:field:name": []string{fieldTag}}
+						ccatt.Metadata = nil
+						validation = nil
+					})
+
+					It("produces the validation go code using the field tag", func() {
+						Ω(code).Should(Equal(strings.Replace(tagCode, "__tag__", fieldTag, -1)))
+					})
+				})
+				Context("with a grand child attribute with struct:tag:name metadata", func() {
+					const fieldTag = "FOO"
+
+					BeforeEach(func() {
+						catt.Metadata = nil
+						ccatt.Metadata = dslengine.MetadataDefinition{"struct:field:name": []string{fieldTag}}
+						validation = nil
+					})
+
+					It("produces the validation go code using the field tag", func() {
+						Ω(code).Should(Equal(strings.Replace(tagChildCode, "__tag__", fieldTag, -1)))
+					})
+				})
+
 			})
 
 		})
@@ -167,6 +198,22 @@ const (
 		if val.Foo.Bar != nil {
 			if !(*val.Foo.Bar == 1 || *val.Foo.Bar == 2 || *val.Foo.Bar == 3) {
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError(` + "`" + `context.foo.bar` + "`" + `, *val.Foo.Bar, []interface{}{1, 2, 3}))
+			}
+		}
+	}`
+
+	tagCode = `	if val.__tag__ != nil {
+		if val.__tag__.Bar != nil {
+			if !(*val.__tag__.Bar == 1 || *val.__tag__.Bar == 2 || *val.__tag__.Bar == 3) {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError(` + "`" + `context.foo.bar` + "`" + `, *val.__tag__.Bar, []interface{}{1, 2, 3}))
+			}
+		}
+	}`
+
+	tagChildCode = `	if val.Foo != nil {
+		if val.Foo.__tag__ != nil {
+			if !(*val.Foo.__tag__ == 1 || *val.Foo.__tag__ == 2 || *val.Foo.__tag__ == 3) {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError(` + "`" + `context.foo.bar` + "`" + `, *val.Foo.__tag__, []interface{}{1, 2, 3}))
 			}
 		}
 	}`
