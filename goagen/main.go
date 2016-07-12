@@ -44,12 +44,8 @@ package and tool and the Swagger specification for the API.
 		cwd, designPkg string
 		debug          bool
 	)
-	cwd, err = os.Getwd()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
-	}
-	rootCmd.PersistentFlags().StringVarP(&cwd, "out", "o", cwd, "output directory")
+
+	rootCmd.PersistentFlags().StringVarP(&cwd, "out", "o", ".", "output directory")
 	rootCmd.PersistentFlags().StringVarP(&designPkg, "design", "d", "", "design package import path")
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "enable debug mode, does not cleanup temporary files.")
 
