@@ -41,15 +41,11 @@ controllers supporting code and main skeleton code (if not already present) as w
 package and tool and the Swagger specification for the API.
 `}
 	var (
-		cwd, designPkg string
-		debug          bool
+		designPkg string
+		debug     bool
 	)
-	cwd, err = os.Getwd()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
-	}
-	rootCmd.PersistentFlags().StringVarP(&cwd, "out", "o", cwd, "output directory")
+
+	rootCmd.PersistentFlags().StringP("out", "o", ".", "output directory")
 	rootCmd.PersistentFlags().StringVarP(&designPkg, "design", "d", "", "design package import path")
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "enable debug mode, does not cleanup temporary files.")
 
@@ -265,6 +261,13 @@ func generate(pkgName, pkgPath string, c *cobra.Command) ([]string, error) {
 	if _, ok := m["out"]; !ok {
 		m["out"] = c.Flag("out").DefValue
 	}
+	// turn "out" into an absolute path
+	var err error
+	m["out"], err = filepath.Abs(m["out"])
+	if err != nil {
+		return nil, err
+	}
+
 	gen, err := meta.NewGenerator(
 		pkgName+".Generate",
 		[]*codegen.ImportSpec{codegen.SimpleImport(pkgPath)},
