@@ -121,7 +121,7 @@ func (g *Generator) generateContexts(api *design.APIDefinition) error {
 		codegen.SimpleImport("strings"),
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
-		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
+		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
 	g.genfiles = append(g.genfiles, ctxFile)
 	ctxWr.WriteHeader(title, g.target, imports)
@@ -351,7 +351,7 @@ func (g *Generator) generateMediaTypes(api *design.APIDefinition) error {
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("time"),
-		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
+		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
 	mtWr.WriteHeader(title, g.target, imports)
 	err = api.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
