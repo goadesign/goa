@@ -996,6 +996,12 @@ func (a *AttributeDefinition) finalizeExample(stack []*AttributeDefinition) (int
 	switch true {
 	case a.Type.IsArray():
 		ary := a.Type.ToArray()
+		if isCyclical(ary.ElemType.Type, stack) {
+			// unable to generate any example and here we set
+			// isCustom to avoid touching this example again
+			// i.e. GenerateExample in the end of this func
+			return a.Example, true
+		}
 		example, isCustom := ary.ElemType.finalizeExample(stack)
 		a.Example, a.isCustomExample = ary.MakeSlice([]interface{}{example}), isCustom
 	case a.Type.IsHash():
@@ -1019,28 +1025,7 @@ func (a *AttributeDefinition) finalizeExample(stack []*AttributeDefinition) (int
 		for _, n := range keys {
 			att := aObj[n]
 			// avoid a cyclical dependency
-			isCyclical := false
-			if ssize := len(stack); ssize > 0 {
-				aid := ""
-				if mt, ok := att.Type.(*MediaTypeDefinition); ok {
-					aid = mt.Identifier
-				} else if ut, ok := att.Type.(*UserTypeDefinition); ok {
-					aid = ut.TypeName
-				}
-				if aid != "" {
-					for _, sa := range stack[:ssize-1] {
-						if mt, ok := sa.Type.(*MediaTypeDefinition); ok {
-							isCyclical = mt.Identifier == aid
-						} else if ut, ok := sa.Type.(*UserTypeDefinition); ok {
-							isCyclical = ut.TypeName == aid
-						}
-						if isCyclical {
-							break
-						}
-					}
-				}
-			}
-			if !isCyclical {
+			if !isCyclical(att.Type, stack) {
 				example[n], isCustom = att.finalizeExample(stack)
 			} else {
 				// unable to generate any example and here we set
@@ -1057,6 +1042,32 @@ func (a *AttributeDefinition) finalizeExample(stack []*AttributeDefinition) (int
 		a.Example = a.GenerateExample(Design.RandomGenerator())
 	}
 	return a.Example, a.isCustomExample
+}
+
+// isCyclical returns true if the given type appears in the given stack, false otherwise.
+func isCyclical(typ DataType, stack []*AttributeDefinition) bool {
+	isCyclical := false
+	if ssize := len(stack); ssize > 0 {
+		aid := ""
+		if mt, ok := typ.(*MediaTypeDefinition); ok {
+			aid = mt.Identifier
+		} else if ut, ok := typ.(*UserTypeDefinition); ok {
+			aid = ut.TypeName
+		}
+		if aid != "" {
+			for _, sa := range stack[:ssize-1] {
+				if mt, ok := sa.Type.(*MediaTypeDefinition); ok {
+					isCyclical = mt.Identifier == aid
+				} else if ut, ok := sa.Type.(*UserTypeDefinition); ok {
+					isCyclical = ut.TypeName == aid
+				}
+				if isCyclical {
+					break
+				}
+			}
+		}
+	}
+	return isCyclical
 }
 
 // Merge merges the argument attributes into the target and returns the target overriding existing
