@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
