@@ -2,6 +2,7 @@ package design_test
 
 import (
 	"errors"
+	"sync"
 
 	. "github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/apidsl"
@@ -367,5 +368,37 @@ var _ = Describe("Walk", func() {
 			Ω(count).Should(Equal(4))
 			Ω(matched).Should(BeTrue())
 		})
+	})
+})
+
+var _ = Describe("Finalize", func() {
+	BeforeEach(func() {
+		dslengine.Reset()
+		MediaType("application/vnd.menu+json", func() {
+			Attributes(func() {
+				Attribute("name", String, "The name of an application")
+				Attribute("child", CollectionOf("application/vnd.menu"))
+			})
+
+			View("default", func() {
+				Attribute("name")
+			})
+		})
+	})
+
+	It("running the DSL should not loop indefinitely", func() {
+		var mu sync.Mutex
+		err := errors.New("infinite loop")
+		go func() {
+			err2 := dslengine.Run()
+			mu.Lock()
+			defer mu.Unlock()
+			err = err2
+		}()
+		Eventually(func() error {
+			mu.Lock()
+			defer mu.Unlock()
+			return err
+		}).ShouldNot(HaveOccurred())
 	})
 })

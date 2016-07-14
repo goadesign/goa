@@ -111,7 +111,6 @@ func MediaType(identifier string, apidsl func()) *design.MediaTypeDefinition {
 	mt := design.NewMediaTypeDefinition(typeName, identifier, apidsl)
 	design.Design.MediaTypes[canonicalID] = mt
 	return mt
-
 }
 
 // Media sets a response media type by name or by reference using a value returned by MediaType:
