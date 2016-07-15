@@ -738,7 +738,8 @@ func (m *MediaTypeDefinition) IterateViews(it ViewIterator) error {
 }
 
 // Project creates a MediaTypeDefinition derived from the given definition that matches the given
-// view.
+// view. links is a user type of type Object where each key corresponds to a linked media type as
+// defined by the media type "links" attribute.
 func (m *MediaTypeDefinition) Project(view string) (p *MediaTypeDefinition, links *UserTypeDefinition, err error) {
 	if _, ok := m.Views[view]; !ok {
 		return nil, nil, fmt.Errorf("unknown view %#v", view)
@@ -783,13 +784,20 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 		val = m.Validation.Dup()
 		val.Required = required
 	}
+	desc := m.Description
+	if desc == "" {
+		desc = m.TypeName + " media type"
+	}
+	desc += " (" + view + " view)"
 	p = &MediaTypeDefinition{
 		Identifier: m.Identifier,
 		UserTypeDefinition: &UserTypeDefinition{
 			TypeName: typeName,
 			AttributeDefinition: &AttributeDefinition{
-				Type:       Dup(v.Type),
-				Validation: val,
+				Description: desc,
+				Type:        Dup(v.Type),
+				Validation:  val,
+				Example:     m.Example,
 			},
 		},
 	}
@@ -858,11 +866,14 @@ func (m *MediaTypeDefinition) projectCollection(view string) (p *MediaTypeDefini
 	if err2 != nil {
 		return nil, nil, fmt.Errorf("collection element: %s", err2)
 	}
+	desc := m.TypeName + " is the media type for an array of " + e.TypeName + " (" + view + " view)"
 	p = &MediaTypeDefinition{
 		Identifier: m.Identifier,
 		UserTypeDefinition: &UserTypeDefinition{
 			AttributeDefinition: &AttributeDefinition{
-				Type: &Array{ElemType: &AttributeDefinition{Type: pe}},
+				Description: desc,
+				Type:        &Array{ElemType: &AttributeDefinition{Type: pe}},
+				Example:     m.Example,
 			},
 			TypeName: pe.TypeName + "Collection",
 		},
