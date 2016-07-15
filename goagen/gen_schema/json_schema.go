@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"sort"
 	"strconv"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/goagen/codegen"
 )
 
 type (
@@ -170,7 +172,9 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 	s.Title = r.Name
 	Definitions[r.Name] = s
 	if mt, ok := api.MediaTypes[r.MediaType]; ok {
-		buildMediaTypeSchema(api, mt, s)
+		for _, v := range mt.Views {
+			buildMediaTypeSchema(api, mt, v.Name, s)
+		}
 	}
 	r.IterateActions(func(a *design.ActionDefinition) error {
 		var requestSchema *JSONSchema
@@ -230,12 +234,16 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 	})
 }
 
-// MediaTypeRef produces the JSON reference to the media type definition.
-func MediaTypeRef(api *design.APIDefinition, mt *design.MediaTypeDefinition) string {
+// MediaTypeRef produces the JSON reference to the media type definition with the given view.
+func MediaTypeRef(api *design.APIDefinition, mt *design.MediaTypeDefinition, view string) string {
 	if _, ok := Definitions[mt.TypeName]; !ok {
-		GenerateMediaTypeDefinition(api, mt)
+		GenerateMediaTypeDefinition(api, mt, view)
 	}
-	return fmt.Sprintf("#/definitions/%s", mt.TypeName)
+	ref := fmt.Sprintf("#/definitions/%s", mt.TypeName)
+	if view != "default" {
+		ref += codegen.Goify(view, true)
+	}
+	return ref
 }
 
 // TypeRef produces the JSON reference to the type definition.
@@ -246,15 +254,16 @@ func TypeRef(api *design.APIDefinition, ut *design.UserTypeDefinition) string {
 	return fmt.Sprintf("#/definitions/%s", ut.TypeName)
 }
 
-// GenerateMediaTypeDefinition produces the JSON schema corresponding to the given media type.
-func GenerateMediaTypeDefinition(api *design.APIDefinition, mt *design.MediaTypeDefinition) {
+// GenerateMediaTypeDefinition produces the JSON schema corresponding to the given media type and
+// given view.
+func GenerateMediaTypeDefinition(api *design.APIDefinition, mt *design.MediaTypeDefinition, view string) {
 	if _, ok := Definitions[mt.TypeName]; ok {
 		return
 	}
 	s := NewJSONSchema()
 	s.Title = fmt.Sprintf("Mediatype identifier: %s", mt.Identifier)
 	Definitions[mt.TypeName] = s
-	buildMediaTypeSchema(api, mt, s)
+	buildMediaTypeSchema(api, mt, view, s)
 }
 
 // GenerateTypeDefinition produces the JSON schema corresponding to the given type.
@@ -301,7 +310,8 @@ func TypeSchema(api *design.APIDefinition, t design.DataType) *JSONSchema {
 	case *design.UserTypeDefinition:
 		s.Ref = TypeRef(api, actual)
 	case *design.MediaTypeDefinition:
-		s.Ref = MediaTypeRef(api, actual)
+		// Use "default" view by default
+		s.Ref = MediaTypeRef(api, actual, "default")
 	}
 	return s
 }
@@ -491,32 +501,44 @@ func propertiesFromDefs(definitions map[string]*JSONSchema, path string) map[str
 	return res
 }
 
-// buildMediaTypeSchema initializes s as the JSON schema representing mt.
-func buildMediaTypeSchema(api *design.APIDefinition, mt *design.MediaTypeDefinition, s *JSONSchema) {
+// buildMediaTypeSchema initializes s as the JSON schema representing mt for the given view.
+func buildMediaTypeSchema(api *design.APIDefinition, mt *design.MediaTypeDefinition, view string, s *JSONSchema) {
 	s.Media = &JSONMedia{Type: mt.Identifier}
-	lnames := make([]string, len(mt.Links))
-	i := 0
-	for n := range mt.Links {
-		lnames[i] = n
-		i++
+	projected, linksUT, err := mt.Project(view)
+	if err != nil {
+		panic(fmt.Sprintf("failed to project media type %#v: %s", mt.Identifier, err)) // bug
 	}
-	for _, ln := range lnames {
-		l := mt.Links[ln]
-		att := l.Attribute() // cannot be nil if DSL validated
-		r := l.MediaType().Resource
-		var href string
-		if r != nil {
-			href = toSchemaHref(api, r.CanonicalAction().Routes[0])
+	if linksUT != nil {
+		links := linksUT.Type.ToObject()
+		lnames := make([]string, len(links))
+		i := 0
+		for n := range links {
+			lnames[i] = n
+			i++
 		}
-		s.Links = append(s.Links, &JSONLink{
-			Title:        l.Name,
-			Rel:          l.Name,
-			Description:  att.Description,
-			Href:         href,
-			Method:       "GET",
-			TargetSchema: TypeSchema(api, l.MediaType()),
-			MediaType:    l.MediaType().Identifier,
-		})
+		sort.Strings(lnames)
+		for _, ln := range lnames {
+			var (
+				att  = links[ln]
+				lmt  = att.Type.(*design.MediaTypeDefinition)
+				r    = lmt.Resource
+				href string
+			)
+			if r != nil {
+				href = toSchemaHref(api, r.CanonicalAction().Routes[0])
+			}
+			sm := NewJSONSchema()
+			sm.Ref = MediaTypeRef(api, lmt, "link")
+			s.Links = append(s.Links, &JSONLink{
+				Title:        ln,
+				Rel:          ln,
+				Description:  att.Description,
+				Href:         href,
+				Method:       "GET",
+				TargetSchema: sm,
+				MediaType:    lmt.Identifier,
+			})
+		}
 	}
-	buildAttributeSchema(api, s, mt.AttributeDefinition)
+	buildAttributeSchema(api, s, projected.AttributeDefinition)
 }
