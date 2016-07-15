@@ -877,6 +877,7 @@ func (m *MediaTypeDefinition) projectCollection(view string) (p *MediaTypeDefini
 			},
 			TypeName: pe.TypeName + "Collection",
 		},
+		Views: pe.Views,
 	}
 	if !dslengine.Execute(p.DSL(), p) {
 		return nil, nil, dslengine.Errors
