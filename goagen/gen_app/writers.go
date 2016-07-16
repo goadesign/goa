@@ -495,10 +495,12 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 		err = goa.MergeErrors(err, goa.MissingParamError("{{ $name }}"))
 	} else {
 {{ else }}	if len(param{{ goify $name true }}) > 0 {
-{{ end }}{{/* if $mustValidate */}}{{ if $att.Type.IsArray }}		var params {{ gotypedef $att 2 true false }}
-		for _, raw{{ goify $name true}} := range param{{ goify $name true}} {
-{{ template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) "params" 3) }}{{/*
-*/}}			{{ printf "rctx.%s" (goify $name true) }} = append({{ printf "rctx.%s" (goify $name true) }}, params...)
+{{ end }}{{/* if $mustValidate */}}{{ if $att.Type.IsArray }}		if len(param{{ goify $name true }}) > 1 || len(param{{ goify $name true }}[0]) > 0 {
+			var params {{ gotypedef $att 2 true false }}
+			for _, raw{{ goify $name true}} := range param{{ goify $name true}} {
+{{ template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) "params" 4) }}{{/*
+*/}}				{{ printf "rctx.%s" (goify $name true) }} = append({{ printf "rctx.%s" (goify $name true) }}, params...)
+			}
 		}
 {{ else }}		raw{{ goify $name true}} := param{{ goify $name true}}[0]
 {{ template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) (printf "rctx.%s" (goify $name true)) 2) }}{{ end }}{{/*
