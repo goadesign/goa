@@ -333,6 +333,7 @@ var _ = Describe("Example", func() {
 	Context("defined examples in a media type", func() {
 		BeforeEach(func() {
 			dslengine.Reset()
+			ProjectedMediaTypes = make(MediaTypeRoot)
 		})
 		It("produces a media type with examples", func() {
 			mt := MediaType("application/vnd.example+json", func() {
@@ -369,7 +370,7 @@ var _ = Describe("Example", func() {
 			attr := mt.Type.ToObject()["test1"]
 			Ω(attr.Example).Should(Equal("test1"))
 			attr = mt.Type.ToObject()["test2"]
-			Ω(attr.Example).Should(BeNil())
+			Ω(attr.Example).Should(Equal("-"))
 			attr = mt.Type.ToObject()["test3"]
 			Ω(attr.Example).Should(BeNumerically(">=", 1))
 			attr = mt.Type.ToObject()["test4"]
@@ -473,6 +474,7 @@ var _ = Describe("Example", func() {
 				})
 				View("default", func() {
 					Attribute("foo")
+					Attribute("others")
 				})
 			})
 
@@ -486,6 +488,7 @@ var _ = Describe("Example", func() {
 				})
 				View("default", func() {
 					Attribute("bar")
+					Attribute("others")
 				})
 			})
 
@@ -530,6 +533,8 @@ var _ = Describe("Example", func() {
 				})
 				View("default", func() {
 					Attribute("test1")
+					Attribute("test2")
+					Attribute("test3")
 				})
 			})
 
@@ -548,6 +553,9 @@ var _ = Describe("Example", func() {
 				})
 				View("default", func() {
 					Attribute("test1")
+					Attribute("test2")
+					Attribute("test3")
+					Attribute("test4")
 				})
 			})
 
@@ -558,7 +566,7 @@ var _ = Describe("Example", func() {
 			attr := mt.Type.ToObject()["test1"]
 			Ω(attr.Example).Should(Equal("test1"))
 			attr = mt.Type.ToObject()["test2"]
-			Ω(attr.Example).Should(BeNil())
+			Ω(attr.Example).Should(Equal("-"))
 			attr = mt.Type.ToObject()["test3"]
 			Ω(attr.Example).Should(BeNumerically(">=", 1))
 
@@ -566,7 +574,7 @@ var _ = Describe("Example", func() {
 			attr = pmt.Type.ToObject()["test1"]
 			Ω(attr.Example).Should(Equal("test1"))
 			attr = pmt.Type.ToObject()["test2"]
-			Ω(attr.Example).Should(BeNil())
+			Ω(attr.Example).Should(Equal("-"))
 			attr = pmt.Type.ToObject()["test3"]
 			Ω(attr.Example).Should(BeNumerically(">=", 1))
 			attr = pmt.Type.ToObject()["test4"]
@@ -574,7 +582,7 @@ var _ = Describe("Example", func() {
 			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string]interface{}{}))
 			attrChild := attr.Example.(map[string]interface{})
 			Ω(attrChild["test1"]).Should(Equal("test1"))
-			Ω(attrChild["test2"]).Should(BeNil())
+			Ω(attrChild["test2"]).Should(Equal("-"))
 			Ω(attrChild["test3"]).Should(BeNumerically(">=", 1))
 		})
 
@@ -593,6 +601,8 @@ var _ = Describe("Example", func() {
 				})
 				View("default", func() {
 					Attribute("test1")
+					Attribute("test2")
+					Attribute("test3")
 				})
 			})
 
@@ -611,6 +621,9 @@ var _ = Describe("Example", func() {
 				})
 				View("default", func() {
 					Attribute("test1")
+					Attribute("test2")
+					Attribute("test3")
+					Attribute("test4")
 				})
 			})
 
@@ -621,7 +634,7 @@ var _ = Describe("Example", func() {
 			attr := mt.Type.ToObject()["test1"]
 			Ω(attr.Example).Should(Equal("test1"))
 			attr = mt.Type.ToObject()["test2"]
-			Ω(attr.Example).Should(BeNil())
+			Ω(attr.Example).Should(Equal("-"))
 			attr = mt.Type.ToObject()["test3"]
 			Ω(attr.Example).Should(BeNumerically(">=", 1))
 
@@ -629,7 +642,7 @@ var _ = Describe("Example", func() {
 			attr = pmt.Type.ToObject()["test1"]
 			Ω(attr.Example).Should(Equal("test1"))
 			attr = pmt.Type.ToObject()["test2"]
-			Ω(attr.Example).Should(BeNil())
+			Ω(attr.Example).Should(Equal("-"))
 			attr = pmt.Type.ToObject()["test3"]
 			Ω(attr.Example).Should(Equal("1"))
 			attr = pmt.Type.ToObject()["test4"]
@@ -639,7 +652,7 @@ var _ = Describe("Example", func() {
 			Ω(attrChildren).Should(HaveLen(1))
 			Ω(attrChildren[0]).Should(BeAssignableToTypeOf(map[string]interface{}{}))
 			Ω(attrChildren[0]["test1"]).Should(Equal("test1"))
-			Ω(attrChildren[0]["test2"]).Should(BeNil())
+			Ω(attrChildren[0]["test2"]).Should(Equal("-"))
 			Ω(attrChildren[0]["test3"]).Should(BeNumerically(">=", 1))
 		})
 
@@ -665,6 +678,8 @@ var _ = Describe("Example", func() {
 				})
 				View("default", func() {
 					Attribute("test1")
+					Attribute("test2")
+					Attribute("test3")
 				})
 			})
 
@@ -679,12 +694,10 @@ var _ = Describe("Example", func() {
 			attr = pmt.Type.ToObject()["test1"]
 			Ω(attr.Example).Should(Equal("test1"))
 			attr = pmt.Type.ToObject()["test2"]
-			Ω(attr.Example).Should(BeNil())
+			Ω(attr.Example).Should(Equal("-"))
 			attr = pmt.Type.ToObject()["test3"]
 			Ω(attr.Example).ShouldNot(BeNil())
 			Expect(attr.Example).Should(BeAssignableToTypeOf(map[string]interface{}{}))
-			attrChild := attr.Example.(map[string]interface{})
-			Ω(attrChild["test1"]).ShouldNot(Equal(cexample))
 		})
 
 		It("produces media type examples from the linked media type collection without custom examples", func() {
@@ -724,13 +737,12 @@ var _ = Describe("Example", func() {
 			attr = pmt.Type.ToObject()["test1"]
 			Ω(attr.Example).Should(Equal("test1"))
 			attr = pmt.Type.ToObject()["test2"]
-			Ω(attr.Example).Should(BeNil())
+			Ω(attr.Example).Should(Equal("-"))
 			attr = pmt.Type.ToObject()["test3"]
 			Ω(attr.Example).ShouldNot(BeNil())
 			Expect(attr.Example).Should(BeAssignableToTypeOf([]map[string]interface{}{}))
 			attrChildren := attr.Example.([]map[string]interface{})
 			Ω(len(attrChildren)).Should(BeNumerically(">=", 1))
-			Ω(attrChildren[0]["test1"]).ShouldNot(Equal(cexample))
 		})
 
 		It("produces a media type with appropriate MinLength and MaxLength examples", func() {
@@ -780,8 +792,8 @@ var _ = Describe("Example", func() {
 			Ω(attr.Example).Should(BeAssignableToTypeOf([]interface{}{}))
 			Ω(attr.Example.([]interface{})).Should(HaveLen(10))
 			attr = mt.Type.ToObject()["test-failure1"]
-			Ω(attr.Example).Should(BeAssignableToTypeOf([]interface{}{}))
-			Ω(attr.Example.([]interface{})).Should(HaveLen(0))
+			Ω(attr.Example).Should(BeAssignableToTypeOf([]map[string]interface{}{}))
+			Ω(attr.Example.([]map[string]interface{})).Should(HaveLen(0))
 		})
 	})
 })

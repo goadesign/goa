@@ -667,7 +667,7 @@ func (u *UserTypeDefinition) Finalize() {
 		}
 	}
 
-	u.finalizeExample(nil)
+	u.finalizeExample()
 }
 
 // NewMediaTypeDefinition creates a media type definition but does not
@@ -753,6 +753,26 @@ func (m *MediaTypeDefinition) Project(view string) (p *MediaTypeDefinition, link
 	return m.projectSingle(view)
 }
 
+// DefaultView returns the name of a view that can be used to project the media type.
+// It returns the default view - or if not available the link view - or if not available the first
+// view by alphabetical order.
+func (m *MediaTypeDefinition) DefaultView() string {
+	if _, ok := m.Views["default"]; ok {
+		return "default"
+	}
+	if _, ok := m.Views["link"]; ok {
+		return "link"
+	}
+	views := make([]string, len(m.Views))
+	i := 0
+	for n := range m.Views {
+		views[i] = n
+		i++
+	}
+	sort.Strings(views)
+	return views[0]
+}
+
 func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition, links *UserTypeDefinition, err error) {
 	v := m.Views[view]
 	canonical := CanonicalIdentifier(m.Identifier)
@@ -762,8 +782,8 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 		canonical += "; view=" + view
 	}
 	var ok bool
-	if p, ok = GeneratedMediaTypes[canonical]; ok {
-		mLinks := GeneratedMediaTypes[canonical+"; links"]
+	if p, ok = ProjectedMediaTypes[canonical]; ok {
+		mLinks := ProjectedMediaTypes[canonical+"; links"]
 		if mLinks != nil {
 			links = mLinks.UserTypeDefinition
 		}
@@ -803,16 +823,11 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 	}
 	p.Views = map[string]*ViewDefinition{view: {
 		Name:                view,
-		AttributeDefinition: v.AttributeDefinition,
+		AttributeDefinition: DupAtt(v.AttributeDefinition),
 		Parent:              p,
 	}}
-	if view != "default" {
-		// Make sure projected media types always have a default view so that code
-		// generators can rely on it.
-		p.Views["default"] = p.Views[view]
-	}
 
-	GeneratedMediaTypes[canonical] = p
+	ProjectedMediaTypes[canonical] = p
 	projectedObj := p.Type.ToObject()
 	mtObj := m.Type.ToObject()
 	for n := range viewObj {
@@ -843,31 +858,19 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 				TypeName: lTypeName,
 			}
 			projectedObj[n] = &AttributeDefinition{Type: links, Description: "Links to related resources"}
-
-			lmt := &MediaTypeDefinition{UserTypeDefinition: links}
-			lmt.Identifier = canonical + "; links"
-			// Make sure all top level MTs have a default view so that e.g. finalizers can rely on it
-			lmt.Views = map[string]*ViewDefinition{
-				"default": {
-					AttributeDefinition: links.AttributeDefinition,
-					Name:                "default",
-					Parent:              lmt,
-				},
-			}
-
-			GeneratedMediaTypes[lmt.Identifier] = lmt
+			ProjectedMediaTypes[canonical+"; links"] = &MediaTypeDefinition{UserTypeDefinition: links}
 		} else {
 			if at := mtObj[n]; at != nil {
-				if m, ok := at.Type.(*MediaTypeDefinition); ok {
+				at = DupAtt(at)
+				if mt, ok := at.Type.(*MediaTypeDefinition); ok {
 					view := at.View
 					if view == "" {
-						view = "default"
+						view = mt.DefaultView()
 					}
-					pr, _, err := m.Project(view)
+					pr, _, err := mt.Project(view)
 					if err != nil {
 						return nil, nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", view, n, err)
 					}
-					at = DupAtt(at)
 					at.Type = pr
 				}
 				projectedObj[n] = at
@@ -878,11 +881,14 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 }
 
 func (m *MediaTypeDefinition) projectCollection(view string) (p *MediaTypeDefinition, links *UserTypeDefinition, err error) {
+	// Project the collection element media type
 	e := m.ToArray().ElemType.Type.(*MediaTypeDefinition) // validation checked this cast would work
 	pe, le, err2 := e.Project(view)
 	if err2 != nil {
 		return nil, nil, fmt.Errorf("collection element: %s", err2)
 	}
+
+	// Build the projected collection with the results
 	desc := m.TypeName + " is the media type for an array of " + e.TypeName + " (" + view + " view)"
 	p = &MediaTypeDefinition{
 		Identifier: m.Identifier,
@@ -894,11 +900,25 @@ func (m *MediaTypeDefinition) projectCollection(view string) (p *MediaTypeDefini
 			},
 			TypeName: pe.TypeName + "Collection",
 		},
-		Views: pe.Views,
 	}
+
+	// Set the collection views with a dup of the element views
+	views := make(map[string]*ViewDefinition, len(pe.Views))
+	for n, v := range pe.Views {
+		views[n] = &ViewDefinition{
+			AttributeDefinition: DupAtt(v.AttributeDefinition),
+			Name:                v.Name,
+			Parent:              p,
+		}
+	}
+	p.Views = views
+
+	// Run the DSL that was created by the CollectionOf function
 	if !dslengine.Execute(p.DSL(), p) {
 		return nil, nil, dslengine.Errors
 	}
+
+	// Build the links user type
 	if le != nil {
 		lTypeName := le.TypeName + "Array"
 		links = &UserTypeDefinition{
@@ -909,6 +929,7 @@ func (m *MediaTypeDefinition) projectCollection(view string) (p *MediaTypeDefini
 			TypeName: lTypeName,
 		}
 	}
+
 	return
 }
 

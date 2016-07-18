@@ -73,6 +73,9 @@ var (
 	// must be defined first then the definition created by CollectionOf must execute.
 	GeneratedMediaTypes MediaTypeRoot
 
+	// ProjectedMediaTypes is a cache used by the MediaType strut Project method.
+	ProjectedMediaTypes MediaTypeRoot
+
 	// WildcardRegex is the regular expression used to capture path parameters.
 	WildcardRegex = regexp.MustCompile(`/(?::|\*)([a-zA-Z0-9_]+)`)
 

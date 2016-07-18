@@ -324,9 +324,6 @@ type (
 		NonZeroAttributes map[string]bool
 		// DSLFunc contains the initialization DSL. This is used for user types.
 		DSLFunc func()
-		// isCustomExample keeps track of whether the example is given by the user, or
-		// should be automatically generated for the user.
-		isCustomExample bool
 	}
 
 	// ContainerDefinition defines a generic container definition that contains attributes.
@@ -563,14 +560,6 @@ func (a *APIDefinition) IterateResponses(it ResponseIterator) error {
 		}
 	}
 	return nil
-}
-
-// GenerateExample returns a random value for the given data type.
-// If the data type has validations then the example value validates them.
-// GenerateExample returns the same random value for a given api name
-// (the random generator is seeded after the api name).
-func (a *APIDefinition) GenerateExample(dt DataType) interface{} {
-	return dt.GenerateExample(a.RandomGenerator())
 }
 
 // RandomGenerator is seeded after the API name. It's used to generate examples.
@@ -962,7 +951,7 @@ func (a *AttributeDefinition) IsPrimitivePointer(attName string) bool {
 
 // GenerateExample returns a random instance of the attribute that validates.
 func (a *AttributeDefinition) GenerateExample(r *RandomGenerator) interface{} {
-	if example := newExampleGenerator(a, r).generate(); example != nil {
+	if example := newExampleGenerator(a, r).Generate(); example != nil {
 		return example
 	}
 	return a.Type.GenerateExample(r)
@@ -972,13 +961,11 @@ func (a *AttributeDefinition) GenerateExample(r *RandomGenerator) interface{} {
 // want any example or any auto-generated example.
 func (a *AttributeDefinition) SetExample(example interface{}) bool {
 	if example == nil {
-		a.Example = nil
-		a.isCustomExample = true
+		a.Example = "-" // set it to something else than nil so we know not to generate one
 		return true
 	}
 	if a.Type == nil || a.Type.IsCompatible(example) {
 		a.Example = example
-		a.isCustomExample = true
 		return true
 	}
 	return false
@@ -987,89 +974,94 @@ func (a *AttributeDefinition) SetExample(example interface{}) bool {
 // finalizeExample goes through each Example and consolidates all of the information it knows i.e.
 // a custom example or auto-generate for the user. It also tracks whether we've randomized
 // the entire example; if so, we shall re-generate the random value for Array/Hash.
-func (a *AttributeDefinition) finalizeExample(stack []*AttributeDefinition) (interface{}, bool) {
-	if a.Example != nil || a.isCustomExample {
-		return a.Example, a.isCustomExample
+func (a *AttributeDefinition) finalizeExample() interface{} {
+	return a.finalizeExampleRecursive(Design.RandomGenerator(), make(map[string]interface{}))
+}
+
+func (a *AttributeDefinition) finalizeExampleRecursive(rand *RandomGenerator, examples map[string]interface{}) interface{} {
+	if a.Example != nil {
+		return a.Example
 	}
 
-	// note: must traverse each node to finalize the examples unless given
-	switch true {
+	// Avoid infinite loops
+	var key string
+	if mt, ok := a.Type.(*MediaTypeDefinition); ok {
+		key = mt.Identifier
+	} else if ut, ok := a.Type.(*UserTypeDefinition); ok {
+		key = ut.TypeName
+	}
+	if ex, ok := examples[key]; ok {
+		a.Example = ex
+		return ex
+	}
+
+	switch {
 	case a.Type.IsArray():
 		ary := a.Type.ToArray()
-		if isCyclical(ary.ElemType.Type, stack) {
-			return a.Example, true
+		ln := newExampleGenerator(a, rand).ExampleLength()
+		res := make([]interface{}, ln)
+		if key != "" {
+			examples[key] = res
 		}
-		example, isCustom := ary.ElemType.finalizeExample(stack)
-		a.Example, a.isCustomExample = ary.MakeSlice([]interface{}{example}), isCustom
+		for i := 0; i < ln; i++ {
+			res[i] = ary.ElemType.finalizeExampleRecursive(rand, examples)
+		}
+		a.Example = ary.MakeSlice(res)
+
 	case a.Type.IsHash():
 		h := a.Type.ToHash()
-		exampleK, isCustomK := h.KeyType.finalizeExample(stack)
-		exampleV, isCustomV := h.ElemType.finalizeExample(stack)
-		a.Example, a.isCustomExample = h.MakeMap(map[interface{}]interface{}{exampleK: exampleV}), isCustomK || isCustomV
-	case a.Type.IsObject():
-		// keep track of the type id, in case of a cyclical situation
-		stack = append(stack, a)
+		ln := newExampleGenerator(a, rand).ExampleLength()
+		res := make(map[interface{}]interface{}, ln)
+		if key != "" {
+			examples[key] = res
+		}
+		for i := 0; i < ln; i++ {
+			k := h.KeyType.finalizeExampleRecursive(rand, examples)
+			v := h.ElemType.finalizeExampleRecursive(rand, examples)
+			res[k] = v
+		}
+		a.Example = h.MakeMap(res)
 
+	case a.Type.IsObject():
 		// project media types
+		actual := a
 		if mt, ok := a.Type.(*MediaTypeDefinition); ok {
-			projected, _, err := mt.Project("default")
+			v := a.View
+			if v == "" {
+				v = mt.DefaultView()
+			}
+			projected, _, err := mt.Project(v)
 			if err != nil {
 				panic(err) // bug
 			}
-			a = projected.AttributeDefinition
+			actual = projected.AttributeDefinition
 		}
 
-		// ensure fixed ordering
-		aObj := a.Type.ToObject()
-		keys := make([]string, 0, len(aObj))
+		// ensure fixed ordering so random values are computed with consistent seeds
+		aObj := actual.Type.ToObject()
+		keys := make([]string, len(aObj))
+		i := 0
 		for n := range aObj {
-			keys = append(keys, n)
+			keys[i] = n
+			i++
 		}
 		sort.Strings(keys)
 
-		example, hasCustom, isCustom := map[string]interface{}{}, false, false
+		res := make(map[string]interface{})
+		if key != "" {
+			examples[key] = res
+		}
 		for _, n := range keys {
 			att := aObj[n]
-			if isCyclical(att.Type, stack) {
-				example[n], isCustom = nil, true
-			} else {
-				example[n], isCustom = att.finalizeExample(stack)
-			}
-			hasCustom = hasCustom || isCustom
+			res[n] = att.finalizeExampleRecursive(rand, examples)
 		}
-		a.Example, a.isCustomExample = example, hasCustom
-	}
-	// while none of the examples is custom, we generate a random value for the entire object
-	if !a.isCustomExample {
-		a.Example = a.GenerateExample(Design.RandomGenerator())
-	}
-	return a.Example, a.isCustomExample
-}
+		a.Example = res
 
-// isCyclical returns true if the given type appears in the given stack, false otherwise.
-func isCyclical(typ DataType, stack []*AttributeDefinition) bool {
-	isCyclical := false
-	if ssize := len(stack); ssize > 0 {
-		aid := ""
-		if mt, ok := typ.(*MediaTypeDefinition); ok {
-			aid = mt.Identifier
-		} else if ut, ok := typ.(*UserTypeDefinition); ok {
-			aid = ut.TypeName
-		}
-		if aid != "" {
-			for _, sa := range stack[:ssize-1] {
-				if mt, ok := sa.Type.(*MediaTypeDefinition); ok {
-					isCyclical = mt.Identifier == aid
-				} else if ut, ok := sa.Type.(*UserTypeDefinition); ok {
-					isCyclical = ut.TypeName == aid
-				}
-				if isCyclical {
-					break
-				}
-			}
-		}
+	default:
+		a.Example = a.GenerateExample(rand)
 	}
-	return isCyclical
+
+	return a.Example
 }
 
 // Merge merges the argument attributes into the target and returns the target overriding existing

@@ -23,8 +23,8 @@ func newExampleGenerator(a *AttributeDefinition, r *RandomGenerator) *exampleGen
 // Maximum number of tries for generating example.
 const maxAttempts = 500
 
-// generate generates a random value based on the given validations.
-func (eg *exampleGenerator) generate() interface{} {
+// Generate generates a random value based on the given validations.
+func (eg *exampleGenerator) Generate() interface{} {
 	// Randomize array length first, since that's from higher level
 	if eg.hasLengthValidation() {
 		return eg.generateValidatedLengthExample()
@@ -63,6 +63,39 @@ func (eg *exampleGenerator) generate() interface{} {
 	return nil
 }
 
+func (eg *exampleGenerator) ExampleLength() int {
+	if eg.hasLengthValidation() {
+		minlength, maxlength := math.Inf(1), math.Inf(-1)
+		if eg.a.Validation.MinLength != nil {
+			minlength = float64(*eg.a.Validation.MinLength)
+		}
+		if eg.a.Validation.MaxLength != nil {
+			maxlength = float64(*eg.a.Validation.MaxLength)
+		}
+		count := 0
+		if math.IsInf(minlength, 1) {
+			count = int(maxlength) - (eg.r.Int() % 3)
+		} else if math.IsInf(maxlength, -1) {
+			count = int(minlength) + (eg.r.Int() % 3)
+		} else if minlength < maxlength {
+			diff := int(maxlength - minlength)
+			if diff > maxExampleLength {
+				diff = maxExampleLength
+			}
+			count = int(minlength) + (eg.r.Int() % diff)
+		} else if minlength == maxlength {
+			count = int(minlength)
+		} else {
+			panic("Validation: MinLength > MaxLength")
+		}
+		if count > maxExampleLength {
+			count = maxExampleLength
+		}
+		return count
+	}
+	return eg.r.Int()%3 + 1
+}
+
 func (eg *exampleGenerator) hasLengthValidation() bool {
 	if eg.a.Validation == nil {
 		return false
@@ -74,34 +107,7 @@ const maxExampleLength = 10
 
 // generateValidatedLengthExample generates a random size array of examples based on what's given.
 func (eg *exampleGenerator) generateValidatedLengthExample() interface{} {
-	minlength, maxlength := math.Inf(1), math.Inf(-1)
-	if eg.a.Validation != nil {
-		if eg.a.Validation.MinLength != nil {
-			minlength = float64(*eg.a.Validation.MinLength)
-		}
-		if eg.a.Validation.MaxLength != nil {
-			maxlength = float64(*eg.a.Validation.MaxLength)
-		}
-	}
-	count := 0
-	if math.IsInf(minlength, 1) {
-		count = int(maxlength) - (eg.r.Int() % 3)
-	} else if math.IsInf(maxlength, -1) {
-		count = int(minlength) + (eg.r.Int() % 3)
-	} else if minlength < maxlength {
-		diff := int(maxlength - minlength)
-		if diff > maxExampleLength {
-			diff = maxExampleLength
-		}
-		count = int(minlength) + (eg.r.Int() % diff)
-	} else if minlength == maxlength {
-		count = int(minlength)
-	} else {
-		panic("Validation: MinLength > MaxLength")
-	}
-	if count > maxExampleLength {
-		count = maxExampleLength
-	}
+	count := eg.ExampleLength()
 	if !eg.a.Type.IsArray() {
 		return eg.r.faker.Characters(count)
 	}
