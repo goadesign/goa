@@ -17,7 +17,7 @@ const (
 	// RequestIDHeader is the name of the header used to transmit the request ID.
 	RequestIDHeader = "X-Request-Id"
 
-	// DefaultRequestIDLengthLimit is the default maximum length for header value.
+	// DefaultRequestIDLengthLimit is the default maximum length for the request ID header value.
 	DefaultRequestIDLengthLimit = 128
 )
 
