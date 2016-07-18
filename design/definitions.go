@@ -997,9 +997,6 @@ func (a *AttributeDefinition) finalizeExample(stack []*AttributeDefinition) (int
 	case a.Type.IsArray():
 		ary := a.Type.ToArray()
 		if isCyclical(ary.ElemType.Type, stack) {
-			// unable to generate any example and here we set
-			// isCustom to avoid touching this example again
-			// i.e. GenerateExample in the end of this func
 			return a.Example, true
 		}
 		example, isCustom := ary.ElemType.finalizeExample(stack)
@@ -1013,6 +1010,15 @@ func (a *AttributeDefinition) finalizeExample(stack []*AttributeDefinition) (int
 		// keep track of the type id, in case of a cyclical situation
 		stack = append(stack, a)
 
+		// project media types
+		if mt, ok := a.Type.(*MediaTypeDefinition); ok {
+			projected, _, err := mt.Project("default")
+			if err != nil {
+				panic(err) // bug
+			}
+			a = projected.AttributeDefinition
+		}
+
 		// ensure fixed ordering
 		aObj := a.Type.ToObject()
 		keys := make([]string, 0, len(aObj))
@@ -1024,14 +1030,10 @@ func (a *AttributeDefinition) finalizeExample(stack []*AttributeDefinition) (int
 		example, hasCustom, isCustom := map[string]interface{}{}, false, false
 		for _, n := range keys {
 			att := aObj[n]
-			// avoid a cyclical dependency
-			if !isCyclical(att.Type, stack) {
-				example[n], isCustom = att.finalizeExample(stack)
-			} else {
-				// unable to generate any example and here we set
-				// isCustom to avoid touching this example again
-				// i.e. GenerateExample in the end of this func
+			if isCyclical(att.Type, stack) {
 				example[n], isCustom = nil, true
+			} else {
+				example[n], isCustom = att.finalizeExample(stack)
 			}
 			hasCustom = hasCustom || isCustom
 		}

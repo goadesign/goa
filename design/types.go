@@ -806,6 +806,11 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 		AttributeDefinition: v.AttributeDefinition,
 		Parent:              p,
 	}}
+	if view != "default" {
+		// Make sure projected media types always have a default view so that code
+		// generators can rely on it.
+		p.Views["default"] = p.Views[view]
+	}
 
 	GeneratedMediaTypes[canonical] = p
 	projectedObj := p.Type.ToObject()
@@ -838,7 +843,19 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 				TypeName: lTypeName,
 			}
 			projectedObj[n] = &AttributeDefinition{Type: links, Description: "Links to related resources"}
-			GeneratedMediaTypes[canonical+"; links"] = &MediaTypeDefinition{UserTypeDefinition: links}
+
+			lmt := &MediaTypeDefinition{UserTypeDefinition: links}
+			lmt.Identifier = canonical + "; links"
+			// Make sure all top level MTs have a default view so that e.g. finalizers can rely on it
+			lmt.Views = map[string]*ViewDefinition{
+				"default": {
+					AttributeDefinition: links.AttributeDefinition,
+					Name:                "default",
+					Parent:              lmt,
+				},
+			}
+
+			GeneratedMediaTypes[lmt.Identifier] = lmt
 		} else {
 			if at := mtObj[n]; at != nil {
 				if m, ok := at.Type.(*MediaTypeDefinition); ok {
