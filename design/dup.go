@@ -53,6 +53,7 @@ func (d *dupper) DupAttribute(att *AttributeDefinition) *AttributeDefinition {
 		NonZeroAttributes: att.NonZeroAttributes,
 		View:              att.View,
 		DSLFunc:           att.DSLFunc,
+		Example:           att.Example,
 	}
 	return &dup
 }
