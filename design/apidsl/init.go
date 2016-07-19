@@ -9,6 +9,7 @@ import (
 func init() {
 	design.Design = design.NewAPIDefinition()
 	design.GeneratedMediaTypes = make(design.MediaTypeRoot)
+	design.ProjectedMediaTypes = make(design.MediaTypeRoot)
 	dslengine.Register(design.Design)
 	dslengine.Register(design.GeneratedMediaTypes)
 }

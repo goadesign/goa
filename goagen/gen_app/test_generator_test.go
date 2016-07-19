@@ -28,6 +28,7 @@ var _ = Describe("Generate", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 		os.Args = []string{"goagen", "--out=" + outDir, "--design=foo", "--version=" + version.String()}
 		design.GeneratedMediaTypes = make(design.MediaTypeRoot)
+		design.ProjectedMediaTypes = make(design.MediaTypeRoot)
 	})
 
 	JustBeforeEach(func() {
