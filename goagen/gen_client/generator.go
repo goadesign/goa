@@ -215,6 +215,7 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 		codegen.SimpleImport("net/http"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.NewImport("goaclient", "github.com/goadesign/goa/client"),
+		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 	}
 	for _, packagePath := range packagePaths {
 		imports = append(imports, codegen.SimpleImport(packagePath))
@@ -650,11 +651,7 @@ func cmdFieldType(t design.DataType, point bool) string {
 	if point && !t.IsArray() {
 		pointer = "*"
 	}
-	if t.Kind() == design.DateTimeKind || t.Kind() == design.UUIDKind {
-		suffix = "string"
-	} else {
-		suffix = codegen.GoNativeType(t)
-	}
+	suffix = codegen.GoNativeType(t)
 	return pointer + suffix
 }
 
@@ -673,8 +670,10 @@ func toString(name, target string, att *design.AttributeDefinition) string {
 			return fmt.Sprintf("%s := strconv.FormatBool(%s)", target, name)
 		case design.NumberKind:
 			return fmt.Sprintf("%s := strconv.FormatFloat(%s, 'f', -1, 64)", target, name)
-		case design.StringKind, design.DateTimeKind, design.UUIDKind:
+		case design.StringKind:
 			return fmt.Sprintf("%s := %s", target, name)
+		case design.DateTimeKind, design.UUIDKind:
+			return fmt.Sprintf("%s := %s.String()", target, strings.Replace(name, "*", "", -1)) // remove pointer if present
 		case design.AnyKind:
 			return fmt.Sprintf("%s := fmt.Sprintf(\"%%v\", %s)", target, name)
 		default:

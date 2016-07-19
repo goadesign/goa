@@ -25,6 +25,7 @@ func (g *Generator) generateMain(mainFile string, clientPkg, cliPkg string, func
 		codegen.SimpleImport(cliPkg),
 		codegen.SimpleImport("github.com/spf13/cobra"),
 		codegen.NewImport("goaclient", "github.com/goadesign/goa/client"),
+		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 	}
 
 	funcs["defaultRouteParams"] = defaultRouteParams
@@ -120,6 +121,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 		codegen.SimpleImport(clientPkg),
 		codegen.SimpleImport("golang.org/x/net/context"),
 		codegen.SimpleImport("golang.org/x/net/websocket"),
+		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 	}
 	if len(api.Resources) > 0 {
 		imports = append(imports, codegen.NewImport("goaclient", "github.com/goadesign/goa/client"))
