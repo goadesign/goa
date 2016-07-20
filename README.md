@@ -127,6 +127,9 @@ This produces the following outputs:
 First let's implement the API - edit the file `operands.go` and replace the content of the `Add`
 function with:
 ```
+// Add import for strconv
+import "strconv"
+
 // Add runs the add action.
 func (c *OperandsController) Add(ctx *app.AddOperandsContext) error {
         sum := ctx.Left + ctx.Right
