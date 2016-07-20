@@ -655,6 +655,35 @@ func cmdFieldType(t design.DataType, point bool) string {
 	return pointer + suffix
 }
 
+// cmdFieldTypeString computes the Go type name used to store command flags of the given design type. Complex types are String
+func cmdFieldTypeString(t design.DataType, point bool) string {
+	var pointer, suffix string
+	if point && !t.IsArray() {
+		pointer = "*"
+	}
+	if t.Kind() == design.UUIDKind || t.Kind() == design.DateTimeKind || t.Kind() == design.AnyKind {
+		suffix = "string"
+	} else if isArrayOfType(t, design.UUIDKind, design.DateTimeKind, design.AnyKind) {
+		suffix = "[]string"
+	} else {
+		suffix = codegen.GoNativeType(t)
+	}
+	return pointer + suffix
+}
+
+func isArrayOfType(array design.DataType, kinds ...design.Kind) bool {
+	if !array.IsArray() {
+		return false
+	}
+	kind := array.ToArray().ElemType.Type.Kind()
+	for _, t := range kinds {
+		if t == kind {
+			return true
+		}
+	}
+	return false
+}
+
 // template used to produce code that serializes arrays of simple values into comma separated
 // strings.
 var arrayToStringTmpl *template.Template

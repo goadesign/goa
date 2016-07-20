@@ -100,6 +100,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	funcs["joinNames"] = joinNames
 	funcs["routes"] = routes
 	funcs["flagType"] = flagType
+	funcs["cmdFieldType"] = cmdFieldTypeString
 
 	commandTypesTmpl := template.Must(template.New("commandTypes").Funcs(funcs).Parse(commandTypesTmpl))
 	commandsTmpl := template.Must(template.New("commands").Funcs(funcs).Parse(commandsTmpl))
@@ -287,11 +288,26 @@ func joinNames(useNil bool, atts ...*design.AttributeDefinition) string {
 						field = `boolFlagVal("` + n + `", ` + field + ")"
 					case design.String:
 						field = `stringFlagVal("` + n + `", ` + field + ")"
+					case design.UUID:
+						field = "uuidVal(" + field + ")"
+					case design.DateTime:
+						field = "timeVal(" + field + ")"
+					case design.Any:
+						field = "jsonVal(" + field + ")"
 					default:
 						field = "&" + field
 					}
 				} else {
 					field = "&" + field
+				}
+			} else if a.Type.IsArray() {
+				switch a.Type.ToArray().ElemType.Type {
+				case design.UUID:
+					field = "uuidArray(" + field + ")"
+				case design.DateTime:
+					field = "timeArray(" + field + ")"
+				case design.Any:
+					field = "jsonArray(" + field + ")"
 				}
 			}
 			if att.IsRequired(n) {
@@ -695,4 +711,61 @@ func hasFlag(name string) bool {
 	}
 	return false
 }
-`
+
+func jsonVal(val string) *interface{} {
+	var t interface{}
+	err := json.Unmarshal([]byte(val), t)
+	if err != nil {
+		panic(err)
+	}
+	return &t
+}
+
+func jsonArray(ids []string) []interface{} {
+	if ids == nil {
+		return nil
+	}
+	var times []interface{}
+	for _, id := range ids {
+		times = append(times, jsonVal(id))
+	}
+	return times
+}
+
+func timeVal(val string) *time.Time {
+	t, err := time.Parse("RFC3339", val)
+	if err != nil {
+		panic(err)
+	}
+	return &t
+}
+
+func timeArray(ids []string) []time.Time {
+	if ids == nil {
+		return nil
+	}
+	var times []time.Time
+	for _, id := range ids {
+		times = append(times, *timeVal(id))
+	}
+	return times
+}
+
+func uuidVal(val string) *uuid.UUID {
+	t, err := uuid.FromString(val)
+	if err != nil {
+		panic(err)
+	}
+	return &t
+}
+
+func uuidArray(ids []string) []uuid.UUID {
+	if ids == nil {
+		return nil
+	}
+	var uuids []uuid.UUID
+	for _, id := range ids {
+		uuids = append(uuids, *uuidVal(id))
+	}
+	return uuids
+}`
