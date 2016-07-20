@@ -311,7 +311,7 @@ func TypeSchema(api *design.APIDefinition, t design.DataType) *JSONSchema {
 		s.Ref = TypeRef(api, actual)
 	case *design.MediaTypeDefinition:
 		// Use "default" view by default
-		s.Ref = MediaTypeRef(api, actual, "default")
+		s.Ref = MediaTypeRef(api, actual, actual.DefaultView())
 	}
 	return s
 }
