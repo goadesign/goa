@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/design/apidsl"
+	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/gen_schema"
 	"github.com/goadesign/goa/version"
@@ -40,11 +41,12 @@ var _ = Describe("Generate", func() {
 
 	Context("with a dummy API", func() {
 		BeforeEach(func() {
-			design.Design = &design.APIDefinition{
-				Name:        "test api",
-				Title:       "dummy API with no resource",
-				Description: "I told you it's dummy",
-			}
+			dslengine.Reset()
+			apidsl.API("test api", func() {
+				apidsl.Title("dummy API with no resource")
+				apidsl.Description("I told you it's dummy")
+			})
+			dslengine.Run()
 		})
 
 		It("generates a dummy schema", func() {
