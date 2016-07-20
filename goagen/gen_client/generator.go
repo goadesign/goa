@@ -746,11 +746,7 @@ func pathParamNames(r *design.RouteDefinition) string {
 }
 
 func typeName(mt *design.MediaTypeDefinition) string {
-	name := codegen.GoTypeName(mt, mt.AllRequired(), 1, false)
-	if mt.IsBuiltIn() {
-		return strings.Split(name, ".")[1]
-	}
-	return name
+	return codegen.GoTypeName(mt, mt.AllRequired(), 1, false)
 }
 
 // paramData is the data structure holding the information needed to generate query params and

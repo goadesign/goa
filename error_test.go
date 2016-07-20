@@ -1,47 +1,33 @@
-package goa_test
+package goa
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
 
-	"github.com/goadesign/goa"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Error", func() {
 	const (
+		id     = "foo"
 		code   = "invalid"
 		status = 400
 		detail = "error"
 	)
-	var meta = map[string]interface{}{"what": 42}
+	var meta = []map[string]interface{}{{"what": 42}}
 
-	var gerr *goa.Error
+	var gerr *errorResponse
 
 	BeforeEach(func() {
-		gerr = &goa.Error{Code: code, Status: status, Detail: detail, MetaValues: meta}
+		gerr = &errorResponse{ID: id, Code: code, Status: status, Detail: detail, Meta: meta}
 	})
 
 	It("serializes to JSON", func() {
 		b, err := json.Marshal(gerr)
 		Ω(err).ShouldNot(HaveOccurred())
-		Ω(string(b)).Should(Equal(`{"code":"invalid","status":400,"detail":"error","meta":{"what":42}}`))
-	})
-
-	Context("with no initial metadata", func() {
-		const name = "meta"
-		const val = 42
-
-		BeforeEach(func() {
-			gerr = &goa.Error{Code: code, Status: status, Detail: detail}
-		})
-
-		It("initializes the Metadata field lazily", func() {
-			Ω(func() { gerr.Meta(name, val) }).ShouldNot(Panic())
-			Ω(gerr.MetaValues).Should(HaveKeyWithValue(name, val))
-		})
+		Ω(string(b)).Should(Equal(`{"id":"foo","code":"invalid","status":400,"detail":"error","meta":[{"what":42}]}`))
 	})
 })
 
@@ -52,13 +38,13 @@ var _ = Describe("InvalidParamTypeError", func() {
 	expected := "43"
 
 	JustBeforeEach(func() {
-		valErr = goa.InvalidParamTypeError(name, val, expected)
+		valErr = InvalidParamTypeError(name, val, expected)
 	})
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
-		err := valErr.(*goa.Error)
+		Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
+		err := valErr.(*errorResponse)
 		Ω(err.Detail).Should(ContainSubstring(name))
 		Ω(err.Detail).Should(ContainSubstring("%d", val))
 		Ω(err.Detail).Should(ContainSubstring(expected))
@@ -70,13 +56,13 @@ var _ = Describe("MissingParaerror", func() {
 	name := "param"
 
 	JustBeforeEach(func() {
-		valErr = goa.MissingParamError(name)
+		valErr = MissingParamError(name)
 	})
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
-		err := valErr.(*goa.Error)
+		Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
+		err := valErr.(*errorResponse)
 		Ω(err.Detail).Should(ContainSubstring(name))
 	})
 })
@@ -88,13 +74,13 @@ var _ = Describe("InvalidAttributeTypeError", func() {
 	expected := "43"
 
 	JustBeforeEach(func() {
-		valErr = goa.InvalidAttributeTypeError(ctx, val, expected)
+		valErr = InvalidAttributeTypeError(ctx, val, expected)
 	})
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
-		err := valErr.(*goa.Error)
+		Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
+		err := valErr.(*errorResponse)
 		Ω(err.Detail).Should(ContainSubstring(ctx))
 		Ω(err.Detail).Should(ContainSubstring("%d", val))
 		Ω(err.Detail).Should(ContainSubstring(expected))
@@ -107,13 +93,13 @@ var _ = Describe("MissingAttributeError", func() {
 	name := "param"
 
 	JustBeforeEach(func() {
-		valErr = goa.MissingAttributeError(ctx, name)
+		valErr = MissingAttributeError(ctx, name)
 	})
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
-		err := valErr.(*goa.Error)
+		Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
+		err := valErr.(*errorResponse)
 		Ω(err.Detail).Should(ContainSubstring(ctx))
 		Ω(err.Detail).Should(ContainSubstring(name))
 	})
@@ -124,13 +110,13 @@ var _ = Describe("MissingHeaderError", func() {
 	name := "param"
 
 	JustBeforeEach(func() {
-		valErr = goa.MissingHeaderError(name)
+		valErr = MissingHeaderError(name)
 	})
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
-		err := valErr.(*goa.Error)
+		Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
+		err := valErr.(*errorResponse)
 		Ω(err.Detail).Should(ContainSubstring(name))
 	})
 })
@@ -142,13 +128,13 @@ var _ = Describe("InvalidEnumValueError", func() {
 	allowed := []interface{}{"43", "44"}
 
 	JustBeforeEach(func() {
-		valErr = goa.InvalidEnumValueError(ctx, val, allowed)
+		valErr = InvalidEnumValueError(ctx, val, allowed)
 	})
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
-		err := valErr.(*goa.Error)
+		Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
+		err := valErr.(*errorResponse)
 		Ω(err.Detail).Should(ContainSubstring(ctx))
 		Ω(err.Detail).Should(ContainSubstring("%d", val))
 		Ω(err.Detail).Should(ContainSubstring(`"43", "44"`))
@@ -159,17 +145,17 @@ var _ = Describe("InvalidFormaerror", func() {
 	var valErr error
 	ctx := "ctx"
 	target := "target"
-	format := goa.FormatDateTime
+	format := FormatDateTime
 	formatError := errors.New("boo")
 
 	JustBeforeEach(func() {
-		valErr = goa.InvalidFormatError(ctx, target, format, formatError)
+		valErr = InvalidFormatError(ctx, target, format, formatError)
 	})
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
-		err := valErr.(*goa.Error)
+		Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
+		err := valErr.(*errorResponse)
 		Ω(err.Detail).Should(ContainSubstring(ctx))
 		Ω(err.Detail).Should(ContainSubstring(target))
 		Ω(err.Detail).Should(ContainSubstring("date-time"))
@@ -184,13 +170,13 @@ var _ = Describe("InvalidPatternError", func() {
 	pattern := "pattern"
 
 	JustBeforeEach(func() {
-		valErr = goa.InvalidPatternError(ctx, target, pattern)
+		valErr = InvalidPatternError(ctx, target, pattern)
 	})
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
-		err := valErr.(*goa.Error)
+		Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
+		err := valErr.(*errorResponse)
 		Ω(err.Detail).Should(ContainSubstring(ctx))
 		Ω(err.Detail).Should(ContainSubstring(target))
 		Ω(err.Detail).Should(ContainSubstring(pattern))
@@ -205,13 +191,13 @@ var _ = Describe("InvalidRangeError", func() {
 	min := true
 
 	JustBeforeEach(func() {
-		valErr = goa.InvalidRangeError(ctx, target, value, min)
+		valErr = InvalidRangeError(ctx, target, value, min)
 	})
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
-		err := valErr.(*goa.Error)
+		Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
+		err := valErr.(*errorResponse)
 		Ω(err.Detail).Should(ContainSubstring(ctx))
 		Ω(err.Detail).Should(ContainSubstring("greater or equal"))
 		Ω(err.Detail).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
@@ -230,7 +216,7 @@ var _ = Describe("InvalidLengthError", func() {
 	var valErr error
 
 	JustBeforeEach(func() {
-		valErr = goa.InvalidLengthError(ctx, target, ln, value, min)
+		valErr = InvalidLengthError(ctx, target, ln, value, min)
 	})
 
 	Context("on strings", func() {
@@ -241,8 +227,8 @@ var _ = Describe("InvalidLengthError", func() {
 
 		It("creates a http error", func() {
 			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
-			err := valErr.(*goa.Error)
+			Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
+			err := valErr.(*errorResponse)
 			Ω(err.Detail).Should(ContainSubstring(ctx))
 			Ω(err.Detail).Should(ContainSubstring("greater or equal"))
 			Ω(err.Detail).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
@@ -258,8 +244,8 @@ var _ = Describe("InvalidLengthError", func() {
 
 		It("creates a http error", func() {
 			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(&goa.Error{}))
-			err := valErr.(*goa.Error)
+			Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
+			err := valErr.(*errorResponse)
 			Ω(err.Detail).Should(ContainSubstring(ctx))
 			Ω(err.Detail).Should(ContainSubstring("greater or equal"))
 			Ω(err.Detail).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
@@ -270,7 +256,7 @@ var _ = Describe("InvalidLengthError", func() {
 
 var _ = Describe("Merge", func() {
 	var err, err2 error
-	var mErr *goa.Error
+	var mErr *errorResponse
 
 	BeforeEach(func() {
 		err = nil
@@ -279,9 +265,9 @@ var _ = Describe("Merge", func() {
 	})
 
 	JustBeforeEach(func() {
-		e := goa.MergeErrors(err, err2)
+		e := MergeErrors(err, err2)
 		if e != nil {
-			mErr = e.(*goa.Error)
+			mErr = e.(*errorResponse)
 		}
 	})
 
@@ -295,7 +281,7 @@ var _ = Describe("Merge", func() {
 		const code = "foo"
 
 		BeforeEach(func() {
-			err = &goa.Error{Code: code}
+			err = &errorResponse{Code: code}
 		})
 
 		It("returns the target", func() {
@@ -308,7 +294,7 @@ var _ = Describe("Merge", func() {
 			const detail = "foo"
 
 			BeforeEach(func() {
-				err2 = &goa.Error{Detail: detail}
+				err2 = &errorResponse{Detail: detail}
 			})
 
 			It("returns it", func() {
@@ -334,21 +320,21 @@ var _ = Describe("Merge", func() {
 		const detail = "foo"
 		var status = 42
 		var code = "common"
-		var metaValues map[string]interface{}
+		var metaValues []map[string]interface{}
 
 		BeforeEach(func() {
-			err = &goa.Error{Detail: detail, Status: status, Code: code, MetaValues: metaValues}
+			err = &errorResponse{Detail: detail, Status: status, Code: code, Meta: metaValues}
 		})
 
 		Context("with another Error", func() {
 			const detail2 = "foo2"
 			var status2 = status
 			var code2 = code
-			var metaValues2 map[string]interface{}
-			var mErr2 *goa.Error
+			var metaValues2 []map[string]interface{}
+			var mErr2 *errorResponse
 
 			BeforeEach(func() {
-				mErr2 = &goa.Error{Detail: detail2, Status: status2, Code: code2, MetaValues: metaValues2}
+				mErr2 = &errorResponse{Detail: detail2, Status: status2, Code: code2, Meta: metaValues2}
 				err2 = mErr2
 			})
 
@@ -390,66 +376,38 @@ var _ = Describe("Merge", func() {
 
 			Context("with nil target metadata", func() {
 				BeforeEach(func() {
-					err.(*goa.Error).MetaValues = nil
+					err.(*errorResponse).Meta = nil
 				})
 
 				Context("with nil/empty other metadata", func() {
 					BeforeEach(func() {
-						mErr2.MetaValues = nil
+						mErr2.Meta = nil
 					})
 
 					It("keeps nil target metadata if no other metadata", func() {
-						Ω(mErr.MetaValues).Should(BeNil())
+						Ω(mErr.Meta).Should(BeNil())
 					})
 				})
 
 				Context("with other metadata", func() {
-					var metaValues2 = map[string]interface{}{"foo": 1, "bar": 2}
+					var metaValues2 = []map[string]interface{}{{"foo": 1}, {"bar": 2}}
 
 					BeforeEach(func() {
-						err.(*goa.Error).MetaValues = nil
-						mErr2.MetaValues = metaValues2
+						err.(*errorResponse).Meta = nil
+						mErr2.Meta = metaValues2
 					})
 
 					It("merges the metadata", func() {
-						Ω(mErr.MetaValues).Should(HaveLen(len(metaValues2)))
-						for k, v := range metaValues2 {
-							Ω(mErr.MetaValues).Should(HaveKeyWithValue(k, v))
+						Ω(mErr.Meta).Should(HaveLen(len(metaValues2)))
+						for i, val := range metaValues2 {
+							for k, v := range val {
+								Ω(mErr.Meta[i]).Should(HaveKeyWithValue(k, v))
+							}
 						}
 					})
 				})
 			})
 
-			Context("with metadata with a common key", func() {
-				const commonKey = "foo"
-
-				var metaValues = map[string]interface{}{commonKey: "bar", "foo2": 44}
-				var metaValues2 = map[string]interface{}{commonKey: 43, "baz": 42}
-
-				BeforeEach(func() {
-					mv := make(map[string]interface{}, len(metaValues))
-					for k, v := range metaValues {
-						mv[k] = v
-					}
-					err.(*goa.Error).MetaValues = mv
-					mErr2.MetaValues = metaValues2
-				})
-
-				It("merges the metadata", func() {
-					Ω(mErr.MetaValues).Should(HaveLen(len(metaValues) + len(metaValues2) - 1))
-					for k, v := range metaValues {
-						if k != commonKey {
-							Ω(mErr.MetaValues).Should(HaveKeyWithValue(k, v))
-						}
-					}
-					for k, v := range metaValues2 {
-						if k != commonKey {
-							Ω(mErr.MetaValues).Should(HaveKeyWithValue(k, v))
-						}
-					}
-					Ω(mErr.MetaValues[commonKey]).Should(Equal(metaValues2[commonKey]))
-				})
-			})
 		})
 	})
 

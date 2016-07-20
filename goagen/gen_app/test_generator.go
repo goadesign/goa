@@ -165,7 +165,7 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		validate := codegen.RecursiveChecker(p.AttributeDefinition, false, false, false, "payload", "raw", 1, true)
 		returnType = &ObjectType{}
 		returnType.Type = tmp
-		if p.IsObject() {
+		if p.IsObject() && !p.IsBuiltIn() {
 			returnType.Pointer = "*"
 		}
 		returnType.Validatable = validate != ""
@@ -303,11 +303,11 @@ func {{ $test.Name }}(t *testing.T, ctx context.Context, service *goa.Service, c
 	// Validate payload
 	err := {{ $test.Payload.Name }}.Validate()
 	if err != nil {
-		e, ok := err.(*goa.Error)
+		e, ok := err.(goa.ServiceError)
 		if !ok {
 			panic(err) // bug
 		}
-		if e.Status != {{ $test.Status }} {
+		if e.ResponseStatus() != {{ $test.Status }} {
 			t.Errorf("unexpected payload validation error: %+v", e)
 		}
 		{{ if $test.ReturnType }}return nil, {{ if eq $test.Status 400 }}e{{ else }}nil{{ end }}{{ else }}return nil{{ end }}

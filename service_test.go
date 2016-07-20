@@ -49,7 +49,7 @@ var _ = Describe("Service", func() {
 		})
 
 		It("handles requests with no registered handlers", func() {
-			Ω(string(rw.Body)).Should(Equal(`{"code":"not_found","status":404,"detail":"/foo"}` + "\n"))
+			Ω(string(rw.Body)).Should(MatchRegexp(`{"id":".*","code":"not_found","status":404,"detail":"/foo"}` + "\n"))
 		})
 
 		Context("with middleware", func() {
@@ -111,7 +111,7 @@ var _ = Describe("Service", func() {
 		})
 
 		It("prevents reading more bytes", func() {
-			Ω(string(rw.Body)).Should(Equal(`413 request_too_large: request body length exceeds 4 bytes`))
+			Ω(string(rw.Body)).Should(MatchRegexp(`\[.*\] 413 request_too_large: request body length exceeds 4 bytes`))
 		})
 	})
 
