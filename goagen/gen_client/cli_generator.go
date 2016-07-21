@@ -116,6 +116,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 		codegen.SimpleImport("path"),
 		codegen.SimpleImport("path/filepath"),
 		codegen.SimpleImport("strings"),
+		codegen.SimpleImport("strconv"),
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("github.com/spf13/cobra"),
