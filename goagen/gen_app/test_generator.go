@@ -199,7 +199,7 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		Name:           fmt.Sprintf("%s%s%s%s%s", actionName, ctrlName, respQualifier, routeQualifier, viewQualifier),
 		ActionName:     actionName,
 		ResourceName:   ctrlName,
-		Comment:        fmt.Sprintf("%s %s", actionName, comment),
+		Comment:        comment,
 		Params:         pathParams(action, route),
 		QueryParams:    queryParams(action),
 		Payload:        payload,
