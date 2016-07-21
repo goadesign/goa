@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -975,10 +976,10 @@ func (a *AttributeDefinition) SetExample(example interface{}) bool {
 // a custom example or auto-generate for the user. It also tracks whether we've randomized
 // the entire example; if so, we shall re-generate the random value for Array/Hash.
 func (a *AttributeDefinition) finalizeExample() interface{} {
-	return a.finalizeExampleRecursive(Design.RandomGenerator(), make(map[string]interface{}))
+	return a.finalizeExampleRecursive(Design.RandomGenerator(), make(map[string]int))
 }
 
-func (a *AttributeDefinition) finalizeExampleRecursive(rand *RandomGenerator, examples map[string]interface{}) interface{} {
+func (a *AttributeDefinition) finalizeExampleRecursive(rand *RandomGenerator, examples map[string]int) interface{} {
 	if a.Example != nil {
 		return a.Example
 	}
@@ -990,37 +991,24 @@ func (a *AttributeDefinition) finalizeExampleRecursive(rand *RandomGenerator, ex
 	} else if ut, ok := a.Type.(*UserTypeDefinition); ok {
 		key = ut.TypeName
 	}
-	if ex, ok := examples[key]; ok {
-		a.Example = ex
-		return ex
+	if key != "" {
+		if count, ok := examples[key]; ok {
+			if count > 3 {
+				// Only go a few levels deep
+				t := toReflectType(a.Type)
+				a.Example = reflect.Zero(t).Interface()
+				return a.Example
+			}
+		}
+		examples[key] = examples[key] + 1
 	}
 
 	switch {
 	case a.Type.IsArray():
-		ary := a.Type.ToArray()
-		ln := newExampleGenerator(a, rand).ExampleLength()
-		res := make([]interface{}, ln)
-		if key != "" {
-			examples[key] = res
-		}
-		for i := 0; i < ln; i++ {
-			res[i] = ary.ElemType.finalizeExampleRecursive(rand, examples)
-		}
-		a.Example = ary.MakeSlice(res)
+		a.Example = a.arrayExample(rand, examples)
 
 	case a.Type.IsHash():
-		h := a.Type.ToHash()
-		ln := newExampleGenerator(a, rand).ExampleLength()
-		res := make(map[interface{}]interface{}, ln)
-		if key != "" {
-			examples[key] = res
-		}
-		for i := 0; i < ln; i++ {
-			k := h.KeyType.finalizeExampleRecursive(rand, examples)
-			v := h.ElemType.finalizeExampleRecursive(rand, examples)
-			res[k] = v
-		}
-		a.Example = h.MakeMap(res)
+		a.Example = a.hashExample(rand, examples)
 
 	case a.Type.IsObject():
 		// project media types
@@ -1048,9 +1036,6 @@ func (a *AttributeDefinition) finalizeExampleRecursive(rand *RandomGenerator, ex
 		sort.Strings(keys)
 
 		res := make(map[string]interface{})
-		if key != "" {
-			examples[key] = res
-		}
 		for _, n := range keys {
 			att := aObj[n]
 			res[n] = att.finalizeExampleRecursive(rand, examples)
@@ -1062,6 +1047,28 @@ func (a *AttributeDefinition) finalizeExampleRecursive(rand *RandomGenerator, ex
 	}
 
 	return a.Example
+}
+
+func (a *AttributeDefinition) arrayExample(rand *RandomGenerator, examples map[string]int) interface{} {
+	ary := a.Type.ToArray()
+	ln := newExampleGenerator(a, rand).ExampleLength()
+	res := make([]interface{}, ln)
+	for i := 0; i < ln; i++ {
+		res[i] = ary.ElemType.finalizeExampleRecursive(rand, examples)
+	}
+	return ary.MakeSlice(res)
+}
+
+func (a *AttributeDefinition) hashExample(rand *RandomGenerator, examples map[string]int) interface{} {
+	h := a.Type.ToHash()
+	ln := newExampleGenerator(a, rand).ExampleLength()
+	res := make(map[interface{}]interface{}, ln)
+	for i := 0; i < ln; i++ {
+		k := h.KeyType.finalizeExampleRecursive(rand, examples)
+		v := h.ElemType.finalizeExampleRecursive(rand, examples)
+		res[k] = v
+	}
+	return h.MakeMap(res)
 }
 
 // Merge merges the argument attributes into the target and returns the target overriding existing
