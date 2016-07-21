@@ -283,9 +283,9 @@ func joinNames(useNil bool, atts ...*design.AttributeDefinition) string {
 					case design.Integer:
 						field = `intFlagVal("` + n + `", ` + field + ")"
 					case design.Number:
-						field = `float64FlagVal("` + n + `", ` + field + ")"
+						field = "float64Val(" + field + ")"
 					case design.Boolean:
-						field = `boolFlagVal("` + n + `", ` + field + ")"
+						field = "boolVal(" + field + ")"
 					case design.String:
 						field = `stringFlagVal("` + n + `", ` + field + ")"
 					case design.UUID:
@@ -302,6 +302,10 @@ func joinNames(useNil bool, atts ...*design.AttributeDefinition) string {
 				}
 			} else if a.Type.IsArray() {
 				switch a.Type.ToArray().ElemType.Type {
+				case design.Number:
+					field = "float64Array(" + field + ")"
+				case design.Boolean:
+					field = "boolArray(" + field + ")"
 				case design.UUID:
 					field = "uuidArray(" + field + ")"
 				case design.DateTime:
@@ -388,9 +392,9 @@ func flagType(att *design.AttributeDefinition) string {
 	case design.IntegerKind:
 		return "Int"
 	case design.NumberKind:
-		return "Float64"
+		return "String"
 	case design.BooleanKind:
-		return "Bool"
+		return "String"
 	case design.StringKind:
 		return "String"
 	case design.DateTimeKind:
@@ -400,7 +404,14 @@ func flagType(att *design.AttributeDefinition) string {
 	case design.AnyKind:
 		return "String"
 	case design.ArrayKind:
-		return flagType(att.Type.(*design.Array).ElemType) + "Slice"
+		switch att.Type.ToArray().ElemType.Type.Kind() {
+		case design.NumberKind:
+			return "StringSlice"
+		case design.BooleanKind:
+			return "StringSlice"
+		default:
+			return flagType(att.Type.(*design.Array).ElemType) + "Slice"
+		}
 	case design.UserTypeKind:
 		return flagType(att.Type.(*design.UserTypeDefinition).AttributeDefinition)
 	case design.MediaTypeKind:
@@ -721,15 +732,15 @@ func jsonVal(val string) *interface{} {
 	return &t
 }
 
-func jsonArray(ids []string) []interface{} {
-	if ids == nil {
+func jsonArray(ins []string) []interface{} {
+	if ins == nil {
 		return nil
 	}
-	var times []interface{}
-	for _, id := range ids {
-		times = append(times, jsonVal(id))
+	var vals []interface{}
+	for _, id := range ins {
+		vals = append(vals, jsonVal(id))
 	}
-	return times
+	return vals
 }
 
 func timeVal(val string) *time.Time {
@@ -740,15 +751,15 @@ func timeVal(val string) *time.Time {
 	return &t
 }
 
-func timeArray(ids []string) []time.Time {
-	if ids == nil {
+func timeArray(ins []string) []time.Time {
+	if ins == nil {
 		return nil
 	}
-	var times []time.Time
-	for _, id := range ids {
-		times = append(times, *timeVal(id))
+	var vals []time.Time
+	for _, id := range ins {
+		vals = append(vals, *timeVal(id))
 	}
-	return times
+	return vals
 }
 
 func uuidVal(val string) *uuid.UUID {
@@ -759,13 +770,51 @@ func uuidVal(val string) *uuid.UUID {
 	return &t
 }
 
-func uuidArray(ids []string) []uuid.UUID {
-	if ids == nil {
+func uuidArray(ins []string) []uuid.UUID {
+	if ins == nil {
 		return nil
 	}
-	var uuids []uuid.UUID
-	for _, id := range ids {
-		uuids = append(uuids, *uuidVal(id))
+	var vals []uuid.UUID
+	for _, id := range ins {
+		vals = append(vals, *uuidVal(id))
 	}
-	return uuids
+	return vals
+}
+
+func float64Val(val string) *float64 {
+	t, err := strconv.ParseFloat(val, 64)
+	if err != nil {
+		panic(err)
+	}
+	return &t
+}
+
+func float64Array(ins []string) []float64 {
+	if ins == nil {
+		return nil
+	}
+	var vals []float64
+	for _, id := range ins {
+		vals = append(vals, *float64Val(id))
+	}
+	return vals
+}
+
+func boolVal(val string) *bool {
+	t, err := strconv.ParseBool(val)
+	if err != nil {
+		panic(err)
+	}
+	return &t
+}
+
+func boolArray(ins []string) []bool {
+	if ins == nil {
+		return nil
+	}
+	var vals []bool
+	for _, id := range ins {
+		vals = append(vals, *boolVal(id))
+	}
+	return vals
 }`

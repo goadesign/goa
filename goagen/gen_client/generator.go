@@ -661,9 +661,9 @@ func cmdFieldTypeString(t design.DataType, point bool) string {
 	if point && !t.IsArray() {
 		pointer = "*"
 	}
-	if t.Kind() == design.UUIDKind || t.Kind() == design.DateTimeKind || t.Kind() == design.AnyKind {
+	if t.Kind() == design.UUIDKind || t.Kind() == design.DateTimeKind || t.Kind() == design.AnyKind || t.Kind() == design.NumberKind || t.Kind() == design.BooleanKind {
 		suffix = "string"
-	} else if isArrayOfType(t, design.UUIDKind, design.DateTimeKind, design.AnyKind) {
+	} else if isArrayOfType(t, design.UUIDKind, design.DateTimeKind, design.AnyKind, design.NumberKind, design.BooleanKind) {
 		suffix = "[]string"
 	} else {
 		suffix = codegen.GoNativeType(t)
