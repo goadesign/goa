@@ -16,7 +16,7 @@ import (
 
 const (
 	// ErrorMediaIdentifier is the media type identifier used for error responses.
-	ErrorMediaIdentifier = "application/vnd.api.error+json"
+	ErrorMediaIdentifier = "application/vnd.goa.error"
 )
 
 type (
@@ -270,7 +270,8 @@ func (ctrl *Controller) MuxHandler(name string, hdlr Handler, unm Unmarshaler) M
 		if req.ContentLength > 0 && unm != nil {
 			if err := unm(ctx, ctrl.Service, req); err != nil {
 				if err.Error() == "http: request body too large" {
-					err = ErrRequestBodyTooLarge("request body length exceeds %d bytes", ctrl.MaxRequestBodyLength)
+					msg := fmt.Sprintf("request body length exceeds %d bytes", ctrl.MaxRequestBodyLength)
+					err = ErrRequestBodyTooLarge(msg)
 				} else {
 					err = ErrBadRequest(err)
 				}

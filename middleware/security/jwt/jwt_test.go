@@ -72,7 +72,7 @@ var _ = Describe("Middleware", func() {
 
 			It("should fail with an error", func() {
 				Ω(dispatchResult).Should(HaveOccurred())
-				Ω(dispatchResult.(*goa.Error)).Should(HaveOccurred())
+				Ω(dispatchResult.(error)).Should(HaveOccurred())
 			})
 		})
 
@@ -112,7 +112,7 @@ var _ = Describe("Middleware", func() {
 
 			It("should fail with an error", func() {
 				Ω(dispatchResult).Should(HaveOccurred())
-				Ω(dispatchResult.(*goa.Error)).Should(HaveOccurred())
+				Ω(dispatchResult.(error)).Should(HaveOccurred())
 			})
 		})
 
