@@ -280,40 +280,12 @@ func joinNames(useNil bool, atts ...*design.AttributeDefinition) string {
 			field := fmt.Sprintf("cmd.%s", codegen.Goify(n, true))
 			if !a.Type.IsArray() && !att.IsRequired(n) && !att.IsNonZero(n) {
 				if useNil {
-					switch a.Type {
-					case design.Integer:
-						field = `intFlagVal("` + n + `", ` + field + ")"
-					case design.Number:
-						field = "float64Val(" + field + ")"
-					case design.Boolean:
-						field = "boolVal(" + field + ")"
-					case design.String:
-						field = `stringFlagVal("` + n + `", ` + field + ")"
-					case design.UUID:
-						field = "uuidVal(" + field + ")"
-					case design.DateTime:
-						field = "timeVal(" + field + ")"
-					case design.Any:
-						field = "jsonVal(" + field + ")"
-					default:
-						field = "&" + field
-					}
+					field = flagTypeVal(a, n, field)
 				} else {
 					field = "&" + field
 				}
 			} else if a.Type.IsArray() {
-				switch a.Type.ToArray().ElemType.Type {
-				case design.Number:
-					field = "float64Array(" + field + ")"
-				case design.Boolean:
-					field = "boolArray(" + field + ")"
-				case design.UUID:
-					field = "uuidArray(" + field + ")"
-				case design.DateTime:
-					field = "timeArray(" + field + ")"
-				case design.Any:
-					field = "jsonArray(" + field + ")"
-				}
+				field = flagTypeArrayVal(a, field)
 			}
 			if att.IsRequired(n) {
 				names = append(names, field)
@@ -325,6 +297,43 @@ func joinNames(useNil bool, atts ...*design.AttributeDefinition) string {
 		elems = append(elems, optNames...)
 	}
 	return strings.Join(elems, ", ")
+}
+
+func flagTypeVal(a *design.AttributeDefinition, key string, field string) string {
+	switch a.Type {
+	case design.Integer:
+		return `intFlagVal("` + key + `", ` + field + ")"
+	case design.Number:
+		return "float64Val(" + field + ")"
+	case design.Boolean:
+		return "boolVal(" + field + ")"
+	case design.String:
+		return `stringFlagVal("` + key + `", ` + field + ")"
+	case design.UUID:
+		return "uuidVal(" + field + ")"
+	case design.DateTime:
+		return "timeVal(" + field + ")"
+	case design.Any:
+		return "jsonVal(" + field + ")"
+	default:
+		return "&" + field
+	}
+}
+
+func flagTypeArrayVal(a *design.AttributeDefinition, field string) string {
+	switch a.Type.ToArray().ElemType.Type {
+	case design.Number:
+		return "float64Array(" + field + ")"
+	case design.Boolean:
+		return "boolArray(" + field + ")"
+	case design.UUID:
+		return "uuidArray(" + field + ")"
+	case design.DateTime:
+		return "timeArray(" + field + ")"
+	case design.Any:
+		return "jsonArray(" + field + ")"
+	}
+	return field
 }
 
 // routes create the action command "Use" suffix.
