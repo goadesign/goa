@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/goadesign/goa"
@@ -9,8 +10,8 @@ import (
 
 // ErrorHandler turns a Go error into an HTTP response. It should be placed in the middleware chain
 // below the logger middleware so the logger properly logs the HTTP response. ErrorHandler
-// understands instances of goa.Error and returns the status and response body embodied in them,
-// it turns other Go error types into a 500 internal error response.
+// understands instances of goa.ServiceError and returns the status and response body embodied in
+// them, it turns other Go error types into a 500 internal error response.
 // If verbose is false the details of internal errors is not included in HTTP responses.
 func ErrorHandler(service *goa.Service, verbose bool) goa.Middleware {
 	return func(h goa.Handler) goa.Handler {
@@ -22,10 +23,10 @@ func ErrorHandler(service *goa.Service, verbose bool) goa.Middleware {
 
 			status := http.StatusInternalServerError
 			var respBody interface{}
-			if err, ok := e.(*goa.Error); ok {
-				status = err.Status
+			if err, ok := e.(goa.ServiceError); ok {
+				status = err.ResponseStatus()
 				respBody = err
-				goa.ContextResponse(ctx).ErrorCode = err.Code
+				goa.ContextResponse(ctx).ErrorCode = err.Token()
 				rw.Header().Set("Content-Type", goa.ErrorMediaIdentifier)
 			} else {
 				respBody = e.Error()
@@ -40,7 +41,8 @@ func ErrorHandler(service *goa.Service, verbose bool) goa.Middleware {
 				goa.LogError(ctx, "uncaught error", "id", reqID, "msg", respBody)
 				if !verbose {
 					rw.Header().Set("Content-Type", goa.ErrorMediaIdentifier)
-					respBody = goa.ErrInternal("%s [%s]", http.StatusText(http.StatusInternalServerError), reqID)
+					msg := fmt.Sprintf("%s [%s]", http.StatusText(http.StatusInternalServerError), reqID)
+					respBody = goa.ErrInternal(msg)
 				}
 			}
 			return service.Send(ctx, status, respBody)

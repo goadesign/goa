@@ -128,7 +128,7 @@ var (
 	GobContentTypes = []string{"application/gob", "application/x-gob"}
 
 	// ErrorMediaIdentifier is the media type identifier used for error responses.
-	ErrorMediaIdentifier = "application/vnd.api.error+json"
+	ErrorMediaIdentifier = "application/vnd.goa.error"
 
 	// ErrorMedia is the built-in media type for error responses.
 	ErrorMedia = &MediaTypeDefinition{
@@ -144,7 +144,7 @@ var (
 					"meta":   map[string]interface{}{"timestamp": 1458609066},
 				},
 			},
-			TypeName: "Error",
+			TypeName: "error",
 		},
 		Identifier: ErrorMediaIdentifier,
 		Views:      map[string]*ViewDefinition{"default": errorMediaView},

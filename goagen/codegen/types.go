@@ -177,6 +177,11 @@ func attributeTags(parent, att *design.AttributeDefinition, name string, private
 // This function assumes the type is in the same package as the code accessing it.
 func GoTypeRef(t design.DataType, required []string, tabs int, private bool) string {
 	tname := GoTypeName(t, required, tabs, private)
+	if mt, ok := t.(*design.MediaTypeDefinition); ok {
+		if mt.IsBuiltIn() {
+			return tname // error and not *error
+		}
+	}
 	if t.IsObject() {
 		return "*" + tname
 	}
@@ -287,7 +292,7 @@ func GoTypeDesc(t design.DataType, upper bool) string {
 // or the empty string if there isn't one.
 func BuiltInTypeName(mt *design.MediaTypeDefinition) string {
 	if mt.Identifier == design.ErrorMedia.Identifier {
-		return "goa.Error"
+		return "error"
 	}
 	return ""
 }

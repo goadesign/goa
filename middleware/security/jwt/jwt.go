@@ -43,7 +43,7 @@ import (
 //    validationHandler, _ := goa.NewMiddleware(func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 //        token := jwt.ContextJWT(ctx)
 //        if val, ok := token.Claims["is_uncle"].(string); !ok || val != "ben" {
-//            return jwt.ErrJWTError.Errorf("you are not uncle ben's")
+//            return jwt.ErrJWTError("you are not uncle ben's")
 //        }
 //    })
 //
@@ -82,11 +82,11 @@ func New(validationKeys interface{}, validationFunc goa.Middleware, scheme *goa.
 			}
 			val := req.Header.Get(scheme.Name)
 			if val == "" {
-				return ErrJWTError("missing header %q", scheme.Name)
+				return ErrJWTError(fmt.Sprintf("missing header %q", scheme.Name))
 			}
 
 			if !strings.HasPrefix(strings.ToLower(val), "bearer ") {
-				return ErrJWTError("invalid or malformed %q header, expected 'Authorization: Bearer JWT-token...'", val)
+				return ErrJWTError(fmt.Sprintf("invalid or malformed %q header, expected 'Authorization: Bearer JWT-token...'", val))
 			}
 
 			incomingToken := strings.Split(val, " ")[1]
@@ -102,7 +102,7 @@ func New(validationKeys interface{}, validationFunc goa.Middleware, scheme *goa.
 				panic("how did this happen ? unsupported algo in jwt middleware")
 			}
 			if err != nil {
-				return ErrJWTError("JWT validation failed: %s", err)
+				return ErrJWTError(fmt.Sprintf("JWT validation failed: %s", err))
 			}
 
 			scopesInClaim, scopesInClaimList, err := parseClaimScopes(token)
@@ -115,7 +115,8 @@ func New(validationKeys interface{}, validationFunc goa.Middleware, scheme *goa.
 
 			for _, scope := range requiredScopes {
 				if !scopesInClaim[scope] {
-					return ErrJWTError("authorization failed: required 'scopes' not present in JWT claim").Meta("required_scopes", requiredScopes, "scopes_in_claim", scopesInClaimList)
+					msg := "authorization failed: required 'scopes' not present in JWT claim"
+					return ErrJWTError(msg, "required", requiredScopes, "scopes", scopesInClaimList)
 				}
 			}
 
@@ -190,7 +191,7 @@ func validateRSAKeys(rsaKeys []*rsa.PublicKey, algo, incomingToken string) (toke
 	for _, pubkey := range rsaKeys {
 		token, err = jwt.Parse(incomingToken, func(token *jwt.Token) (interface{}, error) {
 			if !strings.HasPrefix(token.Method.Alg(), algo) {
-				return nil, ErrJWTError("Unexpected signing method: %v", token.Header["alg"])
+				return nil, ErrJWTError(fmt.Sprintf("Unexpected signing method: %v", token.Header["alg"]))
 			}
 			return pubkey, nil
 		})
@@ -205,7 +206,7 @@ func validateHMACKeys(hmacKeys []string, algo, incomingToken string) (token *jwt
 	for _, key := range hmacKeys {
 		token, err = jwt.Parse(incomingToken, func(token *jwt.Token) (interface{}, error) {
 			if !strings.HasPrefix(token.Method.Alg(), algo) {
-				return nil, ErrJWTError("Unexpected signing method: %v", token.Header["alg"])
+				return nil, ErrJWTError(fmt.Sprintf("Unexpected signing method: %v", token.Header["alg"]))
 			}
 			return []byte(key), nil
 		})

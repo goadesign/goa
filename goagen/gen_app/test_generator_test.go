@@ -127,7 +127,7 @@ var _ = Describe("Generate", func() {
 									"ok": {
 										Name:      "ok",
 										Type:      design.ErrorMedia,
-										MediaType: "application/vnd.api.error+json",
+										MediaType: "application/vnd.goa.error",
 									},
 								},
 							},
@@ -152,7 +152,7 @@ var _ = Describe("Generate", func() {
 			// Multiple Routes
 			Ω(content).Should(ContainSubstring("ShowFooOK1("))
 			// Get returns an error media type
-			Ω(content).Should(ContainSubstring("GetFooOK(t *testing.T, ctx context.Context, service *goa.Service, ctrl app.FooController, payload app.CustomName) (http.ResponseWriter, *goa.Error)"))
+			Ω(content).Should(ContainSubstring("GetFooOK(t *testing.T, ctx context.Context, service *goa.Service, ctrl app.FooController, payload app.CustomName) (http.ResponseWriter, error)"))
 		})
 
 		It("generates the route path parameters", func() {
