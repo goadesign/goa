@@ -1,10 +1,10 @@
 package design
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"path"
-	"reflect"
 	"sort"
 	"strings"
 
@@ -976,12 +976,13 @@ func (a *AttributeDefinition) SetExample(example interface{}) bool {
 // a custom example or auto-generate for the user. It also tracks whether we've randomized
 // the entire example; if so, we shall re-generate the random value for Array/Hash.
 func (a *AttributeDefinition) finalizeExample() interface{} {
-	return a.finalizeExampleRecursive(Design.RandomGenerator(), make(map[string]int))
+	res, _ := a.finalizeExampleRecursive(Design.RandomGenerator(), nil)
+	return res
 }
 
-func (a *AttributeDefinition) finalizeExampleRecursive(rand *RandomGenerator, examples map[string]int) interface{} {
+func (a *AttributeDefinition) finalizeExampleRecursive(rand *RandomGenerator, path []string) (interface{}, error) {
 	if a.Example != nil {
-		return a.Example
+		return a.Example, nil
 	}
 
 	// Avoid infinite loops
@@ -992,23 +993,25 @@ func (a *AttributeDefinition) finalizeExampleRecursive(rand *RandomGenerator, ex
 		key = ut.TypeName
 	}
 	if key != "" {
-		if count, ok := examples[key]; ok {
-			if count > 3 {
-				// Only go a few levels deep
-				t := toReflectType(a.Type)
-				a.Example = reflect.Zero(t).Interface()
-				return a.Example
+		count := 0
+		for _, k := range path {
+			if k == key {
+				count++
 			}
 		}
-		examples[key] = examples[key] + 1
+		if count > 1 {
+			// Only go a couple of levels deep
+			return nil, errors.New("too deep")
+		}
+		path = append(path, key)
 	}
 
 	switch {
 	case a.Type.IsArray():
-		a.Example = a.arrayExample(rand, examples)
+		a.Example = a.arrayExample(rand, path)
 
 	case a.Type.IsHash():
-		a.Example = a.hashExample(rand, examples)
+		a.Example = a.hashExample(rand, path)
 
 	case a.Type.IsObject():
 		// project media types
@@ -1038,7 +1041,12 @@ func (a *AttributeDefinition) finalizeExampleRecursive(rand *RandomGenerator, ex
 		res := make(map[string]interface{})
 		for _, n := range keys {
 			att := aObj[n]
-			res[n] = att.finalizeExampleRecursive(rand, examples)
+			ex, err := att.finalizeExampleRecursive(rand, path)
+			if err == nil {
+				res[n] = ex
+			} else {
+				res[n] = "-"
+			}
 		}
 		a.Example = res
 
@@ -1046,27 +1054,48 @@ func (a *AttributeDefinition) finalizeExampleRecursive(rand *RandomGenerator, ex
 		a.Example = a.GenerateExample(rand)
 	}
 
-	return a.Example
+	return a.Example, nil
 }
 
-func (a *AttributeDefinition) arrayExample(rand *RandomGenerator, examples map[string]int) interface{} {
+func (a *AttributeDefinition) arrayExample(rand *RandomGenerator, path []string) interface{} {
 	ary := a.Type.ToArray()
 	ln := newExampleGenerator(a, rand).ExampleLength()
 	res := make([]interface{}, ln)
+	failed := false
 	for i := 0; i < ln; i++ {
-		res[i] = ary.ElemType.finalizeExampleRecursive(rand, examples)
+		ex, err := ary.ElemType.finalizeExampleRecursive(rand, path)
+		if err != nil {
+			failed = true
+			break
+		}
+		res[i] = ex
+	}
+	if failed {
+		return "-"
 	}
 	return ary.MakeSlice(res)
 }
 
-func (a *AttributeDefinition) hashExample(rand *RandomGenerator, examples map[string]int) interface{} {
+func (a *AttributeDefinition) hashExample(rand *RandomGenerator, path []string) interface{} {
 	h := a.Type.ToHash()
 	ln := newExampleGenerator(a, rand).ExampleLength()
 	res := make(map[interface{}]interface{}, ln)
+	failed := false
 	for i := 0; i < ln; i++ {
-		k := h.KeyType.finalizeExampleRecursive(rand, examples)
-		v := h.ElemType.finalizeExampleRecursive(rand, examples)
+		k, err := h.KeyType.finalizeExampleRecursive(rand, path)
+		if err != nil {
+			failed = true
+			break
+		}
+		v, err := h.ElemType.finalizeExampleRecursive(rand, path)
+		if err != nil {
+			failed = true
+			break
+		}
 		res[k] = v
+	}
+	if failed {
+		return "-"
 	}
 	return h.MakeMap(res)
 }
