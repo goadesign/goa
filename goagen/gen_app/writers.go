@@ -2,6 +2,7 @@ package genapp
 
 import (
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 	"text/template"
@@ -140,6 +141,16 @@ func (c *ContextTemplateData) IsPathParam(param string) bool {
 	return pp
 }
 
+// HasParam returns true if the context template data has a param with the given name, false
+// otherwise.
+func (c *ContextTemplateData) HasParam(param string) bool {
+	if c.Params == nil {
+		return false
+	}
+	_, ok := c.Params.Type.ToObject()[param]
+	return ok
+}
+
 // MustValidate returns true if code that checks for the presence of the given param must be
 // generated.
 func (c *ContextTemplateData) MustValidate(name string) bool {
@@ -180,8 +191,9 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 		return err
 	}
 	fn := template.FuncMap{
-		"newCoerceData":  newCoerceData,
-		"arrayAttribute": arrayAttribute,
+		"newCoerceData":      newCoerceData,
+		"arrayAttribute":     arrayAttribute,
+		"canonicalHeaderKey": http.CanonicalHeaderKey,
 	}
 	if err := w.ExecuteTemplate("new", ctxNewT, fn, data); err != nil {
 		return err
@@ -389,7 +401,9 @@ type {{ .Name }} struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
-{{ if .Params }}{{ range $name, $att := .Params.Type.ToObject }}{{/*
+{{ if .Headers }}{{ range $name, $att := .Headers.Type.ToObject }}{{ if not ($.HasParam $name) }}{{/*
+*/}}	{{ goify $name true }} {{ if and $att.Type.IsPrimitive ($.Headers.IsPrimitivePointer $name) }}*{{ end }}{{ gotyperef .Type nil 0 false }}
+{{ end }}{{ end }}{{ end }}{{ if .Params }}{{ range $name, $att := .Params.Type.ToObject }}{{/*
 */}}	{{ goify $name true }} {{ if and $att.Type.IsPrimitive ($.Params.IsPrimitivePointer $name) }}*{{ end }}{{ gotyperef .Type nil 0 false }}
 {{ end }}{{ end }}{{ if .Payload }}	Payload {{ gotyperef .Payload nil 0 false }}
 {{ end }}}
@@ -480,16 +494,27 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 	resp := goa.ContextResponse(ctx)
 	resp.Service = service
 	req := goa.ContextRequest(ctx)
-	rctx := {{ .Name }}{Context: ctx, ResponseData: resp, RequestData: req}
-{{ if .Headers }}{{ $headers := .Headers }}{{ range $name, $att := $headers.Type.ToObject }}	raw{{ goify $name true }} := req.Header.Get("{{ $name }}")
-{{ if $headers.IsRequired $name }}	if raw{{ goify $name true }} == "" {
+	rctx := {{ .Name }}{Context: ctx, ResponseData: resp, RequestData: req}{{/*
+*/}}
+{{ if .Headers }}{{ range $name, $att := .Headers.Type.ToObject }}	header{{ goify $name true }} := req.Header["{{ canonicalHeaderKey $name }}"]
+{{ $mustValidate := $.Headers.IsRequired $name }}{{ if $mustValidate }}	if len(header{{ goify $name true }}) == 0 {
 		err = goa.MergeErrors(err, goa.MissingHeaderError("{{ $name }}"))
 	} else {
-{{ else }}	if raw{{ goify $name true }} != "" {
-{{ end }}{{ $validation := validationChecker $att ($headers.IsNonZero $name) ($headers.IsRequired $name) ($headers.HasDefaultValue $name) (printf "raw%s" (goify $name true)) $name 2 false }}{{/*
+{{ else }}	if len(header{{ goify $name true }}) > 0 {
+{{ end }}{{/* if $mustValidate */}}{{ if $att.Type.IsArray }}		if len(header{{ goify $name true }}) > 1 || len(header{{ goify $name true }}[0]) > 0 {
+			var headers {{ gotypedef $att 2 true false }}
+			for _, raw{{ goify $name true}} := range header{{ goify $name true}} {
+{{ template "Coerce" (newCoerceData $name $att ($.Headers.IsPrimitivePointer $name) "headers" 4) }}{{/*
+*/}}				{{ printf "rctx.%s" (goify $name true) }} = append({{ printf "rctx.%s" (goify $name true) }}, headers...)
+			}
+		}
+{{ else }}		raw{{ goify $name true}} := header{{ goify $name true}}[0]
+{{ template "Coerce" (newCoerceData $name $att ($.Headers.IsPrimitivePointer $name) (printf "rctx.%s" (goify $name true)) 2) }}{{ end }}{{/*
+*/}}{{ $validation := validationChecker $att ($.Headers.IsNonZero $name) ($.Headers.IsRequired $name) ($.Headers.HasDefaultValue $name) (printf "rctx.%s" (goify $name true)) $name 2 false }}{{/*
 */}}{{ if $validation }}{{ $validation }}
 {{ end }}	}
-{{ end }}{{ end }}{{/*
+{{ end }}{{ end }}{{/* if .Headers }}{{/*
+
 */}}{{ if.Params }}{{ range $name, $att := .Params.Type.ToObject }}	param{{ goify $name true }} := req.Params["{{ $name }}"]
 {{ $mustValidate := $.MustValidate $name }}{{ if $mustValidate }}	if len(param{{ goify $name true }}) == 0 {
 		err = goa.MergeErrors(err, goa.MissingParamError("{{ $name }}"))

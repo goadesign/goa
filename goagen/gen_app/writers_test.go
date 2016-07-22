@@ -281,6 +281,55 @@ var _ = Describe("ContextsWriter", func() {
 				})
 			})
 
+			Context("with a string header", func() {
+				BeforeEach(func() {
+					strHeader := &design.AttributeDefinition{Type: design.String}
+					dataType := design.Object{
+						"Header": strHeader,
+					}
+					headers = &design.AttributeDefinition{
+						Type: dataType,
+					}
+				})
+
+				It("writes the contexts code", func() {
+					err := writer.Execute(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(strHeaderContext))
+					Ω(written).Should(ContainSubstring(strHeaderContextFactory))
+				})
+			})
+
+			Context("with a string header and param with the same name", func() {
+				BeforeEach(func() {
+					str := &design.AttributeDefinition{Type: design.String}
+					dataType := design.Object{
+						"param": str,
+					}
+					params = &design.AttributeDefinition{
+						Type: dataType,
+					}
+					headers = &design.AttributeDefinition{
+						Type: dataType,
+					}
+				})
+
+				It("writes the contexts code", func() {
+					err := writer.Execute(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(strContext))
+					Ω(written).Should(ContainSubstring(strHeaderParamContextFactory))
+				})
+			})
+
 			Context("with a simple payload", func() {
 				BeforeEach(func() {
 					payload = &design.UserTypeDefinition{
@@ -819,6 +868,52 @@ func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottl
 	resp.Service = service
 	req := goa.ContextRequest(ctx)
 	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramParam := req.Params["param"]
+	if len(paramParam) > 0 {
+		rawParam := paramParam[0]
+		rctx.Param = &rawParam
+	}
+	return &rctx, err
+}
+`
+
+	strHeaderContext = `
+type ListBottleContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	Header *string
+}
+`
+
+	strHeaderContextFactory = `
+func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottleContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
+	headerHeader := req.Header["Header"]
+	if len(headerHeader) > 0 {
+		rawHeader := headerHeader[0]
+		rctx.Header = &rawHeader
+	}
+	return &rctx, err
+}
+`
+
+	strHeaderParamContextFactory = `
+func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottleContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
+	headerParam := req.Header["Param"]
+	if len(headerParam) > 0 {
+		rawParam := headerParam[0]
+		rctx.Param = &rawParam
+	}
 	paramParam := req.Params["param"]
 	if len(paramParam) > 0 {
 		rawParam := paramParam[0]
