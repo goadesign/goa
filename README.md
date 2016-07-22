@@ -7,12 +7,6 @@ goa is a framework for building microservices in Go using a unique design-first 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/goadesign/goa/blob/master/LICENSE)
 [![Godoc](https://godoc.org/github.com/goadesign/goa?status.svg)](http://godoc.org/github.com/goadesign/goa)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
-[![Intro](https://img.shields.io/badge/post-gopheracademy-ff69b4.svg?style=flat)](https://blog.gopheracademy.com/advent-2015/goaUntanglingMicroservices/)
-
-## NEWS: goa at Gophercon
-
-Come hear about goa firsthand at [Gophercon](https://gophercon.com/sessions/rsimon/)!
-Room 501, July 11th, 04:30pm - 05:20pm.
 
 ## Why goa?
 
@@ -50,13 +44,6 @@ version of the documentation without having to write a single line of implementa
 
 This idea of separating design and implementation is not new, the excellent [Praxis](http://praxis-framework.io)
 framework from RightScale follows the same pattern and was an inspiration to goa.
-
-## Other Whys and Hows
-
-You should start by reading the
-[Gopher Academy blog post](https://blog.gopheracademy.com/advent-2015/goaUntanglingMicroservices/).
-goa may look a little bit different at first and the post explains the rationale for it in greather
-depth.
 
 ## Installation
 
@@ -306,7 +293,7 @@ Consult the following resources to learn more about goa.
 
 ### goa.design
 
-[http://goa.design](http://goa.design) contains further information on goa including a getting
+[goa.design](https://goa.design) contains further information on goa including a getting
 started guide, detailed DSL documentation as well as information on how to implement a goa service.
 
 ### Examples
