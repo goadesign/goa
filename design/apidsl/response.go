@@ -38,6 +38,7 @@ import (
 //        })
 //
 //        Response("MyResponse", func() {         // Define custom response (using no template)
+//                Description("This is my response")
 //                Media(BottleMedia)
 //                Headers(func() {
 //                        Header("X-Request-Id", func() {
