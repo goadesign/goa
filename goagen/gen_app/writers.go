@@ -141,14 +141,31 @@ func (c *ContextTemplateData) IsPathParam(param string) bool {
 	return pp
 }
 
-// HasParam returns true if the context template data has a param with the given name, false
-// otherwise.
-func (c *ContextTemplateData) HasParam(param string) bool {
-	if c.Params == nil {
+// HasParamAndHeader returns true if the generated struct field name for the given header name
+// matches the generated struct field name for the param with the same name if any.
+func (c *ContextTemplateData) HasParamAndHeader(name string) bool {
+	if c.Params == nil || c.Headers == nil {
 		return false
 	}
-	_, ok := c.Params.Type.ToObject()[param]
-	return ok
+
+	var (
+		paramAtt, headerAtt *design.AttributeDefinition
+		ok                  bool
+	)
+
+	paramAtt, ok = c.Params.Type.ToObject()[name]
+	if !ok {
+		return false
+	}
+	headerAtt, ok = c.Headers.Type.ToObject()[name]
+	if !ok {
+		return false
+	}
+
+	paramName := codegen.GoifyAtt(paramAtt, name, true)
+	headerName := codegen.GoifyAtt(headerAtt, name, true)
+
+	return headerName == paramName
 }
 
 // MustValidate returns true if code that checks for the presence of the given param must be
@@ -401,10 +418,10 @@ type {{ .Name }} struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
-{{ if .Headers }}{{ range $name, $att := .Headers.Type.ToObject }}{{ if not ($.HasParam $name) }}{{/*
-*/}}	{{ goify $name true }} {{ if and $att.Type.IsPrimitive ($.Headers.IsPrimitivePointer $name) }}*{{ end }}{{ gotyperef .Type nil 0 false }}
+{{ if .Headers }}{{ range $name, $att := .Headers.Type.ToObject }}{{ if not ($.HasParamAndHeader $name) }}{{/*
+*/}}	{{ goifyatt $att $name true }} {{ if and $att.Type.IsPrimitive ($.Headers.IsPrimitivePointer $name) }}*{{ end }}{{ gotyperef .Type nil 0 false }}
 {{ end }}{{ end }}{{ end }}{{ if .Params }}{{ range $name, $att := .Params.Type.ToObject }}{{/*
-*/}}	{{ goify $name true }} {{ if and $att.Type.IsPrimitive ($.Params.IsPrimitivePointer $name) }}*{{ end }}{{ gotyperef .Type nil 0 false }}
+*/}}	{{ goifyatt $att $name true }} {{ if and $att.Type.IsPrimitive ($.Params.IsPrimitivePointer $name) }}*{{ end }}{{ gotyperef .Type nil 0 false }}
 {{ end }}{{ end }}{{ if .Payload }}	Payload {{ gotyperef .Payload nil 0 false }}
 {{ end }}}
 `
@@ -505,12 +522,12 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 			var headers {{ gotypedef $att 2 true false }}
 			for _, raw{{ goify $name true}} := range header{{ goify $name true}} {
 {{ template "Coerce" (newCoerceData $name $att ($.Headers.IsPrimitivePointer $name) "headers" 4) }}{{/*
-*/}}				{{ printf "rctx.%s" (goify $name true) }} = append({{ printf "rctx.%s" (goify $name true) }}, headers...)
+*/}}				{{ printf "rctx.%s" (goifyatt $att $name true) }} = append({{ printf "rctx.%s" (goifyatt $att $name true) }}, headers...)
 			}
 		}
 {{ else }}		raw{{ goify $name true}} := header{{ goify $name true}}[0]
-{{ template "Coerce" (newCoerceData $name $att ($.Headers.IsPrimitivePointer $name) (printf "rctx.%s" (goify $name true)) 2) }}{{ end }}{{/*
-*/}}{{ $validation := validationChecker $att ($.Headers.IsNonZero $name) ($.Headers.IsRequired $name) ($.Headers.HasDefaultValue $name) (printf "rctx.%s" (goify $name true)) $name 2 false }}{{/*
+{{ template "Coerce" (newCoerceData $name $att ($.Headers.IsPrimitivePointer $name) (printf "rctx.%s" (goifyatt $att $name true)) 2) }}{{ end }}{{/*
+*/}}{{ $validation := validationChecker $att ($.Headers.IsNonZero $name) ($.Headers.IsRequired $name) ($.Headers.HasDefaultValue $name) (printf "rctx.%s" (goifyatt $att $name true)) $name 2 false }}{{/*
 */}}{{ if $validation }}{{ $validation }}
 {{ end }}	}
 {{ end }}{{ end }}{{/* if .Headers }}{{/*
@@ -524,12 +541,12 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 			var params {{ gotypedef $att 2 true false }}
 			for _, raw{{ goify $name true}} := range param{{ goify $name true}} {
 {{ template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) "params" 4) }}{{/*
-*/}}				{{ printf "rctx.%s" (goify $name true) }} = append({{ printf "rctx.%s" (goify $name true) }}, params...)
+*/}}				{{ printf "rctx.%s" (goifyatt $att $name true) }} = append({{ printf "rctx.%s" (goifyatt $att $name true) }}, params...)
 			}
 		}
 {{ else }}		raw{{ goify $name true}} := param{{ goify $name true}}[0]
-{{ template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) (printf "rctx.%s" (goify $name true)) 2) }}{{ end }}{{/*
-*/}}{{ $validation := validationChecker $att ($.Params.IsNonZero $name) ($.Params.IsRequired $name) ($.Params.HasDefaultValue $name) (printf "rctx.%s" (goify $name true)) $name 2 false }}{{/*
+{{ template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) (printf "rctx.%s" (goifyatt $att $name true)) 2) }}{{ end }}{{/*
+*/}}{{ $validation := validationChecker $att ($.Params.IsNonZero $name) ($.Params.IsRequired $name) ($.Params.HasDefaultValue $name) (printf "rctx.%s" (goifyatt $att $name true)) $name 2 false }}{{/*
 */}}{{ if $validation }}{{ $validation }}
 {{ end }}	}
 {{ end }}{{ end }}{{/* if .Params */}}	return &rctx, err
