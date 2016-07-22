@@ -97,37 +97,29 @@ func GoTypeDef(ds design.DataStructure, tabs int, jsonTags, private bool) string
 }
 
 // goTypeDefObject returns the Go code that defines a Go struct.
-func goTypeDefObject(actual design.Object, def *design.AttributeDefinition, tabs int, jsonTags, private bool) string {
+func goTypeDefObject(obj design.Object, def *design.AttributeDefinition, tabs int, jsonTags, private bool) string {
 	var buffer bytes.Buffer
 	buffer.WriteString("struct {\n")
-	keys := make([]string, len(actual))
+	keys := make([]string, len(obj))
 	i := 0
-	for n := range actual {
+	for n := range obj {
 		keys[i] = n
 		i++
 	}
 	sort.Strings(keys)
 	for _, name := range keys {
 		WriteTabs(&buffer, tabs+1)
-		field := actual[name]
+		field := obj[name]
 		typedef := GoTypeDef(field, tabs+1, jsonTags, private)
 		if (field.Type.IsPrimitive() && private) || field.Type.IsObject() || def.IsPrimitivePointer(name) {
 			typedef = "*" + typedef
 		}
-		fname := name
-		if field.Metadata != nil {
-			if tname, ok := field.Metadata["struct:field:name"]; ok {
-				if len(tname) > 0 {
-					fname = tname[0]
-				}
-			}
-		}
-		fname = Goify(fname, true)
+		fname := GoifyAtt(field, name, true)
 		var tags string
 		if jsonTags {
 			tags = attributeTags(def, field, name, private)
 		}
-		desc := actual[name].Description
+		desc := obj[name].Description
 		if desc != "" {
 			desc = strings.Replace(desc, "\n", "\n\t// ", -1)
 			desc = fmt.Sprintf("// %s\n\t", desc)
@@ -374,10 +366,6 @@ func GoifyAtt(att *design.AttributeDefinition, name string, firstUpper bool) str
 // Goify produces a "CamelCase" version of the string, if firstUpper is true the first character
 // of the identifier is uppercase otherwise it's lowercase.
 func Goify(str string, firstUpper bool) string {
-	// Dev note: this func is probably in need of a rewrite, gocyclo is already at the
-	//           upper limit of 20, further changes may cause the cyclomatic complexity
-	//           check to fail.
-
 	runes := []rune(str)
 
 	// remove trailing invalid identifiers (makes code below simpler)

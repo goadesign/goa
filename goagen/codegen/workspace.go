@@ -58,6 +58,7 @@ var (
 		"commandLine":         CommandLine,
 		"comment":             Comment,
 		"goify":               Goify,
+		"goifyatt":            GoifyAtt,
 		"gonative":            GoNativeType,
 		"gotypedef":           GoTypeDef,
 		"gotypename":          GoTypeName,

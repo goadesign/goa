@@ -281,6 +281,34 @@ var _ = Describe("ContextsWriter", func() {
 				})
 			})
 
+			Context("with a custom name param", func() {
+				BeforeEach(func() {
+					intParam := &design.AttributeDefinition{
+						Type: design.Integer,
+						Metadata: dslengine.MetadataDefinition{
+							"struct:field:name": []string{"custom"},
+						},
+					}
+					dataType := design.Object{
+						"int": intParam,
+					}
+					params = &design.AttributeDefinition{
+						Type: dataType,
+					}
+				})
+
+				It("writes the contexts code", func() {
+					err := writer.Execute(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(customContext))
+					Ω(written).Should(ContainSubstring(customContextFactory))
+				})
+			})
+
 			Context("with a string header", func() {
 				BeforeEach(func() {
 					strHeader := &design.AttributeDefinition{Type: design.String}
@@ -1106,6 +1134,37 @@ func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottl
 		rawInt := paramInt[0]
 		if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
 			rctx.Int = int_
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("int", rawInt, "integer"))
+		}
+	}
+	return &rctx, err
+}
+`
+
+	customContext = `
+type ListBottleContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	Custom *int
+}
+`
+
+	customContextFactory = `
+func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottleContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramInt := req.Params["int"]
+	if len(paramInt) > 0 {
+		rawInt := paramInt[0]
+		if int_, err2 := strconv.Atoi(rawInt); err2 == nil {
+			tmp2 := int_
+			tmp1 := &tmp2
+			rctx.Custom = tmp1
 		} else {
 			err = goa.MergeErrors(err, goa.InvalidParamTypeError("int", rawInt, "integer"))
 		}
