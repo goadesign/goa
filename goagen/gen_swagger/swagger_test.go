@@ -143,7 +143,7 @@ var _ = Describe("New", func() {
 				Design.DSLFunc = func() {
 					base()
 					BasePath(basePath)
-					BaseParams(func() {
+					Params(func() {
 						Param(strParam, String, func() {
 							Description(description)
 							Format("email")

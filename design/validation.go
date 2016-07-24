@@ -75,8 +75,8 @@ func (a *APIDefinition) Validate() error {
 	}
 
 	verr := new(dslengine.ValidationErrors)
-	if a.BaseParams != nil {
-		verr.Merge(a.BaseParams.Validate("base parameters", a))
+	if a.Params != nil {
+		verr.Merge(a.Params.Validate("base parameters", a))
 	}
 
 	a.validateContact(verr)
@@ -205,9 +205,6 @@ func (r *ResourceDefinition) Validate() *dslengine.ValidationErrors {
 		verr.Add(r, "Resource name cannot be empty")
 	}
 	r.validateActions(verr)
-	if r.BaseParams != nil {
-		r.validateBaseParams(verr)
-	}
 	if r.ParentName != "" {
 		r.validateParent(verr)
 	}
@@ -236,36 +233,6 @@ func (r *ResourceDefinition) validateActions(verr *dslengine.ValidationErrors) {
 	}
 	if r.CanonicalActionName != "" && !found {
 		verr.Add(r, `unknown canonical action "%s"`, r.CanonicalActionName)
-	}
-}
-
-func (r *ResourceDefinition) validateBaseParams(verr *dslengine.ValidationErrors) {
-	baseParams, ok := r.BaseParams.Type.(Object)
-	if !ok {
-		verr.Add(r, "invalid type for BaseParams, must be an Object", r)
-	} else {
-		vars := ExtractWildcards(r.BasePath)
-		if len(vars) > 0 {
-			if len(vars) != len(baseParams) {
-				verr.Add(r, "BasePath defines parameters %s but BaseParams has %d elements",
-					strings.Join([]string{
-						strings.Join(vars[:len(vars)-1], ", "),
-						vars[len(vars)-1],
-					}, " and "),
-					len(baseParams),
-				)
-			}
-			for _, v := range vars {
-				if _, found := baseParams[v]; !found {
-					verr.Add(r, "Variable %s from base path %s does not match any parameter from BaseParams",
-						v, r.BasePath)
-				}
-			}
-		} else {
-			if len(baseParams) > 0 {
-				verr.Add(r, "BasePath does not use variables defined in BaseParams")
-			}
-		}
 	}
 }
 
