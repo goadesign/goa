@@ -27,7 +27,6 @@ type Generator struct {
 	tool           string // Name of CLI tool
 	notool         bool   // Whether to skip tool generation
 	genfiles       []string
-	generatedTypes map[string]bool // Keeps track of names of user types that correspond to action payloads.
 	encoders       []*genapp.EncoderTemplateData
 	decoders       []*genapp.EncoderTemplateData
 	encoderImports []string
@@ -243,103 +242,17 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 }
 
 func (g *Generator) generateClientResources(pkgDir, clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
-	userTypeTmpl := template.Must(template.New("userType").Funcs(funcs).Parse(userTypeTmpl))
-	typeDecodeTmpl := template.Must(template.New("typeDecode").Funcs(funcs).Parse(typeDecodeTmpl))
-
 	err := api.IterateResources(func(res *design.ResourceDefinition) error {
 		return g.generateResourceClient(pkgDir, res, funcs)
 	})
 	if err != nil {
 		return err
 	}
-	types := make(map[string]*design.UserTypeDefinition)
-	for _, res := range api.Resources {
-		for n, ut := range res.UserTypes() {
-			types[n] = ut
-		}
-	}
-	filename := filepath.Join(pkgDir, typesFileName+".go")
-	file, err := codegen.SourceFileFor(filename)
-	if err != nil {
-		return err
-	}
-	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("github.com/goadesign/goa"),
-		codegen.SimpleImport("fmt"),
-		codegen.SimpleImport("io"),
-		codegen.SimpleImport("net/http"),
-		codegen.SimpleImport("time"),
-		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
-	}
-	if err := file.WriteHeader("User Types", g.target, imports); err != nil {
-		return err
-	}
-	g.genfiles = append(g.genfiles, filename)
-
-	// Generate user and media types used by action payloads and parameters
-	err = api.IterateUserTypes(func(userType *design.UserTypeDefinition) error {
-		if _, ok := g.generatedTypes[userType.TypeName]; ok {
-			return nil
-		}
-		if _, ok := types[userType.TypeName]; ok {
-			g.generatedTypes[userType.TypeName] = true
-			return userTypeTmpl.Execute(file, userType)
-		}
-		return nil
-	})
-	if err != nil {
+	if err := g.generateUserTypes(pkgDir, api); err != nil {
 		return err
 	}
 
-	// Generate media types used by action responses and their load helpers
-	err = api.IterateResources(func(res *design.ResourceDefinition) error {
-		return res.IterateActions(func(a *design.ActionDefinition) error {
-			return a.IterateResponses(func(r *design.ResponseDefinition) error {
-				if mt := api.MediaTypeWithIdentifier(r.MediaType); mt != nil {
-					if _, ok := g.generatedTypes[mt.TypeName]; !ok {
-						g.generatedTypes[mt.TypeName] = true
-						if !mt.IsBuiltIn() {
-							if err := userTypeTmpl.Execute(file, mt); err != nil {
-								return err
-							}
-						}
-						typeName := mt.TypeName
-						if mt.IsBuiltIn() {
-							elems := strings.Split(typeName, ".")
-							typeName = elems[len(elems)-1]
-						}
-						if err := typeDecodeTmpl.Execute(file, mt); err != nil {
-							return err
-						}
-					}
-				}
-				return nil
-			})
-		})
-	})
-	if err != nil {
-		return err
-	}
-
-	// Generate media types used in payloads but not in responses
-	err = api.IterateMediaTypes(func(mediaType *design.MediaTypeDefinition) error {
-		if mediaType.IsBuiltIn() {
-			return nil
-		}
-		if _, ok := g.generatedTypes[mediaType.TypeName]; ok {
-			return nil
-		}
-		if _, ok := types[mediaType.TypeName]; ok {
-			g.generatedTypes[mediaType.TypeName] = true
-			return userTypeTmpl.Execute(file, mediaType)
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	return file.FormatCode()
+	return g.generateMediaTypes(pkgDir, api, funcs)
 }
 
 func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDefinition, funcs template.FuncMap) error {
@@ -377,7 +290,6 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 		return err
 	}
 	g.genfiles = append(g.genfiles, filename)
-	g.generatedTypes = make(map[string]bool)
 
 	err = res.IterateFileServers(func(fs *design.FileServerDefinition) error {
 		return g.generateFileServer(file, fs, funcs)
@@ -388,7 +300,6 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 			if err := payloadTmpl.Execute(file, action); err != nil {
 				return err
 			}
-			g.generatedTypes[action.Payload.TypeName] = true
 		}
 		for i, r := range action.Routes {
 			data := struct {
@@ -588,6 +499,77 @@ func (g *Generator) fileServerMethod(fs *design.FileServerDefinition) string {
 	return "Download" + codegen.Goify(suffix, true)
 }
 
+// generateMediaTypes iterates through the media types and generate the data structures and
+// marshaling code.
+func (g *Generator) generateMediaTypes(pkgDir string, api *design.APIDefinition, funcs template.FuncMap) error {
+	typeDecodeTmpl := template.Must(template.New("typeDecode").Funcs(funcs).Parse(typeDecodeTmpl))
+	mtFile := filepath.Join(pkgDir, "media_types.go")
+	mtWr, err := genapp.NewMediaTypesWriter(mtFile)
+	if err != nil {
+		panic(err) // bug
+	}
+	title := fmt.Sprintf("%s: Application Media Types", api.Context())
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("github.com/goadesign/goa"),
+		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("net/http"),
+		codegen.SimpleImport("time"),
+		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
+	}
+	mtWr.WriteHeader(title, g.target, imports)
+	err = api.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
+		if mt.IsBuiltIn() {
+			return nil
+		}
+		if mt.Type.IsObject() || mt.Type.IsArray() {
+			if err := mtWr.Execute(mt); err != nil {
+				return err
+			}
+		}
+		err := mt.IterateViews(func(view *design.ViewDefinition) error {
+			p, _, err := mt.Project(view.Name)
+			if err != nil {
+				return err
+			}
+			if err := typeDecodeTmpl.Execute(mtWr.SourceFile, p); err != nil {
+				return err
+			}
+			return nil
+		})
+		return err
+	})
+	g.genfiles = append(g.genfiles, mtFile)
+	if err != nil {
+		return err
+	}
+	return mtWr.FormatCode()
+}
+
+// generateUserTypes iterates through the user types and generates the data structures and
+// marshaling code.
+func (g *Generator) generateUserTypes(pkgDir string, api *design.APIDefinition) error {
+	utFile := filepath.Join(pkgDir, "user_types.go")
+	utWr, err := genapp.NewUserTypesWriter(utFile)
+	if err != nil {
+		panic(err) // bug
+	}
+	title := fmt.Sprintf("%s: Application User Types", api.Context())
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("github.com/goadesign/goa"),
+		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("time"),
+	}
+	utWr.WriteHeader(title, g.target, imports)
+	err = api.IterateUserTypes(func(t *design.UserTypeDefinition) error {
+		return utWr.Execute(t)
+	})
+	g.genfiles = append(g.genfiles, utFile)
+	if err != nil {
+		return err
+	}
+	return utWr.FormatCode()
+}
+
 // join is a code generation helper function that generates a function signature built from
 // concatenating the properties (name type) of the given attribute type (assuming it's an object).
 // join accepts an optional slice of strings which indicates the order in which the parameters
@@ -766,22 +748,19 @@ func (b byParamName) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 func (b byParamName) Less(i, j int) bool { return b[i].Name < b[j].Name }
 func (b byParamName) Len() int           { return len(b) }
 
-const arrayToStringT = `	{{ $tmp := tempvar }}{{ $tmp }} := make([]string, len({{ .Name }}))
+const (
+	arrayToStringT = `	{{ $tmp := tempvar }}{{ $tmp }} := make([]string, len({{ .Name }}))
 	for i, e := range {{ .Name }} {
 		{{ $tmp2 := tempvar }}{{ toString "e" $tmp2 .ElemType }}
 		{{ $tmp }}[i] = {{ $tmp2 }}
 	}
 	{{ .Target }} := strings.Join({{ $tmp }}, ",")`
 
-const payloadTmpl = `// {{ gotypename .Payload nil 0 false }} is the {{ .Parent.Name }} {{ .Name }} action payload.
+	payloadTmpl = `// {{ gotypename .Payload nil 0 false }} is the {{ .Parent.Name }} {{ .Name }} action payload.
 type {{ gotypename .Payload nil 1 false }} {{ gotypedef .Payload 0 true false }}
 `
 
-const userTypeTmpl = `// {{ gotypedesc . true }}
-type {{ gotypename . .AllRequired 1 false }} {{ gotypedef . 0 true false }}
-`
-
-const typeDecodeTmpl = `{{ $typeName := typeName . }}{{ $funcName := printf "Decode%s" $typeName }}// {{ $funcName }} decodes the {{ $typeName }} instance encoded in resp body.
+	typeDecodeTmpl = `{{ $typeName := typeName . }}{{ $funcName := printf "Decode%s" $typeName }}// {{ $funcName }} decodes the {{ $typeName }} instance encoded in resp body.
 func (c *Client) {{ $funcName }}(resp *http.Response) ({{ gotyperef . .AllRequired 0 false }}, error) {
 	var decoded {{ gotypename . .AllRequired 0 false }}
 	err := c.Decoder.Decode(&decoded, resp.Body, resp.Header.Get("Content-Type"))
@@ -789,14 +768,14 @@ func (c *Client) {{ $funcName }}(resp *http.Response) ({{ gotyperef . .AllRequir
 }
 `
 
-const pathTmpl = `{{ $funcName := printf "%sPath%s" (goify (printf "%s%s" .Route.Parent.Name (title .Route.Parent.Parent.Name)) true) ((or (and .Index (add .Index 1)) "") | printf "%v") }}{{/*
+	pathTmpl = `{{ $funcName := printf "%sPath%s" (goify (printf "%s%s" .Route.Parent.Name (title .Route.Parent.Parent.Name)) true) ((or (and .Index (add .Index 1)) "") | printf "%v") }}{{/*
 */}}{{ with .Route }}// {{ $funcName }} computes a request path to the {{ .Parent.Name }} action of {{ .Parent.Parent.Name }}.
 func {{ $funcName }}({{ pathParams . }}) string {
 	return fmt.Sprintf({{ printf "%q" (pathTemplate .) }}, {{ pathParamNames . }})
 }
 {{ end }}`
 
-const clientsTmpl = `{{ $funcName := goify (printf "%s%s" .Name (title .ResourceName)) true }}{{ $desc := .Description }}{{/*
+	clientsTmpl = `{{ $funcName := goify (printf "%s%s" .Name (title .ResourceName)) true }}{{ $desc := .Description }}{{/*
 */}}{{ if $desc }}{{ multiComment $desc }}{{ else }}{{/*
 */}}// {{ $funcName }} makes a request to the {{ .Name }} action endpoint of the {{ .ResourceName }} resource{{ end }}
 func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params}},  {{ .Params }}{{ end }}{{ if .HasPayload }}, contentType string{{ end }}) (*http.Response, error) {
@@ -808,7 +787,7 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params}}
 }
 `
 
-const clientsWSTmpl = `{{ $funcName := goify (printf "%s%s" .Name (title .ResourceName)) true }}{{ $desc := .Description }}{{/*
+	clientsWSTmpl = `{{ $funcName := goify (printf "%s%s" .Name (title .ResourceName)) true }}{{ $desc := .Description }}{{/*
 */}}{{ if $desc }}{{ multiComment $desc }}{{ else }}// {{ $funcName }} establishes a websocket connection to the {{ .Name }} action endpoint of the {{ .ResourceName }} resource{{ end }}
 func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }}, {{ .Params }}{{ end }}) (*websocket.Conn, error) {
 	scheme := c.Scheme
@@ -827,7 +806,7 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 }
 `
 
-const fsTmpl = `// {{ .Name }} downloads {{ if .DirName }}{{ .DirName }}files with the given filename{{ else }}{{ .FileName }}{{ end }} and writes it to the file dest.
+	fsTmpl = `// {{ .Name }} downloads {{ if .DirName }}{{ .DirName }}files with the given filename{{ else }}{{ .FileName }}{{ end }} and writes it to the file dest.
 // It returns the number of bytes downloaded in case of success.
 func (c * Client) {{ .Name }}(ctx context.Context, {{ if .DirName }}filename, {{ end }}dest string) (int64, error) {
 	scheme := c.Scheme
@@ -863,7 +842,7 @@ func (c * Client) {{ .Name }}(ctx context.Context, {{ if .DirName }}filename, {{
 }
 `
 
-const requestsTmpl = `{{ $funcName := goify (printf "New%s%sRequest" (title .Name) (title .ResourceName)) true }}{{/*
+	requestsTmpl = `{{ $funcName := goify (printf "New%s%sRequest" (title .Name) (title .ResourceName)) true }}{{/*
 */}}// {{ $funcName }} create the request corresponding to the {{ .Name }} action endpoint of the {{ .ResourceName }} resource.
 func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }}, {{ .Params }}{{ end }}{{ if .HasPayload }}, contentType string{{ end }}) (*http.Request, error) {
 {{ if .HasPayload }}	var body bytes.Buffer
@@ -907,7 +886,7 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 }
 `
 
-const clientTmpl = `// Client is the {{ .API.Name }} service client.
+	clientTmpl = `// Client is the {{ .API.Name }} service client.
 type Client struct {
 	*goaclient.Client{{range $security := .API.SecuritySchemes }}{{ $signer := signerType $security }}{{ if $signer }}
 	{{ goify $security.SchemeName true }}Signer goaclient.Signer{{ end }}{{ end }}
@@ -947,3 +926,4 @@ func (c *Client) Set{{ $name }}(signer goaclient.Signer) {
 }
 {{ end }}{{ end }}
 `
+)
