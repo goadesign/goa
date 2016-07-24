@@ -193,20 +193,16 @@ func Headers(params ...interface{}) {
 		case *design.ActionDefinition:
 			headers := newAttribute(def.Parent.MediaType)
 			if dslengine.Execute(dsl, headers) {
-				def.Headers = headers
+				def.Headers = def.Headers.Merge(headers)
 			}
 
 		case *design.ResourceDefinition:
 			headers := newAttribute(def.MediaType)
 			if dslengine.Execute(dsl, headers) {
-				def.Headers = headers
+				def.Headers = def.Headers.Merge(headers)
 			}
 
 		case *design.ResponseDefinition:
-			if def.Headers != nil {
-				dslengine.ReportError("headers already defined")
-				return
-			}
 			var h *design.AttributeDefinition
 			switch actual := def.Parent.(type) {
 			case *design.ResourceDefinition:
@@ -219,7 +215,7 @@ func Headers(params ...interface{}) {
 				dslengine.ReportError("invalid use of Response or ResponseTemplate")
 			}
 			if dslengine.Execute(dsl, h) {
-				def.Headers = h
+				def.Headers = def.Headers.Merge(h)
 			}
 
 		default:
