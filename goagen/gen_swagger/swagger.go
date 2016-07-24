@@ -287,7 +287,7 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 	if hasAbsoluteRoutes(api) {
 		basePath = ""
 	}
-	params, err := paramsFromDefinition(api.BaseParams, basePath)
+	params, err := paramsFromDefinition(api.Params, basePath)
 	if err != nil {
 		return nil, err
 	}

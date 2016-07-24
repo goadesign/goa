@@ -85,13 +85,23 @@ func Attribute(name string, args ...interface{}) {
 		parent = def.AttributeDefinition
 	case design.ContainerDefinition:
 		parent = def.Attribute()
+	case *design.APIDefinition:
+		if def.Params == nil {
+			def.Params = new(design.AttributeDefinition)
+		}
+		parent = def.Params
+	case *design.ResourceDefinition:
+		if def.Params == nil {
+			def.Params = new(design.AttributeDefinition)
+		}
+		parent = def.Params
 	default:
 		dslengine.IncompatibleDSL()
 	}
 
 	if parent != nil {
 		if parent.Type == nil {
-			parent.Type = design.Object{}
+			parent.Type = make(design.Object)
 		}
 		if _, ok := parent.Type.(design.Object); !ok {
 			dslengine.ReportError("can't define child attributes on attribute of type %s", parent.Type.Name())

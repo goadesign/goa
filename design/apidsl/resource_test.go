@@ -155,7 +155,7 @@ var _ = Describe("Resource", func() {
 			name = "foo"
 			dsl = func() {
 				BasePath(basePath)
-				BaseParams(func() {
+				Params(func() {
 					Param("paramID")
 				})
 			}
@@ -165,9 +165,9 @@ var _ = Describe("Resource", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.Validate()).ShouldNot(HaveOccurred())
 			Ω(res.BasePath).Should(Equal(basePath))
-			Ω(res.BaseParams).ShouldNot(BeNil())
-			Ω(res.BaseParams.Type).ShouldNot(BeNil())
-			Ω(res.BaseParams.Type.ToObject()).Should(HaveKey("paramID"))
+			Ω(res.Params).ShouldNot(BeNil())
+			Ω(res.Params.Type).ShouldNot(BeNil())
+			Ω(res.Params.Type.ToObject()).Should(HaveKey("paramID"))
 		})
 	})
 
