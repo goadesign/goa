@@ -79,9 +79,9 @@ func Resource(name string, dsl func()) *design.ResourceDefinition {
 //
 // The default media type is used to build OK response definitions when no specific media type is
 // given in the Response function call. The default media type is also used to set the default
-// properties of attributes listed in action payloads. So if a media type defines an attribute
-// "name" with associated validations then simply calling Attribute("name") inside a request
-// Payload defines the payload attribute with the same type and validations.
+// properties of attributes listed in action payloads and params. So if a media type defines an
+// attribute "name" with associated validations then simply calling Attribute("name") inside a
+// request Payload or Param defines the attribute with the same type and validations.
 func DefaultMedia(val interface{}) {
 	if r, ok := resourceDefinition(); ok {
 		if m, ok := val.(*design.MediaTypeDefinition); ok {

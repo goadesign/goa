@@ -34,7 +34,7 @@ import (
 //		Host("goa.design")			// API hostname
 //		Scheme("http")
 //		BasePath("/base/:param")		// Common base path to all API actions
-//		BaseParams(func() {			// Common parameters to all API actions
+//		Params(func() {				// Common parameters to all API actions
 //			Param("param")
 //		})
 //		Security("JWT")
@@ -123,7 +123,7 @@ func Description(d string) {
 
 // BasePath defines the API base path, i.e. the common path prefix to all the API actions.
 // The path may define wildcards (see Routing for a description of the wildcard syntax).
-// The corresponding parameters must be described using BaseParams.
+// The corresponding parameters must be described using Params.
 func BasePath(val string) {
 	switch def := dslengine.CurrentDefinition().(type) {
 	case *design.APIDefinition:
@@ -141,25 +141,6 @@ func BasePath(val string) {
 				}
 			}
 		}
-	default:
-		dslengine.IncompatibleDSL()
-	}
-}
-
-// BaseParams defines the API base path parameters. These parameters may correspond to wildcards in
-// the BasePath or URL query string values.
-// The DSL for describing each Param is the Attribute DSL.
-func BaseParams(dsl func()) {
-	params := new(design.AttributeDefinition)
-	if !dslengine.Execute(dsl, params) {
-		return
-	}
-
-	switch def := dslengine.CurrentDefinition().(type) {
-	case *design.APIDefinition:
-		def.BaseParams = params
-	case *design.ResourceDefinition:
-		def.BaseParams = params
 	default:
 		dslengine.IncompatibleDSL()
 	}

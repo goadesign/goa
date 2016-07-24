@@ -214,7 +214,7 @@ var _ = Describe("API", func() {
 			})
 		})
 
-		Context("with BaseParams", func() {
+		Context("with Params", func() {
 			const param1Name = "accountID"
 			const param1Type = Integer
 			const param1Desc = "the account ID"
@@ -224,7 +224,7 @@ var _ = Describe("API", func() {
 
 			BeforeEach(func() {
 				dsl = func() {
-					BaseParams(func() {
+					Params(func() {
 						Param(param1Name, param1Type, param1Desc)
 						Param(param2Name, param2Type, param2Desc)
 					})
@@ -232,8 +232,8 @@ var _ = Describe("API", func() {
 			})
 
 			It("sets the API base parameters", func() {
-				Ω(Design.BaseParams.Type).Should(BeAssignableToTypeOf(Object{}))
-				params := Design.BaseParams.Type.ToObject()
+				Ω(Design.Params.Type).Should(BeAssignableToTypeOf(Object{}))
+				params := Design.Params.Type.ToObject()
 				Ω(params).Should(HaveLen(2))
 				Ω(params).Should(HaveKey(param1Name))
 				Ω(params).Should(HaveKey(param2Name))
@@ -255,8 +255,8 @@ var _ = Describe("API", func() {
 				})
 
 				It("sets both the base path and parameters", func() {
-					Ω(Design.BaseParams.Type).Should(BeAssignableToTypeOf(Object{}))
-					params := Design.BaseParams.Type.ToObject()
+					Ω(Design.Params.Type).Should(BeAssignableToTypeOf(Object{}))
+					params := Design.Params.Type.ToObject()
 					Ω(params).Should(HaveLen(2))
 					Ω(params).Should(HaveKey(param1Name))
 					Ω(params).Should(HaveKey(param2Name))
@@ -283,6 +283,9 @@ var _ = Describe("API", func() {
 				Context("with an absolute resource base path", func() {
 					JustBeforeEach(func() {
 						Resource("foo", func() {
+							Params(func() {
+								Param(param1Name, param1Type, param1Desc)
+							})
 							BasePath("//:accountID")
 						})
 						dslengine.Run()

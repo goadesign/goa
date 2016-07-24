@@ -142,30 +142,21 @@ func (c *ContextTemplateData) IsPathParam(param string) bool {
 }
 
 // HasParamAndHeader returns true if the generated struct field name for the given header name
-// matches the generated struct field name for the param with the same name if any.
+// matches the generated struct field name of a param in c.Params.
 func (c *ContextTemplateData) HasParamAndHeader(name string) bool {
 	if c.Params == nil || c.Headers == nil {
 		return false
 	}
 
-	var (
-		paramAtt, headerAtt *design.AttributeDefinition
-		ok                  bool
-	)
-
-	paramAtt, ok = c.Params.Type.ToObject()[name]
-	if !ok {
-		return false
-	}
-	headerAtt, ok = c.Headers.Type.ToObject()[name]
-	if !ok {
-		return false
-	}
-
-	paramName := codegen.GoifyAtt(paramAtt, name, true)
+	headerAtt := c.Headers.Type.ToObject()[name]
 	headerName := codegen.GoifyAtt(headerAtt, name, true)
-
-	return headerName == paramName
+	for paramName, paramAtt := range c.Params.Type.ToObject() {
+		paramName = codegen.GoifyAtt(paramAtt, paramName, true)
+		if headerName == paramName {
+			return true
+		}
+	}
+	return false
 }
 
 // MustValidate returns true if code that checks for the presence of the given param must be

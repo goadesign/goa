@@ -242,8 +242,8 @@ func Headers(params ...interface{}) {
 }
 
 // Params describe the action parameters, either path parameters identified via wildcards or query
-// string parameters. Each parameter is described via the `Param` function which uses the same DSL
-// as the Attribute DSL. Here is an example:
+// string parameters if there is no corresponding path parameter. Each parameter is described via
+// the Param function which uses the same DSL as the Attribute DSL. Here is an example:
 //
 //	Params(func() {
 //		Param("id", Integer)		// A path parameter defined using e.g. GET("/:id")
@@ -252,26 +252,58 @@ func Headers(params ...interface{}) {
 //		})
 //	})
 //
-// Params can be used inside Action to define the action parameters or Resource to define common
-// parameters to all the resource actions.
+// Params can be used inside Action to define the action parameters, Resource to define common
+// parameters to all the resource actions or API to define common parameters to all the API actions.
+//
+// If Params is used inside Resource or Action then the resource base media type attributes provide
+// default values for all the properties of params with identical names. For example:
+//
+//     var BottleMedia = MediaType("application/vnd.bottle", func() {
+//         Attributes(func() {
+//             Attribute("name", String, "The name of the bottle", func() {
+//                 MinLength(2) // BottleMedia has one attribute "name" which is a
+//                              // string that must be at least 2 characters long.
+//             })
+//         })
+//         View("default", func() {
+//             Attribute("name")
+//         })
+//     })
+//
+//     var _ = Resource("Bottle", func() {
+//         DefaultMedia(BottleMedia) // Resource "Bottle" uses "BottleMedia" as default
+//         Action("show", func() {   // media type.
+//             Routing(GET("/:name"))
+//             Params(func() {
+//                 Param("name") // inherits type, description and validation from
+//                               // BottleMedia "name" attribute
+//             })
+//         })
+//     })
+//
 func Params(dsl func()) {
+	var params *design.AttributeDefinition
 	switch def := dslengine.CurrentDefinition().(type) {
 	case *design.ActionDefinition:
-		params := newAttribute(def.Parent.MediaType)
-		params.Type = make(design.Object)
-		if dslengine.Execute(dsl, params) {
-			def.Params = params
-		}
-
+		params = newAttribute(def.Parent.MediaType)
 	case *design.ResourceDefinition:
-		params := newAttribute(def.MediaType)
-		params.Type = make(design.Object)
-		if dslengine.Execute(dsl, params) {
-			def.Params = params
-		}
-
+		params = newAttribute(def.MediaType)
+	case *design.APIDefinition:
+		params = new(design.AttributeDefinition)
 	default:
 		dslengine.IncompatibleDSL()
+	}
+	params.Type = make(design.Object)
+	if !dslengine.Execute(dsl, params) {
+		return
+	}
+	switch def := dslengine.CurrentDefinition().(type) {
+	case *design.ActionDefinition:
+		def.Params = def.Params.Merge(params) // Useful for traits
+	case *design.ResourceDefinition:
+		def.Params = def.Params.Merge(params) // Useful for traits
+	case *design.APIDefinition:
+		def.Params = def.Params.Merge(params) // Useful for traits
 	}
 }
 
