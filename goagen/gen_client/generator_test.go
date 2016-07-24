@@ -71,7 +71,7 @@ var _ = Describe("Generate", func() {
 
 		It("generates param initialization code that uses the param name given in the design", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(8))
+			Ω(files).Should(HaveLen(9))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("func ShowFooPath("))
@@ -113,7 +113,7 @@ var _ = Describe("Generate", func() {
 
 		It("generates Path function with unique names", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(8))
+			Ω(files).Should(HaveLen(9))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("func ShowFooPath("))
@@ -136,7 +136,7 @@ var _ = Describe("Generate", func() {
 
 			It("generates a Download function", func() {
 				Ω(genErr).Should(BeNil())
-				Ω(files).Should(HaveLen(8))
+				Ω(files).Should(HaveLen(9))
 				content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
 				Ω(err).ShouldNot(HaveOccurred())
 				Ω(content).Should(ContainSubstring("func (c *Client) DownloadSwaggerJSON("))
@@ -194,7 +194,7 @@ var _ = Describe("Generate", func() {
 
 		It("generates the correct client Fields", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(8))
+			Ω(files).Should(HaveLen(9))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "client.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("JWT1Signer goaclient.Signer"))
@@ -203,7 +203,7 @@ var _ = Describe("Generate", func() {
 
 		It("generates the Signer.Sign call from Action", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(8))
+			Ω(files).Should(HaveLen(9))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("c.JWT1Signer.Sign(req)"))
