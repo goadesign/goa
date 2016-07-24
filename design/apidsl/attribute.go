@@ -29,6 +29,8 @@ import (
 //
 // * An hashmap defined using the HashOf function.
 //
+// * The special type Any to indicate that the attribute may take any of the types listed above.
+//
 // Attributes can be defined using the Attribute, Param, Member or Header functions depending
 // on where the definition appears. The syntax for all these DSL is the same.
 // Here are some examples:
