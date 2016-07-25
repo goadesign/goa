@@ -92,8 +92,9 @@ type (
 		Token() string
 	}
 
-	// errorResponse contains the details of a error response. It implements ServiceError.
-	errorResponse struct {
+	// ErrorResponse contains the details of a error response. It implements ServiceError.
+	// This struct is mainly intended for clients to decode error responses.
+	ErrorResponse struct {
 		// ID is the unique error instance identifier.
 		ID string `json:"id" xml:"id" form:"id"`
 		// Code identifies the class of errors.
@@ -131,7 +132,7 @@ func NewErrorClass(code string, status int) ErrorClass {
 			}
 			meta[i/2] = map[string]interface{}{fmt.Sprintf("%v", k): v}
 		}
-		return &errorResponse{ID: newErrorID(), Code: code, Status: status, Detail: msg, Meta: meta}
+		return &ErrorResponse{ID: newErrorID(), Code: code, Status: status, Detail: msg, Meta: meta}
 	}
 }
 
@@ -228,7 +229,7 @@ func NoAuthMiddleware(schemeName string) error {
 }
 
 // Error returns the error occurrence details.
-func (e *errorResponse) Error() string {
+func (e *ErrorResponse) Error() string {
 	msg := fmt.Sprintf("[%s] %d %s: %s", e.ID, e.Status, e.Code, e.Detail)
 	for _, val := range e.Meta {
 		for k, v := range val {
@@ -239,10 +240,10 @@ func (e *errorResponse) Error() string {
 }
 
 // ResponseStatus is the status used to build responses.
-func (e *errorResponse) ResponseStatus() int { return e.Status }
+func (e *ErrorResponse) ResponseStatus() int { return e.Status }
 
 // Token is the unique error occurrence identifier.
-func (e *errorResponse) Token() string { return e.ID }
+func (e *ErrorResponse) Token() string { return e.ID }
 
 // MergeErrors updates an error by merging another into it. It first converts other into a
 // ServiceError if not already one - producing an internal error in that case. The merge algorithm
@@ -290,10 +291,10 @@ func MergeErrors(err, other error) error {
 	return e
 }
 
-func asErrorResponse(err error) *errorResponse {
-	e, ok := err.(*errorResponse)
+func asErrorResponse(err error) *ErrorResponse {
+	e, ok := err.(*ErrorResponse)
 	if !ok {
-		return &errorResponse{Status: 500, Code: "internal_error", Detail: err.Error()}
+		return &ErrorResponse{Status: 500, Code: "internal_error", Detail: err.Error()}
 	}
 	return e
 }
