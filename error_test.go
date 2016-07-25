@@ -18,10 +18,10 @@ var _ = Describe("Error", func() {
 	)
 	var meta = []map[string]interface{}{{"what": 42}}
 
-	var gerr *errorResponse
+	var gerr *ErrorResponse
 
 	BeforeEach(func() {
-		gerr = &errorResponse{ID: id, Code: code, Status: status, Detail: detail, Meta: meta}
+		gerr = &ErrorResponse{ID: id, Code: code, Status: status, Detail: detail, Meta: meta}
 	})
 
 	It("serializes to JSON", func() {
@@ -43,8 +43,8 @@ var _ = Describe("InvalidParamTypeError", func() {
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
-		err := valErr.(*errorResponse)
+		Ω(valErr).Should(BeAssignableToTypeOf(&ErrorResponse{}))
+		err := valErr.(*ErrorResponse)
 		Ω(err.Detail).Should(ContainSubstring(name))
 		Ω(err.Detail).Should(ContainSubstring("%d", val))
 		Ω(err.Detail).Should(ContainSubstring(expected))
@@ -61,8 +61,8 @@ var _ = Describe("MissingParaerror", func() {
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
-		err := valErr.(*errorResponse)
+		Ω(valErr).Should(BeAssignableToTypeOf(&ErrorResponse{}))
+		err := valErr.(*ErrorResponse)
 		Ω(err.Detail).Should(ContainSubstring(name))
 	})
 })
@@ -79,8 +79,8 @@ var _ = Describe("InvalidAttributeTypeError", func() {
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
-		err := valErr.(*errorResponse)
+		Ω(valErr).Should(BeAssignableToTypeOf(&ErrorResponse{}))
+		err := valErr.(*ErrorResponse)
 		Ω(err.Detail).Should(ContainSubstring(ctx))
 		Ω(err.Detail).Should(ContainSubstring("%d", val))
 		Ω(err.Detail).Should(ContainSubstring(expected))
@@ -98,8 +98,8 @@ var _ = Describe("MissingAttributeError", func() {
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
-		err := valErr.(*errorResponse)
+		Ω(valErr).Should(BeAssignableToTypeOf(&ErrorResponse{}))
+		err := valErr.(*ErrorResponse)
 		Ω(err.Detail).Should(ContainSubstring(ctx))
 		Ω(err.Detail).Should(ContainSubstring(name))
 	})
@@ -115,8 +115,8 @@ var _ = Describe("MissingHeaderError", func() {
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
-		err := valErr.(*errorResponse)
+		Ω(valErr).Should(BeAssignableToTypeOf(&ErrorResponse{}))
+		err := valErr.(*ErrorResponse)
 		Ω(err.Detail).Should(ContainSubstring(name))
 	})
 })
@@ -133,8 +133,8 @@ var _ = Describe("InvalidEnumValueError", func() {
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
-		err := valErr.(*errorResponse)
+		Ω(valErr).Should(BeAssignableToTypeOf(&ErrorResponse{}))
+		err := valErr.(*ErrorResponse)
 		Ω(err.Detail).Should(ContainSubstring(ctx))
 		Ω(err.Detail).Should(ContainSubstring("%d", val))
 		Ω(err.Detail).Should(ContainSubstring(`"43", "44"`))
@@ -154,8 +154,8 @@ var _ = Describe("InvalidFormaerror", func() {
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
-		err := valErr.(*errorResponse)
+		Ω(valErr).Should(BeAssignableToTypeOf(&ErrorResponse{}))
+		err := valErr.(*ErrorResponse)
 		Ω(err.Detail).Should(ContainSubstring(ctx))
 		Ω(err.Detail).Should(ContainSubstring(target))
 		Ω(err.Detail).Should(ContainSubstring("date-time"))
@@ -175,8 +175,8 @@ var _ = Describe("InvalidPatternError", func() {
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
-		err := valErr.(*errorResponse)
+		Ω(valErr).Should(BeAssignableToTypeOf(&ErrorResponse{}))
+		err := valErr.(*ErrorResponse)
 		Ω(err.Detail).Should(ContainSubstring(ctx))
 		Ω(err.Detail).Should(ContainSubstring(target))
 		Ω(err.Detail).Should(ContainSubstring(pattern))
@@ -196,8 +196,8 @@ var _ = Describe("InvalidRangeError", func() {
 
 	It("creates a http error", func() {
 		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
-		err := valErr.(*errorResponse)
+		Ω(valErr).Should(BeAssignableToTypeOf(&ErrorResponse{}))
+		err := valErr.(*ErrorResponse)
 		Ω(err.Detail).Should(ContainSubstring(ctx))
 		Ω(err.Detail).Should(ContainSubstring("greater or equal"))
 		Ω(err.Detail).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
@@ -227,8 +227,8 @@ var _ = Describe("InvalidLengthError", func() {
 
 		It("creates a http error", func() {
 			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
-			err := valErr.(*errorResponse)
+			Ω(valErr).Should(BeAssignableToTypeOf(&ErrorResponse{}))
+			err := valErr.(*ErrorResponse)
 			Ω(err.Detail).Should(ContainSubstring(ctx))
 			Ω(err.Detail).Should(ContainSubstring("greater or equal"))
 			Ω(err.Detail).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
@@ -244,8 +244,8 @@ var _ = Describe("InvalidLengthError", func() {
 
 		It("creates a http error", func() {
 			Ω(valErr).ShouldNot(BeNil())
-			Ω(valErr).Should(BeAssignableToTypeOf(&errorResponse{}))
-			err := valErr.(*errorResponse)
+			Ω(valErr).Should(BeAssignableToTypeOf(&ErrorResponse{}))
+			err := valErr.(*ErrorResponse)
 			Ω(err.Detail).Should(ContainSubstring(ctx))
 			Ω(err.Detail).Should(ContainSubstring("greater or equal"))
 			Ω(err.Detail).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
@@ -256,7 +256,7 @@ var _ = Describe("InvalidLengthError", func() {
 
 var _ = Describe("Merge", func() {
 	var err, err2 error
-	var mErr *errorResponse
+	var mErr *ErrorResponse
 
 	BeforeEach(func() {
 		err = nil
@@ -267,7 +267,7 @@ var _ = Describe("Merge", func() {
 	JustBeforeEach(func() {
 		e := MergeErrors(err, err2)
 		if e != nil {
-			mErr = e.(*errorResponse)
+			mErr = e.(*ErrorResponse)
 		}
 	})
 
@@ -281,7 +281,7 @@ var _ = Describe("Merge", func() {
 		const code = "foo"
 
 		BeforeEach(func() {
-			err = &errorResponse{Code: code}
+			err = &ErrorResponse{Code: code}
 		})
 
 		It("returns the target", func() {
@@ -294,7 +294,7 @@ var _ = Describe("Merge", func() {
 			const detail = "foo"
 
 			BeforeEach(func() {
-				err2 = &errorResponse{Detail: detail}
+				err2 = &ErrorResponse{Detail: detail}
 			})
 
 			It("returns it", func() {
@@ -323,7 +323,7 @@ var _ = Describe("Merge", func() {
 		var metaValues []map[string]interface{}
 
 		BeforeEach(func() {
-			err = &errorResponse{Detail: detail, Status: status, Code: code, Meta: metaValues}
+			err = &ErrorResponse{Detail: detail, Status: status, Code: code, Meta: metaValues}
 		})
 
 		Context("with another Error", func() {
@@ -331,10 +331,10 @@ var _ = Describe("Merge", func() {
 			var status2 = status
 			var code2 = code
 			var metaValues2 []map[string]interface{}
-			var mErr2 *errorResponse
+			var mErr2 *ErrorResponse
 
 			BeforeEach(func() {
-				mErr2 = &errorResponse{Detail: detail2, Status: status2, Code: code2, Meta: metaValues2}
+				mErr2 = &ErrorResponse{Detail: detail2, Status: status2, Code: code2, Meta: metaValues2}
 				err2 = mErr2
 			})
 
@@ -376,7 +376,7 @@ var _ = Describe("Merge", func() {
 
 			Context("with nil target metadata", func() {
 				BeforeEach(func() {
-					err.(*errorResponse).Meta = nil
+					err.(*ErrorResponse).Meta = nil
 				})
 
 				Context("with nil/empty other metadata", func() {
@@ -393,7 +393,7 @@ var _ = Describe("Merge", func() {
 					var metaValues2 = []map[string]interface{}{{"foo": 1}, {"bar": 2}}
 
 					BeforeEach(func() {
-						err.(*errorResponse).Meta = nil
+						err.(*ErrorResponse).Meta = nil
 						mErr2.Meta = metaValues2
 					})
 
