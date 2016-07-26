@@ -863,7 +863,11 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 			if at := mtObj[n]; at != nil {
 				at = DupAtt(at)
 				if mt, ok := at.Type.(*MediaTypeDefinition); ok {
-					view := at.View
+					vatt := viewObj[n]
+					view := vatt.View
+					if view == "" {
+						view = at.View
+					}
 					if view == "" {
 						view = mt.DefaultView()
 					}
