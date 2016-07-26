@@ -71,6 +71,27 @@ var _ = Describe("IterateHeaders", func() {
 	})
 })
 
+var _ = Describe("Finalize ActionDefinition", func() {
+	Context("with an action with no response", func() {
+		var action *design.ActionDefinition
+
+		BeforeEach(func() {
+			// create a Resource with responses, Action with no response
+			resource := &design.ResourceDefinition{
+				Responses: map[string]*design.ResponseDefinition{
+					"NotFound": &design.ResponseDefinition{Name: "NotFound", Status: 404},
+				},
+			}
+			action = &design.ActionDefinition{Parent: resource}
+		})
+
+		It("does not panic and merges the resource responses", func() {
+			Ω(action.Finalize).ShouldNot(Panic())
+			Ω(action.Responses).Should(HaveKey("NotFound"))
+		})
+	})
+})
+
 var _ = Describe("FullPath", func() {
 
 	Context("Given a base resource and a resource with an action with a route", func() {
