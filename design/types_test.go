@@ -123,6 +123,11 @@ var _ = Describe("Project", func() {
 					Attribute("att")
 					Attribute("links")
 				})
+				View("tiny", func() {
+					Attribute("att", func() {
+						View("tiny")
+					})
+				})
 			})
 			MediaType("vnd.application/MT2", func() {
 				TypeName("Mt2")
@@ -134,6 +139,9 @@ var _ = Describe("Project", func() {
 				})
 				View("default", func() {
 					Attribute("att2")
+					Attribute("links")
+				})
+				View("tiny", func() {
 					Attribute("links")
 				})
 			})
@@ -155,6 +163,22 @@ var _ = Describe("Project", func() {
 				l := projected.Type.ToObject()["links"]
 				Ω(l.Type.(*UserTypeDefinition).AttributeDefinition).Should(Equal(links.AttributeDefinition))
 				Ω(links.Type.ToObject()).Should(HaveKey("att"))
+			})
+		})
+
+		Context("using the tiny view", func() {
+			BeforeEach(func() {
+				view = "tiny"
+			})
+
+			It("returns the projected media type with links", func() {
+				Ω(prErr).ShouldNot(HaveOccurred())
+				Ω(projected).ShouldNot(BeNil())
+				Ω(projected.Type).Should(BeAssignableToTypeOf(Object{}))
+				Ω(projected.Type.ToObject()).Should(HaveKey("att"))
+				att := projected.Type.ToObject()["att"]
+				Ω(att.Type.ToObject()).Should(HaveKey("links"))
+				Ω(att.Type.ToObject()).ShouldNot(HaveKey("att2"))
 			})
 		})
 	})
