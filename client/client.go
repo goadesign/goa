@@ -48,13 +48,16 @@ func New(c Doer) *Client {
 // Do wraps the underlying http client Do method and adds logging.
 // The logger should be in the context.
 func (c *Client) Do(ctx context.Context, req *http.Request) (*http.Response, error) {
-	ctx, id := ContextWithRequestID(ctx)
-	// TODO: setting the request ID should be done via client middleware
-	req.Header.Set("X-Request-Id", id) // should the constant middleware.RequestIDHeader be moved and used here?
+	// TODO: setting the request ID should be done via client middleware. For now only set it if the
+	// caller provided one in the ctx.
+	if ctxreqid := ContextRequestID(ctx); ctxreqid != "" {
+		req.Header.Set("X-Request-Id", ctxreqid)
+	}
 	if c.UserAgent != "" {
 		req.Header.Set("User-Agent", c.UserAgent)
 	}
 	startedAt := time.Now()
+	ctx, id := ContextWithRequestID(ctx)
 	goa.LogInfo(ctx, "started", "id", id, req.Method, req.URL.String())
 	if c.Dump {
 		c.dumpRequest(ctx, req)
