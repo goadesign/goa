@@ -204,10 +204,10 @@ var _ = Describe("code generation", func() {
 
 				It("produces the struct go code", func() {
 					expected := "struct {\n" +
-						"	Bar *string `json:\"bar,omitempty\" xml:\"bar,omitempty\" form:\"bar,omitempty\"`\n" +
-						"	Baz *time.Time `json:\"baz,omitempty\" xml:\"baz,omitempty\" form:\"baz,omitempty\"`\n" +
-						"	Foo *int `json:\"foo,omitempty\" xml:\"foo,omitempty\" form:\"foo,omitempty\"`\n" +
-						"	Qux *uuid.UUID `json:\"qux,omitempty\" xml:\"qux,omitempty\" form:\"qux,omitempty\"`\n" +
+						"	Bar *string `form:\"bar,omitempty\" json:\"bar,omitempty\" xml:\"bar,omitempty\"`\n" +
+						"	Baz *time.Time `form:\"baz,omitempty\" json:\"baz,omitempty\" xml:\"baz,omitempty\"`\n" +
+						"	Foo *int `form:\"foo,omitempty\" json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n" +
+						"	Qux *uuid.UUID `form:\"qux,omitempty\" json:\"qux,omitempty\" xml:\"qux,omitempty\"`\n" +
 						"}"
 					Ω(st).Should(Equal(expected))
 				})
@@ -228,10 +228,10 @@ var _ = Describe("code generation", func() {
 
 					It("produces the struct tags", func() {
 						expected := fmt.Sprintf("struct {\n"+
-							"	Bar *string `json:\"bar,omitempty\" xml:\"bar,omitempty\" form:\"bar,omitempty\"`\n"+
-							"	Baz *time.Time `json:\"baz,omitempty\" xml:\"baz,omitempty\" form:\"baz,omitempty\"`\n"+
+							"	Bar *string `form:\"bar,omitempty\" json:\"bar,omitempty\" xml:\"bar,omitempty\"`\n"+
+							"	Baz *time.Time `form:\"baz,omitempty\" json:\"baz,omitempty\" xml:\"baz,omitempty\"`\n"+
 							"	Foo *int `%s:\"%s,%s\" %s:\"%s\"`\n"+
-							"	Qux *uuid.UUID `json:\"qux,omitempty\" xml:\"qux,omitempty\" form:\"qux,omitempty\"`\n"+
+							"	Qux *uuid.UUID `form:\"qux,omitempty\" json:\"qux,omitempty\" xml:\"qux,omitempty\"`\n"+
 							"}", tn1[11:], tv11, tv12, tn2[11:], tv21)
 						Ω(st).Should(Equal(expected))
 					})
@@ -246,10 +246,10 @@ var _ = Describe("code generation", func() {
 
 					It("produces the struct tags", func() {
 						expected := "struct {\n" +
-							"	Bar *string `json:\"bar,omitempty\" xml:\"bar,omitempty\" form:\"bar,omitempty\"`\n" +
-							"	Baz *time.Time `json:\"baz,omitempty\" xml:\"baz,omitempty\" form:\"baz,omitempty\"`\n" +
-							"	ServiceName *int `json:\"foo,omitempty\" xml:\"foo,omitempty\" form:\"foo,omitempty\"`\n" +
-							"	Qux *uuid.UUID `json:\"qux,omitempty\" xml:\"qux,omitempty\" form:\"qux,omitempty\"`\n" +
+							"	Bar *string `form:\"bar,omitempty\" json:\"bar,omitempty\" xml:\"bar,omitempty\"`\n" +
+							"	Baz *time.Time `form:\"baz,omitempty\" json:\"baz,omitempty\" xml:\"baz,omitempty\"`\n" +
+							"	ServiceName *int `form:\"foo,omitempty\" json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n" +
+							"	Qux *uuid.UUID `form:\"qux,omitempty\" json:\"qux,omitempty\" xml:\"qux,omitempty\"`\n" +
 							"}"
 						Ω(st).Should(Equal(expected))
 					})
@@ -268,7 +268,7 @@ var _ = Describe("code generation", func() {
 				})
 
 				It("produces the struct go code", func() {
-					Ω(st).Should(Equal("struct {\n\tFoo map[int]int `json:\"foo,omitempty\" xml:\"foo,omitempty\" form:\"foo,omitempty\"`\n}"))
+					Ω(st).Should(Equal("struct {\n\tFoo map[int]int `form:\"foo,omitempty\" json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n}"))
 				})
 			})
 
@@ -283,7 +283,7 @@ var _ = Describe("code generation", func() {
 				})
 
 				It("produces the struct go code", func() {
-					Ω(st).Should(Equal("struct {\n\tFoo []int `json:\"foo,omitempty\" xml:\"foo,omitempty\" form:\"foo,omitempty\"`\n}"))
+					Ω(st).Should(Equal("struct {\n\tFoo []int `form:\"foo,omitempty\" json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n}"))
 				})
 			})
 
@@ -307,10 +307,10 @@ var _ = Describe("code generation", func() {
 				It("produces the struct go code", func() {
 					expected := "struct {\n" +
 						"	Foo map[*struct {\n" +
-						"		KeyAtt *string `json:\"keyAtt,omitempty\" xml:\"keyAtt,omitempty\" form:\"keyAtt,omitempty\"`\n" +
+						"		KeyAtt *string `form:\"keyAtt,omitempty\" json:\"keyAtt,omitempty\" xml:\"keyAtt,omitempty\"`\n" +
 						"	}]*struct {\n" +
-						"		ElemAtt *int `json:\"elemAtt,omitempty\" xml:\"elemAtt,omitempty\" form:\"elemAtt,omitempty\"`\n" +
-						"	} `json:\"foo,omitempty\" xml:\"foo,omitempty\" form:\"foo,omitempty\"`\n" +
+						"		ElemAtt *int `form:\"elemAtt,omitempty\" json:\"elemAtt,omitempty\" xml:\"elemAtt,omitempty\"`\n" +
+						"	} `form:\"foo,omitempty\" json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n" +
 						"}"
 					Ω(st).Should(Equal(expected))
 				})
@@ -332,8 +332,8 @@ var _ = Describe("code generation", func() {
 				It("produces the struct go code", func() {
 					expected := "struct {\n" +
 						"	Foo []*struct {\n" +
-						"		Bar *int `json:\"bar,omitempty\" xml:\"bar,omitempty\" form:\"bar,omitempty\"`\n" +
-						"	} `json:\"foo,omitempty\" xml:\"foo,omitempty\" form:\"foo,omitempty\"`\n" +
+						"		Bar *int `form:\"bar,omitempty\" json:\"bar,omitempty\" xml:\"bar,omitempty\"`\n" +
+						"	} `form:\"foo,omitempty\" json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n" +
 						"}"
 					Ω(st).Should(Equal(expected))
 				})
@@ -348,8 +348,8 @@ var _ = Describe("code generation", func() {
 					It("produces the struct go code", func() {
 						expected := "struct {\n" +
 							"	Foo []*struct {\n" +
-							"		Bar *int `json:\"bar,omitempty\" xml:\"bar,omitempty\" form:\"bar,omitempty\"`\n" +
-							"	} `json:\"foo\" xml:\"foo\" form:\"foo\"`\n" +
+							"		Bar *int `form:\"bar,omitempty\" json:\"bar,omitempty\" xml:\"bar,omitempty\"`\n" +
+							"	} `form:\"foo\" json:\"foo\" xml:\"foo\"`\n" +
 							"}"
 						Ω(st).Should(Equal(expected))
 					})
@@ -368,7 +368,7 @@ var _ = Describe("code generation", func() {
 
 				It("produces the struct go code", func() {
 					expected := "struct {\n" +
-						"	Foo int `json:\"foo\" xml:\"foo\" form:\"foo\"`\n" +
+						"	Foo int `form:\"foo\" json:\"foo\" xml:\"foo\"`\n" +
 						"}"
 					Ω(st).Should(Equal(expected))
 				})
@@ -407,7 +407,7 @@ var _ = Describe("code generation", func() {
 				})
 
 				It("produces the array go code", func() {
-					Ω(source).Should(Equal("[]*struct {\n\tBar *string `json:\"bar,omitempty\" xml:\"bar,omitempty\" form:\"bar,omitempty\"`\n\tFoo *int `json:\"foo,omitempty\" xml:\"foo,omitempty\" form:\"foo,omitempty\"`\n}"))
+					Ω(source).Should(Equal("[]*struct {\n\tBar *string `form:\"bar,omitempty\" json:\"bar,omitempty\" xml:\"bar,omitempty\"`\n\tFoo *int `form:\"foo,omitempty\" json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n}"))
 				})
 			})
 		})
