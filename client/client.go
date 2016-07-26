@@ -48,11 +48,13 @@ func New(c Doer) *Client {
 // Do wraps the underlying http client Do method and adds logging.
 // The logger should be in the context.
 func (c *Client) Do(ctx context.Context, req *http.Request) (*http.Response, error) {
+	ctx, id := ContextWithRequestID(ctx)
+	// TODO: setting the request ID should be done via client middleware
+	req.Header.Set("X-Request-Id", id) // should the constant middleware.RequestIDHeader be moved and used here?
 	if c.UserAgent != "" {
 		req.Header.Set("User-Agent", c.UserAgent)
 	}
 	startedAt := time.Now()
-	id := shortID()
 	goa.LogInfo(ctx, "started", "id", id, req.Method, req.URL.String())
 	if c.Dump {
 		c.dumpRequest(ctx, req)
@@ -195,4 +197,32 @@ func shortID() string {
 	b := make([]byte, 6)
 	io.ReadFull(rand.Reader, b)
 	return base64.StdEncoding.EncodeToString(b)
+}
+
+// clientKey is the private type used to store values in the context.
+// It is private to avoid possible collisions with keys used by other packages.
+type clientKey int
+
+// ReqIDKey is the context key used to store the request ID value.
+const reqIDKey clientKey = 1
+
+// ContextRequestID extracts the Request ID from the context.
+func ContextRequestID(ctx context.Context) string {
+	var reqID string
+	id := ctx.Value(reqIDKey)
+	if id != nil {
+		reqID = id.(string)
+	}
+	return reqID
+}
+
+// ContextWithRequestID returns ctx and the request ID if it already has one or creates and returns a new context with
+// a new request ID.
+func ContextWithRequestID(ctx context.Context) (context.Context, string) {
+	reqID := ContextRequestID(ctx)
+	if reqID == "" {
+		reqID = shortID()
+		ctx = context.WithValue(ctx, reqIDKey, reqID)
+	}
+	return ctx, reqID
 }
