@@ -157,7 +157,7 @@ func attributeTags(parent, att *design.AttributeDefinition, name string, private
 	if private || (!parent.IsRequired(name) && !parent.HasDefaultValue(name)) {
 		omit = ",omitempty"
 	}
-	return fmt.Sprintf(" `json:\"%s%s\" xml:\"%s%s\" form:\"%s%s\"`", name, omit, name, omit, name, omit)
+	return fmt.Sprintf(" `form:\"%s%s\" json:\"%s%s\" xml:\"%s%s\"`", name, omit, name, omit, name, omit)
 }
 
 // GoTypeRef returns the Go code that refers to the Go type which matches the given data type
