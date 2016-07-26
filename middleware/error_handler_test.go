@@ -98,6 +98,29 @@ var _ = Describe("ErrorHandler", func() {
 				msg = `\[.*\]` + msg[endIDidx+1:]
 				Ω(fmt.Sprintf("%v", decoded.Error())).Should(MatchRegexp(msg))
 			})
+
+			Context("and goa 500 error", func() {
+				var origID string
+
+				BeforeEach(func() {
+					verbose = false
+					h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+						e := goa.ErrInternal("goa-500-boom")
+						origID = e.(goa.ServiceError).Token()
+						return e
+					}
+				})
+
+				It("preserves the error ID from the original error", func() {
+					var decoded errorResponse
+					Ω(origID).ShouldNot(Equal(""))
+					Ω(rw.Status).Should(Equal(500))
+					Ω(rw.ParentHeader["Content-Type"]).Should(Equal([]string{goa.ErrorMediaIdentifier}))
+					err := service.Decoder.Decode(&decoded, bytes.NewBuffer(rw.Body), "application/json")
+					Ω(err).ShouldNot(HaveOccurred())
+					Ω(decoded.ID).Should(Equal(origID))
+				})
+			})
 		})
 	})
 

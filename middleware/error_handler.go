@@ -43,6 +43,11 @@ func ErrorHandler(service *goa.Service, verbose bool) goa.Middleware {
 					rw.Header().Set("Content-Type", goa.ErrorMediaIdentifier)
 					msg := fmt.Sprintf("%s [%s]", http.StatusText(http.StatusInternalServerError), reqID)
 					respBody = goa.ErrInternal(msg)
+					// Preserve the ID of the original error as that's what gets logged, the client
+					// received error ID must match the original
+					if origErrID := goa.ContextResponse(ctx).ErrorCode; origErrID != "" {
+						respBody.(*goa.ErrorResponse).ID = origErrID
+					}
 				}
 			}
 			return service.Send(ctx, status, respBody)
