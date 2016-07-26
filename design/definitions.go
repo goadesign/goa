@@ -1493,6 +1493,9 @@ func (a *ActionDefinition) IterateResponses(it ResponseIterator) error {
 func (a *ActionDefinition) mergeResponses() {
 	for name, resp := range a.Parent.Responses {
 		if _, ok := a.Responses[name]; !ok {
+			if a.Responses == nil {
+				a.Responses = make(map[string]*ResponseDefinition)
+			}
 			a.Responses[name] = resp.Dup()
 		}
 	}
