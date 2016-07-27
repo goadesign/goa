@@ -401,7 +401,7 @@ func main() {
 	}
 
 	// Create client struct
-	httpClient:= newHTTPClient()
+	httpClient := newHTTPClient()
 	c := {{ .Package }}.New(goaclient.HTTPClientDoer(httpClient))
 
 	// Register global flags

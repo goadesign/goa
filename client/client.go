@@ -45,19 +45,19 @@ func New(c Doer) *Client {
 	return &Client{Doer: c}
 }
 
-// HTTPClientDoer turns a stdlib http.Client into a Doer. Used to create a new Client from an http.Client using New().
+// HTTPClientDoer turns a stdlib http.Client into a Doer. Use it to enable to call New() with an http.Client.
 func HTTPClientDoer(hc *http.Client) Doer {
-	return &httpClientDoer{Client: hc}
+	return doFunc(func(_ context.Context, req *http.Request) (*http.Response, error) {
+		return hc.Do(req)
+	})
 }
 
-// httpClientDoer turns a stdlib http.Client into a Doer.
-type httpClientDoer struct {
-	*http.Client
-}
+// doFunc is the type definition of the Doer.Do method. It implements Doer.
+type doFunc func(context.Context, *http.Request) (*http.Response, error)
 
-// Do implements Doer.Do by delegating to the http.Client
-func (h *httpClientDoer) Do(_ context.Context, req *http.Request) (*http.Response, error) {
-	return h.Client.Do(req)
+// Do implements Doer.Do
+func (f doFunc) Do(ctx context.Context, req *http.Request) (*http.Response, error) {
+	return f(ctx, req)
 }
 
 // Do wraps the underlying http client Do method and adds logging.
