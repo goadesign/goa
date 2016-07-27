@@ -40,14 +40,14 @@ type (
 // If c is nil, the returned client wraps the default http client.
 func New(c Doer) *Client {
 	if c == nil {
-		return NewWithHttpClient(nil)
+		return NewWithHTTPClient(nil)
 	}
 	return &Client{Doer: c}
 }
 
-// NewWithHttpClient creates a new API client that wraps hc.
+// NewWithHTTPClient creates a new API client that wraps hc.
 // If hc is nil, the returned client wraps the default http client.
-func NewWithHttpClient(hc *http.Client) *Client {
+func NewWithHTTPClient(hc *http.Client) *Client {
 	if hc == nil {
 		hc = http.DefaultClient
 	}
