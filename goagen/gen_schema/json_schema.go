@@ -528,7 +528,7 @@ func buildMediaTypeSchema(api *design.APIDefinition, mt *design.MediaTypeDefinit
 				href = toSchemaHref(api, r.CanonicalAction().Routes[0])
 			}
 			sm := NewJSONSchema()
-			sm.Ref = MediaTypeRef(api, lmt, "link")
+			sm.Ref = MediaTypeRef(api, lmt, "default")
 			s.Links = append(s.Links, &JSONLink{
 				Title:        ln,
 				Rel:          ln,
