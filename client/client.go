@@ -18,7 +18,7 @@ import (
 type (
 	// Doer defines the Do method of the http client.
 	Doer interface {
-		Do(*http.Request) (*http.Response, error)
+		Do(context.Context, *http.Request) (*http.Response, error)
 	}
 
 	// Client is the common client data structure for all goa service clients.
@@ -37,12 +37,27 @@ type (
 )
 
 // New creates a new API client that wraps c.
-// If c is nil the returned client wraps the default http client.
+// If c is nil, the returned client wraps http.DefaultClient.
 func New(c Doer) *Client {
 	if c == nil {
-		c = http.DefaultClient
+		c = HTTPClientDoer(http.DefaultClient)
 	}
 	return &Client{Doer: c}
+}
+
+// HTTPClientDoer turns a stdlib http.Client into a Doer. Use it to enable to call New() with an http.Client.
+func HTTPClientDoer(hc *http.Client) Doer {
+	return doFunc(func(_ context.Context, req *http.Request) (*http.Response, error) {
+		return hc.Do(req)
+	})
+}
+
+// doFunc is the type definition of the Doer.Do method. It implements Doer.
+type doFunc func(context.Context, *http.Request) (*http.Response, error)
+
+// Do implements Doer.Do
+func (f doFunc) Do(ctx context.Context, req *http.Request) (*http.Response, error) {
+	return f(ctx, req)
 }
 
 // Do wraps the underlying http client Do method and adds logging.
@@ -62,7 +77,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request) (*http.Response, err
 	if c.Dump {
 		c.dumpRequest(ctx, req)
 	}
-	resp, err := c.Doer.Do(req)
+	resp, err := c.Doer.Do(ctx, req)
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return nil, err
