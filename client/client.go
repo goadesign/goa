@@ -37,21 +37,17 @@ type (
 )
 
 // New creates a new API client that wraps c.
-// If c is nil, the returned client wraps the default http client.
+// If c is nil, the returned client wraps http.DefaultClient.
 func New(c Doer) *Client {
 	if c == nil {
-		return NewWithHTTPClient(nil)
+		c = HTTPClientDoer(http.DefaultClient)
 	}
 	return &Client{Doer: c}
 }
 
-// NewWithHTTPClient creates a new API client that wraps hc.
-// If hc is nil, the returned client wraps the default http client.
-func NewWithHTTPClient(hc *http.Client) *Client {
-	if hc == nil {
-		hc = http.DefaultClient
-	}
-	return &Client{Doer: &httpClientDoer{Client: hc}}
+// HTTPClientDoer turns a stdlib http.Client into a Doer. Used to create a new Client from an http.Client using New().
+func HTTPClientDoer(hc *http.Client) Doer {
+	return &httpClientDoer{Client: hc}
 }
 
 // httpClientDoer turns a stdlib http.Client into a Doer.
