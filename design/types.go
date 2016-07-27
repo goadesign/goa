@@ -821,8 +821,8 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 			},
 		},
 	}
-	p.Views = map[string]*ViewDefinition{view: {
-		Name:                view,
+	p.Views = map[string]*ViewDefinition{"default": {
+		Name:                "default",
 		AttributeDefinition: DupAtt(v.AttributeDefinition),
 		Parent:              p,
 	}}
