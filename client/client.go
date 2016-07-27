@@ -45,7 +45,7 @@ func New(c Doer) *Client {
 	return &Client{Doer: c}
 }
 
-// New created a new API client that wraps hc.
+// NewWithHttpClient creates a new API client that wraps hc.
 // If hc is nil, the returned client wraps the default http client.
 func NewWithHttpClient(hc *http.Client) *Client {
 	if hc == nil {
