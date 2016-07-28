@@ -310,7 +310,7 @@ func PackagePath(path string) (string, error) {
 		if gp, err := filepath.Abs(gopath); err == nil {
 			gopath = gp
 		}
-		if strings.HasPrefix(absPath, gopath) {
+		if filepath.HasPrefix(absPath, gopath) {
 			base := filepath.FromSlash(gopath + "/src")
 			rel, err := filepath.Rel(base, absPath)
 			return filepath.ToSlash(rel), err
