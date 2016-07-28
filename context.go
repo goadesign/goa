@@ -28,7 +28,8 @@ type (
 
 		// Payload returns the decoded request body.
 		Payload interface{}
-		// Params is the path and querystring request parameters.
+		// Params contains the raw values for the parameters defined in the design including
+		// path parameters, query string parameters and header parameters.
 		Params url.Values
 	}
 
