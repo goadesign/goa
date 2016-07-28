@@ -1028,14 +1028,8 @@ func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottl
 	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
 	paramParam := req.Params["param"]
 	if len(paramParam) > 0 {
-		if len(paramParam) > 1 || len(paramParam[0]) > 0 {
-			var params []string
-			for _, rawParam := range paramParam {
-				elemsParam := strings.Split(rawParam, ",")
-				params = elemsParam
-				rctx.Param = append(rctx.Param, params...)
-			}
-		}
+		params := paramParam
+		rctx.Param = params
 	}
 	return &rctx, err
 }
@@ -1059,22 +1053,15 @@ func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottl
 	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
 	paramParam := req.Params["param"]
 	if len(paramParam) > 0 {
-		if len(paramParam) > 1 || len(paramParam[0]) > 0 {
-			var params []int
-			for _, rawParam := range paramParam {
-				elemsParam := strings.Split(rawParam, ",")
-				elemsParam2 := make([]int, len(elemsParam))
-				for i, rawElem := range elemsParam {
-					if elem, err2 := strconv.Atoi(rawElem); err2 == nil {
-						elemsParam2[i] = elem
-					} else {
-						err = goa.MergeErrors(err, goa.InvalidParamTypeError("elem", rawElem, "integer"))
-					}
-				}
-				params = elemsParam2
-				rctx.Param = append(rctx.Param, params...)
+		params := make([]int, len(paramParam))
+		for i, rawParam := range paramParam {
+			if param, err2 := strconv.Atoi(rawParam); err2 == nil {
+				params[i] = param
+			} else {
+				err = goa.MergeErrors(err, goa.InvalidParamTypeError("param", rawParam, "integer"))
 			}
 		}
+		rctx.Param = params
 	}
 	return &rctx, err
 }
