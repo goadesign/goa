@@ -481,15 +481,6 @@ type {{ .Name }} struct {
 */}}{{ if .Pointer }}{{ $tmp := tempvar }}{{ tabs .Depth }}{{ $tmp }} := interface{}(raw{{ goify .Name true }})
 {{ tabs .Depth }}{{ .Pkg }} = &{{ $tmp }}
 {{ else }}{{ tabs .Depth }}{{ .Pkg }} = raw{{ goify .Name true }}
-{{ end }}{{ end }}{{ if eq .Attribute.Type.Kind 8 }}{{/*
-
-*/}}{{/* ArrayType */}}{{/*
-*/}}{{ tabs .Depth }}elems{{ goify .Name true }} := strings.Split(raw{{ goify .Name true }}, ",")
-{{ if eq (arrayAttribute .Attribute).Type.Kind 4 }}{{ tabs .Depth }}{{ .Pkg }} = elems{{ goify .Name true }}
-{{ else }}{{ tabs .Depth }}elems{{ goify .Name true }}2 := make({{ gotyperef .Attribute.Type nil .Depth false }}, len(elems{{ goify .Name true }}))
-{{ tabs .Depth }}for i, rawElem := range elems{{ goify .Name true }} {
-{{ template "Coerce" (newCoerceData "elem" (arrayAttribute .Attribute) false (printf "elems%s2[i]" (goify .Name true)) (add .Depth 1)) }}{{ tabs .Depth }}}
-{{ tabs .Depth }}{{ .Pkg }} = elems{{ goify .Name true }}2
 {{ end }}{{ end }}`
 
 	// ctxNewT generates the code for the context factory method.
@@ -509,13 +500,14 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 		err = goa.MergeErrors(err, goa.MissingHeaderError("{{ $name }}"))
 	} else {
 {{ else }}	if len(header{{ goify $name true }}) > 0 {
-{{ end }}{{/* if $mustValidate */}}{{ if $att.Type.IsArray }}		if len(header{{ goify $name true }}) > 1 || len(header{{ goify $name true }}[0]) > 0 {
-			var headers {{ gotypedef $att 2 true false }}
-			for _, raw{{ goify $name true}} := range header{{ goify $name true}} {
-{{ template "Coerce" (newCoerceData $name $att ($.Headers.IsPrimitivePointer $name) "headers" 4) }}{{/*
-*/}}				{{ printf "rctx.%s" (goifyatt $att $name true) }} = append({{ printf "rctx.%s" (goifyatt $att $name true) }}, headers...)
-			}
-		}
+{{ end }}{{/* if $mustValidate */}}{{ if $att.Type.IsArray }}
+{{ if eq (arrayAttribute $att).Type.Kind 4 }}		headers := header{{ goify $name true }}
+{{ else }}		headers := make({{ gotypedef $att 2 true false }}, len(header{{ goify $name true }}))
+		for i, raw{{ goify $name true}} := range header{{ goify $name true}} {
+{{ template "Coerce" (newCoerceData $name (arrayAttribute $att) ($.Headers.IsPrimitivePointer $name) "headers[i]" 3) }}{{/*
+*/}}		}
+{{ end }}		{{ printf "rctx.%s" (goifyatt $att $name true) }} = headers
+		req.Params["{{ goifyatt $att $name true }}"] = headers
 {{ else }}		raw{{ goify $name true}} := header{{ goify $name true}}[0]
 {{ template "Coerce" (newCoerceData $name $att ($.Headers.IsPrimitivePointer $name) (printf "rctx.%s" (goifyatt $att $name true)) 2) }}{{ end }}{{/*
 */}}{{ $validation := validationChecker $att ($.Headers.IsNonZero $name) ($.Headers.IsRequired $name) ($.Headers.HasDefaultValue $name) (printf "rctx.%s" (goifyatt $att $name true)) $name 2 false }}{{/*
@@ -528,13 +520,12 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 		err = goa.MergeErrors(err, goa.MissingParamError("{{ $name }}"))
 	} else {
 {{ else }}	if len(param{{ goify $name true }}) > 0 {
-{{ end }}{{/* if $mustValidate */}}{{ if $att.Type.IsArray }}		if len(param{{ goify $name true }}) > 1 || len(param{{ goify $name true }}[0]) > 0 {
-			var params {{ gotypedef $att 2 true false }}
-			for _, raw{{ goify $name true}} := range param{{ goify $name true}} {
-{{ template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) "params" 4) }}{{/*
-*/}}				{{ printf "rctx.%s" (goifyatt $att $name true) }} = append({{ printf "rctx.%s" (goifyatt $att $name true) }}, params...)
-			}
-		}
+{{ end }}{{/* if $mustValidate */}}{{ if $att.Type.IsArray }}{{ if eq (arrayAttribute $att).Type.Kind 4 }}		params := param{{ goify $name true }}
+{{ else }}		params := make({{ gotypedef $att 2 true false }}, len(param{{ goify $name true }}))
+		for i, raw{{ goify $name true}} := range param{{ goify $name true}} {
+{{ template "Coerce" (newCoerceData $name (arrayAttribute $att) ($.Params.IsPrimitivePointer $name) "params[i]" 3) }}{{/*
+*/}}		}
+{{ end }}		{{ printf "rctx.%s" (goifyatt $att $name true) }} = params
 {{ else }}		raw{{ goify $name true}} := param{{ goify $name true}}[0]
 {{ template "Coerce" (newCoerceData $name $att ($.Params.IsPrimitivePointer $name) (printf "rctx.%s" (goifyatt $att $name true)) 2) }}{{ end }}{{/*
 */}}{{ $validation := validationChecker $att ($.Params.IsNonZero $name) ($.Params.IsRequired $name) ($.Params.HasDefaultValue $name) (printf "rctx.%s" (goifyatt $att $name true)) $name 2 false }}{{/*
