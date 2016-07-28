@@ -924,6 +924,7 @@ func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottl
 	headerHeader := req.Header["Header"]
 	if len(headerHeader) > 0 {
 		rawHeader := headerHeader[0]
+		req.Params["Header"] = []string{rawHeader}
 		rctx.Header = &rawHeader
 	}
 	return &rctx, err
@@ -940,6 +941,7 @@ func NewListBottleContext(ctx context.Context, service *goa.Service) (*ListBottl
 	headerParam := req.Header["Param"]
 	if len(headerParam) > 0 {
 		rawParam := headerParam[0]
+		req.Params["param"] = []string{rawParam}
 		rctx.Param = &rawParam
 	}
 	paramParam := req.Params["param"]
