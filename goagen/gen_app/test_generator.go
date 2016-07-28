@@ -159,13 +159,13 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 			panic(err) // bug
 		}
 		tmp := codegen.GoTypeName(p, nil, 0, false)
-		if !p.IsBuiltIn() {
+		if !p.IsError() {
 			tmp = fmt.Sprintf("%s.%s", g.target, tmp)
 		}
 		validate := codegen.RecursiveChecker(p.AttributeDefinition, false, false, false, "payload", "raw", 1, true)
 		returnType = &ObjectType{}
 		returnType.Type = tmp
-		if p.IsObject() && !p.IsBuiltIn() {
+		if p.IsObject() && !p.IsError() {
 			returnType.Pointer = "*"
 		}
 		returnType.Validatable = validate != ""

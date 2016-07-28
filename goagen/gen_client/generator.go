@@ -502,6 +502,8 @@ func (g *Generator) fileServerMethod(fs *design.FileServerDefinition) string {
 // generateMediaTypes iterates through the media types and generate the data structures and
 // marshaling code.
 func (g *Generator) generateMediaTypes(pkgDir string, api *design.APIDefinition, funcs template.FuncMap) error {
+	funcs["decodegotyperef"] = decodeGoTypeRef
+	funcs["decodegotypename"] = decodeGoTypeName
 	typeDecodeTmpl := template.Must(template.New("typeDecode").Funcs(funcs).Parse(typeDecodeTmpl))
 	mtFile := filepath.Join(pkgDir, "media_types.go")
 	mtWr, err := genapp.NewMediaTypesWriter(mtFile)
@@ -518,10 +520,7 @@ func (g *Generator) generateMediaTypes(pkgDir string, api *design.APIDefinition,
 	}
 	mtWr.WriteHeader(title, g.target, imports)
 	err = api.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
-		if mt.IsBuiltIn() {
-			return nil
-		}
-		if mt.Type.IsObject() || mt.Type.IsArray() {
+		if (mt.Type.IsObject() || mt.Type.IsArray()) && !mt.IsError() {
 			if err := mtWr.Execute(mt); err != nil {
 				return err
 			}
@@ -627,6 +626,24 @@ func goTypeRefExt(t design.DataType, tabs int, pkg string) string {
 	return fmt.Sprintf("%s.%s", pkg, ref)
 }
 
+// decodeGoTypeRef handles the case where the type being decoded is a error response media type.
+func decodeGoTypeRef(t design.DataType, required []string, tabs int, private bool) string {
+	mt, ok := t.(*design.MediaTypeDefinition)
+	if ok && mt.IsError() {
+		return "*goa.ErrorResponse"
+	}
+	return codegen.GoTypeRef(t, required, tabs, private)
+}
+
+// decodeGoTypeName handles the case where the type being decoded is a error response media type.
+func decodeGoTypeName(t design.DataType, required []string, tabs int, private bool) string {
+	mt, ok := t.(*design.MediaTypeDefinition)
+	if ok && mt.IsError() {
+		return "goa.ErrorResponse"
+	}
+	return codegen.GoTypeName(t, required, tabs, private)
+}
+
 // cmdFieldType computes the Go type name used to store command flags of the given design type.
 func cmdFieldType(t design.DataType, point bool) string {
 	var pointer, suffix string
@@ -728,6 +745,9 @@ func pathParamNames(r *design.RouteDefinition) string {
 }
 
 func typeName(mt *design.MediaTypeDefinition) string {
+	if mt.IsError() {
+		return "ErrorResponse"
+	}
 	return codegen.GoTypeName(mt, mt.AllRequired(), 1, false)
 }
 
@@ -761,8 +781,8 @@ type {{ gotypename .Payload nil 1 false }} {{ gotypedef .Payload 0 true false }}
 `
 
 	typeDecodeTmpl = `{{ $typeName := typeName . }}{{ $funcName := printf "Decode%s" $typeName }}// {{ $funcName }} decodes the {{ $typeName }} instance encoded in resp body.
-func (c *Client) {{ $funcName }}(resp *http.Response) ({{ gotyperef . .AllRequired 0 false }}, error) {
-	var decoded {{ gotypename . .AllRequired 0 false }}
+func (c *Client) {{ $funcName }}(resp *http.Response) ({{ decodegotyperef . .AllRequired 0 false }}, error) {
+	var decoded {{ decodegotypename . .AllRequired 0 false }}
 	err := c.Decoder.Decode(&decoded, resp.Body, resp.Header.Get("Content-Type"))
 	return {{ if .IsObject }}&{{ end }}decoded, err
 }
