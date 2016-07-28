@@ -170,8 +170,8 @@ func attributeTags(parent, att *design.AttributeDefinition, name string, private
 func GoTypeRef(t design.DataType, required []string, tabs int, private bool) string {
 	tname := GoTypeName(t, required, tabs, private)
 	if mt, ok := t.(*design.MediaTypeDefinition); ok {
-		if mt.IsBuiltIn() {
-			return tname // error and not *error
+		if mt.IsError() {
+			return "error"
 		}
 	}
 	if t.IsObject() {

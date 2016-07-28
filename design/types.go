@@ -685,8 +685,8 @@ func NewMediaTypeDefinition(name, identifier string, dsl func()) *MediaTypeDefin
 // Kind implements DataKind.
 func (m *MediaTypeDefinition) Kind() Kind { return MediaTypeKind }
 
-// IsBuiltIn returns true if the media type is implemented via a goa struct.
-func (m *MediaTypeDefinition) IsBuiltIn() bool {
+// IsError returns true if the media type is implemented via a goa struct.
+func (m *MediaTypeDefinition) IsError() bool {
 	return m.Identifier == ErrorMedia.Identifier
 }
 
