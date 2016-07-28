@@ -500,15 +500,15 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 		err = goa.MergeErrors(err, goa.MissingHeaderError("{{ $name }}"))
 	} else {
 {{ else }}	if len(header{{ goify $name true }}) > 0 {
-{{ end }}{{/* if $mustValidate */}}{{ if $att.Type.IsArray }}
+{{ end }}{{/* if $mustValidate */}}{{ if $att.Type.IsArray }}		req.Params["{{ $name }}"] = header{{ goify $name true }}
 {{ if eq (arrayAttribute $att).Type.Kind 4 }}		headers := header{{ goify $name true }}
 {{ else }}		headers := make({{ gotypedef $att 2 true false }}, len(header{{ goify $name true }}))
 		for i, raw{{ goify $name true}} := range header{{ goify $name true}} {
 {{ template "Coerce" (newCoerceData $name (arrayAttribute $att) ($.Headers.IsPrimitivePointer $name) "headers[i]" 3) }}{{/*
 */}}		}
 {{ end }}		{{ printf "rctx.%s" (goifyatt $att $name true) }} = headers
-		req.Params["{{ goifyatt $att $name true }}"] = headers
 {{ else }}		raw{{ goify $name true}} := header{{ goify $name true}}[0]
+		req.Params["{{ $name }}"] = []string{raw{{ goify $name true }}}
 {{ template "Coerce" (newCoerceData $name $att ($.Headers.IsPrimitivePointer $name) (printf "rctx.%s" (goifyatt $att $name true)) 2) }}{{ end }}{{/*
 */}}{{ $validation := validationChecker $att ($.Headers.IsNonZero $name) ($.Headers.IsRequired $name) ($.Headers.HasDefaultValue $name) (printf "rctx.%s" (goifyatt $att $name true)) $name 2 false }}{{/*
 */}}{{ if $validation }}{{ $validation }}
