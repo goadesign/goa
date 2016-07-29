@@ -286,6 +286,8 @@ func joinNames(useNil bool, atts ...*design.AttributeDefinition) string {
 				}
 			} else if a.Type.IsArray() {
 				field = flagTypeArrayVal(a, field)
+			} else {
+				field = flagNonRequiredTypeVal(a, field)
 			}
 			if att.IsRequired(n) {
 				names = append(names, field)
@@ -309,6 +311,15 @@ func flagTypeVal(a *design.AttributeDefinition, key string, field string) string
 		return "%s"
 	default:
 		return "&" + field
+	}
+}
+
+func flagNonRequiredTypeVal(a *design.AttributeDefinition, field string) string {
+	switch a.Type {
+	case design.Number, design.Boolean, design.UUID, design.DateTime, design.Any:
+		return "*%s"
+	default:
+		return field
 	}
 }
 
@@ -340,6 +351,7 @@ func handleSpecialTypes(atts ...*design.AttributeDefinition) specialTypeResult {
 			continue
 		}
 		obj := att.Type.ToObject()
+		var names, optNames []string
 
 		keys := make([]string, len(obj))
 		i := 0
@@ -383,7 +395,13 @@ func handleSpecialTypes(atts ...*design.AttributeDefinition) specialTypeResult {
 			}
 			if typeHandler != "" {
 				tmpVar := codegen.Tempvar()
-				result.Temps = append(result.Temps, tmpVar)
+				if att.IsRequired(n) {
+					names = append(names, tmpVar)
+				} else {
+					optNames = append(optNames, tmpVar)
+				}
+
+				//result.Temps = append(result.Temps, tmpVar)
 				result.Output += fmt.Sprintf(`
 	%s, err := %s(%s)
 	if err != nil {
@@ -393,6 +411,8 @@ func handleSpecialTypes(atts ...*design.AttributeDefinition) specialTypeResult {
 
 			}
 		}
+		result.Temps = append(result.Temps, names...)
+		result.Temps = append(result.Temps, optNames...)
 	}
 	return result
 }
@@ -796,7 +816,7 @@ func hasFlag(name string) bool {
 
 func jsonVal(val string) (*interface{}, error) {
 	var t interface{}
-	err := json.Unmarshal([]byte(val), t)
+	err := json.Unmarshal([]byte(val), &t)
 	if err != nil {
 		return nil, err
 	}
