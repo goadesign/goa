@@ -109,7 +109,6 @@ var _ = Describe("Generate", func() {
 
 		It("generate the correct handling for special type DateTime", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(8))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("err := timeVal(cmd.Time)"))
@@ -118,7 +117,6 @@ var _ = Describe("Generate", func() {
 		})
 		It("generate the correct handling for special type DateTime Array", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(8))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("err := timeArray(cmd.TimeArray)"))
@@ -127,7 +125,6 @@ var _ = Describe("Generate", func() {
 		})
 		It("generate the correct handling for special type Number", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(8))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("err := float64Val(cmd.Number)"))
@@ -136,7 +133,6 @@ var _ = Describe("Generate", func() {
 		})
 		It("generate the correct handling for special type Number Array", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(8))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("err := float64Array(cmd.NumberArray)"))
@@ -145,7 +141,6 @@ var _ = Describe("Generate", func() {
 		})
 		It("generate the correct handling for special type Boolean", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(8))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("err := boolVal(cmd.Bool)"))
@@ -154,7 +149,6 @@ var _ = Describe("Generate", func() {
 		})
 		It("generate the correct handling for special type Boolean Array", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(8))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("err := boolArray(cmd.BoolArray)"))
@@ -163,7 +157,6 @@ var _ = Describe("Generate", func() {
 		})
 		It("generate the correct handling for special type required Boolean", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(8))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("err := boolVal(cmd.BoolReq)"))
@@ -172,7 +165,6 @@ var _ = Describe("Generate", func() {
 		})
 		It("generate the correct handling for special type UUID", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(8))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("err := uuidVal(cmd.UUID)"))
@@ -181,7 +173,6 @@ var _ = Describe("Generate", func() {
 		})
 		It("generate the correct handling for special type UUID Array", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(8))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("err := uuidArray(cmd.UUIDArray)"))
@@ -190,7 +181,6 @@ var _ = Describe("Generate", func() {
 		})
 		It("generate the correct handling for special type Any", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(8))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("err := jsonVal(cmd.Any)"))
@@ -199,7 +189,6 @@ var _ = Describe("Generate", func() {
 		})
 		It("generate the correct handling for special type Any Array", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(8))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("err := jsonArray(cmd.AnyArray)"))
@@ -209,7 +198,6 @@ var _ = Describe("Generate", func() {
 
 		It("generates the correct command flag initialization code", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(9))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically(">=", 3))
