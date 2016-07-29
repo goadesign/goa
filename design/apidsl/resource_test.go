@@ -188,6 +188,24 @@ var _ = Describe("Resource", func() {
 		})
 	})
 
+	Context("with a view name", func() {
+		const mediaType = "application/mt"
+
+		BeforeEach(func() {
+			name = "foo"
+			dsl = func() {
+				DefaultMedia(mediaType, "compact")
+			}
+		})
+
+		It("sets the media type", func() {
+			Ω(res).ShouldNot(BeNil())
+			Ω(res.Validate()).ShouldNot(HaveOccurred())
+			Ω(res.MediaType).Should(Equal(mediaType))
+			Ω(res.DefaultViewName).Should(Equal("compact"))
+		})
+	})
+
 	Context("with an invalid media type", func() {
 		var mediaType = &MediaTypeDefinition{Identifier: "application/foo"}
 
