@@ -211,46 +211,58 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 			return err
 		}
 	}
-	fn = template.FuncMap{
-		"project": func(mt *design.MediaTypeDefinition, v string) *design.MediaTypeDefinition {
-			p, _, _ := mt.Project(v)
-			return p
-		},
-	}
-	data.IterateResponses(func(resp *design.ResponseDefinition) error {
+	return data.IterateResponses(func(resp *design.ResponseDefinition) error {
 		respData := map[string]interface{}{
 			"Context":  data,
 			"Response": resp,
 		}
+		var mt *design.MediaTypeDefinition
 		if resp.Type != nil {
-			if mt, ok := resp.Type.(*design.MediaTypeDefinition); ok {
-				return w.executeRespMT(mt, respData, fn)
+			var ok bool
+			if mt, ok = resp.Type.(*design.MediaTypeDefinition); !ok {
+				respData["Type"] = resp.Type
+				respData["ContentType"] = resp.MediaType
+				return w.ExecuteTemplate("response", ctxTRespT, nil, respData)
 			}
-			respData["Type"] = resp.Type
-			respData["ContentType"] = resp.MediaType
-			return w.ExecuteTemplate("response", ctxTRespT, fn, respData)
-		} else if mt := design.Design.MediaTypeWithIdentifier(resp.MediaType); mt != nil {
-			return w.executeRespMT(mt, respData, fn)
 		} else {
-			return w.ExecuteTemplate("response", ctxNoMTRespT, fn, respData)
+			mt = design.Design.MediaTypeWithIdentifier(resp.MediaType)
 		}
+		if mt != nil {
+			var views []string
+			if resp.ViewName != "" {
+				views = []string{resp.ViewName}
+			} else {
+				views = make([]string, len(mt.Views))
+				i := 0
+				for name := range mt.Views {
+					views[i] = name
+					i++
+				}
+				sort.Strings(views)
+			}
+			for _, view := range views {
+				projected, _, err := mt.Project(view)
+				if err != nil {
+					return err
+				}
+				respData["Projected"] = projected
+				respData["ViewName"] = view
+				respData["MediaType"] = mt
+				respData["ContentType"] = mt.ContentType
+				if view == "default" {
+					respData["RespName"] = codegen.Goify(resp.Name, true)
+				} else {
+					base := fmt.Sprintf("%s%s", resp.Name, strings.Title(view))
+					respData["RespName"] = codegen.Goify(base, true)
+				}
+				if err := w.ExecuteTemplate("response", ctxMTRespT, fn, respData); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		return w.ExecuteTemplate("response", ctxNoMTRespT, nil, respData)
 	})
-	return nil
-}
-
-// executeRespMT executes the template that generates the response functions for the given media
-// type.
-func (w *ContextsWriter) executeRespMT(mt *design.MediaTypeDefinition, data map[string]interface{}, fn template.FuncMap) error {
-	data["MediaType"] = mt
-	data["ContentType"] = mt.ContentType
-	fn["respName"] = func(resp *design.ResponseDefinition, view string) string {
-		if view == "default" {
-			return codegen.Goify(resp.Name, true)
-		}
-		base := fmt.Sprintf("%s%s", resp.Name, strings.Title(view))
-		return codegen.Goify(base, true)
-	}
-	return w.ExecuteTemplate("response", ctxMTRespT, fn, data)
 }
 
 // NewControllersWriter returns a handlers code writer.
@@ -537,14 +549,11 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 
 	// ctxMTRespT generates the response helpers for responses with media types.
 	// template input: map[string]interface{}
-	ctxMTRespT = `{{ $ctx := .Context }}{{ $resp := .Response }}{{ $mt := .MediaType }}{{ $ct := .ContentType }}{{/*
-*/}}{{ range $name, $view := $mt.Views }}{{ if not (eq $name "link") }}{{ $projected := project $mt $name }}
-// {{ respName $resp $name }} sends a HTTP response with status code {{ $resp.Status }}.
-func (ctx *{{ $ctx.Name }}) {{ respName $resp $name }}(r {{ gotyperef $projected $projected.AllRequired 0 false }}) error {
-	ctx.ResponseData.Header().Set("Content-Type", "{{ $ct }}")
-	return ctx.ResponseData.Service.Send(ctx.Context, {{ $resp.Status }}, r)
+	ctxMTRespT = `// {{ goify .RespName true }} sends a HTTP response with status code {{ .Response.Status }}.
+func (ctx *{{ .Context.Name }}) {{ goify .RespName true }}(r {{ gotyperef .Projected .Projected.AllRequired 0 false }}) error {
+	ctx.ResponseData.Header().Set("Content-Type", "{{ .Response.MediaType }}")
+	return ctx.ResponseData.Service.Send(ctx.Context, {{ .Response.Status }}, r)
 }
-{{ end }}{{ end }}
 `
 
 	// ctxTRespT generates the response helpers for responses with overridden types.
