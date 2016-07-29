@@ -1,6 +1,7 @@
 package genswagger_test
 
 import (
+	"bytes"
 	"encoding/json"
 
 	"github.com/go-openapi/loads"
@@ -21,6 +22,19 @@ func validateSwagger(swagger *genswagger.Swagger) {
 	doc, err := loads.Analyzed(json.RawMessage(b), "")
 	Ω(err).ShouldNot(HaveOccurred())
 	Ω(doc).ShouldNot(BeNil())
+}
+
+// validateSwaggerWithFragments validates that the given swagger object represents a valid Swagger spec
+// and contains fragments
+func validateSwaggerWithFragments(swagger *genswagger.Swagger, fragments [][]byte) {
+	b, err := json.Marshal(swagger)
+	Ω(err).ShouldNot(HaveOccurred())
+	doc, err := loads.Analyzed(json.RawMessage(b), "")
+	Ω(err).ShouldNot(HaveOccurred())
+	Ω(doc).ShouldNot(BeNil())
+	for _, sub := range fragments {
+		Ω(bytes.Contains(b, sub)).Should(BeTrue())
+	}
 }
 
 var _ = Describe("New", func() {
@@ -198,6 +212,35 @@ var _ = Describe("New", func() {
 			})
 
 			It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
+		})
+
+		Context("with zero value params", func() {
+			const (
+				intParam = "intParam"
+				numParam = "numParam"
+				intMin   = 0.0
+				floatMax = 0.0
+			)
+
+			BeforeEach(func() {
+				Design.DSLFunc = func() {
+					Params(func() {
+						Param(intParam, Integer, func() {
+							Minimum(intMin)
+						})
+						Param(numParam, Number, func() {
+							Maximum(floatMax)
+						})
+					})
+				}
+			})
+
+			It("serializes into valid swagger JSON", func() {
+				validateSwaggerWithFragments(swagger, [][]byte{
+					[]byte(`"minimum":0`),
+					[]byte(`"maximum":0`),
+				})
+			})
 		})
 
 		Context("with response templates", func() {
