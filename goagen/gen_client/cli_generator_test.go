@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/gen_client"
 	"github.com/goadesign/goa/version"
@@ -74,9 +75,20 @@ var _ = Describe("Generate", func() {
 								Name: "show",
 								QueryParams: &design.AttributeDefinition{
 									Type: design.Object{
-										"param": &design.AttributeDefinition{Type: design.Integer},
-										"time":  &design.AttributeDefinition{Type: design.DateTime},
+										"param":       &design.AttributeDefinition{Type: design.Integer},
+										"time":        &design.AttributeDefinition{Type: design.DateTime},
+										"uuid":        &design.AttributeDefinition{Type: design.UUID},
+										"any":         &design.AttributeDefinition{Type: design.Any},
+										"bool":        &design.AttributeDefinition{Type: design.Boolean},
+										"number":      &design.AttributeDefinition{Type: design.Number},
+										"boolReq":     &design.AttributeDefinition{Type: design.Boolean},
+										"timeArray":   &design.AttributeDefinition{Type: &design.Array{ElemType: &design.AttributeDefinition{Type: design.DateTime}}},
+										"uuidArray":   &design.AttributeDefinition{Type: &design.Array{ElemType: &design.AttributeDefinition{Type: design.UUID}}},
+										"anyArray":    &design.AttributeDefinition{Type: &design.Array{ElemType: &design.AttributeDefinition{Type: design.Any}}},
+										"boolArray":   &design.AttributeDefinition{Type: &design.Array{ElemType: &design.AttributeDefinition{Type: design.Boolean}}},
+										"numberArray": &design.AttributeDefinition{Type: &design.Array{ElemType: &design.AttributeDefinition{Type: design.Number}}},
 									},
+									Validation: &dslengine.ValidationDefinition{Required: []string{"boolReq"}},
 								},
 								Routes: []*design.RouteDefinition{
 									{
@@ -95,9 +107,97 @@ var _ = Describe("Generate", func() {
 			showAct.Routes[0].Parent = showAct
 		})
 
+		It("generate the correct handling for special type DateTime", func() {
+			Ω(genErr).Should(BeNil())
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring("err := timeVal(cmd.Time)"))
+			Ω(content).Should(ContainSubstring(", tmp"))
+			Ω(content).Should(ContainSubstring("cc.Flags().StringVar(&cmd.Time, "))
+		})
+		It("generate the correct handling for special type DateTime Array", func() {
+			Ω(genErr).Should(BeNil())
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring("err := timeArray(cmd.TimeArray)"))
+			Ω(content).Should(ContainSubstring(", tmp"))
+			Ω(content).Should(ContainSubstring("cc.Flags().StringSliceVar(&cmd.TimeArray, "))
+		})
+		It("generate the correct handling for special type Number", func() {
+			Ω(genErr).Should(BeNil())
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring("err := float64Val(cmd.Number)"))
+			Ω(content).Should(ContainSubstring(", tmp"))
+			Ω(content).Should(ContainSubstring("cc.Flags().StringVar(&cmd.Number, "))
+		})
+		It("generate the correct handling for special type Number Array", func() {
+			Ω(genErr).Should(BeNil())
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring("err := float64Array(cmd.NumberArray)"))
+			Ω(content).Should(ContainSubstring(", tmp"))
+			Ω(content).Should(ContainSubstring("cc.Flags().StringSliceVar(&cmd.NumberArray, "))
+		})
+		It("generate the correct handling for special type Boolean", func() {
+			Ω(genErr).Should(BeNil())
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring("err := boolVal(cmd.Bool)"))
+			Ω(content).Should(ContainSubstring(", tmp"))
+			Ω(content).Should(ContainSubstring("cc.Flags().StringVar(&cmd.Bool, "))
+		})
+		It("generate the correct handling for special type Boolean Array", func() {
+			Ω(genErr).Should(BeNil())
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring("err := boolArray(cmd.BoolArray)"))
+			Ω(content).Should(ContainSubstring(", tmp"))
+			Ω(content).Should(ContainSubstring("cc.Flags().StringSliceVar(&cmd.BoolArray, "))
+		})
+		It("generate the correct handling for special type required Boolean", func() {
+			Ω(genErr).Should(BeNil())
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring("err := boolVal(cmd.BoolReq)"))
+			Ω(content).Should(ContainSubstring(", *tmp"))
+			Ω(content).Should(ContainSubstring("cc.Flags().StringVar(&cmd.BoolReq, "))
+		})
+		It("generate the correct handling for special type UUID", func() {
+			Ω(genErr).Should(BeNil())
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring("err := uuidVal(cmd.UUID)"))
+			Ω(content).Should(ContainSubstring(", tmp"))
+			Ω(content).Should(ContainSubstring("cc.Flags().StringVar(&cmd.UUID, "))
+		})
+		It("generate the correct handling for special type UUID Array", func() {
+			Ω(genErr).Should(BeNil())
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring("err := uuidArray(cmd.UUIDArray)"))
+			Ω(content).Should(ContainSubstring(", tmp"))
+			Ω(content).Should(ContainSubstring("cc.Flags().StringSliceVar(&cmd.UUIDArray, "))
+		})
+		It("generate the correct handling for special type Any", func() {
+			Ω(genErr).Should(BeNil())
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring("err := jsonVal(cmd.Any)"))
+			Ω(content).Should(ContainSubstring(", tmp"))
+			Ω(content).Should(ContainSubstring("cc.Flags().StringVar(&cmd.Any, "))
+		})
+		It("generate the correct handling for special type Any Array", func() {
+			Ω(genErr).Should(BeNil())
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring("err := jsonArray(cmd.AnyArray)"))
+			Ω(content).Should(ContainSubstring(", tmp"))
+			Ω(content).Should(ContainSubstring("cc.Flags().StringSliceVar(&cmd.AnyArray, "))
+		})
+
 		It("generates the correct command flag initialization code", func() {
 			Ω(genErr).Should(BeNil())
-			Ω(files).Should(HaveLen(9))
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically(">=", 3))

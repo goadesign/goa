@@ -5,9 +5,7 @@
 
 package uuid
 
-import (
-	"github.com/satori/go.uuid"
-)
+import "github.com/satori/go.uuid"
 
 // FromString Wrapper around the real FromString
 func FromString(input string) (UUID, error) {
@@ -18,4 +16,13 @@ func FromString(input string) (UUID, error) {
 // NewV4 Wrapper over the real NewV4 method
 func NewV4() UUID {
 	return UUID(uuid.NewV4())
+}
+
+// Used in string method conversion
+const dash byte = '-'
+
+// Returns canonical string representation of UUID:
+// xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
+func (u UUID) String() string {
+	return uuid.UUID(u).String()
 }
