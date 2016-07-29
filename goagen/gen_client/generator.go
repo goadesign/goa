@@ -107,27 +107,29 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	var clientPkg, cliPkg string
 	{
 		funcs = template.FuncMap{
-			"add":             func(a, b int) int { return a + b },
-			"cmdFieldType":    cmdFieldType,
-			"defaultPath":     defaultPath,
-			"escapeBackticks": escapeBackticks,
-			"goify":           codegen.Goify,
-			"gotypedef":       codegen.GoTypeDef,
-			"gotypedesc":      codegen.GoTypeDesc,
-			"gotypename":      codegen.GoTypeName,
-			"gotyperef":       codegen.GoTypeRef,
-			"gotyperefext":    goTypeRefExt,
-			"join":            join,
-			"joinStrings":     strings.Join,
-			"multiComment":    multiComment,
-			"pathParamNames":  pathParamNames,
-			"pathParams":      pathParams,
-			"pathTemplate":    pathTemplate,
-			"signerType":      signerType,
-			"tempvar":         codegen.Tempvar,
-			"title":           strings.Title,
-			"toString":        toString,
-			"typeName":        typeName,
+			"add":                func(a, b int) int { return a + b },
+			"cmdFieldType":       cmdFieldType,
+			"defaultPath":        defaultPath,
+			"escapeBackticks":    escapeBackticks,
+			"goify":              codegen.Goify,
+			"gotypedef":          codegen.GoTypeDef,
+			"gotypedesc":         codegen.GoTypeDesc,
+			"gotypename":         codegen.GoTypeName,
+			"gotyperef":          codegen.GoTypeRef,
+			"gotyperefext":       goTypeRefExt,
+			"join":               join,
+			"joinStrings":        strings.Join,
+			"multiComment":       multiComment,
+			"pathParamNames":     pathParamNames,
+			"pathParams":         pathParams,
+			"pathTemplate":       pathTemplate,
+			"signerType":         signerType,
+			"tempvar":            codegen.Tempvar,
+			"title":              strings.Title,
+			"toString":           toString,
+			"typeName":           typeName,
+			"format":             format,
+			"handleSpecialTypes": handleSpecialTypes,
 		}
 		clientPkg, err = codegen.PackagePath(pkgDir)
 		if err != nil {
@@ -215,6 +217,7 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 		codegen.SimpleImport("net/http"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.NewImport("goaclient", "github.com/goadesign/goa/client"),
+		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 	}
 	for _, packagePath := range packagePaths {
 		imports = append(imports, codegen.SimpleImport(packagePath))
@@ -650,12 +653,37 @@ func cmdFieldType(t design.DataType, point bool) string {
 	if point && !t.IsArray() {
 		pointer = "*"
 	}
-	if t.Kind() == design.DateTimeKind || t.Kind() == design.UUIDKind {
+	suffix = codegen.GoNativeType(t)
+	return pointer + suffix
+}
+
+// cmdFieldTypeString computes the Go type name used to store command flags of the given design type. Complex types are String
+func cmdFieldTypeString(t design.DataType, point bool) string {
+	var pointer, suffix string
+	if point && !t.IsArray() {
+		pointer = "*"
+	}
+	if t.Kind() == design.UUIDKind || t.Kind() == design.DateTimeKind || t.Kind() == design.AnyKind || t.Kind() == design.NumberKind || t.Kind() == design.BooleanKind {
 		suffix = "string"
+	} else if isArrayOfType(t, design.UUIDKind, design.DateTimeKind, design.AnyKind, design.NumberKind, design.BooleanKind) {
+		suffix = "[]string"
 	} else {
 		suffix = codegen.GoNativeType(t)
 	}
 	return pointer + suffix
+}
+
+func isArrayOfType(array design.DataType, kinds ...design.Kind) bool {
+	if !array.IsArray() {
+		return false
+	}
+	kind := array.ToArray().ElemType.Type.Kind()
+	for _, t := range kinds {
+		if t == kind {
+			return true
+		}
+	}
+	return false
 }
 
 // template used to produce code that serializes arrays of simple values into comma separated
@@ -673,8 +701,10 @@ func toString(name, target string, att *design.AttributeDefinition) string {
 			return fmt.Sprintf("%s := strconv.FormatBool(%s)", target, name)
 		case design.NumberKind:
 			return fmt.Sprintf("%s := strconv.FormatFloat(%s, 'f', -1, 64)", target, name)
-		case design.StringKind, design.DateTimeKind, design.UUIDKind:
+		case design.StringKind:
 			return fmt.Sprintf("%s := %s", target, name)
+		case design.DateTimeKind, design.UUIDKind:
+			return fmt.Sprintf("%s := %s.String()", target, strings.Replace(name, "*", "", -1)) // remove pointer if present
 		case design.AnyKind:
 			return fmt.Sprintf("%s := fmt.Sprintf(\"%%v\", %s)", target, name)
 		default:

@@ -25,6 +25,7 @@ func (g *Generator) generateMain(mainFile string, clientPkg, cliPkg string, func
 		codegen.SimpleImport(cliPkg),
 		codegen.SimpleImport("github.com/spf13/cobra"),
 		codegen.NewImport("goaclient", "github.com/goadesign/goa/client"),
+		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 	}
 
 	funcs["defaultRouteParams"] = defaultRouteParams
@@ -99,6 +100,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	funcs["joinNames"] = joinNames
 	funcs["routes"] = routes
 	funcs["flagType"] = flagType
+	funcs["cmdFieldType"] = cmdFieldTypeString
 
 	commandTypesTmpl := template.Must(template.New("commandTypes").Funcs(funcs).Parse(commandTypesTmpl))
 	commandsTmpl := template.Must(template.New("commands").Funcs(funcs).Parse(commandsTmpl))
@@ -114,12 +116,14 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 		codegen.SimpleImport("path"),
 		codegen.SimpleImport("path/filepath"),
 		codegen.SimpleImport("strings"),
+		codegen.SimpleImport("strconv"),
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("github.com/spf13/cobra"),
 		codegen.SimpleImport(clientPkg),
 		codegen.SimpleImport("golang.org/x/net/context"),
 		codegen.SimpleImport("golang.org/x/net/websocket"),
+		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 	}
 	if len(api.Resources) > 0 {
 		imports = append(imports, codegen.NewImport("goaclient", "github.com/goadesign/goa/client"))
@@ -276,21 +280,14 @@ func joinNames(useNil bool, atts ...*design.AttributeDefinition) string {
 			field := fmt.Sprintf("cmd.%s", codegen.Goify(n, true))
 			if !a.Type.IsArray() && !att.IsRequired(n) && !att.IsNonZero(n) {
 				if useNil {
-					switch a.Type {
-					case design.Integer:
-						field = `intFlagVal("` + n + `", ` + field + ")"
-					case design.Number:
-						field = `float64FlagVal("` + n + `", ` + field + ")"
-					case design.Boolean:
-						field = `boolFlagVal("` + n + `", ` + field + ")"
-					case design.String:
-						field = `stringFlagVal("` + n + `", ` + field + ")"
-					default:
-						field = "&" + field
-					}
+					field = flagTypeVal(a, n, field)
 				} else {
 					field = "&" + field
 				}
+			} else if a.Type.IsArray() {
+				field = flagTypeArrayVal(a, field)
+			} else {
+				field = flagNonRequiredTypeVal(a, field)
 			}
 			if att.IsRequired(n) {
 				names = append(names, field)
@@ -302,6 +299,122 @@ func joinNames(useNil bool, atts ...*design.AttributeDefinition) string {
 		elems = append(elems, optNames...)
 	}
 	return strings.Join(elems, ", ")
+}
+
+func flagTypeVal(a *design.AttributeDefinition, key string, field string) string {
+	switch a.Type {
+	case design.Integer:
+		return `intFlagVal("` + key + `", ` + field + ")"
+	case design.String:
+		return `stringFlagVal("` + key + `", ` + field + ")"
+	case design.Number, design.Boolean, design.UUID, design.DateTime, design.Any:
+		return "%s"
+	default:
+		return "&" + field
+	}
+}
+
+func flagNonRequiredTypeVal(a *design.AttributeDefinition, field string) string {
+	switch a.Type {
+	case design.Number, design.Boolean, design.UUID, design.DateTime, design.Any:
+		return "*%s"
+	default:
+		return field
+	}
+}
+
+func flagTypeArrayVal(a *design.AttributeDefinition, field string) string {
+	switch a.Type.ToArray().ElemType.Type {
+	case design.Number, design.Boolean, design.UUID, design.DateTime, design.Any:
+		return "%s"
+	}
+	return field
+}
+
+func format(format string, vars []string) string {
+	new := make([]interface{}, len(vars))
+	for i, v := range vars {
+		new[i] = v
+	}
+	return fmt.Sprintf(format, new...)
+}
+
+type specialTypeResult struct {
+	Temps  []string
+	Output string
+}
+
+func handleSpecialTypes(atts ...*design.AttributeDefinition) specialTypeResult {
+	result := specialTypeResult{}
+	for _, att := range atts {
+		if att == nil {
+			continue
+		}
+		obj := att.Type.ToObject()
+		var names, optNames []string
+
+		keys := make([]string, len(obj))
+		i := 0
+		for n := range obj {
+			keys[i] = n
+			i++
+		}
+		sort.Strings(keys)
+		for _, n := range keys {
+			a := obj[n]
+			field := fmt.Sprintf("cmd.%s", codegen.Goify(n, true))
+
+			var typeHandler string
+			if !a.Type.IsArray() {
+				switch a.Type {
+				case design.Number:
+					typeHandler = "float64Val"
+				case design.Boolean:
+					typeHandler = "boolVal"
+				case design.UUID:
+					typeHandler = "uuidVal"
+				case design.DateTime:
+					typeHandler = "timeVal"
+				case design.Any:
+					typeHandler = "jsonVal"
+				}
+
+			} else if a.Type.IsArray() {
+				switch a.Type.ToArray().ElemType.Type {
+				case design.Number:
+					typeHandler = "float64Array"
+				case design.Boolean:
+					typeHandler = "boolArray"
+				case design.UUID:
+					typeHandler = "uuidArray"
+				case design.DateTime:
+					typeHandler = "timeArray"
+				case design.Any:
+					typeHandler = "jsonArray"
+				}
+			}
+			if typeHandler != "" {
+				tmpVar := codegen.Tempvar()
+				if att.IsRequired(n) {
+					names = append(names, tmpVar)
+				} else {
+					optNames = append(optNames, tmpVar)
+				}
+
+				//result.Temps = append(result.Temps, tmpVar)
+				result.Output += fmt.Sprintf(`
+	%s, err := %s(%s)
+	if err != nil {
+		goa.LogError(ctx, "argument parse failed", "err", err)
+		return err
+	}`, tmpVar, typeHandler, field)
+
+			}
+		}
+		result.Temps = append(result.Temps, names...)
+		result.Temps = append(result.Temps, optNames...)
+	}
+	return result
 }
 
 // routes create the action command "Use" suffix.
@@ -370,9 +483,9 @@ func flagType(att *design.AttributeDefinition) string {
 	case design.IntegerKind:
 		return "Int"
 	case design.NumberKind:
-		return "Float64"
+		return "String"
 	case design.BooleanKind:
-		return "Bool"
+		return "String"
 	case design.StringKind:
 		return "String"
 	case design.DateTimeKind:
@@ -382,7 +495,14 @@ func flagType(att *design.AttributeDefinition) string {
 	case design.AnyKind:
 		return "String"
 	case design.ArrayKind:
-		return flagType(att.Type.(*design.Array).ElemType) + "Slice"
+		switch att.Type.ToArray().ElemType.Type.Kind() {
+		case design.NumberKind:
+			return "StringSlice"
+		case design.BooleanKind:
+			return "StringSlice"
+		default:
+			return flagType(att.Type.(*design.Array).ElemType) + "Slice"
+		}
 	case design.UserTypeKind:
 		return flagType(att.Type.(*design.UserTypeDefinition).AttributeDefinition)
 	case design.MediaTypeKind:
@@ -511,9 +631,9 @@ func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 {{ else }}{{ $pparams := defaultRouteParams .Action }}	path = fmt.Sprintf({{ printf "%q" (defaultRouteTemplate .Action)}}, {{ joinNames false $pparams }})
 {{ end }}	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
-	ctx := goa.WithLogger(context.Background(), logger)
+	ctx := goa.WithLogger(context.Background(), logger){{ $specialTypeResult := handleSpecialTypes .Action.QueryParams .Action.Headers }}{{ $specialTypeResult.Output }}
 	ws, err := c.{{ goify (printf "%s%s" .Action.Name (title .Resource.Name)) true }}(ctx, path{{/*
-	*/}}{{ $params := joinNames true .Action.QueryParams .Action.Headers }}{{ if $params }}, {{ $params }}{{ end }})
+	*/}}{{ $params := joinNames true .Action.QueryParams .Action.Headers }}{{ if $params }}, {{ format $params $specialTypeResult.Temps }}{{ end }})
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
@@ -610,10 +730,10 @@ func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 {{ end }}		}
 	}
 {{ end }}	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
-	ctx := goa.WithLogger(context.Background(), logger)
+	ctx := goa.WithLogger(context.Background(), logger){{ $specialTypeResult := handleSpecialTypes .Action.QueryParams .Action.Headers }}{{ $specialTypeResult.Output }}
 	resp, err := c.{{ goify (printf "%s%s" .Action.Name (title .Resource.Name)) true }}(ctx, path{{ if .Action.Payload }}, {{/*
 	*/}}{{ if or .Action.Payload.Type.IsObject .Action.Payload.IsPrimitive }}&{{ end }}payload{{ else }}{{ end }}{{/*
-	*/}}{{ $params := joinNames true .Action.QueryParams .Action.Headers }}{{ if $params }}, {{ $params }}{{ end }}{{/*
+	*/}}{{ $params := joinNames true .Action.QueryParams .Action.Headers }}{{ if $params }}, {{ format $params $specialTypeResult.Temps }}{{ end }}{{/*
 	*/}}{{ if .Action.Payload }}, cmd.ContentType{{ end }})
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
@@ -693,4 +813,119 @@ func hasFlag(name string) bool {
 	}
 	return false
 }
-`
+
+func jsonVal(val string) (*interface{}, error) {
+	var t interface{}
+	err := json.Unmarshal([]byte(val), &t)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func jsonArray(ins []string) ([]interface{}, error) {
+	if ins == nil {
+		return nil, nil
+	}
+	var vals []interface{}
+	for _, id := range ins {
+		val, err := jsonVal(id)
+		if err != nil {
+			return nil, err
+		}
+		vals = append(vals, val)
+	}
+	return vals, nil
+}
+
+func timeVal(val string) (*time.Time, error) {
+	t, err := time.Parse("RFC3339", val)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func timeArray(ins []string) ([]time.Time, error) {
+	if ins == nil {
+		return nil, nil
+	}
+	var vals []time.Time
+	for _, id := range ins {
+		val, err := timeVal(id)
+		if err != nil {
+			return nil, err
+		}
+		vals = append(vals, *val)
+	}
+	return vals, nil
+}
+
+func uuidVal(val string) (*uuid.UUID, error) {
+	t, err := uuid.FromString(val)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func uuidArray(ins []string) ([]uuid.UUID, error) {
+	if ins == nil {
+		return nil, nil
+	}
+	var vals []uuid.UUID
+	for _, id := range ins {
+		val, err := uuidVal(id)
+		if err != nil {
+			return nil, err
+		}
+		vals = append(vals, *val)
+	}
+	return vals, nil
+}
+
+func float64Val(val string) (*float64, error) {
+	t, err := strconv.ParseFloat(val, 64)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func float64Array(ins []string) ([]float64, error) {
+	if ins == nil {
+		return nil, nil
+	}
+	var vals []float64
+	for _, id := range ins {
+		val, err := float64Val(id)
+		if err != nil {
+			return nil, err
+		}
+		vals = append(vals, *val)
+	}
+	return vals, nil
+}
+
+func boolVal(val string) (*bool, error) {
+	t, err := strconv.ParseBool(val)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func boolArray(ins []string) ([]bool, error) {
+	if ins == nil {
+		return nil, nil
+	}
+	var vals []bool
+	for _, id := range ins {
+		val, err := boolVal(id)
+		if err != nil {
+			return nil, err
+		}
+		vals = append(vals, *val)
+	}
+	return vals, nil
+}`
