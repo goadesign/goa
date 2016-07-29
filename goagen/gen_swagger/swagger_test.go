@@ -1,6 +1,7 @@
 package genswagger_test
 
 import (
+	"bytes"
 	"encoding/json"
 
 	"github.com/go-openapi/loads"
@@ -21,6 +22,19 @@ func validateSwagger(swagger *genswagger.Swagger) {
 	doc, err := loads.Analyzed(json.RawMessage(b), "")
 	Ω(err).ShouldNot(HaveOccurred())
 	Ω(doc).ShouldNot(BeNil())
+}
+
+// validateSwaggerWithFragments validates that the given swagger object represents a valid Swagger spec
+// and contains fragments
+func validateSwaggerWithFragments(swagger *genswagger.Swagger, fragments [][]byte) {
+	b, err := json.Marshal(swagger)
+	Ω(err).ShouldNot(HaveOccurred())
+	doc, err := loads.Analyzed(json.RawMessage(b), "")
+	Ω(err).ShouldNot(HaveOccurred())
+	Ω(doc).ShouldNot(BeNil())
+	for _, sub := range fragments {
+		Ω(bytes.Contains(b, sub)).Should(BeTrue())
+	}
 }
 
 var _ = Describe("New", func() {
@@ -178,13 +192,13 @@ var _ = Describe("New", func() {
 				Ω(swagger.Parameters[intParam].In).Should(Equal("path"))
 				Ω(swagger.Parameters[intParam].Required).Should(BeTrue())
 				Ω(swagger.Parameters[intParam].Type).Should(Equal("integer"))
-				Ω(swagger.Parameters[intParam].Minimum).Should(Equal(intMin))
+				Ω(*swagger.Parameters[intParam].Minimum).Should(Equal(intMin))
 				Ω(swagger.Parameters[numParam]).ShouldNot(BeNil())
 				Ω(swagger.Parameters[numParam].Name).Should(Equal(numParam))
 				Ω(swagger.Parameters[numParam].In).Should(Equal("path"))
 				Ω(swagger.Parameters[numParam].Required).Should(BeTrue())
 				Ω(swagger.Parameters[numParam].Type).Should(Equal("number"))
-				Ω(swagger.Parameters[numParam].Maximum).Should(Equal(floatMax))
+				Ω(*swagger.Parameters[numParam].Maximum).Should(Equal(floatMax))
 				Ω(swagger.Parameters[boolParam]).ShouldNot(BeNil())
 				Ω(swagger.Parameters[boolParam].Name).Should(Equal(boolParam))
 				Ω(swagger.Parameters[boolParam].In).Should(Equal("path"))
@@ -198,6 +212,35 @@ var _ = Describe("New", func() {
 			})
 
 			It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
+		})
+
+		Context("with zero value params", func() {
+			const (
+				intParam = "intParam"
+				numParam = "numParam"
+				intMin   = 0.0
+				floatMax = 0.0
+			)
+
+			BeforeEach(func() {
+				Design.DSLFunc = func() {
+					Params(func() {
+						Param(intParam, Integer, func() {
+							Minimum(intMin)
+						})
+						Param(numParam, Number, func() {
+							Maximum(floatMax)
+						})
+					})
+				}
+			})
+
+			It("serializes into valid swagger JSON", func() {
+				validateSwaggerWithFragments(swagger, [][]byte{
+					[]byte(`"minimum":0`),
+					[]byte(`"maximum":0`),
+				})
+			})
 		})
 
 		Context("with response templates", func() {
@@ -282,6 +325,14 @@ var _ = Describe("New", func() {
 		})
 
 		Context("with resources", func() {
+			var (
+				minLength1  = 1
+				maxLength10 = 10
+				minimum_2   = -2.0
+				maximum2    = 2.0
+				minItems1   = 1
+				maxItems5   = 5
+			)
 			BeforeEach(func() {
 				Country := MediaType("application/vnd.goa.example.origin", func() {
 					Description("Origin of bottle")
@@ -362,17 +413,17 @@ var _ = Describe("New", func() {
 							})
 							Header("OptionalRegex", String, func() {
 								Pattern(`[a-z]\d+`)
-								MinLength(1)
-								MaxLength(10)
+								MinLength(minLength1)
+								MaxLength(maxLength10)
 							})
 							Header("OptionalInt", Integer, func() {
-								Minimum(-2)
-								Maximum(2)
+								Minimum(minimum_2)
+								Maximum(maximum2)
 							})
 							Header("OptionalArray", ArrayOf(String), func() {
 								// interpreted as MinItems & MaxItems:
-								MinLength(1)
-								MaxLength(5)
+								MinLength(minItems1)
+								MaxLength(maxItems5)
 							})
 							Header("OverrideRequiredHeader")
 							Header("OverrideOptionalHeader")
@@ -410,12 +461,12 @@ var _ = Describe("New", func() {
 				// check Headers in detail
 				Ω(ps[3]).Should(Equal(&genswagger.Parameter{In: "header", Name: "Authorization", Type: "string", Required: true}))
 				Ω(ps[4]).Should(Equal(&genswagger.Parameter{In: "header", Name: "OptionalArray", Type: "array",
-					Items: &genswagger.Items{Type: "string"}, MinItems: 1, MaxItems: 5}))
+					Items: &genswagger.Items{Type: "string"}, MinItems: &minItems1, MaxItems: &maxItems5}))
 				Ω(ps[5]).Should(Equal(&genswagger.Parameter{In: "header", Name: "OptionalBoolWithDefault", Type: "boolean",
 					Description: "defaults true", Default: true}))
-				Ω(ps[6]).Should(Equal(&genswagger.Parameter{In: "header", Name: "OptionalInt", Type: "integer", Minimum: -2, Maximum: 2}))
+				Ω(ps[6]).Should(Equal(&genswagger.Parameter{In: "header", Name: "OptionalInt", Type: "integer", Minimum: &minimum_2, Maximum: &maximum2}))
 				Ω(ps[7]).Should(Equal(&genswagger.Parameter{In: "header", Name: "OptionalRegex", Type: "string",
-					Pattern: `[a-z]\d+`, MinLength: 1, MaxLength: 10}))
+					Pattern: `[a-z]\d+`, MinLength: &minLength1, MaxLength: &maxLength10}))
 				Ω(ps[8]).Should(Equal(&genswagger.Parameter{In: "header", Name: "OptionalResourceHeaderWithEnum", Type: "string",
 					Enum: []interface{}{"a", "b"}}))
 				Ω(ps[9]).Should(Equal(&genswagger.Parameter{In: "header", Name: "OverrideOptionalHeader", Type: "string", Required: true}))

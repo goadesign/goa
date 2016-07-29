@@ -132,15 +132,15 @@ type (
 		// provided, for example a "count" to control the number of results per page might
 		// default to 100 if not supplied by the client in the request.
 		Default          interface{}   `json:"default,omitempty"`
-		Maximum          float64       `json:"maximum,omitempty"`
+		Maximum          *float64      `json:"maximum,omitempty"`
 		ExclusiveMaximum bool          `json:"exclusiveMaximum,omitempty"`
-		Minimum          float64       `json:"minimum,omitempty"`
+		Minimum          *float64      `json:"minimum,omitempty"`
 		ExclusiveMinimum bool          `json:"exclusiveMinimum,omitempty"`
-		MaxLength        int           `json:"maxLength,omitempty"`
-		MinLength        int           `json:"minLength,omitempty"`
+		MaxLength        *int          `json:"maxLength,omitempty"`
+		MinLength        *int          `json:"minLength,omitempty"`
 		Pattern          string        `json:"pattern,omitempty"`
-		MaxItems         int           `json:"maxItems,omitempty"`
-		MinItems         int           `json:"minItems,omitempty"`
+		MaxItems         *int          `json:"maxItems,omitempty"`
+		MinItems         *int          `json:"minItems,omitempty"`
 		UniqueItems      bool          `json:"uniqueItems,omitempty"`
 		Enum             []interface{} `json:"enum,omitempty"`
 		MultipleOf       float64       `json:"multipleOf,omitempty"`
@@ -180,15 +180,15 @@ type (
 		// provided, for example a "count" to control the number of results per page might
 		// default to 100 if not supplied by the client in the request.
 		Default          interface{}   `json:"default,omitempty"`
-		Maximum          float64       `json:"maximum,omitempty"`
+		Maximum          *float64      `json:"maximum,omitempty"`
 		ExclusiveMaximum bool          `json:"exclusiveMaximum,omitempty"`
-		Minimum          float64       `json:"minimum,omitempty"`
+		Minimum          *float64      `json:"minimum,omitempty"`
 		ExclusiveMinimum bool          `json:"exclusiveMinimum,omitempty"`
-		MaxLength        int           `json:"maxLength,omitempty"`
-		MinLength        int           `json:"minLength,omitempty"`
+		MaxLength        *int          `json:"maxLength,omitempty"`
+		MinLength        *int          `json:"minLength,omitempty"`
 		Pattern          string        `json:"pattern,omitempty"`
-		MaxItems         int           `json:"maxItems,omitempty"`
-		MinItems         int           `json:"minItems,omitempty"`
+		MaxItems         *int          `json:"maxItems,omitempty"`
+		MinItems         *int          `json:"minItems,omitempty"`
 		UniqueItems      bool          `json:"uniqueItems,omitempty"`
 		Enum             []interface{} `json:"enum,omitempty"`
 		MultipleOf       float64       `json:"multipleOf,omitempty"`
@@ -250,15 +250,15 @@ type (
 		// provided, for example a "count" to control the number of results per page might
 		// default to 100 if not supplied by the client in the request.
 		Default          interface{}   `json:"default,omitempty"`
-		Maximum          float64       `json:"maximum,omitempty"`
+		Maximum          *float64      `json:"maximum,omitempty"`
 		ExclusiveMaximum bool          `json:"exclusiveMaximum,omitempty"`
-		Minimum          float64       `json:"minimum,omitempty"`
+		Minimum          *float64      `json:"minimum,omitempty"`
 		ExclusiveMinimum bool          `json:"exclusiveMinimum,omitempty"`
-		MaxLength        int           `json:"maxLength,omitempty"`
-		MinLength        int           `json:"minLength,omitempty"`
+		MaxLength        *int          `json:"maxLength,omitempty"`
+		MinLength        *int          `json:"minLength,omitempty"`
 		Pattern          string        `json:"pattern,omitempty"`
-		MaxItems         int           `json:"maxItems,omitempty"`
-		MinItems         int           `json:"minItems,omitempty"`
+		MaxItems         *int          `json:"maxItems,omitempty"`
+		MinItems         *int          `json:"minItems,omitempty"`
 		UniqueItems      bool          `json:"uniqueItems,omitempty"`
 		Enum             []interface{} `json:"enum,omitempty"`
 		MultipleOf       float64       `json:"multipleOf,omitempty"`
@@ -907,7 +907,7 @@ func initPatternValidation(def interface{}, pattern string) {
 	}
 }
 
-func initMinimumValidation(def interface{}, min float64) {
+func initMinimumValidation(def interface{}, min *float64) {
 	switch actual := def.(type) {
 	case *Parameter:
 		actual.Minimum = min
@@ -921,7 +921,7 @@ func initMinimumValidation(def interface{}, min float64) {
 	}
 }
 
-func initMaximumValidation(def interface{}, max float64) {
+func initMaximumValidation(def interface{}, max *float64) {
 	switch actual := def.(type) {
 	case *Parameter:
 		actual.Maximum = max
@@ -935,7 +935,7 @@ func initMaximumValidation(def interface{}, max float64) {
 	}
 }
 
-func initMinLengthValidation(def interface{}, isArray bool, min int) {
+func initMinLengthValidation(def interface{}, isArray bool, min *int) {
 	switch actual := def.(type) {
 	case *Parameter:
 		if isArray {
@@ -950,7 +950,7 @@ func initMinLengthValidation(def interface{}, isArray bool, min int) {
 	}
 }
 
-func initMaxLengthValidation(def interface{}, isArray bool, max int) {
+func initMaxLengthValidation(def interface{}, isArray bool, max *int) {
 	switch actual := def.(type) {
 	case *Parameter:
 		if isArray {
@@ -974,15 +974,15 @@ func initValidations(attr *design.AttributeDefinition, def interface{}) {
 	initFormatValidation(def, val.Format)
 	initPatternValidation(def, val.Pattern)
 	if val.Minimum != nil {
-		initMinimumValidation(def, *val.Minimum)
+		initMinimumValidation(def, val.Minimum)
 	}
 	if val.Maximum != nil {
-		initMaximumValidation(def, *val.Maximum)
+		initMaximumValidation(def, val.Maximum)
 	}
 	if val.MinLength != nil {
-		initMinLengthValidation(def, attr.Type.IsArray(), *val.MinLength)
+		initMinLengthValidation(def, attr.Type.IsArray(), val.MinLength)
 	}
 	if val.MaxLength != nil {
-		initMaxLengthValidation(def, attr.Type.IsArray(), *val.MaxLength)
+		initMaxLengthValidation(def, attr.Type.IsArray(), val.MaxLength)
 	}
 }
