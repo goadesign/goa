@@ -34,6 +34,9 @@ const (
 	// FormatIPv6 defines RFC2373 IPv6 address values.
 	FormatIPv6 = "ipv6"
 
+	// FormatIP defines RFC2373 IPv4 or IPv6 address values.
+	FormatIP = "ip"
+
 	// FormatURI defines RFC3986 URI values.
 	FormatURI = "uri"
 
@@ -83,7 +86,7 @@ func ValidateFormat(f Format, val string) error {
 			err = fmt.Errorf("hostname value '%s' does not match %s",
 				val, hostnameRegex.String())
 		}
-	case FormatIPv4, FormatIPv6:
+	case FormatIPv4, FormatIPv6, FormatIP:
 		ip := net.ParseIP(val)
 		if ip == nil {
 			err = fmt.Errorf("\"%s\" is an invalid %s value", val, f)

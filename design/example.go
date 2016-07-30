@@ -149,6 +149,7 @@ func (eg *exampleGenerator) generateFormatExample() interface{} {
 		"date-time": time.Unix(int64(eg.r.Int())%1454957045, 0).Format(time.RFC3339), // to obtain a "fixed" rand
 		"ipv4":      eg.r.faker.IPv4Address().String(),
 		"ipv6":      eg.r.faker.IPv6Address().String(),
+		"ip":        eg.r.faker.IPv4Address().String(),
 		"uri":       eg.r.faker.URL(),
 		"mac": func() string {
 			res, err := regen.Generate(`([0-9A-F]{2}-){5}[0-9A-F]{2}`)

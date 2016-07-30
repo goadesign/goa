@@ -330,6 +330,7 @@ var SupportedValidationFormats = []string{
 	"hostname",
 	"ipv4",
 	"ipv6",
+	"ip",
 	"mac",
 	"regexp",
 	"uri",
@@ -345,7 +346,7 @@ var SupportedValidationFormats = []string{
 //
 // "hostname": RFC1035 internet host name
 //
-// "ipv4" and "ipv6": RFC2373 IPv4 and IPv6 address
+// "ipv4", "ipv6" and "ip": RFC2373 IPv4 and IPv6 address or either
 //
 // "uri": RFC3986 URI
 //
