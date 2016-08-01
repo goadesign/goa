@@ -34,13 +34,21 @@ func (u UUID) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary Wrapper over the real UnmarshalBinary method
-func (u UUID) UnmarshalBinary(data []byte) error {
-	t := uuid.UUID(u)
-	return t.UnmarshalBinary(data)
+func (u *UUID) UnmarshalBinary(data []byte) error {
+	t := uuid.UUID{}
+	err := t.UnmarshalBinary(data)
+	for i, b := range t.Bytes() {
+		u[i] = b
+	}
+	return err
 }
 
 // UnmarshalText Wrapper over the real UnmarshalText method
-func (u UUID) UnmarshalText(text []byte) (err error) {
-	t := uuid.UUID(u)
-	return t.UnmarshalText(text)
+func (u *UUID) UnmarshalText(text []byte) error {
+	t := uuid.UUID{}
+	err := t.UnmarshalText(text)
+	for i, b := range t.Bytes() {
+		u[i] = b
+	}
+	return err
 }
