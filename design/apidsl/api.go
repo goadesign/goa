@@ -61,6 +61,7 @@ import (
 //			Status(200)
 //			MediaType(arg2)
 //		})
+//              NoExample()                             // Prevent automatic generation of examples
 //		Trait("Authenticated", func() {		// Traits define DSL that can be run anywhere
 //			Headers(func() {
 //				Header("header")

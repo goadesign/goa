@@ -72,6 +72,8 @@ type (
 		// resources and actions, unless overridden by Resource or
 		// Action-level Security() calls.
 		Security *SecurityDefinition
+		// NoExamples indicates whether to bypass automatic example generation.
+		NoExamples bool
 
 		// rand is the random generator used to generate examples.
 		rand *RandomGenerator
@@ -1016,44 +1018,12 @@ func (a *AttributeDefinition) finalizeExampleRecursive(rand *RandomGenerator, pa
 		a.Example = a.hashExample(rand, path)
 
 	case a.Type.IsObject():
-		// project media types
-		actual := a
-		if mt, ok := a.Type.(*MediaTypeDefinition); ok {
-			v := a.View
-			if v == "" {
-				v = mt.DefaultView()
-			}
-			projected, _, err := mt.Project(v)
-			if err != nil {
-				panic(err) // bug
-			}
-			actual = projected.AttributeDefinition
-		}
-
-		// ensure fixed ordering so random values are computed with consistent seeds
-		aObj := actual.Type.ToObject()
-		keys := make([]string, len(aObj))
-		i := 0
-		for n := range aObj {
-			keys[i] = n
-			i++
-		}
-		sort.Strings(keys)
-
-		res := make(map[string]interface{})
-		for _, n := range keys {
-			att := aObj[n]
-			ex, err := att.finalizeExampleRecursive(rand, path)
-			if err == nil {
-				res[n] = ex
-			} else {
-				res[n] = "-"
-			}
-		}
-		a.Example = res
+		a.Example = a.objectExample(rand, path)
 
 	default:
-		a.Example = a.GenerateExample(rand)
+		if !Design.NoExamples {
+			a.Example = a.GenerateExample(rand)
+		}
 	}
 
 	return a.Example, nil
@@ -1100,6 +1070,54 @@ func (a *AttributeDefinition) hashExample(rand *RandomGenerator, path []string) 
 		return "-"
 	}
 	return h.MakeMap(res)
+}
+
+func (a *AttributeDefinition) objectExample(rand *RandomGenerator, path []string) interface{} {
+	// project media types
+	actual := a
+	if mt, ok := a.Type.(*MediaTypeDefinition); ok {
+		v := a.View
+		if v == "" {
+			v = mt.DefaultView()
+		}
+		projected, _, err := mt.Project(v)
+		if err != nil {
+			panic(err) // bug
+		}
+		actual = projected.AttributeDefinition
+	}
+
+	// ensure fixed ordering so random values are computed with consistent seeds
+	aObj := actual.Type.ToObject()
+	keys := make([]string, len(aObj))
+	i := 0
+	for n := range aObj {
+		keys[i] = n
+		i++
+	}
+	sort.Strings(keys)
+
+	res := make(map[string]interface{})
+	for _, n := range keys {
+		att := aObj[n]
+		ex, err := att.finalizeExampleRecursive(rand, path)
+		if err == nil {
+			res[n] = ex
+		} else {
+			res[n] = "-"
+		}
+	}
+	// Delete keys with no example, could happen if the API NoExample flag is set.
+	for k, v := range res {
+		if v == nil {
+			delete(res, k)
+		}
+	}
+	if len(res) > 0 {
+		a.Example = res
+	}
+
+	return a.Example
 }
 
 // Merge merges the argument attributes into the target and returns the target overriding existing
