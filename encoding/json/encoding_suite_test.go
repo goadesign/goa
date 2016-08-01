@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestMiddleware(t *testing.T) {
+func TestJsonEncoding(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Json Encoding Suite")
 }

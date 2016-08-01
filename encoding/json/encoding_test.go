@@ -3,6 +3,7 @@ package json_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 
 	"github.com/goadesign/goa/uuid"
 	. "github.com/onsi/ginkgo"
@@ -12,32 +13,56 @@ import (
 var _ = Describe("JsonEncoding", func() {
 
 	Describe("handle goa/uuid/UUID", func() {
+		name := "Test"
+		id, _ := uuid.FromString("c0586f01-87b5-462b-a673-3b2dcf619091")
+
 		type Payload struct {
 			ID   uuid.UUID
 			Name string
 		}
-		data := Payload{
-			uuid.NewV4(),
-			"Test",
-		}
-		var encoded string
 
 		It("encode", func() {
+			data := Payload{
+				id,
+				name,
+			}
+
 			var b bytes.Buffer
 			encoder := json.NewEncoder(&b)
 			encoder.Encode(data)
-			encoded = b.String()
+			s := b.String()
 
-			Ω(encoded).Should(ContainSubstring(data.ID.String()))
-			Ω(encoded).Should(ContainSubstring(data.Name))
+			Ω(s).Should(ContainSubstring(id.String()))
+			Ω(s).Should(ContainSubstring(name))
 		})
 
 		It("decode", func() {
-			var b bytes.Buffer
-			b.WriteString(encoded)
-			decoder := json.NewDecoder(&b)
+			encoded := fmt.Sprintf(`{"ID":"%s","Name":"%s"}`, id, name)
 
 			var payload Payload
+			var b bytes.Buffer
+			b.WriteString(encoded)
+
+			decoder := json.NewDecoder(&b)
+			decoder.Decode(&payload)
+
+			Ω(payload.ID.String()).Should(Equal(id.String()))
+			Ω(payload.Name).Should(Equal(name))
+		})
+
+		It("round trip", func() {
+			data := Payload{
+				id,
+				name,
+			}
+
+			var payload Payload
+			var b bytes.Buffer
+
+			encoder := json.NewEncoder(&b)
+			encoder.Encode(data)
+
+			decoder := json.NewDecoder(&b)
 			decoder.Decode(&payload)
 
 			Ω(payload.ID.String()).Should(Equal(data.ID.String()))
