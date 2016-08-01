@@ -280,6 +280,8 @@ func constant(formatName string) string {
 		return "goa.FormatIPv4"
 	case "ipv6":
 		return "goa.FormatIPv6"
+	case "ip":
+		return "goa.FormatIP"
 	case "uri":
 		return "goa.FormatURI"
 	case "mac":

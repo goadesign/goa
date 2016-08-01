@@ -135,7 +135,17 @@ var _ = Describe("ValidateFormat", func() {
 				val = "192-168.0.1"
 			})
 
-			It("does not validates", func() {
+			It("does not validate", func() {
+				Ω(valErr).Should(HaveOccurred())
+			})
+		})
+
+		Context("with a valid IPv6 value", func() {
+			BeforeEach(func() {
+				val = "::1"
+			})
+
+			It("does not validate", func() {
 				Ω(valErr).Should(HaveOccurred())
 			})
 		})
@@ -162,7 +172,17 @@ var _ = Describe("ValidateFormat", func() {
 				val = "foo"
 			})
 
-			It("does not validates", func() {
+			It("does not validate", func() {
+				Ω(valErr).Should(HaveOccurred())
+			})
+		})
+
+		Context("with a valid IPv4 value", func() {
+			BeforeEach(func() {
+				val = "10.10.10.10"
+			})
+
+			It("does not validate", func() {
 				Ω(valErr).Should(HaveOccurred())
 			})
 		})
@@ -179,6 +199,42 @@ var _ = Describe("ValidateFormat", func() {
 
 	})
 
+	Context("IP", func() {
+		BeforeEach(func() {
+			f = goa.FormatIP
+		})
+
+		Context("with an invalid value", func() {
+			BeforeEach(func() {
+				val = "::1.1"
+			})
+
+			It("does not validate", func() {
+				Ω(valErr).Should(HaveOccurred())
+			})
+		})
+
+		Context("with a valid IPv4 value", func() {
+			BeforeEach(func() {
+				val = "127.0.0.1"
+			})
+
+			It("validates", func() {
+				Ω(valErr).ShouldNot(HaveOccurred())
+			})
+		})
+
+		Context("with a valid IPv6 value", func() {
+			BeforeEach(func() {
+				val = "::1"
+			})
+
+			It("validates", func() {
+				Ω(valErr).ShouldNot(HaveOccurred())
+			})
+		})
+	})
+
 	Context("URI", func() {
 		BeforeEach(func() {
 			f = goa.FormatURI
@@ -189,7 +245,7 @@ var _ = Describe("ValidateFormat", func() {
 				val = "foo_"
 			})
 
-			It("does not validates", func() {
+			It("does not validate", func() {
 				Ω(valErr).Should(HaveOccurred())
 			})
 		})
@@ -216,7 +272,7 @@ var _ = Describe("ValidateFormat", func() {
 				val = "bar"
 			})
 
-			It("does not validates", func() {
+			It("does not validate", func() {
 				Ω(valErr).Should(HaveOccurred())
 			})
 		})
@@ -243,7 +299,7 @@ var _ = Describe("ValidateFormat", func() {
 				val = "foo"
 			})
 
-			It("does not validates", func() {
+			It("does not validate", func() {
 				Ω(valErr).Should(HaveOccurred())
 			})
 		})
@@ -270,7 +326,7 @@ var _ = Describe("ValidateFormat", func() {
 				val = "foo["
 			})
 
-			It("does not validates", func() {
+			It("does not validate", func() {
 				Ω(valErr).Should(HaveOccurred())
 			})
 		})
