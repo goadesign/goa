@@ -842,15 +842,17 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 func applySecurity(operation *Operation, security *design.SecurityDefinition) {
 	if security != nil && security.Scheme.Kind != design.NoSecurityKind {
 		if security.Scheme.Kind == design.JWTSecurityKind {
-			operation.Description += fmt.Sprintf("\n\n** Required security scopes**:\n%s", scopesList(security.Scopes))
-		} else {
-			scopes := security.Scopes
-			if scopes == nil {
-				scopes = make([]string, 0)
+			if operation.Description != "" {
+				operation.Description += "\n\n"
 			}
-			sec := []map[string][]string{{security.Scheme.SchemeName: scopes}}
-			operation.Security = sec
+			operation.Description += fmt.Sprintf("Required security scopes:\n%s", scopesList(security.Scopes))
 		}
+		scopes := security.Scopes
+		if scopes == nil {
+			scopes = make([]string, 0)
+		}
+		sec := []map[string][]string{{security.Scheme.SchemeName: scopes}}
+		operation.Security = sec
 	}
 }
 
