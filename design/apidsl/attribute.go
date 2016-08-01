@@ -280,8 +280,13 @@ func Example(exp interface{}) {
 // NoExample sets the example of an attribute to be blank for the documentation. It is used when
 // users don't want any custom or auto-generated example
 func NoExample() {
-	if a, ok := attributeDefinition(); ok {
-		a.SetExample(nil)
+	switch def := dslengine.CurrentDefinition().(type) {
+	case *design.APIDefinition:
+		def.NoExamples = true
+	case *design.AttributeDefinition:
+		def.SetExample(nil)
+	default:
+		dslengine.IncompatibleDSL()
 	}
 }
 
@@ -501,7 +506,7 @@ func Required(names ...string) {
 	case *design.MediaTypeDefinition:
 		at = def.AttributeDefinition
 	default:
-		return
+		dslengine.IncompatibleDSL()
 	}
 
 	if at.Type != nil && at.Type.Kind() != design.ObjectKind {
