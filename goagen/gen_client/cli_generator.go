@@ -116,6 +116,8 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("log"),
 		codegen.SimpleImport("os"),
+		codegen.SimpleImport("bufio"),
+		codegen.SimpleImport("bytes"),
 		codegen.SimpleImport("path"),
 		codegen.SimpleImport("path/filepath"),
 		codegen.SimpleImport("strings"),
@@ -781,7 +783,19 @@ func RegisterCommands(app *cobra.Command, c *{{ .Package }}.Client) {
 Payload example:
 
 {{ formatExample $action.Payload.Example }}` + "`" + `,{{ end }}
-		RunE:  func(cmd *cobra.Command, args []string) error { return {{ $tmp }}.Run(c, args) },
+		RunE:  func(cmd *cobra.Command, args []string) error { return {{ $tmp }}.Run(c, args) },{{ if $action.Payload }}
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if {{ $tmp }}.Payload == "" {
+				pipe, _ := os.Stdin.Stat()
+				if (pipe.Mode() & os.ModeNamedPipe) == os.ModeNamedPipe {
+					reader := bufio.NewReader(os.Stdin)
+					buf := new(bytes.Buffer)
+					buf.ReadFrom(reader)
+					{{ $tmp }}.Payload = buf.String()
+				}
+			}
+			return nil
+		},{{ end }}
 	}
 	{{ $tmp }}.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&{{ $tmp }}.PrettyPrint, "pp", false, "Pretty print response body")
