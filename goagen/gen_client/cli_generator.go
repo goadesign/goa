@@ -2,6 +2,7 @@ package genclient
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -101,6 +102,8 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	funcs["routes"] = routes
 	funcs["flagType"] = flagType
 	funcs["cmdFieldType"] = cmdFieldTypeString
+	funcs["formatExample"] = formatExample
+	funcs["shouldAddExample"] = shouldAddExample
 
 	commandTypesTmpl := template.Must(template.New("commandTypes").Funcs(funcs).Parse(commandTypesTmpl))
 	commandsTmpl := template.Must(template.New("commands").Funcs(funcs).Parse(commandsTmpl))
@@ -512,6 +515,21 @@ func flagType(att *design.AttributeDefinition) string {
 	}
 }
 
+func shouldAddExample(ut *design.UserTypeDefinition) bool {
+	if ut == nil {
+		return false
+	}
+	return ut.Example != nil
+}
+
+func formatExample(example interface{}) string {
+	if example == nil {
+		return ""
+	}
+	data, _ := json.MarshalIndent(example, "", "   ")
+	return string(data)
+}
+
 const mainTmpl = `
 func main() {
 	// Create command line parser
@@ -757,7 +775,12 @@ func RegisterCommands(app *cobra.Command, c *{{ .Package }}.Client) {
 */}}{{ $tmp := tempvar }}	{{ $tmp }} := new({{ $cmdName }})
 	sub = &cobra.Command{
 		Use:   ` + "`" + `{{ $action.Parent.Name }} {{ routes $action }}` + "`" + `,
-		Short: ` + "`" + `{{ escapeBackticks $action.Parent.Description }}` + "`" + `,
+		Short: ` + "`" + `{{ escapeBackticks $action.Parent.Description }}` + "`" + `,{{ if shouldAddExample $action.Payload }}
+		Long:  ` + "`" + `{{ escapeBackticks $action.Parent.Description }}
+
+Payload example:
+
+{{ formatExample $action.Payload.Example }}` + "`" + `,{{ end }}
 		RunE:  func(cmd *cobra.Command, args []string) error { return {{ $tmp }}.Run(c, args) },
 	}
 	{{ $tmp }}.RegisterFlags(sub, c)

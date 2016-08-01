@@ -1450,6 +1450,10 @@ func (a *ActionDefinition) Finalize() {
 		a.Security = nil
 	}
 
+	if a.Payload != nil {
+		a.Payload.Finalize()
+	}
+
 	a.mergeResponses()
 	a.initImplicitParams()
 	a.initQueryParams()
