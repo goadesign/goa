@@ -792,8 +792,7 @@ var _ = Describe("Example", func() {
 			Ω(attr.Example).Should(BeAssignableToTypeOf([]interface{}{}))
 			Ω(attr.Example.([]interface{})).Should(HaveLen(10))
 			attr = mt.Type.ToObject()["test-failure1"]
-			Ω(attr.Example).Should(BeAssignableToTypeOf([]map[string]interface{}{}))
-			Ω(attr.Example.([]map[string]interface{})).Should(HaveLen(0))
+			Ω(attr.Example).Should(BeNil())
 		})
 	})
 })
