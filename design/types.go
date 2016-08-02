@@ -849,7 +849,7 @@ func (m *MediaTypeDefinition) projectSingle(view string) (p *MediaTypeDefinition
 				if err != nil {
 					return nil, nil, err
 				}
-				linkObj[n] = &AttributeDefinition{Type: vl, Validation: mtt.Validation}
+				linkObj[n] = &AttributeDefinition{Type: vl, Validation: mtt.Validation, Metadata: mtAtt.Metadata}
 			}
 			lTypeName := fmt.Sprintf("%sLinks", m.TypeName)
 			links = &UserTypeDefinition{

@@ -107,6 +107,7 @@ var _ = Describe("Project", func() {
 	Context("with media types with view attributes with a cyclical dependency", func() {
 		const id = "vnd.application/MT1"
 		const typeName = "Mt1"
+		metadata := dslengine.MetadataDefinition{"foo": []string{"bar"}}
 
 		BeforeEach(func() {
 			dslengine.Reset()
@@ -114,7 +115,9 @@ var _ = Describe("Project", func() {
 			mt = MediaType(id, func() {
 				TypeName(typeName)
 				Attributes(func() {
-					Attribute("att", "vnd.application/MT2")
+					Attribute("att", "vnd.application/MT2", func() {
+						Metadata("foo", "bar")
+					})
 				})
 				Links(func() {
 					Link("att", "default")
@@ -163,6 +166,7 @@ var _ = Describe("Project", func() {
 				l := projected.Type.ToObject()["links"]
 				Ω(l.Type.(*UserTypeDefinition).AttributeDefinition).Should(Equal(links.AttributeDefinition))
 				Ω(links.Type.ToObject()).Should(HaveKey("att"))
+				Ω(links.Type.ToObject()["att"].Metadata).Should(Equal(metadata))
 			})
 		})
 
