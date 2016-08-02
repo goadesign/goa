@@ -8,9 +8,9 @@ import (
 
 const (
 	// Major version number
-	Major = 0
+	Major = 1
 	// Minor version number
-	Minor = 2
+	Minor = 0
 )
 
 var (
@@ -20,7 +20,7 @@ var (
 
 func init() {
 	if Build == "" { // Not set by link flags
-		Build = "dev"
+		Build = "0"
 	}
 }
 
