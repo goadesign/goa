@@ -24,10 +24,10 @@ func newExampleGenerator(a *AttributeDefinition, r *RandomGenerator) *exampleGen
 const maxAttempts = 500
 
 // Generate generates a random value based on the given validations.
-func (eg *exampleGenerator) Generate() interface{} {
+func (eg *exampleGenerator) Generate(seen []string) interface{} {
 	// Randomize array length first, since that's from higher level
 	if eg.hasLengthValidation() {
-		return eg.generateValidatedLengthExample()
+		return eg.generateValidatedLengthExample(seen)
 	}
 	// Enum should dominate, because the potential "examples" are fixed
 	if eg.hasEnumValidation() {
@@ -58,9 +58,12 @@ func (eg *exampleGenerator) Generate() interface{} {
 				continue
 			}
 		}
+		if example == nil {
+			example = eg.a.Type.GenerateExample(eg.r, seen)
+		}
 		return example
 	}
-	return nil
+	return eg.a.Type.GenerateExample(eg.r, seen)
 }
 
 func (eg *exampleGenerator) ExampleLength() int {
@@ -106,14 +109,14 @@ func (eg *exampleGenerator) hasLengthValidation() bool {
 const maxExampleLength = 10
 
 // generateValidatedLengthExample generates a random size array of examples based on what's given.
-func (eg *exampleGenerator) generateValidatedLengthExample() interface{} {
+func (eg *exampleGenerator) generateValidatedLengthExample(seen []string) interface{} {
 	count := eg.ExampleLength()
 	if !eg.a.Type.IsArray() {
 		return eg.r.faker.Characters(count)
 	}
 	res := make([]interface{}, count)
 	for i := 0; i < count; i++ {
-		res[i] = eg.a.Type.ToArray().ElemType.GenerateExample(eg.r)
+		res[i] = eg.a.Type.ToArray().ElemType.GenerateExample(eg.r, seen)
 	}
 	return res
 }

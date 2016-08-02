@@ -59,7 +59,9 @@ type (
 		IsCompatible(val interface{}) bool
 		// GenerateExample returns a random value for the given data type.
 		// If the data type has validations then the example value validates them.
-		GenerateExample(r *RandomGenerator) interface{}
+		// seen keeps track of the user and media types that have been traversed via
+		// recursion to prevent infinite loops.
+		GenerateExample(r *RandomGenerator, seen []string) interface{}
 	}
 
 	// DataStructure is the interface implemented by all data structure types.
@@ -272,7 +274,7 @@ func (p Primitive) IsCompatible(val interface{}) bool {
 var anyPrimitive = []Primitive{Boolean, Integer, Number, DateTime, UUID}
 
 // GenerateExample returns an instance of the given data type.
-func (p Primitive) GenerateExample(r *RandomGenerator) interface{} {
+func (p Primitive) GenerateExample(r *RandomGenerator, seen []string) interface{} {
 	switch p {
 	case Boolean:
 		return r.Bool()
@@ -288,7 +290,7 @@ func (p Primitive) GenerateExample(r *RandomGenerator) interface{} {
 		return r.UUID()
 	case Any:
 		// to not make it too complicated, pick one of the primitive types
-		return anyPrimitive[r.Int()%len(anyPrimitive)].GenerateExample(r)
+		return anyPrimitive[r.Int()%len(anyPrimitive)].GenerateExample(r, seen)
 	default:
 		panic("unknown primitive type") // bug
 	}
@@ -351,11 +353,11 @@ func (a *Array) IsCompatible(val interface{}) bool {
 }
 
 // GenerateExample produces a random array value.
-func (a *Array) GenerateExample(r *RandomGenerator) interface{} {
+func (a *Array) GenerateExample(r *RandomGenerator, seen []string) interface{} {
 	count := r.Int()%3 + 1
 	res := make([]interface{}, count)
 	for i := 0; i < count; i++ {
-		res[i] = a.ElemType.Type.GenerateExample(r)
+		res[i] = a.ElemType.Type.GenerateExample(r, seen)
 	}
 	return a.MakeSlice(res)
 }
@@ -417,7 +419,7 @@ func (o Object) IsCompatible(val interface{}) bool {
 }
 
 // GenerateExample returns a random value of the object.
-func (o Object) GenerateExample(r *RandomGenerator) interface{} {
+func (o Object) GenerateExample(r *RandomGenerator, seen []string) interface{} {
 	// ensure fixed ordering
 	keys := make([]string, 0, len(o))
 	for n := range o {
@@ -428,7 +430,7 @@ func (o Object) GenerateExample(r *RandomGenerator) interface{} {
 	res := make(map[string]interface{})
 	for _, n := range keys {
 		att := o[n]
-		res[n] = att.Type.GenerateExample(r)
+		res[n] = att.Type.GenerateExample(r, seen)
 	}
 	return res
 }
@@ -489,11 +491,11 @@ func (h *Hash) IsCompatible(val interface{}) bool {
 }
 
 // GenerateExample returns a random hash value.
-func (h *Hash) GenerateExample(r *RandomGenerator) interface{} {
+func (h *Hash) GenerateExample(r *RandomGenerator, seen []string) interface{} {
 	count := r.Int()%3 + 1
 	pair := map[interface{}]interface{}{}
 	for i := 0; i < count; i++ {
-		pair[h.KeyType.Type.GenerateExample(r)] = h.ElemType.Type.GenerateExample(r)
+		pair[h.KeyType.Type.GenerateExample(r, seen)] = h.ElemType.Type.GenerateExample(r, seen)
 	}
 	return h.MakeMap(pair)
 }
@@ -667,7 +669,7 @@ func (u *UserTypeDefinition) Finalize() {
 		}
 	}
 
-	u.finalizeExample()
+	u.GenerateExample(Design.RandomGenerator(), nil)
 }
 
 // NewMediaTypeDefinition creates a media type definition but does not

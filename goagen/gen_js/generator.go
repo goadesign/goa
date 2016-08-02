@@ -183,7 +183,7 @@ func (g *Generator) generateIndexHTML(htmlFile string, api *design.APIDefinition
 			if q.Example != nil {
 				argValues[i] = fmt.Sprintf("%v", q.Example)
 			} else {
-				argValues[i] = fmt.Sprintf("%v", q.GenerateExample(api.RandomGenerator()))
+				argValues[i] = fmt.Sprintf("%v", q.GenerateExample(api.RandomGenerator(), nil))
 			}
 		}
 		args = strings.Join(argValues, ", ")
@@ -197,7 +197,7 @@ func (g *Generator) generateIndexHTML(htmlFile string, api *design.APIDefinition
 			if pathVars[n].Example != nil {
 				pathValues[i] = fmt.Sprintf("%v", pathVars[n].Example)
 			} else {
-				pathValues[i] = pathVars[n].GenerateExample(api.RandomGenerator())
+				pathValues[i] = pathVars[n].GenerateExample(api.RandomGenerator(), nil)
 			}
 		}
 		format := design.WildcardRegex.ReplaceAllLiteralString(examplePath, "/%v")
