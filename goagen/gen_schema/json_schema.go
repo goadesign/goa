@@ -39,10 +39,10 @@ type (
 		Enum                 []interface{} `json:"enum,omitempty"`
 		Format               string        `json:"format,omitempty"`
 		Pattern              string        `json:"pattern,omitempty"`
-		Minimum              float64       `json:"minimum,omitempty"`
-		Maximum              float64       `json:"maximum,omitempty"`
-		MinLength            int           `json:"minLength,omitempty"`
-		MaxLength            int           `json:"maxLength,omitempty"`
+		Minimum              *float64      `json:"minimum,omitempty"`
+		Maximum              *float64      `json:"maximum,omitempty"`
+		MinLength            *int          `json:"minLength,omitempty"`
+		MaxLength            *int          `json:"maxLength,omitempty"`
 		Required             []string      `json:"required,omitempty"`
 		AdditionalProperties bool          `json:"additionalProperties,omitempty"`
 
@@ -335,10 +335,26 @@ func (s *JSONSchema) Merge(other *JSONSchema) {
 		{&s.Format, other.Format, s.Format == ""},
 		{&s.Pattern, other.Pattern, s.Pattern == ""},
 		{&s.AdditionalProperties, other.AdditionalProperties, s.AdditionalProperties == false},
-		{&s.Minimum, other.Minimum, s.Minimum > other.Minimum},
-		{&s.Maximum, other.Maximum, s.Maximum < other.Maximum},
-		{&s.MinLength, other.MinLength, s.MinLength > other.MinLength},
-		{&s.MaxLength, other.MaxLength, s.MaxLength < other.MaxLength},
+		{
+			a: s.Minimum, b: other.Minimum,
+			needed: (s.Minimum == nil && s.Minimum != nil) ||
+				(s.Minimum != nil && other.Minimum != nil && *s.Minimum > *other.Minimum),
+		},
+		{
+			a: s.Maximum, b: other.Maximum,
+			needed: (s.Maximum == nil && other.Maximum != nil) ||
+				(s.Maximum != nil && other.Maximum != nil && *s.Maximum < *other.Maximum),
+		},
+		{
+			a: s.MinLength, b: other.MinLength,
+			needed: (s.MinLength == nil && other.MinLength != nil) ||
+				(s.MinLength != nil && other.MinLength != nil && *s.MinLength > *other.MinLength),
+		},
+		{
+			a: s.MaxLength, b: other.MaxLength,
+			needed: (s.MaxLength == nil && other.MaxLength != nil) ||
+				(s.MaxLength != nil && other.MaxLength != nil && *s.MaxLength > *other.MaxLength),
+		},
 	} {
 		if v.needed && v.b != nil {
 			reflect.Indirect(reflect.ValueOf(v.a)).Set(reflect.ValueOf(v.b))
@@ -423,16 +439,16 @@ func buildAttributeSchema(api *design.APIDefinition, s *JSONSchema, at *design.A
 	s.Format = val.Format
 	s.Pattern = val.Pattern
 	if val.Minimum != nil {
-		s.Minimum = *val.Minimum
+		s.Minimum = val.Minimum
 	}
 	if val.Maximum != nil {
-		s.Maximum = *val.Maximum
+		s.Maximum = val.Maximum
 	}
 	if val.MinLength != nil {
-		s.MinLength = *val.MinLength
+		s.MinLength = val.MinLength
 	}
 	if val.MaxLength != nil {
-		s.MaxLength = *val.MaxLength
+		s.MaxLength = val.MaxLength
 	}
 	s.Required = val.Required
 	return s
