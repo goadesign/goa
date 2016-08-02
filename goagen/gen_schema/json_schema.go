@@ -316,12 +316,13 @@ func TypeSchema(api *design.APIDefinition, t design.DataType) *JSONSchema {
 	return s
 }
 
-// Merge does a two level deep merge of other into s.
-func (s *JSONSchema) Merge(other *JSONSchema) {
-	for _, v := range []struct {
-		a, b   interface{}
-		needed bool
-	}{
+type mergeItems []struct {
+	a, b   interface{}
+	needed bool
+}
+
+func (s *JSONSchema) createMergeItems(other *JSONSchema) mergeItems {
+	return mergeItems{
 		{&s.ID, other.ID, s.ID == ""},
 		{&s.Type, other.Type, s.Type == ""},
 		{&s.Ref, other.Ref, s.Ref == ""},
@@ -355,7 +356,13 @@ func (s *JSONSchema) Merge(other *JSONSchema) {
 			needed: (s.MaxLength == nil && other.MaxLength != nil) ||
 				(s.MaxLength != nil && other.MaxLength != nil && *s.MaxLength > *other.MaxLength),
 		},
-	} {
+	}
+}
+
+// Merge does a two level deep merge of other into s.
+func (s *JSONSchema) Merge(other *JSONSchema) {
+	items := s.createMergeItems(other)
+	for _, v := range items {
 		if v.needed && v.b != nil {
 			reflect.Indirect(reflect.ValueOf(v.a)).Set(reflect.ValueOf(v.b))
 		}
