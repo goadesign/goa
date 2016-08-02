@@ -214,29 +214,46 @@ var _ = Describe("New", func() {
 			It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
 		})
 
-		Context("with zero value params", func() {
+		Context("with zero value validations", func() {
 			const (
 				intParam = "intParam"
 				numParam = "numParam"
+				strParam = "strParam"
 				intMin   = 0.0
 				floatMax = 0.0
 			)
 
 			BeforeEach(func() {
-				Design.DSLFunc = func() {
-					Params(func() {
-						Param(intParam, Integer, func() {
-							Minimum(intMin)
-						})
-						Param(numParam, Number, func() {
-							Maximum(floatMax)
-						})
+				PayloadWithZeroValueValidations := Type("PayloadWithZeroValueValidations", func() {
+					Attribute(strParam, String, func() {
+						MinLength(0)
+						MaxLength(0)
 					})
-				}
+				})
+				Resource("res", func() {
+					Action("act", func() {
+						Routing(
+							PUT("/"),
+						)
+						Params(func() {
+							Param(intParam, Integer, func() {
+								Minimum(intMin)
+							})
+							Param(numParam, Number, func() {
+								Maximum(floatMax)
+							})
+						})
+						Payload(PayloadWithZeroValueValidations)
+					})
+				})
 			})
 
 			It("serializes into valid swagger JSON", func() {
 				validateSwaggerWithFragments(swagger, [][]byte{
+					// payload
+					[]byte(`"minLength":0`),
+					[]byte(`"maxLength":0`),
+					// param
 					[]byte(`"minimum":0`),
 					[]byte(`"maximum":0`),
 				})
