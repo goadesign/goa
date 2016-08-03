@@ -300,8 +300,18 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 
 	err = res.IterateActions(func(action *design.ActionDefinition) error {
 		if action.Payload != nil {
-			if err := payloadTmpl.Execute(file, action); err != nil {
-				return err
+			found := false
+			typeName := action.Payload.TypeName
+			for _, t := range design.Design.Types {
+				if t.TypeName == typeName {
+					found = true
+					break
+				}
+			}
+			if !found {
+				if err := payloadTmpl.Execute(file, action); err != nil {
+					return err
+				}
 			}
 		}
 		for i, r := range action.Routes {
