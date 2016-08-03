@@ -18,12 +18,13 @@ import (
 
 // Generator is the application code generator.
 type Generator struct {
-	genfiles  []string      // Generated files
-	outDir    string        // Destination directory
-	timeout   time.Duration // Timeout used by JavaScript client when making requests
-	scheme    string        // Scheme used by JavaScript client
-	host      string        // Host addressed by JavaScript client
-	noexample bool          // Do not generate an HTML example file
+	API       *design.APIDefinition // The API definition
+	OutDir    string                // Destination directory
+	Timeout   time.Duration         // Timeout used by JavaScript client when making requests
+	Scheme    string                // Scheme used by JavaScript client
+	Host      string                // Host addressed by JavaScript client
+	NoExample bool                  // Do not generate an HTML example file
+	genfiles  []string              // Generated files
 }
 
 // Generate is the generator entry point called by the meta generator.
@@ -51,13 +52,13 @@ func Generate() (files []string, err error) {
 	}
 
 	// Now proceed
-	g := &Generator{outDir: outDir, timeout: timeout, scheme: scheme, host: host, noexample: noexample}
+	g := &Generator{OutDir: outDir, Timeout: timeout, Scheme: scheme, Host: host, NoExample: noexample, API: design.Design}
 
-	return g.Generate(design.Design)
+	return g.Generate()
 }
 
 // Generate produces the skeleton main.
-func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) {
+func (g *Generator) Generate() (_ []string, err error) {
 	go utils.Catch(nil, func() { g.Cleanup() })
 
 	defer func() {
@@ -66,30 +67,33 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		}
 	}()
 
-	if g.scheme == "" && len(api.Schemes) > 0 {
-		g.scheme = api.Schemes[0]
+	if g.Timeout == 0 {
+		g.Timeout = 20 * time.Second
 	}
-	if g.scheme == "" {
-		g.scheme = "http"
+	if g.Scheme == "" && len(g.API.Schemes) > 0 {
+		g.Scheme = g.API.Schemes[0]
 	}
-	if g.host == "" {
-		g.host = api.Host
+	if g.Scheme == "" {
+		g.Scheme = "http"
 	}
-	if g.host == "" {
+	if g.Host == "" {
+		g.Host = g.API.Host
+	}
+	if g.Host == "" {
 		return nil, fmt.Errorf("missing host value, set it with --host")
 	}
 
-	g.outDir = filepath.Join(g.outDir, "js")
-	if err := os.RemoveAll(g.outDir); err != nil {
+	g.OutDir = filepath.Join(g.OutDir, "js")
+	if err := os.RemoveAll(g.OutDir); err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(g.outDir, 0755); err != nil {
+	if err := os.MkdirAll(g.OutDir, 0755); err != nil {
 		return nil, err
 	}
-	g.genfiles = append(g.genfiles, g.outDir)
+	g.genfiles = append(g.genfiles, g.OutDir)
 
 	// Generate client.js
-	exampleAction, err := g.generateJS(filepath.Join(g.outDir, "client.js"), api)
+	exampleAction, err := g.generateJS(filepath.Join(g.OutDir, "client.js"))
 	if err != nil {
 		return
 	}
@@ -99,14 +103,14 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		return
 	}
 
-	if exampleAction != nil && !g.noexample {
+	if exampleAction != nil && !g.NoExample {
 		// Generate index.html
-		if err = g.generateIndexHTML(filepath.Join(g.outDir, "index.html"), api, exampleAction); err != nil {
+		if err = g.generateIndexHTML(filepath.Join(g.OutDir, "index.html"), exampleAction); err != nil {
 			return
 		}
 
 		// Generate example
-		if err = g.generateExample(api); err != nil {
+		if err = g.generateExample(); err != nil {
 			return
 		}
 	}
@@ -114,7 +118,7 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 	return g.genfiles, nil
 }
 
-func (g *Generator) generateJS(jsFile string, api *design.APIDefinition) (_ *design.ActionDefinition, err error) {
+func (g *Generator) generateJS(jsFile string) (_ *design.ActionDefinition, err error) {
 	file, err := codegen.SourceFileFor(jsFile)
 	if err != nil {
 		return
@@ -122,17 +126,17 @@ func (g *Generator) generateJS(jsFile string, api *design.APIDefinition) (_ *des
 	g.genfiles = append(g.genfiles, jsFile)
 
 	data := map[string]interface{}{
-		"API":     api,
-		"Host":    g.host,
-		"Scheme":  g.scheme,
-		"Timeout": int64(g.timeout / time.Millisecond),
+		"API":     g.API,
+		"Host":    g.Host,
+		"Scheme":  g.Scheme,
+		"Timeout": int64(g.Timeout / time.Millisecond),
 	}
 	if err = file.ExecuteTemplate("module", moduleT, nil, data); err != nil {
 		return
 	}
 
 	actions := make(map[string][]*design.ActionDefinition)
-	api.IterateResources(func(res *design.ResourceDefinition) error {
+	g.API.IterateResources(func(res *design.ResourceDefinition) error {
 		return res.IterateActions(func(action *design.ActionDefinition) error {
 			if as, ok := actions[action.Name]; ok {
 				actions[action.Name] = append(as, action)
@@ -166,7 +170,7 @@ func (g *Generator) generateJS(jsFile string, api *design.APIDefinition) (_ *des
 	return exampleAction, err
 }
 
-func (g *Generator) generateIndexHTML(htmlFile string, api *design.APIDefinition, exampleAction *design.ActionDefinition) error {
+func (g *Generator) generateIndexHTML(htmlFile string, exampleAction *design.ActionDefinition) error {
 	file, err := codegen.SourceFileFor(htmlFile)
 	if err != nil {
 		return err
@@ -183,7 +187,7 @@ func (g *Generator) generateIndexHTML(htmlFile string, api *design.APIDefinition
 			if q.Example != nil {
 				argValues[i] = fmt.Sprintf("%v", q.Example)
 			} else {
-				argValues[i] = fmt.Sprintf("%v", q.GenerateExample(api.RandomGenerator(), nil))
+				argValues[i] = fmt.Sprintf("%v", q.GenerateExample(g.API.RandomGenerator(), nil))
 			}
 		}
 		args = strings.Join(argValues, ", ")
@@ -197,7 +201,7 @@ func (g *Generator) generateIndexHTML(htmlFile string, api *design.APIDefinition
 			if pathVars[n].Example != nil {
 				pathValues[i] = fmt.Sprintf("%v", pathVars[n].Example)
 			} else {
-				pathValues[i] = pathVars[n].GenerateExample(api.RandomGenerator(), nil)
+				pathValues[i] = pathVars[n].GenerateExample(g.API.RandomGenerator(), nil)
 			}
 		}
 		format := design.WildcardRegex.ReplaceAllLiteralString(examplePath, "/%v")
@@ -214,7 +218,7 @@ func (g *Generator) generateIndexHTML(htmlFile string, api *design.APIDefinition
 		args,
 	)
 	data := map[string]interface{}{
-		"API":         api,
+		"API":         g.API,
 		"ExampleFunc": exampleFunc,
 	}
 
@@ -222,7 +226,7 @@ func (g *Generator) generateIndexHTML(htmlFile string, api *design.APIDefinition
 }
 
 func (g *Generator) generateAxiosJS() error {
-	filePath := filepath.Join(g.outDir, "axios.min.js")
+	filePath := filepath.Join(g.OutDir, "axios.min.js")
 	if err := ioutil.WriteFile(filePath, []byte(axios), 0644); err != nil {
 		return err
 	}
@@ -231,8 +235,8 @@ func (g *Generator) generateAxiosJS() error {
 	return nil
 }
 
-func (g *Generator) generateExample(api *design.APIDefinition) error {
-	controllerFile := filepath.Join(g.outDir, "example.go")
+func (g *Generator) generateExample() error {
+	controllerFile := filepath.Join(g.OutDir, "example.go")
 	file, err := codegen.SourceFileFor(controllerFile)
 	if err != nil {
 		return err
@@ -242,12 +246,12 @@ func (g *Generator) generateExample(api *design.APIDefinition) error {
 		codegen.SimpleImport("github.com/dimfeld/httptreemux"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
-	if err := file.WriteHeader(fmt.Sprintf("%s JavaScript Client Example", api.Name), "js", imports); err != nil {
+	if err := file.WriteHeader(fmt.Sprintf("%s JavaScript Client Example", g.API.Name), "js", imports); err != nil {
 		return err
 	}
 	g.genfiles = append(g.genfiles, controllerFile)
 
-	data := map[string]interface{}{"ServeDir": g.outDir}
+	data := map[string]interface{}{"ServeDir": g.OutDir}
 	if err := file.ExecuteTemplate("examples", exampleCtrlT, nil, data); err != nil {
 		return err
 	}
