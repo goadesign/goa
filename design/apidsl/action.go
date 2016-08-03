@@ -347,8 +347,15 @@ func payload(isOptional bool, p interface{}, dsls ...func()) {
 			att.Type = design.Object{}
 		case *design.AttributeDefinition:
 			att = design.DupAtt(actual)
-		case design.DataStructure:
+		case *design.UserTypeDefinition:
+			if len(dsls) == 0 {
+				a.Payload = actual
+				a.PayloadOptional = isOptional
+				return
+			}
 			att = design.DupAtt(actual.Definition())
+		case *design.MediaTypeDefinition:
+			att = design.DupAtt(actual.AttributeDefinition)
 		case string:
 			ut, ok := design.Design.Types[actual]
 			if !ok {

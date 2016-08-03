@@ -207,8 +207,17 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 		return err
 	}
 	if data.Payload != nil {
-		if err := w.ExecuteTemplate("payload", payloadT, nil, data); err != nil {
-			return err
+		found := false
+		for _, t := range design.Design.Types {
+			if t.TypeName == data.Payload.TypeName {
+				found = true
+				break
+			}
+		}
+		if !found {
+			if err := w.ExecuteTemplate("payload", payloadT, nil, data); err != nil {
+				return err
+			}
 		}
 	}
 	return data.IterateResponses(func(resp *design.ResponseDefinition) error {
