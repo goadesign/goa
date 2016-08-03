@@ -360,6 +360,7 @@ var _ = Describe("ContextsWriter", func() {
 
 			Context("with a simple payload", func() {
 				BeforeEach(func() {
+					design.Design = new(design.APIDefinition)
 					payload = &design.UserTypeDefinition{
 						AttributeDefinition: &design.AttributeDefinition{Type: design.String},
 						TypeName:            "ListBottlePayload",
