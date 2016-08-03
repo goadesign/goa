@@ -14,7 +14,7 @@ import (
 )
 
 func makeTestDir(g *Generator, apiName string) (outDir string, err error) {
-	outDir = filepath.Join(g.outDir, "test")
+	outDir = filepath.Join(g.OutDir, "test")
 	if err = os.RemoveAll(outDir); err != nil {
 		return
 	}
@@ -52,17 +52,17 @@ type ObjectType struct {
 	Validatable bool
 }
 
-func (g *Generator) generateResourceTest(api *design.APIDefinition) error {
-	if len(api.Resources) == 0 {
+func (g *Generator) generateResourceTest() error {
+	if len(g.API.Resources) == 0 {
 		return nil
 	}
 	funcs := template.FuncMap{"isSlice": isSlice}
 	testTmpl := template.Must(template.New("test").Funcs(funcs).Parse(testTmpl))
-	outDir, err := makeTestDir(g, api.Name)
+	outDir, err := makeTestDir(g, g.API.Name)
 	if err != nil {
 		return err
 	}
-	appPkg, err := codegen.PackagePath(g.outDir)
+	appPkg, err := codegen.PackagePath(g.OutDir)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (g *Generator) generateResourceTest(api *design.APIDefinition) error {
 		codegen.SimpleImport("golang.org/x/net/context"),
 	}
 
-	return api.IterateResources(func(res *design.ResourceDefinition) error {
+	return g.API.IterateResources(func(res *design.ResourceDefinition) error {
 		filename := filepath.Join(outDir, codegen.SnakeCase(res.Name)+"_testing.go")
 		file, err := codegen.SourceFileFor(filename)
 		if err != nil {
@@ -160,7 +160,7 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		}
 		tmp := codegen.GoTypeName(p, nil, 0, false)
 		if !p.IsError() {
-			tmp = fmt.Sprintf("%s.%s", g.target, tmp)
+			tmp = fmt.Sprintf("%s.%s", g.Target, tmp)
 		}
 		validate := codegen.RecursiveChecker(p.AttributeDefinition, false, false, false, "payload", "raw", 1, true)
 		returnType = &ObjectType{}
@@ -184,7 +184,7 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 	if action.Payload != nil {
 		payload = &ObjectType{}
 		payload.Name = "payload"
-		payload.Type = fmt.Sprintf("%s.%s", g.target, codegen.Goify(action.Payload.TypeName, true))
+		payload.Type = fmt.Sprintf("%s.%s", g.Target, codegen.Goify(action.Payload.TypeName, true))
 		if !action.Payload.IsPrimitive() && !action.Payload.IsArray() && !action.Payload.IsHash() {
 			payload.Pointer = "*"
 		}
@@ -204,9 +204,9 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		QueryParams:    queryParams(action),
 		Payload:        payload,
 		ReturnType:     returnType,
-		ControllerName: fmt.Sprintf("%s.%sController", g.target, ctrlName),
+		ControllerName: fmt.Sprintf("%s.%sController", g.Target, ctrlName),
 		ContextVarName: fmt.Sprintf("%sCtx", varName),
-		ContextType:    fmt.Sprintf("%s.New%s%sContext", g.target, actionName, ctrlName),
+		ContextType:    fmt.Sprintf("%s.New%s%sContext", g.Target, actionName, ctrlName),
 		RouteVerb:      route.Verb,
 		Status:         response.Status,
 		FullPath:       goPathFormat(route.FullPath()),
