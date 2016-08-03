@@ -13,9 +13,9 @@ import (
 
 // Generator is the application code generator.
 type Generator struct {
-	API *design.APIDefinition // The API definition
-	OutDir   string   // Path to output directory
-	genfiles []string // Generated files
+	API      *design.APIDefinition // The API definition
+	OutDir   string                // Path to output directory
+	genfiles []string              // Generated files
 }
 
 // Generate is the generator entry point called by the meta generator.
