@@ -40,8 +40,11 @@ var _ = Describe("Generate", func() {
 
 	Context("with jsonapi like querystring params", func() {
 		BeforeEach(func() {
+			codegen.TempCount = 0
 			o := design.Object{
 				"fields[foo]": &design.AttributeDefinition{Type: design.String},
+				"fields[bar]": &design.AttributeDefinition{Type: &design.Array{ElemType: &design.AttributeDefinition{Type: design.String}}},
+				"fields[baz]": &design.AttributeDefinition{Type: &design.Array{ElemType: &design.AttributeDefinition{Type: design.Integer}}},
 			}
 			design.Design = &design.APIDefinition{
 				Name: "testapi",
@@ -76,6 +79,16 @@ var _ = Describe("Generate", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(content).Should(ContainSubstring("func ShowFooPath("))
 			Ω(content).Should(ContainSubstring(`values.Set("fields[foo]", *fieldsFoo)`))
+			Ω(content).Should(ContainSubstring(`	for _, p := range fieldsBar {
+		tmp2 := p
+		values.Add("fields[bar]", tmp2)
+	}
+`))
+			Ω(content).Should(ContainSubstring(`	for _, p := range fieldsBaz {
+		tmp3 := strconv.Itoa(p)
+		values.Add("fields[baz]", tmp3)
+	}
+`))
 		})
 	})
 

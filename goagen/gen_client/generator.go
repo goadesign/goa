@@ -417,6 +417,10 @@ func (g *Generator) generateActionClient(action *design.ActionDefinition, file *
 					optData = append(optData, param)
 				}
 			} else {
+				if q.Type.IsArray() {
+					param.IsArray = true
+					param.ElemAttribute = q.Type.ToArray().ElemType
+				}
 				param.MustToString = true
 				param.ValueName = varName
 				param.CheckNil = true
@@ -794,12 +798,14 @@ func typeName(mt *design.MediaTypeDefinition) string {
 // paramData is the data structure holding the information needed to generate query params and
 // headers handling code.
 type paramData struct {
-	Name         string
-	VarName      string
-	ValueName    string
-	Attribute    *design.AttributeDefinition
-	MustToString bool
-	CheckNil     bool
+	Name          string
+	VarName       string
+	ValueName     string
+	Attribute     *design.AttributeDefinition
+	ElemAttribute *design.AttributeDefinition
+	MustToString  bool
+	IsArray       bool
+	CheckNil      bool
 }
 
 type byParamName []*paramData
@@ -857,9 +863,21 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
 {{ if .QueryParams }}	values := u.Query()
 {{ range .QueryParams }}{{ if .CheckNil }}	if {{ .VarName }} != nil {
-	{{ end }}{{ if .MustToString}}{{ $tmp := tempvar }}	{{ toString .ValueName $tmp .Attribute }}
-	values.Set("{{ .Name }}", {{ $tmp }})
-{{ else }}	values.Set("{{ .Name }}", {{ .ValueName }})
+	{{ end }}{{/*
+
+// ARRAY
+*/}}{{ if .IsArray }}		for _, p := range {{ .VarName }} {
+{{ if .MustToString }}{{ $tmp := tempvar }}			{{ toString "p" $tmp .ElemAttribute }}
+			values.Add("{{ .Name }}", {{ $tmp }})
+{{ else }}			values.Add("{{ .Name }}", {{ .ValueName }})
+{{ end }}{{/*
+
+// NON STRING
+*/}}{{ else if .MustToString }}{{ $tmp := tempvar }}	{{ toString .ValueName $tmp .Attribute }}
+	values.Set("{{ .Name }}", {{ $tmp }}){{/*
+
+// STRING
+*/}}{{ else }}	values.Set("{{ .Name }}", {{ .ValueName }})
 {{ end }}{{ if .CheckNil }}	}
 {{ end }}{{ end }}	u.RawQuery = values.Encode()
 {{ end }}	return websocket.Dial(u.String(), "", u.String())
@@ -919,12 +937,28 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 	}
 	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
 {{ if .QueryParams }}	values := u.Query()
-{{ range .QueryParams }}{{ if .CheckNil }}	if {{ .VarName }} != nil {
-	{{ end }}{{ if .MustToString }}{{ $tmp := tempvar }}	{{ toString .ValueName $tmp .Attribute }}
+{{ range .QueryParams }}{{/*
+
+// ARRAY
+*/}}{{ if .IsArray }}		for _, p := range {{ .VarName }} {
+{{ if .MustToString }}{{ $tmp := tempvar }}			{{ toString "p" $tmp .ElemAttribute }}
+			values.Add("{{ .Name }}", {{ $tmp }})
+{{ else }}			values.Add("{{ .Name }}", {{ .ValueName }})
+{{ end }}	 }
+{{/*
+
+// NON STRING
+*/}}{{ else if .MustToString }}{{ if .CheckNil }}	if {{ .VarName }} != nil {
+	{{ end }}{{ $tmp := tempvar }}	{{ toString .ValueName $tmp .Attribute }}
 	values.Set("{{ .Name }}", {{ $tmp }})
-{{ else }}	values.Set("{{ .Name }}", {{ .ValueName }})
-{{ end }}{{ if .CheckNil }}	}
-{{ end }}{{ end }}	u.RawQuery = values.Encode()
+{{ if .CheckNil }}	}
+{{ end }}{{/*
+
+// STRING
+*/}}{{ else }}{{ if .CheckNil }}	if {{ .VarName }} != nil {
+	{{ end }}	values.Set("{{ .Name }}", {{ .ValueName }})
+{{ if .CheckNil }}	}
+{{ end }}{{ end }}{{ end }}	u.RawQuery = values.Encode()
 {{ end }}{{ if .HasPayload }}	req, err := http.NewRequest({{ $route := index .Routes 0 }}"{{ $route.Verb }}", u.String(), &body)
 {{ else }}	req, err := http.NewRequest({{ $route := index .Routes 0 }}"{{ $route.Verb }}", u.String(), nil)
 {{ end }}	if err != nil {
