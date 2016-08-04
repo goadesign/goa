@@ -14,7 +14,7 @@ import (
 	"github.com/goadesign/goa/goagen/codegen"
 )
 
-func (g *Generator) generateMain(mainFile string, clientPkg, cliPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
+func (g *Generator) generateMain(mainFile string, clientPkg, cliPkg string, funcs template.FuncMap) error {
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("encoding/json"),
 		codegen.SimpleImport("fmt"),
@@ -52,7 +52,7 @@ func (g *Generator) generateMain(mainFile string, clientPkg, cliPkg string, func
 	hasBasicAuthSigners := false
 	hasAPIKeySigners := false
 	hasTokenSigners := false
-	for _, s := range api.SecuritySchemes {
+	for _, s := range g.API.SecuritySchemes {
 		if signerType(s) != "" {
 			hasSigners = true
 			switch s.Type {
@@ -75,9 +75,9 @@ func (g *Generator) generateMain(mainFile string, clientPkg, cliPkg string, func
 		HasAPIKeySigners    bool
 		HasTokenSigners     bool
 	}{
-		API:                 api,
+		API:                 g.API,
 		Version:             version,
-		Package:             g.target,
+		Package:             g.Target,
 		HasSigners:          hasSigners,
 		HasBasicAuthSigners: hasBasicAuthSigners,
 		HasAPIKeySigners:    hasAPIKeySigners,
@@ -90,7 +90,7 @@ func (g *Generator) generateMain(mainFile string, clientPkg, cliPkg string, func
 	return file.FormatCode()
 }
 
-func (g *Generator) generateCommands(commandsFile string, clientPkg string, funcs template.FuncMap, api *design.APIDefinition) error {
+func (g *Generator) generateCommands(commandsFile string, clientPkg string, funcs template.FuncMap) error {
 	file, err := codegen.SourceFileFor(commandsFile)
 	if err != nil {
 		return err
@@ -128,7 +128,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 		codegen.SimpleImport("golang.org/x/net/websocket"),
 		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 	}
-	if len(api.Resources) > 0 {
+	if len(g.API.Resources) > 0 {
 		imports = append(imports, codegen.NewImport("goaclient", "github.com/goadesign/goa/client"))
 	}
 	if err := file.WriteHeader("", "cli", imports); err != nil {
@@ -138,7 +138,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 
 	file.Write([]byte("type (\n"))
 	var fs []*design.FileServerDefinition
-	if err := api.IterateResources(func(res *design.ResourceDefinition) error {
+	if err := g.API.IterateResources(func(res *design.ResourceDefinition) error {
 		fs = append(fs, res.FileServers...)
 		return res.IterateActions(func(action *design.ActionDefinition) error {
 			return commandTypesTmpl.Execute(file, action)
@@ -153,7 +153,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 
 	actions := make(map[string][]*design.ActionDefinition)
 	hasDownloads := false
-	api.IterateResources(func(res *design.ResourceDefinition) error {
+	g.API.IterateResources(func(res *design.ResourceDefinition) error {
 		if len(res.FileServers) > 0 {
 			hasDownloads = true
 		}
@@ -173,14 +173,14 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 		HasDownloads bool
 	}{
 		Actions:      actions,
-		Package:      g.target,
+		Package:      g.Target,
 		HasDownloads: hasDownloads,
 	}
 	if err := file.ExecuteTemplate("registerCmds", registerCmdsT, funcs, data); err != nil {
 		return err
 	}
 
-	err = api.IterateResources(func(res *design.ResourceDefinition) error {
+	err = g.API.IterateResources(func(res *design.ResourceDefinition) error {
 		if res.FileServers != nil {
 			var fsdata []map[string]interface{}
 			res.IterateFileServers(func(fs *design.FileServerDefinition) error {
@@ -206,7 +206,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 				Package     string
 				FileServers []map[string]interface{}
 			}{
-				Package:     g.target,
+				Package:     g.Target,
 				FileServers: fsdata,
 			}
 			if err := downloadCommandTmpl.Execute(file, data); err != nil {
@@ -217,7 +217,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 			data := map[string]interface{}{
 				"Action":   action,
 				"Resource": action.Parent,
-				"Package":  g.target,
+				"Package":  g.Target,
 			}
 			var err error
 			if action.WebSocket() {

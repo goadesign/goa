@@ -17,11 +17,12 @@ import (
 
 // Generator is the application code generator.
 type Generator struct {
-	outDir    string   //Path to output directory
-	designPkg string   // Path to design package
-	target    string   // Name of generated "app" package
-	force     bool     // Whether to override existing files
-	genfiles  []string // Generated files
+	API       *design.APIDefinition // The API definition
+	OutDir    string                // Path to output directory
+	DesignPkg string                // Path to design package, only used to mark generated files.
+	Target    string                // Name of generated "app" package
+	Force     bool                  // Whether to override existing files
+	genfiles  []string              // Generated files
 }
 
 // Generate is the generator entry point called by the meta generator.
@@ -39,21 +40,18 @@ func Generate() (files []string, err error) {
 	set.BoolVar(&force, "force", false, "")
 	set.Parse(os.Args[1:])
 
-	// First check compatibility
 	if err := codegen.CheckVersion(ver); err != nil {
 		return nil, err
 	}
 
-	// Now proceed
 	target = codegen.Goify(target, false)
-	g := &Generator{outDir: outDir, designPkg: designPkg, target: target, force: force}
-	codegen.Reserved[target] = true
+	g := &Generator{OutDir: outDir, DesignPkg: designPkg, Target: target, Force: force, API: design.Design}
 
-	return g.Generate(design.Design)
+	return g.Generate()
 }
 
 // Generate produces the skeleton main.
-func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) {
+func (g *Generator) Generate() (_ []string, err error) {
 	go utils.Catch(nil, func() { g.Cleanup() })
 
 	defer func() {
@@ -62,23 +60,29 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		}
 	}()
 
-	mainFile := filepath.Join(g.outDir, "main.go")
-	if g.force {
+	if g.Target == "" {
+		g.Target = "app"
+	}
+
+	codegen.Reserved[g.Target] = true
+
+	mainFile := filepath.Join(g.OutDir, "main.go")
+	if g.Force {
 		os.Remove(mainFile)
 	}
 	funcs := template.FuncMap{
 		"tempvar":   tempvar,
 		"okResp":    g.okResp,
-		"targetPkg": func() string { return g.target },
+		"targetPkg": func() string { return g.Target },
 	}
-	imp, err := codegen.PackagePath(g.outDir)
+	imp, err := codegen.PackagePath(g.OutDir)
 	if err != nil {
 		return nil, err
 	}
 	imp = path.Join(filepath.ToSlash(imp), "app")
 	_, err = os.Stat(mainFile)
 	if err != nil {
-		if err = g.createMainFile(mainFile, api, funcs); err != nil {
+		if err = g.createMainFile(mainFile, funcs); err != nil {
 			return nil, err
 		}
 	}
@@ -88,9 +92,9 @@ func (g *Generator) Generate(api *design.APIDefinition) (_ []string, err error) 
 		codegen.SimpleImport(imp),
 		codegen.SimpleImport("golang.org/x/net/websocket"),
 	}
-	err = api.IterateResources(func(r *design.ResourceDefinition) error {
-		filename := filepath.Join(g.outDir, codegen.SnakeCase(r.Name)+".go")
-		if g.force {
+	err = g.API.IterateResources(func(r *design.ResourceDefinition) error {
+		filename := filepath.Join(g.OutDir, codegen.SnakeCase(r.Name)+".go")
+		if g.Force {
 			if err2 := os.Remove(filename); err2 != nil {
 				return err2
 			}
@@ -147,7 +151,7 @@ func tempvar() string {
 	return fmt.Sprintf("c%d", tempCount)
 }
 
-func (g *Generator) createMainFile(mainFile string, api *design.APIDefinition, funcs template.FuncMap) error {
+func (g *Generator) createMainFile(mainFile string, funcs template.FuncMap) error {
 	g.genfiles = append(g.genfiles, mainFile)
 	file, err := codegen.SourceFileFor(mainFile)
 	if err != nil {
@@ -160,7 +164,7 @@ func (g *Generator) createMainFile(mainFile string, api *design.APIDefinition, f
 		}
 		return port
 	}
-	outPkg, err := codegen.PackagePath(g.outDir)
+	outPkg, err := codegen.PackagePath(g.OutDir)
 	if err != nil {
 		return err
 	}
@@ -171,11 +175,11 @@ func (g *Generator) createMainFile(mainFile string, api *design.APIDefinition, f
 		codegen.SimpleImport("github.com/goadesign/goa/middleware"),
 		codegen.SimpleImport(appPkg),
 	}
-	file.Write([]byte("//go:generate goagen bootstrap -d " + g.designPkg + "\n\n"))
+	file.Write([]byte("//go:generate goagen bootstrap -d " + g.DesignPkg + "\n\n"))
 	file.WriteHeader("", "main", imports)
 	data := map[string]interface{}{
-		"Name": api.Name,
-		"API":  api,
+		"Name": g.API.Name,
+		"API":  g.API,
 	}
 	if err = file.ExecuteTemplate("main", mainT, funcs, data); err != nil {
 		return err
@@ -213,7 +217,7 @@ func (g *Generator) okResp(a *design.ActionDefinition) map[string]interface{} {
 		name = name[1:]
 		pointer = "*"
 	}
-	typeref := fmt.Sprintf("%s%s.%s", pointer, g.target, name)
+	typeref := fmt.Sprintf("%s%s.%s", pointer, g.Target, name)
 	if strings.HasPrefix(typeref, "*") {
 		typeref = "&" + typeref[1:]
 	}
@@ -265,9 +269,9 @@ func New{{ $ctrlName }}(service *goa.Service) *{{ $ctrlName }} {
 const actionT = `{{ $ctrlName := printf "%s%s" (goify .Parent.Name true) "Controller" }}// {{ goify .Name true }} runs the {{ .Name }} action.
 func (c *{{ $ctrlName }}) {{ goify .Name true }}(ctx *{{ targetPkg }}.{{ goify .Name true }}{{ goify .Parent.Name true }}Context) error {
 	// {{ $ctrlName }}_{{ goify .Name true }}: start_implement
-	
+
 	// Put your logic here
-	
+
 	// {{ $ctrlName }}_{{ goify .Name true }}: end_implement
 {{ $ok := okResp . }}{{ if $ok }} res := {{ $ok.TypeRef }}{}
 {{ end }} return {{ if $ok }}ctx.{{ $ok.Name }}(res){{ else }}nil{{ end }}
@@ -284,9 +288,9 @@ func (c *{{ $ctrlName }}) {{ goify .Name true }}(ctx *{{ targetPkg }}.{{ goify .
 func (c *{{ $ctrlName }}) {{ goify .Name true }}WSHandler(ctx *{{ targetPkg }}.{{ goify .Name true }}{{ goify .Parent.Name true }}Context) websocket.Handler {
 	return func(ws *websocket.Conn) {
 		// {{ $ctrlName }}_{{ goify .Name true }}: start_implement
-		
+
 		// Put your logic here
-		
+
 		// {{ $ctrlName }}_{{ goify .Name true }}: end_implement
 		ws.Write([]byte("{{ .Name }} {{ .Parent.Name }}"))
 		// Dummy echo websocket server
