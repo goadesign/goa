@@ -41,8 +41,10 @@ type (
 
 // NewMux returns a Mux.
 func NewMux() ServeMux {
+	r := httptreemux.New()
+	r.EscapeAddedRoutes = true
 	return &mux{
-		router:  httptreemux.New(),
+		router:  r,
 		handles: make(map[string]MuxHandler),
 	}
 }
