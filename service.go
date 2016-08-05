@@ -14,11 +14,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-const (
-	// ErrorMediaIdentifier is the media type identifier used for error responses.
-	ErrorMediaIdentifier = "application/vnd.goa.error"
-)
-
 type (
 	// Service is the data structure supporting goa services.
 	// It provides methods for configuring a service and running it.
