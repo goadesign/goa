@@ -1553,6 +1553,7 @@ func (a *ActionDefinition) initQueryParams() {
 	// 3. Compute QueryParams from Params and set all path params as non zero attributes
 	if params := a.AllParams(); params != nil {
 		queryParams := DupAtt(params)
+		queryParams.Type = Dup(queryParams.Type)
 		if a.Params == nil {
 			a.Params = &AttributeDefinition{Type: Object{}}
 		}
