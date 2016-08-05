@@ -40,12 +40,8 @@ func (d *dupper) DupAttribute(att *AttributeDefinition) *AttributeDefinition {
 	if att.Validation != nil {
 		valDup = att.Validation.Dup()
 	}
-	var dupType DataType
-	if att.Type != nil {
-		dupType = d.DupType(att.Type)
-	}
 	dup := AttributeDefinition{
-		Type:              dupType,
+		Type:              att.Type,
 		Description:       att.Description,
 		Validation:        valDup,
 		Metadata:          att.Metadata,

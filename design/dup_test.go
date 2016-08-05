@@ -145,3 +145,23 @@ var _ = Describe("Dup", func() {
 		})
 	})
 })
+
+var _ = Describe("DupAtt", func() {
+	var att *AttributeDefinition
+	var dup *AttributeDefinition
+
+	JustBeforeEach(func() {
+		dup = DupAtt(att)
+	})
+
+	Context("with an attribute with a type which is a media type", func() {
+		BeforeEach(func() {
+			att = &AttributeDefinition{Type: &MediaTypeDefinition{}}
+		})
+
+		It("does not clone the type", func() {
+			Ω(dup == att).Should(BeFalse())
+			Ω(dup.Type == att.Type).Should(BeTrue())
+		})
+	})
+})
