@@ -38,6 +38,9 @@ import (
 )
 
 var (
+	// ErrorMediaIdentifier is the media type identifier used for error responses.
+	ErrorMediaIdentifier = "application/vnd.goa.error"
+
 	// ErrBadRequest is a generic bad request error.
 	ErrBadRequest = NewErrorClass("bad_request", 400)
 
