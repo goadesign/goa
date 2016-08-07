@@ -205,7 +205,7 @@ func (g *Generator) okResp(a *design.ActionDefinition) map[string]interface{} {
 	}
 	view := ok.ViewName
 	if view == "" {
-		view = mt.DefaultView()
+		view = design.DefaultView
 	}
 	pmt, _, err := mt.Project(view)
 	if err != nil {
