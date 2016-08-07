@@ -382,6 +382,7 @@ var _ = Describe("ContextsWriter", func() {
 
 			Context("with a object payload", func() {
 				BeforeEach(func() {
+					design.Design = new(design.APIDefinition)
 					intParam := &design.AttributeDefinition{Type: design.Integer}
 					strParam := &design.AttributeDefinition{Type: design.String}
 					dataType := design.Object{
@@ -1199,6 +1200,8 @@ func unmarshalListBottlePayload(ctx context.Context, service *goa.Service, req *
 		return err
 	}
 	if err := payload.Validate(); err != nil {
+		// Initialize payload with private data structure so it can be logged
+		goa.ContextRequest(ctx).Payload = payload
 		return err
 	}
 	goa.ContextRequest(ctx).Payload = payload.Publicize()
