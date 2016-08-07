@@ -33,6 +33,8 @@ var _ = Describe("Generate", func() {
 	})
 
 	JustBeforeEach(func() {
+		design.GeneratedMediaTypes = make(design.MediaTypeRoot)
+		design.ProjectedMediaTypes = make(design.MediaTypeRoot)
 		files, genErr = genapp.Generate()
 	})
 
@@ -130,7 +132,7 @@ var _ = Describe("Generate", func() {
 				Name:        "ok",
 				Status:      200,
 				Description: "get of widgets",
-				MediaType:   "vnd.rightscale.codegen.test.widgets",
+				MediaType:   "application/vnd.rightscale.codegen.test.widgets",
 				ViewName:    "default",
 			}
 			route := design.RouteDefinition{
@@ -148,7 +150,7 @@ var _ = Describe("Generate", func() {
 				Name:                "Widget",
 				BasePath:            "/widgets",
 				Description:         "Widgetty",
-				MediaType:           "vnd.rightscale.codegen.test.widgets",
+				MediaType:           "application/vnd.rightscale.codegen.test.widgets",
 				CanonicalActionName: "get",
 			}
 			get := design.ActionDefinition{
@@ -163,8 +165,8 @@ var _ = Describe("Generate", func() {
 			res.Actions = map[string]*design.ActionDefinition{"get": &get}
 			mt := design.MediaTypeDefinition{
 				UserTypeDefinition: &ut,
-				Identifier:         "vnd.rightscale.codegen.test.widgets",
-				ContentType:        "vnd.rightscale.codegen.test.widgets",
+				Identifier:         "application/vnd.rightscale.codegen.test.widgets",
+				ContentType:        "application/vnd.rightscale.codegen.test.widgets",
 				Views: map[string]*design.ViewDefinition{
 					"default": {
 						AttributeDefinition: ut.AttributeDefinition,
@@ -177,7 +179,7 @@ var _ = Describe("Generate", func() {
 				Title:       "dummy API with no resource",
 				Description: "I told you it's dummy",
 				Resources:   map[string]*design.ResourceDefinition{"Widget": &res},
-				MediaTypes:  map[string]*design.MediaTypeDefinition{"vnd.rightscale.codegen.test.widgets": &mt},
+				MediaTypes:  map[string]*design.MediaTypeDefinition{"application/vnd.rightscale.codegen.test.widgets": &mt},
 			}
 		})
 
@@ -290,7 +292,7 @@ func NewGetWidgetContext(ctx context.Context, service *goa.Service) (*GetWidgetC
 
 // OK sends a HTTP response with status code 200.
 func (ctx *GetWidgetContext) OK(r ID) error {
-	ctx.ResponseData.Header().Set("Content-Type", "vnd.rightscale.codegen.test.widgets")
+	ctx.ResponseData.Header().Set("Content-Type", "application/vnd.rightscale.codegen.test.widgets")
 	return ctx.ResponseData.Service.Send(ctx.Context, 200, r)
 }
 `

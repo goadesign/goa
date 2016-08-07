@@ -2,6 +2,7 @@ package design_test
 
 import (
 	"errors"
+	"mime"
 	"sync"
 
 	. "github.com/goadesign/goa/design"
@@ -73,6 +74,19 @@ var _ = Describe("Project", func() {
 				view = "default"
 			})
 
+			It("returns a media type with an identifier view param", func() {
+				Ω(prErr).ShouldNot(HaveOccurred())
+				_, params, err := mime.ParseMediaType(projected.Identifier)
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(params).Should(HaveKeyWithValue("view", "default"))
+			})
+
+			It("returns a media type with only a default view", func() {
+				Ω(prErr).ShouldNot(HaveOccurred())
+				Ω(projected.Views).Should(HaveLen(1))
+				Ω(projected.Views).Should(HaveKey("default"))
+			})
+
 			It("returns a media type with the default view attributes", func() {
 				Ω(prErr).ShouldNot(HaveOccurred())
 				Ω(projected).ShouldNot(BeNil())
@@ -88,6 +102,19 @@ var _ = Describe("Project", func() {
 		Context("using the tiny view", func() {
 			BeforeEach(func() {
 				view = "tiny"
+			})
+
+			It("returns a media type with an identifier view param", func() {
+				Ω(prErr).ShouldNot(HaveOccurred())
+				_, params, err := mime.ParseMediaType(projected.Identifier)
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(params).Should(HaveKeyWithValue("view", "tiny"))
+			})
+
+			It("returns a media type with only a default view", func() {
+				Ω(prErr).ShouldNot(HaveOccurred())
+				Ω(projected.Views).Should(HaveLen(1))
+				Ω(projected.Views).Should(HaveKey("default"))
 			})
 
 			It("returns a media type with the default view attributes", func() {
