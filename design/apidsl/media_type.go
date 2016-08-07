@@ -120,6 +120,15 @@ func MediaType(identifier string, apidsl func()) *design.MediaTypeDefinition {
 //		Media("application/json")
 //	})
 //
+// If Media uses a media type defined in the design then it may optionally specify a view name:
+//
+//	Response("OK", func() {
+//		Status(200)
+//		Media(BottleMedia, "tiny")
+//	})
+//
+// Specifying a media type is useful for responses that always return the same view.
+//
 // Media can be used inside Response or ResponseTemplate.
 func Media(val interface{}, viewName ...string) {
 	if r, ok := responseDefinition(); ok {

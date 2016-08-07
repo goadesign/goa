@@ -1054,7 +1054,7 @@ func (a *AttributeDefinition) objectExample(rand *RandomGenerator, seen []string
 	if mt, ok := a.Type.(*MediaTypeDefinition); ok {
 		v := a.View
 		if v == "" {
-			v = mt.DefaultView()
+			v = DefaultView
 		}
 		projected, _, err := mt.Project(v)
 		if err != nil {
