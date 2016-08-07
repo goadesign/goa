@@ -1200,6 +1200,8 @@ func unmarshalListBottlePayload(ctx context.Context, service *goa.Service, req *
 		return err
 	}
 	if err := payload.Validate(); err != nil {
+		// Initialize payload with private data structure so it can be logged
+		goa.ContextRequest(ctx).Payload = payload
 		return err
 	}
 	goa.ContextRequest(ctx).Payload = payload.Publicize()
