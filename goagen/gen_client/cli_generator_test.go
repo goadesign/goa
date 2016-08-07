@@ -242,6 +242,50 @@ var _ = Describe("Generate", func() {
 			})
 		})
 	})
+	Context("with an action with a special typed UUID path param", func() {
+		BeforeEach(func() {
+			codegen.TempCount = 0
+			design.Design = &design.APIDefinition{
+				Name:        "testapi",
+				Title:       "dummy API with no resource",
+				Description: "I told you it's dummy",
+				Resources: map[string]*design.ResourceDefinition{
+					"foo": {
+						Name: "foo",
+						Actions: map[string]*design.ActionDefinition{
+							"show": {
+								Name: "show",
+								Params: &design.AttributeDefinition{
+									Type: design.Object{
+										"id": &design.AttributeDefinition{Type: design.UUID},
+									},
+									Validation: &dslengine.ValidationDefinition{Required: []string{"id"}},
+								},
+								Routes: []*design.RouteDefinition{
+									{
+										Verb: "GET",
+										Path: "resource/:id",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			fooRes := design.Design.Resources["foo"]
+			showAct := fooRes.Actions["show"]
+			showAct.Parent = fooRes
+			showAct.Routes[0].Parent = showAct
+		})
+
+		It("generates direct access to Command field when resolving path", func() {
+			Ω(genErr).Should(BeNil())
+			Ω(files).Should(HaveLen(9))
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring("path = fmt.Sprintf(\"/resource/%v\", cmd.ID)"))
+		})
+	})
 
 	Context("with an action with security configured", func() {
 		BeforeEach(func() {
