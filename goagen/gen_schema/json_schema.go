@@ -311,7 +311,7 @@ func TypeSchema(api *design.APIDefinition, t design.DataType) *JSONSchema {
 		s.Ref = TypeRef(api, actual)
 	case *design.MediaTypeDefinition:
 		// Use "default" view by default
-		s.Ref = MediaTypeRef(api, actual, actual.DefaultView())
+		s.Ref = MediaTypeRef(api, actual, design.DefaultView)
 	}
 	return s
 }
@@ -430,6 +430,12 @@ func (s *JSONSchema) Dup() *JSONSchema {
 
 // buildAttributeSchema initializes the given JSON schema that corresponds to the given attribute.
 func buildAttributeSchema(api *design.APIDefinition, s *JSONSchema, at *design.AttributeDefinition) *JSONSchema {
+	if at.View != "" {
+		inner := NewJSONSchema()
+		inner.Ref = MediaTypeRef(api, at.Type.(*design.MediaTypeDefinition), at.View)
+		s.Merge(inner)
+		return s
+	}
 	s.Merge(TypeSchema(api, at.Type))
 	if s.Ref != "" {
 		// Ref is exclusive with other fields
@@ -437,7 +443,7 @@ func buildAttributeSchema(api *design.APIDefinition, s *JSONSchema, at *design.A
 	}
 	s.DefaultValue = toStringMap(at.DefaultValue)
 	s.Description = at.Description
-	s.Example = at.Example
+	s.Example = at.GenerateExample(api.RandomGenerator(), nil)
 	val := at.Validation
 	if val == nil {
 		return s

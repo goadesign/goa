@@ -37,6 +37,7 @@ var _ = Describe("ContextsWriter", func() {
 	Context("correctly configured", func() {
 		var f *os.File
 		BeforeEach(func() {
+			dslengine.Reset()
 			f, _ = ioutil.TempFile("", "")
 			filename = f.Name()
 		})

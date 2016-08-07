@@ -183,12 +183,8 @@ func (g *Generator) generateIndexHTML(htmlFile string, exampleAction *design.Act
 		query := exampleAction.QueryParams.Type.ToObject()
 		argValues := make([]string, len(argNames))
 		for i, n := range argNames {
-			q := query[n]
-			if q.Example != nil {
-				argValues[i] = fmt.Sprintf("%v", q.Example)
-			} else {
-				argValues[i] = fmt.Sprintf("%v", q.GenerateExample(g.API.RandomGenerator(), nil))
-			}
+			ex := query[n].GenerateExample(g.API.RandomGenerator(), nil)
+			argValues[i] = fmt.Sprintf("%v", ex)
 		}
 		args = strings.Join(argValues, ", ")
 	}
@@ -198,11 +194,8 @@ func (g *Generator) generateIndexHTML(htmlFile string, exampleAction *design.Act
 		pathVars := exampleAction.AllParams().Type.ToObject()
 		pathValues := make([]interface{}, len(pathParams))
 		for i, n := range pathParams {
-			if pathVars[n].Example != nil {
-				pathValues[i] = fmt.Sprintf("%v", pathVars[n].Example)
-			} else {
-				pathValues[i] = pathVars[n].GenerateExample(g.API.RandomGenerator(), nil)
-			}
+			ex := pathVars[n].GenerateExample(g.API.RandomGenerator(), nil)
+			pathValues[i] = ex
 		}
 		format := design.WildcardRegex.ReplaceAllLiteralString(examplePath, "/%v")
 		examplePath = fmt.Sprintf(format, pathValues...)
