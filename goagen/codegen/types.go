@@ -208,8 +208,8 @@ func GoTypeName(t design.DataType, required []string, tabs int, private bool) st
 	case *design.UserTypeDefinition:
 		return Goify(actual.TypeName, !private)
 	case *design.MediaTypeDefinition:
-		if builtin := BuiltInTypeName(actual); builtin != "" {
-			return builtin
+		if actual.IsError() {
+			return "error"
 		}
 		return Goify(actual.TypeName, !private)
 	default:
@@ -278,15 +278,6 @@ func GoTypeDesc(t design.DataType, upper bool) string {
 	default:
 		return ""
 	}
-}
-
-// BuiltInTypeName returns the name of the goa struct corresponding to the media type definition
-// or the empty string if there isn't one.
-func BuiltInTypeName(mt *design.MediaTypeDefinition) string {
-	if mt.Identifier == design.ErrorMedia.Identifier {
-		return "error"
-	}
-	return ""
 }
 
 var commonInitialisms = map[string]bool{
