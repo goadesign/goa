@@ -560,7 +560,7 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 	// template input: map[string]interface{}
 	ctxMTRespT = `// {{ goify .RespName true }} sends a HTTP response with status code {{ .Response.Status }}.
 func (ctx *{{ .Context.Name }}) {{ goify .RespName true }}(r {{ gotyperef .Projected .Projected.AllRequired 0 false }}) error {
-	ctx.ResponseData.Header().Set("Content-Type", "{{ .Response.MediaType }}")
+	ctx.ResponseData.Header().Set("Content-Type", "{{ .ContentType }}")
 	return ctx.ResponseData.Service.Send(ctx.Context, {{ .Response.Status }}, r)
 }
 `
