@@ -99,6 +99,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	funcs["defaultRouteParams"] = defaultRouteParams
 	funcs["defaultRouteTemplate"] = defaultRouteTemplate
 	funcs["joinNames"] = joinNames
+	funcs["joinFieldNames"] = joinFieldhNames
 	funcs["routes"] = routes
 	funcs["flagType"] = flagType
 	funcs["cmdFieldType"] = cmdFieldTypeString
@@ -259,6 +260,39 @@ func defaultRouteTemplate(a *design.ActionDefinition) string {
 	return design.WildcardRegex.ReplaceAllLiteralString(a.Routes[0].FullPath(), "/%v")
 }
 
+// return a ',' joined list of Params as a reference to cmd.XFieldName
+// ordered by the required first rules.
+func joinFieldhNames(atts ...*design.AttributeDefinition) string {
+	var elems []string
+	for _, att := range atts {
+		if att == nil {
+			continue
+		}
+		obj := att.Type.ToObject()
+		var names, optNames []string
+
+		keys := make([]string, len(obj))
+		i := 0
+		for n := range obj {
+			keys[i] = n
+			i++
+		}
+		sort.Strings(keys)
+
+		for _, n := range keys {
+			field := fmt.Sprintf("cmd.%s", codegen.Goify(n, true))
+			if att.IsRequired(n) {
+				names = append(names, field)
+			} else {
+				optNames = append(optNames, field)
+			}
+		}
+		elems = append(elems, names...)
+		elems = append(elems, optNames...)
+	}
+	return strings.Join(elems, ", ")
+}
+
 // joinNames is a code generation helper function that generates a string built from concatenating
 // the keys of the given attribute type (assuming it's an object).
 func joinNames(useNil bool, atts ...*design.AttributeDefinition) string {
@@ -290,7 +324,7 @@ func joinNames(useNil bool, atts ...*design.AttributeDefinition) string {
 			} else if a.Type.IsArray() {
 				field = flagTypeArrayVal(a, field)
 			} else {
-				field = flagNonRequiredTypeVal(a, field)
+				field = flagRequiredTypeVal(a, field)
 			}
 			if att.IsRequired(n) {
 				names = append(names, field)
@@ -304,6 +338,8 @@ func joinNames(useNil bool, atts ...*design.AttributeDefinition) string {
 	return strings.Join(elems, ", ")
 }
 
+// resolve non required, non array Param/QueryParam for access via CII flags.
+// Some types need convertion from string to 'Type' before calling rich client Commands.
 func flagTypeVal(a *design.AttributeDefinition, key string, field string) string {
 	switch a.Type {
 	case design.Integer:
@@ -317,7 +353,11 @@ func flagTypeVal(a *design.AttributeDefinition, key string, field string) string
 	}
 }
 
-func flagNonRequiredTypeVal(a *design.AttributeDefinition, field string) string {
+// resolve required Param/QueryParam for access via CII flags.
+// Required Params are not generated as pointers
+// Special types like Number/UUID need to be converted from String
+// %s maps to specialTypeResult.Temps
+func flagRequiredTypeVal(a *design.AttributeDefinition, field string) string {
 	switch a.Type {
 	case design.Number, design.Boolean, design.UUID, design.DateTime, design.Any:
 		return "*%s"
@@ -326,6 +366,9 @@ func flagNonRequiredTypeVal(a *design.AttributeDefinition, field string) string 
 	}
 }
 
+// resolve required Param/QueryParam for access via CII flags.
+// Special types like Number/UUID need to be converted from String
+// %s maps to specialTypeResult.Temps
 func flagTypeArrayVal(a *design.AttributeDefinition, field string) string {
 	switch a.Type.ToArray().ElemType.Type {
 	case design.Number, design.Boolean, design.UUID, design.DateTime, design.Any:
@@ -334,6 +377,7 @@ func flagTypeArrayVal(a *design.AttributeDefinition, field string) string {
 	return field
 }
 
+// format a stirng format("%s") with the given vars as argument
 func format(format string, vars []string) string {
 	new := make([]interface{}, len(vars))
 	for i, v := range vars {
@@ -342,11 +386,23 @@ func format(format string, vars []string) string {
 	return fmt.Sprintf(format, new...)
 }
 
+// temp structure to describe the relationship between XParams
+// and their tmp var as generated in the Output. See handleSpecialTypes
 type specialTypeResult struct {
 	Temps  []string
 	Output string
 }
 
+// generate the relation and output of specially typed Params that need
+// custom convertion from String Flags to Rich objects in Client action
+//
+// TMP2, err := uuidVal(cmd.X)
+// if err != nil {
+//   goa.LogError(ctx, "argument parse failed", "err", err)
+//	 return err
+// }
+// resp, err := c.ShowX(ctx, path, TMP2)
+//
 func handleSpecialTypes(atts ...*design.AttributeDefinition) specialTypeResult {
 	result := specialTypeResult{}
 	for _, att := range atts {
@@ -646,7 +702,7 @@ func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 		path = args[0]
 	} else {
 {{ $default := defaultPath .Action }}{{ if $default }}	path = "{{ $default }}"
-{{ else }}{{ $pparams := defaultRouteParams .Action }}	path = fmt.Sprintf({{ printf "%q" (defaultRouteTemplate .Action)}}, {{ joinNames false $pparams }})
+{{ else }}{{ $pparams := defaultRouteParams .Action }}	path = fmt.Sprintf({{ printf "%q" (defaultRouteTemplate .Action)}}, {{ joinFieldNames $pparams }})
 {{ end }}	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger){{ $specialTypeResult := handleSpecialTypes .Action.QueryParams .Action.Headers }}{{ $specialTypeResult.Output }}
@@ -737,7 +793,7 @@ func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 		path = args[0]
 	} else {
 {{ $default := defaultPath .Action }}{{ if $default }}	path = "{{ $default }}"
-{{ else }}{{ $pparams := defaultRouteParams .Action }}	path = fmt.Sprintf({{ printf "%q" (defaultRouteTemplate .Action) }}, {{ joinNames false $pparams }})
+{{ else }}{{ $pparams := defaultRouteParams .Action }}	path = fmt.Sprintf({{ printf "%q" (defaultRouteTemplate .Action) }}, {{ joinFieldNames $pparams }})
 {{ end }}	}
 {{ if .Action.Payload }}var payload {{ gotyperefext .Action.Payload 2 .Package }}
 	if cmd.Payload != "" {
