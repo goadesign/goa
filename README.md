@@ -102,7 +102,7 @@ goagen bootstrap -d goa-adder/design
 This produces the following outputs:
 
 * `main.go` and `operands.go` contain scaffolding code to help bootstrap the implementation.
-  running `goagen` again does no recreate them so that it's safe to edit their content.
+  running `goagen` again does not recreate them so that it's safe to edit their content.
 * an `app` package which contains glue code that binds the low level HTTP server to your
   implementation.
 * a `client` package with a `Client` struct that implements a `AddOperands` function which calls
