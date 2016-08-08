@@ -162,7 +162,7 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		if !p.IsError() {
 			tmp = fmt.Sprintf("%s.%s", g.Target, tmp)
 		}
-		validate := codegen.RecursiveChecker(p.AttributeDefinition, false, false, false, "payload", "raw", 1, true)
+		validate := codegen.RecursiveChecker(p.AttributeDefinition, false, false, false, "payload", "raw", 1, false)
 		returnType = &ObjectType{}
 		returnType.Type = tmp
 		if p.IsObject() && !p.IsError() {
