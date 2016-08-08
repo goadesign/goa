@@ -381,6 +381,7 @@ var _ = Describe("ContextsWriter", func() {
 
 			Context("with a object payload", func() {
 				BeforeEach(func() {
+					design.Design = new(design.APIDefinition)
 					intParam := &design.AttributeDefinition{Type: design.Integer}
 					strParam := &design.AttributeDefinition{Type: design.String}
 					dataType := design.Object{
