@@ -351,7 +351,8 @@ func (a *Array) IsCompatible(val interface{}) bool {
 	}
 	v := reflect.ValueOf(val)
 	for i := 0; i < v.Len(); i++ {
-		if !a.ElemType.Type.IsCompatible(v.Index(i).Interface()) {
+		compat := (a.ElemType.Type != nil) && a.ElemType.Type.IsCompatible(v.Index(i).Interface())
+		if !compat {
 			return false
 		}
 	}
@@ -489,7 +490,9 @@ func (h *Hash) IsCompatible(val interface{}) bool {
 	}
 	v := reflect.ValueOf(val)
 	for _, key := range v.MapKeys() {
-		if !h.KeyType.Type.IsCompatible(key.Interface()) || !h.ElemType.Type.IsCompatible(v.MapIndex(key).Interface()) {
+		keyCompat := h.KeyType.Type == nil || h.KeyType.Type.IsCompatible(key.Interface())
+		elemCompat := h.ElemType.Type == nil || h.ElemType.Type.IsCompatible(v.MapIndex(key).Interface())
+		if !keyCompat || !elemCompat {
 			return false
 		}
 	}
@@ -664,7 +667,7 @@ func (u *UserTypeDefinition) CanHaveDefault() bool { return u.Type.CanHaveDefaul
 
 // IsCompatible returns true if val is compatible with p.
 func (u *UserTypeDefinition) IsCompatible(val interface{}) bool {
-	return u.Type.IsCompatible(val)
+	return u.Type == nil || u.Type.IsCompatible(val)
 }
 
 // Finalize merges base type attributes.
