@@ -1240,7 +1240,7 @@ func handleBottlesOrigin(h goa.Handler) goa.Handler {
 		}
 		if cors.MatchOrigin(origin, "here.example.com") {
 			ctx = goa.WithLogContext(ctx, "origin", origin)
-			rw.Header().Set("Access-Control-Allow-Origin", "here.example.com")
+			rw.Header().Set("Access-Control-Allow-Origin", origin)
 			rw.Header().Set("Vary", "Origin")
 			rw.Header().Set("Access-Control-Expose-Headers", "X-Three")
 			rw.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -1253,7 +1253,7 @@ func handleBottlesOrigin(h goa.Handler) goa.Handler {
 		}
 		if cors.MatchOrigin(origin, "there.example.com") {
 			ctx = goa.WithLogContext(ctx, "origin", origin)
-			rw.Header().Set("Access-Control-Allow-Origin", "there.example.com")
+			rw.Header().Set("Access-Control-Allow-Origin", origin)
 			rw.Header().Set("Vary", "Origin")
 			rw.Header().Set("Access-Control-Allow-Credentials", "false")
 			if acrm := req.Header.Get("Access-Control-Request-Method"); acrm != "" {
