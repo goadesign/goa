@@ -359,10 +359,7 @@ func {{ $test.Name }}(t *testing.T, ctx context.Context, service *goa.Service, c
 		var ok bool
 		mt, ok = resp.({{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }})
 		if !ok {
-			t.Errorf("invalid response media: got %+v, expected instance of {{ $test.ReturnType.Type }}", resp)
-		}
-		if mt == nil {
-			t.Errorf("nil response media type, expected instance of {{ $test.ReturnType.Type }}")
+			t.Fatalf("invalid response media: got %+v, expected instance of {{ $test.ReturnType.Type }}", resp)
 		}
 {{ if $test.ReturnType.Validatable }}		err = mt.Validate()
 		if err != nil {
