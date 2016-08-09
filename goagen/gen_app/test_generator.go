@@ -361,6 +361,9 @@ func {{ $test.Name }}(t *testing.T, ctx context.Context, service *goa.Service, c
 		if !ok {
 			t.Errorf("invalid response media: got %+v, expected instance of {{ $test.ReturnType.Type }}", resp)
 		}
+		if mt == nil {
+			t.Errorf("nil response media type, expected instance of {{ $test.ReturnType.Type }}")
+		}
 {{ if $test.ReturnType.Validatable }}		err = mt.Validate()
 		if err != nil {
 			t.Errorf("invalid response media type: %s", err)
