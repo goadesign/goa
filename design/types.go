@@ -665,7 +665,7 @@ func (u *UserTypeDefinition) ToHash() *Hash { return u.Type.ToHash() }
 // CanHaveDefault calls CanHaveDefault on the user type underlying data type.
 func (u *UserTypeDefinition) CanHaveDefault() bool { return u.Type.CanHaveDefault() }
 
-// IsCompatible returns true if val is compatible with p.
+// IsCompatible returns true if val is compatible with u.
 func (u *UserTypeDefinition) IsCompatible(val interface{}) bool {
 	return u.Type == nil || u.Type.IsCompatible(val)
 }
