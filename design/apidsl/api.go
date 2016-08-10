@@ -163,6 +163,8 @@ func BasePath(val string) {
 //
 //        Origin("/[api|swagger].goa.design/", func() {}) // Define CORS policy with a regular expression
 func Origin(origin string, dsl func()) {
+	cors := &design.CORSDefinition{Origin: origin}
+
 	if strings.HasPrefix(origin, "/") && strings.HasSuffix(origin, "/") {
 		stripped := strings.Trim(origin, "/")
 		_, err := regexp.Compile(stripped)
@@ -170,9 +172,10 @@ func Origin(origin string, dsl func()) {
 			dslengine.ReportError("%s doesn't contain a valid regular expression for Origin", origin)
 			return
 		}
+		cors.Regexp = true
+		cors.Origin = stripped
 	}
 
-	cors := &design.CORSDefinition{Origin: origin}
 	if !dslengine.Execute(dsl, cors) {
 		return
 	}

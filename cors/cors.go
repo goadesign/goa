@@ -26,7 +26,6 @@ const OriginKey key = "origin"
 // - a plain string identifying an origin. eg http://swagger.goa.design
 // - a plain string containing a wildcard. eg *.goa.design
 // - the special string * that matches every host
-// - A regular expression wrapped in //. eg /[api|swagger].goa.design/
 func MatchOrigin(origin, spec string) bool {
 	if spec == "*" {
 		return true
@@ -50,6 +49,13 @@ func MatchOrigin(origin, spec string) bool {
 		return false
 	}
 	return true
+}
+
+// MatchOriginRegexp returns true if the given Origin header value matches the
+// origin specification.
+// Spec must be a valid regex
+func MatchOriginRegexp(origin string, spec *regexp.Regexp) bool {
+	return spec.Match([]byte(origin))
 }
 
 // HandlePreflight returns a simple 200 response. The middleware takes care of handling CORS.
