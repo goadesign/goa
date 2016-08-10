@@ -149,7 +149,9 @@ func BasePath(val string) {
 
 // Origin defines the CORS policy for a given origin. The origin can use a wildcard prefix
 // such as "https://*.mydomain.com". The special value "*" defines the policy for all origins
-// (in which case there should be only one Origin DSL in the parent resource). Example:
+// (in which case there should be only one Origin DSL in the parent resource).
+// The origin can also be a regular expression wrapped into "/".
+// Example:
 //
 //        Origin("http://swagger.goa.design", func() { // Define CORS policy, may be prefixed with "*" wildcard
 //                Headers("X-Shared-Secret")           // One or more authorized headers, use "*" to authorize all
@@ -159,7 +161,17 @@ func BasePath(val string) {
 //                Credentials()                        // Sets Access-Control-Allow-Credentials header
 //        })
 //
+//        Origin("/[api|swagger].goa.design/", func() {}) // Define CORS policy with a regular expression
 func Origin(origin string, dsl func()) {
+	if strings.HasPrefix(origin, "/") && strings.HasSuffix(origin, "/") {
+		stripped := strings.Trim(origin, "/")
+		_, err := regexp.Compile(stripped)
+		if err != nil {
+			dslengine.ReportError("%s doesn't contain a valid regular expression for Origin", origin)
+			return
+		}
+	}
+
 	cors := &design.CORSDefinition{Origin: origin}
 	if !dslengine.Execute(dsl, cors) {
 		return
