@@ -712,6 +712,42 @@ var _ = Describe("ControllersWriter", func() {
 				})
 			})
 
+			Context("with regexp origins", func() {
+				BeforeEach(func() {
+					actions = []string{"List"}
+					verbs = []string{"GET"}
+					paths = []string{"/accounts"}
+					contexts = []string{"ListBottleContext"}
+					origins = []*design.CORSDefinition{
+						{
+							Origin:      "[here|there].example.com",
+							Headers:     []string{"X-One", "X-Two"},
+							Methods:     []string{"GET", "POST"},
+							Exposed:     []string{"X-Three"},
+							Credentials: true,
+							Regexp:      true,
+						},
+						{
+							Origin:  "there.example.com",
+							Headers: []string{"*"},
+							Methods: []string{"*"},
+						},
+					}
+
+				})
+
+				It("writes the controller code", func() {
+					err := writer.Execute(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(originsIntegration))
+					Ω(written).Should(ContainSubstring(regexpOriginsHandler))
+				})
+			})
+
 		})
 	})
 })
@@ -1232,6 +1268,7 @@ type BottlesController interface {
 
 	originsHandler = `// handleBottlesOrigin applies the CORS response headers corresponding to the origin.
 func handleBottlesOrigin(h goa.Handler) goa.Handler {
+
 	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		origin := req.Header.Get("Origin")
 		if origin == "" {
@@ -1239,6 +1276,47 @@ func handleBottlesOrigin(h goa.Handler) goa.Handler {
 			return h(ctx, rw, req)
 		}
 		if cors.MatchOrigin(origin, "here.example.com") {
+			ctx = goa.WithLogContext(ctx, "origin", origin)
+			rw.Header().Set("Access-Control-Allow-Origin", origin)
+			rw.Header().Set("Vary", "Origin")
+			rw.Header().Set("Access-Control-Expose-Headers", "X-Three")
+			rw.Header().Set("Access-Control-Allow-Credentials", "true")
+			if acrm := req.Header.Get("Access-Control-Request-Method"); acrm != "" {
+				// We are handling a preflight request
+				rw.Header().Set("Access-Control-Allow-Methods", "GET, POST")
+				rw.Header().Set("Access-Control-Allow-Headers", "X-One, X-Two")
+			}
+			return h(ctx, rw, req)
+		}
+		if cors.MatchOrigin(origin, "there.example.com") {
+			ctx = goa.WithLogContext(ctx, "origin", origin)
+			rw.Header().Set("Access-Control-Allow-Origin", origin)
+			rw.Header().Set("Vary", "Origin")
+			rw.Header().Set("Access-Control-Allow-Credentials", "false")
+			if acrm := req.Header.Get("Access-Control-Request-Method"); acrm != "" {
+				// We are handling a preflight request
+				rw.Header().Set("Access-Control-Allow-Methods", "*")
+				rw.Header().Set("Access-Control-Allow-Headers", "*")
+			}
+			return h(ctx, rw, req)
+		}
+
+		return h(ctx, rw, req)
+	}
+}
+`
+
+	regexpOriginsHandler = `// handleBottlesOrigin applies the CORS response headers corresponding to the origin.
+func handleBottlesOrigin(h goa.Handler) goa.Handler {
+	spec0 := regexp.MustCompile("[here|there].example.com")
+
+	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		origin := req.Header.Get("Origin")
+		if origin == "" {
+			// Not a CORS request
+			return h(ctx, rw, req)
+		}
+		if cors.MatchOriginRegexp(origin, spec0) {
 			ctx = goa.WithLogContext(ctx, "origin", origin)
 			rw.Header().Set("Access-Control-Allow-Origin", origin)
 			rw.Header().Set("Vary", "Origin")
