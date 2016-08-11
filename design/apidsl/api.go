@@ -166,14 +166,8 @@ func Origin(origin string, dsl func()) {
 	cors := &design.CORSDefinition{Origin: origin}
 
 	if strings.HasPrefix(origin, "/") && strings.HasSuffix(origin, "/") {
-		stripped := strings.Trim(origin, "/")
-		_, err := regexp.Compile(stripped)
-		if err != nil {
-			dslengine.ReportError("%s doesn't contain a valid regular expression for Origin", origin)
-			return
-		}
 		cors.Regexp = true
-		cors.Origin = stripped
+		cors.Origin = strings.Trim(origin, "/")
 	}
 
 	if !dslengine.Execute(dsl, cors) {
