@@ -695,13 +695,15 @@ func Mount{{ .Resource }}Controller(service *goa.Service, ctrl {{ .Resource }}Co
 	// template input: *ControllerTemplateData
 	handleCORST = `// handle{{ .Resource }}Origin applies the CORS response headers corresponding to the origin.
 func handle{{ .Resource }}Origin(h goa.Handler) goa.Handler {
+{{ range $i, $policy := .Origins }}{{ if $policy.Regexp }}	spec{{$i}} := regexp.MustCompile({{ printf "%q" $policy.Origin }})
+{{ end }}{{ end }}
 	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		origin := req.Header.Get("Origin")
 		if origin == "" {
 			// Not a CORS request
 			return h(ctx, rw, req)
 		}
-{{ range $policy := .Origins }}		if cors.MatchOrigin(origin, {{ printf "%q" $policy.Origin }}) {
+{{ range $i, $policy := .Origins }}		{{ if $policy.Regexp }}if cors.MatchOriginRegexp(origin, spec{{$i}}){{else}}if cors.MatchOrigin(origin, {{ printf "%q" $policy.Origin }}){{end}} {
 			ctx = goa.WithLogContext(ctx, "origin", origin)
 			rw.Header().Set("Access-Control-Allow-Origin", origin)
 {{ if not (eq $policy.Origin "*") }}			rw.Header().Set("Vary", "Origin")
