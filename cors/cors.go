@@ -6,6 +6,7 @@ package cors
 
 import (
 	"net/http"
+	"regexp"
 	"strings"
 
 	"golang.org/x/net/context"
@@ -21,10 +22,22 @@ const OriginKey key = "origin"
 
 // MatchOrigin returns true if the given Origin header value matches the
 // origin specification.
+// Spec can be one of:
+// - a plain string identifying an origin. eg http://swagger.goa.design
+// - a plain string containing a wildcard. eg *.goa.design
+// - the special string * that matches every host
 func MatchOrigin(origin, spec string) bool {
 	if spec == "*" {
 		return true
 	}
+
+	// Check regular expression
+	if strings.HasPrefix(spec, "/") && strings.HasSuffix(spec, "/") {
+		stripped := strings.Trim(spec, "/")
+		r := regexp.MustCompile(stripped)
+		return r.Match([]byte(origin))
+	}
+
 	if !strings.Contains(spec, "*") {
 		return origin == spec
 	}
@@ -36,6 +49,13 @@ func MatchOrigin(origin, spec string) bool {
 		return false
 	}
 	return true
+}
+
+// MatchOriginRegexp returns true if the given Origin header value matches the
+// origin specification.
+// Spec must be a valid regex
+func MatchOriginRegexp(origin string, spec *regexp.Regexp) bool {
+	return spec.Match([]byte(origin))
 }
 
 // HandlePreflight returns a simple 200 response. The middleware takes care of handling CORS.
