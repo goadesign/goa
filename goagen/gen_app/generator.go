@@ -180,6 +180,7 @@ func (g *Generator) generateControllers() error {
 		codegen.SimpleImport("golang.org/x/net/context"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("github.com/goadesign/goa/cors"),
+		codegen.SimpleImport("regexp"),
 	}
 	encoders, err := BuildEncoders(g.API.Produces, true)
 	if err != nil {

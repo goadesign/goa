@@ -161,6 +161,8 @@ type (
 		MaxAge uint
 		// Sets Access-Control-Allow-Credentials header
 		Credentials bool
+		// Sets Whether the Origin string is a regular expression
+		Regexp bool
 	}
 
 	// EncodingDefinition defines an encoder supported by the API.

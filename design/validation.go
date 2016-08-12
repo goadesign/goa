@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -250,8 +251,14 @@ func (r *ResourceDefinition) validateParent(verr *dslengine.ValidationErrors) {
 // Validate makes sure the CORS definition origin is valid.
 func (cors *CORSDefinition) Validate() *dslengine.ValidationErrors {
 	verr := new(dslengine.ValidationErrors)
-	if strings.Count(cors.Origin, "*") > 1 {
+	if !cors.Regexp && strings.Count(cors.Origin, "*") > 1 {
 		verr.Add(cors, "invalid origin, can only contain one wildcard character")
+	}
+	if cors.Regexp {
+		_, err := regexp.Compile(cors.Origin)
+		if err != nil {
+			verr.Add(cors, "invalid origin, should be a valid regular expression")
+		}
 	}
 	return verr
 }
