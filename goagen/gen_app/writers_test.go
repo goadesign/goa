@@ -88,6 +88,48 @@ var _ = Describe("ContextsWriter", func() {
 				})
 			})
 
+			Context("with a media type setting a ContentType", func() {
+				var contentType = "application/json"
+
+				BeforeEach(func() {
+					mediaType := &design.MediaTypeDefinition{
+						UserTypeDefinition: &design.UserTypeDefinition{
+							AttributeDefinition: &design.AttributeDefinition{
+								Type: design.Object{"foo": {Type: design.String}},
+							},
+						},
+						Identifier:  "application/vnd.goa.test",
+						ContentType: contentType,
+					}
+					defView := &design.ViewDefinition{
+						AttributeDefinition: mediaType.AttributeDefinition,
+						Name:                "default",
+						Parent:              mediaType,
+					}
+					mediaType.Views = map[string]*design.ViewDefinition{"default": defView}
+					design.Design = new(design.APIDefinition)
+					design.Design.MediaTypes = map[string]*design.MediaTypeDefinition{
+						design.CanonicalIdentifier(mediaType.Identifier): mediaType,
+					}
+					design.ProjectedMediaTypes = make(map[string]*design.MediaTypeDefinition)
+					responses = map[string]*design.ResponseDefinition{"OK": {
+						Name:      "OK",
+						Status:    200,
+						MediaType: mediaType.Identifier,
+					}}
+				})
+
+				It("the generated code sets the Content-Type header", func() {
+					err := writer.Execute(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(`ctx.ResponseData.Header().Set("Content-Type", "` + contentType + `")`))
+				})
+			})
+
 			Context("with an integer param", func() {
 				BeforeEach(func() {
 					intParam := &design.AttributeDefinition{Type: design.Integer}
