@@ -381,9 +381,10 @@ func (g *Generator) generateUserTypes() error {
 	}
 	title := fmt.Sprintf("%s: Application User Types", g.API.Context())
 	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("time"),
+		codegen.SimpleImport("github.com/goadesign/goa"),
+		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
 	utWr.WriteHeader(title, g.Target, imports)
 	err = g.API.IterateUserTypes(func(t *design.UserTypeDefinition) error {
