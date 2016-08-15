@@ -9,6 +9,12 @@ import (
 	"github.com/goadesign/goa/middleware"
 )
 
+// TInterface is an interface for go's testing.T
+type TInterface interface {
+	Errorf(format string, args ...interface{})
+	Fatalf(format string, args ...interface{})
+}
+
 // ResponseSetterFunc func
 type ResponseSetterFunc func(resp interface{})
 
