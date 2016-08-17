@@ -35,7 +35,7 @@ import (
 //			Headers("X-Shared-Secret")           // One or more authorized headers, use "*" to authorize all
 //			Methods("GET", "POST")               // One or more authorized HTTP methods
 //			Expose("X-Time")                     // One or more headers exposed to clients
-//			MaxAge(600)                          // How long to cache a prefligh request response
+//			MaxAge(600)                          // How long to cache a preflight request response
 //			Credentials()                        // Sets Access-Control-Allow-Credentials header
 //		})
 //
