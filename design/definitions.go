@@ -157,7 +157,7 @@ type (
 		Methods []string
 		// List of headers exposed to clients
 		Exposed []string
-		// How long to cache a prefligh request response
+		// How long to cache a preflight request response
 		MaxAge uint
 		// Sets Access-Control-Allow-Credentials header
 		Credentials bool
