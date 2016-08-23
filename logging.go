@@ -47,10 +47,16 @@ func Logger(ctx context.Context) *log.Logger {
 }
 
 func (a *adapter) Info(msg string, keyvals ...interface{}) {
+	if a == nil {
+		return
+	}
 	a.logit(msg, keyvals, false)
 }
 
 func (a *adapter) Error(msg string, keyvals ...interface{}) {
+	if a == nil {
+		return
+	}
 	a.logit(msg, keyvals, true)
 }
 
@@ -58,15 +64,17 @@ func (a *adapter) New(keyvals ...interface{}) LogAdapter {
 	if len(keyvals) == 0 {
 		return a
 	}
-	kvs := append(a.keyvals, keyvals...)
-	if len(kvs)%2 != 0 {
-		kvs = append(kvs, ErrMissingLogValue)
+	if a != nil {
+		keyvals = append(a.keyvals, keyvals...)
+	}
+	if len(keyvals)%2 != 0 {
+		keyvals = append(keyvals, ErrMissingLogValue)
 	}
 	return &adapter{
 		Logger: a.Logger,
 		// Limiting the capacity of the stored keyvals ensures that a new
 		// backing array is created if the slice must grow.
-		keyvals: kvs[:len(kvs):len(kvs)],
+		keyvals: keyvals[:len(keyvals):len(keyvals)],
 	}
 }
 
