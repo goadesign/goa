@@ -984,8 +984,7 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 {{ if .HasPayload }}	if contentType != "*/*" {
 		header.Set("Content-Type", contentType)
 	}
-{{ end }}{{ range .Headers }}{{ if .CheckNil }}	if {{ .VarName }} != nil {
-	{{ end }}{{ if .MustToString }}{{ $tmp := tempvar }}	{{ toString .ValueName $tmp .Attribute }}
+{{ end }}{{ range .Headers }}{{ if .CheckNil }}	if {{ .VarName }} != nil { {{ end }}{{ if .MustToString }}{{ $tmp := tempvar }}	{{ toString .ValueName $tmp .Attribute }}
 	header.Set("{{ .Name }}", {{ $tmp }}){{ else }}
 	header.Set("{{ .Name }}", {{ .ValueName }})
 {{ end }}{{ if .CheckNil }}	}
