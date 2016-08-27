@@ -1,20 +1,24 @@
 package dsl
 
-import "regexp"
+import (
+	"regexp"
 
-// Service defines a network service. It provides the service name, description and other global
-// properties.
+	"github.com/goadesign/goa/design"
+)
+
+// API defines a API exposed by a single host . It provides the API name, description and other
+// global properties. There may be only one API declaration in a given design package.
 //
-// Service is a top level DSL.
-// Service takes two arguments: the name of the service and the defining DSL.
+// API is a top level DSL.
+// API takes two arguments: the name of the API and the defining DSL.
 //
 // Example:
 //
-//    var _ = Service("adder", func() {
+//    var _ = API("adder", func() {
 //        Title("title")                // Title used in documentation
 //        Description("description")    // Description used in documentation
-//        Version("2.0")                // Version of service
-//        TermsOfService("terms")
+//        Version("2.0")                // Version of API
+//        TermsOfAPI("terms")
 //        Contact(func() {              // Contact information
 //            Name("contact name")
 //            Email("contact email")
@@ -28,42 +32,42 @@ import "regexp"
 //            Description("doc description")
 //            URL("doc URL")
 //        })
-//        Host("goa.design")            // Hostname of service
+//        Host("goa.design")            // Hostname of API
 //    }
 //
-func Service(name string, dsl func()) *ServiceExpr {
+func API(name string, dsl func()) *APIExpr {
 	if name == "" {
-		eval.ReportError("Service first argument cannot be empty")
+		eval.ReportError("API first argument cannot be empty")
 		return nil
 	}
 	if _, ok := eval.Current().(eval.TopExpr); !ok {
 		eval.IncompatibleDSL()
 		return nil
 	}
-	service := &ServiceExpr{Name: name, DSLFunc: dsl}
-	Root.Services = append(Root.Services, service)
-	return service
+	api := &APIExpr{Name: name, DSLFunc: dsl}
+	design.Root.APIs = append(Root.APIs, api)
+	return api
 }
 
-// Title sets the service title used by the generated documentation and code comments.
+// Title sets the API title used by the generated documentation and code comments.
 func Title(val string) {
-	if s, ok := eval.Current().(*ServiceExpr); ok {
+	if s, ok := eval.Current().(*APIExpr); ok {
 		s.Title = val
 	} else {
 		eval.IncompatibleDSL()
 	}
 }
 
-// Version specifies the service version. One design describes one version.
+// Version specifies the API version. One design describes one version.
 func Version(ver string) {
-	if s, ok := eval.Current().(*ServiceExpr); ok {
+	if s, ok := eval.Current().(*APIExpr); ok {
 		s.Version = ver
 	} else {
 		eval.IncompatibleDSL()
 	}
 }
 
-// Contact sets the service contact information.
+// Contact sets the API contact information.
 func Contact(dsl func()) {
 	contact := new(design.ContactExpr)
 	if !eval.Execute(dsl, contact) {
@@ -74,7 +78,7 @@ func Contact(dsl func()) {
 	}
 }
 
-// License sets the service license information.
+// License sets the API license information.
 func License(dsl func()) {
 	license := new(design.LicenseExpr)
 	if !eval.Execute(dsl, license) {
@@ -93,7 +97,7 @@ func Docs(dsl func()) {
 	}
 
 	switch expr := eval.Current().(type) {
-	case *design.serviceExpr:
+	case *design.APIExpr:
 		expr.Docs = docs
 	case *design.ActionExpr:
 		expr.Docs = docs
@@ -104,10 +108,10 @@ func Docs(dsl func()) {
 	}
 }
 
-// TermsOfService describes the service terms of services or links to them.
-func TermsOfService(terms string) {
-	if s, ok := eval.Current().(*ServiceExpr); ok {
-		s.TermsOfService = terms
+// TermsOfAPI describes the API terms of services or links to them.
+func TermsOfAPI(terms string) {
+	if s, ok := eval.Current().(*APIExpr); ok {
+		s.TermsOfAPI = terms
 	} else {
 		eval.IncompatibleDSL()
 	}
@@ -123,7 +127,7 @@ func Host(host string) {
 		return
 	}
 
-	if s, ok := eval.Current().(*ServiceExpr); ok {
+	if s, ok := eval.Current().(*APIExpr); ok {
 		s.Host = host
 	} else {
 		eval.IncompatibleDSL()

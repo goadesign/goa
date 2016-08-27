@@ -1,48 +1,47 @@
 package design
 
-// NewUserTypeDefinition creates a user type definition but does not
-// execute the DSL.
-func NewUserTypeDefinition(name string, dsl func()) *UserTypeDefinition {
-	return &UserTypeDefinition{
-		TypeName:        name,
-		FieldDefinition: &FieldDefinition{DSLFunc: dsl},
+// NewUserTypeExpr creates a user type expression but does not execute the DSL.
+func NewUserTypeExpr(name string, dsl func()) *UserTypeExpr {
+	return &UserTypeExpr{
+		TypeName:      name,
+		AttributeExpr: &AttributeExpr{DSLFunc: dsl},
 	}
 }
 
 // Kind implements DataKind.
-func (u *UserTypeDefinition) Kind() Kind { return UserTypeKind }
+func (u *UserTypeExpr) Kind() Kind { return UserTypeKind }
 
 // Name returns the JSON type name.
-func (u *UserTypeDefinition) Name() string { return u.Type.Name() }
+func (u *UserTypeExpr) Name() string { return u.Type.Name() }
 
 // IsPrimitive calls IsPrimitive on the user type underlying data type.
-func (u *UserTypeDefinition) IsPrimitive() bool { return u.Type.IsPrimitive() }
+func (u *UserTypeExpr) IsPrimitive() bool { return u.Type.IsPrimitive() }
 
 // IsObject calls IsObject on the user type underlying data type.
-func (u *UserTypeDefinition) IsObject() bool { return u.Type.IsObject() }
+func (u *UserTypeExpr) IsObject() bool { return u.Type.IsObject() }
 
 // IsArray calls IsArray on the user type underlying data type.
-func (u *UserTypeDefinition) IsArray() bool { return u.Type.IsArray() }
+func (u *UserTypeExpr) IsArray() bool { return u.Type.IsArray() }
 
 // IsMap calls IsMap on the user type underlying data type.
-func (u *UserTypeDefinition) IsMap() bool { return u.Type.IsMap() }
+func (u *UserTypeExpr) IsMap() bool { return u.Type.IsMap() }
 
 // ToObject calls ToObject on the user type underlying data type.
-func (u *UserTypeDefinition) ToObject() Object { return u.Type.ToObject() }
+func (u *UserTypeExpr) ToObject() Object { return u.Type.ToObject() }
 
 // ToArray calls ToArray on the user type underlying data type.
-func (u *UserTypeDefinition) ToArray() *Array { return u.Type.ToArray() }
+func (u *UserTypeExpr) ToArray() *Array { return u.Type.ToArray() }
 
 // ToMap calls ToMap on the user type underlying data type.
-func (u *UserTypeDefinition) ToMap() *Map { return u.Type.ToMap() }
+func (u *UserTypeExpr) ToMap() *Map { return u.Type.ToMap() }
 
 // IsCompatible returns true if u describes the (Go) type of val.
-func (u *UserTypeDefinition) IsCompatible(val interface{}) bool {
+func (u *UserTypeExpr) IsCompatible(val interface{}) bool {
 	return u.Type == nil || u.Type.IsCompatible(val)
 }
 
 // Walk traverses the data structure recursively and calls the given function once on each field
-// starting with the field returned by u.Definition.
-func (u *UserTypeDefinition) Walk(walker func(*FieldDefinition) error) error {
-	return walk(u.FieldDefinition, walker, map[string]bool{u.TypeName: true})
+// starting with the field returned by u.Expr.
+func (u *UserTypeExpr) Walk(walker func(*AttributeExpr) error) error {
+	return walk(u.AttributeExpr, walker, map[string]bool{u.TypeName: true})
 }

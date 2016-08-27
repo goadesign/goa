@@ -16,7 +16,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// errorResponse contains the details of a error response. It implements ServiceError.
+// errorResponse contains the details of a error response. It implements Error.
 type errorResponse struct {
 	// ID is the unique error instance identifier.
 	ID string `json:"id" xml:"id" form:"id"`
@@ -106,7 +106,7 @@ var _ = Describe("ErrorHandler", func() {
 					verbose = false
 					h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 						e := goa.ErrInternal("goa-500-boom")
-						origID = e.(goa.ServiceError).Token()
+						origID = e.(goa.Error).Token()
 						return e
 					}
 				})
@@ -137,7 +137,7 @@ var _ = Describe("ErrorHandler", func() {
 
 		It("maps goa errors to HTTP responses", func() {
 			var decoded errorResponse
-			Ω(rw.Status).Should(Equal(gerr.(goa.ServiceError).ResponseStatus()))
+			Ω(rw.Status).Should(Equal(gerr.(goa.Error).ResponseStatus()))
 			Ω(rw.ParentHeader["Content-Type"]).Should(Equal([]string{goa.ErrorMediaIdentifier}))
 			err := service.Decoder.Decode(&decoded, bytes.NewBuffer(rw.Body), "application/json")
 			Ω(err).ShouldNot(HaveOccurred())

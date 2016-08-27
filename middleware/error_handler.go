@@ -10,9 +10,9 @@ import (
 
 // ErrorHandler turns a Go error into an HTTP response. It should be placed in the middleware chain
 // below the logger middleware so the logger properly logs the HTTP response. ErrorHandler
-// understands instances of goa.ServiceError and returns the status and response body embodied in
-// them, it turns other Go error types into a 500 internal error response.
-// If verbose is false the details of internal errors is not included in HTTP responses.
+// understands instances of goa.Error and returns the status and response body embodied in them, it
+// turns other Go error types into a 500 internal error response.  If verbose is false the details
+// of internal errors is not included in HTTP responses.
 func ErrorHandler(service *goa.Service, verbose bool) goa.Middleware {
 	return func(h goa.Handler) goa.Handler {
 		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
@@ -23,7 +23,7 @@ func ErrorHandler(service *goa.Service, verbose bool) goa.Middleware {
 
 			status := http.StatusInternalServerError
 			var respBody interface{}
-			if err, ok := e.(goa.ServiceError); ok {
+			if err, ok := e.(goa.Error); ok {
 				status = err.ResponseStatus()
 				respBody = err
 				goa.ContextResponse(ctx).ErrorCode = err.Token()

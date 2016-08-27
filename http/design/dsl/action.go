@@ -5,14 +5,20 @@ import (
 	"github.com/goadesign/goa/dslengine"
 )
 
-// Action implements the action definition DSL. Action definitions describe HTTP endpoints including
-// the URL, HTTP method and request parameters (via path wildcards or query strings) and payload
-// (data structure describing the request HTTP body). An action belongs to a resource and "inherits"
-// default values from the resource definition including the URL path prefix, default response media
-// type and default payload attribute properties (inherited from the attribute with identical name
-// in the resource default media type). Action definitions also describe all the possible responses
-// including the HTTP status, headers and body. Here is an example showing all the possible
-// sub-definitions:
+// Action describes a single endpoint  including the URL path, HTTP method, request parameters (via
+// path wildcards or query strings) and payload (data structure describing the request HTTP body).
+// Action also describe the possible responses including their HTTP status, headers and body via
+// media types.
+//
+// An action belongs to a resource and "inherits" default values from the resource definition
+// including the URL path prefix, default response media type and default payload attribute
+// properties (inherited from the attribute with identical name in the resource default media type).
+//
+// Action may appear in Resource.
+//
+// Action accepts two arguments: the name of the action and its defining DSL.
+//
+// Example:
 //
 //    Action("Update", func() {
 //        Description("Update account")
@@ -20,32 +26,29 @@ import (
 //            Description("Update docs")
 //            URL("http//cellarapi.com/docs/actions/update")
 //        })
-//        Scheme("http")
+//        Scheme("http")                       // "http", "https", "ws" or "wss"
 //        Routing(
-//            PUT("/:id"),                     // Action path is relative to parent resource base path
-//            PUT("//orgs/:org/accounts/:id"), // The // prefix indicates an absolute path
+//            PUT("/:id"),                     // path relative to resource base path
+//            PUT("//orgs/:org/accounts/:id"), // absolute path
 //        )
-//        Params(func() {                      // Params describe the action parameters
-//            Param("org", String)             // Parameters may correspond to path wildcards
+//        Params(func() {                      // action parameters
+//            Param("org", String)             // may correspond to path wildcards
 //            Param("id", Integer)
-//            Param("sort", func() {           // or URL query string values.
+//            Param("sort", func() {           // or URL query string values
 //                Enum("asc", "desc")
 //            })
 //        })
-//        Security("oauth2", func() {          // Security sets the security scheme used to secure requests
-//            Scope("api:read")
-//            Scope("api:write")
-//        })
-//        Headers(func() {                     // Headers describe relevant action headers
+//        Headers(func() {                     // relevant action headers
 //            Header("Authorization", String)
 //            Header("X-Account", Integer)
 //            Required("Authorization", "X-Account")
 //        })
-//        Payload(UpdatePayload)                // Payload describes the HTTP request body
-//        // OptionalPayload(UpdatePayload)     // OptionalPayload defines an HTTP request body which may be omitted
-//        Response(NoContent)                   // Each possible HTTP response is described via Response
+//        Payload(UpdatePayload)                // HTTP request body type
+//        // OptionalPayload(UpdatePayload)     // request body which may be omitted
+//        Response(NoContent)                   // HTTP response, see Response
 //        Response(NotFound)
 //    })
+//
 func Action(name string, dsl func()) {
 	if r, ok := resourceExpr(); ok {
 		if r.Actions == nil {
@@ -70,24 +73,32 @@ func Action(name string, dsl func()) {
 // function. The path may end with a wildcard that matches the rest of the URL (e.g. *filepath). If
 // it does the matching path is appended to filename to form the full file path, so:
 //
-// 	Files("/index.html", "/www/data/index.html")
+//     Files("/index.html", "/www/data/index.html")
 //
-// Returns the content of the file "/www/data/index.html" when requests are sent to "/index.html"
+// returns the content of the file "/www/data/index.html" when requests are sent to "/index.html"
 // and:
 //
-//	Files("/assets/*filepath", "/www/data/assets")
+//    Files("/assets/*filepath", "/www/data/assets")
 //
 // returns the content of the file "/www/data/assets/x/y/z" when requests are sent to
 // "/assets/x/y/z".
 //
-// The file path may be absolute or relative to the current path of the process.  Files support
-// setting a description and doc links via additional DSL:
+// Files may appear in Resource.
 //
-//    Files("/index.html", "/www/data/index.html", func() {
-//        Description("Serve home page")
-//        Docs(func() {
-//            Description("Download docs")
-//            URL("http//cellarapi.com/docs/actions/download")
+// Files accepts 2 arguments and an optional DSL. The first argument is the request path which may
+// use a wildcard starting with *. The second argument is the path on disk to the files being
+// served. The file path may be absolute or relative to the current path of the process.  The DSL
+// allows setting a description and documentation.
+//
+// Example:
+//
+//    var _ = Resource("bottle", func() {
+//        Files("/index.html", "/www/data/index.html", func() {
+//            Description("Serve home page")
+//            Docs(func() {
+//                Description("Download docs")
+//                URL("http//cellarapi.com/docs/actions/download")
+//            })
 //        })
 //    })
 //
@@ -107,11 +118,43 @@ func Files(path, filename string, dsls ...func()) {
 	}
 }
 
-// Routing lists the action route. Each route is defined with a function named after the HTTP method.
-// The route function takes the path as argument. Route paths may use wildcards as described in the
-// [httptreemux](https://godoc.org/github.com/dimfeld/httptreemux) package documentation. These
-// wildcards define parameters using the `:name` or `*name` syntax where `:name` matches a path
-// segment and `*name` is a catch-all that matches the path until the end.
+// Routing lists the action route. Each route is defined with a function named after the route HTTP
+// method.
+//
+// The route function takes the path as argument. Route paths may use wildcards to identify action
+// parameters by using the characters ':' or '*' to prefix the parameter name. The syntax `:param`
+// matches a path segment (the characters in between slashes) while the syntax `*name` is a
+// catch-all that matches the path until the end. See the httptreemux
+// (https://godoc.org/github.com/dimfeld/httptreemux) package documentation for additional details.
+//
+// Example:
+//
+//     var _ = Resource("bottle", func() {
+//         BasePath("/bottles")
+//         DefaultMedia(BottleMedia)
+//         Action("show", func() {
+//             Routing(GET("/:id"))    // Endpoint path is "/bottles/:id"
+//             Params(func()
+//                 Param("id", Integer, "id of bottle", func() {
+//                     Minimum(1)      // Define "id" parameter as strictly
+//                 })                  // positive integer
+//             })
+//             Response(OK)
+//         })
+//         Action("update", func() {
+//             Routing(
+//                 PUT("/:id")         // Define action with multiple
+//                 PATCH("/:id")       // routes.
+//             )
+//             Params(func()
+//                 Param("id", Integer, "id of bottle", func() {
+//                     Minimum(1)      // Define "id" parameter as strictly
+//                 })                  // positive integer
+//             })
+//             Response(NoContent)
+//         })
+//     })
+//
 func Routing(routes ...*design.RouteExpr) {
 	if a, ok := actionExpr(); ok {
 		for _, r := range routes {
@@ -121,47 +164,47 @@ func Routing(routes ...*design.RouteExpr) {
 	}
 }
 
-// GET creates a route using the GET HTTP method.
+// GET creates a route using the GET HTTP method. See Routing.
 func GET(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "GET", Path: path}
 }
 
-// HEAD creates a route using the HEAD HTTP method.
+// HEAD creates a route using the HEAD HTTP method. See Routing.
 func HEAD(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "HEAD", Path: path}
 }
 
-// POST creates a route using the POST HTTP method.
+// POST creates a route using the POST HTTP method. See Routing.
 func POST(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "POST", Path: path}
 }
 
-// PUT creates a route using the PUT HTTP method.
+// PUT creates a route using the PUT HTTP method. See Routing.
 func PUT(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "PUT", Path: path}
 }
 
-// DELETE creates a route using the DELETE HTTP method.
+// DELETE creates a route using the DELETE HTTP method. See Routing.
 func DELETE(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "DELETE", Path: path}
 }
 
-// OPTIONS creates a route using the OPTIONS HTTP method.
+// OPTIONS creates a route using the OPTIONS HTTP method. See Routing.
 func OPTIONS(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "OPTIONS", Path: path}
 }
 
-// TRACE creates a route using the TRACE HTTP method.
+// TRACE creates a route using the TRACE HTTP method. See Routing.
 func TRACE(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "TRACE", Path: path}
 }
 
-// CONNECT creates a route using the CONNECT HTTP method.
+// CONNECT creates a route using the CONNECT HTTP method. See Routing.
 func CONNECT(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "CONNECT", Path: path}
 }
 
-// PATCH creates a route using the PATCH HTTP method.
+// PATCH creates a route using the PATCH HTTP method. See Routing.
 func PATCH(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "PATCH", Path: path}
 }
@@ -169,13 +212,13 @@ func PATCH(path string) *design.RouteExpr {
 // Headers implements the DSL for describing HTTP headers. The DSL syntax is identical to the one
 // of Attribute. Here is an example defining a couple of headers with validations:
 //
-//	Headers(func() {
-//		Header("Authorization")
-//		Header("X-Account", Integer, func() {
-//			Minimum(1)
-//		})
-//		Required("Authorization")
-//	})
+//    Headers(func() {
+//        Header("Authorization")
+//        Header("X-Account", Integer, func() {
+//            Minimum(1)
+//        })
+//        Required("Authorization")
+//    })
 //
 // Headers can be used inside Action to define the action request headers, Response to define the
 // response headers or Resource to define common request headers to all the resource actions.
@@ -238,12 +281,12 @@ func Headers(params ...interface{}) {
 // string parameters if there is no corresponding path parameter. Each parameter is described via
 // the Param function which uses the same DSL as the Attribute DSL. Here is an example:
 //
-//	Params(func() {
-//		Param("id", Integer)		// A path parameter defined using e.g. GET("/:id")
-//		Param("sort", String, func() {	// A query string parameter
-//			Enum("asc", "desc")
-//		})
-//	})
+//    Params(func() {
+//        Param("id", Integer)        // A path parameter defined using e.g. GET("/:id")
+//        Param("sort", String, func() {    // A query string parameter
+//            Enum("asc", "desc")
+//        })
+//    })
 //
 // Params can be used inside Action to define the action parameters, Resource to define common
 // parameters to all the resource actions or API to define common parameters to all the API actions.

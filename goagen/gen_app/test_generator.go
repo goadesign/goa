@@ -302,7 +302,7 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 	// Validate payload
 	err := {{ $test.Payload.Name }}.Validate()
 	if err != nil {
-		e, ok := err.(goa.ServiceError)
+		e, ok := err.(goa.Error)
 		if !ok {
 			panic(err) // bug
 		}

@@ -1,30 +1,28 @@
 package design
 
 type (
-	// ServiceExpr contains the global properties for a service expression.
-	ServiceExpr struct {
+	// APIExpr contains the global properties for a API expression.
+	APIExpr struct {
 		// DSLFunc contains the DSL used to initialize the expression.
 		*eval.DSLFunc
-		// Name of Service
+		// Name of API
 		Name string
-		// Title of Service
+		// Title of API
 		Title string
-		// Description of Service
+		// Description of API
 		Description string
-		// Version is the version of the Service described by this DSL.
+		// Version is the version of the API described by this DSL.
 		Version string
-		// Host is the default Service hostname
+		// Host is the default API hostname
 		Host string
-		// TermsOfService describes or links to the Service terms of service
-		TermsOfService string
-		// Contact provides the Service users with contact information
+		// TermsOfAPI describes or links to the API terms of API
+		TermsOfAPI string
+		// Contact provides the API users with contact information
 		Contact *ContactExpr
-		// License describes the Service license
+		// License describes the API license
 		License *LicenseExpr
-		// Docs points to the Service external documentation
+		// Docs points to the API external documentation
 		Docs *DocsExpr
-		// EndpointGroups lists the endpoint groups exposed by the service.
-		EndpointGroups []*EndpointGroupExpr
 		// Metadata is a list of key/value pairs
 		Metadata *MetadataExpr
 	}
