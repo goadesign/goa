@@ -18,7 +18,7 @@ import (
 type (
 	// Doer defines the Do method of the http client.
 	Doer interface {
-		Do(context.Context, *http.Request) (*http.Response, error)
+		Do(*http.Request) (*http.Response, error)
 	}
 
 	// Client is the common client data structure for all goa service clients.
@@ -40,20 +40,13 @@ type (
 // If c is nil, the returned client wraps http.DefaultClient.
 func New(c Doer) *Client {
 	if c == nil {
-		c = HTTPClientDoer(http.DefaultClient)
+		c = http.DefaultClient
 	}
 	return &Client{Doer: c}
 }
 
-// HTTPClientDoer turns a stdlib http.Client into a Doer. Use it to enable to call New() with an http.Client.
-func HTTPClientDoer(hc *http.Client) Doer {
-	return doFunc(func(_ context.Context, req *http.Request) (*http.Response, error) {
-		return hc.Do(req)
-	})
-}
-
 // doFunc is the type definition of the Doer.Do method. It implements Doer.
-type doFunc func(context.Context, *http.Request) (*http.Response, error)
+type doFunc func(*http.Request) (*http.Response, error)
 
 // Do implements Doer.Do
 func (f doFunc) Do(ctx context.Context, req *http.Request) (*http.Response, error) {
@@ -61,18 +54,18 @@ func (f doFunc) Do(ctx context.Context, req *http.Request) (*http.Response, erro
 }
 
 // Do wraps the underlying http client Do method and adds logging.
-// The logger should be in the context.
-func (c *Client) Do(ctx context.Context, req *http.Request) (*http.Response, error) {
+// The logger should be in the request context.
+func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	// TODO: setting the request ID should be done via client middleware. For now only set it if the
 	// caller provided one in the ctx.
-	if ctxreqid := ContextRequestID(ctx); ctxreqid != "" {
+	if ctxreqid := ContextRequestID(req.Context()); ctxreqid != "" {
 		req.Header.Set("X-Request-Id", ctxreqid)
 	}
 	if c.UserAgent != "" {
 		req.Header.Set("User-Agent", c.UserAgent)
 	}
 	startedAt := time.Now()
-	ctx, id := ContextWithRequestID(ctx)
+	ctx, id := ContextWithRequestID(req.Context())
 	goa.LogInfo(ctx, "started", "id", id, req.Method, req.URL.String())
 	if c.Dump {
 		c.dumpRequest(ctx, req)

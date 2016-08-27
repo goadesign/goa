@@ -53,13 +53,13 @@ type (
 	// That is field expressions, user types and media types.
 	DataStructure interface {
 		// Expr returns the data structure expression.
-		Expr() *FieldExpr
+		Expr() *AttributeExpr
 		// Walk traverses the data structure recursively and calls the given function once
 		// on each field starting with the field returned by Expr.
 		// User type and media type fields are traversed once even for recursive
 		// expressions to avoid infinite recursion.
 		// Walk stops and returns the error if the function returns a non-nil error.
-		Walk(func(*FieldExpr) error) error
+		Walk(func(*AttributeExpr) error) error
 	}
 
 	// Primitive is the type for null, boolean, integer, number, string, and time.
@@ -67,22 +67,22 @@ type (
 
 	// Array is the type used to describe field arrays or repeated fields.
 	Array struct {
-		ElemType *FieldExpr
+		ElemType *AttributeExpr
 	}
 
 	// Map is the type used to describe maps of fields.
 	Map struct {
-		KeyType  *FieldExpr
-		ElemType *FieldExpr
+		KeyType  *AttributeExpr
+		ElemType *AttributeExpr
 	}
 
 	// Object is the type used to describe composite data structures.
-	Object map[string]*FieldExpr
+	Object map[string]*AttributeExpr
 
 	// UserTypeExpr is the struct used to describe user defined types.
 	UserTypeExpr struct {
 		// A user type expression is a field expression.
-		*FieldExpr
+		*AttributeExpr
 		// Name of type
 		TypeName string
 	}
@@ -453,13 +453,13 @@ func (h MapVal) ToMap() map[interface{}]interface{} {
 	return mp
 }
 
-// FieldIterator is the type of the function given to IterateFields.
-type FieldIterator func(string, *FieldExpr) error
+// AttributeIterator is the type of the function given to IterateAttributes.
+type AttributeIterator func(string, *AttributeExpr) error
 
-// IterateFields calls the given iterator passing in each field sorted in alphabetical order.
+// IterateAttributes calls the given iterator passing in each field sorted in alphabetical order.
 // Iteration stops if an iterator returns an error and in this case IterateObject returns that
 // error.
-func (o Object) IterateFields(it FieldIterator) error {
+func (o Object) IterateAttributes(it AttributeIterator) error {
 	names := make([]string, len(o))
 	i := 0
 	for n := range o {
