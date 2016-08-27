@@ -549,6 +549,7 @@ func (g *Generator) generateMediaTypes(pkgDir string, funcs template.FuncMap) er
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("net/http"),
 		codegen.SimpleImport("time"),
+		codegen.SimpleImport("unicode/utf8"),
 		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 	}
 	mtWr.WriteHeader(title, g.Target, imports)
@@ -590,6 +591,7 @@ func (g *Generator) generateUserTypes(pkgDir string) error {
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("time"),
+		codegen.SimpleImport("unicode/utf8"),
 	}
 	utWr.WriteHeader(title, g.Target, imports)
 	err = g.API.IterateUserTypes(func(t *design.UserTypeDefinition) error {
