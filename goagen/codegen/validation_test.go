@@ -71,7 +71,7 @@ var _ = Describe("validation code generation", func() {
 				})
 			})
 
-			Context("of min length 1", func() {
+			Context("of array min length 1", func() {
 				BeforeEach(func() {
 					attType = &design.Array{
 						ElemType: &design.AttributeDefinition{
@@ -85,7 +85,21 @@ var _ = Describe("validation code generation", func() {
 				})
 
 				It("produces the validation go code", func() {
-					Ω(code).Should(Equal(minLengthValCode))
+					Ω(code).Should(Equal(arrayMinLengthValCode))
+				})
+			})
+
+			Context("of string min length 2", func() {
+				BeforeEach(func() {
+					attType = design.String
+					min := 2
+					validation = &dslengine.ValidationDefinition{
+						MinLength: &min,
+					}
+				})
+
+				It("produces the validation go code", func() {
+					Ω(code).Should(Equal(stringMinLengthValCode))
 				})
 			})
 
@@ -176,9 +190,15 @@ const (
 		}
 	}`
 
-	minLengthValCode = `	if val != nil {
+	arrayMinLengthValCode = `	if val != nil {
 		if len(val) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError(` + "`" + `context` + "`" + `, val, len(val), 1, true))
+		}
+	}`
+
+	stringMinLengthValCode = `	if val != nil {
+		if utf8.RuneCountInString(*val) < 2 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(` + "`" + `context` + "`" + `, *val, utf8.RuneCountInString(*val), 2, true))
 		}
 	}`
 
