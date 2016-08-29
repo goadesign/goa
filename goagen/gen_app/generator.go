@@ -122,6 +122,7 @@ func (g *Generator) generateContexts() error {
 		codegen.SimpleImport("strconv"),
 		codegen.SimpleImport("strings"),
 		codegen.SimpleImport("time"),
+		codegen.SimpleImport("unicode/utf8"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
@@ -355,6 +356,7 @@ func (g *Generator) generateMediaTypes() error {
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("time"),
+		codegen.SimpleImport("unicode/utf8"),
 		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
 	mtWr.WriteHeader(title, g.Target, imports)
@@ -386,6 +388,7 @@ func (g *Generator) generateUserTypes() error {
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("time"),
+		codegen.SimpleImport("unicode/utf8"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
