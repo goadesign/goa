@@ -185,23 +185,46 @@ var _ = Describe("InvalidPatternError", func() {
 
 var _ = Describe("InvalidRangeError", func() {
 	var valErr error
+	var value interface{}
+
 	ctx := "ctx"
 	target := "target"
-	value := 42
 	min := true
 
 	JustBeforeEach(func() {
 		valErr = InvalidRangeError(ctx, target, value, min)
 	})
 
-	It("creates a http error", func() {
-		Ω(valErr).ShouldNot(BeNil())
-		Ω(valErr).Should(BeAssignableToTypeOf(&ErrorResponse{}))
-		err := valErr.(*ErrorResponse)
-		Ω(err.Detail).Should(ContainSubstring(ctx))
-		Ω(err.Detail).Should(ContainSubstring("greater or equal"))
-		Ω(err.Detail).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
-		Ω(err.Detail).Should(ContainSubstring(target))
+	Context("with an int value", func() {
+		BeforeEach(func() {
+			value = 42
+		})
+
+		It("creates a http error", func() {
+			Ω(valErr).ShouldNot(BeNil())
+			Ω(valErr).Should(BeAssignableToTypeOf(&ErrorResponse{}))
+			err := valErr.(*ErrorResponse)
+			Ω(err.Detail).Should(ContainSubstring(ctx))
+			Ω(err.Detail).Should(ContainSubstring("greater or equal"))
+			Ω(err.Detail).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
+			Ω(err.Detail).Should(ContainSubstring(target))
+		})
+	})
+
+	Context("with a float64 value", func() {
+		BeforeEach(func() {
+			value = 42.42
+		})
+
+		It("creates a http error with no value truncation", func() {
+			Ω(valErr).ShouldNot(BeNil())
+			Ω(valErr).Should(BeAssignableToTypeOf(&ErrorResponse{}))
+			err := valErr.(*ErrorResponse)
+			Ω(err.Detail).Should(ContainSubstring(ctx))
+			Ω(err.Detail).Should(ContainSubstring("greater or equal"))
+			Ω(err.Detail).Should(ContainSubstring(fmt.Sprintf("%#v", value)))
+			Ω(err.Detail).Should(ContainSubstring(target))
+		})
 	})
 })
 
