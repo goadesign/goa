@@ -203,8 +203,8 @@ func InvalidPatternError(ctx, target string, pattern string) error {
 }
 
 // InvalidRangeError is the error produced when the value of a parameter or payload field does
-// not match the range validation defined in the design.
-func InvalidRangeError(ctx string, target interface{}, value int, min bool) error {
+// not match the range validation defined in the design. value may be a int or a float64.
+func InvalidRangeError(ctx string, target interface{}, value interface{}, min bool) error {
 	comp := "greater or equal"
 	if !min {
 		comp = "lesser or equal"
