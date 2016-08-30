@@ -24,6 +24,8 @@ app package:
         Rate   goa.Endpoint
     }
 
+    type Endpoint func(context.Context, interface{}) (interface{}, error)
+
     func (e *BottleEndpoints) Use(m goa.Middleware) {
         e.Create = m(e.Create)
         e.Show = m(e.Show)
