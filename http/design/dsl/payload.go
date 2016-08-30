@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"unicode"
 
-	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/eval"
+	"github.com/goadesign/goa/http/design"
 )
 
 // Payload implements the action payload DSL. An action payload describes the HTTP request body
@@ -42,7 +42,7 @@ func payload(isOptional bool, p interface{}, dsls ...func()) {
 		eval.ReportError("too many arguments given to Payload")
 		return
 	}
-	if a, ok := actionDefinition(); ok {
+	if a, ok := eval.Current().(*design.ActionDefinition); ok {
 		var att *design.AttributeDefinition
 		var dsl func()
 		switch actual := p.(type) {
@@ -93,6 +93,8 @@ func payload(isOptional bool, p interface{}, dsls ...func()) {
 			TypeName:            fmt.Sprintf("%s%sPayload", an, rn),
 		}
 		a.PayloadOptional = isOptional
+	} else {
+		eval.IncompatibleDSL()
 	}
 }
 
