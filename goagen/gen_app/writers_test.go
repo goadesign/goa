@@ -1478,7 +1478,8 @@ type BottlesController interface {
 `
 
 	simpleResourceHref = `func BottleHref(id interface{}) string {
-	return fmt.Sprintf("/bottles/%v", id)
+	paramid := strings.TrimLeftFunc(fmt.Sprintf("%v", id), func(r rune) bool { return r == '/' })
+	return fmt.Sprintf("/bottles/%v", paramid)
 }
 `
 )
