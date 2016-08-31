@@ -312,6 +312,7 @@ func (g *Generator) generateHrefs() error {
 	title := fmt.Sprintf("%s: Application Resource Href Factories", g.API.Context())
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("strings"),
 	}
 	resWr.WriteHeader(title, g.Target, imports)
 	err = g.API.IterateResources(func(r *design.ResourceDefinition) error {

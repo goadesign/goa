@@ -366,11 +366,15 @@ const hrefsCodeTmpl = `//*******************************************************
 
 package app
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // WidgetHref returns the resource href.
 func WidgetHref(id interface{}) string {
-	return fmt.Sprintf("/%v", id)
+	paramid := strings.TrimLeftFunc(fmt.Sprintf("%v", id), func(r rune) bool { return r == '/' })
+	return fmt.Sprintf("/%v", paramid)
 }
 `
 
