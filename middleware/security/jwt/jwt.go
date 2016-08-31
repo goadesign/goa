@@ -2,15 +2,152 @@ package jwt
 
 import (
 	"crypto/rsa"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/goadesign/goa"
 	"golang.org/x/net/context"
 )
+
+// ErrInvalidKey is returned when a key is not of type string, []string,
+// *rsa.PublicKey or []*rsa.PublicKey.
+var ErrInvalidKey = errors.New("invalid parameter, the only keys accepted " +
+	"are *rsa.publicKey, []*rsa.PublicKey (for RSA-based algorithms) or a " +
+	"signing secret string, []string (for HS algorithms)")
+
+// ErrKeyDoesNotExist is returned when a key cannot be found by the provided
+// key name.
+var ErrKeyDoesNotExist = errors.New("key does not exist")
+
+// KeyResolver is a struct that is passed into the New() function, which allows
+// the user to add/remove keys from the jwt goa.middleware. The use of a
+// resolver provides for better scalability/performance as the number of
+// valid keys grows. If an incoming http.Request contains the header field
+// "jwtkeyname", then the handler will only attempt to validate the incoming
+// JWT against the keys stored in the resolver under that name. Otherwise,
+// the handler will attempt to validate the incoming JWT against all keys
+// stored in the resolver.
+type KeyResolver struct {
+	*sync.Mutex
+	keyMap map[string][]interface{}
+}
+
+// AddKeys can be used to add keys to the resolver which will be referenced
+// by the provided name. Acceptable types for keys include string, []string,
+// *rsa.PublicKey or []*rsa.PublicKey. Multiple keys are allowed for a single
+// key name to allow for key rotation.
+func (kr *KeyResolver) AddKeys(name string, keys interface{}) error {
+	kr.Lock()
+	defer kr.Unlock()
+	if _, ok := kr.keyMap[name]; !ok {
+		kr.keyMap[name] = make([]interface{}, 0)
+	}
+
+	switch keys := keys.(type) {
+	case *rsa.PublicKey:
+		kr.keyMap[name] = append(kr.keyMap[name], keys)
+	case []*rsa.PublicKey:
+		for _, key := range keys {
+			kr.keyMap[name] = append(kr.keyMap[name], key)
+		}
+	case string:
+		kr.keyMap[name] = append(kr.keyMap[name], keys)
+	case []string:
+		for _, key := range keys {
+			kr.keyMap[name] = append(kr.keyMap[name], key)
+		}
+	default:
+		return ErrInvalidKey
+	}
+	return nil
+}
+
+// RemoveAllKeys removes all keys from the resolver.
+func (kr *KeyResolver) RemoveAllKeys() {
+	kr.Lock()
+	defer kr.Unlock()
+	kr.keyMap = make(map[string][]interface{})
+	return
+}
+
+// RemoveKeys removes all keys from the resolver stored under the provided name.
+func (kr *KeyResolver) RemoveKeys(name string) {
+	kr.Lock()
+	defer kr.Unlock()
+	delete(kr.keyMap, name)
+	return
+}
+
+// RemoveKey removes only the provided key stored under the provided name from
+// the resolver.
+func (kr *KeyResolver) RemoveKey(name string, key interface{}) {
+	kr.Lock()
+	defer kr.Unlock()
+	if keys, ok := kr.keyMap[name]; ok {
+		for i, keyItem := range keys {
+			if keyItem == key {
+				kr.keyMap[name] = append(keys[:i], keys[i+1:]...)
+			}
+		}
+	}
+	return
+}
+
+// GetAllKeys returns a list of all the keys stored in the resolver.
+func (kr *KeyResolver) GetAllKeys() []interface{} {
+	kr.Lock()
+	defer kr.Unlock()
+	var keys []interface{}
+	for name, _ := range kr.keyMap {
+		for _, key := range kr.keyMap[name] {
+			keys = append(keys, key)
+		}
+	}
+	return keys
+}
+
+// GetKeys returns a list of all the keys stored in the resolver under the
+// provided name.
+func (kr *KeyResolver) GetKeys(name string) ([]interface{}, error) {
+	kr.Lock()
+	defer kr.Unlock()
+	if keys, ok := kr.keyMap[name]; ok {
+		return keys, nil
+	}
+	return nil, ErrKeyDoesNotExist
+}
+
+// NewResolver returns a KeyResolver populated with the provided map of key
+// names to key lists.
+func NewResolver(validationKeys map[string][]interface{}) (*KeyResolver, error) {
+	keyMap := make(map[string][]interface{})
+	for name, _ := range validationKeys {
+		for _, keys := range validationKeys[name] {
+			switch keys := keys.(type) {
+			case *rsa.PublicKey:
+				keyMap[name] = append(keyMap[name], keys)
+			case []*rsa.PublicKey:
+				for _, key := range keys {
+					keyMap[name] = append(keyMap[name], key)
+				}
+			case string:
+				keyMap[name] = append(keyMap[name], keys)
+			case []string:
+				for _, key := range keys {
+					keyMap[name] = append(keyMap[name], key)
+				}
+			default:
+				return nil, ErrInvalidKey
+			}
+		}
+	}
+	return &KeyResolver{Mutex: &sync.Mutex{}, keyMap: keyMap}, nil
+}
 
 // New returns a middleware to be used with the JWTSecurity DSL definitions of goa.  It supports the
 // scopes claim in the JWT and ensures goa-defined Security DSLs are properly validated.
@@ -50,30 +187,10 @@ import (
 // Mount the middleware with the generated UseXX function where XX is the name of the scheme as
 // defined in the design, e.g.:
 //
-//    app.UseJWT(jwt.New("secret", validationHandler, app.NewJWTSecurity()))
+// 	  jwtResolver, _ := jwt.NewResolver("secret")
+//    app.UseJWT(jwt.New(jwtResolver, validationHandler, app.NewJWTSecurity()))
 //
-func New(validationKeys interface{}, validationFunc goa.Middleware, scheme *goa.JWTSecurity) goa.Middleware {
-	var algo string
-	var rsaKeys []*rsa.PublicKey
-	var hmacKeys []string
-
-	switch keys := validationKeys.(type) {
-	case []*rsa.PublicKey:
-		rsaKeys = keys
-		algo = "RS"
-	case *rsa.PublicKey:
-		rsaKeys = []*rsa.PublicKey{keys}
-		algo = "RS"
-	case string:
-		hmacKeys = []string{keys}
-		algo = "HS"
-	case []string:
-		hmacKeys = keys
-		algo = "HS"
-	default:
-		panic("invalid parameter to `jwt.New()`, only accepts *rsa.publicKey, []*rsa.PublicKey (for RSA-based algorithms) or a signing secret string (for HS algorithms)")
-	}
-
+func New(resolver *KeyResolver, validationFunc goa.Middleware, scheme *goa.JWTSecurity) goa.Middleware {
 	return func(nextHandler goa.Handler) goa.Handler {
 		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 			// TODO: implement the QUERY string handler too
@@ -91,18 +208,62 @@ func New(validationKeys interface{}, validationFunc goa.Middleware, scheme *goa.
 
 			incomingToken := strings.Split(val, " ")[1]
 
+			jwtKeyName := req.Header.Get("jwtkeyname")
+
+			// Make a copy of the current keys in the KeyResolver's key map
+			resolver.Lock()
+			keyMap := make(map[string][]interface{})
+			for name, keys := range resolver.keyMap {
+				keyMap[name] = keys
+			}
+			resolver.Unlock()
+
+			// if jwt key name is a non-empty string, we will include only keys
+			// under that name for validation, otherwise we will try all keys.
+			var rsaKeys []*rsa.PublicKey
+			var hmacKeys []string
+			if jwtKeyName != "" {
+				for _, key := range keyMap[jwtKeyName] {
+					switch key.(type) {
+					case *rsa.PublicKey:
+						rsaKeys = append(rsaKeys, key.(*rsa.PublicKey))
+					case string:
+						hmacKeys = append(hmacKeys, key.(string))
+					}
+				}
+			} else {
+				for _, keyList := range keyMap {
+					for _, key := range keyList {
+						switch key.(type) {
+						case *rsa.PublicKey:
+							rsaKeys = append(rsaKeys, key.(*rsa.PublicKey))
+						case string:
+							hmacKeys = append(hmacKeys, key.(string))
+						}
+					}
+				}
+			}
+
 			var token *jwt.Token
 			var err error
-			switch algo {
-			case "RS":
-				token, err = validateRSAKeys(rsaKeys, algo, incomingToken)
-			case "HS":
-				token, err = validateHMACKeys(hmacKeys, algo, incomingToken)
-			default:
-				panic("how did this happen ? unsupported algo in jwt middleware")
+			validated := false
+
+			if len(rsaKeys) > 0 {
+				token, err = validateRSAKeys(rsaKeys, "RS", incomingToken)
+				if err == nil {
+					validated = true
+				}
 			}
-			if err != nil {
-				return ErrJWTError(fmt.Sprintf("JWT validation failed: %s", err))
+
+			if !validated && len(hmacKeys) > 0 {
+				token, err = validateHMACKeys(hmacKeys, "HS", incomingToken)
+				if err == nil {
+					validated = true
+				}
+			}
+
+			if !validated {
+				return ErrJWTError(fmt.Sprint("JWT validation failed"))
 			}
 
 			scopesInClaim, scopesInClaimList, err := parseClaimScopes(token)
