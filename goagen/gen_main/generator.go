@@ -211,15 +211,21 @@ func (g *Generator) okResp(a *design.ActionDefinition) map[string]interface{} {
 	if err != nil {
 		return nil
 	}
-	name := codegen.GoTypeRef(pmt, pmt.AllRequired(), 1, false)
-	var pointer string
-	if strings.HasPrefix(name, "*") {
-		name = name[1:]
-		pointer = "*"
-	}
-	typeref := fmt.Sprintf("%s%s.%s", pointer, g.Target, name)
-	if strings.HasPrefix(typeref, "*") {
-		typeref = "&" + typeref[1:]
+	var typeref string
+	if pmt.IsError() {
+		typeref = `goa.ErrInternal("not implemented")`
+	} else {
+		name := codegen.GoTypeRef(pmt, pmt.AllRequired(), 1, false)
+		var pointer string
+		if strings.HasPrefix(name, "*") {
+			name = name[1:]
+			pointer = "*"
+		}
+		typeref = fmt.Sprintf("%s%s.%s", pointer, g.Target, name)
+		if strings.HasPrefix(typeref, "*") {
+			typeref = "&" + typeref[1:]
+		}
+		typeref += "{}"
 	}
 	var nameSuffix string
 	if view != "default" {
@@ -273,7 +279,7 @@ func (c *{{ $ctrlName }}) {{ goify .Name true }}(ctx *{{ targetPkg }}.{{ goify .
 	// Put your logic here
 
 	// {{ $ctrlName }}_{{ goify .Name true }}: end_implement
-{{ $ok := okResp . }}{{ if $ok }} res := {{ $ok.TypeRef }}{}
+{{ $ok := okResp . }}{{ if $ok }} res := {{ $ok.TypeRef }}
 {{ end }} return {{ if $ok }}ctx.{{ $ok.Name }}(res){{ else }}nil{{ end }}
 }
 `
