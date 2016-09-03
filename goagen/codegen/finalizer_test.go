@@ -73,6 +73,24 @@ var _ = Describe("Struct finalize code generation", func() {
 				Ω(assignments).Should(Equal(hashAssignmentCode))
 			})
 		})
+		Context("given a datetime field", func() {
+			BeforeEach(func() {
+				att = &design.AttributeDefinition{
+					Type: &design.Object{
+						"foo": &design.AttributeDefinition{
+							Type:         design.DateTime,
+							DefaultValue: interface{}("1978-06-30T10:00:00+09:00"),
+						},
+					},
+				}
+				target = "ut"
+			})
+			It("finalizes the hash fields", func() {
+				assignments := codegen.RecursiveFinalizer(att, target, 0)
+				Ω(assignments).Should(Equal(datetimeAssignmentCode))
+			})
+		})
+
 	})
 })
 
@@ -88,5 +106,9 @@ if ut.Foo == nil {
 
 	hashAssignmentCode = `if ut.Foo == nil {
 	ut.Foo = map[string]string{"bar": "baz"}
+}`
+	datetimeAssignmentCode = `var defaultFoo, _ = time.Parse(time.RFC3339, "1978-06-30T10:00:00+09:00")
+if ut.Foo == nil {
+	ut.Foo = &defaultFoo
 }`
 )
