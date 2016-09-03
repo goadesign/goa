@@ -240,7 +240,7 @@ func (p Primitive) ToHash() *Hash { return nil }
 // CanHaveDefault returns whether the primitive can have a default value.
 func (p Primitive) CanHaveDefault() (ok bool) {
 	switch p {
-	case Boolean, Integer, Number, String:
+	case Boolean, Integer, Number, String, DateTime:
 		ok = true
 	}
 	return
