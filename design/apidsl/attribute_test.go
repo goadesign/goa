@@ -213,6 +213,26 @@ var _ = Describe("Attribute", func() {
 		})
 	})
 
+	Context("with a name, type datetime and a DSL defining a default value", func() {
+		BeforeEach(func() {
+			name = "foo"
+			dataType = DateTime
+			dsl = func() { Default("1978-06-30T10:00:00+09:00") }
+		})
+
+		It("produces an attribute of type string with a default value", func() {
+			t := parent.Type
+			Ω(t).ShouldNot(BeNil())
+			Ω(t).Should(BeAssignableToTypeOf(Object{}))
+			o := t.(Object)
+			Ω(o).Should(HaveLen(1))
+			Ω(o).Should(HaveKey(name))
+			Ω(o[name].Type).Should(Equal(DateTime))
+			Ω(o[name].Validation).Should(BeNil())
+			Ω(o[name].DefaultValue).Should(Equal(interface{}("1978-06-30T10:00:00+09:00")))
+		})
+	})
+
 	Context("with a name, type integer and a DSL defining an enum validation", func() {
 		BeforeEach(func() {
 			name = "foo"
