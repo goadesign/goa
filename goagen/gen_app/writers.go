@@ -752,8 +752,9 @@ func {{ .Unmarshal }}(ctx context.Context, service *goa.Service, req *http.Reque
 	resourceT = `{{ if .CanonicalTemplate }}// {{ .Name }}Href returns the resource href.
 func {{ .Name }}Href({{ if .CanonicalParams }}{{ join .CanonicalParams ", " }} interface{}{{ end }}) string {
 {{ range $param := .CanonicalParams }}	param{{$param}} := strings.TrimLeftFunc(fmt.Sprintf("%v", {{$param}}), func(r rune) bool { return r == '/' })
-{{ end }}	return fmt.Sprintf("{{ .CanonicalTemplate }}", param{{ join .CanonicalParams ", param" }})
-}
+{{ end }}{{ if .CanonicalParams }}	return fmt.Sprintf("{{ .CanonicalTemplate }}", param{{ join .CanonicalParams ", param" }})
+{{ else }}	return "{{ .CanonicalTemplate }}"
+{{ end }}}
 {{ end }}`
 
 	// mediaTypeT generates the code for a media type.

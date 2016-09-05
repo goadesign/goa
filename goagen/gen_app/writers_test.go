@@ -905,6 +905,22 @@ var _ = Describe("HrefWriter", func() {
 						Ω(written).Should(ContainSubstring(simpleResourceHref))
 					})
 				})
+
+				Context("and a canonical action with no param", func() {
+					BeforeEach(func() {
+						canoTemplate = "/bottles"
+					})
+
+					It("writes the href method", func() {
+						err := writer.Execute(data)
+						Ω(err).ShouldNot(HaveOccurred())
+						b, err := ioutil.ReadFile(filename)
+						Ω(err).ShouldNot(HaveOccurred())
+						written := string(b)
+						Ω(written).ShouldNot(BeEmpty())
+						Ω(written).Should(ContainSubstring(noParamHref))
+					})
+				})
 			})
 		})
 	})
@@ -1480,6 +1496,10 @@ type BottlesController interface {
 	simpleResourceHref = `func BottleHref(id interface{}) string {
 	paramid := strings.TrimLeftFunc(fmt.Sprintf("%v", id), func(r rune) bool { return r == '/' })
 	return fmt.Sprintf("/bottles/%v", paramid)
+}
+`
+	noParamHref = `func BottleHref() string {
+	return "/bottles"
 }
 `
 )
