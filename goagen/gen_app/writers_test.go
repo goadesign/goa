@@ -510,6 +510,71 @@ var _ = Describe("ControllersWriter", func() {
 			os.Create(filename)
 		})
 
+		Context("with file servers", func() {
+			requestPath := "/swagger.json"
+			filePath := "swagger/swagger.json"
+			var origins []*design.CORSDefinition
+			var preflightPaths []string
+
+			var data []*genapp.ControllerTemplateData
+
+			BeforeEach(func() {
+				origins = nil
+				preflightPaths = nil
+			})
+
+			JustBeforeEach(func() {
+				codegen.TempCount = 0
+				fileServer := &design.FileServerDefinition{
+					FilePath:    filePath,
+					RequestPath: requestPath,
+				}
+				d := &genapp.ControllerTemplateData{
+					API:            &design.APIDefinition{},
+					Origins:        origins,
+					PreflightPaths: preflightPaths,
+					Resource:       "Public",
+					FileServers:    []*design.FileServerDefinition{fileServer},
+				}
+				data = []*genapp.ControllerTemplateData{d}
+			})
+
+			It("writes the file server code", func() {
+				err := writer.Execute(data)
+				Ω(err).ShouldNot(HaveOccurred())
+				b, err := ioutil.ReadFile(filename)
+				Ω(err).ShouldNot(HaveOccurred())
+				written := string(b)
+				Ω(written).ShouldNot(BeEmpty())
+				Ω(written).Should(ContainSubstring(simpleFileServer))
+			})
+
+			Context("with CORS", func() {
+				BeforeEach(func() {
+					origins = []*design.CORSDefinition{
+						{
+							Origin:      "here.example.com",
+							Headers:     []string{"X-One", "X-Two"},
+							Methods:     []string{"GET", "POST"},
+							Exposed:     []string{"X-Three"},
+							Credentials: true,
+						},
+					}
+					preflightPaths = []string{"/public/*filepath"}
+				})
+
+				It("writes the OPTIONS handler code", func() {
+					err := writer.Execute(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(fileServerOptionsHandler))
+				})
+			})
+		})
+
 		Context("with data", func() {
 			var actions, verbs, paths, contexts, unmarshals []string
 			var payloads []*design.UserTypeDefinition
@@ -1296,6 +1361,15 @@ func unmarshalListBottlePayload(ctx context.Context, service *goa.Service, req *
 	return nil
 }
 `
+
+	simpleFileServer = `// PublicController is the controller interface for the Public actions.
+type PublicController interface {
+	goa.Muxer
+	goa.FileServer
+}
+`
+
+	fileServerOptionsHandler = `service.Mux.Handle("OPTIONS", "/public/*filepath", ctrl.MuxHandler("preflight", handlePublicOrigin(cors.HandlePreflight()), nil))`
 
 	simpleController = `// BottlesController is the controller interface for the Bottles actions.
 type BottlesController interface {
