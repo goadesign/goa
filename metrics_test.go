@@ -40,7 +40,7 @@ var _ = Describe("Metrics", func() {
 				goa.SetMetrics(metrics)
 				goa.AddSample(keys[:], 3.14)
 				Ω(keys).Should(Equal([]string{
-					"foo_bar____",
+					"foo_bar_all",
 					"foo___baz",
 					"foo_baz",
 					"foo_bar_baz",
@@ -57,7 +57,7 @@ var _ = Describe("Metrics", func() {
 				goa.SetMetrics(metrics)
 				goa.EmitKey(keys[:], 3.14)
 				Ω(keys).Should(Equal([]string{
-					"foo_bar____",
+					"foo_bar_all",
 					"foo___baz",
 					"foo_baz",
 					"foo_bar_baz",
@@ -74,7 +74,7 @@ var _ = Describe("Metrics", func() {
 				goa.SetMetrics(metrics)
 				goa.IncrCounter(keys[:], 3.14)
 				Ω(keys).Should(Equal([]string{
-					"foo_bar____",
+					"foo_bar_all",
 					"foo___baz",
 					"foo_baz",
 					"foo_bar_baz",
@@ -91,7 +91,7 @@ var _ = Describe("Metrics", func() {
 				goa.SetMetrics(metrics)
 				goa.MeasureSince(keys[:], time.Time{})
 				Ω(keys).Should(Equal([]string{
-					"foo_bar____",
+					"foo_bar_all",
 					"foo___baz",
 					"foo_baz",
 					"foo_bar_baz",
@@ -108,7 +108,7 @@ var _ = Describe("Metrics", func() {
 				goa.SetMetrics(metrics)
 				goa.SetGauge(keys[:], 3.14)
 				Ω(keys).Should(Equal([]string{
-					"foo_bar____",
+					"foo_bar_all",
 					"foo___baz",
 					"foo_baz",
 					"foo_bar_baz",
