@@ -804,6 +804,20 @@ func (r *ResourceDefinition) PreflightPaths() []string {
 		}
 		return nil
 	})
+	r.IterateFileServers(func(fs *FileServerDefinition) error {
+		found := false
+		fp := fs.RequestPath
+		for _, p := range paths {
+			if fp == p {
+				found = true
+				break
+			}
+		}
+		if !found {
+			paths = append(paths, fp)
+		}
+		return nil
+	})
 	return paths
 }
 
