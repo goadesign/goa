@@ -813,7 +813,9 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 			return fmt.Sprintf("/{%s}", w[2:])
 		},
 	)
-	key = strings.TrimPrefix(key, bp)
+	if bp != "/" {
+		key = strings.TrimPrefix(key, bp)
+	}
 	var path *Path
 	var ok bool
 	if path, ok = s.Paths[key]; !ok {
