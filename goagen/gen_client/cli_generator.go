@@ -181,9 +181,9 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 		return err
 	}
 
-	err = g.API.IterateResources(func(res *design.ResourceDefinition) error {
+	var fsdata []map[string]interface{}
+	g.API.IterateResources(func(res *design.ResourceDefinition) error {
 		if res.FileServers != nil {
-			var fsdata []map[string]interface{}
 			res.IterateFileServers(func(fs *design.FileServerDefinition) error {
 				wcs := design.ExtractWildcards(fs.RequestPath)
 				isDir := len(wcs) > 0
@@ -203,17 +203,22 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 				})
 				return nil
 			})
-			data := struct {
-				Package     string
-				FileServers []map[string]interface{}
-			}{
-				Package:     g.Target,
-				FileServers: fsdata,
-			}
-			if err := downloadCommandTmpl.Execute(file, data); err != nil {
-				return err
-			}
 		}
+		return nil
+	})
+	if fsdata != nil {
+		data := struct {
+			Package     string
+			FileServers []map[string]interface{}
+		}{
+			Package:     g.Target,
+			FileServers: fsdata,
+		}
+		if err := downloadCommandTmpl.Execute(file, data); err != nil {
+			return err
+		}
+	}
+	err = g.API.IterateResources(func(res *design.ResourceDefinition) error {
 		return res.IterateActions(func(action *design.ActionDefinition) error {
 			data := map[string]interface{}{
 				"Action":   action,
