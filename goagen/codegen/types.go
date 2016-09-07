@@ -471,6 +471,7 @@ var Reserved = map[string]bool{
 	"http": true,
 	"json": true,
 	"os":   true,
+	"url":  true,
 	"time": true,
 }
 
