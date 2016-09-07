@@ -24,7 +24,7 @@ var (
 	invalidCharactersRE = regexp.MustCompile(`[\*/]`)
 )
 
-// default metrics interface
+// Metrics generic interface for decoupling Goa from go-metrics.
 type Metrics interface {
 	SetGauge(key []string, val float32)
 	EmitKey(key []string, val float32)
@@ -33,8 +33,9 @@ type Metrics interface {
 	MeasureSince(key []string, start time.Time)
 }
 
-// Deprecated - NewMetrics initializes goa's metrics instance with the supplied
+// NewMetrics initializes goa's metrics instance with the supplied
 // configuration and metrics sink
+// This method is deprecated and SetMetrics should be used instead.
 func NewMetrics(conf *metrics.Config, sink metrics.MetricSink) (err error) {
 	metriks, err = metrics.NewGlobal(conf, sink)
 	return
