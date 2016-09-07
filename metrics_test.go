@@ -10,11 +10,12 @@ import (
 )
 
 // mock metrics
-type mockMetrics struct {}
-func (m mockMetrics) SetGauge(key []string, val float32) {}
-func (m mockMetrics) EmitKey(key []string, val float32) {}
-func (m mockMetrics) IncrCounter(key []string, val float32) {}
-func (m mockMetrics) AddSample(key []string, val float32) {}
+type mockMetrics struct{}
+
+func (m mockMetrics) SetGauge(key []string, val float32)         {}
+func (m mockMetrics) EmitKey(key []string, val float32)          {}
+func (m mockMetrics) IncrCounter(key []string, val float32)      {}
+func (m mockMetrics) AddSample(key []string, val float32)        {}
 func (m mockMetrics) MeasureSince(key []string, start time.Time) {}
 
 var _ = Describe("Metrics", func() {

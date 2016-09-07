@@ -31,7 +31,6 @@ type Metrics interface {
 	IncrCounter(key []string, val float32)
 	AddSample(key []string, val float32)
 	MeasureSince(key []string, start time.Time)
-
 }
 
 // Deprecated - NewMetrics initializes goa's metrics instance with the supplied
@@ -105,7 +104,7 @@ func SetGauge(key []string, val float32) {
 // not support * or / in metric names.
 func normalizeKeys(key []string) {
 	if key != nil {
-		for i, k := range(key) {
+		for i, k := range key {
 			// first replace */* with all
 			k = strings.Replace(k, allMatcher, allReplacement, -1)
 
