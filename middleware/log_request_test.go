@@ -38,6 +38,9 @@ var _ = Describe("LogRequest", func() {
 	})
 
 	It("logs requests", func() {
+		// Add Action name to the context to make sure we log it properly.
+		ctx = goa.WithAction(ctx, "goo")
+
 		h := func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 			return service.Send(ctx, 200, "ok")
 		}
@@ -51,22 +54,26 @@ var _ = Describe("LogRequest", func() {
 		Ω(logger.InfoEntries[0].Data[3]).Should(Equal("/goo?param=value"))
 
 		Ω(logger.InfoEntries[1].Data).Should(HaveLen(4))
-		Ω(logger.InfoEntries[0].Data[0]).Should(Equal("req_id"))
+		Ω(logger.InfoEntries[1].Data[0]).Should(Equal("req_id"))
 		Ω(logger.InfoEntries[1].Data[2]).Should(Equal("query"))
 		Ω(logger.InfoEntries[1].Data[3]).Should(Equal("value"))
 
 		Ω(logger.InfoEntries[2].Data).Should(HaveLen(4))
-		Ω(logger.InfoEntries[0].Data[0]).Should(Equal("req_id"))
+		Ω(logger.InfoEntries[2].Data[0]).Should(Equal("req_id"))
 		Ω(logger.InfoEntries[2].Data[2]).Should(Equal("payload"))
 		Ω(logger.InfoEntries[2].Data[3]).Should(Equal(42))
 
-		Ω(logger.InfoEntries[3].Data).Should(HaveLen(8))
-		Ω(logger.InfoEntries[0].Data[0]).Should(Equal("req_id"))
+		Ω(logger.InfoEntries[3].Data).Should(HaveLen(12))
+		Ω(logger.InfoEntries[3].Data[0]).Should(Equal("req_id"))
 		Ω(logger.InfoEntries[3].Data[2]).Should(Equal("status"))
 		Ω(logger.InfoEntries[3].Data[3]).Should(Equal(200))
 		Ω(logger.InfoEntries[3].Data[4]).Should(Equal("bytes"))
 		Ω(logger.InfoEntries[3].Data[5]).Should(Equal(5))
 		Ω(logger.InfoEntries[3].Data[6]).Should(Equal("time"))
+		Ω(logger.InfoEntries[3].Data[8]).Should(Equal("ctrl"))
+		Ω(logger.InfoEntries[3].Data[9]).Should(Equal("test"))
+		Ω(logger.InfoEntries[3].Data[10]).Should(Equal("action"))
+		Ω(logger.InfoEntries[3].Data[11]).Should(Equal("goo"))
 	})
 
 	It("logs error codes", func() {
@@ -81,7 +88,8 @@ var _ = Describe("LogRequest", func() {
 		Ω(logger.InfoEntries[0].Data[0]).Should(Equal("req_id"))
 		Ω(logger.InfoEntries[0].Data[2]).Should(Equal("POST"))
 		Ω(logger.InfoEntries[0].Data[3]).Should(Equal("/goo?param=value"))
-		Ω(logger.InfoEntries[1].Data).Should(HaveLen(10))
+
+		Ω(logger.InfoEntries[1].Data).Should(HaveLen(14))
 		Ω(logger.InfoEntries[1].Data[0]).Should(Equal("req_id"))
 		Ω(logger.InfoEntries[1].Data[2]).Should(Equal("status"))
 		Ω(logger.InfoEntries[1].Data[3]).Should(Equal(400))
@@ -90,5 +98,9 @@ var _ = Describe("LogRequest", func() {
 		Ω(logger.InfoEntries[1].Data[6]).Should(Equal("bytes"))
 		Ω(logger.InfoEntries[1].Data[7]).Should(Equal(126))
 		Ω(logger.InfoEntries[1].Data[8]).Should(Equal("time"))
+		Ω(logger.InfoEntries[1].Data[10]).Should(Equal("ctrl"))
+		Ω(logger.InfoEntries[1].Data[11]).Should(Equal("test"))
+		Ω(logger.InfoEntries[1].Data[12]).Should(Equal("action"))
+		Ω(logger.InfoEntries[1].Data[13]).Should(Equal("<unknown>"))
 	})
 })

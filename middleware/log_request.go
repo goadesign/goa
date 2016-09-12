@@ -66,10 +66,12 @@ func LogRequest(verbose bool) goa.Middleware {
 			resp := goa.ContextResponse(ctx)
 			if code := resp.ErrorCode; code != "" {
 				goa.LogInfo(ctx, "completed", "status", resp.Status, "error", code,
-					"bytes", resp.Length, "time", time.Since(startedAt).String())
+					"bytes", resp.Length, "time", time.Since(startedAt).String(),
+					"ctrl", goa.ContextController(ctx), "action", goa.ContextAction(ctx))
 			} else {
 				goa.LogInfo(ctx, "completed", "status", resp.Status,
-					"bytes", resp.Length, "time", time.Since(startedAt).String())
+					"bytes", resp.Length, "time", time.Since(startedAt).String(),
+					"ctrl", goa.ContextController(ctx), "action", goa.ContextAction(ctx))
 			}
 			return err
 		}
