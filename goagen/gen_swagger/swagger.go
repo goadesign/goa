@@ -453,7 +453,7 @@ func tagsFromDefinition(mdata dslengine.MetadataDefinition) (tags []*Tag) {
 		if len(chunks) != 3 {
 			continue
 		}
-		if chunks[0] != "swagger" && chunks[1] != "tag" {
+		if chunks[0] != "swagger" || chunks[1] != "tag" {
 			continue
 		}
 
