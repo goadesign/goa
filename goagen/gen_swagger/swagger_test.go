@@ -507,5 +507,44 @@ var _ = Describe("New", func() {
 
 			It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
 		})
+
+		Context("with metadata", func() {
+			const gat = "gat"
+
+			BeforeEach(func() {
+				Resource("res", func() {
+					Metadata("swagger:tag:res")
+					Metadata("struct:tag:json", "resource")
+					Action("act", func() {
+						Metadata("swagger:tag:Update")
+						Metadata("struct:tag:json", "action")
+						Routing(
+							PUT("/"),
+						)
+					})
+				})
+				base := Design.DSLFunc
+				Design.DSLFunc = func() {
+					base()
+					Metadata("swagger:tag:" + gat)
+					Metadata("struct:tag:json", "api")
+				}
+			})
+
+			It("should set the swagger object tags", func() {
+				Ω(swagger.Tags).Should(HaveLen(2))
+				tags := []*genswagger.Tag{
+					{Name: gat, Description: "", ExternalDocs: nil},
+					{Name: tag, Description: "Tag desc.", ExternalDocs: &genswagger.ExternalDocs{URL: "http://example.com/tag", Description: "Huge docs"}},
+				}
+				Ω(swagger.Tags).Should(Equal(tags))
+			})
+
+			It("should set the action tags", func() {
+				Ω(swagger.Paths[""].Put.Tags).Should(HaveLen(2))
+				tags := []string{"res", "Update"}
+				Ω(swagger.Paths[""].Put.Tags).Should(Equal(tags))
+			})
+		})
 	})
 })
