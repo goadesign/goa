@@ -22,6 +22,9 @@ var (
 
 	// used for normalizing names by matching '*' and '/' so they can be replaced.
 	invalidCharactersRE = regexp.MustCompile(`[\*/]`)
+
+	// Taken from https://github.com/prometheus/client_golang/blob/66058aac3a83021948e5fb12f1f408ff556b9037/prometheus/desc.go
+	metricsNameRE = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_:]*$`)
 )
 
 // Metrics generic interface for decoupling Goa from go-metrics.
@@ -41,8 +44,7 @@ func NewMetrics(conf *metrics.Config, sink metrics.MetricSink) (err error) {
 	return
 }
 
-// SetMetrics initializes goa's metrics instance with the supplied
-// configuration and metrics sink
+// SetMetrics initializes goa's metrics instance with the supplied metrics adapter interface.
 func SetMetrics(m Metrics) {
 	metriks = m
 }
@@ -104,8 +106,8 @@ func SetGauge(key []string, val float32) {
 // This function is used to make metric names safe for all metric services. Specifically, prometheus does
 // not support * or / in metric names.
 func normalizeKeys(key []string) {
-	if key != nil {
-		for i, k := range key {
+	for i, k := range key {
+		if ! metricsNameRE.MatchString(k) {
 			// first replace */* with all
 			k = strings.Replace(k, allMatcher, allReplacement, -1)
 
