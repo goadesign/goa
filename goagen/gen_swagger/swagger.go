@@ -448,34 +448,39 @@ func scopesMapList(scopes map[string]string) string {
 }
 
 func tagsFromDefinition(mdata dslengine.MetadataDefinition) (tags []*Tag) {
-	for key, value := range mdata {
+	var keys []string
+	for k := range mdata {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
 		chunks := strings.Split(key, ":")
 		if len(chunks) != 3 {
 			continue
 		}
-		if chunks[0] != "swagger" && chunks[1] != "tag" {
+		if chunks[0] != "swagger" || chunks[1] != "tag" {
 			continue
 		}
 
 		tag := &Tag{Name: chunks[2]}
 
-		value = mdata[fmt.Sprintf("%s:desc", key)]
-		if len(value) != 0 {
-			tag.Description = value[0]
+		mdata[key] = mdata[fmt.Sprintf("%s:desc", key)]
+		if len(mdata[key]) != 0 {
+			tag.Description = mdata[key][0]
 		}
 
 		hasDocs := false
 		docs := &ExternalDocs{}
 
-		value = mdata[fmt.Sprintf("%s:url", key)]
-		if len(value) != 0 {
-			docs.URL = value[0]
+		mdata[key] = mdata[fmt.Sprintf("%s:url", key)]
+		if len(mdata[key]) != 0 {
+			docs.URL = mdata[key][0]
 			hasDocs = true
 		}
 
-		value = mdata[fmt.Sprintf("%s:url:desc", key)]
-		if len(value) != 0 {
-			docs.Description = value[0]
+		mdata[key] = mdata[fmt.Sprintf("%s:url:desc", key)]
+		if len(mdata[key]) != 0 {
+			docs.Description = mdata[key][0]
 			hasDocs = true
 		}
 
