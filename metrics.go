@@ -18,7 +18,7 @@ const (
 
 var (
 	// interface for metrics.Metrics
-	metriks Metrics
+	metriks Metrics = &metricDiscarder{}
 
 	// used for normalizing names by matching '*' and '/' so they can be replaced.
 	invalidCharactersRE = regexp.MustCompile(`[\*/]`)
@@ -35,6 +35,15 @@ type Metrics interface {
 	AddSample(key []string, val float32)
 	MeasureSince(key []string, start time.Time)
 }
+
+// used for dealing with race conditions.
+type metricDiscarder struct{}
+func (md *metricDiscarder) SetGauge(key []string, val float32) {}
+func (md *metricDiscarder) EmitKey(key []string, val float32) {}
+func (md *metricDiscarder) IncrCounter(key []string, val float32) {}
+func (md *metricDiscarder) AddSample(key []string, val float32) {}
+func (md *metricDiscarder) MeasureSince(key []string, start time.Time) {}
+
 
 // NewMetrics initializes goa's metrics instance with the supplied
 // configuration and metrics sink
