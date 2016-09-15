@@ -63,7 +63,7 @@ func init() {
 // attribute.
 func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDefault bool, target, context string, depth int, private bool) string {
 	var checks []string
-	if o := att.Type.ToObject(); o != nil {
+	if o, ok := att.Type.(design.Object); ok {
 		if ds, ok := att.Type.(design.DataStructure); ok {
 			att = ds.Definition()
 		}
@@ -96,7 +96,7 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDef
 							return done
 						}
 						for _, name := range a.Validation.Required {
-							att := a.Type.ToObject()[name]
+							att := a.Type.(Object)[name]
 							if att != nil && (!att.Type.IsPrimitive() || att.Type.Kind() == design.StringKind) {
 								hasValidations = true
 								return done
@@ -340,7 +340,7 @@ const (
 {{if .isPointer}}{{tabs $depth}}}
 {{end}}{{tabs .depth}}}`
 
-	requiredValTmpl = `{{range $r := .required}}{{$catt := index $.attribute.Type.ToObject $r}}{{/*
+	requiredValTmpl = `{{range $r := .required}}{{$catt := index ToObject($.attribute.Type) $r}}{{/*
 */}}{{if and (not $.private) (eq $catt.Type.Kind 4)}}{{tabs $.depth}}if {{$.target}}.{{goifyAtt $catt $r true}} == "" {
 {{tabs $.depth}}	err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`" + `{{$.context}}` + "`" + `, "{{$r}}"))
 {{tabs $.depth}}}

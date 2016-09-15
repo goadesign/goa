@@ -1,20 +1,21 @@
 package dsl
 
 import "github.com/goadesign/goa/design"
+import "github.com/goadesign/goa/eval"
 
 // Description sets the expression description.
 //
-// Description may appear in Service, Type or Attribute.
+// Description may appear in API, Docs, Type or Attribute.
 //
 // Example:
 //
-//    Service("adder", func() {
-//        Description("Adder service")
+//    API("adder", func() {
+//        Description("Adder API")
 //    })
 //
 func Description(d string) {
 	switch expr := eval.Current().(type) {
-	case *design.ServiceExpr:
+	case *design.APIExpr:
 		expr.Description = d
 	case *design.AttributeExpr:
 		expr.Description = d

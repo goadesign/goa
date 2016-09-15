@@ -28,7 +28,7 @@ type (
 
 	// Stack represents the expression evaluation stack. The stack is appended to each time the
 	// initiator executes an expression source DSL.
-	Stack []Expr
+	Stack []Expression
 )
 
 // Register appends a root expression to the current Context root expressions. Each root expression
@@ -50,7 +50,7 @@ func Register(r Root) error {
 }
 
 // Current evaluation context, i.e. object being currently built by DSL
-func (s Stack) Current() Expr {
+func (s Stack) Current() Expression {
 	if len(s) == 0 {
 		return nil
 	}

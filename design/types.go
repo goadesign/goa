@@ -24,42 +24,11 @@ type (
 		Kind() Kind
 		// Name returns the type name.
 		Name() string
-		// IsPrimitive returns true if the underlying type is one of the primitive types.
-		IsPrimitive() bool
-		// IsArray returns true if the underlying type is an array, a user type which is an
-		// array or a media type whose type is an array.
-		IsArray() bool
-		// IsMap returns true if the underlying type is a hash map, a user type which is a
-		// hash map or a media type whose type is a hash map.
-		IsMap() bool
-		// IsObject returns true if the underlying type is an object, a user type which is
-		// an object or a media type whose type is an object.
-		IsObject() bool
-		// ToObject returns the underlying object if any (i.e. if IsObject returns true),
-		// nil otherwise.
-		ToObject() Object
-		// ToArray returns the underlying array if any (i.e. if IsArray returns true), nil
-		// otherwise.
-		ToArray() *Array
-		// ToMap returns the underlying map if any (i.e. if IsMap returns true), nil
-		// otherwise.
-		ToMap() *Map
 		// IsCompatible checks whether val has a Go type that is compatible with the data
 		// type.
-		IsCompatible(val interface{}) bool
-	}
-
-	// DataStructure is the interface implemented by all data structure types.
-	// That is field expressions, user types and media types.
-	DataStructure interface {
-		// Expr returns the data structure expression.
-		Expr() *AttributeExpr
-		// Walk traverses the data structure recursively and calls the given function once
-		// on each field starting with the field returned by Expr.
-		// User type and media type fields are traversed once even for recursive
-		// expressions to avoid infinite recursion.
-		// Walk stops and returns the error if the function returns a non-nil error.
-		Walk(func(*AttributeExpr) error) error
+		IsCompatible(interface{}) bool
+		// Example generates a pseudo-random value using the given random generator.
+		Example(*Random) interface{}
 	}
 
 	// Primitive is the type for null, boolean, integer, number, string, and time.
@@ -85,6 +54,16 @@ type (
 		*AttributeExpr
 		// Name of type
 		TypeName string
+	}
+
+	// UserType is the interface implemented by all user type implementations.
+	// DSLs may leverage this interface to introduce their own types.
+	UserType interface {
+		DataType
+		// Attribute provides the underlying type and validations.
+		Attribute() *AttributeExpr
+		// Dup makes a deep copy of the type given a deep copy of its attribute.
+		Dup(att *AttributeExpr) UserType
 	}
 
 	// ArrayVal is the type used to set the default value for arrays.
@@ -171,27 +150,6 @@ func (p Primitive) Name() string {
 	}
 }
 
-// IsPrimitive returns true.
-func (p Primitive) IsPrimitive() bool { return true }
-
-// IsObject returns false.
-func (p Primitive) IsObject() bool { return false }
-
-// IsArray returns false.
-func (p Primitive) IsArray() bool { return false }
-
-// IsMap returns false.
-func (p Primitive) IsMap() bool { return false }
-
-// ToObject returns nil.
-func (p Primitive) ToObject() Object { return nil }
-
-// ToArray returns nil.
-func (p Primitive) ToArray() *Array { return nil }
-
-// ToMap returns nil.
-func (p Primitive) ToMap() *Map { return nil }
-
 // IsCompatible returns true if val is compatible with p.
 func (p Primitive) IsCompatible(val interface{}) bool {
 	if p == Any {
@@ -210,10 +168,8 @@ func (p Primitive) IsCompatible(val interface{}) bool {
 	return false
 }
 
-var anyPrimitive = []Primitive{Boolean, Int32, Int64, Float32, Float64, String}
-
-// GenerateExample returns an instance of the given data type.
-func (p Primitive) GenerateExample(r *RandomGenerator, seen []string) interface{} {
+// Example generates a pseudo-random primitive value using the given random generator.
+func (p Primitive) Example(r *Random) interface{} {
 	switch p {
 	case Boolean:
 		return r.Bool()
@@ -225,11 +181,8 @@ func (p Primitive) GenerateExample(r *RandomGenerator, seen []string) interface{
 		return r.Float32()
 	case Float64:
 		return r.Float64()
-	case String:
+	case String, Any:
 		return r.String()
-	case Any:
-		// to not make it too complicated, pick one of the primitive types
-		return anyPrimitive[r.Int()%len(anyPrimitive)].GenerateExample(r, seen)
 	default:
 		panic("unknown primitive type") // bug
 	}
@@ -242,27 +195,6 @@ func (a *Array) Kind() Kind { return ArrayKind }
 func (a *Array) Name() string {
 	return "array"
 }
-
-// IsPrimitive returns false.
-func (a *Array) IsPrimitive() bool { return false }
-
-// IsObject returns false.
-func (a *Array) IsObject() bool { return false }
-
-// IsArray returns true.
-func (a *Array) IsArray() bool { return true }
-
-// IsMap returns false.
-func (a *Array) IsMap() bool { return false }
-
-// ToObject returns nil.
-func (a *Array) ToObject() Object { return nil }
-
-// ToArray returns a.
-func (a *Array) ToArray() *Array { return a }
-
-// ToMap returns nil.
-func (a *Array) ToMap() *Map { return nil }
 
 // IsCompatible returns true if val is compatible with p.
 func (a *Array) IsCompatible(val interface{}) bool {
@@ -280,18 +212,18 @@ func (a *Array) IsCompatible(val interface{}) bool {
 	return true
 }
 
-// GenerateExample produces a random array value.
-func (a *Array) GenerateExample(r *RandomGenerator, seen []string) interface{} {
+// Example generates a pseudo-random array value using the given random generator.
+func (a *Array) Example(r *Random) interface{} {
 	count := r.Int()%3 + 1
 	res := make([]interface{}, count)
 	for i := 0; i < count; i++ {
-		res[i] = a.ElemType.Type.GenerateExample(r, seen)
+		res[i] = a.ElemType.Example(r)
 	}
 	return a.MakeSlice(res)
 }
 
 // MakeSlice examines the key type from the Array and create a slice with builtin type if possible.
-// The idea is to avoid generating []interface{} and produce more known types.
+// The idea is to avoid generating []interface{} and produce more precise types.
 func (a *Array) MakeSlice(s []interface{}) interface{} {
 	slice := reflect.MakeSlice(toReflectType(a), 0, len(s))
 	for _, item := range s {
@@ -322,27 +254,6 @@ func (o Object) Kind() Kind { return ObjectKind }
 // Name returns the type name.
 func (o Object) Name() string { return "object" }
 
-// IsPrimitive returns false.
-func (o Object) IsPrimitive() bool { return false }
-
-// IsObject returns true.
-func (o Object) IsObject() bool { return true }
-
-// IsArray returns false.
-func (o Object) IsArray() bool { return false }
-
-// IsMap returns false.
-func (o Object) IsMap() bool { return false }
-
-// ToObject returns the underlying object.
-func (o Object) ToObject() Object { return o }
-
-// ToArray returns nil.
-func (o Object) ToArray() *Array { return nil }
-
-// ToMap returns nil.
-func (o Object) ToMap() *Map { return nil }
-
 // Merge copies other's fields into o overridding any pre-existing field with the same name.
 func (o Object) Merge(other Object) {
 	for n, att := range other {
@@ -356,60 +267,42 @@ func (o Object) IsCompatible(val interface{}) bool {
 	return k == reflect.Map || k == reflect.Struct
 }
 
-// GenerateExample returns a random value of the object.
-func (o Object) GenerateExample(r *RandomGenerator, seen []string) interface{} {
+// Example returns a random value of the object.
+func (o Object) Example(r *Random) interface{} {
 	// ensure fixed ordering
-	keys := make([]string, 0, len(o))
+	keys := make([]string, len(o))
+	i := 0
 	for n := range o {
-		keys = append(keys, n)
+		keys[i] = n
+		i++
 	}
 	sort.Strings(keys)
 
 	res := make(map[string]interface{})
 	for _, n := range keys {
-		att := o[n]
-		res[n] = att.Type.GenerateExample(r, seen)
+		if v := o[n].Example(r); v != nil {
+			res[n] = v
+		}
 	}
 	return res
 }
 
 // Kind implements DataKind.
-func (h *Map) Kind() Kind { return MapKind }
+func (m *Map) Kind() Kind { return MapKind }
 
 // Name returns the type name.
-func (h *Map) Name() string { return "hash" }
-
-// IsPrimitive returns false.
-func (h *Map) IsPrimitive() bool { return false }
-
-// IsObject returns false.
-func (h *Map) IsObject() bool { return false }
-
-// IsArray returns false.
-func (h *Map) IsArray() bool { return false }
-
-// IsMap returns true.
-func (h *Map) IsMap() bool { return true }
-
-// ToObject returns nil.
-func (h *Map) ToObject() Object { return nil }
-
-// ToArray returns nil.
-func (h *Map) ToArray() *Array { return nil }
-
-// ToMap returns the underlying hash map.
-func (h *Map) ToMap() *Map { return h }
+func (m *Map) Name() string { return "hash" }
 
 // IsCompatible returns true if o describes the (Go) type of val.
-func (h *Map) IsCompatible(val interface{}) bool {
+func (m *Map) IsCompatible(val interface{}) bool {
 	k := reflect.TypeOf(val).Kind()
 	if k != reflect.Map {
 		return false
 	}
 	v := reflect.ValueOf(val)
 	for _, key := range v.MapKeys() {
-		keyCompat := h.KeyType.Type == nil || h.KeyType.Type.IsCompatible(key.Interface())
-		elemCompat := h.ElemType.Type == nil || h.ElemType.Type.IsCompatible(v.MapIndex(key).Interface())
+		keyCompat := m.KeyType.Type == nil || m.KeyType.Type.IsCompatible(key.Interface())
+		elemCompat := m.ElemType.Type == nil || m.ElemType.Type.IsCompatible(v.MapIndex(key).Interface())
 		if !keyCompat || !elemCompat {
 			return false
 		}
@@ -417,30 +310,35 @@ func (h *Map) IsCompatible(val interface{}) bool {
 	return true
 }
 
-// GenerateExample returns a random hash value.
-func (h *Map) GenerateExample(r *RandomGenerator, seen []string) interface{} {
+// Example returns a random hash value.
+func (m *Map) Example(r *Random) interface{} {
 	count := r.Int()%3 + 1
 	pair := map[interface{}]interface{}{}
 	for i := 0; i < count; i++ {
-		pair[h.KeyType.Type.GenerateExample(r, seen)] = h.ElemType.Type.GenerateExample(r, seen)
+		k := m.KeyType.Example(r)
+		v := m.ElemType.Example(r)
+		if k != nil && v != nil {
+			pair[k] = v
+		}
 	}
-	return h.MakeMap(pair)
+	return m.MakeMap(pair)
 }
 
 // MakeMap examines the key type from a Map and create a map with builtin type if possible.
-// The idea is to avoid generating map[interface{}]interface{}, which cannot be handled by json.Marshal.
-func (h *Map) MakeMap(m map[interface{}]interface{}) interface{} {
-	hash := reflect.MakeMap(toReflectType(h))
-	for key, value := range m {
-		hash.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
+// The idea is to avoid generating map[interface{}]interface{}, which cannot be handled by
+// json.Marshal.
+func (m *Map) MakeMap(raw map[interface{}]interface{}) interface{} {
+	ma := reflect.MakeMap(toReflectType(m))
+	for key, value := range raw {
+		ma.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
 	}
-	return hash.Interface()
+	return ma.Interface()
 }
 
 // ToMap converts a MapVal to a map.
-func (h MapVal) ToMap() map[interface{}]interface{} {
-	mp := make(map[interface{}]interface{}, len(h))
-	for k, v := range h {
+func (m MapVal) ToMap() map[interface{}]interface{} {
+	mp := make(map[interface{}]interface{}, len(m))
+	for k, v := range m {
 		switch actual := v.(type) {
 		case ArrayVal:
 			mp[k] = actual.ToSlice()
@@ -493,17 +391,17 @@ func toReflectType(dtype DataType) reflect.Type {
 	case ObjectKind, UserTypeKind, MediaTypeKind:
 		return reflect.TypeOf(map[string]interface{}{})
 	case ArrayKind:
-		return reflect.SliceOf(toReflectType(dtype.ToArray().ElemType.Type))
+		return reflect.SliceOf(toReflectType(dtype.(*Array).ElemType.Type))
 	case MapKind:
-		hash := dtype.ToMap()
-		// avoid complication: not allow object as the hash key
+		m := dtype.(*Map)
+		// avoid complication: not allow object as the map key
 		var ktype reflect.Type
-		if !hash.KeyType.Type.IsObject() {
-			ktype = toReflectType(hash.KeyType.Type)
+		if m.KeyType.Type.Kind() != ObjectKind {
+			ktype = toReflectType(m.KeyType.Type)
 		} else {
 			ktype = reflect.TypeOf([]interface{}{}).Elem()
 		}
-		return reflect.MapOf(ktype, toReflectType(hash.ElemType.Type))
+		return reflect.MapOf(ktype, toReflectType(m.ElemType.Type))
 	default:
 		return reflect.TypeOf([]interface{}{}).Elem()
 	}

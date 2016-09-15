@@ -129,11 +129,11 @@ func (g *Generator) generateContexts() error {
 		return r.IterateActions(func(a *design.ActionDefinition) error {
 			ctxName := codegen.Goify(a.Name, true) + codegen.Goify(a.Parent.Name, true) + "Context"
 			headers := r.Headers.Merge(a.Headers)
-			if headers != nil && len(headers.Type.ToObject()) == 0 {
+			if headers != nil && len(headers.Type.(Object)) == 0 {
 				headers = nil // So that {{if .Headers}} returns false in templates
 			}
 			params := a.AllParams()
-			if params != nil && len(params.Type.ToObject()) == 0 {
+			if params != nil && len(params.Type.(Object)) == 0 {
 				params = nil // So that {{if .Params}} returns false in templates
 			}
 

@@ -1,8 +1,9 @@
 package dsl
 
 import (
-	apidsl "github.com/goadesign/goa/design/dsl"
-	"github.com/goadesign/http/design"
+	"github.com/goadesign/goa/design/dsl"
+	"github.com/goadesign/goa/eval"
+	"github.com/goadesign/goa/http/design"
 )
 
 // Description sets the expression description.
@@ -17,6 +18,6 @@ func Description(d string) {
 	case *design.FileServerExpr:
 		expr.Description = d
 	default:
-		apidsl.Description(d)
+		dsl.Description(d)
 	}
 }

@@ -1,4 +1,4 @@
-package dslexec
+package eval
 
 import (
 	"fmt"

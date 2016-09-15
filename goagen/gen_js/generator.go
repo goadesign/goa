@@ -180,7 +180,7 @@ func (g *Generator) generateIndexHTML(htmlFile string, exampleAction *design.Act
 	argNames := params(exampleAction)
 	var args string
 	if len(argNames) > 0 {
-		query := exampleAction.QueryParams.Type.ToObject()
+		query := exampleAction.QueryParams.Type.(Object)
 		argValues := make([]string, len(argNames))
 		for i, n := range argNames {
 			ex := query[n].GenerateExample(g.API.RandomGenerator(), nil)
@@ -191,7 +191,7 @@ func (g *Generator) generateIndexHTML(htmlFile string, exampleAction *design.Act
 	examplePath := exampleAction.Routes[0].FullPath()
 	pathParams := exampleAction.Routes[0].Params()
 	if len(pathParams) > 0 {
-		pathVars := exampleAction.AllParams().Type.ToObject()
+		pathVars := exampleAction.AllParams().Type.(Object)
 		pathValues := make([]interface{}, len(pathParams))
 		for i, n := range pathParams {
 			ex := pathVars[n].GenerateExample(g.API.RandomGenerator(), nil)
@@ -264,9 +264,9 @@ func params(action *design.ActionDefinition) []string {
 	if action.QueryParams == nil {
 		return nil
 	}
-	params := make([]string, len(action.QueryParams.Type.ToObject()))
+	params := make([]string, len(action.QueryParams.Type.(Object)))
 	i := 0
-	for n := range action.QueryParams.Type.ToObject() {
+	for n := range action.QueryParams.Type.(Object) {
 		params[i] = n
 		i++
 	}

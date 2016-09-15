@@ -148,9 +148,9 @@ func (c *ContextTemplateData) HasParamAndHeader(name string) bool {
 		return false
 	}
 
-	headerAtt := c.Headers.Type.ToObject()[name]
+	headerAtt := c.Headers.Type.(Object)[name]
 	headerName := codegen.GoifyAtt(headerAtt, name, true)
-	for paramName, paramAtt := range c.Params.Type.ToObject() {
+	for paramName, paramAtt := range c.Params.Type.(Object) {
 		paramName = codegen.GoifyAtt(paramAtt, paramName, true)
 		if headerName == paramName {
 			return true
@@ -430,9 +430,9 @@ type {{ .Name }} struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
-{{ if .Headers }}{{ range $name, $att := .Headers.Type.ToObject }}{{ if not ($.HasParamAndHeader $name) }}{{/*
+{{ if .Headers }}{{ range $name, $att := ToObject(.Headers.Type) }}{{ if not ($.HasParamAndHeader $name) }}{{/*
 */}}	{{ goifyatt $att $name true }} {{ if and $att.Type.IsPrimitive ($.Headers.IsPrimitivePointer $name) }}*{{ end }}{{ gotyperef .Type nil 0 false }}
-{{ end }}{{ end }}{{ end }}{{ if .Params }}{{ range $name, $att := .Params.Type.ToObject }}{{/*
+{{ end }}{{ end }}{{ end }}{{ if .Params }}{{ range $name, $att := ToObject(.Params.Type) }}{{/*
 */}}	{{ goifyatt $att $name true }} {{ if and $att.Type.IsPrimitive ($.Params.IsPrimitivePointer $name) }}*{{ end }}{{ gotyperef .Type nil 0 false }}
 {{ end }}{{ end }}{{ if .Payload }}	Payload {{ gotyperef .Payload nil 0 false }}
 {{ end }}}
@@ -516,7 +516,7 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 	req := goa.ContextRequest(ctx)
 	rctx := {{ .Name }}{Context: ctx, ResponseData: resp, RequestData: req}{{/*
 */}}
-{{ if .Headers }}{{ range $name, $att := .Headers.Type.ToObject }}	header{{ goify $name true }} := req.Header["{{ canonicalHeaderKey $name }}"]
+{{ if .Headers }}{{ range $name, $att := ToObject(.Headers.Type) }}	header{{ goify $name true }} := req.Header["{{ canonicalHeaderKey $name }}"]
 {{ $mustValidate := $.Headers.IsRequired $name }}{{ if $mustValidate }}	if len(header{{ goify $name true }}) == 0 {
 		err = goa.MergeErrors(err, goa.MissingHeaderError("{{ $name }}"))
 	} else {
@@ -536,7 +536,7 @@ func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, er
 {{ end }}	}
 {{ end }}{{ end }}{{/* if .Headers }}{{/*
 
-*/}}{{ if.Params }}{{ range $name, $att := .Params.Type.ToObject }}	param{{ goify $name true }} := req.Params["{{ $name }}"]
+*/}}{{ if.Params }}{{ range $name, $att := ToObject(.Params.Type) }}	param{{ goify $name true }} := req.Params["{{ $name }}"]
 {{ $mustValidate := $.MustValidate $name }}{{ if $mustValidate }}	if len(param{{ goify $name true }}) == 0 {
 		err = goa.MergeErrors(err, goa.MissingParamError("{{ $name }}"))
 	} else {

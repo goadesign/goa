@@ -79,7 +79,7 @@ func (g *Generator) generateResourceTest() error {
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport(appPkg),
 		codegen.SimpleImport("github.com/goadesign/goa"),
-		codegen.SimpleImport("github.com/goadesign/goa/goatest"),
+		codegen.SimpleImport("github.com/goadesign/goa/testing"),
 		codegen.SimpleImport("golang.org/x/net/context"),
 	}
 
@@ -221,7 +221,7 @@ func pathParams(action *design.ActionDefinition, route *design.RouteDefinition) 
 func queryParams(action *design.ActionDefinition) []*ObjectType {
 	var qparams []string
 	if qps := action.QueryParams; qps != nil {
-		for pname := range qps.Type.ToObject() {
+		for pname := range qps.Type.(Object) {
 			qparams = append(qparams, pname)
 		}
 	}
@@ -231,7 +231,7 @@ func queryParams(action *design.ActionDefinition) []*ObjectType {
 
 func paramFromNames(action *design.ActionDefinition, names []string) (params []*ObjectType) {
 	for _, paramName := range names {
-		for name, att := range action.Params.Type.ToObject() {
+		for name, att := range action.Params.Type.(Object) {
 			if name == paramName {
 				param := &ObjectType{}
 				param.Label = name
@@ -277,7 +277,7 @@ var testTmpl = `{{ define "convertParam" }}` + convertParamTmpl + `{{ end }}` + 
 // {{ $test.Name }} {{ $test.Comment }}
 // If ctx is nil then context.Background() is used.
 // If service is nil then a default service is created.
-func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Service, ctrl {{ $test.ControllerName}}{{/*
+func {{ $test.Name }}(t testing.TInterface, ctx context.Context, service *goa.Service, ctrl {{ $test.ControllerName}}{{/*
 */}}{{ range $param := $test.Params }}, {{ $param.Name }} {{ $param.Pointer }}{{ $param.Type }}{{ end }}{{/*
 */}}{{ range $param := $test.QueryParams }}, {{ $param.Name }} {{ $param.Pointer }}{{ $param.Type }}{{ end }}{{/*
 */}}{{ if $test.Payload }}, {{ $test.Payload.Name }} {{ $test.Payload.Pointer }}{{ $test.Payload.Type }}{{ end }}){{/*
@@ -287,10 +287,10 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 		logBuf bytes.Buffer
 		resp   interface{}
 
-		respSetter goatest.ResponseSetterFunc = func(r interface{}) { resp = r }
+		respSetter testing.ResponseSetterFunc = func(r interface{}) { resp = r }
 	)
 	if service == nil {
-		service = goatest.Service(&logBuf, respSetter)
+		service = testing.Service(&logBuf, respSetter)
 	} else {
 		logger := log.New(&logBuf, "", log.Ltime)
 		service.WithLogger(goa.NewLogger(logger))

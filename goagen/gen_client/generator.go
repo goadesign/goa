@@ -412,7 +412,7 @@ func (g *Generator) generateActionClient(action *design.ActionDefinition, file *
 		if att == nil {
 			return nil
 		}
-		obj := att.Type.ToObject()
+		obj := att.Type.(Object)
 		var pdata []*paramData
 		var optData []*paramData
 		for n, q := range obj {
@@ -611,7 +611,7 @@ func join(att *design.AttributeDefinition, usePointers bool, pos ...[]string) st
 	if att == nil {
 		return ""
 	}
-	obj := att.Type.ToObject()
+	obj := att.Type.(Object)
 	elems := make([]string, len(obj))
 	var keys []string
 	if len(pos) > 0 {
@@ -789,7 +789,7 @@ func pathParams(r *design.RouteDefinition) string {
 	pnames := r.Params()
 	params := make(design.Object, len(pnames))
 	for _, p := range pnames {
-		params[p] = r.Parent.Params.Type.ToObject()[p]
+		params[p] = r.Parent.Params.Type.(Object)[p]
 	}
 	return join(&design.AttributeDefinition{Type: params}, false, pnames)
 }

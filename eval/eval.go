@@ -53,7 +53,7 @@ func RunDSL() error {
 
 // runSet executes the DSL for all expressions in the given set. The expression DSLs may append to
 // the set as they execute.
-func runSet(set ExprSet) error {
+func runSet(set ExpressionSet) error {
 	executed := 0
 	recursed := 0
 	for executed < len(set) {
@@ -72,7 +72,7 @@ func runSet(set ExprSet) error {
 }
 
 // validateSet runs the validation on all the set expressions that define one.
-func validateSet(set ExprSet) error {
+func validateSet(set ExpressionSet) error {
 	errors := &ValidationErrors{}
 	for _, def := range set {
 		if validate, ok := def.(Validator); ok {
@@ -88,7 +88,7 @@ func validateSet(set ExprSet) error {
 }
 
 // finalizeSet runs the validation on all the set expressions that define one.
-func finalizeSet(set ExprSet) error {
+func finalizeSet(set ExpressionSet) error {
 	for _, def := range set {
 		if f, ok := def.(Finalizer); ok {
 			f.Finalize()
@@ -103,7 +103,7 @@ func finalizeSet(set ExprSet) error {
 // This function is intended for use by expressions that run the DSL at declaration time rather than
 // store the DSL for execution by the dsl engine (usually simple independent expressions).
 // The DSL should use ReportError to record DSL execution errors.
-func Execute(dsl func(), def Expr) bool {
+func Execute(dsl func(), def Expression) bool {
 	if dsl == nil {
 		return true
 	}
@@ -116,7 +116,7 @@ func Execute(dsl func(), def Expr) bool {
 
 // Current returns the expression whose DSL is currently being executed.
 // As a special case Current returns Top when the execution stack is empty.
-func Current() Expr {
+func Current() Expression {
 	current := Context.Stack.Current()
 	if current == nil {
 		return Top
@@ -129,7 +129,7 @@ func Current() Expr {
 func ReportError(fm string, vals ...interface{}) {
 	var suffix string
 	if cur := Context.Stack.Current(); cur != nil {
-		if name := cur.Name(); name != "" {
+		if name := cur.EvalName(); name != "" {
 			suffix = fmt.Sprintf(" in %s", name)
 		}
 	} else {
@@ -159,15 +159,15 @@ func InvalidArgError(expected string, actual interface{}) {
 
 // ValidationErrors records the errors encountered when running Validate.
 type ValidationErrors struct {
-	Errors []error
-	Exprs  []Expr
+	Errors      []error
+	Expressions []Expression
 }
 
 // Error implements the error interface.
 func (verr *ValidationErrors) Error() string {
 	msg := make([]string, len(verr.Errors))
 	for i, err := range verr.Errors {
-		msg[i] = fmt.Sprintf("%s: %s", verr.Exprs[i].Name(), err)
+		msg[i] = fmt.Sprintf("%s: %s", verr.Expressions[i].EvalName(), err)
 	}
 	return strings.Join(msg, "\n")
 }
@@ -178,25 +178,25 @@ func (verr *ValidationErrors) Merge(err *ValidationErrors) {
 		return
 	}
 	verr.Errors = append(verr.Errors, err.Errors...)
-	verr.Exprs = append(verr.Exprs, err.Exprs...)
+	verr.Expressions = append(verr.Expressions, err.Expressions...)
 }
 
 // Add adds a validation error to the target.
-func (verr *ValidationErrors) Add(def Expr, format string, vals ...interface{}) {
+func (verr *ValidationErrors) Add(def Expression, format string, vals ...interface{}) {
 	verr.AddError(def, fmt.Errorf(format, vals...))
 }
 
 // AddError adds a validation error to the target.
 // AddError "flattens" validation errors so that the recorded errors are never ValidationErrors
 // themselves.
-func (verr *ValidationErrors) AddError(def Expr, err error) {
+func (verr *ValidationErrors) AddError(def Expression, err error) {
 	if v, ok := err.(*ValidationErrors); ok {
 		verr.Errors = append(verr.Errors, v.Errors...)
-		verr.Exprs = append(verr.Exprs, v.Exprs...)
+		verr.Expressions = append(verr.Expressions, v.Expressions...)
 		return
 	}
 	verr.Errors = append(verr.Errors, err)
-	verr.Exprs = append(verr.Exprs, def)
+	verr.Expressions = append(verr.Expressions, def)
 }
 
 // caller returns the name of calling function.

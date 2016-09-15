@@ -11,37 +11,23 @@ func NewUserTypeExpr(name string, dsl func()) *UserTypeExpr {
 // Kind implements DataKind.
 func (u *UserTypeExpr) Kind() Kind { return UserTypeKind }
 
-// Name returns the JSON type name.
-func (u *UserTypeExpr) Name() string { return u.Type.Name() }
-
-// IsPrimitive calls IsPrimitive on the user type underlying data type.
-func (u *UserTypeExpr) IsPrimitive() bool { return u.Type.IsPrimitive() }
-
-// IsObject calls IsObject on the user type underlying data type.
-func (u *UserTypeExpr) IsObject() bool { return u.Type.IsObject() }
-
-// IsArray calls IsArray on the user type underlying data type.
-func (u *UserTypeExpr) IsArray() bool { return u.Type.IsArray() }
-
-// IsMap calls IsMap on the user type underlying data type.
-func (u *UserTypeExpr) IsMap() bool { return u.Type.IsMap() }
-
-// ToObject calls ToObject on the user type underlying data type.
-func (u *UserTypeExpr) ToObject() Object { return u.Type.ToObject() }
-
-// ToArray calls ToArray on the user type underlying data type.
-func (u *UserTypeExpr) ToArray() *Array { return u.Type.ToArray() }
-
-// ToMap calls ToMap on the user type underlying data type.
-func (u *UserTypeExpr) ToMap() *Map { return u.Type.ToMap() }
+// Name returns the type name.
+func (u *UserTypeExpr) Name() string { return u.TypeName }
 
 // IsCompatible returns true if u describes the (Go) type of val.
 func (u *UserTypeExpr) IsCompatible(val interface{}) bool {
 	return u.Type == nil || u.Type.IsCompatible(val)
 }
 
-// Walk traverses the data structure recursively and calls the given function once on each field
-// starting with the field returned by u.Expr.
-func (u *UserTypeExpr) Walk(walker func(*AttributeExpr) error) error {
-	return walk(u.AttributeExpr, walker, map[string]bool{u.TypeName: true})
+// Attribute returns the embedded attribute.
+func (u *UserTypeExpr) Attribute() *AttributeExpr {
+	return u.AttributeExpr
+}
+
+// Dup creates a deep copy of the user type given a deep copy of its attribute.
+func (u *UserTypeExpr) Dup(att *AttributeExpr) UserType {
+	return &UserTypeExpr{
+		AttributeExpr: att,
+		TypeName:      u.TypeName,
+	}
 }

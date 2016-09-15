@@ -512,7 +512,7 @@ func paramsFromDefinition(params *design.AttributeDefinition, path string) ([]*P
 	if params == nil {
 		return nil, nil
 	}
-	obj := params.Type.ToObject()
+	obj := params.Type.(Object)
 	if obj == nil {
 		return nil, fmt.Errorf("invalid parameters definition, not an object")
 	}
@@ -654,7 +654,7 @@ func headersFromDefinition(headers *design.AttributeDefinition) (map[string]*Hea
 	if headers == nil {
 		return nil, nil
 	}
-	obj := headers.Type.ToObject()
+	obj := headers.Type.(Object)
 	if obj == nil {
 		return nil, fmt.Errorf("invalid headers definition, not an object")
 	}

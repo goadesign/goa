@@ -249,7 +249,7 @@ func defaultRouteParams(a *design.ActionDefinition) *design.AttributeDefinition 
 	nz := make(map[string]bool, len(params))
 	pparams := a.PathParams()
 	for _, p := range params {
-		o[p] = pparams.Type.ToObject()[p]
+		o[p] = pparams.Type.(Object)[p]
 		nz[p] = true
 	}
 	return &design.AttributeDefinition{Type: o, NonZeroAttributes: nz}
@@ -268,7 +268,7 @@ func joinFieldhNames(atts ...*design.AttributeDefinition) string {
 		if att == nil {
 			continue
 		}
-		obj := att.Type.ToObject()
+		obj := att.Type.(Object)
 		var names, optNames []string
 
 		keys := make([]string, len(obj))
@@ -301,7 +301,7 @@ func joinNames(useNil bool, atts ...*design.AttributeDefinition) string {
 		if att == nil {
 			continue
 		}
-		obj := att.Type.ToObject()
+		obj := att.Type.(Object)
 		var names, optNames []string
 
 		keys := make([]string, len(obj))
@@ -409,7 +409,7 @@ func handleSpecialTypes(atts ...*design.AttributeDefinition) specialTypeResult {
 		if att == nil {
 			continue
 		}
-		obj := att.Type.ToObject()
+		obj := att.Type.(Object)
 		var names, optNames []string
 
 		keys := make([]string, len(obj))
@@ -675,11 +675,11 @@ const commandTypesTmpl = `{{ $cmdName := goify (printf "%s%s%s" .Name (title .Pa
 	{{ $cmdName }} struct {
 {{ if .Payload }}		Payload string
 		ContentType string
-{{ end }}{{ $params := defaultRouteParams . }}{{ if $params }}{{ range $name, $att := $params.Type.ToObject }}{{ if $att.Description }}		{{ multiComment $att.Description }}
+{{ end }}{{ $params := defaultRouteParams . }}{{ if $params }}{{ range $name, $att := ToObject($params.Type) }}{{ if $att.Description }}		{{ multiComment $att.Description }}
 {{ end }}		{{ goify $name true }} {{ cmdFieldType $att.Type false }}
-{{ end }}{{ end }}{{ $params := .QueryParams }}{{ if $params }}{{ range $name, $att := $params.Type.ToObject }}{{ if $att.Description }}		{{ multiComment $att.Description }}
+{{ end }}{{ end }}{{ $params := .QueryParams }}{{ if $params }}{{ range $name, $att := ToObject($params.Type) }}{{ if $att.Description }}		{{ multiComment $att.Description }}
 {{ end }}		{{ goify $name true }} {{ cmdFieldType $att.Type false}}
-{{ end }}{{ end }}{{ $headers := .Headers }}{{ if $headers }}{{ range $name, $att := $headers.Type.ToObject }}{{ if $att.Description }}		{{ multiComment $att.Description }}
+{{ end }}{{ end }}{{ $headers := .Headers }}{{ if $headers }}{{ range $name, $att := ToObject($headers.Type) }}{{ if $att.Description }}		{{ multiComment $att.Description }}
 {{ end }}		{{ goify $name true }} {{ cmdFieldType $att.Type false}}
 {{ end }}{{ end }}		PrettyPrint bool
 	}
@@ -772,15 +772,16 @@ const registerTmpl = `{{ $cmdName := goify (printf "%s%sCommand" .Action.Name (t
 func (cmd *{{ $cmdName }}) RegisterFlags(cc *cobra.Command, c *{{ .Package }}.Client) {
 {{ if .Action.Payload }}	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
 	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
-{{ end }}{{ $pparams := defaultRouteParams .Action }}{{ if $pparams }}{{ range $pname, $pparam := $pparams.Type.ToObject }}{{ $tmp := goify $pname false }}{{/*
+{{ end }}{{ $pparams := defaultRouteParams .Action }}{{ if $pparams }}{{ range $pname, $pparam := ToObject($pparams.Type) }}{{ $tmp := goify $pname false }}{{/*
 */}}{{ if not $pparam.DefaultValue }}	var {{ $tmp }} {{ cmdFieldType $pparam.Type false }}
 {{ end }}	cc.Flags().{{ flagType $pparam }}Var(&cmd.{{ goify $pname true }}, "{{ $pname }}", {{/*
 */}}{{ if $pparam.DefaultValue }}{{ printf "%#v" $pparam.DefaultValue }}{{ else }}{{ $tmp }}{{ end }}, ` + "`" + `{{ escapeBackticks $pparam.Description }}` + "`" + `)
-{{ end }}{{ end }}{{ $params := .Action.QueryParams }}{{ if $params }}{{ range $name, $param := $params.Type.ToObject }}{{ $tmp := goify $name false }}{{/*
+{{ end }}{{ end }}{{ $params := .Action.QueryParams }}{{ if $params }}{{ range $name, $param := ToObject($params.Type) }}{{ $tmp := goify $name false }}{{/*
 */}}{{ if not $param.DefaultValue }}	var {{ $tmp }} {{ cmdFieldType $param.Type false }}
 {{ end }}	cc.Flags().{{ flagType $param }}Var(&cmd.{{ goify $name true }}, "{{ $name }}", {{/*
 */}}{{ if $param.DefaultValue }}{{ printf "%#v" $param.DefaultValue }}{{ else }}{{ $tmp }}{{ end }}, ` + "`" + `{{ escapeBackticks $param.Description }}` + "`" + `)
-{{ end }}{{ end }}{{ $headers := .Action.Headers }}{{ if $headers }}{{ range $name, $header := $headers.Type.ToObject }}{{/*
+{{ end }}{{ end }}{{ $headers := .Action.Headers }}{{ if $headers }}{{ range $name, $header := ToObject($headers.Type) }}{{/*
+
 */}} cc.Flags().StringVar(&cmd.{{ goify $name true }}, "{{ $name }}", {{/*
 */}}{{ if $header.DefaultValue }}{{ printf "%q" $header.DefaultValue }}{{ else }}""{{ end }}, ` + "`" + `{{ escapeBackticks $header.Description }}` + "`" + `)
 {{ end }}{{ end }}}`
