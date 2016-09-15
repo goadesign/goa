@@ -107,7 +107,7 @@ func SetGauge(key []string, val float32) {
 // not support * or / in metric names.
 func normalizeKeys(key []string) {
 	for i, k := range key {
-		if ! metricsNameRE.MatchString(k) {
+		if !metricsNameRE.MatchString(k) {
 			// first replace */* with all
 			k = strings.Replace(k, allMatcher, allReplacement, -1)
 
