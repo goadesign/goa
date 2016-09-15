@@ -38,12 +38,12 @@ type Metrics interface {
 
 // used for dealing with race conditions.
 type metricDiscarder struct{}
-func (md *metricDiscarder) SetGauge(key []string, val float32) {}
-func (md *metricDiscarder) EmitKey(key []string, val float32) {}
-func (md *metricDiscarder) IncrCounter(key []string, val float32) {}
-func (md *metricDiscarder) AddSample(key []string, val float32) {}
-func (md *metricDiscarder) MeasureSince(key []string, start time.Time) {}
 
+func (md *metricDiscarder) SetGauge(key []string, val float32)         {}
+func (md *metricDiscarder) EmitKey(key []string, val float32)          {}
+func (md *metricDiscarder) IncrCounter(key []string, val float32)      {}
+func (md *metricDiscarder) AddSample(key []string, val float32)        {}
+func (md *metricDiscarder) MeasureSince(key []string, start time.Time) {}
 
 // NewMetrics initializes goa's metrics instance with the supplied
 // configuration and metrics sink
