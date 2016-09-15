@@ -48,7 +48,8 @@ func init() {
 // public struct
 func RecursivePublicizer(att *design.AttributeDefinition, source, target string, depth int) string {
 	var publications []string
-	if o := att.Type.ToObject(); o != nil {
+	o, ok := att.Type.(design.Object)
+	if ok {
 		if ds, ok := att.Type.(design.DataStructure); ok {
 			att = ds.Definition()
 		}

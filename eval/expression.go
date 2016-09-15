@@ -1,10 +1,10 @@
 package eval
 
 type (
-	// Expr built by the engine through the DSL functions.
-	Expr interface {
-		// Name is the qualified name of the DSL expression e.g. "resource bottle".
-		Name() string
+	// Expression built by the engine through the DSL functions.
+	Expression interface {
+		// EvalName is the qualified name of the DSL expression e.g. "resource bottle".
+		EvalName() string
 	}
 
 	// A Root expression represents an entry point to the executed DSL: upon execution the
@@ -52,7 +52,7 @@ type (
 	// TopExpr is the type of Top.
 	TopExpr string
 
-	// ExprSet is a sequence of expressions processed in order. Each DSL implementation
+	// ExpressionSet is a sequence of expressions processed in order. Each DSL implementation
 	// provides an arbitrary number of expression sets to the engine via iterators (see the
 	// Root interface IterateSets method).
 	//
@@ -60,11 +60,11 @@ type (
 	// enable the corresponding behaviors during DSL execution. The engine first runs the
 	// expression DSLs (for the ones that implement Source) then validates them (for the ones
 	// that implement Validator) and finalizes them (for the ones that implement Finalizer).
-	ExprSet []Expr
+	ExpressionSet []Expression
 
 	// SetIterator is the function signature used to iterate over expression sets with
 	// IterateSets.
-	SetIterator func(s ExprSet) error
+	SetIterator func(s ExpressionSet) error
 )
 
 // Top is the expression returned by Current when the execution stack is empty.
@@ -72,8 +72,8 @@ const Top TopExpr = "top-level"
 
 // DSL returns the DSL function.
 func (f DSLFunc) DSL() func() {
-	return f.(func())
+	return f
 }
 
 // Name of top expression is "top-level" to help with error messages.
-func (t TopExpr) Name() string { return string(t) }
+func (t TopExpr) EvalName() string { return string(t) }

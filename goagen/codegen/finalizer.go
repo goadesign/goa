@@ -36,23 +36,16 @@ func init() {
 // given attribute.
 func RecursiveFinalizer(att *design.AttributeDefinition, target string, depth int, vs ...map[string]bool) string {
 	var assignments []string
-	if o := att.Type.ToObject(); o != nil {
-		if mt, ok := att.Type.(*design.MediaTypeDefinition); ok {
+	o, ok := att.Type.(design.Object)
+	if ok {
+		if ut, ok := att.Type.(design.UserType); ok {
 			if len(vs) == 0 {
 				vs = []map[string]bool{make(map[string]bool)}
-			} else if _, ok := vs[0][mt.TypeName]; ok {
+			} else if _, ok := vs[0][ut.Name()]; ok {
 				return ""
 			}
-			vs[0][mt.TypeName] = true
-			att = mt.AttributeDefinition
-		} else if ut, ok := att.Type.(*design.UserTypeDefinition); ok {
-			if len(vs) == 0 {
-				vs = []map[string]bool{make(map[string]bool)}
-			} else if _, ok := vs[0][ut.TypeName]; ok {
-				return ""
-			}
-			vs[0][ut.TypeName] = true
-			att = ut.AttributeDefinition
+			vs[0][ut.Name()] = true
+			att = ut.Attribute()
 		}
 		o.IterateAttributes(func(n string, catt *design.AttributeDefinition) error {
 			if att.HasDefaultValue(n) {

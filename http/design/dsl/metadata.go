@@ -1,6 +1,7 @@
 package dsl
 
-import "github.com/goadesign/rest/design"
+import "github.com/goadesign/goa/http/design"
+import "github.com/goadesign/goa/design/dsl"
 
 // Metadata is a set of key/value pairs that can be assigned to an object. Each value consists of a
 // slice of strings so that multiple invocation of the Metadata function on the same target using
@@ -36,6 +37,11 @@ import "github.com/goadesign/rest/design"
 //
 //        Metadata("swagger:summary", "Short summary of what action does")
 //
+// `swagger:extension:xxx`: defines a swagger extension value.
+// Applicable to all constructs that support Metadata.
+//
+//        Metadata("swagger:extension:x-apis-json", `{"URL": "http://goa.design"}`)
+//
 // The special key names listed above may be used as follows:
 //
 //        var Account = Type("Account", func() {
@@ -46,38 +52,25 @@ import "github.com/goadesign/rest/design"
 //        })
 //
 func Metadata(name string, value ...string) {
+	appendMetadata := func(metadata eval.MetadataExpr, name string, value ...string) eval.MetadataExpr {
+		if metadata == nil {
+			metadata = make(map[string][]string)
+		}
+		metadata[name] = append(metadata[name], value...)
+		return metadata
+	}
 	switch expr := eval.CurrentExpr().(type) {
 	case *design.MediaTypeExpr:
-		if expr.Metadata == nil {
-			expr.Metadata = make(map[string][]string)
-		}
-		expr.Metadata[name] = append(expr.Metadata[name], value...)
-
+		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	case *design.ActionExpr:
-		if expr.Metadata == nil {
-			expr.Metadata = make(map[string][]string)
-		}
-		expr.Metadata[name] = append(expr.Metadata[name], value...)
-
+		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	case *design.FileServerExpr:
-		if expr.Metadata == nil {
-			expr.Metadata = make(map[string][]string)
-		}
-		expr.Metadata[name] = append(expr.Metadata[name], value...)
-
+		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	case *design.ResourceExpr:
-		if expr.Metadata == nil {
-			expr.Metadata = make(map[string][]string)
-		}
-		expr.Metadata[name] = append(expr.Metadata[name], value...)
-
+		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	case *design.ResponseExpr:
-		if expr.Metadata == nil {
-			expr.Metadata = make(map[string][]string)
-		}
-		expr.Metadata[name] = append(expr.Metadata[name], value...)
-
+		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	default:
-		eval.IncompatibleDSL()
+		dsl.Metadata(name, value...)
 	}
 }

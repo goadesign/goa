@@ -71,6 +71,9 @@ var (
 		"tabs":                Tabs,
 		"tempvar":             Tempvar,
 		"title":               strings.Title,
+		"toArray":             ToArray,
+		"toMap":               ToMap,
+		"toObject":            ToObject,
 		"toLower":             strings.ToLower,
 		"validationChecker":   ValidationChecker,
 	}

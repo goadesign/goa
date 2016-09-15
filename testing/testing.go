@@ -1,4 +1,4 @@
-package goatest
+package testing
 
 import (
 	"bytes"

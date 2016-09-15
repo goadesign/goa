@@ -39,6 +39,11 @@ import (
 //
 //        Metadata("swagger:summary", "Short summary of what action does")
 //
+// `swagger:extension:xxx`: defines a swagger extension value.
+// Applicable to all constructs that support Metadata.
+//
+//        Metadata("swagger:extension:x-apis-json", `{"URL": "http://goa.design"}`)
+//
 // The special key names listed above may be used as follows:
 //
 //        var Account = Type("Account", func() {
@@ -49,25 +54,21 @@ import (
 //        })
 //
 func Metadata(name string, value ...string) {
-	switch expr := eval.CurrentExpr().(type) {
-	case design.ContainerExpr:
+	appendMetadata := func(metadata design.MetadataExpr, name string, value ...string) design.MetadataExpr {
+		if metadata == nil {
+			metadata = make(map[string][]string)
+		}
+		metadata[name] = append(metadata[name], value...)
+		return metadata
+	}
+	switch expr := eval.Current().(type) {
+	case design.CompositeExpr:
 		att := expr.Attribute()
-		if att.Metadata == nil {
-			att.Metadata = make(map[string][]string)
-		}
-		att.Metadata[name] = append(att.Metadata[name], value...)
+		att.Metadata = appendMetadata(att.Metadata, name, value...)
 	case *design.AttributeExpr:
-		if expr.Metadata == nil {
-			expr.Metadata = make(map[string][]string)
-		}
-		expr.Metadata[name] = append(expr.Metadata[name], value...)
-
-	case *design.ServiceExpr:
-		if expr.Metadata == nil {
-			expr.Metadata = make(map[string][]string)
-		}
-		expr.Metadata[name] = append(expr.Metadata[name], value...)
-
+		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
+	case *design.APIExpr:
+		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	default:
 		eval.IncompatibleDSL()
 	}

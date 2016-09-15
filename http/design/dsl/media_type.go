@@ -308,14 +308,17 @@ func View(name string, apidsl ...func()) {
 
 // buildView builds a view definition given an attribute and a corresponding media type.
 func buildView(name string, mt *design.MediaTypeDefinition, at *design.AttributeDefinition) (*design.ViewDefinition, error) {
-	if at.Type == nil || !at.Type.IsObject() {
+	if at.Type == nil {
 		return nil, fmt.Errorf("invalid view DSL")
 	}
-	o := at.Type.ToObject()
+	o, ok := at.Type.(design.Object)
+	if !ok {
+		return nil, fmt.Errorf("invalid view DSL")
+	}
 	if o != nil {
-		mto := mt.Type.ToObject()
-		if mto == nil {
-			mto = mt.Type.ToArray().ElemType.Type.ToObject()
+		mto, ok := mt.Type.(design.Object)
+		if !ok {
+			mto = mt.Type.(*design.Array).ElemType.Type.(design.Object)
 		}
 		for n, cat := range o {
 			if existing, ok := mto[n]; ok {

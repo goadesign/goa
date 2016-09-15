@@ -187,7 +187,7 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 			// We don't want to keep the path params, these are defined inline in the href
 			for _, r := range a.Routes {
 				for _, p := range r.Params() {
-					delete(params.Type.ToObject(), p)
+					delete(params.Type.(Object), p)
 				}
 			}
 		}
@@ -538,7 +538,7 @@ func buildMediaTypeSchema(api *design.APIDefinition, mt *design.MediaTypeDefinit
 		panic(fmt.Sprintf("failed to project media type %#v: %s", mt.Identifier, err)) // bug
 	}
 	if linksUT != nil {
-		links := linksUT.Type.ToObject()
+		links := linksUT.Type.(Object)
 		lnames := make([]string, len(links))
 		i := 0
 		for n := range links {

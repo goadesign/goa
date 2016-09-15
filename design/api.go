@@ -1,10 +1,12 @@
 package design
 
+import "github.com/goadesign/goa/eval"
+
 type (
 	// APIExpr contains the global properties for a API expression.
 	APIExpr struct {
 		// DSLFunc contains the DSL used to initialize the expression.
-		*eval.DSLFunc
+		eval.DSLFunc
 		// Name of API
 		Name string
 		// Title of API
@@ -24,7 +26,7 @@ type (
 		// Docs points to the API external documentation
 		Docs *DocsExpr
 		// Metadata is a list of key/value pairs
-		Metadata *MetadataExpr
+		Metadata MetadataExpr
 	}
 
 	// ContactExpr contains the API contact information.
@@ -53,3 +55,9 @@ type (
 		URL string `json:"url,omitempty"`
 	}
 )
+
+// EvalName is the qualified name of the expression.
+func (a *APIExpr) EvalName() string     { return "API " + a.Name }
+func (a *ContactExpr) EvalName() string { return "Contact " + a.Name }
+func (l *LicenseExpr) EvalName() string { return "License " + l.Name }
+func (d *DocsExpr) EvalName() string    { return "Documentation " + d.URL }

@@ -1,6 +1,7 @@
 package dsl
 
 import (
+	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/eval"
 )
 
@@ -98,7 +99,7 @@ func Attribute(name string, args ...interface{}) {
 	switch def := eval.Current().(type) {
 	case *design.AttributeExpr:
 		parent = def
-	case design.CompositeExp:
+	case design.CompositeExpr:
 		parent = def.Attribute()
 	default:
 		eval.IncompatibleDSL()
@@ -116,7 +117,7 @@ func Attribute(name string, args ...interface{}) {
 
 		var baseAttr *design.AttributeExpr
 		if parent.Reference != nil {
-			if att, ok := parent.Reference.ToObject()[name]; ok {
+			if att, ok := parent.Reference.(design.Object)[name]; ok {
 				baseAttr = design.DupAtt(att)
 			}
 		}
@@ -158,28 +159,26 @@ func parseAttributeArgs(baseAttr *design.AttributeExpr, args ...interface{}) (de
 	parseDataType := func(expected string, index int) {
 		if name, ok2 := args[index].(string); ok2 {
 			// Lookup type by name
-			if dataType, ok = design.Design.Types[name]; !ok {
-				if dataType = design.Design.MediaTypeWithIdentifier(name); dataType == nil {
-					dslengine.InvalidArgError(expected, args[index])
-				}
+			if dataType = design.Root.UserType(name); dataType == nil {
+				eval.InvalidArgError(expected, args[index])
 			}
 			return
 		}
 		if dataType, ok = args[index].(design.DataType); !ok {
-			dslengine.InvalidArgError(expected, args[index])
+			eval.InvalidArgError(expected, args[index])
 		}
 	}
 	parseDescription := func(expected string, index int) {
 		if description, ok = args[index].(string); !ok {
-			dslengine.InvalidArgError(expected, args[index])
+			eval.InvalidArgError(expected, args[index])
 		}
 	}
 	parseDSL := func(index int, success, failure func()) {
 		if dsl, ok = args[index].(func()); ok {
 			success()
-		} else {
-			failure()
+			return
 		}
+		failure()
 	}
 
 	success := func() {}
@@ -204,9 +203,9 @@ func parseAttributeArgs(baseAttr *design.AttributeExpr, args ...interface{}) (de
 	case 3:
 		parseDataType("type or type name", 0)
 		parseDescription("string", 1)
-		parseDSL(2, success, func() { dslengine.InvalidArgError("func()", args[2]) })
+		parseDSL(2, success, func() { eval.InvalidArgError("func()", args[2]) })
 	default:
-		dslengine.ReportError("too many arguments in call to Attribute")
+		eval.ReportError("too many arguments in call to Attribute")
 	}
 
 	return dataType, description, dsl
