@@ -125,48 +125,102 @@ func Routing(routes ...*design.RouteDefinition) {
 }
 
 // GET creates a route using the GET HTTP method.
-func GET(path string) *design.RouteDefinition {
-	return &design.RouteDefinition{Verb: "GET", Path: path}
+func GET(path string, dsl ...func()) *design.RouteDefinition {
+	route := &design.RouteDefinition{Verb: "GET", Path: path}
+	if len(dsl) != 0 {
+		if !dslengine.Execute(dsl[0], route) {
+			return nil
+		}
+	}
+	return route
 }
 
 // HEAD creates a route using the HEAD HTTP method.
-func HEAD(path string) *design.RouteDefinition {
-	return &design.RouteDefinition{Verb: "HEAD", Path: path}
+func HEAD(path string, dsl ...func()) *design.RouteDefinition {
+	route := &design.RouteDefinition{Verb: "HEAD", Path: path}
+	if len(dsl) != 0 {
+		if !dslengine.Execute(dsl[0], route) {
+			return nil
+		}
+	}
+	return route
 }
 
 // POST creates a route using the POST HTTP method.
-func POST(path string) *design.RouteDefinition {
-	return &design.RouteDefinition{Verb: "POST", Path: path}
+func POST(path string, dsl ...func()) *design.RouteDefinition {
+	route := &design.RouteDefinition{Verb: "POST", Path: path}
+	if len(dsl) != 0 {
+		if !dslengine.Execute(dsl[0], route) {
+			return nil
+		}
+	}
+	return route
 }
 
 // PUT creates a route using the PUT HTTP method.
-func PUT(path string) *design.RouteDefinition {
-	return &design.RouteDefinition{Verb: "PUT", Path: path}
+func PUT(path string, dsl ...func()) *design.RouteDefinition {
+	route := &design.RouteDefinition{Verb: "PUT", Path: path}
+	if len(dsl) != 0 {
+		if !dslengine.Execute(dsl[0], route) {
+			return nil
+		}
+	}
+	return route
 }
 
 // DELETE creates a route using the DELETE HTTP method.
-func DELETE(path string) *design.RouteDefinition {
-	return &design.RouteDefinition{Verb: "DELETE", Path: path}
+func DELETE(path string, dsl ...func()) *design.RouteDefinition {
+	route := &design.RouteDefinition{Verb: "DELETE", Path: path}
+	if len(dsl) != 0 {
+		if !dslengine.Execute(dsl[0], route) {
+			return nil
+		}
+	}
+	return route
 }
 
 // OPTIONS creates a route using the OPTIONS HTTP method.
-func OPTIONS(path string) *design.RouteDefinition {
-	return &design.RouteDefinition{Verb: "OPTIONS", Path: path}
+func OPTIONS(path string, dsl ...func()) *design.RouteDefinition {
+	route := &design.RouteDefinition{Verb: "OPTIONS", Path: path}
+	if len(dsl) != 0 {
+		if !dslengine.Execute(dsl[0], route) {
+			return nil
+		}
+	}
+	return route
 }
 
 // TRACE creates a route using the TRACE HTTP method.
-func TRACE(path string) *design.RouteDefinition {
-	return &design.RouteDefinition{Verb: "TRACE", Path: path}
+func TRACE(path string, dsl ...func()) *design.RouteDefinition {
+	route := &design.RouteDefinition{Verb: "TRACE", Path: path}
+	if len(dsl) != 0 {
+		if !dslengine.Execute(dsl[0], route) {
+			return nil
+		}
+	}
+	return route
 }
 
 // CONNECT creates a route using the CONNECT HTTP method.
-func CONNECT(path string) *design.RouteDefinition {
-	return &design.RouteDefinition{Verb: "CONNECT", Path: path}
+func CONNECT(path string, dsl ...func()) *design.RouteDefinition {
+	route := &design.RouteDefinition{Verb: "CONNECT", Path: path}
+	if len(dsl) != 0 {
+		if !dslengine.Execute(dsl[0], route) {
+			return nil
+		}
+	}
+	return route
 }
 
 // PATCH creates a route using the PATCH HTTP method.
-func PATCH(path string) *design.RouteDefinition {
-	return &design.RouteDefinition{Verb: "PATCH", Path: path}
+func PATCH(path string, dsl ...func()) *design.RouteDefinition {
+	route := &design.RouteDefinition{Verb: "PATCH", Path: path}
+	if len(dsl) != 0 {
+		if !dslengine.Execute(dsl[0], route) {
+			return nil
+		}
+	}
+	return route
 }
 
 // Headers implements the DSL for describing HTTP headers. The DSL syntax is identical to the one

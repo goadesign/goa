@@ -3,6 +3,8 @@ package design
 import (
 	"fmt"
 	"net/url"
+
+	"github.com/goadesign/goa/dslengine"
 )
 
 // SecuritySchemeKind is a type of security scheme, according to the
@@ -67,6 +69,8 @@ type SecuritySchemeDefinition struct {
 	TokenURL string `json:"token_url,omitempty"`
 	// AuthorizationURL holds URL for retrieving authorization codes with oauth2
 	AuthorizationURL string `json:"authorization_url,omitempty"`
+	// Metadata is a list of key/value pairs
+	Metadata dslengine.MetadataDefinition
 }
 
 // DSL returns the DSL function

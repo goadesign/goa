@@ -304,6 +304,8 @@ type (
 		Path string
 		// Parent is the action this route applies to.
 		Parent *ActionDefinition
+		// Metadata is a list of key/value pairs
+		Metadata dslengine.MetadataDefinition
 	}
 
 	// AttributeDefinition defines a JSON object member with optional description, default
