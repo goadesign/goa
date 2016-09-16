@@ -290,6 +290,7 @@ type (
 		Extensions map[string]string `json:"-"`
 	}
 
+	// These types are used in marshalJSON() to avoid recursive call of json.Marshal().
 	_Info               Info
 	_Path               Path
 	_Operation          Operation
@@ -322,30 +323,37 @@ func marshalJSON(v interface{}, extensions map[string]string) ([]byte, error) {
 	return merged, nil
 }
 
+// MarshalJSON returns the JSON encoding of i.
 func (i Info) MarshalJSON() ([]byte, error) {
 	return marshalJSON(_Info(i), i.Extensions)
 }
 
+// MarshalJSON returns the JSON encoding of p.
 func (p Path) MarshalJSON() ([]byte, error) {
 	return marshalJSON(_Path(p), p.Extensions)
 }
 
+// MarshalJSON returns the JSON encoding of o.
 func (o Operation) MarshalJSON() ([]byte, error) {
 	return marshalJSON(_Operation(o), o.Extensions)
 }
 
+// MarshalJSON returns the JSON encoding of p.
 func (p Parameter) MarshalJSON() ([]byte, error) {
 	return marshalJSON(_Parameter(p), p.Extensions)
 }
 
+// MarshalJSON returns the JSON encoding of r.
 func (r Response) MarshalJSON() ([]byte, error) {
 	return marshalJSON(_Response(r), r.Extensions)
 }
 
+// MarshalJSON returns the JSON encoding of s.
 func (s SecurityDefinition) MarshalJSON() ([]byte, error) {
 	return marshalJSON(_SecurityDefinition(s), s.Extensions)
 }
 
+// MarshalJSON returns the JSON encoding of t.
 func (t Tag) MarshalJSON() ([]byte, error) {
 	return marshalJSON(_Tag(t), t.Extensions)
 }
