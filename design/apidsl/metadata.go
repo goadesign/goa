@@ -98,6 +98,18 @@ func Metadata(name string, value ...string) {
 		}
 		def.Metadata[name] = append(def.Metadata[name], value...)
 
+	case *design.RouteDefinition:
+		if def.Metadata == nil {
+			def.Metadata = make(map[string][]string)
+		}
+		def.Metadata[name] = append(def.Metadata[name], value...)
+
+	case *design.SecurityDefinition:
+		if def.Scheme.Metadata == nil {
+			def.Scheme.Metadata = make(map[string][]string)
+		}
+		def.Scheme.Metadata[name] = append(def.Scheme.Metadata[name], value...)
+
 	default:
 		dslengine.IncompatibleDSL()
 	}
