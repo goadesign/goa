@@ -53,6 +53,18 @@ go get github.com/goadesign/goa
 go get github.com/goadesign/goa/goagen
 ```
 
+### Stable Versions
+
+goa follows [Semantic Versioning](http://semver.org/) which is a fancy way of saying it publishes
+releases with version numbers of the form `vX.Y.Z` and makes sure that your code can upgrade to new
+versions with the same `X` component without having to make changes.
+
+Releases are tagged with the corresponding version number. There is also a branch for each major
+version (only `v1` at the moment). The recommended practice is to vendor the stable branch.
+
+Current Release: `v1.0.0`
+Stable Branch: `v1`
+
 ## Teaser
 
 ### 1. Design
