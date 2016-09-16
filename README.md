@@ -8,8 +8,6 @@ goa is a framework for building microservices in Go using a unique design-first 
 [![Godoc](https://godoc.org/github.com/goadesign/goa?status.svg)](http://godoc.org/github.com/goadesign/goa)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
-### v1.0.0 released! Read the [blog post](https://goa.design/blog/hello-goa/)
-
 ## Why goa?
 
 There are a number of good Go packages for writing modular web services out there so why build
