@@ -49,67 +49,36 @@ import (
 //        })
 //
 func Metadata(name string, value ...string) {
+	appendMetadata := func(metadata dslengine.MetadataDefinition, name string, value ...string) dslengine.MetadataDefinition {
+		if metadata == nil {
+			metadata = make(map[string][]string)
+		}
+		metadata[name] = append(metadata[name], value...)
+		return metadata
+	}
+
 	switch def := dslengine.CurrentDefinition().(type) {
 	case design.ContainerDefinition:
 		att := def.Attribute()
-		if att.Metadata == nil {
-			att.Metadata = make(map[string][]string)
-		}
-		att.Metadata[name] = append(att.Metadata[name], value...)
+		att.Metadata = appendMetadata(att.Metadata, name, value...)
 	case *design.AttributeDefinition:
-		if def.Metadata == nil {
-			def.Metadata = make(map[string][]string)
-		}
-		def.Metadata[name] = append(def.Metadata[name], value...)
-
+		def.Metadata = appendMetadata(def.Metadata, name, value...)
 	case *design.MediaTypeDefinition:
-		if def.Metadata == nil {
-			def.Metadata = make(map[string][]string)
-		}
-		def.Metadata[name] = append(def.Metadata[name], value...)
-
+		def.Metadata = appendMetadata(def.Metadata, name, value...)
 	case *design.ActionDefinition:
-		if def.Metadata == nil {
-			def.Metadata = make(map[string][]string)
-		}
-		def.Metadata[name] = append(def.Metadata[name], value...)
-
+		def.Metadata = appendMetadata(def.Metadata, name, value...)
 	case *design.FileServerDefinition:
-		if def.Metadata == nil {
-			def.Metadata = make(map[string][]string)
-		}
-		def.Metadata[name] = append(def.Metadata[name], value...)
-
+		def.Metadata = appendMetadata(def.Metadata, name, value...)
 	case *design.ResourceDefinition:
-		if def.Metadata == nil {
-			def.Metadata = make(map[string][]string)
-		}
-		def.Metadata[name] = append(def.Metadata[name], value...)
-
+		def.Metadata = appendMetadata(def.Metadata, name, value...)
 	case *design.ResponseDefinition:
-		if def.Metadata == nil {
-			def.Metadata = make(map[string][]string)
-		}
-		def.Metadata[name] = append(def.Metadata[name], value...)
-
+		def.Metadata = appendMetadata(def.Metadata, name, value...)
 	case *design.APIDefinition:
-		if def.Metadata == nil {
-			def.Metadata = make(map[string][]string)
-		}
-		def.Metadata[name] = append(def.Metadata[name], value...)
-
+		def.Metadata = appendMetadata(def.Metadata, name, value...)
 	case *design.RouteDefinition:
-		if def.Metadata == nil {
-			def.Metadata = make(map[string][]string)
-		}
-		def.Metadata[name] = append(def.Metadata[name], value...)
-
+		def.Metadata = appendMetadata(def.Metadata, name, value...)
 	case *design.SecurityDefinition:
-		if def.Scheme.Metadata == nil {
-			def.Scheme.Metadata = make(map[string][]string)
-		}
-		def.Scheme.Metadata[name] = append(def.Scheme.Metadata[name], value...)
-
+		def.Scheme.Metadata = appendMetadata(def.Scheme.Metadata, name, value...)
 	default:
 		dslengine.IncompatibleDSL()
 	}
