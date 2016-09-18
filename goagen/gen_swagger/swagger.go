@@ -616,6 +616,9 @@ func extensionsFromDefinition(mdata dslengine.MetadataDefinition) map[string]str
 		}
 		extensions[chunks[2]] = value[0]
 	}
+	if len(extensions) == 0 {
+		return nil
+	}
 	return extensions
 }
 
