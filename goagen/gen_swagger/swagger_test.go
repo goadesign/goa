@@ -122,7 +122,7 @@ var _ = Describe("New", func() {
 				Host:     host,
 				BasePath: basePath,
 				Schemes:  []string{"https"},
-				Paths:    make(map[string]*genswagger.Path),
+				Paths:    make(map[string]interface{}),
 				Consumes: []string{"application/json", "application/xml", "application/gob", "application/x-gob"},
 				Produces: []string{"application/json", "application/xml", "application/gob", "application/x-gob"},
 				Tags: []*genswagger.Tag{{Name: tag, Description: "Tag desc.", ExternalDocs: &genswagger.ExternalDocs{
@@ -472,8 +472,9 @@ var _ = Describe("New", func() {
 				Ω(newErr).ShouldNot(HaveOccurred())
 				Ω(swagger.Paths).Should(HaveLen(2))
 				Ω(swagger.Paths["/orgs/{org}/accounts/{id}"]).ShouldNot(BeNil())
-				Ω(swagger.Paths["/orgs/{org}/accounts/{id}"].Put).ShouldNot(BeNil())
-				ps := swagger.Paths["/orgs/{org}/accounts/{id}"].Put.Parameters
+				a := swagger.Paths["/orgs/{org}/accounts/{id}"].(*genswagger.Path)
+				Ω(a.Put).ShouldNot(BeNil())
+				ps := a.Put.Parameters
 				Ω(ps).Should(HaveLen(14))
 				// check Headers in detail
 				Ω(ps[3]).Should(Equal(&genswagger.Parameter{In: "header", Name: "Authorization", Type: "string", Required: true}))
@@ -491,18 +492,22 @@ var _ = Describe("New", func() {
 				Ω(ps[11]).Should(Equal(&genswagger.Parameter{In: "header", Name: "X-Account", Type: "integer", Required: true}))
 				Ω(ps[12]).Should(Equal(&genswagger.Parameter{In: "header", Name: "header", Type: "string", Required: true}))
 				Ω(swagger.Paths["/base/bottles/{id}"]).ShouldNot(BeNil())
-				Ω(swagger.Paths["/base/bottles/{id}"].Put).ShouldNot(BeNil())
-				Ω(swagger.Paths["/base/bottles/{id}"].Put.Parameters).Should(HaveLen(14))
+				b := swagger.Paths["/base/bottles/{id}"].(*genswagger.Path)
+				Ω(b.Put).ShouldNot(BeNil())
+				Ω(b.Put.Parameters).Should(HaveLen(14))
 			})
 
 			It("should set the inherited tag and the action tag", func() {
 				tags := []string{"res", "Update"}
-				Ω(swagger.Paths["/orgs/{org}/accounts/{id}"].Put.Tags).Should(Equal(tags))
-				Ω(swagger.Paths["/base/bottles/{id}"].Put.Tags).Should(Equal(tags))
+				a := swagger.Paths["/orgs/{org}/accounts/{id}"].(*genswagger.Path)
+				Ω(a.Put.Tags).Should(Equal(tags))
+				b := swagger.Paths["/base/bottles/{id}"].(*genswagger.Path)
+				Ω(b.Put.Tags).Should(Equal(tags))
 			})
 
 			It("should set the summary from the summary tag", func() {
-				Ω(swagger.Paths["/orgs/{org}/accounts/{id}"].Put.Summary).Should(Equal("a summary"))
+				a := swagger.Paths["/orgs/{org}/accounts/{id}"].(*genswagger.Path)
+				Ω(a.Put.Summary).Should(Equal("a summary"))
 			})
 
 			It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
@@ -541,9 +546,10 @@ var _ = Describe("New", func() {
 			})
 
 			It("should set the action tags", func() {
-				Ω(swagger.Paths[""].Put.Tags).Should(HaveLen(2))
+				p := swagger.Paths[""].(*genswagger.Path)
+				Ω(p.Put.Tags).Should(HaveLen(2))
 				tags := []string{"res", "Update"}
-				Ω(swagger.Paths[""].Put.Tags).Should(Equal(tags))
+				Ω(p.Put.Tags).Should(Equal(tags))
 			})
 		})
 	})
