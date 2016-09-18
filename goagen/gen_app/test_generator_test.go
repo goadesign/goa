@@ -242,6 +242,12 @@ var _ = Describe("Generate", func() {
 
 			Ω(content).Should(ContainSubstring(", payload app.CustomName)"))
 		})
+		It("generates header with DO NOT MODIFY", func() {
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "app", "test", "foo_testing.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+
+			Ω(content).Should(ContainSubstring("DO NOT MODIFY"))
+		})
 
 	})
 })

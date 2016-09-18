@@ -92,7 +92,8 @@ func (g *Generator) generateResourceTest() error {
 		if err != nil {
 			return err
 		}
-		if err := file.WriteHeader("", "test", imports); err != nil {
+		title := fmt.Sprintf("%s: %s TestHelpers", g.API.Context(), res.Name)
+		if err := file.WriteHeader(title, "test", imports); err != nil {
 			return err
 		}
 
