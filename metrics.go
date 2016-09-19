@@ -33,7 +33,7 @@ var (
 )
 
 func init() {
-	SetMetrics(&metricDiscarder{})
+	SetMetrics(&MetricDiscarder{})
 }
 
 // Metrics generic interface for decoupling Goa from go-metrics.
@@ -46,13 +46,13 @@ type Metrics interface {
 }
 
 // used for dealing with race conditions.
-type metricDiscarder struct{}
+type MetricDiscarder struct{}
 
-func (md *metricDiscarder) SetGauge(key []string, val float32)         {}
-func (md *metricDiscarder) EmitKey(key []string, val float32)          {}
-func (md *metricDiscarder) IncrCounter(key []string, val float32)      {}
-func (md *metricDiscarder) AddSample(key []string, val float32)        {}
-func (md *metricDiscarder) MeasureSince(key []string, start time.Time) {}
+func (md *MetricDiscarder) SetGauge(key []string, val float32)         {}
+func (md *MetricDiscarder) EmitKey(key []string, val float32)          {}
+func (md *MetricDiscarder) IncrCounter(key []string, val float32)      {}
+func (md *MetricDiscarder) AddSample(key []string, val float32)        {}
+func (md *MetricDiscarder) MeasureSince(key []string, start time.Time) {}
 
 // NewMetrics initializes goa's metrics instance with the supplied
 // configuration and metrics sink

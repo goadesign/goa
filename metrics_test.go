@@ -23,7 +23,7 @@ var _ = Describe("Metrics", func() {
 	var metrics goa.Metrics
 
 	BeforeEach(func() {
-		metrics = mockMetrics{}
+		metrics = goa.MetricDiscarder{}
 		keys = [6]string{
 			"foo_bar_*/*",
 			"foo_*_baz",
