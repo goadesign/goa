@@ -515,17 +515,33 @@ var _ = Describe("New", func() {
 
 		Context("with metadata", func() {
 			const gat = "gat"
+			const extension = `{"foo":"bar"}`
 
 			BeforeEach(func() {
 				Resource("res", func() {
 					Metadata("swagger:tag:res")
 					Metadata("struct:tag:json", "resource")
+					Metadata("swagger:extension:x-resource", extension)
 					Action("act", func() {
 						Metadata("swagger:tag:Update")
 						Metadata("struct:tag:json", "action")
+						Metadata("swagger:extension:x-action", extension)
+						Security("password", func() {
+							Metadata("swagger:extension:x-security", extension)
+						})
 						Routing(
-							PUT("/"),
+							PUT("/", func() {
+								Metadata("swagger:extension:x-put", extension)
+							}),
 						)
+						Params(func() {
+							Param("param", func() {
+								Metadata("swagger:extension:x-param", extension)
+							})
+						})
+						Response(NoContent, func() {
+							Metadata("swagger:extension:x-response", extension)
+						})
 					})
 				})
 				base := Design.DSLFunc
@@ -533,14 +549,16 @@ var _ = Describe("New", func() {
 					base()
 					Metadata("swagger:tag:" + gat)
 					Metadata("struct:tag:json", "api")
+					Metadata("swagger:extension:x-api", extension)
+					BasicAuthSecurity("password")
 				}
 			})
 
 			It("should set the swagger object tags", func() {
 				Ω(swagger.Tags).Should(HaveLen(2))
 				tags := []*genswagger.Tag{
-					{Name: gat, Description: "", ExternalDocs: nil},
-					{Name: tag, Description: "Tag desc.", ExternalDocs: &genswagger.ExternalDocs{URL: "http://example.com/tag", Description: "Huge docs"}},
+					{Name: gat, Description: "", ExternalDocs: nil, Extensions: map[string]string{"x-api": extension}},
+					{Name: tag, Description: "Tag desc.", ExternalDocs: &genswagger.ExternalDocs{URL: "http://example.com/tag", Description: "Huge docs"}, Extensions: map[string]string{"x-api": extension}},
 				}
 				Ω(swagger.Tags).Should(Equal(tags))
 			})
@@ -551,6 +569,26 @@ var _ = Describe("New", func() {
 				tags := []string{"res", "Update"}
 				Ω(p.Put.Tags).Should(Equal(tags))
 			})
+
+			It("should set the swagger extensions", func() {
+				Ω(swagger.Info.Extensions).Should(HaveLen(1))
+				Ω(swagger.Info.Extensions["x-api"]).Should(Equal(extension))
+				p := swagger.Paths[""].(*genswagger.Path)
+				Ω(p.Extensions).Should(HaveLen(1))
+				Ω(p.Extensions["x-action"]).Should(Equal(extension))
+				Ω(p.Put.Extensions).Should(HaveLen(1))
+				Ω(p.Put.Extensions["x-put"]).Should(Equal(extension))
+				Ω(p.Put.Parameters[0].Extensions).Should(HaveLen(1))
+				Ω(p.Put.Parameters[0].Extensions["x-param"]).Should(Equal(extension))
+				Ω(p.Put.Responses["204"].Extensions).Should(HaveLen(1))
+				Ω(p.Put.Responses["204"].Extensions["x-response"]).Should(Equal(extension))
+				Ω(swagger.Paths["x-resource"]).ShouldNot(BeNil())
+				rs := swagger.Paths["x-resource"].(string)
+				Ω(rs).Should(Equal(extension))
+				Ω(swagger.SecurityDefinitions["password"].Extensions).Should(HaveLen(1))
+				Ω(swagger.SecurityDefinitions["password"].Extensions["x-security"]).Should(Equal(extension))
+			})
+
 		})
 	})
 })
