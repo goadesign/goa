@@ -5,7 +5,6 @@ package goa
 import (
 	"regexp"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -22,14 +21,11 @@ var (
 	// metriks atomic value storage
 	metriks atomic.Value
 
-	// mu mutex for metriks
-	mu sync.Mutex
-
-	// used for normalizing names by matching '*' and '/' so they can be replaced.
-	invalidCharactersRE = regexp.MustCompile(`[\*/]`)
+	// invalidCharactersRE is the invert match of validCharactersRE
+	invalidCharactersRE = regexp.MustCompile(`[^a-zA-Z_:]`)
 
 	// Taken from https://github.com/prometheus/client_golang/blob/66058aac3a83021948e5fb12f1f408ff556b9037/prometheus/desc.go
-	metricsNameRE = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_:]*$`)
+	validCharactersRE = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_:]*$`)
 )
 
 func init() {
@@ -75,9 +71,6 @@ func NewMetrics(conf *metrics.Config, sink metrics.MetricSink) (err error) {
 
 // SetMetrics initializes goa's metrics instance with the supplied metrics adapter interface.
 func SetMetrics(m Metrics) {
-	mu.Lock()
-	defer mu.Unlock()
-
 	metriks.Store(m)
 }
 
@@ -88,9 +81,6 @@ func SetMetrics(m Metrics) {
 func AddSample(key []string, val float32) {
 	normalizeKeys(key)
 
-	mu.Lock()
-	defer mu.Unlock()
-
 	metriks.Load().(Metrics).AddSample(key, val)
 }
 
@@ -100,9 +90,6 @@ func AddSample(key []string, val float32) {
 func EmitKey(key []string, val float32) {
 	normalizeKeys(key)
 
-	mu.Lock()
-	defer mu.Unlock()
-
 	metriks.Load().(Metrics).EmitKey(key, val)
 }
 
@@ -111,9 +98,6 @@ func EmitKey(key []string, val float32) {
 //     IncrCounter([]key{"my","namespace","counter"}, 1.0)
 func IncrCounter(key []string, val float32) {
 	normalizeKeys(key)
-
-	mu.Lock()
-	defer mu.Unlock()
 
 	metriks.Load().(Metrics).IncrCounter(key, val)
 }
@@ -127,9 +111,6 @@ func IncrCounter(key []string, val float32) {
 func MeasureSince(key []string, start time.Time) {
 	normalizeKeys(key)
 
-	mu.Lock()
-	defer mu.Unlock()
-
 	metriks.Load().(Metrics).MeasureSince(key, start)
 }
 
@@ -139,9 +120,6 @@ func MeasureSince(key []string, start time.Time) {
 func SetGauge(key []string, val float32) {
 	normalizeKeys(key)
 
-	mu.Lock()
-	defer mu.Unlock()
-
 	metriks.Load().(Metrics).SetGauge(key, val)
 }
 
@@ -149,7 +127,7 @@ func SetGauge(key []string, val float32) {
 // not support * or / in metric names.
 func normalizeKeys(key []string) {
 	for i, k := range key {
-		if !metricsNameRE.MatchString(k) {
+		if !validCharactersRE.MatchString(k) {
 			// first replace */* with all
 			k = strings.Replace(k, allMatcher, allReplacement, -1)
 
