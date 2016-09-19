@@ -22,7 +22,7 @@ var (
 	metriks atomic.Value
 
 	// invalidCharactersRE is the invert match of validCharactersRE
-	invalidCharactersRE = regexp.MustCompile(`[^a-zA-Z_:]`)
+	invalidCharactersRE = regexp.MustCompile(`[\*/]`)
 
 	// Taken from https://github.com/prometheus/client_golang/blob/66058aac3a83021948e5fb12f1f408ff556b9037/prometheus/desc.go
 	validCharactersRE = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_:]*$`)
