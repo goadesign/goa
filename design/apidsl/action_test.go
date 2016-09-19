@@ -71,6 +71,27 @@ var _ = Describe("Action", func() {
 			})
 		})
 
+		Context("with a metadata", func() {
+			BeforeEach(func() {
+				metadatadsl := func() { Metadata("swagger:extension:x-get", `{"foo":"bar"}`) }
+				route = GET("/:id", metadatadsl)
+				name = "foo"
+			})
+
+			It("produces a valid action definition with the route with the metadata", func() {
+				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+				Ω(action).ShouldNot(BeNil())
+				Ω(action.Name).Should(Equal(name))
+				Ω(action.Validate()).ShouldNot(HaveOccurred())
+				Ω(action.Routes).ShouldNot(BeNil())
+				Ω(action.Routes).Should(HaveLen(1))
+				Ω(action.Routes[0]).Should(Equal(route))
+				Ω(action.Routes[0].Metadata).ShouldNot(BeNil())
+				Ω(action.Routes[0].Metadata).Should(Equal(
+					dslengine.MetadataDefinition{"swagger:extension:x-get": []string{`{"foo":"bar"}`}},
+				))
+			})
+		})
 	})
 
 	Context("with a string payload", func() {
