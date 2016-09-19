@@ -39,6 +39,19 @@ import (
 //
 //        Metadata("swagger:summary", "Short summary of what action does")
 //
+// `swagger:extension:xxx`: sets the Swagger extensions xxx.
+// Applicable to
+// api as within the info and tag object,
+// resource as within the paths object,
+// action as within the path-item object,
+// route as within the operation object,
+// param as within the parameter object,
+// response as within the response object
+// and security as within the security-scheme object.
+// See https://github.com/OAI/OpenAPI-Specification/blob/master/guidelines/EXTENSIONS.md.
+//
+//        Metadata("swagger:extension:x-api", `{"foo":"bar"}`)
+//
 // The special key names listed above may be used as follows:
 //
 //        var Account = Type("Account", func() {
