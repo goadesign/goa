@@ -5,6 +5,8 @@ package goa
 import (
 	"regexp"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -17,8 +19,11 @@ const (
 )
 
 var (
-	// interface for metrics.Metrics
-	metriks Metrics = &metricDiscarder{}
+	// metriks atomic value storage
+	metriks atomic.Value
+
+	// mu mutex for metriks
+	mu sync.Mutex
 
 	// used for normalizing names by matching '*' and '/' so they can be replaced.
 	invalidCharactersRE = regexp.MustCompile(`[\*/]`)
@@ -26,6 +31,10 @@ var (
 	// Taken from https://github.com/prometheus/client_golang/blob/66058aac3a83021948e5fb12f1f408ff556b9037/prometheus/desc.go
 	metricsNameRE = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_:]*$`)
 )
+
+func init() {
+	SetMetrics(&metricDiscarder{})
+}
 
 // Metrics generic interface for decoupling Goa from go-metrics.
 type Metrics interface {
@@ -49,13 +58,18 @@ func (md *metricDiscarder) MeasureSince(key []string, start time.Time) {}
 // configuration and metrics sink
 // This method is deprecated and SetMetrics should be used instead.
 func NewMetrics(conf *metrics.Config, sink metrics.MetricSink) (err error) {
-	metriks, err = metrics.NewGlobal(conf, sink)
-	return
+	m, err := metrics.NewGlobal(conf, sink)
+	SetMetrics(m)
+
+	return nil
 }
 
 // SetMetrics initializes goa's metrics instance with the supplied metrics adapter interface.
 func SetMetrics(m Metrics) {
-	metriks = m
+	mu.Lock()
+	defer mu.Unlock()
+
+	metriks.Store(m)
 }
 
 // AddSample adds a sample to an aggregated metric
@@ -63,30 +77,36 @@ func SetMetrics(m Metrics) {
 // Usage:
 //     AddSample([]string{"my","namespace","key"}, 15.0)
 func AddSample(key []string, val float32) {
-	if metriks != nil {
-		normalizeKeys(key)
-		metriks.AddSample(key, val)
-	}
+	normalizeKeys(key)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	metriks.Load().(Metrics).AddSample(key, val)
 }
 
 // EmitKey emits a key/value pair
 // Usage:
 //     EmitKey([]string{"my","namespace","key"}, 15.0)
 func EmitKey(key []string, val float32) {
-	if metriks != nil {
-		normalizeKeys(key)
-		metriks.EmitKey(key, val)
-	}
+	normalizeKeys(key)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	metriks.Load().(Metrics).EmitKey(key, val)
 }
 
 // IncrCounter increments the counter named by `key`
 // Usage:
 //     IncrCounter([]key{"my","namespace","counter"}, 1.0)
 func IncrCounter(key []string, val float32) {
-	if metriks != nil {
-		normalizeKeys(key)
-		metriks.IncrCounter(key, val)
-	}
+	normalizeKeys(key)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	metriks.Load().(Metrics).IncrCounter(key, val)
 }
 
 // MeasureSince creates a timing metric that records
@@ -96,20 +116,24 @@ func IncrCounter(key []string, val float32) {
 // Frequently used in a defer:
 //    defer MeasureSince([]string{"my","namespace","action}, time.Now())
 func MeasureSince(key []string, start time.Time) {
-	if metriks != nil {
-		normalizeKeys(key)
-		metriks.MeasureSince(key, start)
-	}
+	normalizeKeys(key)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	metriks.Load().(Metrics).MeasureSince(key, start)
 }
 
 // SetGauge sets the named gauge to the specified value
 // Usage:
 //     SetGauge([]string{"my","namespace"}, 2.0)
 func SetGauge(key []string, val float32) {
-	if metriks != nil {
-		normalizeKeys(key)
-		metriks.SetGauge(key, val)
-	}
+	normalizeKeys(key)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	metriks.Load().(Metrics).SetGauge(key, val)
 }
 
 // This function is used to make metric names safe for all metric services. Specifically, prometheus does

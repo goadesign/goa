@@ -37,6 +37,8 @@ type (
 
 		middleware []Middleware       // Middleware chain
 		cancel     context.CancelFunc // Service context cancel signal trigger
+
+		metriks Metrics // metrics gathering
 	}
 
 	// Controller defines the common fields and behavior of generated controllers.
@@ -182,6 +184,16 @@ func (service *Service) Send(ctx context.Context, code int, body interface{}) er
 func (service *Service) ServeFiles(path, filename string) error {
 	ctrl := service.NewController("FileServer")
 	return ctrl.ServeFiles(path, filename)
+}
+
+// SetMetrics sets the metrics framework instance
+func (service *Service) SetMetrics(metriks Metrics) {
+	service.metriks = metriks
+}
+
+// Metrics returns the defined metrics framework instance.
+func (service *Service) Metrics() Metrics {
+	return service.metriks
 }
 
 // DecodeRequest uses the HTTP decoder to unmarshal the request body into the provided value based
