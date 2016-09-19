@@ -45,7 +45,7 @@ type Metrics interface {
 	MeasureSince(key []string, start time.Time)
 }
 
-// used for dealing with race conditions.
+// MetricDiscarder default NOOP metrics recorder
 type MetricDiscarder struct{}
 
 func (md *MetricDiscarder) SetGauge(key []string, val float32)         {}
