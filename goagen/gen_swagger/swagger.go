@@ -1,6 +1,7 @@
 package genswagger
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strconv"
@@ -22,7 +23,7 @@ type (
 		Schemes             []string                         `json:"schemes,omitempty"`
 		Consumes            []string                         `json:"consumes,omitempty"`
 		Produces            []string                         `json:"produces,omitempty"`
-		Paths               map[string]*Path                 `json:"paths"`
+		Paths               map[string]interface{}           `json:"paths"`
 		Definitions         map[string]*genschema.JSONSchema `json:"definitions,omitempty"`
 		Parameters          map[string]*Parameter            `json:"parameters,omitempty"`
 		Responses           map[string]*Response             `json:"responses,omitempty"`
@@ -40,6 +41,7 @@ type (
 		Contact        *design.ContactDefinition `json:"contact,omitempty"`
 		License        *design.LicenseDefinition `json:"license,omitempty"`
 		Version        string                    `json:"version"`
+		Extensions     map[string]string         `json:"-"`
 	}
 
 	// Path holds the relative paths to the individual endpoints.
@@ -63,6 +65,8 @@ type (
 		// Parameters is the list of parameters that are applicable for all the operations
 		// described under this path.
 		Parameters []*Parameter `json:"parameters,omitempty"`
+		// Extensions defines the swagger extensions.
+		Extensions map[string]string `json:"-"`
 	}
 
 	// Operation describes a single API operation on a path.
@@ -95,6 +99,8 @@ type (
 		Deprecated bool `json:"deprecated,omitempty"`
 		// Secury is a declaration of which security schemes are applied for this operation.
 		Security []map[string][]string `json:"security,omitempty"`
+		// Extensions defines the swagger extensions.
+		Extensions map[string]string `json:"-"`
 	}
 
 	// Parameter describes a single operation parameter.
@@ -144,6 +150,8 @@ type (
 		UniqueItems      bool          `json:"uniqueItems,omitempty"`
 		Enum             []interface{} `json:"enum,omitempty"`
 		MultipleOf       float64       `json:"multipleOf,omitempty"`
+		// Extensions defines the swagger extensions.
+		Extensions map[string]string `json:"-"`
 	}
 
 	// Response describes an operation response.
@@ -160,6 +168,8 @@ type (
 		// Ref references a global API response.
 		// This field is exclusive with the other fields of Response.
 		Ref string `json:"$ref,omitempty"`
+		// Extensions defines the swagger extensions.
+		Extensions map[string]string `json:"-"`
 	}
 
 	// Header represents a header parameter.
@@ -217,6 +227,8 @@ type (
 		TokenURL string `json:"tokenUrl,omitempty"`
 		// Scopes list the  available scopes for the OAuth2 security scheme.
 		Scopes map[string]string `json:"scopes,omitempty"`
+		// Extensions defines the swagger extensions.
+		Extensions map[string]string `json:"-"`
 	}
 
 	// Scope corresponds to an available scope for an OAuth2 security scheme.
@@ -274,8 +286,77 @@ type (
 		Description string `json:"description,omitempty"`
 		// ExternalDocs is additional external documentation for this tag.
 		ExternalDocs *ExternalDocs `json:"externalDocs,omitempty"`
+		// Extensions defines the swagger extensions.
+		Extensions map[string]string `json:"-"`
 	}
+
+	// These types are used in marshalJSON() to avoid recursive call of json.Marshal().
+	_Info               Info
+	_Path               Path
+	_Operation          Operation
+	_Parameter          Parameter
+	_Response           Response
+	_SecurityDefinition SecurityDefinition
+	_Tag                Tag
 )
+
+func marshalJSON(v interface{}, extensions map[string]string) ([]byte, error) {
+	marshaled, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	if len(extensions) == 0 {
+		return marshaled, nil
+	}
+	var unmarshaled interface{}
+	if err := json.Unmarshal(marshaled, &unmarshaled); err != nil {
+		return nil, err
+	}
+	asserted := unmarshaled.(map[string]interface{})
+	for k, v := range extensions {
+		asserted[k] = v
+	}
+	merged, err := json.Marshal(asserted)
+	if err != nil {
+		return nil, err
+	}
+	return merged, nil
+}
+
+// MarshalJSON returns the JSON encoding of i.
+func (i Info) MarshalJSON() ([]byte, error) {
+	return marshalJSON(_Info(i), i.Extensions)
+}
+
+// MarshalJSON returns the JSON encoding of p.
+func (p Path) MarshalJSON() ([]byte, error) {
+	return marshalJSON(_Path(p), p.Extensions)
+}
+
+// MarshalJSON returns the JSON encoding of o.
+func (o Operation) MarshalJSON() ([]byte, error) {
+	return marshalJSON(_Operation(o), o.Extensions)
+}
+
+// MarshalJSON returns the JSON encoding of p.
+func (p Parameter) MarshalJSON() ([]byte, error) {
+	return marshalJSON(_Parameter(p), p.Extensions)
+}
+
+// MarshalJSON returns the JSON encoding of r.
+func (r Response) MarshalJSON() ([]byte, error) {
+	return marshalJSON(_Response(r), r.Extensions)
+}
+
+// MarshalJSON returns the JSON encoding of s.
+func (s SecurityDefinition) MarshalJSON() ([]byte, error) {
+	return marshalJSON(_SecurityDefinition(s), s.Extensions)
+}
+
+// MarshalJSON returns the JSON encoding of t.
+func (t Tag) MarshalJSON() ([]byte, error) {
+	return marshalJSON(_Tag(t), t.Extensions)
+}
 
 // New creates a Swagger spec from an API definition.
 func New(api *design.APIDefinition) (*Swagger, error) {
@@ -315,10 +396,11 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 			Contact:        api.Contact,
 			License:        api.License,
 			Version:        api.Version,
+			Extensions:     extensionsFromDefinition(api.Metadata),
 		},
 		Host:                api.Host,
 		BasePath:            basePath,
-		Paths:               make(map[string]*Path),
+		Paths:               make(map[string]interface{}),
 		Schemes:             api.Schemes,
 		Consumes:            consumes,
 		Produces:            produces,
@@ -343,6 +425,9 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 		return nil, err
 	}
 	err = api.IterateResources(func(res *design.ResourceDefinition) error {
+		for k, v := range extensionsFromDefinition(res.Metadata) {
+			s.Paths[k] = v
+		}
 		err := res.IterateFileServers(func(fs *design.FileServerDefinition) error {
 			return buildPathFromFileServer(s, api, fs)
 		})
@@ -417,6 +502,7 @@ func securityDefsFromDefinition(schemes []*design.SecuritySchemeDefinition) map[
 			AuthorizationURL: scheme.AuthorizationURL,
 			TokenURL:         scheme.TokenURL,
 			Scopes:           scheme.Scopes,
+			Extensions:       extensionsFromDefinition(scheme.Metadata),
 		}
 		if scheme.Kind == design.JWTSecurityKind {
 			if def.TokenURL != "" {
@@ -488,6 +574,8 @@ func tagsFromDefinition(mdata dslengine.MetadataDefinition) (tags []*Tag) {
 			tag.ExternalDocs = docs
 		}
 
+		tag.Extensions = extensionsFromDefinition(mdata)
+
 		tags = append(tags, tag)
 	}
 
@@ -511,6 +599,27 @@ func summaryFromDefinition(name string, metadata dslengine.MetadataDefinition) s
 		}
 	}
 	return name
+}
+
+func extensionsFromDefinition(mdata dslengine.MetadataDefinition) map[string]string {
+	extensions := make(map[string]string)
+	for key, value := range mdata {
+		chunks := strings.Split(key, ":")
+		if len(chunks) != 3 {
+			continue
+		}
+		if chunks[0] != "swagger" || chunks[1] != "extension" {
+			continue
+		}
+		if strings.HasPrefix(chunks[2], "x-") != true {
+			continue
+		}
+		extensions[chunks[2]] = value[0]
+	}
+	if len(extensions) == 0 {
+		return nil
+	}
+	return extensions
 }
 
 func paramsFromDefinition(params *design.AttributeDefinition, path string) ([]*Parameter, error) {
@@ -564,6 +673,7 @@ func paramFor(at *design.AttributeDefinition, name, in string, required bool) *P
 	if at.Type.IsArray() {
 		p.Items = itemsFromDefinition(at.Type.ToArray().ElemType)
 	}
+	p.Extensions = extensionsFromDefinition(at.Metadata)
 	initValidations(at, p)
 	return p
 }
@@ -628,6 +738,7 @@ func responseSpecFromDefinition(s *Swagger, api *design.APIDefinition, r *design
 		Description: r.Description,
 		Schema:      schema,
 		Headers:     headers,
+		Extensions:  extensionsFromDefinition(r.Metadata),
 	}, nil
 }
 
@@ -725,13 +836,15 @@ func buildPathFromFileServer(s *Swagger, api *design.APIDefinition, fs *design.F
 	if key == "" {
 		key = "/"
 	}
-	var path *Path
+	var path interface{}
 	var ok bool
 	if path, ok = s.Paths[key]; !ok {
 		path = new(Path)
 		s.Paths[key] = path
 	}
-	path.Get = operation
+	p := path.(*Path)
+	p.Get = operation
+	p.Extensions = extensionsFromDefinition(fs.Metadata)
 
 	return nil
 }
@@ -799,6 +912,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		Responses:    responses,
 		Schemes:      schemes,
 		Deprecated:   false,
+		Extensions:   extensionsFromDefinition(route.Metadata),
 	}
 
 	applySecurity(operation, action.Security)
@@ -821,28 +935,30 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	if bp != "/" {
 		key = strings.TrimPrefix(key, bp)
 	}
-	var path *Path
+	var path interface{}
 	var ok bool
 	if path, ok = s.Paths[key]; !ok {
 		path = new(Path)
 		s.Paths[key] = path
 	}
+	p := path.(*Path)
 	switch route.Verb {
 	case "GET":
-		path.Get = operation
+		p.Get = operation
 	case "PUT":
-		path.Put = operation
+		p.Put = operation
 	case "POST":
-		path.Post = operation
+		p.Post = operation
 	case "DELETE":
-		path.Delete = operation
+		p.Delete = operation
 	case "OPTIONS":
-		path.Options = operation
+		p.Options = operation
 	case "HEAD":
-		path.Head = operation
+		p.Head = operation
 	case "PATCH":
-		path.Patch = operation
+		p.Patch = operation
 	}
+	p.Extensions = extensionsFromDefinition(route.Parent.Metadata)
 	return nil
 }
 

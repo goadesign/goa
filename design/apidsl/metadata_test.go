@@ -23,12 +23,21 @@ var _ = Describe("Metadata", func() {
 		JustBeforeEach(func() {
 			api = API("Example API", func() {
 				Metadata(metadataKey, metadataValue)
+				BasicAuthSecurity("password")
 			})
 
 			rd = Resource("Example Resource", func() {
 				Metadata(metadataKey, metadataValue)
 				Action("Example Action", func() {
 					Metadata(metadataKey, metadataValue)
+					Routing(
+						GET("/", func() {
+							Metadata(metadataKey, metadataValue)
+						}),
+					)
+					Security("password", func() {
+						Metadata(metadataKey, metadataValue)
+					})
 				})
 				Response("Example Response", func() {
 					Metadata(metadataKey, metadataValue)
@@ -56,6 +65,8 @@ var _ = Describe("Metadata", func() {
 				Ω(api.Metadata).To(Equal(expected))
 				Ω(rd.Metadata).To(Equal(expected))
 				Ω(rd.Actions["Example Action"].Metadata).To(Equal(expected))
+				Ω(rd.Actions["Example Action"].Routes[0].Metadata).To(Equal(expected))
+				Ω(rd.Actions["Example Action"].Security.Scheme.Metadata).To(Equal(expected))
 				Ω(rd.Responses["Example Response"].Metadata).To(Equal(expected))
 				Ω(mtd.Metadata).To(Equal(expected))
 
@@ -75,6 +86,8 @@ var _ = Describe("Metadata", func() {
 				Ω(api.Metadata).To(Equal(expected))
 				Ω(rd.Metadata).To(Equal(expected))
 				Ω(rd.Actions["Example Action"].Metadata).To(Equal(expected))
+				Ω(rd.Actions["Example Action"].Routes[0].Metadata).To(Equal(expected))
+				Ω(rd.Actions["Example Action"].Security.Scheme.Metadata).To(Equal(expected))
 				Ω(rd.Responses["Example Response"].Metadata).To(Equal(expected))
 				Ω(mtd.Metadata).To(Equal(expected))
 
@@ -94,6 +107,8 @@ var _ = Describe("Metadata", func() {
 				Ω(api.Metadata).To(Equal(expected))
 				Ω(rd.Metadata).To(Equal(expected))
 				Ω(rd.Actions["Example Action"].Metadata).To(Equal(expected))
+				Ω(rd.Actions["Example Action"].Routes[0].Metadata).To(Equal(expected))
+				Ω(rd.Actions["Example Action"].Security.Scheme.Metadata).To(Equal(expected))
 				Ω(rd.Responses["Example Response"].Metadata).To(Equal(expected))
 				Ω(mtd.Metadata).To(Equal(expected))
 

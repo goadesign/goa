@@ -39,6 +39,19 @@ import (
 //
 //        Metadata("swagger:summary", "Short summary of what action does")
 //
+// `swagger:extension:xxx`: sets the Swagger extensions xxx.
+// Applicable to
+// api as within the info and tag object,
+// resource as within the paths object,
+// action as within the path-item object,
+// route as within the operation object,
+// param as within the parameter object,
+// response as within the response object
+// and security as within the security-scheme object.
+// See https://github.com/OAI/OpenAPI-Specification/blob/master/guidelines/EXTENSIONS.md.
+//
+//        Metadata("swagger:extension:x-api", `{"foo":"bar"}`)
+//
 // The special key names listed above may be used as follows:
 //
 //        var Account = Type("Account", func() {
@@ -49,55 +62,36 @@ import (
 //        })
 //
 func Metadata(name string, value ...string) {
+	appendMetadata := func(metadata dslengine.MetadataDefinition, name string, value ...string) dslengine.MetadataDefinition {
+		if metadata == nil {
+			metadata = make(map[string][]string)
+		}
+		metadata[name] = append(metadata[name], value...)
+		return metadata
+	}
+
 	switch def := dslengine.CurrentDefinition().(type) {
 	case design.ContainerDefinition:
 		att := def.Attribute()
-		if att.Metadata == nil {
-			att.Metadata = make(map[string][]string)
-		}
-		att.Metadata[name] = append(att.Metadata[name], value...)
+		att.Metadata = appendMetadata(att.Metadata, name, value...)
 	case *design.AttributeDefinition:
-		if def.Metadata == nil {
-			def.Metadata = make(map[string][]string)
-		}
-		def.Metadata[name] = append(def.Metadata[name], value...)
-
+		def.Metadata = appendMetadata(def.Metadata, name, value...)
 	case *design.MediaTypeDefinition:
-		if def.Metadata == nil {
-			def.Metadata = make(map[string][]string)
-		}
-		def.Metadata[name] = append(def.Metadata[name], value...)
-
+		def.Metadata = appendMetadata(def.Metadata, name, value...)
 	case *design.ActionDefinition:
-		if def.Metadata == nil {
-			def.Metadata = make(map[string][]string)
-		}
-		def.Metadata[name] = append(def.Metadata[name], value...)
-
+		def.Metadata = appendMetadata(def.Metadata, name, value...)
 	case *design.FileServerDefinition:
-		if def.Metadata == nil {
-			def.Metadata = make(map[string][]string)
-		}
-		def.Metadata[name] = append(def.Metadata[name], value...)
-
+		def.Metadata = appendMetadata(def.Metadata, name, value...)
 	case *design.ResourceDefinition:
-		if def.Metadata == nil {
-			def.Metadata = make(map[string][]string)
-		}
-		def.Metadata[name] = append(def.Metadata[name], value...)
-
+		def.Metadata = appendMetadata(def.Metadata, name, value...)
 	case *design.ResponseDefinition:
-		if def.Metadata == nil {
-			def.Metadata = make(map[string][]string)
-		}
-		def.Metadata[name] = append(def.Metadata[name], value...)
-
+		def.Metadata = appendMetadata(def.Metadata, name, value...)
 	case *design.APIDefinition:
-		if def.Metadata == nil {
-			def.Metadata = make(map[string][]string)
-		}
-		def.Metadata[name] = append(def.Metadata[name], value...)
-
+		def.Metadata = appendMetadata(def.Metadata, name, value...)
+	case *design.RouteDefinition:
+		def.Metadata = appendMetadata(def.Metadata, name, value...)
+	case *design.SecurityDefinition:
+		def.Scheme.Metadata = appendMetadata(def.Scheme.Metadata, name, value...)
 	default:
 		dslengine.IncompatibleDSL()
 	}
