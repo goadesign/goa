@@ -49,13 +49,17 @@ type Metrics interface {
 type MetricDiscarder struct{}
 
 // SetGauge method
-func (md *MetricDiscarder) SetGauge(key []string, val float32)         {}
+func (md *MetricDiscarder) SetGauge(key []string, val float32) {}
+
 // EmitKey method
-func (md *MetricDiscarder) EmitKey(key []string, val float32)          {}
+func (md *MetricDiscarder) EmitKey(key []string, val float32) {}
+
 // IncrCounter method
-func (md *MetricDiscarder) IncrCounter(key []string, val float32)      {}
+func (md *MetricDiscarder) IncrCounter(key []string, val float32) {}
+
 // AddSample method
-func (md *MetricDiscarder) AddSample(key []string, val float32)        {}
+func (md *MetricDiscarder) AddSample(key []string, val float32) {}
+
 // MeasureSince method
 func (md *MetricDiscarder) MeasureSince(key []string, start time.Time) {}
 
