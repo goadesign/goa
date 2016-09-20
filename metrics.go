@@ -29,26 +29,36 @@ var (
 )
 
 func init() {
-	SetMetrics(&NoopSink{})
+	m, err := metrics.New(metrics.DefaultConfig("service"), NewNoOpSink())
+	if err != nil {
+		panic("Unable to instantiate default metrics sink")
+	}
+
+	SetMetrics(m)
+}
+
+// NewNoOpSink returns a NOOP sink.
+func NewNoOpSink() metrics.MetricSink {
+	return &NoOpSink{}
 }
 
 // NoopSink default NOOP metrics recorder
-type NoopSink struct{}
+type NoOpSink struct{}
 
 // SetGauge method
-func (md *NoopSink) SetGauge(key []string, val float32) {}
+func (md *NoOpSink) SetGauge(key []string, val float32) {}
 
 // EmitKey method
-func (md *NoopSink) EmitKey(key []string, val float32) {}
+func (md *NoOpSink) EmitKey(key []string, val float32) {}
 
 // IncrCounter method
-func (md *NoopSink) IncrCounter(key []string, val float32) {}
+func (md *NoOpSink) IncrCounter(key []string, val float32) {}
 
 // AddSample method
-func (md *NoopSink) AddSample(key []string, val float32) {}
+func (md *NoOpSink) AddSample(key []string, val float32) {}
 
 // MeasureSince method
-func (md *NoopSink) MeasureSince(key []string, start time.Time) {}
+func (md *NoOpSink) MeasureSince(key []string, start time.Time) {}
 
 // NewMetrics initializes goa's metrics instance with the supplied
 // configuration and metrics sink
