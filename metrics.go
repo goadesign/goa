@@ -72,7 +72,7 @@ func SetMetrics(m *metrics.Metrics) {
 func AddSample(key []string, val float32) {
 	normalizeKeys(key)
 
-	metriks.Load().(metrics.Metrics).AddSample(key, val)
+	metriks.Load().(*metrics.Metrics).AddSample(key, val)
 }
 
 // EmitKey emits a key/value pair
@@ -81,7 +81,7 @@ func AddSample(key []string, val float32) {
 func EmitKey(key []string, val float32) {
 	normalizeKeys(key)
 
-	metriks.Load().(metrics.Metrics).EmitKey(key, val)
+	metriks.Load().(*metrics.Metrics).EmitKey(key, val)
 }
 
 // IncrCounter increments the counter named by `key`
@@ -90,7 +90,7 @@ func EmitKey(key []string, val float32) {
 func IncrCounter(key []string, val float32) {
 	normalizeKeys(key)
 
-	metriks.Load().(metrics.Metrics).IncrCounter(key, val)
+	metriks.Load().(*metrics.Metrics).IncrCounter(key, val)
 }
 
 // MeasureSince creates a timing metric that records
@@ -102,7 +102,7 @@ func IncrCounter(key []string, val float32) {
 func MeasureSince(key []string, start time.Time) {
 	normalizeKeys(key)
 
-	metriks.Load().(metrics.Metrics).MeasureSince(key, start)
+	metriks.Load().(*metrics.Metrics).MeasureSince(key, start)
 }
 
 // SetGauge sets the named gauge to the specified value
@@ -111,7 +111,7 @@ func MeasureSince(key []string, start time.Time) {
 func SetGauge(key []string, val float32) {
 	normalizeKeys(key)
 
-	metriks.Load().(metrics.Metrics).SetGauge(key, val)
+	metriks.Load().(*metrics.Metrics).SetGauge(key, val)
 }
 
 // This function is used to make metric names safe for all metric services. Specifically, prometheus does
