@@ -22,12 +22,19 @@ func (m *mockSink) MeasureSince(key []string, start time.Time) {}
 
 var _ = Describe("Metrics", func() {
 	var keys = [6]string{}
-	var metrics *metrics.Metrics
+	var metriks *metrics.Metrics
 	var sink *mockSink
 
 	BeforeEach(func() {
 		sink = &mockSink{}
-		metrics = metrics.New(metrics.DefaultConfig("UnitTest Service"), sink)
+
+		var err error
+		metriks, err = metrics.New(metrics.DefaultConfig("UnitTest Service"), sink)
+
+		if err != nil {
+			panic("Unable to create test instance of metrics")
+		}
+
 		keys = [6]string{
 			"foo_bar_*/*",
 			"foo_*_baz",
@@ -41,7 +48,7 @@ var _ = Describe("Metrics", func() {
 	Describe("Add sample", func() {
 		Context("With invalid characters in key", func() {
 			It("should replace invalid characters with normalized characters", func() {
-				goa.SetMetrics(metrics)
+				goa.SetMetrics(metriks)
 				goa.AddSample(keys[:], 3.14)
 				Ω(keys).Should(ConsistOf([]string{
 					"foo_bar_all",
@@ -58,7 +65,7 @@ var _ = Describe("Metrics", func() {
 	Describe("Emit key", func() {
 		Context("With invalid characters in key", func() {
 			It("should replace invalid characters with normalized characters", func() {
-				goa.SetMetrics(metrics)
+				goa.SetMetrics(metriks)
 				goa.EmitKey(keys[:], 3.14)
 				Ω(keys).Should(ConsistOf([]string{
 					"foo_bar_all",
@@ -75,7 +82,7 @@ var _ = Describe("Metrics", func() {
 	Describe("Increment Counter", func() {
 		Context("With invalid characters in key", func() {
 			It("should replace invalid characters with normalized characters", func() {
-				goa.SetMetrics(metrics)
+				goa.SetMetrics(metriks)
 				goa.IncrCounter(keys[:], 3.14)
 				Ω(keys).Should(ConsistOf([]string{
 					"foo_bar_all",
@@ -92,7 +99,7 @@ var _ = Describe("Metrics", func() {
 	Describe("Measure since", func() {
 		Context("With invalid characters in key", func() {
 			It("should replace invalid characters with normalized characters", func() {
-				goa.SetMetrics(metrics)
+				goa.SetMetrics(metriks)
 				goa.MeasureSince(keys[:], time.Time{})
 				Ω(keys).Should(ConsistOf([]string{
 					"foo_bar_all",
@@ -109,7 +116,7 @@ var _ = Describe("Metrics", func() {
 	Describe("Set gauge", func() {
 		Context("With invalid characters in key", func() {
 			It("should replace invalid characters with normalized characters", func() {
-				goa.SetMetrics(metrics)
+				goa.SetMetrics(metriks)
 				goa.SetGauge(keys[:], 3.14)
 				Ω(keys).Should(ConsistOf([]string{
 					"foo_bar_all",
