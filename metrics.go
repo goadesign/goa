@@ -29,26 +29,26 @@ var (
 )
 
 func init() {
-	SetMetrics(&MetricDiscarder{})
+	SetMetrics(&NoopSink{})
 }
 
-// MetricDiscarder default NOOP metrics recorder
-type MetricDiscarder struct{}
+// NoopSink default NOOP metrics recorder
+type NoopSink struct{}
 
 // SetGauge method
-func (md *MetricDiscarder) SetGauge(key []string, val float32) {}
+func (md *NoopSink) SetGauge(key []string, val float32) {}
 
 // EmitKey method
-func (md *MetricDiscarder) EmitKey(key []string, val float32) {}
+func (md *NoopSink) EmitKey(key []string, val float32) {}
 
 // IncrCounter method
-func (md *MetricDiscarder) IncrCounter(key []string, val float32) {}
+func (md *NoopSink) IncrCounter(key []string, val float32) {}
 
 // AddSample method
-func (md *MetricDiscarder) AddSample(key []string, val float32) {}
+func (md *NoopSink) AddSample(key []string, val float32) {}
 
 // MeasureSince method
-func (md *MetricDiscarder) MeasureSince(key []string, start time.Time) {}
+func (md *NoopSink) MeasureSince(key []string, start time.Time) {}
 
 // NewMetrics initializes goa's metrics instance with the supplied
 // configuration and metrics sink
