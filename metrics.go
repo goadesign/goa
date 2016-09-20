@@ -61,7 +61,7 @@ func NewMetrics(conf *metrics.Config, sink metrics.MetricSink) (err error) {
 }
 
 // SetMetrics initializes goa's metrics instance with the supplied metrics adapter interface.
-func SetMetrics(m metrics.Metrics) {
+func SetMetrics(m *metrics.Metrics) {
 	metriks.Store(m)
 }
 

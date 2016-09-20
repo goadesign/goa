@@ -11,8 +11,8 @@ import (
 	"sort"
 	"strings"
 
-	"golang.org/x/net/context"
 	"github.com/armon/go-metrics"
+	"golang.org/x/net/context"
 )
 
 type (
