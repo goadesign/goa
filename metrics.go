@@ -32,15 +32,6 @@ func init() {
 	SetMetrics(&MetricDiscarder{})
 }
 
-// Metrics generic interface for decoupling Goa from go-metrics.
-type Metrics interface {
-	SetGauge(key []string, val float32)
-	EmitKey(key []string, val float32)
-	IncrCounter(key []string, val float32)
-	AddSample(key []string, val float32)
-	MeasureSince(key []string, start time.Time)
-}
-
 // MetricDiscarder default NOOP metrics recorder
 type MetricDiscarder struct{}
 
@@ -70,7 +61,7 @@ func NewMetrics(conf *metrics.Config, sink metrics.MetricSink) (err error) {
 }
 
 // SetMetrics initializes goa's metrics instance with the supplied metrics adapter interface.
-func SetMetrics(m Metrics) {
+func SetMetrics(m metrics.Metrics) {
 	metriks.Store(m)
 }
 
@@ -81,7 +72,7 @@ func SetMetrics(m Metrics) {
 func AddSample(key []string, val float32) {
 	normalizeKeys(key)
 
-	metriks.Load().(Metrics).AddSample(key, val)
+	metriks.Load().(metrics.Metrics).AddSample(key, val)
 }
 
 // EmitKey emits a key/value pair
@@ -90,7 +81,7 @@ func AddSample(key []string, val float32) {
 func EmitKey(key []string, val float32) {
 	normalizeKeys(key)
 
-	metriks.Load().(Metrics).EmitKey(key, val)
+	metriks.Load().(metrics.Metrics).EmitKey(key, val)
 }
 
 // IncrCounter increments the counter named by `key`
@@ -99,7 +90,7 @@ func EmitKey(key []string, val float32) {
 func IncrCounter(key []string, val float32) {
 	normalizeKeys(key)
 
-	metriks.Load().(Metrics).IncrCounter(key, val)
+	metriks.Load().(metrics.Metrics).IncrCounter(key, val)
 }
 
 // MeasureSince creates a timing metric that records
@@ -111,7 +102,7 @@ func IncrCounter(key []string, val float32) {
 func MeasureSince(key []string, start time.Time) {
 	normalizeKeys(key)
 
-	metriks.Load().(Metrics).MeasureSince(key, start)
+	metriks.Load().(metrics.Metrics).MeasureSince(key, start)
 }
 
 // SetGauge sets the named gauge to the specified value
@@ -120,7 +111,7 @@ func MeasureSince(key []string, start time.Time) {
 func SetGauge(key []string, val float32) {
 	normalizeKeys(key)
 
-	metriks.Load().(Metrics).SetGauge(key, val)
+	metriks.Load().(metrics.Metrics).SetGauge(key, val)
 }
 
 // This function is used to make metric names safe for all metric services. Specifically, prometheus does

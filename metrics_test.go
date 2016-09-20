@@ -7,14 +7,27 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/armon/go-metrics"
 )
+
+// mock metrics
+type mockSink struct{}
+
+func (m *mockSink) SetGauge(key []string, val float32)         {}
+func (m *mockSink) EmitKey(key []string, val float32)          {}
+func (m *mockSink) IncrCounter(key []string, val float32)      {}
+func (m *mockSink) AddSample(key []string, val float32)        {}
+func (m *mockSink) MeasureSince(key []string, start time.Time) {}
 
 var _ = Describe("Metrics", func() {
 	var keys = [6]string{}
-	var metrics goa.Metrics
+	var metrics *metrics.Metrics
+	var sink *mockSink
 
 	BeforeEach(func() {
-		metrics = &goa.MetricDiscarder{}
+		sink = &mockSink{}
+		metrics = metrics.New(metrics.DefaultConfig("UnitTest Service"), sink)
 		keys = [6]string{
 			"foo_bar_*/*",
 			"foo_*_baz",
