@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"golang.org/x/net/context"
+	"github.com/armon/go-metrics"
 )
 
 type (
@@ -38,7 +39,7 @@ type (
 		middleware []Middleware       // Middleware chain
 		cancel     context.CancelFunc // Service context cancel signal trigger
 
-		metriks Metrics // metrics gathering
+		metriks metrics.Metrics // metrics gathering
 	}
 
 	// Controller defines the common fields and behavior of generated controllers.
@@ -187,12 +188,12 @@ func (service *Service) ServeFiles(path, filename string) error {
 }
 
 // SetMetrics sets the metrics framework instance
-func (service *Service) SetMetrics(metriks Metrics) {
+func (service *Service) SetMetrics(metriks metrics.Metrics) {
 	service.metriks = metriks
 }
 
 // Metrics returns the defined metrics framework instance.
-func (service *Service) Metrics() Metrics {
+func (service *Service) Metrics() metrics.Metrics {
 	return service.metriks
 }
 
