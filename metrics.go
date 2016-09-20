@@ -42,7 +42,7 @@ func NewNoOpSink() metrics.MetricSink {
 	return &NoOpSink{}
 }
 
-// NoopSink default NOOP metrics recorder
+// NoOpSink default NOOP metrics recorder
 type NoOpSink struct{}
 
 // SetGauge method
