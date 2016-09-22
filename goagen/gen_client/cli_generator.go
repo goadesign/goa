@@ -663,7 +663,7 @@ func new{{ goify $security.SchemeName true }}Signer({{ signerSignature $security
 		SignQuery: {{ if eq $security.In "query" }}true{{ else }}false{{ end }},
 		KeyName: "{{ $security.Name }}",
 		KeyValue: key,
-		Format: format,
+		Format: {{ if eq $security.In "query" }}"%s"{{ else }}format{{ end }},
 	}
 {{ else if eq .Type "jwt" }}	return &goaclient.JWTSigner{
 		TokenSource: source,
