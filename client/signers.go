@@ -100,8 +100,10 @@ func (s *APIKeySigner) Sign(req *http.Request) error {
 	name := s.KeyName
 	format := s.Format
 	val := fmt.Sprintf(format, s.KeyValue)
-	if s.SignQuery {
-		req.URL.Query().Set(name, val)
+	if s.SignQuery && val != "" {
+		query := req.URL.Query()
+		query.Set(name, val)
+		req.URL.RawQuery = query.Encode()
 	} else {
 		req.Header.Set(name, val)
 	}
