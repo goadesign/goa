@@ -616,8 +616,9 @@ func extensionsFromDefinition(mdata dslengine.MetadataDefinition) map[string]int
 		}
 		val := value[0]
 		ival := interface{}(val)
-		if strings.HasPrefix(val, "json:") && len(val) > 5 {
-			json.Unmarshal([]byte(val[5:]), &ival) // ignore errors
+		if err := json.Unmarshal([]byte(val), &ival); err != nil {
+			extensions[chunks[2]] = val
+			continue
 		}
 		extensions[chunks[2]] = ival
 	}
