@@ -516,14 +516,19 @@ var _ = Describe("New", func() {
 		Context("with metadata", func() {
 			const gat = "gat"
 			const extension = `{"foo":"bar"}`
-			const jsonExtension = `json:{"foo":"bar"}`
+			const stringExtension = "foo"
+
+			var (
+				unmarshaled map[string]interface{}
+				_           = json.Unmarshal([]byte(extension), &unmarshaled)
+			)
 
 			BeforeEach(func() {
 				Resource("res", func() {
 					Metadata("swagger:tag:res")
 					Metadata("struct:tag:json", "resource")
 					Metadata("swagger:extension:x-resource", extension)
-					Metadata("swagger:extension:x-json", jsonExtension)
+					Metadata("swagger:extension:x-string", stringExtension)
 					Action("act", func() {
 						Metadata("swagger:tag:Update")
 						Metadata("struct:tag:json", "action")
@@ -559,8 +564,8 @@ var _ = Describe("New", func() {
 			It("should set the swagger object tags", func() {
 				Ω(swagger.Tags).Should(HaveLen(2))
 				tags := []*genswagger.Tag{
-					{Name: gat, Description: "", ExternalDocs: nil, Extensions: map[string]interface{}{"x-api": extension}},
-					{Name: tag, Description: "Tag desc.", ExternalDocs: &genswagger.ExternalDocs{URL: "http://example.com/tag", Description: "Huge docs"}, Extensions: map[string]interface{}{"x-api": extension}},
+					{Name: gat, Description: "", ExternalDocs: nil, Extensions: map[string]interface{}{"x-api": unmarshaled}},
+					{Name: tag, Description: "Tag desc.", ExternalDocs: &genswagger.ExternalDocs{URL: "http://example.com/tag", Description: "Huge docs"}, Extensions: map[string]interface{}{"x-api": unmarshaled}},
 				}
 				Ω(swagger.Tags).Should(Equal(tags))
 			})
@@ -574,26 +579,23 @@ var _ = Describe("New", func() {
 
 			It("should set the swagger extensions", func() {
 				Ω(swagger.Info.Extensions).Should(HaveLen(1))
-				Ω(swagger.Info.Extensions["x-api"]).Should(Equal(extension))
+				Ω(swagger.Info.Extensions["x-api"]).Should(Equal(unmarshaled))
 				p := swagger.Paths[""].(*genswagger.Path)
 				Ω(p.Extensions).Should(HaveLen(1))
-				Ω(p.Extensions["x-action"]).Should(Equal(extension))
+				Ω(p.Extensions["x-action"]).Should(Equal(unmarshaled))
 				Ω(p.Put.Extensions).Should(HaveLen(1))
-				Ω(p.Put.Extensions["x-put"]).Should(Equal(extension))
+				Ω(p.Put.Extensions["x-put"]).Should(Equal(unmarshaled))
 				Ω(p.Put.Parameters[0].Extensions).Should(HaveLen(1))
-				Ω(p.Put.Parameters[0].Extensions["x-param"]).Should(Equal(extension))
+				Ω(p.Put.Parameters[0].Extensions["x-param"]).Should(Equal(unmarshaled))
 				Ω(p.Put.Responses["204"].Extensions).Should(HaveLen(1))
-				Ω(p.Put.Responses["204"].Extensions["x-response"]).Should(Equal(extension))
+				Ω(p.Put.Responses["204"].Extensions["x-response"]).Should(Equal(unmarshaled))
 				Ω(swagger.Paths["x-resource"]).ShouldNot(BeNil())
-				rs := swagger.Paths["x-resource"].(string)
-				Ω(rs).Should(Equal(extension))
-				rs2 := swagger.Paths["x-json"].(map[string]interface{})
-				var expected map[string]interface{}
-				err := json.Unmarshal([]byte(jsonExtension[5:]), &expected)
-				Ω(err).ShouldNot(HaveOccurred())
-				Ω(rs2).Should(Equal(expected))
+				rs := swagger.Paths["x-resource"].(map[string]interface{})
+				Ω(rs).Should(Equal(unmarshaled))
+				rs2 := swagger.Paths["x-string"].(string)
+				Ω(rs2).Should(Equal(stringExtension))
 				Ω(swagger.SecurityDefinitions["password"].Extensions).Should(HaveLen(1))
-				Ω(swagger.SecurityDefinitions["password"].Extensions["x-security"]).Should(Equal(extension))
+				Ω(swagger.SecurityDefinitions["password"].Extensions["x-security"]).Should(Equal(unmarshaled))
 			})
 
 		})

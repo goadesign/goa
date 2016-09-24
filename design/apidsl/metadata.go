@@ -39,10 +39,7 @@ import (
 //
 //        Metadata("swagger:summary", "Short summary of what action does")
 //
-// `swagger:extension:xxx`: sets the Swagger extensions xxx. If the value of the metadata starts
-// with the prefix "json:" then the rest of the value is JSON unmarshaled prior to setting the
-// extension field.
-//
+// `swagger:extension:xxx`: sets the Swagger extensions xxx. It can have any valid JSON format value.
 // Applicable to
 // api as within the info and tag object,
 // resource as within the paths object,
@@ -54,7 +51,6 @@ import (
 // See https://github.com/OAI/OpenAPI-Specification/blob/master/guidelines/EXTENSIONS.md.
 //
 //        Metadata("swagger:extension:x-api", `{"foo":"bar"}`)
-//        Metadata("swagger:extension:x-json", `json:{"foo":"bar"}`)
 //
 // The special key names listed above may be used as follows:
 //
