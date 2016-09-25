@@ -15,7 +15,8 @@ const (
 	maxValue    = 1000 // Maximum value for integer and float examples.
 )
 
-// Example returns a random value for the generator attribute using the generator random value producer.
+// Example returns a random value for the generator attribute using the generator random value
+// producer.
 func (a *AttributeExpr) Example(r *Random) interface{} {
 	// Randomize array length first, since that's from higher level
 	if hasLengthValidation(a) {

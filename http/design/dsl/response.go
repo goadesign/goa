@@ -1,6 +1,7 @@
 package dsl
 
 import (
+	apidesign "github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/eval"
 	"github.com/goadesign/goa/http/design"
 )
@@ -72,9 +73,9 @@ import (
 // type and run the validations defined in the media type during rendering.
 func Response(name string, paramsAndDSL ...interface{}) {
 	switch def := eval.Current().(type) {
-	case *design.ActionDefinition:
+	case *design.ActionExpr:
 		if def.Responses == nil {
-			def.Responses = make(map[string]*design.ResponseDefinition)
+			def.Responses = make(map[string]*design.ResponseExpr)
 		}
 		if _, ok := def.Responses[name]; ok {
 			eval.ReportError("response %s is defined twice", name)
@@ -89,9 +90,9 @@ func Response(name string, paramsAndDSL ...interface{}) {
 			def.Responses[name] = resp
 		}
 
-	case *design.ResourceDefinition:
+	case *design.ResourceExpr:
 		if def.Responses == nil {
-			def.Responses = make(map[string]*design.ResponseDefinition)
+			def.Responses = make(map[string]*design.ResponseExpr)
 		}
 		if _, ok := def.Responses[name]; ok {
 			eval.ReportError("response %s is defined twice", name)
@@ -113,16 +114,19 @@ func Response(name string, paramsAndDSL ...interface{}) {
 
 // Status sets the Response status.
 func Status(status int) {
-	if r, ok := responseDefinition(); ok {
-		r.Status = status
+	res, ok := eval.Current().(*design.ResponseExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
 	}
+	res.Status = status
 }
 
-func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.ResponseDefinition {
+func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.ResponseExpr {
 	var params []string
 	var dsl func()
 	var ok bool
-	var dt design.DataType
+	var dt apidesign.DataType
 	if len(paramsAndDSL) > 0 {
 		d := paramsAndDSL[len(paramsAndDSL)-1]
 		if dsl, ok = d.(func()); ok {
@@ -130,7 +134,7 @@ func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.Respon
 		}
 		if len(paramsAndDSL) > 0 {
 			t := paramsAndDSL[0]
-			if dt, ok = t.(design.DataType); ok {
+			if dt, ok = t.(apidesign.DataType); ok {
 				paramsAndDSL = paramsAndDSL[1:]
 			}
 		}
@@ -143,24 +147,24 @@ func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.Respon
 			}
 		}
 	}
-	var resp *design.ResponseDefinition
+	var resp *design.ResponseExpr
 	if len(params) > 0 {
-		if tmpl, ok := design.Design.ResponseTemplates[name]; ok {
+		if tmpl, ok := design.Root.ResponseTemplates[name]; ok {
 			resp = tmpl.Template(params...)
-		} else if tmpl, ok := design.Design.DefaultResponseTemplates[name]; ok {
+		} else if tmpl, ok := design.Root.DefaultResponseTemplates[name]; ok {
 			resp = tmpl.Template(params...)
 		} else {
 			eval.ReportError("no response template named %#v", name)
 			return nil
 		}
 	} else {
-		if ar, ok := design.Design.Responses[name]; ok {
+		if ar, ok := design.Root.Responses[name]; ok {
 			resp = ar.Dup()
-		} else if ar, ok := design.Design.DefaultResponses[name]; ok {
+		} else if ar, ok := design.Root.DefaultResponses[name]; ok {
 			resp = ar.Dup()
 			resp.Standard = true
 		} else {
-			resp = &design.ResponseDefinition{Name: name}
+			resp = &design.ResponseExpr{Name: name}
 		}
 	}
 	if dsl != nil {
@@ -170,7 +174,7 @@ func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.Respon
 		resp.Standard = false
 	}
 	if dt != nil {
-		if mt, ok := dt.(*design.MediaTypeDefinition); ok {
+		if mt, ok := dt.(*design.MediaTypeExpr); ok {
 			resp.MediaType = mt.Identifier
 		}
 		resp.Type = dt

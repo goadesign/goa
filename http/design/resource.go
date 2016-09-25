@@ -61,8 +61,8 @@ func NewResourceExpr(name string, dsl func()) *ResourceExpr {
 	}
 }
 
-// Context returns the generic definition name used in error messages.
-func (r *ResourceExpr) Context() string {
+// EvalName returns the generic definition name used in error messages.
+func (r *ResourceExpr) EvalName() string {
 	if r.Name != "" {
 		return fmt.Sprintf("resource %#v", r.Name)
 	}
@@ -155,7 +155,7 @@ func (r *ResourceExpr) FullPath() string {
 // Parent returns the parent resource if any, nil otherwise.
 func (r *ResourceExpr) Parent() *ResourceExpr {
 	if r.ParentName != "" {
-		if parent, ok := Root.Resources[r.ParentName]; ok {
+		if parent := Root.Resource(r.ParentName); parent != nil {
 			return parent
 		}
 	}
@@ -175,3 +175,10 @@ func (r *ResourceExpr) Finalize() {
 		return nil
 	})
 }
+
+// ByFilePath makes FileServerExpr sortable for code generators.
+type ByFilePath []*FileServerExpr
+
+func (b ByFilePath) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
+func (b ByFilePath) Len() int           { return len(b) }
+func (b ByFilePath) Less(i, j int) bool { return b[i].FilePath < b[j].FilePath }

@@ -12,6 +12,9 @@ type (
 		Traits []*TraitExpr
 		// Types contains the user types described in the DSL.
 		Types []UserType
+		// NoExamples is a boolean that indicates whether to generate random examples
+		// (false) or not (true).
+		NoExamples bool
 	}
 
 	// MetadataExpr is a set of key/value pairs
