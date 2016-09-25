@@ -38,7 +38,7 @@ type (
 		// Query string parameters only
 		QueryParams *design.AttributeExpr
 		// Payload blueprint (request body) if any
-		Payload *design.UserType
+		Payload design.UserType
 		// PayloadOptional is true if the request payload is optional, false otherwise.
 		PayloadOptional bool
 		// Request headers that need to be made available to action
@@ -64,6 +64,16 @@ type (
 	HeaderIterator func(name string, isRequired bool, h *design.AttributeExpr) error
 )
 
+// ExtractRouteWildcards returns the names of the wildcards that appear in path.
+func ExtractRouteWildcards(path string) []string {
+	matches := WildcardRegex.FindAllStringSubmatch(path, -1)
+	wcs := make([]string, len(matches))
+	for i, m := range matches {
+		wcs[i] = m[1]
+	}
+	return wcs
+}
+
 // EvalName returns the generic expression name used in error messages.
 func (a *ActionExpr) EvalName() string {
 	var prefix, suffix string
@@ -73,7 +83,7 @@ func (a *ActionExpr) EvalName() string {
 		suffix = "unnamed action"
 	}
 	if a.Parent != nil {
-		prefix = a.Parent.Context() + " "
+		prefix = a.Parent.EvalName() + " "
 	}
 	return prefix + suffix
 }
@@ -107,7 +117,7 @@ func (a *ActionExpr) AllParams() *design.AttributeExpr {
 		res = res.Merge(p.CanonicalAction().AllParams())
 	} else {
 		res = res.Merge(a.Parent.Params)
-		res = res.Merge(design.Root.API.Params)
+		res = res.Merge(Root.Params)
 	}
 	return res
 }
@@ -154,7 +164,7 @@ func (a *ActionExpr) EffectiveSchemes() []string {
 			parent = parent.Parent()
 		}
 		if len(schemes) == 0 {
-			schemes = Design.Schemes
+			schemes = Root.Schemes
 		}
 	}
 	return schemes
@@ -188,18 +198,18 @@ func (a *ActionExpr) Finalize() {
 
 // UserTypes returns all the user types used by the action payload and parameters.
 func (a *ActionExpr) UserTypes() map[string]design.UserType {
-	types := make(map[string]UserType)
-	allp := a.AllParams().Type.ToObject()
+	types := make(map[string]design.UserType)
+	allp := a.AllParams().Type.(design.Object)
 	if a.Payload != nil {
 		allp["__payload__"] = &design.AttributeExpr{Type: a.Payload}
 	}
-	for n, ut := range UserTypes(allp) {
+	for n, ut := range userTypes(allp) {
 		types[n] = ut
 	}
 	for _, r := range a.Responses {
-		if mt := Design.MediaTypeWithIdentifier(r.MediaType); mt != nil {
-			types[mt.TypeName] = mt.UserTypeDefinition
-			for n, ut := range UserTypes(mt.UserTypeDefinition) {
+		if mt := Root.MediaType(r.MediaType); mt != nil {
+			types[mt.TypeName] = mt.UserTypeExpr
+			for n, ut := range userTypes(mt.UserTypeExpr) {
 				types[n] = ut
 			}
 		}
@@ -208,6 +218,50 @@ func (a *ActionExpr) UserTypes() map[string]design.UserType {
 		return nil
 	}
 	return types
+}
+
+// userTypes traverses the data type recursively and collects all the user types used to
+// define it. The returned map is indexed by type name.
+func userTypes(dt design.DataType) map[string]design.UserType {
+	collect := func(types map[string]design.UserType) func(*design.AttributeExpr) error {
+		return func(at *design.AttributeExpr) error {
+			if u, ok := at.Type.(design.UserType); ok {
+				types[u.Name()] = u
+			}
+			return nil
+		}
+	}
+	switch actual := dt.(type) {
+	case design.Primitive:
+		return nil
+	case *design.Array:
+		return userTypes(actual.ElemType.Type)
+	case *design.Map:
+		ktypes := userTypes(actual.KeyType.Type)
+		vtypes := userTypes(actual.ElemType.Type)
+		if vtypes == nil {
+			return ktypes
+		}
+		for n, ut := range ktypes {
+			vtypes[n] = ut
+		}
+		return vtypes
+	case design.Object:
+		types := make(map[string]design.UserType)
+		for _, att := range actual {
+			att.Walk(collect(types))
+		}
+		if len(types) == 0 {
+			return nil
+		}
+		return types
+	case design.UserType:
+		types := map[string]design.UserType{actual.Name(): actual}
+		actual.Attribute().Walk(collect(types))
+		return types
+	default:
+		panic("unknown type") // bug
+	}
 }
 
 // IterateHeaders iterates over the resource-level and action-level headers,
@@ -223,6 +277,30 @@ func (a *ActionExpr) IterateHeaders(it HeaderIterator) error {
 	}
 
 	return iterateHeaders(mergedHeaders, isRequired, it)
+}
+
+func iterateHeaders(headers *design.AttributeExpr, isRequired func(name string) bool, it HeaderIterator) error {
+	if headers == nil {
+		return nil
+	}
+	if _, ok := headers.Type.(design.Object); !ok {
+		return nil
+	}
+	headersMap := headers.Type.(design.Object)
+	names := make([]string, len(headersMap))
+	i := 0
+	for n := range headersMap {
+		names[i] = n
+		i++
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		header := headersMap[n]
+		if err := it(n, isRequired(n), header); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // IterateResponses calls the given iterator passing in each response sorted in alphabetical order.
@@ -259,10 +337,10 @@ func (a *ActionExpr) mergeResponses() {
 		if pr, ok := a.Parent.Responses[name]; ok {
 			resp.Merge(pr)
 		}
-		if ar, ok := Root.API.Responses[name]; ok {
+		if ar, ok := Root.Responses[name]; ok {
 			resp.Merge(ar)
 		}
-		if dr, ok := Root.API.DefaultResponses[name]; ok {
+		if dr, ok := Root.DefaultResponses[name]; ok {
 			resp.Merge(dr)
 		}
 	}
@@ -277,12 +355,12 @@ func (a *ActionExpr) initImplicitParams() {
 				if params == nil {
 					return
 				}
-				att, ok := params.Type.ToObject()[wc]
+				att, ok := params.Type.(design.Object)[wc]
 				if ok {
 					if a.Params == nil {
 						a.Params = &design.AttributeExpr{Type: design.Object{}}
 					}
-					a.Params.Type.ToObject()[wc] = att
+					a.Params.Type.(design.Object)[wc] = att
 					found = true
 				}
 			}
@@ -296,43 +374,25 @@ func (a *ActionExpr) initImplicitParams() {
 			if found {
 				continue
 			}
-			search(Design.Params)
+			search(Root.Params)
 			if found {
 				continue
 			}
 			if a.Params == nil {
 				a.Params = &design.AttributeExpr{Type: design.Object{}}
 			}
-			a.Params.Type.ToObject()[wc] = &design.AttributeExpr{Type: String}
+			a.Params.Type.(design.Object)[wc] = &design.AttributeExpr{Type: design.String}
 		}
 	}
 }
 
 // initQueryParams extract the query parameters from the action params.
 func (a *ActionExpr) initQueryParams() {
-	// 3. Compute QueryParams from Params and set all path params as non zero attributes
 	if params := a.AllParams(); params != nil {
-		queryParams := DupAtt(params)
-		queryParams.Type = Dup(queryParams.Type)
+		queryParams := design.DupAtt(params)
+		queryParams.Type = design.Dup(queryParams.Type)
 		if a.Params == nil {
 			a.Params = &design.AttributeExpr{Type: design.Object{}}
-		}
-		a.Params.NonZeroAttributes = make(map[string]bool)
-		for _, route := range a.Routes {
-			pnames := route.Params()
-			for _, pname := range pnames {
-				a.Params.NonZeroAttributes[pname] = true
-				delete(queryParams.Type.ToObject(), pname)
-				if queryParams.Validation != nil {
-					req := queryParams.Validation.Required
-					for i, n := range req {
-						if n == pname {
-							queryParams.Validation.Required = append(req[:i], req[i+1:]...)
-							break
-						}
-					}
-				}
-			}
 		}
 		a.QueryParams = queryParams
 	}
@@ -340,13 +400,13 @@ func (a *ActionExpr) initQueryParams() {
 
 // EvalName returns the generic definition name used in error messages.
 func (r *RouteExpr) EvalName() string {
-	return fmt.Sprintf(`route %s "%s" of %s`, r.Verb, r.Path, r.Parent.Context())
+	return fmt.Sprintf(`route %s "%s" of %s`, r.Verb, r.Path, r.Parent.EvalName())
 }
 
 // Params returns the route parameters.
 // For example for the route "GET /foo/:fooID" Params returns []string{"fooID"}.
 func (r *RouteExpr) Params() []string {
-	return ExtractWildcards(r.FullPath())
+	return ExtractRouteWildcards(r.FullPath())
 }
 
 // FullPath returns the action full path computed by concatenating the API and resource base paths

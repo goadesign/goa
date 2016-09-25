@@ -74,7 +74,7 @@ func Action(name string, dsl func()) {
 
 // Docs provides external documentation pointers for actions.
 func Docs(dsl func()) {
-	docs := new(design.DocsExpr)
+	docs := new(apidesign.DocsExpr)
 	if !eval.Execute(dsl, docs) {
 		return
 	}
@@ -202,7 +202,7 @@ func Headers(params ...interface{}) {
 	}
 	dsl, ok := params[0].(func())
 	if ok {
-		switch def := eval.CurrentExpr().(type) {
+		switch def := eval.Current().(type) {
 		case *design.ActionExpr:
 			headers := newAttribute(def.Parent.MediaType)
 			if eval.Execute(dsl, headers) {
@@ -216,14 +216,14 @@ func Headers(params ...interface{}) {
 			}
 
 		case *design.ResponseExpr:
-			var h *design.AttributeExpr
+			var h *apidesign.AttributeExpr
 			switch actual := def.Parent.(type) {
 			case *design.ResourceExpr:
 				h = newAttribute(actual.MediaType)
 			case *design.ActionExpr:
 				h = newAttribute(actual.Parent.MediaType)
 			case nil: // API ResponseTemplate
-				h = &design.AttributeExpr{}
+				h = &apidesign.AttributeExpr{}
 			default:
 				eval.ReportError("invalid use of Response or ResponseTemplate")
 			}
@@ -234,17 +234,6 @@ func Headers(params ...interface{}) {
 		default:
 			eval.IncompatibleDSL()
 		}
-	} else if cors, ok := corsExpr(); ok {
-		vals := make([]string, len(params))
-		for i, p := range params {
-			if v, ok := p.(string); ok {
-				vals[i] = v
-			} else {
-				eval.ReportError("invalid parameter at position %d: must be a string", i)
-				return
-			}
-		}
-		cors.Headers = vals
 	} else {
 		eval.IncompatibleDSL()
 	}
@@ -294,8 +283,8 @@ func Headers(params ...interface{}) {
 //     })
 //
 func Params(dsl func()) {
-	var params *design.AttributeExpr
-	switch def := eval.CurrentExpr().(type) {
+	var params *apidesign.AttributeExpr
+	switch def := eval.Current().(type) {
 	case *design.ActionExpr:
 		params = newAttribute(def.Parent.MediaType)
 	case *design.ResourceExpr:
@@ -309,12 +298,12 @@ func Params(dsl func()) {
 	if !eval.Execute(dsl, params) {
 		return
 	}
-	switch def := eval.CurrentExpr().(type) {
+	switch def := eval.Current().(type) {
 	case *design.ActionExpr:
 		def.Params = def.Params.Merge(params) // Useful for traits
 	case *design.ResourceExpr:
 		def.Params = def.Params.Merge(params) // Useful for traits
 	case *apidesign.APIExpr:
-		def.Params = def.Params.Merge(params) // Useful for traits
+		design.Root.Params = design.Root.Params.Merge(params) // Useful for traits
 	}
 }

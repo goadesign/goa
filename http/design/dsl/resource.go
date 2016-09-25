@@ -54,19 +54,16 @@ import (
 //     })
 //
 func Resource(name string, dsl func()) *design.ResourceExpr {
-	if design.Root.Resources == nil {
-		design.Root.Resources = make(map[string]*design.ResourceExpr)
-	}
 	if _, ok := eval.Current().(eval.TopExpr); !ok {
-		dslengine.IncompatibleDSL()
+		eval.IncompatibleDSL()
 		return nil
 	}
 
-	if _, ok := design.Root.Resources[name]; ok {
+	if res := design.Root.Resource(name); res != nil {
 		eval.ReportError("resource %#v is defined twice", name)
 		return nil
 	}
 	resource := design.NewResourceExpr(name, dsl)
-	design.Root.Resources[name] = resource
+	design.Root.Resources = append(design.Root.Resources, resource)
 	return resource
 }

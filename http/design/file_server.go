@@ -1,6 +1,11 @@
 package design
 
-import "github.com/goadesign/goa/design"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/goadesign/goa/design"
+)
 
 type (
 	// FileServerExpression defines an endpoint that servers static assets.
@@ -20,5 +25,28 @@ type (
 	}
 
 	// FileServerIterator is the type of functions given to IterateFileServers.
-	FileServerIterator func(f *FileServerDefinition) error
+	FileServerIterator func(*FileServerExpr) error
 )
+
+// EvalName returns the generic definition name used in error messages.
+func (f *FileServerExpr) EvalName() string {
+	suffix := fmt.Sprintf("file server %s", f.FilePath)
+	var prefix string
+	if f.Parent != nil {
+		prefix = f.Parent.EvalName() + " "
+	}
+	return prefix + suffix
+}
+
+// Finalize normalizes the request path.
+func (f *FileServerExpr) Finalize() {
+	// Make sure request path starts with a "/" so codegen can rely on it.
+	if !strings.HasPrefix(f.RequestPath, "/") {
+		f.RequestPath = "/" + f.RequestPath
+	}
+}
+
+// IsDir returns true if the file server serves a directory, false otherwise.
+func (f *FileServerExpr) IsDir() bool {
+	return WildcardRegex.MatchString(f.RequestPath)
+}

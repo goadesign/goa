@@ -20,6 +20,8 @@ type (
 		Metadata MetadataExpr
 		// Optional member default value
 		DefaultValue interface{}
+		// UserExample set in DSL or computed in Finalize
+		UserExample interface{}
 	}
 
 	// CompositeExpr defines a generic composite expression that contains an attribute.
@@ -96,9 +98,51 @@ func (a *AttributeExpr) Inherit(parent *AttributeExpr) {
 	a.inheritRecursive(parent)
 }
 
-// DSL returns the initialization DSL.
-func (a *AttributeExpr) DSL() func() {
-	return a.DSLFunc
+// AllRequired returns the list of all required fields from the underlying object.  This method
+// recurses if the type is itself an attribute (i.e. a UserType, this happens with the Reference DSL
+// for example).
+func (a *AttributeExpr) AllRequired() (required []string) {
+	if a == nil || a.Validation == nil {
+		return
+	}
+	required = a.Validation.Required
+	if u, ok := a.Type.(UserType); ok {
+		required = append(required, u.Attribute().AllRequired()...)
+	}
+	return
+}
+
+// IsRequired returns true if the given string matches the name of a required attribute, false
+// otherwise. This method only applies to attributes of type Object.
+func (a *AttributeExpr) IsRequired(attName string) bool {
+	for _, name := range a.AllRequired() {
+		if name == attName {
+			return true
+		}
+	}
+	return false
+}
+
+// HasDefaultValue returns true if the given attribute has a default value.
+func (a *AttributeExpr) HasDefaultValue(attName string) bool {
+	if o, ok := a.Type.(Object); ok {
+		att := o[attName]
+		return att.DefaultValue != nil
+	}
+	return false
+}
+
+// SetDefault sets the default for the attribute. It also converts HashVal
+// and ArrayVal to map and slice respectively.
+func (a *AttributeExpr) SetDefault(def interface{}) {
+	switch actual := def.(type) {
+	case MapVal:
+		a.DefaultValue = actual.ToMap()
+	case ArrayVal:
+		a.DefaultValue = actual.ToSlice()
+	default:
+		a.DefaultValue = actual
+	}
 }
 
 func (a *AttributeExpr) inheritRecursive(parent *AttributeExpr) {

@@ -31,3 +31,12 @@ func (u *UserTypeExpr) Dup(att *AttributeExpr) UserType {
 		TypeName:      u.TypeName,
 	}
 }
+
+// Finalize merges base type attributes.
+func (u *UserTypeExpr) Finalize() {
+	if u.Reference != nil {
+		if bat := u.AttributeExpr; bat != nil {
+			u.AttributeExpr.Inherit(bat)
+		}
+	}
+}

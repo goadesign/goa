@@ -47,7 +47,7 @@ func Files(path, filename string, dsls ...func()) {
 			FilePath:    filename,
 		}
 		if len(dsls) > 0 {
-			if !dslengine.Execute(dsls[0], server) {
+			if !eval.Execute(dsls[0], server) {
 				return
 			}
 		}

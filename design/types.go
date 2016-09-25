@@ -10,6 +10,7 @@
 package design
 
 import (
+	"fmt"
 	"reflect"
 	"sort"
 )
@@ -64,6 +65,8 @@ type (
 		Attribute() *AttributeExpr
 		// Dup makes a deep copy of the type given a deep copy of its attribute.
 		Dup(att *AttributeExpr) UserType
+		// Finalize finalizes the underlying type.
+		Finalize()
 	}
 
 	// ArrayVal is the type used to set the default value for arrays.
@@ -371,6 +374,33 @@ func (o Object) IterateAttributes(it AttributeIterator) error {
 		}
 	}
 	return nil
+}
+
+// QualifiedTypeName returns the qualified type name for the given data type. The qualified type
+// name includes the name of the type of the elements of array or map types.
+// This is useful in reporting types in error messages, examples of qualified type names:
+//
+//     array<string>
+//     map<string, string>
+//     map<string, array<int32>>
+//
+func QualifiedTypeName(t DataType) string {
+	switch t.Kind() {
+	case ArrayKind:
+		a := t.(*Array)
+		return fmt.Sprintf("%s<%s>",
+			t.Name(),
+			QualifiedTypeName(a.ElemType.Type),
+		)
+	case MapKind:
+		h := t.(*Map)
+		return fmt.Sprintf("%s<%s, %s>",
+			t.Name(),
+			QualifiedTypeName(h.KeyType.Type),
+			QualifiedTypeName(h.ElemType.Type),
+		)
+	}
+	return t.Name()
 }
 
 // toReflectType converts the DataType to reflect.Type.

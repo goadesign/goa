@@ -1,7 +1,11 @@
 package dsl
 
-import "github.com/goadesign/goa/http/design"
-import "github.com/goadesign/goa/design/dsl"
+import (
+	apidesign "github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/design/dsl"
+	"github.com/goadesign/goa/eval"
+	"github.com/goadesign/goa/http/design"
+)
 
 // Metadata is a set of key/value pairs that can be assigned to an object. Each value consists of a
 // slice of strings so that multiple invocation of the Metadata function on the same target using
@@ -52,14 +56,14 @@ import "github.com/goadesign/goa/design/dsl"
 //        })
 //
 func Metadata(name string, value ...string) {
-	appendMetadata := func(metadata eval.MetadataExpr, name string, value ...string) eval.MetadataExpr {
+	appendMetadata := func(metadata apidesign.MetadataExpr, name string, value ...string) apidesign.MetadataExpr {
 		if metadata == nil {
 			metadata = make(map[string][]string)
 		}
 		metadata[name] = append(metadata[name], value...)
 		return metadata
 	}
-	switch expr := eval.CurrentExpr().(type) {
+	switch expr := eval.Current().(type) {
 	case *design.MediaTypeExpr:
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	case *design.ActionExpr:

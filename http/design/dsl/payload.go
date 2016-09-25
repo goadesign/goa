@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"unicode"
 
+	apidesign "github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/eval"
 	"github.com/goadesign/goa/http/design"
 )
@@ -42,70 +43,72 @@ func payload(isOptional bool, p interface{}, dsls ...func()) {
 		eval.ReportError("too many arguments given to Payload")
 		return
 	}
-	if a, ok := eval.Current().(*design.ActionDefinition); ok {
-		var att *design.AttributeDefinition
-		var dsl func()
-		switch actual := p.(type) {
-		case func():
-			dsl = actual
-			att = newAttribute(a.Parent.MediaType)
-			att.Type = design.Object{}
-		case *design.AttributeDefinition:
-			att = design.DupAtt(actual)
-		case *design.UserTypeDefinition:
-			if len(dsls) == 0 {
-				a.Payload = actual
-				a.PayloadOptional = isOptional
-				return
-			}
-			att = design.DupAtt(actual.Definition())
-		case *design.MediaTypeDefinition:
-			att = design.DupAtt(actual.AttributeDefinition)
-		case string:
-			ut, ok := design.Design.Types[actual]
-			if !ok {
-				eval.ReportError("unknown payload type %s", actual)
-			}
-			att = design.DupAtt(ut.AttributeDefinition)
-		case *design.Array:
-			att = &design.AttributeDefinition{Type: actual}
-		case *design.Hash:
-			att = &design.AttributeDefinition{Type: actual}
-		case design.Primitive:
-			att = &design.AttributeDefinition{Type: actual}
-		default:
-			eval.ReportError("invalid Payload argument, must be a type, a media type or a DSL building a type")
+	a, ok := eval.Current().(*design.ActionExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	var att *apidesign.AttributeExpr
+	var dsl func()
+	switch actual := p.(type) {
+	case func():
+		dsl = actual
+		att = newAttribute(a.Parent.MediaType)
+		att.Type = apidesign.Object{}
+	case *apidesign.AttributeExpr:
+		att = apidesign.DupAtt(actual)
+	case *apidesign.UserTypeExpr:
+		if len(dsls) == 0 {
+			a.Payload = actual
+			a.PayloadOptional = isOptional
 			return
 		}
-		if len(dsls) == 1 {
-			if dsl != nil {
-				eval.ReportError("invalid arguments in Payload call, must be (type), (dsl) or (type, dsl)")
-			}
-			dsl = dsls[0]
+		att = apidesign.DupAtt(actual.Attribute())
+	case *design.MediaTypeExpr:
+		att = apidesign.DupAtt(actual.AttributeExpr)
+	case string:
+		ut := apidesign.Root.UserType(actual)
+		if ut == nil {
+			eval.ReportError("unknown payload type %s", actual)
+			return
 		}
-		if dsl != nil {
-			eval.Execute(dsl, att)
-		}
-		rn := camelize(a.Parent.Name)
-		an := camelize(a.Name)
-		a.Payload = &design.UserTypeDefinition{
-			AttributeDefinition: att,
-			TypeName:            fmt.Sprintf("%s%sPayload", an, rn),
-		}
-		a.PayloadOptional = isOptional
-	} else {
-		eval.IncompatibleDSL()
+		att = apidesign.DupAtt(ut.Attribute())
+	case *apidesign.Array:
+		att = &apidesign.AttributeExpr{Type: actual}
+	case *apidesign.Map:
+		att = &apidesign.AttributeExpr{Type: actual}
+	case apidesign.Primitive:
+		att = &apidesign.AttributeExpr{Type: actual}
+	default:
+		eval.ReportError("invalid Payload argument, must be a type, a media type or a DSL building a type")
+		return
 	}
+	if len(dsls) == 1 {
+		if dsl != nil {
+			eval.ReportError("invalid arguments in Payload call, must be (type), (dsl) or (type, dsl)")
+		}
+		dsl = dsls[0]
+	}
+	if dsl != nil {
+		eval.Execute(dsl, att)
+	}
+	rn := camelize(a.Parent.Name)
+	an := camelize(a.Name)
+	a.Payload = &apidesign.UserTypeExpr{
+		AttributeExpr: att,
+		TypeName:      fmt.Sprintf("%s%sPayload", an, rn),
+	}
+	a.PayloadOptional = isOptional
 }
 
 // newAttribute creates a new attribute definition using the media type with the given identifier
 // as base type.
-func newAttribute(baseMT string) *design.AttributeDefinition {
-	var base design.DataType
-	if mt := design.Design.MediaTypeWithIdentifier(baseMT); mt != nil {
+func newAttribute(baseMT string) *apidesign.AttributeExpr {
+	var base apidesign.DataType
+	if mt := design.Root.MediaType(baseMT); mt != nil {
 		base = mt.Type
 	}
-	return &design.AttributeDefinition{Reference: base}
+	return &apidesign.AttributeExpr{Reference: base}
 }
 
 func camelize(str string) string {

@@ -5,6 +5,8 @@ import (
 	"mime"
 	"strings"
 
+	apidesign "github.com/goadesign/goa/design"
+	apidsl "github.com/goadesign/goa/design/dsl"
 	"github.com/goadesign/goa/eval"
 	"github.com/goadesign/goa/http/design"
 )
@@ -65,12 +67,8 @@ var mediaTypeCount int
 //        })
 //     })
 //
-func MediaType(identifier string, apidsl func()) *design.MediaTypeDefinition {
-	if design.Root.MediaTypes == nil {
-		design.Root.MediaTypes = make(map[string]*design.MediaTypeDefinition)
-	}
-
-	if !eval.IsTopLevelDefinition() {
+func MediaType(identifier string, adsl func()) *design.MediaTypeExpr {
+	if _, ok := eval.Current().(eval.TopExpr); !ok {
 		eval.IncompatibleDSL()
 		return nil
 	}
@@ -86,7 +84,7 @@ func MediaType(identifier string, apidsl func()) *design.MediaTypeDefinition {
 	}
 	canonicalID := design.CanonicalIdentifier(identifier)
 	// Validate that media type identifier doesn't clash
-	if _, ok := design.Design.MediaTypes[canonicalID]; ok {
+	if m := design.Root.MediaType(canonicalID); m != nil {
 		eval.ReportError("media type %#v with canonical identifier %#v is defined twice", identifier, canonicalID)
 		return nil
 	}
@@ -111,8 +109,8 @@ func MediaType(identifier string, apidsl func()) *design.MediaTypeDefinition {
 		typeName = fmt.Sprintf("MediaType%d", mediaTypeCount)
 	}
 	// Now save the type in the API media types map
-	mt := design.NewMediaTypeDefinition(typeName, identifier, apidsl)
-	design.Root.MediaTypes[canonicalID] = mt
+	mt := design.NewMediaTypeExpr(typeName, identifier, adsl)
+	design.Root.MediaTypes = append(design.Root.MediaTypes, mt)
 	return mt
 }
 
@@ -196,11 +194,11 @@ func Media(val interface{}, viewName ...string) {
 //
 // defines the "name" and "vintage" attributes with the same type and validations as defined in
 // the Bottle type.
-func Reference(t design.DataType) {
+func Reference(t apidesign.DataType) {
 	switch def := eval.Current().(type) {
 	case *design.MediaTypeExpr:
 		def.Reference = t
-	case *design.AttributeExpr:
+	case *apidesign.AttributeExpr:
 		def.Reference = t
 	default:
 		eval.IncompatibleDSL()
@@ -208,14 +206,14 @@ func Reference(t design.DataType) {
 }
 
 // TypeName makes it possible to set the Go struct name for a type or media type in the generated
-// code. By default goagen uses the name (type) or identifier (media type) given in the apidsl and
+// code. By default goagen uses the name (type) or identifier (media type) given in the adsl and
 // computes a valid Go identifier from it. This function makes it possible to override that and
 // provide a custom name. name must be a valid Go identifier.
 func TypeName(name string) {
 	switch def := eval.Current().(type) {
 	case *design.MediaTypeExpr:
 		def.TypeName = name
-	case *design.UserTypeExpr:
+	case *apidesign.UserTypeExpr:
 		def.TypeName = name
 	default:
 		eval.IncompatibleDSL()
@@ -228,7 +226,7 @@ func TypeName(name string) {
 //    ContentType("application/json")
 //
 func ContentType(typ string) {
-	if mt, ok := eval.Current.(*design.MediaTypeExpr); ok {
+	if mt, ok := eval.Current().(*design.MediaTypeExpr); ok {
 		mt.ContentType = typ
 	} else {
 		eval.IncompatibleDSL()
@@ -238,7 +236,7 @@ func ContentType(typ string) {
 // View adds a new view to a media type. A view has a name and lists attributes that are
 // rendered when the view is used to produce a response. The attribute names must appear in the
 // media type definition. If an attribute is itself a media type then the view may specify which
-// view to use when rendering the attribute using the View function in the View apidsl. If not
+// view to use when rendering the attribute using the View function in the View adsl. If not
 // specified then the view named "default" is used. Examples:
 //
 //	View("default", func() {
@@ -253,34 +251,30 @@ func ContentType(typ string) {
 //			View("extended")	// Use view "extended" to render attribute "origin"
 //		})
 //	})
-func View(name string, apidsl ...func()) {
-	switch def := eval.CurrentDefinition().(type) {
-	case *design.MediaTypeDefinition:
+func View(name string, adsl ...func()) {
+	switch def := eval.Current().(type) {
+	case *design.MediaTypeExpr:
 		mt := def
 
-		if !mt.Type.IsObject() && !mt.Type.IsArray() {
-			eval.ReportError("cannot define view on non object and non collection media types")
-			return
-		}
 		if mt.Views == nil {
-			mt.Views = make(map[string]*design.ViewDefinition)
+			mt.Views = make(map[string]*design.ViewExpr)
 		} else {
 			if _, ok := mt.Views[name]; ok {
 				eval.ReportError("multiple definitions for view %#v in media type %#v", name, mt.TypeName)
 				return
 			}
 		}
-		at := &design.AttributeDefinition{}
+		at := &apidesign.AttributeExpr{}
 		ok := false
-		if len(apidsl) > 0 {
-			ok = eval.Execute(apidsl[0], at)
-		} else if mt.Type.IsArray() {
+		if len(adsl) > 0 {
+			ok = eval.Execute(adsl[0], at)
+		} else if a, ok := mt.Type.(*apidesign.Array); ok {
 			// inherit view from collection element if present
-			elem := mt.Type.ToArray().ElemType
+			elem := a.ElemType
 			if elem != nil {
-				if pa, ok2 := elem.Type.(*design.MediaTypeDefinition); ok2 {
+				if pa, ok2 := elem.Type.(*design.MediaTypeExpr); ok2 {
 					if v, ok2 := pa.Views[name]; ok2 {
-						at = v.AttributeDefinition
+						at = v.AttributeExpr
 						ok = true
 					} else {
 						eval.ReportError("unknown view %#v", name)
@@ -298,8 +292,8 @@ func View(name string, apidsl ...func()) {
 			mt.Views[name] = view
 		}
 
-	case *design.AttributeDefinition:
-		def.View = name
+	case *apidesign.AttributeExpr:
+		def.Metadata["view"] = []string{name}
 
 	default:
 		eval.IncompatibleDSL()
@@ -307,48 +301,54 @@ func View(name string, apidsl ...func()) {
 }
 
 // buildView builds a view definition given an attribute and a corresponding media type.
-func buildView(name string, mt *design.MediaTypeDefinition, at *design.AttributeDefinition) (*design.ViewDefinition, error) {
+func buildView(name string, mt *design.MediaTypeExpr, at *apidesign.AttributeExpr) (*design.ViewExpr, error) {
 	if at.Type == nil {
 		return nil, fmt.Errorf("invalid view DSL")
 	}
-	o, ok := at.Type.(design.Object)
+	o, ok := at.Type.(apidesign.Object)
 	if !ok {
 		return nil, fmt.Errorf("invalid view DSL")
 	}
 	if o != nil {
-		mto, ok := mt.Type.(design.Object)
+		mto, ok := mt.Type.(apidesign.Object)
 		if !ok {
-			mto = mt.Type.(*design.Array).ElemType.Type.(design.Object)
+			mto = mt.Type.(*apidesign.Array).ElemType.Type.(apidesign.Object)
 		}
 		for n, cat := range o {
 			if existing, ok := mto[n]; ok {
-				dup := design.DupAtt(existing)
-				dup.View = cat.View
+				dup := apidesign.DupAtt(existing)
+				dup.Metadata["view"] = cat.Metadata["view"]
 				o[n] = dup
 			} else if n != "links" {
 				return nil, fmt.Errorf("unknown attribute %#v", n)
 			}
 		}
 	}
-	return &design.ViewDefinition{
-		AttributeDefinition: at,
-		Name:                name,
-		Parent:              mt,
+	return &design.ViewExpr{
+		AttributeExpr: at,
+		Name:          name,
+		Parent:        mt,
 	}, nil
 }
 
-// Attributes implements the media type attributes apidsl. See MediaType.
-func Attributes(apidsl func()) {
-	if mt, ok := mediaTypeDefinition(); ok {
-		eval.Execute(apidsl, mt)
+// Attributes implements the media type attributes adsl. See MediaType.
+func Attributes(adsl func()) {
+	mt, ok := eval.Current().(*design.MediaTypeExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
 	}
+	eval.Execute(adsl, mt)
 }
 
-// Links implements the media type links apidsl. See MediaType.
-func Links(apidsl func()) {
-	if mt, ok := mediaTypeDefinition(); ok {
-		eval.Execute(apidsl, mt)
+// Links implements the media type links adsl. See MediaType.
+func Links(adsl func()) {
+	mt, ok := eval.Current().(*design.MediaTypeExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
 	}
+	eval.Execute(adsl, mt)
 }
 
 // Link adds a link to a media type. At the minimum a link has a name corresponding to one of the
@@ -358,26 +358,29 @@ func Links(apidsl func()) {
 //	Link("origin")		// Use the "link" view of the "origin" attribute
 //	Link("account", "tiny")	// Use the "tiny" view of the "account" attribute
 func Link(name string, view ...string) {
-	if mt, ok := mediaTypeDefinition(); ok {
-		if mt.Links == nil {
-			mt.Links = make(map[string]*design.LinkDefinition)
-		} else {
-			if _, ok := mt.Links[name]; ok {
-				eval.ReportError("duplicate definition for link %#v", name)
-				return
-			}
-		}
-		link := &design.LinkDefinition{Name: name, Parent: mt}
-		if len(view) > 1 {
-			eval.ReportError("invalid syntax in Link definition for %#v, allowed syntax is Link(name) or Link(name, view)", name)
-		}
-		if len(view) > 0 {
-			link.View = view[0]
-		} else {
-			link.View = "link"
-		}
-		mt.Links[name] = link
+	mt, ok := eval.Current().(*design.MediaTypeExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
 	}
+	if mt.Links == nil {
+		mt.Links = make(map[string]*design.LinkExpr)
+	} else {
+		if _, ok := mt.Links[name]; ok {
+			eval.ReportError("duplicate definition for link %#v", name)
+			return
+		}
+	}
+	link := &design.LinkExpr{Name: name, Parent: mt}
+	if len(view) > 1 {
+		eval.ReportError("invalid syntax in Link definition for %#v, allowed syntax is Link(name) or Link(name, view)", name)
+	}
+	if len(view) > 0 {
+		link.View = view[0]
+	} else {
+		link.View = "link"
+	}
+	mt.Links[name] = link
 }
 
 // CollectionOf creates a collection media type from its element media type. A collection media
@@ -385,26 +388,26 @@ func Link(name string, view ...string) {
 // actions. This function can be called from any place where a media type can be used.
 // The resulting media type identifier is built from the element media type by appending the media
 // type parameter "type" with value "collection".
-func CollectionOf(v interface{}, apidsl ...func()) *design.MediaTypeDefinition {
-	var m *design.MediaTypeDefinition
+func CollectionOf(v interface{}, adsl ...func()) *design.MediaTypeExpr {
+	var m *design.MediaTypeExpr
 	var ok bool
-	m, ok = v.(*design.MediaTypeDefinition)
+	m, ok = v.(*design.MediaTypeExpr)
 	if !ok {
 		if id, ok := v.(string); ok {
-			m = design.Design.MediaTypes[design.CanonicalIdentifier(id)]
+			m = design.Root.MediaType(id)
 		}
 	}
 	if m == nil {
 		eval.ReportError("invalid CollectionOf argument: not a media type and not a known media type identifier")
 		// don't return nil to avoid panics, the error will get reported at the end
-		return design.NewMediaTypeDefinition("InvalidCollection", "text/plain", nil)
+		return design.NewMediaTypeExpr("InvalidCollection", "text/plain", nil)
 	}
 	id := m.Identifier
 	mediatype, params, err := mime.ParseMediaType(id)
 	if err != nil {
 		eval.ReportError("invalid media type identifier %#v: %s", id, err)
 		// don't return nil to avoid panics, the error will get reported at the end
-		return design.NewMediaTypeDefinition("InvalidCollection", "text/plain", nil)
+		return design.NewMediaTypeExpr("InvalidCollection", "text/plain", nil)
 	}
 	hasType := false
 	for param := range params {
@@ -418,31 +421,34 @@ func CollectionOf(v interface{}, apidsl ...func()) *design.MediaTypeDefinition {
 	}
 	id = mime.FormatMediaType(mediatype, params)
 	canonical := design.CanonicalIdentifier(id)
-	if mt, ok := design.GeneratedMediaTypes[canonical]; ok {
+	if mt := design.Root.GeneratedMediaType(canonical); mt != nil {
 		// Already have a type for this collection, reuse it.
 		return mt
 	}
-	mt := design.NewMediaTypeDefinition("", id, func() {
-		if mt, ok := mediaTypeDefinition(); ok {
-			// Cannot compute collection type name before element media type DSL has executed
-			// since the DSL may modify element type name via the TypeName function.
-			mt.TypeName = m.TypeName + "Collection"
-			mt.AttributeDefinition = &design.AttributeDefinition{Type: ArrayOf(m)}
-			if len(apidsl) > 0 {
-				eval.Execute(apidsl[0], mt)
-			}
-			if mt.Views == nil {
-				// If the apidsl didn't create any views (or there is no apidsl at all)
-				// then inherit the views from the collection element.
-				mt.Views = make(map[string]*design.ViewDefinition)
-				for n, v := range m.Views {
-					mt.Views[n] = v
-				}
+	mt := design.NewMediaTypeExpr("", id, func() {
+		mt, ok := eval.Current().(*design.MediaTypeExpr)
+		if !ok {
+			eval.IncompatibleDSL()
+			return
+		}
+		// Cannot compute collection type name before element media type DSL has executed
+		// since the DSL may modify element type name via the TypeName function.
+		mt.TypeName = m.TypeName + "Collection"
+		mt.AttributeExpr = &apidesign.AttributeExpr{Type: apidsl.ArrayOf(m)}
+		if len(adsl) > 0 {
+			eval.Execute(adsl[0], mt)
+		}
+		if mt.Views == nil {
+			// If the adsl didn't create any views (or there is no adsl at all)
+			// then inherit the views from the collection element.
+			mt.Views = make(map[string]*design.ViewExpr)
+			for n, v := range m.Views {
+				mt.Views[n] = v
 			}
 		}
 	})
-	// Do not execute the apidsl right away, will be done last to make sure the element apidsl has run
+	// Do not execute the adsl right away, will be done last to make sure the element adsl has run
 	// first.
-	design.GeneratedMediaTypes[canonical] = mt
+	design.Root.GeneratedMediaTypes = append(design.Root.GeneratedMediaTypes, mt)
 	return mt
 }
