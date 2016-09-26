@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+
+	"github.com/goadesign/goa/eval"
 )
 
 type (
@@ -65,6 +67,8 @@ type (
 		Attribute() *AttributeExpr
 		// Dup makes a deep copy of the type given a deep copy of its attribute.
 		Dup(att *AttributeExpr) UserType
+		// Validate checks that the user type expression is consistent.
+		Validate(ctx string, parent eval.Expression) *eval.ValidationErrors
 		// Finalize finalizes the underlying type.
 		Finalize()
 	}
@@ -79,16 +83,22 @@ type (
 const (
 	// BooleanKind represents a boolean.
 	BooleanKind Kind = iota + 1
-	// Int32Kind represents a 32-bit integer.
+	// Int32Kind represents a signed 32-bit integer.
 	Int32Kind
-	// Int64Kind represents a 64-bit integer.
+	// Int64Kind represents a signed 64-bit integer.
 	Int64Kind
+	// UInt32Kind represents an unsigned 32-bit integer.
+	UInt32Kind
+	// UInt64Kind represents an unsigned 64-bit integer.
+	UInt64Kind
 	// Float32Kind represents a 32-bit floating number.
 	Float32Kind
 	// Float64Kind represents a 64-bit floating number.
 	Float64Kind
 	// StringKind represents a JSON string.
 	StringKind
+	// BytesKind represent a series of bytes (binary data).
+	BytesKind
 	// ArrayKind represents a JSON array.
 	ArrayKind
 	// ObjectKind represents a JSON object.
@@ -107,11 +117,17 @@ const (
 	// Boolean is the type for a JSON boolean.
 	Boolean = Primitive(BooleanKind)
 
-	// Int32 is the type for a 32-bit integer.
+	// Int32 is the type for a signed 32-bit integer.
 	Int32 = Primitive(Int32Kind)
 
-	// Int64 is the type for a 64-bit integer.
+	// Int64 is the type for a signed 64-bit integer.
 	Int64 = Primitive(Int64Kind)
+
+	// UInt32 is the type for an unsigned 32-bit integer.
+	UInt32 = Primitive(UInt32Kind)
+
+	// UInt64 is the type for an unsigned 64-bit integer.
+	UInt64 = Primitive(UInt64Kind)
 
 	// Float32 is the type for a 32-bit floating number.
 	Float32 = Primitive(Float32Kind)
@@ -121,6 +137,9 @@ const (
 
 	// String is the type for a JSON string.
 	String = Primitive(StringKind)
+
+	// Bytes is the type for binary data.
+	Bytes = Primitive(BytesKind)
 
 	// Any is the type for an arbitrary JSON value (interface{} in Go).
 	Any = Primitive(AnyKind)
@@ -140,12 +159,18 @@ func (p Primitive) Name() string {
 		return "int32"
 	case Int64:
 		return "int64"
+	case UInt32:
+		return "uint32"
+	case UInt64:
+		return "uint64"
 	case Float32:
 		return "float32"
 	case Float64:
 		return "float64"
 	case String:
 		return "string"
+	case Bytes:
+		return "[]byte"
 	case Any:
 		return "any"
 	default:
@@ -161,12 +186,16 @@ func (p Primitive) IsCompatible(val interface{}) bool {
 	switch val.(type) {
 	case bool:
 		return p == Boolean
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-		return p == Int32 || p == Int64 || p == Float32 || p == Float64
+	case int, int8, int16, int32, uint, uint8, uint16, uint32:
+		return p == Int32 || p == Int64 || p == UInt32 || p == UInt64 || p == Float32 || p == Float64
+	case int64, uint64:
+		return p == Int64 || p == UInt64 || p == Float32 || p == Float64
 	case float32, float64:
 		return p == Float32 || p == Float64
 	case string:
-		return p == String
+		return p == String || p == Bytes
+	case []byte:
+		return p == Bytes
 	}
 	return false
 }
@@ -176,15 +205,15 @@ func (p Primitive) Example(r *Random) interface{} {
 	switch p {
 	case Boolean:
 		return r.Bool()
-	case Int32:
+	case Int32, UInt32:
 		return r.Int32()
-	case Int64:
+	case Int64, UInt64:
 		return r.Int64()
 	case Float32:
 		return r.Float32()
 	case Float64:
 		return r.Float64()
-	case String, Any:
+	case String, Bytes, Any:
 		return r.String()
 	default:
 		panic("unknown primitive type") // bug

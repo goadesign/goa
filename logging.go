@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // ErrMissingLogValue is the value used to log keys with missing values
@@ -84,9 +84,6 @@ func (a *adapter) logit(msg string, keyvals []interface{}, iserror bool) {
 		keyvals = append(keyvals, ErrMissingLogValue)
 	}
 	m := (len(a.keyvals) + 1) / 2
-	if len(a.keyvals)%2 != 0 {
-		a.keyvals = append(a.keyvals, ErrMissingLogValue)
-	}
 	n += m
 	var fm bytes.Buffer
 	lvl := "INFO"
