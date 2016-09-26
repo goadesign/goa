@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strings"
 
+	pErrors "github.com/pkg/errors"
+
 	"golang.org/x/net/context"
 
 	"github.com/goadesign/goa"
@@ -142,6 +144,28 @@ var _ = Describe("ErrorHandler", func() {
 			err := service.Decoder.Decode(&decoded, bytes.NewBuffer(rw.Body), "application/json")
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(decoded.Error()).Should(Equal(gerr.Error()))
+		})
+	})
+
+	Context("with a handler returning a pkg/errors wrapped error", func() {
+		var wrappedError error
+
+		BeforeEach(func() {
+			service = newService(nil)
+			wrappedError = pErrors.Wrap(goa.NewErrorClass("code", 500)("teapot", "foobar", 42), "an error")
+			h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+				return wrappedError
+			}
+		})
+
+		It("maps pkg errors to HTTP responses", func() {
+			var decoded errorResponse
+			cause := pErrors.Cause(wrappedError)
+			Ω(rw.Status).Should(Equal(cause.(goa.ServiceError).ResponseStatus()))
+			Ω(rw.ParentHeader["Content-Type"]).Should(Equal([]string{goa.ErrorMediaIdentifier}))
+			err := service.Decoder.Decode(&decoded, bytes.NewBuffer(rw.Body), "application/json")
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(decoded.Error()).Should(Equal(cause.Error()))
 		})
 	})
 })
