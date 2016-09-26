@@ -147,12 +147,14 @@ var _ = Describe("ErrorHandler", func() {
 		})
 	})
 
-	Context("with a handler returning a pkg/errors wrapped error", func() {
+	Context("with a handler returning a pkg errors wrapped error", func() {
 		var wrappedError error
-
+		var logger *testLogger
+		verbose = true
 		BeforeEach(func() {
-			service = newService(nil)
-			wrappedError = pErrors.Wrap(goa.NewErrorClass("code", 500)("teapot", "foobar", 42), "an error")
+			logger = new(testLogger)
+			service = newService(logger)
+			wrappedError = pErrors.Wrap(goa.ErrInternal("something crazy happened"), "an error")
 			h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 				return wrappedError
 			}
@@ -166,6 +168,14 @@ var _ = Describe("ErrorHandler", func() {
 			err := service.Decoder.Decode(&decoded, bytes.NewBuffer(rw.Body), "application/json")
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(decoded.Error()).Should(Equal(cause.Error()))
+		})
+		It("logs pkg errors stacktaces", func() {
+			var decoded errorResponse
+			err := service.Decoder.Decode(&decoded, bytes.NewBuffer(rw.Body), "application/json")
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(logger.ErrorEntries).Should(HaveLen(1))
+			entry := logger.ErrorEntries[0].Msg
+			Ω(entry).Should(ContainSubstring("error_handler_test.go"))
 		})
 	})
 })
