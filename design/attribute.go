@@ -1,6 +1,10 @@
 package design
 
-import "github.com/goadesign/goa/eval"
+import (
+	"fmt"
+
+	"github.com/goadesign/goa/eval"
+)
 
 type (
 	// AttributeExpr defines a object field with optional description, default value and
@@ -63,6 +67,70 @@ type (
 // EvalName returns the name used by the DSL evaluation.
 func (a *AttributeExpr) EvalName() string {
 	return "attribute"
+}
+
+// validated keeps track of validated attributes to handle cyclical definitions.
+var validated = make(map[*AttributeExpr]bool)
+
+// Validate tests whether the attribute required fields exist.
+// Since attributes are unaware of their context, additional context information can be provided
+// to be used in error messages.
+// The parent definition context is automatically added to error messages.
+func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.ValidationErrors {
+	if validated[a] {
+		return nil
+	}
+	validated[a] = true
+	verr := new(eval.ValidationErrors)
+	if a.Type == nil {
+		verr.Add(parent, "attribute type is nil")
+		return verr
+	}
+	if ctx != "" {
+		ctx += " - "
+	}
+	// If both Default and Enum are given, make sure the Default value is one of Enum values.
+	// TODO: We only do the default value and enum check just for primitive types.
+	if _, ok := a.Type.(Primitive); ok {
+		if a.DefaultValue != nil && a.Validation != nil && a.Validation.Values != nil {
+			var found bool
+			for _, e := range a.Validation.Values {
+				if e == a.DefaultValue {
+					found = true
+					break
+				}
+			}
+			if !found {
+				verr.Add(parent, "%sdefault value %#v is not one of the accepted values: %#v", ctx, a.DefaultValue, a.Validation.Values)
+			}
+		}
+	}
+	o := a.Type.(Object)
+	if o != nil {
+		for _, n := range a.AllRequired() {
+			found := false
+			for an := range o {
+				if n == an {
+					found = true
+					break
+				}
+			}
+			if !found {
+				verr.Add(parent, `%srequired field "%s" does not exist`, ctx, n)
+			}
+		}
+		for n, att := range o {
+			ctx = fmt.Sprintf("field %s", n)
+			verr.Merge(att.Validate(ctx, parent))
+		}
+	} else {
+		if ar, ok := a.Type.(*Array); ok {
+			elemType := ar.ElemType
+			verr.Merge(elemType.Validate(ctx, a))
+		}
+	}
+
+	return verr
 }
 
 // Merge merges the argument attributes into the target and returns the target overriding existing

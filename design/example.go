@@ -191,8 +191,8 @@ func byMinMax(a *AttributeExpr, r *Random) interface{} {
 		return nil
 	}
 	var (
-		i32  = a.Type.Kind() == Int32Kind
-		i64  = a.Type.Kind() == Int64Kind
+		i32  = a.Type.Kind() == Int32Kind || a.Type.Kind() == UInt32Kind
+		i64  = a.Type.Kind() == Int64Kind || a.Type.Kind() == UInt64Kind
 		f32  = a.Type.Kind() == Float32Kind
 		min  = math.Inf(-1)
 		max  = math.Inf(1)

@@ -1,32 +1,26 @@
-# grpc
-This branch adds gRPC support to goa.
+# v2
 
-This is a work in progress...
+This branch is work in progress for goa v2.
 
-## TODO
+v2 brings a host of fixes and has a cleaner more composable overall design. Most notably the DSL
+engine assumes less about the DSL and is thus more generic. The top level design package is also
+hugely simplified to focus solely on types.
 
-### Phase 1: move HTTP specific code to rest package
+## gRPC Support
 
-- [ ] Build new goa core design and dsl packages
-- [ ] Build REST support leveraging new core packages
-- [ ] Break out security into its own plugin
-- [ ] Generalize middleware
-- [ ] Generalize error handling
-- [ ] Port generators
+The new top level `rest` and `rpc` packages implement the DSL, design objects, code generation and
+runtime support for REST and gRPC respectively. The DSLs build on top of the core DSL package to add
+transport specific keywords such as request path information for HTTP.
 
-### Phase 2: implement gRPC support via grpc package
+## New Data Types
 
-- [ ] Implement DSL
-- [ ] Generate protobuf file
-- [ ] Invoke protoc
-- [ ] Generate code that integrates with protoc output
-- [ ] Update goa libraries to add any necessary support
+The primitive types now include `Int32`, `Int64`, `UInt32`, `UInt64`, `Float32`, `Float64` and
+`Bytes` making it possible to support gRPC but also helping with making REST interface definitions
+crisper. The v1 types `Integer` and `Float` have been removed in favor of these new types.
 
-### Phase 3: go-kit plugin
+## Separation of Concern
 
-- [ ] Generate go-kit gRPC transport
-- [ ] Generate go-kit HTTP transport
-- [ ] Generate go-kit endpoints
-- [ ] Generate service interface
-- [ ] Generate scaffolding main
-
+The generated code produced by `goagen` v2 implements a much stronger separation of concerns where
+the transport specific logic is encapsulated in a different layer than the actual service code. This
+makes it possible to easily expose the same endpoints via different transport mechanisms such as the
+built-in HTTP and gRPC support.

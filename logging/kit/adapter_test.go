@@ -3,7 +3,7 @@ package goakit_test
 import (
 	"bytes"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/go-kit/kit/log"
 	"github.com/goadesign/goa"

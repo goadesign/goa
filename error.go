@@ -83,10 +83,10 @@ type (
 		error
 		// Status of error, informs whether error should bubble up to transport.
 		Status() ErrorStatus
-		// Token is a unique value associated with the occurrence of the error.
-		Token() string
 		// Code is the code of the error class used to create this error.
 		Code() string
+		// Token is a unique value associated with the occurrence of the error.
+		Token() string
 		// Detail contains the occurrence specific error message.
 		Detail() string
 		// Data returns additional key/value pairs that may be useful to clients for error
@@ -124,16 +124,16 @@ func NewErrorClass(code string, status ErrorStatus) ErrorClass {
 		default:
 			msg = fmt.Sprintf("%v", actual)
 		}
-		meta := make([]map[string]interface{}, (len(keyvals)+1)/2)
+		data := make([]map[string]interface{}, (len(keyvals)+1)/2)
 		for i := 0; i < len(keyvals); i += 2 {
 			k := keyvals[i]
 			var v interface{} = "MISSING"
 			if i+1 < len(keyvals) {
 				v = keyvals[i+1]
 			}
-			meta[i/2] = map[string]interface{}{fmt.Sprintf("%v", k): v}
+			data[i/2] = map[string]interface{}{fmt.Sprintf("%v", k): v}
 		}
-		return &serviceError{status: status, token: newErrorToken(), Code: code, Detail: msg, Meta: meta}
+		return &serviceError{status: status, token: newErrorToken(), code: code, detail: msg, data: data}
 	}
 }
 
@@ -201,8 +201,8 @@ func InvalidPatternError(ctx, target string, pattern string) error {
 }
 
 // InvalidRangeError is the error produced when the value of a parameter or payload field does
-// not match the range validation defined in the design.
-func InvalidRangeError(ctx string, target interface{}, value int, min bool) error {
+// not match the range validation defined in the design. value may be a int or a float64.
+func InvalidRangeError(ctx string, target interface{}, value interface{}, min bool) error {
 	comp := "greater or equal"
 	if !min {
 		comp = "lesser or equal"
@@ -222,17 +222,10 @@ func InvalidLengthError(ctx string, target interface{}, ln, value int, min bool)
 	return ErrInvalid(msg, "attribute", ctx, "value", target, "len", ln, "comp", comp, "expected", value)
 }
 
-// NoAuthMiddleware is the error produced when goa is unable to lookup a auth middleware for a
-// security scheme defined in the design.
-func NoAuthMiddleware(schemeName string) error {
-	msg := fmt.Sprintf("Auth middleware for security scheme %s is not mounted", schemeName)
-	return ErrNoAuthMiddleware(msg, "scheme", schemeName)
-}
-
 // Error returns the error occurrence details.
 func (e *serviceError) Error() string {
-	msg := fmt.Sprintf("[%s] %d %s: %s", e.token, e.status, e.Code, e.Detail)
-	for _, val := range e.Meta {
+	msg := fmt.Sprintf("[%s] %d %s: %s", e.token, e.status, e.code, e.detail)
+	for _, val := range e.data {
 		for k, v := range val {
 			msg += ", " + fmt.Sprintf("%s: %v", k, v)
 		}
@@ -270,23 +263,23 @@ func MergeErrors(err, other error) error {
 	if other == nil {
 		return asError(err)
 	}
-	e := asError(err)
+	e := asError(err).(*serviceError)
 	o := asError(other)
 	switch {
-	case e.Status == StatusBug || o.Status == StatusBug:
-		if e.Status != StatusBug {
-			e.Status = StatusBug
-			e.Code = CodeBug
+	case e.status == StatusBug || o.Status() == StatusBug:
+		if e.status != StatusBug {
+			e.status = StatusBug
+			e.code = CodeBug
 		}
-	case e.Status != o.Status || e.Code != o.Code:
-		e.Status = StatusInvalid
-		e.Code = CodeInvalid
+	case e.status != o.Status() || e.code != o.Code():
+		e.status = StatusInvalid
+		e.code = CodeInvalid
 	}
-	e.Detail = e.Detail + "; " + o.Detail
+	e.detail = e.detail + "; " + o.Detail()
 
-	for _, val := range o.Meta {
+	for _, val := range o.Data() {
 		for k, v := range val {
-			e.Meta = append(e.Meta, map[string]interface{}{k: v})
+			e.data = append(e.data, map[string]interface{}{k: v})
 		}
 	}
 	return e
@@ -295,7 +288,12 @@ func MergeErrors(err, other error) error {
 func asError(err error) Error {
 	e, ok := err.(*serviceError)
 	if !ok {
-		return &serviceError{status: StatusInvalid, Code: CodeInvalid, Detail: err.Error()}
+		return &serviceError{
+			status: StatusBug,
+			code:   CodeBug,
+			token:  newErrorToken(),
+			detail: err.Error(),
+		}
 	}
 	return e
 }

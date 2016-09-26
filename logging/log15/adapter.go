@@ -14,9 +14,10 @@ Usage:
 package goalog15
 
 import (
+	"context"
+
 	"github.com/goadesign/goa"
 	"github.com/inconshreveable/log15"
-	"golang.org/x/net/context"
 )
 
 // adapter is the log15 goa adapter logger.

@@ -1,5 +1,7 @@
 package design
 
+import "github.com/goadesign/goa/eval"
+
 // NewUserTypeExpr creates a user type expression but does not execute the DSL.
 func NewUserTypeExpr(name string, dsl func()) *UserTypeExpr {
 	return &UserTypeExpr{
@@ -32,6 +34,17 @@ func (u *UserTypeExpr) Dup(att *AttributeExpr) UserType {
 	}
 }
 
+// Validate checks that the user type definition is consistent: it has a name and the attribute
+// backing the type is valid.
+func (u *UserTypeExpr) Validate(ctx string, parent eval.Expression) *eval.ValidationErrors {
+	verr := new(eval.ValidationErrors)
+	if u.TypeName == "" {
+		verr.Add(parent, "%s - %s", ctx, "User type must have a name")
+	}
+	verr.Merge(u.AttributeExpr.Validate(ctx, u))
+	return verr
+}
+
 // Finalize merges base type attributes.
 func (u *UserTypeExpr) Finalize() {
 	if u.Reference != nil {
@@ -39,4 +52,9 @@ func (u *UserTypeExpr) Finalize() {
 			u.AttributeExpr.Inherit(bat)
 		}
 	}
+}
+
+// Example produces an example for the user type which is JSON serialization compatible.
+func (u *UserTypeExpr) Example(r *Random) interface{} {
+	return u.AttributeExpr.Type.Example(r)
 }
