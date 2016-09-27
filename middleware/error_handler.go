@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/goadesign/goa"
+	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 )
 
@@ -13,6 +14,7 @@ import (
 // understands instances of goa.ServiceError and returns the status and response body embodied in
 // them, it turns other Go error types into a 500 internal error response.
 // If verbose is false the details of internal errors is not included in HTTP responses.
+// If you use github.com/pkg/errors then wrapping the error will allow a trace to be printed to the logs
 func ErrorHandler(service *goa.Service, verbose bool) goa.Middleware {
 	return func(h goa.Handler) goa.Handler {
 		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
@@ -20,10 +22,10 @@ func ErrorHandler(service *goa.Service, verbose bool) goa.Middleware {
 			if e == nil {
 				return nil
 			}
-
+			cause := errors.Cause(e)
 			status := http.StatusInternalServerError
 			var respBody interface{}
-			if err, ok := e.(goa.ServiceError); ok {
+			if err, ok := cause.(goa.ServiceError); ok {
 				status = err.ResponseStatus()
 				respBody = err
 				goa.ContextResponse(ctx).ErrorCode = err.Token()
@@ -38,7 +40,7 @@ func ErrorHandler(service *goa.Service, verbose bool) goa.Middleware {
 					reqID = shortID()
 					ctx = context.WithValue(ctx, reqIDKey, reqID)
 				}
-				goa.LogError(ctx, "uncaught error", "id", reqID, "msg", respBody)
+				goa.LogError(ctx, "uncaught error", "err", fmt.Sprintf("%+v", e), "id", reqID, "msg", respBody)
 				if !verbose {
 					rw.Header().Set("Content-Type", goa.ErrorMediaIdentifier)
 					msg := fmt.Sprintf("%s [%s]", http.StatusText(http.StatusInternalServerError), reqID)
