@@ -174,8 +174,8 @@ var _ = Describe("ErrorHandler", func() {
 			err := service.Decoder.Decode(&decoded, bytes.NewBuffer(rw.Body), "application/json")
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(logger.ErrorEntries).Should(HaveLen(1))
-			entry := logger.ErrorEntries[0].Msg
-			Ω(entry).Should(ContainSubstring("error_handler_test.go"))
+			data := logger.ErrorEntries[0].Data[1]
+			Ω(data).Should(ContainSubstring("error_handler_test.go"))
 		})
 	})
 })

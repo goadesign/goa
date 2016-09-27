@@ -40,7 +40,7 @@ func ErrorHandler(service *goa.Service, verbose bool) goa.Middleware {
 					reqID = shortID()
 					ctx = context.WithValue(ctx, reqIDKey, reqID)
 				}
-				goa.LogError(ctx, fmt.Sprintf("uncaught error : %+v", e), "id", reqID, "msg", respBody)
+				goa.LogError(ctx, "uncaught error", "err", fmt.Sprintf("%+v", e), "id", reqID, "msg", respBody)
 				if !verbose {
 					rw.Header().Set("Content-Type", goa.ErrorMediaIdentifier)
 					msg := fmt.Sprintf("%s [%s]", http.StatusText(http.StatusInternalServerError), reqID)
