@@ -30,6 +30,7 @@ func Generate() (files []string, err error) {
 
 	set := flag.NewFlagSet("app", flag.PanicOnError)
 	set.String("design", "", "")
+	set.Bool("force", false, "")
 	set.StringVar(&outDir, "out", "", "")
 	set.StringVar(&target, "pkg", "app", "")
 	set.StringVar(&ver, "version", "", "")
