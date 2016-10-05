@@ -43,6 +43,7 @@ func Generate() (files []string, err error) {
 
 	set := flag.NewFlagSet("client", flag.PanicOnError)
 	set.String("design", "", "")
+	set.Bool("force", false, "")
 	set.StringVar(&outDir, "out", "", "")
 	set.StringVar(&target, "pkg", "client", "")
 	set.StringVar(&toolDir, "tooldir", "tool", "")
