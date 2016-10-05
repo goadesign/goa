@@ -95,9 +95,7 @@ func (g *Generator) Generate() (_ []string, err error) {
 	err = g.API.IterateResources(func(r *design.ResourceDefinition) error {
 		filename := filepath.Join(g.OutDir, codegen.SnakeCase(r.Name)+".go")
 		if g.Force {
-			if err2 := os.Remove(filename); err2 != nil {
-				return err2
-			}
+			os.Remove(filename)
 		}
 		if _, e := os.Stat(filename); e != nil {
 			g.genfiles = append(g.genfiles, filename)
