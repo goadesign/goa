@@ -94,6 +94,9 @@ func (eg *exampleGenerator) ExampleLength() int {
 		if count > maxExampleLength {
 			count = maxExampleLength
 		}
+		if count <= 0 && maxlength != 0 {
+			count = 1
+		}
 		return count
 	}
 	return eg.r.Int()%3 + 1
