@@ -21,6 +21,7 @@ var _ = Describe("Project", func() {
 	var prErr error
 
 	JustBeforeEach(func() {
+		ProjectedMediaTypes = make(map[string]*MediaTypeDefinition)
 		projected, links, prErr = mt.Project(view)
 	})
 
@@ -129,6 +130,51 @@ var _ = Describe("Project", func() {
 			})
 		})
 
+	})
+
+	Context("with a media type with a links attribute", func() {
+		BeforeEach(func() {
+			mt = &MediaTypeDefinition{
+				UserTypeDefinition: &UserTypeDefinition{
+					AttributeDefinition: &AttributeDefinition{
+						Type: Object{
+							"att1":  &AttributeDefinition{Type: Integer},
+							"links": &AttributeDefinition{Type: String},
+						},
+					},
+					TypeName: "Foo",
+				},
+				Identifier: "vnd.application/foo",
+				Views: map[string]*ViewDefinition{
+					"default": {
+						Name: "default",
+						AttributeDefinition: &AttributeDefinition{
+							Type: Object{
+								"att1":  &AttributeDefinition{Type: String},
+								"links": &AttributeDefinition{Type: String},
+							},
+						},
+					},
+				},
+			}
+		})
+
+		Context("using the default view", func() {
+			BeforeEach(func() {
+				view = "default"
+			})
+
+			It("uses the links attribute in the view", func() {
+				Ω(prErr).ShouldNot(HaveOccurred())
+				Ω(projected).ShouldNot(BeNil())
+				Ω(projected.Type).Should(BeAssignableToTypeOf(Object{}))
+				Ω(projected.Type.ToObject()).Should(HaveKey("links"))
+				att := projected.Type.ToObject()["links"]
+				Ω(att).ShouldNot(BeNil())
+				Ω(att.Type).ShouldNot(BeNil())
+				Ω(att.Type.Kind()).Should(Equal(StringKind))
+			})
+		})
 	})
 
 	Context("with media types with view attributes with a cyclical dependency", func() {

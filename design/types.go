@@ -821,8 +821,9 @@ func (m *MediaTypeDefinition) projectSingle(view, canonical string) (p *MediaTyp
 	ProjectedMediaTypes[canonical] = p
 	projectedObj := p.Type.ToObject()
 	mtObj := m.Type.ToObject()
+	_, hasAttNamedLinks := mtObj["links"]
 	for n := range viewObj {
-		if n == "links" {
+		if n == "links" && !hasAttNamedLinks {
 			linkObj := make(Object)
 			for n, link := range m.Links {
 				linkView := link.View
