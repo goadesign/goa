@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 
 	jwtpkg "github.com/dgrijalva/jwt-go"
-	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/middleware/security/jwt"
+	"github.com/goadesign/goa"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"golang.org/x/net/context"
@@ -55,8 +55,12 @@ var _ = Describe("Middleware", func() {
 		})
 
 		Context("with a single key", func() {
+			var err1, err2 error
 			BeforeEach(func() {
-				middleware = jwt.New("keys", nil, securityScheme)
+				keyResolver, err := jwt.NewResolver(nil, "keyname")
+				err1 = err
+				err2 = keyResolver.AddKeys("mykeys", "keys")
+				middleware = jwt.New(keyResolver, nil, securityScheme)
 			})
 
 			It("should go through", func() {
@@ -65,9 +69,30 @@ var _ = Describe("Middleware", func() {
 			})
 		})
 
-		Context("with keys that didn't the JWT", func() {
+		Context("with a single key and specified jwt keyname field", func() {
+			var err1, err2 error
 			BeforeEach(func() {
-				middleware = jwt.New("otherkey", nil, securityScheme)
+				request.Header.Set("keyname", "mykeys")
+				keyResolver, err := jwt.NewResolver(nil, "keyname")
+				err1 = err
+				err2 = keyResolver.AddKeys("mykeys", "keys")
+				middleware = jwt.New(keyResolver, nil, securityScheme)
+			})
+
+			It("should go through", func() {
+				Ω(dispatchResult).ShouldNot(HaveOccurred())
+				Ω(fetchedToken).ShouldNot(BeNil())
+			})
+		})
+
+		Context("with a single key and incorrectly specified jwt keyname field", func() {
+			var err1, err2 error
+			BeforeEach(func() {
+				request.Header.Set("keyname", "notmykeys")
+				keyResolver, err := jwt.NewResolver(nil, "keyname")
+				err1 = err
+				err2 = keyResolver.AddKeys("mykeys", "keys")
+				middleware = jwt.New(keyResolver, nil, securityScheme)
 			})
 
 			It("should fail with an error", func() {
@@ -76,12 +101,35 @@ var _ = Describe("Middleware", func() {
 			})
 		})
 
-		Context("with multiple keys", func() {
+		Context("with keys that didn't the JWT", func() {
+			var err1, err2 error
 			BeforeEach(func() {
-				middleware = jwt.New([]string{"firstkey", "keys"}, nil, securityScheme)
+				keyResolver, err := jwt.NewResolver(nil, "keyname")
+				err1 = err
+				err2 = keyResolver.AddKeys("mykeys", "otherkey")
+				middleware = jwt.New(keyResolver, nil, securityScheme)
+			})
+
+			It("should fail with an error", func() {
+				Ω(err1).Should(BeNil())
+				Ω(err2).Should(BeNil())
+				Ω(dispatchResult).Should(HaveOccurred())
+				Ω(dispatchResult.(error)).Should(HaveOccurred())
+			})
+		})
+
+		Context("with multiple keys", func() {
+			var err1, err2 error
+			BeforeEach(func() {
+				keyResolver, err := jwt.NewResolver(nil, "keyname")
+				err1 = err
+				err2 = keyResolver.AddKeys("mykeys", []string{"firstkey", "keys"})
+				middleware = jwt.New(keyResolver, nil, securityScheme)
 			})
 
 			It("should go through", func() {
+				Ω(err1).Should(BeNil())
+				Ω(err2).Should(BeNil())
 				Ω(dispatchResult).ShouldNot(HaveOccurred())
 				Ω(fetchedToken).ShouldNot(BeNil())
 			})
@@ -95,33 +143,87 @@ var _ = Describe("Middleware", func() {
 		})
 
 		Context("with a single key", func() {
+			var err1, err2 error
 			BeforeEach(func() {
-				middleware = jwt.New(rsaPubKey1, nil, securityScheme)
+				keyResolver, err := jwt.NewResolver(nil, "keyname")
+				err1 = err
+				err2 = keyResolver.AddKeys("mykeys", rsaPubKey1)
+				middleware = jwt.New(keyResolver, nil, securityScheme)
 			})
 
 			It("should go through", func() {
+				Ω(err1).Should(BeNil())
+				Ω(err2).Should(BeNil())
 				Ω(dispatchResult).ShouldNot(HaveOccurred())
 				Ω(fetchedToken).ShouldNot(BeNil())
 			})
 		})
 
-		Context("with keys that didn't the JWT", func() {
+		Context("with a single key and specified jwt keyname field", func() {
+			var err1, err2 error
 			BeforeEach(func() {
-				middleware = jwt.New(rsaPubKey2, nil, securityScheme)
+				request.Header.Set("keyname", "mykeys")
+				keyResolver, err := jwt.NewResolver(nil, "keyname")
+				err1 = err
+				err2 = keyResolver.AddKeys("mykeys", rsaPubKey1)
+				middleware = jwt.New(keyResolver, nil, securityScheme)
+			})
+
+			It("should go through", func() {
+				Ω(err1).Should(BeNil())
+				Ω(err2).Should(BeNil())
+				Ω(dispatchResult).ShouldNot(HaveOccurred())
+				Ω(fetchedToken).ShouldNot(BeNil())
+			})
+		})
+
+		Context("with a single key and incorrectly specified jwt keyname field", func() {
+			var err1, err2 error
+			BeforeEach(func() {
+				request.Header.Set("keyname", "notmykeys")
+				keyResolver, err := jwt.NewResolver(nil, "keyname")
+				err1 = err
+				err2 = keyResolver.AddKeys("mykeys", rsaPubKey1)
+				middleware = jwt.New(keyResolver, nil, securityScheme)
 			})
 
 			It("should fail with an error", func() {
+				Ω(err1).Should(BeNil())
+				Ω(err2).Should(BeNil())
+				Ω(dispatchResult).Should(HaveOccurred())
+				Ω(dispatchResult.(error)).Should(HaveOccurred())
+			})
+		})
+
+		Context("with keys that didn't the JWT", func() {
+			var err1, err2 error
+			BeforeEach(func() {
+				keyResolver, err := jwt.NewResolver(nil, "keyname")
+				err1 = err
+				err2 = keyResolver.AddKeys("mykeys", rsaPubKey2)
+				middleware = jwt.New(keyResolver, nil, securityScheme)
+			})
+
+			It("should fail with an error", func() {
+				Ω(err1).Should(BeNil())
+				Ω(err2).Should(BeNil())
 				Ω(dispatchResult).Should(HaveOccurred())
 				Ω(dispatchResult.(error)).Should(HaveOccurred())
 			})
 		})
 
 		Context("with multiple keys", func() {
+			var err1, err2 error
 			BeforeEach(func() {
-				middleware = jwt.New([]*rsa.PublicKey{rsaPubKey1}, nil, securityScheme)
+				keyResolver, err := jwt.NewResolver(nil, "keyname")
+				err1 = err
+				err2 = keyResolver.AddKeys("mykeys", []*rsa.PublicKey{rsaPubKey1})
+				middleware = jwt.New(keyResolver, nil, securityScheme)
 			})
 
 			It("should go through", func() {
+				Ω(err1).Should(BeNil())
+				Ω(err2).Should(BeNil())
 				Ω(dispatchResult).ShouldNot(HaveOccurred())
 				Ω(fetchedToken).ShouldNot(BeNil())
 			})
