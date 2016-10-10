@@ -342,6 +342,7 @@ func Params(dsl func()) {
 		params = new(design.AttributeDefinition)
 	default:
 		dslengine.IncompatibleDSL()
+		return
 	}
 	params.Type = make(design.Object)
 	if !dslengine.Execute(dsl, params) {
