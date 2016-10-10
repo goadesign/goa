@@ -335,6 +335,19 @@ func (a *ActionDefinition) Validate() *dslengine.ValidationErrors {
 	if a.Parent == nil {
 		verr.Add(a, "missing parent resource")
 	}
+	if a.Params != nil {
+		for n, p := range a.Params.Type.ToObject() {
+			if p.Type.IsPrimitive() {
+				continue
+			}
+			if p.Type.IsArray() {
+				if p.Type.ToArray().ElemType.Type.IsPrimitive() {
+					continue
+				}
+			}
+			verr.Add(a, "Param %s has an invalid type, action params must be primitives or arrays of primitives", n)
+		}
+	}
 
 	return verr.AsError()
 }
