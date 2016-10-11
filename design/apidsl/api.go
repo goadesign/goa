@@ -554,7 +554,7 @@ func Trait(name string, val ...func()) {
 
 // UseTrait executes the API trait with the given name. UseTrait can be used inside a Resource,
 // Action, Type, MediaType or Attribute DSL.
-func UseTrait(name string) {
+func UseTrait(names ...string) {
 	var def dslengine.Definition
 
 	switch typedDef := dslengine.CurrentDefinition().(type) {
@@ -571,10 +571,12 @@ func UseTrait(name string) {
 	}
 
 	if def != nil {
-		if trait, ok := design.Design.Traits[name]; ok {
-			dslengine.Execute(trait.DSLFunc, def)
-		} else {
-			dslengine.ReportError("unknown trait %s", name)
+		for _, name := range names {
+			if trait, ok := design.Design.Traits[name]; ok {
+				dslengine.Execute(trait.DSLFunc, def)
+			} else {
+				dslengine.ReportError("unknown trait %s", name)
+			}
 		}
 	}
 }
