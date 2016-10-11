@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/design/apidsl"
 	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/gen_app"
@@ -127,6 +128,50 @@ var _ = Describe("ContextsWriter", func() {
 					written := string(b)
 					Ω(written).ShouldNot(BeEmpty())
 					Ω(written).Should(ContainSubstring(`ctx.ResponseData.Header().Set("Content-Type", "` + contentType + `")`))
+				})
+			})
+
+			Context("with a collection media type", func() {
+				BeforeEach(func() {
+					elemType := &design.MediaTypeDefinition{
+						UserTypeDefinition: &design.UserTypeDefinition{
+							AttributeDefinition: &design.AttributeDefinition{
+								Type: design.Object{"foo": {Type: design.String}},
+							},
+						},
+						Identifier: "application/vnd.goa.test",
+					}
+					defView := &design.ViewDefinition{
+						AttributeDefinition: elemType.AttributeDefinition,
+						Name:                "default",
+						Parent:              elemType,
+					}
+					elemType.Views = map[string]*design.ViewDefinition{"default": defView}
+					design.Design = new(design.APIDefinition)
+					design.Design.MediaTypes = map[string]*design.MediaTypeDefinition{
+						design.CanonicalIdentifier(elemType.Identifier): elemType,
+					}
+					design.ProjectedMediaTypes = make(map[string]*design.MediaTypeDefinition)
+					mediaType := apidsl.CollectionOf(elemType)
+					dslengine.Execute(mediaType.DSL(), mediaType)
+					responses = map[string]*design.ResponseDefinition{"OK": {
+						Name:   "OK",
+						Status: 200,
+						Type:   mediaType,
+					}}
+				})
+
+				It("the generated code sets the response to an empty collection if value is nil", func() {
+					err := writer.Execute(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(`	if r == nil {
+		r = Collection{}
+	}
+	return ctx.ResponseData.Service.Send(ctx.Context, 200, r)`))
 				})
 			})
 
