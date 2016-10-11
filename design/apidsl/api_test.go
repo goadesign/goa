@@ -399,6 +399,55 @@ var _ = Describe("API", func() {
 				Ω(o).Should(HaveKey("bar"))
 			})
 		})
+
+		Context("using variadic Traits", func() {
+			const traitName1 = "Authenticated"
+			const traitName2 = "AuthenticatedTwo"
+
+			BeforeEach(func() {
+				dsl = func() {
+					Trait(traitName1, func() {
+						Attributes(func() {
+							Attribute("foo")
+						})
+					})
+					Trait(traitName2, func() {
+						Attributes(func() {
+							Attribute("baz")
+						})
+					})
+				}
+			})
+
+			JustBeforeEach(func() {
+				API(name, dsl)
+				MediaType("application/vnd.foo", func() {
+					UseTrait(traitName1, traitName2)
+					Attributes(func() {
+						Attribute("bar")
+					})
+					View("default", func() {
+						Attribute("bar")
+						Attribute("foo")
+						Attribute("baz")
+					})
+				})
+				dslengine.Run()
+			})
+
+			It("sets the API traits", func() {
+				O(Design.Traits).Should(HaveLen(2))
+				O(Design.Traits).Should(HaveKey(traitName1))
+				O(Design.Traits).Should(HaveKey(traitName2))
+				O(Design.MediaTypes).Should(HaveKey("application/vnd.foo"))
+				foo := Design.MediaTypes["application/vnd.foo"]
+				O(foo.Type.ToObject()).ShouldNot(BeNil())
+				o := foo.Type.ToObject()
+				O(o).Should(HaveKey("foo"))
+				O(o).Should(HaveKey("bar"))
+				O(o).Should(HaveKey("baz"))
+			})
+		})
 	})
 
 })
