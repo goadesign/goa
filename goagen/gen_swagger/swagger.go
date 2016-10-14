@@ -885,7 +885,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 			Name:        "payload",
 			In:          "body",
 			Description: action.Payload.Description,
-			Required:    true,
+			Required:    !action.PayloadOptional,
 			Schema:      payloadSchema,
 		}
 		params = append(params, pp)
