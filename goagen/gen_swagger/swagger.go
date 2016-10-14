@@ -970,7 +970,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 
 func applySecurity(operation *Operation, security *design.SecurityDefinition) {
 	if security != nil && security.Scheme.Kind != design.NoSecurityKind {
-		if security.Scheme.Kind == design.JWTSecurityKind {
+		if security.Scheme.Kind == design.JWTSecurityKind && len(security.Scopes) > 0 {
 			if operation.Description != "" {
 				operation.Description += "\n\n"
 			}
