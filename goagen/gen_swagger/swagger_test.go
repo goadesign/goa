@@ -214,6 +214,52 @@ var _ = Describe("New", func() {
 			It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
 		})
 
+		Context("with required payload", func() {
+			BeforeEach(func() {
+				p := Type("RequiredPayload", func() {
+					Member("m1", String)
+				})
+				Resource("res", func() {
+					Action("act", func() {
+						Routing(
+							PUT("/"),
+						)
+						Payload(p)
+					})
+				})
+			})
+
+			It("serializes into valid swagger JSON", func() {
+				validateSwaggerWithFragments(swagger, [][]byte{
+					[]byte(`"required":true`),
+				})
+			})
+
+		})
+
+		Context("with optional payload", func() {
+			BeforeEach(func() {
+				p := Type("OptionalPayload", func() {
+					Member("m1", String)
+				})
+				Resource("res", func() {
+					Action("act", func() {
+						Routing(
+							PUT("/"),
+						)
+						OptionalPayload(p)
+					})
+				})
+			})
+
+			It("serializes into valid swagger JSON", func() {
+				validateSwaggerWithFragments(swagger, [][]byte{
+					[]byte(`"required":false`),
+				})
+			})
+
+		})
+
 		Context("with zero value validations", func() {
 			const (
 				intParam = "intParam"
