@@ -12,6 +12,68 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var _ = Describe("IsObject", func() {
+	var dt DataType
+	var isObject bool
+
+	JustBeforeEach(func() {
+		isObject = dt.IsObject()
+	})
+
+	Context("with a primitive", func() {
+		BeforeEach(func() {
+			dt = String
+		})
+
+		It("returns false", func() {
+			Ω(isObject).Should(BeFalse())
+		})
+	})
+
+	Context("with an array", func() {
+		BeforeEach(func() {
+			dt = &Array{ElemType: &AttributeDefinition{Type: String}}
+		})
+
+		It("returns false", func() {
+			Ω(isObject).Should(BeFalse())
+		})
+	})
+
+	Context("with a hash", func() {
+		BeforeEach(func() {
+			dt = &Hash{
+				KeyType:  &AttributeDefinition{Type: String},
+				ElemType: &AttributeDefinition{Type: String},
+			}
+		})
+
+		It("returns false", func() {
+			Ω(isObject).Should(BeFalse())
+		})
+	})
+
+	Context("with a nil user type type", func() {
+		BeforeEach(func() {
+			dt = &UserTypeDefinition{AttributeDefinition: &AttributeDefinition{Type: nil}}
+		})
+
+		It("returns false", func() {
+			Ω(isObject).Should(BeFalse())
+		})
+	})
+
+	Context("with an object", func() {
+		BeforeEach(func() {
+			dt = Object{}
+		})
+
+		It("returns true", func() {
+			Ω(isObject).Should(BeTrue())
+		})
+	})
+})
+
 var _ = Describe("Project", func() {
 	var mt *MediaTypeDefinition
 	var view string
