@@ -401,12 +401,12 @@ type specialTypeResult struct {
 // generate the relation and output of specially typed Params that need
 // custom convertion from String Flags to Rich objects in Client action
 //
-// TMP2, err := uuidVal(cmd.X)
+// tmp, err := uuidVal(cmd.X)
 // if err != nil {
-//   goa.LogError(ctx, "argument parse failed", "err", err)
-//	 return err
+//        goa.LogError(ctx, "argument parse failed", "err", err)
+//        return err
 // }
-// resp, err := c.ShowX(ctx, path, TMP2)
+// resp, err := c.ShowX(ctx, path, tmp)
 //
 func handleSpecialTypes(atts ...*design.AttributeDefinition) specialTypeResult {
 	result := specialTypeResult{}
@@ -427,9 +427,10 @@ func handleSpecialTypes(atts ...*design.AttributeDefinition) specialTypeResult {
 		for _, n := range keys {
 			a := obj[n]
 			field := fmt.Sprintf("cmd.%s", codegen.Goify(n, true))
-
-			var typeHandler string
+			typ := cmdFieldType(a.Type, true)
+			var typeHandler, nilVal string
 			if !a.Type.IsArray() {
+				nilVal = `""`
 				switch a.Type {
 				case design.Number:
 					typeHandler = "float64Val"
@@ -444,6 +445,7 @@ func handleSpecialTypes(atts ...*design.AttributeDefinition) specialTypeResult {
 				}
 
 			} else if a.Type.IsArray() {
+				nilVal = "nil"
 				switch a.Type.ToArray().ElemType.Type {
 				case design.Number:
 					typeHandler = "float64Array"
@@ -467,11 +469,15 @@ func handleSpecialTypes(atts ...*design.AttributeDefinition) specialTypeResult {
 
 				//result.Temps = append(result.Temps, tmpVar)
 				result.Output += fmt.Sprintf(`
-	%s, err := %s(%s)
-	if err != nil {
-		goa.LogError(ctx, "argument parse failed", "err", err)
-		return err
-	}`, tmpVar, typeHandler, field)
+	var %s %s
+	if %s != %s {
+		var err error
+		%s, err = %s(%s)
+		if err != nil {
+			goa.LogError(ctx, "failed to parse flag into %s value", "flag", "--%s", "err", err)
+			return err
+		}
+	}`, tmpVar, typ, field, nilVal, tmpVar, typeHandler, field, typ, n)
 
 			}
 		}
