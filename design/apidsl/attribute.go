@@ -111,7 +111,7 @@ func Attribute(name string, args ...interface{}) {
 		}
 
 		var baseAttr *design.AttributeDefinition
-		if parent.Reference != nil {
+		if parent.Reference != nil && parent.Reference.IsObject() {
 			if att, ok := parent.Reference.ToObject()[name]; ok {
 				baseAttr = design.DupAtt(att)
 			}

@@ -639,19 +639,19 @@ func (u *UserTypeDefinition) Kind() Kind { return UserTypeKind }
 func (u *UserTypeDefinition) Name() string { return u.Type.Name() }
 
 // IsPrimitive calls IsPrimitive on the user type underlying data type.
-func (u *UserTypeDefinition) IsPrimitive() bool { return u.Type.IsPrimitive() }
+func (u *UserTypeDefinition) IsPrimitive() bool { return u.Type != nil && u.Type.IsPrimitive() }
 
 // HasAttributes calls the HasAttributes on the user type underlying data type.
 func (u *UserTypeDefinition) HasAttributes() bool { return u.Type.HasAttributes() }
 
 // IsObject calls IsObject on the user type underlying data type.
-func (u *UserTypeDefinition) IsObject() bool { return u.Type.IsObject() }
+func (u *UserTypeDefinition) IsObject() bool { return u.Type != nil && u.Type.IsObject() }
 
 // IsArray calls IsArray on the user type underlying data type.
-func (u *UserTypeDefinition) IsArray() bool { return u.Type.IsArray() }
+func (u *UserTypeDefinition) IsArray() bool { return u.Type != nil && u.Type.IsArray() }
 
 // IsHash calls IsHash on the user type underlying data type.
-func (u *UserTypeDefinition) IsHash() bool { return u.Type.IsHash() }
+func (u *UserTypeDefinition) IsHash() bool { return u.Type != nil && u.Type.IsHash() }
 
 // ToObject calls ToObject on the user type underlying data type.
 func (u *UserTypeDefinition) ToObject() Object { return u.Type.ToObject() }
