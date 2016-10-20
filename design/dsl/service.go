@@ -14,10 +14,10 @@ import (
 //    var _ = Service("divider", func() {
 //        Description("divider service") // Optional description
 //
+//        DefaultMedia(DivideResponseMedia) // ??
 //        Error("Unauthorized", Unauthorized) // Applies to all endpoints
 //
 //        HTTP(func() {
-//                DefaultMedia(DivideResponseMedia)
 //                BasePath("/divide")
 //                Parent("math")
 //                CanonicalActionName("get")
@@ -25,18 +25,23 @@ import (
 //
 //        Endpoint("divide", func() {     // Defines a single endpoint
 //            Description("The divide endpoint returns the division of A and B")
-//            Request(DivideRequest)
-//            Response(DivideResponse)
+//            Request(DivideRequest)      // Optional, GRPC generation uses built-in empty type if absent
+//            Response(DivideResponse)    // Ditto
 //            Error("DivisionByZero", ErrDivByZero) // ErrDivByZero is optional type that describes error body.
 //               If gRPC error attribute is added to type, if return error matches design error then
 //               error attribute is set otherwise error is returned to gRPC server.
 //
 //            HTTP(func() {
 //                Scheme("https")
-//                GET("/{Dividend/{Divisor}") // DivideRequest must have Dividend and Divisor attributes
+//                GET("/{ID:ParentID}/{Divisor}") // DivideRequest must have Dividend and Divisor attributes
 //                POST("/{Dividend}")         // Body is DivideRequest minus Dividend attribute and headers
 //                POST("/")                   // Body is DivideRequest minus headers
+//                Param("{Foo:Bar}")
 //                Header("Account")           // Must match one of DivideRequest attributes
+//                Payload("Payload")
+//                Payload(func() {
+//                    Field("bar")
+//                })
 //                Response(func() {
 //                    Status(OK)              // Default
 //                    Header("Result")        // Must be an attribute of DivideResponse
@@ -48,6 +53,7 @@ import (
 //            })
 //
 //            GRPC(func() {
+//                // STREAMING?
 //                Proto("divider.divide") // rpc definition in proto file
 //                Error("DivisionByZero", func() { // Defines which field contains error if not "Error"
 //                    Field("DivByZero")
