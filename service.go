@@ -4,15 +4,12 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"sort"
 	"strings"
-	"syscall"
 
 	"golang.org/x/net/context"
 )
@@ -157,20 +154,6 @@ func (service *Service) ListenAndServe(addr string) error {
 func (service *Service) ListenAndServeTLS(addr, certFile, keyFile string) error {
 	service.LogInfo("listen", "transport", "https", "addr", addr)
 	return http.ListenAndServeTLS(addr, certFile, keyFile, service.Mux)
-}
-
-// ListenAndServeUnix starts a unix domain socket listener on the given host.
-func (service *Service) ListenAndServeUnix(addr string) error {
-	listener, err := net.Listen("unix", addr)
-	if err != nil {
-		return err
-	}
-	// enable SIGTERM and SIGKILL handler
-	onTermOrKill(service.Context, listener)
-	if err := http.Serve(listener, service.Mux); err != nil {
-		return err
-	}
-	return nil
 }
 
 // NewController returns a controller for the given resource. This method is mainly intended for
@@ -365,18 +348,6 @@ func (ctrl *Controller) FileHandler(path, filename string) Handler {
 		http.ServeContent(rw, req, d.Name(), d.ModTime(), f)
 		return nil
 	}
-}
-
-func onTermOrKill(ctx context.Context, listener net.Listener) {
-	s := make(chan os.Signal, 2)
-	signal.Notify(s, os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
-	go func() {
-		<-s
-		if err := listener.Close(); err != nil {
-			LogError(ctx, "uncaught error", "err", err)
-		}
-		os.Exit(1)
-	}()
 }
 
 var replacer = strings.NewReplacer(
