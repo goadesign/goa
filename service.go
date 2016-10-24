@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -154,6 +155,14 @@ func (service *Service) ListenAndServe(addr string) error {
 func (service *Service) ListenAndServeTLS(addr, certFile, keyFile string) error {
 	service.LogInfo("listen", "transport", "https", "addr", addr)
 	return http.ListenAndServeTLS(addr, certFile, keyFile, service.Mux)
+}
+
+// Serve starts specified listener on the given host.
+func (service *Service) Serve(listener net.Listener) error {
+	if err := http.Serve(listener, service.Mux); err != nil {
+		return err
+	}
+	return nil
 }
 
 // NewController returns a controller for the given resource. This method is mainly intended for
