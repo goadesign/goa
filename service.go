@@ -157,9 +157,9 @@ func (service *Service) ListenAndServeTLS(addr, certFile, keyFile string) error 
 	return http.ListenAndServeTLS(addr, certFile, keyFile, service.Mux)
 }
 
-// Serve starts specified listener on the given host.
-func (service *Service) Serve(listener net.Listener) error {
-	if err := http.Serve(listener, service.Mux); err != nil {
+// Serve accepts incoming HTTP connections on the listener l, invoking the service mux handler for each.
+func (service *Service) Serve(l net.Listener) error {
+	if err := http.Serve(l, service.Mux); err != nil {
 		return err
 	}
 	return nil
