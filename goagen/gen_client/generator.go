@@ -593,6 +593,7 @@ func (g *Generator) generateUserTypes(pkgDir string) error {
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport("unicode/utf8"),
+		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 	}
 	utWr.WriteHeader(title, g.Target, imports)
 	err = g.API.IterateUserTypes(func(t *design.UserTypeDefinition) error {
