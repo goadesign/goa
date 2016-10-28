@@ -125,7 +125,7 @@ This produces the following outputs:
 
 First let's implement the API - edit the file `operands.go` and replace the content of the `Add`
 function with:
-```
+```go
 // Add import for strconv
 import "strconv"
 
