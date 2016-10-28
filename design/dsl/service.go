@@ -5,7 +5,7 @@ import (
 	"github.com/goadesign/goa/rpc/design"
 )
 
-// Service defines a group of related endpoints that are exposed from the same process.
+// Service defines a group of related endpoints.
 //
 // Service is as a top level expression.
 //
@@ -14,8 +14,11 @@ import (
 //    var _ = Service("divider", func() {
 //        Description("divider service") // Optional description
 //
-//        DefaultMedia(DivideResponseMedia) // ??
-//        Error("Unauthorized", Unauthorized) // Applies to all endpoints
+//        DefaultType(DivideResult) // Default response type for the service endpoints. Also defines
+//                                  // default properties (type, description and validations) for
+//                                  // attributes with identical names in request types.
+//
+//        Error("Unauthorized", Unauthorized) // Error response that applies to all endpoints
 //
 //        HTTP(func() {
 //                BasePath("/divide")
@@ -45,6 +48,9 @@ import (
 //                Response(func() {
 //                    Status(OK)              // Default
 //                    Header("Result")        // Must be an attribute of DivideResponse
+//                })
+//                Response(func() {           // Multiple responses are possible
+//                    Status(NotModified)
 //                })
 //                Error("DivisionByZero", func() {
 //                    Status(BadRequest)      // Default
