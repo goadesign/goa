@@ -507,6 +507,7 @@ func Required(names ...string) {
 		at = def.AttributeDefinition
 	default:
 		dslengine.IncompatibleDSL()
+		return
 	}
 
 	if at.Type != nil && at.Type.Kind() != design.ObjectKind {
