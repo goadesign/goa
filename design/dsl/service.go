@@ -14,56 +14,47 @@ import (
 //    var _ = Service("divider", func() {
 //        Description("divider service") // Optional description
 //
-//        DefaultType(DivideResult) // Default response type for the service endpoints. Also defines
-//                                  // default properties (type, description and validations) for
-//                                  // attributes with identical names in request types.
+//        DefaultType(DivideResult) // Default response type for the service
+//                                  // endpoints. Also defines default
+//                                  // properties (type, description and
+//                                  // validations) for attributes with
+//                                  // identical names in request types.
 //
-//        Error("Unauthorized", Unauthorized) // Error response that applies to all endpoints
+//        Error("Unauthorized", Unauthorized) // Error response that applies to
+//                                            // all endpoints
 //
-//        HTTP(func() {
-//                BasePath("/divide")
-//                Parent("math")
-//                CanonicalActionName("get")
+//        HTTP(func() {                  // HTTP specific expressions
+//                BasePath("/divide")    // Common path prefix to all endpoints
+//                Parent("math")         // Parent resource
+//                CanonicalActionName("get") // Action whose first route defines
+//                                           // the path prefix to all child
+//                                           // resources.
+//        })
+//
+//        GRPC(func() {            // gRPC specific expressions
+//                Package("math")  // Name of protobuf package
+//                Name("Divider")  // Name of protobuf service
 //        })
 //
 //        Endpoint("divide", func() {     // Defines a single endpoint
 //            Description("The divide endpoint returns the division of A and B")
-//            Request(DivideRequest)      // Optional, GRPC generation uses built-in empty type if absent
-//            Response(DivideResponse)    // Ditto
-//            Error("DivisionByZero", ErrDivByZero) // ErrDivByZero is optional type that describes error body.
-//               If gRPC error attribute is added to type, if return error matches design error then
-//               error attribute is set otherwise error is returned to gRPC server.
+//            Request(DivideRequest)      // Request type listing all request
+//                                        // parameters in its attributes.
+//            Response(DivideResponse)    // Response type.
+//            Error("DivisionByZero", DivByZero) // Error, has a name and
+//                                               // optionally a type
+//                                               // (DivByZero) describes the
+//                                               // error response.
 //
-//            HTTP(func() {
-//                Scheme("https")
-//                GET("/{ID:ParentID}/{Divisor}") // DivideRequest must have Dividend and Divisor attributes
-//                POST("/{Dividend}")         // Body is DivideRequest minus Dividend attribute and headers
-//                POST("/")                   // Body is DivideRequest minus headers
-//                Param("{Foo:Bar}")
-//                Header("Account")           // Must match one of DivideRequest attributes
-//                Payload("Payload")
-//                Payload(func() {
-//                    Field("bar")
-//                })
-//                Response(func() {
-//                    Status(OK)              // Default
-//                    Header("Result")        // Must be an attribute of DivideResponse
-//                })
-//                Response(func() {           // Multiple responses are possible
-//                    Status(NotModified)
-//                })
-//                Error("DivisionByZero", func() {
-//                    Status(BadRequest)      // Default
-//                    Header("Message")       // Must be an attribute of ErrDivByZero
-//                })
+//            HTTP(func() {               // HTTP specific expressions
+//                GET("/{Dividend}/{Divisor}") // Use request type attributes
+//                                        // "Dividend" and "Divisor" to define
+//                                        // path parameters.
+//                Response(OK)
 //            })
 //
 //            GRPC(func() {
-//                // STREAMING?
-//                Proto("divider.divide") // rpc definition in proto file
-//                Error("DivisionByZero", func() { // Defines which field contains error if not "Error"
-//                    Field("DivByZero")
-//                })
+//                Name("Divide")
 //            })
 //        })
 //    })

@@ -99,11 +99,14 @@ func Docs(dsl func()) {
 	if !eval.Execute(dsl, docs) {
 		return
 	}
-	if a, ok := eval.Current().(*design.APIExpr); ok {
-		a.Docs = docs
-		return
+	switch e := eval.Current().(type) {
+	case *design.APIExpr:
+		e.Docs = docs
+	case *design.EndpointExpr:
+		e.Docs = docs
+	default:
+		eval.IncompatibleDSL()
 	}
-	eval.IncompatibleDSL()
 }
 
 // TermsOfAPI describes the API terms of services or links to them.
