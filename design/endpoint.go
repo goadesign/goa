@@ -19,6 +19,8 @@ type (
 		Request *AttributeExpr
 		// Response payload type.
 		Response *AttributeExpr
+		// Error responses.
+		Errors Object
 		// Service that owns endpoint.
 		Service *ServiceExpr
 		// Metadata is an arbitrary set of key/value pairs, see dsl.Metadata

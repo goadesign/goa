@@ -15,14 +15,17 @@ import (
 //     var SumPayload = Type("SumPayload", func() {
 //         Description("Type sent to add endpoint")
 //
-//         Attribute("a", String)                 // Define string field "a"
-//         Attribute("b", Int32, "operand")       // Define int32 field "b" with description
-//         Attribute("operands", ArrayOf(Int32))  // Define int32 array field
-//         Attribute("ops", MapOf(String, Int32)) // Define map[string]int32 field
-//         Attribute("c", SumMod)                 // Define field using user type
+//         Attribute("a", String)                 // string field "a"
+//         Attribute("b", Int32, "operand")       // field with description
+//         Attribute("operands", ArrayOf(Int32))  // array field
+//         Attribute("ops", MapOf(String, Int32)) // map field
+//         Attribute("c", SumMod)                 // field using user type
+//         Attribute("len", Int64, func() {       // field with validation
+//             Minimum(1)
+//         })
 //
-//         Required("a")                      // Required fields must be present
-//         Required("b", "c")                 // in serialized data.
+//         Required("a")                          // Required fields
+//         Required("b", "c")
 //     })
 //
 func Type(name string, dsl func()) design.UserType {
