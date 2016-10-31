@@ -2,6 +2,18 @@ package design
 
 import "github.com/goadesign/goa/eval"
 
+type (
+	// UserTypeExpr is the struct used to describe user defined types.
+	UserTypeExpr struct {
+		// A user type expression is a field expression.
+		*AttributeExpr
+		// Name of type
+		TypeName string
+		// Service this type is the default type for if any
+		Service *ServiceExpr
+	}
+)
+
 // NewUserTypeExpr creates a user type expression but does not execute the DSL.
 func NewUserTypeExpr(name string, dsl func()) *UserTypeExpr {
 	return &UserTypeExpr{
@@ -31,6 +43,7 @@ func (u *UserTypeExpr) Dup(att *AttributeExpr) UserType {
 	return &UserTypeExpr{
 		AttributeExpr: att,
 		TypeName:      u.TypeName,
+		Service:       u.Service,
 	}
 }
 

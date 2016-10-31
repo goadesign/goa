@@ -39,7 +39,7 @@ func (r *RootExpr) Trait(name string) *TraitExpr {
 	return nil
 }
 
-// UserType returns the user type expression with the given name and if found, nil otherwise.
+// UserType returns the user type expression with the given name if found, nil otherwise.
 func (r *RootExpr) UserType(name string) UserType {
 	for _, t := range r.Types {
 		if t.Name() == name {
