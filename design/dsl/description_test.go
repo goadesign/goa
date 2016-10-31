@@ -7,11 +7,12 @@ import (
 	"github.com/goadesign/goa/eval"
 )
 
-const (
-	description = "test description"
-)
 
-func TestDescription(t *testing.T) {
+func TestDescription(t *testing.T) {	
+	const (
+		description = "test description"
+	)
+	
 	cases := map[string]struct {
 		Expr     eval.Expression
 		Desc     string
