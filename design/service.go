@@ -13,6 +13,10 @@ type (
 		Description string
 		// Endpoints is the list of service endpoints.
 		Endpoints []*EndpointExpr
+		// DefaultType is the service default response type. The default
+		// type attributes also define the default properties for
+		// request attributes with identical names.
+		DefaultType UserType
 	}
 )
 

@@ -52,8 +52,11 @@ func New(name string) *Service {
 // Serve calls Serve on all the service servers.
 func (service *Service) Serve(l net.Listener) error {
 	for _, server := range service.Servers {
-		server.Serve(l)
+		if err := server.Serve(l); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // Use applies the middleware to all the endpoints.

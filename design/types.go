@@ -51,14 +51,6 @@ type (
 	// Object is the type used to describe composite data structures.
 	Object map[string]*AttributeExpr
 
-	// UserTypeExpr is the struct used to describe user defined types.
-	UserTypeExpr struct {
-		// A user type expression is a field expression.
-		*AttributeExpr
-		// Name of type
-		TypeName string
-	}
-
 	// UserType is the interface implemented by all user type implementations.
 	// DSLs may leverage this interface to introduce their own types.
 	UserType interface {

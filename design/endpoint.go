@@ -15,10 +15,12 @@ type (
 		Name string
 		// Description of endpoint for consumption by humans.
 		Description string
-		// Request payload type.
-		Request *AttributeExpr
-		// Response payload type.
-		Response *AttributeExpr
+		// Docs points to the endpoint external documentation if any.
+		Docs *DocsExpr
+		// Request type.
+		Request DataType
+		// Response type.
+		Response DataType
 		// Error responses.
 		Errors Object
 		// Service that owns endpoint.

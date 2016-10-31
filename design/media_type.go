@@ -6,13 +6,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/eval"
 )
 
 const (
-	// MediaTypeKind represents a media type.
-	MediaTypeKind = design.AnyKind + 1
+	// DefaultView is the name of the default media type view.
+	DefaultView = "default"
 )
 
 type (
@@ -23,7 +22,7 @@ type (
 	// render when building the response body for the corresponding view.
 	MediaTypeExpr struct {
 		// A media type is a type
-		*design.UserTypeExpr
+		*UserTypeExpr
 		// Identifier is the RFC 6838 media type identifier.
 		Identifier string
 		// ContentType identifies the value written to the response "Content-Type" header.
@@ -33,8 +32,6 @@ type (
 		Links map[string]*LinkExpr
 		// Views list the supported views indexed by name.
 		Views map[string]*ViewExpr
-		// Resource this media type is the canonical representation for if any
-		Resource *ResourceExpr
 	}
 
 	// LinkExpr defines a media type link, it specifies a URL to a related resource.
@@ -55,7 +52,7 @@ type (
 	// overridden.
 	ViewExpr struct {
 		// Set of properties included in view
-		*design.AttributeExpr
+		*AttributeExpr
 		// Name of view
 		Name string
 		// Parent media Type
@@ -80,7 +77,7 @@ type (
 		// MediaType is the projected media type.
 		MediaType *MediaTypeExpr
 		// Links lists the media type links if any.
-		Links *design.UserTypeExpr
+		Links *UserTypeExpr
 	}
 )
 
@@ -90,8 +87,8 @@ var (
 
 	// ErrorMedia is the built-in media type for error responses.
 	ErrorMedia = &MediaTypeExpr{
-		UserTypeExpr: &design.UserTypeExpr{
-			AttributeExpr: &design.AttributeExpr{
+		UserTypeExpr: &UserTypeExpr{
+			AttributeExpr: &AttributeExpr{
 				Type:        errorMediaType,
 				Description: "Error response media type",
 				UserExample: map[string]interface{}{
@@ -108,31 +105,31 @@ var (
 		Views:      map[string]*ViewExpr{"default": errorMediaView},
 	}
 
-	errorMediaType = design.Object{
-		"id": &design.AttributeExpr{
-			Type:        design.String,
+	errorMediaType = Object{
+		"id": &AttributeExpr{
+			Type:        String,
 			Description: "a unique identifier for this particular occurrence of the problem.",
 			UserExample: "3F1FKVRR",
 		},
-		"status": &design.AttributeExpr{
-			Type:        design.String,
+		"status": &AttributeExpr{
+			Type:        String,
 			Description: "the HTTP status code applicable to this problem, expressed as a string value.",
 			UserExample: "400",
 		},
-		"code": &design.AttributeExpr{
-			Type:        design.String,
+		"code": &AttributeExpr{
+			Type:        String,
 			Description: "an application-specific error code, expressed as a string value.",
 			UserExample: "invalid_value",
 		},
-		"detail": &design.AttributeExpr{
-			Type:        design.String,
+		"detail": &AttributeExpr{
+			Type:        String,
 			Description: "a human-readable explanation specific to this occurrence of the problem.",
 			UserExample: "Value of ID must be an integer",
 		},
-		"meta": &design.AttributeExpr{
-			Type: &design.Map{
-				KeyType:  &design.AttributeExpr{Type: design.String},
-				ElemType: &design.AttributeExpr{Type: design.Any},
+		"meta": &AttributeExpr{
+			Type: &Map{
+				KeyType:  &AttributeExpr{Type: String},
+				ElemType: &AttributeExpr{Type: Any},
 			},
 			Description: "a meta object containing non-standard meta-information about the error.",
 			UserExample: map[string]interface{}{"timestamp": 1458609066},
@@ -140,7 +137,7 @@ var (
 	}
 
 	errorMediaView = &ViewExpr{
-		AttributeExpr: &design.AttributeExpr{Type: errorMediaType},
+		AttributeExpr: &AttributeExpr{Type: errorMediaType},
 		Name:          "default",
 	}
 )
@@ -149,8 +146,8 @@ var (
 // execute the DSL.
 func NewMediaTypeExpr(name, identifier string, dsl func()) *MediaTypeExpr {
 	return &MediaTypeExpr{
-		UserTypeExpr: &design.UserTypeExpr{
-			AttributeExpr: &design.AttributeExpr{Type: design.Object{}, DSLFunc: dsl},
+		UserTypeExpr: &UserTypeExpr{
+			AttributeExpr: &AttributeExpr{Type: Object{}, DSLFunc: dsl},
 			TypeName:      name,
 		},
 		Identifier: identifier,
@@ -172,16 +169,15 @@ func CanonicalIdentifier(identifier string) string {
 }
 
 // Kind implements DataKind.
-func (m *MediaTypeExpr) Kind() design.Kind { return MediaTypeKind }
+func (m *MediaTypeExpr) Kind() Kind { return MediaTypeKind }
 
 // Dup creates a deep copy of the media type given a deep copy of its attribute.
-func (m *MediaTypeExpr) Dup(att *design.AttributeExpr) design.UserType {
+func (m *MediaTypeExpr) Dup(att *AttributeExpr) UserType {
 	return &MediaTypeExpr{
-		UserTypeExpr: m.UserTypeExpr.Dup(att).(*design.UserTypeExpr),
+		UserTypeExpr: m.UserTypeExpr.Dup(att).(*UserTypeExpr),
 		Identifier:   m.Identifier,
 		Links:        m.Links,
 		Views:        m.Views,
-		Resource:     m.Resource,
 	}
 }
 
@@ -201,7 +197,7 @@ func (m *MediaTypeExpr) ComputeViews() map[string]*ViewExpr {
 	if m.Views != nil {
 		return m.Views
 	}
-	if a, ok := m.Type.(*design.Array); ok {
+	if a, ok := m.Type.(*Array); ok {
 		if mt, ok := a.ElemType.Type.(*MediaTypeExpr); ok {
 			return mt.ComputeViews()
 		}
@@ -254,7 +250,7 @@ func (p *Projector) Project(m *MediaTypeExpr, view string) (*ProjectedMTExpr, er
 	if proj, ok := p.Projected[viewID]; ok {
 		return proj, nil
 	}
-	if _, ok := m.Type.(*design.Array); ok {
+	if _, ok := m.Type.(*Array); ok {
 		return p.projectCollection(m, view, viewID)
 	}
 	return p.projectSingle(m, view, viewID)
@@ -265,10 +261,10 @@ func (p *Projector) projectSingle(m *MediaTypeExpr, view, viewID string) (*Proje
 	if !ok {
 		return nil, fmt.Errorf("unknown view %#v", view)
 	}
-	viewObj := v.Type.(design.Object)
+	viewObj := v.Type.(Object)
 
 	// Compute validations - view may not have all fields
-	var val *design.ValidationExpr
+	var val *ValidationExpr
 	if m.Validation != nil {
 		var required []string
 		for _, n := range m.Validation.Required {
@@ -295,28 +291,28 @@ func (p *Projector) projectSingle(m *MediaTypeExpr, view, viewID string) (*Proje
 
 	projected := &MediaTypeExpr{
 		Identifier: viewID,
-		UserTypeExpr: &design.UserTypeExpr{
+		UserTypeExpr: &UserTypeExpr{
 			TypeName: typeName,
-			AttributeExpr: &design.AttributeExpr{
+			AttributeExpr: &AttributeExpr{
 				Description: desc,
-				Type:        design.Dup(v.Type),
+				Type:        Dup(v.Type),
 				Validation:  val,
 			},
 		},
 	}
 	projected.Views = map[string]*ViewExpr{"default": {
 		Name:          "default",
-		AttributeExpr: design.DupAtt(v.AttributeExpr),
+		AttributeExpr: DupAtt(v.AttributeExpr),
 		Parent:        projected,
 	}}
 
 	proj := ProjectedMTExpr{View: view, MediaType: projected}
 	p.Projected[viewID] = &proj
-	projectedObj := projected.Type.(design.Object)
-	mtObj := m.Type.(design.Object)
+	projectedObj := projected.Type.(Object)
+	mtObj := m.Type.(Object)
 	for n := range viewObj {
 		if n == "links" {
-			linkObj := make(design.Object)
+			linkObj := make(Object)
 			for n, link := range m.Links {
 				linkView := link.View
 				if linkView == "" {
@@ -331,11 +327,11 @@ func (p *Projector) projectSingle(m *MediaTypeExpr, view, viewID string) (*Proje
 				if err != nil {
 					return nil, err
 				}
-				linkObj[n] = &design.AttributeExpr{Type: vl.MediaType, Validation: mtt.Validation, Metadata: mtAtt.Metadata}
+				linkObj[n] = &AttributeExpr{Type: vl.MediaType, Validation: mtt.Validation, Metadata: mtAtt.Metadata}
 			}
 			lTypeName := fmt.Sprintf("%sLinks", m.TypeName)
-			links := &design.UserTypeExpr{
-				AttributeExpr: &design.AttributeExpr{
+			links := &UserTypeExpr{
+				AttributeExpr: &AttributeExpr{
 					Description: fmt.Sprintf("%s contains links to related resources of %s.", lTypeName, m.TypeName),
 					Type:        linkObj,
 				},
@@ -344,7 +340,7 @@ func (p *Projector) projectSingle(m *MediaTypeExpr, view, viewID string) (*Proje
 			proj.Links = links
 		} else {
 			if at := mtObj[n]; at != nil {
-				at = design.DupAtt(at)
+				at = DupAtt(at)
 				if mt, ok := at.Type.(*MediaTypeExpr); ok {
 					vatt := viewObj[n]
 					var view string
@@ -372,7 +368,7 @@ func (p *Projector) projectSingle(m *MediaTypeExpr, view, viewID string) (*Proje
 
 func (p *Projector) projectCollection(m *MediaTypeExpr, view, viewID string) (*ProjectedMTExpr, error) {
 	// Project the collection element media type
-	e := m.Type.(*design.Array).ElemType.Type.(*MediaTypeExpr) // validation checked this cast would work
+	e := m.Type.(*Array).ElemType.Type.(*MediaTypeExpr) // validation checked this cast would work
 	pe, err2 := p.Project(e, view)
 	if err2 != nil {
 		return nil, fmt.Errorf("collection element: %s", err2)
@@ -382,17 +378,17 @@ func (p *Projector) projectCollection(m *MediaTypeExpr, view, viewID string) (*P
 	desc := m.TypeName + " is the media type for an array of " + e.TypeName + " (" + view + " view)"
 	proj := &MediaTypeExpr{
 		Identifier: viewID,
-		UserTypeExpr: &design.UserTypeExpr{
-			AttributeExpr: &design.AttributeExpr{
+		UserTypeExpr: &UserTypeExpr{
+			AttributeExpr: &AttributeExpr{
 				Description: desc,
-				Type:        &design.Array{ElemType: &design.AttributeExpr{Type: pe.MediaType}},
+				Type:        &Array{ElemType: &AttributeExpr{Type: pe.MediaType}},
 				UserExample: m.UserExample,
 			},
 			TypeName: pe.MediaType.TypeName + "Collection",
 		},
 	}
 	proj.Views = map[string]*ViewExpr{"default": &ViewExpr{
-		AttributeExpr: design.DupAtt(pe.MediaType.Views["default"].AttributeExpr),
+		AttributeExpr: DupAtt(pe.MediaType.Views["default"].AttributeExpr),
 		Name:          "default",
 		Parent:        pe.MediaType,
 	}}
@@ -403,12 +399,12 @@ func (p *Projector) projectCollection(m *MediaTypeExpr, view, viewID string) (*P
 	}
 
 	// Build the links user type
-	var links *design.UserTypeExpr
+	var links *UserTypeExpr
 	if pe.Links != nil {
 		lTypeName := pe.Links.TypeName + "Array"
-		links = &design.UserTypeExpr{
-			AttributeExpr: &design.AttributeExpr{
-				Type:        &design.Array{ElemType: &design.AttributeExpr{Type: pe.Links}},
+		links = &UserTypeExpr{
+			AttributeExpr: &AttributeExpr{
+				Type:        &Array{ElemType: &AttributeExpr{Type: pe.Links}},
 				Description: fmt.Sprintf("%s contains links to related resources of %s.", lTypeName, m.TypeName),
 			},
 			TypeName: lTypeName,
@@ -445,8 +441,8 @@ func (l *LinkExpr) EvalName() string {
 }
 
 // Attribute returns the linked attribute.
-func (l *LinkExpr) Attribute() *design.AttributeExpr {
-	p := l.Parent.Type.(design.Object)
+func (l *LinkExpr) Attribute() *AttributeExpr {
+	p := l.Parent.Type.(Object)
 	if p == nil {
 		return nil
 	}

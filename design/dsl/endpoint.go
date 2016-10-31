@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"unicode"
 
+	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/eval"
-	"github.com/goadesign/goa/rpc/design"
 )
 
 // Endpoint defines a single service endpoint.
@@ -42,48 +42,78 @@ func Endpoint(name string, dsl func()) {
 // from HTTP headers, query string values or body fields in the case of HTTP)
 //
 // Request may appear in a Endpoint expression.
-// Request takes one
+//
+// Request takes one or two arguments. The first argument is either a reference
+// to a type, the name of a type or a DSL function.
+// If the first argument is a type or the name of a type then an optional DSL
+// may be passed as second argument that further specializes the type by
+// providing additional validations (e.g. list of required attributes)
+//
+// Examples:
+//
+// Endpoint("add", func() {
+//     // Define request type inline
+//     Request(func() {
+//         Attribute("left", Int32, "Left operand")
+//         Attribute("right", Int32, "Left operand")
+//         Required("left", "right")
+//     })
+// })
+//
+// Endpoint("add", func() {
+//     // Define request type by reference to user type
+//     Request(Operands)
+// })
+//
+// Endpoint("divide", func() {
+//     // Specify required attributes on user type
+//     Request(Operands, func() {
+//         Required("left", "right")
+//     })
+// })
+//
 func Request(p interface{}, dsls ...func()) {
 	if len(dsls) > 1 {
-		eval.ReportError("too many arguments given to Payload")
+		eval.ReportError("too many arguments given to Request")
 		return
 	}
-	a, ok := eval.Current().(*design.ActionExpr)
+	e, ok := eval.Current().(*design.EndpointExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
-	var att *apidesign.AttributeExpr
+	var att *design.AttributeExpr
 	var dsl func()
 	switch actual := p.(type) {
 	case func():
 		dsl = actual
-		att = newAttribute(a.Parent.MediaType)
-		att.Type = apidesign.Object{}
-	case *apidesign.AttributeExpr:
-		att = apidesign.DupAtt(actual)
-	case *apidesign.UserTypeExpr:
+		att = &design.AttributeExpr{
+			Reference: e.Service.DefaultType,
+			Type:      design.Object{},
+		}
+	case *design.AttributeExpr:
+		att = design.DupAtt(actual)
+	case *design.UserTypeExpr:
 		if len(dsls) == 0 {
-			a.Payload = actual
-			a.PayloadOptional = isOptional
+			e.Request = actual
 			return
 		}
-		att = apidesign.DupAtt(actual.Attribute())
+		att = design.DupAtt(actual.Attribute())
 	case *design.MediaTypeExpr:
-		att = apidesign.DupAtt(actual.AttributeExpr)
+		att = design.DupAtt(actual.AttributeExpr)
 	case string:
-		ut := apidesign.Root.UserType(actual)
+		ut := design.Root.UserType(actual)
 		if ut == nil {
-			eval.ReportError("unknown payload type %s", actual)
+			eval.ReportError("unknown request type %s", actual)
 			return
 		}
-		att = apidesign.DupAtt(ut.Attribute())
-	case *apidesign.Array:
-		att = &apidesign.AttributeExpr{Type: actual}
-	case *apidesign.Map:
-		att = &apidesign.AttributeExpr{Type: actual}
-	case apidesign.Primitive:
-		att = &apidesign.AttributeExpr{Type: actual}
+		att = design.DupAtt(ut.Attribute())
+	case *design.Array:
+		att = &design.AttributeExpr{Type: actual}
+	case *design.Map:
+		att = &design.AttributeExpr{Type: actual}
+	case design.Primitive:
+		att = &design.AttributeExpr{Type: actual}
 	default:
 		eval.ReportError("invalid Payload argument, must be a type, a media type or a DSL building a type")
 		return
@@ -97,23 +127,12 @@ func Request(p interface{}, dsls ...func()) {
 	if dsl != nil {
 		eval.Execute(dsl, att)
 	}
-	rn := camelize(a.Parent.Name)
-	an := camelize(a.Name)
-	a.Payload = &apidesign.UserTypeExpr{
+	sn := camelize(e.Service.Name)
+	en := camelize(e.Name)
+	e.Request = &design.UserTypeExpr{
 		AttributeExpr: att,
-		TypeName:      fmt.Sprintf("%s%sPayload", an, rn),
+		TypeName:      fmt.Sprintf("%s%sRequest", en, sn),
 	}
-	a.PayloadOptional = isOptional
-}
-
-// newAttribute creates a new attribute definition using the media type with the given identifier
-// as base type.
-func newAttribute(baseMT string) *apidesign.AttributeExpr {
-	var base apidesign.DataType
-	if mt := design.Root.MediaType(baseMT); mt != nil {
-		base = mt.Type
-	}
-	return &apidesign.AttributeExpr{Reference: base}
 }
 
 func camelize(str string) string {
