@@ -107,11 +107,18 @@ func Execute(dsl func(), def Expression) bool {
 	if dsl == nil {
 		return true
 	}
-	initCount := len(Context.Errors.(MultiError))
+	var startCount int
+	if Context.Errors != nil {
+		startCount = len(Context.Errors.(MultiError))
+	}
 	Context.Stack = append(Context.Stack, def)
 	dsl()
 	Context.Stack = Context.Stack[:len(Context.Stack)-1]
-	return len(Context.Errors.(MultiError)) <= initCount
+	var endCount int
+	if Context.Errors != nil {
+		endCount = len(Context.Errors.(MultiError))
+	}
+	return endCount <= startCount
 }
 
 // Current returns the expression whose DSL is currently being executed.
