@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"encoding/json"
@@ -8,10 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goadesign/goa/goagen/codegen"
-	"github.com/goadesign/goa/goagen/meta"
-	"github.com/goadesign/goa/goagen/utils"
-	"github.com/goadesign/goa/version"
+	"github.com/goadesign/goa/codegen"
+	"github.com/goadesign/goa/pkg"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -54,7 +52,7 @@ package and tool and the Swagger specification for the API.
 		Use:   "version",
 		Short: "Print the version number of goagen",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("goagen " + version.String() + "\nThe goa generation tool.")
+			fmt.Println("goagen " + pkg.Version() + "\nThe goa generation tool.")
 		},
 	}
 	rootCmd.AddCommand(versionCmd)
@@ -195,7 +193,7 @@ package and tool and the Swagger specification for the API.
 		}
 	}
 
-	go utils.Catch(nil, func() {
+	go codegen.Catch(nil, func() {
 		terminatedByUser = true
 	})
 
@@ -268,7 +266,7 @@ func generate(pkgName, pkgPath string, c *cobra.Command) ([]string, error) {
 		return nil, err
 	}
 
-	gen, err := meta.NewGenerator(
+	gen, err := NewGenerator(
 		pkgName+".Generate",
 		[]*codegen.ImportSpec{codegen.SimpleImport(pkgPath)},
 		m,

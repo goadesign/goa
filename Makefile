@@ -15,31 +15,14 @@ DIRS=$(shell go list -f {{.Dir}} ./...)
 # Only list test and build dependencies
 # Standard dependencies are installed via go get
 DEPEND=\
-	github.com/go-openapi/loads \
-	github.com/goadesign/goa-cellar \
-	github.com/goadesign/goa.design/tools/godoc2md \
-	github.com/goadesign/goa.design/tools/mdc \
 	github.com/golang/lint/golint \
 	github.com/on99/gocyclo \
-	github.com/onsi/ginkgo \
-	github.com/onsi/ginkgo/ginkgo \
-	github.com/onsi/gomega \
-	github.com/spf13/hugo \
 	golang.org/x/tools/cmd/cover \
 	golang.org/x/tools/cmd/goimports
 
 .PHONY: goagen
 
 all: depend lint cyclo goagen test
-
-docs:
-	@git clone https://github.com/goadesign/goa.design
-	@rm -rf goa.design/content/reference goa.design/public
-	@mdc github.com/goadesign/goa goa.design/content/reference --exclude goa.design
-	@cd goa.design && hugo
-	@rm -rf public
-	@mv goa.design/public public
-	@rm -rf goa.design
 
 depend:
 	@go get -v ./...
@@ -61,7 +44,7 @@ cyclo:
 	fi
 
 test:
-	@ginkgo -r --randomizeAllSpecs --failOnPending --randomizeSuites --race -skipPackage vendor
+	go test ./...
 	go test ./_integration_tests
 
 goagen:

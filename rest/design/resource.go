@@ -3,7 +3,6 @@ package design
 import (
 	"fmt"
 	"path"
-	"sort"
 	"strings"
 
 	"github.com/dimfeld/httppath"
@@ -14,31 +13,30 @@ type (
 	// ResourceExpr describes a REST resource.
 	// It defines both a media type and a set of actions that can be executed through HTTP
 	// requests.
+	// ResourceExpr embeds a ServiceExpr and adds HTTP specific properties.
 	ResourceExpr struct {
-		// Service is the underlying service.
-		Service *design.Service
+		// ServiceExpr is the underlying service.
+		*design.ServiceExpr
+		// Default media type identifier.
+		MediaType string
 		// Schemes is the supported HTTP schemes.
 		Schemes []string
 		// Common URL prefix to all resource action HTTP requests
 		BasePath string
-		// Path and query string parameters that apply to all actions.
-		Params *design.AttributeExpr
 		// Name of parent resource if any
 		ParentName string
-		// Default media type, describes the resource attributes
-		MediaType string
-		// Default view name if default media type is MediaTypeDefinition
-		DefaultViewName string
 		// Action with canonical resource path
 		CanonicalActionName string
-		// Map of response definitions that apply to all actions indexed by name.
-		Responses map[string]*ResponseExpr
+		// Path and query string parameters that apply to all actions.
+		Params *design.AttributeExpr
 		// Request headers that apply to all actions.
 		Headers *design.AttributeExpr
-		// DSLFunc contains the DSL used to create this definition if any.
-		DSLFunc func()
-		// metadata is a list of key/value pairs
-		Metadata design.MetadataExpr
+		// Actions is the list of resource actions.
+		Actions []*ActionExpr
+		// Responses lists HTTP responses that apply to all actions.
+		Responses []*HTTPResponseExpr
+		// FileServers is the list of static asset serving endpoints
+		FileServers []*FileServerExpr
 	}
 
 	// ResourceIterator is the type of functions given to IterateResources.
@@ -47,11 +45,14 @@ type (
 
 // NewResourceExpr creates a resource definition but does not
 // execute the DSL.
-func NewResourceExpr(name string, dsl func()) *ResourceExpr {
+func NewResourceExpr(service *design.ServiceExpr) *ResourceExpr {
+	mt := "text/plain"
+	if dmt, ok := service.DefaultType.(*design.MediaTypeExpr); ok {
+		mt = dmt.Identifier
+	}
 	return &ResourceExpr{
-		Name:      name,
-		MediaType: "text/plain",
-		DSLFunc:   dsl,
+		ServiceExpr: service,
+		MediaType:   mt,
 	}
 }
 
@@ -63,43 +64,21 @@ func (r *ResourceExpr) EvalName() string {
 	return "unnamed resource"
 }
 
-// IterateActions calls the given iterator passing in each resource action sorted in alphabetical order.
-// Iteration stops if an iterator returns an error and in this case IterateActions returns that
-// error.
-func (r *ResourceExpr) IterateActions(it ActionIterator) error {
-	names := make([]string, len(r.Actions))
-	i := 0
-	for n := range r.Actions {
-		names[i] = n
-		i++
-	}
-	sort.Strings(names)
-	for _, n := range names {
-		if err := it(r.Actions[n]); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// IterateFileServers calls the given iterator passing each resource file server sorted by file
-// path. Iteration stops if an iterator returns an error and in this case IterateFileServers returns
-// that error.
-func (r *ResourceExpr) IterateFileServers(it FileServerIterator) error {
-	sort.Sort(ByFilePath(r.FileServers))
-	for _, f := range r.FileServers {
-		if err := it(f); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // IterateHeaders calls the given iterator passing in each response sorted in alphabetical order.
 // Iteration stops if an iterator returns an error and in this case IterateHeaders returns that
 // error.
 func (r *ResourceExpr) IterateHeaders(it HeaderIterator) error {
 	return iterateHeaders(r.Headers, r.Headers.IsRequired, it)
+}
+
+// Action returns the resource action with the given name or nil if there isn't one.
+func (r *ResourceExpr) Action(name string) *ActionExpr {
+	for _, a := range r.Actions {
+		if a.Name == name {
+			return a
+		}
+	}
+	return nil
 }
 
 // CanonicalAction returns the canonical action of the resource if any.
@@ -109,8 +88,7 @@ func (r *ResourceExpr) CanonicalAction() *ActionExpr {
 	if name == "" {
 		name = "show"
 	}
-	ca, _ := r.Actions[name]
-	return ca
+	return r.Action(name)
 }
 
 // URITemplate returns a URI template to this resource.
@@ -156,23 +134,24 @@ func (r *ResourceExpr) Parent() *ResourceExpr {
 	return nil
 }
 
+// Response returns the resource response with given name if any.
+func (r *ResourceExpr) Response(name string) *HTTPResponseExpr {
+	for _, resp := range r.Responses {
+		if resp.Name == name {
+			return resp
+		}
+	}
+	return nil
+}
+
 // Finalize is run post DSL execution. It merges response definitions, creates implicit action
 // parameters, initializes querystring parameters, sets path parameters as non zero attributes
 // and sets the fallbacks for security schemes.
 func (r *ResourceExpr) Finalize() {
-	r.IterateFileServers(func(f *FileServerExpr) error {
+	for _, f := range r.FileServers {
 		f.Finalize()
-		return nil
-	})
-	r.IterateActions(func(a *ActionExpr) error {
+	}
+	for _, a := range r.Actions {
 		a.Finalize()
-		return nil
-	})
+	}
 }
-
-// ByFilePath makes FileServerExpr sortable for code generators.
-type ByFilePath []*FileServerExpr
-
-func (b ByFilePath) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
-func (b ByFilePath) Len() int           { return len(b) }
-func (b ByFilePath) Less(i, j int) bool { return b[i].FilePath < b[j].FilePath }

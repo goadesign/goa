@@ -50,7 +50,7 @@ type doFunc func(*http.Request) (*http.Response, error)
 
 // Do implements Doer.Do
 func (f doFunc) Do(ctx context.Context, req *http.Request) (*http.Response, error) {
-	return f(ctx, req)
+	return f(req)
 }
 
 // Do wraps the underlying http client Do method and adds logging.
@@ -70,7 +70,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	if c.Dump {
 		c.dumpRequest(ctx, req)
 	}
-	resp, err := c.Doer.Do(ctx, req)
+	resp, err := c.Doer.Do(req)
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return nil, err

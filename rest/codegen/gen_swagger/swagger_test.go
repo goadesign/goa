@@ -8,9 +8,7 @@ import (
 	_ "github.com/goadesign/goa-cellar/design"
 	. "github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/apidsl"
-	"github.com/goadesign/goa/dslengine"
-	"github.com/goadesign/goa/goagen/gen_schema"
-	"github.com/goadesign/goa/goagen/gen_swagger"
+	"github.com/goadesign/goa/eval"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -44,12 +42,12 @@ var _ = Describe("New", func() {
 	BeforeEach(func() {
 		swagger = nil
 		newErr = nil
-		dslengine.Reset()
+		eval.Reset()
 		genschema.Definitions = make(map[string]*genschema.JSONSchema)
 	})
 
 	JustBeforeEach(func() {
-		err := dslengine.Run()
+		err := eval.Run()
 		Ω(err).ShouldNot(HaveOccurred())
 		swagger, newErr = genswagger.New(Design)
 	})

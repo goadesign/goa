@@ -60,8 +60,8 @@ func (service *Service) Serve(l net.Listener) error {
 }
 
 // Use applies the middleware to all the endpoints.
-func (e *Endpoints) Use(m Middleware) {
+func (e Endpoints) Use(m Middleware) {
 	for n, ep := range e {
-		e[n] = m(e)
+		e[n] = m(ep)
 	}
 }

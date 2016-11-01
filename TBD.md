@@ -5,4 +5,4 @@ Notes of things I know still have to be done. Lots more I don't know about.
 - Fix up client so New works with stdlib client (or add new NewStd)
 - Add back security
 - Add back CORS
-
+- Add back (HTTP) response templates?

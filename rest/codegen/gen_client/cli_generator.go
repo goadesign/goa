@@ -10,8 +10,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/goadesign/goa/codegen"
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/goagen/codegen"
 )
 
 func (g *Generator) generateMain(mainFile string, clientPkg, cliPkg string, funcs template.FuncMap) error {

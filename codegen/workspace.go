@@ -17,7 +17,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/goadesign/goa/version"
+	"github.com/goadesign/goa/pkg"
 
 	"golang.org/x/tools/go/ast/astutil"
 )
@@ -230,7 +230,7 @@ func SourceFileFor(path string) (*SourceFile, error) {
 func (f *SourceFile) WriteHeader(title, pack string, imports []*ImportSpec) error {
 	ctx := map[string]interface{}{
 		"Title":       title,
-		"ToolVersion": version.String(),
+		"ToolVersion": pkg.Version(),
 		"Pkg":         pack,
 		"Imports":     imports,
 	}

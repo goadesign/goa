@@ -4,7 +4,7 @@ import (
 	"sort"
 
 	"github.com/goadesign/goa/codegen"
-	"github.com/goadesign/goa/http/design"
+	"github.com/goadesign/goa/rest/design"
 )
 
 type (

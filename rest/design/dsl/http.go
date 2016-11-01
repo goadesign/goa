@@ -7,67 +7,65 @@ import (
 	"github.com/goadesign/goa/rest/design"
 )
 
-// Action describes a single endpoint  including the URL path, HTTP method, request parameters (via
-// path wildcards or query strings) and payload (data structure describing the request HTTP body).
-// Action also describe the possible responses including their HTTP status, headers and body via
-// media types.
+// HTTP defines HTTP transport specific properties either on a service or on a single endpoint. The
+// function maps the request and response types to HTTP properties such as parameters (via path
+// wildcards or query strings), request and response headers and bodies and response status code.
+// HTTP also defines HTTP specific properties such as the endpoint URLs and HTTP methods.
 //
-// An action belongs to a resource and "inherits" default values from the resource definition
-// including the URL path prefix, default response media type and default payload attribute
-// properties (inherited from the attribute with identical name in the resource default media type).
+// HTTP may appear in a Service or an Endpoint expression.
 //
-// Action may appear in Resource.
-//
-// Action accepts two arguments: the name of the action and its defining DSL.
+// HTTP accepts a single argument which the DSL function.
 //
 // Example:
 //
-//    Action("Update", func() {
-//        Description("Update account")
-//        Docs(func() {
-//            Description("Update docs")
-//            URL("http//cellarapi.com/docs/actions/update")
-//        })
-//        Scheme("http")                       // "http", "https", "ws" or "wss"
-//        Routing(
-//            PUT("/:id"),                     // path relative to resource base path
-//            PUT("//orgs/:org/accounts/:id"), // absolute path
-//        )
-//        Params(func() {                      // action parameters
-//            Param("org", String)             // may correspond to path wildcards
-//            Param("id", Integer)
-//            Param("sort", func() {           // or URL query string values
-//                Enum("asc", "desc")
-//            })
-//        })
-//        Headers(func() {                     // relevant action headers
-//            Header("Authorization", String)
-//            Header("X-Account", Integer)
-//            Required("Authorization", "X-Account")
-//        })
-//        Payload(UpdatePayload)                // HTTP request body type
-//        // OptionalPayload(UpdatePayload)     // request body which may be omitted
-//        Response(NoContent)                   // HTTP response, see Response
-//        Response(NotFound)
-//    })
+//    var _ = Service("Manager", func() {
+//        DefaultType(Account)
+//        Error(ErrAuthFailure)
 //
-func Action(name string, dsl func()) {
-	if r, ok := eval.Current().(*design.ResourceExpr); ok {
-		if r.Actions == nil {
-			r.Actions = make(map[string]*design.ActionExpr)
-		}
-		action, ok := r.Actions[name]
-		if !ok {
-			action = &design.ActionExpr{
-				Parent: r,
-				Name:   name,
-			}
-		}
-		if !eval.Execute(dsl, action) {
-			return
-		}
-		r.Actions[name] = action
-	} else {
+//        HTTP(func() {
+//            BasePath("/accounts")               // Prefix to all service HTTP request paths
+//            Error(ErrAuthFailure, Unauthorized) // Use HTTP status code 401 for ErrAuthFailure
+//                                                // error responses.
+//                                                // ErrUnauthorized error responses
+//            Scheme("http")                      // "http", "https", "ws" or "wss"
+//        })
+//
+//        Endpoint("update", func() {
+//            Description("Change account name")
+//            Request(UpdateAccount)
+//            Response(Empty)
+//            Error(ErrNotFound)
+//            Error(ErrBadRequest, ErrorResponse)
+//
+//            HTTP(func() {
+//                PUT("/{accountID}")    // "accountID" attribute of UpdateAccount
+//                Query("req:requestID") // Use "requestID" attribute to define "req" query string
+//                Scheme("https")        // Override default service scheme
+//                Body(func() {
+//                    Attribute("name")  // "name" attribute of UpdateAccount
+//                    Required("name")
+//                })
+//                Header("X-RequestID:requestID") // Use "requestID" attribute of UpdateAccount to
+//                                                // define shape of "X-RequestID" header
+//                Response(NoContent)             // Use HTTP status code 204 on success
+//                Error(ErrNotFound, NotFound)    // Use HTTP status code 404 for ErrNotFound
+//                Error(ErrBadRequest, BadRequest, ErrorMedia) // Use status code 400 for
+//                                                // ErrBadRequest, also use ErrorMedia media type
+//                                                // to describe response body.
+//            })
+//
+//        })
+//    })
+func HTTP(dsl func()) {
+	switch actual := eval.Current().(type) {
+	case *apidesign.ServiceExpr:
+		res := NewResourceExpr(actual, dsl)
+		design.Root.Resources = append(design.Root.Resources, res)
+	case *apidesign.EndpointExpr:
+		act := NewActionExpr(actual, dsl)
+		res = design.ResourceFor(actual.Service)
+		res.Actions = append(res.Actions, act)
+	default:
 		eval.IncompatibleDSL()
 	}
 }
@@ -80,8 +78,6 @@ func Docs(dsl func()) {
 	}
 
 	switch expr := eval.Current().(type) {
-	case *design.ActionExpr:
-		expr.Docs = docs
 	case *design.FileServerExpr:
 		expr.Docs = docs
 	default:
@@ -89,95 +85,66 @@ func Docs(dsl func()) {
 	}
 }
 
-// Routing lists the action route. Each route is defined with a function named after the route HTTP
-// method.
+// GET defines a route using the GET HTTP method. The route may use wildcards to define path
+// parameters. Wildcards start with '{' or with '{*' and end with '}'. A wildcard that starts with
+// '{' matches a section of the path (the value in between two slashes). A wildcard that starts with
+// '{*' matches the rest of the path. Such wildcards must terminate the path.
 //
-// The route function takes the path as argument. Route paths may use wildcards to identify action
-// parameters by using the characters ':' or '*' to prefix the parameter name. The syntax `:param`
-// matches a path segment (the characters in between slashes) while the syntax `*name` is a
-// catch-all that matches the path until the end. See the httptreemux
-// (https://godoc.org/github.com/dimfeld/httptreemux) package documentation for additional details.
+// GET may appear in an endpoint HTTP function.
+// GET accepts one argument which is the request path.
 //
 // Example:
 //
-//     var _ = Resource("bottle", func() {
-//         BasePath("/bottles")
-//         DefaultMedia(BottleMedia)
-//         Action("show", func() {
-//             Routing(GET("/:id"))    // Endpoint path is "/bottles/:id"
-//             Params(func()
-//                 Param("id", Integer, "id of bottle", func() {
-//                     Minimum(1)      // Define "id" parameter as strictly
-//                 })                  // positive integer
+//     var _ = Service("Manager", func() {
+//         Endpoint("GetAccount", func() {
+//             Request(GetAccount)
+//             Response(Account)
+//             HTTP(func() {
+//                 GET("/{accountID}")
+//                 GET("/{*accountPath}")
 //             })
-//             Response(OK)
-//         })
-//         Action("update", func() {
-//             Routing(
-//                 PUT("/:id")         // Define action with multiple
-//                 PATCH("/:id")       // routes.
-//             )
-//             Params(func()
-//                 Param("id", Integer, "id of bottle", func() {
-//                     Minimum(1)      // Define "id" parameter as strictly
-//                 })                  // positive integer
-//             })
-//             Response(NoContent)
 //         })
 //     })
-//
-func Routing(routes ...*design.RouteExpr) {
-	if a, ok := eval.Current().(*design.ActionExpr); ok {
-		for _, r := range routes {
-			r.Parent = a
-			a.Routes = append(a.Routes, r)
-		}
-	} else {
-		eval.IncompatibleDSL()
-	}
-}
-
-// GET creates a route using the GET HTTP method. See Routing.
 func GET(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "GET", Path: path}
 }
 
-// HEAD creates a route using the HEAD HTTP method. See Routing.
+// HEAD creates a route using the HEAD HTTP method. See GET.
 func HEAD(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "HEAD", Path: path}
 }
 
-// POST creates a route using the POST HTTP method. See Routing.
+// POST creates a route using the POST HTTP method. See GET.
 func POST(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "POST", Path: path}
 }
 
-// PUT creates a route using the PUT HTTP method. See Routing.
+// PUT creates a route using the PUT HTTP method. See GET.
 func PUT(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "PUT", Path: path}
 }
 
-// DELETE creates a route using the DELETE HTTP method. See Routing.
+// DELETE creates a route using the DELETE HTTP method. See GET.
 func DELETE(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "DELETE", Path: path}
 }
 
-// OPTIONS creates a route using the OPTIONS HTTP method. See Routing.
+// OPTIONS creates a route using the OPTIONS HTTP method. See GET.
 func OPTIONS(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "OPTIONS", Path: path}
 }
 
-// TRACE creates a route using the TRACE HTTP method. See Routing.
+// TRACE creates a route using the TRACE HTTP method. See GET.
 func TRACE(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "TRACE", Path: path}
 }
 
-// CONNECT creates a route using the CONNECT HTTP method. See Routing.
+// CONNECT creates a route using the CONNECT HTTP method. See GET.
 func CONNECT(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "CONNECT", Path: path}
 }
 
-// PATCH creates a route using the PATCH HTTP method. See Routing.
+// PATCH creates a route using the PATCH HTTP method. See GET.
 func PATCH(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "PATCH", Path: path}
 }

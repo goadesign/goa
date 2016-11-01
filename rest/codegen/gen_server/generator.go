@@ -8,8 +8,7 @@ import (
 	"sort"
 
 	"github.com/goadesign/goa/codegen"
-	"github.com/goadesign/goa/codegen/gen_server"
-	"github.com/goadesign/goa/http/design"
+	"github.com/goadesign/goa/rest/design"
 )
 
 // Generator is the application code generator.

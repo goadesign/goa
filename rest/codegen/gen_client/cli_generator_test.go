@@ -6,11 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/goadesign/goa/codegen"
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/dslengine"
-	"github.com/goadesign/goa/goagen/codegen"
-	"github.com/goadesign/goa/goagen/gen_client"
-	"github.com/goadesign/goa/version"
+	"github.com/goadesign/goa/eval"
+	"github.com/goadesign/goa/pkg"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -28,7 +27,7 @@ var _ = Describe("Generate", func() {
 		outDir = filepath.Join(gopath, "src", testgenPackagePath)
 		err := os.MkdirAll(outDir, 0777)
 		Ω(err).ShouldNot(HaveOccurred())
-		os.Args = []string{"goagen", "--out=" + outDir, "--design=foo", "--version=" + version.String()}
+		os.Args = []string{"goagen", "--out=" + outDir, "--design=foo", "--version=" + pkg.Version()}
 	})
 
 	JustBeforeEach(func() {
@@ -88,7 +87,7 @@ var _ = Describe("Generate", func() {
 										"boolArray":   &design.AttributeDefinition{Type: &design.Array{ElemType: &design.AttributeDefinition{Type: design.Boolean}}},
 										"numberArray": &design.AttributeDefinition{Type: &design.Array{ElemType: &design.AttributeDefinition{Type: design.Number}}},
 									},
-									Validation: &dslengine.ValidationDefinition{Required: []string{"boolReq"}},
+									Validation: &eval.ValidationDefinition{Required: []string{"boolReq"}},
 								},
 								Routes: []*design.RouteDefinition{
 									{
@@ -259,7 +258,7 @@ var _ = Describe("Generate", func() {
 									Type: design.Object{
 										"id": &design.AttributeDefinition{Type: design.UUID},
 									},
-									Validation: &dslengine.ValidationDefinition{Required: []string{"id"}},
+									Validation: &eval.ValidationDefinition{Required: []string{"id"}},
 								},
 								Routes: []*design.RouteDefinition{
 									{

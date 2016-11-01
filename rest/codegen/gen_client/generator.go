@@ -10,9 +10,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/goadesign/goa/codegen"
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/goagen/codegen"
-	"github.com/goadesign/goa/goagen/utils"
 )
 
 // Filename used to generate all data types (without the ".go" extension)
@@ -64,7 +63,7 @@ func Generate() (files []string, err error) {
 
 // Generate generats the client package and CLI.
 func (g *Generator) Generate() (_ []string, err error) {
-	go utils.Catch(nil, func() { g.Cleanup() })
+	go codegen.Catch(nil, func() { g.Cleanup() })
 
 	defer func() {
 		if err != nil {
