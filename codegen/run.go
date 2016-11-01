@@ -1,6 +1,6 @@
 package codegen
 
-import "github.com/goadesign/goa/dslengine"
+import "github.com/goadesign/goa/eval"
 
 type generator interface {
 	Generate() ([]string, error)
@@ -23,7 +23,7 @@ type generator interface {
 //
 func Run(generators ...generator) {
 	for _, generator := range generators {
-		dslengine.PrintFilesOrFail(generator.Generate())
+		eval.PrintFilesOrFail(generator.Generate())
 	}
 }
 
@@ -31,8 +31,8 @@ func Run(generators ...generator) {
 // package, creating your `design.APIDefinition` along the way.
 func ParseDSL() {
 	// Catch any init-time errors
-	dslengine.FailOnError(dslengine.Errors)
+	eval.FailOnError(eval.Errors)
 
 	// Catch any runtime errors, when analyzing the DSL
-	dslengine.FailOnError(dslengine.Run())
+	eval.FailOnError(eval.Run())
 }

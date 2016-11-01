@@ -8,8 +8,8 @@ import (
 )
 
 type (
-	// ResponseExpr defines a HTTP response status and optional validation rules.
-	ResponseExpr struct {
+	// HTTPResponseExpr defines a HTTP response including its status, headers and media type.
+	HTTPResponseExpr struct {
 		// Response name
 		Name string
 		// HTTP status
@@ -20,7 +20,7 @@ type (
 		Type design.DataType
 		// Response body media type if any
 		MediaType string
-		// Response view name if MediaType is MediaTypeExpr
+		// Response view name if MediaType is the id of a MediaTypeExpr
 		ViewName string
 		// Response header expressions
 		Headers *design.AttributeExpr
@@ -31,28 +31,15 @@ type (
 		// Standard is true if the response is one of the default responses.
 		Standard bool
 	}
-
-	// ResponseTemplateExpr defines a response template.
-	// A response template is a function that takes an arbitrary number
-	// of strings and returns a response expression.
-	ResponseTemplateExpr struct {
-		// Response template name
-		Name string
-		// Response template function
-		Template func(...string) *ResponseExpr
-	}
-
-	// ResponseIterator is the type of functions given to IterateResponses.
-	ResponseIterator func(*ResponseExpr) error
 )
 
 // EvalName returns the generic definition name used in error messages.
-func (r *ResponseExpr) EvalName() string {
+func (r *HTTPResponseExpr) EvalName() string {
 	var prefix, suffix string
 	if r.Name != "" {
-		prefix = fmt.Sprintf("response %#v", r.Name)
+		prefix = fmt.Sprintf("HTTP response %#v", r.Name)
 	} else {
-		prefix = "unnamed response"
+		prefix = "unnamed HTTP response"
 	}
 	if r.Parent != nil {
 		suffix = fmt.Sprintf(" of %s", r.Parent.EvalName())
@@ -62,27 +49,27 @@ func (r *ResponseExpr) EvalName() string {
 
 // Validate checks that the response definition is consistent: its status is set and the media
 // type definition if any is valid.
-func (r *ResponseExpr) Validate() *eval.ValidationErrors {
+func (r *HTTPResponseExpr) Validate() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
 	if r.Headers != nil {
-		verr.Merge(r.Headers.Validate("response headers", r))
+		verr.Merge(r.Headers.Validate("HTTP response headers", r))
 	}
 	if r.Status == 0 {
-		verr.Add(r, "response status not defined")
+		verr.Add(r, "HTTP response status not defined")
 	}
 	return verr
 }
 
 // Finalize sets the response media type from its type if the type is a media type and no media
 // type is already specified.
-func (r *ResponseExpr) Finalize() {
+func (r *HTTPResponseExpr) Finalize() {
 	if r.Type == nil {
 		return
 	}
 	if r.MediaType != "" && r.MediaType != "text/plain" {
 		return
 	}
-	mt, ok := r.Type.(*MediaTypeExpr)
+	mt, ok := r.Type.(*design.MediaTypeExpr)
 	if !ok {
 		return
 	}
@@ -90,8 +77,8 @@ func (r *ResponseExpr) Finalize() {
 }
 
 // Dup returns a copy of the response definition.
-func (r *ResponseExpr) Dup() *ResponseExpr {
-	res := ResponseExpr{
+func (r *HTTPResponseExpr) Dup() *HTTPResponseExpr {
+	res := HTTPResponseExpr{
 		Name:        r.Name,
 		Status:      r.Status,
 		Description: r.Description,
@@ -105,7 +92,7 @@ func (r *ResponseExpr) Dup() *ResponseExpr {
 }
 
 // Merge merges other into target. Only the fields of target that are not already set are merged.
-func (r *ResponseExpr) Merge(other *ResponseExpr) {
+func (r *HTTPResponseExpr) Merge(other *HTTPResponseExpr) {
 	if other == nil {
 		return
 	}
@@ -136,12 +123,4 @@ func (r *ResponseExpr) Merge(other *ResponseExpr) {
 			}
 		}
 	}
-}
-
-// EvalName returns the generic definition name used in error messages.
-func (r *ResponseTemplateExpr) EvalName() string {
-	if r.Name != "" {
-		return fmt.Sprintf("response template %#v", r.Name)
-	}
-	return "unnamed response template"
 }

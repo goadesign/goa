@@ -3,8 +3,7 @@ package genschema_test
 import (
 	"github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/apidsl"
-	"github.com/goadesign/goa/dslengine"
-	"github.com/goadesign/goa/goagen/gen_schema"
+	"github.com/goadesign/goa/eval"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -17,7 +16,7 @@ var _ = Describe("TypeSchema", func() {
 	BeforeEach(func() {
 		typ = nil
 		s = nil
-		dslengine.Reset()
+		eval.Reset()
 		design.ProjectedMediaTypes = make(design.MediaTypeRoot)
 	})
 
@@ -36,7 +35,7 @@ var _ = Describe("TypeSchema", func() {
 				})
 			})
 
-			Ω(dslengine.Run()).ShouldNot(HaveOccurred())
+			Ω(eval.Run()).ShouldNot(HaveOccurred())
 			typ = design.Design.MediaTypes["application/foo.bar"]
 		})
 
@@ -67,8 +66,8 @@ var _ = Describe("TypeSchema", func() {
 				})
 			})
 
-			Ω(func() { dslengine.Run() }).ShouldNot(Panic())
-			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+			Ω(func() { eval.Run() }).ShouldNot(Panic())
+			Ω(eval.Errors).ShouldNot(HaveOccurred())
 			typ = design.Design.MediaTypes["application/vnd.menu"]
 		})
 

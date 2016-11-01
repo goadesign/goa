@@ -1,4 +1,4 @@
-package meta_test
+package cmd_test
 
 import (
 	"bytes"
@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/goadesign/goa/goagen/codegen"
-	"github.com/goadesign/goa/goagen/meta"
+	"github.com/goadesign/goa/codegen"
+	"github.com/goadesign/goa/codegen/cmd"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -25,7 +25,7 @@ var _ = Describe("Run", func() {
 	var designPkgPath, setDesignPkgPath string
 	var designPackageSource string
 
-	var m *meta.Generator
+	var m *cmd.Generator
 
 	BeforeEach(func() {
 		genfunc = ""
@@ -53,7 +53,7 @@ var _ = Describe("Run", func() {
 				Ω(err).ShouldNot(HaveOccurred())
 			}
 		}
-		m = &meta.Generator{
+		m = &cmd.Generator{
 			Genfunc:       genfunc,
 			Imports:       []*codegen.ImportSpec{codegen.SimpleImport(designPkgPath)},
 			OutDir:        outputDir,

@@ -1,4 +1,4 @@
-package meta
+package cmd
 
 import (
 	"fmt"
@@ -11,8 +11,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/goadesign/goa/goagen/codegen"
-	"github.com/goadesign/goa/version"
+	"github.com/goadesign/goa/codegen"
+	"github.com/goadesign/goa/pkg"
 )
 
 // Generator generates the code of, compiles and runs generators.
@@ -179,7 +179,7 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 		i++
 	}
 	sort.Strings(args)
-	args = append(args, "--version="+version.String())
+	args = append(args, "--version="+pkg.Version())
 	cmd := exec.Command(genbin, args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {

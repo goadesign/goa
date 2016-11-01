@@ -10,7 +10,7 @@ import (
 	"unicode"
 
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/dslengine"
+	"github.com/goadesign/goa/eval"
 )
 
 var (
@@ -157,7 +157,7 @@ func GoTypeName(t design.DataType, required []string, tabs int, private bool) st
 	case design.Object:
 		att := &design.AttributeDefinition{Type: actual}
 		if len(required) > 0 {
-			requiredVal := &dslengine.ValidationDefinition{Required: required}
+			requiredVal := &eval.ValidationDefinition{Required: required}
 			att.Validation.Merge(requiredVal)
 		}
 		return GoTypeDef(att, tabs, false, private)

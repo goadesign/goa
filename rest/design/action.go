@@ -12,7 +12,8 @@ import (
 )
 
 type (
-	// ActionExpr describes a resource action.
+	// ActionExpr describes a resource action. It embeds a EndpointExpr and adds HTTP specific
+	// properties.
 	//
 	// It defines both an HTTP endpoint and the shape of HTTP requests and responses made to
 	// that endpoint.
@@ -20,12 +21,8 @@ type (
 	// portions of the URL that define parameter values), query string parameters and a payload
 	// parameter (request body).
 	ActionExpr struct {
-		// Action name, e.g. "create"
-		Name string
-		// Action description, e.g. "Creates a task"
-		Description string
-		// Docs points to the API external documentation
-		Docs *design.DocsExpr
+		// EndpointExpr is the underlying endpoint expression.
+		*design.EndpointExpr
 		// Parent resource
 		Parent *ResourceExpr
 		// Specific action URL schemes
@@ -33,19 +30,15 @@ type (
 		// Action routes
 		Routes []*RouteExpr
 		// Map of possible response definitions indexed by name
-		Responses map[string]*ResponseExpr
+		Responses []*HTTPResponseExpr
 		// Path and query string parameters
 		Params *design.AttributeExpr
 		// Query string parameters only
 		QueryParams *design.AttributeExpr
 		// Payload blueprint (request body) if any
 		Payload design.UserType
-		// PayloadOptional is true if the request payload is optional, false otherwise.
-		PayloadOptional bool
 		// Request headers that need to be made available to action
 		Headers *design.AttributeExpr
-		// Metadata is a list of key/value pairs
-		Metadata design.MetadataExpr
 	}
 
 	// RouteExpr represents an action route (HTTP endpoint).
@@ -121,6 +114,16 @@ func (a *ActionExpr) AllParams() *design.AttributeExpr {
 		res = res.Merge(Root.Params)
 	}
 	return res
+}
+
+// Response returns the action response with given name if any.
+func (a *ActionExpr) Response(name string) *HTTPResponseExpr {
+	for _, resp := range a.Responses {
+		if resp.Name == name {
+			return resp
+		}
+	}
+	return nil
 }
 
 // HasAbsoluteRoutes returns true if all the action routes are absolute.
@@ -380,44 +383,22 @@ func iterateHeaders(headers *design.AttributeExpr, isRequired func(name string) 
 	return nil
 }
 
-// IterateResponses calls the given iterator passing in each response sorted in alphabetical order.
-// Iteration stops if an iterator returns an error and in this case IterateResponses returns that
-// error.
-func (a *ActionExpr) IterateResponses(it ResponseIterator) error {
-	names := make([]string, len(a.Responses))
-	i := 0
-	for n := range a.Responses {
-		names[i] = n
-		i++
-	}
-	sort.Strings(names)
-	for _, n := range names {
-		if err := it(a.Responses[n]); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // mergeResponses merges the parent resource and design responses.
 func (a *ActionExpr) mergeResponses() {
-	for name, resp := range a.Parent.Responses {
-		if _, ok := a.Responses[name]; !ok {
-			if a.Responses == nil {
-				a.Responses = make(map[string]*ResponseExpr)
-			}
-			a.Responses[name] = resp.Dup()
+	for _, resp := range a.Parent.Responses {
+		if a.Response(resp.Name) == nil {
+			a.Responses = append(a.Responses, resp.Dup())
 		}
 	}
-	for name, resp := range a.Responses {
+	for _, resp := range a.Responses {
 		resp.Finalize()
-		if pr, ok := a.Parent.Responses[name]; ok {
+		if pr := a.Parent.Response(resp.Name); pr != nil {
 			resp.Merge(pr)
 		}
-		if ar, ok := Root.Responses[name]; ok {
+		if ar := Root.Response(resp.Name); ar != nil {
 			resp.Merge(ar)
 		}
-		if dr, ok := Root.DefaultResponses[name]; ok {
+		if dr := Root.DefaultResponse(resp.Name); dr != nil {
 			resp.Merge(dr)
 		}
 	}

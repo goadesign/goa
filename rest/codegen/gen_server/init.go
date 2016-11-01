@@ -1,6 +1,6 @@
 package genserver
 
-import "github.com/goadesign/goa/goagen/codegen"
+import "github.com/goadesign/goa/codegen"
 
 type (
 	// InitWriter generate the service setup code.

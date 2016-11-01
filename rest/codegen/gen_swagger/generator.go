@@ -9,9 +9,8 @@ import (
 
 	"gopkg.in/yaml.v2"
 
+	"github.com/goadesign/goa/codegen"
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/goagen/codegen"
-	"github.com/goadesign/goa/goagen/utils"
 )
 
 // Generator is the swagger code generator.
@@ -41,7 +40,7 @@ func Generate() (files []string, err error) {
 
 // Generate produces the skeleton main.
 func (g *Generator) Generate() (_ []string, err error) {
-	go utils.Catch(nil, func() { g.Cleanup() })
+	go codegen.Catch(nil, func() { g.Cleanup() })
 
 	defer func() {
 		if err != nil {

@@ -1,4 +1,4 @@
-package version
+package pkg
 
 import (
 	"fmt"
@@ -11,21 +11,19 @@ const (
 	Major = 2
 	// Minor version number
 	Minor = 0
-)
-
-var (
 	// Build number
-	Build = "" // Set in version branches
+	Build = 0
+	// Suffix - set to empty string in release tag commits.
+	Suffix = "wip"
 )
 
-// String returns the complete version number.
-func String() string {
-	var suffix string
-	if Build == "" {
-		Build = "9999"
-		suffix = "-dev"
+// Version returns the complete version number.
+func Version() string {
+	ver := "v" + strconv.Itoa(Major) + "." + strconv.Itoa(Minor) + "." + strconv.Itoa(Build)
+	if Suffix != "" {
+		ver += "-" + Suffix
 	}
-	return "v" + strconv.Itoa(Major) + "." + strconv.Itoa(Minor) + "." + Build + suffix
+	return ver
 }
 
 // Compatible returns true if Major matches the major version of the given version string.

@@ -1,4 +1,4 @@
-package version
+package pkg
 
 import (
 	"regexp"

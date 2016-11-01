@@ -9,15 +9,15 @@ import (
 	"io"
 
 	"github.com/ajg/form"
-	"github.com/goadesign/goa"
+	"github.com/goadesign/goa/rest"
 )
 
 // NewEncoder returns a form encoder that writes to w.
-func NewEncoder(w io.Writer) goa.Encoder {
+func NewEncoder(w io.Writer) rest.Encoder {
 	return form.NewEncoder(w)
 }
 
 // NewDecoder returns a form decoder that reads from r.
-func NewDecoder(r io.Reader) goa.Decoder {
+func NewDecoder(r io.Reader) rest.Decoder {
 	return form.NewDecoder(r)
 }

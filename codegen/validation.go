@@ -7,7 +7,7 @@ import (
 	"text/template"
 
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/dslengine"
+	"github.com/goadesign/goa/eval"
 )
 
 var (
@@ -195,7 +195,7 @@ func ValidationChecker(att *design.AttributeDefinition, nonzero, required, hasDe
 	return strings.Join(res, "\n")
 }
 
-func validationsCode(validation *dslengine.ValidationDefinition, data map[string]interface{}) (res []string) {
+func validationsCode(validation *eval.ValidationDefinition, data map[string]interface{}) (res []string) {
 	if validation == nil {
 		return nil
 	}

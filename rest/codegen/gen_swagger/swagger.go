@@ -8,8 +8,7 @@ import (
 	"strings"
 
 	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/dslengine"
-	"github.com/goadesign/goa/goagen/gen_schema"
+	"github.com/goadesign/goa/eval"
 )
 
 type (
@@ -533,7 +532,7 @@ func scopesMapList(scopes map[string]string) string {
 	return strings.Join(lines, "\n")
 }
 
-func tagsFromDefinition(mdata dslengine.MetadataDefinition) (tags []*Tag) {
+func tagsFromDefinition(mdata eval.MetadataDefinition) (tags []*Tag) {
 	var keys []string
 	for k := range mdata {
 		keys = append(keys, k)
@@ -582,7 +581,7 @@ func tagsFromDefinition(mdata dslengine.MetadataDefinition) (tags []*Tag) {
 	return
 }
 
-func tagNamesFromDefinitions(mdatas ...dslengine.MetadataDefinition) (tagNames []string) {
+func tagNamesFromDefinitions(mdatas ...eval.MetadataDefinition) (tagNames []string) {
 	for _, mdata := range mdatas {
 		tags := tagsFromDefinition(mdata)
 		for _, tag := range tags {
@@ -592,7 +591,7 @@ func tagNamesFromDefinitions(mdatas ...dslengine.MetadataDefinition) (tagNames [
 	return
 }
 
-func summaryFromDefinition(name string, metadata dslengine.MetadataDefinition) string {
+func summaryFromDefinition(name string, metadata eval.MetadataDefinition) string {
 	for n, mdata := range metadata {
 		if n == "swagger:summary" && len(mdata) > 0 {
 			return mdata[0]
@@ -601,7 +600,7 @@ func summaryFromDefinition(name string, metadata dslengine.MetadataDefinition) s
 	return name
 }
 
-func extensionsFromDefinition(mdata dslengine.MetadataDefinition) map[string]interface{} {
+func extensionsFromDefinition(mdata eval.MetadataDefinition) map[string]interface{} {
 	extensions := make(map[string]interface{})
 	for key, value := range mdata {
 		chunks := strings.Split(key, ":")

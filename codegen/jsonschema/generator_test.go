@@ -7,11 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/goadesign/goa/codegen"
 	"github.com/goadesign/goa/design/apidsl"
 	"github.com/goadesign/goa/dslengine"
-	"github.com/goadesign/goa/goagen/codegen"
-	"github.com/goadesign/goa/goagen/gen_schema"
-	"github.com/goadesign/goa/version"
+	"github.com/goadesign/goa/pkg"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -28,7 +27,7 @@ var _ = Describe("Generate", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 		testPkg, err = workspace.NewPackage("schematest")
 		Ω(err).ShouldNot(HaveOccurred())
-		os.Args = []string{"goagen", "--out=" + testPkg.Abs(), "--design=foo", "--version=" + version.String()}
+		os.Args = []string{"goagen", "--out=" + testPkg.Abs(), "--design=foo", "--version=" + pkg.Version()}
 	})
 
 	JustBeforeEach(func() {
