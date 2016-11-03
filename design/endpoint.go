@@ -26,7 +26,7 @@ type (
 		// Service that owns endpoint.
 		Service *ServiceExpr
 		// Metadata is an arbitrary set of key/value pairs, see dsl.Metadata
-		Metadata map[string]string
+		Metadata MetadataExpr
 	}
 )
 

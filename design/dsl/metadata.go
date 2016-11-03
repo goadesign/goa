@@ -69,6 +69,8 @@ func Metadata(name string, value ...string) {
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	case *design.APIExpr:
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
+	case *design.EndpointExpr:
+		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	default:
 		eval.IncompatibleDSL()
 	}
