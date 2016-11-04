@@ -107,3 +107,64 @@ var _ = Describe("Type", func() {
 		})
 	})
 })
+
+var _ = Describe("ArrayOf", func() {
+	Context("used on a global variable", func() {
+		var (
+			ut *UserTypeDefinition
+			ar *Array
+		)
+		BeforeEach(func() {
+			dslengine.Reset()
+			ut = Type("example", func() {
+				Attribute("id")
+			})
+			ar = ArrayOf(ut)
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+		})
+
+		JustBeforeEach(func() {
+			dslengine.Run()
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+		})
+
+		It("produces a array type", func() {
+			Ω(ar).ShouldNot(BeNil())
+			Ω(ar.Kind()).Should(Equal(ArrayKind))
+			Ω(ar.ElemType.Type).Should(Equal(ut))
+		})
+	})
+
+	Context("defined with the type name", func() {
+		var ar *UserTypeDefinition
+		BeforeEach(func() {
+			dslengine.Reset()
+			Type("name", func() {
+				Attribute("id")
+			})
+			ar = Type("names", func() {
+				Attribute("ut", ArrayOf("name"))
+			})
+		})
+
+		JustBeforeEach(func() {
+			dslengine.Run()
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+		})
+
+		It("produces a media type", func() {
+			Ω(ar).ShouldNot(BeNil())
+			Ω(ar.TypeName).Should(Equal("names"))
+			Ω(ar.Type).ShouldNot(BeNil())
+			Ω(ar.Type.ToObject()).ShouldNot(BeNil())
+			Ω(ar.Type.ToObject()).Should(HaveKey("ut"))
+			ut := ar.Type.ToObject()["ut"]
+			Ω(ut.Type).ShouldNot(BeNil())
+			Ω(ut.Type).Should(BeAssignableToTypeOf(&Array{}))
+			et := ut.Type.ToArray().ElemType
+			Ω(et).ShouldNot(BeNil())
+			Ω(et.Type).Should(BeAssignableToTypeOf(&UserTypeDefinition{}))
+			Ω(et.Type.(*UserTypeDefinition).TypeName).Should(Equal("name"))
+		})
+	})
+})
