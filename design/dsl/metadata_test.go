@@ -36,14 +36,14 @@ func TestMetaData(t *testing.T) {
 			}
 			meta := tc.MetaFunc(tc.Expr)
 			if _, ok := meta[tc.Name]; !ok {
-				t.Fatalf("%s: expected %s to be present", k, tc.Name)
+				t.Errorf("%s: expected %s to be present", k, tc.Name)
 			}
 			if len(meta[tc.Name]) != (len(tc.Values) * tc.Invocations) {
-				t.Fatalf("%s: expected the number of metadata values to match %d got %d ", k, len(tc.Values), len(meta[tc.Name]))
+				t.Errorf("%s: expected the number of metadata values to match %d got %d ", k, len(tc.Values), len(meta[tc.Name]))
 			}
 			for _, caseVal := range tc.Values {
 				if !hasValue(meta[tc.Name], caseVal) {
-					t.Fatalf("%s: meta data %v did not conatin expected value %v", k, meta[tc.Name], caseVal)
+					t.Errorf("%s: meta data %v did not conatin expected value %v", k, meta[tc.Name], caseVal)
 				}
 			}
 		})
