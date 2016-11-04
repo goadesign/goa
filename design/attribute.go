@@ -18,6 +18,8 @@ type (
 		Reference DataType
 		// Optional description
 		Description string
+		// Docs points to external documentation
+		Docs *DocsExpr
 		// Optional validations
 		Validation *ValidationExpr
 		// Metadata is a list of key/value pairs

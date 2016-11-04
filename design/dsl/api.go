@@ -94,6 +94,19 @@ func License(dsl func()) {
 }
 
 // Docs provides external documentation pointers.
+//
+// Docs may appear in an API, Service, Endpoint or Attribute expressions.
+// Docs takes a single argument which is the defining DSL.
+//
+// Example:
+//
+//    var _ = API("cellar", func() {
+//        Docs(func() {
+//            Description("Additional documentation")
+//            URL("https://goa.design")
+//        })
+//    })
+//
 func Docs(dsl func()) {
 	docs := new(design.DocsExpr)
 	if !eval.Execute(dsl, docs) {
@@ -102,7 +115,11 @@ func Docs(dsl func()) {
 	switch e := eval.Current().(type) {
 	case *design.APIExpr:
 		e.Docs = docs
+	case *design.ServiceExpr:
+		e.Docs = docs
 	case *design.EndpointExpr:
+		e.Docs = docs
+	case *design.AttributeExpr:
 		e.Docs = docs
 	default:
 		eval.IncompatibleDSL()
