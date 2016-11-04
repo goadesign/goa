@@ -70,7 +70,20 @@ func Type(name string, dsl func()) *design.UserTypeDefinition {
 // If you are looking to return a collection of elements in a Response
 // clause, refer to CollectionOf.  ArrayOf creates a type, where
 // CollectionOf creates a media type.
-func ArrayOf(t design.DataType) *design.Array {
+func ArrayOf(v interface{}) *design.Array {
+	var t design.DataType
+	var ok bool
+	t, ok = v.(design.DataType)
+	if !ok {
+		if name, ok := v.(string); ok {
+			t = design.Design.Types[name]
+		}
+	}
+	if t == nil {
+		dslengine.ReportError("invalid ArrayOf argument: not a type and not a known user type name")
+		// don't return nil to avoid panics, the error will get reported at the end
+		return &design.Array{ElemType: &design.AttributeDefinition{Type: design.String}}
+	}
 	at := design.AttributeDefinition{Type: t}
 	return &design.Array{ElemType: &at}
 }
