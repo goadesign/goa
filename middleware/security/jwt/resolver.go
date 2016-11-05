@@ -72,8 +72,8 @@ func NewResolver(keys map[string][]Key, header string) (*GroupResolver, error) {
 }
 
 // NewSimpleResolver returns a simple resolver.
-func NewSimpleResolver(keys []Key) (KeyResolver, error) {
-	return simpleResolver(keys), nil
+func NewSimpleResolver(keys []Key) KeyResolver {
+	return simpleResolver(keys)
 }
 
 // AddKeys can be used to add keys to the resolver which will be referenced
