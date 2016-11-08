@@ -106,9 +106,9 @@ func IncrCounter(key []string, val float32) {
 // MeasureSince creates a timing metric that records
 // the duration of elapsed time since `start`
 // Usage:
-//     MeasureSince([]string{"my","namespace","action}, time.Now())
+//     MeasureSince([]string{"my","namespace","action"}, time.Now())
 // Frequently used in a defer:
-//    defer MeasureSince([]string{"my","namespace","action}, time.Now())
+//    defer MeasureSince([]string{"my","namespace","action"}, time.Now())
 func MeasureSince(key []string, start time.Time) {
 	normalizeKeys(key)
 
