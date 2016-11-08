@@ -270,7 +270,7 @@ var convertParamTmpl = `{{ if eq .Type "string" }}		sliceVal := []string{ {{ if 
 		for i, v := range {{ .Name }} {
 			sliceVal[i] = fmt.Sprintf("%v", v)
 		}{{/*
-*/}}{{ else if eq .Type "time.Time" }}		sliceVal := []string{ {{ if .Pointer }}*{{ end }}{{ .Name }}.Format(time.RFC3339)}{{/*
+*/}}{{ else if eq .Type "time.Time" }}		sliceVal := []string{ {{ if .Pointer }}(*{{ end }}{{ .Name }}{{ if .Pointer }}){{ end }}.Format(time.RFC3339)}{{/*
 */}}{{ else }}		sliceVal := []string{fmt.Sprintf("%v", {{ if .Pointer }}*{{ end }}{{ .Name }})}{{ end }}`
 
 var testTmpl = `{{ define "convertParam" }}` + convertParamTmpl + `{{ end }}` + `
