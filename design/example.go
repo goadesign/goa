@@ -149,23 +149,23 @@ func byFormat(a *AttributeExpr, r *Random) interface{} {
 		return nil
 	}
 	format := a.Validation.Format
-	if res, ok := map[string]interface{}{
-		"email":     r.faker.Email(),
-		"hostname":  r.faker.DomainName() + "." + r.faker.DomainSuffix(),
-		"date-time": time.Unix(int64(r.Int())%1454957045, 0).Format(time.RFC3339), // to obtain a "fixed" rand
-		"ipv4":      r.faker.IPv4Address().String(),
-		"ipv6":      r.faker.IPv6Address().String(),
-		"ip":        r.faker.IPv4Address().String(),
-		"uri":       r.faker.URL(),
-		"mac": func() string {
+	if res, ok := map[ValidationFormat]interface{}{
+		FormatEmail:    r.faker.Email(),
+		FormatHostname: r.faker.DomainName() + "." + r.faker.DomainSuffix(),
+		FormatDateTime: time.Unix(int64(r.Int())%1454957045, 0).Format(time.RFC3339), // to obtain a "fixed" rand
+		FormatIPv4:     r.faker.IPv4Address().String(),
+		FormatIPv6:     r.faker.IPv6Address().String(),
+		FormatIP:       r.faker.IPv4Address().String(),
+		FormatURI:      r.faker.URL(),
+		FormatMAC: func() string {
 			res, err := regen.Generate(`([0-9A-F]{2}-){5}[0-9A-F]{2}`)
 			if err != nil {
 				return "12-34-56-78-9A-BC"
 			}
 			return res
 		}(),
-		"cidr":   "192.168.100.14/24",
-		"regexp": r.faker.Characters(3) + ".*",
+		FormatCIDR:   "192.168.100.14/24",
+		FormatRegexp: r.faker.Characters(3) + ".*",
 	}[format]; ok {
 		return res
 	}

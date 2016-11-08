@@ -44,7 +44,7 @@ type (
 		Values []interface{}
 		// Format represents a format validation as described at
 		// http://json-schema.org/latest/json-schema-validation.html#anchor104.
-		Format string
+		Format ValidationFormat
 		// PatternValidationExpr represents a pattern validation as described at
 		// http://json-schema.org/latest/json-schema-validation.html#anchor33
 		Pattern string
@@ -64,6 +64,41 @@ type (
 		// http://json-schema.org/latest/json-schema-validation.html#anchor61.
 		Required []string
 	}
+
+	// ValidationFormat is the type used to enumerates the possible string formats.
+	ValidationFormat string
+)
+
+const (
+	// FormatCIDR designates
+	FormatCIDR ValidationFormat = "cidr"
+
+	// FormatDateTime designates values that follow RFC3339
+	FormatDateTime = "date-time"
+
+	// FormatEmail designates values that follow RFC5322
+	FormatEmail = "email"
+
+	// FormatHostname designates
+	FormatHostname = "hostname"
+
+	// FormatIPv4 designates values that follow RFC2373 IPv4
+	FormatIPv4 = "ipv4"
+
+	// FormatIPv6 designates values that follow RFC2373 IPv6
+	FormatIPv6 = "ipv6"
+
+	// FormatIP designates values that follow RFC2373 IPv4 or IPv6
+	FormatIP = "ip"
+
+	// FormatMAC designates
+	FormatMAC = "mac"
+
+	// FormatRegexp designates
+	FormatRegexp = "regexp"
+
+	// FormatURI designates
+	FormatURI = "uri"
 )
 
 // EvalName returns the name used by the DSL evaluation.

@@ -67,8 +67,21 @@ func Type(name string, dsl func()) design.UserType {
 //        })
 //    })
 //
-func ArrayOf(t design.DataType) *design.Array {
-	at := design.AttributeExpr{Type: t}
+func ArrayOf(v interface{}) *design.Array {
+	var t design.DataType
+	var ok bool
+	t, ok = v.(design.DataType)
+	if !ok {
+		if name, ok := v.(string); ok {
+			t = design.Design.Types[name]
+		}
+	}
+	if t == nil {
+		eval.ReportError("invalid ArrayOf argument: not a type and not a known user type name")
+		// don't return nil to avoid panics, the error will get reported at the end
+		return &design.Array{ElemType: &design.AttributeDefinition{Type: design.String}}
+	}
+	at := design.AttributeDefinition{Type: t}
 	return &design.Array{ElemType: &at}
 }
 
