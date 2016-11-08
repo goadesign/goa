@@ -924,7 +924,7 @@ func jsonArray(ins []string) ([]interface{}, error) {
 }
 
 func timeVal(val string) (*time.Time, error) {
-	t, err := time.Parse("RFC3339", val)
+	t, err := time.Parse(time.RFC3339, val)
 	if err != nil {
 		return nil, err
 	}

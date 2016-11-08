@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/eval"
@@ -12,7 +11,7 @@ import (
 
 // Enum adds a "enum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor76.
-func Enum(val ...interface{}) {
+func Enum(val ...design.ValidationFormat) {
 	if a, ok := attributeDefinition(); ok {
 		ok := true
 		for i, v := range val {
@@ -46,32 +45,17 @@ func Enum(val ...interface{}) {
 	}
 }
 
-// SupportedValidationFormats lists the supported formats for use with the
-// Format DSL.
-var SupportedValidationFormats = []string{
-	"cidr",
-	"date-time",
-	"email",
-	"hostname",
-	"ipv4",
-	"ipv6",
-	"ip",
-	"mac",
-	"regexp",
-	"uri",
-}
-
 // Format adds a "format" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor104.
 // The formats supported by goa are:
 //
-// "date-time": RFC3339 date time
+// FormatDateTime: RFC3339 date time
 //
-// "email": RFC5322 email address
+// FormatEmail: RFC5322 email address
 //
-// "hostname": RFC1035 internet host name
+// FormatHostname: RFC1035 internet host name
 //
-// "ipv4", "ipv6", "ip": RFC2373 IPv4, IPv6 address or either
+// FormatIPv4, FormatIPv6, FormatIP: RFC2373 IPv4, IPv6 address or either
 //
 // "uri": RFC3986 URI
 //
@@ -81,26 +65,14 @@ var SupportedValidationFormats = []string{
 //
 // "regexp": RE2 regular expression
 func Format(f string) {
-	if a, ok := attributeDefinition(); ok {
+	if a, ok := eval.Current().(*design.AttributeExpr); ok {
 		if a.Type != nil && a.Type.Kind() != design.StringKind {
 			incompatibleAttributeType("format", a.Type.Name(), "a string")
 		} else {
-			supported := false
-			for _, s := range SupportedValidationFormats {
-				if s == f {
-					supported = true
-					break
-				}
+			if a.Validation == nil {
+				a.Validation = &design.ValidationExpr{}
 			}
-			if !supported {
-				eval.ReportError("unsupported format %#v, supported formats are: %s",
-					f, strings.Join(SupportedValidationFormats, ", "))
-			} else {
-				if a.Validation == nil {
-					a.Validation = &design.ValidationExpr{}
-				}
-				a.Validation.Format = f
-			}
+			a.Validation.Format = f
 		}
 	}
 }
