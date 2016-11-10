@@ -678,6 +678,7 @@ func paramFor(at *design.AttributeDefinition, name, in string, required bool) *P
 	}
 	if at.Type.IsArray() {
 		p.Items = itemsFromDefinition(at.Type.ToArray().ElemType)
+		p.CollectionFormat = "multi"
 	}
 	p.Extensions = extensionsFromDefinition(at.Metadata)
 	initValidations(at, p)
