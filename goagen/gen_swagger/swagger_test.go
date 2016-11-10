@@ -524,7 +524,7 @@ var _ = Describe("New", func() {
 				Ω(ps).Should(HaveLen(14))
 				// check Headers in detail
 				Ω(ps[3]).Should(Equal(&genswagger.Parameter{In: "header", Name: "Authorization", Type: "string", Required: true}))
-				Ω(ps[4]).Should(Equal(&genswagger.Parameter{In: "header", Name: "OptionalArray", Type: "array",
+				Ω(ps[4]).Should(Equal(&genswagger.Parameter{In: "header", Name: "OptionalArray", Type: "array", CollectionFormat: "multi",
 					Items: &genswagger.Items{Type: "string"}, MinItems: &minItems1, MaxItems: &maxItems5}))
 				Ω(ps[5]).Should(Equal(&genswagger.Parameter{In: "header", Name: "OptionalBoolWithDefault", Type: "boolean",
 					Description: "defaults true", Default: true}))
