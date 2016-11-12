@@ -162,7 +162,7 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		if !p.IsError() {
 			tmp = fmt.Sprintf("%s.%s", g.Target, tmp)
 		}
-		validate := codegen.RecursiveChecker(p.AttributeDefinition, false, false, false, "payload", "raw", 1, false)
+		validate := g.validator.Code(p.AttributeDefinition, false, false, false, "payload", "raw", 1, false)
 		returnType = &ObjectType{}
 		returnType.Type = tmp
 		if p.IsObject() && !p.IsError() {
@@ -189,7 +189,7 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 			payload.Pointer = "*"
 		}
 
-		validate := codegen.RecursiveChecker(action.Payload.AttributeDefinition, false, false, false, "payload", "raw", 1, false)
+		validate := g.validator.Code(action.Payload.AttributeDefinition, false, false, false, "payload", "raw", 1, false)
 		if validate != "" {
 			payload.Validatable = true
 		}

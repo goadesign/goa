@@ -14,11 +14,12 @@ import (
 
 // Generator is the application code generator.
 type Generator struct {
-	API      *design.APIDefinition // The API definition
-	OutDir   string                // Path to output directory
-	Target   string                // Name of generated package
-	NoTest   bool                  // Whether to skip test generation
-	genfiles []string              // Generated files
+	API       *design.APIDefinition // The API definition
+	OutDir    string                // Path to output directory
+	Target    string                // Name of generated package
+	NoTest    bool                  // Whether to skip test generation
+	genfiles  []string              // Generated files
+	validator *codegen.Validator    // Validation code generator
 }
 
 // Generate is the generator entry point called by the meta generator.
@@ -43,7 +44,7 @@ func Generate() (files []string, err error) {
 	}
 
 	target = codegen.Goify(target, false)
-	g := &Generator{OutDir: outDir, Target: target, NoTest: notest, API: design.Design}
+	g := &Generator{OutDir: outDir, Target: target, NoTest: notest, API: design.Design, validator: codegen.NewValidator()}
 
 	return g.Generate()
 }

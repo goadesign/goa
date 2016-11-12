@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"strings"
@@ -11,8 +12,6 @@ import (
 )
 
 var (
-	arrayValT    *template.Template
-	userValT     *template.Template
 	enumValT     *template.Template
 	formatValT   *template.Template
 	patternValT  *template.Template
@@ -25,19 +24,12 @@ var (
 func init() {
 	var err error
 	fm := template.FuncMap{
-		"tabs":             Tabs,
-		"slice":            toSlice,
-		"oneof":            oneof,
-		"constant":         constant,
-		"goifyAtt":         GoifyAtt,
-		"add":              Add,
-		"recursiveChecker": RecursiveChecker,
-	}
-	if arrayValT, err = template.New("array").Funcs(fm).Parse(arrayValTmpl); err != nil {
-		panic(err)
-	}
-	if userValT, err = template.New("user").Funcs(fm).Parse(userValTmpl); err != nil {
-		panic(err)
+		"tabs":     Tabs,
+		"slice":    toSlice,
+		"oneof":    oneof,
+		"constant": constant,
+		"goifyAtt": GoifyAtt,
+		"add":      Add,
 	}
 	if enumValT, err = template.New("enum").Funcs(fm).Parse(enumValTmpl); err != nil {
 		panic(err)
@@ -59,91 +51,93 @@ func init() {
 	}
 }
 
-// RecursiveChecker produces Go code that runs the validation checks recursively over the given
-// attribute.
-func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDefault bool, target, context string, depth int, private bool) string {
-	var checks []string
+// Validator is the code generator for the 'Validate' type methods.
+type Validator struct {
+	arrayValT *template.Template
+	userValT  *template.Template
+	seen      map[string]*bytes.Buffer
+}
+
+// NewValidator instantiates a validate code generator.
+func NewValidator() *Validator {
+	var (
+		v   = &Validator{seen: make(map[string]*bytes.Buffer)}
+		err error
+	)
+	fm := template.FuncMap{
+		"tabs":             Tabs,
+		"slice":            toSlice,
+		"oneof":            oneof,
+		"constant":         constant,
+		"goifyAtt":         GoifyAtt,
+		"add":              Add,
+		"recursiveChecker": v.Code,
+	}
+	v.arrayValT, err = template.New("array").Funcs(fm).Parse(arrayValTmpl)
+	if err != nil {
+		panic(err)
+	}
+	v.userValT, err = template.New("user").Funcs(fm).Parse(userValTmpl)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// Code produces Go code that runs the validation checks recursively over the given attribute.
+func (v *Validator) Code(att *design.AttributeDefinition, nonzero, required, hasDefault bool, target, context string, depth int, private bool) string {
+	buf := v.recurse(att, nonzero, required, hasDefault, target, context, depth, private)
+	return buf.String()
+}
+
+func (v *Validator) recurse(att *design.AttributeDefinition, nonzero, required, hasDefault bool, target, context string, depth int, private bool) *bytes.Buffer {
+	var (
+		buf   = new(bytes.Buffer)
+		first = true
+	)
+
+	// Break infinite recursions
+	switch dt := att.Type.(type) {
+	case *design.MediaTypeDefinition:
+		if buf, ok := v.seen[dt.TypeName]; ok {
+			return buf
+		}
+		v.seen[dt.TypeName] = buf
+	case *design.UserTypeDefinition:
+		if buf, ok := v.seen[dt.TypeName]; ok {
+			return buf
+		}
+		v.seen[dt.TypeName] = buf
+	}
+
 	if o := att.Type.ToObject(); o != nil {
 		if ds, ok := att.Type.(design.DataStructure); ok {
 			att = ds.Definition()
 		}
 		validation := ValidationChecker(att, nonzero, required, hasDefault, target, context, depth, private)
 		if validation != "" {
-			checks = append(checks, validation)
+			buf.WriteString(validation)
+			first = false
 		}
 		o.IterateAttributes(func(n string, catt *design.AttributeDefinition) error {
-			var validation string
-			if ds, ok := catt.Type.(design.DataStructure); ok {
-				// We need to check empirically whether there are validations to be
-				// generated, we can't just generate and check whether something was
-				// generated to avoid infinite recursions.
-				hasValidations := false
-				done := errors.New("done")
-				ds.Walk(func(a *design.AttributeDefinition) error {
-					if a.Validation != nil {
-						if private {
-							hasValidations = true
-							return done
-						}
-						// For public data structures there is a case where
-						// there is validation but no actual validation
-						// code: if the validation is a required validation
-						// that applies to attributes that cannot be nil or
-						// empty string i.e. primitive types other than
-						// string.
-						if !a.Validation.HasRequiredOnly() {
-							hasValidations = true
-							return done
-						}
-						for _, name := range a.Validation.Required {
-							att := a.Type.ToObject()[name]
-							if att != nil && (!att.Type.IsPrimitive() || att.Type.Kind() == design.StringKind) {
-								hasValidations = true
-								return done
-							}
-						}
-					}
-					return nil
-				})
-				if hasValidations {
-					validation = RunTemplate(
-						userValT,
-						map[string]interface{}{
-							"depth":  depth,
-							"target": fmt.Sprintf("%s.%s", target, GoifyAtt(catt, n, true)),
-						},
-					)
-				}
-			} else {
-				dp := depth
-				if catt.Type.IsObject() {
-					dp++
-				}
-				validation = RecursiveChecker(
-					catt,
-					att.IsNonZero(n),
-					att.IsRequired(n),
-					att.HasDefaultValue(n),
-					fmt.Sprintf("%s.%s", target, GoifyAtt(catt, n, true)),
-					fmt.Sprintf("%s.%s", context, n),
-					dp,
-					private,
-				)
-			}
+			validation := v.recurseAttribute(att, catt, n, target, context, depth, private)
 			if validation != "" {
-				if catt.Type.IsObject() {
-					validation = fmt.Sprintf("%sif %s.%s != nil {\n%s\n%s}",
-						Tabs(depth), target, GoifyAtt(catt, n, true), validation, Tabs(depth))
+				if !first {
+					buf.WriteByte('\n')
+				} else {
+					first = false
 				}
-				checks = append(checks, validation)
+				buf.WriteString(validation)
 			}
 			return nil
 		})
 	} else if a := att.Type.ToArray(); a != nil {
 		// Perform any validation on the array type such as MinLength, MaxLength, etc.
 		validation := ValidationChecker(att, nonzero, required, hasDefault, target, context, depth, private)
+		first := true
 		if validation != "" {
-			checks = append(checks, validation)
+			buf.WriteString(validation)
+			first = false
 		}
 		data := map[string]interface{}{
 			"elemType": a.ElemType,
@@ -152,17 +146,87 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDef
 			"depth":    1,
 			"private":  private,
 		}
-		validation = RunTemplate(arrayValT, data)
+		validation = RunTemplate(v.arrayValT, data)
 		if validation != "" {
-			checks = append(checks, validation)
+			if !first {
+				buf.WriteByte('\n')
+			} else {
+				first = false
+			}
+			buf.WriteString(validation)
 		}
 	} else {
 		validation := ValidationChecker(att, nonzero, required, hasDefault, target, context, depth, private)
 		if validation != "" {
-			checks = append(checks, validation)
+			buf.WriteString(validation)
 		}
 	}
-	return strings.Join(checks, "\n")
+	return buf
+}
+
+func (v *Validator) recurseAttribute(att, catt *design.AttributeDefinition, n, target, context string, depth int, private bool) string {
+	var validation string
+	if ds, ok := catt.Type.(design.DataStructure); ok {
+		// We need to check empirically whether there are validations to be
+		// generated, we can't just generate and check whether something was
+		// generated to avoid infinite recursions.
+		hasValidations := false
+		done := errors.New("done")
+		ds.Walk(func(a *design.AttributeDefinition) error {
+			if a.Validation != nil {
+				if private {
+					hasValidations = true
+					return done
+				}
+				// For public data structures there is a case where
+				// there is validation but no actual validation
+				// code: if the validation is a required validation
+				// that applies to attributes that cannot be nil or
+				// empty string i.e. primitive types other than
+				// string.
+				if !a.Validation.HasRequiredOnly() {
+					hasValidations = true
+					return done
+				}
+				for _, name := range a.Validation.Required {
+					att := a.Type.ToObject()[name]
+					if att != nil && (!att.Type.IsPrimitive() || att.Type.Kind() == design.StringKind) {
+						hasValidations = true
+						return done
+					}
+				}
+			}
+			return nil
+		})
+		if hasValidations {
+			validation = RunTemplate(v.userValT, map[string]interface{}{
+				"depth":  depth,
+				"target": fmt.Sprintf("%s.%s", target, GoifyAtt(catt, n, true)),
+			})
+		}
+	} else {
+		dp := depth
+		if catt.Type.IsObject() {
+			dp++
+		}
+		validation = v.recurse(
+			catt,
+			att.IsNonZero(n),
+			att.IsRequired(n),
+			att.HasDefaultValue(n),
+			fmt.Sprintf("%s.%s", target, GoifyAtt(catt, n, true)),
+			fmt.Sprintf("%s.%s", context, n),
+			dp,
+			private,
+		).String()
+	}
+	if validation != "" {
+		if catt.Type.IsObject() {
+			validation = fmt.Sprintf("%sif %s.%s != nil {\n%s\n%s}",
+				Tabs(depth), target, GoifyAtt(catt, n, true), validation, Tabs(depth))
+		}
+	}
+	return validation
 }
 
 // ValidationChecker produces Go code that runs the validation defined in the given attribute
