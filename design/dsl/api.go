@@ -151,3 +151,36 @@ func Host(host string) {
 	}
 	eval.IncompatibleDSL()
 }
+
+// Name sets the contact or license name.
+func Name(name string) {
+	switch def := eval.Current().(type) {
+	case *design.ContactExpr:
+		def.Name = name
+	case *design.LicenseExpr:
+		def.Name = name
+	default:
+		eval.IncompatibleDSL()
+	}
+}
+
+// Email sets the contact email.
+func Email(email string) {
+	if c, ok := eval.Current().(*design.ContactExpr); ok {
+		c.Email = email
+	}
+}
+
+// URL sets the contact or license URL.
+func URL(url string) {
+	switch def := eval.Current().(type) {
+	case *design.ContactExpr:
+		def.URL = url
+	case *design.LicenseExpr:
+		def.URL = url
+	case *design.DocsExpr:
+		def.URL = url
+	default:
+		eval.IncompatibleDSL()
+	}
+}
