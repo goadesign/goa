@@ -496,6 +496,13 @@ var _ = Describe("New", func() {
 						Response(NoContent)
 						Response(NotFound)
 					})
+
+					Action("hidden", func() {
+						Description("Does not show up in Swagger spec")
+						Metadata("swagger:generate", "false")
+						Routing(GET("/hidden"))
+						Response(OK)
+					})
 				})
 				base := Design.DSLFunc
 				Design.DSLFunc = func() {
