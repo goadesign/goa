@@ -545,6 +545,7 @@ var _ = Describe("Finalize", func() {
 
 			View("default", func() {
 				Attribute("name")
+				Attribute("child")
 			})
 		})
 	})

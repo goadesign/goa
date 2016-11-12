@@ -562,14 +562,23 @@ func (m *MediaTypeDefinition) Validate() *dslengine.ValidationErrors {
 		}
 	}
 	hasDefaultView := false
+	viewAttributes := make(map[string]bool)
 	for n, v := range m.Views {
 		if n == "default" {
 			hasDefaultView = true
+		}
+		for n := range v.AttributeDefinition.Type.ToObject() {
+			viewAttributes[n] = true
 		}
 		verr.Merge(v.Validate())
 	}
 	if !hasDefaultView {
 		verr.Add(m, `media type does not define the default view, use View("default", ...) to define it.`)
+	}
+	for n := range obj {
+		if _, ok := viewAttributes[n]; !ok {
+			verr.Add(m, "attribute %s of media type not used in any view", n)
+		}
 	}
 
 	for _, l := range m.Links {
