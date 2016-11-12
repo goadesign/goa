@@ -8,70 +8,74 @@ import (
 )
 
 var _ = Describe("Struct finalize code generation", func() {
-	Describe("RecursiveFinalizer", func() {
-		var att *design.AttributeDefinition
-		var target string
-		Context("given an object with a primitive field", func() {
-			BeforeEach(func() {
-				att = &design.AttributeDefinition{
-					Type: &design.Object{
-						"foo": &design.AttributeDefinition{
-							Type:         design.String,
-							DefaultValue: "bar",
-						},
+	var (
+		att       *design.AttributeDefinition
+		target    string
+		finalizer *codegen.Finalizer
+	)
+
+	BeforeEach(func() {
+		finalizer = codegen.NewFinalizer()
+	})
+
+	Context("given an object with a primitive field", func() {
+		BeforeEach(func() {
+			att = &design.AttributeDefinition{
+				Type: &design.Object{
+					"foo": &design.AttributeDefinition{
+						Type:         design.String,
+						DefaultValue: "bar",
 					},
-				}
-				target = "ut"
-			})
-			It("finalizes the fields", func() {
-				assignments := codegen.RecursiveFinalizer(att, target, 0)
-				Ω(assignments).Should(Equal(primitiveAssignmentCode))
-			})
+				},
+			}
+			target = "ut"
 		})
-		Context("given an array field", func() {
-			BeforeEach(func() {
-				att = &design.AttributeDefinition{
-					Type: &design.Object{
-						"foo": &design.AttributeDefinition{
-							Type: &design.Array{
-								ElemType: &design.AttributeDefinition{
-									Type: design.String,
-								},
-							},
-							DefaultValue: []interface{}{"bar", "baz"},
-						},
-					},
-				}
-				target = "ut"
-			})
-			It("finalizes the array fields", func() {
-				assignments := codegen.RecursiveFinalizer(att, target, 0)
-				Ω(assignments).Should(Equal(arrayAssignmentCode))
-			})
+		It("finalizes the fields", func() {
+			code := finalizer.Code(att, target, 0)
+			Ω(code).Should(Equal(primitiveAssignmentCode))
 		})
-		Context("given a hash field", func() {
-			BeforeEach(func() {
-				att = &design.AttributeDefinition{
-					Type: &design.Object{
-						"foo": &design.AttributeDefinition{
-							Type: &design.Hash{
-								KeyType: &design.AttributeDefinition{
-									Type: design.String,
-								},
-								ElemType: &design.AttributeDefinition{
-									Type: design.String,
-								},
+	})
+
+	Context("given an array field", func() {
+		BeforeEach(func() {
+			att = &design.AttributeDefinition{
+				Type: &design.Object{
+					"foo": &design.AttributeDefinition{
+						Type: &design.Array{
+							ElemType: &design.AttributeDefinition{
+								Type: design.String,
 							},
-							DefaultValue: map[interface{}]interface{}{"bar": "baz"},
 						},
+						DefaultValue: []interface{}{"bar", "baz"},
 					},
-				}
-				target = "ut"
-			})
-			It("finalizes the hash fields", func() {
-				assignments := codegen.RecursiveFinalizer(att, target, 0)
-				Ω(assignments).Should(Equal(hashAssignmentCode))
-			})
+				},
+			}
+			target = "ut"
+		})
+		It("finalizes the array fields", func() {
+			code := finalizer.Code(att, target, 0)
+			Ω(code).Should(Equal(arrayAssignmentCode))
+		})
+	})
+
+	Context("given a hash field", func() {
+		BeforeEach(func() {
+			att = &design.AttributeDefinition{
+				Type: &design.Object{
+					"foo": &design.AttributeDefinition{
+						Type: &design.Hash{
+							KeyType: &design.AttributeDefinition{
+								Type: design.String,
+							},
+							ElemType: &design.AttributeDefinition{
+								Type: design.String,
+							},
+						},
+						DefaultValue: map[interface{}]interface{}{"bar": "baz"},
+					},
+				},
+			}
+			target = "ut"
 		})
 	})
 })
