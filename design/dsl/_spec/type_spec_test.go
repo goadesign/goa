@@ -4,6 +4,60 @@ package dsl_test
 import . "github.com/goadesign/goa/design"
 import . "github.com/goadesign/goa/design/dsl"
 
+// BasicType shows the basic usage for Type.
+//
+// Type is the DSL function used to describe user types. A user type is an
+// object type that can be used to define request and response types or
+// attributes of request and response types.
+//
+// Type takes the name of the type as first argument. This name must be unique
+// across all types in a given design package.
+var BasicType = Type("Name", func() {
+	// Optional description used in code comments and docs.
+	Description("Optional description")
+
+	// Attribute defines a field of the type, see below for all possible
+	// usage.
+	Attribute("an_attribute", String)
+
+	// Required lists the required attributes. Required takes one or more
+	// attribute names and can appear one or more times.
+	Required("an_attribute")
+})
+
+// BasicMediaType shows the basic usage for MediaType.
+//
+// MediaType is the DSL function used to describe media types. A media type is a
+// special kind of type that adds the concept of views: A view defines a subset
+// of the type attributes to be rendered. This is used to describe *response*
+// types where an endpoint may render different attributes depending on the
+// request state or when different endpoints render the type differently (for
+// example a listing endpoint may render less attribute than a endpoint that
+// retrieves a single value). All media types muse define a default view. The
+// default view is the view named "default".
+//
+// Media type takes a media type identifier (as defined by RFC6 838) as first
+// argument. This identifier must be unique across all media types in a given
+// package.
+var BasicMediaType = MediaType("application/vnd.goa.media", func() {
+	// Optional description used in code comments and docs.
+	Description("Optional description")
+
+	// Attributes lists the media type attributes identically to Type.
+	Attributes(func() {
+		Attribute("an_attribute", String)
+		Required("an_attribute")
+	})
+
+	// View defines a view. View may appear one or more times in a MediaType
+	// expression.
+	View("default", func() {
+		// There is no need to repeat the attribute properties when
+		// listing the view attributes, only the name is required.
+		Attribute("an_attribute")
+	})
+})
+
 // AllTypes is a type definition with attributes using all possible data types.
 var AllTypes = Type("AllTypes", func() {
 	Description("An object with attributes of all possible types")
@@ -36,7 +90,7 @@ var AUserType = Type("UserType", func() {
 })
 
 // AMediaType is a media type used to define an attribute in AllTypes.
-var AMediaType = Type("MediaType", func() {
+var AMediaType = MediaType("MediaType", func() {
 	Description("Optional description")
 	Attributes(func() {
 		Attribute("optional", String)
