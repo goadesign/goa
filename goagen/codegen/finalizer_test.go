@@ -8,89 +8,144 @@ import (
 )
 
 var _ = Describe("Struct finalize code generation", func() {
-	Describe("RecursiveFinalizer", func() {
-		var att *design.AttributeDefinition
-		var target string
-		Context("given an object with a primitive field", func() {
-			BeforeEach(func() {
-				att = &design.AttributeDefinition{
-					Type: &design.Object{
-						"foo": &design.AttributeDefinition{
-							Type:         design.String,
-							DefaultValue: "bar",
-						},
-					},
-				}
-				target = "ut"
-			})
-			It("finalizes the fields", func() {
-				assignments := codegen.RecursiveFinalizer(att, target, 0)
-				Ω(assignments).Should(Equal(primitiveAssignmentCode))
-			})
-		})
-		Context("given an array field", func() {
-			BeforeEach(func() {
-				att = &design.AttributeDefinition{
-					Type: &design.Object{
-						"foo": &design.AttributeDefinition{
-							Type: &design.Array{
-								ElemType: &design.AttributeDefinition{
-									Type: design.String,
-								},
-							},
-							DefaultValue: []interface{}{"bar", "baz"},
-						},
-					},
-				}
-				target = "ut"
-			})
-			It("finalizes the array fields", func() {
-				assignments := codegen.RecursiveFinalizer(att, target, 0)
-				Ω(assignments).Should(Equal(arrayAssignmentCode))
-			})
-		})
-		Context("given a hash field", func() {
-			BeforeEach(func() {
-				att = &design.AttributeDefinition{
-					Type: &design.Object{
-						"foo": &design.AttributeDefinition{
-							Type: &design.Hash{
-								KeyType: &design.AttributeDefinition{
-									Type: design.String,
-								},
-								ElemType: &design.AttributeDefinition{
-									Type: design.String,
-								},
-							},
-							DefaultValue: map[interface{}]interface{}{"bar": "baz"},
-						},
-					},
-				}
-				target = "ut"
-			})
-			It("finalizes the hash fields", func() {
-				assignments := codegen.RecursiveFinalizer(att, target, 0)
-				Ω(assignments).Should(Equal(hashAssignmentCode))
-			})
-		})
-		Context("given a datetime field", func() {
-			BeforeEach(func() {
-				att = &design.AttributeDefinition{
-					Type: &design.Object{
-						"foo": &design.AttributeDefinition{
-							Type:         design.DateTime,
-							DefaultValue: interface{}("1978-06-30T10:00:00+09:00"),
-						},
-					},
-				}
-				target = "ut"
-			})
-			It("finalizes the hash fields", func() {
-				assignments := codegen.RecursiveFinalizer(att, target, 0)
-				Ω(assignments).Should(Equal(datetimeAssignmentCode))
-			})
-		})
+	var (
+		att       *design.AttributeDefinition
+		target    string
+		finalizer *codegen.Finalizer
+	)
 
+	BeforeEach(func() {
+		finalizer = codegen.NewFinalizer()
+	})
+
+	Context("given an object with a primitive field", func() {
+		BeforeEach(func() {
+			att = &design.AttributeDefinition{
+				Type: &design.Object{
+					"foo": &design.AttributeDefinition{
+						Type:         design.String,
+						DefaultValue: "bar",
+					},
+				},
+			}
+			target = "ut"
+		})
+		It("finalizes the fields", func() {
+			code := finalizer.Code(att, target, 0)
+			Ω(code).Should(Equal(primitiveAssignmentCode))
+		})
+	})
+
+	Context("given an array field", func() {
+		BeforeEach(func() {
+			att = &design.AttributeDefinition{
+				Type: &design.Object{
+					"foo": &design.AttributeDefinition{
+						Type: &design.Array{
+							ElemType: &design.AttributeDefinition{
+								Type: design.String,
+							},
+						},
+						DefaultValue: []interface{}{"bar", "baz"},
+					},
+				},
+			}
+			target = "ut"
+		})
+		It("finalizes the array fields", func() {
+			code := finalizer.Code(att, target, 0)
+			Ω(code).Should(Equal(arrayAssignmentCode))
+		})
+	})
+
+	Context("given a hash field", func() {
+		BeforeEach(func() {
+			att = &design.AttributeDefinition{
+				Type: &design.Object{
+					"foo": &design.AttributeDefinition{
+						Type: &design.Hash{
+							KeyType: &design.AttributeDefinition{
+								Type: design.String,
+							},
+							ElemType: &design.AttributeDefinition{
+								Type: design.String,
+							},
+						},
+						DefaultValue: map[interface{}]interface{}{"bar": "baz"},
+					},
+				},
+			}
+			target = "ut"
+		})
+		It("finalizes the hash fields", func() {
+			code := finalizer.Code(att, target, 0)
+			Ω(code).Should(Equal(hashAssignmentCode))
+		})
+	})
+
+	Context("given a datetime field", func() {
+		BeforeEach(func() {
+			att = &design.AttributeDefinition{
+				Type: &design.Object{
+					"foo": &design.AttributeDefinition{
+						Type:         design.DateTime,
+						DefaultValue: interface{}("1978-06-30T10:00:00+09:00"),
+					},
+				},
+			}
+			target = "ut"
+		})
+		It("finalizes the hash fields", func() {
+			code := finalizer.Code(att, target, 0)
+			Ω(code).Should(Equal(datetimeAssignmentCode))
+		})
+	})
+
+	Context("given a recursive user type", func() {
+		BeforeEach(func() {
+			var (
+				rt  = &design.UserTypeDefinition{TypeName: "recursive"}
+				obj = &design.Object{
+					"child": &design.AttributeDefinition{Type: rt},
+					"other": &design.AttributeDefinition{
+						Type:         design.String,
+						DefaultValue: "foo",
+					},
+				}
+			)
+			rt.AttributeDefinition = &design.AttributeDefinition{Type: obj}
+
+			att = &design.AttributeDefinition{Type: rt}
+			target = "ut"
+		})
+		It("finalizes the recursive type fields", func() {
+			code := finalizer.Code(att, target, 0)
+			Ω(code).Should(Equal(recursiveAssignmentCode))
+		})
+	})
+
+	Context("given a recursive user type with an array attribute", func() {
+		BeforeEach(func() {
+			var (
+				rt  = &design.UserTypeDefinition{TypeName: "recursive"}
+				ar  = &design.Array{ElemType: &design.AttributeDefinition{Type: rt}}
+				obj = &design.Object{
+					"elems": &design.AttributeDefinition{Type: ar},
+					"other": &design.AttributeDefinition{
+						Type:         design.String,
+						DefaultValue: "foo",
+					},
+				}
+			)
+			rt.AttributeDefinition = &design.AttributeDefinition{Type: obj}
+
+			att = &design.AttributeDefinition{Type: rt}
+			target = "ut"
+		})
+		It("finalizes the recursive type fields", func() {
+			code := finalizer.Code(att, target, 0)
+			Ω(code).Should(Equal(recursiveAssignmentCode))
+		})
 	})
 })
 
@@ -110,5 +165,10 @@ if ut.Foo == nil {
 	datetimeAssignmentCode = `var defaultFoo, _ = time.Parse(time.RFC3339, "1978-06-30T10:00:00+09:00")
 if ut.Foo == nil {
 	ut.Foo = &defaultFoo
+}`
+
+	recursiveAssignmentCode = `var defaultOther = "foo"
+if ut.Other == nil {
+	ut.Other = &defaultOther
 }`
 )
