@@ -429,12 +429,18 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 			s.Paths[k] = v
 		}
 		err := res.IterateFileServers(func(fs *design.FileServerDefinition) error {
+			if !mustGenerate(fs.Metadata) {
+				return nil
+			}
 			return buildPathFromFileServer(s, api, fs)
 		})
 		if err != nil {
 			return err
 		}
 		return res.IterateActions(func(a *design.ActionDefinition) error {
+			if !mustGenerate(a.Metadata) {
+				return nil
+			}
 			for _, route := range a.Routes {
 				if err := buildPathFromDefinition(s, api, route, basePath); err != nil {
 					return err
@@ -458,17 +464,34 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 	return s, nil
 }
 
+// mustGenerate returns true if the metadata indicates that a Swagger specification should be
+// generated, false otherwise.
+func mustGenerate(meta dslengine.MetadataDefinition) bool {
+	if m, ok := meta["swagger:generate"]; ok {
+		if len(m) > 0 && m[0] == "false" {
+			return false
+		}
+	}
+	return true
+}
+
 // hasAbsoluteRoutes returns true if any action exposed by the API uses an absolute route of if the
 // API has file servers. This is needed as Swagger does not support exceptions to the base path so
 // if the API has any absolute route the base path must be "/" and all routes must be absolutes.
 func hasAbsoluteRoutes(api *design.APIDefinition) bool {
 	hasAbsoluteRoutes := false
 	for _, res := range api.Resources {
-		if len(res.FileServers) > 0 {
+		for _, fs := range res.FileServers {
+			if !mustGenerate(fs.Metadata) {
+				continue
+			}
 			hasAbsoluteRoutes = true
 			break
 		}
 		for _, a := range res.Actions {
+			if !mustGenerate(a.Metadata) {
+				continue
+			}
 			for _, ro := range a.Routes {
 				if ro.IsAbsolute() {
 					hasAbsoluteRoutes = true

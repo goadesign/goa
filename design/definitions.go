@@ -832,11 +832,22 @@ func (r *ResourceDefinition) DSL() func() {
 // parameters, initializes querystring parameters, sets path parameters as non zero attributes
 // and sets the fallbacks for security schemes.
 func (r *ResourceDefinition) Finalize() {
+	meta := r.Metadata["swagger:generate"]
 	r.IterateFileServers(func(f *FileServerDefinition) error {
+		if meta != nil {
+			if _, ok := f.Metadata["swagger:generate"]; !ok {
+				f.Metadata["swagger:generate"] = meta
+			}
+		}
 		f.Finalize()
 		return nil
 	})
 	r.IterateActions(func(a *ActionDefinition) error {
+		if meta != nil {
+			if _, ok := a.Metadata["swagger:generate"]; !ok {
+				a.Metadata["swagger:generate"] = meta
+			}
+		}
 		a.Finalize()
 		return nil
 	})
