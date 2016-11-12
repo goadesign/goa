@@ -26,6 +26,17 @@ import (
 //        Metadata("struct:tag:json", "myName,omitempty")
 //        Metadata("struct:tag:xml", "myName,attr")
 //
+// `swagger:generate`: specifies whether Swagger specification should be generated. Defaults to
+// true.
+// Applicable to resources, actions and file servers.
+//
+//        Metadata("swagger:generate", "false")
+//
+// `swagger:summary`: sets the Swagger operation summary field.
+// Applicable to actions.
+//
+//        Metadata("swagger:summary", "Short summary of what action does")
+//
 // `swagger:tag:xxx`: sets the Swagger object field tag xxx.
 // Applicable to resources and actions.
 //
@@ -33,11 +44,6 @@ import (
 //        Metadata("swagger:tag:Backend:desc", "Quick description of what 'Backend' is")
 //        Metadata("swagger:tag:Backend:url", "http://example.com")
 //        Metadata("swagger:tag:Backend:url:desc", "See more docs here")
-//
-// `swagger:summary`: sets the Swagger operation summary field.
-// Applicable to actions.
-//
-//        Metadata("swagger:summary", "Short summary of what action does")
 //
 // `swagger:extension:xxx`: sets the Swagger extensions xxx. It can have any valid JSON format value.
 // Applicable to
