@@ -67,10 +67,16 @@ func Type(name string, dsl func()) *design.UserTypeDefinition {
 //		Payload(ArrayOf(Bottle))  // Equivalent to Payload(Bottles)
 //	})
 //
-// If you are looking to return a collection of elements in a Response
-// clause, refer to CollectionOf.  ArrayOf creates a type, where
-// CollectionOf creates a media type.
-func ArrayOf(v interface{}) *design.Array {
+// ArrayOf accepts an optional DSL as second argument which allows providing validations for the
+// elements of the array:
+//
+//      var Names = ArrayOf(String, func() {
+//          Pattern("[a-zA-Z]+")
+//      })
+//
+// If you are looking to return a collection of elements in a Response clause, refer to
+// CollectionOf.  ArrayOf creates a type, where CollectionOf creates a media type.
+func ArrayOf(v interface{}, dsl ...func()) *design.Array {
 	var t design.DataType
 	var ok bool
 	t, ok = v.(design.DataType)
@@ -79,12 +85,20 @@ func ArrayOf(v interface{}) *design.Array {
 			t = design.Design.Types[name]
 		}
 	}
+	// never return nil to avoid panics, errors are reported after DSL execution
+	res := &design.Array{ElemType: &design.AttributeDefinition{Type: design.String}}
 	if t == nil {
 		dslengine.ReportError("invalid ArrayOf argument: not a type and not a known user type name")
-		// don't return nil to avoid panics, the error will get reported at the end
-		return &design.Array{ElemType: &design.AttributeDefinition{Type: design.String}}
+		return res
+	}
+	if len(dsl) > 1 {
+		dslengine.ReportError("ArrayOf: too many arguments")
+		return res
 	}
 	at := design.AttributeDefinition{Type: t}
+	if len(dsl) == 1 {
+		dslengine.Execute(dsl[0], &at)
+	}
 	return &design.Array{ElemType: &at}
 }
 
