@@ -32,7 +32,7 @@ func TestMetaData(t *testing.T) {
 				}, tc.Expr)
 			}
 			if eval.Context.Errors != nil {
-				t.Errorf("%s: Description failed unexpectedly with %s", k, eval.Context.Errors)
+				t.Errorf("%s: Metadata failed unexpectedly with %s", k, eval.Context.Errors)
 			}
 			meta := tc.MetaFunc(tc.Expr)
 			if _, ok := meta[tc.Name]; !ok {
