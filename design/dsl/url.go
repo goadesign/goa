@@ -9,9 +9,8 @@ import "github.com/goadesign/goa/eval"
 //
 // Example:
 //
-//    Docs( func() {
-//        URL("http://example.com")
-//    })
+//    URL("http://example.com")
+//
 //
 func URL(u string) {
 	switch expr := eval.Current().(type) {
