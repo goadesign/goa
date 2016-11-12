@@ -32,7 +32,7 @@ func Endpoint(name string, dsl func()) {
 		eval.IncompatibleDSL()
 		return
 	}
-	ep := &design.EndpointExpr{Name: name, DSLFunc: dsl}
+	ep := &design.EndpointExpr{Name: name, Service: s, DSLFunc: dsl}
 	s.Endpoints = append(s.Endpoints, ep)
 }
 
