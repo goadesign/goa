@@ -71,7 +71,7 @@ func NewValidator() *Validator {
 		"constant":         constant,
 		"goifyAtt":         GoifyAtt,
 		"add":              Add,
-		"recursiveChecker": v.Code,
+		"recurseAttribute": v.recurseAttribute,
 	}
 	v.arrayValT, err = template.New("array").Funcs(fm).Parse(arrayValTmpl)
 	if err != nil {
@@ -139,15 +139,25 @@ func (v *Validator) recurse(att *design.AttributeDefinition, nonzero, required, 
 			buf.WriteString(validation)
 			first = false
 		}
-		data := map[string]interface{}{
-			"elemType": a.ElemType,
-			"context":  context,
-			"target":   target,
-			"depth":    1,
-			"private":  private,
+		var val string
+		if _, ok := a.ElemType.Type.(*design.UserTypeDefinition); ok {
+			val = RunTemplate(v.userValT, map[string]interface{}{
+				"depth":  depth + 1,
+				"target": "e",
+			})
+		} else {
+			val = v.Code(a.ElemType, true, false, false, "e", context+"[*]", depth+1, false)
 		}
-		validation = RunTemplate(v.arrayValT, data)
-		if validation != "" {
+		if val != "" {
+			data := map[string]interface{}{
+				"elemType":   a.ElemType,
+				"context":    context,
+				"target":     target,
+				"depth":      1,
+				"private":    private,
+				"validation": val,
+			}
+			validation = RunTemplate(v.arrayValT, data)
 			if !first {
 				buf.WriteByte('\n')
 			} else {
@@ -360,10 +370,9 @@ func constant(formatName string) string {
 }
 
 const (
-	arrayValTmpl = `{{$validation := recursiveChecker .elemType false false false "e" (printf "%s[*]" .context) (add .depth 1) .private}}{{/*
-*/}}{{if $validation}}{{tabs .depth}}for _, e := range {{.target}} {
-{{$validation}}
-{{tabs .depth}}}{{end}}`
+	arrayValTmpl = `{{tabs .depth}}for _, e := range {{.target}} {
+{{.validation}}
+{{tabs .depth}}}`
 
 	userValTmpl = `{{tabs .depth}}if err2 := {{.target}}.Validate(); err2 != nil {
 {{tabs .depth}}	err = goa.MergeErrors(err, err2)

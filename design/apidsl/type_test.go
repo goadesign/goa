@@ -135,6 +135,29 @@ var _ = Describe("ArrayOf", func() {
 		})
 	})
 
+	Context("with a DSL", func() {
+		var (
+			pattern = "foo"
+			ar      *Array
+		)
+
+		BeforeEach(func() {
+			dslengine.Reset()
+			ar = ArrayOf(String, func() {
+				Pattern(pattern)
+			})
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+		})
+
+		It("records the validations", func() {
+			Ω(ar).ShouldNot(BeNil())
+			Ω(ar.Kind()).Should(Equal(ArrayKind))
+			Ω(ar.ElemType.Type).Should(Equal(String))
+			Ω(ar.ElemType.Validation).ShouldNot(BeNil())
+			Ω(ar.ElemType.Validation.Pattern).Should(Equal(pattern))
+		})
+	})
+
 	Context("defined with the type name", func() {
 		var ar *UserTypeDefinition
 		BeforeEach(func() {
