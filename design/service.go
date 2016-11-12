@@ -11,6 +11,8 @@ type (
 		Name string
 		// Description of endpoint group for consumption by humans.
 		Description string
+		// Docs points to external documentation
+		Docs *DocsExpr
 		// Endpoints is the list of service endpoints.
 		Endpoints []*EndpointExpr
 		// DefaultType is the service default response type. The default

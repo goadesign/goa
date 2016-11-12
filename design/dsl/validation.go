@@ -11,10 +11,9 @@ import (
 
 // Enum adds a "enum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor76.
-func Enum(val ...design.ValidationFormat) {
-	if a, ok := attributeDefinition(); ok {
-		ok := true
-		for i, v := range val {
+func Enum(vals ...interface{}) {
+	if a, ok := eval.Current().(*design.AttributeExpr); ok {
+		for i, v := range vals {
 			// When can a.Type be nil? glad you asked
 			// There are two ways to write an Attribute declaration with the DSL that
 			// don't set the type: with one argument - just the name - in which case the type
@@ -40,7 +39,20 @@ func Enum(val ...design.ValidationFormat) {
 			}
 		}
 		if ok {
-			a.AddValues(val)
+			if a.Validation == nil {
+				a.Validation = &design.ValidationExpr{}
+			}
+			a.Validation.Values = make([]interface{}, len(vals))
+			for i, v := range vals {
+				switch actual := v.(type) {
+				case design.MapVal:
+					a.Validation.Values[i] = actual.ToMap()
+				case design.ArrayVal:
+					a.Validation.Values[i] = actual.ToSlice()
+				default:
+					a.Validation.Values[i] = actual
+				}
+			}
 		}
 	}
 }
@@ -57,14 +69,14 @@ func Enum(val ...design.ValidationFormat) {
 //
 // FormatIPv4, FormatIPv6, FormatIP: RFC2373 IPv4, IPv6 address or either
 //
-// "uri": RFC3986 URI
+// FormatURI: RFC3986 URI
 //
-// "mac": IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address
+// FormatMAC: IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address
 //
-// "cidr": RFC4632 or RFC4291 CIDR notation IP address
+// FormatCIDR: RFC4632 or RFC4291 CIDR notation IP address
 //
-// "regexp": RE2 regular expression
-func Format(f string) {
+// FormatRegexp: RE2 regular expression
+func Format(f design.ValidationFormat) {
 	if a, ok := eval.Current().(*design.AttributeExpr); ok {
 		if a.Type != nil && a.Type.Kind() != design.StringKind {
 			incompatibleAttributeType("format", a.Type.Name(), "a string")
@@ -80,7 +92,7 @@ func Format(f string) {
 // Pattern adds a "pattern" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor33.
 func Pattern(p string) {
-	if a, ok := attributeDefinition(); ok {
+	if a, ok := eval.Current().(*design.AttributeExpr); ok {
 		if a.Type != nil && a.Type.Kind() != design.StringKind {
 			incompatibleAttributeType("pattern", a.Type.Name(), "a string")
 		} else {
@@ -100,8 +112,11 @@ func Pattern(p string) {
 // Minimum adds a "minimum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor21.
 func Minimum(val interface{}) {
-	if a, ok := attributeDefinition(); ok {
-		if a.Type != nil && a.Type.Kind() != design.IntegerKind && a.Type.Kind() != design.NumberKind {
+	if a, ok := eval.Current().(*design.AttributeExpr); ok {
+		if a.Type != nil &&
+			a.Type.Kind() != design.Int32Kind && a.Type.Kind() != design.Int64Kind &&
+			a.Type.Kind() != design.Float32Kind && a.Type.Kind() != design.Float64Kind {
+
 			incompatibleAttributeType("minimum", a.Type.Name(), "an integer or a number")
 		} else {
 			var f float64
@@ -130,8 +145,11 @@ func Minimum(val interface{}) {
 // Maximum adds a "maximum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor17.
 func Maximum(val interface{}) {
-	if a, ok := attributeDefinition(); ok {
-		if a.Type != nil && a.Type.Kind() != design.IntegerKind && a.Type.Kind() != design.NumberKind {
+	if a, ok := eval.Current().(*design.AttributeExpr); ok {
+		if a.Type != nil &&
+			a.Type.Kind() != design.Int32Kind && a.Type.Kind() != design.Int64Kind &&
+			a.Type.Kind() != design.Float32Kind && a.Type.Kind() != design.Float64Kind {
+
 			incompatibleAttributeType("maximum", a.Type.Name(), "an integer or a number")
 		} else {
 			var f float64
@@ -142,11 +160,11 @@ func Maximum(val interface{}) {
 				var err error
 				f, err = strconv.ParseFloat(v, 64)
 				if err != nil {
-					dslengine.ReportError("invalid number value %#v", v)
+					eval.ReportError("invalid number value %#v", v)
 					return
 				}
 			default:
-				dslengine.ReportError("invalid number value %#v", v)
+				eval.ReportError("invalid number value %#v", v)
 				return
 			}
 			if a.Validation == nil {
@@ -160,7 +178,7 @@ func Maximum(val interface{}) {
 // MinLength adss a "minItems" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor45.
 func MinLength(val int) {
-	if a, ok := attributeDefinition(); ok {
+	if a, ok := eval.Current().(*design.AttributeExpr); ok {
 		if a.Type != nil {
 			kind := a.Type.Kind()
 			if kind != design.BytesKind &&
@@ -182,7 +200,7 @@ func MinLength(val int) {
 // MaxLength adds a "maxItems" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor42.
 func MaxLength(val int) {
-	if a, ok := attributeDefinition(); ok {
+	if a, ok := eval.Current().(*design.AttributeExpr); ok {
 		if a.Type != nil {
 			kind := a.Type.Kind()
 			if kind != design.BytesKind &&
@@ -204,13 +222,13 @@ func MaxLength(val int) {
 // Required adds a "required" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor61.
 func Required(names ...string) {
-	var at *design.AttributeDefinition
+	var at *design.AttributeExpr
 
-	switch def := dslengine.CurrentDefinition().(type) {
-	case *design.AttributeDefinition:
+	switch def := eval.Current().(type) {
+	case *design.AttributeExpr:
 		at = def
-	case *design.MediaTypeDefinition:
-		at = def.AttributeDefinition
+	case *design.MediaTypeExpr:
+		at = def.AttributeExpr
 	default:
 		eval.IncompatibleDSL()
 		return
@@ -224,4 +242,11 @@ func Required(names ...string) {
 		}
 		at.Validation.AddRequired(names)
 	}
+}
+
+// incompatibleAttributeType reports an error for validations defined on
+// incompatible attributes (e.g. max value on string).
+func incompatibleAttributeType(validation, actual, expected string) {
+	eval.ReportError("invalid %s validation definition: attribute must be %s (but type is %s)",
+		validation, expected, actual)
 }

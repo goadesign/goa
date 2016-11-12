@@ -53,11 +53,18 @@ func Type(name string, dsl func()) design.UserType {
 // ArrayOf creates an array type from its element type.
 //
 // ArrayOf may be used wherever types can.
-// ArrayOf takes one argument: the type of the array elements either by name or by reference.
+// The first argument of ArrayOf is the type of the array elements specified by
+// name or by reference.
+// The second argument of ArrayOf is an optional DSL that defines validations
+// for the array elements.
 //
-// Example:
+// Examples:
 //
-//    var Bottle = Type("Bottle", func() {
+//    var Names = ArrayOf(String, func() {
+//        Pattern("[a-zA-Z]+")
+//    })
+//
+//    var Bottle = Type("bottle", func() {
 //        Attribute("name")
 //    })
 //
@@ -67,21 +74,33 @@ func Type(name string, dsl func()) design.UserType {
 //        })
 //    })
 //
-func ArrayOf(v interface{}) *design.Array {
+// Note: CollectionOf and ArrayOf both return array types. CollectionOf returns
+// a media type where ArrayOf returns a user type. In general you want to use
+// CollectionOf if the argument is a media type and ArrayOf if it is a user
+// type.
+func ArrayOf(v interface{}, dsl ...func()) *design.Array {
 	var t design.DataType
 	var ok bool
 	t, ok = v.(design.DataType)
 	if !ok {
 		if name, ok := v.(string); ok {
-			t = design.Design.Types[name]
+			t = design.Root.UserType(name)
 		}
 	}
+	// never return nil to avoid panics, errors are reported after DSL execution
+	res := &design.Array{ElemType: &design.AttributeExpr{Type: design.String}}
 	if t == nil {
 		eval.ReportError("invalid ArrayOf argument: not a type and not a known user type name")
-		// don't return nil to avoid panics, the error will get reported at the end
-		return &design.Array{ElemType: &design.AttributeDefinition{Type: design.String}}
+		return res
 	}
-	at := design.AttributeDefinition{Type: t}
+	if len(dsl) > 1 {
+		eval.ReportError("ArrayOf: too many arguments")
+		return res
+	}
+	at := design.AttributeExpr{Type: t}
+	if len(dsl) == 1 {
+		eval.Execute(dsl[0], &at)
+	}
 	return &design.Array{ElemType: &at}
 }
 
