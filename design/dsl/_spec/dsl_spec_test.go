@@ -72,6 +72,7 @@ var _ = Service("service", func() {
 	Error("name_of_error_5", func() {
 		Description("Optional description")
 		Attribute("message", String)
+		Required("message")
 	})
 
 	// Endpoint describes a single endpoint. A service may define any number
@@ -199,7 +200,7 @@ var AErrorMediaType = MediaType("application/vnd.goa.design.error", func() {
 	Attributes(func() {
 		Attribute("msg", String)
 	})
-	View(Default, func() {
+	View("default", func() {
 		Attribute("msg")
 	})
 })

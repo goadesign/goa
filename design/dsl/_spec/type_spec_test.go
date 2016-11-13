@@ -79,6 +79,7 @@ var AllTypes = Type("AllTypes", func() {
 	})
 	Attribute("user", AUserType)
 	Attribute("media", AMediaType)
+	Attribute("collection", CollectionOf(AMediaType))
 })
 
 // AUserType is a type used to define an attribute in AllTypes.
@@ -97,15 +98,33 @@ var AMediaType = MediaType("MediaType", func() {
 		Attribute("required", String)
 		Required("required")
 	})
-	View(Default, func() {
+	View("default", func() {
 		Attribute("optional", String)
+		Attribute("required", String)
+	})
+	View("tiny", func() {
 		Attribute("required", String)
 	})
 })
 
-// Attributes is a type definition which demonstrates the different ways
-// attributes may be defined.
-var Attributes = Type("Attributes", func() {
+// ACollectionMedia type shows all the possible DSL of CollectionOf.
+var ACollectionMedia = CollectionOf(AMediaType, func() {
+	// View allows defining collection specific views.
+	// The view is defined using the attributes of the element of the
+	// collection.
+	View("collection", func() {
+		Attribute("optional")
+	})
+
+	// View can also refer to existing views defined in the element media
+	// type. If no View is specified (i.e. no DSL argument is provided to
+	// CollectionOf) then all the element media type views are inherited.
+	View("tiny")
+})
+
+// Attrs is a type definition which demonstrates the different ways attributes
+// may be defined.
+var Attrs = Type("Attributes", func() {
 	// Attribute defined with a name and a type
 	Attribute("name", String)
 	// Attribute defined with a name, a type and a description
@@ -119,7 +138,7 @@ var Attributes = Type("Attributes", func() {
 	Attribute("name_4", String, "description", func() {
 		MinLength(10)
 		MaxLength(100)
-		DefaultValue("default value")
+		Default("default value")
 		Example("example value")
 	})
 })

@@ -10,11 +10,13 @@ type (
 		API *APIExpr
 		// Traits contains the trait expressions built by the DSL.
 		Traits []*TraitExpr
-		// Types contains the user types described in the DSL.
+		// Services contains the list of services exposed by the API.
+		Services []*ServiceExpr
+		// Types contains the user and media types described in the DSL.
 		Types []UserType
-		// NoExamples is a boolean that indicates whether to generate random examples
-		// (false) or not (true).
-		NoExamples bool
+		// GeneratedMediaTypes contains the set of media types created
+		// by CollectionOf.
+		GeneratedMediaTypes []*MediaTypeExpr
 	}
 
 	// MetadataExpr is a set of key/value pairs
@@ -44,6 +46,27 @@ func (r *RootExpr) UserType(name string) UserType {
 	for _, t := range r.Types {
 		if t.Name() == name {
 			return t
+		}
+	}
+	return nil
+}
+
+// GeneratedMediaType returns the generated media type expression with the given
+// id, nil if there isn't one.
+func (r *RootExpr) GeneratedMediaType(id string) *MediaTypeExpr {
+	for _, mt := range r.GeneratedMediaTypes {
+		if mt.Identifier == id {
+			return mt
+		}
+	}
+	return nil
+}
+
+// Service returns the service with the given name.
+func (r *RootExpr) Service(name string) *ServiceExpr {
+	for _, s := range r.Services {
+		if s.Name == name {
+			return s
 		}
 	}
 	return nil

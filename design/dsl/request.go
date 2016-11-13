@@ -74,7 +74,7 @@ func endpointTypeDSL(p interface{}, dsls ...func()) *design.AttributeExpr {
 	case func():
 		dsl = actual
 		att = &design.AttributeExpr{
-			Reference: e.Service.DefaultType,
+			Reference: e.Service.DefaultType(),
 			Type:      design.Object{},
 		}
 	case *design.AttributeExpr:

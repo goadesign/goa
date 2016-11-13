@@ -163,19 +163,21 @@ func Default(def interface{}) {
 	a.SetDefault(def)
 }
 
-// Example sets the example of an attribute to be used for the documentation:
+// Example sets the example of an attribute to be used for the documentation.
+// If no example is explicitly provided then a random example is generated
+// unless the "swagger:example" metadata is set to "false". See Metadata.
+//
+// Example may appear in a Attribute expression.
+// Example takes one argument: the example value.
+//
+// Example:
 //
 //	Attributes(func() {
-//		Attribute("ID", Integer, func() {
+//		Attribute("ID", Int64, func() {
 //			Example(1)
 //		})
-//		Attribute("name", String, func() {
-//			Example("Cabernet Sauvignon")
-//		})
-//		Attribute("price", String) //If no Example() is provided, goa generates one that fits your specification
 //	})
 //
-// If you do not want an auto-generated example for an attribute, add NoExample() to it.
 func Example(exp interface{}) {
 	if a, ok := eval.Current().(*design.AttributeExpr); ok {
 		if !a.Type.IsCompatible(exp) {
@@ -187,18 +189,6 @@ func Example(exp interface{}) {
 	}
 }
 
-// NoExample sets the example of an attribute to be blank for the documentation. It is used when
-// users don't want any custom or auto-generated example
-func NoExample() {
-	switch def := eval.Current().(type) {
-	case *design.APIExpr:
-		design.Root.NoExamples = true
-	case *design.AttributeExpr:
-		def.UserExample = nil
-	default:
-		eval.IncompatibleDSL()
-	}
-}
 func parseAttributeArgs(baseAttr *design.AttributeExpr, args ...interface{}) (design.DataType, string, func()) {
 	var (
 		dataType    design.DataType
