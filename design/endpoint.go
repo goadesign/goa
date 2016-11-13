@@ -21,8 +21,8 @@ type (
 		Request DataType
 		// Response type.
 		Response DataType
-		// Error responses.
-		Errors Object
+		// Errors lists the error responses.
+		Errors []*ErrorExpr
 		// Service that owns endpoint.
 		Service *ServiceExpr
 		// Metadata is an arbitrary set of key/value pairs, see dsl.Metadata

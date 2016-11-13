@@ -181,6 +181,9 @@ func (m *MediaTypeExpr) Dup(att *AttributeExpr) UserType {
 	}
 }
 
+// Name returns the media type canonical identifier.
+func (m *MediaTypeExpr) Name() string { return CanonicalIdentifier(m.Identifier) }
+
 // IsError returns true if the media type is implemented via a goa struct.
 func (m *MediaTypeExpr) IsError() bool {
 	base, params, err := mime.ParseMediaType(m.Identifier)

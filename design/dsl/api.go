@@ -171,7 +171,18 @@ func Email(email string) {
 	}
 }
 
-// URL sets the contact or license URL.
+// URL sets the contact, license or external documentation URL.
+//
+// URL may appear in Contact, License or Docs
+// URL accepts a single argument which is the URL.
+//
+// Example:
+//
+//    Docs(func() {
+//        Description("Additional information")
+//        URL("https://goa.design")
+//    })
+//
 func URL(url string) {
 	switch def := eval.Current().(type) {
 	case *design.ContactExpr:

@@ -287,7 +287,7 @@ func (a *ActionExpr) UserTypes() map[string]design.UserType {
 		types[n] = ut
 	}
 	for _, r := range a.Responses {
-		if mt := Root.MediaType(r.MediaType); mt != nil {
+		if mt := design.Root.MediaType(r.MediaType); mt != nil {
 			types[mt.TypeName] = mt.UserTypeExpr
 			for n, ut := range userTypes(mt.UserTypeExpr) {
 				types[n] = ut
