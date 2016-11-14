@@ -1,8 +1,6 @@
 package dsl
 
 import (
-	"regexp"
-
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/eval"
 )
@@ -135,21 +133,36 @@ func TermsOfAPI(terms string) {
 	eval.IncompatibleDSL()
 }
 
-// Regular expression used to validate RFC1035 hostnames
-var hostnameRegex = regexp.MustCompile(`^[[:alnum:]][[:alnum:]\-]{0,61}[[:alnum:]]|[[:alpha:]]$`)
-
-// Host sets the API hostname.
-func Host(host string) {
-	if !hostnameRegex.MatchString(host) {
-		eval.ReportError(`invalid hostname value "%s"`, host)
+// Server defines an API host.
+func Server(url string, dsl ...func()) {
+	if len(dsl) > 1 {
+		eval.ReportError("too many arguments given to Server")
+	}
+	s, ok := eval.Current().(*design.APIExpr)
+	if !ok {
+		eval.IncompatibleDSL()
 		return
 	}
+	if url == "" {
+		eval.ReportError("Server URL cannot be empty")
+	}
+	server := &design.ServerExpr{
+		Params: new(design.AttributeExpr),
+		URL:    url,
+	}
+	if len(dsl) > 0 {
+		eval.Execute(dsl[0], server)
+	}
+	s.Servers = append(s.Servers, server)
+}
 
-	if s, ok := eval.Current().(*design.APIExpr); ok {
-		s.Host = host
+// Param defines a server URL parameter.
+func Param(name string, args ...interface{}) {
+	if _, ok := eval.Current().(*design.ServerExpr); !ok {
+		eval.IncompatibleDSL()
 		return
 	}
-	eval.IncompatibleDSL()
+	Attribute(name, args...)
 }
 
 // Name sets the contact or license name.

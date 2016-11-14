@@ -57,6 +57,14 @@ func (s Stack) Current() Expression {
 	return s[len(s)-1]
 }
 
+// Error builds the error message from the current context errors.
+func (c *DSLContext) Error() string {
+	if c.Errors != nil {
+		return c.Errors.Error()
+	}
+	return ""
+}
+
 // SortRoots orders the DSL roots making sure dependencies are last. It returns an error if there
 // is a dependency cycle.
 func (c *DSLContext) SortRoots() ([]Root, error) {
