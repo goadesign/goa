@@ -20,36 +20,49 @@ var _ = API("dsl_spec", func() {
 	Contact(func() {
 		Name("contact name")
 		Email("contact@goa.design")
-		URL("http://goa.design")
+		URL("https://goa.design")
 	})
 
 	// API Licensing information
 	License(func() {
 		Name("License name")
+		URL("https://goa.design/license")
 	})
 
 	// Docs allows linking to external documentation.
 	Docs(func() {
 		Description("Optional description")
-		URL("http://goa.design/getting-started.html")
+		URL("https://goa.design/getting-started")
 	})
 
-	// Default host used in generated OpenAPI spec and client.
-	Host("goa.design")
+	// Server describes a single API host and may appear more than once.
+	// URL must include protocol and hostname, may include port and base
+	// path (HTTP only).  Any component except the protocol may use
+	// parameters.
+	Server("https://{param}.goa.design:443/basePath", func() {
+		Description("Optional description")
+		// Param describes a single parameter
+		Param("param", String, "Optional description", func() {
+			// Default value *must* be provided
+			Default("default")
+			// Optional list of possible values
+			Enum("default", "other")
+		})
+	})
 
 	// Metadata whose effects depend on the generators.
-	Metadata("metadata", "some value", "some other value")
+	Metadata("metadata", "value", "other value")
 })
 
 // The Service expression defines a single service. There may be any number of
 // Service declarations in one design.
 var _ = Service("service", func() {
 	// Service description for code comments and docs
-	Description("Optional service expression")
+	Description("Optional service description")
 
 	// Docs allows linking to external documentation.
 	Docs(func() {
-		Description("External documentation link")
+		Description("Optional description")
 		URL("https://goa.design")
 	})
 
@@ -79,11 +92,11 @@ var _ = Service("service", func() {
 	// of endpoints.
 	Endpoint("endpoint", func() {
 		// Endpoint description for code comments and docs
-		Description("A service endpoint")
+		Description("Optional description")
 
 		// Docs allows linking to external documentation.
 		Docs(func() {
-			Description("External documentation link")
+			Description("Optional description")
 			URL("https://goa.design")
 		})
 
