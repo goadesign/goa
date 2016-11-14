@@ -30,5 +30,7 @@ func Endpoint(name string, dsl func()) {
 		return
 	}
 	ep := &design.EndpointExpr{Name: name, Service: s, DSLFunc: dsl}
-	s.Endpoints = append(s.Endpoints, ep)
+	if eval.Execute(ep.DSL(), ep) {
+		s.Endpoints = append(s.Endpoints, ep)
+	}
 }

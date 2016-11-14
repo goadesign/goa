@@ -17,6 +17,10 @@ func Description(d string) {
 	switch expr := eval.Current().(type) {
 	case *design.APIExpr:
 		expr.Description = d
+	case *design.ServerExpr:
+		expr.Description = d
+	case *design.ServiceExpr:
+		expr.Description = d
 	case *design.AttributeExpr:
 		expr.Description = d
 	case *design.DocsExpr:
