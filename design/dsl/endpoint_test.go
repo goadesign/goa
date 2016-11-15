@@ -3,6 +3,8 @@ package dsl_test
 import (
 	"testing"
 
+	"fmt"
+
 	"github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/dsl"
 	"github.com/goadesign/goa/eval"
@@ -10,10 +12,9 @@ import (
 
 func TestEndpoint(t *testing.T) {
 	cases := map[string]struct {
-		Expr        eval.Expression
-		DSL         func()
-		Assert      func(testName string, t *testing.T, e *design.EndpointExpr)
-		Invocations int
+		Expr   eval.Expression
+		DSL    func()
+		Assert func(testName string, t *testing.T, s *design.ServiceExpr)
 	}{
 		"basic endpoint": {
 			&design.ServiceExpr{},
@@ -22,39 +23,77 @@ func TestEndpoint(t *testing.T) {
 					Description("basic endpoint")
 				})
 			},
-			func(testName string, t *testing.T, e *design.EndpointExpr) {
-				expected := "basic endpoint"
-				if e.Description != expected {
-					t.Errorf("%s: expected the description to be '%s' but got '%s' ", testName, expected, e.Description)
+			func(testName string, t *testing.T, s *design.ServiceExpr) {
+				if len(s.Endpoints) != 1 {
+					t.Errorf("%s: expected %d endpoints but got %d", testName, 1, len(s.Endpoints))
+				}
+				for _, e := range s.Endpoints {
+					if err := assertEndpointDescription("basic endpoint", e.Description); err != nil {
+						t.Errorf("%s assert failed %s ", testName, err.Error())
+					}
 				}
 			},
-			1,
+		},
+		"basic endpoint with docs": {
+			&design.ServiceExpr{},
+			func() {
+				Endpoint("basic", func() {
+					Description("basic endpoint")
+					Docs(func() {
+						URL("http://example.com")
+						Description("some docs")
+					})
+				})
+			},
+			func(testName string, t *testing.T, s *design.ServiceExpr) {
+				if len(s.Endpoints) != 1 {
+					t.Errorf("%s: expected %d endpoints but got %d", testName, 1, len(s.Endpoints))
+				}
+				for _, e := range s.Endpoints {
+					if err := assertEndpointDescription("basic endpoint", e.Description); err != nil {
+						t.Errorf("%s assert failed %s ", testName, err.Error())
+					}
+					if err := assertEndpointDocs(e.Docs, "http://example.com", "some docs"); err != nil {
+						t.Errorf("%s assert failed %s ", testName, err.Error())
+					}
+				}
+			},
 		},
 	}
 
 	for k, tc := range cases {
 		t.Run(k, func(t *testing.T) {
 			eval.Context = &eval.DSLContext{}
-			for i := tc.Invocations; i > 0; i-- {
-				eval.Execute(tc.DSL, tc.Expr)
-				//After evaling the service our endpoints are present but need to also need to have thier DSL func exectuted.
-				evalService := tc.Expr.(*design.ServiceExpr)
-				for _, endpointExp := range evalService.Endpoints {
-					eval.Execute(endpointExp.DSLFunc, endpointExp)
-				}
+			eval.Execute(tc.DSL, tc.Expr)
+			//After evaling the service our endpoints are present but need to also need to have thier DSL func exectuted.
+			evalService := tc.Expr.(*design.ServiceExpr)
+			for _, endpointExp := range evalService.Endpoints {
+				eval.Execute(endpointExp.DSLFunc, endpointExp)
 			}
 			if eval.Context.Errors != nil {
 				t.Errorf("%s: Endpoint failed unexpectedly with %s", k, eval.Context.Errors)
 			}
-			endpoints := tc.Expr.(*design.ServiceExpr).Endpoints
-			if len(endpoints) != tc.Invocations {
-				t.Errorf("%s: expected %d endpoints but got %d", k, tc.Invocations, len(endpoints))
-			}
-			for _, endpoint := range endpoints {
-				if tc.Assert != nil {
-					tc.Assert(k, t, endpoint)
-				}
+			if tc.Assert != nil {
+				tc.Assert(k, t, evalService)
 			}
 		})
 	}
+}
+
+//helper funcs
+func assertEndpointDocs(doc *design.DocsExpr, url, desc string) error {
+	if doc.Description != desc {
+		return fmt.Errorf("expected docs description '%s' to match '%s' ", desc, doc.Description)
+	}
+	if doc.URL != url {
+		return fmt.Errorf("expected docs url '%s' to match '%s' ", url, doc.URL)
+	}
+	return nil
+}
+
+func assertEndpointDescription(expectedDesc, actualDesc string) error {
+	if expectedDesc != actualDesc {
+		return fmt.Errorf("expected description '%s' to match '%s' ", actualDesc, expectedDesc)
+	}
+	return nil
 }
