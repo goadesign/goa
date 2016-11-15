@@ -142,8 +142,7 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 			}
 		}
 	}
-	o := a.Type.(Object)
-	if o != nil {
+	if o := AsObject(a.Type); o != nil {
 		for _, n := range a.AllRequired() {
 			found := false
 			for an := range o {
@@ -161,7 +160,7 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 			verr.Merge(att.Validate(ctx, parent))
 		}
 	} else {
-		if ar, ok := a.Type.(*Array); ok {
+		if ar := AsArray(a.Type); ar != nil {
 			elemType := ar.ElemType
 			verr.Merge(elemType.Validate(ctx, a))
 		}
@@ -230,7 +229,7 @@ func (a *AttributeExpr) IsRequired(attName string) bool {
 
 // HasDefaultValue returns true if the given attribute has a default value.
 func (a *AttributeExpr) HasDefaultValue(attName string) bool {
-	if o, ok := a.Type.(Object); ok {
+	if o := AsObject(a.Type); o != nil {
 		att := o[attName]
 		return att.DefaultValue != nil
 	}
@@ -254,9 +253,8 @@ func (a *AttributeExpr) inheritRecursive(parent *AttributeExpr) {
 	if !a.shouldInherit(parent) {
 		return
 	}
-
-	for n, att := range a.Type.(Object) {
-		if patt, ok := parent.Type.(Object)[n]; ok {
+	for n, att := range AsObject(a.Type) {
+		if patt, ok := AsObject(parent.Type)[n]; ok {
 			if att.Description == "" {
 				att.Description = patt.Description
 			}
@@ -267,8 +265,8 @@ func (a *AttributeExpr) inheritRecursive(parent *AttributeExpr) {
 			if att.Type == nil {
 				att.Type = patt.Type
 			} else if att.shouldInherit(patt) {
-				for _, att := range att.Type.(Object) {
-					att.Inherit(patt.Type.(Object)[n])
+				for _, att := range AsObject(att.Type) {
+					att.Inherit(AsObject(patt.Type)[n])
 				}
 			}
 		}
@@ -286,15 +284,8 @@ func (a *AttributeExpr) inheritValidations(parent *AttributeExpr) {
 }
 
 func (a *AttributeExpr) shouldInherit(parent *AttributeExpr) bool {
-	if a == nil || parent == nil {
-		return false
-	}
-	if _, ok := a.Type.(Object); ok {
-		if _, ok := parent.Type.(Object); ok {
-			return true
-		}
-	}
-	return false
+	return a != nil && AsObject(a.Type) != nil &&
+		parent != nil && AsObject(parent.Type) != nil
 }
 
 // Walk traverses the data structure recursively and calls the given function once

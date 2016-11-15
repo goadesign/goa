@@ -137,6 +137,50 @@ const (
 	Any = Primitive(AnyKind)
 )
 
+// Convenience methods
+
+// AsObject returns the type underlying object if any, nil otherwise.
+func AsObject(dt DataType) Object {
+	switch t := dt.(type) {
+	case *UserTypeExpr:
+		return AsObject(t.Type)
+	case *MediaTypeExpr:
+		return AsObject(t.Type)
+	case Object:
+		return t
+	default:
+		return nil
+	}
+}
+
+// AsArray returns the type underlying array if any, nil otherwise.
+func AsArray(dt DataType) *Array {
+	switch t := dt.(type) {
+	case *UserTypeExpr:
+		return AsArray(t.Type)
+	case *MediaTypeExpr:
+		return AsArray(t.Type)
+	case *Array:
+		return t
+	default:
+		return nil
+	}
+}
+
+// AsMap returns the type underlying map if any, nil otherwise.
+func AsMap(dt DataType) *Map {
+	switch t := dt.(type) {
+	case *UserTypeExpr:
+		return AsMap(t.Type)
+	case *MediaTypeExpr:
+		return AsMap(t.Type)
+	case *Map:
+		return t
+	default:
+		return nil
+	}
+}
+
 // DataType implementation
 
 // Kind implements DataKind.

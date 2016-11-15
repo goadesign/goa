@@ -163,14 +163,9 @@ func View(name string, adsl ...func()) {
 	switch def := eval.Current().(type) {
 	case *design.MediaTypeExpr:
 		mt := def
-
-		if mt.Views == nil {
-			mt.Views = make(map[string]*design.ViewExpr)
-		} else {
-			if _, ok := mt.Views[name]; ok {
-				eval.ReportError("multiple definitions for view %#v in media type %#v", name, mt.TypeName)
-				return
-			}
+		if mt.View(name) != nil {
+			eval.ReportError("multiple definitions for view %#v in media type %#v", name, mt.TypeName)
+			return
 		}
 		at := &design.AttributeExpr{}
 		ok := false
@@ -181,7 +176,7 @@ func View(name string, adsl ...func()) {
 			elem := a.ElemType
 			if elem != nil {
 				if pa, ok2 := elem.Type.(*design.MediaTypeExpr); ok2 {
-					if v, ok2 := pa.Views[name]; ok2 {
+					if v := pa.View(name); v != nil {
 						at = v.AttributeExpr
 						ok = true
 					} else {
@@ -197,7 +192,7 @@ func View(name string, adsl ...func()) {
 				eval.ReportError(err.Error())
 				return
 			}
-			mt.Views[name] = view
+			mt.Views = append(mt.Views, view)
 		}
 
 	case *design.AttributeExpr:
@@ -291,9 +286,10 @@ func CollectionOf(v interface{}, adsl ...func()) *design.MediaTypeExpr {
 		if mt.Views == nil {
 			// If the adsl didn't create any views (or there is no adsl at all)
 			// then inherit the views from the collection element.
-			mt.Views = make(map[string]*design.ViewExpr)
-			for n, v := range m.Views {
-				mt.Views[n] = v
+			mt.Views = make([]*design.ViewExpr, len(m.Views))
+			for i, v := range m.Views {
+				v := v
+				mt.Views[i] = v
 			}
 		}
 	})
@@ -308,23 +304,21 @@ func buildView(name string, mt *design.MediaTypeExpr, at *design.AttributeExpr) 
 	if at.Type == nil {
 		return nil, fmt.Errorf("invalid view DSL")
 	}
-	o, ok := at.Type.(design.Object)
-	if !ok {
+	o := design.AsObject(at.Type)
+	if o == nil {
 		return nil, fmt.Errorf("invalid view DSL")
 	}
-	if o != nil {
-		mto, ok := mt.Type.(design.Object)
-		if !ok {
-			mto = mt.Type.(*design.Array).ElemType.Type.(design.Object)
-		}
-		for n, cat := range o {
-			if existing, ok := mto[n]; ok {
-				dup := design.DupAtt(existing)
-				dup.Metadata["view"] = cat.Metadata["view"]
-				o[n] = dup
-			} else if n != "links" {
-				return nil, fmt.Errorf("unknown attribute %#v", n)
-			}
+	mto := design.AsObject(mt.Type)
+	if mto == nil {
+		mto = design.AsObject(mt.Type.(*design.Array).ElemType.Type)
+	}
+	for n, cat := range o {
+		if existing, ok := mto[n]; ok {
+			dup := design.DupAtt(existing)
+			dup.Metadata["view"] = cat.Metadata["view"]
+			o[n] = dup
+		} else if n != "links" {
+			return nil, fmt.Errorf("unknown attribute %#v", n)
 		}
 	}
 	return &design.ViewExpr{
