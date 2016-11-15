@@ -29,6 +29,7 @@ func Generate() (files []string, err error) {
 	set.StringVar(&ver, "version", "", "")
 	set.String("design", "", "")
 	set.Bool("force", false, "")
+	set.Bool("notest", false, "")
 	set.Parse(os.Args[1:])
 
 	if err := codegen.CheckVersion(ver); err != nil {

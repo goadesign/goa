@@ -38,6 +38,7 @@ func Generate() (files []string, err error) {
 	set.StringVar(&target, "pkg", "app", "")
 	set.StringVar(&ver, "version", "", "")
 	set.BoolVar(&force, "force", false, "")
+	set.Bool("notest", false, "")
 	set.Parse(os.Args[1:])
 
 	if err := codegen.CheckVersion(ver); err != nil {
