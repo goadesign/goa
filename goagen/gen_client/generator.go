@@ -42,14 +42,15 @@ func Generate() (files []string, err error) {
 	dtool := defaultToolName(design.Design)
 
 	set := flag.NewFlagSet("client", flag.PanicOnError)
-	set.String("design", "", "")
-	set.Bool("force", false, "")
 	set.StringVar(&outDir, "out", "", "")
 	set.StringVar(&target, "pkg", "client", "")
 	set.StringVar(&toolDir, "tooldir", "tool", "")
 	set.StringVar(&tool, "tool", dtool, "")
 	set.StringVar(&ver, "version", "", "")
 	set.BoolVar(&notool, "notool", false, "")
+	set.String("design", "", "")
+	set.Bool("force", false, "")
+	set.Bool("notest", false, "")
 	set.Parse(os.Args[1:])
 
 	// First check compatibility
