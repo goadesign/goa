@@ -117,7 +117,7 @@ func Attribute(name string, args ...interface{}) {
 
 		var baseAttr *design.AttributeExpr
 		if parent.Reference != nil {
-			if att, ok := parent.Reference.(design.Object)[name]; ok {
+			if att, ok := design.AsObject(parent.Reference)[name]; ok {
 				baseAttr = design.DupAtt(att)
 			}
 		}
@@ -144,7 +144,7 @@ func Attribute(name string, args ...interface{}) {
 			// DSL did not contain an "Attribute" declaration
 			baseAttr.Type = design.String
 		}
-		parent.Type.(design.Object)[name] = baseAttr
+		design.AsObject(parent.Type)[name] = baseAttr
 	}
 }
 

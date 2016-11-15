@@ -3,7 +3,6 @@ package design
 import (
 	"fmt"
 	"mime"
-	"sort"
 	"strings"
 
 	"github.com/goadesign/goa/eval"
@@ -28,10 +27,8 @@ type (
 		// ContentType identifies the value written to the response "Content-Type" header.
 		// Defaults to Identifier.
 		ContentType string
-		// Links list the rendered links indexed by name.
-		Links map[string]*LinkExpr
 		// Views list the supported views indexed by name.
-		Views map[string]*ViewExpr
+		Views []*ViewExpr
 	}
 
 	// LinkExpr defines a media type link, it specifies a URL to a related resource.
@@ -102,7 +99,7 @@ var (
 			TypeName: "error",
 		},
 		Identifier: ErrorMediaIdentifier,
-		Views:      map[string]*ViewExpr{"default": errorMediaView},
+		Views:      []*ViewExpr{errorMediaView},
 	}
 
 	errorMediaType = Object{
@@ -176,13 +173,22 @@ func (m *MediaTypeExpr) Dup(att *AttributeExpr) UserType {
 	return &MediaTypeExpr{
 		UserTypeExpr: m.UserTypeExpr.Dup(att).(*UserTypeExpr),
 		Identifier:   m.Identifier,
-		Links:        m.Links,
 		Views:        m.Views,
 	}
 }
 
 // Name returns the media type canonical identifier.
 func (m *MediaTypeExpr) Name() string { return CanonicalIdentifier(m.Identifier) }
+
+// View returns the view with the given name.
+func (m *MediaTypeExpr) View(name string) *ViewExpr {
+	for _, v := range m.Views {
+		if v.Name == name {
+			return v
+		}
+	}
+	return nil
+}
 
 // IsError returns true if the media type is implemented via a goa struct.
 func (m *MediaTypeExpr) IsError() bool {
@@ -196,38 +202,13 @@ func (m *MediaTypeExpr) IsError() bool {
 
 // ComputeViews returns the media type views recursing as necessary if the media type is a
 // collection.
-func (m *MediaTypeExpr) ComputeViews() map[string]*ViewExpr {
+func (m *MediaTypeExpr) ComputeViews() []*ViewExpr {
 	if m.Views != nil {
 		return m.Views
 	}
 	if a, ok := m.Type.(*Array); ok {
 		if mt, ok := a.ElemType.Type.(*MediaTypeExpr); ok {
 			return mt.ComputeViews()
-		}
-	}
-	return nil
-}
-
-// ViewIterator is the type of the function given to IterateViews.
-type ViewIterator func(*ViewExpr) error
-
-// IterateViews calls the given iterator passing in each field sorted in alphabetical order.
-// Iteration stops if an iterator returns an error and in this case IterateViews returns that
-// error.
-func (m *MediaTypeExpr) IterateViews(it ViewIterator) error {
-	o := m.Views
-	// gather names and sort them
-	names := make([]string, len(o))
-	i := 0
-	for n := range o {
-		names[i] = n
-		i++
-	}
-	sort.Strings(names)
-	// iterate
-	for _, n := range names {
-		if err := it(o[n]); err != nil {
-			return err
 		}
 	}
 	return nil
@@ -260,8 +241,8 @@ func (p *Projector) Project(m *MediaTypeExpr, view string) (*ProjectedMTExpr, er
 }
 
 func (p *Projector) projectSingle(m *MediaTypeExpr, view, viewID string) (*ProjectedMTExpr, error) {
-	v, ok := m.Views[view]
-	if !ok {
+	v := m.View(view)
+	if v == nil {
 		return nil, fmt.Errorf("unknown view %#v", view)
 	}
 	viewObj := v.Type.(Object)
@@ -303,7 +284,7 @@ func (p *Projector) projectSingle(m *MediaTypeExpr, view, viewID string) (*Proje
 			},
 		},
 	}
-	projected.Views = map[string]*ViewExpr{"default": {
+	projected.Views = []*ViewExpr{&ViewExpr{
 		Name:          "default",
 		AttributeExpr: DupAtt(v.AttributeExpr),
 		Parent:        projected,
@@ -314,56 +295,27 @@ func (p *Projector) projectSingle(m *MediaTypeExpr, view, viewID string) (*Proje
 	projectedObj := projected.Type.(Object)
 	mtObj := m.Type.(Object)
 	for n := range viewObj {
-		if n == "links" {
-			linkObj := make(Object)
-			for n, link := range m.Links {
-				linkView := link.View
-				if linkView == "" {
-					linkView = "link"
+		if at := mtObj[n]; at != nil {
+			at = DupAtt(at)
+			if mt, ok := at.Type.(*MediaTypeExpr); ok {
+				vatt := viewObj[n]
+				var view string
+				if len(vatt.Metadata["view"]) > 0 {
+					view = vatt.Metadata["view"][0]
 				}
-				mtAtt, ok := mtObj[n]
-				if !ok {
-					return nil, fmt.Errorf("unknown field %#v used in links", n)
+				if view == "" && len(at.Metadata["view"]) > 0 {
+					view = at.Metadata["view"][0]
 				}
-				mtt := mtAtt.Type.(*MediaTypeExpr)
-				vl, err := p.Project(mtt, linkView)
+				if view == "" {
+					view = DefaultView
+				}
+				pr, err := p.Project(mt, view)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", view, n, err)
 				}
-				linkObj[n] = &AttributeExpr{Type: vl.MediaType, Validation: mtt.Validation, Metadata: mtAtt.Metadata}
+				at.Type = pr.MediaType
 			}
-			lTypeName := fmt.Sprintf("%sLinks", m.TypeName)
-			links := &UserTypeExpr{
-				AttributeExpr: &AttributeExpr{
-					Description: fmt.Sprintf("%s contains links to related resources of %s.", lTypeName, m.TypeName),
-					Type:        linkObj,
-				},
-				TypeName: lTypeName,
-			}
-			proj.Links = links
-		} else {
-			if at := mtObj[n]; at != nil {
-				at = DupAtt(at)
-				if mt, ok := at.Type.(*MediaTypeExpr); ok {
-					vatt := viewObj[n]
-					var view string
-					if len(vatt.Metadata["view"]) > 0 {
-						view = vatt.Metadata["view"][0]
-					}
-					if view == "" && len(at.Metadata["view"]) > 0 {
-						view = at.Metadata["view"][0]
-					}
-					if view == "" {
-						view = DefaultView
-					}
-					pr, err := p.Project(mt, view)
-					if err != nil {
-						return nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", view, n, err)
-					}
-					at.Type = pr.MediaType
-				}
-				projectedObj[n] = at
-			}
+			projectedObj[n] = at
 		}
 	}
 	return &proj, nil
@@ -390,8 +342,8 @@ func (p *Projector) projectCollection(m *MediaTypeExpr, view, viewID string) (*P
 			TypeName: pe.MediaType.TypeName + "Collection",
 		},
 	}
-	proj.Views = map[string]*ViewExpr{"default": &ViewExpr{
-		AttributeExpr: DupAtt(pe.MediaType.Views["default"].AttributeExpr),
+	proj.Views = []*ViewExpr{&ViewExpr{
+		AttributeExpr: DupAtt(pe.MediaType.View("default").AttributeExpr),
 		Name:          "default",
 		Parent:        pe.MediaType,
 	}}

@@ -219,8 +219,8 @@ var AErrorMediaType = MediaType("application/vnd.goa.design.error", func() {
 })
 
 // RequestType is the type that describes the request parameters.
-var RequestType = Type("request", func() {
-	Description("Request parameters")
+var RequestType = Type("Request", func() {
+	Description("Optional description")
 	Attribute("required", String)
 	Attribute("name", String)
 	Required("required")
