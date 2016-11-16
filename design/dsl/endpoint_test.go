@@ -3,7 +3,7 @@ package dsl_test
 import (
 	"testing"
 
-	"fmt"
+	"reflect"
 
 	"github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/dsl"
@@ -14,86 +14,123 @@ func TestEndpoint(t *testing.T) {
 	cases := map[string]struct {
 		Expr   eval.Expression
 		DSL    func()
-		Assert func(testName string, t *testing.T, s *design.ServiceExpr)
+		Assert map[string]func(t *testing.T, s *design.EndpointExpr)
 	}{
-		"basic endpoint": {
+		"basic": {
 			&design.ServiceExpr{},
 			func() {
 				Endpoint("basic", func() {
-					Description("basic endpoint")
-				})
-			},
-			func(testName string, t *testing.T, s *design.ServiceExpr) {
-				if len(s.Endpoints) != 1 {
-					t.Errorf("%s: expected %d endpoints but got %d", testName, 1, len(s.Endpoints))
-				}
-				for _, e := range s.Endpoints {
-					if err := assertEndpointDescription("basic endpoint", e.Description); err != nil {
-						t.Errorf("%s assert failed %s ", testName, err.Error())
-					}
-				}
-			},
-		},
-		"basic endpoint with docs": {
-			&design.ServiceExpr{},
-			func() {
-				Endpoint("basic", func() {
-					Description("basic endpoint")
+					Description("Optional description")
+
+					// Docs allows linking to external documentation.
 					Docs(func() {
-						URL("http://example.com")
-						Description("some docs")
+						Description("Optional description")
+						URL("https://goa.design")
 					})
+					Request(func() {
+						Description("Optional description")
+						Attribute("required", design.String)
+						Required("required")
+					})
+					Response(func() {
+						Description("Optional description")
+						Attribute("required", design.String)
+						Required("required")
+					})
+					Error("basic_error")
+					Error("basic_media_error", design.ErrorMedia)
+					Metadata("name", "some value", "some other value")
 				})
 			},
-			func(testName string, t *testing.T, s *design.ServiceExpr) {
-				if len(s.Endpoints) != 1 {
-					t.Errorf("%s: expected %d endpoints but got %d", testName, 1, len(s.Endpoints))
-				}
-				for _, e := range s.Endpoints {
-					if err := assertEndpointDescription("basic endpoint", e.Description); err != nil {
-						t.Errorf("%s assert failed %s ", testName, err.Error())
+			map[string]func(t *testing.T, s *design.EndpointExpr){
+				"basic": func(t *testing.T, e *design.EndpointExpr) {
+					assertEndpointDescription(t, "Optional description", e.Description)
+					assertEndpointDocs(t, e.Docs, "https://goa.design", "Optional description")
+					if len(e.Errors) != 2 {
+						t.Errorf("expected %d error definitions but got %d ", 1, len(e.Errors))
 					}
-					if err := assertEndpointDocs(e.Docs, "http://example.com", "some docs"); err != nil {
-						t.Errorf("%s assert failed %s ", testName, err.Error())
+					assertEndpointError(t, e.Errors[0], "basic_error", design.ErrorMedia)
+					assertEndpointError(t, e.Errors[1], "basic_media_error", design.ErrorMedia)
+					expectedMeta := design.MetadataExpr{
+						"name": []string{"some value", "some other value"},
 					}
-				}
+					assertEndpointMetaData(t, e.Metadata, expectedMeta)
+					expectedReq := &design.UserTypeExpr{TypeName: "BasicRequest"}
+					assertEndpointRequestResponse(t, "Request", e.Request, expectedReq)
+					expectedRes := &design.UserTypeExpr{TypeName: "BasicResponse"}
+					assertEndpointRequestResponse(t, "Response", e.Response, expectedRes)
+				},
 			},
 		},
 	}
-
+	//Run our tests
 	for k, tc := range cases {
 		t.Run(k, func(t *testing.T) {
 			eval.Context = &eval.DSLContext{}
 			eval.Execute(tc.DSL, tc.Expr)
-			//After evaling the service our endpoints are present but need to also need to have thier DSL func exectuted.
 			evalService := tc.Expr.(*design.ServiceExpr)
-			for _, endpointExp := range evalService.Endpoints {
-				eval.Execute(endpointExp.DSLFunc, endpointExp)
-			}
 			if eval.Context.Errors != nil {
 				t.Errorf("%s: Endpoint failed unexpectedly with %s", k, eval.Context.Errors)
 			}
-			if tc.Assert != nil {
-				tc.Assert(k, t, evalService)
+			for _, e := range evalService.Endpoints {
+				if _, ok := tc.Assert[e.Name]; !ok {
+					t.Errorf("no assert found for endpoint %s ", e.Name)
+				}
+				tc.Assert[e.Name](t, e)
 			}
 		})
 	}
 }
 
 //helper funcs
-func assertEndpointDocs(doc *design.DocsExpr, url, desc string) error {
+func assertEndpointDocs(t *testing.T, doc *design.DocsExpr, url, desc string) {
 	if doc.Description != desc {
-		return fmt.Errorf("expected docs description '%s' to match '%s' ", desc, doc.Description)
+		t.Errorf("expected docs description '%s' to match '%s' ", desc, doc.Description)
 	}
 	if doc.URL != url {
-		return fmt.Errorf("expected docs url '%s' to match '%s' ", url, doc.URL)
+		t.Errorf("expected docs url '%s' to match '%s' ", url, doc.URL)
 	}
-	return nil
 }
 
-func assertEndpointDescription(expectedDesc, actualDesc string) error {
+func assertEndpointDescription(t *testing.T, expectedDesc, actualDesc string) {
 	if expectedDesc != actualDesc {
-		return fmt.Errorf("expected description '%s' to match '%s' ", actualDesc, expectedDesc)
+		t.Errorf("expected description '%s' to match '%s' ", actualDesc, expectedDesc)
 	}
-	return nil
+}
+
+func assertEndpointError(t *testing.T, actual *design.ErrorExpr, name string, dt design.DataType) {
+	if actual.Name != name {
+		t.Errorf("expected error to have name %s but got %s ", name, actual.Name)
+	}
+
+	if actual.AttributeExpr.Type != dt {
+		t.Errorf("expected the error DataType to be %v but got %v ", dt, actual.AttributeExpr.Type)
+	}
+}
+
+func assertEndpointMetaData(t *testing.T, actual design.MetadataExpr, expected design.MetadataExpr) {
+	for key, val := range actual {
+		vals, ok := expected[key]
+		if !ok {
+			t.Errorf("metaData was missing expected key %s ", key)
+			continue
+		}
+		for _, metaVal := range val {
+			if !hasValue(vals, metaVal) {
+				t.Errorf("metaData was missing expected value %s ", metaVal)
+			}
+		}
+
+	}
+}
+
+func assertEndpointRequestResponse(t *testing.T, assertType string, actual design.DataType, expected *design.UserTypeExpr) {
+	ut, ok := actual.(*design.UserTypeExpr)
+	if !ok {
+		t.Errorf("expected endpoint %s to be a *UserTypeExpr but got %v", assertType, reflect.TypeOf(ut))
+	}
+	if ut.Name() != expected.Name() {
+		t.Errorf("expected endpoint %s name %s to match %s", assertType, ut.Name(), expected.Name())
+	}
+
 }
