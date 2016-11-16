@@ -151,7 +151,7 @@ func assertEndpointMetaData(t *testing.T, actual design.MetadataExpr, expected d
 
 func assertEndpointRequestResponse(t *testing.T, assertType string, actual design.DataType, expected *design.UserTypeExpr) {
 	ut, ok := actual.(*design.UserTypeExpr)
-	if !ok {
+	if !ok || ut == nil {
 		t.Errorf("expected endpoint %s to be a *UserTypeExpr but got %v", assertType, reflect.TypeOf(ut))
 	}
 	if ut.Name() != expected.Name() {
