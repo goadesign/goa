@@ -172,14 +172,12 @@ func (m *Generator) generateToolSourceCode(pkg *codegen.Package) {
 // spawn runs the compiled generator using the arguments initialized by Kingpin
 // when parsing the command line.
 func (m *Generator) spawn(genbin string) ([]string, error) {
-	args := make([]string, len(m.Flags))
-	i := 0
+	var args []string
 	for k, v := range m.Flags {
 		if k == "debug" {
 			continue
 		}
-		args[i] = fmt.Sprintf("--%s=%s", k, v)
-		i++
+		args = append(args, fmt.Sprintf("--%s=%s", k, v))
 	}
 	sort.Strings(args)
 	args = append(args, "--version="+version.String())
