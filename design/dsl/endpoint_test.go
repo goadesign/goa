@@ -14,9 +14,9 @@ func TestEndpoint(t *testing.T) {
 	cases := map[string]struct {
 		Expr   eval.Expression
 		DSL    func()
-		Assert map[string]func(t *testing.T, s *design.EndpointExpr)
+		Assert func(t *testing.T, s []*design.EndpointExpr)
 	}{
-		"basic": {
+		"basic_usage": {
 			&design.ServiceExpr{},
 			func() {
 				Endpoint("basic", func() {
@@ -51,45 +51,50 @@ func TestEndpoint(t *testing.T) {
 					Error("basic_media_error", design.ErrorMedia)
 				})
 			},
-			map[string]func(t *testing.T, s *design.EndpointExpr){
-				"basic": func(t *testing.T, e *design.EndpointExpr) {
-					assertEndpointDescription(t, "Optional description", e.Description)
+			func(t *testing.T, endpoints []*design.EndpointExpr) {
+				if len(endpoints) != 2 {
+					t.Errorf("expected 2 endpoints but got %d ", len(endpoints))
+				}
+				for i, e := range endpoints {
 					assertEndpointDocs(t, e.Docs, "https://goa.design", "Optional description")
-					if len(e.Errors) != 2 {
-						t.Errorf("expected %d error definitions but got %d ", 2, len(e.Errors))
+					//assert on first endpoint
+					if i == 0 {
+						if len(e.Errors) != 2 {
+							t.Errorf("expected %d error definitions but got %d ", 2, len(e.Errors))
+						}
+						assertEndpointDescription(t, "Optional description", e.Description)
+						assertEndpointError(t, e.Errors[0], "basic_error", design.ErrorMedia)
+						assertEndpointError(t, e.Errors[1], "basic_media_error", design.ErrorMedia)
+						expectedMeta := design.MetadataExpr{
+							"name": []string{"some value", "some other value"},
+						}
+						assertEndpointMetaData(t, e.Metadata, expectedMeta)
+						expectedReq := &design.UserTypeExpr{
+							TypeName:      "BasicRequest",
+							AttributeExpr: &design.AttributeExpr{Description: "Optional description", Type: &design.Object{}}}
+						assertEndpointRequestResponse(t, "Request", e.Request, expectedReq)
+						expectedRes := &design.UserTypeExpr{
+							TypeName:      "BasicResponse",
+							AttributeExpr: &design.AttributeExpr{Description: "Optional description", Type: &design.Object{}}}
+						assertEndpointRequestResponse(t, "Response", e.Response, expectedRes)
+					} else {
+						//assert on second endpoint
+						if len(e.Errors) != 1 {
+							t.Errorf("expected %d error definitions but got %d ", 1, len(e.Errors))
+						}
+						if e.Description != "" {
+							t.Errorf("no endpoint Description was defined expected an empty Description but got %s", e.Description)
+						}
+						if len(e.Metadata) != 0 {
+							t.Errorf("no endpoint Metadata defined expected an empty Metadata but got %v ", e.Metadata)
+						}
+						assertEndpointError(t, e.Errors[0], "basic_media_error", design.ErrorMedia)
+						expectedReq := &design.UserTypeExpr{TypeName: "AnotherRequest", AttributeExpr: &design.AttributeExpr{Type: design.String}}
+						assertEndpointRequestResponse(t, "Request", e.Request, expectedReq)
+						expectedRes := &design.UserTypeExpr{TypeName: "AnotherResponse", AttributeExpr: &design.AttributeExpr{Type: design.String}}
+						assertEndpointRequestResponse(t, "Response", e.Response, expectedRes)
 					}
-					assertEndpointError(t, e.Errors[0], "basic_error", design.ErrorMedia)
-					assertEndpointError(t, e.Errors[1], "basic_media_error", design.ErrorMedia)
-					expectedMeta := design.MetadataExpr{
-						"name": []string{"some value", "some other value"},
-					}
-					assertEndpointMetaData(t, e.Metadata, expectedMeta)
-					expectedReq := &design.UserTypeExpr{
-						TypeName:      "BasicRequest",
-						AttributeExpr: &design.AttributeExpr{Description: "Optional description", Type: &design.Object{}}}
-					assertEndpointRequestResponse(t, "Request", e.Request, expectedReq)
-					expectedRes := &design.UserTypeExpr{
-						TypeName:      "BasicResponse",
-						AttributeExpr: &design.AttributeExpr{Description: "Optional description", Type: &design.Object{}}}
-					assertEndpointRequestResponse(t, "Response", e.Response, expectedRes)
-				},
-				"another": func(t *testing.T, e *design.EndpointExpr) {
-					assertEndpointDocs(t, e.Docs, "https://goa.design", "Optional description")
-					if len(e.Errors) != 1 {
-						t.Errorf("expected %d error definitions but got %d ", 1, len(e.Errors))
-					}
-					if e.Description != "" {
-						t.Errorf("no endpoint Description was defined expected an empty Description but got %s", e.Description)
-					}
-					if len(e.Metadata) != 0 {
-						t.Errorf("no endpoint Metadata defined expected an empty Metadata but got %v ", e.Metadata)
-					}
-					assertEndpointError(t, e.Errors[0], "basic_media_error", design.ErrorMedia)
-					expectedReq := &design.UserTypeExpr{TypeName: "AnotherRequest", AttributeExpr: &design.AttributeExpr{Type: design.String}}
-					assertEndpointRequestResponse(t, "Request", e.Request, expectedReq)
-					expectedRes := &design.UserTypeExpr{TypeName: "AnotherResponse", AttributeExpr: &design.AttributeExpr{Type: design.String}}
-					assertEndpointRequestResponse(t, "Response", e.Response, expectedRes)
-				},
+				}
 			},
 		},
 	}
@@ -102,13 +107,7 @@ func TestEndpoint(t *testing.T) {
 			if eval.Context.Errors != nil {
 				t.Errorf("%s: Endpoint failed unexpectedly with %s", k, eval.Context.Errors)
 			}
-			for _, e := range evalService.Endpoints {
-				if _, ok := tc.Assert[e.Name]; !ok {
-					t.Errorf("no assert found for endpoint %s ", e.Name)
-					break
-				}
-				tc.Assert[e.Name](t, e)
-			}
+			tc.Assert(t, evalService.Endpoints)
 		})
 	}
 }
@@ -151,7 +150,6 @@ func assertEndpointMetaData(t *testing.T, actual design.MetadataExpr, expected d
 				t.Errorf("metaData was missing expected value %s ", metaVal)
 			}
 		}
-
 	}
 }
 
