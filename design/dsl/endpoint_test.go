@@ -78,6 +78,12 @@ func TestEndpoint(t *testing.T) {
 					if len(e.Errors) != 1 {
 						t.Errorf("expected %d error definitions but got %d ", 1, len(e.Errors))
 					}
+					if e.Description != "" {
+						t.Errorf("no endpoint Description was defined expected an empty Description but got %s", e.Description)
+					}
+					if len(e.Metadata) != 0 {
+						t.Errorf("no endpoint Metadata defined expected an empty Metadata but got %v ", e.Metadata)
+					}
 					assertEndpointError(t, e.Errors[0], "basic_media_error", design.ErrorMedia)
 					expectedReq := &design.UserTypeExpr{TypeName: "AnotherRequest", AttributeExpr: &design.AttributeExpr{Type: design.String}}
 					assertEndpointRequestResponse(t, "Request", e.Request, expectedReq)
@@ -153,6 +159,7 @@ func assertEndpointRequestResponse(t *testing.T, assertType string, actual desig
 	ut, ok := actual.(*design.UserTypeExpr)
 	if !ok || ut == nil {
 		t.Errorf("expected endpoint %s to be a *UserTypeExpr but got %v", assertType, reflect.TypeOf(ut))
+		return
 	}
 	if ut.Name() != expected.Name() {
 		t.Errorf("expected endpoint %s name %s to match %s", assertType, ut.Name(), expected.Name())
