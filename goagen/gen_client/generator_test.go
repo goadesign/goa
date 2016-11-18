@@ -90,6 +90,17 @@ var _ = Describe("Generate", func() {
 	}
 `))
 		})
+
+		Context("with --notool", func() {
+			BeforeEach(func() {
+				os.Args = append(os.Args, "--notool")
+			})
+
+			It("should not return an error", func() {
+				Ω(genErr).Should(BeNil())
+				Ω(files).Should(HaveLen(5)) // 9, minus 4 entries for tool paths
+			})
+		})
 	})
 
 	Context("with an action with multiple routes", func() {
