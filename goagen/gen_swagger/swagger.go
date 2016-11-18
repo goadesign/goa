@@ -757,7 +757,12 @@ func responseSpecFromDefinition(s *Swagger, api *design.APIDefinition, r *design
 	var schema *genschema.JSONSchema
 	if r.MediaType != "" {
 		if mt, ok := api.MediaTypes[design.CanonicalIdentifier(r.MediaType)]; ok {
-			schema = genschema.TypeSchema(api, mt)
+			view := r.ViewName
+			if view == "" {
+				view = design.DefaultView
+			}
+			schema = genschema.NewJSONSchema()
+			schema.Ref = genschema.MediaTypeRef(api, mt, view)
 		}
 	}
 	headers, err := headersFromDefinition(r.Headers)
