@@ -49,8 +49,7 @@ framework from RightScale follows the same pattern and was an inspiration to goa
 
 Assuming you have a working [Go](https://golang.org) setup:
 ```
-go get github.com/goadesign/goa
-go get github.com/goadesign/goa/goagen
+go get -u github.com/goadesign/goa/...
 ```
 
 ### Stable Versions
