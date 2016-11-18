@@ -1,6 +1,6 @@
 #! /usr/bin/make
 #
-# Makefile for goa
+# Makefile for goa v2
 #
 # Targets:
 # - "depend" retrieves the Go packages needed to run the linter and tests
@@ -10,7 +10,7 @@
 # Meta targets:
 # - "all" is the default target, it runs all the targets in the order above.
 #
-DIRS=$(shell go list -f {{.Dir}} ./...)
+DIRS=$(shell go list -f {{.Dir}} github.com/goadesign/goa/design/...)
 
 # Only list test and build dependencies
 # Standard dependencies are installed via go get
