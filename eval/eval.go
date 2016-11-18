@@ -8,11 +8,12 @@ import (
 	"strings"
 )
 
-// RunDSL iterates through the root expressions and calls IterateSets on each to retrieve the
-// expression sets. It iterates over the expression sets multiple times to first execute the DSL,
-// then validate the resulting expressions and lastly to finalize them. The executed DSL may
-// register additional roots during initial execution via Register to have them be executed (last)
-// in the same run.
+// RunDSL iterates through the root expressions and calls IterateSets on each to
+// retrieve the expression sets. It iterates over the expression sets multiple
+// times to first execute the DSL, then validate the resulting expressions and
+// lastly to finalize them. The executed DSL may register additional roots
+// during initial execution via Register to have them be executed (last) in the
+// same run.
 func RunDSL() error {
 	roots, err := Context.SortRoots()
 	if err != nil {
@@ -51,8 +52,8 @@ func RunDSL() error {
 	return nil
 }
 
-// runSet executes the DSL for all expressions in the given set. The expression DSLs may append to
-// the set as they execute.
+// runSet executes the DSL for all expressions in the given set. The expression
+// DSLs may append to the set as they execute.
 func runSet(set ExpressionSet) error {
 	executed := 0
 	recursed := 0
@@ -97,12 +98,13 @@ func finalizeSet(set ExpressionSet) error {
 	return nil
 }
 
-// Execute runs the given DSL to initialize the given expression. It returns true on success.
-// It returns false and appends to i.Errors on failure.
-// Note that Run takes care of calling Execute on all expressions that implement Source.
-// This function is intended for use by expressions that run the DSL at declaration time rather than
-// store the DSL for execution by the dsl engine (usually simple independent expressions).
-// The DSL should use ReportError to record DSL execution errors.
+// Execute runs the given DSL to initialize the given expression. It returns
+// true on success.  It returns false and appends to i.Errors on failure.  Note
+// that Run takes care of calling Execute on all expressions that implement
+// Source.  This function is intended for use by expressions that run the DSL at
+// declaration time rather than store the DSL for execution by the dsl engine
+// (usually simple independent expressions).  The DSL should use ReportError to
+// record DSL execution errors.
 func Execute(dsl func(), def Expression) bool {
 	if dsl == nil {
 		return true
@@ -131,8 +133,8 @@ func Current() Expression {
 	return current
 }
 
-// ReportError records a DSL error for reporting post DSL execution.  It accepts a format and values
-// a la fmt.Printf.
+// ReportError records a DSL error for reporting post DSL execution.  It accepts
+// a format and values a la fmt.Printf.
 func ReportError(fm string, vals ...interface{}) {
 	var suffix string
 	if cur := Context.Stack.Current(); cur != nil {
@@ -151,15 +153,15 @@ func ReportError(fm string, vals ...interface{}) {
 	})
 }
 
-// IncompatibleDSL should be called by DSL functions when they are invoked in an incorrect context
-// (e.g. "Params" in "Resource").
+// IncompatibleDSL should be called by DSL functions when they are invoked in an
+// incorrect context (e.g. "Params" in "Resource").
 func IncompatibleDSL() {
 	elems := strings.Split(caller(), ".")
 	ReportError("invalid use of %s", elems[len(elems)-1])
 }
 
-// InvalidArgError records an invalid argument error.  It is used by DSL functions that take dynamic
-// arguments.
+// InvalidArgError records an invalid argument error.  It is used by DSL
+// functions that take dynamic arguments.
 func InvalidArgError(expected string, actual interface{}) {
 	ReportError("cannot use %#v (type %s) as type %s", actual, reflect.TypeOf(actual), expected)
 }
@@ -193,9 +195,8 @@ func (verr *ValidationErrors) Add(def Expression, format string, vals ...interfa
 	verr.AddError(def, fmt.Errorf(format, vals...))
 }
 
-// AddError adds a validation error to the target.
-// AddError "flattens" validation errors so that the recorded errors are never ValidationErrors
-// themselves.
+// AddError adds a validation error to the target. It "flattens" validation
+// errors so that the recorded errors are never ValidationErrors themselves.
 func (verr *ValidationErrors) AddError(def Expression, err error) {
 	if v, ok := err.(*ValidationErrors); ok {
 		verr.Errors = append(verr.Errors, v.Errors...)

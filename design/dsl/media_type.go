@@ -58,7 +58,7 @@ var mediaTypeCount int
 //        })
 //     })
 //
-func MediaType(identifier string, adsl func()) *design.MediaTypeExpr {
+func MediaType(identifier string, dsl func()) *design.MediaTypeExpr {
 	if _, ok := eval.Current().(eval.TopExpr); !ok {
 		eval.IncompatibleDSL()
 		return nil
@@ -102,8 +102,8 @@ func MediaType(identifier string, adsl func()) *design.MediaTypeExpr {
 		typeName = fmt.Sprintf("MediaType%d", mediaTypeCount)
 	}
 	// Now save the type in the API media types map
-	mt := design.NewMediaTypeExpr(typeName, identifier, adsl)
-	design.Root.Types = append(design.Root.Types, mt)
+	mt := design.NewMediaTypeExpr(typeName, identifier, dsl)
+	design.Root.MediaTypes = append(design.Root.MediaTypes, mt)
 
 	return mt
 }
@@ -114,11 +114,11 @@ func MediaType(identifier string, adsl func()) *design.MediaTypeExpr {
 // This function makes it possible to override that and provide a custom name.
 // name must be a valid Go identifier.
 func TypeName(name string) {
-	switch def := eval.Current().(type) {
+	switch expr := eval.Current().(type) {
 	case *design.MediaTypeExpr:
-		def.TypeName = name
+		expr.TypeName = name
 	case *design.UserTypeExpr:
-		def.TypeName = name
+		expr.TypeName = name
 	default:
 		eval.IncompatibleDSL()
 	}
@@ -139,7 +139,7 @@ func ContentType(typ string) {
 
 // View adds a new view to a media type. A view has a name and lists attributes
 // that are rendered when the view is used to produce a response. The attribute
-// names must appear in the media type definition. If an attribute is itself a
+// names must appear in the media type expression. If an attribute is itself a
 // media type then the view may specify which view to use when rendering the
 // attribute using the View function in the View adsl. If not specified then the
 // view named "default" is used. Examples:
@@ -160,11 +160,11 @@ func ContentType(typ string) {
 //	})
 //
 func View(name string, adsl ...func()) {
-	switch def := eval.Current().(type) {
+	switch expr := eval.Current().(type) {
 	case *design.MediaTypeExpr:
-		mt := def
+		mt := expr
 		if mt.View(name) != nil {
-			eval.ReportError("multiple definitions for view %#v in media type %#v", name, mt.TypeName)
+			eval.ReportError("multiple expressions for view %#v in media type %#v", name, mt.TypeName)
 			return
 		}
 		at := &design.AttributeExpr{}
@@ -196,7 +196,10 @@ func View(name string, adsl ...func()) {
 		}
 
 	case *design.AttributeExpr:
-		def.Metadata["view"] = []string{name}
+		if expr.Metadata == nil {
+			expr.Metadata = make(map[string][]string)
+		}
+		expr.Metadata["view"] = []string{name}
 
 	default:
 		eval.IncompatibleDSL()
@@ -299,7 +302,7 @@ func CollectionOf(v interface{}, adsl ...func()) *design.MediaTypeExpr {
 	return mt
 }
 
-// buildView builds a view definition given an attribute and a corresponding media type.
+// buildView builds a view expression given an attribute and a corresponding media type.
 func buildView(name string, mt *design.MediaTypeExpr, at *design.AttributeExpr) (*design.ViewExpr, error) {
 	if at.Type == nil {
 		return nil, fmt.Errorf("invalid view DSL")
@@ -315,6 +318,9 @@ func buildView(name string, mt *design.MediaTypeExpr, at *design.AttributeExpr) 
 	for n, cat := range o {
 		if existing, ok := mto[n]; ok {
 			dup := design.DupAtt(existing)
+			if dup.Metadata == nil {
+				dup.Metadata = make(map[string][]string)
+			}
 			dup.Metadata["view"] = cat.Metadata["view"]
 			o[n] = dup
 		} else if n != "links" {

@@ -15,24 +15,28 @@ type (
 	DSLContext struct {
 		// Stack represents the current execution stack.
 		Stack Stack
-		// Errors contains the DSL execution errors for the current expression set.
+		// Errors contains the DSL execution errors for the current
+		// expression set.
 		// Errors is an instance of MultiError.
 		Errors error
 
-		// roots is the list of DSL roots as registered by all loaded DSLs.
+		// roots is the list of DSL roots as registered by all loaded
+		// DSLs.
 		roots []Root
-		// dslPackages keeps track of the DSL package import paths so the initiator may skip
-		// any callstack frame that belongs to them when computing error locations.
+		// dslPackages keeps track of the DSL package import paths so
+		// the initiator may skip any callstack frame that belongs to
+		// them when computing error locations.
 		dslPackages []string
 	}
 
-	// Stack represents the expression evaluation stack. The stack is appended to each time the
-	// initiator executes an expression source DSL.
+	// Stack represents the expression evaluation stack. The stack is
+	// appended to each time the initiator executes an expression source
+	// DSL.
 	Stack []Expression
 )
 
-// Register appends a root expression to the current Context root expressions. Each root expression
-// may only be registered once.
+// Register appends a root expression to the current Context root expressions.
+// Each root expression may only be registered once.
 func Register(r Root) error {
 	for _, o := range Context.roots {
 		if r.DSLName() == o.DSLName() {
@@ -65,8 +69,8 @@ func (c *DSLContext) Error() string {
 	return ""
 }
 
-// SortRoots orders the DSL roots making sure dependencies are last. It returns an error if there
-// is a dependency cycle.
+// SortRoots orders the DSL roots making sure dependencies are last. It returns
+// an error if there is a dependency cycle.
 func (c *DSLContext) SortRoots() ([]Root, error) {
 	roots := c.roots
 	if len(roots) == 0 {

@@ -1,8 +1,6 @@
 package dsl
 
 import (
-	"fmt"
-
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/eval"
 )
@@ -48,15 +46,14 @@ import (
 // })
 //
 func Response(val interface{}, dsls ...func()) {
-	att := endpointTypeDSL(val, dsls...)
-	if att == nil {
+	if len(dsls) > 1 {
+		eval.ReportError("too many arguments")
 		return
 	}
-	e := eval.Current().(*design.EndpointExpr)
-	sn := camelize(e.Service.Name)
-	en := camelize(e.Name)
-	e.Response = &design.UserTypeExpr{
-		AttributeExpr: att,
-		TypeName:      fmt.Sprintf("%s%sResponse", en, sn),
+	e, ok := eval.Current().(*design.EndpointExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
 	}
+	e.Response = endpointTypeDSL("Response", val, dsls...)
 }
