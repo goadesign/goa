@@ -10,12 +10,13 @@ import (
 
 type (
 	// Error represents an error that occurred while evaluating the DSL.
-	// It contains the name of the file and line number of where the error occurred as well as
-	// the original Go error.
+	// It contains the name of the file and line number of where the error
+	// occurred as well as the original Go error.
 	Error struct {
 		// GoError is the original error returned by the DSL function.
 		GoError error
-		// File is the path to the file containing the user code that caused the error.
+		// File is the path to the file containing the user code that
+		// caused the error.
 		File string
 		// Line is the line number  that caused the error.
 		Line int
@@ -63,7 +64,7 @@ func computeErrorLocation() (file string, line int) {
 		}
 		return false
 	}
-	depth := 2
+	depth := 3
 	_, file, line, _ = runtime.Caller(depth)
 	for skipFunc(file) {
 		depth++

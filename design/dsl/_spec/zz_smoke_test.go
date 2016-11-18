@@ -9,10 +9,13 @@ import (
 )
 
 func TestAPISpec(t *testing.T) {
-	api := design.Root.API
-	if !eval.Execute(api.DSL(), api) {
-		t.Errorf("API: DSL execution failed: %s", eval.Context.Error())
+	if err := eval.Register(design.Root); err != nil {
+		t.Fatalf("API: failed to register DSL: %s", err)
 	}
+	if err := eval.RunDSL(); err != nil {
+		t.Fatalf("API: failed to run DSL: %s", err)
+	}
+	api := design.Root.API
 
 	if api.Name != "dsl_spec" {
 		t.Errorf("API: invalid name")
@@ -144,9 +147,6 @@ func TestServiceSpec(t *testing.T) {
 		t.Fatalf("Service: invalid API services count")
 	}
 	service := design.Root.Services[0]
-	if !eval.Execute(service.DSL(), service) {
-		t.Errorf("Service: DSL execution failed: %s", eval.Context.Error())
-	}
 
 	if service.Description != "Optional service description" {
 		t.Errorf("Service: invalid description")
@@ -167,7 +167,7 @@ func TestServiceSpec(t *testing.T) {
 	}
 
 	if len(service.Errors) != 5 {
-		t.Fatalf("Service: invalid Errors count")
+		t.Fatalf("Service: invalid Errors count (%d)", len(service.Errors))
 	}
 	if service.Errors[0].Name != "name_of_error" {
 		t.Errorf("Service: invalid first error name")
@@ -253,8 +253,8 @@ func TestServiceSpec(t *testing.T) {
 		t.Errorf("Service: first endpoint request type has invalid kind")
 	}
 	if ut, ok := service.Endpoints[0].Request.(*design.UserTypeExpr); ok {
-		if ut.Name() != "Request" {
-			t.Errorf("Service: invalid first endpoint request type name")
+		if ut.Name() != "EndpointServiceRequest" {
+			t.Errorf("Service: invalid first endpoint request type")
 		}
 		if ut.Description != "Optional description" {
 			t.Errorf("Service: invalid first endpoint request type description")
@@ -294,7 +294,7 @@ func TestServiceSpec(t *testing.T) {
 		t.Errorf("Service: first endpoint request type is nil")
 	}
 	if service.Endpoints[0].Response != nil && service.Endpoints[0].Response.Kind() != design.MediaTypeKind {
-		t.Errorf("Service: first endpoint request type has invalid kind")
+		t.Errorf("Service: first endpoint response type has invalid kind")
 	}
 	if mt, ok := service.Endpoints[0].Response.(*design.MediaTypeExpr); ok {
 		if mt.Name() != "application/vnd.goa.response" {
@@ -361,20 +361,163 @@ func TestServiceSpec(t *testing.T) {
 	if len(service.Endpoints[0].Errors) == 1 && service.Endpoints[0].Errors[0].Type != design.ErrorMedia {
 		t.Errorf("Service: invalid first endpoint error type")
 	}
+	if len(service.Endpoints[0].Metadata) != 1 {
+		t.Errorf("Service: invalid first endpoint metadata count")
+	}
+	if len(service.Endpoints[0].Metadata) == 1 {
+		if _, ok := service.Endpoints[0].Metadata["name"]; !ok {
+			t.Errorf("Service: first endpoint metadata is missing 'name' key")
+		} else {
+			if len(service.Endpoints[0].Metadata["name"]) != 2 {
+				t.Errorf("Service: first endpoint metadata 'name' is invalid")
+			} else {
+				if service.Endpoints[0].Metadata["name"][0] != "some value" {
+					t.Errorf("Service: first endpoint metadata 'name' first value is invalid")
+				}
+				if service.Endpoints[0].Metadata["name"][1] != "some other value" {
+					t.Errorf("Service: first endpoint metadata 'name' second value is invalid")
+				}
+			}
+		}
+
+	}
 
 	if service.Endpoints[1].Name != "default-type" {
 		t.Errorf("Service: invalid second endpoint name")
 	}
+	if service.Endpoints[1].Request != service.DefaultType() {
+		t.Errorf("Service: invalid second endpoint request type")
+	}
+	rt, ok := service.Endpoints[1].Response.(design.UserType)
+	if !ok {
+		t.Errorf("Service: invalid second endpoint response type")
+	}
+	o, ok := rt.Attribute().Type.(design.Object)
+	if !ok {
+		t.Errorf("Service: invalid second endpoint response type (not object)")
+	}
+	if len(o) != 1 {
+		t.Errorf("Service: invalid second endpoint response type attribute count")
+	} else {
+		at, ok := o["value"]
+		if !ok {
+			t.Errorf("Service: invalid second endpoint response type attribute")
+		} else {
+			if at.Type != design.String {
+				t.Errorf("Service: invalid second endpoint response type attribute type")
+			}
+		}
+	}
+
 	if service.Endpoints[2].Name != "inline-primitive" {
 		t.Errorf("Service: invalid third endpoint name")
 	}
+	if service.Endpoints[2].Request != design.String {
+		t.Errorf("Service: invalid third endpoint request type")
+	}
+	if service.Endpoints[2].Response != design.String {
+		t.Errorf("Service: invalid third endpoint response type")
+	}
+
 	if service.Endpoints[3].Name != "inline-array" {
 		t.Errorf("Service: invalid fourth endpoint name")
 	}
+	ar, ok := service.Endpoints[3].Request.(*design.Array)
+	if !ok {
+		t.Errorf("Service: invalid fourth endpoint request type")
+	} else if ar.ElemType.Type != design.String {
+		t.Errorf("Service: invalid fourth endpoint request array element type")
+	}
+	ar, ok = service.Endpoints[3].Response.(*design.Array)
+	if !ok {
+		t.Errorf("Service: invalid fourth endpoint response type")
+	} else if ar.ElemType.Type != design.String {
+		t.Errorf("Service: invalid fourth endpoint response array element type")
+	}
+
 	if service.Endpoints[4].Name != "inline-map" {
 		t.Errorf("Service: invalid fifth endpoint name")
 	}
+	m, ok := service.Endpoints[4].Request.(*design.Map)
+	if !ok {
+		t.Errorf("Service: invalid fifth endpoint request type")
+	} else {
+		if m.ElemType.Type != design.String {
+			t.Errorf("Service: invalid fifth endpoint request map element type")
+		}
+		if m.KeyType.Type != design.String {
+			t.Errorf("Service: invalid fifth endpoint request map key type")
+		}
+	}
+	m, ok = service.Endpoints[4].Response.(*design.Map)
+	if !ok {
+		t.Errorf("Service: invalid fifth endpoint response type")
+	} else {
+		if m.ElemType.Type != design.String {
+			t.Errorf("Service: invalid fifth endpoint response map element type")
+		}
+		if m.KeyType.Type != design.String {
+			t.Errorf("Service: invalid fifth endpoint response map key type")
+		}
+	}
+
 	if service.Endpoints[5].Name != "inline-object" {
 		t.Errorf("Service: invalid sixth name")
+	}
+	ut, ok := service.Endpoints[5].Request.(*design.UserTypeExpr)
+	if !ok {
+		t.Errorf("Service: invalid sixth endpoint request type")
+	} else {
+		if ut.Description != "Optional description" {
+			t.Errorf("Service: invalid sixth endpoint request type description")
+		}
+		o, ok := ut.Type.(design.Object)
+		if !ok {
+			t.Errorf("Service: invalid sixth endpoint request inner type")
+		} else {
+			at, ok := o["required"]
+			if !ok {
+				t.Errorf("Service: sixth endpoint request inner type is missing 'required' attribute")
+			} else if at.Type != design.String {
+				t.Errorf("Service: sixth endpoint request type 'required' field type is invalid")
+			}
+			at, ok = o["optional"]
+			if !ok {
+				t.Errorf("Service: sixth endpoint request inner type is missing 'optional' attribute")
+			} else if at.Type != design.String {
+				t.Errorf("Service: sixth endpoint request type 'optional' field type is invalid")
+			}
+		}
+		if len(ut.Validation.Required) == 0 {
+			t.Errorf("Service: sixth endpoint request type is missing required field")
+		}
+	}
+	ut, ok = service.Endpoints[5].Response.(*design.UserTypeExpr)
+	if !ok {
+		t.Errorf("Service: invalid sixth endpoint response type")
+	} else {
+		if ut.Description != "Optional description" {
+			t.Errorf("Service: invalid sixth endpoint response type description")
+		}
+		o, ok := ut.Type.(design.Object)
+		if !ok {
+			t.Errorf("Service: invalid sixth endpoint response inner type")
+		} else {
+			at, ok := o["required"]
+			if !ok {
+				t.Errorf("Service: sixth endpoint response inner type is missing 'required' attribute")
+			} else if at.Type != design.String {
+				t.Errorf("Service: sixth endpoint response type 'required' field type is invalid")
+			}
+			at, ok = o["optional"]
+			if !ok {
+				t.Errorf("Service: sixth endpoint response inner type is missing 'optional' attribute")
+			} else if at.Type != design.String {
+				t.Errorf("Service: sixth endpoint response type 'optional' field type is invalid")
+			}
+		}
+		if len(ut.Validation.Required) == 0 {
+			t.Errorf("Service: sixth endpoint response type is missing required field")
+		}
 	}
 }

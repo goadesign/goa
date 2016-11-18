@@ -56,3 +56,12 @@ func (s *ServiceExpr) Error(name string) *ErrorExpr {
 	}
 	return nil
 }
+
+// Finalize makes sure all endpoints that must use the service default type do.
+func (s *ServiceExpr) Finalize() {
+	for _, ep := range s.Endpoints {
+		if ep.Request == nil {
+			ep.Request = s.DefaultType()
+		}
+	}
+}

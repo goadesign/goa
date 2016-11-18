@@ -115,6 +115,11 @@ var _ = Service("service", func() {
 		//
 		// Additionally Request can add to the list of required
 		// attributes.
+		//
+		//     Request(RequestType, func() {
+		//         Required("name")
+		//     })
+		//
 		Request(RequestType, func() {
 			Required("name")
 		})
