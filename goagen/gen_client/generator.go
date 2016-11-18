@@ -118,7 +118,7 @@ func (g *Generator) Generate() (_ []string, err error) {
 
 	// Setup generation
 	var funcs template.FuncMap
-	var clientPkg, cliPkg string
+	var clientPkg string
 	{
 		funcs = template.FuncMap{
 			"add":                func(a, b int) int { return a + b },
@@ -149,14 +149,16 @@ func (g *Generator) Generate() (_ []string, err error) {
 		if err != nil {
 			return
 		}
-		cliPkg, err = codegen.PackagePath(cliDir)
-		if err != nil {
-			return
-		}
 		arrayToStringTmpl = template.Must(template.New("client").Funcs(funcs).Parse(arrayToStringT))
 	}
 
 	if !g.NoTool {
+		var cliPkg string
+		cliPkg, err = codegen.PackagePath(cliDir)
+		if err != nil {
+			return
+		}
+
 		// Generate tool/main.go (only once)
 		mainFile := filepath.Join(toolDir, "main.go")
 		if _, err := os.Stat(mainFile); err != nil {
