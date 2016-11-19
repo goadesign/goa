@@ -521,3 +521,212 @@ func TestServiceSpec(t *testing.T) {
 		}
 	}
 }
+
+func TestTypes(t *testing.T) {
+	if len(design.Root.Types) != 10 {
+		t.Fatalf("Types: invalid count (%d)", len(design.Root.Types))
+	}
+	b := design.Root.UserType("Name")
+	if b == nil {
+		t.Fatalf("Types: type 'Name' is missing")
+	}
+	basic, ok := b.(*design.UserTypeExpr)
+	if !ok {
+		t.Fatalf("Types: invalid 'Name' type")
+	}
+	if basic.Description != "Optional description" {
+		t.Errorf("Types: invalid 'Name' type description")
+	}
+	if basic.Type.Kind() != design.ObjectKind {
+		t.Fatalf("Types: invalid 'Name' type kind")
+	}
+	o := basic.Type.(design.Object)
+	if len(o) != 1 {
+		t.Fatalf("Types: invalid 'Name' type attribute count")
+	}
+	att, ok := o["an_attribute"]
+	if !ok {
+		t.Fatalf("Types: missing 'Name' type 'an_attribute' attribute")
+	}
+	if att.Type.Kind() != design.StringKind {
+		t.Errorf("Types: invalid 'Name' type 'an_attribute' attribute type")
+	}
+	if len(basic.Validation.Required) != 1 {
+		t.Fatalf("Types: invalid 'Name' type required attribute count")
+	}
+	if basic.Validation.Required[0] != "an_attribute" {
+		t.Errorf("Types: invalid 'Name' type first required attribute")
+	}
+
+	a := design.Root.UserType("AllTypes")
+	if a == nil {
+		t.Fatalf("Types: type 'AllTypes' is missing")
+	}
+	all, ok := a.(*design.UserTypeExpr)
+	if !ok {
+		t.Fatalf("Types: invalid 'AllTypes' type")
+	}
+	if all.Description != "An object with attributes of all possible types" {
+		t.Errorf("Types: invalid 'AllTypes' type description")
+	}
+	if all.Type.Kind() != design.ObjectKind {
+		t.Fatalf("Types: invalid 'AllTypes' type kind")
+	}
+	o = all.Type.(design.Object)
+	if len(o) != 14 {
+		t.Fatalf("Types: invalid 'AllTypes' type attribute count")
+	}
+	cases := map[string]design.Kind{
+		"string":     design.StringKind,
+		"bytes":      design.BytesKind,
+		"boolean":    design.BooleanKind,
+		"int32":      design.Int32Kind,
+		"int64":      design.Int64Kind,
+		"float32":    design.Float32Kind,
+		"float64":    design.Float64Kind,
+		"any":        design.AnyKind,
+		"object":     design.ObjectKind,
+		"user":       design.UserTypeKind,
+		"media":      design.MediaTypeKind,
+		"collection": design.MediaTypeKind,
+	}
+	for n, k := range cases {
+		att, ok := o[n]
+		if !ok {
+			t.Fatalf("Types: invalid 'AllTypes' type '%s' attribute type", n)
+		}
+		if att.Type.Kind() != k {
+			t.Errorf("Types: invalid 'AllTypes' type '%s' attribute type", n)
+		}
+	}
+	if att, ok := o["object"]; ok {
+		if att.Description != "Inner type" {
+			t.Errorf("Types: invalid 'AllTypes' type 'object' attribute description")
+		}
+		if len(att.Validation.Required) != 1 {
+			t.Fatalf("Types: invalid 'AllTypes' type 'object' attribute required validation")
+		}
+		if att.Validation.Required[0] != "inner_attribute" {
+			t.Fatalf("Types: invalid 'AllTypes' type 'object' attribute required validation attribute name")
+		}
+		o = att.Type.(design.Object)
+		if len(o) != 1 {
+			t.Errorf("Types: invalid 'AllTypes' type 'object' attribute inner attribute count")
+		}
+		if _, ok := o["inner_attribute"]; !ok {
+			t.Fatalf("Types: invalid 'AllTypes' type 'object' attribute inner attribute missing")
+		}
+		if o["inner_attribute"].Type.Kind() != design.StringKind {
+			t.Errorf("Types: invalid 'AllTypes' type 'object' attribute inner attribute type")
+		}
+	}
+
+	if AArrayType.ElemType.Type.Kind() != design.StringKind {
+		t.Errorf("Types: invalid 'AArrayType' element type")
+	}
+	if AArrayType.ElemType.Validation.Pattern != "regexp" {
+		t.Fatalf("Types: invalid 'AArrayType' element type validation")
+	}
+
+	if AMapType.ElemType.Type.Kind() != design.StringKind {
+		t.Errorf("Types: invalid 'AMapType' element type")
+	}
+	if AMapType.KeyType.Type.Kind() != design.StringKind {
+		t.Errorf("Types: invalid 'AMapType' key type")
+	}
+	if AMapType.ElemType.Validation.Pattern != "valueregexp" {
+		t.Fatalf("Types: invalid 'AMapType' element type validation")
+	}
+	if AMapType.KeyType.Validation.Pattern != "keyregexp" {
+		t.Fatalf("Types: invalid 'AMapType' key type validation")
+	}
+
+	attrs := design.Root.UserType("Attributes")
+	if attrs == nil {
+		t.Fatalf("Types: type 'Attrs' is missing")
+	}
+	if attrs.Attribute().Type.Kind() != design.ObjectKind {
+		t.Fatalf("Types: type 'Attrs' invalid kind")
+	}
+	o = attrs.Attribute().Type.(design.Object)
+	if len(o) != 4 {
+		t.Fatalf("Types: type 'Attrs' invalid attribute count")
+	}
+	for _, n := range []string{"name", "name_2", "name_3", "name_4"} {
+		if _, ok := o[n]; !ok {
+			t.Fatalf("Types: type 'Attrs' missing %s attribute", n)
+		}
+		if o[n].Type.Kind() != design.StringKind {
+			t.Errorf("Types: type 'Attrs' attribute %s invalid kind", n)
+		}
+	}
+	if o["name_2"].Description != "description" {
+		t.Errorf("Types: type 'Attrs' invalid 'name_2' attribute description")
+	}
+	if o["name_3"].Validation.MinLength == nil {
+		t.Fatalf("Types: type 'Attrs' missing 'name_3' attribute validation")
+	}
+	if *o["name_3"].Validation.MinLength != 10 {
+		t.Errorf("Types: type 'Attrs' invalid 'name_3' attribute min length validation")
+	}
+	if o["name_4"].Description != "description" {
+		t.Errorf("Types: type 'Attrs' invalid 'name_4' attribute description")
+	}
+	if o["name_4"].Validation.MinLength == nil {
+		t.Fatalf("Types: type 'Attrs' missing 'name_4' attribute min length validation")
+	}
+	if *o["name_4"].Validation.MinLength != 10 {
+		t.Errorf("Types: type 'Attrs' invalid 'name_4' attribute min length validation")
+	}
+	if o["name_4"].Validation.MaxLength == nil {
+		t.Fatalf("Types: type 'Attrs' missing 'name_4' attribute max length validation")
+	}
+	if *o["name_4"].Validation.MaxLength != 100 {
+		t.Errorf("Types: type 'Attrs' invalid 'name_4' attribute max length validation")
+	}
+	if o["name_4"].DefaultValue == nil {
+		t.Errorf("Types: type 'Attrs' missing 'name_4' attribute default value")
+	}
+	if o["name_4"].DefaultValue != "default value" {
+		t.Errorf("Types: type 'Attrs' invalid 'name_4' attribute default value")
+	}
+	if o["name_4"].UserExample == nil {
+		t.Errorf("Types: type 'Attrs' missing 'name_4' attribute example value")
+	}
+	if o["name_4"].UserExample != "example value" {
+		t.Errorf("Types: type 'Attrs' invalid 'name_4' attribute example value")
+	}
+
+	rec := design.Root.UserType("Recursive")
+	if rec == nil {
+		t.Fatalf("Types: missing 'Recursive' type")
+	}
+	if rec.Attribute().Type.Kind() != design.ObjectKind {
+		t.Fatalf("Types: invalid 'Recursive' type")
+	}
+	o = rec.Attribute().Type.(design.Object)
+	if len(o) != 2 {
+		t.Fatalf("Types: invalid 'Recursive' type attribute count")
+	}
+	if _, ok := o["recursive"]; !ok {
+		t.Fatalf("Types: missing 'Recursive' type attribute 'recursive'")
+	}
+	if o["recursive"].Type.Kind() != design.UserTypeKind {
+		t.Fatalf("Types: invalid 'Recursive' type attribute 'recursive' kind")
+	}
+	if o["recursive"].Type.(*design.UserTypeExpr).TypeName != "Recursive" {
+		t.Errorf("Types: invalid 'Recursive' type attribute 'recursive' type")
+	}
+	if _, ok := o["recursives"]; !ok {
+		t.Fatalf("Types: missing 'Recursive' type attribute 'recursives'")
+	}
+	if o["recursives"].Type.Kind() != design.ArrayKind {
+		t.Fatalf("Types: invalid 'Recursive' type attribute 'recursives' kind")
+	}
+	if o["recursives"].Type.(*design.Array).ElemType.Type.Kind() != design.UserTypeKind {
+		t.Errorf("Types: invalid 'Recursive' type attribute 'recursives' array element type")
+	}
+	if o["recursives"].Type.(*design.Array).ElemType.Type.(*design.UserTypeExpr).TypeName != "Recursive" {
+		t.Errorf("Types: invalid 'Recursive' type attribute 'recursives' array element type name")
+	}
+}

@@ -122,6 +122,24 @@ var ACollectionMedia = CollectionOf(AMediaType, func() {
 	View("tiny")
 })
 
+// AArrayType is a array type with a element validation.
+var AArrayType = ArrayOf(String, func() {
+	Pattern("regexp")
+})
+
+// AMapType is a map with element and key validations.
+var AMapType = MapOf(String, String, func() {
+	// Key is used to define validations that apply to the keys of the map.
+	Key(func() {
+		Pattern("keyregexp")
+	})
+
+	// Value is used to define validations that apply to the values of the map.
+	Value(func() {
+		Pattern("valueregexp")
+	})
+})
+
 // Attrs is a type definition which demonstrates the different ways attributes
 // may be defined.
 var Attrs = Type("Attributes", func() {
