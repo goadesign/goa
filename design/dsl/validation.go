@@ -234,6 +234,10 @@ func Required(names ...string) {
 		return
 	}
 
+	if at.Type != nil && at.Type.Kind() == design.ObjectKind {
+		o := at.Type.(design.Object)
+		checkMissingValidationAttribute(names, o)
+	}
 	if at.Type != nil && at.Type.Kind() != design.ObjectKind {
 		incompatibleAttributeType("required", at.Type.Name(), "an object")
 	} else {
@@ -241,6 +245,15 @@ func Required(names ...string) {
 			at.Validation = &design.ValidationExpr{}
 		}
 		at.Validation.AddRequired(names)
+	}
+}
+
+// checkMissingValidationAttribute reports an error if a Required field is specified that does not exist as an Attribute
+func checkMissingValidationAttribute(names []string, obj design.Object) {
+	for _, n := range names {
+		if _, ok := obj[n]; !ok {
+			eval.ReportError("invalid validation definition: specified required Attribute %s that is not present in the definition %v ", n, obj)
+		}
 	}
 }
 

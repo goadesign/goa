@@ -3,8 +3,6 @@ package dsl_test
 import (
 	"testing"
 
-	"reflect"
-
 	"goa.design/goa.v2/design"
 	. "goa.design/goa.v2/design/dsl"
 	"goa.design/goa.v2/eval"
@@ -61,7 +59,7 @@ func TestEndpoint(t *testing.T) {
 				if len(endpoint.Errors) != 2 {
 					t.Errorf("expected %d error definitions but got %d ", 2, len(endpoint.Errors))
 				}
-				assertEndpointDescription(t, "Optional description", endpoint.Description)
+				assertDescription(t, "Optional description", endpoint.Description)
 				assertEndpointError(t, endpoint.Errors[0], "basic_error", design.ErrorMedia)
 				assertEndpointError(t, endpoint.Errors[1], "basic_media_error", design.ErrorMedia)
 				expectedMeta := design.MetadataExpr{
@@ -126,7 +124,7 @@ func assertEndpointDocs(t *testing.T, doc *design.DocsExpr, url, desc string) {
 	}
 }
 
-func assertEndpointDescription(t *testing.T, expectedDesc, actualDesc string) {
+func assertDescription(t *testing.T, expectedDesc, actualDesc string) {
 	if expectedDesc != actualDesc {
 		t.Errorf("expected description '%s' to match '%s' ", actualDesc, expectedDesc)
 	}
@@ -158,9 +156,17 @@ func assertEndpointMetaData(t *testing.T, actual design.MetadataExpr, expected d
 }
 
 func assertEndpointRequestResponse(t *testing.T, assertType string, actual design.DataType, expected *design.UserTypeExpr) {
+
 	ut, ok := actual.(*design.UserTypeExpr)
-	if !ok || ut == nil {
-		t.Errorf("expected endpoint %s to be a *UserTypeExpr but got %v", assertType, reflect.TypeOf(ut))
+	if !ok {
+		//test on the DataType
+		if actual.Kind() != expected.Type.Kind() {
+			t.Errorf("expected endpoint %s Kind to match %d but got %d", assertType, expected.Kind(), actual.Kind())
+		}
+		return
+	}
+	if ut == nil {
+		t.Errorf("did not expect endpoint %s to be nil ", assertType)
 		return
 	}
 	if ut.Name() != expected.Name() {
