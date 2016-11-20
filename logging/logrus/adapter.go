@@ -19,7 +19,7 @@ import (
 	"context"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/goadesign/goa"
+	"goa.design/goa.v2"
 )
 
 // adapter is the logrus goa logger adapter.

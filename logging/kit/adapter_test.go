@@ -6,8 +6,8 @@ import (
 	"context"
 
 	"github.com/go-kit/kit/log"
-	"github.com/goadesign/goa"
-	"github.com/goadesign/goa/logging/kit"
+	"goa.design/goa.v2"
+	"goa.design/goa.v2/logging/kit"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

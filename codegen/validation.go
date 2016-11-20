@@ -6,8 +6,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/eval"
+	"goa.design/goa.v2/design"
+	"goa.design/goa.v2/eval"
 )
 
 var (

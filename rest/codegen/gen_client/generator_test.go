@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/goadesign/goa/codegen"
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/pkg"
+	"goa.design/goa.v2/codegen"
+	"goa.design/goa.v2/design"
+	"goa.design/goa.v2/pkg"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

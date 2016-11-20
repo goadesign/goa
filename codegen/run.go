@@ -1,6 +1,6 @@
 package codegen
 
-import "github.com/goadesign/goa/eval"
+import "goa.design/goa.v2/eval"
 
 type generator interface {
 	Generate() ([]string, error)

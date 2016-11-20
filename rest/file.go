@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/goadesign/goa"
+	"goa.design/goa.v2"
 )
 
 // FileHandler returns a handler that serves files under the given filename for the given route path.

@@ -3,7 +3,7 @@ package design
 import (
 	"regexp"
 
-	"github.com/goadesign/goa/design"
+	"goa.design/goa.v2/design"
 )
 
 var (

@@ -3,16 +3,15 @@ package dsl
 import (
 	"testing"
 
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/eval"
+	"goa.design/goa.v2/design"
+	"goa.design/goa.v2/eval"
 )
 
-
-func TestDescription(t *testing.T) {	
+func TestDescription(t *testing.T) {
 	const (
 		description = "test description"
 	)
-	
+
 	cases := map[string]struct {
 		Expr     eval.Expression
 		Desc     string

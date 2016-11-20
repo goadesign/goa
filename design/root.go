@@ -1,6 +1,6 @@
 package design
 
-import "github.com/goadesign/goa/eval"
+import "goa.design/goa.v2/eval"
 
 // Root is the root object built by the DSL.
 var Root = new(RootExpr)

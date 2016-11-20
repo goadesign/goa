@@ -1,8 +1,8 @@
 // This test demonstrates all the DSL functions defined in the dsl package.
 package dsl_test
 
-import . "github.com/goadesign/goa/design"
-import . "github.com/goadesign/goa/design/dsl"
+import . "goa.design/goa.v2/design"
+import . "goa.design/goa.v2/design/dsl"
 
 // The API expression defines the global API properties of tbe design. There can
 // only be one such declaration in a given design package.

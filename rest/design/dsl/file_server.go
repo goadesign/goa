@@ -1,8 +1,8 @@
 package dsl
 
 import (
-	"github.com/goadesign/goa/eval"
-	"github.com/goadesign/goa/rest/design"
+	"goa.design/goa.v2/eval"
+	"goa.design/goa.v2/rest/design"
 )
 
 // Files defines a endpoint that serves static assets. The logic for what to do when the

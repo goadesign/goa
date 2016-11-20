@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 
 	"github.com/go-openapi/loads"
-	_ "github.com/goadesign/goa-cellar/design"
-	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
-	"github.com/goadesign/goa/eval"
+	_ "goa.design/goa.v2-cellar/design"
+	. "goa.design/goa.v2/design"
+	. "goa.design/goa.v2/design/apidsl"
+	"goa.design/goa.v2/eval"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

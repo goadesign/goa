@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/goadesign/goa/codegen"
+	"goa.design/goa.v2/codegen"
 )
 
 // GenerateController

@@ -3,7 +3,7 @@ package design
 import (
 	"regexp"
 
-	"github.com/goadesign/goa/eval"
+	"goa.design/goa.v2/eval"
 )
 
 type (

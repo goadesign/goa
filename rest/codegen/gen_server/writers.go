@@ -9,8 +9,8 @@ import (
 
 	"sort"
 
-	"github.com/goadesign/goa/codegen"
-	"github.com/goadesign/goa/design"
+	"goa.design/goa.v2/codegen"
+	"goa.design/goa.v2/design"
 )
 
 // WildcardRegex is the regex used to capture path parameters.

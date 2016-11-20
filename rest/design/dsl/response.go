@@ -1,9 +1,9 @@
 package dsl
 
 import (
-	apidesign "github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/eval"
-	"github.com/goadesign/goa/rest/design"
+	apidesign "goa.design/goa.v2/design"
+	"goa.design/goa.v2/eval"
+	"goa.design/goa.v2/rest/design"
 )
 
 // Response implements the response definition DSL. Response takes the name of the response as

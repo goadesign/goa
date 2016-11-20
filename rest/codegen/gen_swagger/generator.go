@@ -9,8 +9,8 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/goadesign/goa/codegen"
-	"github.com/goadesign/goa/design"
+	"goa.design/goa.v2/codegen"
+	"goa.design/goa.v2/design"
 )
 
 // Generator is the swagger code generator.

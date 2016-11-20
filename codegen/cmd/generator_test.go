@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/goadesign/goa/codegen"
-	"github.com/goadesign/goa/codegen/cmd"
+	"goa.design/goa.v2/codegen"
+	"goa.design/goa.v2/codegen/cmd"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

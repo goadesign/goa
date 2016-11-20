@@ -3,9 +3,9 @@ package dsl
 import (
 	"strconv"
 
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/design/dsl"
-	"github.com/goadesign/goa/eval"
+	"goa.design/goa.v2/design"
+	"goa.design/goa.v2/design/dsl"
+	"goa.design/goa.v2/eval"
 )
 
 // Field defines the fields of messages.
