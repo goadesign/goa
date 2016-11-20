@@ -11,8 +11,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/goadesign/goa/codegen"
-	"github.com/goadesign/goa/pkg"
+	"goa.design/goa.v2/codegen"
+	"goa.design/goa.v2/pkg"
 )
 
 // Generator generates the code of, compiles and runs generators.

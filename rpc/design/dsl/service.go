@@ -1,8 +1,8 @@
 package dsl
 
 import (
-	"github.com/goadesign/goa/eval"
-	"github.com/goadesign/goa/rpc/design"
+	"goa.design/goa.v2/eval"
+	"goa.design/goa.v2/rpc/design"
 )
 
 // Service defines a group of related endpoints that are exposed from the same process.

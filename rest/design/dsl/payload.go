@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"unicode"
 
-	apidesign "github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/eval"
-	"github.com/goadesign/goa/rest/design"
+	apidesign "goa.design/goa.v2/design"
+	"goa.design/goa.v2/eval"
+	"goa.design/goa.v2/rest/design"
 )
 
 // Payload implements the action payload DSL. An action payload describes the HTTP request body

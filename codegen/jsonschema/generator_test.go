@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/goadesign/goa/codegen"
-	"github.com/goadesign/goa/design/apidsl"
-	"github.com/goadesign/goa/dslengine"
-	"github.com/goadesign/goa/pkg"
+	"goa.design/goa.v2/codegen"
+	"goa.design/goa.v2/design/apidsl"
+	"goa.design/goa.v2/dslengine"
+	"goa.design/goa.v2/pkg"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

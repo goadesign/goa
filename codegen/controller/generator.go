@@ -1,6 +1,6 @@
 package controller
 
-import "github.com/goadesign/goa/design"
+import "goa.design/goa.v2/design"
 
 type ControllerData struct {
 	// Name of controller

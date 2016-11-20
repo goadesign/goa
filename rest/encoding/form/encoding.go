@@ -9,7 +9,7 @@ import (
 	"io"
 
 	"github.com/ajg/form"
-	"github.com/goadesign/goa/rest"
+	"goa.design/goa.v2/rest"
 )
 
 // NewEncoder returns a form encoder that writes to w.

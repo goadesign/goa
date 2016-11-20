@@ -5,7 +5,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/goadesign/goa/design"
+	"goa.design/goa.v2/design"
 )
 
 // TransformMapKey is the name of the metadata used to specify the key for mapping fields when

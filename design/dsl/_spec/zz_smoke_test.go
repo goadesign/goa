@@ -4,8 +4,8 @@ package dsl_test
 import (
 	"testing"
 
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/eval"
+	"goa.design/goa.v2/design"
+	"goa.design/goa.v2/eval"
 )
 
 func TestAPISpec(t *testing.T) {

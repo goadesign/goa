@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"unicode"
 
-	"github.com/goadesign/goa/design"
-	"github.com/goadesign/goa/eval"
+	"goa.design/goa.v2/design"
+	"goa.design/goa.v2/eval"
 )
 
 // Request defines the data type which lists the request parameters in its

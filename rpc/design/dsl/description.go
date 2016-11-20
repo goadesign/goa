@@ -1,9 +1,9 @@
 package dsl
 
 import (
-	"github.com/goadesign/goa/design/dsl"
-	"github.com/goadesign/goa/eval"
-	"github.com/goadesign/goa/rpc/design"
+	"goa.design/goa.v2/design/dsl"
+	"goa.design/goa.v2/eval"
+	"goa.design/goa.v2/rpc/design"
 )
 
 // Description sets the expression description.

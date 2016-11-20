@@ -3,8 +3,8 @@ package goalog15_test
 import (
 	"context"
 
-	"github.com/goadesign/goa"
-	"github.com/goadesign/goa/logging/log15"
+	"goa.design/goa.v2"
+	"goa.design/goa.v2/logging/log15"
 	"github.com/inconshreveable/log15"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -3,7 +3,7 @@ package codegen
 import (
 	"sort"
 
-	"github.com/goadesign/goa/design"
+	"goa.design/goa.v2/design"
 )
 
 // GenerateExample produces a random value of the given type.

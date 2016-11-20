@@ -6,7 +6,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/goadesign/goa/design"
+	"goa.design/goa.v2/design"
 )
 
 var (

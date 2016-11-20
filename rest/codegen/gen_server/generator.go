@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/goadesign/goa/codegen"
-	"github.com/goadesign/goa/rest/design"
+	"goa.design/goa.v2/codegen"
+	"goa.design/goa.v2/rest/design"
 )
 
 // Generator is the application code generator.

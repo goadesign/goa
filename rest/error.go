@@ -29,7 +29,7 @@ middleware) also generate an internal error response.
 */
 package rest
 
-import "github.com/goadesign/goa"
+import "goa.design/goa.v2"
 
 const (
 	// StatusUnauthorized indicates the request is not authorized.

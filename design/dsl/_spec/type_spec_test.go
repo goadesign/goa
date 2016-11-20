@@ -1,8 +1,8 @@
 // This test demonstrates all the possible usage of Type.
 package dsl_test
 
-import . "github.com/goadesign/goa/design"
-import . "github.com/goadesign/goa/design/dsl"
+import . "goa.design/goa.v2/design"
+import . "goa.design/goa.v2/design/dsl"
 
 // BasicType shows the basic usage for Type.
 //

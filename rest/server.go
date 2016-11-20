@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/goadesign/goa"
+	"goa.design/goa.v2"
 )
 
 // HTTPServer implements a server which accepts HTTP requests.

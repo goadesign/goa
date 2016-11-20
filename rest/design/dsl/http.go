@@ -1,10 +1,10 @@
 package dsl
 
 import (
-	apidesign "github.com/goadesign/goa/design"
-	apidsl "github.com/goadesign/goa/design/dsl"
-	"github.com/goadesign/goa/eval"
-	"github.com/goadesign/goa/rest/design"
+	apidesign "goa.design/goa.v2/design"
+	apidsl "goa.design/goa.v2/design/dsl"
+	"goa.design/goa.v2/eval"
+	"goa.design/goa.v2/rest/design"
 )
 
 // HTTP defines HTTP transport specific properties either on a service or on a single endpoint. The

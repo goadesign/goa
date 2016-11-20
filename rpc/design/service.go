@@ -1,6 +1,6 @@
 package design
 
-import "github.com/goadesign/goa/eval"
+import "goa.design/goa.v2/eval"
 
 type (
 	// ServiceExpr describes a set of related endpoints.
