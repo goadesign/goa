@@ -11,8 +11,8 @@ import (
 
 type (
 	// ResourceExpr describes a REST resource.
-	// It defines both a media type and a set of actions that can be executed through HTTP
-	// requests.
+	// It defines both a media type and a set of actions that can be
+	// executed through HTTP requests.
 	// ResourceExpr embeds a ServiceExpr and adds HTTP specific properties.
 	ResourceExpr struct {
 		// ServiceExpr is the underlying service.
@@ -38,36 +38,38 @@ type (
 		// FileServers is the list of static asset serving endpoints
 		FileServers []*FileServerExpr
 	}
-
-	// ResourceIterator is the type of functions given to IterateResources.
-	ResourceIterator func(r *ResourceExpr) error
 )
 
-// NewResourceExpr creates a resource definition but does not
-// execute the DSL.
-func NewResourceExpr(service *design.ServiceExpr) *ResourceExpr {
+// ResourceFor creates a new or returns the existing resource definition for the
+// given service.
+func ResourceFor(service *design.ServiceExpr) *ResourceExpr {
+	if r := Root.Resource(service.Name); r != nil {
+		return r
+	}
 	mt := "text/plain"
 	if dmt, ok := service.DefaultType.(*design.MediaTypeExpr); ok {
 		mt = dmt.Identifier
 	}
-	return &ResourceExpr{
+	r := &ResourceExpr{
 		ServiceExpr: service,
 		MediaType:   mt,
 	}
+	Root.Resources = append(Root.Resources, r)
+	return r
 }
 
 // EvalName returns the generic definition name used in error messages.
 func (r *ResourceExpr) EvalName() string {
-	if r.Name != "" {
-		return fmt.Sprintf("resource %#v", r.Name)
+	if r.Name == "" {
+		return "unnamed resource"
 	}
-	return "unnamed resource"
+	return fmt.Sprintf("resource %#v", r.Name)
 }
 
-// IterateHeaders calls the given iterator passing in each response sorted in alphabetical order.
-// Iteration stops if an iterator returns an error and in this case IterateHeaders returns that
-// error.
-func (r *ResourceExpr) IterateHeaders(it HeaderIterator) error {
+// WalkHeaders calls the given iterator passing in each response sorted in
+// alphabetical order.  Iteration stops if an iterator returns an error and in
+// this case WalkHeaders returns that error.
+func (r *ResourceExpr) WalkHeaders(it HeaderWalker) error {
 	return iterateHeaders(r.Headers, r.Headers.IsRequired, it)
 }
 

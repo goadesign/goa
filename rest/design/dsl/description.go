@@ -20,8 +20,6 @@ func Description(d string) {
 	switch expr := eval.Current().(type) {
 	case *design.ResponseExpr:
 		expr.Description = d
-	case *design.MediaTypeExpr:
-		expr.Description = d
 	case *design.FileServerExpr:
 		expr.Description = d
 	default:

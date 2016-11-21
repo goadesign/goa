@@ -149,8 +149,8 @@ func (c *ContextTemplateData) MustValidate(name string) bool {
 	return c.Params.IsRequired(name) && !c.IsPathParam(name)
 }
 
-// IterateResponses iterates through the responses sorted by status code.
-func (c *ContextTemplateData) IterateResponses(it func(*design.ResponseDefinition) error) error {
+// WalkResponses iterates through the responses sorted by status code.
+func (c *ContextTemplateData) WalkResponses(it func(*design.ResponseDefinition) error) error {
 	m := make(map[int]*design.ResponseDefinition, len(c.Responses))
 	var s []int
 	for _, resp := range c.Responses {
@@ -204,7 +204,7 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 			}
 		}
 	}
-	return data.IterateResponses(func(resp *design.ResponseDefinition) error {
+	return data.WalkResponses(func(resp *design.ResponseDefinition) error {
 		respData := map[string]interface{}{
 			"Context":  data,
 			"Response": resp,
@@ -321,7 +321,7 @@ func NewMediaTypesWriter(filename string) (*MediaTypesWriter, error) {
 func (w *MediaTypesWriter) Execute(mt *design.MediaTypeDefinition) error {
 	var mLinks *design.UserTypeDefinition
 	viewMT := mt
-	err := mt.IterateViews(func(view *design.ViewDefinition) error {
+	err := mt.WalkViews(func(view *design.ViewDefinition) error {
 		p, links, err := mt.Project(view.Name)
 		if mLinks == nil {
 			mLinks = links

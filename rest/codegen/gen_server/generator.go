@@ -187,7 +187,7 @@ func (g *Generator) generateControllers() error {
 	ctlWr.WriteInitService(encoders, decoders)
 
 	var controllersData []*ControllerTemplateData
-	err = g.Root.IterateResources(func(r *design.ResourceDefinition) error {
+	err = g.Root.WalkResources(func(r *design.ResourceDefinition) error {
 		// Create file servers for all directory file servers that serve index.html.
 		fileServers := r.FileServers
 		for _, fs := range r.FileServers {
@@ -211,7 +211,7 @@ func (g *Generator) generateControllers() error {
 			PreflightPaths: r.PreflightPaths(),
 			FileServers:    fileServers,
 		}
-		ierr := r.IterateActions(func(a *design.ActionDefinition) error {
+		ierr := r.WalkActions(func(a *design.ActionDefinition) error {
 			context := fmt.Sprintf("%s%sContext", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			unmarshal := fmt.Sprintf("unmarshal%s%sPayload", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			action := map[string]interface{}{
@@ -260,7 +260,7 @@ func (g *Generator) generateHrefs() error {
 		codegen.SimpleImport("strings"),
 	}
 	resWr.WriteHeader(title, g.OutPkg, imports)
-	err = g.Root.IterateResources(func(r *design.ResourceDefinition) error {
+	err = g.Root.WalkResources(func(r *design.ResourceDefinition) error {
 		m := g.Root.MediaTypeWithIdentifier(r.MediaType)
 		var identifier string
 		if m != nil {
@@ -302,7 +302,7 @@ func (g *Generator) generateMediaTypes() error {
 		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
 	mtWr.WriteHeader(title, g.OutPkg, imports)
-	err = g.Root.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
+	err = g.Root.WalkMediaTypes(func(mt *design.MediaTypeDefinition) error {
 		if mt.IsError() {
 			return nil
 		}

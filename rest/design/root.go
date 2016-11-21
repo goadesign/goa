@@ -21,8 +21,8 @@ const (
 
 // RootExpr is the data structure built by the http design DSL.
 type RootExpr struct {
-	// BasePath is the common request path prefix to all the service HTTP endpoints.
-	BasePath string
+	// Path is the common request path prefix to all the service HTTP endpoints.
+	Path string
 	// Params defines common request parameters to all the service HTTP endpoints.
 	Params *design.AttributeExpr
 	// Schemes is the supported API URL schemes

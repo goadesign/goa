@@ -1,6 +1,7 @@
 package dsl
 
 import (
+	goadesign "goa.design/goa.v2/design"
 	"goa.design/goa.v2/eval"
 	"goa.design/goa.v2/rest/design"
 )
@@ -20,7 +21,7 @@ import (
 // returns the content of the file "/www/data/assets/x/y/z" when requests are sent to
 // "/assets/x/y/z".
 //
-// Files may appear in Resource.
+// Files may appear in Service.
 //
 // Files accepts 2 arguments and an optional DSL. The first argument is the request path which may
 // use a wildcard starting with *. The second argument is the path on disk to the files being
@@ -29,27 +30,30 @@ import (
 //
 // Example:
 //
-//    var _ = Resource("bottle", func() {
+//    var _ = Service("bottle", func() {
 //        Files("/index.html", "/www/data/index.html", func() {
 //            Description("Serve home page")
 //            Docs(func() {
-//                Description("Download docs")
-//                URL("http//cellarapi.com/docs/actions/download")
+//                Description("Additional documentation")
+//                URL("https://goa.design")
 //            })
 //        })
 //    })
 //
 func Files(path, filename string, dsls ...func()) {
-	if r, ok := eval.Current().(*design.ResourceExpr); ok {
+	if len(dsls) > 1 {
+		eval.ReportError("too many arguments given to Files")
+		return
+	}
+	if s, ok := eval.Current().(*goadesign.ServiceExpr); ok {
+		r := design.ResourceFor(s)
 		server := &design.FileServerExpr{
-			Parent:      r,
+			Resource:    r,
 			RequestPath: path,
 			FilePath:    filename,
 		}
 		if len(dsls) > 0 {
-			if !eval.Execute(dsls[0], server) {
-				return
-			}
+			eval.Execute(dsls[0], server)
 		}
 		r.FileServers = append(r.FileServers, server)
 	}

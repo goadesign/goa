@@ -259,7 +259,7 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 }
 
 func (g *Generator) generateClientResources(pkgDir, clientPkg string, funcs template.FuncMap) error {
-	err := g.API.IterateResources(func(res *design.ResourceDefinition) error {
+	err := g.API.WalkResources(func(res *design.ResourceDefinition) error {
 		return g.generateResourceClient(pkgDir, res, funcs)
 	})
 	if err != nil {
@@ -308,11 +308,11 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 	}
 	g.genfiles = append(g.genfiles, filename)
 
-	err = res.IterateFileServers(func(fs *design.FileServerDefinition) error {
+	err = res.WalkFileServers(func(fs *design.FileServerDefinition) error {
 		return g.generateFileServer(file, fs, funcs)
 	})
 
-	err = res.IterateActions(func(action *design.ActionDefinition) error {
+	err = res.WalkActions(func(action *design.ActionDefinition) error {
 		if action.Payload != nil {
 			found := false
 			typeName := action.Payload.TypeName
@@ -551,13 +551,13 @@ func (g *Generator) generateMediaTypes(pkgDir string, funcs template.FuncMap) er
 		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 	}
 	mtWr.WriteHeader(title, g.Target, imports)
-	err = g.API.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
+	err = g.API.WalkMediaTypes(func(mt *design.MediaTypeDefinition) error {
 		if (mt.Type.IsObject() || mt.Type.IsArray()) && !mt.IsError() {
 			if err := mtWr.Execute(mt); err != nil {
 				return err
 			}
 		}
-		err := mt.IterateViews(func(view *design.ViewDefinition) error {
+		err := mt.WalkViews(func(view *design.ViewDefinition) error {
 			p, _, err := mt.Project(view.Name)
 			if err != nil {
 				return err
@@ -592,7 +592,7 @@ func (g *Generator) generateUserTypes(pkgDir string) error {
 		codegen.SimpleImport("unicode/utf8"),
 	}
 	utWr.WriteHeader(title, g.Target, imports)
-	err = g.API.IterateUserTypes(func(t *design.UserTypeDefinition) error {
+	err = g.API.WalkUserTypes(func(t *design.UserTypeDefinition) error {
 		return utWr.Execute(t)
 	})
 	g.genfiles = append(g.genfiles, utFile)
