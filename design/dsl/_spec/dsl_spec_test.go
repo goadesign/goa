@@ -109,7 +109,8 @@ var _ = Service("service", func() {
 		//         Required("name")
 		//     })
 		//
-		// Request attributes can be described using a user type.
+		// Request attributes can be described using a user type. The
+		// user type must be an object.
 		//
 		//     Request(RequestType)
 		//
@@ -134,7 +135,7 @@ var _ = Service("service", func() {
 		//     })
 		//
 		// Response attributes can be described using a user or media
-		// type.
+		// type. If using a user type it must be an object.
 		//
 		//     Response(ResponseMediaType)
 		//
@@ -155,34 +156,15 @@ var _ = Service("service", func() {
 		Metadata("name", "some value", "some other value")
 	})
 
-	// Endpoint using the service default type as request attributes and
-	// reusing the default type attributes to define the response
-	// attributes.
+	// Endpoint using the service default type ad respose type and reusing
+	// the default type attributes to define the request attributes.
 	Endpoint("default-type", func() {
-		Response(func() {
+		Request(func() {
 			// Inherits type, description, default value, example
 			// and validations from ServiceDefaultType "value"
 			// attribute.
 			Attribute("value")
 		})
-	})
-
-	// Endpoint with inline request and response primitive types
-	Endpoint("inline-primitive", func() {
-		Request(String)
-		Response(String)
-	})
-
-	// Endpoint with request and response array types
-	Endpoint("inline-array", func() {
-		Request(ArrayOf(String))
-		Response(ArrayOf(String))
-	})
-
-	// Endpoint with request and response map types
-	Endpoint("inline-map", func() {
-		Request(MapOf(String, String))
-		Response(MapOf(String, String))
 	})
 
 	// Endpoint with inline request and response object types

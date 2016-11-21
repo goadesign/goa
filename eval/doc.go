@@ -65,14 +65,14 @@ the anonymous function stored in the DSLFunc field of each EndpointExpression
 instance. This is where the RunDSL function of package eval comes in.
 
 RunDSL iterates over the initial set of root expressions and calls the
-IterateSets method exposed by the Root interface. This method lets the DSL
+WalkSets method exposed by the Root interface. This method lets the DSL
 engine iterate over the sub-expressions that were initialized when the process
 loaded.
 
-In this example the ServiceExpression implementation of IterateSets simply
+In this example the ServiceExpression implementation of WalkSets simply
 passes the Endpoints field to the iterator:
 
-    func (se *ServiceExpression) IterateSets(it eval.SetIterator) {
+    func (se *ServiceExpression) WalkSets(it eval.SetWalker) {
         it(se.Endpoints)
     }
 

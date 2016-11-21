@@ -41,7 +41,7 @@ var _ = Service("account", func() {
     DefaultType(Account)
     Error(ErrUnauthorized, Unauthorized)
     HTTP(func() {
-        BasePath("/accounts")
+        Path("/accounts")
     })
     GRPC(func() {
         Name("Account")
@@ -67,7 +67,7 @@ in HTTP, Empty message in gRPC).
         Request(UpdateAccount)
         Response(Empty)
         Error(ErrNotFound)
-        Error(ErrBadRequest, ErrorResponse)
+        Error(ErrBadRequest, ErrorMedia)
 ```
 
 The request, response and error types define the request and responses
@@ -92,7 +92,7 @@ response type.
             })
             Response(NoContent)
             Error(ErrNotFound, NotFound)
-            Error(ErrBadRequest, BadRequest, ErrorResponse)
+            Error(ErrBadRequest, BadRequest, ErrorMedia)
         })
         GRPC(func() {
             Name("Update")
@@ -111,7 +111,7 @@ attribute `name`.
 Any attribute that is no explicitly mapped by the `HTTP` function is implicitly
 mapped to request body attributes. This makes is simple to define mappings where
 only one of the fields for the request type is mapped to the header and all
-other fields are mapped tp the body.
+other fields are mapped to the body.
 
 The body attributes may also be listed explicitly using the `Body` function.
 This function accepts either a DSL listing the body attributes or the name of a
@@ -126,7 +126,7 @@ Implicit request body definition:
             PUT("/{accountID}")    // "accountID" request attribute
             Response(NoContent)
             Error(ErrNotFound, NotFound)
-            Error(ErrBadRequest, BadRequest, ErrorResponse)
+            Error(ErrBadRequest, BadRequest, ErrorMedia)
         })
 ```
 
@@ -138,7 +138,7 @@ Array body definition:
             Body("names") // Assumes request type has attribute "names"
             Response(NoContent)
             Error(ErrNotFound, NotFound)
-            Error(ErrBadRequest, BadRequest, ErrorResponse)
+            Error(ErrBadRequest, BadRequest, ErrorMedia)
         })
 ```
 
@@ -152,7 +152,7 @@ By default the shape of the body of responses with HTTP status code 200 is
 described by the endpoint response type.  The `HTTP` function may optionnally
 use response type attributes to define response headers. Any attribute of the
 response type that is not explicitly used to define a response header defines a
-field of the response body implcitly. This alleviates the need to repeat all the
+field of the response body implicitly. This alleviates the need to repeat all the
 response type attributes to define the body since in most cases only a few would
 map to headers.
 
@@ -221,7 +221,7 @@ The DSL for defining user types and media types is the same as in v1 (using
 gRPC (and other RPC protocols) requires that each attribute defined on a type or
 media type be tagged with a unique integer. This tag is used to pack the data on
 the wire and must thus never change as the type evolves. It is therefore
-necessary to explicitly defines the tags, they cannot be simply inferred using
+necessary to explicitly define the tags, they cannot be simply inferred using
 the position of the attribute for example.
 
 There are two ways a tag may be defined in the DSL: using metadata or using the

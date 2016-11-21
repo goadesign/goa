@@ -43,8 +43,8 @@ func (r *RootExpr) DSLName() string {
 // DependsOn returns nil, the core DSL has no dependency.
 func (r *RootExpr) DependsOn() []eval.Root { return nil }
 
-// IterateSets returns the expressions in order of evaluation.
-func (r *RootExpr) IterateSets(it eval.SetIterator) {
+// WalkSets returns the expressions in order of evaluation.
+func (r *RootExpr) WalkSets(it eval.SetWalker) {
 	// First run the top level API DSL
 	it(eval.ExpressionSet{r.API})
 

@@ -228,7 +228,7 @@ func TestServiceSpec(t *testing.T) {
 		t.Errorf("Service: invalid fifth error type attribute type")
 	}
 
-	if len(service.Endpoints) != 6 {
+	if len(service.Endpoints) != 3 {
 		t.Fatalf("Service: invalid endpoints count")
 	}
 	if service.Endpoints[0].Name != "endpoint" {
@@ -385,139 +385,87 @@ func TestServiceSpec(t *testing.T) {
 	if service.Endpoints[1].Name != "default-type" {
 		t.Errorf("Service: invalid second endpoint name")
 	}
-	if service.Endpoints[1].Request != service.DefaultType() {
+	if service.Endpoints[1].Response != service.DefaultType() {
 		t.Errorf("Service: invalid second endpoint request type")
 	}
-	rt, ok := service.Endpoints[1].Response.(design.UserType)
+	rt, ok := service.Endpoints[1].Request.(design.UserType)
 	if !ok {
-		t.Errorf("Service: invalid second endpoint response type")
+		t.Errorf("Service: invalid second endpoint request type")
 	}
 	o, ok := rt.Attribute().Type.(design.Object)
 	if !ok {
-		t.Errorf("Service: invalid second endpoint response type (not object)")
+		t.Errorf("Service: invalid second endpoint request type (not object)")
 	}
 	if len(o) != 1 {
-		t.Errorf("Service: invalid second endpoint response type attribute count")
+		t.Errorf("Service: invalid second endpoint request type attribute count")
 	} else {
 		at, ok := o["value"]
 		if !ok {
-			t.Errorf("Service: invalid second endpoint response type attribute")
+			t.Errorf("Service: invalid second endpoint request type attribute")
 		} else {
 			if at.Type != design.String {
-				t.Errorf("Service: invalid second endpoint response type attribute type")
+				t.Errorf("Service: invalid second endpoint request type attribute type")
 			}
 		}
 	}
 
-	if service.Endpoints[2].Name != "inline-primitive" {
-		t.Errorf("Service: invalid third endpoint name")
+	if service.Endpoints[2].Name != "inline-object" {
+		t.Errorf("Service: invalid third name")
 	}
-	if service.Endpoints[2].Request != design.String {
+	ut, ok := service.Endpoints[2].Request.(*design.UserTypeExpr)
+	if !ok {
 		t.Errorf("Service: invalid third endpoint request type")
+	} else {
+		if ut.Description != "Optional description" {
+			t.Errorf("Service: invalid third endpoint request type description")
+		}
+		o, ok := ut.Type.(design.Object)
+		if !ok {
+			t.Errorf("Service: invalid third endpoint request inner type")
+		} else {
+			at, ok := o["required"]
+			if !ok {
+				t.Errorf("Service: third endpoint request inner type is missing 'required' attribute")
+			} else if at.Type != design.String {
+				t.Errorf("Service: third endpoint request type 'required' field type is invalid")
+			}
+			at, ok = o["optional"]
+			if !ok {
+				t.Errorf("Service: third endpoint request inner type is missing 'optional' attribute")
+			} else if at.Type != design.String {
+				t.Errorf("Service: third endpoint request type 'optional' field type is invalid")
+			}
+		}
+		if len(ut.Validation.Required) == 0 {
+			t.Errorf("Service: third endpoint request type is missing required field")
+		}
 	}
-	if service.Endpoints[2].Response != design.String {
+	ut, ok = service.Endpoints[2].Response.(*design.UserTypeExpr)
+	if !ok {
 		t.Errorf("Service: invalid third endpoint response type")
-	}
-
-	if service.Endpoints[3].Name != "inline-array" {
-		t.Errorf("Service: invalid fourth endpoint name")
-	}
-	ar, ok := service.Endpoints[3].Request.(*design.Array)
-	if !ok {
-		t.Errorf("Service: invalid fourth endpoint request type")
-	} else if ar.ElemType.Type != design.String {
-		t.Errorf("Service: invalid fourth endpoint request array element type")
-	}
-	ar, ok = service.Endpoints[3].Response.(*design.Array)
-	if !ok {
-		t.Errorf("Service: invalid fourth endpoint response type")
-	} else if ar.ElemType.Type != design.String {
-		t.Errorf("Service: invalid fourth endpoint response array element type")
-	}
-
-	if service.Endpoints[4].Name != "inline-map" {
-		t.Errorf("Service: invalid fifth endpoint name")
-	}
-	m, ok := service.Endpoints[4].Request.(*design.Map)
-	if !ok {
-		t.Errorf("Service: invalid fifth endpoint request type")
-	} else {
-		if m.ElemType.Type != design.String {
-			t.Errorf("Service: invalid fifth endpoint request map element type")
-		}
-		if m.KeyType.Type != design.String {
-			t.Errorf("Service: invalid fifth endpoint request map key type")
-		}
-	}
-	m, ok = service.Endpoints[4].Response.(*design.Map)
-	if !ok {
-		t.Errorf("Service: invalid fifth endpoint response type")
-	} else {
-		if m.ElemType.Type != design.String {
-			t.Errorf("Service: invalid fifth endpoint response map element type")
-		}
-		if m.KeyType.Type != design.String {
-			t.Errorf("Service: invalid fifth endpoint response map key type")
-		}
-	}
-
-	if service.Endpoints[5].Name != "inline-object" {
-		t.Errorf("Service: invalid sixth name")
-	}
-	ut, ok := service.Endpoints[5].Request.(*design.UserTypeExpr)
-	if !ok {
-		t.Errorf("Service: invalid sixth endpoint request type")
 	} else {
 		if ut.Description != "Optional description" {
-			t.Errorf("Service: invalid sixth endpoint request type description")
+			t.Errorf("Service: invalid third endpoint response type description")
 		}
 		o, ok := ut.Type.(design.Object)
 		if !ok {
-			t.Errorf("Service: invalid sixth endpoint request inner type")
+			t.Errorf("Service: invalid third endpoint response inner type")
 		} else {
 			at, ok := o["required"]
 			if !ok {
-				t.Errorf("Service: sixth endpoint request inner type is missing 'required' attribute")
+				t.Errorf("Service: third endpoint response inner type is missing 'required' attribute")
 			} else if at.Type != design.String {
-				t.Errorf("Service: sixth endpoint request type 'required' field type is invalid")
+				t.Errorf("Service: third endpoint response type 'required' field type is invalid")
 			}
 			at, ok = o["optional"]
 			if !ok {
-				t.Errorf("Service: sixth endpoint request inner type is missing 'optional' attribute")
+				t.Errorf("Service: third endpoint response inner type is missing 'optional' attribute")
 			} else if at.Type != design.String {
-				t.Errorf("Service: sixth endpoint request type 'optional' field type is invalid")
+				t.Errorf("Service: third endpoint response type 'optional' field type is invalid")
 			}
 		}
 		if len(ut.Validation.Required) == 0 {
-			t.Errorf("Service: sixth endpoint request type is missing required field")
-		}
-	}
-	ut, ok = service.Endpoints[5].Response.(*design.UserTypeExpr)
-	if !ok {
-		t.Errorf("Service: invalid sixth endpoint response type")
-	} else {
-		if ut.Description != "Optional description" {
-			t.Errorf("Service: invalid sixth endpoint response type description")
-		}
-		o, ok := ut.Type.(design.Object)
-		if !ok {
-			t.Errorf("Service: invalid sixth endpoint response inner type")
-		} else {
-			at, ok := o["required"]
-			if !ok {
-				t.Errorf("Service: sixth endpoint response inner type is missing 'required' attribute")
-			} else if at.Type != design.String {
-				t.Errorf("Service: sixth endpoint response type 'required' field type is invalid")
-			}
-			at, ok = o["optional"]
-			if !ok {
-				t.Errorf("Service: sixth endpoint response inner type is missing 'optional' attribute")
-			} else if at.Type != design.String {
-				t.Errorf("Service: sixth endpoint response type 'optional' field type is invalid")
-			}
-		}
-		if len(ut.Validation.Required) == 0 {
-			t.Errorf("Service: sixth endpoint response type is missing required field")
+			t.Errorf("Service: third endpoint response type is missing required field")
 		}
 	}
 }

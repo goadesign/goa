@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// RunDSL iterates through the root expressions and calls IterateSets on each to
+// RunDSL iterates through the root expressions and calls WalkSets on each to
 // retrieve the expression sets. It iterates over the expression sets multiple
 // times to first execute the DSL, then validate the resulting expressions and
 // lastly to finalize them. The executed DSL may register additional roots
@@ -29,7 +29,7 @@ func RunDSL() error {
 		start := executed
 		executed = len(roots)
 		for _, root := range roots[start:] {
-			root.IterateSets(runSet)
+			root.WalkSets(runSet)
 		}
 		if recursed > 100 {
 			// Let's cross that bridge once we get there
@@ -40,13 +40,13 @@ func RunDSL() error {
 		return Context.Errors
 	}
 	for _, root := range roots {
-		root.IterateSets(validateSet)
+		root.WalkSets(validateSet)
 	}
 	if Context.Errors != nil {
 		return Context.Errors
 	}
 	for _, root := range roots {
-		root.IterateSets(finalizeSet)
+		root.WalkSets(finalizeSet)
 	}
 
 	return nil

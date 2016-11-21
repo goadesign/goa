@@ -47,7 +47,7 @@ func RecursiveFinalizer(att *design.AttributeDefinition, target string, depth in
 			vs[0][ut.Name()] = true
 			att = ut.Attribute()
 		}
-		o.IterateAttributes(func(n string, catt *design.AttributeDefinition) error {
+		o.WalkAttributes(func(n string, catt *design.AttributeDefinition) error {
 			if att.HasDefaultValue(n) {
 				data := map[string]interface{}{
 					"target":     target,

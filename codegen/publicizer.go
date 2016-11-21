@@ -53,7 +53,7 @@ func RecursivePublicizer(att *design.AttributeDefinition, source, target string,
 		if ds, ok := att.Type.(design.DataStructure); ok {
 			att = ds.Definition()
 		}
-		o.IterateAttributes(func(n string, catt *design.AttributeDefinition) error {
+		o.WalkAttributes(func(n string, catt *design.AttributeDefinition) error {
 			publication := Publicizer(
 				catt,
 				fmt.Sprintf("%s.%s", source, Goify(n, true)),
