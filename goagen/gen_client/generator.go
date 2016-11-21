@@ -869,8 +869,8 @@ func {{ $funcName }}({{ pathParams . }}) string {
 	clientsTmpl = `{{ $funcName := goify (printf "%s%s" .Name (title .ResourceName)) true }}{{ $desc := .Description }}{{/*
 */}}{{ if $desc }}{{ multiComment $desc }}{{ else }}{{/*
 */}}// {{ $funcName }} makes a request to the {{ .Name }} action endpoint of the {{ .ResourceName }} resource{{ end }}
-func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params}},  {{ .Params }}{{ end }}{{ if .HasPayload }}, contentType string{{ end }}) (*http.Response, error) {
-	req, err := c.New{{ $funcName }}Request(ctx, path{{ if .ParamNames }}, {{ .ParamNames }}{{ end }}{{ if .HasPayload }}, contentType{{ end }})
+func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params}},  {{ .Params }}{{ end }}{{ if .HasPayload }}{{ if .HasMultiContent }}, contentType string{{ end }}{{ end }}) (*http.Response, error) {
+	req, err := c.New{{ $funcName }}Request(ctx, path{{ if .ParamNames }}, {{ .ParamNames }}{{ end }}{{ if .HasPayload }}{{ if .HasMultiContent }}, contentType{{ end }}{{ end }})
 	if err != nil {
 		return nil, err
 	}
@@ -990,6 +990,7 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 		return nil, err
 	}
 {{ if or .Headers .HasPayload }}	header := req.Header
+		_ = header // Avoid "header declared and not used" error
 {{ if .HasPayload }}{{ if .HasMultiContent }}	if contentType != "*/*" {
 		header.Set("Content-Type", contentType)
 	}
