@@ -2,17 +2,20 @@ package dsl
 
 import (
 	"fmt"
+	"strings"
 
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/eval"
 )
 
 // Attribute defines the field of a composite type.
-// An attribute has a name, a type and optionally a default value and validation rules.
+// An attribute has a name, a type and optionally a default value and validation
+// rules.
 //
 // The type of an attribute can be one of:
 //
-// * The primitive types Boolean, Float32, Float64, Int32, Int64, UInt32, UInt64, String or Bytes.
+// * The primitive types Boolean, Float32, Float64, Int32, Int64, UInt32,
+//   UInt64, String or Bytes.
 //
 // * A user type defined via the Type function.
 //
@@ -20,13 +23,16 @@ import (
 //
 // * An map defined using the MapOf function.
 //
-// * The special type Any to indicate that the attribute may take any of the types listed above.
+// * The special type Any to indicate that the attribute may take any of the
+//   types listed above.
 //
-// The type may also be defined inline using Attribute to define the type fields recursively.
+// The type may also be defined inline using Attribute to define the type fields
+// recursively.
 //
 // Attribute may appear in Type, Attribute or Attributes.
 //
-// Attribute accepts two to four arguments, the valid usages of the function are:
+// Attribute accepts two to four arguments, the valid usages of the function
+// are:
 //
 //    Attribute(name, dsl)  // Defines type inline
 //                          // Description and/or validations also in DSL
@@ -39,18 +45,23 @@ import (
 //
 //    Attribute(name, type, description, dsl) // Validations in DSL
 //
-// Where name is a string indicating the name of the attribute, type specifies the attribute type
-// (see above for the possible values), description a string providing a human description of the
-// attribute and dsl the defining DSL if any.
+// Where name is a string indicating the name of the attribute, type specifies
+// the attribute type (see above for the possible values), description a string
+// providing a human description of the attribute and dsl the defining DSL if
+// any.
 //
-// When defining the type inline using Attribute recursively the function takes the first form (name
-// and DSL defining the type). The description can be provided using the Description function in
-// this case.
+// The name of the attribute may use the format "struct name:attribute name"
+// where "struct name" is the name of the actual underlying data structure field
+// and "attribute name" the name of the design attribute.
+//
+// When defining the type inline using Attribute recursively the function takes
+// the first form (name and DSL defining the type). The description can be
+// provided using the Description function in this case.
 //
 // Examples:
 //
 //    Attribute("name", String)           // Defines a attribute of type String
-//                                        // with no description and no validation
+//                                        // with no description nor validation
 //    Attribute("driver", Person)         // Use type defined with Type function
 //
 //    Attribute("driver", "Person")       // May also use the type name
@@ -60,8 +71,8 @@ import (
 //    })
 //
 //    Attribute("driver", Person, func() {
-//        Required("name")                // Add required field to list of required
-//    })                                  // fields already defined in Person
+//        Required("name")                // Add required field to list of
+//    })                                  // fields already required in Person
 //
 //    Attribute("name", String, func() {
 //        Default("bob")                  // Sets a default value
@@ -70,7 +81,8 @@ import (
 //    Attribute("name", String, "name of driver") // Sets a description
 //
 //    Attribute("age", Int32, "description", func() {
-//        Minimum(2)                       // Sets both a description and validations
+//        Minimum(2)                       // Sets both a description and
+//                                         // validations
 //    })
 //
 //    // The definition below defines a composite attribute inline.
@@ -92,11 +104,14 @@ import (
 //            Required("name")
 //        })
 //
-//        Required("name", "age")            // List attributes that are required
+//        Required("name", "age")            // List required attributes
 //    })
 //
 func Attribute(name string, args ...interface{}) {
-	var parent *design.AttributeExpr
+	var (
+		parent             *design.AttributeExpr
+		fieldName, attName string
+	)
 
 	switch def := eval.Current().(type) {
 	case *design.AttributeExpr:
@@ -108,6 +123,17 @@ func Attribute(name string, args ...interface{}) {
 		return
 	}
 
+	elems := strings.Split(name, ":")
+	if len(elems) > 2 {
+		eval.ReportError("invalid attribute name %s, attribute names must be of the name 'field name:attribute name'")
+		return
+	}
+	fieldName = elems[0]
+	if len(elems) > 1 {
+		attName = elems[1]
+	} else {
+		attName = fieldName
+	}
 	if parent != nil {
 		if parent.Type == nil {
 			parent.Type = make(design.Object)
@@ -119,7 +145,7 @@ func Attribute(name string, args ...interface{}) {
 
 		var baseAttr *design.AttributeExpr
 		if parent.Reference != nil {
-			if att, ok := design.AsObject(parent.Reference)[name]; ok {
+			if att, ok := design.AsObject(parent.Reference)[attName]; ok {
 				baseAttr = design.DupAtt(att)
 			}
 		}
@@ -146,15 +172,22 @@ func Attribute(name string, args ...interface{}) {
 			// DSL did not contain an "Attribute" declaration
 			baseAttr.Type = design.String
 		}
-		design.AsObject(parent.Type)[name] = baseAttr
+		if fieldName != attName {
+			if baseAttr.Metadata == nil {
+				baseAttr.Metadata = make(design.MetadataExpr)
+			}
+			baseAttr.Metadata["struct:field:name"] = []string{fieldName}
+		}
+		design.AsObject(parent.Type)[attName] = baseAttr
 	}
 }
 
-// Field is syntactic sugar to define an attribute with the "rpc:tag" metadata set with the value of
-// the first argument.
+// Field is syntactic sugar to define an attribute with the "rpc:tag" metadata
+// set with the value of the first argument.
 //
 // Field may appear wherever Attribute can.
-// Field takes the same arguments as Attribute with the addition of the tag value as first argument.
+// Field takes the same arguments as Attribute with the addition of the tag
+// value as first argument.
 //
 // Example:
 //
