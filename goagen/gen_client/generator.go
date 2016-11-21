@@ -478,6 +478,7 @@ func (g *Generator) generateActionClient(action *design.ActionDefinition, file *
 		Description     string
 		Routes          []*design.RouteDefinition
 		HasPayload      bool
+		HasMultiContent bool
 		Params          string
 		ParamNames      string
 		CanonicalScheme string
@@ -490,6 +491,7 @@ func (g *Generator) generateActionClient(action *design.ActionDefinition, file *
 		Description:     action.Description,
 		Routes:          action.Routes,
 		HasPayload:      action.Payload != nil,
+		HasMultiContent: len(design.Design.Consumes) > 1,
 		Params:          strings.Join(params, ", "),
 		ParamNames:      strings.Join(names, ", "),
 		CanonicalScheme: action.CanonicalScheme(),
@@ -945,12 +947,12 @@ func (c * Client) {{ .Name }}(ctx context.Context, {{ if .DirName }}filename, {{
 
 	requestsTmpl = `{{ $funcName := goify (printf "New%s%sRequest" (title .Name) (title .ResourceName)) true }}{{/*
 */}}// {{ $funcName }} create the request corresponding to the {{ .Name }} action endpoint of the {{ .ResourceName }} resource.
-func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }}, {{ .Params }}{{ end }}{{ if .HasPayload }}, contentType string{{ end }}) (*http.Request, error) {
+func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }}, {{ .Params }}{{ end }}{{ if .HasPayload }}{{ if .HasMultiContent }}, contentType string{{ end }}{{ end }}) (*http.Request, error) {
 {{ if .HasPayload }}	var body bytes.Buffer
-	if contentType == "" {
+{{ if .HasMultiContent }}	if contentType == "" {
 		contentType = "*/*" // Use default encoder
 	}
-	err := c.Encoder.Encode(payload, &body, contentType)
+{{ end }}	err := c.Encoder.Encode(payload, &body, {{ if .HasMultiContent }}contentType{{ else }}"*/*"{{ end }})
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode body: %s", err)
 	}
@@ -988,10 +990,11 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 		return nil, err
 	}
 {{ if or .Headers .HasPayload }}	header := req.Header
-{{ if .HasPayload }}	if contentType != "*/*" {
+{{ if .HasPayload }}{{ if .HasMultiContent }}	if contentType != "*/*" {
 		header.Set("Content-Type", contentType)
 	}
-{{ end }}{{ range .Headers }}{{ if .CheckNil }}	if {{ .VarName }} != nil { {{ end }}{{ if .MustToString }}{{ $tmp := tempvar }}	{{ toString .ValueName $tmp .Attribute }}
+{{ end }}{{ end }}{{ range .Headers }}{{ if .CheckNil }}	if {{ .VarName }} != nil {
+{{ end }}{{ if .MustToString }}{{ $tmp := tempvar }}	{{ toString .ValueName $tmp .Attribute }}
 	header.Set("{{ .Name }}", {{ $tmp }}){{ else }}
 	header.Set("{{ .Name }}", {{ .ValueName }})
 {{ end }}{{ if .CheckNil }}	}
