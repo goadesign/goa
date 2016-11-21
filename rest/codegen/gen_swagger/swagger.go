@@ -409,7 +409,7 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 		SecurityDefinitions: securityDefsFromDefinition(api.SecuritySchemes),
 	}
 
-	err = api.IterateResponses(func(r *design.ResponseDefinition) error {
+	err = api.WalkResponses(func(r *design.ResponseDefinition) error {
 		res, err := responseSpecFromDefinition(s, api, r)
 		if err != nil {
 			return err
@@ -423,17 +423,17 @@ func New(api *design.APIDefinition) (*Swagger, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = api.IterateResources(func(res *design.ResourceDefinition) error {
+	err = api.WalkResources(func(res *design.ResourceDefinition) error {
 		for k, v := range extensionsFromDefinition(res.Metadata) {
 			s.Paths[k] = v
 		}
-		err := res.IterateFileServers(func(fs *design.FileServerDefinition) error {
+		err := res.WalkFileServers(func(fs *design.FileServerDefinition) error {
 			return buildPathFromFileServer(s, api, fs)
 		})
 		if err != nil {
 			return err
 		}
-		return res.IterateActions(func(a *design.ActionDefinition) error {
+		return res.WalkActions(func(a *design.ActionDefinition) error {
 			for _, route := range a.Routes {
 				if err := buildPathFromDefinition(s, api, route, basePath); err != nil {
 					return err
@@ -638,7 +638,7 @@ func paramsFromDefinition(params *design.AttributeDefinition, path string) ([]*P
 	res := make([]*Parameter, len(obj))
 	i := 0
 	wildcards := design.ExtractWildcards(path)
-	obj.IterateAttributes(func(n string, at *design.AttributeDefinition) error {
+	obj.WalkAttributes(func(n string, at *design.AttributeDefinition) error {
 		in := "query"
 		required := params.IsRequired(n)
 		for _, w := range wildcards {
@@ -658,7 +658,7 @@ func paramsFromDefinition(params *design.AttributeDefinition, path string) ([]*P
 
 func paramsFromHeaders(action *design.ActionDefinition) []*Parameter {
 	params := []*Parameter{}
-	action.IterateHeaders(func(name string, required bool, header *design.AttributeDefinition) error {
+	action.WalkHeaders(func(name string, required bool, header *design.AttributeDefinition) error {
 		p := paramFor(header, name, "header", required)
 		params = append(params, p)
 		return nil
@@ -780,7 +780,7 @@ func headersFromDefinition(headers *design.AttributeDefinition) (map[string]*Hea
 		return nil, fmt.Errorf("invalid headers definition, not an object")
 	}
 	res := make(map[string]*Header)
-	obj.IterateAttributes(func(n string, at *design.AttributeDefinition) error {
+	obj.WalkAttributes(func(n string, at *design.AttributeDefinition) error {
 		header := &Header{
 			Default:     at.DefaultValue,
 			Description: at.Description,

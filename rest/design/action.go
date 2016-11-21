@@ -51,11 +51,11 @@ type (
 		Parent *ActionExpr
 	}
 
-	// ActionIterator is the type of functions given to IterateActions.
-	ActionIterator func(a *ActionExpr) error
+	// ActionWalker is the type of functions given to WalkActions.
+	ActionWalker func(a *ActionExpr) error
 
-	// HeaderIterator is the type of functions given to IterateHeaders.
-	HeaderIterator func(name string, isRequired bool, h *design.AttributeExpr) error
+	// HeaderWalker is the type of functions given to WalkHeaders.
+	HeaderWalker func(name string, isRequired bool, h *design.AttributeExpr) error
 )
 
 // ExtractRouteWildcards returns the names of the wildcards that appear in path.
@@ -344,11 +344,11 @@ func userTypes(dt design.DataType) map[string]design.UserType {
 	}
 }
 
-// IterateHeaders iterates over the resource-level and action-level headers,
+// WalkHeaders iterates over the resource-level and action-level headers,
 // calling the given iterator passing in each response sorted in alphabetical order.
-// Iteration stops if an iterator returns an error and in this case IterateHeaders returns that
+// Iteration stops if an iterator returns an error and in this case WalkHeaders returns that
 // error.
-func (a *ActionExpr) IterateHeaders(it HeaderIterator) error {
+func (a *ActionExpr) WalkHeaders(it HeaderWalker) error {
 	mergedHeaders := a.Parent.Headers.Merge(a.Headers)
 
 	isRequired := func(name string) bool {
@@ -359,7 +359,7 @@ func (a *ActionExpr) IterateHeaders(it HeaderIterator) error {
 	return iterateHeaders(mergedHeaders, isRequired, it)
 }
 
-func iterateHeaders(headers *design.AttributeExpr, isRequired func(name string) bool, it HeaderIterator) error {
+func iterateHeaders(headers *design.AttributeExpr, isRequired func(name string) bool, it HeaderWalker) error {
 	if headers == nil {
 		return nil
 	}

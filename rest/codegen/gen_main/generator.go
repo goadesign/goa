@@ -91,7 +91,7 @@ func (g *Generator) Generate() (_ []string, err error) {
 		codegen.SimpleImport(imp),
 		codegen.SimpleImport("golang.org/x/net/websocket"),
 	}
-	err = g.API.IterateResources(func(r *design.ResourceDefinition) error {
+	err = g.API.WalkResources(func(r *design.ResourceDefinition) error {
 		filename := filepath.Join(g.OutDir, codegen.SnakeCase(r.Name)+".go")
 		if g.Force {
 			if err2 := os.Remove(filename); err2 != nil {
@@ -108,7 +108,7 @@ func (g *Generator) Generate() (_ []string, err error) {
 			if err2 = file.ExecuteTemplate("controller", ctrlT, funcs, r); err2 != nil {
 				return err
 			}
-			err2 = r.IterateActions(func(a *design.ActionDefinition) error {
+			err2 = r.WalkActions(func(a *design.ActionDefinition) error {
 				if a.WebSocket() {
 					return file.ExecuteTemplate("actionWS", actionWST, funcs, a)
 				}

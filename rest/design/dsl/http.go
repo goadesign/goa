@@ -1,16 +1,17 @@
 package dsl
 
 import (
-	apidesign "goa.design/goa.v2/design"
-	apidsl "goa.design/goa.v2/design/dsl"
+	goadesign "goa.design/goa.v2/design"
+	goadsl "goa.design/goa.v2/design/dsl"
 	"goa.design/goa.v2/eval"
 	"goa.design/goa.v2/rest/design"
 )
 
-// HTTP defines HTTP transport specific properties either on a service or on a single endpoint. The
-// function maps the request and response types to HTTP properties such as parameters (via path
-// wildcards or query strings), request and response headers and bodies and response status code.
-// HTTP also defines HTTP specific properties such as the endpoint URLs and HTTP methods.
+// HTTP defines HTTP transport specific properties either on a service or on a
+// single endpoint. The function maps the request and response types to HTTP
+// properties such as parameters (via path wildcards or query strings), request
+// and response headers and bodies and response status code.  HTTP also defines
+// HTTP specific properties such as the endpoint URLs and HTTP methods.
 //
 // HTTP may appear in a Service or an Endpoint expression.
 //
@@ -18,51 +19,55 @@ import (
 //
 // Example:
 //
-//    var _ = Service("Manager", func() {
-//        DefaultType(Account)
+//    var _ = Service("calculator", func() {
+//        DefaultType(ResultMediaType)
 //        Error(ErrAuthFailure)
 //
 //        HTTP(func() {
-//            BasePath("/accounts")               // Prefix to all service HTTP request paths
-//            Error(ErrAuthFailure, Unauthorized) // Use HTTP status code 401 for ErrAuthFailure
-//                                                // error responses.
-//                                                // ErrUnauthorized error responses
-//            Scheme("http")                      // "http", "https", "ws" or "wss"
+//            Path("/calc")      // Prefix to all request paths
+//            Error(ErrAuthFailure, http.StatusUnauthorized) // Define
+//                               // ErrAuthFailure HTTP response status code.
+//            Scheme("http")     // HTTP scheme
+//            Parent("account")  // Parent resource, used to prefix request
+//                               // paths.
+//            CanonicalEndpoint("add") // Endpoint whose path is used to prefix
+//                                     // the paths of child resources.
 //        })
 //
-//        Endpoint("update", func() {
-//            Description("Change account name")
-//            Request(UpdateAccount)
-//            Response(Empty)
-//            Error(ErrNotFound)
-//            Error(ErrBadRequest, ErrorResponse)
+//        Endpoint("add", func() {
+//            Description("Add two operands")
+//            Request(Operands)
+//            Error(ErrBadRequest, ErrorMedia)
 //
 //            HTTP(func() {
-//                PUT("/{accountID}")    // "accountID" attribute of UpdateAccount
-//                Query("req:requestID") // Use "requestID" attribute to define "req" query string
-//                Scheme("https")        // Override default service scheme
-//                Body(func() {
-//                    Attribute("name")  // "name" attribute of UpdateAccount
-//                    Required("name")
+//                GET("/add/{left}/{right}") // Define HTTP route. The "left"
+//                                         // and "right" parameter properties
+//                                         // are inherited from the
+//                                         // corresponding Operands attributes.
+//                Params(func() {            // Define endpoint path and query
+//                                           // string parameters.
+//                    Param("req:requestID") // Use "requestID" attribute to
+//                                           // define "req" query string
 //                })
-//                Header("X-RequestID:requestID") // Use "requestID" attribute of UpdateAccount to
-//                                                // define shape of "X-RequestID" header
-//                Response(NoContent)             // Use HTTP status code 204 on success
-//                Error(ErrNotFound, NotFound)    // Use HTTP status code 404 for ErrNotFound
-//                Error(ErrBadRequest, BadRequest, ErrorMedia) // Use status code 400 for
-//                                                // ErrBadRequest, also use ErrorMedia media type
-//                                                // to describe response body.
+//                Scheme("https")        // Override default service scheme
+//                Header("X-RequestID:requestID") // Use "requestID" attribute
+//                                                // of Operands to define shape
+//                                                // of X-RequestID header
+//                Response(NoContent)             // Use status 204 on success
+//                Error(ErrBadRequest, BadRequest) // Use status code 400 for
+//                                                 // ErrBadRequest responses
 //            })
 //
 //        })
 //    })
 func HTTP(dsl func()) {
 	switch actual := eval.Current().(type) {
-	case *apidesign.ServiceExpr:
-		res := NewResourceExpr(actual, dsl)
-		design.Root.Resources = append(design.Root.Resources, res)
-	case *apidesign.EndpointExpr:
-		act := NewActionExpr(actual, dsl)
+	case *goadesign.ServiceExpr:
+		res := ResourceFor(actual)
+		eval.Execute(dsl, res)
+	case *goadesign.EndpointExpr:
+		act := ActionFor(actual)
+		eval.Execute(dsl, act)
 		res = design.ResourceFor(actual.Service)
 		res.Actions = append(res.Actions, act)
 	default:
@@ -72,7 +77,7 @@ func HTTP(dsl func()) {
 
 // Docs provides external documentation pointers for actions.
 func Docs(dsl func()) {
-	docs := new(apidesign.DocsExpr)
+	docs := new(goadesign.DocsExpr)
 	if !eval.Execute(dsl, docs) {
 		return
 	}
@@ -81,14 +86,19 @@ func Docs(dsl func()) {
 	case *design.FileServerExpr:
 		expr.Docs = docs
 	default:
-		apidsl.Docs(dsl)
+		goadsl.Docs(dsl)
 	}
 }
 
-// GET defines a route using the GET HTTP method. The route may use wildcards to define path
-// parameters. Wildcards start with '{' or with '{*' and end with '}'. A wildcard that starts with
-// '{' matches a section of the path (the value in between two slashes). A wildcard that starts with
-// '{*' matches the rest of the path. Such wildcards must terminate the path.
+// GET defines a route using the GET HTTP method. The route may use wildcards to
+// define path parameters. Wildcards start with '{' or with '{*' and end with
+// '}'.
+//
+// A wildcard that starts with '{' matches a section of the path (the value in
+// between two slashes).
+//
+// A wildcard that starts with '{*' matches the rest of the path. Such wildcards
+// must terminate the path.
 //
 // GET may appear in an endpoint HTTP function.
 // GET accepts one argument which is the request path.
@@ -149,11 +159,12 @@ func PATCH(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "PATCH", Path: path}
 }
 
-// Headers define relevant action HTTP headers. The DSL syntax is identical to the one of Attribute.
-// Here is an example defining a couple of headers with validations:
+// Headers define relevant action HTTP headers. The DSL syntax is identical to
+// the one of Attributes.
 //
-// Headers can be used inside Action to define the action request headers, Response to define the
-// response headers or Resource to define common request headers to all the resource actions.
+// Headers can be used inside a service HTTP DSL to define common request
+// headers to all the service endpoints, a endpoint DSL to define endpoint
+// request specific headers or Response to define response headers.
 //
 // Example:
 //
@@ -165,61 +176,54 @@ func PATCH(path string) *design.RouteExpr {
 //        Required("Authorization")
 //    })
 //
-func Headers(params ...interface{}) {
-	if len(params) == 0 {
-		eval.ReportError("missing parameter")
-		return
-	}
-	dsl, ok := params[0].(func())
-	if ok {
-		switch def := eval.Current().(type) {
-		case *design.ActionExpr:
-			headers := newAttribute(def.Parent.MediaType)
-			if eval.Execute(dsl, headers) {
-				def.Headers = def.Headers.Merge(headers)
-			}
-
-		case *design.ResourceExpr:
-			headers := newAttribute(def.MediaType)
-			if eval.Execute(dsl, headers) {
-				def.Headers = def.Headers.Merge(headers)
-			}
-
-		case *design.ResponseExpr:
-			var h *apidesign.AttributeExpr
-			switch actual := def.Parent.(type) {
-			case *design.ResourceExpr:
-				h = newAttribute(actual.MediaType)
-			case *design.ActionExpr:
-				h = newAttribute(actual.Parent.MediaType)
-			case nil: // API ResponseTemplate
-				h = &apidesign.AttributeExpr{}
-			default:
-				eval.ReportError("invalid use of Response or ResponseTemplate")
-			}
-			if eval.Execute(dsl, h) {
-				def.Headers = def.Headers.Merge(h)
-			}
-
-		default:
-			eval.IncompatibleDSL()
+func Headers(dsl func()) {
+	switch def := eval.Current().(type) {
+	case *design.ActionExpr:
+		headers := newAttribute(def.Parent.MediaType)
+		if eval.Execute(dsl, headers) {
+			def.Headers = def.Headers.Merge(headers)
 		}
-	} else {
+
+	case *design.ResourceExpr:
+		headers := newAttribute(def.MediaType)
+		if eval.Execute(dsl, headers) {
+			def.Headers = def.Headers.Merge(headers)
+		}
+
+	case *design.ResponseExpr:
+		var h *goadesign.AttributeExpr
+		switch actual := def.Parent.(type) {
+		case *design.ResourceExpr:
+			h = newAttribute(actual.MediaType)
+		case *design.ActionExpr:
+			h = newAttribute(actual.Parent.MediaType)
+		case nil: // API ResponseTemplate
+			h = &goadesign.AttributeExpr{}
+		default:
+			eval.ReportError("invalid use of Response or ResponseTemplate")
+		}
+		if eval.Execute(dsl, h) {
+			def.Headers = def.Headers.Merge(h)
+		}
+
+	default:
 		eval.IncompatibleDSL()
 	}
 }
 
-// Params describe the action parameters, either path parameters identified via wildcards or query
-// string parameters if there is no corresponding path parameter. Each parameter is described
-// with the Param function which appears in the Params DSL.
+// Params describe the endpoint parameters, either path parameters identified
+// via wildcards or query string parameters if there is no corresponding path
+// parameter. Each parameter is described with the Param function which appears
+// in the Params DSL.
 //
-// Params may appear inside Action to define the action parameters, Resource to define common
-// parameters to all the resource actions or API to define common parameters to all the API actions.
+// Params may appear inside the endpoint HTTP DSL to define the action
+// parameters, serivce HTTP DSL to define common parameters to all the service
+// endpoints or API HTTP DSL to define common parameters to all the API actions.
 //
 // Example:
 //
 //    var _ = API("cellar", func() { // Define API "cellar"
-//        BasePath("/api/:version")  // Base path uses parameter defined by :version
+//        Path("/api/{version}")     // Base path uses parameter defined by :version
 //        Params(func() {            // Define parameters
 //            Param("version", String, func() { // Define version parameter
 //                Enum("v1", "v2")              // Syntax is identical to Attribute's
@@ -253,18 +257,18 @@ func Headers(params ...interface{}) {
 //     })
 //
 func Params(dsl func()) {
-	var params *apidesign.AttributeExpr
+	var params *goadesign.AttributeExpr
 	switch def := eval.Current().(type) {
 	case *design.ActionExpr:
 		params = newAttribute(def.Parent.MediaType)
 	case *design.ResourceExpr:
 		params = newAttribute(def.MediaType)
-	case *apidesign.APIExpr:
-		params = new(apidesign.AttributeExpr)
+	case *goadesign.APIExpr:
+		params = new(goadesign.AttributeExpr)
 	default:
 		eval.IncompatibleDSL()
 	}
-	params.Type = make(apidesign.Object)
+	params.Type = make(goadesign.Object)
 	if !eval.Execute(dsl, params) {
 		return
 	}
@@ -273,7 +277,7 @@ func Params(dsl func()) {
 		def.Params = def.Params.Merge(params) // Useful for traits
 	case *design.ResourceExpr:
 		def.Params = def.Params.Merge(params) // Useful for traits
-	case *apidesign.APIExpr:
+	case *goadesign.APIExpr:
 		design.Root.Params = design.Root.Params.Merge(params) // Useful for traits
 	}
 }

@@ -24,8 +24,8 @@ type (
 		Metadata design.MetadataExpr
 	}
 
-	// FileServerIterator is the type of functions given to IterateFileServers.
-	FileServerIterator func(*FileServerExpr) error
+	// FileServerWalker is the type of functions given to WalkFileServers.
+	FileServerWalker func(*FileServerExpr) error
 )
 
 // EvalName returns the generic definition name used in error messages.
