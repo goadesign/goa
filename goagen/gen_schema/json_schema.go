@@ -239,7 +239,7 @@ func MediaTypeRef(api *design.APIDefinition, mt *design.MediaTypeDefinition, vie
 	if _, ok := Definitions[design.CanonicalIdentifier(mt.Identifier)]; !ok {
 		GenerateMediaTypeDefinition(api, mt, view)
 	}
-	ref := fmt.Sprintf("#/definitions/%s", mt.TypeName)
+	ref := fmt.Sprintf("#/definitions/%s", design.CanonicalIdentifier(mt.Identifier))
 	if view != "default" {
 		ref += codegen.Goify(view, true)
 	}

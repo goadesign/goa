@@ -4,7 +4,6 @@ import (
 	"github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/apidsl"
 	"github.com/goadesign/goa/dslengine"
-	"github.com/goadesign/goa/goagen/gen_schema"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -42,7 +41,7 @@ var _ = Describe("TypeSchema", func() {
 
 		It("returns a proper JSON schema type", func() {
 			Ω(s).ShouldNot(BeNil())
-			Ω(s.Ref).Should(Equal("#/definitions/FooBar"))
+			Ω(s.Ref).Should(Equal("#/definitions/application/foo.bar"))
 		})
 	})
 
@@ -74,7 +73,7 @@ var _ = Describe("TypeSchema", func() {
 
 		It("returns a proper JSON schema type", func() {
 			Ω(s).ShouldNot(BeNil())
-			Ω(s.Ref).Should(Equal("#/definitions/Menu"))
+			Ω(s.Ref).Should(Equal("#/definitions/application/vnd.menu"))
 		})
 
 	})
