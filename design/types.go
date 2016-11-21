@@ -868,6 +868,9 @@ func (m *MediaTypeDefinition) projectSingle(view, canonical string) (p *MediaTyp
 						return nil, nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", view, n, err)
 					}
 					at.Type = pr
+					// Force example to be generated again
+					// since set of attributes has changed
+					at.Example = nil
 				}
 				projectedObj[n] = at
 			}
