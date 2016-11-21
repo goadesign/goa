@@ -27,20 +27,21 @@ func makeTestDir(g *Generator, apiName string) (outDir string, err error) {
 
 // TestMethod structure
 type TestMethod struct {
-	Name           string
-	Comment        string
-	ResourceName   string
-	ActionName     string
-	ControllerName string
-	ContextVarName string
-	ContextType    string
-	RouteVerb      string
-	FullPath       string
-	Status         int
-	ReturnType     *ObjectType
-	Params         []*ObjectType
-	QueryParams    []*ObjectType
-	Payload        *ObjectType
+	Name              string
+	Comment           string
+	ResourceName      string
+	ActionName        string
+	ControllerName    string
+	ContextVarName    string
+	ContextType       string
+	RouteVerb         string
+	FullPath          string
+	Status            int
+	ReturnType        *ObjectType
+	ReturnsErrorMedia bool
+	Params            []*ObjectType
+	QueryParams       []*ObjectType
+	Payload           *ObjectType
 }
 
 // ObjectType structure
@@ -197,20 +198,21 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 	}
 
 	return &TestMethod{
-		Name:           fmt.Sprintf("%s%s%s%s%s", actionName, ctrlName, respQualifier, routeQualifier, viewQualifier),
-		ActionName:     actionName,
-		ResourceName:   ctrlName,
-		Comment:        comment,
-		Params:         pathParams(action, route),
-		QueryParams:    queryParams(action),
-		Payload:        payload,
-		ReturnType:     returnType,
-		ControllerName: fmt.Sprintf("%s.%sController", g.Target, ctrlName),
-		ContextVarName: fmt.Sprintf("%sCtx", varName),
-		ContextType:    fmt.Sprintf("%s.New%s%sContext", g.Target, actionName, ctrlName),
-		RouteVerb:      route.Verb,
-		Status:         response.Status,
-		FullPath:       goPathFormat(route.FullPath()),
+		Name:              fmt.Sprintf("%s%s%s%s%s", actionName, ctrlName, respQualifier, routeQualifier, viewQualifier),
+		ActionName:        actionName,
+		ResourceName:      ctrlName,
+		Comment:           comment,
+		Params:            pathParams(action, route),
+		QueryParams:       queryParams(action),
+		Payload:           payload,
+		ReturnType:        returnType,
+		ReturnsErrorMedia: mediaType == design.ErrorMedia,
+		ControllerName:    fmt.Sprintf("%s.%sController", g.Target, ctrlName),
+		ContextVarName:    fmt.Sprintf("%sCtx", varName),
+		ContextType:       fmt.Sprintf("%s.New%s%sContext", g.Target, actionName, ctrlName),
+		RouteVerb:         route.Verb,
+		Status:            response.Status,
+		FullPath:          goPathFormat(route.FullPath()),
 	}
 }
 
@@ -308,10 +310,8 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 		if !ok {
 			panic(err) // bug
 		}
-		if e.ResponseStatus() != {{ $test.Status }} {
-			t.Errorf("unexpected payload validation error: %+v", e)
-		}
-		{{ if $test.ReturnType }}return nil, {{ if eq $test.Status 400 }}e{{ else }}nil{{ end }}{{ else }}return nil{{ end }}
+{{ if not $test.ReturnsErrorMedia }}		t.Errorf("unexpected payload validation error: %+v", e)
+{{ end }}{{ if $test.ReturnType }}		return nil, {{ if $test.ReturnsErrorMedia }}e{{ else }}nil{{ end }}{{ else }}return nil{{ end }}
 	}
 {{ end }}{{ end }}
 	// Setup request context
