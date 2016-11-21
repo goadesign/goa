@@ -71,7 +71,7 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDef
 		if validation != "" {
 			checks = append(checks, validation)
 		}
-		o.IterateAttributes(func(n string, catt *design.AttributeDefinition) error {
+		o.WalkAttributes(func(n string, catt *design.AttributeDefinition) error {
 			var validation string
 			if ds, ok := catt.Type.(design.DataStructure); ok {
 				// We need to check empirically whether there are validations to be

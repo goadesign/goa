@@ -126,7 +126,7 @@ func (s *JSONSchema) JSON() ([]byte, error) {
 
 // APISchema produces the API JSON hyper schema.
 func APISchema(api *design.APIDefinition) *JSONSchema {
-	api.IterateResources(func(r *design.ResourceDefinition) error {
+	api.WalkResources(func(r *design.ResourceDefinition) error {
 		GenerateResourceDefinition(api, r)
 		return nil
 	})
@@ -176,7 +176,7 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 			buildMediaTypeSchema(api, mt, v.Name, s)
 		}
 	}
-	r.IterateActions(func(a *design.ActionDefinition) error {
+	r.WalkActions(func(a *design.ActionDefinition) error {
 		var requestSchema *JSONSchema
 		if a.Payload != nil {
 			requestSchema = TypeSchema(api, a.Payload)

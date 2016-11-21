@@ -7,8 +7,8 @@ import (
 )
 
 type (
-	// AttributeExpr defines a object field with optional description, default value and
-	// validations.
+	// AttributeExpr defines a object field with optional description,
+	// default value and validations.
 	AttributeExpr struct {
 		// DSLFunc contains the DSL used to initialize the expression.
 		eval.DSLFunc
@@ -30,8 +30,9 @@ type (
 		UserExample interface{}
 	}
 
-	// CompositeExpr defines a generic composite expression that contains an attribute.
-	// This makes it possible for plugins to use attributes in their own data structures.
+	// CompositeExpr defines a generic composite expression that contains an
+	// attribute.  This makes it possible for plugins to use attributes in
+	// their own data structures.
 	CompositeExpr interface {
 		// Attribute returns the composite expression embedded attribute.
 		Attribute() *AttributeExpr
@@ -45,27 +46,33 @@ type (
 		// Format represents a format validation as described at
 		// http://json-schema.org/latest/json-schema-validation.html#anchor104.
 		Format ValidationFormat
-		// PatternValidationExpr represents a pattern validation as described at
+		// PatternValidationExpr represents a pattern validation as
+		// described at
 		// http://json-schema.org/latest/json-schema-validation.html#anchor33
 		Pattern string
-		// Minimum represents an minimum value validation as described at
+		// Minimum represents an minimum value validation as described
+		// at
 		// http://json-schema.org/latest/json-schema-validation.html#anchor21.
 		Minimum *float64
 		// Maximum represents a maximum value validation as described at
 		// http://json-schema.org/latest/json-schema-validation.html#anchor17.
 		Maximum *float64
-		// MinLength represents an minimum length validation as described at
+		// MinLength represents an minimum length validation as
+		// described at
 		// http://json-schema.org/latest/json-schema-validation.html#anchor29.
 		MinLength *int
-		// MaxLength represents an maximum length validation as described at
+		// MaxLength represents an maximum length validation as
+		// described at
 		// http://json-schema.org/latest/json-schema-validation.html#anchor26.
 		MaxLength *int
-		// Required list the required fields of object attributes as described at
+		// Required list the required fields of object attributes as
+		// described at
 		// http://json-schema.org/latest/json-schema-validation.html#anchor61.
 		Required []string
 	}
 
-	// ValidationFormat is the type used to enumerates the possible string formats.
+	// ValidationFormat is the type used to enumerates the possible string
+	// formats.
 	ValidationFormat string
 )
 
@@ -109,10 +116,10 @@ func (a *AttributeExpr) EvalName() string {
 // validated keeps track of validated attributes to handle cyclical definitions.
 var validated = make(map[*AttributeExpr]bool)
 
-// Validate tests whether the attribute required fields exist.
-// Since attributes are unaware of their context, additional context information can be provided
-// to be used in error messages.
-// The parent definition context is automatically added to error messages.
+// Validate tests whether the attribute required fields exist.  Since attributes
+// are unaware of their context, additional context information can be provided
+// to be used in error messages.  The parent definition context is automatically
+// added to error messages.
 func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.ValidationErrors {
 	if validated[a] {
 		return nil
@@ -126,8 +133,9 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 	if ctx != "" {
 		ctx += " - "
 	}
-	// If both Default and Enum are given, make sure the Default value is one of Enum values.
-	// TODO: We only do the default value and enum check just for primitive types.
+	// If both Default and Enum are given, make sure the Default value is
+	// one of Enum values.  TODO: We only do the default value and enum
+	// check just for primitive types.
 	if _, ok := a.Type.(Primitive); ok {
 		if a.DefaultValue != nil && a.Validation != nil && a.Validation.Values != nil {
 			var found bool
@@ -138,7 +146,13 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 				}
 			}
 			if !found {
-				verr.Add(parent, "%sdefault value %#v is not one of the accepted values: %#v", ctx, a.DefaultValue, a.Validation.Values)
+				verr.Add(
+					parent,
+					"%sdefault value %#v is not one of the accepted values: %#v",
+					ctx,
+					a.DefaultValue,
+					a.Validation.Values,
+				)
 			}
 		}
 	}
@@ -169,8 +183,9 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 	return verr
 }
 
-// Merge merges the argument attributes into the target and returns the target overriding existing
-// attributes with identical names.
+// Merge merges other's attributes into a and returns a overriding its
+// attributes with attributes with attributes with identical names from other.
+//
 // This only applies to attributes of type Object and Merge panics if the
 // argument or the target is not of type Object.
 func (a *AttributeExpr) Merge(other *AttributeExpr) *AttributeExpr {
@@ -191,8 +206,9 @@ func (a *AttributeExpr) Merge(other *AttributeExpr) *AttributeExpr {
 	return a
 }
 
-// Inherit merges the properties of existing target type attributes with the argument's.
-// The algorithm is recursive so that child attributes are also merged.
+// Inherit merges the properties of existing target type attributes with the
+// argument's.  The algorithm is recursive so that child attributes are also
+// merged.
 func (a *AttributeExpr) Inherit(parent *AttributeExpr) {
 	if !a.shouldInherit(parent) {
 		return

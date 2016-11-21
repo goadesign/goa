@@ -419,13 +419,13 @@ func (m MapVal) ToMap() map[interface{}]interface{} {
 	return mp
 }
 
-// AttributeIterator is the type of the function given to IterateAttributes.
-type AttributeIterator func(string, *AttributeExpr) error
+// AttributeWalker is the type of the function given to WalkAttributes.
+type AttributeWalker func(string, *AttributeExpr) error
 
-// IterateAttributes calls the given iterator passing in each field sorted in alphabetical order.
-// Iteration stops if an iterator returns an error and in this case IterateObject returns that
+// WalkAttributes calls the given iterator passing in each field sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case WalkObject returns that
 // error.
-func (o Object) IterateAttributes(it AttributeIterator) error {
+func (o Object) WalkAttributes(it AttributeWalker) error {
 	names := make([]string, len(o))
 	i := 0
 	for n := range o {

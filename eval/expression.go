@@ -10,7 +10,7 @@ type (
 
 	// A Root expression represents an entry point to the executed DSL: upon
 	// execution the DSL engine iterates over all root expressions and calls
-	// their IterateSets methods to iterate over the sub-expressions.
+	// their WalkSets methods to iterate over the sub-expressions.
 	Root interface {
 		// DSLName is displayed by the runner upon executing the DSL.
 		// Registered DSL roots must have unique DSL names.
@@ -19,12 +19,12 @@ type (
 		// depends on.  The engine uses this function to order the
 		// execution of the DSL roots.
 		DependsOn() []Root
-		// IterateSets implements the visitor pattern: is is called by
+		// WalkSets implements the visitor pattern: is is called by
 		// the engine so the DSL can control the order of execution.
-		// IterateSets calls back the engine via the given iterator as
+		// WalkSets calls back the engine via the given iterator as
 		// many times as needed providing the expression sets on each
 		// callback.
-		IterateSets(SetIterator)
+		WalkSets(SetWalker)
 	}
 
 	// A Source expression embeds DSL to be executed after the process is
@@ -62,7 +62,7 @@ type (
 
 	// ExpressionSet is a sequence of expressions processed in order. Each
 	// DSL implementation provides an arbitrary number of expression sets to
-	// the engine via iterators (see the Root interface IterateSets method).
+	// the engine via iterators (see the Root interface WalkSets method).
 	//
 	// The items in the set may implement the Source, Validator and/or
 	// Finalizer interfaces to enable the corresponding behaviors during DSL
@@ -72,9 +72,9 @@ type (
 	// Finalizer).
 	ExpressionSet []Expression
 
-	// SetIterator is the function signature used to iterate over expression
-	// sets with IterateSets.
-	SetIterator func(s ExpressionSet) error
+	// SetWalker is the function signature used to iterate over expression
+	// sets with WalkSets.
+	SetWalker func(s ExpressionSet) error
 )
 
 // Top is the expression returned by Current when the execution stack is empty.

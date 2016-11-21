@@ -57,11 +57,33 @@ func (s *ServiceExpr) Error(name string) *ErrorExpr {
 	return nil
 }
 
-// Finalize makes sure all endpoints that must use the service default type do.
-func (s *ServiceExpr) Finalize() {
+// Validate makes sure all endpoints have a request type defined.
+func (s *ServiceExpr) Validate() error {
+	verr := new(eval.ValidationErrors)
 	for _, ep := range s.Endpoints {
 		if ep.Request == nil {
-			ep.Request = s.DefaultType()
+			verr.Add(ep, "request type is not defined")
 		}
+		if s.DefaultType() == nil && ep.Response == nil {
+			verr.Add(ep, "response type is not defined and service does not define a default type")
+		}
+	}
+
+	return verr
+}
+
+// Finalize sets the endpoint response types with the service default type if
+// the response type isn't set. It also merges attributes from the service
+// default type with the request attributes of the same name.
+func (s *ServiceExpr) Finalize() {
+	def := s.DefaultType()
+	for _, ep := range s.Endpoints {
+		if ep.Response == nil {
+			ep.Response = def
+		}
+		if def == nil {
+			continue
+		}
+		ep.Request.Attribute().Inherit(def.Attribute())
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"goa.design/goa.v2/codegen"
+	"goa.design/goa.v2/design"
 )
 
 // GenerateController
@@ -53,7 +54,7 @@ func (g *Generator) generateControllers() error {
 	ctlWr.WriteInitService(encoders, decoders)
 
 	var controllersData []*ControllerTemplateData
-	err = g.Root.IterateResources(func(r *design.ResourceDefinition) error {
+	err = g.Root.WalkResources(func(r *design.ResourceDefinition) error {
 		// Create file servers for all directory file servers that serve index.html.
 		fileServers := r.FileServers
 		for _, fs := range r.FileServers {
@@ -77,7 +78,7 @@ func (g *Generator) generateControllers() error {
 			PreflightPaths: r.PreflightPaths(),
 			FileServers:    fileServers,
 		}
-		ierr := r.IterateActions(func(a *design.ActionDefinition) error {
+		ierr := r.WalkActions(func(a *design.ActionDefinition) error {
 			context := fmt.Sprintf("%s%sContext", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			unmarshal := fmt.Sprintf("unmarshal%s%sPayload", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			action := map[string]interface{}{

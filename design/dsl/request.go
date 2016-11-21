@@ -56,7 +56,7 @@ func Request(val interface{}, dsls ...func()) {
 	e.Request = endpointTypeDSL("Request", val, dsls...)
 }
 
-func endpointTypeDSL(suffix string, p interface{}, dsls ...func()) design.DataType {
+func endpointTypeDSL(suffix string, p interface{}, dsls ...func()) design.UserType {
 	var (
 		e  = eval.Current().(*design.EndpointExpr)
 		sn = camelize(e.Service.Name)
@@ -69,13 +69,14 @@ func endpointTypeDSL(suffix string, p interface{}, dsls ...func()) design.DataTy
 	switch actual := p.(type) {
 	case func():
 		dsl = actual
-		att = &design.AttributeExpr{
-			Reference: e.Service.DefaultType(),
-			Type:      design.Object{},
-		}
+		att = &design.AttributeExpr{Type: design.Object{}}
 	case *design.AttributeExpr:
 		att = design.DupAtt(actual)
 	case design.UserType:
+		if design.AsObject(actual) == nil {
+			eval.ReportError("%s type must be an object, %s is a %s", suffix, actual.Name(), actual.Attribute().Type.Name())
+			return nil
+		}
 		if len(dsls) == 0 {
 			return actual
 		}
@@ -92,15 +93,14 @@ func endpointTypeDSL(suffix string, p interface{}, dsls ...func()) design.DataTy
 			eval.ReportError("unknown request type %s", actual)
 			return nil
 		}
+		if design.AsObject(t) == nil {
+			eval.ReportError("%s type must be an object, %s is a %s", suffix, actual, t.Attribute().Type.Name())
+			return nil
+		}
 		ut = design.Dup(t).(design.UserType)
 		att = ut.Attribute()
-	case design.DataType:
-		if len(dsls) == 0 {
-			return actual
-		}
-		att = &design.AttributeExpr{Type: actual}
 	default:
-		eval.ReportError("invalid Request argument, must be a type, a media type or a DSL building a type")
+		eval.ReportError("invalid Request argument, must be a object type, a media type or a DSL building a type")
 		return nil
 	}
 	if len(dsls) == 1 {

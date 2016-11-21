@@ -18,9 +18,9 @@ type (
 		// Docs points to the endpoint external documentation if any.
 		Docs *DocsExpr
 		// Request type.
-		Request DataType
+		Request UserType
 		// Response type.
-		Response DataType
+		Response UserType
 		// Errors lists the error responses.
 		Errors []*ErrorExpr
 		// Service that owns endpoint.

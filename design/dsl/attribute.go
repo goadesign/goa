@@ -1,6 +1,8 @@
 package dsl
 
 import (
+	"fmt"
+
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/eval"
 )
@@ -146,6 +148,28 @@ func Attribute(name string, args ...interface{}) {
 		}
 		design.AsObject(parent.Type)[name] = baseAttr
 	}
+}
+
+// Field is syntactic sugar to define an attribute with the "rpc:tag" metadata set with the value of
+// the first argument.
+//
+// Field may appear wherever Attribute can.
+// Field takes the same arguments as Attribute with the addition of the tag value as first argument.
+//
+// Example:
+//
+//     Field(1, "ID", String, func() {
+//         Pattern("[0-9]+")
+//     })
+//
+func Field(tag interface{}, name string, args ...interface{}) {
+	dsl := func() { Metadata("rpc:tag", fmt.Sprintf("%v", tag)) }
+	if d, ok := args[len(args)-1].(func()); ok {
+		old := dsl
+		dsl = func() { d(); old() }
+		args = args[:len(args)-1]
+	}
+	Attribute(name, append(args, dsl)...)
 }
 
 // Default sets the default value for an attribute.

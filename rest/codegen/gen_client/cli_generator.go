@@ -139,9 +139,9 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 
 	file.Write([]byte("type (\n"))
 	var fs []*design.FileServerDefinition
-	if err := g.API.IterateResources(func(res *design.ResourceDefinition) error {
+	if err := g.API.WalkResources(func(res *design.ResourceDefinition) error {
 		fs = append(fs, res.FileServers...)
-		return res.IterateActions(func(action *design.ActionDefinition) error {
+		return res.WalkActions(func(action *design.ActionDefinition) error {
 			return commandTypesTmpl.Execute(file, action)
 		})
 	}); err != nil {
@@ -154,11 +154,11 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 
 	actions := make(map[string][]*design.ActionDefinition)
 	hasDownloads := false
-	g.API.IterateResources(func(res *design.ResourceDefinition) error {
+	g.API.WalkResources(func(res *design.ResourceDefinition) error {
 		if len(res.FileServers) > 0 {
 			hasDownloads = true
 		}
-		return res.IterateActions(func(action *design.ActionDefinition) error {
+		return res.WalkActions(func(action *design.ActionDefinition) error {
 			name := codegen.Goify(action.Name, false)
 			if as, ok := actions[name]; ok {
 				actions[name] = append(as, action)
@@ -182,9 +182,9 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	}
 
 	var fsdata []map[string]interface{}
-	g.API.IterateResources(func(res *design.ResourceDefinition) error {
+	g.API.WalkResources(func(res *design.ResourceDefinition) error {
 		if res.FileServers != nil {
-			res.IterateFileServers(func(fs *design.FileServerDefinition) error {
+			res.WalkFileServers(func(fs *design.FileServerDefinition) error {
 				wcs := design.ExtractWildcards(fs.RequestPath)
 				isDir := len(wcs) > 0
 				var reqDir, filename string
@@ -218,8 +218,8 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 			return err
 		}
 	}
-	err = g.API.IterateResources(func(res *design.ResourceDefinition) error {
-		return res.IterateActions(func(action *design.ActionDefinition) error {
+	err = g.API.WalkResources(func(res *design.ResourceDefinition) error {
+		return res.WalkActions(func(action *design.ActionDefinition) error {
 			data := map[string]interface{}{
 				"Action":   action,
 				"Resource": action.Parent,
