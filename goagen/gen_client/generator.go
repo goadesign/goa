@@ -989,8 +989,7 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 {{ end }}	if err != nil {
 		return nil, err
 	}
-{{ if or .Headers .HasPayload }}	header := req.Header
-		_ = header // Avoid "header declared and not used" error
+{{ if or .Headers (and .HasPayload .HasMultiContent) }}	header := req.Header
 {{ if .HasPayload }}{{ if .HasMultiContent }}	if contentType != "*/*" {
 		header.Set("Content-Type", contentType)
 	}
