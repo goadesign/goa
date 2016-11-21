@@ -155,8 +155,12 @@ func parseAttributeArgs(baseAttr *design.AttributeDefinition, args ...interface{
 		if name, ok2 := args[index].(string); ok2 {
 			// Lookup type by name
 			if dataType, ok = design.Design.Types[name]; !ok {
-				if dataType = design.Design.MediaTypeWithIdentifier(name); dataType == nil {
+				var mt *design.MediaTypeDefinition
+				if mt = design.Design.MediaTypeWithIdentifier(name); mt == nil {
+					dataType = design.String // not nil to avoid panics
 					dslengine.InvalidArgError(expected, args[index])
+				} else {
+					dataType = mt
 				}
 			}
 			return
