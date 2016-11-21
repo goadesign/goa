@@ -4,6 +4,7 @@ import (
 	"github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/apidsl"
 	"github.com/goadesign/goa/dslengine"
+	"github.com/goadesign/goa/goagen/gen_schema"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
