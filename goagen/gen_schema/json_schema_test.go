@@ -42,7 +42,7 @@ var _ = Describe("TypeSchema", func() {
 
 		It("returns a proper JSON schema type", func() {
 			Ω(s).ShouldNot(BeNil())
-			Ω(s.Ref).Should(Equal("#/definitions/application/foo.bar"))
+			Ω(s.Ref).Should(Equal("#/definitions/FooBar"))
 		})
 	})
 
@@ -74,7 +74,7 @@ var _ = Describe("TypeSchema", func() {
 
 		It("returns a proper JSON schema type", func() {
 			Ω(s).ShouldNot(BeNil())
-			Ω(s.Ref).Should(Equal("#/definitions/application/vnd.menu"))
+			Ω(s.Ref).Should(Equal("#/definitions/Menu"))
 		})
 
 	})
