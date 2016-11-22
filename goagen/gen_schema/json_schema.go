@@ -236,10 +236,10 @@ func GenerateResourceDefinition(api *design.APIDefinition, r *design.ResourceDef
 
 // MediaTypeRef produces the JSON reference to the media type definition with the given view.
 func MediaTypeRef(api *design.APIDefinition, mt *design.MediaTypeDefinition, view string) string {
-	if _, ok := Definitions[design.CanonicalIdentifier(mt.Identifier)]; !ok {
+	if _, ok := Definitions[mt.TypeName]; !ok {
 		GenerateMediaTypeDefinition(api, mt, view)
 	}
-	ref := fmt.Sprintf("#/definitions/%s", design.CanonicalIdentifier(mt.Identifier))
+	ref := fmt.Sprintf("#/definitions/%s", mt.TypeName)
 	if view != "default" {
 		ref += codegen.Goify(view, true)
 	}
@@ -257,13 +257,12 @@ func TypeRef(api *design.APIDefinition, ut *design.UserTypeDefinition) string {
 // GenerateMediaTypeDefinition produces the JSON schema corresponding to the given media type and
 // given view.
 func GenerateMediaTypeDefinition(api *design.APIDefinition, mt *design.MediaTypeDefinition, view string) {
-	cano := design.CanonicalIdentifier(mt.Identifier)
-	if _, ok := Definitions[cano]; ok {
+	if _, ok := Definitions[mt.TypeName]; ok {
 		return
 	}
 	s := NewJSONSchema()
 	s.Title = fmt.Sprintf("Mediatype identifier: %s", mt.Identifier)
-	Definitions[cano] = s
+	Definitions[mt.TypeName] = s
 	buildMediaTypeSchema(api, mt, view, s)
 }
 
