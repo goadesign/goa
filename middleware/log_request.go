@@ -32,6 +32,16 @@ func LogRequest(verbose bool) goa.Middleware {
 			goa.LogInfo(ctx, "started", r.Method, r.URL.String(), "from", from(req),
 				"ctrl", goa.ContextController(ctx), "action", goa.ContextAction(ctx))
 			if verbose {
+				if len(r.Header) > 0 {
+					logCtx := make([]interface{}, 2*len(r.Header))
+					i := 0
+					for k, v := range r.Header {
+						logCtx[i] = k
+						logCtx[i+1] = interface{}(strings.Join(v, ", "))
+						i = i + 2
+					}
+					goa.LogInfo(ctx, "headers", logCtx...)
+				}
 				if len(r.Params) > 0 {
 					logCtx := make([]interface{}, 2*len(r.Params))
 					i := 0
