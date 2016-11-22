@@ -74,6 +74,7 @@ func (g *Generator) generateMain(mainFile string, clientPkg, cliPkg string, func
 		HasBasicAuthSigners bool
 		HasAPIKeySigners    bool
 		HasTokenSigners     bool
+		HasMultiContent     bool
 	}{
 		API:                 g.API,
 		Version:             version,
@@ -82,6 +83,7 @@ func (g *Generator) generateMain(mainFile string, clientPkg, cliPkg string, func
 		HasBasicAuthSigners: hasBasicAuthSigners,
 		HasAPIKeySigners:    hasAPIKeySigners,
 		HasTokenSigners:     hasTokenSigners,
+		HasMultiContent:     len(g.API.Consumes) > 1,
 	}
 	if err := file.ExecuteTemplate("main", mainTmpl, funcs, data); err != nil {
 		return err
@@ -819,7 +821,7 @@ func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 	resp, err := c.{{ goify (printf "%s%s" .Action.Name (title .Resource.Name)) true }}(ctx, path{{ if .Action.Payload }}, {{/*
 	*/}}{{ if or .Action.Payload.Type.IsObject .Action.Payload.IsPrimitive }}&{{ end }}payload{{ else }}{{ end }}{{/*
 	*/}}{{ $params := joinNames true .Action.QueryParams .Action.Headers }}{{ if $params }}, {{ format $params $specialTypeResult.Temps }}{{ end }}{{/*
-	*/}}{{ if .Action.Payload }}, cmd.ContentType{{ end }})
+	*/}}{{ if .Action.Payload }}{{ if .HasMultiContent }}, cmd.ContentType{{ end }}{{ end }})
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
