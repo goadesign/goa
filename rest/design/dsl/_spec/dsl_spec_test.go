@@ -86,6 +86,7 @@ var _ = Service("service", func() {
 	DefaultType(ResponseMediaType)
 
 	// Error defines a common error response to all the service endpoints.
+	// The DSL is identical as when used in an API expression.
 	Error("service_error")
 
 	// HTTP specific properties, see the API HTTP DSL for the descriptions
@@ -156,18 +157,119 @@ var _ = Service("service", func() {
 
 		Response(func() {
 			// Inherits type, description, default value, example
-			// and validations from ServiceDefaultType "value"
+			// and validations from ResponseMediaType "name"
 			// attribute.
-			Attribute("value")
+			Attribute("name")
 		})
 
 		// Error in an Endpoint expression defines endpoint specific
 		// error responses, the syntax is identical as when used in a
-		// Service expression.
+		// API expression.
 		Error("endpoint_error")
 
 		// HTTP defines HTTP transport specific properties.
 		HTTP(func() {
+
+			// GET, POST, PUT etc. set the endpoint HTTP route. The
+			// complete path is computed by appending the API prefix
+			// path with the resource prefix path with the endpoint
+			// path.
+			PUT("/endpoint_path/{endpoint_path_param}")
+
+			// Params defines the path and query string parameters.
+			Params(func() {
+				// Param defines a single path or query string
+				// parameter. The Param arguments and DSL are
+				// identical to Attribute.
+				Param("endpoint_path_param")
+				Param("endpoint_query_param")
+			})
+
+			// Headers list headers that are relevant to the
+			// endpoint handler.
+			Headers(func() {
+				// Header defines a single header. The arguments
+				// and DSL is identical to Attribute. The names
+				// of the header must match the name of a
+				// request type attribute or must be of the form
+				// "Header name:Attribute name".
+				Header("Header-Name:name")
+			})
+
+			// Body defines the endpoint request body fields. This
+			// function is optional and if not called the body
+			// fields are defined by using all the request type
+			// attributes not used by params or headers. Body also
+			// accepts the name of a request type attribute instead
+			// of a DSL in which case the type used to represent
+			// the request body is the type of the attribute (which
+			// could be a primitive type, an array, a map or an
+			// object).
+			//
+			//    Body("request_type_attribute")
+			//
+			Body(func() {
+				Attribute("request_type_attribute")
+			})
+
+			// Response defines a single HTTP response. There may be
+			// more than one Response expression in a single
+			// Endpoint expression to describe multiple possible
+			// responses. Response accepts the HTTP status code as
+			// first argument, a type as optional second argument
+			// and an optional DSL as last argument.
+			Response(OK, func() {
+				// ContentType allows setting the value of the
+				// response Content-Type header explicitely. By
+				// default this header is set with the response
+				// media type identifier if the response type is
+				// a media type.
+				ContentType("application/json")
+
+				// Headers list the response type attributes
+				// mapped to the response headers. The mapping
+				// uses the attribute  name as header name
+				// unsill the attribute name follows the format
+				// "Header-Name:attribute name".
+				Headers(func() {
+					// Header defines a single header, the
+					// argument must match one of the
+					// response type attribute names.
+					Header("response_type_attribute")
+					Required("response_type_attribute")
+				})
+
+				// Body defines the response body fields. This
+				// function is optional and if not called the
+				// body fields are defined by using all the
+				// response type attributes not used by headers.
+				// Body also accepts the name of a response type
+				// attribute instead of a DSL in which case the
+				// type used to represent the response body is
+				// the type of the attribute (which could be a
+				// primitive type, an array, a map or an
+				// object).
+				//
+				//     Body("response_type_attribute")
+				//
+				Body(func() {
+					Attribute("response_type_attribute")
+					Required("response_type_attribute")
+				})
+			})
+
+			// If the endpoint response type is Empty then the
+			// response body must be empty, the Body function is
+			// optional. If the endpoint type is not Empty then the
+			// response Body function may use Empty to signifiy an
+			// empty response body.
+			Response(NoContent, func() {
+				Body(Empty)
+			})
+
+			// Error defines a endpoint specific error response. The
+			// DSL is identical to API level HTTP Error expressions.
+			Error("service_error")
 		})
 	})
 
@@ -175,30 +277,18 @@ var _ = Service("service", func() {
 	// from the service default type.
 	Endpoint("another_endpoint", func() {
 		Request(RequestType)
+
 		HTTP(func() {
-			GET("/another")
+
+			// No Body function means the endpoint HTTP request body
+			// is defined by the endpoint request type RequestType.
+			PUT("/another")
+
+			// No type argument or DSL means the response body shape
+			// is defined by the endpoint response type, here the
+			// service default type.
+			Response(OK)
 		})
-	})
-})
-
-// ServiceDefaultType is a simple type definition.
-var ServiceDefaultType = Type("ServiceDefaultType", func() {
-	Attribute("value", String)
-})
-
-// AErrorType is a simple type definition.
-var AErrorType = Type("AErrorType", func() {
-	Attribute("msg", String)
-})
-
-// AErrorMediaType is a simple media type definition.
-var AErrorMediaType = MediaType("application/vnd.goa.design.error", func() {
-	TypeName("AErrorMedia")
-	Attributes(func() {
-		Attribute("msg", String)
-	})
-	View("default", func() {
-		Attribute("msg")
 	})
 })
 
