@@ -41,6 +41,7 @@ type TestMethod struct {
 	ReturnsErrorMedia bool
 	Params            []*ObjectType
 	QueryParams       []*ObjectType
+	Headers           []*ObjectType
 	Payload           *ObjectType
 }
 
@@ -204,6 +205,7 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		Comment:           comment,
 		Params:            pathParams(action, route),
 		QueryParams:       queryParams(action),
+		Headers:           headers(action),
 		Payload:           payload,
 		ReturnType:        returnType,
 		ReturnsErrorMedia: mediaType == design.ErrorMedia,
@@ -221,6 +223,25 @@ func pathParams(action *design.ActionDefinition, route *design.RouteDefinition) 
 	return paramFromNames(action, route.Params())
 }
 
+// headers builds the template data structure needed to proprely render the code
+// for setting the headers for the given action.
+func headers(action *design.ActionDefinition) []*ObjectType {
+	hds := action.Headers
+	if hds == nil {
+		return nil
+	}
+	var headrs []string
+	for header := range hds.Type.ToObject() {
+		headrs = append(headrs, header)
+	}
+	sort.Strings(headrs)
+	objs := make([]*ObjectType, len(headrs))
+	for i, name := range headrs {
+		objs[i] = attToObject(name, hds, hds.Type.ToObject()[name])
+	}
+	return objs
+}
+
 // queryParams returns the query string params for the given action.
 func queryParams(action *design.ActionDefinition) []*ObjectType {
 	var qparams []string
@@ -234,21 +255,22 @@ func queryParams(action *design.ActionDefinition) []*ObjectType {
 }
 
 func paramFromNames(action *design.ActionDefinition, names []string) (params []*ObjectType) {
-	for _, paramName := range names {
-		for name, att := range action.Params.Type.ToObject() {
-			if name == paramName {
-				param := &ObjectType{}
-				param.Label = name
-				param.Name = codegen.Goify(name, false)
-				param.Type = codegen.GoTypeRef(att.Type, nil, 0, false)
-				if att.Type.IsPrimitive() && action.Params.IsPrimitivePointer(name) {
-					param.Pointer = "*"
-				}
-				params = append(params, param)
-			}
-		}
+	obj := action.Params.Type.ToObject()
+	for _, name := range names {
+		params = append(params, attToObject(name, action.Params, obj[name]))
 	}
 	return
+}
+
+func attToObject(name string, parent, att *design.AttributeDefinition) *ObjectType {
+	obj := &ObjectType{}
+	obj.Label = name
+	obj.Name = codegen.Goify(name, false)
+	obj.Type = codegen.GoTypeRef(att.Type, nil, 0, false)
+	if att.Type.IsPrimitive() && parent.IsPrimitivePointer(name) {
+		obj.Pointer = "*"
+	}
+	return obj
 }
 
 func goPathFormat(path string) string {
@@ -284,6 +306,7 @@ var testTmpl = `{{ define "convertParam" }}` + convertParamTmpl + `{{ end }}` + 
 func {{ $test.Name }}(t *testing.T, ctx context.Context, service *goa.Service, ctrl {{ $test.ControllerName}}{{/*
 */}}{{ range $param := $test.Params }}, {{ $param.Name }} {{ $param.Pointer }}{{ $param.Type }}{{ end }}{{/*
 */}}{{ range $param := $test.QueryParams }}, {{ $param.Name }} {{ $param.Pointer }}{{ $param.Type }}{{ end }}{{/*
+*/}}{{ range $header := $test.Headers }}, {{ $header.Name }} {{ $header.Pointer }}{{ $header.Type }}{{ end }}{{/*
 */}}{{ if $test.Payload }}, {{ $test.Payload.Name }} {{ $test.Payload.Pointer }}{{ $test.Payload.Type }}{{ end }}){{/*
 */}} (http.ResponseWriter{{ if $test.ReturnType }}, {{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}{{ end }}) {
 	// Setup service
@@ -329,7 +352,11 @@ func {{ $test.Name }}(t *testing.T, ctx context.Context, service *goa.Service, c
 	if err != nil {
 		panic("invalid test " + err.Error()) // bug
 	}
-	prms := url.Values{}
+{{ range $header := $test.Headers }}{{ if $header.Pointer }}	if {{ $header.Name }} != nil {{ end }}{
+{{ template "convertParam" $header }}
+		req.Header[{{ printf "%q" $header.Label }}] = sliceVal
+	}
+{{ end }} prms := url.Values{}
 {{ range $param := $test.Params }}	prms["{{ $param.Label }}"] = []string{fmt.Sprintf("%v",{{ $param.Name}})}
 {{ end }}{{ range $param := $test.QueryParams }}{{ if $param.Pointer }} if {{ $param.Name }} != nil {{ end }} {
 {{ template "convertParam" $param }}

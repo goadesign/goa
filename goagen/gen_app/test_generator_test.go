@@ -106,6 +106,13 @@ var _ = Describe("Generate", func() {
 									},
 									Validation: &dslengine.ValidationDefinition{Required: []string{"required"}},
 								},
+								Headers: &design.AttributeDefinition{
+									Type: design.Object{
+										"optionalHeader": &design.AttributeDefinition{Type: design.Integer},
+										"requiredHeader": &design.AttributeDefinition{Type: design.String},
+									},
+									Validation: &dslengine.ValidationDefinition{Required: []string{"requiredHeader"}},
+								},
 								QueryParams: &design.AttributeDefinition{
 									Type: design.Object{
 										"optional": &design.AttributeDefinition{Type: design.Integer},
@@ -204,6 +211,15 @@ var _ = Describe("Generate", func() {
 
 			Ω(content).Should(ContainSubstring(`if optional != nil`))
 			Ω(content).ShouldNot(ContainSubstring(`if required != nil`))
+		})
+
+		It("properly handles headers", func() {
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "app", "test", "foo_testing.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+
+			Ω(content).Should(ContainSubstring(`if optionalHeader != nil`))
+			Ω(content).ShouldNot(ContainSubstring(`if requiredHeader != nil`))
+			Ω(content).Should(ContainSubstring(`req.Header["requiredHeader"] = sliceVal`))
 		})
 
 		It("generates calls to new Context ", func() {
