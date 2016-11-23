@@ -279,16 +279,18 @@ func CollectionOf(v interface{}, adsl ...func()) *design.MediaTypeExpr {
 			eval.IncompatibleDSL()
 			return
 		}
-		// Cannot compute collection type name before element media type DSL has executed
-		// since the DSL may modify element type name via the TypeName function.
+		// Cannot compute collection type name before element media type
+		// DSL has executed since the DSL may modify element type name
+		// via the TypeName function.
 		mt.TypeName = m.TypeName + "Collection"
 		mt.AttributeExpr = &design.AttributeExpr{Type: ArrayOf(m)}
 		if len(adsl) > 0 {
 			eval.Execute(adsl[0], mt)
 		}
 		if mt.Views == nil {
-			// If the adsl didn't create any views (or there is no adsl at all)
-			// then inherit the views from the collection element.
+			// If the adsl didn't create any views (or there is no
+			// adsl at all) then inherit the views from the
+			// collection element.
 			mt.Views = make([]*design.ViewExpr, len(m.Views))
 			for i, v := range m.Views {
 				v := v
@@ -296,13 +298,69 @@ func CollectionOf(v interface{}, adsl ...func()) *design.MediaTypeExpr {
 			}
 		}
 	})
-	// Do not execute the adsl right away, will be done last to make sure the element adsl has run
-	// first.
+	// Do not execute the adsl right away, will be done last to make sure
+	// the element adsl has run first.
 	design.Root.GeneratedMediaTypes = append(design.Root.GeneratedMediaTypes, mt)
 	return mt
 }
 
-// buildView builds a view expression given an attribute and a corresponding media type.
+// Reference sets a type or media type reference. The value itself can be a type
+// or a media type.  The reference type attributes define the default properties
+// for attributes with the same name in the type using the reference.
+//
+// Reference may be used in Type or MediaType.
+// Reference accepts a single argument: the type or media type containing the
+// attributes that define the default properties of the attributes of the type
+// or media type that uses Reference.
+//
+// Example:
+//
+//	var Bottle = Type("bottle", func() {
+//		Attribute("name", String, func() {
+//			MinLength(3)
+//		})
+//		Attribute("vintage", Int32, func() {
+//			Minimum(1970)
+//		})
+//		Attribute("somethingelse", String)
+//	})
+//
+//	var BottleMedia = MediaType("vnd.goa.bottle", func() {
+//		Reference(Bottle)
+//		Attributes(func() {
+//			Attribute("id", UInt64, "ID is the bottle identifier")
+//
+//                      // The type and validation of "name" and "vintage" are
+//                      // inherited from the Bottle type "name" and "vintage"
+//                      // attributes.
+//			Attribute("name")
+//			Attribute("vintage")
+//		})
+//	})
+//
+func Reference(t apidesign.DataType) {
+	switch def := eval.Current().(type) {
+	case *design.MediaTypeExpr:
+		def.Reference = t
+	case *apidesign.AttributeExpr:
+		def.Reference = t
+	default:
+		eval.IncompatibleDSL()
+	}
+}
+
+// Attributes implements the media type Attributes DSL. See MediaType.
+func Attributes(dsl func()) {
+	mt, ok := eval.Current().(*design.MediaTypeExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	eval.Execute(dsl, mt)
+}
+
+// buildView builds a view expression given an attribute and a corresponding
+// media type.
 func buildView(name string, mt *design.MediaTypeExpr, at *design.AttributeExpr) (*design.ViewExpr, error) {
 	if at.Type == nil {
 		return nil, fmt.Errorf("invalid view DSL")
@@ -332,14 +390,4 @@ func buildView(name string, mt *design.MediaTypeExpr, at *design.AttributeExpr) 
 		Name:          name,
 		Parent:        mt,
 	}, nil
-}
-
-// Attributes implements the media type Attributes DSL. See MediaType.
-func Attributes(dsl func()) {
-	mt, ok := eval.Current().(*design.MediaTypeExpr)
-	if !ok {
-		eval.IncompatibleDSL()
-		return
-	}
-	eval.Execute(dsl, mt)
 }

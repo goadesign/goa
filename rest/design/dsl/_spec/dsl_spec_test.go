@@ -128,6 +128,21 @@ var _ = Service("service", func() {
 		// CanonicalEndpoint identifies the endpoint whose path is used
 		// to prefix all the child service endpoint paths.
 		CanonicalEndpoint("endpoint")
+
+		// Files defines an endpoint that serve static assets. The files
+		// being served are identified by path, either a file path for
+		// service the file or a directory path for service files in
+		// that directory. The HTTP path for requesting the files is
+		// defined by the first argument of Files. The path may end with
+		// a wildcard startign with * to capture the path suffix that
+		// gets appended to the directory path.
+		Files("/public/*filepath", "/www/data/", func() {
+			Description("Optional description")
+			Docs(func() {
+				Description("Additional documentation")
+				URL("https://goa.design")
+			})
+		})
 	})
 
 	// Endpoint describes a single endpoint. A service may define any number
@@ -216,9 +231,8 @@ var _ = Service("service", func() {
 			// more than one Response expression in a single
 			// Endpoint expression to describe multiple possible
 			// responses. Response accepts the HTTP status code as
-			// first argument, a type as optional second argument
-			// and an optional DSL as last argument.
-			Response(OK, func() {
+			// first argument and an optional DSL as last argument.
+			Response(http.StatusOK, func() {
 				// ContentType allows setting the value of the
 				// response Content-Type header explicitely. By
 				// default this header is set with the response
@@ -259,13 +273,14 @@ var _ = Service("service", func() {
 			})
 
 			// If the endpoint response type is Empty then the
-			// response body must be empty, the Body function is
-			// optional. If the endpoint type is not Empty then the
-			// response Body function may use Empty to signifiy an
-			// empty response body.
-			Response(NoContent, func() {
-				Body(Empty)
-			})
+			// response Body function must be ommitted or use Empty.
+			// If the endpoint type is not Empty then the response
+			// Body function may use Empty to signifiy an empty
+			// response body.
+			// As a convenience responses using HTTP status code 204
+			// (NoContent) that do not call Body default to an empty
+			// body.
+			Response(http.StatusNoContent)
 
 			// Error defines a endpoint specific error response. The
 			// DSL is identical to API level HTTP Error expressions.
@@ -284,10 +299,10 @@ var _ = Service("service", func() {
 			// is defined by the endpoint request type RequestType.
 			PUT("/another")
 
-			// No type argument or DSL means the response body shape
-			// is defined by the endpoint response type, here the
-			// service default type.
-			Response(OK)
+			// No DSL means the response body shape is defined by
+			// the endpoint response type, here the service default
+			// type.
+			Response(http.StatusOK)
 		})
 	})
 })
