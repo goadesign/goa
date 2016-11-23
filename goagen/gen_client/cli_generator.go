@@ -221,9 +221,10 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	err = g.API.IterateResources(func(res *design.ResourceDefinition) error {
 		return res.IterateActions(func(action *design.ActionDefinition) error {
 			data := map[string]interface{}{
-				"Action":   action,
-				"Resource": action.Parent,
-				"Package":  g.Target,
+				"Action":          action,
+				"Resource":        action.Parent,
+				"Package":         g.Target,
+				"HasMultiContent": len(g.API.Consumes) > 1,
 			}
 			var err error
 			if action.WebSocket() {
@@ -819,7 +820,7 @@ func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 	resp, err := c.{{ goify (printf "%s%s" .Action.Name (title .Resource.Name)) true }}(ctx, path{{ if .Action.Payload }}, {{/*
 	*/}}{{ if or .Action.Payload.Type.IsObject .Action.Payload.IsPrimitive }}&{{ end }}payload{{ else }}{{ end }}{{/*
 	*/}}{{ $params := joinNames true .Action.QueryParams .Action.Headers }}{{ if $params }}, {{ format $params $specialTypeResult.Temps }}{{ end }}{{/*
-	*/}}{{ if .Action.Payload }}, cmd.ContentType{{ end }})
+	*/}}{{ if and .Action.Payload .HasMultiContent }}, cmd.ContentType{{ end }})
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
