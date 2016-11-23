@@ -639,7 +639,8 @@ func join(att *design.AttributeDefinition, usePointers bool, pos ...[]string) st
 	}
 	for i, n := range keys {
 		a := obj[n]
-		elems[i] = fmt.Sprintf("%s %s", codegen.Goify(n, false), cmdFieldType(a.Type, usePointers && !a.IsRequired(n)))
+		elems[i] = fmt.Sprintf("%s %s", codegen.Goify(n, false),
+			cmdFieldType(a.Type, usePointers && !a.IsRequired(n)))
 	}
 	return strings.Join(elems, ", ")
 }
@@ -869,8 +870,8 @@ func {{ $funcName }}({{ pathParams . }}) string {
 	clientsTmpl = `{{ $funcName := goify (printf "%s%s" .Name (title .ResourceName)) true }}{{ $desc := .Description }}{{/*
 */}}{{ if $desc }}{{ multiComment $desc }}{{ else }}{{/*
 */}}// {{ $funcName }} makes a request to the {{ .Name }} action endpoint of the {{ .ResourceName }} resource{{ end }}
-func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params}},  {{ .Params }}{{ end }}{{ if .HasPayload }}{{ if .HasMultiContent }}, contentType string{{ end }}{{ end }}) (*http.Response, error) {
-	req, err := c.New{{ $funcName }}Request(ctx, path{{ if .ParamNames }}, {{ .ParamNames }}{{ end }}{{ if .HasPayload }}{{ if .HasMultiContent }}, contentType{{ end }}{{ end }})
+func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }}, {{ .Params }}{{ end }}{{ if and .HasPayload .HasMultiContent }}, contentType string{{ end }}) (*http.Response, error) {
+	req, err := c.New{{ $funcName }}Request(ctx, path{{ if .ParamNames }}, {{ .ParamNames }}{{ end }}{{ if and .HasPayload .HasMultiContent }}, contentType{{ end }})
 	if err != nil {
 		return nil, err
 	}
@@ -905,7 +906,14 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 */}}{{ else }}	values.Set("{{ .Name }}", {{ .ValueName }})
 {{ end }}{{ if .CheckNil }}	}
 {{ end }}{{ end }}	u.RawQuery = values.Encode()
-{{ end }}	return websocket.Dial(u.String(), "", u.String())
+{{ end }}	url_ := u.String()
+	cfg, err := websocket.NewConfig(url_, url_)
+	if err != nil {
+		return nil, err
+	}
+{{ range $header := .Headers }}{{ $tmp := tempvar }}	{{ toString $header.VarName $tmp $header.Attribute }}
+	cfg.Header["{{ $header.Name }}"] = []string{ {{ $tmp }} }
+{{ end }}	return websocket.DialConfig(cfg)
 }
 `
 
