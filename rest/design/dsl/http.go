@@ -53,7 +53,7 @@ import (
 //                Header("X-RequestID:requestID") // Use "requestID" attribute
 //                                                // of Operands to define shape
 //                                                // of X-RequestID header
-//                Response(NoContent)             // Use status 204 on success
+//                Response(http.StatusNoContent)   // Use status 204 on success
 //                Error(ErrBadRequest, BadRequest) // Use status code 400 for
 //                                                 // ErrBadRequest responses
 //            })
