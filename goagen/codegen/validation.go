@@ -139,15 +139,7 @@ func (v *Validator) recurse(att *design.AttributeDefinition, nonzero, required, 
 			buf.WriteString(validation)
 			first = false
 		}
-		var val string
-		if _, ok := a.ElemType.Type.(*design.UserTypeDefinition); ok {
-			val = RunTemplate(v.userValT, map[string]interface{}{
-				"depth":  depth + 1,
-				"target": "e",
-			})
-		} else {
-			val = v.Code(a.ElemType, true, false, false, "e", context+"[*]", depth+1, false)
-		}
+		val := v.Code(a.ElemType, true, false, false, "e", context+"[*]", depth+1, false)
 		if val != "" {
 			data := map[string]interface{}{
 				"elemType":   a.ElemType,
@@ -324,10 +316,15 @@ func validationsCode(validation *dslengine.ValidationDefinition, data map[string
 		}
 	}
 	if required := validation.Required; len(required) > 0 {
-		data["required"] = required
-		if val := RunTemplate(requiredValT, data); val != "" {
-			res = append(res, val)
+		var val string
+		for i, r := range required {
+			if i > 0 {
+				val += "\n"
+			}
+			data["required"] = r
+			val += RunTemplate(requiredValT, data)
 		}
+		res = append(res, val)
 	}
 	return
 }
@@ -370,56 +367,54 @@ func constant(formatName string) string {
 }
 
 const (
-	arrayValTmpl = `{{tabs .depth}}for _, e := range {{.target}} {
-{{.validation}}
-{{tabs .depth}}}`
+	arrayValTmpl = `{{ tabs .depth }}for _, e := range {{ .target }} {
+{{ .validation }}
+{{ tabs .depth }}}`
 
-	userValTmpl = `{{tabs .depth}}if err2 := {{.target}}.Validate(); err2 != nil {
-{{tabs .depth}}	err = goa.MergeErrors(err, err2)
-{{tabs .depth}}}`
+	userValTmpl = `{{ tabs .depth }}if err2 := {{ .target }}.Validate(); err2 != nil {
+{{ tabs .depth }}	err = goa.MergeErrors(err, err2)
+{{ tabs .depth }}}`
 
-	enumValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
-*/}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
-{{end}}{{tabs $depth}}if !({{oneof .targetVal .values}}) {
-{{tabs $depth}}	err = goa.MergeErrors(err, goa.InvalidEnumValueError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, {{slice .values}}))
-{{if .isPointer}}{{tabs $depth}}}
-{{end}}{{tabs .depth}}}`
+	enumValTmpl = `{{ $depth := or (and .isPointer (add .depth 1)) .depth }}{{/*
+*/}}{{ if .isPointer }}{{ tabs .depth }}if {{ .target }} != nil {
+{{ end }}{{ tabs $depth }}if !({{ oneof .targetVal .values }}) {
+{{ tabs $depth }}	err = goa.MergeErrors(err, goa.InvalidEnumValueError(` + "`" + `{{ .context }}` + "`" + `, {{ .targetVal }}, {{ slice .values }}))
+{{ if .isPointer }}{{ tabs $depth }}}
+{{ end }}{{ tabs .depth }}}`
 
-	patternValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
-*/}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
-{{end}}{{tabs $depth}}if ok := goa.ValidatePattern(` + "`{{.pattern}}`" + `, {{.targetVal}}); !ok {
-{{tabs $depth}}	err = goa.MergeErrors(err, goa.InvalidPatternError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, ` + "`{{.pattern}}`" + `))
-{{tabs $depth}}}{{if .isPointer}}
-{{tabs .depth}}}{{end}}`
+	patternValTmpl = `{{ $depth := or (and .isPointer (add .depth 1)) .depth }}{{/*
+*/}}{{ if .isPointer }}{{ tabs .depth }}if {{ .target }} != nil {
+{{ end }}{{ tabs $depth }}if ok := goa.ValidatePattern(` + "`{{ .pattern }}`" + `, {{ .targetVal }}); !ok {
+{{ tabs $depth }}	err = goa.MergeErrors(err, goa.InvalidPatternError(` + "`" + `{{ .context }}` + "`" + `, {{ .targetVal }}, ` + "`{{ .pattern }}`" + `))
+{{ tabs $depth }}}{{ if .isPointer }}
+{{ tabs .depth }}}{{ end }}`
 
-	formatValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
-*/}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
-{{end}}{{tabs $depth}}if err2 := goa.ValidateFormat({{constant .format}}, {{.targetVal}}); err2 != nil {
-{{tabs $depth}}		err = goa.MergeErrors(err, goa.InvalidFormatError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, {{constant .format}}, err2))
-{{if .isPointer}}{{tabs $depth}}}
-{{end}}{{tabs .depth}}}`
+	formatValTmpl = `{{ $depth := or (and .isPointer (add .depth 1)) .depth }}{{/*
+*/}}{{ if .isPointer }}{{ tabs .depth }}if {{ .target }} != nil {
+{{ end }}{{ tabs $depth }}if err2 := goa.ValidateFormat({{ constant .format }}, {{ .targetVal }}); err2 != nil {
+{{ tabs $depth }}		err = goa.MergeErrors(err, goa.InvalidFormatError(` + "`" + `{{ .context }}` + "`" + `, {{ .targetVal }}, {{ constant .format }}, err2))
+{{ if .isPointer }}{{ tabs $depth }}}
+{{ end }}{{ tabs .depth }}}`
 
-	minMaxValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
-*/}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
-{{end}}{{tabs .depth}}	if {{.targetVal}} {{if .isMin}}<{{else}}>{{end}} {{if .isMin}}{{.min}}{{else}}{{.max}}{{end}} {
-{{tabs $depth}}	err = goa.MergeErrors(err, goa.InvalidRangeError(` + "`" + `{{.context}}` + "`" + `, {{.targetVal}}, {{if .isMin}}{{.min}}, true{{else}}{{.max}}, false{{end}}))
-{{if .isPointer}}{{tabs $depth}}}
-{{end}}{{tabs .depth}}}`
+	minMaxValTmpl = `{{ $depth := or (and .isPointer (add .depth 1)) .depth }}{{/*
+*/}}{{ if .isPointer }}{{ tabs .depth }}if {{ .target }} != nil {
+{{ end }}{{ tabs .depth }}	if {{ .targetVal }} {{ if .isMin }}<{{ else }}>{{ end }} {{ if .isMin }}{{ .min }}{{ else }}{{ .max }}{{ end }} {
+{{ tabs $depth }}	err = goa.MergeErrors(err, goa.InvalidRangeError(` + "`" + `{{ .context }}` + "`" + `, {{ .targetVal }}, {{ if .isMin }}{{ .min }}, true{{ else }}{{ .max }}, false{{ end }}))
+{{ if .isPointer }}{{ tabs $depth }}}
+{{ end }}{{ tabs .depth }}}`
 
-	lengthValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
-*/}}{{$target := or (and (or (or .array .hash) .nonzero) .target) .targetVal}}{{/*
-*/}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
-{{end}}{{tabs .depth}}	if {{if .string}}utf8.RuneCountInString({{$target}}){{else}}len({{$target}}){{end}} {{if .isMinLength}}<{{else}}>{{end}} {{if .isMinLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
-{{tabs $depth}}	err = goa.MergeErrors(err, goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{$target}}, {{if .string}}utf8.RuneCountInString({{$target}}){{else}}len({{$target}}){{end}}, {{if .isMinLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}))
-{{if .isPointer}}{{tabs $depth}}}
-{{end}}{{tabs .depth}}}`
+	lengthValTmpl = `{{ $depth := or (and .isPointer (add .depth 1)) .depth }}{{/*
+*/}}{{ $target := or (and (or (or .array .hash) .nonzero) .target) .targetVal }}{{/*
+*/}}{{ if .isPointer }}{{ tabs .depth }}if {{ .target }} != nil {
+{{ end }}{{ tabs .depth }}	if {{ if .string }}utf8.RuneCountInString({{ $target }}){{ else }}len({{ $target }}){{ end }} {{ if .isMinLength }}<{{ else }}>{{ end }} {{ if .isMinLength }}{{ .minLength }}{{ else }}{{ .maxLength }}{{ end }} {
+{{ tabs $depth }}	err = goa.MergeErrors(err, goa.InvalidLengthError(` + "`" + `{{ .context }}` + "`" + `, {{ $target }}, {{ if .string }}utf8.RuneCountInString({{ $target }}){{ else }}len({{ $target }}){{ end }}, {{ if .isMinLength }}{{ .minLength }}, true{{ else }}{{ .maxLength }}, false{{ end }}))
+{{ if .isPointer }}{{ tabs $depth }}}
+{{ end }}{{ tabs .depth }}}`
 
-	requiredValTmpl = `{{range $r := .required}}{{$catt := index $.attribute.Type.ToObject $r}}{{/*
-*/}}{{if and (not $.private) (eq $catt.Type.Kind 4)}}{{tabs $.depth}}if {{$.target}}.{{goifyAtt $catt $r true}} == "" {
-{{tabs $.depth}}	err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`" + `{{$.context}}` + "`" + `, "{{$r}}"))
-{{tabs $.depth}}}
-{{else if or $.private (not $catt.Type.IsPrimitive)}}{{tabs $.depth}}if {{$.target}}.{{goifyAtt $catt $r true}} == nil {
-{{tabs $.depth}}	err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`" + `{{$.context}}` + "`" + `, "{{$r}}"))
-{{tabs $.depth}}}
-{{end}}{{end}}`
+	requiredValTmpl = `{{ $att := index $.attribute.Type.ToObject .required }}{{/*
+*/}}{{ if and (not $.private) (eq $att.Type.Kind 4) }}{{ tabs $.depth }}if {{ $.target }}.{{ goifyAtt $att .required true }} == "" {
+{{ tabs $.depth }}	err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`" + `{{ $.context }}` + "`" + `, "{{  .required  }}"))
+{{ tabs $.depth }}}{{ else if or $.private (not $att.Type.IsPrimitive) }}{{ tabs $.depth }}if {{ $.target }}.{{ goifyAtt $att .required true }} == nil {
+{{ tabs $.depth }}	err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`" + `{{ $.context }}` + "`" + `, "{{ .required }}"))
+{{ tabs $.depth }}}{{ end }}`
 )
