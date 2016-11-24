@@ -388,7 +388,6 @@ func NewMediaTypesWriter(filename string) (*MediaTypesWriter, error) {
 func (w *MediaTypesWriter) Execute(mt *design.MediaTypeDefinition) error {
 	var (
 		mLinks *design.UserTypeDefinition
-		viewMT = mt
 		fn     = template.FuncMap{"validationCode": w.Validator.Code}
 	)
 	err := mt.IterateViews(func(view *design.ViewDefinition) error {
@@ -399,8 +398,7 @@ func (w *MediaTypesWriter) Execute(mt *design.MediaTypeDefinition) error {
 		if err != nil {
 			return err
 		}
-		viewMT = p
-		if err := w.ExecuteTemplate("mediatype", mediaTypeT, fn, viewMT); err != nil {
+		if err := w.ExecuteTemplate("mediatype", mediaTypeT, fn, p); err != nil {
 			return err
 		}
 		return nil

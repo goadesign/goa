@@ -153,6 +153,57 @@ var _ = Describe("validation code generation", func() {
 
 			})
 
+			Context("of required user type attribute with no validation", func() {
+				var ut *design.UserTypeDefinition
+
+				BeforeEach(func() {
+					ut = &design.UserTypeDefinition{
+						TypeName: "UT",
+						AttributeDefinition: &design.AttributeDefinition{
+							Type: design.Object{
+								"bar": &design.AttributeDefinition{Type: design.String},
+							},
+						},
+					}
+					uatt := &design.AttributeDefinition{Type: design.Dup(ut)}
+					arr := &design.AttributeDefinition{
+						Type: &design.Array{
+							ElemType: &design.AttributeDefinition{Type: ut},
+						},
+					}
+
+					attType = design.Object{"foo": arr, "foo2": uatt}
+					validation = &dslengine.ValidationDefinition{
+						Required: []string{"foo"},
+					}
+				})
+
+				Context("with only direct required attributes", func() {
+					BeforeEach(func() {
+						validation = &dslengine.ValidationDefinition{
+							Required: []string{"foo"},
+						}
+					})
+
+					It("does not call Validate on the user type attribute", func() {
+						Ω(code).Should(Equal(utCode))
+					})
+				})
+
+				Context("with required attributes on inner attribute", func() {
+					BeforeEach(func() {
+						ut.AttributeDefinition.Validation = &dslengine.ValidationDefinition{
+							Required: []string{"bar"},
+						}
+						validation = nil
+					})
+
+					It("calls Validate on the user type attribute", func() {
+						Ω(code).Should(Equal(utRequiredCode))
+					})
+				})
+			})
+
 		})
 	})
 })
@@ -193,7 +244,6 @@ const (
 	embeddedRequiredValCode = `	if val.Foo == nil {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`context`" + `, "foo"))
 	}
-
 	if val.Foo != nil {
 		if val.Foo.Bar != nil {
 			if !(*val.Foo.Bar == 1 || *val.Foo.Bar == 2 || *val.Foo.Bar == 3) {
@@ -215,6 +265,16 @@ const (
 			if !(*val.Foo.__tag__ == 1 || *val.Foo.__tag__ == 2 || *val.Foo.__tag__ == 3) {
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError(` + "`" + `context.foo.bar` + "`" + `, *val.Foo.__tag__, []interface{}{1, 2, 3}))
 			}
+		}
+	}`
+
+	utCode = `	if val.Foo == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`context`" + `, "foo"))
+	}`
+
+	utRequiredCode = `	for _, e := range val.Foo {
+		if e.Bar == "" {
+			err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`context.foo[*]`" + `, "bar"))
 		}
 	}`
 )
