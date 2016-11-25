@@ -273,8 +273,8 @@ const (
 	}`
 
 	utRequiredCode = `	for _, e := range val.Foo {
-		if e.Bar == "" {
-			err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`context.foo[*]`" + `, "bar"))
+		if err2 := e.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
 	}`
 )
