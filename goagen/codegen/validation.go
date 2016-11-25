@@ -141,6 +141,14 @@ func (v *Validator) recurse(att *design.AttributeDefinition, nonzero, required, 
 		}
 		val := v.Code(a.ElemType, true, false, false, "e", context+"[*]", depth+1, false)
 		if val != "" {
+			switch a.ElemType.Type.(type) {
+			case *design.UserTypeDefinition, *design.MediaTypeDefinition:
+				// For user and media types, call the Validate method
+				val = RunTemplate(v.userValT, map[string]interface{}{
+					"depth":  depth + 1,
+					"target": "e",
+				})
+			}
 			data := map[string]interface{}{
 				"elemType":   a.ElemType,
 				"context":    context,
