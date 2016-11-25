@@ -45,6 +45,7 @@ var _ = Describe("Generate", func() {
 				"fields[foo]": &design.AttributeDefinition{Type: design.String},
 				"fields[bar]": &design.AttributeDefinition{Type: &design.Array{ElemType: &design.AttributeDefinition{Type: design.String}}},
 				"fields[baz]": &design.AttributeDefinition{Type: &design.Array{ElemType: &design.AttributeDefinition{Type: design.Integer}}},
+				"fields[bat]": &design.AttributeDefinition{Type: design.DateTime},
 			}
 			design.Design = &design.APIDefinition{
 				Name: "testapi",
@@ -75,20 +76,23 @@ var _ = Describe("Generate", func() {
 		It("generates param initialization code that uses the param name given in the design", func() {
 			Ω(genErr).Should(BeNil())
 			Ω(files).Should(HaveLen(9))
-			content, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
+			c, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
 			Ω(err).ShouldNot(HaveOccurred())
+			content := string(c)
 			Ω(content).Should(ContainSubstring("func ShowFooPath("))
 			Ω(content).Should(ContainSubstring(`values.Set("fields[foo]", *fieldsFoo)`))
 			Ω(content).Should(ContainSubstring(`	for _, p := range fieldsBar {
-		tmp2 := p
-		values.Add("fields[bar]", tmp2)
+		tmp3 := p
+		values.Add("fields[bar]", tmp3)
 	}
 `))
 			Ω(content).Should(ContainSubstring(`	for _, p := range fieldsBaz {
-		tmp3 := strconv.Itoa(p)
-		values.Add("fields[baz]", tmp3)
+		tmp5 := strconv.Itoa(p)
+		values.Add("fields[baz]", tmp5)
 	}
 `))
+			Ω(content).Should(ContainSubstring(`	tmp4 := fieldsBat.Format(time.RFC3339)
+		values.Set("fields[bat]", tmp4)`))
 		})
 
 		Context("with --notool", func() {
