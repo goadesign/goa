@@ -741,7 +741,9 @@ func toString(name, target string, att *design.AttributeDefinition) string {
 			return fmt.Sprintf("%s := strconv.FormatFloat(%s, 'f', -1, 64)", target, name)
 		case design.StringKind:
 			return fmt.Sprintf("%s := %s", target, name)
-		case design.DateTimeKind, design.UUIDKind:
+		case design.DateTimeKind:
+			return fmt.Sprintf("%s := %s.Format(time.RFC3339)", target, strings.Replace(name, "*", "", -1)) // remove pointer if present
+		case design.UUIDKind:
 			return fmt.Sprintf("%s := %s.String()", target, strings.Replace(name, "*", "", -1)) // remove pointer if present
 		case design.AnyKind:
 			return fmt.Sprintf("%s := fmt.Sprintf(\"%%v\", %s)", target, name)
