@@ -18,7 +18,7 @@ import (
 //
 func Description(d string) {
 	switch expr := eval.Current().(type) {
-	case *design.ResponseExpr:
+	case *design.HTTPResponseExpr:
 		expr.Description = d
 	case *design.FileServerExpr:
 		expr.Description = d

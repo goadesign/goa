@@ -6,39 +6,41 @@ import (
 	"goa.design/goa.v2/rest/design"
 )
 
-// Response implements the response definition DSL. Response takes the name of the response as
-// first parameter. goa defines all the standard HTTP status name as global variables so they can be
-// readily used as response names. The response body data type can be specified as second argument.
-// If a type is specified it overrides any type defined by in the response media type. Response also
-// accepts optional arguments that correspond to the arguments defined by the corresponding response
-// template (the response template with the same name) if there is one, see ResponseTemplate.
+// Response implements the response definition DSL. Response takes the name of
+// the response as first parameter. goa defines all the standard HTTP status
+// name as global variables so they can be readily used as response names. The
+// response body data type can be specified as second argument. If a type is
+// specified it overrides any type defined by in the response media type. Response
+// also accepts optional arguments that correspond to the arguments defined by
+// the corresponding response template (the response template with the same
+// name) if there is one, see ResponseTemplate.
 //
-// A response may also optionally use an anonymous function as last argument to specify the response
-// status code, media type and headers overriding what the default response or response template
-// specifies:
+// A response may also optionally use an anonymous function as last argument to
+// specify the response status code, media type and headers overriding what the
+// default response or response template specifies:
 //
-//        Response(OK, "text/plain")              // OK response template accepts one argument:
-//                                                // the media type identifier
+//        Response(OK, "text/plain")           // OK response template accepts one argument:
+//                                             // the media type identifier
 //
-//        Response(OK, BottleMedia)               // or a media type defined in the design
+//        Response(OK, BottleMedia)            // or a media type defined in the design
 //
-//        Response(OK, "application/vnd.bottle")  // optionally referred to by identifier
+//        Response(OK, "application/vnd.bot")  // optionally referred to by identifier
 //
 //        Response(OK, func() {
-//                Media("application/vnd.bottle") // Alternatively media type is set with Media
+//                Media("application/vnd.bot") // Alternatively media type is set with Media
 //        })
 //
 //        Response(OK, BottleMedia, func() {
-//                Headers(func() {                // Headers list the response HTTP headers
-//                        Header("X-Request-Id")  // Header syntax is identical to Attribute's
+//                Headers(func() {             // Headers list the response HTTP headers
+//                        Header("Request-Id") // Header syntax is identical to Attribute's
 //                })
 //        })
 //
 //        Response(OK, BottleMedia, func() {
-//                Status(201)                     // Set response status (overrides template's)
+//                Status(201)                  // Set response status (overrides template's)
 //        })
 //
-//        Response("MyResponse", func() {         // Define custom response (using no template)
+//        Response("MyResponse", func() {      // Define custom response (using no template)
 //                Description("This is my response")
 //                Media(BottleMedia)
 //                Headers(func() {
@@ -74,37 +76,29 @@ import (
 func Response(name string, paramsAndDSL ...interface{}) {
 	switch def := eval.Current().(type) {
 	case *design.ActionExpr:
-		if def.Responses == nil {
-			def.Responses = make(map[string]*design.ResponseExpr)
-		}
-		if _, ok := def.Responses[name]; ok {
+		if def.Response(name) != nil {
 			eval.ReportError("response %s is defined twice", name)
 			return
 		}
 		if resp := executeResponseDSL(name, paramsAndDSL...); resp != nil {
 			if resp.Status == 200 && resp.MediaType == "" {
-				resp.MediaType = def.Parent.MediaType
-				resp.ViewName = def.Parent.DefaultViewName
+				resp.MediaType = def.Resource.MediaType
 			}
 			resp.Parent = def
-			def.Responses[name] = resp
+			def.Responses = append(def.Responses, resp)
 		}
 
 	case *design.ResourceExpr:
-		if def.Responses == nil {
-			def.Responses = make(map[string]*design.ResponseExpr)
-		}
-		if _, ok := def.Responses[name]; ok {
+		if def.Response(name) != nil {
 			eval.ReportError("response %s is defined twice", name)
 			return
 		}
 		if resp := executeResponseDSL(name, paramsAndDSL...); resp != nil {
 			if resp.Status == 200 && resp.MediaType == "" {
 				resp.MediaType = def.MediaType
-				resp.ViewName = def.DefaultViewName
 			}
 			resp.Parent = def
-			def.Responses[name] = resp
+			def.Responses = append(def.Responses, resp)
 		}
 
 	default:
@@ -114,7 +108,7 @@ func Response(name string, paramsAndDSL ...interface{}) {
 
 // Status sets the Response status.
 func Status(status int) {
-	res, ok := eval.Current().(*design.ResponseExpr)
+	res, ok := eval.Current().(*design.HTTPResponseExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
@@ -122,7 +116,7 @@ func Status(status int) {
 	res.Status = status
 }
 
-func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.ResponseExpr {
+func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.HTTPResponseExpr {
 	var params []string
 	var dsl func()
 	var ok bool
@@ -147,25 +141,18 @@ func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.Respon
 			}
 		}
 	}
-	var resp *design.ResponseExpr
+	var resp *design.HTTPResponseExpr
 	if len(params) > 0 {
-		if tmpl, ok := design.Root.ResponseTemplates[name]; ok {
-			resp = tmpl.Template(params...)
-		} else if tmpl, ok := design.Root.DefaultResponseTemplates[name]; ok {
-			resp = tmpl.Template(params...)
-		} else {
-			eval.ReportError("no response template named %#v", name)
-			return nil
-		}
+		eval.ReportError("no response template named %#v", name)
+		return nil
+	}
+	if ar := design.Root.Response(name); ar != nil {
+		resp = ar.Dup()
+	} else if ar := design.Root.DefaultResponse(name); ar != nil {
+		resp = ar.Dup()
+		resp.Standard = true
 	} else {
-		if ar, ok := design.Root.Responses[name]; ok {
-			resp = ar.Dup()
-		} else if ar, ok := design.Root.DefaultResponses[name]; ok {
-			resp = ar.Dup()
-			resp.Standard = true
-		} else {
-			resp = &design.ResponseExpr{Name: name}
-		}
+		resp = &design.HTTPResponseExpr{Name: name}
 	}
 	if dsl != nil {
 		if !eval.Execute(dsl, resp) {
@@ -174,7 +161,7 @@ func executeResponseDSL(name string, paramsAndDSL ...interface{}) *design.Respon
 		resp.Standard = false
 	}
 	if dt != nil {
-		if mt, ok := dt.(*design.MediaTypeExpr); ok {
+		if mt, ok := dt.(*apidesign.MediaTypeExpr); ok {
 			resp.MediaType = mt.Identifier
 		}
 		resp.Type = dt

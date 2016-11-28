@@ -3,8 +3,6 @@ package rest
 import (
 	"fmt"
 	"net/http"
-
-	"context"
 )
 
 type (
@@ -17,7 +15,7 @@ type (
 //
 // - a goa middleware: goa.Middleware or func(goa.Handler) goa.Handler
 //
-// - a goa handler: goa.Handler or func(context.Context, http.ResponseWriter, *http.Request) error
+// - a goa handler: goa.Handler or func(http.ResponseWriter, *http.Request) error
 //
 // - an http middleware: func(http.Handler) http.Handler
 //
@@ -32,13 +30,13 @@ func NewMiddleware(m interface{}) (mw Middleware, err error) {
 		mw = m
 	case Handler:
 		mw = handlerToMiddleware(m)
-	case func(context.Context, http.ResponseWriter, *http.Request) error:
+	case func(http.ResponseWriter, *http.Request) error:
 		mw = handlerToMiddleware(m)
 	case func(http.Handler) http.Handler:
 		mw = func(h Handler) Handler {
-			return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) (err error) {
+			return func(rw http.ResponseWriter, req *http.Request) (err error) {
 				m(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					err = h(ctx, w, r)
+					err = h(w, r)
 				})).ServeHTTP(rw, req)
 				return
 			}
@@ -58,11 +56,11 @@ func NewMiddleware(m interface{}) (mw Middleware, err error) {
 // an error by also returning the error or calls the next handler in the chain otherwise.
 func handlerToMiddleware(m Handler) Middleware {
 	return func(h Handler) Handler {
-		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-			if err := m(ctx, rw, req); err != nil {
+		return func(rw http.ResponseWriter, req *http.Request) error {
+			if err := m(rw, req); err != nil {
 				return err
 			}
-			return h(ctx, rw, req)
+			return h(rw, req)
 		}
 	}
 }
@@ -72,9 +70,9 @@ func handlerToMiddleware(m Handler) Middleware {
 // middleware in the chain.
 func httpHandlerToMiddleware(m http.HandlerFunc) Middleware {
 	return func(h Handler) Handler {
-		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		return func(rw http.ResponseWriter, req *http.Request) error {
 			m.ServeHTTP(rw, req)
-			return h(ctx, rw, req)
+			return h(rw, req)
 		}
 	}
 }

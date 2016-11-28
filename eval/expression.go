@@ -85,5 +85,5 @@ func (f DSLFunc) DSL() func() {
 	return f
 }
 
-// Name of top expression is "top-level" to help with error messages.
+// EvalName is the name is the qualified name of the expression.
 func (t TopExpr) EvalName() string { return string(t) }

@@ -10,13 +10,13 @@ import (
 )
 
 const (
-	maxAttempts = 500  // Maximum number of retries when generating validated example.
-	maxLength   = 3    // Maximum length for array and map examples.
-	maxValue    = 1000 // Maximum value for integer and float examples.
+	maxAttempts = 500  // Max number of retries to generate valid example.
+	maxLength   = 3    // Max length for array and map examples.
+	maxValue    = 1000 // Max value for integer and float examples.
 )
 
-// Example returns a random value for the generator attribute using the generator random value
-// producer.
+// Example returns a random value for the generator attribute using the
+// generator random value producer.
 func (a *AttributeExpr) Example(r *Random) interface{} {
 	// Randomize array length first, since that's from higher level
 	if hasLengthValidation(a) {
@@ -27,8 +27,12 @@ func (a *AttributeExpr) Example(r *Random) interface{} {
 		return byEnum(a, r)
 	}
 	// loop until a satisified example is generated
-	hasFormat, hasPattern, hasMinMax := hasFormatValidation(a), hasPatternValidation(a), hasMinMaxValidation(a)
-	attempts := 0
+	var (
+		hasFormat  = hasFormatValidation(a)
+		hasPattern = hasPatternValidation(a)
+		hasMinMax  = hasMinMaxValidation(a)
+		attempts   = 0
+	)
 	for attempts < maxAttempts {
 		attempts++
 		var example interface{}
@@ -36,7 +40,7 @@ func (a *AttributeExpr) Example(r *Random) interface{} {
 		if hasFormat {
 			example = byFormat(a, r)
 		}
-		// now validate with the rest of matchers; if not satisified, redo
+		// now validate with rest of matchers; redo if not satisified
 		if hasPattern {
 			if example == nil {
 				example = byPattern(a, r)

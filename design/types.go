@@ -57,6 +57,9 @@ type (
 		DataType
 		// Attribute provides the underlying type and validations.
 		Attribute() *AttributeExpr
+		// Walk traverses the data structure recursively and calls the
+		// given function once on each attribute starting with Attribute
+		Walk(walker func(*AttributeExpr) error) error
 		// Dup makes a deep copy of the type given a deep copy of its attribute.
 		Dup(att *AttributeExpr) UserType
 		// Validate checks that the user type expression is consistent.
@@ -178,6 +181,29 @@ func AsMap(dt DataType) *Map {
 		return t
 	default:
 		return nil
+	}
+}
+
+// IsObject returns true if the data type is an object.
+func IsObject(dt DataType) bool { return AsObject(dt) != nil }
+
+// IsArray returns true if the data type is an array.
+func IsArray(dt DataType) bool { return AsArray(dt) != nil }
+
+// IsMap returns true if the data type is a map.
+func IsMap(dt DataType) bool { return AsMap(dt) != nil }
+
+// IsPrimitive returns true if the data type is a primitive type.
+func IsPrimitive(dt DataType) bool {
+	switch t := dt.(type) {
+	case Primitive:
+		return true
+	case *UserTypeExpr:
+		return IsPrimitive(t.Type)
+	case *MediaTypeExpr:
+		return IsPrimitive(t.Type)
+	default:
+		return false
 	}
 }
 

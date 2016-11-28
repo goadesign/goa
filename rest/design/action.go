@@ -23,8 +23,8 @@ type (
 	ActionExpr struct {
 		// EndpointExpr is the underlying endpoint expression.
 		*design.EndpointExpr
-		// Parent resource
-		Parent *ResourceExpr
+		// Resource is the parent resource
+		Resource *ResourceExpr
 		// Specific action URL schemes
 		Schemes []string
 		// Action routes
@@ -47,8 +47,8 @@ type (
 		Verb string
 		// Path is the URL path e.g. "/tasks/:id"
 		Path string
-		// Parent is the action this route applies to.
-		Parent *ActionExpr
+		// Action is the action this route applies to.
+		Action *ActionExpr
 	}
 
 	// ActionWalker is the type of functions given to WalkActions.
@@ -76,8 +76,8 @@ func (a *ActionExpr) EvalName() string {
 	} else {
 		suffix = "unnamed action"
 	}
-	if a.Parent != nil {
-		prefix = a.Parent.EvalName() + " "
+	if a.Resource != nil {
+		prefix = a.Resource.EvalName() + " "
 	}
 	return prefix + suffix
 }
@@ -107,10 +107,10 @@ func (a *ActionExpr) AllParams() *design.AttributeExpr {
 	if a.HasAbsoluteRoutes() {
 		return res
 	}
-	if p := a.Parent.Parent(); p != nil {
+	if p := a.Resource.Parent(); p != nil {
 		res = res.Merge(p.CanonicalAction().AllParams())
 	} else {
-		res = res.Merge(a.Parent.Params)
+		res = res.Merge(a.Resource.Params)
 		res = res.Merge(Root.Params)
 	}
 	return res
@@ -160,7 +160,7 @@ func (a *ActionExpr) EffectiveSchemes() []string {
 	// Compute the schemes
 	schemes := a.Schemes
 	if len(schemes) == 0 {
-		res := a.Parent
+		res := a.Resource
 		schemes = res.Schemes
 		parent := res.Parent()
 		for len(schemes) == 0 && parent != nil {
@@ -210,7 +210,7 @@ func (a *ActionExpr) Validate() error {
 	if a.Payload != nil {
 		verr.Merge(a.Payload.Validate("action payload", a))
 	}
-	if a.Parent == nil {
+	if a.Resource == nil {
 		verr.Add(a, "missing parent resource")
 	}
 
@@ -287,7 +287,8 @@ func (a *ActionExpr) UserTypes() map[string]design.UserType {
 		types[n] = ut
 	}
 	for _, r := range a.Responses {
-		if mt := design.Root.MediaType(r.MediaType); mt != nil {
+		if ut := design.Root.UserType(r.MediaType); ut != nil {
+			mt := ut.(*design.MediaTypeExpr)
 			types[mt.TypeName] = mt.UserTypeExpr
 			for n, ut := range userTypes(mt.UserTypeExpr) {
 				types[n] = ut
@@ -349,11 +350,11 @@ func userTypes(dt design.DataType) map[string]design.UserType {
 // Iteration stops if an iterator returns an error and in this case WalkHeaders returns that
 // error.
 func (a *ActionExpr) WalkHeaders(it HeaderWalker) error {
-	mergedHeaders := a.Parent.Headers.Merge(a.Headers)
+	mergedHeaders := a.Resource.Headers.Merge(a.Headers)
 
 	isRequired := func(name string) bool {
 		// header required in either the Resource or Action scope?
-		return a.Parent.Headers.IsRequired(name) || a.Headers.IsRequired(name)
+		return a.Resource.Headers.IsRequired(name) || a.Headers.IsRequired(name)
 	}
 
 	return iterateHeaders(mergedHeaders, isRequired, it)
@@ -385,14 +386,14 @@ func iterateHeaders(headers *design.AttributeExpr, isRequired func(name string) 
 
 // mergeResponses merges the parent resource and design responses.
 func (a *ActionExpr) mergeResponses() {
-	for _, resp := range a.Parent.Responses {
+	for _, resp := range a.Resource.Responses {
 		if a.Response(resp.Name) == nil {
 			a.Responses = append(a.Responses, resp.Dup())
 		}
 	}
 	for _, resp := range a.Responses {
 		resp.Finalize()
-		if pr := a.Parent.Response(resp.Name); pr != nil {
+		if pr := a.Resource.Response(resp.Name); pr != nil {
 			resp.Merge(pr)
 		}
 		if ar := Root.Response(resp.Name); ar != nil {
@@ -423,7 +424,7 @@ func (a *ActionExpr) initImplicitParams() {
 				}
 			}
 			search(a.Params)
-			parent := a.Parent
+			parent := a.Resource
 			for !found && parent != nil {
 				bp := parent.Params
 				parent = parent.Parent()
@@ -458,7 +459,7 @@ func (a *ActionExpr) initQueryParams() {
 
 // EvalName returns the generic definition name used in error messages.
 func (r *RouteExpr) EvalName() string {
-	return fmt.Sprintf(`route %s "%s" of %s`, r.Verb, r.Path, r.Parent.EvalName())
+	return fmt.Sprintf(`route %s "%s" of %s`, r.Verb, r.Path, r.Action.EvalName())
 }
 
 // Params returns the route parameters.
@@ -474,8 +475,8 @@ func (r *RouteExpr) FullPath() string {
 		return httppath.Clean(r.Path[1:])
 	}
 	var base string
-	if r.Parent != nil && r.Parent.Parent != nil {
-		base = r.Parent.Parent.FullPath()
+	if r.Action != nil && r.Action.Resource != nil {
+		base = r.Action.Resource.FullPath()
 	}
 	return httppath.Clean(path.Join(base, r.Path))
 }

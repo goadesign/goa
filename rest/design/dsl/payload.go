@@ -25,20 +25,6 @@ import (
 //	})
 //
 func Payload(p interface{}, dsls ...func()) {
-	payload(false, p, dsls...)
-}
-
-// OptionalPayload implements the action optional payload DSL. The function works identically to the
-// Payload DSL except it sets a bit in the action definition to denote that the payload is not
-// required. Example:
-//
-//	OptionalPayload(BottlePayload)		// Request payload is described by the BottlePayload type and is optional
-//
-func OptionalPayload(p interface{}, dsls ...func()) {
-	payload(true, p, dsls...)
-}
-
-func payload(isOptional bool, p interface{}, dsls ...func()) {
 	if len(dsls) > 1 {
 		eval.ReportError("too many arguments given to Payload")
 		return
@@ -53,18 +39,17 @@ func payload(isOptional bool, p interface{}, dsls ...func()) {
 	switch actual := p.(type) {
 	case func():
 		dsl = actual
-		att = newAttribute(a.Parent.MediaType)
+		att = newAttribute(a.Resource.MediaType)
 		att.Type = apidesign.Object{}
 	case *apidesign.AttributeExpr:
 		att = apidesign.DupAtt(actual)
 	case *apidesign.UserTypeExpr:
 		if len(dsls) == 0 {
 			a.Payload = actual
-			a.PayloadOptional = isOptional
 			return
 		}
 		att = apidesign.DupAtt(actual.Attribute())
-	case *design.MediaTypeExpr:
+	case *apidesign.MediaTypeExpr:
 		att = apidesign.DupAtt(actual.AttributeExpr)
 	case string:
 		ut := apidesign.Root.UserType(actual)
@@ -92,20 +77,20 @@ func payload(isOptional bool, p interface{}, dsls ...func()) {
 	if dsl != nil {
 		eval.Execute(dsl, att)
 	}
-	rn := camelize(a.Parent.Name)
+	rn := camelize(a.Resource.Name)
 	an := camelize(a.Name)
 	a.Payload = &apidesign.UserTypeExpr{
 		AttributeExpr: att,
 		TypeName:      fmt.Sprintf("%s%sPayload", an, rn),
 	}
-	a.PayloadOptional = isOptional
 }
 
 // newAttribute creates a new attribute definition using the media type with the given identifier
 // as base type.
 func newAttribute(baseMT string) *apidesign.AttributeExpr {
 	var base apidesign.DataType
-	if mt := design.Root.MediaType(baseMT); mt != nil {
+	if ut := apidesign.Root.UserType(baseMT); ut != nil {
+		mt := ut.(*apidesign.MediaTypeExpr)
 		base = mt.Type
 	}
 	return &apidesign.AttributeExpr{Reference: base}

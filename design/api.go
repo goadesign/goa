@@ -79,11 +79,10 @@ type (
 )
 
 // EvalName is the qualified name of the expression.
-func (a *APIExpr) EvalName() string     { return "API " + a.Name }
-func (a *ContactExpr) EvalName() string { return "Contact " + a.Name }
-func (l *LicenseExpr) EvalName() string { return "License " + l.Name }
-func (d *DocsExpr) EvalName() string    { return "Documentation " + d.URL }
-func (s *ServerExpr) EvalName() string  { return "Server " + s.URL }
+func (a *APIExpr) EvalName() string { return "API " + a.Name }
+
+// EvalName is the qualified name of the expression.
+func (s *ServerExpr) EvalName() string { return "Server " + s.URL }
 
 // Attribute returns the embedded attribute.
 func (s *ServerExpr) Attribute() *AttributeExpr {
@@ -131,6 +130,18 @@ func (s *ServerExpr) Validate() error {
 
 	return verr
 }
+
+// EvalName is the qualified name of the expression.
+func (p *ServerParamExpr) EvalName() string { return "URL parameter " + p.Name }
+
+// EvalName is the qualified name of the expression.
+func (l *LicenseExpr) EvalName() string { return "License " + l.Name }
+
+// EvalName is the qualified name of the expression.
+func (d *DocsExpr) EvalName() string { return "Documentation " + d.URL }
+
+// EvalName is the qualified name of the expression.
+func (c *ContactExpr) EvalName() string { return "Contact " + c.Name }
 
 // URLParamsRegexp is the regular expression used to capture the parameters
 // present in a URL.

@@ -31,3 +31,9 @@ type Section struct {
     Data interface{}
 }
 ```
+
+# Generated Files
+
+All generated files that get re-generated each time should be written to the
+same top level directory e.g. `gen` to help with the scaffold vs. generated
+dichotomy.

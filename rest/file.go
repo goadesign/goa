@@ -1,7 +1,6 @@
 package rest
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -13,21 +12,22 @@ import (
 	"goa.design/goa.v2"
 )
 
-// FileHandler returns a handler that serves files under the given filename for the given route path.
-// The logic for what to do when the filename points to a file vs. a directory is the same as the
-// standard http package ServeFile function. The path may end with a wildcard that matches the rest
-// of the URL (e.g. *filepath). If it does the matching path is appended to filename to form the
-// full file path, so:
+// FileHandler returns a handler that serves files under the given filename for
+// the given route path.  The logic for what to do when the filename points to a
+// file vs. a directory is the same as the standard http package ServeFile
+// function. The path may end with a wildcard that matches the rest of the URL
+// (e.g. *filepath). If it does the matching path is appended to filename to
+// form the full file path, so:
 //
 // 	c.FileHandler("/index.html", "/www/data/index.html")
 //
-// Returns the content of the file "/www/data/index.html" when requests are sent to "/index.html"
-// and:
+// Returns the content of the file "/www/data/index.html" when requests are sent
+// to "/index.html" and:
 //
 //	c.FileHandler("/assets/*filepath", "/www/data/assets")
 //
-// returns the content of the file "/www/data/assets/x/y/z" when requests are sent to
-// "/assets/x/y/z".
+// returns the content of the file "/www/data/assets/x/y/z" when requests are
+// sent to "/assets/x/y/z".
 func FileHandler(path, filename string) Handler {
 	var wc string
 	if idx := strings.LastIndex(path, "/*"); idx > -1 && idx < len(path)-1 {
@@ -36,8 +36,11 @@ func FileHandler(path, filename string) Handler {
 			wc = ""
 		}
 	}
-	return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
-		fname := filename
+	return func(rw http.ResponseWriter, req *http.Request) error {
+		var (
+			fname = filename
+			ctx   = req.Context()
+		)
 		if len(wc) > 0 {
 			if m, ok := ContextRequest(ctx).Params[wc]; ok {
 				fname = filepath.Join(filename, m[0])
