@@ -73,6 +73,50 @@ var _ = Describe("Generate", func() {
 						Actions: map[string]*design.ActionDefinition{
 							"show": {
 								Name: "show",
+								Params: &design.AttributeDefinition{
+									Type: design.Object{
+										"nicID":     &design.AttributeDefinition{Type: design.String},
+										"ipAddress": &design.AttributeDefinition{Type: design.String},
+									},
+								},
+								Routes: []*design.RouteDefinition{
+									{
+										Verb: "GET",
+										Path: "/nics/:nicID/add/:ipAddress",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			fooRes := design.Design.Resources["foo"]
+			showAct := fooRes.Actions["show"]
+			showAct.Parent = fooRes
+			showAct.Routes[0].Parent = showAct
+		})
+
+		It("generate the correct command path formatting code", func() {
+			Ω(genErr).Should(BeNil())
+			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring(`path = fmt.Sprintf("/nics/%v/add/%v", cmd.NicID, cmd.IPAddress`))
+		})
+	})
+
+	Context("with an action with an integer parameter with no default value", func() {
+		BeforeEach(func() {
+			codegen.TempCount = 0
+			design.Design = &design.APIDefinition{
+				Name:        "testapi",
+				Title:       "dummy API with no resource",
+				Description: "I told you it's dummy",
+				Resources: map[string]*design.ResourceDefinition{
+					"foo": {
+						Name: "foo",
+						Actions: map[string]*design.ActionDefinition{
+							"show": {
+								Name: "show",
 								QueryParams: &design.AttributeDefinition{
 									Type: design.Object{
 										"param":       &design.AttributeDefinition{Type: design.Integer},
