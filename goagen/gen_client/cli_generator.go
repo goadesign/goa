@@ -99,7 +99,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	funcs["defaultRouteParams"] = defaultRouteParams
 	funcs["defaultRouteTemplate"] = defaultRouteTemplate
 	funcs["joinNames"] = joinNames
-	funcs["joinFieldNames"] = joinFieldhNames
+	funcs["joinRouteParams"] = joinRouteParams
 	funcs["routes"] = routes
 	funcs["flagType"] = flagType
 	funcs["cmdFieldType"] = cmdFieldTypeString
@@ -268,33 +268,14 @@ func defaultRouteTemplate(a *design.ActionDefinition) string {
 
 // return a ',' joined list of Params as a reference to cmd.XFieldName
 // ordered by the required first rules.
-func joinFieldhNames(atts ...*design.AttributeDefinition) string {
-	var elems []string
-	for _, att := range atts {
-		if att == nil {
-			continue
-		}
-		obj := att.Type.ToObject()
-		var names, optNames []string
-
-		keys := make([]string, len(obj))
-		i := 0
-		for n := range obj {
-			keys[i] = n
-			i++
-		}
-		sort.Strings(keys)
-
-		for _, n := range keys {
-			field := fmt.Sprintf("cmd.%s", codegen.Goify(n, true))
-			if att.IsRequired(n) {
-				names = append(names, field)
-			} else {
-				optNames = append(optNames, field)
-			}
-		}
-		elems = append(elems, names...)
-		elems = append(elems, optNames...)
+func joinRouteParams(action *design.ActionDefinition, att *design.AttributeDefinition) string {
+	var (
+		params = action.Routes[0].Params()
+		elems  = make([]string, len(params))
+	)
+	for i, p := range params {
+		field := fmt.Sprintf("cmd.%s", codegen.Goify(p, true))
+		elems[i] = field
 	}
 	return strings.Join(elems, ", ")
 }
@@ -714,7 +695,7 @@ func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 		path = args[0]
 	} else {
 {{ $default := defaultPath .Action }}{{ if $default }}	path = "{{ $default }}"
-{{ else }}{{ $pparams := defaultRouteParams .Action }}	path = fmt.Sprintf({{ printf "%q" (defaultRouteTemplate .Action)}}, {{ joinFieldNames $pparams }})
+{{ else }}{{ $pparams := defaultRouteParams .Action }}	path = fmt.Sprintf({{ printf "%q" (defaultRouteTemplate .Action)}}, {{ joinRouteParams .Action $pparams }})
 {{ end }}	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger){{ $specialTypeResult := handleSpecialTypes .Action.QueryParams .Action.Headers }}{{ $specialTypeResult.Output }}
@@ -805,7 +786,7 @@ func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 		path = args[0]
 	} else {
 {{ $default := defaultPath .Action }}{{ if $default }}	path = "{{ $default }}"
-{{ else }}{{ $pparams := defaultRouteParams .Action }}	path = fmt.Sprintf({{ printf "%q" (defaultRouteTemplate .Action) }}, {{ joinFieldNames $pparams }})
+{{ else }}{{ $pparams := defaultRouteParams .Action }}	path = fmt.Sprintf({{ printf "%q" (defaultRouteTemplate .Action) }}, {{ joinRouteParams .Action $pparams }})
 {{ end }}	}
 {{ if .Action.Payload }}var payload {{ gotyperefext .Action.Payload 2 .Package }}
 	if cmd.Payload != "" {
