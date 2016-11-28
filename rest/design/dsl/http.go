@@ -63,13 +63,12 @@ import (
 func HTTP(dsl func()) {
 	switch actual := eval.Current().(type) {
 	case *goadesign.ServiceExpr:
-		res := ResourceFor(actual)
+		res := design.Root.ResourceFor(actual)
 		eval.Execute(dsl, res)
 	case *goadesign.EndpointExpr:
-		act := ActionFor(actual)
+		res := design.Root.ResourceFor(actual.Service)
+		act := res.Action(actual.Name)
 		eval.Execute(dsl, act)
-		res = design.ResourceFor(actual.Service)
-		res.Actions = append(res.Actions, act)
 	default:
 		eval.IncompatibleDSL()
 	}
@@ -179,7 +178,7 @@ func PATCH(path string) *design.RouteExpr {
 func Headers(dsl func()) {
 	switch def := eval.Current().(type) {
 	case *design.ActionExpr:
-		headers := newAttribute(def.Parent.MediaType)
+		headers := newAttribute(def.Resource.MediaType)
 		if eval.Execute(dsl, headers) {
 			def.Headers = def.Headers.Merge(headers)
 		}
@@ -190,13 +189,13 @@ func Headers(dsl func()) {
 			def.Headers = def.Headers.Merge(headers)
 		}
 
-	case *design.ResponseExpr:
+	case *design.HTTPResponseExpr:
 		var h *goadesign.AttributeExpr
 		switch actual := def.Parent.(type) {
 		case *design.ResourceExpr:
 			h = newAttribute(actual.MediaType)
 		case *design.ActionExpr:
-			h = newAttribute(actual.Parent.MediaType)
+			h = newAttribute(actual.Resource.MediaType)
 		case nil: // API ResponseTemplate
 			h = &goadesign.AttributeExpr{}
 		default:
@@ -231,14 +230,15 @@ func Headers(dsl func()) {
 //        })
 //    })
 //
-// If Params is used inside Resource or Action then the resource base media type attributes provide
-// default values for all the properties of params with identical names. For example:
+// If Params is used inside Resource or Action then the resource base media type
+// attributes provide default values for all the properties of params with
+// identical names. For example:
 //
 //     var BottleMedia = MediaType("application/vnd.bottle", func() {
 //         Attributes(func() {
 //             Attribute("name", String, "Name of bottle", func() {
-//                 MinLength(2) // BottleMedia has one attribute "name" which is a
-//                              // string that must be at least 2 characters long.
+//                 MinLength(2) // BottleMedia "name" attribute is a string that
+//                              // must be at least 2 characters long.
 //             })
 //         })
 //         View("default", func() {
@@ -250,8 +250,8 @@ func Headers(dsl func()) {
 //         DefaultMedia(BottleMedia)  // Resource "Bottle" uses "BottleMedia" as
 //         Action("show", func() {    // default media type.
 //             Routing(GET("/:name")) // Action show uses parameter "name"
-//             Params(func() {   // Parameter "name" inherits type, description
-//                 Param("name") // and validation from BottleMedia "name" attribute
+//             Params(func() {   // Parameter inherits type, description and
+//                 Param("name") // validation from BottleMedia "name" attribute
 //             })
 //         })
 //     })
@@ -260,7 +260,7 @@ func Params(dsl func()) {
 	var params *goadesign.AttributeExpr
 	switch def := eval.Current().(type) {
 	case *design.ActionExpr:
-		params = newAttribute(def.Parent.MediaType)
+		params = newAttribute(def.Resource.MediaType)
 	case *design.ResourceExpr:
 		params = newAttribute(def.MediaType)
 	case *goadesign.APIExpr:
@@ -274,10 +274,10 @@ func Params(dsl func()) {
 	}
 	switch def := eval.Current().(type) {
 	case *design.ActionExpr:
-		def.Params = def.Params.Merge(params) // Useful for traits
+		def.Params = def.Params.Merge(params)
 	case *design.ResourceExpr:
-		def.Params = def.Params.Merge(params) // Useful for traits
+		def.Params = def.Params.Merge(params)
 	case *goadesign.APIExpr:
-		design.Root.Params = design.Root.Params.Merge(params) // Useful for traits
+		design.Root.Params = design.Root.Params.Merge(params)
 	}
 }

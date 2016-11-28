@@ -338,11 +338,11 @@ func CollectionOf(v interface{}, adsl ...func()) *design.MediaTypeExpr {
 //		})
 //	})
 //
-func Reference(t apidesign.DataType) {
+func Reference(t design.DataType) {
 	switch def := eval.Current().(type) {
 	case *design.MediaTypeExpr:
 		def.Reference = t
-	case *apidesign.AttributeExpr:
+	case *design.AttributeExpr:
 		def.Reference = t
 	default:
 		eval.IncompatibleDSL()

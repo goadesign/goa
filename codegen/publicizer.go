@@ -46,19 +46,18 @@ func init() {
 
 // RecursivePublicizer produces code that copies fields from the private struct to the
 // public struct
-func RecursivePublicizer(att *design.AttributeDefinition, source, target string, depth int) string {
+func RecursivePublicizer(att *design.AttributeExpr, source, target string, depth int) string {
 	var publications []string
-	o, ok := att.Type.(design.Object)
-	if ok {
-		if ds, ok := att.Type.(design.DataStructure); ok {
-			att = ds.Definition()
+	if o := design.AsObject(att.Type); o != nil {
+		if ut, ok := att.Type.(design.UserType); ok {
+			att = ut.Attribute()
 		}
-		o.WalkAttributes(func(n string, catt *design.AttributeDefinition) error {
+		o.WalkAttributes(func(n string, catt *design.AttributeExpr) error {
 			publication := Publicizer(
 				catt,
 				fmt.Sprintf("%s.%s", source, Goify(n, true)),
 				fmt.Sprintf("%s.%s", target, Goify(n, true)),
-				catt.Type.IsPrimitive() && !att.IsPrimitivePointer(n),
+				design.IsPrimitive(catt.Type) && !att.IsPrimitivePointer(n),
 				depth+1,
 				false,
 			)
@@ -72,7 +71,7 @@ func RecursivePublicizer(att *design.AttributeDefinition, source, target string,
 }
 
 // Publicizer publicizes a single attribute based on the type.
-func Publicizer(att *design.AttributeDefinition, sourceField, targetField string, dereference bool, depth int, init bool) string {
+func Publicizer(att *design.AttributeExpr, sourceField, targetField string, dereference bool, depth int, init bool) string {
 	var publication string
 	data := map[string]interface{}{
 		"sourceField": sourceField,
@@ -83,29 +82,30 @@ func Publicizer(att *design.AttributeDefinition, sourceField, targetField string
 		"init":        init,
 	}
 	switch {
-	case att.Type.IsPrimitive():
+	case design.IsPrimitive(att.Type):
 		publication = RunTemplate(simplePublicizeT, data)
-	case att.Type.IsObject():
-		if _, ok := att.Type.(*design.MediaTypeDefinition); ok {
+	case design.IsObject(att.Type):
+		if _, ok := att.Type.(*design.MediaTypeExpr); ok {
 			publication = RunTemplate(recursivePublicizeT, data)
-		} else if _, ok := att.Type.(*design.UserTypeDefinition); ok {
+		} else if _, ok := att.Type.(*design.UserTypeExpr); ok {
 			publication = RunTemplate(recursivePublicizeT, data)
 		} else {
 			publication = RunTemplate(objectPublicizeT, data)
 		}
-	case att.Type.IsArray():
+	case design.IsArray(att.Type):
 		// If the array element is primitive type, we can simply copy the elements over (i.e) []string
-		if att.Type.HasAttributes() {
-			data["elemType"] = att.Type.ToArray().ElemType
+		ar := design.AsArray(att.Type)
+		if design.IsObject(ar.ElemType.Type) {
+			data["elemType"] = ar.ElemType
 			publication = RunTemplate(arrayPublicizeT, data)
 		} else {
 			publication = RunTemplate(simplePublicizeT, data)
 		}
-	case att.Type.IsHash():
-		if att.Type.HasAttributes() {
-			h := att.Type.ToHash()
-			data["keyType"] = h.KeyType
-			data["elemType"] = h.ElemType
+	case design.IsMap(att.Type):
+		m := design.AsMap(att.Type)
+		if design.IsObject(m.KeyType.Type) || design.IsObject(m.ElemType.Type) {
+			data["keyType"] = m.KeyType
+			data["elemType"] = m.ElemType
 			publication = RunTemplate(hashPublicizeT, data)
 		} else {
 			publication = RunTemplate(simplePublicizeT, data)

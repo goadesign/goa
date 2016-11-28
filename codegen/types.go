@@ -10,7 +10,6 @@ import (
 	"unicode"
 
 	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/eval"
 )
 
 var (
@@ -18,40 +17,38 @@ var (
 	TempCount int
 )
 
-// GoTypeDef returns the Go code that defines a Go type which matches the data structure
-// definition (the part that comes after `type foo`).
-// tabs is the number of tab character(s) used to tabulate the definition however the first
-// line is never indented.
-// jsonTags controls whether to produce json tags.
-// private controls whether the field is a pointer or not. All fields in the struct are
-//   pointers for a private struct.
-func GoTypeDef(ds design.DataStructure, tabs int, jsonTags, private bool) string {
-	def := ds.Definition()
+// GoTypeDef returns the Go code that defines a Go type which matches the data
+// structure definition (the part that comes after `type foo`). tabs is the
+// number of tab character(s) used to tabulate the definition however the first
+// line is never indented. jsonTags controls whether to produce json tags.
+// private controls whether the field is a pointer or not. All fields in the
+// struct are pointers for a private struct.
+func GoTypeDef(def *design.AttributeExpr, tabs int, jsonTags, private bool) string {
 	t := def.Type
 	switch actual := t.(type) {
 	case design.Primitive:
 		return GoTypeName(t, nil, tabs, private)
 	case *design.Array:
 		d := GoTypeDef(actual.ElemType, tabs, jsonTags, private)
-		if actual.ElemType.Type.IsObject() {
+		if design.IsObject(actual.ElemType.Type) {
 			d = "*" + d
 		}
 		return "[]" + d
-	case *design.Hash:
+	case *design.Map:
 		keyDef := GoTypeDef(actual.KeyType, tabs, jsonTags, private)
-		if actual.KeyType.Type.IsObject() {
+		if design.IsObject(actual.KeyType.Type) {
 			keyDef = "*" + keyDef
 		}
 		elemDef := GoTypeDef(actual.ElemType, tabs, jsonTags, private)
-		if actual.ElemType.Type.IsObject() {
+		if design.IsObject(actual.ElemType.Type) {
 			elemDef = "*" + elemDef
 		}
 		return fmt.Sprintf("map[%s]%s", keyDef, elemDef)
 	case design.Object:
 		return goTypeDefObject(actual, def, tabs, jsonTags, private)
-	case *design.UserTypeDefinition:
+	case *design.UserTypeExpr:
 		return GoTypeName(actual, actual.AllRequired(), tabs, private)
-	case *design.MediaTypeDefinition:
+	case *design.MediaTypeExpr:
 		return GoTypeName(actual, actual.AllRequired(), tabs, private)
 	default:
 		panic("goa bug: unknown data structure type")
@@ -59,7 +56,7 @@ func GoTypeDef(ds design.DataStructure, tabs int, jsonTags, private bool) string
 }
 
 // goTypeDefObject returns the Go code that defines a Go struct.
-func goTypeDefObject(obj design.Object, def *design.AttributeDefinition, tabs int, jsonTags, private bool) string {
+func goTypeDefObject(obj design.Object, def *design.AttributeExpr, tabs int, jsonTags, private bool) string {
 	var buffer bytes.Buffer
 	buffer.WriteString("struct {\n")
 	keys := make([]string, len(obj))
@@ -73,7 +70,9 @@ func goTypeDefObject(obj design.Object, def *design.AttributeDefinition, tabs in
 		writeTabs(&buffer, tabs+1)
 		field := obj[name]
 		typedef := GoTypeDef(field, tabs+1, jsonTags, private)
-		if (field.Type.IsPrimitive() && private) || field.Type.IsObject() || def.IsPrimitivePointer(name) {
+		if (design.IsPrimitive(field.Type) && private) ||
+			design.IsObject(field.Type) ||
+			def.IsPrimitivePointer(name) {
 			typedef = "*" + typedef
 		}
 		fname := GoifyAtt(field, name, true)
@@ -94,7 +93,7 @@ func goTypeDefObject(obj design.Object, def *design.AttributeDefinition, tabs in
 }
 
 // attributeTags computes the struct field tags.
-func attributeTags(parent, att *design.AttributeDefinition, name string, private bool) string {
+func attributeTags(parent, att *design.AttributeExpr, name string, private bool) string {
 	var elems []string
 	keys := make([]string, len(att.Metadata))
 	i := 0
@@ -131,23 +130,24 @@ func attributeTags(parent, att *design.AttributeDefinition, name string, private
 // This function assumes the type is in the same package as the code accessing it.
 func GoTypeRef(t design.DataType, required []string, tabs int, private bool) string {
 	tname := GoTypeName(t, required, tabs, private)
-	if mt, ok := t.(*design.MediaTypeDefinition); ok {
+	if mt, ok := t.(*design.MediaTypeExpr); ok {
 		if mt.IsError() {
 			return "error"
 		}
 	}
-	if t.IsObject() {
+	if design.IsObject(t) {
 		return "*" + tname
 	}
 	return tname
 }
 
-// GoTypeName returns the Go type name for a data type.
-// tabs is used to properly tabulate the object struct fields and only applies to this case.
-// This function assumes the type is in the same package as the code accessing it.
-// required only applies when referring to a user type that is an object defined inline. In this
-// case the type (Object) does not carry the required field information defined in the parent
-// (anonymous) attribute.
+// GoTypeName returns the Go type name for a data type. This function assumes the
+// type is in the same package as the code accessing it.
+// tabs is used to properly tabulate the object struct fields and only applies
+// to this case.
+// required only applies when referring to a user type that is an object defined
+// inline. In this case the type (Object) does not carry the required field
+// information defined in the parent (anonymous) attribute.
 func GoTypeName(t design.DataType, required []string, tabs int, private bool) string {
 	switch actual := t.(type) {
 	case design.Primitive:
@@ -155,21 +155,21 @@ func GoTypeName(t design.DataType, required []string, tabs int, private bool) st
 	case *design.Array:
 		return "[]" + GoTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), tabs+1, private)
 	case design.Object:
-		att := &design.AttributeDefinition{Type: actual}
+		att := &design.AttributeExpr{Type: actual}
 		if len(required) > 0 {
-			requiredVal := &eval.ValidationDefinition{Required: required}
+			requiredVal := &design.ValidationExpr{Required: required}
 			att.Validation.Merge(requiredVal)
 		}
 		return GoTypeDef(att, tabs, false, private)
-	case *design.Hash:
+	case *design.Map:
 		return fmt.Sprintf(
 			"map[%s]%s",
 			GoTypeRef(actual.KeyType.Type, actual.KeyType.AllRequired(), tabs+1, private),
 			GoTypeRef(actual.ElemType.Type, actual.ElemType.AllRequired(), tabs+1, private),
 		)
-	case *design.UserTypeDefinition:
+	case *design.UserTypeExpr:
 		return Goify(actual.TypeName, !private)
-	case *design.MediaTypeDefinition:
+	case *design.MediaTypeExpr:
 		if actual.IsError() {
 			return "error"
 		}
@@ -179,56 +179,65 @@ func GoTypeName(t design.DataType, required []string, tabs int, private bool) st
 	}
 }
 
-// GoNativeType returns the Go built-in type from which instances of t can be initialized.
+// GoNativeType returns the Go built-in type from which instances of t can be
+// initialized.
 func GoNativeType(t design.DataType) string {
 	switch actual := t.(type) {
 	case design.Primitive:
-		switch actual.Kind() {
-		case design.BooleanKind:
-			return "bool"
-		case design.Int64Kind:
-			if strconv.IntSize == 64 {
-				return "int"
-			}
-			return "int64"
-		case design.UInt64Kind:
-			if strconv.IntSize == 64 {
-				return "uint"
-			}
-			return "uint64"
-		case design.Int32Kind:
-			if strconv.IntSize == 32 {
-				return "int"
-			}
-			return "int32"
-		case design.UInt32Kind:
-			if strconv.IntSize == 32 {
-				return "uint"
-			}
-			return "uint32"
-		case design.NumberKind:
-			return "float64"
-		case design.StringKind:
-			return "string"
-		case design.BytesKind:
-			return "[]byte"
-		case design.AnyKind:
-			return "interface{}"
-		default:
-			panic(fmt.Sprintf("goa bug: unknown primitive type %#v", actual))
-		}
+		return goPrimitiveType(actual)
 	case *design.Array:
 		return "[]" + GoNativeType(actual.ElemType.Type)
 	case design.Object:
 		return "map[string]interface{}"
-	case *design.Hash:
+	case *design.Map:
 		return fmt.Sprintf("map[%s]%s", GoNativeType(actual.KeyType.Type), GoNativeType(actual.ElemType.Type))
-	case *design.MediaTypeDefinition:
+	case *design.MediaTypeExpr:
 		return GoNativeType(actual.Type)
-	case *design.UserTypeDefinition:
+	case *design.UserTypeExpr:
 		return GoNativeType(actual.Type)
 	default:
 		panic(fmt.Sprintf("goa bug: unknown type %#v", actual))
+	}
+}
+
+// goPrimitiveType returns the Go built-in type from which instances of t can be
+// initialized.
+func goPrimitiveType(t design.Primitive) string {
+	switch t.Kind() {
+	case design.BooleanKind:
+		return "bool"
+	case design.Int64Kind:
+		if strconv.IntSize == 64 {
+			return "int"
+		}
+		return "int64"
+	case design.UInt64Kind:
+		if strconv.IntSize == 64 {
+			return "uint"
+		}
+		return "uint64"
+	case design.Int32Kind:
+		if strconv.IntSize == 32 {
+			return "int"
+		}
+		return "int32"
+	case design.UInt32Kind:
+		if strconv.IntSize == 32 {
+			return "uint"
+		}
+		return "uint32"
+	case design.Float32Kind:
+		return "float32"
+	case design.Float64Kind:
+		return "float64"
+	case design.StringKind:
+		return "string"
+	case design.BytesKind:
+		return "[]byte"
+	case design.AnyKind:
+		return "interface{}"
+	default:
+		panic(fmt.Sprintf("goa bug: unknown primitive type %#v", t))
 	}
 }
 
@@ -236,18 +245,18 @@ func GoNativeType(t design.DataType) string {
 // for the type, one will be generated.
 func GoTypeDesc(t design.DataType, upper bool) string {
 	switch actual := t.(type) {
-	case *design.UserTypeDefinition:
+	case *design.UserTypeExpr:
 		if actual.Description != "" {
 			return strings.Replace(actual.Description, "\n", "\n// ", -1)
 		}
 
 		return Goify(actual.TypeName, upper) + " user type."
-	case *design.MediaTypeDefinition:
+	case *design.MediaTypeExpr:
 		if actual.Description != "" {
 			return strings.Replace(actual.Description, "\n", "\n// ", -1)
 		}
 
-		switch elem := actual.UserTypeDefinition.AttributeDefinition.Type.(type) {
+		switch elem := actual.UserTypeExpr.AttributeExpr.Type.(type) {
 		case *design.Array:
 			return fmt.Sprintf("%s media type is a collection of %s.", Goify(actual.TypeName, upper), GoTypeName(elem.ElemType.Type, nil, 0, !upper))
 		default:
@@ -320,7 +329,7 @@ func removeInvalidAtIndex(i int, runes []rune) []rune {
 
 // GoifyAtt honors any struct:field:name metadata set on the attribute and calls Goify with the tag
 // value if present or the given name otherwise.
-func GoifyAtt(att *design.AttributeDefinition, name string, firstUpper bool) string {
+func GoifyAtt(att *design.AttributeExpr, name string, firstUpper bool) string {
 	if tname, ok := att.Metadata["struct:field:name"]; ok {
 		if len(tname) > 0 {
 			name = tname[0]
@@ -526,10 +535,10 @@ func toSlice(val []interface{}) string {
 }
 
 // typeName returns the type name of the given attribute if it is a named type, empty string otherwise.
-func typeName(att *design.AttributeDefinition) (name string) {
-	if ut, ok := att.Type.(*design.UserTypeDefinition); ok {
+func typeName(att *design.AttributeExpr) (name string) {
+	if ut, ok := att.Type.(*design.UserTypeExpr); ok {
 		name = Goify(ut.TypeName, true)
-	} else if mt, ok := att.Type.(*design.MediaTypeDefinition); ok {
+	} else if mt, ok := att.Type.(*design.MediaTypeExpr); ok {
 		name = Goify(mt.TypeName, true)
 	}
 	return

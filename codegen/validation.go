@@ -7,7 +7,6 @@ import (
 	"text/template"
 
 	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/eval"
 )
 
 var (
@@ -61,25 +60,27 @@ func init() {
 
 // RecursiveChecker produces Go code that runs the validation checks recursively over the given
 // attribute.
-func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDefault bool, target, context string, depth int, private bool) string {
+func RecursiveChecker(att *design.AttributeExpr, required,
+	hasDefault bool, target, context string, depth int, private bool) string {
+
 	var checks []string
-	if o, ok := att.Type.(design.Object); ok {
-		if ds, ok := att.Type.(design.DataStructure); ok {
-			att = ds.Definition()
+	if o := design.AsObject(att.Type); o != nil {
+		if ut, ok := att.Type.(design.UserType); ok {
+			att = ut.Attribute()
 		}
-		validation := ValidationChecker(att, nonzero, required, hasDefault, target, context, depth, private)
+		validation := ValidationChecker(att, required, hasDefault, target, context, depth, private)
 		if validation != "" {
 			checks = append(checks, validation)
 		}
-		o.WalkAttributes(func(n string, catt *design.AttributeDefinition) error {
+		o.WalkAttributes(func(n string, catt *design.AttributeExpr) error {
 			var validation string
-			if ds, ok := catt.Type.(design.DataStructure); ok {
+			if ut, ok := catt.Type.(design.UserType); ok {
 				// We need to check empirically whether there are validations to be
 				// generated, we can't just generate and check whether something was
 				// generated to avoid infinite recursions.
 				hasValidations := false
 				done := errors.New("done")
-				ds.Walk(func(a *design.AttributeDefinition) error {
+				ut.Walk(func(a *design.AttributeExpr) error {
 					if a.Validation != nil {
 						if private {
 							hasValidations = true
@@ -96,8 +97,8 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDef
 							return done
 						}
 						for _, name := range a.Validation.Required {
-							att := a.Type.(Object)[name]
-							if att != nil && (!att.Type.IsPrimitive() || att.Type.Kind() == design.StringKind) {
+							att := a.Type.(design.Object)[name]
+							if att != nil && (!design.IsPrimitive(att.Type) || att.Type.Kind() == design.StringKind) {
 								hasValidations = true
 								return done
 							}
@@ -116,12 +117,11 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDef
 				}
 			} else {
 				dp := depth
-				if catt.Type.IsObject() {
+				if design.IsObject(catt.Type) {
 					dp++
 				}
 				validation = RecursiveChecker(
 					catt,
-					att.IsNonZero(n),
 					att.IsRequired(n),
 					att.HasDefaultValue(n),
 					fmt.Sprintf("%s.%s", target, GoifyAtt(catt, n, true)),
@@ -131,7 +131,7 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDef
 				)
 			}
 			if validation != "" {
-				if catt.Type.IsObject() {
+				if design.IsObject(catt.Type) {
 					validation = fmt.Sprintf("%sif %s.%s != nil {\n%s\n%s}",
 						Tabs(depth), target, GoifyAtt(catt, n, true), validation, Tabs(depth))
 				}
@@ -139,9 +139,9 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDef
 			}
 			return nil
 		})
-	} else if a := att.Type.ToArray(); a != nil {
+	} else if a := design.AsArray(att.Type); a != nil {
 		// Perform any validation on the array type such as MinLength, MaxLength, etc.
-		validation := ValidationChecker(att, nonzero, required, hasDefault, target, context, depth, private)
+		validation := ValidationChecker(att, required, hasDefault, target, context, depth, private)
 		if validation != "" {
 			checks = append(checks, validation)
 		}
@@ -157,7 +157,7 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDef
 			checks = append(checks, validation)
 		}
 	} else {
-		validation := ValidationChecker(att, nonzero, required, hasDefault, target, context, depth, private)
+		validation := ValidationChecker(att, required, hasDefault, target, context, depth, private)
 		if validation != "" {
 			checks = append(checks, validation)
 		}
@@ -172,22 +172,21 @@ func RecursiveChecker(att *design.AttributeDefinition, nonzero, required, hasDef
 // The generated code assumes that there is a pre-existing "err" variable of type
 // error. It initializes that variable in case a validation fails.
 // Note: we do not want to recurse here, recursion is done by the marshaler/unmarshaler code.
-func ValidationChecker(att *design.AttributeDefinition, nonzero, required, hasDefault bool, target, context string, depth int, private bool) string {
+func ValidationChecker(att *design.AttributeExpr, required, hasDefault bool, target, context string, depth int, private bool) string {
 	t := target
-	isPointer := private || (!required && !hasDefault && !nonzero)
-	if isPointer && att.Type.IsPrimitive() {
+	isPointer := private || (!required && !hasDefault)
+	if isPointer && design.IsPrimitive(att.Type) {
 		t = "*" + t
 	}
 	data := map[string]interface{}{
 		"attribute": att,
 		"isPointer": private || isPointer,
-		"nonzero":   nonzero,
 		"context":   context,
 		"target":    target,
 		"targetVal": t,
 		"string":    att.Type.Name() == "string",
-		"array":     att.Type.IsArray(),
-		"hash":      att.Type.IsHash(),
+		"array":     design.IsArray(att.Type),
+		"hash":      design.IsMap(att.Type),
 		"depth":     depth,
 		"private":   private,
 	}
@@ -195,7 +194,7 @@ func ValidationChecker(att *design.AttributeDefinition, nonzero, required, hasDe
 	return strings.Join(res, "\n")
 }
 
-func validationsCode(validation *eval.ValidationDefinition, data map[string]interface{}) (res []string) {
+func validationsCode(validation *design.ValidationExpr, data map[string]interface{}) (res []string) {
 	if validation == nil {
 		return nil
 	}
@@ -334,7 +333,7 @@ const (
 {{end}}{{tabs .depth}}}`
 
 	lengthValTmpl = `{{$depth := or (and .isPointer (add .depth 1)) .depth}}{{/*
-*/}}{{$target := or (and (or (or .array .hash) .nonzero) .target) .targetVal}}{{/*
+*/}}{{$target := or (and (or .array .hash) .target) .targetVal}}{{/*
 */}}{{if .isPointer}}{{tabs .depth}}if {{.target}} != nil {
 {{end}}{{tabs .depth}}	if {{if .string}}utf8.RuneCountInString({{$target}}){{else}}len({{$target}}){{end}} {{if .isMinLength}}<{{else}}>{{end}} {{if .isMinLength}}{{.minLength}}{{else}}{{.maxLength}}{{end}} {
 {{tabs $depth}}	err = goa.MergeErrors(err, goa.InvalidLengthError(` + "`" + `{{.context}}` + "`" + `, {{$target}}, {{if .string}}utf8.RuneCountInString({{$target}}){{else}}len({{$target}}){{end}}, {{if .isMinLength}}{{.minLength}}, true{{else}}{{.maxLength}}, false{{end}}))

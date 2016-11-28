@@ -34,7 +34,7 @@ func init() {
 
 // RecursiveFinalizer produces Go code that sets the default values for fields recursively for the
 // given attribute.
-func RecursiveFinalizer(att *design.AttributeDefinition, target string, depth int, vs ...map[string]bool) string {
+func RecursiveFinalizer(att *design.AttributeExpr, target string, depth int, vs ...map[string]bool) string {
 	var assignments []string
 	o, ok := att.Type.(design.Object)
 	if ok {
@@ -47,15 +47,15 @@ func RecursiveFinalizer(att *design.AttributeDefinition, target string, depth in
 			vs[0][ut.Name()] = true
 			att = ut.Attribute()
 		}
-		o.WalkAttributes(func(n string, catt *design.AttributeDefinition) error {
+		o.WalkAttributes(func(n string, catt *design.AttributeExpr) error {
 			if att.HasDefaultValue(n) {
 				data := map[string]interface{}{
 					"target":     target,
 					"field":      n,
 					"catt":       catt,
 					"depth":      depth,
-					"isDatetime": catt.Type == design.DateTime,
-					"defaultVal": printVal(catt.Type, catt.DefaultValue),
+					"isDatetime": catt.Validation != nil && catt.Validation.Format == design.FormatDateTime,
+					"defaultVal": printVal(catt, catt.DefaultValue),
 				}
 				assignments = append(assignments, RunTemplate(assignmentT, data))
 			}
@@ -66,7 +66,7 @@ func RecursiveFinalizer(att *design.AttributeDefinition, target string, depth in
 				vs...,
 			)
 			if assignment != "" {
-				if catt.Type.IsObject() {
+				if design.IsObject(catt.Type) {
 					assignment = fmt.Sprintf("%sif %s.%s != nil {\n%s\n%s}",
 						Tabs(depth), target, Goify(n, true), assignment, Tabs(depth))
 				}
@@ -74,7 +74,7 @@ func RecursiveFinalizer(att *design.AttributeDefinition, target string, depth in
 			}
 			return nil
 		})
-	} else if a := att.Type.ToArray(); a != nil {
+	} else if a := design.AsArray(att.Type); a != nil {
 		data := map[string]interface{}{
 			"elemType": a.ElemType,
 			"target":   target,
@@ -88,35 +88,36 @@ func RecursiveFinalizer(att *design.AttributeDefinition, target string, depth in
 	return strings.Join(assignments, "\n")
 }
 
-// printVal prints the given value corresponding to the given data type.
+// printVal prints the value corresponding to the given attribute.
 // The value is already checked for the compatibility with the data type.
-func printVal(t design.DataType, val interface{}) string {
+func printVal(att *design.AttributeExpr, val interface{}) string {
+	t := att.Type
 	switch {
-	case t.IsPrimitive():
+	case design.IsPrimitive(t):
 		// For primitive types, simply print the value
 		s := fmt.Sprintf("%#v", val)
-		if t == design.DateTime {
+		if att.Validation != nil && att.Validation.Format == design.FormatDateTime {
 			s = fmt.Sprintf("time.Parse(time.RFC3339, %s)", s)
 		}
 		return s
-	case t.IsHash():
+	case design.IsMap(t):
 		// The input is a hash
-		h := t.ToHash()
-		hval := val.(map[interface{}]interface{})
-		if len(hval) == 0 {
+		m := design.AsMap(t)
+		mval := val.(map[interface{}]interface{})
+		if len(mval) == 0 {
 			return fmt.Sprintf("%s{}", GoTypeName(t, nil, 0, false))
 		}
 		var buffer bytes.Buffer
 		buffer.WriteString(fmt.Sprintf("%s{", GoTypeName(t, nil, 0, false)))
-		for k, v := range hval {
-			buffer.WriteString(fmt.Sprintf("%s: %s, ", printVal(h.KeyType.Type, k), printVal(h.ElemType.Type, v)))
+		for k, v := range mval {
+			buffer.WriteString(fmt.Sprintf("%s: %s, ", printVal(m.KeyType, k), printVal(m.ElemType, v)))
 		}
 		buffer.Truncate(buffer.Len() - 2) // remove ", "
 		buffer.WriteString("}")
 		return buffer.String()
-	case t.IsArray():
+	case design.IsArray(t):
 		// Input is an array
-		a := t.ToArray()
+		a := design.AsArray(t)
 		aval := val.([]interface{})
 		if len(aval) == 0 {
 			return fmt.Sprintf("%s{}", GoTypeName(t, nil, 0, false))
@@ -124,7 +125,7 @@ func printVal(t design.DataType, val interface{}) string {
 		var buffer bytes.Buffer
 		buffer.WriteString(fmt.Sprintf("%s{", GoTypeName(t, nil, 0, false)))
 		for _, e := range aval {
-			buffer.WriteString(fmt.Sprintf("%s, ", printVal(a.ElemType.Type, e)))
+			buffer.WriteString(fmt.Sprintf("%s, ", printVal(a.ElemType, e)))
 		}
 		buffer.Truncate(buffer.Len() - 2) // remove ", "
 		buffer.WriteString("}")

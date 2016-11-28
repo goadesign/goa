@@ -8,10 +8,10 @@ import (
 )
 
 type (
-	// FileServerExpression defines an endpoint that servers static assets.
+	// FileServerExpr defines an endpoint that servers static assets.
 	FileServerExpr struct {
-		// Parent resource
-		Parent *ResourceExpr
+		// Resource is the parent resource.
+		Resource *ResourceExpr
 		// Description for docs
 		Description string
 		// Docs points to the service external documentation
@@ -32,8 +32,8 @@ type (
 func (f *FileServerExpr) EvalName() string {
 	suffix := fmt.Sprintf("file server %s", f.FilePath)
 	var prefix string
-	if f.Parent != nil {
-		prefix = f.Parent.EvalName() + " "
+	if f.Resource != nil {
+		prefix = f.Resource.EvalName() + " "
 	}
 	return prefix + suffix
 }

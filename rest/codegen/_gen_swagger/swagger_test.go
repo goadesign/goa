@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 
 	"github.com/go-openapi/loads"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	_ "goa.design/goa.v2-cellar/design"
 	. "goa.design/goa.v2/design"
 	. "goa.design/goa.v2/design/apidsl"
 	"goa.design/goa.v2/eval"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 // validateSwagger validates that the given swagger object represents a valid Swagger spec.
@@ -210,52 +210,6 @@ var _ = Describe("New", func() {
 			})
 
 			It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
-		})
-
-		Context("with zero value validations", func() {
-			const (
-				intParam = "intParam"
-				numParam = "numParam"
-				strParam = "strParam"
-				intMin   = 0.0
-				floatMax = 0.0
-			)
-
-			BeforeEach(func() {
-				PayloadWithZeroValueValidations := Type("PayloadWithZeroValueValidations", func() {
-					Attribute(strParam, String, func() {
-						MinLength(0)
-						MaxLength(0)
-					})
-				})
-				Resource("res", func() {
-					Action("act", func() {
-						Routing(
-							PUT("/"),
-						)
-						Params(func() {
-							Param(intParam, Integer, func() {
-								Minimum(intMin)
-							})
-							Param(numParam, Number, func() {
-								Maximum(floatMax)
-							})
-						})
-						Payload(PayloadWithZeroValueValidations)
-					})
-				})
-			})
-
-			It("serializes into valid swagger JSON", func() {
-				validateSwaggerWithFragments(swagger, [][]byte{
-					// payload
-					[]byte(`"minLength":0`),
-					[]byte(`"maxLength":0`),
-					// param
-					[]byte(`"minimum":0`),
-					[]byte(`"maximum":0`),
-				})
-			})
 		})
 
 		Context("with response templates", func() {

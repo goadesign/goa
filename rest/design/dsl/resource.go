@@ -1,10 +1,5 @@
 package dsl
 
-import (
-	"goa.design/goa.v2/eval"
-	"goa.design/goa.v2/rest/design"
-)
-
 // Resource describes a set of related endpoints, if implementing a REST API
 // then it describes a single REST resource.
 //
@@ -57,17 +52,17 @@ import (
 //         })
 //     })
 //
-func Resource(name string, dsl func()) *design.ResourceExpr {
-	if _, ok := eval.Current().(eval.TopExpr); !ok {
-		eval.IncompatibleDSL()
-		return nil
-	}
+// func Resource(name string, dsl func()) *design.ResourceExpr {
+// 	if _, ok := eval.Current().(eval.TopExpr); !ok {
+// 		eval.IncompatibleDSL()
+// 		return nil
+// 	}
 
-	if res := design.Root.Resource(name); res != nil {
-		eval.ReportError("resource %#v is defined twice", name)
-		return nil
-	}
-	resource := design.NewResourceExpr(name, dsl)
-	design.Root.Resources = append(design.Root.Resources, resource)
-	return resource
-}
+// 	if res := design.Root.Resource(name); res != nil {
+// 		eval.ReportError("resource %#v is defined twice", name)
+// 		return nil
+// 	}
+// 	resource := design.NewResource(name, dsl)
+// 	design.Root.Resources = append(design.Root.Resources, resource)
+// 	return resource
+// }

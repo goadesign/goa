@@ -34,11 +34,15 @@ error middleware) also generate an internal error response.
 */
 package rest
 
-import "goa.design/goa.v2"
+import (
+	"net/http"
+
+	"goa.design/goa.v2"
+)
 
 const (
 	// StatusUnauthorized indicates the request is not authorized.
-	StatusUnauthorized = goa.StatusBug + 1
+	StatusUnauthorized = goa.StatusBug + 1 + iota
 	// StatusNotFound caries the same semantic as HTTP status code 404.
 	StatusNotFound
 	// StatusRequestBodyTooLarge indicates that the request body exceeded
@@ -52,33 +56,33 @@ var (
 	ErrorMediaIdentifier = "application/vnd.goa.error"
 
 	// ErrBadRequest is a generic bad request error.
-	ErrBadRequest = NewErrorClass("bad_request", goa.StatusInvalid)
+	ErrBadRequest = goa.NewErrorClass("bad_request", goa.StatusInvalid)
 
 	// ErrUnauthorized is a generic unauthorized error.
-	ErrUnauthorized = NewErrorClass("unauthorized", StatusUnauthorized)
+	ErrUnauthorized = goa.NewErrorClass("unauthorized", StatusUnauthorized)
 
 	// ErrInvalidRequest is the class of errors produced by the generated
 	// code when a request parameter or payload fails to validate.
-	ErrInvalidRequest = NewErrorClass("invalid_request", goa.StatusInvalid)
+	ErrInvalidRequest = goa.NewErrorClass("invalid_request", goa.StatusInvalid)
 
 	// ErrInvalidEncoding is the error produced when a request body fails to
 	// be decoded.
-	ErrInvalidEncoding = NewErrorClass("invalid_encoding", goa.StatusInvalid)
+	ErrInvalidEncoding = goa.NewErrorClass("invalid_encoding", goa.StatusInvalid)
 
 	// ErrRequestBodyTooLarge is the error produced when the size of a
 	// request body exceeds MaxRequestBodyLength bytes.
-	ErrRequestBodyTooLarge = NewErrorClass("request_too_large", StatusRequestBodyTooLarge)
+	ErrRequestBodyTooLarge = goa.NewErrorClass("request_too_large", StatusRequestBodyTooLarge)
 
 	// ErrInvalidFile is the error produced by ServeFiles when requested to
 	// serve non-existant or non-readable files.
-	ErrInvalidFile = NewErrorClass("invalid_file", StatusNotFound)
+	ErrInvalidFile = goa.NewErrorClass("invalid_file", StatusNotFound)
 
 	// ErrNotFound is the error returned to requests that don't match a
 	// registered handler.
-	ErrNotFound = NewErrorClass("not_found", StatusNotFound)
+	ErrNotFound = goa.NewErrorClass("not_found", StatusNotFound)
 
 	// ErrInternal is the class of error used for uncaught errors.
-	ErrInternal = NewErrorClass("internal", goa.StatusBug)
+	ErrInternal = goa.NewErrorClass("internal", goa.StatusBug)
 )
 
 type (
@@ -116,12 +120,12 @@ func HTTPStatus(status goa.ErrorStatus) int {
 	case goa.StatusInvalid:
 		return http.StatusBadRequest
 	case goa.StatusBug:
-		return http.StatusInternalError
+		return http.StatusInternalServerError
 	case StatusNotFound:
 		return http.StatusNotFound
 	case StatusRequestBodyTooLarge:
-		return http.StatusRequestBodyTooLarge
+		return http.StatusRequestEntityTooLarge
 	default:
-		return http.StatusInternalError
+		return http.StatusInternalServerError
 	}
 }

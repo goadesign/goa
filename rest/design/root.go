@@ -69,6 +69,31 @@ func (r *RootExpr) Resource(name string) *ResourceExpr {
 	return nil
 }
 
+// ResourceFor creates a new or returns the existing resource definition for the
+// given service.
+func (r *RootExpr) ResourceFor(s *design.ServiceExpr) *ResourceExpr {
+	if res := r.Resource(s.Name); res != nil {
+		return res
+	}
+	mt := "text/plain"
+	if dmt, ok := s.DefaultType().(*design.MediaTypeExpr); ok {
+		mt = dmt.Identifier
+	}
+	res := &ResourceExpr{
+		ServiceExpr: s,
+		MediaType:   mt,
+		Actions:     make([]*ActionExpr, len(s.Endpoints)),
+	}
+	for i, e := range s.Endpoints {
+		res.Actions[i] = &ActionExpr{
+			EndpointExpr: e,
+			Resource:     res,
+		}
+	}
+	r.Resources = append(r.Resources, res)
+	return res
+}
+
 // ExtractWildcards returns the names of the wildcards that appear in path.
 func ExtractWildcards(path string) []string {
 	matches := WildcardRegex.FindAllStringSubmatch(path, -1)

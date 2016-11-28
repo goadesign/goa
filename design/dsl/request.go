@@ -73,7 +73,7 @@ func endpointTypeDSL(suffix string, p interface{}, dsls ...func()) design.UserTy
 	case *design.AttributeExpr:
 		att = design.DupAtt(actual)
 	case design.UserType:
-		if design.AsObject(actual) == nil {
+		if design.IsObject(actual) {
 			eval.ReportError("%s type must be an object, %s is a %s", suffix, actual.Name(), actual.Attribute().Type.Name())
 			return nil
 		}
@@ -93,7 +93,7 @@ func endpointTypeDSL(suffix string, p interface{}, dsls ...func()) design.UserTy
 			eval.ReportError("unknown request type %s", actual)
 			return nil
 		}
-		if design.AsObject(t) == nil {
+		if design.IsObject(t) {
 			eval.ReportError("%s type must be an object, %s is a %s", suffix, actual, t.Attribute().Type.Name())
 			return nil
 		}

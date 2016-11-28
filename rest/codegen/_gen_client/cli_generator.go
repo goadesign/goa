@@ -251,13 +251,11 @@ func defaultRouteParams(a *design.ActionDefinition) *design.AttributeDefinition 
 	r := a.Routes[0]
 	params := r.Params()
 	o := make(design.Object, len(params))
-	nz := make(map[string]bool, len(params))
 	pparams := a.PathParams()
 	for _, p := range params {
 		o[p] = pparams.Type.(Object)[p]
-		nz[p] = true
 	}
-	return &design.AttributeDefinition{Type: o, NonZeroAttributes: nz}
+	return &design.AttributeDefinition{Type: o}
 }
 
 // produces a fmt template to render the first route of action.
@@ -320,7 +318,7 @@ func joinNames(useNil bool, atts ...*design.AttributeDefinition) string {
 		for _, n := range keys {
 			a := obj[n]
 			field := fmt.Sprintf("cmd.%s", codegen.Goify(n, true))
-			if !a.Type.IsArray() && !att.IsRequired(n) && !att.IsNonZero(n) {
+			if !a.Type.IsArray() && !att.IsRequired(n) {
 				if useNil {
 					field = flagTypeVal(a, n, field)
 				} else {

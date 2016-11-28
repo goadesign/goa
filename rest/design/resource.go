@@ -40,24 +40,6 @@ type (
 	}
 )
 
-// ResourceFor creates a new or returns the existing resource definition for the
-// given service.
-func ResourceFor(service *design.ServiceExpr) *ResourceExpr {
-	if r := Root.Resource(service.Name); r != nil {
-		return r
-	}
-	mt := "text/plain"
-	if dmt, ok := service.DefaultType.(*design.MediaTypeExpr); ok {
-		mt = dmt.Identifier
-	}
-	r := &ResourceExpr{
-		ServiceExpr: service,
-		MediaType:   mt,
-	}
-	Root.Resources = append(Root.Resources, r)
-	return r
-}
-
 // EvalName returns the generic definition name used in error messages.
 func (r *ResourceExpr) EvalName() string {
 	if r.Name == "" {
@@ -121,7 +103,7 @@ func (r *ResourceExpr) FullPath() string {
 			}
 		}
 	} else {
-		basePath = Root.BasePath
+		basePath = Root.Path
 	}
 	return httppath.Clean(path.Join(basePath, r.BasePath))
 }
@@ -146,9 +128,8 @@ func (r *ResourceExpr) Response(name string) *HTTPResponseExpr {
 	return nil
 }
 
-// Finalize is run post DSL execution. It merges response definitions, creates implicit action
-// parameters, initializes querystring parameters, sets path parameters as non zero attributes
-// and sets the fallbacks for security schemes.
+// Finalize is run post DSL execution. It merges response definitions, creates
+// implicit action parameters and initializes querystring parameters.
 func (r *ResourceExpr) Finalize() {
 	for _, f := range r.FileServers {
 		f.Finalize()

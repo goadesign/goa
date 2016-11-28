@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/pkg"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"goa.design/goa.v2/codegen"
+	"goa.design/goa.v2/pkg"
 
 	// These are packages required by the generated code but not by goagen.
 	// We list them here so that `go get` picks them up.
@@ -192,10 +192,6 @@ package and tool and the Swagger specification for the API.
 			os.RemoveAll(f)
 		}
 	}
-
-	go codegen.Catch(nil, func() {
-		terminatedByUser = true
-	})
 
 	rootCmd.Execute()
 

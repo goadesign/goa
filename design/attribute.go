@@ -133,29 +133,7 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 	if ctx != "" {
 		ctx += " - "
 	}
-	// If both Default and Enum are given, make sure the Default value is
-	// one of Enum values.  TODO: We only do the default value and enum
-	// check just for primitive types.
-	if _, ok := a.Type.(Primitive); ok {
-		if a.DefaultValue != nil && a.Validation != nil && a.Validation.Values != nil {
-			var found bool
-			for _, e := range a.Validation.Values {
-				if e == a.DefaultValue {
-					found = true
-					break
-				}
-			}
-			if !found {
-				verr.Add(
-					parent,
-					"%sdefault value %#v is not one of the accepted values: %#v",
-					ctx,
-					a.DefaultValue,
-					a.Validation.Values,
-				)
-			}
-		}
-	}
+	verr.Merge(a.validateEnumDefault(ctx, parent))
 	if o := AsObject(a.Type); o != nil {
 		for _, n := range a.AllRequired() {
 			found := false
@@ -181,6 +159,12 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 	}
 
 	return verr
+}
+
+// Walk traverses the data structure recursively and calls the given function
+// once on each attribute starting with a.
+func (a *AttributeExpr) Walk(walker func(*AttributeExpr) error) error {
+	return walk(a, walker, make(map[string]bool))
 }
 
 // Merge merges other's attributes into a and returns a overriding its
@@ -218,9 +202,9 @@ func (a *AttributeExpr) Inherit(parent *AttributeExpr) {
 	a.inheritRecursive(parent)
 }
 
-// AllRequired returns the list of all required fields from the underlying object.  This method
-// recurses if the type is itself an attribute (i.e. a UserType, this happens with the Reference DSL
-// for example).
+// AllRequired returns the list of all required fields from the underlying
+// object. This method recurses if the type is itself an attribute (i.e. a
+// UserType, this happens with the Reference DSL for example).
 func (a *AttributeExpr) AllRequired() (required []string) {
 	if a == nil || a.Validation == nil {
 		return
@@ -232,13 +216,32 @@ func (a *AttributeExpr) AllRequired() (required []string) {
 	return
 }
 
-// IsRequired returns true if the given string matches the name of a required attribute, false
-// otherwise. This method only applies to attributes of type Object.
+// IsRequired returns true if the given string matches the name of a required
+// attribute, false otherwise. This method only applies to attributes of type
+// Object.
 func (a *AttributeExpr) IsRequired(attName string) bool {
 	for _, name := range a.AllRequired() {
 		if name == attName {
 			return true
 		}
+	}
+	return false
+}
+
+// IsPrimitivePointer returns true if the field generated for the given
+// attribute should be a pointer to a primitive type. The target attribute must
+// be an object.
+func (a *AttributeExpr) IsPrimitivePointer(attName string) bool {
+	o := AsObject(a.Type)
+	if o == nil {
+		panic("checking pointer field on non-object") // bug
+	}
+	att := o[attName]
+	if att == nil {
+		return false
+	}
+	if IsPrimitive(att.Type) {
+		return !a.IsRequired(attName) && !a.HasDefaultValue(attName)
 	}
 	return false
 }
@@ -263,6 +266,35 @@ func (a *AttributeExpr) SetDefault(def interface{}) {
 	default:
 		a.DefaultValue = actual
 	}
+}
+
+// validateEnumDefault makes sure that the attribute default value is one of the
+// enum values.
+func (a *AttributeExpr) validateEnumDefault(ctx string, parent eval.Expression) *eval.ValidationErrors {
+	//TODO: We only do the default value and enum check just for primitive types.
+	if _, ok := a.Type.(Primitive); !ok {
+		return nil
+	}
+	verr := new(eval.ValidationErrors)
+	if a.DefaultValue != nil && a.Validation != nil && a.Validation.Values != nil {
+		var found bool
+		for _, e := range a.Validation.Values {
+			if e == a.DefaultValue {
+				found = true
+				break
+			}
+		}
+		if !found {
+			verr.Add(
+				parent,
+				"%sdefault value %#v is not one of the accepted values: %#v",
+				ctx,
+				a.DefaultValue,
+				a.Validation.Values,
+			)
+		}
+	}
+	return verr
 }
 
 func (a *AttributeExpr) inheritRecursive(parent *AttributeExpr) {
@@ -302,49 +334,6 @@ func (a *AttributeExpr) inheritValidations(parent *AttributeExpr) {
 func (a *AttributeExpr) shouldInherit(parent *AttributeExpr) bool {
 	return a != nil && AsObject(a.Type) != nil &&
 		parent != nil && AsObject(parent.Type) != nil
-}
-
-// Walk traverses the data structure recursively and calls the given function once
-// on each field starting with the field returned by Expr.
-func (a *AttributeExpr) Walk(walker func(*AttributeExpr) error) error {
-	return walk(a, walker, make(map[string]bool))
-}
-
-// Recursive implementation of the Walk methods. Takes care of avoiding infinite recursions by
-// keeping track of types that have already been walked.
-func walk(at *AttributeExpr, walker func(*AttributeExpr) error, seen map[string]bool) error {
-	if err := walker(at); err != nil {
-		return err
-	}
-	walkUt := func(ut UserType) error {
-		if _, ok := seen[ut.Name()]; ok {
-			return nil
-		}
-		seen[ut.Name()] = true
-		return walk(ut.Attribute(), walker, seen)
-	}
-	switch actual := at.Type.(type) {
-	case Primitive:
-		return nil
-	case *Array:
-		return walk(actual.ElemType, walker, seen)
-	case *Map:
-		if err := walk(actual.KeyType, walker, seen); err != nil {
-			return err
-		}
-		return walk(actual.ElemType, walker, seen)
-	case Object:
-		for _, cat := range actual {
-			if err := walk(cat, walker, seen); err != nil {
-				return err
-			}
-		}
-	case UserType:
-		return walkUt(actual)
-	default:
-		panic("unknown field type") // bug
-	}
-	return nil
 }
 
 // Context returns the generic definition name used in error messages.
@@ -394,7 +383,8 @@ func (v *ValidationExpr) AddRequired(required []string) {
 	}
 }
 
-// HasRequiredOnly returns true if the validation only has the Required field with a non-zero value.
+// HasRequiredOnly returns true if the validation only has the Required field
+// with a non-zero value.
 func (v *ValidationExpr) HasRequiredOnly() bool {
 	if len(v.Values) > 0 {
 		return false

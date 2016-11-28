@@ -8,11 +8,11 @@ import (
 	"io"
 	"mime"
 	"sync"
-	"time"
 )
 
 type (
-	// DecoderFunc instantiates a decoder that decodes data read from the given io reader.
+	// DecoderFunc instantiates a decoder that decodes data read from the
+	// given io reader.
 	DecoderFunc func(r io.Reader) Decoder
 
 	// A Decoder unmarshals an io.Reader into an interface.
@@ -20,8 +20,8 @@ type (
 		Decode(v interface{}) error
 	}
 
-	// ResettableDecoder is used to determine whether or not a Decoder can be reset and thus
-	// safely reused in a sync.Pool.
+	// ResettableDecoder is used to determine whether or not a Decoder can
+	// be reset and thus safely reused in a sync.Pool.
 	ResettableDecoder interface {
 		Decoder
 		Reset(r io.Reader)
@@ -42,31 +42,32 @@ type (
 		Encode(v interface{}) error
 	}
 
-	// The ResettableEncoder is used to determine whether or not a Encoder can be reset and
-	// thus safely reused in a sync.Pool.
+	// The ResettableEncoder is used to determine whether or not a Encoder
+	// can be reset and thus safely reused in a sync.Pool.
 	ResettableEncoder interface {
 		Encoder
 		Reset(w io.Writer)
 	}
 
-	// encoderPool smartly determines whether to instantiate a new Encoder or reuse one from a
-	// sync.Pool.
+	// encoderPool smartly determines whether to instantiate a new Encoder
+	// or reuse one from a sync.Pool.
 	encoderPool struct {
 		fn   EncoderFunc
 		pool *sync.Pool
 	}
 
-	// HTTPDecoder is a Decoder that decodes HTTP request or response bodies given a set of
-	// known Content-Type to decoder mapping.
+	// HTTPDecoder is a Decoder that decodes HTTP request or response bodies
+	// given a set of known Content-Type to decoder mapping.
 	HTTPDecoder struct {
 		pools map[string]*decoderPool // Registered decoders
 	}
 
-	// HTTPEncoder is a Encoder that encodes HTTP request or response bodies given a set of
-	// known Content-Type to encoder mapping.
+	// HTTPEncoder is a Encoder that encodes HTTP request or response bodies
+	// given a set of known Content-Type to encoder mapping.
 	HTTPEncoder struct {
 		pools        map[string]*encoderPool // Registered encoders
-		contentTypes []string                // List of content types for type negotiation
+		contentTypes []string                // List of content types
+		// used for type negotiation
 	}
 )
 
@@ -88,14 +89,16 @@ func NewGobEncoder(w io.Writer) Encoder { return gob.NewEncoder(w) }
 // NewGobDecoder is an adapter for the encoding package gob decoder.
 func NewGobDecoder(r io.Reader) Decoder { return gob.NewDecoder(r) }
 
-// NewHTTPEncoder creates an encoder that maps HTTP content types to low level encoders.
+// NewHTTPEncoder creates an encoder that maps HTTP content types to low level
+// encoders.
 func NewHTTPEncoder() *HTTPEncoder {
 	return &HTTPEncoder{
 		pools: make(map[string]*encoderPool),
 	}
 }
 
-// NewHTTPDecoder creates a decoder that maps HTTP content types to low level decoders.
+// NewHTTPDecoder creates a decoder that maps HTTP content types to low level
+// decoders.
 func NewHTTPDecoder() *HTTPDecoder {
 	return &HTTPDecoder{
 		pools: make(map[string]*decoderPool),
@@ -104,8 +107,6 @@ func NewHTTPDecoder() *HTTPDecoder {
 
 // Decode uses registered Decoders to unmarshal a body based on the contentType.
 func (decoder *HTTPDecoder) Decode(v interface{}, body io.Reader, contentType string) error {
-	now := time.Now()
-	defer MeasureSince([]string{"goa", "decode", contentType}, now)
 	var p *decoderPool
 	if contentType == "" {
 		// Default to JSON
@@ -133,8 +134,8 @@ func (decoder *HTTPDecoder) Decode(v interface{}, body io.Reader, contentType st
 	return nil
 }
 
-// Register sets a specific decoder to be used for the specified content types. If a decoder is
-// already registered, it is overwritten.
+// Register sets a specific decoder to be used for the specified content types.
+// If a decoder is already registered, it is overwritten.
 func (decoder *HTTPDecoder) Register(f DecoderFunc, contentTypes ...string) {
 	p := newDecodePool(f)
 
@@ -147,8 +148,8 @@ func (decoder *HTTPDecoder) Register(f DecoderFunc, contentTypes ...string) {
 	}
 }
 
-// newDecodePool checks to see if the DecoderFunc returns reusable decoders and if so, creates a
-// pool.
+// newDecodePool checks to see if the DecoderFunc returns reusable decoders and
+// if so, creates a pool.
 func newDecodePool(f DecoderFunc) *decoderPool {
 	// get a new decoder and type assert to see if it can be reset
 	d := f(nil)
@@ -167,7 +168,8 @@ func newDecodePool(f DecoderFunc) *decoderPool {
 	return p
 }
 
-// Get returns an already reset Decoder from the pool or creates a new one if necessary.
+// Get returns an already reset Decoder from the pool or creates a new one if
+// necessary.
 func (p *decoderPool) Get(r io.Reader) Decoder {
 	if p.pool == nil {
 		return p.fn(r)
@@ -186,10 +188,9 @@ func (p *decoderPool) Put(d Decoder) {
 	p.pool.Put(d)
 }
 
-// Encode uses the registered encoders and given content type to marshal and write the given value
-// using the given writer.
+// Encode uses the registered encoders and given content type to marshal and
+// write the given value using the given writer.
 func (encoder *HTTPEncoder) Encode(v interface{}, resp io.Writer, accept string) error {
-	now := time.Now()
 	if accept == "" {
 		accept = "*/*"
 	}
@@ -200,7 +201,6 @@ func (encoder *HTTPEncoder) Encode(v interface{}, resp io.Writer, accept string)
 			break
 		}
 	}
-	defer MeasureSince([]string{"goa", "encode", contentType}, now)
 	p := encoder.pools[contentType]
 	if p == nil && contentType != "*/*" {
 		p = encoder.pools["*/*"]
@@ -219,8 +219,8 @@ func (encoder *HTTPEncoder) Encode(v interface{}, resp io.Writer, accept string)
 	return nil
 }
 
-// Register sets a specific encoder to be used for the specified content types. If an encoder is
-// already registered, it is overwritten.
+// Register sets a specific encoder to be used for the specified content types.
+// If an encoder is already registered, it is overwritten.
 func (encoder *HTTPEncoder) Register(f EncoderFunc, contentTypes ...string) {
 	p := newEncodePool(f)
 	for _, contentType := range contentTypes {
@@ -231,15 +231,16 @@ func (encoder *HTTPEncoder) Register(f EncoderFunc, contentTypes ...string) {
 		encoder.pools[mediaType] = p
 	}
 
-	// Rebuild a unique index of registered content encoders to be used in EncodeResponse
+	// Rebuild a unique index of registered content encoders to be used in
+	// EncodeResponse
 	encoder.contentTypes = make([]string, 0, len(encoder.pools))
 	for contentType := range encoder.pools {
 		encoder.contentTypes = append(encoder.contentTypes, contentType)
 	}
 }
 
-// newEncodePool checks to see if the EncoderFactory returns reusable encoders and if so, creates
-// a pool.
+// newEncodePool checks to see if the EncoderFactory returns reusable encoders
+// and if so, creates a pool.
 func newEncodePool(f EncoderFunc) *encoderPool {
 	// get a new encoder and type assert to see if it can be reset
 	e := f(nil)
@@ -258,7 +259,8 @@ func newEncodePool(f EncoderFunc) *encoderPool {
 	return p
 }
 
-// Get returns an already reset Encoder from the pool or creates a new one if necessary.
+// Get returns an already reset Encoder from the pool or creates a new one if // necessary. This is a test for a long line that is more than 80 characters to
+// see if
 func (p *encoderPool) Get(w io.Writer) Encoder {
 	if p.pool == nil {
 		return p.fn(w)

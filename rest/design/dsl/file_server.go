@@ -48,7 +48,7 @@ func Files(path, filename string, dsls ...func()) {
 		return
 	}
 	if s, ok := eval.Current().(*goadesign.ServiceExpr); ok {
-		r := design.ResourceFor(s)
+		r := design.Root.ResourceFor(s)
 		server := &design.FileServerExpr{
 			Resource:    r,
 			RequestPath: path,
