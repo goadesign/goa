@@ -59,6 +59,7 @@ type (
 		Attribute() *AttributeExpr
 		// Walk traverses the data structure recursively and calls the
 		// given function once on each attribute starting with Attribute
+		// type attribute.
 		Walk(walker func(*AttributeExpr) error) error
 		// Dup makes a deep copy of the type given a deep copy of its attribute.
 		Dup(att *AttributeExpr) UserType
