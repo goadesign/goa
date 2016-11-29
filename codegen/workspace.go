@@ -17,6 +17,7 @@ import (
 	"strings"
 	"text/template"
 
+	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/pkg"
 
 	"golang.org/x/tools/go/ast/astutil"
@@ -71,9 +72,9 @@ var (
 		"tabs":                Tabs,
 		"tempvar":             Tempvar,
 		"title":               strings.Title,
-		"toArray":             ToArray,
-		"toMap":               ToMap,
-		"toObject":            ToObject,
+		"toArray":             design.AsArray,
+		"toMap":               design.AsMap,
+		"toObject":            design.AsObject,
 		"toLower":             strings.ToLower,
 		"validationChecker":   ValidationChecker,
 	}
