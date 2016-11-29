@@ -22,7 +22,7 @@ DEPEND=\
 
 .PHONY: goagen
 
-all: depend lint cyclo goagen test
+all: depend lint cyclo test
 
 depend:
 	@go get -v ./...
@@ -45,7 +45,6 @@ cyclo:
 
 test:
 	go test ./...
-	go test ./_integration_tests
 
 goagen:
 	@cd goagen && \
