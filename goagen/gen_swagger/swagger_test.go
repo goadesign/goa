@@ -234,6 +234,27 @@ var _ = Describe("New", func() {
 					[]byte(`"required":true`),
 				})
 			})
+		})
+
+		Context("with a payload of type Any", func() {
+			BeforeEach(func() {
+				Resource("res", func() {
+					Action("act", func() {
+						Routing(
+							PUT("/"),
+						)
+						Payload(Any, func() {
+							Example("example")
+						})
+					})
+				})
+			})
+
+			It("serializes into valid swagger JSON", func() {
+				validateSwaggerWithFragments(swagger, [][]byte{
+					[]byte(`"ActResPayload":{"title":"ActResPayload","example":"example"}`),
+				})
+			})
 
 		})
 

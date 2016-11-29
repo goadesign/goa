@@ -282,7 +282,9 @@ func TypeSchema(api *design.APIDefinition, t design.DataType) *JSONSchema {
 	s := NewJSONSchema()
 	switch actual := t.(type) {
 	case design.Primitive:
-		s.Type = JSONType(actual.Name())
+		if name := actual.Name(); name != "any" {
+			s.Type = JSONType(actual.Name())
+		}
 		switch actual.Kind() {
 		case design.UUIDKind:
 			s.Format = "uuid"
