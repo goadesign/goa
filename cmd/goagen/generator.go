@@ -146,7 +146,7 @@ func (m *Generator) generateToolSourceCode(pkg *codegen.Package) {
 	imports := append(m.Imports,
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("strings"),
-		codegen.SimpleImport("github.com/goadesign/goa/dslengine"),
+		codegen.SimpleImport("goa.design/goa.v2/dslengine"),
 		codegen.NewImport("_", filepath.ToSlash(m.DesignPkgPath)),
 	)
 	file.WriteHeader("Code Generator", "main", imports)
