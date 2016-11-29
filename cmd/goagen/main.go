@@ -220,7 +220,7 @@ package and tool and the Swagger specification for the API.
 }
 
 func run(pkg string, c *cobra.Command) ([]string, error) {
-	pkgPath := fmt.Sprintf("github.com/goadesign/goa/goagen/gen_%s", pkg[3:])
+	pkgPath := fmt.Sprintf("goa.design/goa.v2/goagen/gen_%s", pkg[3:])
 	pkgSrcPath, err := codegen.PackageSourcePath(pkgPath)
 	if err != nil {
 		return nil, fmt.Errorf("invalid plugin package import path: %s", err)
