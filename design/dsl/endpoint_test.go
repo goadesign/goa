@@ -3,8 +3,6 @@ package dsl_test
 import (
 	"testing"
 
-	"reflect"
-
 	"goa.design/goa.v2/design"
 	. "goa.design/goa.v2/design/dsl"
 	"goa.design/goa.v2/eval"
@@ -61,7 +59,7 @@ func TestEndpoint(t *testing.T) {
 				if len(endpoint.Errors) != 2 {
 					t.Errorf("expected %d error definitions but got %d ", 2, len(endpoint.Errors))
 				}
-				assertEndpointDescription(t, "Optional description", endpoint.Description)
+				assertDescription(t, "Optional description", endpoint.Description)
 				assertEndpointError(t, endpoint.Errors[0], "basic_error", design.ErrorMedia)
 				assertEndpointError(t, endpoint.Errors[1], "basic_media_error", design.ErrorMedia)
 				expectedMeta := design.MetadataExpr{
@@ -70,12 +68,12 @@ func TestEndpoint(t *testing.T) {
 				assertEndpointMetaData(t, endpoint.Metadata, expectedMeta)
 				expectedReq := &design.UserTypeExpr{
 					TypeName:      "BasicRequest",
-					AttributeExpr: &design.AttributeExpr{Description: "Optional description", Type: design.Object{}}}
-				assertEndpointRequestResponse(t, "Request", endpoint.Request, expectedReq)
+					AttributeExpr: &design.AttributeExpr{Description: "Optional description", Type: &design.Object{}}}
+				assertUserType(t, "Request", endpoint.Request, expectedReq)
 				expectedRes := &design.UserTypeExpr{
 					TypeName:      "BasicResponse",
-					AttributeExpr: &design.AttributeExpr{Description: "Optional description", Type: design.Object{}}}
-				assertEndpointRequestResponse(t, "Response", endpoint.Response, expectedRes)
+					AttributeExpr: &design.AttributeExpr{Description: "Optional description", Type: &design.Object{}}}
+				assertUserType(t, "Response", endpoint.Response, expectedRes)
 
 				//assert on second endpoint
 				endpoint = endpoints[1]
@@ -89,16 +87,8 @@ func TestEndpoint(t *testing.T) {
 					t.Errorf("no endpoint Metadata defined expected an empty Metadata but got %v ", endpoint.Metadata)
 				}
 				assertEndpointError(t, endpoint.Errors[0], "basic_media_error", design.ErrorMedia)
-				expectedReq = &design.UserTypeExpr{
-					TypeName:      "AnotherRequest",
-					AttributeExpr: &design.AttributeExpr{Type: design.Object{}},
-				}
-				assertEndpointRequestResponse(t, "Request", endpoint.Request, expectedReq)
-				expectedRes = &design.UserTypeExpr{
-					TypeName:      "AnotherResponse",
-					AttributeExpr: &design.AttributeExpr{Type: design.Object{}},
-				}
-				assertEndpointRequestResponse(t, "Response", endpoint.Response, expectedRes)
+				assertPrimitive(t, "Request", endpoint.Request, design.String)
+				assertPrimitive(t, "Response", endpoint.Response, design.String)
 			},
 		},
 	}
@@ -126,7 +116,7 @@ func assertEndpointDocs(t *testing.T, doc *design.DocsExpr, url, desc string) {
 	}
 }
 
-func assertEndpointDescription(t *testing.T, expectedDesc, actualDesc string) {
+func assertDescription(t *testing.T, expectedDesc, actualDesc string) {
 	if expectedDesc != actualDesc {
 		t.Errorf("expected description '%s' to match '%s' ", actualDesc, expectedDesc)
 	}
@@ -157,20 +147,36 @@ func assertEndpointMetaData(t *testing.T, actual design.MetadataExpr, expected d
 	}
 }
 
-func assertEndpointRequestResponse(t *testing.T, assertType string, actual design.DataType, expected *design.UserTypeExpr) {
+func assertPrimitive(t *testing.T, context string, actual design.DataType, expected design.Primitive) {
+	v, ok := actual.(design.Primitive)
+	if !ok {
+		t.Errorf("expected %s to be a Primitive but got %s ", context, actual.Name())
+		return
+	}
+	if v != expected {
+		t.Errorf("expected %s to be a %s but got %s ", context, expected.Name(), actual.Name())
+	}
+}
+
+func assertUserType(t *testing.T, context string, actual design.DataType, expected *design.UserTypeExpr) {
+
 	ut, ok := actual.(*design.UserTypeExpr)
-	if !ok || ut == nil {
-		t.Errorf("expected endpoint %s to be a *UserTypeExpr but got %v", assertType, reflect.TypeOf(ut))
+	if !ok {
+		t.Errorf("expected %s to be a user type but got %s", context, actual.Name())
+		return
+	}
+	if ut == nil {
+		t.Errorf("did not expect user type %s to be nil ", context)
 		return
 	}
 	if ut.Name() != expected.Name() {
-		t.Errorf("expected endpoint %s name %s to match %s", assertType, ut.Name(), expected.Name())
+		t.Errorf("expected user type %s name %s to match %s", context, ut.Name(), expected.Name())
 	}
 	if ut.AttributeExpr.Type.Name() != expected.Type.Name() {
-		t.Errorf("expected endpoint %s TypeName %s to match %s ", assertType, ut.Type.Name(), expected.Type.Name())
+		t.Errorf("expected user type %s TypeName %s to match %s ", context, ut.Type.Name(), expected.Type.Name())
 	}
 	if ut.Description != expected.Description {
-		t.Errorf("expected endpoint %s description %s to match %s", assertType, ut.Description, expected.Description)
+		t.Errorf("expected user type %s description %s to match %s", context, ut.Description, expected.Description)
 	}
 
 }
