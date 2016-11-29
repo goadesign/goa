@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	// TempCount holds the value appended to variable names to make them unique.
+	// TempCount is the value appended to variable names to make them unique.
 	TempCount int
 )
 
@@ -121,13 +121,14 @@ func attributeTags(parent, att *design.AttributeExpr, name string, private bool)
 	return fmt.Sprintf(" `form:\"%s%s\" json:\"%s%s\" xml:\"%s%s\"`", name, omit, name, omit, name, omit)
 }
 
-// GoTypeRef returns the Go code that refers to the Go type which matches the given data type
-// (the part that comes after `var foo`)
-// required only applies when referring to a user type that is an object defined inline. In this
-// case the type (Object) does not carry the required field information defined in the parent
-// (anonymous) attribute.
-// tabs is used to properly tabulate the object struct fields and only applies to this case.
-// This function assumes the type is in the same package as the code accessing it.
+// GoTypeRef returns the Go code that refers to the Go type which matches the
+// given data type (the part that comes after `var foo`)
+// required only applies when referring to a user type that is an object defined
+// inline. In this case the type (Object) does not carry the required field
+// information defined in the parent (anonymous) attribute.
+// tabs is used to properly tabulate the object struct fields and only applies
+// to this case. This function assumes the type is in the same package as the
+// code accessing it.
 func GoTypeRef(t design.DataType, required []string, tabs int, private bool) string {
 	tname := GoTypeName(t, required, tabs, private)
 	if mt, ok := t.(*design.MediaTypeExpr); ok {
@@ -318,7 +319,8 @@ func removeTrailingInvalid(runes []rune) []rune {
 	return runes[0 : valid+1]
 }
 
-// removeInvalidAtIndex removes consecutive invalid identifiers from runes starting at index i.
+// removeInvalidAtIndex removes consecutive invalid identifiers from runes
+// starting at index i.
 func removeInvalidAtIndex(i int, runes []rune) []rune {
 	valid := i
 	for ; valid < len(runes) && !validIdentifier(runes[valid]); valid++ {
@@ -327,8 +329,8 @@ func removeInvalidAtIndex(i int, runes []rune) []rune {
 	return append(runes[:i], runes[valid:]...)
 }
 
-// GoifyAtt honors any struct:field:name metadata set on the attribute and calls Goify with the tag
-// value if present or the given name otherwise.
+// GoifyAtt honors any struct:field:name metadata set on the attribute and calls
+// Goify with the tag value if present or the given name otherwise.
 func GoifyAtt(att *design.AttributeExpr, name string, firstUpper bool) string {
 	if tname, ok := att.Metadata["struct:field:name"]; ok {
 		if len(tname) > 0 {
@@ -339,10 +341,10 @@ func GoifyAtt(att *design.AttributeExpr, name string, firstUpper bool) string {
 }
 
 // Goify makes a valid Go identifier out of any string.
-// It does that by removing any non letter and non digit character and by making sure the first
-// character is a letter or "_".
-// Goify produces a "CamelCase" version of the string, if firstUpper is true the first character
-// of the identifier is uppercase otherwise it's lowercase.
+// It does that by removing any non letter and non digit character and by making
+// sure the first character is a letter or "_".
+// Goify produces a "CamelCase" version of the string, if firstUpper is true the
+// first character of the identifier is uppercase otherwise it's lowercase.
 func Goify(str string, firstUpper bool) string {
 	runes := []rune(str)
 
@@ -499,32 +501,6 @@ func RunTemplate(tmpl *template.Template, data interface{}) string {
 	return b.String()
 }
 
-// ToArray is a helper function which asserts the type to an array. Mainly intended for use in
-// templates.
-func ToArray(dt design.DataType) *design.Array {
-	if a, ok := dt.(*design.Array); ok {
-		return a
-	}
-	return nil
-}
-
-// ToMap is a helper function which asserts the type to a map. Mainly intended for use in templates.
-func ToMap(dt design.DataType) *design.Map {
-	if m, ok := dt.(*design.Map); ok {
-		return m
-	}
-	return nil
-}
-
-// ToObject is a helper function which asserts the type to a object. Mainly intended for use in
-// templates.
-func ToObject(dt design.DataType) design.Object {
-	if o, ok := dt.(design.Object); ok {
-		return o
-	}
-	return nil
-}
-
 // toSlice returns Go code that represents the given slice.
 func toSlice(val []interface{}) string {
 	elems := make([]string, len(val))
@@ -534,7 +510,8 @@ func toSlice(val []interface{}) string {
 	return fmt.Sprintf("[]interface{}{%s}", strings.Join(elems, ", "))
 }
 
-// typeName returns the type name of the given attribute if it is a named type, empty string otherwise.
+// typeName returns the type name of the given attribute if it is a named type,
+// empty string otherwise.
 func typeName(att *design.AttributeExpr) (name string) {
 	if ut, ok := att.Type.(*design.UserTypeExpr); ok {
 		name = Goify(ut.TypeName, true)

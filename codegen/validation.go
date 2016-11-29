@@ -31,6 +31,7 @@ func init() {
 		"goifyAtt":         GoifyAtt,
 		"add":              Add,
 		"recursiveChecker": RecursiveChecker,
+		"toObject":         design.AsObject,
 	}
 	if arrayValT, err = template.New("array").Funcs(fm).Parse(arrayValTmpl); err != nil {
 		panic(err)
@@ -340,7 +341,7 @@ const (
 {{if .isPointer}}{{tabs $depth}}}
 {{end}}{{tabs .depth}}}`
 
-	requiredValTmpl = `{{range $r := .required}}{{$catt := index ToObject($.attribute.Type) $r}}{{/*
+	requiredValTmpl = `{{range $r := .required}}{{$catt := index (toObject $.attribute.Type) $r}}{{/*
 */}}{{if and (not $.private) (eq $catt.Type.Kind 4)}}{{tabs $.depth}}if {{$.target}}.{{goifyAtt $catt $r true}} == "" {
 {{tabs $.depth}}	err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`" + `{{$.context}}` + "`" + `, "{{$r}}"))
 {{tabs $.depth}}}

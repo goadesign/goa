@@ -144,7 +144,12 @@ const (
 
 package dsl
 
-import goadsl "goa.design/goa.v2/design/dsl"`
+import (
+	"goa.design/goa.v2/design"
+	goadsl "goa.design/goa.v2/design/dsl"
+)
+
+`
 
 	// aliasT is the source of the text template that renders alias
 	// implementations.
