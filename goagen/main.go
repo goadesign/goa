@@ -141,9 +141,12 @@ package and tool and the Swagger specification for the API.
 	genCmd := &cobra.Command{
 		Use:   "gen",
 		Short: "Run third-party generator",
-		Run:   func(c *cobra.Command, _ []string) { files, err = runGen(c) },
+		Run:   func(c *cobra.Command, args []string) { files, err = runGen(c, args) },
 	}
 	genCmd.Flags().StringVar(&pkgPath, "pkg-path", "", "Package import path of generator. The package must implement the Generate global function.")
+	// stop parsing arguments after -- to prevent an unknown flag error
+	// this also means custom arguments (after --) should be the last arguments
+	genCmd.Flags().SetInterspersed(false)
 	rootCmd.AddCommand(genCmd)
 
 	// boostrapCmd implements the "bootstrap" command.
@@ -235,10 +238,10 @@ func run(pkg string, c *cobra.Command) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid package import path: %s", err)
 	}
-	return generate(pkgName, pkgPath, c)
+	return generate(pkgName, pkgPath, c, []string{})
 }
 
-func runGen(c *cobra.Command) ([]string, error) {
+func runGen(c *cobra.Command, args []string) ([]string, error) {
 	pkgPath := c.Flag("pkg-path").Value.String()
 	pkgSrcPath, err := codegen.PackageSourcePath(pkgPath)
 	if err != nil {
@@ -248,13 +251,13 @@ func runGen(c *cobra.Command) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid plugin package import path: %s", err)
 	}
-	return generate(pkgName, pkgPath, c)
+	return generate(pkgName, pkgPath, c, args)
 }
 
-func generate(pkgName, pkgPath string, c *cobra.Command) ([]string, error) {
+func generate(pkgName, pkgPath string, c *cobra.Command, args []string) ([]string, error) {
 	m := make(map[string]string)
-	c.Flags().Visit(func(f *pflag.Flag) {
-		if f.Name != "pkg-path" {
+	c.Flags().VisitAll(func(f *pflag.Flag) {
+		if f.Name != "pkg-path" && f.Name != "help" {
 			m[f.Name] = f.Value.String()
 		}
 	})
@@ -266,6 +269,19 @@ func generate(pkgName, pkgPath string, c *cobra.Command) ([]string, error) {
 	m["out"], err = filepath.Abs(m["out"])
 	if err != nil {
 		return nil, err
+	}
+
+	// Add additional arguments to the generator command.
+	// Only full flags (such as --flag=value) are passed,
+	// because these flags have not been parsed yet. Short flags
+	// (such as -f value) are not passed.
+	// A boolean flag should be added in the form of --flag=true.
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "--") && strings.Contains(arg, "=") {
+			val := strings.Split(arg, "=")
+			flag := strings.TrimPrefix(val[0], "--")
+			m[flag] = val[1]
+		}
 	}
 
 	gen, err := meta.NewGenerator(
