@@ -268,12 +268,20 @@ func GoTypeDesc(t design.DataType, upper bool) string {
 		if actual.Description != "" {
 			return strings.Replace(actual.Description, "\n", "\n// ", -1)
 		}
+		name := Goify(actual.TypeName, upper)
+		if actual.View != "default" {
+			name += Goify(actual.View, true)
+		}
 
 		switch elem := actual.UserTypeDefinition.AttributeDefinition.Type.(type) {
 		case *design.Array:
-			return fmt.Sprintf("%s media type is a collection of %s.", Goify(actual.TypeName, upper), GoTypeName(elem.ElemType.Type, nil, 0, !upper))
+			elemName := GoTypeName(elem.ElemType.Type, nil, 0, !upper)
+			if actual.View != "default" {
+				elemName += Goify(actual.View, true)
+			}
+			return fmt.Sprintf("%s media type is a collection of %s.", name, elemName)
 		default:
-			return Goify(actual.TypeName, upper) + " media type."
+			return name + " media type."
 		}
 	default:
 		return ""
