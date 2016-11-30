@@ -1,7 +1,7 @@
-# <img src="http://goa.design/img/goa-logo.svg">
+## <img src="http://goa.design/img/goa-logo.svg">
+*goa is a framework for building microservices and APIs in Go using a unique design-first approach.*
 
-goa is a framework for building microservices in Go using a unique design-first approach.
-
+---
 [![Build Status](https://travis-ci.org/goadesign/goa.svg?branch=master)](https://travis-ci.org/goadesign/goa)
 [![Windows Build status](https://ci.appveyor.com/api/projects/status/vixp37loj5i6qmaf/branch/master?svg=true)](https://ci.appveyor.com/project/RaphaelSimon/goa-oqtis/branch/master)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/goadesign/goa/blob/master/LICENSE)
