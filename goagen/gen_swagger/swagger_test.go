@@ -514,6 +514,9 @@ var _ = Describe("New", func() {
 							Required("Authorization", "X-Account", "OverrideOptionalHeader")
 						})
 						Payload(UpdatePayload)
+						Response(OK, func() {
+							Media(CollectionOf(BottleMedia), "extended")
+						})
 						Response(NoContent)
 						Response(NotFound)
 					})
@@ -574,14 +577,20 @@ var _ = Describe("New", func() {
 			It("should set the inherited tag and the action tag", func() {
 				tags := []string{"res", "Update"}
 				a := swagger.Paths["/orgs/{org}/accounts/{id}"].(*genswagger.Path)
+				Ω(a.Put).ShouldNot(BeNil())
 				Ω(a.Put.Tags).Should(Equal(tags))
 				b := swagger.Paths["/base/bottles/{id}"].(*genswagger.Path)
 				Ω(b.Put.Tags).Should(Equal(tags))
 			})
 
-			It("should set the summary from the summary tag", func() {
+			It("sets the summary from the summary tag", func() {
 				a := swagger.Paths["/orgs/{org}/accounts/{id}"].(*genswagger.Path)
 				Ω(a.Put.Summary).Should(Equal("a summary"))
+			})
+
+			It("generates the media type collection schema", func() {
+				Ω(swagger.Definitions).Should(HaveLen(6))
+				Ω(swagger.Definitions).Should(HaveKey("GoaExampleBottleExtendedCollection"))
 			})
 
 			It("serializes into valid swagger JSON", func() { validateSwagger(swagger) })
