@@ -257,7 +257,7 @@ func runGen(c *cobra.Command, args []string) ([]string, error) {
 func generate(pkgName, pkgPath string, c *cobra.Command, args []string) ([]string, error) {
 	m := make(map[string]string)
 	c.Flags().Visit(func(f *pflag.Flag) {
-		if f.Name != "pkg-path" && f.Name != "help" {
+		if f.Name != "pkg-path" {
 			m[f.Name] = f.Value.String()
 		}
 	})
@@ -271,23 +271,11 @@ func generate(pkgName, pkgPath string, c *cobra.Command, args []string) ([]strin
 		return nil, err
 	}
 
-	// Add additional arguments to the generator command.
-	// Only full flags (such as --flag=value) are passed,
-	// because these flags have not been parsed yet. Short flags
-	// (such as -f value) are not passed.
-	// A boolean flag should be added in the form of --flag=true.
-	for _, arg := range args {
-		if strings.HasPrefix(arg, "--") && strings.Contains(arg, "=") {
-			val := strings.Split(arg, "=")
-			flag := strings.TrimPrefix(val[0], "--")
-			m[flag] = val[1]
-		}
-	}
-
 	gen, err := meta.NewGenerator(
 		pkgName+".Generate",
 		[]*codegen.ImportSpec{codegen.SimpleImport(pkgPath)},
 		m,
+		args,
 	)
 	if err != nil {
 		return nil, err
