@@ -60,7 +60,7 @@ var _ = Describe("Generate", func() {
 		})
 	})
 
-	Context("with an action with an integer parameter with no default value", func() {
+	Context("with an action with two parameters", func() {
 		BeforeEach(func() {
 			codegen.TempCount = 0
 			design.Design = &design.APIDefinition{
@@ -100,7 +100,7 @@ var _ = Describe("Generate", func() {
 			Ω(genErr).Should(BeNil())
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 			Ω(err).ShouldNot(HaveOccurred())
-			Ω(content).Should(ContainSubstring(`path = fmt.Sprintf("/nics/%v/add/%v", cmd.NicID, cmd.IPAddress`))
+			Ω(content).Should(ContainSubstring(`path = fmt.Sprintf("/nics/%v/add/%v", url.QueryEscape(cmd.NicID), url.QueryEscape(cmd.IPAddress)`))
 		})
 	})
 
