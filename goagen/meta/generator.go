@@ -33,6 +33,10 @@ type Generator struct {
 	// generator on the command line.
 	Flags map[string]string
 
+	// CustomFlags is the list of arguments that appear after the -- separator.
+	// These arguments are appended verbatim to the final generator command line.
+	CustomFlags []string
+
 	// OutDir is the final output directory.
 	OutDir string
 
@@ -44,7 +48,7 @@ type Generator struct {
 
 // NewGenerator returns a meta generator that can run an actual Generator
 // given its factory method and command line flags.
-func NewGenerator(genfunc string, imports []*codegen.ImportSpec, flags map[string]string) (*Generator, error) {
+func NewGenerator(genfunc string, imports []*codegen.ImportSpec, flags map[string]string, customflags []string) (*Generator, error) {
 	var (
 		outDir, designPkgPath string
 		debug                 bool
@@ -68,6 +72,7 @@ func NewGenerator(genfunc string, imports []*codegen.ImportSpec, flags map[strin
 		Genfunc:       genfunc,
 		Imports:       imports,
 		Flags:         flags,
+		CustomFlags:   customflags,
 		OutDir:        outDir,
 		DesignPkgPath: designPkgPath,
 		debug:         debug,
@@ -181,6 +186,7 @@ func (m *Generator) spawn(genbin string) ([]string, error) {
 	}
 	sort.Strings(args)
 	args = append(args, "--version="+version.String())
+	args = append(args, m.CustomFlags...)
 	cmd := exec.Command(genbin, args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {

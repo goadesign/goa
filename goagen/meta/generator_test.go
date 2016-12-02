@@ -24,6 +24,7 @@ var _ = Describe("Run", func() {
 	var outputDir string
 	var designPkgPath, setDesignPkgPath string
 	var designPackageSource string
+	var customFlags []string
 
 	var m *meta.Generator
 
@@ -41,6 +42,7 @@ var _ = Describe("Run", func() {
 		Ω(err).ShouldNot(HaveOccurred())
 		compiledFiles = nil
 		compileError = nil
+		customFlags = []string{"--custom=arg"}
 	})
 
 	JustBeforeEach(func() {
@@ -57,6 +59,7 @@ var _ = Describe("Run", func() {
 			Genfunc:       genfunc,
 			Imports:       []*codegen.ImportSpec{codegen.SimpleImport(designPkgPath)},
 			OutDir:        outputDir,
+			CustomFlags:   customFlags,
 			DesignPkgPath: setDesignPkgPath,
 		}
 		compiledFiles, compileError = m.Generate()
@@ -240,6 +243,21 @@ var _ = Describe("Run", func() {
 				Ω(compiledFiles).Should(Equal(filePaths))
 			})
 		})
+		Context("with code that uses custom flags", func() {
+			BeforeEach(func() {
+				var b bytes.Buffer
+				tmpl, err := template.New("source").Parse(validSourceTmplWithCustomFlags)
+				Ω(err).ShouldNot(HaveOccurred())
+				err = tmpl.Execute(&b, "--custom=arg")
+				Ω(err).ShouldNot(HaveOccurred())
+				designPackageSource = b.String()
+
+			})
+
+			It("returns no error", func() {
+				Ω(compileError).ShouldNot(HaveOccurred())
+			})
+		})
 	})
 })
 
@@ -268,6 +286,20 @@ func Generate() ([]string, error) {
 	{{range .}}fmt.Println("{{.}}")
 	{{end}}
 	return nil, nil
+}
+`
+
+	validSourceTmplWithCustomFlags = `package foo
+import "fmt"
+import "os"
+
+func Generate() ([]string, error) {
+	for _, arg := range os.Args {
+		if arg == "{{.}}" {
+			return nil, nil
+		}
+	}
+	return nil, fmt.Errorf("no flag --custom=arg found")
 }
 `
 )
