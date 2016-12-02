@@ -33,9 +33,8 @@ type Generator struct {
 	// generator on the command line.
 	Flags map[string]string
 
-	// CustomFlags is a list of arguments given to the final generator that
-	// where after the '--' argument and thus where not pardes by goagen.
-	// They will be forwarded to the final generator without modification.
+	// CustomFlags is the list of arguments that appear after the -- separator.
+	// These arguments are appended verbatim to the final generator command line.
 	CustomFlags []string
 
 	// OutDir is the final output directory.
