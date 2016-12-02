@@ -116,6 +116,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 		codegen.SimpleImport("encoding/json"),
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("log"),
+		codegen.SimpleImport("net/url"),
 		codegen.SimpleImport("os"),
 		codegen.SimpleImport("path"),
 		codegen.SimpleImport("path/filepath"),
@@ -274,7 +275,15 @@ func joinRouteParams(action *design.ActionDefinition, att *design.AttributeDefin
 		elems  = make([]string, len(params))
 	)
 	for i, p := range params {
-		field := fmt.Sprintf("cmd.%s", codegen.Goify(p, true))
+		patt, ok := att.Type.ToObject()[p]
+		if !ok {
+			continue
+		}
+		pf := "cmd.%s"
+		if patt.Type.Kind() == design.StringKind {
+			pf = "url.QueryEscape(cmd.%s)"
+		}
+		field := fmt.Sprintf(pf, codegen.Goify(p, true))
 		elems[i] = field
 	}
 	return strings.Join(elems, ", ")
