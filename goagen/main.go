@@ -238,7 +238,7 @@ func run(pkg string, c *cobra.Command) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid package import path: %s", err)
 	}
-	return generate(pkgName, pkgPath, c, []string{})
+	return generate(pkgName, pkgPath, c, nil)
 }
 
 func runGen(c *cobra.Command, args []string) ([]string, error) {
