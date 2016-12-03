@@ -299,7 +299,7 @@ func Generate() ([]string, error) {
 			return nil, nil
 		}
 	}
-	return nil, fmt.Errorf("no flag --custom=arg found")
+	return nil, fmt.Errorf("no flag {{.}} found")
 }
 `
 )
