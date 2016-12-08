@@ -293,8 +293,10 @@ const (
 	}`
 
 	utRequiredCode = `	for _, e := range val.Foo {
-		if err2 := e.Validate(); err2 != nil {
-			err = goa.MergeErrors(err, err2)
+		if e != nil {
+			if err2 := e.Validate(); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
 		}
 	}`
 )
