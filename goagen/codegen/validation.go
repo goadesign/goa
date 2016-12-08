@@ -145,9 +145,10 @@ func (v *Validator) recurse(att *design.AttributeDefinition, nonzero, required, 
 			case *design.UserTypeDefinition, *design.MediaTypeDefinition:
 				// For user and media types, call the Validate method
 				val = RunTemplate(v.userValT, map[string]interface{}{
-					"depth":  depth + 1,
+					"depth":  depth + 2,
 					"target": "e",
 				})
+				val = fmt.Sprintf("%sif e != nil {\n%s\n%s}", Tabs(depth+1), val, Tabs(depth+1))
 			}
 			data := map[string]interface{}{
 				"elemType":   a.ElemType,
