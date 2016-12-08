@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/gen_client"
 	"github.com/goadesign/goa/version"
@@ -36,6 +37,53 @@ var _ = Describe("Generate", func() {
 	AfterEach(func() {
 		os.RemoveAll(outDir)
 		delete(codegen.Reserved, "client")
+	})
+
+	Context("with a required UUID header", func() {
+		BeforeEach(func() {
+			codegen.TempCount = 0
+			o := design.Object{
+				"header_name": &design.AttributeDefinition{Type: design.UUID},
+			}
+			design.Design = &design.APIDefinition{
+				Name: "testapi",
+				Resources: map[string]*design.ResourceDefinition{
+					"foo": {
+						Name: "foo",
+						Actions: map[string]*design.ActionDefinition{
+							"show": {
+								Name: "show",
+								Routes: []*design.RouteDefinition{
+									{
+										Verb: "GET",
+										Path: "",
+									},
+								},
+								Headers: &design.AttributeDefinition{
+									Type: o,
+									Validation: &dslengine.ValidationDefinition{
+										Required: []string{"header_name"},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			fooRes := design.Design.Resources["foo"]
+			showAct := fooRes.Actions["show"]
+			showAct.Parent = fooRes
+			showAct.Routes[0].Parent = showAct
+		})
+
+		It("generates header initialization code that compiles", func() {
+			Ω(genErr).Should(BeNil())
+			Ω(files).Should(HaveLen(9))
+			c, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			content := string(c)
+			Ω(content).Should(ContainSubstring("header.Set(\"header_name\", tmp3)\n"))
+		})
 	})
 
 	Context("with jsonapi like querystring params", func() {
