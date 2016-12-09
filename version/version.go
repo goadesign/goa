@@ -10,7 +10,7 @@ const (
 	// Major version number
 	Major = 1
 	// Minor version number
-	Minor = 0
+	Minor = 1
 )
 
 var (
@@ -20,7 +20,7 @@ var (
 
 func init() {
 	if Build == "" { // Not set by link flags
-		Build = "0"
+		Build = "0-dirty"
 	}
 }
 

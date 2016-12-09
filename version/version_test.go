@@ -31,7 +31,7 @@ var _ = Describe("version", func() {
 		})
 
 		It("returns the default version", func() {
-			Ω(ver).Should(HaveSuffix(".0"))
+			Ω(ver).Should(HaveSuffix(".0-dirty"))
 		})
 	})
 
