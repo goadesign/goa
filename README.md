@@ -8,7 +8,7 @@ goa is a framework for building microservices in Go using a unique design-first 
 [![Godoc](https://godoc.org/github.com/goadesign/goa?status.svg)](http://godoc.org/github.com/goadesign/goa)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
-### v1.0.0 released! Read the [blog post](https://goa.design/blog/hello-goa/)
+### goa v1.1.0 released! Read the [announcement](https://goa.design/blog/003-v1_1_0/).
 
 ## Why goa?
 
@@ -55,6 +55,21 @@ go get github.com/goadesign/goa
 go get github.com/goadesign/goa/goagen
 ```
 
+<<<<<<< HEAD
+=======
+### Stable Versions
+
+goa follows [Semantic Versioning](http://semver.org/) which is a fancy way of saying it publishes
+releases with version numbers of the form `vX.Y.Z` and makes sure that your code can upgrade to new
+versions with the same `X` component without having to make changes.
+
+Releases are tagged with the corresponding version number. There is also a branch for each major
+version (only `v1` at the moment). The recommended practice is to vendor the stable branch.
+
+Current Release: `v1.1.0`
+Stable Branch: `v1`
+
+>>>>>>> 10b2b28... Release v1.1.0
 ## Teaser
 
 ### 1. Design
