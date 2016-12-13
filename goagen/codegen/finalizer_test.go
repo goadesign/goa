@@ -90,8 +90,8 @@ var _ = Describe("Struct finalize code generation", func() {
 				target = "ut"
 			})
 			It("finalizes the hash fields", func() {
-				assignments := codegen.RecursiveFinalizer(att, target, 0)
-				Ω(assignments).Should(Equal(datetimeAssignmentCode))
+				code := finalizer.Code(att, target, 0)
+				Ω(code).Should(Equal(datetimeAssignmentCode))
 			})
 		})
 
