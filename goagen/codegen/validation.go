@@ -260,7 +260,7 @@ func ValidationChecker(att *design.AttributeDefinition, nonzero, required, hasDe
 		"context":   context,
 		"target":    target,
 		"targetVal": t,
-		"string":    att.Type.Name() == "string",
+		"string":    att.Type.Kind() == design.StringKind,
 		"array":     att.Type.IsArray(),
 		"hash":      att.Type.IsHash(),
 		"depth":     depth,
