@@ -55,8 +55,6 @@ go get github.com/goadesign/goa
 go get github.com/goadesign/goa/goagen
 ```
 
-<<<<<<< HEAD
-=======
 ### Stable Versions
 
 goa follows [Semantic Versioning](http://semver.org/) which is a fancy way of saying it publishes
@@ -69,7 +67,6 @@ version (only `v1` at the moment). The recommended practice is to vendor the sta
 Current Release: `v1.1.0`
 Stable Branch: `v1`
 
->>>>>>> 10b2b28... Release v1.1.0
 ## Teaser
 
 ### 1. Design
