@@ -1,6 +1,11 @@
 package design_test
 
 import (
+	"go/build"
+	"io/ioutil"
+	"os"
+	"path"
+
 	. "github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/apidsl"
 	"github.com/goadesign/goa/dslengine"
@@ -284,6 +289,71 @@ var _ = Describe("Validation", func() {
 				Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 				Ω(Design.Types["bar"].Validation).ShouldNot(BeNil())
 				Ω(Design.Types["bar"].Validation.Required).Should(Equal([]string{attName}))
+			})
+		})
+	})
+
+	Describe("EncoderDefinition", func() {
+		var (
+			enc           *EncodingDefinition
+			oldGoPath     string
+			oldWorkingDir string
+			cellarPath    string
+		)
+
+		BeforeEach(func() {
+			enc = &EncodingDefinition{MIMETypes: []string{"application/foo"}, Encoder: true, PackagePath: "github.com/goadesign/goa/encoding/foo"}
+			oldGoPath = build.Default.GOPATH
+
+			var err error
+			oldWorkingDir, err = os.Getwd()
+			Ω(err).ShouldNot(HaveOccurred())
+
+			cellarPath = path.Join(oldWorkingDir, "tmp_gopath/src/github.com/goadesign/goa_fake_cellar")
+			Ω(os.MkdirAll(cellarPath, 0777)).ShouldNot(HaveOccurred())
+		})
+
+		JustBeforeEach(func() {
+			build.Default.GOPATH = path.Join(oldWorkingDir, "tmp_gopath")
+			Ω(os.Chdir(cellarPath)).ShouldNot(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			build.Default.GOPATH = oldGoPath
+			os.Chdir(oldWorkingDir)
+			Ω(os.RemoveAll("tmp_gopath")).ShouldNot(HaveOccurred())
+		})
+
+		Context("with package is not found", func() {
+			It("returns a validation error", func() {
+				Ω(len(enc.Validate().Errors)).Should(Equal(1))
+				Ω(enc.Validate().Errors[0].Error()).Should(MatchRegexp("^invalid Go package path"))
+			})
+		})
+
+		Context("with package in gopath", func() {
+			BeforeEach(func() {
+				packagePath := path.Join(cellarPath, "../goa/encoding/foo")
+
+				Ω(os.MkdirAll(packagePath, 0777)).ShouldNot(HaveOccurred())
+				Ω(ioutil.WriteFile(path.Join(packagePath, "encoding.go"), []byte("package foo"), 0777)).ShouldNot(HaveOccurred())
+			})
+
+			It("validates EncoderDefinition", func() {
+				Ω(enc.Validate().Errors).Should(BeNil())
+			})
+		})
+
+		Context("with package in vendor", func() {
+			BeforeEach(func() {
+				packagePath := path.Join(cellarPath, "vendor/github.com/goadesign/goa/encoding/foo")
+
+				Ω(os.MkdirAll(packagePath, 0777)).ShouldNot(HaveOccurred())
+				Ω(ioutil.WriteFile(path.Join(packagePath, "encoding.go"), []byte("package foo"), 0777)).ShouldNot(HaveOccurred())
+			})
+
+			It("validates EncoderDefinition", func() {
+				Ω(enc.Validate().Errors).Should(BeNil())
 			})
 		})
 	})

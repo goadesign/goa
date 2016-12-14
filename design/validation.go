@@ -2,6 +2,7 @@ package design
 
 import (
 	"fmt"
+	"go/build"
 	"mime"
 	"net/url"
 	"os"
@@ -265,7 +266,6 @@ func (cors *CORSDefinition) Validate() *dslengine.ValidationErrors {
 
 // Validate validates the encoding MIME type and Go package path if set.
 func (enc *EncodingDefinition) Validate() *dslengine.ValidationErrors {
-	gopaths := filepath.SplitList(os.Getenv("GOPATH"))
 	verr := new(dslengine.ValidationErrors)
 	if len(enc.MIMETypes) == 0 {
 		verr.Add(enc, "missing MIME type")
@@ -278,16 +278,16 @@ func (enc *EncodingDefinition) Validate() *dslengine.ValidationErrors {
 		}
 	}
 	if len(enc.PackagePath) > 0 {
-		found := false
 		rel := filepath.FromSlash(enc.PackagePath)
-		for _, gopath := range gopaths {
-			if _, err := os.Stat(filepath.Join(gopath, "src", rel)); err == nil {
-				found = true
-				break
-			}
+		dir, err := os.Getwd()
+		if err != nil {
+			verr.Add(enc, "couldn't retrieve working directory %s", err)
+			return verr
 		}
-		if !found {
-			verr.Add(enc, "invalid Go package path %#v", enc.PackagePath)
+		_, err = build.Default.Import(rel, dir, build.FindOnly)
+		if err != nil {
+			verr.Add(enc, "invalid Go package path %#v: %s", enc.PackagePath, err)
+			return verr
 		}
 	} else {
 		for _, m := range enc.MIMETypes {
