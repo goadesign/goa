@@ -86,6 +86,52 @@ var _ = Describe("Generate", func() {
 		})
 	})
 
+	Context("with querystring params in path", func() {
+		BeforeEach(func() {
+			codegen.TempCount = 0
+			o := design.Object{
+				"foo": &design.AttributeDefinition{Type: design.String},
+				"bar": &design.AttributeDefinition{Type: &design.Array{ElemType: &design.AttributeDefinition{Type: design.Integer}}},
+				"baz": &design.AttributeDefinition{Type: design.DateTime},
+				"bat": &design.AttributeDefinition{Type: design.UUID},
+			}
+			design.Design = &design.APIDefinition{
+				Name: "testapi",
+				Resources: map[string]*design.ResourceDefinition{
+					"foo": {
+						Name: "foo",
+						Actions: map[string]*design.ActionDefinition{
+							"show": {
+								Name:   "show",
+								Params: &design.AttributeDefinition{Type: o},
+								Routes: []*design.RouteDefinition{
+									{
+										Verb: "GET",
+										Path: "/foo/:foo/bar/:bar/baz/:baz/bat/:bat",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			fooRes := design.Design.Resources["foo"]
+			showAct := fooRes.Actions["show"]
+			showAct.Parent = fooRes
+			showAct.Routes[0].Parent = showAct
+		})
+
+		It("generates path initialization code that uses all defined URL params in proper format", func() {
+			Ω(genErr).Should(BeNil())
+			Ω(files).Should(HaveLen(9))
+			c, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			content := string(c)
+			Ω(content).Should(ContainSubstring("func ShowFooPath("))
+			Ω(content).Should(ContainSubstring(`fmt.Sprintf("/foo/%v/bar/%v/baz/%v/bat/%v", foo, bar, baz.Format(time.RFC3339), bat)`))
+		})
+	})
+
 	Context("with jsonapi like querystring params", func() {
 		BeforeEach(func() {
 			codegen.TempCount = 0
