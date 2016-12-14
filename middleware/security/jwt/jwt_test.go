@@ -64,8 +64,6 @@ var _ = Describe("Middleware", func() {
 			})
 
 			It("should go through", func() {
-				Ω(err1).ShouldNot(HaveOccurred())
-				Ω(err2).ShouldNot(HaveOccurred())
 				Ω(dispatchResult).ShouldNot(HaveOccurred())
 				Ω(fetchedToken).ShouldNot(BeNil())
 			})
@@ -82,8 +80,6 @@ var _ = Describe("Middleware", func() {
 			})
 
 			It("should go through", func() {
-				Ω(err1).ShouldNot(HaveOccurred())
-				Ω(err2).ShouldNot(HaveOccurred())
 				Ω(dispatchResult).ShouldNot(HaveOccurred())
 				Ω(fetchedToken).ShouldNot(BeNil())
 			})
@@ -100,9 +96,8 @@ var _ = Describe("Middleware", func() {
 			})
 
 			It("should fail with an error", func() {
-				Ω(err1).ShouldNot(HaveOccurred())
-				Ω(err2).ShouldNot(HaveOccurred())
 				Ω(dispatchResult).Should(HaveOccurred())
+				Ω(dispatchResult.(error)).Should(HaveOccurred())
 			})
 		})
 
@@ -116,9 +111,10 @@ var _ = Describe("Middleware", func() {
 			})
 
 			It("should fail with an error", func() {
-				Ω(err1).ShouldNot(HaveOccurred())
-				Ω(err2).ShouldNot(HaveOccurred())
+				Ω(err1).Should(BeNil())
+				Ω(err2).Should(BeNil())
 				Ω(dispatchResult).Should(HaveOccurred())
+				Ω(dispatchResult.(error)).Should(HaveOccurred())
 			})
 		})
 
@@ -132,8 +128,8 @@ var _ = Describe("Middleware", func() {
 			})
 
 			It("should go through", func() {
-				Ω(err1).ShouldNot(HaveOccurred())
-				Ω(err2).ShouldNot(HaveOccurred())
+				Ω(err1).Should(BeNil())
+				Ω(err2).Should(BeNil())
 				Ω(dispatchResult).ShouldNot(HaveOccurred())
 				Ω(fetchedToken).ShouldNot(BeNil())
 			})
@@ -143,11 +139,7 @@ var _ = Describe("Middleware", func() {
 	Context("RSA keys signed token", func() {
 		BeforeEach(func() {
 			// RS256 {"scopes":"scope1 scope2","admin":true}, signed with rsaKey1 below
-			request.Header.Set("Authorization", "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzY29wZXMiOiJzY29wZTEgc2NvcGU"+
-				"yIiwiYWRtaW4iOnRydWV9.gT4gSGqXTCUZAJT_TWZ4eknazVo-ulMKwSpHoghWZU8Sm9QXt48ISwFAb_wW2xhR58MUNX95iuiex0bCWvze59r"+
-				"35dEQ2SOZixuDvE8srQi2SRk9qqsVV9-R361qf2D8KfLX9jQ7j-UB40bleg0fOyBAjPLPq0ggBigSjQ2yUz8YDKma-n6Ulc3LJ4gyozmb3MjO"+
-				"9RV2pdD3N-m6ttwkTkUE2jhsL6a3T8f0Y6xSGTMyZasKc6kHbUyz6NjAeplLhbkBDE8-Ak4GaLGlLnLzZ49oTVrh89yauciW5yLQCXzXt2POD"+
-				"qp6zXPC0FFcDr-2USCpA-nqaQQyhliMcgtqVw")
+			request.Header.Set("Authorization", "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzY29wZXMiOiJzY29wZTEgc2NvcGUyIiwiYWRtaW4iOnRydWV9.gT4gSGqXTCUZAJT_TWZ4eknazVo-ulMKwSpHoghWZU8Sm9QXt48ISwFAb_wW2xhR58MUNX95iuiex0bCWvze59r35dEQ2SOZixuDvE8srQi2SRk9qqsVV9-R361qf2D8KfLX9jQ7j-UB40bleg0fOyBAjPLPq0ggBigSjQ2yUz8YDKma-n6Ulc3LJ4gyozmb3MjO9RV2pdD3N-m6ttwkTkUE2jhsL6a3T8f0Y6xSGTMyZasKc6kHbUyz6NjAeplLhbkBDE8-Ak4GaLGlLnLzZ49oTVrh89yauciW5yLQCXzXt2PODqp6zXPC0FFcDr-2USCpA-nqaQQyhliMcgtqVw")
 		})
 
 		Context("with a single key", func() {
@@ -160,8 +152,8 @@ var _ = Describe("Middleware", func() {
 			})
 
 			It("should go through", func() {
-				Ω(err1).ShouldNot(HaveOccurred())
-				Ω(err2).ShouldNot(HaveOccurred())
+				Ω(err1).Should(BeNil())
+				Ω(err2).Should(BeNil())
 				Ω(dispatchResult).ShouldNot(HaveOccurred())
 				Ω(fetchedToken).ShouldNot(BeNil())
 			})
@@ -178,8 +170,8 @@ var _ = Describe("Middleware", func() {
 			})
 
 			It("should go through", func() {
-				Ω(err1).ShouldNot(HaveOccurred())
-				Ω(err2).ShouldNot(HaveOccurred())
+				Ω(err1).Should(BeNil())
+				Ω(err2).Should(BeNil())
 				Ω(dispatchResult).ShouldNot(HaveOccurred())
 				Ω(fetchedToken).ShouldNot(BeNil())
 			})
@@ -196,8 +188,8 @@ var _ = Describe("Middleware", func() {
 			})
 
 			It("should fail with an error", func() {
-				Ω(err1).ShouldNot(HaveOccurred())
-				Ω(err2).ShouldNot(HaveOccurred())
+				Ω(err1).Should(BeNil())
+				Ω(err2).Should(BeNil())
 				Ω(dispatchResult).Should(HaveOccurred())
 				Ω(dispatchResult.(error)).Should(HaveOccurred())
 			})
@@ -213,8 +205,8 @@ var _ = Describe("Middleware", func() {
 			})
 
 			It("should fail with an error", func() {
-				Ω(err1).ShouldNot(HaveOccurred())
-				Ω(err2).ShouldNot(HaveOccurred())
+				Ω(err1).Should(BeNil())
+				Ω(err2).Should(BeNil())
 				Ω(dispatchResult).Should(HaveOccurred())
 				Ω(dispatchResult.(error)).Should(HaveOccurred())
 			})
@@ -230,8 +222,8 @@ var _ = Describe("Middleware", func() {
 			})
 
 			It("should go through", func() {
-				Ω(err1).ShouldNot(HaveOccurred())
-				Ω(err2).ShouldNot(HaveOccurred())
+				Ω(err1).Should(BeNil())
+				Ω(err2).Should(BeNil())
 				Ω(dispatchResult).ShouldNot(HaveOccurred())
 				Ω(fetchedToken).ShouldNot(BeNil())
 			})
