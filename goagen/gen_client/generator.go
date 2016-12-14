@@ -811,6 +811,16 @@ func pathParamNames(r *design.RouteDefinition) string {
 	params := r.Params()
 	goified := make([]string, len(params))
 	for i, p := range params {
+		if po, ok := r.Parent.Params.Type.ToObject()[p]; ok {
+			switch t := po.Type.(type) {
+			case design.Primitive:
+				switch t.Kind() {
+				case design.DateTimeKind:
+					goified[i] = fmt.Sprintf("%s.Format(time.RFC3339)", codegen.Goify(p, false))
+					continue
+				}
+			}
+		}
 		goified[i] = codegen.Goify(p, false)
 	}
 	return strings.Join(goified, ", ")
