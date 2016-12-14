@@ -131,3 +131,13 @@ func responseDefinition() (*design.ResponseDefinition, bool) {
 	}
 	return r, ok
 }
+
+// lookupDefinition returns true and current context if it is a LookupDefinition,
+// nil and false otherwise.
+func lookupDefinition() (*design.LookupDefinition, bool) {
+	l, ok := dslengine.CurrentDefinition().(*design.LookupDefinition)
+	if !ok {
+		dslengine.IncompatibleDSL()
+	}
+	return l, ok
+}

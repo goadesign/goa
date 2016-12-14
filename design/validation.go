@@ -64,7 +64,6 @@ func (r *routeInfo) DifferentWildcards(other *routeInfo) (res [][2]*wildCardInfo
 // Validate tests whether the API definition is consistent: all resource parent names resolve to
 // an actual resource.
 func (a *APIDefinition) Validate() error {
-
 	// This is a little bit hacky but we need the generated media types DSLs to run first so
 	// that their views are defined otherwise we risk running into validation errors where an
 	// attribute defined on a non generated media type uses a generated mediatype (i.e.

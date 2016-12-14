@@ -68,6 +68,9 @@ import (
 //				Required("header")
 //			})
 //		})
+//		Lookup("Account", AccountType, func() {	// Creates a new lookup template function
+//			Attribute("id", UUID)		// The input attributes
+//		})
 //	}
 //
 func API(name string, dsl func()) *design.APIDefinition {
@@ -475,7 +478,9 @@ func setupResponseTemplate(a *design.APIDefinition, name string, p interface{}) 
 	} else if tmpl, ok := p.(func(...string)); ok {
 		t := func(params ...string) *design.ResponseDefinition {
 			r := &design.ResponseDefinition{Name: name}
-			dslengine.Execute(func() { tmpl(params...) }, r)
+			dslengine.Execute(func() {
+				tmpl(params...)
+			}, r)
 			return r
 		}
 		a.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
@@ -512,7 +517,9 @@ func setupResponseTemplate(a *design.APIDefinition, name string, p interface{}) 
 				// append input arguments
 				in[i] = reflect.ValueOf(params[i])
 			}
-			dslengine.Execute(func() { val.Call(in) }, r)
+			dslengine.Execute(func() {
+				val.Call(in)
+			}, r)
 			return r
 		}
 		a.ResponseTemplates[name] = &design.ResponseTemplateDefinition{
