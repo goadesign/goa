@@ -76,6 +76,7 @@ func (f *Finalizer) recurse(att *design.AttributeDefinition, target string, dept
 					"field":      n,
 					"catt":       catt,
 					"depth":      depth,
+					"isDatetime": catt.Type == design.DateTime,
 					"defaultVal": printVal(catt.Type, catt.DefaultValue),
 				}
 				if !first {
@@ -119,7 +120,11 @@ func printVal(t design.DataType, val interface{}) string {
 	switch {
 	case t.IsPrimitive():
 		// For primitive types, simply print the value
-		return fmt.Sprintf("%#v", val)
+		s := fmt.Sprintf("%#v", val)
+		if t == design.DateTime {
+			s = fmt.Sprintf("time.Parse(time.RFC3339, %s)", s)
+		}
+		return s
 	case t.IsHash():
 		// The input is a hash
 		h := t.ToHash()
@@ -158,7 +163,7 @@ func printVal(t design.DataType, val interface{}) string {
 
 const (
 	assignmentTmpl = `{{ if .catt.Type.IsPrimitive }}{{ $defaultName := (print "default" (goify .field true)) }}{{/*
-*/}}{{ tabs .depth }}var {{ $defaultName }} = {{ .defaultVal }}
+*/}}{{ tabs .depth }}var {{ $defaultName }}{{if .isDatetime}}, _{{end}} = {{ .defaultVal }}
 {{ tabs .depth }}if {{ .target }}.{{ goify .field true }} == nil {
 {{ tabs .depth }}	{{ .target }}.{{ goify .field true }} = &{{ $defaultName }}
 }{{ else }}{{ tabs .depth }}if {{ .target }}.{{ goify .field true }} == nil {
