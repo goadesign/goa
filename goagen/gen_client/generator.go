@@ -134,7 +134,6 @@ func (g *Generator) Generate() (_ []string, err error) {
 			"join":               join,
 			"joinStrings":        strings.Join,
 			"multiComment":       multiComment,
-			"pathParamNames":     pathParamNames,
 			"pathParams":         pathParams,
 			"pathTemplate":       pathTemplate,
 			"signerType":         signerType,
@@ -334,13 +333,50 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 				}
 			}
 		}
+		initParams := func(att *design.AttributeDefinition) []*paramData {
+			if att == nil {
+				return nil
+			}
+			obj := att.Type.ToObject()
+			var pdata []*paramData
+			for n, q := range obj {
+				varName := codegen.Goify(n, false)
+				param := &paramData{
+					Name:      n,
+					VarName:   varName,
+					Attribute: q,
+				}
+				if q.Type.IsPrimitive() {
+					param.MustToString = q.Type.Kind() != design.StringKind
+					param.ValueName = varName
+					pdata = append(pdata, param)
+				} else {
+					if q.Type.IsArray() {
+						param.IsArray = true
+						param.ElemAttribute = q.Type.ToArray().ElemType
+					}
+					param.MustToString = true
+					param.ValueName = varName
+					param.CheckNil = true
+					pdata = append(pdata, param)
+				}
+			}
+			sort.Sort(byParamName(pdata))
+			return pdata
+		}
 		for i, r := range action.Routes {
+			params := make(design.Object, len(r.Params()))
+			for _, p := range r.Params() {
+				params[p] = action.Params.Type.ToObject()[p]
+			}
 			data := struct {
-				Route *design.RouteDefinition
-				Index int
+				Route  *design.RouteDefinition
+				Index  int
+				Params []*paramData
 			}{
-				Route: r,
-				Index: i,
+				Route:  r,
+				Index:  i,
+				Params: initParams(&design.AttributeDefinition{Type: params}),
 			}
 			if err := pathTmpl.Execute(file, data); err != nil {
 				return err
@@ -597,8 +633,8 @@ func (g *Generator) generateUserTypes(pkgDir string) error {
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("time"),
-		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 		codegen.SimpleImport("unicode/utf8"),
+		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 	}
 	utWr.WriteHeader(title, g.Target, imports)
 	err = g.API.IterateUserTypes(func(t *design.UserTypeDefinition) error {
@@ -791,9 +827,9 @@ func signerType(scheme *design.SecuritySchemeDefinition) string {
 	return ""
 }
 
-// pathTemplate returns a fmt format suitable to build a request path to the reoute.
+// pathTemplate returns a fmt format suitable to build a request path to the route.
 func pathTemplate(r *design.RouteDefinition) string {
-	return design.WildcardRegex.ReplaceAllLiteralString(r.FullPath(), "/%v")
+	return design.WildcardRegex.ReplaceAllLiteralString(r.FullPath(), "/%s")
 }
 
 // pathParams return the function signature of the path factory function for the given route.
@@ -804,26 +840,6 @@ func pathParams(r *design.RouteDefinition) string {
 		params[p] = r.Parent.Params.Type.ToObject()[p]
 	}
 	return join(&design.AttributeDefinition{Type: params}, false, pnames)
-}
-
-// pathParamNames return the names of the parameters of the path factory function for the given route.
-func pathParamNames(r *design.RouteDefinition) string {
-	params := r.Params()
-	goified := make([]string, len(params))
-	for i, p := range params {
-		if po, ok := r.Parent.Params.Type.ToObject()[p]; ok {
-			switch t := po.Type.(type) {
-			case design.Primitive:
-				switch t.Kind() {
-				case design.DateTimeKind:
-					goified[i] = fmt.Sprintf("%s.Format(time.RFC3339)", codegen.Goify(p, false))
-					continue
-				}
-			}
-		}
-		goified[i] = codegen.Goify(p, false)
-	}
-	return strings.Join(goified, ", ")
 }
 
 func typeName(mt *design.MediaTypeDefinition) string {
@@ -873,11 +889,16 @@ func (c *Client) {{ $funcName }}(resp *http.Response) ({{ decodegotyperef . .All
 `
 
 	pathTmpl = `{{ $funcName := printf "%sPath%s" (goify (printf "%s%s" .Route.Parent.Name (title .Route.Parent.Parent.Name)) true) ((or (and .Index (add .Index 1)) "") | printf "%v") }}{{/*
-*/}}{{ with .Route }}// {{ $funcName }} computes a request path to the {{ .Parent.Name }} action of {{ .Parent.Parent.Name }}.
-func {{ $funcName }}({{ pathParams . }}) string {
-	return fmt.Sprintf({{ printf "%q" (pathTemplate .) }}, {{ pathParamNames . }})
+*/}}// {{ $funcName }} computes a request path to the {{ .Route.Parent.Name }} action of {{ .Route.Parent.Parent.Name }}.
+func {{ $funcName }}({{ pathParams .Route }}) string {
+	var params []interface{}
+	{{ range $param := .Params }}{{ $tmp := tempvar }}{{/*
+*/}}{{ toString "p" $tmp $param.Attribute }}
+	params = append(params, {{ $tmp }})
+	{{ end }}
+	return fmt.Sprintf({{ printf "%q" (pathTemplate .Route) }}, params...)
 }
-{{ end }}`
+`
 
 	clientsTmpl = `{{ $funcName := goify (printf "%s%s" .Name (title .ResourceName)) true }}{{ $desc := .Description }}{{/*
 */}}{{ if $desc }}{{ multiComment $desc }}{{ else }}{{/*
