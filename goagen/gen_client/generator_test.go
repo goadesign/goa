@@ -128,7 +128,7 @@ var _ = Describe("Generate", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			content := string(c)
 			Ω(content).Should(ContainSubstring("func ShowFooPath("))
-			Ω(content).Should(ContainSubstring(`fmt.Sprintf("/foo/%v/bar/%v/baz/%v/bat/%v", foo, bar, baz.Format(time.RFC3339), bat)`))
+			Ω(content).Should(ContainSubstring(`fmt.Sprintf("/foo/%s/bar/%s/baz/%s/bat/%s", params...`))
 		})
 	})
 
