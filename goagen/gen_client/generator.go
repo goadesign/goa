@@ -11,6 +11,7 @@ import (
 	"text/template"
 
 	"github.com/goadesign/goa/design"
+	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/codegen"
 	"github.com/goadesign/goa/goagen/gen_app"
 	"github.com/goadesign/goa/goagen/utils"
@@ -333,42 +334,18 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 				}
 			}
 		}
-		initParams := func(att *design.AttributeDefinition) []*paramData {
-			if att == nil {
-				return nil
-			}
-			obj := att.Type.ToObject()
-			var pdata []*paramData
-			for n, q := range obj {
-				varName := codegen.Goify(n, false)
-				param := &paramData{
-					Name:      n,
-					VarName:   varName,
-					Attribute: q,
-				}
-				if q.Type.IsPrimitive() {
-					param.MustToString = q.Type.Kind() != design.StringKind
-					param.ValueName = varName
-					pdata = append(pdata, param)
-				} else {
-					if q.Type.IsArray() {
-						param.IsArray = true
-						param.ElemAttribute = q.Type.ToArray().ElemType
-					}
-					param.MustToString = true
-					param.ValueName = varName
-					param.CheckNil = true
-					pdata = append(pdata, param)
-				}
-			}
-			sort.Sort(byParamName(pdata))
-			return pdata
-		}
 		for i, r := range action.Routes {
-			params := make(design.Object, len(r.Params()))
+			genParams := make(design.Object, len(r.Params()))
 			for _, p := range r.Params() {
-				params[p] = action.Params.Type.ToObject()[p]
+				genParams[p] = action.Params.Type.ToObject()[p]
 			}
+			reqParams, _ := initParams(&design.AttributeDefinition{
+				Type: genParams,
+				Validation: &dslengine.ValidationDefinition{
+					Required: r.Params(),
+				},
+			})
+
 			data := struct {
 				Route  *design.RouteDefinition
 				Index  int
@@ -376,7 +353,7 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 			}{
 				Route:  r,
 				Index:  i,
-				Params: initParams(&design.AttributeDefinition{Type: params}),
+				Params: reqParams,
 			}
 			if err := pathTmpl.Execute(file, data); err != nil {
 				return err
@@ -448,51 +425,12 @@ func (g *Generator) generateActionClient(action *design.ActionDefinition, file *
 		params = append(params, "payload "+codegen.GoTypeRef(action.Payload, action.Payload.AllRequired(), 1, false))
 		names = append(names, "payload")
 	}
-	initParams := func(att *design.AttributeDefinition) []*paramData {
-		if att == nil {
-			return nil
-		}
-		obj := att.Type.ToObject()
-		var pdata []*paramData
-		var optData []*paramData
-		for n, q := range obj {
-			varName := codegen.Goify(n, false)
-			param := &paramData{
-				Name:      n,
-				VarName:   varName,
-				Attribute: q,
-			}
-			if q.Type.IsPrimitive() {
-				param.MustToString = q.Type.Kind() != design.StringKind
-				if att.IsRequired(n) {
-					param.ValueName = varName
-					pdata = append(pdata, param)
-				} else {
-					param.ValueName = "*" + varName
-					param.CheckNil = true
-					optData = append(optData, param)
-				}
-			} else {
-				if q.Type.IsArray() {
-					param.IsArray = true
-					param.ElemAttribute = q.Type.ToArray().ElemType
-				}
-				param.MustToString = true
-				param.ValueName = varName
-				param.CheckNil = true
-				if att.IsRequired(n) {
-					pdata = append(pdata, param)
-				} else {
-					optData = append(optData, param)
-				}
-			}
-		}
 
-		sort.Sort(byParamName(pdata))
-		sort.Sort(byParamName(optData))
+	initParamsScoped := func(att *design.AttributeDefinition) []*paramData {
+		reqData, optData := initParams(att)
 
 		// Update closure
-		for _, p := range pdata {
+		for _, p := range reqData {
 			names = append(names, p.VarName)
 			params = append(params, p.VarName+" "+cmdFieldType(p.Attribute.Type, false))
 		}
@@ -500,11 +438,11 @@ func (g *Generator) generateActionClient(action *design.ActionDefinition, file *
 			names = append(names, p.VarName)
 			params = append(params, p.VarName+" "+cmdFieldType(p.Attribute.Type, p.Attribute.Type.IsPrimitive()))
 		}
-
-		return append(pdata, optData...)
+		return append(reqData, optData...)
 	}
-	queryParams = initParams(action.QueryParams)
-	headers = initParams(action.Headers)
+	queryParams = initParamsScoped(action.QueryParams)
+	headers = initParamsScoped(action.Headers)
+
 	if action.Security != nil {
 		signer = codegen.Goify(action.Security.Scheme.SchemeName, true)
 	}
@@ -842,11 +780,59 @@ func pathParams(r *design.RouteDefinition) string {
 	return join(&design.AttributeDefinition{Type: params}, false, pnames)
 }
 
+// typeName returns Go type name of given MediaType definition.
 func typeName(mt *design.MediaTypeDefinition) string {
 	if mt.IsError() {
 		return "ErrorResponse"
 	}
 	return codegen.GoTypeName(mt, mt.AllRequired(), 1, false)
+}
+
+// initParams returns required and optional paramData extracted from given attribute definition.
+func initParams(att *design.AttributeDefinition) ([]*paramData, []*paramData) {
+	if att == nil {
+		return nil, nil
+	}
+	obj := att.Type.ToObject()
+	var reqParamData []*paramData
+	var optParamData []*paramData
+	for n, q := range obj {
+		varName := codegen.Goify(n, false)
+		param := &paramData{
+			Name:      n,
+			VarName:   varName,
+			Attribute: q,
+		}
+		if q.Type.IsPrimitive() {
+			param.MustToString = q.Type.Kind() != design.StringKind
+			if att.IsRequired(n) {
+				param.ValueName = varName
+				reqParamData = append(reqParamData, param)
+			} else {
+				param.ValueName = "*" + varName
+				param.CheckNil = true
+				optParamData = append(optParamData, param)
+			}
+		} else {
+			if q.Type.IsArray() {
+				param.IsArray = true
+				param.ElemAttribute = q.Type.ToArray().ElemType
+			}
+			param.MustToString = true
+			param.ValueName = varName
+			param.CheckNil = true
+			if att.IsRequired(n) {
+				reqParamData = append(reqParamData, param)
+			} else {
+				optParamData = append(optParamData, param)
+			}
+		}
+	}
+
+	sort.Sort(byParamName(reqParamData))
+	sort.Sort(byParamName(optParamData))
+
+	return reqParamData, optParamData
 }
 
 // paramData is the data structure holding the information needed to generate query params and
@@ -891,12 +877,10 @@ func (c *Client) {{ $funcName }}(resp *http.Response) ({{ decodegotyperef . .All
 	pathTmpl = `{{ $funcName := printf "%sPath%s" (goify (printf "%s%s" .Route.Parent.Name (title .Route.Parent.Parent.Name)) true) ((or (and .Index (add .Index 1)) "") | printf "%v") }}{{/*
 */}}// {{ $funcName }} computes a request path to the {{ .Route.Parent.Name }} action of {{ .Route.Parent.Parent.Name }}.
 func {{ $funcName }}({{ pathParams .Route }}) string {
-	var params []interface{}
-	{{ range $param := .Params }}{{ $tmp := tempvar }}{{/*
-*/}}{{ toString "p" $tmp $param.Attribute }}
-	params = append(params, {{ $tmp }})
+	{{ range $i, $param := .Params }}{{/*
+*/}}{{ toString $param.VarName (printf "param%d" $i) $param.Attribute }}
 	{{ end }}
-	return fmt.Sprintf({{ printf "%q" (pathTemplate .Route) }}, params...)
+	return fmt.Sprintf({{ printf "%q" (pathTemplate .Route) }}{{ range $i, $param := .Params }}, {{ printf "param%d" $i }}{{ end }})
 }
 `
 
