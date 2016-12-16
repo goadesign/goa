@@ -128,15 +128,15 @@ var _ = Describe("Generate", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			content := string(c)
 			Ω(content).Should(ContainSubstring("func ShowFooPath("))
+			Ω(content).Should(ContainSubstring(`param0 := foo`))
 			Ω(content).Should(ContainSubstring(`tmp2 := make([]string, len(bar))
 	for i, e := range bar {
 		tmp3 := strconv.Itoa(e)
 		tmp2[i] = tmp3
 	}
-	param0 := strings.Join(tmp2, ",")`))
-			Ω(content).Should(ContainSubstring(`param1 := bat.String()`))
+	param1 := strings.Join(tmp2, ",")`))
 			Ω(content).Should(ContainSubstring(`param2 := baz.Format(time.RFC3339)`))
-			Ω(content).Should(ContainSubstring(`param3 := foo`))
+			Ω(content).Should(ContainSubstring(`param3 := bat.String()`))
 			Ω(content).Should(ContainSubstring(`fmt.Sprintf("/foo/%s/bar/%s/baz/%s/bat/%s", param0, param1, param2, param3)`))
 		})
 	})

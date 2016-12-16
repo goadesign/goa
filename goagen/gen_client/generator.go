@@ -335,16 +335,20 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 			}
 		}
 		for i, r := range action.Routes {
-			genParams := make(design.Object, len(r.Params()))
-			for _, p := range r.Params() {
-				genParams[p] = action.Params.Type.ToObject()[p]
+			routeParams := r.Params()
+			var pd []*paramData
+
+			for _, p := range routeParams {
+				requiredParams, _ := initParams(&design.AttributeDefinition{
+					Type: &design.Object{
+						p: action.Params.Type.ToObject()[p],
+					},
+					Validation: &dslengine.ValidationDefinition{
+						Required: routeParams,
+					},
+				})
+				pd = append(pd, requiredParams...)
 			}
-			reqParams, _ := initParams(&design.AttributeDefinition{
-				Type: genParams,
-				Validation: &dslengine.ValidationDefinition{
-					Required: r.Params(),
-				},
-			})
 
 			data := struct {
 				Route  *design.RouteDefinition
@@ -353,7 +357,7 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 			}{
 				Route:  r,
 				Index:  i,
-				Params: reqParams,
+				Params: pd,
 			}
 			if err := pathTmpl.Execute(file, data); err != nil {
 				return err
@@ -428,6 +432,9 @@ func (g *Generator) generateActionClient(action *design.ActionDefinition, file *
 
 	initParamsScoped := func(att *design.AttributeDefinition) []*paramData {
 		reqData, optData := initParams(att)
+
+		sort.Sort(byParamName(reqData))
+		sort.Sort(byParamName(optData))
 
 		// Update closure
 		for _, p := range reqData {
@@ -828,9 +835,6 @@ func initParams(att *design.AttributeDefinition) ([]*paramData, []*paramData) {
 			}
 		}
 	}
-
-	sort.Sort(byParamName(reqParamData))
-	sort.Sort(byParamName(optParamData))
 
 	return reqParamData, optParamData
 }
