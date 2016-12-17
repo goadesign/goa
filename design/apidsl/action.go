@@ -41,6 +41,7 @@ func Files(path, filename string, dsls ...func()) {
 			Parent:      r,
 			RequestPath: path,
 			FilePath:    filename,
+			Metadata:    make(dslengine.MetadataDefinition),
 		}
 		if len(dsls) > 0 {
 			if !dslengine.Execute(dsls[0], server) {
@@ -99,8 +100,9 @@ func Action(name string, dsl func()) {
 		action, ok := r.Actions[name]
 		if !ok {
 			action = &design.ActionDefinition{
-				Parent: r,
-				Name:   name,
+				Parent:   r,
+				Name:     name,
+				Metadata: make(dslengine.MetadataDefinition),
 			}
 		}
 		if !dslengine.Execute(dsl, action) {
