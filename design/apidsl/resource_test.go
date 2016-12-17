@@ -125,7 +125,7 @@ var _ = Describe("Resource", func() {
 			}
 		})
 
-		It("sets the actions", func() {
+		It("sets the files", func() {
 			Ω(res).ShouldNot(BeNil())
 			Ω(res.Finalize).ShouldNot(Panic())
 			Ω(res.Validate()).ShouldNot(HaveOccurred())
