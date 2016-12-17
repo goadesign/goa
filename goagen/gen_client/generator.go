@@ -242,7 +242,8 @@ func (g *Generator) generateClient(clientFile string, clientPkg string, funcs te
 	for _, packagePath := range packagePaths {
 		imports = append(imports, codegen.SimpleImport(packagePath))
 	}
-	if err := file.WriteHeader("", g.Target, imports); err != nil {
+	title := fmt.Sprintf("%s: Client", g.API.Context())
+	if err := file.WriteHeader(title, g.Target, imports); err != nil {
 		return err
 	}
 	g.genfiles = append(g.genfiles, clientFile)
@@ -309,7 +310,8 @@ func (g *Generator) generateResourceClient(pkgDir string, res *design.ResourceDe
 		codegen.SimpleImport("golang.org/x/net/websocket"),
 		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 	}
-	if err := file.WriteHeader("", g.Target, imports); err != nil {
+	title := fmt.Sprintf("%s: %s Resource Client", g.API.Context(), res.Name)
+	if err := file.WriteHeader(title, g.Target, imports); err != nil {
 		return err
 	}
 	g.genfiles = append(g.genfiles, filename)
