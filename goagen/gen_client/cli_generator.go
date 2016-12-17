@@ -133,7 +133,8 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	if len(g.API.Resources) > 0 {
 		imports = append(imports, codegen.NewImport("goaclient", "github.com/goadesign/goa/client"))
 	}
-	if err := file.WriteHeader("", "cli", imports); err != nil {
+	title := fmt.Sprintf("%s: CLI Commands", g.API.Context())
+	if err := file.WriteHeader(title, "cli", imports); err != nil {
 		return err
 	}
 	g.genfiles = append(g.genfiles, commandsFile)
