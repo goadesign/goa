@@ -116,7 +116,7 @@ var _ = Describe("Resource", func() {
 		})
 	})
 
-	Context("with files and actions", func() {
+	Context("with metadata and files", func() {
 		BeforeEach(func() {
 			name = "foo"
 			dsl = func() {
