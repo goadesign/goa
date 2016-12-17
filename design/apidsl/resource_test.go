@@ -96,6 +96,43 @@ var _ = Describe("Resource", func() {
 		})
 	})
 
+	Context("with metadata and actions", func() {
+		const actionName = "action"
+
+		BeforeEach(func() {
+			name = "foo"
+			dsl = func() {
+				Metadata("swagger:generate", "false")
+				Action(actionName, func() { Routing(PUT(":/id")) })
+			}
+		})
+
+		It("sets the actions", func() {
+			Ω(res).ShouldNot(BeNil())
+			Ω(res.Finalize).ShouldNot(Panic())
+			Ω(res.Validate()).ShouldNot(HaveOccurred())
+			Ω(res.Actions).Should(HaveLen(1))
+			Ω(res.Actions).Should(HaveKey(actionName))
+		})
+	})
+
+	Context("with files and actions", func() {
+		BeforeEach(func() {
+			name = "foo"
+			dsl = func() {
+				Metadata("swagger:generate", "false")
+				Files("path", "filename")
+			}
+		})
+
+		It("sets the actions", func() {
+			Ω(res).ShouldNot(BeNil())
+			Ω(res.Finalize).ShouldNot(Panic())
+			Ω(res.Validate()).ShouldNot(HaveOccurred())
+			Ω(res.FileServers).Should(HaveLen(1))
+		})
+	})
+
 	Context("with a canonical action that does not exist", func() {
 		const can = "can"
 
