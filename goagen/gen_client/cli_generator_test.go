@@ -19,7 +19,7 @@ import (
 )
 
 var _ = Describe("Generate", func() {
-	const testgenPackagePath = "github.com/goadesign/goa/goagen/gen_client/test_"
+	var testgenPackagePath = filepath.FromSlash("github.com/goadesign/goa/goagen/gen_client/test_")
 
 	var outDir string
 	var files []string
