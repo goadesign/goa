@@ -244,3 +244,8 @@ func ContextWithRequestID(ctx context.Context) (context.Context, string) {
 	}
 	return ctx, reqID
 }
+
+// SetContextRequestID sets a request ID in the given context and returns a new context.
+func SetContextRequestID(ctx context.Context, reqID string) context.Context {
+	return context.WithValue(ctx, reqIDKey, reqID)
+}
