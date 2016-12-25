@@ -141,6 +141,17 @@ const (
 	Any = Primitive(AnyKind)
 )
 
+// Built-in composite types
+
+// Empty represents empty values.
+var Empty = &UserTypeExpr{
+	TypeName: "Empty",
+	AttributeExpr: &AttributeExpr{
+		Description: "Empty represents empty values",
+		Type:        Object{},
+	},
+}
+
 // Convenience methods
 
 // AsObject returns the type underlying object if any, nil otherwise.

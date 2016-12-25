@@ -51,10 +51,6 @@ const (
 )
 
 var (
-	// ErrorMediaIdentifier is the media type identifier used for error
-	// responses.
-	ErrorMediaIdentifier = "application/vnd.goa.error"
-
 	// ErrBadRequest is a generic bad request error.
 	ErrBadRequest = goa.NewErrorClass("bad_request", goa.StatusInvalid)
 

@@ -26,19 +26,17 @@ type (
 		// Resource is the parent resource
 		Resource *ResourceExpr
 		// Specific action URL schemes
-		Schemes []string
+		Schemes []APIScheme
 		// Action routes
 		Routes []*RouteExpr
 		// Map of possible response definitions indexed by name
 		Responses []*HTTPResponseExpr
 		// Path and query string parameters
-		Params *design.AttributeExpr
-		// Query string parameters only
-		QueryParams *design.AttributeExpr
-		// Payload blueprint (request body) if any
-		Payload design.UserType
+		Params *AttributeMapExpr
+		// Body attribute map
+		Body *AttributeMapExpr
 		// Request headers that need to be made available to action
-		Headers *design.AttributeExpr
+		Headers *AttributeMapExpr
 	}
 
 	// RouteExpr represents an action route (HTTP endpoint).
@@ -100,7 +98,7 @@ func (a *ActionExpr) PathParams() *design.AttributeExpr {
 func (a *ActionExpr) AllParams() *design.AttributeExpr {
 	var res *design.AttributeExpr
 	if a.Params != nil {
-		res = design.DupAtt(a.Params)
+		res = a.Params.Attribute()
 	} else {
 		res = &design.AttributeExpr{Type: design.Object{}}
 	}
@@ -110,8 +108,8 @@ func (a *ActionExpr) AllParams() *design.AttributeExpr {
 	if p := a.Resource.Parent(); p != nil {
 		res = res.Merge(p.CanonicalAction().AllParams())
 	} else {
-		res = res.Merge(a.Resource.Params)
-		res = res.Merge(Root.Params)
+		res = res.Merge(a.Resource.Params.Attribute())
+		res = res.Merge(Root.Params.Attribute())
 	}
 	return res
 }
@@ -137,7 +135,7 @@ func (a *ActionExpr) HasAbsoluteRoutes() bool {
 }
 
 // CanonicalScheme returns the preferred scheme for making requests. Favor secure schemes.
-func (a *ActionExpr) CanonicalScheme() string {
+func (a *ActionExpr) CanonicalScheme() APIScheme {
 	if a.WebSocket() {
 		for _, s := range a.EffectiveSchemes() {
 			if s == "wss" {
@@ -156,7 +154,7 @@ func (a *ActionExpr) CanonicalScheme() string {
 
 // EffectiveSchemes return the URL schemes that apply to the action. Looks recursively into action
 // resource, parent resources and API.
-func (a *ActionExpr) EffectiveSchemes() []string {
+func (a *ActionExpr) EffectiveSchemes() []APIScheme {
 	// Compute the schemes
 	schemes := a.Schemes
 	if len(schemes) == 0 {
@@ -207,8 +205,8 @@ func (a *ActionExpr) Validate() error {
 		verr.Merge(r.Validate())
 	}
 	verr.Merge(a.ValidateParams())
-	if a.Payload != nil {
-		verr.Merge(a.Payload.Validate("action payload", a))
+	if a.Body != nil {
+		verr.Merge(a.Body.Attribute().Validate("action payload", a))
 	}
 	if a.Resource == nil {
 		verr.Add(a, "missing parent resource")
@@ -223,7 +221,7 @@ func (a *ActionExpr) ValidateParams() *eval.ValidationErrors {
 	if a.Params == nil {
 		return nil
 	}
-	params, ok := a.Params.Type.(design.Object)
+	params, ok := a.Params.Attribute().Type.(design.Object)
 	if !ok {
 		verr.Add(a, `"Params" field of action is not an object`)
 	}
@@ -267,82 +265,7 @@ func (a *ActionExpr) ValidateParams() *eval.ValidationErrors {
 
 // Finalize inherits security scheme and action responses from parent and top level design.
 func (a *ActionExpr) Finalize() {
-	if a.Payload != nil {
-		a.Payload.Finalize()
-	}
-
 	a.mergeResponses()
-	a.initImplicitParams()
-	a.initQueryParams()
-}
-
-// UserTypes returns all the user types used by the action payload and parameters.
-func (a *ActionExpr) UserTypes() map[string]design.UserType {
-	types := make(map[string]design.UserType)
-	allp := a.AllParams().Type.(design.Object)
-	if a.Payload != nil {
-		allp["__payload__"] = &design.AttributeExpr{Type: a.Payload}
-	}
-	for n, ut := range userTypes(allp) {
-		types[n] = ut
-	}
-	for _, r := range a.Responses {
-		if ut := design.Root.UserType(r.MediaType); ut != nil {
-			mt := ut.(*design.MediaTypeExpr)
-			types[mt.TypeName] = mt.UserTypeExpr
-			for n, ut := range userTypes(mt.UserTypeExpr) {
-				types[n] = ut
-			}
-		}
-	}
-	if len(types) == 0 {
-		return nil
-	}
-	return types
-}
-
-// userTypes traverses the data type recursively and collects all the user types used to
-// define it. The returned map is indexed by type name.
-func userTypes(dt design.DataType) map[string]design.UserType {
-	collect := func(types map[string]design.UserType) func(*design.AttributeExpr) error {
-		return func(at *design.AttributeExpr) error {
-			if u, ok := at.Type.(design.UserType); ok {
-				types[u.Name()] = u
-			}
-			return nil
-		}
-	}
-	switch actual := dt.(type) {
-	case design.Primitive:
-		return nil
-	case *design.Array:
-		return userTypes(actual.ElemType.Type)
-	case *design.Map:
-		ktypes := userTypes(actual.KeyType.Type)
-		vtypes := userTypes(actual.ElemType.Type)
-		if vtypes == nil {
-			return ktypes
-		}
-		for n, ut := range ktypes {
-			vtypes[n] = ut
-		}
-		return vtypes
-	case design.Object:
-		types := make(map[string]design.UserType)
-		for _, att := range actual {
-			att.Walk(collect(types))
-		}
-		if len(types) == 0 {
-			return nil
-		}
-		return types
-	case design.UserType:
-		types := map[string]design.UserType{actual.Name(): actual}
-		actual.Attribute().Walk(collect(types))
-		return types
-	default:
-		panic("unknown type") // bug
-	}
 }
 
 // WalkHeaders iterates over the resource-level and action-level headers,
@@ -350,12 +273,15 @@ func userTypes(dt design.DataType) map[string]design.UserType {
 // Iteration stops if an iterator returns an error and in this case WalkHeaders returns that
 // error.
 func (a *ActionExpr) WalkHeaders(it HeaderWalker) error {
-	mergedHeaders := a.Resource.Headers.Merge(a.Headers)
-
-	isRequired := func(name string) bool {
-		// header required in either the Resource or Action scope?
-		return a.Resource.Headers.IsRequired(name) || a.Headers.IsRequired(name)
-	}
+	var (
+		resAttrs      = a.Resource.Headers.Attribute()
+		actAttrs      = a.Headers.Attribute()
+		mergedHeaders = resAttrs.Merge(actAttrs)
+		isRequired    = func(name string) bool {
+			return resAttrs.IsRequired(name) ||
+				actAttrs.IsRequired(name)
+		}
+	)
 
 	return iterateHeaders(mergedHeaders, isRequired, it)
 }
@@ -402,58 +328,6 @@ func (a *ActionExpr) mergeResponses() {
 		if dr := Root.DefaultResponse(resp.Name); dr != nil {
 			resp.Merge(dr)
 		}
-	}
-}
-
-// initImplicitParams creates params for path segments that don't have one.
-func (a *ActionExpr) initImplicitParams() {
-	for _, ro := range a.Routes {
-		for _, wc := range ro.Params() {
-			found := false
-			search := func(params *design.AttributeExpr) {
-				if params == nil {
-					return
-				}
-				att, ok := params.Type.(design.Object)[wc]
-				if ok {
-					if a.Params == nil {
-						a.Params = &design.AttributeExpr{Type: design.Object{}}
-					}
-					a.Params.Type.(design.Object)[wc] = att
-					found = true
-				}
-			}
-			search(a.Params)
-			parent := a.Resource
-			for !found && parent != nil {
-				bp := parent.Params
-				parent = parent.Parent()
-				search(bp)
-			}
-			if found {
-				continue
-			}
-			search(Root.Params)
-			if found {
-				continue
-			}
-			if a.Params == nil {
-				a.Params = &design.AttributeExpr{Type: design.Object{}}
-			}
-			a.Params.Type.(design.Object)[wc] = &design.AttributeExpr{Type: design.String}
-		}
-	}
-}
-
-// initQueryParams extract the query parameters from the action params.
-func (a *ActionExpr) initQueryParams() {
-	if params := a.AllParams(); params != nil {
-		queryParams := design.DupAtt(params)
-		queryParams.Type = design.Dup(queryParams.Type)
-		if a.Params == nil {
-			a.Params = &design.AttributeExpr{Type: design.Object{}}
-		}
-		a.QueryParams = queryParams
 	}
 }
 

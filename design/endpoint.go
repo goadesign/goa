@@ -43,3 +43,13 @@ func (e *EndpointExpr) EvalName() string {
 	}
 	return prefix + suffix
 }
+
+// Finalize makes sure the endpoint request and response types are set.
+func (e *EndpointExpr) Finalize() {
+	if e.Request == nil {
+		e.Request = Empty
+	}
+	if e.Response == nil {
+		e.Response = Empty
+	}
+}
