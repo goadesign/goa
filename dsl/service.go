@@ -52,39 +52,6 @@ func Service(name string, dsl func()) *design.ServiceExpr {
 	return s
 }
 
-// DefaultType sets the service default response type by name or by reference.
-// The attributes of the service default type also define the default properties
-// for request type attributes with identical names.
-//
-// DefaultType may appear in Service expressions.
-// DefaultType accepts one argument: the name of a reference to the type.
-// Example:
-//
-//    var _ = Service("divider", func() {
-//        DefaultType(DivideResult)
-//
-//        // Endpoint which uses the default type for its response.
-//        Endpoint("divide", func() {
-//            Request(DivideRequest)
-//        })
-//    })
-//
-func DefaultType(val interface{}) {
-	if s, ok := eval.Current().(*design.ServiceExpr); ok {
-		switch actual := val.(type) {
-		case *design.UserTypeExpr:
-			s.DefaultTypeName = actual.Name()
-		case *design.MediaTypeExpr:
-			s.DefaultTypeName = actual.Name()
-		case string:
-			s.DefaultTypeName = actual
-		default:
-			eval.ReportError("default type must be a string or a reference to a type")
-			return
-		}
-	}
-}
-
 // Error describes an endpoint error response. The description includes a unique
 // name (in the scope of the endpoint), an optional type, description and DSL
 // that further describes the type. If no type is specified then the goa

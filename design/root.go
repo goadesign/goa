@@ -31,7 +31,7 @@ type (
 		// Trait name
 		Name string
 		// Trait DSL
-		DSLFunc func()
+		DSL interface{}
 	}
 )
 

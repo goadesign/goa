@@ -19,6 +19,13 @@ import (
 //
 //        Metadata("struct:field:name", "MyName")
 //
+// `struct:field:origin`: overrides the name of the value used to initialize an
+// attribute value. For example if the attributes describes an HTTP header this
+// metadata specifies the name of the header in case it's different from the name
+// of the attribute. Applicable to attributes only.
+//
+//        Metadata("struct:field:origin", "X-API-Version")
+//
 // `struct:tag:xxx`: sets the struct field tag xxx on generated Go structs.
 // Overrides tags that goagen would otherwise set.  If the metadata value is a
 // slice then the strings are joined with the space character as separator.

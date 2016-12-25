@@ -2,7 +2,7 @@
 package dsl_test
 
 import . "goa.design/goa.v2/design"
-import . "goa.design/goa.v2/design/dsl"
+import . "goa.design/goa.v2/dsl"
 
 // The API expression defines the global API properties of tbe design. There can
 // only be one such declaration in a given design package.
@@ -36,12 +36,22 @@ var _ = API("dsl_spec", func() {
 	})
 
 	// Server describes a single API host and may appear more than once.
-	// URL must include protocol and hostname, may include port and base
-	// path (HTTP only).  Any component except the protocol may use
-	// parameters.
-	Server("https://{param}.goa.design:443/basePath", func() {
+	// URL must include the protocol and hostname and may include a port.
+	// The hostname and port may use parameters to define possible
+	// alternative values.
+	Server("https://{param}.goa.design:443", func() {
 		Description("Optional description")
-		// Param describes a single parameter
+
+		// Param describes a single parameter used in the server URL.
+		//
+		// The syntax for Param is the same as Attribute's. The Server
+		// Param declarations must include a default value.
+		//
+		// The attributes defined in Server get merged into the request
+		// types of all the API endpoints. The merge algorithm adds
+		// new attributes to the request types if they don't already have
+		// ones with the same names - overrides their properties (type,
+		// description etc.) otherwise.
 		Param("param", String, "Optional description", func() {
 			// Default value *must* be provided
 			Default("default")
@@ -60,20 +70,20 @@ var _ = Service("service", func() {
 	// Service description for code comments and docs
 	Description("Optional service description")
 
+	// Server definitions that appear in the Service DSL override all the API
+	// level definitions.
+	Server("https://service.goa.design:443", func() {
+		Description("Service specific server description")
+	})
+
 	// Docs allows linking to external documentation.
 	Docs(func() {
 		Description("Optional description")
 		URL("https://goa.design")
 	})
 
-	// DefaultType is an optional expression that can be used to define the
-	// default response type for the service endpoints. The attributes of
-	// the default type also define the default properties for attributes of
-	// the same name in request types.
-	DefaultType(ServiceDefaultType)
-
 	// Error defines a common error response to all the service endpoints.
-	Error("name_of_error")
+	Error("name_of_error_1")
 	// ErrorMedia is a built-in media type used by default for error
 	// responses.
 	Error("name_of_error_2", ErrorMedia, "Optional description of error")
@@ -84,7 +94,7 @@ var _ = Service("service", func() {
 	// Error response attributes can be described inline
 	Error("name_of_error_5", func() {
 		Description("Optional description")
-		Attribute("message", String)
+		Attribute("message")
 		Required("message")
 	})
 
@@ -100,12 +110,12 @@ var _ = Service("service", func() {
 			URL("https://goa.design")
 		})
 
-		// Request describes the request attributes. There must be only
+		// Request describes the request attributes. There can only be
 		// one Request expression per Endpoint expression.
 		// Request attributes can be described inline.
 		//
 		//     Request(func() {
-		//         Attribute("name", String)
+		//         Attribute("name")
 		//         Required("name")
 		//     })
 		//
@@ -125,12 +135,12 @@ var _ = Service("service", func() {
 			Required("name")
 		})
 
-		// Response describes the response attributes. There must be
-		// only one Response expression per Endpoint expression.
+		// Response describes the response attributes. There can only be
+		// one Response expression per Endpoint expression.
 		// Response attributes can be described inline.
 		//
 		//     Response(func() {
-		//         Attribute("name", String)
+		//         Attribute("name")
 		//         Required("name")
 		//     })
 		//
@@ -156,29 +166,18 @@ var _ = Service("service", func() {
 		Metadata("name", "some value", "some other value")
 	})
 
-	// Endpoint using the service default type ad respose type and reusing
-	// the default type attributes to define the request attributes.
-	Endpoint("default-type", func() {
-		Request(func() {
-			// Inherits type, description, default value, example
-			// and validations from ServiceDefaultType "value"
-			// attribute.
-			Attribute("value")
-		})
-	})
-
 	// Endpoint with inline request and response object types
 	Endpoint("inline-object", func() {
 		Request(func() {
 			Description("Optional description")
-			Attribute("required", String)
-			Attribute("optional", String)
+			Attribute("required")
+			Attribute("optional")
 			Required("required")
 		})
 		Response(func() {
 			Description("Optional description")
-			Attribute("required", String)
-			Attribute("optional", String)
+			Attribute("required")
+			Attribute("optional")
 			Required("required")
 		})
 	})
@@ -186,19 +185,19 @@ var _ = Service("service", func() {
 
 // ServiceDefaultType is a simple type definition.
 var ServiceDefaultType = Type("ServiceDefaultType", func() {
-	Attribute("value", String)
+	Attribute("value")
 })
 
 // AErrorType is a simple type definition.
 var AErrorType = Type("AErrorType", func() {
-	Attribute("msg", String)
+	Attribute("msg")
 })
 
 // AErrorMediaType is a simple media type definition.
 var AErrorMediaType = MediaType("application/vnd.goa.design.error", func() {
 	TypeName("AErrorMedia")
 	Attributes(func() {
-		Attribute("msg", String)
+		Attribute("msg")
 	})
 	View("default", func() {
 		Attribute("msg")
@@ -208,8 +207,8 @@ var AErrorMediaType = MediaType("application/vnd.goa.design.error", func() {
 // RequestType is the type that describes the request parameters.
 var RequestType = Type("Request", func() {
 	Description("Optional description")
-	Attribute("required", String)
-	Attribute("name", String)
+	Attribute("required")
+	Attribute("name")
 	Required("required")
 })
 
@@ -217,8 +216,8 @@ var RequestType = Type("Request", func() {
 var ResponseMediaType = MediaType("application/vnd.goa.response", func() {
 	Description("Optional description")
 	Attributes(func() {
-		Attribute("required", String)
-		Attribute("name", String)
+		Attribute("required")
+		Attribute("name")
 		Required("required")
 	})
 	View("default", func() {

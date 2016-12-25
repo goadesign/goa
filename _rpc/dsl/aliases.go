@@ -10,7 +10,7 @@ package dsl
 
 import (
 	"goa.design/goa.v2/design"
-	goadsl "goa.design/goa.v2/design/dsl"
+	goadsl "goa.design/goa.v2/dsl"
 )
 
 // API defines a network service API. It provides the API name, description and other global
@@ -39,7 +39,6 @@ import (
 //            Description("doc description")
 //            URL("doc URL")
 //        })
-//        Host("goa.design")            // Hostname used by OpenAPI spec
 //    }
 //
 func API(name string, dsl func()) *design.APIExpr {
@@ -74,9 +73,10 @@ func ArrayOf(v interface{}, dsl ...func()) *design.Array {
 	return goadsl.ArrayOf(v, dsl...)
 }
 
-// Attribute defines the field of a composite type.
-// An attribute has a name, a type and optionally a default value and validation
-// rules.
+// Attribute describes a field of an object.
+//
+// An attribute has a name, a type and optionally a default value, an example
+// value and validation rules.
 //
 // The type of an attribute can be one of:
 //
@@ -89,45 +89,50 @@ func ArrayOf(v interface{}, dsl ...func()) *design.Array {
 //
 // * An map defined using the MapOf function.
 //
+// * An object defined inline using Attribute to define the type fields
+//   recursively.
+//
 // * The special type Any to indicate that the attribute may take any of the
 //   types listed above.
 //
-// The type may also be defined inline using Attribute to define the type fields
-// recursively.
+// Attribute may appear in MediaType, Type, Attribute or Attributes.
 //
-// Attribute may appear in Type, Attribute or Attributes.
-//
-// Attribute accepts two to four arguments, the valid usages of the function
+// Attribute accepts one to four arguments, the valid usages of the function
 // are:
 //
-//    Attribute(name, dsl)  // Defines type inline
-//                          // Description and/or validations also in DSL
+//    Attribute(name)       // Attribute of type String with no description, no
+//                          // validation, default or example value
 //
-//    Attribute(name, type) // No description and no validation
+//    Attribute(name, dsl)  // Attribute of type object with inline field
+//                          // definitions, description, validations, default
+//                          // and/or example value
 //
-//    Attribute(name, type, dsl) // Description and/or validations in DSL
+//    Attribute(name, type) // Attribute with no description, no validation,
+//                          // no default or example value
 //
-//    Attribute(name, type, description)      // No validations
+//    Attribute(name, type, dsl) // Attribute with description, validations,
+//                               // default and/or example value
 //
-//    Attribute(name, type, description, dsl) // Validations in DSL
+//    Attribute(name, type, description)      // Attribute with no validation,
+//                                            // default or example value
+//
+//    Attribute(name, type, description, dsl) // Attribute with description,
+//                                            // validations, default and/or
+//                                            // example value
 //
 // Where name is a string indicating the name of the attribute, type specifies
 // the attribute type (see above for the possible values), description a string
 // providing a human description of the attribute and dsl the defining DSL if
 // any.
 //
-// The name of the attribute may use the format "struct name:attribute name"
-// where "struct name" is the name of the actual underlying data structure field
-// and "attribute name" the name of the design attribute.
-//
 // When defining the type inline using Attribute recursively the function takes
-// the first form (name and DSL defining the type). The description can be
+// the second form (name and DSL defining the type). The description can be
 // provided using the Description function in this case.
 //
 // Examples:
 //
-//    Attribute("name", String)           // Defines a attribute of type String
-//                                        // with no description nor validation
+//    Attribute("name")
+//
 //    Attribute("driver", Person)         // Use type defined with Type function
 //
 //    Attribute("driver", "Person")       // May also use the type name
@@ -151,11 +156,10 @@ func ArrayOf(v interface{}, dsl ...func()) *design.Array {
 //                                         // validations
 //    })
 //
-//    // The definition below defines a composite attribute inline.
-//    // The resulting type is an object with three attributes
-//    // "name", "age" and "child". The "child" attribute is itself
-//    // defined inline and has one child attribute "name".
-//    //
+// The definition below defines an attribute inline. The resulting type
+// is an object with three attributes "name", "age" and "child". The "child"
+// attribute is itself defined inline and has one child attribute "name".
+//
 //    Attribute("driver", func() {           // Define type inline
 //        Description("Composite attribute") // Set description
 //
@@ -165,7 +169,7 @@ func ArrayOf(v interface{}, dsl ...func()) *design.Array {
 //            Default(42)
 //            Minimum(2)
 //        })
-//        Attribute("child", func() {        // Defines a composite child
+//        Attribute("child", func() {        // Defines a child attribute
 //            Attribute("name", String)      // Grand-child attribute
 //            Required("name")
 //        })
@@ -231,41 +235,6 @@ func Default(def interface{}) {
 	goadsl.Default(def)
 }
 
-// DefaultType sets the service default response type by name or by reference.
-// The attributes of the service default type also define the default properties
-// for request type attributes with identical names.
-//
-// DefaultType may appear in Service expressions.
-// DefaultType accepts one argument: the name of a reference to the type.
-// Example:
-//
-//    var _ = Service("divider", func() {
-//        DefaultType(DivideResult)
-//
-//        // Endpoint which uses the default type for its response.
-//        Endpoint("divide", func() {
-//            Request(DivideRequest)
-//        })
-//    })
-//
-func DefaultType(val interface{}) {
-	goadsl.DefaultType(val)
-}
-
-// Description sets the expression description.
-//
-// Description may appear in API, Docs, Type or Attribute.
-//
-// Example:
-//
-//    API("adder", func() {
-//        Description("Adder API")
-//    })
-//
-func Description(d string) {
-	goadsl.Description(d)
-}
-
 // Docs provides external documentation pointers.
 //
 // Docs may appear in an API, Service, Endpoint or Attribute expressions.
@@ -309,12 +278,6 @@ func Email(email string) {
 //
 func Endpoint(name string, dsl func()) {
 	goadsl.Endpoint(name, dsl)
-}
-
-// Enum adds a "enum" validation to the attribute.
-// See http://json-schema.org/latest/json-schema-validation.html#anchor76.
-func Enum(vals ...interface{}) {
-	goadsl.Enum(vals...)
 }
 
 // Error describes an endpoint error response. The description includes a unique
@@ -361,23 +324,6 @@ func Error(name string, args ...interface{}) {
 //
 func Example(exp interface{}) {
 	goadsl.Example(exp)
-}
-
-// Field is syntactic sugar to define an attribute with the "rpc:tag" metadata
-// set with the value of the first argument.
-//
-// Field may appear wherever Attribute can.
-// Field takes the same arguments as Attribute with the addition of the tag
-// value as first argument.
-//
-// Example:
-//
-//     Field(1, "ID", String, func() {
-//         Pattern("[0-9]+")
-//     })
-//
-func Field(tag interface{}, name string, args ...interface{}) {
-	goadsl.Field(tag, name, args...)
 }
 
 // Format adds a "format" validation to the attribute.
@@ -511,6 +457,13 @@ func MediaType(identifier string, dsl func()) *design.MediaTypeExpr {
 // by goagen.  Applicable to attributes only.
 //
 //        Metadata("struct:field:name", "MyName")
+//
+// `struct:field:origin`: overrides the name of the value used to initialize an
+// attribute value. For example if the attributes describes an HTTP header this
+// metadata specifies the name of the header in case it's different from the name
+// of the attribute. Applicable to attributes only.
+//
+//        Metadata("struct:field:origin", "X-API-Version")
 //
 // `struct:tag:xxx`: sets the struct field tag xxx on generated Go structs.
 // Overrides tags that goagen would otherwise set.  If the metadata value is a
@@ -731,43 +684,6 @@ func Response(val interface{}, dsls ...func()) {
 // Server defines an API host.
 func Server(url string, dsl ...func()) {
 	goadsl.Server(url, dsl...)
-}
-
-// Service defines a group of related endpoints. Refer to the transport specific
-// DSLs to learn how to provide transport specific information.
-//
-// Service is as a top level expression.
-// Service accepts two arguments: the name of the service (which must be unique
-// in the design package) and its defining DSL.
-//
-// Example:
-//
-//    var _ = Service("divider", func() {
-//        Description("divider service") // Optional description
-//
-//        DefaultType(DivideResult) // Default response type for the service
-//                                  // endpoints. Also defines default
-//                                  // properties (type, description and
-//                                  // validations) for attributes with
-//                                  // identical names in request types.
-//
-//        Error("Unauthorized", Unauthorized) // Error response that applies to
-//                                            // all endpoints
-//
-//        Endpoint("divide", func() {     // Defines a single endpoint
-//            Description("The divide endpoint returns the division of A and B")
-//            Request(DivideRequest)      // Request type listing all request
-//                                        // parameters in its attributes.
-//            Response(DivideResponse)    // Response type.
-//            Error("DivisionByZero", DivByZero) // Error, has a name and
-//                                               // optionally a type
-//                                               // (DivByZero) describes the
-//                                               // error response.
-//        })
-//    })
-//
-func Service(name string, dsl func()) *design.ServiceExpr {
-	return goadsl.Service(name, dsl)
 }
 
 // TermsOfAPI describes the API terms of services or links to them.

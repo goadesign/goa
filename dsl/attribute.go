@@ -2,15 +2,15 @@ package dsl
 
 import (
 	"fmt"
-	"strings"
 
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/eval"
 )
 
-// Attribute defines the field of a composite type.
-// An attribute has a name, a type and optionally a default value and validation
-// rules.
+// Attribute describes a field of an object.
+//
+// An attribute has a name, a type and optionally a default value, an example
+// value and validation rules.
 //
 // The type of an attribute can be one of:
 //
@@ -23,45 +23,50 @@ import (
 //
 // * An map defined using the MapOf function.
 //
+// * An object defined inline using Attribute to define the type fields
+//   recursively.
+//
 // * The special type Any to indicate that the attribute may take any of the
 //   types listed above.
 //
-// The type may also be defined inline using Attribute to define the type fields
-// recursively.
+// Attribute may appear in MediaType, Type, Attribute or Attributes.
 //
-// Attribute may appear in Type, Attribute or Attributes.
-//
-// Attribute accepts two to four arguments, the valid usages of the function
+// Attribute accepts one to four arguments, the valid usages of the function
 // are:
 //
-//    Attribute(name, dsl)  // Defines type inline
-//                          // Description and/or validations also in DSL
+//    Attribute(name)       // Attribute of type String with no description, no
+//                          // validation, default or example value
 //
-//    Attribute(name, type) // No description and no validation
+//    Attribute(name, dsl)  // Attribute of type object with inline field
+//                          // definitions, description, validations, default
+//                          // and/or example value
 //
-//    Attribute(name, type, dsl) // Description and/or validations in DSL
+//    Attribute(name, type) // Attribute with no description, no validation,
+//                          // no default or example value
 //
-//    Attribute(name, type, description)      // No validations
+//    Attribute(name, type, dsl) // Attribute with description, validations,
+//                               // default and/or example value
 //
-//    Attribute(name, type, description, dsl) // Validations in DSL
+//    Attribute(name, type, description)      // Attribute with no validation,
+//                                            // default or example value
+//
+//    Attribute(name, type, description, dsl) // Attribute with description,
+//                                            // validations, default and/or
+//                                            // example value
 //
 // Where name is a string indicating the name of the attribute, type specifies
 // the attribute type (see above for the possible values), description a string
 // providing a human description of the attribute and dsl the defining DSL if
 // any.
 //
-// The name of the attribute may use the format "struct name:attribute name"
-// where "struct name" is the name of the actual underlying data structure field
-// and "attribute name" the name of the design attribute.
-//
 // When defining the type inline using Attribute recursively the function takes
-// the first form (name and DSL defining the type). The description can be
+// the second form (name and DSL defining the type). The description can be
 // provided using the Description function in this case.
 //
 // Examples:
 //
-//    Attribute("name", String)           // Defines a attribute of type String
-//                                        // with no description nor validation
+//    Attribute("name")
+//
 //    Attribute("driver", Person)         // Use type defined with Type function
 //
 //    Attribute("driver", "Person")       // May also use the type name
@@ -85,11 +90,10 @@ import (
 //                                         // validations
 //    })
 //
-//    // The definition below defines a composite attribute inline.
-//    // The resulting type is an object with three attributes
-//    // "name", "age" and "child". The "child" attribute is itself
-//    // defined inline and has one child attribute "name".
-//    //
+// The definition below defines an attribute inline. The resulting type
+// is an object with three attributes "name", "age" and "child". The "child"
+// attribute is itself defined inline and has one child attribute "name".
+//
 //    Attribute("driver", func() {           // Define type inline
 //        Description("Composite attribute") // Set description
 //
@@ -99,7 +103,7 @@ import (
 //            Default(42)
 //            Minimum(2)
 //        })
-//        Attribute("child", func() {        // Defines a composite child
+//        Attribute("child", func() {        // Defines a child attribute
 //            Attribute("name", String)      // Grand-child attribute
 //            Required("name")
 //        })
@@ -108,10 +112,7 @@ import (
 //    })
 //
 func Attribute(name string, args ...interface{}) {
-	var (
-		parent             *design.AttributeExpr
-		fieldName, attName string
-	)
+	var parent *design.AttributeExpr
 
 	switch def := eval.Current().(type) {
 	case *design.AttributeExpr:
@@ -123,17 +124,6 @@ func Attribute(name string, args ...interface{}) {
 		return
 	}
 
-	elems := strings.Split(name, ":")
-	if len(elems) > 2 {
-		eval.ReportError("invalid attribute name %s, attribute names must be of the name 'field name:attribute name'")
-		return
-	}
-	fieldName = elems[0]
-	if len(elems) > 1 {
-		attName = elems[1]
-	} else {
-		attName = fieldName
-	}
 	if parent != nil {
 		if parent.Type == nil {
 			parent.Type = make(design.Object)
@@ -145,7 +135,7 @@ func Attribute(name string, args ...interface{}) {
 
 		var baseAttr *design.AttributeExpr
 		if parent.Reference != nil {
-			if att, ok := design.AsObject(parent.Reference)[attName]; ok {
+			if att, ok := design.AsObject(parent.Reference)[name]; ok {
 				baseAttr = design.DupAtt(att)
 			}
 		}
@@ -172,13 +162,7 @@ func Attribute(name string, args ...interface{}) {
 			// DSL did not contain an "Attribute" declaration
 			baseAttr.Type = design.String
 		}
-		if fieldName != attName {
-			if baseAttr.Metadata == nil {
-				baseAttr.Metadata = make(design.MetadataExpr)
-			}
-			baseAttr.Metadata["struct:field:name"] = []string{fieldName}
-		}
-		design.AsObject(parent.Type)[attName] = baseAttr
+		design.AsObject(parent.Type)[name] = baseAttr
 	}
 }
 

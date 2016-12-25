@@ -1,8 +1,10 @@
 package dsl
 
 import (
+	"strings"
+
 	goadesign "goa.design/goa.v2/design"
-	goadsl "goa.design/goa.v2/design/dsl"
+	goadsl "goa.design/goa.v2/dsl"
 	"goa.design/goa.v2/eval"
 	"goa.design/goa.v2/rest/design"
 )
@@ -20,7 +22,6 @@ import (
 // Example:
 //
 //    var _ = Service("calculator", func() {
-//        DefaultType(ResultMediaType)
 //        Error(ErrAuthFailure)
 //
 //        HTTP(func() {
@@ -50,9 +51,9 @@ import (
 //                                           // define "req" query string
 //                })
 //                Scheme("https")        // Override default service scheme
-//                Header("X-RequestID:requestID") // Use "requestID" attribute
-//                                                // of Operands to define shape
-//                                                // of X-RequestID header
+//                Header("requestID:X-RequestID")  // Use "requestID" attribute
+//                                                 // of Operands to define shape
+//                                                 // of X-RequestID header
 //                Response(http.StatusNoContent)   // Use status 204 on success
 //                Error(ErrBadRequest, BadRequest) // Use status code 400 for
 //                                                 // ErrBadRequest responses
@@ -69,6 +70,45 @@ func HTTP(dsl func()) {
 		res := design.Root.ResourceFor(actual.Service)
 		act := res.Action(actual.Name)
 		eval.Execute(dsl, act)
+	default:
+		eval.IncompatibleDSL()
+	}
+}
+
+// Scheme sets the API URL schemes.
+func Scheme(vals ...design.APIScheme) {
+	switch def := eval.Current().(type) {
+	case *goadesign.APIExpr:
+		design.Root.Schemes = append(design.Root.Schemes, vals...)
+	case *design.ResourceExpr:
+		def.Schemes = append(def.Schemes, vals...)
+	case *design.ActionExpr:
+		def.Schemes = append(def.Schemes, vals...)
+	default:
+		eval.IncompatibleDSL()
+	}
+}
+
+// Path defines the API base path, i.e. the common path prefix to all the API
+// actions. The path may define wildcards (see GET for a description of the
+// wildcard syntax). The corresponding parameters must be described using Params.
+func Path(val string) {
+	switch def := eval.Current().(type) {
+	case *goadesign.APIExpr:
+		design.Root.Path = val
+	case *design.ResourceExpr:
+		def.Path = val
+		if !strings.HasPrefix(val, "//") {
+			awcs := design.ExtractWildcards(design.Root.Path)
+			wcs := design.ExtractWildcards(val)
+			for _, awc := range awcs {
+				for _, wc := range wcs {
+					if awc == wc {
+						eval.ReportError(`duplicate wildcard "%s" in API and resource base paths`, wc)
+					}
+				}
+			}
+		}
 	default:
 		eval.IncompatibleDSL()
 	}
@@ -158,51 +198,54 @@ func PATCH(path string) *design.RouteExpr {
 	return &design.RouteExpr{Verb: "PATCH", Path: path}
 }
 
-// Headers define relevant action HTTP headers. The DSL syntax is identical to
-// the one of Attributes.
+// Headers defines a mapping of attribute names to HTTP header names. Depending
+// on where Headers is used it defines how to map the incoming request HTTP
+// headers to the request type attributes or how to map the response type
+// attributes to the outgoing HTTP response headers.
 //
-// Headers can be used inside a service HTTP DSL to define common request
-// headers to all the service endpoints, a endpoint DSL to define endpoint
-// request specific headers or Response to define response headers.
+// Headers defines the mapping of request headers to request type attributes when
+// used in the service DSL (in which case the mapping is to the service default
+// type) or in a specific endpoint HTTP DSL. Headers define the mapping of the
+// response type attributes to HTTP response headers when used in the Response
+// DSL either at the service level (in which case the mapping is from the
+// default response type) or at the specific endpoint level.
 //
 // Example:
 //
 //    Headers(func() {
-//        Header("Authorization")
-//        Header("X-Account", Integer, func() {
-//            Minimum(1)
-//        })
-//        Required("Authorization")
+//        Header("Authorization") // Map attribute Authorization or header with
+//                                // same name.
+//        Header("account:X-Account") // Map attribute account to header
+//                                    // X-Account
+//        Required("Authorization") // Required headers
 //    })
 //
 func Headers(dsl func()) {
 	switch def := eval.Current().(type) {
 	case *design.ActionExpr:
-		headers := newAttribute(def.Resource.MediaType)
+		headers := design.NewAttributeMap(def, def.Resource.DefaultType)
 		if eval.Execute(dsl, headers) {
-			def.Headers = def.Headers.Merge(headers)
+			def.Headers = headers
 		}
 
 	case *design.ResourceExpr:
-		headers := newAttribute(def.MediaType)
+		headers := design.NewAttributeMap(def, def.DefaultType)
 		if eval.Execute(dsl, headers) {
-			def.Headers = def.Headers.Merge(headers)
+			def.Headers = headers
 		}
 
 	case *design.HTTPResponseExpr:
-		var h *goadesign.AttributeExpr
+		var h *design.AttributeMapExpr
 		switch actual := def.Parent.(type) {
 		case *design.ResourceExpr:
-			h = newAttribute(actual.MediaType)
+			h = design.NewAttributeMap(def, actual.DefaultType)
 		case *design.ActionExpr:
-			h = newAttribute(actual.Resource.MediaType)
-		case nil: // API ResponseTemplate
-			h = &goadesign.AttributeExpr{}
+			h = design.NewAttributeMap(def, actual.Resource.DefaultType)
 		default:
 			eval.ReportError("invalid use of Response or ResponseTemplate")
 		}
 		if eval.Execute(dsl, h) {
-			def.Headers = def.Headers.Merge(h)
+			def.Headers = h
 		}
 
 	default:
@@ -210,10 +253,46 @@ func Headers(dsl func()) {
 	}
 }
 
+// Header describes a single HTTP header.
+//
+// Header may appear inside Headers.
+//
+// Header accepts a single argument which defines both the name of the header and
+// the name of the corresponding request or response type attribute. The argument
+// is of the form "name of attribute:name of header". If both names are identical
+// then the form "name" (with no :) my be used instead.
+//
+// Example:
+//
+//     var _ = Endpoint("
+func Header(name string) {
+	headers, ok := eval.Current().(*design.AttributeMapExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	if err := headers.Alias(name); err != nil {
+		eval.ReportError(err.Error())
+	}
+}
+
 // Params describe the endpoint parameters, either path parameters identified
-// via wildcards or query string parameters if there is no corresponding path
-// parameter. Each parameter is described with the Param function which appears
-// in the Params DSL.
+// via wildcards or query string parameters. Path parameters are described with
+// the Param function while query string parameters are described with the Query
+// function. Both the Param and Query functions appear inside the Params DSL.
+//
+// Each Param and Query expression must map one of the endpoint request type
+// attributes. The syntax for defining parameters is:
+//
+//      Param("ATTRIBUTE[:PARAMETER]")
+//
+// And the one for query strings is:
+//
+//      Query("ATTRIBUTE[:PARAMETER]")
+//
+// where ATTRIBUTE is the name of request type attribute and PARAMETER the name
+// of the HTTP path or query string parameter. The parameter name is optional
+// and only required when the name differ from the name of the attribute.
 //
 // Params may appear inside the endpoint HTTP DSL to define the action
 // parameters, serivce HTTP DSL to define common parameters to all the service
@@ -221,63 +300,63 @@ func Headers(dsl func()) {
 //
 // Example:
 //
-//    var _ = API("cellar", func() { // Define API "cellar"
-//        Path("/api/{version}")     // Base path uses parameter defined by :version
-//        Params(func() {            // Define parameters
-//            Param("version", String, func() { // Define version parameter
-//                Enum("v1", "v2")              // Syntax is identical to Attribute's
+//    var ShowRequest = Type("ShowRequest", func() {
+//        Attribute("version", String, "Endpoint version", func() {
+//            Enum("1.0", "2.0")
+//        })
+//    })
+//
+//    var _ = Service("Bottle", func() {
+//        DefaultType(BottleMedia)   // Service "Bottle" uses "BottleMedia" as
+//        Endpoint("show", func() {  // default response type.
+//            Request(ShowRequest)
+//            Routing(GET("/:name")) // Action show uses parameter "name"
+//            Params(func() {   // Parameter inherits type, description and
+//                Param("name") // validation from BottleMedia "name" attribute
 //            })
 //        })
 //    })
 //
-// If Params is used inside Resource or Action then the resource base media type
-// attributes provide default values for all the properties of params with
-// identical names. For example:
-//
-//     var BottleMedia = MediaType("application/vnd.bottle", func() {
-//         Attributes(func() {
-//             Attribute("name", String, "Name of bottle", func() {
-//                 MinLength(2) // BottleMedia "name" attribute is a string that
-//                              // must be at least 2 characters long.
-//             })
-//         })
-//         View("default", func() {
-//             Attribute("name")
-//         })
-//     })
-//
-//     var _ = Resource("Bottle", func() {
-//         DefaultMedia(BottleMedia)  // Resource "Bottle" uses "BottleMedia" as
-//         Action("show", func() {    // default media type.
-//             Routing(GET("/:name")) // Action show uses parameter "name"
-//             Params(func() {   // Parameter inherits type, description and
-//                 Param("name") // validation from BottleMedia "name" attribute
-//             })
-//         })
-//     })
-//
 func Params(dsl func()) {
-	var params *goadesign.AttributeExpr
+	var params *design.AttributeMapExpr
 	switch def := eval.Current().(type) {
 	case *design.ActionExpr:
-		params = newAttribute(def.Resource.MediaType)
+		params = design.NewAttributeMap(def, def.EndpointExpr.Request)
 	case *design.ResourceExpr:
-		params = newAttribute(def.MediaType)
+		params = design.NewAttributeMap(def, def.DefaultType)
 	case *goadesign.APIExpr:
-		params = new(goadesign.AttributeExpr)
+		params = design.NewAttributeMap(def, nil)
 	default:
 		eval.IncompatibleDSL()
 	}
-	params.Type = make(goadesign.Object)
 	if !eval.Execute(dsl, params) {
 		return
 	}
 	switch def := eval.Current().(type) {
 	case *design.ActionExpr:
-		def.Params = def.Params.Merge(params)
+		def.Params = params
 	case *design.ResourceExpr:
-		def.Params = def.Params.Merge(params)
+		def.Params = params
 	case *goadesign.APIExpr:
-		design.Root.Params = design.Root.Params.Merge(params)
+		design.Root.Params = params
+	}
+}
+
+// Param describes a single HTTP request path or query string parameter.
+//
+// Param may appear inside Params.
+//
+// Param accepts a single argument which defines both the name of the parameter
+// and the name of the corresponding request or response type attribute. The
+// argument is of the form "name_of_header:name_of_attribute". If both names are
+// identical then the form "common_name" my be used instead.
+func Param(name string) {
+	params, ok := eval.Current().(*design.AttributeMapExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	if err := params.Alias(name); err != nil {
+		eval.ReportError(err.Error())
 	}
 }

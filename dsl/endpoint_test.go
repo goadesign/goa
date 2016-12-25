@@ -6,7 +6,7 @@ import (
 	"reflect"
 
 	"goa.design/goa.v2/design"
-	. "goa.design/goa.v2/design/dsl"
+	. "goa.design/goa.v2/dsl"
 	"goa.design/goa.v2/eval"
 )
 

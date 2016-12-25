@@ -23,7 +23,7 @@ type (
 		// Response view name if MediaType is the id of a MediaTypeExpr
 		ViewName string
 		// Response header expressions
-		Headers *design.AttributeExpr
+		Headers *AttributeMapExpr
 		// Parent action or resource
 		Parent eval.Expression
 		// Metadata is a list of key/value pairs
@@ -52,7 +52,7 @@ func (r *HTTPResponseExpr) EvalName() string {
 func (r *HTTPResponseExpr) Validate() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
 	if r.Headers != nil {
-		verr.Merge(r.Headers.Validate("HTTP response headers", r))
+		verr.Merge(r.Headers.Attribute().Validate("HTTP response headers", r))
 	}
 	if r.Status == 0 {
 		verr.Add(r, "HTTP response status not defined")
@@ -84,9 +84,7 @@ func (r *HTTPResponseExpr) Dup() *HTTPResponseExpr {
 		Description: r.Description,
 		MediaType:   r.MediaType,
 		ViewName:    r.ViewName,
-	}
-	if r.Headers != nil {
-		res.Headers = design.DupAtt(r.Headers)
+		Headers:     r.Headers,
 	}
 	return &res
 }
@@ -110,17 +108,10 @@ func (r *HTTPResponseExpr) Merge(other *HTTPResponseExpr) {
 		r.ViewName = other.ViewName
 	}
 	if other.Headers != nil {
-		otherHeaders := other.Headers.Type.(design.Object)
-		if len(otherHeaders) > 0 {
-			if r.Headers == nil {
-				r.Headers = &design.AttributeExpr{Type: design.Object{}}
-			}
-			headers := r.Headers.Type.(design.Object)
-			for n, h := range otherHeaders {
-				if _, ok := headers[n]; !ok {
-					headers[n] = h
-				}
-			}
+		if r.Headers == nil {
+			r.Headers = other.Headers
+		} else {
+			r.Headers.Merge(other.Headers)
 		}
 	}
 }

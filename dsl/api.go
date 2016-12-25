@@ -31,7 +31,6 @@ import (
 //            Description("doc description")
 //            URL("doc URL")
 //        })
-//        Host("goa.design")            // Hostname used by OpenAPI spec
 //    }
 //
 func API(name string, dsl func()) *design.APIExpr {
@@ -138,14 +137,6 @@ func Server(url string, dsl ...func()) {
 	if len(dsl) > 1 {
 		eval.ReportError("too many arguments given to Server")
 	}
-	s, ok := eval.Current().(*design.APIExpr)
-	if !ok {
-		eval.IncompatibleDSL()
-		return
-	}
-	if url == "" {
-		eval.ReportError("Server URL cannot be empty")
-	}
 	server := &design.ServerExpr{
 		Params: new(design.AttributeExpr),
 		URL:    url,
@@ -153,7 +144,17 @@ func Server(url string, dsl ...func()) {
 	if len(dsl) > 0 {
 		eval.Execute(dsl[0], server)
 	}
-	s.Servers = append(s.Servers, server)
+	if url == "" {
+		eval.ReportError("Server URL cannot be empty")
+	}
+	switch e := eval.Current().(type) {
+	case *design.APIExpr:
+		e.Servers = append(e.Servers, server)
+	case *design.ServiceExpr:
+		e.Servers = append(e.Servers, server)
+	default:
+		eval.IncompatibleDSL()
+	}
 }
 
 // Param defines a server URL parameter.

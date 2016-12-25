@@ -17,24 +17,24 @@ type (
 	ResourceExpr struct {
 		// ServiceExpr is the underlying service.
 		*design.ServiceExpr
-		// Default media type identifier.
-		MediaType string
 		// Schemes is the supported HTTP schemes.
-		Schemes []string
+		Schemes []APIScheme
 		// Common URL prefix to all resource action HTTP requests
-		BasePath string
+		Path string
 		// Name of parent resource if any
 		ParentName string
 		// Action with canonical resource path
 		CanonicalActionName string
 		// Path and query string parameters that apply to all actions.
-		Params *design.AttributeExpr
+		Params *AttributeMapExpr
 		// Request headers that apply to all actions.
-		Headers *design.AttributeExpr
+		Headers *AttributeMapExpr
 		// Actions is the list of resource actions.
 		Actions []*ActionExpr
 		// Responses lists HTTP responses that apply to all actions.
 		Responses []*HTTPResponseExpr
+		// Errors lists HTTP errors that apply to all actions.
+		Errors []*HTTPErrorExpr
 		// FileServers is the list of static asset serving endpoints
 		FileServers []*FileServerExpr
 	}
@@ -52,7 +52,8 @@ func (r *ResourceExpr) EvalName() string {
 // alphabetical order.  Iteration stops if an iterator returns an error and in
 // this case WalkHeaders returns that error.
 func (r *ResourceExpr) WalkHeaders(it HeaderWalker) error {
-	return iterateHeaders(r.Headers, r.Headers.IsRequired, it)
+	h := r.Headers.Attribute()
+	return iterateHeaders(h, h.IsRequired, it)
 }
 
 // Action returns the resource action with the given name or nil if there isn't one.
@@ -89,8 +90,8 @@ func (r *ResourceExpr) URITemplate() string {
 // FullPath computes the base path to the resource actions concatenating the API and parent resource
 // base paths as needed.
 func (r *ResourceExpr) FullPath() string {
-	if strings.HasPrefix(r.BasePath, "//") {
-		return httppath.Clean(r.BasePath)
+	if strings.HasPrefix(r.Path, "//") {
+		return httppath.Clean(r.Path)
 	}
 	var basePath string
 	if p := r.Parent(); p != nil {
@@ -105,7 +106,7 @@ func (r *ResourceExpr) FullPath() string {
 	} else {
 		basePath = Root.Path
 	}
-	return httppath.Clean(path.Join(basePath, r.BasePath))
+	return httppath.Clean(path.Join(basePath, r.Path))
 }
 
 // Parent returns the parent resource if any, nil otherwise.
@@ -123,6 +124,16 @@ func (r *ResourceExpr) Response(name string) *HTTPResponseExpr {
 	for _, resp := range r.Responses {
 		if resp.Name == name {
 			return resp
+		}
+	}
+	return nil
+}
+
+// Error returns the resource error with given name if any.
+func (r *ResourceExpr) Error(name string) *HTTPErrorExpr {
+	for _, erro := range r.Errors {
+		if erro.Name == name {
+			return erro
 		}
 	}
 	return nil

@@ -73,7 +73,7 @@ func endpointTypeDSL(suffix string, p interface{}, dsls ...func()) design.UserTy
 	case *design.AttributeExpr:
 		att = design.DupAtt(actual)
 	case design.UserType:
-		if design.IsObject(actual) {
+		if !design.IsObject(actual) {
 			eval.ReportError("%s type must be an object, %s is a %s", suffix, actual.Name(), actual.Attribute().Type.Name())
 			return nil
 		}

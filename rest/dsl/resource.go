@@ -16,8 +16,8 @@ package dsl
 // resources has two effects.  First, parent resources set the prefix of all
 // resource action paths to the parent resource href.  Note that actions can
 // override the path using an absolute path (that is a path starting with "//").
-// Second, goa uses the parent resource href coupled with the resource BasePath
-// if any to build request paths.
+// Second, goa uses the parent resource href coupled with the resource Path if
+// any to build request paths.
 //
 // By default goa uses the show action if present to compute a resource href
 // (basically concatenating the parent resource href with the base path and show
@@ -34,7 +34,7 @@ package dsl
 //     var _ = Resource("bottle", func() {
 //         Description("A wine bottle")    // Resource description
 //         DefaultMedia(BottleMedia)       // Resource default media type if any
-//         BasePath("/bottles")            // Common resource action path prefix
+//         Path("/bottles")                // Common resource action path prefix
 //         Parent("account")               // Name of parent resource if any
 //         CanonicalActionName("get")      // Name of action that used to
 //                                         // compute href if not "show"

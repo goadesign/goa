@@ -82,32 +82,33 @@ var _ = API("rest_dsl_spec", func() {
 		// ("Bad Request") and the error type attributes define the shape
 		// of the body.
 		//
-		// Error accepts the name of the error as first argument and an
-		// optional DSL used to describe the mapping of the error type
-		// attributes to the HTTP response headers and body fields. If
-		// the name of the error matches one of the errors defined in
-		// the API DSL then
-		Error("api_error", func() {
-			// Code sets the HTTP response status code.
-			Code(StatusUnauthorized)
+		// Error accepts the name of the error as first argument, an
+		// HTTP status code as second argument and an optional DSL used
+		// to describe the mapping of the error type attributes to the
+		// HTTP response headers and body fields. The name of the error
+		// must correspond to one of the errors defined in the API DSL.
+		Error("api_error", http.StatusUnauthorized, func() {
 
-			// Header defines a single header. The syntax
-			// for Header is the same as Attribute's.
-			// The name argument can optionally define a
-			// mapping between the attribute and the HTTP
-			// header name using the syntax "attribute
-			// name:header name".
-			//
-			// If the error type defines an attribute with
-			// the same name as the name of the Header
-			// attribute then the header attribute inherits
-			// all its properties (type, description,
-			// validations, etc.) from it.
-			Header("error_code:Error-Code")
+			// Headers list the error response headers.
+			Headers(func() {
+				// Header defines a single header. The syntax
+				// for Header is the same as Attribute's.
+				// The name argument can optionally define a
+				// mapping between the attribute and the HTTP
+				// header name using the syntax "attribute
+				// name:header name".
+				//
+				// If the error type defines an attribute with
+				// the same name as the name of the Header
+				// attribute then the header attribute inherits
+				// all its properties (type, description,
+				// validations, etc.) from it.
+				Header("error_code:Code")
+			})
 
 			// Body defines the response body fields.
 			// By default (when Body is absent) the error type
-			// attributes not listed in the Header DSLs are used
+			// attributes not listed in the Headers DSL are used
 			// to define the response body fields.
 			Body(func() {
 				// If the error type defines an attribute with
@@ -159,7 +160,9 @@ var _ = Service("service", func() {
 		// Service specific errors. Syntax and logic is identical to the
 		// API level HTTP Error expressions.
 		Error("service_error", http.StatusForbidden, func() {
-			Header("name:Header-Name")
+			Headers(func() {
+				Header("name:Header-Name")
+			})
 			Body(func() {
 				Attribute("id")
 				Attribute("status")
@@ -235,35 +238,44 @@ var _ = Service("service", func() {
 
 			// GET, POST, PUT etc. set the endpoint HTTP route. The
 			// complete path is computed by appending the API prefix
-			// path with the service prefix path with the endpoint
+			// path with the resource prefix path with the endpoint
 			// path.
 			PUT("/endpoint_path/{endpoint_path_param}")
 
-			// Param defines a single path or query string
-			// parameter.
-			// If the name of the parameter attribute matches
-			// the name of one of the request type attribute
-			// then it inherits all its properties
-			// (description, type, validations etc.) from it.
-			Param("endpoint_path_param")
-			Param("endpoint_query_param")
+			// Params defines the path and query string parameters.
+			Params(func() {
+				// Param defines a single path or query string
+				// parameter.
+				// If the name of the parameter attribute matches
+				// the name of one of the request type attribute
+				// then it inherits all its properties
+				// (description, type, validations etc.) from it.
+				Param("endpoint_path_param")
+				Param("endpoint_query_param")
+			})
 
-			// Header defines a single header. The syntax for
-			// Header is the same as Attribute's. The name argument
-			// can optionally define a mapping between the attribute
-			// and the HTTP header name using the syntax "attribute
-			// name:header name".
-			//
-			// If the request type defines an attribute with the
-			// same name as the name of the Header attribute then
-			// the header attribute inherits all its properties
-			// (type, description, validations, etc.) from it.
-			Header("name:Header-Name")
+			// Headers list request headers that are relevant to the
+			// endpoint handler.
+			Headers(func() {
+				// Header defines a single header. The syntax
+				// for Header is the same as Attribute's.
+				// The name argument can optionally define a
+				// mapping between the attribute and the HTTP
+				// header name using the syntax "attribute
+				// name:header name".
+				//
+				// If the request type defines an attribute with
+				// the same name as the name of the Header
+				// attribute then the header attribute inherits
+				// all its properties (type, description,
+				// validations, etc.) from it.
+				Header("name:Header-Name")
+			})
 
 			// Body defines the endpoint request body fields. This
 			// function is optional and if not called the body
 			// fields are defined by using all the request type
-			// attributes not used by Param or Header. Body also
+			// attributes not used by params or headers. Body also
 			// accepts the name of a request type attribute instead
 			// of a DSL in which case the type used to represent
 			// the request body is the type of the attribute (which
@@ -284,29 +296,36 @@ var _ = Service("service", func() {
 			// Response defines a single HTTP response. There may be
 			// more than one Response expression in a single
 			// Endpoint HTTP expression to describe multiple possible
-			// responses.
-			Response(func() {
-				// Code defines the HTTP response status code.
-				// The default is 200 OK for responses whose type
-				// is not Empty - 204 No Content otherwise.
-				Code(StatusOK)
+			// responses. Response accepts the HTTP status code as
+			// first argument and an optional DSL as last argument.
+			Response(http.StatusOK, func() {
 				// ContentType allows setting the value of the
-				// response Content-Type header explicitly. By
+				// response Content-Type header explicitely. By
 				// default this header is set with the response
 				// media type identifier if the response type is
 				// a media type.
 				ContentType("application/json")
 
-				// Header defines a single header. The syntax
-				// for Header is the same as Attribute's. The
-				// name argument can optionally define a mapping
-				// between the attribute and the HTTP header
-				// name. If the response type defines an
-				// attribute with the same name as the name of
-				// the Header attribute then the header
-				// attribute inherits all its properties (type,
-				// description, validations, etc.) from it.
-				Header("response_type_attribute")
+				// Headers list the response type attributes
+				// mapped to the response headers. The mapping
+				// uses the attribute  name as header name
+				// unsill the attribute name follows the format
+				// "Header-Name:attribute name".
+				Headers(func() {
+					// Header defines a single header. The
+					// syntax for Header is the same as
+					// Attribute's. The name argument can
+					// optionally define a mapping between
+					// the attribute and the HTTP header
+					// name. If the response type defines
+					// an attribute with the same name as
+					// the name of the Header attribute then
+					// the header attribute inherits all its
+					// properties (type, description,
+					// validations, etc.) from it.
+					Header("response_type_attribute")
+					Required("response_type_attribute")
+				})
 
 				// Body defines the response body fields. This
 				// function is optional and if not called the
@@ -322,16 +341,26 @@ var _ = Service("service", func() {
 				//     Body("response_type_attribute")
 				//
 				Body(func() {
-					// Attribute defines a single body
-					// field. If the response type defines
-					// an attribute with the same name then
-					// the Body attribute inherits all its
+					// Attribute defines a single body field.
+					// If the response type defines an
+					// attribute with the same name then the
+					// Body attribute inherits all its
 					// properties (type, description,
 					// validations, etc.) from it.
 					Attribute("response_type_attribute")
 					Required("response_type_attribute")
 				})
 			})
+
+			// If the endpoint response type is Empty then the
+			// response Body function must be omitted or use Empty.
+			// If the endpoint type is not Empty then the response
+			// Body function may use Empty to signifiy an empty
+			// response body.
+			// As a convenience responses using HTTP status code 204
+			// (No Content) that do not call Body default to an empty
+			// body.
+			Response(http.StatusNoContent)
 
 			// Error defines a endpoint specific error response. The
 			// DSL is identical to API level HTTP Error expressions.
@@ -351,9 +380,10 @@ var _ = Service("service", func() {
 			// is defined by the endpoint request type RequestType.
 			PUT("/another")
 
-			// No Response DSL means the response body shape and
-			// content type is defined by the endpoint response type
-			// ResponseMediaType and the status code is 200 OK.
+			// No DSL means the response body shape and content type
+			// is defined by the endpoint response type
+			// ResponseMediaType.
+			Response(http.StatusOK)
 		})
 	})
 })

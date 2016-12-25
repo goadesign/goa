@@ -70,7 +70,7 @@ func TestAPISpec(t *testing.T) {
 	}
 	if len(api.Servers) == 1 {
 		s := api.Servers[0]
-		if s.URL != "https://{param}.goa.design:443/basePath" {
+		if s.URL != "https://{param}.goa.design:443" {
 			t.Errorf("API: invalid server URL")
 		}
 		if s.Description != "Optional description" {
@@ -162,14 +162,10 @@ func TestServiceSpec(t *testing.T) {
 		t.Errorf("Service: invalid docs URL")
 	}
 
-	if service.DefaultTypeName != ServiceDefaultType.Name() {
-		t.Errorf("Service: invalid default type name")
-	}
-
 	if len(service.Errors) != 5 {
 		t.Fatalf("Service: invalid Errors count (%d)", len(service.Errors))
 	}
-	if service.Errors[0].Name != "name_of_error" {
+	if service.Errors[0].Name != "name_of_error_1" {
 		t.Errorf("Service: invalid first error name")
 	}
 	if service.Errors[0].Type != design.ErrorMedia {
@@ -228,7 +224,7 @@ func TestServiceSpec(t *testing.T) {
 		t.Errorf("Service: invalid fifth error type attribute type")
 	}
 
-	if len(service.Endpoints) != 3 {
+	if len(service.Endpoints) != 2 {
 		t.Fatalf("Service: invalid endpoints count")
 	}
 	if service.Endpoints[0].Name != "endpoint" {
@@ -382,37 +378,10 @@ func TestServiceSpec(t *testing.T) {
 
 	}
 
-	if service.Endpoints[1].Name != "default-type" {
-		t.Errorf("Service: invalid second endpoint name")
-	}
-	if service.Endpoints[1].Response != service.DefaultType() {
-		t.Errorf("Service: invalid second endpoint request type")
-	}
-	rt, ok := service.Endpoints[1].Request.(design.UserType)
-	if !ok {
-		t.Errorf("Service: invalid second endpoint request type")
-	}
-	o, ok := rt.Attribute().Type.(design.Object)
-	if !ok {
-		t.Errorf("Service: invalid second endpoint request type (not object)")
-	}
-	if len(o) != 1 {
-		t.Errorf("Service: invalid second endpoint request type attribute count")
-	} else {
-		at, ok := o["value"]
-		if !ok {
-			t.Errorf("Service: invalid second endpoint request type attribute")
-		} else {
-			if at.Type != design.String {
-				t.Errorf("Service: invalid second endpoint request type attribute type")
-			}
-		}
-	}
-
-	if service.Endpoints[2].Name != "inline-object" {
+	if service.Endpoints[1].Name != "inline-object" {
 		t.Errorf("Service: invalid third name")
 	}
-	ut, ok := service.Endpoints[2].Request.(*design.UserTypeExpr)
+	ut, ok := service.Endpoints[1].Request.(*design.UserTypeExpr)
 	if !ok {
 		t.Errorf("Service: invalid third endpoint request type")
 	} else {
@@ -440,7 +409,7 @@ func TestServiceSpec(t *testing.T) {
 			t.Errorf("Service: third endpoint request type is missing required field")
 		}
 	}
-	ut, ok = service.Endpoints[2].Response.(*design.UserTypeExpr)
+	ut, ok = service.Endpoints[1].Response.(*design.UserTypeExpr)
 	if !ok {
 		t.Errorf("Service: invalid third endpoint response type")
 	} else {

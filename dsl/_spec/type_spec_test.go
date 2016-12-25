@@ -2,7 +2,7 @@
 package dsl_test
 
 import . "goa.design/goa.v2/design"
-import . "goa.design/goa.v2/design/dsl"
+import . "goa.design/goa.v2/dsl"
 
 // BasicType shows the basic usage for Type.
 //
