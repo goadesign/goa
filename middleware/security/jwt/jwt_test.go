@@ -18,9 +18,7 @@ var _ = Describe("Middleware", func() {
 	var respRecord *httptest.ResponseRecorder
 	var request *http.Request
 	var handler goa.Handler
-	var scopesFetcher func(context.Context) []string
 	var middleware goa.Middleware
-	var requiredScopes []string
 	var dispatchResult error
 	var fetchedToken *jwtpkg.Token
 
@@ -30,16 +28,12 @@ var _ = Describe("Middleware", func() {
 			Name: "Authorization",
 		}
 		respRecord = httptest.NewRecorder()
-		requiredScopes = []string{"scope1"}
 		request, _ = http.NewRequest("GET", "http://example.com/", nil)
 		// HS256 {"scopes":"scope1","admin":true}, signed with "keys"
 		request.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzY29wZXMiOiJzY29wZTEiLCJhZG1pbiI6dHJ1ZX0.UCvEfbD_yuS5dCZidxZgogVi2yF0ZVecMsQQbY1HJy0")
 		handler = func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 			fetchedToken = jwt.ContextJWT(ctx)
 			return nil
-		}
-		scopesFetcher = func(ctx context.Context) []string {
-			return requiredScopes
 		}
 	})
 
