@@ -82,7 +82,11 @@ func ArrayOf(v interface{}, dsl ...func()) *design.Array {
 	t, ok = v.(design.DataType)
 	if !ok {
 		if name, ok := v.(string); ok {
-			t = design.Design.Types[name]
+			if ut, ok := design.Design.Types[name]; ok {
+				t = ut
+			} else if mt, ok := design.Design.MediaTypes[name]; ok {
+				t = mt
+			}
 		}
 	}
 	// never return nil to avoid panics, errors are reported after DSL execution

@@ -175,7 +175,7 @@ var _ = Describe("ArrayOf", func() {
 			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
 		})
 
-		It("produces a media type", func() {
+		It("produces a user type", func() {
 			Ω(ar).ShouldNot(BeNil())
 			Ω(ar.TypeName).Should(Equal("names"))
 			Ω(ar.Type).ShouldNot(BeNil())
@@ -188,6 +188,41 @@ var _ = Describe("ArrayOf", func() {
 			Ω(et).ShouldNot(BeNil())
 			Ω(et.Type).Should(BeAssignableToTypeOf(&UserTypeDefinition{}))
 			Ω(et.Type.(*UserTypeDefinition).TypeName).Should(Equal("name"))
+		})
+	})
+
+	Context("defined with a media type name", func() {
+		var mt *MediaTypeDefinition
+		BeforeEach(func() {
+			dslengine.Reset()
+			mt = MediaType("application/vnd.test", func() {
+				Attributes(func() {
+					Attribute("ut", ArrayOf("application/vnd.test"))
+				})
+				View("default", func() {
+					Attribute("ut")
+				})
+			})
+		})
+
+		JustBeforeEach(func() {
+			dslengine.Run()
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+		})
+
+		It("produces a user type", func() {
+			Ω(mt).ShouldNot(BeNil())
+			Ω(mt.TypeName).Should(Equal("Test"))
+			Ω(mt.Type).ShouldNot(BeNil())
+			Ω(mt.Type.ToObject()).ShouldNot(BeNil())
+			Ω(mt.Type.ToObject()).Should(HaveKey("ut"))
+			ut := mt.Type.ToObject()["ut"]
+			Ω(ut.Type).ShouldNot(BeNil())
+			Ω(ut.Type).Should(BeAssignableToTypeOf(&Array{}))
+			et := ut.Type.ToArray().ElemType
+			Ω(et).ShouldNot(BeNil())
+			Ω(et.Type).Should(BeAssignableToTypeOf(&MediaTypeDefinition{}))
+			Ω(et.Type.(*MediaTypeDefinition).TypeName).Should(Equal("Test"))
 		})
 	})
 })
