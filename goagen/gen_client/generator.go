@@ -20,6 +20,17 @@ import (
 // Filename used to generate all data types (without the ".go" extension)
 const typesFileName = "datatypes"
 
+//NewGenerator returns an initialized instance of a Go Client Generator
+func NewGenerator(options ...Option) *Generator {
+	g := &Generator{}
+
+	for _, option := range options {
+		option(g)
+	}
+
+	return g
+}
+
 // Generator is the application code generator.
 type Generator struct {
 	API            *design.APIDefinition // The API definition
