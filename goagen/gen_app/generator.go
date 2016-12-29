@@ -15,7 +15,6 @@ import (
 //NewGenerator returns an initialized instance of an Application Generator
 func NewGenerator(options ...Option) *Generator {
 	g := &Generator{}
-
 	g.validator = codegen.NewValidator()
 
 	for _, option := range options {

@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"time"
+
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/gen_js"
 	"github.com/goadesign/goa/version"
@@ -96,5 +98,52 @@ var _ = Describe("Generate", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically(">=", 13))
 		})
+	})
+})
+
+var _ = Describe("NewGenerator", func() {
+	var generator *genjs.Generator
+
+	var args = struct {
+		api       *design.APIDefinition
+		outDir    string
+		timeout   time.Duration
+		scheme    string
+		host      string
+		noExample bool
+	}{
+		api: &design.APIDefinition{
+			Name: "test api",
+		},
+		outDir:    "out_dir",
+		timeout:   time.Millisecond * 500,
+		scheme:    "http",
+		host:      "localhost",
+		noExample: true,
+	}
+
+	Context("with options all options set", func() {
+		BeforeEach(func() {
+
+			generator = genjs.NewGenerator(
+				genjs.API(args.api),
+				genjs.OutDir(args.outDir),
+				genjs.Timeout(args.timeout),
+				genjs.Scheme(args.scheme),
+				genjs.Host(args.host),
+				genjs.NoExample(args.noExample),
+			)
+		})
+
+		It("has all public properties set with expected value", func() {
+			Ω(generator).ShouldNot(BeNil())
+			Ω(generator.API.Name).Should(Equal(args.api.Name))
+			Ω(generator.OutDir).Should(Equal(args.outDir))
+			Ω(generator.Timeout).Should(Equal(args.timeout))
+			Ω(generator.Scheme).Should(Equal(args.scheme))
+			Ω(generator.Host).Should(Equal(args.host))
+			Ω(generator.NoExample).Should(Equal(args.noExample))
+		})
+
 	})
 })
