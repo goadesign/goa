@@ -205,22 +205,22 @@ func InvalidPatternError(ctx, target string, pattern string) error {
 // InvalidRangeError is the error produced when the value of a parameter or payload field does
 // not match the range validation defined in the design. value may be a int or a float64.
 func InvalidRangeError(ctx string, target interface{}, value interface{}, min bool) error {
-	comp := "greater or equal"
+	comp := "greater than or equal to"
 	if !min {
-		comp = "lesser or equal"
+		comp = "less than or equal to"
 	}
-	msg := fmt.Sprintf("%s must be %s than %d but got value %#v", ctx, comp, value, target)
+	msg := fmt.Sprintf("%s must be %s %d but got value %#v", ctx, comp, value, target)
 	return ErrInvalidRequest(msg, "attribute", ctx, "value", target, "comp", comp, "expected", value)
 }
 
 // InvalidLengthError is the error produced when the value of a parameter or payload field does
 // not match the length validation defined in the design.
 func InvalidLengthError(ctx string, target interface{}, ln, value int, min bool) error {
-	comp := "greater or equal"
+	comp := "greater than or equal to"
 	if !min {
-		comp = "lesser or equal"
+		comp = "less than or equal to"
 	}
-	msg := fmt.Sprintf("length of %s must be %s than %d but got value %#v (len=%d)", ctx, comp, value, target, ln)
+	msg := fmt.Sprintf("length of %s must be %s %d but got value %#v (len=%d)", ctx, comp, value, target, ln)
 	return ErrInvalidRequest(msg, "attribute", ctx, "value", target, "len", ln, "comp", comp, "expected", value)
 }
 
