@@ -319,7 +319,7 @@ func Enum(val ...interface{}) {
 			// one below are really a convenience to the user and not a fundamental feature
 			// - not checking in the case the type is not known yet is OK.
 			if a.Type != nil && !a.Type.IsCompatible(v) {
-				dslengine.ReportError("value %#v at index #d is incompatible with attribute of type %s",
+				dslengine.ReportError("value %#v at index %d is incompatible with attribute of type %s",
 					v, i, a.Type.Name())
 				ok = false
 			}
