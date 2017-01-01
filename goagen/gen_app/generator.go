@@ -137,7 +137,7 @@ func (g *Generator) generateContexts() error {
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport("unicode/utf8"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
-		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
+		codegen.SimpleImport("github.com/goadesign/goa/uuid"),
 	}
 	g.genfiles = append(g.genfiles, ctxFile)
 	ctxWr.WriteHeader(title, g.Target, imports)
@@ -370,7 +370,7 @@ func (g *Generator) generateMediaTypes() error {
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport("unicode/utf8"),
-		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
+		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 	}
 	mtWr.WriteHeader(title, g.Target, imports)
 	err = g.API.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
@@ -403,7 +403,7 @@ func (g *Generator) generateUserTypes() error {
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport("unicode/utf8"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
-		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
+		codegen.SimpleImport("github.com/goadesign/goa/uuid"),
 	}
 	utWr.WriteHeader(title, g.Target, imports)
 	err = g.API.IterateUserTypes(func(t *design.UserTypeDefinition) error {
