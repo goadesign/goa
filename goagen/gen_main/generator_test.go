@@ -57,3 +57,47 @@ var _ = Describe("Generate", func() {
 		})
 	})
 })
+
+var _ = Describe("NewGenerator", func() {
+	var generator *genmain.Generator
+
+	var args = struct {
+		api       *design.APIDefinition
+		outDir    string
+		designPkg string
+		target    string
+		force     bool
+		noExample bool
+	}{
+		api: &design.APIDefinition{
+			Name: "test api",
+		},
+		outDir:    "out_dir",
+		designPkg: "design",
+		target:    "app",
+		force:     false,
+	}
+
+	Context("with options all options set", func() {
+		BeforeEach(func() {
+
+			generator = genmain.NewGenerator(
+				genmain.API(args.api),
+				genmain.OutDir(args.outDir),
+				genmain.DesignPkg(args.designPkg),
+				genmain.Target(args.target),
+				genmain.Force(args.force),
+			)
+		})
+
+		It("has all public properties set with expected value", func() {
+			Ω(generator).ShouldNot(BeNil())
+			Ω(generator.API.Name).Should(Equal(args.api.Name))
+			Ω(generator.OutDir).Should(Equal(args.outDir))
+			Ω(generator.DesignPkg).Should(Equal(args.designPkg))
+			Ω(generator.Target).Should(Equal(args.target))
+			Ω(generator.Force).Should(Equal(args.force))
+		})
+
+	})
+})

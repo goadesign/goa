@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/design/apidsl"
 	"github.com/goadesign/goa/dslengine"
 	"github.com/goadesign/goa/goagen/codegen"
@@ -58,6 +59,36 @@ var _ = Describe("Generate", func() {
 			var s genschema.JSONSchema
 			err = json.Unmarshal(content, &s)
 			Ω(err).ShouldNot(HaveOccurred())
+		})
+	})
+})
+
+var _ = Describe("NewGenerator", func() {
+	var generator *genschema.Generator
+
+	var args = struct {
+		api    *design.APIDefinition
+		outDir string
+	}{
+		api: &design.APIDefinition{
+			Name: "test api",
+		},
+		outDir: "out_dir",
+	}
+
+	Context("with options all options set", func() {
+		BeforeEach(func() {
+
+			generator = genschema.NewGenerator(
+				genschema.API(args.api),
+				genschema.OutDir(args.outDir),
+			)
+		})
+
+		It("has all public properties set with expected value", func() {
+			Ω(generator).ShouldNot(BeNil())
+			Ω(generator.API.Name).Should(Equal(args.api.Name))
+			Ω(generator.OutDir).Should(Equal(args.outDir))
 		})
 	})
 })
