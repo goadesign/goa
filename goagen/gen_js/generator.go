@@ -16,6 +16,17 @@ import (
 	"github.com/goadesign/goa/goagen/utils"
 )
 
+//NewGenerator returns an initialized instance of a JavaScript Client Generator
+func NewGenerator(options ...Option) *Generator {
+	g := &Generator{}
+
+	for _, option := range options {
+		option(g)
+	}
+
+	return g
+}
+
 // Generator is the application code generator.
 type Generator struct {
 	API       *design.APIDefinition // The API definition
