@@ -8,8 +8,6 @@
 [![Godoc](https://godoc.org/github.com/goadesign/goa?status.svg)](http://godoc.org/github.com/goadesign/goa)
 [![Slack](https://img.shields.io/badge/slack-gophers-orange.svg?style=flat)](https://gophers.slack.com/messages/goa/)
 
-### goa v1.1.0 released! Read the [announcement](https://goa.design/blog/003-v1_1_0/).
-
 ## Why goa?
 
 There are a number of good Go packages for writing modular web services out there so why build
