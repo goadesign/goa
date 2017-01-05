@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/goadesign/goa"
-	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 )
 
@@ -22,7 +21,7 @@ func ErrorHandler(service *goa.Service, verbose bool) goa.Middleware {
 			if e == nil {
 				return nil
 			}
-			cause := errors.Cause(e)
+			cause := cause(e)
 			status := http.StatusInternalServerError
 			var respBody interface{}
 			if err, ok := cause.(goa.ServiceError); ok {
@@ -55,4 +54,33 @@ func ErrorHandler(service *goa.Service, verbose bool) goa.Middleware {
 			return service.Send(ctx, status, respBody)
 		}
 	}
+}
+
+// Cause returns the underlying cause of the error, if possible.
+// An error value has a cause if it implements the following
+// interface:
+//
+//     type causer interface {
+//            Cause() error
+//     }
+//
+// If the error does not implement Cause, the original error will
+// be returned. If the error is nil, nil will be returned without further
+// investigation.
+func cause(e error) error {
+	type causer interface {
+		Cause() error
+	}
+	for {
+		cause, ok := e.(causer)
+		if !ok {
+			break
+		}
+		c := cause.Cause()
+		if c == nil {
+			break
+		}
+		e = c
+	}
+	return e
 }
