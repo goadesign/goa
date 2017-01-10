@@ -4,5 +4,12 @@ package middleware
 // It is private to avoid possible collisions with keys used by other packages.
 type middlewareKey int
 
-// ReqIDKey is the context key used by the RequestID middleware to store the request ID value.
-const reqIDKey middlewareKey = 1
+const (
+	// ReqIDKey is the context key used by the RequestID middleware to store the request ID value.
+	reqIDKey middlewareKey = iota + 1
+
+	// Keys used to record trace in context.
+	traceKey
+	spanKey
+	parentSpanKey
+)
