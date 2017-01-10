@@ -174,6 +174,9 @@ func (s *Segment) recordError(e error, fault bool) {
 		}
 		xerr.Stack = frames
 	}
+
+	s.Lock()
+	defer s.Unlock()
 	if s.Cause == nil {
 		wd, _ := os.Getwd()
 		s.Cause = &Cause{WorkingDirectory: wd}
@@ -241,6 +244,8 @@ func (s *Segment) AddBoolAnnotation(key string, value bool) {
 // addAnnotation adds a key-value pair that can be queried by AWS X-Ray.
 // AWS X-Ray only supports annotations of type string, integer or boolean.
 func (s *Segment) addAnnotation(key string, value interface{}) {
+	s.Lock()
+	defer s.Unlock()
 	if s.Annotations == nil {
 		s.Annotations = make(map[string]interface{})
 	}
@@ -266,6 +271,8 @@ func (s *Segment) AddBoolMetadata(key string, value bool) {
 // addMetadata adds a key-value pair that can be queried by AWS X-Ray.
 // AWS X-Ray only supports annotations of type string, integer or boolean.
 func (s *Segment) addMetadata(key string, value interface{}) {
+	s.Lock()
+	defer s.Unlock()
 	if s.Metadata == nil {
 		s.Metadata = make(map[string]map[string]interface{})
 		s.Metadata["default"] = make(map[string]interface{})

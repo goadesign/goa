@@ -27,7 +27,7 @@ func TestRecordError(t *testing.T) {
 		"wrappedTwice": {wrappedTwice, inner + ": " + cause + ": " + errMsg, true},
 	}
 	for k, c := range cases {
-		s := Segment{}
+		s := Segment{Mutex: &sync.Mutex{}}
 		s.recordError(c.Error, false)
 		w := s.Cause.Exceptions[0]
 		if w.Message != c.Message {
