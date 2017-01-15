@@ -470,7 +470,13 @@ func handleSpecialTypes(atts ...*design.AttributeDefinition) specialTypeResult {
 			return err
 		}
 	}`, tmpVar, typ, field, nilVal, tmpVar, typeHandler, field, typ, n)
-
+				if att.IsRequired(n) {
+					result.Output += fmt.Sprintf(`
+	if %s == nil {
+		goa.LogError(ctx, "required flag is missing", "flag", "--%s")
+		return fmt.Errorf("required flag %s is missing")
+	}`, tmpVar, n, n)
+				}
 			}
 		}
 		result.Temps = append(result.Temps, names...)
