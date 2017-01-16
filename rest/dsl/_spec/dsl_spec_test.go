@@ -32,15 +32,16 @@ var _ = API("rest_dsl_spec", func() {
 		// Path defines the common path prefix to all API HTTP requests.
 		Path("/path/{api_path_param}")
 
-		// Params defines the API path and query string parameters.
+		// Params groups path and query string parameter expressions.
 		// The attributes defined in Params get merged into the request
 		// types of all the API endpoints. The merge algorithm adds
 		// new attributes to the request types if they don't already have
-		// ones with the same names - overrides their properties (type,
-		// description etc.) otherwise.
+		// one with the same name or overrides the existing attribute
+		// properties (type, description etc.) if they do.
 		Params(func() {
 			// Param defines a single path or query string parameter.
-			// The syntax of Param is the same as Attribute's.
+			// The arguments of Param are the same as the Attribute
+			// function.
 			Param("api_path_param")
 			// The name argument can optionally define a mapping
 			// between the attribute and the query string key name
@@ -51,19 +52,20 @@ var _ = API("rest_dsl_spec", func() {
 
 		// Params also accepts a user type as argument. The user type
 		// must be an object. Params may appear multiple times in which
-		// case the union of all parameters defined in each Params DSL
-		// is used to define the API path and query string parameters.
+		// case the union of all parameters defined in each Params
+		// expression is used to define the API path and query string
+		// parameters.
 		Params(CommonParams)
 
 		// Headers defines API headers common to all the API requests.
 		// The attributes defined in Headers get merged into the request
 		// types of all the API endpoints. The merge algorithm adds
 		// new attributes to the request types if they don't already have
-		// ones with the same names - overrides their properties (type,
-		// description etc.) otherwise.
+		// one with the same name or overrides the existing attribute
+		// properties (type, description etc.) if they do.
 		Headers(func() {
-			// Header defines a single header. The syntax of Header
-			// is the same as Attribute's.
+			// Header defines a single header. The arguments of
+			// Header are the same as the Attribute function.
 			// The name argument can optionally define a mapping
 			// between the attribute and the HTTP header name
 			// using the syntax "attribute name:header name".
@@ -73,8 +75,8 @@ var _ = API("rest_dsl_spec", func() {
 
 		// Headers also accepts a user type as argument. The user type
 		// must be an object. Headers may appear multiple times in which
-		// case the union of all headers defined in each Headers DSL
-		// is used to define the API headers.
+		// case the union of all headers defined in each Headers
+		// expression is used to define the API headers.
 		Headers(CommonHeaders)
 
 		// Error defines the HTTP response associated with the given
@@ -83,10 +85,11 @@ var _ = API("rest_dsl_spec", func() {
 		// of the body.
 		//
 		// Error accepts the name of the error as first argument, an
-		// HTTP status code as second argument and an optional DSL used
-		// to describe the mapping of the error type attributes to the
-		// HTTP response headers and body fields. The name of the error
-		// must correspond to one of the errors defined in the API DSL.
+		// HTTP status code as second argument and an optional function
+		// used to describe the mapping of the error type attributes to
+		// the HTTP response headers and body fields. The name of the
+		// error must correspond to one of the errors defined in the API
+		// expression.
 		Error("api_error", http.StatusUnauthorized, func() {
 
 			// Headers list the error response headers.

@@ -31,7 +31,11 @@ type (
 	// ErrorExpr defines an error response. It consists of a named
 	// attribute.
 	ErrorExpr struct {
+		// AttributeExpr is the underlying attribute.
+		// Note: we do not use a UserType like we do for responses
+		// because an error may have a description.
 		*AttributeExpr
+		// Name is the unique name of the error.
 		Name string
 	}
 )
@@ -51,7 +55,7 @@ func (s *ServiceExpr) Error(name string) *ErrorExpr {
 			return erro
 		}
 	}
-	return nil
+	return Root.Error(name)
 }
 
 // Finalize finalizes all then endpoints.

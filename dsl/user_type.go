@@ -5,30 +5,54 @@ import (
 	"goa.design/goa.v2/eval"
 )
 
-// Type describes a user type.
+// Type defines a user type. A user type has a unique name and may be an alias
+// to an existing type or may describe a completely new type using a list of
+// attributes (object fields). Attribute types may themselves be user type.
+// When a user type is defined as an alias to another type it may define
+// additional validations - for example it a user type which is an alias of
+// String may define a validation pattern that all instances of the type
+// must match.
 //
 // Type is a top level definition.
-// Type takes two arguments: the type name and the defining DSL.
+//
+// Type takes two or three arguments: the first argument is the name of the type.
+// The name must be unique. The second argument is either another type or a
+// function. If the second argument is a type then there may be a function passed
+// as third argument.
 //
 // Example:
 //
+//     // simple alias
+//     var MyString = Type("MyString", String)
+//
+//     // alias with description and additional validation
+//     var Hostname = Type("Hostname", String, func() {
+//         Description("A host name")
+//         Format(FormatHostname)
+//     })
+//
+//     // new type
 //     var SumPayload = Type("SumPayload", func() {
 //         Description("Type sent to add endpoint")
 //
-//         Attribute("a", String)                 // string field "a"
-//         Attribute("b", Int32, "operand")       // field with description
-//         Attribute("operands", ArrayOf(Int32))  // array field
-//         Attribute("ops", MapOf(String, Int32)) // map field
-//         Attribute("c", SumMod)                 // field using user type
-//         Attribute("len", Int64, func() {       // field with validation
+//         Attribute("a", String)                 // string attribute "a"
+//         Attribute("b", Int32, "operand")       // attribute with description
+//         Attribute("operands", ArrayOf(Int32))  // array attribute
+//         Attribute("ops", MapOf(String, Int32)) // map attribute
+//         Attribute("c", SumMod)                 // attribute using user type
+//         Attribute("len", Int64, func() {       // attribute with validation
 //             Minimum(1)
 //         })
 //
-//         Required("a")                          // Required fields
+//         Required("a")                          // Required attributes
 //         Required("b", "c")
 //     })
 //
-func Type(name string, dsl func()) design.UserType {
+func Type(name string, args ...interface{}) design.UserType {
+	if len(args) > 2 {
+		eval.ReportError("too many arguments")
+		return nil
+	}
 	if t := design.Root.UserType(name); t != nil {
 		eval.ReportError("type %#v defined twice", name)
 		return nil
@@ -39,12 +63,40 @@ func Type(name string, dsl func()) design.UserType {
 		return nil
 	}
 
+	var (
+		base design.DataType
+		dsl  func()
+	)
+	if len(args) == 0 {
+		// Make Type behave like Attribute
+		args = []interface{}{design.String}
+	}
+	switch a := args[0].(type) {
+	case design.DataType:
+		base = a
+		if len(args) == 2 {
+			d, ok := args[1].(func())
+			if !ok {
+				eval.ReportError("third argument must be a function")
+				return nil
+			}
+			dsl = d
+		}
+	case func():
+		base = design.Object{}
+		dsl = a
+		if len(args) == 2 {
+			eval.ReportError("only one argument allowed when it is a function")
+			return nil
+		}
+	default:
+		eval.InvalidArgError("type or function", args[0])
+		return nil
+	}
+
 	t := &design.UserTypeExpr{
 		TypeName:      name,
-		AttributeExpr: &design.AttributeExpr{DSLFunc: dsl},
-	}
-	if dsl == nil {
-		t.Type = design.String
+		AttributeExpr: &design.AttributeExpr{Type: base, DSLFunc: dsl},
 	}
 	design.Root.Types = append(design.Root.Types, t)
 	return t
@@ -55,8 +107,8 @@ func Type(name string, dsl func()) design.UserType {
 // ArrayOf may be used wherever types can.
 // The first argument of ArrayOf is the type of the array elements specified by
 // name or by reference.
-// The second argument of ArrayOf is an optional DSL that defines validations
-// for the array elements.
+// The second argument of ArrayOf is an optional function that defines
+// validations for the array elements.
 //
 // Examples:
 //

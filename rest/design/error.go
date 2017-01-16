@@ -11,22 +11,36 @@ type (
 	HTTPErrorExpr struct {
 		// ErrorExpr is the underlying goa design error expression.
 		*design.ErrorExpr
-		// HTTP status
-		Status int
-		// Headers maps the ErrorExpr type attribues to HTTP headers.
-		// Each entry is of the form "attribute name:header name". If the
-		// : is omitted then the string defines both the attribute and
-		// header name.
-		Headers []string
-		// Fields maps the ErrorExpr type attributes to HTTP body fields.
-		// The mapping syntax is the same as the one used by Headers.
-		Fields []string
-		// Parent resource or action
-		Parent eval.Expression
+		// Name of error, we need a separate copy of the name to match it
+		// up with the appropriate ErrorExpr.
+		Name string
+		// Response is the corresponding HTTP response.
+		Response *HTTPResponseExpr
 	}
 )
 
 // EvalName returns the generic definition name used in error messages.
-func (r *HTTPErrorExpr) EvalName() string {
-	return "HTTP error " + r.Name
+func (e *HTTPErrorExpr) EvalName() string {
+	return "HTTP error " + e.Name
+}
+
+// Validate makes sure there is a error expression that matches the HTTP error
+// expression.
+func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
+	var ee *design.ErrorExpr
+	switch p := e.Response.Parent.(type) {
+	case *ActionExpr:
+		ee = p.EndpointExpr.Error(e.Name)
+	case *ResourceExpr:
+		ee = p.ServiceExpr.Error(e.Name)
+	case *RootExpr:
+		ee = design.Root.Error(e.Name)
+	}
+	if ee == nil {
+		verr := new(eval.ValidationErrors)
+		verr.Add(e, "Error %#v does not match an error defined in the endpoint, service or API", e.Name)
+		return verr
+	}
+	e.ErrorExpr = ee
+	return nil
 }
