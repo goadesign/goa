@@ -21,28 +21,28 @@ type (
 	// portions of the URL that define parameter values), query string parameters and a payload
 	// parameter (request body).
 	ActionExpr struct {
-		// EndpointExpr is the underlying endpoint expression.
+		// Endpoint is the underlying endpoint expression.
 		*design.EndpointExpr
-		// Resource is the parent resource
+		// Resource is the parent resource.
 		Resource *ResourceExpr
-		// Specific action URL schemes
-		Schemes []APIScheme
 		// Action routes
 		Routes []*RouteExpr
-		// Map of possible response definitions indexed by name
+		// Responses is the list of possible HTTP responses.
 		Responses []*HTTPResponseExpr
-		// Path and query string parameters
-		Params *AttributeMapExpr
-		// Body attribute map
-		Body *AttributeMapExpr
+		// HTTPErrors is the list of error HTTP responses.
+		HTTPErrors []*HTTPErrorExpr
+		// Body attribute
+		Body *design.AttributeExpr
 		// Request headers that need to be made available to action
-		Headers *AttributeMapExpr
+		headers *design.AttributeExpr
+		// Path and query string parameters
+		params *design.AttributeExpr
 	}
 
 	// RouteExpr represents an action route (HTTP endpoint).
 	RouteExpr struct {
-		// Verb is the HTTP method, e.g. "GET", "POST", etc.
-		Verb string
+		// Method is the HTTP method, e.g. "GET", "POST", etc.
+		Method string
 		// Path is the URL path e.g. "/tasks/:id"
 		Path string
 		// Action is the action this route applies to.
@@ -97,8 +97,8 @@ func (a *ActionExpr) PathParams() *design.AttributeExpr {
 // AllParams returns the path and query string parameters of the action across all its routes.
 func (a *ActionExpr) AllParams() *design.AttributeExpr {
 	var res *design.AttributeExpr
-	if a.Params != nil {
-		res = a.Params.Attribute()
+	if a.params != nil {
+		res = design.DupAtt(a.params)
 	} else {
 		res = &design.AttributeExpr{Type: design.Object{}}
 	}
@@ -108,79 +108,32 @@ func (a *ActionExpr) AllParams() *design.AttributeExpr {
 	if p := a.Resource.Parent(); p != nil {
 		res = res.Merge(p.CanonicalAction().AllParams())
 	} else {
-		res = res.Merge(a.Resource.Params.Attribute())
-		res = res.Merge(Root.Params.Attribute())
+		res = res.Merge(a.Resource.params)
+		res = res.Merge(Root.params)
 	}
 	return res
 }
 
-// Response returns the action response with given name if any.
-func (a *ActionExpr) Response(name string) *HTTPResponseExpr {
-	for _, resp := range a.Responses {
-		if resp.Name == name {
-			return resp
-		}
+// Headers initializes and returns the attribute holding the action headers.
+func (a *ActionExpr) Headers() *design.AttributeExpr {
+	if a.headers == nil {
+		a.headers = &design.AttributeExpr{Type: make(design.Object)}
 	}
-	return nil
+	return a.headers
+}
+
+// Params initializes and returns the attribute holding the action parameters.
+func (a *ActionExpr) Params() *design.AttributeExpr {
+	if a.params == nil {
+		a.params = &design.AttributeExpr{Type: make(design.Object)}
+	}
+	return a.params
 }
 
 // HasAbsoluteRoutes returns true if all the action routes are absolute.
 func (a *ActionExpr) HasAbsoluteRoutes() bool {
 	for _, r := range a.Routes {
 		if !r.IsAbsolute() {
-			return false
-		}
-	}
-	return true
-}
-
-// CanonicalScheme returns the preferred scheme for making requests. Favor secure schemes.
-func (a *ActionExpr) CanonicalScheme() APIScheme {
-	if a.WebSocket() {
-		for _, s := range a.EffectiveSchemes() {
-			if s == "wss" {
-				return s
-			}
-		}
-		return "ws"
-	}
-	for _, s := range a.EffectiveSchemes() {
-		if s == "https" {
-			return s
-		}
-	}
-	return "http"
-}
-
-// EffectiveSchemes return the URL schemes that apply to the action. Looks recursively into action
-// resource, parent resources and API.
-func (a *ActionExpr) EffectiveSchemes() []APIScheme {
-	// Compute the schemes
-	schemes := a.Schemes
-	if len(schemes) == 0 {
-		res := a.Resource
-		schemes = res.Schemes
-		parent := res.Parent()
-		for len(schemes) == 0 && parent != nil {
-			schemes = parent.Schemes
-			parent = parent.Parent()
-		}
-		if len(schemes) == 0 {
-			schemes = Root.Schemes
-		}
-	}
-	return schemes
-}
-
-// WebSocket returns true if the action scheme is "ws" or "wss" or both (directly or inherited
-// from the resource or API)
-func (a *ActionExpr) WebSocket() bool {
-	schemes := a.EffectiveSchemes()
-	if len(schemes) == 0 {
-		return false
-	}
-	for _, s := range schemes {
-		if s != "ws" && s != "wss" {
 			return false
 		}
 	}
@@ -198,15 +151,15 @@ func (a *ActionExpr) Validate() error {
 	}
 	for i, r := range a.Responses {
 		for j, r2 := range a.Responses {
-			if i != j && r.Status == r2.Status {
-				verr.Add(r, "Multiple response definitions with status code %d", r.Status)
+			if i != j && r.StatusCode == r2.StatusCode {
+				verr.Add(r, "Multiple response definitions with status code %d", r.StatusCode)
 			}
 		}
 		verr.Merge(r.Validate())
 	}
 	verr.Merge(a.ValidateParams())
 	if a.Body != nil {
-		verr.Merge(a.Body.Attribute().Validate("action payload", a))
+		verr.Merge(a.Body.Validate("action payload", a))
 	}
 	if a.Resource == nil {
 		verr.Add(a, "missing parent resource")
@@ -215,13 +168,23 @@ func (a *ActionExpr) Validate() error {
 	return verr
 }
 
+// Finalize sets the Parent fields of the action responses and errors.
+func (a *ActionExpr) Finalize() {
+	for _, r := range a.Responses {
+		r.Parent = a
+	}
+	for _, e := range a.HTTPErrors {
+		e.Response.Parent = a
+	}
+}
+
 // ValidateParams checks the action parameters (make sure they have names, members and types).
 func (a *ActionExpr) ValidateParams() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
-	if a.Params == nil {
+	if a.params == nil {
 		return nil
 	}
-	params, ok := a.Params.Attribute().Type.(design.Object)
+	params, ok := a.params.Type.(design.Object)
 	if !ok {
 		verr.Add(a, `"Params" field of action is not an object`)
 	}
@@ -263,19 +226,14 @@ func (a *ActionExpr) ValidateParams() *eval.ValidationErrors {
 	return verr
 }
 
-// Finalize inherits security scheme and action responses from parent and top level design.
-func (a *ActionExpr) Finalize() {
-	a.mergeResponses()
-}
-
 // WalkHeaders iterates over the resource-level and action-level headers,
 // calling the given iterator passing in each response sorted in alphabetical order.
 // Iteration stops if an iterator returns an error and in this case WalkHeaders returns that
 // error.
 func (a *ActionExpr) WalkHeaders(it HeaderWalker) error {
 	var (
-		resAttrs      = a.Resource.Headers.Attribute()
-		actAttrs      = a.Headers.Attribute()
+		resAttrs      = design.DupAtt(a.Resource.headers)
+		actAttrs      = design.DupAtt(a.headers)
 		mergedHeaders = resAttrs.Merge(actAttrs)
 		isRequired    = func(name string) bool {
 			return resAttrs.IsRequired(name) ||
@@ -310,30 +268,9 @@ func iterateHeaders(headers *design.AttributeExpr, isRequired func(name string) 
 	return nil
 }
 
-// mergeResponses merges the parent resource and design responses.
-func (a *ActionExpr) mergeResponses() {
-	for _, resp := range a.Resource.Responses {
-		if a.Response(resp.Name) == nil {
-			a.Responses = append(a.Responses, resp.Dup())
-		}
-	}
-	for _, resp := range a.Responses {
-		resp.Finalize()
-		if pr := a.Resource.Response(resp.Name); pr != nil {
-			resp.Merge(pr)
-		}
-		if ar := Root.Response(resp.Name); ar != nil {
-			resp.Merge(ar)
-		}
-		if dr := Root.DefaultResponse(resp.Name); dr != nil {
-			resp.Merge(dr)
-		}
-	}
-}
-
 // EvalName returns the generic definition name used in error messages.
 func (r *RouteExpr) EvalName() string {
-	return fmt.Sprintf(`route %s "%s" of %s`, r.Verb, r.Path, r.Action.EvalName())
+	return fmt.Sprintf(`route %s "%s" of %s`, r.Method, r.Path, r.Action.EvalName())
 }
 
 // Params returns the route parameters.

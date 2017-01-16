@@ -7,6 +7,7 @@ import (
 
 	"github.com/dimfeld/httppath"
 	"goa.design/goa.v2/design"
+	"goa.design/goa.v2/eval"
 )
 
 type (
@@ -17,26 +18,22 @@ type (
 	ResourceExpr struct {
 		// ServiceExpr is the underlying service.
 		*design.ServiceExpr
-		// Schemes is the supported HTTP schemes.
-		Schemes []APIScheme
 		// Common URL prefix to all resource action HTTP requests
 		Path string
 		// Name of parent resource if any
 		ParentName string
 		// Action with canonical resource path
 		CanonicalActionName string
-		// Path and query string parameters that apply to all actions.
-		Params *AttributeMapExpr
-		// Request headers that apply to all actions.
-		Headers *AttributeMapExpr
 		// Actions is the list of resource actions.
 		Actions []*ActionExpr
-		// Responses lists HTTP responses that apply to all actions.
-		Responses []*HTTPResponseExpr
-		// Errors lists HTTP errors that apply to all actions.
-		Errors []*HTTPErrorExpr
+		// HTTPErrors lists HTTP errors that apply to all actions.
+		HTTPErrors []*HTTPErrorExpr
 		// FileServers is the list of static asset serving endpoints
 		FileServers []*FileServerExpr
+		// Path and query string parameters that apply to all actions.
+		params *design.AttributeExpr
+		// Request headers that apply to all actions.
+		headers *design.AttributeExpr
 	}
 )
 
@@ -46,14 +43,6 @@ func (r *ResourceExpr) EvalName() string {
 		return "unnamed resource"
 	}
 	return fmt.Sprintf("resource %#v", r.Name)
-}
-
-// WalkHeaders calls the given iterator passing in each response sorted in
-// alphabetical order.  Iteration stops if an iterator returns an error and in
-// this case WalkHeaders returns that error.
-func (r *ResourceExpr) WalkHeaders(it HeaderWalker) error {
-	h := r.Headers.Attribute()
-	return iterateHeaders(h, h.IsRequired, it)
 }
 
 // Action returns the resource action with the given name or nil if there isn't one.
@@ -119,24 +108,46 @@ func (r *ResourceExpr) Parent() *ResourceExpr {
 	return nil
 }
 
-// Response returns the resource response with given name if any.
-func (r *ResourceExpr) Response(name string) *HTTPResponseExpr {
-	for _, resp := range r.Responses {
-		if resp.Name == name {
-			return resp
-		}
-	}
-	return nil
-}
-
 // Error returns the resource error with given name if any.
 func (r *ResourceExpr) Error(name string) *HTTPErrorExpr {
-	for _, erro := range r.Errors {
+	for _, erro := range r.HTTPErrors {
 		if erro.Name == name {
 			return erro
 		}
 	}
 	return nil
+}
+
+// Headers initializes and returns the attribute holding the resource headers.
+func (r *ResourceExpr) Headers() *design.AttributeExpr {
+	if r.headers == nil {
+		r.headers = &design.AttributeExpr{Type: make(design.Object)}
+	}
+	return r.headers
+}
+
+// Params initializes and returns the attribute holding the resource parameters.
+func (r *ResourceExpr) Params() *design.AttributeExpr {
+	if r.params == nil {
+		r.params = &design.AttributeExpr{Type: make(design.Object)}
+	}
+	return r.params
+}
+
+// Validate makes sure the resource is valid.
+func (r *ResourceExpr) Validate() error {
+	verr := new(eval.ValidationErrors)
+	if n := r.ParentName; n != "" {
+		if p := Root.Resource(n); p == nil {
+			verr.Add(r, "Parent service %s not found", n)
+		}
+	}
+	if n := r.CanonicalActionName; n != "" {
+		if a := r.Action(n); a == nil {
+			verr.Add(r, "Unknown canonical action %s", n)
+		}
+	}
+	return verr
 }
 
 // Finalize is run post DSL execution. It merges response definitions, creates

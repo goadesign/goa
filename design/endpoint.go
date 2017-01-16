@@ -30,6 +30,17 @@ type (
 	}
 )
 
+// Error returns the error with the given name. It looks up recursively in the
+// enpoint then the service and finally the root expression.
+func (e *EndpointExpr) Error(name string) *ErrorExpr {
+	for _, err := range e.Errors {
+		if err.Name == name {
+			return err
+		}
+	}
+	return e.Service.Error(name)
+}
+
 // EvalName returns the generic expression name used in error messages.
 func (e *EndpointExpr) EvalName() string {
 	var prefix, suffix string

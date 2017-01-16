@@ -14,6 +14,9 @@ type (
 		Traits []*TraitExpr
 		// Services contains the list of services exposed by the API.
 		Services []*ServiceExpr
+		// Errors contains the list of errors returned by all the API
+		// endpoints.
+		Errors []*ErrorExpr
 		// Types contains the user types described in the DSL.
 		Types []UserType
 		// MediaTypes contains the media types described in the DSL.
@@ -35,8 +38,17 @@ type (
 	}
 )
 
-// DSLName is the name of the DSL.
-func (r *RootExpr) DSLName() string {
+// Dup creates a new map from the given expression.
+func (m MetadataExpr) Dup() MetadataExpr {
+	d := make(MetadataExpr, len(m))
+	for k, v := range m {
+		d[k] = v
+	}
+	return d
+}
+
+// EvalName is the name of the DSL.
+func (r *RootExpr) EvalName() string {
 	return "API " + r.API.Name
 }
 
@@ -115,6 +127,16 @@ func (r *RootExpr) Service(name string) *ServiceExpr {
 	for _, s := range r.Services {
 		if s.Name == name {
 			return s
+		}
+	}
+	return nil
+}
+
+// Error returns the error with the given name.
+func (r *RootExpr) Error(name string) *ErrorExpr {
+	for _, e := range r.Errors {
+		if e.Name == name {
+			return e
 		}
 	}
 	return nil

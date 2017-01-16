@@ -1,12 +1,15 @@
-// Package design defines types which are used to describe the data structures used by both the
-// request and response messages used by services.
-//
-// There are primitive types corresponding to scalar values (bool, string, integers and numbers),
-// array types which represent a collection of items, map types which represent maps of key/value
-// pairs and object types describing data structures with fields.
-//
-// The package also defines user types which are named types and media types which describe HTTP
-// media types.
+/*
+Package design defines types which are used to describe the data structures used
+by both the request and response messages used by services.
+
+There are primitive types corresponding to scalar values (bool, string, integers
+and numbers), array types which represent a collection of items, map types which
+represent maps of key/value pairs and object types describing data structures
+with fields.
+
+The package also defines user types which are named types and media types which
+describe HTTP media types.
+*/
 package design
 
 import (
@@ -52,9 +55,11 @@ type (
 	Object map[string]*AttributeExpr
 
 	// UserType is the interface implemented by all user type implementations.
-	// DSLs may leverage this interface to introduce their own types.
+	// Plugins may leverage this interface to introduce their own types.
 	UserType interface {
 		DataType
+		// Rename changes the type name to the given value.
+		Rename(string)
 		// Attribute provides the underlying type and validations.
 		Attribute() *AttributeExpr
 		// Walk traverses the data structure recursively and calls the

@@ -235,6 +235,7 @@ func (encoder *HTTPEncoder) Register(f EncoderFunc, contentTypes ...string) {
 	// EncodeResponse
 	encoder.contentTypes = make([]string, 0, len(encoder.pools))
 	for contentType := range encoder.pools {
+		a := 2
 		encoder.contentTypes = append(encoder.contentTypes, contentType)
 	}
 }

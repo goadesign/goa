@@ -4,12 +4,25 @@
 
 Like in v1 the top level DSL function in v2 is `API`. The `API` DSL lists the
 global properties of the API such as its hostname, its version number etc.
+One change compared to v1 is the use of `Server` instead of `Host` and `Scheme`
+to define API hosts. This provides a more flexible way to list multiple hosts
+and is inline with the OpenAPI v3 spec.
 
 ```go
 var _ = API("cellar", func() {
     Title("The virtual wine cellar")
     Version("1.0")
     Description("An example of an API implemented with goa")
+	Server("https://service.goa.design:443", func() {
+		Description("Production host")
+	})
+	Server("https://service.test.goa.design:443", func() {
+		Description("Integration host")
+	})
+    Docs(func() {
+        Description("goa guide")
+        URL("http://goa.design/getting-started.html")
+    })
     Contact(func() {
         Name("goa team")
         Email("admin@goa.design")
@@ -18,27 +31,18 @@ var _ = API("cellar", func() {
     License(func() {
         Name("MIT")
     })
-    Docs(func() {
-        Description("goa guide")
-        URL("http://goa.design/getting-started.html")
-    })
-    Host("cellar.goa.design")
 })
 ```
 
 ## `Service` Expression
 
 The `Service` DSL defines a group of endpoints. This maps to a resource in REST
-or a `service` declaration in gRPC. A service may define a default type (with
-`DefaultType`). The default type lists common attributes that may be reused
-throughout the service endpoint request and response types. A service may also
-define common error responses to all the service endpoint, more on error
-responses in the next section.
+or a `service` declaration in gRPC. A service may define common error responses
+to all the service endpoints, more on error responses in the next section.
 
 ```go
 // The "account" service exposes the account resource endpoints.
 var _ = Service("account", func() {
-    DefaultType(Account)
     Error(ErrUnauthorized, Unauthorized)
     HTTP(func() {
         Path("/accounts")
@@ -56,10 +60,9 @@ service name.
 
 The service endpoints are described using `Endpoint`. This function defines the
 endpoint request and response types. It may also list an arbitrary number of
-error responses. An error response has a name and optionally a type. If the
-`Endpoint` DSL omits the response type then the service default type is used
-instead. The built-in type `Empty` denotes an empty response (no response body
-in HTTP, Empty message in gRPC).
+error responses. An error response has a name and optionally a type. Omitting
+the request or response type has the same effect as using the built-int type
+`Empty` which maps to an empty body in HTTP and to the `Empty` message in gRPC.
 
 ```go
     Endpoint("update", func() {
@@ -242,7 +245,7 @@ and accepts the tag as first argument:
 ```
 
 Types defined using `Field` instead of `Attributes` can be used to define HTTP
-endpoints, the metadata is simply isgnored by the generators in this case.
+endpoints, the metadata is simply ignored by the generators in this case.
 
 ### gRPC: Using Protobuf Files
 
@@ -279,5 +282,3 @@ var _ = Type("account", func() {
     Proto("cellar.api", "Account")
 })
 ```
-
-

@@ -696,26 +696,46 @@ func Title(val string) {
 	goadsl.Title(val)
 }
 
-// Type describes a user type.
+// Type defines a user type. A user type has a unique name and may be an alias
+// to an existing type or may describe a completely new type using a list of
+// attributes (object fields). Attribute types may themselves be user type.
+// When a user type is defined as an alias to another type it may define
+// additional validations - for example it a user type which is an alias of
+// String may define a validation pattern that all instances of the type
+// must match.
 //
 // Type is a top level definition.
-// Type takes two arguments: the type name and the defining DSL.
+//
+// Type takes two or three arguments: the first argument is the name of the type.
+// The name must be unique. The second argument is either another type or a
+// function. If the second argument is a type then there may be a function passed
+// as third argument.
 //
 // Example:
 //
+//     // simple alias
+//     var MyString = Type("MyString", String)
+//
+//     // alias with description and additional validation
+//     var Hostname = Type("Hostname", String, func() {
+//         Description("A host name")
+//         Format(FormatHostname)
+//     })
+//
+//     // new type
 //     var SumPayload = Type("SumPayload", func() {
 //         Description("Type sent to add endpoint")
 //
-//         Attribute("a", String)                 // string field "a"
-//         Attribute("b", Int32, "operand")       // field with description
-//         Attribute("operands", ArrayOf(Int32))  // array field
-//         Attribute("ops", MapOf(String, Int32)) // map field
-//         Attribute("c", SumMod)                 // field using user type
-//         Attribute("len", Int64, func() {       // field with validation
+//         Attribute("a", String)                 // string attribute "a"
+//         Attribute("b", Int32, "operand")       // attribute with description
+//         Attribute("operands", ArrayOf(Int32))  // array attribute
+//         Attribute("ops", MapOf(String, Int32)) // map attribute
+//         Attribute("c", SumMod)                 // attribute using user type
+//         Attribute("len", Int64, func() {       // attribute with validation
 //             Minimum(1)
 //         })
 //
-//         Required("a")                          // Required fields
+//         Required("a")                          // Required attributes
 //         Required("b", "c")
 //     })
 //

@@ -28,6 +28,9 @@ func (u *UserTypeExpr) Kind() Kind { return UserTypeKind }
 // Name returns the type name.
 func (u *UserTypeExpr) Name() string { return u.TypeName }
 
+// Rename changes the type name to the given value.
+func (u *UserTypeExpr) Rename(n string) { u.TypeName = n }
+
 // IsCompatible returns true if u describes the (Go) type of val.
 func (u *UserTypeExpr) IsCompatible(val interface{}) bool {
 	return u.Type == nil || u.Type.IsCompatible(val)

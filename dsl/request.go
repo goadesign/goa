@@ -66,46 +66,28 @@ func endpointTypeDSL(suffix string, p interface{}, dsls ...func()) design.UserTy
 		ut  design.UserType
 		dsl func()
 	)
+	if len(dsls) > 0 && dsls[0] == nil {
+		dsls = dsls[1:]
+	}
 	switch actual := p.(type) {
 	case func():
 		dsl = actual
 		att = &design.AttributeExpr{Type: design.Object{}}
-	case *design.AttributeExpr:
-		att = design.DupAtt(actual)
 	case design.UserType:
-		if !design.IsObject(actual) {
-			eval.ReportError("%s type must be an object, %s is a %s", suffix, actual.Name(), actual.Attribute().Type.Name())
-			return nil
-		}
 		if len(dsls) == 0 {
+			// Do not duplicate type if it is not customized
 			return actual
 		}
-		ut = design.Dup(actual).(design.UserType)
-		ute, ok := ut.(*design.UserTypeExpr)
-		if !ok {
-			ute = ut.(*design.MediaTypeExpr).UserTypeExpr
-		}
-		ute.TypeName = fmt.Sprintf("%s%s%s", en, sn, suffix)
-		att = ut.Attribute()
-	case string:
-		t := design.Root.UserType(actual)
-		if t == nil {
-			eval.ReportError("unknown request type %s", actual)
-			return nil
-		}
-		if design.IsObject(t) {
-			eval.ReportError("%s type must be an object, %s is a %s", suffix, actual, t.Attribute().Type.Name())
-			return nil
-		}
-		ut = design.Dup(t).(design.UserType)
-		att = ut.Attribute()
+		att = design.DupAtt(actual.Attribute())
+	case design.DataType:
+		att = &design.AttributeExpr{Type: actual}
 	default:
-		eval.ReportError("invalid Request argument, must be a object type, a media type or a DSL building a type")
+		eval.ReportError("invalid %s argument, must be a type or a function", suffix)
 		return nil
 	}
 	if len(dsls) == 1 {
 		if dsl != nil {
-			eval.ReportError("invalid arguments in Request call, must be (type), (dsl) or (type, dsl)")
+			eval.ReportError("invalid arguments in %s call, must be (type), (func) or (type, func)", suffix)
 		}
 		dsl = dsls[0]
 	}
