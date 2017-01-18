@@ -377,7 +377,7 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 
 	// Validate response
 	if err != nil {
-		t.Fatalf("controller returned %s, logs:\n%s", err, logBuf.String())
+		t.Fatalf("controller returned %+v, logs:\n%s", err, logBuf.String())
 	}
 	if rw.Code != {{ $test.Status }} {
 		t.Errorf("invalid response status code: got %+v, expected {{ $test.Status }}", rw.Code)
