@@ -1,6 +1,7 @@
 package jwt_test
 
 import (
+	"crypto/ecdsa"
 	"crypto/rsa"
 	"net/http"
 	"net/http/httptest"
@@ -232,6 +233,102 @@ var _ = Describe("Middleware", func() {
 		})
 	})
 
+	Context("ECDSA keys signed token", func() {
+		BeforeEach(func() {
+			// ES256 {"scopes":"scope1 scope2","admin":true}, signed with ecKey1 below
+			request.Header.Set("Authorization", "Bearer "+
+				"eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9."+
+				"eyJhZG1pbiI6dHJ1ZSwic2NvcGVzIjoic2NvcGUxIHNjb3BlMiJ9."+
+				"7gM4EblP4cvX5C6PBLSBFpKX2FQ9AsLNmOXEm86uvrd4czBfw1zDO24abQ7gtlbMcjuVvxrpIyRa7Nbbn31G7w")
+		})
+
+		Context("with a single key", func() {
+			var err1, err2 error
+			BeforeEach(func() {
+				keyResolver, err := jwt.NewResolver(nil, "keyname")
+				err1 = err
+				err2 = keyResolver.AddKeys("mykeys", ecPubKey1)
+				middleware = jwt.New(keyResolver, nil, securityScheme)
+			})
+
+			It("should go through", func() {
+				Ω(err1).ShouldNot(HaveOccurred())
+				Ω(err2).ShouldNot(HaveOccurred())
+				Ω(dispatchResult).ShouldNot(HaveOccurred())
+				Ω(fetchedToken).ShouldNot(BeNil())
+			})
+		})
+
+		Context("with a single key and specified jwt keyname field", func() {
+			var err1, err2 error
+			BeforeEach(func() {
+				request.Header.Set("keyname", "mykeys")
+				keyResolver, err := jwt.NewResolver(nil, "keyname")
+				err1 = err
+				err2 = keyResolver.AddKeys("mykeys", ecPubKey1)
+				middleware = jwt.New(keyResolver, nil, securityScheme)
+			})
+
+			It("should go through", func() {
+				Ω(err1).ShouldNot(HaveOccurred())
+				Ω(err2).ShouldNot(HaveOccurred())
+				Ω(dispatchResult).ShouldNot(HaveOccurred())
+				Ω(fetchedToken).ShouldNot(BeNil())
+			})
+		})
+
+		Context("with a single key and incorrectly specified jwt keyname field", func() {
+			var err1, err2 error
+			BeforeEach(func() {
+				request.Header.Set("keyname", "notmykeys")
+				keyResolver, err := jwt.NewResolver(nil, "keyname")
+				err1 = err
+				err2 = keyResolver.AddKeys("mykeys", ecPubKey1)
+				middleware = jwt.New(keyResolver, nil, securityScheme)
+			})
+
+			It("should fail with an error", func() {
+				Ω(err1).ShouldNot(HaveOccurred())
+				Ω(err2).ShouldNot(HaveOccurred())
+				Ω(dispatchResult).Should(HaveOccurred())
+				Ω(dispatchResult.(error)).Should(HaveOccurred())
+			})
+		})
+
+		Context("with keys that didn't sign the JWT", func() {
+			var err1, err2 error
+			BeforeEach(func() {
+				keyResolver, err := jwt.NewResolver(nil, "keyname")
+				err1 = err
+				err2 = keyResolver.AddKeys("mykeys", ecPubKey2)
+				middleware = jwt.New(keyResolver, nil, securityScheme)
+			})
+
+			It("should fail with an error", func() {
+				Ω(err1).ShouldNot(HaveOccurred())
+				Ω(err2).ShouldNot(HaveOccurred())
+				Ω(dispatchResult).Should(HaveOccurred())
+				Ω(dispatchResult.(error)).Should(HaveOccurred())
+			})
+		})
+
+		Context("with multiple keys", func() {
+			var err1, err2 error
+			BeforeEach(func() {
+				keyResolver, err := jwt.NewResolver(nil, "keyname")
+				err1 = err
+				err2 = keyResolver.AddKeys("mykeys", []*ecdsa.PublicKey{ecPubKey1})
+				middleware = jwt.New(keyResolver, nil, securityScheme)
+			})
+
+			It("should go through", func() {
+				Ω(err1).ShouldNot(HaveOccurred())
+				Ω(err2).ShouldNot(HaveOccurred())
+				Ω(dispatchResult).ShouldNot(HaveOccurred())
+				Ω(fetchedToken).ShouldNot(BeNil())
+			})
+		})
+	})
 })
 
 var rsaKey1, _ = jwtpkg.ParseRSAPrivateKeyFromPEM([]byte(`-----BEGIN RSA PRIVATE KEY-----
@@ -308,4 +405,26 @@ JK0LxTEcneuDkF4re+BdP3q9cKRzFtI/ZVhVnD7+PS1wps7OiTM0iOaIDo9+uFrC
 WgqTMC3KrRX/6QJFFfpgyQzFT09WDYnmXl2gS7C2sk4UejygqmVg96JxaIaT3WiQ
 SjxXddjR/krcA9EGNNEkpZB2W6Ux6d63yWsNG9YJUacwI+M2q5ZW964J1s//FiNZ
 ZQIDAQAB
+-----END PUBLIC KEY-----`))
+
+var ecKey1, _ = jwtpkg.ParseECPrivateKeyFromPEM([]byte(`-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEIM4zAVusfF+Xl4Z5a5LaspGk+OIwGQweubphSqC1R9+VoAoGCCqGSM49
+AwEHoUQDQgAE3tWSknhfssUVytNbPz3TB7giFfxKtHsFW27Yls+Ohfuui9NW4eEk
+fLOxYkTI9tyoKfh9Dan5kJFA7ZYEwZ0zMQ==
+-----END EC PRIVATE KEY-----`))
+
+var ecPubKey1, _ = jwtpkg.ParseECPublicKeyFromPEM([]byte(`-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE3tWSknhfssUVytNbPz3TB7giFfxK
+tHsFW27Yls+Ohfuui9NW4eEkfLOxYkTI9tyoKfh9Dan5kJFA7ZYEwZ0zMQ==
+-----END PUBLIC KEY-----`))
+
+var ecKey2, _ = jwtpkg.ParseECPrivateKeyFromPEM([]byte(`-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEIKQ7EyFGaYMuFpMLnqK+mBnT9CrWOqzVxsF8wBlGrTq/oAoGCCqGSM49
+AwEHoUQDQgAE8IX3mOtLvBpvrylaRjFpadqGrirXh9dkjJfM/t1dnLu5qPhybMIY
+tEr3Xs8vYp2wyaSTVKsyj9y+t344T5Bhdw==
+-----END EC PRIVATE KEY-----`))
+
+var ecPubKey2, _ = jwtpkg.ParseECPublicKeyFromPEM([]byte(`-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8IX3mOtLvBpvrylaRjFpadqGrirX
+h9dkjJfM/t1dnLu5qPhybMIYtEr3Xs8vYp2wyaSTVKsyj9y+t344T5Bhdw==
 -----END PUBLIC KEY-----`))
