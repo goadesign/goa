@@ -27,15 +27,14 @@ import (
 //
 // validationKeys can be one of these:
 //
-//     * a single []byte
-//     * a single string
-//     * a slice of []byte
-//     * a slice of string
-//     * a single *rsa.PublicKey
-//     * a slice of *rsa.PublicKey
+//     * []byte
+//     * string
+//     * an *rsa.PublicKey
+//     * an *ecdsa.PublicKey
+//     * a slice of any of the above
 //
-// Keys of type string or []byte are interepreted according to the signing method defined in the JWT
-// token (HMAC, RSA, etc.).
+// Keys of type string or []byte are interpreted according to the signing method defined in the JWT
+// token's `typ` header element: `HS`, `RS`, `ES`, etc.
 //
 // You can define an optional function to do additional validations on the token once the signature
 // and the claims requirements are proven to be valid.  Example:
