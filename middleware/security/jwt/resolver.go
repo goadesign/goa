@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"crypto/ecdsa"
 	"crypto/rsa"
 	"net/http"
 	"sync"
@@ -45,9 +46,13 @@ func NewResolver(keys map[string][]Key, header string) (*GroupResolver, error) {
 	for name := range keys {
 		for _, keys := range keys[name] {
 			switch keys := keys.(type) {
-			case *rsa.PublicKey, string, []byte:
+			case *rsa.PublicKey, *ecdsa.PublicKey, string, []byte:
 				keyMap[name] = append(keyMap[name], keys)
 			case []*rsa.PublicKey:
+				for _, key := range keys {
+					keyMap[name] = append(keyMap[name], key)
+				}
+			case []*ecdsa.PublicKey:
 				for _, key := range keys {
 					keyMap[name] = append(keyMap[name], key)
 				}
@@ -84,9 +89,13 @@ func (kr *GroupResolver) AddKeys(name string, keys Key) error {
 	kr.Lock()
 	defer kr.Unlock()
 	switch keys := keys.(type) {
-	case *rsa.PublicKey, []byte, string:
+	case *rsa.PublicKey, *ecdsa.PublicKey, []byte, string:
 		kr.keyMap[name] = append(kr.keyMap[name], keys)
 	case []*rsa.PublicKey:
+		for _, key := range keys {
+			kr.keyMap[name] = append(kr.keyMap[name], key)
+		}
+	case []*ecdsa.PublicKey:
 		for _, key := range keys {
 			kr.keyMap[name] = append(kr.keyMap[name], key)
 		}
