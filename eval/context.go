@@ -39,8 +39,8 @@ type (
 // Each root expression may only be registered once.
 func Register(r Root) error {
 	for _, o := range Context.roots {
-		if r.DSLName() == o.DSLName() {
-			return fmt.Errorf("duplicate DSL %s", r.DSLName())
+		if r.EvalName() == o.EvalName() {
+			return fmt.Errorf("duplicate DSL %s", r.EvalName())
 		}
 	}
 	t := reflect.TypeOf(r)
@@ -85,29 +85,29 @@ func (c *DSLContext) SortRoots() ([]Root, error) {
 		for i := 0; i < length/2; i++ {
 			sorted[i], sorted[length-i-1] = sorted[length-i-1], sorted[i]
 		}
-		rootDeps[r.DSLName()] = sorted
-		rootByName[r.DSLName()] = r
+		rootDeps[r.EvalName()] = sorted
+		rootByName[r.EvalName()] = r
 	}
 	// Now check for cycles
 	for name, deps := range rootDeps {
 		root := rootByName[name]
 		for otherName, otherdeps := range rootDeps {
 			other := rootByName[otherName]
-			if root.DSLName() == other.DSLName() {
+			if root.EvalName() == other.EvalName() {
 				continue
 			}
 			dependsOnOther := false
 			for _, dep := range deps {
-				if dep.DSLName() == other.DSLName() {
+				if dep.EvalName() == other.EvalName() {
 					dependsOnOther = true
 					break
 				}
 			}
 			if dependsOnOther {
 				for _, dep := range otherdeps {
-					if dep.DSLName() == root.DSLName() {
+					if dep.EvalName() == root.EvalName() {
 						return nil, fmt.Errorf("dependency cycle: %s and %s depend on each other (directly or not)",
-							root.DSLName(), other.DSLName())
+							root.EvalName(), other.EvalName())
 					}
 				}
 			}
@@ -116,11 +116,11 @@ func (c *DSLContext) SortRoots() ([]Root, error) {
 	// Now sort top level DSLs
 	var sorted []Root
 	for _, r := range roots {
-		s := sortDependencies(roots, r, func(r Root) []Root { return rootDeps[r.DSLName()] })
+		s := sortDependencies(roots, r, func(r Root) []Root { return rootDeps[r.EvalName()] })
 		for _, s := range s {
 			found := false
 			for _, r := range sorted {
-				if r.DSLName() == s.DSLName() {
+				if r.EvalName() == s.EvalName() {
 					found = true
 					break
 				}
@@ -153,8 +153,8 @@ func sortDependencies(roots []Root, root Root, depFunc func(Root) []Root) []Root
 // sortDependenciesR sorts the depencies of the given root in the given slice.
 func sortDependenciesR(root Root, seen map[string]bool, sorted *[]Root, depFunc func(Root) []Root) {
 	for _, dep := range depFunc(root) {
-		if !seen[dep.DSLName()] {
-			seen[root.DSLName()] = true
+		if !seen[dep.EvalName()] {
+			seen[root.EvalName()] = true
 			sortDependenciesR(dep, seen, sorted, depFunc)
 		}
 	}

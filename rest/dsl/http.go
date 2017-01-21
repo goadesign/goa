@@ -44,7 +44,7 @@ import (
 //
 //        Endpoint("add", func() {
 //            Description("Add two operands")
-//            Request(Operands)
+//            Payload(Operands)
 //            Error(ErrBadRequest, ErrorMedia)
 //
 //            HTTP(func() {
@@ -139,8 +139,8 @@ func Docs(dsl func()) {
 //
 //     var _ = Service("Manager", func() {
 //         Endpoint("GetAccount", func() {
-//             Request(GetAccount)
-//             Response(Account)
+//             Payload(GetAccount)
+//             Result(Account)
 //             HTTP(func() {
 //                 GET("/{accountID}")
 //                 GET("/{*accountPath}")
@@ -251,7 +251,7 @@ func Headers(args interface{}) {
 //
 // Header may appear in the API HTTP expression (to define request headers
 // common to all the API endpoints), a specific endpoint HTTP expression (to
-// define request headers), a Response expression (to define the response
+// define request headers), a Result expression (to define the response
 // headers) or an Error expression (to define the error response headers). Header
 // may also appear in a Headers expression.
 //
@@ -263,15 +263,15 @@ func Headers(args interface{}) {
 //
 //    var _ = Service("account", func() {
 //        Endpoint("create", func() {
-//            Request(CreateRequest)
-//            Response(CreateResponse)
+//            Payload(CreatePayload)
+//            Result(Account)
 //            HTTP(func() {
 //                Header("auth:Authorization", String, "Auth token", func() {
 //                    Pattern("^Bearer [^ ]+$")
 //                })
 //                Response(StatusCreated, func() {
 //                    Header("href") // Inherits description, type, validations
-//                                   // etc. from CreateResponse href attribute
+//                                   // etc. from Account href attribute
 //                })
 //            })
 //        })
@@ -346,7 +346,7 @@ func Params(args interface{}) {
 //
 // Example:
 //
-//    var ShowRequest = Type("ShowRequest", func() {
+//    var ShowPayload = Type("ShowPayload", func() {
 //        Attribute("id", UInt64, "Account ID")
 //        Attribute("version", String, "Endpoint version", func() {
 //            Enum("1.0", "2.0")
@@ -359,19 +359,19 @@ func Params(args interface{}) {
 //            Param("parentID", UInt64, "ID of parent account")
 //        })
 //        Endpoint("show", func() {  // default response type.
-//            Request(ShowRequest)
-//            Response(AccountMedia)
+//            Payload(ShowPayload)
+//            Result(AccountMedia)
 //            HTTP(func() {
-//                Routing(GET("/{id}"))  // HTTP request uses ShowRequest "id"
+//                Routing(GET("/{id}"))  // HTTP request uses ShowPayload "id"
 //                                       // attribute to define "id" parameter.
 //                Params(func() {        // Params makes it possible to group
 //                                       // Param expressions.
-//                    Param("version:v") // "version" of ShowRequest to define
+//                    Param("version:v") // "version" of ShowPayload to define
 //                                       // path and query string parameters.
 //                                       // Query string "v" maps to attribute
-//                                       // "version" of ShowRequest.
+//                                       // "version" of ShowPayload.
 //                    Param("csrf", String) // HTTP only parameter not defined in
-//                                          // ShowRequest
+//                                          // ShowPayload
 //                    Required("crsf")   // Params makes it possible to list the
 //                                       // required parameters.
 //                })
@@ -391,7 +391,7 @@ func Param(name string, args ...interface{}) {
 // Body describes a HTTP request or response body.
 //
 // Body may appear in a Endpoint HTTP expression to define the request body or in
-// an Error or Response HTTP expression to define the response body. If Body is
+// an Error or Result HTTP expression to define the response body. If Body is
 // absent then the endpoint request or response type describes the body.
 //
 // Body accepts one argument which describes the shape of the body, it can be:
@@ -405,20 +405,20 @@ func Param(name string, args ...interface{}) {
 //
 // Assuming the type:
 //
-//     var CreateRequest = Type("CreateRequest", func() {
+//     var CreatePayload = Type("CreatePayload", func() {
 //         Attribute("name", String, "Name of account")
 //     })
 //
 // The following:
 //
 //     Endpoint("create", func() {
-//         Request(CreateRequest)
+//         Payload(CreatePayload)
 //     })
 //
 // is equivalent to:
 //
 //     Endpoint("create", func() {
-//         Request(CreateRequest)
+//         Payload(CreatePayload)
 //         HTTP(func() {
 //             Body(func() {
 //                 Attribute("name")
@@ -443,7 +443,7 @@ func Body(args ...interface{}) {
 	// Figure out reference type and setter function
 	switch e := eval.Current().(type) {
 	case *design.ActionExpr:
-		ref = e.EndpointExpr.Request
+		ref = e.EndpointExpr.Payload
 		setter = func(att *goadesign.AttributeExpr) {
 			e.Body = att
 		}
@@ -461,7 +461,7 @@ func Body(args ...interface{}) {
 			kind += " " + e.Name
 		}
 	case *design.HTTPResponseExpr:
-		ref = e.Parent.(*design.ActionExpr).EndpointExpr.Response
+		ref = e.Parent.(*design.ActionExpr).EndpointExpr.Result
 		setter = func(att *goadesign.AttributeExpr) {
 			e.Body = att
 		}
