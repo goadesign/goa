@@ -23,12 +23,12 @@ func TestEndpoint(t *testing.T) {
 						Description("Optional description")
 						URL("https://goa.design")
 					})
-					Request(func() {
+					Payload(func() {
 						Description("Optional description")
 						Attribute("required", design.String)
 						Required("required")
 					})
-					Response(func() {
+					Result(func() {
 						Description("Optional description")
 						Attribute("required", design.String)
 						Required("required")
@@ -42,10 +42,10 @@ func TestEndpoint(t *testing.T) {
 						Description("Optional description")
 						URL("https://goa.design")
 					})
-					Request(func() {
+					Payload(func() {
 						Attribute("name", design.String)
 					})
-					Response(func() {
+					Result(func() {
 						Attribute("name", design.String)
 					})
 					Error("basic_media_error", design.ErrorMedia)
@@ -69,13 +69,13 @@ func TestEndpoint(t *testing.T) {
 				}
 				assertEndpointMetaData(t, endpoint.Metadata, expectedMeta)
 				expectedReq := &design.UserTypeExpr{
-					TypeName:      "BasicRequest",
+					TypeName:      "BasicPayload",
 					AttributeExpr: &design.AttributeExpr{Description: "Optional description", Type: design.Object{}}}
-				assertEndpointRequestResponse(t, "Request", endpoint.Request, expectedReq)
+				assertEndpointPayloadResult(t, "Payload", endpoint.Payload, expectedReq)
 				expectedRes := &design.UserTypeExpr{
-					TypeName:      "BasicResponse",
+					TypeName:      "BasicResult",
 					AttributeExpr: &design.AttributeExpr{Description: "Optional description", Type: design.Object{}}}
-				assertEndpointRequestResponse(t, "Response", endpoint.Response, expectedRes)
+				assertEndpointPayloadResult(t, "Result", endpoint.Result, expectedRes)
 
 				//assert on second endpoint
 				endpoint = endpoints[1]
@@ -90,15 +90,15 @@ func TestEndpoint(t *testing.T) {
 				}
 				assertEndpointError(t, endpoint.Errors[0], "basic_media_error", design.ErrorMedia)
 				expectedReq = &design.UserTypeExpr{
-					TypeName:      "AnotherRequest",
+					TypeName:      "AnotherPayload",
 					AttributeExpr: &design.AttributeExpr{Type: design.Object{}},
 				}
-				assertEndpointRequestResponse(t, "Request", endpoint.Request, expectedReq)
+				assertEndpointPayloadResult(t, "Payload", endpoint.Payload, expectedReq)
 				expectedRes = &design.UserTypeExpr{
-					TypeName:      "AnotherResponse",
+					TypeName:      "AnotherResult",
 					AttributeExpr: &design.AttributeExpr{Type: design.Object{}},
 				}
-				assertEndpointRequestResponse(t, "Response", endpoint.Response, expectedRes)
+				assertEndpointPayloadResult(t, "Result", endpoint.Result, expectedRes)
 			},
 		},
 	}
@@ -157,7 +157,7 @@ func assertEndpointMetaData(t *testing.T, actual design.MetadataExpr, expected d
 	}
 }
 
-func assertEndpointRequestResponse(t *testing.T, assertType string, actual design.DataType, expected *design.UserTypeExpr) {
+func assertEndpointPayloadResult(t *testing.T, assertType string, actual design.DataType, expected *design.UserTypeExpr) {
 	ut, ok := actual.(*design.UserTypeExpr)
 	if !ok || ut == nil {
 		t.Errorf("expected endpoint %s to be a *UserTypeExpr but got %v", assertType, reflect.TypeOf(ut))

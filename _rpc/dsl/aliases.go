@@ -50,8 +50,8 @@ func API(name string, dsl func()) *design.APIExpr {
 // ArrayOf may be used wherever types can.
 // The first argument of ArrayOf is the type of the array elements specified by
 // name or by reference.
-// The second argument of ArrayOf is an optional DSL that defines validations
-// for the array elements.
+// The second argument of ArrayOf is an optional function that defines
+// validations for the array elements.
 //
 // Examples:
 //
@@ -287,8 +287,11 @@ func Endpoint(name string, dsl func()) {
 // Transport specific DSL may further describe the mapping between the error
 // type attributes and the serialized response.
 //
+// goa has a few predefined error names for the common cases, see ErrBadRequest
+// for example.
+//
 // Error may appear in the Service (to define error responses that apply to all
-// the service endpoints) or Endppoint expressions.
+// the service endpoints) or Endpoint expressions.
 // See Attribute for details on the Error arguments.
 //
 // Example:
@@ -553,6 +556,42 @@ func Pattern(p string) {
 	goadsl.Pattern(p)
 }
 
+// Payload defines the data type which lists the payload attributes.
+//
+// Payload may appear in a Endpoint expression.
+//
+// Payload takes one or two arguments. The first argument is either a type or a
+// DSL function. If the first argument is a type then an optional DSL may be
+// passed as second argument that further specializes the type by providing
+// additional validations (e.g. list of required attributes)
+//
+// Examples:
+//
+// Endpoint("add", func() {
+//     // Define payload type inline
+//     Payload(func() {
+//         Attribute("left", Int32, "Left operand")
+//         Attribute("right", Int32, "Left operand")
+//         Required("left", "right")
+//     })
+// })
+//
+// Endpoint("add", func() {
+//     // Define payload type by reference to user type
+//     Payload(Operands)
+// })
+//
+// Endpoint("divide", func() {
+//     // Specify required attributes on user type
+//     Payload(Operands, func() {
+//         Required("left", "right")
+//     })
+// })
+//
+func Payload(val interface{}, dsls ...func()) {
+	goadsl.Payload(val, dsls...)
+}
+
 // Reference sets a type or media type reference. The value itself can be a type
 // or a media type.  The reference type attributes define the default properties
 // for attributes with the same name in the type using the reference.
@@ -591,94 +630,50 @@ func Reference(t design.DataType) {
 	goadsl.Reference(t)
 }
 
-// Request defines the data type which lists the request parameters in its
-// attributes. Transport specific DSL may provide a mapping between the
-// attributes and incoming request state (e.g. which attributes are initialized
-// from HTTP headers, query string values or body fields in the case of HTTP)
-//
-// Request may appear in a Endpoint expression.
-//
-// Request takes one or two arguments. The first argument is either a reference
-// to a type, the name of a type or a DSL function.
-// If the first argument is a type or the name of a type then an optional DSL
-// may be passed as second argument that further specializes the type by
-// providing additional validations (e.g. list of required attributes)
-//
-// Examples:
-//
-// Endpoint("add", func() {
-//     // Define request type inline
-//     Request(func() {
-//         Attribute("left", Int32, "Left operand")
-//         Attribute("right", Int32, "Left operand")
-//         Required("left", "right")
-//     })
-// })
-//
-// Endpoint("add", func() {
-//     // Define request type by reference to user type
-//     Request(Operands)
-// })
-//
-// Endpoint("divide", func() {
-//     // Specify required attributes on user type
-//     Request(Operands, func() {
-//         Required("left", "right")
-//     })
-// })
-//
-func Request(val interface{}, dsls ...func()) {
-	goadsl.Request(val, dsls...)
-}
-
 // Required adds a "required" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor61.
 func Required(names ...string) {
 	goadsl.Required(names...)
 }
 
-// Response describes and endpoint response type. Transport specific DSL may
-// provide a mapping between the type attributes and the response state when the
-// type is an object (e.g. which object attributes are written to the HTTP
-// response headers and which ones to the body).
+// Result describes and endpoint result type.
 //
-// Response may appear in a Endpoint expression.
+// Result may appear in a Endpoint expression.
 //
-// Response takes one or two arguments. The first argument is either a reference
-// to a type, the name of a type or a DSL function.
-// If the first argument is a type or the name of a type then an optional DSL
-// may be passed as second argument that further specializes the type by
-// providing additional validations (e.g. list of required attributes)
+// Result takes one or two arguments. The first argument is either a type or a
+// DSL function. If the first argument is a type then an optional DSL may be
+// passed as second argument that further specializes the type by providing
+// additional validations (e.g. list of required attributes)
 //
 // Examples:
 //
 // Endpoint("add", func() {
-//     // Define response using primitive type
-//     Response(Int32)
+//     // Define result using primitive type
+//     Result(Int32)
 // })
 //
 // Endpoint("add", func() {
-//     // Define response using object defined inline
-//     Response(func() {
+//     // Define result using object defined inline
+//     Result(func() {
 //         Attribute("value", Int32, "Resulting sum")
 //         Required("value")
 //     })
 // })
 //
 // Endpoint("add", func() {
-//     // Define response type using user type
-//     Response(Sum) // this works too: Response("Sum")
+//     // Define result type using user type
+//     Result(Sum) // this works too: Result("Sum")
 // })
 //
 // Endpoint("add", func() {
 //     // Specify required attributes on user type
-//     Response(Sum, func() {
+//     Result(Sum, func() {
 //         Required("value")
 //     })
 // })
 //
-func Response(val interface{}, dsls ...func()) {
-	goadsl.Response(val, dsls...)
+func Result(val interface{}, dsls ...func()) {
+	goadsl.Result(val, dsls...)
 }
 
 // Server defines an API host.
@@ -739,8 +734,8 @@ func Title(val string) {
 //         Required("b", "c")
 //     })
 //
-func Type(name string, dsl func()) design.UserType {
-	return goadsl.Type(name, dsl)
+func Type(name string, args ...interface{}) design.UserType {
+	return goadsl.Type(name, args...)
 }
 
 // TypeName makes it possible to set the Go struct name for a type or media type

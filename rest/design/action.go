@@ -33,7 +33,7 @@ type (
 		HTTPErrors []*HTTPErrorExpr
 		// Body attribute
 		Body *design.AttributeExpr
-		// Request headers that need to be made available to action
+		// Payload headers that need to be made available to action
 		headers *design.AttributeExpr
 		// Path and query string parameters
 		params *design.AttributeExpr

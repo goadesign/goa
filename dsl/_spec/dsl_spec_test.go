@@ -47,9 +47,9 @@ var _ = API("dsl_spec", func() {
 		// The syntax for Param is the same as Attribute's. The Server
 		// Param declarations must include a default value.
 		//
-		// The attributes defined in Server get merged into the request
+		// The attributes defined in Server get merged into the payload
 		// types of all the API endpoints. The merge algorithm adds
-		// new attributes to the request types if they don't already have
+		// new attributes to the payload types if they don't already have
 		// ones with the same names - overrides their properties (type,
 		// description etc.) otherwise.
 		Param("param", String, "Optional description", func() {
@@ -82,16 +82,15 @@ var _ = Service("service", func() {
 		URL("https://goa.design")
 	})
 
-	// Error defines a common error response to all the service endpoints.
+	// Error defines a common error to all the service endpoints.
 	Error("name_of_error_1")
-	// ErrorMedia is a built-in media type used by default for error
-	// responses.
+	// ErrorMedia is a built-in media type used by default for errors.
 	Error("name_of_error_2", ErrorMedia, "Optional description of error")
-	// Error response attributes can be described using a media type
+	// Error attributes can be described using a media type.
 	Error("name_of_error_3", AErrorMediaType)
-	// Error response attributes can be described using a user type
+	// Error attributes can be described using a user type.
 	Error("name_of_error_4", AErrorType)
-	// Error response attributes can be described inline
+	// Error attributes can be described inline.
 	Error("name_of_error_5", func() {
 		Description("Optional description")
 		Attribute("message")
@@ -110,54 +109,54 @@ var _ = Service("service", func() {
 			URL("https://goa.design")
 		})
 
-		// Request describes the request attributes. There can only be
-		// one Request expression per Endpoint expression.
-		// Request attributes can be described inline.
+		// Payload describes the payload attributes. There can only be
+		// one Payload expression per Endpoint expression.
+		// Payload attributes can be described inline.
 		//
-		//     Request(func() {
+		//     Payload(func() {
 		//         Attribute("name")
 		//         Required("name")
 		//     })
 		//
-		// Request attributes can be described using a user type. The
+		// Payload attributes can be described using a user type. The
 		// user type must be an object.
 		//
-		//     Request(RequestType)
+		//     Payload(PayloadType)
 		//
-		// Additionally Request can add to the list of required
+		// Additionally Payload can add to the list of required
 		// attributes.
 		//
-		//     Request(RequestType, func() {
+		//     Payload(PayloadType, func() {
 		//         Required("name")
 		//     })
 		//
-		Request(RequestType, func() {
+		Payload(PayloadType, func() {
 			Required("name")
 		})
 
-		// Response describes the response attributes. There can only be
-		// one Response expression per Endpoint expression.
-		// Response attributes can be described inline.
+		// Result describes the result attributes. There can only be
+		// one Result expression per Endpoint expression.
+		// Result attributes can be described inline.
 		//
-		//     Response(func() {
+		//     Result(func() {
 		//         Attribute("name")
 		//         Required("name")
 		//     })
 		//
-		// Response attributes can be described using a user or media
+		// Result attributes can be described using a user or media
 		// type. If using a user type it must be an object.
 		//
-		//     Response(ResponseMediaType)
+		//     Result(ResultMediaType)
 		//
-		// Additionally Response can add to the list of required
+		// Additionally Result can add to the list of required
 		// attributes.
-		Response(ResponseMediaType, func() {
+		Result(ResultMediaType, func() {
 			Required("name")
 		})
 
 		// Error in an Endpoint expression defines endpoint specific
-		// error responses, the syntax is identical as when used in a
-		// Service expression.
+		// errors, the syntax is identical as when used in a Service
+		// expression.
 		Error("endpoint_specific_error")
 
 		// Metadata expression. Effect depends on generators.
@@ -166,15 +165,15 @@ var _ = Service("service", func() {
 		Metadata("name", "some value", "some other value")
 	})
 
-	// Endpoint with inline request and response object types
+	// Endpoint with inline payload and result object types
 	Endpoint("inline-object", func() {
-		Request(func() {
+		Payload(func() {
 			Description("Optional description")
 			Attribute("required")
 			Attribute("optional")
 			Required("required")
 		})
-		Response(func() {
+		Result(func() {
 			Description("Optional description")
 			Attribute("required")
 			Attribute("optional")
@@ -204,16 +203,16 @@ var AErrorMediaType = MediaType("application/vnd.goa.design.error", func() {
 	})
 })
 
-// RequestType is the type that describes the request parameters.
-var RequestType = Type("Request", func() {
+// PayloadType is the type that describes the payload attributes.
+var PayloadType = Type("Payload", func() {
 	Description("Optional description")
 	Attribute("required")
 	Attribute("name")
 	Required("required")
 })
 
-// ResponseMediaType is the media type that describes the response shape.
-var ResponseMediaType = MediaType("application/vnd.goa.response", func() {
+// ResultMediaType is the media type that describes the result shape.
+var ResultMediaType = MediaType("application/vnd.goa.result", func() {
 	Description("Optional description")
 	Attributes(func() {
 		Attribute("required")

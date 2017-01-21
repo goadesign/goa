@@ -12,9 +12,7 @@ type (
 	// execution the DSL engine iterates over all root expressions and calls
 	// their WalkSets methods to iterate over the sub-expressions.
 	Root interface {
-		// DSLName is displayed by the runner upon executing the DSL.
-		// Registered DSL roots must have unique DSL names.
-		DSLName() string
+		Expression
 		// DependsOn returns the list of other DSL roots this root
 		// depends on.  The engine uses this function to order the
 		// execution of the DSL roots.

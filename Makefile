@@ -22,7 +22,7 @@ DEPEND=\
 
 .PHONY: goagen
 
-all: depend lint cyclo test
+all: depend lint cyclo aliases test
 
 depend:
 	@go get -v ./...
@@ -42,6 +42,11 @@ cyclo:
 	@if [ "`gocyclo -over 20 . | grep -v _integration_tests | grep -v _test.go | tee /dev/stderr`" ]; then \
 		echo "^ - Cyclomatic complexity exceeds 20, refactor the code!" && echo && exit 1; \
 	fi
+
+aliases:
+	@cd cmd/aliaser && \
+	go build && \
+	./aliaser > /dev/null
 
 test:
 	go test ./...

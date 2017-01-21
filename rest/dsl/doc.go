@@ -1,5 +1,5 @@
 /*
-Package rest/dsl implements the goa DSL used to define REST APIs.
+Package dsl implements the goa DSL used to define REST APIs.
 
 The REST DSL adds a "HTTP" function to the generic DSL constructs that require
 HTTP specific information. These include the API, Service, Endpoint and Error

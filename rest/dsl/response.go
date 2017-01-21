@@ -1,7 +1,6 @@
 package dsl
 
 import (
-	goadsl "goa.design/goa.v2/dsl"
 	"goa.design/goa.v2/eval"
 	"goa.design/goa.v2/rest/design"
 )
@@ -111,15 +110,7 @@ import (
 func Response(val interface{}, args ...interface{}) {
 	a, ok := eval.Current().(*design.ActionExpr)
 	if !ok {
-		var dsl func()
-		if len(args) > 0 {
-			dsl, ok = args[0].(func())
-			if !ok {
-				eval.InvalidArgError("function", args[0])
-				return
-			}
-		}
-		goadsl.Response(val, dsl)
+		eval.IncompatibleDSL()
 		return
 	}
 	code, dsl := parseResponseArgs(val, args...)

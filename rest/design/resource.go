@@ -137,9 +137,17 @@ func (r *ResourceExpr) Params() *design.AttributeExpr {
 // Validate makes sure the resource is valid.
 func (r *ResourceExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
+	if r.params != nil {
+		verr.Merge(r.params.Validate("parameters", r))
+	}
+	if r.headers != nil {
+		verr.Merge(r.headers.Validate("headers", r))
+	}
 	if n := r.ParentName; n != "" {
 		if p := Root.Resource(n); p == nil {
 			verr.Add(r, "Parent service %s not found", n)
+		} else if p.CanonicalAction() == nil {
+			verr.Add(r, "Parent service %s has no canonical action", n)
 		}
 	}
 	if n := r.CanonicalActionName; n != "" {
