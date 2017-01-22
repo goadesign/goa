@@ -2,13 +2,11 @@ package goa
 
 import (
 	"context"
-	"log"
 	"net"
-	"os"
 )
 
 type (
-	// Service represents a network service process that runs one ore more servers.
+	// Service represents a network service that runs one ore more servers.
 	//
 	// A service implements an API defined in a design.
 	Service struct {
@@ -16,17 +14,14 @@ type (
 		Name string
 		// Servers that serve network requests made to the service.
 		Servers []Server
-		// LogAdapter is the logger adapter used internally by the service and generated
-		// code to create log entries.
-		LogAdapter LogAdapter
 	}
 
 	// A Server that serves requests made by remote clients.
 	Server interface {
 		// Mount registers the server with the service.
 		Mount(service *Service)
-		// Serve accepts incoming connections on the Listener l, creating a new service
-		// goroutine for each.
+		// Serve accepts incoming connections on the Listener l,
+		// creating a new service goroutine for each.
 		Serve(l net.Listener) error
 	}
 
@@ -42,10 +37,8 @@ type (
 
 // New instantiates a service with the given name.
 func New(name string) *Service {
-	stdlog := log.New(os.Stderr, "", log.LstdFlags)
 	return &Service{
-		Name:       name,
-		LogAdapter: NewLogger(stdlog),
+		Name: name,
 	}
 }
 

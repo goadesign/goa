@@ -268,6 +268,36 @@ func Enum(vals ...interface{}) {
 	goadsl.Enum(vals...)
 }
 
+// Error describes an endpoint error response. The description includes a unique
+// name (in the scope of the endpoint), an optional type, description and DSL
+// that further describes the type. If no type is specified then the goa
+// ErrorMedia type is used. The DSL syntax is identical to the Attribute DSL.
+// Transport specific DSL may further describe the mapping between the error
+// type attributes and the serialized response.
+//
+// goa has a few predefined error names for the common cases, see ErrBadRequest
+// for example.
+//
+// Error may appear in the Service (to define error responses that apply to all
+// the service endpoints) or Endpoint expressions.
+// See Attribute for details on the Error arguments.
+//
+// Example:
+//
+//    var _ = Service("divider", func() {
+//        Error("invalid_arguments") // Uses type ErrorMedia
+//
+//        // Endpoint which uses the default type for its response.
+//        Endpoint("divide", func() {
+//            Request(DivideRequest)
+//            Error("div_by_zero", DivByZero, "Division by zero")
+//        })
+//    })
+//
+func Error(name string, args ...interface{}) {
+	goadsl.Error(name, args...)
+}
+
 // Example sets the example of an attribute to be used for the documentation.
 // If no example is explicitly provided then a random example is generated
 // unless the "swagger:example" metadata is set to "false". See Metadata.
