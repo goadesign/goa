@@ -5,9 +5,7 @@
 package dsl_test
 
 import (
-	"net/http"
-
-	. "goa.design/goa.v2/design"
+	. "goa.design/goa.v2/rest/design"
 	. "goa.design/goa.v2/rest/dsl"
 )
 
@@ -79,18 +77,18 @@ var _ = API("rest_dsl_spec", func() {
 		// expression is used to define the API headers.
 		Headers(CommonHeaders)
 
-		// Error defines the HTTP response associated with the given
+		// Response defines the HTTP response associated with the given
 		// error. By default the response uses HTTP status code 400
 		// ("Bad Request") and the error type attributes define the shape
 		// of the body.
 		//
-		// Error accepts the name of the error as first argument, an
+		// Response the name of the error as first argument, an
 		// HTTP status code as second argument and an optional function
 		// used to describe the mapping of the error type attributes to
 		// the HTTP response headers and body fields. The name of the
 		// error must correspond to one of the errors defined in the API
 		// expression.
-		Error("api_error", http.StatusUnauthorized, func() {
+		Response("api_error", StatusUnauthorized, func() {
 
 			// Headers list the error response headers.
 			Headers(func() {
@@ -161,8 +159,8 @@ var _ = Service("service", func() {
 		})
 
 		// Service specific errors. Syntax and logic is identical to the
-		// API level HTTP Error expressions.
-		Error("service_error", http.StatusForbidden, func() {
+		// API level HTTP Response expressions.
+		Response("service_error", StatusForbidden, func() {
 			Headers(func() {
 				Header("name:Header-Name")
 			})
@@ -205,30 +203,30 @@ var _ = Service("service", func() {
 	// Endpoint describes a single endpoint. A service may define any number
 	// of endpoints.
 	Endpoint("endpoint", func() {
-		// Request describes the request attributes. There can only be
-		// one Request expression per Endpoint expression.
-		// Request attributes can be described inline.
+		// Payload describes the request attributes. There can only be
+		// one Payload expression per Endpoint expression.
+		// Payload attributes can be described inline.
 		//
-		//     Request(func() {
+		//     Payload(func() {
 		//         Attribute("name", String)
 		//         Required("name")
 		//     })
 		//
-		// Request attributes can be described using a user type.
+		// Payload attributes can be described using a user type.
 		//
-		//     Request(RequestType)
+		//     Payload(PayloadType)
 		//
-		// Additionally Request can add to the list of required
+		// Additionally Payload can add to the list of required
 		// attributes.
 		//
-		//     Request(RequestType, func() {
+		//     Payload(PayloadType, func() {
 		//         Required("name")
 		//     })
 		//
-		Request(RequestType)
+		Payload(PayloadType)
 
 		// Response describes the response attributes. The syntax is
-		// identical to Request.
+		// identical to Payload.
 		Response(ResponseMediaType)
 
 		// Error in an Endpoint expression defines endpoint specific
@@ -301,7 +299,7 @@ var _ = Service("service", func() {
 			// Endpoint HTTP expression to describe multiple possible
 			// responses. Response accepts the HTTP status code as
 			// first argument and an optional DSL as last argument.
-			Response(http.StatusOK, func() {
+			Response(StatusOK, func() {
 				// ContentType allows setting the value of the
 				// response Content-Type header explicitely. By
 				// default this header is set with the response
@@ -363,30 +361,31 @@ var _ = Service("service", func() {
 			// As a convenience responses using HTTP status code 204
 			// (No Content) that do not call Body default to an empty
 			// body.
-			Response(http.StatusNoContent)
+			Response(StatusNoContent)
 
-			// Error defines a endpoint specific error response. The
-			// DSL is identical to API level HTTP Error expressions.
-			Error("service_error")
+			// Response defines a endpoint specific error response.
+			// The DSL is identical to API level HTTP Response
+			// expressions.
+			Response("service_error")
 		})
 	})
 
 	// Endpoint using the service request and response types default HTTP
 	// mappings.
 	Endpoint("another_endpoint", func() {
-		Request(RequestType)
+		Payload(PayloadType)
 		Response(ResponseMediaType)
 
 		HTTP(func() {
 
 			// No Body function means the endpoint HTTP request body
-			// is defined by the endpoint request type RequestType.
+			// is defined by the endpoint request type PayloadType.
 			PUT("/another")
 
 			// No DSL means the response body shape and content type
 			// is defined by the endpoint response type
 			// ResponseMediaType.
-			Response(http.StatusOK)
+			Response(StatusOK)
 		})
 	})
 })
@@ -407,8 +406,8 @@ var CommonHeaders = Type("CommonHeaders", func() {
 	Required("attribute")
 })
 
-// RequestType is the type that describes the request parameters.
-var RequestType = Type("Request", func() {
+// PayloadType is the type that describes the request parameters.
+var PayloadType = Type("Payload", func() {
 	Description("Optional description")
 	Attribute("required", String)
 	Attribute("name", String)

@@ -1,59 +1,71 @@
 Design:
 
-    var CreateAccountRequest = Type("CreateAccountRequest", func() {
-        Attribute("Name", String)
+    var CreateAccountPayload = Type("CreateAccountPayload", func() {
+        Attribute("OrgID", String, "ID of organization that owns created account")
+        Attribute("Name", String, "Name of account")
+        Required("OrgID", "Name")
     })
 
-    var CreateAccountResponse = Type("CreateAccountResponse, func() {
-        Attribute("Location", String)
-        Attribute("Name", String)
+    var Account = Type("Account, func() {
+        Reference(CreateAccountPayload)
+        Attribute("Href", String, "Href to account resource")
+        Attribute("ID", String, "Unique account ID")
+        Attribute("OrgID")
+        Attribute("Name")
+        Required("Href", "ID", "OrgID", "Name")
     })
 
     // OR
 
-    var CreateAccountMedia = MediaType("application/vnd.account", func() {
+    var AccountMedia = MediaType("application/vnd.account", func() {
+        Reference(CreateAccountPayload)
         Attributes(func() {
-                Attribute("Location", String)
-                Attribute("Name", String)
+        	Attribute("Href", String, "Href to account resource")
+            Attribute("ID", String, "Unique account ID")
+            Attribute("OrgID")
+            Attribute("Name")
         })
         Views("default", func() {
-            Attribute("Location")
+        	Attribute("Href")
+            Attribute("ID")
+            Attribute("OrgID")
             Attribute("Name")
         })
     })
 
-    var _ = Resource("account", func() {
-        Description("accout resource") // Optional description
+    var _ = Service("account", func() {
+        Description("Accout service") // Optional description
 
         Endpoint("create", func() {     // Defines a single endpoint
             Description("The create endpoint creates a new bottle")
-            Request(CreateAccountRequest)
-            Response(CreateAccountResponse) // Can use Type or MediaType. Views generated for GRPC
-                                            // as well if media type
-            Error("DivisionByZero", ErrDivByZero) // ErrDivByZero is optional type that describes error body.
-               If gRPC error attribute is added to type, if return error matches design error then
-               error attribute is set otherwise error is returned to gRPC server.
 
+            Payload(CreateAccountPayload)
+            Result(Account) // Can use Type or MediaType. Views generated for GRPC
+                            // as well if media type
+            Error("NameAlreadyTaken", ErrNameTaken) // ErrNameTaken is optional
+               // type that describes error body. If gRPC error attribute is added
+               // to type, if return error matches design error then error
+               // attribute is set otherwise error is returned to gRPC server.
+
+			// HTTP defines HTTP transport specific properties
             HTTP(func() {
-                Scheme("https")
-                GET("/{Dividend/{Divisor}") // DivideRequest must have Dividend and Divisor attributes
-                POST("/{Dividend}")         // Body is DivideRequest minus Dividend attribute and headers
-                POST("/")                   // Body is DivideRequest minus headers
-                Header("Api-Version")       // May match one of CreateAccountRequest attributes
+                POST("/Org/{OrgID}")        // Body is CreateAccountPayload minus OrgID attribute and headers
+                POST("/")                   // Body is CreateAccountPayload minus headers
+                Header("Api-Version")       // May match one of CreateAccountPayload attributes
                 Response(func() {
                     Status(OK)              // Default
-                    Header("Result")        // Must be an attribute of DivideResponse
+                    Header("Href:Location") // Href must be an attribute of Account, Location is name of header
                 })
-                Error("DivisionByZero", func() {
+                Error("NameAlreadyTaken", func() {
                     Status(BadRequest)      // Default
-                    Header("Message")       // Must be an attribute of ErrDivByZero
+                    Header("Message")       // Must be an attribute of NameAlreadyTaken
                 })
             })
 
             GRPC(func() {
-                Proto("divider.divide") // rpc definition in proto file
-                Error("DivisionByZero", func() { // Defines which field contains error if not "Error"
-                    Field("DivByZero")
+                Proto("account.create") // rpc definition in proto file
+                Error("NameAlreadyTaken", func() { // Defines which field contains error if not "Error"
+                    Field("CreationError")
                 })
             })
         })
@@ -61,25 +73,33 @@ Design:
 
 User code:
 
-    // Generated type
-    type BottleCreateResponse struct {
-        // Location header
-        Location string
-        // Name of bottle
-        Name string
-        
-    func (c * BottleController) Create(ctx context.Context, req *server.BottleCreateRequest) (*server.BottleCreateResponse, error) {
-        resp := server.BottleCreateResponse{
-            Status: http.StatusCreated,
-            Location: "/..",
-            MediaType: mt,
+    // Generated type (generated code)
+    type Account struct {
+        Href  string
+        ID    string
+        OrgID string
+        Name  string
+    }
+
+    // Generated service (scaffold code)
+    type AccountService struct {
+    }
+
+    // Generated encoders (generated code)
+    func HTTPEncodeAccount(rw http.ResponseWriter, a *Account)
+    func HTTPEncodeNameAlreadyTaken(rw http.ResponseWriter, e *NameAlreadyTaken)
+
+    // Generated
+
+    func (c * AccountService) Create(ctx context.Context, req *server.AccountCreatePayload) (*server.Account, error) {
+        a := server.Account{
+            Href: "/..",
         }
-        // OR
-        resp := server.NewBottleCreateCreatedResponse("/...", mt)
-    
+
+        return &a, nil
+
         // rest.ContextRequest(ctx) -> *http.Request
         // rest.ContextResponse(ctx) -> http.ResponseWriter
-        return &resp, nil
     }
 
     func (c * BottleController) Show(ctx context.Context, req *server.BottleShowRequest) (*server.BottleShowResponse, error) {
@@ -89,7 +109,7 @@ User code:
         }
         // OR
         resp := server.NewBottleShowShowdResponse("/...", mt)
-    
+
         // rest.ContextRequest(ctx) -> *http.Request
         // rest.ContextResponse(ctx) -> http.ResponseWriter
         return &resp, nil
