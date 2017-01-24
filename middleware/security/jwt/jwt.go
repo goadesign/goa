@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"crypto/ecdsa"
 	"crypto/rsa"
 	"fmt"
 	"net/http"
@@ -26,16 +27,14 @@ import (
 //
 // validationKeys can be one of these:
 //
-//     * a single string
-//     * a single []byte
-//     * a list of string
-//     * a list of []byte
-//     * a single rsa.PublicKey
-//     * a list of rsa.PublicKey
+//     * []byte
+//     * string
+//     * an *rsa.PublicKey
+//     * an *ecdsa.PublicKey
+//     * a slice of any of the above
 //
-// The type of the keys determine the algorithms that will be used to do the check.  The goal of
-// having lists of keys is to allow for key rotation, still check the previous keys until rotation
-// has been completed.
+// Keys of type string or []byte are interpreted according to the signing method defined in the JWT
+// token's `typ` header element: `HS`, `RS`, `ES`, etc.
 //
 // You can define an optional function to do additional validations on the token once the signature
 // and the claims requirements are proven to be valid.  Example:
@@ -86,22 +85,41 @@ func New(validationKeys interface{}, validationFunc goa.Middleware, scheme *goa.
 			}
 
 			if !strings.HasPrefix(strings.ToLower(val), "bearer ") {
-				return ErrJWTError(fmt.Sprintf("invalid or malformed %q header, expected 'Authorization: Bearer JWT-token...'", val))
+				return ErrJWTError(fmt.Sprintf("invalid or malformed %q header, expected 'Bearer JWT-token...'", val))
 			}
 
 			incomingToken := strings.Split(val, " ")[1]
 
-			var token *jwt.Token
-			var err error
-			switch algo {
-			case "RS":
-				token, err = validateRSAKeys(rsaKeys, algo, incomingToken)
-			case "HS":
-				token, err = validateHMACKeys(hmacKeys, algo, incomingToken)
-			default:
-				panic("how did this happen ? unsupported algo in jwt middleware")
+			rsaKeys, ecdsaKeys, hmacKeys := partitionKeys(resolver.SelectKeys(req))
+
+			var (
+				token     *jwt.Token
+				err       error
+				validated = false
+			)
+
+			if len(rsaKeys) > 0 {
+				token, err = validateRSAKeys(rsaKeys, "RS", incomingToken)
+				if err == nil {
+					validated = true
+				}
 			}
-			if err != nil {
+
+			if !validated && len(ecdsaKeys) > 0 {
+				token, err = validateECDSAKeys(ecdsaKeys, "ES", incomingToken)
+				if err == nil {
+					validated = true
+				}
+			}
+
+			if !validated && len(hmacKeys) > 0 {
+				token, err = validateHMACKeys(hmacKeys, "HS", incomingToken)
+				if err == nil {
+					validated = true
+				}
+			}
+
+			if !validated {
 				return ErrJWTError(fmt.Sprintf("JWT validation failed: %s", err))
 			}
 
@@ -129,6 +147,30 @@ func New(validationKeys interface{}, validationFunc goa.Middleware, scheme *goa.
 	}
 }
 
+// partitionKeys sorts keys by their type.
+func partitionKeys(keys []Key) ([]*rsa.PublicKey, []*ecdsa.PublicKey, [][]byte) {
+	var (
+		rsaKeys   []*rsa.PublicKey
+		ecdsaKeys []*ecdsa.PublicKey
+		hmacKeys  [][]byte
+	)
+
+	for _, key := range keys {
+		switch k := key.(type) {
+		case *rsa.PublicKey:
+			rsaKeys = append(rsaKeys, k)
+		case *ecdsa.PublicKey:
+			ecdsaKeys = append(ecdsaKeys, k)
+		case []byte:
+			hmacKeys = append(hmacKeys, k)
+		case string:
+			hmacKeys = append(hmacKeys, []byte(k))
+		}
+	}
+
+	return rsaKeys, ecdsaKeys, hmacKeys
+}
+
 // parseClaimScopes parses the "scopes" parameter in the Claims. It supports two formats:
 //
 // * a list of string
@@ -139,7 +181,7 @@ func parseClaimScopes(token *jwt.Token) (map[string]bool, []string, error) {
 	var scopesInClaimList []string
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return nil, nil, fmt.Errorf("unsupport claims shape")
+		return nil, nil, fmt.Errorf("unsupported claims shape")
 	}
 	if claims["scopes"] != nil {
 		switch scopes := claims["scopes"].(type) {
@@ -202,7 +244,22 @@ func validateRSAKeys(rsaKeys []*rsa.PublicKey, algo, incomingToken string) (toke
 	return
 }
 
-func validateHMACKeys(hmacKeys []string, algo, incomingToken string) (token *jwt.Token, err error) {
+func validateECDSAKeys(ecdsaKeys []*ecdsa.PublicKey, algo, incomingToken string) (token *jwt.Token, err error) {
+	for _, pubkey := range ecdsaKeys {
+		token, err = jwt.Parse(incomingToken, func(token *jwt.Token) (interface{}, error) {
+			if !strings.HasPrefix(token.Method.Alg(), algo) {
+				return nil, ErrJWTError(fmt.Sprintf("Unexpected signing method: %v", token.Header["alg"]))
+			}
+			return pubkey, nil
+		})
+		if err == nil {
+			return
+		}
+	}
+	return
+}
+
+func validateHMACKeys(hmacKeys [][]byte, algo, incomingToken string) (token *jwt.Token, err error) {
 	for _, key := range hmacKeys {
 		token, err = jwt.Parse(incomingToken, func(token *jwt.Token) (interface{}, error) {
 			if !strings.HasPrefix(token.Method.Alg(), algo) {
