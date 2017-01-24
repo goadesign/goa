@@ -83,23 +83,17 @@ func New(validationKeys interface{}, validationFunc goa.Middleware, scheme *goa.
 
 			if len(rsaKeys) > 0 {
 				token, err = validateRSAKeys(rsaKeys, "RS", incomingToken)
-				if err == nil {
-					validated = true
-				}
+				validated = err == nil
 			}
 
 			if !validated && len(ecdsaKeys) > 0 {
 				token, err = validateECDSAKeys(ecdsaKeys, "ES", incomingToken)
-				if err == nil {
-					validated = true
-				}
+				validated = err == nil
 			}
 
 			if !validated && len(hmacKeys) > 0 {
 				token, err = validateHMACKeys(hmacKeys, "HS", incomingToken)
-				if err == nil {
-					validated = true
-				}
+				//validated = err == nil
 			}
 
 			if err != nil {
