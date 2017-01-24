@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"crypto/ecdsa"
 	"crypto/rsa"
 	"fmt"
 	"net/http"
@@ -26,14 +27,13 @@ import (
 //
 // validationKeys can be one of these:
 //
-//     * a single string
-//     * a single []byte
-//     * a list of string
-//     * a list of []byte
-//     * a single rsa.PublicKey
-//     * a list of rsa.PublicKey
+//     * a string (for HMAC)
+//     * a []byte (for HMAC)
+//     * an rsa.PublicKey
+//     * an ecdsa.PublicKey
+//     * a slice of any of the above
 //
-// The type of the keys determine the algorithms that will be used to do the check.  The goal of
+// The type of the keys determine the algorithm that will be used to do the check.  The goal of
 // having lists of keys is to allow for key rotation, still check the previous keys until rotation
 // has been completed.
 //
@@ -53,26 +53,10 @@ import (
 //    app.UseJWT(jwt.New("secret", validationHandler, app.NewJWTSecurity()))
 //
 func New(validationKeys interface{}, validationFunc goa.Middleware, scheme *goa.JWTSecurity) goa.Middleware {
-	var algo string
 	var rsaKeys []*rsa.PublicKey
-	var hmacKeys []string
+	var hmacKeys [][]byte
 
-	switch keys := validationKeys.(type) {
-	case []*rsa.PublicKey:
-		rsaKeys = keys
-		algo = "RS"
-	case *rsa.PublicKey:
-		rsaKeys = []*rsa.PublicKey{keys}
-		algo = "RS"
-	case string:
-		hmacKeys = []string{keys}
-		algo = "HS"
-	case []string:
-		hmacKeys = keys
-		algo = "HS"
-	default:
-		panic("invalid parameter to `jwt.New()`, only accepts *rsa.publicKey, []*rsa.PublicKey (for RSA-based algorithms) or a signing secret string (for HS algorithms)")
-	}
+	rsaKeys, ecdsaKeys, hmacKeys := partitionKeys(validationKeys)
 
 	return func(nextHandler goa.Handler) goa.Handler {
 		return func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
@@ -91,16 +75,27 @@ func New(validationKeys interface{}, validationFunc goa.Middleware, scheme *goa.
 
 			incomingToken := strings.Split(val, " ")[1]
 
-			var token *jwt.Token
-			var err error
-			switch algo {
-			case "RS":
-				token, err = validateRSAKeys(rsaKeys, algo, incomingToken)
-			case "HS":
-				token, err = validateHMACKeys(hmacKeys, algo, incomingToken)
-			default:
-				panic("how did this happen ? unsupported algo in jwt middleware")
+			var (
+				token     *jwt.Token
+				err       error
+				validated = false
+			)
+
+			if len(rsaKeys) > 0 {
+				token, err = validateRSAKeys(rsaKeys, "RS", incomingToken)
+				validated = err == nil
 			}
+
+			if !validated && len(ecdsaKeys) > 0 {
+				token, err = validateECDSAKeys(ecdsaKeys, "ES", incomingToken)
+				validated = err == nil
+			}
+
+			if !validated && len(hmacKeys) > 0 {
+				token, err = validateHMACKeys(hmacKeys, "HS", incomingToken)
+				//validated = err == nil
+			}
+
 			if err != nil {
 				return ErrJWTError(fmt.Sprintf("JWT validation failed: %s", err))
 			}
@@ -173,18 +168,36 @@ const (
 	jwtKey contextKey = iota + 1
 )
 
-// WithJWT creates a child context containing the given JWT.
-func WithJWT(ctx context.Context, t *jwt.Token) context.Context {
-	return context.WithValue(ctx, jwtKey, t)
-}
+// partitionKeys sorts keys by their type.
+func partitionKeys(k interface{}) ([]*rsa.PublicKey, []*ecdsa.PublicKey, [][]byte) {
+	var (
+		rsaKeys   []*rsa.PublicKey
+		ecdsaKeys []*ecdsa.PublicKey
+		hmacKeys  [][]byte
+	)
 
-// ContextJWT retrieves the JWT token from a `context` that went through our security middleware.
-func ContextJWT(ctx context.Context) *jwt.Token {
-	token, ok := ctx.Value(jwtKey).(*jwt.Token)
-	if !ok {
-		return nil
+	switch typed := k.(type) {
+	case []byte:
+		hmacKeys = append(hmacKeys, typed)
+	case [][]byte:
+		hmacKeys = typed
+	case string:
+		hmacKeys = append(hmacKeys, []byte(typed))
+	case []string:
+		for _, s := range typed {
+			hmacKeys = append(hmacKeys, []byte(s))
+		}
+	case *rsa.PublicKey:
+		rsaKeys = append(rsaKeys, typed)
+	case []*rsa.PublicKey:
+		rsaKeys = typed
+	case *ecdsa.PublicKey:
+		ecdsaKeys = append(ecdsaKeys, typed)
+	case []*ecdsa.PublicKey:
+		ecdsaKeys = typed
 	}
-	return token
+
+	return rsaKeys, ecdsaKeys, hmacKeys
 }
 
 func validateRSAKeys(rsaKeys []*rsa.PublicKey, algo, incomingToken string) (token *jwt.Token, err error) {
@@ -202,13 +215,28 @@ func validateRSAKeys(rsaKeys []*rsa.PublicKey, algo, incomingToken string) (toke
 	return
 }
 
-func validateHMACKeys(hmacKeys []string, algo, incomingToken string) (token *jwt.Token, err error) {
+func validateECDSAKeys(ecdsaKeys []*ecdsa.PublicKey, algo, incomingToken string) (token *jwt.Token, err error) {
+	for _, pubkey := range ecdsaKeys {
+		token, err = jwt.Parse(incomingToken, func(token *jwt.Token) (interface{}, error) {
+			if !strings.HasPrefix(token.Method.Alg(), algo) {
+				return nil, ErrJWTError(fmt.Sprintf("Unexpected signing method: %v", token.Header["alg"]))
+			}
+			return pubkey, nil
+		})
+		if err == nil {
+			return
+		}
+	}
+	return
+}
+
+func validateHMACKeys(hmacKeys [][]byte, algo, incomingToken string) (token *jwt.Token, err error) {
 	for _, key := range hmacKeys {
 		token, err = jwt.Parse(incomingToken, func(token *jwt.Token) (interface{}, error) {
 			if !strings.HasPrefix(token.Method.Alg(), algo) {
 				return nil, ErrJWTError(fmt.Sprintf("Unexpected signing method: %v", token.Header["alg"]))
 			}
-			return []byte(key), nil
+			return key, nil
 		})
 		if err == nil {
 			return
