@@ -136,6 +136,7 @@ var _ = Describe("Service", func() {
 					rw.Write([]byte(err.Error()))
 					return nil
 				}
+				goa.ContextRequest(c).Request = req
 				ctx = c
 				rw.WriteHeader(respStatus)
 				rw.Write(respContent)

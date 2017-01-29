@@ -366,7 +366,7 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 		ctx = context.Background()
 	}
 	goaCtx := goa.NewContext(goa.WithAction(ctx, "{{ $test.ResourceName }}Test"), rw, req, prms)
-	{{ $test.ContextVarName }}, err := {{ $test.ContextType }}(goaCtx, service)
+	{{ $test.ContextVarName }}, err := {{ $test.ContextType }}(goaCtx, req, service)
 	if err != nil {
 		panic("invalid test data " + err.Error()) // bug
 	}
