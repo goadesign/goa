@@ -130,13 +130,14 @@ func (g *Generator) generateContexts() error {
 	title := fmt.Sprintf("%s: Application Contexts", g.API.Context())
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("fmt"),
-		codegen.SimpleImport("golang.org/x/net/context"),
+		codegen.SimpleImport("net/http"),
 		codegen.SimpleImport("strconv"),
 		codegen.SimpleImport("strings"),
 		codegen.SimpleImport("time"),
 		codegen.SimpleImport("unicode/utf8"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
+		codegen.SimpleImport("golang.org/x/net/context"),
 	}
 	g.genfiles = append(g.genfiles, ctxFile)
 	ctxWr.WriteHeader(title, g.Target, imports)

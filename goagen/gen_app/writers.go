@@ -541,11 +541,12 @@ type {{ .Name }} struct {
 	ctxNewT = `{{ define "Coerce" }}` + coerceT + `{{ end }}` + `
 // New{{ goify .Name true }} parses the incoming request URL and body, performs validations and creates the
 // context used by the {{ .ResourceName }} controller {{ .ActionName }} action.
-func New{{ .Name }}(ctx context.Context, service *goa.Service) (*{{ .Name }}, error) {
+func New{{ .Name }}(ctx context.Context, r *http.Request, service *goa.Service) (*{{ .Name }}, error) {
 	var err error
 	resp := goa.ContextResponse(ctx)
 	resp.Service = service
 	req := goa.ContextRequest(ctx)
+	req.Request = r
 	rctx := {{ .Name }}{Context: ctx, ResponseData: resp, RequestData: req}{{/*
 */}}
 {{ if .Headers }}{{ range $name, $att := .Headers.Type.ToObject }}	header{{ goify $name true }} := req.Header["{{ canonicalHeaderKey $name }}"]
@@ -701,7 +702,7 @@ func Mount{{ .Resource }}Controller(service *goa.Service, ctrl {{ .Resource }}Co
 			return err
 		}
 		// Build the context
-		rctx, err := New{{ .Context }}(ctx, service)
+		rctx, err := New{{ .Context }}(ctx, req, service)
 		if err != nil {
 			return err
 		}

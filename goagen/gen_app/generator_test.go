@@ -300,6 +300,7 @@ package app
 import (
 	"github.com/goadesign/goa"
 	"golang.org/x/net/context"
+	"net/http"
 )
 
 // GetWidgetContext provides the Widget get action context.
@@ -312,11 +313,12 @@ type GetWidgetContext struct {
 
 // NewGetWidgetContext parses the incoming request URL and body, performs validations and creates the
 // context used by the Widget controller get action.
-func NewGetWidgetContext(ctx context.Context, service *goa.Service) (*GetWidgetContext, error) {
+func NewGetWidgetContext(ctx context.Context, r *http.Request, service *goa.Service) (*GetWidgetContext, error) {
 	var err error
 	resp := goa.ContextResponse(ctx)
 	resp.Service = service
 	req := goa.ContextRequest(ctx)
+	req.Request = r
 	rctx := GetWidgetContext{Context: ctx, ResponseData: resp, RequestData: req}
 	paramID := req.Params["id"]
 	if len(paramID) > 0 {
@@ -375,7 +377,7 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 			return err
 		}
 		// Build the context
-		rctx, err := NewGetWidgetContext(ctx, service)
+		rctx, err := NewGetWidgetContext(ctx, req, service)
 		if err != nil {
 			return err
 		}
@@ -435,7 +437,7 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 			return err
 		}
 		// Build the context
-		rctx, err := NewGetWidgetContext(ctx, service)
+		rctx, err := NewGetWidgetContext(ctx, req, service)
 		if err != nil {
 			return err
 		}
@@ -474,7 +476,7 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 			return err
 		}
 		// Build the context
-		rctx, err := NewGetWidgetContext(ctx, service)
+		rctx, err := NewGetWidgetContext(ctx, req, service)
 		if err != nil {
 			return err
 		}
