@@ -94,6 +94,10 @@ func (g *Generator) Generate() (_ []string, err error) {
 	imp = path.Join(filepath.ToSlash(imp), "app")
 	_, err = os.Stat(mainFile)
 	if err != nil {
+		// ensure that the output directory exists before creating a new main
+		if err := os.MkdirAll(g.OutDir, 0755); err != nil {
+			return nil, err
+		}
 		if err = g.createMainFile(mainFile, funcs); err != nil {
 			return nil, err
 		}
