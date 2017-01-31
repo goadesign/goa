@@ -185,9 +185,9 @@ func InvalidFieldTypeError(name string, val interface{}, expected string) error 
 
 // MissingFieldError is the error produced when a payload is missing a required
 // field.
-func MissingFieldError(name string) error {
-	msg := fmt.Sprintf("%#v is missing", name)
-	return ErrInvalid(msg, "field", name)
+func MissingFieldError(name, context string) error {
+	msg := fmt.Sprintf("%#v is missing from %s", name, context)
+	return ErrInvalid(msg, "field", name, "context", context)
 }
 
 // InvalidEnumValueError is the error produced when the value of a payload field
