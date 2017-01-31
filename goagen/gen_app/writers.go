@@ -212,6 +212,7 @@ func (w *ContextsWriter) Execute(data *ContextTemplateData) error {
 	fn := template.FuncMap{
 		"newCoerceData":      newCoerceData,
 		"arrayAttribute":     arrayAttribute,
+		"printVal":           codegen.PrintVal,
 		"canonicalHeaderKey": http.CanonicalHeaderKey,
 	}
 	if err := w.ExecuteTemplate("new", ctxNewT, fn, data); err != nil {
@@ -571,10 +572,14 @@ func New{{ .Name }}(ctx context.Context, r *http.Request, service *goa.Service) 
 
 */}}{{ if.Params }}{{ range $name, $att := .Params.Type.ToObject }}	param{{ goify $name true }} := req.Params["{{ $name }}"]
 {{ $mustValidate := $.MustValidate $name }}{{ if $mustValidate }}	if len(param{{ goify $name true }}) == 0 {
-		err = goa.MergeErrors(err, goa.MissingParamError("{{ $name }}"))
+		{{ if $.Params.HasDefaultValue $name }}{{printf "rctx.%s" (goifyatt $att $name true) }} = {{ printVal $att.Type $att.DefaultValue }}{{else}}{{/*
+*/}}err = goa.MergeErrors(err, goa.MissingParamError("{{ $name }}")){{end}}
+	} else {
+{{ else }}{{ if $.Params.HasDefaultValue $name }}	if len(param{{ goify $name true }}) == 0 {
+		{{printf "rctx.%s" (goifyatt $att $name true) }} = {{ printVal $att.Type $att.DefaultValue }}
 	} else {
 {{ else }}	if len(param{{ goify $name true }}) > 0 {
-{{ end }}{{/* if $mustValidate */}}{{ if $att.Type.IsArray }}{{ if eq (arrayAttribute $att).Type.Kind 4 }}		params := param{{ goify $name true }}
+{{ end }}{{ end }}{{/* if $mustValidate */}}{{ if $att.Type.IsArray }}{{ if eq (arrayAttribute $att).Type.Kind 4 }}		params := param{{ goify $name true }}
 {{ else }}		params := make({{ gotypedef $att 2 true false }}, len(param{{ goify $name true }}))
 		for i, raw{{ goify $name true}} := range param{{ goify $name true}} {
 {{ template "Coerce" (newCoerceData $name (arrayAttribute $att) ($.Params.IsPrimitivePointer $name) "params[i]" 3) }}{{/*

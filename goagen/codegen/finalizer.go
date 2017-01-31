@@ -77,7 +77,7 @@ func (f *Finalizer) recurse(att *design.AttributeDefinition, target string, dept
 					"catt":       catt,
 					"depth":      depth,
 					"isDatetime": catt.Type == design.DateTime,
-					"defaultVal": printVal(catt.Type, catt.DefaultValue),
+					"defaultVal": PrintVal(catt.Type, catt.DefaultValue),
 				}
 				if !first {
 					buf.WriteByte('\n')
@@ -114,9 +114,9 @@ func (f *Finalizer) recurse(att *design.AttributeDefinition, target string, dept
 	return buf
 }
 
-// printVal prints the given value corresponding to the given data type.
+// PrintVal prints the given value corresponding to the given data type.
 // The value is already checked for the compatibility with the data type.
-func printVal(t design.DataType, val interface{}) string {
+func PrintVal(t design.DataType, val interface{}) string {
 	switch {
 	case t.IsPrimitive():
 		// For primitive types, simply print the value
@@ -135,7 +135,7 @@ func printVal(t design.DataType, val interface{}) string {
 		var buffer bytes.Buffer
 		buffer.WriteString(fmt.Sprintf("%s{", GoTypeName(t, nil, 0, false)))
 		for k, v := range hval {
-			buffer.WriteString(fmt.Sprintf("%s: %s, ", printVal(h.KeyType.Type, k), printVal(h.ElemType.Type, v)))
+			buffer.WriteString(fmt.Sprintf("%s: %s, ", PrintVal(h.KeyType.Type, k), PrintVal(h.ElemType.Type, v)))
 		}
 		buffer.Truncate(buffer.Len() - 2) // remove ", "
 		buffer.WriteString("}")
@@ -150,7 +150,7 @@ func printVal(t design.DataType, val interface{}) string {
 		var buffer bytes.Buffer
 		buffer.WriteString(fmt.Sprintf("%s{", GoTypeName(t, nil, 0, false)))
 		for _, e := range aval {
-			buffer.WriteString(fmt.Sprintf("%s, ", printVal(a.ElemType.Type, e)))
+			buffer.WriteString(fmt.Sprintf("%s, ", PrintVal(a.ElemType.Type, e)))
 		}
 		buffer.Truncate(buffer.Len() - 2) // remove ", "
 		buffer.WriteString("}")
