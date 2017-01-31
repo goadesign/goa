@@ -9,6 +9,7 @@ handled by the error middleware) also generate an internal error response.
 package rest
 
 import (
+	"fmt"
 	"net/http"
 
 	"goa.design/goa.v2"
@@ -76,7 +77,7 @@ type (
 // NewErrorResponse creates a HTTP response from the given goa Error.
 func NewErrorResponse(err goa.Error) *ErrorResponse {
 	return &ErrorResponse{
-		ID:     err.Token(),
+		Token:  err.Token(),
 		Code:   err.Code(),
 		Status: HTTPStatus(err.Status()),
 		Detail: err.Detail(),
@@ -98,4 +99,14 @@ func HTTPStatus(status goa.ErrorStatus) int {
 	default:
 		return int(status)
 	}
+}
+
+func (r *ErrorResponse) Error() string {
+	msg := fmt.Sprintf("[%s] %d %s: %s", r.Token, r.Status, r.Code, r.Detail)
+	for _, val := range r.Data {
+		for k, v := range val {
+			msg += ", " + fmt.Sprintf("%s: %v", k, v)
+		}
+	}
+	return msg
 }

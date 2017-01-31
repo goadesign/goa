@@ -9,8 +9,8 @@ import (
 type AccountService struct {
 }
 
-func NewAccountService() app.AccountService {
-
+func NewAccountService() *AccountService {
+	return &AccountService{}
 }
 
 // Create implements the "create" endpoint.
@@ -27,4 +27,9 @@ func (s *AccountService) List(ctx context.Context) ([]*app.Account, error) {
 // Show implements the "show" endpoint.
 func (s *AccountService) Show(ctx context.Context, p *app.ShowAccountPayload) (*app.Account, error) {
 	return &app.Account{}, nil
+}
+
+// Delete implements the "delete" endpoint.
+func (s *AccountService) Delete(ctx context.Context, p *app.DeleteAccountPayload) error {
+	return nil
 }

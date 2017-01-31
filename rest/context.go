@@ -2,7 +2,6 @@ package rest
 
 import (
 	"net/http"
-	"net/url"
 
 	"golang.org/x/net/context"
 )
@@ -11,32 +10,29 @@ import (
 const (
 	reqKey key = iota + 1
 	respKey
-	ctrlKey
-	actionKey
-	paramsKey
-	logKey
-	logContextKey
-	errKey
-	securityScopesKey
+	endpointKey
+	serviceKey
 )
 
 type (
 	// RequestData provides access to the underlying HTTP request.
 	RequestData struct {
+		// Request is the raw underlying http request. This field is
+		// initialized by the final handler and is thus not available to
+		// middlewares until the next handler has executed. Middlewares
+		// must use the request passed to them as argument if needed.
 		*http.Request
-
 		// Payload returns the decoded request body.
 		Payload interface{}
-		// Params contains the raw values for the parameters defined in the design including
-		// path parameters, query string parameters and header parameters.
-		Params url.Values
+		// Params contains the captured path parameters indexed by name.
+		Params map[string]string
 	}
 
 	// ResponseData provides access to the underlying HTTP response.
 	ResponseData struct {
 		http.ResponseWriter
 
-		// ErrorCode is the code of the error returned by the action if any.
+		// ErrorCode is the code of the error
 		ErrorCode string
 		// Status is the response HTTP status code.
 		Status int
@@ -51,34 +47,34 @@ type (
 
 // NewContext builds a new goa request context.
 // If ctx is nil then context.Background() is used.
-func NewContext(ctx context.Context, rw http.ResponseWriter, req *http.Request, params url.Values) context.Context {
+func NewContext(
+	ctx context.Context,
+	resp *ResponseData,
+	req *RequestData,
+	service, endpoint string,
+) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	request := &RequestData{Request: req, Params: params}
-	response := &ResponseData{ResponseWriter: rw}
-	ctx = context.WithValue(ctx, respKey, response)
-	ctx = context.WithValue(ctx, reqKey, request)
+	ctx = context.WithValue(ctx, respKey, resp)
+	ctx = context.WithValue(ctx, reqKey, req)
+	ctx = context.WithValue(ctx, serviceKey, service)
+	ctx = context.WithValue(ctx, endpointKey, endpoint)
 
 	return ctx
 }
 
-// WithAction creates a context with the given action name.
-func WithAction(ctx context.Context, action string) context.Context {
-	return context.WithValue(ctx, actionKey, action)
-}
-
-// ContextController extracts the controller name from the given context.
-func ContextController(ctx context.Context) string {
-	if c := ctx.Value(ctrlKey); c != nil {
+// ContextService extracts the controller name from the given context.
+func ContextService(ctx context.Context) string {
+	if c := ctx.Value(serviceKey); c != nil {
 		return c.(string)
 	}
 	return "<unknown>"
 }
 
-// ContextAction extracts the action name from the given context.
-func ContextAction(ctx context.Context) string {
-	if a := ctx.Value(actionKey); a != nil {
+// ContextEndpoint extracts the action name from the given context.
+func ContextEndpoint(ctx context.Context) string {
+	if a := ctx.Value(endpointKey); a != nil {
 		return a.(string)
 	}
 	return "<unknown>"
@@ -96,14 +92,6 @@ func ContextRequest(ctx context.Context) *RequestData {
 func ContextResponse(ctx context.Context) *ResponseData {
 	if r := ctx.Value(respKey); r != nil {
 		return r.(*ResponseData)
-	}
-	return nil
-}
-
-// ContextError extracts the error from the given context.
-func ContextError(ctx context.Context) error {
-	if err := ctx.Value(errKey); err != nil {
-		return err.(error)
 	}
 	return nil
 }
