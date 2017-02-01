@@ -28,7 +28,7 @@ func TestRecordError(t *testing.T) {
 	}
 	for k, c := range cases {
 		s := Segment{Mutex: &sync.Mutex{}}
-		s.recordError(c.Error, false)
+		s.RecordError(c.Error)
 		w := s.Cause.Exceptions[0]
 		if w.Message != c.Message {
 			t.Errorf("%s: invalid message, expected %s got %s", k, c.Message, w.Message)

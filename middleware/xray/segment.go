@@ -45,9 +45,9 @@ type (
 		// automatically set by Close when the response status code is
 		// 500 or more.
 		Error bool `json:"error"`
-		// Fault is true when a request results in an error. It is
-		// automatically set by Close when the response status code is
-		// between 400 and 500 (but not 429).
+		// Fault is true when a request results in an error that is due
+		// to the user. Typically it should be set when the response
+		// status code is between 400 and 500 (but not 429).
 		Fault bool `json:"fault"`
 		// Throttle is true when a request is throttled. It is set to
 		// true when the segment closes and the response status code is
@@ -143,13 +143,13 @@ type (
 	}
 )
 
-// recordError traces an error. fault denotes whether the error is unexpected
-// (a bug) or whether it is due to invalid data (e.g. bad request).
+// RecordError traces an error. The client may also want to initialize the
+// fault field of s.
 //
 // The trace contains a stack trace and a cause for the error if the argument
 // was created using one of the New, Errorf, Wrap or Wrapf functions of the
 // github.com/pkg/errors package. Otherwise the Stack and Cause fields are empty.
-func (s *Segment) recordError(e error, fault bool) {
+func (s *Segment) RecordError(e error) {
 	var xerr *Exception
 	if c, ok := e.(causer); ok {
 		xerr = &Exception{Message: c.Cause().Error()}

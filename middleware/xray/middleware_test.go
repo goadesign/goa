@@ -140,7 +140,7 @@ func TestMiddleware(t *testing.T) {
 			ctx    = goa.NewContext(context.Background(), rw, req, nil)
 			h      = func(ctx context.Context, rw http.ResponseWriter, _ *http.Request) error {
 				if c.Segment.Exception != "" {
-					ContextSegment(ctx).recordError(errors.New(c.Segment.Exception), false)
+					ContextSegment(ctx).RecordError(errors.New(c.Segment.Exception))
 				}
 				rw.WriteHeader(c.Response.Status)
 				return nil
