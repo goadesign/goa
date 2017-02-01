@@ -152,9 +152,11 @@ func record(ctx context.Context, s *Segment, err error) {
 	if err != nil {
 		fault := false
 		if gerr, ok := err.(goa.ServiceError); ok {
-			fault = gerr.ResponseStatus() < 500
+			fault = gerr.ResponseStatus() < http.StatusInternalServerError &&
+				gerr.ResponseStatus() != http.StatusTooManyRequests
 		}
-		s.recordError(err, fault)
+		s.Fault = fault
+		s.RecordError(err)
 	}
 	s.Close()
 }
