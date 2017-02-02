@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/goadesign/goa"
@@ -116,16 +115,8 @@ func newSegment(ctx context.Context, traceID, name string, req *http.Request, c 
 		h        = &HTTP{Request: requestData(req)}
 	)
 
-	s := &Segment{
-		Mutex:      &sync.Mutex{},
-		ID:         spanID,
-		HTTP:       h,
-		Name:       name,
-		TraceID:    traceID,
-		StartTime:  now(),
-		InProgress: true,
-		conn:       c,
-	}
+	s := NewSegment(name, traceID, spanID, c)
+	s.HTTP = h
 
 	if parentID != "" {
 		s.ParentID = parentID

@@ -143,6 +143,20 @@ type (
 	}
 )
 
+// NewSegment creates a new segment that gets written to the given connection
+// on close.
+func NewSegment(name, traceID, spanID string, conn net.Conn) *Segment {
+	return &Segment{
+		Mutex:      &sync.Mutex{},
+		Name:       name,
+		TraceID:    traceID,
+		ID:         spanID,
+		StartTime:  now(),
+		InProgress: true,
+		conn:       conn,
+	}
+}
+
 // RecordError traces an error. The client may also want to initialize the
 // fault field of s.
 //
