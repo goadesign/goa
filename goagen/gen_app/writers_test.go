@@ -176,13 +176,21 @@ var _ = Describe("ContextsWriter", func() {
 			})
 
 			Context("with an integer param", func() {
+				var (
+					intParam   *design.AttributeDefinition
+					dataType   design.Object
+					validation *dslengine.ValidationDefinition
+				)
+
 				BeforeEach(func() {
-					intParam := &design.AttributeDefinition{Type: design.Integer}
-					dataType := design.Object{
+					intParam = &design.AttributeDefinition{Type: design.Integer}
+					dataType = design.Object{
 						"param": intParam,
 					}
+					validation = &dslengine.ValidationDefinition{}
 					params = &design.AttributeDefinition{
-						Type: dataType,
+						Type:       dataType,
+						Validation: validation,
 					}
 				})
 
@@ -196,20 +204,79 @@ var _ = Describe("ContextsWriter", func() {
 					Ω(written).Should(ContainSubstring(intContext))
 					Ω(written).Should(ContainSubstring(intContextFactory))
 				})
+
+				Context("with a default value", func() {
+					BeforeEach(func() {
+						intParam.SetDefault(2)
+					})
+
+					It("writes the integer contexts code", func() {
+						err := writer.Execute(data)
+						Ω(err).ShouldNot(HaveOccurred())
+						b, err := ioutil.ReadFile(filename)
+						Ω(err).ShouldNot(HaveOccurred())
+						written := string(b)
+						Ω(written).ShouldNot(BeEmpty())
+						Ω(written).Should(ContainSubstring(intDefaultContext))
+						Ω(written).Should(ContainSubstring(intDefaultContextFactory))
+					})
+				})
+
+				Context("with required attribute", func() {
+					BeforeEach(func() {
+						validation.Required = []string{"param"}
+					})
+
+					It("writes the integer contexts code", func() {
+						err := writer.Execute(data)
+						Ω(err).ShouldNot(HaveOccurred())
+						b, err := ioutil.ReadFile(filename)
+						Ω(err).ShouldNot(HaveOccurred())
+						written := string(b)
+						Ω(written).ShouldNot(BeEmpty())
+						Ω(written).Should(ContainSubstring(intRequiredContext))
+						Ω(written).Should(ContainSubstring(intRequiredContextFactory))
+					})
+
+					Context("with a default value", func() {
+						BeforeEach(func() {
+							intParam.SetDefault(2)
+						})
+
+						It("writes the integer contexts code", func() {
+							err := writer.Execute(data)
+							Ω(err).ShouldNot(HaveOccurred())
+							b, err := ioutil.ReadFile(filename)
+							Ω(err).ShouldNot(HaveOccurred())
+							written := string(b)
+							Ω(written).ShouldNot(BeEmpty())
+							Ω(written).Should(ContainSubstring(intRequiredDefaultContext))
+							Ω(written).Should(ContainSubstring(intRequiredDefaultContextFactory))
+						})
+					})
+				})
 			})
 
-			Context("with a string param", func() {
+			Context("with an string param", func() {
+				var (
+					strParam   *design.AttributeDefinition
+					dataType   design.Object
+					validation *dslengine.ValidationDefinition
+				)
+
 				BeforeEach(func() {
-					strParam := &design.AttributeDefinition{Type: design.String}
-					dataType := design.Object{
+					strParam = &design.AttributeDefinition{Type: design.String}
+					dataType = design.Object{
 						"param": strParam,
 					}
+					validation = &dslengine.ValidationDefinition{}
 					params = &design.AttributeDefinition{
-						Type: dataType,
+						Type:       dataType,
+						Validation: validation,
 					}
 				})
 
-				It("writes the contexts code", func() {
+				It("writes the string contexts code", func() {
 					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
@@ -219,20 +286,79 @@ var _ = Describe("ContextsWriter", func() {
 					Ω(written).Should(ContainSubstring(strContext))
 					Ω(written).Should(ContainSubstring(strContextFactory))
 				})
+
+				Context("with a default value", func() {
+					BeforeEach(func() {
+						strParam.SetDefault("foo")
+					})
+
+					It("writes the string contexts code", func() {
+						err := writer.Execute(data)
+						Ω(err).ShouldNot(HaveOccurred())
+						b, err := ioutil.ReadFile(filename)
+						Ω(err).ShouldNot(HaveOccurred())
+						written := string(b)
+						Ω(written).ShouldNot(BeEmpty())
+						Ω(written).Should(ContainSubstring(strNonOptionalContext))
+						Ω(written).Should(ContainSubstring(strDefaultContextFactory))
+					})
+				})
+
+				Context("with required attribute", func() {
+					BeforeEach(func() {
+						validation.Required = []string{"param"}
+					})
+
+					It("writes the String contexts code", func() {
+						err := writer.Execute(data)
+						Ω(err).ShouldNot(HaveOccurred())
+						b, err := ioutil.ReadFile(filename)
+						Ω(err).ShouldNot(HaveOccurred())
+						written := string(b)
+						Ω(written).ShouldNot(BeEmpty())
+						Ω(written).Should(ContainSubstring(strNonOptionalContext))
+						Ω(written).Should(ContainSubstring(strRequiredContextFactory))
+					})
+
+					Context("with a default value", func() {
+						BeforeEach(func() {
+							strParam.SetDefault("foo")
+						})
+
+						It("writes the integer contexts code", func() {
+							err := writer.Execute(data)
+							Ω(err).ShouldNot(HaveOccurred())
+							b, err := ioutil.ReadFile(filename)
+							Ω(err).ShouldNot(HaveOccurred())
+							written := string(b)
+							Ω(written).ShouldNot(BeEmpty())
+							Ω(written).Should(ContainSubstring(strNonOptionalContext))
+							Ω(written).Should(ContainSubstring(strDefaultContextFactory))
+						})
+					})
+				})
 			})
 
 			Context("with a number param", func() {
+				var (
+					numParam   *design.AttributeDefinition
+					dataType   design.Object
+					validation *dslengine.ValidationDefinition
+				)
+
 				BeforeEach(func() {
-					numParam := &design.AttributeDefinition{Type: design.Number}
-					dataType := design.Object{
+					numParam = &design.AttributeDefinition{Type: design.Number}
+					dataType = design.Object{
 						"param": numParam,
 					}
+					validation = &dslengine.ValidationDefinition{}
 					params = &design.AttributeDefinition{
-						Type: dataType,
+						Type:       dataType,
+						Validation: validation,
 					}
 				})
 
-				It("writes the contexts code", func() {
+				It("writes the number contexts code", func() {
 					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
@@ -242,20 +368,79 @@ var _ = Describe("ContextsWriter", func() {
 					Ω(written).Should(ContainSubstring(numContext))
 					Ω(written).Should(ContainSubstring(numContextFactory))
 				})
+
+				Context("with a default value", func() {
+					BeforeEach(func() {
+						numParam.SetDefault(2.3)
+					})
+
+					It("writes the number contexts code", func() {
+						err := writer.Execute(data)
+						Ω(err).ShouldNot(HaveOccurred())
+						b, err := ioutil.ReadFile(filename)
+						Ω(err).ShouldNot(HaveOccurred())
+						written := string(b)
+						Ω(written).ShouldNot(BeEmpty())
+						Ω(written).Should(ContainSubstring(numNonOptionalContext))
+						Ω(written).Should(ContainSubstring(numDefaultContextFactory))
+					})
+				})
+
+				Context("with required attribute", func() {
+					BeforeEach(func() {
+						validation.Required = []string{"param"}
+					})
+
+					It("writes the number contexts code", func() {
+						err := writer.Execute(data)
+						Ω(err).ShouldNot(HaveOccurred())
+						b, err := ioutil.ReadFile(filename)
+						Ω(err).ShouldNot(HaveOccurred())
+						written := string(b)
+						Ω(written).ShouldNot(BeEmpty())
+						Ω(written).Should(ContainSubstring(numNonOptionalContext))
+						Ω(written).Should(ContainSubstring(numRequiredContextFactory))
+					})
+
+					Context("with a default value", func() {
+						BeforeEach(func() {
+							numParam.SetDefault(2.3)
+						})
+
+						It("writes the number contexts code", func() {
+							err := writer.Execute(data)
+							Ω(err).ShouldNot(HaveOccurred())
+							b, err := ioutil.ReadFile(filename)
+							Ω(err).ShouldNot(HaveOccurred())
+							written := string(b)
+							Ω(written).ShouldNot(BeEmpty())
+							Ω(written).Should(ContainSubstring(numNonOptionalContext))
+							Ω(written).Should(ContainSubstring(numDefaultContextFactory))
+						})
+					})
+				})
 			})
 
 			Context("with a boolean param", func() {
+				var (
+					boolParam  *design.AttributeDefinition
+					dataType   design.Object
+					validation *dslengine.ValidationDefinition
+				)
+
 				BeforeEach(func() {
-					boolParam := &design.AttributeDefinition{Type: design.Boolean}
-					dataType := design.Object{
+					boolParam = &design.AttributeDefinition{Type: design.Boolean}
+					dataType = design.Object{
 						"param": boolParam,
 					}
+					validation = &dslengine.ValidationDefinition{}
 					params = &design.AttributeDefinition{
-						Type: dataType,
+						Type:       dataType,
+						Validation: validation,
 					}
 				})
 
-				It("writes the contexts code", func() {
+				It("writes the boolean contexts code", func() {
 					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
@@ -265,23 +450,79 @@ var _ = Describe("ContextsWriter", func() {
 					Ω(written).Should(ContainSubstring(boolContext))
 					Ω(written).Should(ContainSubstring(boolContextFactory))
 				})
+
+				Context("with a default value", func() {
+					BeforeEach(func() {
+						boolParam.SetDefault(true)
+					})
+
+					It("writes the boolean contexts code", func() {
+						err := writer.Execute(data)
+						Ω(err).ShouldNot(HaveOccurred())
+						b, err := ioutil.ReadFile(filename)
+						Ω(err).ShouldNot(HaveOccurred())
+						written := string(b)
+						Ω(written).ShouldNot(BeEmpty())
+						Ω(written).Should(ContainSubstring(boolNonOptionalContext))
+						Ω(written).Should(ContainSubstring(boolDefaultContextFactory))
+					})
+				})
+
+				Context("with required attribute", func() {
+					BeforeEach(func() {
+						validation.Required = []string{"param"}
+					})
+
+					It("writes the boolean contexts code", func() {
+						err := writer.Execute(data)
+						Ω(err).ShouldNot(HaveOccurred())
+						b, err := ioutil.ReadFile(filename)
+						Ω(err).ShouldNot(HaveOccurred())
+						written := string(b)
+						Ω(written).ShouldNot(BeEmpty())
+						Ω(written).Should(ContainSubstring(boolNonOptionalContext))
+						Ω(written).Should(ContainSubstring(boolRequiredContextFactory))
+					})
+
+					Context("with a default value", func() {
+						BeforeEach(func() {
+							boolParam.SetDefault(true)
+						})
+
+						It("writes the boolean contexts code", func() {
+							err := writer.Execute(data)
+							Ω(err).ShouldNot(HaveOccurred())
+							b, err := ioutil.ReadFile(filename)
+							Ω(err).ShouldNot(HaveOccurred())
+							written := string(b)
+							Ω(written).ShouldNot(BeEmpty())
+							Ω(written).Should(ContainSubstring(boolNonOptionalContext))
+							Ω(written).Should(ContainSubstring(boolDefaultContextFactory))
+						})
+					})
+				})
 			})
 
-			Context("with an array param", func() {
+			Context("with a array param", func() {
+				var (
+					arrayParam *design.AttributeDefinition
+					dataType   design.Object
+					validation *dslengine.ValidationDefinition
+				)
+
 				BeforeEach(func() {
-					str := &design.AttributeDefinition{Type: design.String}
-					arrayParam := &design.AttributeDefinition{
-						Type: &design.Array{ElemType: str},
-					}
-					dataType := design.Object{
+					arrayParam = &design.AttributeDefinition{Type: &design.Array{ElemType: &design.AttributeDefinition{Type: design.String}}}
+					dataType = design.Object{
 						"param": arrayParam,
 					}
+					validation = &dslengine.ValidationDefinition{}
 					params = &design.AttributeDefinition{
-						Type: dataType,
+						Type:       dataType,
+						Validation: validation,
 					}
 				})
 
-				It("writes the contexts code", func() {
+				It("writes the array contexts code", func() {
 					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
@@ -291,23 +532,79 @@ var _ = Describe("ContextsWriter", func() {
 					Ω(written).Should(ContainSubstring(arrayContext))
 					Ω(written).Should(ContainSubstring(arrayContextFactory))
 				})
+
+				Context("with a default value", func() {
+					BeforeEach(func() {
+						arrayParam.SetDefault([]interface{}{"foo", "bar", "baz"})
+					})
+
+					It("writes the array contexts code", func() {
+						err := writer.Execute(data)
+						Ω(err).ShouldNot(HaveOccurred())
+						b, err := ioutil.ReadFile(filename)
+						Ω(err).ShouldNot(HaveOccurred())
+						written := string(b)
+						Ω(written).ShouldNot(BeEmpty())
+						Ω(written).Should(ContainSubstring(arrayContext))
+						Ω(written).Should(ContainSubstring(arrayDefaultContextFactory))
+					})
+				})
+
+				Context("with required attribute", func() {
+					BeforeEach(func() {
+						validation.Required = []string{"param"}
+					})
+
+					It("writes the array contexts code", func() {
+						err := writer.Execute(data)
+						Ω(err).ShouldNot(HaveOccurred())
+						b, err := ioutil.ReadFile(filename)
+						Ω(err).ShouldNot(HaveOccurred())
+						written := string(b)
+						Ω(written).ShouldNot(BeEmpty())
+						Ω(written).Should(ContainSubstring(arrayContext))
+						Ω(written).Should(ContainSubstring(arrayRequiredContextFactory))
+					})
+
+					Context("with a default value", func() {
+						BeforeEach(func() {
+							arrayParam.SetDefault([]interface{}{"foo", "bar", "baz"})
+						})
+
+						It("writes the array contexts code", func() {
+							err := writer.Execute(data)
+							Ω(err).ShouldNot(HaveOccurred())
+							b, err := ioutil.ReadFile(filename)
+							Ω(err).ShouldNot(HaveOccurred())
+							written := string(b)
+							Ω(written).ShouldNot(BeEmpty())
+							Ω(written).Should(ContainSubstring(arrayContext))
+							Ω(written).Should(ContainSubstring(arrayDefaultContextFactory))
+						})
+					})
+				})
 			})
 
-			Context("with an integer array param", func() {
+			Context("with an int array param", func() {
+				var (
+					arrayParam *design.AttributeDefinition
+					dataType   design.Object
+					validation *dslengine.ValidationDefinition
+				)
+
 				BeforeEach(func() {
-					i := &design.AttributeDefinition{Type: design.Integer}
-					intArrayParam := &design.AttributeDefinition{
-						Type: &design.Array{ElemType: i},
+					arrayParam = &design.AttributeDefinition{Type: &design.Array{ElemType: &design.AttributeDefinition{Type: design.Integer}}}
+					dataType = design.Object{
+						"param": arrayParam,
 					}
-					dataType := design.Object{
-						"param": intArrayParam,
-					}
+					validation = &dslengine.ValidationDefinition{}
 					params = &design.AttributeDefinition{
-						Type: dataType,
+						Type:       dataType,
+						Validation: validation,
 					}
 				})
 
-				It("writes the contexts code", func() {
+				It("writes the array contexts code", func() {
 					err := writer.Execute(data)
 					Ω(err).ShouldNot(HaveOccurred())
 					b, err := ioutil.ReadFile(filename)
@@ -316,6 +613,57 @@ var _ = Describe("ContextsWriter", func() {
 					Ω(written).ShouldNot(BeEmpty())
 					Ω(written).Should(ContainSubstring(intArrayContext))
 					Ω(written).Should(ContainSubstring(intArrayContextFactory))
+				})
+
+				Context("with a default value", func() {
+					BeforeEach(func() {
+						arrayParam.SetDefault([]interface{}{1, 1, 2, 3, 5, 8})
+					})
+
+					It("writes the array contexts code", func() {
+						err := writer.Execute(data)
+						Ω(err).ShouldNot(HaveOccurred())
+						b, err := ioutil.ReadFile(filename)
+						Ω(err).ShouldNot(HaveOccurred())
+						written := string(b)
+						Ω(written).ShouldNot(BeEmpty())
+						Ω(written).Should(ContainSubstring(intArrayContext))
+						Ω(written).Should(ContainSubstring(intArrayDefaultContextFactory))
+					})
+				})
+
+				Context("with required attribute", func() {
+					BeforeEach(func() {
+						validation.Required = []string{"param"}
+					})
+
+					It("writes the array contexts code", func() {
+						err := writer.Execute(data)
+						Ω(err).ShouldNot(HaveOccurred())
+						b, err := ioutil.ReadFile(filename)
+						Ω(err).ShouldNot(HaveOccurred())
+						written := string(b)
+						Ω(written).ShouldNot(BeEmpty())
+						Ω(written).Should(ContainSubstring(intArrayContext))
+						Ω(written).Should(ContainSubstring(intArrayRequiredContextFactory))
+					})
+
+					Context("with a default value", func() {
+						BeforeEach(func() {
+							arrayParam.SetDefault([]interface{}{1, 1, 2, 3, 5, 8})
+						})
+
+						It("writes the array contexts code", func() {
+							err := writer.Execute(data)
+							Ω(err).ShouldNot(HaveOccurred())
+							b, err := ioutil.ReadFile(filename)
+							Ω(err).ShouldNot(HaveOccurred())
+							written := string(b)
+							Ω(written).ShouldNot(BeEmpty())
+							Ω(written).Should(ContainSubstring(intArrayContext))
+							Ω(written).Should(ContainSubstring(intArrayDefaultContextFactory))
+						})
+					})
 				})
 			})
 
@@ -1089,6 +1437,101 @@ func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Ser
 }
 `
 
+	intDefaultContext = `
+type ListBottleContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	Param int
+}
+`
+
+	intDefaultContextFactory = `
+func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Service) (*ListBottleContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	req.Request = r
+	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramParam := req.Params["param"]
+	if len(paramParam) == 0 {
+		rctx.Param = 2
+	} else {
+		rawParam := paramParam[0]
+		if param, err2 := strconv.Atoi(rawParam); err2 == nil {
+			rctx.Param = param
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("param", rawParam, "integer"))
+		}
+	}
+	return &rctx, err
+}
+`
+
+	intRequiredDefaultContext = `
+type ListBottleContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	Param int
+}
+`
+
+	intRequiredDefaultContextFactory = `
+func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Service) (*ListBottleContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	req.Request = r
+	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramParam := req.Params["param"]
+	if len(paramParam) == 0 {
+		rctx.Param = 2
+	} else {
+		rawParam := paramParam[0]
+		if param, err2 := strconv.Atoi(rawParam); err2 == nil {
+			rctx.Param = param
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("param", rawParam, "integer"))
+		}
+	}
+	return &rctx, err
+}
+`
+
+	intRequiredContext = `
+type ListBottleContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	Param int
+}
+`
+	intRequiredContextFactory = `
+func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Service) (*ListBottleContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	req.Request = r
+	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramParam := req.Params["param"]
+	if len(paramParam) == 0 {
+		err = goa.MergeErrors(err, goa.MissingParamError("param"))
+	} else {
+		rawParam := paramParam[0]
+		if param, err2 := strconv.Atoi(rawParam); err2 == nil {
+			rctx.Param = param
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("param", rawParam, "integer"))
+		}
+	}
+	return &rctx, err
+}
+`
+
 	strContext = `
 type ListBottleContext struct {
 	context.Context
@@ -1110,6 +1553,53 @@ func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Ser
 	if len(paramParam) > 0 {
 		rawParam := paramParam[0]
 		rctx.Param = &rawParam
+	}
+	return &rctx, err
+}
+`
+
+	strNonOptionalContext = `
+type ListBottleContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	Param string
+}
+`
+
+	strDefaultContextFactory = `
+func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Service) (*ListBottleContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	req.Request = r
+	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramParam := req.Params["param"]
+	if len(paramParam) == 0 {
+		rctx.Param = "foo"
+	} else {
+		rawParam := paramParam[0]
+		rctx.Param = rawParam
+	}
+	return &rctx, err
+}
+`
+
+	strRequiredContextFactory = `
+func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Service) (*ListBottleContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	req.Request = r
+	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramParam := req.Params["param"]
+	if len(paramParam) == 0 {
+		err = goa.MergeErrors(err, goa.MissingParamError("param"))
+	} else {
+		rawParam := paramParam[0]
+		rctx.Param = rawParam
 	}
 	return &rctx, err
 }
@@ -1195,6 +1685,62 @@ func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Ser
 	return &rctx, err
 }
 `
+
+	numNonOptionalContext = `
+type ListBottleContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	Param float64
+}
+`
+
+	numDefaultContextFactory = `
+func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Service) (*ListBottleContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	req.Request = r
+	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramParam := req.Params["param"]
+	if len(paramParam) == 0 {
+		rctx.Param = 2.3
+	} else {
+		rawParam := paramParam[0]
+		if param, err2 := strconv.ParseFloat(rawParam, 64); err2 == nil {
+			rctx.Param = param
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("param", rawParam, "number"))
+		}
+	}
+	return &rctx, err
+}
+`
+
+	numRequiredContextFactory = `
+func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Service) (*ListBottleContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	req.Request = r
+	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramParam := req.Params["param"]
+	if len(paramParam) == 0 {
+		err = goa.MergeErrors(err, goa.MissingParamError("param"))
+	} else {
+		rawParam := paramParam[0]
+		if param, err2 := strconv.ParseFloat(rawParam, 64); err2 == nil {
+			rctx.Param = param
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("param", rawParam, "number"))
+		}
+	}
+	return &rctx, err
+}
+`
+
 	boolContext = `
 type ListBottleContext struct {
 	context.Context
@@ -1218,6 +1764,61 @@ func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Ser
 		if param, err2 := strconv.ParseBool(rawParam); err2 == nil {
 			tmp1 := &param
 			rctx.Param = tmp1
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("param", rawParam, "boolean"))
+		}
+	}
+	return &rctx, err
+}
+`
+
+	boolNonOptionalContext = `
+type ListBottleContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	Param bool
+}
+`
+
+	boolDefaultContextFactory = `
+func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Service) (*ListBottleContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	req.Request = r
+	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramParam := req.Params["param"]
+	if len(paramParam) == 0 {
+		rctx.Param = true
+	} else {
+		rawParam := paramParam[0]
+		if param, err2 := strconv.ParseBool(rawParam); err2 == nil {
+			rctx.Param = param
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("param", rawParam, "boolean"))
+		}
+	}
+	return &rctx, err
+}
+`
+
+	boolRequiredContextFactory = `
+func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Service) (*ListBottleContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	req.Request = r
+	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramParam := req.Params["param"]
+	if len(paramParam) == 0 {
+		err = goa.MergeErrors(err, goa.MissingParamError("param"))
+	} else {
+		rawParam := paramParam[0]
+		if param, err2 := strconv.ParseBool(rawParam); err2 == nil {
+			rctx.Param = param
 		} else {
 			err = goa.MergeErrors(err, goa.InvalidParamTypeError("param", rawParam, "boolean"))
 		}
@@ -1252,6 +1853,44 @@ func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Ser
 }
 `
 
+	arrayDefaultContextFactory = `
+func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Service) (*ListBottleContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	req.Request = r
+	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramParam := req.Params["param"]
+	if len(paramParam) == 0 {
+		rctx.Param = []string{"foo", "bar", "baz"}
+	} else {
+		params := paramParam
+		rctx.Param = params
+	}
+	return &rctx, err
+}
+`
+
+	arrayRequiredContextFactory = `
+func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Service) (*ListBottleContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	req.Request = r
+	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramParam := req.Params["param"]
+	if len(paramParam) == 0 {
+		err = goa.MergeErrors(err, goa.MissingParamError("param"))
+	} else {
+		params := paramParam
+		rctx.Param = params
+	}
+	return &rctx, err
+}
+`
+
 	intArrayContext = `
 type ListBottleContext struct {
 	context.Context
@@ -1271,6 +1910,58 @@ func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Ser
 	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
 	paramParam := req.Params["param"]
 	if len(paramParam) > 0 {
+		params := make([]int, len(paramParam))
+		for i, rawParam := range paramParam {
+			if param, err2 := strconv.Atoi(rawParam); err2 == nil {
+				params[i] = param
+			} else {
+				err = goa.MergeErrors(err, goa.InvalidParamTypeError("param", rawParam, "integer"))
+			}
+		}
+		rctx.Param = params
+	}
+	return &rctx, err
+}
+`
+
+	intArrayDefaultContextFactory = `
+func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Service) (*ListBottleContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	req.Request = r
+	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramParam := req.Params["param"]
+	if len(paramParam) == 0 {
+		rctx.Param = []int{1, 1, 2, 3, 5, 8}
+	} else {
+		params := make([]int, len(paramParam))
+		for i, rawParam := range paramParam {
+			if param, err2 := strconv.Atoi(rawParam); err2 == nil {
+				params[i] = param
+			} else {
+				err = goa.MergeErrors(err, goa.InvalidParamTypeError("param", rawParam, "integer"))
+			}
+		}
+		rctx.Param = params
+	}
+	return &rctx, err
+}
+`
+
+	intArrayRequiredContextFactory = `
+func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Service) (*ListBottleContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	req.Request = r
+	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramParam := req.Params["param"]
+	if len(paramParam) == 0 {
+		err = goa.MergeErrors(err, goa.MissingParamError("param"))
+	} else {
 		params := make([]int, len(paramParam))
 		for i, rawParam := range paramParam {
 			if param, err2 := strconv.Atoi(rawParam); err2 == nil {
