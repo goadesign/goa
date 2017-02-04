@@ -2,40 +2,39 @@ package goa
 
 import "context"
 
-// Private type used to store values in context.
-type key int
-
+// Keys used to store data in context.
 const (
-	serviceKey key = iota + 1
-	endpointKey
+	endpointKey key = iota + 1
+	serviceKey
 )
 
-// WithService creates a new context with the given value set for the name of the
-// service. Use ContextService to extract the value later. This is mainly
-// intended for use by generated code.
-func WithService(ctx context.Context, service string) context.Context {
-	return context.WithValue(ctx, serviceKey, service)
+// key is the type used to store internal values in the context.
+// Context provides typed accessor methods to these values.
+type key int
+
+// NewContext builds a new goa request context. The context contains the service
+// and endpoint names as set by the generated code. This can be leveraged by
+// middlewares such as the security middleware to implement cross concern
+// behavior.
+func NewContext(ctx context.Context, s, e string) context.Context {
+	ctx = context.WithValue(ctx, serviceKey, s)
+	ctx = context.WithValue(ctx, endpointKey, e)
+
+	return ctx
 }
 
-// WithEndpoint creates a new context with the given value set for the name of
-// the endpoint. Use ContextEndpoint to extract the value later. This is mainly
-// intended for use by generated code.
-func WithEndpoint(ctx context.Context, endpoint string) context.Context {
-	return context.WithValue(ctx, endpointKey, endpoint)
-}
-
-// ContextService extracts the name of the service from the context.
+// ContextService extracts the service name from the given context.
 func ContextService(ctx context.Context) string {
-	if n := ctx.Value(serviceKey); n != nil {
-		return n.(string)
+	if c := ctx.Value(serviceKey); c != nil {
+		return c.(string)
 	}
 	return ""
 }
 
-// ContextEndpoint extracts the name of the endpoint from the context.
+// ContextEndpoint extracts the endpoint name from the given context.
 func ContextEndpoint(ctx context.Context) string {
-	if n := ctx.Value(endpointKey); n != nil {
-		return n.(string)
+	if a := ctx.Value(endpointKey); a != nil {
+		return a.(string)
 	}
 	return ""
 }

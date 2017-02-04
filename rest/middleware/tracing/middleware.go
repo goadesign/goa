@@ -1,8 +1,13 @@
 package tracing
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"io"
 	rd "math/rand"
 	"net/http"
+
+	goa "goa.design/goa.v2"
 
 	"context"
 )
@@ -38,6 +43,10 @@ type (
 		Do(*http.Request) (*http.Response, error)
 	}
 
+	// Option is a constructor option that makes it possible to customize
+	// the middleware.
+	Option func(*options) *options
+
 	// tracedDoer is a client Doer that inserts the tracing headers for
 	// each request it makes.
 	tracedDoer struct {
@@ -45,23 +54,71 @@ type (
 		traceID string
 		spanID  string
 	}
+
+	// tracedLogger is a logger which logs the trace ID with every log
+	// entry when one is present.
+	tracedLogger struct {
+		goa.Logger
+	}
+
+	// options is the struct storing all the options.
+	options struct {
+		traceIDFunc  IDFunc
+		spanIDFunc   IDFunc
+		samplingRate int
+	}
 )
+
+// TraceIDFunc is a constructor option that overrides the function used to
+// compute trace IDs.
+func TraceIDFunc(f IDFunc) Option {
+	return func(o *options) *options {
+		o.traceIDFunc = f
+		return o
+	}
+}
+
+// SpanIDFunc is a constructor option that overrides the function used to
+// compute span IDs.
+func SpanIDFunc(f IDFunc) Option {
+	return func(o *options) *options {
+		o.spanIDFunc = f
+		return o
+	}
+}
+
+// SamplingPercent sets the tracing sampling rate as a percentage value.
+// It panics if p is less than 0 or more than 100.
+func SamplingPercent(p int) Option {
+	if p < 0 || p > 100 {
+		panic("sampling rate must be between 0 and 100")
+	}
+	return func(o *options) *options {
+		o.samplingRate = p
+		return o
+	}
+}
 
 // New returns a trace middleware that initializes the trace information in the
 // request context. The information can be retrieved using any of the ContextXXX
 // functions.
 //
-// sampleRate must be a value between 0 and 100. It represents the percentage of
+// samplingRate must be a value between 0 and 100. It represents the percentage of
 // requests that should be traced. If the incoming request has a Trace ID header
-// then the sample rate is disregarded and the tracing is enabled.
+// then the sampling rate is disregarded and the tracing is enabled.
 //
 // spanIDFunc and traceIDFunc are the functions used to create Span and Trace
 // IDs respectively. This is configurable so that the created IDs are compatible
 // with the various backend tracing systems. The xray package provides
 // implementations that produce AWS X-Ray compatible IDs.
-func New(sampleRate int, spanIDFunc, traceIDFunc IDFunc) func(http.Handler) http.Handler {
-	if sampleRate < 0 || sampleRate > 100 {
-		panic("tracing: sample rate must be between 0 and 100")
+func New(opts ...Option) func(http.Handler) http.Handler {
+	o := &options{
+		traceIDFunc:  shortID,
+		spanIDFunc:   shortID,
+		samplingRate: 100,
+	}
+	for _, opt := range opts {
+		o = opt(o)
 	}
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -69,18 +126,18 @@ func New(sampleRate int, spanIDFunc, traceIDFunc IDFunc) func(http.Handler) http
 			var (
 				traceID  = r.Header.Get(TraceIDHeader)
 				parentID = r.Header.Get(ParentSpanIDHeader)
-				spanID   = spanIDFunc()
+				spanID   = o.spanIDFunc()
 			)
 			if traceID == "" {
 				// Avoid computing a random value if unnecessary.
-				if sampleRate == 0 || rd.Intn(100) > sampleRate {
+				if o.samplingRate == 0 || o.samplingRate != 100 && rd.Intn(100) > o.samplingRate {
 					h.ServeHTTP(w, r)
 				}
-				traceID = traceIDFunc()
+				traceID = o.traceIDFunc()
 			}
 
 			// Setup context.
-			ctx := WithTrace(r.Context(), traceID, spanID, parentID)
+			ctx := WithSpan(r.Context(), traceID, spanID, parentID)
 
 			// Call next handler.
 			h.ServeHTTP(w, r.WithContext(ctx))
@@ -88,12 +145,12 @@ func New(sampleRate int, spanIDFunc, traceIDFunc IDFunc) func(http.Handler) http
 	}
 }
 
-// Wrap wraps a goa client Doer and sets the trace headers so that the downstream
-// service may properly retrieve the parent span ID and trace ID.
+// WrapDoer wraps a goa client Doer and sets the trace headers so that the
+// downstream service may properly retrieve the parent span ID and trace ID.
 //
 // ctx must contain the current request segment as set by the xray middleware or
 // the doer passed as argument is returned.
-func Wrap(ctx context.Context, doer Doer) Doer {
+func WrapDoer(ctx context.Context, doer Doer) Doer {
 	var (
 		traceID = ContextTraceID(ctx)
 		spanID  = ContextSpanID(ctx)
@@ -106,6 +163,12 @@ func Wrap(ctx context.Context, doer Doer) Doer {
 		traceID: traceID,
 		spanID:  spanID,
 	}
+}
+
+// WrapLogger returns a logger which logs the trace ID with every message if
+// there is one.
+func WrapLogger(l goa.Logger) goa.Logger {
+	return &tracedLogger{l}
 }
 
 // ContextTraceID returns the trace ID extracted from the given context if any,
@@ -135,9 +198,15 @@ func ContextParentSpanID(ctx context.Context) string {
 	return ""
 }
 
-// WithTrace returns a context containing the given trace, span and parent span
+// WithTrace returns a context containing the given trace ID.
+func WithTrace(ctx context.Context, traceID string) context.Context {
+	ctx = context.WithValue(ctx, traceKey, traceID)
+	return ctx
+}
+
+// WithSpan returns a context containing the given trace, span and parent span
 // IDs.
-func WithTrace(ctx context.Context, traceID, spanID, parentID string) context.Context {
+func WithSpan(ctx context.Context, traceID, spanID, parentID string) context.Context {
 	if parentID != "" {
 		ctx = context.WithValue(ctx, parentSpanKey, parentID)
 	}
@@ -152,4 +221,34 @@ func (d *tracedDoer) Do(r *http.Request) (*http.Response, error) {
 	r.Header.Set(ParentSpanIDHeader, d.spanID)
 
 	return d.doer.Do(r)
+}
+
+// Info logs the trace ID when present then the values passed as argument.
+func (l *tracedLogger) Info(ctx context.Context, keyvals ...interface{}) {
+	traceID := ContextTraceID(ctx)
+	if traceID == "" {
+		l.Logger.Info(ctx, keyvals...)
+		return
+	}
+	keyvals = append([]interface{}{"trace", traceID}, keyvals...)
+	l.Logger.Info(ctx, keyvals)
+}
+
+// Error logs the trace ID when present then the values passed as argument.
+func (l *tracedLogger) Error(ctx context.Context, keyvals ...interface{}) {
+	traceID := ContextTraceID(ctx)
+	if traceID == "" {
+		l.Logger.Error(ctx, keyvals...)
+		return
+	}
+	keyvals = append([]interface{}{"trace", traceID}, keyvals...)
+	l.Logger.Error(ctx, keyvals)
+}
+
+// shortID produces a " unique" 6 bytes long string.
+// Do not use as a reliable way to get unique IDs, instead use for things like logging.
+func shortID() string {
+	b := make([]byte, 6)
+	io.ReadFull(rand.Reader, b)
+	return base64.RawURLEncoding.EncodeToString(b)
 }

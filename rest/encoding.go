@@ -3,57 +3,37 @@ package rest
 import (
 	"net/http"
 
-	"github.com/goadesign/goa"
+	goa "goa.design/goa.v2"
 )
 
 type (
-	// A Decoder unmarshals an io.Reader into an interface.
+	// Decoder is the low level decoder interface.
 	Decoder interface {
+		// Decode decodes the data read from the writer associated with
+		// Decoder into v.
 		Decode(v interface{}) error
 	}
 
-	// An Encoder marshals from an interface into an io.Writer.
+	// Encoder is the low level encoder interface.
 	Encoder interface {
+		// Encode encodes v into the writer associated with Encoder.
 		Encode(v interface{}) error
 	}
 
-	// RequestDecoder is a function that produces a decoder that reads from
-	// the given request body. The function should take advantage the HTTP
-	// request Content-Type header to produce an adequate decoder.
-	RequestDecoder func(*http.Request) Decoder
-
-	// ResponseEncoder represents function that produces an encoder that
-	// writes to a given response writer. The function also returns the
-	// corresponding mime type which may be use to set the response
-	// Content-Type header.
-	//
-	// The function should take advantage of the HTTP request Accept header
-	// to produce the adequate encoder and signer.
-	ResponseEncoder func(http.ResponseWriter, *http.Request) (Encoder, string)
-
-	// ErrorEncoder is a function that serializes errors to responses.
-	ErrorEncoder func(error, http.ResponseWriter, *http.Request)
-)
-
-// NewErrorEncoder returns the default implementation for ErrorEncoder.
-func NewErrorEncoder(enc ResponseEncoder) ErrorEncoder {
-	return func(err error, w http.ResponseWriter, r *http.Request) {
-		switch t := err.(type) {
-		case *ErrorResponse:
-			resp := goa.ContextResponse(r.Context())
-			if resp != nil {
-				// Make it possible for middleware to know that
-				// this response is an error response.
-				resp.ErrorCode = t.Code
-			}
-			w.WriteHeader(t.Status)
-		default:
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-		e, mime := enc(w, r)
-		w.Header().Set("Content-Type", mime)
-		if err := e.Encode(err); err != nil {
-			w.Write([]byte(err.Error()))
-		}
+	// ErrorEncoder handles and encodes errors returned by the endpoints.
+	ErrorEncoder interface {
+		Encode(error)
 	}
-}
+
+	// DecoderFunc creates a decoder appropriate for decoding the given
+	// request.
+	DecoderFunc func(*http.Request) Decoder
+
+	// EncoderFunc creates an encoder appropriate for encoding responses of
+	// the given request. It writes to the given response writer.
+	EncoderFunc func(http.ResponseWriter, *http.Request) Encoder
+
+	// ErrorEncoderFunc creates a error handler which may encode and/or log
+	// errors.
+	ErrorEncoderFunc func(http.ResponseWriter, *http.Request, goa.Logger) ErrorEncoder
+)

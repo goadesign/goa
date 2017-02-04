@@ -15,7 +15,6 @@ import (
 	"goa.design/goa.v2/rest"
 	"goa.design/goa.v2/rest/middleware/debug"
 	"goa.design/goa.v2/rest/middleware/logging"
-	"goa.design/goa.v2/rest/middleware/tracing"
 )
 
 func main() {
@@ -50,17 +49,30 @@ func main() {
 	}
 
 	var (
-		encode = rest.EncodeErrors(app.NewEncoder)
-		decode = app.NewDecoder
+		encode      = app.NewEncoder
+		decode      = app.NewDecoder
+		encodeError = rest.NewErrorEncoder(encode)
 	)
 
 	var (
 		ah *app.AccountHTTPHandlers
 	)
 	{
-		ah = app.NewAccountHTTPHandlers(ctx, aep, decode, encode)
+		ah = app.NewAccountHTTPHandlers(ctx, aep, decode, encode, encodeError)
 	}
 
+	createAccountHandler := httptransport.NewServer(
+		ctx,
+		aep.Create,
+		decodeUppercaseRequest,
+		encodeResponse,
+	)
+	countHandler := httptransport.NewServer(
+		ctx,
+		makeCountEndpoint(svc),
+		decodeCountRequest,
+		encodeResponse,
+	)
 	var mux rest.ServeMux
 	{
 		mux = rest.NewMux()
@@ -69,7 +81,6 @@ func main() {
 
 	var handler http.Handler = mux
 	{
-		handler = tracing.New()(handler)
 		if *dbg {
 			handler = debug.NewStd(logger)(handler)
 		}

@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/dimfeld/httptreemux"
 )
 
 // FileHandler returns a HTTP handler that serves files under the given filename
@@ -26,7 +28,7 @@ import (
 //
 // returns the content of the file "/www/data/assets/x/y/z" when requests are
 // sent to "/assets/x/y/z".
-func FileHandler(path, filename string, ee ErrorEncoder) http.HandlerFunc {
+func FileHandler(path, filename string, enc EncodeResponseFunc) http.HandlerFunc {
 	var wc string
 	if idx := strings.LastIndex(path, "/*"); idx > -1 && idx < len(path)-1 {
 		wc = path[idx+2:]
@@ -40,7 +42,7 @@ func FileHandler(path, filename string, ee ErrorEncoder) http.HandlerFunc {
 			ctx   = r.Context()
 		)
 		if len(wc) > 0 {
-			if m, ok := ContextRequest(ctx).Params[wc]; ok {
+			if m, ok := httptreemux.ContextParams(ctx)[wc]; ok {
 				fname = filepath.Join(filename, m)
 			}
 		}
@@ -48,12 +50,12 @@ func FileHandler(path, filename string, ee ErrorEncoder) http.HandlerFunc {
 		fs := http.Dir(dir)
 		f, err := fs.Open(name)
 		if err != nil {
-			ee(ErrInvalidFile(err), w, r)
+			enc(w, r, ErrInvalidFile(err))
 		}
 		defer f.Close()
 		d, err := f.Stat()
 		if err != nil {
-			ee(ErrInvalidFile(err), w, r)
+			enc(w, r, ErrInvalidFile(err))
 		}
 		// use contents of index.html for directory, if present
 		if d.IsDir() {
@@ -73,7 +75,7 @@ func FileHandler(path, filename string, ee ErrorEncoder) http.HandlerFunc {
 		// serveContent will check modification time
 		// Still a directory? (we didn't find an index.html file)
 		if d.IsDir() {
-			dirList(w, r, f, ee)
+			dirList(w, r, f, enc)
 		}
 		http.ServeContent(w, r, d.Name(), d.ModTime(), f)
 	}
@@ -89,10 +91,10 @@ var replacer = strings.NewReplacer(
 	"'", "&#39;",
 )
 
-func dirList(w http.ResponseWriter, r *http.Request, f http.File, ee ErrorEncoder) {
+func dirList(w http.ResponseWriter, r *http.Request, f http.File, enc EncodeResponseFunc) {
 	dirs, err := f.Readdir(-1)
 	if err != nil {
-		ee(err, w, r)
+		enc(w, r, err)
 	}
 	sort.Sort(byName(dirs))
 

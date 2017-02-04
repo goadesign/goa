@@ -1,14 +1,15 @@
-package app
+package endpoints
 
 import (
 	"context"
 
-	goa "goa.design/goa.v2"
+	"goa.design/goa.v2"
+	"goa.design/goa.v2/examples/account/gen/services"
 )
 
 type (
-	// AccountEndpoints lists the account service endpoints.
-	AccountEndpoints struct {
+	// Account lists the account service endpoints.
+	Account struct {
 		Create goa.Endpoint
 		List   goa.Endpoint
 		Show   goa.Endpoint
@@ -16,11 +17,12 @@ type (
 	}
 )
 
-func NewAccountEndpoints(s AccountService) *AccountEndpoints {
-	ep := &AccountEndpoints{}
+// NewAccount creates a new account service.
+func NewAccount(s services.Account) *Account {
+	ep := &Account{}
 
 	ep.Create = func(ctx context.Context, req interface{}) (interface{}, error) {
-		p := req.(*CreateAccountPayload)
+		p := req.(*services.CreateAccountPayload)
 		return s.Create(ctx, p)
 	}
 
@@ -29,12 +31,12 @@ func NewAccountEndpoints(s AccountService) *AccountEndpoints {
 	}
 
 	ep.Show = func(ctx context.Context, req interface{}) (interface{}, error) {
-		p := req.(*ShowAccountPayload)
+		p := req.(*services.ShowAccountPayload)
 		return s.Show(ctx, p)
 	}
 
 	ep.Delete = func(ctx context.Context, req interface{}) (interface{}, error) {
-		p := req.(*DeleteAccountPayload)
+		p := req.(*services.DeleteAccountPayload)
 		return nil, s.Delete(ctx, p)
 	}
 

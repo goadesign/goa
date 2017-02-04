@@ -1,4 +1,4 @@
-package app
+package transport
 
 import goa "goa.design/goa.v2"
 
@@ -9,7 +9,8 @@ type createAccountBody struct {
 }
 
 // newCreateAccountPayload creates a CreateAccountPayload from the HTTP request data.
-func newCreateAccountPayload(body *createAccountBody) (*CreateAccountPayload, error) {
+func newCreateAccountPayload(b interface{}) (*CreateAccountPayload, error) {
+	body := b.(*createAccountBody)
 	if err := body.Validate(); err != nil {
 		return nil, err
 	}
