@@ -187,55 +187,55 @@ func InvalidFieldTypeError(name string, val interface{}, expected string) error 
 // field.
 func MissingFieldError(name, context string) error {
 	msg := fmt.Sprintf("%#v is missing from %s", name, context)
-	return ErrInvalid(msg, "field", name, "context", context)
+	return ErrInvalid(msg, context, name)
 }
 
 // InvalidEnumValueError is the error produced when the value of a payload field
 // does not match one the values defined in the design Enum validation.
-func InvalidEnumValueError(ctx string, val interface{}, allowed []interface{}) error {
+func InvalidEnumValueError(name string, val interface{}, allowed []interface{}) error {
 	elems := make([]string, len(allowed))
 	for i, a := range allowed {
 		elems[i] = fmt.Sprintf("%#v", a)
 	}
-	msg := fmt.Sprintf("value of %s must be one of %s but got value %#v", ctx, strings.Join(elems, ", "), val)
-	return ErrInvalid(msg, "field", ctx, "value", val, "expected", strings.Join(elems, ", "))
+	msg := fmt.Sprintf("value of %s must be one of %s but got value %#v", name, strings.Join(elems, ", "), val)
+	return ErrInvalid(msg, "field", name, "value", val, "expected", strings.Join(elems, ", "))
 }
 
 // InvalidFormatError is the error produced when the value of a payload field
 // does not match the format validation defined in the design.
-func InvalidFormatError(ctx, target string, format Format, formatError error) error {
-	msg := fmt.Sprintf("%s must be formatted as a %s but got value %#v, %s", ctx, format, target, formatError.Error())
-	return ErrInvalid(msg, "field", ctx, "value", target, "expected", format, "error", formatError.Error())
+func InvalidFormatError(name, target string, format Format, formatError error) error {
+	msg := fmt.Sprintf("%s must be formatted as a %s but got value %#v, %s", name, format, target, formatError.Error())
+	return ErrInvalid(msg, "field", name, "value", target, "expected", format, "error", formatError.Error())
 }
 
 // InvalidPatternError is the error produced when the value of a payload field
 // does not match the pattern validation defined in the design.
-func InvalidPatternError(ctx, target string, pattern string) error {
-	msg := fmt.Sprintf("%s must match the regexp %#v but got value %#v", ctx, pattern, target)
-	return ErrInvalid(msg, "field", ctx, "value", target, "regexp", pattern)
+func InvalidPatternError(name, target string, pattern string) error {
+	msg := fmt.Sprintf("%s must match the regexp %#v but got value %#v", name, pattern, target)
+	return ErrInvalid(msg, "field", name, "value", target, "regexp", pattern)
 }
 
 // InvalidRangeError is the error produced when the value of a payload field does
 // not match the range validation defined in the design. value may be an int or
 // a float64.
-func InvalidRangeError(ctx string, target interface{}, value interface{}, min bool) error {
+func InvalidRangeError(name string, target interface{}, value interface{}, min bool) error {
 	comp := "greater or equal"
 	if !min {
 		comp = "lesser or equal"
 	}
-	msg := fmt.Sprintf("%s must be %s than %d but got value %#v", ctx, comp, value, target)
-	return ErrInvalid(msg, "field", ctx, "value", target, "comp", comp, "expected", value)
+	msg := fmt.Sprintf("%s must be %s than %d but got value %#v", name, comp, value, target)
+	return ErrInvalid(msg, "field", name, "value", target, "comp", comp, "expected", value)
 }
 
 // InvalidLengthError is the error produced when the value of a payload field
 // does not match the length validation defined in the design.
-func InvalidLengthError(ctx string, target interface{}, ln, value int, min bool) error {
+func InvalidLengthError(name string, target interface{}, ln, value int, min bool) error {
 	comp := "greater or equal"
 	if !min {
 		comp = "lesser or equal"
 	}
-	msg := fmt.Sprintf("length of %s must be %s than %d but got value %#v (len=%d)", ctx, comp, value, target, ln)
-	return ErrInvalid(msg, "field", ctx, "value", target, "len", ln, "comp", comp, "expected", value)
+	msg := fmt.Sprintf("length of %s must be %s than %d but got value %#v (len=%d)", name, comp, value, target, ln)
+	return ErrInvalid(msg, "field", name, "value", target, "len", ln, "comp", comp, "expected", value)
 }
 
 // MergeErrors updates an error by merging another into it. It first converts
@@ -288,13 +288,7 @@ func MergeErrors(err, other error) error {
 
 // Error returns the error occurrence details.
 func (e *serviceError) Error() string {
-	msg := fmt.Sprintf("[%s] %d %s: %s", e.token, e.status, e.code, e.detail)
-	for _, val := range e.data {
-		for k, v := range val {
-			msg += ", " + fmt.Sprintf("%s: %v", k, v)
-		}
-	}
-	return msg
+	return fmt.Sprintf("[%s] %d %s: %s", e.token, e.status, e.code, e.detail)
 }
 
 func (e *serviceError) Status() ErrorStatus            { return e.status }
@@ -324,5 +318,5 @@ func asError(err error) Error {
 func newErrorToken() string {
 	b := make([]byte, 6)
 	io.ReadFull(rand.Reader, b)
-	return base64.StdEncoding.EncodeToString(b)
+	return base64.RawURLEncoding.EncodeToString(b)
 }

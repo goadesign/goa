@@ -14,9 +14,9 @@ func NewAccountService() *AccountService {
 }
 
 // Create implements the "create" endpoint.
-// Create may return a *app.Account or a string (href field of Account)
+// Create may return a *app.AccountCreated or a *app.AccountAccepted
 func (s *AccountService) Create(ctx context.Context, p *app.CreateAccountPayload) (interface{}, error) {
-	return &app.Account{}, nil
+	return &app.AccountCreated{}, nil
 }
 
 // List implements the "list" endpoint.

@@ -10,17 +10,18 @@ import (
 	"os/signal"
 	"syscall"
 
-	goa "goa.design/goa.v2"
 	"goa.design/goa.v2/examples/account"
 	"goa.design/goa.v2/examples/account/gen/app"
 	"goa.design/goa.v2/rest"
+	"goa.design/goa.v2/rest/middleware/debug"
 	"goa.design/goa.v2/rest/middleware/logging"
-	"goa.design/goa.v2/rest/middleware/recovering"
+	"goa.design/goa.v2/rest/middleware/tracing"
 )
 
 func main() {
 	var (
-		httpAddr = flag.String("http.addr", ":8080", "HTTP listen address")
+		addr = flag.String("http.addr", ":8080", "HTTP listen `address`")
+		dbg  = flag.Bool("app.debug", false, "Log request and response bodies")
 	)
 	flag.Parse()
 
@@ -49,17 +50,15 @@ func main() {
 	}
 
 	var (
-		encode      = app.NewEncoder
-		decode      = app.NewDecoder
-		encodeError = rest.NewErrorEncoder(encode)
-		m           = logging.New(goa.AdaptLogger(logger), true)
+		encode = rest.EncodeErrors(app.NewEncoder)
+		decode = app.NewDecoder
 	)
 
 	var (
 		ah *app.AccountHTTPHandlers
 	)
 	{
-		ah = app.NewAccountHTTPHandlers(ctx, aep, decode, encode, encodeError, m)
+		ah = app.NewAccountHTTPHandlers(ctx, aep, decode, encode)
 	}
 
 	var mux rest.ServeMux
@@ -68,9 +67,13 @@ func main() {
 		app.MountAccountHTTPHandlers(mux, ah)
 	}
 
-	var handler http.Handler
+	var handler http.Handler = mux
 	{
-		handler = recovering.New(encodeError)(mux)
+		handler = tracing.New()(handler)
+		if *dbg {
+			handler = debug.NewStd(logger)(handler)
+		}
+		handler = logging.NewStd(logger)(handler)
 	}
 
 	errc := make(chan error)
@@ -84,8 +87,8 @@ func main() {
 
 	// Start HTTP listener
 	go func() {
-		logger.Printf("listening on %s", *httpAddr)
-		errc <- http.ListenAndServe(*httpAddr, handler)
+		logger.Printf("listening on %s", *addr)
+		errc <- http.ListenAndServe(*addr, handler)
 	}()
 
 	// Run!

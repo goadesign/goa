@@ -207,7 +207,7 @@ func filterHeaders(headers http.Header, iterator headerIterator) {
 func shortID() string {
 	b := make([]byte, 6)
 	io.ReadFull(rand.Reader, b)
-	return base64.StdEncoding.EncodeToString(b)
+	return base64.RawURLEncoding.EncodeToString(b)
 }
 
 // clientKey is the private type used to store values in the context.
