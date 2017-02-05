@@ -1,13 +1,14 @@
 package transport
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
 
 	"github.com/dimfeld/httptreemux"
 	"goa.design/goa.v2"
+	"goa.design/goa.v2/examples/account/gen/endpoints"
+	"goa.design/goa.v2/examples/account/gen/services"
 	"goa.design/goa.v2/rest"
 )
 
@@ -22,17 +23,17 @@ type AccountHTTPHandlers struct {
 // NewAccountHTTPHandlers instantiates HTTP handlers for all the account service
 // endpoints.
 func NewAccountHTTPHandlers(
-	ctx context.Context,
-	e *AccountEndpoints,
-	dec rest.DecodeRequestFunc,
-	enc rest.EncodeResponseFunc,
+	e *endpoints.Account,
+	dec rest.DecoderFunc,
+	enc rest.EncoderFunc,
+	handler rest.ErrorEncoderFunc,
 	logger goa.Logger,
 ) *AccountHTTPHandlers {
 	return &AccountHTTPHandlers{
-		Create: NewCreateAccountHTTPHandler(ctx, e.Create, dec, enc, logger),
-		List:   NewListAccountHTTPHandler(ctx, e.List, dec, enc, logger),
-		Show:   NewShowAccountHTTPHandler(ctx, e.Show, dec, enc, logger),
-		Delete: NewDeleteAccountHTTPHandler(ctx, e.Delete, dec, enc, logger),
+		Create: NewCreateAccountHTTPHandler(e.Create, dec, enc, handler, logger),
+		List:   NewListAccountHTTPHandler(e.List, dec, enc, handler, logger),
+		Show:   NewShowAccountHTTPHandler(e.Show, dec, enc, handler, logger),
+		Delete: NewDeleteAccountHTTPHandler(e.Delete, dec, enc, handler, logger),
 	}
 }
 
@@ -76,15 +77,15 @@ func NewCreateAccountHTTPHandler(
 	endpoint goa.Endpoint,
 	decoder rest.DecoderFunc,
 	encoder rest.EncoderFunc,
-	handler rest.ErrorHandlerFunc,
+	handler rest.ErrorEncoderFunc,
 	logger goa.Logger,
 ) http.Handler {
-	decodeRequest := CreateAccountDecodeRequestFunc(decoder)
-	encodeResponse := CreateAccountEncodeResponseFunc(encoder)
+	decodeRequest := CreateAccountDecoderFunc(decoder)
+	encodeResponse := CreateAccountEncoderFunc(encoder)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		payload, err := decodeRequest(r)
 		if err != nil {
-			handler(encoder, logger).Handle(err)
+			handler(w, r, logger).Encode(err)
 			return
 		}
 
@@ -92,47 +93,50 @@ func NewCreateAccountHTTPHandler(
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			handler(encoder, logger).Handle(err)
+			handler(w, r, logger).Encode(err)
 			return
 		}
 		if err := encodeResponse(w, r, res); err != nil {
-			handler(encoder, logger).Handle(err)
+			handler(w, r, logger).Encode(err)
 		}
 	})
 }
 
-// CreateAccountDecodeRequestFunc returns a decoder for requests sent to the
+// CreateAccountDecoderFunc returns a decoder for requests sent to the
 // create account endpoint.
-func CreateAccountDecodeRequestFunc(decoder rest.DecoderFunc) func(r *http.Request) (interface{}, error) {
+func CreateAccountDecoderFunc(decoder rest.DecoderFunc) func(r *http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
-		body, err := decoder(r)
+		var body createAccountBody
+		err := decoder(r).Decode(&body)
 		if err != nil {
 			if err == io.EOF {
 				err = fmt.Errorf("Request Body Empty")
 			}
 			return nil, err
 		}
-		return newCreateAccountPayload(body)
+		payload, err := newCreateAccountPayload(&body)
+		return interface{}(payload), err
 	}
 }
 
-// CreateAccountEncodeResponseFunc returns an encoder for responses returned by
+// CreateAccountEncoderFunc returns an encoder for responses returned by
 // the create account endpoint.
-func CreateAccountEncodeResponseFunc(encoder rest.EncodeResponseFunc) func(w http.ResponseWriter, r *http.Request, v interface{}) error {
+func CreateAccountEncoderFunc(encoder rest.EncoderFunc) func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
-		w.Header().Set("Content-Type", ResponseContentType(r, ""))
+		w.Header().Set("Content-Type", ResponseContentType(r))
 		switch t := v.(type) {
-		case *AccountCreated:
+		case *services.AccountCreated:
 			w.Header().Set("Location", t.Href)
 			w.WriteHeader(http.StatusCreated)
-			return encoder(w, r, t)
-		case *AccountAccepted:
+			encoder(w, r).Encode(t)
+		case *services.AccountAccepted:
 			w.Header().Set("Location", t.Href)
 			w.WriteHeader(http.StatusAccepted)
 			return nil
 		default:
 			return fmt.Errorf("invalid response type")
 		}
+		return nil
 	}
 }
 
@@ -142,37 +146,33 @@ func CreateAccountEncodeResponseFunc(encoder rest.EncodeResponseFunc) func(w htt
 // may access the request state via the rest package ContextXXX functions.
 func NewListAccountHTTPHandler(
 	endpoint goa.Endpoint,
-	decoder rest.DecodeRequestFunc,
-	encoder rest.EncodeResponseFunc,
+	decoder rest.DecoderFunc,
+	encoder rest.EncoderFunc,
+	handler rest.ErrorEncoderFunc,
 	logger goa.Logger,
 ) http.Handler {
-	encodeResponse := ListAccountEncodeResponseFunc(encoder)
-	encodeError := func(w http.ResponseWriter, r *http.Request, err error) {
-		if err := encoder(w, r, err); err != nil {
-			logger.Error("err", err)
-		}
-	}
+	encodeResponse := ListAccountEncoderFunc(encoder)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := goa.NewContext(r.Context(), "account", "list")
 		res, err := endpoint(ctx, nil)
 
 		if err != nil {
-			encodeError(w, r, err)
+			handler(w, r, logger).Encode(err)
 			return
 		}
 		if err := encodeResponse(w, r, res); err != nil {
-			encodeError(w, r, err)
+			handler(w, r, logger).Encode(err)
 		}
 	})
 }
 
-// ListAccountEncodeResponseFunc returns an encoder for responses returned by
+// ListAccountEncoderFunc returns an encoder for responses returned by
 // the list account endpoint.
-func ListAccountEncodeResponseFunc(encoder rest.EncodeResponseFunc) func(w http.ResponseWriter, r *http.Request, v interface{}) error {
+func ListAccountEncoderFunc(encoder rest.EncoderFunc) func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
-		w.Header().Set("Content-Type", ResponseContentType(r, ""))
+		w.Header().Set("Content-Type", ResponseContentType(r))
 		w.WriteHeader(http.StatusOK)
-		return encoder(w, r, v)
+		return encoder(w, r).Encode(v)
 	}
 }
 
@@ -182,51 +182,50 @@ func ListAccountEncodeResponseFunc(encoder rest.EncodeResponseFunc) func(w http.
 // may access the request state via the rest package ContextXXX functions.
 func NewShowAccountHTTPHandler(
 	endpoint goa.Endpoint,
+	decoder rest.DecoderFunc,
+	encoder rest.EncoderFunc,
+	handler rest.ErrorEncoderFunc,
 	logger goa.Logger,
 ) http.Handler {
-	decodeRequest := ShowAccountDecodeRequestFunc()
-	encodeResponse := ShowAccountEncodeResponseFunc()
-	encodeError := func(w http.ResponseWriter, r *http.Request, err error) {
-		if err := encoder(w, r, err); err != nil {
-			logger.Error("err", err)
-		}
-	}
+	decodeRequest := ShowAccountDecoderFunc(decoder)
+	encodeResponse := ShowAccountEncoderFunc(encoder)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(w, r, err)
+			handler(w, r, logger).Encode(err)
 		}
 
 		ctx := goa.NewContext(r.Context(), "account", "show")
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			encodeError(w, r, err)
+			handler(w, r, logger).Encode(err)
 			return
 		}
 		if err := encodeResponse(w, r, res); err != nil {
-			encodeError(w, r, err)
+			handler(w, r, logger).Encode(err)
 		}
 	})
 }
 
-// ShowAccountDecodeRequestFunc returns a decoder for requests sent to the
+// ShowAccountDecoderFunc returns a decoder for requests sent to the
 // show account endpoint.
-func ShowAccountDecodeRequestFunc() func(r *http.Request) (interface{}, error) {
+func ShowAccountDecoderFunc(decoder rest.DecoderFunc) func(r *http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		params := httptreemux.ContextParams(r.Context())
 		id := params["id"]
-		return newShowAccountPayload(id)
+		payload, err := newShowAccountPayload(id)
+		return interface{}(payload), err
 	}
 }
 
-// ShowAccountEncodeResponseFunc returns an encoder for responses returned by
+// ShowAccountEncoderFunc returns an encoder for responses returned by
 // the show account endpoint.
-func ShowAccountEncodeResponseFunc() func(w http.ResponseWriter, r *http.Request, v interface{}) error {
+func ShowAccountEncoderFunc(encoder rest.EncoderFunc) func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
-		w.Header().Set("Content-Type", ResponseContentType(r, ""))
+		w.Header().Set("Content-Type", ResponseContentType(r))
 		w.WriteHeader(http.StatusOK)
-		return NewEncoder(w, r)(v)
+		return encoder(w, r).Encode(v)
 	}
 }
 
@@ -236,47 +235,46 @@ func ShowAccountEncodeResponseFunc() func(w http.ResponseWriter, r *http.Request
 // may access the request state via the rest package ContextXXX functions.
 func NewDeleteAccountHTTPHandler(
 	endpoint goa.Endpoint,
+	decoder rest.DecoderFunc,
+	encoder rest.EncoderFunc,
+	handler rest.ErrorEncoderFunc,
 	logger goa.Logger,
 ) http.Handler {
-	decodeRequest := DeleteAccountDecodeRequestFunc()
-	encodeResponse := DeleteAccountEncodeResponseFunc()
-	encodeError := func(w http.ResponseWriter, r *http.Request, err error) {
-		if err := encoder(w, r, err); err != nil {
-			logger.Error("err", err)
-		}
-	}
+	decodeRequest := DeleteAccountDecoderFunc(decoder)
+	encodeResponse := DeleteAccountEncoderFunc(encoder)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(w, r, err)
+			handler(w, r, logger).Encode(err)
 		}
 
 		ctx := goa.NewContext(r.Context(), "account", "delete")
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
-			encodeError(w, r, err)
+			handler(w, r, logger).Encode(err)
 			return
 		}
 		if err := encodeResponse(w, r, res); err != nil {
-			encodeError(w, r, err)
+			handler(w, r, logger).Encode(err)
 		}
 	})
 }
 
-// DeleteAccountDecodeRequestFunc returns a decoder for requests sent to the
+// DeleteAccountDecoderFunc returns a decoder for requests sent to the
 // show account endpoint.
-func DeleteAccountDecodeRequestFunc() func(r *http.Request) (interface{}, error) {
+func DeleteAccountDecoderFunc(decoder rest.DecoderFunc) func(r *http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		params := httptreemux.ContextParams(r.Context())
 		id := params["id"]
-		return newDeleteAccountPayload(id)
+		payload, err := newDeleteAccountPayload(id)
+		return interface{}(payload), err
 	}
 }
 
-// DeleteAccountEncodeResponseFunc returns an encoder for responses returned by
+// DeleteAccountEncoderFunc returns an encoder for responses returned by
 // the show account endpoint.
-func DeleteAccountEncodeResponseFunc() func(w http.ResponseWriter, r *http.Request, v interface{}) error {
+func DeleteAccountEncoderFunc(encoder rest.EncoderFunc) func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 		w.WriteHeader(http.StatusNoContent)
 		return nil

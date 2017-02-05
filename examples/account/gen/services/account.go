@@ -10,9 +10,9 @@ type (
 		// *AccountCreated or of *AccountAccepted.
 		Create(context.Context, *CreateAccountPayload) (interface{}, error)
 		// List implements the "list" endpoint.
-		List(context.Context) ([]*Account, error)
+		List(context.Context) ([]*AccountResponse, error)
 		// Show implements the "show" endpoint.
-		Show(context.Context, *ShowAccountPayload) (*Account, error)
+		Show(context.Context, *ShowAccountPayload) (*AccountResponse, error)
 		// Delete implements the "delete" endpoint.
 		Delete(context.Context, *DeleteAccountPayload) error
 	}
@@ -23,7 +23,7 @@ type (
 		// Href is the value of the Location header
 		Href string
 		// Body describes the response body.
-		Body *Account
+		Body *AccountResponse
 	}
 
 	// AccountAccepted is the type that describes the "create" endpoint HTTP
@@ -33,8 +33,8 @@ type (
 		Href string
 	}
 
-	// AccountBody type
-	AccountBody struct {
+	// AccountResponse type
+	AccountResponse struct {
 		// Href to account
 		Href string
 		// ID of account

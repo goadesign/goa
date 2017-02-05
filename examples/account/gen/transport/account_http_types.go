@@ -1,6 +1,9 @@
 package transport
 
-import goa "goa.design/goa.v2"
+import (
+	goa "goa.design/goa.v2"
+	"goa.design/goa.v2/examples/account/gen/services"
+)
 
 // createAccountBody is type of the "create" request body.
 type createAccountBody struct {
@@ -9,12 +12,12 @@ type createAccountBody struct {
 }
 
 // newCreateAccountPayload creates a CreateAccountPayload from the HTTP request data.
-func newCreateAccountPayload(b interface{}) (*CreateAccountPayload, error) {
+func newCreateAccountPayload(b interface{}) (*services.CreateAccountPayload, error) {
 	body := b.(*createAccountBody)
 	if err := body.Validate(); err != nil {
 		return nil, err
 	}
-	p := CreateAccountPayload{
+	p := services.CreateAccountPayload{
 		Name:  *body.Name,
 		OrgID: *body.OrgID,
 	}
@@ -32,10 +35,10 @@ func (b *createAccountBody) Validate() (err error) {
 	return
 }
 
-func newShowAccountPayload(id string) (*ShowAccountPayload, error) {
-	return &ShowAccountPayload{ID: id}, nil
+func newShowAccountPayload(id string) (*services.ShowAccountPayload, error) {
+	return &services.ShowAccountPayload{ID: id}, nil
 }
 
-func newDeleteAccountPayload(id string) (*DeleteAccountPayload, error) {
-	return &DeleteAccountPayload{ID: id}, nil
+func newDeleteAccountPayload(id string) (*services.DeleteAccountPayload, error) {
+	return &services.DeleteAccountPayload{ID: id}, nil
 }
