@@ -6,12 +6,11 @@ import (
 	"encoding/base64"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/dimfeld/httptreemux"
-	"goa.design/goa.v2/rest/middleware/logging"
+	goa "goa.design/goa.v2"
 	"goa.design/goa.v2/rest/middleware/tracing"
 )
 
@@ -24,7 +23,7 @@ type responseDupper struct {
 
 // New returns a debug middleware which prints all the details about incoming
 // requests and outgoing responses.
-func New(logger logging.Logger) func(http.Handler) http.Handler {
+func New(logger goa.Logger) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requestID := tracing.ContextTraceID(r.Context())
@@ -44,7 +43,7 @@ func New(logger logging.Logger) func(http.Handler) http.Handler {
 					entries[i+5] = interface{}(strings.Join(v, ", "))
 					i = i + 2
 				}
-				logger.Log(entries...)
+				logger.Info(r.Context(), entries...)
 			}
 			params := httptreemux.ContextParams(r.Context())
 			if len(params) > 0 {
@@ -59,7 +58,7 @@ func New(logger logging.Logger) func(http.Handler) http.Handler {
 					entries[i+1] = v
 					i = i + 2
 				}
-				logger.Log(entries...)
+				logger.Info(r.Context(), entries...)
 			}
 			buf, err := ioutil.ReadAll(r.Body)
 			if err != nil {
@@ -69,7 +68,7 @@ func New(logger logging.Logger) func(http.Handler) http.Handler {
 			if len(buf) == 0 {
 				buf = []byte("<empty>")
 			}
-			logger.Log("id", requestID, "payload", string(buf))
+			logger.Info(r.Context(), "id", requestID, "payload", string(buf))
 
 			dupper := &responseDupper{ResponseWriter: w, Buffer: &bytes.Buffer{}}
 			h.ServeHTTP(dupper, r)
@@ -86,18 +85,13 @@ func New(logger logging.Logger) func(http.Handler) http.Handler {
 					entries[i+5] = interface{}(strings.Join(v, ", "))
 					i = i + 2
 				}
-				logger.Log(entries...)
+				logger.Info(r.Context(), entries...)
 			}
 			if dupper.Buffer.Len() > 0 {
-				logger.Log("id", requestID, "response body", dupper.Buffer.String())
+				logger.Info(r.Context(), "id", requestID, "response body", dupper.Buffer.String())
 			}
 		})
 	}
-}
-
-// NewStd uses a stand library logger to create a debug middleware.
-func NewStd(logger *log.Logger) func(http.Handler) http.Handler {
-	return New(&logging.Adapter{Logger: logger})
 }
 
 // Write writes the data to the buffer and connection as part of an HTTP reply.

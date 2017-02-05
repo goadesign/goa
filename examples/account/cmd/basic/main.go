@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -10,8 +9,11 @@ import (
 	"os/signal"
 	"syscall"
 
+	"goa.design/goa.v2"
 	"goa.design/goa.v2/examples/account"
-	"goa.design/goa.v2/examples/account/gen/app"
+	"goa.design/goa.v2/examples/account/gen/endpoints"
+	"goa.design/goa.v2/examples/account/gen/services"
+	"goa.design/goa.v2/examples/account/gen/transport"
 	"goa.design/goa.v2/rest"
 	"goa.design/goa.v2/rest/middleware/debug"
 	"goa.design/goa.v2/rest/middleware/logging"
@@ -25,55 +27,53 @@ func main() {
 	)
 	flag.Parse()
 
-	var logger *log.Logger
+	var (
+		logger *log.Logger
+	)
 	{
 		logger = log.New(os.Stderr, "[basic] ", log.Ltime)
 	}
 
-	var ctx context.Context
-	{
-		ctx = context.Background()
-	}
-
 	var (
-		as app.AccountService
+		as services.Account
 	)
 	{
 		as = basic.NewAccountService()
 	}
 
 	var (
-		aep *app.AccountEndpoints
+		aep *endpoints.Account
 	)
 	{
-		aep = app.NewAccountEndpoints(as)
+		aep = endpoints.NewAccount(as)
 	}
 
 	var (
-		encode = rest.EncodeErrors(app.NewEncoder)
-		decode = app.NewDecoder
+		encode = transport.NewHTTPEncoder
+		decode = transport.NewHTTPDecoder
+		handle = transport.NewErrorHTTPEncoder
 	)
 
 	var (
-		ah *app.AccountHTTPHandlers
+		ah *transport.AccountHTTPHandlers
 	)
 	{
-		ah = app.NewAccountHTTPHandlers(ctx, aep, decode, encode)
+		ah = transport.NewAccountHTTPHandlers(aep, decode, encode, handle, goa.AdaptStdLogger(logger))
 	}
 
 	var mux rest.ServeMux
 	{
 		mux = rest.NewMux()
-		app.MountAccountHTTPHandlers(mux, ah)
+		transport.MountAccountHTTPHandlers(mux, ah)
 	}
 
 	var handler http.Handler = mux
 	{
 		handler = tracing.New()(handler)
 		if *dbg {
-			handler = debug.NewStd(logger)(handler)
+			handler = debug.New(goa.AdaptStdLogger(logger))(handler)
 		}
-		handler = logging.NewStd(logger)(handler)
+		handler = logging.New(goa.AdaptStdLogger(logger))(handler)
 	}
 
 	errc := make(chan error)
@@ -87,7 +87,7 @@ func main() {
 
 	// Start HTTP listener
 	go func() {
-		logger.Printf("listening on %s", *addr)
+		logger.Printf("[INFO] listening on %s", *addr)
 		errc <- http.ListenAndServe(*addr, handler)
 	}()
 

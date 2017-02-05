@@ -2,6 +2,7 @@ package goa
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
 )
@@ -13,9 +14,9 @@ type (
 	// Logger is the logging interface used by goa to produce log entries.
 	Logger interface {
 		// Info logs informational messages.
-		Info(keyvals ...interface{})
+		Info(ctx context.Context, keyvals ...interface{})
 		// Error logs error messages.
-		Error(keyvals ...interface{})
+		Error(ctx context.Context, keyvals ...interface{})
 	}
 
 	// adapter is a thin wrapper around the stdlib logger that adapts it to
@@ -25,18 +26,18 @@ type (
 	}
 )
 
-// NewLogger creates a logger backed by a stdlib logger.
-func NewLogger(l *log.Logger) Logger {
+// AdaptStdLogger creates a logger backed by a stdlib logger.
+func AdaptStdLogger(l *log.Logger) Logger {
 	return &adapter{l}
 }
 
 // Info logs an informational message.
-func (a *adapter) Info(keyvals ...interface{}) {
+func (a *adapter) Info(ctx context.Context, keyvals ...interface{}) {
 	a.log("INFO", keyvals...)
 }
 
 // Error logs an error message.
-func (a *adapter) Error(keyvals ...interface{}) {
+func (a *adapter) Error(ctx context.Context, keyvals ...interface{}) {
 	a.log("EROR", keyvals...)
 }
 
@@ -47,13 +48,13 @@ func (a *adapter) log(lvl string, keyvals ...interface{}) {
 		keyvals = append(keyvals, errMissingLogValue)
 	}
 	var fm bytes.Buffer
-	fm.WriteString("[%s] ")
+	fm.WriteString("[%s]")
 	vals := make([]interface{}, n+1)
 	vals[0] = lvl
-	for i := 1; i <= len(keyvals); i += 2 {
+	for i := 0; i < len(keyvals); i += 2 {
 		k := keyvals[i]
 		v := keyvals[i+1]
-		vals[i/2] = v
+		vals[i/2+1] = v
 		fm.WriteString(fmt.Sprintf(" %s=%%+v", k))
 	}
 	a.Logger.Printf(fm.String(), vals...)

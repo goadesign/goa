@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strings"
 
+	goa "goa.design/goa.v2"
+
 	"github.com/dimfeld/httptreemux"
 )
 
@@ -28,7 +30,7 @@ import (
 //
 // returns the content of the file "/www/data/assets/x/y/z" when requests are
 // sent to "/assets/x/y/z".
-func FileHandler(path, filename string, enc EncodeResponseFunc) http.HandlerFunc {
+func FileHandler(path, filename string, enc ErrorEncoderFunc, logger goa.Logger) http.HandlerFunc {
 	var wc string
 	if idx := strings.LastIndex(path, "/*"); idx > -1 && idx < len(path)-1 {
 		wc = path[idx+2:]
@@ -50,12 +52,12 @@ func FileHandler(path, filename string, enc EncodeResponseFunc) http.HandlerFunc
 		fs := http.Dir(dir)
 		f, err := fs.Open(name)
 		if err != nil {
-			enc(w, r, ErrInvalidFile(err))
+			enc(w, r, logger).Encode(ErrInvalidFile(err))
 		}
 		defer f.Close()
 		d, err := f.Stat()
 		if err != nil {
-			enc(w, r, ErrInvalidFile(err))
+			enc(w, r, logger).Encode(ErrInvalidFile(err))
 		}
 		// use contents of index.html for directory, if present
 		if d.IsDir() {
@@ -75,7 +77,7 @@ func FileHandler(path, filename string, enc EncodeResponseFunc) http.HandlerFunc
 		// serveContent will check modification time
 		// Still a directory? (we didn't find an index.html file)
 		if d.IsDir() {
-			dirList(w, r, f, enc)
+			dirList(w, r, f, enc, logger)
 		}
 		http.ServeContent(w, r, d.Name(), d.ModTime(), f)
 	}
@@ -91,10 +93,10 @@ var replacer = strings.NewReplacer(
 	"'", "&#39;",
 )
 
-func dirList(w http.ResponseWriter, r *http.Request, f http.File, enc EncodeResponseFunc) {
+func dirList(w http.ResponseWriter, r *http.Request, f http.File, enc ErrorEncoderFunc, logger goa.Logger) {
 	dirs, err := f.Readdir(-1)
 	if err != nil {
-		enc(w, r, err)
+		enc(w, r, logger).Encode(err)
 	}
 	sort.Sort(byName(dirs))
 

@@ -3,7 +3,7 @@ package rest
 import (
 	"net/http"
 
-	goa "goa.design/goa.v2"
+	"goa.design/goa.v2"
 )
 
 type (
