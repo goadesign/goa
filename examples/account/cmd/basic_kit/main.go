@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -10,8 +9,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/go-kit/kit/log"
+
 	"goa.design/goa.v2/examples/account"
-	"goa.design/goa.v2/examples/account/gen/app"
+	"goa.design/goa.v2/examples/account/gen/endpoints"
+	"goa.design/goa.v2/examples/account/gen/services"
+	"goa.design/goa.v2/examples/account/gen/transport"
 	"goa.design/goa.v2/rest"
 	"goa.design/goa.v2/rest/middleware/debug"
 	"goa.design/goa.v2/rest/middleware/logging"
@@ -19,89 +22,41 @@ import (
 
 func main() {
 	var (
-		addr = flag.String("http.addr", ":8080", "HTTP listen `address`")
-		dbg  = flag.Bool("app.debug", false, "Log request and response bodies")
+		listen = flag.String("listen", ":8080", "HTTP listen `address`")
 	)
 	flag.Parse()
 
-	var logger *log.Logger
-	{
-		logger = log.New(os.Stderr, "[basic] ", log.Ltime)
-	}
+	logger := log.NewLogfmtLogger(os.Stderr)
+	logger = log.NewContext(logger).With("listen", *listen).With("caller", log.DefaultCaller)
 
-	var ctx context.Context
-	{
-		ctx = context.Background()
-	}
+	as := basic.NewAccountService()
 
-	var (
-		as app.AccountService
-	)
-	{
-		as = basic.NewAccountService()
-	}
+	aep := endpoints.NewAccount(as)
 
-	var (
-		aep *app.AccountEndpoints
-	)
-	{
-		aep = app.NewAccountEndpoints(as)
-	}
+	encode := transport.NewHTTPEncoder
+	decode := transport.NewHTTPDecoder
+	eencode := transport.NewErrorHTTPEncoder
 
-	var (
-		encode      = app.NewEncoder
-		decode      = app.NewDecoder
-		encodeError = rest.NewErrorEncoder(encode)
-	)
-
-	var (
-		ah *app.AccountHTTPHandlers
-	)
-	{
-		ah = app.NewAccountHTTPHandlers(ctx, aep, decode, encode, encodeError)
-	}
+	ah := transport.NewAccountHTTPHandlers(ctx, aep, decode, encode, eencode)
 
 	createAccountHandler := httptransport.NewServer(
 		ctx,
 		aep.Create,
-		decodeUppercaseRequest,
+		genkit.CreateAccountDecoderFunc(decoder rest.DecoderFunc),
 		encodeResponse,
 	)
-	countHandler := httptransport.NewServer(
-		ctx,
-		makeCountEndpoint(svc),
-		decodeCountRequest,
-		encodeResponse,
-	)
-	var mux rest.ServeMux
-	{
-		mux = rest.NewMux()
-		app.MountAccountHTTPHandlers(mux, ah)
-	}
 
-	var handler http.Handler = mux
-	{
-		if *dbg {
-			handler = debug.NewStd(logger)(handler)
-		}
-		handler = logging.NewStd(logger)(handler)
-	}
-
-	errc := make(chan error)
-
-	// Setup interrupt handler
+	errs := make(chan error)
 	go func() {
-		c := make(chan os.Signal, 1)
+		c := make(chan os.Signal)
 		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-		errc <- fmt.Errorf("%s", <-c)
+		errs <- fmt.Errorf("%s", <-c)
 	}()
 
-	// Start HTTP listener
 	go func() {
-		logger.Printf("listening on %s", *addr)
-		errc <- http.ListenAndServe(*addr, handler)
+		logger.Log("transport", "HTTP", "addr", *httpAddr)
+		errs <- http.ListenAndServe(*httpAddr, h)
 	}()
 
-	// Run!
-	logger.Print("exit", <-errc)
+	logger.Log("exit", <-errs)
 }
