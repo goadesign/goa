@@ -101,6 +101,9 @@ func (g *Generator) Generate() (_ []string, err error) {
 	if err := g.generateUserTypes(); err != nil {
 		return nil, err
 	}
+	if err := g.generateLookups(); err != nil {
+		return nil, err
+	}
 	if !g.NoTest {
 		if err := g.generateResourceTest(); err != nil {
 			return nil, err
@@ -153,6 +156,11 @@ func (g *Generator) generateContexts() error {
 				params = nil // So that {{if .Params}} returns false in templates
 			}
 
+			lookups := a.AllLookups()
+			if lookups != nil && len(lookups) == 0 {
+				lookups = nil // So that {{if .lookups}} returns false in templates
+			}
+
 			non101 := make(map[string]*design.ResponseDefinition)
 			for k, v := range a.Responses {
 				if v.Status != 101 {
@@ -165,6 +173,7 @@ func (g *Generator) generateContexts() error {
 				ActionName:   a.Name,
 				Payload:      a.Payload,
 				Params:       params,
+				Lookups:      lookups,
 				Headers:      headers,
 				Routes:       a.Routes,
 				Responses:    non101,
@@ -250,6 +259,7 @@ func (g *Generator) generateControllers() error {
 			Resource:       codegen.Goify(r.Name, true),
 			PreflightPaths: r.PreflightPaths(),
 			FileServers:    fileServers,
+			LookupNames:    r.LookupNames(),
 		}
 		ierr := r.IterateActions(func(a *design.ActionDefinition) error {
 			context := fmt.Sprintf("%s%sContext", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
@@ -262,10 +272,12 @@ func (g *Generator) generateControllers() error {
 				"Payload":         a.Payload,
 				"PayloadOptional": a.PayloadOptional,
 				"Security":        a.Security,
+				"Lookups":         a.AllLookups(),
 			}
 			data.Actions = append(data.Actions, action)
 			return nil
 		})
+
 		if ierr != nil {
 			return ierr
 		}
@@ -410,6 +422,29 @@ func (g *Generator) generateUserTypes() error {
 		return utWr.Execute(t)
 	})
 	g.genfiles = append(g.genfiles, utFile)
+	if err != nil {
+		return err
+	}
+	return utWr.FormatCode()
+}
+
+// generateLookups iterates through the lookup templats and generates the data structures and
+// marshaling code.
+func (g *Generator) generateLookups() error {
+	lFile := filepath.Join(g.OutDir, "lookups.go")
+	utWr, err := NewLookupsWriter(lFile)
+	if err != nil {
+		panic(err) // bug
+	}
+	title := fmt.Sprintf("%s: Application lookup Interfaces", g.API.Context())
+	imports := []*codegen.ImportSpec{
+		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
+	}
+	utWr.WriteHeader(title, g.Target, imports)
+	err = g.API.IterateLookups(func(t *design.LookupDefinition) error {
+		return utWr.Execute(t)
+	})
+	g.genfiles = append(g.genfiles, lFile)
 	if err != nil {
 		return err
 	}

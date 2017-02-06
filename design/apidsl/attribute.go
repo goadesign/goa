@@ -97,6 +97,11 @@ func Attribute(name string, args ...interface{}) {
 			def.Params = new(design.AttributeDefinition)
 		}
 		parent = def.Params
+	case *design.LookupDefinition:
+		if def.Params == nil {
+			def.Params = new(design.AttributeDefinition)
+		}
+		parent = def.Params
 	default:
 		dslengine.IncompatibleDSL()
 	}

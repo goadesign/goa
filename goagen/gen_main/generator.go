@@ -117,11 +117,11 @@ func (g *Generator) Generate() (_ []string, err error) {
 			g.genfiles = append(g.genfiles, filename)
 			file, err2 := codegen.SourceFileFor(filename)
 			if err2 != nil {
-				return err
+				return err2
 			}
 			file.WriteHeader("", "main", imports)
 			if err2 = file.ExecuteTemplate("controller", ctrlT, funcs, r); err2 != nil {
-				return err
+				return err2
 			}
 			err2 = r.IterateActions(func(a *design.ActionDefinition) error {
 				if a.WebSocket() {
@@ -130,7 +130,7 @@ func (g *Generator) Generate() (_ []string, err error) {
 				return file.ExecuteTemplate("action", actionT, funcs, a)
 			})
 			if err2 != nil {
-				return err
+				return err2
 			}
 			if err2 = file.FormatCode(); err2 != nil {
 				return err2
@@ -142,6 +142,37 @@ func (g *Generator) Generate() (_ []string, err error) {
 		return
 	}
 
+	if len(g.API.Lookups) > 0 {
+		filename := filepath.Join(g.OutDir, "lookups.go")
+		if g.Force {
+			os.Remove(filename)
+		}
+		if _, e := os.Stat(filename); e != nil {
+			title := fmt.Sprintf("%s: Application lookup Interfaces", g.API.Context())
+			imports := []*codegen.ImportSpec{
+				codegen.SimpleImport(imp),
+				codegen.NewImport("uuid", "github.com/satori/go.uuid"),
+			}
+
+			g.genfiles = append(g.genfiles, filename)
+			file, err2 := codegen.SourceFileFor(filename)
+			if err2 != nil {
+				return nil, err2
+			}
+			file.WriteHeader(title, "main", imports)
+
+			for _, l := range g.API.Lookups {
+				if err2 = file.ExecuteTemplate("lookups", lookupT, funcs, l); err2 != nil {
+					return nil, err2
+				}
+
+			}
+			if err2 = file.FormatCode(); err2 != nil {
+				return nil, err2
+			}
+		}
+
+	}
 	return g.genfiles, nil
 }
 
@@ -263,9 +294,15 @@ func main() {
 	service.Use(middleware.ErrorHandler(service, true))
 	service.Use(middleware.Recover())
 {{ $api := .API }}
+{{ range $api.Lookups -}}
+	lookup{{ goify .Name true}} := NewLookup{{ goify .Name true}}()
+{{ end}}
 {{ range $name, $res := $api.Resources }}{{ $name := goify $res.Name true }} // Mount "{{$res.Name}}" controller
 	{{ $tmp := tempvar }}{{ $tmp }} := New{{ $name }}Controller(service)
-	{{ targetPkg }}.Mount{{ $name }}Controller(service, {{ $tmp }})
+	{{ targetPkg }}.Mount{{ $name }}Controller(service, {{ $tmp }}
+	{{- range $i, $name := .LookupNames -}}
+		, lookup{{ goify $name true -}}
+	{{ end }})
 {{ end }}
 
 	// Start service
@@ -316,5 +353,20 @@ func (c *{{ $ctrlName }}) {{ goify .Name true }}WSHandler(ctx *{{ targetPkg }}.{
 		// Dummy echo websocket server
 		io.Copy(ws, ws)
 	}
+}
+`
+
+const lookupT = `
+type lookup{{ goify .Name true}} struct {}
+
+// NewLookup{{ goify .Name true}} creates a new {{ .Name }} lookup
+func NewLookup{{ goify .Name true}}() {{ targetPkg }}.Lookup{{ goify .Name true}} {
+	return &lookup{{ goify .Name true}}{}
+}
+
+// Lookup{{ goify .Name true}} handles the lookup of the context value {{ goify .Name true}}
+func (l *lookup{{ goify .Name true}}) Lookup{{ goify .Name true}}({{ range $i, $arg := .Arguments }}{{ if ne $i 0}},{{ end }} {{ goifyatt $arg.Attribute $arg.ArgumentName false }} {{ gotypename $arg.Attribute.Type nil 0 false }}{{end}}) (*{{ targetPkg }}.{{ goify .ReturnType.TypeName true }}, error) {
+	// Put your lookup logic here
+	return nil, nil
 }
 `

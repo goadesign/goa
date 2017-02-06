@@ -71,6 +71,13 @@ type (
 		Validator    *codegen.Validator
 	}
 
+	// LookupWriter generate code for a goa application lookup interfaces.
+	// Lookups are used to lookup context values
+	LookupsWriter struct {
+		*codegen.SourceFile
+		LookupTmpl *template.Template
+	}
+
 	// ContextTemplateData contains all the information used by the template to render the context
 	// code for an action.
 	ContextTemplateData struct {
@@ -78,6 +85,7 @@ type (
 		ResourceName string // e.g. "bottles"
 		ActionName   string // e.g. "list"
 		Params       *design.AttributeDefinition
+		Lookups      []*design.LookupDefinition
 		Payload      *design.UserTypeDefinition
 		Headers      *design.AttributeDefinition
 		Routes       []*design.RouteDefinition
@@ -97,6 +105,7 @@ type (
 		Decoders       []*EncoderTemplateData         // Decoder data
 		Origins        []*design.CORSDefinition       // CORS policies
 		PreflightPaths []string
+		LookupNames    []string // All lookup names
 	}
 
 	// ResourceData contains the information required to generate the resource GoGenerator
@@ -438,6 +447,25 @@ func (w *UserTypesWriter) Execute(t *design.UserTypeDefinition) error {
 	return w.ExecuteTemplate("types", userTypeT, fn, t)
 }
 
+// NewLookupsWriter returns a contexts code writer.
+// Lookups contain a interface for lookuing up context values defined by DSL "Lookup".
+func NewLookupsWriter(filename string) (*LookupsWriter, error) {
+	file, err := codegen.SourceFileFor(filename)
+	if err != nil {
+		return nil, err
+	}
+	return &LookupsWriter{
+		SourceFile: file,
+		//Finalizer:  codegen.NewFinalizer(),
+		//Validator:  codegen.NewValidator(),
+	}, nil
+}
+
+// Execute writes the code for the context lookups to the writer.
+func (w *LookupsWriter) Execute(l *design.LookupDefinition) error {
+	return w.ExecuteTemplate("lookups", lookupInterfaceT, nil, l)
+}
+
 // newCoerceData is a helper function that creates a map that can be given to the "Coerce" template.
 func newCoerceData(name string, att *design.AttributeDefinition, pointer bool, pkg string, depth int) map[string]interface{} {
 	return map[string]interface{}{
@@ -467,6 +495,8 @@ type {{ .Name }} struct {
 */}}	{{ goifyatt $att $name true }} {{ if and $att.Type.IsPrimitive ($.Headers.IsPrimitivePointer $name) }}*{{ end }}{{ gotyperef .Type nil 0 false }}
 {{ end }}{{ end }}{{ end }}{{ if .Params }}{{ range $name, $att := .Params.Type.ToObject }}{{/*
 */}}	{{ goifyatt $att $name true }} {{ if and $att.Type.IsPrimitive ($.Params.IsPrimitivePointer $name) }}*{{ end }}{{ gotyperef .Type nil 0 false }}
+{{ end }}{{ end }}{{ if .Lookups }}{{ range $i, $lookup := .Lookups }}{{/*
+*/}}	{{ goify $lookup.Name true }} *{{ goify $lookup.ReturnType.TypeName true }}
 {{ end }}{{ end }}{{ if .Payload }}	Payload {{ gotyperef .Payload nil 0 false }}
 {{ end }}}
 `
@@ -695,7 +725,9 @@ func initService(service *goa.Service) {
 	// template input: *ControllerTemplateData
 	mountT = `
 // Mount{{ .Resource }}Controller "mounts" a {{ .Resource }} resource controller on the given service.
-func Mount{{ .Resource }}Controller(service *goa.Service, ctrl {{ .Resource }}Controller) {
+func Mount{{ .Resource }}Controller(service *goa.Service, ctrl {{ .Resource }}Controller{{- range $i, $name := .LookupNames -}}
+, lookup{{ goify $name true }} Lookup{{ goify $name true -}}
+{{ end }}) {
 	initService(service)
 	var h goa.Handler
 {{ $res := .Resource }}{{ if .Origins }}{{ range .PreflightPaths }}{{/*
@@ -717,7 +749,22 @@ func Mount{{ .Resource }}Controller(service *goa.Service, ctrl {{ .Resource }}Co
 {{ if not .PayloadOptional }}		} else {
 			return goa.MissingPayloadError()
 {{ end }}		}
-{{ end }}		return ctrl.{{ .Name }}(rctx)
+{{ end }}{{ if .Lookups }}{{- range $lookup := .Lookups }}
+		// Lookup the context value {{ goify $lookup.Name true }} {{ goify $lookup.ReturnType.TypeName true }}
+{{- $tmp := tempvar }}
+
+		{{ $tmp }}, err := lookup{{ goify $lookup.Name true }}.Lookup{{ goify $lookup.Name true }}({{ range $i, $arg := $lookup.Arguments }}{{ if ne $i 0}}, {{ end }}rctx.{{ goify $arg.ContextParamName true }}{{end}})
+		if err != nil {
+			return goa.ErrInternal("lookup of {{ $lookup.Name }} failed with error", "error", err, "lookup", "{{ $lookup.Name }}")
+		}
+		{{- if $lookup.MustResolve }}
+		if {{ $tmp }} == nil {
+			return goa.ErrNotFound("{{ $lookup.Name }} is not found by id", "lookup", "{{ $lookup.Name }}")
+		}
+		{{ end -}}
+		rctx.{{ goify $lookup.Name true }} = {{ $tmp }}
+
+{{ end }}{{ end }}		return ctrl.{{ .Name }}(rctx)
 	}
 {{ if .Security }}	h = handleSecurity({{ printf "%q" .Security.Scheme.SchemeName }}, h{{ range .Security.Scopes }}, {{ printf "%q" . }}{{ end }})
 {{ end }}{{ if $.Origins }}	h = handle{{ $res }}Origin(h)
@@ -852,6 +899,15 @@ func (ut {{ gotyperef . .AllRequired 0 false }}) Validate() (err error) {
 {{ $validation }}
 	return
 }{{ end }}
+`
+
+	// lookupInterfaceT generates the code for a lookup interface.
+	// template input: map[string]*design.LookupDefinition
+	lookupInterfaceT = `
+type Lookup{{ goify .Name true}} interface {
+	Lookup{{ goify .Name true}}({{ range $i, $arg := .Arguments }}{{ if ne $i 0}},{{ end }} {{ goifyatt $arg.Attribute $arg.ArgumentName false }} {{ gotypename $arg.Attribute.Type nil 0 false }}{{end}}) (*{{ goify .ReturnType.TypeName true }}, error)
+}
+
 `
 
 	// securitySchemesT generates the code for the security module.

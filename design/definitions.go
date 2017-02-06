@@ -50,6 +50,8 @@ type (
 		Types map[string]*UserTypeDefinition
 		// MediaTypes indexes the API media types by canonical identifier
 		MediaTypes map[string]*MediaTypeDefinition
+		// Lookups describes the generic context lookup functions
+		Lookups map[string]*LookupDefinition
 		// Traits available to all API resources and actions indexed by name
 		Traits map[string]*dslengine.TraitDefinition
 		// Responses available to all API actions indexed by name
@@ -132,6 +134,8 @@ type (
 		CanonicalActionName string
 		// Map of response definitions that apply to all actions indexed by name.
 		Responses map[string]*ResponseDefinition
+		// Lookups
+		Lookups []*LookupDefinition
 		// Request headers that apply to all actions.
 		Headers *AttributeDefinition
 		// Origins defines the CORS policies that apply to this resource.
@@ -244,6 +248,8 @@ type (
 		Payload *UserTypeDefinition
 		// PayloadOptional is true if the request payload is optional, false otherwise.
 		PayloadOptional bool
+		// Lookups
+		Lookups []*LookupDefinition
 		// Request headers that need to be made available to action
 		Headers *AttributeDefinition
 		// Metadata is a list of key/value pairs
@@ -341,6 +347,25 @@ type (
 		Attribute() *AttributeDefinition
 	}
 
+	// LookupDefinition defines a lookup function who is called after context creation and before
+	// the actual action is called
+	LookupDefinition struct {
+		// Name for the lookup function
+		Name string
+
+		// ReturnType is the type the lookup will return
+		ReturnType *UserTypeDefinition
+
+		// Params are the arguments provided to the lookup
+		Params *AttributeDefinition
+
+		// Remap gives a mapping
+		Remap map[string]string
+
+		// MustResolve indicates that the lookup needs to return a non nil pointer
+		MustResolve bool
+	}
+
 	// ResourceIterator is the type of functions given to IterateResources.
 	ResourceIterator func(r *ResourceDefinition) error
 
@@ -355,6 +380,9 @@ type (
 
 	// FileServerIterator is the type of functions given to IterateFileServers.
 	FileServerIterator func(f *FileServerDefinition) error
+
+	// LookupIterator is the type of functions given to IterateLookups.
+	LookupIterator func(l *LookupDefinition) error
 
 	// HeaderIterator is the type of functions given to IterateHeaders.
 	HeaderIterator func(name string, isRequired bool, h *AttributeDefinition) error
@@ -545,6 +573,25 @@ func (a *APIDefinition) IterateUserTypes(it UserTypeIterator) error {
 	sort.Strings(names)
 	for _, n := range names {
 		if err := it(a.Types[n]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// IterateLookups calls the given iterator passing in each lookup sorted in alphabetical order.
+// Iteration stops if an iterator returns an error and in this case IterateLookups returns that
+// error.
+func (a *APIDefinition) IterateLookups(it LookupIterator) error {
+	names := make([]string, len(a.Lookups))
+	i := 0
+	for n, _ := range a.Lookups {
+		names[i] = n
+		i++
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		if err := it(a.Lookups[n]); err != nil {
 			return err
 		}
 	}
@@ -821,6 +868,30 @@ func (r *ResourceDefinition) PreflightPaths() []string {
 		return nil
 	})
 	return paths
+}
+
+// Lookup names returns the lookup names used in all its actions
+func (r *ResourceDefinition) LookupNames() []string {
+	names := []string{}
+	findLookupByName := func(name string) bool {
+		for _, n := range names {
+			if strings.EqualFold(name, n) {
+				return true
+			}
+		}
+		return false
+	}
+
+	r.IterateActions(func(a *ActionDefinition) error {
+		for _, l := range a.AllLookups() {
+			if false == findLookupByName(l.Name) {
+				names = append(names, l.Name)
+			}
+		}
+		return nil
+	})
+
+	return names
 }
 
 // DSL returns the initialization DSL.
@@ -1369,6 +1440,52 @@ func (a *ActionDefinition) AllParams() *AttributeDefinition {
 	return res
 }
 
+// AllLookup returns all the lookup types of all the actions/routes across its routes.
+func (a *ActionDefinition) AllLookups() []*LookupDefinition {
+
+	lookups := []*LookupDefinition{}
+
+	findLookupIndex := func(n string) (int, bool) {
+		for i, l := range lookups {
+			if strings.EqualFold(l.Name, n) {
+				return i, true
+			}
+		}
+		return 0, false
+	}
+
+	iterateLookups := func(in []*LookupDefinition) {
+		if in == nil {
+			return
+		}
+
+		for _, l := range in {
+			if i, ok := findLookupIndex(l.Name); ok {
+				lookups[i] = lookups[i].Merge(l)
+			} else {
+				lookups = append([]*LookupDefinition{l}, lookups...)
+			}
+		}
+	}
+
+	iterateLookups(a.Lookups)
+	if a.Parent != nil {
+		iterateLookups(a.Parent.Lookups)
+
+		if p := a.Parent.Parent(); p != nil {
+			iterateLookups(p.CanonicalAction().AllLookups())
+		}
+	}
+
+	for i, l := range lookups {
+		if lt, ok := Design.Lookups[l.Name]; ok {
+			lookups[i] = l.Merge(lt)
+		}
+	}
+
+	return lookups
+}
+
 // HasAbsoluteRoutes returns true if all the action routes are absolute.
 func (a *ActionDefinition) HasAbsoluteRoutes() bool {
 	for _, r := range a.Routes {
@@ -1643,9 +1760,15 @@ func (f *FileServerDefinition) IsDir() bool {
 // ByFilePath makes FileServerDefinition sortable for code generators.
 type ByFilePath []*FileServerDefinition
 
-func (b ByFilePath) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
-func (b ByFilePath) Len() int           { return len(b) }
-func (b ByFilePath) Less(i, j int) bool { return b[i].FilePath < b[j].FilePath }
+func (b ByFilePath) Swap(i, j int) {
+	b[i], b[j] = b[j], b[i]
+}
+func (b ByFilePath) Len() int {
+	return len(b)
+}
+func (b ByFilePath) Less(i, j int) bool {
+	return b[i].FilePath < b[j].FilePath
+}
 
 // Context returns the generic definition name used in error messages.
 func (l *LinkDefinition) Context() string {
@@ -1721,6 +1844,74 @@ func (r *RouteDefinition) FullPath() string {
 // base paths.
 func (r *RouteDefinition) IsAbsolute() bool {
 	return strings.HasPrefix(r.Path, "//")
+}
+
+func (d *LookupDefinition) Context() string {
+	return fmt.Sprintf("lookup %s", d.Name)
+}
+
+// Merge combines 2 lookup definitions into one
+func (d *LookupDefinition) Merge(in *LookupDefinition) *LookupDefinition {
+
+	remap := make(map[string]string)
+	mergeRemap := func(in map[string]string) {
+		if in == nil {
+			return
+		}
+		for to, from := range in {
+			if _, ok := remap[to]; !ok {
+				remap[to] = from
+			}
+		}
+	}
+	mergeRemap(d.Remap)
+	mergeRemap(in.Remap)
+
+	params := &AttributeDefinition{
+		Type: Object{},
+	}
+	params = params.Merge(d.Params)
+	params = params.Merge(in.Params)
+
+	returnType := d.ReturnType
+	if returnType == nil {
+		returnType = in.ReturnType
+	}
+
+	return &LookupDefinition{
+		Name:        d.Name,
+		ReturnType:  returnType,
+		Params:      params,
+		Remap:       remap,
+		MustResolve: d.MustResolve,
+	}
+}
+
+// Arguments returns information about the arguments of a lookup function in the correct invoke order
+func (l *LookupDefinition) Arguments() []map[string]interface{} {
+	obj := l.Params.Type.ToObject()
+	names := make([]string, len(obj))
+	i := 0
+	for n := range obj {
+		names[i] = n
+		i++
+	}
+	sort.Strings(names)
+
+	args := make([]map[string]interface{}, len(obj))
+	for i, n := range names {
+		p := n
+		if to, ok := l.Remap[n]; ok {
+			p = to
+		}
+
+		args[i] = map[string]interface{}{
+			"Attribute":        obj[n],
+			"ArgumentName":     n,
+			"ContextParamName": p,
+		}
+	}
+	return args
 }
 
 func iterateHeaders(headers *AttributeDefinition, isRequired func(name string) bool, it HeaderIterator) error {
