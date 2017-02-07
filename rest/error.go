@@ -6,7 +6,7 @@ corresponding content including the HTTP status is used otherwise an internal
 error is returned. Errors that bubble up all the way to the top (i.e. not
 handled by the error middleware) also generate an internal error response.
 */
-package http
+package rest
 
 import (
 	"fmt"

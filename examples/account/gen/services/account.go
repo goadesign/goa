@@ -1,6 +1,9 @@
 package services
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 // Account is the "account" service interface.
 type (
@@ -8,6 +11,7 @@ type (
 		// Create implements the "create" endpoint.
 		// The implementation should return an instance of
 		// *AccountCreated or of *AccountAccepted.
+		// Possible errors are BadRequest, NameAlreadyToken
 		Create(context.Context, *CreateAccountPayload) (interface{}, error)
 		// List implements the "list" endpoint.
 		List(context.Context) ([]*AccountResponse, error)
@@ -31,6 +35,13 @@ type (
 	AccountAccepted struct {
 		// Href is the value of the Location header
 		Href string
+	}
+
+	// NameAlreadyTaken is the error returned when the account name is
+	// already taken.
+	NameAlreadyTaken struct {
+		// Message of error
+		Message string
 	}
 
 	// AccountResponse type
@@ -58,3 +69,7 @@ type (
 		ID string
 	}
 )
+
+func (nat *NameAlreadyTaken) Error() string {
+	return fmt.Sprintf("Message: %v", nat.Message)
+}

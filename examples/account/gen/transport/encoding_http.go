@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/gob"
@@ -10,10 +11,33 @@ import (
 	"mime"
 	"net/http"
 
-	"github.com/rightscale/aes/logger"
-
-	"goa.design/goa.v2"
+	goa "goa.design/goa.v2"
 	"goa.design/goa.v2/rest"
+)
+
+type (
+	// Service Encoding/Decoding
+
+	// DecodeRequestFunc decodes the HTTP request into a request payload.
+	DecodeRequestFunc func(*http.Request) (interface{}, error)
+
+	// EncodeResponseFunc encodes the request result into a HTTP response.
+	// The encoding may perform content-type negotiation using the given
+	// request.
+	EncodeResponseFunc func(http.ResponseWriter, *http.Request, interface{}) error
+
+	// EncodeErrorFunc encodes an error into a HTTP response.
+	// The encoding may perform content-type negotiation using the given
+	// request.
+	EncodeErrorFunc func(http.ResponseWriter, *http.Request, error)
+
+	// Client Encoding/Decoding
+
+	// EncodeRequestFunc encodes a request payload into a HTTP request.
+	EncodeRequestFunc func(*http.Request, interface{}) error
+
+	// DecodeResponseFunc decodes a request result from a HTTP response.
+	DecodeResponseFunc func(context.Context, *http.Response) (interface{}, error)
 )
 
 // NewHTTPDecoder returns a HTTP request body decoder.
@@ -72,45 +96,6 @@ func NewHTTPEncoder(w http.ResponseWriter, r *http.Request) rest.Encoder {
 	}
 }
 
-// NewErrorHTTPEncoder returns an encoder that checks whether the error is a goa
-// Error and if so sets the response status code using the error status and
-// encodes the corresponding ErrorResponse struct to the response body. If the
-// error is not a goa.Error then it sets the response status code to 500, writes
-// the error message to the response body and logs it.
-func NewErrorHTTPEncoder(w http.ResponseWriter, r *http.Request, logger goa.Logger) rest.ErrorEncoder {
-	return &errorEncoder{
-		w:       w,
-		r:       r,
-		encoder: NewHTTPEncoder(w, r),
-	}
-}
-
-type errorEncoder struct {
-	w       http.ResponseWriter
-	r       *http.Request
-	encoder rest.Encoder
-}
-
-func (e *errorEncoder) Encode(handled error) {
-	switch t := handled.(type) {
-	case goa.Error:
-		e.w.Header().Set("Content-Type", ResponseContentType(e.r))
-		e.w.WriteHeader(rest.HTTPStatus(t.Status()))
-		err := e.encoder.Encode(rest.NewErrorResponse(t))
-		if err != nil {
-			logger.Error(e.r.Context(), "encoding", err)
-		}
-	default:
-		b := make([]byte, 6)
-		io.ReadFull(rand.Reader, b)
-		id := base64.RawURLEncoding.EncodeToString(b) + ": "
-		e.w.Header().Set("Content-Type", "text/plain")
-		e.w.WriteHeader(http.StatusInternalServerError)
-		e.w.Write([]byte(id + handled.Error()))
-		logger.Error(e.r.Context(), "id", id, "error", handled.Error())
-	}
-}
-
 // ResponseContentType returns the value of the Content-Type header for the
 // given request.
 func ResponseContentType(r *http.Request) string {
@@ -129,5 +114,32 @@ func ResponseContentType(r *http.Request) string {
 		return accept
 	default:
 		return "application/json"
+	}
+}
+
+// EncodeError returns an encoder that checks whether the error is a goa
+// Error and if so sets the response status code using the error status and
+// encodes the corresponding ErrorResponse struct to the response body. If the
+// error is not a goa.Error then it sets the response status code to 500, writes
+// the error message to the response body and logs it.
+func EncodeError(enc rest.ResponseEncoderFunc, logger goa.Logger) func(http.ResponseWriter, *http.Request, error) {
+	return func(w http.ResponseWriter, r *http.Request, v error) {
+		switch t := v.(type) {
+		case goa.Error:
+			w.Header().Set("Content-Type", ResponseContentType(r))
+			w.WriteHeader(rest.HTTPStatus(t.Status()))
+			err := enc(w, r).Encode(rest.NewErrorResponse(t))
+			if err != nil {
+				logger.Error(r.Context(), "encoding", err)
+			}
+		default:
+			b := make([]byte, 6)
+			io.ReadFull(rand.Reader, b)
+			id := base64.RawURLEncoding.EncodeToString(b) + ": "
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(id + t.Error()))
+			logger.Error(r.Context(), "id", id, "error", t.Error())
+		}
 	}
 }

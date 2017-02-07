@@ -9,11 +9,19 @@ import (
 	"goa.design/goa.v2/rest/design"
 )
 
-// HTTP defines HTTP transport specific properties either on a service or on a
-// single endpoint. The function maps the request and response types to HTTP
-// properties such as parameters (via path wildcards or query strings), request
-// and response headers and bodies as well as response status code.  HTTP also
-// defines HTTP specific properties such as the endpoint URLs and HTTP methods.
+// HTTP defines HTTP transport specific properties either on a API, service or
+// on a single endpoint. The function maps the request and response types to
+// HTTP properties such as parameters (via path wildcards or query strings),
+// request and response headers and bodies as well as response status code. HTTP
+// also defines HTTP specific properties such as the endpoint URLs and HTTP
+// methods.
+//
+// As a special case HTTP may be used to define the response generated for
+// invalid requests and internal errors (errors returned by the service
+// endpoints that don't match any of the error responses defined in the design).
+// This is the only use of HTTP allowed in the API expression. The attributes of
+// the built in invalid request error are "id", "status", "code", "detail" and
+// "meta", see ErrorMedia.
 //
 // The functions that appear in HTTP such as Header, Param or Body may take
 // advantage of the request or response types (depending on whether they appear
@@ -23,9 +31,21 @@ import (
 // also define new attributes or override the existing request or response type
 // attributes.
 //
-// HTTP may appear in a Service or an Endpoint expression.
+// HTTP may appear in API, a Service or an Endpoint expression.
 //
 // HTTP accepts a single argument which is the defining DSL function.
+//
+// Example:
+//
+//    var _ = API("calc", func() {
+//        HTTP(func() {
+//            Response(InvalidRequest, func() {
+//                Header("Error-Code:code") // Use the "code" attribute of the
+//                                          // invalid error struct to set the
+//                                          // value of the Error-Code header.
+//            })
+//        })
+//    }
 //
 // Example:
 //

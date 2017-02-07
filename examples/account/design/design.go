@@ -24,6 +24,7 @@ var _ = Service("account", func() {
 				Header("Href:Location")
 				Body(Empty)
 			})
+			Response("name_already_taken", StatusConflict)
 		})
 	})
 	Endpoint("list", func() {
