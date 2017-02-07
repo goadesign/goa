@@ -142,6 +142,51 @@ var _ = Describe("Generate", func() {
 		})
 	})
 
+	Context("with a resource name with underscores characters", func() {
+		BeforeEach(func() {
+			codegen.TempCount = 0
+			design.Design = &design.APIDefinition{
+				Name:        "testapi",
+				Title:       "dummy API with no resource",
+				Description: "I told you it's dummy",
+				Resources: map[string]*design.ResourceDefinition{
+					"foo_test": {
+						Name: "foo_test",
+						Actions: map[string]*design.ActionDefinition{
+							"show": {
+								Name: "show",
+								Params: &design.AttributeDefinition{
+									Type: design.Object{
+										"nicID":     &design.AttributeDefinition{Type: design.String},
+										"ipAddress": &design.AttributeDefinition{Type: design.String},
+									},
+								},
+								Routes: []*design.RouteDefinition{
+									{
+										Verb: "GET",
+										Path: "/nics/:nicID/add/:ipAddress",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			fooRes := design.Design.Resources["foo"]
+			showAct := fooRes.Actions["show"]
+			showAct.Parent = fooRes
+			showAct.Routes[0].Parent = showAct
+		})
+
+		It("generate the correct command path formatting code", func() {
+			Ω(genErr).Should(BeNil())
+			c, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
+			content := string(c)
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(content).Should(ContainSubstring(`foo-test`))
+		})
+	})
+
 	Context("with an action with an integer parameter with no default value", func() {
 		BeforeEach(func() {
 			codegen.TempCount = 0
