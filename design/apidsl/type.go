@@ -46,6 +46,8 @@ func Type(name string, dsl func()) *design.UserTypeDefinition {
 	}
 	if dsl == nil {
 		t.Type = design.String
+	} else {
+		t.Type = make(design.Object)
 	}
 	design.Design.Types[name] = t
 	return t
