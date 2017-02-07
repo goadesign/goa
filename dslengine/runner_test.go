@@ -143,4 +143,25 @@ var _ = Describe("DSL errors", func() {
 			Ω(dslengine.Errors[0].Line).Should(Equal(lineNumber))
 		})
 	})
+
+	Context("with DSL using an empty type", func() {
+		BeforeEach(func() {
+			API("foo", func() {})
+			Resource("bar", func() {
+				Action("baz", func() {
+					Payload("use-empty")
+				})
+			})
+			Type("use-empty", func() {
+				Attribute("e", "empty")
+			})
+			Type("empty", func() {
+			})
+			dslengine.Run()
+		})
+
+		It("does not panic", func() {
+			Ω(func() { dslengine.Run() }).ShouldNot(Panic())
+		})
+	})
 })
