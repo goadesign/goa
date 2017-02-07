@@ -15,15 +15,15 @@ import (
 	"goa.design/goa.v2/examples/account/gen/services"
 	"goa.design/goa.v2/examples/account/gen/transport"
 	"goa.design/goa.v2/rest"
-	"goa.design/goa.v2/rest/middleware/debug"
+	"goa.design/goa.v2/rest/middleware/debugging"
 	"goa.design/goa.v2/rest/middleware/logging"
 	"goa.design/goa.v2/rest/middleware/tracing"
 )
 
 func main() {
 	var (
-		addr = flag.String("http.addr", ":8080", "HTTP listen `address`")
-		dbg  = flag.Bool("app.debug", false, "Log request and response bodies")
+		addr = flag.String("listen", ":8080", "HTTP listen `address`")
+		dbg  = flag.Bool("debug", false, "Log request and response bodies")
 	)
 	flag.Parse()
 
@@ -49,16 +49,15 @@ func main() {
 	}
 
 	var (
-		encode = transport.NewHTTPEncoder
-		decode = transport.NewHTTPDecoder
-		handle = transport.NewErrorHTTPEncoder
+		enc = transport.NewHTTPEncoder
+		dec = transport.NewHTTPDecoder
 	)
 
 	var (
 		ah *transport.AccountHTTPHandlers
 	)
 	{
-		ah = transport.NewAccountHTTPHandlers(aep, decode, encode, handle, goa.AdaptStdLogger(logger))
+		ah = transport.NewAccountHTTPHandlers(aep, dec, enc, goa.AdaptStdLogger(logger))
 	}
 
 	var mux rest.ServeMux
@@ -71,7 +70,7 @@ func main() {
 	{
 		handler = tracing.New()(handler)
 		if *dbg {
-			handler = debug.New(goa.AdaptStdLogger(logger))(handler)
+			handler = debugging.New(goa.AdaptStdLogger(logger))(handler)
 		}
 		handler = logging.New(goa.AdaptStdLogger(logger))(handler)
 	}
