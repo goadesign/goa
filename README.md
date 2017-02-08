@@ -40,8 +40,8 @@ the
 ## Separation of Concern
 
 The generated code produced by `goagen` v2 implements a much stronger separation
-of the transport specific logic is encapsulated in a different layer than the
-actual service code. This makes it possible to easily expose the same endpoints
-via different transport mechanisms such as HTTP and gRPC. See
-the [account example](https://github.com/goadesign/goa/tree/v2/examples/account)
+of concern between the transport and service layers. This makes it possible to
+easily expose the same endpoints via different transport mechanisms such as HTTP
+and gRPC. See the
+[account example](https://github.com/goadesign/goa/tree/v2/examples/account)
 which illustrates the new generated code structure.
