@@ -1,4 +1,4 @@
-package transport
+package http
 
 import (
 	"fmt"
@@ -12,67 +12,67 @@ import (
 	"goa.design/goa.v2/rest"
 )
 
-// AccountHTTPHandlers lists the account service endpoint HTTP handlers.
-type AccountHTTPHandlers struct {
+// AccountHandlers lists the account service endpoint HTTP handlers.
+type AccountHandlers struct {
 	Create http.Handler
 	List   http.Handler
 	Show   http.Handler
 	Delete http.Handler
 }
 
-// NewAccountHTTPHandlers instantiates HTTP handlers for all the account service
+// NewAccountHandlers instantiates HTTP handlers for all the account service
 // endpoints.
-func NewAccountHTTPHandlers(
+func NewAccountHandlers(
 	e *endpoints.Account,
 	dec rest.RequestDecoderFunc,
 	enc rest.ResponseEncoderFunc,
 	logger goa.Logger,
-) *AccountHTTPHandlers {
-	return &AccountHTTPHandlers{
-		Create: NewCreateAccountHTTPHandler(e.Create, dec, enc, logger),
-		List:   NewListAccountHTTPHandler(e.List, dec, enc, logger),
-		Show:   NewShowAccountHTTPHandler(e.Show, dec, enc, logger),
-		Delete: NewDeleteAccountHTTPHandler(e.Delete, dec, enc, logger),
+) *AccountHandlers {
+	return &AccountHandlers{
+		Create: NewCreateAccountHandler(e.Create, dec, enc, logger),
+		List:   NewListAccountHandler(e.List, dec, enc, logger),
+		Show:   NewShowAccountHandler(e.Show, dec, enc, logger),
+		Delete: NewDeleteAccountHandler(e.Delete, dec, enc, logger),
 	}
 }
 
-// MountAccountHTTPHandlers configures the mux to serve the account endpoints.
-func MountAccountHTTPHandlers(mux rest.ServeMux, h *AccountHTTPHandlers) {
-	MountCreateAccountHTTPHandler(mux, h.Create)
-	MountListAccountHTTPHandler(mux, h.List)
-	MountShowAccountHTTPHandler(mux, h.Show)
-	MountDeleteAccountHTTPHandler(mux, h.Delete)
+// MountAccountHandlers configures the mux to serve the account endpoints.
+func MountAccountHandlers(mux rest.ServeMux, h *AccountHandlers) {
+	MountCreateAccountHandler(mux, h.Create)
+	MountListAccountHandler(mux, h.List)
+	MountShowAccountHandler(mux, h.Show)
+	MountDeleteAccountHandler(mux, h.Delete)
 }
 
-// MountCreateAccountHTTPHandler configures the mux to serve the
+// MountCreateAccountHandler configures the mux to serve the
 // "account" service "create" endpoint.
-func MountCreateAccountHTTPHandler(mux rest.ServeMux, h http.Handler) {
+func MountCreateAccountHandler(mux rest.ServeMux, h http.Handler) {
 	mux.Handle("POST", "/accounts", h)
 }
 
-// MountListAccountHTTPHandler configures the mux to serve the
+// MountListAccountHandler configures the mux to serve the
 // "account" service "list" endpoint.
-func MountListAccountHTTPHandler(mux rest.ServeMux, h http.Handler) {
+func MountListAccountHandler(mux rest.ServeMux, h http.Handler) {
 	mux.Handle("GET", "/accounts", h)
 }
 
-// MountShowAccountHTTPHandler configures the mux to serve the
+// MountShowAccountHandler configures the mux to serve the
 // "account" service "show" endpoint.
-func MountShowAccountHTTPHandler(mux rest.ServeMux, h http.Handler) {
+func MountShowAccountHandler(mux rest.ServeMux, h http.Handler) {
 	mux.Handle("GET", "/accounts/:id", h)
 }
 
-// MountDeleteAccountHTTPHandler configures the mux to serve the
+// MountDeleteAccountHandler configures the mux to serve the
 // "account" service "delete" endpoint.
-func MountDeleteAccountHTTPHandler(mux rest.ServeMux, h http.Handler) {
+func MountDeleteAccountHandler(mux rest.ServeMux, h http.Handler) {
 	mux.Handle("DELETE", "/accounts/:id", h)
 }
 
-// NewCreateAccountHTTPHandler creates a HTTP handler which loads the HTTP
+// NewCreateAccountHandler creates a HTTP handler which loads the HTTP
 // request and calls the "account" service "create" endpoint.
 // The middleware is mounted so it executes after the request is loaded and thus
 // may access the request state via the rest package ContextXXX functions.
-func NewCreateAccountHTTPHandler(
+func NewCreateAccountHandler(
 	endpoint goa.Endpoint,
 	dec rest.RequestDecoderFunc,
 	enc rest.ResponseEncoderFunc,
@@ -91,6 +91,7 @@ func NewCreateAccountHTTPHandler(
 		}
 
 		ctx := goa.NewContext(r.Context(), "account", "show")
+		ctx = rest.NewContext(ctx, w, r)
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
@@ -157,11 +158,11 @@ func CreateAccountEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logge
 	}
 }
 
-// NewListAccountHTTPHandler creates a HTTP handler which loads the HTTP
+// NewListAccountHandler creates a HTTP handler which loads the HTTP
 // request and calls the "account" service "list" endpoint.
 // The middleware is mounted so it executes after the request is loaded and thus
 // may access the request state via the rest package ContextXXX functions.
-func NewListAccountHTTPHandler(
+func NewListAccountHandler(
 	endpoint goa.Endpoint,
 	dec rest.RequestDecoderFunc,
 	enc rest.ResponseEncoderFunc,
@@ -173,6 +174,7 @@ func NewListAccountHTTPHandler(
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := goa.NewContext(r.Context(), "account", "list")
+		ctx = rest.NewContext(ctx, w, r)
 		res, err := endpoint(ctx, nil)
 
 		if err != nil {
@@ -195,11 +197,11 @@ func ListAccountEncodeResponse(encoder rest.ResponseEncoderFunc) EncodeResponseF
 	}
 }
 
-// NewShowAccountHTTPHandler creates a HTTP handler which loads the HTTP
+// NewShowAccountHandler creates a HTTP handler which loads the HTTP
 // request and calls the "account" service "show" endpoint.
 // The middleware is mounted so it executes after the request is loaded and thus
 // may access the request state via the rest package ContextXXX functions.
-func NewShowAccountHTTPHandler(
+func NewShowAccountHandler(
 	endpoint goa.Endpoint,
 	dec rest.RequestDecoderFunc,
 	enc rest.ResponseEncoderFunc,
@@ -217,6 +219,7 @@ func NewShowAccountHTTPHandler(
 		}
 
 		ctx := goa.NewContext(r.Context(), "account", "show")
+		ctx = rest.NewContext(ctx, w, r)
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {
@@ -261,9 +264,9 @@ func ShowAccountEncodeResponse(encoder rest.ResponseEncoderFunc) func(w http.Res
 	}
 }
 
-// NewDeleteAccountHTTPHandler creates a HTTP handler which loads the HTTP
+// NewDeleteAccountHandler creates a HTTP handler which loads the HTTP
 // request and calls the "account" service "delete" endpoint.
-func NewDeleteAccountHTTPHandler(
+func NewDeleteAccountHandler(
 	endpoint goa.Endpoint,
 	dec rest.RequestDecoderFunc,
 	enc rest.ResponseEncoderFunc,
@@ -282,6 +285,7 @@ func NewDeleteAccountHTTPHandler(
 		}
 
 		ctx := goa.NewContext(r.Context(), "account", "delete")
+		ctx = rest.NewContext(ctx, w, r)
 		res, err := endpoint(ctx, payload)
 
 		if err != nil {

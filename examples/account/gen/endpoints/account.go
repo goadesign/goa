@@ -1,7 +1,7 @@
 package endpoints
 
 import (
-	"context"
+	"golang.org/x/net/context"
 
 	"goa.design/goa.v2"
 	"goa.design/goa.v2/examples/account/gen/services"

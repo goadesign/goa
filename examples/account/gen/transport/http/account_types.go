@@ -1,4 +1,4 @@
-package transport
+package http
 
 import (
 	goa "goa.design/goa.v2"

@@ -1,7 +1,6 @@
-package transport
+package http
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/gob"
@@ -10,6 +9,8 @@ import (
 	"io"
 	"mime"
 	"net/http"
+
+	"golang.org/x/net/context"
 
 	goa "goa.design/goa.v2"
 	"goa.design/goa.v2/rest"
@@ -40,13 +41,13 @@ type (
 	DecodeResponseFunc func(context.Context, *http.Response) (interface{}, error)
 )
 
-// NewHTTPDecoder returns a HTTP request body decoder.
+// NewDecoder returns a HTTP request body decoder.
 // The decoder handles the following content types:
 //
 // * application/json using package encoding/json
 // * application/xml using package encoding/xml
 // * application/gob using package encoding/gob
-func NewHTTPDecoder(r *http.Request) rest.Decoder {
+func NewDecoder(r *http.Request) rest.Decoder {
 	contentType := r.Header.Get("Content-Type")
 	if contentType == "" {
 		// Default to JSON
@@ -68,13 +69,13 @@ func NewHTTPDecoder(r *http.Request) rest.Decoder {
 	}
 }
 
-// NewHTTPEncoder returns a HTTP response encoder.
+// NewEncoder returns a HTTP response encoder.
 // The encoder handles the following content types:
 //
 // * application/json using package encoding/json
 // * application/xml using package encoding/xml
 // * application/gob using package encoding/gob
-func NewHTTPEncoder(w http.ResponseWriter, r *http.Request) rest.Encoder {
+func NewEncoder(w http.ResponseWriter, r *http.Request) rest.Encoder {
 	accept := r.Header.Get("Accept")
 	if accept == "" {
 		// Default to JSON

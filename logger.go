@@ -2,7 +2,7 @@ package goa
 
 import (
 	"bytes"
-	"context"
+	"golang.org/x/net/context"
 	"fmt"
 	"log"
 )
