@@ -172,7 +172,7 @@ var _ = Describe("Generate", func() {
 					},
 				},
 			}
-			fooRes := design.Design.Resources["foo"]
+			fooRes := design.Design.Resources["foo_test"]
 			showAct := fooRes.Actions["show"]
 			showAct.Parent = fooRes
 			showAct.Routes[0].Parent = showAct
@@ -183,7 +183,7 @@ var _ = Describe("Generate", func() {
 			c, err := ioutil.ReadFile(filepath.Join(outDir, "tool", "cli", "commands.go"))
 			content := string(c)
 			Ω(err).ShouldNot(HaveOccurred())
-			Ω(content).Should(ContainSubstring(`foo-test`))
+			Ω(content).Should(ContainSubstring("foo-test"))
 		})
 	})
 

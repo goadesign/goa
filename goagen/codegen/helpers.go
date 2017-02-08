@@ -167,35 +167,6 @@ func SnakeCase(name string) string {
 
 // KebabCase produces the kebab-case version of the given CamelCase string.
 func KebabCase(name string) string {
-	for u, l := range toLower {
-		name = strings.Replace(name, u, l, -1)
-		// Replace any potential underscore by a dash character following kebab-case alg.
-		name = strings.Replace(name, "_", "-", -1)
-	}
-	var b bytes.Buffer
-	var lastDash bool
-	ln := len(name)
-	if ln == 0 {
-		return ""
-	}
-	b.WriteRune(unicode.ToLower(rune(name[0])))
-	for i := 1; i < ln; i++ {
-		r := rune(name[i])
-		nextIsLower := false
-		if i < ln-1 {
-			n := rune(name[i+1])
-			nextIsLower = unicode.IsLower(n) && unicode.IsLetter(n)
-		}
-		if unicode.IsUpper(r) {
-			if !lastDash && nextIsLower {
-				b.WriteRune('-')
-				lastDash = true
-			}
-			b.WriteRune(unicode.ToLower(r))
-		} else {
-			b.WriteRune(r)
-			lastDash = false
-		}
-	}
-	return b.String()
+	name = SnakeCase(name)
+	return strings.Replace(name, "_", "-", -1)
 }
