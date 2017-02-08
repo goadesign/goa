@@ -75,7 +75,8 @@ package and tool and the Swagger specification for the API.
 
 	// mainCmd implements the "main" command.
 	var (
-		force bool
+		force, noGeneratedMain bool
+		mainPkg                string
 	)
 	mainCmd := &cobra.Command{
 		Use:   "main",
@@ -83,6 +84,8 @@ package and tool and the Swagger specification for the API.
 		Run:   func(c *cobra.Command, _ []string) { files, err = run("genmain", c) },
 	}
 	mainCmd.Flags().BoolVar(&force, "force", false, "overwrite existing files")
+	mainCmd.Flags().StringVar(&mainPkg, "main-pkg-name", "main", "specify main package name")
+	mainCmd.Flags().BoolVar(&noGeneratedMain, "no-generated-main", false, "use generated main file")
 	rootCmd.AddCommand(mainCmd)
 
 	// clientCmd implements the "client" command.

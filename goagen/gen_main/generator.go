@@ -28,27 +28,31 @@ func NewGenerator(options ...Option) *Generator {
 
 // Generator is the application code generator.
 type Generator struct {
-	API       *design.APIDefinition // The API definition
-	OutDir    string                // Path to output directory
-	DesignPkg string                // Path to design package, only used to mark generated files.
-	Target    string                // Name of generated "app" package
-	Force     bool                  // Whether to override existing files
-	genfiles  []string              // Generated files
+	API             *design.APIDefinition // The API definition
+	OutDir          string                // Path to output directory
+	DesignPkg       string                // Path to design package, only used to mark generated files.
+	Target          string                // Name of generated "app" package
+	Force           bool                  // Whether to override existing files
+	Pkg             string                // Package name used instead of main
+	NoGeneratedMain bool                  // Whether to use the generated main.go or not
+	genfiles        []string              // Generated files
 }
 
 // Generate is the generator entry point called by the meta generator.
 func Generate() (files []string, err error) {
 	var (
-		outDir, designPkg, target, ver string
-		force                          bool
+		outDir, designPkg, target, ver, pkg string
+		force, noGeneratedMain              bool
 	)
 
 	set := flag.NewFlagSet("main", flag.PanicOnError)
 	set.StringVar(&outDir, "out", "", "")
 	set.StringVar(&designPkg, "design", "", "")
 	set.StringVar(&target, "pkg", "app", "")
+	set.StringVar(&pkg, "pkg-name", "main", "")
 	set.StringVar(&ver, "version", "", "")
 	set.BoolVar(&force, "force", false, "")
+	set.BoolVar(&noGeneratedMain, "no-generated-main", false, "")
 	set.Bool("notest", false, "")
 	set.Parse(os.Args[1:])
 
@@ -57,7 +61,7 @@ func Generate() (files []string, err error) {
 	}
 
 	target = codegen.Goify(target, false)
-	g := &Generator{OutDir: outDir, DesignPkg: designPkg, Target: target, Force: force, API: design.Design}
+	g := &Generator{OutDir: outDir, DesignPkg: designPkg, Target: target, Force: force, API: design.Design, Pkg: pkg, NoGeneratedMain: noGeneratedMain}
 
 	return g.Generate()
 }
@@ -78,10 +82,6 @@ func (g *Generator) Generate() (_ []string, err error) {
 
 	codegen.Reserved[g.Target] = true
 
-	mainFile := filepath.Join(g.OutDir, "main.go")
-	if g.Force {
-		os.Remove(mainFile)
-	}
 	funcs := template.FuncMap{
 		"tempvar":   tempvar,
 		"okResp":    g.okResp,
@@ -92,16 +92,20 @@ func (g *Generator) Generate() (_ []string, err error) {
 		return nil, err
 	}
 	imp = path.Join(filepath.ToSlash(imp), "app")
-	_, err = os.Stat(mainFile)
-	if err != nil {
-		// ensure that the output directory exists before creating a new main
-		if err := os.MkdirAll(g.OutDir, 0755); err != nil {
-			return nil, err
+
+	if !g.NoGeneratedMain {
+		mainFile := filepath.Join(g.OutDir, g.Pkg+".go")
+		if g.Force {
+			os.Remove(mainFile)
 		}
-		if err = g.createMainFile(mainFile, funcs); err != nil {
-			return nil, err
+		_, err = os.Stat(mainFile)
+		if err != nil {
+			if err = g.createMainFile(mainFile, funcs); err != nil {
+				return nil, err
+			}
 		}
 	}
+
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("io"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
@@ -119,7 +123,7 @@ func (g *Generator) Generate() (_ []string, err error) {
 			if err2 != nil {
 				return err
 			}
-			file.WriteHeader("", "main", imports)
+			file.WriteHeader("", g.Pkg, imports)
 			if err2 = file.ExecuteTemplate("controller", ctrlT, funcs, r); err2 != nil {
 				return err
 			}
@@ -179,6 +183,9 @@ func (g *Generator) createMainFile(mainFile string, funcs template.FuncMap) erro
 		return port
 	}
 	outPkg, err := codegen.PackagePath(g.OutDir)
+	if g.OutDir != "" {
+		outPkg, err = codegen.PackagePath("")
+	}
 	if err != nil {
 		return err
 	}
