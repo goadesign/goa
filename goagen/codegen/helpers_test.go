@@ -9,29 +9,11 @@ import (
 )
 
 func TestHelpers(t *testing.T) {
-	var (
-		stringTestA = "testAa"
-		stringTestB = "test-B"
-		stringTestC = "test_cA"
-		stringTestD = "test_D"
-		stringTestE = "teste"
-		stringTestF = "testABC"
-		stringTestG = "testAbc"
-
-		expectedTestA = "test-aa"
-		expectedTestB = "test-b"
-		expectedTestC = "test-ca"
-		expectedTestD = "test-d"
-		expectedTestE = "teste"
-		expectedTestF = "testabc"
-		expectedTestG = "test-abc"
-	)
-
-	Expect(codegen.KebabCase(stringTestA)).To(Equal(expectedTestA))
-	Expect(codegen.KebabCase(stringTestB)).To(Equal(expectedTestB))
-	Expect(codegen.KebabCase(stringTestC)).To(Equal(expectedTestC))
-	Expect(codegen.KebabCase(stringTestD)).To(Equal(expectedTestD))
-	Expect(codegen.KebabCase(stringTestE)).To(Equal(expectedTestE))
-	Expect(codegen.KebabCase(stringTestF)).To(Equal(expectedTestF))
-	Expect(codegen.KebabCase(stringTestG)).To(Equal(expectedTestG))
+	Expect(codegen.KebabCase("testAa")).To(Equal("test-aa"))
+	Expect(codegen.KebabCase("test-B")).To(Equal("test-b"))
+	Expect(codegen.KebabCase("test_cA")).To(Equal("test-ca"))
+	Expect(codegen.KebabCase("test_D")).To(Equal("test-d"))
+	Expect(codegen.KebabCase("teste")).To(Equal("teste"))
+	Expect(codegen.KebabCase("testABC")).To(Equal("testabc"))
+	Expect(codegen.KebabCase("testAbc")).To(Equal("test-abc"))
 }
