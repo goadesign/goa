@@ -1,6 +1,6 @@
 package goa
 
-import "context"
+import "golang.org/x/net/context"
 
 type (
 	// Endpoint exposes service methods to remote clients.

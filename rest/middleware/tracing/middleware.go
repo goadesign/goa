@@ -9,7 +9,7 @@ import (
 
 	goa "goa.design/goa.v2"
 
-	"context"
+	"golang.org/x/net/context"
 )
 
 // middlewareKey is the private type used for goa middlewares to store values in
