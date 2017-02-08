@@ -105,6 +105,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 	funcs["cmdFieldType"] = cmdFieldTypeString
 	funcs["formatExample"] = formatExample
 	funcs["shouldAddExample"] = shouldAddExample
+	funcs["kebabCase"] = codegen.KebabCase
 
 	commandTypesTmpl := template.Must(template.New("commandTypes").Funcs(funcs).Parse(commandTypesTmpl))
 	commandsTmpl := template.Must(template.New("commands").Funcs(funcs).Parse(commandsTmpl))
@@ -833,13 +834,13 @@ const registerCmdsT = `// RegisterCommands registers the resource action CLI com
 func RegisterCommands(app *cobra.Command, c *{{ .Package }}.Client) {
 {{ with .Actions }}{{ if gt (len .) 0 }}	var command, sub *cobra.Command
 {{ end }}{{ range $name, $actions := . }}	command = &cobra.Command{
-		Use:   "{{ $name }}",
+		Use:   "{{ kebabCase $name }}",
 		Short: ` + "`" + `{{ if eq (len $actions) 1 }}{{ $a := index $actions 0 }}{{ escapeBackticks $a.Description }}{{ else }}{{ $name }} action{{ end }}` + "`" + `,
 	}
-{{ range $action := $actions }}{{ $cmdName := goify (printf "%s%sCommand" $action.Name (title $action.Parent.Name)) true }}{{/*
+{{ range $action := $actions }}{{ $cmdName := goify (printf "%s%sCommand" $action.Name (title (kebabCase $action.Parent.Name))) true }}{{/*
 */}}{{ $tmp := tempvar }}	{{ $tmp }} := new({{ $cmdName }})
 	sub = &cobra.Command{
-		Use:   ` + "`" + `{{ $action.Parent.Name }} {{ routes $action }}` + "`" + `,
+		Use:   ` + "`" + `{{ kebabCase $action.Parent.Name }} {{ routes $action }}` + "`" + `,
 		Short: ` + "`" + `{{ escapeBackticks $action.Parent.Description }}` + "`" + `,{{ if shouldAddExample $action.Payload }}
 		Long:  ` + "`" + `{{ escapeBackticks $action.Parent.Description }}
 

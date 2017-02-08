@@ -164,3 +164,9 @@ func SnakeCase(name string) string {
 	}
 	return b.String()
 }
+
+// KebabCase produces the kebab-case version of the given CamelCase string.
+func KebabCase(name string) string {
+	name = SnakeCase(name)
+	return strings.Replace(name, "_", "-", -1)
+}
