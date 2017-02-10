@@ -184,7 +184,7 @@ package and tool and the Swagger specification for the API.
 
 	// controllerCmd implements the "controller" command.
 	var (
-		res, pkgName string
+		res, appPkg string
 	)
 	controllerCmd := &cobra.Command{
 		Use:   "controller",
@@ -192,9 +192,9 @@ package and tool and the Swagger specification for the API.
 		Run:   func(c *cobra.Command, _ []string) { files, err = run("gencontroller", c) },
 	}
 	controllerCmd.Flags().BoolVar(&force, "force", false, "overwrite existing files")
-	controllerCmd.Flags().StringVar(&res, "res", "controller", "specify the name of the resource and is compulsory")
-	controllerCmd.Flags().StringVar(&pkg, "pkg", "app", "Name of generated Go package containing controllers supporting code (contexts, media types, user types etc.)")
-	controllerCmd.Flags().StringVar(&pkgName, "pkg-name", "controller", "specify the name of the generated controller package")
+	controllerCmd.Flags().StringVar(&res, "res", "", "specify the name of the resource and is compulsory")
+	controllerCmd.Flags().StringVar(&pkg, "pkg", "controller", "specify the name of the generated controller package")
+	controllerCmd.Flags().StringVar(&appPkg, "app-pkg", "app", "Name of generated Go package containing controllers supporting code (contexts, media types, user types etc.)")
 	rootCmd.AddCommand(controllerCmd)
 
 	// cmdsCmd implements the commands command

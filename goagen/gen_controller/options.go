@@ -26,10 +26,10 @@ func DesignPkg(designPkg string) Option {
 	}
 }
 
-//Target Name of generated "app" package
-func Target(target string) Option {
+//AppPkg Name of generated "app" package
+func AppPkg(pkg string) Option {
 	return func(g *Generator) {
-		g.Target = target
+		g.AppPkg = pkg
 	}
 }
 

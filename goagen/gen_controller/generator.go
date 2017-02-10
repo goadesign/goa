@@ -3,7 +3,6 @@ package gencontroller
 import (
 	"flag"
 	"fmt"
-	"net"
 	"os"
 	"path"
 	"path/filepath"
@@ -31,7 +30,7 @@ type Generator struct {
 	API       *design.APIDefinition // The API definition
 	OutDir    string                // Path to output directory
 	DesignPkg string                // Path to design package, only used to mark generated files.
-	Target    string                // Name of generated "app" package
+	AppPkg    string                // Name of generated "app" package
 	Force     bool                  // Whether to override existing files
 	Pkg       string                // Name of the generated package
 	Resource  string                // Name of the generated file
@@ -41,16 +40,16 @@ type Generator struct {
 // Generate is the generator entry point called by the meta generator.
 func Generate() (files []string, err error) {
 	var (
-		outDir, designPkg, target, ver, res, pkgName string
-		force                                        bool
+		outDir, designPkg, appPkg, ver, res, pkg string
+		force                                    bool
 	)
 
 	set := flag.NewFlagSet("controller", flag.PanicOnError)
 	set.StringVar(&outDir, "out", "", "")
 	set.StringVar(&designPkg, "design", "", "")
-	set.StringVar(&target, "pkg", "app", "")
-	set.StringVar(&pkgName, "pkg-name", "controller", "")
-	set.StringVar(&res, "res", "controller", "")
+	set.StringVar(&appPkg, "app-pkg", "app", "")
+	set.StringVar(&pkg, "pkg", "controller", "")
+	set.StringVar(&res, "res", "", "")
 	set.StringVar(&ver, "version", "", "")
 	set.BoolVar(&force, "force", false, "")
 	set.Bool("notest", false, "")
@@ -60,8 +59,8 @@ func Generate() (files []string, err error) {
 		return nil, err
 	}
 
-	target = codegen.Goify(target, false)
-	g := &Generator{OutDir: outDir, DesignPkg: designPkg, Target: target, Force: force, API: design.Design, Pkg: pkgName, Resource: res}
+	appPkg = codegen.Goify(appPkg, false)
+	g := &Generator{OutDir: outDir, DesignPkg: designPkg, AppPkg: appPkg, Force: force, API: design.Design, Pkg: pkg, Resource: res}
 
 	return g.Generate()
 }
@@ -76,77 +75,78 @@ func (g *Generator) Generate() (_ []string, err error) {
 		}
 	}()
 
-	if g.Target == "" {
-		g.Target = "app"
+	if g.AppPkg == "" {
+		g.AppPkg = "app"
 	}
 
-	codegen.Reserved[g.Target] = true
+	codegen.Reserved[g.AppPkg] = true
 
-	controllerServiceFile := filepath.Join(g.OutDir, g.Resource+".go")
-	if g.Force {
-		os.Remove(controllerServiceFile)
-	}
 	funcs := template.FuncMap{
 		"tempvar":   tempvar,
 		"okResp":    g.okResp,
-		"targetPkg": func() string { return g.Target },
+		"targetPkg": func() string { return g.AppPkg },
 	}
+
 	imp, err := codegen.PackagePath(g.OutDir)
 	if err != nil {
 		return nil, err
 	}
 	imp = path.Join(filepath.ToSlash(imp), "app")
-	_, err = os.Stat(controllerServiceFile)
-	if err != nil {
-		// ensure that the output directory exists before creating a new controller
-		if err := os.MkdirAll(g.OutDir, 0755); err != nil {
-			return nil, err
-		}
-		if err = g.createControllerServiceFile(controllerServiceFile, funcs); err != nil {
-			return nil, err
-		}
-	}
+
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("io"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport(imp),
 		codegen.SimpleImport("golang.org/x/net/websocket"),
 	}
+
 	err = g.API.IterateResources(func(r *design.ResourceDefinition) error {
 		filename := filepath.Join(g.OutDir, codegen.SnakeCase(r.Name)+".go")
-		if g.Force {
-			os.Remove(filename)
+
+		if g.Resource != "" {
+			if g.Resource == r.Name {
+				filename = filepath.Join(g.OutDir, codegen.SnakeCase(g.Resource)+".go")
+				g.generateControllerFile(filename, funcs, imports, r)
+			}
+		} else {
+			g.generateControllerFile(filename, funcs, imports, r)
 		}
-		if _, e := os.Stat(filename); e != nil {
-			g.genfiles = append(g.genfiles, filename)
-			file, err2 := codegen.SourceFileFor(filename)
-			if err2 != nil {
-				return err
-			}
-			file.WriteHeader("", g.Pkg, imports)
-			if err2 = file.ExecuteTemplate("controller", ctrlT, funcs, r); err2 != nil {
-				return err
-			}
-			err2 = r.IterateActions(func(a *design.ActionDefinition) error {
-				if a.WebSocket() {
-					return file.ExecuteTemplate("actionWS", actionWST, funcs, a)
-				}
-				return file.ExecuteTemplate("action", actionT, funcs, a)
-			})
-			if err2 != nil {
-				return err
-			}
-			if err2 = file.FormatCode(); err2 != nil {
-				return err2
-			}
-		}
+
 		return nil
 	})
-	if err != nil {
-		return
-	}
 
 	return g.genfiles, nil
+}
+
+func (g *Generator) generateControllerFile(filename string, funcs template.FuncMap, imports []*codegen.ImportSpec, r *design.ResourceDefinition) error {
+	if g.Force {
+		os.Remove(filename)
+	}
+	if _, e := os.Stat(filename); e != nil {
+		g.genfiles = append(g.genfiles, filename)
+		file, err := codegen.SourceFileFor(filename)
+		if err != nil {
+			return err
+		}
+		file.WriteHeader("", g.Pkg, imports)
+		if err = file.ExecuteTemplate("controller", ctrlT, funcs, r); err != nil {
+			return err
+		}
+		err = r.IterateActions(func(a *design.ActionDefinition) error {
+			if a.WebSocket() {
+				return file.ExecuteTemplate("actionWS", actionWST, funcs, a)
+			}
+			return file.ExecuteTemplate("action", actionT, funcs, a)
+		})
+		if err != nil {
+			return err
+		}
+		if err = file.FormatCode(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Cleanup removes all the files generated by this generator during the last invokation of Generate.
@@ -167,45 +167,6 @@ func tempvar() string {
 		return "c"
 	}
 	return fmt.Sprintf("c%d", tempCount)
-}
-
-func (g *Generator) createControllerServiceFile(controllerServiceFile string, funcs template.FuncMap) error {
-	g.genfiles = append(g.genfiles, controllerServiceFile)
-	file, err := codegen.SourceFileFor(controllerServiceFile)
-	if err != nil {
-		return err
-	}
-	funcs["getPort"] = func(hostport string) string {
-		_, port, err := net.SplitHostPort(hostport)
-		if err != nil {
-			return "8080"
-		}
-		return port
-	}
-	outPkg, err := codegen.PackagePath(g.OutDir)
-	if g.OutDir != "" {
-		outPkg, err = codegen.PackagePath("")
-	}
-	if err != nil {
-		return err
-	}
-	appPkg := path.Join(outPkg, "app")
-	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("time"),
-		codegen.SimpleImport("github.com/goadesign/goa"),
-		codegen.SimpleImport("github.com/goadesign/goa/middleware"),
-		codegen.SimpleImport(appPkg),
-	}
-	file.Write([]byte("//go:generate goagen bootstrap -d " + g.DesignPkg + "\n\n"))
-	file.WriteHeader("", g.Pkg, imports)
-	data := map[string]interface{}{
-		"Name": g.API.Name,
-		"API":  g.API,
-	}
-	if err = file.ExecuteTemplate(g.Resource, controllerServiceT, funcs, data); err != nil {
-		return err
-	}
-	return file.FormatCode()
 }
 
 func (g *Generator) okResp(a *design.ActionDefinition) map[string]interface{} {
@@ -242,7 +203,7 @@ func (g *Generator) okResp(a *design.ActionDefinition) map[string]interface{} {
 			name = name[1:]
 			pointer = "*"
 		}
-		typeref = fmt.Sprintf("%s%s.%s", pointer, g.Target, name)
+		typeref = fmt.Sprintf("%s%s.%s", pointer, g.AppPkg, name)
 		if strings.HasPrefix(typeref, "*") {
 			typeref = "&" + typeref[1:]
 		}
@@ -258,31 +219,6 @@ func (g *Generator) okResp(a *design.ActionDefinition) map[string]interface{} {
 		"TypeRef": typeref,
 	}
 }
-
-const controllerServiceT = `
-func NewControllerService() *goa.Service {
-	// Create service
-	service := goa.New({{ printf "%q" .Name }})
-
-	// Mount middleware
-	service.Use(middleware.RequestID())
-	service.Use(middleware.LogRequest(true))
-	service.Use(middleware.ErrorHandler(service, true))
-	service.Use(middleware.Recover())
-{{ $api := .API }}
-{{ range $name, $res := $api.Resources }}{{ $name := goify $res.Name true }} // Mount "{{$res.Name}}" controller
-	{{ $tmp := tempvar }}{{ $tmp }} := New{{ $name }}Controller(service)
-	{{ targetPkg }}.Mount{{ $name }}Controller(service, {{ $tmp }})
-{{ end }}
-
-	// Start service
-	if err := service.ListenAndServe(":{{ getPort .API.Host }}"); err != nil {
-		service.LogError("startup", "err", err)
-	}
-
-	return service
-}
-`
 
 const ctrlT = `// {{ $ctrlName := printf "%s%s" (goify .Name true) "Controller" }}{{ $ctrlName }} implements the {{ .Name }} resource.
 type {{ $ctrlName }} struct {

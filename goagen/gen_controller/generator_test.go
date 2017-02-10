@@ -65,7 +65,7 @@ var _ = Describe("NewGenerator", func() {
 		api       *design.APIDefinition
 		outDir    string
 		designPkg string
-		target    string
+		appPkg    string
 		force     bool
 		pkg       string
 		resource  string
@@ -76,7 +76,7 @@ var _ = Describe("NewGenerator", func() {
 		},
 		outDir:    "out_dir",
 		designPkg: "design",
-		target:    "app",
+		appPkg:    "app",
 		pkg:       "controller",
 		resource:  "controller",
 		force:     false,
@@ -89,7 +89,7 @@ var _ = Describe("NewGenerator", func() {
 				gencontroller.API(args.api),
 				gencontroller.OutDir(args.outDir),
 				gencontroller.DesignPkg(args.designPkg),
-				gencontroller.Target(args.target),
+				gencontroller.AppPkg(args.appPkg),
 				gencontroller.Pkg(args.pkg),
 				gencontroller.Resource(args.resource),
 				gencontroller.Force(args.force),
@@ -101,7 +101,7 @@ var _ = Describe("NewGenerator", func() {
 			Ω(generator.API.Name).Should(Equal(args.api.Name))
 			Ω(generator.OutDir).Should(Equal(args.outDir))
 			Ω(generator.DesignPkg).Should(Equal(args.designPkg))
-			Ω(generator.Target).Should(Equal(args.target))
+			Ω(generator.AppPkg).Should(Equal(args.appPkg))
 			Ω(generator.Pkg).Should(Equal(args.pkg))
 			Ω(generator.Resource).Should(Equal(args.resource))
 			Ω(generator.Force).Should(Equal(args.force))
