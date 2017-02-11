@@ -81,11 +81,7 @@ func (g *Generator) Generate() (_ []string, err error) {
 			filename string
 			err      error
 		)
-		if g.Resource != "" {
-			if g.Resource == r.Name {
-				filename, err = utils.GenerateControllerFile(g.Force, g.AppPkg, g.OutDir, g.Pkg, g.Resource, r)
-			}
-		} else {
+		if g.Resource == "" || g.Resource == r.Name {
 			filename, err = utils.GenerateControllerFile(g.Force, g.AppPkg, g.OutDir, g.Pkg, r.Name, r)
 		}
 
