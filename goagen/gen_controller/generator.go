@@ -6,6 +6,7 @@ import (
 
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/goagen/codegen"
+	"github.com/goadesign/goa/goagen/gen_main"
 	"github.com/goadesign/goa/goagen/utils"
 )
 
@@ -82,7 +83,7 @@ func (g *Generator) Generate() (_ []string, err error) {
 			err      error
 		)
 		if g.Resource == "" || g.Resource == r.Name {
-			filename, err = utils.GenerateControllerFile(g.Force, g.AppPkg, g.OutDir, g.Pkg, r.Name, r)
+			filename, err = genmain.GenerateControllerFile(g.Force, g.AppPkg, g.OutDir, g.Pkg, r.Name, r)
 		}
 
 		if err != nil {
