@@ -47,7 +47,7 @@ func Generate() (files []string, err error) {
 	set.StringVar(&outDir, "out", "", "")
 	set.StringVar(&designPkg, "design", "", "")
 	set.StringVar(&appPkg, "app-pkg", "app", "")
-	set.StringVar(&pkg, "pkg", "controller", "")
+	set.StringVar(&pkg, "pkg", "main", "")
 	set.StringVar(&res, "res", "", "")
 	set.StringVar(&ver, "version", "", "")
 	set.BoolVar(&force, "force", false, "")
