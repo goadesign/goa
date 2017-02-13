@@ -205,6 +205,9 @@ func (g *Generator) Generate() (_ []string, err error) {
 }
 
 func defaultToolName(api *design.APIDefinition) string {
+	if api == nil {
+		return ""
+	}
 	return strings.Replace(strings.ToLower(api.Name), " ", "-", -1) + "-cli"
 }
 
