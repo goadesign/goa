@@ -151,10 +151,24 @@ func (service *Service) ListenAndServe(addr string) error {
 	return http.ListenAndServe(addr, service.Mux)
 }
 
+// ListenAndServeCustom starts a custom HTTP server.
+func (service *Service) ListenAndServeCustom(s *http.Server) error {
+	service.LogInfo("listen", "transport", "http", "addr", s.Addr)
+	s.Handler = service.Mux
+	return s.ListenAndServe()
+}
+
 // ListenAndServeTLS starts a HTTPS server and sets up a listener on the given host/port.
 func (service *Service) ListenAndServeTLS(addr, certFile, keyFile string) error {
 	service.LogInfo("listen", "transport", "https", "addr", addr)
 	return http.ListenAndServeTLS(addr, certFile, keyFile, service.Mux)
+}
+
+// ListenAndServeTLSCustom starts a custom HTTPS server.
+func (service *Service) ListenAndServeTLSCustom(s *http.Server, certFile, keyFile string) error {
+	service.LogInfo("listen", "transport", "https", "addr", addr)
+	s.Handler = service.Mux
+	return http.ListenAndServeTLS(certFile, keyFile)
 }
 
 // Serve accepts incoming HTTP connections on the listener l, invoking the service mux handler for each.
