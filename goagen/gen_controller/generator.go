@@ -2,6 +2,7 @@ package gencontroller
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	"github.com/goadesign/goa/design"
@@ -63,6 +64,10 @@ func Generate() (files []string, err error) {
 
 // Generate produces the skeleton controller service factory.
 func (g *Generator) Generate() (_ []string, err error) {
+	if g.API == nil {
+		return nil, fmt.Errorf("missing API definition, make sure design is properly initialized")
+	}
+
 	go utils.Catch(nil, func() { g.Cleanup() })
 
 	defer func() {
