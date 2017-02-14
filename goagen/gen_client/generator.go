@@ -91,15 +91,18 @@ func (g *Generator) Generate() (_ []string, err error) {
 		}
 	}()
 
-	if g.Target == "" {
-		g.Target = "client"
+	firstNonEmpty := func(args ...string) string {
+		for _, value := range args {
+			if len(value) > 0 {
+				return value
+			}
+		}
+		return ""
 	}
-	if g.ToolDirName == "" {
-		g.ToolDirName = "tool"
-	}
-	if g.Tool == "" {
-		g.Tool = defaultToolName(g.API)
-	}
+
+	g.Target = firstNonEmpty(g.Target, "client")
+	g.ToolDirName = firstNonEmpty(g.ToolDirName, "tool")
+	g.Tool = firstNonEmpty(g.Tool, defaultToolName(g.API))
 
 	codegen.Reserved[g.Target] = true
 
