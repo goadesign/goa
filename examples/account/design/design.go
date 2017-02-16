@@ -28,9 +28,13 @@ var _ = Service("account", func() {
 		})
 	})
 	Endpoint("list", func() {
+		Payload(ListFilter)
 		Result(ArrayOf(Account))
 		HTTP(func() {
 			GET("/")
+			Params(func() {
+				Param("filter")
+			})
 		})
 	})
 	Endpoint("show", func() {
@@ -65,4 +69,11 @@ var NameAlreadyTaken = Type("NameAlreadyTaken", func() {
 	Description("NameAlreadyTaken is the type returned when creating an account fails because its name is already taken")
 	Attribute("message", String, "Message of error")
 	Required("message")
+})
+
+var ListFilter = Type("ListFilter", func() {
+	Description("ListFilter defines an optional list filter")
+	Attribute("filter", String, "Filter is the account name prefix filter", func() {
+		Example("go")
+	})
 })

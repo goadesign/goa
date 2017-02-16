@@ -1,9 +1,6 @@
 package rest
 
-import (
-	"golang.org/x/net/context"
-	"net/http"
-)
+import "net/http"
 
 type (
 	// Decoder is the low level decoder interface.
@@ -33,5 +30,5 @@ type (
 
 	// ResponseDecoderFunc creates a decoder appropriate for decoding the
 	// given response body.
-	ResponseDecoderFunc func(context.Context, *http.Response) Decoder
+	ResponseDecoderFunc func(*http.Response) Decoder
 )

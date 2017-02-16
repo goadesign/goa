@@ -13,7 +13,7 @@ import (
 	"goa.design/goa.v2/examples/account"
 	"goa.design/goa.v2/examples/account/gen/endpoints"
 	"goa.design/goa.v2/examples/account/gen/services"
-	"goa.design/goa.v2/examples/account/gen/transport"
+	httptransport "goa.design/goa.v2/examples/account/gen/transport/http"
 	"goa.design/goa.v2/rest"
 	"goa.design/goa.v2/rest/middleware/debugging"
 	"goa.design/goa.v2/rest/middleware/logging"
@@ -49,21 +49,21 @@ func main() {
 	}
 
 	var (
-		enc = transport.NewHTTPEncoder
-		dec = transport.NewHTTPDecoder
+		enc = httptransport.NewEncoder
+		dec = httptransport.NewDecoder
 	)
 
 	var (
-		ah *transport.AccountHTTPHandlers
+		ah *httptransport.AccountHandlers
 	)
 	{
-		ah = transport.NewAccountHTTPHandlers(aep, dec, enc, goa.AdaptStdLogger(logger))
+		ah = httptransport.NewAccountHandlers(aep, dec, enc, goa.AdaptStdLogger(logger))
 	}
 
 	var mux rest.ServeMux
 	{
 		mux = rest.NewMux()
-		transport.MountAccountHTTPHandlers(mux, ah)
+		httptransport.MountAccountHandlers(mux, ah)
 	}
 
 	var handler http.Handler = mux

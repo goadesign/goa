@@ -86,13 +86,11 @@ func NewCreateAccountHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(w, r, err)
+			encodeError(w, r, goa.ErrInvalid("request invalid: %s", err))
 			return
 		}
 
-		ctx := goa.NewContext(r.Context(), "account", "show")
-		ctx = rest.NewContext(ctx, w, r)
-		res, err := endpoint(ctx, payload)
+		res, err := endpoint(r.Context(), payload)
 
 		if err != nil {
 			encodeError(w, r, err)
@@ -112,12 +110,14 @@ func CreateAccountDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFu
 		err := decoder(r).Decode(&body)
 		if err != nil {
 			if err == io.EOF {
-				err = fmt.Errorf("Request Body Empty")
+				err = fmt.Errorf("empty body")
 			}
 			return nil, err
 		}
-		payload, err := newCreateAccountPayload(&body)
-		return interface{}(payload), err
+		params := httptreemux.ContextParams(r.Context())
+		orgID := params["org_id"]
+		payload, err := newCreateAccountPayload(&body, orgID)
+		return payload, err
 	}
 }
 
@@ -170,12 +170,16 @@ func NewListAccountHandler(
 ) http.Handler {
 	var (
 		encodeResponse = ListAccountEncodeResponse(enc)
+		decodeRequest  = ListAccountDecodeRequest(dec)
 		encodeError    = EncodeError(enc, logger)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := goa.NewContext(r.Context(), "account", "list")
-		ctx = rest.NewContext(ctx, w, r)
-		res, err := endpoint(ctx, nil)
+		payload, err := decodeRequest(r)
+		if err != nil {
+			encodeError(w, r, err)
+		}
+
+		res, err := endpoint(r.Context(), payload)
 
 		if err != nil {
 			encodeError(w, r, err)
@@ -187,13 +191,26 @@ func NewListAccountHandler(
 	})
 }
 
+// ListAccountDecodeRequest returns a decoder for requests sent to the
+// list account endpoint.
+func ListAccountDecodeRequest(decoder rest.RequestDecoderFunc) func(r *http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		filter := r.URL.Query().Get("filter")
+		payload, err := newListAccountPayload(filter)
+		return payload, err
+	}
+}
+
 // ListAccountEncodeResponse returns an encoder for responses returned by
 // the list account endpoint.
 func ListAccountEncodeResponse(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 		w.Header().Set("Content-Type", ResponseContentType(r))
 		w.WriteHeader(http.StatusOK)
-		return encoder(w, r).Encode(v)
+		if v != nil {
+			return encoder(w, r).Encode(v)
+		}
+		return nil
 	}
 }
 
@@ -218,9 +235,7 @@ func NewShowAccountHandler(
 			encodeError(w, r, err)
 		}
 
-		ctx := goa.NewContext(r.Context(), "account", "show")
-		ctx = rest.NewContext(ctx, w, r)
-		res, err := endpoint(ctx, payload)
+		res, err := endpoint(r.Context(), payload)
 
 		if err != nil {
 			encodeError(w, r, err)
@@ -243,24 +258,16 @@ func ShowAccountDecodeRequest(decoder rest.RequestDecoderFunc) func(r *http.Requ
 	}
 }
 
-// ShowAccountEncodeRequest returns an encoder for requests sent to the show
-// account endpoint.
-func ShowAccountEncodeRequest(encoder rest.ResponseEncoderFunc) func(r *http.Request) (interface{}, error) {
-	return func(r *http.Request) (interface{}, error) {
-		params := httptreemux.ContextParams(r.Context())
-		id := params["id"]
-		payload, err := newShowAccountPayload(id)
-		return interface{}(payload), err
-	}
-}
-
 // ShowAccountEncodeResponse returns an encoder for responses returned by
 // the show account endpoint.
 func ShowAccountEncodeResponse(encoder rest.ResponseEncoderFunc) func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 		w.Header().Set("Content-Type", ResponseContentType(r))
 		w.WriteHeader(http.StatusOK)
-		return encoder(w, r).Encode(v)
+		if v != nil {
+			return encoder(w, r).Encode(v)
+		}
+		return nil
 	}
 }
 
@@ -284,9 +291,7 @@ func NewDeleteAccountHandler(
 			return
 		}
 
-		ctx := goa.NewContext(r.Context(), "account", "delete")
-		ctx = rest.NewContext(ctx, w, r)
-		res, err := endpoint(ctx, payload)
+		res, err := endpoint(r.Context(), payload)
 
 		if err != nil {
 			encodeError(w, r, err)

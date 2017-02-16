@@ -52,12 +52,14 @@ func FileHandler(path, filename string, enc ResponseEncoderFunc, logger goa.Logg
 		fs := http.Dir(dir)
 		f, err := fs.Open(name)
 		if err != nil {
-			enc(w, r).Encode(ErrInvalidFile(err))
+			inv := goa.ErrInvalid("failed to open file: %s", err)
+			enc(w, r).Encode(NewErrorResponse(inv))
 		}
 		defer f.Close()
 		d, err := f.Stat()
 		if err != nil {
-			enc(w, r).Encode(ErrInvalidFile(err))
+			inv := goa.ErrInvalid("failed to query file: %s", err)
+			enc(w, r).Encode(NewErrorResponse(inv))
 		}
 		// use contents of index.html for directory, if present
 		if d.IsDir() {
