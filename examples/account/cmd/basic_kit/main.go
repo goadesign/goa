@@ -13,33 +13,18 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
+	genhttp "goa.design/goa.v2/examples/account/gen/transport/http"
 
-	goa "goa.design/goa.v2"
+	"goa.design/goa.v2"
 	"goa.design/goa.v2/examples/account"
 	"goa.design/goa.v2/examples/account/gen/endpoints"
+	"goa.design/goa.v2/examples/account/gen/kit"
 	"goa.design/goa.v2/examples/account/gen/services"
-	genhttp "goa.design/goa.v2/examples/account/gen/transport/http"
 	"goa.design/goa.v2/rest"
 	"goa.design/goa.v2/rest/middleware/debugging"
 	"goa.design/goa.v2/rest/middleware/logging"
 	"goa.design/goa.v2/rest/middleware/tracing"
 )
-
-// Logger wraps a go-kit logger and makes it compatible with goa's Logger
-// interface.
-type Logger struct {
-	log.Logger
-}
-
-func (l *Logger) Info(_ context.Context, keyvals ...interface{}) {
-	kv := append([]interface{}{"lvl", "info"}, keyvals...)
-	l.Logger.Log(kv...)
-}
-
-func (l *Logger) Error(_ context.Context, keyvals ...interface{}) {
-	kv := append([]interface{}{"lvl", "error"}, keyvals...)
-	l.Logger.Log(kv...)
-}
 
 func main() {
 	var (
@@ -48,47 +33,112 @@ func main() {
 	)
 	flag.Parse()
 
-	var ctx context.Context
-	ctx = context.Background()
-
-	var logger log.Logger
-	logger = log.NewLogfmtLogger(os.Stderr)
-	logger = log.NewContext(logger).With("listen", *addr).With("caller", log.DefaultCaller)
-
-	var goalogger goa.Logger = &Logger{logger}
-
-	var as services.Account
-	as = basic.NewAccountService()
-
-	var aep *endpoints.Account
-	aep = endpoints.NewAccount(as)
+	var (
+		ctx context.Context
+	)
+	{
+		ctx = context.Background()
+	}
 
 	var (
-		enc = genhttp.NewEncoder
+		logger log.Logger
+	)
+	{
+		logger = log.NewLogfmtLogger(os.Stderr)
+		logger = log.NewContext(logger).With("listen", *addr).With("caller", log.DefaultCaller)
+	}
+
+	var (
+		gl goa.Logger
+	)
+	{
+		gl = &Logger{logger}
+	}
+
+	var (
+		as services.Account
+	)
+	{
+		as = basic.NewAccountService()
+	}
+
+	var (
+		aep *endpoints.Account
+	)
+	{
+		aep = endpoints.NewAccount(as)
+	}
+
+	var (
+		dec rest.RequestDecoderFunc
+		enc rest.ResponseEncoderFunc
+	)
+	{
 		dec = genhttp.NewDecoder
-	)
+		enc = genhttp.NewEncoder
+	}
 
-	createAccountHandler := httptransport.NewServer(
-		ctx,
-		endpoint.Endpoint(aep.Create),
-		genhttp.CreateAccountDecodeRequestKit(dec),
-		genhttp.CreateAccountEncodeResponseKit(enc),
-		httptransport.ServerErrorEncoder(genhttp.CreateAccountEncoderErrorKit(enc, goalogger)),
+	var (
+		createAccountHandler http.Handler
+		listAccountHandler   http.Handler
+		showAccountHandler   http.Handler
+		deleteAccountHandler http.Handler
 	)
+	{
+		createAccountHandler = httptransport.NewServer(
+			ctx,
+			endpoint.Endpoint(aep.Create),
+			kit.CreateAccountDecodeRequest(dec),
+			kit.CreateAccountEncodeResponse(enc),
+			httptransport.ServerBefore(kit.StashRequest),
+			httptransport.ServerErrorEncoder(kit.CreateAccountEncodeError(enc, gl)),
+		)
+		listAccountHandler = httptransport.NewServer(
+			ctx,
+			endpoint.Endpoint(aep.List),
+			kit.ListAccountDecodeRequest(dec),
+			kit.ListAccountEncodeResponse(enc),
+			httptransport.ServerBefore(kit.StashRequest),
+			httptransport.ServerErrorEncoder(kit.ListAccountEncodeError(enc, gl)),
+		)
+		showAccountHandler = httptransport.NewServer(
+			ctx,
+			endpoint.Endpoint(aep.Show),
+			kit.ShowAccountDecodeRequest(dec),
+			kit.ShowAccountEncodeResponse(enc),
+			httptransport.ServerBefore(kit.StashRequest),
+			httptransport.ServerErrorEncoder(kit.ShowAccountEncodeError(enc, gl)),
+		)
+		deleteAccountHandler = httptransport.NewServer(
+			ctx,
+			endpoint.Endpoint(aep.Delete),
+			kit.DeleteAccountDecodeRequest(dec),
+			kit.DeleteAccountEncodeResponse(enc),
+			httptransport.ServerBefore(kit.StashRequest),
+			httptransport.ServerErrorEncoder(kit.DeleteAccountEncodeError(enc, gl)),
+		)
+	}
 
-	var mux rest.ServeMux
+	var (
+		mux rest.ServeMux
+	)
 	{
 		mux = rest.NewMux()
 		genhttp.MountCreateAccountHandler(mux, createAccountHandler)
+		genhttp.MountListAccountHandler(mux, listAccountHandler)
+		genhttp.MountShowAccountHandler(mux, showAccountHandler)
+		genhttp.MountDeleteAccountHandler(mux, deleteAccountHandler)
 	}
 
-	var handler http.Handler = mux
+	var (
+		handler http.Handler
+	)
 	{
-		handler = tracing.New()(handler)
+		handler = tracing.New()(mux)
 		if *dbg {
-			handler = debugging.New(goalogger)(handler)
+			handler = debugging.New(gl)(handler)
 		}
-		handler = logging.New(goalogger)(handler)
+		handler = logging.New(gl)(handler)
 	}
 
 	errs := make(chan error)

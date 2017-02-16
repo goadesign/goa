@@ -17,7 +17,7 @@ type (
 	}
 )
 
-// NewAccount creates a new account service.
+// NewAccount wraps the given account service with endpoints.
 func NewAccount(s services.Account) *Account {
 	ep := &Account{}
 
@@ -27,7 +27,11 @@ func NewAccount(s services.Account) *Account {
 	}
 
 	ep.List = func(ctx context.Context, req interface{}) (interface{}, error) {
-		return s.List(ctx)
+		var p *services.ListAccountPayload
+		if req != nil {
+			p = req.(*services.ListAccountPayload)
+		}
+		return s.List(ctx, p)
 	}
 
 	ep.Show = func(ctx context.Context, req interface{}) (interface{}, error) {

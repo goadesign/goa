@@ -1,8 +1,9 @@
 package services
 
 import (
-	"golang.org/x/net/context"
 	"fmt"
+
+	"golang.org/x/net/context"
 )
 
 // Account is the "account" service interface.
@@ -14,9 +15,9 @@ type (
 		// Possible errors are BadRequest, NameAlreadyToken
 		Create(context.Context, *CreateAccountPayload) (interface{}, error)
 		// List implements the "list" endpoint.
-		List(context.Context) ([]*AccountResponse, error)
+		List(context.Context, *ListAccountPayload) ([]*AccountBody, error)
 		// Show implements the "show" endpoint.
-		Show(context.Context, *ShowAccountPayload) (*AccountResponse, error)
+		Show(context.Context, *ShowAccountPayload) (*AccountBody, error)
 		// Delete implements the "delete" endpoint.
 		Delete(context.Context, *DeleteAccountPayload) error
 	}
@@ -27,7 +28,7 @@ type (
 		// Href is the value of the Location header
 		Href string
 		// Body describes the response body.
-		Body *AccountResponse
+		Body *AccountBody
 	}
 
 	// AccountAccepted is the type that describes the "create" endpoint HTTP
@@ -44,8 +45,14 @@ type (
 		Message string
 	}
 
-	// AccountResponse type
-	AccountResponse struct {
+	// ListFilter defines an optional list filter.
+	ListFilter struct {
+		// Filter is the account name prefix filter.
+		Filter *string
+	}
+
+	// AccountBody type
+	AccountBody struct {
 		// Href to account
 		Href string
 		// ID of account
@@ -59,6 +66,10 @@ type (
 	CreateAccountPayload struct {
 		OrgID string
 		Name  string
+	}
+
+	ListAccountPayload struct {
+		Filter string
 	}
 
 	ShowAccountPayload struct {

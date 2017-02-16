@@ -10,8 +10,6 @@ import (
 	"mime"
 	"net/http"
 
-	"golang.org/x/net/context"
-
 	goa "goa.design/goa.v2"
 	"goa.design/goa.v2/rest"
 )
@@ -35,10 +33,10 @@ type (
 	// Client Encoding/Decoding
 
 	// EncodeRequestFunc encodes a request payload into a HTTP request.
-	EncodeRequestFunc func(*http.Request, interface{}) error
+	EncodeRequestFunc func(interface{}) (*http.Request, error)
 
 	// DecodeResponseFunc decodes a request result from a HTTP response.
-	DecodeResponseFunc func(context.Context, *http.Response) (interface{}, error)
+	DecodeResponseFunc func(*http.Response) (interface{}, error)
 )
 
 // NewDecoder returns a HTTP request body decoder.
