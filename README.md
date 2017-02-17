@@ -45,3 +45,28 @@ easily expose the same endpoints via different transport mechanisms such as HTTP
 and gRPC. See the
 [account example](https://github.com/goadesign/goa/tree/v2/examples/account)
 which illustrates the new generated code structure.
+
+## Getting Started
+
+v2 is work in progress. The code is **not** in a usable state (in particular the
+code generators are not done yet). However:
+
+* The core and rest DSLs should be fairly stable, see:
+  - The [core API DSL spec](https://github.com/goadesign/goa/blob/v2/dsl/_spec/dsl_spec_test.go)
+  - The [type DSL spec](https://github.com/goadesign/goa/blob/v2/dsl/_spec/type_spec_test.go)
+  - The [rest DSL spec](https://github.com/goadesign/goa/blob/v2/rest/dsl/_spec/dsl_spec_test.go)
+
+* The account example should give a good sense of what the generated code will
+  look like, see:
+  - The [design](https://github.com/goadesign/goa/blob/v2/examples/account/design/design.go)
+  - The [main scaffold](https://github.com/goadesign/goa/blob/v2/examples/account/cmd/basic/main.go)
+  - The [generated service](https://github.com/goadesign/goa/blob/v2/examples/account/gen/services/account.go)
+  - The [generated endpoints](https://github.com/goadesign/goa/blob/v2/examples/account/gen/endpoints/account.go)
+  - The [generated HTTP transport](https://github.com/goadesign/goa/tree/v2/examples/account/gen/transport/http)
+
+## Getting Involved
+
+Ping me on [slack](https://gophers.slack.com/messages/goa/) or open an issue
+tagged with `v2` if you have feedback on the above or would like to contribute.
+One area that might be interesting to look at may be to write what the
+generated code would be for the gRPC transport.
