@@ -303,7 +303,7 @@ func Header(name string, args ...interface{}) {
 		eval.IncompatibleDSL()
 		return
 	}
-	eval.Execute(func() { Attribute(name, args...) }, h.Headers())
+	eval.Execute(func() { goadsl.Attribute(name, args...) }, h.Headers())
 }
 
 // Params groups a set of Param expressions. It makes it possible to list
@@ -405,7 +405,7 @@ func Param(name string, args ...interface{}) {
 		eval.IncompatibleDSL()
 		return
 	}
-	eval.Execute(func() { Attribute(name, args...) }, h.Params())
+	eval.Execute(func() { goadsl.Attribute(name, args...) }, h.Params())
 }
 
 // Body describes a HTTP request or response body.

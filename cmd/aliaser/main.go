@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	goaDSL    = "goa.design/goa.v2/dsl"
-	restDSL   = "goa.design/goa.v2/rest/dsl"
-	rpcDSL    = "goa.design/goa.v2/_rpc/dsl"
+	goaDSL  = "goa.design/goa.v2/dsl"
+	restDSL = "goa.design/goa.v2/rest/dsl"
+	//rpcDSL    = "goa.design/goa.v2/_rpc/dsl"
 	aliasFile = "aliases.go"
 )
 
@@ -38,12 +38,12 @@ func main() {
 		restAlias = filepath.Join(restPkg, aliasFile)
 		os.Remove(restAlias) // to avoid parsing them
 
-		rpcPkg, err = codegen.PackageSourcePath(rpcDSL)
-		if err != nil {
-			fail("could not find %s package: %s", rpcDSL, err)
-		}
-		rpcAlias = filepath.Join(rpcPkg, aliasFile)
-		os.Remove(rpcAlias)
+		//rpcPkg, err = codegen.PackageSourcePath(rpcDSL)
+		//if err != nil {
+		//fail("could not find %s package: %s", rpcDSL, err)
+		//}
+		//rpcAlias = filepath.Join(rpcPkg, aliasFile)
+		//os.Remove(rpcAlias)
 
 		goaPkg, err = codegen.PackageSourcePath(goaDSL)
 		if err != nil {
