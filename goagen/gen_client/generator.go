@@ -79,6 +79,10 @@ func Generate() (files []string, err error) {
 
 // Generate generats the client package and CLI.
 func (g *Generator) Generate() (_ []string, err error) {
+	if g.API == nil {
+		return nil, fmt.Errorf("missing API definition, make sure design is properly initialized")
+	}
+
 	go utils.Catch(nil, func() { g.Cleanup() })
 
 	defer func() {
@@ -87,15 +91,18 @@ func (g *Generator) Generate() (_ []string, err error) {
 		}
 	}()
 
-	if g.Target == "" {
-		g.Target = "client"
+	firstNonEmpty := func(args ...string) string {
+		for _, value := range args {
+			if len(value) > 0 {
+				return value
+			}
+		}
+		return ""
 	}
-	if g.ToolDirName == "" {
-		g.ToolDirName = "tool"
-	}
-	if g.Tool == "" {
-		g.Tool = defaultToolName(g.API)
-	}
+
+	g.Target = firstNonEmpty(g.Target, "client")
+	g.ToolDirName = firstNonEmpty(g.ToolDirName, "tool")
+	g.Tool = firstNonEmpty(g.Tool, defaultToolName(g.API))
 
 	codegen.Reserved[g.Target] = true
 
@@ -201,6 +208,9 @@ func (g *Generator) Generate() (_ []string, err error) {
 }
 
 func defaultToolName(api *design.APIDefinition) string {
+	if api == nil {
+		return ""
+	}
 	return strings.Replace(strings.ToLower(api.Name), " ", "-", -1) + "-cli"
 }
 
