@@ -940,7 +940,7 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 {{ if .MustToString }}{{ $tmp := tempvar }}			{{ toString "p" $tmp .ElemAttribute }}
 			values.Add("{{ .Name }}", {{ $tmp }})
 {{ else }}			values.Add("{{ .Name }}", {{ .ValueName }})
-{{ end }}{{/*
+{{ end }}}{{/*
 
 // NON STRING
 */}}{{ else if .MustToString }}{{ $tmp := tempvar }}	{{ toString .ValueName $tmp .Attribute }}
