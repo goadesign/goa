@@ -66,7 +66,7 @@ code generators are not done yet). However:
 
 ## Getting Involved
 
-Ping me on [slack](https://gophers.slack.com/messages/goa/) or open an issue
+Ping us on [slack](https://gophers.slack.com/messages/goa/) or open an issue
 tagged with `v2` if you have feedback on the above or would like to contribute.
 One area that might be interesting to look at may be to write what the
 generated code would be for the gRPC transport.
