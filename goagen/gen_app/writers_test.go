@@ -1384,6 +1384,117 @@ var _ = Describe("HrefWriter", func() {
 	})
 })
 
+var _ = Describe("UserTypesWriter", func() {
+	var writer *genapp.UserTypesWriter
+	var workspace *codegen.Workspace
+	var filename string
+
+	BeforeEach(func() {
+		var err error
+		workspace, err = codegen.NewWorkspace("test")
+		Ω(err).ShouldNot(HaveOccurred())
+		pkg, err := workspace.NewPackage("controllers")
+		Ω(err).ShouldNot(HaveOccurred())
+		src := pkg.CreateSourceFile("test.go")
+		filename = src.Abs()
+	})
+
+	JustBeforeEach(func() {
+		var err error
+		writer, err = genapp.NewUserTypesWriter(filename)
+		Ω(err).ShouldNot(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		workspace.Delete()
+	})
+
+	Context("correctly configured", func() {
+		Context("with data", func() {
+			var data *design.UserTypeDefinition
+			var attDef *design.AttributeDefinition
+			var typeName string
+
+			BeforeEach(func() {
+				data = nil
+				attDef = nil
+				typeName = ""
+			})
+
+			JustBeforeEach(func() {
+				data = &design.UserTypeDefinition{
+					AttributeDefinition: attDef,
+					TypeName:            typeName,
+				}
+			})
+
+			Context("with a simple user type", func() {
+				BeforeEach(func() {
+					attDef = &design.AttributeDefinition{
+						Type: design.Object{
+							"name": &design.AttributeDefinition{
+								Type: design.String,
+							},
+						},
+					}
+					typeName = "SimplePayload"
+				})
+				It("writes the simple user type code", func() {
+					err := writer.Execute(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(simpleUserType))
+				})
+			})
+
+			Context("with a user type including hash", func() {
+				BeforeEach(func() {
+					attDef = &design.AttributeDefinition{
+						Type: design.Object{
+							"name": &design.AttributeDefinition{
+								Type: design.String,
+							},
+							"misc": &design.AttributeDefinition{
+								Type: &design.Hash{
+									KeyType: &design.AttributeDefinition{
+										Type: design.Integer,
+									},
+									ElemType: &design.AttributeDefinition{
+										Type: &design.UserTypeDefinition{
+											AttributeDefinition: &design.AttributeDefinition{
+												Type: &design.UserTypeDefinition{
+													AttributeDefinition: &design.AttributeDefinition{
+														Type: design.Object{},
+													},
+													TypeName: "Misc",
+												},
+											},
+											TypeName: "MiscPayload",
+										},
+									},
+								},
+							},
+						},
+					}
+					typeName = "ComplexPayload"
+				})
+				It("writes the user type including hash", func() {
+					err := writer.Execute(data)
+					Ω(err).ShouldNot(HaveOccurred())
+					b, err := ioutil.ReadFile(filename)
+					Ω(err).ShouldNot(HaveOccurred())
+					written := string(b)
+					Ω(written).ShouldNot(BeEmpty())
+					Ω(written).Should(ContainSubstring(userTypeIncludingHash))
+				})
+			})
+		})
+	})
+})
+
 const (
 	emptyContext = `
 type ListBottleContext struct {
@@ -2323,6 +2434,60 @@ type BottlesController interface {
 `
 	noParamHref = `func BottleHref() string {
 	return "/bottles"
+}
+`
+
+	simpleUserType = `// simplePayload user type.
+type simplePayload struct {
+	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+}
+
+
+
+// Publicize creates SimplePayload from simplePayload
+func (ut *simplePayload) Publicize() *SimplePayload {
+	var pub SimplePayload
+		if ut.Name != nil {
+		pub.Name = ut.Name
+	}
+	return &pub
+}
+
+// SimplePayload user type.
+type SimplePayload struct {
+	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+}
+`
+
+	userTypeIncludingHash = `// complexPayload user type.
+type complexPayload struct {
+	Misc map[int]*miscPayload ` + "`" + `form:"misc,omitempty" json:"misc,omitempty" xml:"misc,omitempty"` + "`" + `
+	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+}
+
+
+
+// Publicize creates ComplexPayload from complexPayload
+func (ut *complexPayload) Publicize() *ComplexPayload {
+	var pub ComplexPayload
+		if ut.Misc != nil {
+		pub.Misc = make(map[int]*MiscPayload, len(ut.Misc))
+		for k2, v2 := range ut.Misc {
+					pubk2 := k2
+					pubv2 := v2.Publicize()
+			pub.Misc[pubk2] = pubv2
+		}
+	}
+	if ut.Name != nil {
+		pub.Name = ut.Name
+	}
+	return &pub
+}
+
+// ComplexPayload user type.
+type ComplexPayload struct {
+	Misc map[int]*MiscPayload ` + "`" + `form:"misc,omitempty" json:"misc,omitempty" xml:"misc,omitempty"` + "`" + `
+	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
 }
 `
 )
