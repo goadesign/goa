@@ -296,6 +296,80 @@ var _ = Describe("Generate", func() {
 		})
 	})
 
+	Context("with an action using websocket", func() {
+		BeforeEach(func() {
+			codegen.TempCount = 0
+			o := design.Object{
+				"fields[foo]": &design.AttributeDefinition{Type: design.String},
+				"fields[bar]": &design.AttributeDefinition{Type: &design.Array{ElemType: &design.AttributeDefinition{Type: design.String}}},
+				"fields[baz]": &design.AttributeDefinition{Type: &design.Array{ElemType: &design.AttributeDefinition{Type: design.Integer}}},
+				"fields[bat]": &design.AttributeDefinition{Type: design.DateTime},
+			}
+			design.Design = &design.APIDefinition{
+				Name: "testapi",
+				Resources: map[string]*design.ResourceDefinition{
+					"foo": {
+						Name: "foo",
+						Actions: map[string]*design.ActionDefinition{
+							"show": {
+								Name:    "show",
+								Schemes: []string{"ws"},
+								Routes: []*design.RouteDefinition{
+									{
+										Verb: "GET",
+										Path: "",
+									},
+								},
+								QueryParams: &design.AttributeDefinition{Type: o},
+							},
+						},
+					},
+				},
+			}
+			fooRes := design.Design.Resources["foo"]
+			showAct := fooRes.Actions["show"]
+			showAct.Parent = fooRes
+			showAct.Routes[0].Parent = showAct
+		})
+
+		It("generates param initialization code that uses the param name given in the design", func() {
+			Ω(genErr).Should(BeNil())
+			Ω(files).Should(HaveLen(9))
+			c, err := ioutil.ReadFile(filepath.Join(outDir, "client", "foo.go"))
+			Ω(err).ShouldNot(HaveOccurred())
+			content := string(c)
+			Ω(content).Should(ContainSubstring("func ShowFooPath("))
+			Ω(content).Should(ContainSubstring(`values.Set("fields[foo]", *fieldsFoo)`))
+			Ω(content).Should(ContainSubstring(`	if fieldsBar != nil {
+		for _, p := range fieldsBar {
+			tmp3 := p
+			values.Add("fields[bar]", tmp3)
+		}
+	}
+`))
+			Ω(content).Should(ContainSubstring(`	if fieldsBaz != nil {
+		for _, p := range fieldsBaz {
+			tmp5 := strconv.Itoa(p)
+			values.Add("fields[baz]", tmp5)
+		}
+	}
+`))
+			Ω(content).Should(ContainSubstring(`	tmp4 := fieldsBat.Format(time.RFC3339)
+		values.Set("fields[bat]", tmp4)`))
+		})
+
+		Context("with --notool", func() {
+			BeforeEach(func() {
+				os.Args = append(os.Args, "--notool")
+			})
+
+			It("should not return an error", func() {
+				Ω(genErr).Should(BeNil())
+				Ω(files).Should(HaveLen(5)) // 9, minus 4 entries for tool paths
+			})
+		})
+	})
+
 	Context("with an action with multiple routes", func() {
 		BeforeEach(func() {
 			design.Design = &design.APIDefinition{
