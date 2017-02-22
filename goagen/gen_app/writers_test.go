@@ -946,6 +946,7 @@ var _ = Describe("ControllersWriter", func() {
 				BeforeEach(func() {
 					origins = []*design.CORSDefinition{
 						{
+							// NB: including backslash to ensure proper escaping
 							Origin:      "here.example.com",
 							Headers:     []string{"X-One", "X-Two"},
 							Methods:     []string{"GET", "POST"},
@@ -953,7 +954,7 @@ var _ = Describe("ControllersWriter", func() {
 							Credentials: true,
 						},
 					}
-					preflightPaths = []string{"/public/*filepath"}
+					preflightPaths = []string{"/public/star\\*star/*filepath"}
 				})
 
 				It("writes the OPTIONS handler code", func() {
@@ -2134,7 +2135,7 @@ type PublicController interface {
 }
 `
 
-	fileServerOptionsHandler = `service.Mux.Handle("OPTIONS", "/public/*filepath", ctrl.MuxHandler("preflight", handlePublicOrigin(cors.HandlePreflight()), nil))`
+	fileServerOptionsHandler = `service.Mux.Handle("OPTIONS", "/public/star\\*star/*filepath", ctrl.MuxHandler("preflight", handlePublicOrigin(cors.HandlePreflight()), nil))`
 
 	simpleController = `// BottlesController is the controller interface for the Bottles actions.
 type BottlesController interface {

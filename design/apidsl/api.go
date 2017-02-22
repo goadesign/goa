@@ -161,7 +161,7 @@ func BasePath(val string) {
 //                Credentials()                        // Sets Access-Control-Allow-Credentials header
 //        })
 //
-//        Origin("/[api|swagger].goa.design/", func() {}) // Define CORS policy with a regular expression
+//        Origin("/(api|swagger)[.]goa[.]design/", func() {}) // Define CORS policy with a regular expression
 func Origin(origin string, dsl func()) {
 	cors := &design.CORSDefinition{Origin: origin}
 
