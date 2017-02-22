@@ -120,7 +120,7 @@ var _ = Describe("Struct finalize code generation", func() {
 		})
 		It("finalizes the recursive type fields", func() {
 			code := finalizer.Code(att, target, 0)
-			Ω(code).Should(Equal(recursiveAssignmentCode))
+			Ω(code).Should(Equal(recursiveAssignmentCodeA))
 		})
 	})
 
@@ -144,7 +144,7 @@ var _ = Describe("Struct finalize code generation", func() {
 		})
 		It("finalizes the recursive type fields", func() {
 			code := finalizer.Code(att, target, 0)
-			Ω(code).Should(Equal(recursiveAssignmentCode))
+			Ω(code).Should(Equal(recursiveAssignmentCodeB))
 		})
 	})
 })
@@ -167,7 +167,24 @@ if ut.Foo == nil {
 	ut.Foo = &defaultFoo
 }`
 
-	recursiveAssignmentCode = `var defaultOther = "foo"
+	recursiveAssignmentCodeA = `if ut.Child != nil {
+	var defaultOther = "foo"
+	if ut.Child.Other == nil {
+		ut.Child.Other = &defaultOther
+}
+}
+var defaultOther = "foo"
+if ut.Other == nil {
+	ut.Other = &defaultOther
+}`
+
+	recursiveAssignmentCodeB = `	for _, e := range ut.Elems {
+		var defaultOther = "foo"
+		if e.Other == nil {
+			e.Other = &defaultOther
+}
+	}
+var defaultOther = "foo"
 if ut.Other == nil {
 	ut.Other = &defaultOther
 }`

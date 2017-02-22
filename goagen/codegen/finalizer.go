@@ -12,13 +12,13 @@ import (
 type Finalizer struct {
 	assignmentT      *template.Template
 	arrayAssignmentT *template.Template
-	seen             map[string]*bytes.Buffer
+	seen             map[*design.AttributeDefinition]map[*design.AttributeDefinition]*bytes.Buffer
 }
 
 // NewFinalizer instantiates a finalize code generator.
 func NewFinalizer() *Finalizer {
 	var (
-		f   = &Finalizer{seen: make(map[string]*bytes.Buffer)}
+		f   = &Finalizer{seen: make(map[*design.AttributeDefinition]map[*design.AttributeDefinition]*bytes.Buffer)}
 		err error
 	)
 	fm := template.FuncMap{
@@ -42,30 +42,23 @@ func NewFinalizer() *Finalizer {
 // Code produces Go code that sets the default values for fields recursively for the given
 // attribute.
 func (f *Finalizer) Code(att *design.AttributeDefinition, target string, depth int) string {
-	buf := f.recurse(att, target, depth)
+	buf := f.recurse(att, att, target, depth)
 	return buf.String()
 }
 
-func (f *Finalizer) recurse(att *design.AttributeDefinition, target string, depth int) *bytes.Buffer {
+func (f *Finalizer) recurse(root, att *design.AttributeDefinition, target string, depth int) *bytes.Buffer {
 	var (
 		buf   = new(bytes.Buffer)
 		first = true
 	)
 
-	// Break infinite recursions
-	switch dt := att.Type.(type) {
-	case *design.MediaTypeDefinition:
-		if buf, ok := f.seen[dt.TypeName+"#"+target]; ok {
+	if s, ok := f.seen[root]; ok {
+		if buf, ok := s[att]; ok {
 			return buf
 		}
-		f.seen[dt.TypeName+"#"+target] = buf
-		att = dt.AttributeDefinition
-	case *design.UserTypeDefinition:
-		if buf, ok := f.seen[dt.TypeName+"#"+target]; ok {
-			return buf
-		}
-		f.seen[dt.TypeName+"#"+target] = buf
-		att = dt.AttributeDefinition
+		s[att] = buf
+	} else {
+		f.seen[root] = map[*design.AttributeDefinition]*bytes.Buffer{att: buf}
 	}
 
 	if o := att.Type.ToObject(); o != nil {
@@ -86,7 +79,7 @@ func (f *Finalizer) recurse(att *design.AttributeDefinition, target string, dept
 				}
 				buf.WriteString(RunTemplate(f.assignmentT, data))
 			}
-			a := f.recurse(catt, fmt.Sprintf("%s.%s", target, Goify(n, true)), depth+1).String()
+			a := f.recurse(root, catt, fmt.Sprintf("%s.%s", target, Goify(n, true)), depth+1).String()
 			if a != "" {
 				if catt.Type.IsObject() {
 					a = fmt.Sprintf("%sif %s.%s != nil {\n%s\n%s}",
