@@ -55,16 +55,16 @@ func (f *Finalizer) recurse(att *design.AttributeDefinition, target string, dept
 	// Break infinite recursions
 	switch dt := att.Type.(type) {
 	case *design.MediaTypeDefinition:
-		if buf, ok := f.seen[dt.TypeName]; ok {
+		if buf, ok := f.seen[dt.TypeName+"#"+target]; ok {
 			return buf
 		}
-		f.seen[dt.TypeName] = buf
+		f.seen[dt.TypeName+"#"+target] = buf
 		att = dt.AttributeDefinition
 	case *design.UserTypeDefinition:
-		if buf, ok := f.seen[dt.TypeName]; ok {
+		if buf, ok := f.seen[dt.TypeName+"#"+target]; ok {
 			return buf
 		}
-		f.seen[dt.TypeName] = buf
+		f.seen[dt.TypeName+"#"+target] = buf
 		att = dt.AttributeDefinition
 	}
 
