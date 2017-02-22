@@ -95,6 +95,34 @@ var _ = Describe("Struct finalize code generation", func() {
 			})
 		})
 
+		It("finalizes the recursive type fields", func() {
+			code := finalizer.Code(att, target, 0)
+			Ω(code).Should(Equal(recursiveAssignmentCodeA))
+		})
+	})
+
+	Context("given a recursive user type with an array attribute", func() {
+		BeforeEach(func() {
+			var (
+				rt  = &design.UserTypeDefinition{TypeName: "recursive"}
+				ar  = &design.Array{ElemType: &design.AttributeDefinition{Type: rt}}
+				obj = &design.Object{
+					"elems": &design.AttributeDefinition{Type: ar},
+					"other": &design.AttributeDefinition{
+						Type:         design.String,
+						DefaultValue: "foo",
+					},
+				}
+			)
+			rt.AttributeDefinition = &design.AttributeDefinition{Type: obj}
+
+			att = &design.AttributeDefinition{Type: rt}
+			target = "ut"
+		})
+		It("finalizes the recursive type fields", func() {
+			code := finalizer.Code(att, target, 0)
+			Ω(code).Should(Equal(recursiveAssignmentCodeB))
+		})
 	})
 })
 
@@ -114,5 +142,20 @@ if ut.Foo == nil {
 	datetimeAssignmentCode = `var defaultFoo, _ = time.Parse(time.RFC3339, "1978-06-30T10:00:00+09:00")
 if ut.Foo == nil {
 	ut.Foo = &defaultFoo
+}`
+
+	recursiveAssignmentCodeA = `if ut.Foo == nil {
+	ut.Foo = map[string]string{"bar": "baz"}
+}`
+
+	recursiveAssignmentCodeB = `	for _, e := range ut.Elems {
+		var defaultOther = "foo"
+		if e.Other == nil {
+			e.Other = &defaultOther
+}
+	}
+var defaultOther = "foo"
+if ut.Other == nil {
+	ut.Other = &defaultOther
 }`
 )
