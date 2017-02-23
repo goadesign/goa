@@ -84,10 +84,14 @@ type (
 const (
 	// BooleanKind represents a boolean.
 	BooleanKind Kind = iota + 1
+	// IntKind represents a signed integer.
+	IntKind
 	// Int32Kind represents a signed 32-bit integer.
 	Int32Kind
 	// Int64Kind represents a signed 64-bit integer.
 	Int64Kind
+	// UIntKind represents an unsigned integer.
+	UIntKind
 	// UInt32Kind represents an unsigned 32-bit integer.
 	UInt32Kind
 	// UInt64Kind represents an unsigned 64-bit integer.
@@ -118,11 +122,17 @@ const (
 	// Boolean is the type for a JSON boolean.
 	Boolean = Primitive(BooleanKind)
 
+	// Int is the type for a signed integer.
+	Int = Primitive(IntKind)
+
 	// Int32 is the type for a signed 32-bit integer.
 	Int32 = Primitive(Int32Kind)
 
 	// Int64 is the type for a signed 64-bit integer.
 	Int64 = Primitive(Int64Kind)
+
+	// UInt is the type for an unsigned integer.
+	UInt = Primitive(UIntKind)
 
 	// UInt32 is the type for an unsigned 32-bit integer.
 	UInt32 = Primitive(UInt32Kind)
@@ -234,10 +244,14 @@ func (p Primitive) Name() string {
 	switch p {
 	case Boolean:
 		return "boolean"
+	case Int:
+		return "int"
 	case Int32:
 		return "int32"
 	case Int64:
 		return "int64"
+	case UInt:
+		return "uint"
 	case UInt32:
 		return "uint32"
 	case UInt64:
@@ -266,7 +280,9 @@ func (p Primitive) IsCompatible(val interface{}) bool {
 	case bool:
 		return p == Boolean
 	case int, int8, int16, int32, uint, uint8, uint16, uint32:
-		return p == Int32 || p == Int64 || p == UInt32 || p == UInt64 || p == Float32 || p == Float64
+		return p == Int || p == Int32 || p == Int64 ||
+			p == UInt || p == UInt32 || p == UInt64 ||
+			p == Float32 || p == Float64
 	case int64, uint64:
 		return p == Int64 || p == UInt64 || p == Float32 || p == Float64
 	case float32, float64:

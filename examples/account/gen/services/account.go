@@ -58,13 +58,13 @@ type (
 		// ID of account
 		ID string
 		// ID of organization that owns newly created account
-		OrgID string
+		OrgID int
 		// Name of new account
 		Name string
 	}
 
 	CreateAccountPayload struct {
-		OrgID string
+		OrgID int
 		Name  string
 	}
 

@@ -195,6 +195,7 @@ func byMinMax(a *AttributeExpr, r *Random) interface{} {
 		return nil
 	}
 	var (
+		i    = a.Type.Kind() == IntKind || a.Type.Kind() == UIntKind
 		i32  = a.Type.Kind() == Int32Kind || a.Type.Kind() == UInt32Kind
 		i64  = a.Type.Kind() == Int64Kind || a.Type.Kind() == UInt64Kind
 		f32  = a.Type.Kind() == Float32Kind
@@ -215,6 +216,8 @@ func byMinMax(a *AttributeExpr, r *Random) interface{} {
 
 	if math.IsInf(max, 1) {
 		switch {
+		case i:
+			return sign * (r.Int() + int(min))
 		case i32:
 			return int32(sign) * (r.Int32() + int32(min))
 		case i64:
@@ -228,6 +231,8 @@ func byMinMax(a *AttributeExpr, r *Random) interface{} {
 	if min < max {
 		delta := max - min
 		switch {
+		case i:
+			return r.Int()%int(delta) + int(min)
 		case i32:
 			return r.Int32()%int32(delta) + int32(min)
 		case i64:
@@ -239,6 +244,8 @@ func byMinMax(a *AttributeExpr, r *Random) interface{} {
 		}
 	}
 	switch {
+	case i:
+		return int(min)
 	case i32:
 		return int32(min)
 	case i64:

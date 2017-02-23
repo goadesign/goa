@@ -49,8 +49,8 @@ func main() {
 	}
 
 	var (
-		enc = httptransport.NewEncoder
-		dec = httptransport.NewDecoder
+		enc = httptransport.NewResponseEncoder
+		dec = httptransport.NewRequestDecoder
 	)
 
 	var (

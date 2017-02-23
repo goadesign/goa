@@ -1,15 +1,36 @@
 package rest
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
+	"sort"
+	"strings"
 )
 
 type (
 	// Doer is the HTTP client interface.
 	Doer interface {
 		Do(*http.Request) (*http.Response, error)
+	}
+
+	// DebugDoer is a Doer that can print the low level HTTP details.
+	DebugDoer interface {
+		Doer
+		// Fprint prints the HTTP request and response details.
+		Fprint(io.Writer)
+	}
+
+	// debugDoer wraps a doer and implements DebugDoer.
+	debugDoer struct {
+		Doer
+		// Request is the captured request.
+		Request *http.Request
+		// Response is the captured response.
+		Response *http.Response
 	}
 
 	// clientError is an error returned by a HTTP service client.
@@ -21,6 +42,86 @@ type (
 		timeout   bool
 	}
 )
+
+// NewDebugDoer wraps the given doer and captures the request and response so
+// they can be printed.
+func NewDebugDoer(d Doer) DebugDoer {
+	return &debugDoer{Doer: d}
+}
+
+// Do captures the request and response.
+func (dd *debugDoer) Do(req *http.Request) (*http.Response, error) {
+	var reqb []byte
+	if req.Body != nil {
+		reqb, _ := ioutil.ReadAll(req.Body)
+		req.Body = ioutil.NopCloser(bytes.NewBuffer(reqb))
+	}
+
+	resp, err := dd.Doer.Do(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	respb, _ := ioutil.ReadAll(resp.Body)
+	resp.Body = ioutil.NopCloser(bytes.NewBuffer(respb))
+
+	dd.Response = resp
+	req.Body = ioutil.NopCloser(bytes.NewBuffer(reqb))
+	dd.Request = req
+
+	return resp, err
+}
+
+// Printf dumps the captured request and response details to w.
+func (dd *debugDoer) Fprint(w io.Writer) {
+	if dd.Request == nil {
+		return
+	}
+	buf := &bytes.Buffer{}
+	buf.WriteString(fmt.Sprintf("> %s %s", dd.Request.Method, dd.Request.URL.String()))
+
+	keys := make([]string, len(dd.Request.Header))
+	i := 0
+	for k, _ := range dd.Request.Header {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		buf.WriteString(fmt.Sprintf("\n> %s: %s", k, strings.Join(dd.Request.Header[k], ", ")))
+	}
+
+	b, _ := ioutil.ReadAll(dd.Request.Body)
+	if len(b) > 0 {
+		buf.Write([]byte{'\n'})
+		buf.Write(b)
+	}
+
+	if dd.Response == nil {
+		w.Write(buf.Bytes())
+		return
+	}
+	buf.WriteString(fmt.Sprintf("\n< %s", dd.Response.Status))
+
+	keys = make([]string, len(dd.Response.Header))
+	i = 0
+	for k, _ := range dd.Response.Header {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		buf.WriteString(fmt.Sprintf("\n< %s: %s", k, strings.Join(dd.Response.Header[k], ", ")))
+	}
+
+	b, _ = ioutil.ReadAll(dd.Response.Body)
+	if len(b) > 0 {
+		buf.Write([]byte{'\n'})
+		buf.Write(b)
+	}
+	w.Write(buf.Bytes())
+}
 
 // Error builds an error message.
 func (c *clientError) Error() string {

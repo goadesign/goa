@@ -198,7 +198,7 @@ Like in v1, the built-in types are primitive types, array, map and object types
 The list of primitive types in v2 is:
 
 * `Boolean`
-* `Int32`, `Int64`, `UInt32`, `UInt64`
+* `Int`, `Int32`, `Int64`, `UInt`, `UInt32`, `UInt64`
 * `Float32`, `Float64`
 * `String`, `Bytes`
 * `Any` (maps to any type, primitive or not)
