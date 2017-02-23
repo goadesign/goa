@@ -83,7 +83,7 @@ func (dd *debugDoer) Fprint(w io.Writer) {
 
 	keys := make([]string, len(dd.Request.Header))
 	i := 0
-	for k, _ := range dd.Request.Header {
+	for k := range dd.Request.Header {
 		keys[i] = k
 		i++
 	}
@@ -106,7 +106,7 @@ func (dd *debugDoer) Fprint(w io.Writer) {
 
 	keys = make([]string, len(dd.Response.Header))
 	i = 0
-	for k, _ := range dd.Response.Header {
+	for k := range dd.Response.Header {
 		keys[i] = k
 		i++
 	}
