@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"golang.org/x/net/context"
+	"context"
 
 	goa "goa.design/goa.v2"
 	"goa.design/goa.v2/rest"
@@ -30,7 +30,7 @@ func StashRequest(ctx context.Context, r *http.Request) context.Context {
 // for decoding create account requests.
 func CreateAccountDecodeRequest(decoder rest.RequestDecoderFunc) httptransport.DecodeRequestFunc {
 	dec := httpgen.CreateAccountDecodeRequest(decoder)
-	return func(ctx context.Context, r *http.Request) (interface{}, error) {
+	return func(_ context.Context, r *http.Request) (interface{}, error) {
 		return dec(r)
 	}
 }
@@ -72,7 +72,7 @@ func CreateAccountEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logge
 // for decoding list account requests.
 func ListAccountDecodeRequest(decoder rest.RequestDecoderFunc) httptransport.DecodeRequestFunc {
 	dec := httpgen.ListAccountDecodeRequest(decoder)
-	return func(ctx context.Context, r *http.Request) (interface{}, error) {
+	return func(_ context.Context, r *http.Request) (interface{}, error) {
 		return dec(r)
 	}
 }
@@ -112,7 +112,7 @@ func ListAccountEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger)
 // for decoding create account requests.
 func ShowAccountDecodeRequest(decoder rest.RequestDecoderFunc) httptransport.DecodeRequestFunc {
 	dec := httpgen.ShowAccountDecodeRequest(decoder)
-	return func(ctx context.Context, r *http.Request) (interface{}, error) {
+	return func(_ context.Context, r *http.Request) (interface{}, error) {
 		return dec(r)
 	}
 }
@@ -154,7 +154,7 @@ func ShowAccountEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger)
 // for decoding create account requests.
 func DeleteAccountDecodeRequest(decoder rest.RequestDecoderFunc) httptransport.DecodeRequestFunc {
 	dec := httpgen.DeleteAccountDecodeRequest(decoder)
-	return func(ctx context.Context, r *http.Request) (interface{}, error) {
+	return func(_ context.Context, r *http.Request) (interface{}, error) {
 		return dec(r)
 	}
 }

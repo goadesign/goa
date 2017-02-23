@@ -1,6 +1,6 @@
 package goa
 
-import "golang.org/x/net/context"
+import "context"
 
 // Keys used to store data in context.
 const (
