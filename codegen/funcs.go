@@ -8,7 +8,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/goadesign/goa/pkg"
+	"goa.design/goa.v2/pkg"
 )
 
 // CheckVersion returns an error if the ver is empty, contains an incorrect value or

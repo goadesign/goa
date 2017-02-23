@@ -1,7 +1,7 @@
 package basic
 
 import (
-	"golang.org/x/net/context"
+	"context"
 
 	"goa.design/goa.v2/examples/account/gen/services"
 )
