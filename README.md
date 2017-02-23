@@ -22,10 +22,10 @@ See
 
 ## New Data Types
 
-The primitive types now include `Int32`, `Int64`, `UInt32`, `UInt64`, `Float32`,
-`Float64` and `Bytes`. This makes it possible to support transports such as gRPC
-but also makes REST interface definitions crisper. The v1 types `Integer` and
-`Float` have been removed in favor of these new types.
+The primitive types now include `Int`, `Int32`, `Int64`, `UInt` `UInt32`,
+`UInt64`, `Float32`, `Float64` and `Bytes`. This makes it possible to support
+transports such as gRPC but also makes REST interface definitions crisper. The
+v1 types `Integer` and `Float` have been removed in favor of these new types.
 
 ## Composable Code Generation
 

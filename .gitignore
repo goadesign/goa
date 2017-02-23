@@ -17,3 +17,4 @@ _integration_tests/*/**/*.*
 # OSes cruft
 .DS_Store
 /examples/account/cmd/basic/basic
+/examples/account/cmd/basiccli/basiccli

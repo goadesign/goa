@@ -27,11 +27,17 @@ const (
 	// Boolean is the type for a JSON boolean.
 	Boolean = design.Boolean
 
+	// Int is the type for a signed integer.
+	Int = design.Int
+
 	// Int32 is the type for a signed 32-bit integer.
 	Int32 = design.Int32
 
 	// Int64 is the type for a signed 64-bit integer.
 	Int64 = design.Int64
+
+	// UInt is the type for a signed integer.
+	UInt = design.UInt
 
 	// UInt32 is the type for an unsigned 32-bit integer.
 	UInt32 = design.UInt32

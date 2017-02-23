@@ -1,7 +1,6 @@
 package http
 
 import (
-	"bytes"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -79,14 +78,13 @@ func (c *AccountClient) EncodeCreate(encoder rest.RequestEncoderFunc) EncodeRequ
 
 		// Build request
 		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: CreateAccountPath()}
-		buf := &bytes.Buffer{}
-		req, err := http.NewRequest("POST", u.String(), buf)
+		req, err := http.NewRequest("POST", u.String(), nil)
 		if err != nil {
 			return nil, rest.ErrInvalidURL("account", "create", u.String(), err)
 		}
 
 		// Encode body
-		var body createAccountBody
+		var body CreateAccountBody
 		body.Name = &p.Name
 		err = encoder(req).Encode(&body)
 		if err != nil {
@@ -187,7 +185,7 @@ func (c *AccountClient) DecodeList(decoder rest.ResponseDecoderFunc) DecodeRespo
 	return func(resp *http.Response) (interface{}, error) {
 		switch resp.StatusCode {
 		case http.StatusOK:
-			var body []*services.Account
+			var body []*services.AccountBody
 			err := decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, rest.ErrDecodingError("account", "list", err)
@@ -248,7 +246,7 @@ func (c *AccountClient) DecodeShow(decoder rest.ResponseDecoderFunc) DecodeRespo
 	return func(resp *http.Response) (interface{}, error) {
 		switch resp.StatusCode {
 		case http.StatusOK:
-			var body *services.Account
+			var body *services.AccountBody
 			err := decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, rest.ErrDecodingError("account", "show", err)
@@ -307,18 +305,6 @@ func (c *AccountClient) EncodeDelete(encoder rest.RequestEncoderFunc) EncodeRequ
 // endpoint.
 func (c *AccountClient) DecodeDelete(decoder rest.ResponseDecoderFunc) DecodeResponseFunc {
 	return func(resp *http.Response) (interface{}, error) {
-		switch resp.StatusCode {
-		case http.StatusOK:
-			var body *services.Account
-			err := decoder(resp).Decode(&body)
-			if err != nil {
-				return nil, rest.ErrDecodingError("account", "delete", err)
-			}
-			resp.Body.Close()
-			return body, nil
-		default:
-			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, rest.ErrInvalidResponse("account", "delete", resp.StatusCode, string(body))
-		}
+		return nil, nil
 	}
 }

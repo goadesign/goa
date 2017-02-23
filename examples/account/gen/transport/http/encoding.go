@@ -1,14 +1,17 @@
 package http
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/gob"
 	"encoding/json"
 	"encoding/xml"
 	"io"
+	"io/ioutil"
 	"mime"
 	"net/http"
+	"strings"
 
 	goa "goa.design/goa.v2"
 	"goa.design/goa.v2/rest"
@@ -39,13 +42,13 @@ type (
 	DecodeResponseFunc func(*http.Response) (interface{}, error)
 )
 
-// NewDecoder returns a HTTP request body decoder.
+// NewRequestDecoder returns a HTTP request body decoder.
 // The decoder handles the following content types:
 //
 // * application/json using package encoding/json
 // * application/xml using package encoding/xml
 // * application/gob using package encoding/gob
-func NewDecoder(r *http.Request) rest.Decoder {
+func NewRequestDecoder(r *http.Request) rest.Decoder {
 	contentType := r.Header.Get("Content-Type")
 	if contentType == "" {
 		// Default to JSON
@@ -67,13 +70,13 @@ func NewDecoder(r *http.Request) rest.Decoder {
 	}
 }
 
-// NewEncoder returns a HTTP response encoder.
+// NewResponseEncoder returns a HTTP response encoder.
 // The encoder handles the following content types:
 //
 // * application/json using package encoding/json
 // * application/xml using package encoding/xml
 // * application/gob using package encoding/gob
-func NewEncoder(w http.ResponseWriter, r *http.Request) rest.Encoder {
+func NewResponseEncoder(w http.ResponseWriter, r *http.Request) rest.Encoder {
 	accept := r.Header.Get("Accept")
 	if accept == "" {
 		// Default to JSON
@@ -92,6 +95,40 @@ func NewEncoder(w http.ResponseWriter, r *http.Request) rest.Encoder {
 		return xml.NewEncoder(w)
 	default:
 		return json.NewEncoder(w)
+	}
+}
+
+// NewRequestEncoder returns a HTTP request encoder.
+// The encoder uses package encoding/json.
+func NewRequestEncoder(r *http.Request) rest.Encoder {
+	var buf bytes.Buffer
+	r.Body = ioutil.NopCloser(&buf)
+	return json.NewEncoder(&buf)
+}
+
+// NewResponseDecoder returns a HTTP response decoder.
+// The decoder handles the following content types:
+//
+// * application/json using package encoding/json (default)
+// * application/xml using package encoding/xml
+// * application/gob using package encoding/gob
+func NewResponseDecoder(resp *http.Response) rest.Decoder {
+	ct := resp.Header.Get("Content-Type")
+	if ct == "" {
+		return json.NewDecoder(resp.Body)
+	}
+	if mediaType, _, err := mime.ParseMediaType(ct); err == nil {
+		ct = mediaType
+	}
+	switch {
+	case ct == "application/json" || strings.HasSuffix(ct, "+json"):
+		return json.NewDecoder(resp.Body)
+	case ct == "application/gob" || strings.HasSuffix(ct, "+gob"):
+		return gob.NewDecoder(resp.Body)
+	case ct == "application/xml" || strings.HasSuffix(ct, "+xml"):
+		return xml.NewDecoder(resp.Body)
+	default:
+		return json.NewDecoder(resp.Body)
 	}
 }
 

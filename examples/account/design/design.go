@@ -10,7 +10,9 @@ var _ = API("basic", func() {
 })
 
 var _ = Service("account", func() {
+	Description("Manage accounts")
 	Endpoint("create", func() {
+		Description("Create new account")
 		Payload(CreateAccount)
 		Result(Account)
 		Error("name_already_taken", NameAlreadyTaken, "Error returned when name is already taken")
@@ -28,6 +30,7 @@ var _ = Service("account", func() {
 		})
 	})
 	Endpoint("list", func() {
+		Description("List all accounts")
 		Payload(ListFilter)
 		Result(ArrayOf(Account))
 		HTTP(func() {
@@ -38,6 +41,7 @@ var _ = Service("account", func() {
 		})
 	})
 	Endpoint("show", func() {
+		Description("Show account by ID")
 		Payload(func() {
 			Attribute("id", String, "ID of account to show")
 		})
@@ -46,11 +50,21 @@ var _ = Service("account", func() {
 			GET("/{id}")
 		})
 	})
+	Endpoint("delete", func() {
+		Description("Delete account by IF")
+		Payload(func() {
+			Attribute("id", String, "ID of account to delete")
+		})
+		Result(Empty)
+		HTTP(func() {
+			DELETE("/{id}")
+		})
+	})
 })
 
 var CreateAccount = Type("CreateAccount", func() {
 	Description("CreateAccount is the account creation payload")
-	Attribute("org_id", String, "ID of organization that owns newly created account")
+	Attribute("org_id", Int, "ID of organization that owns newly created account")
 	Attribute("name", String, "Name of new account")
 	Required("org_id", "name")
 })

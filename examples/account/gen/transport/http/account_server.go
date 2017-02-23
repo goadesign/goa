@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/dimfeld/httptreemux"
 	"goa.design/goa.v2"
@@ -106,17 +107,33 @@ func NewCreateAccountHandler(
 // create account endpoint.
 func CreateAccountDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 	return func(r *http.Request) (interface{}, error) {
-		var body createAccountBody
-		err := decoder(r).Decode(&body)
-		if err != nil {
-			if err == io.EOF {
-				err = fmt.Errorf("empty body")
+		var (
+			body CreateAccountBody
+			err  error
+		)
+		{
+			err = decoder(r).Decode(&body)
+			if err != nil {
+				if err == io.EOF {
+					err = fmt.Errorf("empty body")
+				}
+				return nil, err
 			}
-			return nil, err
 		}
+
 		params := httptreemux.ContextParams(r.Context())
-		orgID := params["org_id"]
-		payload, err := newCreateAccountPayload(&body, orgID)
+		var (
+			orgID int
+		)
+		{
+			orgIDRaw := params["org_id"]
+			orgID, err = strconv.Atoi(orgIDRaw)
+			if err != nil {
+				return nil, fmt.Errorf("org_id must be an integer, got %#v", orgID)
+			}
+		}
+
+		payload, err := NewCreateAccountPayload(&body, orgID)
 		return payload, err
 	}
 }
@@ -196,7 +213,7 @@ func NewListAccountHandler(
 func ListAccountDecodeRequest(decoder rest.RequestDecoderFunc) func(r *http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		filter := r.URL.Query().Get("filter")
-		payload, err := newListAccountPayload(filter)
+		payload, err := NewListAccountPayload(filter)
 		return payload, err
 	}
 }
@@ -253,7 +270,7 @@ func ShowAccountDecodeRequest(decoder rest.RequestDecoderFunc) func(r *http.Requ
 	return func(r *http.Request) (interface{}, error) {
 		params := httptreemux.ContextParams(r.Context())
 		id := params["id"]
-		payload, err := newShowAccountPayload(id)
+		payload, err := NewShowAccountPayload(id)
 		return interface{}(payload), err
 	}
 }
@@ -309,7 +326,7 @@ func DeleteAccountDecodeRequest(decoder rest.RequestDecoderFunc) func(r *http.Re
 	return func(r *http.Request) (interface{}, error) {
 		params := httptreemux.ContextParams(r.Context())
 		id := params["id"]
-		payload, err := newDeleteAccountPayload(id)
+		payload, err := NewDeleteAccountPayload(id)
 		return interface{}(payload), err
 	}
 }

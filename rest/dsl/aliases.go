@@ -80,8 +80,8 @@ func ArrayOf(v interface{}, dsl ...func()) *design.Array {
 //
 // The type of an attribute can be one of:
 //
-// * The primitive types Boolean, Float32, Float64, Int32, Int64, UInt32,
-//   UInt64, String or Bytes.
+// * The primitive types Boolean, Float32, Float64, Int, Int32, Int64, UInt,
+//   UInt32, UInt64, String or Bytes.
 //
 // * A user type defined via the Type function.
 //
