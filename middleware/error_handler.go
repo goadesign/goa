@@ -33,7 +33,7 @@ func ErrorHandler(service *goa.Service, verbose bool) goa.Middleware {
 				respBody = e.Error()
 				rw.Header().Set("Content-Type", "text/plain")
 			}
-			if status >= 500 && status < 600 {
+			if status == http.StatusInternalServerError {
 				reqID := ctx.Value(reqIDKey)
 				if reqID == nil {
 					reqID = shortID()
