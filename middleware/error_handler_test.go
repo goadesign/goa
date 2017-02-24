@@ -105,7 +105,6 @@ var _ = Describe("ErrorHandler", func() {
 				var origID string
 
 				BeforeEach(func() {
-					verbose = false
 					h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 						e := goa.ErrInternal("goa-500-boom")
 						origID = e.(goa.ServiceError).Token()
@@ -121,6 +120,25 @@ var _ = Describe("ErrorHandler", func() {
 					err := service.Decoder.Decode(&decoded, bytes.NewBuffer(rw.Body), "application/json")
 					Ω(err).ShouldNot(HaveOccurred())
 					Ω(decoded.ID).Should(Equal(origID))
+				})
+			})
+
+			Context("and goa 504 error", func() {
+				BeforeEach(func() {
+					meaningful := goa.NewErrorClass("goa-504-with-info", http.StatusGatewayTimeout)
+					h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+						return meaningful("gatekeeper says no")
+					}
+				})
+
+				It("passes the response", func() {
+					var decoded errorResponse
+					Ω(rw.Status).Should(Equal(http.StatusGatewayTimeout))
+					Ω(rw.ParentHeader["Content-Type"]).Should(Equal([]string{goa.ErrorMediaIdentifier}))
+					err := service.Decoder.Decode(&decoded, bytes.NewBuffer(rw.Body), "application/json")
+					Ω(err).ShouldNot(HaveOccurred())
+					Ω(decoded.Code).Should(Equal("goa-504-with-info"))
+					Ω(decoded.Detail).Should(Equal("gatekeeper says no"))
 				})
 			})
 		})
