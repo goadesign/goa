@@ -5,6 +5,7 @@
 # Targets:
 # - "depend" retrieves the Go packages needed to run the linter and tests
 # - "lint" runs the linter and checks the code format using goimports
+# - "aliases" builds the DSL aliases files
 # - "test" runs the tests
 #
 # Meta targets:
@@ -16,13 +17,9 @@ DIRS=$(shell go list -f {{.Dir}} goa.design/goa.v2/design/...)
 # Standard dependencies are installed via go get
 DEPEND=\
 	github.com/golang/lint/golint \
-	github.com/on99/gocyclo \
-	golang.org/x/tools/cmd/cover \
 	golang.org/x/tools/cmd/goimports
 
-.PHONY: goagen
-
-all: depend lint cyclo aliases test
+all: depend lint aliases test
 
 depend:
 	@go get -v ./...
@@ -38,11 +35,6 @@ lint:
 		echo "^ - Lint errors!" && echo && exit 1; \
 	fi
 
-cyclo:
-	@if [ "`gocyclo -over 20 . | grep -v _integration_tests | grep -v _test.go | tee /dev/stderr`" ]; then \
-		echo "^ - Cyclomatic complexity exceeds 20, refactor the code!" && echo && exit 1; \
-	fi
-
 aliases:
 	@cd cmd/aliaser && \
 	go build && \
@@ -50,7 +42,3 @@ aliases:
 
 test:
 	go test ./...
-
-goagen:
-	@cd goagen && \
-	go install
