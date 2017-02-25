@@ -184,8 +184,14 @@ for i0, elem0 := range source {
 
 	hashPublicizeCode = `target = make(map[*TheKeyType]*TheElemType, len(source))
 for k0, v0 := range source {
-	pubk0 := k0.Publicize()
-	pubv0 := v0.Publicize()
+	var pubk0 *TheKeyType
+	if k0 != nil {
+		pubk0 = k0.Publicize()
+	}
+	var pubv0 *TheElemType
+	if v0 != nil {
+		pubv0 = v0.Publicize()
+	}
 	target[pubk0] = pubv0
 }`
 )
