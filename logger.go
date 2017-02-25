@@ -26,7 +26,7 @@ type (
 	}
 )
 
-// AdaptStdLogger creates a logger backed by a stdlib logger.
+// AdaptStdLogger creates a Logger backed by a stdlib logger.
 func AdaptStdLogger(l *log.Logger) Logger {
 	return &adapter{l}
 }

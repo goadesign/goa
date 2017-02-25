@@ -6,10 +6,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 	"unicode"
 
 	"goa.design/goa.v2/pkg"
 )
+
+// TemplateFuncs returns all the common helper functions.
+func TemplateFuncs() template.FuncMap {
+	return map[string]interface{}{
+		"commandLine": CommandLine,
+		"comment":     Comment,
+	}
+}
 
 // CheckVersion returns an error if the ver is empty, contains an incorrect value or
 // a version number that is not compatible with the version of this repo.
@@ -76,22 +85,20 @@ func Comment(elems ...string) string {
 // Indent inserts prefix at the beginning of each non-empty line of s. The
 // end-of-line marker is NL.
 func Indent(s, prefix string) string {
-	return string(IndentBytes([]byte(s), []byte(prefix)))
-}
-
-// IndentBytes inserts prefix at the beginning of each non-empty line of b.
-// The end-of-line marker is NL.
-func IndentBytes(b, prefix []byte) []byte {
-	var res []byte
-	bol := true
+	var (
+		res []byte
+		b   = []byte(s)
+		p   = []byte(prefix)
+		bol = true
+	)
 	for _, c := range b {
 		if bol && c != '\n' {
-			res = append(res, prefix...)
+			res = append(res, p...)
 		}
 		res = append(res, c)
 		bol = c == '\n'
 	}
-	return res
+	return string(res)
 }
 
 // Tabs returns a string made of depth tab characters.
