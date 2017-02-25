@@ -2446,9 +2446,6 @@ type simplePayload struct {
 
 // Publicize creates SimplePayload from simplePayload
 func (ut *simplePayload) Publicize() *SimplePayload {
-	if ut == nil {
-		return nil
-	}
 	var pub SimplePayload
 		if ut.Name != nil {
 		pub.Name = ut.Name
@@ -2472,9 +2469,6 @@ type complexPayload struct {
 
 // Publicize creates ComplexPayload from complexPayload
 func (ut *complexPayload) Publicize() *ComplexPayload {
-	if ut == nil {
-		return nil
-	}
 	var pub ComplexPayload
 		if ut.Misc != nil {
 		pub.Misc = make(map[int]*MiscPayload, len(ut.Misc))

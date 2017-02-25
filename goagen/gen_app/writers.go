@@ -840,9 +840,6 @@ func (ut {{ gotyperef . .AllRequired 0 true }}) Validate() (err error) {
 {{ $typeName := gotypename . .AllRequired 0 false }}
 // Publicize creates {{ $typeName }} from {{ $privateTypeName }}
 func (ut {{ gotyperef . .AllRequired 0 true }}) Publicize() {{ gotyperef . .AllRequired 0 false }} {
-	if ut == nil {
-		return nil
-	}
 	var pub {{ gotypename . .AllRequired 0 false }}
 	{{ recursivePublicizer .AttributeDefinition "ut" "pub" 1 }}
 	return &pub
