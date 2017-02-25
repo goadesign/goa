@@ -2473,8 +2473,11 @@ func (ut *complexPayload) Publicize() *ComplexPayload {
 		if ut.Misc != nil {
 		pub.Misc = make(map[int]*MiscPayload, len(ut.Misc))
 		for k2, v2 := range ut.Misc {
-					pubk2 := k2
-					pubv2 := v2.Publicize()
+						pubk2 := k2
+			var pubv2 *MiscPayload
+			if v2 != nil {
+						pubv2 = v2.Publicize()
+			}
 			pub.Misc[pubk2] = pubv2
 		}
 	}
