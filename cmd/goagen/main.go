@@ -15,9 +15,9 @@ import (
 
 func main() {
 	var (
-		out     = flag.String("out", ".", "Output `directory`")
-		design  = flag.String("design", "", "Design Go import `package path`")
-		debug   = flag.Bool("debug", false, "Print debug information")
+		// out     = flag.String("out", ".", "Output `directory`")
+		// design  = flag.String("design", "", "Design Go import `package path`")
+		// debug   = flag.Bool("debug", false, "Print debug information")
 		version = flag.Bool("version", false, "Print version information")
 	)
 
@@ -29,13 +29,13 @@ func main() {
 		os.Exit(0)
 	}
 
-	if len(os.Args) < flag.Nflag+2 {
+	if len(os.Args) < flag.NFlag()+2 {
 		fmt.Fprint(os.Stderr, "Missing command\n")
 		os.Exit(1)
 	}
 
-	cmd := command(os.Args[flag.Nflag+1])
-	command.Run(*out, *design, *debug)
+	// cmd := command(os.Args[flag.NFlag()+1])
+	// command.Run(*out, *design, *debug)
 }
 
 func usage() {
