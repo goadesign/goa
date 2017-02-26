@@ -1,4 +1,4 @@
-package service
+package writers
 
 import (
 	"goa.design/goa.v2/codegen"
@@ -29,9 +29,9 @@ type (
 	}
 )
 
-// Writer returns the codegen.FileWriter for the given service.
-func Writer(api *design.APIExpr, service *design.ServiceExpr) codegen.FileWriter {
-
+// ServiceWriter returns the codegen.FileWriter for the given service.
+func ServiceWriter(api *design.APIExpr, service *design.ServiceExpr) codegen.FileWriter {
+	return nil
 }
 
 // serviceT is the template used to write a service definition.

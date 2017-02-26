@@ -6,6 +6,6 @@ import (
 )
 
 // ServerWriters returns the server HTTP transport writers.
-func ServerWriters(r *design.RootExpr) (writers []codegen.FileWriter) {
+func ServerWriters(r *design.RootExpr) (ws []codegen.FileWriter) {
 	return
 }

@@ -1,4 +1,4 @@
-package endpoint
+package writers
 
 import (
 	"goa.design/goa.v2/codegen"
@@ -29,9 +29,10 @@ type (
 	}
 )
 
-// Writer returns the codegen.FileWriter for the given endpoint.
-func Writer(api *design.APIExpr, endpoint *design.EndpointExpr) codegen.FileWriter {
-
+// EndpointsWriter returns the codegen.FileWriter for the endpoints of the given
+// service.
+func EndpointsWriter(api *design.APIExpr, service *design.ServiceExpr) codegen.FileWriter {
+	return nil
 }
 
 // endpointT is the template used to write a endpoint definition.

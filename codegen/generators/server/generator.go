@@ -9,21 +9,20 @@ package server
 
 import (
 	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/codegen/endpoint"
-	"goa.design/goa.v2/codegen/service"
+	"goa.design/goa.v2/codegen/writers"
 	"goa.design/goa.v2/design"
 	restcodegen "goa.design/goa.v2/rest/codegen"
 	rest "goa.design/goa.v2/rest/design"
 )
 
 // Writers returns the server writers.
-func Writers(api *design.APIExpr) (writers []codegen.FileWriter) {
+func Writers(api *design.APIExpr) (ws []codegen.FileWriter) {
 	for _, s := range design.Root.Services {
-		writers = append(writers, service.Writer(api, s))
-		writers = append(writers, endpoint.Writer(api, s))
+		ws = append(ws, writers.ServiceWriter(api, s))
+		ws = append(ws, writers.EndpointsWriter(api, s))
 	}
-	if rest.RootExpr != nil {
-		writers = append(writers, restcodegen.Writers(rest.RootExpr))
+	if rest.Root != nil {
+		ws = append(ws, restcodegen.ServerWriters(rest.Root)...)
 	}
 	return
 }

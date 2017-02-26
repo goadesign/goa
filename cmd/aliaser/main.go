@@ -24,11 +24,11 @@ var aliasTmpl = template.Must(template.New("alias").Parse(aliasT))
 
 func main() {
 	var (
-		restPkg, rpcPkg, goaPkg    string
-		restFuncs, rpcFuncs, funcs map[string]*ExportedFunc
-		restAlias, rpcAlias        string
-		names, aliases             []string
-		err                        error
+		restPkg, goaPkg  string
+		restFuncs, funcs map[string]*ExportedFunc
+		restAlias        string
+		names, aliases   []string
+		err              error
 	)
 	{
 		restPkg, err = codegen.PackageSourcePath(restDSL)
@@ -38,13 +38,6 @@ func main() {
 		restAlias = filepath.Join(restPkg, aliasFile)
 		os.Remove(restAlias) // to avoid parsing them
 
-		//rpcPkg, err = codegen.PackageSourcePath(rpcDSL)
-		//if err != nil {
-		//fail("could not find %s package: %s", rpcDSL, err)
-		//}
-		//rpcAlias = filepath.Join(rpcPkg, aliasFile)
-		//os.Remove(rpcAlias)
-
 		goaPkg, err = codegen.PackageSourcePath(goaDSL)
 		if err != nil {
 			fail("could not find %s package: %s", goaDSL, err)
@@ -53,11 +46,6 @@ func main() {
 		restFuncs, err = ParseFuncs(restPkg)
 		if err != nil {
 			fail("could not parse functions in %s: %s", restPkg, err)
-		}
-
-		rpcFuncs, err = ParseFuncs(rpcPkg)
-		if err != nil {
-			fail("could not parse functions in %s: %s", rpcPkg, err)
 		}
 
 		funcs, err = ParseFuncs(goaPkg)
@@ -77,12 +65,6 @@ func main() {
 		fail("failed to create rest package aliases: %s", err)
 	}
 	fmt.Printf("rest (%d):\n", len(aliases))
-	fmt.Println("  " + strings.Join(aliases, "\n  "))
-
-	if aliases, err = CreateAliases(names, funcs, rpcFuncs, rpcAlias); err != nil {
-		fail("failed to create rpc package aliases: %s", err)
-	}
-	fmt.Printf("\nrpc (%d):\n", len(aliases))
 	fmt.Println("  " + strings.Join(aliases, "\n  "))
 }
 
