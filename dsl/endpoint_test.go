@@ -57,6 +57,40 @@ func TestEndpoint(t *testing.T) {
 				}
 			},
 		},
+		"c": {
+			func() {
+				Endpoint("c", func() {
+					Payload(func() {
+						Description(desc)
+						Attribute("required", design.String)
+						Required("required")
+					})
+				})
+			},
+			func(t *testing.T, endpoints []*design.EndpointExpr) {
+				if len(endpoints) != 1 {
+					t.Fatalf("b: expected 1 endpoint, got %d", len(endpoints))
+				}
+				endpoint := endpoints[0]
+				if endpoint == nil {
+					t.Fatalf("c: endpoint is nil")
+				}
+				payload := endpoint.Payload
+				if payload == nil {
+					t.Fatalf("c: endpoint payload is nil")
+				}
+				if payload.Attribute().Description != desc {
+					t.Errorf("c: expected payload description '%s' to match '%s' ", desc, payload.Attribute().Description)
+				}
+				attrs := design.AsObject(payload.Attribute().Type)
+				if _, ok := attrs["required"]; !ok {
+					t.Errorf("c: expected a payload field with key required")
+				}
+				if !payload.Attribute().IsRequired("required") {
+					t.Errorf("c: expected the required field to be required")
+				}
+			},
+		},
 	}
 	//Run our tests
 	for k, tc := range cases {
