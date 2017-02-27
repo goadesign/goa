@@ -96,7 +96,7 @@ var _ = Describe("LogRequest", func() {
 		Ω(logger.InfoEntries[1].Data[4]).Should(Equal("error"))
 		Ω(logger.InfoEntries[1].Data[5]).Should(HaveLen(8)) // Error ID
 		Ω(logger.InfoEntries[1].Data[6]).Should(Equal("bytes"))
-		Ω(logger.InfoEntries[1].Data[7]).Should(Equal(126))
+		Ω(logger.InfoEntries[1].Data[7]).Should(Equal(124))
 		Ω(logger.InfoEntries[1].Data[8]).Should(Equal("time"))
 		Ω(logger.InfoEntries[1].Data[10]).Should(Equal("ctrl"))
 		Ω(logger.InfoEntries[1].Data[11]).Should(Equal("test"))

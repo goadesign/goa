@@ -29,16 +29,14 @@ type errorResponse struct {
 	// Detail describes the specific error occurrence.
 	Detail string `json:"detail" xml:"detail" form:"detail"`
 	// Meta contains additional key/value pairs useful to clients.
-	Meta []map[string]interface{} `json:"meta,omitempty" xml:"meta,omitempty" form:"meta,omitempty"`
+	Meta map[string]interface{} `json:"meta,omitempty" xml:"meta,omitempty" form:"meta,omitempty"`
 }
 
 // Error returns the error occurrence details.
 func (e *errorResponse) Error() string {
 	msg := fmt.Sprintf("[%s] %d %s: %s", e.ID, e.Status, e.Code, e.Detail)
-	for _, val := range e.Meta {
-		for k, v := range val {
-			msg += ", " + fmt.Sprintf("%s: %v", k, v)
-		}
+	for k, v := range e.Meta {
+		msg += ", " + fmt.Sprintf("%s: %v", k, v)
 	}
 	return msg
 }
