@@ -115,6 +115,11 @@ func goTypeDefObject(obj design.Object, def *design.AttributeDefinition, tabs in
 			typedef = "*" + typedef
 		}
 		fname := GoifyAtt(field, name, true)
+		if tname, ok := field.Metadata["struct:field:type"]; ok {
+			if len(tname) > 0 {
+				typedef = tname[0]
+			}
+		}
 		var tags string
 		if jsonTags {
 			tags = attributeTags(def, field, name, private)

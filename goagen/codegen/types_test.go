@@ -254,6 +254,24 @@ var _ = Describe("code generation", func() {
 						Ω(st).Should(Equal(expected))
 					})
 				})
+
+				Context("using struct field type metadata", func() {
+					BeforeEach(func() {
+						object["foo"].Metadata = dslengine.MetadataDefinition{
+							"struct:field:type": []string{"[]byte", "unused"},
+						}
+					})
+
+					It("produces the struct tags", func() {
+						expected := "struct {\n" +
+							"	Bar *string `form:\"bar,omitempty\" json:\"bar,omitempty\" xml:\"bar,omitempty\"`\n" +
+							"	Baz *time.Time `form:\"baz,omitempty\" json:\"baz,omitempty\" xml:\"baz,omitempty\"`\n" +
+							"	Foo []byte `form:\"foo,omitempty\" json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n" +
+							"	Qux *uuid.UUID `form:\"qux,omitempty\" json:\"qux,omitempty\" xml:\"qux,omitempty\"`\n" +
+							"}"
+						Ω(st).Should(Equal(expected))
+					})
+				})
 			})
 
 			Context("of hash of primitive types", func() {
