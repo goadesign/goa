@@ -58,7 +58,11 @@ func (g *Generator) generateResourceTest() error {
 	if len(g.API.Resources) == 0 {
 		return nil
 	}
-	funcs := template.FuncMap{"isSlice": isSlice}
+	funcs := template.FuncMap{
+		"isSlice":       isSlice,
+		"initArguments": initArguments,
+		"tempvar":       tempvar,
+	}
 	testTmpl := template.Must(template.New("test").Funcs(funcs).Parse(testTmpl))
 	outDir, err := makeTestDir(g, g.API.Name)
 	if err != nil {
@@ -218,6 +222,36 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 	}
 }
 
+var arguments map[string]bool
+
+func initArguments(method TestMethod) string {
+	arguments = make(map[string]bool)
+	for _, param := range method.Params {
+		arguments[param.Name] = true
+	}
+	for _, param := range method.QueryParams {
+		arguments[param.Name] = true
+	}
+	for _, header := range method.Headers {
+		arguments[header.Name] = true
+	}
+	if method.Payload != nil {
+		arguments[method.Payload.Name] = true
+	}
+	if method.ReturnType != nil {
+		arguments[method.ReturnType.Name] = true
+	}
+	return ""
+}
+
+func tempvar(s string) string {
+	if ok := arguments[s]; ok {
+		s = tempvar(s + "_")
+	}
+	arguments[s] = true
+	return s
+}
+
 // pathParams returns the path params for the given action and route.
 func pathParams(action *design.ActionDefinition, route *design.RouteDefinition) []*ObjectType {
 	return paramFromNames(action, route.Params())
@@ -299,7 +333,7 @@ var convertParamTmpl = `{{ if eq .Type "string" }}		sliceVal := []string{ {{ if 
 */}}{{ else }}		sliceVal := []string{fmt.Sprintf("%v", {{ if .Pointer }}*{{ end }}{{ .Name }})}{{ end }}`
 
 var testTmpl = `{{ define "convertParam" }}` + convertParamTmpl + `{{ end }}` + `
-{{ range $test := . }}
+{{ range $test := . }}{{ initArguments $test }}
 // {{ $test.Name }} {{ $test.Comment }}
 // If ctx is nil then context.Background() is used.
 // If service is nil then a default service is created.
@@ -311,91 +345,91 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 */}} (http.ResponseWriter{{ if $test.ReturnType }}, {{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}{{ end }}) {
 	// Setup service
 	var (
-		logBuf bytes.Buffer
-		resp   interface{}
+		{{ $logBuf := tempvar "logBuf" }}{{ $logBuf }} bytes.Buffer
+		{{ $resp := tempvar "resp" }}{{ $resp }}   interface{}
 
-		respSetter goatest.ResponseSetterFunc = func(r interface{}) { resp = r }
+		{{ $respSetter := tempvar "respSetter" }}{{ $respSetter }} goatest.ResponseSetterFunc = func(r interface{}) { {{ $resp }} = r }
 	)
 	if service == nil {
-		service = goatest.Service(&logBuf, respSetter)
+		service = goatest.Service(&{{ $logBuf }}, {{ $respSetter }})
 	} else {
-		logger := log.New(&logBuf, "", log.Ltime)
-		service.WithLogger(goa.NewLogger(logger))
-		newEncoder := func(io.Writer) goa.Encoder { return  respSetter }
+		{{ $logger := tempvar "logger" }}{{ $logger }} := log.New(&{{ $logBuf }}, "", log.Ltime)
+		service.WithLogger(goa.NewLogger({{ $logger }}))
+		{{ $newEncoder := tempvar "newEncoder" }}{{ $newEncoder }} := func(io.Writer) goa.Encoder { return  {{ $respSetter }} }
 		service.Encoder = goa.NewHTTPEncoder() // Make sure the code ends up using this decoder
-		service.Encoder.Register(newEncoder, "*/*")
+		service.Encoder.Register({{ $newEncoder }}, "*/*")
 	}
 {{ if $test.Payload }}{{ if $test.Payload.Validatable }}
 	// Validate payload
-	err := {{ $test.Payload.Name }}.Validate()
-	if err != nil {
-		e, ok := err.(goa.ServiceError)
-		if !ok {
-			panic(err) // bug
+	{{ $err := tempvar "err" }}{{ $err }} := {{ $test.Payload.Name }}.Validate()
+	if {{ $err }} != nil {
+		{{ $e := tempvar "e" }}{{ $e }}, {{ $ok := tempvar "ok" }}{{ $ok }} := {{ $err }}.(goa.ServiceError)
+		if !{{ $ok }} {
+			panic({{ $err }}) // bug
 		}
-{{ if not $test.ReturnsErrorMedia }}		t.Errorf("unexpected payload validation error: %+v", e)
-{{ end }}{{ if $test.ReturnType }}		return nil, {{ if $test.ReturnsErrorMedia }}e{{ else }}nil{{ end }}{{ else }}return nil{{ end }}
+{{ if not $test.ReturnsErrorMedia }}		t.Errorf("unexpected payload validation error: %+v", {{ $e }})
+{{ end }}{{ if $test.ReturnType }}		return nil, {{ if $test.ReturnsErrorMedia }}{{ $e }}{{ else }}nil{{ end }}{{ else }}return nil{{ end }}
 	}
 {{ end }}{{ end }}
 	// Setup request context
-	rw := httptest.NewRecorder()
-{{ if $test.QueryParams}}	query := url.Values{}
+	{{ $rw := tempvar "rw" }}{{ $rw }} := httptest.NewRecorder()
+{{ $query := tempvar "query" }}{{ if $test.QueryParams}}	{{ $query }} := url.Values{}
 {{ range $param := $test.QueryParams }}{{ if $param.Pointer }}	if {{ $param.Name }} != nil {{ end }}{
 {{ template "convertParam" $param }}
-		query[{{ printf "%q" $param.Label }}] = sliceVal
+		{{ $query }}[{{ printf "%q" $param.Label }}] = sliceVal
 	}
-{{ end }}{{ end }}	u := &url.URL{
+{{ end }}{{ end }}	{{ $u := tempvar "u" }}{{ $u }}:= &url.URL{
 		Path: fmt.Sprintf({{ printf "%q" $test.FullPath }}{{ range $param := $test.Params }}, {{ $param.Name }}{{ end }}),
-{{ if $test.QueryParams }}		RawQuery: query.Encode(),
+{{ if $test.QueryParams }}		RawQuery: {{ $query }}.Encode(),
 {{ end }}	}
-	req, err := http.NewRequest("{{ $test.RouteVerb }}", u.String(), nil)
-	if err != nil {
-		panic("invalid test " + err.Error()) // bug
+	{{ $req := tempvar "req" }}{{ $req }}, {{ $err := tempvar "err" }}{{ $err }}:= http.NewRequest("{{ $test.RouteVerb }}", {{ $u }}.String(), nil)
+	if {{ $err }} != nil {
+		panic("invalid test " + {{ $err }}.Error()) // bug
 	}
 {{ range $header := $test.Headers }}{{ if $header.Pointer }}	if {{ $header.Name }} != nil {{ end }}{
 {{ template "convertParam" $header }}
-		req.Header[{{ printf "%q" $header.Label }}] = sliceVal
+		{{ $req }}.Header[{{ printf "%q" $header.Label }}] = sliceVal
 	}
-{{ end }} prms := url.Values{}
-{{ range $param := $test.Params }}	prms["{{ $param.Label }}"] = []string{fmt.Sprintf("%v",{{ $param.Name}})}
+{{ end }} {{ $prms := tempvar "prms" }}{{ $prms }} := url.Values{}
+{{ range $param := $test.Params }}	{{ $prms }}["{{ $param.Label }}"] = []string{fmt.Sprintf("%v",{{ $param.Name}})}
 {{ end }}{{ range $param := $test.QueryParams }}{{ if $param.Pointer }} if {{ $param.Name }} != nil {{ end }} {
 {{ template "convertParam" $param }}
-		prms[{{ printf "%q" $param.Label }}] = sliceVal
+		{{ $prms }}[{{ printf "%q" $param.Label }}] = sliceVal
 	}
 {{ end }}	if ctx == nil {
 		ctx = context.Background()
 	}
-	goaCtx := goa.NewContext(goa.WithAction(ctx, "{{ $test.ResourceName }}Test"), rw, req, prms)
-	{{ $test.ContextVarName }}, err := {{ $test.ContextType }}(goaCtx, req, service)
-	if err != nil {
-		panic("invalid test data " + err.Error()) // bug
+	{{ $goaCtx := tempvar "goaCtx" }}{{ $goaCtx }} := goa.NewContext(goa.WithAction(ctx, "{{ $test.ResourceName }}Test"), {{ $rw }}, {{ $req }}, {{ $prms }})
+	{{ $test.ContextVarName }}, {{ $err := tempvar "err" }}{{ $err }} := {{ $test.ContextType }}({{ $goaCtx }}, {{ $req }}, service)
+	if {{ $err }} != nil {
+		panic("invalid test data " + {{ $err }}.Error()) // bug
 	}
 	{{ if $test.Payload }}{{ $test.ContextVarName }}.Payload = {{ $test.Payload.Name }}{{ end }}
 
 	// Perform action
-	err = ctrl.{{ $test.ActionName}}({{ $test.ContextVarName }})
+	{{ $err }} = ctrl.{{ $test.ActionName}}({{ $test.ContextVarName }})
 
 	// Validate response
-	if err != nil {
-		t.Fatalf("controller returned %+v, logs:\n%s", err, logBuf.String())
+	if {{ $err }} != nil {
+		t.Fatalf("controller returned %+v, logs:\n%s", {{ $err }}, {{ $logBuf }}.String())
 	}
-	if rw.Code != {{ $test.Status }} {
-		t.Errorf("invalid response status code: got %+v, expected {{ $test.Status }}", rw.Code)
+	if {{ $rw }}.Code != {{ $test.Status }} {
+		t.Errorf("invalid response status code: got %+v, expected {{ $test.Status }}", {{ $rw }}.Code)
 	}
 {{ if $test.ReturnType }}	var mt {{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}
-	if resp != nil {
-		var ok bool
-		mt, ok = resp.({{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }})
-		if !ok {
-			t.Fatalf("invalid response media: got %+v, expected instance of {{ $test.ReturnType.Type }}", resp)
+	if {{ $resp }} != nil {
+		var {{ $ok := tempvar "ok" }}{{ $ok }} bool
+		mt, {{ $ok }} = {{ $resp }}.({{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }})
+		if !{{ $ok }} {
+			t.Fatalf("invalid response media: got %+v, expected instance of {{ $test.ReturnType.Type }}", {{ $resp }})
 		}
-{{ if $test.ReturnType.Validatable }}		err = mt.Validate()
-		if err != nil {
-			t.Errorf("invalid response media type: %s", err)
+{{ if $test.ReturnType.Validatable }}		{{ $err }} = mt.Validate()
+		if {{ $err }} != nil {
+			t.Errorf("invalid response media type: %s", {{ $err }})
 		}
 {{ end }}	}
 {{ end }}
 	// Return results
-	return rw{{ if $test.ReturnType }}, mt{{ end }}
+	return {{ $rw }}{{ if $test.ReturnType }}, mt{{ end }}
 }
 {{ end }}`
