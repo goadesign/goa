@@ -49,7 +49,7 @@ type TestMethod struct {
 // Escape escapes given string.
 func (t *TestMethod) Escape(s string) string {
 	if ok := t.reservedNames[s]; ok {
-		s = t.Escape(s + "_")
+		s = t.Escape("_" + s)
 	}
 	t.reservedNames[s] = true
 	return s
