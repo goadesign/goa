@@ -110,16 +110,19 @@ func goTypeDefObject(obj design.Object, def *design.AttributeDefinition, tabs in
 	for _, name := range keys {
 		WriteTabs(&buffer, tabs+1)
 		field := obj[name]
-		typedef := GoTypeDef(field, tabs+1, jsonTags, private)
-		if (field.Type.IsPrimitive() && private) || field.Type.IsObject() || def.IsPrimitivePointer(name) {
-			typedef = "*" + typedef
-		}
-		fname := GoifyAtt(field, name, true)
+		typedef := ""
 		if tname, ok := field.Metadata["struct:field:type"]; ok {
 			if len(tname) > 0 {
 				typedef = tname[0]
 			}
 		}
+		if typedef == "" {
+			typedef = GoTypeDef(field, tabs+1, jsonTags, private)
+			if (field.Type.IsPrimitive() && private) || field.Type.IsObject() || def.IsPrimitivePointer(name) {
+				typedef = "*" + typedef
+			}
+		}
+		fname := GoifyAtt(field, name, true)
 		var tags string
 		if jsonTags {
 			tags = attributeTags(def, field, name, private)
