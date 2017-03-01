@@ -43,6 +43,7 @@ type TestMethod struct {
 	QueryParams       []*ObjectType
 	Headers           []*ObjectType
 	Payload           *ObjectType
+	reservedNames     map[string]bool
 }
 
 // ObjectType structure
@@ -59,9 +60,8 @@ func (g *Generator) generateResourceTest() error {
 		return nil
 	}
 	funcs := template.FuncMap{
-		"isSlice":       isSlice,
-		"initArguments": initArguments,
-		"tempvar":       tempvar,
+		"isSlice": isSlice,
+		"escape":  escape,
 	}
 	testTmpl := template.Must(template.New("test").Funcs(funcs).Parse(testTmpl))
 	outDir, err := makeTestDir(g, g.API.Name)
@@ -146,6 +146,9 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		actionName, ctrlName, varName                string
 		routeQualifier, viewQualifier, respQualifier string
 		comment                                      string
+		path                                         []*ObjectType
+		query                                        []*ObjectType
+		header                                       []*ObjectType
 		returnType                                   *ObjectType
 		payload                                      *ObjectType
 	)
@@ -188,6 +191,10 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 	}
 	comment += "."
 
+	path = pathParams(action, route)
+	query = queryParams(action)
+	header = headers(action)
+
 	if action.Payload != nil {
 		payload = &ObjectType{}
 		payload.Name = "payload"
@@ -207,9 +214,9 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		ActionName:        actionName,
 		ResourceName:      ctrlName,
 		Comment:           comment,
-		Params:            pathParams(action, route),
-		QueryParams:       queryParams(action),
-		Headers:           headers(action),
+		Params:            path,
+		QueryParams:       query,
+		Headers:           header,
 		Payload:           payload,
 		ReturnType:        returnType,
 		ReturnsErrorMedia: mediaType == design.ErrorMedia,
@@ -219,37 +226,8 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		RouteVerb:         route.Verb,
 		Status:            response.Status,
 		FullPath:          goPathFormat(route.FullPath()),
+		reservedNames:     reservedNames(path, query, header, payload, returnType),
 	}
-}
-
-var arguments map[string]bool
-
-func initArguments(method TestMethod) string {
-	arguments = make(map[string]bool)
-	for _, param := range method.Params {
-		arguments[param.Name] = true
-	}
-	for _, param := range method.QueryParams {
-		arguments[param.Name] = true
-	}
-	for _, header := range method.Headers {
-		arguments[header.Name] = true
-	}
-	if method.Payload != nil {
-		arguments[method.Payload.Name] = true
-	}
-	if method.ReturnType != nil {
-		arguments[method.ReturnType.Name] = true
-	}
-	return ""
-}
-
-func tempvar(s string) string {
-	if ok := arguments[s]; ok {
-		s = tempvar(s + "_")
-	}
-	arguments[s] = true
-	return s
 }
 
 // pathParams returns the path params for the given action and route.
@@ -296,6 +274,26 @@ func paramFromNames(action *design.ActionDefinition, names []string) (params []*
 	return
 }
 
+func reservedNames(params, queryParams, headers []*ObjectType, payload, returnType *ObjectType) map[string]bool {
+	var names = make(map[string]bool)
+	for _, param := range params {
+		names[param.Name] = true
+	}
+	for _, param := range queryParams {
+		names[param.Name] = true
+	}
+	for _, header := range headers {
+		names[header.Name] = true
+	}
+	if payload != nil {
+		names[payload.Name] = true
+	}
+	if returnType != nil {
+		names[returnType.Name] = true
+	}
+	return names
+}
+
 func attToObject(name string, parent, att *design.AttributeDefinition) *ObjectType {
 	obj := &ObjectType{}
 	obj.Label = name
@@ -322,6 +320,14 @@ func isSlice(typeName string) bool {
 	return strings.HasPrefix(typeName, "[]")
 }
 
+func escape(t TestMethod, s string) string {
+	if ok := t.reservedNames[s]; ok {
+		s = escape(t, s+"_")
+	}
+	t.reservedNames[s] = true
+	return s
+}
+
 var convertParamTmpl = `{{ if eq .Type "string" }}		sliceVal := []string{ {{ if .Pointer }}*{{ end }}{{ .Name }}}{{/*
 */}}{{ else if eq .Type "int" }}		sliceVal := []string{strconv.Itoa({{ if .Pointer }}*{{ end }}{{ .Name }})}{{/*
 */}}{{ else if eq .Type "[]string" }}		sliceVal := {{ .Name }}{{/*
@@ -333,7 +339,7 @@ var convertParamTmpl = `{{ if eq .Type "string" }}		sliceVal := []string{ {{ if 
 */}}{{ else }}		sliceVal := []string{fmt.Sprintf("%v", {{ if .Pointer }}*{{ end }}{{ .Name }})}{{ end }}`
 
 var testTmpl = `{{ define "convertParam" }}` + convertParamTmpl + `{{ end }}` + `
-{{ range $test := . }}{{ initArguments $test }}
+{{ range $test := . }}
 // {{ $test.Name }} {{ $test.Comment }}
 // If ctx is nil then context.Background() is used.
 // If service is nil then a default service is created.
@@ -345,25 +351,25 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 */}} (http.ResponseWriter{{ if $test.ReturnType }}, {{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}{{ end }}) {
 	// Setup service
 	var (
-		{{ $logBuf := tempvar "logBuf" }}{{ $logBuf }} bytes.Buffer
-		{{ $resp := tempvar "resp" }}{{ $resp }}   interface{}
+		{{ $logBuf := escape $test "logBuf" }}{{ $logBuf }} bytes.Buffer
+		{{ $resp := escape $test "resp" }}{{ $resp }}   interface{}
 
-		{{ $respSetter := tempvar "respSetter" }}{{ $respSetter }} goatest.ResponseSetterFunc = func(r interface{}) { {{ $resp }} = r }
+		{{ $respSetter := escape $test "respSetter" }}{{ $respSetter }} goatest.ResponseSetterFunc = func(r interface{}) { {{ $resp }} = r }
 	)
 	if service == nil {
 		service = goatest.Service(&{{ $logBuf }}, {{ $respSetter }})
 	} else {
-		{{ $logger := tempvar "logger" }}{{ $logger }} := log.New(&{{ $logBuf }}, "", log.Ltime)
+		{{ $logger := escape $test "logger" }}{{ $logger }} := log.New(&{{ $logBuf }}, "", log.Ltime)
 		service.WithLogger(goa.NewLogger({{ $logger }}))
-		{{ $newEncoder := tempvar "newEncoder" }}{{ $newEncoder }} := func(io.Writer) goa.Encoder { return  {{ $respSetter }} }
+		{{ $newEncoder := escape $test "newEncoder" }}{{ $newEncoder }} := func(io.Writer) goa.Encoder { return  {{ $respSetter }} }
 		service.Encoder = goa.NewHTTPEncoder() // Make sure the code ends up using this decoder
 		service.Encoder.Register({{ $newEncoder }}, "*/*")
 	}
 {{ if $test.Payload }}{{ if $test.Payload.Validatable }}
 	// Validate payload
-	{{ $err := tempvar "err" }}{{ $err }} := {{ $test.Payload.Name }}.Validate()
+	{{ $err := escape $test "err" }}{{ $err }} := {{ $test.Payload.Name }}.Validate()
 	if {{ $err }} != nil {
-		{{ $e := tempvar "e" }}{{ $e }}, {{ $ok := tempvar "ok" }}{{ $ok }} := {{ $err }}.(goa.ServiceError)
+		{{ $e := escape $test "e" }}{{ $e }}, {{ $ok := escape $test "ok" }}{{ $ok }} := {{ $err }}.(goa.ServiceError)
 		if !{{ $ok }} {
 			panic({{ $err }}) // bug
 		}
@@ -372,17 +378,17 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 	}
 {{ end }}{{ end }}
 	// Setup request context
-	{{ $rw := tempvar "rw" }}{{ $rw }} := httptest.NewRecorder()
-{{ $query := tempvar "query" }}{{ if $test.QueryParams}}	{{ $query }} := url.Values{}
+	{{ $rw := escape $test "rw" }}{{ $rw }} := httptest.NewRecorder()
+{{ $query := escape $test "query" }}{{ if $test.QueryParams}}	{{ $query }} := url.Values{}
 {{ range $param := $test.QueryParams }}{{ if $param.Pointer }}	if {{ $param.Name }} != nil {{ end }}{
 {{ template "convertParam" $param }}
 		{{ $query }}[{{ printf "%q" $param.Label }}] = sliceVal
 	}
-{{ end }}{{ end }}	{{ $u := tempvar "u" }}{{ $u }}:= &url.URL{
+{{ end }}{{ end }}	{{ $u := escape $test "u" }}{{ $u }}:= &url.URL{
 		Path: fmt.Sprintf({{ printf "%q" $test.FullPath }}{{ range $param := $test.Params }}, {{ $param.Name }}{{ end }}),
 {{ if $test.QueryParams }}		RawQuery: {{ $query }}.Encode(),
 {{ end }}	}
-	{{ $req := tempvar "req" }}{{ $req }}, {{ $err := tempvar "err" }}{{ $err }}:= http.NewRequest("{{ $test.RouteVerb }}", {{ $u }}.String(), nil)
+	{{ $req := escape $test "req" }}{{ $req }}, {{ $err := escape $test "err" }}{{ $err }}:= http.NewRequest("{{ $test.RouteVerb }}", {{ $u }}.String(), nil)
 	if {{ $err }} != nil {
 		panic("invalid test " + {{ $err }}.Error()) // bug
 	}
@@ -390,7 +396,7 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 {{ template "convertParam" $header }}
 		{{ $req }}.Header[{{ printf "%q" $header.Label }}] = sliceVal
 	}
-{{ end }} {{ $prms := tempvar "prms" }}{{ $prms }} := url.Values{}
+{{ end }} {{ $prms := escape $test "prms" }}{{ $prms }} := url.Values{}
 {{ range $param := $test.Params }}	{{ $prms }}["{{ $param.Label }}"] = []string{fmt.Sprintf("%v",{{ $param.Name}})}
 {{ end }}{{ range $param := $test.QueryParams }}{{ if $param.Pointer }} if {{ $param.Name }} != nil {{ end }} {
 {{ template "convertParam" $param }}
@@ -399,8 +405,8 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 {{ end }}	if ctx == nil {
 		ctx = context.Background()
 	}
-	{{ $goaCtx := tempvar "goaCtx" }}{{ $goaCtx }} := goa.NewContext(goa.WithAction(ctx, "{{ $test.ResourceName }}Test"), {{ $rw }}, {{ $req }}, {{ $prms }})
-	{{ $test.ContextVarName }}, {{ $err := tempvar "err" }}{{ $err }} := {{ $test.ContextType }}({{ $goaCtx }}, {{ $req }}, service)
+	{{ $goaCtx := escape $test "goaCtx" }}{{ $goaCtx }} := goa.NewContext(goa.WithAction(ctx, "{{ $test.ResourceName }}Test"), {{ $rw }}, {{ $req }}, {{ $prms }})
+	{{ $test.ContextVarName }}, {{ $err := escape $test "err" }}{{ $err }} := {{ $test.ContextType }}({{ $goaCtx }}, {{ $req }}, service)
 	if {{ $err }} != nil {
 		panic("invalid test data " + {{ $err }}.Error()) // bug
 	}
@@ -418,7 +424,7 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 	}
 {{ if $test.ReturnType }}	var mt {{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}
 	if {{ $resp }} != nil {
-		var {{ $ok := tempvar "ok" }}{{ $ok }} bool
+		var {{ $ok := escape $test "ok" }}{{ $ok }} bool
 		mt, {{ $ok }} = {{ $resp }}.({{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }})
 		if !{{ $ok }} {
 			t.Fatalf("invalid response media: got %+v, expected instance of {{ $test.ReturnType.Type }}", {{ $resp }})
