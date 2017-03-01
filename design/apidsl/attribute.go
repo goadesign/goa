@@ -110,13 +110,7 @@ func Attribute(name string, args ...interface{}) {
 			return
 		}
 
-		var baseAttr *design.AttributeDefinition
-		if parent.Reference != nil && parent.Reference.IsObject() {
-			if att, ok := parent.Reference.ToObject()[name]; ok {
-				baseAttr = design.DupAtt(att)
-			}
-		}
-
+		baseAttr := attributeFromRef(name, parent.Reference)
 		dataType, description, dsl := parseAttributeArgs(baseAttr, args...)
 		if baseAttr != nil {
 			if description != "" {
@@ -141,6 +135,35 @@ func Attribute(name string, args ...interface{}) {
 		}
 		parent.Type.(design.Object)[name] = baseAttr
 	}
+}
+
+// attributeFromRef returns a base attribute given a reference data type.
+// It takes care of running the DSL on the reference type if it hasn't run yet.
+func attributeFromRef(name string, ref design.DataType) *design.AttributeDefinition {
+	if ref == nil {
+		return nil
+	}
+	switch t := ref.(type) {
+	case *design.UserTypeDefinition:
+		if t.DSLFunc != nil {
+			dsl := t.DSLFunc
+			t.DSLFunc = nil
+			dslengine.Execute(dsl, t.AttributeDefinition)
+		}
+		if att, ok := t.ToObject()[name]; ok {
+			return design.DupAtt(att)
+		}
+	case *design.MediaTypeDefinition:
+		if t.DSLFunc != nil {
+			dsl := t.DSLFunc
+			t.DSLFunc = nil
+			dslengine.Execute(dsl, t)
+		}
+		if att, ok := t.ToObject()[name]; ok {
+			return design.DupAtt(att)
+		}
+	}
+	return nil
 }
 
 func parseAttributeArgs(baseAttr *design.AttributeDefinition, args ...interface{}) (design.DataType, string, func()) {
