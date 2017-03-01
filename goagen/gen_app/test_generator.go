@@ -46,6 +46,15 @@ type TestMethod struct {
 	reservedNames     map[string]bool
 }
 
+// Escape escapes given string.
+func (t *TestMethod) Escape(s string) string {
+	if ok := t.reservedNames[s]; ok {
+		s = t.Escape(s + "_")
+	}
+	t.reservedNames[s] = true
+	return s
+}
+
 // ObjectType structure
 type ObjectType struct {
 	Label       string
@@ -61,7 +70,6 @@ func (g *Generator) generateResourceTest() error {
 	}
 	funcs := template.FuncMap{
 		"isSlice": isSlice,
-		"escape":  escape,
 	}
 	testTmpl := template.Must(template.New("test").Funcs(funcs).Parse(testTmpl))
 	outDir, err := makeTestDir(g, g.API.Name)
@@ -320,14 +328,6 @@ func isSlice(typeName string) bool {
 	return strings.HasPrefix(typeName, "[]")
 }
 
-func escape(t TestMethod, s string) string {
-	if ok := t.reservedNames[s]; ok {
-		s = escape(t, s+"_")
-	}
-	t.reservedNames[s] = true
-	return s
-}
-
 var convertParamTmpl = `{{ if eq .Type "string" }}		sliceVal := []string{ {{ if .Pointer }}*{{ end }}{{ .Name }}}{{/*
 */}}{{ else if eq .Type "int" }}		sliceVal := []string{strconv.Itoa({{ if .Pointer }}*{{ end }}{{ .Name }})}{{/*
 */}}{{ else if eq .Type "[]string" }}		sliceVal := {{ .Name }}{{/*
@@ -351,25 +351,25 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 */}} (http.ResponseWriter{{ if $test.ReturnType }}, {{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}{{ end }}) {
 	// Setup service
 	var (
-		{{ $logBuf := escape $test "logBuf" }}{{ $logBuf }} bytes.Buffer
-		{{ $resp := escape $test "resp" }}{{ $resp }}   interface{}
+		{{ $logBuf := $test.Escape "logBuf" }}{{ $logBuf }} bytes.Buffer
+		{{ $resp := $test.Escape "resp" }}{{ $resp }}   interface{}
 
-		{{ $respSetter := escape $test "respSetter" }}{{ $respSetter }} goatest.ResponseSetterFunc = func(r interface{}) { {{ $resp }} = r }
+		{{ $respSetter := $test.Escape "respSetter" }}{{ $respSetter }} goatest.ResponseSetterFunc = func(r interface{}) { {{ $resp }} = r }
 	)
 	if service == nil {
 		service = goatest.Service(&{{ $logBuf }}, {{ $respSetter }})
 	} else {
-		{{ $logger := escape $test "logger" }}{{ $logger }} := log.New(&{{ $logBuf }}, "", log.Ltime)
+		{{ $logger := $test.Escape "logger" }}{{ $logger }} := log.New(&{{ $logBuf }}, "", log.Ltime)
 		service.WithLogger(goa.NewLogger({{ $logger }}))
-		{{ $newEncoder := escape $test "newEncoder" }}{{ $newEncoder }} := func(io.Writer) goa.Encoder { return  {{ $respSetter }} }
+		{{ $newEncoder := $test.Escape "newEncoder" }}{{ $newEncoder }} := func(io.Writer) goa.Encoder { return  {{ $respSetter }} }
 		service.Encoder = goa.NewHTTPEncoder() // Make sure the code ends up using this decoder
 		service.Encoder.Register({{ $newEncoder }}, "*/*")
 	}
 {{ if $test.Payload }}{{ if $test.Payload.Validatable }}
 	// Validate payload
-	{{ $err := escape $test "err" }}{{ $err }} := {{ $test.Payload.Name }}.Validate()
+	{{ $err := $test.Escape "err" }}{{ $err }} := {{ $test.Payload.Name }}.Validate()
 	if {{ $err }} != nil {
-		{{ $e := escape $test "e" }}{{ $e }}, {{ $ok := escape $test "ok" }}{{ $ok }} := {{ $err }}.(goa.ServiceError)
+		{{ $e := $test.Escape "e" }}{{ $e }}, {{ $ok := $test.Escape "ok" }}{{ $ok }} := {{ $err }}.(goa.ServiceError)
 		if !{{ $ok }} {
 			panic({{ $err }}) // bug
 		}
@@ -378,17 +378,17 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 	}
 {{ end }}{{ end }}
 	// Setup request context
-	{{ $rw := escape $test "rw" }}{{ $rw }} := httptest.NewRecorder()
-{{ $query := escape $test "query" }}{{ if $test.QueryParams}}	{{ $query }} := url.Values{}
+	{{ $rw := $test.Escape "rw" }}{{ $rw }} := httptest.NewRecorder()
+{{ $query := $test.Escape "query" }}{{ if $test.QueryParams}}	{{ $query }} := url.Values{}
 {{ range $param := $test.QueryParams }}{{ if $param.Pointer }}	if {{ $param.Name }} != nil {{ end }}{
 {{ template "convertParam" $param }}
 		{{ $query }}[{{ printf "%q" $param.Label }}] = sliceVal
 	}
-{{ end }}{{ end }}	{{ $u := escape $test "u" }}{{ $u }}:= &url.URL{
+{{ end }}{{ end }}	{{ $u := $test.Escape "u" }}{{ $u }}:= &url.URL{
 		Path: fmt.Sprintf({{ printf "%q" $test.FullPath }}{{ range $param := $test.Params }}, {{ $param.Name }}{{ end }}),
 {{ if $test.QueryParams }}		RawQuery: {{ $query }}.Encode(),
 {{ end }}	}
-	{{ $req := escape $test "req" }}{{ $req }}, {{ $err := escape $test "err" }}{{ $err }}:= http.NewRequest("{{ $test.RouteVerb }}", {{ $u }}.String(), nil)
+	{{ $req := $test.Escape "req" }}{{ $req }}, {{ $err := $test.Escape "err" }}{{ $err }}:= http.NewRequest("{{ $test.RouteVerb }}", {{ $u }}.String(), nil)
 	if {{ $err }} != nil {
 		panic("invalid test " + {{ $err }}.Error()) // bug
 	}
@@ -396,7 +396,7 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 {{ template "convertParam" $header }}
 		{{ $req }}.Header[{{ printf "%q" $header.Label }}] = sliceVal
 	}
-{{ end }} {{ $prms := escape $test "prms" }}{{ $prms }} := url.Values{}
+{{ end }} {{ $prms := $test.Escape "prms" }}{{ $prms }} := url.Values{}
 {{ range $param := $test.Params }}	{{ $prms }}["{{ $param.Label }}"] = []string{fmt.Sprintf("%v",{{ $param.Name}})}
 {{ end }}{{ range $param := $test.QueryParams }}{{ if $param.Pointer }} if {{ $param.Name }} != nil {{ end }} {
 {{ template "convertParam" $param }}
@@ -405,8 +405,8 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 {{ end }}	if ctx == nil {
 		ctx = context.Background()
 	}
-	{{ $goaCtx := escape $test "goaCtx" }}{{ $goaCtx }} := goa.NewContext(goa.WithAction(ctx, "{{ $test.ResourceName }}Test"), {{ $rw }}, {{ $req }}, {{ $prms }})
-	{{ $test.ContextVarName }}, {{ $err := escape $test "err" }}{{ $err }} := {{ $test.ContextType }}({{ $goaCtx }}, {{ $req }}, service)
+	{{ $goaCtx := $test.Escape "goaCtx" }}{{ $goaCtx }} := goa.NewContext(goa.WithAction(ctx, "{{ $test.ResourceName }}Test"), {{ $rw }}, {{ $req }}, {{ $prms }})
+	{{ $test.ContextVarName }}, {{ $err := $test.Escape "err" }}{{ $err }} := {{ $test.ContextType }}({{ $goaCtx }}, {{ $req }}, service)
 	if {{ $err }} != nil {
 		panic("invalid test data " + {{ $err }}.Error()) // bug
 	}
@@ -424,7 +424,7 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 	}
 {{ if $test.ReturnType }}	var mt {{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}
 	if {{ $resp }} != nil {
-		var {{ $ok := escape $test "ok" }}{{ $ok }} bool
+		var {{ $ok := $test.Escape "ok" }}{{ $ok }} bool
 		mt, {{ $ok }} = {{ $resp }}.({{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }})
 		if !{{ $ok }} {
 			t.Fatalf("invalid response media: got %+v, expected instance of {{ $test.ReturnType.Type }}", {{ $resp }})
