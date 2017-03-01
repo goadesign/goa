@@ -562,6 +562,7 @@ func (g *Generator) generateMediaTypes(pkgDir string, funcs template.FuncMap) er
 		codegen.SimpleImport("unicode/utf8"),
 		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 	}
+	imports = g.mediaTypeMetadataImports(imports)
 	mtWr.WriteHeader(title, g.Target, imports)
 	err = g.API.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
 		if (mt.Type.IsObject() || mt.Type.IsArray()) && !mt.IsError() {
@@ -604,6 +605,7 @@ func (g *Generator) generateUserTypes(pkgDir string) error {
 		codegen.SimpleImport("unicode/utf8"),
 		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 	}
+	imports = g.userTypeMetadataImports(imports)
 	utWr.WriteHeader(title, g.Target, imports)
 	err = g.API.IterateUserTypes(func(t *design.UserTypeDefinition) error {
 		return utWr.Execute(t)
@@ -613,6 +615,84 @@ func (g *Generator) generateUserTypes(pkgDir string) error {
 		return err
 	}
 	return utWr.FormatCode()
+}
+
+// mediaTypeMetadataImports will grab all imports specified in a struct:field:type Metadata tag and
+// add them to the imports for the media_types.go file.
+func (g *Generator) mediaTypeMetadataImports(s []*codegen.ImportSpec) []*codegen.ImportSpec {
+	for _, v := range g.API.MediaTypes {
+		def := v.Definition()
+		t := def.Type
+		switch t.(type) {
+		case design.Object:
+			obj := v.ToObject()
+			keys := make([]string, len(obj))
+			i := 0
+			for n := range obj {
+				keys[i] = n
+				i++
+			}
+			sort.Strings(keys)
+			for _, name := range keys {
+				field := obj[name]
+				if tname, ok := field.Metadata["struct:field:type"]; ok {
+					if len(tname) > 1 {
+						tagImp := codegen.SimpleImport(tname[1])
+						if importsContains(s, tagImp) != true {
+							s = append(s, tagImp)
+						}
+					}
+				}
+			}
+		default:
+			continue
+		}
+	}
+	return s
+}
+
+// userTypeMetadataImports will grab all imports specified in a struct:field:type Metadata tag and
+// add them to the imports for the user_types.go file.
+func (g *Generator) userTypeMetadataImports(s []*codegen.ImportSpec) []*codegen.ImportSpec {
+	for _, v := range g.API.Types {
+		def := v.Definition()
+		t := def.Type
+		switch t.(type) {
+		case design.Object:
+			obj := v.ToObject()
+			keys := make([]string, len(obj))
+			i := 0
+			for n := range obj {
+				keys[i] = n
+				i++
+			}
+			sort.Strings(keys)
+			for _, name := range keys {
+				field := obj[name]
+				if tname, ok := field.Metadata["struct:field:type"]; ok {
+					if len(tname) > 1 {
+						tagImp := codegen.SimpleImport(tname[1])
+						if importsContains(s, tagImp) != true {
+							s = append(s, tagImp)
+						}
+					}
+				}
+			}
+		default:
+			continue
+		}
+	}
+	return s
+}
+
+// importsContains will check for uniqueness in a given *codegen.ImportSpec slice
+func importsContains(s []*codegen.ImportSpec, e *codegen.ImportSpec) bool {
+	for _, a := range s {
+		if a.Path == e.Path {
+			return true
+		}
+	}
+	return false
 }
 
 // join is a code generation helper function that generates a function signature built from
