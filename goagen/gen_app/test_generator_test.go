@@ -103,6 +103,7 @@ var _ = Describe("Generate", func() {
 										"uuid":     &design.AttributeDefinition{Type: design.UUID},
 										"optional": &design.AttributeDefinition{Type: design.Integer},
 										"required": &design.AttributeDefinition{Type: design.DateTime},
+										"query":    &design.AttributeDefinition{Type: design.String},
 									},
 									Validation: &dslengine.ValidationDefinition{Required: []string{"required"}},
 								},
@@ -117,6 +118,7 @@ var _ = Describe("Generate", func() {
 									Type: design.Object{
 										"optional": &design.AttributeDefinition{Type: design.Integer},
 										"required": &design.AttributeDefinition{Type: design.DateTime},
+										"query":    &design.AttributeDefinition{Type: design.String},
 									},
 									Validation: &dslengine.ValidationDefinition{Required: []string{"required"}},
 								},
@@ -211,6 +213,7 @@ var _ = Describe("Generate", func() {
 
 			Ω(content).Should(ContainSubstring(`if optional != nil`))
 			Ω(content).ShouldNot(ContainSubstring(`if required != nil`))
+			Ω(content).Should(ContainSubstring(`if query != nil`))
 		})
 
 		It("properly handles headers", func() {
