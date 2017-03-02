@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"fmt"
+
 	"github.com/goadesign/goa/design"
 )
 
@@ -27,22 +28,6 @@ func (s *ImportSpec) Code() string {
 		return fmt.Sprintf(`%s "%s"`, s.Name, s.Path)
 	}
 	return fmt.Sprintf(`"%s"`, s.Path)
-}
-
-// appendImports appends two ImportSpec slices and preserves uniqueness
-func appendImports(i, a []*ImportSpec) []*ImportSpec {
-	for _, v := range a {
-		contains := false
-		for _, att := range i {
-			if att.Path == v.Path {
-				contains = true
-			}
-		}
-		if contains != true {
-			i = append(i, v)
-		}
-	}
-	return i
 }
 
 // AttributeImports will construct a new ImportsSpec slice from an existing slice and add in imports specified in
@@ -83,4 +68,20 @@ func AttributeImports(att *design.AttributeDefinition, imports []*ImportSpec, se
 	}
 
 	return imports
+}
+
+// appendImports appends two ImportSpec slices and preserves uniqueness
+func appendImports(i, a []*ImportSpec) []*ImportSpec {
+	for _, v := range a {
+		contains := false
+		for _, att := range i {
+			if att.Path == v.Path {
+				contains = true
+			}
+		}
+		if contains != true {
+			i = append(i, v)
+		}
+	}
+	return i
 }
