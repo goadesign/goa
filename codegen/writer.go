@@ -1,6 +1,9 @@
 package codegen
 
-import "text/template"
+import (
+	"io"
+	"text/template"
+)
 
 type (
 	// A FileWriter exposes a set of Sections and the relative path to the
@@ -20,3 +23,8 @@ type (
 		Data interface{}
 	}
 )
+
+// Render renders the section to the given writer.
+func (s *Section) Render(w io.Writer) error {
+	return s.Template.Execute(w, s.Data)
+}
