@@ -258,7 +258,7 @@ var _ = Describe("code generation", func() {
 				Context("using struct field type metadata", func() {
 					BeforeEach(func() {
 						object["foo"].Metadata = dslengine.MetadataDefinition{
-							"struct:field:type": []string{"[]byte", "unused"},
+							"struct:field:type": []string{"[]byte"},
 						}
 					})
 
