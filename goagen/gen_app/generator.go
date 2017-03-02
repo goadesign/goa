@@ -373,8 +373,7 @@ func (g *Generator) generateMediaTypes() error {
 		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
 	for _, v := range g.API.MediaTypes {
-		var seen []*design.AttributeDefinition
-		imports = codegen.AttributeImports(v.AttributeDefinition, imports, seen)
+		imports = codegen.AttributeImports(v.AttributeDefinition, imports, nil)
 	}
 	mtWr.WriteHeader(title, g.Target, imports)
 	err = g.API.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
@@ -410,8 +409,7 @@ func (g *Generator) generateUserTypes() error {
 		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
 	for _, v := range g.API.Types {
-		var seen []*design.AttributeDefinition
-		imports = codegen.AttributeImports(v.AttributeDefinition, imports, seen)
+		imports = codegen.AttributeImports(v.AttributeDefinition, imports, nil)
 	}
 	utWr.WriteHeader(title, g.Target, imports)
 	err = g.API.IterateUserTypes(func(t *design.UserTypeDefinition) error {
