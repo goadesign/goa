@@ -77,6 +77,7 @@ func appendImports(i, a []*ImportSpec) []*ImportSpec {
 		for _, att := range i {
 			if att.Path == v.Path {
 				contains = true
+				break
 			}
 		}
 		if contains != true {
