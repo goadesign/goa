@@ -40,6 +40,42 @@ var _ = Describe("AttributeImports", func() {
 			})
 		})
 
+		Context("of recursive object", func() {
+
+			It("produces the import slice", func() {
+				var imports []*codegen.ImportSpec
+				o := Object{
+					"foo": &AttributeDefinition{Type: String},
+				}
+				o["foo"].Metadata = dslengine.MetadataDefinition{
+					"struct:field:type": []string{"json.RawMessage", "encoding/json"},
+				}
+				child := &AttributeDefinition{Type: o}
+
+				po := Object{"child": child}
+				po["child"].Metadata = dslengine.MetadataDefinition{
+					"struct:field:type": []string{"json.RawMessage", "encoding/json"},
+				}
+				parent := &AttributeDefinition{Type: po}
+
+				o["parent"] = parent
+
+				att = new(AttributeDefinition)
+				att.Type = po
+				imports = codegen.AttributeImports(att, imports, nil)
+
+				i := []*codegen.ImportSpec{&codegen.ImportSpec{
+					Path: "encoding/json",
+				},
+				}
+				st = i[0].Path
+				l := len(imports)
+
+				Ω(st).Should(Equal(imports[0].Path))
+				Ω(l).Should(Equal(1))
+			})
+		})
+
 		Context("of hash", func() {
 
 			It("produces the import slice", func() {
@@ -97,7 +133,6 @@ var _ = Describe("AttributeImports", func() {
 
 			It("produces the import slice", func() {
 				var imports []*codegen.ImportSpec
-				var u *UserTypeDefinition
 				object = Object{
 					"bar": &AttributeDefinition{Type: String},
 				}
@@ -105,7 +140,7 @@ var _ = Describe("AttributeImports", func() {
 					"struct:field:type": []string{"json.RawMessage", "encoding/json"},
 				}
 
-				u = &UserTypeDefinition{
+				u := &UserTypeDefinition{
 					AttributeDefinition: &AttributeDefinition{Type: object},
 				}
 
@@ -125,7 +160,6 @@ var _ = Describe("AttributeImports", func() {
 		Context("of MediaTypeDefinition", func() {
 			It("produces the import slice", func() {
 				var imports []*codegen.ImportSpec
-				var m *MediaTypeDefinition
 				elemType := &AttributeDefinition{Type: Integer}
 				elemType.Metadata = dslengine.MetadataDefinition{
 					"struct:field:type": []string{"json.RawMessage", "encoding/json"},
@@ -134,7 +168,7 @@ var _ = Describe("AttributeImports", func() {
 				u := &UserTypeDefinition{
 					AttributeDefinition: &AttributeDefinition{Type: array},
 				}
-				m = &MediaTypeDefinition{
+				m := &MediaTypeDefinition{
 					UserTypeDefinition: u,
 				}
 
