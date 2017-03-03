@@ -7,47 +7,31 @@ import (
 	"goa.design/goa.v2/design"
 )
 
-func TestEndpointTmpl(t *testing.T) {
-	cases := map[string]struct {
-		data     endpointData
-		expected string
-	}{
-		"a simple endpoint": {
-			data: endpointData{
-				Name:        "Account",
-				Description: "",
-				Methods: []*endpointMethod{
-					&endpointMethod{
-						Name:        "Create",
-						Description: "",
-						Payload: &design.UserTypeExpr{
-							TypeName: "CreateAccountPayload",
-						},
-					},
-					&endpointMethod{
-						Name:        "List",
-						Description: "",
-						Payload: &design.UserTypeExpr{
-							TypeName: "ListAccountPayload",
-						},
-					},
-					&endpointMethod{
-						Name:        "Show",
-						Description: "",
-						Payload: &design.UserTypeExpr{
-							TypeName: "ShowAccountPayload",
-						},
-					},
-					&endpointMethod{
-						Name:        "Delete",
-						Description: "",
-						Payload: &design.UserTypeExpr{
-							TypeName: "DeleteAccountPayload",
-						},
-					},
-				},
-			},
-			expected: `type (
+func TestEndpoint(t *testing.T) {
+	const (
+		singleMethod = `type (
+	// Account lists the account service endpoints.
+	Account struct {
+		Create goa.Endpoint
+	}
+)
+
+// NewAccount wraps the given account service with endpoints.
+func NewAccount(s services.Account) *Account {
+	ep := &Account{}
+
+	ep.Create = func(ctx context.Context, req interface{}) (interface{}, error) {
+		var p *services.CreateAccountPayload
+		if req != nil {
+			p = req.(*services.CreateAccountPayload)
+		}
+		return s.Create(ctx, p)
+	}
+
+	return ep
+}`
+
+		multipleMethods = `type (
 	// Account lists the account service endpoints.
 	Account struct {
 		Create goa.Endpoint
@@ -94,17 +78,69 @@ func NewAccount(s services.Account) *Account {
 	}
 
 	return ep
-}`,
-		},
+}`
+	)
+	var (
+		create = design.EndpointExpr{
+			Name: "Create",
+			Payload: &design.UserTypeExpr{
+				TypeName: "CreateAccountPayload",
+			},
+		}
+
+		list = design.EndpointExpr{
+			Name: "List",
+			Payload: &design.UserTypeExpr{
+				TypeName: "ListAccountPayload",
+			},
+		}
+
+		show = design.EndpointExpr{
+			Name: "Show",
+			Payload: &design.UserTypeExpr{
+				TypeName: "ShowAccountPayload",
+			},
+		}
+
+		delete = design.EndpointExpr{
+			Name: "Delete",
+			Payload: &design.UserTypeExpr{
+				TypeName: "DeleteAccountPayload",
+			},
+		}
+
+		withSingleEndpoint = design.ServiceExpr{
+			Name: "Account",
+			Endpoints: []*design.EndpointExpr{
+				&create,
+			},
+		}
+
+		withMultipleEndpoints = design.ServiceExpr{
+			Name: "Account",
+			Endpoints: []*design.EndpointExpr{
+				&create,
+				&list,
+				&show,
+				&delete,
+			},
+		}
+	)
+	cases := map[string]struct {
+		API      *design.APIExpr
+		Service  *design.ServiceExpr
+		Expected string
+	}{
+		"single-method":    {Service: &withSingleEndpoint, Expected: singleMethod},
+		"multiple-methods": {Service: &withMultipleEndpoints, Expected: multipleMethods},
 	}
 	for k, tc := range cases {
 		buf := new(bytes.Buffer)
-		if err := endpointTmpl.ExecuteTemplate(buf, "endpoint", tc.data); err != nil {
-			t.Fatalf("Execute returned %s", err)
-		}
+		s := Endpoint(tc.API, tc.Service)
+		s.Render(buf)
 		actual := buf.String()
-		if actual != tc.expected {
-			t.Errorf("%s: got %v, expected %v", k, actual, tc.expected)
+		if actual != tc.Expected {
+			t.Errorf("%s: got %v, expected %v", k, actual, tc.Expected)
 		}
 	}
 }
