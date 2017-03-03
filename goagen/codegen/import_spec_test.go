@@ -11,8 +11,6 @@ import (
 
 var _ = Describe("AttributeImports", func() {
 	Context("given an attribute definition with fields", func() {
-
-		var imports []*codegen.ImportSpec
 		var att *AttributeDefinition
 		var st string
 		var object Object
@@ -20,6 +18,7 @@ var _ = Describe("AttributeImports", func() {
 		Context("of object", func() {
 
 			It("produces the import slice", func() {
+				var imports []*codegen.ImportSpec
 				object = Object{
 					"foo": &AttributeDefinition{Type: String},
 					"bar": &AttributeDefinition{Type: Integer},
@@ -44,6 +43,7 @@ var _ = Describe("AttributeImports", func() {
 		Context("of hash", func() {
 
 			It("produces the import slice", func() {
+				var imports []*codegen.ImportSpec
 				elemType := &AttributeDefinition{Type: Integer}
 				elemType.Metadata = dslengine.MetadataDefinition{
 					"struct:field:type": []string{"json.RawMessage", "encoding/json"},
@@ -72,6 +72,7 @@ var _ = Describe("AttributeImports", func() {
 
 		Context("of array", func() {
 			It("produces the import slice", func() {
+				var imports []*codegen.ImportSpec
 				elemType := &AttributeDefinition{Type: Integer}
 				elemType.Metadata = dslengine.MetadataDefinition{
 					"struct:field:type": []string{"json.RawMessage", "encoding/json"},
@@ -95,6 +96,7 @@ var _ = Describe("AttributeImports", func() {
 		Context("of UserTypeDefinition", func() {
 
 			It("produces the import slice", func() {
+				var imports []*codegen.ImportSpec
 				var u *UserTypeDefinition
 				object = Object{
 					"bar": &AttributeDefinition{Type: String},
@@ -104,7 +106,7 @@ var _ = Describe("AttributeImports", func() {
 				}
 
 				u = &UserTypeDefinition{
-					AttributeDefinition: &AttributeDefinition{Type: &object},
+					AttributeDefinition: &AttributeDefinition{Type: object},
 				}
 
 				att = u.AttributeDefinition
@@ -122,6 +124,7 @@ var _ = Describe("AttributeImports", func() {
 
 		Context("of MediaTypeDefinition", func() {
 			It("produces the import slice", func() {
+				var imports []*codegen.ImportSpec
 				var m *MediaTypeDefinition
 				elemType := &AttributeDefinition{Type: Integer}
 				elemType.Metadata = dslengine.MetadataDefinition{
