@@ -55,14 +55,14 @@ func CommandLine() string {
 				args[i] = a
 			}
 		}
-		param = strings.Join(args, " ")
+		param = " " + strings.Join(args, " ")
 	}
 	rawcmd := filepath.Base(os.Args[0])
 	// Remove possible .exe suffix to not create different ouptut just because
 	// you ran goagen on Windows.
 	rawcmd = strings.TrimSuffix(rawcmd, ".exe")
 
-	cmd := fmt.Sprintf("$ %s %s", rawcmd, param)
+	cmd := fmt.Sprintf("$ %s%s", rawcmd, param)
 	return strings.Replace(cmd, " --", "\n\t--", -1)
 }
 
