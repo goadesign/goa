@@ -94,7 +94,7 @@ var _ = Describe("AttributeImports", func() {
 
 		Context("of UserTypeDefinition", func() {
 
-			It("produces the struct go code", func() {
+			It("produces the import slice", func() {
 				var u *UserTypeDefinition
 				object = Object{
 					"bar": &AttributeDefinition{Type: String},
@@ -102,8 +102,12 @@ var _ = Describe("AttributeImports", func() {
 				object["bar"].Metadata = dslengine.MetadataDefinition{
 					"struct:field:type": []string{"json.RawMessage", "encoding/json"},
 				}
+
+				u = &UserTypeDefinition{
+					AttributeDefinition: &AttributeDefinition{Type: &object},
+				}
+
 				att = u.AttributeDefinition
-				att.Type = object
 				imports = codegen.AttributeImports(att, imports, nil)
 
 				i := []*codegen.ImportSpec{&codegen.ImportSpec{
@@ -117,16 +121,21 @@ var _ = Describe("AttributeImports", func() {
 		})
 
 		Context("of MediaTypeDefinition", func() {
-			It("produces the struct go code", func() {
+			It("produces the import slice", func() {
 				var m *MediaTypeDefinition
 				elemType := &AttributeDefinition{Type: Integer}
 				elemType.Metadata = dslengine.MetadataDefinition{
 					"struct:field:type": []string{"json.RawMessage", "encoding/json"},
 				}
 				array := &Array{ElemType: elemType}
+				u := &UserTypeDefinition{
+					AttributeDefinition: &AttributeDefinition{Type: array},
+				}
+				m = &MediaTypeDefinition{
+					UserTypeDefinition: u,
+				}
 
 				att = m.AttributeDefinition
-				att.Type = array
 				imports = codegen.AttributeImports(att, imports, nil)
 
 				i := []*codegen.ImportSpec{&codegen.ImportSpec{
