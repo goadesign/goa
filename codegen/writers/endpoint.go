@@ -1,6 +1,7 @@
 package writers
 
 import (
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -57,7 +58,7 @@ func EndpointsWriter(api *design.APIExpr, service *design.ServiceExpr) codegen.F
 			}),
 			Endpoint(api, service),
 		},
-		outputPath: "gen/endpoints/", // TODO Set output path.
+		outputPath: filepath.Join("gen/endpoints/", codegen.SnakeCase(service.Name)+".go"),
 	}
 }
 
