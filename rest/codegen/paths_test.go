@@ -11,7 +11,7 @@ import (
 func TestPaths(t *testing.T) {
 	const (
 		pathWithoutParams = `
-// ShowAccountPath returns the URL path to the account service show HTTP endpoint.
+// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath() string {
 	return "/account/test"
 }
@@ -19,14 +19,14 @@ func ShowAccountPath() string {
 `
 
 		pathWithOneParam = `
-// ShowAccountPath returns the URL path to the account service show HTTP endpoint.
+// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath(id int32) string {
 	return fmt.Sprintf("/account/test/%v", id)
 }
 
 `
 		pathWithMultipleParams = `
-// ShowAccountPath returns the URL path to the account service show HTTP endpoint.
+// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath(id int32, view string) string {
 	return fmt.Sprintf("/account/test/%v/view/%v", id, view)
 }
@@ -34,18 +34,18 @@ func ShowAccountPath(id int32, view string) string {
 `
 
 		pathWithAlternatives = `
-// ShowAccountPath returns the URL path to the account service show HTTP endpoint.
+// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath() string {
 	return "/account/test"
 }
 
-// ShowAccountAlternativePath returns the URL path to the account service show HTTP endpoint.
-func ShowAccountAlternativePath(id int32) string {
+// ShowAccountPath2 returns the URL path to the Account service Show HTTP endpoint.
+func ShowAccountPath2(id int32) string {
 	return fmt.Sprintf("/account/test/%v", id)
 }
 
-// ShowAccountAlternativePath1 returns the URL path to the account service show HTTP endpoint.
-func ShowAccountAlternativePath1(id int32, view string) string {
+// ShowAccountPath3 returns the URL path to the Account service Show HTTP endpoint.
+func ShowAccountPath3(id int32, view string) string {
 	return fmt.Sprintf("/account/test/%v/view/%v", id, view)
 }
 
@@ -66,7 +66,6 @@ func ShowAccountAlternativePath1(id int32, view string) string {
 		endpoint = goadesign.EndpointExpr{
 			Name:    "Show",
 			Service: &service,
-			//Payload: &goadesign.UserTypeExpr{AttributeExpr: &params },
 		}
 
 		resource = design.ResourceExpr{
@@ -76,7 +75,6 @@ func ShowAccountAlternativePath1(id int32, view string) string {
 		action = design.ActionExpr{
 			EndpointExpr: &endpoint,
 			Resource:     &resource,
-			//Body:         &params,
 			Routes: []*design.RouteExpr{
 				{Path: "/test"},
 			},
@@ -133,10 +131,12 @@ func ShowAccountAlternativePath1(id int32, view string) string {
 		linkRouteToAction(tc.Action)
 		buf := new(bytes.Buffer)
 		s := Path(tc.Action)
-		s.Render(buf)
+		e := s.Render(buf)
 		actual := buf.String()
 
-		if actual != tc.Expected {
+		if e != nil {
+			t.Errorf("%s: failed to execute template, error %s", k, e)
+		} else if actual != tc.Expected {
 			t.Errorf("%s: got %v, expected %v", k, actual, tc.Expected)
 		}
 	}

@@ -10,6 +10,18 @@ import (
 	"goa.design/goa.v2/rest/design"
 )
 
+const pathT = `{{range $i, $route := .Routes}}
+// {{$.EndpointName}}{{$.ServiceName}}Path{{if ne $i 0}}{{add $i 1}}{{end}} returns the URL path to the {{$.ServiceName}} service {{$.EndpointName}} HTTP endpoint.
+func {{$.EndpointName}}{{$.ServiceName}}Path{{if ne $i 0}}{{add $i 1}}{{end}}({{if .Arguments}}{{join .Arguments ", "}}{{end}}) string {
+{{- if .Params}}
+	return fmt.Sprintf("{{ .Path }}", {{join .Params ", "}})
+{{- else}}
+	return "{{ .Path }}"
+{{- end}}
+}
+{{end}}
+`
+
 type (
 	// pathData contains the data necessary to render the path template.
 	pathData struct {
@@ -21,9 +33,8 @@ type (
 		Routes []*pathRoute
 	}
 
+	// pathRoute contains the data to render a path for a specific route.
 	pathRoute struct {
-		// Name is the route name for the path
-		Name string
 		// Path is the fullpath converted to printf compatible layout
 		Path string
 		// Params are all the path parameters in this route
@@ -31,7 +42,20 @@ type (
 		// Arguments describe all the function arguments with types
 		Arguments []string
 	}
+
+	// pathWriter
+	pathWriter struct {
+		sections   []*codegen.Section
+		outputPath string
+	}
 )
+
+var pathTmpl = template.Must(template.New("path").
+	Funcs(template.FuncMap{
+		"join": strings.Join,
+		"add":  codegen.Add,
+	}).
+	Parse(pathT))
 
 // PathWriter returns the path generators writer.
 func PathWriter(r *design.RootExpr) codegen.FileWriter {
@@ -48,7 +72,7 @@ func PathWriter(r *design.RootExpr) codegen.FileWriter {
 		}
 	}
 
-	return pathWriter{
+	return &pathWriter{
 		sections:   sections,
 		outputPath: "gen/transport/http/paths.go",
 	}
@@ -62,16 +86,11 @@ func Path(a *design.ActionExpr) *codegen.Section {
 	}
 }
 
-type pathWriter struct {
-	sections   []*codegen.Section
-	outputPath string
-}
-
-func (e pathWriter) Sections() []*codegen.Section {
+func (e *pathWriter) Sections() []*codegen.Section {
 	return e.sections
 }
 
-func (e pathWriter) OutputPath() string {
+func (e *pathWriter) OutputPath() string {
 	return e.outputPath
 }
 
@@ -84,7 +103,6 @@ func buildPathData(a *design.ActionExpr) *pathData {
 
 	for i, r := range a.Routes {
 		pd.Routes[i] = &pathRoute{
-			Name:      generateRoutePathName(i, a),
 			Path:      design.WildcardRegex.ReplaceAllString(r.FullPath(), "/%v"),
 			Params:    r.Params(),
 			Arguments: generatePathArguments(r),
@@ -103,36 +121,3 @@ func generatePathArguments(r *design.RouteExpr) []string {
 	}
 	return args
 }
-
-func generateRoutePathName(routeNum int, a *design.ActionExpr) string {
-	serviceName := strings.Title(a.Service.Name)
-	endpointName := strings.Title(a.Name)
-
-	if routeNum == 1 {
-		return fmt.Sprintf("%s%sAlternativePath", endpointName, serviceName)
-	}
-
-	if routeNum > 1 {
-		return fmt.Sprintf("%s%sAlternativePath%d", endpointName, serviceName, routeNum-1)
-	}
-
-	return fmt.Sprintf("%s%sPath", endpointName, serviceName)
-}
-
-const pathT = `{{range .Routes}}
-// {{.Name}} returns the URL path to the {{tolower $.ServiceName}} service {{tolower $.EndpointName}} HTTP endpoint.
-func {{.Name}}({{if .Arguments}}{{join .Arguments ", "}}{{end}}) string {
-{{- if .Params}}
-	return fmt.Sprintf("{{ .Path }}", {{join .Params ", "}})
-{{- else}}
-	return "{{ .Path }}"
-{{- end}}
-}
-{{end}}
-`
-
-var pathTmpl = template.Must(template.New("path").
-	Funcs(template.FuncMap{
-		"tolower": strings.ToLower,
-		"join":    strings.Join,
-	}).Parse(pathT))
