@@ -109,14 +109,14 @@ func generateRoutePathName(routeNum int, a *design.ActionExpr) string {
 	endpointName := strings.Title(a.Name)
 
 	if routeNum == 1 {
-		return fmt.Sprintf("%s%sAlternativePath", serviceName, endpointName)
+		return fmt.Sprintf("%s%sAlternativePath", endpointName, serviceName)
 	}
 
 	if routeNum > 1 {
-		return fmt.Sprintf("%s%sAlternativePath%d", serviceName, endpointName, routeNum-1)
+		return fmt.Sprintf("%s%sAlternativePath%d", endpointName, serviceName, routeNum-1)
 	}
 
-	return fmt.Sprintf("%s%sPath", serviceName, endpointName)
+	return fmt.Sprintf("%s%sPath", endpointName, serviceName)
 }
 
 const pathT = `{{range .Routes}}

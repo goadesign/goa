@@ -11,41 +11,41 @@ import (
 func TestPaths(t *testing.T) {
 	const (
 		pathWithoutParams = `
-// AccountShowPath returns the URL path to the account service show HTTP endpoint.
-func AccountShowPath() string {
+// ShowAccountPath returns the URL path to the account service show HTTP endpoint.
+func ShowAccountPath() string {
 	return "/account/test"
 }
 
 `
 
 		pathWithOneParam = `
-// AccountShowPath returns the URL path to the account service show HTTP endpoint.
-func AccountShowPath(id int32) string {
+// ShowAccountPath returns the URL path to the account service show HTTP endpoint.
+func ShowAccountPath(id int32) string {
 	return fmt.Sprintf("/account/test/%v", id)
 }
 
 `
 		pathWithMultipleParams = `
-// AccountShowPath returns the URL path to the account service show HTTP endpoint.
-func AccountShowPath(id int32, view string) string {
+// ShowAccountPath returns the URL path to the account service show HTTP endpoint.
+func ShowAccountPath(id int32, view string) string {
 	return fmt.Sprintf("/account/test/%v/view/%v", id, view)
 }
 
 `
 
 		pathWithAlternatives = `
-// AccountShowPath returns the URL path to the account service show HTTP endpoint.
-func AccountShowPath() string {
+// ShowAccountPath returns the URL path to the account service show HTTP endpoint.
+func ShowAccountPath() string {
 	return "/account/test"
 }
 
-// AccountShowAlternativePath returns the URL path to the account service show HTTP endpoint.
-func AccountShowAlternativePath(id int32) string {
+// ShowAccountAlternativePath returns the URL path to the account service show HTTP endpoint.
+func ShowAccountAlternativePath(id int32) string {
 	return fmt.Sprintf("/account/test/%v", id)
 }
 
-// AccountShowAlternativePath1 returns the URL path to the account service show HTTP endpoint.
-func AccountShowAlternativePath1(id int32, view string) string {
+// ShowAccountAlternativePath1 returns the URL path to the account service show HTTP endpoint.
+func ShowAccountAlternativePath1(id int32, view string) string {
 	return fmt.Sprintf("/account/test/%v/view/%v", id, view)
 }
 
