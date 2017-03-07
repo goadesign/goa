@@ -9,8 +9,8 @@ Usage:
     service.WithLogger(goakit.New(logger))
     // ... Proceed with configuring and starting the goa service
 
-    // In handlers:
-    goakit.Context(ctx).Log("foo", "bar")
+    // In middlewares:
+    goakit.Logger(ctx).Log("foo", "bar")
 */
 package goakit
 
@@ -22,24 +22,19 @@ import (
 
 // adapter is the go-kit log goa logger adapter.
 type adapter struct {
-	*log.Context
+	log.Logger
 }
 
 // New wraps a go-kit logger into a goa logger.
 func New(logger log.Logger) goa.LogAdapter {
-	return FromContext(log.NewContext(logger))
+	return &adapter{logger}
 }
 
-// FromContext wraps a go-kit log context into a goa logger.
-func FromContext(ctx *log.Context) goa.LogAdapter {
-	return &adapter{Context: ctx}
-}
-
-// Context returns the go-kit log context stored in the given context if any, nil otherwise.
-func Context(ctx context.Context) *log.Context {
+// Logger returns the go-kit logger stored in the given context if any, nil otherwise.
+func Logger(ctx context.Context) log.Logger {
 	logger := goa.ContextLogger(ctx)
 	if a, ok := logger.(*adapter); ok {
-		return a.Context
+		return a.Logger
 	}
 	return nil
 }
@@ -48,17 +43,17 @@ func Context(ctx context.Context) *log.Context {
 func (a *adapter) Info(msg string, data ...interface{}) {
 	ctx := []interface{}{"lvl", "info", "msg", msg}
 	ctx = append(ctx, data...)
-	a.Context.Log(ctx...)
+	a.Logger.Log(ctx...)
 }
 
 // Error logs error messages using go-kit.
 func (a *adapter) Error(msg string, data ...interface{}) {
 	ctx := []interface{}{"lvl", "error", "msg", msg}
 	ctx = append(ctx, data...)
-	a.Context.Log(ctx...)
+	a.Logger.Log(ctx...)
 }
 
 // New instantiates a new logger from the given context.
 func (a *adapter) New(data ...interface{}) goa.LogAdapter {
-	return &adapter{Context: a.Context.With(data...)}
+	return &adapter{Logger: log.With(a.Logger, data...)}
 }
