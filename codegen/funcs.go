@@ -9,6 +9,7 @@ import (
 	"text/template"
 	"unicode"
 
+	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/pkg"
 )
 
@@ -154,4 +155,60 @@ func SnakeCase(name string) string {
 func KebabCase(name string) string {
 	name = SnakeCase(name)
 	return strings.Replace(name, "_", "-", -1)
+}
+
+// GoTypeRef returns the Go code that refers to the Go type which matches the given data type
+func GoTypeRef(dt design.DataType) string {
+	tname := GoTypeName(dt)
+	if design.IsObject(dt) {
+		return "*" + tname
+	}
+	return tname
+}
+
+// GoTypeName returns the Go type name for a data type.
+func GoTypeName(dt design.DataType) string {
+	switch actual := dt.(type) {
+	case design.Primitive:
+		return GoNativeType(dt)
+	case *design.Array:
+		return "[]" + GoTypeRef(actual.ElemType.Type)
+	default:
+		panic(fmt.Sprintf("goa bug: unknown type %#v", actual))
+	}
+}
+
+// GoNativeType returns the Go built-in type from which instances of provided datatype can be initialized.
+func GoNativeType(t design.DataType) string {
+	switch actual := t.(type) {
+	case design.Primitive:
+		switch actual.Kind() {
+		case design.BooleanKind:
+			return "bool"
+		case design.Int32Kind:
+			return "int32"
+		case design.Int64Kind:
+			return "int64"
+		case design.UInt32Kind:
+			return "uint32"
+		case design.UInt64Kind:
+			return "uint64"
+		case design.Float32Kind:
+			return "float32"
+		case design.Float64Kind:
+			return "float64"
+		case design.StringKind:
+			return "string"
+		case design.AnyKind:
+			return "interface{}"
+		default:
+			panic(fmt.Sprintf("goa bug: unknown primitive type %#v", actual))
+		}
+	case *design.Array:
+		return "[]" + GoNativeType(actual.ElemType.Type)
+	case design.CompositeExpr:
+		return GoNativeType(actual.Attribute().Type)
+	default:
+		panic(fmt.Sprintf("goa bug: unknown type %#v", actual))
+	}
 }
