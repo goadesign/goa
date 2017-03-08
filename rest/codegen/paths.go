@@ -24,22 +24,22 @@ func {{$.EndpointName}}{{$.ServiceName}}Path{{if ne $i 0}}{{add $i 1}}{{end}}({{
 
 {{- define "arguments" -}}
 {{range $i, $arg := . -}}
-{{if ne $i 0}}, {{end}}{{.Name}} {{goTypeRef .Type}}
+{{if ne $i 0}}, {{end}}{{goify .Name false}} {{goTypeRef .Type}}
 {{- end}}
 {{- end}}
 
 {{- define "fmt_params" -}}
 {{range . -}}
-, {{if eq .Type.Name "array"}}strings.Join(encoded{{.Name}}, ","){{else}}{{.Name}}{{end}}
+, {{if eq .Type.Name "array"}}strings.Join(encoded{{goify .Name true}}, ","){{else}}{{goify .Name false}}{{end}}
 {{- end}}
 {{- end}}
 
 {{- define "slice_conversion" -}}
 {{range $i, $arg := .}}
 	{{- if eq .Type.Name "array" -}}
-	encoded{{.Name}} := make([]string, len({{.Name}}))
-	for i, v := range {{.Name}} {
-		encoded{{.Name}}[i] = {{if eq .Type.ElemType.Type.Name "string"}}url.QueryEscape(v)
+	encoded{{goify .Name true}} := make([]string, len({{goify .Name false}}))
+	for i, v := range {{goify .Name false}} {
+		encoded{{goify .Name true}}[i] = {{if eq .Type.ElemType.Type.Name "string"}}url.QueryEscape(v)
 	{{else if eq .Type.ElemType.Type.Name "int32" "int64"}}strconv.FormatInt(v, 10)
 	{{else if eq .Type.ElemType.Type.Name "uint32" "uint64"}}strconv.FormatUint(v, 10)
 	{{else if eq .Type.ElemType.Type.Name "float32"}}strconv.FormatFloat(v, 'f', -1, 32)
@@ -93,6 +93,7 @@ var pathTmpl = template.Must(template.New("path").
 	Funcs(template.FuncMap{
 		"add":       codegen.Add,
 		"goTypeRef": codegen.GoTypeRef,
+		"goify":     codegen.Goify,
 	}).
 	Parse(pathT))
 

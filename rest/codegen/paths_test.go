@@ -48,109 +48,109 @@ func ShowAccountPath3(id int32, view string) string {
 `
 
 		pathWithStringSliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
-func ShowAccountPath(slice_string []string) string {
-	encodedslice_string := make([]string, len(slice_string))
-	for i, v := range slice_string {
-		encodedslice_string[i] = url.QueryEscape(v)
+func ShowAccountPath(sliceString []string) string {
+	encodedSliceString := make([]string, len(sliceString))
+	for i, v := range sliceString {
+		encodedSliceString[i] = url.QueryEscape(v)
 	}
 
-	return fmt.Sprintf("/account/test/%v", strings.Join(encodedslice_string, ","))
+	return fmt.Sprintf("/account/test/%v", strings.Join(encodedSliceString, ","))
 }
 
 `
 
 		pathWithInt32SliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
-func ShowAccountPath(slice_int32 []int32) string {
-	encodedslice_int32 := make([]string, len(slice_int32))
-	for i, v := range slice_int32 {
-		encodedslice_int32[i] = strconv.FormatInt(v, 10)
+func ShowAccountPath(sliceInt32 []int32) string {
+	encodedSliceInt32 := make([]string, len(sliceInt32))
+	for i, v := range sliceInt32 {
+		encodedSliceInt32[i] = strconv.FormatInt(v, 10)
 	}
 
-	return fmt.Sprintf("/account/test/%v", strings.Join(encodedslice_int32, ","))
+	return fmt.Sprintf("/account/test/%v", strings.Join(encodedSliceInt32, ","))
 }
 
 `
 
 		pathWithInt64SliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
-func ShowAccountPath(slice_int64 []int64) string {
-	encodedslice_int64 := make([]string, len(slice_int64))
-	for i, v := range slice_int64 {
-		encodedslice_int64[i] = strconv.FormatInt(v, 10)
+func ShowAccountPath(sliceInt64 []int64) string {
+	encodedSliceInt64 := make([]string, len(sliceInt64))
+	for i, v := range sliceInt64 {
+		encodedSliceInt64[i] = strconv.FormatInt(v, 10)
 	}
 
-	return fmt.Sprintf("/account/test/%v", strings.Join(encodedslice_int64, ","))
+	return fmt.Sprintf("/account/test/%v", strings.Join(encodedSliceInt64, ","))
 }
 
 `
 
 		pathWithUint32SliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
-func ShowAccountPath(slice_uint32 []uint32) string {
-	encodedslice_uint32 := make([]string, len(slice_uint32))
-	for i, v := range slice_uint32 {
-		encodedslice_uint32[i] = strconv.FormatUint(v, 10)
+func ShowAccountPath(sliceUint32 []uint32) string {
+	encodedSliceUint32 := make([]string, len(sliceUint32))
+	for i, v := range sliceUint32 {
+		encodedSliceUint32[i] = strconv.FormatUint(v, 10)
 	}
 
-	return fmt.Sprintf("/account/test/%v", strings.Join(encodedslice_uint32, ","))
+	return fmt.Sprintf("/account/test/%v", strings.Join(encodedSliceUint32, ","))
 }
 
 `
 
 		pathWithUint64SliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
-func ShowAccountPath(slice_uint64 []uint64) string {
-	encodedslice_uint64 := make([]string, len(slice_uint64))
-	for i, v := range slice_uint64 {
-		encodedslice_uint64[i] = strconv.FormatUint(v, 10)
+func ShowAccountPath(sliceUint64 []uint64) string {
+	encodedSliceUint64 := make([]string, len(sliceUint64))
+	for i, v := range sliceUint64 {
+		encodedSliceUint64[i] = strconv.FormatUint(v, 10)
 	}
 
-	return fmt.Sprintf("/account/test/%v", strings.Join(encodedslice_uint64, ","))
+	return fmt.Sprintf("/account/test/%v", strings.Join(encodedSliceUint64, ","))
 }
 
 `
 
 		pathWithFloat32SliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
-func ShowAccountPath(slice_float32 []float32) string {
-	encodedslice_float32 := make([]string, len(slice_float32))
-	for i, v := range slice_float32 {
-		encodedslice_float32[i] = strconv.FormatFloat(v, 'f', -1, 32)
+func ShowAccountPath(sliceFloat32 []float32) string {
+	encodedSliceFloat32 := make([]string, len(sliceFloat32))
+	for i, v := range sliceFloat32 {
+		encodedSliceFloat32[i] = strconv.FormatFloat(v, 'f', -1, 32)
 	}
 
-	return fmt.Sprintf("/account/test/%v", strings.Join(encodedslice_float32, ","))
+	return fmt.Sprintf("/account/test/%v", strings.Join(encodedSliceFloat32, ","))
 }
 
 `
 
 		pathWithFloat64SliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
-func ShowAccountPath(slice_float64 []float64) string {
-	encodedslice_float64 := make([]string, len(slice_float64))
-	for i, v := range slice_float64 {
-		encodedslice_float64[i] = strconv.FormatFloat(v, 'f', -1, 64)
+func ShowAccountPath(sliceFloat64 []float64) string {
+	encodedSliceFloat64 := make([]string, len(sliceFloat64))
+	for i, v := range sliceFloat64 {
+		encodedSliceFloat64[i] = strconv.FormatFloat(v, 'f', -1, 64)
 	}
 
-	return fmt.Sprintf("/account/test/%v", strings.Join(encodedslice_float64, ","))
+	return fmt.Sprintf("/account/test/%v", strings.Join(encodedSliceFloat64, ","))
 }
 
 `
 
 		pathWithBoolSliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
-func ShowAccountPath(slice_bool []bool) string {
-	encodedslice_bool := make([]string, len(slice_bool))
-	for i, v := range slice_bool {
-		encodedslice_bool[i] = strconv.FormatBool(v)
+func ShowAccountPath(sliceBool []bool) string {
+	encodedSliceBool := make([]string, len(sliceBool))
+	for i, v := range sliceBool {
+		encodedSliceBool[i] = strconv.FormatBool(v)
 	}
 
-	return fmt.Sprintf("/account/test/%v", strings.Join(encodedslice_bool, ","))
+	return fmt.Sprintf("/account/test/%v", strings.Join(encodedSliceBool, ","))
 }
 
 `
 
 		pathWithInterfaceSliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
-func ShowAccountPath(slice_interface []interface{}) string {
-	encodedslice_interface := make([]string, len(slice_interface))
-	for i, v := range slice_interface {
-		encodedslice_interface[i] = url.QueryEscape(fmt.Sprintf("%v", v))
+func ShowAccountPath(sliceInterface []interface{}) string {
+	encodedSliceInterface := make([]string, len(sliceInterface))
+	for i, v := range sliceInterface {
+		encodedSliceInterface[i] = url.QueryEscape(fmt.Sprintf("%v", v))
 	}
 
-	return fmt.Sprintf("/account/test/%v", strings.Join(encodedslice_interface, ","))
+	return fmt.Sprintf("/account/test/%v", strings.Join(encodedSliceInterface, ","))
 }
 
 `
