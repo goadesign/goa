@@ -10,31 +10,27 @@ import (
 
 func TestPaths(t *testing.T) {
 	const (
-		pathWithoutParams = `
-// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
+		pathWithoutParams = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath() string {
 	return "/account/test"
 }
 
 `
 
-		pathWithOneParam = `
-// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
+		pathWithOneParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath(id int32) string {
 	return fmt.Sprintf("/account/test/%v", id)
 }
 
 `
-		pathWithMultipleParams = `
-// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
+		pathWithMultipleParams = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath(id int32, view string) string {
 	return fmt.Sprintf("/account/test/%v/view/%v", id, view)
 }
 
 `
 
-		pathWithAlternatives = `
-// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
+		pathWithAlternatives = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath() string {
 	return "/account/test"
 }
@@ -51,8 +47,7 @@ func ShowAccountPath3(id int32, view string) string {
 
 `
 
-		pathWithStringSliceParam = `
-// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
+		pathWithStringSliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath(slice_string []string) string {
 	encodedslice_string := make([]string, len(slice_string))
 	for i, v := range slice_string {
@@ -64,8 +59,7 @@ func ShowAccountPath(slice_string []string) string {
 
 `
 
-		pathWithInt32SliceParam = `
-// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
+		pathWithInt32SliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath(slice_int32 []int32) string {
 	encodedslice_int32 := make([]string, len(slice_int32))
 	for i, v := range slice_int32 {
@@ -77,8 +71,7 @@ func ShowAccountPath(slice_int32 []int32) string {
 
 `
 
-		pathWithInt64SliceParam = `
-// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
+		pathWithInt64SliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath(slice_int64 []int64) string {
 	encodedslice_int64 := make([]string, len(slice_int64))
 	for i, v := range slice_int64 {
@@ -90,8 +83,7 @@ func ShowAccountPath(slice_int64 []int64) string {
 
 `
 
-		pathWithUint32SliceParam = `
-// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
+		pathWithUint32SliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath(slice_uint32 []uint32) string {
 	encodedslice_uint32 := make([]string, len(slice_uint32))
 	for i, v := range slice_uint32 {
@@ -103,8 +95,7 @@ func ShowAccountPath(slice_uint32 []uint32) string {
 
 `
 
-		pathWithUint64SliceParam = `
-// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
+		pathWithUint64SliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath(slice_uint64 []uint64) string {
 	encodedslice_uint64 := make([]string, len(slice_uint64))
 	for i, v := range slice_uint64 {
@@ -116,8 +107,7 @@ func ShowAccountPath(slice_uint64 []uint64) string {
 
 `
 
-		pathWithFloat32SliceParam = `
-// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
+		pathWithFloat32SliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath(slice_float32 []float32) string {
 	encodedslice_float32 := make([]string, len(slice_float32))
 	for i, v := range slice_float32 {
@@ -129,8 +119,7 @@ func ShowAccountPath(slice_float32 []float32) string {
 
 `
 
-		pathWithFloat64SliceParam = `
-// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
+		pathWithFloat64SliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath(slice_float64 []float64) string {
 	encodedslice_float64 := make([]string, len(slice_float64))
 	for i, v := range slice_float64 {
@@ -142,8 +131,7 @@ func ShowAccountPath(slice_float64 []float64) string {
 
 `
 
-		pathWithBoolSliceParam = `
-// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
+		pathWithBoolSliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath(slice_bool []bool) string {
 	encodedslice_bool := make([]string, len(slice_bool))
 	for i, v := range slice_bool {
@@ -155,8 +143,7 @@ func ShowAccountPath(slice_bool []bool) string {
 
 `
 
-		pathWithInterfaceSliceParam = `
-// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
+		pathWithInterfaceSliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath(slice_interface []interface{}) string {
 	encodedslice_interface := make([]string, len(slice_interface))
 	for i, v := range slice_interface {

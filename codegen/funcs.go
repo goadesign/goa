@@ -167,6 +167,7 @@ func GoTypeRef(dt design.DataType) string {
 }
 
 // GoTypeName returns the Go type name for a data type.
+// todo: TBD add support for maps, objects and usertypes
 func GoTypeName(dt design.DataType) string {
 	switch actual := dt.(type) {
 	case design.Primitive:
@@ -179,6 +180,7 @@ func GoTypeName(dt design.DataType) string {
 }
 
 // GoNativeType returns the Go built-in type from which instances of provided datatype can be initialized.
+// todo: TBD add support for maps, objects and usertypes
 func GoNativeType(t design.DataType) string {
 	switch actual := t.(type) {
 	case design.Primitive:

@@ -9,9 +9,7 @@ import (
 	"goa.design/goa.v2/rest/design"
 )
 
-// note: conversion array to string path https://play.golang.org/p/0QHmyJeFhR
-
-const pathT = `{{range $i, $route := .Routes}}
+const pathT = `{{range $i, $route := .Routes -}}
 // {{$.EndpointName}}{{$.ServiceName}}Path{{if ne $i 0}}{{add $i 1}}{{end}} returns the URL path to the {{$.ServiceName}} service {{$.EndpointName}} HTTP endpoint.
 func {{$.EndpointName}}{{$.ServiceName}}Path{{if ne $i 0}}{{add $i 1}}{{end}}({{template "arguments" .Arguments}}) string {
 {{- if .Arguments}}
@@ -21,7 +19,8 @@ func {{$.EndpointName}}{{$.ServiceName}}Path{{if ne $i 0}}{{add $i 1}}{{end}}({{
 	return "{{ .Path }}"
 {{- end}}
 }
-{{end -}}
+
+{{end}}
 
 {{- define "arguments" -}}
 {{range $i, $arg := . -}}
@@ -52,8 +51,7 @@ func {{$.EndpointName}}{{$.ServiceName}}Path{{if ne $i 0}}{{add $i 1}}{{end}}({{
 
 	{{end}}
 {{- end}}
-{{- end}}
-`
+{{- end}}`
 
 type (
 	// pathData contains the data necessary to render the path template.
