@@ -45,16 +45,14 @@ func main() {
 	}
 
 	var (
-		output, ppkg string
-		gens, debug  bool
+		output      string
+		gens, debug bool
 	)
 	if len(os.Args) > 3 {
 		var (
 			fset     = flag.NewFlagSet("default", flag.ExitOnError)
 			o        = fset.String("o", "", "output `directory`")
-			out      = fset.String("plugin", "", "output `directory`")
-			p        = fset.String("p", "", "plugin Go `import path`")
-			plugin   = fset.String("out", ".", "plugin Go `import path`")
+			out      = fset.String("out", ".", "output `directory`")
 			s        = fset.Bool("s", false, "Generate scaffold (does not override existing files)")
 			scaffold = fset.Bool("scaffold", false, "Generate scaffold (does not override existing files)")
 		)
@@ -66,11 +64,6 @@ func main() {
 		output = *o
 		if output == "" {
 			output = *out
-		}
-
-		ppkg = *p
-		if ppkg == "" {
-			ppkg = *plugin
 		}
 
 		gens = *s
@@ -91,7 +84,7 @@ func main() {
 		defer tmp.Remove()
 	}
 
-	if err := tmp.WriteMain(gens, debug); err != nil {
+	if err := tmp.Write(gens, debug); err != nil {
 		fail(err)
 	}
 
@@ -127,8 +120,6 @@ should be edited by hand after the initial generation.
 Usage:
 
   goagen [server] [client] [openapi] PACKAGE [--out DIRECTORY] [--scaffold] [--debug]
-
-  goagen CMD [CMD...] PACKAGE --plugin PLUGIN [--out DIRECTORY] [--scaffold] [--debug]
 
   goagen version
 

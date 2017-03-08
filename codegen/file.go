@@ -19,8 +19,6 @@ import (
 type (
 	// SourceFile represents a single Go source file
 	SourceFile struct {
-		// Name of the source file
-		Name string
 		// Absolute path to file
 		Path string
 	}

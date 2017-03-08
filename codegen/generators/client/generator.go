@@ -1,11 +1,11 @@
 /*
-Package server generates the code for a server. This includes:
+Package client generates the code for a client. This includes:
 
     - A service package which defines the service interfaces
     - An endpoint package which defines endpoints that wrap the services methods.
     - transport packages for each of the transports defined in the design.
 */
-package server
+package client
 
 import (
 	"goa.design/goa.v2/codegen"
@@ -22,7 +22,7 @@ func Writers(d *design.RootExpr, r *rest.RootExpr) (ws []codegen.FileWriter) {
 		ws = append(ws, writers.EndpointsWriter(api, s))
 	}
 	if r != nil {
-		ws = append(ws, restcodegen.ServerWriters(r)...)
+		ws = append(ws, restcodegen.ClientWriters(r)...)
 	}
 	return
 }

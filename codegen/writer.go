@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"io"
+	"path/filepath"
 	"text/template"
 )
 
@@ -23,6 +24,17 @@ type (
 		Data interface{}
 	}
 )
+
+// Render renders the file writer to its output in dir.
+func Render(fw FileWriter, dir string) error {
+	f := &SourceFile{filepath.Join(dir, fw.OutputPath())}
+	for _, s := range fw.Sections() {
+		if err := s.Render(f); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // Render renders the section to the given writer.
 func (s *Section) Render(w io.Writer) error {
