@@ -34,18 +34,12 @@ func main() {
 	flag.Parse()
 
 	var (
-		ctx context.Context
-	)
-	{
-		ctx = context.Background()
-	}
-
-	var (
 		logger log.Logger
 	)
 	{
 		logger = log.NewLogfmtLogger(os.Stderr)
-		logger = log.NewContext(logger).With("listen", *addr).With("caller", log.DefaultCaller)
+		logger = log.With(logger, "listen", *addr)
+		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
 
 	var (
@@ -86,7 +80,6 @@ func main() {
 	)
 	{
 		createAccountHandler = httptransport.NewServer(
-			ctx,
 			endpoint.Endpoint(create(aep)),
 			kit.CreateAccountDecodeRequest(dec),
 			kit.CreateAccountEncodeResponse(enc),
@@ -94,7 +87,6 @@ func main() {
 			httptransport.ServerErrorEncoder(kit.CreateAccountEncodeError(enc, gl)),
 		)
 		listAccountHandler = httptransport.NewServer(
-			ctx,
 			endpoint.Endpoint(list(aep)),
 			kit.ListAccountDecodeRequest(dec),
 			kit.ListAccountEncodeResponse(enc),
@@ -102,7 +94,6 @@ func main() {
 			httptransport.ServerErrorEncoder(kit.ListAccountEncodeError(enc, gl)),
 		)
 		showAccountHandler = httptransport.NewServer(
-			ctx,
 			endpoint.Endpoint(show(aep)),
 			kit.ShowAccountDecodeRequest(dec),
 			kit.ShowAccountEncodeResponse(enc),
@@ -110,7 +101,6 @@ func main() {
 			httptransport.ServerErrorEncoder(kit.ShowAccountEncodeError(enc, gl)),
 		)
 		deleteAccountHandler = httptransport.NewServer(
-			ctx,
 			endpoint.Endpoint(delete_(aep)),
 			kit.DeleteAccountDecodeRequest(dec),
 			kit.DeleteAccountEncodeResponse(enc),

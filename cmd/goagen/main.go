@@ -110,12 +110,12 @@ func usage() {
 Learn more about goa at https://goa.design.
 
 The tool supports multiple subcommands that generate different outputs.
-The second argument is the Go import path to the service design package.
+The only argument is the Go import path to the service design package.
 
 The "--scaffold" flag tells goagen to also generate the scaffold for the service
 and/or the client depending on which command is being executed. The scaffold is
-code that is generated once as a way to get started quickly. The scaffold code
-should be edited by hand after the initial generation.
+code that is generated once as a way to get started quickly. It should be edited
+after the initial generation.
 
 Usage:
 
@@ -136,9 +136,6 @@ Commands:
   version
         Print version information (exclusive with other flags and commands).
 
-  CMD
-        Run plugin command.
-
 Args:
   PACKAGE
         Go import path to design package
@@ -149,9 +146,6 @@ Flags:
 
   -s, --scaffold
         generate scaffold (does not override existing files)
-
-  -p, --plugin PLUGIN
-        Run plugin implemented by package with import path PLUGIN
 
   --debug
         Print debug information (mainly intended for goa developers)

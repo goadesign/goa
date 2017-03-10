@@ -30,7 +30,13 @@ func main() {
 		err              error
 	)
 	{
-		pkg, err := build.Import(restDSL, ".", build.FindOnly)
+		pkg, err := build.Import(goaDSL, ".", build.FindOnly)
+		if err != nil {
+			fail("could not find %s package: %s", goaDSL, err)
+		}
+		goaPkg = pkg.Dir
+
+		pkg, err = build.Import(restDSL, ".", build.FindOnly)
 		if err != nil {
 			fail("could not find %s package: %s", restDSL, err)
 		}
@@ -38,12 +44,6 @@ func main() {
 		restAlias = filepath.Join(restPkg, aliasFile)
 		os.Remove(restAlias) // to avoid parsing them
 
-		pkg, err = build.Import(goaDSL, ".", build.FindOnly)
-		if err != nil {
-			fail("could not find %s package: %s", goaDSL, err)
-		}
-
-		restPkg = pkg.Dir
 		restFuncs, err = ParseFuncs(restPkg)
 		if err != nil {
 			fail("could not parse functions in %s: %s", restPkg, err)

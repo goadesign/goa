@@ -65,12 +65,15 @@ func (g *GenPackage) Write(gens, debug bool) error {
 	{
 		s = codegen.SourceFile{Path: filepath.Join(tmpDir, "main.go")}
 		imports := []*codegen.ImportSpec{
+			codegen.SimpleImport("flag"),
 			codegen.SimpleImport("fmt"),
 			codegen.SimpleImport("os"),
+			codegen.SimpleImport("path/filepath"),
 			codegen.SimpleImport("sort"),
 			codegen.SimpleImport("strings"),
 			codegen.SimpleImport("goa.design/goa.v2/codegen"),
 			codegen.SimpleImport("goa.design/goa.v2/design"),
+			codegen.SimpleImport("goa.design/goa.v2/pkg"),
 			codegen.NewImport("rest", "goa.design/goa.v2/rest/design"),
 			codegen.NewImport("_", g.DesignPath),
 		}
@@ -132,13 +135,13 @@ func (g *GenPackage) Remove() {
 // mainTmpl is the template for the generator main.
 const mainTmpl = `func main() {
 	var (
-		out     = flag.String("out", "", "")
+		out     = flag.String("output", "", "")
 		version = flag.String("version", "", "")
 	)
 	{
 		flag.Parse()
 		if *out == "" {
-			fmt.Fprintln(os.Stderr, "missing out flag")
+			fmt.Fprintln(os.Stderr, "missing output flag")
 			os.Exit(1)
 		}
 		if *version == "" {
@@ -156,7 +159,7 @@ const mainTmpl = `func main() {
 	{
 {{- range . }}
 		writers = append(writers, {{.}}.Writers(design.Root, rest.Root)...)
--}}
+{{ end -}}
 	}
 	outputs := make([]string, len(writers))
 	for i, w := range writers {

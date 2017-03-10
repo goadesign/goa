@@ -9,8 +9,3 @@ import (
 func ServerWriters(r *design.RootExpr) (ws []codegen.FileWriter) {
 	return
 }
-
-// ClientWriters returns the server HTTP transport writers.
-func ClientWriters(r *design.RootExpr) (ws []codegen.FileWriter) {
-	return
-}

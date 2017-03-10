@@ -11,18 +11,18 @@ import (
 	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/codegen/writers"
 	"goa.design/goa.v2/design"
-	restcodegen "goa.design/goa.v2/rest/codegen"
 	rest "goa.design/goa.v2/rest/design"
 )
 
 // Writers returns the server writers.
-func Writers(d *design.RootExpr, r *rest.RootExpr) (ws []codegen.FileWriter) {
+func Writers(d *design.RootExpr, r *rest.RootExpr) []codegen.FileWriter {
+	var ws []codegen.FileWriter
 	for _, s := range d.Services {
-		ws = append(ws, writers.ServiceWriter(api, s))
-		ws = append(ws, writers.EndpointsWriter(api, s))
+		ws = append(ws, writers.ServiceWriter(d.API, s))
+		ws = append(ws, writers.EndpointsWriter(d.API, s))
 	}
 	if r != nil {
-		ws = append(ws, restcodegen.ClientWriters(r)...)
+		// ws = append(ws, restcodegen.ClientWriters(r)...)
 	}
-	return
+	return ws
 }
