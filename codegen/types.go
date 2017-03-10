@@ -138,10 +138,14 @@ func GoNativeType(t design.DataType) string {
 		switch actual.Kind() {
 		case design.BooleanKind:
 			return "bool"
+		case design.IntKind:
+			return "int"
 		case design.Int32Kind:
 			return "int32"
 		case design.Int64Kind:
 			return "int64"
+		case design.UIntKind:
+			return "uint"
 		case design.UInt32Kind:
 			return "uint32"
 		case design.UInt64Kind:

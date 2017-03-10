@@ -59,11 +59,23 @@ func ShowAccountPath(sliceString []string) string {
 
 `
 
+		pathWithIntSliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
+func ShowAccountPath(sliceInt []int) string {
+	encodedSliceInt := make([]string, len(sliceInt))
+	for i, v := range sliceInt {
+		encodedSliceInt[i] = strconv.FormatInt(int64(v), 10)
+	}
+
+	return fmt.Sprintf("/account/test/%v", strings.Join(encodedSliceInt, ","))
+}
+
+`
+
 		pathWithInt32SliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath(sliceInt32 []int32) string {
 	encodedSliceInt32 := make([]string, len(sliceInt32))
 	for i, v := range sliceInt32 {
-		encodedSliceInt32[i] = strconv.FormatInt(v, 10)
+		encodedSliceInt32[i] = strconv.FormatInt(int64(v), 10)
 	}
 
 	return fmt.Sprintf("/account/test/%v", strings.Join(encodedSliceInt32, ","))
@@ -83,11 +95,23 @@ func ShowAccountPath(sliceInt64 []int64) string {
 
 `
 
+		pathWithUintSliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
+func ShowAccountPath(sliceUint []uint) string {
+	encodedSliceUint := make([]string, len(sliceUint))
+	for i, v := range sliceUint {
+		encodedSliceUint[i] = strconv.FormatUint(uint64(v), 10)
+	}
+
+	return fmt.Sprintf("/account/test/%v", strings.Join(encodedSliceUint, ","))
+}
+
+`
+
 		pathWithUint32SliceParam = `// ShowAccountPath returns the URL path to the Account service Show HTTP endpoint.
 func ShowAccountPath(sliceUint32 []uint32) string {
 	encodedSliceUint32 := make([]string, len(sliceUint32))
 	for i, v := range sliceUint32 {
-		encodedSliceUint32[i] = strconv.FormatUint(v, 10)
+		encodedSliceUint32[i] = strconv.FormatUint(uint64(v), 10)
 	}
 
 	return fmt.Sprintf("/account/test/%v", strings.Join(encodedSliceUint32, ","))
@@ -111,7 +135,7 @@ func ShowAccountPath(sliceUint64 []uint64) string {
 func ShowAccountPath(sliceFloat32 []float32) string {
 	encodedSliceFloat32 := make([]string, len(sliceFloat32))
 	for i, v := range sliceFloat32 {
-		encodedSliceFloat32[i] = strconv.FormatFloat(v, 'f', -1, 32)
+		encodedSliceFloat32[i] = strconv.FormatFloat(float64(v), 'f', -1, 32)
 	}
 
 	return fmt.Sprintf("/account/test/%v", strings.Join(encodedSliceFloat32, ","))
@@ -174,8 +198,10 @@ func ShowAccountPath(sliceInterface []interface{}) string {
 				"id":              {Type: goadesign.Int32},
 				"view":            {Type: goadesign.String},
 				"slice_string":    {Type: &goadesign.Array{ElemType: &goadesign.AttributeExpr{Type: goadesign.String}}},
+				"slice_int":     {Type: &goadesign.Array{ElemType: &goadesign.AttributeExpr{Type: goadesign.Int}}},
 				"slice_int32":     {Type: &goadesign.Array{ElemType: &goadesign.AttributeExpr{Type: goadesign.Int32}}},
 				"slice_int64":     {Type: &goadesign.Array{ElemType: &goadesign.AttributeExpr{Type: goadesign.Int64}}},
+				"slice_uint":    {Type: &goadesign.Array{ElemType: &goadesign.AttributeExpr{Type: goadesign.UInt}}},
 				"slice_uint32":    {Type: &goadesign.Array{ElemType: &goadesign.AttributeExpr{Type: goadesign.UInt32}}},
 				"slice_uint64":    {Type: &goadesign.Array{ElemType: &goadesign.AttributeExpr{Type: goadesign.UInt64}}},
 				"slice_float32":   {Type: &goadesign.Array{ElemType: &goadesign.AttributeExpr{Type: goadesign.Float32}}},
@@ -215,8 +241,10 @@ func ShowAccountPath(sliceInterface []interface{}) string {
 		"single-path-multiple-params":     {Action: action("/test/:id/view/:view"), Expected: pathWithMultipleParams},
 		"alternative-paths":               {Action: action("/test", "/test/:id", "/test/:id/view/:view"), Expected: pathWithAlternatives},
 		"path-with-string-slice-param":    {Action: action("/test/:slice_string"), Expected: pathWithStringSliceParam},
+		"path-with-int-slice-param":     {Action: action("/test/:slice_int"), Expected: pathWithIntSliceParam},
 		"path-with-int32-slice-param":     {Action: action("/test/:slice_int32"), Expected: pathWithInt32SliceParam},
 		"path-with-int64-slice-param":     {Action: action("/test/:slice_int64"), Expected: pathWithInt64SliceParam},
+		"path-with-uint-slice-param":    {Action: action("/test/:slice_uint"), Expected: pathWithUintSliceParam},
 		"path-with-uint32-slice-param":    {Action: action("/test/:slice_uint32"), Expected: pathWithUint32SliceParam},
 		"path-with-uint64-slice-param":    {Action: action("/test/:slice_uint64"), Expected: pathWithUint64SliceParam},
 		"path-with-float32-slice-param":   {Action: action("/test/:slice_float32"), Expected: pathWithFloat32SliceParam},
