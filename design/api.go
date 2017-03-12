@@ -21,8 +21,8 @@ type (
 		Version string
 		// Servers list the API hosts
 		Servers []*ServerExpr
-		// TermsOfAPI describes or links to the API terms of API
-		TermsOfAPI string
+		// TermsOfService describes or links to the service terms of API
+		TermsOfService string
 		// Contact provides the API users with contact information
 		Contact *ContactExpr
 		// License describes the API license
@@ -31,6 +31,8 @@ type (
 		Docs *DocsExpr
 		// Metadata is a list of key/value pairs
 		Metadata MetadataExpr
+		// Random generator used to build examples for the API types.
+		random *Random
 	}
 
 	// ServerExpr contains a single API host information.
@@ -80,6 +82,25 @@ type (
 
 // EvalName is the qualified name of the expression.
 func (a *APIExpr) EvalName() string { return "API " + a.Name }
+
+// Random returns the random generator associated with a. APIs with identical
+// names return generators that return the same sequence of pseudo random values.
+func (a *APIExpr) Random() *Random {
+	if a.random == nil {
+		a.random = NewRandom(a.Name)
+	}
+	return a.random
+}
+
+// Validate makes sure there is at least one Server expression.
+func (a *APIExpr) Validate() error {
+	if len(a.Servers) == 0 {
+		verr := new(eval.ValidationErrors)
+		verr.Add(a, "missing Server expression")
+		return verr
+	}
+	return nil
+}
 
 // EvalName is the qualified name of the expression.
 func (s *ServerExpr) EvalName() string { return "Server " + s.URL }

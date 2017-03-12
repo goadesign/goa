@@ -130,16 +130,6 @@ var _ = API("rest_dsl_spec", func() {
 // Service declarations in one design.
 var _ = Service("service", func() {
 
-	// Server describes a single service host and may appear more than once.
-	// URL must include the protocol and hostname and may include a port.
-	// The hostname and port may use parameters to define possible
-	// alternative values.
-	// API Server definitions are overridden by the Service Server
-	// definitions when present.
-	Server("https://service.goa.design:443", func() {
-		Description("Optional description")
-	})
-
 	// Error defines a common error response to all the service endpoints.
 	// The DSL is identical as when used in an API expression.
 	Error("service_error")

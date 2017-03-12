@@ -98,6 +98,9 @@ type (
 		Resources []*ResourceExpr
 		// HTTPErrors lists the error HTTP responses.
 		HTTPErrors []*HTTPErrorExpr
+		// Metadata is a set of key/value pairs with semantic that is
+		// specific to each generator.
+		Metadata design.MetadataExpr
 		// Params defines common request parameters to all the service
 		// HTTP endpoints.
 		params *design.AttributeExpr

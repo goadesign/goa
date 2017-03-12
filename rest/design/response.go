@@ -95,6 +95,18 @@ type (
 	}
 )
 
+// MediaType returns the media type describing the response body if any, nil
+// otherwise.
+func (r *HTTPResponseExpr) MediaType() *design.MediaTypeExpr {
+	if r.Body == nil {
+		return nil
+	}
+	if mt, ok := r.Body.Type.(*design.MediaTypeExpr); ok {
+		return mt
+	}
+	return nil
+}
+
 // EvalName returns the generic definition name used in error messages.
 func (r *HTTPResponseExpr) EvalName() string {
 	var suffix string
