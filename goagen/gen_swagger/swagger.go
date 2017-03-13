@@ -949,6 +949,7 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 		Extensions:   extensionsFromDefinition(route.Metadata),
 	}
 
+	computeProduces(operation, s, action)
 	applySecurity(operation, action.Security)
 
 	key := design.WildcardRegex.ReplaceAllStringFunc(
@@ -994,6 +995,38 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	}
 	p.Extensions = extensionsFromDefinition(route.Parent.Metadata)
 	return nil
+}
+
+func computeProduces(operation *Operation, s *Swagger, action *design.ActionDefinition) {
+	produces := make(map[string]bool)
+	action.IterateResponses(func(resp *design.ResponseDefinition) error {
+		if resp.MediaType != "" {
+			produces[resp.MediaType] = true
+		}
+		return nil
+	})
+	subset := true
+	for p := range produces {
+		found := false
+		for _, p2 := range s.Produces {
+			if p == p2 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			subset = false
+			break
+		}
+	}
+	if !subset {
+		operation.Produces = make([]string, len(produces))
+		i := 0
+		for p := range produces {
+			operation.Produces[i] = p
+			i++
+		}
+	}
 }
 
 func applySecurity(operation *Operation, security *design.SecurityDefinition) {
