@@ -25,7 +25,7 @@ import (
 //        Title("title")                // Title used in documentation
 //        Description("description")    // Description used in documentation
 //        Version("2.0")                // Version of API
-//        TermsOfAPI("terms")           // Terms of use
+//        TermsOfService("terms")       // Terms of use
 //        Contact(func() {              // Contact info
 //            Name("contact name")
 //            Email("contact email")
@@ -253,8 +253,8 @@ func Email(email string) {
 //            Description("Add docs")
 //            URL("http//adder.goa.design/docs/actions/add")
 //        })
-//        Request(Operands)
-//        Response(Sum)
+//        Payload(Operands)
+//        Result(Sum)
 //        Error(ErrInvalidOperands)
 //    })
 //
@@ -289,7 +289,7 @@ func Enum(vals ...interface{}) {
 //
 //        // Endpoint which uses the default type for its response.
 //        Endpoint("divide", func() {
-//            Request(DivideRequest)
+//            Payload(DivideRequest)
 //            Error("div_by_zero", DivByZero, "Division by zero")
 //        })
 //    })
@@ -559,29 +559,24 @@ func Required(names ...string) {
 //
 // Result may appear in a Endpoint expression.
 //
-// Result accepts a type as first argument. This argument is optional if the type
-// is described using a DSL instead (see below).
+// Result accepts a type as first argument. This argument is optional in which
+// case the type must be described inline (see below).
 //
-// Result accepts an optional list of views as second argument. This list defines
-// the views of the media type given as first argument that may be used by this
-// endpoint to render the result.
-//
-// Finally Result accepts an optional DSL function as last argument. This
-// function may define the result type inline using Attribute or may further
-// specialize the type passed as first argument e.g. by providing additional
-// validations (e.g. list of required attributes).
+// Result accepts an optional DSL function as second argument. This function may
+// define the result type inline using Attribute or may further specialize the
+// type passed as first argument e.g. by providing additional validations (e.g.
+// list of required attributes). The DSL may also specify a view when the first
+// argument is a media type corresponding to the view rendered by this endpoint.
+// Note that specifying a view when the result type is a media type is optional
+// and only useful in cases the endpoint renders a single view.
 //
 // The valid syntax for Result is thus:
 //
-//    Result(type)
-//
-//    Result(mediaType, view1, view2, ...)
+//    Result(dsltype)
 //
 //    Result(func())
 //
-//    Result(type, func())
-//
-//    Result(mediaType, view1, view2, ..., func())
+//    Result(dsltype, func())
 //
 // Examples:
 //
@@ -603,27 +598,16 @@ func Required(names ...string) {
 //        Result(Sum)
 //    })
 //
-//    // Specify media type view, assumes Sum is a media type.
-//    Endpoint("add", func() {
-//        Result(Sum, "default")
-//    })
-//
-//    // Specify required attributes on user type
+//    // Specify view and required attributes on media type
 //    Endpoint("add", func() {
 //        Result(Sum, func() {
+//            View("default")
 //            Required("value")
 //        })
 //    })
 //
-//    // Specify required attributes and view on media type
-//    Endpoint("add", func() {
-//        Result(Sum, "default", func() {
-//            Required("value")
-//        })
-//    })
-//
-func Result(val interface{}, args ...interface{}) {
-	goadsl.Result(val, args...)
+func Result(val interface{}, dsls ...func()) {
+	goadsl.Result(val, dsls...)
 }
 
 // Server defines an API host.
@@ -668,9 +652,9 @@ func Service(name string, dsl func()) *design.ServiceExpr {
 	return goadsl.Service(name, dsl)
 }
 
-// TermsOfAPI describes the API terms of services or links to them.
-func TermsOfAPI(terms string) {
-	goadsl.TermsOfAPI(terms)
+// TermsOfService describes the API terms of services or links to them.
+func TermsOfService(terms string) {
+	goadsl.TermsOfService(terms)
 }
 
 // Title sets the API title used by the generated documentation and code comments.
