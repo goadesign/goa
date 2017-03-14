@@ -13,7 +13,8 @@ install:
   - set PATH=%PATH%;c:\MinGW\bin;%GOPATH%\bin
 
 build_script:
-  - make
+  - make depend
+  - make test
 
 test: off
 

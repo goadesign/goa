@@ -2,14 +2,13 @@ package main
 
 import (
 	"fmt"
+	"go/build"
 	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"text/template"
-
-	"goa.design/goa.v2/codegen"
 )
 
 const (
@@ -31,17 +30,19 @@ func main() {
 		err              error
 	)
 	{
-		restPkg, err = codegen.PackageSourcePath(restDSL)
-		if err != nil {
-			fail("could not find %s package: %s", restDSL, err)
-		}
-		restAlias = filepath.Join(restPkg, aliasFile)
-		os.Remove(restAlias) // to avoid parsing them
-
-		goaPkg, err = codegen.PackageSourcePath(goaDSL)
+		pkg, err := build.Import(goaDSL, ".", build.FindOnly)
 		if err != nil {
 			fail("could not find %s package: %s", goaDSL, err)
 		}
+		goaPkg = pkg.Dir
+
+		pkg, err = build.Import(restDSL, ".", build.FindOnly)
+		if err != nil {
+			fail("could not find %s package: %s", restDSL, err)
+		}
+		restPkg = pkg.Dir
+		restAlias = filepath.Join(restPkg, aliasFile)
+		os.Remove(restAlias) // to avoid parsing them
 
 		restFuncs, err = ParseFuncs(restPkg)
 		if err != nil {
