@@ -559,40 +559,71 @@ func Required(names ...string) {
 //
 // Result may appear in a Endpoint expression.
 //
-// Result takes one or two arguments. The first argument is either a type or a
-// DSL function. If the first argument is a type then an optional DSL may be
-// passed as second argument that further specializes the type by providing
-// additional validations (e.g. list of required attributes)
+// Result accepts a type as first argument. This argument is optional if the type
+// is described using a DSL instead (see below).
+//
+// Result accepts an optional list of views as second argument. This list defines
+// the views of the media type given as first argument that may be used by this
+// endpoint to render the result.
+//
+// Finally Result accepts an optional DSL function as last argument. This
+// function may define the result type inline using Attribute or may further
+// specialize the type passed as first argument e.g. by providing additional
+// validations (e.g. list of required attributes).
+//
+// The valid syntax for Result is thus:
+//
+//    Result(type)
+//
+//    Result(mediaType, view1, view2, ...)
+//
+//    Result(func())
+//
+//    Result(type, func())
+//
+//    Result(mediaType, view1, view2, ..., func())
 //
 // Examples:
 //
-// Endpoint("add", func() {
-//     // Define result using primitive type
-//     Result(Int32)
-// })
+//    // Define result using primitive type
+//    Endpoint("add", func() {
+//        Result(Int32)
+//    })
 //
-// Endpoint("add", func() {
-//     // Define result using object defined inline
-//     Result(func() {
-//         Attribute("value", Int32, "Resulting sum")
-//         Required("value")
-//     })
-// })
+//    // Define result using object defined inline
+//    Endpoint("add", func() {
+//        Result(func() {
+//            Attribute("value", Int32, "Resulting sum")
+//            Required("value")
+//        })
+//    })
 //
-// Endpoint("add", func() {
-//     // Define result type using user type
-//     Result(Sum) // this works too: Result("Sum")
-// })
+//    // Define result type using user type
+//    Endpoint("add", func() {
+//        Result(Sum)
+//    })
 //
-// Endpoint("add", func() {
-//     // Specify required attributes on user type
-//     Result(Sum, func() {
-//         Required("value")
-//     })
-// })
+//    // Specify media type view, assumes Sum is a media type.
+//    Endpoint("add", func() {
+//        Result(Sum, "default")
+//    })
 //
-func Result(val interface{}, dsls ...func()) {
-	goadsl.Result(val, dsls...)
+//    // Specify required attributes on user type
+//    Endpoint("add", func() {
+//        Result(Sum, func() {
+//            Required("value")
+//        })
+//    })
+//
+//    // Specify required attributes and view on media type
+//    Endpoint("add", func() {
+//        Result(Sum, "default", func() {
+//            Required("value")
+//        })
+//    })
+//
+func Result(val interface{}, args ...interface{}) {
+	goadsl.Result(val, args...)
 }
 
 // Server defines an API host.

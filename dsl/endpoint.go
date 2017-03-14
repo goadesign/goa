@@ -18,8 +18,8 @@ import (
 //            Description("Add docs")
 //            URL("http//adder.goa.design/docs/actions/add")
 //        })
-//        Request(Operands)
-//        Response(Sum)
+//        Payload(Operands)
+//        Result(Sum)
 //        Error(ErrInvalidOperands)
 //    })
 //

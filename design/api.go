@@ -1,7 +1,9 @@
 package design
 
 import (
+	"net/url"
 	"regexp"
+	"sort"
 
 	"goa.design/goa.v2/eval"
 )
@@ -80,8 +82,26 @@ type (
 	}
 )
 
-// EvalName is the qualified name of the expression.
-func (a *APIExpr) EvalName() string { return "API " + a.Name }
+// Schemes returns the list of HTTP methods used by all the API servers.
+func (a *APIExpr) Schemes() []string {
+	schemes := make(map[string]bool)
+	for _, s := range a.Servers {
+		if u, err := url.Parse(s.URL); err != nil {
+			schemes[u.Scheme] = true
+		}
+	}
+	if len(schemes) == 0 {
+		return []string{"http"}
+	}
+	ss := make([]string, len(schemes))
+	i := 0
+	for s := range schemes {
+		ss[i] = s
+		i++
+	}
+	sort.Strings(ss)
+	return ss
+}
 
 // Random returns the random generator associated with a. APIs with identical
 // names return generators that return the same sequence of pseudo random values.
@@ -91,6 +111,9 @@ func (a *APIExpr) Random() *Random {
 	}
 	return a.random
 }
+
+// EvalName is the qualified name of the expression.
+func (a *APIExpr) EvalName() string { return "API " + a.Name }
 
 // Validate makes sure there is at least one Server expression.
 func (a *APIExpr) Validate() error {

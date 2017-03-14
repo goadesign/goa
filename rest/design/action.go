@@ -47,6 +47,8 @@ type (
 		Path string
 		// Action is the action this route applies to.
 		Action *ActionExpr
+		// Metadata is an arbitrary set of key/value pairs, see dsl.Metadata
+		Metadata design.MetadataExpr
 	}
 
 	// ActionWalker is the type of functions given to WalkActions.

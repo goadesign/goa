@@ -2,27 +2,35 @@ package v2
 
 // New creates a OpenAPI spec from a REST root expression.
 import (
-	"encoding/json"
+	js "encoding/json"
 	"fmt"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
 
+	"goa.design/goa.v2/codegen/writers/openapi/json"
 	"goa.design/goa.v2/design"
 	rest "goa.design/goa.v2/rest/design"
 )
 
 // New returns the OpenAPI v2 specification for the given API.
-func New(api *design.APIExpr, r *rest.RootExpr) (*OpenAPI, error) {
-	if r == nil {
+func New(root *rest.RootExpr) (*OpenAPI, error) {
+	if root == nil {
 		return nil, nil
 	}
-	tags := tagsFromExpr(r.Metadata)
-	basePath := r.BasePath
-	if hasAbsoluteRoutes(r) {
+	tags := tagsFromExpr(root.Metadata)
+	u, err := url.Parse(root.Design.API.Servers[0].URL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse server URL: %s", err)
+	}
+	host := u.Host
+
+	basePath := root.Path
+	if hasAbsoluteRoutes(root) {
 		basePath = ""
 	}
-	params, err := paramsFromExpr(r.Params(), basePath)
+	params, err := paramsFromExpr(root.Params(), basePath)
 	if err != nil {
 		return nil, err
 	}
@@ -33,68 +41,55 @@ func New(api *design.APIExpr, r *rest.RootExpr) (*OpenAPI, error) {
 			paramMap[p.Name] = p
 		}
 	}
-	var consumes []string
-	for _, c := range api.Consumes {
-		consumes = append(consumes, c.MIMETypes...)
-	}
-	var produces []string
-	for _, p := range api.Produces {
-		produces = append(produces, p.MIMETypes...)
-	}
 	s := &OpenAPI{
 		Swagger: "2.0",
 		Info: &Info{
-			Title:          api.Title,
-			Description:    api.Description,
-			TermsOfService: api.TermsOfService,
-			Contact:        api.Contact,
-			License:        api.License,
-			Version:        api.Version,
-			Extensions:     extensionsFromExpr(r.Metadata),
+			Title:          root.Design.API.Title,
+			Description:    root.Design.API.Description,
+			TermsOfService: root.Design.API.TermsOfService,
+			Contact:        root.Design.API.Contact,
+			License:        root.Design.API.License,
+			Version:        root.Design.API.Version,
+			Extensions:     extensionsFromExpr(root.Metadata),
 		},
-		Host:         api.Host,
+		Host:         host,
 		BasePath:     basePath,
 		Paths:        make(map[string]interface{}),
-		Consumes:     consumes,
-		Produces:     produces,
+		Consumes:     root.Consumes,
+		Produces:     root.Produces,
 		Parameters:   paramMap,
 		Tags:         tags,
-		ExternalDocs: docsFromExpr(api.Docs),
+		ExternalDocs: docsFromExpr(root.Design.API.Docs),
 	}
 
-	for _, he := range r.HTTPErrors {
-		res, err := responseSpecFromExpr(s, r, he.Response)
+	for _, he := range root.HTTPErrors {
+		res, err := responseSpecFromExpr(s, root, he.Response)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if s.Responses == nil {
 			s.Responses = make(map[string]*Response)
 		}
-		s.Responses[r.Name] = res
+		s.Responses[he.Name] = res
 	}
-	if err != nil {
-		return nil, err
-	}
-	for _, res := range r.Resources {
+
+	for _, res := range root.Resources {
 		for k, v := range extensionsFromExpr(res.Metadata) {
 			s.Paths[k] = v
 		}
 		for _, fs := range res.FileServers {
-			if !mustGenerate(fs.Metadata) {
-				return nil
+			if mustGenerate(fs.Metadata) {
+				if err := buildPathFromFileServer(s, root, fs); err != nil {
+					return nil, err
+				}
 			}
-			return buildPathFromFileServer(s, api, fs)
-		}
-		if err != nil {
-			return err
-		}
-		for _, a := range res.Actions {
-			if !mustGenerate(a.Metadata) {
-				return nil
-			}
-			for _, route := range a.Routes {
-				if err := buildPathFromExpr(s, api, route, basePath); err != nil {
-					return err
+			for _, a := range res.Actions {
+				if mustGenerate(a.Metadata) {
+					for _, route := range a.Routes {
+						if err := buildPathFromExpr(s, root, route, basePath); err != nil {
+							return nil, err
+						}
+					}
 				}
 			}
 		}
@@ -102,9 +97,9 @@ func New(api *design.APIExpr, r *rest.RootExpr) (*OpenAPI, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(genschema.Definitions) > 0 {
-		s.Definitions = make(map[string]*genschema.JSONSchema)
-		for n, d := range genschema.Definitions {
+	if len(json.Definitions) > 0 {
+		s.Definitions = make(map[string]*json.Schema)
+		for n, d := range json.Definitions {
 			// sad but swagger doesn't support these
 			d.Media = nil
 			d.Links = nil
@@ -128,9 +123,9 @@ func mustGenerate(meta design.MetadataExpr) bool {
 // hasAbsoluteRoutes returns true if any action exposed by the API uses an absolute route of if the
 // API has file servers. This is needed as OpenAPI does not support exceptions to the base path so
 // if the API has any absolute route the base path must be "/" and all routes must be absolutes.
-func hasAbsoluteRoutes(api *design.APIExpr) bool {
+func hasAbsoluteRoutes(root *rest.RootExpr) bool {
 	hasAbsoluteRoutes := false
-	for _, res := range api.Resources {
+	for _, res := range root.Resources {
 		for _, fs := range res.FileServers {
 			if !mustGenerate(fs.Metadata) {
 				continue
@@ -242,7 +237,7 @@ func extensionsFromExpr(mdata design.MetadataExpr) map[string]interface{} {
 		}
 		val := value[0]
 		ival := interface{}(val)
-		if err := json.Unmarshal([]byte(val), &ival); err != nil {
+		if err := js.Unmarshal([]byte(val), &ival); err != nil {
 			extensions[chunks[2]] = val
 			continue
 		}
@@ -258,14 +253,14 @@ func paramsFromExpr(params *design.AttributeExpr, path string) ([]*Parameter, er
 	if params == nil {
 		return nil, nil
 	}
-	obj := params.Type.ToObject()
+	obj := design.AsObject(params.Type)
 	if obj == nil {
 		return nil, fmt.Errorf("invalid parameters definition, not an object")
 	}
 	res := make([]*Parameter, len(obj))
 	i := 0
-	wildcards := design.ExtractWildcards(path)
-	obj.IterateAttributes(func(n string, at *design.AttributeExpr) error {
+	wildcards := rest.ExtractWildcards(path)
+	obj.WalkAttributes(func(n string, at *design.AttributeExpr) error {
 		in := "query"
 		required := params.IsRequired(n)
 		for _, w := range wildcards {
@@ -285,7 +280,7 @@ func paramsFromExpr(params *design.AttributeExpr, path string) ([]*Parameter, er
 
 func paramsFromHeaders(action *rest.ActionExpr) []*Parameter {
 	params := []*Parameter{}
-	action.IterateHeaders(func(name string, required bool, header *design.AttributeExpr) error {
+	action.WalkHeaders(func(name string, required bool, header *design.AttributeExpr) error {
 		p := paramFor(header, name, "header", required)
 		params = append(params, p)
 		return nil
@@ -302,8 +297,8 @@ func paramFor(at *design.AttributeExpr, name, in string, required bool) *Paramet
 		Required:    required,
 		Type:        at.Type.Name(),
 	}
-	if at.Type.IsArray() {
-		p.Items = itemsFromExpr(at.Type.ToArray().ElemType)
+	if design.IsArray(at.Type) {
+		p.Items = itemsFromExpr(design.AsArray(at.Type).ElemType)
 		p.CollectionFormat = "multi"
 	}
 	p.Extensions = extensionsFromExpr(at.Metadata)
@@ -350,22 +345,22 @@ func toString(val interface{}) string {
 func itemsFromExpr(at *design.AttributeExpr) *Items {
 	items := &Items{Type: at.Type.Name()}
 	initValidations(at, items)
-	if at.Type.IsArray() {
-		items.Items = itemsFromExpr(at.Type.ToArray().ElemType)
+	if design.IsArray(at.Type) {
+		items.Items = itemsFromExpr(design.AsArray(at.Type).ElemType)
 	}
 	return items
 }
 
-func responseSpecFromExpr(s *OpenAPI, api *design.APIExpr, r *rest.HTTPResponseExpr) (*Response, error) {
-	var schema *genschema.JSONSchema
-	if r.MediaType != "" {
-		if mt, ok := api.MediaTypes[design.CanonicalIdentifier(r.MediaType)]; ok {
-			view := r.ViewName
-			if view == "" {
-				view = design.DefaultView
+func responseSpecFromExpr(s *OpenAPI, root *rest.RootExpr, r *rest.HTTPResponseExpr) (*Response, error) {
+	var schema *json.Schema
+	if r.Body != nil {
+		if mt, ok := r.Body.Type.(*design.MediaTypeExpr); ok {
+			view := design.DefaultView
+			if v, ok := r.Body.Metadata["view"]; ok {
+				view = v[0]
 			}
-			schema = genschema.NewJSONSchema()
-			schema.Ref = genschema.MediaTypeRef(api, mt, view)
+			schema = json.NewSchema()
+			schema.Ref = json.MediaTypeRef(root.Design.API, mt, view)
 		}
 	}
 	headers, err := headersFromExpr(r.Headers)
@@ -380,40 +375,16 @@ func responseSpecFromExpr(s *OpenAPI, api *design.APIExpr, r *rest.HTTPResponseE
 	}, nil
 }
 
-func responseFromExpr(s *OpenAPI, api *design.APIExpr, r *rest.HTTPResponseExpr) (*Response, error) {
-	var (
-		response *Response
-		err      error
-	)
-	response, err = responseSpecFromExpr(s, api, r)
-	if err != nil {
-		return nil, err
-	}
-	if r.Standard {
-		if s.Responses == nil {
-			s.Responses = make(map[string]*Response)
-		}
-		if _, ok := s.Responses[r.Name]; !ok {
-			sp, err := responseSpecFromExpr(s, api, r)
-			if err != nil {
-				return nil, err
-			}
-			s.Responses[r.Name] = sp
-		}
-	}
-	return response, nil
-}
-
 func headersFromExpr(headers *design.AttributeExpr) (map[string]*Header, error) {
 	if headers == nil {
 		return nil, nil
 	}
-	obj := headers.Type.ToObject()
+	obj := design.AsObject(headers.Type)
 	if obj == nil {
 		return nil, fmt.Errorf("invalid headers definition, not an object")
 	}
 	res := make(map[string]*Header)
-	obj.IterateAttributes(func(n string, at *design.AttributeExpr) error {
+	obj.WalkAttributes(func(n string, at *design.AttributeExpr) error {
 		header := &Header{
 			Default:     at.DefaultValue,
 			Description: at.Description,
@@ -426,8 +397,8 @@ func headersFromExpr(headers *design.AttributeExpr) (map[string]*Header, error) 
 	return res, nil
 }
 
-func buildPathFromFileServer(s *OpenAPI, api *design.APIAPIDefinition, fs *design.FileServerDefinition) error {
-	wcs := design.ExtractWildcards(fs.RequestPath)
+func buildPathFromFileServer(s *OpenAPI, root *rest.RootExpr, fs *rest.FileServerExpr) error {
+	wcs := rest.ExtractWildcards(fs.RequestPath)
 	var param []*Parameter
 	if len(wcs) > 0 {
 		param = []*Parameter{{
@@ -442,16 +413,16 @@ func buildPathFromFileServer(s *OpenAPI, api *design.APIAPIDefinition, fs *desig
 	responses := map[string]*Response{
 		"200": {
 			Description: "File downloaded",
-			Schema:      &genschema.JSONSchema{Type: genschema.JSONFile},
+			Schema:      &json.Schema{Type: json.File},
 		},
 	}
 	if len(wcs) > 0 {
-		schema := genschema.TypeSchema(api, design.ErrorMedia)
+		schema := json.TypeSchema(root.Design.API, design.ErrorMedia)
 		responses["404"] = &Response{Description: "File not found", Schema: schema}
 	}
 
-	operationID := fmt.Sprintf("%s#%s", fs.Parent.Name, fs.RequestPath)
-	schemes := api.Schemes
+	operationID := fmt.Sprintf("%s#%s", fs.Resource.Name, fs.RequestPath)
+	schemes := root.Design.API.Schemes()
 
 	operation := &Operation{
 		Description:  fs.Description,
@@ -463,9 +434,7 @@ func buildPathFromFileServer(s *OpenAPI, api *design.APIAPIDefinition, fs *desig
 		Schemes:      schemes,
 	}
 
-	applySecurity(operation, fs.Security)
-
-	key := design.WildcardRegex.ReplaceAllStringFunc(
+	key := rest.WildcardRegex.ReplaceAllStringFunc(
 		fs.RequestPath,
 		func(w string) string {
 			return fmt.Sprintf("/{%s}", w[2:])
@@ -487,13 +456,13 @@ func buildPathFromFileServer(s *OpenAPI, api *design.APIAPIDefinition, fs *desig
 	return nil
 }
 
-func buildPathFromExpr(s *OpenAPI, api *design.APIExpr, route *design.RouteDefinition, basePath string) error {
-	action := route.Parent
+func buildPathFromExpr(s *OpenAPI, root *rest.RootExpr, route *rest.RouteExpr, basePath string) error {
+	action := route.Action
 
-	tagNames := tagNamesFromExpr(action.Parent.Metadata, action.Metadata)
+	tagNames := tagNamesFromExpr(action.Resource.Metadata, action.Metadata)
 	if len(tagNames) == 0 {
 		// By default tag with resource name
-		tagNames = []string{route.Parent.Parent.Name}
+		tagNames = []string{route.Action.Resource.Name}
 	}
 	params, err := paramsFromExpr(action.AllParams(), route.FullPath())
 	if err != nil {
@@ -504,26 +473,26 @@ func buildPathFromExpr(s *OpenAPI, api *design.APIExpr, route *design.RouteDefin
 
 	responses := make(map[string]*Response, len(action.Responses))
 	for _, r := range action.Responses {
-		resp, err := responseFromExpr(s, api, r)
+		resp, err := responseSpecFromExpr(s, root, r)
 		if err != nil {
 			return err
 		}
-		responses[strconv.Itoa(r.Status)] = resp
+		responses[strconv.Itoa(r.StatusCode)] = resp
 	}
 
 	if action.Payload != nil {
-		payloadSchema := genschema.TypeSchema(api, action.Payload)
+		payloadSchema := json.TypeSchema(root.Design.API, action.Payload)
 		pp := &Parameter{
 			Name:        "payload",
 			In:          "body",
-			Description: action.Payload.Description,
-			Required:    !action.PayloadOptional,
+			Description: action.Payload.Attribute().Description,
+			Required:    action.Payload != nil,
 			Schema:      payloadSchema,
 		}
 		params = append(params, pp)
 	}
 
-	operationID := fmt.Sprintf("%s#%s", action.Parent.Name, action.Name)
+	operationID := fmt.Sprintf("%s#%s", action.Resource.Name, action.Name)
 	index := 0
 	for i, rt := range action.Routes {
 		if rt == route {
@@ -535,15 +504,15 @@ func buildPathFromExpr(s *OpenAPI, api *design.APIExpr, route *design.RouteDefin
 		operationID = fmt.Sprintf("%s#%d", operationID, index)
 	}
 
-	schemes := action.Schemes
+	schemes := action.Resource.Schemes()
 	if len(schemes) == 0 {
-		schemes = api.Schemes
+		schemes = root.Design.API.Schemes()
 	}
 
 	operation := &Operation{
 		Tags:         tagNames,
 		Description:  action.Description,
-		Summary:      summaryFromExpr(action.Name+" "+action.Parent.Name, action.Metadata),
+		Summary:      summaryFromExpr(action.Name+" "+action.Resource.Name, action.Metadata),
 		ExternalDocs: docsFromExpr(action.Docs),
 		OperationID:  operationID,
 		Parameters:   params,
@@ -553,9 +522,7 @@ func buildPathFromExpr(s *OpenAPI, api *design.APIExpr, route *design.RouteDefin
 		Extensions:   extensionsFromExpr(route.Metadata),
 	}
 
-	applySecurity(operation, action.Security)
-
-	key := design.WildcardRegex.ReplaceAllStringFunc(
+	key := rest.WildcardRegex.ReplaceAllStringFunc(
 		route.FullPath(),
 		func(w string) string {
 			return fmt.Sprintf("/{%s}", w[2:])
@@ -564,7 +531,7 @@ func buildPathFromExpr(s *OpenAPI, api *design.APIExpr, route *design.RouteDefin
 	if key == "" {
 		key = "/"
 	}
-	bp := design.WildcardRegex.ReplaceAllStringFunc(
+	bp := rest.WildcardRegex.ReplaceAllStringFunc(
 		basePath,
 		func(w string) string {
 			return fmt.Sprintf("/{%s}", w[2:])
@@ -580,7 +547,7 @@ func buildPathFromExpr(s *OpenAPI, api *design.APIExpr, route *design.RouteDefin
 		s.Paths[key] = path
 	}
 	p := path.(*Path)
-	switch route.Verb {
+	switch route.Method {
 	case "GET":
 		p.Get = operation
 	case "PUT":
@@ -596,25 +563,8 @@ func buildPathFromExpr(s *OpenAPI, api *design.APIExpr, route *design.RouteDefin
 	case "PATCH":
 		p.Patch = operation
 	}
-	p.Extensions = extensionsFromExpr(route.Parent.Metadata)
+	p.Extensions = extensionsFromExpr(route.Action.Metadata)
 	return nil
-}
-
-func applySecurity(operation *Operation, security *design.SecurityDefinition) {
-	if security != nil && security.Scheme.Kind != design.NoSecurityKind {
-		if security.Scheme.Kind == design.JWTSecurityKind && len(security.Scopes) > 0 {
-			if operation.Description != "" {
-				operation.Description += "\n\n"
-			}
-			operation.Description += fmt.Sprintf("Required security scopes:\n%s", scopesList(security.Scopes))
-		}
-		scopes := security.Scopes
-		if scopes == nil {
-			scopes = make([]string, 0)
-		}
-		sec := []map[string][]string{{security.Scheme.SchemeName: scopes}}
-		operation.Security = sec
-	}
 }
 
 func scopesList(scopes []string) string {
@@ -627,7 +577,7 @@ func scopesList(scopes []string) string {
 	return strings.Join(lines, "\n")
 }
 
-func docsFromExpr(docs *design.DocsDefinition) *ExternalDocs {
+func docsFromExpr(docs *design.DocsExpr) *ExternalDocs {
 	if docs == nil {
 		return nil
 	}
@@ -734,7 +684,7 @@ func initValidations(attr *design.AttributeExpr, def interface{}) {
 		return
 	}
 	initEnumValidation(def, val.Values)
-	initFormatValidation(def, val.Format)
+	initFormatValidation(def, string(val.Format))
 	initPatternValidation(def, val.Pattern)
 	if val.Minimum != nil {
 		initMinimumValidation(def, val.Minimum)
@@ -743,9 +693,9 @@ func initValidations(attr *design.AttributeExpr, def interface{}) {
 		initMaximumValidation(def, val.Maximum)
 	}
 	if val.MinLength != nil {
-		initMinLengthValidation(def, attr.Type.IsArray(), val.MinLength)
+		initMinLengthValidation(def, design.IsArray(attr.Type), val.MinLength)
 	}
 	if val.MaxLength != nil {
-		initMaxLengthValidation(def, attr.Type.IsArray(), val.MaxLength)
+		initMaxLengthValidation(def, design.IsArray(attr.Type), val.MaxLength)
 	}
 }

@@ -21,8 +21,10 @@ import (
 // response body shape.
 //
 // If the response type is a media type then the media type identifier is
-// used to set the value of the "Content-Type" HTTP header in the response. In
-// other words given the following type:
+// used to set the value of the "Content-Type" HTTP header in the response. Also
+// in this case Response accepts an optional list of views corresponding to the
+// media type views used by the response. Specifying no view has the same effect
+// as specifying all views. In other words given the following type:
 //
 //     var AccountMedia = MediaType("application/vnd.goa.account", func() {
 //         Attributes(func() {
@@ -31,6 +33,9 @@ import (
 //         })
 //         View("default", func() {
 //             Attribute("href")
+//             Attribute("name")
+//         })
+//         View("terse", func() {
 //             Attribute("name")
 //         })
 //     })
@@ -44,7 +49,7 @@ import (
 // is equivalent to:
 //
 //     Endpoint("show", func() {
-//         Response(AccountMedia)
+//         Response(AccountMedia, "default", "terse")
 //         HTTP(func() {
 //             Response(func() {
 //                 Code(StatusOK)
@@ -60,7 +65,7 @@ import (
 // The following:
 //
 //     Endpoint("show", func() {
-//         Response(ShowResponse)
+//         Response(ShowResponse, "default")
 //         HTTP(func() {
 //             Response(func() {
 //                 Header("href")

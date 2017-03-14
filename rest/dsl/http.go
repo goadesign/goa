@@ -101,6 +101,64 @@ func HTTP(dsl func()) {
 	}
 }
 
+// Consumes adds a MIME type to the list of MIME types the APIs supports when
+// accepting requests. While the DSL supports any MIME type, the code generator
+// only knows to generate the code for "application/json", "application/xml" and
+// "application/gob". The service code must provide the decoder for other MIME
+// types.
+//
+// Consumes may appear in the HTTP expression of API.
+//
+// Consumes accepts one or more strings corresponding to the MIME types.
+//
+// Example:
+//
+//    API("cellar", func() {
+//        // ...
+//        HTTP(func() {
+//            Consumes("application/json", "application/xml")
+//            // ...
+//        })
+//    })
+//
+func Consumes(args ...string) {
+	root, ok := eval.Current().(*design.RootExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	root.Consumes = append(root.Consumes, args...)
+}
+
+// Produces adds a MIME type to the list of MIME types the APIs supports when
+// writing responses. While the DSL supports any MIME type, the code generator
+// only knows to generate the code for "application/json", "application/xml" and
+// "application/gob". The service code must provide the encoder for other MIME
+// types.
+//
+// Produces may appear in the HTTP expression of API.
+//
+// Produces accepts one or more strings corresponding to the MIME types.
+//
+// Example:
+//
+//    API("cellar", func() {
+//        // ...
+//        HTTP(func() {
+//            Produces("application/json", "application/xml")
+//            // ...
+//        })
+//    })
+//
+func Produces(args ...string) {
+	root, ok := eval.Current().(*design.RootExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	root.Produces = append(root.Produces, args...)
+}
+
 // Path defines the API base path, i.e. the common path prefix to all the API
 // or service actions. The path may define wildcards (see GET for a description
 // of the wildcard syntax). The corresponding parameters must be described using

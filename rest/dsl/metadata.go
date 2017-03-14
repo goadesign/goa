@@ -71,6 +71,8 @@ func Metadata(name string, value ...string) {
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	case *design.ActionExpr:
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
+	case *design.RouteExpr:
+		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	case *design.FileServerExpr:
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	case *design.HTTPResponseExpr:
