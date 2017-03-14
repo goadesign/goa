@@ -1,16 +1,15 @@
-package v2
+package openapi
 
 import (
-	js "encoding/json"
+	"encoding/json"
 
-	"goa.design/goa.v2/codegen/writers/openapi/json"
 	"goa.design/goa.v2/design"
 )
 
 type (
-	// OpenAPI represents an instance of a Swagger object.
+	// V2 represents an instance of a Swagger object.
 	// See https://github.com/OAI/OpenAPI-Specification
-	OpenAPI struct {
+	V2 struct {
 		Swagger             string                         `json:"swagger,omitempty"`
 		Info                *Info                          `json:"info,omitempty"`
 		Host                string                         `json:"host,omitempty"`
@@ -19,7 +18,7 @@ type (
 		Consumes            []string                       `json:"consumes,omitempty"`
 		Produces            []string                       `json:"produces,omitempty"`
 		Paths               map[string]interface{}         `json:"paths"`
-		Definitions         map[string]*json.Schema        `json:"definitions,omitempty"`
+		Definitions         map[string]*Schema             `json:"definitions,omitempty"`
 		Parameters          map[string]*Parameter          `json:"parameters,omitempty"`
 		Responses           map[string]*Response           `json:"responses,omitempty"`
 		SecurityDefinitions map[string]*SecurityDefinition `json:"securityDefinitions,omitempty"`
@@ -111,7 +110,7 @@ type (
 		// Required determines whether this parameter is mandatory.
 		Required bool `json:"required"`
 		// Schema defining the type used for the body parameter, only if "in" is body
-		Schema *json.Schema `json:"schema,omitempty"`
+		Schema *Schema `json:"schema,omitempty"`
 
 		// properties below only apply if "in" is not body
 
@@ -157,7 +156,7 @@ type (
 		// an array or an object. If this field does not exist, it means no content is
 		// returned as part of the response. As an extension to the Schema Object, its root
 		// type value may also be "file".
-		Schema *json.Schema `json:"schema,omitempty"`
+		Schema *Schema `json:"schema,omitempty"`
 		// Headers is a list of headers that are sent with the response.
 		Headers map[string]*Header `json:"headers,omitempty"`
 		// Ref references a global API response.
@@ -296,7 +295,7 @@ type (
 )
 
 func marshalJSON(v interface{}, extensions map[string]interface{}) ([]byte, error) {
-	marshaled, err := js.Marshal(v)
+	marshaled, err := json.Marshal(v)
 	if err != nil {
 		return nil, err
 	}
@@ -304,14 +303,14 @@ func marshalJSON(v interface{}, extensions map[string]interface{}) ([]byte, erro
 		return marshaled, nil
 	}
 	var unmarshaled interface{}
-	if err := js.Unmarshal(marshaled, &unmarshaled); err != nil {
+	if err := json.Unmarshal(marshaled, &unmarshaled); err != nil {
 		return nil, err
 	}
 	asserted := unmarshaled.(map[string]interface{})
 	for k, v := range extensions {
 		asserted[k] = v
 	}
-	merged, err := js.Marshal(asserted)
+	merged, err := json.Marshal(asserted)
 	if err != nil {
 		return nil, err
 	}

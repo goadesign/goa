@@ -1,21 +1,20 @@
-package v2
+package openapi
 
 // New creates a OpenAPI spec from a REST root expression.
 import (
-	js "encoding/json"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"sort"
 	"strconv"
 	"strings"
 
-	"goa.design/goa.v2/codegen/writers/openapi/json"
 	"goa.design/goa.v2/design"
 	rest "goa.design/goa.v2/rest/design"
 )
 
-// New returns the OpenAPI v2 specification for the given API.
-func New(root *rest.RootExpr) (*OpenAPI, error) {
+// MakeV2 returns the OpenAPI v2 specification for the given API.
+func MakeV2(root *rest.RootExpr) (*V2, error) {
 	if root == nil {
 		return nil, nil
 	}
@@ -41,7 +40,7 @@ func New(root *rest.RootExpr) (*OpenAPI, error) {
 			paramMap[p.Name] = p
 		}
 	}
-	s := &OpenAPI{
+	s := &V2{
 		Swagger: "2.0",
 		Info: &Info{
 			Title:          root.Design.API.Title,
@@ -97,9 +96,9 @@ func New(root *rest.RootExpr) (*OpenAPI, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(json.Definitions) > 0 {
-		s.Definitions = make(map[string]*json.Schema)
-		for n, d := range json.Definitions {
+	if len(Definitions) > 0 {
+		s.Definitions = make(map[string]*Schema)
+		for n, d := range Definitions {
 			// sad but swagger doesn't support these
 			d.Media = nil
 			d.Links = nil
@@ -237,7 +236,7 @@ func extensionsFromExpr(mdata design.MetadataExpr) map[string]interface{} {
 		}
 		val := value[0]
 		ival := interface{}(val)
-		if err := js.Unmarshal([]byte(val), &ival); err != nil {
+		if err := json.Unmarshal([]byte(val), &ival); err != nil {
 			extensions[chunks[2]] = val
 			continue
 		}
@@ -306,42 +305,6 @@ func paramFor(at *design.AttributeExpr, name, in string, required bool) *Paramet
 	return p
 }
 
-// toStringMap converts map[interface{}]interface{} to a map[string]interface{} when possible.
-func toStringMap(val interface{}) interface{} {
-	switch actual := val.(type) {
-	case map[interface{}]interface{}:
-		m := make(map[string]interface{})
-		for k, v := range actual {
-			m[toString(k)] = toStringMap(v)
-		}
-		return m
-	case []interface{}:
-		mapSlice := make([]interface{}, len(actual))
-		for i, e := range actual {
-			mapSlice[i] = toStringMap(e)
-		}
-		return mapSlice
-	default:
-		return actual
-	}
-}
-
-// toString returns the string representation of the given type.
-func toString(val interface{}) string {
-	switch actual := val.(type) {
-	case string:
-		return actual
-	case int:
-		return strconv.Itoa(actual)
-	case float64:
-		return strconv.FormatFloat(actual, 'f', -1, 64)
-	case bool:
-		return strconv.FormatBool(actual)
-	default:
-		panic("unexpected key type")
-	}
-}
-
 func itemsFromExpr(at *design.AttributeExpr) *Items {
 	items := &Items{Type: at.Type.Name()}
 	initValidations(at, items)
@@ -351,16 +314,16 @@ func itemsFromExpr(at *design.AttributeExpr) *Items {
 	return items
 }
 
-func responseSpecFromExpr(s *OpenAPI, root *rest.RootExpr, r *rest.HTTPResponseExpr) (*Response, error) {
-	var schema *json.Schema
+func responseSpecFromExpr(s *V2, root *rest.RootExpr, r *rest.HTTPResponseExpr) (*Response, error) {
+	var schema *Schema
 	if r.Body != nil {
 		if mt, ok := r.Body.Type.(*design.MediaTypeExpr); ok {
 			view := design.DefaultView
 			if v, ok := r.Body.Metadata["view"]; ok {
 				view = v[0]
 			}
-			schema = json.NewSchema()
-			schema.Ref = json.MediaTypeRef(root.Design.API, mt, view)
+			schema = NewSchema()
+			schema.Ref = MediaTypeRef(root.Design.API, mt, view)
 		}
 	}
 	headers, err := headersFromExpr(r.Headers)
@@ -397,7 +360,7 @@ func headersFromExpr(headers *design.AttributeExpr) (map[string]*Header, error) 
 	return res, nil
 }
 
-func buildPathFromFileServer(s *OpenAPI, root *rest.RootExpr, fs *rest.FileServerExpr) error {
+func buildPathFromFileServer(s *V2, root *rest.RootExpr, fs *rest.FileServerExpr) error {
 	wcs := rest.ExtractWildcards(fs.RequestPath)
 	var param []*Parameter
 	if len(wcs) > 0 {
@@ -413,11 +376,11 @@ func buildPathFromFileServer(s *OpenAPI, root *rest.RootExpr, fs *rest.FileServe
 	responses := map[string]*Response{
 		"200": {
 			Description: "File downloaded",
-			Schema:      &json.Schema{Type: json.File},
+			Schema:      &Schema{Type: File},
 		},
 	}
 	if len(wcs) > 0 {
-		schema := json.TypeSchema(root.Design.API, design.ErrorMedia)
+		schema := TypeSchema(root.Design.API, design.ErrorMedia)
 		responses["404"] = &Response{Description: "File not found", Schema: schema}
 	}
 
@@ -456,7 +419,7 @@ func buildPathFromFileServer(s *OpenAPI, root *rest.RootExpr, fs *rest.FileServe
 	return nil
 }
 
-func buildPathFromExpr(s *OpenAPI, root *rest.RootExpr, route *rest.RouteExpr, basePath string) error {
+func buildPathFromExpr(s *V2, root *rest.RootExpr, route *rest.RouteExpr, basePath string) error {
 	action := route.Action
 
 	tagNames := tagNamesFromExpr(action.Resource.Metadata, action.Metadata)
@@ -481,7 +444,7 @@ func buildPathFromExpr(s *OpenAPI, root *rest.RootExpr, route *rest.RouteExpr, b
 	}
 
 	if action.Payload != nil {
-		payloadSchema := json.TypeSchema(root.Design.API, action.Payload)
+		payloadSchema := TypeSchema(root.Design.API, action.Payload)
 		pp := &Parameter{
 			Name:        "payload",
 			In:          "body",
