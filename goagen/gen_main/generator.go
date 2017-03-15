@@ -62,6 +62,61 @@ func Generate() (files []string, err error) {
 	return g.Generate()
 }
 
+// GenerateController generates the controller corresponding to the given
+// resource and returns the generated filename.
+func GenerateController(force bool, appPkg, outDir, pkg, name string, r *design.ResourceDefinition) (string, error) {
+	filename := filepath.Join(outDir, codegen.SnakeCase(name)+".go")
+	if force {
+		os.Remove(filename)
+	}
+	if _, e := os.Stat(filename); e == nil {
+		return "", nil
+	}
+	file, err := codegen.SourceFileFor(filename)
+	if err != nil {
+		return "", err
+	}
+
+	elems := strings.Split(appPkg, "/")
+	pkgName := elems[len(elems)-1]
+	var imp string
+	if _, err := codegen.PackageSourcePath(appPkg); err == nil {
+		imp = appPkg
+	} else {
+		imp, err = codegen.PackagePath(outDir)
+		if err != nil {
+			return "", err
+		}
+		imp = path.Join(filepath.ToSlash(imp), appPkg)
+	}
+
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("io"),
+		codegen.SimpleImport("github.com/goadesign/goa"),
+		codegen.SimpleImport(imp),
+		codegen.SimpleImport("golang.org/x/net/websocket"),
+	}
+
+	file.WriteHeader("", pkg, imports)
+	if err = file.ExecuteTemplate("controller", ctrlT, funcMap(pkgName), r); err != nil {
+		return "", err
+	}
+	err = r.IterateActions(func(a *design.ActionDefinition) error {
+		if a.WebSocket() {
+			return file.ExecuteTemplate("actionWS", actionWST, funcMap(pkgName), a)
+		}
+		return file.ExecuteTemplate("action", actionT, funcMap(pkgName), a)
+	})
+	if err != nil {
+		return "", err
+	}
+	if err = file.FormatCode(); err != nil {
+		return "", err
+	}
+
+	return filename, nil
+}
+
 // Generate produces the skeleton main.
 func (g *Generator) Generate() (_ []string, err error) {
 	if g.API == nil {
@@ -92,13 +147,13 @@ func (g *Generator) Generate() (_ []string, err error) {
 		if err := os.MkdirAll(g.OutDir, 0755); err != nil {
 			return nil, err
 		}
-		if err = g.createMainFile(mainFile, getFunctions(g.Target)); err != nil {
+		if err = g.createMainFile(mainFile, funcMap(g.Target)); err != nil {
 			return nil, err
 		}
 	}
 
 	err = g.API.IterateResources(func(r *design.ResourceDefinition) error {
-		filename, err := GenerateControllerFile(g.Force, g.Target, g.OutDir, "main", r.Name, r)
+		filename, err := GenerateController(g.Force, g.Target, g.OutDir, "main", r.Name, r)
 		if err != nil {
 			return err
 		}
@@ -220,68 +275,13 @@ func okResp(a *design.ActionDefinition, appPkg string) map[string]interface{} {
 	}
 }
 
-// getFunctions creates a map that includes all the required functions to be
-// used inside the templates
-func getFunctions(appPkg string) template.FuncMap {
+// funcMap creates the funcMap used to render the controller code.
+func funcMap(appPkg string) template.FuncMap {
 	return template.FuncMap{
 		"tempvar":   tempvar,
 		"okResp":    okResp,
 		"targetPkg": func() string { return appPkg },
 	}
-}
-
-// getImports creates a ImportSpec structure that containers all the required
-// go packages to be imported in the generated go files.
-func getImports(outDir string) ([]*codegen.ImportSpec, error) {
-	imp, err := codegen.PackagePath(outDir)
-	if err != nil {
-		return nil, err
-	}
-	imp = path.Join(filepath.ToSlash(imp), "app")
-
-	return []*codegen.ImportSpec{
-		codegen.SimpleImport("io"),
-		codegen.SimpleImport("github.com/goadesign/goa"),
-		codegen.SimpleImport(imp),
-		codegen.SimpleImport("golang.org/x/net/websocket"),
-	}, nil
-}
-
-// GenerateControllerFile function returns the filename of the generated the
-// controller file.
-func GenerateControllerFile(force bool, appPkg, outDir, pkg, name string, r *design.ResourceDefinition) (string, error) {
-	filename := filepath.Join(outDir, codegen.SnakeCase(name)+".go")
-	if force {
-		os.Remove(filename)
-	}
-	if _, e := os.Stat(filename); e != nil {
-		file, err := codegen.SourceFileFor(filename)
-		if err != nil {
-			return "", err
-		}
-		imports, err := getImports(outDir)
-		if err != nil {
-			return "", err
-		}
-		file.WriteHeader("", pkg, imports)
-		if err = file.ExecuteTemplate("controller", ctrlT, getFunctions(appPkg), r); err != nil {
-			return "", err
-		}
-		err = r.IterateActions(func(a *design.ActionDefinition) error {
-			if a.WebSocket() {
-				return file.ExecuteTemplate("actionWS", actionWST, getFunctions(appPkg), a)
-			}
-			return file.ExecuteTemplate("action", actionT, getFunctions(appPkg), a)
-		})
-		if err != nil {
-			return "", err
-		}
-		if err = file.FormatCode(); err != nil {
-			return "", err
-		}
-	}
-
-	return filename, nil
 }
 
 const ctrlT = `// {{ $ctrlName := printf "%s%s" (goify .Name true) "Controller" }}{{ $ctrlName }} implements the {{ .Name }} resource.

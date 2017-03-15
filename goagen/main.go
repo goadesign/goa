@@ -192,9 +192,9 @@ package and tool and the Swagger specification for the API.
 		Run:   func(c *cobra.Command, _ []string) { files, err = run("gencontroller", c) },
 	}
 	controllerCmd.Flags().BoolVar(&force, "force", false, "overwrite existing files")
-	controllerCmd.Flags().StringVar(&res, "res", "", "specify the name of the resource and is compulsory")
-	controllerCmd.Flags().StringVar(&pkg, "pkg", "controller", "specify the name of the generated controller package")
-	controllerCmd.Flags().StringVar(&appPkg, "app-pkg", "app", "Name of generated Go package containing controllers supporting code (contexts, media types, user types etc.)")
+	controllerCmd.Flags().StringVar(&res, "res", "", "name of the `resource` to generate the controller for, generate all if not specified")
+	controllerCmd.Flags().StringVar(&pkg, "pkg", "controller", "name of the generated controller `package`")
+	controllerCmd.Flags().StringVar(&appPkg, "app-pkg", "app", "`import path` of Go package generated with 'goagen app', may be relative to output")
 	rootCmd.AddCommand(controllerCmd)
 
 	// cmdsCmd implements the commands command
