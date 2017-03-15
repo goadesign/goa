@@ -99,6 +99,9 @@ func (g *Generator) Generate() (_ []string, err error) {
 
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return g.genfiles, err
 }
