@@ -72,6 +72,9 @@ func GenerateController(force bool, appPkg, outDir, pkg, name string, r *design.
 	if _, e := os.Stat(filename); e == nil {
 		return "", nil
 	}
+	if err := os.MkdirAll(outDir, 0755); err != nil {
+		return "", err
+	}
 	file, err := codegen.SourceFileFor(filename)
 	if err != nil {
 		return "", err
