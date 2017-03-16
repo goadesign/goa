@@ -141,27 +141,21 @@ const mainTmpl = `func main() {
 	{
 		flag.Parse()
 		if *out == "" {
-			fmt.Fprintln(os.Stderr, "missing output flag")
-			os.Exit(1)
+			fail("missing output flag")
 		}
 		if *version == "" {
-			fmt.Fprintln(os.Stderr, "missing version flag")
-			os.Exit(1)
+			fail("missing version flag")
 		}
 	}
 
 	if *version != pkg.Version() {
-		fmt.Fprintf(os.Stderr, "goa DSL was run with goa version %s but compiled generator is running %s\n", *version, pkg.Version())
-		os.Exit(1)
+		fail("goa DSL was run with goa version %s but compiled generator is running %s\n", *version, pkg.Version())
 	}
-
         if err := eval.Context.Errors; err != nil {
-		fmt.Fprint(os.Stderr, err.Error())
-		os.Exit(1)
+		fail(err.Error())
 	}
 	if err := eval.RunDSL(); err != nil {
-		fmt.Fprint(os.Stderr, err.Error())
-		os.Exit(1)
+		fail(err.Error())
 	}
 
 	var writers []codegen.FileWriter
@@ -169,20 +163,23 @@ const mainTmpl = `func main() {
 {{- range . }}
 		ws, err := {{ . }}.RestWriters(rest.Root)
 		if err != nil {
-			fmt.Fprint(os.Stderr, err.Error())
-			os.Exit(1)
+			fail(err.Error())
 		}
 		writers = append(writers, ws...)
 {{ end }}	}
 	outputs := make([]string, len(writers))
 	for i, w := range writers {
 		if err := codegen.Render(w, *out); err != nil {
-			fmt.Fprintf(os.Stderr, err.Error())
-			os.Exit(1)
+			fail(err.Error())
 		}
 		outputs[i] = filepath.Join(*out, w.OutputPath())
 	}
 	sort.Strings(outputs)
 	fmt.Println(strings.Join(outputs, "\n"))
+}
+
+func fail(msg string, vals ...interface{}) {
+	fmt.Fprintf(os.Stderr, msg, vals...)
+	os.Exit(1)
 }
 `
