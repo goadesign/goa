@@ -22,7 +22,7 @@ var (
 // Header returns a header section.
 func Header(title, pack string, imports []*ImportSpec) *Section {
 	return &Section{
-		Template: *headerTmpl,
+		Template: headerTmpl,
 		Data: map[string]interface{}{
 			"Title":       title,
 			"ToolVersion": pkg.Version(),

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/build"
 	"os"
+	"sort"
 	"strings"
 
 	"goa.design/goa.v2/pkg"
@@ -13,8 +14,9 @@ import (
 
 func main() {
 	var (
-		cmds []string
-		path string
+		cmds   []string
+		path   string
+		offset int
 	)
 	{
 		if len(os.Args) == 1 {
@@ -29,37 +31,41 @@ func main() {
 			if len(os.Args) == 2 {
 				usage()
 			}
-			cmds = []string{os.Args[1]}
-			i := 2
-			for len(os.Args) > i+1 &&
-				(os.Args[i] == "client" ||
-					os.Args[i] == "server" ||
-					os.Args[i] == "openapi") {
-				cmds = append(cmds, os.Args[i])
-				i++
+			cm := map[string]bool{os.Args[1]: true}
+			offset = 2
+			for len(os.Args) > offset+1 &&
+				(os.Args[offset] == "client" ||
+					os.Args[offset] == "server" ||
+					os.Args[offset] == "openapi") {
+				cm[os.Args[offset]] = true
+				offset++
 			}
-			path = os.Args[i]
+			for cmd := range cm {
+				cmds = append(cmds, cmd)
+			}
+			sort.Strings(cmds)
+			path = os.Args[offset]
 		default:
 			usage()
 		}
 	}
 
 	var (
-		output      string
+		output      = "."
 		gens, debug bool
 	)
-	if len(os.Args) > 3 {
+	if len(os.Args) > offset+1 {
 		var (
 			fset     = flag.NewFlagSet("default", flag.ExitOnError)
 			o        = fset.String("o", "", "output `directory`")
-			out      = fset.String("out", ".", "output `directory`")
+			out      = fset.String("output", output, "output `directory`")
 			s        = fset.Bool("s", false, "Generate scaffold (does not override existing files)")
 			scaffold = fset.Bool("scaffold", false, "Generate scaffold (does not override existing files)")
 		)
 		fset.BoolVar(&debug, "debug", false, "Print debug information")
 
 		fset.Usage = usage
-		fset.Parse(os.Args[3:])
+		fset.Parse(os.Args[offset+1:])
 
 		output = *o
 		if output == "" {
@@ -72,6 +78,16 @@ func main() {
 		}
 	}
 
+	gen(cmds, path, output, gens, debug)
+}
+
+// help with tests
+var (
+	usage = help
+	gen   = generate
+)
+
+func generate(cmds []string, path, output string, gens, debug bool) {
 	if _, err := build.Import(path, ".", build.IgnoreVendor); err != nil {
 		fail(err)
 	}
@@ -105,7 +121,7 @@ func fail(err error) {
 	os.Exit(1)
 }
 
-func usage() {
+func help() {
 	fmt.Fprint(os.Stderr, `goagen is the goa code generation tool.
 Learn more about goa at https://goa.design.
 
@@ -141,13 +157,13 @@ Args:
         Go import path to design package
 
 Flags:
-  -o, --out DIRECTORY
+  -o, -output DIRECTORY
         output directory, defaults to the current working directory
 
-  -s, --scaffold
+  -s, -scaffold
         generate scaffold (does not override existing files)
 
-  --debug
+  -debug
         Print debug information (mainly intended for goa developers)
 
 Examples:
