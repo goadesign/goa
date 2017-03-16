@@ -72,6 +72,7 @@ func (g *GenPackage) Write(gens, debug bool) error {
 			codegen.SimpleImport("sort"),
 			codegen.SimpleImport("strings"),
 			codegen.SimpleImport("goa.design/goa.v2/codegen"),
+			codegen.SimpleImport("goa.design/goa.v2/eval"),
 			codegen.SimpleImport("goa.design/goa.v2/pkg"),
 			codegen.NewImport("rest", "goa.design/goa.v2/rest/design"),
 			codegen.NewImport("_", g.DesignPath),
@@ -151,6 +152,15 @@ const mainTmpl = `func main() {
 
 	if *version != pkg.Version() {
 		fmt.Fprintf(os.Stderr, "goa DSL was run with goa version %s but compiled generator is running %s\n", *version, pkg.Version())
+		os.Exit(1)
+	}
+
+        if err := eval.Context.Errors; err != nil {
+		fmt.Fprint(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+	if err := eval.RunDSL(); err != nil {
+		fmt.Fprint(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 
