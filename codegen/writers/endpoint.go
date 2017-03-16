@@ -65,7 +65,7 @@ func EndpointsWriter(api *design.APIExpr, service *design.ServiceExpr) codegen.F
 // Endpoint returns an endpoint section.
 func Endpoint(api *design.APIExpr, service *design.ServiceExpr) *codegen.Section {
 	return &codegen.Section{
-		Template: *endpointTmpl,
+		Template: endpointTmpl,
 		Data:     buildEndpointData(api, service),
 	}
 }
