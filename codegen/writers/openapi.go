@@ -18,7 +18,7 @@ type (
 
 // OpenAPIWriter returns the codegen.FileWriter for the OpenAPI spec of the given
 // HTTP API.
-func OpenAPIWriter(root *rest.RootExpr) (codegen.FileWriter, error) {
+func OpenAPI(root *rest.RootExpr) (codegen.FileWriter, error) {
 	spec, err := openapi.MakeV2(root)
 	if err != nil {
 		return nil, err

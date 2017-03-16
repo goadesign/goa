@@ -99,7 +99,9 @@ func generate(cmds []string, path, output string, gens, debug bool) {
 	}
 
 	tmp = NewGenPackage(cmds, path, output)
-	defer tmp.Remove()
+	if !debug {
+		defer tmp.Remove()
+	}
 
 	if err = tmp.Write(gens, debug); err != nil {
 		goto fail
@@ -117,7 +119,7 @@ func generate(cmds []string, path, output string, gens, debug bool) {
 	return
 fail:
 	fmt.Fprint(os.Stderr, err.Error())
-	if tmp != nil {
+	if !debug && tmp != nil {
 		tmp.Remove()
 	}
 	os.Exit(1)
