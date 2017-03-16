@@ -88,36 +88,38 @@ var (
 )
 
 func generate(cmds []string, path, output string, gens, debug bool) {
-	if _, err := build.Import(path, ".", build.IgnoreVendor); err != nil {
-		fail(err)
-	}
-
 	var (
-		tmp *GenPackage
+		files []string
+		err   error
+		tmp   *GenPackage
 	)
-	{
-		tmp = NewGenPackage(cmds, path, output)
-		defer tmp.Remove()
+
+	if _, err = build.Import(path, ".", build.IgnoreVendor); err != nil {
+		goto fail
 	}
 
-	if err := tmp.Write(gens, debug); err != nil {
-		fail(err)
+	tmp = NewGenPackage(cmds, path, output)
+	defer tmp.Remove()
+
+	if err = tmp.Write(gens, debug); err != nil {
+		goto fail
 	}
 
-	if err := tmp.Compile(); err != nil {
-		fail(err)
+	if err = tmp.Compile(); err != nil {
+		goto fail
 	}
 
-	files, err := tmp.Run()
-	if err != nil {
-		fail(err)
+	if files, err = tmp.Run(); err != nil {
+		goto fail
 	}
 
 	fmt.Println(strings.Join(files, "\n"))
-}
-
-func fail(err error) {
+	return
+fail:
 	fmt.Fprint(os.Stderr, err.Error())
+	if tmp != nil {
+		tmp.Remove()
+	}
 	os.Exit(1)
 }
 

@@ -127,7 +127,7 @@ func (g *GenPackage) Run() ([]string, error) {
 // Remove deletes the package files.
 func (g *GenPackage) Remove() {
 	if g.tmpDir != "" {
-		os.Remove(g.tmpDir)
+		os.RemoveAll(g.tmpDir)
 		g.tmpDir = ""
 	}
 }
