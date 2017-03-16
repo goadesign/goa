@@ -16,9 +16,9 @@ import (
 // RestWriters returns the HTTP server writers.
 func RestWriters(r *rest.RootExpr) ([]codegen.FileWriter, error) {
 	var ws []codegen.FileWriter
-	for _, s := range d.Services {
-		ws = append(ws, writers.ServiceWriter(d.API, s))
-		ws = append(ws, writers.EndpointsWriter(d.API, s))
+	for _, s := range r.Design.Services {
+		ws = append(ws, writers.Service(r.Design.API, s))
+		ws = append(ws, writers.Endpoint(r.Design.API, s))
 	}
 	if r != nil {
 		// ws = append(ws, restcodegen.ClientWriters(r)...)
