@@ -144,7 +144,17 @@ func (g *Generator) generateContexts() error {
 	err = g.API.IterateResources(func(r *design.ResourceDefinition) error {
 		return r.IterateActions(func(a *design.ActionDefinition) error {
 			ctxName := codegen.Goify(a.Name, true) + codegen.Goify(a.Parent.Name, true) + "Context"
-			headers := r.Headers.Merge(a.Headers)
+			headers := &design.AttributeDefinition{
+				Type: design.Object{},
+			}
+			if r.Headers != nil {
+				headers.Merge(r.Headers)
+				headers.Validation = r.Headers.Validation
+			}
+			if a.Headers != nil {
+				headers.Merge(a.Headers)
+				headers.Validation = a.Headers.Validation
+			}
 			if headers != nil && len(headers.Type.ToObject()) == 0 {
 				headers = nil // So that {{if .Headers}} returns false in templates
 			}
