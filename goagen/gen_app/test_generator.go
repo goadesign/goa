@@ -201,7 +201,7 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 
 	path = pathParams(action, route)
 	query = queryParams(action)
-	header = headers(action)
+	header = headers(action, resource.Headers)
 
 	if action.Payload != nil {
 		payload = &ObjectType{}
@@ -245,8 +245,19 @@ func pathParams(action *design.ActionDefinition, route *design.RouteDefinition) 
 
 // headers builds the template data structure needed to proprely render the code
 // for setting the headers for the given action.
-func headers(action *design.ActionDefinition) []*ObjectType {
-	hds := action.Headers
+func headers(action *design.ActionDefinition, headers *design.AttributeDefinition) []*ObjectType {
+	hds := &design.AttributeDefinition{
+		Type: design.Object{},
+	}
+	if headers != nil {
+		hds.Merge(headers)
+		hds.Validation = headers.Validation
+	}
+	if action.Headers != nil {
+		hds.Merge(action.Headers)
+		hds.Validation = action.Headers.Validation
+	}
+
 	if hds == nil {
 		return nil
 	}

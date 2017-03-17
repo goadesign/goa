@@ -93,6 +93,13 @@ var _ = Describe("Generate", func() {
 				Resources: map[string]*design.ResourceDefinition{
 					"foo": {
 						Name: "foo",
+						Headers: &design.AttributeDefinition{
+							Type: design.Object{
+								"optionalResourceHeader": &design.AttributeDefinition{Type: design.Integer},
+								"requiredResourceHeader": &design.AttributeDefinition{Type: design.String},
+							},
+							Validation: &dslengine.ValidationDefinition{Required: []string{"requiredResourceHeader"}},
+						},
 						Actions: map[string]*design.ActionDefinition{
 							"show": {
 								Name: "show",
@@ -112,7 +119,7 @@ var _ = Describe("Generate", func() {
 										"optionalHeader": &design.AttributeDefinition{Type: design.Integer},
 										"requiredHeader": &design.AttributeDefinition{Type: design.String},
 									},
-									Validation: &dslengine.ValidationDefinition{Required: []string{"requiredHeader"}},
+									Validation: &dslengine.ValidationDefinition{Required: []string{"requiredHeader", "requiredResourceHeader"}},
 								},
 								QueryParams: &design.AttributeDefinition{
 									Type: design.Object{
@@ -194,7 +201,7 @@ var _ = Describe("Generate", func() {
 			// Multiple Routes
 			Ω(content).Should(ContainSubstring("ShowFooOK1("))
 			// Get returns an error media type
-			Ω(content).Should(ContainSubstring("GetFooOK(t goatest.TInterface, ctx context.Context, service *goa.Service, ctrl app.FooController, payload app.CustomName) (http.ResponseWriter, error)"))
+			Ω(content).Should(ContainSubstring("GetFooOK(t goatest.TInterface, ctx context.Context, service *goa.Service, ctrl app.FooController, optionalResourceHeader *int, requiredResourceHeader string, payload app.CustomName) (http.ResponseWriter, error)"))
 		})
 
 		It("generates the route path parameters", func() {
@@ -223,6 +230,9 @@ var _ = Describe("Generate", func() {
 			Ω(content).Should(ContainSubstring(`if optionalHeader != nil`))
 			Ω(content).ShouldNot(ContainSubstring(`if requiredHeader != nil`))
 			Ω(content).Should(ContainSubstring(`req.Header["requiredHeader"] = sliceVal`))
+			Ω(content).Should(ContainSubstring(`if optionalResourceHeader != nil`))
+			Ω(content).ShouldNot(ContainSubstring(`if requiredResourceHeader != nil`))
+			Ω(content).Should(ContainSubstring(`req.Header["requiredResourceHeader"] = sliceVal`))
 		})
 
 		It("generates calls to new Context ", func() {
