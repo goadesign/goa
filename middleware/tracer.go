@@ -27,9 +27,7 @@ type (
 	// tracedDoer is a goa client Doer that inserts the tracing headers for
 	// each request it makes.
 	tracedDoer struct {
-		doer    client.Doer
-		traceID string
-		spanID  string
+		client.Doer
 	}
 )
 
@@ -78,22 +76,8 @@ func Tracer(sampleRate int, spanIDFunc, traceIDFunc IDFunc) goa.Middleware {
 
 // TraceDoer wraps a goa client Doer and sets the trace headers so that the
 // downstream service may properly retrieve the parent span ID and trace ID.
-//
-// ctx must contain the current request segment as set by the xray middleware or
-// the doer passed as argument is returned.
-func TraceDoer(ctx context.Context, doer client.Doer) client.Doer {
-	var (
-		traceID = ContextTraceID(ctx)
-		spanID  = ContextSpanID(ctx)
-	)
-	if traceID == "" {
-		return doer
-	}
-	return &tracedDoer{
-		doer:    doer,
-		traceID: traceID,
-		spanID:  spanID,
-	}
+func TraceDoer(doer client.Doer) client.Doer {
+	return &tracedDoer{doer}
 }
 
 // ContextTraceID returns the trace ID extracted from the given context if any,
@@ -136,8 +120,14 @@ func WithTrace(ctx context.Context, traceID, spanID, parentID string) context.Co
 
 // Do adds the tracing headers to the requests before making it.
 func (d *tracedDoer) Do(ctx context.Context, req *http.Request) (*http.Response, error) {
-	req.Header.Set(TraceIDHeader, d.traceID)
-	req.Header.Set(ParentSpanIDHeader, d.spanID)
+	var (
+		traceID = ContextTraceID(ctx)
+		spanID  = ContextSpanID(ctx)
+	)
+	if traceID != "" {
+		req.Header.Set(TraceIDHeader, traceID)
+		req.Header.Set(ParentSpanIDHeader, spanID)
+	}
 
-	return d.doer.Do(ctx, req)
+	return d.Doer.Do(ctx, req)
 }
