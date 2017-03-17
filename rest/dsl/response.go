@@ -137,53 +137,46 @@ import (
 // })
 //
 func Response(val interface{}, args ...interface{}) {
-	var a *design.ActionExpr
+	name, ok := val.(string)
 	switch t := eval.Current().(type) {
+	case *design.ResourceExpr:
+		if !ok {
+			eval.InvalidArgError("name of error", val)
+			return
+		}
+		if e := httpError(name, t, args); e != nil {
+			t.HTTPErrors = append(t.HTTPErrors, e)
+		}
+	case *design.RootExpr:
+		if !ok {
+			eval.InvalidArgError("name of error", val)
+			return
+		}
+		if e := httpError(name, t, args); e != nil {
+			t.HTTPErrors = append(t.HTTPErrors, e)
+		}
 	case *design.ActionExpr:
-		name, ok := val.(string)
 		if ok {
 			if e := httpError(name, t, args); e != nil {
 				t.HTTPErrors = append(t.HTTPErrors, e)
 			}
 			return
 		}
-		a = t
-	case *design.ResourceExpr:
-		name, ok := val.(string)
-		if !ok {
-			eval.InvalidArgError("name of error", val)
-			return
+		code, dsl := parseResponseArgs(val, args...)
+		if code == 0 {
+			code = design.StatusOK
 		}
-		if e := httpError(name, t, args); e != nil {
-			t.HTTPErrors = append(t.HTTPErrors, e)
+		resp := &design.HTTPResponseExpr{
+			StatusCode: code,
+			Parent:     t,
 		}
-		return
-	case *design.RootExpr:
-		name, ok := val.(string)
-		if !ok {
-			eval.InvalidArgError("name of error", val)
-			return
+		if dsl != nil {
+			eval.Execute(dsl, resp)
 		}
-		if e := httpError(name, t, args); e != nil {
-			t.HTTPErrors = append(t.HTTPErrors, e)
-		}
-		return
+		t.Responses = append(t.Responses, resp)
 	default:
 		eval.IncompatibleDSL()
-		return
 	}
-	code, dsl := parseResponseArgs(val, args...)
-	if code == 0 {
-		code = design.StatusOK
-	}
-	resp := &design.HTTPResponseExpr{
-		StatusCode: code,
-		Parent:     a,
-	}
-	if dsl != nil {
-		eval.Execute(dsl, resp)
-	}
-	a.Responses = append(a.Responses, resp)
 }
 
 // Code sets the Response status code.

@@ -114,6 +114,11 @@ type (
 	}
 )
 
+// Register DSL roots.
+func init() {
+	eval.Register(Root)
+}
+
 // Schemes returns the list of HTTP schemes used by the API servers.
 func (r *RootExpr) Schemes() []string {
 	if r.Design == nil {
@@ -188,6 +193,21 @@ func (r *RootExpr) Params() *design.AttributeExpr {
 // error messages.
 func (r *RootExpr) EvalName() string {
 	return "API HTTP"
+}
+
+// WalkSets returns the generated media types for evaluation.
+func (r *RootExpr) WalkSets(w eval.SetWalker) {
+	w(eval.ExpressionSet{r})
+	res := make(eval.ExpressionSet, len(r.Resources))
+	for i, re := range r.Resources {
+		res[i] = re
+	}
+	w(res)
+}
+
+// DependsOn tells the evaluation engine to execute Root first.
+func (r RootExpr) DependsOn() []eval.Root {
+	return []eval.Root{design.Root.GeneratedMediaTypes}
 }
 
 // ExtractWildcards returns the names of the wildcards that appear in path.
