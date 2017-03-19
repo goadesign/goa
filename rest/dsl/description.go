@@ -22,6 +22,10 @@ func Description(d string) {
 		expr.Description = d
 	case *design.FileServerExpr:
 		expr.Description = d
+	case *design.ResourceExpr:
+		expr.Description = d
+	case *design.ActionExpr:
+		expr.Description = d
 	default:
 		dsl.Description(d)
 	}

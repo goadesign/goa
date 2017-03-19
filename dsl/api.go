@@ -17,7 +17,7 @@ import (
 //        Title("title")                // Title used in documentation
 //        Description("description")    // Description used in documentation
 //        Version("2.0")                // Version of API
-//        TermsOfAPI("terms")           // Terms of use
+//        TermsOfService("terms")       // Terms of use
 //        Contact(func() {              // Contact info
 //            Name("contact name")
 //            Email("contact email")
@@ -123,10 +123,10 @@ func Docs(dsl func()) {
 	}
 }
 
-// TermsOfAPI describes the API terms of services or links to them.
-func TermsOfAPI(terms string) {
+// TermsOfService describes the API terms of services or links to them.
+func TermsOfService(terms string) {
 	if s, ok := eval.Current().(*design.APIExpr); ok {
-		s.TermsOfAPI = terms
+		s.TermsOfService = terms
 		return
 	}
 	eval.IncompatibleDSL()

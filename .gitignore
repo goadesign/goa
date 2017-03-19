@@ -18,3 +18,4 @@ _integration_tests/*/**/*.*
 .DS_Store
 /examples/account/cmd/basic/basic
 /examples/account/cmd/basiccli/basiccli
+/cmd/goagen/goagen

@@ -99,7 +99,13 @@ func TestEndpoint(t *testing.T) {
 			serviceExpr := &design.ServiceExpr{}
 			eval.Execute(tc.DSL, serviceExpr)
 			if eval.Context.Errors != nil {
-				t.Errorf("%s: Endpoint failed unexpectedly with %s", k, eval.Context.Errors)
+				t.Errorf("%s: Service DSL failed unexpectedly with %s", k, eval.Context.Errors)
+			}
+			for _, endpointExpr := range serviceExpr.Endpoints {
+				eval.Execute(endpointExpr.DSLFunc, endpointExpr)
+				if eval.Context.Errors != nil {
+					t.Errorf("%s: Endpoint DSL failed unexpectedly with %s", k, eval.Context.Errors)
+				}
 			}
 			tc.Assert(t, serviceExpr.Endpoints)
 		})

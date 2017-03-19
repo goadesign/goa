@@ -65,11 +65,15 @@ func Metadata(name string, value ...string) {
 		return metadata
 	}
 	switch expr := eval.Current().(type) {
-	case *design.ActionExpr:
-		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
-	case *design.FileServerExpr:
+	case *design.RootExpr:
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	case *design.ResourceExpr:
+		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
+	case *design.ActionExpr:
+		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
+	case *design.RouteExpr:
+		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
+	case *design.FileServerExpr:
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	case *design.HTTPResponseExpr:
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)

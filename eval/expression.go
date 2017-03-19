@@ -13,16 +13,22 @@ type (
 	// their WalkSets methods to iterate over the sub-expressions.
 	Root interface {
 		Expression
-		// DependsOn returns the list of other DSL roots this root
-		// depends on.  The engine uses this function to order the
-		// execution of the DSL roots.
-		DependsOn() []Root
 		// WalkSets implements the visitor pattern: is is called by
 		// the engine so the DSL can control the order of execution.
 		// WalkSets calls back the engine via the given iterator as
 		// many times as needed providing the expression sets on each
 		// callback.
 		WalkSets(SetWalker)
+		// DependsOn returns the list of other DSL roots this root
+		// depends on.  The engine uses this function to order the
+		// execution of the DSL roots.
+		DependsOn() []Root
+		// Packages returns the import path to the Go packages that make
+		// up the DSL. This is used to skip frames that point to files
+		// in these packages when computing the location of errors.
+		Packages() []string
+		// Used returns true if any DSL contributed to the root.
+		Used() bool
 	}
 
 	// A Source expression embeds DSL to be executed after the process is

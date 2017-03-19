@@ -1,6 +1,8 @@
 package design
 
-import "goa.design/goa.v2/eval"
+import (
+	"goa.design/goa.v2/eval"
+)
 
 // Root is the root object built by the DSL.
 var Root = new(RootExpr)
@@ -23,7 +25,7 @@ type (
 		MediaTypes []UserType
 		// GeneratedMediaTypes contains the set of media types created
 		// by CollectionOf.
-		GeneratedMediaTypes []UserType
+		GeneratedMediaTypes GeneratedRoot
 	}
 
 	// MetadataExpr is a set of key/value pairs
@@ -38,51 +40,56 @@ type (
 	}
 )
 
-// Dup creates a new map from the given expression.
-func (m MetadataExpr) Dup() MetadataExpr {
-	d := make(MetadataExpr, len(m))
-	for k, v := range m {
-		d[k] = v
-	}
-	return d
-}
+// WalkSets returns the expressions in order of evaluation.
+func (r *RootExpr) WalkSets(walk eval.SetWalker) {
+	// First run the top level API DSL
+	walk(eval.ExpressionSet{r.API})
 
-// EvalName is the name of the DSL.
-func (r *RootExpr) EvalName() string {
-	return "API " + r.API.Name
+	// Then run the user type DSLs
+	types := make(eval.ExpressionSet, len(r.Types))
+	for i, t := range r.Types {
+		types[i] = t.Attribute()
+	}
+	walk(types)
+
+	// Next media types
+	mtypes := make(eval.ExpressionSet, len(r.MediaTypes))
+	for i, mt := range r.MediaTypes {
+		mtypes[i] = mt.(*MediaTypeExpr)
+	}
+	walk(mtypes)
+
+	// Next the services
+	services := make(eval.ExpressionSet, len(r.Services))
+	for i, s := range r.Services {
+		services[i] = s
+	}
+	walk(services)
+
+	// Next the endpoints
+	var endpoints eval.ExpressionSet
+	for _, s := range r.Services {
+		for _, e := range s.Endpoints {
+			endpoints = append(endpoints, e)
+		}
+	}
+	walk(endpoints)
 }
 
 // DependsOn returns nil, the core DSL has no dependency.
 func (r *RootExpr) DependsOn() []eval.Root { return nil }
 
-// WalkSets returns the expressions in order of evaluation.
-func (r *RootExpr) WalkSets(it eval.SetWalker) {
-	// First run the top level API DSL
-	it(eval.ExpressionSet{r.API})
-
-	// Then run the user type DSLs
-	typeAttributes := make([]eval.Expression, len(r.Types))
-	for i, ut := range r.Types {
-		typeAttributes[i] = ut.Attribute()
-		i++
+// Packages returns the Go import path to this and the dsl packages.
+func (r *RootExpr) Packages() []string {
+	return []string{
+		"goa.design/goa.v2/design",
+		"goa.design/goa.v2/dsl",
 	}
-	it(typeAttributes)
+}
 
-	// Next media types
-	mts := make([]eval.Expression, len(r.MediaTypes))
-	for i, mt := range r.MediaTypes {
-		mts[i] = mt.(*MediaTypeExpr)
-		i++
-	}
-	it(mts)
-
-	// Next the services
-	services := make([]eval.Expression, len(r.Services))
-	for i, s := range r.Services {
-		services[i] = s
-		i++
-	}
-	it(services)
+// Used returns true if the DSL makes use of API.
+func (r *RootExpr) Used() bool {
+	return r.API != nil
 }
 
 // Trait returns the trait expression with the given name if found, nil otherwise.
@@ -140,4 +147,27 @@ func (r *RootExpr) Error(name string) *ErrorExpr {
 		}
 	}
 	return nil
+}
+
+// EvalName is the name of the DSL.
+func (r *RootExpr) EvalName() string {
+	return "design"
+}
+
+// Validate makes sure the root expression is valid for code generation.
+func (r *RootExpr) Validate() error {
+	var verr eval.ValidationErrors
+	if r.API == nil {
+		verr.Add(r, "Missing API declaration")
+	}
+	return &verr
+}
+
+// Dup creates a new map from the given expression.
+func (m MetadataExpr) Dup() MetadataExpr {
+	d := make(MetadataExpr, len(m))
+	for k, v := range m {
+		d[k] = v
+	}
+	return d
 }

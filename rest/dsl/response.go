@@ -20,9 +20,11 @@ import (
 // type (success responses) or error type (error responses) to define the
 // response body shape.
 //
-// If the response type is a media type then the media type identifier is
-// used to set the value of the "Content-Type" HTTP header in the response. In
-// other words given the following type:
+// Additionally if the response type is a media type then the "Content-Type"
+// response header is set with the corresponding content type (either the value
+// set with ContentType in the media type DSL or the media type identifier).
+//
+// In other words given the following type:
 //
 //     var AccountMedia = MediaType("application/vnd.goa.account", func() {
 //         Attributes(func() {
@@ -135,53 +137,46 @@ import (
 // })
 //
 func Response(val interface{}, args ...interface{}) {
-	var a *design.ActionExpr
+	name, ok := val.(string)
 	switch t := eval.Current().(type) {
+	case *design.ResourceExpr:
+		if !ok {
+			eval.InvalidArgError("name of error", val)
+			return
+		}
+		if e := httpError(name, t, args...); e != nil {
+			t.HTTPErrors = append(t.HTTPErrors, e)
+		}
+	case *design.RootExpr:
+		if !ok {
+			eval.InvalidArgError("name of error", val)
+			return
+		}
+		if e := httpError(name, t, args...); e != nil {
+			t.HTTPErrors = append(t.HTTPErrors, e)
+		}
 	case *design.ActionExpr:
-		name, ok := val.(string)
 		if ok {
-			if e := httpError(name, t, args); e != nil {
+			if e := httpError(name, t, args...); e != nil {
 				t.HTTPErrors = append(t.HTTPErrors, e)
 			}
 			return
 		}
-		a = t
-	case *design.ResourceExpr:
-		name, ok := val.(string)
-		if !ok {
-			eval.InvalidArgError("name of error", val)
-			return
+		code, dsl := parseResponseArgs(val, args...)
+		if code == 0 {
+			code = design.StatusOK
 		}
-		if e := httpError(name, t, args); e != nil {
-			t.HTTPErrors = append(t.HTTPErrors, e)
+		resp := &design.HTTPResponseExpr{
+			StatusCode: code,
+			Parent:     t,
 		}
-		return
-	case *design.RootExpr:
-		name, ok := val.(string)
-		if !ok {
-			eval.InvalidArgError("name of error", val)
-			return
+		if dsl != nil {
+			eval.Execute(dsl, resp)
 		}
-		if e := httpError(name, t, args); e != nil {
-			t.HTTPErrors = append(t.HTTPErrors, e)
-		}
-		return
+		t.Responses = append(t.Responses, resp)
 	default:
 		eval.IncompatibleDSL()
-		return
 	}
-	code, dsl := parseResponseArgs(val, args...)
-	if code == 0 {
-		code = design.StatusOK
-	}
-	resp := &design.HTTPResponseExpr{
-		StatusCode: code,
-		Parent:     a,
-	}
-	if dsl != nil {
-		eval.Execute(dsl, resp)
-	}
-	a.Responses = append(a.Responses, resp)
 }
 
 // Code sets the Response status code.

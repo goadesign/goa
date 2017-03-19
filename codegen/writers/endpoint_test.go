@@ -136,7 +136,7 @@ func NewAccount(s services.Account) *Account {
 	}
 	for k, tc := range cases {
 		buf := new(bytes.Buffer)
-		s := Endpoint(tc.API, tc.Service)
+		s := EndpointSection(tc.API, tc.Service)
 		s.Render(buf)
 		actual := buf.String()
 		if actual != tc.Expected {

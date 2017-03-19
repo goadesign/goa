@@ -27,6 +27,24 @@ var _ = API("rest_dsl_spec", func() {
 	// HTTP may appear multiple times to enable the use of traits.
 	HTTP(func() {
 
+		// Consumes lists the mime types corresponding to the encodings
+		// supported by the API in requests.
+		// goagen knows how to generate the decoding code for the
+		// following mime types: "application/json", "application/xml"
+		// and "application/gob". The decoding code for other mime types
+		// must be written and provided to the generated handler
+		// constructors.
+		Consumes("application/json", "application/xml")
+
+		// Produces lists the mime types corresponding to the encodings
+		// used by the API to encode responses.
+		// goagen knows how to generate the encoding code for the
+		// following mime types: "application/json", "application/xml"
+		// and "application/gob". The encoding code for other mime types
+		// must be written and provided to the generated handler
+		// constructors.
+		Produces("application/json", "application/xml")
+
 		// Path defines the common path prefix to all API HTTP requests.
 		Path("/path/{api_path_param}")
 
@@ -130,16 +148,6 @@ var _ = API("rest_dsl_spec", func() {
 // Service declarations in one design.
 var _ = Service("service", func() {
 
-	// Server describes a single service host and may appear more than once.
-	// URL must include the protocol and hostname and may include a port.
-	// The hostname and port may use parameters to define possible
-	// alternative values.
-	// API Server definitions are overridden by the Service Server
-	// definitions when present.
-	Server("https://service.goa.design:443", func() {
-		Description("Optional description")
-	})
-
 	// Error defines a common error response to all the service endpoints.
 	// The DSL is identical as when used in an API expression.
 	Error("service_error")
@@ -225,9 +233,12 @@ var _ = Service("service", func() {
 		//
 		Payload(PayloadType)
 
-		// Response describes the response attributes. The syntax is
-		// identical to Payload.
-		Response(ResponseMediaType)
+		// Result describes the result attributes. The syntax is
+		// identical to Payload with the exception that it makes it
+		// possible to list the views used by the response when the first
+		// argument is a media type. Listing no view has the same effect
+		// as listing all views in this case.
+		Result(ResponseMediaType, "view")
 
 		// Error in an Endpoint expression defines endpoint specific
 		// error responses, the syntax is identical as when used in a
@@ -424,6 +435,9 @@ var ResponseMediaType = MediaType("application/vnd.goa.response", func() {
 	})
 	View("default", func() {
 		Attribute("required")
+		Attribute("name")
+	})
+	View("view", func() {
 		Attribute("name")
 	})
 })

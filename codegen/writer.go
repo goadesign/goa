@@ -19,7 +19,7 @@ type (
 	// A Section consists of a template and accompaying render data.
 	Section struct {
 		// Template used to render section text.
-		Template template.Template
+		Template *template.Template
 		// Data used as input of template.
 		Data interface{}
 	}

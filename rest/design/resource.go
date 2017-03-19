@@ -2,7 +2,9 @@ package design
 
 import (
 	"fmt"
+	"net/url"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/dimfeld/httppath"
@@ -37,12 +39,25 @@ type (
 	}
 )
 
-// EvalName returns the generic definition name used in error messages.
-func (r *ResourceExpr) EvalName() string {
-	if r.Name == "" {
-		return "unnamed resource"
+// Schemes returns the resource endpoint HTTP schemes.
+func (r *ResourceExpr) Schemes() []string {
+	schemes := make(map[string]bool)
+	for _, s := range r.Servers {
+		if u, err := url.Parse(s.URL); err != nil {
+			schemes[u.Scheme] = true
+		}
 	}
-	return fmt.Sprintf("resource %#v", r.Name)
+	if len(schemes) == 0 {
+		return nil
+	}
+	ss := make([]string, len(schemes))
+	i := 0
+	for s := range schemes {
+		ss[i] = s
+		i++
+	}
+	sort.Strings(ss)
+	return ss
 }
 
 // Action returns the resource action with the given name or nil if there isn't one.
@@ -132,6 +147,14 @@ func (r *ResourceExpr) Params() *design.AttributeExpr {
 		r.params = &design.AttributeExpr{Type: make(design.Object)}
 	}
 	return r.params
+}
+
+// EvalName returns the generic definition name used in error messages.
+func (r *ResourceExpr) EvalName() string {
+	if r.Name == "" {
+		return "unnamed resource"
+	}
+	return fmt.Sprintf("resource %#v", r.Name)
 }
 
 // Validate makes sure the resource is valid.
