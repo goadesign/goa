@@ -169,6 +169,10 @@ const mainTmpl = `func main() {
 {{ end }}	}
 	outputs := make([]string, len(writers))
 	for i, w := range writers {
+		d := filepath.Dir(w.OutputPath())
+		if err := os.MkdirAll(d, 0755); err != nil {
+			fail(err.Error())
+		}
 		if err := codegen.Render(w, *out); err != nil {
 			fail(err.Error())
 		}

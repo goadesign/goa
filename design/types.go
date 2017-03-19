@@ -302,6 +302,8 @@ func (p Primitive) Example(r *Random) interface{} {
 	switch p {
 	case Boolean:
 		return r.Bool()
+	case Int, UInt:
+		return r.Int()
 	case Int32, UInt32:
 		return r.Int32()
 	case Int64, UInt64:

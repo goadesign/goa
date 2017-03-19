@@ -144,7 +144,7 @@ func Response(val interface{}, args ...interface{}) {
 			eval.InvalidArgError("name of error", val)
 			return
 		}
-		if e := httpError(name, t, args); e != nil {
+		if e := httpError(name, t, args...); e != nil {
 			t.HTTPErrors = append(t.HTTPErrors, e)
 		}
 	case *design.RootExpr:
@@ -152,12 +152,12 @@ func Response(val interface{}, args ...interface{}) {
 			eval.InvalidArgError("name of error", val)
 			return
 		}
-		if e := httpError(name, t, args); e != nil {
+		if e := httpError(name, t, args...); e != nil {
 			t.HTTPErrors = append(t.HTTPErrors, e)
 		}
 	case *design.ActionExpr:
 		if ok {
-			if e := httpError(name, t, args); e != nil {
+			if e := httpError(name, t, args...); e != nil {
 				t.HTTPErrors = append(t.HTTPErrors, e)
 			}
 			return

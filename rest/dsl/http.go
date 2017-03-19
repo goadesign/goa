@@ -95,6 +95,9 @@ func HTTP(dsl func()) {
 	case *goadesign.EndpointExpr:
 		res := design.Root.ResourceFor(actual.Service)
 		act := res.Action(actual.Name)
+		if act == nil {
+			panic("dsl: missing resource action") // bug
+		}
 		eval.Execute(dsl, act)
 	default:
 		eval.IncompatibleDSL()
@@ -270,11 +273,15 @@ func PATCH(path string) *design.RouteExpr {
 }
 
 func route(method, path string) *design.RouteExpr {
-	if _, ok := eval.Current().(*design.ActionExpr); !ok {
+	r := &design.RouteExpr{Method: method, Path: path}
+	a, ok := eval.Current().(*design.ActionExpr)
+	if !ok {
 		eval.IncompatibleDSL()
-		// Don't return so return value is not nil
+		return r
 	}
-	return &design.RouteExpr{Method: method, Path: path}
+	r.Action = a
+	a.Routes = append(a.Routes, r)
+	return r
 }
 
 // Headers groups a set of Header expressions. It makes it possible to list

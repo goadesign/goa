@@ -82,12 +82,12 @@ func MakeV2(root *rest.RootExpr) (*V2, error) {
 					return nil, err
 				}
 			}
-			for _, a := range res.Actions {
-				if mustGenerate(a.Metadata) {
-					for _, route := range a.Routes {
-						if err := buildPathFromExpr(s, root, route, basePath); err != nil {
-							return nil, err
-						}
+		}
+		for _, a := range res.Actions {
+			if mustGenerate(a.Metadata) {
+				for _, route := range a.Routes {
+					if err := buildPathFromExpr(s, root, route, basePath); err != nil {
+						return nil, err
 					}
 				}
 			}
@@ -326,7 +326,7 @@ func responseSpecFromExpr(s *V2, root *rest.RootExpr, r *rest.HTTPResponseExpr) 
 			schema.Ref = MediaTypeRef(root.Design.API, mt, view)
 		}
 	}
-	headers, err := headersFromExpr(r.Headers)
+	headers, err := headersFromExpr(r.Headers())
 	if err != nil {
 		return nil, err
 	}

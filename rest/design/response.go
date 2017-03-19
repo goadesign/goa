@@ -82,8 +82,8 @@ type (
 		StatusCode int
 		// Response description
 		Description string
-		// Response header expressions
-		Headers *design.AttributeExpr
+		// Response header attribute
+		HeadersAtt *design.AttributeExpr
 		// Response body if any
 		Body *design.AttributeExpr
 		// Response Content-Type header value
@@ -94,6 +94,14 @@ type (
 		Metadata design.MetadataExpr
 	}
 )
+
+// Headers returns the response headers.
+func (r *HTTPResponseExpr) Headers() *design.AttributeExpr {
+	if r.HeadersAtt == nil {
+		r.HeadersAtt = &design.AttributeExpr{}
+	}
+	return r.HeadersAtt
+}
 
 // MediaType returns the media type describing the response body if any, nil
 // otherwise.
@@ -121,7 +129,7 @@ func (r *HTTPResponseExpr) EvalName() string {
 func (r *HTTPResponseExpr) Validate() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
 	if r.Headers != nil {
-		verr.Merge(r.Headers.Validate("HTTP response headers", r))
+		verr.Merge(r.HeadersAtt.Validate("HTTP response headers", r))
 	}
 	if r.Body != nil {
 		verr.Merge(r.Body.Validate("HTTP response body", r))
@@ -146,18 +154,4 @@ func (r *HTTPResponseExpr) Finalize() {
 		return
 	}
 	r.ContentType = mt.Identifier
-}
-
-// Dup returns a copy of the response definition.
-func (r *HTTPResponseExpr) Dup() *HTTPResponseExpr {
-	res := HTTPResponseExpr{
-		StatusCode:  r.StatusCode,
-		Description: r.Description,
-		Headers:     design.DupAtt(r.Headers),
-		Body:        design.DupAtt(r.Body),
-		ContentType: r.ContentType,
-		Parent:      r.Parent,
-		Metadata:    r.Metadata.Dup(),
-	}
-	return &res
 }

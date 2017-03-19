@@ -233,6 +233,9 @@ func (a *ActionExpr) ValidateParams() *eval.ValidationErrors {
 // Iteration stops if an iterator returns an error and in this case WalkHeaders returns that
 // error.
 func (a *ActionExpr) WalkHeaders(it HeaderWalker) error {
+	if a.headers == nil {
+		return nil
+	}
 	var (
 		resAttrs      = design.DupAtt(a.Resource.headers)
 		actAttrs      = design.DupAtt(a.headers)

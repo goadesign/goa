@@ -2,7 +2,6 @@ package eval
 
 import (
 	"fmt"
-	"reflect"
 )
 
 var (
@@ -43,11 +42,7 @@ func Register(r Root) error {
 			return fmt.Errorf("duplicate DSL %s", r.EvalName())
 		}
 	}
-	t := reflect.TypeOf(r)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-	Context.dslPackages = append(Context.dslPackages, t.PkgPath())
+	Context.dslPackages = append(Context.dslPackages, r.Packages()...)
 	Context.roots = append(Context.roots, r)
 
 	return nil
