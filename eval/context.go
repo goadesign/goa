@@ -67,11 +67,17 @@ func (c *DSLContext) Error() string {
 // Roots orders the DSL roots making sure dependencies are last. It returns an
 // error if there is a dependency cycle.
 func (c *DSLContext) Roots() ([]Root, error) {
-	roots := c.roots
+	// Filter out unused roots
+	var roots []Root
+	for _, root := range c.roots {
+		if root.Used() {
+			roots = append(roots, root)
+		}
+	}
 	if len(roots) == 0 {
 		return nil, nil
 	}
-	// First flatten dependencies for each root
+	// Flatten dependencies for each root
 	rootDeps := make(map[string][]Root, len(roots))
 	rootByName := make(map[string]Root, len(roots))
 	for _, r := range roots {
@@ -83,7 +89,7 @@ func (c *DSLContext) Roots() ([]Root, error) {
 		rootDeps[r.EvalName()] = sorted
 		rootByName[r.EvalName()] = r
 	}
-	// Now check for cycles
+	// Check for cycles
 	for name, deps := range rootDeps {
 		root := rootByName[name]
 		for otherName, otherdeps := range rootDeps {
