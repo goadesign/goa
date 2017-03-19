@@ -74,7 +74,6 @@ func (g *GenPackage) Write(gens, debug bool) error {
 			codegen.SimpleImport("goa.design/goa.v2/codegen"),
 			codegen.SimpleImport("goa.design/goa.v2/eval"),
 			codegen.SimpleImport("goa.design/goa.v2/pkg"),
-			codegen.NewImport("rest", "goa.design/goa.v2/rest/design"),
 			codegen.NewImport("_", g.DesignPath),
 		}
 		for _, cmd := range g.Commands {
@@ -158,15 +157,25 @@ const mainTmpl = `func main() {
 		fail(err.Error())
 	}
 
+	var roots []eval.Root
+	{
+		rs, err := eval.Context.Roots()
+		if err != nil {
+			fail(err.Error())
+		}
+		roots = rs
+	}
+
 	var writers []codegen.FileWriter
 	{
 {{- range . }}
-		ws, err := {{ . }}.RestWriters(rest.Root)
+		ws, err := {{ . }}.Writers(roots...)
 		if err != nil {
 			fail(err.Error())
 		}
 		writers = append(writers, ws...)
 {{ end }}	}
+
 	outputs := make([]string, len(writers))
 	for i, w := range writers {
 		d := filepath.Dir(w.OutputPath())
@@ -178,6 +187,7 @@ const mainTmpl = `func main() {
 		}
 		outputs[i] = filepath.Join(*out, w.OutputPath())
 	}
+
 	sort.Strings(outputs)
 	fmt.Println(strings.Join(outputs, "\n"))
 }

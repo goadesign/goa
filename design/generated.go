@@ -46,3 +46,8 @@ func (r GeneratedRoot) Packages() []string {
 		"goa.design/goa.v2/dsl",
 	}
 }
+
+// Used returns true if the DSL makes use of CollectionOf.
+func (r GeneratedRoot) Used() bool {
+	return len(r) > 0
+}

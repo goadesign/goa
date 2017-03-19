@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	// Context contains the state used by the initiator to execute the DSL.
+	// Context contains the state used by the engine to execute the DSL.
 	Context = &DSLContext{}
 )
 
@@ -64,9 +64,9 @@ func (c *DSLContext) Error() string {
 	return ""
 }
 
-// SortRoots orders the DSL roots making sure dependencies are last. It returns
-// an error if there is a dependency cycle.
-func (c *DSLContext) SortRoots() ([]Root, error) {
+// Roots orders the DSL roots making sure dependencies are last. It returns an
+// error if there is a dependency cycle.
+func (c *DSLContext) Roots() ([]Root, error) {
 	roots := c.roots
 	if len(roots) == 0 {
 		return nil, nil

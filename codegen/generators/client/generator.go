@@ -8,20 +8,42 @@ Package client generates the code for a client. This includes:
 package client
 
 import (
+	"fmt"
+
 	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/codegen/writers"
+	"goa.design/goa.v2/design"
+	"goa.design/goa.v2/eval"
+	restcodegen "goa.design/goa.v2/rest/codegen"
 	rest "goa.design/goa.v2/rest/design"
 )
 
-// RestWriters returns the HTTP server writers.
-func RestWriters(r *rest.RootExpr) ([]codegen.FileWriter, error) {
-	var ws []codegen.FileWriter
-	for _, s := range r.Design.Services {
-		ws = append(ws, writers.Service(r.Design.API, s))
-		ws = append(ws, writers.Endpoint(r.Design.API, s))
+// Writers iterates through the roots and returns the writers needed to render
+// the service server code. It returns an error if the roots slice does not
+// include both a goa design and at least one transport design roots.
+func Writers(roots ...eval.Root) ([]codegen.FileWriter, error) {
+	var (
+		desws, tranws []codegen.FileWriter
+	)
+	for _, root := range roots {
+		switch r := root.(type) {
+		case *design.RootExpr:
+			for _, s := range r.Services {
+				desws = append(desws, writers.Service(r.API, s))
+				desws = append(desws, writers.Endpoint(r.API, s))
+			}
+		case *rest.RootExpr:
+			tranws = append(tranws, restcodegen.ClientWriters(r)...)
+		}
+		// TBD:
+		// case *rpc.RootExpr:
+		// tranws = append(tranws, rpccodegen.ClientWriters(r))
 	}
-	if r != nil {
-		// ws = append(ws, restcodegen.ClientWriters(r)...)
+	if len(desws) == 0 {
+		return nil, fmt.Errorf("could not find goa design in DSL roots, vendoring issue?")
 	}
-	return ws, nil
+	if len(tranws) == 0 {
+		return nil, fmt.Errorf("could not find transport design in DSL roots")
+	}
+	return append(desws, tranws...), nil
 }

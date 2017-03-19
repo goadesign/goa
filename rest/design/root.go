@@ -190,6 +190,23 @@ func (r *RootExpr) EvalName() string {
 	return "API HTTP"
 }
 
+// WalkSets and DependsOn are no-ops for this root as the DSL runs when loaded.
+func (r *RootExpr) WalkSets(w eval.SetWalker) {}
+func (r *RootExpr) DependsOn() []eval.Root    { return nil }
+
+// Packages returns the Go import path to this and the dsl packages.
+func (r *RootExpr) Packages() []string {
+	return []string{
+		"goa.design/goa.v2/rest/design",
+		"goa.design/goa.v2/rest/dsl",
+	}
+}
+
+// Used returns true if the DSL makes use of HTTP.
+func (r *RootExpr) Used() bool {
+	return len(r.Resources) > 0
+}
+
 // ExtractWildcards returns the names of the wildcards that appear in path.
 func ExtractWildcards(path string) []string {
 	matches := WildcardRegex.FindAllStringSubmatch(path, -1)

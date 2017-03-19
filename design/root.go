@@ -87,6 +87,11 @@ func (r *RootExpr) Packages() []string {
 	}
 }
 
+// Used returns true if the DSL makes use of API.
+func (r *RootExpr) Used() bool {
+	return r.API != nil
+}
+
 // Trait returns the trait expression with the given name if found, nil otherwise.
 func (r *RootExpr) Trait(name string) *TraitExpr {
 	for _, t := range r.Traits {

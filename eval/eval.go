@@ -15,7 +15,7 @@ import (
 // during initial execution via Register to have them be executed (last) in the
 // same run.
 func RunDSL() error {
-	roots, err := Context.SortRoots()
+	roots, err := Context.Roots()
 	if err != nil {
 		return err
 	}
