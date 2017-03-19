@@ -190,9 +190,11 @@ func (r *RootExpr) EvalName() string {
 	return "API HTTP"
 }
 
-// WalkSets and DependsOn are no-ops for this root as the DSL runs when loaded.
+// WalkSets is a no-op as the DSL runs when loaded.
 func (r *RootExpr) WalkSets(w eval.SetWalker) {}
-func (r *RootExpr) DependsOn() []eval.Root    { return nil }
+
+// DependsOn is a no-op as the DSL runs when loaded.
+func (r *RootExpr) DependsOn() []eval.Root { return nil }
 
 // Packages returns the Go import path to this and the dsl packages.
 func (r *RootExpr) Packages() []string {
