@@ -26,7 +26,7 @@ import (
 //
 //        // Endpoint which uses the default type for its response.
 //        Endpoint("divide", func() {
-//            Request(DivideRequest)
+//            Payload(DivideRequest)
 //            Error("div_by_zero", DivByZero, "Division by zero")
 //        })
 //    })

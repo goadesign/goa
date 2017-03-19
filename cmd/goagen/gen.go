@@ -72,9 +72,8 @@ func (g *GenPackage) Write(gens, debug bool) error {
 			codegen.SimpleImport("sort"),
 			codegen.SimpleImport("strings"),
 			codegen.SimpleImport("goa.design/goa.v2/codegen"),
-			codegen.SimpleImport("goa.design/goa.v2/design"),
+			codegen.SimpleImport("goa.design/goa.v2/eval"),
 			codegen.SimpleImport("goa.design/goa.v2/pkg"),
-			codegen.NewImport("rest", "goa.design/goa.v2/rest/design"),
 			codegen.NewImport("_", g.DesignPath),
 		}
 		for _, cmd := range g.Commands {
@@ -127,7 +126,7 @@ func (g *GenPackage) Run() ([]string, error) {
 // Remove deletes the package files.
 func (g *GenPackage) Remove() {
 	if g.tmpDir != "" {
-		os.Remove(g.tmpDir)
+		os.RemoveAll(g.tmpDir)
 		g.tmpDir = ""
 	}
 }
@@ -141,35 +140,60 @@ const mainTmpl = `func main() {
 	{
 		flag.Parse()
 		if *out == "" {
-			fmt.Fprintln(os.Stderr, "missing output flag")
-			os.Exit(1)
+			fail("missing output flag")
 		}
 		if *version == "" {
-			fmt.Fprintln(os.Stderr, "missing version flag")
-			os.Exit(1)
+			fail("missing version flag")
 		}
 	}
 
 	if *version != pkg.Version() {
-		fmt.Fprintf(os.Stderr, "goa DSL was run with goa version %s but compiled generator is running %s\n", *version, pkg.Version())
-		os.Exit(1)
+		fail("goa DSL was run with goa version %s but compiled generator is running %s\n", *version, pkg.Version())
+	}
+        if err := eval.Context.Errors; err != nil {
+		fail(err.Error())
+	}
+	if err := eval.RunDSL(); err != nil {
+		fail(err.Error())
+	}
+
+	var roots []eval.Root
+	{
+		rs, err := eval.Context.Roots()
+		if err != nil {
+			fail(err.Error())
+		}
+		roots = rs
 	}
 
 	var writers []codegen.FileWriter
 	{
 {{- range . }}
-		writers = append(writers, {{.}}.Writers(design.Root, rest.Root)...)
-{{ end -}}
-	}
+		ws, err := {{ . }}.Writers(roots...)
+		if err != nil {
+			fail(err.Error())
+		}
+		writers = append(writers, ws...)
+{{ end }}	}
+
 	outputs := make([]string, len(writers))
 	for i, w := range writers {
+		d := filepath.Dir(w.OutputPath())
+		if err := os.MkdirAll(d, 0755); err != nil {
+			fail(err.Error())
+		}
 		if err := codegen.Render(w, *out); err != nil {
-			fmt.Fprintf(os.Stderr, err.Error())
-			os.Exit(1)
+			fail(err.Error())
 		}
 		outputs[i] = filepath.Join(*out, w.OutputPath())
 	}
+
 	sort.Strings(outputs)
 	fmt.Println(strings.Join(outputs, "\n"))
+}
+
+func fail(msg string, vals ...interface{}) {
+	fmt.Fprintf(os.Stderr, msg, vals...)
+	os.Exit(1)
 }
 `

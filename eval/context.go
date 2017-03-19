@@ -2,11 +2,10 @@ package eval
 
 import (
 	"fmt"
-	"reflect"
 )
 
 var (
-	// Context contains the state used by the initiator to execute the DSL.
+	// Context contains the state used by the engine to execute the DSL.
 	Context = &DSLContext{}
 )
 
@@ -43,11 +42,7 @@ func Register(r Root) error {
 			return fmt.Errorf("duplicate DSL %s", r.EvalName())
 		}
 	}
-	t := reflect.TypeOf(r)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-	Context.dslPackages = append(Context.dslPackages, t.PkgPath())
+	Context.dslPackages = append(Context.dslPackages, r.Packages()...)
 	Context.roots = append(Context.roots, r)
 
 	return nil
@@ -69,14 +64,20 @@ func (c *DSLContext) Error() string {
 	return ""
 }
 
-// SortRoots orders the DSL roots making sure dependencies are last. It returns
-// an error if there is a dependency cycle.
-func (c *DSLContext) SortRoots() ([]Root, error) {
-	roots := c.roots
+// Roots orders the DSL roots making sure dependencies are last. It returns an
+// error if there is a dependency cycle.
+func (c *DSLContext) Roots() ([]Root, error) {
+	// Filter out unused roots
+	var roots []Root
+	for _, root := range c.roots {
+		if root.Used() {
+			roots = append(roots, root)
+		}
+	}
 	if len(roots) == 0 {
 		return nil, nil
 	}
-	// First flatten dependencies for each root
+	// Flatten dependencies for each root
 	rootDeps := make(map[string][]Root, len(roots))
 	rootByName := make(map[string]Root, len(roots))
 	for _, r := range roots {
@@ -88,7 +89,7 @@ func (c *DSLContext) SortRoots() ([]Root, error) {
 		rootDeps[r.EvalName()] = sorted
 		rootByName[r.EvalName()] = r
 	}
-	// Now check for cycles
+	// Check for cycles
 	for name, deps := range rootDeps {
 		root := rootByName[name]
 		for otherName, otherdeps := range rootDeps {

@@ -9,52 +9,6 @@ import (
 	"goa.design/goa.v2/rest/design"
 )
 
-const pathT = `{{range $i, $route := .Routes -}}
-// {{$.EndpointName}}{{$.ServiceName}}Path{{if ne $i 0}}{{add $i 1}}{{end}} returns the URL path to the {{$.ServiceName}} service {{$.EndpointName}} HTTP endpoint.
-func {{$.EndpointName}}{{$.ServiceName}}Path{{if ne $i 0}}{{add $i 1}}{{end}}({{template "arguments" .Arguments}}) string {
-{{- if .Arguments}}
-	{{template "slice_conversion" .Arguments -}}
-	return fmt.Sprintf("{{ .Path }}"{{template "fmt_params" .Arguments}})
-{{- else}}
-	return "{{ .Path }}"
-{{- end}}
-}
-
-{{end}}
-
-{{- define "arguments" -}}
-{{range $i, $arg := . -}}
-{{if ne $i 0}}, {{end}}{{goify .Name false}} {{goTypeRef .Type}}
-{{- end}}
-{{- end}}
-
-{{- define "fmt_params" -}}
-{{range . -}}
-, {{if eq .Type.Name "array"}}strings.Join(encoded{{goify .Name true}}, ","){{else}}{{goify .Name false}}{{end}}
-{{- end}}
-{{- end}}
-
-{{- define "slice_conversion" -}}
-{{range $i, $arg := .}}
-	{{- if eq .Type.Name "array" -}}
-	encoded{{goify .Name true}} := make([]string, len({{goify .Name false}}))
-	for i, v := range {{goify .Name false}} {
-		encoded{{goify .Name true}}[i] = {{if eq .Type.ElemType.Type.Name "string"}}url.QueryEscape(v)
-	{{else if eq .Type.ElemType.Type.Name "int" "int32"}}strconv.FormatInt(int64(v), 10)
-	{{else if eq .Type.ElemType.Type.Name "int64"}}strconv.FormatInt(v, 10)
-	{{else if eq .Type.ElemType.Type.Name "uint" "uint32"}}strconv.FormatUint(uint64(v), 10)
-	{{else if eq .Type.ElemType.Type.Name "uint64"}}strconv.FormatUint(v, 10)
-	{{else if eq .Type.ElemType.Type.Name "float32"}}strconv.FormatFloat(float64(v), 'f', -1, 32)
-	{{else if eq .Type.ElemType.Type.Name "float64"}}strconv.FormatFloat(v, 'f', -1, 64)
-	{{else if eq .Type.ElemType.Type.Name "boolean"}}strconv.FormatBool(v)
-	{{else}}url.QueryEscape(fmt.Sprintf("%v", v))
-	{{end -}}
-	}
-
-	{{end}}
-{{- end}}
-{{- end}}`
-
 type (
 	// pathData contains the data necessary to render the path template.
 	pathData struct {
@@ -126,7 +80,7 @@ func PathWriter(api *goadesign.APIExpr, r *design.RootExpr) codegen.FileWriter {
 // Path returns a path section for the specified action
 func Path(a *design.ActionExpr) *codegen.Section {
 	return &codegen.Section{
-		Template: *pathTmpl,
+		Template: pathTmpl,
 		Data:     buildPathData(a),
 	}
 }
@@ -168,3 +122,49 @@ func generatePathArguments(r *design.RouteExpr) []*pathArgument {
 	}
 	return args
 }
+
+const pathT = `{{range $i, $route := .Routes -}}
+// {{$.EndpointName}}{{$.ServiceName}}Path{{if ne $i 0}}{{add $i 1}}{{end}} returns the URL path to the {{$.ServiceName}} service {{$.EndpointName}} HTTP endpoint.
+func {{$.EndpointName}}{{$.ServiceName}}Path{{if ne $i 0}}{{add $i 1}}{{end}}({{template "arguments" .Arguments}}) string {
+{{- if .Arguments}}
+	{{template "slice_conversion" .Arguments -}}
+	return fmt.Sprintf("{{ .Path }}"{{template "fmt_params" .Arguments}})
+{{- else}}
+	return "{{ .Path }}"
+{{- end}}
+}
+
+{{end}}
+
+{{- define "arguments" -}}
+{{range $i, $arg := . -}}
+{{if ne $i 0}}, {{end}}{{goify .Name false}} {{goTypeRef .Type}}
+{{- end}}
+{{- end}}
+
+{{- define "fmt_params" -}}
+{{range . -}}
+, {{if eq .Type.Name "array"}}strings.Join(encoded{{goify .Name true}}, ","){{else}}{{goify .Name false}}{{end}}
+{{- end}}
+{{- end}}
+
+{{- define "slice_conversion" -}}
+{{range $i, $arg := .}}
+	{{- if eq .Type.Name "array" -}}
+	encoded{{goify .Name true}} := make([]string, len({{goify .Name false}}))
+	for i, v := range {{goify .Name false}} {
+		encoded{{goify .Name true}}[i] = {{if eq .Type.ElemType.Type.Name "string"}}url.QueryEscape(v)
+	{{else if eq .Type.ElemType.Type.Name "int" "int32"}}strconv.FormatInt(int64(v), 10)
+	{{else if eq .Type.ElemType.Type.Name "int64"}}strconv.FormatInt(v, 10)
+	{{else if eq .Type.ElemType.Type.Name "uint" "uint32"}}strconv.FormatUint(uint64(v), 10)
+	{{else if eq .Type.ElemType.Type.Name "uint64"}}strconv.FormatUint(v, 10)
+	{{else if eq .Type.ElemType.Type.Name "float32"}}strconv.FormatFloat(float64(v), 'f', -1, 32)
+	{{else if eq .Type.ElemType.Type.Name "float64"}}strconv.FormatFloat(v, 'f', -1, 64)
+	{{else if eq .Type.ElemType.Type.Name "boolean"}}strconv.FormatBool(v)
+	{{else}}url.QueryEscape(fmt.Sprintf("%v", v))
+	{{end -}}
+	}
+
+	{{end}}
+{{- end}}
+{{- end}}`

@@ -29,8 +29,8 @@ type (
 	}
 )
 
-// ServiceWriter returns the codegen.FileWriter for the given service.
-func ServiceWriter(api *design.APIExpr, service *design.ServiceExpr) codegen.FileWriter {
+// Service returns the codegen.FileWriter for the given service.
+func Service(api *design.APIExpr, service *design.ServiceExpr) codegen.FileWriter {
 	return nil
 }
 

@@ -46,9 +46,9 @@ func (e endpointWriter) OutputPath() string {
 	return e.outputPath
 }
 
-// EndpointsWriter returns the codegen.FileWriter for the endpoints of the given
+// Endpoint returns the codegen.FileWriter for the endpoints of the given
 // service.
-func EndpointsWriter(api *design.APIExpr, service *design.ServiceExpr) codegen.FileWriter {
+func Endpoint(api *design.APIExpr, service *design.ServiceExpr) codegen.FileWriter {
 	return endpointWriter{
 		sections: []*codegen.Section{
 			codegen.Header("", "endpoints", []*codegen.ImportSpec{
@@ -56,16 +56,16 @@ func EndpointsWriter(api *design.APIExpr, service *design.ServiceExpr) codegen.F
 				&codegen.ImportSpec{Path: "goa.design/goa.v2"},
 				&codegen.ImportSpec{Path: "goa.design/goa.v2/examples/account/gen/services"},
 			}),
-			Endpoint(api, service),
+			EndpointSection(api, service),
 		},
 		outputPath: filepath.Join("gen/endpoints/", codegen.SnakeCase(service.Name)+".go"),
 	}
 }
 
-// Endpoint returns an endpoint section.
-func Endpoint(api *design.APIExpr, service *design.ServiceExpr) *codegen.Section {
+// EndpointSection returns an endpoint section.
+func EndpointSection(api *design.APIExpr, service *design.ServiceExpr) *codegen.Section {
 	return &codegen.Section{
-		Template: *endpointTmpl,
+		Template: endpointTmpl,
 		Data:     buildEndpointData(api, service),
 	}
 }

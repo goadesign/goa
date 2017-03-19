@@ -68,6 +68,8 @@ type (
 		Walk(walker func(*AttributeExpr) error) error
 		// Dup makes a deep copy of the type given a deep copy of its attribute.
 		Dup(att *AttributeExpr) UserType
+		// EvalName returns the name reported by the DSL engine.
+		EvalName() string
 		// Validate checks that the user type expression is consistent.
 		Validate(ctx string, parent eval.Expression) *eval.ValidationErrors
 		// Finalize finalizes the underlying type.
@@ -300,6 +302,8 @@ func (p Primitive) Example(r *Random) interface{} {
 	switch p {
 	case Boolean:
 		return r.Bool()
+	case Int, UInt:
+		return r.Int()
 	case Int32, UInt32:
 		return r.Int32()
 	case Int64, UInt64:

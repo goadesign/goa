@@ -18,8 +18,8 @@ import (
 //            Description("Add docs")
 //            URL("http//adder.goa.design/docs/actions/add")
 //        })
-//        Request(Operands)
-//        Response(Sum)
+//        Payload(Operands)
+//        Result(Sum)
 //        Error(ErrInvalidOperands)
 //    })
 //
@@ -30,7 +30,5 @@ func Endpoint(name string, dsl func()) {
 		return
 	}
 	ep := &design.EndpointExpr{Name: name, Service: s, DSLFunc: dsl}
-	if eval.Execute(ep.DSL(), ep) {
-		s.Endpoints = append(s.Endpoints, ep)
-	}
+	s.Endpoints = append(s.Endpoints, ep)
 }
