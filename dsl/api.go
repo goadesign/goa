@@ -33,7 +33,7 @@ import (
 //        })
 //    }
 //
-func API(name string, dsl func()) *design.APIExpr {
+func API(name string, fn func()) *design.APIExpr {
 	if name == "" {
 		eval.ReportError("API first argument cannot be empty")
 		return nil
@@ -42,7 +42,7 @@ func API(name string, dsl func()) *design.APIExpr {
 		eval.IncompatibleDSL()
 		return nil
 	}
-	design.Root.API = &design.APIExpr{Name: name, DSLFunc: dsl}
+	design.Root.API = &design.APIExpr{Name: name, DSLFunc: fn}
 	return design.Root.API
 }
 
@@ -65,9 +65,9 @@ func Version(ver string) {
 }
 
 // Contact sets the API contact information.
-func Contact(dsl func()) {
+func Contact(fn func()) {
 	contact := new(design.ContactExpr)
-	if !eval.Execute(dsl, contact) {
+	if !eval.Execute(fn, contact) {
 		return
 	}
 	if a, ok := eval.Current().(*design.APIExpr); ok {
@@ -78,9 +78,9 @@ func Contact(dsl func()) {
 }
 
 // License sets the API license information.
-func License(dsl func()) {
+func License(fn func()) {
 	license := new(design.LicenseExpr)
-	if !eval.Execute(dsl, license) {
+	if !eval.Execute(fn, license) {
 		return
 	}
 	if a, ok := eval.Current().(*design.APIExpr); ok {
@@ -104,9 +104,9 @@ func License(dsl func()) {
 //        })
 //    })
 //
-func Docs(dsl func()) {
+func Docs(fn func()) {
 	docs := new(design.DocsExpr)
-	if !eval.Execute(dsl, docs) {
+	if !eval.Execute(fn, docs) {
 		return
 	}
 	switch e := eval.Current().(type) {
@@ -133,16 +133,16 @@ func TermsOfService(terms string) {
 }
 
 // Server defines an API host.
-func Server(url string, dsl ...func()) {
-	if len(dsl) > 1 {
+func Server(url string, fn ...func()) {
+	if len(fn) > 1 {
 		eval.ReportError("too many arguments given to Server")
 	}
 	server := &design.ServerExpr{
 		Params: new(design.AttributeExpr),
 		URL:    url,
 	}
-	if len(dsl) > 0 {
-		eval.Execute(dsl[0], server)
+	if len(fn) > 0 {
+		eval.Execute(fn[0], server)
 	}
 	if url == "" {
 		eval.ReportError("Server URL cannot be empty")

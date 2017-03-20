@@ -15,10 +15,10 @@ type (
 )
 
 // NewUserTypeExpr creates a user type expression but does not execute the DSL.
-func NewUserTypeExpr(name string, dsl func()) *UserTypeExpr {
+func NewUserTypeExpr(name string, fn func()) *UserTypeExpr {
 	return &UserTypeExpr{
 		TypeName:      name,
-		AttributeExpr: &AttributeExpr{DSLFunc: dsl},
+		AttributeExpr: &AttributeExpr{DSLFunc: fn},
 	}
 }
 

@@ -19,7 +19,7 @@ type (
 
 // NewAccount wraps the given account service with endpoints.
 func NewAccount(s services.Account) *Account {
-	ep := &Account{}
+	ep := new(Account)
 
 	ep.Create = func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*services.CreateAccountPayload)

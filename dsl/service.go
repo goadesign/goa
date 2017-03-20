@@ -38,7 +38,7 @@ import (
 //        })
 //    })
 //
-func Service(name string, dsl func()) *design.ServiceExpr {
+func Service(name string, fn func()) *design.ServiceExpr {
 	if _, ok := eval.Current().(eval.TopExpr); !ok {
 		eval.IncompatibleDSL()
 		return nil
@@ -47,7 +47,7 @@ func Service(name string, dsl func()) *design.ServiceExpr {
 		eval.ReportError("service %#v is defined twice", name)
 		return nil
 	}
-	s := &design.ServiceExpr{Name: name, DSLFunc: dsl}
+	s := &design.ServiceExpr{Name: name, DSLFunc: fn}
 	design.Root.Services = append(design.Root.Services, s)
 	return s
 }

@@ -40,8 +40,8 @@ import (
 //     })
 // })
 //
-func Payload(val interface{}, dsls ...func()) {
-	if len(dsls) > 1 {
+func Payload(val interface{}, fns ...func()) {
+	if len(fns) > 1 {
 		eval.ReportError("too many arguments")
 	}
 	e, ok := eval.Current().(*design.EndpointExpr)
@@ -49,10 +49,10 @@ func Payload(val interface{}, dsls ...func()) {
 		eval.IncompatibleDSL()
 		return
 	}
-	e.Payload = endpointTypeDSL("Payload", val, dsls...)
+	e.Payload = endpointTypeDSL("Payload", val, fns...)
 }
 
-func endpointTypeDSL(suffix string, p interface{}, dsls ...func()) design.UserType {
+func endpointTypeDSL(suffix string, p interface{}, fns ...func()) design.UserType {
 	var (
 		e  = eval.Current().(*design.EndpointExpr)
 		sn = camelize(e.Service.Name)
@@ -60,17 +60,17 @@ func endpointTypeDSL(suffix string, p interface{}, dsls ...func()) design.UserTy
 
 		att *design.AttributeExpr
 		ut  design.UserType
-		dsl func()
+		fn  func()
 	)
-	if len(dsls) > 0 && dsls[0] == nil {
-		dsls = dsls[1:]
+	if len(fns) > 0 && fns[0] == nil {
+		fns = fns[1:]
 	}
 	switch actual := p.(type) {
 	case func():
-		dsl = actual
+		fn = actual
 		att = &design.AttributeExpr{Type: design.Object{}}
 	case design.UserType:
-		if len(dsls) == 0 {
+		if len(fns) == 0 {
 			// Do not duplicate type if it is not customized
 			return actual
 		}
@@ -82,14 +82,14 @@ func endpointTypeDSL(suffix string, p interface{}, dsls ...func()) design.UserTy
 		eval.ReportError("invalid %s argument, must be a type or a function", suffix)
 		return nil
 	}
-	if len(dsls) == 1 {
-		if dsl != nil {
+	if len(fns) == 1 {
+		if fn != nil {
 			eval.ReportError("invalid arguments in %s call, must be (type), (func) or (type, func)", suffix)
 		}
-		dsl = dsls[0]
+		fn = fns[0]
 	}
-	if dsl != nil {
-		eval.Execute(dsl, att)
+	if fn != nil {
+		eval.Execute(fn, att)
 	}
 	if ut == nil {
 		ut = &design.UserTypeExpr{

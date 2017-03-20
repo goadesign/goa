@@ -35,13 +35,13 @@ func Error(name string, args ...interface{}) {
 	if len(args) == 0 {
 		args = []interface{}{design.ErrorMedia}
 	}
-	dt, desc, dsl := parseAttributeArgs(nil, args...)
+	dt, desc, fn := parseAttributeArgs(nil, args...)
 	att := &design.AttributeExpr{
 		Description: desc,
 		Type:        dt,
 	}
-	if dsl != nil {
-		eval.Execute(dsl, att)
+	if fn != nil {
+		eval.Execute(fn, att)
 	}
 	erro := &design.ErrorExpr{AttributeExpr: att, Name: name}
 	switch actual := eval.Current().(type) {

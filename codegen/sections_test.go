@@ -53,7 +53,7 @@ import (
 	for k, tc := range cases {
 		buf := new(bytes.Buffer)
 		s := Header(tc.Title, "testpackage", tc.Imports)
-		s.Render(buf)
+		s.Write(buf)
 		actual := buf.String()
 		if actual != tc.Expected {
 			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.Expected)

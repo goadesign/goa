@@ -65,7 +65,7 @@ func Type(name string, args ...interface{}) design.UserType {
 
 	var (
 		base design.DataType
-		dsl  func()
+		fn   func()
 	)
 	if len(args) == 0 {
 		// Make Type behave like Attribute
@@ -80,11 +80,11 @@ func Type(name string, args ...interface{}) design.UserType {
 				eval.ReportError("third argument must be a function")
 				return nil
 			}
-			dsl = d
+			fn = d
 		}
 	case func():
 		base = design.Object{}
-		dsl = a
+		fn = a
 		if len(args) == 2 {
 			eval.ReportError("only one argument allowed when it is a function")
 			return nil
@@ -96,7 +96,7 @@ func Type(name string, args ...interface{}) design.UserType {
 
 	t := &design.UserTypeExpr{
 		TypeName:      name,
-		AttributeExpr: &design.AttributeExpr{Type: base, DSLFunc: dsl},
+		AttributeExpr: &design.AttributeExpr{Type: base, DSLFunc: fn},
 	}
 	design.Root.Types = append(design.Root.Types, t)
 	return t
@@ -126,7 +126,7 @@ func Type(name string, args ...interface{}) design.UserType {
 // a media type where ArrayOf returns a user type. In general you want to use
 // CollectionOf if the argument is a media type and ArrayOf if it is a user
 // type.
-func ArrayOf(v interface{}, dsl ...func()) *design.Array {
+func ArrayOf(v interface{}, fn ...func()) *design.Array {
 	var t design.DataType
 	var ok bool
 	t, ok = v.(design.DataType)
@@ -141,13 +141,13 @@ func ArrayOf(v interface{}, dsl ...func()) *design.Array {
 		eval.ReportError("invalid ArrayOf argument: not a type and not a known user type name")
 		return res
 	}
-	if len(dsl) > 1 {
+	if len(fn) > 1 {
 		eval.ReportError("ArrayOf: too many arguments")
 		return res
 	}
 	at := design.AttributeExpr{Type: t}
-	if len(dsl) == 1 {
-		eval.Execute(dsl[0], &at)
+	if len(fn) == 1 {
+		eval.Execute(fn[0], &at)
 	}
 	return &design.Array{ElemType: &at}
 }
@@ -172,7 +172,7 @@ func ArrayOf(v interface{}, dsl ...func()) *design.Array {
 //        Attribute("ratings", MapOf(Bottle, Int32), "Bottle ratings")
 //    })
 //
-func MapOf(k, v interface{}, dsl ...func()) *design.Map {
+func MapOf(k, v interface{}, fn ...func()) *design.Map {
 	var tk, tv design.DataType
 	var ok bool
 	tk, ok = k.(design.DataType)
@@ -197,38 +197,38 @@ func MapOf(k, v interface{}, dsl ...func()) *design.Map {
 		eval.ReportError("invalid MapOf value argument: not a type and not a known user type name")
 		return res
 	}
-	if len(dsl) > 1 {
+	if len(fn) > 1 {
 		eval.ReportError("MapOf: too many arguments")
 		return res
 	}
 	kat := design.AttributeExpr{Type: tk}
 	vat := design.AttributeExpr{Type: tv}
 	m := &design.Map{KeyType: &kat, ElemType: &vat}
-	if len(dsl) == 1 {
+	if len(fn) == 1 {
 		mat := design.AttributeExpr{Type: m}
-		eval.Execute(dsl[0], &mat)
+		eval.Execute(fn[0], &mat)
 	}
 	return m
 }
 
 // Key makes it possible to specify validations for map keys.
-func Key(dsl func()) {
+func Key(fn func()) {
 	at, ok := eval.Current().(*design.AttributeExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
 	m := at.Type.(*design.Map)
-	eval.Execute(dsl, m.KeyType)
+	eval.Execute(fn, m.KeyType)
 }
 
 // Value makes it possible to specify validations for map values.
-func Value(dsl func()) {
+func Value(fn func()) {
 	at, ok := eval.Current().(*design.AttributeExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
 	m := at.Type.(*design.Map)
-	eval.Execute(dsl, m.ElemType)
+	eval.Execute(fn, m.ElemType)
 }
