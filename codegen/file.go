@@ -34,7 +34,7 @@ type (
 
 // WriteHeader writes the generic generated code header.
 func (f *SourceFile) WriteHeader(title, pack string, imports []*ImportSpec) error {
-	return Header(title, pack, imports).Render(f)
+	return Header(title, pack, imports).Write(f)
 }
 
 // Write implements io.Writer so that variables of type *SourceFile can be

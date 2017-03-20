@@ -58,7 +58,7 @@ var mediaTypeCount int
 //        })
 //     })
 //
-func MediaType(identifier string, dsl func()) *design.MediaTypeExpr {
+func MediaType(identifier string, fn func()) *design.MediaTypeExpr {
 	if _, ok := eval.Current().(eval.TopExpr); !ok {
 		eval.IncompatibleDSL()
 		return nil
@@ -102,7 +102,7 @@ func MediaType(identifier string, dsl func()) *design.MediaTypeExpr {
 		typeName = fmt.Sprintf("MediaType%d", mediaTypeCount)
 	}
 	// Now save the type in the API media types map
-	mt := design.NewMediaTypeExpr(typeName, identifier, dsl)
+	mt := design.NewMediaTypeExpr(typeName, identifier, fn)
 	design.Root.MediaTypes = append(design.Root.MediaTypes, mt)
 
 	return mt
@@ -350,13 +350,13 @@ func Reference(t design.DataType) {
 }
 
 // Attributes implements the media type Attributes DSL. See MediaType.
-func Attributes(dsl func()) {
+func Attributes(fn func()) {
 	mt, ok := eval.Current().(*design.MediaTypeExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
-	eval.Execute(dsl, mt)
+	eval.Execute(fn, mt)
 }
 
 // buildView builds a view expression given an attribute and a corresponding

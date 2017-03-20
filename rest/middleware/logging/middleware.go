@@ -5,18 +5,15 @@ import (
 	"net/http"
 	"time"
 
-	goa "goa.design/goa.v2"
+	"goa.design/goa.v2"
 	"goa.design/goa.v2/rest"
 )
 
 // New returns a middleware that logs incoming requests and outgoing responses.
-// If dump is true the middleware logs the request and response bodies.
 func New(logger goa.Logger) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var (
-				startedAt = time.Now()
-			)
+			started := time.Now()
 
 			logger.Info(
 				r.Context(),
@@ -24,14 +21,14 @@ func New(logger goa.Logger) func(h http.Handler) http.Handler {
 				"from", from(r),
 			)
 
-			rw := rest.WrapResponseWriter(w)
+			rw := rest.CaptureResponse(w)
 			h.ServeHTTP(rw, r)
 
 			logger.Info(
 				r.Context(),
 				"status", rw.StatusCode,
 				"bytes", rw.ContentLength,
-				"time", time.Since(startedAt).String(),
+				"time", time.Since(started).String(),
 			)
 		})
 	}

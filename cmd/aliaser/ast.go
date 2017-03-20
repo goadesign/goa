@@ -26,15 +26,15 @@ type ExportedFunc struct {
 
 // ParseFuncs parses the Go package at the given path and returns the list of
 // exported functions indexed by name.
-func ParseFuncs(pkg string) (map[string]*ExportedFunc, error) {
+func ParseFuncs(pkgPath, pkgName string) (map[string]*ExportedFunc, error) {
 	fset := token.NewFileSet()
-	f, err := parser.ParseDir(fset, pkg, noTestFilter, parser.ParseComments)
+	f, err := parser.ParseDir(fset, pkgPath, noTestFilter, parser.ParseComments)
 	if err != nil {
 		return nil, err
 	}
-	p := f["dsl"]
+	p := f[pkgName]
 	if p == nil {
-		return nil, fmt.Errorf("did not find package 'dsl' in %s", pkg)
+		return nil, fmt.Errorf("did not find package '%s' in %s", pkgName, pkgPath)
 	}
 	funcs := make(map[string]*ExportedFunc)
 	for _, file := range p.Files {

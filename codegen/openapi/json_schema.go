@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	"goa.design/goa.v2/design"
-	rest "goa.design/goa.v2/rest/design"
+	"goa.design/goa.v2/design/rest"
 )
 
 type (

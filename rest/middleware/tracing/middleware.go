@@ -7,7 +7,7 @@ import (
 	rd "math/rand"
 	"net/http"
 
-	goa "goa.design/goa.v2"
+	"goa.design/goa.v2"
 
 	"context"
 )
@@ -50,9 +50,7 @@ type (
 	// tracedDoer is a client Doer that inserts the tracing headers for
 	// each request it makes.
 	tracedDoer struct {
-		doer    Doer
-		traceID string
-		spanID  string
+		Doer
 	}
 
 	// tracedLogger is a logger which logs the trace ID with every log
@@ -151,18 +149,7 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 // ctx must contain the current request segment as set by the xray middleware or
 // the doer passed as argument is returned.
 func WrapDoer(ctx context.Context, doer Doer) Doer {
-	var (
-		traceID = ContextTraceID(ctx)
-		spanID  = ContextSpanID(ctx)
-	)
-	if traceID == "" {
-		return doer
-	}
-	return &tracedDoer{
-		doer:    doer,
-		traceID: traceID,
-		spanID:  spanID,
-	}
+	return &tracedDoer{doer}
 }
 
 // WrapLogger returns a logger which logs the trace ID with every message if
@@ -217,10 +204,16 @@ func WithSpan(ctx context.Context, traceID, spanID, parentID string) context.Con
 
 // Do adds the tracing headers to the requests before making it.
 func (d *tracedDoer) Do(r *http.Request) (*http.Response, error) {
-	r.Header.Set(TraceIDHeader, d.traceID)
-	r.Header.Set(ParentSpanIDHeader, d.spanID)
+	var (
+		traceID = ContextTraceID(r.Context())
+		spanID  = ContextSpanID(r.Context())
+	)
+	if traceID != "" {
+		r.Header.Set(TraceIDHeader, traceID)
+		r.Header.Set(ParentSpanIDHeader, spanID)
+	}
 
-	return d.doer.Do(r)
+	return d.Doer.Do(r)
 }
 
 // Info logs the trace ID when present then the values passed as argument.

@@ -54,7 +54,7 @@ code generators are not done yet). However:
 * The core and rest DSLs should be fairly stable, see:
   - The [core API DSL spec](https://github.com/goadesign/goa/blob/v2/dsl/_spec/dsl_spec_test.go)
   - The [type DSL spec](https://github.com/goadesign/goa/blob/v2/dsl/_spec/type_spec_test.go)
-  - The [rest DSL spec](https://github.com/goadesign/goa/blob/v2/rest/dsl/_spec/dsl_spec_test.go)
+  - The [rest DSL spec](https://github.com/goadesign/goa/blob/v2/dsl/rest/_spec/dsl_spec_test.go)
 
 * The account example should give a good sense of what the generated code will
   look like, see:

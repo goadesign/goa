@@ -141,10 +141,10 @@ var (
 
 // NewMediaTypeExpr creates a media type definition but does not
 // execute the DSL.
-func NewMediaTypeExpr(name, identifier string, dsl func()) *MediaTypeExpr {
+func NewMediaTypeExpr(name, identifier string, fn func()) *MediaTypeExpr {
 	return &MediaTypeExpr{
 		UserTypeExpr: &UserTypeExpr{
-			AttributeExpr: &AttributeExpr{Type: Object{}, DSLFunc: dsl},
+			AttributeExpr: &AttributeExpr{Type: Object{}, DSLFunc: fn},
 			TypeName:      name,
 		},
 		Identifier: identifier,

@@ -13,8 +13,8 @@ import (
 
 const (
 	goaDSL  = "goa.design/goa.v2/dsl"
-	restDSL = "goa.design/goa.v2/rest/dsl"
-	//rpcDSL    = "goa.design/goa.v2/_rpc/dsl"
+	restDSL = "goa.design/goa.v2/dsl/rest"
+	//rpcDSL    = "goa.design/goa.v2/dsl/rpc"
 	aliasFile = "aliases.go"
 )
 
@@ -44,12 +44,12 @@ func main() {
 		restAlias = filepath.Join(restPkg, aliasFile)
 		os.Remove(restAlias) // to avoid parsing them
 
-		restFuncs, err = ParseFuncs(restPkg)
+		restFuncs, err = ParseFuncs(restPkg, "rest")
 		if err != nil {
 			fail("could not parse functions in %s: %s", restPkg, err)
 		}
 
-		funcs, err = ParseFuncs(goaPkg)
+		funcs, err = ParseFuncs(goaPkg, "dsl")
 		if err != nil {
 			fail("could not parse functions in %s: %s", goaPkg, err)
 		}
@@ -125,11 +125,11 @@ const (
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
-package dsl
+package rest
 
 import (
 	"goa.design/goa.v2/design"
-	goadsl "goa.design/goa.v2/dsl"
+	"goa.design/goa.v2/dsl"
 )
 
 `
@@ -138,6 +138,6 @@ import (
 	// implementations.
 	aliasT = `{{ .Comment }}
 {{ .Declaration }} {
-	{{ if .Return }}return {{ end }}goadsl.{{ .Call }}
+	{{ if .Return }}return {{ end }}dsl.{{ .Call }}
 }`
 )

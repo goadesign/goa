@@ -91,14 +91,14 @@ func generate(cmds []string, path, output string, gens, debug bool) {
 	var (
 		files []string
 		err   error
-		tmp   *GenPackage
+		tmp   *Generator
 	)
 
 	if _, err = build.Import(path, ".", build.IgnoreVendor); err != nil {
 		goto fail
 	}
 
-	tmp = NewGenPackage(cmds, path, output)
+	tmp = NewGenerator(cmds, path, output)
 	if !debug {
 		defer tmp.Remove()
 	}

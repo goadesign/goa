@@ -1,7 +1,7 @@
 package design
 
-import . "goa.design/goa.v2/rest/design"
-import . "goa.design/goa.v2/rest/dsl"
+import . "goa.design/goa.v2/design/rest"
+import . "goa.design/goa.v2/dsl/rest"
 
 var _ = API("basic", func() {
 	Title("Basic REST example")
