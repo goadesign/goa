@@ -23,12 +23,12 @@ import (
 //        Error(ErrInvalidOperands)
 //    })
 //
-func Endpoint(name string, dsl func()) {
+func Endpoint(name string, fn func()) {
 	s, ok := eval.Current().(*design.ServiceExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
-	ep := &design.EndpointExpr{Name: name, Service: s, DSLFunc: dsl}
+	ep := &design.EndpointExpr{Name: name, Service: s, DSLFunc: fn}
 	s.Endpoints = append(s.Endpoints, ep)
 }

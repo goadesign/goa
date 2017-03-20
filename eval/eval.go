@@ -105,8 +105,8 @@ func finalizeSet(set ExpressionSet) error {
 // declaration time rather than store the DSL for execution by the dsl engine
 // (usually simple independent expressions).  The DSL should use ReportError to
 // record DSL execution errors.
-func Execute(dsl func(), def Expression) bool {
-	if dsl == nil {
+func Execute(fn func(), def Expression) bool {
+	if fn == nil {
 		return true
 	}
 	var startCount int
@@ -114,7 +114,7 @@ func Execute(dsl func(), def Expression) bool {
 		startCount = len(Context.Errors.(MultiError))
 	}
 	Context.Stack = append(Context.Stack, def)
-	dsl()
+	fn()
 	Context.Stack = Context.Stack[:len(Context.Stack)-1]
 	var endCount int
 	if Context.Errors != nil {

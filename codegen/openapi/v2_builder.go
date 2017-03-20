@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"goa.design/goa.v2/design"
-	rest "goa.design/goa.v2/rest/design"
+	"goa.design/goa.v2/design/rest"
 )
 
 // MakeV2 returns the OpenAPI v2 specification for the given API.

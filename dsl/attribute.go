@@ -37,26 +37,26 @@ import (
 //    Attribute(name)       // Attribute of type String with no description, no
 //                          // validation, default or example value
 //
-//    Attribute(name, dsl)  // Attribute of type object with inline field
+//    Attribute(name, fn)   // Attribute of type object with inline field
 //                          // definitions, description, validations, default
 //                          // and/or example value
 //
 //    Attribute(name, type) // Attribute with no description, no validation,
 //                          // no default or example value
 //
-//    Attribute(name, type, dsl) // Attribute with description, validations,
-//                               // default and/or example value
+//    Attribute(name, type, fn) // Attribute with description, validations,
+//                              // default and/or example value
 //
-//    Attribute(name, type, description)      // Attribute with no validation,
-//                                            // default or example value
+//    Attribute(name, type, description)     // Attribute with no validation,
+//                                           // default or example value
 //
-//    Attribute(name, type, description, dsl) // Attribute with description,
-//                                            // validations, default and/or
-//                                            // example value
+//    Attribute(name, type, description, fn) // Attribute with description,
+//                                           // validations, default and/or
+//                                           // example value
 //
 // Where name is a string indicating the name of the attribute, type specifies
 // the attribute type (see above for the possible values), description a string
-// providing a human description of the attribute and dsl the defining DSL if
+// providing a human description of the attribute and fn the defining DSL if
 // any.
 //
 // When defining the type inline using Attribute recursively the function takes
@@ -140,7 +140,7 @@ func Attribute(name string, args ...interface{}) {
 			}
 		}
 
-		dataType, description, dsl := parseAttributeArgs(baseAttr, args...)
+		dataType, description, fn := parseAttributeArgs(baseAttr, args...)
 		if baseAttr != nil {
 			if description != "" {
 				baseAttr.Description = description
@@ -155,8 +155,8 @@ func Attribute(name string, args ...interface{}) {
 			}
 		}
 		baseAttr.Reference = parent.Reference
-		if dsl != nil {
-			eval.Execute(dsl, baseAttr)
+		if fn != nil {
+			eval.Execute(fn, baseAttr)
 		}
 		if baseAttr.Type == nil {
 			// DSL did not contain an "Attribute" declaration
@@ -180,13 +180,13 @@ func Attribute(name string, args ...interface{}) {
 //     })
 //
 func Field(tag interface{}, name string, args ...interface{}) {
-	dsl := func() { Metadata("rpc:tag", fmt.Sprintf("%v", tag)) }
+	fn := func() { Metadata("rpc:tag", fmt.Sprintf("%v", tag)) }
 	if d, ok := args[len(args)-1].(func()); ok {
-		old := dsl
-		dsl = func() { d(); old() }
+		old := fn
+		fn = func() { d(); old() }
 		args = args[:len(args)-1]
 	}
-	Attribute(name, append(args, dsl)...)
+	Attribute(name, append(args, fn)...)
 }
 
 // Default sets the default value for an attribute.
@@ -234,7 +234,7 @@ func parseAttributeArgs(baseAttr *design.AttributeExpr, args ...interface{}) (de
 	var (
 		dataType    design.DataType
 		description string
-		dsl         func()
+		fn          func()
 		ok          bool
 	)
 
@@ -256,7 +256,7 @@ func parseAttributeArgs(baseAttr *design.AttributeExpr, args ...interface{}) (de
 		}
 	}
 	parseDSL := func(index int, success, failure func()) {
-		if dsl, ok = args[index].(func()); ok {
+		if fn, ok = args[index].(func()); ok {
 			success()
 			return
 		}
@@ -290,5 +290,5 @@ func parseAttributeArgs(baseAttr *design.AttributeExpr, args ...interface{}) (de
 		eval.ReportError("too many arguments in call to Attribute")
 	}
 
-	return dataType, description, dsl
+	return dataType, description, fn
 }

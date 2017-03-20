@@ -40,8 +40,8 @@ EndpointExpression created by the Endpoint function:
 The Endpoint DSL function simply initializes a EndpointExpression and stores it
 in the Endpoints field of the root ServiceExpression:
 
-    func Endpoint(name string, dsl func()) {
-        ep := &EndpointExpression{Name: name, DSLFunc: dsl}
+    func Endpoint(name string, fn func()) {
+        ep := &EndpointExpression{Name: name, DSLFunc: fn}
         Design.Endpoints = append(Design.Endpoints, ep)
     }
 

@@ -56,8 +56,8 @@ import (
 //        })
 //    })
 //
-func Result(val interface{}, dsls ...func()) {
-	if len(dsls) > 1 {
+func Result(val interface{}, fns ...func()) {
+	if len(fns) > 1 {
 		eval.ReportError("too many arguments")
 		return
 	}
@@ -66,5 +66,5 @@ func Result(val interface{}, dsls ...func()) {
 		eval.IncompatibleDSL()
 		return
 	}
-	e.Result = endpointTypeDSL("Result", val, dsls...)
+	e.Result = endpointTypeDSL("Result", val, fns...)
 }
