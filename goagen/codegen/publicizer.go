@@ -131,8 +131,14 @@ const (
 */}}{{ $k := printf "%s%d" "k" .depth }}{{ $v := printf "%s%d" "v" .depth }}
 {{ tabs .depth }}for {{ $k }}, {{ $v }} := range {{ .sourceField }} {
 {{ $pubk := printf "%s%s" "pub" $k }}{{ $pubv := printf "%s%s" "pub" $v }}{{/*
-*/}}{{ tabs .depth }}{{ publicizer .keyType $k $pubk .dereference (add .depth 1) true }}
-{{ tabs .depth }}{{ publicizer .elemType $v $pubv .dereference (add .depth 1) true }}
+*/}}{{ tabs (add .depth 1) }}{{ if .keyType.Type.IsObject }}var {{ $pubk }} {{ gotyperef .keyType.Type .AllRequired .depth false}}
+{{ tabs (add .depth 1) }}if {{ $k }} != nil {
+{{ tabs (add .depth 1) }}{{ publicizer .keyType $k $pubk .dereference (add .depth 1) false }}
+{{ tabs (add .depth 1) }}}{{ else }}{{ publicizer .keyType $k $pubk .dereference (add .depth 1) true }}{{ end }}
+{{ tabs (add .depth 1) }}{{if .elemType.Type.IsObject }}var {{ $pubv }} {{ gotyperef .elemType.Type .AllRequired .depth false }}
+{{ tabs (add .depth 1) }}if {{ $v }} != nil {
+{{ tabs (add .depth 1) }}{{ publicizer .elemType $v $pubv .dereference (add .depth 1) false }}
+{{ tabs (add .depth 1) }}}{{ else }}{{ publicizer .elemType $v $pubv .dereference (add .depth 1) true }}{{ end }}
 {{ tabs .depth }}	{{ printf "%s[%s]" .targetField $pubk }} = {{ $pubv }}
 {{ tabs .depth }}}`
 )

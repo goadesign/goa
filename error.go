@@ -107,7 +107,7 @@ type (
 		// Detail describes the specific error occurrence.
 		Detail string `json:"detail" xml:"detail" form:"detail"`
 		// Meta contains additional key/value pairs useful to clients.
-		Meta []map[string]interface{} `json:"meta,omitempty" xml:"meta,omitempty" form:"meta,omitempty"`
+		Meta map[string]interface{} `json:"meta,omitempty" xml:"meta,omitempty" form:"meta,omitempty"`
 	}
 )
 
@@ -126,14 +126,18 @@ func NewErrorClass(code string, status int) ErrorClass {
 		default:
 			msg = fmt.Sprintf("%v", actual)
 		}
-		meta := make([]map[string]interface{}, (len(keyvals)+1)/2)
-		for i := 0; i < len(keyvals); i += 2 {
+		var meta map[string]interface{}
+		l := len(keyvals)
+		if l > 0 {
+			meta = make(map[string]interface{})
+		}
+		for i := 0; i < l; i += 2 {
 			k := keyvals[i]
 			var v interface{} = "MISSING"
-			if i+1 < len(keyvals) {
+			if i+1 < l {
 				v = keyvals[i+1]
 			}
-			meta[i/2] = map[string]interface{}{fmt.Sprintf("%v", k): v}
+			meta[fmt.Sprintf("%v", k)] = v
 		}
 		return &ErrorResponse{ID: newErrorID(), Code: code, Status: status, Detail: msg, Meta: meta}
 	}
@@ -234,10 +238,8 @@ func NoAuthMiddleware(schemeName string) error {
 // Error returns the error occurrence details.
 func (e *ErrorResponse) Error() string {
 	msg := fmt.Sprintf("[%s] %d %s: %s", e.ID, e.Status, e.Code, e.Detail)
-	for _, val := range e.Meta {
-		for k, v := range val {
-			msg += ", " + fmt.Sprintf("%s: %v", k, v)
-		}
+	for k, v := range e.Meta {
+		msg += ", " + fmt.Sprintf("%s: %v", k, v)
 	}
 	return msg
 }
@@ -286,10 +288,11 @@ func MergeErrors(err, other error) error {
 	}
 	e.Detail = e.Detail + "; " + o.Detail
 
-	for _, val := range o.Meta {
-		for k, v := range val {
-			e.Meta = append(e.Meta, map[string]interface{}{k: v})
-		}
+	if e.Meta == nil && len(o.Meta) > 0 {
+		e.Meta = make(map[string]interface{})
+	}
+	for k, v := range o.Meta {
+		e.Meta[k] = v
 	}
 	return e
 }

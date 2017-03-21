@@ -144,7 +144,17 @@ func (g *Generator) generateContexts() error {
 	err = g.API.IterateResources(func(r *design.ResourceDefinition) error {
 		return r.IterateActions(func(a *design.ActionDefinition) error {
 			ctxName := codegen.Goify(a.Name, true) + codegen.Goify(a.Parent.Name, true) + "Context"
-			headers := r.Headers.Merge(a.Headers)
+			headers := &design.AttributeDefinition{
+				Type: design.Object{},
+			}
+			if r.Headers != nil {
+				headers.Merge(r.Headers)
+				headers.Validation = r.Headers.Validation
+			}
+			if a.Headers != nil {
+				headers.Merge(a.Headers)
+				headers.Validation = a.Headers.Validation
+			}
 			if headers != nil && len(headers.Type.ToObject()) == 0 {
 				headers = nil // So that {{if .Headers}} returns false in templates
 			}
@@ -372,6 +382,9 @@ func (g *Generator) generateMediaTypes() error {
 		codegen.SimpleImport("unicode/utf8"),
 		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
+	for _, v := range g.API.MediaTypes {
+		imports = codegen.AttributeImports(v.AttributeDefinition, imports, nil)
+	}
 	mtWr.WriteHeader(title, g.Target, imports)
 	err = g.API.IterateMediaTypes(func(mt *design.MediaTypeDefinition) error {
 		if mt.IsError() {
@@ -404,6 +417,9 @@ func (g *Generator) generateUserTypes() error {
 		codegen.SimpleImport("unicode/utf8"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
+	}
+	for _, v := range g.API.Types {
+		imports = codegen.AttributeImports(v.AttributeDefinition, imports, nil)
 	}
 	utWr.WriteHeader(title, g.Target, imports)
 	err = g.API.IterateUserTypes(func(t *design.UserTypeDefinition) error {

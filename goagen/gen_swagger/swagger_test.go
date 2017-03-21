@@ -572,6 +572,7 @@ var _ = Describe("New", func() {
 				b := swagger.Paths["/base/bottles/{id}"].(*genswagger.Path)
 				Ω(b.Put).ShouldNot(BeNil())
 				Ω(b.Put.Parameters).Should(HaveLen(14))
+				Ω(b.Put.Produces).Should(Equal([]string{"application/vnd.goa.example.bottle; type=collection"}))
 			})
 
 			It("should set the inherited tag and the action tag", func() {
