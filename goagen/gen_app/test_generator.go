@@ -43,6 +43,16 @@ type TestMethod struct {
 	QueryParams       []*ObjectType
 	Headers           []*ObjectType
 	Payload           *ObjectType
+	reservedNames     map[string]bool
+}
+
+// Escape escapes given string.
+func (t *TestMethod) Escape(s string) string {
+	if ok := t.reservedNames[s]; ok {
+		s = t.Escape("_" + s)
+	}
+	t.reservedNames[s] = true
+	return s
 }
 
 // ObjectType structure
@@ -58,7 +68,9 @@ func (g *Generator) generateResourceTest() error {
 	if len(g.API.Resources) == 0 {
 		return nil
 	}
-	funcs := template.FuncMap{"isSlice": isSlice}
+	funcs := template.FuncMap{
+		"isSlice": isSlice,
+	}
 	testTmpl := template.Must(template.New("test").Funcs(funcs).Parse(testTmpl))
 	outDir, err := makeTestDir(g, g.API.Name)
 	if err != nil {
@@ -142,6 +154,9 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		actionName, ctrlName, varName                string
 		routeQualifier, viewQualifier, respQualifier string
 		comment                                      string
+		path                                         []*ObjectType
+		query                                        []*ObjectType
+		header                                       []*ObjectType
 		returnType                                   *ObjectType
 		payload                                      *ObjectType
 	)
@@ -184,6 +199,10 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 	}
 	comment += "."
 
+	path = pathParams(action, route)
+	query = queryParams(action)
+	header = headers(action, resource.Headers)
+
 	if action.Payload != nil {
 		payload = &ObjectType{}
 		payload.Name = "payload"
@@ -203,9 +222,9 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		ActionName:        actionName,
 		ResourceName:      ctrlName,
 		Comment:           comment,
-		Params:            pathParams(action, route),
-		QueryParams:       queryParams(action),
-		Headers:           headers(action),
+		Params:            path,
+		QueryParams:       query,
+		Headers:           header,
 		Payload:           payload,
 		ReturnType:        returnType,
 		ReturnsErrorMedia: mediaType == design.ErrorMedia,
@@ -215,6 +234,7 @@ func (g *Generator) createTestMethod(resource *design.ResourceDefinition, action
 		RouteVerb:         route.Verb,
 		Status:            response.Status,
 		FullPath:          goPathFormat(route.FullPath()),
+		reservedNames:     reservedNames(path, query, header, payload, returnType),
 	}
 }
 
@@ -225,8 +245,19 @@ func pathParams(action *design.ActionDefinition, route *design.RouteDefinition) 
 
 // headers builds the template data structure needed to proprely render the code
 // for setting the headers for the given action.
-func headers(action *design.ActionDefinition) []*ObjectType {
-	hds := action.Headers
+func headers(action *design.ActionDefinition, headers *design.AttributeDefinition) []*ObjectType {
+	hds := &design.AttributeDefinition{
+		Type: design.Object{},
+	}
+	if headers != nil {
+		hds.Merge(headers)
+		hds.Validation = headers.Validation
+	}
+	if action.Headers != nil {
+		hds.Merge(action.Headers)
+		hds.Validation = action.Headers.Validation
+	}
+
 	if hds == nil {
 		return nil
 	}
@@ -260,6 +291,26 @@ func paramFromNames(action *design.ActionDefinition, names []string) (params []*
 		params = append(params, attToObject(name, action.Params, obj[name]))
 	}
 	return
+}
+
+func reservedNames(params, queryParams, headers []*ObjectType, payload, returnType *ObjectType) map[string]bool {
+	var names = make(map[string]bool)
+	for _, param := range params {
+		names[param.Name] = true
+	}
+	for _, param := range queryParams {
+		names[param.Name] = true
+	}
+	for _, header := range headers {
+		names[header.Name] = true
+	}
+	if payload != nil {
+		names[payload.Name] = true
+	}
+	if returnType != nil {
+		names[returnType.Name] = true
+	}
+	return names
 }
 
 func attToObject(name string, parent, att *design.AttributeDefinition) *ObjectType {
@@ -311,91 +362,91 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 */}} (http.ResponseWriter{{ if $test.ReturnType }}, {{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}{{ end }}) {
 	// Setup service
 	var (
-		logBuf bytes.Buffer
-		resp   interface{}
+		{{ $logBuf := $test.Escape "logBuf" }}{{ $logBuf }} bytes.Buffer
+		{{ $resp := $test.Escape "resp" }}{{ $resp }}   interface{}
 
-		respSetter goatest.ResponseSetterFunc = func(r interface{}) { resp = r }
+		{{ $respSetter := $test.Escape "respSetter" }}{{ $respSetter }} goatest.ResponseSetterFunc = func(r interface{}) { {{ $resp }} = r }
 	)
 	if service == nil {
-		service = goatest.Service(&logBuf, respSetter)
+		service = goatest.Service(&{{ $logBuf }}, {{ $respSetter }})
 	} else {
-		logger := log.New(&logBuf, "", log.Ltime)
-		service.WithLogger(goa.NewLogger(logger))
-		newEncoder := func(io.Writer) goa.Encoder { return  respSetter }
+		{{ $logger := $test.Escape "logger" }}{{ $logger }} := log.New(&{{ $logBuf }}, "", log.Ltime)
+		service.WithLogger(goa.NewLogger({{ $logger }}))
+		{{ $newEncoder := $test.Escape "newEncoder" }}{{ $newEncoder }} := func(io.Writer) goa.Encoder { return  {{ $respSetter }} }
 		service.Encoder = goa.NewHTTPEncoder() // Make sure the code ends up using this decoder
-		service.Encoder.Register(newEncoder, "*/*")
+		service.Encoder.Register({{ $newEncoder }}, "*/*")
 	}
 {{ if $test.Payload }}{{ if $test.Payload.Validatable }}
 	// Validate payload
-	err := {{ $test.Payload.Name }}.Validate()
-	if err != nil {
-		e, ok := err.(goa.ServiceError)
-		if !ok {
-			panic(err) // bug
+	{{ $err := $test.Escape "err" }}{{ $err }} := {{ $test.Payload.Name }}.Validate()
+	if {{ $err }} != nil {
+		{{ $e := $test.Escape "e" }}{{ $e }}, {{ $ok := $test.Escape "ok" }}{{ $ok }} := {{ $err }}.(goa.ServiceError)
+		if !{{ $ok }} {
+			panic({{ $err }}) // bug
 		}
-{{ if not $test.ReturnsErrorMedia }}		t.Errorf("unexpected payload validation error: %+v", e)
-{{ end }}{{ if $test.ReturnType }}		return nil, {{ if $test.ReturnsErrorMedia }}e{{ else }}nil{{ end }}{{ else }}return nil{{ end }}
+{{ if not $test.ReturnsErrorMedia }}		t.Errorf("unexpected payload validation error: %+v", {{ $e }})
+{{ end }}{{ if $test.ReturnType }}		return nil, {{ if $test.ReturnsErrorMedia }}{{ $e }}{{ else }}nil{{ end }}{{ else }}return nil{{ end }}
 	}
 {{ end }}{{ end }}
 	// Setup request context
-	rw := httptest.NewRecorder()
-{{ if $test.QueryParams}}	query := url.Values{}
+	{{ $rw := $test.Escape "rw" }}{{ $rw }} := httptest.NewRecorder()
+{{ $query := $test.Escape "query" }}{{ if $test.QueryParams}}	{{ $query }} := url.Values{}
 {{ range $param := $test.QueryParams }}{{ if $param.Pointer }}	if {{ $param.Name }} != nil {{ end }}{
 {{ template "convertParam" $param }}
-		query[{{ printf "%q" $param.Label }}] = sliceVal
+		{{ $query }}[{{ printf "%q" $param.Label }}] = sliceVal
 	}
-{{ end }}{{ end }}	u := &url.URL{
+{{ end }}{{ end }}	{{ $u := $test.Escape "u" }}{{ $u }}:= &url.URL{
 		Path: fmt.Sprintf({{ printf "%q" $test.FullPath }}{{ range $param := $test.Params }}, {{ $param.Name }}{{ end }}),
-{{ if $test.QueryParams }}		RawQuery: query.Encode(),
+{{ if $test.QueryParams }}		RawQuery: {{ $query }}.Encode(),
 {{ end }}	}
-	req, err := http.NewRequest("{{ $test.RouteVerb }}", u.String(), nil)
-	if err != nil {
-		panic("invalid test " + err.Error()) // bug
+	{{ $req := $test.Escape "req" }}{{ $req }}, {{ $err := $test.Escape "err" }}{{ $err }}:= http.NewRequest("{{ $test.RouteVerb }}", {{ $u }}.String(), nil)
+	if {{ $err }} != nil {
+		panic("invalid test " + {{ $err }}.Error()) // bug
 	}
 {{ range $header := $test.Headers }}{{ if $header.Pointer }}	if {{ $header.Name }} != nil {{ end }}{
 {{ template "convertParam" $header }}
-		req.Header[{{ printf "%q" $header.Label }}] = sliceVal
+		{{ $req }}.Header[{{ printf "%q" $header.Label }}] = sliceVal
 	}
-{{ end }} prms := url.Values{}
-{{ range $param := $test.Params }}	prms["{{ $param.Label }}"] = []string{fmt.Sprintf("%v",{{ $param.Name}})}
+{{ end }} {{ $prms := $test.Escape "prms" }}{{ $prms }} := url.Values{}
+{{ range $param := $test.Params }}	{{ $prms }}["{{ $param.Label }}"] = []string{fmt.Sprintf("%v",{{ $param.Name}})}
 {{ end }}{{ range $param := $test.QueryParams }}{{ if $param.Pointer }} if {{ $param.Name }} != nil {{ end }} {
 {{ template "convertParam" $param }}
-		prms[{{ printf "%q" $param.Label }}] = sliceVal
+		{{ $prms }}[{{ printf "%q" $param.Label }}] = sliceVal
 	}
 {{ end }}	if ctx == nil {
 		ctx = context.Background()
 	}
-	goaCtx := goa.NewContext(goa.WithAction(ctx, "{{ $test.ResourceName }}Test"), rw, req, prms)
-	{{ $test.ContextVarName }}, err := {{ $test.ContextType }}(goaCtx, req, service)
-	if err != nil {
-		panic("invalid test data " + err.Error()) // bug
+	{{ $goaCtx := $test.Escape "goaCtx" }}{{ $goaCtx }} := goa.NewContext(goa.WithAction(ctx, "{{ $test.ResourceName }}Test"), {{ $rw }}, {{ $req }}, {{ $prms }})
+	{{ $test.ContextVarName }}, {{ $err := $test.Escape "err" }}{{ $err }} := {{ $test.ContextType }}({{ $goaCtx }}, {{ $req }}, service)
+	if {{ $err }} != nil {
+		panic("invalid test data " + {{ $err }}.Error()) // bug
 	}
 	{{ if $test.Payload }}{{ $test.ContextVarName }}.Payload = {{ $test.Payload.Name }}{{ end }}
 
 	// Perform action
-	err = ctrl.{{ $test.ActionName}}({{ $test.ContextVarName }})
+	{{ $err }} = ctrl.{{ $test.ActionName}}({{ $test.ContextVarName }})
 
 	// Validate response
-	if err != nil {
-		t.Fatalf("controller returned %+v, logs:\n%s", err, logBuf.String())
+	if {{ $err }} != nil {
+		t.Fatalf("controller returned %+v, logs:\n%s", {{ $err }}, {{ $logBuf }}.String())
 	}
-	if rw.Code != {{ $test.Status }} {
-		t.Errorf("invalid response status code: got %+v, expected {{ $test.Status }}", rw.Code)
+	if {{ $rw }}.Code != {{ $test.Status }} {
+		t.Errorf("invalid response status code: got %+v, expected {{ $test.Status }}", {{ $rw }}.Code)
 	}
 {{ if $test.ReturnType }}	var mt {{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }}
-	if resp != nil {
-		var ok bool
-		mt, ok = resp.({{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }})
-		if !ok {
-			t.Fatalf("invalid response media: got %+v, expected instance of {{ $test.ReturnType.Type }}", resp)
+	if {{ $resp }} != nil {
+		var {{ $ok := $test.Escape "ok" }}{{ $ok }} bool
+		mt, {{ $ok }} = {{ $resp }}.({{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }})
+		if !{{ $ok }} {
+			t.Fatalf("invalid response media: got %+v, expected instance of {{ $test.ReturnType.Type }}", {{ $resp }})
 		}
-{{ if $test.ReturnType.Validatable }}		err = mt.Validate()
-		if err != nil {
-			t.Errorf("invalid response media type: %s", err)
+{{ if $test.ReturnType.Validatable }}		{{ $err }} = mt.Validate()
+		if {{ $err }} != nil {
+			t.Errorf("invalid response media type: %s", {{ $err }})
 		}
 {{ end }}	}
 {{ end }}
 	// Return results
-	return rw{{ if $test.ReturnType }}, mt{{ end }}
+	return {{ $rw }}{{ if $test.ReturnType }}, mt{{ end }}
 }
 {{ end }}`

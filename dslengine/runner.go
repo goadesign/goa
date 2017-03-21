@@ -294,7 +294,9 @@ func runSet(set DefinitionSet) error {
 		for _, def := range set[executed:] {
 			executed++
 			if source, ok := def.(Source); ok {
-				Execute(source.DSL(), source)
+				if dsl := source.DSL(); dsl != nil {
+					Execute(dsl, source)
+				}
 			}
 		}
 		if recursed > 100 {

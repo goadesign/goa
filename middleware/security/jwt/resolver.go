@@ -9,7 +9,7 @@ import (
 
 type (
 	// Key represents a public key used to validate the incoming token signatures.
-	// The value must be of type *rsa.PublicKey, []byte or string.
+	// The value must be of type *rsa.PublicKey, *ecdsa.PublicKey, []byte or string.
 	// Keys of type []byte or string are interpreted depending on the incoming request JWT token
 	// method (HMAC, RSA, etc.).
 	Key interface{}
