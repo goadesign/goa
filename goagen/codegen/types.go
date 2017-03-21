@@ -113,7 +113,11 @@ func goTypeDefObject(obj design.Object, def *design.AttributeDefinition, tabs in
 		typedef := ""
 		if tname, ok := field.Metadata["struct:field:type"]; ok {
 			if len(tname) > 0 {
-				typedef = tname[0]
+				if (field.Type.IsPrimitive() && private) || field.Type.IsObject() || def.IsPrimitivePointer(name) {
+					typedef = "*" + tname[0]
+				} else {
+					typedef = tname[0]
+				}
 			}
 		}
 		if typedef == "" {
