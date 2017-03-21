@@ -266,7 +266,7 @@ var _ = Describe("code generation", func() {
 						expected := "struct {\n" +
 							"	Bar *string `form:\"bar,omitempty\" json:\"bar,omitempty\" xml:\"bar,omitempty\"`\n" +
 							"	Baz *time.Time `form:\"baz,omitempty\" json:\"baz,omitempty\" xml:\"baz,omitempty\"`\n" +
-							"	Foo []byte `form:\"foo,omitempty\" json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n" +
+							"	Foo *[]byte `form:\"foo,omitempty\" json:\"foo,omitempty\" xml:\"foo,omitempty\"`\n" +
 							"	Qux *uuid.UUID `form:\"qux,omitempty\" json:\"qux,omitempty\" xml:\"qux,omitempty\"`\n" +
 							"}"
 						Ω(st).Should(Equal(expected))
