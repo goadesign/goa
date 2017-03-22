@@ -2,7 +2,6 @@ package files
 
 import (
 	"path/filepath"
-	"strings"
 	"text/template"
 
 	"goa.design/goa.v2/codegen"
@@ -13,10 +12,10 @@ type (
 	// endpointData contains the data necessary to render the endpoint
 	// template.
 	endpointData struct {
-		// Name is the endpoint struct name.
+		// Name is the service name.
 		Name string
-		// Description is the endpoint struct description.
-		Description string
+		// VarName is the endpoint struct name.
+		VarName string
 		// Methods lists the endpoint struct methods.
 		Methods []*endpointMethod
 	}
@@ -25,98 +24,91 @@ type (
 	endpointMethod struct {
 		// Name is the method name.
 		Name string
-		// Description is the method description.
-		Description string
-		// Payload is the payload type.
-		Payload design.UserType
-		// Result is the result type.
-		Result design.UserType
+		// PayloadType is name of the payload Go type if any.
+		PayloadType string
+		// HasPayload is true if the payload type is not empty.
+		HasPayload bool
 	}
 
-	// endpointWriter is the endpoint files writer.
-	endpointWriter struct {
-		sections []*codegen.Section
-		service  *design.ServiceExpr
+	// endpointFile is the codgen file for a given service.
+	endpointFile struct {
+		service *design.ServiceExpr
 	}
 )
 
-// Sections returns the endpoint file writer sections.
-func (e endpointWriter) Sections() []*codegen.Section {
-	return e.sections
+// endpointTmpl is the template used to render the body of the endpoint file.
+var endpointTmpl = template.Must(template.New("endpoint").Parse(endpointT))
+
+// Endpoint returns the endpoint file for the given service.
+func Endpoint(service *design.ServiceExpr) codegen.File {
+	return &endpointFile{service}
+}
+
+// Sections returns the endpoint file sections.
+func (e *endpointFile) Sections(genPkg string) []*codegen.Section {
+	var (
+		data *endpointData
+	)
+	{
+		methods := make([]*endpointMethod, len(e.service.Endpoints))
+		for i, v := range e.service.Endpoints {
+			methods[i] = &endpointMethod{
+				Name:        codegen.Goify(v.Name, true),
+				PayloadType: codegen.Goify(v.Payload.Name(), true),
+				HasPayload:  v.Payload != design.Empty,
+			}
+		}
+		data = &endpointData{
+			Name:    e.service.Name,
+			VarName: codegen.Goify(e.service.Name, true),
+			Methods: methods,
+		}
+	}
+
+	var (
+		header, body *codegen.Section
+	)
+	{
+		header = codegen.Header(e.service.Name+"Endpoints", "endpoints",
+			[]*codegen.ImportSpec{
+				&codegen.ImportSpec{Path: "context"},
+				&codegen.ImportSpec{Path: "goa.design/goa.v2"},
+				&codegen.ImportSpec{Path: genPkg + "/services"},
+			})
+		body = &codegen.Section{
+			Template: endpointTmpl,
+			Data:     data,
+		}
+	}
+
+	return []*codegen.Section{header, body}
 }
 
 // OutputPath is the path to the generated endpoint file relative to the output
 // directory.
-func (e endpointWriter) OutputPath(reserved map[string]bool) string {
+func (e *endpointFile) OutputPath(reserved map[string]bool) string {
 	svc := codegen.SnakeCase(e.service.Name)
 	return UniquePath(filepath.Join("endpoints", svc+"%d.go"), reserved)
 }
 
-// Endpoint returns the files for the endpoints of the given service.
-func Endpoint(api *design.APIExpr, service *design.ServiceExpr) codegen.File {
-	return endpointWriter{
-		sections: []*codegen.Section{
-			codegen.Header("", "endpoints", []*codegen.ImportSpec{
-				&codegen.ImportSpec{Path: "context"},
-				&codegen.ImportSpec{Path: "goa.design/goa.v2"},
-				&codegen.ImportSpec{Path: "goa.design/goa.v2/examples/account/gen/services"},
-			}),
-			EndpointSection(api, service),
-		},
-		service: service,
-	}
-}
-
-// EndpointSection returns an endpoint section.
-func EndpointSection(api *design.APIExpr, service *design.ServiceExpr) *codegen.Section {
-	return &codegen.Section{
-		Template: endpointTmpl,
-		Data:     buildEndpointData(api, service),
-	}
-}
-
-func buildEndpointData(api *design.APIExpr, service *design.ServiceExpr) endpointData {
-	methods := make([]*endpointMethod, len(service.Endpoints))
-	for i, v := range service.Endpoints {
-		methods[i] = &endpointMethod{
-			Name:        v.Name,
-			Description: v.Description,
-		}
-		if payload, ok := v.Payload.(*design.UserTypeExpr); ok {
-			methods[i].Payload = payload
-		}
-		if result, ok := v.Result.(*design.UserTypeExpr); ok {
-			methods[i].Result = result
-		}
-	}
-	return endpointData{
-		Name:        service.Name,
-		Description: service.Description,
-		Methods:     methods,
-	}
-}
-
 // endpointT is the template used to write an endpoint definition.
-const endpointT = `type ({{ $service := . }}
-	// {{ .Name }} lists the {{ tolower .Name }} service endpoints.
-	{{ .Name }} struct {
+const endpointT = `type (
+	// {{ .VarName }} lists the {{ .Name }} service endpoints.
+	{{ .VarName }} struct {
 {{ range .Methods }}		{{ .Name }} goa.Endpoint
 {{ end }}	}
 )
 
-// New{{ .Name }} wraps the given {{ tolower .Name }} service with endpoints.
-func New{{ .Name }}(s services.{{ .Name }}) *{{ .Name }} {
-	ep := &{{ .Name }}{}
+// New{{ .VarName }} wraps the methods of a {{ .Name }} service with endpoints.
+func New{{ .VarName }}(s services.{{ .VarName }}) *{{ .VarName }} {
+	ep := &{{ .VarName }}{}
 {{ range .Methods }}
 	ep.{{ .Name }} = func(ctx context.Context, req interface{}) (interface{}, error) {
-		var p *services.{{ .Payload.TypeName }}
-		if req != nil {
-			p = req.(*services.{{ .Payload.TypeName }})
-		}
-		return s.{{ .Name }}(ctx, p)
+{{- if .HasPayload }}
+		p := req.(*services.{{ .PayloadType }})
+{{- end }}
+		return s.{{ .Name }}(ctx, {{ if .HasPayload }}p{{ else }}nil{{ end }})
 	}
 {{ end }}
 	return ep
 }`
-
-var endpointTmpl = template.Must(template.New("endpoint").Funcs(template.FuncMap{"tolower": strings.ToLower}).Parse(endpointT))

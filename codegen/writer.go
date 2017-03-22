@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"go/build"
 	"io"
 	"os"
 	"path/filepath"
@@ -19,8 +20,9 @@ type (
 
 	// A File contains the logic to generate a complete file.
 	File interface {
-		// Sections is the list of file sections.
-		Sections() []*Section
+		// Sections is the list of file sections. genPkg is the Import
+		// path to the gen package.
+		Sections(genPkg string) []*Section
 		// OutputPath returns the relative path to the output file.
 		// The value must not be a key of reserved.
 		OutputPath(reserved map[string]bool) string
@@ -42,7 +44,11 @@ func (w *Writer) Write(file File) error {
 		return err
 	}
 	f := &SourceFile{filepath.Join(w.Dir, p)}
-	for _, s := range file.Sections() {
+	genPkg, err := build.ImportDir(w.Dir, build.FindOnly)
+	if err != nil {
+		return err
+	}
+	for _, s := range file.Sections(genPkg.ImportPath) {
 		if err := s.Write(f); err != nil {
 			return err
 		}
