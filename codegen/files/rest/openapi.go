@@ -26,7 +26,7 @@ func OpenAPI(root *rest.RootExpr) (codegen.File, error) {
 }
 
 // Sections is the list of file sections.
-func (w *openAPI) Sections() []*codegen.Section {
+func (w *openAPI) Sections(_ string) []*codegen.Section {
 	funcs := template.FuncMap{"toJSON": toJSON}
 	tmpl := template.Must(template.New("openapiV2").Funcs(funcs).Parse(openapiTmpl))
 	return []*codegen.Section{&codegen.Section{

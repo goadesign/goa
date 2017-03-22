@@ -82,7 +82,7 @@ func Path(a *rest.ActionExpr) *codegen.Section {
 	}
 }
 
-func (e *pathFile) Sections() []*codegen.Section {
+func (e *pathFile) Sections(_ string) []*codegen.Section {
 	return e.sections
 }
 
