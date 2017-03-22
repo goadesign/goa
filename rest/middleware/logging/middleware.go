@@ -1,6 +1,9 @@
 package logging
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"io"
 	"net"
 	"net/http"
 	"time"
@@ -13,23 +16,24 @@ import (
 func New(logger goa.Logger) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			started := time.Now()
-
-			logger.Info(
-				r.Context(),
-				r.Method, r.URL.String(),
-				"from", from(r),
+			var (
+				started = time.Now()
+				reqID   = shortID()
 			)
+
+			logger.Info(r.Context(),
+				"reqID", reqID,
+				r.Method, r.URL.String(),
+				"from", from(r))
 
 			rw := rest.CaptureResponse(w)
 			h.ServeHTTP(rw, r)
 
-			logger.Info(
-				r.Context(),
+			logger.Info(r.Context(),
+				"reqID", reqID,
 				"status", rw.StatusCode,
 				"bytes", rw.ContentLength,
-				"time", time.Since(started).String(),
-			)
+				"time", time.Since(started).String())
 		})
 	}
 }
@@ -45,4 +49,12 @@ func from(req *http.Request) string {
 		return f
 	}
 	return ip
+}
+
+// shortID produces a "unique" 6 bytes long string.
+// Do not use as a reliable way to get unique IDs.
+func shortID() string {
+	b := make([]byte, 6)
+	io.ReadFull(rand.Reader, b)
+	return base64.RawURLEncoding.EncodeToString(b)
 }
