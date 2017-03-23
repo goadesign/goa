@@ -156,6 +156,8 @@ func GoNativeType(t design.DataType) string {
 			return "float64"
 		case design.StringKind:
 			return "string"
+		case design.BytesKind:
+			return "[]byte"
 		case design.AnyKind:
 			return "interface{}"
 		default:
@@ -259,7 +261,7 @@ func removeTrailingInvalid(runes []rune) []rune {
 	for ; valid >= 0 && !validIdentifier(runes[valid]); valid-- {
 	}
 
-	return runes[0: valid+1]
+	return runes[0 : valid+1]
 }
 
 // removeInvalidAtIndex removes consecutive invalid identifiers from runes starting at index i.
