@@ -67,7 +67,7 @@ var statusCodeToConst = map[int]string{
 	http.StatusNetworkAuthenticationRequired: "StatusNetworkAuthenticationRequired",
 }
 
-func statusCodeToHttpConst(statusCode int) string {
+func statusCodeToHTTPConst(statusCode int) string {
 	if v, ok := statusCodeToConst[statusCode]; ok {
 		return fmt.Sprintf("http.%s", v)
 	}
