@@ -101,7 +101,6 @@ func TestService(t *testing.T) {
 				&b,
 			},
 		}
-		_ = multipleEndpoints
 
 		nopayloadEndpoint = design.ServiceExpr{
 			Name: "NoPayload",
@@ -109,7 +108,6 @@ func TestService(t *testing.T) {
 				&nopayload,
 			},
 		}
-		_ = nopayloadEndpoint
 	)
 	cases := map[string]struct {
 		Service  *design.ServiceExpr
