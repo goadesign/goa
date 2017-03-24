@@ -14,7 +14,6 @@ import (
 )
 
 //todo: in encode headers and mappings
-//todo: in decode payload, query and paths
 
 const serverStructT = `{{ printf "%s lists the %s service endpoint HTTP handlers." .HandlersStruct .ServiceName | comment }}
 type {{ .HandlersStruct }} struct {
@@ -110,93 +109,167 @@ func {{ .Decoder }}(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 		{{- end }}
 		var (
 			{{- range .Payload.AllParams }}
-			{{ goify .Name false }} {{goTypeRef .Type }}
+			{{ .VarName }} {{goTypeRef .Type }}
 			{{- end }}
 		)
 {{ range .Payload.QueryParams }}
 	{{- if eq .Type.Name "string" }}
-		{{ goify .Name false }} = r.URL.Query().Get("{{ .Name }}")
+		{{ .VarName }} = r.URL.Query().Get("{{ .Name }}")
 	{{- else }}
-		{{ goify .Name false }}Raw := r.URL.Query().Get("{{ .Name }}")
-		{{- template "type_conversion" . }}
+		{{ .VarName }}Raw := r.URL.Query().Get("{{ .Name }}")
+		{{- template "conversion" . }}
 	{{- end }}
-{{- end }}
+{{ end }}
 {{- range .Payload.PathParams }}
 	{{- if eq .Type.Name "string" }}
-		{{ goify .Name false }} = params["{{ .Name }}"]
+		{{ .VarName }} = params["{{ .Name }}"]
 	{{- else }}
-		{{ goify .Name false }}Raw := params["{{ .Name }}"]
-		{{- template "type_conversion" . }}
+		{{ .VarName }}Raw := params["{{ .Name }}"]
+		{{- template "conversion" . }}
 	{{- end }}
-{{- end }}
+{{ end }}
 {{- end }}
 		payload, err := {{ .Payload.Constructor }}(
 			{{- if .Payload.HasBody }}&body{{ end -}}
 			{{- range $i, $p := .Payload.AllParams }}
-				{{- if or (ne $i 0) ($.Payload.HasBody) }}, {{ end -}}{{ goify .Name false }}
+				{{- if or (ne $i 0) ($.Payload.HasBody) }}, {{ end -}}{{ .VarName }}
 			{{- end }})
 		return payload, err
 	}
 }
-{{ define "type_conversion"}}
-	{{- if eq .Type.Name "int" }}
-		if v, err := strconv.ParseInt({{ goify .Name false }}Raw, 10, strconv.IntSize); err != nil {
-			return nil, fmt.Errorf("{{ .Name }} must be an integer, got '%s'", {{ goify .Name false }}Raw)
-		} else {
-			{{ goify .Name false }} = int(v)
-		}
-	{{- else if eq .Type.Name "int32" }}
-		if v, err := strconv.ParseInt({{ goify .Name false }}Raw, 10, 32); err != nil {
-			return nil, fmt.Errorf("{{ .Name }} must be an integer, got '%s'", {{ goify .Name false }}Raw)
-		} else {
-			{{ goify .Name false }} = int32(v)
-		}
-	{{- else if eq .Type.Name "int64" }}
-		if v, err := strconv.ParseInt({{ goify .Name false }}Raw, 10, 64); err != nil {
-			return nil, fmt.Errorf("{{ .Name }} must be an integer, got '%s'", {{ goify .Name false }}Raw)
-		} else {
-			{{ goify .Name false }} = v
-		}
-	{{- else if eq .Type.Name "uint" }}
-		if v, err := strconv.ParseUint({{ goify .Name false }}Raw, 10, strconv.IntSize); err != nil {
-			return nil, fmt.Errorf("{{ .Name }} must be an unsigned integer, got '%s'", {{ goify .Name false }}Raw)
-		} else {
-			{{ goify .Name false }} = uint(v)
-		}
-	{{- else if eq .Type.Name "uint32" }}
-		if v, err := strconv.ParseUint({{ goify .Name false }}Raw, 10, 32); err != nil {
-			return nil, fmt.Errorf("{{ .Name }} must be an unsigned integer, got '%s'", {{ goify .Name false }}Raw)
-		} else {
-			{{ goify .Name false }} = int32(v)
-		}
-	{{- else if eq .Type.Name "uint64" }}
-		if v, err := strconv.ParseUint({{ goify .Name false }}Raw, 10, 64); err != nil {
-			return nil, fmt.Errorf("{{ .Name }} must be an unsigned integer, got '%s'", {{ goify .Name false }}Raw)
-		} else {
-			{{ goify .Name false }} = v
-		}
-	{{- else if eq .Type.Name "float32" }}
-		if v, err := strconv.ParseFloat({{ goify .Name false }}Raw, 32); err != nil {
-			return nil, fmt.Errorf("{{ .Name }} must be a float, got '%s'", {{ goify .Name false }}Raw)
-		} else {
-			{{ goify .Name false }} = float32(v)
-		}
-	{{- else if eq .Type.Name "float64" }}
-		if v, err := strconv.ParseFloat({{ goify .Name false }}Raw, 64); err != nil {
-			return nil, fmt.Errorf("{{ .Name }} must be a float, got '%s'", {{ goify .Name false }}Raw)
-		} else {
-			{{ goify .Name false }} = v
-		}
-	{{- else if eq .Type.Name "boolean" }}
-		if v, err := strconv.ParseBool({{ goify .Name false }}Raw); err != nil {
-			return nil, fmt.Errorf("{{ .Name }} must be a boolean (true or false), got '%s'", {{ goify .Name false }}Raw)
-		} else {
-			{{ goify .Name false }} = v
+{{- define "conversion" }}
+	{{- if eq .Type.Name "array" }}
+		{{ .VarName }}RawSlice := strings.Split({{ .VarName }}Raw, ",")
+		{{ .VarName }} = make({{ goTypeRef .Type }}, len({{ .VarName }}RawSlice))
+		for i, rv := range {{ .VarName }}RawSlice {
+			{{- template "type_slice_conversion" . }}
 		}
 	{{- else }}
-		// unsupported type YET!
+		{{- template "type_conversion" . }}
 	{{- end }}
-{{end -}}
+{{- end }}
+{{- define "type_conversion" }}
+	{{- if eq .Type.Name "string" }}
+		{{ .VarName }} = url.QueryUnescape(v)
+	{{- else if eq .Type.Name "int" }}
+		if v, err := strconv.ParseInt({{ .VarName }}Raw, 10, strconv.IntSize); err != nil {
+			return nil, fmt.Errorf("{{ .Name }} must be an integer, got '%s'", {{ .VarName }}Raw)
+		} else {
+			{{ .VarName }} = int(v)
+		}
+	{{- else if eq .Type.Name "int32" }}
+		if v, err := strconv.ParseInt({{ .VarName }}Raw, 10, 32); err != nil {
+			return nil, fmt.Errorf("{{ .Name }} must be an integer, got '%s'", {{ .VarName }}Raw)
+		} else {
+			{{ .VarName }} = int32(v)
+		}
+	{{- else if eq .Type.Name "int64" }}
+		if v, err := strconv.ParseInt({{ .VarName }}Raw, 10, 64); err != nil {
+			return nil, fmt.Errorf("{{ .Name }} must be an integer, got '%s'", {{ .VarName }}Raw)
+		} else {
+			{{ .VarName }} = v
+		}
+	{{- else if eq .Type.Name "uint" }}
+		if v, err := strconv.ParseUint({{ .VarName }}Raw, 10, strconv.IntSize); err != nil {
+			return nil, fmt.Errorf("{{ .Name }} must be an unsigned integer, got '%s'", {{ .VarName }}Raw)
+		} else {
+			{{ .VarName }} = uint(v)
+		}
+	{{- else if eq .Type.Name "uint32" }}
+		if v, err := strconv.ParseUint({{ .VarName }}Raw, 10, 32); err != nil {
+			return nil, fmt.Errorf("{{ .Name }} must be an unsigned integer, got '%s'", {{ .VarName }}Raw)
+		} else {
+			{{ .VarName }} = int32(v)
+		}
+	{{- else if eq .Type.Name "uint64" }}
+		if v, err := strconv.ParseUint({{ .VarName }}Raw, 10, 64); err != nil {
+			return nil, fmt.Errorf("{{ .Name }} must be an unsigned integer, got '%s'", {{ .VarName }}Raw)
+		} else {
+			{{ .VarName }} = v
+		}
+	{{- else if eq .Type.Name "float32" }}
+		if v, err := strconv.ParseFloat({{ .VarName }}Raw, 32); err != nil {
+			return nil, fmt.Errorf("{{ .Name }} must be a float, got '%s'", {{ .VarName }}Raw)
+		} else {
+			{{ .VarName }} = float32(v)
+		}
+	{{- else if eq .Type.Name "float64" }}
+		if v, err := strconv.ParseFloat({{ .VarName }}Raw, 64); err != nil {
+			return nil, fmt.Errorf("{{ .Name }} must be a float, got '%s'", {{ .VarName }}Raw)
+		} else {
+			{{ .VarName }} = v
+		}
+	{{- else if eq .Type.Name "boolean" }}
+		if v, err := strconv.ParseBool({{ .VarName }}Raw); err != nil {
+			return nil, fmt.Errorf("{{ .Name }} must be a boolean (true or false), got '%s'", {{ .VarName }}Raw)
+		} else {
+			{{ .VarName }} = v
+		}
+	{{- else }}
+		// unsupported type {{ .Type.Name }} for var {{ .VarName }}
+	{{- end }}
+{{- end }}
+{{- define "type_slice_conversion" }}
+		{{- if eq .Type.ElemType.Type.Name "string" }}
+			{{ .VarName }}[i] = url.QueryUnescape(rv)
+		{{- else if eq .Type.ElemType.Type.Name "int" }}
+			if v, err := strconv.ParseInt(rv, 10, strconv.IntSize); err != nil {
+				return nil, fmt.Errorf("{{ .Name }} must be an set of integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
+			} else {
+				{{ .VarName }}[i] = int(v)
+			}
+		{{- else if eq .Type.ElemType.Type.Name "int32" }}
+			if v, err := strconv.ParseInt(rv, 10, 32); err != nil {
+				return nil, fmt.Errorf("{{ .Name }} must be an set of integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
+			} else {
+				{{ .VarName }}[i] = int32(v)
+			}
+		{{- else if eq .Type.ElemType.Type.Name "int64" }}
+			if v, err := strconv.ParseInt(rv, 10, 64); err != nil {
+				return nil, fmt.Errorf("{{ .Name }} must be an set of integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
+			} else {
+				{{ .VarName }}[i] = v
+			}
+		{{- else if eq .Type.ElemType.Type.Name "uint" }}
+			if v, err := strconv.ParseUint(rv, 10, strconv.IntSize); err != nil {
+				return nil, fmt.Errorf("{{ .Name }} must be an set of unsigned integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
+			} else {
+				{{ .VarName }}[i] = uint(v)
+			}
+		{{- else if eq .Type.ElemType.Type.Name "uint32" }}
+			if v, err := strconv.ParseUint(rv, 10, 32); err != nil {
+				return nil, fmt.Errorf("{{ .Name }} must be an set of unsigned integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
+			} else {
+				{{ .VarName }}[i] = int32(v)
+			}
+		{{- else if eq .Type.ElemType.Type.Name "uint64" }}
+			if v, err := strconv.ParseUint(rv, 10, 64); err != nil {
+				return nil, fmt.Errorf("{{ .Name }} must be an set of unsigned integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
+			} else {
+				{{ .VarName }}[i] = v
+			}
+		{{- else if eq .Type.ElemType.Type.Name "float32" }}
+			if v, err := strconv.ParseFloat(rv, 32); err != nil {
+				return nil, fmt.Errorf("{{ .Name }} must be an set of floats, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
+			} else {
+				{{ .VarName }}[i] = float32(v)
+			}
+		{{- else if eq .Type.ElemType.Type.Name "float64" }}
+			if v, err := strconv.ParseFloat(rv, 64); err != nil {
+				return nil, fmt.Errorf("{{ .Name }} must be an set of floats, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
+			} else {
+				{{ .VarName }}[i] = v
+			}
+		{{- else if eq .Type.ElemType.Type.Name "boolean" }}
+			if v, err := strconv.ParseBool(rv); err != nil {
+				return nil, fmt.Errorf("{{ .Name }} must be an set of booleans (true, false, 1 or 0), got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
+			} else {
+				{{ .VarName }}[i] = v
+			}
+		{{- else }}
+			// unsupported slice type {{ .Type.ElemType.Type.Name }} for var {{ .VarName }}
+		{{- end }}
+{{- end }}
 `
 
 const serverEncoderT = `{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .Encoder .EndpointName .ServiceName | comment }}
@@ -306,6 +379,7 @@ type (
 
 	serverParamData struct {
 		Name     string
+		VarName  string
 		Type     design.DataType
 		Required bool
 	}
@@ -319,9 +393,7 @@ type (
 
 var (
 	serverTmpl = template.New("server").Funcs(template.FuncMap{
-		"add":       codegen.Add,
 		"goTypeRef": codegen.GoTypeRef,
-		"goify":     codegen.Goify,
 	}).Funcs(codegen.TemplateFuncs())
 	serverStructTmpl             = template.Must(serverTmpl.New("struct").Parse(serverStructT))
 	serverConstructorTmpl        = template.Must(serverTmpl.New("constructor").Parse(serverConstructorT))
@@ -486,6 +558,7 @@ func extractParams(a *design.AttributeExpr) []*serverParamData {
 	for i, name := range keys {
 		params[i] = &serverParamData{
 			Name:     name,
+			VarName:  codegen.Goify(name, false),
 			Type:     obj[name].Type,
 			Required: true,
 		}
