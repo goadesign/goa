@@ -296,6 +296,220 @@ func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 	}
 }
 `
+		showUserDecodeAllTypes = `// ShowUserDecodeRequest returns a decoder for requests sent to the create User endpoint.
+func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
+	return func(r *http.Request) (*service.ShowUserPayload, error) {
+		var (
+			body ShowUserBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				err = fmt.Errorf("empty body")
+			}
+			return nil, err
+		}
+
+		var (
+			boolVar bool
+			float32Var float32
+			float64Var float64
+			int32Var int32
+			int64Var int64
+			intVar int
+			sliceBoolVar []bool
+			sliceFloat32Var []float32
+			sliceFloat64Var []float64
+			sliceInt32Var []int32
+			sliceInt64Var []int64
+			sliceIntVar []int
+			sliceString []string
+			sliceUint32Var []uint32
+			sliceUint64Var []uint64
+			sliceUintVar []uint
+			stringVar string
+			uint32Var uint32
+			uint64Var uint64
+			uintVar uint
+		)
+
+		boolVarRaw := r.URL.Query().Get("bool_var")
+		if v, err := strconv.ParseBool(boolVarRaw); err != nil {
+			return nil, fmt.Errorf("bool_var must be a boolean (true or false), got '%s'", boolVarRaw)
+		} else {
+			boolVar = v
+		}
+
+		float32VarRaw := r.URL.Query().Get("float32_var")
+		if v, err := strconv.ParseFloat(float32VarRaw, 32); err != nil {
+			return nil, fmt.Errorf("float32_var must be a float, got '%s'", float32VarRaw)
+		} else {
+			float32Var = float32(v)
+		}
+
+		float64VarRaw := r.URL.Query().Get("float64_var")
+		if v, err := strconv.ParseFloat(float64VarRaw, 64); err != nil {
+			return nil, fmt.Errorf("float64_var must be a float, got '%s'", float64VarRaw)
+		} else {
+			float64Var = v
+		}
+
+		int32VarRaw := r.URL.Query().Get("int32_var")
+		if v, err := strconv.ParseInt(int32VarRaw, 10, 32); err != nil {
+			return nil, fmt.Errorf("int32_var must be an integer, got '%s'", int32VarRaw)
+		} else {
+			int32Var = int32(v)
+		}
+
+		int64VarRaw := r.URL.Query().Get("int64_var")
+		if v, err := strconv.ParseInt(int64VarRaw, 10, 64); err != nil {
+			return nil, fmt.Errorf("int64_var must be an integer, got '%s'", int64VarRaw)
+		} else {
+			int64Var = v
+		}
+
+		intVarRaw := r.URL.Query().Get("int_var")
+		if v, err := strconv.ParseInt(intVarRaw, 10, strconv.IntSize); err != nil {
+			return nil, fmt.Errorf("int_var must be an integer, got '%s'", intVarRaw)
+		} else {
+			intVar = int(v)
+		}
+
+		sliceBoolVarRaw := r.URL.Query().Get("slice_bool_var")
+		sliceBoolVarRawSlice := strings.Split(sliceBoolVarRaw, ",")
+		sliceBoolVar = make([]bool, len(sliceBoolVarRawSlice))
+		for i, rv := range sliceBoolVarRawSlice {
+			if v, err := strconv.ParseBool(rv); err != nil {
+				return nil, fmt.Errorf("slice_bool_var must be an set of booleans (true, false, 1 or 0), got value '%s' in set '%s'", rv, sliceBoolVarRaw)
+			} else {
+				sliceBoolVar[i] = v
+			}
+		}
+
+		sliceFloat32VarRaw := r.URL.Query().Get("slice_float32_var")
+		sliceFloat32VarRawSlice := strings.Split(sliceFloat32VarRaw, ",")
+		sliceFloat32Var = make([]float32, len(sliceFloat32VarRawSlice))
+		for i, rv := range sliceFloat32VarRawSlice {
+			if v, err := strconv.ParseFloat(rv, 32); err != nil {
+				return nil, fmt.Errorf("slice_float32_var must be an set of floats, got value '%s' in set '%s'", rv, sliceFloat32VarRaw)
+			} else {
+				sliceFloat32Var[i] = float32(v)
+			}
+		}
+
+		sliceFloat64VarRaw := r.URL.Query().Get("slice_float64_var")
+		sliceFloat64VarRawSlice := strings.Split(sliceFloat64VarRaw, ",")
+		sliceFloat64Var = make([]float64, len(sliceFloat64VarRawSlice))
+		for i, rv := range sliceFloat64VarRawSlice {
+			if v, err := strconv.ParseFloat(rv, 64); err != nil {
+				return nil, fmt.Errorf("slice_float64_var must be an set of floats, got value '%s' in set '%s'", rv, sliceFloat64VarRaw)
+			} else {
+				sliceFloat64Var[i] = v
+			}
+		}
+
+		sliceInt32VarRaw := r.URL.Query().Get("slice_int32_var")
+		sliceInt32VarRawSlice := strings.Split(sliceInt32VarRaw, ",")
+		sliceInt32Var = make([]int32, len(sliceInt32VarRawSlice))
+		for i, rv := range sliceInt32VarRawSlice {
+			if v, err := strconv.ParseInt(rv, 10, 32); err != nil {
+				return nil, fmt.Errorf("slice_int32_var must be an set of integers, got value '%s' in set '%s'", rv, sliceInt32VarRaw)
+			} else {
+				sliceInt32Var[i] = int32(v)
+			}
+		}
+
+		sliceInt64VarRaw := r.URL.Query().Get("slice_int64_var")
+		sliceInt64VarRawSlice := strings.Split(sliceInt64VarRaw, ",")
+		sliceInt64Var = make([]int64, len(sliceInt64VarRawSlice))
+		for i, rv := range sliceInt64VarRawSlice {
+			if v, err := strconv.ParseInt(rv, 10, 64); err != nil {
+				return nil, fmt.Errorf("slice_int64_var must be an set of integers, got value '%s' in set '%s'", rv, sliceInt64VarRaw)
+			} else {
+				sliceInt64Var[i] = v
+			}
+		}
+
+		sliceIntVarRaw := r.URL.Query().Get("slice_int_var")
+		sliceIntVarRawSlice := strings.Split(sliceIntVarRaw, ",")
+		sliceIntVar = make([]int, len(sliceIntVarRawSlice))
+		for i, rv := range sliceIntVarRawSlice {
+			if v, err := strconv.ParseInt(rv, 10, strconv.IntSize); err != nil {
+				return nil, fmt.Errorf("slice_int_var must be an set of integers, got value '%s' in set '%s'", rv, sliceIntVarRaw)
+			} else {
+				sliceIntVar[i] = int(v)
+			}
+		}
+
+		sliceStringRaw := r.URL.Query().Get("slice_string")
+		sliceStringRawSlice := strings.Split(sliceStringRaw, ",")
+		sliceString = make([]string, len(sliceStringRawSlice))
+		for i, rv := range sliceStringRawSlice {
+			sliceString[i] = url.QueryUnescape(rv)
+		}
+
+		sliceUint32VarRaw := r.URL.Query().Get("slice_uint32_var")
+		sliceUint32VarRawSlice := strings.Split(sliceUint32VarRaw, ",")
+		sliceUint32Var = make([]uint32, len(sliceUint32VarRawSlice))
+		for i, rv := range sliceUint32VarRawSlice {
+			if v, err := strconv.ParseUint(rv, 10, 32); err != nil {
+				return nil, fmt.Errorf("slice_uint32_var must be an set of unsigned integers, got value '%s' in set '%s'", rv, sliceUint32VarRaw)
+			} else {
+				sliceUint32Var[i] = int32(v)
+			}
+		}
+
+		sliceUint64VarRaw := r.URL.Query().Get("slice_uint64_var")
+		sliceUint64VarRawSlice := strings.Split(sliceUint64VarRaw, ",")
+		sliceUint64Var = make([]uint64, len(sliceUint64VarRawSlice))
+		for i, rv := range sliceUint64VarRawSlice {
+			if v, err := strconv.ParseUint(rv, 10, 64); err != nil {
+				return nil, fmt.Errorf("slice_uint64_var must be an set of unsigned integers, got value '%s' in set '%s'", rv, sliceUint64VarRaw)
+			} else {
+				sliceUint64Var[i] = v
+			}
+		}
+
+		sliceUintVarRaw := r.URL.Query().Get("slice_uint_var")
+		sliceUintVarRawSlice := strings.Split(sliceUintVarRaw, ",")
+		sliceUintVar = make([]uint, len(sliceUintVarRawSlice))
+		for i, rv := range sliceUintVarRawSlice {
+			if v, err := strconv.ParseUint(rv, 10, strconv.IntSize); err != nil {
+				return nil, fmt.Errorf("slice_uint_var must be an set of unsigned integers, got value '%s' in set '%s'", rv, sliceUintVarRaw)
+			} else {
+				sliceUintVar[i] = uint(v)
+			}
+		}
+
+		stringVar = r.URL.Query().Get("string_var")
+
+		uint32VarRaw := r.URL.Query().Get("uint32_var")
+		if v, err := strconv.ParseUint(uint32VarRaw, 10, 32); err != nil {
+			return nil, fmt.Errorf("uint32_var must be an unsigned integer, got '%s'", uint32VarRaw)
+		} else {
+			uint32Var = int32(v)
+		}
+
+		uint64VarRaw := r.URL.Query().Get("uint64_var")
+		if v, err := strconv.ParseUint(uint64VarRaw, 10, 64); err != nil {
+			return nil, fmt.Errorf("uint64_var must be an unsigned integer, got '%s'", uint64VarRaw)
+		} else {
+			uint64Var = v
+		}
+
+		uintVarRaw := r.URL.Query().Get("uint_var")
+		if v, err := strconv.ParseUint(uintVarRaw, 10, strconv.IntSize); err != nil {
+			return nil, fmt.Errorf("uint_var must be an unsigned integer, got '%s'", uintVarRaw)
+		} else {
+			uintVar = uint(v)
+		}
+
+		payload, err := NewShowUserPayload(&body, boolVar, float32Var, float64Var, int32Var, int64Var, intVar, sliceBoolVar, sliceFloat32Var, sliceFloat64Var, sliceInt32Var, sliceInt64Var, sliceIntVar, sliceString, sliceUint32Var, sliceUint64Var, sliceUintVar, stringVar, uint32Var, uint64Var, uintVar)
+		return payload, err
+	}
+}
+`
 
 		showUserEncodeResponseNoResponse = `// ShowUserEncodeResponse returns an encoder for responses returned by the Show User endpoint.
 func ShowUserEncodeResponse(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
@@ -698,6 +912,41 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				showUserEncodeError,
 			},
 		},
+
+		"with-all-payload-types": {
+			Resource: resource(&actionWithPayloadBody),
+			Params: design.Object{
+				"string_var":        {Type: design.String},
+				"int_var":           {Type: design.Int},
+				"int32_var":         {Type: design.Int32},
+				"int64_var":         {Type: design.Int64},
+				"uint_var":          {Type: design.UInt},
+				"uint32_var":        {Type: design.UInt32},
+				"uint64_var":        {Type: design.UInt64},
+				"float32_var":       {Type: design.Float32},
+				"float64_var":       {Type: design.Float64},
+				"bool_var":          {Type: design.Boolean},
+				"slice_string":      {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.String}}},
+				"slice_int_var":     {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Int}}},
+				"slice_int32_var":   {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Int32}}},
+				"slice_int64_var":   {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Int64}}},
+				"slice_uint_var":    {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.UInt}}},
+				"slice_uint32_var":  {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.UInt32}}},
+				"slice_uint64_var":  {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.UInt64}}},
+				"slice_float32_var": {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Float32}}},
+				"slice_float64_var": {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Float64}}},
+				"slice_bool_var":    {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Boolean}}},
+			},
+			Expected: []string{
+				userHandlers,
+				newUserHandlersConstructor,
+				mountUserHandlers,
+				mountShowUserHandler,
+				newShowUserHandlerNoPayload,
+				showUserEncodeResponseNoResponse,
+				showUserDecodeAllTypes,
+			},
+		},
 	}
 
 	for k, tc := range cases {
@@ -709,6 +958,8 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 
 		if tc.Params != nil {
 			setParams(tc.Resource, &tc.Params)
+		} else {
+			setParams(tc.Resource, &design.Object{})
 		}
 
 		buf := new(bytes.Buffer)
