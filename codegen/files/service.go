@@ -100,9 +100,9 @@ func (s *serviceFile) Sections(genPkg string) []*codegen.Section {
 	{
 		header = codegen.Header(s.service.Name+"Services", "services",
 			[]*codegen.ImportSpec{
-				&codegen.ImportSpec{Path: "context"},
-				&codegen.ImportSpec{Path: "goa.design/goa.v2"},
-				&codegen.ImportSpec{Path: genPkg + "/services"},
+				{Path: "context"},
+				{Path: "goa.design/goa.v2"},
+				{Path: genPkg + "/services"},
 			})
 		body = &codegen.Section{
 			Template: serviceTmpl,
