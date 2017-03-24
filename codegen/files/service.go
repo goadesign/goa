@@ -24,6 +24,8 @@ type (
 	serviceMethod struct {
 		// Name is the method name.
 		Name string
+		// VarName is the method struct name.
+		VarName string
 		// Payload is the payload of the method.
 		Payload servicePayload
 		// HasPayload is true if the payload type is not empty.
@@ -75,7 +77,8 @@ func (s *serviceFile) Sections(genPkg string) []*codegen.Section {
 				}
 			}
 			methods[i] = &serviceMethod{
-				Name: codegen.Goify(v.Name, true),
+				Name:    v.Name,
+				VarName: codegen.Goify(v.Name, true),
 				Payload: servicePayload{
 					Name:   codegen.Goify(v.Payload.Name(), true),
 					Fields: fields,
@@ -124,7 +127,7 @@ func (s *serviceFile) OutputPath(reserved map[string]bool) string {
 const serviceT = `type (
 	// {{ .VarName }} is the {{ .Name }} service interface.
 	{{ .VarName }} interface {
-{{ range .Methods }}		// {{ .Name }} implements the {{ .Name }} endpoint.
+{{ range .Methods }}		// {{ .VarName }} implements the {{ .Name }} endpoint.
 		{{ .Name }}(context.Context{{ if .HasPayload }}, *{{ .Payload.Name }}{{ end }}) {{ if .HasResult }}({{ .Result.Name }}, error){{ else }}error{{ end }}
 {{ end }}	}
 {{ range .Methods }}{{ if .HasPayload }}
