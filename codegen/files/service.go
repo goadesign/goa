@@ -69,7 +69,7 @@ func (s *serviceFile) Sections(genPkg string) []*codegen.Section {
 		methods := make([]*serviceMethod, len(s.service.Endpoints))
 		for i, v := range s.service.Endpoints {
 			fields := make(map[string]string)
-			if o, ok := v.Payload.Attribute().Type.(design.Object); ok {
+			if o := design.AsObject(v.Payload); o != nil {
 				for key, value := range o {
 					fields[key] = codegen.GoTypeName(value.Type)
 				}
