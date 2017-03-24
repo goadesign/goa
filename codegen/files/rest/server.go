@@ -494,7 +494,7 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 					codegen.Goify(serviceName, true),
 					codegen.Goify(http.StatusText(v.StatusCode), true),
 				),
-				StatusCode: statusCodeToHttpConst(v.StatusCode),
+				StatusCode: statusCodeToHTTPConst(v.StatusCode),
 				HasBody:    hasBody,
 			}
 		}
@@ -503,7 +503,7 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 		for i, v := range a.HTTPErrors {
 			httpErrors[i] = &serverResponseData{
 				Name:       codegen.Goify(v.Name, true),
-				StatusCode: statusCodeToHttpConst(v.Response.StatusCode),
+				StatusCode: statusCodeToHTTPConst(v.Response.StatusCode),
 			}
 		}
 
