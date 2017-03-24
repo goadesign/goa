@@ -963,14 +963,14 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 		}
 
 		buf := new(bytes.Buffer)
-		ss := Server(tc.Resource)
+		ss := Server(tc.Resource).Sections("")
 
-		if len(ss) != len(tc.Expected) {
+		if len(ss)-1 != len(tc.Expected) {
 			t.Errorf("%s: got %d sections but expected %d", k, len(ss), len(tc.Expected))
 			continue
 		}
 
-		for i, s := range ss {
+		for i, s := range ss[1:] {
 			buf.Reset()
 
 			e := s.Write(buf)
