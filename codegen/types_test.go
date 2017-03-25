@@ -2,7 +2,37 @@ package codegen
 
 import (
 	"testing"
+
+	"goa.design/goa.v2/design"
 )
+
+func TestGoNativeType(t *testing.T) {
+	cases := map[string]struct {
+		dataType design.DataType
+		expected string
+	}{
+		"BooleanKind": {design.Boolean, "bool"},
+		"IntKind":     {design.Int, "int"},
+		"Int32Kind":   {design.Int32, "int32"},
+		"Int64Kind":   {design.Int64, "int64"},
+		"UIntKind":    {design.UInt, "uint"},
+		"UInt32Kind":  {design.UInt32, "uint32"},
+		"UInt64Kind":  {design.UInt64, "uint64"},
+		"Float32Kind": {design.Float32, "float32"},
+		"Float64Kind": {design.Float64, "float64"},
+		"StringKind":  {design.String, "string"},
+		"BytesKind":   {design.Bytes, "[]byte"},
+		"AnyKind":     {design.Any, "interface{}"},
+		"Array":       {&design.Array{&design.AttributeExpr{Type: design.Boolean}}, "[]bool"},
+	}
+
+	for k, tc := range cases {
+		actual := GoNativeType(tc.dataType)
+		if actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
 
 func TestGoify(t *testing.T) {
 	cases := map[string]struct {
