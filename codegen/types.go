@@ -131,7 +131,6 @@ func GoTypeName(dt design.DataType) string {
 }
 
 // GoNativeType returns the Go built-in type from which instances of provided datatype can be initialized.
-// todo: TBD add support for maps, objects and usertypes
 func GoNativeType(t design.DataType) string {
 	switch actual := t.(type) {
 	case design.Primitive:
@@ -165,6 +164,12 @@ func GoNativeType(t design.DataType) string {
 		}
 	case *design.Array:
 		return "[]" + GoNativeType(actual.ElemType.Type)
+	case *design.Map:
+		return fmt.Sprintf("map[%s]%s", GoNativeType(actual.KeyType.Type), GoNativeType(actual.ElemType.Type))
+	case design.Object:
+		return "map[string]interface{}"
+	case *design.UserTypeExpr:
+		return actual.TypeName
 	case design.CompositeExpr:
 		return GoNativeType(actual.Attribute().Type)
 	default:
