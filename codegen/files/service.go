@@ -72,9 +72,10 @@ func (s *serviceFile) Sections(genPkg string) []*codegen.Section {
 		for i, v := range s.service.Endpoints {
 			fields := make(map[string]string)
 			if o := design.AsObject(v.Payload); o != nil {
-				for key, value := range o {
-					fields[key] = codegen.GoTypeName(value.Type)
-				}
+				o.WalkAttributes(func(name string, at *design.AttributeExpr) error {
+					fields[name] = codegen.GoNativeType(at.Type)
+					return nil
+				})
 			}
 			methods[i] = &serviceMethod{
 				Name:    v.Name,

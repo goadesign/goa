@@ -18,6 +18,8 @@ func TestService(t *testing.T) {
 	}
 
 	APayload struct {
+		BooleanField bool
+		BytesField []byte
 		IntField int
 		StringField string
 	}
@@ -34,13 +36,16 @@ func TestService(t *testing.T) {
 	}
 
 	APayload struct {
+		BooleanField bool
+		BytesField []byte
 		IntField int
 		StringField string
 	}
 
 	BPayload struct {
-		BooleanField bool
-		BytesField []byte
+		ArrayField []bool
+		MapField map[int]string
+		ObjectField map[string]interface{}
 	}
 )
 `
@@ -62,8 +67,10 @@ func TestService(t *testing.T) {
 			Payload: &design.UserTypeExpr{
 				TypeName: "APayload",
 				AttributeExpr: &design.AttributeExpr{Type: design.Object{
-					"IntField":    &design.AttributeExpr{Type: design.Int},
-					"StringField": &design.AttributeExpr{Type: design.String},
+					"IntField":     &design.AttributeExpr{Type: design.Int},
+					"StringField":  &design.AttributeExpr{Type: design.String},
+					"BooleanField": &design.AttributeExpr{Type: design.Boolean},
+					"BytesField":   &design.AttributeExpr{Type: design.Bytes},
 				}},
 			},
 			Result: design.NewUserTypeExpr("AResult", nil),
@@ -74,8 +81,9 @@ func TestService(t *testing.T) {
 			Payload: &design.UserTypeExpr{
 				TypeName: "BPayload",
 				AttributeExpr: &design.AttributeExpr{Type: design.Object{
-					"BooleanField": &design.AttributeExpr{Type: design.Boolean},
-					"BytesField":   &design.AttributeExpr{Type: design.Bytes},
+					"ArrayField":  &design.AttributeExpr{Type: &design.Array{&design.AttributeExpr{Type: design.Boolean}}},
+					"MapField":    &design.AttributeExpr{Type: &design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}},
+					"ObjectField": &design.AttributeExpr{Type: design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}},
 				}},
 			},
 			Result: design.NewUserTypeExpr("BResult", nil),
