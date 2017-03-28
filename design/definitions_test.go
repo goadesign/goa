@@ -69,8 +69,8 @@ var _ = Describe("IterateHeaders", func() {
 		Ω(action.IterateHeaders(it)).Should(Succeed(), "despite action.Parent.Headers being nil")
 		Ω(names).Should(ConsistOf("a"))
 	})
-})
 
+})
 var _ = Describe("Finalize ActionDefinition", func() {
 	Context("with an action with no response", func() {
 		var action *design.ActionDefinition
@@ -159,6 +159,105 @@ var _ = Describe("FullPath", func() {
 					Ω(route.FullPath()).Should(Equal(resourcePath[1:] + "/" + actionPath[1:]))
 				})
 			})
+		})
+	})
+})
+
+var _ = Describe("AllParams", func() {
+	Context("Given a resource with a parent and an action with a route", func() {
+		var (
+			resource, parent *design.ResourceDefinition
+			action           *design.ActionDefinition
+			allParams        design.Object
+		)
+
+		BeforeEach(func() {
+			// Parent resource
+			{
+				baseParams := &design.AttributeDefinition{Type: design.Object{
+					"pbasepath":  &design.AttributeDefinition{Type: design.String},
+					"pbasequery": &design.AttributeDefinition{Type: design.String},
+				}}
+				parent = &design.ResourceDefinition{
+					Name:                "parent",
+					CanonicalActionName: "canonical",
+					BasePath:            "/:pbasepath",
+					Params:              baseParams,
+				}
+				canParams := &design.AttributeDefinition{Type: design.Object{
+					"canpath":  &design.AttributeDefinition{Type: design.String},
+					"canquery": &design.AttributeDefinition{Type: design.String},
+				}}
+				canonical := &design.ActionDefinition{
+					Name:   "canonical",
+					Parent: parent,
+					Params: canParams,
+				}
+				croute := &design.RouteDefinition{
+					Path:   "/:canpath",
+					Parent: canonical,
+				}
+				canonical.Routes = []*design.RouteDefinition{croute}
+				parent.Actions = map[string]*design.ActionDefinition{"canonical": canonical}
+			}
+
+			// Resource
+			{
+				baseParams := &design.AttributeDefinition{Type: design.Object{
+					"basepath":  &design.AttributeDefinition{Type: design.String},
+					"basequery": &design.AttributeDefinition{Type: design.String},
+				}}
+				resource = &design.ResourceDefinition{
+					Name:       "child",
+					ParentName: "parent",
+					BasePath:   "/:basepath",
+					Params:     baseParams,
+				}
+			}
+
+			// Action
+			{
+				params := &design.AttributeDefinition{Type: design.Object{
+					"path":     &design.AttributeDefinition{Type: design.String},
+					"query":    &design.AttributeDefinition{Type: design.String},
+					"basepath": &design.AttributeDefinition{Type: design.String},
+				}}
+				action = &design.ActionDefinition{
+					Name:   "action",
+					Parent: resource,
+					Params: params,
+				}
+				route := &design.RouteDefinition{
+					Path:   "/:path",
+					Parent: action,
+				}
+				action.Routes = []*design.RouteDefinition{route}
+				resource.Actions = map[string]*design.ActionDefinition{"action": action}
+			}
+			design.Design.Resources = map[string]*design.ResourceDefinition{"resource": resource, "parent": parent}
+		})
+
+		JustBeforeEach(func() {
+			allParams = action.AllParams().Type.ToObject()
+			Ω(allParams).ShouldNot(BeNil())
+		})
+
+		It("returns both path and query parameters", func() {
+			for p := range action.Params.Type.ToObject() {
+				Ω(allParams).Should(HaveKey(p))
+			}
+		})
+
+		It("returns all path parameters recursively", func() {
+			for _, p := range []string{"path", "basepath", "canpath", "pbasepath"} {
+				Ω(allParams).Should(HaveKey(p))
+			}
+		})
+
+		It("does not return the query parameters of the parent resource canonical action", func() {
+			for _, p := range []string{"basequery", "canquery", "pbasequery"} {
+				Ω(allParams).ShouldNot(HaveKey(p))
+			}
 		})
 	})
 })
