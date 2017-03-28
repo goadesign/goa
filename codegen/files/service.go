@@ -125,16 +125,25 @@ func (s *serviceFile) OutputPath(reserved map[string]bool) string {
 }
 
 // serviceT is the template used to write an service definition.
-const serviceT = `type (
+const serviceT = `
+{{- define "interface" }}
 	// {{ .VarName }} is the {{ .Name }} service interface.
 	{{ .VarName }} interface {
 {{ range .Methods }}		// {{ .VarName }} implements the {{ .Name }} endpoint.
 		{{ .Name }}(context.Context{{ if .HasPayload }}, *{{ .Payload.Name }}{{ end }}) {{ if .HasResult }}({{ .Result.Name }}, error){{ else }}error{{ end }}
 {{ end }}	}
+{{- end -}}
+
+{{- define "payloads" }}
 {{ range .Methods }}{{ if .HasPayload }}
 	{{ .Payload.Name }} struct {
 {{ range $key, $att := .Payload.Fields }}		{{ $key }} {{ $att }}
 {{ end }}	}
 {{ end }}{{ end -}}
+{{- end -}}
+
+type (
+{{- template "interface" . -}}
+{{- template "payloads" . -}}
 )
 `
