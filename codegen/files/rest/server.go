@@ -15,6 +15,279 @@ import (
 
 //todo: in encode headers and mappings
 
+type (
+	serverData struct {
+		ServiceName string
+
+		HandlersStruct string
+		Constructor    string
+		MountHandlers  string
+
+		ActionData []*serverActionData
+	}
+
+	serverActionData struct {
+		EndpointName string
+		ServiceName  string
+
+		Routes []*serverRouteData
+
+		MountHandler string
+		Constructor  string
+		Decoder      string
+		Encoder      string
+		ErrorEncoder string
+
+		Payload *serverPayloadData
+
+		Responses  []*serverResponseData
+		HTTPErrors []*serverResponseData
+	}
+
+	serverPayloadData struct {
+		Name        string
+		Constructor string
+		Body        string
+		hasBody     bool
+
+		PathParams  []*serverParamData
+		QueryParams []*serverParamData
+		AllParams   []*serverParamData
+	}
+
+	serverRouteData struct {
+		Method string
+		Path   string
+	}
+
+	serverResponseData struct {
+		Name       string
+		StatusCode string
+		HasBody    bool
+	}
+
+	serverParamData struct {
+		Name     string
+		VarName  string
+		Type     design.DataType
+		Required bool
+	}
+
+	serverHeaderData struct {
+		Name string
+		MapFrom string
+		Value string
+	}
+
+	// serverFile
+	serverFile struct {
+		resource *rest.ResourceExpr
+	}
+)
+
+var (
+	serverTmpl = template.New("server").Funcs(template.FuncMap{
+		"goTypeRef": codegen.GoTypeRef,
+	}).Funcs(codegen.TemplateFuncs())
+	serverStructTmpl             = template.Must(serverTmpl.New("struct").Parse(serverStructT))
+	serverConstructorTmpl        = template.Must(serverTmpl.New("constructor").Parse(serverConstructorT))
+	serverMountTmpl              = template.Must(serverTmpl.New("mount").Parse(serverMountT))
+	serverHandlerTmpl            = template.Must(serverTmpl.New("handler").Parse(serverHandlerT))
+	serverHandlerConstructorTmpl = template.Must(serverTmpl.New("handler_constructor").Parse(serverHandlerConstructorT))
+	serverDecoderTmpl            = template.Must(serverTmpl.New("decoder").Parse(serverDecoderT))
+	serverEncoderTmpl            = template.Must(serverTmpl.New("encoder").Parse(serverEncoderT))
+	serverErrorEncoderTmpl       = template.Must(serverTmpl.New("error_encoder").Parse(serverErrorEncoderT))
+)
+
+// ServerFiles returns all the server HTTP transport files.
+func ServerFiles(root *rest.RootExpr) []codegen.File {
+	fw := make([]codegen.File, len(root.Resources))
+	for i, r := range root.Resources {
+		fw[i] = Server(r)
+	}
+	return fw
+}
+
+// Server returns the server HTTP transport file
+func Server(r *rest.ResourceExpr) codegen.File {
+	return &serverFile{r}
+}
+
+func (e *serverFile) Sections(genPkg string) []*codegen.Section {
+	d := buildServerData(e.resource)
+
+	title := fmt.Sprintf("%s server HTTP transport", e.resource.Name)
+	s := []*codegen.Section{
+		codegen.Header(title, "http", []*codegen.ImportSpec{
+			{Path: "fmt"},
+			{Path: "io"},
+			{Path: "net/http"},
+			{Path: "strconv"},
+			{Path: "strings"},
+			{Path: "github.com/dimfeld/httptreemux"},
+			{Path: "goa.design/goa.v2"},
+			{Path: "goa.design/goa.v2/rest"},
+			{Path: genPkg + "/endpoints"},
+			{Path: genPkg + "/services"},
+		}),
+		{Template: serverStructTmpl, Data: d},
+		{Template: serverConstructorTmpl, Data: d},
+		{Template: serverMountTmpl, Data: d},
+	}
+
+	for _, a := range d.ActionData {
+		as := []*codegen.Section{
+			{Template: serverHandlerTmpl, Data: a},
+			{Template: serverHandlerConstructorTmpl, Data: a},
+		}
+		s = append(s, as...)
+
+		if a.HasResponses() {
+			s = append(s, &codegen.Section{Template: serverEncoderTmpl, Data: a})
+		}
+
+		if a.HasPayload() {
+			s = append(s, &codegen.Section{Template: serverDecoderTmpl, Data: a})
+		}
+
+		if a.HasErrors() {
+			s = append(s, &codegen.Section{Template: serverErrorEncoderTmpl, Data: a})
+		}
+	}
+	return s
+}
+
+func (e *serverFile) OutputPath(reserved map[string]bool) string {
+	name := fmt.Sprintf("transport/http/%s_server%%d.go", codegen.SnakeCase(e.resource.Name))
+	return files.UniquePath(name, reserved)
+}
+
+func buildServerData(r *rest.ResourceExpr) *serverData {
+
+	serviceName := codegen.Goify(r.Name, true)
+	sd := &serverData{
+		ServiceName: serviceName,
+
+		HandlersStruct: fmt.Sprintf("%sHandlers", serviceName),
+		Constructor:    fmt.Sprintf("New%sHandlers", serviceName),
+		MountHandlers:  fmt.Sprintf("Mount%sHandlers", serviceName),
+	}
+
+	for _, a := range r.Actions {
+		endpointName := codegen.Goify(a.Name, true)
+
+		routes := make([]*serverRouteData, len(a.Routes))
+		for i, v := range a.Routes {
+			routes[i] = &serverRouteData{
+				Method: strings.ToUpper(v.Method),
+				Path:   v.FullPath(),
+			}
+		}
+
+		responses := make([]*serverResponseData, len(a.Responses))
+		for i, v := range a.Responses {
+			hasBody := v.Body != nil && v.Body.Type != design.Empty
+			responses[i] = &serverResponseData{
+				Name: fmt.Sprintf("%s%s",
+					codegen.Goify(serviceName, true),
+					codegen.Goify(http.StatusText(v.StatusCode), true),
+				),
+				StatusCode: statusCodeToHTTPConst(v.StatusCode),
+				HasBody:    hasBody,
+			}
+		}
+
+		httpErrors := make([]*serverResponseData, len(a.HTTPErrors))
+		for i, v := range a.HTTPErrors {
+			httpErrors[i] = &serverResponseData{
+				Name:       codegen.Goify(v.Name, true),
+				StatusCode: statusCodeToHTTPConst(v.Response.StatusCode),
+			}
+		}
+
+		ad := &serverActionData{
+			EndpointName: endpointName,
+			ServiceName:  serviceName,
+			Routes:       routes,
+			Responses:    responses,
+			HTTPErrors:   httpErrors,
+
+			MountHandler: fmt.Sprintf("Mount%s%sHandler", endpointName, serviceName),
+			Constructor:  fmt.Sprintf("New%s%sHandler", endpointName, serviceName),
+			Decoder:      fmt.Sprintf("%s%sDecodeRequest", endpointName, serviceName),
+			Encoder:      fmt.Sprintf("%s%sEncodeResponse", endpointName, serviceName),
+			ErrorEncoder: fmt.Sprintf("%s%sEncodeError", endpointName, serviceName),
+		}
+
+		if a.Payload != nil && a.Payload != design.Empty {
+			hasBody := a.Body != nil && a.Body.Type != design.Empty
+			ad.Payload = &serverPayloadData{
+				Name:        fmt.Sprintf("%s%sPayload", endpointName, serviceName),
+				Constructor: fmt.Sprintf("New%s%sPayload", endpointName, serviceName),
+				Body:        fmt.Sprintf("%s%sBody", endpointName, serviceName),
+				hasBody:     hasBody,
+				PathParams:  extractParams(a.PathParams()),
+				QueryParams: extractParams(a.QueryParams()),
+				AllParams:   extractParams(a.AllParams()),
+			}
+		}
+
+		sd.ActionData = append(sd.ActionData, ad)
+	}
+
+	return sd
+}
+
+func extractParams(a *design.AttributeExpr) []*serverParamData {
+	obj := design.AsObject(a.Type)
+	keys := make([]string, len(obj))
+	i := 0
+	for n := range obj {
+		keys[i] = n
+		i++
+	}
+	sort.Strings(keys)
+	params := make([]*serverParamData, len(obj))
+	for i, name := range keys {
+		params[i] = &serverParamData{
+			Name:     name,
+			VarName:  codegen.Goify(name, false),
+			Type:     obj[name].Type,
+			Required: true,
+		}
+	}
+
+	return params
+}
+
+func (d *serverActionData) HasResponses() bool {
+	return len(d.Responses) >= 1
+}
+
+func (d *serverActionData) HasPayload() bool {
+	return d.Payload != nil
+}
+
+func (d *serverActionData) HasErrors() bool {
+	return len(d.HTTPErrors) > 0
+}
+
+func (d *serverPayloadData) HasBody() bool {
+	return d.hasBody
+}
+
+func (d *serverPayloadData) HasPathParams() bool {
+	return len(d.PathParams) > 0
+}
+
+func (d *serverPayloadData) HasQueryParams() bool {
+	return len(d.QueryParams) > 0
+}
+
+func (d *serverPayloadData) HasParams() bool {
+	return d.HasPathParams() || d.HasQueryParams()
+}
+
 const serverStructT = `{{ printf "%s lists the %s service endpoint HTTP handlers." .HandlersStruct .ServiceName | comment }}
 type {{ .HandlersStruct }} struct {
 	{{- range .ActionData }}
@@ -63,11 +336,16 @@ func {{ .Constructor }}(
 	logger goa.Logger,
 ) http.Handler {
 	var (
+		{{- if .HasPayload }}
 		decodeRequest  = {{ .Decoder }}(dec)
+		{{- end }}
+		{{- if .HasResponses }}
 		encodeResponse = {{ .Encoder }}EncodeResponse(enc)
+		{{- end }}
 		encodeError    = {{ if .HasErrors }}{{ .ErrorEncoder }}{{ else }}EncodeError{{ end }}(enc, logger)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		{{- if .HasPayload }}
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(w, r, goa.ErrInvalid("request invalid: %s", err))
@@ -75,14 +353,21 @@ func {{ .Constructor }}(
 		}
 
 		res, err := endpoint(r.Context(), payload)
+		{{- else }}
+		res, err := endpoint(r.Context())
+		{{- end }}
 
 		if err != nil {
 			encodeError(w, r, err)
 			return
 		}
+		{{- if .HasResponses }}
 		if err := encodeResponse(w, r, res); err != nil {
 			encodeError(w, r, err)
 		}
+		{{- else }}
+		w.Write(http.StatusNoContent)
+		{{- end }}
 	})
 }
 `
@@ -325,263 +610,3 @@ func {{ .ErrorEncoder }}(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 	}
 }
 `
-
-type (
-	serverData struct {
-		ServiceName string
-
-		HandlersStruct string
-		Constructor    string
-		MountHandlers  string
-
-		ActionData []*serverActionData
-	}
-
-	serverActionData struct {
-		EndpointName string
-		ServiceName  string
-
-		Routes []*serverRouteData
-
-		MountHandler string
-		Constructor  string
-		Decoder      string
-		Encoder      string
-		ErrorEncoder string
-
-		Payload *serverPayloadData
-
-		Responses  []*serverResponseData
-		HTTPErrors []*serverResponseData
-	}
-
-	serverPayloadData struct {
-		Name        string
-		Constructor string
-		Body        string
-		hasBody     bool
-
-		PathParams  []*serverParamData
-		QueryParams []*serverParamData
-		AllParams   []*serverParamData
-	}
-
-	serverRouteData struct {
-		Method string
-		Path   string
-	}
-
-	serverResponseData struct {
-		Name       string
-		StatusCode string
-		HasBody    bool
-	}
-
-	serverParamData struct {
-		Name     string
-		VarName  string
-		Type     design.DataType
-		Required bool
-	}
-
-	// serverFile
-	serverFile struct {
-		resource *rest.ResourceExpr
-	}
-)
-
-var (
-	serverTmpl = template.New("server").Funcs(template.FuncMap{
-		"goTypeRef": codegen.GoTypeRef,
-	}).Funcs(codegen.TemplateFuncs())
-	serverStructTmpl             = template.Must(serverTmpl.New("struct").Parse(serverStructT))
-	serverConstructorTmpl        = template.Must(serverTmpl.New("constructor").Parse(serverConstructorT))
-	serverMountTmpl              = template.Must(serverTmpl.New("mount").Parse(serverMountT))
-	serverHandlerTmpl            = template.Must(serverTmpl.New("handler").Parse(serverHandlerT))
-	serverHandlerConstructorTmpl = template.Must(serverTmpl.New("handler_constructor").Parse(serverHandlerConstructorT))
-	serverDecoderTmpl            = template.Must(serverTmpl.New("decoder").Parse(serverDecoderT))
-	serverEncoderTmpl            = template.Must(serverTmpl.New("encoder").Parse(serverEncoderT))
-	serverErrorEncoderTmpl       = template.Must(serverTmpl.New("error_encoder").Parse(serverErrorEncoderT))
-)
-
-// ServerFiles returns all the server HTTP transport files.
-func ServerFiles(root *rest.RootExpr) []codegen.File {
-	fw := make([]codegen.File, len(root.Resources))
-	for i, r := range root.Resources {
-		fw[i] = Server(r)
-	}
-	return fw
-}
-
-// Server returns the server HTTP transport file
-func Server(r *rest.ResourceExpr) codegen.File {
-	return &serverFile{r}
-}
-
-func (e *serverFile) Sections(genPkg string) []*codegen.Section {
-	d := buildServerData(e.resource)
-
-	title := fmt.Sprintf("%s server HTTP transport", e.resource.Name)
-	s := []*codegen.Section{
-		codegen.Header(title, "http", []*codegen.ImportSpec{
-			{Path: "fmt"},
-			{Path: "io"},
-			{Path: "net/http"},
-			{Path: "strconv"},
-			{Path: "strings"},
-			{Path: "github.com/dimfeld/httptreemux"},
-			{Path: "goa.design/goa.v2"},
-			{Path: "goa.design/goa.v2/rest"},
-			{Path: genPkg + "/endpoints"},
-			{Path: genPkg + "/services"},
-		}),
-		{Template: serverStructTmpl, Data: d},
-		{Template: serverConstructorTmpl, Data: d},
-		{Template: serverMountTmpl, Data: d},
-	}
-
-	for _, a := range d.ActionData {
-		as := []*codegen.Section{
-			{Template: serverHandlerTmpl, Data: a},
-			{Template: serverHandlerConstructorTmpl, Data: a},
-			{Template: serverEncoderTmpl, Data: a},
-		}
-		s = append(s, as...)
-
-		if a.HasPayload() {
-			s = append(s, &codegen.Section{Template: serverDecoderTmpl, Data: a})
-		}
-
-		if a.HasErrors() {
-			s = append(s, &codegen.Section{Template: serverErrorEncoderTmpl, Data: a})
-		}
-	}
-	return s
-}
-
-func (e *serverFile) OutputPath(reserved map[string]bool) string {
-	name := fmt.Sprintf("transport/http/%s_server%%d.go", codegen.SnakeCase(e.resource.Name))
-	return files.UniquePath(name, reserved)
-}
-
-func buildServerData(r *rest.ResourceExpr) *serverData {
-
-	serviceName := codegen.Goify(r.Name, true)
-	sd := &serverData{
-		ServiceName: serviceName,
-
-		HandlersStruct: fmt.Sprintf("%sHandlers", serviceName),
-		Constructor:    fmt.Sprintf("New%sHandlers", serviceName),
-		MountHandlers:  fmt.Sprintf("Mount%sHandlers", serviceName),
-	}
-
-	for _, a := range r.Actions {
-		endpointName := codegen.Goify(a.Name, true)
-
-		routes := make([]*serverRouteData, len(a.Routes))
-		for i, v := range a.Routes {
-			routes[i] = &serverRouteData{
-				Method: strings.ToUpper(v.Method),
-				Path:   v.FullPath(),
-			}
-		}
-
-		responses := make([]*serverResponseData, len(a.Responses))
-		for i, v := range a.Responses {
-			hasBody := v.Body != nil && v.Body.Type != design.Empty
-			responses[i] = &serverResponseData{
-				Name: fmt.Sprintf("%s%s",
-					codegen.Goify(serviceName, true),
-					codegen.Goify(http.StatusText(v.StatusCode), true),
-				),
-				StatusCode: statusCodeToHTTPConst(v.StatusCode),
-				HasBody:    hasBody,
-			}
-		}
-
-		httpErrors := make([]*serverResponseData, len(a.HTTPErrors))
-		for i, v := range a.HTTPErrors {
-			httpErrors[i] = &serverResponseData{
-				Name:       codegen.Goify(v.Name, true),
-				StatusCode: statusCodeToHTTPConst(v.Response.StatusCode),
-			}
-		}
-
-		ad := &serverActionData{
-			EndpointName: endpointName,
-			ServiceName:  serviceName,
-			Routes:       routes,
-			Responses:    responses,
-			HTTPErrors:   httpErrors,
-
-			MountHandler: fmt.Sprintf("Mount%s%sHandler", endpointName, serviceName),
-			Constructor:  fmt.Sprintf("New%s%sHandler", endpointName, serviceName),
-			Decoder:      fmt.Sprintf("%s%sDecodeRequest", endpointName, serviceName),
-			Encoder:      fmt.Sprintf("%s%sEncodeResponse", endpointName, serviceName),
-			ErrorEncoder: fmt.Sprintf("%s%sEncodeError", endpointName, serviceName),
-		}
-
-		if a.Payload != nil && a.Payload != design.Empty {
-			hasBody := a.Body != nil && a.Body.Type != design.Empty
-			ad.Payload = &serverPayloadData{
-				Name:        fmt.Sprintf("%s%sPayload", endpointName, serviceName),
-				Constructor: fmt.Sprintf("New%s%sPayload", endpointName, serviceName),
-				Body:        fmt.Sprintf("%s%sBody", endpointName, serviceName),
-				hasBody:     hasBody,
-				PathParams:  extractParams(a.PathParams()),
-				QueryParams: extractParams(a.QueryParams()),
-				AllParams:   extractParams(a.AllParams()),
-			}
-		}
-
-		sd.ActionData = append(sd.ActionData, ad)
-	}
-
-	return sd
-}
-
-func extractParams(a *design.AttributeExpr) []*serverParamData {
-	obj := design.AsObject(a.Type)
-	keys := make([]string, len(obj))
-	i := 0
-	for n := range obj {
-		keys[i] = n
-		i++
-	}
-	sort.Strings(keys)
-	params := make([]*serverParamData, len(obj))
-	for i, name := range keys {
-		params[i] = &serverParamData{
-			Name:     name,
-			VarName:  codegen.Goify(name, false),
-			Type:     obj[name].Type,
-			Required: true,
-		}
-	}
-
-	return params
-}
-
-func (d *serverActionData) HasPayload() bool {
-	return d.Payload != nil
-}
-
-func (d *serverActionData) HasErrors() bool {
-	return len(d.HTTPErrors) > 0
-}
-
-func (d *serverPayloadData) HasBody() bool {
-	return d.hasBody
-}
-
-func (d *serverPayloadData) HasPathParams() bool {
-	return len(d.PathParams) > 0
-}
-
-func (d *serverPayloadData) HasQueryParams() bool {
-	return len(d.QueryParams) > 0
-}
-
-func (d *serverPayloadData) HasParams() bool {
-	return d.HasPathParams() || d.HasQueryParams()
-}

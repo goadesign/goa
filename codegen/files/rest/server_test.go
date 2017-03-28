@@ -87,7 +87,85 @@ func MountShowUserHandler(mux rest.ServeMux, h http.Handler) {
 }
 `
 
+		newShowUserHandlerNoResponse = `// NewShowUserHandler creates a HTTP handler which loads the HTTP request and calls the "User" service "Show" endpoint.
+// The middleware is mounted so it executes after the request is loaded and thus may access the request state via the rest package ContextXXX functions.
+func NewShowUserHandler(
+	endpoint goa.Endpoint,
+	dec rest.RequestDecoderFunc,
+	enc rest.ResponseEncoderFunc,
+	logger goa.Logger,
+) http.Handler {
+	var (
+		decodeRequest  = ShowUserDecodeRequest(dec)
+		encodeError    = EncodeError(enc, logger)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		payload, err := decodeRequest(r)
+		if err != nil {
+			encodeError(w, r, goa.ErrInvalid("request invalid: %s", err))
+			return
+		}
+
+		res, err := endpoint(r.Context(), payload)
+
+		if err != nil {
+			encodeError(w, r, err)
+			return
+		}
+		w.Write(http.StatusNoContent)
+	})
+}
+`
+
+		newShowUserHandlerNoPayloadAndResponse = `// NewShowUserHandler creates a HTTP handler which loads the HTTP request and calls the "User" service "Show" endpoint.
+// The middleware is mounted so it executes after the request is loaded and thus may access the request state via the rest package ContextXXX functions.
+func NewShowUserHandler(
+	endpoint goa.Endpoint,
+	dec rest.RequestDecoderFunc,
+	enc rest.ResponseEncoderFunc,
+	logger goa.Logger,
+) http.Handler {
+	var (
+		encodeError    = EncodeError(enc, logger)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		res, err := endpoint(r.Context())
+
+		if err != nil {
+			encodeError(w, r, err)
+			return
+		}
+		w.Write(http.StatusNoContent)
+	})
+}
+`
 		newShowUserHandlerNoPayload = `// NewShowUserHandler creates a HTTP handler which loads the HTTP request and calls the "User" service "Show" endpoint.
+// The middleware is mounted so it executes after the request is loaded and thus may access the request state via the rest package ContextXXX functions.
+func NewShowUserHandler(
+	endpoint goa.Endpoint,
+	dec rest.RequestDecoderFunc,
+	enc rest.ResponseEncoderFunc,
+	logger goa.Logger,
+) http.Handler {
+	var (
+		encodeResponse = ShowUserEncodeResponseEncodeResponse(enc)
+		encodeError    = EncodeError(enc, logger)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		res, err := endpoint(r.Context())
+
+		if err != nil {
+			encodeError(w, r, err)
+			return
+		}
+		if err := encodeResponse(w, r, res); err != nil {
+			encodeError(w, r, err)
+		}
+	})
+}
+`
+
+		newShowUserHandler = `// NewShowUserHandler creates a HTTP handler which loads the HTTP request and calls the "User" service "Show" endpoint.
 // The middleware is mounted so it executes after the request is loaded and thus may access the request state via the rest package ContextXXX functions.
 func NewShowUserHandler(
 	endpoint goa.Endpoint,
@@ -119,6 +197,7 @@ func NewShowUserHandler(
 	})
 }
 `
+
 		newListUserHandlerNoPayload = `// NewListUserHandler creates a HTTP handler which loads the HTTP request and calls the "User" service "List" endpoint.
 // The middleware is mounted so it executes after the request is loaded and thus may access the request state via the rest package ContextXXX functions.
 func NewListUserHandler(
@@ -128,18 +207,11 @@ func NewListUserHandler(
 	logger goa.Logger,
 ) http.Handler {
 	var (
-		decodeRequest  = ListUserDecodeRequest(dec)
 		encodeResponse = ListUserEncodeResponseEncodeResponse(enc)
 		encodeError    = EncodeError(enc, logger)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		payload, err := decodeRequest(r)
-		if err != nil {
-			encodeError(w, r, goa.ErrInvalid("request invalid: %s", err))
-			return
-		}
-
-		res, err := endpoint(r.Context(), payload)
+		res, err := endpoint(r.Context())
 
 		if err != nil {
 			encodeError(w, r, err)
@@ -162,7 +234,6 @@ func NewShowUserHandler(
 ) http.Handler {
 	var (
 		decodeRequest  = ShowUserDecodeRequest(dec)
-		encodeResponse = ShowUserEncodeResponseEncodeResponse(enc)
 		encodeError    = ShowUserEncodeError(enc, logger)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -178,9 +249,7 @@ func NewShowUserHandler(
 			encodeError(w, r, err)
 			return
 		}
-		if err := encodeResponse(w, r, res); err != nil {
-			encodeError(w, r, err)
-		}
+		w.Write(http.StatusNoContent)
 	})
 }
 `
@@ -636,6 +705,7 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 			Routes:       []*rest.RouteExpr{{Path: "/foo", Method: "GET"}},
 		}
 
+		// actionWithEmptyResponse is the testcase when  the user defined at response with no content as status code
 		actionWithEmptyResponse = rest.ActionExpr{
 			EndpointExpr: &endpointPlain,
 			Routes:       []*rest.RouteExpr{{Path: "/foo", Method: "GET"}},
@@ -645,6 +715,12 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 					Body:       &design.AttributeExpr{Type: design.Empty},
 				},
 			},
+		}
+
+		// actionWithNilResponse is the testcase when no response is defined at all in the design
+		actionWithNilResponse = rest.ActionExpr{
+			EndpointExpr: &endpointPlain,
+			Routes:       []*rest.RouteExpr{{Path: "/foo", Method: "GET"}},
 		}
 
 		actionWithMultiplePaths = rest.ActionExpr{
@@ -778,8 +854,8 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				newUserHandlersConstructorMultipleActions,
 				mountUserHandlersMultipleActions,
 				mountShowUserHandler,
-				newShowUserHandlerNoPayload,
-				showUserEncodeResponseNoResponse,
+				newShowUserHandlerNoPayloadAndResponse,
+				//showUserEncodeResponseNoResponse,
 				mountListUserHandler,
 				newListUserHandlerNoPayload,
 				listUserEncodeResponseNoResponse,
@@ -792,8 +868,8 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				newUserHandlersConstructor,
 				mountUserHandlers,
 				mountShowUserHandlerMultiplePaths,
-				newShowUserHandlerNoPayload,
-				showUserEncodeResponseNoResponse,
+				newShowUserHandlerNoPayloadAndResponse,
+				//showUserEncodeResponseNoResponse,
 			},
 		},
 		"no-payload-and-response": {
@@ -803,11 +879,11 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				newUserHandlersConstructor,
 				mountUserHandlers,
 				mountShowUserHandler,
-				newShowUserHandlerNoPayload,
-				showUserEncodeResponseNoResponse,
+				newShowUserHandlerNoPayloadAndResponse,
+				//showUserEncodeResponseNoResponse,
 			},
 		},
-		"with-empty-response": {
+		"with-empty-no-content-defined-response": {
 			Resource: resource(&actionWithEmptyResponse),
 			Expected: []string{
 				userHandlers,
@@ -818,6 +894,16 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				showUserEncodeResponseNoResponse,
 			},
 		},
+		"with-empty-nil-response": {
+			Resource: resource(&actionWithNilResponse),
+			Expected: []string{
+				userHandlers,
+				newUserHandlersConstructor,
+				mountUserHandlers,
+				mountShowUserHandler,
+				newShowUserHandlerNoPayloadAndResponse,
+			},
+		},
 		"with-payload-in-body": {
 			Resource: resource(&actionWithPayloadBody),
 			Expected: []string{
@@ -825,8 +911,8 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				newUserHandlersConstructor,
 				mountUserHandlers,
 				mountShowUserHandler,
-				newShowUserHandlerNoPayload,
-				showUserEncodeResponseNoResponse,
+				newShowUserHandlerNoResponse,
+				//showUserEncodeResponseNoResponse,
 				showUserDecodeBodyPayload,
 			},
 		},
@@ -840,8 +926,8 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				newUserHandlersConstructor,
 				mountUserHandlers,
 				mountShowUserHandler,
-				newShowUserHandlerNoPayload,
-				showUserEncodeResponseNoResponse,
+				newShowUserHandlerNoResponse,
+				//showUserEncodeResponseNoResponse,
 				showUserDecodeQueryParams,
 			},
 		},
@@ -855,8 +941,8 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				newUserHandlersConstructor,
 				mountUserHandlers,
 				mountShowUserHandlerPathParam,
-				newShowUserHandlerNoPayload,
-				showUserEncodeResponseNoResponse,
+				newShowUserHandlerNoResponse,
+				//showUserEncodeResponseNoResponse,
 				showUserDecodePathParams,
 			},
 		},
@@ -871,8 +957,8 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				newUserHandlersConstructor,
 				mountUserHandlers,
 				mountShowUserHandlerPathParam,
-				newShowUserHandlerNoPayload,
-				showUserEncodeResponseNoResponse,
+				newShowUserHandlerNoResponse,
+				//showUserEncodeResponseNoResponse,
 				showUserDecodeBodyAll,
 			},
 		},
@@ -894,7 +980,7 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				newUserHandlersConstructor,
 				mountUserHandlers,
 				mountShowUserHandler,
-				newShowUserHandlerNoPayload,
+				newShowUserHandler,
 				showUserEncodeMultipleResponses,
 				showUserDecodeNoPayload,
 			},
@@ -907,7 +993,7 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				mountUserHandlers,
 				mountShowUserHandler,
 				newShowUserHandlerWithCustomError,
-				showUserEncodeResponseNoResponse,
+				//showUserEncodeResponseNoResponse,
 				showUserDecodeNoPayload,
 				showUserEncodeError,
 			},
@@ -942,8 +1028,8 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				newUserHandlersConstructor,
 				mountUserHandlers,
 				mountShowUserHandler,
-				newShowUserHandlerNoPayload,
-				showUserEncodeResponseNoResponse,
+				newShowUserHandlerNoResponse,
+				//showUserEncodeResponseNoResponse,
 				showUserDecodeAllTypes,
 			},
 		},
@@ -966,7 +1052,7 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 		ss := Server(tc.Resource).Sections("")
 
 		if len(ss)-1 != len(tc.Expected) {
-			t.Errorf("%s: got %d sections but expected %d", k, len(ss), len(tc.Expected))
+			t.Errorf("%s: got %d sections but expected %d", k, len(ss)-1, len(tc.Expected))
 			continue
 		}
 
