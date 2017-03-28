@@ -513,6 +513,16 @@ func (a *APIDefinition) Context() string {
 	return "unnamed API"
 }
 
+// PathParams returns the base path parameters of a.
+func (a *APIDefinition) PathParams() *AttributeDefinition {
+	names := ExtractWildcards(a.BasePath)
+	obj := make(Object)
+	for _, n := range names {
+		obj[n] = a.Params.Type.ToObject()[n]
+	}
+	return &AttributeDefinition{Type: obj}
+}
+
 // IterateMediaTypes calls the given iterator passing in each media type sorted in alphabetical order.
 // Iteration stops if an iterator returns an error and in this case IterateMediaTypes returns that
 // error.
@@ -665,6 +675,16 @@ func (r *ResourceDefinition) Context() string {
 		return fmt.Sprintf("resource %#v", r.Name)
 	}
 	return "unnamed resource"
+}
+
+// PathParams returns the base path parameters of r.
+func (r *ResourceDefinition) PathParams() *AttributeDefinition {
+	names := ExtractWildcards(r.BasePath)
+	obj := make(Object)
+	for _, n := range names {
+		obj[n] = r.Params.Type.ToObject()[n]
+	}
+	return &AttributeDefinition{Type: obj}
 }
 
 // IterateActions calls the given iterator passing in each resource action sorted in alphabetical order.
@@ -1361,10 +1381,10 @@ func (a *ActionDefinition) AllParams() *AttributeDefinition {
 		return res
 	}
 	if p := a.Parent.Parent(); p != nil {
-		res = res.Merge(p.CanonicalAction().AllParams())
+		res = res.Merge(p.CanonicalAction().PathParams())
 	} else {
-		res = res.Merge(a.Parent.Params)
-		res = res.Merge(Design.Params)
+		res = res.Merge(a.Parent.PathParams())
+		res = res.Merge(Design.PathParams())
 	}
 	return res
 }
