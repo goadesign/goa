@@ -17,7 +17,8 @@ import (
 
 type (
 	serverData struct {
-		ServiceName string
+		ServiceName    string
+		VarServiceName string
 
 		HandlersStruct string
 		Constructor    string
@@ -27,8 +28,10 @@ type (
 	}
 
 	serverActionData struct {
-		EndpointName string
-		ServiceName  string
+		EndpointName    string
+		VarEndpointName string
+		ServiceName     string
+		VarServiceName  string
 
 		Routes []*serverRouteData
 
@@ -74,9 +77,9 @@ type (
 	}
 
 	serverHeaderData struct {
-		Name string
+		Name    string
 		MapFrom string
-		Value string
+		Value   string
 	}
 
 	// serverFile
@@ -164,17 +167,18 @@ func (e *serverFile) OutputPath(reserved map[string]bool) string {
 
 func buildServerData(r *rest.ResourceExpr) *serverData {
 
-	serviceName := codegen.Goify(r.Name, true)
+	varServiceName := codegen.Goify(r.Name, true)
 	sd := &serverData{
-		ServiceName: serviceName,
+		ServiceName:    r.Name,
+		VarServiceName: varServiceName,
 
-		HandlersStruct: fmt.Sprintf("%sHandlers", serviceName),
-		Constructor:    fmt.Sprintf("New%sHandlers", serviceName),
-		MountHandlers:  fmt.Sprintf("Mount%sHandlers", serviceName),
+		HandlersStruct: fmt.Sprintf("%sHandlers", varServiceName),
+		Constructor:    fmt.Sprintf("New%sHandlers", varServiceName),
+		MountHandlers:  fmt.Sprintf("Mount%sHandlers", varServiceName),
 	}
 
 	for _, a := range r.Actions {
-		endpointName := codegen.Goify(a.Name, true)
+		varEndpointName := codegen.Goify(a.Name, true)
 
 		routes := make([]*serverRouteData, len(a.Routes))
 		for i, v := range a.Routes {
@@ -189,7 +193,7 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 			hasBody := v.Body != nil && v.Body.Type != design.Empty
 			responses[i] = &serverResponseData{
 				Name: fmt.Sprintf("%s%s",
-					codegen.Goify(serviceName, true),
+					varServiceName,
 					codegen.Goify(http.StatusText(v.StatusCode), true),
 				),
 				StatusCode: statusCodeToHTTPConst(v.StatusCode),
@@ -206,25 +210,27 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 		}
 
 		ad := &serverActionData{
-			EndpointName: endpointName,
-			ServiceName:  serviceName,
-			Routes:       routes,
-			Responses:    responses,
-			HTTPErrors:   httpErrors,
+			EndpointName:    a.Name,
+			VarEndpointName: varEndpointName,
+			ServiceName:     r.Name,
+			VarServiceName:  varServiceName,
+			Routes:          routes,
+			Responses:       responses,
+			HTTPErrors:      httpErrors,
 
-			MountHandler: fmt.Sprintf("Mount%s%sHandler", endpointName, serviceName),
-			Constructor:  fmt.Sprintf("New%s%sHandler", endpointName, serviceName),
-			Decoder:      fmt.Sprintf("%s%sDecodeRequest", endpointName, serviceName),
-			Encoder:      fmt.Sprintf("%s%sEncodeResponse", endpointName, serviceName),
-			ErrorEncoder: fmt.Sprintf("%s%sEncodeError", endpointName, serviceName),
+			MountHandler: fmt.Sprintf("Mount%s%sHandler", varEndpointName, varServiceName),
+			Constructor:  fmt.Sprintf("New%s%sHandler", varEndpointName, varServiceName),
+			Decoder:      fmt.Sprintf("%s%sDecodeRequest", varEndpointName, varServiceName),
+			Encoder:      fmt.Sprintf("%s%sEncodeResponse", varEndpointName, varServiceName),
+			ErrorEncoder: fmt.Sprintf("%s%sEncodeError", varEndpointName, varServiceName),
 		}
 
 		if a.Payload != nil && a.Payload != design.Empty {
 			hasBody := a.Body != nil && a.Body.Type != design.Empty
 			ad.Payload = &serverPayloadData{
-				Name:        fmt.Sprintf("%s%sPayload", endpointName, serviceName),
-				Constructor: fmt.Sprintf("New%s%sPayload", endpointName, serviceName),
-				Body:        fmt.Sprintf("%s%sBody", endpointName, serviceName),
+				Name:        fmt.Sprintf("%s%sPayload", varEndpointName, varServiceName),
+				Constructor: fmt.Sprintf("New%s%sPayload", varEndpointName, varServiceName),
+				Body:        fmt.Sprintf("%s%sBody", varEndpointName, varServiceName),
 				hasBody:     hasBody,
 				PathParams:  extractParams(a.PathParams()),
 				QueryParams: extractParams(a.QueryParams()),
@@ -298,14 +304,14 @@ type {{ .HandlersStruct }} struct {
 
 const serverConstructorT = `{{ printf "%s instantiates HTTP handlers for all the %s service endpoints." .Constructor .ServiceName | comment }}
 func {{ .Constructor }}(
-	e *endpoints.{{ .ServiceName }},
+	e *endpoints.{{ .VarServiceName }},
 	dec rest.RequestDecoderFunc,
 	enc rest.ResponseEncoderFunc,
 	logger goa.Logger,
 ) *{{ .HandlersStruct }} {
 	return &{{ .HandlersStruct }}{
 		{{- range .ActionData }}
-		{{ .EndpointName }}: {{ .Constructor }}(e.{{ .EndpointName }}, dec, enc, logger),
+		{{ .VarEndpointName }}: {{ .Constructor }}(e.{{ .VarEndpointName }}, dec, enc, logger),
 		{{- end }}
 	}
 }
@@ -314,7 +320,7 @@ func {{ .Constructor }}(
 const serverMountT = `{{ printf "%s configures the mux to serve the %s endpoints." .MountHandlers .ServiceName | comment }}
 func {{ .MountHandlers }}(mux rest.ServeMux, h *{{ .HandlersStruct }}) {
 	{{- range .ActionData }}
-	{{ .MountHandler }}(mux, h.{{ .EndpointName }})
+	{{ .MountHandler }}(mux, h.{{ .VarEndpointName }})
 	{{- end }}
 }
 `

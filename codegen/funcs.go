@@ -79,7 +79,7 @@ func Comment(elems ...string) string {
 	}
 	t := strings.Join(trimmed, "\n")
 
-	return Indent(t, "// ")
+	return Indent(WrapText(t, 77), "// ")
 }
 
 // Indent inserts prefix at the beginning of each non-empty line of s. The
@@ -154,4 +154,50 @@ func SnakeCase(name string) string {
 func KebabCase(name string) string {
 	name = SnakeCase(name)
 	return strings.Replace(name, "_", "-", -1)
+}
+
+// WrapText produces lines with text capped at maxChars
+// it will keep words intact and respects newlines.
+func WrapText(text string, maxChars int) string {
+	res := ""
+	lines := strings.Split(text, "\n")
+	for _, v := range lines {
+		runes := []rune(strings.TrimSpace(v))
+		for l := len(runes); l >= 0; l = len(runes) {
+			if maxChars >= l {
+				res = res + string(runes) + "\n"
+				break
+			}
+
+			i := runeSpacePosRev(runes[:maxChars])
+			if i == 0 {
+				i = runeSpacePos(runes)
+			}
+
+			res = res + string(runes[:i]) + "\n"
+			if l == i {
+				break
+			}
+			runes = runes[i+1:]
+		}
+	}
+	return res[:len(res)-1]
+}
+
+func runeSpacePosRev(r []rune) int {
+	for i := len(r) - 1; i > 0; i-- {
+		if unicode.IsSpace(r[i]) {
+			return i
+		}
+	}
+	return 0
+}
+
+func runeSpacePos(r []rune) int {
+	for i := 0; i < len(r); i++ {
+		if unicode.IsSpace(r[i]) {
+			return i
+		}
+	}
+	return len(r)
 }
