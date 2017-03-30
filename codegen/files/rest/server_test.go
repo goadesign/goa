@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"go/format"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
@@ -575,7 +576,7 @@ func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 			}
 		}
 
-		stringVar = r.URL.Query().Get("string_var")
+		stringVar = r.URL.Query().Get("mappedvar")
 
 		uint32VarRaw := r.URL.Query().Get("uint32_var")
 		if v, err := strconv.ParseUint(uint32VarRaw, 10, 32); err != nil {
@@ -627,10 +628,13 @@ func ListUserEncodeResponse(encoder rest.ResponseEncoderFunc) EncodeResponseFunc
 // User endpoint.
 func ShowUserEncodeResponse(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
+		t := v.(*UserOK)
 		w.Header().Set("Content-Type", ResponseContentType(r))
+		w.Header().Set("Location", t.Href)
+		w.Header().Set("Request", t.Request)
 		w.WriteHeader(http.StatusOK)
-		if v != nil {
-			return encoder(w, r).Encode(v)
+		if t != nil {
+			return encoder(w, r).Encode(t)
 		}
 		return nil
 	}
@@ -642,6 +646,8 @@ func ShowUserEncodeResponse(encoder rest.ResponseEncoderFunc) EncodeResponseFunc
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 		switch t := v.(type) {
 		case *UserCreated:
+			w.Header().Set("Location", t.Href)
+			w.Header().Set("Request", t.Request)
 			w.WriteHeader(http.StatusCreated)
 			return encoder(w, r).Encode(t)
 		case *UserAccepted:
@@ -781,6 +787,10 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				{
 					StatusCode: rest.StatusCreated,
 					Body:       &design.AttributeExpr{Type: &accountType},
+					HeadersAtt: &design.AttributeExpr{Type: design.Object{
+						"Href:Location": &design.AttributeExpr{Type: design.String},
+						"Request":       &design.AttributeExpr{Type: design.String},
+					}},
 				}, {
 					StatusCode: rest.StatusAccepted,
 					Body:       &design.AttributeExpr{Type: design.Empty},
@@ -795,6 +805,10 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				{
 					StatusCode: rest.StatusOK,
 					Body:       &design.AttributeExpr{Type: &accountType},
+					HeadersAtt: &design.AttributeExpr{Type: design.Object{
+						"Href:Location": &design.AttributeExpr{Type: design.String},
+						"Request":       &design.AttributeExpr{Type: design.String},
+					}},
 				},
 			},
 		}
@@ -833,20 +847,6 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 		}
 
 		setParams = func(r *rest.ResourceExpr, obj *design.Object) {
-			//list := map[string]*design.AttributeExpr{
-			//	,
-			//	"view":            {Type: design.String},
-			//	"slice_string":    {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.String}}},
-			//	"slice_int32":     {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Int32}}},
-			//	"slice_int64":     {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Int64}}},
-			//	"slice_uint32":    {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.UInt32}}},
-			//	"slice_uint64":    {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.UInt64}}},
-			//	"slice_float32":   {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Float32}}},
-			//	"slice_float64":   {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Float64}}},
-			//	"slice_bool":      {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Boolean}}},
-			//	"slice_interface": {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Any}}},
-			//}
-
 			for _, a := range r.Actions {
 				a.Params().Type = *obj
 			}
@@ -865,7 +865,6 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 					r.Action = a
 				}
 			}
-
 			return r
 		}
 	)
@@ -884,7 +883,6 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				mountUserHandlersMultipleActions,
 				mountShowUserHandler,
 				newShowUserHandlerNoPayloadAndResponse,
-				//showUserEncodeResponseNoResponse,
 				mountListUserHandler,
 				newListUserHandlerNoPayload,
 				listUserEncodeResponseNoResponse,
@@ -898,7 +896,6 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				mountUserHandlers,
 				mountShowUserHandlerMultiplePaths,
 				newShowUserHandlerNoPayloadAndResponse,
-				//showUserEncodeResponseNoResponse,
 			},
 		},
 		"no-payload-and-response": {
@@ -909,7 +906,6 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				mountUserHandlers,
 				mountShowUserHandler,
 				newShowUserHandlerNoPayloadAndResponse,
-				//showUserEncodeResponseNoResponse,
 			},
 		},
 		"with-empty-no-content-defined-response": {
@@ -941,7 +937,6 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				mountUserHandlers,
 				mountShowUserHandler,
 				newShowUserHandlerNoResponse,
-				//showUserEncodeResponseNoResponse,
 				showUserDecodeBodyPayload,
 			},
 		},
@@ -956,7 +951,6 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				mountUserHandlers,
 				mountShowUserHandler,
 				newShowUserHandlerNoResponse,
-				//showUserEncodeResponseNoResponse,
 				showUserDecodeQueryParams,
 			},
 		},
@@ -971,7 +965,6 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				mountUserHandlers,
 				mountShowUserHandlerPathParam,
 				newShowUserHandlerNoResponse,
-				//showUserEncodeResponseNoResponse,
 				showUserDecodePathParams,
 			},
 		},
@@ -987,7 +980,6 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				mountUserHandlers,
 				mountShowUserHandlerPathParam,
 				newShowUserHandlerNoResponse,
-				//showUserEncodeResponseNoResponse,
 				showUserDecodeBodyAll,
 			},
 		},
@@ -1022,7 +1014,6 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				mountUserHandlers,
 				mountShowUserHandler,
 				newShowUserHandlerWithCustomError,
-				//showUserEncodeResponseNoResponse,
 				showUserDecodeNoPayload,
 				showUserEncodeError,
 			},
@@ -1031,26 +1022,26 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 		"with-all-payload-types": {
 			Resource: resource(&actionWithPayloadBody),
 			Params: design.Object{
-				"string_var":        {Type: design.String},
-				"int_var":           {Type: design.Int},
-				"int32_var":         {Type: design.Int32},
-				"int64_var":         {Type: design.Int64},
-				"uint_var":          {Type: design.UInt},
-				"uint32_var":        {Type: design.UInt32},
-				"uint64_var":        {Type: design.UInt64},
-				"float32_var":       {Type: design.Float32},
-				"float64_var":       {Type: design.Float64},
-				"bool_var":          {Type: design.Boolean},
-				"slice_string":      {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.String}}},
-				"slice_int_var":     {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Int}}},
-				"slice_int32_var":   {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Int32}}},
-				"slice_int64_var":   {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Int64}}},
-				"slice_uint_var":    {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.UInt}}},
-				"slice_uint32_var":  {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.UInt32}}},
-				"slice_uint64_var":  {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.UInt64}}},
-				"slice_float32_var": {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Float32}}},
-				"slice_float64_var": {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Float64}}},
-				"slice_bool_var":    {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Boolean}}},
+				"string_var:mappedvar": {Type: design.String},
+				"int_var":              {Type: design.Int},
+				"int32_var":            {Type: design.Int32},
+				"int64_var":            {Type: design.Int64},
+				"uint_var":             {Type: design.UInt},
+				"uint32_var":           {Type: design.UInt32},
+				"uint64_var":           {Type: design.UInt64},
+				"float32_var":          {Type: design.Float32},
+				"float64_var":          {Type: design.Float64},
+				"bool_var":             {Type: design.Boolean},
+				"slice_string":         {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.String}}},
+				"slice_int_var":        {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Int}}},
+				"slice_int32_var":      {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Int32}}},
+				"slice_int64_var":      {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Int64}}},
+				"slice_uint_var":       {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.UInt}}},
+				"slice_uint32_var":     {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.UInt32}}},
+				"slice_uint64_var":     {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.UInt64}}},
+				"slice_float32_var":    {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Float32}}},
+				"slice_float64_var":    {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Float64}}},
+				"slice_bool_var":       {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Boolean}}},
 			},
 			Expected: []string{
 				userHandlers,
@@ -1058,45 +1049,44 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				mountUserHandlers,
 				mountShowUserHandler,
 				newShowUserHandlerNoResponse,
-				//showUserEncodeResponseNoResponse,
 				showUserDecodeAllTypes,
 			},
 		},
 	}
 
 	for k, tc := range cases {
-
-		//for testing only the test i want
-		//if k != "with-payload-in-body-and-params" && k != "with-payload-path-params" && k != "with-payload-query-params" && k != "with-payload-in-body" {
-		//	continue
-		//}
-
 		if tc.Params != nil {
 			setParams(tc.Resource, &tc.Params)
 		} else {
 			setParams(tc.Resource, &design.Object{})
 		}
 
-		buf := new(bytes.Buffer)
 		ss := Server(tc.Resource).Sections("")
-
 		if len(ss)-1 != len(tc.Expected) {
 			t.Errorf("%s: got %d sections but expected %d", k, len(ss)-1, len(tc.Expected))
 			continue
 		}
 
 		for i, s := range ss[1:] {
-			buf.Reset()
+			buf := new(bytes.Buffer)
 
 			e := s.Write(buf)
 			if e != nil {
-				t.Errorf("%s: failed to execute template, error '%s' for section @index %d", k, e, i)
-				continue
+				t.Fatalf("%s: failed to execute template, error '%s' for section @index %d", k, e, i)
 			}
-			actual := buf.String()
 
-			if actual != tc.Expected[i] {
-				t.Errorf("%s: got `%s`, expected `%s` for section @index %d", k, actual, tc.Expected[i], i)
+			actual, err := format.Source(buf.Bytes())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			expected, err := format.Source([]byte(tc.Expected[i]))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !bytes.Equal(actual, expected) {
+				t.Errorf("%s: got `%s`, expected `%s` for section @index %d", k, actual, expected, i)
 			}
 		}
 	}
