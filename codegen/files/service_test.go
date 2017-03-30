@@ -2,6 +2,7 @@ package files
 
 import (
 	"bytes"
+	"go/format"
 	"strings"
 	"testing"
 
@@ -19,16 +20,16 @@ func TestService(t *testing.T) {
 
 	APayload struct {
 		BooleanField bool
-		BytesField []byte
-		IntField int
-		StringField string
+		BytesField   []byte
+		IntField     int
+		StringField  string
 	}
 
 	AResult struct {
 		BooleanField bool
-		BytesField []byte
-		IntField int
-		StringField string
+		BytesField   []byte
+		IntField     int
+		StringField  string
 	}
 )
 `
@@ -44,39 +45,39 @@ func TestService(t *testing.T) {
 
 	APayload struct {
 		BooleanField bool
-		BytesField []byte
-		IntField int
-		StringField string
+		BytesField   []byte
+		IntField     int
+		StringField  string
 	}
 
 	BPayload struct {
-		ArrayField []bool
-		MapField map[int]string
-		ObjectField map[string]interface{}
+		ArrayField    []bool
+		MapField      map[int]string
+		ObjectField   map[string]interface{}
 		UserTypeField Parent
 	}
 
 	AResult struct {
 		BooleanField bool
-		BytesField []byte
-		IntField int
-		StringField string
+		BytesField   []byte
+		IntField     int
+		StringField  string
 	}
 
 	BResult struct {
-		ArrayField []bool
-		MapField map[int]string
-		ObjectField map[string]interface{}
+		ArrayField    []bool
+		MapField      map[int]string
+		ObjectField   map[string]interface{}
 		UserTypeField Parent
 	}
 
 	Child struct {
-p Parent
-}
+		p Parent
+	}
 
 	Parent struct {
-c Child
-}
+		c Child
+	}
 )
 `
 
@@ -204,7 +205,11 @@ c Child
 				t.Fatal(err)
 			}
 		}
-		actual := buf.String()
+		bs, err := format.Source(buf.Bytes())
+		if err != nil {
+			t.Fatal(err)
+		}
+		actual := string(bs)
 		if !strings.Contains(actual, tc.Expected) {
 			t.Errorf("%s: got\n%v\n=============\nexpected to contain\n%v", k, actual, tc.Expected)
 		}

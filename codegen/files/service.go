@@ -157,32 +157,32 @@ func (s *serviceFile) OutputPath(reserved map[string]bool) string {
 // serviceT is the template used to write an service definition.
 const serviceT = `
 {{- define "interface" }}
-	// {{ .VarName }} is the {{ .Name }} service interface.
-	{{ .VarName }} interface {
-{{ range .Methods }}		// {{ .VarName }} implements the {{ .Name }} endpoint.
-		{{ .Name }}(context.Context{{ if .HasPayload }}, *{{ .Payload.Name }}{{ end }}) {{ if .HasResult }}({{ .Result.Name }}, error){{ else }}error{{ end }}
-{{ end }}	}
+// {{ .VarName }} is the {{ .Name }} service interface.
+{{ .VarName }} interface {
+{{ range .Methods }}// {{ .VarName }} implements the {{ .Name }} endpoint.
+{{ .Name }}(context.Context{{ if .HasPayload }}, *{{ .Payload.Name }}{{ end }}) {{ if .HasResult }}({{ .Result.Name }}, error){{ else }}error{{ end }}
+{{ end }}}
 {{- end -}}
 
 {{- define "payloads" }}
 {{ range .Methods }}{{ if .HasPayload }}
-	{{ .Payload.Name }} struct {
-{{ range $key, $att := .Payload.Fields }}		{{ $key }} {{ $att }}
-{{ end }}	}
+{{ .Payload.Name }} struct {
+{{ range $key, $att := .Payload.Fields }}{{ $key }} {{ $att }}
+{{ end }}}
 {{ end }}{{ end -}}
 {{- end -}}
 
 {{- define "results" -}}
 {{ range .Methods }}{{ if .HasResult }}
-	{{ .Result.Name }} struct {
-{{ range $key, $att := .Result.Fields }}		{{ $key }} {{ $att }}
-{{ end }}	}
+{{ .Result.Name }} struct {
+{{ range $key, $att := .Result.Fields }}{{ $key }} {{ $att }}
+{{ end }}}
 {{ end }}{{ end -}}
 {{- end -}}
 
 {{- define "types" -}}
 {{ range $key, $ut := .UserTypes }}
-	{{ $key }} {{ $ut }}
+{{ $key }} {{ $ut }}
 {{ end -}}
 {{- end -}}
 
