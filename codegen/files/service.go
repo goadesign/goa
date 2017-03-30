@@ -46,6 +46,8 @@ type (
 	serviceResult struct {
 		// Name is the result name.
 		Name string
+		// Fileds lists the result fields.
+		Fields map[string]string
 	}
 
 	// serviceFile is the codgen file for a given service.
@@ -70,23 +72,33 @@ func (s *serviceFile) Sections(genPkg string) []*codegen.Section {
 	{
 		methods := make([]*serviceMethod, len(s.service.Endpoints))
 		for i, v := range s.service.Endpoints {
-			fields := make(map[string]string)
+			payloadFields := make(map[string]string)
 			if o := design.AsObject(v.Payload); o != nil {
 				o.WalkAttributes(func(name string, at *design.AttributeExpr) error {
-					fields[name] = codegen.GoNativeType(at.Type)
+					payloadFields[name] = codegen.GoNativeType(at.Type)
 					return nil
 				})
 			}
+
+			resultFields := make(map[string]string)
+			if o := design.AsObject(v.Result); o != nil {
+				o.WalkAttributes(func(name string, at *design.AttributeExpr) error {
+					resultFields[name] = codegen.GoNativeType(at.Type)
+					return nil
+				})
+			}
+
 			methods[i] = &serviceMethod{
 				Name:    v.Name,
 				VarName: codegen.Goify(v.Name, true),
 				Payload: servicePayload{
 					Name:   codegen.Goify(v.Payload.Name(), true),
-					Fields: fields,
+					Fields: payloadFields,
 				},
 				HasPayload: v.Payload != design.Empty,
 				Result: serviceResult{
-					Name: codegen.Goify(v.Result.Name(), true),
+					Name:   codegen.Goify(v.Result.Name(), true),
+					Fields: resultFields,
 				},
 				HasResult: v.Result != design.Empty,
 			}
@@ -142,8 +154,17 @@ const serviceT = `
 {{ end }}{{ end -}}
 {{- end -}}
 
+{{- define "results" -}}
+{{ range .Methods }}{{ if .HasResult }}
+	{{ .Result.Name }} struct {
+{{ range $key, $att := .Result.Fields }}		{{ $key }} {{ $att }}
+{{ end }}	}
+{{ end }}{{ end -}}
+{{- end -}}
+
 type (
 {{- template "interface" . -}}
 {{- template "payloads" . -}}
+{{- template "results" . -}}
 )
 `

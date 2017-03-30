@@ -23,6 +23,13 @@ func TestService(t *testing.T) {
 		IntField int
 		StringField string
 	}
+
+	AResult struct {
+		BooleanField bool
+		BytesField []byte
+		IntField int
+		StringField string
+	}
 )
 `
 
@@ -43,6 +50,19 @@ func TestService(t *testing.T) {
 	}
 
 	BPayload struct {
+		ArrayField []bool
+		MapField map[int]string
+		ObjectField map[string]interface{}
+	}
+
+	AResult struct {
+		BooleanField bool
+		BytesField []byte
+		IntField int
+		StringField string
+	}
+
+	BResult struct {
 		ArrayField []bool
 		MapField map[int]string
 		ObjectField map[string]interface{}
@@ -73,7 +93,15 @@ func TestService(t *testing.T) {
 					"BytesField":   &design.AttributeExpr{Type: design.Bytes},
 				}},
 			},
-			Result: design.NewUserTypeExpr("AResult", nil),
+			Result: &design.UserTypeExpr{
+				TypeName: "AResult",
+				AttributeExpr: &design.AttributeExpr{Type: design.Object{
+					"IntField":     &design.AttributeExpr{Type: design.Int},
+					"StringField":  &design.AttributeExpr{Type: design.String},
+					"BooleanField": &design.AttributeExpr{Type: design.Boolean},
+					"BytesField":   &design.AttributeExpr{Type: design.Bytes},
+				}},
+			},
 		}
 
 		b = design.EndpointExpr{
@@ -86,7 +114,14 @@ func TestService(t *testing.T) {
 					"ObjectField": &design.AttributeExpr{Type: design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}},
 				}},
 			},
-			Result: design.NewUserTypeExpr("BResult", nil),
+			Result: &design.UserTypeExpr{
+				TypeName: "BResult",
+				AttributeExpr: &design.AttributeExpr{Type: design.Object{
+					"ArrayField":  &design.AttributeExpr{Type: &design.Array{&design.AttributeExpr{Type: design.Boolean}}},
+					"MapField":    &design.AttributeExpr{Type: &design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}},
+					"ObjectField": &design.AttributeExpr{Type: design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}},
+				}},
+			},
 		}
 
 		nopayload = design.EndpointExpr{
