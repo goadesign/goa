@@ -13,76 +13,113 @@ import (
 	"strings"
 )
 
-//todo: in encode headers and mappings
-
 type (
+	// serverActionData describes a single endpoint/resource.
 	serverData struct {
-		ServiceName    string
+		// ServiceName is the name of the service.
+		ServiceName string
+		// VarServiceName is the goified name of the service.
 		VarServiceName string
-
+		// HandlerStruct is the name of the main server handler structure.
 		HandlersStruct string
-		Constructor    string
-		MountHandlers  string
-
+		// Constructor is the name of the constructor of the handler struct function.
+		Constructor string
+		// MountHandlers is the name of the name of the mount function.
+		MountHandlers string
+		// Action describes the action data for this endpoint.
 		ActionData []*serverActionData
 	}
 
+	// serverActionData describes a single action.
 	serverActionData struct {
-		EndpointName    string
+		// EndpointName is the name of the endpoint.
+		EndpointName string
+		// VarEndpointName is the goified name of theendpoint/resource.
 		VarEndpointName string
-		ServiceName     string
-		VarServiceName  string
-
+		// ServiceName is the name of the service.
+		ServiceName string
+		// VarServiceName is the goified name of the service.
+		VarServiceName string
+		// Routes describes the possible routes for this action.
 		Routes []*serverRouteData
 
+		// MountHandler is the name of the mount handler function.
 		MountHandler string
-		Constructor  string
-		Decoder      string
-		Encoder      string
+		// Constructor is the name of the constructor function for the http handler function.
+		Constructor string
+		// Decoder is the name of the decoder function.
+		Decoder string
+		// Encoder is the name of the encoder function.
+		Encoder string
+		// ErrorEncoder is the name of the error encoder function.
 		ErrorEncoder string
-
+		// Payload provides information about the payload.
 		Payload *serverPayloadData
-
-		Responses  []*serverResponseData
+		// Responses describes the information about the different responses.
+		Responses []*serverResponseData
+		// HTTPErrors describes the information about error responses.
 		HTTPErrors []*serverResponseData
 	}
 
+	// serverPayloadData describes a payload.
 	serverPayloadData struct {
-		Name        string
+		// Name is the name of the payload structure.
+		Name string
+		// Constructor is the name of the payload constructor function.
 		Constructor string
-		Body        string
-		hasBody     bool
-
-		PathParams  []*serverParamData
+		// Body is the name of the body structure.
+		Body string
+		// HasBody indicate that the payload expects a body.
+		HasBody bool
+		// PathParams describes the information about params that are present in the path.
+		PathParams []*serverParamData
+		// QueryParams describes the information about the params that are present in the query.
 		QueryParams []*serverParamData
-		AllParams   []*serverParamData
+		// AllParams describes the params, in path and query.
+		AllParams []*serverParamData
 	}
 
+	// serverRouteData describes a route.
 	serverRouteData struct {
+		// Method is the HTTP method.
 		Method string
-		Path   string
+		// Path is the full path.
+		Path string
 	}
 
+	// serverResponseData describes a response.
 	serverResponseData struct {
-		Name       string
+		// Name is the name of the response structure.
+		Name string
+		// StatusCode is the return code of the response.
 		StatusCode string
-		HasBody    bool
+		// HasBody indicates that the response will return data in the body.
+		HasBody bool
+		// Headers provides information about the headers in the response.
+		Headers []*serverHeaderData
 	}
 
+	// serverParamData describes a parameter.
 	serverParamData struct {
-		Name     string
-		VarName  string
-		Type     design.DataType
-		Required bool
+		// Name is the name of the mapping to the actual variable name.
+		Name string
+		// VarName is the name of the variable.
+		VarName string
+		// Type is the datatype of the variable.
+		Type design.DataType
 	}
 
+	// serverHeaderData describes a header.
 	serverHeaderData struct {
-		Name    string
-		MapFrom string
-		Value   string
+		// Name describes the name of the header key.
+		Name string
+		// VarName describes the variable name where the value for the header is obtained.
+		VarName string
+		// Type describes the datatype of the variable value. Mainly used for conversion.
+		Type design.DataType
 	}
 
-	// serverFile
+	// serverFile is the codegenerator file for the given server.
 	serverFile struct {
 		resource *rest.ResourceExpr
 	}
@@ -166,12 +203,10 @@ func (e *serverFile) OutputPath(reserved map[string]bool) string {
 }
 
 func buildServerData(r *rest.ResourceExpr) *serverData {
-
 	varServiceName := codegen.Goify(r.Name, true)
 	sd := &serverData{
 		ServiceName:    r.Name,
 		VarServiceName: varServiceName,
-
 		HandlersStruct: fmt.Sprintf("%sHandlers", varServiceName),
 		Constructor:    fmt.Sprintf("New%sHandlers", varServiceName),
 		MountHandlers:  fmt.Sprintf("Mount%sHandlers", varServiceName),
@@ -198,6 +233,7 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 				),
 				StatusCode: statusCodeToHTTPConst(v.StatusCode),
 				HasBody:    hasBody,
+				Headers:    extractHeaders(v.Headers()),
 			}
 		}
 
@@ -217,12 +253,11 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 			Routes:          routes,
 			Responses:       responses,
 			HTTPErrors:      httpErrors,
-
-			MountHandler: fmt.Sprintf("Mount%s%sHandler", varEndpointName, varServiceName),
-			Constructor:  fmt.Sprintf("New%s%sHandler", varEndpointName, varServiceName),
-			Decoder:      fmt.Sprintf("%s%sDecodeRequest", varEndpointName, varServiceName),
-			Encoder:      fmt.Sprintf("%s%sEncodeResponse", varEndpointName, varServiceName),
-			ErrorEncoder: fmt.Sprintf("%s%sEncodeError", varEndpointName, varServiceName),
+			MountHandler:    fmt.Sprintf("Mount%s%sHandler", varEndpointName, varServiceName),
+			Constructor:     fmt.Sprintf("New%s%sHandler", varEndpointName, varServiceName),
+			Decoder:         fmt.Sprintf("%s%sDecodeRequest", varEndpointName, varServiceName),
+			Encoder:         fmt.Sprintf("%s%sEncodeResponse", varEndpointName, varServiceName),
+			ErrorEncoder:    fmt.Sprintf("%s%sEncodeError", varEndpointName, varServiceName),
 		}
 
 		if a.Payload != nil && a.Payload != design.Empty {
@@ -231,17 +266,44 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 				Name:        fmt.Sprintf("%s%sPayload", varEndpointName, varServiceName),
 				Constructor: fmt.Sprintf("New%s%sPayload", varEndpointName, varServiceName),
 				Body:        fmt.Sprintf("%s%sBody", varEndpointName, varServiceName),
-				hasBody:     hasBody,
+				HasBody:     hasBody,
 				PathParams:  extractParams(a.PathParams()),
 				QueryParams: extractParams(a.QueryParams()),
 				AllParams:   extractParams(a.AllParams()),
 			}
 		}
-
 		sd.ActionData = append(sd.ActionData, ad)
 	}
-
 	return sd
+}
+
+func splitParamName(name string) (string, string) {
+	parts := strings.Split(name, ":")
+	if len(parts) >= 2 {
+		return parts[0], parts[1]
+	}
+	return parts[0], parts[0]
+}
+
+func extractHeaders(a *design.AttributeExpr) []*serverHeaderData {
+	obj := design.AsObject(a.Type)
+	keys := make([]string, len(obj))
+	i := 0
+	for n := range obj {
+		keys[i] = n
+		i++
+	}
+	sort.Strings(keys)
+	headers := make([]*serverHeaderData, len(obj))
+	for i, name := range keys {
+		mapFrom, name := splitParamName(name)
+		headers[i] = &serverHeaderData{
+			Name:    name,
+			VarName: codegen.Goify(mapFrom, true),
+		}
+	}
+
+	return headers
 }
 
 func extractParams(a *design.AttributeExpr) []*serverParamData {
@@ -255,41 +317,43 @@ func extractParams(a *design.AttributeExpr) []*serverParamData {
 	sort.Strings(keys)
 	params := make([]*serverParamData, len(obj))
 	for i, name := range keys {
+		mapTo, lookupName := splitParamName(name)
 		params[i] = &serverParamData{
-			Name:     name,
-			VarName:  codegen.Goify(name, false),
-			Type:     obj[name].Type,
-			Required: true,
+			Name:    lookupName,
+			VarName: codegen.Goify(mapTo, false),
+			Type:    obj[name].Type,
 		}
 	}
 
 	return params
 }
 
+// HasResponses indicates if an action has responses.
 func (d *serverActionData) HasResponses() bool {
 	return len(d.Responses) >= 1
 }
 
+// HasPayload indicates if an action has a payload.
 func (d *serverActionData) HasPayload() bool {
 	return d.Payload != nil
 }
 
+// HasErrors indicates if an action has errors defined.
 func (d *serverActionData) HasErrors() bool {
 	return len(d.HTTPErrors) > 0
 }
 
-func (d *serverPayloadData) HasBody() bool {
-	return d.hasBody
-}
-
+// HasPathParams indicates if a payload has path parameters.
 func (d *serverPayloadData) HasPathParams() bool {
 	return len(d.PathParams) > 0
 }
 
+// HasQueryParams indicates if a payload has query parameters.
 func (d *serverPayloadData) HasQueryParams() bool {
 	return len(d.QueryParams) > 0
 }
 
+// HasParams indicates if a payload has any parameters.
 func (d *serverPayloadData) HasParams() bool {
 	return d.HasPathParams() || d.HasQueryParams()
 }
@@ -566,17 +630,21 @@ func {{ .Decoder }}(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 const serverEncoderT = `{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .Encoder .EndpointName .ServiceName | comment }}
 func {{ .Encoder }}(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
-	{{- if eq (len .Responses) 0 }}
-		w.WriteHeader(http.StatusNoContent)
-	{{- else if eq (len .Responses) 1 }}
+	{{- if eq (len .Responses) 1 }}
 		{{- with index .Responses 0}}
+		{{- if or .HasBody .Headers }}
+		t := v.(*{{ .Name }})
+		{{- end }}
 		{{- if .HasBody }}
-		w.Header().Set("Content-Type", ResponseContentType(r)){{ end }}
-		{{- /* TODO: need a way to fill and map header values e.g. w.Header().Set("Location", v.Href) */}}
+		w.Header().Set("Content-Type", ResponseContentType(r))
+		{{- end }}
+		{{- range .Headers }}
+		w.Header().Set("{{ .Name }}", t.{{ .VarName }})
+		{{- end }}
 		w.WriteHeader({{ .StatusCode }})
 		{{- if .HasBody }}
-		if v != nil {
-			return encoder(w, r).Encode(v)
+		if t != nil {
+			return encoder(w, r).Encode(t)
 		}
 		{{- end }}
 		{{- end }}
@@ -584,7 +652,9 @@ func {{ .Encoder }}(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
 		switch t := v.(type) {
 		{{- range .Responses }}
 		case *{{ .Name }}:
-			{{- /* TODO: need a way to fill and map header values e.g. w.Header().Set("Location", v.Href) */}}
+			{{- range .Headers }}
+			w.Header().Set("{{ .Name }}", t.{{ .VarName }})
+			{{- end }}
 			w.WriteHeader({{ .StatusCode }})
 			{{- if .HasBody }}
 			return encoder(w, r).Encode(t)
