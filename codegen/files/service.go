@@ -78,6 +78,9 @@ func (s *serviceFile) Sections(genPkg string) []*codegen.Section {
 			var walker func(*design.AttributeExpr) error
 			walker = func(at *design.AttributeExpr) error {
 				if ut, ok := at.Type.(design.UserType); ok {
+					if _, ok := userTypes[ut.Name()]; ok {
+						return nil
+					}
 					userTypes[ut.Name()] = codegen.GoTypeDef(ut.Attribute().Type)
 					ut.Walk(walker)
 				}
