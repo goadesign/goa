@@ -53,6 +53,7 @@ func TestService(t *testing.T) {
 		ArrayField []bool
 		MapField map[int]string
 		ObjectField map[string]interface{}
+		UserTypeField Parent
 	}
 
 	AResult struct {
@@ -66,7 +67,14 @@ func TestService(t *testing.T) {
 		ArrayField []bool
 		MapField map[int]string
 		ObjectField map[string]interface{}
+		UserTypeField Parent
 	}
+
+	Child int
+
+	Parent struct {
+ChildField Child
+}
 )
 `
 
@@ -112,6 +120,21 @@ func TestService(t *testing.T) {
 					"ArrayField":  &design.AttributeExpr{Type: &design.Array{&design.AttributeExpr{Type: design.Boolean}}},
 					"MapField":    &design.AttributeExpr{Type: &design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}},
 					"ObjectField": &design.AttributeExpr{Type: design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}},
+					"UserTypeField": &design.AttributeExpr{
+						Type: &design.UserTypeExpr{
+							TypeName: "Parent",
+							AttributeExpr: &design.AttributeExpr{
+								Type: design.Object{
+									"ChildField": &design.AttributeExpr{
+										Type: &design.UserTypeExpr{
+											TypeName:      "Child",
+											AttributeExpr: &design.AttributeExpr{Type: design.Int},
+										},
+									},
+								},
+							},
+						},
+					},
 				}},
 			},
 			Result: &design.UserTypeExpr{
@@ -120,6 +143,21 @@ func TestService(t *testing.T) {
 					"ArrayField":  &design.AttributeExpr{Type: &design.Array{&design.AttributeExpr{Type: design.Boolean}}},
 					"MapField":    &design.AttributeExpr{Type: &design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}},
 					"ObjectField": &design.AttributeExpr{Type: design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}},
+					"UserTypeField": &design.AttributeExpr{
+						Type: &design.UserTypeExpr{
+							TypeName: "Parent",
+							AttributeExpr: &design.AttributeExpr{
+								Type: design.Object{
+									"ChildField": &design.AttributeExpr{
+										Type: &design.UserTypeExpr{
+											TypeName:      "Child",
+											AttributeExpr: &design.AttributeExpr{Type: design.Int},
+										},
+									},
+								},
+							},
+						},
+					},
 				}},
 			},
 		}

@@ -18,6 +18,8 @@ type (
 		VarName string
 		// Methods lists the service struct methods.
 		Methods []*serviceMethod
+		// UserTypes lists the user types.
+		UserTypes map[string]string
 	}
 
 	// serviceMethod describes a single service method.
@@ -71,11 +73,22 @@ func (s *serviceFile) Sections(genPkg string) []*codegen.Section {
 	)
 	{
 		methods := make([]*serviceMethod, len(s.service.Endpoints))
+		userTypes := make(map[string]string)
 		for i, v := range s.service.Endpoints {
+			var walker func(*design.AttributeExpr) error
+			walker = func(at *design.AttributeExpr) error {
+				if ut, ok := at.Type.(design.UserType); ok {
+					userTypes[ut.Name()] = codegen.GoTypeDef(ut.Attribute().Type)
+					ut.Walk(walker)
+				}
+				return nil
+			}
+
 			payloadFields := make(map[string]string)
 			if o := design.AsObject(v.Payload); o != nil {
 				o.WalkAttributes(func(name string, at *design.AttributeExpr) error {
 					payloadFields[name] = codegen.GoNativeType(at.Type)
+					at.Walk(walker)
 					return nil
 				})
 			}
@@ -84,6 +97,7 @@ func (s *serviceFile) Sections(genPkg string) []*codegen.Section {
 			if o := design.AsObject(v.Result); o != nil {
 				o.WalkAttributes(func(name string, at *design.AttributeExpr) error {
 					resultFields[name] = codegen.GoNativeType(at.Type)
+					at.Walk(walker)
 					return nil
 				})
 			}
@@ -104,9 +118,10 @@ func (s *serviceFile) Sections(genPkg string) []*codegen.Section {
 			}
 		}
 		data = &serviceData{
-			Name:    s.service.Name,
-			VarName: codegen.Goify(s.service.Name, true),
-			Methods: methods,
+			Name:      s.service.Name,
+			VarName:   codegen.Goify(s.service.Name, true),
+			Methods:   methods,
+			UserTypes: userTypes,
 		}
 	}
 
@@ -162,9 +177,16 @@ const serviceT = `
 {{ end }}{{ end -}}
 {{- end -}}
 
+{{- define "types" -}}
+{{ range $key, $ut := .UserTypes }}
+	{{ $key }} {{ $ut }}
+{{ end -}}
+{{- end -}}
+
 type (
 {{- template "interface" . -}}
 {{- template "payloads" . -}}
 {{- template "results" . -}}
+{{- template "types" . -}}
 )
 `
