@@ -683,7 +683,9 @@ func (r *ResourceDefinition) PathParams() *AttributeDefinition {
 	obj := make(Object)
 	if r.Params != nil {
 		for _, n := range names {
-			obj[n] = r.Params.Type.ToObject()[n]
+			if p, ok := r.Params.Type.ToObject()[n]; ok {
+				obj[n] = p
+			}
 		}
 	}
 	return &AttributeDefinition{Type: obj}
@@ -1382,6 +1384,7 @@ func (a *ActionDefinition) AllParams() *AttributeDefinition {
 	if a.HasAbsoluteRoutes() {
 		return res
 	}
+	res = res.Merge(a.Parent.Params)
 	if p := a.Parent.Parent(); p != nil {
 		res = res.Merge(p.CanonicalAction().PathParams())
 	} else {
