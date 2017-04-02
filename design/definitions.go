@@ -681,8 +681,10 @@ func (r *ResourceDefinition) Context() string {
 func (r *ResourceDefinition) PathParams() *AttributeDefinition {
 	names := ExtractWildcards(r.BasePath)
 	obj := make(Object)
-	for _, n := range names {
-		obj[n] = r.Params.Type.ToObject()[n]
+	if r.Params != nil {
+		for _, n := range names {
+			obj[n] = r.Params.Type.ToObject()[n]
+		}
 	}
 	return &AttributeDefinition{Type: obj}
 }
