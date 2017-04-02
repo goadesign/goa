@@ -261,3 +261,95 @@ var _ = Describe("AllParams", func() {
 		})
 	})
 })
+
+var _ = Describe("PathParams", func() {
+
+	Context("Given a resource with a base path and an action with a route", func() {
+		var (
+			resource   *design.ResourceDefinition
+			action     *design.ActionDefinition
+			pathParams design.Object
+		)
+
+		BeforeEach(func() {
+			// Resource
+			{
+				baseParams := &design.AttributeDefinition{Type: design.Object{
+					"basepath":  &design.AttributeDefinition{Type: design.String},
+					"basequery": &design.AttributeDefinition{Type: design.String},
+				}}
+				resource = &design.ResourceDefinition{
+					Name:     "resource",
+					BasePath: "/:basepath",
+					Params:   baseParams,
+				}
+			}
+
+			// Action
+			{
+				params := &design.AttributeDefinition{Type: design.Object{
+					"path":     &design.AttributeDefinition{Type: design.String},
+					"query":    &design.AttributeDefinition{Type: design.String},
+					"basepath": &design.AttributeDefinition{Type: design.String},
+				}}
+				action = &design.ActionDefinition{
+					Name:   "action",
+					Parent: resource,
+					Params: params,
+				}
+				route := &design.RouteDefinition{
+					Path:   "/:path",
+					Parent: action,
+				}
+				action.Routes = []*design.RouteDefinition{route}
+				resource.Actions = map[string]*design.ActionDefinition{"action": action}
+			}
+			design.Design.Resources = map[string]*design.ResourceDefinition{"resource": resource}
+		})
+
+		JustBeforeEach(func() {
+			pathParams = action.PathParams().Type.ToObject()
+			Ω(pathParams).ShouldNot(BeNil())
+		})
+
+		It("returns path parameters", func() {
+			for _, p := range []string{"basepath", "path"} {
+				Ω(pathParams).Should(HaveKey(p))
+			}
+		})
+
+		It("does not return query parameters", func() {
+			for _, p := range []string{"basequery", "query"} {
+				Ω(pathParams).ShouldNot(HaveKey(p))
+			}
+		})
+	})
+
+	Context("Given a resource with a nil base params", func() {
+		var (
+			resource   *design.ResourceDefinition
+			pathParams design.Object
+		)
+
+		BeforeEach(func() {
+			// Resource
+			{
+				resource = &design.ResourceDefinition{
+					Name:     "resource",
+					BasePath: "/:basepath",
+				}
+			}
+
+			design.Design.Resources = map[string]*design.ResourceDefinition{"resource": resource}
+		})
+
+		JustBeforeEach(func() {
+			pathParams = resource.PathParams().Type.ToObject()
+			Ω(pathParams).ShouldNot(BeNil())
+		})
+
+		It("returns an empty attribute", func() {
+			Ω(pathParams).Should(BeEmpty())
+		})
+	})
+})
