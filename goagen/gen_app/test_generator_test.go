@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/goadesign/goa/design"
 	"github.com/goadesign/goa/dslengine"
@@ -255,12 +256,11 @@ var _ = Describe("Generate", func() {
 
 			Ω(content).Should(ContainSubstring(", payload app.CustomName)"))
 		})
-		It("generates header with DO NOT MODIFY", func() {
+
+		It("generates header compliant with https://github.com/golang/go/issues/13560", func() {
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "app", "test", "foo_testing.go"))
 			Ω(err).ShouldNot(HaveOccurred())
-
-			Ω(content).Should(ContainSubstring("DO NOT MODIFY"))
+			Ω(strings.Split(string(content), "\n")).Should(ContainElement(MatchRegexp(`^// Code generated .* DO NOT EDIT\.$`)))
 		})
-
 	})
 })
