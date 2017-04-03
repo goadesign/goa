@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/armon/go-metrics"
+	"github.com/tikasan/go-metrics"
 )
 
 // mock metrics

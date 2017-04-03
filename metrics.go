@@ -1,4 +1,4 @@
-// +build !js
+// +build !js,!appengine
 
 package goa
 
@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
+	"github.com/tikasan/go-metrics"
 )
 
 const (
