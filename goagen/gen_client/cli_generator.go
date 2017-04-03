@@ -681,7 +681,7 @@ func new{{ goify $security.SchemeName true }}Signer({{ signerSignature $security
 {{ end }}{{ end }}
 `
 
-const commandTypesTmpl = `{{ $cmdName := goify (printf "%s%s%s" .Name (title .Parent.Name) "Command") true }}	// {{ $cmdName }} is the command line data structure for the {{ .Name }} action of {{ .Parent.Name }}
+const commandTypesTmpl = `{{ $cmdName := goify (printf "%s%sCommand" .Name (title (kebabCase .Parent.Name))) true }}	// {{ $cmdName }} is the command line data structure for the {{ .Name }} action of {{ .Parent.Name }}
 	{{ $cmdName }} struct {
 {{ if .Payload }}		Payload string
 		ContentType string
@@ -705,7 +705,7 @@ const downloadCommandType = `// DownloadCommand is the command line data structu
 `
 
 const commandsTmplWS = `
-{{ $cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true }}// Run establishes a websocket connection for the {{ $cmdName }} command.
+{{ $cmdName := goify (printf "%s%sCommand" .Action.Name (title (kebabCase .Resource.Name))) true }}// Run establishes a websocket connection for the {{ $cmdName }} command.
 func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 	var path string
 	if len(args) > 0 {
@@ -778,7 +778,7 @@ found:
 }
 `
 
-const registerTmpl = `{{ $cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true }}// RegisterFlags registers the command flags with the command line.
+const registerTmpl = `{{ $cmdName := goify (printf "%s%sCommand" .Action.Name (title (kebabCase .Resource.Name))) true }}// RegisterFlags registers the command flags with the command line.
 func (cmd *{{ $cmdName }}) RegisterFlags(cc *cobra.Command, c *{{ .Package }}.Client) {
 {{ if .Action.Payload }}	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
 	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
@@ -796,7 +796,7 @@ func (cmd *{{ $cmdName }}) RegisterFlags(cc *cobra.Command, c *{{ .Package }}.Cl
 {{ end }}{{ end }}}`
 
 const commandsTmpl = `
-{{ $cmdName := goify (printf "%s%sCommand" .Action.Name (title .Resource.Name)) true }}// Run makes the HTTP request corresponding to the {{ $cmdName }} command.
+{{ $cmdName := goify (printf "%s%sCommand" .Action.Name (title (kebabCase .Resource.Name))) true }}// Run makes the HTTP request corresponding to the {{ $cmdName }} command.
 func (cmd *{{ $cmdName }}) Run(c *{{ .Package }}.Client, args []string) error {
 	var path string
 	if len(args) > 0 {
