@@ -95,12 +95,14 @@ type (
 	}
 )
 
-// Headers returns the response headers.
+// Headers returns the raw response headers attribute.
 func (r *HTTPResponseExpr) Headers() *design.AttributeExpr {
-	if r.HeadersAtt == nil {
-		r.HeadersAtt = &design.AttributeExpr{}
-	}
 	return r.HeadersAtt
+}
+
+// MappedHeaders returns the computed response headers attribute map.
+func (r *HTTPResponseExpr) MappedHeaders() *MappedAttributeExpr {
+	return NewMappedAttributeExpr(r.HeadersAtt)
 }
 
 // MediaType returns the media type describing the response body if any, nil
@@ -128,7 +130,7 @@ func (r *HTTPResponseExpr) EvalName() string {
 // and the media type definition if any is valid.
 func (r *HTTPResponseExpr) Validate() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
-	if r.Headers != nil {
+	if r.HeadersAtt != nil {
 		verr.Merge(r.HeadersAtt.Validate("HTTP response headers", r))
 	}
 	if r.Body != nil {

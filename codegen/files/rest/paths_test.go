@@ -255,7 +255,7 @@ func ShowAccountPath(sliceInterface []interface{}) string {
 
 	for k, tc := range cases {
 		buf := new(bytes.Buffer)
-		s := Path(tc.Action)
+		s := PathSection(tc.Action)
 		e := s.Write(buf)
 		actual := buf.String()
 

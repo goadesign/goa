@@ -68,15 +68,15 @@ func PathFile(api *design.APIExpr, r *rest.RootExpr) codegen.File {
 
 	for _, res := range r.Resources {
 		for _, a := range res.Actions {
-			sections = append(sections, Path(a))
+			sections = append(sections, PathSection(a))
 		}
 	}
 
 	return &pathFile{sections}
 }
 
-// Path returns a path section for the specified action
-func Path(a *rest.ActionExpr) *codegen.Section {
+// PathSection returns a path section for the specified action
+func PathSection(a *rest.ActionExpr) *codegen.Section {
 	return &codegen.Section{
 		Template: pathTmpl,
 		Data:     buildPathData(a),

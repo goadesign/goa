@@ -32,9 +32,15 @@ type (
 		HTTPErrors []*HTTPErrorExpr
 		// FileServers is the list of static asset serving endpoints
 		FileServers []*FileServerExpr
-		// Path and query string parameters that apply to all actions.
+		// params defines common request parameters to all the service
+		// HTTP endpoints. The keys may use the "attribute:param" syntax
+		// where "attribute" is the name of the attribute and "param"
+		// the name of the HTTP parameter.
 		params *design.AttributeExpr
-		// Request headers that apply to all actions.
+		// headers defines common headers to all the service HTTP
+		// endpoints. The keys may use the "attribute:header" syntax
+		// where "attribute" is the name of the attribute and "header"
+		// the name of the HTTP header.
 		headers *design.AttributeExpr
 	}
 )
@@ -133,7 +139,7 @@ func (r *ResourceExpr) Error(name string) *HTTPErrorExpr {
 	return nil
 }
 
-// Headers initializes and returns the attribute holding the resource headers.
+// Headers initializes and returns the attribute holding the API headers.
 func (r *ResourceExpr) Headers() *design.AttributeExpr {
 	if r.headers == nil {
 		r.headers = &design.AttributeExpr{Type: make(design.Object)}
@@ -141,12 +147,22 @@ func (r *ResourceExpr) Headers() *design.AttributeExpr {
 	return r.headers
 }
 
-// Params initializes and returns the attribute holding the resource parameters.
+// MappedHeaders computes the mapped attribute expression from Headers.
+func (r *ResourceExpr) MappedHeaders() *MappedAttributeExpr {
+	return NewMappedAttributeExpr(r.headers)
+}
+
+// Params initializes and returns the attribute holding the API parameters.
 func (r *ResourceExpr) Params() *design.AttributeExpr {
 	if r.params == nil {
 		r.params = &design.AttributeExpr{Type: make(design.Object)}
 	}
 	return r.params
+}
+
+// MappedParams computes the mapped attribute expression from Params.
+func (r *ResourceExpr) MappedParams() *MappedAttributeExpr {
+	return NewMappedAttributeExpr(r.params)
 }
 
 // EvalName returns the generic definition name used in error messages.

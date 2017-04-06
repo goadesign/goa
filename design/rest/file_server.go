@@ -23,9 +23,6 @@ type (
 		// Metadata is a list of key/value pairs
 		Metadata design.MetadataExpr
 	}
-
-	// FileServerWalker is the type of functions given to WalkFileServers.
-	FileServerWalker func(*FileServerExpr) error
 )
 
 // EvalName returns the generic definition name used in error messages.
