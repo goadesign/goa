@@ -48,6 +48,7 @@ var _ = Describe("Generate", func() {
 				Name:        "testapi",
 				Title:       "dummy API with no resource",
 				Description: "I told you it's dummy",
+				Consumes:    design.DefaultEncoders,
 			}
 		})
 
@@ -104,6 +105,7 @@ var _ = Describe("Generate", func() {
 				Name:        "testapi",
 				Title:       "dummy API with no resource",
 				Description: "I told you it's dummy",
+				Consumes:    design.DefaultEncoders,
 				Resources: map[string]*design.ResourceDefinition{
 					"foo": {
 						Name: "foo",
@@ -149,6 +151,7 @@ var _ = Describe("Generate", func() {
 				Name:        "testapi",
 				Title:       "dummy API with no resource",
 				Description: "I told you it's dummy",
+				Consumes:    design.DefaultEncoders,
 				Resources: map[string]*design.ResourceDefinition{
 					"foo_test": {
 						Name: "foo_test",
@@ -194,6 +197,7 @@ var _ = Describe("Generate", func() {
 				Name:        "testapi",
 				Title:       "dummy API with no resource",
 				Description: "I told you it's dummy",
+				Consumes:    design.DefaultEncoders,
 				Resources: map[string]*design.ResourceDefinition{
 					"foo": {
 						Name: "foo",
@@ -390,6 +394,7 @@ var _ = Describe("Generate", func() {
 				Name:        "testapi",
 				Title:       "dummy API with no resource",
 				Description: "I told you it's dummy",
+				Consumes:    design.DefaultEncoders,
 				Resources: map[string]*design.ResourceDefinition{
 					"foo": {
 						Name: "foo",
@@ -440,6 +445,7 @@ var _ = Describe("Generate", func() {
 				Name:        "testapi",
 				Title:       "dummy API with no resource",
 				Description: "I told you it's dummy",
+				Consumes:    design.DefaultEncoders,
 				SecuritySchemes: []*design.SecuritySchemeDefinition{
 					securitySchemeDef,
 				},
