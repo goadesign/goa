@@ -477,31 +477,33 @@ func (g *Generator) generateActionClient(action *design.ActionDefinition, file *
 		signer = codegen.Goify(action.Security.Scheme.SchemeName, true)
 	}
 	data := struct {
-		Name            string
-		ResourceName    string
-		Description     string
-		Routes          []*design.RouteDefinition
-		HasPayload      bool
-		HasMultiContent bool
-		Params          string
-		ParamNames      string
-		CanonicalScheme string
-		Signer          string
-		QueryParams     []*paramData
-		Headers         []*paramData
+		Name               string
+		ResourceName       string
+		Description        string
+		Routes             []*design.RouteDefinition
+		HasPayload         bool
+		HasMultiContent    bool
+		DefaultContentType string
+		Params             string
+		ParamNames         string
+		CanonicalScheme    string
+		Signer             string
+		QueryParams        []*paramData
+		Headers            []*paramData
 	}{
-		Name:            action.Name,
-		ResourceName:    action.Parent.Name,
-		Description:     action.Description,
-		Routes:          action.Routes,
-		HasPayload:      action.Payload != nil,
-		HasMultiContent: len(design.Design.Consumes) > 1,
-		Params:          strings.Join(params, ", "),
-		ParamNames:      strings.Join(names, ", "),
-		CanonicalScheme: action.CanonicalScheme(),
-		Signer:          signer,
-		QueryParams:     queryParams,
-		Headers:         headers,
+		Name:               action.Name,
+		ResourceName:       action.Parent.Name,
+		Description:        action.Description,
+		Routes:             action.Routes,
+		HasPayload:         action.Payload != nil,
+		HasMultiContent:    len(design.Design.Consumes) > 1,
+		DefaultContentType: design.Design.Consumes[0].MIMETypes[0],
+		Params:             strings.Join(params, ", "),
+		ParamNames:         strings.Join(names, ", "),
+		CanonicalScheme:    action.CanonicalScheme(),
+		Signer:             signer,
+		QueryParams:        queryParams,
+		Headers:            headers,
 	}
 	if action.WebSocket() {
 		return clientsWSTmpl.Execute(file, data)
@@ -1047,10 +1049,13 @@ func (c *Client) {{ $funcName }}(ctx context.Context, path string{{ if .Params }
 {{ end }}	if err != nil {
 		return nil, err
 	}
-{{ if or .Headers (and .HasPayload .HasMultiContent) }}	header := req.Header
-{{ if .HasPayload }}{{ if .HasMultiContent }}	if contentType != "*/*" {
+{{ if or .HasPayload .Headers }}	header := req.Header
+{{ if .HasPayload }}{{ if .HasMultiContent }}	if contentType == "*/*" {
+		header.Set("Content-Type", "{{ .DefaultContentType }}")
+	} else {
 		header.Set("Content-Type", contentType)
 	}
+{{ else }}	header.Set("Content-Type", "{{ .DefaultContentType }}")
 {{ end }}{{ end }}{{ range .Headers }}{{ if .CheckNil }}	if {{ .VarName }} != nil {
 {{ end }}{{ if .MustToString }}{{ $tmp := tempvar }}	{{ toString .ValueName $tmp .Attribute }}
 	header.Set("{{ .Name }}", {{ $tmp }}){{ else }}

@@ -67,7 +67,8 @@ var _ = Describe("Generate", func() {
 		BeforeEach(func() {
 			codegen.TempCount = 0
 			design.Design = &design.APIDefinition{
-				Name: "testapi",
+				Name:     "testapi",
+				Consumes: design.DefaultEncoders,
 				Resources: map[string]*design.ResourceDefinition{
 					"foo": {
 						Name: "foo",
@@ -138,7 +139,8 @@ var _ = Describe("Generate", func() {
 				"header_name": &design.AttributeDefinition{Type: design.UUID},
 			}
 			design.Design = &design.APIDefinition{
-				Name: "testapi",
+				Name:     "testapi",
+				Consumes: design.DefaultEncoders,
 				Resources: map[string]*design.ResourceDefinition{
 					"foo": {
 						Name: "foo",
@@ -182,7 +184,8 @@ var _ = Describe("Generate", func() {
 				"bat": &design.AttributeDefinition{Type: design.UUID},
 			}
 			design.Design = &design.APIDefinition{
-				Name: "testapi",
+				Name:     "testapi",
+				Consumes: design.DefaultEncoders,
 				Resources: map[string]*design.ResourceDefinition{
 					"foo": {
 						Name: "foo",
@@ -237,7 +240,8 @@ var _ = Describe("Generate", func() {
 				"fields[bat]": &design.AttributeDefinition{Type: design.DateTime},
 			}
 			design.Design = &design.APIDefinition{
-				Name: "testapi",
+				Name:     "testapi",
+				Consumes: design.DefaultEncoders,
 				Resources: map[string]*design.ResourceDefinition{
 					"foo": {
 						Name: "foo",
@@ -306,7 +310,8 @@ var _ = Describe("Generate", func() {
 				"fields[bat]": &design.AttributeDefinition{Type: design.DateTime},
 			}
 			design.Design = &design.APIDefinition{
-				Name: "testapi",
+				Name:     "testapi",
+				Consumes: design.DefaultEncoders,
 				Resources: map[string]*design.ResourceDefinition{
 					"foo": {
 						Name: "foo",
@@ -373,7 +378,8 @@ var _ = Describe("Generate", func() {
 	Context("with an action with multiple routes", func() {
 		BeforeEach(func() {
 			design.Design = &design.APIDefinition{
-				Name: "testapi",
+				Name:     "testapi",
+				Consumes: design.DefaultEncoders,
 				Resources: map[string]*design.ResourceDefinition{
 					"foo": {
 						Name: "foo",
@@ -447,6 +453,7 @@ var _ = Describe("Generate", func() {
 				Name:        "testapi",
 				Title:       "dummy API with no resource",
 				Description: "I told you it's dummy",
+				Consumes:    design.DefaultEncoders,
 				SecuritySchemes: []*design.SecuritySchemeDefinition{
 					securitySchemeDef,
 				},
@@ -521,6 +528,7 @@ var _ = Describe("Generate", func() {
 				Name:        "testapi",
 				Title:       "dummy API with no resource",
 				Description: "I told you it's dummy",
+				Consumes:    design.DefaultEncoders,
 				Resources: map[string]*design.ResourceDefinition{
 					"foo": {
 						Name: "foo",
