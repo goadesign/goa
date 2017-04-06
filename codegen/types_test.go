@@ -6,6 +6,22 @@ import (
 	"goa.design/goa.v2/design"
 )
 
+func TestGoTypeDefObject(t *testing.T) {
+	cases := map[string]struct {
+		dataType design.Object
+		expected string
+	}{
+		"simple object": {design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}, "struct {\n\tIntField int\n\tStringField string\n}"},
+	}
+
+	for k, tc := range cases {
+		actual := goTypeDefObject(tc.dataType)
+		if actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
+
 func TestGoNativeType(t *testing.T) {
 	cases := map[string]struct {
 		dataType design.DataType
