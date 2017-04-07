@@ -22,7 +22,7 @@ DEPEND=\
 all: depend lint aliases test
 
 depend:
-	@go get -v ./...
+	@go get -t -v ./...
 	@go get -v $(DEPEND)
 
 lint:
