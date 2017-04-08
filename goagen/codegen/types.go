@@ -65,6 +65,11 @@ func init() {
 //   pointers for a private struct.
 func GoTypeDef(ds design.DataStructure, tabs int, jsonTags, private bool) string {
 	def := ds.Definition()
+	if tname, ok := def.Metadata["struct:field:type"]; ok {
+		if len(tname) > 0 {
+			return tname[0]
+		}
+	}
 	t := def.Type
 	switch actual := t.(type) {
 	case design.Primitive:

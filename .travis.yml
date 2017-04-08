@@ -1,10 +1,8 @@
 language: go
 go:
 - 1.6.4
-- 1.7.4
-# matrix:
-#   allow_failures:
-#     - go: tip
+- 1.7.5
+- 1.8.1
 sudo: false
 install:
 - export PATH=${PATH}:${HOME}/gopath/bin
@@ -17,22 +15,6 @@ install:
 script:
 - export PATH=${PATH}:${HOME}/bin
 - make
-# TBD: Fix make docs after upgrade to latest hugo
-#- make && make docs
 notifications:
   slack:
     secure: bMYXaoSEGoNdqR0t1VnMAv/4V9PSOhEWyekdJM7p9WmKjJi2yKy0k77uRmwf+5Mrz5GLs3CkZnDha/8cSFld3KEN9SC6QYmIBF/1Pd/5mKHFQOI81i7sTlhrdMv897+6sofEtbBNq1jffhVGVttbMrMWwCTNZu0NrCGBVsDmb44=
-#deploy:
-  #provider: gcs
-  #access_key_id: GOOGDIIIVPY7O6DG3PSZ
-  #secret_access_key:
-    #secure: JRgLO+aCMRgMEQHujG9Xjxez6CmTiSxE14dNGc+iG16jcgUjmRnyY1adNcp/gxzmi274qRC8OYT10+NVNVRl4lK7HTtCcWuCWOI3N1o77RZqNA+e2k4GrNrsAmfnlbUu2Eg8XCrlQfctwJmN6058oQ8r/hdq36JUk0xDPgA8hws=
-  #bucket: goa.design
-  #local-dir: public/reference
-  #upload-dir: reference
-  #skip-cleanup: true
-  #acl: public-read
-  #cache-control: max-age=300
-  #on:
-    #repo: goadesign/goa
-    #go: '1.7.4'
