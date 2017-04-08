@@ -226,3 +226,66 @@ var _ = Describe("ArrayOf", func() {
 		})
 	})
 })
+
+var _ = Describe("HashOf", func() {
+	Context("used on a global variable", func() {
+		var (
+			kt *UserTypeDefinition
+			vt *UserTypeDefinition
+			ha *Hash
+		)
+		BeforeEach(func() {
+			dslengine.Reset()
+			kt = Type("key", func() {
+				Attribute("id")
+			})
+			vt = Type("val", func() {
+				Attribute("id")
+			})
+			ha = HashOf(kt, vt)
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+		})
+
+		JustBeforeEach(func() {
+			dslengine.Run()
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+		})
+
+		It("produces a hash type", func() {
+			Ω(ha).ShouldNot(BeNil())
+			Ω(ha.Kind()).Should(Equal(HashKind))
+			Ω(ha.KeyType.Type).Should(Equal(kt))
+			Ω(ha.ElemType.Type).Should(Equal(vt))
+		})
+	})
+
+	Context("with DSLs", func() {
+		var (
+			kp = "foo"
+			vp = "bar"
+			ha *Hash
+		)
+
+		BeforeEach(func() {
+			dslengine.Reset()
+			ha = HashOf(String, String, func() { Pattern(kp) }, func() { Pattern(vp) })
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+		})
+
+		JustBeforeEach(func() {
+			dslengine.Run()
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+		})
+
+		It("records the validations", func() {
+			Ω(ha).ShouldNot(BeNil())
+			Ω(ha.Kind()).Should(Equal(HashKind))
+			Ω(ha.KeyType.Type).Should(Equal(String))
+			Ω(ha.KeyType.Validation).ShouldNot(BeNil())
+			Ω(ha.KeyType.Validation.Pattern).Should(Equal(kp))
+			Ω(ha.ElemType.Type).Should(Equal(String))
+			Ω(ha.ElemType.Validation).ShouldNot(BeNil())
+			Ω(ha.ElemType.Validation.Pattern).Should(Equal(vp))
+		})
+	})
+})
