@@ -17,15 +17,16 @@ var _ = Describe("validation code generation", func() {
 
 	Describe("ValidationChecker", func() {
 		Context("given an attribute definition and validations", func() {
+			var att *design.AttributeDefinition
 			var attType design.DataType
 			var validation *dslengine.ValidationDefinition
 
-			att := new(design.AttributeDefinition)
 			target := "val"
 			context := "context"
 			var code string // generated code
 
 			JustBeforeEach(func() {
+				att = new(design.AttributeDefinition)
 				att.Type = attType
 				att.Validation = validation
 				code = codegen.NewValidator().Code(att, false, false, false, target, context, 1, false)
@@ -218,6 +219,23 @@ var _ = Describe("validation code generation", func() {
 				})
 			})
 
+			Context("with a custom type metadata", func() {
+				JustBeforeEach(func() {
+					att.Metadata = map[string][]string{"struct:field:type": {"foo"}}
+					code = codegen.NewValidator().Code(att, false, false, false, target, context, 1, false)
+				})
+
+				BeforeEach(func() {
+					attType = design.Integer
+					validation = &dslengine.ValidationDefinition{
+						Values: []interface{}{1, 2, 3},
+					}
+				})
+
+				It("does not produce validation code", func() {
+					Ω(code).Should(BeEmpty())
+				})
+			})
 		})
 	})
 })
