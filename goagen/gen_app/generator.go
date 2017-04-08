@@ -139,6 +139,15 @@ func (g *Generator) generateContexts() error {
 		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 		codegen.SimpleImport("golang.org/x/net/context"),
 	}
+	g.API.IterateResources(func(r *design.ResourceDefinition) error {
+		return r.IterateActions(func(a *design.ActionDefinition) error {
+			if a.Payload != nil {
+				imports = codegen.AttributeImports(a.Payload.AttributeDefinition, imports, nil)
+			}
+			return nil
+		})
+	})
+
 	g.genfiles = append(g.genfiles, ctxFile)
 	ctxWr.WriteHeader(title, g.Target, imports)
 	err = g.API.IterateResources(func(r *design.ResourceDefinition) error {
