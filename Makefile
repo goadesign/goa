@@ -25,7 +25,6 @@ DEPEND=\
 	github.com/onsi/ginkgo/ginkgo \
 	github.com/onsi/gomega \
 	github.com/pkg/errors \
-	github.com/spf13/hugo \
 	golang.org/x/tools/cmd/cover \
 	golang.org/x/tools/cmd/goimports
 
@@ -34,6 +33,7 @@ DEPEND=\
 all: depend lint cyclo goagen test
 
 docs:
+	@go get -v github.com/spf13/hugo
 	@git clone https://github.com/goadesign/goa.design
 	@rm -rf goa.design/content/reference goa.design/public
 	@mdc --exclude goa.design github.com/goadesign/goa goa.design/content/reference
