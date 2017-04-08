@@ -86,6 +86,10 @@ func NewValidator() *Validator {
 
 // Code produces Go code that runs the validation checks recursively over the given attribute.
 func (v *Validator) Code(att *design.AttributeDefinition, nonzero, required, hasDefault bool, target, context string, depth int, private bool) string {
+	if _, ok := att.Metadata["struct:field:type"]; ok {
+		// Skip validation generation for attributes with custom types
+		return ""
+	}
 	buf := v.recurse(att, nonzero, required, hasDefault, target, context, depth, private)
 	return buf.String()
 }
