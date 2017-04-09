@@ -6,6 +6,38 @@ import (
 	"goa.design/goa.v2/design"
 )
 
+func TestGoTypeDef(t *testing.T) {
+	cases := map[string]struct {
+		dataType design.DataType
+		expected string
+	}{
+		"BooleanKind":   {design.Boolean, "bool"},
+		"IntKind":       {design.Int, "int"},
+		"Int32Kind":     {design.Int32, "int32"},
+		"Int64Kind":     {design.Int64, "int64"},
+		"UIntKind":      {design.UInt, "uint"},
+		"UInt32Kind":    {design.UInt32, "uint32"},
+		"UInt64Kind":    {design.UInt64, "uint64"},
+		"Float32Kind":   {design.Float32, "float32"},
+		"Float64Kind":   {design.Float64, "float64"},
+		"StringKind":    {design.String, "string"},
+		"BytesKind":     {design.Bytes, "[]byte"},
+		"AnyKind":       {design.Any, "interface{}"},
+		"Array":         {&design.Array{&design.AttributeExpr{Type: design.Boolean}}, "[]bool"},
+		"Map":           {&design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}, "map[int]string"},
+		"Object":        {design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}, "struct {\n\tIntField int\n\tStringField string\n}"},
+		"UserTypeExpr":  {&design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{Type: design.Boolean}, TypeName: "UserType"}, "bool"},
+		"MediaTypeExpr": {&design.MediaTypeExpr{UserTypeExpr: &design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{Type: design.Boolean}}, Identifier: "application/vnd.goa.example", Views: nil}, "bool"},
+	}
+
+	for k, tc := range cases {
+		actual := GoTypeDef(tc.dataType)
+		if actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
+
 func TestGoTypeDefObject(t *testing.T) {
 	cases := map[string]struct {
 		dataType design.Object
@@ -27,22 +59,23 @@ func TestGoNativeType(t *testing.T) {
 		dataType design.DataType
 		expected string
 	}{
-		"BooleanKind":  {design.Boolean, "bool"},
-		"IntKind":      {design.Int, "int"},
-		"Int32Kind":    {design.Int32, "int32"},
-		"Int64Kind":    {design.Int64, "int64"},
-		"UIntKind":     {design.UInt, "uint"},
-		"UInt32Kind":   {design.UInt32, "uint32"},
-		"UInt64Kind":   {design.UInt64, "uint64"},
-		"Float32Kind":  {design.Float32, "float32"},
-		"Float64Kind":  {design.Float64, "float64"},
-		"StringKind":   {design.String, "string"},
-		"BytesKind":    {design.Bytes, "[]byte"},
-		"AnyKind":      {design.Any, "interface{}"},
-		"Array":        {&design.Array{&design.AttributeExpr{Type: design.Boolean}}, "[]bool"},
-		"Map":          {&design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}, "map[int]string"},
-		"Object":       {design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}, "map[string]interface{}"},
-		"UserTypeExpr": {&design.UserTypeExpr{TypeName: "UserType"}, "UserType"},
+		"BooleanKind":   {design.Boolean, "bool"},
+		"IntKind":       {design.Int, "int"},
+		"Int32Kind":     {design.Int32, "int32"},
+		"Int64Kind":     {design.Int64, "int64"},
+		"UIntKind":      {design.UInt, "uint"},
+		"UInt32Kind":    {design.UInt32, "uint32"},
+		"UInt64Kind":    {design.UInt64, "uint64"},
+		"Float32Kind":   {design.Float32, "float32"},
+		"Float64Kind":   {design.Float64, "float64"},
+		"StringKind":    {design.String, "string"},
+		"BytesKind":     {design.Bytes, "[]byte"},
+		"AnyKind":       {design.Any, "interface{}"},
+		"Array":         {&design.Array{&design.AttributeExpr{Type: design.Boolean}}, "[]bool"},
+		"Map":           {&design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}, "map[int]string"},
+		"Object":        {design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}, "map[string]interface{}"},
+		"UserTypeExpr":  {&design.UserTypeExpr{TypeName: "UserType"}, "UserType"},
+		"MediaTypeExpr": {&design.MediaTypeExpr{Identifier: "application/vnd.goa.example", Views: nil}, "application/vnd.goa.example"},
 	}
 
 	for k, tc := range cases {

@@ -132,8 +132,8 @@ func GoTypeDef(dt design.DataType) string {
 		return fmt.Sprintf("map[%s]%s", keyDef, elemDef)
 	case design.Object:
 		return goTypeDefObject(actual)
-	case *design.UserTypeExpr:
-		return GoTypeName(actual)
+	case design.UserType:
+		return GoTypeName(actual.Attribute().Type)
 	default:
 		panic("goa bug: unknown data structure type")
 	}
@@ -171,8 +171,8 @@ func GoTypeName(dt design.DataType) string {
 		return fmt.Sprintf("map[%s]%s", GoNativeType(actual.KeyType.Type), GoNativeType(actual.ElemType.Type))
 	case design.Object:
 		return "map[string]interface{}"
-	case *design.UserTypeExpr:
-		return actual.TypeName
+	case design.UserType:
+		return actual.Name()
 	case design.CompositeExpr:
 		return GoNativeType(actual.Attribute().Type)
 	default:
@@ -218,8 +218,8 @@ func GoNativeType(t design.DataType) string {
 		return fmt.Sprintf("map[%s]%s", GoNativeType(actual.KeyType.Type), GoNativeType(actual.ElemType.Type))
 	case design.Object:
 		return "map[string]interface{}"
-	case *design.UserTypeExpr:
-		return actual.TypeName
+	case design.UserType:
+		return actual.Name()
 	case design.CompositeExpr:
 		return GoNativeType(actual.Attribute().Type)
 	default:
