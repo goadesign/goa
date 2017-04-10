@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -137,7 +136,7 @@ func record(ctx context.Context, s *Segment, err error) {
 		case resp.Status >= 500:
 			s.Error = true
 		}
-		s.HTTP.Response = &Response{resp.Status, resp.Length}
+		s.HTTP.Response = &Response{resp.Status, int64(resp.Length)}
 		s.Unlock()
 	}
 	if err != nil {
@@ -165,23 +164,19 @@ func requestData(req *http.Request) *Request {
 		host = req.URL.Host
 	}
 	return &Request{
-		Method:    req.Method,
-		URL:       fmt.Sprintf("%s://%s%s", scheme, host, req.URL.Path),
-		ClientIP:  getIP(req),
-		UserAgent: req.UserAgent(),
+		Method:        req.Method,
+		URL:           fmt.Sprintf("%s://%s%s", scheme, host, req.URL.Path),
+		ClientIP:      getIP(req),
+		UserAgent:     req.UserAgent(),
+		ContentLength: req.ContentLength,
 	}
 }
 
 // responseData creates a Response from a http.Response.
 func responseData(resp *http.Response) *Response {
-	var ln int
-	if lh := resp.Header.Get("Content-Length"); lh != "" {
-		ln, _ = strconv.Atoi(lh)
-	}
-
 	return &Response{
 		Status:        resp.StatusCode,
-		ContentLength: ln,
+		ContentLength: resp.ContentLength,
 	}
 }
 

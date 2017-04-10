@@ -146,6 +146,7 @@ func TestMiddleware(t *testing.T) {
 				return nil
 			}
 		)
+
 		ctx = middleware.WithTrace(ctx, c.Trace.TraceID, c.Trace.SpanID, c.Trace.ParentID)
 		if c.Request.UserAgent != "" {
 			req.Header.Set("User-Agent", c.Request.UserAgent)
@@ -226,7 +227,10 @@ func TestMiddleware(t *testing.T) {
 		if s.HTTP.Request.UserAgent != c.Request.UserAgent {
 			t.Errorf("%s: HTTP Request UserAgent is invalid, expected %#v got %#v", k, c.Request.UserAgent, s.HTTP.Request.UserAgent)
 		}
-		if (s.Cause == nil && c.Segment.Exception != "") || (s.Cause != nil && s.Cause.Exceptions[0].Message != c.Segment.Exception) {
+		if s.Cause == nil && c.Segment.Exception != "" {
+			t.Errorf("%s: Exception is invalid, expected %v but got nil Cause", k, c.Segment.Exception)
+		}
+		if s.Cause != nil && s.Cause.Exceptions[0].Message != c.Segment.Exception {
 			t.Errorf("%s: Exception is invalid, expected %v got %v", k, c.Segment.Exception, s.Cause.Exceptions[0].Message)
 		}
 		if s.Error != c.Segment.Error {
