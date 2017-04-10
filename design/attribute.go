@@ -161,23 +161,14 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 	return verr
 }
 
-// Walk traverses the data structure recursively and calls the given function
-// once on each attribute starting with a.
-func (a *AttributeExpr) Walk(walker func(*AttributeExpr) error) error {
-	return walk(a, walker, make(map[string]bool))
-}
-
-// Merge merges other's attributes into a and returns a overriding its
-// attributes with attributes with attributes with identical names from other.
+// Merge merges other's attributes into a overriding attributes of a with
+// attributes of other with identical names.
 //
 // This only applies to attributes of type Object and Merge panics if the
 // argument or the target is not of type Object.
-func (a *AttributeExpr) Merge(other *AttributeExpr) *AttributeExpr {
+func (a *AttributeExpr) Merge(other *AttributeExpr) {
 	if other == nil {
-		return a
-	}
-	if a == nil {
-		return other
+		return
 	}
 	left := a.Type.(Object)
 	right := other.Type.(Object)
@@ -186,8 +177,13 @@ func (a *AttributeExpr) Merge(other *AttributeExpr) *AttributeExpr {
 	}
 	for n, v := range right {
 		left[n] = v
+		if other.IsRequired(n) && !a.IsRequired(n) {
+			if a.Validation == nil {
+				a.Validation = &ValidationExpr{}
+			}
+			a.Validation.Required = append(a.Validation.Required, n)
+		}
 	}
-	return a
 }
 
 // Inherit merges the properties of existing target type attributes with the

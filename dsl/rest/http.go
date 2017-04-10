@@ -3,6 +3,8 @@ package rest
 import (
 	"strings"
 
+	"reflect"
+
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 	"goa.design/goa.v2/dsl"
@@ -56,10 +58,10 @@ import (
 //            Path("/calc")      // Prefix to all request paths
 //            Error(ErrAuthFailure, StatusUnauthorized) // Define
 //                               // ErrAuthFailure HTTP response status code.
-//            Parent("account")  // Parent resource, used to prefix request
+//            Parent("account")  // Parent service, used to prefix request
 //                               // paths.
 //            CanonicalEndpoint("add") // Endpoint whose path is used to prefix
-//                                     // the paths of child resources.
+//                                     // the paths of child service.
 //        })
 //
 //        Endpoint("add", func() {
@@ -162,10 +164,10 @@ func Produces(args ...string) {
 	root.Produces = append(root.Produces, args...)
 }
 
-// Path defines the API base path, i.e. the common path prefix to all the API
-// or service actions. The path may define wildcards (see GET for a description
-// of the wildcard syntax). The corresponding parameters must be described using
-// Params.
+// Path defines the API or service base path, i.e. the common path prefix to all
+// the API or service endpoints. The path may define wildcards (see GET for a
+// description of the wildcard syntax). The corresponding parameters must be
+// described using Params.
 func Path(val string) {
 	switch def := eval.Current().(type) {
 	case *design.APIExpr:
@@ -178,7 +180,7 @@ func Path(val string) {
 			for _, awc := range awcs {
 				for _, wc := range wcs {
 					if awc == wc {
-						eval.ReportError(`duplicate wildcard "%s" in API and resource base paths`, wc)
+						eval.ReportError(`duplicate wildcard "%s" in API and service base paths`, wc)
 					}
 				}
 			}
@@ -188,7 +190,7 @@ func Path(val string) {
 	}
 }
 
-// Docs provides external documentation pointers for actions.
+// Docs provides external documentation pointers for endpoints.
 func Docs(fn func()) {
 	docs := new(design.DocsExpr)
 	if !eval.Execute(fn, docs) {
@@ -325,7 +327,7 @@ func Headers(args interface{}) {
 	}
 	o := design.AsObject(t)
 	if o == nil {
-		eval.ReportError("type must be an object but got %#v", args)
+		eval.ReportError("type must be an object but got %s", reflect.TypeOf(args).Name())
 	}
 	h.Headers().Merge(&design.AttributeExpr{Type: o})
 }
@@ -367,6 +369,9 @@ func Header(name string, args ...interface{}) {
 	if !ok {
 		eval.IncompatibleDSL()
 		return
+	}
+	if name == "" {
+		eval.ReportError("header name cannot be empty")
 	}
 	eval.Execute(func() { dsl.Attribute(name, args...) }, h.Headers())
 }
@@ -412,7 +417,7 @@ func Params(args interface{}) {
 	}
 	o := design.AsObject(t)
 	if o == nil {
-		eval.ReportError("type must be an object but got %#v", args)
+		eval.ReportError("type must be an object but got %s", reflect.TypeOf(args).Name())
 	}
 	h.Params().Merge(&design.AttributeExpr{Type: o})
 }
@@ -470,14 +475,18 @@ func Param(name string, args ...interface{}) {
 		eval.IncompatibleDSL()
 		return
 	}
+	if name == "" {
+		eval.ReportError("parameter name cannot be empty")
+	}
 	eval.Execute(func() { dsl.Attribute(name, args...) }, h.Params())
 }
 
 // Body describes a HTTP request or response body.
 //
-// Body may appear in a Endpoint HTTP expression to define the request body or in
-// an Error or Result HTTP expression to define the response body. If Body is
-// absent then the endpoint request or response type describes the body.
+// Body may appear in a Endpoint HTTP expression to define the request body or
+// in an Error or Result HTTP expression to define the response body. If Body is
+// absent then the body is built using the endpoint request or response type
+// attributes not used to describe parameters (request only) or headers.
 //
 // Body accepts one argument which describes the shape of the body, it can be:
 //
@@ -485,8 +494,8 @@ func Param(name string, args ...interface{}) {
 //    attribute type describes the shape of the body.
 //
 //  - A function listing the body attributes. The attributes inherit the
-//    properties (description, type, validations etc.) of the request or response
-//    type attributes with the same names.
+//    properties (description, type, validations etc.) of the request or
+//    response type attributes with identical names.
 //
 // Assuming the type:
 //
@@ -593,7 +602,7 @@ func Body(args ...interface{}) {
 }
 
 // Parent sets the name of the parent service. The parent service canonical
-// action path is used as prefix for all the service endpoint paths.
+// endpoint path is used as prefix for all the service endpoint paths.
 func Parent(name string) {
 	r, ok := eval.Current().(*rest.ResourceExpr)
 	if !ok {
@@ -603,8 +612,8 @@ func Parent(name string) {
 	r.ParentName = name
 }
 
-// CanonicalEndpoint sets the name of the service canonical action. The
-// canonical action path is used to prefix the paths to any child service
+// CanonicalEndpoint sets the name of the service canonical endpoint. The
+// canonical endpoint path is used to prefix the paths to any child service
 // endpoint. The default value is "show".
 func CanonicalEndpoint(name string) {
 	r, ok := eval.Current().(*rest.ResourceExpr)

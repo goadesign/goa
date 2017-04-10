@@ -1,4 +1,4 @@
-package openapi
+package rest
 
 import (
 	"encoding/json"
@@ -171,7 +171,7 @@ func GenerateResourceDefinition(api *design.APIExpr, res *rest.ResourceExpr) {
 			requestSchema.Description = a.Name + " payload"
 		}
 		if a.Params() != nil {
-			params := design.DupAtt(a.Params())
+			params := a.MappedParams()
 			// We don't want to keep the path params, these are
 			// defined inline in the href
 			for _, r := range a.Routes {

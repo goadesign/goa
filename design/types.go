@@ -62,10 +62,6 @@ type (
 		Rename(string)
 		// Attribute provides the underlying type and validations.
 		Attribute() *AttributeExpr
-		// Walk traverses the data structure recursively and calls the
-		// given function once on each attribute starting with Attribute
-		// type attribute.
-		Walk(walker func(*AttributeExpr) error) error
 		// Dup makes a deep copy of the type given a deep copy of its attribute.
 		Dup(att *AttributeExpr) UserType
 		// EvalName returns the name reported by the DSL engine.
@@ -480,28 +476,6 @@ func (m MapVal) ToMap() map[interface{}]interface{} {
 		}
 	}
 	return mp
-}
-
-// AttributeWalker is the type of the function given to WalkAttributes.
-type AttributeWalker func(string, *AttributeExpr) error
-
-// WalkAttributes calls the given iterator passing in each field sorted in alphabetical order.
-// Iteration stops if an iterator returns an error and in this case WalkObject returns that
-// error.
-func (o Object) WalkAttributes(it AttributeWalker) error {
-	names := make([]string, len(o))
-	i := 0
-	for n := range o {
-		names[i] = n
-		i++
-	}
-	sort.Strings(names)
-	for _, n := range names {
-		if err := it(n, o[n]); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // QualifiedTypeName returns the qualified type name for the given data type. The qualified type

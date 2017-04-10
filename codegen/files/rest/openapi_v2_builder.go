@@ -1,4 +1,4 @@
-package openapi
+package rest
 
 // New creates a OpenAPI spec from a REST root expression.
 import (
@@ -13,8 +13,8 @@ import (
 	"goa.design/goa.v2/design/rest"
 )
 
-// MakeV2 returns the OpenAPI v2 specification for the given API.
-func MakeV2(root *rest.RootExpr) (*V2, error) {
+// makeOpenAPIV2 returns the OpenAPI v2 specification for the given API.
+func makeOpenAPIV2(root *rest.RootExpr) (*openAPIV2, error) {
 	if root == nil {
 		return nil, nil
 	}
@@ -29,7 +29,7 @@ func MakeV2(root *rest.RootExpr) (*V2, error) {
 	if hasAbsoluteRoutes(root) {
 		basePath = ""
 	}
-	params, err := paramsFromExpr(root.Params(), basePath)
+	params, err := paramsFromExpr(root.MappedParams(), basePath)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func MakeV2(root *rest.RootExpr) (*V2, error) {
 			paramMap[p.Name] = p
 		}
 	}
-	s := &V2{
+	s := &openAPIV2{
 		Swagger: "2.0",
 		Info: &Info{
 			Title:          root.Design.API.Title,
@@ -248,20 +248,17 @@ func extensionsFromExpr(mdata design.MetadataExpr) map[string]interface{} {
 	return extensions
 }
 
-func paramsFromExpr(params *design.AttributeExpr, path string) ([]*Parameter, error) {
+func paramsFromExpr(params *rest.MappedAttributeExpr, path string) ([]*Parameter, error) {
 	if params == nil {
 		return nil, nil
 	}
-	obj := design.AsObject(params.Type)
-	if obj == nil {
-		return nil, fmt.Errorf("invalid parameters definition, not an object")
-	}
-	res := make([]*Parameter, len(obj))
-	i := 0
-	wildcards := rest.ExtractWildcards(path)
-	obj.WalkAttributes(func(n string, at *design.AttributeExpr) error {
+	var (
+		res       []*Parameter
+		wildcards = rest.ExtractWildcards(path)
+		i         = 0
+	)
+	WalkMappedAttr(params, func(n, pn string, required bool, at *design.AttributeExpr) error {
 		in := "query"
-		required := params.IsRequired(n)
 		for _, w := range wildcards {
 			if n == w {
 				in = "path"
@@ -269,8 +266,8 @@ func paramsFromExpr(params *design.AttributeExpr, path string) ([]*Parameter, er
 				break
 			}
 		}
-		param := paramFor(at, n, in, required)
-		res[i] = param
+		param := paramFor(at, pn, in, required)
+		res = append(res, param)
 		i++
 		return nil
 	})
@@ -279,7 +276,7 @@ func paramsFromExpr(params *design.AttributeExpr, path string) ([]*Parameter, er
 
 func paramsFromHeaders(action *rest.ActionExpr) []*Parameter {
 	params := []*Parameter{}
-	action.WalkHeaders(func(name string, required bool, header *design.AttributeExpr) error {
+	WalkHeaders(action, func(_, name string, required bool, header *design.AttributeExpr) error {
 		p := paramFor(header, name, "header", required)
 		params = append(params, p)
 		return nil
@@ -314,7 +311,7 @@ func itemsFromExpr(at *design.AttributeExpr) *Items {
 	return items
 }
 
-func responseSpecFromExpr(s *V2, root *rest.RootExpr, r *rest.HTTPResponseExpr) (*Response, error) {
+func responseSpecFromExpr(s *openAPIV2, root *rest.RootExpr, r *rest.HTTPResponseExpr) (*Response, error) {
 	var schema *Schema
 	if r.Body != nil {
 		if mt, ok := r.Body.Type.(*design.MediaTypeExpr); ok {
@@ -326,7 +323,7 @@ func responseSpecFromExpr(s *V2, root *rest.RootExpr, r *rest.HTTPResponseExpr) 
 			schema.Ref = MediaTypeRef(root.Design.API, mt, view)
 		}
 	}
-	headers, err := headersFromExpr(r.Headers())
+	headers, err := headersFromExpr(r.MappedHeaders())
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +335,7 @@ func responseSpecFromExpr(s *V2, root *rest.RootExpr, r *rest.HTTPResponseExpr) 
 	}, nil
 }
 
-func headersFromExpr(headers *design.AttributeExpr) (map[string]*Header, error) {
+func headersFromExpr(headers *rest.MappedAttributeExpr) (map[string]*Header, error) {
 	if headers == nil {
 		return nil, nil
 	}
@@ -347,7 +344,7 @@ func headersFromExpr(headers *design.AttributeExpr) (map[string]*Header, error) 
 		return nil, fmt.Errorf("invalid headers definition, not an object")
 	}
 	res := make(map[string]*Header)
-	obj.WalkAttributes(func(n string, at *design.AttributeExpr) error {
+	WalkMappedAttr(headers, func(_, n string, required bool, at *design.AttributeExpr) error {
 		header := &Header{
 			Default:     at.DefaultValue,
 			Description: at.Description,
@@ -357,10 +354,13 @@ func headersFromExpr(headers *design.AttributeExpr) (map[string]*Header, error) 
 		res[n] = header
 		return nil
 	})
+	if len(res) == 0 {
+		return nil, nil
+	}
 	return res, nil
 }
 
-func buildPathFromFileServer(s *V2, root *rest.RootExpr, fs *rest.FileServerExpr) error {
+func buildPathFromFileServer(s *openAPIV2, root *rest.RootExpr, fs *rest.FileServerExpr) error {
 	wcs := rest.ExtractWildcards(fs.RequestPath)
 	var param []*Parameter
 	if len(wcs) > 0 {
@@ -419,7 +419,7 @@ func buildPathFromFileServer(s *V2, root *rest.RootExpr, fs *rest.FileServerExpr
 	return nil
 }
 
-func buildPathFromExpr(s *V2, root *rest.RootExpr, route *rest.RouteExpr, basePath string) error {
+func buildPathFromExpr(s *openAPIV2, root *rest.RootExpr, route *rest.RouteExpr, basePath string) error {
 	action := route.Action
 
 	tagNames := tagNamesFromExpr(action.Resource.Metadata, action.Metadata)
