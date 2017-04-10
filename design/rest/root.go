@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"regexp"
 	"sort"
+	"strings"
 
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/eval"
@@ -105,11 +106,15 @@ type (
 		// Metadata is a set of key/value pairs with semantic that is
 		// specific to each generator.
 		Metadata design.MetadataExpr
-		// Params defines common request parameters to all the service
-		// HTTP endpoints.
+		// params defines common request parameters to all the service
+		// HTTP endpoints. The keys may use the "attribute:param" syntax
+		// where "attribute" is the name of the attribute and "param"
+		// the name of the HTTP parameter.
 		params *design.AttributeExpr
-		// Headers defines common headers to all the service HTTP
-		// endpoints.
+		// headers defines common headers to all the service HTTP
+		// endpoints. The keys may use the "attribute:header" syntax
+		// where "attribute" is the name of the attribute and "header"
+		// the name of the HTTP header.
 		headers *design.AttributeExpr
 	}
 )
@@ -176,12 +181,22 @@ func (r *RootExpr) Headers() *design.AttributeExpr {
 	return r.headers
 }
 
+// MappedHeaders computes the mapped attribute expression from Headers.
+func (r *RootExpr) MappedHeaders() *MappedAttributeExpr {
+	return NewMappedAttributeExpr(r.headers)
+}
+
 // Params initializes and returns the attribute holding the API parameters.
 func (r *RootExpr) Params() *design.AttributeExpr {
 	if r.params == nil {
 		r.params = &design.AttributeExpr{Type: make(design.Object)}
 	}
 	return r.params
+}
+
+// MappedParams computes the mapped attribute expression from Params.
+func (r *RootExpr) MappedParams() *MappedAttributeExpr {
+	return NewMappedAttributeExpr(r.params)
 }
 
 // EvalName is the expression name used by the evaluation engine to display
@@ -217,4 +232,19 @@ func ExtractWildcards(path string) []string {
 		wcs[i] = m[1]
 	}
 	return wcs
+}
+
+// NameMap returns the attribute and HTTP element name encoded in the given
+// string. The encoding uses a simple "attribute:element" notation which allows
+// to map header or body field names to underlying attributes. The second
+// element of the encoding is optional in which case both the element and
+// attribute have the same name.
+func NameMap(encoded string) (string, string) {
+	elems := strings.Split(encoded, ":")
+	attName := elems[0]
+	name := attName
+	if len(elems) > 1 {
+		name = elems[1]
+	}
+	return attName, name
 }

@@ -3,7 +3,6 @@ package rest
 import (
 	"fmt"
 	"path"
-	"sort"
 	"strings"
 
 	"github.com/dimfeld/httppath"
@@ -33,10 +32,16 @@ type (
 		HTTPErrors []*HTTPErrorExpr
 		// Body attribute
 		Body *design.AttributeExpr
-		// Payload headers that need to be made available to action
-		headers *design.AttributeExpr
-		// Path and query string parameters
+		// params defines common request parameters to all the service
+		// HTTP endpoints. The keys may use the "attribute:param" syntax
+		// where "attribute" is the name of the attribute and "param"
+		// the name of the HTTP parameter.
 		params *design.AttributeExpr
+		// headers defines common headers to all the service HTTP
+		// endpoints. The keys may use the "attribute:header" syntax
+		// where "attribute" is the name of the attribute and "header"
+		// the name of the HTTP header.
+		headers *design.AttributeExpr
 	}
 
 	// RouteExpr represents an action route (HTTP endpoint).
@@ -50,12 +55,6 @@ type (
 		// Metadata is an arbitrary set of key/value pairs, see dsl.Metadata
 		Metadata design.MetadataExpr
 	}
-
-	// ActionWalker is the type of functions given to WalkActions.
-	ActionWalker func(a *ActionExpr) error
-
-	// HeaderWalker is the type of functions given to WalkHeaders.
-	HeaderWalker func(name string, isRequired bool, h *design.AttributeExpr) error
 )
 
 // ExtractRouteWildcards returns the names of the wildcards that appear in path.
@@ -83,35 +82,39 @@ func (a *ActionExpr) EvalName() string {
 }
 
 // PathParams returns the path parameters of the action across all its routes.
-func (a *ActionExpr) PathParams() *design.AttributeExpr {
-	obj := make(design.Object)
-	allParams := a.AllParams().Type.(design.Object)
+func (a *ActionExpr) PathParams() *MappedAttributeExpr {
+	params := a.AllParams()
+	pp := make(map[string]struct{})
 	for _, r := range a.Routes {
 		for _, p := range r.Params() {
-			if _, ok := obj[p]; !ok {
-				obj[p] = allParams[p]
-			}
+			pp[p] = struct{}{}
 		}
 	}
-	return &design.AttributeExpr{Type: obj}
+	for name := range params.Type.(design.Object) {
+		if _, ok := pp[name]; !ok {
+			params.Delete(name)
+		}
+	}
+	return params
 }
 
 // AllParams returns the path and query string parameters of the action across all its routes.
-func (a *ActionExpr) AllParams() *design.AttributeExpr {
-	var res *design.AttributeExpr
+func (a *ActionExpr) AllParams() *MappedAttributeExpr {
+	var res *MappedAttributeExpr
 	if a.params != nil {
-		res = design.DupAtt(a.params)
+		res = a.MappedParams()
 	} else {
-		res = &design.AttributeExpr{Type: design.Object{}}
+		attr := &design.AttributeExpr{Type: design.Object{}}
+		res = NewMappedAttributeExpr(attr)
 	}
 	if a.HasAbsoluteRoutes() {
 		return res
 	}
 	if p := a.Resource.Parent(); p != nil {
-		res = res.Merge(p.CanonicalAction().AllParams())
+		res.Merge(p.CanonicalAction().AllParams())
 	} else {
-		res = res.Merge(a.Resource.params)
-		res = res.Merge(Root.params)
+		res.Merge(a.Resource.MappedParams())
+		res.Merge(Root.MappedParams())
 	}
 	return res
 }
@@ -124,12 +127,22 @@ func (a *ActionExpr) Headers() *design.AttributeExpr {
 	return a.headers
 }
 
+// MappedHeaders computes the mapped attribute expression from Headers.
+func (a *ActionExpr) MappedHeaders() *MappedAttributeExpr {
+	return NewMappedAttributeExpr(a.headers)
+}
+
 // Params initializes and returns the attribute holding the action parameters.
 func (a *ActionExpr) Params() *design.AttributeExpr {
 	if a.params == nil {
 		a.params = &design.AttributeExpr{Type: make(design.Object)}
 	}
 	return a.params
+}
+
+// MappedParams computes the mapped attribute expression from Params.
+func (a *ActionExpr) MappedParams() *MappedAttributeExpr {
+	return NewMappedAttributeExpr(a.params)
 }
 
 // HasAbsoluteRoutes returns true if all the action routes are absolute.
@@ -159,12 +172,9 @@ func (a *ActionExpr) Validate() error {
 		}
 		verr.Merge(r.Validate())
 	}
-	verr.Merge(a.ValidateParams())
+	verr.Merge(a.validateParams())
 	if a.Body != nil {
 		verr.Merge(a.Body.Validate("action payload", a))
-	}
-	if a.Resource == nil {
-		verr.Add(a, "missing parent resource")
 	}
 
 	return verr
@@ -180,97 +190,28 @@ func (a *ActionExpr) Finalize() {
 	}
 }
 
-// ValidateParams checks the action parameters (make sure they have names, members and types).
-func (a *ActionExpr) ValidateParams() *eval.ValidationErrors {
-	verr := new(eval.ValidationErrors)
+// validateParams checks the action parameters makes sure parameters are of
+// an allowed type and that they match an attribute of the service payload.
+func (a *ActionExpr) validateParams() *eval.ValidationErrors {
 	if a.params == nil {
 		return nil
 	}
-	params, ok := a.params.Type.(design.Object)
-	if !ok {
-		verr.Add(a, `"Params" field of action is not an object`)
-	}
-	var wcs []string
-	for _, r := range a.Routes {
-		rwcs := ExtractWildcards(r.FullPath())
-		for _, rwc := range rwcs {
-			found := false
-			for _, wc := range wcs {
-				if rwc == wc {
-					found = true
-					break
-				}
-			}
-			if !found {
-				wcs = append(wcs, rwc)
-			}
-		}
-	}
+	verr := new(eval.ValidationErrors)
+	params := design.AsObject(a.params.Type)
 	for n, p := range params {
-		if n == "" {
-			verr.Add(a, "action has parameter with no name")
-		} else if p == nil {
-			verr.Add(a, "definition of parameter %s cannot be nil", n)
-		} else if p.Type == nil {
-			verr.Add(a, "type of parameter %s cannot be nil", n)
+		if design.IsObject(p.Type) {
+			verr.Add(a, "parameter %s cannot be an object, parameter types must be primitive or array", n)
+		} else if design.IsMap(p.Type) {
+			verr.Add(a, "parameter %s cannot be a map, parameter types must be primitive or array", n)
+		} else {
+			ctx := fmt.Sprintf("parameter %s", n)
+			verr.Merge(p.Validate(ctx, a))
 		}
-		if p.Type.Kind() == design.ObjectKind {
-			verr.Add(a, `parameter %s cannot be an object, only action payloads may be of type object`, n)
-		} else if p.Type.Kind() == design.MapKind {
-			verr.Add(a, `parameter %s cannot be a map, only action payloads may be of type map`, n)
-		}
-		ctx := fmt.Sprintf("parameter %s", n)
-		verr.Merge(p.Validate(ctx, a))
 	}
 	for _, resp := range a.Responses {
 		verr.Merge(resp.Validate())
 	}
 	return verr
-}
-
-// WalkHeaders iterates over the resource-level and action-level headers,
-// calling the given iterator passing in each response sorted in alphabetical order.
-// Iteration stops if an iterator returns an error and in this case WalkHeaders returns that
-// error.
-func (a *ActionExpr) WalkHeaders(it HeaderWalker) error {
-	if a.headers == nil {
-		return nil
-	}
-	var (
-		resAttrs      = design.DupAtt(a.Resource.headers)
-		actAttrs      = design.DupAtt(a.headers)
-		mergedHeaders = resAttrs.Merge(actAttrs)
-		isRequired    = func(name string) bool {
-			return resAttrs.IsRequired(name) ||
-				actAttrs.IsRequired(name)
-		}
-	)
-
-	return iterateHeaders(mergedHeaders, isRequired, it)
-}
-
-func iterateHeaders(headers *design.AttributeExpr, isRequired func(name string) bool, it HeaderWalker) error {
-	if headers == nil {
-		return nil
-	}
-	if _, ok := headers.Type.(design.Object); !ok {
-		return nil
-	}
-	headersMap := headers.Type.(design.Object)
-	names := make([]string, len(headersMap))
-	i := 0
-	for n := range headersMap {
-		names[i] = n
-		i++
-	}
-	sort.Strings(names)
-	for _, n := range names {
-		header := headersMap[n]
-		if err := it(n, isRequired(n), header); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // EvalName returns the generic definition name used in error messages.
@@ -284,8 +225,8 @@ func (r *RouteExpr) Params() []string {
 	return ExtractRouteWildcards(r.FullPath())
 }
 
-// FullPath returns the action full path computed by concatenating the API and resource base paths
-// with the action specific path.
+// FullPath returns the action full path computed by concatenating the API and
+// resource base paths with the action specific path.
 func (r *RouteExpr) FullPath() string {
 	if r.IsAbsolute() {
 		return httppath.Clean(r.Path[1:])
@@ -297,8 +238,8 @@ func (r *RouteExpr) FullPath() string {
 	return httppath.Clean(path.Join(base, r.Path))
 }
 
-// IsAbsolute returns true if the action path should not be concatenated to the resource and API
-// base paths.
+// IsAbsolute returns true if the action path should not be concatenated to the
+// resource and API base paths.
 func (r *RouteExpr) IsAbsolute() bool {
 	return strings.HasPrefix(r.Path, "//")
 }

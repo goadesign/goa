@@ -6,7 +6,7 @@ import (
 
 var (
 	// Context contains the state used by the engine to execute the DSL.
-	Context = &DSLContext{}
+	Context = &DSLContext{dslPackages: []string{"goa.design/goa.v2/eval"}}
 )
 
 type (

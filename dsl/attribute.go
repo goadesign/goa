@@ -113,57 +113,59 @@ import (
 //
 func Attribute(name string, args ...interface{}) {
 	var parent *design.AttributeExpr
-
-	switch def := eval.Current().(type) {
-	case *design.AttributeExpr:
-		parent = def
-	case design.CompositeExpr:
-		parent = def.Attribute()
-	default:
-		eval.IncompatibleDSL()
-		return
-	}
-
-	if parent != nil {
+	{
+		switch def := eval.Current().(type) {
+		case *design.AttributeExpr:
+			parent = def
+		case design.CompositeExpr:
+			parent = def.Attribute()
+		default:
+			eval.IncompatibleDSL()
+			return
+		}
+		if parent == nil {
+			eval.ReportError("invalid syntax, attribute %#v has no parent", name)
+			return
+		}
 		if parent.Type == nil {
 			parent.Type = make(design.Object)
 		}
 		if _, ok := parent.Type.(design.Object); !ok {
-			eval.ReportError("can't define child attributes on attribute of type %s", parent.Type.Name())
+			eval.ReportError("can't define child attribute %#v on attribute of type %s", name, parent.Type.Name())
 			return
 		}
-
-		var baseAttr *design.AttributeExpr
-		if parent.Reference != nil {
-			if att, ok := design.AsObject(parent.Reference)[name]; ok {
-				baseAttr = design.DupAtt(att)
-			}
-		}
-
-		dataType, description, fn := parseAttributeArgs(baseAttr, args...)
-		if baseAttr != nil {
-			if description != "" {
-				baseAttr.Description = description
-			}
-			if dataType != nil {
-				baseAttr.Type = dataType
-			}
-		} else {
-			baseAttr = &design.AttributeExpr{
-				Type:        dataType,
-				Description: description,
-			}
-		}
-		baseAttr.Reference = parent.Reference
-		if fn != nil {
-			eval.Execute(fn, baseAttr)
-		}
-		if baseAttr.Type == nil {
-			// DSL did not contain an "Attribute" declaration
-			baseAttr.Type = design.String
-		}
-		design.AsObject(parent.Type)[name] = baseAttr
 	}
+
+	var attr *design.AttributeExpr
+	if parent.Reference != nil {
+		if att, ok := design.AsObject(parent.Reference)[name]; ok {
+			attr = design.DupAtt(att)
+		}
+	}
+
+	dataType, description, fn := parseAttributeArgs(attr, args...)
+	if attr != nil {
+		if description != "" {
+			attr.Description = description
+		}
+		if dataType != nil {
+			attr.Type = dataType
+		}
+	} else {
+		attr = &design.AttributeExpr{
+			Type:        dataType,
+			Description: description,
+		}
+	}
+	attr.Reference = parent.Reference
+	if fn != nil {
+		eval.Execute(fn, attr)
+	}
+	if attr.Type == nil {
+		// DSL did not contain an "Attribute" declaration
+		attr.Type = design.String
+	}
+	design.AsObject(parent.Type)[name] = attr
 }
 
 // Field is syntactic sugar to define an attribute with the "rpc:tag" metadata

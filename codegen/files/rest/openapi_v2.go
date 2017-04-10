@@ -1,4 +1,4 @@
-package openapi
+package rest
 
 import (
 	"encoding/json"
@@ -7,9 +7,9 @@ import (
 )
 
 type (
-	// V2 represents an instance of a Swagger object.
+	// openAPIV2 represents an instance of a Swagger object.
 	// See https://github.com/OAI/OpenAPI-Specification
-	V2 struct {
+	openAPIV2 struct {
 		Swagger             string                         `json:"swagger,omitempty"`
 		Info                *Info                          `json:"info,omitempty"`
 		Host                string                         `json:"host,omitempty"`
