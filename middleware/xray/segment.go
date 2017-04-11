@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"strconv"
 	"sync"
@@ -79,16 +80,17 @@ type (
 
 	// Request describes a HTTP request.
 	Request struct {
-		Method    string `json:"method,omitempty"`
-		URL       string `json:"url,omitempty"`
-		UserAgent string `json:"user_agent,omitempty"`
-		ClientIP  string `json:"client_ip,omitempty"`
+		Method        string `json:"method,omitempty"`
+		URL           string `json:"url,omitempty"`
+		UserAgent     string `json:"user_agent,omitempty"`
+		ClientIP      string `json:"client_ip,omitempty"`
+		ContentLength int64  `json:"content_length"`
 	}
 
 	// Response describes a HTTP response.
 	Response struct {
-		Status        int `json:"status"`
-		ContentLength int `json:"content_length"`
+		Status        int   `json:"status"`
+		ContentLength int64 `json:"content_length"`
 	}
 
 	// Cause list errors that happens during the request.
@@ -157,6 +159,22 @@ func NewSegment(name, traceID, spanID string, conn net.Conn) *Segment {
 	}
 }
 
+// RecordResponse traces a response.
+//
+// It sets Throttle, Fault, Error and HTTP.Response
+func (s *Segment) RecordResponse(resp *http.Response) {
+	switch {
+	case resp.StatusCode == http.StatusTooManyRequests:
+		s.Throttle = true
+	case resp.StatusCode >= 400 && resp.StatusCode < 500:
+		s.Fault = true
+	case resp.StatusCode >= 500:
+		s.Error = true
+	}
+
+	s.HTTP.Response = responseData(resp)
+}
+
 // RecordError traces an error. The client may also want to initialize the
 // fault field of s.
 //
@@ -191,6 +209,7 @@ func (s *Segment) RecordError(e error) {
 
 	s.Lock()
 	defer s.Unlock()
+
 	if s.Cause == nil {
 		wd, _ := os.Getwd()
 		s.Cause = &Cause{WorkingDirectory: wd}
