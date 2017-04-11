@@ -23,9 +23,14 @@ func (mrt *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 }
 
 func TestTransportExample(t *testing.T) {
+	var (
+		responseBody = "good morning"
+	)
 	server := httptest.NewServer(http.HandlerFunc(
 		func(rw http.ResponseWriter, req *http.Request) {
-			rw.WriteHeader(http.StatusNoContent)
+			rw.WriteHeader(http.StatusOK)
+
+			rw.Write([]byte(responseBody))
 		}))
 	defer server.Close()
 
@@ -59,8 +64,8 @@ func TestTransportExample(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to make request - %s", err)
 		}
-		if resp.StatusCode != http.StatusNoContent {
-			t.Errorf("HTTP Response Status is invalid, expected %d got %d", http.StatusNoContent, resp.Status)
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("HTTP Response Status is invalid, expected %d got %d", http.StatusOK, resp.StatusCode)
 		}
 	})
 
@@ -85,7 +90,9 @@ func TestTransportExample(t *testing.T) {
 	if s.ParentID != parentSegment.ID {
 		t.Errorf("unexpected ParentID, expect %q - got %q", parentSegment.ID, s.ParentID)
 	}
-
+	if s.HTTP.Response.ContentLength != int64(len(responseBody)) {
+		t.Errorf("unexpected ContentLength, expect %d - got %d", len(responseBody), s.HTTP.Response.ContentLength)
+	}
 }
 
 func TestTransportNoSegmentInContext(t *testing.T) {
@@ -254,8 +261,8 @@ func TestTransport(t *testing.T) {
 		if s.ID == "" {
 			t.Errorf("%s: segment ID not set", k)
 		}
-		if s.TraceID == "" {
-			t.Errorf("%s: segment TraceID not set", k)
+		if s.TraceID != c.Trace.TraceID {
+			t.Errorf("%s: unexpected trace ID, expected %s - got %s", k, c.Trace.TraceID, s.TraceID)
 		}
 		if s.StartTime == 0 {
 			t.Errorf("%s: StartTime is 0", k)
