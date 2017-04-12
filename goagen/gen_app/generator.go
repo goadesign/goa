@@ -137,7 +137,7 @@ func (g *Generator) generateContexts() error {
 		codegen.SimpleImport("unicode/utf8"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
-		codegen.SimpleImport("golang.org/x/net/context"),
+		codegen.SimpleImport("context"),
 	}
 	g.API.IterateResources(func(r *design.ResourceDefinition) error {
 		return r.IterateActions(func(a *design.ActionDefinition) error {
@@ -212,7 +212,7 @@ func (g *Generator) generateControllers() error {
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("net/http"),
 		codegen.SimpleImport("fmt"),
-		codegen.SimpleImport("golang.org/x/net/context"),
+		codegen.SimpleImport("context"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("github.com/goadesign/goa/cors"),
 		codegen.SimpleImport("regexp"),
@@ -323,7 +323,7 @@ func (g *Generator) generateSecurity() error {
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("net/http"),
 		codegen.SimpleImport("errors"),
-		codegen.SimpleImport("golang.org/x/net/context"),
+		codegen.SimpleImport("context"),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 	}
 	secWr.WriteHeader(title, g.Target, imports)

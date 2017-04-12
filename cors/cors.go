@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/goadesign/goa"
 )

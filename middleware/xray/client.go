@@ -3,7 +3,7 @@ package xray
 import (
 	"net/http"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 type (

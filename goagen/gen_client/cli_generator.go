@@ -127,7 +127,7 @@ func (g *Generator) generateCommands(commandsFile string, clientPkg string, func
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("github.com/spf13/cobra"),
 		codegen.SimpleImport(clientPkg),
-		codegen.SimpleImport("golang.org/x/net/context"),
+		codegen.SimpleImport("context"),
 		codegen.SimpleImport("golang.org/x/net/websocket"),
 		codegen.NewImport("uuid", "github.com/goadesign/goa/uuid"),
 	}

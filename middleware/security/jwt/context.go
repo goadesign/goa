@@ -1,7 +1,7 @@
 package jwt
 
 import (
-	"golang.org/x/net/context"
+	"context"
 
 	jwt "github.com/dgrijalva/jwt-go"
 )

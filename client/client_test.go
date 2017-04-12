@@ -1,8 +1,9 @@
 package client_test
 
 import (
+	"context"
+
 	"github.com/goadesign/goa/client"
-	"golang.org/x/net/context"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

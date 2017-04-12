@@ -10,7 +10,7 @@ import (
 	"net/http/httputil"
 	"time"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/goadesign/goa"
 )
