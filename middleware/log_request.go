@@ -12,7 +12,7 @@ import (
 
 	"github.com/goadesign/goa"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // LogRequest creates a request logger middleware.

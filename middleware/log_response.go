@@ -5,7 +5,7 @@ import (
 
 	"github.com/goadesign/goa"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // loggingResponseWriter wraps an http.ResponseWriter and writes only raw

@@ -298,8 +298,8 @@ const contextsCodeTmpl = `// API "test api": Application Contexts
 package app
 
 import (
+	"context"
 	"github.com/goadesign/goa"
-	"golang.org/x/net/context"
 	"net/http"
 )
 
@@ -348,8 +348,8 @@ const controllersCodeTmpl = `// API "test api": Application Controllers
 package app
 
 import (
+	"context"
 	"github.com/goadesign/goa"
-	"golang.org/x/net/context"
 	"net/http"
 )
 

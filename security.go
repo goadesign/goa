@@ -1,6 +1,6 @@
 package goa
 
-import "golang.org/x/net/context"
+import "context"
 
 // Location is the enum defining where the value of key based security schemes should be read:
 // either a HTTP request header or a URL querystring value

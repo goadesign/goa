@@ -8,9 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"context"
+
 	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/middleware"
-	"golang.org/x/net/context"
 )
 
 const (
