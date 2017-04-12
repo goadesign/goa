@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // Keys used to store data in context.

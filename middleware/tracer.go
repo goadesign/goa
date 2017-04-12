@@ -4,9 +4,10 @@ import (
 	rd "math/rand"
 	"net/http"
 
+	"context"
+
 	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/client"
-	"golang.org/x/net/context"
 )
 
 var (

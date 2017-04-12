@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/middleware"

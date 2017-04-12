@@ -94,7 +94,7 @@ func (g *Generator) generateResourceTest() error {
 		codegen.SimpleImport(appPkg),
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport("github.com/goadesign/goa/goatest"),
-		codegen.SimpleImport("golang.org/x/net/context"),
+		codegen.SimpleImport("context"),
 		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
 

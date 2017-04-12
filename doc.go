@@ -16,8 +16,8 @@ encoding algorithms.
 Request Context
 
 The RequestData and ResponseData structs provides access to the request and response state. goa request
-handlers also accept a golang.org/x/net/Context interface as first parameter so that deadlines and
-cancelation signals may easily be implemented.
+handlers also accept a context.Context interface as first parameter so that deadlines and cancelation
+signals may easily be implemented.
 
 The request state exposes the underlying http.Request object as well as the deserialized payload (request
 body) and parameters (both path and querystring parameters). Generated action specific contexts wrap

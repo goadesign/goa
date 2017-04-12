@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"log"
 
+	"context"
+
 	"github.com/goadesign/goa"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"golang.org/x/net/context"
 )
 
 var _ = Describe("Info", func() {

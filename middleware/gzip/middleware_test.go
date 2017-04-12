@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/goadesign/goa"
 	gzm "github.com/goadesign/goa/middleware/gzip"
