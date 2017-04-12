@@ -1,8 +1,9 @@
 package jwt
 
 import (
+	"context"
+
 	jwt "github.com/dgrijalva/jwt-go"
-	"golang.org/x/net/context"
 )
 
 // WithJWT creates a child context containing the given JWT.

@@ -16,7 +16,7 @@ package goalogrus
 import (
 	"fmt"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/goadesign/goa"

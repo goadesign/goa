@@ -6,12 +6,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 
+	"context"
+
 	jwtpkg "github.com/dgrijalva/jwt-go"
 	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/middleware/security/jwt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"golang.org/x/net/context"
 )
 
 var _ = Describe("Middleware", func() {

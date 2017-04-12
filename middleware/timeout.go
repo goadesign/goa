@@ -6,7 +6,7 @@ import (
 
 	"github.com/goadesign/goa"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // Timeout sets a global timeout for all controller actions.
@@ -26,16 +26,6 @@ import (
 //			return err  		// forward its return value
 //		}
 //	}
-//
-// Package golang.org/x/net/context/ctxhttp contains an implementation of an HTTP client which is
-// context-aware:
-//
-// 	func (ctrl *Controller) HttpAction(ctx *HttpActionContext) error {
-//		req, err := http.NewRequest("GET", "http://iamaslowservice.com", nil)
-//		// ...
-//		resp, err := ctxhttp.Do(ctx, nil, req) // returns if timeout triggers
-//		// ...
-// 	}
 //
 // Controller actions can check if a timeout is set by calling the context Deadline method.
 func Timeout(timeout time.Duration) goa.Middleware {

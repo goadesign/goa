@@ -3,8 +3,9 @@ package basicauth
 import (
 	"net/http"
 
+	"context"
+
 	"github.com/goadesign/goa"
-	"golang.org/x/net/context"
 )
 
 // ErrBasicAuthFailed means it wasn't able to authenticate you with your login/password.

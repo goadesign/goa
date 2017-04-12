@@ -15,7 +15,7 @@ import (
 	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/middleware"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 const (

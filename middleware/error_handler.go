@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"context"
+
 	"github.com/goadesign/goa"
-	"golang.org/x/net/context"
 )
 
 // ErrorHandler turns a Go error into an HTTP response. It should be placed in the middleware chain

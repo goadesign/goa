@@ -8,7 +8,7 @@ import (
 
 	"github.com/goadesign/goa"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // Recover is a middleware that recovers panics and maps them to errors.

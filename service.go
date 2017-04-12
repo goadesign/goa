@@ -12,7 +12,7 @@ import (
 	"sort"
 	"strings"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 type (
@@ -118,7 +118,7 @@ func New(name string) *Service {
 }
 
 // CancelAll sends a cancel signals to all request handlers via the context.
-// See https://godoc.org/golang.org/x/net/context for details on how to handle the signal.
+// See https://golang.org/pkg/context/ for details on how to handle the signal.
 func (service *Service) CancelAll() {
 	service.cancel()
 }

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // ErrMissingLogValue is the value used to log keys with missing values

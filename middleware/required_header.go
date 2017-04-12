@@ -6,7 +6,7 @@ import (
 
 	"github.com/goadesign/goa"
 
-	"golang.org/x/net/context"
+	"context"
 )
 
 // RequireHeader requires a request header to match a value pattern. If the

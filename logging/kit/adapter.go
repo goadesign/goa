@@ -15,9 +15,10 @@ Usage:
 package goakit
 
 import (
+	"context"
+
 	"github.com/go-kit/kit/log"
 	"github.com/goadesign/goa"
-	"golang.org/x/net/context"
 )
 
 // adapter is the go-kit log goa logger adapter.
