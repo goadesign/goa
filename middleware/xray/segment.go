@@ -169,8 +169,12 @@ func (s *Segment) RecordRequest(req *http.Request, namespace string) {
 	s.Lock()
 	defer s.Unlock()
 
+	if s.HTTP == nil {
+		s.HTTP = &HTTP{}
+	}
+
 	s.Namespace = namespace
-	s.HTTP = &HTTP{Request: requestData(req)}
+	s.HTTP.Request = requestData(req)
 }
 
 // RecordResponse traces a response.
@@ -179,6 +183,10 @@ func (s *Segment) RecordRequest(req *http.Request, namespace string) {
 func (s *Segment) RecordResponse(resp *http.Response) {
 	s.Lock()
 	defer s.Unlock()
+
+	if s.HTTP == nil {
+		s.HTTP = &HTTP{}
+	}
 
 	switch {
 	case resp.StatusCode == http.StatusTooManyRequests:
@@ -203,6 +211,10 @@ func (s *Segment) RecordContextResponse(ctx context.Context) {
 
 	s.Lock()
 	defer s.Unlock()
+
+	if s.HTTP == nil {
+		s.HTTP = &HTTP{}
+	}
 
 	switch {
 	case resp.Status == http.StatusTooManyRequests:
