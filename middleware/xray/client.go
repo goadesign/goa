@@ -42,8 +42,7 @@ func (r *httpTracer) Do(req *http.Request) (*http.Response, error) {
 	sub := r.segment.NewSubsegment(req.URL.Host)
 	defer sub.Close()
 
-	sub.Namespace = "remote"
-	sub.HTTP = &HTTP{Request: requestData(req)}
+	sub.RecordRequest(req, "remote")
 
 	resp, err := r.client.Do(req)
 

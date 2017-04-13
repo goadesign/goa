@@ -67,7 +67,14 @@ func New(service, daemon string) (goa.Middleware, error) {
 			ctx = WithSegment(ctx, s)
 
 			defer func() {
-				go record(ctx, s, err)
+				go func() {
+					defer s.Close()
+
+					s.RecordContextResponse(ctx)
+					if err != nil {
+						s.RecordError(err)
+					}
+				}()
 			}()
 
 			err = h(ctx, rw, req)
@@ -112,11 +119,10 @@ func newSegment(ctx context.Context, traceID, name string, req *http.Request, c 
 	var (
 		spanID   = middleware.ContextSpanID(ctx)
 		parentID = middleware.ContextParentSpanID(ctx)
-		h        = &HTTP{Request: requestData(req)}
 	)
 
 	s := NewSegment(name, traceID, spanID, c)
-	s.HTTP = h
+	s.RecordRequest(req, "")
 
 	if parentID != "" {
 		s.ParentID = parentID
@@ -124,32 +130,6 @@ func newSegment(ctx context.Context, traceID, name string, req *http.Request, c 
 	}
 
 	return s
-}
-
-// record finalizes and sends the segment to the X-Ray daemon.
-func record(ctx context.Context, s *Segment, err error) {
-	resp := goa.ContextResponse(ctx)
-	if resp != nil {
-		s.Lock()
-		switch {
-		case resp.Status == 429:
-			s.Throttle = true
-		case resp.Status >= 500:
-			s.Error = true
-		}
-		s.HTTP.Response = &Response{resp.Status, int64(resp.Length)}
-		s.Unlock()
-	}
-	if err != nil {
-		fault := false
-		if gerr, ok := err.(goa.ServiceError); ok {
-			fault = gerr.ResponseStatus() < http.StatusInternalServerError &&
-				gerr.ResponseStatus() != http.StatusTooManyRequests
-		}
-		s.Fault = fault
-		s.RecordError(err)
-	}
-	s.Close()
 }
 
 // requestData creates a Request from a http.Request.
