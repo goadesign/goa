@@ -195,8 +195,7 @@ func TestTransport(t *testing.T) {
 				}
 
 				rw.WriteHeader(c.Response.Status)
-				_, err := rw.WriteString(c.Response.Body)
-				if err != nil {
+				if _, err := rw.WriteString(c.Response.Body); err != nil {
 					t.Fatalf("%s: failed to write response body - %s", k, err)
 				}
 				rw.Header().Set("Content-Length", fmt.Sprintf("%d", len(c.Response.Body)))
@@ -204,7 +203,7 @@ func TestTransport(t *testing.T) {
 
 				// Fixed in go1.8 with commit
 				// https://github.com/golang/go/commit/ea143c299040f8a270fb782c5efd3a3a5e6057a4
-				// to stay backwards compatible with go1.7, we set it manually
+				// to stay backwards compatible with go1.7, we set ContentLength manually
 				res.ContentLength = int64(len(c.Response.Body))
 
 				return res, nil
