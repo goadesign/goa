@@ -235,7 +235,7 @@ func TestRace(t *testing.T) {
 		s.RecordContextResponse(ctx)
 		s.RecordError(rErr)
 
-		s.NewSubsegment("sub")
+		sub := s.NewSubsegment("sub")
 		s.Capture("sub2", func() {})
 
 		s.AddAnnotation("k1", "v1")
@@ -246,6 +246,7 @@ func TestRace(t *testing.T) {
 		s.AddInt64Metadata("k2", 2)
 		s.AddBoolMetadata("k3", true)
 
+		sub.Close()
 		s.Close()
 
 		wg.Done()
