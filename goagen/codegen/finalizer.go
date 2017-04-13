@@ -114,7 +114,10 @@ func PrintVal(t design.DataType, val interface{}) string {
 	case t.IsPrimitive():
 		// For primitive types, simply print the value
 		s := fmt.Sprintf("%#v", val)
-		if t == design.DateTime {
+		switch t {
+		case design.Number:
+			s = fmt.Sprintf("%f", val)
+		case design.DateTime:
 			s = fmt.Sprintf("time.Parse(time.RFC3339, %s)", s)
 		}
 		return s
