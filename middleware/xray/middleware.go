@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	"context"
@@ -67,7 +66,14 @@ func New(service, daemon string) (goa.Middleware, error) {
 			ctx = WithSegment(ctx, s)
 
 			defer func() {
-				go record(ctx, s, err)
+				go func() {
+					defer s.Close()
+
+					s.RecordContextResponse(ctx)
+					if err != nil {
+						s.RecordError(err)
+					}
+				}()
 			}()
 
 			err = h(ctx, rw, req)
@@ -112,11 +118,10 @@ func newSegment(ctx context.Context, traceID, name string, req *http.Request, c 
 	var (
 		spanID   = middleware.ContextSpanID(ctx)
 		parentID = middleware.ContextParentSpanID(ctx)
-		h        = &HTTP{Request: requestData(req)}
 	)
 
 	s := NewSegment(name, traceID, spanID, c)
-	s.HTTP = h
+	s.RecordRequest(req, "")
 
 	if parentID != "" {
 		s.ParentID = parentID
@@ -124,81 +129,6 @@ func newSegment(ctx context.Context, traceID, name string, req *http.Request, c 
 	}
 
 	return s
-}
-
-// record finalizes and sends the segment to the X-Ray daemon.
-func record(ctx context.Context, s *Segment, err error) {
-	resp := goa.ContextResponse(ctx)
-	if resp != nil {
-		s.Lock()
-		switch {
-		case resp.Status == 429:
-			s.Throttle = true
-		case resp.Status >= 500:
-			s.Error = true
-		}
-		s.HTTP.Response = &Response{resp.Status, int64(resp.Length)}
-		s.Unlock()
-	}
-	if err != nil {
-		fault := false
-		if gerr, ok := err.(goa.ServiceError); ok {
-			fault = gerr.ResponseStatus() < http.StatusInternalServerError &&
-				gerr.ResponseStatus() != http.StatusTooManyRequests
-		}
-		s.Fault = fault
-		s.RecordError(err)
-	}
-	s.Close()
-}
-
-// requestData creates a Request from a http.Request.
-func requestData(req *http.Request) *Request {
-	var (
-		scheme = "http"
-		host   = req.Host
-	)
-	if len(req.URL.Scheme) > 0 {
-		scheme = req.URL.Scheme
-	}
-	if len(req.URL.Host) > 0 {
-		host = req.URL.Host
-	}
-	return &Request{
-		Method:        req.Method,
-		URL:           fmt.Sprintf("%s://%s%s", scheme, host, req.URL.Path),
-		ClientIP:      getIP(req),
-		UserAgent:     req.UserAgent(),
-		ContentLength: req.ContentLength,
-	}
-}
-
-// responseData creates a Response from a http.Response.
-func responseData(resp *http.Response) *Response {
-	return &Response{
-		Status:        resp.StatusCode,
-		ContentLength: resp.ContentLength,
-	}
-}
-
-// getIP implements a heuristic that returns an origin IP address for a request.
-func getIP(req *http.Request) string {
-	for _, h := range []string{"X-Forwarded-For", "X-Real-Ip"} {
-		for _, ip := range strings.Split(req.Header.Get(h), ",") {
-			if len(ip) == 0 {
-				continue
-			}
-			realIP := net.ParseIP(strings.Replace(ip, " ", "", -1))
-			return realIP.String()
-		}
-	}
-
-	// not found in header
-	host, _, err := net.SplitHostPort(req.RemoteAddr)
-	if err != nil {
-		return req.RemoteAddr
-	}
-	return host
 }
 
 // now returns the current time as a float appropriate for X-Ray processing.

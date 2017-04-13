@@ -1,6 +1,7 @@
 package xray
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net"
@@ -14,8 +15,6 @@ import (
 
 	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/middleware"
-
-	"context"
 )
 
 const (
