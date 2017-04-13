@@ -1,6 +1,7 @@
 package xray
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -9,6 +10,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/goadesign/goa"
 	"github.com/pkg/errors"
 )
 
@@ -159,10 +161,24 @@ func NewSegment(name, traceID, spanID string, conn net.Conn) *Segment {
 	}
 }
 
+// RecordRequest traces a request.
+//
+// It sets Http.Request & Namespace (ex: "remote")
+func (s *Segment) RecordRequest(req *http.Request, namespace string) {
+	s.Lock()
+	defer s.Unlock()
+
+	s.Namespace = namespace
+	s.HTTP = &HTTP{Request: requestData(req)}
+}
+
 // RecordResponse traces a response.
 //
 // It sets Throttle, Fault, Error and HTTP.Response
 func (s *Segment) RecordResponse(resp *http.Response) {
+	s.Lock()
+	defer s.Unlock()
+
 	switch {
 	case resp.StatusCode == http.StatusTooManyRequests:
 		s.Throttle = true
@@ -173,6 +189,29 @@ func (s *Segment) RecordResponse(resp *http.Response) {
 	}
 
 	s.HTTP.Response = responseData(resp)
+}
+
+// RecordContextResponse traces a context response if present in the context
+//
+// It sets Throttle, Fault, Error and HTTP.Response
+func (s *Segment) RecordContextResponse(ctx context.Context) {
+	resp := goa.ContextResponse(ctx)
+	if resp == nil {
+		return
+	}
+
+	s.Lock()
+	defer s.Unlock()
+
+	switch {
+	case resp.Status == http.StatusTooManyRequests:
+		s.Throttle = true
+	case resp.Status >= 400 && resp.Status < 500:
+		s.Fault = true
+	case resp.Status >= 500:
+		s.Error = true
+	}
+	s.HTTP.Response = &Response{resp.Status, int64(resp.Length)}
 }
 
 // RecordError traces an error. The client may also want to initialize the
@@ -228,6 +267,7 @@ func (s *Segment) RecordError(e error) {
 func (s *Segment) NewSubsegment(name string) *Segment {
 	s.Lock()
 	defer s.Unlock()
+
 	sub := &Segment{
 		Mutex:      &sync.Mutex{},
 		ID:         NewID(),
@@ -279,6 +319,7 @@ func (s *Segment) AddBoolAnnotation(key string, value bool) {
 func (s *Segment) addAnnotation(key string, value interface{}) {
 	s.Lock()
 	defer s.Unlock()
+
 	if s.Annotations == nil {
 		s.Annotations = make(map[string]interface{})
 	}
@@ -306,6 +347,7 @@ func (s *Segment) AddBoolMetadata(key string, value bool) {
 func (s *Segment) addMetadata(key string, value interface{}) {
 	s.Lock()
 	defer s.Unlock()
+
 	if s.Metadata == nil {
 		s.Metadata = make(map[string]map[string]interface{})
 		s.Metadata["default"] = make(map[string]interface{})
@@ -317,6 +359,7 @@ func (s *Segment) addMetadata(key string, value interface{}) {
 func (s *Segment) Close() {
 	s.Lock()
 	defer s.Unlock()
+
 	s.EndTime = now()
 	s.InProgress = false
 	if s.Parent != nil {
@@ -338,6 +381,7 @@ func (s *Segment) flush() {
 func (s *Segment) decrementCounter() {
 	s.Lock()
 	defer s.Unlock()
+
 	s.counter--
 	if s.counter <= 0 && s.EndTime != 0 {
 		// Segment is closed and last subsegment closed, flush it
