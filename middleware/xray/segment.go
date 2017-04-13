@@ -188,14 +188,7 @@ func (s *Segment) RecordResponse(resp *http.Response) {
 		s.HTTP = &HTTP{}
 	}
 
-	switch {
-	case resp.StatusCode == http.StatusTooManyRequests:
-		s.Throttle = true
-	case resp.StatusCode >= 400 && resp.StatusCode < 500:
-		s.Fault = true
-	case resp.StatusCode >= 500:
-		s.Error = true
-	}
+	s.recordStatusCode(resp.StatusCode)
 
 	s.HTTP.Response = responseData(resp)
 }
@@ -216,14 +209,7 @@ func (s *Segment) RecordContextResponse(ctx context.Context) {
 		s.HTTP = &HTTP{}
 	}
 
-	switch {
-	case resp.Status == http.StatusTooManyRequests:
-		s.Throttle = true
-	case resp.Status >= 400 && resp.Status < 500:
-		s.Fault = true
-	case resp.Status >= 500:
-		s.Error = true
-	}
+	s.recordStatusCode(resp.Status)
 	s.HTTP.Response = &Response{resp.Status, int64(resp.Length)}
 }
 
@@ -367,6 +353,20 @@ func (s *Segment) flush() {
 	s.conn.Write(append([]byte(udpHeader), b...))
 }
 
+// recordStatusCode sets Throttle, Fault, Error
+//
+// It is expected that the mutex has already been locked when calling this method.
+func (s *Segment) recordStatusCode(statusCode int) {
+	switch {
+	case statusCode == http.StatusTooManyRequests:
+		s.Throttle = true
+	case statusCode >= 400 && statusCode < 500:
+		s.Fault = true
+	case statusCode >= 500:
+		s.Error = true
+	}
+}
+
 // decrementCounter decrements the segment counter and flushes it if it's 0.
 func (s *Segment) decrementCounter() {
 	s.Lock()
@@ -421,6 +421,7 @@ func requestData(req *http.Request) *Request {
 	if len(req.URL.Host) > 0 {
 		host = req.URL.Host
 	}
+
 	return &Request{
 		Method:        req.Method,
 		URL:           fmt.Sprintf("%s://%s%s", scheme, host, req.URL.Path),
