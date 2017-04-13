@@ -1817,7 +1817,7 @@ func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Ser
 	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
 	paramParam := req.Params["param"]
 	if len(paramParam) == 0 {
-		rctx.Param = 2.3
+		rctx.Param = 2.300000
 	} else {
 		rawParam := paramParam[0]
 		if param, err2 := strconv.ParseFloat(rawParam, 64); err2 == nil {
