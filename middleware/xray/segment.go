@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/goadesign/goa"
@@ -221,30 +222,7 @@ func (s *Segment) RecordContextResponse(ctx context.Context) {
 // was created using one of the New, Errorf, Wrap or Wrapf functions of the
 // github.com/pkg/errors package. Otherwise the Stack and Cause fields are empty.
 func (s *Segment) RecordError(e error) {
-	var xerr *Exception
-	if c, ok := e.(causer); ok {
-		xerr = &Exception{Message: c.Cause().Error()}
-	} else {
-		xerr = &Exception{Message: e.Error()}
-	}
-	if s, ok := e.(stackTracer); ok {
-		st := s.StackTrace()
-		ln := len(st)
-		if ln > maxStackDepth {
-			ln = maxStackDepth
-		}
-		frames := make([]*StackEntry, ln)
-		for i := 0; i < ln; i++ {
-			f := st[i]
-			line, _ := strconv.Atoi(fmt.Sprintf("%d", f))
-			frames[i] = &StackEntry{
-				Path:  fmt.Sprintf("%s", f),
-				Line:  line,
-				Label: fmt.Sprintf("%n", f),
-			}
-		}
-		xerr.Stack = frames
-	}
+	xerr := exceptionData(e)
 
 	s.Lock()
 	defer s.Unlock()
@@ -387,4 +365,83 @@ func (s *Segment) decrementCounter() {
 		// Segment is closed and last subsegment closed, flush it
 		s.flush()
 	}
+}
+
+// exceptionData creates an Exception from an error.
+func exceptionData(e error) *Exception {
+	var xerr *Exception
+	if c, ok := e.(causer); ok {
+		xerr = &Exception{Message: c.Cause().Error()}
+	} else {
+		xerr = &Exception{Message: e.Error()}
+	}
+	if s, ok := e.(stackTracer); ok {
+		st := s.StackTrace()
+		ln := len(st)
+		if ln > maxStackDepth {
+			ln = maxStackDepth
+		}
+		frames := make([]*StackEntry, ln)
+		for i := 0; i < ln; i++ {
+			f := st[i]
+			line, _ := strconv.Atoi(fmt.Sprintf("%d", f))
+			frames[i] = &StackEntry{
+				Path:  fmt.Sprintf("%s", f),
+				Line:  line,
+				Label: fmt.Sprintf("%n", f),
+			}
+		}
+		xerr.Stack = frames
+	}
+
+	return xerr
+}
+
+// requestData creates a Request from a http.Request.
+func requestData(req *http.Request) *Request {
+	var (
+		scheme = "http"
+		host   = req.Host
+	)
+	if len(req.URL.Scheme) > 0 {
+		scheme = req.URL.Scheme
+	}
+	if len(req.URL.Host) > 0 {
+		host = req.URL.Host
+	}
+	return &Request{
+		Method:        req.Method,
+		URL:           fmt.Sprintf("%s://%s%s", scheme, host, req.URL.Path),
+		ClientIP:      getIP(req),
+		UserAgent:     req.UserAgent(),
+		ContentLength: req.ContentLength,
+	}
+}
+
+// responseData creates a Response from a http.Response.
+func responseData(resp *http.Response) *Response {
+	return &Response{
+		Status:        resp.StatusCode,
+		ContentLength: resp.ContentLength,
+	}
+}
+
+// getIP implements a heuristic that returns an origin IP address for a request.
+func getIP(req *http.Request) string {
+	for _, h := range []string{"X-Forwarded-For", "X-Real-Ip"} {
+		for _, ip := range strings.Split(req.Header.Get(h), ",") {
+			if len(ip) == 0 {
+				continue
+			}
+			realIP := net.ParseIP(strings.Replace(ip, " ", "", -1))
+			return realIP.String()
+		}
+	}
+
+	// not found in header
+	host, _, err := net.SplitHostPort(req.RemoteAddr)
+	if err != nil {
+		return req.RemoteAddr
+	}
+	return host
 }

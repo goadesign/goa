@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	"context"
@@ -130,55 +129,6 @@ func newSegment(ctx context.Context, traceID, name string, req *http.Request, c 
 	}
 
 	return s
-}
-
-// requestData creates a Request from a http.Request.
-func requestData(req *http.Request) *Request {
-	var (
-		scheme = "http"
-		host   = req.Host
-	)
-	if len(req.URL.Scheme) > 0 {
-		scheme = req.URL.Scheme
-	}
-	if len(req.URL.Host) > 0 {
-		host = req.URL.Host
-	}
-	return &Request{
-		Method:        req.Method,
-		URL:           fmt.Sprintf("%s://%s%s", scheme, host, req.URL.Path),
-		ClientIP:      getIP(req),
-		UserAgent:     req.UserAgent(),
-		ContentLength: req.ContentLength,
-	}
-}
-
-// responseData creates a Response from a http.Response.
-func responseData(resp *http.Response) *Response {
-	return &Response{
-		Status:        resp.StatusCode,
-		ContentLength: resp.ContentLength,
-	}
-}
-
-// getIP implements a heuristic that returns an origin IP address for a request.
-func getIP(req *http.Request) string {
-	for _, h := range []string{"X-Forwarded-For", "X-Real-Ip"} {
-		for _, ip := range strings.Split(req.Header.Get(h), ",") {
-			if len(ip) == 0 {
-				continue
-			}
-			realIP := net.ParseIP(strings.Replace(ip, " ", "", -1))
-			return realIP.String()
-		}
-	}
-
-	// not found in header
-	host, _, err := net.SplitHostPort(req.RemoteAddr)
-	if err != nil {
-		return req.RemoteAddr
-	}
-	return host
 }
 
 // now returns the current time as a float appropriate for X-Ray processing.
