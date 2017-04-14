@@ -213,7 +213,7 @@ func InvalidRangeError(ctx string, target interface{}, value interface{}, min bo
 	if !min {
 		comp = "less than or equal to"
 	}
-	msg := fmt.Sprintf("%s must be %s than %d but got value %#v", ctx, comp, value, target)
+	msg := fmt.Sprintf("%s must be %s %v but got value %#v", ctx, comp, value, target)
 	return ErrInvalidRequest(msg, "attribute", ctx, "value", target, "comp", comp, "expected", value)
 }
 
