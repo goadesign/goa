@@ -133,7 +133,7 @@ func GoTypeDef(dt design.DataType) string {
 	case design.Object:
 		return goTypeDefObject(actual)
 	case design.UserType:
-		return GoTypeName(actual.Attribute().Type)
+		return GoTypeName(actual)
 	default:
 		panic("goa bug: unknown data structure type")
 	}

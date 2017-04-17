@@ -26,8 +26,8 @@ func TestGoTypeDef(t *testing.T) {
 		"Array":         {&design.Array{&design.AttributeExpr{Type: design.Boolean}}, "[]bool"},
 		"Map":           {&design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}, "map[int]string"},
 		"Object":        {design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}, "struct {\n\tIntField int\n\tStringField string\n}"},
-		"UserTypeExpr":  {&design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{Type: design.Boolean}, TypeName: "UserType"}, "bool"},
-		"MediaTypeExpr": {&design.MediaTypeExpr{UserTypeExpr: &design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{Type: design.Boolean}}, Identifier: "application/vnd.goa.example", Views: nil}, "bool"},
+		"UserTypeExpr":  {&design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{Type: design.Boolean}, TypeName: "UserType"}, "UserType"},
+		"MediaTypeExpr": {&design.MediaTypeExpr{UserTypeExpr: &design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{Type: design.Boolean}, TypeName: "MediaType"}, Identifier: "application/vnd.goa.example", Views: nil}, "MediaType"},
 	}
 
 	for k, tc := range cases {
@@ -75,7 +75,7 @@ func TestGoNativeType(t *testing.T) {
 		"Map":           {&design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}, "map[int]string"},
 		"Object":        {design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}, "map[string]interface{}"},
 		"UserTypeExpr":  {&design.UserTypeExpr{TypeName: "UserType"}, "UserType"},
-		"MediaTypeExpr": {&design.MediaTypeExpr{Identifier: "application/vnd.goa.example", Views: nil}, "application/vnd.goa.example"},
+		"MediaTypeExpr": {&design.MediaTypeExpr{UserTypeExpr: &design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{Type: design.Boolean}, TypeName: "MediaType"}, Identifier: "application/vnd.goa.example", Views: nil}, "MediaType"},
 	}
 
 	for k, tc := range cases {
