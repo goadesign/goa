@@ -10,7 +10,7 @@ const (
 	// Major version number
 	Major = 1
 	// Minor version number
-	Minor = 1
+	Minor = 2
 )
 
 var (
