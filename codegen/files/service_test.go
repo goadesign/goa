@@ -81,11 +81,43 @@ func TestService(t *testing.T) {
 )
 `
 
-		nopayloadMethods = `type (
-	// NoPayload is the NoPayload service interface.
-	NoPayload interface {
-		// NoPayload implements the NoPayload endpoint.
-		NoPayload(context.Context) error
+		emptyMethods = `type (
+	// Empty is the Empty service interface.
+	Empty interface {
+		// Empty implements the Empty endpoint.
+		Empty(context.Context) error
+	}
+)
+`
+
+		emptyResultMethods = `type (
+	// EmptyResult is the EmptyResult service interface.
+	EmptyResult interface {
+		// EmptyResult implements the EmptyResult endpoint.
+		EmptyResult(context.Context, *APayload) error
+	}
+
+	APayload struct {
+		BooleanField bool
+		BytesField   []byte
+		IntField     int
+		StringField  string
+	}
+)
+`
+
+		emptyPayloadMethods = `type (
+	// EmptyPayload is the EmptyPayload service interface.
+	EmptyPayload interface {
+		// EmptyPayload implements the EmptyPayload endpoint.
+		EmptyPayload(context.Context) (AResult, error)
+	}
+
+	AResult struct {
+		BooleanField bool
+		BytesField   []byte
+		IntField     int
+		StringField  string
 	}
 )
 `
@@ -116,54 +148,74 @@ func TestService(t *testing.T) {
 	}
 
 	var (
+		apayload = design.UserTypeExpr{
+			TypeName: "APayload",
+			AttributeExpr: &design.AttributeExpr{Type: design.Object{
+				"IntField":     &design.AttributeExpr{Type: design.Int},
+				"StringField":  &design.AttributeExpr{Type: design.String},
+				"BooleanField": &design.AttributeExpr{Type: design.Boolean},
+				"BytesField":   &design.AttributeExpr{Type: design.Bytes},
+			}},
+		}
+
+		bpayload = design.UserTypeExpr{
+			TypeName: "BPayload",
+			AttributeExpr: &design.AttributeExpr{Type: design.Object{
+				"ArrayField":    &design.AttributeExpr{Type: &design.Array{&design.AttributeExpr{Type: design.Boolean}}},
+				"MapField":      &design.AttributeExpr{Type: &design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}},
+				"ObjectField":   &design.AttributeExpr{Type: design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}},
+				"UserTypeField": &design.AttributeExpr{Type: parent},
+			}},
+		}
+
+		aresult = design.UserTypeExpr{
+			TypeName: "AResult",
+			AttributeExpr: &design.AttributeExpr{Type: design.Object{
+				"IntField":     &design.AttributeExpr{Type: design.Int},
+				"StringField":  &design.AttributeExpr{Type: design.String},
+				"BooleanField": &design.AttributeExpr{Type: design.Boolean},
+				"BytesField":   &design.AttributeExpr{Type: design.Bytes},
+			}},
+		}
+
+		bresult = design.UserTypeExpr{
+			TypeName: "BResult",
+			AttributeExpr: &design.AttributeExpr{Type: design.Object{
+				"ArrayField":    &design.AttributeExpr{Type: &design.Array{&design.AttributeExpr{Type: design.Boolean}}},
+				"MapField":      &design.AttributeExpr{Type: &design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}},
+				"ObjectField":   &design.AttributeExpr{Type: design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}},
+				"UserTypeField": &design.AttributeExpr{Type: parent},
+			}},
+		}
+
 		a = design.EndpointExpr{
-			Name: "A",
-			Payload: &design.UserTypeExpr{
-				TypeName: "APayload",
-				AttributeExpr: &design.AttributeExpr{Type: design.Object{
-					"IntField":     &design.AttributeExpr{Type: design.Int},
-					"StringField":  &design.AttributeExpr{Type: design.String},
-					"BooleanField": &design.AttributeExpr{Type: design.Boolean},
-					"BytesField":   &design.AttributeExpr{Type: design.Bytes},
-				}},
-			},
-			Result: &design.UserTypeExpr{
-				TypeName: "AResult",
-				AttributeExpr: &design.AttributeExpr{Type: design.Object{
-					"IntField":     &design.AttributeExpr{Type: design.Int},
-					"StringField":  &design.AttributeExpr{Type: design.String},
-					"BooleanField": &design.AttributeExpr{Type: design.Boolean},
-					"BytesField":   &design.AttributeExpr{Type: design.Bytes},
-				}},
-			},
+			Name:    "A",
+			Payload: &apayload,
+			Result:  &aresult,
 		}
 
 		b = design.EndpointExpr{
-			Name: "B",
-			Payload: &design.UserTypeExpr{
-				TypeName: "BPayload",
-				AttributeExpr: &design.AttributeExpr{Type: design.Object{
-					"ArrayField":    &design.AttributeExpr{Type: &design.Array{&design.AttributeExpr{Type: design.Boolean}}},
-					"MapField":      &design.AttributeExpr{Type: &design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}},
-					"ObjectField":   &design.AttributeExpr{Type: design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}},
-					"UserTypeField": &design.AttributeExpr{Type: parent},
-				}},
-			},
-			Result: &design.UserTypeExpr{
-				TypeName: "BResult",
-				AttributeExpr: &design.AttributeExpr{Type: design.Object{
-					"ArrayField":    &design.AttributeExpr{Type: &design.Array{&design.AttributeExpr{Type: design.Boolean}}},
-					"MapField":      &design.AttributeExpr{Type: &design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}},
-					"ObjectField":   &design.AttributeExpr{Type: design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}},
-					"UserTypeField": &design.AttributeExpr{Type: parent},
-				}},
-			},
+			Name:    "B",
+			Payload: &bpayload,
+			Result:  &bresult,
 		}
 
-		nopayload = design.EndpointExpr{
-			Name:    "NoPayload",
+		empty = design.EndpointExpr{
+			Name:    "Empty",
 			Payload: design.Empty,
 			Result:  design.Empty,
+		}
+
+		emptyResult = design.EndpointExpr{
+			Name:    "EmptyResult",
+			Payload: &apayload,
+			Result:  design.Empty,
+		}
+
+		emptyPayload = design.EndpointExpr{
+			Name:    "EmptyPayload",
+			Payload: design.Empty,
+			Result:  &aresult,
 		}
 
 		singleEndpoint = design.ServiceExpr{
@@ -181,10 +233,24 @@ func TestService(t *testing.T) {
 			},
 		}
 
-		nopayloadEndpoint = design.ServiceExpr{
-			Name: "NoPayload",
+		emptyEndpoint = design.ServiceExpr{
+			Name: "Empty",
 			Endpoints: []*design.EndpointExpr{
-				&nopayload,
+				&empty,
+			},
+		}
+
+		emptyResultEndpoint = design.ServiceExpr{
+			Name: "EmptyResult",
+			Endpoints: []*design.EndpointExpr{
+				&emptyResult,
+			},
+		}
+
+		emptyPayloadEndpoint = design.ServiceExpr{
+			Name: "EmptyPayload",
+			Endpoints: []*design.EndpointExpr{
+				&emptyPayload,
 			},
 		}
 	)
@@ -193,9 +259,11 @@ func TestService(t *testing.T) {
 		Service  *design.ServiceExpr
 		Expected string
 	}{
-		"single":    {Service: &singleEndpoint, Expected: singleMethod},
-		"multiple":  {Service: &multipleEndpoints, Expected: multipleMethods},
-		"nopayload": {Service: &nopayloadEndpoint, Expected: nopayloadMethods},
+		"single":                             {Service: &singleEndpoint, Expected: singleMethod},
+		"multiple":                           {Service: &multipleEndpoints, Expected: multipleMethods},
+		"empty payload, empty result":        {Service: &emptyEndpoint, Expected: emptyMethods},
+		"non empty payload but empty result": {Service: &emptyResultEndpoint, Expected: emptyResultMethods},
+		"empty payload and non empty result": {Service: &emptyPayloadEndpoint, Expected: emptyPayloadMethods},
 	}
 	for k, tc := range cases {
 		buf := new(bytes.Buffer)
