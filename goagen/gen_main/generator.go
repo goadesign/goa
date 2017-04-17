@@ -205,9 +205,16 @@ func (g *Generator) createMainFile(mainFile string, funcs template.FuncMap) erro
 	}
 	file.Write([]byte("//go:generate goagen bootstrap -d " + g.DesignPkg + "\n\n"))
 	file.WriteHeader("", "main", imports)
+	tls := false
+	for _, scheme := range g.API.Schemes {
+		if scheme == "https" {
+			tls = true
+		}
+	}
 	data := map[string]interface{}{
 		"Name": g.API.Name,
 		"API":  g.API,
+		"TLS":  tls,
 	}
 	if err = file.ExecuteTemplate("main", mainT, funcs, data); err != nil {
 		return err
@@ -346,9 +353,16 @@ func main() {
 	{{ targetPkg }}.Mount{{ $name }}Controller(service, {{ $tmp }})
 {{ end }}
 
+{{ if .TLS }}
+	// Start service
+	if err := service.ListenAndServeTLS(":{{ getPort .API.Host }}", "cert.pem", "key.pem"); err != nil {
+		service.LogError("startup", "err", err)
+	}
+{{ else }}
 	// Start service
 	if err := service.ListenAndServe(":{{ getPort .API.Host }}"); err != nil {
 		service.LogError("startup", "err", err)
 	}
+{{ end }}
 }
 `
