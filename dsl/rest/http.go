@@ -207,7 +207,7 @@ func Docs(fn func()) {
 
 // GET defines a route using the GET HTTP method. The route may use wildcards to
 // define path parameters. Wildcards start with '{' or with '{*' and end with
-// '}'.
+// '}'. They must appear after a '/'.
 //
 // A wildcard that starts with '{' matches a section of the path (the value in
 // between two slashes).
@@ -225,7 +225,7 @@ func Docs(fn func()) {
 //             Payload(GetAccount)
 //             Result(Account)
 //             HTTP(func() {
-//                 GET("/{accountID}")
+//                 GET("/{accountID}/details")
 //                 GET("/{*accountPath}")
 //             })
 //         })

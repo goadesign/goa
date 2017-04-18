@@ -60,13 +60,13 @@ func MountListAccountHandler(mux rest.ServeMux, h http.Handler) {
 // MountShowAccountHandler configures the mux to serve the
 // "account" service "show" endpoint.
 func MountShowAccountHandler(mux rest.ServeMux, h http.Handler) {
-	mux.Handle("GET", "/accounts/:id", h)
+	mux.Handle("GET", "/accounts/{id}", h)
 }
 
 // MountDeleteAccountHandler configures the mux to serve the
 // "account" service "delete" endpoint.
 func MountDeleteAccountHandler(mux rest.ServeMux, h http.Handler) {
-	mux.Handle("DELETE", "/accounts/:id", h)
+	mux.Handle("DELETE", "/accounts/{id}", h)
 }
 
 // NewCreateAccountHandler creates a HTTP handler which loads the HTTP
