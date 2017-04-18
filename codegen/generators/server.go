@@ -22,7 +22,7 @@ func Server(roots ...eval.Root) ([]codegen.File, error) {
 		switch r := root.(type) {
 		case *design.RootExpr:
 			for _, s := range r.Services {
-				des = append(des, files.Service(r.API, s))
+				des = append(des, files.Service(s))
 				des = append(des, files.Endpoint(s))
 			}
 		case *rest.RootExpr:

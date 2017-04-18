@@ -177,8 +177,8 @@ func (m *MediaTypeExpr) Dup(att *AttributeExpr) UserType {
 	}
 }
 
-// Name returns the media type canonical identifier.
-func (m *MediaTypeExpr) Name() string { return CanonicalIdentifier(m.Identifier) }
+// Name returns the media type name.
+func (m *MediaTypeExpr) Name() string { return m.TypeName }
 
 // View returns the view with the given name.
 func (m *MediaTypeExpr) View(name string) *ViewExpr {
