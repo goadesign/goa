@@ -142,7 +142,7 @@ func GoTypeDef(dt design.DataType) string {
 func goTypeDefObject(o design.Object) string {
 	var ss []string
 	ss = append(ss, "struct {")
-	o.WalkAttributes(func(name string, at *design.AttributeExpr) error {
+	WalkAttributes(o, func(name string, at *design.AttributeExpr) error {
 		ss = append(ss, fmt.Sprintf("\t%s %s", name, GoTypeName(at.Type)))
 		return nil
 	})

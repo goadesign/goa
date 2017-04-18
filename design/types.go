@@ -520,6 +520,8 @@ func toReflectType(dtype DataType) reflect.Type {
 		return reflect.TypeOf(float64(0))
 	case StringKind:
 		return reflect.TypeOf("")
+	case BytesKind:
+		return reflect.TypeOf([]byte{})
 	case ObjectKind, UserTypeKind, MediaTypeKind:
 		return reflect.TypeOf(map[string]interface{}{})
 	case ArrayKind:

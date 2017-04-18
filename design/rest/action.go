@@ -48,7 +48,7 @@ type (
 	RouteExpr struct {
 		// Method is the HTTP method, e.g. "GET", "POST", etc.
 		Method string
-		// Path is the URL path e.g. "/tasks/:id"
+		// Path is the URL path e.g. "/tasks/{id}"
 		Path string
 		// Action is the action this route applies to.
 		Action *ActionExpr
@@ -84,15 +84,19 @@ func (a *ActionExpr) EvalName() string {
 // PathParams returns the path parameters of the action across all its routes.
 func (a *ActionExpr) PathParams() *MappedAttributeExpr {
 	params := a.AllParams()
-	pp := make(map[string]struct{})
+	qparams := a.QueryParams()
+	for attName := range qparams.Type.(design.Object) {
+		params.Delete(attName)
+	}
+	return params
+}
+
+// QueryParams returns the query parameters of the action across all its routes.
+func (a *ActionExpr) QueryParams() *MappedAttributeExpr {
+	params := a.AllParams()
 	for _, r := range a.Routes {
 		for _, p := range r.Params() {
-			pp[p] = struct{}{}
-		}
-	}
-	for name := range params.Type.(design.Object) {
-		if _, ok := pp[name]; !ok {
-			params.Delete(name)
+			params.Delete(strings.Split(p, ":")[0])
 		}
 	}
 	return params
@@ -120,6 +124,8 @@ func (a *ActionExpr) AllParams() *MappedAttributeExpr {
 }
 
 // Headers initializes and returns the attribute holding the action headers.
+// The underlying object type keys are the raw values as defined in the design.
+// Use MappedHeaders to retrieve the corresponding mapped attributes.
 func (a *ActionExpr) Headers() *design.AttributeExpr {
 	if a.headers == nil {
 		a.headers = &design.AttributeExpr{Type: make(design.Object)}
@@ -133,6 +139,8 @@ func (a *ActionExpr) MappedHeaders() *MappedAttributeExpr {
 }
 
 // Params initializes and returns the attribute holding the action parameters.
+// The underlying object type keys are the raw values as defined in the design.
+// Use MappedParams to retrieve the corresponding mapped attributes.
 func (a *ActionExpr) Params() *design.AttributeExpr {
 	if a.params == nil {
 		a.params = &design.AttributeExpr{Type: make(design.Object)}
@@ -220,7 +228,7 @@ func (r *RouteExpr) EvalName() string {
 }
 
 // Params returns the route parameters.
-// For example for the route "GET /foo/:fooID" Params returns []string{"fooID"}.
+// For example for the route "GET /foo/{fooID}" Params returns []string{"fooID"}.
 func (r *RouteExpr) Params() []string {
 	return ExtractRouteWildcards(r.FullPath())
 }

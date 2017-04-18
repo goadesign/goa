@@ -24,7 +24,8 @@ type (
 // stops if there is no more attribute to iterate over or if the iterator
 // function returns an error in which case it returns the error.
 func WalkMappedAttr(ma *rest.MappedAttributeExpr, it MappedAttributeWalker) error {
-	keys := make([]string, len(design.AsObject(ma.Type)))
+	o := design.AsObject(ma.Type)
+	keys := make([]string, len(o))
 	i := 0
 	for key := range design.AsObject(ma.Type) {
 		keys[i] = key
@@ -32,7 +33,7 @@ func WalkMappedAttr(ma *rest.MappedAttributeExpr, it MappedAttributeWalker) erro
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		if err := it(k, ma.ElemName(k), ma.IsRequired(k), ma.AttributeExpr); err != nil {
+		if err := it(k, ma.ElemName(k), ma.IsRequired(k), o[k]); err != nil {
 			return err
 		}
 	}
