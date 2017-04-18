@@ -14,8 +14,9 @@ var (
 	// Root holds the root expression built on process initialization.
 	Root = &RootExpr{Design: design.Root}
 
-	// WildcardRegex is the regular expression used to capture path parameters.
-	WildcardRegex = regexp.MustCompile(`/(?::|\*)([a-zA-Z0-9_]+)`)
+	// WildcardRegex is the regular expression used to capture path
+	// parameters.
+	WildcardRegex = regexp.MustCompile(`/{\*?([a-zA-Z0-9_]+)}`)
 
 	// ErrorMedia is the built-in media type for error responses.
 	ErrorMedia = design.ErrorMedia

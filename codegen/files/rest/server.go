@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"text/template"
 
+	"net/http"
+	"strings"
+
 	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/codegen/files"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
-	"net/http"
-	"sort"
-	"strings"
 )
 
 type (
@@ -233,7 +233,7 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 				),
 				StatusCode: statusCodeToHTTPConst(v.StatusCode),
 				HasBody:    hasBody,
-				Headers:    extractHeaders(v.Headers()),
+				Headers:    extractHeaders(v.MappedHeaders()),
 			}
 		}
 
@@ -277,53 +277,30 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 	return sd
 }
 
-func splitParamName(name string) (string, string) {
-	parts := strings.Split(name, ":")
-	if len(parts) >= 2 {
-		return parts[0], parts[1]
-	}
-	return parts[0], parts[0]
-}
-
-func extractHeaders(a *design.AttributeExpr) []*serverHeaderData {
-	obj := design.AsObject(a.Type)
-	keys := make([]string, len(obj))
-	i := 0
-	for n := range obj {
-		keys[i] = n
-		i++
-	}
-	sort.Strings(keys)
-	headers := make([]*serverHeaderData, len(obj))
-	for i, name := range keys {
-		mapFrom, name := splitParamName(name)
-		headers[i] = &serverHeaderData{
-			Name:    name,
-			VarName: codegen.Goify(mapFrom, true),
-		}
-	}
+func extractHeaders(a *rest.MappedAttributeExpr) []*serverHeaderData {
+	var headers []*serverHeaderData
+	WalkMappedAttr(a, func(name, elem string, required bool, a *design.AttributeExpr) error {
+		headers = append(headers, &serverHeaderData{
+			Name:    elem,
+			VarName: codegen.Goify(name, true),
+			Type:    a.Type,
+		})
+		return nil
+	})
 
 	return headers
 }
 
-func extractParams(a *design.AttributeExpr) []*serverParamData {
-	obj := design.AsObject(a.Type)
-	keys := make([]string, len(obj))
-	i := 0
-	for n := range obj {
-		keys[i] = n
-		i++
-	}
-	sort.Strings(keys)
-	params := make([]*serverParamData, len(obj))
-	for i, name := range keys {
-		mapTo, lookupName := splitParamName(name)
-		params[i] = &serverParamData{
-			Name:    lookupName,
-			VarName: codegen.Goify(mapTo, false),
-			Type:    obj[name].Type,
-		}
-	}
+func extractParams(a *rest.MappedAttributeExpr) []*serverParamData {
+	var params []*serverParamData
+	WalkMappedAttr(a, func(name, elem string, required bool, a *design.AttributeExpr) error {
+		params = append(params, &serverParamData{
+			Name:    elem,
+			VarName: codegen.Goify(name, true),
+			Type:    a.Type,
+		})
+		return nil
+	})
 
 	return params
 }
@@ -506,6 +483,8 @@ func {{ .Decoder }}(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 {{- define "type_conversion" }}
 	{{- if eq .Type.Name "string" }}
 		{{ .VarName }} = url.QueryUnescape(v)
+	{{- else if eq .Type.Name "[]byte" }}
+		{{ .VarName }} = url.QueryUnescape(string(v))
 	{{- else if eq .Type.Name "int" }}
 		if v, err := strconv.ParseInt({{ .VarName }}Raw, 10, strconv.IntSize); err != nil {
 			return nil, fmt.Errorf("{{ .Name }} must be an integer, got '%s'", {{ .VarName }}Raw)
@@ -567,6 +546,8 @@ func {{ .Decoder }}(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 {{- define "type_slice_conversion" }}
 		{{- if eq .Type.ElemType.Type.Name "string" }}
 			{{ .VarName }}[i] = url.QueryUnescape(rv)
+		{{- else if eq .Type.ElemType.Type.Name "[]byte" }}
+			{{ .VarName }}[i] = url.QueryUnescape(string(rv))
 		{{- else if eq .Type.ElemType.Type.Name "int" }}
 			if v, err := strconv.ParseInt(rv, 10, strconv.IntSize); err != nil {
 				return nil, fmt.Errorf("{{ .Name }} must be an set of integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
@@ -631,16 +612,35 @@ const serverEncoderT = `{{ printf "%s returns an encoder for responses returned 
 func {{ .Encoder }}(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 	{{- if eq (len .Responses) 1 }}
-		{{- with index .Responses 0}}
+		{{- with index .Responses 0}}{{/* TBD: support multiple responses */}}
 		{{- if or .HasBody .Headers }}
 		t := v.(*{{ .Name }})
 		{{- end }}
+
 		{{- if .HasBody }}
 		w.Header().Set("Content-Type", ResponseContentType(r))
 		{{- end }}
+
 		{{- range .Headers }}
-		w.Header().Set("{{ .Name }}", t.{{ .VarName }})
+
+		{{- if not .Required }}
+		if t.{{ .VarName }} != nil {
 		{{- end }}
+
+		{{- if eq .Type.Name "string" }}
+		w.Header().Set("{{ .Name }}", {{ if not .Required }}*{{ end }}t.{{ .VarName }})
+		{{- else }}
+		v := t.{{ .VarName }}
+		{{ template "conversion" . }}
+		w.Header().Set("{{ .Name }}", tmp{{ .VarName }})
+		{{- end }}
+
+		{{- if not .Required }}
+		}
+		{{- end }}
+
+		{{- end }}
+
 		w.WriteHeader({{ .StatusCode }})
 		{{- if .HasBody }}
 		if t != nil {
@@ -652,9 +652,19 @@ func {{ .Encoder }}(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
 		switch t := v.(type) {
 		{{- range .Responses }}
 		case *{{ .Name }}:
+
 			{{- range .Headers }}
-			w.Header().Set("{{ .Name }}", t.{{ .VarName }})
+
+			{{- if eq .Type.Name "string" }}
+			w.Header().Set("{{ .Name }}", {{ if not .Required }}*{{ end }}t.{{ .VarName }})
+			{{- else }}
+			v := t.{{ .VarName }}
+			{{ template "conversion" . }}
+			w.Header().Set("{{ .Name }}", tmp{{ .VarName }})
 			{{- end }}
+
+			{{- end }}
+
 			w.WriteHeader({{ .StatusCode }})
 			{{- if .HasBody }}
 			return encoder(w, r).Encode(t)
@@ -667,7 +677,33 @@ func {{ .Encoder }}(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
 		return nil
 	}
 }
-`
+{{- define "conversion" }}
+	{{- if eq .Type.Name "boolean" }}
+		tmp{{ .VarName }} := strconv.FormatBool({{ if not .Required }}*{{ end }}v)
+	{{- else if eq .Type.Name "int" }}
+		tmp{{ .VarName }} := strconv.Itoa({{ if not .Required }}*{{ end }}v)
+	{{- else if eq .Type.Name "int32" }}
+		tmp{{ .VarName }} := strconv.FormatInt(int64({{ if not .Required }}*{{ end }}v), 10)
+	{{- else if eq .Type.Name "int64" }}
+		tmp{{ .VarName }} := strconv.FormatInt({{ if not .Required }}*{{ end }}v, 10)
+	{{- else if eq .Type.Name "uint" }}
+		tmp{{ .VarName }} := strconv.FormatUint(uint64({{ if not .Required }}*{{ end }}v), 10)
+	{{- else if eq .Type.Name "uint32" }}
+		tmp{{ .VarName }} := strconv.FormatUint(uint64({{ if not .Required }}*{{ end }}v), 10)
+	{{- else if eq .Type.Name "uint64" }}
+		tmp{{ .VarName }} := strconv.FormatUint({{ if not .Required }}*{{ end }}v, 10)
+	{{- else if eq .Type.Name "float32" }}
+		tmp{{ .VarName }} := strconv.FormatFloat(float64({{ if not .Required }}*{{ end }}v), 'f', -1, 32)
+	{{- else if eq .Type.Name "float64" }}
+		tmp{{ .VarName }} := strconv.FormatFloat({{ if not .Required }}*{{ end }}v, 'f', -1, 64)
+	{{- else if eq .Type.Name "string" }}
+		tmp{{ .VarName }} := v
+	{{- else if eq .Type.Name "[]byte" }}
+		tmp{{ .VarName }} := string({{ if not .Required }}*{{ end }}v)
+	{{- else }}
+		// unsupported type {{ .Type.Name }} for var {{ .VarName }}
+	{{- end }}
+{{- end }}`
 
 const serverErrorEncoderT = `{{ printf "%s returns an encoder for errors returned by the %s %s endpoint." .ErrorEncoder .EndpointName .ServiceName | comment }}
 func {{ .ErrorEncoder }}(encoder rest.ResponseEncoderFunc, logger goa.Logger) EncodeErrorFunc {
