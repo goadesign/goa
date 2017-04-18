@@ -98,6 +98,19 @@ func (a *ActionExpr) PathParams() *MappedAttributeExpr {
 	return params
 }
 
+// QueryParams returns the query parameters of the action across all its routes.
+func (a *ActionExpr) QueryParams() *design.AttributeExpr {
+	allParams := a.AllParams()
+	allParams.Type = design.Dup(allParams.Type)
+	obj := allParams.Type.(design.Object)
+	for _, r := range a.Routes {
+		for _, p := range r.Params() {
+			delete(obj, p)
+		}
+	}
+	return allParams
+}
+
 // AllParams returns the path and query string parameters of the action across all its routes.
 func (a *ActionExpr) AllParams() *MappedAttributeExpr {
 	var res *MappedAttributeExpr
