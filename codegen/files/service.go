@@ -82,25 +82,25 @@ func (s *serviceFile) Sections(genPkg string) []*codegen.Section {
 						return nil
 					}
 					userTypes[ut.Name()] = codegen.GoTypeDef(ut.Attribute().Type)
-					ut.Walk(walker)
+					codegen.Walk(ut.Attribute(), walker)
 				}
 				return nil
 			}
 
 			payloadFields := make(map[string]string)
 			if o := design.AsObject(v.Payload); o != nil {
-				o.WalkAttributes(func(name string, at *design.AttributeExpr) error {
+				codegen.WalkAttributes(o, func(name string, at *design.AttributeExpr) error {
 					payloadFields[name] = codegen.GoNativeType(at.Type)
-					at.Walk(walker)
+					codegen.Walk(at, walker)
 					return nil
 				})
 			}
 
 			resultFields := make(map[string]string)
 			if o := design.AsObject(v.Result); o != nil {
-				o.WalkAttributes(func(name string, at *design.AttributeExpr) error {
+				codegen.WalkAttributes(o, func(name string, at *design.AttributeExpr) error {
 					resultFields[name] = codegen.GoNativeType(at.Type)
-					at.Walk(walker)
+					codegen.Walk(at, walker)
 					return nil
 				})
 			}

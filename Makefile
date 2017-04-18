@@ -16,6 +16,7 @@ DIRS=$(shell go list -f {{.Dir}} goa.design/goa.v2/design/...)
 # Only list test and build dependencies
 # Standard dependencies are installed via go get
 DEPEND=\
+	github.com/sergi/go-diff/diffmatchpatch \
 	github.com/golang/lint/golint \
 	golang.org/x/tools/cmd/goimports
 

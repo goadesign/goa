@@ -103,8 +103,14 @@ type (
 	serverParamData struct {
 		// Name is the name of the mapping to the actual variable name.
 		Name string
-		// VarName is the name of the variable.
+		// FieldName is the name of the struct field that holds the
+		// param value.
+		FieldName string
+		// VarName is the name of the Go variable used to read or
+		// convert the param value.
 		VarName string
+		// Required is true if the param is required.
+		Required bool
 		// Type is the datatype of the variable.
 		Type design.DataType
 	}
@@ -113,8 +119,14 @@ type (
 	serverHeaderData struct {
 		// Name describes the name of the header key.
 		Name string
-		// VarName describes the variable name where the value for the header is obtained.
+		// FieldName is the name of the struct field that holds the
+		// header value.
+		FieldName string
+		// VarName is the name of the Go variable used to read or
+		// convert the header value.
 		VarName string
+		// Required is true if the header is required.
+		Required bool
 		// Type describes the datatype of the variable value. Mainly used for conversion.
 		Type design.DataType
 	}
@@ -279,11 +291,13 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 
 func extractHeaders(a *rest.MappedAttributeExpr) []*serverHeaderData {
 	var headers []*serverHeaderData
-	WalkMappedAttr(a, func(name, elem string, required bool, a *design.AttributeExpr) error {
+	WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
 		headers = append(headers, &serverHeaderData{
-			Name:    elem,
-			VarName: codegen.Goify(name, true),
-			Type:    a.Type,
+			Name:      elem,
+			FieldName: codegen.Goify(name, true),
+			VarName:   codegen.Goify(name, false),
+			Required:  required,
+			Type:      c.Type,
 		})
 		return nil
 	})
@@ -293,11 +307,13 @@ func extractHeaders(a *rest.MappedAttributeExpr) []*serverHeaderData {
 
 func extractParams(a *rest.MappedAttributeExpr) []*serverParamData {
 	var params []*serverParamData
-	WalkMappedAttr(a, func(name, elem string, required bool, a *design.AttributeExpr) error {
+	WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
 		params = append(params, &serverParamData{
-			Name:    elem,
-			VarName: codegen.Goify(name, true),
-			Type:    a.Type,
+			Name:      elem,
+			FieldName: codegen.Goify(name, true),
+			VarName:   codegen.Goify(name, false),
+			Required:  required,
+			Type:      c.Type,
 		})
 		return nil
 	})
@@ -624,15 +640,15 @@ func {{ .Encoder }}(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
 		{{- range .Headers }}
 
 		{{- if not .Required }}
-		if t.{{ .VarName }} != nil {
+		if t.{{ .FieldName }} != nil {
 		{{- end }}
 
 		{{- if eq .Type.Name "string" }}
-		w.Header().Set("{{ .Name }}", {{ if not .Required }}*{{ end }}t.{{ .VarName }})
+		w.Header().Set("{{ .Name }}", {{ if not .Required }}*{{ end }}t.{{ .FieldName }})
 		{{- else }}
-		v := t.{{ .VarName }}
-		{{ template "conversion" . }}
-		w.Header().Set("{{ .Name }}", tmp{{ .VarName }})
+		v := t.{{ .FieldName }}
+		{{ template "header_conversion" . }}
+		w.Header().Set("{{ .Name }}", {{ .VarName }})
 		{{- end }}
 
 		{{- if not .Required }}
@@ -640,7 +656,6 @@ func {{ .Encoder }}(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
 		{{- end }}
 
 		{{- end }}
-
 		w.WriteHeader({{ .StatusCode }})
 		{{- if .HasBody }}
 		if t != nil {
@@ -656,15 +671,14 @@ func {{ .Encoder }}(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
 			{{- range .Headers }}
 
 			{{- if eq .Type.Name "string" }}
-			w.Header().Set("{{ .Name }}", {{ if not .Required }}*{{ end }}t.{{ .VarName }})
+			w.Header().Set("{{ .Name }}", {{ if not .Required }}*{{ end }}t.{{ .FieldName }})
 			{{- else }}
-			v := t.{{ .VarName }}
-			{{ template "conversion" . }}
-			w.Header().Set("{{ .Name }}", tmp{{ .VarName }})
+			v := t.{{ .FieldName }}
+			{{ template "header_conversion" . }}
+			w.Header().Set("{{ .Name }}", {{ .VarName }})
 			{{- end }}
 
 			{{- end }}
-
 			w.WriteHeader({{ .StatusCode }})
 			{{- if .HasBody }}
 			return encoder(w, r).Encode(t)
@@ -677,31 +691,31 @@ func {{ .Encoder }}(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
 		return nil
 	}
 }
-{{- define "conversion" }}
+{{ define "header_conversion" }}
 	{{- if eq .Type.Name "boolean" }}
-		tmp{{ .VarName }} := strconv.FormatBool({{ if not .Required }}*{{ end }}v)
+		{{ .VarName }} := strconv.FormatBool({{ if not .Required }}*{{ end }}v)
 	{{- else if eq .Type.Name "int" }}
-		tmp{{ .VarName }} := strconv.Itoa({{ if not .Required }}*{{ end }}v)
+		{{ .VarName }} := strconv.Itoa({{ if not .Required }}*{{ end }}v)
 	{{- else if eq .Type.Name "int32" }}
-		tmp{{ .VarName }} := strconv.FormatInt(int64({{ if not .Required }}*{{ end }}v), 10)
+		{{ .VarName }} := strconv.FormatInt(int64({{ if not .Required }}*{{ end }}v), 10)
 	{{- else if eq .Type.Name "int64" }}
-		tmp{{ .VarName }} := strconv.FormatInt({{ if not .Required }}*{{ end }}v, 10)
+		{{ .VarName }} := strconv.FormatInt({{ if not .Required }}*{{ end }}v, 10)
 	{{- else if eq .Type.Name "uint" }}
-		tmp{{ .VarName }} := strconv.FormatUint(uint64({{ if not .Required }}*{{ end }}v), 10)
+		{{ .VarName }} := strconv.FormatUint(uint64({{ if not .Required }}*{{ end }}v), 10)
 	{{- else if eq .Type.Name "uint32" }}
-		tmp{{ .VarName }} := strconv.FormatUint(uint64({{ if not .Required }}*{{ end }}v), 10)
+		{{ .VarName }} := strconv.FormatUint(uint64({{ if not .Required }}*{{ end }}v), 10)
 	{{- else if eq .Type.Name "uint64" }}
-		tmp{{ .VarName }} := strconv.FormatUint({{ if not .Required }}*{{ end }}v, 10)
+		{{ .VarName }} := strconv.FormatUint({{ if not .Required }}*{{ end }}v, 10)
 	{{- else if eq .Type.Name "float32" }}
-		tmp{{ .VarName }} := strconv.FormatFloat(float64({{ if not .Required }}*{{ end }}v), 'f', -1, 32)
+		{{ .VarName }} := strconv.FormatFloat(float64({{ if not .Required }}*{{ end }}v), 'f', -1, 32)
 	{{- else if eq .Type.Name "float64" }}
-		tmp{{ .VarName }} := strconv.FormatFloat({{ if not .Required }}*{{ end }}v, 'f', -1, 64)
+		{{ .VarName }} := strconv.FormatFloat({{ if not .Required }}*{{ end }}v, 'f', -1, 64)
 	{{- else if eq .Type.Name "string" }}
-		tmp{{ .VarName }} := v
+		{{ .VarName }} := v
 	{{- else if eq .Type.Name "[]byte" }}
-		tmp{{ .VarName }} := string({{ if not .Required }}*{{ end }}v)
+		{{ .VarName }} := string({{ if not .Required }}*{{ end }}v)
 	{{- else }}
-		// unsupported type {{ .Type.Name }} for var {{ .VarName }}
+		// unsupported type {{ .Type.Name }} for header field {{ .FieldName }}
 	{{- end }}
 {{- end }}`
 

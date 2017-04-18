@@ -48,7 +48,7 @@ type (
 	RouteExpr struct {
 		// Method is the HTTP method, e.g. "GET", "POST", etc.
 		Method string
-		// Path is the URL path e.g. "/tasks/:id"
+		// Path is the URL path e.g. "/tasks/{id}"
 		Path string
 		// Action is the action this route applies to.
 		Action *ActionExpr

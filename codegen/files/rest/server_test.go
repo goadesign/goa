@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"go/format"
+
+	"github.com/sergi/go-diff/diffmatchpatch"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
@@ -75,7 +77,7 @@ func MountShowUserHandler(mux rest.ServeMux, h http.Handler) {
 		mountShowUserHandlerPathParam = `// MountShowUserHandler configures the mux to serve the "User" service "Show"
 // endpoint.
 func MountShowUserHandler(mux rest.ServeMux, h http.Handler) {
-	mux.Handle("GET", "/account/foo/:id", h)
+	mux.Handle("GET", "/account/foo/{id}", h)
 }
 `
 
@@ -790,7 +792,7 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 					HeadersAtt: &design.AttributeExpr{Type: design.Object{
 						"Href:Location": &design.AttributeExpr{Type: design.String},
 						"Request":       &design.AttributeExpr{Type: design.String},
-					}},
+					}, Validation: &design.ValidationExpr{Required: []string{"Href", "Request"}}},
 				}, {
 					StatusCode: rest.StatusAccepted,
 					Body:       &design.AttributeExpr{Type: design.Empty},
@@ -808,7 +810,7 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 					HeadersAtt: &design.AttributeExpr{Type: design.Object{
 						"Href:Location": &design.AttributeExpr{Type: design.String},
 						"Request":       &design.AttributeExpr{Type: design.String},
-					}},
+					}, Validation: &design.ValidationExpr{Required: []string{"Href", "Request"}}},
 				},
 			},
 		}
@@ -832,7 +834,7 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 
 		actionWithPayloadPathParams = rest.ActionExpr{
 			EndpointExpr: &endpointWithPayload,
-			Routes:       []*rest.RouteExpr{{Path: "/foo/:id", Method: "GET"}},
+			Routes:       []*rest.RouteExpr{{Path: "/foo/{id}", Method: "GET"}},
 		}
 
 		actionWithPayloadQueryParams = rest.ActionExpr{
@@ -843,7 +845,7 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 		actionWithPayloadBodyAndParams = rest.ActionExpr{
 			EndpointExpr: &endpointWithPayload,
 			Body:         endpointWithPayload.Payload.Attribute(),
-			Routes:       []*rest.RouteExpr{{Path: "/foo/:id", Method: "GET"}},
+			Routes:       []*rest.RouteExpr{{Path: "/foo/{id}", Method: "GET"}},
 		}
 
 		setParams = func(r *rest.ResourceExpr, obj *design.Object) {
@@ -1086,7 +1088,10 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 			}
 
 			if !bytes.Equal(actual, expected) {
-				t.Errorf("%s: got `%s`, expected `%s` for section @index %d", k, actual, expected, i)
+				dmp := diffmatchpatch.New()
+				diffs := dmp.DiffMain(string(actual), string(expected), false)
+				diff := dmp.DiffPrettyText(diffs)
+				t.Errorf("%s: diff:\n%s\nfor section @index %d", k, diff, i)
 			}
 		}
 	}
