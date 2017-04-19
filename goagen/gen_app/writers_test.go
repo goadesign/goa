@@ -1007,7 +1007,8 @@ var _ = Describe("ControllersWriter", func() {
 						payload = payloads[i]
 					}
 					as[i] = map[string]interface{}{
-						"Name": a,
+						"Name":       codegen.Goify(a, true),
+						"DesignName": a,
 						"Routes": []*design.RouteDefinition{
 							{
 								Verb: verbs[i],
@@ -1042,7 +1043,7 @@ var _ = Describe("ControllersWriter", func() {
 
 			Context("with a simple controller", func() {
 				BeforeEach(func() {
-					actions = []string{"List"}
+					actions = []string{"list"}
 					verbs = []string{"GET"}
 					paths = []string{"/accounts/:accountID/bottles"}
 					contexts = []string{"ListBottleContext"}
@@ -1062,7 +1063,7 @@ var _ = Describe("ControllersWriter", func() {
 
 			Context("with actions that take a payload", func() {
 				BeforeEach(func() {
-					actions = []string{"List"}
+					actions = []string{"list"}
 					verbs = []string{"GET"}
 					paths = []string{"/accounts/:accountID/bottles"}
 					contexts = []string{"ListBottleContext"}
@@ -1092,7 +1093,7 @@ var _ = Describe("ControllersWriter", func() {
 			})
 			Context("with actions that take a payload with a required validation", func() {
 				BeforeEach(func() {
-					actions = []string{"List"}
+					actions = []string{"list"}
 					required := &dslengine.ValidationDefinition{
 						Required: []string{"id"},
 					}
@@ -1127,7 +1128,7 @@ var _ = Describe("ControllersWriter", func() {
 
 			Context("with multiple controllers", func() {
 				BeforeEach(func() {
-					actions = []string{"List", "Show"}
+					actions = []string{"list", "show"}
 					verbs = []string{"GET", "GET"}
 					paths = []string{"/accounts/:accountID/bottles", "/accounts/:accountID/bottles/:id"}
 					contexts = []string{"ListBottleContext", "ShowBottleContext"}
@@ -1147,7 +1148,7 @@ var _ = Describe("ControllersWriter", func() {
 
 			Context("with encoder and decoder maps", func() {
 				BeforeEach(func() {
-					actions = []string{"List"}
+					actions = []string{"list"}
 					verbs = []string{"GET"}
 					paths = []string{"/accounts/:accountID/bottles"}
 					contexts = []string{"ListBottleContext"}
@@ -1180,7 +1181,7 @@ var _ = Describe("ControllersWriter", func() {
 
 			Context("with multiple origins", func() {
 				BeforeEach(func() {
-					actions = []string{"List"}
+					actions = []string{"list"}
 					verbs = []string{"GET"}
 					paths = []string{"/accounts"}
 					contexts = []string{"ListBottleContext"}
@@ -1215,7 +1216,7 @@ var _ = Describe("ControllersWriter", func() {
 
 			Context("with regexp origins", func() {
 				BeforeEach(func() {
-					actions = []string{"List"}
+					actions = []string{"list"}
 					verbs = []string{"GET"}
 					paths = []string{"/accounts"}
 					contexts = []string{"ListBottleContext"}
@@ -2358,7 +2359,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 		}
 		return ctrl.List(rctx)
 	}
-	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
+	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("list", h, nil))
 	service.LogInfo("mount", "ctrl", "Bottles", "action", "List", "route", "GET /accounts/:accountID/bottles")
 }
 `
@@ -2379,7 +2380,7 @@ func MountBottlesController(service *goa.Service, ctrl BottlesController) {
 		}
 		return ctrl.List(rctx)
 	}
-	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
+	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("list", h, nil))
 	service.LogInfo("mount", "ctrl", "Bottles", "action", "List", "route", "GET /accounts/:accountID/bottles")
 }
 `
@@ -2408,7 +2409,7 @@ type BottlesController interface {
 		}
 		return ctrl.List(rctx)
 	}
-	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("List", h, nil))
+	service.Mux.Handle("GET", "/accounts/:accountID/bottles", ctrl.MuxHandler("list", h, nil))
 	service.LogInfo("mount", "ctrl", "Bottles", "action", "List", "route", "GET /accounts/:accountID/bottles")
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
@@ -2423,7 +2424,7 @@ type BottlesController interface {
 		}
 		return ctrl.Show(rctx)
 	}
-	service.Mux.Handle("GET", "/accounts/:accountID/bottles/:id", ctrl.MuxHandler("Show", h, nil))
+	service.Mux.Handle("GET", "/accounts/:accountID/bottles/:id", ctrl.MuxHandler("show", h, nil))
 	service.LogInfo("mount", "ctrl", "Bottles", "action", "Show", "route", "GET /accounts/:accountID/bottles/:id")
 }
 `

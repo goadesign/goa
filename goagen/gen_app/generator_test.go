@@ -383,7 +383,7 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 		}
 		return ctrl.Get(rctx)
 	}
-	service.Mux.Handle("GET", "/:id", ctrl.MuxHandler("Get", h, nil))
+	service.Mux.Handle("GET", "/:id", ctrl.MuxHandler("get", h, nil))
 	service.LogInfo("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
 }
 `
@@ -449,7 +449,7 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 		}
 		return ctrl.Get(rctx)
 	}
-	service.Mux.Handle("GET", "/:id", ctrl.MuxHandler("Get", h, unmarshalGetWidgetPayload))
+	service.Mux.Handle("GET", "/:id", ctrl.MuxHandler("get", h, unmarshalGetWidgetPayload))
 	service.LogInfo("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
 }
 
@@ -486,7 +486,7 @@ func MountWidgetController(service *goa.Service, ctrl WidgetController) {
 		}
 		return ctrl.Get(rctx)
 	}
-	service.Mux.Handle("GET", "/:id", ctrl.MuxHandler("Get", h, unmarshalGetWidgetPayload))
+	service.Mux.Handle("GET", "/:id", ctrl.MuxHandler("get", h, unmarshalGetWidgetPayload))
 	service.LogInfo("mount", "ctrl", "Widget", "action", "Get", "route", "GET /:id")
 }
 
