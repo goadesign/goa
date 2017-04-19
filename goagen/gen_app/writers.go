@@ -91,7 +91,7 @@ type (
 	ControllerTemplateData struct {
 		API            *design.APIDefinition          // API definition
 		Resource       string                         // Lower case plural resource name, e.g. "bottles"
-		Actions        []map[string]interface{}       // Array of actions, each action has keys "Name", "Routes", "Context" and "Unmarshal"
+		Actions        []map[string]interface{}       // Array of actions, each action has keys "Name", "DesignName", "Routes", "Context" and "Unmarshal"
 		FileServers    []*design.FileServerDefinition // File servers
 		Encoders       []*EncoderTemplateData         // Encoder data
 		Decoders       []*EncoderTemplateData         // Decoder data
@@ -721,7 +721,7 @@ func Mount{{ .Resource }}Controller(service *goa.Service, ctrl {{ .Resource }}Co
 	}
 {{ if .Security }}	h = handleSecurity({{ printf "%q" .Security.Scheme.SchemeName }}, h{{ range .Security.Scopes }}, {{ printf "%q" . }}{{ end }})
 {{ end }}{{ if $.Origins }}	h = handle{{ $res }}Origin(h)
-{{ end }}{{ range .Routes }}	service.Mux.Handle("{{ .Verb }}", {{ printf "%q" .FullPath }}, ctrl.MuxHandler({{ printf "%q" $action.Name }}, h, {{ if $action.Payload }}{{ $action.Unmarshal }}{{ else }}nil{{ end }}))
+{{ end }}{{ range .Routes }}	service.Mux.Handle("{{ .Verb }}", {{ printf "%q" .FullPath }}, ctrl.MuxHandler({{ printf "%q" $action.DesignName }}, h, {{ if $action.Payload }}{{ $action.Unmarshal }}{{ else }}nil{{ end }}))
 	service.LogInfo("mount", "ctrl", {{ printf "%q" $res }}, "action", {{ printf "%q" $action.Name }}, "route", {{ printf "%q" (printf "%s %s" .Verb .FullPath) }}{{ with $action.Security }}, "security", {{ printf "%q" .Scheme.SchemeName }}{{ end }})
 {{ end }}{{ end }}{{ range .FileServers }}
 	h = ctrl.FileHandler({{ printf "%q" .RequestPath }}, {{ printf "%q" .FilePath }})
