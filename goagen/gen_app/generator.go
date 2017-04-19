@@ -275,6 +275,7 @@ func (g *Generator) generateControllers() error {
 			unmarshal := fmt.Sprintf("unmarshal%s%sPayload", codegen.Goify(a.Name, true), codegen.Goify(r.Name, true))
 			action := map[string]interface{}{
 				"Name":            codegen.Goify(a.Name, true),
+				"DesignName":      a.Name,
 				"Routes":          a.Routes,
 				"Context":         context,
 				"Unmarshal":       unmarshal,
