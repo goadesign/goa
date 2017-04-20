@@ -81,7 +81,17 @@ func (g *Generator) Write(gens, debug bool) error {
 		}
 	}
 
-	return s.ExecuteTemplate("main", mainTmpl, nil, generators(g.Commands))
+	var data map[string]interface{}
+	{
+		data = map[string]interface{}{
+			"Generators": generators(g.Commands),
+		}
+		if gens {
+			data["Scaffolds"] = scaffolds(g.Commands)
+		}
+	}
+
+	return s.ExecuteTemplate("main", mainTmpl, nil, data)
 }
 
 // Compile compiles the generator.
@@ -147,6 +157,21 @@ func generators(commands []string) []string {
 	return gens
 }
 
+// scaffolds returns the names of the generator functions for the scaffolds
+// exposed by the generator package for the given commands.
+func scaffolds(commands []string) []string {
+	var scaf []string
+	for _, c := range commands {
+		switch c {
+		case "server":
+			scaf = append(scaf, "ServerScaffold")
+		case "client":
+			scaf = append(scaf, "ClientScaffold")
+		}
+	}
+	return scaf
+}
+
 // mainTmpl is the template for the generator main.
 const mainTmpl = `func main() {
 	var (
@@ -164,7 +189,7 @@ const mainTmpl = `func main() {
 	}
 
 	if *version != pkg.Version() {
-		fail("goa DSL was run with goa version %s but compiled generator is running %s\n", *version, pkg.Version())
+		fail("cannot run generator produced by goagen version %s and compiled with goa version %s\n", *version, pkg.Version())
 	}
         if err := eval.Context.Errors; err != nil {
 		fail(err.Error())
@@ -183,15 +208,28 @@ const mainTmpl = `func main() {
 	}
 
 	var files []codegen.File
+{{- range .Generators }}
 	{
-{{- range . }}
 		fs, err := generator.{{ . }}(roots...)
 		if err != nil {
 			fail(err.Error())
 		}
 		files = append(files, fs...)
-{{ end }}	}
-
+	}
+{{ end }}
+{{- range .Scaffolds }}
+	{
+		fs, err := generator.{{ . }}(roots...)
+		if err != nil {
+			fail(err.Error())
+		}
+		for _, f := range fs {
+			if _, err := os.Stat(f.OutputPath()); os.IsNotExist(err) {
+				files = append(files, f)
+			}
+		}
+	}
+{{ end }}
 	var w *codegen.Writer
 	{
 		w = &codegen.Writer{
