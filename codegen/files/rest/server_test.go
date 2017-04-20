@@ -789,10 +789,6 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				{
 					StatusCode: rest.StatusCreated,
 					Body:       &design.AttributeExpr{Type: &accountType},
-					HeadersAtt: &design.AttributeExpr{Type: design.Object{
-						"Href:Location": &design.AttributeExpr{Type: design.String},
-						"Request":       &design.AttributeExpr{Type: design.String},
-					}, Validation: &design.ValidationExpr{Required: []string{"Href", "Request"}}},
 				}, {
 					StatusCode: rest.StatusAccepted,
 					Body:       &design.AttributeExpr{Type: design.Empty},
@@ -807,10 +803,6 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 				{
 					StatusCode: rest.StatusOK,
 					Body:       &design.AttributeExpr{Type: &accountType},
-					HeadersAtt: &design.AttributeExpr{Type: design.Object{
-						"Href:Location": &design.AttributeExpr{Type: design.String},
-						"Request":       &design.AttributeExpr{Type: design.String},
-					}, Validation: &design.ValidationExpr{Required: []string{"Href", "Request"}}},
 				},
 			},
 		}
@@ -870,6 +862,16 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 			return r
 		}
 	)
+
+	h := actionWithResponse.Responses[0].Headers()
+	h.Type.(design.Object)["Href:Location"] = &design.AttributeExpr{Type: design.String}
+	h.Type.(design.Object)["Request"] = &design.AttributeExpr{Type: design.String}
+	h.Validation = &design.ValidationExpr{Required: []string{"Href", "Request"}}
+
+	h = actionWithMultipleResponses.Responses[0].Headers()
+	h.Type.(design.Object)["Href:Location"] = &design.AttributeExpr{Type: design.String}
+	h.Type.(design.Object)["Request"] = &design.AttributeExpr{Type: design.String}
+	h.Validation = &design.ValidationExpr{Required: []string{"Href", "Request"}}
 
 	// testcases
 	cases := map[string]struct {
