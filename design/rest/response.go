@@ -82,8 +82,6 @@ type (
 		StatusCode int
 		// Response description
 		Description string
-		// Response header attribute
-		HeadersAtt *design.AttributeExpr
 		// Response body if any
 		Body *design.AttributeExpr
 		// Response Content-Type header value
@@ -92,17 +90,22 @@ type (
 		Parent eval.Expression
 		// Metadata is a list of key/value pairs
 		Metadata design.MetadataExpr
+		// Response header attribute, access with Headers method
+		headers *design.AttributeExpr
 	}
 )
 
 // Headers returns the raw response headers attribute.
 func (r *HTTPResponseExpr) Headers() *design.AttributeExpr {
-	return r.HeadersAtt
+	if r.headers == nil {
+		r.headers = &design.AttributeExpr{Type: make(design.Object)}
+	}
+	return r.headers
 }
 
 // MappedHeaders returns the computed response headers attribute map.
 func (r *HTTPResponseExpr) MappedHeaders() *MappedAttributeExpr {
-	return NewMappedAttributeExpr(r.HeadersAtt)
+	return NewMappedAttributeExpr(r.headers)
 }
 
 // MediaType returns the media type describing the response body if any, nil
@@ -130,8 +133,8 @@ func (r *HTTPResponseExpr) EvalName() string {
 // and the media type definition if any is valid.
 func (r *HTTPResponseExpr) Validate() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
-	if r.HeadersAtt != nil {
-		verr.Merge(r.HeadersAtt.Validate("HTTP response headers", r))
+	if r.headers != nil {
+		verr.Merge(r.headers.Validate("HTTP response headers", r))
 	}
 	if r.Body != nil {
 		verr.Merge(r.Body.Validate("HTTP response body", r))
