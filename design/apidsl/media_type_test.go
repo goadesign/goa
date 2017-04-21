@@ -360,6 +360,11 @@ var _ = Describe("Example", func() {
 				})
 				View("default", func() {
 					Attribute("test1")
+					Attribute("test2")
+					Attribute("test3")
+					Attribute("test4")
+					Attribute("test5")
+					Attribute("test-failure1")
 				})
 			})
 
@@ -413,6 +418,22 @@ var _ = Describe("Example", func() {
 				})
 				View("default", func() {
 					Attribute("test1")
+					Attribute("test2")
+					Attribute("test3")
+					Attribute("test4")
+
+					Attribute("test-with-user-type-1")
+					Attribute("test-with-user-type-2")
+
+					Attribute("test-with-array-1")
+					Attribute("test-with-array-2")
+					Attribute("test-with-array-3")
+					Attribute("test-with-array-4")
+					Attribute("test-with-array-5")
+					Attribute("test-with-array-6")
+
+					Attribute("test-with-example-1")
+					Attribute("test-with-example-2")
 				})
 			})
 
@@ -722,6 +743,8 @@ var _ = Describe("Example", func() {
 				})
 				View("default", func() {
 					Attribute("test1")
+					Attribute("test2")
+					Attribute("test3")
 				})
 			})
 
@@ -775,6 +798,9 @@ var _ = Describe("Example", func() {
 				})
 				View("default", func() {
 					Attribute("test1")
+					Attribute("test2")
+					Attribute("test3")
+					Attribute("test-failure1")
 				})
 			})
 
