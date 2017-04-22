@@ -384,8 +384,14 @@ func {{ .MountHandlers }}(mux rest.ServeMux, h *{{ .HandlersStruct }}) {
 
 const serverHandlerT = `{{ printf "%s configures the mux to serve the \"%s\" service \"%s\" endpoint." .MountHandler .ServiceName .EndpointName | comment }}
 func {{ .MountHandler }}(mux rest.ServeMux, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
 	{{- range .Routes }}
-	mux.Handle("{{ .Method }}", "{{ .Path }}", h)
+	mux.Handle("{{ .Method }}", "{{ .Path }}", f)
 	{{- end }}
 }
 `

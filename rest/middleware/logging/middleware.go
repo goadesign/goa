@@ -10,16 +10,19 @@ import (
 
 	"goa.design/goa.v2"
 	"goa.design/goa.v2/rest"
+	"goa.design/goa.v2/rest/middleware/tracing"
 )
 
-// New returns a middleware that logs incoming requests and outgoing responses.
+// New returns a middleware that logs short messages for incoming requests and
+// outgoing responses.
 func New(logger goa.Logger) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var (
-				started = time.Now()
-				reqID   = shortID()
-			)
+			reqID := tracing.ContextTraceID(r.Context())
+			if reqID == "" {
+				reqID = shortID()
+			}
+			started := time.Now()
 
 			logger.Info(r.Context(),
 				"reqID", reqID,

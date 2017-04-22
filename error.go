@@ -181,10 +181,10 @@ func MergeErrors(err, other error) error {
 		if other == nil {
 			return nil
 		}
-		return asError(other)
+		return other
 	}
 	if other == nil {
-		return asError(err)
+		return err
 	}
 	e := asError(err).(*serviceError)
 	o := asError(other)
@@ -201,15 +201,6 @@ func MergeErrors(err, other error) error {
 	return e
 }
 
-// Error returns the error occurrence details.
-func (e *serviceError) Error() string {
-	return fmt.Sprintf("[%s] %d: %s", e.id, e.status, e.message)
-}
-
-func (e *serviceError) Status() ErrorStatus { return e.status }
-func (e *serviceError) ID() string          { return e.id }
-func (e *serviceError) Message() string     { return e.message }
-
 func asError(err error) Error {
 	e, ok := err.(*serviceError)
 	if !ok {
@@ -221,6 +212,15 @@ func asError(err error) Error {
 	}
 	return e
 }
+
+// Error returns the error occurrence details.
+func (e *serviceError) Error() string {
+	return fmt.Sprintf("[%s] %d: %s", e.id, e.status, e.message)
+}
+
+func (e *serviceError) Status() ErrorStatus { return e.status }
+func (e *serviceError) ID() string          { return e.id }
+func (e *serviceError) Message() string     { return e.message }
 
 // If you're curious - simplifying a bit - the probability of 2 values being
 // equal for n 6-bytes values is n^2 / 2^49. For n = 1 million this gives around
