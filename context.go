@@ -15,7 +15,7 @@ type key int
 // NewContext builds a new goa request context. The context contains the service
 // and endpoint names as set by the generated code. This can be leveraged by
 // middlewares such as the security middleware to implement cross concern
-// behavior.
+// functionality.
 func NewContext(ctx context.Context, s, e string) context.Context {
 	ctx = context.WithValue(ctx, serviceKey, s)
 	ctx = context.WithValue(ctx, endpointKey, e)

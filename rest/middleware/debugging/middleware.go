@@ -21,7 +21,7 @@ type responseDupper struct {
 	Status int
 }
 
-// New returns a debug middleware which prints all the details about incoming
+// New returns a debug middleware which logs all the details about incoming
 // requests and outgoing responses.
 func New(logger goa.Logger) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {

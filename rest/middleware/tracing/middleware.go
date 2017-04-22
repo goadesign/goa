@@ -6,6 +6,9 @@ import (
 	"io"
 	rd "math/rand"
 	"net/http"
+	"sync"
+	"sync/atomic"
+	"time"
 
 	"goa.design/goa.v2"
 
@@ -61,9 +64,11 @@ type (
 
 	// options is the struct storing all the options.
 	options struct {
-		traceIDFunc  IDFunc
-		spanIDFunc   IDFunc
-		samplingRate int
+		traceIDFunc     IDFunc
+		spanIDFunc      IDFunc
+		samplingRate    int
+		maxSamplingRate int
+		sampleSize      uint32
 	}
 )
 
@@ -87,12 +92,40 @@ func SpanIDFunc(f IDFunc) Option {
 
 // SamplingPercent sets the tracing sampling rate as a percentage value.
 // It panics if p is less than 0 or more than 100.
+// SamplingPercent and MaxSamplingRate are mutually exclusive.
 func SamplingPercent(p int) Option {
 	if p < 0 || p > 100 {
 		panic("sampling rate must be between 0 and 100")
 	}
 	return func(o *options) *options {
 		o.samplingRate = p
+		return o
+	}
+}
+
+// MaxSamplingRate sets a target sampling rate in requests per second. Setting a
+// max sampling rate causes the middleware to adjust the sampling percent
+// dynamically. Defaults to 2 req/s.
+// SamplingPercent and MaxSamplingRate are mutually exclusive.
+func MaxSamplingRate(r int) Option {
+	if r <= 0 {
+		panic("max sampling rate must be greater than 0")
+	}
+	return func(o *options) *options {
+		o.samplingRate = 100
+		o.maxSamplingRate = r
+		return o
+	}
+}
+
+// SampleSize sets the number of requests between two adjustments of the sampling
+// rate when MaxSamplingRate is set. Defaults to 1,000.
+func SampleSize(s int) Option {
+	if s <= 0 {
+		panic("sample size must be greater than 0")
+	}
+	return func(o *options) *options {
+		o.sampleSize = uint32(s)
 		return o
 	}
 }
@@ -114,11 +147,21 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 		traceIDFunc:  shortID,
 		spanIDFunc:   shortID,
 		samplingRate: 100,
+		// Below only apply if maxSamplingRate is set
+		sampleSize: 1000,
 	}
 	for _, opt := range opts {
 		o = opt(o)
 	}
 	return func(h http.Handler) http.Handler {
+		var (
+			counter         uint32
+			mu              sync.Mutex
+			samplingRate    = o.samplingRate
+			maxSamplingRate = o.samplingRate
+			sampleSize      = o.sampleSize
+			start           = time.Now()
+		)
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Compute trace info.
 			var (
@@ -126,9 +169,32 @@ func New(opts ...Option) func(http.Handler) http.Handler {
 				parentID = r.Header.Get(ParentSpanIDHeader)
 				spanID   = o.spanIDFunc()
 			)
+
+			// Adjust sampling rate if needed
+			if maxSamplingRate > 0 {
+				c := atomic.AddUint32(&counter, 1)
+				if c == sampleSize {
+					atomic.StoreUint32(&counter, 0) // race is ok
+					mu.Lock()
+					{
+						d := time.Since(start).Seconds()
+						r := float64(sampleSize) / d
+						samplingRate := int((float64(maxSamplingRate) * 100) / r)
+						if samplingRate > 100 {
+							samplingRate = 100
+						} else if samplingRate < 1 {
+							samplingRate = 1
+						}
+						start = time.Now()
+					}
+					mu.Unlock()
+				}
+			}
+
+			// Determine if request is trace root
 			if traceID == "" {
 				// Avoid computing a random value if unnecessary.
-				if o.samplingRate == 0 || o.samplingRate != 100 && rd.Intn(100) > o.samplingRate {
+				if samplingRate == 0 || samplingRate != 100 && rd.Intn(100) > o.samplingRate {
 					h.ServeHTTP(w, r)
 				}
 				traceID = o.traceIDFunc()
