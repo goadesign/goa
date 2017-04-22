@@ -361,9 +361,9 @@ func Params(dsl func()) {
 }
 
 // Payload implements the action payload DSL. An action payload describes the HTTP request body
-// data structure. The function accepts either a type or a DSL that describes the payload members
-// using the Member DSL which accepts the same syntax as the Attribute DSL. This function can be
-// called passing in a type, a DSL or both. Examples:
+// data structure. The function accepts either a Type (design.UserTypeDefinition) or a DSL that describes
+// the payload members using the Member DSL which accepts the same syntax as the Attribute DSL.
+// This function can be called passing in a Type (design.UserTypeDefinition), a DSL or both. Examples:
 //
 //	Payload(BottlePayload)		// Request payload is described by the BottlePayload type
 //
