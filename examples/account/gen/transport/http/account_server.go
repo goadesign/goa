@@ -48,25 +48,53 @@ func MountAccountHandlers(mux rest.ServeMux, h *AccountHandlers) {
 // MountCreateAccountHandler configures the mux to serve the
 // "account" service "create" endpoint.
 func MountCreateAccountHandler(mux rest.ServeMux, h http.Handler) {
-	mux.Handle("POST", "/accounts", h)
+	var f http.HandlerFunc
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("POST", "/accounts", f)
 }
 
 // MountListAccountHandler configures the mux to serve the
 // "account" service "list" endpoint.
 func MountListAccountHandler(mux rest.ServeMux, h http.Handler) {
-	mux.Handle("GET", "/accounts", h)
+	var f http.HandlerFunc
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/accounts", f)
 }
 
 // MountShowAccountHandler configures the mux to serve the
 // "account" service "show" endpoint.
 func MountShowAccountHandler(mux rest.ServeMux, h http.Handler) {
-	mux.Handle("GET", "/accounts/{id}", h)
+	var f http.HandlerFunc
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/accounts/{id}", f)
 }
 
 // MountDeleteAccountHandler configures the mux to serve the
 // "account" service "delete" endpoint.
 func MountDeleteAccountHandler(mux rest.ServeMux, h http.Handler) {
-	mux.Handle("DELETE", "/accounts/{id}", h)
+	var f http.HandlerFunc
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("DELETE", "/accounts/{id}", f)
 }
 
 // NewCreateAccountHandler creates a HTTP handler which loads the HTTP
@@ -78,13 +106,13 @@ func NewCreateAccountHandler(
 	dec rest.RequestDecoderFunc,
 	enc rest.ResponseEncoderFunc,
 	logger goa.Logger,
-) http.Handler {
+) http.HandlerFunc {
 	var (
 		decodeRequest  = CreateAccountDecodeRequest(dec)
 		encodeResponse = CreateAccountEncodeResponse(enc)
 		encodeError    = CreateAccountEncodeError(enc, logger)
 	)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(w, r, goa.ErrInvalid("request invalid: %s", err))
@@ -100,7 +128,7 @@ func NewCreateAccountHandler(
 		if err := encodeResponse(w, r, res); err != nil {
 			encodeError(w, r, err)
 		}
-	})
+	}
 }
 
 // CreateAccountDecodeRequest returns a decoder for requests sent to the
@@ -184,13 +212,13 @@ func NewListAccountHandler(
 	dec rest.RequestDecoderFunc,
 	enc rest.ResponseEncoderFunc,
 	logger goa.Logger,
-) http.Handler {
+) http.HandlerFunc {
 	var (
 		encodeResponse = ListAccountEncodeResponse(enc)
 		decodeRequest  = ListAccountDecodeRequest(dec)
 		encodeError    = EncodeError(enc, logger)
 	)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(w, r, err)
@@ -205,7 +233,7 @@ func NewListAccountHandler(
 		if err := encodeResponse(w, r, res); err != nil {
 			encodeError(w, r, err)
 		}
-	})
+	}
 }
 
 // ListAccountDecodeRequest returns a decoder for requests sent to the
@@ -240,13 +268,13 @@ func NewShowAccountHandler(
 	dec rest.RequestDecoderFunc,
 	enc rest.ResponseEncoderFunc,
 	logger goa.Logger,
-) http.Handler {
+) http.HandlerFunc {
 	var (
 		decodeRequest  = ShowAccountDecodeRequest(dec)
 		encodeResponse = ShowAccountEncodeResponse(enc)
 		encodeError    = EncodeError(enc, logger)
 	)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(w, r, err)
@@ -261,7 +289,7 @@ func NewShowAccountHandler(
 		if err := encodeResponse(w, r, res); err != nil {
 			encodeError(w, r, err)
 		}
-	})
+	}
 }
 
 // ShowAccountDecodeRequest returns a decoder for requests sent to the
@@ -295,13 +323,13 @@ func NewDeleteAccountHandler(
 	dec rest.RequestDecoderFunc,
 	enc rest.ResponseEncoderFunc,
 	logger goa.Logger,
-) http.Handler {
+) http.HandlerFunc {
 	var (
 		decodeRequest  = DeleteAccountDecodeRequest(dec)
 		encodeResponse = DeleteAccountEncodeResponse(enc)
 		encodeError    = EncodeError(enc, logger)
 	)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(w, r, err)
@@ -317,7 +345,7 @@ func NewDeleteAccountHandler(
 		if err := encodeResponse(w, r, res); err != nil {
 			encodeError(w, r, err)
 		}
-	})
+	}
 }
 
 // DeleteAccountDecodeRequest returns a decoder for requests sent to the

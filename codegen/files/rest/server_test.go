@@ -70,29 +70,53 @@ func MountUserHandlers(mux rest.ServeMux, h *UserHandlers) {
 		mountShowUserHandler = `// MountShowUserHandler configures the mux to serve the "User" service "Show"
 // endpoint.
 func MountShowUserHandler(mux rest.ServeMux, h http.Handler) {
-	mux.Handle("GET", "/account/foo", h)
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/account/foo", f)
 }
 `
 
 		mountShowUserHandlerPathParam = `// MountShowUserHandler configures the mux to serve the "User" service "Show"
 // endpoint.
 func MountShowUserHandler(mux rest.ServeMux, h http.Handler) {
-	mux.Handle("GET", "/account/foo/{id}", h)
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/account/foo/{id}", f)
 }
 `
 
 		mountListUserHandler = `// MountListUserHandler configures the mux to serve the "User" service "List"
 // endpoint.
 func MountListUserHandler(mux rest.ServeMux, h http.Handler) {
-	mux.Handle("POST", "/account/bar", h)
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("POST", "/account/bar", f)
 }
 `
 
 		mountShowUserHandlerMultiplePaths = `// MountShowUserHandler configures the mux to serve the "User" service "Show"
 // endpoint.
 func MountShowUserHandler(mux rest.ServeMux, h http.Handler) {
-	mux.Handle("GET", "/account/foo", h)
-	mux.Handle("GET", "/bar/baz", h)
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/account/foo", f)
+	mux.Handle("GET", "/bar/baz", f)
 }
 `
 
