@@ -17,7 +17,7 @@ func TestHeader(t *testing.T) {
 // test title
 //
 // Command:
-// $ codegen.test
+// $ goagen
 
 package testpackage
 
