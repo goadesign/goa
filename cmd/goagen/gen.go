@@ -97,7 +97,7 @@ func (g *Generator) Write(gens, debug bool) error {
 		sectionsFunc := func(_ string) []*codegen.Section {
 			return sections
 		}
-		s = codegen.NewSource(filepath.Join(tmpDir, "main.go"), sectionsFunc)
+		s = codegen.NewSource("main.go", sectionsFunc)
 	}
 
 	var w *codegen.Writer
@@ -108,7 +108,7 @@ func (g *Generator) Write(gens, debug bool) error {
 		}
 	}
 
-	return w.Write(s)
+	return w.Write(".", s)
 }
 
 // Compile compiles the generator.
@@ -224,19 +224,19 @@ const mainTmpl = `func main() {
 		roots = rs
 	}
 
-	var files []codegen.File
+	var genfiles []codegen.File
 {{- range .Generators }}
 	{
 		fs, err := generator.{{ . }}(roots...)
 		if err != nil {
 			fail(err.Error())
 		}
-		files = append(files, fs...)
+		genfiles = append(genfiles, fs...)
 
 		// Delete previously generated directories
 		dirs := make(map[string]bool)
-		for _, file := range files {
-			dirs[filepath.Dir(file.OutputPath())] = true
+		for _, f := range genfiles {
+			dirs[filepath.Dir(filepath.Join("gen", f.OutputPath()))] = true
 		}
 		for d := range dirs {
 			if _, err := os.Stat(d); err == nil {
@@ -247,6 +247,8 @@ const mainTmpl = `func main() {
 		}
 	}
 {{ end }}
+
+	var scafiles []codegen.File
 {{- range .Scaffolds }}
 	{
 		fs, err := generator.{{ . }}(roots...)
@@ -255,7 +257,7 @@ const mainTmpl = `func main() {
 		}
 		for _, f := range fs {
 			if _, err := os.Stat(f.OutputPath()); os.IsNotExist(err) {
-				files = append(files, f)
+				scafiles = append(scafiles, f)
 			}
 		}
 	}
@@ -267,8 +269,13 @@ const mainTmpl = `func main() {
 			Files: make(map[string]bool),
 		}
 	}
-	for _, file := range files {
-		if err := w.Write(file); err != nil {
+	for _, f := range genfiles {
+		if err := w.Write("gen", f); err != nil {
+			fail(err.Error())
+		}
+	}
+	for _, f := range scafiles {
+		if err := w.Write(".", f); err != nil {
 			fail(err.Error())
 		}
 	}
@@ -276,9 +283,17 @@ const mainTmpl = `func main() {
 	var outputs []string
 	{
 		outputs = make([]string, len(w.Files))
+		cwd, err := os.Getwd()
+		if err != nil {
+			cwd = "."
+		}	
 		i := 0
 		for o := range w.Files {
-			outputs[i] = o
+			rel, err := filepath.Rel(cwd, o)
+			if err != nil {
+				rel = o
+			}
+			outputs[i] = rel
 			i++
 		}
 	}
