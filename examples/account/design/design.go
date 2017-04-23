@@ -11,13 +11,19 @@ var _ = API("basic", func() {
 
 var _ = Service("account", func() {
 	Description("Manage accounts")
+	HTTP(func() {
+		Path("/orgs/{org_id}/accounts")
+		Param("org_id", UInt, "ID of owner organization", func() {
+			Example(123)
+		})
+	})
 	Endpoint("create", func() {
 		Description("Create new account")
 		Payload(CreateAccount)
 		Result(Account)
 		Error("name_already_taken", NameAlreadyTaken, "Error returned when name is already taken")
 		HTTP(func() {
-			POST("/orgs/{org_id}")
+			POST("/")
 			Response(StatusCreated, func() {
 				Header("Href:Location")
 				Body(Account)
@@ -43,7 +49,9 @@ var _ = Service("account", func() {
 	Endpoint("show", func() {
 		Description("Show account by ID")
 		Payload(func() {
-			Attribute("id", String, "ID of account to show")
+			Attribute("id", String, "ID of account to show", func() {
+				Example("joe")
+			})
 		})
 		Result(Account)
 		HTTP(func() {
@@ -53,7 +61,9 @@ var _ = Service("account", func() {
 	Endpoint("delete", func() {
 		Description("Delete account by IF")
 		Payload(func() {
-			Attribute("id", String, "ID of account to delete")
+			Attribute("id", String, "ID of account to show", func() {
+				Example("joe")
+			})
 		})
 		Result(Empty)
 		HTTP(func() {

@@ -77,7 +77,7 @@ func (c *AccountClient) EncodeCreate(encoder rest.RequestEncoderFunc) EncodeRequ
 		}
 
 		// Build request
-		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: CreateAccountPath()}
+		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: CreateAccountPath(p.OrgID)}
 		req, err := http.NewRequest("POST", u.String(), nil)
 		if err != nil {
 			return nil, rest.ErrInvalidURL("account", "create", u.String(), err)
@@ -164,7 +164,7 @@ func (c *AccountClient) EncodeList(encoder rest.RequestEncoderFunc) EncodeReques
 		}
 
 		// Build request
-		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ListAccountPath()}
+		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ListAccountPath(p.OrgID)}
 		if p.Filter != "" {
 			q := u.Query()
 			q.Set("filter", p.Filter)
@@ -230,7 +230,7 @@ func (c *AccountClient) EncodeShow(encoder rest.RequestEncoderFunc) EncodeReques
 		}
 
 		// Build request
-		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ShowAccountPath(p.ID)}
+		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ShowAccountPath(p.OrgID, p.ID)}
 		req, err := http.NewRequest("GET", u.String(), nil)
 		if err != nil {
 			return nil, rest.ErrInvalidURL("account", "show", u.String(), err)
@@ -291,7 +291,7 @@ func (c *AccountClient) EncodeDelete(encoder rest.RequestEncoderFunc) EncodeRequ
 		}
 
 		// Build request
-		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: DeleteAccountPath(p.ID)}
+		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: DeleteAccountPath(p.OrgID, p.ID)}
 		req, err := http.NewRequest("GET", u.String(), nil)
 		if err != nil {
 			return nil, rest.ErrInvalidURL("account", "delete", u.String(), err)

@@ -319,11 +319,11 @@ func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 		)
 
 		idRaw := params["id"]
-		if v, err := strconv.ParseInt(idRaw, 10, strconv.IntSize); err != nil {
+		v, err := strconv.ParseInt(idRaw, 10, strconv.IntSize)
+		if err != nil {
 			return nil, fmt.Errorf("id must be an integer, got '%s'", idRaw)
-		} else {
-			id = int(v)
 		}
+		id = int(v)
 
 		payload, err := NewShowUserPayload(id)
 		return payload, err
@@ -340,11 +340,11 @@ func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 		)
 
 		idRaw := r.URL.Query().Get("id")
-		if v, err := strconv.ParseInt(idRaw, 10, strconv.IntSize); err != nil {
+		v, err := strconv.ParseInt(idRaw, 10, strconv.IntSize)
+		if err != nil {
 			return nil, fmt.Errorf("id must be an integer, got '%s'", idRaw)
-		} else {
-			id = int(v)
 		}
+		id = int(v)
 
 		payload, err := NewShowUserPayload(id)
 		return payload, err
@@ -397,18 +397,18 @@ func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 		)
 
 		fooRaw := r.URL.Query().Get("foo")
-		if v, err := strconv.ParseInt(fooRaw, 10, strconv.IntSize); err != nil {
+		v, err := strconv.ParseInt(fooRaw, 10, strconv.IntSize)
+		if err != nil {
 			return nil, fmt.Errorf("foo must be an integer, got '%s'", fooRaw)
-		} else {
-			foo = int(v)
 		}
+		foo = int(v)
 
 		idRaw := params["id"]
-		if v, err := strconv.ParseInt(idRaw, 10, strconv.IntSize); err != nil {
+		v, err := strconv.ParseInt(idRaw, 10, strconv.IntSize)
+		if err != nil {
 			return nil, fmt.Errorf("id must be an integer, got '%s'", idRaw)
-		} else {
-			id = int(v)
 		}
+		id = int(v)
 
 		payload, err := NewShowUserPayload(&body, foo, id)
 		return payload, err
@@ -455,111 +455,111 @@ func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 		)
 
 		boolVarRaw := r.URL.Query().Get("bool_var")
-		if v, err := strconv.ParseBool(boolVarRaw); err != nil {
+		v, err := strconv.ParseBool(boolVarRaw)
+		if err != nil {
 			return nil, fmt.Errorf("bool_var must be a boolean (true or false), got '%s'", boolVarRaw)
-		} else {
-			boolVar = v
 		}
+		boolVar = v
 
 		float32VarRaw := r.URL.Query().Get("float32_var")
-		if v, err := strconv.ParseFloat(float32VarRaw, 32); err != nil {
+		v, err := strconv.ParseFloat(float32VarRaw, 32)
+		if err != nil {
 			return nil, fmt.Errorf("float32_var must be a float, got '%s'", float32VarRaw)
-		} else {
-			float32Var = float32(v)
 		}
+		float32Var = float32(v)
 
 		float64VarRaw := r.URL.Query().Get("float64_var")
-		if v, err := strconv.ParseFloat(float64VarRaw, 64); err != nil {
+		v, err := strconv.ParseFloat(float64VarRaw, 64)
+		if err != nil {
 			return nil, fmt.Errorf("float64_var must be a float, got '%s'", float64VarRaw)
-		} else {
-			float64Var = v
 		}
+		float64Var = v
 
 		int32VarRaw := r.URL.Query().Get("int32_var")
-		if v, err := strconv.ParseInt(int32VarRaw, 10, 32); err != nil {
+		v, err := strconv.ParseInt(int32VarRaw, 10, 32)
+		if err != nil {
 			return nil, fmt.Errorf("int32_var must be an integer, got '%s'", int32VarRaw)
-		} else {
-			int32Var = int32(v)
 		}
+		int32Var = int32(v)
 
 		int64VarRaw := r.URL.Query().Get("int64_var")
-		if v, err := strconv.ParseInt(int64VarRaw, 10, 64); err != nil {
+		v, err := strconv.ParseInt(int64VarRaw, 10, 64)
+		if err != nil {
 			return nil, fmt.Errorf("int64_var must be an integer, got '%s'", int64VarRaw)
-		} else {
-			int64Var = v
 		}
+		int64Var = v
 
 		intVarRaw := r.URL.Query().Get("int_var")
-		if v, err := strconv.ParseInt(intVarRaw, 10, strconv.IntSize); err != nil {
+		v, err := strconv.ParseInt(intVarRaw, 10, strconv.IntSize)
+		if err != nil {
 			return nil, fmt.Errorf("int_var must be an integer, got '%s'", intVarRaw)
-		} else {
-			intVar = int(v)
 		}
+		intVar = int(v)
 
 		sliceBoolVarRaw := r.URL.Query().Get("slice_bool_var")
 		sliceBoolVarRawSlice := strings.Split(sliceBoolVarRaw, ",")
 		sliceBoolVar = make([]bool, len(sliceBoolVarRawSlice))
 		for i, rv := range sliceBoolVarRawSlice {
-			if v, err := strconv.ParseBool(rv); err != nil {
+			v, err := strconv.ParseBool(rv)
+			if err != nil {
 				return nil, fmt.Errorf("slice_bool_var must be an set of booleans (true, false, 1 or 0), got value '%s' in set '%s'", rv, sliceBoolVarRaw)
-			} else {
-				sliceBoolVar[i] = v
 			}
+			sliceBoolVar[i] = v
 		}
 
 		sliceFloat32VarRaw := r.URL.Query().Get("slice_float32_var")
 		sliceFloat32VarRawSlice := strings.Split(sliceFloat32VarRaw, ",")
 		sliceFloat32Var = make([]float32, len(sliceFloat32VarRawSlice))
 		for i, rv := range sliceFloat32VarRawSlice {
-			if v, err := strconv.ParseFloat(rv, 32); err != nil {
+			v, err := strconv.ParseFloat(rv, 32)
+			if err != nil {
 				return nil, fmt.Errorf("slice_float32_var must be an set of floats, got value '%s' in set '%s'", rv, sliceFloat32VarRaw)
-			} else {
-				sliceFloat32Var[i] = float32(v)
 			}
+			sliceFloat32Var[i] = float32(v)
 		}
 
 		sliceFloat64VarRaw := r.URL.Query().Get("slice_float64_var")
 		sliceFloat64VarRawSlice := strings.Split(sliceFloat64VarRaw, ",")
 		sliceFloat64Var = make([]float64, len(sliceFloat64VarRawSlice))
 		for i, rv := range sliceFloat64VarRawSlice {
-			if v, err := strconv.ParseFloat(rv, 64); err != nil {
+			v, err := strconv.ParseFloat(rv, 64)
+			if err != nil {
 				return nil, fmt.Errorf("slice_float64_var must be an set of floats, got value '%s' in set '%s'", rv, sliceFloat64VarRaw)
-			} else {
-				sliceFloat64Var[i] = v
 			}
+			sliceFloat64Var[i] = v
 		}
 
 		sliceInt32VarRaw := r.URL.Query().Get("slice_int32_var")
 		sliceInt32VarRawSlice := strings.Split(sliceInt32VarRaw, ",")
 		sliceInt32Var = make([]int32, len(sliceInt32VarRawSlice))
 		for i, rv := range sliceInt32VarRawSlice {
-			if v, err := strconv.ParseInt(rv, 10, 32); err != nil {
+			v, err := strconv.ParseInt(rv, 10, 32)
+			if err != nil {
 				return nil, fmt.Errorf("slice_int32_var must be an set of integers, got value '%s' in set '%s'", rv, sliceInt32VarRaw)
-			} else {
-				sliceInt32Var[i] = int32(v)
 			}
+			sliceInt32Var[i] = int32(v)
 		}
 
 		sliceInt64VarRaw := r.URL.Query().Get("slice_int64_var")
 		sliceInt64VarRawSlice := strings.Split(sliceInt64VarRaw, ",")
 		sliceInt64Var = make([]int64, len(sliceInt64VarRawSlice))
 		for i, rv := range sliceInt64VarRawSlice {
-			if v, err := strconv.ParseInt(rv, 10, 64); err != nil {
+			v, err := strconv.ParseInt(rv, 10, 64)
+			if err != nil {
 				return nil, fmt.Errorf("slice_int64_var must be an set of integers, got value '%s' in set '%s'", rv, sliceInt64VarRaw)
-			} else {
-				sliceInt64Var[i] = v
 			}
+			sliceInt64Var[i] = v
 		}
 
 		sliceIntVarRaw := r.URL.Query().Get("slice_int_var")
 		sliceIntVarRawSlice := strings.Split(sliceIntVarRaw, ",")
 		sliceIntVar = make([]int, len(sliceIntVarRawSlice))
 		for i, rv := range sliceIntVarRawSlice {
-			if v, err := strconv.ParseInt(rv, 10, strconv.IntSize); err != nil {
+			v, err := strconv.ParseInt(rv, 10, strconv.IntSize)
+			if err != nil {
 				return nil, fmt.Errorf("slice_int_var must be an set of integers, got value '%s' in set '%s'", rv, sliceIntVarRaw)
-			} else {
-				sliceIntVar[i] = int(v)
 			}
+			sliceIntVar[i] = int(v)
 		}
 
 		sliceStringRaw := r.URL.Query().Get("slice_string")
@@ -573,57 +573,57 @@ func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 		sliceUint32VarRawSlice := strings.Split(sliceUint32VarRaw, ",")
 		sliceUint32Var = make([]uint32, len(sliceUint32VarRawSlice))
 		for i, rv := range sliceUint32VarRawSlice {
-			if v, err := strconv.ParseUint(rv, 10, 32); err != nil {
+			v, err := strconv.ParseUint(rv, 10, 32)
+			if err != nil {
 				return nil, fmt.Errorf("slice_uint32_var must be an set of unsigned integers, got value '%s' in set '%s'", rv, sliceUint32VarRaw)
-			} else {
-				sliceUint32Var[i] = int32(v)
 			}
+			sliceUint32Var[i] = int32(v)
 		}
 
 		sliceUint64VarRaw := r.URL.Query().Get("slice_uint64_var")
 		sliceUint64VarRawSlice := strings.Split(sliceUint64VarRaw, ",")
 		sliceUint64Var = make([]uint64, len(sliceUint64VarRawSlice))
 		for i, rv := range sliceUint64VarRawSlice {
-			if v, err := strconv.ParseUint(rv, 10, 64); err != nil {
+			v, err := strconv.ParseUint(rv, 10, 64)
+			if err != nil {
 				return nil, fmt.Errorf("slice_uint64_var must be an set of unsigned integers, got value '%s' in set '%s'", rv, sliceUint64VarRaw)
-			} else {
-				sliceUint64Var[i] = v
 			}
+			sliceUint64Var[i] = v
 		}
 
 		sliceUintVarRaw := r.URL.Query().Get("slice_uint_var")
 		sliceUintVarRawSlice := strings.Split(sliceUintVarRaw, ",")
 		sliceUintVar = make([]uint, len(sliceUintVarRawSlice))
 		for i, rv := range sliceUintVarRawSlice {
-			if v, err := strconv.ParseUint(rv, 10, strconv.IntSize); err != nil {
+			v, err := strconv.ParseUint(rv, 10, strconv.IntSize)
+			if err != nil {
 				return nil, fmt.Errorf("slice_uint_var must be an set of unsigned integers, got value '%s' in set '%s'", rv, sliceUintVarRaw)
-			} else {
-				sliceUintVar[i] = uint(v)
 			}
+			sliceUintVar[i] = uint(v)
 		}
 
 		stringVar = r.URL.Query().Get("mappedvar")
 
 		uint32VarRaw := r.URL.Query().Get("uint32_var")
-		if v, err := strconv.ParseUint(uint32VarRaw, 10, 32); err != nil {
+		v, err := strconv.ParseUint(uint32VarRaw, 10, 32)
+		if err != nil {
 			return nil, fmt.Errorf("uint32_var must be an unsigned integer, got '%s'", uint32VarRaw)
-		} else {
-			uint32Var = int32(v)
 		}
+		uint32Var = int32(v)
 
 		uint64VarRaw := r.URL.Query().Get("uint64_var")
-		if v, err := strconv.ParseUint(uint64VarRaw, 10, 64); err != nil {
+		v, err := strconv.ParseUint(uint64VarRaw, 10, 64)
+		if err != nil {
 			return nil, fmt.Errorf("uint64_var must be an unsigned integer, got '%s'", uint64VarRaw)
-		} else {
-			uint64Var = v
 		}
+		uint64Var = v
 
 		uintVarRaw := r.URL.Query().Get("uint_var")
-		if v, err := strconv.ParseUint(uintVarRaw, 10, strconv.IntSize); err != nil {
+		v, err := strconv.ParseUint(uintVarRaw, 10, strconv.IntSize)
+		if err != nil {
 			return nil, fmt.Errorf("uint_var must be an unsigned integer, got '%s'", uintVarRaw)
-		} else {
-			uintVar = uint(v)
 		}
+		uintVar = uint(v)
 
 		payload, err := NewShowUserPayload(&body, boolVar, float32Var, float64Var, int32Var, int64Var, intVar, sliceBoolVar, sliceFloat32Var, sliceFloat64Var, sliceInt32Var, sliceInt64Var, sliceIntVar, sliceString, sliceUint32Var, sliceUint64Var, sliceUintVar, stringVar, uint32Var, uint64Var, uintVar)
 		return payload, err

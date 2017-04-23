@@ -90,8 +90,8 @@ func PathSection(a *rest.ActionExpr) *codegen.Section {
 
 func buildPathData(a *rest.ActionExpr) *pathData {
 	pd := pathData{
-		ServiceName:  a.Service.Name,
-		EndpointName: a.Name,
+		ServiceName:  a.EndpointExpr.Service.Name,
+		EndpointName: a.Name(),
 		Routes:       make([]*pathRoute, len(a.Routes)),
 	}
 

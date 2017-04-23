@@ -11,7 +11,7 @@ type CreateAccountBody struct {
 }
 
 // NewCreateAccountPayload creates and validates a CreateAccountPayload.
-func NewCreateAccountPayload(body *CreateAccountBody, orgID int) (*services.CreateAccountPayload, error) {
+func NewCreateAccountPayload(body *CreateAccountBody, orgID uint) (*services.CreateAccountPayload, error) {
 	if err := body.Validate(); err != nil {
 		return nil, err
 	}
@@ -31,16 +31,16 @@ func (b *CreateAccountBody) Validate() (err error) {
 }
 
 // NewListAccountPayload creates and validates a CreateAccountPayload.
-func NewListAccountPayload(filter string) (*services.ListAccountPayload, error) {
-	return &services.ListAccountPayload{Filter: filter}, nil
+func NewListAccountPayload(orgID uint, filter string) (*services.ListAccountPayload, error) {
+	return &services.ListAccountPayload{OrgID: orgID, Filter: filter}, nil
 }
 
 // NewShowAccountPayload creates and validates a CreateAccountPayload.
-func NewShowAccountPayload(id string) (*services.ShowAccountPayload, error) {
-	return &services.ShowAccountPayload{ID: id}, nil
+func NewShowAccountPayload(orgID uint, id string) (*services.ShowAccountPayload, error) {
+	return &services.ShowAccountPayload{OrgID: orgID, ID: id}, nil
 }
 
 // NewDeleteAccountPayload creates and validates a CreateAccountPayload.
-func NewDeleteAccountPayload(id string) (*services.DeleteAccountPayload, error) {
-	return &services.DeleteAccountPayload{ID: id}, nil
+func NewDeleteAccountPayload(orgID uint, id string) (*services.DeleteAccountPayload, error) {
+	return &services.DeleteAccountPayload{OrgID: orgID, ID: id}, nil
 }

@@ -150,15 +150,16 @@ func CreateAccountDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFu
 		}
 
 		params := httptreemux.ContextParams(r.Context())
+		orgIDRaw := params["org_id"]
 		var (
-			orgID int
+			orgID uint
 		)
 		{
-			orgIDRaw := params["org_id"]
-			orgID, err = strconv.Atoi(orgIDRaw)
+			v, err := strconv.ParseUint(orgIDRaw, 10, strconv.IntSize)
 			if err != nil {
-				return nil, fmt.Errorf("org_id must be an integer, got %#v", orgID)
+				return nil, fmt.Errorf("{{ .Name }} must be an unsigned integer, got '%s'", orgIDRaw)
 			}
+			orgID = uint(v)
 		}
 
 		payload, err := NewCreateAccountPayload(&body, orgID)
@@ -241,7 +242,21 @@ func NewListAccountHandler(
 func ListAccountDecodeRequest(decoder rest.RequestDecoderFunc) func(r *http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		filter := r.URL.Query().Get("filter")
-		payload, err := NewListAccountPayload(filter)
+
+		params := httptreemux.ContextParams(r.Context())
+		orgIDRaw := params["org_id"]
+		var (
+			orgID uint
+		)
+		{
+			v, err := strconv.ParseUint(orgIDRaw, 10, strconv.IntSize)
+			if err != nil {
+				return nil, fmt.Errorf("{{ .Name }} must be an unsigned integer, got '%s'", orgIDRaw)
+			}
+			orgID = uint(v)
+		}
+
+		payload, err := NewListAccountPayload(orgID, filter)
 		return payload, err
 	}
 }
@@ -298,7 +313,18 @@ func ShowAccountDecodeRequest(decoder rest.RequestDecoderFunc) func(r *http.Requ
 	return func(r *http.Request) (interface{}, error) {
 		params := httptreemux.ContextParams(r.Context())
 		id := params["id"]
-		payload, err := NewShowAccountPayload(id)
+		orgIDRaw := params["org_id"]
+		var (
+			orgID uint
+		)
+		{
+			v, err := strconv.ParseUint(orgIDRaw, 10, strconv.IntSize)
+			if err != nil {
+				return nil, fmt.Errorf("{{ .Name }} must be an unsigned integer, got '%s'", orgIDRaw)
+			}
+			orgID = uint(v)
+		}
+		payload, err := NewShowAccountPayload(orgID, id)
 		return interface{}(payload), err
 	}
 }
@@ -354,7 +380,18 @@ func DeleteAccountDecodeRequest(decoder rest.RequestDecoderFunc) func(r *http.Re
 	return func(r *http.Request) (interface{}, error) {
 		params := httptreemux.ContextParams(r.Context())
 		id := params["id"]
-		payload, err := NewDeleteAccountPayload(id)
+		orgIDRaw := params["org_id"]
+		var (
+			orgID uint
+		)
+		{
+			v, err := strconv.ParseUint(orgIDRaw, 10, strconv.IntSize)
+			if err != nil {
+				return nil, fmt.Errorf("{{ .Name }} must be an unsigned integer, got '%s'", orgIDRaw)
+			}
+			orgID = uint(v)
+		}
+		payload, err := NewDeleteAccountPayload(orgID, id)
 		return interface{}(payload), err
 	}
 }
