@@ -20,8 +20,9 @@ type (
 	// portions of the URL that define parameter values), query string parameters and a payload
 	// parameter (request body).
 	ActionExpr struct {
-		// Endpoint is the underlying endpoint expression.
-		*design.EndpointExpr
+		eval.DSLFunc
+		// EndpointExpr is the underlying endpoint expression.
+		EndpointExpr *design.EndpointExpr
 		// Resource is the parent resource.
 		Resource *ResourceExpr
 		// Action routes
@@ -32,6 +33,9 @@ type (
 		HTTPErrors []*HTTPErrorExpr
 		// Body attribute
 		Body *design.AttributeExpr
+		// Metadata is a set of key/value pairs with semantic that is
+		// specific to each generator.
+		Metadata design.MetadataExpr
 		// params defines common request parameters to all the service
 		// HTTP endpoints. The keys may use the "attribute:param" syntax
 		// where "attribute" is the name of the attribute and "param"
@@ -67,11 +71,21 @@ func ExtractRouteWildcards(path string) []string {
 	return wcs
 }
 
+// Name of action (endpoint)
+func (a *ActionExpr) Name() string {
+	return a.EndpointExpr.Name
+}
+
+// Description of action (endpoint)
+func (a *ActionExpr) Description() string {
+	return a.EndpointExpr.Description
+}
+
 // EvalName returns the generic expression name used in error messages.
 func (a *ActionExpr) EvalName() string {
 	var prefix, suffix string
-	if a.Name != "" {
-		suffix = fmt.Sprintf("action %#v", a.Name)
+	if a.Name() != "" {
+		suffix = fmt.Sprintf("action %#v", a.Name())
 	} else {
 		suffix = "unnamed action"
 	}
@@ -171,7 +185,7 @@ func (a *ActionExpr) HasAbsoluteRoutes() bool {
 // Validate validates the action expression.
 func (a *ActionExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
-	if a.Name == "" {
+	if a.Name() == "" {
 		verr.Add(a, "Action name cannot be empty")
 	}
 	if len(a.Routes) == 0 {

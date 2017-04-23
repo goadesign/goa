@@ -166,9 +166,9 @@ func GenerateResourceDefinition(api *design.APIExpr, res *rest.ResourceExpr) {
 	Definitions[res.Name()] = s
 	for _, a := range res.Actions {
 		var requestSchema *Schema
-		if a.Payload != nil {
-			requestSchema = TypeSchema(api, a.Payload)
-			requestSchema.Description = a.Name + " payload"
+		if a.EndpointExpr.Payload != nil {
+			requestSchema = TypeSchema(api, a.EndpointExpr.Payload)
+			requestSchema.Description = a.Name() + " payload"
 		}
 		if a.Params() != nil {
 			params := a.MappedParams()
@@ -202,8 +202,8 @@ func GenerateResourceDefinition(api *design.APIExpr, res *rest.ResourceExpr) {
 		}
 		for i, r := range a.Routes {
 			link := Link{
-				Title:        a.Name,
-				Rel:          a.Name,
+				Title:        a.Name(),
+				Rel:          a.Name(),
 				Href:         toSchemaHref(r),
 				Method:       r.Method,
 				Schema:       requestSchema,
@@ -212,7 +212,7 @@ func GenerateResourceDefinition(api *design.APIExpr, res *rest.ResourceExpr) {
 			}
 			if i == 0 {
 				if ca := a.Resource.CanonicalAction(); ca != nil {
-					if ca.Name == a.Name {
+					if ca.Name() == a.Name() {
 						link.Rel = "self"
 					}
 				}

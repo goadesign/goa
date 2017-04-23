@@ -4,24 +4,24 @@ import "fmt"
 
 // CreateAccountPath returns the URL path to the account service create HTTP
 // endpoint.
-func CreateAccountPath() string {
-	return "/accounts"
+func CreateAccountPath(orgID uint) string {
+	return fmt.Sprintf("/orgs/%v/accounts", orgID)
 }
 
 // ListAccountPath returns the URL path to the account service list HTTP
 // endpoint.
-func ListAccountPath() string {
-	return "/accounts"
+func ListAccountPath(orgID uint) string {
+	return fmt.Sprintf("/orgs/%v/accounts", orgID)
 }
 
 // ShowAccountPath returns the URL path to the account service show HTTP
 // endpoint.
-func ShowAccountPath(id string) string {
-	return fmt.Sprintf("/accounts/%v", id)
+func ShowAccountPath(orgID uint, id string) string {
+	return fmt.Sprintf("/orgs/%v/accounts/%v", orgID, id)
 }
 
 // DeleteAccountPath returns the URL path to the account service delete HTTP
 // endpoint.
-func DeleteAccountPath(id string) string {
-	return fmt.Sprintf("/accounts/%v", id)
+func DeleteAccountPath(orgID uint, id string) string {
+	return fmt.Sprintf("/orgs/%v/accounts/%v", orgID, id)
 }

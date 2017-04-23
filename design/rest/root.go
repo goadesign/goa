@@ -162,13 +162,6 @@ func (r *RootExpr) ResourceFor(s *design.ServiceExpr) *ResourceExpr {
 	}
 	res := &ResourceExpr{
 		ServiceExpr: s,
-		Actions:     make([]*ActionExpr, len(s.Endpoints)),
-	}
-	for i, e := range s.Endpoints {
-		res.Actions[i] = &ActionExpr{
-			EndpointExpr: e,
-			Resource:     res,
-		}
 	}
 	r.Resources = append(r.Resources, res)
 	return res
@@ -209,10 +202,15 @@ func (r *RootExpr) EvalName() string {
 // WalkSets iterates through the resources to finalize and validate them.
 func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	resources := make(eval.ExpressionSet, len(r.Resources))
+	var actions []eval.Expression
 	for i, res := range r.Resources {
 		resources[i] = res
+		for _, a := range res.Actions {
+			actions = append(actions, a)
+		}
 	}
 	walk(resources)
+	walk(actions)
 }
 
 // DependsOn is a no-op as the DSL runs when loaded.

@@ -1,3 +1,10 @@
+// Code generated with goagen v2.0.0-wip, DO NOT EDIT.
+//
+// accountEndpoints
+//
+// Command:
+// $ goagen server goa.design/goa.v2/examples/account/design
+
 package endpoints
 
 import (

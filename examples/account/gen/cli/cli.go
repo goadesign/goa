@@ -33,16 +33,19 @@ func RunCommand(timeout int, accountClient *genhttp.AccountClient) (interface{},
 
 		accountCreateFlags     = flag.NewFlagSet("account-create", flag.ExitOnError)
 		accountCreateNameFlag  = accountCreateFlags.String("name", "REQUIRED", "account name")
-		accountCreateOrgIDFlag = accountCreateFlags.Int("org-id", 0, "ID of organization that owns newly created account")
+		accountCreateOrgIDFlag = accountCreateFlags.Uint("org-id", 0, "ID of organization that owns newly created account")
 
 		accountListFlags      = flag.NewFlagSet("account-list", flag.ExitOnError)
 		accountListFilterFlag = accountListFlags.String("filter", "", "Filter is the account name prefix filter")
+		accountListOrgIDFlag  = accountListFlags.Uint("org-id", 0, "ID of organization that owns account")
 
-		accountShowFlags  = flag.NewFlagSet("account-show", flag.ExitOnError)
-		accountShowIDFlag = accountShowFlags.String("id", "REQUIRED", "ID of account")
+		accountShowFlags     = flag.NewFlagSet("account-show", flag.ExitOnError)
+		accountShowIDFlag    = accountShowFlags.String("id", "REQUIRED", "ID of account")
+		accountShowOrgIDFlag = accountShowFlags.Uint("org-id", 0, "ID of organization that owns account")
 
-		accountDeleteFlags  = flag.NewFlagSet("account-delete", flag.ExitOnError)
-		accountDeleteIDFlag = accountDeleteFlags.String("id", "REQUIRED", "ID of account")
+		accountDeleteFlags     = flag.NewFlagSet("account-delete", flag.ExitOnError)
+		accountDeleteIDFlag    = accountDeleteFlags.String("id", "REQUIRED", "ID of account")
+		accountDeleteOrgIDFlag = accountDeleteFlags.Uint("org-id", 0, "ID of organization that owns account")
 	)
 	accountFlags.Usage = accountUsage
 	accountCreateFlags.Usage = accountCreateUsage
@@ -114,11 +117,11 @@ func RunCommand(timeout int, accountClient *genhttp.AccountClient) (interface{},
 			case "create":
 				data, err = runAccountCreate(ctx, accountClient.Create(), *accountCreateNameFlag, *accountCreateOrgIDFlag)
 			case "list":
-				data, err = runAccountList(ctx, accountClient.List(), *accountListFilterFlag)
+				data, err = runAccountList(ctx, accountClient.List(), *accountListFilterFlag, *accountListOrgIDFlag)
 			case "show":
-				data, err = runAccountShow(ctx, accountClient.Show(), *accountShowIDFlag)
+				data, err = runAccountShow(ctx, accountClient.Show(), *accountShowIDFlag, *accountShowOrgIDFlag)
 			case "delete":
-				data, err = runAccountDelete(ctx, accountClient.Delete(), *accountDeleteIDFlag)
+				data, err = runAccountDelete(ctx, accountClient.Delete(), *accountDeleteIDFlag, *accountDeleteOrgIDFlag)
 			}
 		}
 	}
@@ -126,7 +129,7 @@ func RunCommand(timeout int, accountClient *genhttp.AccountClient) (interface{},
 	return data, err
 }
 
-func runAccountCreate(ctx context.Context, endpoint goa.Endpoint, name string, orgID int) (interface{}, error) {
+func runAccountCreate(ctx context.Context, endpoint goa.Endpoint, name string, orgID uint) (interface{}, error) {
 	payload := services.CreateAccountPayload{
 		Name:  name,
 		OrgID: orgID,
@@ -134,25 +137,28 @@ func runAccountCreate(ctx context.Context, endpoint goa.Endpoint, name string, o
 	return endpoint(ctx, &payload)
 }
 
-func runAccountList(ctx context.Context, endpoint goa.Endpoint, filter string) (interface{}, error) {
+func runAccountList(ctx context.Context, endpoint goa.Endpoint, filter string, orgID uint) (interface{}, error) {
 	payload := services.ListAccountPayload{
 		Filter: filter,
+		OrgID:  orgID,
 	}
 
 	return endpoint(ctx, &payload)
 }
 
-func runAccountShow(ctx context.Context, endpoint goa.Endpoint, id string) (interface{}, error) {
+func runAccountShow(ctx context.Context, endpoint goa.Endpoint, id string, orgID uint) (interface{}, error) {
 	payload := services.ShowAccountPayload{
-		ID: id,
+		ID:    id,
+		OrgID: orgID,
 	}
 
 	return endpoint(ctx, &payload)
 }
 
-func runAccountDelete(ctx context.Context, endpoint goa.Endpoint, id string) (interface{}, error) {
+func runAccountDelete(ctx context.Context, endpoint goa.Endpoint, id string, orgID uint) (interface{}, error) {
 	payload := services.DeleteAccountPayload{
-		ID: id,
+		ID:    id,
+		OrgID: orgID,
 	}
 
 	return endpoint(ctx, &payload)

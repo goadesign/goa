@@ -64,20 +64,23 @@ type (
 	}
 
 	CreateAccountPayload struct {
-		OrgID int
+		OrgID uint
 		Name  string
 	}
 
 	ListAccountPayload struct {
+		OrgID  uint
 		Filter string
 	}
 
 	ShowAccountPayload struct {
-		ID string
+		OrgID uint
+		ID    string
 	}
 
 	DeleteAccountPayload struct {
-		ID string
+		OrgID uint
+		ID    string
 	}
 )
 
