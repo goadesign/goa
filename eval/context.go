@@ -67,21 +67,11 @@ func (c *DSLContext) Error() string {
 // Roots orders the DSL roots making sure dependencies are last. It returns an
 // error if there is a dependency cycle.
 func (c *DSLContext) Roots() ([]Root, error) {
-	// Filter out unused roots
-	var roots []Root
-	for _, root := range c.roots {
-		if root.Used() {
-			roots = append(roots, root)
-		}
-	}
-	if len(roots) == 0 {
-		return nil, nil
-	}
 	// Flatten dependencies for each root
-	rootDeps := make(map[string][]Root, len(roots))
-	rootByName := make(map[string]Root, len(roots))
-	for _, r := range roots {
-		sorted := sortDependencies(roots, r, func(r Root) []Root { return r.DependsOn() })
+	rootDeps := make(map[string][]Root, len(c.roots))
+	rootByName := make(map[string]Root, len(c.roots))
+	for _, r := range c.roots {
+		sorted := sortDependencies(c.roots, r, func(r Root) []Root { return r.DependsOn() })
 		length := len(sorted)
 		for i := 0; i < length/2; i++ {
 			sorted[i], sorted[length-i-1] = sorted[length-i-1], sorted[i]
@@ -116,8 +106,8 @@ func (c *DSLContext) Roots() ([]Root, error) {
 	}
 	// Now sort top level DSLs
 	var sorted []Root
-	for _, r := range roots {
-		s := sortDependencies(roots, r, func(r Root) []Root { return rootDeps[r.EvalName()] })
+	for _, r := range c.roots {
+		s := sortDependencies(c.roots, r, func(r Root) []Root { return rootDeps[r.EvalName()] })
 		for _, s := range s {
 			found := false
 			for _, r := range sorted {

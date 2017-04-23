@@ -6,6 +6,10 @@ import (
 
 // Register DSL roots.
 func init() {
-	eval.Register(Root)
-	eval.Register(Root.GeneratedMediaTypes)
+	if err := eval.Register(Root); err != nil {
+		panic(err) // bug
+	}
+	if err := eval.Register(Root.GeneratedMediaTypes); err != nil {
+		panic(err) // bug
+	}
 }
