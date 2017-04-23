@@ -19,7 +19,3 @@ cmd/goagen/goagen
 
 # Example outputs
 /examples/account/cmd/*
-/examples/account/endpoints/*
-/examples/account/openapi/*
-/examples/account/transport/*
-/examples/account/services/*
