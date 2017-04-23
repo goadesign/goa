@@ -160,10 +160,10 @@ func APISchema(api *design.APIExpr, r *rest.RootExpr) *Schema {
 // API resource. It stores the results in cachedSchema.
 func GenerateResourceDefinition(api *design.APIExpr, res *rest.ResourceExpr) {
 	s := NewSchema()
-	s.Description = res.Description
+	s.Description = res.Description()
 	s.Type = Object
-	s.Title = res.Name
-	Definitions[res.Name] = s
+	s.Title = res.Name()
+	Definitions[res.Name()] = s
 	for _, a := range res.Actions {
 		var requestSchema *Schema
 		if a.Payload != nil {

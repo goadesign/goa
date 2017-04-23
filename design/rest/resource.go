@@ -18,8 +18,9 @@ type (
 	// executed through HTTP requests.
 	// ResourceExpr embeds a ServiceExpr and adds HTTP specific properties.
 	ResourceExpr struct {
-		// ServiceExpr is the underlying service.
-		*design.ServiceExpr
+		// ServiceExpr is the service expression that backs this
+		// resource.
+		ServiceExpr *design.ServiceExpr
 		// Common URL prefix to all resource action HTTP requests
 		Path string
 		// Name of parent resource if any
@@ -32,6 +33,9 @@ type (
 		HTTPErrors []*HTTPErrorExpr
 		// FileServers is the list of static asset serving endpoints
 		FileServers []*FileServerExpr
+		// Metadata is a set of key/value pairs with semantic that is
+		// specific to each generator.
+		Metadata design.MetadataExpr
 		// params defines common request parameters to all the service
 		// HTTP endpoints. The keys may use the "attribute:param" syntax
 		// where "attribute" is the name of the attribute and "param"
@@ -45,10 +49,20 @@ type (
 	}
 )
 
+// Name of resource (service)
+func (r *ResourceExpr) Name() string {
+	return r.ServiceExpr.Name
+}
+
+// Description of resource (service)
+func (r *ResourceExpr) Description() string {
+	return r.ServiceExpr.Description
+}
+
 // Schemes returns the resource endpoint HTTP schemes.
 func (r *ResourceExpr) Schemes() []string {
 	schemes := make(map[string]bool)
-	for _, s := range r.Servers {
+	for _, s := range r.ServiceExpr.Servers {
 		if u, err := url.Parse(s.URL); err != nil {
 			schemes[u.Scheme] = true
 		}
@@ -64,6 +78,16 @@ func (r *ResourceExpr) Schemes() []string {
 	}
 	sort.Strings(ss)
 	return ss
+}
+
+// Error returns the error with the given name.
+func (r *ResourceExpr) Error(name string) *design.ErrorExpr {
+	for _, erro := range r.ServiceExpr.Errors {
+		if erro.Name == name {
+			return erro
+		}
+	}
+	return Root.Design.Error(name)
 }
 
 // Action returns the resource action with the given name or nil if there isn't one.
@@ -129,8 +153,8 @@ func (r *ResourceExpr) Parent() *ResourceExpr {
 	return nil
 }
 
-// Error returns the resource error with given name if any.
-func (r *ResourceExpr) Error(name string) *HTTPErrorExpr {
+// HTTPError returns the resource HTTP error with given name if any.
+func (r *ResourceExpr) HTTPError(name string) *HTTPErrorExpr {
 	for _, erro := range r.HTTPErrors {
 		if erro.Name == name {
 			return erro
@@ -167,10 +191,10 @@ func (r *ResourceExpr) MappedParams() *MappedAttributeExpr {
 
 // EvalName returns the generic definition name used in error messages.
 func (r *ResourceExpr) EvalName() string {
-	if r.Name == "" {
+	if r.Name() == "" {
 		return "unnamed resource"
 	}
-	return fmt.Sprintf("resource %#v", r.Name)
+	return fmt.Sprintf("resource %#v", r.Name())
 }
 
 // Validate makes sure the resource is valid.

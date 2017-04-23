@@ -83,23 +83,28 @@ func (a *ActionExpr) EvalName() string {
 
 // PathParams returns the path parameters of the action across all its routes.
 func (a *ActionExpr) PathParams() *MappedAttributeExpr {
-	params := a.AllParams()
-	qparams := a.QueryParams()
-	for attName := range qparams.Type.(design.Object) {
-		params.Delete(attName)
+	allParams := a.AllParams()
+	pathParams := NewMappedAttributeExpr(&design.AttributeExpr{Type: design.Object{}})
+	for _, r := range a.Routes {
+		for _, p := range r.ParamAttributes() {
+			att := allParams.Type.(design.Object)[p]
+			if att == nil {
+				panic("attribute not found " + p) // bug
+			}
+			pathParams.Type.(design.Object)[p] = att
+		}
 	}
-	return params
+	return pathParams
 }
 
 // QueryParams returns the query parameters of the action across all its routes.
 func (a *ActionExpr) QueryParams() *MappedAttributeExpr {
-	params := a.AllParams()
-	for _, r := range a.Routes {
-		for _, p := range r.Params() {
-			params.Delete(strings.Split(p, ":")[0])
-		}
+	allParams := a.AllParams()
+	pathParams := a.PathParams()
+	for attName := range pathParams.Type.(design.Object) {
+		allParams.Delete(attName)
 	}
-	return params
+	return allParams
 }
 
 // AllParams returns the path and query string parameters of the action across all its routes.
@@ -115,7 +120,7 @@ func (a *ActionExpr) AllParams() *MappedAttributeExpr {
 		return res
 	}
 	if p := a.Resource.Parent(); p != nil {
-		res.Merge(p.CanonicalAction().AllParams())
+		res.Merge(p.CanonicalAction().PathParams())
 	} else {
 		res.Merge(a.Resource.MappedParams())
 		res.Merge(Root.MappedParams())
@@ -190,6 +195,14 @@ func (a *ActionExpr) Validate() error {
 
 // Finalize sets the Parent fields of the action responses and errors.
 func (a *ActionExpr) Finalize() {
+	// Create default parameter expressions
+	for _, r := range a.Routes {
+		for _, p := range r.ParamAttributes() {
+			if _, ok := a.Params().Type.(design.Object)[p]; !ok {
+				a.Params().Type.(design.Object)[p] = &design.AttributeExpr{Type: String}
+			}
+		}
+	}
 	for _, r := range a.Responses {
 		r.Parent = a
 	}
@@ -227,10 +240,21 @@ func (r *RouteExpr) EvalName() string {
 	return fmt.Sprintf(`route %s "%s" of %s`, r.Method, r.Path, r.Action.EvalName())
 }
 
-// Params returns the route parameters.
-// For example for the route "GET /foo/{fooID}" Params returns []string{"fooID"}.
+// Params returns the route parameters. For example for the route
+// "GET /foo/{fooID:foo_id}" Params returns []string{"fooID:foo_id"}.
 func (r *RouteExpr) Params() []string {
 	return ExtractRouteWildcards(r.FullPath())
+}
+
+// ParamAttributes returns the route parameter attribute names. For example for
+// the route "GET /foo/{fooID:foo_id}" ParamAttributes returns []string{"fooID"}.
+func (r *RouteExpr) ParamAttributes() []string {
+	params := r.Params()
+	res := make([]string, len(params))
+	for i, param := range params {
+		res[i] = strings.Split(param, ":")[0]
+	}
+	return res
 }
 
 // FullPath returns the action full path computed by concatenating the API and

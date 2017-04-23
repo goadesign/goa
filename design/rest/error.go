@@ -32,7 +32,7 @@ func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
 	case *ActionExpr:
 		ee = p.EndpointExpr.Error(e.Name)
 	case *ResourceExpr:
-		ee = p.ServiceExpr.Error(e.Name)
+		ee = p.Error(e.Name)
 	case *RootExpr:
 		ee = design.Root.Error(e.Name)
 	}

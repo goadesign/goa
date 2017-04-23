@@ -384,7 +384,7 @@ func buildPathFromFileServer(s *openAPIV2, root *rest.RootExpr, fs *rest.FileSer
 		responses["404"] = &Response{Description: "File not found", Schema: schema}
 	}
 
-	operationID := fmt.Sprintf("%s#%s", fs.Resource.Name, fs.RequestPath)
+	operationID := fmt.Sprintf("%s#%s", fs.Resource.Name(), fs.RequestPath)
 	schemes := root.Design.API.Schemes()
 
 	operation := &Operation{
@@ -425,7 +425,7 @@ func buildPathFromExpr(s *openAPIV2, root *rest.RootExpr, route *rest.RouteExpr,
 	tagNames := tagNamesFromExpr(action.Resource.Metadata, action.Metadata)
 	if len(tagNames) == 0 {
 		// By default tag with resource name
-		tagNames = []string{route.Action.Resource.Name}
+		tagNames = []string{route.Action.Resource.Name()}
 	}
 	params, err := paramsFromExpr(action.AllParams(), route.FullPath())
 	if err != nil {
@@ -455,7 +455,7 @@ func buildPathFromExpr(s *openAPIV2, root *rest.RootExpr, route *rest.RouteExpr,
 		params = append(params, pp)
 	}
 
-	operationID := fmt.Sprintf("%s#%s", action.Resource.Name, action.Name)
+	operationID := fmt.Sprintf("%s#%s", action.Resource.Name(), action.Name)
 	index := 0
 	for i, rt := range action.Routes {
 		if rt == route {
@@ -475,7 +475,7 @@ func buildPathFromExpr(s *openAPIV2, root *rest.RootExpr, route *rest.RouteExpr,
 	operation := &Operation{
 		Tags:         tagNames,
 		Description:  action.Description,
-		Summary:      summaryFromExpr(action.Name+" "+action.Resource.Name, action.Metadata),
+		Summary:      summaryFromExpr(action.Name+" "+action.Resource.Name(), action.Metadata),
 		ExternalDocs: docsFromExpr(action.Docs),
 		OperationID:  operationID,
 		Parameters:   params,

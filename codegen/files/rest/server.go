@@ -157,11 +157,11 @@ func ServerFiles(root *rest.RootExpr) []codegen.File {
 
 // Server returns the server HTTP transport file
 func Server(r *rest.ResourceExpr) codegen.File {
-	path := filepath.Join("transport", "http", codegen.SnakeCase(r.Name)+"_server.go")
+	path := filepath.Join("transport", "http", codegen.SnakeCase(r.Name())+"_server.go")
 	sections := func(genPkg string) []*codegen.Section {
 		d := buildServerData(r)
 
-		title := fmt.Sprintf("%s server HTTP transport", r.Name)
+		title := fmt.Sprintf("%s server HTTP transport", r.Name())
 		s := []*codegen.Section{
 			codegen.Header(title, "http", []*codegen.ImportSpec{
 				{Path: "fmt"},
@@ -206,9 +206,9 @@ func Server(r *rest.ResourceExpr) codegen.File {
 }
 
 func buildServerData(r *rest.ResourceExpr) *serverData {
-	varServiceName := codegen.Goify(r.Name, true)
+	varServiceName := codegen.Goify(r.Name(), true)
 	sd := &serverData{
-		ServiceName:    r.Name,
+		ServiceName:    r.Name(),
 		VarServiceName: varServiceName,
 		HandlersStruct: fmt.Sprintf("%sHandlers", varServiceName),
 		Constructor:    fmt.Sprintf("New%sHandlers", varServiceName),
@@ -251,7 +251,7 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 		ad := &serverActionData{
 			EndpointName:    a.Name,
 			VarEndpointName: varEndpointName,
-			ServiceName:     r.Name,
+			ServiceName:     r.Name(),
 			VarServiceName:  varServiceName,
 			Routes:          routes,
 			Responses:       responses,

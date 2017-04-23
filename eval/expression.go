@@ -27,8 +27,6 @@ type (
 		// up the DSL. This is used to skip frames that point to files
 		// in these packages when computing the location of errors.
 		Packages() []string
-		// Used returns true if any DSL contributed to the root.
-		Used() bool
 	}
 
 	// A Source expression embeds DSL to be executed after the process is
