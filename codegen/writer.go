@@ -42,35 +42,35 @@ type (
 )
 
 // Write generates the file produced by the given file writer.
-func (w *Writer) Write(file File) error {
-	p := file.OutputPath()
-	_, err := os.Stat(p)
+func (w *Writer) Write(dir string, file File) error {
+	base, err := filepath.Abs(filepath.Join(w.Dir, dir))
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(base, file.OutputPath())
+	_, err = os.Stat(path)
 	if err == nil {
 		i := 1
 		for err == nil {
 			i := i + 1
-			ext := filepath.Ext(p)
-			p = strings.TrimSuffix(p, ext)
-			p = strings.TrimRight(p, "0123456789")
-			p = p + strconv.Itoa(i) + ext
-			_, err = os.Stat(p)
+			ext := filepath.Ext(path)
+			path = strings.TrimSuffix(path, ext)
+			path = strings.TrimRight(path, "0123456789")
+			path = path + strconv.Itoa(i) + ext
+			_, err = os.Stat(path)
 		}
 	}
 
-	if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
-	abs, err := filepath.Abs(w.Dir)
-	if err != nil {
-		abs = w.Dir
-	}
-	genPkg, err := build.ImportDir(abs, build.FindOnly)
+	genPkg, err := build.ImportDir(base, build.FindOnly)
 	if err != nil {
 		return err
 	}
 
 	f, err := os.OpenFile(
-		p,
+		path,
 		os.O_CREATE|os.O_APPEND|os.O_WRONLY,
 		0644,
 	)
@@ -85,10 +85,10 @@ func (w *Writer) Write(file File) error {
 	if err := f.Close(); err != nil {
 		return err
 	}
-	if err := file.Finalize(p); err != nil {
+	if err := file.Finalize(path); err != nil {
 		return err
 	}
-	w.Files[p] = true
+	w.Files[path] = true
 	return nil
 }
 
