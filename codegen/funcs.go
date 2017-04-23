@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"text/template"
 	"unicode"
@@ -36,34 +35,14 @@ func CheckVersion(ver string) error {
 
 // CommandLine return the command used to run this process.
 func CommandLine() string {
-	// We don't use the full path to the tool so that running goagen multiple times doesn't
-	// end up creating different command line comments (because of the temporary directory it
-	// runs in).
-	var param string
-
-	if len(os.Args) > 1 {
-		args := make([]string, len(os.Args)-1)
-		gopaths := filepath.SplitList(os.Getenv("GOPATH"))
-		for i, a := range os.Args[1:] {
-			for _, p := range gopaths {
-				if strings.Contains(a, p) {
-					args[i] = strings.Replace(a, p, "$(GOPATH)", -1)
-					break
-				}
-			}
-			if args[i] == "" {
-				args[i] = a
-			}
+	cmdl := "$ goagen"
+	for _, arg := range os.Args {
+		if strings.HasPrefix(arg, "--cmd=") {
+			cmdl = arg[6:]
+			break
 		}
-		param = " " + strings.Join(args, " ")
 	}
-	rawcmd := filepath.Base(os.Args[0])
-	// Remove possible .exe suffix to not create different ouptut just because
-	// you ran goagen on Windows.
-	rawcmd = strings.TrimSuffix(rawcmd, ".exe")
-
-	cmd := fmt.Sprintf("$ %s%s", rawcmd, param)
-	return strings.Replace(cmd, " --", "\n\t--", -1)
+	return cmdl
 }
 
 // Comment produces line comments by concatenating the given strings and producing 80 characters
