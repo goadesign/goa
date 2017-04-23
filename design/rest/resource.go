@@ -18,6 +18,7 @@ type (
 	// executed through HTTP requests.
 	// ResourceExpr embeds a ServiceExpr and adds HTTP specific properties.
 	ResourceExpr struct {
+		eval.DSLFunc
 		// ServiceExpr is the service expression that backs this
 		// resource.
 		ServiceExpr *design.ServiceExpr
@@ -93,11 +94,24 @@ func (r *ResourceExpr) Error(name string) *design.ErrorExpr {
 // Action returns the resource action with the given name or nil if there isn't one.
 func (r *ResourceExpr) Action(name string) *ActionExpr {
 	for _, a := range r.Actions {
-		if a.Name == name {
+		if a.Name() == name {
 			return a
 		}
 	}
 	return nil
+}
+
+// ActionFor builds the action for the given endpoint.
+func (r *ResourceExpr) ActionFor(name string, e *design.EndpointExpr) *ActionExpr {
+	if a := r.Action(name); a != nil {
+		return a
+	}
+	a := &ActionExpr{
+		EndpointExpr: e,
+		Resource:     r,
+	}
+	r.Actions = append(r.Actions, a)
+	return a
 }
 
 // CanonicalAction returns the canonical action of the resource if any.

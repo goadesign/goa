@@ -216,7 +216,7 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 	}
 
 	for _, a := range r.Actions {
-		varEndpointName := codegen.Goify(a.Name, true)
+		varEndpointName := codegen.Goify(a.Name(), true)
 
 		routes := make([]*serverRouteData, len(a.Routes))
 		for i, v := range a.Routes {
@@ -249,7 +249,7 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 		}
 
 		ad := &serverActionData{
-			EndpointName:    a.Name,
+			EndpointName:    a.Name(),
 			VarEndpointName: varEndpointName,
 			ServiceName:     r.Name(),
 			VarServiceName:  varServiceName,
@@ -263,7 +263,7 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 			ErrorEncoder:    fmt.Sprintf("%s%sEncodeError", varEndpointName, varServiceName),
 		}
 
-		if a.Payload != nil && a.Payload != design.Empty {
+		if a.EndpointExpr.Payload != nil && a.EndpointExpr.Payload != design.Empty {
 			hasBody := a.Body != nil && a.Body.Type != design.Empty
 			ad.Payload = &serverPayloadData{
 				Name:        fmt.Sprintf("%s%sPayload", varEndpointName, varServiceName),
@@ -499,59 +499,59 @@ func {{ .Decoder }}(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 	{{- else if eq .Type.Name "[]byte" }}
 		{{ .VarName }} = url.QueryUnescape(string(v))
 	{{- else if eq .Type.Name "int" }}
-		if v, err := strconv.ParseInt({{ .VarName }}Raw, 10, strconv.IntSize); err != nil {
+		v, err := strconv.ParseInt({{ .VarName }}Raw, 10, strconv.IntSize)
+		if err != nil {
 			return nil, fmt.Errorf("{{ .Name }} must be an integer, got '%s'", {{ .VarName }}Raw)
-		} else {
-			{{ .VarName }} = int(v)
 		}
+		{{ .VarName }} = int(v)
 	{{- else if eq .Type.Name "int32" }}
-		if v, err := strconv.ParseInt({{ .VarName }}Raw, 10, 32); err != nil {
+		v, err := strconv.ParseInt({{ .VarName }}Raw, 10, 32)
+		if err != nil {
 			return nil, fmt.Errorf("{{ .Name }} must be an integer, got '%s'", {{ .VarName }}Raw)
-		} else {
-			{{ .VarName }} = int32(v)
 		}
+		{{ .VarName }} = int32(v)
 	{{- else if eq .Type.Name "int64" }}
-		if v, err := strconv.ParseInt({{ .VarName }}Raw, 10, 64); err != nil {
+		v, err := strconv.ParseInt({{ .VarName }}Raw, 10, 64)
+		if err != nil {
 			return nil, fmt.Errorf("{{ .Name }} must be an integer, got '%s'", {{ .VarName }}Raw)
-		} else {
-			{{ .VarName }} = v
 		}
+		{{ .VarName }} = v
 	{{- else if eq .Type.Name "uint" }}
-		if v, err := strconv.ParseUint({{ .VarName }}Raw, 10, strconv.IntSize); err != nil {
+		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, strconv.IntSize)
+		if err != nil {
 			return nil, fmt.Errorf("{{ .Name }} must be an unsigned integer, got '%s'", {{ .VarName }}Raw)
-		} else {
-			{{ .VarName }} = uint(v)
 		}
+		{{ .VarName }} = uint(v)
 	{{- else if eq .Type.Name "uint32" }}
-		if v, err := strconv.ParseUint({{ .VarName }}Raw, 10, 32); err != nil {
+		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, 32)
+		if err != nil {
 			return nil, fmt.Errorf("{{ .Name }} must be an unsigned integer, got '%s'", {{ .VarName }}Raw)
-		} else {
-			{{ .VarName }} = int32(v)
 		}
+		{{ .VarName }} = int32(v)
 	{{- else if eq .Type.Name "uint64" }}
-		if v, err := strconv.ParseUint({{ .VarName }}Raw, 10, 64); err != nil {
+		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, 64)
+		if err != nil {
 			return nil, fmt.Errorf("{{ .Name }} must be an unsigned integer, got '%s'", {{ .VarName }}Raw)
-		} else {
-			{{ .VarName }} = v
 		}
+		{{ .VarName }} = v
 	{{- else if eq .Type.Name "float32" }}
-		if v, err := strconv.ParseFloat({{ .VarName }}Raw, 32); err != nil {
+		v, err := strconv.ParseFloat({{ .VarName }}Raw, 32)
+		if err != nil {
 			return nil, fmt.Errorf("{{ .Name }} must be a float, got '%s'", {{ .VarName }}Raw)
-		} else {
-			{{ .VarName }} = float32(v)
 		}
+		{{ .VarName }} = float32(v)
 	{{- else if eq .Type.Name "float64" }}
-		if v, err := strconv.ParseFloat({{ .VarName }}Raw, 64); err != nil {
+		v, err := strconv.ParseFloat({{ .VarName }}Raw, 64)
+		if err != nil {
 			return nil, fmt.Errorf("{{ .Name }} must be a float, got '%s'", {{ .VarName }}Raw)
-		} else {
-			{{ .VarName }} = v
 		}
+		{{ .VarName }} = v
 	{{- else if eq .Type.Name "boolean" }}
-		if v, err := strconv.ParseBool({{ .VarName }}Raw); err != nil {
+		v, err := strconv.ParseBool({{ .VarName }}Raw)
+		if err != nil {
 			return nil, fmt.Errorf("{{ .Name }} must be a boolean (true or false), got '%s'", {{ .VarName }}Raw)
-		} else {
-			{{ .VarName }} = v
 		}
+		{{ .VarName }} = v
 	{{- else }}
 		// unsupported type {{ .Type.Name }} for var {{ .VarName }}
 	{{- end }}
@@ -562,59 +562,59 @@ func {{ .Decoder }}(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 		{{- else if eq .Type.ElemType.Type.Name "[]byte" }}
 			{{ .VarName }}[i] = url.QueryUnescape(string(rv))
 		{{- else if eq .Type.ElemType.Type.Name "int" }}
-			if v, err := strconv.ParseInt(rv, 10, strconv.IntSize); err != nil {
+			v, err := strconv.ParseInt(rv, 10, strconv.IntSize)
+			if err != nil {
 				return nil, fmt.Errorf("{{ .Name }} must be an set of integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
-			} else {
-				{{ .VarName }}[i] = int(v)
 			}
+			{{ .VarName }}[i] = int(v)
 		{{- else if eq .Type.ElemType.Type.Name "int32" }}
-			if v, err := strconv.ParseInt(rv, 10, 32); err != nil {
+			v, err := strconv.ParseInt(rv, 10, 32)
+			if err != nil {
 				return nil, fmt.Errorf("{{ .Name }} must be an set of integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
-			} else {
-				{{ .VarName }}[i] = int32(v)
 			}
+			{{ .VarName }}[i] = int32(v)
 		{{- else if eq .Type.ElemType.Type.Name "int64" }}
-			if v, err := strconv.ParseInt(rv, 10, 64); err != nil {
+			v, err := strconv.ParseInt(rv, 10, 64)
+			if err != nil {
 				return nil, fmt.Errorf("{{ .Name }} must be an set of integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
-			} else {
-				{{ .VarName }}[i] = v
 			}
+			{{ .VarName }}[i] = v
 		{{- else if eq .Type.ElemType.Type.Name "uint" }}
-			if v, err := strconv.ParseUint(rv, 10, strconv.IntSize); err != nil {
+			v, err := strconv.ParseUint(rv, 10, strconv.IntSize)
+			if err != nil {
 				return nil, fmt.Errorf("{{ .Name }} must be an set of unsigned integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
-			} else {
-				{{ .VarName }}[i] = uint(v)
 			}
+			{{ .VarName }}[i] = uint(v)
 		{{- else if eq .Type.ElemType.Type.Name "uint32" }}
-			if v, err := strconv.ParseUint(rv, 10, 32); err != nil {
+			v, err := strconv.ParseUint(rv, 10, 32)
+			if err != nil {
 				return nil, fmt.Errorf("{{ .Name }} must be an set of unsigned integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
-			} else {
-				{{ .VarName }}[i] = int32(v)
 			}
+			{{ .VarName }}[i] = int32(v)
 		{{- else if eq .Type.ElemType.Type.Name "uint64" }}
-			if v, err := strconv.ParseUint(rv, 10, 64); err != nil {
+			v, err := strconv.ParseUint(rv, 10, 64)
+			if err != nil {
 				return nil, fmt.Errorf("{{ .Name }} must be an set of unsigned integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
-			} else {
-				{{ .VarName }}[i] = v
 			}
+			{{ .VarName }}[i] = v
 		{{- else if eq .Type.ElemType.Type.Name "float32" }}
-			if v, err := strconv.ParseFloat(rv, 32); err != nil {
+			v, err := strconv.ParseFloat(rv, 32)
+			if err != nil {
 				return nil, fmt.Errorf("{{ .Name }} must be an set of floats, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
-			} else {
-				{{ .VarName }}[i] = float32(v)
 			}
+			{{ .VarName }}[i] = float32(v)
 		{{- else if eq .Type.ElemType.Type.Name "float64" }}
-			if v, err := strconv.ParseFloat(rv, 64); err != nil {
+			v, err := strconv.ParseFloat(rv, 64)
+			if err != nil {
 				return nil, fmt.Errorf("{{ .Name }} must be an set of floats, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
-			} else {
-				{{ .VarName }}[i] = v
 			}
+			{{ .VarName }}[i] = v
 		{{- else if eq .Type.ElemType.Type.Name "boolean" }}
-			if v, err := strconv.ParseBool(rv); err != nil {
+			v, err := strconv.ParseBool(rv)
+			if err != nil {
 				return nil, fmt.Errorf("{{ .Name }} must be an set of booleans (true, false, 1 or 0), got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
-			} else {
-				{{ .VarName }}[i] = v
 			}
+			{{ .VarName }}[i] = v
 		{{- else }}
 			// unsupported slice type {{ .Type.ElemType.Type.Name }} for var {{ .VarName }}
 		{{- end }}

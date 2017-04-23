@@ -443,19 +443,19 @@ func buildPathFromExpr(s *openAPIV2, root *rest.RootExpr, route *rest.RouteExpr,
 		responses[strconv.Itoa(r.StatusCode)] = resp
 	}
 
-	if action.Payload != nil {
-		payloadSchema := TypeSchema(root.Design.API, action.Payload)
+	if action.EndpointExpr.Payload != nil {
+		payloadSchema := TypeSchema(root.Design.API, action.EndpointExpr.Payload)
 		pp := &Parameter{
 			Name:        "payload",
 			In:          "body",
-			Description: action.Payload.Attribute().Description,
-			Required:    action.Payload != nil,
+			Description: action.EndpointExpr.Payload.Attribute().Description,
+			Required:    action.EndpointExpr.Payload != nil,
 			Schema:      payloadSchema,
 		}
 		params = append(params, pp)
 	}
 
-	operationID := fmt.Sprintf("%s#%s", action.Resource.Name(), action.Name)
+	operationID := fmt.Sprintf("%s#%s", action.Resource.Name(), action.Name())
 	index := 0
 	for i, rt := range action.Routes {
 		if rt == route {
@@ -474,9 +474,9 @@ func buildPathFromExpr(s *openAPIV2, root *rest.RootExpr, route *rest.RouteExpr,
 
 	operation := &Operation{
 		Tags:         tagNames,
-		Description:  action.Description,
-		Summary:      summaryFromExpr(action.Name+" "+action.Resource.Name(), action.Metadata),
-		ExternalDocs: docsFromExpr(action.Docs),
+		Description:  action.Description(),
+		Summary:      summaryFromExpr(action.Name()+" "+action.Resource.Name(), action.Metadata),
+		ExternalDocs: docsFromExpr(action.EndpointExpr.Docs),
 		OperationID:  operationID,
 		Parameters:   params,
 		Responses:    responses,

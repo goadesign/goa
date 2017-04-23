@@ -93,14 +93,11 @@ func HTTP(fn func()) {
 		eval.Execute(fn, rest.Root)
 	case *design.ServiceExpr:
 		res := rest.Root.ResourceFor(actual)
-		eval.Execute(fn, res)
+		res.DSLFunc = fn
 	case *design.EndpointExpr:
 		res := rest.Root.ResourceFor(actual.Service)
-		act := res.Action(actual.Name)
-		if act == nil {
-			panic("dsl: missing resource action") // bug
-		}
-		eval.Execute(fn, act)
+		act := res.ActionFor(actual.Name, actual)
+		act.DSLFunc = fn
 	default:
 		eval.IncompatibleDSL()
 	}
