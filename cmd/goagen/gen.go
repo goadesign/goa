@@ -134,7 +134,31 @@ func (g *Generator) Compile() error {
 
 // Run runs the compiled binary and return the output lines.
 func (g *Generator) Run() ([]string, error) {
-	args := []string{"--version=" + pkg.Version(), "--output=" + g.Output}
+	var cmdl string
+	{
+		args := make([]string, len(os.Args)-1)
+		gopaths := filepath.SplitList(os.Getenv("GOPATH"))
+		for i, a := range os.Args[1:] {
+			for _, p := range gopaths {
+				if strings.Contains(a, p) {
+					args[i] = strings.Replace(a, p, "$(GOPATH)", -1)
+					break
+				}
+			}
+			if args[i] == "" {
+				args[i] = a
+			}
+		}
+		cmdl = " " + strings.Join(args, " ")
+		rawcmd := filepath.Base(os.Args[0])
+		// Remove possible .exe suffix to not create different ouptut just because
+		// you ran goagen on Windows.
+		rawcmd = strings.TrimSuffix(rawcmd, ".exe")
+
+		cmdl = fmt.Sprintf("$ %s%s", rawcmd, cmdl)
+	}
+
+	args := []string{"--version=" + pkg.Version(), "--output=" + g.Output, "--cmd=" + cmdl}
 	cmd := exec.Command(filepath.Join(g.tmpDir, g.bin), args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -194,6 +218,7 @@ const mainTmpl = `func main() {
 	var (
 		out     = flag.String("output", "", "")
 		version = flag.String("version", "", "")
+		cmdl    = flag.String("cmd", "", "")
 	)
 	{
 		flag.Parse()
@@ -202,6 +227,9 @@ const mainTmpl = `func main() {
 		}
 		if *version == "" {
 			fail("missing version flag")
+		}
+		if *cmdl == "" {
+			fail("missing cmd flag")
 		}
 	}
 
