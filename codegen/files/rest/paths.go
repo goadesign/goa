@@ -55,8 +55,9 @@ var pathTmpl = template.Must(template.New("path").
 	Parse(pathT))
 
 // PathFile returns the path file.
-func PathFile(api *design.APIExpr, r *rest.RootExpr) codegen.File {
-	path := filepath.Join("gen", "transport", "http", "paths.go")
+func PathFile(r *rest.RootExpr) codegen.File {
+	api := r.Design.API
+	path := filepath.Join("transport", "http", "paths.go")
 	title := fmt.Sprintf("%s HTTP request path constructors", api.Name)
 	sections := func(_ string) []*codegen.Section {
 		s := []*codegen.Section{
@@ -97,7 +98,7 @@ func buildPathData(a *rest.ActionExpr) *pathData {
 	for i, r := range a.Routes {
 		pd.Routes[i] = &pathRoute{
 			Path:       rest.WildcardRegex.ReplaceAllString(r.FullPath(), "/%v"),
-			PathParams: r.Params(),
+			PathParams: r.ParamAttributes(),
 			Arguments:  generatePathArguments(r),
 		}
 	}
@@ -105,13 +106,13 @@ func buildPathData(a *rest.ActionExpr) *pathData {
 }
 
 func generatePathArguments(r *rest.RouteExpr) []*pathArgument {
-	params := r.Params()
-	obj := design.AsObject(r.Action.PathParams().Type)
-	args := make([]*pathArgument, len(params))
-	for i, name := range params {
+	routeParams := r.ParamAttributes()
+	allParams := r.Action.PathParams()
+	args := make([]*pathArgument, len(routeParams))
+	for i, name := range routeParams {
 		args[i] = &pathArgument{
 			Name: name,
-			Type: obj[name].Type,
+			Type: allParams.Type.(design.Object)[name].Type,
 		}
 	}
 	return args
@@ -124,7 +125,7 @@ func {{ goify $.EndpointName true }}{{ goify $.ServiceName true }}Path{{ if ne $
 	{{ template "slice_conversion" .Arguments -}}
 	return fmt.Sprintf("{{ .Path }}"{{ template "fmt_params" .Arguments }})
 {{- else }}
-	return "{{  .Path  }}"
+	return "{{ .Path }}"
 {{- end }}
 }
 

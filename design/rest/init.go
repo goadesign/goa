@@ -6,5 +6,7 @@ import (
 
 // Register DSL roots.
 func init() {
-	eval.Register(Root)
+	if err := eval.Register(Root); err != nil {
+		panic(err) // bug
+	}
 }

@@ -147,7 +147,7 @@ func (r *RootExpr) Schemes() []string {
 // Resource returns the resource with the given name if any.
 func (r *RootExpr) Resource(name string) *ResourceExpr {
 	for _, res := range r.Resources {
-		if res.Name == name {
+		if res.Name() == name {
 			return res
 		}
 	}
@@ -206,8 +206,14 @@ func (r *RootExpr) EvalName() string {
 	return "API HTTP"
 }
 
-// WalkSets is a no-op as the DSL runs when loaded.
-func (r *RootExpr) WalkSets(w eval.SetWalker) {}
+// WalkSets iterates through the resources to finalize and validate them.
+func (r *RootExpr) WalkSets(walk eval.SetWalker) {
+	resources := make(eval.ExpressionSet, len(r.Resources))
+	for i, res := range r.Resources {
+		resources[i] = res
+	}
+	walk(resources)
+}
 
 // DependsOn is a no-op as the DSL runs when loaded.
 func (r *RootExpr) DependsOn() []eval.Root { return nil }
@@ -218,11 +224,6 @@ func (r *RootExpr) Packages() []string {
 		"goa.design/goa.v2/design/rest",
 		"goa.design/goa.v2/dsl/rest",
 	}
-}
-
-// Used returns true if the DSL makes use of HTTP.
-func (r *RootExpr) Used() bool {
-	return len(r.Resources) > 0
 }
 
 // ExtractWildcards returns the names of the wildcards that appear in path.
