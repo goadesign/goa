@@ -2,10 +2,10 @@ package rest
 
 import (
 	"fmt"
+	"path/filepath"
 	"text/template"
 
 	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/codegen/files"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
@@ -56,39 +56,35 @@ var pathTmpl = template.Must(template.New("path").
 
 // PathFile returns the path file.
 func PathFile(api *design.APIExpr, r *rest.RootExpr) codegen.File {
+	path := filepath.Join("gen", "transport", "http", "paths.go")
 	title := fmt.Sprintf("%s HTTP request path constructors", api.Name)
-	sections := []*codegen.Section{
-		codegen.Header(title, "http", []*codegen.ImportSpec{
-			{Path: "fmt"},
-			{Path: "net/url"},
-			{Path: "strconv"},
-			{Path: "strings"},
-		}),
-	}
-
-	for _, res := range r.Resources {
-		for _, a := range res.Actions {
-			sections = append(sections, PathSection(a))
+	sections := func(_ string) []*codegen.Section {
+		s := []*codegen.Section{
+			codegen.Header(title, "http", []*codegen.ImportSpec{
+				{Path: "fmt"},
+				{Path: "net/url"},
+				{Path: "strconv"},
+				{Path: "strings"},
+			}),
 		}
+
+		for _, res := range r.Resources {
+			for _, a := range res.Actions {
+				s = append(s, PathSection(a))
+			}
+		}
+		return s
 	}
 
-	return &pathFile{sections}
+	return codegen.NewSource(path, sections)
 }
 
-// PathSection returns a path section for the specified action
+// PathSection returns the section to generate the given paht.
 func PathSection(a *rest.ActionExpr) *codegen.Section {
 	return &codegen.Section{
 		Template: pathTmpl,
 		Data:     buildPathData(a),
 	}
-}
-
-func (e *pathFile) Sections(_ string) []*codegen.Section {
-	return e.sections
-}
-
-func (e *pathFile) OutputPath(reserved map[string]bool) string {
-	return files.UniquePath("gen/transport/http/paths%d.go", reserved)
 }
 
 func buildPathData(a *rest.ActionExpr) *pathData {

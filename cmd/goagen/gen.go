@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"text/template"
 
 	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/pkg"
@@ -61,13 +62,19 @@ func (g *Generator) Write(gens, debug bool) error {
 	}
 	g.tmpDir = tmpDir
 
-	var s codegen.SourceFile
+	var sections []*codegen.Section
 	{
-		s = codegen.SourceFile{Path: filepath.Join(tmpDir, "main.go")}
+		data := map[string]interface{}{
+			"Generators": generators(g.Commands),
+		}
+		if gens {
+			data["Scaffolds"] = scaffolds(g.Commands)
+		}
 		imports := []*codegen.ImportSpec{
 			codegen.SimpleImport("flag"),
 			codegen.SimpleImport("fmt"),
 			codegen.SimpleImport("os"),
+			codegen.SimpleImport("path/filepath"),
 			codegen.SimpleImport("sort"),
 			codegen.SimpleImport("strings"),
 			codegen.SimpleImport("goa.design/goa.v2/codegen"),
@@ -76,22 +83,32 @@ func (g *Generator) Write(gens, debug bool) error {
 			codegen.SimpleImport("goa.design/goa.v2/pkg"),
 			codegen.NewImport("_", g.DesignPath),
 		}
-		if err := s.WriteHeader("Code Generator", "main", imports); err != nil {
-			return err
+		sections = []*codegen.Section{
+			codegen.Header("Code Generator", "main", imports),
+			&codegen.Section{
+				Template: template.Must(template.New("main").Parse(mainTmpl)),
+				Data:     data,
+			},
 		}
 	}
 
-	var data map[string]interface{}
+	var s codegen.File
 	{
-		data = map[string]interface{}{
-			"Generators": generators(g.Commands),
+		sectionsFunc := func(_ string) []*codegen.Section {
+			return sections
 		}
-		if gens {
-			data["Scaffolds"] = scaffolds(g.Commands)
+		s = codegen.NewSource(filepath.Join(tmpDir, "main.go"), sectionsFunc)
+	}
+
+	var w *codegen.Writer
+	{
+		w = &codegen.Writer{
+			Dir:   tmpDir,
+			Files: make(map[string]bool),
 		}
 	}
 
-	return s.ExecuteTemplate("main", mainTmpl, nil, data)
+	return w.Write(s)
 }
 
 // Compile compiles the generator.
@@ -215,6 +232,19 @@ const mainTmpl = `func main() {
 			fail(err.Error())
 		}
 		files = append(files, fs...)
+
+		// Delete previously generated directories
+		dirs := make(map[string]bool)
+		for _, file := range files {
+			dirs[filepath.Dir(file.OutputPath())] = true
+		}
+		for d := range dirs {
+			if _, err := os.Stat(d); err == nil {
+				if err := os.RemoveAll(d); err != nil {
+					fail(err.Error())	
+				}
+			}
+		}
 	}
 {{ end }}
 {{- range .Scaffolds }}

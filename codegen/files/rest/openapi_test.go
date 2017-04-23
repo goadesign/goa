@@ -3,6 +3,7 @@ package rest
 import (
 	"bytes"
 	"encoding/json"
+	"path/filepath"
 	"testing"
 
 	"github.com/go-openapi/loads"
@@ -95,8 +96,8 @@ func TestOutputPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenAPI failed with %s", err)
 	}
-	if o.OutputPath(nil) != "openapi/swagger.json" {
-		t.Errorf("invalid output path %#v", o.OutputPath(nil))
+	if o.OutputPath() != filepath.Join("openapi", "swagger.json") {
+		t.Errorf("invalid output path %#v", o.OutputPath())
 	}
 }
 

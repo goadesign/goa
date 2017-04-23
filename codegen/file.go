@@ -3,80 +3,63 @@ package codegen
 import (
 	"bytes"
 	"fmt"
-	"go/ast"
-	"go/format"
 	"go/parser"
 	"go/scanner"
 	"go/token"
 	"io/ioutil"
 	"os"
 	"strings"
-	"text/template"
 
 	"golang.org/x/tools/go/ast/astutil"
+	"golang.org/x/tools/imports"
 )
 
 type (
-	// SourceFile represents a single Go source file
+	// SourceFile represents a single Go source file. It implements File.
 	SourceFile struct {
-		// Absolute path to file
-		Path string
+		// path is the relative path to the output file.
+		path string
+		// Sections maker function
+		sectionsFunc SectionsFunc
 	}
 
-	// ImportSpec defines a generated import statement.
-	ImportSpec struct {
-		// Name of imported package if needed.
-		Name string
-		// Go import path of package.
-		Path string
-	}
+	// SectionsFunc is the function that returns the actual content generators.
+	SectionsFunc func(genPkg string) []*Section
 )
 
-// WriteHeader writes the generic generated code header.
-func (f *SourceFile) WriteHeader(title, pack string, imports []*ImportSpec) error {
-	return Header(title, pack, imports).Write(f)
-}
-
-// Write implements io.Writer so that variables of type *SourceFile can be
-// used in template.Execute.
-func (f *SourceFile) Write(b []byte) (int, error) {
-	file, err := os.OpenFile(
-		f.Path,
-		os.O_CREATE|os.O_APPEND|os.O_WRONLY,
-		0644,
-	)
-	if err != nil {
-		return 0, err
+// NewSource returns a Go source file generator.
+func NewSource(path string, sections SectionsFunc) File {
+	return &SourceFile{
+		path:         path,
+		sectionsFunc: sections,
 	}
-	defer file.Close()
-	return file.Write(b)
 }
 
-// ExecuteTemplate executes the template and writes the output to the file.
-func (f *SourceFile) ExecuteTemplate(name, source string, funcMap template.FuncMap, data interface{}) error {
-	tmpl, err := template.New(name).
-		Funcs(funcMap).
-		Parse(source)
-	if err != nil {
-		panic(err) // bug
-	}
-	return tmpl.Execute(f, data)
+// Sections returns the generated file sections.
+func (f *SourceFile) Sections(genPkg string) []*Section {
+	return f.sectionsFunc(genPkg)
 }
 
-// FormatCode runs "goimports -w" on the source file.
-func (f *SourceFile) FormatCode() error {
-	// Parse file into AST
+// OutputPath produces the output path.
+func (f *SourceFile) OutputPath() string {
+	return f.path
+}
+
+// Finalize formats the file.
+func (f *SourceFile) Finalize(path string) error {
+	// Make sure file parses and print content if it does not.
 	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, f.Path, nil, parser.ParseComments)
+	file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 	if err != nil {
-		content, _ := ioutil.ReadFile(f.Path)
+		content, _ := ioutil.ReadFile(path)
 		var buf bytes.Buffer
 		scanner.PrintError(&buf, err)
 		return fmt.Errorf("%s\n========\nContent:\n%s", buf.String(), content)
 	}
+
 	// Clean unused imports
-	imports := astutil.Imports(fset, file)
-	for _, group := range imports {
+	imps := astutil.Imports(fset, file)
+	for _, group := range imps {
 		for _, imp := range group {
 			path := strings.Trim(imp.Path.Value, `"`)
 			if !astutil.UsesImport(file, path) {
@@ -88,35 +71,19 @@ func (f *SourceFile) FormatCode() error {
 			}
 		}
 	}
-	ast.SortImports(fset, file)
-	// Open file to be written
-	w, err := os.OpenFile(
-		f.Path,
-		os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
-		os.ModePerm,
-	)
+
+	// Format code
+	bs, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	defer w.Close()
-	// Write formatted code without unused imports
-	return format.Node(w, fset, file)
-}
-
-// NewImport creates an import spec.
-func NewImport(name, path string) *ImportSpec {
-	return &ImportSpec{Name: name, Path: path}
-}
-
-// SimpleImport creates an import with no explicit path component.
-func SimpleImport(path string) *ImportSpec {
-	return &ImportSpec{Path: path}
-}
-
-// Code returns the Go import statement for the ImportSpec.
-func (s *ImportSpec) Code() string {
-	if len(s.Name) > 0 {
-		return fmt.Sprintf(`%s "%s"`, s.Name, s.Path)
+	opt := imports.Options{
+		Comments:   true,
+		FormatOnly: true,
 	}
-	return fmt.Sprintf(`"%s"`, s.Path)
+	bs, err = imports.Process(path, bs, &opt)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(path, bs, os.ModePerm)
 }
