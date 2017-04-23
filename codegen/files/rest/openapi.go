@@ -2,6 +2,7 @@ package rest
 
 import (
 	"encoding/json"
+	"path/filepath"
 	"text/template"
 
 	"goa.design/goa.v2/codegen"
@@ -35,9 +36,12 @@ func (w *openAPI) Sections(_ string) []*codegen.Section {
 }
 
 // OutputPath is the relative path to the output file.
-func (w *openAPI) OutputPath(_ map[string]bool) string {
-	return "openapi/swagger.json"
+func (w *openAPI) OutputPath() string {
+	return filepath.Join("openapi", "swagger.json")
 }
+
+// Finalize is a no-op for this file.
+func (w *openAPI) Finalize(_ string) error { return nil }
 
 func toJSON(d interface{}) string {
 	b, err := json.Marshal(d)

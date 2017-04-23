@@ -4,8 +4,8 @@
 vendor
 
 # Executables and test outputs
-goagen/goagen
 _integration_tests/*/**/*.*
+cmd/goagen/goagen
 
 # Editor / IDEs cruft
 .idea/
@@ -16,6 +16,10 @@ _integration_tests/*/**/*.*
 
 # OSes cruft
 .DS_Store
-/examples/account/cmd/basic/basic
-/examples/account/cmd/basiccli/basiccli
-/cmd/goagen/goagen
+
+# Example outputs
+/examples/account/cmd/*
+/examples/account/endpoints/*
+/examples/account/openapi/*
+/examples/account/transport/*
+/examples/account/services/*
