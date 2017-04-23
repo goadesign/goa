@@ -2,13 +2,13 @@ package rest
 
 import (
 	"fmt"
+	"path/filepath"
 	"text/template"
 
 	"net/http"
 	"strings"
 
 	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/codegen/files"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
@@ -130,11 +130,6 @@ type (
 		// Type describes the datatype of the variable value. Mainly used for conversion.
 		Type design.DataType
 	}
-
-	// serverFile is the codegenerator file for the given server.
-	serverFile struct {
-		resource *rest.ResourceExpr
-	}
 )
 
 var (
@@ -162,56 +157,52 @@ func ServerFiles(root *rest.RootExpr) []codegen.File {
 
 // Server returns the server HTTP transport file
 func Server(r *rest.ResourceExpr) codegen.File {
-	return &serverFile{r}
-}
+	path := filepath.Join("transport", "http", codegen.SnakeCase(r.Name)+"_server.go")
+	sections := func(genPkg string) []*codegen.Section {
+		d := buildServerData(r)
 
-func (e *serverFile) Sections(genPkg string) []*codegen.Section {
-	d := buildServerData(e.resource)
+		title := fmt.Sprintf("%s server HTTP transport", r.Name)
+		s := []*codegen.Section{
+			codegen.Header(title, "http", []*codegen.ImportSpec{
+				{Path: "fmt"},
+				{Path: "io"},
+				{Path: "net/http"},
+				{Path: "strconv"},
+				{Path: "strings"},
+				{Path: "github.com/dimfeld/httptreemux"},
+				{Path: "goa.design/goa.v2"},
+				{Path: "goa.design/goa.v2/rest"},
+				{Path: genPkg + "/endpoints"},
+				{Path: genPkg + "/services"},
+			}),
+			{Template: serverStructTmpl, Data: d},
+			{Template: serverConstructorTmpl, Data: d},
+			{Template: serverMountTmpl, Data: d},
+		}
 
-	title := fmt.Sprintf("%s server HTTP transport", e.resource.Name)
-	s := []*codegen.Section{
-		codegen.Header(title, "http", []*codegen.ImportSpec{
-			{Path: "fmt"},
-			{Path: "io"},
-			{Path: "net/http"},
-			{Path: "strconv"},
-			{Path: "strings"},
-			{Path: "github.com/dimfeld/httptreemux"},
-			{Path: "goa.design/goa.v2"},
-			{Path: "goa.design/goa.v2/rest"},
-			{Path: genPkg + "/endpoints"},
-			{Path: genPkg + "/services"},
-		}),
-		{Template: serverStructTmpl, Data: d},
-		{Template: serverConstructorTmpl, Data: d},
-		{Template: serverMountTmpl, Data: d},
+		for _, a := range d.ActionData {
+			as := []*codegen.Section{
+				{Template: serverHandlerTmpl, Data: a},
+				{Template: serverHandlerConstructorTmpl, Data: a},
+			}
+			s = append(s, as...)
+
+			if a.HasResponses() {
+				s = append(s, &codegen.Section{Template: serverEncoderTmpl, Data: a})
+			}
+
+			if a.HasPayload() {
+				s = append(s, &codegen.Section{Template: serverDecoderTmpl, Data: a})
+			}
+
+			if a.HasErrors() {
+				s = append(s, &codegen.Section{Template: serverErrorEncoderTmpl, Data: a})
+			}
+		}
+		return s
 	}
 
-	for _, a := range d.ActionData {
-		as := []*codegen.Section{
-			{Template: serverHandlerTmpl, Data: a},
-			{Template: serverHandlerConstructorTmpl, Data: a},
-		}
-		s = append(s, as...)
-
-		if a.HasResponses() {
-			s = append(s, &codegen.Section{Template: serverEncoderTmpl, Data: a})
-		}
-
-		if a.HasPayload() {
-			s = append(s, &codegen.Section{Template: serverDecoderTmpl, Data: a})
-		}
-
-		if a.HasErrors() {
-			s = append(s, &codegen.Section{Template: serverErrorEncoderTmpl, Data: a})
-		}
-	}
-	return s
-}
-
-func (e *serverFile) OutputPath(reserved map[string]bool) string {
-	name := fmt.Sprintf("transport/http/%s_server%%d.go", codegen.SnakeCase(e.resource.Name))
-	return files.UniquePath(name, reserved)
+	return codegen.NewSource(path, sections)
 }
 
 func buildServerData(r *rest.ResourceExpr) *serverData {

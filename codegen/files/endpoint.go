@@ -41,54 +41,47 @@ var endpointTmpl = template.Must(template.New("endpoint").Parse(endpointT))
 
 // Endpoint returns the endpoint file for the given service.
 func Endpoint(service *design.ServiceExpr) codegen.File {
-	return &endpointFile{service}
-}
-
-// Sections returns the endpoint file sections.
-func (e *endpointFile) Sections(genPkg string) []*codegen.Section {
-	var (
-		data *endpointData
-	)
-	{
-		methods := make([]*endpointMethod, len(e.service.Endpoints))
-		for i, v := range e.service.Endpoints {
-			methods[i] = &endpointMethod{
-				Name:        codegen.Goify(v.Name, true),
-				PayloadType: codegen.Goify(v.Payload.Name(), true),
-				HasPayload:  v.Payload != design.Empty,
+	path := filepath.Join("endpoints", service.Name+".go")
+	sections := func(genPkg string) []*codegen.Section {
+		var (
+			data *endpointData
+		)
+		{
+			methods := make([]*endpointMethod, len(service.Endpoints))
+			for i, v := range service.Endpoints {
+				methods[i] = &endpointMethod{
+					Name:        codegen.Goify(v.Name, true),
+					PayloadType: codegen.Goify(v.Payload.Name(), true),
+					HasPayload:  v.Payload != design.Empty,
+				}
+			}
+			data = &endpointData{
+				Name:    service.Name,
+				VarName: codegen.Goify(service.Name, true),
+				Methods: methods,
 			}
 		}
-		data = &endpointData{
-			Name:    e.service.Name,
-			VarName: codegen.Goify(e.service.Name, true),
-			Methods: methods,
+
+		var (
+			header, body *codegen.Section
+		)
+		{
+			header = codegen.Header(service.Name+"Endpoints", "endpoints",
+				[]*codegen.ImportSpec{
+					&codegen.ImportSpec{Path: "context"},
+					&codegen.ImportSpec{Path: "goa.design/goa.v2"},
+					&codegen.ImportSpec{Path: genPkg + "/services"},
+				})
+			body = &codegen.Section{
+				Template: endpointTmpl,
+				Data:     data,
+			}
 		}
+
+		return []*codegen.Section{header, body}
 	}
 
-	var (
-		header, body *codegen.Section
-	)
-	{
-		header = codegen.Header(e.service.Name+"Endpoints", "endpoints",
-			[]*codegen.ImportSpec{
-				&codegen.ImportSpec{Path: "context"},
-				&codegen.ImportSpec{Path: "goa.design/goa.v2"},
-				&codegen.ImportSpec{Path: genPkg + "/services"},
-			})
-		body = &codegen.Section{
-			Template: endpointTmpl,
-			Data:     data,
-		}
-	}
-
-	return []*codegen.Section{header, body}
-}
-
-// OutputPath is the path to the generated endpoint file relative to the output
-// directory.
-func (e *endpointFile) OutputPath(reserved map[string]bool) string {
-	svc := codegen.SnakeCase(e.service.Name)
-	return UniquePath(filepath.Join("endpoints", svc+"%d.go"), reserved)
+	return codegen.NewSource(path, sections)
 }
 
 // endpointT is the template used to write an endpoint definition.

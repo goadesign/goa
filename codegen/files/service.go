@@ -63,95 +63,88 @@ var serviceTmpl = template.Must(template.New("service").Parse(serviceT))
 
 // Service returns the service file for the given service.
 func Service(service *design.ServiceExpr) codegen.File {
-	return &serviceFile{service}
-}
-
-// Sections returns the service file sections.
-func (s *serviceFile) Sections(genPkg string) []*codegen.Section {
-	var (
-		data *serviceData
-	)
-	{
-		methods := make([]*serviceMethod, len(s.service.Endpoints))
-		userTypes := make(map[string]string)
-		for i, v := range s.service.Endpoints {
-			var walker func(*design.AttributeExpr) error
-			walker = func(at *design.AttributeExpr) error {
-				if ut, ok := at.Type.(design.UserType); ok {
-					if _, ok := userTypes[ut.Name()]; ok {
-						return nil
+	path := filepath.Join("services", service.Name+".go")
+	sections := func(genPkg string) []*codegen.Section {
+		var (
+			data *serviceData
+		)
+		{
+			methods := make([]*serviceMethod, len(service.Endpoints))
+			userTypes := make(map[string]string)
+			for i, v := range service.Endpoints {
+				var walker func(*design.AttributeExpr) error
+				walker = func(at *design.AttributeExpr) error {
+					if ut, ok := at.Type.(design.UserType); ok {
+						if _, ok := userTypes[ut.Name()]; ok {
+							return nil
+						}
+						userTypes[ut.Name()] = codegen.GoTypeDef(ut.Attribute().Type)
+						codegen.Walk(ut.Attribute(), walker)
 					}
-					userTypes[ut.Name()] = codegen.GoTypeDef(ut.Attribute().Type)
-					codegen.Walk(ut.Attribute(), walker)
+					return nil
 				}
-				return nil
-			}
 
-			payloadFields := make(map[string]string)
-			if o := design.AsObject(v.Payload); o != nil {
-				codegen.WalkAttributes(o, func(name string, at *design.AttributeExpr) error {
-					payloadFields[name] = codegen.GoNativeType(at.Type)
-					codegen.Walk(at, walker)
-					return nil
-				})
-			}
+				payloadFields := make(map[string]string)
+				if o := design.AsObject(v.Payload); o != nil {
+					codegen.WalkAttributes(o, func(name string, at *design.AttributeExpr) error {
+						payloadFields[name] = codegen.GoNativeType(at.Type)
+						codegen.Walk(at, walker)
+						return nil
+					})
+				}
 
-			resultFields := make(map[string]string)
-			if o := design.AsObject(v.Result); o != nil {
-				codegen.WalkAttributes(o, func(name string, at *design.AttributeExpr) error {
-					resultFields[name] = codegen.GoNativeType(at.Type)
-					codegen.Walk(at, walker)
-					return nil
-				})
-			}
+				resultFields := make(map[string]string)
+				if o := design.AsObject(v.Result); o != nil {
+					codegen.WalkAttributes(o, func(name string, at *design.AttributeExpr) error {
+						resultFields[name] = codegen.GoNativeType(at.Type)
+						codegen.Walk(at, walker)
+						return nil
+					})
+				}
 
-			methods[i] = &serviceMethod{
-				Name:    v.Name,
-				VarName: codegen.Goify(v.Name, true),
-				Payload: servicePayload{
-					Name:   codegen.Goify(v.Payload.Name(), true),
-					Fields: payloadFields,
-				},
-				HasPayload: v.Payload != design.Empty,
-				Result: serviceResult{
-					Name:   codegen.Goify(v.Result.Name(), true),
-					Fields: resultFields,
-				},
-				HasResult: v.Result != design.Empty,
+				methods[i] = &serviceMethod{
+					Name:    v.Name,
+					VarName: codegen.Goify(v.Name, true),
+					Payload: servicePayload{
+						Name:   codegen.Goify(v.Payload.Name(), true),
+						Fields: payloadFields,
+					},
+					HasPayload: v.Payload != design.Empty,
+					Result: serviceResult{
+						Name:   codegen.Goify(v.Result.Name(), true),
+						Fields: resultFields,
+					},
+					HasResult: v.Result != design.Empty,
+				}
+			}
+			data = &serviceData{
+				Name:      service.Name,
+				VarName:   codegen.Goify(service.Name, true),
+				Methods:   methods,
+				UserTypes: userTypes,
 			}
 		}
-		data = &serviceData{
-			Name:      s.service.Name,
-			VarName:   codegen.Goify(s.service.Name, true),
-			Methods:   methods,
-			UserTypes: userTypes,
+
+		var (
+			header, body *codegen.Section
+		)
+		{
+			header = codegen.Header(service.Name+"Services", "services",
+				[]*codegen.ImportSpec{
+					{Path: "context"},
+					{Path: "goa.design/goa.v2"},
+					{Path: genPkg + "/services"},
+				})
+			body = &codegen.Section{
+				Template: serviceTmpl,
+				Data:     data,
+			}
 		}
+
+		return []*codegen.Section{header, body}
 	}
 
-	var (
-		header, body *codegen.Section
-	)
-	{
-		header = codegen.Header(s.service.Name+"Services", "services",
-			[]*codegen.ImportSpec{
-				{Path: "context"},
-				{Path: "goa.design/goa.v2"},
-				{Path: genPkg + "/services"},
-			})
-		body = &codegen.Section{
-			Template: serviceTmpl,
-			Data:     data,
-		}
-	}
-
-	return []*codegen.Section{header, body}
-}
-
-// OutputPath is the path to the generated service file relative to the output
-// directory.
-func (s *serviceFile) OutputPath(reserved map[string]bool) string {
-	svc := codegen.SnakeCase(s.service.Name)
-	return UniquePath(filepath.Join("services", svc+"%d.go"), reserved)
+	return codegen.NewSource(path, sections)
 }
 
 // serviceT is the template used to write an service definition.
