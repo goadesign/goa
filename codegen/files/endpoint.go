@@ -94,7 +94,7 @@ const endpointT = `type (
 
 // New{{ .VarName }} wraps the methods of a {{ .Name }} service with endpoints.
 func New{{ .VarName }}(s services.{{ .VarName }}) *{{ .VarName }} {
-	ep := &{{ .VarName }}{}
+	ep := new({{ .VarName }})
 {{ range .Methods }}
 	ep.{{ .Name }} = func(ctx context.Context, req interface{}) (interface{}, error) {
 {{- if .HasPayload }}

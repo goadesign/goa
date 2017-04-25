@@ -19,7 +19,7 @@ func TestEndpoint(t *testing.T) {
 
 // NewSingle wraps the methods of a Single service with endpoints.
 func NewSingle(s services.Single) *Single {
-	ep := &Single{}
+	ep := new(Single)
 
 	ep.A = func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*services.AType)
@@ -39,7 +39,7 @@ func NewSingle(s services.Single) *Single {
 
 // NewMultiple wraps the methods of a Multiple service with endpoints.
 func NewMultiple(s services.Multiple) *Multiple {
-	ep := &Multiple{}
+	ep := new(Multiple)
 
 	ep.A = func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*services.AType)
@@ -63,7 +63,7 @@ func NewMultiple(s services.Multiple) *Multiple {
 
 // NewNoPayload wraps the methods of a NoPayload service with endpoints.
 func NewNoPayload(s services.NoPayload) *NoPayload {
-	ep := &NoPayload{}
+	ep := new(NoPayload)
 
 	ep.NoPayload = func(ctx context.Context, req interface{}) (interface{}, error) {
 		return s.NoPayload(ctx, nil)
