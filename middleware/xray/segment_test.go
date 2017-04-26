@@ -43,6 +43,9 @@ func TestRecordError(t *testing.T) {
 		if c.HasCause && len(w.Stack) < 2 {
 			t.Errorf("%s: stack too small: %v", k, w.Stack)
 		}
+		if !s.Error {
+			t.Error("s.Error was not set to true")
+		}
 	}
 }
 
