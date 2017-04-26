@@ -115,7 +115,7 @@ func TestMiddleware(t *testing.T) {
 			Trace:    Tra{traceID, spanID, ""},
 			Request:  Req{method, host, ip, remoteAddr, remoteHost, agent, url},
 			Response: Res{http.StatusBadRequest},
-			Segment:  Seg{"error", false},
+			Segment:  Seg{"error", true},
 		},
 		"fault": {
 			Trace:    Tra{traceID, spanID, ""},

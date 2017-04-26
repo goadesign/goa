@@ -225,6 +225,14 @@ func (s *Segment) RecordError(e error) {
 	s.Lock()
 	defer s.Unlock()
 
+	// set Error to indicate an internal error due to service being unreachable, etc.
+	// otherwise if a response was received then the status will determine Error vs. Fault.
+	//
+	// first check if the other flags have already been set in case these methods are being
+	// called directly instead of using xray.WrapClient(), etc.
+	if !(s.Fault || s.Throttle) {
+		s.Error = true
+	}
 	if s.Cause == nil {
 		wd, _ := os.Getwd()
 		s.Cause = &Cause{WorkingDirectory: wd}

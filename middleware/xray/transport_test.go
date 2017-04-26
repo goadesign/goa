@@ -175,7 +175,7 @@ func TestTransport(t *testing.T) {
 			Trace:    Tra{traceID, spanID},
 			Request:  Req{method, host, ip, remoteAddr, remoteHost, agent, url},
 			Response: nil,
-			Segment:  Seg{"some error", false},
+			Segment:  Seg{"some error", true},
 		},
 	}
 	for k, c := range cases {
