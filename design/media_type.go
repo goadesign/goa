@@ -14,24 +14,26 @@ const (
 )
 
 type (
-	// MediaTypeExpr describes the rendering of a resource using field and link
-	// definitions. A field corresponds to a single member of the media type, it has a name and
-	// a type as well as optional validation rules. A link has a name and a URL that points to a
-	// related resource.  Media types also define views which describe which fields and links to
+	// MediaTypeExpr describes the rendering of a resource using field and
+	// link definitions. A field corresponds to a single member of the media
+	// type, it has a name and a type as well as optional validation rules.
+	// A link has a name and a URL that points to a related resource. Media
+	// types also define views which describe which fields and links to
 	// render when building the response body for the corresponding view.
 	MediaTypeExpr struct {
 		// A media type is a type
 		*UserTypeExpr
 		// Identifier is the RFC 6838 media type identifier.
 		Identifier string
-		// ContentType identifies the value written to the response "Content-Type" header.
-		// Defaults to Identifier.
+		// ContentType identifies the value written to the response
+		// "Content-Type" header. Defaults to Identifier.
 		ContentType string
 		// Views list the supported views indexed by name.
 		Views []*ViewExpr
 	}
 
-	// LinkExpr defines a media type link, it specifies a URL to a related resource.
+	// LinkExpr defines a media type link, it specifies a URL to a related
+	// resource.
 	LinkExpr struct {
 		// Link name
 		Name string
@@ -43,10 +45,10 @@ type (
 		Parent *MediaTypeExpr
 	}
 
-	// ViewExpr defines which fields and links to render when building a response.  The
-	// view is an object whose field names must match the names of the parent media type field
-	// names.  The field definitions are inherited from the parent media type but may be
-	// overridden.
+	// ViewExpr defines which fields and links to render when building a
+	// response. The view is an object whose field names must match the
+	// names of the parent media type field names. The field definitions are
+	// inherited from the parent media type but may be overridden.
 	ViewExpr struct {
 		// Set of properties included in view
 		*AttributeExpr
@@ -56,18 +58,21 @@ type (
 		Parent *MediaTypeExpr
 	}
 
-	// Projector derives media types using a canonical media type expression and a view
-	// expression.
+	// Projector derives media types using a canonical media type expression
+	// and a view expression.
 	Projector struct {
-		// Projected is a cache of projected media types indexed by identifier.
+		// Projected is a cache of projected media types indexed by
+		// identifier.
 		Projected map[string]*ProjectedMTExpr
 	}
 
-	// ProjectedMTExpr represents a media type that was derived from a media type
-	// expression defined in a DSL by applying a view. The result of applying a view is a media
-	// type expression that contains the subset of the original media type fields listed in the
-	// view recursively projected if they are media types themselves. The result also include a
-	// links object that corresponds to the media type links defined in the design.
+	// ProjectedMTExpr represents a media type that was derived from a media
+	// type expression defined in a DSL by applying a view. The result of
+	// applying a view is a media type expression that contains the subset
+	// of the original media type fields listed in the view recursively
+	// projected if they are media types themselves. The result also include
+	// a links object that corresponds to the media type links defined in
+	// the design.
 	ProjectedMTExpr struct {
 		// View used to create projected media type
 		View string
@@ -79,7 +84,8 @@ type (
 )
 
 var (
-	// ErrorMediaIdentifier is the media type identifier used for error responses.
+	// ErrorMediaIdentifier is the media type identifier used for error
+	// responses.
 	ErrorMediaIdentifier = "application/vnd.goa.error"
 
 	// ErrorMedia is the built-in media type for error responses.
@@ -88,13 +94,16 @@ var (
 			AttributeExpr: &AttributeExpr{
 				Type:        errorMediaType,
 				Description: "Error response media type",
-				UserExample: map[string]interface{}{
-					"id":     "3F1FKVRR",
-					"status": "400",
-					"code":   "invalid_value",
-					"detail": "Value of ID must be an integer",
-					"meta":   map[string]interface{}{"timestamp": 1458609066},
-				},
+				UserExamples: []*ExampleExpr{{
+					Summary: "BadRequest",
+					Value: Val{
+						"id":     "3F1FKVRR",
+						"status": "400",
+						"code":   "invalid_value",
+						"detail": "Value of ID must be an integer",
+						"meta":   map[string]interface{}{"timestamp": 1458609066},
+					},
+				}},
 			},
 			TypeName: "error",
 		},
@@ -106,22 +115,18 @@ var (
 		"id": &AttributeExpr{
 			Type:        String,
 			Description: "a unique identifier for this particular occurrence of the problem.",
-			UserExample: "3F1FKVRR",
 		},
 		"status": &AttributeExpr{
 			Type:        String,
 			Description: "the HTTP status code applicable to this problem, expressed as a string value.",
-			UserExample: "400",
 		},
 		"code": &AttributeExpr{
 			Type:        String,
 			Description: "an application-specific error code, expressed as a string value.",
-			UserExample: "invalid_value",
 		},
 		"detail": &AttributeExpr{
 			Type:        String,
 			Description: "a human-readable explanation specific to this occurrence of the problem.",
-			UserExample: "Value of ID must be an integer",
 		},
 		"meta": &AttributeExpr{
 			Type: &Map{
@@ -129,7 +134,6 @@ var (
 				ElemType: &AttributeExpr{Type: Any},
 			},
 			Description: "a meta object containing non-standard meta-information about the error.",
-			UserExample: map[string]interface{}{"timestamp": 1458609066},
 		},
 	}
 
@@ -200,8 +204,8 @@ func (m *MediaTypeExpr) IsError() bool {
 	return mime.FormatMediaType(base, params) == ErrorMedia.Identifier
 }
 
-// ComputeViews returns the media type views recursing as necessary if the media type is a
-// collection.
+// ComputeViews returns the media type views recursing as necessary if the media
+// type is a collection.
 func (m *MediaTypeExpr) ComputeViews() []*ViewExpr {
 	if m.Views != nil {
 		return m.Views
@@ -214,13 +218,13 @@ func (m *MediaTypeExpr) ComputeViews() []*ViewExpr {
 	return nil
 }
 
-// Project creates a MediaTypeExpr containing the fields defined in the view expression of m named
-// after the view argument. Project also returns a links object created after the link expression of
-// m if there is one.
+// Project creates a MediaTypeExpr containing the fields defined in the view
+// expression of m named after the view argument. Project also returns a links
+// object created after the link expression of m if there is one.
 //
-// The resulting media type defines a default view. The media type identifier is computed by adding
-// a parameter called "view" to the original identifier. The value of the "view" parameter is the
-// name of the view.
+// The resulting media type defines a default view. The media type identifier is
+// computed by adding a parameter called "view" to the original identifier. The
+// value of the "view" parameter is the name of the view.
 func (p *Projector) Project(m *MediaTypeExpr, view string) (*ProjectedMTExpr, error) {
 	var viewID string
 	cano := CanonicalIdentifier(m.Identifier)
@@ -335,9 +339,9 @@ func (p *Projector) projectCollection(m *MediaTypeExpr, view, viewID string) (*P
 		Identifier: viewID,
 		UserTypeExpr: &UserTypeExpr{
 			AttributeExpr: &AttributeExpr{
-				Description: desc,
-				Type:        &Array{ElemType: &AttributeExpr{Type: pe.MediaType}},
-				UserExample: m.UserExample,
+				Description:  desc,
+				Type:         &Array{ElemType: &AttributeExpr{Type: pe.MediaType}},
+				UserExamples: m.UserExamples,
 			},
 			TypeName: pe.MediaType.TypeName + "Collection",
 		},
@@ -369,9 +373,10 @@ func (p *Projector) projectCollection(m *MediaTypeExpr, view, viewID string) (*P
 	return &ProjectedMTExpr{view, proj, links}, nil
 }
 
-// projectIdentifier computes the projected media type identifier by adding the "view" param.  We
-// need the projected media type identifier to be different so that looking up projected media types
-// from ProjectedMediaTypes works correctly. It's also good for clients.
+// projectIdentifier computes the projected media type identifier by adding the
+// "view" param. We need the projected media type identifier to be different so
+// that looking up projected media types from ProjectedMediaTypes works
+// correctly. It's also good for clients.
 func (m *MediaTypeExpr) projectIdentifier(view string) string {
 	base, params, err := mime.ParseMediaType(m.Identifier)
 	if err != nil {

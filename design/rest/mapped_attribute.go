@@ -86,6 +86,19 @@ func (ma *MappedAttributeExpr) Delete(attName string) {
 	delete(ma.Type.(design.Object), attName)
 }
 
+// Attribute returns the original attribute using "att:elem" format for the keys.
+func (ma *MappedAttributeExpr) Attribute() *design.AttributeExpr {
+	att := design.DupAtt(ma.AttributeExpr)
+	obj := design.AsObject(att.Type)
+	for k, v := range obj {
+		if elem := ma.ElemName(k); elem != k {
+			delete(obj, k)
+			obj[k+":"+elem] = v
+		}
+	}
+	return att
+}
+
 // ElemName returns the HTTP element name of the given object key. It returns
 // keyName if it's a key of the mapped attribute object type. It panics if there
 // is no mapping and keyName is not a key.

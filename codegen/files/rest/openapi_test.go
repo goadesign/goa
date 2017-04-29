@@ -31,12 +31,14 @@ func newDesign(t *testing.T, resources ...*rest.ResourceExpr) *rest.RootExpr {
 func newResource(t *testing.T) *rest.ResourceExpr {
 	ep := &design.EndpointExpr{
 		Name: "testEndpoint",
-		Payload: &design.UserTypeExpr{
-			AttributeExpr: &design.AttributeExpr{Type: design.String},
-		},
-		Result: &design.UserTypeExpr{
-			AttributeExpr: &design.AttributeExpr{Type: design.String},
-		},
+		Payload: &design.AttributeExpr{
+			Type: &design.UserTypeExpr{
+				AttributeExpr: &design.AttributeExpr{Type: design.String},
+			}},
+		Result: &design.AttributeExpr{
+			Type: &design.UserTypeExpr{
+				AttributeExpr: &design.AttributeExpr{Type: design.String},
+			}},
 	}
 	s := &design.ServiceExpr{
 		Name:      "testService",

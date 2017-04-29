@@ -11,7 +11,7 @@ import (
 	"context"
 
 	"goa.design/goa.v2"
-	"goa.design/goa.v2/examples/account/gen/services"
+	"goa.design/goa.v2/examples/account/gen/service"
 )
 
 type (
@@ -25,29 +25,29 @@ type (
 )
 
 // NewAccount wraps the given account service with endpoints.
-func NewAccount(s services.Account) *Account {
+func NewAccount(s service.Account) *Account {
 	ep := new(Account)
 
 	ep.Create = func(ctx context.Context, req interface{}) (interface{}, error) {
-		p := req.(*services.CreateAccountPayload)
+		p := req.(*service.CreateAccount)
 		return s.Create(ctx, p)
 	}
 
 	ep.List = func(ctx context.Context, req interface{}) (interface{}, error) {
-		var p *services.ListAccountPayload
+		var p *service.ListAccount
 		if req != nil {
-			p = req.(*services.ListAccountPayload)
+			p = req.(*service.ListAccount)
 		}
 		return s.List(ctx, p)
 	}
 
 	ep.Show = func(ctx context.Context, req interface{}) (interface{}, error) {
-		p := req.(*services.ShowAccountPayload)
+		p := req.(*service.ShowAccountPayload)
 		return s.Show(ctx, p)
 	}
 
 	ep.Delete = func(ctx context.Context, req interface{}) (interface{}, error) {
-		p := req.(*services.DeleteAccountPayload)
+		p := req.(*service.DeleteAccountPayload)
 		return nil, s.Delete(ctx, p)
 	}
 

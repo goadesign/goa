@@ -32,8 +32,6 @@ type (
 	// attribute.
 	ErrorExpr struct {
 		// AttributeExpr is the underlying attribute.
-		// Note: we do not use a UserType like we do for responses
-		// because an error may have a description.
 		*AttributeExpr
 		// Name is the unique name of the error.
 		Name string

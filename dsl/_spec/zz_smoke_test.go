@@ -607,10 +607,10 @@ func TestTypes(t *testing.T) {
 	if o["name_4"].DefaultValue != "default value" {
 		t.Errorf("Types: type 'Attrs' invalid 'name_4' attribute default value")
 	}
-	if o["name_4"].UserExample == nil {
+	if len(o["name_4"].UserExamples) == 0 {
 		t.Errorf("Types: type 'Attrs' missing 'name_4' attribute example value")
 	}
-	if o["name_4"].UserExample != "example value" {
+	if len(o["name_4"].UserExamples) != 1 || o["name_4"].UserExamples[0].Value != "example value" {
 		t.Errorf("Types: type 'Attrs' invalid 'name_4' attribute example value")
 	}
 

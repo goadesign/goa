@@ -79,14 +79,14 @@ func TestEndpoint(t *testing.T) {
 				if payload == nil {
 					t.Fatalf("c: endpoint payload is nil")
 				}
-				if payload.Attribute().Description != desc {
-					t.Errorf("c: expected payload description '%s' to match '%s' ", desc, payload.Attribute().Description)
+				if payload.Description != desc {
+					t.Errorf("c: expected payload description '%s' to match '%s' ", desc, payload.Description)
 				}
-				attrs := design.AsObject(payload.Attribute().Type)
+				attrs := design.AsObject(payload.Type)
 				if _, ok := attrs["required"]; !ok {
 					t.Errorf("c: expected a payload field with key required")
 				}
-				if !payload.Attribute().IsRequired("required") {
+				if !payload.IsRequired("required") {
 					t.Errorf("c: expected the required field to be required")
 				}
 			},

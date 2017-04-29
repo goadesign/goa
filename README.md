@@ -60,7 +60,7 @@ code generators are not done yet). However:
   look like, see:
   - The [design](https://github.com/goadesign/goa/blob/v2/examples/account/design/design.go)
   - The [main scaffold](https://github.com/goadesign/goa/blob/v2/examples/account/cmd/basic/main.go)
-  - The [generated service](https://github.com/goadesign/goa/blob/v2/examples/account/gen/services/account.go)
+  - The [generated service](https://github.com/goadesign/goa/blob/v2/examples/account/gen/service/account.go)
   - The [generated endpoints](https://github.com/goadesign/goa/blob/v2/examples/account/gen/endpoints/account.go)
   - The [generated HTTP transport](https://github.com/goadesign/goa/tree/v2/examples/account/gen/transport/http)
 

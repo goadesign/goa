@@ -222,8 +222,8 @@ func Key(fn func()) {
 	eval.Execute(fn, m.KeyType)
 }
 
-// Value makes it possible to specify validations for map values.
-func Value(fn func()) {
+// Elem makes it possible to specify validations for map values.
+func Elem(fn func()) {
 	at, ok := eval.Current().(*design.AttributeExpr)
 	if !ok {
 		eval.IncompatibleDSL()

@@ -66,5 +66,5 @@ func Result(val interface{}, fns ...func()) {
 		eval.IncompatibleDSL()
 		return
 	}
-	e.Result = endpointTypeDSL("Result", val, fns...)
+	e.Result = endpointDSL("Result", val, fns...)
 }

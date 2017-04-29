@@ -1,9 +1,6 @@
 package dsl
 
 import (
-	"fmt"
-	"unicode"
-
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/eval"
 )
@@ -49,17 +46,12 @@ func Payload(val interface{}, fns ...func()) {
 		eval.IncompatibleDSL()
 		return
 	}
-	e.Payload = endpointTypeDSL("Payload", val, fns...)
+	e.Payload = endpointDSL("Payload", val, fns...)
 }
 
-func endpointTypeDSL(suffix string, p interface{}, fns ...func()) design.UserType {
+func endpointDSL(suffix string, p interface{}, fns ...func()) *design.AttributeExpr {
 	var (
-		e  = eval.Current().(*design.EndpointExpr)
-		sn = camelize(e.Service.Name)
-		en = camelize(e.Name)
-
 		att *design.AttributeExpr
-		ut  design.UserType
 		fn  func()
 	)
 	if len(fns) > 0 && fns[0] == nil {
@@ -72,9 +64,9 @@ func endpointTypeDSL(suffix string, p interface{}, fns ...func()) design.UserTyp
 	case design.UserType:
 		if len(fns) == 0 {
 			// Do not duplicate type if it is not customized
-			return actual
+			return &design.AttributeExpr{Type: actual}
 		}
-		ut = design.Dup(actual).(design.UserType)
+		ut := design.Dup(actual).(design.UserType)
 		att = ut.Attribute()
 	case design.DataType:
 		att = &design.AttributeExpr{Type: actual}
@@ -91,54 +83,5 @@ func endpointTypeDSL(suffix string, p interface{}, fns ...func()) design.UserTyp
 	if fn != nil {
 		eval.Execute(fn, att)
 	}
-	if ut == nil {
-		ut = &design.UserTypeExpr{
-			AttributeExpr: att,
-			TypeName:      fmt.Sprintf("%s%s%s", en, sn, suffix),
-		}
-	}
-	return ut
-}
-
-func camelize(str string) string {
-	runes := []rune(str)
-	w, i := 0, 0
-	for i+1 <= len(runes) {
-		eow := false
-		if i+1 == len(runes) {
-			eow = true
-		} else if !validIdentifier(runes[i]) {
-			runes = append(runes[:i], runes[i+1:]...)
-		} else if spacer(runes[i+1]) {
-			eow = true
-			n := 1
-			for i+n+1 < len(runes) && spacer(runes[i+n+1]) {
-				n++
-			}
-			copy(runes[i+1:], runes[i+n+1:])
-			runes = runes[:len(runes)-n]
-		} else if unicode.IsLower(runes[i]) && !unicode.IsLower(runes[i+1]) {
-			eow = true
-		}
-		i++
-		if !eow {
-			continue
-		}
-		runes[w] = unicode.ToUpper(runes[w])
-		w = i
-	}
-	return string(runes)
-}
-
-// validIdentifier returns true if the rune is a letter or number
-func validIdentifier(r rune) bool {
-	return unicode.IsLetter(r) || unicode.IsDigit(r)
-}
-
-func spacer(c rune) bool {
-	switch c {
-	case '_', ' ', ':', '-':
-		return true
-	}
-	return false
+	return att
 }

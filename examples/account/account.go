@@ -3,7 +3,7 @@ package basic
 import (
 	"context"
 
-	"goa.design/goa.v2/examples/account/gen/services"
+	"goa.design/goa.v2/examples/account/gen/service"
 )
 
 // AccountService implements the account service.
@@ -17,21 +17,21 @@ func NewAccountService() *AccountService {
 
 // Create implements the "create" endpoint.
 // Create may return a *app.AccountCreated or a *app.AccountAccepted
-func (s *AccountService) Create(ctx context.Context, p *services.CreateAccountPayload) (interface{}, error) {
-	return &services.AccountCreated{}, nil
+func (s *AccountService) Create(ctx context.Context, p *service.CreateAccount) (*service.AccountResult, error) {
+	return &service.AccountResult{}, nil
 }
 
 // List implements the "list" endpoint.
-func (s *AccountService) List(ctx context.Context, filter *services.ListAccountPayload) ([]*services.AccountBody, error) {
+func (s *AccountService) List(ctx context.Context, filter *service.ListAccount) ([]*service.AccountResult, error) {
 	return nil, nil
 }
 
 // Show implements the "show" endpoint.
-func (s *AccountService) Show(ctx context.Context, p *services.ShowAccountPayload) (*services.AccountBody, error) {
-	return &services.AccountBody{}, nil
+func (s *AccountService) Show(ctx context.Context, p *service.ShowAccountPayload) (*service.AccountResult, error) {
+	return &service.AccountResult{}, nil
 }
 
 // Delete implements the "delete" endpoint.
-func (s *AccountService) Delete(ctx context.Context, p *services.DeleteAccountPayload) error {
+func (s *AccountService) Delete(ctx context.Context, p *service.DeleteAccountPayload) error {
 	return nil
 }

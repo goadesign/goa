@@ -206,29 +206,56 @@ func Default(def interface{}) {
 	a.SetDefault(def)
 }
 
-// Example sets the example of an attribute to be used for the documentation.
+// Example provides an example value for a type, a parameter, a header or any
+// attribute. Example supports two syntaxes, both syntaxes accept two arguments
+// and in both cases the first argument is a summary describing the example. The
+// second argument provides the value of the example either directly or via a
+// DSL that can also specify a long description.
+//
 // If no example is explicitly provided then a random example is generated
 // unless the "swagger:example" metadata is set to "false". See Metadata.
 //
-// Example may appear in a Attribute expression.
-// Example takes one argument: the example value.
+// Example may appear in a Attributes or Attribute expression DSL.
+// Example takes two arguments: a summary and the example value or defining DSL.
 //
-// Example:
+// Examples:
 //
-//	Attributes(func() {
-//		Attribute("ID", Int64, func() {
-//			Example(1)
+//	Params(func() {
+//		Param("ZipCode:zip-code", String, "Zip code filter", func() {
+//			Example("Santa Barbara", "93111")
 //		})
 //	})
 //
-func Example(exp interface{}) {
+//	Attributes(func() {
+//		Attribute("ID", Int64, "ID is the unique bottle identifier")
+//		Example("The first bottle", func() {
+//			Description("This bottle has an ID set to 1")
+//			Value(Val{"ID": 1})
+//		})
+//		Example("Another bottle", func() {
+//			Description("This bottle has an ID set to 5")
+//			Value(Val{"ID": 5})
+//		})
+//	})
+//
+func Example(summary string, arg interface{}) {
 	if a, ok := eval.Current().(*design.AttributeExpr); ok {
-		if !a.Type.IsCompatible(exp) {
-			eval.ReportError("example value %#v is incompatible with attribute of type %s",
-				exp, a.Type.Name())
+		ex := &design.ExampleExpr{Summary: summary}
+		if dsl, ok := arg.(func()); ok {
+			eval.Execute(dsl, ex)
+		} else {
+			ex.Value = arg
+		}
+		if ex.Value == nil {
+			eval.ReportError("example value is missing")
 			return
 		}
-		a.UserExample = exp
+		if !a.Type.IsCompatible(ex.Value) {
+			eval.ReportError("example value %#v is incompatible with attribute of type %s",
+				ex.Value, a.Type.Name())
+			return
+		}
+		a.UserExamples = append(a.UserExamples, ex)
 	}
 }
 
