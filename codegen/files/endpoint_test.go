@@ -5,6 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sergi/go-diff/diffmatchpatch"
+
+	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/design"
 )
 
@@ -18,11 +21,11 @@ func TestEndpoint(t *testing.T) {
 )
 
 // NewSingle wraps the methods of a Single service with endpoints.
-func NewSingle(s services.Single) *Single {
+func NewSingle(s service.Single) *Single {
 	ep := new(Single)
 
 	ep.A = func(ctx context.Context, req interface{}) (interface{}, error) {
-		p := req.(*services.AType)
+		p := req.(*service.AType)
 		return s.A(ctx, p)
 	}
 
@@ -32,23 +35,23 @@ func NewSingle(s services.Single) *Single {
 		multipleMethods = `type (
 	// Multiple lists the Multiple service endpoints.
 	Multiple struct {
-		A goa.Endpoint
 		B goa.Endpoint
+		C goa.Endpoint
 	}
 )
 
 // NewMultiple wraps the methods of a Multiple service with endpoints.
-func NewMultiple(s services.Multiple) *Multiple {
+func NewMultiple(s service.Multiple) *Multiple {
 	ep := new(Multiple)
 
-	ep.A = func(ctx context.Context, req interface{}) (interface{}, error) {
-		p := req.(*services.AType)
-		return s.A(ctx, p)
+	ep.B = func(ctx context.Context, req interface{}) (interface{}, error) {
+		p := req.(*service.BType)
+		return s.B(ctx, p)
 	}
 
-	ep.B = func(ctx context.Context, req interface{}) (interface{}, error) {
-		p := req.(*services.BType)
-		return s.B(ctx, p)
+	ep.C = func(ctx context.Context, req interface{}) (interface{}, error) {
+		p := req.(*service.CType)
+		return s.C(ctx, p)
 	}
 
 	return ep
@@ -62,7 +65,7 @@ func NewMultiple(s services.Multiple) *Multiple {
 )
 
 // NewNoPayload wraps the methods of a NoPayload service with endpoints.
-func NewNoPayload(s services.NoPayload) *NoPayload {
+func NewNoPayload(s service.NoPayload) *NoPayload {
 	ep := new(NoPayload)
 
 	ep.NoPayload = func(ctx context.Context, req interface{}) (interface{}, error) {
@@ -77,21 +80,34 @@ func NewNoPayload(s services.NoPayload) *NoPayload {
 	var (
 		a = design.EndpointExpr{
 			Name: "A",
-			Payload: &design.UserTypeExpr{
-				TypeName: "AType",
-			},
+			Payload: &design.AttributeExpr{
+				Type: &design.UserTypeExpr{
+					AttributeExpr: &design.AttributeExpr{Type: design.String},
+					TypeName:      "AType",
+				}},
 		}
 
 		b = design.EndpointExpr{
 			Name: "B",
-			Payload: &design.UserTypeExpr{
-				TypeName: "BType",
-			},
+			Payload: &design.AttributeExpr{
+				Type: &design.UserTypeExpr{
+					AttributeExpr: &design.AttributeExpr{Type: design.String},
+					TypeName:      "BType",
+				}},
+		}
+
+		c = design.EndpointExpr{
+			Name: "C",
+			Payload: &design.AttributeExpr{
+				Type: &design.UserTypeExpr{
+					AttributeExpr: &design.AttributeExpr{Type: design.String},
+					TypeName:      "CType",
+				}},
 		}
 
 		nopayload = design.EndpointExpr{
 			Name:    "NoPayload",
-			Payload: design.Empty,
+			Payload: &design.AttributeExpr{Type: design.Empty},
 		}
 
 		singleEndpoint = design.ServiceExpr{
@@ -104,8 +120,8 @@ func NewNoPayload(s services.NoPayload) *NoPayload {
 		multipleEndpoints = design.ServiceExpr{
 			Name: "Multiple",
 			Endpoints: []*design.EndpointExpr{
-				&a,
 				&b,
+				&c,
 			},
 		}
 
@@ -116,6 +132,11 @@ func NewNoPayload(s services.NoPayload) *NoPayload {
 			},
 		}
 	)
+	a.Service = &singleEndpoint
+	b.Service = &multipleEndpoints
+	c.Service = &multipleEndpoints
+	nopayload.Service = &nopayloadEndpoint
+
 	cases := map[string]struct {
 		Service  *design.ServiceExpr
 		Expected string
@@ -126,6 +147,9 @@ func NewNoPayload(s services.NoPayload) *NoPayload {
 	}
 	for k, tc := range cases {
 		buf := new(bytes.Buffer)
+		ServiceScope = codegen.NewNameScope()
+		s := Service(tc.Service) // to initialize ServiceScope
+		s.Sections("")
 		file := Endpoint(tc.Service)
 		for _, s := range file.Sections(genPkg) {
 			if err := s.Write(buf); err != nil {
@@ -134,7 +158,10 @@ func NewNoPayload(s services.NoPayload) *NoPayload {
 		}
 		actual := buf.String()
 		if !strings.Contains(actual, tc.Expected) {
-			t.Errorf("%s: got\n%v\n=============\nexpected to contain\n%v", k, actual, tc.Expected)
+			dmp := diffmatchpatch.New()
+			diffs := dmp.DiffMain(actual, tc.Expected, false)
+			diff := dmp.DiffPrettyText(diffs)
+			t.Errorf("%s: got\n%v\n=============\nexpected to contain\n%v\ndiff\n%v", k, actual, tc.Expected, diff)
 		}
 	}
 }

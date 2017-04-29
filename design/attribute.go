@@ -27,8 +27,22 @@ type (
 		// Optional member default value
 		DefaultValue interface{}
 		// UserExample set in DSL or computed in Finalize
-		UserExample interface{}
+		UserExamples []*ExampleExpr
 	}
+
+	// ExampleExpr represents an example.
+	ExampleExpr struct {
+		// Summary is the example short summary.
+		Summary string
+		// Description is an optional long description.
+		Description string
+		// Value is the example value.
+		Value interface{}
+	}
+
+	// Val is the type used to provide the value of examples for attributes that are
+	// objects.
+	Val map[string]interface{}
 
 	// CompositeExpr defines a generic composite expression that contains an
 	// attribute.  This makes it possible for plugins to use attributes in
@@ -330,6 +344,11 @@ func (a *AttributeExpr) inheritValidations(parent *AttributeExpr) {
 func (a *AttributeExpr) shouldInherit(parent *AttributeExpr) bool {
 	return a != nil && AsObject(a.Type) != nil &&
 		parent != nil && AsObject(parent.Type) != nil
+}
+
+// EvalName returns the name used by the DSL evaluation.
+func (a *ExampleExpr) EvalName() string {
+	return `example "` + a.Summary + `"`
 }
 
 // Context returns the generic definition name used in error messages.

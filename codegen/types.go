@@ -2,328 +2,176 @@ package codegen
 
 import (
 	"fmt"
+	"sort"
 	"strings"
-	"unicode"
 
 	"goa.design/goa.v2/design"
 )
 
-var (
-	// common words who need to keep their
-	commonInitialisms = map[string]bool{
-		"API":   true,
-		"ASCII": true,
-		"CPU":   true,
-		"CSS":   true,
-		"DNS":   true,
-		"EOF":   true,
-		"GUID":  true,
-		"HTML":  true,
-		"HTTP":  true,
-		"HTTPS": true,
-		"ID":    true,
-		"IP":    true,
-		"JMES":  true,
-		"JSON":  true,
-		"JWT":   true,
-		"LHS":   true,
-		"OK":    true,
-		"QPS":   true,
-		"RAM":   true,
-		"RHS":   true,
-		"RPC":   true,
-		"SLA":   true,
-		"SMTP":  true,
-		"SQL":   true,
-		"SSH":   true,
-		"TCP":   true,
-		"TLS":   true,
-		"TTL":   true,
-		"UDP":   true,
-		"UI":    true,
-		"UID":   true,
-		"UUID":  true,
-		"URI":   true,
-		"URL":   true,
-		"UTF8":  true,
-		"VM":    true,
-		"XML":   true,
-		"XSRF":  true,
-		"XSS":   true,
-	}
-
-	// reserved golang keywords and package names
-	reserved = map[string]bool{
-		"byte":       true,
-		"complex128": true,
-		"complex64":  true,
-		"float32":    true,
-		"float64":    true,
-		"int":        true,
-		"int16":      true,
-		"int32":      true,
-		"int64":      true,
-		"int8":       true,
-		"rune":       true,
-		"string":     true,
-		"uint16":     true,
-		"uint32":     true,
-		"uint64":     true,
-		"uint8":      true,
-
-		// reserved keywords
-		"break":       true,
-		"case":        true,
-		"chan":        true,
-		"const":       true,
-		"continue":    true,
-		"default":     true,
-		"defer":       true,
-		"else":        true,
-		"fallthrough": true,
-		"for":         true,
-		"func":        true,
-		"go":          true,
-		"goto":        true,
-		"if":          true,
-		"import":      true,
-		"interface":   true,
-		"map":         true,
-		"package":     true,
-		"range":       true,
-		"return":      true,
-		"select":      true,
-		"struct":      true,
-		"switch":      true,
-		"type":        true,
-		"var":         true,
-
-		// stdlib and goa packages used by generated code
-		"fmt":  true,
-		"http": true,
-		"json": true,
-		"os":   true,
-		"url":  true,
-		"time": true,
-	}
-)
-
-// GoTypeDef returns the Go code that defines a Go type which matches the data structure
-// definition (the part that comes after `type foo`).
-func GoTypeDef(dt design.DataType) string {
-	switch actual := dt.(type) {
+// GoTypeDef returns the Go code that defines a Go type which matches the data
+// structure definition (the part that comes after `type foo`). If private is
+// true then the generated type is private and includes JSON, XML and form tags.
+func GoTypeDef(att *design.AttributeExpr, private bool) string {
+	switch actual := att.Type.(type) {
 	case design.Primitive:
-		return GoTypeName(actual)
+		return GoTypeName(actual, private)
 	case *design.Array:
-		d := GoTypeDef(actual.ElemType.Type)
+		d := GoTypeDef(actual.ElemType, private)
 		if design.IsObject(actual.ElemType.Type) {
 			d = "*" + d
 		}
 		return "[]" + d
 	case *design.Map:
-		keyDef := GoTypeDef(actual.KeyType.Type)
+		keyDef := GoTypeDef(actual.KeyType, private)
 		if design.IsObject(actual.KeyType.Type) {
 			keyDef = "*" + keyDef
 		}
-		elemDef := GoTypeDef(actual.ElemType.Type)
+		elemDef := GoTypeDef(actual.ElemType, private)
 		if design.IsObject(actual.ElemType.Type) {
 			elemDef = "*" + elemDef
 		}
 		return fmt.Sprintf("map[%s]%s", keyDef, elemDef)
 	case design.Object:
-		return goTypeDefObject(actual)
+		var ss []string
+		ss = append(ss, "struct {")
+		WalkAttributes(actual, func(name string, at *design.AttributeExpr) error {
+			var (
+				fn   string
+				tdef string
+				desc string
+				tags string
+			)
+			{
+				fn = GoifyAtt(at, name, true)
+				tdef = GoTypeDef(at, private)
+				if (at.Type.Kind() != design.BytesKind) &&
+					(design.IsPrimitive(at.Type) && private || design.IsObject(at.Type) || att.IsPrimitivePointer(name)) {
+					tdef = "*" + tdef
+				}
+				if at.Description != "" {
+					desc = fmt.Sprintf("// %s\n\t", at.Description)
+				}
+				if private {
+					tags = attributeTags(att, at, name)
+				}
+			}
+			ss = append(ss, fmt.Sprintf("\t%s%s %s%s", desc, fn, tdef, tags))
+			return nil
+		})
+		ss = append(ss, "}")
+		return strings.Join(ss, "\n")
 	case design.UserType:
-		return GoTypeName(actual)
+		return GoTypeName(actual, private)
 	default:
-		panic("goa bug: unknown data structure type")
+		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
 }
 
-func goTypeDefObject(o design.Object) string {
-	var ss []string
-	ss = append(ss, "struct {")
-	WalkAttributes(o, func(name string, at *design.AttributeExpr) error {
-		ss = append(ss, fmt.Sprintf("\t%s %s", name, GoTypeName(at.Type)))
-		return nil
-	})
-	ss = append(ss, "}")
-	return strings.Join(ss, "\n")
-}
-
-// GoTypeRef returns the Go code that refers to the Go type which matches the given data type
-func GoTypeRef(dt design.DataType) string {
-	tname := GoTypeName(dt)
+// GoTypeRef returns the Go code that refers to the Go type which matches the
+// given data type. If private is true then the reference is to a private type.
+func GoTypeRef(dt design.DataType, private bool) string {
+	tname := GoTypeName(dt, private)
+	if _, ok := dt.(design.Object); ok {
+		return tname
+	}
 	if design.IsObject(dt) {
 		return "*" + tname
 	}
 	return tname
 }
 
-// GoTypeName returns the Go type name for a data type.
-// todo: TBD add support for maps, objects and usertypes
-func GoTypeName(dt design.DataType) string {
+// GoPackageTypeRef returns the Go code that refers to the given type. If the
+// type is a user type then it is assumed to be defined in the given package.
+func GoPackageTypeRef(dt design.DataType, pack string) string {
+	tdef := GoTypeRef(dt, false)
+	if _, ok := dt.(design.UserType); ok {
+		isObj := design.IsObject(dt)
+		if isObj {
+			tdef = tdef[1:]
+		}
+		tdef = pack + "." + tdef
+		if isObj {
+			tdef = "*" + tdef
+		}
+	}
+	return tdef
+}
+
+// GoTypeName returns the Go type name of the given data type. It returns the
+// private name if private is true.
+func GoTypeName(dt design.DataType, private bool) string {
 	switch actual := dt.(type) {
 	case design.Primitive:
 		return GoNativeType(dt)
 	case *design.Array:
-		return "[]" + GoTypeRef(actual.ElemType.Type)
+		return "[]" + GoTypeRef(actual.ElemType.Type, private)
 	case *design.Map:
-		return fmt.Sprintf("map[%s]%s", GoNativeType(actual.KeyType.Type), GoNativeType(actual.ElemType.Type))
+		return fmt.Sprintf("map[%s]%s", GoTypeRef(actual.KeyType.Type, private), GoTypeRef(actual.ElemType.Type, private))
 	case design.Object:
 		return "map[string]interface{}"
 	case design.UserType:
-		return actual.Name()
+		return Goify(actual.Name(), !private)
 	case design.CompositeExpr:
-		return GoNativeType(actual.Attribute().Type)
+		return GoTypeName(actual.Attribute().Type, private)
 	default:
-		panic(fmt.Sprintf("goa bug: unknown type %#v", actual))
+		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
 }
 
-// GoNativeType returns the Go built-in type from which instances of provided datatype can be initialized.
+// GoNativeType returns the Go built-in type corresponding to the given
+// primitive type. GoNativeType panics if t is not a primitive type.
 func GoNativeType(t design.DataType) string {
-	switch actual := t.(type) {
-	case design.Primitive:
-		switch actual.Kind() {
-		case design.BooleanKind:
-			return "bool"
-		case design.IntKind:
-			return "int"
-		case design.Int32Kind:
-			return "int32"
-		case design.Int64Kind:
-			return "int64"
-		case design.UIntKind:
-			return "uint"
-		case design.UInt32Kind:
-			return "uint32"
-		case design.UInt64Kind:
-			return "uint64"
-		case design.Float32Kind:
-			return "float32"
-		case design.Float64Kind:
-			return "float64"
-		case design.StringKind:
-			return "string"
-		case design.BytesKind:
-			return "[]byte"
-		case design.AnyKind:
-			return "interface{}"
-		default:
-			panic(fmt.Sprintf("goa bug: unknown primitive type %#v", actual))
-		}
-	case *design.Array:
-		return "[]" + GoNativeType(actual.ElemType.Type)
-	case *design.Map:
-		return fmt.Sprintf("map[%s]%s", GoNativeType(actual.KeyType.Type), GoNativeType(actual.ElemType.Type))
-	case design.Object:
-		return "map[string]interface{}"
-	case design.UserType:
-		return actual.Name()
-	case design.CompositeExpr:
-		return GoNativeType(actual.Attribute().Type)
+	switch t.Kind() {
+	case design.BooleanKind:
+		return "bool"
+	case design.IntKind:
+		return "int"
+	case design.Int32Kind:
+		return "int32"
+	case design.Int64Kind:
+		return "int64"
+	case design.UIntKind:
+		return "uint"
+	case design.UInt32Kind:
+		return "uint32"
+	case design.UInt64Kind:
+		return "uint64"
+	case design.Float32Kind:
+		return "float32"
+	case design.Float64Kind:
+		return "float64"
+	case design.StringKind:
+		return "string"
+	case design.BytesKind:
+		return "[]byte"
+	case design.AnyKind:
+		return "interface{}"
 	default:
-		panic(fmt.Sprintf("goa bug: unknown type %#v", actual))
+		panic(fmt.Sprintf("cannot compute native Go type for %T", t)) // bug
 	}
 }
 
-// Goify makes a valid Go identifier out of any string.
-// It does that by removing any non letter and non digit character and by making sure the first
-// character is a letter or "_".
-// Goify produces a "CamelCase" version of the string, if firstUpper is true the first character
-// of the identifier is uppercase otherwise it's lowercase.
-func Goify(str string, firstUpper bool) string {
-	runes := []rune(str)
-
-	// remove trailing invalid identifiers (makes code below simpler)
-	runes = removeTrailingInvalid(runes)
-
-	w, i := 0, 0 // index of start of word, scan
-	for i+1 <= len(runes) {
-		eow := false // whether we hit the end of a word
-
-		// remove leading invalid identifiers
-		runes = removeInvalidAtIndex(i, runes)
-
-		if i+1 == len(runes) {
-			eow = true
-		} else if !validIdentifier(runes[i]) {
-			// get rid of it
-			runes = append(runes[:i], runes[i+1:]...)
-		} else if runes[i+1] == '_' {
-			// underscore; shift the remainder forward over any run of underscores
-			eow = true
-			n := 1
-			for i+n+1 < len(runes) && runes[i+n+1] == '_' {
-				n++
-			}
-			copy(runes[i+1:], runes[i+n+1:])
-			runes = runes[:len(runes)-n]
-		} else if unicode.IsLower(runes[i]) && !unicode.IsLower(runes[i+1]) {
-			// lower->non-lower
-			eow = true
-		}
+// attributeTags computes the struct field tags.
+func attributeTags(parent, att *design.AttributeExpr, name string) string {
+	var elems []string
+	keys := make([]string, len(att.Metadata))
+	i := 0
+	for k := range att.Metadata {
+		keys[i] = k
 		i++
-		if !eow {
-			continue
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		val := att.Metadata[key]
+		if strings.HasPrefix(key, "struct:tag:") {
+			name := key[11:]
+			value := strings.Join(val, ",")
+			elems = append(elems, fmt.Sprintf("%s:\"%s\"", name, value))
 		}
-
-		// [w,i] is a word.
-		word := string(runes[w:i])
-		// is it one of our initialisms?
-		if u := strings.ToUpper(word); commonInitialisms[u] {
-			if firstUpper {
-				u = strings.ToUpper(u)
-			} else if w == 0 {
-				u = strings.ToLower(u)
-			}
-
-			// All the common initialisms are ASCII,
-			// so we can replace the bytes exactly.
-			copy(runes[w:], []rune(u))
-		} else if w > 0 && strings.ToLower(word) == word {
-			// already all lowercase, and not the first word, so uppercase the first character.
-			runes[w] = unicode.ToUpper(runes[w])
-		} else if w == 0 && strings.ToLower(word) == word && firstUpper {
-			runes[w] = unicode.ToUpper(runes[w])
-		}
-		if w == 0 && !firstUpper {
-			runes[w] = unicode.ToLower(runes[w])
-		}
-		//advance to next word
-		w = i
 	}
-
-	return fixReserved(string(runes))
-}
-
-// validIdentifier returns true if the rune is a letter or number
-func validIdentifier(r rune) bool {
-	return unicode.IsLetter(r) || unicode.IsDigit(r)
-}
-
-// fixReserved appends an underscore on to Go reserved keywords.
-func fixReserved(w string) string {
-	if reserved[w] {
-		w += "_"
+	if len(elems) > 0 {
+		return " `" + strings.Join(elems, " ") + "`"
 	}
-	return w
-}
-
-// removeTrailingInvalid removes trailing invalid identifiers from runes.
-func removeTrailingInvalid(runes []rune) []rune {
-	valid := len(runes) - 1
-	for ; valid >= 0 && !validIdentifier(runes[valid]); valid-- {
-	}
-
-	return runes[0 : valid+1]
-}
-
-// removeInvalidAtIndex removes consecutive invalid identifiers from runes starting at index i.
-func removeInvalidAtIndex(i int, runes []rune) []rune {
-	valid := i
-	for ; valid < len(runes) && !validIdentifier(runes[valid]); valid++ {
-	}
-
-	return append(runes[:i], runes[valid:]...)
+	// Default algorithm
+	return fmt.Sprintf(" `form:\"%s,omitempty\" json:\"%s,omitempty\" xml:\"%s,omitempty\"`", name, name, name)
 }

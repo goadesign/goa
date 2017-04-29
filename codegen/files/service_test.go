@@ -2,10 +2,15 @@ package files
 
 import (
 	"bytes"
+	"fmt"
 	"go/format"
+	"io/ioutil"
+	"os"
+	"os/exec"
 	"strings"
 	"testing"
 
+	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/design"
 )
 
@@ -14,22 +19,26 @@ func TestService(t *testing.T) {
 		singleMethod = `type (
 	// Single is the Single service interface.
 	Single interface {
-		// A implements the A endpoint.
-		A(context.Context, *APayload) (AResult, error)
+		// A implements A.
+		A(context.Context, *APayload) (*AResult, error)
 	}
 
+	// APayload is the payload type of the Single service A method.
 	APayload struct {
-		BooleanField bool
-		BytesField   []byte
-		IntField     int
-		StringField  string
+		BooleanField  bool
+		BytesField    []byte
+		IntField      int
+		OptionalField *string
+		StringField   string
 	}
 
+	// AResult is the result type of the Single service A method.
 	AResult struct {
-		BooleanField bool
-		BytesField   []byte
-		IntField     int
-		StringField  string
+		BooleanField  bool
+		BytesField    []byte
+		IntField      int
+		OptionalField *string
+		StringField   string
 	}
 )
 `
@@ -37,46 +46,58 @@ func TestService(t *testing.T) {
 		multipleMethods = `type (
 	// Multiple is the Multiple service interface.
 	Multiple interface {
-		// A implements the A endpoint.
-		A(context.Context, *APayload) (AResult, error)
-		// B implements the B endpoint.
-		B(context.Context, *BPayload) (BResult, error)
+		// A implements A.
+		A(context.Context, *APayload) (*AResult, error)
+		// B implements B.
+		B(context.Context, *BPayload) (*BResult, error)
 	}
 
+	// APayload is the payload type of the Multiple service A method.
 	APayload struct {
-		BooleanField bool
-		BytesField   []byte
-		IntField     int
-		StringField  string
+		BooleanField  bool
+		BytesField    []byte
+		IntField      int
+		OptionalField *string
+		StringField   string
 	}
 
+	// BPayload is the payload type of the Multiple service B method.
 	BPayload struct {
-		ArrayField    []bool
-		MapField      map[int]string
-		ObjectField   map[string]interface{}
-		UserTypeField Parent
+		ArrayField  []bool
+		MapField    map[int]string
+		ObjectField *struct {
+			IntField    *int
+			StringField *string
+		}
+		UserTypeField *Parent
 	}
 
+	// AResult is the result type of the Multiple service A method.
 	AResult struct {
-		BooleanField bool
-		BytesField   []byte
-		IntField     int
-		StringField  string
+		BooleanField  bool
+		BytesField    []byte
+		IntField      int
+		OptionalField *string
+		StringField   string
 	}
 
+	// BResult is the result type of the Multiple service B method.
 	BResult struct {
-		ArrayField    []bool
-		MapField      map[int]string
-		ObjectField   map[string]interface{}
-		UserTypeField Parent
+		ArrayField  []bool
+		MapField    map[int]string
+		ObjectField *struct {
+			IntField    *int
+			StringField *string
+		}
+		UserTypeField *Parent
 	}
 
 	Child struct {
-		p Parent
+		P *Parent
 	}
 
 	Parent struct {
-		c Child
+		C *Child
 	}
 )
 `
@@ -84,7 +105,7 @@ func TestService(t *testing.T) {
 		emptyMethods = `type (
 	// Empty is the Empty service interface.
 	Empty interface {
-		// Empty implements the Empty endpoint.
+		// Empty implements Empty.
 		Empty(context.Context) error
 	}
 )
@@ -93,15 +114,17 @@ func TestService(t *testing.T) {
 		emptyResultMethods = `type (
 	// EmptyResult is the EmptyResult service interface.
 	EmptyResult interface {
-		// EmptyResult implements the EmptyResult endpoint.
+		// EmptyResult implements EmptyResult.
 		EmptyResult(context.Context, *APayload) error
 	}
 
+	// APayload is the payload type of the EmptyResult service EmptyResult method.
 	APayload struct {
-		BooleanField bool
-		BytesField   []byte
-		IntField     int
-		StringField  string
+		BooleanField  bool
+		BytesField    []byte
+		IntField      int
+		OptionalField *string
+		StringField   string
 	}
 )
 `
@@ -109,15 +132,17 @@ func TestService(t *testing.T) {
 		emptyPayloadMethods = `type (
 	// EmptyPayload is the EmptyPayload service interface.
 	EmptyPayload interface {
-		// EmptyPayload implements the EmptyPayload endpoint.
-		EmptyPayload(context.Context) (AResult, error)
+		// EmptyPayload implements EmptyPayload.
+		EmptyPayload(context.Context) (*AResult, error)
 	}
 
+	// AResult is the result type of the EmptyPayload service EmptyPayload method.
 	AResult struct {
-		BooleanField bool
-		BytesField   []byte
-		IntField     int
-		StringField  string
+		BooleanField  bool
+		BytesField    []byte
+		IntField      int
+		OptionalField *string
+		StringField   string
 	}
 )
 `
@@ -148,47 +173,68 @@ func TestService(t *testing.T) {
 	}
 
 	var (
-		apayload = design.UserTypeExpr{
-			TypeName: "APayload",
-			AttributeExpr: &design.AttributeExpr{Type: design.Object{
-				"IntField":     &design.AttributeExpr{Type: design.Int},
-				"StringField":  &design.AttributeExpr{Type: design.String},
-				"BooleanField": &design.AttributeExpr{Type: design.Boolean},
-				"BytesField":   &design.AttributeExpr{Type: design.Bytes},
-			}},
+		apayload = design.AttributeExpr{
+			Type: &design.UserTypeExpr{
+				TypeName: "APayload",
+				AttributeExpr: &design.AttributeExpr{
+					Type: design.Object{
+						"IntField":      &design.AttributeExpr{Type: design.Int},
+						"StringField":   &design.AttributeExpr{Type: design.String},
+						"BooleanField":  &design.AttributeExpr{Type: design.Boolean},
+						"BytesField":    &design.AttributeExpr{Type: design.Bytes},
+						"OptionalField": &design.AttributeExpr{Type: design.String},
+					},
+					Validation: &design.ValidationExpr{
+						Required: []string{"IntField", "StringField", "BooleanField", "BytesField"},
+					},
+				},
+			}}
+
+		bpayload = design.AttributeExpr{
+			Type: &design.UserTypeExpr{
+				TypeName: "BPayload",
+				AttributeExpr: &design.AttributeExpr{Type: design.Object{
+					"ArrayField":    &design.AttributeExpr{Type: &design.Array{&design.AttributeExpr{Type: design.Boolean}}},
+					"MapField":      &design.AttributeExpr{Type: &design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}},
+					"ObjectField":   &design.AttributeExpr{Type: design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}},
+					"UserTypeField": &design.AttributeExpr{Type: parent},
+				}},
+			}}
+
+		aresult = design.AttributeExpr{
+			Type: &design.UserTypeExpr{
+				TypeName: "AResult",
+				AttributeExpr: &design.AttributeExpr{Type: design.Object{
+					"IntField":      &design.AttributeExpr{Type: design.Int},
+					"StringField":   &design.AttributeExpr{Type: design.String},
+					"BooleanField":  &design.AttributeExpr{Type: design.Boolean},
+					"BytesField":    &design.AttributeExpr{Type: design.Bytes},
+					"OptionalField": &design.AttributeExpr{Type: design.String},
+				},
+					Validation: &design.ValidationExpr{
+						Required: []string{"IntField", "StringField", "BooleanField", "BytesField"},
+					},
+				},
+			}}
+
+		bresult = design.AttributeExpr{
+			Type: &design.UserTypeExpr{
+				TypeName: "BResult",
+				AttributeExpr: &design.AttributeExpr{Type: design.Object{
+					"ArrayField":    &design.AttributeExpr{Type: &design.Array{&design.AttributeExpr{Type: design.Boolean}}},
+					"MapField":      &design.AttributeExpr{Type: &design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}},
+					"ObjectField":   &design.AttributeExpr{Type: design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}},
+					"UserTypeField": &design.AttributeExpr{Type: parent},
+				}},
+			}}
+
+		a1 = design.EndpointExpr{
+			Name:    "A",
+			Payload: &apayload,
+			Result:  &aresult,
 		}
 
-		bpayload = design.UserTypeExpr{
-			TypeName: "BPayload",
-			AttributeExpr: &design.AttributeExpr{Type: design.Object{
-				"ArrayField":    &design.AttributeExpr{Type: &design.Array{&design.AttributeExpr{Type: design.Boolean}}},
-				"MapField":      &design.AttributeExpr{Type: &design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}},
-				"ObjectField":   &design.AttributeExpr{Type: design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}},
-				"UserTypeField": &design.AttributeExpr{Type: parent},
-			}},
-		}
-
-		aresult = design.UserTypeExpr{
-			TypeName: "AResult",
-			AttributeExpr: &design.AttributeExpr{Type: design.Object{
-				"IntField":     &design.AttributeExpr{Type: design.Int},
-				"StringField":  &design.AttributeExpr{Type: design.String},
-				"BooleanField": &design.AttributeExpr{Type: design.Boolean},
-				"BytesField":   &design.AttributeExpr{Type: design.Bytes},
-			}},
-		}
-
-		bresult = design.UserTypeExpr{
-			TypeName: "BResult",
-			AttributeExpr: &design.AttributeExpr{Type: design.Object{
-				"ArrayField":    &design.AttributeExpr{Type: &design.Array{&design.AttributeExpr{Type: design.Boolean}}},
-				"MapField":      &design.AttributeExpr{Type: &design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}},
-				"ObjectField":   &design.AttributeExpr{Type: design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}},
-				"UserTypeField": &design.AttributeExpr{Type: parent},
-			}},
-		}
-
-		a = design.EndpointExpr{
+		a2 = design.EndpointExpr{
 			Name:    "A",
 			Payload: &apayload,
 			Result:  &aresult,
@@ -202,33 +248,33 @@ func TestService(t *testing.T) {
 
 		empty = design.EndpointExpr{
 			Name:    "Empty",
-			Payload: design.Empty,
-			Result:  design.Empty,
+			Payload: &design.AttributeExpr{Type: design.Empty},
+			Result:  &design.AttributeExpr{Type: design.Empty},
 		}
 
 		emptyResult = design.EndpointExpr{
 			Name:    "EmptyResult",
 			Payload: &apayload,
-			Result:  design.Empty,
+			Result:  &design.AttributeExpr{Type: design.Empty},
 		}
 
 		emptyPayload = design.EndpointExpr{
 			Name:    "EmptyPayload",
-			Payload: design.Empty,
+			Payload: &design.AttributeExpr{Type: design.Empty},
 			Result:  &aresult,
 		}
 
 		singleEndpoint = design.ServiceExpr{
 			Name: "Single",
 			Endpoints: []*design.EndpointExpr{
-				&a,
+				&a1,
 			},
 		}
 
 		multipleEndpoints = design.ServiceExpr{
 			Name: "Multiple",
 			Endpoints: []*design.EndpointExpr{
-				&a,
+				&a2,
 				&b,
 			},
 		}
@@ -254,6 +300,12 @@ func TestService(t *testing.T) {
 			},
 		}
 	)
+	singleEndpoint.Endpoints[0].Service = &singleEndpoint
+	multipleEndpoints.Endpoints[0].Service = &multipleEndpoints
+	multipleEndpoints.Endpoints[1].Service = &multipleEndpoints
+	emptyEndpoint.Endpoints[0].Service = &emptyEndpoint
+	emptyResultEndpoint.Endpoints[0].Service = &emptyResultEndpoint
+	emptyPayloadEndpoint.Endpoints[0].Service = &emptyPayloadEndpoint
 
 	cases := map[string]struct {
 		Service  *design.ServiceExpr
@@ -267,6 +319,7 @@ func TestService(t *testing.T) {
 	}
 	for k, tc := range cases {
 		buf := new(bytes.Buffer)
+		ServiceScope = codegen.NewNameScope()
 		file := Service(tc.Service)
 		for _, s := range file.Sections(genPkg) {
 			if err := s.Write(buf); err != nil {
@@ -275,11 +328,38 @@ func TestService(t *testing.T) {
 		}
 		bs, err := format.Source(buf.Bytes())
 		if err != nil {
+			fmt.Println(buf.String())
 			t.Fatal(err)
 		}
 		actual := string(bs)
 		if !strings.Contains(actual, tc.Expected) {
-			t.Errorf("%s: got\n%v\n=============\nexpected to contain\n%v", k, actual, tc.Expected)
+			_, err := exec.LookPath("diff")
+			supportsDiff := (err == nil)
+			var diff string
+			if supportsDiff {
+				left := createTempFile(t, actual)
+				right := createTempFile(t, tc.Expected)
+				defer os.Remove(left)
+				defer os.Remove(right)
+				cmd := exec.Command("diff", left, right)
+				diffb, _ := cmd.CombinedOutput()
+				diff = "diff\n" + string(diffb)
+			}
+			t.Errorf("%s: got\n%v\n=============\nexpected to contain\n%v\n%v", k, actual, tc.Expected, diff)
 		}
 	}
+}
+
+func createTempFile(t *testing.T, content string) string {
+	f, err := ioutil.TempFile("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = f.WriteString(content)
+	if err != nil {
+		os.Remove(f.Name())
+		t.Fatal(err)
+	}
+	f.Close()
+	return f.Name()
 }

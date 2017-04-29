@@ -17,10 +17,10 @@ type (
 		Description string
 		// Docs points to the endpoint external documentation if any.
 		Docs *DocsExpr
-		// Payload type.
-		Payload UserType
-		// Result type.
-		Result UserType
+		// Payload attribute
+		Payload *AttributeExpr
+		// Result attribute
+		Result *AttributeExpr
 		// Errors lists the error responses.
 		Errors []*ErrorExpr
 		// Service that owns endpoint.
@@ -58,9 +58,9 @@ func (e *EndpointExpr) EvalName() string {
 // Finalize makes sure the endpoint payload and result types are set.
 func (e *EndpointExpr) Finalize() {
 	if e.Payload == nil {
-		e.Payload = Empty
+		e.Payload = &AttributeExpr{Type: Empty}
 	}
 	if e.Result == nil {
-		e.Result = Empty
+		e.Result = &AttributeExpr{Type: Empty}
 	}
 }

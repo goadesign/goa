@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"goa.design/goa.v2/examples/account/gen/services"
+	"goa.design/goa.v2/examples/account/gen/service"
 	genhttp "goa.design/goa.v2/examples/account/gen/transport/http"
 
 	"goa.design/goa.v2"
@@ -117,7 +117,7 @@ func RunCommand(timeout int, accountClient *genhttp.AccountClient) (interface{},
 			case "create":
 				data, err = runAccountCreate(ctx, accountClient.Create(), *accountCreateNameFlag, *accountCreateOrgIDFlag)
 			case "list":
-				data, err = runAccountList(ctx, accountClient.List(), *accountListFilterFlag, *accountListOrgIDFlag)
+				data, err = runAccountList(ctx, accountClient.List(), accountListFilterFlag, *accountListOrgIDFlag)
 			case "show":
 				data, err = runAccountShow(ctx, accountClient.Show(), *accountShowIDFlag, *accountShowOrgIDFlag)
 			case "delete":
@@ -130,15 +130,15 @@ func RunCommand(timeout int, accountClient *genhttp.AccountClient) (interface{},
 }
 
 func runAccountCreate(ctx context.Context, endpoint goa.Endpoint, name string, orgID uint) (interface{}, error) {
-	payload := services.CreateAccountPayload{
+	payload := service.CreateAccount{
 		Name:  name,
 		OrgID: orgID,
 	}
 	return endpoint(ctx, &payload)
 }
 
-func runAccountList(ctx context.Context, endpoint goa.Endpoint, filter string, orgID uint) (interface{}, error) {
-	payload := services.ListAccountPayload{
+func runAccountList(ctx context.Context, endpoint goa.Endpoint, filter *string, orgID uint) (interface{}, error) {
+	payload := service.ListAccount{
 		Filter: filter,
 		OrgID:  orgID,
 	}
@@ -147,7 +147,7 @@ func runAccountList(ctx context.Context, endpoint goa.Endpoint, filter string, o
 }
 
 func runAccountShow(ctx context.Context, endpoint goa.Endpoint, id string, orgID uint) (interface{}, error) {
-	payload := services.ShowAccountPayload{
+	payload := service.ShowAccountPayload{
 		ID:    id,
 		OrgID: orgID,
 	}
@@ -156,7 +156,7 @@ func runAccountShow(ctx context.Context, endpoint goa.Endpoint, id string, orgID
 }
 
 func runAccountDelete(ctx context.Context, endpoint goa.Endpoint, id string, orgID uint) (interface{}, error) {
-	payload := services.DeleteAccountPayload{
+	payload := service.DeleteAccountPayload{
 		ID:    id,
 		OrgID: orgID,
 	}

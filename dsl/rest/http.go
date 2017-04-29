@@ -524,11 +524,9 @@ func Body(args ...interface{}) {
 	}
 
 	var (
-		ref    design.UserType
+		ref    *design.AttributeExpr
 		setter func(*design.AttributeExpr)
 		kind   string
-		attr   *design.AttributeExpr
-		fn     func()
 	)
 
 	// Figure out reference type and setter function
@@ -540,7 +538,7 @@ func Body(args ...interface{}) {
 		}
 		kind = "Request"
 	case *rest.HTTPErrorExpr:
-		ref = e.ErrorExpr.Type.(design.UserType)
+		ref = e.ErrorExpr.AttributeExpr
 		setter = func(att *design.AttributeExpr) {
 			if e.Response == nil {
 				e.Response = &rest.HTTPResponseExpr{}
@@ -563,12 +561,15 @@ func Body(args ...interface{}) {
 	}
 
 	// Now initialize target attribute and DSL if any
+	var (
+		attr *design.AttributeExpr
+		fn   func()
+	)
 	switch a := args[0].(type) {
 	case string:
-		att := ref.Attribute()
-		obj := design.AsObject(att.Type)
+		obj := design.AsObject(ref.Type)
 		if obj == nil {
-			eval.ReportError("%s type must be an object with an attribute with name %#v, got %#v", kind, a, ref.Name())
+			eval.ReportError("%s type must be an object with an attribute with name %#v, got %T", kind, a, ref.Type)
 			return
 		}
 		var ok bool
@@ -588,7 +589,10 @@ func Body(args ...interface{}) {
 		}
 	case func():
 		fn = a
-		attr = ref.Attribute()
+		attr = ref
+	default:
+		eval.InvalidArgError("attribute name, user type or DSL", a)
+		return
 	}
 
 	// Set body attribute

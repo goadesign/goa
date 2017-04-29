@@ -29,6 +29,8 @@ func Description(d string) {
 		expr.Description = d
 	case *design.EndpointExpr:
 		expr.Description = d
+	case *design.ExampleExpr:
+		expr.Description = d
 	default:
 		eval.IncompatibleDSL()
 	}

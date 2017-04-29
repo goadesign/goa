@@ -8,7 +8,7 @@ import (
 	"context"
 
 	"goa.design/goa.v2"
-	"goa.design/goa.v2/examples/account/gen/services"
+	"goa.design/goa.v2/examples/account/gen/service"
 	"goa.design/goa.v2/rest"
 )
 
@@ -71,9 +71,9 @@ func (c *AccountClient) Create() goa.Endpoint {
 // endpoint.
 func (c *AccountClient) EncodeCreate(encoder rest.RequestEncoderFunc) EncodeRequestFunc {
 	return func(v interface{}) (*http.Request, error) {
-		p, ok := v.(*services.CreateAccountPayload)
+		p, ok := v.(*service.CreateAccount)
 		if !ok {
-			return nil, rest.ErrInvalidType("account", "create", "services.CreateAccountPayload", v)
+			return nil, rest.ErrInvalidType("account", "create", "service.CreateAccount", v)
 		}
 
 		// Build request
@@ -85,7 +85,7 @@ func (c *AccountClient) EncodeCreate(encoder rest.RequestEncoderFunc) EncodeRequ
 
 		// Encode body
 		var body CreateAccountBody
-		body.Name = &p.Name
+		body.Name = p.Name
 		err = encoder(req).Encode(&body)
 		if err != nil {
 			return nil, rest.ErrEncodingError("account", "create", err)
@@ -102,24 +102,26 @@ func (c *AccountClient) DecodeCreate(decoder rest.ResponseDecoderFunc) DecodeRes
 		switch resp.StatusCode {
 		case http.StatusCreated:
 			loc := resp.Header.Get("Location")
-			var body services.AccountBody
+			var body AccountCreateCreated
 			err := decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, rest.ErrDecodingError("account", "create", err)
 			}
 			resp.Body.Close()
-			return &services.AccountCreated{
-				Href: loc,
-				Body: &body,
+			return &service.AccountResult{
+				Href:  loc,
+				ID:    body.ID,
+				OrgID: body.OrgID,
+				Name:  body.Name,
 			}, nil
 		case http.StatusAccepted:
 			resp.Body.Close()
 			loc := resp.Header.Get("Location")
-			return &services.AccountAccepted{
+			return &service.AccountResult{
 				Href: loc,
 			}, nil
 		case http.StatusConflict:
-			var errResp services.NameAlreadyTaken
+			var errResp service.NameAlreadyTaken
 			err := decoder(resp).Decode(&errResp)
 			if err != nil {
 				return nil, rest.ErrDecodingError("account", "create", err)
@@ -158,16 +160,16 @@ func (c *AccountClient) List() goa.Endpoint {
 // EncodeList returns an encoder for requests sent to the list account endpoint.
 func (c *AccountClient) EncodeList(encoder rest.RequestEncoderFunc) EncodeRequestFunc {
 	return func(v interface{}) (*http.Request, error) {
-		p, ok := v.(*services.ListAccountPayload)
+		p, ok := v.(*service.ListAccount)
 		if !ok {
-			return nil, rest.ErrInvalidType("account", "list", "services.ListAccountPayload", v)
+			return nil, rest.ErrInvalidType("account", "list", "service.ListAccount", v)
 		}
 
 		// Build request
 		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ListAccountPath(p.OrgID)}
-		if p.Filter != "" {
+		if p.Filter != nil {
 			q := u.Query()
-			q.Set("filter", p.Filter)
+			q.Set("filter", *p.Filter)
 			u.RawQuery = q.Encode()
 		}
 		req, err := http.NewRequest("GET", u.String(), nil)
@@ -185,7 +187,7 @@ func (c *AccountClient) DecodeList(decoder rest.ResponseDecoderFunc) DecodeRespo
 	return func(resp *http.Response) (interface{}, error) {
 		switch resp.StatusCode {
 		case http.StatusOK:
-			var body []*services.AccountBody
+			var body []*service.Account
 			err := decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, rest.ErrDecodingError("account", "list", err)
@@ -224,9 +226,9 @@ func (c *AccountClient) Show() goa.Endpoint {
 // EncodeShow returns an encoder for requests sent to the show account endpoint.
 func (c *AccountClient) EncodeShow(encoder rest.RequestEncoderFunc) EncodeRequestFunc {
 	return func(v interface{}) (*http.Request, error) {
-		p, ok := v.(*services.ShowAccountPayload)
+		p, ok := v.(*service.ShowAccountPayload)
 		if !ok {
-			return nil, rest.ErrInvalidType("account", "show", "services.ShowAccountPayload", v)
+			return nil, rest.ErrInvalidType("account", "show", "service.ShowAccountPayload", v)
 		}
 
 		// Build request
@@ -246,7 +248,7 @@ func (c *AccountClient) DecodeShow(decoder rest.ResponseDecoderFunc) DecodeRespo
 	return func(resp *http.Response) (interface{}, error) {
 		switch resp.StatusCode {
 		case http.StatusOK:
-			var body *services.AccountBody
+			var body *service.Account
 			err := decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, rest.ErrDecodingError("account", "show", err)
@@ -285,9 +287,9 @@ func (c *AccountClient) Delete() goa.Endpoint {
 // EncodeDelete returns an encoder for requests sent to the delete account endpoint.
 func (c *AccountClient) EncodeDelete(encoder rest.RequestEncoderFunc) EncodeRequestFunc {
 	return func(v interface{}) (*http.Request, error) {
-		p, ok := v.(*services.DeleteAccountPayload)
+		p, ok := v.(*service.DeleteAccountPayload)
 		if !ok {
-			return nil, rest.ErrInvalidType("account", "delete", "services.DeleteAccountPayload", v)
+			return nil, rest.ErrInvalidType("account", "delete", "service.DeleteAccountPayload", v)
 		}
 
 		// Build request

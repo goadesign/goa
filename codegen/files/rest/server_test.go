@@ -705,23 +705,26 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 	)
 
 	var (
-		accountType = design.UserTypeExpr{
-			AttributeExpr: &design.AttributeExpr{},
-			TypeName:      "Account",
+		accountAttr = design.AttributeExpr{
+			Type: &design.UserTypeExpr{
+				AttributeExpr: &design.AttributeExpr{},
+				TypeName:      "Account",
+			}}
+
+		arrayAccountAttr = design.AttributeExpr{
+			Type: &design.UserTypeExpr{
+				AttributeExpr: &design.AttributeExpr{
+					Type: &design.Array{
+						ElemType: &accountAttr,
+					},
+				}},
 		}
 
-		arrayAccountType = design.UserTypeExpr{
-			AttributeExpr: &design.AttributeExpr{
-				Type: &design.Array{
-					ElemType: &design.AttributeExpr{Type: &accountType},
-				},
-			},
-		}
-
-		payload = design.UserTypeExpr{
-			AttributeExpr: &design.AttributeExpr{},
-			TypeName:      "FooUserPayload",
-		}
+		payload = design.AttributeExpr{
+			Type: &design.UserTypeExpr{
+				AttributeExpr: &design.AttributeExpr{},
+				TypeName:      "FooUserPayload",
+			}}
 
 		errorNameAlreadyTaken = design.ErrorExpr{
 			AttributeExpr: &design.AttributeExpr{},
@@ -735,7 +738,7 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 		endpointWithErrorAndPayload = design.EndpointExpr{
 			Name:    "Show",
 			Payload: &payload,
-			Result:  &accountType,
+			Result:  &accountAttr,
 			Errors:  []*design.ErrorExpr{&errorNameAlreadyTaken},
 			Service: &service,
 		}
@@ -743,21 +746,21 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 		endpointWithPayload = design.EndpointExpr{
 			Name:    "Show",
 			Payload: &payload,
-			Result:  &arrayAccountType,
+			Result:  &arrayAccountAttr,
 			Service: &service,
 		}
 
 		endpointPlain = design.EndpointExpr{
 			Name:    "Show",
-			Payload: design.Empty,
-			Result:  design.Empty,
+			Payload: &design.AttributeExpr{Type: design.Empty},
+			Result:  &design.AttributeExpr{Type: design.Empty},
 			Service: &service,
 		}
 
 		endpointPlainOther = design.EndpointExpr{
 			Name:    "List",
-			Payload: design.Empty,
-			Result:  design.Empty,
+			Payload: &design.AttributeExpr{Type: design.Empty},
+			Result:  &design.AttributeExpr{Type: design.Empty},
 			Service: &service,
 		}
 
@@ -812,7 +815,7 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 			Responses: []*rest.HTTPResponseExpr{
 				{
 					StatusCode: rest.StatusCreated,
-					Body:       &design.AttributeExpr{Type: &accountType},
+					Body:       &accountAttr,
 				}, {
 					StatusCode: rest.StatusAccepted,
 					Body:       &design.AttributeExpr{Type: design.Empty},
@@ -826,7 +829,7 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 			Responses: []*rest.HTTPResponseExpr{
 				{
 					StatusCode: rest.StatusOK,
-					Body:       &design.AttributeExpr{Type: &accountType},
+					Body:       &accountAttr,
 				},
 			},
 		}
@@ -844,7 +847,7 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 
 		actionWithPayloadBody = rest.ActionExpr{
 			EndpointExpr: &endpointWithPayload,
-			Body:         endpointWithPayload.Payload.Attribute(),
+			Body:         endpointWithPayload.Payload,
 			Routes:       []*rest.RouteExpr{{Path: "/foo", Method: "GET"}},
 		}
 
@@ -860,7 +863,7 @@ func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) En
 
 		actionWithPayloadBodyAndParams = rest.ActionExpr{
 			EndpointExpr: &endpointWithPayload,
-			Body:         endpointWithPayload.Payload.Attribute(),
+			Body:         endpointWithPayload.Payload,
 			Routes:       []*rest.RouteExpr{{Path: "/foo/{id}", Method: "GET"}},
 		}
 

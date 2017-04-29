@@ -5,6 +5,16 @@ import (
 	"net/http"
 )
 
+// StatusCodeToHTTPConst produces the standard name for the given HTTP status
+// code. If no standard name exists then the string consisting of the code
+// integer value is returned.
+func StatusCodeToHTTPConst(statusCode int) string {
+	if v, ok := statusCodeToConst[statusCode]; ok {
+		return fmt.Sprintf("http.%s", v)
+	}
+	return fmt.Sprintf("%d", statusCode)
+}
+
 var statusCodeToConst = map[int]string{
 	http.StatusContinue:                      "StatusContinue",
 	http.StatusSwitchingProtocols:            "StatusSwitchingProtocols",
@@ -65,11 +75,4 @@ var statusCodeToConst = map[int]string{
 	http.StatusLoopDetected:                  "StatusLoopDetected",
 	http.StatusNotExtended:                   "StatusNotExtended",
 	http.StatusNetworkAuthenticationRequired: "StatusNetworkAuthenticationRequired",
-}
-
-func statusCodeToHTTPConst(statusCode int) string {
-	if v, ok := statusCodeToConst[statusCode]; ok {
-		return fmt.Sprintf("http.%s", v)
-	}
-	return fmt.Sprintf("%d", statusCode)
 }
