@@ -235,6 +235,11 @@ func Default(def interface{}) {
 	dsl.Default(def)
 }
 
+// Elem makes it possible to specify validations for map values.
+func Elem(fn func()) {
+	dsl.Elem(fn)
+}
+
 // Email sets the contact email.
 func Email(email string) {
 	dsl.Email(email)
@@ -298,23 +303,40 @@ func Error(name string, args ...interface{}) {
 	dsl.Error(name, args...)
 }
 
-// Example sets the example of an attribute to be used for the documentation.
+// Example provides an example value for a type, a parameter, a header or any
+// attribute. Example supports two syntaxes, both syntaxes accept two arguments
+// and in both cases the first argument is a summary describing the example. The
+// second argument provides the value of the example either directly or via a
+// DSL that can also specify a long description.
+//
 // If no example is explicitly provided then a random example is generated
 // unless the "swagger:example" metadata is set to "false". See Metadata.
 //
-// Example may appear in a Attribute expression.
-// Example takes one argument: the example value.
+// Example may appear in a Attributes or Attribute expression DSL.
+// Example takes two arguments: a summary and the example value or defining DSL.
 //
-// Example:
+// Examples:
 //
-//	Attributes(func() {
-//		Attribute("ID", Int64, func() {
-//			Example(1)
+//	Params(func() {
+//		Param("ZipCode:zip-code", String, "Zip code filter", func() {
+//			Example("Santa Barbara", "93111")
 //		})
 //	})
 //
-func Example(exp interface{}) {
-	dsl.Example(exp)
+//	Attributes(func() {
+//		Attribute("ID", Int64, "ID is the unique bottle identifier")
+//		Example("The first bottle", func() {
+//			Description("This bottle has an ID set to 1")
+//			Value(Val{"ID": 1})
+//		})
+//		Example("Another bottle", func() {
+//			Description("This bottle has an ID set to 5")
+//			Value(Val{"ID": 5})
+//		})
+//	})
+//
+func Example(summary string, arg interface{}) {
+	dsl.Example(summary, arg)
 }
 
 // Field is syntactic sugar to define an attribute with the "rpc:tag" metadata
@@ -734,11 +756,6 @@ func URL(url string) {
 	dsl.URL(url)
 }
 
-// Value makes it possible to specify validations for map values.
-func Value(fn func()) {
-	dsl.Value(fn)
-}
-
 // Version specifies the API version. One design describes one version.
 func Version(ver string) {
 	dsl.Version(ver)
@@ -748,7 +765,7 @@ func Version(ver string) {
 // that are rendered when the view is used to produce a response. The attribute
 // names must appear in the media type expression. If an attribute is itself a
 // media type then the view may specify which view to use when rendering the
-// attribute using the View function in the View adsl. If not specified then the
+// attribute using the View function in the View DSL. If not specified then the
 // view named "default" is used. Examples:
 //
 //	View("default", func() {

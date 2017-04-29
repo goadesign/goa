@@ -14,7 +14,7 @@ var _ = Service("account", func() {
 	HTTP(func() {
 		Path("/orgs/{org_id}/accounts")
 		Param("org_id", UInt, "ID of owner organization", func() {
-			Example(123)
+			Example("basic", 123)
 		})
 	})
 	Endpoint("create", func() {
@@ -26,7 +26,6 @@ var _ = Service("account", func() {
 			POST("/")
 			Response(StatusCreated, func() {
 				Header("Href:Location")
-				Body(Account)
 			})
 			Response(StatusAccepted, func() {
 				Header("Href:Location")
@@ -37,21 +36,19 @@ var _ = Service("account", func() {
 	})
 	Endpoint("list", func() {
 		Description("List all accounts")
-		Payload(ListFilter)
+		Payload(ListAccount)
 		Result(ArrayOf(Account))
 		HTTP(func() {
 			GET("/")
-			Params(func() {
-				Param("filter")
-			})
+			Param("filter")
 		})
 	})
 	Endpoint("show", func() {
 		Description("Show account by ID")
 		Payload(func() {
-			Attribute("id", String, "ID of account to show", func() {
-				Example("joe")
-			})
+			Attribute("org_id", UInt, "ID of organization that owns  account")
+			Attribute("id", String, "ID of account to show")
+			Example("basic", Val{"org_id": 123, "id": "account1"})
 		})
 		Result(Account)
 		HTTP(func() {
@@ -61,9 +58,9 @@ var _ = Service("account", func() {
 	Endpoint("delete", func() {
 		Description("Delete account by IF")
 		Payload(func() {
-			Attribute("id", String, "ID of account to show", func() {
-				Example("joe")
-			})
+			Attribute("org_id", UInt, "ID of organization that owns  account")
+			Attribute("id", String, "ID of account to show")
+			Example("basic", Val{"org_id": 123, "id": "account1"})
 		})
 		Result(Empty)
 		HTTP(func() {
@@ -74,9 +71,17 @@ var _ = Service("account", func() {
 
 var CreateAccount = Type("CreateAccount", func() {
 	Description("CreateAccount is the account creation payload")
-	Attribute("org_id", Int, "ID of organization that owns newly created account")
+	Attribute("org_id", UInt, "ID of organization that owns newly created account")
 	Attribute("name", String, "Name of new account")
 	Required("org_id", "name")
+})
+
+var ListAccount = Type("ListAccount", func() {
+	Description("ListAccount is the list account payload, it defines an optional list filter")
+	Attribute("org_id", UInt, "ID of organization that owns newly created account")
+	Attribute("filter", String, "Filter is the account name prefix filter", func() {
+		Example("prefix", "go")
+	})
 })
 
 var Account = Type("Account", func() {
@@ -93,11 +98,4 @@ var NameAlreadyTaken = Type("NameAlreadyTaken", func() {
 	Description("NameAlreadyTaken is the type returned when creating an account fails because its name is already taken")
 	Attribute("message", String, "Message of error")
 	Required("message")
-})
-
-var ListFilter = Type("ListFilter", func() {
-	Description("ListFilter defines an optional list filter")
-	Attribute("filter", String, "Filter is the account name prefix filter", func() {
-		Example("go")
-	})
 })

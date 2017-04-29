@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"goa.design/goa.v2/codegen"
+	restgen "goa.design/goa.v2/codegen/rest"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
@@ -234,7 +235,7 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 					varServiceName,
 					codegen.Goify(http.StatusText(v.StatusCode), true),
 				),
-				StatusCode: statusCodeToHTTPConst(v.StatusCode),
+				StatusCode: restgen.StatusCodeToHTTPConst(v.StatusCode),
 				HasBody:    hasBody,
 				Headers:    extractHeaders(v.MappedHeaders()),
 			}
@@ -244,7 +245,7 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 		for i, v := range a.HTTPErrors {
 			httpErrors[i] = &serverResponseData{
 				Name:       codegen.Goify(v.Name, true),
-				StatusCode: statusCodeToHTTPConst(v.Response.StatusCode),
+				StatusCode: restgen.StatusCodeToHTTPConst(v.Response.StatusCode),
 			}
 		}
 
@@ -263,7 +264,7 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 			ErrorEncoder:    fmt.Sprintf("%s%sEncodeError", varEndpointName, varServiceName),
 		}
 
-		if a.EndpointExpr.Payload != nil && a.EndpointExpr.Payload != design.Empty {
+		if a.EndpointExpr.Payload != nil && a.EndpointExpr.Payload.Type != design.Empty {
 			hasBody := a.Body != nil && a.Body.Type != design.Empty
 			ad.Payload = &serverPayloadData{
 				Name:        fmt.Sprintf("%s%sPayload", varEndpointName, varServiceName),
@@ -282,7 +283,7 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 
 func extractHeaders(a *rest.MappedAttributeExpr) []*serverHeaderData {
 	var headers []*serverHeaderData
-	WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
+	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
 		headers = append(headers, &serverHeaderData{
 			Name:      elem,
 			FieldName: codegen.Goify(name, true),
@@ -298,7 +299,7 @@ func extractHeaders(a *rest.MappedAttributeExpr) []*serverHeaderData {
 
 func extractParams(a *rest.MappedAttributeExpr) []*serverParamData {
 	var params []*serverParamData
-	WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
+	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
 		params = append(params, &serverParamData{
 			Name:      elem,
 			FieldName: codegen.Goify(name, true),
@@ -454,7 +455,7 @@ func {{ .Decoder }}(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 		{{- end }}
 		var (
 			{{- range .Payload.AllParams }}
-			{{ .VarName }} {{goTypeRef .Type }}
+			{{ .VarName }} {{goTypeRef .Type false }}
 			{{- end }}
 		)
 {{ range .Payload.QueryParams }}
@@ -485,7 +486,7 @@ func {{ .Decoder }}(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 {{- define "conversion" }}
 	{{- if eq .Type.Name "array" }}
 		{{ .VarName }}RawSlice := strings.Split({{ .VarName }}Raw, ",")
-		{{ .VarName }} = make({{ goTypeRef .Type }}, len({{ .VarName }}RawSlice))
+		{{ .VarName }} = make({{ goTypeRef .Type false }}, len({{ .VarName }}RawSlice))
 		for i, rv := range {{ .VarName }}RawSlice {
 			{{- template "type_slice_conversion" . }}
 		}

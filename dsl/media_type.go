@@ -141,7 +141,7 @@ func ContentType(typ string) {
 // that are rendered when the view is used to produce a response. The attribute
 // names must appear in the media type expression. If an attribute is itself a
 // media type then the view may specify which view to use when rendering the
-// attribute using the View function in the View adsl. If not specified then the
+// attribute using the View function in the View DSL. If not specified then the
 // view named "default" is used. Examples:
 //
 //	View("default", func() {

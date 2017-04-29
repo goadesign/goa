@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	codegen "goa.design/goa.v2/codegen/rest"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
@@ -257,7 +258,7 @@ func paramsFromExpr(params *rest.MappedAttributeExpr, path string) ([]*Parameter
 		wildcards = rest.ExtractWildcards(path)
 		i         = 0
 	)
-	WalkMappedAttr(params, func(n, pn string, required bool, at *design.AttributeExpr) error {
+	codegen.WalkMappedAttr(params, func(n, pn string, required bool, at *design.AttributeExpr) error {
 		in := "query"
 		for _, w := range wildcards {
 			if n == w {
@@ -276,7 +277,7 @@ func paramsFromExpr(params *rest.MappedAttributeExpr, path string) ([]*Parameter
 
 func paramsFromHeaders(action *rest.ActionExpr) []*Parameter {
 	params := []*Parameter{}
-	WalkHeaders(action, func(_, name string, required bool, header *design.AttributeExpr) error {
+	codegen.WalkHeaders(action, func(_, name string, required bool, header *design.AttributeExpr) error {
 		p := paramFor(header, name, "header", required)
 		params = append(params, p)
 		return nil
@@ -344,7 +345,7 @@ func headersFromExpr(headers *rest.MappedAttributeExpr) (map[string]*Header, err
 		return nil, fmt.Errorf("invalid headers definition, not an object")
 	}
 	res := make(map[string]*Header)
-	WalkMappedAttr(headers, func(_, n string, required bool, at *design.AttributeExpr) error {
+	codegen.WalkMappedAttr(headers, func(_, n string, required bool, at *design.AttributeExpr) error {
 		header := &Header{
 			Default:     at.DefaultValue,
 			Description: at.Description,
@@ -444,11 +445,11 @@ func buildPathFromExpr(s *openAPIV2, root *rest.RootExpr, route *rest.RouteExpr,
 	}
 
 	if action.EndpointExpr.Payload != nil {
-		payloadSchema := TypeSchema(root.Design.API, action.EndpointExpr.Payload)
+		payloadSchema := TypeSchema(root.Design.API, action.EndpointExpr.Payload.Type)
 		pp := &Parameter{
 			Name:        "payload",
 			In:          "body",
-			Description: action.EndpointExpr.Payload.Attribute().Description,
+			Description: action.EndpointExpr.Payload.Description,
 			Required:    action.EndpointExpr.Payload != nil,
 			Schema:      payloadSchema,
 		}

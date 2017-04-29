@@ -22,6 +22,8 @@ func Server(roots ...eval.Root) ([]codegen.File, error) {
 		switch r := root.(type) {
 		case *design.RootExpr:
 			for _, s := range r.Services {
+				// Make sure service is first so name scope is
+				// properly initialized.
 				des = append(des, files.Service(s))
 				des = append(des, files.Endpoint(s))
 			}

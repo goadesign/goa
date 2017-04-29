@@ -80,16 +80,6 @@ func Indent(s, prefix string) string {
 	return string(res)
 }
 
-// Tabs returns a string made of depth tab characters.
-func Tabs(depth int) string {
-	var tabs string
-	for i := 0; i < depth; i++ {
-		tabs += "\t"
-	}
-	//	return fmt.Sprintf("%d%s", depth, tabs)
-	return tabs
-}
-
 // Add adds two integers and returns the sum of the two.
 func Add(a, b int) int { return a + b }
 

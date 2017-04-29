@@ -27,6 +27,26 @@ func (e *HTTPErrorExpr) EvalName() string {
 // Validate makes sure there is a error expression that matches the HTTP error
 // expression.
 func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
+	verr := new(eval.ValidationErrors)
+	switch p := e.Response.Parent.(type) {
+	case *ActionExpr:
+		if p.EndpointExpr.Error(e.Name) == nil {
+			verr.Add(e, "Error %#v does not match an error defined in the endpoint", e.Name)
+		}
+	case *ResourceExpr:
+		if p.Error(e.Name) == nil {
+			verr.Add(e, "Error %#v does not match an error defined in the service", e.Name)
+		}
+	case *RootExpr:
+		if design.Root.Error(e.Name) == nil {
+			verr.Add(e, "Error %#v does not match an error defined in the API", e.Name)
+		}
+	}
+	return verr
+}
+
+// Finalize looks up the corresponding endpoint error expression.
+func (e *HTTPErrorExpr) Finalize() {
 	var ee *design.ErrorExpr
 	switch p := e.Response.Parent.(type) {
 	case *ActionExpr:
@@ -36,11 +56,5 @@ func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
 	case *RootExpr:
 		ee = design.Root.Error(e.Name)
 	}
-	if ee == nil {
-		verr := new(eval.ValidationErrors)
-		verr.Add(e, "Error %#v does not match an error defined in the endpoint, service or API", e.Name)
-		return verr
-	}
 	e.ErrorExpr = ee
-	return nil
 }

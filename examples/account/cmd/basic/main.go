@@ -12,7 +12,7 @@ import (
 	"goa.design/goa.v2"
 	"goa.design/goa.v2/examples/account"
 	"goa.design/goa.v2/examples/account/gen/endpoints"
-	"goa.design/goa.v2/examples/account/gen/services"
+	"goa.design/goa.v2/examples/account/gen/service"
 	httptransport "goa.design/goa.v2/examples/account/gen/transport/http"
 	"goa.design/goa.v2/rest"
 	"goa.design/goa.v2/rest/middleware/debugging"
@@ -35,7 +35,7 @@ func main() {
 	}
 
 	var (
-		as services.Account
+		as service.Account
 	)
 	{
 		as = basic.NewAccountService()

@@ -9,7 +9,7 @@ import (
 	"github.com/dimfeld/httptreemux"
 	"goa.design/goa.v2"
 	"goa.design/goa.v2/examples/account/gen/endpoints"
-	"goa.design/goa.v2/examples/account/gen/services"
+	"goa.design/goa.v2/examples/account/gen/service"
 	"goa.design/goa.v2/rest"
 )
 
@@ -162,7 +162,7 @@ func CreateAccountDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFu
 			orgID = uint(v)
 		}
 
-		payload, err := NewCreateAccountPayload(&body, orgID)
+		payload, err := NewCreateAccount(&body, orgID)
 		return payload, err
 	}
 }
@@ -172,30 +172,30 @@ func CreateAccountDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFu
 func CreateAccountEncodeResponse(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 		w.Header().Set("Content-Type", ResponseContentType(r))
-		switch t := v.(type) {
-		case *services.AccountCreated:
-			w.Header().Set("Location", t.Href)
-			w.WriteHeader(http.StatusCreated)
-			encoder(w, r).Encode(t)
-		case *services.AccountAccepted:
-			w.Header().Set("Location", t.Href)
-			w.WriteHeader(http.StatusAccepted)
-			return nil
-		default:
-			return fmt.Errorf("invalid response type")
+		// TBD the HTTP endpoint supports two responses, how do we know
+		// which one to use? For now always use the first. The user can
+		// override this method.
+		t := v.(*service.AccountResult)
+		w.Header().Set("Location", t.Href)
+		w.WriteHeader(http.StatusCreated)
+		body := AccountCreateCreated{
+			ID:    t.ID,
+			OrgID: t.OrgID,
+			Name:  t.Name,
 		}
+		encoder(w, r).Encode(&body)
 		return nil
 	}
 }
 
-// CreateAccountError returns an encoder for errors returned by the create
+// CreateAccountEncodeError returns an encoder for errors returned by the create
 // account endpoint.
 func CreateAccountEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) EncodeErrorFunc {
 	encodeError := EncodeError(encoder, logger)
 	return func(w http.ResponseWriter, r *http.Request, v error) {
 		w.Header().Set("Content-Type", ResponseContentType(r))
 		switch t := v.(type) {
-		case *services.NameAlreadyTaken:
+		case *service.NameAlreadyTaken:
 			w.WriteHeader(http.StatusConflict)
 			encoder(w, r).Encode(t)
 		default:
@@ -241,7 +241,11 @@ func NewListAccountHandler(
 // list account endpoint.
 func ListAccountDecodeRequest(decoder rest.RequestDecoderFunc) func(r *http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
-		filter := r.URL.Query().Get("filter")
+		var filter *string
+		f := r.URL.Query().Get("filter")
+		if f != "" {
+			filter = &f
+		}
 
 		params := httptreemux.ContextParams(r.Context())
 		orgIDRaw := params["org_id"]
@@ -256,7 +260,7 @@ func ListAccountDecodeRequest(decoder rest.RequestDecoderFunc) func(r *http.Requ
 			orgID = uint(v)
 		}
 
-		payload, err := NewListAccountPayload(orgID, filter)
+		payload, err := NewListAccount(orgID, filter)
 		return payload, err
 	}
 }
@@ -268,7 +272,13 @@ func ListAccountEncodeResponse(encoder rest.ResponseEncoderFunc) EncodeResponseF
 		w.Header().Set("Content-Type", ResponseContentType(r))
 		w.WriteHeader(http.StatusOK)
 		if v != nil {
-			return encoder(w, r).Encode(v)
+			res := v.([]*service.AccountResult)
+			body := make([]*AccountResultBody, len(res))
+			for i, r := range res {
+				b := AccountResultBody(*r)
+				body[i] = &b
+			}
+			return encoder(w, r).Encode(body)
 		}
 		return nil
 	}
@@ -336,7 +346,9 @@ func ShowAccountEncodeResponse(encoder rest.ResponseEncoderFunc) func(w http.Res
 		w.Header().Set("Content-Type", ResponseContentType(r))
 		w.WriteHeader(http.StatusOK)
 		if v != nil {
-			return encoder(w, r).Encode(v)
+			res := v.(*service.AccountResult)
+			body := AccountResultBody(*res)
+			return encoder(w, r).Encode(&body)
 		}
 		return nil
 	}
@@ -362,13 +374,13 @@ func NewDeleteAccountHandler(
 			return
 		}
 
-		res, err := endpoint(r.Context(), payload)
+		_, err = endpoint(r.Context(), payload)
 
 		if err != nil {
 			encodeError(w, r, err)
 			return
 		}
-		if err := encodeResponse(w, r, res); err != nil {
+		if err := encodeResponse(w, r, nil); err != nil {
 			encodeError(w, r, err)
 		}
 	}
@@ -399,7 +411,7 @@ func DeleteAccountDecodeRequest(decoder rest.RequestDecoderFunc) func(r *http.Re
 // DeleteAccountEncodeResponse returns an encoder for responses returned by
 // the show account endpoint.
 func DeleteAccountEncodeResponse(encoder rest.ResponseEncoderFunc) func(w http.ResponseWriter, r *http.Request, v interface{}) error {
-	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
+	return func(w http.ResponseWriter, r *http.Request, _ interface{}) error {
 		w.WriteHeader(http.StatusNoContent)
 		return nil
 	}

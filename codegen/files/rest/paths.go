@@ -133,7 +133,7 @@ func {{ goify $.EndpointName true }}{{ goify $.ServiceName true }}Path{{ if ne $
 
 {{- define "arguments" -}}
 {{ range $i, $arg := . -}}
-{{ if ne $i 0 }}, {{ end }}{{ goify .Name false }} {{ goTypeRef .Type }}
+{{ if ne $i 0 }}, {{ end }}{{ goify .Name false }} {{ goTypeRef .Type false }}
 {{- end }}
 {{- end }}
 

@@ -13,13 +13,13 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
+	"goa.design/goa.v2/examples/account/gen/service"
 	genhttp "goa.design/goa.v2/examples/account/gen/transport/http"
 
 	"goa.design/goa.v2"
 	"goa.design/goa.v2/examples/account"
 	"goa.design/goa.v2/examples/account/gen/endpoints"
 	"goa.design/goa.v2/examples/account/gen/kit"
-	"goa.design/goa.v2/examples/account/gen/services"
 	"goa.design/goa.v2/rest"
 	"goa.design/goa.v2/rest/middleware/debugging"
 	"goa.design/goa.v2/rest/middleware/logging"
@@ -50,7 +50,7 @@ func main() {
 	}
 
 	var (
-		as services.Account
+		as service.Account
 	)
 	{
 		as = basic.NewAccountService()

@@ -1,7 +1,9 @@
 package files
 
 import (
+	"fmt"
 	"path/filepath"
+	"sort"
 	"text/template"
 
 	"goa.design/goa.v2/codegen"
@@ -14,130 +16,78 @@ type (
 	serviceData struct {
 		// Name is the service name.
 		Name string
+		// Description is the service description.
+		Description string
 		// VarName is the service struct name.
 		VarName string
-		// Methods lists the service struct methods.
+		// Methods lists the service interface methods.
 		Methods []*serviceMethod
-		// UserTypes lists the user types.
-		UserTypes map[string]string
+		// UserTypes lists the types definitions that the service depends on.
+		UserTypes []*userType
 	}
 
 	// serviceMethod describes a single service method.
 	serviceMethod struct {
 		// Name is the method name.
 		Name string
+		// Description is the method description.
+		Description string
 		// VarName is the method struct name.
 		VarName string
-		// Payload is the payload of the method.
-		Payload servicePayload
-		// HasPayload is true if the payload type is not empty.
-		HasPayload bool
-		// Result is the result of the method.
-		Result serviceResult
-		// HasResult is true if the result type is not empty.
-		HasResult bool
+		// Payload is the name of the payload type if any,
+		Payload string
+		// PayloadRef is a reference to the payload type if any,
+		PayloadRef string
+		// PayloadDesc is the payload type description if any.
+		PayloadDesc string
+		// PayloadDef is the payload type definition if any.
+		PayloadDef string
+		// Result is the name of the result type if any.
+		Result string
+		// ResultDesc is the result type description if any.
+		ResultDesc string
+		// ResultDef is the result type definition if any.
+		ResultDef string
+		// ResultRef is the reference to the result type if any.
+		ResultRef string
 	}
 
-	servicePayload struct {
-		// Name is the payload name.
-		Name string
-		// Fileds lists the payload fields.
-		Fields map[string]string
-	}
-
-	serviceResult struct {
-		// Name is the result name.
-		Name string
-		// Fileds lists the result fields.
-		Fields map[string]string
-	}
-
-	// serviceFile is the codgen file for a given service.
-	serviceFile struct {
-		service *design.ServiceExpr
+	// userType describes a user type used by the service types.
+	userType struct {
+		// VarName is the generated type name.
+		VarName string
+		// Description is the type description if any.
+		Description string
+		// TypeDef is the type definition.
+		TypeDef string
 	}
 )
 
-// serviceTmpl is the template used to render the body of the service file.
-var serviceTmpl = template.Must(template.New("service").Parse(serviceT))
+var (
+	// serviceTmpl is the template used to render the body of the service file.
+	serviceTmpl = template.Must(template.New("service").Parse(serviceT))
+
+	// ServiceScope is the naming scope used to render the service types.
+	ServiceScope = codegen.NewNameScope()
+)
 
 // Service returns the service file for the given service.
 func Service(service *design.ServiceExpr) codegen.File {
-	path := filepath.Join("services", service.Name+".go")
+	path := filepath.Join("service", service.Name+".go")
 	sections := func(genPkg string) []*codegen.Section {
 		var (
-			data *serviceData
-		)
-		{
-			methods := make([]*serviceMethod, len(service.Endpoints))
-			userTypes := make(map[string]string)
-			for i, v := range service.Endpoints {
-				var walker func(*design.AttributeExpr) error
-				walker = func(at *design.AttributeExpr) error {
-					if ut, ok := at.Type.(design.UserType); ok {
-						if _, ok := userTypes[ut.Name()]; ok {
-							return nil
-						}
-						userTypes[ut.Name()] = codegen.GoTypeDef(ut.Attribute().Type)
-						codegen.Walk(ut.Attribute(), walker)
-					}
-					return nil
-				}
-
-				payloadFields := make(map[string]string)
-				if o := design.AsObject(v.Payload); o != nil {
-					codegen.WalkAttributes(o, func(name string, at *design.AttributeExpr) error {
-						payloadFields[name] = codegen.GoNativeType(at.Type)
-						codegen.Walk(at, walker)
-						return nil
-					})
-				}
-
-				resultFields := make(map[string]string)
-				if o := design.AsObject(v.Result); o != nil {
-					codegen.WalkAttributes(o, func(name string, at *design.AttributeExpr) error {
-						resultFields[name] = codegen.GoNativeType(at.Type)
-						codegen.Walk(at, walker)
-						return nil
-					})
-				}
-
-				methods[i] = &serviceMethod{
-					Name:    v.Name,
-					VarName: codegen.Goify(v.Name, true),
-					Payload: servicePayload{
-						Name:   codegen.Goify(v.Payload.Name(), true),
-						Fields: payloadFields,
-					},
-					HasPayload: v.Payload != design.Empty,
-					Result: serviceResult{
-						Name:   codegen.Goify(v.Result.Name(), true),
-						Fields: resultFields,
-					},
-					HasResult: v.Result != design.Empty,
-				}
-			}
-			data = &serviceData{
-				Name:      service.Name,
-				VarName:   codegen.Goify(service.Name, true),
-				Methods:   methods,
-				UserTypes: userTypes,
-			}
-		}
-
-		var (
 			header, body *codegen.Section
+			userTypes    = make(map[string]design.UserType)
 		)
 		{
-			header = codegen.Header(service.Name+"Services", "services",
+			header = codegen.Header(service.Name+" service", "service",
 				[]*codegen.ImportSpec{
 					{Path: "context"},
 					{Path: "goa.design/goa.v2"},
-					{Path: genPkg + "/services"},
 				})
 			body = &codegen.Section{
 				Template: serviceTmpl,
-				Data:     data,
+				Data:     buildServiceData(service, userTypes),
 			}
 		}
 
@@ -147,37 +97,166 @@ func Service(service *design.ServiceExpr) codegen.File {
 	return codegen.NewSource(path, sections)
 }
 
+// buildServiceData creates the data necessary to render the code of the given
+// service. It records the user types needed by the service definition in
+// userTypes.
+func buildServiceData(service *design.ServiceExpr, userTypes map[string]design.UserType) *serviceData {
+	varName := codegen.Goify(service.Name, true)
+	ServiceScope.Unique(service, varName) // reserve it
+	methods := make([]*serviceMethod, len(service.Endpoints))
+	for i, e := range service.Endpoints {
+		methods[i] = buildServiceMethod(e, userTypes)
+	}
+	names := make([]string, len(userTypes))
+	i := 0
+	for n := range userTypes {
+		names[i] = n
+		i++
+	}
+	sort.Strings(names)
+	types := make([]*userType, len(userTypes))
+	for i, n := range names {
+		ut := userTypes[n]
+		types[i] = &userType{
+			VarName:     ServiceScope.Unique(ut, codegen.Goify(n, true)),
+			Description: ut.Attribute().Description,
+			TypeDef:     codegen.GoTypeDef(ut.Attribute(), false),
+		}
+	}
+	desc := service.Description
+	if desc == "" {
+		desc = fmt.Sprintf("%s is the %s service interface.", varName, service.Name)
+	}
+	return &serviceData{
+		Name:        service.Name,
+		Description: desc,
+		VarName:     varName,
+		Methods:     methods,
+		UserTypes:   types,
+	}
+}
+
+// buildServiceMethod creates the data needed to render the given endpoint. It
+// records the user types needed by the service definition in userTypes.
+func buildServiceMethod(m *design.EndpointExpr, userTypes map[string]design.UserType) *serviceMethod {
+	var walkTypes func(*design.AttributeExpr) error
+	walkTypes = func(at *design.AttributeExpr) error {
+		if ut, ok := at.Type.(design.UserType); ok {
+			if _, ok := userTypes[ut.Name()]; ok {
+				return nil
+			}
+			userTypes[ut.Name()] = ut
+			codegen.Walk(ut.Attribute(), walkTypes)
+		} else if design.IsObject(at.Type) {
+			for _, catt := range design.AsObject(at.Type) {
+				walkTypes(catt)
+			}
+		}
+		return nil
+	}
+
+	var (
+		varName     string
+		desc        string
+		payloadName string
+		payloadDesc string
+		payloadDef  string
+		payloadRef  string
+		resultName  string
+		resultDesc  string
+		resultDef   string
+		resultRef   string
+	)
+	{
+		varName = codegen.Goify(m.Name, true)
+		desc = m.Description
+		if desc == "" {
+			desc = codegen.Goify(m.Name, true) + " implements " + m.Name + "."
+		}
+		if m.Payload != nil && m.Payload.Type != design.Empty {
+			payloadName = ServiceScope.Unique(m.Payload.Type, codegen.GoTypeName(m.Payload.Type, false), "Payload")
+			payloadDesc = m.Payload.Description
+			if payloadDesc == "" {
+				payloadDesc = fmt.Sprintf("%s is the payload type of the %s service %s method.",
+					payloadName, m.Service.Name, m.Name)
+			}
+			payloadAttr := m.Payload
+			payloadRef = codegen.GoTypeRef(payloadAttr.Type, false)
+			if ut, ok := payloadAttr.Type.(design.UserType); ok {
+				walkTypes(ut.Attribute())
+				payloadAttr = ut.Attribute()
+			}
+			payloadDef = codegen.GoTypeDef(payloadAttr, false)
+		}
+		if m.Result != nil && m.Result.Type != design.Empty {
+			resultName = ServiceScope.Unique(m.Result.Type, codegen.GoTypeName(m.Result.Type, false), "Result")
+			resultDesc = m.Result.Description
+			if resultDesc == "" {
+				resultDesc = fmt.Sprintf("%s is the result type of the %s service %s method.",
+					resultName, m.Service.Name, m.Name)
+			}
+			resultAttr := m.Result
+			resultRef = codegen.GoTypeRef(resultAttr.Type, false)
+			if ut, ok := resultAttr.Type.(design.UserType); ok {
+				walkTypes(ut.Attribute())
+				resultAttr = ut.Attribute()
+			}
+			resultDef = codegen.GoTypeDef(resultAttr, false)
+		}
+	}
+	return &serviceMethod{
+		Name:        m.Name,
+		VarName:     varName,
+		Description: desc,
+		Payload:     payloadName,
+		PayloadDesc: payloadDesc,
+		PayloadDef:  payloadDef,
+		PayloadRef:  payloadRef,
+		Result:      resultName,
+		ResultDesc:  resultDesc,
+		ResultDef:   resultDef,
+		ResultRef:   resultRef,
+	}
+}
+
 // serviceT is the template used to write an service definition.
 const serviceT = `
 {{- define "interface" }}
-	// {{ .VarName }} is the {{ .Name }} service interface.
+	// {{ .Description }}
 	{{ .VarName }} interface {
-{{ range .Methods }}		// {{ .VarName }} implements the {{ .Name }} endpoint.
-		{{ .Name }}(context.Context{{ if .HasPayload }}, *{{ .Payload.Name }}{{ end }}) {{ if .HasResult }}({{ .Result.Name }}, error){{ else }}error{{ end }}
-{{ end }}	}
-{{- end -}}
+{{- range .Methods }}
+		// {{ .Description }}
+		{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) {{ if .Result }}({{ .ResultRef }}, error){{ else }}error{{ end }}
+{{- end }}
+	}
+{{end -}}
 
-{{- define "payloads" }}
-{{ range .Methods }}{{ if .HasPayload }}
-	{{ .Payload.Name }} struct {
-{{ range $key, $att := .Payload.Fields }}		{{ $key }} {{ $att }}
-{{ end }}	}
-{{ end }}{{ end -}}
-{{- end -}}
-
-{{- define "results" -}}
-{{ range .Methods }}{{ if .HasResult }}
-	{{ .Result.Name }} struct {
-{{ range $key, $att := .Result.Fields }}		{{ $key }} {{ $att }}
-{{ end }}	}
-{{ end }}{{ end -}}
-{{- end -}}
-
-{{- define "types" -}}
-{{ range $key, $ut := .UserTypes }}
-	{{ $key }} {{ $ut }}
+{{ define "payloads" -}}
+{{ range .Methods -}}
+{{ if .Payload }}
+	// {{ .PayloadDesc }}
+	{{ .Payload }} {{ .PayloadDef }}
 {{ end -}}
-{{- end -}}
+{{ end -}}
+{{ end -}}
+
+{{ define "results" -}}
+{{ range .Methods -}}
+{{ if .Result }}
+	// {{ .ResultDesc }}
+	{{ .Result }} {{ .ResultDef }}
+{{ end -}}
+{{ end -}}
+{{ end -}}
+
+{{ define "types" -}}
+{{ range .UserTypes }}
+{{- if .Description -}}
+	// {{ .Description }}
+{{- end }}
+	{{ .VarName }} {{ .TypeDef }}
+{{ end -}}
+{{ end -}}
 
 type (
 {{- template "interface" . -}}

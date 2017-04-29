@@ -158,6 +158,8 @@ var Attrs = Type("Attributes", func() {
 		MaxLength(100)
 		Default("default value")
 		Example("example value")
+		Example("another example value")
+		Example("title", "example text")
 	})
 })
 
