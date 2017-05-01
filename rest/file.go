@@ -30,7 +30,7 @@ import (
 //
 // returns the content of the file "/www/data/assets/x/y/z" when requests are
 // sent to "/assets/x/y/z".
-func FileHandler(path, filename string, enc ResponseEncoderFunc, logger goa.Logger) http.HandlerFunc {
+func FileHandler(path, filename string, enc func(http.ResponseWriter, *http.Request) Encoder, logger goa.LogAdapter) http.HandlerFunc {
 	var wc string
 	if idx := strings.LastIndex(path, "/*"); idx > -1 && idx < len(path)-1 {
 		wc = path[idx+2:]
@@ -95,7 +95,7 @@ var replacer = strings.NewReplacer(
 	"'", "&#39;",
 )
 
-func dirList(w http.ResponseWriter, r *http.Request, f http.File, enc ResponseEncoderFunc, logger goa.Logger) {
+func dirList(w http.ResponseWriter, r *http.Request, f http.File, enc func(http.ResponseWriter, *http.Request) Encoder, logger goa.LogAdapter) {
 	dirs, err := f.Readdir(-1)
 	if err != nil {
 		enc(w, r).Encode(err)

@@ -354,9 +354,9 @@ type {{ .HandlersStruct }} struct {
 const serverConstructorT = `{{ printf "%s instantiates HTTP handlers for all the %s service endpoints." .Constructor .ServiceName | comment }}
 func {{ .Constructor }}(
 	e *endpoints.{{ .VarServiceName }},
-	dec rest.RequestDecoderFunc,
-	enc rest.ResponseEncoderFunc,
-	logger goa.Logger,
+	dec func(*http.Request) rest.Decoder,
+	enc func(http.ResponseWriter, *http.Request) rest.Encoder,
+	logger goa.LogAdapter,
 ) *{{ .HandlersStruct }} {
 	return &{{ .HandlersStruct }}{
 		{{- range .ActionData }}
@@ -367,7 +367,7 @@ func {{ .Constructor }}(
 `
 
 const serverMountT = `{{ printf "%s configures the mux to serve the %s endpoints." .MountHandlers .ServiceName | comment }}
-func {{ .MountHandlers }}(mux rest.ServeMux, h *{{ .HandlersStruct }}) {
+func {{ .MountHandlers }}(mux rest.Muxer, h *{{ .HandlersStruct }}) {
 	{{- range .ActionData }}
 	{{ .MountHandler }}(mux, h.{{ .VarEndpointName }})
 	{{- end }}
@@ -375,7 +375,7 @@ func {{ .MountHandlers }}(mux rest.ServeMux, h *{{ .HandlersStruct }}) {
 `
 
 const serverHandlerT = `{{ printf "%s configures the mux to serve the \"%s\" service \"%s\" endpoint." .MountHandler .ServiceName .EndpointName | comment }}
-func {{ .MountHandler }}(mux rest.ServeMux, h http.Handler) {
+func {{ .MountHandler }}(mux rest.Muxer, h http.Handler) {
 	f, ok := h.(http.HandlerFunc)
 	if !ok {
 		f = func(w http.ResponseWriter, r *http.Request) {
@@ -392,9 +392,9 @@ const serverHandlerConstructorT = `{{ printf "%s creates a HTTP handler which lo
 {{ comment "The middleware is mounted so it executes after the request is loaded and thus may access the request state via the rest package ContextXXX functions."}}
 func {{ .Constructor }}(
 	endpoint goa.Endpoint,
-	dec rest.RequestDecoderFunc,
-	enc rest.ResponseEncoderFunc,
-	logger goa.Logger,
+	dec func(*http.Request) rest.Decoder,
+	enc func(http.ResponseWriter, *http.Request) rest.Encoder,
+	logger goa.LogAdapter,
 ) http.Handler {
 	var (
 		{{- if .HasPayload }}
@@ -403,7 +403,7 @@ func {{ .Constructor }}(
 		{{- if .HasResponses }}
 		encodeResponse = {{ .Encoder }}EncodeResponse(enc)
 		{{- end }}
-		encodeError    = {{ if .HasErrors }}{{ .ErrorEncoder }}{{ else }}EncodeError{{ end }}(enc, logger)
+		encodeError    = {{ if .HasErrors }}{{ .ErrorEncoder }}{{ else }}rest.EncodeError{{ end }}(enc, logger)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		{{- if .HasPayload }}
@@ -434,7 +434,7 @@ func {{ .Constructor }}(
 `
 
 const serverDecoderT = `{{ printf "%s returns a decoder for requests sent to the create %s endpoint." .Decoder .ServiceName | comment }}
-func {{ .Decoder }}(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
+func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*service.{{ .Payload.Name }}, error) {
 {{- if .Payload.HasBody }}
 		var (
@@ -623,7 +623,7 @@ func {{ .Decoder }}(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 `
 
 const serverEncoderT = `{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .Encoder .EndpointName .ServiceName | comment }}
-func {{ .Encoder }}(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
+func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) rest.Encoder) func(http.ResponseWriter, *http.Request, interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 	{{- if eq (len .Responses) 1 }}
 		{{- with index .Responses 0}}{{/* TBD: support multiple responses */}}
@@ -718,8 +718,8 @@ func {{ .Encoder }}(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
 {{- end }}`
 
 const serverErrorEncoderT = `{{ printf "%s returns an encoder for errors returned by the %s %s endpoint." .ErrorEncoder .EndpointName .ServiceName | comment }}
-func {{ .ErrorEncoder }}(encoder rest.ResponseEncoderFunc, logger goa.Logger) EncodeErrorFunc {
-	encodeError := EncodeError(encoder, logger)
+func {{ .ErrorEncoder }}(encoder func(http.ResponseWriter, *http.Request) rest.Encoder, logger goa.LogAdapter) func(http.ResponseWriter, *http.Request, error) {
+	encodeError := rest.EncodeError(encoder, logger)
 	return func(w http.ResponseWriter, r *http.Request, v error) {
 		w.Header().Set("Content-Type", ResponseContentType(r))
 		switch t := v.(type) {

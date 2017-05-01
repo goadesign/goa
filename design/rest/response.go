@@ -86,7 +86,8 @@ type (
 		Body *design.AttributeExpr
 		// Response Content-Type header value
 		ContentType string
-		// Parent expression, one of ActionExpr, ResourceExpr or RootExpr.
+		// Parent expression, one of ActionExpr, ResourceExpr or
+		// RootExpr.
 		Parent eval.Expression
 		// Metadata is a list of key/value pairs
 		Metadata design.MetadataExpr

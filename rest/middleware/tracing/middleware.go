@@ -59,7 +59,7 @@ type (
 	// tracedLogger is a logger which logs the trace ID with every log
 	// entry when one is present.
 	tracedLogger struct {
-		goa.Logger
+		goa.LogAdapter
 	}
 
 	// options is the struct storing all the options.
@@ -220,7 +220,7 @@ func WrapDoer(ctx context.Context, doer Doer) Doer {
 
 // WrapLogger returns a logger which logs the trace ID with every message if
 // there is one.
-func WrapLogger(l goa.Logger) goa.Logger {
+func WrapLogger(l goa.LogAdapter) goa.LogAdapter {
 	return &tracedLogger{l}
 }
 
@@ -286,22 +286,22 @@ func (d *tracedDoer) Do(r *http.Request) (*http.Response, error) {
 func (l *tracedLogger) Info(ctx context.Context, keyvals ...interface{}) {
 	traceID := ContextTraceID(ctx)
 	if traceID == "" {
-		l.Logger.Info(ctx, keyvals...)
+		l.LogAdapter.Info(ctx, keyvals...)
 		return
 	}
 	keyvals = append([]interface{}{"trace", traceID}, keyvals...)
-	l.Logger.Info(ctx, keyvals)
+	l.LogAdapter.Info(ctx, keyvals)
 }
 
 // Error logs the trace ID when present then the values passed as argument.
 func (l *tracedLogger) Error(ctx context.Context, keyvals ...interface{}) {
 	traceID := ContextTraceID(ctx)
 	if traceID == "" {
-		l.Logger.Error(ctx, keyvals...)
+		l.LogAdapter.Error(ctx, keyvals...)
 		return
 	}
 	keyvals = append([]interface{}{"trace", traceID}, keyvals...)
-	l.Logger.Error(ctx, keyvals)
+	l.LogAdapter.Error(ctx, keyvals)
 }
 
 // shortID produces a " unique" 6 bytes long string.

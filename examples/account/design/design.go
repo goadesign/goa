@@ -84,14 +84,17 @@ var ListAccount = Type("ListAccount", func() {
 	})
 })
 
-var Account = Type("Account", func() {
+var Account = MediaType("application/vnd.basic.account", func() {
+	TypeName("Account")
 	Description("Account type")
 	Reference(CreateAccount)
-	Attribute("href", String, "Href to account")
-	Attribute("id", String, "ID of account")
-	Attribute("org_id")
-	Attribute("name")
-	Required("href", "id", "org_id", "name")
+	Attributes(func() {
+		Attribute("href", String, "Href to account")
+		Attribute("id", String, "ID of account")
+		Attribute("org_id")
+		Attribute("name")
+		Required("href", "id", "org_id", "name")
+	})
 })
 
 var NameAlreadyTaken = Type("NameAlreadyTaken", func() {

@@ -13,18 +13,19 @@ import (
 // types.
 var mediaTypeCount int
 
-// MediaType describes a media type used to desribe an endpoint response.
+// MediaType defines a media type used to describe an endpoint response.
 //
-// Media types are defined with a unique identifier as described in RFC6838. The
-// identifier defines the default value for the Content-Type header of HTTP
-// responses.
+// Media types have a unique identifier as described in RFC6838. The identifier
+// defines the default value for the Content-Type header of HTTP responses.
 //
 // The media type expression includes a listing of all the response attributes.
 // Views specify which of the attributes are actually rendered so that the same
 // media type expression may represent multiple rendering of a given response.
 //
-// All media types must define a view named "default". This view is used to
-// render the media type in responses when no other view is specified.
+// All media types have a view named "default". This view is used to render the
+// media type in responses when no other view is specified. If the default view
+// is not explicitly described in the DSL then one is created that lists all the
+// media type attributes.
 //
 // MediaType is a top level DSL.
 // MediaType accepts two arguments: the media type identifier and the defining
@@ -34,7 +35,7 @@ var mediaTypeCount int
 //
 //    var BottleMT = MediaType("application/vnd.goa.example.bottle", func() {
 //        Description("A bottle of wine")
-//        TypeName("BottleMedia")         // Override generated name
+//        TypeName("BottleMedia")         // Override generated type name
 //        ContentType("application/json") // Override Content-Type header
 //
 //        Attributes(func() {
@@ -45,7 +46,7 @@ var mediaTypeCount int
 //            Required("id", "href")
 //        })
 //
-//        View("default", func() {        // Define default view
+//        View("default", func() {        // Explicitly define default view
 //            Attribute("id")
 //            Attribute("href")
 //        })
