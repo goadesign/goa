@@ -11,8 +11,9 @@ import (
 const errMissingLogValue = "MISSING"
 
 type (
-	// Logger is the logging interface used by goa to produce log entries.
-	Logger interface {
+	// LogAdapter is the logging interface used by goa to produce log
+	// entries.
+	LogAdapter interface {
 		// Info logs informational messages.
 		Info(ctx context.Context, keyvals ...interface{})
 		// Error logs error messages.
@@ -20,14 +21,14 @@ type (
 	}
 
 	// adapter is a thin wrapper around the stdlib logger that adapts it to
-	// the Logger interface.
+	// the LogAdapter interface.
 	adapter struct {
 		*log.Logger
 	}
 )
 
-// AdaptStdLogger creates a Logger backed by a stdlib logger.
-func AdaptStdLogger(l *log.Logger) Logger {
+// AdaptStdLogger creates a LogAdapter backed by a stdlib logger.
+func AdaptStdLogger(l *log.Logger) LogAdapter {
 	return &adapter{l}
 }
 

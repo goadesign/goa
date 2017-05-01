@@ -30,9 +30,9 @@ type UserHandlers struct {
 // endpoints.
 func NewUserHandlers(
 	e *endpoints.User,
-	dec rest.RequestDecoderFunc,
-	enc rest.ResponseEncoderFunc,
-	logger goa.Logger,
+	dec func(*http.Request) rest.Decoder,
+	enc func(http.ResponseWriter, *http.Request) rest.Encoder,
+	logger goa.LogAdapter,
 ) *UserHandlers {
 	return &UserHandlers{
 		Show: NewShowUserHandler(e.Show, dec, enc, logger),
@@ -43,9 +43,9 @@ func NewUserHandlers(
 // endpoints.
 func NewUserHandlers(
 	e *endpoints.User,
-	dec rest.RequestDecoderFunc,
-	enc rest.ResponseEncoderFunc,
-	logger goa.Logger,
+	dec func(*http.Request) rest.Decoder,
+	enc func(http.ResponseWriter, *http.Request) rest.Encoder,
+	logger goa.LogAdapter,
 ) *UserHandlers {
 	return &UserHandlers{
 		Show: NewShowUserHandler(e.Show, dec, enc, logger),
@@ -55,13 +55,13 @@ func NewUserHandlers(
 `
 
 		mountUserHandlers = `// MountUserHandlers configures the mux to serve the User endpoints.
-func MountUserHandlers(mux rest.ServeMux, h *UserHandlers) {
+func MountUserHandlers(mux rest.Muxer, h *UserHandlers) {
 	MountShowUserHandler(mux, h.Show)
 }
 `
 
 		mountUserHandlersMultipleActions = `// MountUserHandlers configures the mux to serve the User endpoints.
-func MountUserHandlers(mux rest.ServeMux, h *UserHandlers) {
+func MountUserHandlers(mux rest.Muxer, h *UserHandlers) {
 	MountShowUserHandler(mux, h.Show)
 	MountListUserHandler(mux, h.List)
 }
@@ -69,7 +69,7 @@ func MountUserHandlers(mux rest.ServeMux, h *UserHandlers) {
 
 		mountShowUserHandler = `// MountShowUserHandler configures the mux to serve the "User" service "Show"
 // endpoint.
-func MountShowUserHandler(mux rest.ServeMux, h http.Handler) {
+func MountShowUserHandler(mux rest.Muxer, h http.Handler) {
 	f, ok := h.(http.HandlerFunc)
 	if !ok {
 		f = func(w http.ResponseWriter, r *http.Request) {
@@ -82,7 +82,7 @@ func MountShowUserHandler(mux rest.ServeMux, h http.Handler) {
 
 		mountShowUserHandlerPathParam = `// MountShowUserHandler configures the mux to serve the "User" service "Show"
 // endpoint.
-func MountShowUserHandler(mux rest.ServeMux, h http.Handler) {
+func MountShowUserHandler(mux rest.Muxer, h http.Handler) {
 	f, ok := h.(http.HandlerFunc)
 	if !ok {
 		f = func(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +95,7 @@ func MountShowUserHandler(mux rest.ServeMux, h http.Handler) {
 
 		mountListUserHandler = `// MountListUserHandler configures the mux to serve the "User" service "List"
 // endpoint.
-func MountListUserHandler(mux rest.ServeMux, h http.Handler) {
+func MountListUserHandler(mux rest.Muxer, h http.Handler) {
 	f, ok := h.(http.HandlerFunc)
 	if !ok {
 		f = func(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +108,7 @@ func MountListUserHandler(mux rest.ServeMux, h http.Handler) {
 
 		mountShowUserHandlerMultiplePaths = `// MountShowUserHandler configures the mux to serve the "User" service "Show"
 // endpoint.
-func MountShowUserHandler(mux rest.ServeMux, h http.Handler) {
+func MountShowUserHandler(mux rest.Muxer, h http.Handler) {
 	f, ok := h.(http.HandlerFunc)
 	if !ok {
 		f = func(w http.ResponseWriter, r *http.Request) {
@@ -126,13 +126,13 @@ func MountShowUserHandler(mux rest.ServeMux, h http.Handler) {
 // thus may access the request state via the rest package ContextXXX functions.
 func NewShowUserHandler(
 	endpoint goa.Endpoint,
-	dec rest.RequestDecoderFunc,
-	enc rest.ResponseEncoderFunc,
-	logger goa.Logger,
+	dec func(*http.Request) rest.Decoder,
+	enc func(http.ResponseWriter, *http.Request) rest.Encoder,
+	logger goa.LogAdapter,
 ) http.Handler {
 	var (
 		decodeRequest  = ShowUserDecodeRequest(dec)
-		encodeError    = EncodeError(enc, logger)
+		encodeError    = rest.EncodeError(enc, logger)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		payload, err := decodeRequest(r)
@@ -158,12 +158,12 @@ func NewShowUserHandler(
 // thus may access the request state via the rest package ContextXXX functions.
 func NewShowUserHandler(
 	endpoint goa.Endpoint,
-	dec rest.RequestDecoderFunc,
-	enc rest.ResponseEncoderFunc,
-	logger goa.Logger,
+	dec func(*http.Request) rest.Decoder,
+	enc func(http.ResponseWriter, *http.Request) rest.Encoder,
+	logger goa.LogAdapter,
 ) http.Handler {
 	var (
-		encodeError    = EncodeError(enc, logger)
+		encodeError    = rest.EncodeError(enc, logger)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		res, err := endpoint(r.Context())
@@ -182,13 +182,13 @@ func NewShowUserHandler(
 // thus may access the request state via the rest package ContextXXX functions.
 func NewShowUserHandler(
 	endpoint goa.Endpoint,
-	dec rest.RequestDecoderFunc,
-	enc rest.ResponseEncoderFunc,
-	logger goa.Logger,
+	dec func(*http.Request) rest.Decoder,
+	enc func(http.ResponseWriter, *http.Request) rest.Encoder,
+	logger goa.LogAdapter,
 ) http.Handler {
 	var (
 		encodeResponse = ShowUserEncodeResponseEncodeResponse(enc)
-		encodeError    = EncodeError(enc, logger)
+		encodeError    = rest.EncodeError(enc, logger)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		res, err := endpoint(r.Context())
@@ -210,14 +210,14 @@ func NewShowUserHandler(
 // thus may access the request state via the rest package ContextXXX functions.
 func NewShowUserHandler(
 	endpoint goa.Endpoint,
-	dec rest.RequestDecoderFunc,
-	enc rest.ResponseEncoderFunc,
-	logger goa.Logger,
+	dec func(*http.Request) rest.Decoder,
+	enc func(http.ResponseWriter, *http.Request) rest.Encoder,
+	logger goa.LogAdapter,
 ) http.Handler {
 	var (
 		decodeRequest  = ShowUserDecodeRequest(dec)
 		encodeResponse = ShowUserEncodeResponseEncodeResponse(enc)
-		encodeError    = EncodeError(enc, logger)
+		encodeError    = rest.EncodeError(enc, logger)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		payload, err := decodeRequest(r)
@@ -245,13 +245,13 @@ func NewShowUserHandler(
 // thus may access the request state via the rest package ContextXXX functions.
 func NewListUserHandler(
 	endpoint goa.Endpoint,
-	dec rest.RequestDecoderFunc,
-	enc rest.ResponseEncoderFunc,
-	logger goa.Logger,
+	dec func(*http.Request) rest.Decoder,
+	enc func(http.ResponseWriter, *http.Request) rest.Encoder,
+	logger goa.LogAdapter,
 ) http.Handler {
 	var (
 		encodeResponse = ListUserEncodeResponseEncodeResponse(enc)
-		encodeError    = EncodeError(enc, logger)
+		encodeError    = rest.EncodeError(enc, logger)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		res, err := endpoint(r.Context())
@@ -273,9 +273,9 @@ func NewListUserHandler(
 // thus may access the request state via the rest package ContextXXX functions.
 func NewShowUserHandler(
 	endpoint goa.Endpoint,
-	dec rest.RequestDecoderFunc,
-	enc rest.ResponseEncoderFunc,
-	logger goa.Logger,
+	dec func(*http.Request) rest.Decoder,
+	enc func(http.ResponseWriter, *http.Request) rest.Encoder,
+	logger goa.LogAdapter,
 ) http.Handler {
 	var (
 		decodeRequest  = ShowUserDecodeRequest(dec)
@@ -301,7 +301,7 @@ func NewShowUserHandler(
 
 		showUserDecodeNoPayload = `// ShowUserDecodeRequest returns a decoder for requests sent to the create User
 // endpoint.
-func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
+func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*service.ShowUserPayload, error) {
 		payload, err := NewShowUserPayload()
 		return payload, err
@@ -311,7 +311,7 @@ func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 
 		showUserDecodePathParams = `// ShowUserDecodeRequest returns a decoder for requests sent to the create User
 // endpoint.
-func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
+func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*service.ShowUserPayload, error) {
 		params := httptreemux.ContextParams(r.Context())
 		var (
@@ -333,7 +333,7 @@ func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 
 		showUserDecodeQueryParams = `// ShowUserDecodeRequest returns a decoder for requests sent to the create User
 // endpoint.
-func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
+func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*service.ShowUserPayload, error) {
 		var (
 			id int
@@ -354,7 +354,7 @@ func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 
 		showUserDecodeBodyPayload = `// ShowUserDecodeRequest returns a decoder for requests sent to the create User
 // endpoint.
-func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
+func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*service.ShowUserPayload, error) {
 		var (
 			body ShowUserBody
@@ -376,7 +376,7 @@ func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 
 		showUserDecodeBodyAll = `// ShowUserDecodeRequest returns a decoder for requests sent to the create User
 // endpoint.
-func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
+func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*service.ShowUserPayload, error) {
 		var (
 			body ShowUserBody
@@ -417,7 +417,7 @@ func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 `
 		showUserDecodeAllTypes = `// ShowUserDecodeRequest returns a decoder for requests sent to the create User
 // endpoint.
-func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
+func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*service.ShowUserPayload, error) {
 		var (
 			body ShowUserBody
@@ -633,7 +633,7 @@ func ShowUserDecodeRequest(decoder rest.RequestDecoderFunc) DecodeRequestFunc {
 
 		showUserEncodeResponseNoResponse = `// ShowUserEncodeResponse returns an encoder for responses returned by the Show
 // User endpoint.
-func ShowUserEncodeResponse(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
+func ShowUserEncodeResponse(encoder func(http.ResponseWriter, *http.Request) rest.Encoder) func(http.ResponseWriter, *http.Request, interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 		w.WriteHeader(http.StatusNoContent)
 		return nil
@@ -642,7 +642,7 @@ func ShowUserEncodeResponse(encoder rest.ResponseEncoderFunc) EncodeResponseFunc
 `
 		listUserEncodeResponseNoResponse = `// ListUserEncodeResponse returns an encoder for responses returned by the List
 // User endpoint.
-func ListUserEncodeResponse(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
+func ListUserEncodeResponse(encoder func(http.ResponseWriter, *http.Request) rest.Encoder) func(http.ResponseWriter, *http.Request, interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 		w.WriteHeader(http.StatusNoContent)
 		return nil
@@ -652,7 +652,7 @@ func ListUserEncodeResponse(encoder rest.ResponseEncoderFunc) EncodeResponseFunc
 
 		showUserEncodeResponse = `// ShowUserEncodeResponse returns an encoder for responses returned by the Show
 // User endpoint.
-func ShowUserEncodeResponse(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
+func ShowUserEncodeResponse(encoder func(http.ResponseWriter, *http.Request) rest.Encoder) func(http.ResponseWriter, *http.Request, interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 		t := v.(*UserOK)
 		w.Header().Set("Content-Type", ResponseContentType(r))
@@ -668,7 +668,7 @@ func ShowUserEncodeResponse(encoder rest.ResponseEncoderFunc) EncodeResponseFunc
 `
 		showUserEncodeMultipleResponses = `// ShowUserEncodeResponse returns an encoder for responses returned by the Show
 // User endpoint.
-func ShowUserEncodeResponse(encoder rest.ResponseEncoderFunc) EncodeResponseFunc {
+func ShowUserEncodeResponse(encoder func(http.ResponseWriter, *http.Request) rest.Encoder) func(http.ResponseWriter, *http.Request, interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 		switch t := v.(type) {
 		case *UserCreated:
@@ -688,8 +688,8 @@ func ShowUserEncodeResponse(encoder rest.ResponseEncoderFunc) EncodeResponseFunc
 
 		showUserEncodeError = `// ShowUserEncodeError returns an encoder for errors returned by the Show User
 // endpoint.
-func ShowUserEncodeError(encoder rest.ResponseEncoderFunc, logger goa.Logger) EncodeErrorFunc {
-	encodeError := EncodeError(encoder, logger)
+func ShowUserEncodeError(encoder func(http.ResponseWriter, *http.Request) rest.Encoder, logger goa.LogAdapter) func(http.ResponseWriter, *http.Request, error) {
+	encodeError := rest.EncodeError(encoder, logger)
 	return func(w http.ResponseWriter, r *http.Request, v error) {
 		w.Header().Set("Content-Type", ResponseContentType(r))
 		switch t := v.(type) {

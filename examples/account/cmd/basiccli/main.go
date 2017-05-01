@@ -54,8 +54,8 @@ func main() {
 		scheme,
 		host,
 		doer,
-		genhttp.NewRequestEncoder,
-		genhttp.NewResponseDecoder,
+		rest.DefaultRequestEncoder,
+		rest.DefaultResponseDecoder,
 	)
 
 	data, err := cli.RunCommand(*timeout, client)
