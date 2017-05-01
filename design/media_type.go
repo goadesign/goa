@@ -218,6 +218,18 @@ func (m *MediaTypeExpr) ComputeViews() []*ViewExpr {
 	return nil
 }
 
+// Finalize builds the default view if not explicitly defined.
+func (m *MediaTypeExpr) Finalize() {
+	if m.View("default") == nil {
+		v := &ViewExpr{
+			AttributeExpr: DupAtt(m.AttributeExpr),
+			Name:          "default",
+			Parent:        m,
+		}
+		m.Views = append(m.Views, v)
+	}
+}
+
 // Project creates a MediaTypeExpr containing the fields defined in the view
 // expression of m named after the view argument. Project also returns a links
 // object created after the link expression of m if there is one.

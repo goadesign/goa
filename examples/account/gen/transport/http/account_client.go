@@ -20,8 +20,8 @@ type AccountClient struct {
 	DeleteDoer rest.Doer
 	scheme     string
 	host       string
-	encoder    rest.RequestEncoderFunc
-	decoder    rest.ResponseDecoderFunc
+	encoder    func(*http.Request) rest.Encoder
+	decoder    func(*http.Response) rest.Decoder
 }
 
 // NewAccountClient instantiates a HTTP client for all the account service
@@ -30,8 +30,8 @@ func NewAccountClient(
 	scheme string,
 	host string,
 	doer rest.Doer,
-	enc rest.RequestEncoderFunc,
-	dec rest.ResponseDecoderFunc,
+	enc func(*http.Request) rest.Encoder,
+	dec func(*http.Response) rest.Decoder,
 ) *AccountClient {
 	return &AccountClient{
 		CreateDoer: doer,
@@ -69,7 +69,7 @@ func (c *AccountClient) Create() goa.Endpoint {
 
 // EncodeCreate returns an encoder for requests sent to the create account
 // endpoint.
-func (c *AccountClient) EncodeCreate(encoder rest.RequestEncoderFunc) EncodeRequestFunc {
+func (c *AccountClient) EncodeCreate(encoder func(*http.Request) rest.Encoder) func(interface{}) (*http.Request, error) {
 	return func(v interface{}) (*http.Request, error) {
 		p, ok := v.(*service.CreateAccount)
 		if !ok {
@@ -97,7 +97,7 @@ func (c *AccountClient) EncodeCreate(encoder rest.RequestEncoderFunc) EncodeRequ
 
 // DecodeCreate returns a decoder for responses returned by
 // the create account endpoint.
-func (c *AccountClient) DecodeCreate(decoder rest.ResponseDecoderFunc) DecodeResponseFunc {
+func (c *AccountClient) DecodeCreate(decoder func(*http.Response) rest.Decoder) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		switch resp.StatusCode {
 		case http.StatusCreated:
@@ -158,7 +158,7 @@ func (c *AccountClient) List() goa.Endpoint {
 }
 
 // EncodeList returns an encoder for requests sent to the list account endpoint.
-func (c *AccountClient) EncodeList(encoder rest.RequestEncoderFunc) EncodeRequestFunc {
+func (c *AccountClient) EncodeList(encoder func(*http.Request) rest.Encoder) func(interface{}) (*http.Request, error) {
 	return func(v interface{}) (*http.Request, error) {
 		p, ok := v.(*service.ListAccount)
 		if !ok {
@@ -183,7 +183,7 @@ func (c *AccountClient) EncodeList(encoder rest.RequestEncoderFunc) EncodeReques
 
 // DecodeList returns a decoder for responses returned by the list account
 // endpoint.
-func (c *AccountClient) DecodeList(decoder rest.ResponseDecoderFunc) DecodeResponseFunc {
+func (c *AccountClient) DecodeList(decoder func(*http.Response) rest.Decoder) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		switch resp.StatusCode {
 		case http.StatusOK:
@@ -224,7 +224,7 @@ func (c *AccountClient) Show() goa.Endpoint {
 }
 
 // EncodeShow returns an encoder for requests sent to the show account endpoint.
-func (c *AccountClient) EncodeShow(encoder rest.RequestEncoderFunc) EncodeRequestFunc {
+func (c *AccountClient) EncodeShow(encoder func(*http.Request) rest.Encoder) func(interface{}) (*http.Request, error) {
 	return func(v interface{}) (*http.Request, error) {
 		p, ok := v.(*service.ShowAccountPayload)
 		if !ok {
@@ -244,7 +244,7 @@ func (c *AccountClient) EncodeShow(encoder rest.RequestEncoderFunc) EncodeReques
 
 // DecodeShow returns a decoder for responses returned by the show account
 // endpoint.
-func (c *AccountClient) DecodeShow(decoder rest.ResponseDecoderFunc) DecodeResponseFunc {
+func (c *AccountClient) DecodeShow(decoder func(*http.Response) rest.Decoder) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		switch resp.StatusCode {
 		case http.StatusOK:
@@ -285,7 +285,7 @@ func (c *AccountClient) Delete() goa.Endpoint {
 }
 
 // EncodeDelete returns an encoder for requests sent to the delete account endpoint.
-func (c *AccountClient) EncodeDelete(encoder rest.RequestEncoderFunc) EncodeRequestFunc {
+func (c *AccountClient) EncodeDelete(encoder func(*http.Request) rest.Encoder) func(interface{}) (*http.Request, error) {
 	return func(v interface{}) (*http.Request, error) {
 		p, ok := v.(*service.DeleteAccountPayload)
 		if !ok {
@@ -305,7 +305,7 @@ func (c *AccountClient) EncodeDelete(encoder rest.RequestEncoderFunc) EncodeRequ
 
 // DecodeDelete returns a decoder for responses returned by the delete account
 // endpoint.
-func (c *AccountClient) DecodeDelete(decoder rest.ResponseDecoderFunc) DecodeResponseFunc {
+func (c *AccountClient) DecodeDelete(decoder func(*http.Response) rest.Decoder) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		return nil, nil
 	}

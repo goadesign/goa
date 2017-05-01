@@ -15,7 +15,7 @@ import (
 
 // New returns a middleware that logs short messages for incoming requests and
 // outgoing responses.
-func New(logger goa.Logger) func(h http.Handler) http.Handler {
+func New(logger goa.LogAdapter) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			reqID := tracing.ContextTraceID(r.Context())

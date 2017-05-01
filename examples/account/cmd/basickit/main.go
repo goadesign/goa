@@ -43,7 +43,7 @@ func main() {
 	}
 
 	var (
-		gl goa.Logger
+		gl goa.LogAdapter
 	)
 	{
 		gl = &Logger{logger}
@@ -63,14 +63,16 @@ func main() {
 		aep = endpoints.NewAccount(as)
 	}
 
+	// Provide the transport specific request decoder and response encoder.
+	// The goa rest package has built-in support for JSON, XML and gob.
+	// Other encodings can be used by providing the corresponding functions.
+	//
+	// The package goa.design/encoding provides implementations of these
+	// functions for common encodings.
 	var (
-		dec rest.RequestDecoderFunc
-		enc rest.ResponseEncoderFunc
+		dec = rest.DefaultRequestDecoder
+		enc = rest.DefaultResponseEncoder
 	)
-	{
-		dec = genhttp.NewRequestDecoder
-		enc = genhttp.NewResponseEncoder
-	}
 
 	var (
 		createAccountHandler http.Handler
@@ -110,10 +112,10 @@ func main() {
 	}
 
 	var (
-		mux rest.ServeMux
+		mux rest.Muxer
 	)
 	{
-		mux = rest.NewMux()
+		mux = rest.NewMuxer()
 		genhttp.MountCreateAccountHandler(mux, createAccountHandler)
 		genhttp.MountListAccountHandler(mux, listAccountHandler)
 		genhttp.MountShowAccountHandler(mux, showAccountHandler)

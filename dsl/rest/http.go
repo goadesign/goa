@@ -106,7 +106,7 @@ func HTTP(fn func()) {
 // Consumes adds a MIME type to the list of MIME types the APIs supports when
 // accepting requests. While the DSL supports any MIME type, the code generator
 // only knows to generate the code for "application/json", "application/xml" and
-// "application/gob". The service code must provide the decoder for other MIME
+// "application/gob". The service code must provide the decoders for other MIME
 // types.
 //
 // Consumes may appear in the HTTP expression of API.
@@ -124,18 +124,18 @@ func HTTP(fn func()) {
 //    })
 //
 func Consumes(args ...string) {
-	root, ok := eval.Current().(*rest.RootExpr)
-	if !ok {
+	switch def := eval.Current().(type) {
+	case *rest.RootExpr:
+		def.Consumes = append(rest.Root.Consumes, args...)
+	default:
 		eval.IncompatibleDSL()
-		return
 	}
-	root.Consumes = append(root.Consumes, args...)
 }
 
 // Produces adds a MIME type to the list of MIME types the APIs supports when
 // writing responses. While the DSL supports any MIME type, the code generator
 // only knows to generate the code for "application/json", "application/xml" and
-// "application/gob". The service code must provide the encoder for other MIME
+// "application/gob". The service code must provide the encoders for other MIME
 // types.
 //
 // Produces may appear in the HTTP expression of API.
@@ -153,12 +153,12 @@ func Consumes(args ...string) {
 //    })
 //
 func Produces(args ...string) {
-	root, ok := eval.Current().(*rest.RootExpr)
-	if !ok {
+	switch def := eval.Current().(type) {
+	case *rest.RootExpr:
+		def.Produces = append(rest.Root.Produces, args...)
+	default:
 		eval.IncompatibleDSL()
-		return
 	}
-	root.Produces = append(root.Produces, args...)
 }
 
 // Path defines the API or service base path, i.e. the common path prefix to all
