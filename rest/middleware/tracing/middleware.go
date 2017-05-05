@@ -1,18 +1,13 @@
 package tracing
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"io"
-	rd "math/rand"
 	"net/http"
-	"sync"
-	"sync/atomic"
-	"time"
 
 	"goa.design/goa.v2"
-
-	"context"
 )
 
 // middlewareKey is the private type used for goa middlewares to store values in
@@ -66,9 +61,9 @@ type (
 	options struct {
 		traceIDFunc     IDFunc
 		spanIDFunc      IDFunc
-		samplingRate    int
+		samplingPercent int
 		maxSamplingRate int
-		sampleSize      uint32
+		sampleSize      int
 	}
 )
 
@@ -98,7 +93,7 @@ func SamplingPercent(p int) Option {
 		panic("sampling rate must be between 0 and 100")
 	}
 	return func(o *options) *options {
-		o.samplingRate = p
+		o.samplingPercent = p
 		return o
 	}
 }
@@ -112,7 +107,6 @@ func MaxSamplingRate(r int) Option {
 		panic("max sampling rate must be greater than 0")
 	}
 	return func(o *options) *options {
-		o.samplingRate = 100
 		o.maxSamplingRate = r
 		return o
 	}
@@ -125,7 +119,7 @@ func SampleSize(s int) Option {
 		panic("sample size must be greater than 0")
 	}
 	return func(o *options) *options {
-		o.sampleSize = uint32(s)
+		o.sampleSize = s
 		return o
 	}
 }
@@ -144,67 +138,38 @@ func SampleSize(s int) Option {
 // implementations that produce AWS X-Ray compatible IDs.
 func New(opts ...Option) func(http.Handler) http.Handler {
 	o := &options{
-		traceIDFunc:  shortID,
-		spanIDFunc:   shortID,
-		samplingRate: 100,
+		traceIDFunc:     shortID,
+		spanIDFunc:      shortID,
+		samplingPercent: 100,
 		// Below only apply if maxSamplingRate is set
 		sampleSize: 1000,
 	}
 	for _, opt := range opts {
 		o = opt(o)
 	}
+	var sampler Sampler
+	if o.maxSamplingRate > 0 {
+		sampler = NewAdaptiveSampler(o.maxSamplingRate, o.sampleSize)
+	} else {
+		sampler = NewFixedSampler(o.samplingPercent)
+	}
 	return func(h http.Handler) http.Handler {
-		var (
-			counter         uint32
-			mu              sync.Mutex
-			samplingRate    = o.samplingRate
-			maxSamplingRate = o.samplingRate
-			sampleSize      = o.sampleSize
-			start           = time.Now()
-		)
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Compute trace info.
-			var (
-				traceID  = r.Header.Get(TraceIDHeader)
-				parentID = r.Header.Get(ParentSpanIDHeader)
-				spanID   = o.spanIDFunc()
-			)
-
-			// Adjust sampling rate if needed
-			if maxSamplingRate > 0 {
-				c := atomic.AddUint32(&counter, 1)
-				if c == sampleSize {
-					atomic.StoreUint32(&counter, 0) // race is ok
-					mu.Lock()
-					{
-						d := time.Since(start).Seconds()
-						r := float64(sampleSize) / d
-						samplingRate := int((float64(maxSamplingRate) * 100) / r)
-						if samplingRate > 100 {
-							samplingRate = 100
-						} else if samplingRate < 1 {
-							samplingRate = 1
-						}
-						start = time.Now()
-					}
-					mu.Unlock()
-				}
-			}
-
-			// Determine if request is trace root
-			if traceID == "" {
-				// Avoid computing a random value if unnecessary.
-				if samplingRate == 0 || samplingRate != 100 && rd.Intn(100) > o.samplingRate {
-					h.ServeHTTP(w, r)
-				}
+			// insert a new trace ID only if not already being traced.
+			traceID := r.Header.Get(TraceIDHeader)
+			if traceID == "" && sampler.Sample() {
+				// insert tracing only within sample.
 				traceID = o.traceIDFunc()
 			}
-
-			// Setup context.
-			ctx := WithSpan(r.Context(), traceID, spanID, parentID)
-
-			// Call next handler.
-			h.ServeHTTP(w, r.WithContext(ctx))
+			if traceID == "" {
+				h.ServeHTTP(w, r)
+			} else {
+				// insert IDs into context to enable tracing.
+				spanID := o.spanIDFunc()
+				parentID := r.Header.Get(ParentSpanIDHeader)
+				ctx := WithSpan(r.Context(), traceID, spanID, parentID)
+				h.ServeHTTP(w, r.WithContext(ctx))
+			}
 		})
 	}
 }
