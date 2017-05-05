@@ -1367,6 +1367,10 @@ func (a *ActionDefinition) PathParams() *AttributeDefinition {
 		for _, p := range r.Params() {
 			if _, ok := obj[p]; !ok {
 				obj[p] = allParams[p]
+				if obj[p] == nil {
+					obj[p] = &AttributeDefinition{Type: Object{}}
+				}
+
 			}
 		}
 	}
