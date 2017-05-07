@@ -23,9 +23,7 @@ type (
 		counter         uint32
 	}
 
-	fixedSampler struct {
-		samplingPercent int
-	}
+	fixedSampler int
 )
 
 const (
@@ -62,9 +60,7 @@ func NewFixedSampler(samplingPercent int) Sampler {
 	if samplingPercent < 0 || samplingPercent > 100 {
 		panic("samplingPercent must be between 0 and 100")
 	}
-	return &fixedSampler{
-		samplingPercent: samplingPercent,
-	}
+	return fixedSampler(samplingPercent)
 }
 
 // Sample implementation for adaptive rate
@@ -96,7 +92,7 @@ func (s *adaptiveSampler) Sample() bool {
 }
 
 // Sample implementation for fixed percentage
-func (s *fixedSampler) Sample() bool {
-	samplingPercent := s.samplingPercent
+func (s fixedSampler) Sample() bool {
+	samplingPercent := int(s)
 	return samplingPercent > 0 && (samplingPercent == 100 || rand.Intn(100) < samplingPercent)
 }
