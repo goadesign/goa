@@ -129,7 +129,7 @@ func Routing(routes ...*design.RouteDefinition) {
 	}
 }
 
-// GET used in: Routing
+// GET is used as an argument to Routing
 // GET creates a route using the GET HTTP method.
 func GET(path string, dsl ...func()) *design.RouteDefinition {
 	route := &design.RouteDefinition{Verb: "GET", Path: path}
@@ -141,7 +141,7 @@ func GET(path string, dsl ...func()) *design.RouteDefinition {
 	return route
 }
 
-// HEAD used in: Routing
+// HEAD is used as an argument to Routing
 // HEAD creates a route using the HEAD HTTP method.
 func HEAD(path string, dsl ...func()) *design.RouteDefinition {
 	route := &design.RouteDefinition{Verb: "HEAD", Path: path}
@@ -153,7 +153,7 @@ func HEAD(path string, dsl ...func()) *design.RouteDefinition {
 	return route
 }
 
-// POST used in: Routing
+// POST is used as an argument to Routing
 // POST creates a route using the POST HTTP method.
 func POST(path string, dsl ...func()) *design.RouteDefinition {
 	route := &design.RouteDefinition{Verb: "POST", Path: path}
@@ -165,7 +165,7 @@ func POST(path string, dsl ...func()) *design.RouteDefinition {
 	return route
 }
 
-// PUT used in: Routing
+// PUT is used as an argument to Routing
 // PUT creates a route using the PUT HTTP method.
 func PUT(path string, dsl ...func()) *design.RouteDefinition {
 	route := &design.RouteDefinition{Verb: "PUT", Path: path}
@@ -177,7 +177,7 @@ func PUT(path string, dsl ...func()) *design.RouteDefinition {
 	return route
 }
 
-// DELETE used in: Routing
+// DELETE is used as an argument to Routing
 // DELETE creates a route using the DELETE HTTP method.
 func DELETE(path string, dsl ...func()) *design.RouteDefinition {
 	route := &design.RouteDefinition{Verb: "DELETE", Path: path}
@@ -189,7 +189,7 @@ func DELETE(path string, dsl ...func()) *design.RouteDefinition {
 	return route
 }
 
-// OPTIONS used in: Routing
+// OPTIONS is used as an argument to Routing
 // OPTIONS creates a route using the OPTIONS HTTP method.
 func OPTIONS(path string, dsl ...func()) *design.RouteDefinition {
 	route := &design.RouteDefinition{Verb: "OPTIONS", Path: path}
@@ -201,7 +201,7 @@ func OPTIONS(path string, dsl ...func()) *design.RouteDefinition {
 	return route
 }
 
-// TRACE used in: Routing
+// TRACE is used as an argument to Routing
 // TRACE creates a route using the TRACE HTTP method.
 func TRACE(path string, dsl ...func()) *design.RouteDefinition {
 	route := &design.RouteDefinition{Verb: "TRACE", Path: path}
@@ -213,7 +213,7 @@ func TRACE(path string, dsl ...func()) *design.RouteDefinition {
 	return route
 }
 
-// CONNECT used in: Routing
+// CONNECT is used as an argument to Routing
 // CONNECT creates a route using the CONNECT HTTP method.
 func CONNECT(path string, dsl ...func()) *design.RouteDefinition {
 	route := &design.RouteDefinition{Verb: "CONNECT", Path: path}
@@ -225,7 +225,7 @@ func CONNECT(path string, dsl ...func()) *design.RouteDefinition {
 	return route
 }
 
-// PATCH used in: Routing
+// PATCH is used as an argument to Routing
 // PATCH creates a route using the PATCH HTTP method.
 func PATCH(path string, dsl ...func()) *design.RouteDefinition {
 	route := &design.RouteDefinition{Verb: "PATCH", Path: path}
