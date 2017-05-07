@@ -85,7 +85,7 @@ func NoSecurity() {
 	}
 }
 
-// BasicAuthSecurity can be used in: (it is a top level DSL)
+// BasicAuthSecurity is a top level DSL.
 // BasicAuthSecurity defines a "basic" security scheme for the API.
 //
 // Example:
@@ -131,7 +131,7 @@ func securitySchemeRedefined(name string) bool {
 	return false
 }
 
-// APIKeySecurity can be used in: (it is a top level DSL)
+// APIKeySecurity is a top level DSL.
 // APIKeySecurity defines an "apiKey" security scheme available throughout the API.
 //
 // Example:
@@ -168,7 +168,7 @@ func APIKeySecurity(name string, dsl ...func()) *design.SecuritySchemeDefinition
 	return def
 }
 
-// OAuth2Security can be used in: (it is a top level DSL)
+// OAuth2Security is a top level DSL.
 // OAuth2Security defines an OAuth2 security scheme. The child DSL must define one and exactly one
 // flow. One of AccessCodeFlow, ImplicitFlow, PasswordFlow or ApplicationFlow. Each flow defines
 // endpoints for retrieving OAuth2 authorization codes and/or refresh and access tokens. The
@@ -219,7 +219,7 @@ func OAuth2Security(name string, dsl ...func()) *design.SecuritySchemeDefinition
 	return def
 }
 
-// JWTSecurity can be used in: (it is a top level DSL)
+// JWTSecurity is a top level DSL.
 // JWTSecurity defines an APIKey security scheme, with support for Scopes and a TokenURL.
 //
 // Since Scopes and TokenURLs are not compatible with the Swagger specification, the swagger
@@ -307,7 +307,6 @@ func inHeader(headerName string) {
 	dslengine.IncompatibleDSL()
 }
 
-// TODO: is this correct?
 // Query can be used in: APIKeySecurity, JWTSecurity
 // Query defines that an APIKeySecurity or JWTSecurity implementation must check in the query
 // parameter named "parameterName" to get the api key.

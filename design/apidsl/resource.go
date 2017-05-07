@@ -5,7 +5,7 @@ import (
 	"github.com/goadesign/goa/dslengine"
 )
 
-// Resource can be used in: (it is a top level DSL)
+// Resource is a top level DSL.
 // Resource implements the resource definition dsl. There is one resource definition per resource
 // exposed by the API. The resource dsl allows setting the resource default media type. This media
 // type is used to render the response body of actions that return the OK response (unless the

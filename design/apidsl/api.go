@@ -10,7 +10,7 @@ import (
 	"github.com/goadesign/goa/dslengine"
 )
 
-// API used in: (top level DSL)
+// API is a top level DSL.
 // API implements the top level API DSL. It defines the API name, default description and other
 // default global property values. Here is an example showing all the possible API sub-definitions:
 //
@@ -124,7 +124,7 @@ func Description(d string) {
 	}
 }
 
-// BasePath used in: API
+// BasePath can used in: API, Resource
 // BasePath defines the API base path, i.e. the common path prefix to all the API actions.
 // The path may define wildcards (see Routing for a description of the wildcard syntax).
 // The corresponding parameters must be described using Params.
@@ -150,8 +150,7 @@ func BasePath(val string) {
 	}
 }
 
-// Origin can be used in: Resource, API, Action
-// TODO: check if origin can really be used in action
+// Origin can be used in: Resource, API
 // Origin defines the CORS policy for a given origin. The origin can use a wildcard prefix
 // such as "https://*.mydomain.com". The special value "*" defines the policy for all origins
 // (in which case there should be only one Origin DSL in the parent resource).
@@ -231,7 +230,7 @@ func Credentials() {
 	}
 }
 
-// TermsOfService can be used in: Origin
+// TermsOfService can be used in: API
 // TermsOfService describes the API terms of services or links to them.
 func TermsOfService(terms string) {
 	if a, ok := apiDefinition(); ok {
@@ -256,7 +255,6 @@ func Host(host string) {
 }
 
 // Scheme can be used in: API, Resource, Action
-// TODO: can it really be used in Resource (no examples in docs)
 // Scheme sets the API URL schemes.
 func Scheme(vals ...string) {
 	ok := true
@@ -306,8 +304,7 @@ func License(dsl func()) {
 	}
 }
 
-// Docs can be used in: API, Action, Resource, Files
-// TODO: can it really be used in Resource (no examples)
+// Docs can be used in: API, Action, Files
 // Docs provides external documentation pointers.
 func Docs(dsl func()) {
 	docs := new(design.DocsDefinition)
@@ -348,8 +345,8 @@ func Email(email string) {
 	}
 }
 
-// URL can be used in: Contact, License.
-// URL sets the contact or license URL.
+// URL can be used in: Contact, License, Docs
+// URL sets the contact, license, or Docs URL.
 func URL(url string) {
 	switch def := dslengine.CurrentDefinition().(type) {
 	case *design.ContactDefinition:
@@ -434,7 +431,7 @@ func Package(path string) {
 	}
 }
 
-// TODO: where is function used?
+// Function can be used in: Consumes, Produces
 // Function sets the Go function name used to instantiate the encoder or decoder. Defaults to
 // NewEncoder / NewDecoder.
 func Function(fn string) {
@@ -579,7 +576,7 @@ func Trait(name string, val ...func()) {
 	}
 }
 
-// Trait can be used in: Resource, Action, Type, MediaType, Attribute
+// UseTrait can be used in: Resource, Action, Type, MediaType, Attribute
 // UseTrait executes the API trait with the given name. An API level DSL trait must be
 // defined first. UseTrait takes a variable number of trait names.
 func UseTrait(names ...string) {

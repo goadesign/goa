@@ -5,7 +5,7 @@ import (
 	"github.com/goadesign/goa/dslengine"
 )
 
-// Metadata can be used in: Attributes, MediaTypes, Action, Response, Resource, API
+// Metadata can be used in: Attributes, MediaType, Action, Response, Resource, API
 // Metadata is a set of key/value pairs that can be assigned to an object. Each value consists of a
 // slice of strings so that multiple invocation of the Metadata function on the same target using
 // the same key builds up the slice.

@@ -12,7 +12,7 @@ import (
 // Counter used to create unique media type names for identifier-less media types.
 var mediaTypeCount int
 
-// MediaType can be used in: ResponseTemplate, (also as a top level DSL)
+// MediaType is a top level DSL, which can also be used in: ResponseTemplate
 // MediaType implements the media type definition DSL. A media type definition describes the
 // representation of a resource used in a response body.
 //
@@ -130,8 +130,6 @@ func MediaType(identifier string, apidsl func()) *design.MediaTypeDefinition {
 //	})
 //
 // Specifying a media type is useful for responses that always return the same view.
-//
-// Media can be used inside Response or ResponseTemplate.
 func Media(val interface{}, viewName ...string) {
 	if r, ok := responseDefinition(); ok {
 		if m, ok := val.(*design.MediaTypeDefinition); ok {
@@ -206,7 +204,7 @@ func TypeName(name string) {
 	}
 }
 
-// ContentType can be used in: Type, MediaType
+// ContentType can be used in: MediaType
 // ContentType sets the value of the Content-Type response header. By default the ID of the media
 // type is used.
 //
@@ -218,7 +216,7 @@ func ContentType(typ string) {
 	}
 }
 
-// iew can be used in: MediaType
+// View can be used in: MediaType, Response
 // View adds a new view to a media type. A view has a name and lists attributes that are
 // rendered when the view is used to produce a response. The attribute names must appear in the
 // media type definition. If an attribute is itself a media type then the view may specify which
@@ -364,8 +362,8 @@ func Link(name string, view ...string) {
 	}
 }
 
-// TODO: is this correct?
-// CollectionOf can be used in: Media, Response, ResponseTemplate
+// CollectionOf can be used in: Wherever a MediaType can be used..
+// e.g. Attribute("foo", CollectionOf(Bar))
 // CollectionOf creates a collection media type from its element media type. A collection media
 // type represents the content of responses that return a collection of resources such as "list"
 // actions. This function can be called from any place where a media type can be used.
