@@ -1,49 +1,116 @@
 package middleware
 
 import (
+	"context"
 	"math"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"context"
 )
 
-func TestNew(t *testing.T) {
-	cases := map[string]struct{ Rate int }{
-		"zero":  {0},
-		"one":   {1},
-		"fifty": {50},
-		"100":   {100},
-	}
-
-	for k, c := range cases {
-		m := Tracer(c.Rate, nil, nil)
-		if m == nil {
-			t.Errorf("%s: Tracer return nil", k)
+func TestNewTracer(t *testing.T) {
+	// valid sampling percentage
+	{
+		cases := map[string]struct{ Rate int }{
+			"zero":  {0},
+			"one":   {1},
+			"fifty": {50},
+			"100":   {100},
+		}
+		for k, c := range cases {
+			m := Tracer(c.Rate, shortID, shortID)
+			if m == nil {
+				t.Errorf("%s: Tracer return nil", k)
+			}
+			m = NewTracer(SamplingPercent(c.Rate))
+			if m == nil {
+				t.Errorf("%s: NewTracer return nil", k)
+			}
 		}
 	}
 
-	cases = map[string]struct{ Rate int }{
-		"negative":  {-1},
-		"one-o-one": {101},
-		"maxint":    {math.MaxInt64},
+	// valid adaptive sampler tests
+	{
+		m := NewTracer(MaxSamplingRate(2))
+		if m == nil {
+			t.Error("NewTracer return nil")
+		}
+		m = NewTracer(MaxSamplingRate(5), SampleSize(100))
+		if m == nil {
+			t.Error("NewTracer return nil")
+		}
 	}
 
-	for k, c := range cases {
-		func() {
-			defer func() {
-				r := recover()
-				if r != "tracing: sample rate must be between 0 and 100" {
-					t.Errorf("%s: Tracer did *not* panic", k)
-				}
+	// invalid sampling percentage
+	{
+		cases := map[string]struct{ SamplingPercentage int }{
+			"negative":  {-1},
+			"one-o-one": {101},
+			"maxint":    {math.MaxInt64},
+		}
+
+		for k, c := range cases {
+			func() {
+				defer func() {
+					r := recover()
+					if r != "sampling rate must be between 0 and 100" {
+						t.Errorf("%s: Tracer did *not* panic as expected: %v", k, r)
+					}
+				}()
+				Tracer(c.SamplingPercentage, shortID, shortID)
 			}()
-			Tracer(c.Rate, nil, nil)
-		}()
+			func() {
+				defer func() {
+					r := recover()
+					if r != "sampling rate must be between 0 and 100" {
+						t.Errorf("%s: NewTracer did *not* panic as expected: %v", k, r)
+					}
+				}()
+				NewTracer(SamplingPercent(c.SamplingPercentage))
+			}()
+		}
+	}
+
+	// invalid max sampling rate
+	{
+		cases := map[string]struct{ MaxSamplingRate int }{
+			"negative": {-1},
+			"zero":     {0},
+		}
+		for k, c := range cases {
+			func() {
+				defer func() {
+					r := recover()
+					if r != "max sampling rate must be greater than 0" {
+						t.Errorf("%s: NewTracer did *not* panic as expected: %v", k, r)
+					}
+				}()
+				NewTracer(MaxSamplingRate(c.MaxSamplingRate))
+			}()
+		}
+	}
+
+	// invalid sample size
+	{
+		cases := map[string]struct{ SampleSize int }{
+			"negative": {-1},
+			"zero":     {0},
+		}
+		for k, c := range cases {
+			func() {
+				defer func() {
+					r := recover()
+					if r != "sample size must be greater than 0" {
+						t.Errorf("%s: NewTracer did *not* panic as expected: %v", k, r)
+					}
+				}()
+				NewTracer(SampleSize(c.SampleSize))
+			}()
+		}
 	}
 }
 
-func TestMiddleware(t *testing.T) {
+func TestTracerMiddleware(t *testing.T) {
 	var (
 		traceID    = "testTraceID"
 		spanID     = "testSpanID"
