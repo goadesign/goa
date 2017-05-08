@@ -14,7 +14,7 @@ import (
 func GoTypeDef(att *design.AttributeExpr, private bool) string {
 	switch actual := att.Type.(type) {
 	case design.Primitive:
-		return GoTypeName(actual, private)
+		return GoType(actual, private)
 	case *design.Array:
 		d := GoTypeDef(actual.ElemType, private)
 		if design.IsObject(actual.ElemType.Type) {
@@ -61,7 +61,7 @@ func GoTypeDef(att *design.AttributeExpr, private bool) string {
 		ss = append(ss, "}")
 		return strings.Join(ss, "\n")
 	case design.UserType:
-		return GoTypeName(actual, private)
+		return GoType(actual, private)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
@@ -70,7 +70,7 @@ func GoTypeDef(att *design.AttributeExpr, private bool) string {
 // GoTypeRef returns the Go code that refers to the Go type which matches the
 // given data type. If private is true then the reference is to a private type.
 func GoTypeRef(dt design.DataType, private bool) string {
-	tname := GoTypeName(dt, private)
+	tname := GoType(dt, private)
 	if _, ok := dt.(design.Object); ok {
 		return tname
 	}
@@ -97,9 +97,52 @@ func GoPackageTypeRef(dt design.DataType, pack string) string {
 	return tdef
 }
 
-// GoTypeName returns the Go type name of the given data type. It returns the
+// GoTypeName produces a valid Go type identifier for the given data type.
+func GoTypeName(dt design.DataType) string {
+	switch actual := dt.(type) {
+	case design.Primitive:
+		return GoNativeTypeName(dt)
+	case *design.Array:
+		return GoTypeName(actual.ElemType.Type) + "Array"
+	case *design.Map:
+		return GoTypeName(actual.KeyType.Type) + GoTypeName(actual.ElemType.Type) + "Map"
+	case design.Object:
+		return "Object"
+	case design.UserType:
+		return Goify(actual.Name(), true)
+	case design.CompositeExpr:
+		return GoTypeName(actual.Attribute().Type)
+	default:
+		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
+	}
+}
+
+// GoNativeTypeName returns a valid Go identifier for the given data type.
+// GoNativeTypeName panics if t is not a primitive type.
+func GoNativeTypeName(t design.DataType) string {
+	switch t.Kind() {
+	case design.BooleanKind:
+		return "Boolean"
+	case design.IntKind, design.Int32Kind, design.Int64Kind:
+		return "Integer"
+	case design.UIntKind, design.UInt32Kind, design.UInt64Kind:
+		return "Unsigned"
+	case design.Float32Kind, design.Float64Kind:
+		return "Float"
+	case design.StringKind:
+		return "String"
+	case design.BytesKind:
+		return "Bytes"
+	case design.AnyKind:
+		return "Any"
+	default:
+		panic(fmt.Sprintf("cannot compute type name for non primitive %T", t)) // bug
+	}
+}
+
+// GoType returns the Go type name of the given data type. It returns the
 // private name if private is true.
-func GoTypeName(dt design.DataType, private bool) string {
+func GoType(dt design.DataType, private bool) string {
 	switch actual := dt.(type) {
 	case design.Primitive:
 		return GoNativeType(dt)
@@ -112,7 +155,7 @@ func GoTypeName(dt design.DataType, private bool) string {
 	case design.UserType:
 		return Goify(actual.Name(), !private)
 	case design.CompositeExpr:
-		return GoTypeName(actual.Attribute().Type, private)
+		return GoType(actual.Attribute().Type, private)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}

@@ -174,34 +174,74 @@ func buildServiceMethod(m *design.EndpointExpr, userTypes map[string]design.User
 			desc = codegen.Goify(m.Name, true) + " implements " + m.Name + "."
 		}
 		if m.Payload != nil && m.Payload.Type != design.Empty {
-			payloadName = ServiceScope.Unique(m.Payload.Type, codegen.GoTypeName(m.Payload.Type, false), "Payload")
+			switch dt := m.Payload.Type.(type) {
+			case design.UserType:
+				payloadName = ServiceScope.Unique(dt, codegen.GoType(dt, false), "Payload")
+				payloadRef = "*" + payloadName
+				payloadDef = codegen.GoTypeDef(dt.Attribute(), false)
+				walkTypes(dt.Attribute())
+			case design.Object:
+				payloadName = fmt.Sprintf("%s%sPayload", codegen.Goify(m.Service.Name, true), codegen.Goify(m.Name, true))
+				payloadName = ServiceScope.Unique(dt, payloadName, "")
+				payloadRef = "*" + payloadName
+				payloadDef = codegen.GoTypeDef(m.Payload, false)
+				walkTypes(m.Payload)
+			case *design.Array:
+				payloadName = fmt.Sprintf("%s%sPayload", codegen.Goify(m.Service.Name, true), codegen.Goify(m.Name, true))
+				payloadName = ServiceScope.Unique(dt, payloadName, "")
+				payloadRef = payloadName
+				payloadDef = codegen.GoTypeDef(m.Payload, false)
+				walkTypes(dt.ElemType)
+			case *design.Map:
+				payloadName = fmt.Sprintf("%s%sPayload", codegen.Goify(m.Service.Name, true), codegen.Goify(m.Name, true))
+				payloadName = ServiceScope.Unique(dt, payloadName, "")
+				payloadRef = payloadName
+				payloadDef = codegen.GoTypeDef(m.Payload, false)
+				walkTypes(dt.KeyType)
+				walkTypes(dt.ElemType)
+			default:
+				payloadName = codegen.GoNativeType(m.Payload.Type)
+			}
 			payloadDesc = m.Payload.Description
 			if payloadDesc == "" {
 				payloadDesc = fmt.Sprintf("%s is the payload type of the %s service %s method.",
 					payloadName, m.Service.Name, m.Name)
 			}
-			payloadAttr := m.Payload
-			payloadRef = codegen.GoTypeRef(payloadAttr.Type, false)
-			if ut, ok := payloadAttr.Type.(design.UserType); ok {
-				walkTypes(ut.Attribute())
-				payloadAttr = ut.Attribute()
-			}
-			payloadDef = codegen.GoTypeDef(payloadAttr, false)
 		}
 		if m.Result != nil && m.Result.Type != design.Empty {
-			resultName = ServiceScope.Unique(m.Result.Type, codegen.GoTypeName(m.Result.Type, false), "Result")
+			switch dt := m.Result.Type.(type) {
+			case design.UserType:
+				resultName = ServiceScope.Unique(dt, codegen.GoType(dt, false), "Result")
+				resultRef = "*" + resultName
+				resultDef = codegen.GoTypeDef(dt.Attribute(), false)
+				walkTypes(dt.Attribute())
+			case design.Object:
+				resultName = fmt.Sprintf("%s%sResult", codegen.Goify(m.Service.Name, true), codegen.Goify(m.Name, true))
+				resultName = ServiceScope.Unique(dt, resultName, "")
+				resultRef = "*" + resultName
+				resultDef = codegen.GoTypeDef(m.Result, false)
+				walkTypes(m.Result)
+			case *design.Array:
+				resultName = fmt.Sprintf("%s%sResult", codegen.Goify(m.Service.Name, true), codegen.Goify(m.Name, true))
+				resultName = ServiceScope.Unique(dt, resultName, "")
+				resultRef = resultName
+				resultDef = codegen.GoTypeDef(m.Result, false)
+				walkTypes(dt.ElemType)
+			case *design.Map:
+				resultName = fmt.Sprintf("%s%sResult", codegen.Goify(m.Service.Name, true), codegen.Goify(m.Name, true))
+				resultName = ServiceScope.Unique(dt, resultName, "")
+				resultRef = resultName
+				resultDef = codegen.GoTypeDef(m.Result, false)
+				walkTypes(dt.KeyType)
+				walkTypes(dt.ElemType)
+			default:
+				resultName = codegen.GoNativeType(m.Result.Type)
+			}
 			resultDesc = m.Result.Description
 			if resultDesc == "" {
 				resultDesc = fmt.Sprintf("%s is the result type of the %s service %s method.",
 					resultName, m.Service.Name, m.Name)
 			}
-			resultAttr := m.Result
-			resultRef = codegen.GoTypeRef(resultAttr.Type, false)
-			if ut, ok := resultAttr.Type.(design.UserType); ok {
-				walkTypes(ut.Attribute())
-				resultAttr = ut.Attribute()
-			}
-			resultDef = codegen.GoTypeDef(resultAttr, false)
 		}
 	}
 	return &serviceMethod{
@@ -233,7 +273,7 @@ const serviceT = `
 
 {{ define "payloads" -}}
 {{ range .Methods -}}
-{{ if .Payload }}
+{{ if .PayloadDef }}
 	// {{ .PayloadDesc }}
 	{{ .Payload }} {{ .PayloadDef }}
 {{ end -}}
@@ -242,7 +282,7 @@ const serviceT = `
 
 {{ define "results" -}}
 {{ range .Methods -}}
-{{ if .Result }}
+{{ if .ResultDef }}
 	// {{ .ResultDesc }}
 	{{ .Result }} {{ .ResultDef }}
 {{ end -}}

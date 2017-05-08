@@ -133,6 +133,7 @@ func DefaultResponseDecoder(resp *http.Response) Decoder {
 func EncodeError(encoder func(http.ResponseWriter, *http.Request) (Encoder, string), logger goa.LogAdapter) func(http.ResponseWriter, *http.Request, error) {
 	return func(w http.ResponseWriter, r *http.Request, v error) {
 		switch t := v.(type) {
+
 		case goa.Error:
 			enc, ct := encoder(w, r)
 			SetContentType(w, ct)
@@ -141,13 +142,14 @@ func EncodeError(encoder func(http.ResponseWriter, *http.Request) (Encoder, stri
 			if err != nil {
 				logger.Error(r.Context(), "encoding", err)
 			}
+
 		default:
 			b := make([]byte, 6)
 			io.ReadFull(rand.Reader, b)
-			id := base64.RawURLEncoding.EncodeToString(b) + ": "
+			id := base64.RawURLEncoding.EncodeToString(b)
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(id + t.Error()))
+			w.Write([]byte(id + ": " + t.Error()))
 			logger.Error(r.Context(), "id", id, "error", t.Error())
 		}
 	}

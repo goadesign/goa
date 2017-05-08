@@ -98,10 +98,10 @@ func PrintVal(t design.DataType, val interface{}) string {
 		m := design.AsMap(t)
 		mval := val.(map[interface{}]interface{})
 		if len(mval) == 0 {
-			return fmt.Sprintf("%s{}", GoTypeName(t, true))
+			return fmt.Sprintf("%s{}", GoType(t, true))
 		}
 		var buffer bytes.Buffer
-		buffer.WriteString(fmt.Sprintf("%s{", GoTypeName(t, true)))
+		buffer.WriteString(fmt.Sprintf("%s{", GoType(t, true)))
 		for k, v := range mval {
 			buffer.WriteString(fmt.Sprintf("%s: %s, ",
 				PrintVal(m.KeyType.Type, k),
@@ -116,10 +116,10 @@ func PrintVal(t design.DataType, val interface{}) string {
 		aval := val.([]interface{})
 		a := design.AsArray(t)
 		if len(aval) == 0 {
-			return fmt.Sprintf("%s{}", GoTypeName(t, true))
+			return fmt.Sprintf("%s{}", GoType(t, true))
 		}
 		var buffer bytes.Buffer
-		buffer.WriteString(fmt.Sprintf("%s{", GoTypeName(t, true)))
+		buffer.WriteString(fmt.Sprintf("%s{", GoType(t, true)))
 		for _, e := range aval {
 			buffer.WriteString(fmt.Sprintf("%s, ", PrintVal(a.ElemType.Type, e)))
 		}

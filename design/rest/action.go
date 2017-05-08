@@ -191,13 +191,20 @@ func (a *ActionExpr) Validate() error {
 	if len(a.Routes) == 0 {
 		verr.Add(a, "No route defined for action")
 	}
+	allTagged := true
 	for i, r := range a.Responses {
 		for j, r2 := range a.Responses {
 			if i != j && r.StatusCode == r2.StatusCode {
 				verr.Add(r, "Multiple response definitions with status code %d", r.StatusCode)
 			}
 		}
+		if r.Tag[0] != "" {
+			allTagged = false
+		}
 		verr.Merge(r.Validate())
+	}
+	if allTagged {
+		verr.Add(a, "All responses define a Tag, at least one response must define no Tag.")
 	}
 	verr.Merge(a.validateParams())
 	if a.Body != nil {
@@ -217,9 +224,21 @@ func (a *ActionExpr) Finalize() {
 			}
 		}
 	}
+
+	// Initialize responses parent
 	for _, r := range a.Responses {
 		r.Parent = a
 	}
+
+	// Inherit HTTP errors from resource and root
+	for _, r := range a.Resource.HTTPErrors {
+		a.HTTPErrors = append(a.HTTPErrors, r.Dup())
+	}
+	for _, r := range Root.HTTPErrors {
+		a.HTTPErrors = append(a.HTTPErrors, r.Dup())
+	}
+
+	// Initialize error responses parent
 	for _, e := range a.HTTPErrors {
 		e.Response.Parent = a
 	}

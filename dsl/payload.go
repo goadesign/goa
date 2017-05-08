@@ -5,7 +5,7 @@ import (
 	"goa.design/goa.v2/eval"
 )
 
-// Payload defines the data type which lists the payload attributes.
+// Payload defines the data type of an endpoint input.
 //
 // Payload may appear in a Endpoint expression.
 //
@@ -16,8 +16,13 @@ import (
 //
 // Examples:
 //
+// Endpoint("save"), func() {
+//	// Use primitive type.
+//	Payload(String)
+// }
+//
 // Endpoint("add", func() {
-//     // Define payload type inline
+//     // Define payload data structure inline.
 //     Payload(func() {
 //         Attribute("left", Int32, "Left operand")
 //         Attribute("right", Int32, "Left operand")
@@ -26,12 +31,12 @@ import (
 // })
 //
 // Endpoint("add", func() {
-//     // Define payload type by reference to user type
+//     // Define payload type by reference to user type.
 //     Payload(Operands)
 // })
 //
 // Endpoint("divide", func() {
-//     // Specify required attributes on user type
+//     // Specify additional required attributes on user type.
 //     Payload(Operands, func() {
 //         Required("left", "right")
 //     })

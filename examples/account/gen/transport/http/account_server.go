@@ -29,10 +29,10 @@ func NewAccountHandlers(
 	logger goa.LogAdapter,
 ) *AccountHandlers {
 	return &AccountHandlers{
-		Create: NewCreateAccountHandler(e.Create, dec, enc, logger),
-		List:   NewListAccountHandler(e.List, dec, enc, logger),
-		Show:   NewShowAccountHandler(e.Show, dec, enc, logger),
-		Delete: NewDeleteAccountHandler(e.Delete, dec, enc, logger),
+		Create: NewCreateAccountHandler(e.Create, CreateAccountDecodeRequest(dec), CreateAccountEncodeResponse(enc), CreateAccountEncodeError(enc, logger)),
+		List:   NewListAccountHandler(e.List, ListAccountDecodeRequest(dec), ListAccountEncodeResponse(enc), rest.EncodeError(enc, logger)),
+		Show:   NewShowAccountHandler(e.Show, ShowAccountDecodeRequest(dec), ShowAccountEncodeResponse(enc), rest.EncodeError(enc, logger)),
+		Delete: NewDeleteAccountHandler(e.Delete, DeleteAccountDecodeRequest(dec), DeleteAccountEncodeResponse(enc), rest.EncodeError(enc, logger)),
 	}
 }
 
@@ -44,7 +44,8 @@ func (h *AccountHandlers) Use(m func(http.Handler) http.Handler) {
 	h.Delete = m(h.Delete)
 }
 
-// MountAccountHandlers configures the mux to serve the account endpoints.
+// MountAccountHandlers configures mux to serve HTTP requests sent to the
+// account service endpoint handlers.
 func MountAccountHandlers(mux rest.Muxer, h *AccountHandlers) {
 	MountCreateAccountHandler(mux, h.Create)
 	MountListAccountHandler(mux, h.List)
@@ -52,10 +53,9 @@ func MountAccountHandlers(mux rest.Muxer, h *AccountHandlers) {
 	MountDeleteAccountHandler(mux, h.Delete)
 }
 
-// MountCreateAccountHandler configures the mux to serve the
-// "account" service "create" endpoint.
+// MountCreateAccountHandler configures mux to serve HTTP requests sent to the
+// account service "create" endpoint handler.
 func MountCreateAccountHandler(mux rest.Muxer, h http.Handler) {
-	var f http.HandlerFunc
 	f, ok := h.(http.HandlerFunc)
 	if !ok {
 		f = func(w http.ResponseWriter, r *http.Request) {
@@ -104,23 +104,17 @@ func MountDeleteAccountHandler(mux rest.Muxer, h http.Handler) {
 	mux.Handle("DELETE", "/accounts/{id}", f)
 }
 
-// NewCreateAccountHandler creates a HTTP handler which loads the HTTP
-// request and calls the "account" service "create" endpoint.
-// The middleware is mounted so it executes after the request is loaded and thus
-// may access the request state via the rest package ContextXXX functions.
+// NewCreateAccountHandler creates a HTTP handler for the account service
+// "create" endpoint. The handler decodes the request, calls the endpoint and
+// encodes the return value in the HTTP response.
 func NewCreateAccountHandler(
 	endpoint goa.Endpoint,
-	dec func(*http.Request) rest.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (rest.Encoder, string),
-	logger goa.LogAdapter,
+	decode func(*http.Request) (interface{}, error),
+	encode func(http.ResponseWriter, *http.Request, interface{}) error,
+	encodeError func(http.ResponseWriter, *http.Request, error),
 ) http.HandlerFunc {
-	var (
-		decodeRequest  = CreateAccountDecodeRequest(dec)
-		encodeResponse = CreateAccountEncodeResponse(enc)
-		encodeError    = CreateAccountEncodeError(enc, logger)
-	)
 	return func(w http.ResponseWriter, r *http.Request) {
-		payload, err := decodeRequest(r)
+		payload, err := decode(r)
 		if err != nil {
 			encodeError(w, r, goa.ErrInvalid("request invalid: %s", err))
 			return
@@ -132,7 +126,7 @@ func NewCreateAccountHandler(
 			encodeError(w, r, err)
 			return
 		}
-		if err := encodeResponse(w, r, res); err != nil {
+		if err := encode(w, r, res); err != nil {
 			encodeError(w, r, err)
 		}
 	}
@@ -191,8 +185,7 @@ func CreateAccountEncodeResponse(encoder func(http.ResponseWriter, *http.Request
 			OrgID: t.OrgID,
 			Name:  t.Name,
 		}
-		enc.Encode(&body)
-		return nil
+		return enc.Encode(&body)
 	}
 }
 
@@ -206,7 +199,9 @@ func CreateAccountEncodeError(encoder func(http.ResponseWriter, *http.Request) (
 			enc, ct := encoder(w, r)
 			rest.SetContentType(w, ct)
 			w.WriteHeader(http.StatusConflict)
-			enc.Encode(t)
+			if err := enc.Encode(t); err != nil {
+				encodeError(w, r, err)
+			}
 		default:
 			encodeError(w, r, v)
 		}
@@ -219,17 +214,12 @@ func CreateAccountEncodeError(encoder func(http.ResponseWriter, *http.Request) (
 // may access the request state via the rest package ContextXXX functions.
 func NewListAccountHandler(
 	endpoint goa.Endpoint,
-	dec func(*http.Request) rest.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (rest.Encoder, string),
-	logger goa.LogAdapter,
+	decode func(r *http.Request) (interface{}, error),
+	encode func(http.ResponseWriter, *http.Request, interface{}) error,
+	encodeError func(http.ResponseWriter, *http.Request, error),
 ) http.HandlerFunc {
-	var (
-		encodeResponse = ListAccountEncodeResponse(enc)
-		decodeRequest  = ListAccountDecodeRequest(dec)
-		encodeError    = rest.EncodeError(enc, logger)
-	)
 	return func(w http.ResponseWriter, r *http.Request) {
-		payload, err := decodeRequest(r)
+		payload, err := decode(r)
 		if err != nil {
 			encodeError(w, r, err)
 		}
@@ -240,7 +230,7 @@ func NewListAccountHandler(
 			encodeError(w, r, err)
 			return
 		}
-		if err := encodeResponse(w, r, res); err != nil {
+		if err := encode(w, r, res); err != nil {
 			encodeError(w, r, err)
 		}
 	}
@@ -300,17 +290,12 @@ func ListAccountEncodeResponse(encoder func(http.ResponseWriter, *http.Request) 
 // may access the request state via the rest package ContextXXX functions.
 func NewShowAccountHandler(
 	endpoint goa.Endpoint,
-	dec func(*http.Request) rest.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (rest.Encoder, string),
-	logger goa.LogAdapter,
+	decode func(*http.Request) (interface{}, error),
+	encode func(http.ResponseWriter, *http.Request, interface{}) error,
+	encodeError func(http.ResponseWriter, *http.Request, error),
 ) http.HandlerFunc {
-	var (
-		decodeRequest  = ShowAccountDecodeRequest(dec)
-		encodeResponse = ShowAccountEncodeResponse(enc)
-		encodeError    = rest.EncodeError(enc, logger)
-	)
 	return func(w http.ResponseWriter, r *http.Request) {
-		payload, err := decodeRequest(r)
+		payload, err := decode(r)
 		if err != nil {
 			encodeError(w, r, err)
 		}
@@ -321,7 +306,7 @@ func NewShowAccountHandler(
 			encodeError(w, r, err)
 			return
 		}
-		if err := encodeResponse(w, r, res); err != nil {
+		if err := encode(w, r, res); err != nil {
 			encodeError(w, r, err)
 		}
 	}
@@ -369,17 +354,12 @@ func ShowAccountEncodeResponse(encoder func(http.ResponseWriter, *http.Request) 
 // request and calls the "account" service "delete" endpoint.
 func NewDeleteAccountHandler(
 	endpoint goa.Endpoint,
-	dec func(*http.Request) rest.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (rest.Encoder, string),
-	logger goa.LogAdapter,
+	decode func(*http.Request) (interface{}, error),
+	encode func(http.ResponseWriter, *http.Request, interface{}) error,
+	encodeError func(http.ResponseWriter, *http.Request, error),
 ) http.HandlerFunc {
-	var (
-		decodeRequest  = DeleteAccountDecodeRequest(dec)
-		encodeResponse = DeleteAccountEncodeResponse(enc)
-		encodeError    = rest.EncodeError(enc, logger)
-	)
 	return func(w http.ResponseWriter, r *http.Request) {
-		payload, err := decodeRequest(r)
+		payload, err := decode(r)
 		if err != nil {
 			encodeError(w, r, err)
 			return
@@ -391,7 +371,7 @@ func NewDeleteAccountHandler(
 			encodeError(w, r, err)
 			return
 		}
-		if err := encodeResponse(w, r, nil); err != nil {
+		if err := encode(w, r, nil); err != nil {
 			encodeError(w, r, err)
 		}
 	}

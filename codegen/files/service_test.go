@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sergi/go-diff/diffmatchpatch"
+
 	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/design"
 )
@@ -333,21 +335,29 @@ func TestService(t *testing.T) {
 		}
 		actual := string(bs)
 		if !strings.Contains(actual, tc.Expected) {
-			_, err := exec.LookPath("diff")
-			supportsDiff := (err == nil)
-			var diff string
-			if supportsDiff {
-				left := createTempFile(t, actual)
-				right := createTempFile(t, tc.Expected)
-				defer os.Remove(left)
-				defer os.Remove(right)
-				cmd := exec.Command("diff", left, right)
-				diffb, _ := cmd.CombinedOutput()
-				diff = "diff\n" + string(diffb)
-			}
-			t.Errorf("%s: got\n%v\n=============\nexpected to contain\n%v\n%v", k, actual, tc.Expected, diff)
+			t.Errorf("%s: got\n%v\n=============\nexpected to contain\n%v\ndiff:\n%s", k, actual, tc.Expected, diff(t, actual, tc.Expected))
 		}
 	}
+}
+
+// diff returns a diff between s1 and s2.
+// It tries to leverage the diff tool if present in the system otherwise
+// degrades to using the dmp package.
+func diff(t *testing.T, s1, s2 string) string {
+	_, err := exec.LookPath("diff")
+	supportsDiff := (err == nil)
+	if !supportsDiff {
+		dmp := diffmatchpatch.New()
+		diffs := dmp.DiffMain(s1, s2, false)
+		return dmp.DiffPrettyText(diffs)
+	}
+	left := createTempFile(t, s1)
+	right := createTempFile(t, s2)
+	defer os.Remove(left)
+	defer os.Remove(right)
+	cmd := exec.Command("diff", left, right)
+	diffb, _ := cmd.CombinedOutput()
+	return string(diffb)
 }
 
 func createTempFile(t *testing.T, content string) string {

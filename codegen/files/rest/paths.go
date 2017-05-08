@@ -158,6 +158,7 @@ func {{ goify $.EndpointName true }}{{ goify $.ServiceName true }}Path{{ if ne $
 	{{ else if eq $elemType "float32"       }}strconv.FormatFloat(float64(v), 'f', -1, 32)
 	{{ else if eq $elemType "float64"       }}strconv.FormatFloat(v, 'f', -1, 64)
 	{{ else if eq $elemType "boolean"       }}strconv.FormatBool(v)
+	{{ else if eq $elemType "bytes"         }}url.QueryEscape(string(v))
 	{{ else }}url.QueryEscape(fmt.Sprintf("%v", v))
 	{{ end -}}
 	}

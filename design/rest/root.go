@@ -205,6 +205,12 @@ func (r *RootExpr) EvalName() string {
 func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	resources := make(eval.ExpressionSet, len(r.Resources))
 	var actions []eval.Expression
+	sort.SliceStable(r.Resources, func(i, j int) bool {
+		if r.Resources[j].ParentName == r.Resources[i].Name() {
+			return true
+		}
+		return false
+	})
 	for i, res := range r.Resources {
 		resources[i] = res
 		for _, a := range res.Actions {

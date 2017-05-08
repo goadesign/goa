@@ -1,11 +1,24 @@
+// TBD
+// MarshalTypes codegen file
+// Change RequestBodyType like RequestResponseType
+// Write decode code
+// use name scope for types? (hopefully don't have to)
+// add tags to generated type from restgen.GoTypeDef
+// Make sure to generate user type for each error even if declared with primitive
+// Add metadata to specify error type attribute to be used for error message
+// validate only one error per http status code
+// Make sure primitive rename of []byte to bytes didn't break stuff
+
+// DSL validation: make sure there's at least one response for all actions
+
 package rest
 
 import (
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"text/template"
 
-	"net/http"
 	"strings"
 
 	"goa.design/goa.v2/codegen"
@@ -43,7 +56,6 @@ type (
 		VarServiceName string
 		// Routes describes the possible routes for this action.
 		Routes []*serverRouteData
-
 		// MountHandler is the name of the mount handler function.
 		MountHandler string
 		// Constructor is the name of the constructor function for the http handler function.
@@ -56,10 +68,12 @@ type (
 		ErrorEncoder string
 		// Payload provides information about the payload.
 		Payload *serverPayloadData
-		// Responses describes the information about the different responses.
+		// Responses describes the information about the different
+		// responses. If there are more than one responses then the
+		// tagless response must be last.
 		Responses []*serverResponseData
 		// HTTPErrors describes the information about error responses.
-		HTTPErrors []*serverResponseData
+		HTTPErrors []*serverErrorData
 	}
 
 	// serverPayloadData describes a payload.
@@ -90,14 +104,34 @@ type (
 
 	// serverResponseData describes a response.
 	serverResponseData struct {
-		// Name is the name of the response structure.
-		Name string
+		// Body is the type of the response body, nil if body should be
+		// empty.
+		Body design.DataType
+		// BodyUserTypeName is the name of the Body type if it is a user
+		// or media type, the empty string otherwise.
+		BodyUserTypeName string
 		// StatusCode is the return code of the response.
 		StatusCode string
-		// HasBody indicates that the response will return data in the body.
-		HasBody bool
 		// Headers provides information about the headers in the response.
 		Headers []*serverHeaderData
+		// TagName is the name of the attribute used to test whether the
+		// response is the one to use.
+		TagName string
+		// TagValue is the value the result attribute named by TagName
+		// must have for this response to be used.
+		TagValue string
+		// ResultToBody maps the result type attribute names to the
+		// response body attribute names if the type differ (i.e. if
+		// there are mapped attribute or if there are response headers)
+		ResultToBody map[string]string
+	}
+
+	// serverErrorData describes a error response.
+	serverErrorData struct {
+		// Type is the error user type.
+		Type design.DataType
+		// Response is the error response data.
+		Response *serverResponseData
 	}
 
 	// serverParamData describes a parameter.
@@ -229,24 +263,12 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 
 		responses := make([]*serverResponseData, len(a.Responses))
 		for i, v := range a.Responses {
-			hasBody := v.Body != nil && v.Body.Type != design.Empty
-			responses[i] = &serverResponseData{
-				Name: fmt.Sprintf("%s%s",
-					varServiceName,
-					codegen.Goify(http.StatusText(v.StatusCode), true),
-				),
-				StatusCode: restgen.StatusCodeToHTTPConst(v.StatusCode),
-				HasBody:    hasBody,
-				Headers:    extractHeaders(v.MappedHeaders()),
-			}
+			responses[i] = buildResponseData(r, a, v)
 		}
 
-		httpErrors := make([]*serverResponseData, len(a.HTTPErrors))
+		httperrs := make([]*serverErrorData, len(a.HTTPErrors))
 		for i, v := range a.HTTPErrors {
-			httpErrors[i] = &serverResponseData{
-				Name:       codegen.Goify(v.Name, true),
-				StatusCode: restgen.StatusCodeToHTTPConst(v.Response.StatusCode),
-			}
+			httperrs[i] = buildErrorData(r, a, v)
 		}
 
 		ad := &serverActionData{
@@ -256,7 +278,7 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 			VarServiceName:  varServiceName,
 			Routes:          routes,
 			Responses:       responses,
-			HTTPErrors:      httpErrors,
+			HTTPErrors:      httperrs,
 			MountHandler:    fmt.Sprintf("Mount%s%sHandler", varEndpointName, varServiceName),
 			Constructor:     fmt.Sprintf("New%s%sHandler", varEndpointName, varServiceName),
 			Decoder:         fmt.Sprintf("%s%sDecodeRequest", varEndpointName, varServiceName),
@@ -279,6 +301,93 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 		sd.ActionData = append(sd.ActionData, ad)
 	}
 	return sd
+}
+
+func buildResponseData(r *rest.ResourceExpr, a *rest.ActionExpr, v *rest.HTTPResponseExpr) *serverResponseData {
+	var bodyTypeName string
+	name := codegen.Goify(r.Name(), true) + codegen.Goify(a.Name(), true)
+	if len(a.Responses) > 1 {
+		name += http.StatusText(v.StatusCode)
+	}
+	name += "Response"
+	body := restgen.ResponseBodyType(a.EndpointExpr.Result, v, name)
+	if body != nil {
+		if ut, ok := body.(design.UserType); ok {
+			bodyTypeName = ut.Name()
+		}
+	}
+	var resultToBody map[string]string
+	mapped := false
+	if design.IsObject(body) {
+		resultToBody = make(map[string]string)
+		matt := rest.NewMappedAttributeExpr(&design.AttributeExpr{Type: body})
+		obj := design.AsObject(a.EndpointExpr.Result.Type)
+		restgen.WalkMappedAttr(matt, func(name, elem string, required bool, a *design.AttributeExpr) error {
+			if _, ok := obj[name]; ok {
+				resultToBody[name] = elem
+				if name != elem {
+					mapped = true
+				}
+			}
+			return nil
+		})
+	}
+	if body == a.EndpointExpr.Result.Type && !mapped {
+		resultToBody = nil // no need to generate mapping
+	}
+	return &serverResponseData{
+		Body:             body,
+		BodyUserTypeName: bodyTypeName,
+		StatusCode:       restgen.StatusCodeToHTTPConst(v.StatusCode),
+		Headers:          extractHeaders(v.MappedHeaders()),
+		TagName:          v.Tag[0],
+		TagValue:         v.Tag[1],
+		ResultToBody:     resultToBody,
+	}
+}
+
+func buildErrorData(r *rest.ResourceExpr, a *rest.ActionExpr, v *rest.HTTPErrorExpr) *serverErrorData {
+	var bodyTypeName string
+	name := codegen.Goify(r.Name(), true) +
+		codegen.Goify(a.Name(), true) +
+		http.StatusText(v.Response.StatusCode) +
+		"Response"
+	body := restgen.ResponseBodyType(v.ErrorExpr.AttributeExpr, v.Response, name)
+	if body != nil {
+		if ut, ok := body.(design.UserType); ok {
+			bodyTypeName = ut.Name()
+		}
+	}
+	var resultToBody map[string]string
+	mapped := false
+	if design.IsObject(body) {
+		resultToBody = make(map[string]string)
+		matt := rest.NewMappedAttributeExpr(&design.AttributeExpr{Type: body})
+		obj := design.AsObject(v.ErrorExpr.Type)
+		restgen.WalkMappedAttr(matt, func(name, elem string, required bool, a *design.AttributeExpr) error {
+			if _, ok := obj[name]; ok {
+				resultToBody[name] = elem
+				if name != elem {
+					mapped = true
+				}
+			}
+			return nil
+		})
+	}
+	if body == v.ErrorExpr.Type && !mapped {
+		resultToBody = nil // no need to generate mapping
+	}
+	response := serverResponseData{
+		Body:             body,
+		BodyUserTypeName: bodyTypeName,
+		StatusCode:       restgen.StatusCodeToHTTPConst(v.Response.StatusCode),
+		Headers:          extractHeaders(v.Response.MappedHeaders()),
+		ResultToBody:     resultToBody,
+	}
+	return &serverErrorData{
+		Type:     v.ErrorExpr.Type.(design.UserType),
+		Response: &response,
+	}
 }
 
 func extractHeaders(a *rest.MappedAttributeExpr) []*serverHeaderData {
@@ -625,71 +734,105 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 const serverEncoderT = `{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .Encoder .EndpointName .ServiceName | comment }}
 func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) rest.Encoder) func(http.ResponseWriter, *http.Request, interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
-	{{- if eq (len .Responses) 1 }}
-		{{- with index .Responses 0}}{{/* TBD: support multiple responses */}}
-		{{- if or .HasBody .Headers }}
-		t := v.(*{{ .Name }})
+
+	{{- if .BodyUserTypeName }}
+		t := v.(*{{ .BodyUserTypeName }})
+
+		{{- range .Responses }}
+
+			{{- if .TagName }}
+		if t.{{ .TagName }} == {{ printf "%q" .TagValue }} {
+			{{- end }}
+
+			{{- template "response" . }}
+
+			{{- if .TagName }}
+		}
+			{{- end }}
+
 		{{- end }}
 
-		{{- if .HasBody }}
-		w.Header().Set("Content-Type", ResponseContentType(r))
+	{{- else }}
+
+		{{- with (index .Responses 0) }}
+
+		{{- if .Body }}
+		enc, ct := encoder(w, r)
+		rest.SetContentType(w, ct)
+		w.WriteHeader({{ .StatusCode }})
+		return enc.Encode(v)
+
+		{{- else }}
+		w.WriteHeader({{ .StatusCode }})
+		return nil
+
 		{{- end }}
 
-		{{- range .Headers }}
+		{{- end }}
 
+	{{- end }}
+	}
+}
+` + responseT
+
+const serverErrorEncoderT = `{{ printf "%s returns an encoder for errors returned by the %s %s endpoint." .ErrorEncoder .EndpointName .ServiceName | comment }}
+func {{ .ErrorEncoder }}(encoder func(http.ResponseWriter, *http.Request) rest.Encoder, logger goa.LogAdapter) func(http.ResponseWriter, *http.Request, error) {
+	encodeError := rest.EncodeError(encoder, logger)
+	return func(w http.ResponseWriter, r *http.Request, v error) {
+		switch t := v.(type) {
+
+		{{- range .HTTPErrors }}
+		case *service.{{ .Type }}:
+
+			{{- template "response" .Response }}
+
+		{{- end }}
+		default:
+			encodeError(w, r, v)
+		}
+	}
+}
+` + responseT
+
+const responseT = `{{ define "response" }}
+	enc, ct := encoder(w, r)
+	rest.SetContentType(w, ct)
+
+	{{- range .Headers }}
 		{{- if not .Required }}
-		if t.{{ .FieldName }} != nil {
+	if t.{{ .FieldName }} != nil {
 		{{- end }}
 
 		{{- if eq .Type.Name "string" }}
-		w.Header().Set("{{ .Name }}", {{ if not .Required }}*{{ end }}t.{{ .FieldName }})
+	w.Header().Set("{{ .Name }}", {{ if not .Required }}*{{ end }}t.{{ .FieldName }})
 		{{- else }}
-		v := t.{{ .FieldName }}
-		{{ template "header_conversion" . }}
-		w.Header().Set("{{ .Name }}", {{ .VarName }})
+	v := t.{{ .FieldName }}
+	{{ template "header_conversion" . }}
+	w.Header().Set("{{ .Name }}", {{ .VarName }})
 		{{- end }}
 
 		{{- if not .Required }}
-		}
-		{{- end }}
-
-		{{- end }}
-		w.WriteHeader({{ .StatusCode }})
-		{{- if .HasBody }}
-		if t != nil {
-			return encoder(w, r).Encode(t)
-		}
-		{{- end }}
-		{{- end }}
-	{{- else }}
-		switch t := v.(type) {
-		{{- range .Responses }}
-		case *{{ .Name }}:
-
-			{{- range .Headers }}
-
-			{{- if eq .Type.Name "string" }}
-			w.Header().Set("{{ .Name }}", {{ if not .Required }}*{{ end }}t.{{ .FieldName }})
-			{{- else }}
-			v := t.{{ .FieldName }}
-			{{ template "header_conversion" . }}
-			w.Header().Set("{{ .Name }}", {{ .VarName }})
-			{{- end }}
-
-			{{- end }}
-			w.WriteHeader({{ .StatusCode }})
-			{{- if .HasBody }}
-			return encoder(w, r).Encode(t)
-			{{- end }}
-		{{- end }}
-		default:
-			return fmt.Errorf("invalid response type")
-		}
-	{{- end }}
-		return nil
 	}
-}
-{{ define "header_conversion" }}
+		{{- end }}
+	{{- end }}
+
+	w.WriteHeader({{ .StatusCode }})
+
+	{{- if .ResultToBody }}	
+	body := {{ .BodyUserTypeName }}{
+		{{- range $res, $bod := .ResultToBody }}
+		{{ $bod }}: t.{{ $res }},
+		{{- end }}
+	}
+
+	{{- else }}
+	body := {{ .BodyUserTypeName }}(*t)
+
+	{{- end }}
+	return enc.Encode(&body)
+{{- end }}
+
+{{- define "header_conversion" }}
 	{{- if eq .Type.Name "boolean" }}
 		{{ .VarName }} := strconv.FormatBool({{ if not .Required }}*{{ end }}v)
 	{{- else if eq .Type.Name "int" }}
@@ -715,22 +858,5 @@ func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) rest.Encode
 	{{- else }}
 		// unsupported type {{ .Type.Name }} for header field {{ .FieldName }}
 	{{- end }}
-{{- end }}`
-
-const serverErrorEncoderT = `{{ printf "%s returns an encoder for errors returned by the %s %s endpoint." .ErrorEncoder .EndpointName .ServiceName | comment }}
-func {{ .ErrorEncoder }}(encoder func(http.ResponseWriter, *http.Request) rest.Encoder, logger goa.LogAdapter) func(http.ResponseWriter, *http.Request, error) {
-	encodeError := rest.EncodeError(encoder, logger)
-	return func(w http.ResponseWriter, r *http.Request, v error) {
-		w.Header().Set("Content-Type", ResponseContentType(r))
-		switch t := v.(type) {
-		{{ range .HTTPErrors -}}
-		case *service.{{ .Name }}:
-			w.WriteHeader({{ .StatusCode }})
-			encoder(w, r).Encode(t)
-		{{- end }}
-		default:
-			encodeError(w, r, v)
-		}
-	}
-}
+{{- end }}
 `

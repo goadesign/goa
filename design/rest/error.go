@@ -58,3 +58,12 @@ func (e *HTTPErrorExpr) Finalize() {
 	}
 	e.ErrorExpr = ee
 }
+
+// Dup creates a copy of the error expression.
+func (e *HTTPErrorExpr) Dup() *HTTPErrorExpr {
+	return &HTTPErrorExpr{
+		ErrorExpr: e.ErrorExpr,
+		Name:      e.Name,
+		Response:  e.Response.Dup(),
+	}
+}

@@ -223,8 +223,13 @@ func (r *ResourceExpr) Validate() error {
 	if n := r.ParentName; n != "" {
 		if p := Root.Resource(n); p == nil {
 			verr.Add(r, "Parent service %s not found", n)
-		} else if p.CanonicalAction() == nil {
-			verr.Add(r, "Parent service %s has no canonical action", n)
+		} else {
+			if p.CanonicalAction() == nil {
+				verr.Add(r, "Parent service %s has no canonical action", n)
+			}
+			if p.ParentName == r.Name() {
+				verr.Add(r, "Parent service %s is also child", n)
+			}
 		}
 	}
 	if n := r.CanonicalActionName; n != "" {

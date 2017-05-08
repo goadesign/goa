@@ -9,11 +9,15 @@ import (
 // error responses. When describing an error response the first argument is the
 // name of the error.
 //
-// While a service endpoint may only define a single result type Response may
-// define multiple success HTTP responses. The expression allows for specifying
-// the response status code (as an argument of the Response function or via the
-// Code function), headers (via the Header and ContentType functions) and body
-// (via the Body function).
+// While a service endpoint may only define a single result type Response may be
+// called multiple times to define multiple success HTTP responses. In this case
+// the Tag expression makes it possible to specify the name of a field in the
+// endpoint result type and a value that the field must have for the
+// corresponding response to be sent. The tag field must be of type String.
+//
+// Response allows specifying the response status code as an argument or via the
+// Code expression, headers via the Header and ContentType expressions and body
+// via the Body expression.
 //
 // By default success HTTP responses use status code 200 and error HTTP responses
 // use status code 400. Also by default the responses use the endpoint result
@@ -111,30 +115,30 @@ import (
 //
 // Example:
 //
-// Endpoint("create", func() {
-//     Payload(CreatePayload)
-//     Result(CreateResult)
-//     Error("an_error")
-//     HTTP(func() {
-//         Response(StatusCreated) // Uses HTTP status code 201 Created and
-//                                 // CreateResult type to describe body
+//    Endpoint("create", func() {
+//        Payload(CreatePayload)
+//        Result(CreateResult)
+//        Error("an_error")
+//        HTTP(func() {
+//            Response(StatusCreated) // Uses HTTP status code 201 Created and
+//                                    // CreateResult type to describe body
 //
-//         Response(func() {
-//             Description("Response used when item already exists")
-//             Code(StatusNoContent) // HTTP status code set using Code
-//             Body(Empty)           // Override endpoint result type
-//         })
+//            Response(func() {
+//                Description("Response used when item already exists")
+//                Code(StatusNoContent) // HTTP status code set using Code
+//                Body(Empty)           // Override endpoint result type
+//            })
 //
-//         Response(StatusAccepted, func() {
-//             Description("Response used for async creations")
-//             Body(func() {
-//                 Attribute("taskHref", String, "API href to async task")
-//             })
-//         })
+//            Response(StatusAccepted, func() {
+//                Description("Response used for async creations")
+//                Body(func() {
+//                    Attribute("taskHref", String, "API href to async task")
+//                })
+//            })
 //
-//         Response("an_error", StatusConflict) // Override default of 400
-//     })
-// })
+//            Response("an_error", StatusConflict) // Override default of 400
+//        })
+//    })
 //
 func Response(val interface{}, args ...interface{}) {
 	name, ok := val.(string)
@@ -177,6 +181,45 @@ func Response(val interface{}, args ...interface{}) {
 	default:
 		eval.IncompatibleDSL()
 	}
+}
+
+// Tag identifies a endpoint result type field and a value. The algorithm that
+// encodes the result into the HTTP response iterates through the responses and
+// uses the first response that has a matching tag (that is for which the result
+// field with the tag name matches the tag value). There must be one and only
+// one response with no Tag expression, this response is used when no other tag
+// matches.
+//
+// Tag may appear in Response.
+// Tag accepts two arguments: the name of the field and the (string) value.
+//
+// Example:
+//
+//    Endpoint("create", func() {
+//        Result(CreateResult)
+//        HTTP(func() {
+//            Response(StatusCreated, func() {
+//                Tag("outcome", "created") // Assumes CreateResult has attribute
+//                                          // "outcome" which may be "created"
+//                                          // or "accepted"
+//            })
+//
+//            Response(StatusAccepted, func() {
+//                Tag("outcome", "accepted")
+//            })
+//
+//            Response(StatusOK)            // Default response if "outcome" is
+//                                          // neither "created" nor "accepted"
+//        })
+//    })
+//
+func Tag(name, value string) {
+	res, ok := eval.Current().(*rest.HTTPResponseExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	res.Tag = [2]string{name, value}
 }
 
 // Code sets the Response status code.

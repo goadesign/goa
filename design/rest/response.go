@@ -86,6 +86,9 @@ type (
 		Body *design.AttributeExpr
 		// Response Content-Type header value
 		ContentType string
+		// Tag the value a field of the result must have for this
+		// response to be used.
+		Tag [2]string
 		// Parent expression, one of ActionExpr, ResourceExpr or
 		// RootExpr.
 		Parent eval.Expression
@@ -160,4 +163,17 @@ func (r *HTTPResponseExpr) Finalize() {
 		return
 	}
 	r.ContentType = mt.Identifier
+}
+
+// Dup creates a copy of the response expression.
+func (r *HTTPResponseExpr) Dup() *HTTPResponseExpr {
+	return &HTTPResponseExpr{
+		StatusCode:  r.StatusCode,
+		Description: r.Description,
+		Body:        design.DupAtt(r.Body),
+		ContentType: r.ContentType,
+		Parent:      r.Parent,
+		Metadata:    r.Metadata,
+		headers:     design.DupAtt(r.headers),
+	}
 }

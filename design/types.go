@@ -261,7 +261,7 @@ func (p Primitive) Name() string {
 	case String:
 		return "string"
 	case Bytes:
-		return "[]byte"
+		return "bytes"
 	case Any:
 		return "any"
 	default:

@@ -24,7 +24,7 @@ func NewMappedAttributeExpr(att *design.AttributeExpr) *MappedAttributeExpr {
 		panic("cannot create a mapped attribute with a non object attribute") // bug
 	}
 	var (
-		o          = att.Type.(design.Object)
+		o          = design.AsObject(att.Type)
 		n          = make(design.Object, len(o))
 		nameMap    = make(map[string]string)
 		reverseMap = make(map[string]string)
