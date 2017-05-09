@@ -5,6 +5,7 @@ import (
 	"github.com/goadesign/goa/dslengine"
 )
 
+// Response can be used in: Action, Resource
 // Response implements the response definition DSL. Response takes the name of the response as
 // first parameter. goa defines all the standard HTTP status name as global variables so they can be
 // readily used as response names. The response body data type can be specified as second argument.
@@ -111,6 +112,7 @@ func Response(name string, paramsAndDSL ...interface{}) {
 	}
 }
 
+// Status can be used in: Response, ResponseTemplate
 // Status sets the Response status.
 func Status(status int) {
 	if r, ok := responseDefinition(); ok {
