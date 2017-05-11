@@ -31,7 +31,7 @@ func TestGoTypeDef(t *testing.T) {
 	}
 
 	for k, tc := range cases {
-		actual := GoTypeDef(&design.AttributeExpr{Type: tc.dataType}, false)
+		actual := GoTypeDef(&design.AttributeExpr{Type: tc.dataType}, true)
 		if actual != tc.expected {
 			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
 		}

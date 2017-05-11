@@ -7,7 +7,7 @@ import (
 )
 
 // GoTypeDef returns the Go code that defines the struct corresponding to ma.
-func GoTypeDef(ma *rest.MappedAttributeExpr, private bool) string {
+func GoTypeDef(ma *rest.MappedAttributeExpr, public bool) string {
 	obj := make(design.Object, len(design.AsObject(ma.Type)))
 	var required []string
 	WalkMappedAttr(ma, func(name, elem string, req bool, a *design.AttributeExpr) error {
@@ -20,5 +20,5 @@ func GoTypeDef(ma *rest.MappedAttributeExpr, private bool) string {
 	att := design.DupAtt(ma.Attribute())
 	att.Type = obj
 	att.Validation = &design.ValidationExpr{Required: required}
-	return codegen.GoTypeDef(att, private)
+	return codegen.GoTypeDef(att, public)
 }

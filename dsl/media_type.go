@@ -301,7 +301,7 @@ func CollectionOf(v interface{}, adsl ...func()) *design.MediaTypeExpr {
 	})
 	// Do not execute the adsl right away, will be done last to make sure
 	// the element adsl has run first.
-	design.Root.GeneratedMediaTypes = append(design.Root.GeneratedMediaTypes, mt)
+	design.Root.GeneratedTypes = append(design.Root.GeneratedTypes, mt)
 	return mt
 }
 

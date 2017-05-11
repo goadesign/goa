@@ -68,6 +68,8 @@ type (
 		ErrorEncoder string
 		// Payload provides information about the payload.
 		Payload *serverPayloadData
+		// ResultTypeName is the service endpoint result type name
+		ResultTypeName string
 		// Responses describes the information about the different
 		// responses. If there are more than one responses then the
 		// tagless response must be last.
@@ -82,16 +84,19 @@ type (
 		Name string
 		// Constructor is the name of the payload constructor function.
 		Constructor string
-		// Body is the name of the body structure.
-		Body string
-		// HasBody indicate that the payload expects a body.
-		HasBody bool
-		// PathParams describes the information about params that are present in the path.
+		// BodyTypeName is the name of the request body type if any.
+		BodyTypeName string
+		// PathParams describes the information about params that are
+		// present in the path.
 		PathParams []*serverParamData
-		// QueryParams describes the information about the params that are present in the query.
+		// QueryParams describes the information about the params that
+		// are present in the query.
 		QueryParams []*serverParamData
 		// AllParams describes the params, in path and query.
 		AllParams []*serverParamData
+		// ValidateBody contains the code used to validate the request
+		// body if any.
+		ValidateBody string
 	}
 
 	// serverRouteData describes a route.
@@ -128,8 +133,8 @@ type (
 
 	// serverErrorData describes a error response.
 	serverErrorData struct {
-		// Type is the error user type.
-		Type design.DataType
+		// TypeRef is a reference to the user type.
+		TypeRef string
 		// Response is the error response data.
 		Response *serverResponseData
 	}
@@ -148,6 +153,8 @@ type (
 		Required bool
 		// Type is the datatype of the variable.
 		Type design.DataType
+		// Validate contains the validation code if any.
+		Validate string
 	}
 
 	// serverHeaderData describes a header.
@@ -204,7 +211,6 @@ func Server(r *rest.ResourceExpr) codegen.File {
 				{Path: "net/http"},
 				{Path: "strconv"},
 				{Path: "strings"},
-				{Path: "github.com/dimfeld/httptreemux"},
 				{Path: "goa.design/goa.v2"},
 				{Path: "goa.design/goa.v2/rest"},
 				{Path: genPkg + "/endpoints"},
@@ -252,6 +258,10 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 
 	for _, a := range r.Actions {
 		varEndpointName := codegen.Goify(a.Name(), true)
+		var resultTypeName string
+		if a.EndpointExpr.Result.Type != nil && a.EndpointExpr.Result.Type != design.Empty {
+			resultTypeName = codegen.GoTypeName(a.EndpointExpr.Result.Type)
+		}
 
 		routes := make([]*serverRouteData, len(a.Routes))
 		for i, v := range a.Routes {
@@ -261,9 +271,21 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 			}
 		}
 
-		responses := make([]*serverResponseData, len(a.Responses))
+		var responses []*serverResponseData
+		notag := -1
 		for i, v := range a.Responses {
-			responses[i] = buildResponseData(r, a, v)
+			if v.Tag[0] == "" {
+				if notag > -1 {
+					continue // we don't want more than one response with no tag
+				}
+				notag = i
+			}
+			responses = append(responses, buildResponseData(r, a, v))
+		}
+		count := len(responses)
+		if notag >= 0 && notag < count-1 {
+			// Make sure tagless response is last
+			responses[notag], responses[count-1] = responses[count-1], responses[notag]
 		}
 
 		httperrs := make([]*serverErrorData, len(a.HTTPErrors))
@@ -277,6 +299,7 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 			ServiceName:     r.Name(),
 			VarServiceName:  varServiceName,
 			Routes:          routes,
+			ResultTypeName:  resultTypeName,
 			Responses:       responses,
 			HTTPErrors:      httperrs,
 			MountHandler:    fmt.Sprintf("Mount%s%sHandler", varEndpointName, varServiceName),
@@ -286,16 +309,30 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 			ErrorEncoder:    fmt.Sprintf("%s%sEncodeError", varEndpointName, varServiceName),
 		}
 
-		if a.EndpointExpr.Payload != nil && a.EndpointExpr.Payload.Type != design.Empty {
-			hasBody := a.Body != nil && a.Body.Type != design.Empty
+		if a.EndpointExpr.Payload.Type != design.Empty {
+			name := codegen.Goify(r.Name(), false) + codegen.Goify(a.Name(), true) + "RequestBody"
+			body, public := restgen.RequestBodyType(a, name)
+			var (
+				validate     string
+				bodyTypeName string
+			)
+			{
+				if ut, ok := body.(design.UserType); ok {
+					validate = codegen.RecursiveValidationCode(ut.Attribute(), true, true, "body", "body")
+				}
+				bodyTypeName = codegen.GoTypeName(body)
+				if public {
+					bodyTypeName = "service." + bodyTypeName
+				}
+			}
 			ad.Payload = &serverPayloadData{
-				Name:        fmt.Sprintf("%s%sPayload", varEndpointName, varServiceName),
-				Constructor: fmt.Sprintf("New%s%sPayload", varEndpointName, varServiceName),
-				Body:        fmt.Sprintf("%s%sBody", varEndpointName, varServiceName),
-				HasBody:     hasBody,
-				PathParams:  extractParams(a.PathParams()),
-				QueryParams: extractParams(a.QueryParams()),
-				AllParams:   extractParams(a.AllParams()),
+				Name:         fmt.Sprintf("%s%sPayload", varEndpointName, varServiceName),
+				Constructor:  fmt.Sprintf("New%s%sPayload", varEndpointName, varServiceName),
+				BodyTypeName: bodyTypeName,
+				PathParams:   extractParams(a.PathParams()),
+				QueryParams:  extractParams(a.QueryParams()),
+				AllParams:    extractParams(a.AllParams()),
+				ValidateBody: validate,
 			}
 		}
 		sd.ActionData = append(sd.ActionData, ad)
@@ -309,7 +346,7 @@ func buildResponseData(r *rest.ResourceExpr, a *rest.ActionExpr, v *rest.HTTPRes
 	if len(a.Responses) > 1 {
 		name += http.StatusText(v.StatusCode)
 	}
-	name += "Response"
+	name += "ResponseBody"
 	body := restgen.ResponseBodyType(a.EndpointExpr.Result, v, name)
 	if body != nil {
 		if ut, ok := body.(design.UserType); ok {
@@ -317,23 +354,11 @@ func buildResponseData(r *rest.ResourceExpr, a *rest.ActionExpr, v *rest.HTTPRes
 		}
 	}
 	var resultToBody map[string]string
-	mapped := false
-	if design.IsObject(body) {
-		resultToBody = make(map[string]string)
-		matt := rest.NewMappedAttributeExpr(&design.AttributeExpr{Type: body})
-		obj := design.AsObject(a.EndpointExpr.Result.Type)
-		restgen.WalkMappedAttr(matt, func(name, elem string, required bool, a *design.AttributeExpr) error {
-			if _, ok := obj[name]; ok {
-				resultToBody[name] = elem
-				if name != elem {
-					mapped = true
-				}
-			}
-			return nil
-		})
-	}
-	if body == a.EndpointExpr.Result.Type && !mapped {
-		resultToBody = nil // no need to generate mapping
+	if design.IsObject(a.EndpointExpr.Result.Type) && design.IsObject(body) {
+		rb, mapped := serviceTypeToBody(a.EndpointExpr.Result.Type, body)
+		if body != a.EndpointExpr.Result.Type || mapped {
+			resultToBody = rb
+		}
 	}
 	return &serverResponseData{
 		Body:             body,
@@ -385,7 +410,7 @@ func buildErrorData(r *rest.ResourceExpr, a *rest.ActionExpr, v *rest.HTTPErrorE
 		ResultToBody:     resultToBody,
 	}
 	return &serverErrorData{
-		Type:     v.ErrorExpr.Type.(design.UserType),
+		TypeRef:  codegen.GoPackageTypeRef(v.ErrorExpr.Type, "service"),
 		Response: &response,
 	}
 }
@@ -409,17 +434,45 @@ func extractHeaders(a *rest.MappedAttributeExpr) []*serverHeaderData {
 func extractParams(a *rest.MappedAttributeExpr) []*serverParamData {
 	var params []*serverParamData
 	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
+		field := codegen.Goify(name, true)
+		varn := codegen.Goify(name, false)
 		params = append(params, &serverParamData{
 			Name:      elem,
-			FieldName: codegen.Goify(name, true),
-			VarName:   codegen.Goify(name, false),
+			FieldName: field,
+			VarName:   varn,
 			Required:  required,
 			Type:      c.Type,
+			Validate:  codegen.ValidationCode(c, a.IsRequired(name), false, varn, varn),
 		})
 		return nil
 	})
 
 	return params
+}
+
+// serviceTypeToBody takes a endpoint payload or result type and the
+// corresponding HTTP request or response body type and builds a mapping of
+// endpoint type attribute name to body type attribute name. The names may
+// differ if the DSL uses the "a:b" notation. In that case the second return
+// value is true. Also some body attributes may not have equivalents in endpoint
+// type if the body was explicitly defined in the DSL. In this case the
+// generated code won't automatically initialized non-matching attributes, the
+// user may want to augment the generated code with custom code.
+func serviceTypeToBody(dt, body design.DataType) (map[string]string, bool) {
+	mapped := false
+	toBody := make(map[string]string)
+	obj := design.AsObject(dt)
+	matt := rest.NewMappedAttributeExpr(&design.AttributeExpr{Type: body})
+	restgen.WalkMappedAttr(matt, func(name, elem string, required bool, a *design.AttributeExpr) error {
+		if _, ok := obj[name]; ok {
+			toBody[name] = elem
+			if name != elem {
+				mapped = true
+			}
+		}
+		return nil
+	})
+	return toBody, mapped
 }
 
 // HasResponses indicates if an action has responses.
@@ -545,51 +598,60 @@ func {{ .Constructor }}(
 const serverDecoderT = `{{ printf "%s returns a decoder for requests sent to the create %s endpoint." .Decoder .ServiceName | comment }}
 func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*service.{{ .Payload.Name }}, error) {
-{{- if .Payload.HasBody }}
+
+{{- if .Payload.BodyTypeName }}
 		var (
-			body {{ .Payload.Body }}
+			body {{ .Payload.BodyTypeName }}
 			err  error
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if err == io.EOF {
-				err = fmt.Errorf("empty body")
+				err = goa.MissingPayloadError()
 			}
 			return nil, err
 		}
+		{{- .Payload.ValidateBody }}
 {{ end }}
-{{- if or .Payload.HasParams }}
-		{{- if or .Payload.HasPathParams }}
-		params := httptreemux.ContextParams(r.Context())
+
+{{- if .Payload.HasParams }}
+		{{- if .Payload.HasPathParams }}
+		params := rest.ContextParams(r.Context())
 		{{- end }}
 		var (
 			{{- range .Payload.AllParams }}
 			{{ .VarName }} {{goTypeRef .Type false }}
 			{{- end }}
 		)
-{{ range .Payload.QueryParams }}
-	{{- if eq .Type.Name "string" }}
-		{{ .VarName }} = r.URL.Query().Get("{{ .Name }}")
-	{{- else }}
-		{{ .VarName }}Raw := r.URL.Query().Get("{{ .Name }}")
+
+{{- range .Payload.QueryParams }}
+	{{ .VarName }}{{ if not (eq .Type.Name "string" )}}Raw :{{ end }}= r.URL.Query().Get("{{ .Name }}")
+	{{- if .Required }}if {{ .VarName }}{{ if not (eq .Type.Name "string" )}}Raw{{ end }} == "" {
+		return nil, goa.MissingFieldError("{{ .Name }}", "query string")
+	}{{ end }}
+	{{- if not (eq .Type.Name "string") }}
 		{{- template "conversion" . }}
 	{{- end }}
+	{{- .Validate }}
 {{ end }}
+
 {{- range .Payload.PathParams }}
-	{{- if eq .Type.Name "string" }}
-		{{ .VarName }} = params["{{ .Name }}"]
-	{{- else }}
-		{{ .VarName }}Raw := params["{{ .Name }}"]
+	{{ .VarName }}{{ if not (eq .Type.Name "string" )}}Raw :{{ end }}= params["{{ .Name }}"]
+	{{- if .Required }}if {{ .VarName }}{{ if not (eq .Type.Name "string" )}}Raw{{ end }} == "" {
+		return nil, goa.MissingFieldError("{{ .Name }}", "path parameter")
+	}{{ end }}
+	{{- if not (eq .Type.Name "string") }}
 		{{- template "conversion" . }}
 	{{- end }}
+	{{- .Validate }}
 {{ end }}
+
 {{- end }}
-		payload, err := {{ .Payload.Constructor }}(
-			{{- if .Payload.HasBody }}&body{{ end -}}
+		return {{ .Payload.Constructor }}(
+			{{- if .Payload.BodyTypeName }}&body{{ end -}}
 			{{- range $i, $p := .Payload.AllParams }}
-				{{- if or (ne $i 0) ($.Payload.HasBody) }}, {{ end -}}{{ .VarName }}
+				{{- if or (ne $i 0) ($.Payload.BodyTypeName) }}, {{ end -}}{{ .VarName }}
 			{{- end }})
-		return payload, err
 	}
 }
 {{- define "conversion" }}
@@ -611,55 +673,55 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 	{{- else if eq .Type.Name "int" }}
 		v, err := strconv.ParseInt({{ .VarName }}Raw, 10, strconv.IntSize)
 		if err != nil {
-			return nil, fmt.Errorf("{{ .Name }} must be an integer, got '%s'", {{ .VarName }}Raw)
+			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "integer")
 		}
 		{{ .VarName }} = int(v)
 	{{- else if eq .Type.Name "int32" }}
 		v, err := strconv.ParseInt({{ .VarName }}Raw, 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("{{ .Name }} must be an integer, got '%s'", {{ .VarName }}Raw)
+			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "integer")
 		}
 		{{ .VarName }} = int32(v)
 	{{- else if eq .Type.Name "int64" }}
 		v, err := strconv.ParseInt({{ .VarName }}Raw, 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("{{ .Name }} must be an integer, got '%s'", {{ .VarName }}Raw)
+			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "integer")
 		}
 		{{ .VarName }} = v
 	{{- else if eq .Type.Name "uint" }}
 		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, strconv.IntSize)
 		if err != nil {
-			return nil, fmt.Errorf("{{ .Name }} must be an unsigned integer, got '%s'", {{ .VarName }}Raw)
+			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "unsigned integer")
 		}
 		{{ .VarName }} = uint(v)
 	{{- else if eq .Type.Name "uint32" }}
 		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("{{ .Name }} must be an unsigned integer, got '%s'", {{ .VarName }}Raw)
+			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "unsigned integer")
 		}
 		{{ .VarName }} = int32(v)
 	{{- else if eq .Type.Name "uint64" }}
 		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("{{ .Name }} must be an unsigned integer, got '%s'", {{ .VarName }}Raw)
+			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "unsigned integer")
 		}
 		{{ .VarName }} = v
 	{{- else if eq .Type.Name "float32" }}
 		v, err := strconv.ParseFloat({{ .VarName }}Raw, 32)
 		if err != nil {
-			return nil, fmt.Errorf("{{ .Name }} must be a float, got '%s'", {{ .VarName }}Raw)
+			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "float")
 		}
 		{{ .VarName }} = float32(v)
 	{{- else if eq .Type.Name "float64" }}
 		v, err := strconv.ParseFloat({{ .VarName }}Raw, 64)
 		if err != nil {
-			return nil, fmt.Errorf("{{ .Name }} must be a float, got '%s'", {{ .VarName }}Raw)
+			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "float")
 		}
 		{{ .VarName }} = v
 	{{- else if eq .Type.Name "boolean" }}
 		v, err := strconv.ParseBool({{ .VarName }}Raw)
 		if err != nil {
-			return nil, fmt.Errorf("{{ .Name }} must be a boolean (true or false), got '%s'", {{ .VarName }}Raw)
+			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "boolean")
 		}
 		{{ .VarName }} = v
 	{{- else }}
@@ -674,55 +736,55 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		{{- else if eq .Type.ElemType.Type.Name "int" }}
 			v, err := strconv.ParseInt(rv, 10, strconv.IntSize)
 			if err != nil {
-				return nil, fmt.Errorf("{{ .Name }} must be an set of integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
+				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of integers")
 			}
 			{{ .VarName }}[i] = int(v)
 		{{- else if eq .Type.ElemType.Type.Name "int32" }}
 			v, err := strconv.ParseInt(rv, 10, 32)
 			if err != nil {
-				return nil, fmt.Errorf("{{ .Name }} must be an set of integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
+				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of integers")
 			}
 			{{ .VarName }}[i] = int32(v)
 		{{- else if eq .Type.ElemType.Type.Name "int64" }}
 			v, err := strconv.ParseInt(rv, 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("{{ .Name }} must be an set of integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
+				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of integers")
 			}
 			{{ .VarName }}[i] = v
 		{{- else if eq .Type.ElemType.Type.Name "uint" }}
 			v, err := strconv.ParseUint(rv, 10, strconv.IntSize)
 			if err != nil {
-				return nil, fmt.Errorf("{{ .Name }} must be an set of unsigned integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
+				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of unsigned integers")
 			}
 			{{ .VarName }}[i] = uint(v)
 		{{- else if eq .Type.ElemType.Type.Name "uint32" }}
 			v, err := strconv.ParseUint(rv, 10, 32)
 			if err != nil {
-				return nil, fmt.Errorf("{{ .Name }} must be an set of unsigned integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
+				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of unsigned integers")
 			}
 			{{ .VarName }}[i] = int32(v)
 		{{- else if eq .Type.ElemType.Type.Name "uint64" }}
 			v, err := strconv.ParseUint(rv, 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("{{ .Name }} must be an set of unsigned integers, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
+				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of unsigned integers")
 			}
 			{{ .VarName }}[i] = v
 		{{- else if eq .Type.ElemType.Type.Name "float32" }}
 			v, err := strconv.ParseFloat(rv, 32)
 			if err != nil {
-				return nil, fmt.Errorf("{{ .Name }} must be an set of floats, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
+				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of floats")
 			}
 			{{ .VarName }}[i] = float32(v)
 		{{- else if eq .Type.ElemType.Type.Name "float64" }}
 			v, err := strconv.ParseFloat(rv, 64)
 			if err != nil {
-				return nil, fmt.Errorf("{{ .Name }} must be an set of floats, got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
+				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of floats")
 			}
 			{{ .VarName }}[i] = v
 		{{- else if eq .Type.ElemType.Type.Name "boolean" }}
 			v, err := strconv.ParseBool(rv)
 			if err != nil {
-				return nil, fmt.Errorf("{{ .Name }} must be an set of booleans (true, false, 1 or 0), got value '%s' in set '%s'", rv, {{ .VarName }}Raw)
+				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of booleans")
 			}
 			{{ .VarName }}[i] = v
 		{{- else }}
@@ -735,16 +797,21 @@ const serverEncoderT = `{{ printf "%s returns an encoder for responses returned 
 func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) rest.Encoder) func(http.ResponseWriter, *http.Request, interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 
-	{{- if .BodyUserTypeName }}
-		t := v.(*{{ .BodyUserTypeName }})
+	{{- if .ResultTypeName }}
+		t := v.(*service.{{ .ResultTypeName }})
 
 		{{- range .Responses }}
 
 			{{- if .TagName }}
 		if t.{{ .TagName }} == {{ printf "%q" .TagValue }} {
 			{{- end }}
+			{{ template "response" . }}
 
-			{{- template "response" . }}
+			{{- if .ResultToBody }}	
+			return enc.Encode(&body)
+			{{- else }}	
+			return enc.Encode(t)
+			{{- end }}	
 
 			{{- if .TagName }}
 		}
@@ -782,9 +849,16 @@ func {{ .ErrorEncoder }}(encoder func(http.ResponseWriter, *http.Request) rest.E
 		switch t := v.(type) {
 
 		{{- range .HTTPErrors }}
-		case *service.{{ .Type }}:
+		case {{ .TypeRef }}:
 
 			{{- template "response" .Response }}
+			{{- if .Response.ResultToBody }}	
+			if err := enc.Encode(&body); err != nil {
+			{{- else }}	
+			if err := enc.Encode(t); err != nil {
+			{{- end }}
+				encodeError(w, r, err)
+			}
 
 		{{- end }}
 		default:
@@ -794,7 +868,7 @@ func {{ .ErrorEncoder }}(encoder func(http.ResponseWriter, *http.Request) rest.E
 }
 ` + responseT
 
-const responseT = `{{ define "response" }}
+const responseT = `{{ define "response" -}}
 	enc, ct := encoder(w, r)
 	rest.SetContentType(w, ct)
 
@@ -815,7 +889,6 @@ const responseT = `{{ define "response" }}
 	}
 		{{- end }}
 	{{- end }}
-
 	w.WriteHeader({{ .StatusCode }})
 
 	{{- if .ResultToBody }}	
@@ -825,11 +898,7 @@ const responseT = `{{ define "response" }}
 		{{- end }}
 	}
 
-	{{- else }}
-	body := {{ .BodyUserTypeName }}(*t)
-
 	{{- end }}
-	return enc.Encode(&body)
 {{- end }}
 
 {{- define "header_conversion" }}
@@ -858,5 +927,5 @@ const responseT = `{{ define "response" }}
 	{{- else }}
 		// unsupported type {{ .Type.Name }} for header field {{ .FieldName }}
 	{{- end }}
-{{- end }}
+{{- end -}}
 `

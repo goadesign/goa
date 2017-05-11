@@ -335,7 +335,7 @@ func TestService(t *testing.T) {
 		}
 		actual := string(bs)
 		if !strings.Contains(actual, tc.Expected) {
-			t.Errorf("%s: got\n%v\n=============\nexpected to contain\n%v\ndiff:\n%s", k, actual, tc.Expected, diff(t, actual, tc.Expected))
+			t.Errorf("%s:\ngot:\n%s\ndiff:\n%s", k, actual, diff(t, actual, tc.Expected))
 		}
 	}
 }

@@ -22,7 +22,8 @@ type (
 		VarName string
 		// Methods lists the service interface methods.
 		Methods []*serviceMethod
-		// UserTypes lists the types definitions that the service depends on.
+		// UserTypes lists the types definitions that the service
+		// depends on.
 		UserTypes []*userType
 	}
 
@@ -120,7 +121,7 @@ func buildServiceData(service *design.ServiceExpr, userTypes map[string]design.U
 		types[i] = &userType{
 			VarName:     ServiceScope.Unique(ut, codegen.Goify(n, true)),
 			Description: ut.Attribute().Description,
-			TypeDef:     codegen.GoTypeDef(ut.Attribute(), false),
+			TypeDef:     codegen.GoTypeDef(ut.Attribute(), true),
 		}
 	}
 	desc := service.Description
@@ -176,27 +177,27 @@ func buildServiceMethod(m *design.EndpointExpr, userTypes map[string]design.User
 		if m.Payload != nil && m.Payload.Type != design.Empty {
 			switch dt := m.Payload.Type.(type) {
 			case design.UserType:
-				payloadName = ServiceScope.Unique(dt, codegen.GoType(dt, false), "Payload")
+				payloadName = ServiceScope.Unique(dt, codegen.GoType(dt, true), "Payload")
 				payloadRef = "*" + payloadName
-				payloadDef = codegen.GoTypeDef(dt.Attribute(), false)
+				payloadDef = codegen.GoTypeDef(dt.Attribute(), true)
 				walkTypes(dt.Attribute())
 			case design.Object:
 				payloadName = fmt.Sprintf("%s%sPayload", codegen.Goify(m.Service.Name, true), codegen.Goify(m.Name, true))
 				payloadName = ServiceScope.Unique(dt, payloadName, "")
 				payloadRef = "*" + payloadName
-				payloadDef = codegen.GoTypeDef(m.Payload, false)
+				payloadDef = codegen.GoTypeDef(m.Payload, true)
 				walkTypes(m.Payload)
 			case *design.Array:
 				payloadName = fmt.Sprintf("%s%sPayload", codegen.Goify(m.Service.Name, true), codegen.Goify(m.Name, true))
 				payloadName = ServiceScope.Unique(dt, payloadName, "")
 				payloadRef = payloadName
-				payloadDef = codegen.GoTypeDef(m.Payload, false)
+				payloadDef = codegen.GoTypeDef(m.Payload, true)
 				walkTypes(dt.ElemType)
 			case *design.Map:
 				payloadName = fmt.Sprintf("%s%sPayload", codegen.Goify(m.Service.Name, true), codegen.Goify(m.Name, true))
 				payloadName = ServiceScope.Unique(dt, payloadName, "")
 				payloadRef = payloadName
-				payloadDef = codegen.GoTypeDef(m.Payload, false)
+				payloadDef = codegen.GoTypeDef(m.Payload, true)
 				walkTypes(dt.KeyType)
 				walkTypes(dt.ElemType)
 			default:
@@ -211,27 +212,27 @@ func buildServiceMethod(m *design.EndpointExpr, userTypes map[string]design.User
 		if m.Result != nil && m.Result.Type != design.Empty {
 			switch dt := m.Result.Type.(type) {
 			case design.UserType:
-				resultName = ServiceScope.Unique(dt, codegen.GoType(dt, false), "Result")
+				resultName = ServiceScope.Unique(dt, codegen.GoType(dt, true), "Result")
 				resultRef = "*" + resultName
-				resultDef = codegen.GoTypeDef(dt.Attribute(), false)
+				resultDef = codegen.GoTypeDef(dt.Attribute(), true)
 				walkTypes(dt.Attribute())
 			case design.Object:
 				resultName = fmt.Sprintf("%s%sResult", codegen.Goify(m.Service.Name, true), codegen.Goify(m.Name, true))
 				resultName = ServiceScope.Unique(dt, resultName, "")
 				resultRef = "*" + resultName
-				resultDef = codegen.GoTypeDef(m.Result, false)
+				resultDef = codegen.GoTypeDef(m.Result, true)
 				walkTypes(m.Result)
 			case *design.Array:
 				resultName = fmt.Sprintf("%s%sResult", codegen.Goify(m.Service.Name, true), codegen.Goify(m.Name, true))
 				resultName = ServiceScope.Unique(dt, resultName, "")
 				resultRef = resultName
-				resultDef = codegen.GoTypeDef(m.Result, false)
+				resultDef = codegen.GoTypeDef(m.Result, true)
 				walkTypes(dt.ElemType)
 			case *design.Map:
 				resultName = fmt.Sprintf("%s%sResult", codegen.Goify(m.Service.Name, true), codegen.Goify(m.Name, true))
 				resultName = ServiceScope.Unique(dt, resultName, "")
 				resultRef = resultName
-				resultDef = codegen.GoTypeDef(m.Result, false)
+				resultDef = codegen.GoTypeDef(m.Result, true)
 				walkTypes(dt.KeyType)
 				walkTypes(dt.ElemType)
 			default:

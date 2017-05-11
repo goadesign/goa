@@ -191,6 +191,7 @@ func (a *ActionExpr) Validate() error {
 	if len(a.Routes) == 0 {
 		verr.Add(a, "No route defined for action")
 	}
+	hasTagged := false
 	allTagged := true
 	for i, r := range a.Responses {
 		for j, r2 := range a.Responses {
@@ -200,11 +201,16 @@ func (a *ActionExpr) Validate() error {
 		}
 		if r.Tag[0] != "" {
 			allTagged = false
+		} else {
+			hasTagged = true
 		}
 		verr.Merge(r.Validate())
 	}
-	if allTagged {
+	if hasTagged && allTagged {
 		verr.Add(a, "All responses define a Tag, at least one response must define no Tag.")
+	}
+	if hasTagged && !design.IsObject(a.EndpointExpr.Result.Type) {
+		verr.Add(a, "Some responses define a Tag but the endpoint Result type is not an object.")
 	}
 	verr.Merge(a.validateParams())
 	if a.Body != nil {
@@ -214,7 +220,8 @@ func (a *ActionExpr) Validate() error {
 	return verr
 }
 
-// Finalize sets the Parent fields of the action responses and errors.
+// Finalize sets the Parent fields of the action responses and errors. It also
+// flattens the errors.
 func (a *ActionExpr) Finalize() {
 	// Create default parameter expressions
 	for _, r := range a.Routes {
@@ -236,6 +243,25 @@ func (a *ActionExpr) Finalize() {
 	}
 	for _, r := range Root.HTTPErrors {
 		a.HTTPErrors = append(a.HTTPErrors, r.Dup())
+	}
+
+	// Make sure all error types are user types.
+	for _, r := range a.HTTPErrors {
+		if _, ok := r.AttributeExpr.Type.(design.UserType); !ok {
+			att := r.AttributeExpr
+			if !design.IsObject(att.Type) {
+				att = &design.AttributeExpr{
+					Type:       design.Object{"error": att},
+					Validation: &design.ValidationExpr{Required: []string{"error"}},
+				}
+			}
+			ut := &design.UserTypeExpr{
+				AttributeExpr: att,
+				TypeName:      r.Name,
+			}
+			r.AttributeExpr = &design.AttributeExpr{Type: ut}
+			design.Root.GeneratedTypes = append(design.Root.GeneratedTypes, ut)
+		}
 	}
 
 	// Initialize error responses parent

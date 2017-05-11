@@ -2,11 +2,16 @@ package rest
 
 import (
 	"bytes"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"strings"
 	"testing"
+
+	"github.com/sergi/go-diff/diffmatchpatch"
 
 	"go/format"
 
-	"github.com/sergi/go-diff/diffmatchpatch"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
@@ -303,8 +308,7 @@ func NewShowUserHandler(
 // endpoint.
 func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*service.ShowUserPayload, error) {
-		payload, err := NewShowUserPayload()
-		return payload, err
+		return NewShowUserPayload()
 	}
 }
 `
@@ -313,7 +317,7 @@ func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.
 // endpoint.
 func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*service.ShowUserPayload, error) {
-		params := httptreemux.ContextParams(r.Context())
+		params := rest.ContextParams(r.Context())
 		var (
 			id int
 		)
@@ -321,12 +325,11 @@ func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.
 		idRaw := params["id"]
 		v, err := strconv.ParseInt(idRaw, 10, strconv.IntSize)
 		if err != nil {
-			return nil, fmt.Errorf("id must be an integer, got '%s'", idRaw)
+			return nil, goa.InvalidFieldTypeError(idRaw, id, "integer")
 		}
 		id = int(v)
 
-		payload, err := NewShowUserPayload(id)
-		return payload, err
+		return NewShowUserPayload(id)
 	}
 }
 `
@@ -342,12 +345,32 @@ func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.
 		idRaw := r.URL.Query().Get("id")
 		v, err := strconv.ParseInt(idRaw, 10, strconv.IntSize)
 		if err != nil {
-			return nil, fmt.Errorf("id must be an integer, got '%s'", idRaw)
+			return nil, goa.InvalidFieldTypeError(idRaw, id, "integer")
 		}
 		id = int(v)
 
-		payload, err := NewShowUserPayload(id)
-		return payload, err
+		return NewShowUserPayload(id)
+	}
+}
+`
+
+		showUserDecodePayload = `// ShowUserDecodeRequest returns a decoder for requests sent to the create User
+// endpoint.
+func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (*service.ShowUserPayload, error) {
+		var (
+			body service.FooUserPayload
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				err = goa.MissingPayloadError()
+			}
+			return nil, err
+		}
+
+		return NewShowUserPayload(&body)
 	}
 }
 `
@@ -357,19 +380,81 @@ func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.
 func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*service.ShowUserPayload, error) {
 		var (
-			body ShowUserBody
+			body FooUserPayload
 			err  error
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if err == io.EOF {
-				err = fmt.Errorf("empty body")
+				err = goa.MissingPayloadError()
 			}
 			return nil, err
 		}
 
-		payload, err := NewShowUserPayload(&body)
-		return payload, err
+		return NewShowUserPayload(&body)
+	}
+}
+`
+
+		showUserDecodePayloadQueryParams = `// ShowUserDecodeRequest returns a decoder for requests sent to the create User
+// endpoint.
+func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (*service.ShowUserPayload, error) {
+		var (
+			body UserShowRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				err = goa.MissingPayloadError()
+			}
+			return nil, err
+		}
+
+		var (
+			id int
+		)
+		idRaw := r.URL.Query().Get("id")
+		v, err := strconv.ParseInt(idRaw, 10, strconv.IntSize)
+		if err != nil {
+			return nil, goa.InvalidFieldTypeError(idRaw, id, "integer")
+		}
+		id = int(v)
+
+		return NewShowUserPayload(&body, id)
+	}
+}
+`
+
+		showUserDecodePayloadPathParams = `// ShowUserDecodeRequest returns a decoder for requests sent to the create User
+// endpoint.
+func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (*service.ShowUserPayload, error) {
+		var (
+			body UserShowRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				err = goa.MissingPayloadError()
+			}
+			return nil, err
+		}
+
+		params := rest.ContextParams(r.Context())
+		var (
+			id int
+		)
+		idRaw := params["id"]
+		v, err := strconv.ParseInt(idRaw, 10, strconv.IntSize)
+		if err != nil {
+			return nil, goa.InvalidFieldTypeError(idRaw, id, "integer")
+		}
+		id = int(v)
+
+		return NewShowUserPayload(&body, id)
 	}
 }
 `
@@ -379,39 +464,37 @@ func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.
 func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*service.ShowUserPayload, error) {
 		var (
-			body ShowUserBody
+			body FooUserPayload
 			err  error
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if err == io.EOF {
-				err = fmt.Errorf("empty body")
+				err = goa.MissingPayloadError()
 			}
 			return nil, err
 		}
 
-		params := httptreemux.ContextParams(r.Context())
+		params := rest.ContextParams(r.Context())
 		var (
 			foo int
 			id int
 		)
-
 		fooRaw := r.URL.Query().Get("foo")
 		v, err := strconv.ParseInt(fooRaw, 10, strconv.IntSize)
 		if err != nil {
-			return nil, fmt.Errorf("foo must be an integer, got '%s'", fooRaw)
+			return nil, goa.InvalidFieldTypeError(fooRaw, foo, "integer")
 		}
 		foo = int(v)
 
 		idRaw := params["id"]
 		v, err := strconv.ParseInt(idRaw, 10, strconv.IntSize)
 		if err != nil {
-			return nil, fmt.Errorf("id must be an integer, got '%s'", idRaw)
+			return nil, goa.InvalidFieldTypeError(idRaw, id, "integer")
 		}
 		id = int(v)
 
-		payload, err := NewShowUserPayload(&body, foo, id)
-		return payload, err
+		return NewShowUserPayload(&body, foo, id)
 	}
 }
 `
@@ -420,13 +503,13 @@ func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.
 func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*service.ShowUserPayload, error) {
 		var (
-			body ShowUserBody
+			body FooUserPayload
 			err  error
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if err == io.EOF {
-				err = fmt.Errorf("empty body")
+				err = goa.MissingPayloadError()
 			}
 			return nil, err
 		}
@@ -453,46 +536,45 @@ func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.
 			uint64Var uint64
 			uintVar uint
 		)
-
 		boolVarRaw := r.URL.Query().Get("bool_var")
 		v, err := strconv.ParseBool(boolVarRaw)
 		if err != nil {
-			return nil, fmt.Errorf("bool_var must be a boolean (true or false), got '%s'", boolVarRaw)
+			return nil, goa.InvalidFieldTypeError(boolVarRaw, bool_var, "boolean")
 		}
 		boolVar = v
 
 		float32VarRaw := r.URL.Query().Get("float32_var")
 		v, err := strconv.ParseFloat(float32VarRaw, 32)
 		if err != nil {
-			return nil, fmt.Errorf("float32_var must be a float, got '%s'", float32VarRaw)
+			return nil, goa.InvalidFieldTypeError(float32VarRaw, float32_var, "float")
 		}
 		float32Var = float32(v)
 
 		float64VarRaw := r.URL.Query().Get("float64_var")
 		v, err := strconv.ParseFloat(float64VarRaw, 64)
 		if err != nil {
-			return nil, fmt.Errorf("float64_var must be a float, got '%s'", float64VarRaw)
+			return nil, goa.InvalidFieldTypeError(float64VarRaw, float64_var, "float")
 		}
 		float64Var = v
 
 		int32VarRaw := r.URL.Query().Get("int32_var")
 		v, err := strconv.ParseInt(int32VarRaw, 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("int32_var must be an integer, got '%s'", int32VarRaw)
+			return nil, goa.InvalidFieldTypeError(int32VarRaw, int32_var, "integer")
 		}
 		int32Var = int32(v)
 
 		int64VarRaw := r.URL.Query().Get("int64_var")
 		v, err := strconv.ParseInt(int64VarRaw, 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("int64_var must be an integer, got '%s'", int64VarRaw)
+			return nil, goa.InvalidFieldTypeError(int64VarRaw, int64_var, "integer")
 		}
 		int64Var = v
 
 		intVarRaw := r.URL.Query().Get("int_var")
 		v, err := strconv.ParseInt(intVarRaw, 10, strconv.IntSize)
 		if err != nil {
-			return nil, fmt.Errorf("int_var must be an integer, got '%s'", intVarRaw)
+			return nil, goa.InvalidFieldTypeError(intVarRaw, int_var, "integer")
 		}
 		intVar = int(v)
 
@@ -502,7 +584,7 @@ func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.
 		for i, rv := range sliceBoolVarRawSlice {
 			v, err := strconv.ParseBool(rv)
 			if err != nil {
-				return nil, fmt.Errorf("slice_bool_var must be an set of booleans (true, false, 1 or 0), got value '%s' in set '%s'", rv, sliceBoolVarRaw)
+				return nil, goa.InvalidFieldTypeError(sliceBoolVarRaw, slice_bool_var, "array of booleans")
 			}
 			sliceBoolVar[i] = v
 		}
@@ -513,7 +595,7 @@ func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.
 		for i, rv := range sliceFloat32VarRawSlice {
 			v, err := strconv.ParseFloat(rv, 32)
 			if err != nil {
-				return nil, fmt.Errorf("slice_float32_var must be an set of floats, got value '%s' in set '%s'", rv, sliceFloat32VarRaw)
+				return nil, goa.InvalidFieldTypeError(sliceFloat32VarRaw, slice_float32_var, "array of floats")
 			}
 			sliceFloat32Var[i] = float32(v)
 		}
@@ -524,7 +606,7 @@ func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.
 		for i, rv := range sliceFloat64VarRawSlice {
 			v, err := strconv.ParseFloat(rv, 64)
 			if err != nil {
-				return nil, fmt.Errorf("slice_float64_var must be an set of floats, got value '%s' in set '%s'", rv, sliceFloat64VarRaw)
+				return nil, goa.InvalidFieldTypeError(sliceFloat64VarRaw, slice_float64_var, "array of floats")
 			}
 			sliceFloat64Var[i] = v
 		}
@@ -535,7 +617,7 @@ func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.
 		for i, rv := range sliceInt32VarRawSlice {
 			v, err := strconv.ParseInt(rv, 10, 32)
 			if err != nil {
-				return nil, fmt.Errorf("slice_int32_var must be an set of integers, got value '%s' in set '%s'", rv, sliceInt32VarRaw)
+				return nil, goa.InvalidFieldTypeError(sliceInt32VarRaw, slice_int32_var, "array of integers")
 			}
 			sliceInt32Var[i] = int32(v)
 		}
@@ -546,7 +628,7 @@ func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.
 		for i, rv := range sliceInt64VarRawSlice {
 			v, err := strconv.ParseInt(rv, 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("slice_int64_var must be an set of integers, got value '%s' in set '%s'", rv, sliceInt64VarRaw)
+				return nil, goa.InvalidFieldTypeError(sliceInt64VarRaw, slice_int64_var, "array of integers")
 			}
 			sliceInt64Var[i] = v
 		}
@@ -557,7 +639,7 @@ func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.
 		for i, rv := range sliceIntVarRawSlice {
 			v, err := strconv.ParseInt(rv, 10, strconv.IntSize)
 			if err != nil {
-				return nil, fmt.Errorf("slice_int_var must be an set of integers, got value '%s' in set '%s'", rv, sliceIntVarRaw)
+				return nil, goa.InvalidFieldTypeError(sliceIntVarRaw, slice_int_var, "array of integers")
 			}
 			sliceIntVar[i] = int(v)
 		}
@@ -575,7 +657,7 @@ func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.
 		for i, rv := range sliceUint32VarRawSlice {
 			v, err := strconv.ParseUint(rv, 10, 32)
 			if err != nil {
-				return nil, fmt.Errorf("slice_uint32_var must be an set of unsigned integers, got value '%s' in set '%s'", rv, sliceUint32VarRaw)
+				return nil, goa.InvalidFieldTypeError(sliceUint32VarRaw, slice_uint32_var, "array of unsigned integers")
 			}
 			sliceUint32Var[i] = int32(v)
 		}
@@ -586,7 +668,7 @@ func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.
 		for i, rv := range sliceUint64VarRawSlice {
 			v, err := strconv.ParseUint(rv, 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("slice_uint64_var must be an set of unsigned integers, got value '%s' in set '%s'", rv, sliceUint64VarRaw)
+				return nil, goa.InvalidFieldTypeError(sliceUint64VarRaw, slice_uint64_var, "array of unsigned integers")
 			}
 			sliceUint64Var[i] = v
 		}
@@ -597,7 +679,7 @@ func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.
 		for i, rv := range sliceUintVarRawSlice {
 			v, err := strconv.ParseUint(rv, 10, strconv.IntSize)
 			if err != nil {
-				return nil, fmt.Errorf("slice_uint_var must be an set of unsigned integers, got value '%s' in set '%s'", rv, sliceUintVarRaw)
+				return nil, goa.InvalidFieldTypeError(sliceUintVarRaw, slice_uint_var, "array of unsigned integers")
 			}
 			sliceUintVar[i] = uint(v)
 		}
@@ -607,26 +689,25 @@ func ShowUserDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*http.
 		uint32VarRaw := r.URL.Query().Get("uint32_var")
 		v, err := strconv.ParseUint(uint32VarRaw, 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("uint32_var must be an unsigned integer, got '%s'", uint32VarRaw)
+			return nil, goa.InvalidFieldTypeError(uint32VarRaw, uint32_var, "unsigned integer")
 		}
 		uint32Var = int32(v)
 
 		uint64VarRaw := r.URL.Query().Get("uint64_var")
 		v, err := strconv.ParseUint(uint64VarRaw, 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("uint64_var must be an unsigned integer, got '%s'", uint64VarRaw)
+			return nil, goa.InvalidFieldTypeError(uint64VarRaw, uint64_var, "unsigned integer")
 		}
 		uint64Var = v
 
 		uintVarRaw := r.URL.Query().Get("uint_var")
 		v, err := strconv.ParseUint(uintVarRaw, 10, strconv.IntSize)
 		if err != nil {
-			return nil, fmt.Errorf("uint_var must be an unsigned integer, got '%s'", uintVarRaw)
+			return nil, goa.InvalidFieldTypeError(uintVarRaw, uint_var, "unsigned integer")
 		}
 		uintVar = uint(v)
 
-		payload, err := NewShowUserPayload(&body, boolVar, float32Var, float64Var, int32Var, int64Var, intVar, sliceBoolVar, sliceFloat32Var, sliceFloat64Var, sliceInt32Var, sliceInt64Var, sliceIntVar, sliceString, sliceUint32Var, sliceUint64Var, sliceUintVar, stringVar, uint32Var, uint64Var, uintVar)
-		return payload, err
+		return NewShowUserPayload(&body, boolVar, float32Var, float64Var, int32Var, int64Var, intVar, sliceBoolVar, sliceFloat32Var, sliceFloat64Var, sliceInt32Var, sliceInt64Var, sliceIntVar, sliceString, sliceUint32Var, sliceUint64Var, sliceUintVar, stringVar, uint32Var, uint64Var, uintVar)
 	}
 }
 `
@@ -654,15 +735,10 @@ func ListUserEncodeResponse(encoder func(http.ResponseWriter, *http.Request) res
 // User endpoint.
 func ShowUserEncodeResponse(encoder func(http.ResponseWriter, *http.Request) rest.Encoder) func(http.ResponseWriter, *http.Request, interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
-		t := v.(*UserOK)
-		w.Header().Set("Content-Type", ResponseContentType(r))
-		w.Header().Set("Location", t.Href)
-		w.Header().Set("Request", t.Request)
+		enc, ct := encoder(w, r)
+		rest.SetContentType(w, ct)
 		w.WriteHeader(http.StatusOK)
-		if t != nil {
-			return encoder(w, r).Encode(t)
-		}
-		return nil
+		return enc.Encode(v)
 	}
 }
 `
@@ -670,18 +746,13 @@ func ShowUserEncodeResponse(encoder func(http.ResponseWriter, *http.Request) res
 // User endpoint.
 func ShowUserEncodeResponse(encoder func(http.ResponseWriter, *http.Request) rest.Encoder) func(http.ResponseWriter, *http.Request, interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
-		switch t := v.(type) {
-		case *UserCreated:
-			w.Header().Set("Location", t.Href)
-			w.Header().Set("Request", t.Request)
-			w.WriteHeader(http.StatusCreated)
-			return encoder(w, r).Encode(t)
-		case *UserAccepted:
-			w.WriteHeader(http.StatusAccepted)
-		default:
-			return fmt.Errorf("invalid response type")
-		}
-		return nil
+		t := v.(*service.Account)
+		enc, ct := encoder(w, r)
+		rest.SetContentType(w, ct)
+		w.Header().Set("Location", t.Href)
+		w.Header().Set("Request", t.Request)
+		w.WriteHeader(http.StatusCreated)
+		return enc.Encode(t)
 	}
 }
 `
@@ -691,11 +762,14 @@ func ShowUserEncodeResponse(encoder func(http.ResponseWriter, *http.Request) res
 func ShowUserEncodeError(encoder func(http.ResponseWriter, *http.Request) rest.Encoder, logger goa.LogAdapter) func(http.ResponseWriter, *http.Request, error) {
 	encodeError := rest.EncodeError(encoder, logger)
 	return func(w http.ResponseWriter, r *http.Request, v error) {
-		w.Header().Set("Content-Type", ResponseContentType(r))
 		switch t := v.(type) {
 		case *service.NameAlreadyTaken:
+			enc, ct := encoder(w, r)
+			rest.SetContentType(w, ct)
 			w.WriteHeader(http.StatusConflict)
-			encoder(w, r).Encode(t)
+			if err := enc.Encode(t); err != nil {
+				encodeError(w, r, err)
+			}
 		default:
 			encodeError(w, r, v)
 		}
@@ -722,32 +796,29 @@ func ShowUserEncodeError(encoder func(http.ResponseWriter, *http.Request) rest.E
 
 		payload = design.AttributeExpr{
 			Type: &design.UserTypeExpr{
-				AttributeExpr: &design.AttributeExpr{},
-				TypeName:      "FooUserPayload",
+				AttributeExpr: &design.AttributeExpr{
+					Type: design.Object{
+						"text": &design.AttributeExpr{Type: design.String},
+					},
+				},
+				TypeName: "FooUserPayload",
 			}}
 
+		nat = &design.UserTypeExpr{
+			TypeName: "NameAlreadyTaken",
+			AttributeExpr: &design.AttributeExpr{
+				Type: design.Object{
+					"msg": &design.AttributeExpr{Type: design.String},
+				},
+			},
+		}
 		errorNameAlreadyTaken = design.ErrorExpr{
-			AttributeExpr: &design.AttributeExpr{},
+			AttributeExpr: &design.AttributeExpr{Type: nat},
 			Name:          "name_already_taken",
 		}
 
 		service = design.ServiceExpr{
 			Name: "User",
-		}
-
-		endpointWithErrorAndPayload = design.EndpointExpr{
-			Name:    "Show",
-			Payload: &payload,
-			Result:  &accountAttr,
-			Errors:  []*design.ErrorExpr{&errorNameAlreadyTaken},
-			Service: &service,
-		}
-
-		endpointWithPayload = design.EndpointExpr{
-			Name:    "Show",
-			Payload: &payload,
-			Result:  &arrayAccountAttr,
-			Service: &service,
 		}
 
 		endpointPlain = design.EndpointExpr{
@@ -761,6 +832,28 @@ func ShowUserEncodeError(encoder func(http.ResponseWriter, *http.Request) rest.E
 			Name:    "List",
 			Payload: &design.AttributeExpr{Type: design.Empty},
 			Result:  &design.AttributeExpr{Type: design.Empty},
+			Service: &service,
+		}
+
+		endpointWithPayload = design.EndpointExpr{
+			Name:    "Show",
+			Payload: &payload,
+			Result:  &arrayAccountAttr,
+			Service: &service,
+		}
+
+		endpointWithResult = design.EndpointExpr{
+			Name:    "Show",
+			Payload: &design.AttributeExpr{Type: design.Empty},
+			Result:  &accountAttr,
+			Service: &service,
+		}
+
+		endpointWithErrorAndPayload = design.EndpointExpr{
+			Name:    "Show",
+			Payload: &payload,
+			Result:  &accountAttr,
+			Errors:  []*design.ErrorExpr{&errorNameAlreadyTaken},
 			Service: &service,
 		}
 
@@ -810,7 +903,7 @@ func ShowUserEncodeError(encoder func(http.ResponseWriter, *http.Request) rest.E
 		}
 
 		actionWithMultipleResponses = rest.ActionExpr{
-			EndpointExpr: &endpointWithPayload,
+			EndpointExpr: &endpointWithResult,
 			Routes:       []*rest.RouteExpr{{Path: "/foo", Method: "GET"}},
 			Responses: []*rest.HTTPResponseExpr{
 				{
@@ -982,7 +1075,7 @@ func ShowUserEncodeError(encoder func(http.ResponseWriter, *http.Request) rest.E
 				mountUserHandlers,
 				mountShowUserHandler,
 				newShowUserHandlerNoResponse,
-				showUserDecodeQueryParams,
+				showUserDecodePayloadQueryParams,
 			},
 		},
 		"with-payload-path-params": {
@@ -996,7 +1089,7 @@ func ShowUserEncodeError(encoder func(http.ResponseWriter, *http.Request) rest.E
 				mountUserHandlers,
 				mountShowUserHandlerPathParam,
 				newShowUserHandlerNoResponse,
-				showUserDecodePathParams,
+				showUserDecodePayloadPathParams,
 			},
 		},
 		"with-payload-in-body-and-params": {
@@ -1032,9 +1125,8 @@ func ShowUserEncodeError(encoder func(http.ResponseWriter, *http.Request) rest.E
 				newUserHandlersConstructor,
 				mountUserHandlers,
 				mountShowUserHandler,
-				newShowUserHandler,
+				newShowUserHandlerNoPayload,
 				showUserEncodeMultipleResponses,
-				showUserDecodeNoPayload,
 			},
 		},
 		"with-custom-errors": {
@@ -1045,7 +1137,7 @@ func ShowUserEncodeError(encoder func(http.ResponseWriter, *http.Request) rest.E
 				mountUserHandlers,
 				mountShowUserHandler,
 				newShowUserHandlerWithCustomError,
-				showUserDecodeNoPayload,
+				showUserDecodePayload,
 				showUserEncodeError,
 			},
 		},
@@ -1108,7 +1200,7 @@ func ShowUserEncodeError(encoder func(http.ResponseWriter, *http.Request) rest.E
 
 			actual, err := format.Source(buf.Bytes())
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("%s - source:\n%s", err, buf.String())
 			}
 
 			expected, err := format.Source([]byte(tc.Expected[i]))
@@ -1117,11 +1209,46 @@ func ShowUserEncodeError(encoder func(http.ResponseWriter, *http.Request) rest.E
 			}
 
 			if !bytes.Equal(actual, expected) {
-				dmp := diffmatchpatch.New()
-				diffs := dmp.DiffMain(string(actual), string(expected), false)
-				diff := dmp.DiffPrettyText(diffs)
-				t.Errorf("%s: diff:\n%s\nfor section @index %d", k, diff, i)
+				t.Errorf("%s:\ngot:\n%s\ndiff:\n%s\nfor section @index %d",
+					k,
+					strings.Replace("-"+string(actual), "\n", "\n-", -1),
+					diff(t, string(actual), string(expected)),
+					i)
 			}
 		}
 	}
+}
+
+// diff returns a diff between s1 and s2.
+// It tries to leverage the diff tool if present in the system otherwise
+// degrades to using the dmp package.
+func diff(t *testing.T, s1, s2 string) string {
+	_, err := exec.LookPath("diff")
+	supportsDiff := (err == nil)
+	if !supportsDiff {
+		dmp := diffmatchpatch.New()
+		diffs := dmp.DiffMain(s1, s2, false)
+		return dmp.DiffPrettyText(diffs)
+	}
+	left := createTempFile(t, s1)
+	right := createTempFile(t, s2)
+	defer os.Remove(left)
+	defer os.Remove(right)
+	cmd := exec.Command("diff", left, right)
+	diffb, _ := cmd.CombinedOutput()
+	return string(diffb)
+}
+
+func createTempFile(t *testing.T, content string) string {
+	f, err := ioutil.TempFile("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = f.WriteString(content)
+	if err != nil {
+		os.Remove(f.Name())
+		t.Fatal(err)
+	}
+	f.Close()
+	return f.Name()
 }

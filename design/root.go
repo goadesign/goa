@@ -23,9 +23,9 @@ type (
 		Types []UserType
 		// MediaTypes contains the media types described in the DSL.
 		MediaTypes []UserType
-		// GeneratedMediaTypes contains the set of media types created
-		// by CollectionOf.
-		GeneratedMediaTypes GeneratedRoot
+		// GeneratedTypes contains the types generated during DSL
+		// execution.
+		GeneratedTypes GeneratedRoot
 	}
 
 	// MetadataExpr is a set of key/value pairs
@@ -115,7 +115,7 @@ func (r *RootExpr) UserType(name string) UserType {
 // GeneratedMediaType returns the generated media type expression with the given
 // id, nil if there isn't one.
 func (r *RootExpr) GeneratedMediaType(id string) *MediaTypeExpr {
-	for _, t := range r.GeneratedMediaTypes {
+	for _, t := range r.GeneratedTypes {
 		mt := t.(*MediaTypeExpr)
 		if mt.Identifier == id {
 			return mt

@@ -9,24 +9,25 @@ import (
 )
 
 // GoTypeDef returns the Go code that defines a Go type which matches the data
-// structure definition (the part that comes after `type foo`). If private is
-// true then the generated type is private and includes JSON, XML and form tags.
-func GoTypeDef(att *design.AttributeExpr, private bool) string {
+// structure definition (the part that comes after `type foo`). If public is
+// true then the generated type is public and does not includes JSON, XML and
+// form tags.
+func GoTypeDef(att *design.AttributeExpr, public bool) string {
 	switch actual := att.Type.(type) {
 	case design.Primitive:
-		return GoType(actual, private)
+		return GoType(actual, public)
 	case *design.Array:
-		d := GoTypeDef(actual.ElemType, private)
+		d := GoTypeDef(actual.ElemType, public)
 		if design.IsObject(actual.ElemType.Type) {
 			d = "*" + d
 		}
 		return "[]" + d
 	case *design.Map:
-		keyDef := GoTypeDef(actual.KeyType, private)
+		keyDef := GoTypeDef(actual.KeyType, public)
 		if design.IsObject(actual.KeyType.Type) {
 			keyDef = "*" + keyDef
 		}
-		elemDef := GoTypeDef(actual.ElemType, private)
+		elemDef := GoTypeDef(actual.ElemType, public)
 		if design.IsObject(actual.ElemType.Type) {
 			elemDef = "*" + elemDef
 		}
@@ -43,15 +44,15 @@ func GoTypeDef(att *design.AttributeExpr, private bool) string {
 			)
 			{
 				fn = GoifyAtt(at, name, true)
-				tdef = GoTypeDef(at, private)
+				tdef = GoTypeDef(at, public)
 				if (at.Type.Kind() != design.BytesKind) &&
-					(design.IsPrimitive(at.Type) && private || design.IsObject(at.Type) || att.IsPrimitivePointer(name)) {
+					(design.IsPrimitive(at.Type) && !public || design.IsObject(at.Type) || att.IsPrimitivePointer(name)) {
 					tdef = "*" + tdef
 				}
 				if at.Description != "" {
 					desc = fmt.Sprintf("// %s\n\t", at.Description)
 				}
-				if private {
+				if !public {
 					tags = attributeTags(att, at, name)
 				}
 			}
@@ -61,16 +62,16 @@ func GoTypeDef(att *design.AttributeExpr, private bool) string {
 		ss = append(ss, "}")
 		return strings.Join(ss, "\n")
 	case design.UserType:
-		return GoType(actual, private)
+		return GoType(actual, public)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
 }
 
 // GoTypeRef returns the Go code that refers to the Go type which matches the
-// given data type. If private is true then the reference is to a private type.
-func GoTypeRef(dt design.DataType, private bool) string {
-	tname := GoType(dt, private)
+// given data type. If public is true then the reference is to a public type.
+func GoTypeRef(dt design.DataType, public bool) string {
+	tname := GoType(dt, public)
 	if _, ok := dt.(design.Object); ok {
 		return tname
 	}
@@ -83,16 +84,12 @@ func GoTypeRef(dt design.DataType, private bool) string {
 // GoPackageTypeRef returns the Go code that refers to the given type. If the
 // type is a user type then it is assumed to be defined in the given package.
 func GoPackageTypeRef(dt design.DataType, pack string) string {
-	tdef := GoTypeRef(dt, false)
+	tdef := GoTypeRef(dt, true)
 	if _, ok := dt.(design.UserType); ok {
-		isObj := design.IsObject(dt)
-		if isObj {
-			tdef = tdef[1:]
+		if design.IsObject(dt) {
+			return "*" + pack + "." + tdef[1:]
 		}
-		tdef = pack + "." + tdef
-		if isObj {
-			tdef = "*" + tdef
-		}
+		return pack + "." + tdef
 	}
 	return tdef
 }
@@ -141,21 +138,21 @@ func GoNativeTypeName(t design.DataType) string {
 }
 
 // GoType returns the Go type name of the given data type. It returns the
-// private name if private is true.
-func GoType(dt design.DataType, private bool) string {
+// public name if public is true.
+func GoType(dt design.DataType, public bool) string {
 	switch actual := dt.(type) {
 	case design.Primitive:
 		return GoNativeType(dt)
 	case *design.Array:
-		return "[]" + GoTypeRef(actual.ElemType.Type, private)
+		return "[]" + GoTypeRef(actual.ElemType.Type, public)
 	case *design.Map:
-		return fmt.Sprintf("map[%s]%s", GoTypeRef(actual.KeyType.Type, private), GoTypeRef(actual.ElemType.Type, private))
+		return fmt.Sprintf("map[%s]%s", GoTypeRef(actual.KeyType.Type, public), GoTypeRef(actual.ElemType.Type, public))
 	case design.Object:
 		return "map[string]interface{}"
 	case design.UserType:
-		return Goify(actual.Name(), !private)
+		return Goify(actual.Name(), public)
 	case design.CompositeExpr:
-		return GoType(actual.Attribute().Type, private)
+		return GoType(actual.Attribute().Type, public)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
