@@ -506,7 +506,7 @@ func Maximum(val interface{}) {
 }
 
 // MinLength can be used in: Attribute, Header, Param, HashOf, ArrayOf
-// MinLength adss a "minItems" validation to the attribute.
+// MinLength adds a "minItems" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor45.
 func MinLength(val int) {
 	if a, ok := attributeDefinition(); ok {
@@ -522,7 +522,7 @@ func MinLength(val int) {
 }
 
 // MaxLength can be used in: Attribute, Header, Param, HashOf, ArrayOf
-// MaxLength adss a "maxItems" validation to the attribute.
+// MaxLength adds a "maxItems" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor42.
 func MaxLength(val int) {
 	if a, ok := attributeDefinition(); ok {
