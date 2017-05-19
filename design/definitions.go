@@ -485,17 +485,24 @@ func (a *APIDefinition) IterateSets(iterator dslengine.SetIterator) {
 	}
 	iterator(securitySchemes)
 
-	// And now that we have everything the resources.  The resource
-	// lifecycle handlers dispatch to their children elements, like
-	// Actions, etc..
-	resources := make([]dslengine.Definition, len(a.Resources))
+	// And now that we have everything - the resources. The resource
+	// lifecycle handlers dispatch to their children elements, like Actions,
+	// etc.. We must process parent resources first to ensure that query
+	// string and path parameters are initialized by the time a child
+	// resource action parameters are categorized.
+	resources := make([]*ResourceDefinition, len(a.Resources))
 	i = 0
 	a.IterateResources(func(res *ResourceDefinition) error {
 		resources[i] = res
 		i++
 		return nil
 	})
-	iterator(resources)
+	sort.Sort(byParent(resources))
+	defs := make([]dslengine.Definition, len(resources))
+	for i, r := range resources {
+		defs[i] = r
+	}
+	iterator(defs)
 }
 
 // Reset sets all the API definition fields to their zero value except the default responses and
@@ -890,6 +897,13 @@ func (r *ResourceDefinition) UserTypes() map[string]*UserTypeDefinition {
 	}
 	return types
 }
+
+// byParent makes it possible to sort resources - parents first the children.
+type byParent []*ResourceDefinition
+
+func (p byParent) Len() int           { return len(p) }
+func (p byParent) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p byParent) Less(i, j int) bool { return p[j].ParentName == p[i].Name }
 
 // Context returns the generic definition name used in error messages.
 func (cors *CORSDefinition) Context() string {
