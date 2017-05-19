@@ -175,7 +175,7 @@ func Maximum(val interface{}) {
 	}
 }
 
-// MinLength adss a "minItems" validation to the attribute.
+// MinLength adds a "minItems" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor45.
 func MinLength(val int) {
 	if a, ok := eval.Current().(*design.AttributeExpr); ok {
