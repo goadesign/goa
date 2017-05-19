@@ -376,9 +376,17 @@ func Link(name string, view ...string) {
 // CollectionOf creates a collection media type from its element media type. A collection media
 // type represents the content of responses that return a collection of resources such as "list"
 // actions. This function can be called from any place where a media type can be used.
+//
 // The resulting media type identifier is built from the element media type by appending the media
 // type parameter "type" with value "collection".
-func CollectionOf(v interface{}, apidsl ...func()) *design.MediaTypeDefinition {
+//
+//  CollectionOf(BottleMedia)  // If the identifier of BottleMedia is "vnd.goa.bottle',
+//                             // Content-Type will be "vnd.goa.bottle; type=collection".
+//
+// The collection identifier can be specified as second argument.
+//
+//  CollectionOf(BottleMedia, "vnd.goa.bottles")  // Content-Type will be "vnd.goa.bottles".
+func CollectionOf(v interface{}, paramAndDSL ...interface{}) *design.MediaTypeDefinition {
 	var m *design.MediaTypeDefinition
 	var ok bool
 	m, ok = v.(*design.MediaTypeDefinition)
@@ -410,6 +418,10 @@ func CollectionOf(v interface{}, apidsl ...func()) *design.MediaTypeDefinition {
 		params["type"] = "collection"
 	}
 	id = mime.FormatMediaType(mediatype, params)
+	p, apidsl := parseCollectionOfDSL(paramAndDSL...)
+	if p != "" {
+		id = p
+	}
 	canonical := design.CanonicalIdentifier(id)
 	if mt, ok := design.GeneratedMediaTypes[canonical]; ok {
 		// Already have a type for this collection, reuse it.
@@ -421,8 +433,8 @@ func CollectionOf(v interface{}, apidsl ...func()) *design.MediaTypeDefinition {
 			// since the DSL may modify element type name via the TypeName function.
 			mt.TypeName = m.TypeName + "Collection"
 			mt.AttributeDefinition = &design.AttributeDefinition{Type: ArrayOf(m)}
-			if len(apidsl) > 0 {
-				dslengine.Execute(apidsl[0], mt)
+			if apidsl != nil {
+				dslengine.Execute(apidsl, mt)
 			}
 			if mt.Views == nil {
 				// If the apidsl didn't create any views (or there is no apidsl at all)
@@ -438,4 +450,24 @@ func CollectionOf(v interface{}, apidsl ...func()) *design.MediaTypeDefinition {
 	// first.
 	design.GeneratedMediaTypes[canonical] = mt
 	return mt
+}
+
+func parseCollectionOfDSL(paramAndDSL ...interface{}) (string, func()) {
+	var param string
+	var dsl func()
+	var ok bool
+	if len(paramAndDSL) > 0 {
+		d := paramAndDSL[len(paramAndDSL)-1]
+		if dsl, ok = d.(func()); ok {
+			paramAndDSL = paramAndDSL[:len(paramAndDSL)-1]
+		}
+		for _, p := range paramAndDSL {
+			param, ok = p.(string)
+			if !ok {
+				dslengine.ReportError("invalid CollectionOf argument, must be a string", p)
+				return "", nil
+			}
+		}
+	}
+	return param, dsl
 }

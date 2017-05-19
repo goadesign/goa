@@ -281,7 +281,34 @@ var _ = Describe("CollectionOf", func() {
 
 		It("produces a media type", func() {
 			Ω(col).ShouldNot(BeNil())
-			Ω(col.Identifier).ShouldNot(BeEmpty())
+			Ω(col.Identifier).Should(Equal("application/vnd.example; type=collection"))
+			Ω(col.TypeName).ShouldNot(BeEmpty())
+			Ω(Design.MediaTypes).Should(HaveKey(col.Identifier))
+		})
+	})
+
+	Context("defined with the collectio identifier", func() {
+		var col *MediaTypeDefinition
+		BeforeEach(func() {
+			dslengine.Reset()
+			mt := MediaType("application/vnd.example", func() {
+				Attribute("id")
+				View("default", func() {
+					Attribute("id")
+				})
+			})
+			col = CollectionOf(mt, "application/vnd.examples")
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+		})
+
+		JustBeforeEach(func() {
+			dslengine.Run()
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+		})
+
+		It("produces a media type", func() {
+			Ω(col).ShouldNot(BeNil())
+			Ω(col.Identifier).Should(Equal("application/vnd.examples"))
 			Ω(col.TypeName).ShouldNot(BeEmpty())
 			Ω(Design.MediaTypes).Should(HaveKey(col.Identifier))
 		})
