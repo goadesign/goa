@@ -6,6 +6,7 @@ import (
 )
 
 // Resource is a top level DSL.
+//
 // Resource implements the resource definition dsl. There is one resource definition per resource
 // exposed by the API. The resource dsl allows setting the resource default media type. This media
 // type is used to render the response body of actions that return the OK response (unless the
@@ -66,6 +67,7 @@ func Resource(name string, dsl func()) *design.ResourceDefinition {
 }
 
 // DefaultMedia can be used in: Resource
+//
 // DefaultMedia sets a resource default media type by identifier or by reference using a value
 // returned by MediaType:
 //
@@ -108,6 +110,7 @@ func DefaultMedia(val interface{}, viewName ...string) {
 }
 
 // Parent can be used in: Resource
+//
 // Parent sets the resource parent. The parent resource is used to compute the path to the resource
 // actions as well as resource collection item hrefs. See Resource.
 func Parent(p string) {
@@ -117,6 +120,7 @@ func Parent(p string) {
 }
 
 // CanonicalActionName sets the name of the action used to compute the resource collection and
+//
 // resource collection items hrefs. See Resource.
 func CanonicalActionName(a string) {
 	if r, ok := resourceDefinition(); ok {

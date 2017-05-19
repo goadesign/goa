@@ -13,6 +13,7 @@ import (
 var mediaTypeCount int
 
 // MediaType is a top level DSL, which can also be used in: ResponseTemplate
+//
 // MediaType implements the media type definition DSL. A media type definition describes the
 // representation of a resource used in a response body.
 //
@@ -115,6 +116,7 @@ func MediaType(identifier string, apidsl func()) *design.MediaTypeDefinition {
 }
 
 // Media can be used in: Response, ResponseTemplate
+//
 // Media sets a response media type by name or by reference using a value returned by MediaType:
 //
 //	Response("NotFound", func() {
@@ -150,6 +152,7 @@ func Media(val interface{}, viewName ...string) {
 }
 
 // Reference can be used in: MediaType, Type
+//
 // Reference sets a type or media type reference. The value itself can be a type or a media type.
 // The reference type attributes define the default properties for attributes with the same name in
 // the type using the reference. So for example if a type is defined as such:
@@ -189,6 +192,7 @@ func Reference(t design.DataType) {
 }
 
 // TypeName can be used in: Type, MediaType
+//
 // TypeName makes it possible to set the Go struct name for a type or media type in the generated
 // code. By default goagen uses the name (type) or identifier (media type) given in the apidsl and
 // computes a valid Go identifier from it. This function makes it possible to override that and
@@ -205,6 +209,7 @@ func TypeName(name string) {
 }
 
 // ContentType can be used in: MediaType
+//
 // ContentType sets the value of the Content-Type response header. By default the ID of the media
 // type is used.
 //
@@ -317,6 +322,7 @@ func buildView(name string, mt *design.MediaTypeDefinition, at *design.Attribute
 }
 
 // Attributes can be used in: MediaType
+//
 // Attributes implements the media type attributes apidsl. See MediaType.
 func Attributes(apidsl func()) {
 	if mt, ok := mediaTypeDefinition(); ok {
@@ -325,6 +331,7 @@ func Attributes(apidsl func()) {
 }
 
 // Links can be used in: MediaType
+//
 // Links implements the media type links apidsl. See MediaType.
 func Links(apidsl func()) {
 	if mt, ok := mediaTypeDefinition(); ok {
@@ -333,6 +340,7 @@ func Links(apidsl func()) {
 }
 
 // Link can be used in: Links
+//
 // Link adds a link to a media type. At the minimum a link has a name corresponding to one of the
 // media type attribute names. A link may also define the view used to render the linked-to
 // attribute. The default view used to render links is "link". Examples:
@@ -363,6 +371,7 @@ func Link(name string, view ...string) {
 }
 
 // CollectionOf can be used in: Wherever a MediaType can be used..
+//
 // e.g. Attribute("foo", CollectionOf(Bar))
 // CollectionOf creates a collection media type from its element media type. A collection media
 // type represents the content of responses that return a collection of resources such as "list"

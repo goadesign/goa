@@ -6,6 +6,7 @@ import (
 )
 
 // Type is a top level DSL.
+//
 // Type implements the type definition dsl. A type definition describes a data structure consisting
 // of attributes. Each attribute has a type which can also refer to a type definition (or use a
 // primitive type or nested attibutes). The dsl syntax for define a type definition is the
@@ -61,6 +62,7 @@ func Type(name string, dsl func()) *design.UserTypeDefinition {
 }
 
 // ArrayOf can be used in: Wherever a a type can be used...
+//
 // e.g. Attribute("foo", ArrayOf(String))
 // ArrayOf creates an array type from its element type. The result can be used anywhere a type can.
 // Examples:
@@ -118,6 +120,7 @@ func ArrayOf(v interface{}, dsl ...func()) *design.Array {
 }
 
 // HashOf can be used in: Wherever a type can be used...
+//
 // e.g. Attribute("foo", HashOf(String))
 // HashOf creates a hash map from its key and element types. The result can be used anywhere a type
 // can. Examples:

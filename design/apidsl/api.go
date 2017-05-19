@@ -11,6 +11,7 @@ import (
 )
 
 // API is a top level DSL.
+//
 // API implements the top level API DSL. It defines the API name, default description and other
 // default global property values. Here is an example showing all the possible API sub-definitions:
 //
@@ -90,6 +91,7 @@ func API(name string, dsl func()) *design.APIDefinition {
 }
 
 // Version can be used in: API
+//
 // Version specifies the API version. One design describes one version.
 func Version(ver string) {
 	if api, ok := apiDefinition(); ok {
@@ -98,6 +100,7 @@ func Version(ver string) {
 }
 
 // Description can be used in: API, Resource, Action, or MediaType
+//
 // Description sets the definition description.
 func Description(d string) {
 	switch def := dslengine.CurrentDefinition().(type) {
@@ -125,6 +128,7 @@ func Description(d string) {
 }
 
 // BasePath can used in: API, Resource
+//
 // BasePath defines the API base path, i.e. the common path prefix to all the API actions.
 // The path may define wildcards (see Routing for a description of the wildcard syntax).
 // The corresponding parameters must be described using Params.
@@ -151,6 +155,7 @@ func BasePath(val string) {
 }
 
 // Origin can be used in: Resource, API
+//
 // Origin defines the CORS policy for a given origin. The origin can use a wildcard prefix
 // such as "https://*.mydomain.com". The special value "*" defines the policy for all origins
 // (in which case there should be only one Origin DSL in the parent resource).
@@ -199,6 +204,7 @@ func Origin(origin string, dsl func()) {
 }
 
 // Methods can be used in: Origin
+//
 // Methods sets the origin allowed methods.
 func Methods(vals ...string) {
 	if cors, ok := corsDefinition(); ok {
@@ -207,6 +213,7 @@ func Methods(vals ...string) {
 }
 
 // Expose can be used in: Origin
+//
 // Expose sets the origin exposed headers.
 func Expose(vals ...string) {
 	if cors, ok := corsDefinition(); ok {
@@ -215,6 +222,7 @@ func Expose(vals ...string) {
 }
 
 // MaxAge can be used in: Origin
+//
 // MaxAge sets the cache expiry for preflight request responses.
 func MaxAge(val uint) {
 	if cors, ok := corsDefinition(); ok {
@@ -223,6 +231,7 @@ func MaxAge(val uint) {
 }
 
 // Credentials can be used in: Origin
+//
 // Credentials sets the allow credentials response header.
 func Credentials() {
 	if cors, ok := corsDefinition(); ok {
@@ -231,6 +240,7 @@ func Credentials() {
 }
 
 // TermsOfService can be used in: API
+//
 // TermsOfService describes the API terms of services or links to them.
 func TermsOfService(terms string) {
 	if a, ok := apiDefinition(); ok {
@@ -242,6 +252,7 @@ func TermsOfService(terms string) {
 var hostnameRegex = regexp.MustCompile(`^[[:alnum:]][[:alnum:]\-]{0,61}[[:alnum:]]|[[:alpha:]]$`)
 
 // Host used in: API
+//
 // Host sets the API hostname.
 func Host(host string) {
 	if !hostnameRegex.MatchString(host) {
@@ -255,6 +266,7 @@ func Host(host string) {
 }
 
 // Scheme can be used in: API, Resource, Action
+//
 // Scheme sets the API URL schemes.
 func Scheme(vals ...string) {
 	ok := true
@@ -281,6 +293,7 @@ func Scheme(vals ...string) {
 }
 
 // Contact can be used in: API
+//
 // Contact sets the API contact information.
 func Contact(dsl func()) {
 	contact := new(design.ContactDefinition)
@@ -305,6 +318,7 @@ func License(dsl func()) {
 }
 
 // Docs can be used in: API, Action, Files
+//
 // Docs provides external documentation pointers.
 func Docs(dsl func()) {
 	docs := new(design.DocsDefinition)
@@ -325,6 +339,7 @@ func Docs(dsl func()) {
 }
 
 // Name can be used in: Contact, License.
+//
 // Name sets the contact or license name.
 func Name(name string) {
 	switch def := dslengine.CurrentDefinition().(type) {
@@ -338,6 +353,7 @@ func Name(name string) {
 }
 
 // Email can be used in: Contact
+//
 // Email sets the contact email.
 func Email(email string) {
 	if c, ok := contactDefinition(); ok {
@@ -361,6 +377,7 @@ func URL(url string) {
 }
 
 // Consumes can be used in: API
+//
 // Consumes adds a MIME type to the list of MIME types the APIs supports when accepting requests.
 // Consumes may also specify the path of the decoding package.
 // The package must expose a DecoderFactory method that returns an object which implements
@@ -374,6 +391,7 @@ func Consumes(args ...interface{}) {
 }
 
 // Produces can be used in: API
+//
 // Produces adds a MIME type to the list of MIME types the APIs can encode responses with.
 // Produces may also specify the path of the encoding package.
 // The package must expose a EncoderFactory method that returns an object which implements
@@ -423,6 +441,7 @@ func buildEncodingDefinition(encoding bool, args ...interface{}) *design.Encodin
 }
 
 // Package used in: Consumes, Produces.
+//
 // Package sets the Go package path to the encoder or decoder. It must be used inside a
 // Consumes or Produces DSL.
 func Package(path string) {
@@ -432,6 +451,7 @@ func Package(path string) {
 }
 
 // Function can be used in: Consumes, Produces
+//
 // Function sets the Go function name used to instantiate the encoder or decoder. Defaults to
 // NewEncoder / NewDecoder.
 func Function(fn string) {
@@ -441,6 +461,7 @@ func Function(fn string) {
 }
 
 // ResponseTemplate can be used in: API
+//
 // ResponseTemplate defines a response template that action definitions can use to describe their
 // responses. The template may specify the HTTP response status, header specification and body media
 // type. The template consists of a name and an anonymous function. The function is called when an
@@ -545,6 +566,7 @@ func setupResponseTemplate(a *design.APIDefinition, name string, p interface{}) 
 }
 
 // Title used in: API
+//
 // Title sets the API title used by generated documentation, JSON Hyper-schema, code comments etc.
 func Title(val string) {
 	if a, ok := apiDefinition(); ok {
@@ -553,6 +575,7 @@ func Title(val string) {
 }
 
 // Trait can be used in: API
+//
 // Trait defines an API trait. A trait encapsulates arbitrary DSL that gets executed wherever the
 // trait is called via the UseTrait function.
 func Trait(name string, val ...func()) {
@@ -577,6 +600,7 @@ func Trait(name string, val ...func()) {
 }
 
 // UseTrait can be used in: Resource, Action, Type, MediaType, Attribute
+//
 // UseTrait executes the API trait with the given name. An API level DSL trait must be
 // defined first. UseTrait takes a variable number of trait names.
 func UseTrait(names ...string) {
