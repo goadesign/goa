@@ -287,7 +287,7 @@ var _ = Describe("CollectionOf", func() {
 		})
 	})
 
-	Context("defined with the collectio identifier", func() {
+	Context("defined with a collection identifier", func() {
 		var col *MediaTypeDefinition
 		BeforeEach(func() {
 			dslengine.Reset()

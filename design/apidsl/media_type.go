@@ -370,22 +370,30 @@ func Link(name string, view ...string) {
 	}
 }
 
-// CollectionOf can be used in: Wherever a MediaType can be used..
+// CollectionOf creates a collection media type from its element media type and an optional
+// identifier. A collection media type represents the content of responses that return a collection
+// of resources such as "list" actions. This function can be called from any place where a media
+// type can be used.
 //
-// e.g. Attribute("foo", CollectionOf(Bar))
-// CollectionOf creates a collection media type from its element media type. A collection media
-// type represents the content of responses that return a collection of resources such as "list"
-// actions. This function can be called from any place where a media type can be used.
+// If an identifier isn't provided then the resulting media type identifier is built from the
+// element media type by appending the media type parameter "type" with value "collection".
 //
-// The resulting media type identifier is built from the element media type by appending the media
-// type parameter "type" with value "collection".
+// Examples:
 //
-//  CollectionOf(BottleMedia)  // If the identifier of BottleMedia is "vnd.goa.bottle',
-//                             // Content-Type will be "vnd.goa.bottle; type=collection".
+//   // Define a collection media type using the default generated identifier
+//   // (e.g. "vnd.goa.bottle; type=collection" assuming the identifier of BottleMedia
+//   // is "vnd.goa.bottle") and the default views (i.e. inherited from the BottleMedia
+//   // views).
+//   var col = CollectionOf(BottleMedia)
 //
-// The collection identifier can be specified as second argument.
-//
-//  CollectionOf(BottleMedia, "vnd.goa.bottles")  // Content-Type will be "vnd.goa.bottles".
+//   // Another collection media type using the same element media type but defining a
+//   // different default view.
+//   var col2 = CollectionOf(BottleMedia, "vnd.goa.bottle.alternate; type=collection;", func() {
+//       View("default", func() {
+//           Attribute("id")
+//           Attribute("name")
+//       })
+//   })
 func CollectionOf(v interface{}, paramAndDSL ...interface{}) *design.MediaTypeDefinition {
 	var m *design.MediaTypeDefinition
 	var ok bool
@@ -464,7 +472,7 @@ func parseCollectionOfDSL(paramAndDSL ...interface{}) (string, func()) {
 		for _, p := range paramAndDSL {
 			param, ok = p.(string)
 			if !ok {
-				dslengine.ReportError("invalid CollectionOf argument, must be a string", p)
+				dslengine.ReportError("invalid CollectionOf argument, must be a string or a DSL function", p)
 				return "", nil
 			}
 		}
