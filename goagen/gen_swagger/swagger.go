@@ -999,9 +999,11 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 
 func computeProduces(operation *Operation, s *Swagger, action *design.ActionDefinition) {
 	produces := make(map[string]bool)
+	producesSorted := make([]string, 0)
 	action.IterateResponses(func(resp *design.ResponseDefinition) error {
 		if resp.MediaType != "" {
 			produces[resp.MediaType] = true
+			producesSorted = append(producesSorted, resp.MediaType)
 		}
 		return nil
 	})
@@ -1020,9 +1022,9 @@ func computeProduces(operation *Operation, s *Swagger, action *design.ActionDefi
 		}
 	}
 	if !subset {
-		operation.Produces = make([]string, len(produces))
+		operation.Produces = make([]string, len(producesSorted))
 		i := 0
-		for p := range produces {
+		for _, p := range producesSorted {
 			operation.Produces[i] = p
 			i++
 		}
