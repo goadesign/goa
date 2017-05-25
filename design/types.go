@@ -35,6 +35,8 @@ type (
 		IsCompatible(interface{}) bool
 		// Example generates a pseudo-random value using the given random generator.
 		Example(*Random) interface{}
+		// Hash returns a unique hash value for the instance of the type.
+		Hash() string
 	}
 
 	// Primitive is the type for null, boolean, integer, number, string, and time.
@@ -293,7 +295,8 @@ func (p Primitive) IsCompatible(val interface{}) bool {
 	return false
 }
 
-// Example generates a pseudo-random primitive value using the given random generator.
+// Example generates a pseudo-random primitive value using the given random
+// generator.
 func (p Primitive) Example(r *Random) interface{} {
 	switch p {
 	case Boolean:
@@ -315,12 +318,22 @@ func (p Primitive) Example(r *Random) interface{} {
 	}
 }
 
+// Hash returns a unique hash value for p.
+func (p Primitive) Hash() string {
+	return p.Name()
+}
+
 // Kind implements DataKind.
 func (a *Array) Kind() Kind { return ArrayKind }
 
 // Name returns the type name.
 func (a *Array) Name() string {
 	return "array"
+}
+
+// Hash returns a unique hash value for a.
+func (a *Array) Hash() string {
+	return "_array_+" + a.ElemType.Type.Hash()
 }
 
 // IsCompatible returns true if val is compatible with p.
@@ -381,6 +394,24 @@ func (o Object) Kind() Kind { return ObjectKind }
 // Name returns the type name.
 func (o Object) Name() string { return "object" }
 
+// Hash returns a unique hash value for o.
+func (o Object) Hash() string {
+	h := "_object_"
+	// ensure fixed ordering
+	keys := make([]string, len(o))
+	i := 0
+	for n := range o {
+		keys[i] = n
+		i++
+	}
+	sort.Strings(keys)
+
+	for _, n := range keys {
+		h += "+" + o[n].Type.Hash()
+	}
+	return h
+}
+
 // Merge copies other's fields into o overridding any pre-existing field with the same name.
 func (o Object) Merge(other Object) {
 	for n, att := range other {
@@ -419,6 +450,11 @@ func (m *Map) Kind() Kind { return MapKind }
 
 // Name returns the type name.
 func (m *Map) Name() string { return "hash" }
+
+// Hash returns a unique hash value for m.
+func (m *Map) Hash() string {
+	return "_map_+" + m.KeyType.Type.Hash() + ":" + m.ElemType.Type.Hash()
+}
 
 // IsCompatible returns true if o describes the (Go) type of val.
 func (m *Map) IsCompatible(val interface{}) bool {

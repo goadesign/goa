@@ -5,27 +5,25 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sergi/go-diff/diffmatchpatch"
-
-	"goa.design/goa.v2/codegen"
+	. "goa.design/goa.v2/codegen/testing"
 	"goa.design/goa.v2/design"
 )
 
 func TestEndpoint(t *testing.T) {
 	const (
 		singleMethod = `type (
-	// Single lists the Single service endpoints.
-	Single struct {
+	// SingleEndpoint lists the Single service endpoints.
+	SingleEndpoint struct {
 		A goa.Endpoint
 	}
 )
 
-// NewSingle wraps the methods of a Single service with endpoints.
-func NewSingle(s service.Single) *Single {
-	ep := new(Single)
+// NewSingleEndpoint wraps the methods of a Single service with endpoints.
+func NewSingleEndpoint(s Single) *SingleEndpoint {
+	ep := new(SingleEndpoint)
 
 	ep.A = func(ctx context.Context, req interface{}) (interface{}, error) {
-		p := req.(*service.AType)
+		p := req.(*AType)
 		return s.A(ctx, p)
 	}
 
@@ -33,24 +31,24 @@ func NewSingle(s service.Single) *Single {
 }`
 
 		multipleMethods = `type (
-	// Multiple lists the Multiple service endpoints.
-	Multiple struct {
+	// MultipleEndpoint lists the Multiple service endpoints.
+	MultipleEndpoint struct {
 		B goa.Endpoint
 		C goa.Endpoint
 	}
 )
 
-// NewMultiple wraps the methods of a Multiple service with endpoints.
-func NewMultiple(s service.Multiple) *Multiple {
-	ep := new(Multiple)
+// NewMultipleEndpoint wraps the methods of a Multiple service with endpoints.
+func NewMultipleEndpoint(s Multiple) *MultipleEndpoint {
+	ep := new(MultipleEndpoint)
 
 	ep.B = func(ctx context.Context, req interface{}) (interface{}, error) {
-		p := req.(*service.BType)
+		p := req.(*BType)
 		return s.B(ctx, p)
 	}
 
 	ep.C = func(ctx context.Context, req interface{}) (interface{}, error) {
-		p := req.(*service.CType)
+		p := req.(*CType)
 		return s.C(ctx, p)
 	}
 
@@ -58,15 +56,15 @@ func NewMultiple(s service.Multiple) *Multiple {
 }`
 
 		nopayloadMethods = `type (
-	// NoPayload lists the NoPayload service endpoints.
-	NoPayload struct {
+	// NoPayloadEndpoint lists the NoPayload service endpoints.
+	NoPayloadEndpoint struct {
 		NoPayload goa.Endpoint
 	}
 )
 
-// NewNoPayload wraps the methods of a NoPayload service with endpoints.
-func NewNoPayload(s service.NoPayload) *NoPayload {
-	ep := new(NoPayload)
+// NewNoPayloadEndpoint wraps the methods of a NoPayload service with endpoints.
+func NewNoPayloadEndpoint(s NoPayload) *NoPayloadEndpoint {
+	ep := new(NoPayloadEndpoint)
 
 	ep.NoPayload = func(ctx context.Context, req interface{}) (interface{}, error) {
 		return s.NoPayload(ctx, nil)
@@ -85,6 +83,7 @@ func NewNoPayload(s service.NoPayload) *NoPayload {
 					AttributeExpr: &design.AttributeExpr{Type: design.String},
 					TypeName:      "AType",
 				}},
+			Result: &design.AttributeExpr{Type: design.Empty},
 		}
 
 		b = design.EndpointExpr{
@@ -94,6 +93,7 @@ func NewNoPayload(s service.NoPayload) *NoPayload {
 					AttributeExpr: &design.AttributeExpr{Type: design.String},
 					TypeName:      "BType",
 				}},
+			Result: &design.AttributeExpr{Type: design.Empty},
 		}
 
 		c = design.EndpointExpr{
@@ -103,11 +103,13 @@ func NewNoPayload(s service.NoPayload) *NoPayload {
 					AttributeExpr: &design.AttributeExpr{Type: design.String},
 					TypeName:      "CType",
 				}},
+			Result: &design.AttributeExpr{Type: design.Empty},
 		}
 
 		nopayload = design.EndpointExpr{
 			Name:    "NoPayload",
 			Payload: &design.AttributeExpr{Type: design.Empty},
+			Result:  &design.AttributeExpr{Type: design.Empty},
 		}
 
 		singleEndpoint = design.ServiceExpr{
@@ -147,7 +149,8 @@ func NewNoPayload(s service.NoPayload) *NoPayload {
 	}
 	for k, tc := range cases {
 		buf := new(bytes.Buffer)
-		ServiceScope = codegen.NewNameScope()
+		Services = make(ServicesData)
+		design.Root.Services = []*design.ServiceExpr{tc.Service}
 		s := Service(tc.Service) // to initialize ServiceScope
 		s.Sections("")
 		file := Endpoint(tc.Service)
@@ -158,10 +161,8 @@ func NewNoPayload(s service.NoPayload) *NoPayload {
 		}
 		actual := buf.String()
 		if !strings.Contains(actual, tc.Expected) {
-			dmp := diffmatchpatch.New()
-			diffs := dmp.DiffMain(actual, tc.Expected, false)
-			diff := dmp.DiffPrettyText(diffs)
-			t.Errorf("%s: got\n%v\n=============\nexpected to contain\n%v\ndiff\n%v", k, actual, tc.Expected, diff)
+			d := Diff(t, actual, tc.Expected)
+			t.Errorf("%s: got\n%v\n=============\nexpected to contain\n%v\ndiff\n%v", k, actual, tc.Expected, d)
 		}
 	}
 }

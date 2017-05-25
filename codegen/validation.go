@@ -18,6 +18,7 @@ var (
 	lengthValT   *template.Template
 	requiredValT *template.Template
 	arrayValT    *template.Template
+	mapValT      *template.Template
 	userValT     *template.Template
 )
 
@@ -36,14 +37,48 @@ func init() {
 	lengthValT = template.Must(template.New("length").Funcs(fm).Parse(lengthValTmpl))
 	requiredValT = template.Must(template.New("req").Funcs(fm).Parse(requiredValTmpl))
 	arrayValT = template.Must(template.New("array").Funcs(fm).Parse(arrayValTmpl))
+	mapValT = template.Must(template.New("map").Funcs(fm).Parse(mapValTmpl))
 	userValT = template.Must(template.New("user").Funcs(fm).Parse(userValTmpl))
+}
+
+// HasValidations returns true if the given attribute or any of its children
+// recursively has validations. If ignoreRequired is true then HasValidation
+// does not consider "Required" validations. This is necessary to know whether
+// validation code should be generated for types that don't use pointers to
+// define required fields.
+func HasValidations(att *design.AttributeExpr, ignoreRequired bool) bool {
+	if att.Validation != nil {
+		if !ignoreRequired || !att.Validation.HasRequiredOnly() {
+			return true
+		}
+	}
+	if o := design.AsObject(att.Type); o != nil {
+		for _, catt := range o {
+			seen := make(map[*design.AttributeExpr]struct{})
+			seen[att] = struct{}{}
+			if hasValidationsRecurse(catt, ignoreRequired, seen) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // ValidationCode produces Go code that runs the validations defined in the
 // given attribute definition if any against the content of the variable named
-// target. context is used to produce helpful messages in case of error. The
-// generated code assumes that there is a pre-existing "err" variable of type
-// error. It initializes that variable in case a validation fails.
+// target. The generated code assumes that there is a pre-existing "err"
+// variable of type error. It initializes that variable in case a validation
+// fails.
+//
+// req indicates whether the attribute is required (true) or optional (false) in
+// which case target is assumed to be a pointer.
+//
+// pub indicates whether the data structure described by att is public (true) or
+// private (false). A private data structure uses pointers to hold all attributes
+// so that they may be properly validated.
+//
+// context is used to produce helpful messages in case of error.
+//
 func ValidationCode(att *design.AttributeExpr, req, pub bool, target, context string) string {
 	validation := att.Validation
 	if validation == nil {
@@ -140,18 +175,34 @@ func ValidationCode(att *design.AttributeExpr, req, pub bool, target, context st
 
 // RecursiveValidationCode produces Go code that runs the validations defined in
 // the given attribute and its children recursively against the value held by
-// the variable named target. req must be true if att is a child attribute that
-// is required. pub must be true if the attribute corresponds to a public field.
-// context represents the path to the attribute and is used to build error
-// messages. The generated code assumes that there is a pre-existing "err"
-// variable of type error. It initializes that variable in case a validation
-// fails.
-func RecursiveValidationCode(att *design.AttributeExpr, req, pub bool, target, context string) string {
+// the variable named target. See ValidationCode for a description of the
+// arguments and their effects.
+func RecursiveValidationCode(att *design.AttributeExpr, req, pub bool, target string) string {
 	seen := make(map[string]*bytes.Buffer)
-	return recurse(att, req, pub, target, context, seen).String()
+	return recurseValidationCode(att, req, pub, target, target, seen).String()
 }
 
-func recurse(att *design.AttributeExpr, req, pub bool, target, context string, seen map[string]*bytes.Buffer) *bytes.Buffer {
+func hasValidationsRecurse(att *design.AttributeExpr, ignoreRequired bool, seen map[*design.AttributeExpr]struct{}) bool {
+	if att.Validation != nil {
+		if !ignoreRequired || !att.Validation.HasRequiredOnly() {
+			return true
+		}
+	}
+	if o := design.AsObject(att.Type); o != nil {
+		for _, catt := range o {
+			if _, ok := seen[catt]; ok {
+				continue // break infinite recursions
+			}
+			seen[catt] = struct{}{}
+			if hasValidationsRecurse(catt, ignoreRequired, seen) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func recurseValidationCode(att *design.AttributeExpr, req, pub bool, target, context string, seen map[string]*bytes.Buffer) *bytes.Buffer {
 	var (
 		buf   = new(bytes.Buffer)
 		first = true
@@ -165,12 +216,13 @@ func recurse(att *design.AttributeExpr, req, pub bool, target, context string, s
 		seen[ut.Name()] = buf
 	}
 
+	validation := ValidationCode(att, req, pub, target, context)
+	if validation != "" {
+		buf.WriteString(validation)
+		first = false
+	}
+
 	if o := design.AsObject(att.Type); o != nil {
-		validation := ValidationCode(att, req, pub, target, context)
-		if validation != "" {
-			buf.WriteString(validation)
-			first = false
-		}
 		WalkAttributes(o, func(n string, catt *design.AttributeExpr) error {
 			validation := recurseAttribute(att, catt, n, target, context, pub, seen)
 			if validation != "" {
@@ -184,14 +236,7 @@ func recurse(att *design.AttributeExpr, req, pub bool, target, context string, s
 			return nil
 		})
 	} else if a := design.AsArray(att.Type); a != nil {
-		// Perform any validation on the array type such as MinLength, MaxLength, etc.
-		validation := ValidationCode(att, req, pub, target, context)
-		first := true
-		if validation != "" {
-			buf.WriteString(validation)
-			first = false
-		}
-		val := ValidationCode(a.ElemType, true, true, "e", context+"[*]")
+		val := recurseValidationCode(a.ElemType, true, true, "e", context+"[*]", seen).String()
 		if val != "" {
 			switch a.ElemType.Type.(type) {
 			case design.UserType:
@@ -203,10 +248,7 @@ func recurse(att *design.AttributeExpr, req, pub bool, target, context string, s
 				val = fmt.Sprintf("if e != nil {\n\t%s\n}", buf.String())
 			}
 			data := map[string]interface{}{
-				"elemType":   a.ElemType,
-				"context":    context,
 				"target":     target,
-				"pub":        pub,
 				"validation": val,
 			}
 			if !first {
@@ -218,10 +260,45 @@ func recurse(att *design.AttributeExpr, req, pub bool, target, context string, s
 				panic(err) // bug
 			}
 		}
-	} else {
-		validation := ValidationCode(att, req, pub, target, context)
-		if validation != "" {
-			buf.WriteString(validation)
+	} else if m := design.AsMap(att.Type); m != nil {
+		keyVal := recurseValidationCode(m.KeyType, true, true, "k", context+".key", seen).String()
+		valueVal := recurseValidationCode(m.ElemType, true, true, "v", context+"[key]", seen).String()
+		if keyVal != "" || valueVal != "" {
+			if keyVal != "" {
+				if _, ok := m.KeyType.Type.(design.UserType); ok {
+					var buf bytes.Buffer
+					if err := userValT.Execute(&buf, map[string]interface{}{"target": "k"}); err != nil {
+						panic(err) // bug
+					}
+					keyVal = fmt.Sprintf("\nif k != nil {\n\t%s\n}", buf.String())
+				} else {
+					keyVal = "\n" + keyVal
+				}
+			}
+			if valueVal != "" {
+				if _, ok := m.ElemType.Type.(design.UserType); ok {
+					var buf bytes.Buffer
+					if err := userValT.Execute(&buf, map[string]interface{}{"target": "v"}); err != nil {
+						panic(err) // bug
+					}
+					valueVal = fmt.Sprintf("\nif v != nil {\n\t%s\n}", buf.String())
+				} else {
+					valueVal = "\n" + valueVal
+				}
+			}
+			data := map[string]interface{}{
+				"target":          target,
+				"keyValidation":   keyVal,
+				"valueValidation": valueVal,
+			}
+			if !first {
+				buf.WriteByte('\n')
+			} else {
+				first = false
+			}
+			if err := mapValT.Execute(buf, data); err != nil {
+				panic(err) // bug
+			}
 		}
 	}
 	return buf
@@ -270,7 +347,7 @@ func recurseAttribute(att, catt *design.AttributeExpr, n, target, context string
 			validation = buf.String()
 		}
 	} else {
-		validation = recurse(
+		validation = recurseValidationCode(
 			catt,
 			att.IsRequired(n),
 			pub,
@@ -339,6 +416,11 @@ const (
 {{ .validation }}
 }`
 
+	mapValTmpl = `for {{if .keyValidation }}k{{ else }}_{{ end }}, {{ if .valueValidation }}v{{ else }}_{{ end }} := range {{ .target }} {
+{{- .keyValidation }}
+{{- .valueValidation }}
+}`
+
 	userValTmpl = `if err2 := {{ .target }}.Validate(); err2 != nil {
 	err = goa.MergeErrors(err, err2)
 }`
@@ -347,7 +429,7 @@ const (
 if {{ .target }} != nil {
 {{ end -}}
 if !({{ oneof .targetVal .values }}) {
-	err = goa.MergeErrors(err, goa.InvalidEnumValueError(` + "`" + `{{ .context }}` + "`" + `, {{ .targetVal }}, {{ slice .values }}))
+	err = goa.MergeErrors(err, goa.InvalidEnumValueError({{ printf "%q" .context }}, {{ .targetVal }}, {{ slice .values }}))
 {{ if .isPointer -}}
 }
 {{ end -}}
@@ -356,9 +438,7 @@ if !({{ oneof .targetVal .values }}) {
 	patternValTmpl = `{{ if .isPointer -}}
 if {{ .target }} != nil {
 {{ end -}}
-if ok := goa.ValidatePattern(` + "`{{ .pattern }}`" + `, {{ .targetVal }}); !ok {
-	err = goa.MergeErrors(err, goa.InvalidPatternError(` + "`" + `{{ .context }}` + "`" + `, {{ .targetVal }}, ` + "`{{ .pattern }}`" + `))
-}
+	err = goa.MergeErrors(err, goa.ValidatePattern({{ printf "%q" .context }}, {{ .targetVal }}, {{ printf "%q" .pattern }}))
 {{- if .isPointer }}
 }
 {{- end }}`
@@ -366,8 +446,7 @@ if ok := goa.ValidatePattern(` + "`{{ .pattern }}`" + `, {{ .targetVal }}); !ok 
 	formatValTmpl = `{{ if .isPointer -}}
 if {{ .target }} != nil {
 {{ end -}}
-if err2 := goa.ValidateFormat({{ constant .format }}, {{ .targetVal }}); err2 != nil {
-		err = goa.MergeErrors(err, goa.InvalidFormatError(` + "`" + `{{ .context }}` + "`" + `, {{ .targetVal }}, {{ constant .format }}, err2))
+	err = goa.MergeErrors(err, goa.ValidateFormat({{ printf "%q" .context }}, {{ .targetVal}}, {{ constant .format }}))
 {{ if .isPointer -}}
 }
 {{ end -}}
@@ -377,7 +456,7 @@ if err2 := goa.ValidateFormat({{ constant .format }}, {{ .targetVal }}); err2 !=
 if {{ .target }} != nil {
 {{ end -}}
 	if {{ .targetVal }} {{ if .isMin }}<{{ else }}>{{ end }} {{ if .isMin }}{{ .min }}{{ else }}{{ .max }}{{ end }} {
-	err = goa.MergeErrors(err, goa.InvalidRangeError(` + "`" + `{{ .context }}` + "`" + `, {{ .targetVal }}, {{ if .isMin }}{{ .min }}, true{{ else }}{{ .max }}, false{{ end }}))
+	err = goa.MergeErrors(err, goa.InvalidRangeError({{ printf "%q" .context }}, {{ .targetVal }}, {{ if .isMin }}{{ .min }}, true{{ else }}{{ .max }}, false{{ end }}))
 {{ if .isPointer -}}
 }
 {{ end -}}
@@ -388,7 +467,7 @@ if {{ .target }} != nil {
 if {{ .target }} != nil {
 {{ end -}}
 	if {{ if .string }}utf8.RuneCountInString({{ $target }}){{ else }}len({{ $target }}){{ end }} {{ if .isMinLength }}<{{ else }}>{{ end }} {{ if .isMinLength }}{{ .minLength }}{{ else }}{{ .maxLength }}{{ end }} {
-	err = goa.MergeErrors(err, goa.InvalidLengthError(` + "`" + `{{ .context }}` + "`" + `, {{ $target }}, {{ if .string }}utf8.RuneCountInString({{ $target }}){{ else }}len({{ $target }}){{ end }}, {{ if .isMinLength }}{{ .minLength }}, true{{ else }}{{ .maxLength }}, false{{ end }}))
+	err = goa.MergeErrors(err, goa.InvalidLengthError({{ printf "%q" .context }}, {{ $target }}, {{ if .string }}utf8.RuneCountInString({{ $target }}){{ else }}len({{ $target }}){{ end }}, {{ if .isMinLength }}{{ .minLength }}, true{{ else }}{{ .maxLength }}, false{{ end }}))
 {{ if .isPointer -}}
 	}
 {{ end -}}
@@ -397,11 +476,11 @@ if {{ .target }} != nil {
 	requiredValTmpl = `{{ $att := index $.attribute.Type.ToObject .req }}
 {{- if and $.pub (eq $att.Type.Kind 4) -}}
 if {{ $.target }}.{{ goifyAtt $att .req true }} == "" {
-	err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`" + `{{ $.context }}` + "`" + `, "{{  .req  }}"))
+	err = goa.MergeErrors(err, goa.MissingAttributeError({{ printf "%q" $.context }}, "{{  .req  }}"))
 }
 {{- else if or (not $.pub) (not $att.Type.IsPrimitive) -}}
 if {{ $.target }}.{{ goifyAtt $att .req true }} == nil {
-	err = goa.MergeErrors(err, goa.MissingAttributeError(` + "`" + `{{ $.context }}` + "`" + `, "{{ .req }}"))
+	err = goa.MergeErrors(err, goa.MissingAttributeError({{ printf "%q" $.context }}, "{{ .req }}"))
 }
 {{- end }}`
 )

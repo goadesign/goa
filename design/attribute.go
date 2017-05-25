@@ -251,7 +251,7 @@ func (a *AttributeExpr) IsPrimitivePointer(attName string) bool {
 		return false
 	}
 	if IsPrimitive(att.Type) {
-		return !a.IsRequired(attName) && !a.HasDefaultValue(attName)
+		return a.Type.Kind() != BytesKind && !a.IsRequired(attName) && !a.HasDefaultValue(attName)
 	}
 	return false
 }

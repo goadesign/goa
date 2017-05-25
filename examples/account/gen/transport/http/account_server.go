@@ -148,6 +148,9 @@ func CreateAccountDecodeRequest(decoder func(*http.Request) rest.Decoder) func(*
 				}
 				return nil, err
 			}
+			if err = body.Validate(); err != nil {
+				return nil, err
+			}
 		}
 
 		params := rest.ContextParams(r.Context())
@@ -273,9 +276,15 @@ func ListAccountEncodeResponse(encoder func(http.ResponseWriter, *http.Request) 
 		w.WriteHeader(http.StatusOK)
 		if v != nil {
 			res := v.([]*service.AccountResult)
-			body := make([]*AccountResultBody, len(res))
-			for i, r := range res {
-				b := AccountResultBody(*r)
+			body := make([]*AccountResponseBody, len(res))
+			for i, re := range res {
+				b := AccountResponseBody{
+					Href:        re.Href,
+					ID:          re.ID,
+					OrgID:       re.OrgID,
+					Name:        re.Name,
+					Description: re.Description,
+				}
 				body[i] = &b
 			}
 			return enc.Encode(body)
@@ -343,7 +352,13 @@ func ShowAccountEncodeResponse(encoder func(http.ResponseWriter, *http.Request) 
 		w.WriteHeader(http.StatusOK)
 		if v != nil {
 			res := v.(*service.AccountResult)
-			body := AccountResultBody(*res)
+			body := AccountResponseBody{
+				Href:        res.Href,
+				ID:          res.ID,
+				OrgID:       res.OrgID,
+				Name:        res.Name,
+				Description: res.Description,
+			}
 			return enc.Encode(&body)
 		}
 		return nil

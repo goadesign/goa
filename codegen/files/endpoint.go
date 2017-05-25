@@ -10,27 +10,27 @@ import (
 )
 
 type (
-	// endpointData contains the data necessary to render the endpoint
+	// EndpointData contains the data necessary to render the endpoint
 	// template.
-	endpointData struct {
+	EndpointData struct {
 		// Name is the service name.
 		Name string
 		// Description is the service description.
 		Description string
 		// VarName is the endpoint struct name.
 		VarName string
+		// ServiceVarName is the service interface name.
+		ServiceVarName string
 		// Methods lists the endpoint struct methods.
-		Methods []*endpointMethod
+		Methods []*EndpointMethodData
 	}
 
-	// endpointMethod describes a single endpoint method.
-	endpointMethod struct {
+	// EndpointMethodData describes a single endpoint method.
+	EndpointMethodData struct {
 		// Name is the method name.
 		Name string
 		// PayloadRef is reference to the payload Go type if any.
 		PayloadRef string
-		// HasPayload is true if the payload type is not empty.
-		HasPayload bool
 	}
 )
 
@@ -39,36 +39,32 @@ var endpointTmpl = template.Must(template.New("endpoint").Parse(endpointT))
 
 // Endpoint returns the endpoint file for the given service.
 func Endpoint(service *design.ServiceExpr) codegen.File {
-	path := filepath.Join("endpoints", service.Name+".go")
+	path := filepath.Join(codegen.KebabCase(service.Name), "endpoint.go")
 	sections := func(genPkg string) []*codegen.Section {
 		var (
-			data *endpointData
+			data *EndpointData
 		)
 		{
-			methods := make([]*endpointMethod, len(service.Endpoints))
-			for i, v := range service.Endpoints {
-				var ptype string
-				if ut, ok := v.Payload.Type.(design.UserType); ok {
-					ptype = "*service." + ServiceScope.Get(ut)
-				} else {
-					ptype = codegen.GoTypeRef(v.Payload.Type, false)
-				}
-				methods[i] = &endpointMethod{
-					Name:       codegen.Goify(v.Name, true),
-					PayloadRef: ptype,
-					HasPayload: v.Payload.Type != design.Empty,
+			svc := Services.Get(service.Name)
+			methods := make([]*EndpointMethodData, len(svc.Methods))
+			for i, m := range svc.Methods {
+				methods[i] = &EndpointMethodData{
+					Name:       m.VarName,
+					PayloadRef: m.PayloadRef,
 				}
 			}
 			desc := service.Description
-			varName := codegen.Goify(service.Name, true)
+			serviceVarName := svc.VarName
+			varName := serviceVarName + "Endpoint"
 			if desc == "" {
 				desc = fmt.Sprintf("%s lists the %s service endpoints.", varName, service.Name)
 			}
-			data = &endpointData{
-				Name:        service.Name,
-				Description: desc,
-				VarName:     varName,
-				Methods:     methods,
+			data = &EndpointData{
+				Name:           service.Name,
+				Description:    desc,
+				VarName:        varName,
+				ServiceVarName: serviceVarName,
+				Methods:        methods,
 			}
 		}
 
@@ -80,7 +76,6 @@ func Endpoint(service *design.ServiceExpr) codegen.File {
 				[]*codegen.ImportSpec{
 					&codegen.ImportSpec{Path: "context"},
 					&codegen.ImportSpec{Path: "goa.design/goa.v2"},
-					&codegen.ImportSpec{Path: genPkg + "/services"},
 				})
 			body = &codegen.Section{
 				Template: endpointTmpl,
@@ -105,14 +100,14 @@ const endpointT = `type (
 )
 
 // New{{ .VarName }} wraps the methods of a {{ .Name }} service with endpoints.
-func New{{ .VarName }}(s service.{{ .VarName }}) *{{ .VarName }} {
+func New{{ .VarName }}(s {{ .ServiceVarName }}) *{{ .VarName }} {
 	ep := new({{ .VarName }})
 {{ range .Methods }}
 	ep.{{ .Name }} = func(ctx context.Context, req interface{}) (interface{}, error) {
-{{- if .HasPayload }}
+{{- if .PayloadRef }}
 		p := req.({{ .PayloadRef }})
 {{- end }}
-		return s.{{ .Name }}(ctx, {{ if .HasPayload }}p{{ else }}nil{{ end }})
+		return s.{{ .Name }}(ctx, {{ if .PayloadRef }}p{{ else }}nil{{ end }})
 	}
 {{ end }}
 	return ep

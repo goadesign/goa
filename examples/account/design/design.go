@@ -14,6 +14,7 @@ var _ = Service("account", func() {
 	HTTP(func() {
 		Path("/orgs/{org_id}/accounts")
 		Param("org_id", UInt, "ID of owner organization", func() {
+			Maximum(10000)
 			Example("basic", 123)
 		})
 	})
@@ -73,6 +74,7 @@ var CreateAccount = Type("CreateAccount", func() {
 	Description("CreateAccount is the account creation payload")
 	Attribute("org_id", UInt, "ID of organization that owns newly created account")
 	Attribute("name", String, "Name of new account")
+	Attribute("description", String, "Description of new account")
 	Required("org_id", "name")
 })
 
@@ -93,6 +95,9 @@ var Account = MediaType("application/vnd.basic.account", func() {
 		Attribute("id", String, "ID of account")
 		Attribute("org_id")
 		Attribute("name")
+		Attribute("description", func() {
+			Default("An active account")
+		})
 		Required("href", "id", "org_id", "name")
 	})
 })

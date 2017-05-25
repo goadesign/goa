@@ -85,7 +85,7 @@ func (c *AccountClient) EncodeCreate(encoder func(*http.Request) rest.Encoder) f
 
 		// Encode body
 		var body CreateAccountBody
-		body.Name = p.Name
+		body.Name = &p.Name
 		err = encoder(req).Encode(&body)
 		if err != nil {
 			return nil, rest.ErrEncodingError("account", "create", err)

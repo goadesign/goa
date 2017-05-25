@@ -84,6 +84,16 @@ func (ma *MappedAttributeExpr) Delete(attName string) {
 		}
 	}
 	delete(ma.Type.(design.Object), attName)
+	if ma.Validation != nil {
+		if req := ma.Validation.Required; len(req) > 0 {
+			for i, r := range req {
+				if r == attName {
+					ma.Validation.Required = append(req[:i], req[i+1:len(req)]...)
+					break
+				}
+			}
+		}
+	}
 }
 
 // Attribute returns the original attribute using "att:elem" format for the keys.

@@ -56,6 +56,11 @@ func (s *ServiceExpr) Error(name string) *ErrorExpr {
 	return Root.Error(name)
 }
 
+// Hash returns a unique hash value for s.
+func (s *ServiceExpr) Hash() string {
+	return "_service_+" + s.Name
+}
+
 // Finalize finalizes all then endpoints.
 func (s *ServiceExpr) Finalize() {
 	for _, ep := range s.Endpoints {

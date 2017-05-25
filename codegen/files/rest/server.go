@@ -1,8 +1,4 @@
-// TBD
 // MarshalTypes codegen file
-// Change RequestBodyType like RequestResponseType
-// Write decode code
-// use name scope for types? (hopefully don't have to)
 // add tags to generated type from restgen.GoTypeDef
 // Make sure to generate user type for each error even if declared with primitive
 // Add metadata to specify error type attribute to be used for error message
@@ -10,7 +6,12 @@
 // Make sure primitive rename of []byte to bytes didn't break stuff
 
 // DSL validation: make sure there's at least one response for all actions
+// Make sure all routes define identical path params
+// Remove required attributes from 'Required' slice that have default values
 
+// Add response tags to account example
+// Test response tags
+// Add tests for the different payload sources (body, params, headers)
 package rest
 
 import (
@@ -22,18 +23,19 @@ import (
 	"strings"
 
 	"goa.design/goa.v2/codegen"
+	"goa.design/goa.v2/codegen/files"
 	restgen "goa.design/goa.v2/codegen/rest"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
 
 type (
-	// serverActionData describes a single endpoint/resource.
-	serverData struct {
+	// ServerData describes a single endpoint/resource.
+	ServerData struct {
 		// ServiceName is the name of the service.
 		ServiceName string
-		// VarServiceName is the goified name of the service.
-		VarServiceName string
+		// ServiceVarName is the goified name of the service.
+		ServiceVarName string
 		// HandlerStruct is the name of the main server handler structure.
 		HandlersStruct string
 		// Constructor is the name of the constructor of the handler struct function.
@@ -41,21 +43,21 @@ type (
 		// MountHandlers is the name of the name of the mount function.
 		MountHandlers string
 		// Action describes the action data for this endpoint.
-		ActionData []*serverActionData
+		ActionData []*ServerActionData
 	}
 
-	// serverActionData describes a single action.
-	serverActionData struct {
+	// ServerActionData describes a single action.
+	ServerActionData struct {
 		// EndpointName is the name of the endpoint.
 		EndpointName string
-		// VarEndpointName is the goified name of theendpoint/resource.
-		VarEndpointName string
+		// EndpointVarName is the goified name of theendpoint/resource.
+		EndpointVarName string
 		// ServiceName is the name of the service.
 		ServiceName string
-		// VarServiceName is the goified name of the service.
-		VarServiceName string
+		// ServiceVarName is the goified name of the service.
+		ServiceVarName string
 		// Routes describes the possible routes for this action.
-		Routes []*serverRouteData
+		Routes []*ServerRouteData
 		// MountHandler is the name of the mount handler function.
 		MountHandler string
 		// Constructor is the name of the constructor function for the http handler function.
@@ -67,48 +69,57 @@ type (
 		// ErrorEncoder is the name of the error encoder function.
 		ErrorEncoder string
 		// Payload provides information about the payload.
-		Payload *serverPayloadData
-		// ResultTypeName is the service endpoint result type name
-		ResultTypeName string
+		Payload *ServerPayloadData
+		// ResultTypeRef is the service endpoint result type reference
+		ResultTypeRef string
 		// Responses describes the information about the different
 		// responses. If there are more than one responses then the
 		// tagless response must be last.
-		Responses []*serverResponseData
+		Responses []*ServerResponseData
 		// HTTPErrors describes the information about error responses.
-		HTTPErrors []*serverErrorData
+		HTTPErrors []*ServerErrorData
 	}
 
-	// serverPayloadData describes a payload.
-	serverPayloadData struct {
-		// Name is the name of the payload structure.
-		Name string
+	// ServerPayloadData describes a payload.
+	ServerPayloadData struct {
+		// Ref is the reference to the payload type.
+		Ref string
 		// Constructor is the name of the payload constructor function.
 		Constructor string
 		// BodyTypeName is the name of the request body type if any.
 		BodyTypeName string
+		// BodyRef is a reference to the body variable as returned by the
+		// decode function (i.e. "body" or "&body")
+		BodyRef string
 		// PathParams describes the information about params that are
 		// present in the path.
-		PathParams []*serverParamData
+		PathParams []*ServerParamData
 		// QueryParams describes the information about the params that
 		// are present in the query.
-		QueryParams []*serverParamData
+		QueryParams []*ServerParamData
 		// AllParams describes the params, in path and query.
-		AllParams []*serverParamData
-		// ValidateBody contains the code used to validate the request
-		// body if any.
+		AllParams []*ServerParamData
+		// ConstructorParams is a string representing the Go code for the
+		// section of the payload constructor signature that consists of
+		// passing all the parameter and header values.
+		ConstructorParams string
+		// Headers contains the HTTP request headers used to build the
+		// endpoint payload.
+		Headers []*ServerHeaderData
+		// ValidateBody contains the body validation code if any.
 		ValidateBody string
 	}
 
-	// serverRouteData describes a route.
-	serverRouteData struct {
+	// ServerRouteData describes a route.
+	ServerRouteData struct {
 		// Method is the HTTP method.
 		Method string
 		// Path is the full path.
 		Path string
 	}
 
-	// serverResponseData describes a response.
-	serverResponseData struct {
+	// ServerResponseData describes a response.
+	ServerResponseData struct {
 		// Body is the type of the response body, nil if body should be
 		// empty.
 		Body design.DataType
@@ -118,29 +129,31 @@ type (
 		// StatusCode is the return code of the response.
 		StatusCode string
 		// Headers provides information about the headers in the response.
-		Headers []*serverHeaderData
+		Headers []*ServerHeaderData
+		// BodyFields is the list of the response body type attributes
+		// used to initialize the response body. Not needed if the
+		// response type can be assigned to directly from the endpoint
+		// result type (i.e. if the response body has all the result
+		// attributes).
+		BodyFields []string
 		// TagName is the name of the attribute used to test whether the
 		// response is the one to use.
 		TagName string
 		// TagValue is the value the result attribute named by TagName
 		// must have for this response to be used.
 		TagValue string
-		// ResultToBody maps the result type attribute names to the
-		// response body attribute names if the type differ (i.e. if
-		// there are mapped attribute or if there are response headers)
-		ResultToBody map[string]string
 	}
 
-	// serverErrorData describes a error response.
-	serverErrorData struct {
+	// ServerErrorData describes a error response.
+	ServerErrorData struct {
 		// TypeRef is a reference to the user type.
 		TypeRef string
 		// Response is the error response data.
-		Response *serverResponseData
+		Response *ServerResponseData
 	}
 
-	// serverParamData describes a parameter.
-	serverParamData struct {
+	// ServerParamData describes a parameter.
+	ServerParamData struct {
 		// Name is the name of the mapping to the actual variable name.
 		Name string
 		// FieldName is the name of the struct field that holds the
@@ -153,12 +166,21 @@ type (
 		Required bool
 		// Type is the datatype of the variable.
 		Type design.DataType
+		// Primitive is true if and only the param type is a primitive
+		// that is not Bytes.
+		Primitive bool
+		// StringSlice is true if the param type is array of strings.
+		StringSlice bool
+		// Slice is true if the param type is an array.
+		Slice bool
 		// Validate contains the validation code if any.
 		Validate string
+		// DefaultValue contains the default value if any.
+		DefaultValue interface{}
 	}
 
-	// serverHeaderData describes a header.
-	serverHeaderData struct {
+	// ServerHeaderData describes a header.
+	ServerHeaderData struct {
 		// Name describes the name of the header key.
 		Name string
 		// FieldName is the name of the struct field that holds the
@@ -174,20 +196,6 @@ type (
 	}
 )
 
-var (
-	serverTmpl = template.New("server").Funcs(template.FuncMap{
-		"goTypeRef": codegen.GoTypeRef,
-	}).Funcs(codegen.TemplateFuncs())
-	serverStructTmpl             = template.Must(serverTmpl.New("struct").Parse(serverStructT))
-	serverConstructorTmpl        = template.Must(serverTmpl.New("constructor").Parse(serverConstructorT))
-	serverMountTmpl              = template.Must(serverTmpl.New("mount").Parse(serverMountT))
-	serverHandlerTmpl            = template.Must(serverTmpl.New("handler").Parse(serverHandlerT))
-	serverHandlerConstructorTmpl = template.Must(serverTmpl.New("handler_constructor").Parse(serverHandlerConstructorT))
-	serverDecoderTmpl            = template.Must(serverTmpl.New("decoder").Parse(serverDecoderT))
-	serverEncoderTmpl            = template.Must(serverTmpl.New("encoder").Parse(serverEncoderT))
-	serverErrorEncoderTmpl       = template.Must(serverTmpl.New("error_encoder").Parse(serverErrorEncoderT))
-)
-
 // ServerFiles returns all the server HTTP transport files.
 func ServerFiles(root *rest.RootExpr) []codegen.File {
 	fw := make([]codegen.File, len(root.Resources))
@@ -199,9 +207,9 @@ func ServerFiles(root *rest.RootExpr) []codegen.File {
 
 // Server returns the server HTTP transport file
 func Server(r *rest.ResourceExpr) codegen.File {
-	path := filepath.Join("transport", "http", codegen.SnakeCase(r.Name())+"_server.go")
+	path := filepath.Join(codegen.KebabCase(r.Name()), "transport", "http", "server.go")
 	sections := func(genPkg string) []*codegen.Section {
-		d := buildServerData(r)
+		d := buildServiceData(r)
 
 		title := fmt.Sprintf("%s server HTTP transport", r.Name())
 		s := []*codegen.Section{
@@ -216,28 +224,28 @@ func Server(r *rest.ResourceExpr) codegen.File {
 				{Path: genPkg + "/endpoints"},
 				{Path: genPkg + "/services"},
 			}),
-			{Template: serverStructTmpl, Data: d},
-			{Template: serverConstructorTmpl, Data: d},
-			{Template: serverMountTmpl, Data: d},
+			{Template: serverStructTmpl(r), Data: d},
+			{Template: serverConstructorTmpl(r), Data: d},
+			{Template: serverMountTmpl(r), Data: d},
 		}
 
 		for _, a := range d.ActionData {
 			as := []*codegen.Section{
-				{Template: serverHandlerTmpl, Data: a},
-				{Template: serverHandlerConstructorTmpl, Data: a},
+				{Template: serverHandlerTmpl(r), Data: a},
+				{Template: serverHandlerConstructorTmpl(r), Data: a},
 			}
 			s = append(s, as...)
 
 			if a.HasResponses() {
-				s = append(s, &codegen.Section{Template: serverEncoderTmpl, Data: a})
+				s = append(s, &codegen.Section{Template: serverEncoderTmpl(r), Data: a})
 			}
 
 			if a.HasPayload() {
-				s = append(s, &codegen.Section{Template: serverDecoderTmpl, Data: a})
+				s = append(s, &codegen.Section{Template: serverDecoderTmpl(r), Data: a})
 			}
 
 			if a.HasErrors() {
-				s = append(s, &codegen.Section{Template: serverErrorEncoderTmpl, Data: a})
+				s = append(s, &codegen.Section{Template: serverErrorEncoderTmpl(r), Data: a})
 			}
 		}
 		return s
@@ -246,32 +254,66 @@ func Server(r *rest.ResourceExpr) codegen.File {
 	return codegen.NewSource(path, sections)
 }
 
-func buildServerData(r *rest.ResourceExpr) *serverData {
-	varServiceName := codegen.Goify(r.Name(), true)
-	sd := &serverData{
-		ServiceName:    r.Name(),
-		VarServiceName: varServiceName,
-		HandlersStruct: fmt.Sprintf("%sHandlers", varServiceName),
-		Constructor:    fmt.Sprintf("New%sHandlers", varServiceName),
-		MountHandlers:  fmt.Sprintf("Mount%sHandlers", varServiceName),
+func serverTmpl(r *rest.ResourceExpr) *template.Template {
+	scope := files.Services.Get(r.Name()).Scope
+	return template.New("server").
+		Funcs(template.FuncMap{"goTypeRef": scope.GoTypeRef}).
+		Funcs(codegen.TemplateFuncs())
+}
+
+func serverStructTmpl(r *rest.ResourceExpr) *template.Template {
+	return template.Must(serverTmpl(r).New("struct").Parse(serverStructT))
+}
+
+func serverConstructorTmpl(r *rest.ResourceExpr) *template.Template {
+	return template.Must(serverTmpl(r).New("constructor").Parse(serverConstructorT))
+}
+
+func serverMountTmpl(r *rest.ResourceExpr) *template.Template {
+	return template.Must(serverTmpl(r).New("mount").Parse(serverMountT))
+}
+
+func serverHandlerTmpl(r *rest.ResourceExpr) *template.Template {
+	return template.Must(serverTmpl(r).New("handler").Parse(serverHandlerT))
+}
+
+func serverHandlerConstructorTmpl(r *rest.ResourceExpr) *template.Template {
+	return template.Must(serverTmpl(r).New("handler_constructor").Parse(serverHandlerConstructorT))
+}
+
+func serverDecoderTmpl(r *rest.ResourceExpr) *template.Template {
+	return template.Must(serverTmpl(r).New("decoder").Parse(serverDecoderT))
+}
+
+func serverEncoderTmpl(r *rest.ResourceExpr) *template.Template {
+	return template.Must(serverTmpl(r).New("encoder").Parse(serverEncoderT))
+}
+
+func serverErrorEncoderTmpl(r *rest.ResourceExpr) *template.Template {
+	return template.Must(serverTmpl(r).New("error_encoder").Parse(serverErrorEncoderT))
+}
+
+func buildServiceData(r *rest.ResourceExpr) *ServerData {
+	svc := files.Services.Get(r.ServiceExpr.Name)
+
+	sd := &ServerData{
+		ServiceName:    svc.Name,
+		ServiceVarName: svc.VarName,
+		HandlersStruct: fmt.Sprintf("%sHandlers", svc.VarName),
+		Constructor:    fmt.Sprintf("New%sHandlers", svc.VarName),
+		MountHandlers:  fmt.Sprintf("Mount%sHandlers", svc.VarName),
 	}
 
 	for _, a := range r.Actions {
-		varEndpointName := codegen.Goify(a.Name(), true)
-		var resultTypeName string
-		if a.EndpointExpr.Result.Type != nil && a.EndpointExpr.Result.Type != design.Empty {
-			resultTypeName = codegen.GoTypeName(a.EndpointExpr.Result.Type)
-		}
-
-		routes := make([]*serverRouteData, len(a.Routes))
-		for i, v := range a.Routes {
-			routes[i] = &serverRouteData{
-				Method: strings.ToUpper(v.Method),
-				Path:   v.FullPath(),
+		routes := make([]*ServerRouteData, len(a.Routes))
+		for i, r := range a.Routes {
+			routes[i] = &ServerRouteData{
+				Method: strings.ToUpper(r.Method),
+				Path:   r.FullPath(),
 			}
 		}
 
-		var responses []*serverResponseData
+		var responses []*ServerResponseData
 		notag := -1
 		for i, v := range a.Responses {
 			if v.Tag[0] == "" {
@@ -288,51 +330,90 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 			responses[notag], responses[count-1] = responses[count-1], responses[notag]
 		}
 
-		httperrs := make([]*serverErrorData, len(a.HTTPErrors))
+		httperrs := make([]*ServerErrorData, len(a.HTTPErrors))
 		for i, v := range a.HTTPErrors {
 			httperrs[i] = buildErrorData(r, a, v)
 		}
 
-		ad := &serverActionData{
-			EndpointName:    a.Name(),
-			VarEndpointName: varEndpointName,
-			ServiceName:     r.Name(),
-			VarServiceName:  varServiceName,
+		ep := svc.Method(a.EndpointExpr.Name)
+
+		ad := &ServerActionData{
+			EndpointName:    ep.Name,
+			EndpointVarName: ep.VarName,
+			ServiceName:     svc.Name,
+			ServiceVarName:  svc.VarName,
 			Routes:          routes,
-			ResultTypeName:  resultTypeName,
+			ResultTypeRef:   ep.ResultRef,
 			Responses:       responses,
 			HTTPErrors:      httperrs,
-			MountHandler:    fmt.Sprintf("Mount%s%sHandler", varEndpointName, varServiceName),
-			Constructor:     fmt.Sprintf("New%s%sHandler", varEndpointName, varServiceName),
-			Decoder:         fmt.Sprintf("%s%sDecodeRequest", varEndpointName, varServiceName),
-			Encoder:         fmt.Sprintf("%s%sEncodeResponse", varEndpointName, varServiceName),
-			ErrorEncoder:    fmt.Sprintf("%s%sEncodeError", varEndpointName, varServiceName),
+			MountHandler:    fmt.Sprintf("Mount%sHandler", ep.VarName),
+			Constructor:     fmt.Sprintf("New%sHandler", ep.VarName),
+			Decoder:         fmt.Sprintf("Decode%sRequest", ep.VarName),
+			Encoder:         fmt.Sprintf("Encode%sResponse", ep.VarName),
+			ErrorEncoder:    fmt.Sprintf("Encode%sError", ep.VarName),
 		}
 
-		if a.EndpointExpr.Payload.Type != design.Empty {
-			name := codegen.Goify(r.Name(), false) + codegen.Goify(a.Name(), true) + "RequestBody"
-			body, public := restgen.RequestBodyType(a, name)
+		if ep.Payload != "" {
 			var (
-				validate     string
+				constructor  string
+				validateBody string
 				bodyTypeName string
+				bodyRef      string
+				params       []string
 			)
 			{
-				if ut, ok := body.(design.UserType); ok {
-					validate = codegen.RecursiveValidationCode(ut.Attribute(), true, true, "body", "body")
+				body := restgen.RequestBodyType(r, a, "ServerRequestBody")
+				if ut, ok := a.EndpointExpr.Payload.Type.(design.UserType); ok {
+					if ut != body {
+						constructor = fmt.Sprintf("New%s", ep.Payload)
+					}
 				}
-				bodyTypeName = codegen.GoTypeName(body)
-				if public {
-					bodyTypeName = "service." + bodyTypeName
+				if body != design.Empty {
+					{
+						if ut, ok := body.(design.UserType); ok {
+							if codegen.HasValidations(ut.Attribute(), false) {
+								validateBody = `
+		if err := body.Validate(); err != nil {
+			return nil, err
+		}`
+							}
+						} else {
+							code := codegen.RecursiveValidationCode(a.EndpointExpr.Payload, true, true, "body")
+							if code != "" {
+								validateBody = "\n" + code + `
+		if err != nil {
+			return nil, err
+		}`
+							}
+						}
+						bodyTypeName = svc.Scope.GoTypeName(body)
+						bodyRef = "body"
+						if design.IsObject(body) {
+							bodyRef = "&" + bodyRef
+						}
+					}
+					params = []string{bodyRef}
 				}
+				restgen.WalkMappedAttr(a.AllParams(), func(_, elem string, _ bool, _ *design.AttributeExpr) error {
+					params = append(params, codegen.Goify(elem, false))
+					return nil
+				})
+				restgen.WalkMappedAttr(a.MappedHeaders(), func(_, elem string, _ bool, _ *design.AttributeExpr) error {
+					params = append(params, codegen.Goify(elem, false))
+					return nil
+				})
 			}
-			ad.Payload = &serverPayloadData{
-				Name:         fmt.Sprintf("%s%sPayload", varEndpointName, varServiceName),
-				Constructor:  fmt.Sprintf("New%s%sPayload", varEndpointName, varServiceName),
-				BodyTypeName: bodyTypeName,
-				PathParams:   extractParams(a.PathParams()),
-				QueryParams:  extractParams(a.QueryParams()),
-				AllParams:    extractParams(a.AllParams()),
-				ValidateBody: validate,
+			ad.Payload = &ServerPayloadData{
+				Ref:               ep.PayloadRef,
+				Constructor:       constructor,
+				BodyTypeName:      bodyTypeName,
+				BodyRef:           bodyRef,
+				PathParams:        extractParams(a.PathParams()),
+				QueryParams:       extractParams(a.QueryParams()),
+				AllParams:         extractParams(a.AllParams()),
+				Headers:           extractHeaders(a.MappedHeaders()),
+				ConstructorParams: strings.Join(params, ", "),
+				ValidateBody:      validateBody,
 			}
 		}
 		sd.ActionData = append(sd.ActionData, ad)
@@ -340,85 +421,71 @@ func buildServerData(r *rest.ResourceExpr) *serverData {
 	return sd
 }
 
-func buildResponseData(r *rest.ResourceExpr, a *rest.ActionExpr, v *rest.HTTPResponseExpr) *serverResponseData {
-	var bodyTypeName string
-	name := codegen.Goify(r.Name(), true) + codegen.Goify(a.Name(), true)
+func buildResponseData(r *rest.ResourceExpr, a *rest.ActionExpr, v *rest.HTTPResponseExpr) *ServerResponseData {
+	var suffix, bodyTypeName string
 	if len(a.Responses) > 1 {
-		name += http.StatusText(v.StatusCode)
+		suffix = http.StatusText(v.StatusCode)
 	}
-	name += "ResponseBody"
-	body := restgen.ResponseBodyType(a.EndpointExpr.Result, v, name)
+	body := restgen.ResponseBodyType(r, v, a.EndpointExpr.Result, suffix)
 	if body != nil {
 		if ut, ok := body.(design.UserType); ok {
 			bodyTypeName = ut.Name()
 		}
 	}
-	var resultToBody map[string]string
+	var bodyFields []string
 	if design.IsObject(a.EndpointExpr.Result.Type) && design.IsObject(body) {
-		rb, mapped := serviceTypeToBody(a.EndpointExpr.Result.Type, body)
-		if body != a.EndpointExpr.Result.Type || mapped {
-			resultToBody = rb
+		if body != a.EndpointExpr.Result.Type {
+			codegen.WalkAttributes(design.AsObject(body), func(name string, att *design.AttributeExpr) error {
+				bodyFields = append(bodyFields, codegen.GoifyAtt(att, name, true))
+				return nil
+			})
 		}
 	}
-	return &serverResponseData{
+	return &ServerResponseData{
 		Body:             body,
 		BodyUserTypeName: bodyTypeName,
 		StatusCode:       restgen.StatusCodeToHTTPConst(v.StatusCode),
 		Headers:          extractHeaders(v.MappedHeaders()),
+		BodyFields:       bodyFields,
 		TagName:          v.Tag[0],
 		TagValue:         v.Tag[1],
-		ResultToBody:     resultToBody,
 	}
 }
 
-func buildErrorData(r *rest.ResourceExpr, a *rest.ActionExpr, v *rest.HTTPErrorExpr) *serverErrorData {
+func buildErrorData(r *rest.ResourceExpr, a *rest.ActionExpr, v *rest.HTTPErrorExpr) *ServerErrorData {
 	var bodyTypeName string
-	name := codegen.Goify(r.Name(), true) +
-		codegen.Goify(a.Name(), true) +
-		http.StatusText(v.Response.StatusCode) +
-		"Response"
-	body := restgen.ResponseBodyType(v.ErrorExpr.AttributeExpr, v.Response, name)
+	body := restgen.ResponseBodyType(r, v.Response, v.ErrorExpr.AttributeExpr, http.StatusText(v.Response.StatusCode))
 	if body != nil {
 		if ut, ok := body.(design.UserType); ok {
 			bodyTypeName = ut.Name()
 		}
 	}
-	var resultToBody map[string]string
-	mapped := false
-	if design.IsObject(body) {
-		resultToBody = make(map[string]string)
-		matt := rest.NewMappedAttributeExpr(&design.AttributeExpr{Type: body})
-		obj := design.AsObject(v.ErrorExpr.Type)
-		restgen.WalkMappedAttr(matt, func(name, elem string, required bool, a *design.AttributeExpr) error {
-			if _, ok := obj[name]; ok {
-				resultToBody[name] = elem
-				if name != elem {
-					mapped = true
-				}
-			}
-			return nil
-		})
+	var bodyFields []string
+	if design.IsObject(v.ErrorExpr.Type) && design.IsObject(body) {
+		if body != v.ErrorExpr.Type {
+			codegen.WalkAttributes(design.AsObject(body), func(name string, att *design.AttributeExpr) error {
+				bodyFields = append(bodyFields, codegen.GoifyAtt(att, name, true))
+				return nil
+			})
+		}
 	}
-	if body == v.ErrorExpr.Type && !mapped {
-		resultToBody = nil // no need to generate mapping
-	}
-	response := serverResponseData{
+	response := ServerResponseData{
 		Body:             body,
 		BodyUserTypeName: bodyTypeName,
 		StatusCode:       restgen.StatusCodeToHTTPConst(v.Response.StatusCode),
 		Headers:          extractHeaders(v.Response.MappedHeaders()),
-		ResultToBody:     resultToBody,
+		BodyFields:       bodyFields,
 	}
-	return &serverErrorData{
-		TypeRef:  codegen.GoPackageTypeRef(v.ErrorExpr.Type, "service"),
+	return &ServerErrorData{
+		TypeRef:  files.Services.Get(r.Name()).Scope.GoTypeRef(v.ErrorExpr.Type),
 		Response: &response,
 	}
 }
 
-func extractHeaders(a *rest.MappedAttributeExpr) []*serverHeaderData {
-	var headers []*serverHeaderData
+func extractHeaders(a *rest.MappedAttributeExpr) []*ServerHeaderData {
+	var headers []*ServerHeaderData
 	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
-		headers = append(headers, &serverHeaderData{
+		headers = append(headers, &ServerHeaderData{
 			Name:      elem,
 			FieldName: codegen.Goify(name, true),
 			VarName:   codegen.Goify(name, false),
@@ -431,18 +498,25 @@ func extractHeaders(a *rest.MappedAttributeExpr) []*serverHeaderData {
 	return headers
 }
 
-func extractParams(a *rest.MappedAttributeExpr) []*serverParamData {
-	var params []*serverParamData
+func extractParams(a *rest.MappedAttributeExpr) []*ServerParamData {
+	var params []*ServerParamData
 	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
-		field := codegen.Goify(name, true)
-		varn := codegen.Goify(name, false)
-		params = append(params, &serverParamData{
-			Name:      elem,
-			FieldName: field,
-			VarName:   varn,
-			Required:  required,
-			Type:      c.Type,
-			Validate:  codegen.ValidationCode(c, a.IsRequired(name), false, varn, varn),
+		var (
+			field = codegen.Goify(name, true)
+			varn  = codegen.Goify(name, false)
+			arr   = design.AsArray(c.Type)
+		)
+		params = append(params, &ServerParamData{
+			Name:         elem,
+			FieldName:    field,
+			VarName:      varn,
+			Required:     required,
+			Type:         c.Type,
+			Primitive:    design.IsPrimitive(c.Type) && c.Type.Kind() != design.BytesKind,
+			StringSlice:  arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
+			Slice:        arr != nil,
+			Validate:     codegen.ValidationCode(c, a.IsRequired(name), false, varn, varn),
+			DefaultValue: c.DefaultValue,
 		})
 		return nil
 	})
@@ -450,79 +524,44 @@ func extractParams(a *rest.MappedAttributeExpr) []*serverParamData {
 	return params
 }
 
-// serviceTypeToBody takes a endpoint payload or result type and the
-// corresponding HTTP request or response body type and builds a mapping of
-// endpoint type attribute name to body type attribute name. The names may
-// differ if the DSL uses the "a:b" notation. In that case the second return
-// value is true. Also some body attributes may not have equivalents in endpoint
-// type if the body was explicitly defined in the DSL. In this case the
-// generated code won't automatically initialized non-matching attributes, the
-// user may want to augment the generated code with custom code.
-func serviceTypeToBody(dt, body design.DataType) (map[string]string, bool) {
-	mapped := false
-	toBody := make(map[string]string)
-	obj := design.AsObject(dt)
-	matt := rest.NewMappedAttributeExpr(&design.AttributeExpr{Type: body})
-	restgen.WalkMappedAttr(matt, func(name, elem string, required bool, a *design.AttributeExpr) error {
-		if _, ok := obj[name]; ok {
-			toBody[name] = elem
-			if name != elem {
-				mapped = true
-			}
-		}
-		return nil
-	})
-	return toBody, mapped
-}
-
 // HasResponses indicates if an action has responses.
-func (d *serverActionData) HasResponses() bool {
+func (d *ServerActionData) HasResponses() bool {
 	return len(d.Responses) >= 1
 }
 
 // HasPayload indicates if an action has a payload.
-func (d *serverActionData) HasPayload() bool {
+func (d *ServerActionData) HasPayload() bool {
 	return d.Payload != nil
 }
 
 // HasErrors indicates if an action has errors defined.
-func (d *serverActionData) HasErrors() bool {
+func (d *ServerActionData) HasErrors() bool {
 	return len(d.HTTPErrors) > 0
 }
 
 // HasPathParams indicates if a payload has path parameters.
-func (d *serverPayloadData) HasPathParams() bool {
+func (d *ServerPayloadData) HasPathParams() bool {
 	return len(d.PathParams) > 0
-}
-
-// HasQueryParams indicates if a payload has query parameters.
-func (d *serverPayloadData) HasQueryParams() bool {
-	return len(d.QueryParams) > 0
-}
-
-// HasParams indicates if a payload has any parameters.
-func (d *serverPayloadData) HasParams() bool {
-	return d.HasPathParams() || d.HasQueryParams()
 }
 
 const serverStructT = `{{ printf "%s lists the %s service endpoint HTTP handlers." .HandlersStruct .ServiceName | comment }}
 type {{ .HandlersStruct }} struct {
 	{{- range .ActionData }}
-	{{ .EndpointName }} http.Handler
+	{{ .EndpointVarName }} http.Handler
 	{{- end }}
 }
 `
 
 const serverConstructorT = `{{ printf "%s instantiates HTTP handlers for all the %s service endpoints." .Constructor .ServiceName | comment }}
 func {{ .Constructor }}(
-	e *endpoints.{{ .VarServiceName }},
+	e *endpoints.{{ .ServiceVarName }},
 	dec func(*http.Request) rest.Decoder,
 	enc func(http.ResponseWriter, *http.Request) rest.Encoder,
 	logger goa.LogAdapter,
 ) *{{ .HandlersStruct }} {
 	return &{{ .HandlersStruct }}{
 		{{- range .ActionData }}
-		{{ .VarEndpointName }}: {{ .Constructor }}(e.{{ .VarEndpointName }}, dec, enc, logger),
+		{{ .EndpointVarName }}: {{ .Constructor }}(e.{{ .EndpointVarName }}, dec, enc, logger),
 		{{- end }}
 	}
 }
@@ -531,7 +570,7 @@ func {{ .Constructor }}(
 const serverMountT = `{{ printf "%s configures the mux to serve the %s endpoints." .MountHandlers .ServiceName | comment }}
 func {{ .MountHandlers }}(mux rest.Muxer, h *{{ .HandlersStruct }}) {
 	{{- range .ActionData }}
-	{{ .MountHandler }}(mux, h.{{ .VarEndpointName }})
+	{{ .MountHandler }}(mux, h.{{ .EndpointVarName }})
 	{{- end }}
 }
 `
@@ -595,9 +634,9 @@ func {{ .Constructor }}(
 }
 `
 
-const serverDecoderT = `{{ printf "%s returns a decoder for requests sent to the create %s endpoint." .Decoder .ServiceName | comment }}
+const serverDecoderT = `{{ printf "%s returns a decoder for requests sent to the %s %s endpoint." .Decoder .ServiceName .EndpointName | comment }}
 func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*service.{{ .Payload.Name }}, error) {
+	return func(r *http.Request) ({{ .Payload.Ref }}, error) {
 
 {{- if .Payload.BodyTypeName }}
 		var (
@@ -614,47 +653,222 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		{{- .Payload.ValidateBody }}
 {{ end }}
 
-{{- if .Payload.HasParams }}
-		{{- if .Payload.HasPathParams }}
-		params := rest.ContextParams(r.Context())
-		{{- end }}
+{{- if or .Payload.AllParams .Payload.Headers }}
 		var (
-			{{- range .Payload.AllParams }}
-			{{ .VarName }} {{goTypeRef .Type false }}
-			{{- end }}
+		{{- range .Payload.AllParams }}
+			{{ .VarName }} {{ if and (not .Required) .Primitive }}*{{ end }}{{goTypeRef .Type false }}
+		{{- end }}
+		{{- range .Payload.Headers }}
+			{{ .VarName }} {{ if and (not .Required) .Primitive }}*{{ end }}{{goTypeRef .Type false }}
+		{{- end }}
+		{{- if .Payload.HasPathParams }}
+
+			params = rest.ContextParams(r.Context())
+		{{- end }}
 		)
 
-{{- range .Payload.QueryParams }}
-	{{ .VarName }}{{ if not (eq .Type.Name "string" )}}Raw :{{ end }}= r.URL.Query().Get("{{ .Name }}")
-	{{- if .Required }}if {{ .VarName }}{{ if not (eq .Type.Name "string" )}}Raw{{ end }} == "" {
-		return nil, goa.MissingFieldError("{{ .Name }}", "query string")
-	}{{ end }}
-	{{- if not (eq .Type.Name "string") }}
-		{{- template "conversion" . }}
-	{{- end }}
-	{{- .Validate }}
-{{ end }}
-
 {{- range .Payload.PathParams }}
-	{{ .VarName }}{{ if not (eq .Type.Name "string" )}}Raw :{{ end }}= params["{{ .Name }}"]
-	{{- if .Required }}if {{ .VarName }}{{ if not (eq .Type.Name "string" )}}Raw{{ end }} == "" {
-		return nil, goa.MissingFieldError("{{ .Name }}", "path parameter")
-	}{{ end }}
-	{{- if not (eq .Type.Name "string") }}
-		{{- template "conversion" . }}
+	{{- if and (eq .Type.Name "string") .Required }}
+		{{ .VarName }} = params["{{ .Name }}"]
+		if {{ .VarName }} == "" {
+			return nil, goa.MissingFieldError("{{ .Name }}", "path")
+		}
+
+	{{- else if eq .Type.Name "string" }}
+		{{ .VarName }}Raw := params["{{ .Name }}"]
+		if {{ .VarName }}Raw != "" {
+			{{ .VarName }} = &{{ .VarName }}Raw
+		}
+		{{- if .DefaultValue }} else {
+		{{ .VarName }}Def := {{ print "%q" .DefaultValue }}
+		{{ .VarName }} = &{{ .VarName }}Def
+	}
+		{{- end }}
+
+	{{- else }}
+		{{ .VarName }}Raw := params["{{ .Name }}"]
+		{{- if .Required }}
+		if {{ .VarName }}Raw == "" {
+			return nil, goa.MissingFieldError("{{ .Name }}", "path")
+		}
+		{{- else if .DefaultValue }}
+		if {{ .VarName }}Raw == "" {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+		}
+		{{- end }}
+
+		{{- if .DefaultValue }}else {
+		{{- else if not .Required }}
+		if {{ .VarName }}Raw != "" {
+		{{- end }}
+		{{- template "path_conversion" . }}
+		{{- if or .DefaultValue (not .Required) }}
+		}
+		{{- end }}
 	{{- end }}
-	{{- .Validate }}
+		{{ .Validate -}}
 {{ end }}
 
+{{- range .Payload.QueryParams }}
+	{{- if and (eq .Type.Name "string") .Required }}
+		{{ .VarName }} = r.URL.Query().Get("{{ .Name }}")
+		if {{ .VarName }} == "" {
+			return nil, goa.MissingFieldError("{{ .Name }}", "query string")
+		}
+
+	{{- else if eq .Type.Name "string" }}
+		{{ .VarName }}Raw := r.URL.Query().Get("{{ .Name }}")
+		if {{ .VarName }}Raw != "" {
+			{{ .VarName }} = &{{ .VarName }}Raw
+		}
+		{{- if .DefaultValue }} else {
+			{{ .VarName }}Def := {{ printf "%q" .DefaultValue }}
+			{{ .VarName }} = &{{ .VarName }}Def
+		}
+		{{- end }}
+
+	{{- else if .StringSlice }}
+		{{ .VarName }} = r.URL.Query()["{{ .Name }}"]
+		{{- if .Required }}
+		if {{ .VarName }} == nil {
+			return nil, goa.MissingFieldError("{{ .Name }}", "query string")
+		}
+		{{- else if .DefaultValue }}
+		if {{ .VarName }} == nil {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+		}
+		{{- end }}
+
+	{{- else if .Slice }}
+		{{ .VarName }}Raw := r.URL.Query()["{{ .Name }}"]
+		{{- if .Required }}
+		if {{ .VarName }}Raw == nil {
+			return nil, goa.MissingFieldError("{{ .Name }}", "query string")
+		}
+		{{- else if .DefaultValue }}
+		if {{ .VarName }}Raw == nil {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+		}
+		{{- end }}
+
+		{{- if .DefaultValue }}else {
+		{{- else if not .Required }}
+		if {{ .VarName }}Raw != nil {
+		{{- end }}
+		{{- template "slice_conversion" . }}
+		{{- if or .DefaultValue (not .Required) }}
+		}
+		{{- end }}
+
+	{{- else }}{{/* not string and not slice */}}
+		{{ .VarName }}Raw := r.URL.Query().Get("{{ .Name }}")
+		{{- if .Required }}
+		if {{ .VarName }}Raw == "" {
+			return nil, goa.MissingFieldError("{{ .Name }}", "query string")
+		}
+		{{- else if .DefaultValue }}
+		if {{ .VarName }}Raw == "" {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+		}
+		{{- end }}
+		{{- if .DefaultValue }}else {
+		{{- else if not .Required }}
+		if {{ .VarName }}Raw != nil {
+		{{- end }}
+		{{- template "type_conversion" . }}
+		{{- if or .DefaultValue (not .Required) }}
+		}
+		{{- end }}
+	
+	{{- end }}
+		{{ .Validate -}}
+{{ end }}
+
+{{- range .Payload.Headers }}
+	{{- if and (eq .Type.Name "string") .Required }}
+		{{ .VarName }} = r.Header.Get("{{ .Name }}")
+		if {{ .VarName }} == "" {
+			return nil, goa.MissingFieldError("{{ .Name }}", "header")
+		}
+
+	{{- else if eq .Type.Name "string" }}
+		{{ .VarName }}Raw := r.Header.Get("{{ .Name }}")
+		if {{ .VarName }}Raw != "" {
+			{{ .VarName }} = &{{ .VarName }}Raw
+		}
+		{{- if .DefaultValue }} else {
+			{{ .VarName }}Def := {{ print "%q" .DefaultValue }}
+			{{ .VarName }} = &{{ .VarName }}Def
+		}
+		{{- end }}
+
+	{{- else if .StringSlice }}
+		{{ .VarName }} = r.Header["{{ .Name }}"]
+		{{ if .Required }}
+		if {{ .VarName }} == nil {
+			return nil, goa.MissingFieldError("{{ .Name }}", "header")
+		}
+		{{- else if .DefaultValue }}
+		if {{ .VarName }} == nil {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+		}
+		{{- end }}
+
+	{{- else if .Slice }}
+		{{ .VarName }}Raw := r.Header["{{ .Name }}"]
+		{{ if .Required }}if {{ .VarName }}Raw == nil {
+			return nil, goa.MissingFieldError("{{ .Name }}", "header")
+		}
+		{{- else if .DefaultValue }}
+		if {{ .VarName }}Raw == nil {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+		}
+		{{- end }}
+
+		{{- if .DefaultValue }}else {
+		{{- else if not .Required }}
+		if {{ .VarName }}Raw != nil {
+		{{- end }}
+		{{- template "slice_conversion" . }}
+		{{- if or .DefaultValue (not .Required) }}
+		}
+		{{- end }}
+
+	{{- else }}{{/* not string and not slice */}}
+		{{ .VarName }}Raw := r.Header.Get("{{ .Name }}")
+		{{- if .Required }}
+		if {{ .VarName }}Raw == "" {
+			return nil, goa.MissingFieldError("{{ .Name }}", "header")
+		}
+		{{- else if .DefaultValue }}
+		if {{ .VarName }}Raw == "" {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+		}
+		{{- end }}
+
+		{{- if .DefaultValue }}else {
+		{{- else if not .Required }}
+		if {{ .VarName }}Raw != "" {
+		{{- end }}
+		{{- template "type_conversion" . }}
+		{{- if or .DefaultValue (not .Required) }}
+		}
+		{{- end }}
+	{{- end }}
+		{{- .Validate -}}
 {{- end }}
-		return {{ .Payload.Constructor }}(
-			{{- if .Payload.BodyTypeName }}&body{{ end -}}
-			{{- range $i, $p := .Payload.AllParams }}
-				{{- if or (ne $i 0) ($.Payload.BodyTypeName) }}, {{ end -}}{{ .VarName }}
-			{{- end }})
+{{ end }}
+		{{- if .Payload.Constructor }}
+		return {{ .Payload.Constructor }}({{ .Payload.ConstructorParams }}), nil
+		{{- else if .Payload.BodyRef }}
+		return {{ .Payload.BodyRef }}, nil
+		{{- else }}
+		return {{ (index .Payload.AllParams 0).VarName }}, nil
+		{{- end }}
 	}
 }
-{{- define "conversion" }}
+
+{{- define "path_conversion" }}
 	{{- if eq .Type.Name "array" }}
 		{{ .VarName }}RawSlice := strings.Split({{ .VarName }}Raw, ",")
 		{{ .VarName }} = make({{ goTypeRef .Type false }}, len({{ .VarName }}RawSlice))
@@ -665,65 +879,98 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		{{- template "type_conversion" . }}
 	{{- end }}
 {{- end }}
+
+{{- define "slice_conversion" }}
+	{{ .VarName }} = make({{ goTypeRef .Type false }}, len({{ .VarName }}Raw))
+	for i, rv := range {{ .VarName }}Raw {
+		{{- template "type_slice_conversion" . }}
+	}
+{{- end }}
+
 {{- define "type_conversion" }}
 	{{- if eq .Type.Name "string" }}
 		{{ .VarName }} = url.QueryUnescape(v)
-	{{- else if eq .Type.Name "[]byte" }}
+	{{- else if eq .Type.Name "bytes" }}
 		{{ .VarName }} = url.QueryUnescape(string(v))
 	{{- else if eq .Type.Name "int" }}
 		v, err := strconv.ParseInt({{ .VarName }}Raw, 10, strconv.IntSize)
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "integer")
 		}
+		{{- if .Required }}
 		{{ .VarName }} = int(v)
+		{{- else }}
+		pv := int(v)
+		{{ .VarName }} = &pv
+		{{- end }}
 	{{- else if eq .Type.Name "int32" }}
 		v, err := strconv.ParseInt({{ .VarName }}Raw, 10, 32)
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "integer")
 		}
+		{{- if .Required }}
 		{{ .VarName }} = int32(v)
+		{{- else }}
+		pv := int32(v)
+		{{ .VarName }} = &pv
+		{{- end }}
 	{{- else if eq .Type.Name "int64" }}
 		v, err := strconv.ParseInt({{ .VarName }}Raw, 10, 64)
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "integer")
 		}
-		{{ .VarName }} = v
+		{{ .VarName }} = {{- if not .Required}}&{{ end }}v
 	{{- else if eq .Type.Name "uint" }}
 		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, strconv.IntSize)
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "unsigned integer")
 		}
+		{{- if  .Required }}
 		{{ .VarName }} = uint(v)
+		{{- else }}
+		pv := uint(v)
+		{{ .VarName }} = &pv
+		{{- end }}
 	{{- else if eq .Type.Name "uint32" }}
 		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, 32)
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "unsigned integer")
 		}
-		{{ .VarName }} = int32(v)
+		{{- if  .Required }}
+		{{ .VarName }} = uint32(v)
+		{{- else }}
+		pv := uint32(v)
+		{{ .VarName }} = &pv
+		{{- end }}
 	{{- else if eq .Type.Name "uint64" }}
 		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, 64)
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "unsigned integer")
 		}
-		{{ .VarName }} = v
+		{{ .VarName }} = {{- if not .Required }}&{{ end }}v
 	{{- else if eq .Type.Name "float32" }}
 		v, err := strconv.ParseFloat({{ .VarName }}Raw, 32)
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "float")
 		}
+		{{- if  .Required }}
 		{{ .VarName }} = float32(v)
+		{{- else }}
+		pv := float32(v)
+		{{ .VarName }} = &pv
+		{{- end }}
 	{{- else if eq .Type.Name "float64" }}
 		v, err := strconv.ParseFloat({{ .VarName }}Raw, 64)
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "float")
 		}
-		{{ .VarName }} = v
+		{{ .VarName }} = {{ if not .Required }}&{{ end }}v
 	{{- else if eq .Type.Name "boolean" }}
 		v, err := strconv.ParseBool({{ .VarName }}Raw)
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "boolean")
 		}
-		{{ .VarName }} = v
+		{{ .VarName }} = {{ if not .Required }}&{{ end }}v
 	{{- else }}
 		// unsupported type {{ .Type.Name }} for var {{ .VarName }}
 	{{- end }}
@@ -731,7 +978,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 {{- define "type_slice_conversion" }}
 		{{- if eq .Type.ElemType.Type.Name "string" }}
 			{{ .VarName }}[i] = url.QueryUnescape(rv)
-		{{- else if eq .Type.ElemType.Type.Name "[]byte" }}
+		{{- else if eq .Type.ElemType.Type.Name "bytes" }}
 			{{ .VarName }}[i] = url.QueryUnescape(string(rv))
 		{{- else if eq .Type.ElemType.Type.Name "int" }}
 			v, err := strconv.ParseInt(rv, 10, strconv.IntSize)
@@ -797,8 +1044,8 @@ const serverEncoderT = `{{ printf "%s returns an encoder for responses returned 
 func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) rest.Encoder) func(http.ResponseWriter, *http.Request, interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 
-	{{- if .ResultTypeName }}
-		t := v.(*service.{{ .ResultTypeName }})
+	{{- if .ResultTypeRef }}
+		t := v.({{ .ResultTypeRef }})
 
 		{{- range .Responses }}
 
@@ -807,11 +1054,11 @@ func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) rest.Encode
 			{{- end }}
 			{{ template "response" . }}
 
-			{{- if .ResultToBody }}	
+			{{- if .Body }}
 			return enc.Encode(&body)
-			{{- else }}	
-			return enc.Encode(t)
-			{{- end }}	
+			{{- else }}
+			return nil
+			{{- end }}
 
 			{{- if .TagName }}
 		}
@@ -852,13 +1099,11 @@ func {{ .ErrorEncoder }}(encoder func(http.ResponseWriter, *http.Request) rest.E
 		case {{ .TypeRef }}:
 
 			{{- template "response" .Response }}
-			{{- if .Response.ResultToBody }}	
+			{{- if .Response.Body }}
 			if err := enc.Encode(&body); err != nil {
-			{{- else }}	
-			if err := enc.Encode(t); err != nil {
-			{{- end }}
 				encodeError(w, r, err)
 			}
+			{{- end }}
 
 		{{- end }}
 		default:
@@ -872,6 +1117,21 @@ const responseT = `{{ define "response" -}}
 	enc, ct := encoder(w, r)
 	rest.SetContentType(w, ct)
 
+	{{- if .Body }}
+		{{- if .BodyUserTypeName }}
+			{{- if .BodyFields }}
+		body := {{ .BodyUserTypeName }}{
+				{{- range .BodyFields}}	
+			{{ . }}: v.{{ . }},
+				{{- end }}
+		}
+			{{- else }}
+			body := {{ .BodyUserTypeName }}(*v)
+			{{- end }}
+		{{- else }}
+		body := v
+		{{- end }}
+	{{- end }}
 	{{- range .Headers }}
 		{{- if not .Required }}
 	if t.{{ .FieldName }} != nil {
@@ -890,15 +1150,6 @@ const responseT = `{{ define "response" -}}
 		{{- end }}
 	{{- end }}
 	w.WriteHeader({{ .StatusCode }})
-
-	{{- if .ResultToBody }}	
-	body := {{ .BodyUserTypeName }}{
-		{{- range $res, $bod := .ResultToBody }}
-		{{ $bod }}: t.{{ $res }},
-		{{- end }}
-	}
-
-	{{- end }}
 {{- end }}
 
 {{- define "header_conversion" }}
@@ -922,7 +1173,7 @@ const responseT = `{{ define "response" -}}
 		{{ .VarName }} := strconv.FormatFloat({{ if not .Required }}*{{ end }}v, 'f', -1, 64)
 	{{- else if eq .Type.Name "string" }}
 		{{ .VarName }} := v
-	{{- else if eq .Type.Name "[]byte" }}
+	{{- else if eq .Type.Name "bytes" }}
 		{{ .VarName }} := string({{ if not .Required }}*{{ end }}v)
 	{{- else }}
 		// unsupported type {{ .Type.Name }} for header field {{ .FieldName }}

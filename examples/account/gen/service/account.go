@@ -30,6 +30,8 @@ type (
 		OrgID uint
 		// Name of account
 		Name string
+		// Description of account
+		Description *string
 	}
 
 	// NameAlreadyTaken is the error returned when the account name is
@@ -49,8 +51,9 @@ type (
 
 	// CreateAccount is the account creation payload.
 	CreateAccount struct {
-		OrgID uint
-		Name  string
+		OrgID       uint
+		Name        string
+		Description string
 	}
 
 	ShowAccountPayload struct {

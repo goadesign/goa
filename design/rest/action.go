@@ -191,7 +191,7 @@ func (a *ActionExpr) Validate() error {
 	if len(a.Routes) == 0 {
 		verr.Add(a, "No route defined for action")
 	}
-	hasTagged := false
+	hasTags := false
 	allTagged := true
 	for i, r := range a.Responses {
 		for j, r2 := range a.Responses {
@@ -199,22 +199,25 @@ func (a *ActionExpr) Validate() error {
 				verr.Add(r, "Multiple response definitions with status code %d", r.StatusCode)
 			}
 		}
-		if r.Tag[0] != "" {
+		if r.Tag[0] == "" {
 			allTagged = false
 		} else {
-			hasTagged = true
+			hasTags = true
 		}
 		verr.Merge(r.Validate())
 	}
-	if hasTagged && allTagged {
+	if hasTags && allTagged {
 		verr.Add(a, "All responses define a Tag, at least one response must define no Tag.")
 	}
-	if hasTagged && !design.IsObject(a.EndpointExpr.Result.Type) {
+	if hasTags && !design.IsObject(a.EndpointExpr.Result.Type) {
 		verr.Add(a, "Some responses define a Tag but the endpoint Result type is not an object.")
 	}
 	verr.Merge(a.validateParams())
 	if a.Body != nil {
 		verr.Merge(a.Body.Validate("action payload", a))
+	}
+	for _, r := range a.HTTPErrors {
+		verr.Merge(r.Validate())
 	}
 
 	return verr
@@ -247,6 +250,7 @@ func (a *ActionExpr) Finalize() {
 
 	// Make sure all error types are user types.
 	for _, r := range a.HTTPErrors {
+		r.Finalize()
 		if _, ok := r.AttributeExpr.Type.(design.UserType); !ok {
 			att := r.AttributeExpr
 			if !design.IsObject(att.Type) {

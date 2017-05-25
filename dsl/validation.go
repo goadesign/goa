@@ -147,7 +147,8 @@ func Minimum(val interface{}) {
 func Maximum(val interface{}) {
 	if a, ok := eval.Current().(*design.AttributeExpr); ok {
 		if a.Type != nil &&
-			a.Type.Kind() != design.Int32Kind && a.Type.Kind() != design.Int64Kind &&
+			a.Type.Kind() != design.IntKind && a.Type.Kind() != design.Int32Kind && a.Type.Kind() != design.Int64Kind &&
+			a.Type.Kind() != design.UIntKind && a.Type.Kind() != design.UInt32Kind && a.Type.Kind() != design.UInt64Kind &&
 			a.Type.Kind() != design.Float32Kind && a.Type.Kind() != design.Float64Kind {
 
 			incompatibleAttributeType("maximum", a.Type.Name(), "an integer or a number")

@@ -31,14 +31,14 @@ func TestGoTypeDef(t *testing.T) {
 	}
 
 	for k, tc := range cases {
-		actual := GoTypeDef(&design.AttributeExpr{Type: tc.dataType}, true)
+		actual := GoTypeDef(&design.AttributeExpr{Type: tc.dataType})
 		if actual != tc.expected {
 			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
 		}
 	}
 }
 
-func TestGoNativeType(t *testing.T) {
+func TestGoNativeTypeName(t *testing.T) {
 	cases := map[string]struct {
 		dataType design.DataType
 		expected string
@@ -58,7 +58,7 @@ func TestGoNativeType(t *testing.T) {
 	}
 
 	for k, tc := range cases {
-		actual := GoNativeType(tc.dataType)
+		actual := GoNativeTypeName(tc.dataType)
 		if actual != tc.expected {
 			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
 		}

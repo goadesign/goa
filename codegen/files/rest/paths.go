@@ -6,33 +6,34 @@ import (
 	"text/template"
 
 	"goa.design/goa.v2/codegen"
+	"goa.design/goa.v2/codegen/files"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
 
 type (
-	// pathData contains the data necessary to render the path template.
-	pathData struct {
+	// PathData contains the data necessary to render the path template.
+	PathData struct {
 		// ServiceName is the name of the service defined in the design.
 		ServiceName string
 		// EndpointName is the name of the endpoint defined in the design.
 		EndpointName string
 		// Routes describes all the possible paths for an action.
-		Routes []*pathRoute
+		Routes []*PathRoute
 	}
 
-	// pathRoute contains the data to render a path for a specific route.
-	pathRoute struct {
+	// PathRoute contains the data to render a path for a specific route.
+	PathRoute struct {
 		// Path is the fullpath converted to printf compatible layout.
 		Path string
 		// PathParams are all the path parameters in this route.
 		PathParams []string
 		// Arguments describe the arguments used in the route.
-		Arguments []*pathArgument
+		Arguments []*PathArgument
 	}
 
-	// pathArgument contains the name and data type of the path arguments.
-	pathArgument struct {
+	// PathArgument contains the name and data type of the path arguments.
+	PathArgument struct {
 		// Name is the name of the argument variable.
 		Name string
 		// Type describes the datatype of the argument.
@@ -44,15 +45,6 @@ type (
 		sections []*codegen.Section
 	}
 )
-
-var pathTmpl = template.Must(template.New("path").
-	Funcs(template.FuncMap{
-		"add":       codegen.Add,
-		"goTypeRef": codegen.GoTypeRef,
-		"goify":     codegen.Goify,
-		"isArray":   design.IsArray,
-	}).
-	Parse(pathT))
 
 // PathFile returns the path file.
 func PathFile(r *rest.RootExpr) codegen.File {
@@ -83,20 +75,33 @@ func PathFile(r *rest.RootExpr) codegen.File {
 // PathSection returns the section to generate the given paht.
 func PathSection(a *rest.ActionExpr) *codegen.Section {
 	return &codegen.Section{
-		Template: pathTmpl,
+		Template: pathTmpl(a.Resource),
 		Data:     buildPathData(a),
 	}
 }
 
-func buildPathData(a *rest.ActionExpr) *pathData {
-	pd := pathData{
+// pathTmpl returns the template used to render the paths functions.
+func pathTmpl(r *rest.ResourceExpr) *template.Template {
+	svc := files.Services.Get(r.Name())
+	return template.Must(template.New("path").
+		Funcs(template.FuncMap{
+			"add":       codegen.Add,
+			"goTypeRef": svc.Scope.GoTypeRef,
+			"goify":     codegen.Goify,
+			"isArray":   design.IsArray,
+		}).
+		Parse(pathT))
+}
+
+func buildPathData(a *rest.ActionExpr) *PathData {
+	pd := PathData{
 		ServiceName:  a.EndpointExpr.Service.Name,
 		EndpointName: a.Name(),
-		Routes:       make([]*pathRoute, len(a.Routes)),
+		Routes:       make([]*PathRoute, len(a.Routes)),
 	}
 
 	for i, r := range a.Routes {
-		pd.Routes[i] = &pathRoute{
+		pd.Routes[i] = &PathRoute{
 			Path:       rest.WildcardRegex.ReplaceAllString(r.FullPath(), "/%v"),
 			PathParams: r.ParamAttributes(),
 			Arguments:  generatePathArguments(r),
@@ -105,12 +110,12 @@ func buildPathData(a *rest.ActionExpr) *pathData {
 	return &pd
 }
 
-func generatePathArguments(r *rest.RouteExpr) []*pathArgument {
+func generatePathArguments(r *rest.RouteExpr) []*PathArgument {
 	routeParams := r.ParamAttributes()
 	allParams := r.Action.PathParams()
-	args := make([]*pathArgument, len(routeParams))
+	args := make([]*PathArgument, len(routeParams))
 	for i, name := range routeParams {
-		args[i] = &pathArgument{
+		args[i] = &PathArgument{
 			Name: name,
 			Type: allParams.Type.(design.Object)[name].Type,
 		}
@@ -133,7 +138,7 @@ func {{ goify $.EndpointName true }}{{ goify $.ServiceName true }}Path{{ if ne $
 
 {{- define "arguments" -}}
 {{ range $i, $arg := . -}}
-{{ if ne $i 0 }}, {{ end }}{{ goify .Name false }} {{ goTypeRef .Type false }}
+{{ if ne $i 0 }}, {{ end }}{{ goify .Name false }} {{ goTypeRef .Type }}
 {{- end }}
 {{- end }}
 

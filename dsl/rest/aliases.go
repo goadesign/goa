@@ -509,31 +509,31 @@ func Pattern(p string) {
 //
 // Examples:
 //
-//     Endpoint("save"), func() {
-//         // Use primitive type.
-//         Payload(String)
-//     }
+// Endpoint("save"), func() {
+//	// Use primitive type.
+//	Payload(String)
+// }
 //
-//     Endpoint("add", func() {
-//         // Define payload data structure inline.
-//         Payload(func() {
-//             Attribute("left", Int32, "Left operand")
-//             Attribute("right", Int32, "Left operand")
-//             Required("left", "right")
-//         })
+// Endpoint("add", func() {
+//     // Define payload data structure inline.
+//     Payload(func() {
+//         Attribute("left", Int32, "Left operand")
+//         Attribute("right", Int32, "Left operand")
+//         Required("left", "right")
 //     })
+// })
 //
-//     Endpoint("add", func() {
-//         // Define payload type by reference to user type.
-//         Payload(Operands)
-//     })
+// Endpoint("add", func() {
+//     // Define payload type by reference to user type.
+//     Payload(Operands)
+// })
 //
-//     Endpoint("divide", func() {
-//         // Specify additional required attributes on user type.
-//         Payload(Operands, func() {
-//             Required("left", "right")
-//         })
+// Endpoint("divide", func() {
+//     // Specify additional required attributes on user type.
+//     Payload(Operands, func() {
+//         Required("left", "right")
 //     })
+// })
 //
 func Payload(val interface{}, fns ...func()) {
 	dsl.Payload(val, fns...)
@@ -550,27 +550,28 @@ func Payload(val interface{}, fns ...func()) {
 //
 // Example:
 //
-//    var Bottle = Type("bottle", func() {
-//        Attribute("name", String, func() {
-//            MinLength(3)
-//        })
-//        Attribute("vintage", Int32, func() {
-//            Minimum(1970)
-//        })
-//        Attribute("somethingelse", String)
-//    })
+//	var Bottle = Type("bottle", func() {
+//		Attribute("name", String, func() {
+//			MinLength(3)
+//		})
+//		Attribute("vintage", Int32, func() {
+//			Minimum(1970)
+//		})
+//		Attribute("somethingelse", String)
+//	})
 //
-//    var BottleMedia = MediaType("vnd.goa.bottle", func() {
-//        Reference(Bottle)
-//        Attributes(func() {
-//            Attribute("id", UInt64, "ID is the bottle identifier")
+//	var BottleMedia = MediaType("vnd.goa.bottle", func() {
+//		Reference(Bottle)
+//		Attributes(func() {
+//			Attribute("id", UInt64, "ID is the bottle identifier")
 //
-//            // The type and validation of "name" and "vintage" are inherited
-//            // from the Bottle type "name" and "vintage" attributes.
-//            Attribute("name")
-//            Attribute("vintage")
-//        })
-//    })
+//                      // The type and validation of "name" and "vintage" are
+//                      // inherited from the Bottle type "name" and "vintage"
+//                      // attributes.
+//			Attribute("name")
+//			Attribute("vintage")
+//		})
+//	})
 //
 func Reference(t design.DataType) {
 	dsl.Reference(t)

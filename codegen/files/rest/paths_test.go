@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"goa.design/goa.v2/codegen/files"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
@@ -190,7 +191,8 @@ func ShowAccountPath(sliceInterface []interface{}) string {
 		}
 
 		resource = rest.ResourceExpr{
-			Path: "/account",
+			ServiceExpr: &service,
+			Path:        "/account",
 		}
 
 		setParams = func(a *design.AttributeExpr) {
@@ -232,6 +234,9 @@ func ShowAccountPath(sliceInterface []interface{}) string {
 		}
 	)
 
+	files.Services = make(files.ServicesData)
+	design.Root.Services = []*design.ServiceExpr{resource.ServiceExpr}
+
 	cases := map[string]struct {
 		Action   *rest.ActionExpr
 		Expected string
@@ -247,7 +252,7 @@ func ShowAccountPath(sliceInterface []interface{}) string {
 		"path-with-uint-slice-param":      {Action: action("/test/{slice_uint}"), Expected: pathWithUintSliceParam},
 		"path-with-uint32-slice-param":    {Action: action("/test/{slice_uint32}"), Expected: pathWithUint32SliceParam},
 		"path-with-uint64-slice-param":    {Action: action("/test/{slice_uint64}"), Expected: pathWithUint64SliceParam},
-		"path-with-float32-slice-param":   {Action: action("/test/{slice_float32}"), Expected: pathWithFloat32SliceParam},
+		"path-with-float33-slice-param":   {Action: action("/test/{slice_float32}"), Expected: pathWithFloat32SliceParam},
 		"path-with-float64-slice-param":   {Action: action("/test/{slice_float64}"), Expected: pathWithFloat64SliceParam},
 		"path-with-bool-slice-param":      {Action: action("/test/{slice_bool}"), Expected: pathWithBoolSliceParam},
 		"path-with-interface-slice-param": {Action: action("/test/{slice_interface}"), Expected: pathWithInterfaceSliceParam},

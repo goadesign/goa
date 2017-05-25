@@ -30,6 +30,7 @@ func Server(roots ...eval.Root) ([]codegen.File, error) {
 		case *rest.RootExpr:
 			tran = append(tran, restfiles.ServerFiles(r)...)
 			tran = append(tran, restfiles.PathFile(r))
+			tran = append(tran, restfiles.PathFile(r))
 		}
 		// TBD:
 		// case *rpc.RootExpr:

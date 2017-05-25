@@ -12,7 +12,7 @@ import (
 type (
 	// openAPI is the OpenAPI spec file implementation.
 	openAPI struct {
-		spec *openAPIV2
+		spec *OpenAPIV2
 	}
 )
 

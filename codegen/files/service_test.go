@@ -4,16 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"go/format"
-	"io/ioutil"
-	"os"
-	"os/exec"
 	"strings"
 	"testing"
 
-	"github.com/sergi/go-diff/diffmatchpatch"
-
-	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/design"
+
+	. "goa.design/goa.v2/codegen/testing"
 )
 
 func TestService(t *testing.T) {
@@ -94,12 +90,12 @@ func TestService(t *testing.T) {
 		UserTypeField *Parent
 	}
 
-	Child struct {
-		P *Parent
-	}
-
 	Parent struct {
 		C *Child
+	}
+
+	Child struct {
+		P *Parent
 	}
 )
 `
@@ -321,7 +317,9 @@ func TestService(t *testing.T) {
 	}
 	for k, tc := range cases {
 		buf := new(bytes.Buffer)
-		ServiceScope = codegen.NewNameScope()
+		Services = make(ServicesData)
+		design.Root = new(design.RootExpr)
+		design.Root.Services = []*design.ServiceExpr{tc.Service}
 		file := Service(tc.Service)
 		for _, s := range file.Sections(genPkg) {
 			if err := s.Write(buf); err != nil {
@@ -335,41 +333,7 @@ func TestService(t *testing.T) {
 		}
 		actual := string(bs)
 		if !strings.Contains(actual, tc.Expected) {
-			t.Errorf("%s:\ngot:\n%s\ndiff:\n%s", k, actual, diff(t, actual, tc.Expected))
+			t.Errorf("%s:\ngot:\n%s\ndiff:\n%s", k, actual, Diff(t, actual, tc.Expected))
 		}
 	}
-}
-
-// diff returns a diff between s1 and s2.
-// It tries to leverage the diff tool if present in the system otherwise
-// degrades to using the dmp package.
-func diff(t *testing.T, s1, s2 string) string {
-	_, err := exec.LookPath("diff")
-	supportsDiff := (err == nil)
-	if !supportsDiff {
-		dmp := diffmatchpatch.New()
-		diffs := dmp.DiffMain(s1, s2, false)
-		return dmp.DiffPrettyText(diffs)
-	}
-	left := createTempFile(t, s1)
-	right := createTempFile(t, s2)
-	defer os.Remove(left)
-	defer os.Remove(right)
-	cmd := exec.Command("diff", left, right)
-	diffb, _ := cmd.CombinedOutput()
-	return string(diffb)
-}
-
-func createTempFile(t *testing.T, content string) string {
-	f, err := ioutil.TempFile("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = f.WriteString(content)
-	if err != nil {
-		os.Remove(f.Name())
-		t.Fatal(err)
-	}
-	f.Close()
-	return f.Name()
 }

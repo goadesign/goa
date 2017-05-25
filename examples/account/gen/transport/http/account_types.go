@@ -8,7 +8,8 @@ import (
 type (
 	// CreateAccountBody is type of the "create" request body.
 	CreateAccountBody struct {
-		Name string `json:"name"`
+		Name        *string `json:"name"`
+		Description *string `json:"description"`
 	}
 
 	// AccountCreateCreated is the type describing the StatusCreated
@@ -20,10 +21,12 @@ type (
 		OrgID uint `json:"org_id"`
 		// Name is the account name
 		Name string `json:"name"`
+		// Description is the account description if any
+		Description *string `json:"description"`
 	}
 
-	// AccountResultBody is the type used to marshal AccountResult.
-	AccountResultBody struct {
+	// AccountResponseBody is the type used to marshal AccountResult.
+	AccountResponseBody struct {
 		// Href is the account href.
 		Href string `json:"href"`
 		// ID is the account ID.
@@ -32,24 +35,28 @@ type (
 		OrgID uint `json:"org_id"`
 		// Name is the account name
 		Name string `json:"name"`
+		// Description is the account description if any
+		Description *string `json:"description"`
 	}
 )
 
 // NewCreateAccount creates and validates a CreateAccount.
 func NewCreateAccount(body *CreateAccountBody, orgID uint) (*service.CreateAccount, error) {
-	if err := body.Validate(); err != nil {
-		return nil, err
-	}
 	p := service.CreateAccount{
-		Name:  body.Name,
 		OrgID: orgID,
+		Name:  *body.Name,
+	}
+	if body.Description != nil {
+		p.Description = *body.Description
+	} else {
+		p.Description = "An active account"
 	}
 	return &p, nil
 }
 
 // Validate runs the validations defined in the design.
 func (b *CreateAccountBody) Validate() (err error) {
-	if b.Name == "" {
+	if b.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
 	return

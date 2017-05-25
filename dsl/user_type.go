@@ -218,17 +218,26 @@ func Key(fn func()) {
 		eval.IncompatibleDSL()
 		return
 	}
-	m := at.Type.(*design.Map)
-	eval.Execute(fn, m.KeyType)
+	if m, ok := at.Type.(*design.Map); ok {
+		eval.Execute(fn, m.KeyType)
+		return
+	}
+	eval.IncompatibleDSL()
 }
 
-// Elem makes it possible to specify validations for map values.
+// Elem makes it possible to specify validations for array and map values.
 func Elem(fn func()) {
 	at, ok := eval.Current().(*design.AttributeExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
-	m := at.Type.(*design.Map)
-	eval.Execute(fn, m.ElemType)
+	switch e := at.Type.(type) {
+	case *design.Array:
+		eval.Execute(fn, e.ElemType)
+	case *design.Map:
+		eval.Execute(fn, e.ElemType)
+	default:
+		eval.IncompatibleDSL()
+	}
 }

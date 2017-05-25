@@ -1,63 +1,68 @@
 package restgen
 
 import (
+	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
 
-// RequestBodyType returns the type of the request body given an action, it also
-// returns whether the type is a public type (service package type) or private
-// (only used for transport). If the design specifies a body explicitly using
-// the Body DSL then it is returned. Otherwise one is computed by removing the
-// attributes of the endpoint payload used to define headers and parameters.
-func RequestBodyType(action *rest.ActionExpr, name string) (design.DataType, bool) {
-	if action.Body != nil {
-		if action.Body.Type != design.Empty {
-			return action.Body.Type, false
+// RequestBodyType returns the type of the request body given an action. If the
+// DSL defines a body explicitly via the Body function then the corresponding
+// type is used instead of the payload type. Otherwise the type is computed by
+// removing the attributes of the endpoint payload used to define headers and
+// parameters.
+func RequestBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, suffix string) design.DataType {
+	if a.Body != nil {
+		if a.Body.Type == design.Empty {
+			return design.Empty
 		}
+		return a.Body.Type
 	}
 
-	dt := action.EndpointExpr.Payload.Type
+	dt := a.EndpointExpr.Payload.Type
 	if !design.IsObject(dt) {
-		return dt, true
+		return dt
 	}
 
 	// 1. Return user type if no modification needed
 	if _, ok := dt.(design.UserType); ok {
-		if headers := action.Headers(); len(design.AsObject(headers.Type)) == 0 {
-			if params := action.AllParams(); len(design.AsObject(params.Type)) == 0 {
-				return dt, true
+		if headers := a.Headers(); len(design.AsObject(headers.Type)) == 0 {
+			if params := a.AllParams(); len(design.AsObject(params.Type)) == 0 {
+				return dt
 			}
 		}
 	}
 
 	// 2. Remove header and param attributes
-	body := rest.NewMappedAttributeExpr(action.EndpointExpr.Payload)
-	removeAttributes(body, action.MappedHeaders())
-	removeAttributes(body, action.AllParams())
+	body := rest.NewMappedAttributeExpr(a.EndpointExpr.Payload)
+	removeAttributes(body, a.MappedHeaders())
+	removeAttributes(body, a.AllParams())
 
 	// 3. Build computed user type
+	name := codegen.Goify(a.Name(), true) + suffix
 	return &design.UserTypeExpr{
 		AttributeExpr: body.Attribute(),
 		TypeName:      name,
-	}, false
+	}
 }
 
-// ResponseBodyType returns the type of the response body for the given response
-// and result. If result's Body is not nil then its type is returned. Otherwise
-// one is computed by removing the attributes of the endpoint result used to
-// define the response headers from the attributes of the response. If the
-// response defines a view then the resulting attribute is the result of
-// projecting the media type with that view.
-func ResponseBodyType(result *design.AttributeExpr, response *rest.HTTPResponseExpr, name string) design.DataType {
-	if response.Body != nil {
-		if response.Body.Type != design.Empty {
-			return response.Body.Type
-		}
-		return nil
-	}
+// ResponseBodyType returns the type of the response body given a response and
+// the corresponding service attribute (either a result or an error attribute).
+// and result attribute. If the DSL defines a body explicitly via the Body
+// function then the corresponding type is used instead of the attribute type.
+// Otherwise the type is computed by removing the attributes of the endpoint
+// payload used to define headers and parameters. Also if the response defines a
+// view then the response media type is projected first. suffix is appended to
+// the created type name if any.
+func ResponseBodyType(r *rest.ResourceExpr, resp *rest.HTTPResponseExpr, result *design.AttributeExpr, suffix string) design.DataType {
 	if result == nil || result.Type == design.Empty {
-		return nil
+		return design.Empty
+	}
+	if resp.Body != nil {
+		if resp.Body.Type == design.Empty {
+			return design.Empty
+		}
+		return resp.Body.Type
 	}
 
 	dt := result.Type
@@ -71,27 +76,30 @@ func ResponseBodyType(result *design.AttributeExpr, response *rest.HTTPResponseE
 	if ismt {
 		if v := result.Metadata["view"]; len(v) > 0 {
 			p, err := new(design.Projector).Project(mt, v[0])
-			if err == nil {
-				dt = p.MediaType
-				result = design.DupAtt(result)
-				result.Type = dt
+			if err != nil {
+				panic(err) // bug
 			}
+			dt = p.MediaType
+			result = design.DupAtt(result)
+			result.Type = dt
 		}
 	}
 
 	// 2. Return user type if no modification needed
 	if _, ok := dt.(design.UserType); ok {
-		if headers := response.Headers(); len(design.AsObject(headers.Type)) == 0 {
+		if headers := resp.Headers(); len(design.AsObject(headers.Type)) == 0 {
 			return dt
 		}
 	}
 
 	// 3. Remove header attributes
 	body := rest.NewMappedAttributeExpr(result)
-	headers := response.MappedHeaders()
+	headers := resp.MappedHeaders()
 	removeAttributes(body, headers)
 
 	// 4. Build computed user type
+	action := resp.Parent.(*rest.ActionExpr)
+	name := codegen.Goify(action.Name(), true) + suffix + "ResponseBody"
 	userType := &design.UserTypeExpr{
 		AttributeExpr: body.Attribute(),
 		TypeName:      name,

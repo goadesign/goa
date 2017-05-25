@@ -15,7 +15,7 @@ import (
 )
 
 // makeOpenAPIV2 returns the OpenAPI v2 specification for the given API.
-func makeOpenAPIV2(root *rest.RootExpr) (*openAPIV2, error) {
+func makeOpenAPIV2(root *rest.RootExpr) (*OpenAPIV2, error) {
 	if root == nil {
 		return nil, nil
 	}
@@ -41,7 +41,7 @@ func makeOpenAPIV2(root *rest.RootExpr) (*openAPIV2, error) {
 			paramMap[p.Name] = p
 		}
 	}
-	s := &openAPIV2{
+	s := &OpenAPIV2{
 		Swagger: "2.0",
 		Info: &Info{
 			Title:          root.Design.API.Title,
@@ -312,7 +312,7 @@ func itemsFromExpr(at *design.AttributeExpr) *Items {
 	return items
 }
 
-func responseSpecFromExpr(s *openAPIV2, root *rest.RootExpr, r *rest.HTTPResponseExpr) (*Response, error) {
+func responseSpecFromExpr(s *OpenAPIV2, root *rest.RootExpr, r *rest.HTTPResponseExpr) (*Response, error) {
 	var schema *Schema
 	if r.Body != nil {
 		if mt, ok := r.Body.Type.(*design.MediaTypeExpr); ok {
@@ -361,7 +361,7 @@ func headersFromExpr(headers *rest.MappedAttributeExpr) (map[string]*Header, err
 	return res, nil
 }
 
-func buildPathFromFileServer(s *openAPIV2, root *rest.RootExpr, fs *rest.FileServerExpr) error {
+func buildPathFromFileServer(s *OpenAPIV2, root *rest.RootExpr, fs *rest.FileServerExpr) error {
 	wcs := rest.ExtractWildcards(fs.RequestPath)
 	var param []*Parameter
 	if len(wcs) > 0 {
@@ -420,7 +420,7 @@ func buildPathFromFileServer(s *openAPIV2, root *rest.RootExpr, fs *rest.FileSer
 	return nil
 }
 
-func buildPathFromExpr(s *openAPIV2, root *rest.RootExpr, route *rest.RouteExpr, basePath string) error {
+func buildPathFromExpr(s *OpenAPIV2, root *rest.RootExpr, route *rest.RouteExpr, basePath string) error {
 	action := route.Action
 
 	tagNames := tagNamesFromExpr(action.Resource.Metadata, action.Metadata)

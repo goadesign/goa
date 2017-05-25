@@ -7,9 +7,9 @@ import (
 )
 
 type (
-	// openAPIV2 represents an instance of a Swagger object.
+	// OpenAPIV2 represents an instance of a Swagger object.
 	// See https://github.com/OAI/OpenAPI-Specification
-	openAPIV2 struct {
+	OpenAPIV2 struct {
 		Swagger             string                         `json:"swagger,omitempty"`
 		Info                *Info                          `json:"info,omitempty"`
 		Host                string                         `json:"host,omitempty"`
