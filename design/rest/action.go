@@ -163,6 +163,9 @@ func (a *ActionExpr) MappedHeaders() *MappedAttributeExpr {
 func (a *ActionExpr) Params() *design.AttributeExpr {
 	if a.params == nil {
 		a.params = &design.AttributeExpr{Type: make(design.Object)}
+		if pt := a.EndpointExpr.Payload.Type; pt != design.Empty {
+			a.params.Reference = pt
+		}
 	}
 	return a.params
 }
@@ -229,9 +232,17 @@ func (a *ActionExpr) Finalize() {
 	// Create default parameter expressions
 	for _, r := range a.Routes {
 		for _, p := range r.ParamAttributes() {
-			if _, ok := a.Params().Type.(design.Object)[p]; !ok {
-				a.Params().Type.(design.Object)[p] = &design.AttributeExpr{Type: String}
+			var att *design.AttributeExpr
+			if o := design.AsObject(a.EndpointExpr.Payload.Type); o != nil {
+				att = o[p]
 			}
+			if att == nil {
+				att = a.Params().Type.(design.Object)[p]
+			}
+			if att == nil {
+				att = &design.AttributeExpr{Type: String}
+			}
+			a.Params().Type.(design.Object)[p] = att
 		}
 	}
 

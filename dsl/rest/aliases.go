@@ -235,7 +235,7 @@ func Default(def interface{}) {
 	dsl.Default(def)
 }
 
-// Elem makes it possible to specify validations for map values.
+// Elem makes it possible to specify validations for array and map values.
 func Elem(fn func()) {
 	dsl.Elem(fn)
 }

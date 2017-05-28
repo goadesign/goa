@@ -61,7 +61,16 @@ func (s *ServiceExpr) Hash() string {
 	return "_service_+" + s.Name
 }
 
-// Finalize finalizes all then endpoints.
+// Validate validates all the service endpoints.
+func (s *ServiceExpr) Validate() error {
+	var verr eval.ValidationErrors
+	for _, ep := range s.Endpoints {
+		verr.Merge(ep.Validate().(*eval.ValidationErrors))
+	}
+	return &verr
+}
+
+// Finalize finalizes all the service endpoints.
 func (s *ServiceExpr) Finalize() {
 	for _, ep := range s.Endpoints {
 		ep.Finalize()

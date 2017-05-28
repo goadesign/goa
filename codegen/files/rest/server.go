@@ -11,7 +11,8 @@
 
 // Add response tags to account example
 // Test response tags
-// Add tests for the different payload sources (body, params, headers)
+// Test default values and header decoding
+
 package rest
 
 import (
@@ -166,9 +167,8 @@ type (
 		Required bool
 		// Type is the datatype of the variable.
 		Type design.DataType
-		// Primitive is true if and only the param type is a primitive
-		// that is not Bytes.
-		Primitive bool
+		// Pointer is true if and only the param variable is a pointer.
+		Pointer bool
 		// StringSlice is true if the param type is array of strings.
 		StringSlice bool
 		// Slice is true if the param type is an array.
@@ -485,11 +485,12 @@ func buildErrorData(r *rest.ResourceExpr, a *rest.ActionExpr, v *rest.HTTPErrorE
 func extractHeaders(a *rest.MappedAttributeExpr) []*ServerHeaderData {
 	var headers []*ServerHeaderData
 	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
+		isNativePointer := c.Type.Kind() == design.BytesKind || c.Type.Kind() == design.AnyKind
 		headers = append(headers, &ServerHeaderData{
 			Name:      elem,
 			FieldName: codegen.Goify(name, true),
 			VarName:   codegen.Goify(name, false),
-			Required:  required,
+			Required:  required || isNativePointer,
 			Type:      c.Type,
 		})
 		return nil
@@ -502,9 +503,10 @@ func extractParams(a *rest.MappedAttributeExpr) []*ServerParamData {
 	var params []*ServerParamData
 	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
 		var (
-			field = codegen.Goify(name, true)
-			varn  = codegen.Goify(name, false)
-			arr   = design.AsArray(c.Type)
+			field           = codegen.Goify(name, true)
+			varn            = codegen.Goify(name, false)
+			arr             = design.AsArray(c.Type)
+			isNativePointer = c.Type.Kind() == design.BytesKind || c.Type.Kind() == design.AnyKind
 		)
 		params = append(params, &ServerParamData{
 			Name:         elem,
@@ -512,10 +514,10 @@ func extractParams(a *rest.MappedAttributeExpr) []*ServerParamData {
 			VarName:      varn,
 			Required:     required,
 			Type:         c.Type,
-			Primitive:    design.IsPrimitive(c.Type) && c.Type.Kind() != design.BytesKind,
+			Pointer:      !required && design.IsPrimitive(c.Type) && !isNativePointer,
 			StringSlice:  arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
 			Slice:        arr != nil,
-			Validate:     codegen.ValidationCode(c, a.IsRequired(name), false, varn, varn),
+			Validate:     codegen.RecursiveValidationCode(c, a.IsRequired(name) || isNativePointer, false, varn),
 			DefaultValue: c.DefaultValue,
 		})
 		return nil
@@ -656,10 +658,10 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 {{- if or .Payload.AllParams .Payload.Headers }}
 		var (
 		{{- range .Payload.AllParams }}
-			{{ .VarName }} {{ if and (not .Required) .Primitive }}*{{ end }}{{goTypeRef .Type false }}
+			{{ .VarName }} {{ if .Pointer }}*{{ end }}{{goTypeRef .Type }}
 		{{- end }}
 		{{- range .Payload.Headers }}
-			{{ .VarName }} {{ if and (not .Required) .Primitive }}*{{ end }}{{goTypeRef .Type false }}
+			{{ .VarName }} {{ if .Pointer }}*{{ end }}{{goTypeRef .Type }}
 		{{- end }}
 		{{- if .Payload.HasPathParams }}
 
@@ -668,24 +670,24 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		)
 
 {{- range .Payload.PathParams }}
-	{{- if and (eq .Type.Name "string") .Required }}
+	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
 		{{ .VarName }} = params["{{ .Name }}"]
 		if {{ .VarName }} == "" {
 			return nil, goa.MissingFieldError("{{ .Name }}", "path")
 		}
 
-	{{- else if eq .Type.Name "string" }}
+	{{- else if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
 		{{ .VarName }}Raw := params["{{ .Name }}"]
 		if {{ .VarName }}Raw != "" {
-			{{ .VarName }} = &{{ .VarName }}Raw
+			{{ .VarName }} = {{ if eq .Type.Name "string" }}&{{ end }}{{ .VarName }}Raw
 		}
 		{{- if .DefaultValue }} else {
 		{{ .VarName }}Def := {{ print "%q" .DefaultValue }}
-		{{ .VarName }} = &{{ .VarName }}Def
+		{{ .VarName }} = {{ if eq .Type.Name "string" }}&{{ end }}{{ .VarName }}Def
 	}
 		{{- end }}
 
-	{{- else }}
+	{{- else }}{{/* not string */}}
 		{{ .VarName }}Raw := params["{{ .Name }}"]
 		{{- if .Required }}
 		if {{ .VarName }}Raw == "" {
@@ -706,24 +708,26 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		}
 		{{- end }}
 	{{- end }}
-		{{ .Validate -}}
-{{ end }}
+		{{- if .Validate }}
+		{{ .Validate }}
+		{{- end }}
+{{- end }}
 
 {{- range .Payload.QueryParams }}
-	{{- if and (eq .Type.Name "string") .Required }}
+	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
 		{{ .VarName }} = r.URL.Query().Get("{{ .Name }}")
 		if {{ .VarName }} == "" {
 			return nil, goa.MissingFieldError("{{ .Name }}", "query string")
 		}
 
-	{{- else if eq .Type.Name "string" }}
+	{{- else if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
 		{{ .VarName }}Raw := r.URL.Query().Get("{{ .Name }}")
 		if {{ .VarName }}Raw != "" {
-			{{ .VarName }} = &{{ .VarName }}Raw
+			{{ .VarName }} = {{ if eq .Type.Name "string" }}&{{ end }}{{ .VarName }}Raw
 		}
 		{{- if .DefaultValue }} else {
 			{{ .VarName }}Def := {{ printf "%q" .DefaultValue }}
-			{{ .VarName }} = &{{ .VarName }}Def
+			{{ .VarName }} = {{ if eq .Type.Name "string" }}&{{ end }}{{ .VarName }}Def
 		}
 		{{- end }}
 
@@ -760,7 +764,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		}
 		{{- end }}
 
-	{{- else }}{{/* not string and not slice */}}
+	{{- else }}{{/* not string, not any and not slice */}}
 		{{ .VarName }}Raw := r.URL.Query().Get("{{ .Name }}")
 		{{- if .Required }}
 		if {{ .VarName }}Raw == "" {
@@ -773,7 +777,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		{{- end }}
 		{{- if .DefaultValue }}else {
 		{{- else if not .Required }}
-		if {{ .VarName }}Raw != nil {
+		if {{ .VarName }}Raw != "" {
 		{{- end }}
 		{{- template "type_conversion" . }}
 		{{- if or .DefaultValue (not .Required) }}
@@ -781,24 +785,26 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		{{- end }}
 	
 	{{- end }}
-		{{ .Validate -}}
-{{ end }}
+		{{- if .Validate }}
+		{{ .Validate }}
+		{{- end }}
+{{- end }}
 
 {{- range .Payload.Headers }}
-	{{- if and (eq .Type.Name "string") .Required }}
+	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
 		{{ .VarName }} = r.Header.Get("{{ .Name }}")
 		if {{ .VarName }} == "" {
 			return nil, goa.MissingFieldError("{{ .Name }}", "header")
 		}
 
-	{{- else if eq .Type.Name "string" }}
+	{{- else if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
 		{{ .VarName }}Raw := r.Header.Get("{{ .Name }}")
 		if {{ .VarName }}Raw != "" {
-			{{ .VarName }} = &{{ .VarName }}Raw
+			{{ .VarName }} = {{ if eq .Type.Name "string" }}&{{ end }}{{ .VarName }}Raw
 		}
 		{{- if .DefaultValue }} else {
 			{{ .VarName }}Def := {{ print "%q" .DefaultValue }}
-			{{ .VarName }} = &{{ .VarName }}Def
+			{{ .VarName }} = {{ if eq .Type.Name "string" }}&{{ end }}{{ .VarName }}Def
 		}
 		{{- end }}
 
@@ -834,7 +840,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		}
 		{{- end }}
 
-	{{- else }}{{/* not string and not slice */}}
+	{{- else }}{{/* not string, not any and not slice */}}
 		{{ .VarName }}Raw := r.Header.Get("{{ .Name }}")
 		{{- if .Required }}
 		if {{ .VarName }}Raw == "" {
@@ -855,7 +861,9 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		}
 		{{- end }}
 	{{- end }}
-		{{- .Validate -}}
+		{{- if .Validate }}
+		{{ .Validate }}
+		{{- end }}
 {{- end }}
 {{ end }}
 		{{- if .Payload.Constructor }}
@@ -871,7 +879,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 {{- define "path_conversion" }}
 	{{- if eq .Type.Name "array" }}
 		{{ .VarName }}RawSlice := strings.Split({{ .VarName }}Raw, ",")
-		{{ .VarName }} = make({{ goTypeRef .Type false }}, len({{ .VarName }}RawSlice))
+		{{ .VarName }} = make({{ goTypeRef .Type }}, len({{ .VarName }}RawSlice))
 		for i, rv := range {{ .VarName }}RawSlice {
 			{{- template "type_slice_conversion" . }}
 		}
@@ -881,17 +889,15 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 {{- end }}
 
 {{- define "slice_conversion" }}
-	{{ .VarName }} = make({{ goTypeRef .Type false }}, len({{ .VarName }}Raw))
+	{{ .VarName }} = make({{ goTypeRef .Type }}, len({{ .VarName }}Raw))
 	for i, rv := range {{ .VarName }}Raw {
 		{{- template "type_slice_conversion" . }}
 	}
 {{- end }}
 
 {{- define "type_conversion" }}
-	{{- if eq .Type.Name "string" }}
-		{{ .VarName }} = url.QueryUnescape(v)
-	{{- else if eq .Type.Name "bytes" }}
-		{{ .VarName }} = url.QueryUnescape(string(v))
+	{{- if eq .Type.Name "bytes" }}
+		{{ .VarName }} = []byte({{.VarName}}Raw)
 	{{- else if eq .Type.Name "int" }}
 		v, err := strconv.ParseInt({{ .VarName }}Raw, 10, strconv.IntSize)
 		if err != nil {
@@ -919,7 +925,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "integer")
 		}
-		{{ .VarName }} = {{- if not .Required}}&{{ end }}v
+		{{ .VarName }} = {{ if not .Required}}&{{ end }}v
 	{{- else if eq .Type.Name "uint" }}
 		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, strconv.IntSize)
 		if err != nil {
@@ -947,7 +953,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "unsigned integer")
 		}
-		{{ .VarName }} = {{- if not .Required }}&{{ end }}v
+		{{ .VarName }} = {{ if not .Required }}&{{ end }}v
 	{{- else if eq .Type.Name "float32" }}
 		v, err := strconv.ParseFloat({{ .VarName }}Raw, 32)
 		if err != nil {
@@ -977,9 +983,9 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 {{- end }}
 {{- define "type_slice_conversion" }}
 		{{- if eq .Type.ElemType.Type.Name "string" }}
-			{{ .VarName }}[i] = url.QueryUnescape(rv)
+			{{ .VarName }}[i] = rv
 		{{- else if eq .Type.ElemType.Type.Name "bytes" }}
-			{{ .VarName }}[i] = url.QueryUnescape(string(rv))
+			{{ .VarName }}[i] = []byte(rv)
 		{{- else if eq .Type.ElemType.Type.Name "int" }}
 			v, err := strconv.ParseInt(rv, 10, strconv.IntSize)
 			if err != nil {
@@ -1034,6 +1040,8 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of booleans")
 			}
 			{{ .VarName }}[i] = v
+		{{- else if eq .Type.ElemType.Type.Name "any" }}
+			{{ .VarName }}[i] = rv
 		{{- else }}
 			// unsupported slice type {{ .Type.ElemType.Type.Name }} for var {{ .VarName }}
 		{{- end }}
@@ -1174,7 +1182,9 @@ const responseT = `{{ define "response" -}}
 	{{- else if eq .Type.Name "string" }}
 		{{ .VarName }} := v
 	{{- else if eq .Type.Name "bytes" }}
-		{{ .VarName }} := string({{ if not .Required }}*{{ end }}v)
+		{{ .VarName }} := []byte({{ if not .Required }}*{{ end }}v)
+	{{- else if eq .Type.Name "any" }}
+		{{ .VarName }} := {{ if not .Required }}*{{ end }}v
 	{{- else }}
 		// unsupported type {{ .Type.Name }} for header field {{ .FieldName }}
 	{{- end }}

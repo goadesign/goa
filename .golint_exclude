@@ -1,2 +1,3 @@
 ^design/rest/response.go
 ^examples/.*
+^codegen/files/rest/testing/.*

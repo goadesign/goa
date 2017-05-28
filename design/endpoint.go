@@ -55,6 +55,18 @@ func (e *EndpointExpr) EvalName() string {
 	return prefix + suffix
 }
 
+// Validate makes sure that the payload and result types are objects.
+func (e *EndpointExpr) Validate() error {
+	var verr eval.ValidationErrors
+	if e.Payload != nil && !IsObject(e.Payload.Type) {
+		verr.Add(e, "payload must be an object, use the transport specific DSL to define the shape of requests.")
+	}
+	if e.Result != nil && !IsObject(e.Result.Type) {
+		verr.Add(e, "result must be an object, use the transport specific DSL to define the shape of responses.")
+	}
+	return &verr
+}
+
 // Finalize makes sure the endpoint payload and result types are set.
 func (e *EndpointExpr) Finalize() {
 	if e.Payload == nil {

@@ -47,6 +47,11 @@ func (f *SourceFile) OutputPath() string {
 
 // Finalize formats the file.
 func (f *SourceFile) Finalize(path string) error {
+	return Format(path)
+}
+
+// Format formats the file.
+func Format(path string) error {
 	// Make sure file parses and print content if it does not.
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)

@@ -33,7 +33,7 @@ func Enum(vals ...interface{}) {
 			// one below are really a convenience to the user and not a fundamental feature
 			// - not checking in the case the type is not known yet is OK.
 			if a.Type != nil && !a.Type.IsCompatible(v) {
-				eval.ReportError("value %#v at index #d is incompatible with attribute of type %s",
+				eval.ReportError("value %#v at index %d is incompatible with attribute of type %s",
 					v, i, a.Type.Name())
 				ok = false
 			}
@@ -114,7 +114,9 @@ func Pattern(p string) {
 func Minimum(val interface{}) {
 	if a, ok := eval.Current().(*design.AttributeExpr); ok {
 		if a.Type != nil &&
-			a.Type.Kind() != design.Int32Kind && a.Type.Kind() != design.Int64Kind &&
+			a.Type.Kind() != design.IntKind && a.Type.Kind() != design.UIntKind &&
+			a.Type.Kind() != design.Int32Kind && a.Type.Kind() != design.UInt32Kind &&
+			a.Type.Kind() != design.Int64Kind && a.Type.Kind() != design.UInt64Kind &&
 			a.Type.Kind() != design.Float32Kind && a.Type.Kind() != design.Float64Kind {
 
 			incompatibleAttributeType("minimum", a.Type.Name(), "an integer or a number")
@@ -147,8 +149,9 @@ func Minimum(val interface{}) {
 func Maximum(val interface{}) {
 	if a, ok := eval.Current().(*design.AttributeExpr); ok {
 		if a.Type != nil &&
-			a.Type.Kind() != design.IntKind && a.Type.Kind() != design.Int32Kind && a.Type.Kind() != design.Int64Kind &&
-			a.Type.Kind() != design.UIntKind && a.Type.Kind() != design.UInt32Kind && a.Type.Kind() != design.UInt64Kind &&
+			a.Type.Kind() != design.IntKind && a.Type.Kind() != design.UIntKind &&
+			a.Type.Kind() != design.Int32Kind && a.Type.Kind() != design.UInt32Kind &&
+			a.Type.Kind() != design.Int64Kind && a.Type.Kind() != design.UInt64Kind &&
 			a.Type.Kind() != design.Float32Kind && a.Type.Kind() != design.Float64Kind {
 
 			incompatibleAttributeType("maximum", a.Type.Name(), "an integer or a number")

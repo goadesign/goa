@@ -86,7 +86,8 @@ func ValidationCode(att *design.AttributeExpr, req, pub bool, target, context st
 	}
 	t := target
 	isPointer := !pub || (!req && att.DefaultValue == nil)
-	if isPointer && design.IsPrimitive(att.Type) {
+	if isPointer && design.IsPrimitive(att.Type) &&
+		att.Type.Kind() != design.BytesKind && att.Type.Kind() != design.AnyKind {
 		t = "*" + t
 	}
 	data := map[string]interface{}{

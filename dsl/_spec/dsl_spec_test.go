@@ -118,8 +118,7 @@ var _ = Service("service", func() {
 		//         Required("name")
 		//     })
 		//
-		// Payload attributes can be described using a user type. The
-		// user type must be an object.
+		// Payload attributes can be described using a user type.
 		//
 		//     Payload(PayloadType)
 		//
@@ -144,7 +143,7 @@ var _ = Service("service", func() {
 		//     })
 		//
 		// Result attributes can be described using a user or media
-		// type. If using a user type it must be an object.
+		// type.
 		//
 		//     Result(ResultMediaType)
 		//

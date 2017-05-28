@@ -188,6 +188,7 @@ func ShowAccountPath(sliceInterface []interface{}) string {
 		endpoint = design.EndpointExpr{
 			Name:    "Show",
 			Service: &service,
+			Payload: &design.AttributeExpr{Type: design.Empty},
 		}
 
 		resource = rest.ResourceExpr{
