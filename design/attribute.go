@@ -216,10 +216,12 @@ func (a *AttributeExpr) Inherit(parent *AttributeExpr) {
 // object. This method recurses if the type is itself an attribute (i.e. a
 // UserType, this happens with the Reference DSL for example).
 func (a *AttributeExpr) AllRequired() (required []string) {
-	if a == nil || a.Validation == nil {
+	if a == nil {
 		return
 	}
-	required = a.Validation.Required
+	if a.Validation != nil {
+		required = a.Validation.Required
+	}
 	if u, ok := a.Type.(UserType); ok {
 		required = append(required, u.Attribute().AllRequired()...)
 	}

@@ -479,7 +479,7 @@ if {{ .target }} != nil {
 if {{ $.target }}.{{ goifyAtt $att .req true }} == "" {
 	err = goa.MergeErrors(err, goa.MissingAttributeError({{ printf "%q" $.context }}, "{{  .req  }}"))
 }
-{{- else if or (not $.pub) (not $att.Type.IsPrimitive) -}}
+{{- else if or (not $.pub) (not $att.Type.IsPrimitive) (eq $att.Type.Kind 11) (eq $att.Type.Kind 17) -}}
 if {{ $.target }}.{{ goifyAtt $att .req true }} == nil {
 	err = goa.MergeErrors(err, goa.MissingAttributeError({{ printf "%q" $.context }}, "{{ .req }}"))
 }

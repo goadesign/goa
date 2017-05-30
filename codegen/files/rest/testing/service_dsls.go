@@ -14,6 +14,18 @@ import (
 var PayloadQueryBoolDSL = func() {
 	Service("ServiceQueryBool", func() {
 		Endpoint("EndpointQueryBool", func() {
+			Payload(Boolean)
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryBoolAttributeDSL = func() {
+	Service("ServiceQueryBoolAttribute", func() {
+		Endpoint("EndpointQueryBoolAttribute", func() {
 			Payload(func() {
 				Attribute("q", Boolean)
 			})

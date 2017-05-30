@@ -174,8 +174,8 @@ func InvalidLengthError(name string, target interface{}, ln, value int, min bool
 // The Message field is updated by concatenating the fields of e and other
 // separated by a semi-colon.
 //
-// Merge returns the updated error. This is makes it possible to return other
-// when err is nil.
+// Merge returns the updated error. This makes it possible to return other when
+// err is nil.
 func MergeErrors(err, other error) error {
 	if err == nil {
 		if other == nil {

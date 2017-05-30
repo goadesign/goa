@@ -22,24 +22,38 @@ func RequestBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, suffix string) de
 		params  = a.AllParams()
 	)
 
-	// 1. Return user type if no modification needed
+	bodyOnly := len(design.AsObject(headers.Type)) == 0 &&
+		len(design.AsObject(params.Type)) == 0
+
+	// 1. If Payload is not an object then check whether there are params or
+	// headers defined and if so return empty type (payload encoded in
+	// request params or headers) otherwise return payload type (payload
+	// encoded in request body).
+	if !design.IsObject(dt) {
+		if bodyOnly {
+			return dt
+		}
+		return design.Empty
+	}
+
+	// 2. Return user type if no modification needed
 	if _, ok := dt.(design.UserType); ok {
 		if len(design.AsObject(headers.Type)) == 0 && len(design.AsObject(params.Type)) == 0 {
 			return dt
 		}
 	}
 
-	// 2. Remove header and param attributes
+	// 3. Remove header and param attributes
 	body := rest.NewMappedAttributeExpr(a.EndpointExpr.Payload)
 	removeAttributes(body, headers)
 	removeAttributes(body, params)
 
-	// 3. Return empty type if no attribute left
+	// 4. Return empty type if no attribute left
 	if len(design.AsObject(body.Type)) == 0 {
 		return design.Empty
 	}
 
-	// 4. Build computed user type
+	// 5. Build computed user type
 	name := codegen.Goify(a.Name(), true) + suffix
 	return &design.UserTypeExpr{
 		AttributeExpr: body.Attribute(),
@@ -68,7 +82,18 @@ func ResponseBodyType(r *rest.ResourceExpr, resp *rest.HTTPResponseExpr, result 
 		headers = resp.MappedHeaders()
 	)
 
-	// 1. Project if response type is media type and attribute has a
+	// 1. If Result is not an object then check whether there are headers
+	// defined and if so return empty type (result encoded in response
+	// headers) otherwise return result type (result encoded in response
+	// body).
+	if !design.IsObject(dt) {
+		if len(design.AsObject(resp.Headers().Type)) == 0 {
+			return dt
+		}
+		return design.Empty
+	}
+
+	// 2. Project if response type is media type and attribute has a
 	// view.
 	mt, ismt := dt.(*design.MediaTypeExpr)
 	if ismt {
@@ -83,23 +108,23 @@ func ResponseBodyType(r *rest.ResourceExpr, resp *rest.HTTPResponseExpr, result 
 		}
 	}
 
-	// 2. Return user type if no modification needed
+	// 3. Return user type if no modification needed
 	if _, ok := dt.(design.UserType); ok {
 		if headers := resp.Headers(); len(design.AsObject(headers.Type)) == 0 {
 			return dt
 		}
 	}
 
-	// 3. Remove header attributes
+	// 4. Remove header attributes
 	body := rest.NewMappedAttributeExpr(result)
 	removeAttributes(body, headers)
 
-	// 4. Return empty type if no attribute left
+	// 5. Return empty type if no attribute left
 	if len(design.AsObject(body.Type)) == 0 {
 		return design.Empty
 	}
 
-	// 5. Build computed user type
+	// 6. Build computed user type
 	action := resp.Parent.(*rest.ActionExpr)
 	name := codegen.Goify(action.Name(), true) + suffix + "ResponseBody"
 	userType := &design.UserTypeExpr{

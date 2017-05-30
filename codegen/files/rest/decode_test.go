@@ -21,6 +21,7 @@ func TestDecode(t *testing.T) {
 		Code string
 	}{
 		{"query-bool", PayloadQueryBoolDSL, PayloadQueryBoolDecodeCode},
+		{"query-bool-attribute", PayloadQueryBoolAttributeDSL, PayloadQueryBoolAttributeDecodeCode},
 		{"query-bool-validate", PayloadQueryBoolValidateDSL, PayloadQueryBoolValidateDecodeCode},
 		{"query-int", PayloadQueryIntDSL, PayloadQueryIntDecodeCode},
 		{"query-int-validate", PayloadQueryIntValidateDSL, PayloadQueryIntValidateDecodeCode},

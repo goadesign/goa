@@ -3,7 +3,32 @@ package testing
 var PayloadQueryBoolDecodeCode = `// DecodeEndpointQueryBoolRequest returns a decoder for requests sent to the
 // ServiceQueryBool EndpointQueryBool endpoint.
 func DecodeEndpointQueryBoolRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*EndpointQueryBoolPayload, error) {
+	return func(r *http.Request) (bool, error) {
+		var (
+			q bool
+		)
+		qRaw := r.URL.Query().Get("q")
+		if qRaw == "" {
+			return nil, goa.MissingFieldError("q", "query string")
+		}
+		v, err := strconv.ParseBool(qRaw)
+		if err != nil {
+			return nil, goa.InvalidFieldTypeError(qRaw, q, "boolean")
+		}
+		q = v
+
+		if err != nil {
+			return nil, err
+		}
+		return q, nil
+	}
+}
+`
+
+var PayloadQueryBoolAttributeDecodeCode = `// DecodeEndpointQueryBoolAttributeRequest returns a decoder for requests sent
+// to the ServiceQueryBoolAttribute EndpointQueryBoolAttribute endpoint.
+func DecodeEndpointQueryBoolAttributeRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (*EndpointQueryBoolAttributePayload, error) {
 		var (
 			q *bool
 		)
@@ -16,7 +41,10 @@ func DecodeEndpointQueryBoolRequest(decoder func(*http.Request) rest.Decoder) fu
 			q = &v
 		}
 
-		return NewEndpointQueryBoolPayload(q), nil
+		if err != nil {
+			return nil, err
+		}
+		return NewEndpointQueryBoolAttributePayload(q), nil
 	}
 }
 `
@@ -42,6 +70,9 @@ func DecodeEndpointQueryBoolValidateRequest(decoder func(*http.Request) rest.Dec
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryBoolValidatePayload(q), nil
 	}
 }
@@ -64,6 +95,9 @@ func DecodeEndpointQueryIntRequest(decoder func(*http.Request) rest.Decoder) fun
 			q = &pv
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryIntPayload(q), nil
 	}
 }
@@ -91,6 +125,9 @@ func DecodeEndpointQueryIntValidateRequest(decoder func(*http.Request) rest.Deco
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryIntValidatePayload(q), nil
 	}
 }
@@ -113,6 +150,9 @@ func DecodeEndpointQueryInt32Request(decoder func(*http.Request) rest.Decoder) f
 			q = &pv
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryInt32Payload(q), nil
 	}
 }
@@ -140,6 +180,9 @@ func DecodeEndpointQueryInt32ValidateRequest(decoder func(*http.Request) rest.De
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryInt32ValidatePayload(q), nil
 	}
 }
@@ -161,6 +204,9 @@ func DecodeEndpointQueryInt64Request(decoder func(*http.Request) rest.Decoder) f
 			q = &v
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryInt64Payload(q), nil
 	}
 }
@@ -187,6 +233,9 @@ func DecodeEndpointQueryInt64ValidateRequest(decoder func(*http.Request) rest.De
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryInt64ValidatePayload(q), nil
 	}
 }
@@ -209,6 +258,9 @@ func DecodeEndpointQueryUIntRequest(decoder func(*http.Request) rest.Decoder) fu
 			q = &pv
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryUIntPayload(q), nil
 	}
 }
@@ -236,6 +288,9 @@ func DecodeEndpointQueryUIntValidateRequest(decoder func(*http.Request) rest.Dec
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryUIntValidatePayload(q), nil
 	}
 }
@@ -258,6 +313,9 @@ func DecodeEndpointQueryUInt32Request(decoder func(*http.Request) rest.Decoder) 
 			q = &pv
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryUInt32Payload(q), nil
 	}
 }
@@ -285,6 +343,9 @@ func DecodeEndpointQueryUInt32ValidateRequest(decoder func(*http.Request) rest.D
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryUInt32ValidatePayload(q), nil
 	}
 }
@@ -306,6 +367,9 @@ func DecodeEndpointQueryUInt64Request(decoder func(*http.Request) rest.Decoder) 
 			q = &v
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryUInt64Payload(q), nil
 	}
 }
@@ -332,6 +396,9 @@ func DecodeEndpointQueryUInt64ValidateRequest(decoder func(*http.Request) rest.D
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryUInt64ValidatePayload(q), nil
 	}
 }
@@ -354,6 +421,9 @@ func DecodeEndpointQueryFloat32Request(decoder func(*http.Request) rest.Decoder)
 			q = &pv
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryFloat32Payload(q), nil
 	}
 }
@@ -382,6 +452,9 @@ func DecodeEndpointQueryFloat32ValidateRequest(decoder func(*http.Request) rest.
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryFloat32ValidatePayload(q), nil
 	}
 }
@@ -403,6 +476,9 @@ func DecodeEndpointQueryFloat64Request(decoder func(*http.Request) rest.Decoder)
 			q = &v
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryFloat64Payload(q), nil
 	}
 }
@@ -430,6 +506,9 @@ func DecodeEndpointQueryFloat64ValidateRequest(decoder func(*http.Request) rest.
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryFloat64ValidatePayload(q), nil
 	}
 }
@@ -447,6 +526,9 @@ func DecodeEndpointQueryStringRequest(decoder func(*http.Request) rest.Decoder) 
 			q = &qRaw
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryStringPayload(q), nil
 	}
 }
@@ -469,6 +551,9 @@ func DecodeEndpointQueryStringValidateRequest(decoder func(*http.Request) rest.D
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryStringValidatePayload(q), nil
 	}
 }
@@ -486,6 +571,9 @@ func DecodeEndpointQueryBytesRequest(decoder func(*http.Request) rest.Decoder) f
 			q = []byte(qRaw)
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryBytesPayload(q), nil
 	}
 }
@@ -502,12 +590,13 @@ func DecodeEndpointQueryBytesValidateRequest(decoder func(*http.Request) rest.De
 		if qRaw != "" {
 			q = []byte(qRaw)
 		}
-		if q != nil {
-			if len(q) < 1 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
-			}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryBytesValidatePayload(q), nil
 	}
 }
@@ -525,6 +614,9 @@ func DecodeEndpointQueryAnyRequest(decoder func(*http.Request) rest.Decoder) fun
 			q = qRaw
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryAnyPayload(q), nil
 	}
 }
@@ -541,12 +633,13 @@ func DecodeEndpointQueryAnyValidateRequest(decoder func(*http.Request) rest.Deco
 		if qRaw != "" {
 			q = qRaw
 		}
-		if q != nil {
-			if !(q == "val" || q == 1) {
-				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []interface{}{"val", 1}))
-			}
+		if !(q == "val" || q == 1) {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []interface{}{"val", 1}))
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryAnyValidatePayload(q), nil
 	}
 }
@@ -571,6 +664,9 @@ func DecodeEndpointQueryArrayBoolRequest(decoder func(*http.Request) rest.Decode
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayBoolPayload(q), nil
 	}
 }
@@ -595,10 +691,8 @@ func DecodeEndpointQueryArrayBoolValidateRequest(decoder func(*http.Request) res
 				q[i] = v
 			}
 		}
-		if q != nil {
-			if len(q) < 1 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
-			}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
 		}
 		for _, e := range q {
 			if !(e == true) {
@@ -606,6 +700,9 @@ func DecodeEndpointQueryArrayBoolValidateRequest(decoder func(*http.Request) res
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayBoolValidatePayload(q), nil
 	}
 }
@@ -630,6 +727,9 @@ func DecodeEndpointQueryArrayIntRequest(decoder func(*http.Request) rest.Decoder
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayIntPayload(q), nil
 	}
 }
@@ -654,10 +754,8 @@ func DecodeEndpointQueryArrayIntValidateRequest(decoder func(*http.Request) rest
 				q[i] = int(v)
 			}
 		}
-		if q != nil {
-			if len(q) < 1 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
-			}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
 		}
 		for _, e := range q {
 			if e < 1 {
@@ -665,6 +763,9 @@ func DecodeEndpointQueryArrayIntValidateRequest(decoder func(*http.Request) rest
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayIntValidatePayload(q), nil
 	}
 }
@@ -689,6 +790,9 @@ func DecodeEndpointQueryArrayInt32Request(decoder func(*http.Request) rest.Decod
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayInt32Payload(q), nil
 	}
 }
@@ -713,10 +817,8 @@ func DecodeEndpointQueryArrayInt32ValidateRequest(decoder func(*http.Request) re
 				q[i] = int32(v)
 			}
 		}
-		if q != nil {
-			if len(q) < 1 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
-			}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
 		}
 		for _, e := range q {
 			if e < 1 {
@@ -724,6 +826,9 @@ func DecodeEndpointQueryArrayInt32ValidateRequest(decoder func(*http.Request) re
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayInt32ValidatePayload(q), nil
 	}
 }
@@ -748,6 +853,9 @@ func DecodeEndpointQueryArrayInt64Request(decoder func(*http.Request) rest.Decod
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayInt64Payload(q), nil
 	}
 }
@@ -772,10 +880,8 @@ func DecodeEndpointQueryArrayInt64ValidateRequest(decoder func(*http.Request) re
 				q[i] = v
 			}
 		}
-		if q != nil {
-			if len(q) < 1 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
-			}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
 		}
 		for _, e := range q {
 			if e < 1 {
@@ -783,6 +889,9 @@ func DecodeEndpointQueryArrayInt64ValidateRequest(decoder func(*http.Request) re
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayInt64ValidatePayload(q), nil
 	}
 }
@@ -807,6 +916,9 @@ func DecodeEndpointQueryArrayUIntRequest(decoder func(*http.Request) rest.Decode
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayUIntPayload(q), nil
 	}
 }
@@ -831,10 +943,8 @@ func DecodeEndpointQueryArrayUIntValidateRequest(decoder func(*http.Request) res
 				q[i] = uint(v)
 			}
 		}
-		if q != nil {
-			if len(q) < 1 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
-			}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
 		}
 		for _, e := range q {
 			if e < 1 {
@@ -842,6 +952,9 @@ func DecodeEndpointQueryArrayUIntValidateRequest(decoder func(*http.Request) res
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayUIntValidatePayload(q), nil
 	}
 }
@@ -866,6 +979,9 @@ func DecodeEndpointQueryArrayUInt32Request(decoder func(*http.Request) rest.Deco
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayUInt32Payload(q), nil
 	}
 }
@@ -890,10 +1006,8 @@ func DecodeEndpointQueryArrayUInt32ValidateRequest(decoder func(*http.Request) r
 				q[i] = int32(v)
 			}
 		}
-		if q != nil {
-			if len(q) < 1 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
-			}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
 		}
 		for _, e := range q {
 			if e < 1 {
@@ -901,6 +1015,9 @@ func DecodeEndpointQueryArrayUInt32ValidateRequest(decoder func(*http.Request) r
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayUInt32ValidatePayload(q), nil
 	}
 }
@@ -925,6 +1042,9 @@ func DecodeEndpointQueryArrayUInt64Request(decoder func(*http.Request) rest.Deco
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayUInt64Payload(q), nil
 	}
 }
@@ -949,10 +1069,8 @@ func DecodeEndpointQueryArrayUInt64ValidateRequest(decoder func(*http.Request) r
 				q[i] = v
 			}
 		}
-		if q != nil {
-			if len(q) < 1 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
-			}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
 		}
 		for _, e := range q {
 			if e < 1 {
@@ -960,6 +1078,9 @@ func DecodeEndpointQueryArrayUInt64ValidateRequest(decoder func(*http.Request) r
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayUInt64ValidatePayload(q), nil
 	}
 }
@@ -984,6 +1105,9 @@ func DecodeEndpointQueryArrayFloat32Request(decoder func(*http.Request) rest.Dec
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayFloat32Payload(q), nil
 	}
 }
@@ -1008,10 +1132,8 @@ func DecodeEndpointQueryArrayFloat32ValidateRequest(decoder func(*http.Request) 
 				q[i] = float32(v)
 			}
 		}
-		if q != nil {
-			if len(q) < 1 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
-			}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
 		}
 		for _, e := range q {
 			if e < 1 {
@@ -1019,6 +1141,9 @@ func DecodeEndpointQueryArrayFloat32ValidateRequest(decoder func(*http.Request) 
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayFloat32ValidatePayload(q), nil
 	}
 }
@@ -1043,6 +1168,9 @@ func DecodeEndpointQueryArrayFloat64Request(decoder func(*http.Request) rest.Dec
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayFloat64Payload(q), nil
 	}
 }
@@ -1067,10 +1195,8 @@ func DecodeEndpointQueryArrayFloat64ValidateRequest(decoder func(*http.Request) 
 				q[i] = v
 			}
 		}
-		if q != nil {
-			if len(q) < 1 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
-			}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
 		}
 		for _, e := range q {
 			if e < 1 {
@@ -1078,6 +1204,9 @@ func DecodeEndpointQueryArrayFloat64ValidateRequest(decoder func(*http.Request) 
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayFloat64ValidatePayload(q), nil
 	}
 }
@@ -1092,6 +1221,9 @@ func DecodeEndpointQueryArrayStringRequest(decoder func(*http.Request) rest.Deco
 		)
 		q = r.URL.Query()["q"]
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayStringPayload(q), nil
 	}
 }
@@ -1106,10 +1238,8 @@ func DecodeEndpointQueryArrayStringValidateRequest(decoder func(*http.Request) r
 			q []string
 		)
 		q = r.URL.Query()["q"]
-		if q != nil {
-			if len(q) < 1 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
-			}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
 		}
 		for _, e := range q {
 			if !(e == "val") {
@@ -1117,6 +1247,9 @@ func DecodeEndpointQueryArrayStringValidateRequest(decoder func(*http.Request) r
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayStringValidatePayload(q), nil
 	}
 }
@@ -1137,6 +1270,9 @@ func DecodeEndpointQueryArrayBytesRequest(decoder func(*http.Request) rest.Decod
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayBytesPayload(q), nil
 	}
 }
@@ -1157,10 +1293,8 @@ func DecodeEndpointQueryArrayBytesValidateRequest(decoder func(*http.Request) re
 				q[i] = []byte(rv)
 			}
 		}
-		if q != nil {
-			if len(q) < 1 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
-			}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
 		}
 		for _, e := range q {
 			if len(e) < 2 {
@@ -1168,6 +1302,9 @@ func DecodeEndpointQueryArrayBytesValidateRequest(decoder func(*http.Request) re
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayBytesValidatePayload(q), nil
 	}
 }
@@ -1188,6 +1325,9 @@ func DecodeEndpointQueryArrayAnyRequest(decoder func(*http.Request) rest.Decoder
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayAnyPayload(q), nil
 	}
 }
@@ -1208,10 +1348,8 @@ func DecodeEndpointQueryArrayAnyValidateRequest(decoder func(*http.Request) rest
 				q[i] = rv
 			}
 		}
-		if q != nil {
-			if len(q) < 1 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
-			}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
 		}
 		for _, e := range q {
 			if !(e == "val" || e == 1) {
@@ -1219,6 +1357,9 @@ func DecodeEndpointQueryArrayAnyValidateRequest(decoder func(*http.Request) rest
 			}
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointQueryArrayAnyValidatePayload(q), nil
 	}
 }
@@ -1229,15 +1370,15 @@ var PayloadPathStringDecodeCode = `// DecodeEndpointPathStringRequest returns a 
 func DecodeEndpointPathStringRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*EndpointPathStringPayload, error) {
 		var (
-			p *string
+			p string
 
 			params = rest.ContextParams(r.Context())
 		)
-		pRaw := params["p"]
-		if pRaw != "" {
-			p = &pRaw
-		}
+		p = params["p"]
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointPathStringPayload(p), nil
 	}
 }
@@ -1248,20 +1389,18 @@ var PayloadPathStringValidateDecodeCode = `// DecodeEndpointPathStringValidateRe
 func DecodeEndpointPathStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*EndpointPathStringValidatePayload, error) {
 		var (
-			p *string
+			p string
 
 			params = rest.ContextParams(r.Context())
 		)
-		pRaw := params["p"]
-		if pRaw != "" {
-			p = &pRaw
-		}
-		if p != nil {
-			if !(*p == "val") {
-				err = goa.MergeErrors(err, goa.InvalidEnumValueError("p", *p, []interface{}{"val"}))
-			}
+		p = params["p"]
+		if !(p == "val") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("p", p, []interface{}{"val"}))
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointPathStringValidatePayload(p), nil
 	}
 }
@@ -1277,14 +1416,15 @@ func DecodeEndpointPathArrayStringRequest(decoder func(*http.Request) rest.Decod
 			params = rest.ContextParams(r.Context())
 		)
 		pRaw := params["p"]
-		if pRaw != "" {
-			pRawSlice := strings.Split(pRaw, ",")
-			p = make([]string, len(pRawSlice))
-			for i, rv := range pRawSlice {
-				p[i] = rv
-			}
+		pRawSlice := strings.Split(pRaw, ",")
+		p = make([]string, len(pRawSlice))
+		for i, rv := range pRawSlice {
+			p[i] = rv
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointPathArrayStringPayload(p), nil
 	}
 }
@@ -1301,19 +1441,18 @@ func DecodeEndpointPathArrayStringValidateRequest(decoder func(*http.Request) re
 			params = rest.ContextParams(r.Context())
 		)
 		pRaw := params["p"]
-		if pRaw != "" {
-			pRawSlice := strings.Split(pRaw, ",")
-			p = make([]string, len(pRawSlice))
-			for i, rv := range pRawSlice {
-				p[i] = rv
-			}
+		pRawSlice := strings.Split(pRaw, ",")
+		p = make([]string, len(pRawSlice))
+		for i, rv := range pRawSlice {
+			p[i] = rv
 		}
-		if p != nil {
-			if !(p == []string{"val"}) {
-				err = goa.MergeErrors(err, goa.InvalidEnumValueError("p", p, []interface{}{[]string{"val"}}))
-			}
+		if !(p == []string{"val"}) {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("p", p, []interface{}{[]string{"val"}}))
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointPathArrayStringValidatePayload(p), nil
 	}
 }
@@ -1335,6 +1474,9 @@ func DecodeEndpointBodyStringRequest(decoder func(*http.Request) rest.Decoder) f
 			return nil, err
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return &body, nil
 	}
 }
@@ -1355,10 +1497,11 @@ func DecodeEndpointBodyStringValidateRequest(decoder func(*http.Request) rest.De
 			}
 			return nil, err
 		}
-		if err := body.Validate(); err != nil {
+		err = goa.MergeErrors(err, body.Validate())
+
+		if err != nil {
 			return nil, err
 		}
-
 		return &body, nil
 	}
 }
@@ -1400,10 +1543,11 @@ func DecodeEndpointBodyObjectValidateRequest(decoder func(*http.Request) rest.De
 			}
 			return nil, err
 		}
-		if err := body.Validate(); err != nil {
+		err = goa.MergeErrors(err, body.Validate())
+
+		if err != nil {
 			return nil, err
 		}
-
 		return &body, nil
 	}
 }
@@ -1425,6 +1569,9 @@ func DecodeEndpointBodyUserRequest(decoder func(*http.Request) rest.Decoder) fun
 			return nil, err
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return &body, nil
 	}
 }
@@ -1445,10 +1592,11 @@ func DecodeEndpointBodyUserValidateRequest(decoder func(*http.Request) rest.Deco
 			}
 			return nil, err
 		}
-		if err := body.Validate(); err != nil {
+		err = goa.MergeErrors(err, body.Validate())
+
+		if err != nil {
 			return nil, err
 		}
-
 		return &body, nil
 	}
 }
@@ -1470,6 +1618,9 @@ func DecodeEndpointBodyArrayStringRequest(decoder func(*http.Request) rest.Decod
 			return nil, err
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return &body, nil
 	}
 }
@@ -1491,10 +1642,11 @@ func DecodeEndpointBodyArrayStringValidateRequest(decoder func(*http.Request) re
 			}
 			return nil, err
 		}
-		if err := body.Validate(); err != nil {
+		err = goa.MergeErrors(err, body.Validate())
+
+		if err != nil {
 			return nil, err
 		}
-
 		return &body, nil
 	}
 }
@@ -1516,6 +1668,9 @@ func DecodeEndpointBodyArrayUserRequest(decoder func(*http.Request) rest.Decoder
 			return nil, err
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return &body, nil
 	}
 }
@@ -1537,10 +1692,11 @@ func DecodeEndpointBodyArrayUserValidateRequest(decoder func(*http.Request) rest
 			}
 			return nil, err
 		}
-		if err := body.Validate(); err != nil {
+		err = goa.MergeErrors(err, body.Validate())
+
+		if err != nil {
 			return nil, err
 		}
-
 		return &body, nil
 	}
 }
@@ -1562,6 +1718,9 @@ func DecodeEndpointBodyMapStringRequest(decoder func(*http.Request) rest.Decoder
 			return nil, err
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return &body, nil
 	}
 }
@@ -1584,6 +1743,9 @@ func DecodeEndpointBodyMapStringValidateRequest(decoder func(*http.Request) rest
 			return nil, err
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return &body, nil
 	}
 }
@@ -1605,6 +1767,9 @@ func DecodeEndpointBodyMapUserRequest(decoder func(*http.Request) rest.Decoder) 
 			return nil, err
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return &body, nil
 	}
 }
@@ -1626,6 +1791,9 @@ func DecodeEndpointBodyMapUserValidateRequest(decoder func(*http.Request) rest.D
 			return nil, err
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return &body, nil
 	}
 }
@@ -1655,6 +1823,9 @@ func DecodeEndpointBodyQueryObjectRequest(decoder func(*http.Request) rest.Decod
 			b = &bRaw
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointBodyQueryObjectPayload(&body, b), nil
 	}
 }
@@ -1676,21 +1847,20 @@ func DecodeEndpointBodyQueryObjectValidateRequest(decoder func(*http.Request) re
 			}
 			return nil, err
 		}
-		if err := body.Validate(); err != nil {
-			return nil, err
-		}
+		err = goa.MergeErrors(err, body.Validate())
 
 		var (
-			b *string
+			b string
 		)
-		bRaw := r.URL.Query().Get("b")
-		if bRaw != "" {
-			b = &bRaw
+		b = r.URL.Query().Get("b")
+		if b == "" {
+			err = goa.MergeErrors(err, goa.MissingFieldError("b", "query string"))
 		}
-		if b != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("b", *b, "patternb"))
-		}
+		err = goa.MergeErrors(err, goa.ValidatePattern("b", b, "patternb"))
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointBodyQueryObjectValidatePayload(&body, b), nil
 	}
 }
@@ -1720,6 +1890,9 @@ func DecodeEndpointBodyQueryUserRequest(decoder func(*http.Request) rest.Decoder
 			b = &bRaw
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewPayloadType(&body, b), nil
 	}
 }
@@ -1741,21 +1914,20 @@ func DecodeEndpointBodyQueryUserValidateRequest(decoder func(*http.Request) rest
 			}
 			return nil, err
 		}
-		if err := body.Validate(); err != nil {
-			return nil, err
-		}
+		err = goa.MergeErrors(err, body.Validate())
 
 		var (
-			b *string
+			b string
 		)
-		bRaw := r.URL.Query().Get("b")
-		if bRaw != "" {
-			b = &bRaw
+		b = r.URL.Query().Get("b")
+		if b == "" {
+			err = goa.MergeErrors(err, goa.MissingFieldError("b", "query string"))
 		}
-		if b != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("b", *b, "patternb"))
-		}
+		err = goa.MergeErrors(err, goa.ValidatePattern("b", b, "patternb"))
 
+		if err != nil {
+			return nil, err
+		}
 		return NewPayloadType(&body, b), nil
 	}
 }
@@ -1777,6 +1949,9 @@ func DecodeEndpointBodyPathObjectRequest(decoder func(*http.Request) rest.Decode
 			return nil, err
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return &body, nil
 	}
 }
@@ -1798,10 +1973,11 @@ func DecodeEndpointBodyPathObjectValidateRequest(decoder func(*http.Request) res
 			}
 			return nil, err
 		}
-		if err := body.Validate(); err != nil {
+		err = goa.MergeErrors(err, body.Validate())
+
+		if err != nil {
 			return nil, err
 		}
-
 		return &body, nil
 	}
 }
@@ -1823,6 +1999,9 @@ func DecodeEndpointBodyPathUserRequest(decoder func(*http.Request) rest.Decoder)
 			return nil, err
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return &body, nil
 	}
 }
@@ -1844,10 +2023,11 @@ func DecodeEndpointUserBodyPathValidateRequest(decoder func(*http.Request) rest.
 			}
 			return nil, err
 		}
-		if err := body.Validate(); err != nil {
+		err = goa.MergeErrors(err, body.Validate())
+
+		if err != nil {
 			return nil, err
 		}
-
 		return &body, nil
 	}
 }
@@ -1870,20 +2050,20 @@ func DecodeEndpointBodyQueryPathObjectRequest(decoder func(*http.Request) rest.D
 		}
 
 		var (
+			c string
 			b *string
-			c *string
 
 			params = rest.ContextParams(r.Context())
 		)
-		cRaw := params["c"]
-		if cRaw != "" {
-			c = &cRaw
-		}
+		c = params["c"]
 		bRaw := r.URL.Query().Get("b")
 		if bRaw != "" {
 			b = &bRaw
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointBodyQueryPathObjectPayload(&body, b, c), nil
 	}
 }
@@ -1905,31 +2085,25 @@ func DecodeEndpointBodyQueryPathObjectValidateRequest(decoder func(*http.Request
 			}
 			return nil, err
 		}
-		if err := body.Validate(); err != nil {
-			return nil, err
-		}
+		err = goa.MergeErrors(err, body.Validate())
 
 		var (
-			b *string
-			c *string
+			c string
+			b string
 
 			params = rest.ContextParams(r.Context())
 		)
-		cRaw := params["c"]
-		if cRaw != "" {
-			c = &cRaw
+		c = params["c"]
+		err = goa.MergeErrors(err, goa.ValidatePattern("c", c, "patternc"))
+		b = r.URL.Query().Get("b")
+		if b == "" {
+			err = goa.MergeErrors(err, goa.MissingFieldError("b", "query string"))
 		}
-		if c != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("c", *c, "patternc"))
-		}
-		bRaw := r.URL.Query().Get("b")
-		if bRaw != "" {
-			b = &bRaw
-		}
-		if b != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("b", *b, "patternb"))
-		}
+		err = goa.MergeErrors(err, goa.ValidatePattern("b", b, "patternb"))
 
+		if err != nil {
+			return nil, err
+		}
 		return NewEndpointBodyQueryPathObjectValidatePayload(&body, b, c), nil
 	}
 }
@@ -1952,20 +2126,20 @@ func DecodeEndpointBodyQueryPathUserRequest(decoder func(*http.Request) rest.Dec
 		}
 
 		var (
+			c string
 			b *string
-			c *string
 
 			params = rest.ContextParams(r.Context())
 		)
-		cRaw := params["c"]
-		if cRaw != "" {
-			c = &cRaw
-		}
+		c = params["c"]
 		bRaw := r.URL.Query().Get("b")
 		if bRaw != "" {
 			b = &bRaw
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		return NewPayloadType(&body, b, c), nil
 	}
 }
@@ -1987,31 +2161,25 @@ func DecodeEndpointBodyQueryPathUserValidateRequest(decoder func(*http.Request) 
 			}
 			return nil, err
 		}
-		if err := body.Validate(); err != nil {
-			return nil, err
-		}
+		err = goa.MergeErrors(err, body.Validate())
 
 		var (
-			b *string
-			c *string
+			c string
+			b string
 
 			params = rest.ContextParams(r.Context())
 		)
-		cRaw := params["c"]
-		if cRaw != "" {
-			c = &cRaw
+		c = params["c"]
+		err = goa.MergeErrors(err, goa.ValidatePattern("c", c, "patternc"))
+		b = r.URL.Query().Get("b")
+		if b == "" {
+			err = goa.MergeErrors(err, goa.MissingFieldError("b", "query string"))
 		}
-		if c != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("c", *c, "patternc"))
-		}
-		bRaw := r.URL.Query().Get("b")
-		if bRaw != "" {
-			b = &bRaw
-		}
-		if b != nil {
-			err = goa.MergeErrors(err, goa.ValidatePattern("b", *b, "patternb"))
-		}
+		err = goa.MergeErrors(err, goa.ValidatePattern("b", b, "patternb"))
 
+		if err != nil {
+			return nil, err
+		}
 		return NewPayloadType(&body, b, c), nil
 	}
 }

@@ -1,5 +1,4 @@
 // MarshalTypes codegen file
-// add tags to generated type from restgen.GoTypeDef
 // Make sure to generate user type for each error even if declared with primitive
 // Add metadata to specify error type attribute to be used for error message
 // validate only one error per http status code
@@ -12,6 +11,9 @@
 // Add response tags to account example
 // Test response tags
 // Test default values and header decoding
+// Test optional payload
+
+// Initialize error responses headers and body from result (action.go)
 
 package rest
 
@@ -85,25 +87,26 @@ type (
 	ServerPayloadData struct {
 		// Ref is the reference to the payload type.
 		Ref string
+		// Required is true if the payload is required.
+		Required bool
 		// Constructor is the name of the payload constructor function.
 		Constructor string
+		// ConstructorParams is a string representing the Go code for the
+		// section of the payload constructor signature that consists of
+		// passing all the parameter and header values.
+		ConstructorParams string
+		// DecoderReturnValue is a reference to the decoder return value
+		// if there is no payload constructor (i.e. Constructor is the
+		// empty string).
+		DecoderReturnValue string
 		// BodyTypeName is the name of the request body type if any.
 		BodyTypeName string
-		// BodyRef is a reference to the body variable as returned by the
-		// decode function (i.e. "body" or "&body")
-		BodyRef string
 		// PathParams describes the information about params that are
 		// present in the path.
 		PathParams []*ServerParamData
 		// QueryParams describes the information about the params that
 		// are present in the query.
 		QueryParams []*ServerParamData
-		// AllParams describes the params, in path and query.
-		AllParams []*ServerParamData
-		// ConstructorParams is a string representing the Go code for the
-		// section of the payload constructor signature that consists of
-		// passing all the parameter and header values.
-		ConstructorParams string
 		// Headers contains the HTTP request headers used to build the
 		// endpoint payload.
 		Headers []*ServerHeaderData
@@ -372,23 +375,18 @@ func buildServiceData(r *rest.ResourceExpr) *ServerData {
 					{
 						if ut, ok := body.(design.UserType); ok {
 							if codegen.HasValidations(ut.Attribute(), false) {
-								validateBody = `
-		if err := body.Validate(); err != nil {
-			return nil, err
-		}`
+								validateBody = "\n\t\terr = goa.MergeErrors(err, body.Validate())"
 							}
 						} else {
-							code := codegen.RecursiveValidationCode(a.EndpointExpr.Payload, true, true, "body")
+							code := codegen.RecursiveValidationCode(a.EndpointExpr.Payload, a.EndpointExpr.PayloadRequired, true, "body")
 							if code != "" {
-								validateBody = "\n" + code + `
-		if err != nil {
-			return nil, err
-		}`
+								validateBody = "\n\t\t" + code
 							}
 						}
 						bodyTypeName = svc.Scope.GoTypeName(body)
 						bodyRef = "body"
-						if design.IsObject(body) {
+						if design.IsObject(body) ||
+							design.IsPrimitive(body) && body.Kind() != design.BytesKind && body.Kind() != design.AnyKind && !a.EndpointExpr.PayloadRequired {
 							bodyRef = "&" + bodyRef
 						}
 					}
@@ -402,18 +400,47 @@ func buildServiceData(r *rest.ResourceExpr) *ServerData {
 					params = append(params, codegen.Goify(elem, false))
 					return nil
 				})
+
 			}
+
+			var (
+				returnValue string
+				att         *design.AttributeExpr
+			)
+			if constructor == "" {
+				if keys := a.PathParams().Keys(); len(keys) > 0 {
+					att = design.AsObject(a.PathParams().Type)[keys[0]]
+					returnValue = codegen.Goify(keys[0], false)
+				} else if keys := a.QueryParams().Keys(); len(keys) > 0 {
+					att = design.AsObject(a.QueryParams().Type)[keys[0]]
+					returnValue = codegen.Goify(keys[0], false)
+				} else if keys := a.MappedHeaders().Keys(); len(keys) > 0 {
+					att = design.AsObject(a.MappedHeaders().Type)[keys[0]]
+					returnValue = codegen.Goify(keys[0], false)
+				} else {
+					returnValue = bodyRef
+				}
+			}
+			if att != nil &&
+				design.IsPrimitive(att.Type) &&
+				att.Type.Kind() != design.BytesKind &&
+				att.Type.Kind() != design.AnyKind &&
+				!a.EndpointExpr.PayloadRequired {
+
+				returnValue = "&" + returnValue
+			}
+
 			ad.Payload = &ServerPayloadData{
-				Ref:               ep.PayloadRef,
-				Constructor:       constructor,
-				BodyTypeName:      bodyTypeName,
-				BodyRef:           bodyRef,
-				PathParams:        extractParams(a.PathParams()),
-				QueryParams:       extractParams(a.QueryParams()),
-				AllParams:         extractParams(a.AllParams()),
-				Headers:           extractHeaders(a.MappedHeaders()),
-				ConstructorParams: strings.Join(params, ", "),
-				ValidateBody:      validateBody,
+				Ref:                ep.PayloadRef,
+				Required:           a.EndpointExpr.PayloadRequired,
+				Constructor:        constructor,
+				ConstructorParams:  strings.Join(params, ", "),
+				DecoderReturnValue: returnValue,
+				BodyTypeName:       bodyTypeName,
+				PathParams:         extractPathParams(a.PathParams()),
+				QueryParams:        extractQueryParams(a.QueryParams()),
+				Headers:            extractHeaders(a.MappedHeaders()),
+				ValidateBody:       validateBody,
 			}
 		}
 		sd.ActionData = append(sd.ActionData, ad)
@@ -482,6 +509,62 @@ func buildErrorData(r *rest.ResourceExpr, a *rest.ActionExpr, v *rest.HTTPErrorE
 	}
 }
 
+func extractPathParams(a *rest.MappedAttributeExpr) []*ServerParamData {
+	var params []*ServerParamData
+	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
+		var (
+			field = codegen.Goify(name, true)
+			varn  = codegen.Goify(name, false)
+			arr   = design.AsArray(c.Type)
+		)
+		params = append(params, &ServerParamData{
+			Name:         elem,
+			FieldName:    field,
+			VarName:      varn,
+			Required:     required,
+			Type:         c.Type,
+			Pointer:      false,
+			StringSlice:  arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
+			Slice:        arr != nil,
+			Validate:     codegen.RecursiveValidationCode(c, true, true, varn),
+			DefaultValue: c.DefaultValue,
+		})
+		return nil
+	})
+
+	return params
+}
+
+func extractQueryParams(a *rest.MappedAttributeExpr) []*ServerParamData {
+	var params []*ServerParamData
+	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
+		var (
+			field = codegen.Goify(name, true)
+			varn  = codegen.Goify(name, false)
+			arr   = design.AsArray(c.Type)
+		)
+		pointer := !required &&
+			design.IsPrimitive(c.Type) &&
+			c.Type.Kind() != design.BytesKind &&
+			c.Type.Kind() != design.AnyKind
+		params = append(params, &ServerParamData{
+			Name:         elem,
+			FieldName:    field,
+			VarName:      varn,
+			Required:     required,
+			Type:         c.Type,
+			Pointer:      pointer,
+			StringSlice:  arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
+			Slice:        arr != nil,
+			Validate:     codegen.RecursiveValidationCode(c, !pointer, true, varn),
+			DefaultValue: c.DefaultValue,
+		})
+		return nil
+	})
+
+	return params
+}
+
 func extractHeaders(a *rest.MappedAttributeExpr) []*ServerHeaderData {
 	var headers []*ServerHeaderData
 	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
@@ -497,33 +580,6 @@ func extractHeaders(a *rest.MappedAttributeExpr) []*ServerHeaderData {
 	})
 
 	return headers
-}
-
-func extractParams(a *rest.MappedAttributeExpr) []*ServerParamData {
-	var params []*ServerParamData
-	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
-		var (
-			field           = codegen.Goify(name, true)
-			varn            = codegen.Goify(name, false)
-			arr             = design.AsArray(c.Type)
-			isNativePointer = c.Type.Kind() == design.BytesKind || c.Type.Kind() == design.AnyKind
-		)
-		params = append(params, &ServerParamData{
-			Name:         elem,
-			FieldName:    field,
-			VarName:      varn,
-			Required:     required,
-			Type:         c.Type,
-			Pointer:      !required && design.IsPrimitive(c.Type) && !isNativePointer,
-			StringSlice:  arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
-			Slice:        arr != nil,
-			Validate:     codegen.RecursiveValidationCode(c, a.IsRequired(name) || isNativePointer, false, varn),
-			DefaultValue: c.DefaultValue,
-		})
-		return nil
-	})
-
-	return params
 }
 
 // HasResponses indicates if an action has responses.
@@ -655,9 +711,12 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		{{- .Payload.ValidateBody }}
 {{ end }}
 
-{{- if or .Payload.AllParams .Payload.Headers }}
+{{- if or .Payload.PathParams .Payload.QueryParams .Payload.Headers }}
 		var (
-		{{- range .Payload.AllParams }}
+		{{- range .Payload.PathParams }}
+			{{ .VarName }} {{ if .Pointer }}*{{ end }}{{goTypeRef .Type }}
+		{{- end }}
+		{{- range .Payload.QueryParams }}
 			{{ .VarName }} {{ if .Pointer }}*{{ end }}{{goTypeRef .Type }}
 		{{- end }}
 		{{- range .Payload.Headers }}
@@ -670,43 +729,13 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		)
 
 {{- range .Payload.PathParams }}
-	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
+	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
 		{{ .VarName }} = params["{{ .Name }}"]
-		if {{ .VarName }} == "" {
-			return nil, goa.MissingFieldError("{{ .Name }}", "path")
-		}
-
-	{{- else if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
-		{{ .VarName }}Raw := params["{{ .Name }}"]
-		if {{ .VarName }}Raw != "" {
-			{{ .VarName }} = {{ if eq .Type.Name "string" }}&{{ end }}{{ .VarName }}Raw
-		}
-		{{- if .DefaultValue }} else {
-		{{ .VarName }}Def := {{ print "%q" .DefaultValue }}
-		{{ .VarName }} = {{ if eq .Type.Name "string" }}&{{ end }}{{ .VarName }}Def
-	}
-		{{- end }}
 
 	{{- else }}{{/* not string */}}
 		{{ .VarName }}Raw := params["{{ .Name }}"]
-		{{- if .Required }}
-		if {{ .VarName }}Raw == "" {
-			return nil, goa.MissingFieldError("{{ .Name }}", "path")
-		}
-		{{- else if .DefaultValue }}
-		if {{ .VarName }}Raw == "" {
-			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
-		}
-		{{- end }}
-
-		{{- if .DefaultValue }}else {
-		{{- else if not .Required }}
-		if {{ .VarName }}Raw != "" {
-		{{- end }}
 		{{- template "path_conversion" . }}
-		{{- if or .DefaultValue (not .Required) }}
-		}
-		{{- end }}
+
 	{{- end }}
 		{{- if .Validate }}
 		{{ .Validate }}
@@ -717,7 +746,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
 		{{ .VarName }} = r.URL.Query().Get("{{ .Name }}")
 		if {{ .VarName }} == "" {
-			return nil, goa.MissingFieldError("{{ .Name }}", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
 		}
 
 	{{- else if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
@@ -735,7 +764,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		{{ .VarName }} = r.URL.Query()["{{ .Name }}"]
 		{{- if .Required }}
 		if {{ .VarName }} == nil {
-			return nil, goa.MissingFieldError("{{ .Name }}", "query string")
+			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
 		}
 		{{- else if .DefaultValue }}
 		if {{ .VarName }} == nil {
@@ -794,7 +823,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
 		{{ .VarName }} = r.Header.Get("{{ .Name }}")
 		if {{ .VarName }} == "" {
-			return nil, goa.MissingFieldError("{{ .Name }}", "header")
+			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
 		}
 
 	{{- else if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
@@ -812,7 +841,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		{{ .VarName }} = r.Header["{{ .Name }}"]
 		{{ if .Required }}
 		if {{ .VarName }} == nil {
-			return nil, goa.MissingFieldError("{{ .Name }}", "header")
+			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
 		}
 		{{- else if .DefaultValue }}
 		if {{ .VarName }} == nil {
@@ -866,12 +895,13 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		{{- end }}
 {{- end }}
 {{ end }}
+		if err != nil {
+			return nil, err
+		}
 		{{- if .Payload.Constructor }}
 		return {{ .Payload.Constructor }}({{ .Payload.ConstructorParams }}), nil
-		{{- else if .Payload.BodyRef }}
-		return {{ .Payload.BodyRef }}, nil
-		{{- else }}
-		return {{ (index .Payload.AllParams 0).VarName }}, nil
+		{{- else if .Payload.DecoderReturnValue }}
+		return {{ .Payload.DecoderReturnValue }}, nil
 		{{- end }}
 	}
 }
@@ -903,80 +933,80 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "integer")
 		}
-		{{- if .Required }}
-		{{ .VarName }} = int(v)
-		{{- else }}
+		{{- if .Pointer }}
 		pv := int(v)
 		{{ .VarName }} = &pv
+		{{- else }}
+		{{ .VarName }} = int(v)
 		{{- end }}
 	{{- else if eq .Type.Name "int32" }}
 		v, err := strconv.ParseInt({{ .VarName }}Raw, 10, 32)
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "integer")
 		}
-		{{- if .Required }}
-		{{ .VarName }} = int32(v)
-		{{- else }}
+		{{- if .Pointer }}
 		pv := int32(v)
 		{{ .VarName }} = &pv
+		{{- else }}
+		{{ .VarName }} = int32(v)
 		{{- end }}
 	{{- else if eq .Type.Name "int64" }}
 		v, err := strconv.ParseInt({{ .VarName }}Raw, 10, 64)
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "integer")
 		}
-		{{ .VarName }} = {{ if not .Required}}&{{ end }}v
+		{{ .VarName }} = {{ if .Pointer}}&{{ end }}v
 	{{- else if eq .Type.Name "uint" }}
 		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, strconv.IntSize)
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "unsigned integer")
 		}
-		{{- if  .Required }}
-		{{ .VarName }} = uint(v)
-		{{- else }}
+		{{- if .Pointer }}
 		pv := uint(v)
 		{{ .VarName }} = &pv
+		{{- else }}
+		{{ .VarName }} = uint(v)
 		{{- end }}
 	{{- else if eq .Type.Name "uint32" }}
 		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, 32)
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "unsigned integer")
 		}
-		{{- if  .Required }}
-		{{ .VarName }} = uint32(v)
-		{{- else }}
+		{{- if .Pointer }}
 		pv := uint32(v)
 		{{ .VarName }} = &pv
+		{{- else }}
+		{{ .VarName }} = uint32(v)
 		{{- end }}
 	{{- else if eq .Type.Name "uint64" }}
 		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, 64)
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "unsigned integer")
 		}
-		{{ .VarName }} = {{ if not .Required }}&{{ end }}v
+		{{ .VarName }} = {{ if .Pointer }}&{{ end }}v
 	{{- else if eq .Type.Name "float32" }}
 		v, err := strconv.ParseFloat({{ .VarName }}Raw, 32)
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "float")
 		}
-		{{- if  .Required }}
-		{{ .VarName }} = float32(v)
-		{{- else }}
+		{{- if .Pointer }}
 		pv := float32(v)
 		{{ .VarName }} = &pv
+		{{- else }}
+		{{ .VarName }} = float32(v)
 		{{- end }}
 	{{- else if eq .Type.Name "float64" }}
 		v, err := strconv.ParseFloat({{ .VarName }}Raw, 64)
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "float")
 		}
-		{{ .VarName }} = {{ if not .Required }}&{{ end }}v
+		{{ .VarName }} = {{ if .Pointer }}&{{ end }}v
 	{{- else if eq .Type.Name "boolean" }}
 		v, err := strconv.ParseBool({{ .VarName }}Raw)
 		if err != nil {
 			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "boolean")
 		}
-		{{ .VarName }} = {{ if not .Required }}&{{ end }}v
+		{{ .VarName }} = {{ if .Pointer }}&{{ end }}v
 	{{- else }}
 		// unsupported type {{ .Type.Name }} for var {{ .VarName }}
 	{{- end }}

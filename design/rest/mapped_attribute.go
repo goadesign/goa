@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"sort"
 	"strings"
 
 	"goa.design/goa.v2/design"
@@ -133,6 +134,19 @@ func (ma *MappedAttributeExpr) KeyName(elemName string) string {
 		return elemName
 	}
 	panic("HTTP element " + elemName + " is not defined and is not a key") // bug
+}
+
+// Keys returns the attribute keys sorted alphabetically.
+func (ma *MappedAttributeExpr) Keys() []string {
+	o := design.AsObject(ma.Type)
+	keys := make([]string, len(o))
+	i := 0
+	for key := range design.AsObject(ma.Type) {
+		keys[i] = key
+		i++
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // Merge merges other's attributes into a overriding attributes of a with

@@ -25,14 +25,7 @@ type (
 // function returns an error in which case it returns the error.
 func WalkMappedAttr(ma *rest.MappedAttributeExpr, it MappedAttributeWalker) error {
 	o := design.AsObject(ma.Type)
-	keys := make([]string, len(o))
-	i := 0
-	for key := range design.AsObject(ma.Type) {
-		keys[i] = key
-		i++
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
+	for _, k := range ma.Keys() {
 		if err := it(k, ma.ElemName(k), ma.IsRequired(k), o[k]); err != nil {
 			return err
 		}
