@@ -14,18 +14,6 @@ import (
 var PayloadQueryBoolDSL = func() {
 	Service("ServiceQueryBool", func() {
 		Endpoint("EndpointQueryBool", func() {
-			Payload(Boolean)
-			HTTP(func() {
-				GET("/")
-				Param("q")
-			})
-		})
-	})
-}
-
-var PayloadQueryBoolAttributeDSL = func() {
-	Service("ServiceQueryBoolAttribute", func() {
-		Endpoint("EndpointQueryBoolAttribute", func() {
 			Payload(func() {
 				Attribute("q", Boolean)
 			})
@@ -44,6 +32,7 @@ var PayloadQueryBoolValidateDSL = func() {
 				Attribute("q", Boolean, func() {
 					Enum(true)
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -74,6 +63,7 @@ var PayloadQueryIntValidateDSL = func() {
 				Attribute("q", Int, func() {
 					Minimum(1)
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -104,6 +94,7 @@ var PayloadQueryInt32ValidateDSL = func() {
 				Attribute("q", Int32, func() {
 					Minimum(1)
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -134,6 +125,7 @@ var PayloadQueryInt64ValidateDSL = func() {
 				Attribute("q", Int64, func() {
 					Minimum(1)
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -164,6 +156,7 @@ var PayloadQueryUIntValidateDSL = func() {
 				Attribute("q", UInt, func() {
 					Minimum(1)
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -194,6 +187,7 @@ var PayloadQueryUInt32ValidateDSL = func() {
 				Attribute("q", UInt32, func() {
 					Minimum(1)
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -224,6 +218,7 @@ var PayloadQueryUInt64ValidateDSL = func() {
 				Attribute("q", UInt64, func() {
 					Minimum(1)
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -254,6 +249,7 @@ var PayloadQueryFloat32ValidateDSL = func() {
 				Attribute("q", Float32, func() {
 					Minimum(1)
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -284,6 +280,7 @@ var PayloadQueryFloat64ValidateDSL = func() {
 				Attribute("q", Float64, func() {
 					Minimum(1)
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -314,6 +311,7 @@ var PayloadQueryStringValidateDSL = func() {
 				Attribute("q", String, func() {
 					Enum("val")
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -344,6 +342,7 @@ var PayloadQueryBytesValidateDSL = func() {
 				Attribute("q", Bytes, func() {
 					MinLength(1)
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -374,6 +373,7 @@ var PayloadQueryAnyValidateDSL = func() {
 				Attribute("q", Any, func() {
 					Enum("val", 1)
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -407,6 +407,7 @@ var PayloadQueryArrayBoolValidateDSL = func() {
 						Enum(true)
 					})
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -440,6 +441,7 @@ var PayloadQueryArrayIntValidateDSL = func() {
 						Minimum(1)
 					})
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -473,6 +475,7 @@ var PayloadQueryArrayInt32ValidateDSL = func() {
 						Minimum(1)
 					})
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -506,6 +509,7 @@ var PayloadQueryArrayInt64ValidateDSL = func() {
 						Minimum(1)
 					})
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -539,6 +543,7 @@ var PayloadQueryArrayUIntValidateDSL = func() {
 						Minimum(1)
 					})
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -572,6 +577,7 @@ var PayloadQueryArrayUInt32ValidateDSL = func() {
 						Minimum(1)
 					})
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -605,6 +611,7 @@ var PayloadQueryArrayUInt64ValidateDSL = func() {
 						Minimum(1)
 					})
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -638,6 +645,7 @@ var PayloadQueryArrayFloat32ValidateDSL = func() {
 						Minimum(1)
 					})
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -671,6 +679,7 @@ var PayloadQueryArrayFloat64ValidateDSL = func() {
 						Minimum(1)
 					})
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -704,6 +713,7 @@ var PayloadQueryArrayStringValidateDSL = func() {
 						Enum("val")
 					})
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -737,6 +747,7 @@ var PayloadQueryArrayBytesValidateDSL = func() {
 						MinLength(2)
 					})
 				})
+				Required("q")
 			})
 			HTTP(func() {
 				GET("/")
@@ -769,6 +780,364 @@ var PayloadQueryArrayAnyValidateDSL = func() {
 					Elem(func() {
 						Enum("val", 1)
 					})
+				})
+				Required("q")
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryMapStringStringDSL = func() {
+	Service("ServiceQueryMapStringString", func() {
+		Endpoint("EndpointQueryMapStringString", func() {
+			Payload(func() {
+				Attribute("q", MapOf(String, String))
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryMapStringStringValidateDSL = func() {
+	Service("ServiceQueryMapStringStringValidate", func() {
+		Endpoint("EndpointQueryMapStringStringValidate", func() {
+			Payload(func() {
+				Attribute("q", MapOf(String, String), func() {
+					MinLength(1)
+					Key(func() {
+						Enum("key")
+					})
+					Elem(func() {
+						Enum("val")
+					})
+				})
+				Required("q")
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryMapStringBoolDSL = func() {
+	Service("ServiceQueryMapStringBool", func() {
+		Endpoint("EndpointQueryMapStringBool", func() {
+			Payload(func() {
+				Attribute("q", MapOf(String, Boolean))
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryMapStringBoolValidateDSL = func() {
+	Service("ServiceQueryMapStringBoolValidate", func() {
+		Endpoint("EndpointQueryMapStringBoolValidate", func() {
+			Payload(func() {
+				Attribute("q", MapOf(String, Boolean), func() {
+					MinLength(1)
+					Key(func() {
+						Enum("key")
+					})
+					Elem(func() {
+						Enum(true)
+					})
+				})
+				Required("q")
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryMapBoolStringDSL = func() {
+	Service("ServiceQueryMapBoolString", func() {
+		Endpoint("EndpointQueryMapBoolString", func() {
+			Payload(func() {
+				Attribute("q", MapOf(Boolean, String))
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryMapBoolStringValidateDSL = func() {
+	Service("ServiceQueryMapBoolStringValidate", func() {
+		Endpoint("EndpointQueryMapBoolStringValidate", func() {
+			Payload(func() {
+				Attribute("q", MapOf(Boolean, String), func() {
+					MinLength(1)
+					Key(func() {
+						Enum(true)
+					})
+					Elem(func() {
+						Enum("val")
+					})
+				})
+				Required("q")
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryMapBoolBoolDSL = func() {
+	Service("ServiceQueryMapBoolBool", func() {
+		Endpoint("EndpointQueryMapBoolBool", func() {
+			Payload(func() {
+				Attribute("q", MapOf(Boolean, Boolean))
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryMapBoolBoolValidateDSL = func() {
+	Service("ServiceQueryMapBoolBoolValidate", func() {
+		Endpoint("EndpointQueryMapBoolBoolValidate", func() {
+			Payload(func() {
+				Attribute("q", MapOf(Boolean, Boolean), func() {
+					MinLength(1)
+					Key(func() {
+						Enum(false)
+					})
+					Elem(func() {
+						Enum(true)
+					})
+				})
+				Required("q")
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryMapStringArrayStringDSL = func() {
+	Service("ServiceQueryMapStringArrayString", func() {
+		Endpoint("EndpointQueryMapStringArrayString", func() {
+			Payload(func() {
+				Attribute("q", MapOf(String, ArrayOf(String)))
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryMapStringArrayStringValidateDSL = func() {
+	Service("ServiceQueryMapStringArrayStringValidate", func() {
+		Endpoint("EndpointQueryMapStringArrayStringValidate", func() {
+			Payload(func() {
+				Attribute("q", MapOf(String, ArrayOf(String)), func() {
+					MinLength(1)
+					Key(func() {
+						Enum("key")
+					})
+					Elem(func() {
+						MinLength(2)
+					})
+				})
+				Required("q")
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryMapStringArrayBoolDSL = func() {
+	Service("ServiceQueryMapStringArrayBool", func() {
+		Endpoint("EndpointQueryMapStringArrayBool", func() {
+			Payload(func() {
+				Attribute("q", MapOf(String, ArrayOf(Boolean)))
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryMapStringArrayBoolValidateDSL = func() {
+	Service("ServiceQueryMapStringArrayBoolValidate", func() {
+		Endpoint("EndpointQueryMapStringArrayBoolValidate", func() {
+			Payload(func() {
+				Attribute("q", MapOf(String, ArrayOf(Boolean)), func() {
+					MinLength(1)
+					Key(func() {
+						Enum("key")
+					})
+					Elem(func() {
+						MinLength(2)
+					})
+				})
+				Required("q")
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryMapBoolArrayBoolDSL = func() {
+	Service("ServiceQueryMapBoolArrayBool", func() {
+		Endpoint("EndpointQueryMapBoolArrayBool", func() {
+			Payload(func() {
+				Attribute("q", MapOf(Boolean, ArrayOf(Boolean)))
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryMapBoolArrayBoolValidateDSL = func() {
+	Service("ServiceQueryMapBoolArrayBoolValidate", func() {
+		Endpoint("EndpointQueryMapBoolArrayBoolValidate", func() {
+			Payload(func() {
+				Attribute("q", MapOf(Boolean, ArrayOf(Boolean)), func() {
+					MinLength(1)
+					Key(func() {
+						Enum(true)
+					})
+					Elem(func() {
+						MinLength(2)
+					})
+				})
+				Required("q")
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryMapBoolArrayStringDSL = func() {
+	Service("ServiceQueryMapBoolArrayString", func() {
+		Endpoint("EndpointQueryMapBoolArrayString", func() {
+			Payload(func() {
+				Attribute("q", MapOf(Boolean, ArrayOf(String)))
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryMapBoolArrayStringValidateDSL = func() {
+	Service("ServiceQueryMapBoolArrayStringValidate", func() {
+		Endpoint("EndpointQueryMapBoolArrayStringValidate", func() {
+			Payload(func() {
+				Attribute("q", MapOf(Boolean, ArrayOf(String)), func() {
+					MinLength(1)
+					Key(func() {
+						Enum(true)
+					})
+					Elem(func() {
+						MinLength(2)
+					})
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryPrimitiveStringValidateDSL = func() {
+	Service("ServiceQueryPrimitiveStringValidate", func() {
+		Endpoint("EndpointQueryPrimitiveStringValidate", func() {
+			Payload(String, func() {
+				Enum("val")
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryPrimitiveBoolValidateDSL = func() {
+	Service("ServiceQueryPrimitiveBoolValidate", func() {
+		Endpoint("EndpointQueryPrimitiveBoolValidate", func() {
+			Payload(Boolean, func() {
+				Enum(true)
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryPrimitiveArrayStringValidateDSL = func() {
+	Service("ServiceQueryPrimitiveArrayStringValidate", func() {
+		Endpoint("EndpointQueryPrimitiveArrayStringValidate", func() {
+			Payload(ArrayOf(String), func() {
+				MinLength(1)
+				Elem(func() {
+					Enum("val")
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryPrimitiveArrayBoolValidateDSL = func() {
+	Service("ServiceQueryPrimitiveArrayBoolValidate", func() {
+		Endpoint("EndpointQueryPrimitiveArrayBoolValidate", func() {
+			Payload(ArrayOf(Boolean), func() {
+				MinLength(1)
+				Elem(func() {
+					Enum(true)
 				})
 			})
 			HTTP(func() {
@@ -826,6 +1195,64 @@ var PayloadPathArrayStringValidateDSL = func() {
 			Payload(func() {
 				Attribute("p", ArrayOf(String), func() {
 					Enum([]string{"val"})
+				})
+			})
+			HTTP(func() {
+				GET("/{p}")
+			})
+		})
+	})
+}
+
+var PayloadPathPrimitiveStringValidateDSL = func() {
+	Service("ServicePathPrimitiveStringValidate", func() {
+		Endpoint("EndpointPathPrimitiveStringValidate", func() {
+			Payload(String, func() {
+				Enum("val")
+			})
+			HTTP(func() {
+				GET("/{p}")
+			})
+		})
+	})
+}
+
+var PayloadPathPrimitiveBoolValidateDSL = func() {
+	Service("ServicePathPrimitiveBoolValidate", func() {
+		Endpoint("EndpointPathPrimitiveBoolValidate", func() {
+			Payload(Boolean, func() {
+				Enum(true)
+			})
+			HTTP(func() {
+				GET("/{p}")
+			})
+		})
+	})
+}
+
+var PayloadPathPrimitiveArrayStringValidateDSL = func() {
+	Service("ServicePathPrimitiveArrayStringValidate", func() {
+		Endpoint("EndpointPathPrimitiveArrayStringValidate", func() {
+			Payload(ArrayOf(String), func() {
+				MinLength(1)
+				Elem(func() {
+					Enum("val")
+				})
+			})
+			HTTP(func() {
+				GET("/{p}")
+			})
+		})
+	})
+}
+
+var PayloadPathPrimitiveArrayBoolValidateDSL = func() {
+	Service("ServicePathPrimitiveArrayBoolValidate", func() {
+		Endpoint("EndpointPathPrimitiveArrayBoolValidate", func() {
+			Payload(ArrayOf(Boolean), func() {
+				MinLength(1)
+				Elem(func() {
+					Enum(true)
 				})
 			})
 			HTTP(func() {
@@ -1024,6 +1451,64 @@ var PayloadBodyMapUserValidateDSL = func() {
 					Key(func() {
 						MinLength(2)
 					})
+				})
+			})
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
+var PayloadBodyPrimitiveStringValidateDSL = func() {
+	Service("ServiceBodyPrimitiveStringValidate", func() {
+		Endpoint("EndpointBodyPrimitiveStringValidate", func() {
+			Payload(String, func() {
+				Enum("val")
+			})
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
+var PayloadBodyPrimitiveBoolValidateDSL = func() {
+	Service("ServiceBodyPrimitiveBoolValidate", func() {
+		Endpoint("EndpointBodyPrimitiveBoolValidate", func() {
+			Payload(Boolean, func() {
+				Enum(true)
+			})
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
+var PayloadBodyPrimitiveArrayStringValidateDSL = func() {
+	Service("ServiceBodyPrimitiveArrayStringValidate", func() {
+		Endpoint("EndpointBodyPrimitiveArrayStringValidate", func() {
+			Payload(ArrayOf(String), func() {
+				MinLength(1)
+				Elem(func() {
+					Enum("val")
+				})
+			})
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
+var PayloadBodyPrimitiveArrayBoolValidateDSL = func() {
+	Service("ServiceBodyPrimitiveArrayBoolValidate", func() {
+		Endpoint("EndpointBodyPrimitiveArrayBoolValidate", func() {
+			Payload(ArrayOf(Boolean), func() {
+				MinLength(1)
+				Elem(func() {
+					Enum(true)
 				})
 			})
 			HTTP(func() {

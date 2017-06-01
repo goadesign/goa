@@ -87,8 +87,6 @@ type (
 	ServerPayloadData struct {
 		// Ref is the reference to the payload type.
 		Ref string
-		// Required is true if the payload is required.
-		Required bool
 		// Constructor is the name of the payload constructor function.
 		Constructor string
 		// ConstructorParams is a string representing the Go code for the
@@ -176,6 +174,11 @@ type (
 		StringSlice bool
 		// Slice is true if the param type is an array.
 		Slice bool
+		// MapStringSlice is true if the param type is a map of string
+		// slice.
+		MapStringSlice bool
+		// Map is true if the param type is a map.
+		Map bool
 		// Validate contains the validation code if any.
 		Validate string
 		// DefaultValue contains the default value if any.
@@ -260,7 +263,7 @@ func Server(r *rest.ResourceExpr) codegen.File {
 func serverTmpl(r *rest.ResourceExpr) *template.Template {
 	scope := files.Services.Get(r.Name()).Scope
 	return template.New("server").
-		Funcs(template.FuncMap{"goTypeRef": scope.GoTypeRef}).
+		Funcs(template.FuncMap{"goTypeRef": scope.GoTypeRef, "conversionContext": conversionContext}).
 		Funcs(codegen.TemplateFuncs())
 }
 
@@ -378,15 +381,14 @@ func buildServiceData(r *rest.ResourceExpr) *ServerData {
 								validateBody = "\n\t\terr = goa.MergeErrors(err, body.Validate())"
 							}
 						} else {
-							code := codegen.RecursiveValidationCode(a.EndpointExpr.Payload, a.EndpointExpr.PayloadRequired, true, "body")
+							code := codegen.RecursiveValidationCode(a.EndpointExpr.Payload, true, true, "body")
 							if code != "" {
 								validateBody = "\n\t\t" + code
 							}
 						}
 						bodyTypeName = svc.Scope.GoTypeName(body)
 						bodyRef = "body"
-						if design.IsObject(body) ||
-							design.IsPrimitive(body) && body.Kind() != design.BytesKind && body.Kind() != design.AnyKind && !a.EndpointExpr.PayloadRequired {
+						if design.IsObject(body) {
 							bodyRef = "&" + bodyRef
 						}
 					}
@@ -405,34 +407,21 @@ func buildServiceData(r *rest.ResourceExpr) *ServerData {
 
 			var (
 				returnValue string
-				att         *design.AttributeExpr
 			)
 			if constructor == "" {
 				if keys := a.PathParams().Keys(); len(keys) > 0 {
-					att = design.AsObject(a.PathParams().Type)[keys[0]]
 					returnValue = codegen.Goify(keys[0], false)
 				} else if keys := a.QueryParams().Keys(); len(keys) > 0 {
-					att = design.AsObject(a.QueryParams().Type)[keys[0]]
 					returnValue = codegen.Goify(keys[0], false)
 				} else if keys := a.MappedHeaders().Keys(); len(keys) > 0 {
-					att = design.AsObject(a.MappedHeaders().Type)[keys[0]]
 					returnValue = codegen.Goify(keys[0], false)
 				} else {
 					returnValue = bodyRef
 				}
 			}
-			if att != nil &&
-				design.IsPrimitive(att.Type) &&
-				att.Type.Kind() != design.BytesKind &&
-				att.Type.Kind() != design.AnyKind &&
-				!a.EndpointExpr.PayloadRequired {
-
-				returnValue = "&" + returnValue
-			}
 
 			ad.Payload = &ServerPayloadData{
 				Ref:                ep.PayloadRef,
-				Required:           a.EndpointExpr.PayloadRequired,
 				Constructor:        constructor,
 				ConstructorParams:  strings.Join(params, ", "),
 				DecoderReturnValue: returnValue,
@@ -518,16 +507,18 @@ func extractPathParams(a *rest.MappedAttributeExpr) []*ServerParamData {
 			arr   = design.AsArray(c.Type)
 		)
 		params = append(params, &ServerParamData{
-			Name:         elem,
-			FieldName:    field,
-			VarName:      varn,
-			Required:     required,
-			Type:         c.Type,
-			Pointer:      false,
-			StringSlice:  arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
-			Slice:        arr != nil,
-			Validate:     codegen.RecursiveValidationCode(c, true, true, varn),
-			DefaultValue: c.DefaultValue,
+			Name:           elem,
+			FieldName:      field,
+			VarName:        varn,
+			Required:       required,
+			Type:           c.Type,
+			Pointer:        false,
+			Slice:          arr != nil,
+			StringSlice:    arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
+			Map:            false,
+			MapStringSlice: false,
+			Validate:       codegen.RecursiveValidationCode(c, true, true, varn),
+			DefaultValue:   c.DefaultValue,
 		})
 		return nil
 	})
@@ -542,20 +533,26 @@ func extractQueryParams(a *rest.MappedAttributeExpr) []*ServerParamData {
 			field = codegen.Goify(name, true)
 			varn  = codegen.Goify(name, false)
 			arr   = design.AsArray(c.Type)
+			mp    = design.AsMap(c.Type)
 		)
 		pointer := !required &&
 			design.IsPrimitive(c.Type) &&
 			c.Type.Kind() != design.BytesKind &&
 			c.Type.Kind() != design.AnyKind
 		params = append(params, &ServerParamData{
-			Name:         elem,
-			FieldName:    field,
-			VarName:      varn,
-			Required:     required,
-			Type:         c.Type,
-			Pointer:      pointer,
-			StringSlice:  arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
-			Slice:        arr != nil,
+			Name:        elem,
+			FieldName:   field,
+			VarName:     varn,
+			Required:    required,
+			Type:        c.Type,
+			Pointer:     pointer,
+			Slice:       arr != nil,
+			StringSlice: arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
+			Map:         mp != nil,
+			MapStringSlice: mp != nil &&
+				mp.KeyType.Type.Kind() == design.StringKind &&
+				mp.ElemType.Type.Kind() == design.ArrayKind &&
+				design.AsArray(mp.ElemType.Type).ElemType.Type.Kind() == design.StringKind,
 			Validate:     codegen.RecursiveValidationCode(c, !pointer, true, varn),
 			DefaultValue: c.DefaultValue,
 		})
@@ -600,6 +597,16 @@ func (d *ServerActionData) HasErrors() bool {
 // HasPathParams indicates if a payload has path parameters.
 func (d *ServerPayloadData) HasPathParams() bool {
 	return len(d.PathParams) > 0
+}
+
+// conversionContext creates a template context suitable for executing the
+// "type_conversion" template.
+func conversionContext(varName, name string, dt design.DataType) map[string]interface{} {
+	return map[string]interface{}{
+		"VarName": varName,
+		"Name":    name,
+		"Type":    dt,
+	}
 }
 
 const serverStructT = `{{ printf "%s lists the %s service endpoint HTTP handlers." .HandlersStruct .ServiceName | comment }}
@@ -722,6 +729,9 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		{{- range .Payload.Headers }}
 			{{ .VarName }} {{ if .Pointer }}*{{ end }}{{goTypeRef .Type }}
 		{{- end }}
+		{{- if not .Payload.BodyTypeName }}
+			err error
+		{{- end }}
 		{{- if .Payload.HasPathParams }}
 
 			params = rest.ContextParams(r.Context())
@@ -793,7 +803,48 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		}
 		{{- end }}
 
-	{{- else }}{{/* not string, not any and not slice */}}
+	{{- else if .MapStringSlice }}
+		{{ .VarName }} = r.URL.Query()
+		{{- if .Required }}
+		if len({{ .VarName }}) == 0 {
+			return nil, goa.MissingFieldError("{{ .Name }}", "query string")
+		}
+		{{- else if .DefaultValue }}
+		if len({{ .VarName }}Raw) == 0 {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+		}
+		{{- end }}
+
+	{{- else if .Map }}
+		{{ .VarName }}Raw := r.URL.Query()
+		{{- if .Required }}
+		if len({{ .VarName }}Raw) == 0 {
+			return nil, goa.MissingFieldError("{{ .Name }}", "query string")
+		}
+		{{- else if .DefaultValue }}
+		if len({{ .VarName }}Raw) == 0 {
+			{{ .VarName }} = {{ printf "%#v" .DefaultValue }}
+		}
+		{{- end }}
+
+		{{- if .DefaultValue }}else {
+		{{- else if not .Required }}
+		if len({{ .VarName }}Raw) != 0 {
+		{{- end }}
+		{{- if eq .Type.ElemType.Type.Name "array" }}
+			{{- if eq .Type.ElemType.Type.ElemType.Type.Name "string" }}
+			{{- template "map_key_conversion" . }}
+			{{- else }}
+			{{- template "map_slice_conversion" . }}
+			{{- end }}
+		{{- else }}
+			{{- template "map_conversion" . }}
+		{{- end }}
+		{{- if or .DefaultValue (not .Required) }}
+		}
+		{{- end }}
+
+	{{- else }}{{/* not string, not any, not slice and not map */}}
 		{{ .VarName }}Raw := r.URL.Query().Get("{{ .Name }}")
 		{{- if .Required }}
 		if {{ .VarName }}Raw == "" {
@@ -911,7 +962,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		{{ .VarName }}RawSlice := strings.Split({{ .VarName }}Raw, ",")
 		{{ .VarName }} = make({{ goTypeRef .Type }}, len({{ .VarName }}RawSlice))
 		for i, rv := range {{ .VarName }}RawSlice {
-			{{- template "type_slice_conversion" . }}
+			{{- template "slice_item_conversion" . }}
 		}
 	{{- else }}
 		{{- template "type_conversion" . }}
@@ -921,7 +972,73 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 {{- define "slice_conversion" }}
 	{{ .VarName }} = make({{ goTypeRef .Type }}, len({{ .VarName }}Raw))
 	for i, rv := range {{ .VarName }}Raw {
-		{{- template "type_slice_conversion" . }}
+		{{- template "slice_item_conversion" . }}
+	}
+{{- end }}
+
+{{- define "map_key_conversion" }}
+	{{ .VarName }} = make({{ goTypeRef .Type }}, len({{ .VarName }}Raw))
+	for keyRaw, val := range {{ .VarName }}Raw {
+		var key {{ goTypeRef .Type.KeyType.Type }}
+		{
+		{{- with conversionContext "key" (printf "%q" "query") .Type.KeyType.Type }}
+		{{- template "type_conversion" . }}
+		{{- end }}
+		}
+		{{ .VarName }}[key] = val
+	}
+{{- end }}
+
+{{- define "map_slice_conversion" }}
+	{{ .VarName }} = make({{ goTypeRef .Type }}, len({{ .VarName }}Raw))
+	for key{{ if not (eq .Type.KeyType.Type.Name "string") }}Raw{{ end }}, valRaw := range {{ .VarName }}Raw {
+
+		{{- if not (eq .Type.KeyType.Type.Name "string") }}
+		var key {{ goTypeRef .Type.KeyType.Type }}
+		{
+			{{- with conversionContext "key" (printf "%q" "query") .Type.KeyType.Type }}
+			{{- template "type_conversion" . }}
+			{{- end }}
+		}
+		{{- end }}
+		var val {{ goTypeRef .Type.ElemType.Type }}
+		{
+		{{- with conversionContext "val" (printf "%q" "query") .Type.ElemType.Type }}
+		{{- template "slice_conversion" . }}
+		{{- end }}
+		}
+		{{ .VarName }}[key] = val
+	}
+{{- end }}
+
+{{- define "map_conversion" }}
+	{{ .VarName }} = make({{ goTypeRef .Type }}, len({{ .VarName }}Raw))
+	for key{{ if not (eq .Type.KeyType.Type.Name "string") }}Raw{{ end }}, va := range {{ .VarName }}Raw {
+
+		{{- if not (eq .Type.KeyType.Type.Name "string") }}
+		var key {{ goTypeRef .Type.KeyType.Type }}
+		{
+			{{- if eq .Type.KeyType.Type.Name "string" }}
+			key = keyRaw
+			{{- else }}
+			{{- with conversionContext "key" (printf "%q" "query") .Type.KeyType.Type }}
+			{{- template "type_conversion" . }}
+			{{- end }}
+			{{- end }}
+		}
+		{{- end }}
+		var val {{ goTypeRef .Type.ElemType.Type }}
+		{
+			{{- if eq .Type.ElemType.Type.Name "string" }}
+			val = va[0]
+			{{- else }}
+			valRaw := va[0]
+			{{- with conversionContext "val" (printf "%q" "query") .Type.ElemType.Type }}
+			{{- template "type_conversion" . }}
+			{{- end }}
+			{{- end }}
+		}
+		{{ .VarName }}[key] = val
 	}
 {{- end }}
 
@@ -1011,7 +1128,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		// unsupported type {{ .Type.Name }} for var {{ .VarName }}
 	{{- end }}
 {{- end }}
-{{- define "type_slice_conversion" }}
+{{- define "slice_item_conversion" }}
 		{{- if eq .Type.ElemType.Type.Name "string" }}
 			{{ .VarName }}[i] = rv
 		{{- else if eq .Type.ElemType.Type.Name "bytes" }}

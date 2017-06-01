@@ -129,7 +129,7 @@ with the following restrictions:
 - only primitive or array types may be used to define path parameters or headers
 - only primitive, array and map types may be used to define query string parameters
 - array and map types used to define path parameters, query string parameters or
-  headers may only use primitive types to define their keys and elements.
+  headers must use primitive types to define their elements
 
 Arrays in paths and headers are represented using comma separated values.
 

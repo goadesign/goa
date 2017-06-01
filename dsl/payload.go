@@ -6,7 +6,7 @@ import (
 )
 
 // Payload defines the data type of an endpoint input. Payload also makes the
-// input required. Use PayloadOpt to describe the type of an optional input.
+// input required.
 //
 // Payload may appear in a Endpoint expression.
 //
@@ -44,17 +44,6 @@ import (
 // })
 //
 func Payload(val interface{}, fns ...func()) {
-	PayloadOpt(val, fns...)
-	if e, ok := eval.Current().(*design.EndpointExpr); ok {
-		e.PayloadRequired = true
-	}
-}
-
-// PayloadOpt defines the data type of an endpoint input. PayloadOpt also makes
-// the input optional. Use Payload to describe the type of a required input.
-//
-// See Payload for usage and examples.
-func PayloadOpt(val interface{}, fns ...func()) {
 	if len(fns) > 1 {
 		eval.ReportError("too many arguments")
 	}

@@ -449,7 +449,7 @@ func (o Object) Example(r *Random) interface{} {
 func (m *Map) Kind() Kind { return MapKind }
 
 // Name returns the type name.
-func (m *Map) Name() string { return "hash" }
+func (m *Map) Name() string { return "map" }
 
 // Hash returns a unique hash value for m.
 func (m *Map) Hash() string {

@@ -244,9 +244,6 @@ func buildServiceMethodData(m *design.EndpointExpr, scope *codegen.NameScope) *S
 			default:
 				payloadName = scope.GoTypeName(dt)
 				payloadRef = payloadName
-				if design.IsPrimitive(dt) && dt.Kind() != design.BytesKind && dt.Kind() != design.AnyKind && !m.PayloadRequired {
-					payloadRef = "*" + payloadRef
-				}
 			}
 			payloadDesc = m.Payload.Description
 			if payloadDesc == "" {

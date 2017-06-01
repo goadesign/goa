@@ -19,8 +19,6 @@ type (
 		Docs *DocsExpr
 		// Payload attribute
 		Payload *AttributeExpr
-		// PayloadRequired is true if the payload is required.
-		PayloadRequired bool
 		// Result attribute
 		Result *AttributeExpr
 		// Errors lists the error responses.

@@ -21,7 +21,6 @@ func TestDecode(t *testing.T) {
 		Code string
 	}{
 		{"query-bool", PayloadQueryBoolDSL, PayloadQueryBoolDecodeCode},
-		{"query-bool-attribute", PayloadQueryBoolAttributeDSL, PayloadQueryBoolAttributeDecodeCode},
 		{"query-bool-validate", PayloadQueryBoolValidateDSL, PayloadQueryBoolValidateDecodeCode},
 		{"query-int", PayloadQueryIntDSL, PayloadQueryIntDecodeCode},
 		{"query-int-validate", PayloadQueryIntValidateDSL, PayloadQueryIntValidateDecodeCode},
@@ -69,11 +68,37 @@ func TestDecode(t *testing.T) {
 		{"query-array-bytes-validate", PayloadQueryArrayBytesValidateDSL, PayloadQueryArrayBytesValidateDecodeCode},
 		{"query-array-any", PayloadQueryArrayAnyDSL, PayloadQueryArrayAnyDecodeCode},
 		{"query-array-any-validate", PayloadQueryArrayAnyValidateDSL, PayloadQueryArrayAnyValidateDecodeCode},
+		{"query-map-string-string", PayloadQueryMapStringStringDSL, PayloadQueryMapStringStringDecodeCode},
+		{"query-map-string-string-validate", PayloadQueryMapStringStringValidateDSL, PayloadQueryMapStringStringValidateDecodeCode},
+		{"query-map-string-bool", PayloadQueryMapStringBoolDSL, PayloadQueryMapStringBoolDecodeCode},
+		{"query-map-string-bool-validate", PayloadQueryMapStringBoolValidateDSL, PayloadQueryMapStringBoolValidateDecodeCode},
+		{"query-map-bool-string", PayloadQueryMapBoolStringDSL, PayloadQueryMapBoolStringDecodeCode},
+		{"query-map-bool-string-validate", PayloadQueryMapBoolStringValidateDSL, PayloadQueryMapBoolStringValidateDecodeCode},
+		{"query-map-bool-bool", PayloadQueryMapBoolBoolDSL, PayloadQueryMapBoolBoolDecodeCode},
+		{"query-map-bool-bool-validate", PayloadQueryMapBoolBoolValidateDSL, PayloadQueryMapBoolBoolValidateDecodeCode},
+		{"query-map-string-array-string", PayloadQueryMapStringArrayStringDSL, PayloadQueryMapStringArrayStringDecodeCode},
+		{"query-map-string-array-string-validate", PayloadQueryMapStringArrayStringValidateDSL, PayloadQueryMapStringArrayStringValidateDecodeCode},
+		{"query-map-string-array-bool", PayloadQueryMapStringArrayBoolDSL, PayloadQueryMapStringArrayBoolDecodeCode},
+		{"query-map-string-array-bool-validate", PayloadQueryMapStringArrayBoolValidateDSL, PayloadQueryMapStringArrayBoolValidateDecodeCode},
+		{"query-map-bool-array-string", PayloadQueryMapBoolArrayStringDSL, PayloadQueryMapBoolArrayStringDecodeCode},
+		{"query-map-bool-array-string-validate", PayloadQueryMapBoolArrayStringValidateDSL, PayloadQueryMapBoolArrayStringValidateDecodeCode},
+		{"query-map-bool-array-bool", PayloadQueryMapBoolArrayBoolDSL, PayloadQueryMapBoolArrayBoolDecodeCode},
+		{"query-map-bool-array-bool-validate", PayloadQueryMapBoolArrayBoolValidateDSL, PayloadQueryMapBoolArrayBoolValidateDecodeCode},
+
+		{"query-primitive-string-validate", PayloadQueryPrimitiveStringValidateDSL, PayloadQueryPrimitiveStringValidateDecodeCode},
+		{"query-primitive-bool-validate", PayloadQueryPrimitiveBoolValidateDSL, PayloadQueryPrimitiveBoolValidateDecodeCode},
+		{"query-primitive-array-string-validate", PayloadQueryPrimitiveArrayStringValidateDSL, PayloadQueryPrimitiveArrayStringValidateDecodeCode},
+		{"query-primitive-array-bool-validate", PayloadQueryPrimitiveArrayBoolValidateDSL, PayloadQueryPrimitiveArrayBoolValidateDecodeCode},
 
 		{"path-string", PayloadPathStringDSL, PayloadPathStringDecodeCode},
 		{"path-string-validate", PayloadPathStringValidateDSL, PayloadPathStringValidateDecodeCode},
 		{"path-array-string", PayloadPathArrayStringDSL, PayloadPathArrayStringDecodeCode},
 		{"path-array-string-validate", PayloadPathArrayStringValidateDSL, PayloadPathArrayStringValidateDecodeCode},
+
+		{"path-primitive-string-validate", PayloadPathPrimitiveStringValidateDSL, PayloadPathPrimitiveStringValidateDecodeCode},
+		{"path-primitive-bool-validate", PayloadPathPrimitiveBoolValidateDSL, PayloadPathPrimitiveBoolValidateDecodeCode},
+		{"path-primitive-array-string-validate", PayloadPathPrimitiveArrayStringValidateDSL, PayloadPathPrimitiveArrayStringValidateDecodeCode},
+		{"path-primitive-array-bool-validate", PayloadPathPrimitiveArrayBoolValidateDSL, PayloadPathPrimitiveArrayBoolValidateDecodeCode},
 
 		{"body-string", PayloadBodyStringDSL, PayloadBodyStringDecodeCode},
 		{"body-string-validate", PayloadBodyStringValidateDSL, PayloadBodyStringValidateDecodeCode},
@@ -87,6 +112,11 @@ func TestDecode(t *testing.T) {
 		{"body-map-string-validate", PayloadBodyMapStringValidateDSL, PayloadBodyMapStringValidateDecodeCode},
 		{"body-map-user", PayloadBodyMapUserDSL, PayloadBodyMapUserDecodeCode},
 		{"body-map-user-validate", PayloadBodyMapUserValidateDSL, PayloadBodyMapUserValidateDecodeCode},
+
+		{"body-primitive-string-validate", PayloadBodyPrimitiveStringValidateDSL, PayloadBodyPrimitiveStringValidateDecodeCode},
+		{"body-primitive-bool-validate", PayloadBodyPrimitiveBoolValidateDSL, PayloadBodyPrimitiveBoolValidateDecodeCode},
+		{"body-primitive-array-string-validate", PayloadBodyPrimitiveArrayStringValidateDSL, PayloadBodyPrimitiveArrayStringValidateDecodeCode},
+		{"body-primitive-array-bool-validate", PayloadBodyPrimitiveArrayBoolValidateDSL, PayloadBodyPrimitiveArrayBoolValidateDecodeCode},
 
 		{"body-query-object", PayloadBodyQueryObjectDSL, PayloadBodyQueryObjectDecodeCode},
 		{"body-query-object-validate", PayloadBodyQueryObjectValidateDSL, PayloadBodyQueryObjectValidateDecodeCode},

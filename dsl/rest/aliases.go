@@ -499,7 +499,7 @@ func Pattern(p string) {
 }
 
 // Payload defines the data type of an endpoint input. Payload also makes the
-// input required. Use PayloadOpt to describe the type of an optional input.
+// input required.
 //
 // Payload may appear in a Endpoint expression.
 //
@@ -538,14 +538,6 @@ func Pattern(p string) {
 //
 func Payload(val interface{}, fns ...func()) {
 	dsl.Payload(val, fns...)
-}
-
-// PayloadOpt defines the data type of an endpoint input. PayloadOpt also makes
-// the input optional. Use Payload to describe the type of a required input.
-//
-// See Payload for usage and examples.
-func PayloadOpt(val interface{}, fns ...func()) {
-	dsl.PayloadOpt(val, fns...)
 }
 
 // Reference sets a type or media type reference. The value itself can be a type

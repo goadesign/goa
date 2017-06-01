@@ -261,7 +261,7 @@ func (a *ActionExpr) Finalize() {
 				required = a.EndpointExpr.Payload.IsRequired(n)
 			} else {
 				patt = a.EndpointExpr.Payload
-				required = a.EndpointExpr.PayloadRequired
+				required = true
 			}
 			initAttrFromDesign(att, patt)
 			if required {
@@ -284,7 +284,7 @@ func (a *ActionExpr) Finalize() {
 				required = a.EndpointExpr.Payload.IsRequired(n)
 			} else {
 				patt = a.EndpointExpr.Payload
-				required = a.EndpointExpr.PayloadRequired
+				required = true
 			}
 			initAttrFromDesign(att, patt)
 			if required {
@@ -309,7 +309,7 @@ func (a *ActionExpr) Finalize() {
 					required = a.EndpointExpr.Payload.IsRequired(n)
 				} else {
 					att = a.EndpointExpr.Payload
-					required = a.EndpointExpr.PayloadRequired
+					required = true
 				}
 				initAttrFromDesign(att, patt)
 				if required {
