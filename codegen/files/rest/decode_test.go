@@ -89,6 +89,12 @@ func TestDecode(t *testing.T) {
 		{"query-primitive-bool-validate", PayloadQueryPrimitiveBoolValidateDSL, PayloadQueryPrimitiveBoolValidateDecodeCode},
 		{"query-primitive-array-string-validate", PayloadQueryPrimitiveArrayStringValidateDSL, PayloadQueryPrimitiveArrayStringValidateDecodeCode},
 		{"query-primitive-array-bool-validate", PayloadQueryPrimitiveArrayBoolValidateDSL, PayloadQueryPrimitiveArrayBoolValidateDecodeCode},
+		{"query-primitive-map-string-array-string-validate", PayloadQueryPrimitiveMapStringArrayStringValidateDSL, PayloadQueryPrimitiveMapStringArrayStringValidateDecodeCode},
+		{"query-primitive-map-string-bool-validate", PayloadQueryPrimitiveMapStringBoolValidateDSL, PayloadQueryPrimitiveMapStringBoolValidateDecodeCode},
+		{"query-primitive-map-bool-array-bool-validate", PayloadQueryPrimitiveMapBoolArrayBoolValidateDSL, PayloadQueryPrimitiveMapBoolArrayBoolValidateDecodeCode},
+
+		{"query-string-default", PayloadQueryStringDefaultDSL, PayloadQueryStringDefaultDecodeCode},
+		{"query-primitive-string-default", PayloadQueryPrimitiveStringDefaultDSL, PayloadQueryPrimitiveStringDefaultDecodeCode},
 
 		{"path-string", PayloadPathStringDSL, PayloadPathStringDecodeCode},
 		{"path-string-validate", PayloadPathStringValidateDSL, PayloadPathStringValidateDecodeCode},
@@ -99,6 +105,19 @@ func TestDecode(t *testing.T) {
 		{"path-primitive-bool-validate", PayloadPathPrimitiveBoolValidateDSL, PayloadPathPrimitiveBoolValidateDecodeCode},
 		{"path-primitive-array-string-validate", PayloadPathPrimitiveArrayStringValidateDSL, PayloadPathPrimitiveArrayStringValidateDecodeCode},
 		{"path-primitive-array-bool-validate", PayloadPathPrimitiveArrayBoolValidateDSL, PayloadPathPrimitiveArrayBoolValidateDecodeCode},
+
+		{"header-string", PayloadHeaderStringDSL, PayloadHeaderStringDecodeCode},
+		{"header-string-validate", PayloadHeaderStringValidateDSL, PayloadHeaderStringValidateDecodeCode},
+		{"header-array-string", PayloadHeaderArrayStringDSL, PayloadHeaderArrayStringDecodeCode},
+		{"header-array-string-validate", PayloadHeaderArrayStringValidateDSL, PayloadHeaderArrayStringValidateDecodeCode},
+
+		{"header-primitive-string-validate", PayloadHeaderPrimitiveStringValidateDSL, PayloadHeaderPrimitiveStringValidateDecodeCode},
+		{"header-primitive-bool-validate", PayloadHeaderPrimitiveBoolValidateDSL, PayloadHeaderPrimitiveBoolValidateDecodeCode},
+		{"header-primitive-array-string-validate", PayloadHeaderPrimitiveArrayStringValidateDSL, PayloadHeaderPrimitiveArrayStringValidateDecodeCode},
+		{"header-primitive-array-bool-validate", PayloadHeaderPrimitiveArrayBoolValidateDSL, PayloadHeaderPrimitiveArrayBoolValidateDecodeCode},
+
+		{"header-string-default", PayloadHeaderStringDefaultDSL, PayloadHeaderStringDefaultDecodeCode},
+		{"header-primitive-string-default", PayloadHeaderPrimitiveStringDefaultDSL, PayloadHeaderPrimitiveStringDefaultDecodeCode},
 
 		{"body-string", PayloadBodyStringDSL, PayloadBodyStringDecodeCode},
 		{"body-string-validate", PayloadBodyStringValidateDSL, PayloadBodyStringValidateDecodeCode},

@@ -234,7 +234,7 @@ func (a *AttributeExpr) AllRequired() (required []string) {
 func (a *AttributeExpr) IsRequired(attName string) bool {
 	for _, name := range a.AllRequired() {
 		if name == attName {
-			return true
+			return AsObject(a.Type)[name].DefaultValue == nil
 		}
 	}
 	return false

@@ -1148,6 +1148,102 @@ var PayloadQueryPrimitiveArrayBoolValidateDSL = func() {
 	})
 }
 
+var PayloadQueryPrimitiveMapStringArrayStringValidateDSL = func() {
+	Service("ServiceQueryPrimitiveMapStringArrayStringValidate", func() {
+		Endpoint("EndpointQueryPrimitiveMapStringArrayStringValidate", func() {
+			Payload(MapOf(String, ArrayOf(String)), func() {
+				MinLength(1)
+				Key(func() {
+					Pattern("key")
+				})
+				Elem(func() {
+					MinLength(2)
+					Elem(func() {
+						Pattern("val")
+					})
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryPrimitiveMapStringBoolValidateDSL = func() {
+	Service("ServiceQueryPrimitiveMapStringBoolValidate", func() {
+		Endpoint("EndpointQueryPrimitiveMapStringBoolValidate", func() {
+			Payload(MapOf(String, Boolean), func() {
+				MinLength(1)
+				Key(func() {
+					Pattern("key")
+				})
+				Elem(func() {
+					Enum(true)
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryPrimitiveMapBoolArrayBoolValidateDSL = func() {
+	Service("ServiceQueryPrimitiveMapBoolArrayBoolValidate", func() {
+		Endpoint("EndpointQueryPrimitiveMapBoolArrayBoolValidate", func() {
+			Payload(MapOf(Boolean, ArrayOf(Boolean)), func() {
+				MinLength(1)
+				Key(func() {
+					Enum(true)
+				})
+				Elem(func() {
+					MinLength(2)
+					Elem(func() {
+						Enum(false)
+					})
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryStringDefaultDSL = func() {
+	Service("ServiceQueryStringDefault", func() {
+		Endpoint("EndpointQueryStringDefault", func() {
+			Payload(func() {
+				Attribute("q", func() {
+					Default("def")
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
+var PayloadQueryPrimitiveStringDefaultDSL = func() {
+	Service("ServiceQueryPrimitiveStringDefault", func() {
+		Endpoint("EndpointQueryPrimitiveStringDefault", func() {
+			Payload(String, func() {
+				Default("def")
+			})
+			HTTP(func() {
+				GET("/")
+				Param("q")
+			})
+		})
+	})
+}
+
 var PayloadPathStringDSL = func() {
 	Service("ServicePathString", func() {
 		Endpoint("EndpointPathString", func() {
@@ -1257,6 +1353,158 @@ var PayloadPathPrimitiveArrayBoolValidateDSL = func() {
 			})
 			HTTP(func() {
 				GET("/{p}")
+			})
+		})
+	})
+}
+
+var PayloadHeaderStringDSL = func() {
+	Service("ServiceHeaderString", func() {
+		Endpoint("EndpointHeaderString", func() {
+			Payload(func() {
+				Attribute("h", String)
+			})
+			HTTP(func() {
+				GET("/")
+				Header("h")
+			})
+		})
+	})
+}
+
+var PayloadHeaderStringValidateDSL = func() {
+	Service("ServiceHeaderStringValidate", func() {
+		Endpoint("EndpointHeaderStringValidate", func() {
+			Payload(func() {
+				Attribute("h", String, func() {
+					Pattern("header")
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Header("h")
+			})
+		})
+	})
+}
+
+var PayloadHeaderArrayStringDSL = func() {
+	Service("ServiceHeaderArrayString", func() {
+		Endpoint("EndpointHeaderArrayString", func() {
+			Payload(func() {
+				Attribute("h", ArrayOf(String))
+			})
+			HTTP(func() {
+				GET("/")
+				Header("h")
+			})
+		})
+	})
+}
+
+var PayloadHeaderArrayStringValidateDSL = func() {
+	Service("ServiceHeaderArrayStringValidate", func() {
+		Endpoint("EndpointHeaderArrayStringValidate", func() {
+			Payload(func() {
+				Attribute("h", ArrayOf(String, func() {
+					Enum("val")
+				}))
+			})
+			HTTP(func() {
+				GET("/")
+				Header("h")
+			})
+		})
+	})
+}
+
+var PayloadHeaderPrimitiveStringValidateDSL = func() {
+	Service("ServiceHeaderPrimitiveStringValidate", func() {
+		Endpoint("EndpointHeaderPrimitiveStringValidate", func() {
+			Payload(String, func() {
+				Enum("val")
+			})
+			HTTP(func() {
+				GET("/")
+				Header("h")
+			})
+		})
+	})
+}
+
+var PayloadHeaderPrimitiveBoolValidateDSL = func() {
+	Service("ServiceHeaderPrimitiveBoolValidate", func() {
+		Endpoint("EndpointHeaderPrimitiveBoolValidate", func() {
+			Payload(Boolean, func() {
+				Enum(true)
+			})
+			HTTP(func() {
+				GET("/")
+				Header("h")
+			})
+		})
+	})
+}
+
+var PayloadHeaderPrimitiveArrayStringValidateDSL = func() {
+	Service("ServiceHeaderPrimitiveArrayStringValidate", func() {
+		Endpoint("EndpointHeaderPrimitiveArrayStringValidate", func() {
+			Payload(ArrayOf(String), func() {
+				MinLength(1)
+				Elem(func() {
+					Pattern("val")
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Header("h")
+			})
+		})
+	})
+}
+
+var PayloadHeaderPrimitiveArrayBoolValidateDSL = func() {
+	Service("ServiceHeaderPrimitiveArrayBoolValidate", func() {
+		Endpoint("EndpointHeaderPrimitiveArrayBoolValidate", func() {
+			Payload(ArrayOf(Boolean), func() {
+				MinLength(1)
+				Elem(func() {
+					Enum(true)
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Header("h")
+			})
+		})
+	})
+}
+
+var PayloadHeaderStringDefaultDSL = func() {
+	Service("ServiceHeaderStringDefault", func() {
+		Endpoint("EndpointHeaderStringDefault", func() {
+			Payload(func() {
+				Attribute("h", String, func() {
+					Default("def")
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Header("h")
+			})
+		})
+	})
+}
+
+var PayloadHeaderPrimitiveStringDefaultDSL = func() {
+	Service("ServiceHeaderPrimitiveStringDefault", func() {
+		Endpoint("EndpointHeaderPrimitiveStringDefault", func() {
+			Payload(String, func() {
+				Default("def")
+			})
+			HTTP(func() {
+				GET("")
+				Header("h")
 			})
 		})
 	})

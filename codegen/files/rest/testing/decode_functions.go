@@ -2152,6 +2152,194 @@ func DecodeEndpointQueryPrimitiveArrayBoolValidateRequest(decoder func(*http.Req
 }
 `
 
+var PayloadQueryPrimitiveMapStringArrayStringValidateDecodeCode = `// DecodeEndpointQueryPrimitiveMapStringArrayStringValidateRequest returns a
+// decoder for requests sent to the
+// ServiceQueryPrimitiveMapStringArrayStringValidate
+// EndpointQueryPrimitiveMapStringArrayStringValidate endpoint.
+func DecodeEndpointQueryPrimitiveMapStringArrayStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (map[string][]string, error) {
+		var (
+			q   map[string][]string
+			err error
+		)
+		q = r.URL.Query()
+		if len(q) == 0 {
+			return nil, goa.MissingFieldError("q", "query string")
+		}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
+		}
+		for k, v := range q {
+			err = goa.MergeErrors(err, goa.ValidatePattern("q.key", k, "key"))
+			if len(v) < 2 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("q[key]", v, len(v), 2, true))
+			}
+			for _, e := range v {
+				err = goa.MergeErrors(err, goa.ValidatePattern("q[key][*]", e, "val"))
+			}
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		return q, nil
+	}
+}
+`
+
+var PayloadQueryPrimitiveMapStringBoolValidateDecodeCode = `// DecodeEndpointQueryPrimitiveMapStringBoolValidateRequest returns a decoder
+// for requests sent to the ServiceQueryPrimitiveMapStringBoolValidate
+// EndpointQueryPrimitiveMapStringBoolValidate endpoint.
+func DecodeEndpointQueryPrimitiveMapStringBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (map[string]bool, error) {
+		var (
+			q   map[string]bool
+			err error
+		)
+		qRaw := r.URL.Query()
+		if len(qRaw) == 0 {
+			return nil, goa.MissingFieldError("q", "query string")
+		}
+		q = make(map[string]bool, len(qRaw))
+		for key, va := range qRaw {
+			var val bool
+			{
+				valRaw := va[0]
+				v, err := strconv.ParseBool(valRaw)
+				if err != nil {
+					return nil, goa.InvalidFieldTypeError(valRaw, "query", "boolean")
+				}
+				val = v
+			}
+			q[key] = val
+		}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
+		}
+		for k, v := range q {
+			err = goa.MergeErrors(err, goa.ValidatePattern("q.key", k, "key"))
+			if !(v == true) {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q[key]", v, []interface{}{true}))
+			}
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		return q, nil
+	}
+}
+`
+
+var PayloadQueryPrimitiveMapBoolArrayBoolValidateDecodeCode = `// DecodeEndpointQueryPrimitiveMapBoolArrayBoolValidateRequest returns a
+// decoder for requests sent to the
+// ServiceQueryPrimitiveMapBoolArrayBoolValidate
+// EndpointQueryPrimitiveMapBoolArrayBoolValidate endpoint.
+func DecodeEndpointQueryPrimitiveMapBoolArrayBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (map[bool][]bool, error) {
+		var (
+			q   map[bool][]bool
+			err error
+		)
+		qRaw := r.URL.Query()
+		if len(qRaw) == 0 {
+			return nil, goa.MissingFieldError("q", "query string")
+		}
+		q = make(map[bool][]bool, len(qRaw))
+		for keyRaw, valRaw := range qRaw {
+			var key bool
+			{
+				v, err := strconv.ParseBool(keyRaw)
+				if err != nil {
+					return nil, goa.InvalidFieldTypeError(keyRaw, "query", "boolean")
+				}
+				key = v
+			}
+			var val []bool
+			{
+				val = make([]bool, len(valRaw))
+				for i, rv := range valRaw {
+					v, err := strconv.ParseBool(rv)
+					if err != nil {
+						return nil, goa.InvalidFieldTypeError(valRaw, "query", "array of booleans")
+					}
+					val[i] = v
+				}
+			}
+			q[key] = val
+		}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
+		}
+		for k, v := range q {
+			if !(k == true) {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q.key", k, []interface{}{true}))
+			}
+			if len(v) < 2 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("q[key]", v, len(v), 2, true))
+			}
+			for _, e := range v {
+				if !(e == false) {
+					err = goa.MergeErrors(err, goa.InvalidEnumValueError("q[key][*]", e, []interface{}{false}))
+				}
+			}
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		return q, nil
+	}
+}
+`
+
+var PayloadQueryStringDefaultDecodeCode = `// DecodeEndpointQueryStringDefaultRequest returns a decoder for requests sent
+// to the ServiceQueryStringDefault EndpointQueryStringDefault endpoint.
+func DecodeEndpointQueryStringDefaultRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (*EndpointQueryStringDefaultPayload, error) {
+		var (
+			q   string
+			err error
+		)
+		qRaw := r.URL.Query().Get("q")
+		if qRaw != "" {
+			q = qRaw
+		} else {
+			q = "def"
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		return NewEndpointQueryStringDefaultPayload(q), nil
+	}
+}
+`
+
+var PayloadQueryPrimitiveStringDefaultDecodeCode = `// DecodeEndpointQueryPrimitiveStringDefaultRequest returns a decoder for
+// requests sent to the ServiceQueryPrimitiveStringDefault
+// EndpointQueryPrimitiveStringDefault endpoint.
+func DecodeEndpointQueryPrimitiveStringDefaultRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (string, error) {
+		var (
+			q   string
+			err error
+		)
+		qRaw := r.URL.Query().Get("q")
+		if qRaw != "" {
+			q = qRaw
+		} else {
+			q = "def"
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		return q, nil
+	}
+}
+`
+
 var PayloadPathStringDecodeCode = `// DecodeEndpointPathStringRequest returns a decoder for requests sent to the
 // ServicePathString EndpointPathString endpoint.
 func DecodeEndpointPathStringRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
@@ -2370,6 +2558,264 @@ func DecodeEndpointPathPrimitiveArrayBoolValidateRequest(decoder func(*http.Requ
 			return nil, err
 		}
 		return p, nil
+	}
+}
+`
+
+var PayloadHeaderStringDecodeCode = `// DecodeEndpointHeaderStringRequest returns a decoder for requests sent to the
+// ServiceHeaderString EndpointHeaderString endpoint.
+func DecodeEndpointHeaderStringRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (*EndpointHeaderStringPayload, error) {
+		var (
+			h   *string
+			err error
+		)
+		hRaw := r.Header.Get("h")
+		if hRaw != "" {
+			h = &hRaw
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		return NewEndpointHeaderStringPayload(h), nil
+	}
+}
+`
+
+var PayloadHeaderStringValidateDecodeCode = `// DecodeEndpointHeaderStringValidateRequest returns a decoder for requests
+// sent to the ServiceHeaderStringValidate EndpointHeaderStringValidate
+// endpoint.
+func DecodeEndpointHeaderStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (*EndpointHeaderStringValidatePayload, error) {
+		var (
+			h   *string
+			err error
+		)
+		hRaw := r.Header.Get("h")
+		if hRaw != "" {
+			h = &hRaw
+		}
+		if h != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("h", *h, "header"))
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		return NewEndpointHeaderStringValidatePayload(h), nil
+	}
+}
+`
+
+var PayloadHeaderArrayStringDecodeCode = `// DecodeEndpointHeaderArrayStringRequest returns a decoder for requests sent
+// to the ServiceHeaderArrayString EndpointHeaderArrayString endpoint.
+func DecodeEndpointHeaderArrayStringRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (*EndpointHeaderArrayStringPayload, error) {
+		var (
+			h   []string
+			err error
+		)
+		h = r.Header["H"]
+
+		if err != nil {
+			return nil, err
+		}
+		return NewEndpointHeaderArrayStringPayload(h), nil
+	}
+}
+`
+
+var PayloadHeaderArrayStringValidateDecodeCode = `// DecodeEndpointHeaderArrayStringValidateRequest returns a decoder for
+// requests sent to the ServiceHeaderArrayStringValidate
+// EndpointHeaderArrayStringValidate endpoint.
+func DecodeEndpointHeaderArrayStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (*EndpointHeaderArrayStringValidatePayload, error) {
+		var (
+			h   []string
+			err error
+		)
+		h = r.Header["H"]
+
+		for _, e := range h {
+			if !(e == "val") {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("h[*]", e, []interface{}{"val"}))
+			}
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		return NewEndpointHeaderArrayStringValidatePayload(h), nil
+	}
+}
+`
+
+var PayloadHeaderPrimitiveStringValidateDecodeCode = `// DecodeEndpointHeaderPrimitiveStringValidateRequest returns a decoder for
+// requests sent to the ServiceHeaderPrimitiveStringValidate
+// EndpointHeaderPrimitiveStringValidate endpoint.
+func DecodeEndpointHeaderPrimitiveStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (string, error) {
+		var (
+			h   string
+			err error
+		)
+		h = r.Header.Get("h")
+		if h == "" {
+			err = goa.MergeErrors(err, goa.MissingFieldError("h", "header"))
+		}
+		if !(h == "val") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("h", h, []interface{}{"val"}))
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		return h, nil
+	}
+}
+`
+
+var PayloadHeaderPrimitiveBoolValidateDecodeCode = `// DecodeEndpointHeaderPrimitiveBoolValidateRequest returns a decoder for
+// requests sent to the ServiceHeaderPrimitiveBoolValidate
+// EndpointHeaderPrimitiveBoolValidate endpoint.
+func DecodeEndpointHeaderPrimitiveBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (bool, error) {
+		var (
+			h   bool
+			err error
+		)
+		hRaw := r.Header.Get("h")
+		if hRaw == "" {
+			return nil, goa.MissingFieldError("h", "header")
+		}
+		v, err := strconv.ParseBool(hRaw)
+		if err != nil {
+			return nil, goa.InvalidFieldTypeError(hRaw, h, "boolean")
+		}
+		h = v
+		if !(h == true) {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("h", h, []interface{}{true}))
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		return h, nil
+	}
+}
+`
+
+var PayloadHeaderPrimitiveArrayStringValidateDecodeCode = `// DecodeEndpointHeaderPrimitiveArrayStringValidateRequest returns a decoder
+// for requests sent to the ServiceHeaderPrimitiveArrayStringValidate
+// EndpointHeaderPrimitiveArrayStringValidate endpoint.
+func DecodeEndpointHeaderPrimitiveArrayStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) ([]string, error) {
+		var (
+			h   []string
+			err error
+		)
+		h = r.Header["H"]
+
+		if h == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("h", "header"))
+		}
+		if len(h) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("h", h, len(h), 1, true))
+		}
+		for _, e := range h {
+			err = goa.MergeErrors(err, goa.ValidatePattern("h[*]", e, "val"))
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		return h, nil
+	}
+}
+`
+
+var PayloadHeaderPrimitiveArrayBoolValidateDecodeCode = `// DecodeEndpointHeaderPrimitiveArrayBoolValidateRequest returns a decoder for
+// requests sent to the ServiceHeaderPrimitiveArrayBoolValidate
+// EndpointHeaderPrimitiveArrayBoolValidate endpoint.
+func DecodeEndpointHeaderPrimitiveArrayBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) ([]bool, error) {
+		var (
+			h   []bool
+			err error
+		)
+		hRaw := r.Header["H"]
+		if hRaw == nil {
+			return nil, goa.MissingFieldError("h", "header")
+		}
+		h = make([]bool, len(hRaw))
+		for i, rv := range hRaw {
+			v, err := strconv.ParseBool(rv)
+			if err != nil {
+				return nil, goa.InvalidFieldTypeError(hRaw, h, "array of booleans")
+			}
+			h[i] = v
+		}
+		if len(h) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("h", h, len(h), 1, true))
+		}
+		for _, e := range h {
+			if !(e == true) {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("h[*]", e, []interface{}{true}))
+			}
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		return h, nil
+	}
+}
+`
+
+var PayloadHeaderStringDefaultDecodeCode = `// DecodeEndpointHeaderStringDefaultRequest returns a decoder for requests sent
+// to the ServiceHeaderStringDefault EndpointHeaderStringDefault endpoint.
+func DecodeEndpointHeaderStringDefaultRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (*EndpointHeaderStringDefaultPayload, error) {
+		var (
+			h   string
+			err error
+		)
+		hRaw := r.Header.Get("h")
+		if hRaw != "" {
+			h = hRaw
+		} else {
+			h = "def"
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		return NewEndpointHeaderStringDefaultPayload(h), nil
+	}
+}
+`
+
+var PayloadHeaderPrimitiveStringDefaultDecodeCode = `// DecodeEndpointHeaderPrimitiveStringDefaultRequest returns a decoder for
+// requests sent to the ServiceHeaderPrimitiveStringDefault
+// EndpointHeaderPrimitiveStringDefault endpoint.
+func DecodeEndpointHeaderPrimitiveStringDefaultRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (string, error) {
+		var (
+			h   string
+			err error
+		)
+		hRaw := r.Header.Get("h")
+		if hRaw != "" {
+			h = hRaw
+		} else {
+			h = "def"
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		return h, nil
 	}
 }
 `

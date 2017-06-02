@@ -371,21 +371,6 @@ func Header(name string, args ...interface{}) {
 		eval.ReportError("header name cannot be empty")
 	}
 	eval.Execute(func() { dsl.Attribute(name, args...) }, h.Headers())
-
-	// Make sure type matches payload attribute if any
-	a, ok := eval.Current().(*rest.ActionExpr)
-	if !ok {
-		return
-	}
-	o := design.AsObject(a.EndpointExpr.Payload.Type)
-	if o == nil {
-		return
-	}
-	ht := design.AsObject(h.Headers().Type)[name].Type
-	if o[name] != nil && o[name].Type.Kind() != ht.Kind() {
-		eval.ReportError("type of header %s (%s) does not match type of payload attribute (%s)",
-			name, o[name].Type.Name(), ht.Name())
-	}
 }
 
 // Params groups a set of Param expressions. It makes it possible to list
@@ -491,21 +476,6 @@ func Param(name string, args ...interface{}) {
 		eval.ReportError("parameter name cannot be empty")
 	}
 	eval.Execute(func() { dsl.Attribute(name, args...) }, h.Params())
-
-	// Make sure type matches payload attribute if any
-	a, ok := eval.Current().(*rest.ActionExpr)
-	if !ok {
-		return
-	}
-	o := design.AsObject(a.EndpointExpr.Payload.Type)
-	if o == nil {
-		return
-	}
-	pt := design.AsObject(h.Params().Type)[name].Type
-	if o[name] != nil && o[name].Type.Kind() != pt.Kind() {
-		eval.ReportError("type of param %s (%s) does not match type of payload attribute (%s)",
-			name, o[name].Type.Name(), pt.Name())
-	}
 }
 
 // Body describes a HTTP request or response body.

@@ -11,7 +11,6 @@
 // Add response tags to account example
 // Test response tags
 // Test default values and header decoding
-// Test optional payload
 
 // Initialize error responses headers and body from result (action.go)
 
@@ -189,6 +188,8 @@ type (
 	ServerHeaderData struct {
 		// Name describes the name of the header key.
 		Name string
+		// CanonicalName is the canonical header key.
+		CanonicalName string
 		// FieldName is the name of the struct field that holds the
 		// header value.
 		FieldName string
@@ -197,8 +198,18 @@ type (
 		VarName string
 		// Required is true if the header is required.
 		Required bool
+		// Pointer is true if and only the param variable is a pointer.
+		Pointer bool
+		// StringSlice is true if the param type is array of strings.
+		StringSlice bool
+		// Slice is true if the param type is an array.
+		Slice bool
 		// Type describes the datatype of the variable value. Mainly used for conversion.
 		Type design.DataType
+		// Validate contains the validation code if any.
+		Validate string
+		// DefaultValue contains the default value if any.
+		DefaultValue interface{}
 	}
 )
 
@@ -536,6 +547,7 @@ func extractQueryParams(a *rest.MappedAttributeExpr) []*ServerParamData {
 			mp    = design.AsMap(c.Type)
 		)
 		pointer := !required &&
+			c.DefaultValue == nil &&
 			design.IsPrimitive(c.Type) &&
 			c.Type.Kind() != design.BytesKind &&
 			c.Type.Kind() != design.AnyKind
@@ -565,13 +577,27 @@ func extractQueryParams(a *rest.MappedAttributeExpr) []*ServerParamData {
 func extractHeaders(a *rest.MappedAttributeExpr) []*ServerHeaderData {
 	var headers []*ServerHeaderData
 	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
-		isNativePointer := c.Type.Kind() == design.BytesKind || c.Type.Kind() == design.AnyKind
+		var (
+			varn = codegen.Goify(name, false)
+			arr  = design.AsArray(c.Type)
+		)
+		pointer := !required &&
+			c.DefaultValue == nil &&
+			design.IsPrimitive(c.Type) &&
+			c.Type.Kind() != design.BytesKind &&
+			c.Type.Kind() != design.AnyKind
 		headers = append(headers, &ServerHeaderData{
-			Name:      elem,
-			FieldName: codegen.Goify(name, true),
-			VarName:   codegen.Goify(name, false),
-			Required:  required || isNativePointer,
-			Type:      c.Type,
+			Name:          elem,
+			CanonicalName: http.CanonicalHeaderKey(elem),
+			FieldName:     codegen.Goify(name, true),
+			VarName:       varn,
+			Required:      required,
+			Pointer:       pointer,
+			Slice:         arr != nil,
+			StringSlice:   arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
+			Type:          c.Type,
+			Validate:      codegen.RecursiveValidationCode(c, !pointer, true, varn),
+			DefaultValue:  c.DefaultValue,
 		})
 		return nil
 	})
@@ -762,11 +788,10 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 	{{- else if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
 		{{ .VarName }}Raw := r.URL.Query().Get("{{ .Name }}")
 		if {{ .VarName }}Raw != "" {
-			{{ .VarName }} = {{ if eq .Type.Name "string" }}&{{ end }}{{ .VarName }}Raw
+			{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
 		}
 		{{- if .DefaultValue }} else {
-			{{ .VarName }}Def := {{ printf "%q" .DefaultValue }}
-			{{ .VarName }} = {{ if eq .Type.Name "string" }}&{{ end }}{{ .VarName }}Def
+			{{ .VarName }} = {{ if eq .Type.Name "string" }}{{ printf "%q" .DefaultValue }}{{ else }}{{ printf "%#v" .DefaultValue }}{{ end }}
 		}
 		{{- end }}
 
@@ -880,16 +905,15 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 	{{- else if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
 		{{ .VarName }}Raw := r.Header.Get("{{ .Name }}")
 		if {{ .VarName }}Raw != "" {
-			{{ .VarName }} = {{ if eq .Type.Name "string" }}&{{ end }}{{ .VarName }}Raw
+			{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
 		}
 		{{- if .DefaultValue }} else {
-			{{ .VarName }}Def := {{ print "%q" .DefaultValue }}
-			{{ .VarName }} = {{ if eq .Type.Name "string" }}&{{ end }}{{ .VarName }}Def
+			{{ .VarName }} = {{ if eq .Type.Name "string" }}{{ printf "%q" .DefaultValue }}{{ else }}{{ printf "%#v" .DefaultValue }}{{ end }}
 		}
 		{{- end }}
 
 	{{- else if .StringSlice }}
-		{{ .VarName }} = r.Header["{{ .Name }}"]
+		{{ .VarName }} = r.Header["{{ .CanonicalName }}"]
 		{{ if .Required }}
 		if {{ .VarName }} == nil {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
@@ -901,7 +925,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		{{- end }}
 
 	{{- else if .Slice }}
-		{{ .VarName }}Raw := r.Header["{{ .Name }}"]
+		{{ .VarName }}Raw := r.Header["{{ .CanonicalName }}"]
 		{{ if .Required }}if {{ .VarName }}Raw == nil {
 			return nil, goa.MissingFieldError("{{ .Name }}", "header")
 		}
