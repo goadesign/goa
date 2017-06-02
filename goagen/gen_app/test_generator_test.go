@@ -230,10 +230,10 @@ var _ = Describe("Generate", func() {
 
 			Ω(content).Should(ContainSubstring(`if optionalHeader != nil`))
 			Ω(content).ShouldNot(ContainSubstring(`if requiredHeader != nil`))
-			Ω(content).Should(ContainSubstring(`req.Header["requiredHeader"] = sliceVal`))
+			Ω(content).Should(ContainSubstring(`req.Header["Requiredheader"] = sliceVal`))
 			Ω(content).Should(ContainSubstring(`if optionalResourceHeader != nil`))
 			Ω(content).ShouldNot(ContainSubstring(`if requiredResourceHeader != nil`))
-			Ω(content).Should(ContainSubstring(`req.Header["requiredResourceHeader"] = sliceVal`))
+			Ω(content).Should(ContainSubstring(`req.Header["Requiredresourceheader"] = sliceVal`))
 		})
 
 		It("generates calls to new Context ", func() {

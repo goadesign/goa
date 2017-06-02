@@ -2,6 +2,7 @@ package genapp
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -269,6 +270,7 @@ func headers(action *design.ActionDefinition, headers *design.AttributeDefinitio
 	objs := make([]*ObjectType, len(headrs))
 	for i, name := range headrs {
 		objs[i] = attToObject(name, hds, hds.Type.ToObject()[name])
+		objs[i].Label = http.CanonicalHeaderKey(objs[i].Label)
 	}
 	return objs
 }
