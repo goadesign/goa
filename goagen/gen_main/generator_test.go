@@ -86,6 +86,7 @@ var _ = Describe("NewGenerator", func() {
 		designPkg string
 		target    string
 		force     bool
+		regen     bool
 		noExample bool
 	}{
 		api: &design.APIDefinition{
@@ -95,6 +96,7 @@ var _ = Describe("NewGenerator", func() {
 		designPkg: "design",
 		target:    "app",
 		force:     false,
+		regen:     false,
 	}
 
 	Context("with options all options set", func() {
@@ -106,6 +108,7 @@ var _ = Describe("NewGenerator", func() {
 				genmain.DesignPkg(args.designPkg),
 				genmain.Target(args.target),
 				genmain.Force(args.force),
+				genmain.Regen(args.regen),
 			)
 		})
 
@@ -116,6 +119,7 @@ var _ = Describe("NewGenerator", func() {
 			Ω(generator.DesignPkg).Should(Equal(args.designPkg))
 			Ω(generator.Target).Should(Equal(args.target))
 			Ω(generator.Force).Should(Equal(args.force))
+			Ω(generator.Regen).Should(Equal(args.regen))
 		})
 
 	})

@@ -33,6 +33,7 @@ type Generator struct {
 	DesignPkg string                // Path to design package, only used to mark generated files.
 	Target    string                // Name of generated "app" package
 	Force     bool                  // Whether to override existing files
+	Regen     bool                  // Whether to regenerate scaffolding in place, maintaining controller implementation
 	genfiles  []string              // Generated files
 }
 
@@ -40,7 +41,7 @@ type Generator struct {
 func Generate() (files []string, err error) {
 	var (
 		outDir, designPkg, target, ver string
-		force                          bool
+		force, regen                   bool
 	)
 
 	set := flag.NewFlagSet("main", flag.PanicOnError)
@@ -49,6 +50,7 @@ func Generate() (files []string, err error) {
 	set.StringVar(&target, "pkg", "app", "")
 	set.StringVar(&ver, "version", "", "")
 	set.BoolVar(&force, "force", false, "")
+	set.BoolVar(&regen, "regen", false, "")
 	set.Bool("notest", false, "")
 	set.Parse(os.Args[1:])
 
@@ -57,14 +59,14 @@ func Generate() (files []string, err error) {
 	}
 
 	target = codegen.Goify(target, false)
-	g := &Generator{OutDir: outDir, DesignPkg: designPkg, Target: target, Force: force, API: design.Design}
+	g := &Generator{OutDir: outDir, DesignPkg: designPkg, Target: target, Force: force, Regen: regen, API: design.Design}
 
 	return g.Generate()
 }
 
 // GenerateController generates the controller corresponding to the given
 // resource and returns the generated filename.
-func GenerateController(force bool, appPkg, outDir, pkg, name string, r *design.ResourceDefinition) (string, error) {
+func GenerateController(force, regen bool, appPkg, outDir, pkg, name string, r *design.ResourceDefinition) (string, error) {
 	filename := filepath.Join(outDir, codegen.SnakeCase(name)+".go")
 	if force {
 		os.Remove(filename)
@@ -156,7 +158,7 @@ func (g *Generator) Generate() (_ []string, err error) {
 	}
 
 	err = g.API.IterateResources(func(r *design.ResourceDefinition) error {
-		filename, err := GenerateController(g.Force, g.Target, g.OutDir, "main", r.Name, r)
+		filename, err := GenerateController(g.Force, g.Regen, g.Target, g.OutDir, "main", r.Name, r)
 		if err != nil {
 			return err
 		}
