@@ -75,7 +75,7 @@ package and tool and the Swagger specification for the API.
 
 	// mainCmd implements the "main" command.
 	var (
-		force bool
+		force, regen bool
 	)
 	mainCmd := &cobra.Command{
 		Use:   "main",
@@ -83,6 +83,7 @@ package and tool and the Swagger specification for the API.
 		Run:   func(c *cobra.Command, _ []string) { files, err = run("genmain", c) },
 	}
 	mainCmd.Flags().BoolVar(&force, "force", false, "overwrite existing files")
+	mainCmd.Flags().BoolVar(&regen, "regen", false, "regenerate scaffolding, maintaining controller implementations")
 	rootCmd.AddCommand(mainCmd)
 
 	// clientCmd implements the "client" command.
