@@ -1,8 +1,10 @@
 package goa
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -196,8 +198,14 @@ func (service *Service) ServeFiles(path, filename string) error {
 // DecodeRequest uses the HTTP decoder to unmarshal the request body into the provided value based
 // on the request Content-Type header.
 func (service *Service) DecodeRequest(req *http.Request, v interface{}) error {
-	body, contentType := req.Body, req.Header.Get("Content-Type")
-	defer body.Close()
+	closer := req.Body
+	defer closer.Close()
+
+	var buf bytes.Buffer
+	body := io.TeeReader(req.Body, &buf)
+	req.Body = ioutil.NopCloser(&buf)
+
+	contentType := req.Header.Get("Content-Type")
 
 	if err := service.Decoder.Decode(v, body, contentType); err != nil {
 		return fmt.Errorf("failed to decode request body with content type %#v: %s", contentType, err)
