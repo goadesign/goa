@@ -44,6 +44,9 @@ var (
 	// ErrBadRequest is a generic bad request error.
 	ErrBadRequest = NewErrorClass("bad_request", 400)
 
+	// ErrConflict is a generic conflict error.
+	ErrConflict = NewErrorClass("conflict", 409)
+
 	// ErrUnauthorized is a generic unauthorized error.
 	ErrUnauthorized = NewErrorClass("unauthorized", 401)
 
