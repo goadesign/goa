@@ -40,6 +40,13 @@ func Force(force bool) Option {
 	}
 }
 
+//Regen Whether to regenerate scaffolding while maintaining controller impls
+func Regen(regen bool) Option {
+	return func(g *Generator) {
+		g.Regen = regen
+	}
+}
+
 //Pkg sets the name of generated package
 func Pkg(name string) Option {
 	return func(g *Generator) {
