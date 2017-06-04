@@ -1,12 +1,14 @@
 package genmain
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"net"
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 
@@ -64,10 +66,48 @@ func Generate() (files []string, err error) {
 	return g.Generate()
 }
 
+func extractControllerBody(filename string) map[string]string {
+	actionImpls := map[string]string{}
+	f, err := os.Open(filename)
+	if err != nil {
+		return actionImpls
+	}
+	defer f.Close()
+	var (
+		inBlock bool
+		block   []string
+	)
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		match := linePattern.FindStringSubmatch(line)
+		if len(match) == 3 {
+			switch match[2] {
+			case "start":
+				inBlock = true
+			case "end":
+				inBlock = false
+				actionImpls[match[1]] = strings.Join(block, "\n")
+				block = []string{}
+			}
+			continue
+		}
+		if inBlock {
+			block = append(block, line)
+		}
+	}
+	return actionImpls
+}
+
 // GenerateController generates the controller corresponding to the given
 // resource and returns the generated filename.
 func GenerateController(force, regen bool, appPkg, outDir, pkg, name string, r *design.ResourceDefinition) (string, error) {
 	filename := filepath.Join(outDir, codegen.SnakeCase(name)+".go")
+	var actionImpls map[string]string
+	if regen {
+		actionImpls = extractControllerBody(filename)
+		os.Remove(filename)
+	}
 	if force {
 		os.Remove(filename)
 	}
@@ -102,15 +142,16 @@ func GenerateController(force, regen bool, appPkg, outDir, pkg, name string, r *
 		codegen.SimpleImport("golang.org/x/net/websocket"),
 	}
 
+	funcs := funcMap(pkgName, actionImpls)
 	file.WriteHeader("", pkg, imports)
-	if err = file.ExecuteTemplate("controller", ctrlT, funcMap(pkgName), r); err != nil {
+	if err = file.ExecuteTemplate("controller", ctrlT, funcs, r); err != nil {
 		return "", err
 	}
 	err = r.IterateActions(func(a *design.ActionDefinition) error {
 		if a.WebSocket() {
-			return file.ExecuteTemplate("actionWS", actionWST, funcMap(pkgName), a)
+			return file.ExecuteTemplate("actionWS", actionWST, funcs, a)
 		}
-		return file.ExecuteTemplate("action", actionT, funcMap(pkgName), a)
+		return file.ExecuteTemplate("action", actionT, funcs, a)
 	})
 	if err != nil {
 		return "", err
@@ -152,7 +193,7 @@ func (g *Generator) Generate() (_ []string, err error) {
 		if err := os.MkdirAll(g.OutDir, 0755); err != nil {
 			return nil, err
 		}
-		if err = g.createMainFile(mainFile, funcMap(g.Target)); err != nil {
+		if err = g.createMainFile(mainFile, funcMap(g.Target, nil)); err != nil {
 			return nil, err
 		}
 	}
@@ -288,13 +329,27 @@ func okResp(a *design.ActionDefinition, appPkg string) map[string]interface{} {
 }
 
 // funcMap creates the funcMap used to render the controller code.
-func funcMap(appPkg string) template.FuncMap {
+func funcMap(appPkg string, actionImpls map[string]string) template.FuncMap {
 	return template.FuncMap{
 		"tempvar":   tempvar,
 		"okResp":    okResp,
 		"targetPkg": func() string { return appPkg },
+		"actionBody": func(name string) string {
+			if actionImpls == nil {
+				return defaultActionBody
+			}
+			body, ok := actionImpls[name]
+			if !ok {
+				return defaultActionBody
+			}
+			return body
+		},
 	}
 }
+
+var linePattern = regexp.MustCompile(`^\s*// ([^:]+): (\w+)_implement\s*$`)
+
+const defaultActionBody = `// Put your logic here`
 
 const ctrlT = `// {{ $ctrlName := printf "%s%s" (goify .Name true) "Controller" }}{{ $ctrlName }} implements the {{ .Name }} resource.
 type {{ $ctrlName }} struct {
@@ -307,19 +362,25 @@ func New{{ $ctrlName }}(service *goa.Service) *{{ $ctrlName }} {
 }
 `
 
-const actionT = `{{ $ctrlName := printf "%s%s" (goify .Parent.Name true) "Controller" }}// {{ goify .Name true }} runs the {{ .Name }} action.
+const actionT = `
+{{- $ctrlName := printf "%s%s" (goify .Parent.Name true) "Controller" -}}
+{{- $actionDescr := printf "%s_%s" $ctrlName (goify .Name true) -}}
+// {{ goify .Name true }} runs the {{ .Name }} action.
 func (c *{{ $ctrlName }}) {{ goify .Name true }}(ctx *{{ targetPkg }}.{{ goify .Name true }}{{ goify .Parent.Name true }}Context) error {
-	// {{ $ctrlName }}_{{ goify .Name true }}: start_implement
+	// {{ $actionDescr }}: start_implement
 
-	// Put your logic here
+	{{ actionBody $actionDescr }}
 
-	// {{ $ctrlName }}_{{ goify .Name true }}: end_implement
+	// {{ $actionDescr }}: end_implement
 {{ $ok := okResp . targetPkg }}{{ if $ok }} res := {{ $ok.TypeRef }}
 {{ end }} return {{ if $ok }}ctx.{{ $ok.Name }}(res){{ else }}nil{{ end }}
 }
 `
 
-const actionWST = `{{ $ctrlName := printf "%s%s" (goify .Parent.Name true) "Controller" }}// {{ goify .Name true }} runs the {{ .Name }} action.
+const actionWST = `
+{{- $ctrlName := printf "%s%s" (goify .Parent.Name true) "Controller" -}}
+{{- $actionDescr := printf "%s_%s" $ctrlName (goify .Name true) -}}
+// {{ goify .Name true }} runs the {{ .Name }} action.
 func (c *{{ $ctrlName }}) {{ goify .Name true }}(ctx *{{ targetPkg }}.{{ goify .Name true }}{{ goify .Parent.Name true }}Context) error {
 	c.{{ goify .Name true }}WSHandler(ctx).ServeHTTP(ctx.ResponseWriter, ctx.Request)
 	return nil
@@ -328,11 +389,11 @@ func (c *{{ $ctrlName }}) {{ goify .Name true }}(ctx *{{ targetPkg }}.{{ goify .
 // {{ goify .Name true }}WSHandler establishes a websocket connection to run the {{ .Name }} action.
 func (c *{{ $ctrlName }}) {{ goify .Name true }}WSHandler(ctx *{{ targetPkg }}.{{ goify .Name true }}{{ goify .Parent.Name true }}Context) websocket.Handler {
 	return func(ws *websocket.Conn) {
-		// {{ $ctrlName }}_{{ goify .Name true }}: start_implement
+		// {{ $actionDescr }}: start_implement
 
-		// Put your logic here
+		{{ actionBody $actionDescr }}
 
-		// {{ $ctrlName }}_{{ goify .Name true }}: end_implement
+		// {{ $actionDescr }}: end_implement
 		ws.Write([]byte("{{ .Name }} {{ .Parent.Name }}"))
 		// Dummy echo websocket server
 		io.Copy(ws, ws)

@@ -30,6 +30,7 @@ type Generator struct {
 	DesignPkg string                // Path to design package, only used to mark generated files.
 	AppPkg    string                // Name of generated "app" package
 	Force     bool                  // Whether to override existing files
+	Regen     bool                  // Whether to regenerate scaffolding in place, retaining controller impls
 	Pkg       string                // Name of the generated package
 	Resource  string                // Name of the generated file
 	genfiles  []string              // Generated files
@@ -39,7 +40,7 @@ type Generator struct {
 func Generate() (files []string, err error) {
 	var (
 		outDir, designPkg, appPkg, ver, res, pkg string
-		force                                    bool
+		force, regen                             bool
 	)
 
 	set := flag.NewFlagSet("controller", flag.PanicOnError)
@@ -50,6 +51,7 @@ func Generate() (files []string, err error) {
 	set.StringVar(&res, "res", "", "")
 	set.StringVar(&ver, "version", "", "")
 	set.BoolVar(&force, "force", false, "")
+	set.BoolVar(&regen, "regen", false, "")
 	set.Bool("notest", false, "")
 	set.Parse(os.Args[1:])
 
@@ -57,7 +59,7 @@ func Generate() (files []string, err error) {
 		return nil, err
 	}
 
-	g := &Generator{OutDir: outDir, DesignPkg: designPkg, AppPkg: appPkg, Force: force, API: design.Design, Pkg: pkg, Resource: res}
+	g := &Generator{OutDir: outDir, DesignPkg: designPkg, AppPkg: appPkg, Force: force, Regen: regen, API: design.Design, Pkg: pkg, Resource: res}
 
 	return g.Generate()
 }
@@ -89,7 +91,7 @@ func (g *Generator) Generate() (_ []string, err error) {
 			err      error
 		)
 		if g.Resource == "" || g.Resource == r.Name {
-			filename, err = genmain.GenerateController(g.Force, g.AppPkg, g.OutDir, g.Pkg, r.Name, r)
+			filename, err = genmain.GenerateController(g.Force, g.Regen, g.AppPkg, g.OutDir, g.Pkg, r.Name, r)
 		}
 
 		if err != nil {
