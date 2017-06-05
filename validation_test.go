@@ -342,4 +342,31 @@ var _ = Describe("ValidateFormat", func() {
 		})
 
 	})
+
+	Context("RFC1123", func() {
+		BeforeEach(func() {
+			f = goa.FormatRFC1123
+		})
+
+		Context("with an invalid value", func() {
+			BeforeEach(func() {
+				val = "Mon 04 Jun 2017 23:52:05 MST"
+
+			})
+
+			It("does not validates", func() {
+				Ω(valErr).Should(HaveOccurred())
+			})
+		})
+
+		Context("with a valid value", func() {
+			BeforeEach(func() {
+				val = "Mon, 04 Jun 2017 23:52:05 MST"
+			})
+
+			It("validates", func() {
+				Ω(valErr).ShouldNot(HaveOccurred())
+			})
+		})
+	})
 })
