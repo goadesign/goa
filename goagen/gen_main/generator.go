@@ -66,17 +66,17 @@ func Generate() (files []string, err error) {
 	return g.Generate()
 }
 
-func extractControllerBody(filename string) map[string]string {
-	actionImpls := map[string]string{}
+func extractControllerBody(filename string) (map[string]string, error) {
 	f, err := os.Open(filename)
 	if err != nil {
-		return actionImpls
+		return nil, err
 	}
 	defer f.Close()
 	var (
 		inBlock bool
 		block   []string
 	)
+	actionImpls := map[string]string{}
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -96,16 +96,25 @@ func extractControllerBody(filename string) map[string]string {
 			block = append(block, line)
 		}
 	}
-	return actionImpls
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return actionImpls, nil
 }
 
 // GenerateController generates the controller corresponding to the given
 // resource and returns the generated filename.
 func GenerateController(force, regen bool, appPkg, outDir, pkg, name string, r *design.ResourceDefinition) (string, error) {
 	filename := filepath.Join(outDir, codegen.SnakeCase(name)+".go")
-	var actionImpls map[string]string
+	var (
+		actionImpls map[string]string
+		err         error
+	)
 	if regen {
-		actionImpls = extractControllerBody(filename)
+		actionImpls, err = extractControllerBody(filename)
+		if err != nil {
+			return "", err
+		}
 		os.Remove(filename)
 	}
 	if force {
