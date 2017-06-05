@@ -48,6 +48,9 @@ const (
 
 	// FormatRegexp Regexp defines regular expression syntax accepted by RE2.
 	FormatRegexp = "regexp"
+
+	// FormatRFC1123 defines RFC1123 date time values.
+	FormatRFC1123 = "rfc1123"
 )
 
 var (
@@ -72,6 +75,7 @@ var (
 //     - "mac": IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address value
 //     - "cidr": RFC4632 and RFC4291 CIDR notation IP address value
 //     - "regexp": Regular expression syntax accepted by RE2
+//     - "rfc1123": RFC1123 date time value
 func ValidateFormat(f Format, val string) error {
 	var err error
 	switch f {
@@ -109,6 +113,8 @@ func ValidateFormat(f Format, val string) error {
 		_, _, err = net.ParseCIDR(val)
 	case FormatRegexp:
 		_, err = regexp.Compile(val)
+	case FormatRFC1123:
+		_, err = time.Parse(time.RFC1123, val)
 	default:
 		return fmt.Errorf("unknown format %#v", f)
 	}

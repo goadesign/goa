@@ -375,6 +375,8 @@ func constant(formatName string) string {
 		return "goa.FormatCIDR"
 	case "regexp":
 		return "goa.FormatRegexp"
+	case "rfc1123":
+		return "goa.FormatRFC1123"
 	}
 	panic("unknown format") // bug
 }

@@ -381,6 +381,7 @@ var SupportedValidationFormats = []string{
 	"ip",
 	"mac",
 	"regexp",
+	"rfc1123",
 	"uri",
 }
 
@@ -405,6 +406,8 @@ var SupportedValidationFormats = []string{
 // "cidr": RFC4632 or RFC4291 CIDR notation IP address
 //
 // "regexp": RE2 regular expression
+//
+// "rfc1123": RFC1123 date time
 func Format(f string) {
 	if a, ok := attributeDefinition(); ok {
 		if a.Type != nil && a.Type.Kind() != design.StringKind {
