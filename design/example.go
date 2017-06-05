@@ -164,8 +164,9 @@ func (eg *exampleGenerator) generateFormatExample() interface{} {
 			}
 			return res
 		}(),
-		"cidr":   "192.168.100.14/24",
-		"regexp": eg.r.faker.Characters(3) + ".*",
+		"cidr":    "192.168.100.14/24",
+		"regexp":  eg.r.faker.Characters(3) + ".*",
+		"rfc1123": time.Unix(int64(eg.r.Int())%1454957045, 0).Format(time.RFC1123), // to obtain a "fixed" rand
 	}[format]; ok {
 		return res
 	}
