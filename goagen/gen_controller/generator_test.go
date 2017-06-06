@@ -83,6 +83,7 @@ var _ = Describe("NewGenerator", func() {
 		designPkg string
 		appPkg    string
 		force     bool
+		regen     bool
 		pkg       string
 		resource  string
 		noExample bool
@@ -109,6 +110,7 @@ var _ = Describe("NewGenerator", func() {
 				gencontroller.Pkg(args.pkg),
 				gencontroller.Resource(args.resource),
 				gencontroller.Force(args.force),
+				gencontroller.Regen(args.regen),
 			)
 		})
 
@@ -121,6 +123,7 @@ var _ = Describe("NewGenerator", func() {
 			Ω(generator.Pkg).Should(Equal(args.pkg))
 			Ω(generator.Resource).Should(Equal(args.resource))
 			Ω(generator.Force).Should(Equal(args.force))
+			Ω(generator.Regen).Should(Equal(args.regen))
 		})
 
 	})

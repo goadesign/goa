@@ -39,3 +39,10 @@ func Force(force bool) Option {
 		g.Force = force
 	}
 }
+
+//Regen Whether to regenerate scaffolding in place, maintaining existing controller implementation
+func Regen(regen bool) Option {
+	return func(g *Generator) {
+		g.Regen = regen
+	}
+}
