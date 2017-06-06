@@ -75,7 +75,7 @@ package and tool and the Swagger specification for the API.
 
 	// mainCmd implements the "main" command.
 	var (
-		force bool
+		force, regen bool
 	)
 	mainCmd := &cobra.Command{
 		Use:   "main",
@@ -83,6 +83,7 @@ package and tool and the Swagger specification for the API.
 		Run:   func(c *cobra.Command, _ []string) { files, err = run("genmain", c) },
 	}
 	mainCmd.Flags().BoolVar(&force, "force", false, "overwrite existing files")
+	mainCmd.Flags().BoolVar(&regen, "regen", false, "regenerate scaffolding, maintaining controller implementations")
 	rootCmd.AddCommand(mainCmd)
 
 	// clientCmd implements the "client" command.
@@ -192,6 +193,7 @@ package and tool and the Swagger specification for the API.
 		Run:   func(c *cobra.Command, _ []string) { files, err = run("gencontroller", c) },
 	}
 	controllerCmd.Flags().BoolVar(&force, "force", false, "overwrite existing files")
+	controllerCmd.Flags().BoolVar(&regen, "regen", false, "regenerate scaffolding, maintaining controller implementations")
 	controllerCmd.Flags().StringVar(&res, "res", "", "name of the `resource` to generate the controller for, generate all if not specified")
 	controllerCmd.Flags().StringVar(&pkg, "pkg", "controller", "name of the generated controller `package`")
 	controllerCmd.Flags().StringVar(&appPkg, "app-pkg", "app", "`import path` of Go package generated with 'goagen app', may be relative to output")
