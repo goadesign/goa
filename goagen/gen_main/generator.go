@@ -4,6 +4,9 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"net"
 	"os"
 	"path"
@@ -66,10 +69,19 @@ func Generate() (files []string, err error) {
 	return g.Generate()
 }
 
-func extractControllerBody(filename string) (map[string]string, error) {
+func extractControllerBody(filename string) (map[string]string, []*ast.ImportSpec, error) {
+	// First check if a file is there. If not, return empty results to let generation proceed.
+	if _, e := os.Stat(filename); e != nil {
+		return map[string]string{}, []*ast.ImportSpec{}, nil
+	}
+	fset := token.NewFileSet()
+	pfile, err := parser.ParseFile(fset, filename, nil, parser.ImportsOnly)
+	if err != nil {
+		return nil, nil, err
+	}
 	f, err := os.Open(filename)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer f.Close()
 	var (
@@ -97,9 +109,9 @@ func extractControllerBody(filename string) (map[string]string, error) {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return actionImpls, nil
+	return actionImpls, pfile.Imports, nil
 }
 
 // GenerateController generates the controller corresponding to the given
@@ -107,11 +119,12 @@ func extractControllerBody(filename string) (map[string]string, error) {
 func GenerateController(force, regen bool, appPkg, outDir, pkg, name string, r *design.ResourceDefinition) (string, error) {
 	filename := filepath.Join(outDir, codegen.SnakeCase(name)+".go")
 	var (
-		actionImpls map[string]string
-		err         error
+		actionImpls      map[string]string
+		extractedImports []*ast.ImportSpec
+		err              error
 	)
 	if regen {
-		actionImpls, err = extractControllerBody(filename)
+		actionImpls, extractedImports, err = extractControllerBody(filename)
 		if err != nil {
 			return "", err
 		}
@@ -149,6 +162,18 @@ func GenerateController(force, regen bool, appPkg, outDir, pkg, name string, r *
 		codegen.SimpleImport("github.com/goadesign/goa"),
 		codegen.SimpleImport(imp),
 		codegen.SimpleImport("golang.org/x/net/websocket"),
+	}
+	for _, imp := range extractedImports {
+		// This may introduce duplicate imports of the defaults, but that'll
+		// get worked out by FormatCode later
+		var cgimp *codegen.ImportSpec
+		path := strings.Trim(imp.Path.Value, `"`)
+		if imp.Name != nil {
+			cgimp = codegen.NewImport(imp.Name.Name, path)
+		} else {
+			cgimp = codegen.SimpleImport(path)
+		}
+		imports = append(imports, cgimp)
 	}
 
 	funcs := funcMap(pkgName, actionImpls)
