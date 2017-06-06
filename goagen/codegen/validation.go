@@ -100,6 +100,12 @@ func (v *Validator) recurse(att *design.AttributeDefinition, nonzero, required, 
 		first = true
 	)
 
+	// Validator is optional on Attributes, so it's possible for v to be a nil
+	// pointer
+	if v == nil {
+		return buf
+	}
+
 	// Break infinite recursions
 	switch dt := att.Type.(type) {
 	case *design.MediaTypeDefinition:
