@@ -1846,7 +1846,7 @@ var PayloadBodyPathObjectDSL = func() {
 				Attribute("b", String)
 			})
 			HTTP(func() {
-				POST("/:b")
+				POST("/{b}")
 			})
 		})
 	})
@@ -1865,7 +1865,7 @@ var PayloadBodyPathObjectValidateDSL = func() {
 				Required("a", "b")
 			})
 			HTTP(func() {
-				POST("/:b")
+				POST("/{b}")
 			})
 		})
 	})
@@ -1880,7 +1880,7 @@ var PayloadBodyPathUserDSL = func() {
 		Endpoint("EndpointBodyPathUser", func() {
 			Payload(PayloadType)
 			HTTP(func() {
-				POST("/:b")
+				POST("/{b}")
 			})
 		})
 	})
@@ -1900,7 +1900,7 @@ var PayloadBodyPathUserValidateDSL = func() {
 		Endpoint("EndpointUserBodyPathValidate", func() {
 			Payload(PayloadType)
 			HTTP(func() {
-				POST("/:b")
+				POST("/{b}")
 			})
 		})
 	})

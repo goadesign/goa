@@ -229,8 +229,8 @@ func (a *AttributeExpr) AllRequired() (required []string) {
 }
 
 // IsRequired returns true if the given string matches the name of a required
-// attribute, false otherwise. This method only applies to attributes of type
-// Object.
+// attribute and the attribute has no default value, false otherwise. This
+// method only applies to attributes of type Object.
 func (a *AttributeExpr) IsRequired(attName string) bool {
 	for _, name := range a.AllRequired() {
 		if name == attName {
@@ -253,7 +253,8 @@ func (a *AttributeExpr) IsPrimitivePointer(attName string) bool {
 		return false
 	}
 	if IsPrimitive(att.Type) {
-		return a.Type.Kind() != BytesKind && !a.IsRequired(attName) && !a.HasDefaultValue(attName)
+		return att.Type.Kind() != BytesKind && att.Type.Kind() != AnyKind &&
+			!a.IsRequired(attName) && !a.HasDefaultValue(attName)
 	}
 	return false
 }

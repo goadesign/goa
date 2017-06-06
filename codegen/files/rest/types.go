@@ -43,12 +43,8 @@ type (
 		// BodyFieldsDefault contain the list of body struct fields
 		// that correspond to attributes with default value.
 		BodyFieldsDefault []*FieldData
-		// ParamsNoDefault is the list of constructor parameters other
-		// than body that correspond to attributes with no default value.
-		ParamsNoDefault []*ParamData
-		// ParamsNoDefault is the list of constructor parameters other
-		// than body that correspond to attributes with a default value.
-		ParamsDefault []*ParamData
+		// Params is the list of constructor parameters other than body.
+		Params []*ParamData
 	}
 
 	// ParamData contains the data needed to render a single parameter.
@@ -159,7 +155,7 @@ func requestBodyTypes(r *rest.ResourceExpr) []*TypeData {
 			if desc == "" {
 				desc = fmt.Sprintf("%s is the type of the %s \"%s\" HTTP endpoint request body.", name, r.Name(), a.Name())
 			}
-			def = restgen.GoTypeDef(scope, rest.NewMappedAttributeExpr(ut.Attribute()), true)
+			def = restgen.GoTypeDef(scope, ut.Attribute(), true)
 			validate = codegen.RecursiveValidationCode(ut.Attribute(), false, false, "body")
 		}
 		types = append(types, &TypeData{
@@ -197,7 +193,7 @@ func responseBodyTypes(r *rest.ResourceExpr) []*TypeData {
 				if desc == "" {
 					desc = fmt.Sprintf("%s is the type of the %s \"%s\" HTTP endpoint %s response body.", name, r.Name(), a.Name(), http.StatusText(resp.StatusCode))
 				}
-				def = restgen.GoTypeDef(scope, rest.NewMappedAttributeExpr(ut.Attribute()), true)
+				def = restgen.GoTypeDef(scope, ut.Attribute(), true)
 			}
 			types = append(types, &TypeData{
 				VarName:     name,
@@ -212,10 +208,13 @@ func responseBodyTypes(r *rest.ResourceExpr) []*TypeData {
 func payloadInits(r *rest.ResourceExpr) []*PayloadInitData {
 	var data []*PayloadInitData
 	for _, a := range r.Actions {
+		if a.EndpointExpr.Payload.Type == design.Empty {
+			continue // no payload
+		}
 		body := restgen.RequestBodyType(r, a, "ServerRequestBody")
 		ut, ok := body.(design.UserType)
-		if !ok {
-			continue // nothing to generate
+		if ok && ut == a.EndpointExpr.Payload.Type {
+			continue // no need for a constructor
 		}
 		data = append(data, payloadInitData(r, a, ut))
 	}
@@ -233,8 +232,7 @@ func payloadInitData(r *rest.ResourceExpr, a *rest.ActionExpr, body design.UserT
 		bodyRef             string
 		bodyFieldsNoDefault []*FieldData
 		bodyFieldsDefault   []*FieldData
-		paramsNoDefault     []*ParamData
-		paramsDefault       []*ParamData
+		params              []*ParamData
 	)
 	{
 		svc := files.Services.Get(r.Name())
@@ -244,7 +242,9 @@ func payloadInitData(r *rest.ResourceExpr, a *rest.ActionExpr, body design.UserT
 			name,
 			r.Name(),
 			a.Name())
-		bodyRef = svc.Scope.GoTypeRef(body)
+		if body != design.Empty {
+			bodyRef = svc.Scope.GoTypeRef(body)
+		}
 
 		bfields := rest.NewMappedAttributeExpr(body.Attribute())
 		restgen.WalkMappedAttr(bfields, func(name, elem string, required bool, a *design.AttributeExpr) error {
@@ -261,19 +261,36 @@ func payloadInitData(r *rest.ResourceExpr, a *rest.ActionExpr, body design.UserT
 			return nil
 		})
 
+		queryParams := a.QueryParams()
 		all := a.AllParams()
 		restgen.WalkMappedAttr(all, func(name, elem string, required bool, a *design.AttributeExpr) error {
+			pointer := ""
+			if queryParams.IsPrimitivePointer(name) {
+				pointer = "*"
+			}
 			param := &ParamData{
 				VarName:      codegen.Goify(elem, false),
 				FieldName:    codegen.GoifyAtt(a, name, true),
-				TypeRef:      svc.Scope.GoTypeRef(a.Type),
+				TypeRef:      pointer + svc.Scope.GoTypeRef(a.Type),
 				DefaultValue: a.DefaultValue,
 			}
-			if a.DefaultValue != nil {
-				paramsDefault = append(paramsDefault, param)
-				return nil
+			params = append(params, param)
+			return nil
+		})
+
+		headerParams := a.MappedHeaders()
+		restgen.WalkMappedAttr(headerParams, func(name, elem string, required bool, a *design.AttributeExpr) error {
+			pointer := ""
+			if headerParams.IsPrimitivePointer(name) {
+				pointer = "*"
 			}
-			paramsNoDefault = append(paramsNoDefault, param)
+			param := &ParamData{
+				VarName:      codegen.Goify(elem, false),
+				FieldName:    codegen.GoifyAtt(a, name, true),
+				TypeRef:      pointer + svc.Scope.GoTypeRef(a.Type),
+				DefaultValue: a.DefaultValue,
+			}
+			params = append(params, param)
 			return nil
 		})
 	}
@@ -284,25 +301,24 @@ func payloadInitData(r *rest.ResourceExpr, a *rest.ActionExpr, body design.UserT
 		BodyTypeRef:         bodyRef,
 		BodyFieldsNoDefault: bodyFieldsNoDefault,
 		BodyFieldsDefault:   bodyFieldsDefault,
-		ParamsNoDefault:     paramsNoDefault,
-		ParamsDefault:       paramsDefault,
+		Params:              params,
 	}
 }
 
-const typeDeclT = `
-// {{ comment .Description }}
-{{ .TypeName }} {{ .TypeDef }}
+const typeDeclT = `{{ comment .Description }}
+type {{ .VarName }} {{ .TypeDef }}
 `
 
 const payloadInitT = `{{ comment .Description }}
-func {{ .Name }}({{ if .BodyTypeRef }}body {{ .BodyTypeRef }}, {{ end }}{{ range .Params }}{{ .VarName }} {{ .TypeRef }}, {{ end }}) (*{{ .TypeName }}, error) {
+func {{ .Name }}({{ if .BodyTypeRef }}body {{ .BodyTypeRef }}, {{ end }}
+{{- range .Params }}{{ .VarName }} {{ .TypeRef }}, {{ end }}) (*{{ .TypeName }}, error) {
 	p := {{ .TypeName }}{
 	{{- range .BodyFieldsNoDefault }}
-		{{ .FieldName }}: {{ if .Required }}*{{ end }}{{ .FieldName }},
-	{{ end -}}
-	{{- range .ParamsNoDefault }}
-		{{ .FieldName }}: {{ if .Required }}*{{ end }}{{ .VarName }},
-	{{ end -}}
+		{{ .FieldName }}: body.{{ .FieldName }},
+	{{- end }}
+	{{- range .Params }}
+		{{ .FieldName }}: {{ .VarName }},
+	{{- end }}
 	}
 	{{- range .BodyFieldsDefault }}
 	if body.{{ .FieldName }} != nil {
@@ -310,21 +326,13 @@ func {{ .Name }}({{ if .BodyTypeRef }}body {{ .BodyTypeRef }}, {{ end }}{{ range
 	} else {
 		p.{{ .FieldName }} = {{ .DefaultValue }}
 	}
-	{{ end -}}
-	{{- range .ParamsDefault }}
-	if {{ .VarName }} != nil {
-		p.{{ .FieldName }} = *{{ .VarName }}
-	} else {
-		p.{{ .FieldName }} = {{ .DefaultValue }}
-	}
-	{{ end -}}
+	{{- end }}
 	return &p, nil
 }
 `
 
-const validateT = `
-// {{ comment .Description }}
-func (body *{{ .TypeName }}) Validate() (err error) {
+const validateT = `{{ comment .Description }}
+func (body *{{ .VarName }}) Validate() (err error) {
 	{{ .Validate }}
 	return
 }

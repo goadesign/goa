@@ -3422,7 +3422,7 @@ var PayloadBodyPathObjectDecodeCode = `// DecodeEndpointBodyPathObjectRequest re
 func DecodeEndpointBodyPathObjectRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*EndpointBodyPathObjectPayload, error) {
 		var (
-			body EndpointBodyPathObjectPayload
+			body EndpointBodyPathObjectServerRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3433,10 +3433,17 @@ func DecodeEndpointBodyPathObjectRequest(decoder func(*http.Request) rest.Decode
 			return nil, err
 		}
 
+		var (
+			b string
+
+			params = rest.ContextParams(r.Context())
+		)
+		b = params["b"]
+
 		if err != nil {
 			return nil, err
 		}
-		return &body, nil
+		return NewEndpointBodyPathObjectPayload(&body, b), nil
 	}
 }
 `
@@ -3447,7 +3454,7 @@ var PayloadBodyPathObjectValidateDecodeCode = `// DecodeEndpointBodyPathObjectVa
 func DecodeEndpointBodyPathObjectValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*EndpointBodyPathObjectValidatePayload, error) {
 		var (
-			body EndpointBodyPathObjectValidatePayload
+			body EndpointBodyPathObjectValidateServerRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3459,10 +3466,18 @@ func DecodeEndpointBodyPathObjectValidateRequest(decoder func(*http.Request) res
 		}
 		err = goa.MergeErrors(err, body.Validate())
 
+		var (
+			b string
+
+			params = rest.ContextParams(r.Context())
+		)
+		b = params["b"]
+		err = goa.MergeErrors(err, goa.ValidatePattern("b", b, "patternb"))
+
 		if err != nil {
 			return nil, err
 		}
-		return &body, nil
+		return NewEndpointBodyPathObjectValidatePayload(&body, b), nil
 	}
 }
 `
@@ -3472,7 +3487,7 @@ var PayloadBodyPathUserDecodeCode = `// DecodeEndpointBodyPathUserRequest return
 func DecodeEndpointBodyPathUserRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*PayloadType, error) {
 		var (
-			body PayloadType
+			body EndpointBodyPathUserServerRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3483,10 +3498,17 @@ func DecodeEndpointBodyPathUserRequest(decoder func(*http.Request) rest.Decoder)
 			return nil, err
 		}
 
+		var (
+			b string
+
+			params = rest.ContextParams(r.Context())
+		)
+		b = params["b"]
+
 		if err != nil {
 			return nil, err
 		}
-		return &body, nil
+		return NewPayloadType(&body, b), nil
 	}
 }
 `
@@ -3497,7 +3519,7 @@ var PayloadBodyPathUserValidateDecodeCode = `// DecodeEndpointUserBodyPathValida
 func DecodeEndpointUserBodyPathValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (*PayloadType, error) {
 		var (
-			body PayloadType
+			body EndpointUserBodyPathValidateServerRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3509,10 +3531,18 @@ func DecodeEndpointUserBodyPathValidateRequest(decoder func(*http.Request) rest.
 		}
 		err = goa.MergeErrors(err, body.Validate())
 
+		var (
+			b string
+
+			params = rest.ContextParams(r.Context())
+		)
+		b = params["b"]
+		err = goa.MergeErrors(err, goa.ValidatePattern("b", b, "patternb"))
+
 		if err != nil {
 			return nil, err
 		}
-		return &body, nil
+		return NewPayloadType(&body, b), nil
 	}
 }
 `

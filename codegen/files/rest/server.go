@@ -10,7 +10,6 @@
 
 // Add response tags to account example
 // Test response tags
-// Test default values and header decoding
 
 // Initialize error responses headers and body from result (action.go)
 
@@ -546,18 +545,13 @@ func extractQueryParams(a *rest.MappedAttributeExpr) []*ServerParamData {
 			arr   = design.AsArray(c.Type)
 			mp    = design.AsMap(c.Type)
 		)
-		pointer := !required &&
-			c.DefaultValue == nil &&
-			design.IsPrimitive(c.Type) &&
-			c.Type.Kind() != design.BytesKind &&
-			c.Type.Kind() != design.AnyKind
 		params = append(params, &ServerParamData{
 			Name:        elem,
 			FieldName:   field,
 			VarName:     varn,
 			Required:    required,
 			Type:        c.Type,
-			Pointer:     pointer,
+			Pointer:     a.IsPrimitivePointer(name),
 			Slice:       arr != nil,
 			StringSlice: arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
 			Map:         mp != nil,
@@ -565,7 +559,7 @@ func extractQueryParams(a *rest.MappedAttributeExpr) []*ServerParamData {
 				mp.KeyType.Type.Kind() == design.StringKind &&
 				mp.ElemType.Type.Kind() == design.ArrayKind &&
 				design.AsArray(mp.ElemType.Type).ElemType.Type.Kind() == design.StringKind,
-			Validate:     codegen.RecursiveValidationCode(c, !pointer, true, varn),
+			Validate:     codegen.RecursiveValidationCode(c, !a.IsPrimitivePointer(name), true, varn),
 			DefaultValue: c.DefaultValue,
 		})
 		return nil
@@ -581,22 +575,17 @@ func extractHeaders(a *rest.MappedAttributeExpr) []*ServerHeaderData {
 			varn = codegen.Goify(name, false)
 			arr  = design.AsArray(c.Type)
 		)
-		pointer := !required &&
-			c.DefaultValue == nil &&
-			design.IsPrimitive(c.Type) &&
-			c.Type.Kind() != design.BytesKind &&
-			c.Type.Kind() != design.AnyKind
 		headers = append(headers, &ServerHeaderData{
 			Name:          elem,
 			CanonicalName: http.CanonicalHeaderKey(elem),
 			FieldName:     codegen.Goify(name, true),
 			VarName:       varn,
 			Required:      required,
-			Pointer:       pointer,
+			Pointer:       a.IsPrimitivePointer(name),
 			Slice:         arr != nil,
 			StringSlice:   arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
 			Type:          c.Type,
-			Validate:      codegen.RecursiveValidationCode(c, !pointer, true, varn),
+			Validate:      codegen.RecursiveValidationCode(c, !a.IsPrimitivePointer(name), true, varn),
 			DefaultValue:  c.DefaultValue,
 		})
 		return nil

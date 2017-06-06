@@ -84,19 +84,22 @@ func ValidationCode(att *design.AttributeExpr, req, pub bool, target, context st
 	if validation == nil {
 		return ""
 	}
-	t := target
-	isPointer := !pub || (!req && att.DefaultValue == nil)
-	if isPointer && design.IsPrimitive(att.Type) &&
-		att.Type.Kind() != design.BytesKind && att.Type.Kind() != design.AnyKind {
-		t = "*" + t
+	var (
+		kind            = att.Type.Kind()
+		isNativePointer = kind == design.BytesKind || kind == design.AnyKind
+		isPointer       = !pub || (!req && att.DefaultValue == nil)
+		tval            = target
+	)
+	if isPointer && design.IsPrimitive(att.Type) && !isNativePointer {
+		tval = "*" + tval
 	}
 	data := map[string]interface{}{
 		"attribute": att,
 		"isPointer": isPointer,
 		"context":   context,
 		"target":    target,
-		"targetVal": t,
-		"string":    att.Type.Kind() == design.StringKind,
+		"targetVal": tval,
+		"string":    kind == design.StringKind,
 		"array":     design.IsArray(att.Type),
 		"map":       design.IsMap(att.Type),
 		"pub":       pub,
@@ -161,15 +164,21 @@ func ValidationCode(att *design.AttributeExpr, req, pub bool, target, context st
 		}
 	}
 	if req := validation.Required; len(req) > 0 {
-		var val string
-		for i, r := range req {
-			if i > 0 {
-				val += "\n"
+		for _, r := range req {
+			reqAtt := design.AsObject(att.Type)[r]
+			if reqAtt == nil {
+				continue
+			}
+			if pub && design.IsPrimitive(reqAtt.Type) &&
+				reqAtt.Type.Kind() != design.BytesKind &&
+				reqAtt.Type.Kind() != design.AnyKind {
+
+				continue
 			}
 			data["req"] = r
-			val += runTemplate(requiredValT, data)
+			data["reqAtt"] = reqAtt
+			res = append(res, runTemplate(requiredValT, data))
 		}
-		res = append(res, val)
 	}
 	return strings.Join(res, "\n")
 }
@@ -474,14 +483,7 @@ if {{ .target }} != nil {
 {{ end -}}
 }`
 
-	requiredValTmpl = `{{ $att := index $.attribute.Type.ToObject .req }}
-{{- if and $.pub (eq $att.Type.Kind 4) -}}
-if {{ $.target }}.{{ goifyAtt $att .req true }} == "" {
-	err = goa.MergeErrors(err, goa.MissingAttributeError({{ printf "%q" $.context }}, "{{  .req  }}"))
-}
-{{- else if or (not $.pub) (not $att.Type.IsPrimitive) (eq $att.Type.Kind 11) (eq $att.Type.Kind 17) -}}
-if {{ $.target }}.{{ goifyAtt $att .req true }} == nil {
+	requiredValTmpl = `if {{ $.target }}.{{ goifyAtt $.reqAtt .req true }} == nil {
 	err = goa.MergeErrors(err, goa.MissingAttributeError({{ printf "%q" $.context }}, "{{ .req }}"))
-}
-{{- end }}`
+}`
 )

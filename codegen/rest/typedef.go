@@ -20,22 +20,22 @@ import (
 //      required so that the generated code may validate explicitly if ptr is
 //      true.
 //
-func GoTypeDef(scope *codegen.NameScope, ma *rest.MappedAttributeExpr, ptr bool) string {
-	switch actual := ma.Type.(type) {
+func GoTypeDef(scope *codegen.NameScope, att *design.AttributeExpr, ptr bool) string {
+	switch actual := att.Type.(type) {
 	case design.Primitive:
 		return codegen.GoNativeTypeName(actual)
 	case *design.Array:
-		d := GoTypeDef(scope, rest.NewMappedAttributeExpr(actual.ElemType), ptr)
+		d := GoTypeDef(scope, actual.ElemType, ptr)
 		if design.IsObject(actual.ElemType.Type) {
 			d = "*" + d
 		}
 		return "[]" + d
 	case *design.Map:
-		keyDef := GoTypeDef(scope, rest.NewMappedAttributeExpr(actual.KeyType), ptr)
+		keyDef := GoTypeDef(scope, actual.KeyType, ptr)
 		if design.IsObject(actual.KeyType.Type) {
 			keyDef = "*" + keyDef
 		}
-		elemDef := GoTypeDef(scope, rest.NewMappedAttributeExpr(actual.ElemType), ptr)
+		elemDef := GoTypeDef(scope, actual.ElemType, ptr)
 		if design.IsObject(actual.ElemType.Type) {
 			elemDef = "*" + elemDef
 		}
@@ -43,6 +43,7 @@ func GoTypeDef(scope *codegen.NameScope, ma *rest.MappedAttributeExpr, ptr bool)
 	case design.Object:
 		var ss []string
 		ss = append(ss, "struct {")
+		ma := rest.NewMappedAttributeExpr(att)
 		mat := ma.Attribute()
 		WalkMappedAttr(ma, func(name, elem string, required bool, at *design.AttributeExpr) error {
 			var (
@@ -53,7 +54,7 @@ func GoTypeDef(scope *codegen.NameScope, ma *rest.MappedAttributeExpr, ptr bool)
 			)
 			{
 				fn = codegen.GoifyAtt(at, name, true)
-				tdef = GoTypeDef(scope, rest.NewMappedAttributeExpr(at), ptr)
+				tdef = GoTypeDef(scope, at, ptr)
 				if design.IsPrimitive(at.Type) {
 					if ptr || mat.IsPrimitivePointer(name) {
 						tdef = "*" + tdef
