@@ -1,13 +1,13 @@
 package xray
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"net"
 	"net/http"
+	"sync"
 	"time"
-
-	"context"
 
 	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/middleware"
@@ -47,7 +47,9 @@ const (
 //     return
 //
 func New(service, daemon string) (goa.Middleware, error) {
-	c, err := net.Dial("udp", daemon)
+	connection, err := periodicallyRedialingConn(context.Background(), time.Minute, func() (net.Conn, error) {
+		return net.Dial("udp", daemon)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("xray: failed to connect to daemon - %s", err)
 	}
@@ -62,7 +64,7 @@ func New(service, daemon string) (goa.Middleware, error) {
 				return h(ctx, rw, req)
 			}
 
-			s := newSegment(ctx, traceID, service, req, c)
+			s := newSegment(ctx, traceID, service, req, connection())
 			ctx = WithSegment(ctx, s)
 
 			defer func() {
@@ -134,4 +136,47 @@ func newSegment(ctx context.Context, traceID, name string, req *http.Request, c 
 // now returns the current time as a float appropriate for X-Ray processing.
 func now() float64 {
 	return float64(time.Now().Truncate(time.Millisecond).UnixNano()) / 1e9
+}
+
+// periodicallyRedialingConn creates a goroutine to periodically re-dial a connection, so the hostname can be
+// re-resolved if the IP changes.
+// Returns a func that provides the latest Conn value.
+func periodicallyRedialingConn(ctx context.Context, renewPeriod time.Duration, dial func() (net.Conn, error)) (func() net.Conn, error) {
+	var (
+		err error
+
+		// guard access to c
+		mu sync.RWMutex
+		c  net.Conn
+	)
+
+	// get an initial connection
+	if c, err = dial(); err != nil {
+		return nil, err
+	}
+
+	// periodically re-dial
+	go func() {
+		ticker := time.NewTicker(renewPeriod)
+		for {
+			select {
+			case <-ticker.C:
+				newConn, err := dial()
+				if err != nil {
+					continue // we don't have anything better to replace `c` with
+				}
+				mu.Lock()
+				c = newConn
+				mu.Unlock()
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	return func() net.Conn {
+		mu.RLock()
+		defer mu.RUnlock()
+		return c
+	}, nil
 }
