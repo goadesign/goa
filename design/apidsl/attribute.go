@@ -164,6 +164,10 @@ func attributeFromRef(name string, ref design.DataType) *design.AttributeDefinit
 		if att, ok := t.ToObject()[name]; ok {
 			return design.DupAtt(att)
 		}
+	case design.Object:
+		if att, ok := t[name]; ok {
+			return design.DupAtt(att)
+		}
 	}
 	return nil
 }
