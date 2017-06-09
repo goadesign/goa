@@ -61,11 +61,8 @@ func Type(name string, dsl func()) *design.UserTypeDefinition {
 	return t
 }
 
-// ArrayOf can be used in: Wherever a a type can be used...
-//
-// e.g. Attribute("foo", ArrayOf(String))
-// ArrayOf creates an array type from its element type. The result can be used anywhere a type can.
-// Examples:
+// ArrayOf creates an array type from its element type. The result can be used
+// anywhere a type can. Examples:
 //
 //	var Bottle = Type("bottle", func() {
 //		Attribute("name")
@@ -80,15 +77,16 @@ func Type(name string, dsl func()) *design.UserTypeDefinition {
 //		Payload(ArrayOf(Bottle))  // Equivalent to Payload(Bottles)
 //	})
 //
-// ArrayOf accepts an optional DSL as second argument which allows providing validations for the
-// elements of the array:
+// ArrayOf accepts an optional DSL as second argument which allows providing
+// validations for the elements of the array:
 //
 //      var Names = ArrayOf(String, func() {
 //          Pattern("[a-zA-Z]+")
 //      })
 //
-// If you are looking to return a collection of elements in a Response clause, refer to
-// CollectionOf.  ArrayOf creates a type, where CollectionOf creates a media type.
+// If you are looking to return a collection of elements in a Response clause,
+// refer to CollectionOf. ArrayOf creates a type, where CollectionOf creates a
+// media type.
 func ArrayOf(v interface{}, dsl ...func()) *design.Array {
 	var t design.DataType
 	var ok bool
@@ -119,11 +117,8 @@ func ArrayOf(v interface{}, dsl ...func()) *design.Array {
 	return &design.Array{ElemType: &at}
 }
 
-// HashOf can be used in: Wherever a type can be used...
-//
-// e.g. Attribute("foo", HashOf(String))
-// HashOf creates a hash map from its key and element types. The result can be used anywhere a type
-// can. Examples:
+// HashOf creates a hash map from its key and element types. The result can be
+// used anywhere a type can. Examples:
 //
 //	var Bottle = Type("bottle", func() {
 //		Attribute("name")
@@ -137,8 +132,8 @@ func ArrayOf(v interface{}, dsl ...func()) *design.Array {
 //			Member("bottles", RatedBottles)
 //	})
 //
-// HashOf accepts optional DSLs as third and fourth argument which allows providing validations for
-// the keys and values of the hash respectively:
+// HashOf accepts optional DSLs as third and fourth argument which allows
+// providing validations for the keys and values of the hash respectively:
 //
 //	var RatedBottles = HashOf(String, Bottle, func() {
 //          Pattern("[a-zA-Z]+") // Validate bottle names
