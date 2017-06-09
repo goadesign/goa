@@ -51,6 +51,7 @@ var _ = Describe("ContextsWriter", func() {
 			var params, headers *design.AttributeDefinition
 			var payload *design.UserTypeDefinition
 			var responses map[string]*design.ResponseDefinition
+			var routes []*design.RouteDefinition
 
 			var data *genapp.ContextTemplateData
 
@@ -59,6 +60,7 @@ var _ = Describe("ContextsWriter", func() {
 				headers = nil
 				payload = nil
 				responses = nil
+				routes = nil
 				data = nil
 			})
 
@@ -71,6 +73,7 @@ var _ = Describe("ContextsWriter", func() {
 					Payload:      payload,
 					Headers:      headers,
 					Responses:    responses,
+					Routes:       routes,
 					API:          design.Design,
 					DefaultPkg:   "",
 				}
@@ -531,6 +534,23 @@ var _ = Describe("ContextsWriter", func() {
 					Ω(written).ShouldNot(BeEmpty())
 					Ω(written).Should(ContainSubstring(arrayContext))
 					Ω(written).Should(ContainSubstring(arrayContextFactory))
+				})
+
+				Context("using a path param", func() {
+					BeforeEach(func() {
+						route := &design.RouteDefinition{Path: "/:param"}
+						routes = append(routes, route)
+					})
+
+					It("writes the array contexts code", func() {
+						err := writer.Execute(data)
+						Ω(err).ShouldNot(HaveOccurred())
+						b, err := ioutil.ReadFile(filename)
+						Ω(err).ShouldNot(HaveOccurred())
+						written := string(b)
+						Ω(written).ShouldNot(BeEmpty())
+						Ω(written).Should(ContainSubstring(arrayParamContextFactory))
+					})
 				})
 
 				Context("with a default value", func() {
@@ -1958,6 +1978,26 @@ func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Ser
 	req.Request = r
 	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
 	paramParam := req.Params["param"]
+	if len(paramParam) > 0 {
+		params := paramParam
+		rctx.Param = params
+	}
+	return &rctx, err
+}
+`
+
+	arrayParamContextFactory = `
+func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Service) (*ListBottleContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	req.Request = r
+	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramParam := req.Params["param"]
+	if len(paramParam) > 0 {
+		paramParam = strings.Split(paramParam, ",")
+	}
 	if len(paramParam) > 0 {
 		params := paramParam
 		rctx.Param = params
