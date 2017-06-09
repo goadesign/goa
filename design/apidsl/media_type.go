@@ -12,7 +12,7 @@ import (
 // Counter used to create unique media type names for identifier-less media types.
 var mediaTypeCount int
 
-// MediaType is a top level DSL, which can also be used in: ResponseTemplate
+// MediaType is a top level DSL which can also be used in ResponseTemplate.
 //
 // MediaType implements the media type definition DSL. A media type definition describes the
 // representation of a resource used in a response body.
@@ -191,17 +191,15 @@ func Reference(t design.DataType) {
 	}
 }
 
-// TypeName can be used in: Type, MediaType
+// TypeName can be used in: MediaType
 //
-// TypeName makes it possible to set the Go struct name for a type or media type in the generated
-// code. By default goagen uses the name (type) or identifier (media type) given in the apidsl and
-// computes a valid Go identifier from it. This function makes it possible to override that and
-// provide a custom name. name must be a valid Go identifier.
+// TypeName makes it possible to set the Go struct name for a media type in the
+// generated code. By default goagen uses the identifier to compute a valid Go
+// identifier. This function makes it possible to override that and provide a
+// custom name. name must be a valid Go identifier.
 func TypeName(name string) {
 	switch def := dslengine.CurrentDefinition().(type) {
 	case *design.MediaTypeDefinition:
-		def.TypeName = name
-	case *design.UserTypeDefinition:
 		def.TypeName = name
 	default:
 		dslengine.IncompatibleDSL()
@@ -222,6 +220,7 @@ func ContentType(typ string) {
 }
 
 // View can be used in: MediaType, Response
+//
 // View adds a new view to a media type. A view has a name and lists attributes that are
 // rendered when the view is used to produce a response. The attribute names must appear in the
 // media type definition. If an attribute is itself a media type then the view may specify which
