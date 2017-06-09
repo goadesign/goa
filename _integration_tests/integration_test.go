@@ -3,9 +3,11 @@ package tests
 import (
 	"fmt"
 	"go/build"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 	"testing"
 )
 
@@ -17,6 +19,32 @@ func TestBootstrapReadme(t *testing.T) {
 	}
 	if err := gobuild("./readme"); err != nil {
 		t.Error(err.Error())
+	}
+}
+
+func TestDefaultMedia(t *testing.T) {
+	defer os.RemoveAll("./media/main.go")
+	defer os.RemoveAll("./media/tool")
+	if err := goagen("./media", "bootstrap", "-d", "github.com/goadesign/goa/_integration_tests/media/design"); err != nil {
+		t.Error(err.Error())
+	}
+	if err := gobuild("./media"); err != nil {
+		t.Error(err.Error())
+	}
+	b, err := ioutil.ReadFile("./media/app/contexts.go")
+	if err != nil {
+		t.Fatal("failed to load contexts.go")
+	}
+	expected := `// CreateGreetingPayload is the Greeting create action payload.
+type CreateGreetingPayload struct {
+	// A required string field in the parent type.
+	Message string ` + "`" + `form:"message" json:"message" xml:"message"` + "`" + `
+	// An optional boolean field in the parent type.
+	ParentOptional *bool ` + "`" + `form:"parent_optional,omitempty" json:"parent_optional,omitempty" xml:"parent_optional,omitempty"` + "`" + `
+}
+`
+	if !strings.Contains(string(b), expected) {
+		t.Errorf("DefaultMedia attribute definitions reference failed. Generated context:\n%s", string(b))
 	}
 }
 
