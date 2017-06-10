@@ -1173,6 +1173,14 @@ func (a *AttributeDefinition) Merge(other *AttributeDefinition) *AttributeDefini
 	for n, v := range right {
 		left[n] = v
 	}
+	if other.Validation != nil && len(other.Validation.Required) > 0 {
+		if a.Validation == nil {
+			a.Validation = &dslengine.ValidationDefinition{}
+		}
+		for _, r := range other.Validation.Required {
+			a.Validation.Required = append(a.Validation.Required, r)
+		}
+	}
 	return a
 }
 
