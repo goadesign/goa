@@ -141,11 +141,49 @@ var _ = Describe("Action", func() {
 			Ω(action.Responses).ShouldNot(BeNil())
 			Ω(action.Responses).Should(HaveLen(1))
 			Ω(action.Responses).Should(HaveKey("NoContent"))
-			Ω(action.Headers.Type.(Object)).Should(HaveKey(headerName))
 			Ω(action.Headers).ShouldNot(BeNil())
 			Ω(action.Headers.Type).Should(BeAssignableToTypeOf(Object{}))
 			Ω(action.Headers.Type.(Object)).Should(HaveLen(1))
 			Ω(action.Headers.Type.(Object)).Should(HaveKey(headerName))
+		})
+	})
+
+	Context("with multiple headers sections", func() {
+		const typeName = "typeName"
+		const headerName = "Foo"
+		const headerName2 = "Foo2"
+
+		BeforeEach(func() {
+			Type(typeName, func() {
+				Attribute("name")
+			})
+			name = "foo"
+			dsl = func() {
+				Routing(GET("/:id"))
+				Headers(func() {
+					Header(headerName)
+					Required(headerName)
+				})
+				Headers(func() {
+					Header(headerName2)
+					Required(headerName2)
+				})
+			}
+		})
+
+		It("produces a valid action with all required headers accounted for", func() {
+			Ω(dslengine.Errors).ShouldNot(HaveOccurred())
+			Ω(action).ShouldNot(BeNil())
+			Ω(action.Validate()).ShouldNot(HaveOccurred())
+			Ω(action.Name).Should(Equal(name))
+			Ω(action.Headers).ShouldNot(BeNil())
+			Ω(action.Headers.Type.(Object)).Should(HaveKey(headerName))
+			Ω(action.Headers.Type).Should(BeAssignableToTypeOf(Object{}))
+			Ω(action.Headers.Type.(Object)).Should(HaveLen(2))
+			Ω(action.Headers.Type.(Object)).Should(HaveKey(headerName))
+			Ω(action.Headers.Type.(Object)).Should(HaveKey(headerName2))
+			Ω(action.Headers.Validation).ShouldNot(BeNil())
+			Ω(action.Headers.Validation.Required).Should(Equal([]string{headerName, headerName2}))
 		})
 	})
 
