@@ -92,7 +92,7 @@ func License(fn func()) {
 
 // Docs provides external documentation pointers.
 //
-// Docs may appear in an API, Service, Endpoint or Attribute expressions.
+// Docs may appear in an API, Service, Method or Attribute expressions.
 // Docs takes a single argument which is the defining DSL.
 //
 // Example:
@@ -114,7 +114,7 @@ func Docs(fn func()) {
 		e.Docs = docs
 	case *design.ServiceExpr:
 		e.Docs = docs
-	case *design.EndpointExpr:
+	case *design.MethodExpr:
 		e.Docs = docs
 	case *design.AttributeExpr:
 		e.Docs = docs

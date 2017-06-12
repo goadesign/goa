@@ -17,7 +17,7 @@ type (
 		// Services contains the list of services exposed by the API.
 		Services []*ServiceExpr
 		// Errors contains the list of errors returned by all the API
-		// endpoints.
+		// methods.
 		Errors []*ErrorExpr
 		// Types contains the user types described in the DSL.
 		Types []UserType
@@ -66,14 +66,14 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	}
 	walk(services)
 
-	// Next the endpoints
-	var endpoints eval.ExpressionSet
+	// Next the methods
+	var methods eval.ExpressionSet
 	for _, s := range r.Services {
-		for _, e := range s.Endpoints {
-			endpoints = append(endpoints, e)
+		for _, e := range s.Methods {
+			methods = append(methods, e)
 		}
 	}
-	walk(endpoints)
+	walk(methods)
 }
 
 // DependsOn returns nil, the core DSL has no dependency.

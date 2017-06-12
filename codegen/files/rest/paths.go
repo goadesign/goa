@@ -16,8 +16,8 @@ type (
 	PathData struct {
 		// ServiceName is the name of the service defined in the design.
 		ServiceName string
-		// EndpointName is the name of the endpoint defined in the design.
-		EndpointName string
+		// MethodName is the name of the method defined in the design.
+		MethodName string
 		// Routes describes all the possible paths for an action.
 		Routes []*PathRoute
 	}
@@ -95,9 +95,9 @@ func pathTmpl(r *rest.ResourceExpr) *template.Template {
 
 func buildPathData(a *rest.ActionExpr) *PathData {
 	pd := PathData{
-		ServiceName:  a.EndpointExpr.Service.Name,
-		EndpointName: a.Name(),
-		Routes:       make([]*PathRoute, len(a.Routes)),
+		ServiceName: a.MethodExpr.Service.Name,
+		MethodName:  a.Name(),
+		Routes:      make([]*PathRoute, len(a.Routes)),
 	}
 
 	for i, r := range a.Routes {
@@ -124,8 +124,8 @@ func generatePathArguments(r *rest.RouteExpr) []*PathArgument {
 }
 
 const pathT = `{{ range $i, $route := .Routes -}}
-// {{ goify $.EndpointName true }}{{ goify $.ServiceName true }}Path{{ if ne $i 0 }}{{ add $i 1 }}{{ end }} returns the URL path to the {{ $.ServiceName }} service {{ $.EndpointName }} HTTP endpoint.
-func {{ goify $.EndpointName true }}{{ goify $.ServiceName true }}Path{{ if ne $i 0 }}{{ add $i 1 }}{{ end }}({{ template "arguments" .Arguments }}) string {
+// {{ goify $.MethodName true }}{{ goify $.ServiceName true }}Path{{ if ne $i 0 }}{{ add $i 1 }}{{ end }} returns the URL path to the {{ $.ServiceName }} service {{ $.MethodName }} HTTP endpoint.
+func {{ goify $.MethodName true }}{{ goify $.ServiceName true }}Path{{ if ne $i 0 }}{{ add $i 1 }}{{ end }}({{ template "arguments" .Arguments }}) string {
 {{- if .Arguments }}
 	{{ template "slice_conversion" .Arguments -}}
 	return fmt.Sprintf("{{ .Path }}"{{ template "fmt_params" .Arguments }})

@@ -33,7 +33,7 @@ import (
 //
 //     // new type
 //     var SumPayload = Type("SumPayload", func() {
-//         Description("Type sent to add endpoint")
+//         Description("Type sent to add method")
 //
 //         Attribute("a", String)                 // string attribute "a"
 //         Attribute("b", Int32, "operand")       // attribute with description

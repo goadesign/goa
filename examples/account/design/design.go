@@ -18,7 +18,7 @@ var _ = Service("account", func() {
 			Example("basic", 123)
 		})
 	})
-	Endpoint("create", func() {
+	Method("create", func() {
 		Description("Create new account")
 		Payload(CreateAccount)
 		Result(Account)
@@ -35,7 +35,7 @@ var _ = Service("account", func() {
 			Response("name_already_taken", StatusConflict)
 		})
 	})
-	Endpoint("list", func() {
+	Method("list", func() {
 		Description("List all accounts")
 		Payload(ListAccount)
 		Result(ArrayOf(Account))
@@ -44,7 +44,7 @@ var _ = Service("account", func() {
 			Param("filter")
 		})
 	})
-	Endpoint("show", func() {
+	Method("show", func() {
 		Description("Show account by ID")
 		Payload(func() {
 			Attribute("org_id", UInt, "ID of organization that owns  account")
@@ -56,7 +56,7 @@ var _ = Service("account", func() {
 			GET("/{id}")
 		})
 	})
-	Endpoint("delete", func() {
+	Method("delete", func() {
 		Description("Delete account by IF")
 		Payload(func() {
 			Attribute("org_id", UInt, "ID of organization that owns  account")

@@ -14,18 +14,6 @@ import (
 )
 
 type (
-	// TypeData contains the data needed to render a type definition.
-	TypeData struct {
-		// VarName is the type name.
-		VarName string
-		// Description is the type human description.
-		Description string
-		// TypeDef is the type definition Go code.
-		TypeDef string
-		// Validate contains the validation code.
-		Validate string
-	}
-
 	// PayloadInitData contains the data needed to render the
 	// payload constructor.
 	PayloadInitData struct {
@@ -39,42 +27,38 @@ type (
 		BodyTypeRef string
 		// BodyFieldsNoDefault contain the list of body struct fields
 		// that correspond to attributes with no default value.
-		BodyFieldsNoDefault []*FieldData
+		BodyFieldsNoDefault []*files.FieldData
 		// BodyFieldsDefault contain the list of body struct fields
 		// that correspond to attributes with default value.
-		BodyFieldsDefault []*FieldData
+		BodyFieldsDefault []*files.FieldData
 		// Params is the list of constructor parameters other than body.
 		Params []*ParamData
 	}
 
-	// ParamData contains the data needed to render a single parameter.
-	ParamData struct {
-		// VarName is the name of the variable holding the param value.
+	// ValidateData contains the data needed to render the body types
+	// Validate methods.
+	ValidateData struct {
+		// Description is the type description.
+		Description string
+		// VarName is the Go type name.
 		VarName string
-		// FieldName is the name of the type field to be initialized
-		// with the param value.
-		FieldName string
-		// TypeRef is a reference to the parameter type.
-		TypeRef string
-		// DefaultValue is the parameter attribute default value if any.
-		DefaultValue interface{}
-	}
-
-	// FieldData contains the data needed to render a single field.
-	FieldData struct {
-		// FieldName is the name of the payload / body field.
-		FieldName string
-		// Required is true if the field is required.
-		Required bool
-		// DefaultValue is the payload attribute default value if any.
-		DefaultValue interface{}
+		// Validate contains the Go validation code.
+		Validate string
 	}
 )
 
 var (
-	typeDeclTmpl    = template.Must(template.New("typeDecl").Funcs(template.FuncMap{"comment": codegen.Comment}).Parse(typeDeclT))
-	payloadInitTmpl = template.Must(template.New("payloadInit").Funcs(template.FuncMap{"comment": codegen.Comment}).Parse(payloadInitT))
-	validateTmpl    = template.Must(template.New("validate").Funcs(template.FuncMap{"comment": codegen.Comment}).Parse(validateT))
+	funcMap = template.FuncMap{"comment": codegen.Comment}
+
+	typeDeclTmpl = template.Must(
+		template.New("typeDecl").Funcs(funcMap).Parse(typeDeclT),
+	)
+	payloadInitTmpl = template.Must(
+		template.New("payloadInit").Funcs(funcMap).Parse(payloadInitT),
+	)
+	validateTmpl = template.Must(
+		template.New("validate").Funcs(funcMap).Parse(validateT),
+	)
 )
 
 // MarshalTypes return the file containing the type definitions used by the HTTP
@@ -119,12 +103,10 @@ func MarshalTypes(r *rest.ResourceExpr) codegen.File {
 			})
 		}
 		for _, typ := range types {
-			if v := typ.Validate; v != "" {
-				secs = append(secs, &codegen.Section{
-					Template: validateTmpl,
-					Data:     typ,
-				})
-			}
+			secs = append(secs, &codegen.Section{
+				Template: validateTmpl,
+				Data:     typ,
+			})
 		}
 		return secs
 	}
@@ -135,7 +117,7 @@ func requestBodyTypes(r *rest.ResourceExpr) []*TypeData {
 	var types []*TypeData
 	scope := files.Services.Get(r.Name()).Scope
 	for _, a := range r.Actions {
-		if a.EndpointExpr.Payload.Type == design.Empty {
+		if a.MethodExpr.Payload.Type == design.Empty {
 			continue
 		}
 		body := restgen.RequestBodyType(r, a, "ServerRequestBody")
@@ -144,10 +126,11 @@ func requestBodyTypes(r *rest.ResourceExpr) []*TypeData {
 			continue // nothing to generate
 		}
 		var (
-			name     string
-			desc     string
-			def      string
-			validate string
+			name        string
+			desc        string
+			def         string
+			validate    string
+			validateRef string
 		)
 		{
 			name = scope.GoTypeName(ut)
@@ -156,13 +139,19 @@ func requestBodyTypes(r *rest.ResourceExpr) []*TypeData {
 				desc = fmt.Sprintf("%s is the type of the %s \"%s\" HTTP endpoint request body.", name, r.Name(), a.Name())
 			}
 			def = restgen.GoTypeDef(scope, ut.Attribute(), true)
-			validate = codegen.RecursiveValidationCode(ut.Attribute(), false, false, "body")
+			validate = codegen.RecursiveValidationCode(ut.Attribute(), true, true, "body")
+			if validate != "" {
+				validateRef = "err = goa.MergeErrors(err, body.Validate())"
+			}
 		}
 		types = append(types, &TypeData{
+			Name:        ut.Name(),
 			VarName:     name,
 			Description: desc,
-			TypeDef:     def,
-			Validate:    validate,
+			Def:         def,
+			Ref:         scope.GoTypeRef(ut),
+			ValidateDef: validate,
+			ValidateRef: validateRef,
 		})
 	}
 	return types
@@ -177,15 +166,17 @@ func responseBodyTypes(r *rest.ResourceExpr) []*TypeData {
 			if len(a.Responses) > 1 {
 				suffix = http.StatusText(resp.StatusCode)
 			}
-			body := restgen.ResponseBodyType(r, resp, a.EndpointExpr.Result, suffix)
+			body := restgen.ResponseBodyType(r, resp, a.MethodExpr.Result, suffix)
 			ut, ok := body.(design.UserType)
 			if !ok {
 				continue // nothing to generate
 			}
 			var (
-				desc string
-				name string
-				def  string
+				desc        string
+				name        string
+				def         string
+				validate    string
+				validateRef string
 			)
 			{
 				name = scope.GoTypeName(ut)
@@ -194,11 +185,19 @@ func responseBodyTypes(r *rest.ResourceExpr) []*TypeData {
 					desc = fmt.Sprintf("%s is the type of the %s \"%s\" HTTP endpoint %s response body.", name, r.Name(), a.Name(), http.StatusText(resp.StatusCode))
 				}
 				def = restgen.GoTypeDef(scope, ut.Attribute(), true)
+				validate = codegen.RecursiveValidationCode(ut.Attribute(), true, true, "body")
+				if validate != "" {
+					validateRef = "err = goa.MergeErrors(err, body.Validate())"
+				}
 			}
 			types = append(types, &TypeData{
+				Name:        ut.Name(),
 				VarName:     name,
 				Description: desc,
-				TypeDef:     def,
+				Def:         def,
+				Ref:         scope.GoTypeRef(ut),
+				ValidateDef: validate,
+				ValidateRef: validateRef,
 			})
 		}
 	}
@@ -208,12 +207,12 @@ func responseBodyTypes(r *rest.ResourceExpr) []*TypeData {
 func payloadInits(r *rest.ResourceExpr) []*PayloadInitData {
 	var data []*PayloadInitData
 	for _, a := range r.Actions {
-		if a.EndpointExpr.Payload.Type == design.Empty {
+		if a.MethodExpr.Payload.Type == design.Empty {
 			continue // no payload
 		}
 		body := restgen.RequestBodyType(r, a, "ServerRequestBody")
 		ut, ok := body.(design.UserType)
-		if ok && ut == a.EndpointExpr.Payload.Type {
+		if ok && ut == a.MethodExpr.Payload.Type {
 			continue // no need for a constructor
 		}
 		data = append(data, payloadInitData(r, a, ut))
@@ -230,8 +229,8 @@ func payloadInitData(r *rest.ResourceExpr, a *rest.ActionExpr, body design.UserT
 		desc                string
 		typeName            string
 		bodyRef             string
-		bodyFieldsNoDefault []*FieldData
-		bodyFieldsDefault   []*FieldData
+		bodyFieldsNoDefault []*files.FieldData
+		bodyFieldsDefault   []*files.FieldData
 		params              []*ParamData
 	)
 	{
@@ -248,8 +247,10 @@ func payloadInitData(r *rest.ResourceExpr, a *rest.ActionExpr, body design.UserT
 
 		bfields := rest.NewMappedAttributeExpr(body.Attribute())
 		restgen.WalkMappedAttr(bfields, func(name, elem string, required bool, a *design.AttributeExpr) error {
-			field := &FieldData{
-				FieldName:    codegen.GoifyAtt(a, name, true),
+			field := &files.FieldData{
+				Name:         name,
+				VarName:      codegen.GoifyAtt(a, name, true),
+				TypeRef:      svc.Scope.GoTypeRef(a.Type),
 				Required:     required,
 				DefaultValue: a.DefaultValue,
 			}
@@ -269,6 +270,7 @@ func payloadInitData(r *rest.ResourceExpr, a *rest.ActionExpr, body design.UserT
 				pointer = "*"
 			}
 			param := &ParamData{
+				Name:         elem,
 				VarName:      codegen.Goify(elem, false),
 				FieldName:    codegen.GoifyAtt(a, name, true),
 				TypeRef:      pointer + svc.Scope.GoTypeRef(a.Type),
@@ -314,15 +316,15 @@ func {{ .Name }}({{ if .BodyTypeRef }}body {{ .BodyTypeRef }}, {{ end }}
 {{- range .Params }}{{ .VarName }} {{ .TypeRef }}, {{ end }}) (*{{ .TypeName }}, error) {
 	p := {{ .TypeName }}{
 	{{- range .BodyFieldsNoDefault }}
-		{{ .FieldName }}: body.{{ .FieldName }},
+		{{ .VarName }}: body.{{ .VarName }},
 	{{- end }}
 	{{- range .Params }}
 		{{ .FieldName }}: {{ .VarName }},
 	{{- end }}
 	}
 	{{- range .BodyFieldsDefault }}
-	if body.{{ .FieldName }} != nil {
-		p.{{ .FieldName }} = *body.{{ .FieldName }}
+	if body.{{ .Name }} != nil {
+		p.{{ .FieldName }} = *body.{{ .VarName }}
 	} else {
 		p.{{ .FieldName }} = {{ .DefaultValue }}
 	}

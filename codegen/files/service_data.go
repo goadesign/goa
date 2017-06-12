@@ -2,6 +2,7 @@ package files
 
 import (
 	"fmt"
+	"sort"
 
 	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/design"
@@ -35,7 +36,7 @@ type (
 
 	// ServiceMethodData describes a single service method.
 	ServiceMethodData struct {
-		// Name is the endpoint name.
+		// Name is the method name.
 		Name string
 		// Description is the method description.
 		Description string
@@ -59,14 +60,37 @@ type (
 		ResultRef string
 	}
 
-	// UserTypeData describes a user type used by the service types.
+	// UserTypeData contains the data describing a data type.
 	UserTypeData struct {
-		// Name is the generated type name.
+		// Name is the type name.
 		Name string
-		// Description is the type description if any.
+		// VarName is the corresponding Go type name.
+		VarName string
+		// Description is the type human description.
 		Description string
-		// TypeDef is the type definition.
-		TypeDef string
+		// Fields list the object fields. Only present when describing a
+		// user type.
+		Fields []*FieldData
+		// Def is the type definition Go code.
+		Def string
+		// Ref is the reference to the type.
+		Ref string
+		// Type is the underlying type.
+		Type design.UserType
+	}
+
+	// FieldData contains the data needed to render a single field.
+	FieldData struct {
+		// Name is the name of the attribute.
+		Name string
+		// VarName is the name of the Go type field.
+		VarName string
+		// TypeRef is the reference to the field type.
+		TypeRef string
+		// Required is true if the field is required.
+		Required bool
+		// DefaultValue is the payload attribute default value if any.
+		DefaultValue interface{}
 	}
 )
 
@@ -80,21 +104,22 @@ func (d ServicesData) Get(name string) *ServiceData {
 	if service == nil {
 		return nil
 	}
-	return d.analyze(service)
+	d[name] = d.analyze(service)
+	return d[name]
 }
 
-// Method returns the service method data for the endpoint with the given
-// name, nil if there isn't one.
-func (s *ServiceData) Method(endpointName string) *ServiceMethodData {
+// Method returns the service method data for the method with the given name,
+// nil if there isn't one.
+func (s *ServiceData) Method(name string) *ServiceMethodData {
 	for _, m := range s.Methods {
-		if m.Name == endpointName {
+		if m.Name == name {
 			return m
 		}
 	}
 	return nil
 }
 
-// buildData creates the data necessary to render the code of the given service.
+// analyze creates the data necessary to render the code of the given service.
 // It records the user types needed by the service definition in userTypes.
 func (d ServicesData) analyze(service *design.ServiceExpr) *ServiceData {
 	var (
@@ -109,7 +134,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *ServiceData {
 		seen = make(map[string]struct{})
 		// Reserve service, payload and result type names
 		scope.Unique(service, varName)
-		for _, e := range service.Endpoints {
+		for _, e := range service.Methods {
 			// Create user type for raw object payloads
 			if _, ok := e.Payload.Type.(design.Object); ok {
 				e.Payload.Type = &design.UserTypeExpr{
@@ -134,7 +159,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *ServiceData {
 				seen[ut.Name()] = struct{}{}
 			}
 		}
-		for _, e := range service.Endpoints {
+		for _, e := range service.Methods {
 			patt := e.Payload
 			if ut, ok := patt.Type.(design.UserType); ok {
 				patt = ut.Attribute()
@@ -152,8 +177,8 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *ServiceData {
 		methods []*ServiceMethodData
 	)
 	{
-		methods = make([]*ServiceMethodData, len(service.Endpoints))
-		for i, e := range service.Endpoints {
+		methods = make([]*ServiceMethodData, len(service.Methods))
+		for i, e := range service.Methods {
 			m := buildServiceMethodData(e, scope)
 			methods[i] = m
 		}
@@ -194,10 +219,33 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 		if _, ok := seen[dt.Name()]; ok {
 			return nil
 		}
+		obj := design.AsObject(dt.Attribute().Type)
+		fields := make([]*FieldData, len(obj))
+		names := make([]string, len(obj))
+		i := 0
+		for n := range obj {
+			names[i] = n
+			i++
+		}
+		sort.Strings(names)
+		for i, n := range names {
+			att := obj[n]
+			fields[i] = &FieldData{
+				Name:         n,
+				VarName:      codegen.Goify(n, true),
+				TypeRef:      scope.GoTypeRef(att.Type),
+				Required:     dt.Attribute().IsRequired(n),
+				DefaultValue: att.DefaultValue,
+			}
+		}
 		data = append(data, &UserTypeData{
-			Name:        scope.GoTypeName(dt),
+			Name:        dt.Name(),
+			VarName:     scope.GoTypeName(dt),
 			Description: dt.Attribute().Description,
-			TypeDef:     scope.GoTypeDef(dt.Attribute()),
+			Fields:      fields,
+			Def:         scope.GoTypeDef(dt.Attribute()),
+			Ref:         scope.GoTypeRef(dt),
+			Type:        dt,
 		})
 		seen[dt.Name()] = struct{}{}
 		data = append(data, collect(dt.Attribute())...)
@@ -216,7 +264,7 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 
 // buildServiceMethodData creates the data needed to render the given endpoint. It
 // records the user types needed by the service definition in userTypes.
-func buildServiceMethodData(m *design.EndpointExpr, scope *codegen.NameScope) *ServiceMethodData {
+func buildServiceMethodData(m *design.MethodExpr, scope *codegen.NameScope) *ServiceMethodData {
 	var (
 		varName     string
 		desc        string

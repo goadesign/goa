@@ -27,7 +27,7 @@ func Description(d string) {
 		expr.Description = d
 	case *design.DocsExpr:
 		expr.Description = d
-	case *design.EndpointExpr:
+	case *design.MethodExpr:
 		expr.Description = d
 	case *design.ExampleExpr:
 		expr.Description = d

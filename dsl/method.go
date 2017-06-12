@@ -5,15 +5,15 @@ import (
 	"goa.design/goa.v2/eval"
 )
 
-// Endpoint defines a single service endpoint.
+// Method defines a single service method.
 //
-// Endpoint may appear in a Service expression.
-// Endpoint takes two arguments: the name of the endpoint and the defining DSL.
+// Method may appear in a Service expression.
+// Method takes two arguments: the name of the method and the defining DSL.
 //
 // Example:
 //
-//    Endpoint("add", func() {
-//        Description("The add endpoint returns the sum of A and B")
+//    Method("add", func() {
+//        Description("The add method returns the sum of A and B")
 //        Docs(func() {
 //            Description("Add docs")
 //            URL("http//adder.goa.design/docs/actions/add")
@@ -23,12 +23,12 @@ import (
 //        Error(ErrInvalidOperands)
 //    })
 //
-func Endpoint(name string, fn func()) {
+func Method(name string, fn func()) {
 	s, ok := eval.Current().(*design.ServiceExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
-	ep := &design.EndpointExpr{Name: name, Service: s, DSLFunc: fn}
-	s.Endpoints = append(s.Endpoints, ep)
+	ep := &design.MethodExpr{Name: name, Service: s, DSLFunc: fn}
+	s.Methods = append(s.Methods, ep)
 }

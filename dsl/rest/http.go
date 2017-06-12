@@ -11,16 +11,16 @@ import (
 	"goa.design/goa.v2/eval"
 )
 
-// HTTP defines HTTP transport specific properties either on a API, service or
-// on a single endpoint. The function maps the request and response types to
-// HTTP properties such as parameters (via path wildcards or query strings),
-// request and response headers and bodies as well as response status code. HTTP
-// also defines HTTP specific properties such as the endpoint URLs and HTTP
-// methods.
+// HTTP defines HTTP transport specific properties on a API, a service or a
+// single method. The function maps the request and response types to HTTP
+// properties such as parameters (via path wildcards or query strings), request
+// or response headers, request or response bodies as well as response status
+// code. HTTP also defines HTTP specific properties such as the method endpoint
+// URLs and HTTP methods.
 //
 // As a special case HTTP may be used to define the response generated for
 // invalid requests and internal errors (errors returned by the service
-// endpoints that don't match any of the error responses defined in the design).
+// methods that don't match any of the error responses defined in the design).
 // This is the only use of HTTP allowed in the API expression. The attributes of
 // the built in invalid request error are "id", "status", "code", "detail" and
 // "meta", see ErrorMedia.
@@ -33,7 +33,7 @@ import (
 // also define new attributes or override the existing request or response type
 // attributes.
 //
-// HTTP may appear in API, a Service or an Endpoint expression.
+// HTTP may appear in API, a Service or an Method expression.
 //
 // HTTP accepts a single argument which is the defining DSL function.
 //
@@ -60,11 +60,11 @@ import (
 //                               // ErrAuthFailure HTTP response status code.
 //            Parent("account")  // Parent service, used to prefix request
 //                               // paths.
-//            CanonicalEndpoint("add") // Endpoint whose path is used to prefix
-//                                     // the paths of child service.
+//            CanonicalMethod("add") // Method whose path is used to prefix
+//                                   // the paths of child service.
 //        })
 //
-//        Endpoint("add", func() {
+//        Method("add", func() {
 //            Description("Add two operands")
 //            Payload(Operands)
 //            Error(ErrBadRequest, ErrorMedia)
@@ -94,7 +94,7 @@ func HTTP(fn func()) {
 	case *design.ServiceExpr:
 		res := rest.Root.ResourceFor(actual)
 		res.DSLFunc = fn
-	case *design.EndpointExpr:
+	case *design.MethodExpr:
 		res := rest.Root.ResourceFor(actual.Service)
 		act := res.ActionFor(actual.Name, actual)
 		act.DSLFunc = fn
@@ -162,7 +162,7 @@ func Produces(args ...string) {
 }
 
 // Path defines the API or service base path, i.e. the common path prefix to all
-// the API or service endpoints. The path may define wildcards (see GET for a
+// the API or service methods. The path may define wildcards (see GET for a
 // description of the wildcard syntax). The corresponding parameters must be
 // described using Params.
 func Path(val string) {
@@ -187,7 +187,7 @@ func Path(val string) {
 	}
 }
 
-// Docs provides external documentation pointers for endpoints.
+// Docs provides external documentation pointers for methods.
 func Docs(fn func()) {
 	docs := new(design.DocsExpr)
 	if !eval.Execute(fn, docs) {
@@ -212,13 +212,13 @@ func Docs(fn func()) {
 // A wildcard that starts with '{*' matches the rest of the path. Such wildcards
 // must terminate the path.
 //
-// GET may appear in an endpoint HTTP function.
+// GET may appear in a method HTTP function.
 // GET accepts one argument which is the request path.
 //
 // Example:
 //
 //     var _ = Service("Manager", func() {
-//         Endpoint("GetAccount", func() {
+//         Method("GetAccount", func() {
 //             Payload(GetAccount)
 //             Result(Account)
 //             HTTP(func() {
@@ -287,8 +287,8 @@ func route(method, path string) *rest.RouteExpr {
 // required headers using the Required function.
 //
 // Headers may appear in an API or Service HTTP expression to define request
-// headers common to all the API or service endpoints. Headers may also appear
-// in an endpoint, response or error HTTP expression to define the endpoint
+// headers common to all the API or service methods. Headers may also appear
+// in a method, response or error HTTP expression to define the HTTP endpoint
 // request and response headers.
 //
 // Headers accepts one argument: Either a function listing the headers or a user
@@ -334,7 +334,7 @@ func Headers(args interface{}) {
 // attribute with the same name by default.
 //
 // Header may appear in the API HTTP expression (to define request headers
-// common to all the API endpoints), a specific endpoint HTTP expression (to
+// common to all the API endpoints), a specific method HTTP expression (to
 // define request headers), a Result expression (to define the response
 // headers) or an Error expression (to define the error response headers). Header
 // may also appear in a Headers expression.
@@ -346,7 +346,7 @@ func Headers(args interface{}) {
 // Example:
 //
 //    var _ = Service("account", func() {
-//        Endpoint("create", func() {
+//        Method("create", func() {
 //            Payload(CreatePayload)
 //            Result(Account)
 //            HTTP(func() {
@@ -378,7 +378,7 @@ func Header(name string, args ...interface{}) {
 //
 // Params may appear in an API or Service HTTP expression to define the API or
 // service base path and query string parameters. Params may also appear in an
-// endpoint HTTP expression to define the endpoint path and query string
+// method HTTP expression to define the HTTP endpoint path and query string
 // parameters.
 //
 // Params accepts one argument: Either a function listing the parameters or a
@@ -423,7 +423,7 @@ func Params(args interface{}) {
 //
 // Param may appear in the API HTTP expression (to define request parameters
 // common to all the API endpoints), a service HTTP expression to define common
-// parameters to all the service endpoints or a specific endpoint HTTP
+// parameters to all the service methods or a specific method HTTP
 // expression. Param may also appear in a Params expression.
 //
 // Param accepts the same arguments as the Function Attribute.
@@ -435,7 +435,7 @@ func Params(args interface{}) {
 //
 //    var ShowPayload = Type("ShowPayload", func() {
 //        Attribute("id", UInt64, "Account ID")
-//        Attribute("version", String, "Endpoint version", func() {
+//        Attribute("version", String, "Version", func() {
 //            Enum("1.0", "2.0")
 //        })
 //    })
@@ -445,7 +445,7 @@ func Params(args interface{}) {
 //            Path("/{parentID}")
 //            Param("parentID", UInt64, "ID of parent account")
 //        })
-//        Endpoint("show", func() {  // default response type.
+//        Method("show", func() {  // default response type.
 //            Payload(ShowPayload)
 //            Result(AccountMedia)
 //            HTTP(func() {
@@ -480,10 +480,10 @@ func Param(name string, args ...interface{}) {
 
 // Body describes a HTTP request or response body.
 //
-// Body may appear in a Endpoint HTTP expression to define the request body or
-// in an Error or Result HTTP expression to define the response body. If Body is
-// absent then the body is built using the endpoint request or response type
-// attributes not used to describe parameters (request only) or headers.
+// Body may appear in a Method HTTP expression to define the request body or in
+// an Error or Result HTTP expression to define the response body. If Body is
+// absent then the body is built using the HTTP endpoint request or response
+// type attributes not used to describe parameters (request only) or headers.
 //
 // Body accepts one argument which describes the shape of the body, it can be:
 //
@@ -502,13 +502,13 @@ func Param(name string, args ...interface{}) {
 //
 // The following:
 //
-//     Endpoint("create", func() {
+//     Method("create", func() {
 //         Payload(CreatePayload)
 //     })
 //
 // is equivalent to:
 //
-//     Endpoint("create", func() {
+//     Method("create", func() {
 //         Payload(CreatePayload)
 //         HTTP(func() {
 //             Body(func() {
@@ -532,7 +532,7 @@ func Body(args ...interface{}) {
 	// Figure out reference type and setter function
 	switch e := eval.Current().(type) {
 	case *rest.ActionExpr:
-		ref = e.EndpointExpr.Payload
+		ref = e.MethodExpr.Payload
 		setter = func(att *design.AttributeExpr) {
 			e.Body = att
 		}
@@ -550,7 +550,7 @@ func Body(args ...interface{}) {
 			kind += " " + e.Name
 		}
 	case *rest.HTTPResponseExpr:
-		ref = e.Parent.(*rest.ActionExpr).EndpointExpr.Result
+		ref = e.Parent.(*rest.ActionExpr).MethodExpr.Result
 		setter = func(att *design.AttributeExpr) {
 			e.Body = att
 		}
@@ -603,7 +603,7 @@ func Body(args ...interface{}) {
 }
 
 // Parent sets the name of the parent service. The parent service canonical
-// endpoint path is used as prefix for all the service endpoint paths.
+// method path is used as prefix for all the service HTTP endpoint paths.
 func Parent(name string) {
 	r, ok := eval.Current().(*rest.ResourceExpr)
 	if !ok {
@@ -613,10 +613,10 @@ func Parent(name string) {
 	r.ParentName = name
 }
 
-// CanonicalEndpoint sets the name of the service canonical endpoint. The
-// canonical endpoint path is used to prefix the paths to any child service
+// CanonicalMethod sets the name of the service canonical method. The canonical
+// method endpoint path is used to prefix the paths to any child service
 // endpoint. The default value is "show".
-func CanonicalEndpoint(name string) {
+func CanonicalMethod(name string) {
 	r, ok := eval.Current().(*rest.ResourceExpr)
 	if !ok {
 		eval.IncompatibleDSL()

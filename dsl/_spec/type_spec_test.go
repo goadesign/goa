@@ -30,11 +30,11 @@ var BasicType = Type("Name", func() {
 // MediaType is the DSL function used to describe media types. A media type is a
 // special kind of type that adds the concept of views: A view defines a subset
 // of the type attributes to be rendered. This is used to describe *response*
-// types where an endpoint may render different attributes depending on the
-// request state or when different endpoints render the type differently (for
-// example a listing endpoint may render less attribute than a endpoint that
-// retrieves a single value). All media types muse define a default view. The
-// default view is the view named "default".
+// types where an method may render different attributes depending on the
+// request state or when different methods render the type differently (for
+// example a list method may render less attribute than a method that retrieves
+// a single value). All media types muse define a default view. The default view
+// is the view named "default".
 //
 // Media type takes a media type identifier (as defined by RFC6 838) as first
 // argument. This identifier must be unique across all media types in a given

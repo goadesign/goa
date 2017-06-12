@@ -101,14 +101,14 @@ func (r *ResourceExpr) Action(name string) *ActionExpr {
 	return nil
 }
 
-// ActionFor builds the action for the given endpoint.
-func (r *ResourceExpr) ActionFor(name string, e *design.EndpointExpr) *ActionExpr {
+// ActionFor builds the action for the given method.
+func (r *ResourceExpr) ActionFor(name string, m *design.MethodExpr) *ActionExpr {
 	if a := r.Action(name); a != nil {
 		return a
 	}
 	a := &ActionExpr{
-		EndpointExpr: e,
-		Resource:     r,
+		MethodExpr: m,
+		Resource:   r,
 	}
 	r.Actions = append(r.Actions, a)
 	return a

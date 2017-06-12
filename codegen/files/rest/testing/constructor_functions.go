@@ -1,791 +1,788 @@
 package testing
 
-var PayloadQueryBoolConstructorCode = `// NewEndpointQueryBoolPayload instantiates and validates the ServiceQueryBool
-// service EndpointQueryBool endpoint server request body.
-func NewEndpointQueryBoolPayload(q *bool) (*EndpointQueryBoolPayload, error) {
-	p := EndpointQueryBoolPayload{
+var PayloadQueryBoolConstructorCode = `// NewMethodQueryBoolPayload instantiates and validates the ServiceQueryBool
+// service MethodQueryBool endpoint server request body.
+func NewMethodQueryBoolPayload(q *bool) (*MethodQueryBoolPayload, error) {
+	p := MethodQueryBoolPayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryBoolValidateConstructorCode = `// NewEndpointQueryBoolValidatePayload instantiates and validates the
-// ServiceQueryBoolValidate service EndpointQueryBoolValidate endpoint server
+var PayloadQueryBoolValidateConstructorCode = `// NewMethodQueryBoolValidatePayload instantiates and validates the
+// ServiceQueryBoolValidate service MethodQueryBoolValidate endpoint server
 // request body.
-func NewEndpointQueryBoolValidatePayload(q bool) (*EndpointQueryBoolValidatePayload, error) {
-	p := EndpointQueryBoolValidatePayload{
+func NewMethodQueryBoolValidatePayload(q bool) (*MethodQueryBoolValidatePayload, error) {
+	p := MethodQueryBoolValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryIntConstructorCode = `// NewEndpointQueryIntPayload instantiates and validates the ServiceQueryInt
-// service EndpointQueryInt endpoint server request body.
-func NewEndpointQueryIntPayload(q *int) (*EndpointQueryIntPayload, error) {
-	p := EndpointQueryIntPayload{
+var PayloadQueryIntConstructorCode = `// NewMethodQueryIntPayload instantiates and validates the ServiceQueryInt
+// service MethodQueryInt endpoint server request body.
+func NewMethodQueryIntPayload(q *int) (*MethodQueryIntPayload, error) {
+	p := MethodQueryIntPayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryIntValidateConstructorCode = `// NewEndpointQueryIntValidatePayload instantiates and validates the
-// ServiceQueryIntValidate service EndpointQueryIntValidate endpoint server
+var PayloadQueryIntValidateConstructorCode = `// NewMethodQueryIntValidatePayload instantiates and validates the
+// ServiceQueryIntValidate service MethodQueryIntValidate endpoint server
 // request body.
-func NewEndpointQueryIntValidatePayload(q int) (*EndpointQueryIntValidatePayload, error) {
-	p := EndpointQueryIntValidatePayload{
+func NewMethodQueryIntValidatePayload(q int) (*MethodQueryIntValidatePayload, error) {
+	p := MethodQueryIntValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryInt32ConstructorCode = `// NewEndpointQueryInt32Payload instantiates and validates the
-// ServiceQueryInt32 service EndpointQueryInt32 endpoint server request body.
-func NewEndpointQueryInt32Payload(q *int32) (*EndpointQueryInt32Payload, error) {
-	p := EndpointQueryInt32Payload{
+var PayloadQueryInt32ConstructorCode = `// NewMethodQueryInt32Payload instantiates and validates the ServiceQueryInt32
+// service MethodQueryInt32 endpoint server request body.
+func NewMethodQueryInt32Payload(q *int32) (*MethodQueryInt32Payload, error) {
+	p := MethodQueryInt32Payload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryInt32ValidateConstructorCode = `// NewEndpointQueryInt32ValidatePayload instantiates and validates the
-// ServiceQueryInt32Validate service EndpointQueryInt32Validate endpoint server
+var PayloadQueryInt32ValidateConstructorCode = `// NewMethodQueryInt32ValidatePayload instantiates and validates the
+// ServiceQueryInt32Validate service MethodQueryInt32Validate endpoint server
 // request body.
-func NewEndpointQueryInt32ValidatePayload(q int32) (*EndpointQueryInt32ValidatePayload, error) {
-	p := EndpointQueryInt32ValidatePayload{
+func NewMethodQueryInt32ValidatePayload(q int32) (*MethodQueryInt32ValidatePayload, error) {
+	p := MethodQueryInt32ValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryInt64ConstructorCode = `// NewEndpointQueryInt64Payload instantiates and validates the
-// ServiceQueryInt64 service EndpointQueryInt64 endpoint server request body.
-func NewEndpointQueryInt64Payload(q *int64) (*EndpointQueryInt64Payload, error) {
-	p := EndpointQueryInt64Payload{
+var PayloadQueryInt64ConstructorCode = `// NewMethodQueryInt64Payload instantiates and validates the ServiceQueryInt64
+// service MethodQueryInt64 endpoint server request body.
+func NewMethodQueryInt64Payload(q *int64) (*MethodQueryInt64Payload, error) {
+	p := MethodQueryInt64Payload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryInt64ValidateConstructorCode = `// NewEndpointQueryInt64ValidatePayload instantiates and validates the
-// ServiceQueryInt64Validate service EndpointQueryInt64Validate endpoint server
+var PayloadQueryInt64ValidateConstructorCode = `// NewMethodQueryInt64ValidatePayload instantiates and validates the
+// ServiceQueryInt64Validate service MethodQueryInt64Validate endpoint server
 // request body.
-func NewEndpointQueryInt64ValidatePayload(q int64) (*EndpointQueryInt64ValidatePayload, error) {
-	p := EndpointQueryInt64ValidatePayload{
+func NewMethodQueryInt64ValidatePayload(q int64) (*MethodQueryInt64ValidatePayload, error) {
+	p := MethodQueryInt64ValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryUIntConstructorCode = `// NewEndpointQueryUIntPayload instantiates and validates the ServiceQueryUInt
-// service EndpointQueryUInt endpoint server request body.
-func NewEndpointQueryUIntPayload(q *uint) (*EndpointQueryUIntPayload, error) {
-	p := EndpointQueryUIntPayload{
+var PayloadQueryUIntConstructorCode = `// NewMethodQueryUIntPayload instantiates and validates the ServiceQueryUInt
+// service MethodQueryUInt endpoint server request body.
+func NewMethodQueryUIntPayload(q *uint) (*MethodQueryUIntPayload, error) {
+	p := MethodQueryUIntPayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryUIntValidateConstructorCode = `// NewEndpointQueryUIntValidatePayload instantiates and validates the
-// ServiceQueryUIntValidate service EndpointQueryUIntValidate endpoint server
+var PayloadQueryUIntValidateConstructorCode = `// NewMethodQueryUIntValidatePayload instantiates and validates the
+// ServiceQueryUIntValidate service MethodQueryUIntValidate endpoint server
 // request body.
-func NewEndpointQueryUIntValidatePayload(q uint) (*EndpointQueryUIntValidatePayload, error) {
-	p := EndpointQueryUIntValidatePayload{
+func NewMethodQueryUIntValidatePayload(q uint) (*MethodQueryUIntValidatePayload, error) {
+	p := MethodQueryUIntValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryUInt32ConstructorCode = `// NewEndpointQueryUInt32Payload instantiates and validates the
-// ServiceQueryUInt32 service EndpointQueryUInt32 endpoint server request body.
-func NewEndpointQueryUInt32Payload(q *uint32) (*EndpointQueryUInt32Payload, error) {
-	p := EndpointQueryUInt32Payload{
+var PayloadQueryUInt32ConstructorCode = `// NewMethodQueryUInt32Payload instantiates and validates the
+// ServiceQueryUInt32 service MethodQueryUInt32 endpoint server request body.
+func NewMethodQueryUInt32Payload(q *uint32) (*MethodQueryUInt32Payload, error) {
+	p := MethodQueryUInt32Payload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryUInt32ValidateConstructorCode = `// NewEndpointQueryUInt32ValidatePayload instantiates and validates the
-// ServiceQueryUInt32Validate service EndpointQueryUInt32Validate endpoint
+var PayloadQueryUInt32ValidateConstructorCode = `// NewMethodQueryUInt32ValidatePayload instantiates and validates the
+// ServiceQueryUInt32Validate service MethodQueryUInt32Validate endpoint server
+// request body.
+func NewMethodQueryUInt32ValidatePayload(q uint32) (*MethodQueryUInt32ValidatePayload, error) {
+	p := MethodQueryUInt32ValidatePayload{
+		Q: q,
+	}
+	return &p, nil
+}
+`
+
+var PayloadQueryUInt64ConstructorCode = `// NewMethodQueryUInt64Payload instantiates and validates the
+// ServiceQueryUInt64 service MethodQueryUInt64 endpoint server request body.
+func NewMethodQueryUInt64Payload(q *uint64) (*MethodQueryUInt64Payload, error) {
+	p := MethodQueryUInt64Payload{
+		Q: q,
+	}
+	return &p, nil
+}
+`
+
+var PayloadQueryUInt64ValidateConstructorCode = `// NewMethodQueryUInt64ValidatePayload instantiates and validates the
+// ServiceQueryUInt64Validate service MethodQueryUInt64Validate endpoint server
+// request body.
+func NewMethodQueryUInt64ValidatePayload(q uint64) (*MethodQueryUInt64ValidatePayload, error) {
+	p := MethodQueryUInt64ValidatePayload{
+		Q: q,
+	}
+	return &p, nil
+}
+`
+
+var PayloadQueryFloat32ConstructorCode = `// NewMethodQueryFloat32Payload instantiates and validates the
+// ServiceQueryFloat32 service MethodQueryFloat32 endpoint server request body.
+func NewMethodQueryFloat32Payload(q *float32) (*MethodQueryFloat32Payload, error) {
+	p := MethodQueryFloat32Payload{
+		Q: q,
+	}
+	return &p, nil
+}
+`
+
+var PayloadQueryFloat32ValidateConstructorCode = `// NewMethodQueryFloat32ValidatePayload instantiates and validates the
+// ServiceQueryFloat32Validate service MethodQueryFloat32Validate endpoint
 // server request body.
-func NewEndpointQueryUInt32ValidatePayload(q uint32) (*EndpointQueryUInt32ValidatePayload, error) {
-	p := EndpointQueryUInt32ValidatePayload{
+func NewMethodQueryFloat32ValidatePayload(q float32) (*MethodQueryFloat32ValidatePayload, error) {
+	p := MethodQueryFloat32ValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryUInt64ConstructorCode = `// NewEndpointQueryUInt64Payload instantiates and validates the
-// ServiceQueryUInt64 service EndpointQueryUInt64 endpoint server request body.
-func NewEndpointQueryUInt64Payload(q *uint64) (*EndpointQueryUInt64Payload, error) {
-	p := EndpointQueryUInt64Payload{
+var PayloadQueryFloat64ConstructorCode = `// NewMethodQueryFloat64Payload instantiates and validates the
+// ServiceQueryFloat64 service MethodQueryFloat64 endpoint server request body.
+func NewMethodQueryFloat64Payload(q *float64) (*MethodQueryFloat64Payload, error) {
+	p := MethodQueryFloat64Payload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryUInt64ValidateConstructorCode = `// NewEndpointQueryUInt64ValidatePayload instantiates and validates the
-// ServiceQueryUInt64Validate service EndpointQueryUInt64Validate endpoint
+var PayloadQueryFloat64ValidateConstructorCode = `// NewMethodQueryFloat64ValidatePayload instantiates and validates the
+// ServiceQueryFloat64Validate service MethodQueryFloat64Validate endpoint
 // server request body.
-func NewEndpointQueryUInt64ValidatePayload(q uint64) (*EndpointQueryUInt64ValidatePayload, error) {
-	p := EndpointQueryUInt64ValidatePayload{
+func NewMethodQueryFloat64ValidatePayload(q float64) (*MethodQueryFloat64ValidatePayload, error) {
+	p := MethodQueryFloat64ValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryFloat32ConstructorCode = `// NewEndpointQueryFloat32Payload instantiates and validates the
-// ServiceQueryFloat32 service EndpointQueryFloat32 endpoint server request
+var PayloadQueryStringConstructorCode = `// NewMethodQueryStringPayload instantiates and validates the
+// ServiceQueryString service MethodQueryString endpoint server request body.
+func NewMethodQueryStringPayload(q *string) (*MethodQueryStringPayload, error) {
+	p := MethodQueryStringPayload{
+		Q: q,
+	}
+	return &p, nil
+}
+`
+
+var PayloadQueryStringValidateConstructorCode = `// NewMethodQueryStringValidatePayload instantiates and validates the
+// ServiceQueryStringValidate service MethodQueryStringValidate endpoint server
+// request body.
+func NewMethodQueryStringValidatePayload(q string) (*MethodQueryStringValidatePayload, error) {
+	p := MethodQueryStringValidatePayload{
+		Q: q,
+	}
+	return &p, nil
+}
+`
+
+var PayloadQueryBytesConstructorCode = `// NewMethodQueryBytesPayload instantiates and validates the ServiceQueryBytes
+// service MethodQueryBytes endpoint server request body.
+func NewMethodQueryBytesPayload(q []byte) (*MethodQueryBytesPayload, error) {
+	p := MethodQueryBytesPayload{
+		Q: q,
+	}
+	return &p, nil
+}
+`
+
+var PayloadQueryBytesValidateConstructorCode = `// NewMethodQueryBytesValidatePayload instantiates and validates the
+// ServiceQueryBytesValidate service MethodQueryBytesValidate endpoint server
+// request body.
+func NewMethodQueryBytesValidatePayload(q []byte) (*MethodQueryBytesValidatePayload, error) {
+	p := MethodQueryBytesValidatePayload{
+		Q: q,
+	}
+	return &p, nil
+}
+`
+
+var PayloadQueryAnyConstructorCode = `// NewMethodQueryAnyPayload instantiates and validates the ServiceQueryAny
+// service MethodQueryAny endpoint server request body.
+func NewMethodQueryAnyPayload(q interface{}) (*MethodQueryAnyPayload, error) {
+	p := MethodQueryAnyPayload{
+		Q: q,
+	}
+	return &p, nil
+}
+`
+
+var PayloadQueryAnyValidateConstructorCode = `// NewMethodQueryAnyValidatePayload instantiates and validates the
+// ServiceQueryAnyValidate service MethodQueryAnyValidate endpoint server
+// request body.
+func NewMethodQueryAnyValidatePayload(q interface{}) (*MethodQueryAnyValidatePayload, error) {
+	p := MethodQueryAnyValidatePayload{
+		Q: q,
+	}
+	return &p, nil
+}
+`
+
+var PayloadQueryArrayBoolConstructorCode = `// NewMethodQueryArrayBoolPayload instantiates and validates the
+// ServiceQueryArrayBool service MethodQueryArrayBool endpoint server request
 // body.
-func NewEndpointQueryFloat32Payload(q *float32) (*EndpointQueryFloat32Payload, error) {
-	p := EndpointQueryFloat32Payload{
+func NewMethodQueryArrayBoolPayload(q []bool) (*MethodQueryArrayBoolPayload, error) {
+	p := MethodQueryArrayBoolPayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryFloat32ValidateConstructorCode = `// NewEndpointQueryFloat32ValidatePayload instantiates and validates the
-// ServiceQueryFloat32Validate service EndpointQueryFloat32Validate endpoint
+var PayloadQueryArrayBoolValidateConstructorCode = `// NewMethodQueryArrayBoolValidatePayload instantiates and validates the
+// ServiceQueryArrayBoolValidate service MethodQueryArrayBoolValidate endpoint
 // server request body.
-func NewEndpointQueryFloat32ValidatePayload(q float32) (*EndpointQueryFloat32ValidatePayload, error) {
-	p := EndpointQueryFloat32ValidatePayload{
+func NewMethodQueryArrayBoolValidatePayload(q []bool) (*MethodQueryArrayBoolValidatePayload, error) {
+	p := MethodQueryArrayBoolValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryFloat64ConstructorCode = `// NewEndpointQueryFloat64Payload instantiates and validates the
-// ServiceQueryFloat64 service EndpointQueryFloat64 endpoint server request
+var PayloadQueryArrayIntConstructorCode = `// NewMethodQueryArrayIntPayload instantiates and validates the
+// ServiceQueryArrayInt service MethodQueryArrayInt endpoint server request
 // body.
-func NewEndpointQueryFloat64Payload(q *float64) (*EndpointQueryFloat64Payload, error) {
-	p := EndpointQueryFloat64Payload{
+func NewMethodQueryArrayIntPayload(q []int) (*MethodQueryArrayIntPayload, error) {
+	p := MethodQueryArrayIntPayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryFloat64ValidateConstructorCode = `// NewEndpointQueryFloat64ValidatePayload instantiates and validates the
-// ServiceQueryFloat64Validate service EndpointQueryFloat64Validate endpoint
+var PayloadQueryArrayIntValidateConstructorCode = `// NewMethodQueryArrayIntValidatePayload instantiates and validates the
+// ServiceQueryArrayIntValidate service MethodQueryArrayIntValidate endpoint
 // server request body.
-func NewEndpointQueryFloat64ValidatePayload(q float64) (*EndpointQueryFloat64ValidatePayload, error) {
-	p := EndpointQueryFloat64ValidatePayload{
+func NewMethodQueryArrayIntValidatePayload(q []int) (*MethodQueryArrayIntValidatePayload, error) {
+	p := MethodQueryArrayIntValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryStringConstructorCode = `// NewEndpointQueryStringPayload instantiates and validates the
-// ServiceQueryString service EndpointQueryString endpoint server request body.
-func NewEndpointQueryStringPayload(q *string) (*EndpointQueryStringPayload, error) {
-	p := EndpointQueryStringPayload{
-		Q: q,
-	}
-	return &p, nil
-}
-`
-
-var PayloadQueryStringValidateConstructorCode = `// NewEndpointQueryStringValidatePayload instantiates and validates the
-// ServiceQueryStringValidate service EndpointQueryStringValidate endpoint
-// server request body.
-func NewEndpointQueryStringValidatePayload(q string) (*EndpointQueryStringValidatePayload, error) {
-	p := EndpointQueryStringValidatePayload{
-		Q: q,
-	}
-	return &p, nil
-}
-`
-
-var PayloadQueryBytesConstructorCode = `// NewEndpointQueryBytesPayload instantiates and validates the
-// ServiceQueryBytes service EndpointQueryBytes endpoint server request body.
-func NewEndpointQueryBytesPayload(q []byte) (*EndpointQueryBytesPayload, error) {
-	p := EndpointQueryBytesPayload{
-		Q: q,
-	}
-	return &p, nil
-}
-`
-
-var PayloadQueryBytesValidateConstructorCode = `// NewEndpointQueryBytesValidatePayload instantiates and validates the
-// ServiceQueryBytesValidate service EndpointQueryBytesValidate endpoint server
-// request body.
-func NewEndpointQueryBytesValidatePayload(q []byte) (*EndpointQueryBytesValidatePayload, error) {
-	p := EndpointQueryBytesValidatePayload{
-		Q: q,
-	}
-	return &p, nil
-}
-`
-
-var PayloadQueryAnyConstructorCode = `// NewEndpointQueryAnyPayload instantiates and validates the ServiceQueryAny
-// service EndpointQueryAny endpoint server request body.
-func NewEndpointQueryAnyPayload(q interface{}) (*EndpointQueryAnyPayload, error) {
-	p := EndpointQueryAnyPayload{
-		Q: q,
-	}
-	return &p, nil
-}
-`
-
-var PayloadQueryAnyValidateConstructorCode = `// NewEndpointQueryAnyValidatePayload instantiates and validates the
-// ServiceQueryAnyValidate service EndpointQueryAnyValidate endpoint server
-// request body.
-func NewEndpointQueryAnyValidatePayload(q interface{}) (*EndpointQueryAnyValidatePayload, error) {
-	p := EndpointQueryAnyValidatePayload{
-		Q: q,
-	}
-	return &p, nil
-}
-`
-
-var PayloadQueryArrayBoolConstructorCode = `// NewEndpointQueryArrayBoolPayload instantiates and validates the
-// ServiceQueryArrayBool service EndpointQueryArrayBool endpoint server request
+var PayloadQueryArrayInt32ConstructorCode = `// NewMethodQueryArrayInt32Payload instantiates and validates the
+// ServiceQueryArrayInt32 service MethodQueryArrayInt32 endpoint server request
 // body.
-func NewEndpointQueryArrayBoolPayload(q []bool) (*EndpointQueryArrayBoolPayload, error) {
-	p := EndpointQueryArrayBoolPayload{
+func NewMethodQueryArrayInt32Payload(q []int32) (*MethodQueryArrayInt32Payload, error) {
+	p := MethodQueryArrayInt32Payload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryArrayBoolValidateConstructorCode = `// NewEndpointQueryArrayBoolValidatePayload instantiates and validates the
-// ServiceQueryArrayBoolValidate service EndpointQueryArrayBoolValidate
+var PayloadQueryArrayInt32ValidateConstructorCode = `// NewMethodQueryArrayInt32ValidatePayload instantiates and validates the
+// ServiceQueryArrayInt32Validate service MethodQueryArrayInt32Validate
 // endpoint server request body.
-func NewEndpointQueryArrayBoolValidatePayload(q []bool) (*EndpointQueryArrayBoolValidatePayload, error) {
-	p := EndpointQueryArrayBoolValidatePayload{
+func NewMethodQueryArrayInt32ValidatePayload(q []int32) (*MethodQueryArrayInt32ValidatePayload, error) {
+	p := MethodQueryArrayInt32ValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryArrayIntConstructorCode = `// NewEndpointQueryArrayIntPayload instantiates and validates the
-// ServiceQueryArrayInt service EndpointQueryArrayInt endpoint server request
+var PayloadQueryArrayInt64ConstructorCode = `// NewMethodQueryArrayInt64Payload instantiates and validates the
+// ServiceQueryArrayInt64 service MethodQueryArrayInt64 endpoint server request
 // body.
-func NewEndpointQueryArrayIntPayload(q []int) (*EndpointQueryArrayIntPayload, error) {
-	p := EndpointQueryArrayIntPayload{
+func NewMethodQueryArrayInt64Payload(q []int64) (*MethodQueryArrayInt64Payload, error) {
+	p := MethodQueryArrayInt64Payload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryArrayIntValidateConstructorCode = `// NewEndpointQueryArrayIntValidatePayload instantiates and validates the
-// ServiceQueryArrayIntValidate service EndpointQueryArrayIntValidate endpoint
-// server request body.
-func NewEndpointQueryArrayIntValidatePayload(q []int) (*EndpointQueryArrayIntValidatePayload, error) {
-	p := EndpointQueryArrayIntValidatePayload{
-		Q: q,
-	}
-	return &p, nil
-}
-`
-
-var PayloadQueryArrayInt32ConstructorCode = `// NewEndpointQueryArrayInt32Payload instantiates and validates the
-// ServiceQueryArrayInt32 service EndpointQueryArrayInt32 endpoint server
-// request body.
-func NewEndpointQueryArrayInt32Payload(q []int32) (*EndpointQueryArrayInt32Payload, error) {
-	p := EndpointQueryArrayInt32Payload{
-		Q: q,
-	}
-	return &p, nil
-}
-`
-
-var PayloadQueryArrayInt32ValidateConstructorCode = `// NewEndpointQueryArrayInt32ValidatePayload instantiates and validates the
-// ServiceQueryArrayInt32Validate service EndpointQueryArrayInt32Validate
+var PayloadQueryArrayInt64ValidateConstructorCode = `// NewMethodQueryArrayInt64ValidatePayload instantiates and validates the
+// ServiceQueryArrayInt64Validate service MethodQueryArrayInt64Validate
 // endpoint server request body.
-func NewEndpointQueryArrayInt32ValidatePayload(q []int32) (*EndpointQueryArrayInt32ValidatePayload, error) {
-	p := EndpointQueryArrayInt32ValidatePayload{
+func NewMethodQueryArrayInt64ValidatePayload(q []int64) (*MethodQueryArrayInt64ValidatePayload, error) {
+	p := MethodQueryArrayInt64ValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryArrayInt64ConstructorCode = `// NewEndpointQueryArrayInt64Payload instantiates and validates the
-// ServiceQueryArrayInt64 service EndpointQueryArrayInt64 endpoint server
-// request body.
-func NewEndpointQueryArrayInt64Payload(q []int64) (*EndpointQueryArrayInt64Payload, error) {
-	p := EndpointQueryArrayInt64Payload{
-		Q: q,
-	}
-	return &p, nil
-}
-`
-
-var PayloadQueryArrayInt64ValidateConstructorCode = `// NewEndpointQueryArrayInt64ValidatePayload instantiates and validates the
-// ServiceQueryArrayInt64Validate service EndpointQueryArrayInt64Validate
-// endpoint server request body.
-func NewEndpointQueryArrayInt64ValidatePayload(q []int64) (*EndpointQueryArrayInt64ValidatePayload, error) {
-	p := EndpointQueryArrayInt64ValidatePayload{
-		Q: q,
-	}
-	return &p, nil
-}
-`
-
-var PayloadQueryArrayUIntConstructorCode = `// NewEndpointQueryArrayUIntPayload instantiates and validates the
-// ServiceQueryArrayUInt service EndpointQueryArrayUInt endpoint server request
+var PayloadQueryArrayUIntConstructorCode = `// NewMethodQueryArrayUIntPayload instantiates and validates the
+// ServiceQueryArrayUInt service MethodQueryArrayUInt endpoint server request
 // body.
-func NewEndpointQueryArrayUIntPayload(q []uint) (*EndpointQueryArrayUIntPayload, error) {
-	p := EndpointQueryArrayUIntPayload{
+func NewMethodQueryArrayUIntPayload(q []uint) (*MethodQueryArrayUIntPayload, error) {
+	p := MethodQueryArrayUIntPayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryArrayUIntValidateConstructorCode = `// NewEndpointQueryArrayUIntValidatePayload instantiates and validates the
-// ServiceQueryArrayUIntValidate service EndpointQueryArrayUIntValidate
-// endpoint server request body.
-func NewEndpointQueryArrayUIntValidatePayload(q []uint) (*EndpointQueryArrayUIntValidatePayload, error) {
-	p := EndpointQueryArrayUIntValidatePayload{
+var PayloadQueryArrayUIntValidateConstructorCode = `// NewMethodQueryArrayUIntValidatePayload instantiates and validates the
+// ServiceQueryArrayUIntValidate service MethodQueryArrayUIntValidate endpoint
+// server request body.
+func NewMethodQueryArrayUIntValidatePayload(q []uint) (*MethodQueryArrayUIntValidatePayload, error) {
+	p := MethodQueryArrayUIntValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryArrayUInt32ConstructorCode = `// NewEndpointQueryArrayUInt32Payload instantiates and validates the
-// ServiceQueryArrayUInt32 service EndpointQueryArrayUInt32 endpoint server
+var PayloadQueryArrayUInt32ConstructorCode = `// NewMethodQueryArrayUInt32Payload instantiates and validates the
+// ServiceQueryArrayUInt32 service MethodQueryArrayUInt32 endpoint server
 // request body.
-func NewEndpointQueryArrayUInt32Payload(q []uint32) (*EndpointQueryArrayUInt32Payload, error) {
-	p := EndpointQueryArrayUInt32Payload{
+func NewMethodQueryArrayUInt32Payload(q []uint32) (*MethodQueryArrayUInt32Payload, error) {
+	p := MethodQueryArrayUInt32Payload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryArrayUInt32ValidateConstructorCode = `// NewEndpointQueryArrayUInt32ValidatePayload instantiates and validates the
-// ServiceQueryArrayUInt32Validate service EndpointQueryArrayUInt32Validate
+var PayloadQueryArrayUInt32ValidateConstructorCode = `// NewMethodQueryArrayUInt32ValidatePayload instantiates and validates the
+// ServiceQueryArrayUInt32Validate service MethodQueryArrayUInt32Validate
 // endpoint server request body.
-func NewEndpointQueryArrayUInt32ValidatePayload(q []uint32) (*EndpointQueryArrayUInt32ValidatePayload, error) {
-	p := EndpointQueryArrayUInt32ValidatePayload{
+func NewMethodQueryArrayUInt32ValidatePayload(q []uint32) (*MethodQueryArrayUInt32ValidatePayload, error) {
+	p := MethodQueryArrayUInt32ValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryArrayUInt64ConstructorCode = `// NewEndpointQueryArrayUInt64Payload instantiates and validates the
-// ServiceQueryArrayUInt64 service EndpointQueryArrayUInt64 endpoint server
+var PayloadQueryArrayUInt64ConstructorCode = `// NewMethodQueryArrayUInt64Payload instantiates and validates the
+// ServiceQueryArrayUInt64 service MethodQueryArrayUInt64 endpoint server
 // request body.
-func NewEndpointQueryArrayUInt64Payload(q []uint64) (*EndpointQueryArrayUInt64Payload, error) {
-	p := EndpointQueryArrayUInt64Payload{
+func NewMethodQueryArrayUInt64Payload(q []uint64) (*MethodQueryArrayUInt64Payload, error) {
+	p := MethodQueryArrayUInt64Payload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryArrayUInt64ValidateConstructorCode = `// NewEndpointQueryArrayUInt64ValidatePayload instantiates and validates the
-// ServiceQueryArrayUInt64Validate service EndpointQueryArrayUInt64Validate
+var PayloadQueryArrayUInt64ValidateConstructorCode = `// NewMethodQueryArrayUInt64ValidatePayload instantiates and validates the
+// ServiceQueryArrayUInt64Validate service MethodQueryArrayUInt64Validate
 // endpoint server request body.
-func NewEndpointQueryArrayUInt64ValidatePayload(q []uint64) (*EndpointQueryArrayUInt64ValidatePayload, error) {
-	p := EndpointQueryArrayUInt64ValidatePayload{
+func NewMethodQueryArrayUInt64ValidatePayload(q []uint64) (*MethodQueryArrayUInt64ValidatePayload, error) {
+	p := MethodQueryArrayUInt64ValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryArrayFloat32ConstructorCode = `// NewEndpointQueryArrayFloat32Payload instantiates and validates the
-// ServiceQueryArrayFloat32 service EndpointQueryArrayFloat32 endpoint server
+var PayloadQueryArrayFloat32ConstructorCode = `// NewMethodQueryArrayFloat32Payload instantiates and validates the
+// ServiceQueryArrayFloat32 service MethodQueryArrayFloat32 endpoint server
 // request body.
-func NewEndpointQueryArrayFloat32Payload(q []float32) (*EndpointQueryArrayFloat32Payload, error) {
-	p := EndpointQueryArrayFloat32Payload{
+func NewMethodQueryArrayFloat32Payload(q []float32) (*MethodQueryArrayFloat32Payload, error) {
+	p := MethodQueryArrayFloat32Payload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryArrayFloat32ValidateConstructorCode = `// NewEndpointQueryArrayFloat32ValidatePayload instantiates and validates the
-// ServiceQueryArrayFloat32Validate service EndpointQueryArrayFloat32Validate
+var PayloadQueryArrayFloat32ValidateConstructorCode = `// NewMethodQueryArrayFloat32ValidatePayload instantiates and validates the
+// ServiceQueryArrayFloat32Validate service MethodQueryArrayFloat32Validate
 // endpoint server request body.
-func NewEndpointQueryArrayFloat32ValidatePayload(q []float32) (*EndpointQueryArrayFloat32ValidatePayload, error) {
-	p := EndpointQueryArrayFloat32ValidatePayload{
+func NewMethodQueryArrayFloat32ValidatePayload(q []float32) (*MethodQueryArrayFloat32ValidatePayload, error) {
+	p := MethodQueryArrayFloat32ValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryArrayFloat64ConstructorCode = `// NewEndpointQueryArrayFloat64Payload instantiates and validates the
-// ServiceQueryArrayFloat64 service EndpointQueryArrayFloat64 endpoint server
+var PayloadQueryArrayFloat64ConstructorCode = `// NewMethodQueryArrayFloat64Payload instantiates and validates the
+// ServiceQueryArrayFloat64 service MethodQueryArrayFloat64 endpoint server
 // request body.
-func NewEndpointQueryArrayFloat64Payload(q []float64) (*EndpointQueryArrayFloat64Payload, error) {
-	p := EndpointQueryArrayFloat64Payload{
+func NewMethodQueryArrayFloat64Payload(q []float64) (*MethodQueryArrayFloat64Payload, error) {
+	p := MethodQueryArrayFloat64Payload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryArrayFloat64ValidateConstructorCode = `// NewEndpointQueryArrayFloat64ValidatePayload instantiates and validates the
-// ServiceQueryArrayFloat64Validate service EndpointQueryArrayFloat64Validate
+var PayloadQueryArrayFloat64ValidateConstructorCode = `// NewMethodQueryArrayFloat64ValidatePayload instantiates and validates the
+// ServiceQueryArrayFloat64Validate service MethodQueryArrayFloat64Validate
 // endpoint server request body.
-func NewEndpointQueryArrayFloat64ValidatePayload(q []float64) (*EndpointQueryArrayFloat64ValidatePayload, error) {
-	p := EndpointQueryArrayFloat64ValidatePayload{
+func NewMethodQueryArrayFloat64ValidatePayload(q []float64) (*MethodQueryArrayFloat64ValidatePayload, error) {
+	p := MethodQueryArrayFloat64ValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryArrayStringConstructorCode = `// NewEndpointQueryArrayStringPayload instantiates and validates the
-// ServiceQueryArrayString service EndpointQueryArrayString endpoint server
+var PayloadQueryArrayStringConstructorCode = `// NewMethodQueryArrayStringPayload instantiates and validates the
+// ServiceQueryArrayString service MethodQueryArrayString endpoint server
 // request body.
-func NewEndpointQueryArrayStringPayload(q []string) (*EndpointQueryArrayStringPayload, error) {
-	p := EndpointQueryArrayStringPayload{
+func NewMethodQueryArrayStringPayload(q []string) (*MethodQueryArrayStringPayload, error) {
+	p := MethodQueryArrayStringPayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryArrayStringValidateConstructorCode = `// NewEndpointQueryArrayStringValidatePayload instantiates and validates the
-// ServiceQueryArrayStringValidate service EndpointQueryArrayStringValidate
+var PayloadQueryArrayStringValidateConstructorCode = `// NewMethodQueryArrayStringValidatePayload instantiates and validates the
+// ServiceQueryArrayStringValidate service MethodQueryArrayStringValidate
 // endpoint server request body.
-func NewEndpointQueryArrayStringValidatePayload(q []string) (*EndpointQueryArrayStringValidatePayload, error) {
-	p := EndpointQueryArrayStringValidatePayload{
+func NewMethodQueryArrayStringValidatePayload(q []string) (*MethodQueryArrayStringValidatePayload, error) {
+	p := MethodQueryArrayStringValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryArrayBytesConstructorCode = `// NewEndpointQueryArrayBytesPayload instantiates and validates the
-// ServiceQueryArrayBytes service EndpointQueryArrayBytes endpoint server
-// request body.
-func NewEndpointQueryArrayBytesPayload(q [][]byte) (*EndpointQueryArrayBytesPayload, error) {
-	p := EndpointQueryArrayBytesPayload{
-		Q: q,
-	}
-	return &p, nil
-}
-`
-
-var PayloadQueryArrayBytesValidateConstructorCode = `// NewEndpointQueryArrayBytesValidatePayload instantiates and validates the
-// ServiceQueryArrayBytesValidate service EndpointQueryArrayBytesValidate
-// endpoint server request body.
-func NewEndpointQueryArrayBytesValidatePayload(q [][]byte) (*EndpointQueryArrayBytesValidatePayload, error) {
-	p := EndpointQueryArrayBytesValidatePayload{
-		Q: q,
-	}
-	return &p, nil
-}
-`
-
-var PayloadQueryArrayAnyConstructorCode = `// NewEndpointQueryArrayAnyPayload instantiates and validates the
-// ServiceQueryArrayAny service EndpointQueryArrayAny endpoint server request
+var PayloadQueryArrayBytesConstructorCode = `// NewMethodQueryArrayBytesPayload instantiates and validates the
+// ServiceQueryArrayBytes service MethodQueryArrayBytes endpoint server request
 // body.
-func NewEndpointQueryArrayAnyPayload(q []interface{}) (*EndpointQueryArrayAnyPayload, error) {
-	p := EndpointQueryArrayAnyPayload{
+func NewMethodQueryArrayBytesPayload(q [][]byte) (*MethodQueryArrayBytesPayload, error) {
+	p := MethodQueryArrayBytesPayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryArrayAnyValidateConstructorCode = `// NewEndpointQueryArrayAnyValidatePayload instantiates and validates the
-// ServiceQueryArrayAnyValidate service EndpointQueryArrayAnyValidate endpoint
+var PayloadQueryArrayBytesValidateConstructorCode = `// NewMethodQueryArrayBytesValidatePayload instantiates and validates the
+// ServiceQueryArrayBytesValidate service MethodQueryArrayBytesValidate
+// endpoint server request body.
+func NewMethodQueryArrayBytesValidatePayload(q [][]byte) (*MethodQueryArrayBytesValidatePayload, error) {
+	p := MethodQueryArrayBytesValidatePayload{
+		Q: q,
+	}
+	return &p, nil
+}
+`
+
+var PayloadQueryArrayAnyConstructorCode = `// NewMethodQueryArrayAnyPayload instantiates and validates the
+// ServiceQueryArrayAny service MethodQueryArrayAny endpoint server request
+// body.
+func NewMethodQueryArrayAnyPayload(q []interface{}) (*MethodQueryArrayAnyPayload, error) {
+	p := MethodQueryArrayAnyPayload{
+		Q: q,
+	}
+	return &p, nil
+}
+`
+
+var PayloadQueryArrayAnyValidateConstructorCode = `// NewMethodQueryArrayAnyValidatePayload instantiates and validates the
+// ServiceQueryArrayAnyValidate service MethodQueryArrayAnyValidate endpoint
 // server request body.
-func NewEndpointQueryArrayAnyValidatePayload(q []interface{}) (*EndpointQueryArrayAnyValidatePayload, error) {
-	p := EndpointQueryArrayAnyValidatePayload{
+func NewMethodQueryArrayAnyValidatePayload(q []interface{}) (*MethodQueryArrayAnyValidatePayload, error) {
+	p := MethodQueryArrayAnyValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryMapStringStringConstructorCode = `// NewEndpointQueryMapStringStringPayload instantiates and validates the
-// ServiceQueryMapStringString service EndpointQueryMapStringString endpoint
+var PayloadQueryMapStringStringConstructorCode = `// NewMethodQueryMapStringStringPayload instantiates and validates the
+// ServiceQueryMapStringString service MethodQueryMapStringString endpoint
 // server request body.
-func NewEndpointQueryMapStringStringPayload(q map[string]string) (*EndpointQueryMapStringStringPayload, error) {
-	p := EndpointQueryMapStringStringPayload{
+func NewMethodQueryMapStringStringPayload(q map[string]string) (*MethodQueryMapStringStringPayload, error) {
+	p := MethodQueryMapStringStringPayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryMapStringStringValidateConstructorCode = `// NewEndpointQueryMapStringStringValidatePayload instantiates and validates
-// the ServiceQueryMapStringStringValidate service
-// EndpointQueryMapStringStringValidate endpoint server request body.
-func NewEndpointQueryMapStringStringValidatePayload(q map[string]string) (*EndpointQueryMapStringStringValidatePayload, error) {
-	p := EndpointQueryMapStringStringValidatePayload{
+var PayloadQueryMapStringStringValidateConstructorCode = `// NewMethodQueryMapStringStringValidatePayload instantiates and validates the
+// ServiceQueryMapStringStringValidate service
+// MethodQueryMapStringStringValidate endpoint server request body.
+func NewMethodQueryMapStringStringValidatePayload(q map[string]string) (*MethodQueryMapStringStringValidatePayload, error) {
+	p := MethodQueryMapStringStringValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryMapStringBoolConstructorCode = `// NewEndpointQueryMapStringBoolPayload instantiates and validates the
-// ServiceQueryMapStringBool service EndpointQueryMapStringBool endpoint server
+var PayloadQueryMapStringBoolConstructorCode = `// NewMethodQueryMapStringBoolPayload instantiates and validates the
+// ServiceQueryMapStringBool service MethodQueryMapStringBool endpoint server
 // request body.
-func NewEndpointQueryMapStringBoolPayload(q map[string]bool) (*EndpointQueryMapStringBoolPayload, error) {
-	p := EndpointQueryMapStringBoolPayload{
+func NewMethodQueryMapStringBoolPayload(q map[string]bool) (*MethodQueryMapStringBoolPayload, error) {
+	p := MethodQueryMapStringBoolPayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryMapStringBoolValidateConstructorCode = `// NewEndpointQueryMapStringBoolValidatePayload instantiates and validates the
-// ServiceQueryMapStringBoolValidate service EndpointQueryMapStringBoolValidate
+var PayloadQueryMapStringBoolValidateConstructorCode = `// NewMethodQueryMapStringBoolValidatePayload instantiates and validates the
+// ServiceQueryMapStringBoolValidate service MethodQueryMapStringBoolValidate
 // endpoint server request body.
-func NewEndpointQueryMapStringBoolValidatePayload(q map[string]bool) (*EndpointQueryMapStringBoolValidatePayload, error) {
-	p := EndpointQueryMapStringBoolValidatePayload{
+func NewMethodQueryMapStringBoolValidatePayload(q map[string]bool) (*MethodQueryMapStringBoolValidatePayload, error) {
+	p := MethodQueryMapStringBoolValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryMapBoolStringConstructorCode = `// NewEndpointQueryMapBoolStringPayload instantiates and validates the
-// ServiceQueryMapBoolString service EndpointQueryMapBoolString endpoint server
+var PayloadQueryMapBoolStringConstructorCode = `// NewMethodQueryMapBoolStringPayload instantiates and validates the
+// ServiceQueryMapBoolString service MethodQueryMapBoolString endpoint server
 // request body.
-func NewEndpointQueryMapBoolStringPayload(q map[bool]string) (*EndpointQueryMapBoolStringPayload, error) {
-	p := EndpointQueryMapBoolStringPayload{
+func NewMethodQueryMapBoolStringPayload(q map[bool]string) (*MethodQueryMapBoolStringPayload, error) {
+	p := MethodQueryMapBoolStringPayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryMapBoolStringValidateConstructorCode = `// NewEndpointQueryMapBoolStringValidatePayload instantiates and validates the
-// ServiceQueryMapBoolStringValidate service EndpointQueryMapBoolStringValidate
+var PayloadQueryMapBoolStringValidateConstructorCode = `// NewMethodQueryMapBoolStringValidatePayload instantiates and validates the
+// ServiceQueryMapBoolStringValidate service MethodQueryMapBoolStringValidate
 // endpoint server request body.
-func NewEndpointQueryMapBoolStringValidatePayload(q map[bool]string) (*EndpointQueryMapBoolStringValidatePayload, error) {
-	p := EndpointQueryMapBoolStringValidatePayload{
+func NewMethodQueryMapBoolStringValidatePayload(q map[bool]string) (*MethodQueryMapBoolStringValidatePayload, error) {
+	p := MethodQueryMapBoolStringValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryMapBoolBoolConstructorCode = `// NewEndpointQueryMapBoolBoolPayload instantiates and validates the
-// ServiceQueryMapBoolBool service EndpointQueryMapBoolBool endpoint server
+var PayloadQueryMapBoolBoolConstructorCode = `// NewMethodQueryMapBoolBoolPayload instantiates and validates the
+// ServiceQueryMapBoolBool service MethodQueryMapBoolBool endpoint server
 // request body.
-func NewEndpointQueryMapBoolBoolPayload(q map[bool]bool) (*EndpointQueryMapBoolBoolPayload, error) {
-	p := EndpointQueryMapBoolBoolPayload{
+func NewMethodQueryMapBoolBoolPayload(q map[bool]bool) (*MethodQueryMapBoolBoolPayload, error) {
+	p := MethodQueryMapBoolBoolPayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryMapBoolBoolValidateConstructorCode = `// NewEndpointQueryMapBoolBoolValidatePayload instantiates and validates the
-// ServiceQueryMapBoolBoolValidate service EndpointQueryMapBoolBoolValidate
+var PayloadQueryMapBoolBoolValidateConstructorCode = `// NewMethodQueryMapBoolBoolValidatePayload instantiates and validates the
+// ServiceQueryMapBoolBoolValidate service MethodQueryMapBoolBoolValidate
 // endpoint server request body.
-func NewEndpointQueryMapBoolBoolValidatePayload(q map[bool]bool) (*EndpointQueryMapBoolBoolValidatePayload, error) {
-	p := EndpointQueryMapBoolBoolValidatePayload{
+func NewMethodQueryMapBoolBoolValidatePayload(q map[bool]bool) (*MethodQueryMapBoolBoolValidatePayload, error) {
+	p := MethodQueryMapBoolBoolValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryMapStringArrayStringConstructorCode = `// NewEndpointQueryMapStringArrayStringPayload instantiates and validates the
-// ServiceQueryMapStringArrayString service EndpointQueryMapStringArrayString
+var PayloadQueryMapStringArrayStringConstructorCode = `// NewMethodQueryMapStringArrayStringPayload instantiates and validates the
+// ServiceQueryMapStringArrayString service MethodQueryMapStringArrayString
 // endpoint server request body.
-func NewEndpointQueryMapStringArrayStringPayload(q map[string][]string) (*EndpointQueryMapStringArrayStringPayload, error) {
-	p := EndpointQueryMapStringArrayStringPayload{
+func NewMethodQueryMapStringArrayStringPayload(q map[string][]string) (*MethodQueryMapStringArrayStringPayload, error) {
+	p := MethodQueryMapStringArrayStringPayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryMapStringArrayStringValidateConstructorCode = `// NewEndpointQueryMapStringArrayStringValidatePayload instantiates and
-// validates the ServiceQueryMapStringArrayStringValidate service
-// EndpointQueryMapStringArrayStringValidate endpoint server request body.
-func NewEndpointQueryMapStringArrayStringValidatePayload(q map[string][]string) (*EndpointQueryMapStringArrayStringValidatePayload, error) {
-	p := EndpointQueryMapStringArrayStringValidatePayload{
+var PayloadQueryMapStringArrayStringValidateConstructorCode = `// NewMethodQueryMapStringArrayStringValidatePayload instantiates and validates
+// the ServiceQueryMapStringArrayStringValidate service
+// MethodQueryMapStringArrayStringValidate endpoint server request body.
+func NewMethodQueryMapStringArrayStringValidatePayload(q map[string][]string) (*MethodQueryMapStringArrayStringValidatePayload, error) {
+	p := MethodQueryMapStringArrayStringValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryMapStringArrayBoolConstructorCode = `// NewEndpointQueryMapStringArrayBoolPayload instantiates and validates the
-// ServiceQueryMapStringArrayBool service EndpointQueryMapStringArrayBool
+var PayloadQueryMapStringArrayBoolConstructorCode = `// NewMethodQueryMapStringArrayBoolPayload instantiates and validates the
+// ServiceQueryMapStringArrayBool service MethodQueryMapStringArrayBool
 // endpoint server request body.
-func NewEndpointQueryMapStringArrayBoolPayload(q map[string][]bool) (*EndpointQueryMapStringArrayBoolPayload, error) {
-	p := EndpointQueryMapStringArrayBoolPayload{
+func NewMethodQueryMapStringArrayBoolPayload(q map[string][]bool) (*MethodQueryMapStringArrayBoolPayload, error) {
+	p := MethodQueryMapStringArrayBoolPayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryMapStringArrayBoolValidateConstructorCode = `// NewEndpointQueryMapStringArrayBoolValidatePayload instantiates and validates
+var PayloadQueryMapStringArrayBoolValidateConstructorCode = `// NewMethodQueryMapStringArrayBoolValidatePayload instantiates and validates
 // the ServiceQueryMapStringArrayBoolValidate service
-// EndpointQueryMapStringArrayBoolValidate endpoint server request body.
-func NewEndpointQueryMapStringArrayBoolValidatePayload(q map[string][]bool) (*EndpointQueryMapStringArrayBoolValidatePayload, error) {
-	p := EndpointQueryMapStringArrayBoolValidatePayload{
+// MethodQueryMapStringArrayBoolValidate endpoint server request body.
+func NewMethodQueryMapStringArrayBoolValidatePayload(q map[string][]bool) (*MethodQueryMapStringArrayBoolValidatePayload, error) {
+	p := MethodQueryMapStringArrayBoolValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryMapBoolArrayStringConstructorCode = `// NewEndpointQueryMapBoolArrayStringPayload instantiates and validates the
-// ServiceQueryMapBoolArrayString service EndpointQueryMapBoolArrayString
+var PayloadQueryMapBoolArrayStringConstructorCode = `// NewMethodQueryMapBoolArrayStringPayload instantiates and validates the
+// ServiceQueryMapBoolArrayString service MethodQueryMapBoolArrayString
 // endpoint server request body.
-func NewEndpointQueryMapBoolArrayStringPayload(q map[bool][]string) (*EndpointQueryMapBoolArrayStringPayload, error) {
-	p := EndpointQueryMapBoolArrayStringPayload{
+func NewMethodQueryMapBoolArrayStringPayload(q map[bool][]string) (*MethodQueryMapBoolArrayStringPayload, error) {
+	p := MethodQueryMapBoolArrayStringPayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryMapBoolArrayStringValidateConstructorCode = `// NewEndpointQueryMapBoolArrayStringValidatePayload instantiates and validates
+var PayloadQueryMapBoolArrayStringValidateConstructorCode = `// NewMethodQueryMapBoolArrayStringValidatePayload instantiates and validates
 // the ServiceQueryMapBoolArrayStringValidate service
-// EndpointQueryMapBoolArrayStringValidate endpoint server request body.
-func NewEndpointQueryMapBoolArrayStringValidatePayload(q map[bool][]string) (*EndpointQueryMapBoolArrayStringValidatePayload, error) {
-	p := EndpointQueryMapBoolArrayStringValidatePayload{
+// MethodQueryMapBoolArrayStringValidate endpoint server request body.
+func NewMethodQueryMapBoolArrayStringValidatePayload(q map[bool][]string) (*MethodQueryMapBoolArrayStringValidatePayload, error) {
+	p := MethodQueryMapBoolArrayStringValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryMapBoolArrayBoolConstructorCode = `// NewEndpointQueryMapBoolArrayBoolPayload instantiates and validates the
-// ServiceQueryMapBoolArrayBool service EndpointQueryMapBoolArrayBool endpoint
+var PayloadQueryMapBoolArrayBoolConstructorCode = `// NewMethodQueryMapBoolArrayBoolPayload instantiates and validates the
+// ServiceQueryMapBoolArrayBool service MethodQueryMapBoolArrayBool endpoint
 // server request body.
-func NewEndpointQueryMapBoolArrayBoolPayload(q map[bool][]bool) (*EndpointQueryMapBoolArrayBoolPayload, error) {
-	p := EndpointQueryMapBoolArrayBoolPayload{
+func NewMethodQueryMapBoolArrayBoolPayload(q map[bool][]bool) (*MethodQueryMapBoolArrayBoolPayload, error) {
+	p := MethodQueryMapBoolArrayBoolPayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadQueryMapBoolArrayBoolValidateConstructorCode = `// NewEndpointQueryMapBoolArrayBoolValidatePayload instantiates and validates
-// the ServiceQueryMapBoolArrayBoolValidate service
-// EndpointQueryMapBoolArrayBoolValidate endpoint server request body.
-func NewEndpointQueryMapBoolArrayBoolValidatePayload(q map[bool][]bool) (*EndpointQueryMapBoolArrayBoolValidatePayload, error) {
-	p := EndpointQueryMapBoolArrayBoolValidatePayload{
+var PayloadQueryMapBoolArrayBoolValidateConstructorCode = `// NewMethodQueryMapBoolArrayBoolValidatePayload instantiates and validates the
+// ServiceQueryMapBoolArrayBoolValidate service
+// MethodQueryMapBoolArrayBoolValidate endpoint server request body.
+func NewMethodQueryMapBoolArrayBoolValidatePayload(q map[bool][]bool) (*MethodQueryMapBoolArrayBoolValidatePayload, error) {
+	p := MethodQueryMapBoolArrayBoolValidatePayload{
 		Q: q,
 	}
 	return &p, nil
 }
 `
 
-var PayloadPathStringConstructorCode = `// NewEndpointPathStringPayload instantiates and validates the
-// ServicePathString service EndpointPathString endpoint server request body.
-func NewEndpointPathStringPayload(p string) (*EndpointPathStringPayload, error) {
-	p := EndpointPathStringPayload{
+var PayloadPathStringConstructorCode = `// NewMethodPathStringPayload instantiates and validates the ServicePathString
+// service MethodPathString endpoint server request body.
+func NewMethodPathStringPayload(p string) (*MethodPathStringPayload, error) {
+	p := MethodPathStringPayload{
 		P: p,
 	}
 	return &p, nil
 }
 `
 
-var PayloadPathStringValidateConstructorCode = `// NewEndpointPathStringValidatePayload instantiates and validates the
-// ServicePathStringValidate service EndpointPathStringValidate endpoint server
+var PayloadPathStringValidateConstructorCode = `// NewMethodPathStringValidatePayload instantiates and validates the
+// ServicePathStringValidate service MethodPathStringValidate endpoint server
 // request body.
-func NewEndpointPathStringValidatePayload(p string) (*EndpointPathStringValidatePayload, error) {
-	p := EndpointPathStringValidatePayload{
+func NewMethodPathStringValidatePayload(p string) (*MethodPathStringValidatePayload, error) {
+	p := MethodPathStringValidatePayload{
 		P: p,
 	}
 	return &p, nil
 }
 `
 
-var PayloadPathArrayStringConstructorCode = `// NewEndpointPathArrayStringPayload instantiates and validates the
-// ServicePathArrayString service EndpointPathArrayString endpoint server
-// request body.
-func NewEndpointPathArrayStringPayload(p []string) (*EndpointPathArrayStringPayload, error) {
-	p := EndpointPathArrayStringPayload{
-		P: p,
-	}
-	return &p, nil
-}
-`
-
-var PayloadPathArrayStringValidateConstructorCode = `// NewEndpointPathArrayStringValidatePayload instantiates and validates the
-// ServicePathArrayStringValidate service EndpointPathArrayStringValidate
-// endpoint server request body.
-func NewEndpointPathArrayStringValidatePayload(p []string) (*EndpointPathArrayStringValidatePayload, error) {
-	p := EndpointPathArrayStringValidatePayload{
-		P: p,
-	}
-	return &p, nil
-}
-`
-
-var PayloadHeaderStringConstructorCode = `// NewEndpointHeaderStringPayload instantiates and validates the
-// ServiceHeaderString service EndpointHeaderString endpoint server request
+var PayloadPathArrayStringConstructorCode = `// NewMethodPathArrayStringPayload instantiates and validates the
+// ServicePathArrayString service MethodPathArrayString endpoint server request
 // body.
-func NewEndpointHeaderStringPayload(h *string) (*EndpointHeaderStringPayload, error) {
-	p := EndpointHeaderStringPayload{
-		H: h,
+func NewMethodPathArrayStringPayload(p []string) (*MethodPathArrayStringPayload, error) {
+	p := MethodPathArrayStringPayload{
+		P: p,
 	}
 	return &p, nil
 }
 `
 
-var PayloadHeaderStringValidateConstructorCode = `// NewEndpointHeaderStringValidatePayload instantiates and validates the
-// ServiceHeaderStringValidate service EndpointHeaderStringValidate endpoint
-// server request body.
-func NewEndpointHeaderStringValidatePayload(h *string) (*EndpointHeaderStringValidatePayload, error) {
-	p := EndpointHeaderStringValidatePayload{
-		H: h,
-	}
-	return &p, nil
-}
-`
-
-var PayloadHeaderArrayStringConstructorCode = `// NewEndpointHeaderArrayStringPayload instantiates and validates the
-// ServiceHeaderArrayString service EndpointHeaderArrayString endpoint server
-// request body.
-func NewEndpointHeaderArrayStringPayload(h []string) (*EndpointHeaderArrayStringPayload, error) {
-	p := EndpointHeaderArrayStringPayload{
-		H: h,
-	}
-	return &p, nil
-}
-`
-
-var PayloadHeaderArrayStringValidateConstructorCode = `// NewEndpointHeaderArrayStringValidatePayload instantiates and validates the
-// ServiceHeaderArrayStringValidate service EndpointHeaderArrayStringValidate
+var PayloadPathArrayStringValidateConstructorCode = `// NewMethodPathArrayStringValidatePayload instantiates and validates the
+// ServicePathArrayStringValidate service MethodPathArrayStringValidate
 // endpoint server request body.
-func NewEndpointHeaderArrayStringValidatePayload(h []string) (*EndpointHeaderArrayStringValidatePayload, error) {
-	p := EndpointHeaderArrayStringValidatePayload{
+func NewMethodPathArrayStringValidatePayload(p []string) (*MethodPathArrayStringValidatePayload, error) {
+	p := MethodPathArrayStringValidatePayload{
+		P: p,
+	}
+	return &p, nil
+}
+`
+
+var PayloadHeaderStringConstructorCode = `// NewMethodHeaderStringPayload instantiates and validates the
+// ServiceHeaderString service MethodHeaderString endpoint server request body.
+func NewMethodHeaderStringPayload(h *string) (*MethodHeaderStringPayload, error) {
+	p := MethodHeaderStringPayload{
 		H: h,
 	}
 	return &p, nil
 }
 `
 
-var PayloadBodyQueryObjectConstructorCode = `// NewEndpointBodyQueryObjectPayload instantiates and validates the
-// ServiceBodyQueryObject service EndpointBodyQueryObject endpoint server
+var PayloadHeaderStringValidateConstructorCode = `// NewMethodHeaderStringValidatePayload instantiates and validates the
+// ServiceHeaderStringValidate service MethodHeaderStringValidate endpoint
+// server request body.
+func NewMethodHeaderStringValidatePayload(h *string) (*MethodHeaderStringValidatePayload, error) {
+	p := MethodHeaderStringValidatePayload{
+		H: h,
+	}
+	return &p, nil
+}
+`
+
+var PayloadHeaderArrayStringConstructorCode = `// NewMethodHeaderArrayStringPayload instantiates and validates the
+// ServiceHeaderArrayString service MethodHeaderArrayString endpoint server
 // request body.
-func NewEndpointBodyQueryObjectPayload(body *EndpointBodyQueryObjectServerRequestBody, b *string) (*EndpointBodyQueryObjectPayload, error) {
-	p := EndpointBodyQueryObjectPayload{
+func NewMethodHeaderArrayStringPayload(h []string) (*MethodHeaderArrayStringPayload, error) {
+	p := MethodHeaderArrayStringPayload{
+		H: h,
+	}
+	return &p, nil
+}
+`
+
+var PayloadHeaderArrayStringValidateConstructorCode = `// NewMethodHeaderArrayStringValidatePayload instantiates and validates the
+// ServiceHeaderArrayStringValidate service MethodHeaderArrayStringValidate
+// endpoint server request body.
+func NewMethodHeaderArrayStringValidatePayload(h []string) (*MethodHeaderArrayStringValidatePayload, error) {
+	p := MethodHeaderArrayStringValidatePayload{
+		H: h,
+	}
+	return &p, nil
+}
+`
+
+var PayloadBodyQueryObjectConstructorCode = `// NewMethodBodyQueryObjectPayload instantiates and validates the
+// ServiceBodyQueryObject service MethodBodyQueryObject endpoint server request
+// body.
+func NewMethodBodyQueryObjectPayload(body *MethodBodyQueryObjectServerRequestBody, b *string) (*MethodBodyQueryObjectPayload, error) {
+	p := MethodBodyQueryObjectPayload{
 		A: body.A,
 		B: b,
 	}
@@ -793,11 +790,11 @@ func NewEndpointBodyQueryObjectPayload(body *EndpointBodyQueryObjectServerReques
 }
 `
 
-var PayloadBodyQueryObjectValidateConstructorCode = `// NewEndpointBodyQueryObjectValidatePayload instantiates and validates the
-// ServiceBodyQueryObjectValidate service EndpointBodyQueryObjectValidate
+var PayloadBodyQueryObjectValidateConstructorCode = `// NewMethodBodyQueryObjectValidatePayload instantiates and validates the
+// ServiceBodyQueryObjectValidate service MethodBodyQueryObjectValidate
 // endpoint server request body.
-func NewEndpointBodyQueryObjectValidatePayload(body *EndpointBodyQueryObjectValidateServerRequestBody, b string) (*EndpointBodyQueryObjectValidatePayload, error) {
-	p := EndpointBodyQueryObjectValidatePayload{
+func NewMethodBodyQueryObjectValidatePayload(body *MethodBodyQueryObjectValidateServerRequestBody, b string) (*MethodBodyQueryObjectValidatePayload, error) {
+	p := MethodBodyQueryObjectValidatePayload{
 		A: body.A,
 		B: b,
 	}
@@ -806,8 +803,8 @@ func NewEndpointBodyQueryObjectValidatePayload(body *EndpointBodyQueryObjectVali
 `
 
 var PayloadBodyQueryUserConstructorCode = `// NewPayloadType instantiates and validates the ServiceBodyQueryUser service
-// EndpointBodyQueryUser endpoint server request body.
-func NewPayloadType(body *EndpointBodyQueryUserServerRequestBody, b *string) (*PayloadType, error) {
+// MethodBodyQueryUser endpoint server request body.
+func NewPayloadType(body *MethodBodyQueryUserServerRequestBody, b *string) (*PayloadType, error) {
 	p := PayloadType{
 		A: body.A,
 		B: b,
@@ -817,8 +814,8 @@ func NewPayloadType(body *EndpointBodyQueryUserServerRequestBody, b *string) (*P
 `
 
 var PayloadBodyQueryUserValidateConstructorCode = `// NewPayloadType instantiates and validates the ServiceBodyQueryUserValidate
-// service EndpointBodyQueryUserValidate endpoint server request body.
-func NewPayloadType(body *EndpointBodyQueryUserValidateServerRequestBody, b string) (*PayloadType, error) {
+// service MethodBodyQueryUserValidate endpoint server request body.
+func NewPayloadType(body *MethodBodyQueryUserValidateServerRequestBody, b string) (*PayloadType, error) {
 	p := PayloadType{
 		A: body.A,
 		B: b,
@@ -827,11 +824,11 @@ func NewPayloadType(body *EndpointBodyQueryUserValidateServerRequestBody, b stri
 }
 `
 
-var PayloadBodyPathObjectConstructorCode = `// NewEndpointBodyPathObjectPayload instantiates and validates the
-// ServiceBodyPathObject service EndpointBodyPathObject endpoint server request
+var PayloadBodyPathObjectConstructorCode = `// NewMethodBodyPathObjectPayload instantiates and validates the
+// ServiceBodyPathObject service MethodBodyPathObject endpoint server request
 // body.
-func NewEndpointBodyPathObjectPayload(body *EndpointBodyPathObjectServerRequestBody, b string) (*EndpointBodyPathObjectPayload, error) {
-	p := EndpointBodyPathObjectPayload{
+func NewMethodBodyPathObjectPayload(body *MethodBodyPathObjectServerRequestBody, b string) (*MethodBodyPathObjectPayload, error) {
+	p := MethodBodyPathObjectPayload{
 		A: body.A,
 		B: b,
 	}
@@ -839,11 +836,11 @@ func NewEndpointBodyPathObjectPayload(body *EndpointBodyPathObjectServerRequestB
 }
 `
 
-var PayloadBodyPathObjectValidateConstructorCode = `// NewEndpointBodyPathObjectValidatePayload instantiates and validates the
-// ServiceBodyPathObjectValidate service EndpointBodyPathObjectValidate
-// endpoint server request body.
-func NewEndpointBodyPathObjectValidatePayload(body *EndpointBodyPathObjectValidateServerRequestBody, b string) (*EndpointBodyPathObjectValidatePayload, error) {
-	p := EndpointBodyPathObjectValidatePayload{
+var PayloadBodyPathObjectValidateConstructorCode = `// NewMethodBodyPathObjectValidatePayload instantiates and validates the
+// ServiceBodyPathObjectValidate service MethodBodyPathObjectValidate endpoint
+// server request body.
+func NewMethodBodyPathObjectValidatePayload(body *MethodBodyPathObjectValidateServerRequestBody, b string) (*MethodBodyPathObjectValidatePayload, error) {
+	p := MethodBodyPathObjectValidatePayload{
 		A: body.A,
 		B: b,
 	}
@@ -852,8 +849,8 @@ func NewEndpointBodyPathObjectValidatePayload(body *EndpointBodyPathObjectValida
 `
 
 var PayloadBodyPathUserConstructorCode = `// NewPayloadType instantiates and validates the ServiceBodyPathUser service
-// EndpointBodyPathUser endpoint server request body.
-func NewPayloadType(body *EndpointBodyPathUserServerRequestBody, b string) (*PayloadType, error) {
+// MethodBodyPathUser endpoint server request body.
+func NewPayloadType(body *MethodBodyPathUserServerRequestBody, b string) (*PayloadType, error) {
 	p := PayloadType{
 		A: body.A,
 		B: b,
@@ -863,8 +860,8 @@ func NewPayloadType(body *EndpointBodyPathUserServerRequestBody, b string) (*Pay
 `
 
 var PayloadBodyPathUserValidateConstructorCode = `// NewPayloadType instantiates and validates the ServiceBodyPathUserValidate
-// service EndpointUserBodyPathValidate endpoint server request body.
-func NewPayloadType(body *EndpointUserBodyPathValidateServerRequestBody, b string) (*PayloadType, error) {
+// service MethodUserBodyPathValidate endpoint server request body.
+func NewPayloadType(body *MethodUserBodyPathValidateServerRequestBody, b string) (*PayloadType, error) {
 	p := PayloadType{
 		A: body.A,
 		B: b,
@@ -873,11 +870,11 @@ func NewPayloadType(body *EndpointUserBodyPathValidateServerRequestBody, b strin
 }
 `
 
-var PayloadBodyQueryPathObjectConstructorCode = `// NewEndpointBodyQueryPathObjectPayload instantiates and validates the
-// ServiceBodyQueryPathObject service EndpointBodyQueryPathObject endpoint
-// server request body.
-func NewEndpointBodyQueryPathObjectPayload(body *EndpointBodyQueryPathObjectServerRequestBody, b *string, c string) (*EndpointBodyQueryPathObjectPayload, error) {
-	p := EndpointBodyQueryPathObjectPayload{
+var PayloadBodyQueryPathObjectConstructorCode = `// NewMethodBodyQueryPathObjectPayload instantiates and validates the
+// ServiceBodyQueryPathObject service MethodBodyQueryPathObject endpoint server
+// request body.
+func NewMethodBodyQueryPathObjectPayload(body *MethodBodyQueryPathObjectServerRequestBody, b *string, c string) (*MethodBodyQueryPathObjectPayload, error) {
+	p := MethodBodyQueryPathObjectPayload{
 		A: body.A,
 		B: b,
 		C: c,
@@ -886,11 +883,11 @@ func NewEndpointBodyQueryPathObjectPayload(body *EndpointBodyQueryPathObjectServ
 }
 `
 
-var PayloadBodyQueryPathObjectValidateConstructorCode = `// NewEndpointBodyQueryPathObjectValidatePayload instantiates and validates the
-// ServiceBodyQueryPathObjectValidate service
-// EndpointBodyQueryPathObjectValidate endpoint server request body.
-func NewEndpointBodyQueryPathObjectValidatePayload(body *EndpointBodyQueryPathObjectValidateServerRequestBody, b string, c string) (*EndpointBodyQueryPathObjectValidatePayload, error) {
-	p := EndpointBodyQueryPathObjectValidatePayload{
+var PayloadBodyQueryPathObjectValidateConstructorCode = `// NewMethodBodyQueryPathObjectValidatePayload instantiates and validates the
+// ServiceBodyQueryPathObjectValidate service MethodBodyQueryPathObjectValidate
+// endpoint server request body.
+func NewMethodBodyQueryPathObjectValidatePayload(body *MethodBodyQueryPathObjectValidateServerRequestBody, b string, c string) (*MethodBodyQueryPathObjectValidatePayload, error) {
+	p := MethodBodyQueryPathObjectValidatePayload{
 		A: body.A,
 		B: b,
 		C: c,
@@ -900,8 +897,8 @@ func NewEndpointBodyQueryPathObjectValidatePayload(body *EndpointBodyQueryPathOb
 `
 
 var PayloadBodyQueryPathUserConstructorCode = `// NewPayloadType instantiates and validates the ServiceBodyQueryPathUser
-// service EndpointBodyQueryPathUser endpoint server request body.
-func NewPayloadType(body *EndpointBodyQueryPathUserServerRequestBody, b *string, c string) (*PayloadType, error) {
+// service MethodBodyQueryPathUser endpoint server request body.
+func NewPayloadType(body *MethodBodyQueryPathUserServerRequestBody, b *string, c string) (*PayloadType, error) {
 	p := PayloadType{
 		A: body.A,
 		B: b,
@@ -912,9 +909,9 @@ func NewPayloadType(body *EndpointBodyQueryPathUserServerRequestBody, b *string,
 `
 
 var PayloadBodyQueryPathUserValidateConstructorCode = `// NewPayloadType instantiates and validates the
-// ServiceBodyQueryPathUserValidate service EndpointBodyQueryPathUserValidate
+// ServiceBodyQueryPathUserValidate service MethodBodyQueryPathUserValidate
 // endpoint server request body.
-func NewPayloadType(body *EndpointBodyQueryPathUserValidateServerRequestBody, b string, c string) (*PayloadType, error) {
+func NewPayloadType(body *MethodBodyQueryPathUserValidateServerRequestBody, b string, c string) (*PayloadType, error) {
 	p := PayloadType{
 		A: body.A,
 		B: b,

@@ -224,217 +224,217 @@ func TestServiceSpec(t *testing.T) {
 		t.Errorf("Service: invalid fifth error type attribute type")
 	}
 
-	if len(service.Endpoints) != 2 {
-		t.Fatalf("Service: invalid endpoints count")
+	if len(service.Methods) != 2 {
+		t.Fatalf("Service: invalid methods count")
 	}
-	if service.Endpoints[0].Name != "endpoint" {
-		t.Errorf("Service: invalid first endpoint name")
+	if service.Methods[0].Name != "method" {
+		t.Errorf("Service: invalid first method name")
 	}
-	if service.Endpoints[0].Description != "Optional description" {
-		t.Errorf("Service: invalid first endpoint description")
+	if service.Methods[0].Description != "Optional description" {
+		t.Errorf("Service: invalid first method description")
 	}
-	if service.Endpoints[0].Docs == nil {
+	if service.Methods[0].Docs == nil {
 		t.Errorf("Service: docs is nil")
 	}
-	if service.Endpoints[0].Docs != nil && service.Endpoints[0].Docs.Description != "Optional description" {
+	if service.Methods[0].Docs != nil && service.Methods[0].Docs.Description != "Optional description" {
 		t.Errorf("Service: invalid docs description")
 	}
-	if service.Endpoints[0].Docs != nil && service.Endpoints[0].Docs.URL != "https://goa.design" {
+	if service.Methods[0].Docs != nil && service.Methods[0].Docs.URL != "https://goa.design" {
 		t.Errorf("Service: invalid docs URL")
 	}
-	if service.Endpoints[0].Payload == nil {
-		t.Errorf("Service: first endpoint payload type is nil")
+	if service.Methods[0].Payload == nil {
+		t.Errorf("Service: first method payload type is nil")
 	}
-	if service.Endpoints[0].Payload != nil && service.Endpoints[0].Payload.Kind() != design.UserTypeKind {
-		t.Errorf("Service: first endpoint payload type has invalid kind")
+	if service.Methods[0].Payload != nil && service.Methods[0].Payload.Kind() != design.UserTypeKind {
+		t.Errorf("Service: first method payload type has invalid kind")
 	}
-	if ut, ok := service.Endpoints[0].Payload.(*design.UserTypeExpr); ok {
+	if ut, ok := service.Methods[0].Payload.(*design.UserTypeExpr); ok {
 		if ut.Name() != "Payload" {
-			t.Errorf("Service: invalid first endpoint payload type")
+			t.Errorf("Service: invalid first method payload type")
 		}
 		if ut.Description != "Optional description" {
-			t.Errorf("Service: invalid first endpoint payload type description")
+			t.Errorf("Service: invalid first method payload type description")
 		}
 		if o, ok := ut.Type.(design.Object); ok {
 			if len(o) != 2 {
-				t.Errorf("Service: invalid attribute count for first endpoint payload type")
+				t.Errorf("Service: invalid attribute count for first method payload type")
 			} else {
 				if att, ok := o["required"]; ok {
 					if att.Type.Kind() != design.StringKind {
-						t.Errorf("Service: invalid 'required' attribute type for first endpoint payload type")
+						t.Errorf("Service: invalid 'required' attribute type for first method payload type")
 					}
 				} else {
-					t.Errorf("Service: missing 'required' attribute for first endpoint payload type")
+					t.Errorf("Service: missing 'required' attribute for first method payload type")
 				}
 				if att, ok := o["name"]; ok {
 					if att.Type.Kind() != design.StringKind {
-						t.Errorf("Service: invalid 'name' attribute type for first endpoint payload type")
+						t.Errorf("Service: invalid 'name' attribute type for first method payload type")
 					}
 				} else {
-					t.Errorf("Service: missing 'name' attribute for first endpoint payload type")
+					t.Errorf("Service: missing 'name' attribute for first method payload type")
 				}
 			}
 		}
 		if len(ut.Validation.Required) != 2 {
-			t.Errorf("Service: invalid first endpoint payload type required attributes")
+			t.Errorf("Service: invalid first method payload type required attributes")
 		} else {
 			if ut.Validation.Required[0] != "required" {
-				t.Errorf("Service: invalid first endpoint payload type first required attribute name")
+				t.Errorf("Service: invalid first method payload type first required attribute name")
 			}
 			if ut.Validation.Required[1] != "name" {
-				t.Errorf("Service: invalid first endpoint payload type second required attribute name")
+				t.Errorf("Service: invalid first method payload type second required attribute name")
 			}
 		}
 	}
-	if service.Endpoints[0].Result == nil {
-		t.Errorf("Service: first endpoint payload type is nil")
+	if service.Methods[0].Result == nil {
+		t.Errorf("Service: first method payload type is nil")
 	}
-	if service.Endpoints[0].Result != nil && service.Endpoints[0].Result.Kind() != design.MediaTypeKind {
-		t.Errorf("Service: first endpoint result type has invalid kind")
+	if service.Methods[0].Result != nil && service.Methods[0].Result.Kind() != design.MediaTypeKind {
+		t.Errorf("Service: first method result type has invalid kind")
 	}
-	if mt, ok := service.Endpoints[0].Result.(*design.MediaTypeExpr); ok {
+	if mt, ok := service.Methods[0].Result.(*design.MediaTypeExpr); ok {
 		if mt.Name() != "application/vnd.goa.result" {
-			t.Errorf("Service: invalid first endpoint result media type identifier")
+			t.Errorf("Service: invalid first method result media type identifier")
 		}
 		if mt.Description != "Optional description" {
-			t.Errorf("Service: invalid first endpoint result type description")
+			t.Errorf("Service: invalid first method result type description")
 		}
 		if o, ok := mt.Type.(design.Object); ok {
 			if len(o) != 2 {
-				t.Errorf("Service: invalid attribute count for first endpoint result type")
+				t.Errorf("Service: invalid attribute count for first method result type")
 			} else {
 				if att, ok := o["required"]; ok {
 					if att.Type.Kind() != design.StringKind {
-						t.Errorf("Service: invalid 'required' attribute type for first endpoint result type")
+						t.Errorf("Service: invalid 'required' attribute type for first method result type")
 					}
 				} else {
-					t.Errorf("Service: missing 'required' attribute for first endpoint result type")
+					t.Errorf("Service: missing 'required' attribute for first method result type")
 				}
 				if att, ok := o["name"]; ok {
 					if att.Type.Kind() != design.StringKind {
-						t.Errorf("Service: invalid 'name' attribute type for first endpoint result type")
+						t.Errorf("Service: invalid 'name' attribute type for first method result type")
 					}
 				} else {
-					t.Errorf("Service: missing 'name' attribute for first endpoint result type")
+					t.Errorf("Service: missing 'name' attribute for first method result type")
 				}
 			}
 		}
 		if len(mt.Validation.Required) != 2 {
-			t.Errorf("Service: invalid first endpoint result type required attributes")
+			t.Errorf("Service: invalid first method result type required attributes")
 		} else {
 			if mt.Validation.Required[0] != "required" {
-				t.Errorf("Service: invalid first endpoint result type first required attribute name")
+				t.Errorf("Service: invalid first method result type first required attribute name")
 			}
 			if mt.Validation.Required[1] != "name" {
-				t.Errorf("Service: invalid first endpoint result type second required attribute name")
+				t.Errorf("Service: invalid first method result type second required attribute name")
 			}
 		}
 		if len(mt.Views) != 1 {
-			t.Errorf("Service: invalid first endpoint result media type view count")
+			t.Errorf("Service: invalid first method result media type view count")
 		}
 		if len(mt.Views) == 1 && mt.Views[0].Name != "default" {
-			t.Errorf("Service: invalid first endpoint result media type view name")
+			t.Errorf("Service: invalid first method result media type view name")
 		}
 		if len(mt.Views) == 1 {
 			o := mt.Views[0].AttributeExpr.Type.(design.Object)
 			if len(o) != 2 {
-				t.Errorf("Service: invalid first endpoint result media type view attribute count")
+				t.Errorf("Service: invalid first method result media type view attribute count")
 			}
 			if len(o) == 2 && o["required"] == nil {
-				t.Errorf("Service: missing first endpoint result media type view attribute 'required' attribute")
+				t.Errorf("Service: missing first method result media type view attribute 'required' attribute")
 			}
 			if len(o) == 2 && o["name"] == nil {
-				t.Errorf("Service: missing first endpoint result media type view attribute 'name' attribute")
+				t.Errorf("Service: missing first method result media type view attribute 'name' attribute")
 			}
 		}
 	}
-	if len(service.Endpoints[0].Errors) != 1 {
-		t.Errorf("Service: invalid first endpoint error count")
+	if len(service.Methods[0].Errors) != 1 {
+		t.Errorf("Service: invalid first method error count")
 	}
-	if len(service.Endpoints[0].Errors) == 1 && service.Endpoints[0].Errors[0].Name != "endpoint_specific_error" {
-		t.Errorf("Service: invalid first endpoint error name")
+	if len(service.Methods[0].Errors) == 1 && service.Methods[0].Errors[0].Name != "method_specific_error" {
+		t.Errorf("Service: invalid first method error name")
 	}
-	if len(service.Endpoints[0].Errors) == 1 && service.Endpoints[0].Errors[0].Type != design.ErrorMedia {
-		t.Errorf("Service: invalid first endpoint error type")
+	if len(service.Methods[0].Errors) == 1 && service.Methods[0].Errors[0].Type != design.ErrorMedia {
+		t.Errorf("Service: invalid first method error type")
 	}
-	if len(service.Endpoints[0].Metadata) != 1 {
-		t.Errorf("Service: invalid first endpoint metadata count")
+	if len(service.Methods[0].Metadata) != 1 {
+		t.Errorf("Service: invalid first method metadata count")
 	}
-	if len(service.Endpoints[0].Metadata) == 1 {
-		if _, ok := service.Endpoints[0].Metadata["name"]; !ok {
-			t.Errorf("Service: first endpoint metadata is missing 'name' key")
+	if len(service.Methods[0].Metadata) == 1 {
+		if _, ok := service.Methods[0].Metadata["name"]; !ok {
+			t.Errorf("Service: first method metadata is missing 'name' key")
 		} else {
-			if len(service.Endpoints[0].Metadata["name"]) != 2 {
-				t.Errorf("Service: first endpoint metadata 'name' is invalid")
+			if len(service.Methods[0].Metadata["name"]) != 2 {
+				t.Errorf("Service: first method metadata 'name' is invalid")
 			} else {
-				if service.Endpoints[0].Metadata["name"][0] != "some value" {
-					t.Errorf("Service: first endpoint metadata 'name' first value is invalid")
+				if service.Methods[0].Metadata["name"][0] != "some value" {
+					t.Errorf("Service: first method metadata 'name' first value is invalid")
 				}
-				if service.Endpoints[0].Metadata["name"][1] != "some other value" {
-					t.Errorf("Service: first endpoint metadata 'name' second value is invalid")
+				if service.Methods[0].Metadata["name"][1] != "some other value" {
+					t.Errorf("Service: first method metadata 'name' second value is invalid")
 				}
 			}
 		}
 
 	}
 
-	if service.Endpoints[1].Name != "inline-object" {
+	if service.Methods[1].Name != "inline-object" {
 		t.Errorf("Service: invalid third name")
 	}
-	ut, ok := service.Endpoints[1].Payload.(*design.UserTypeExpr)
+	ut, ok := service.Methods[1].Payload.(*design.UserTypeExpr)
 	if !ok {
-		t.Errorf("Service: invalid third endpoint payload type")
+		t.Errorf("Service: invalid third method payload type")
 	} else {
 		if ut.Description != "Optional description" {
-			t.Errorf("Service: invalid third endpoint payload type description")
+			t.Errorf("Service: invalid third method payload type description")
 		}
 		o, ok := ut.Type.(design.Object)
 		if !ok {
-			t.Errorf("Service: invalid third endpoint payload inner type")
+			t.Errorf("Service: invalid third method payload inner type")
 		} else {
 			at, ok := o["required"]
 			if !ok {
-				t.Errorf("Service: third endpoint payload inner type is missing 'required' attribute")
+				t.Errorf("Service: third method payload inner type is missing 'required' attribute")
 			} else if at.Type != design.String {
-				t.Errorf("Service: third endpoint payload type 'required' field type is invalid")
+				t.Errorf("Service: third method payload type 'required' field type is invalid")
 			}
 			at, ok = o["optional"]
 			if !ok {
-				t.Errorf("Service: third endpoint payload inner type is missing 'optional' attribute")
+				t.Errorf("Service: third method payload inner type is missing 'optional' attribute")
 			} else if at.Type != design.String {
-				t.Errorf("Service: third endpoint payload type 'optional' field type is invalid")
+				t.Errorf("Service: third method payload type 'optional' field type is invalid")
 			}
 		}
 		if len(ut.Validation.Required) == 0 {
-			t.Errorf("Service: third endpoint payload type is missing required field")
+			t.Errorf("Service: third method payload type is missing required field")
 		}
 	}
-	ut, ok = service.Endpoints[1].Result.(*design.UserTypeExpr)
+	ut, ok = service.Methods[1].Result.(*design.UserTypeExpr)
 	if !ok {
-		t.Errorf("Service: invalid third endpoint result type")
+		t.Errorf("Service: invalid third method result type")
 	} else {
 		if ut.Description != "Optional description" {
-			t.Errorf("Service: invalid third endpoint result type description")
+			t.Errorf("Service: invalid third method result type description")
 		}
 		o, ok := ut.Type.(design.Object)
 		if !ok {
-			t.Errorf("Service: invalid third endpoint result inner type")
+			t.Errorf("Service: invalid third method result inner type")
 		} else {
 			at, ok := o["required"]
 			if !ok {
-				t.Errorf("Service: third endpoint result inner type is missing 'required' attribute")
+				t.Errorf("Service: third method result inner type is missing 'required' attribute")
 			} else if at.Type != design.String {
-				t.Errorf("Service: third endpoint result type 'required' field type is invalid")
+				t.Errorf("Service: third method result type 'required' field type is invalid")
 			}
 			at, ok = o["optional"]
 			if !ok {
-				t.Errorf("Service: third endpoint result inner type is missing 'optional' attribute")
+				t.Errorf("Service: third method result inner type is missing 'optional' attribute")
 			} else if at.Type != design.String {
-				t.Errorf("Service: third endpoint result type 'optional' field type is invalid")
+				t.Errorf("Service: third method result type 'optional' field type is invalid")
 			}
 		}
 		if len(ut.Validation.Required) == 0 {
-			t.Errorf("Service: third endpoint result type is missing required field")
+			t.Errorf("Service: third method result type is missing required field")
 		}
 	}
 }

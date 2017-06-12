@@ -5,10 +5,10 @@ import (
 	"goa.design/goa.v2/eval"
 )
 
-// Payload defines the data type of an endpoint input. Payload also makes the
+// Payload defines the data type of an method input. Payload also makes the
 // input required.
 //
-// Payload may appear in a Endpoint expression.
+// Payload may appear in a Method expression.
 //
 // Payload takes one or two arguments. The first argument is either a type or a
 // DSL function. If the first argument is a type then an optional DSL may be
@@ -17,12 +17,12 @@ import (
 //
 // Examples:
 //
-// Endpoint("save"), func() {
+// Method("save"), func() {
 //	// Use primitive type.
 //	Payload(String)
 // }
 //
-// Endpoint("add", func() {
+// Method("add", func() {
 //     // Define payload data structure inline.
 //     Payload(func() {
 //         Attribute("left", Int32, "Left operand")
@@ -31,12 +31,12 @@ import (
 //     })
 // })
 //
-// Endpoint("add", func() {
+// Method("add", func() {
 //     // Define payload type by reference to user type.
 //     Payload(Operands)
 // })
 //
-// Endpoint("divide", func() {
+// Method("divide", func() {
 //     // Specify additional required attributes on user type.
 //     Payload(Operands, func() {
 //         Required("left", "right")
@@ -47,15 +47,15 @@ func Payload(val interface{}, fns ...func()) {
 	if len(fns) > 1 {
 		eval.ReportError("too many arguments")
 	}
-	e, ok := eval.Current().(*design.EndpointExpr)
+	e, ok := eval.Current().(*design.MethodExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
-	e.Payload = endpointDSL("Payload", val, fns...)
+	e.Payload = methodDSL("Payload", val, fns...)
 }
 
-func endpointDSL(suffix string, p interface{}, fns ...func()) *design.AttributeExpr {
+func methodDSL(suffix string, p interface{}, fns ...func()) *design.AttributeExpr {
 	var (
 		att *design.AttributeExpr
 		fn  func()

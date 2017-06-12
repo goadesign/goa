@@ -166,8 +166,8 @@ func GenerateResourceDefinition(api *design.APIExpr, res *rest.ResourceExpr) {
 	Definitions[res.Name()] = s
 	for _, a := range res.Actions {
 		var requestSchema *Schema
-		if a.EndpointExpr.Payload != nil {
-			requestSchema = TypeSchema(api, a.EndpointExpr.Payload.Type)
+		if a.MethodExpr.Payload != nil {
+			requestSchema = TypeSchema(api, a.MethodExpr.Payload.Type)
 			requestSchema.Description = a.Name() + " payload"
 		}
 		if a.Params() != nil {

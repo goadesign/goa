@@ -13,7 +13,7 @@ import (
 
 var PayloadQueryBoolDSL = func() {
 	Service("ServiceQueryBool", func() {
-		Endpoint("EndpointQueryBool", func() {
+		Method("MethodQueryBool", func() {
 			Payload(func() {
 				Attribute("q", Boolean)
 			})
@@ -27,7 +27,7 @@ var PayloadQueryBoolDSL = func() {
 
 var PayloadQueryBoolValidateDSL = func() {
 	Service("ServiceQueryBoolValidate", func() {
-		Endpoint("EndpointQueryBoolValidate", func() {
+		Method("MethodQueryBoolValidate", func() {
 			Payload(func() {
 				Attribute("q", Boolean, func() {
 					Enum(true)
@@ -44,7 +44,7 @@ var PayloadQueryBoolValidateDSL = func() {
 
 var PayloadQueryIntDSL = func() {
 	Service("ServiceQueryInt", func() {
-		Endpoint("EndpointQueryInt", func() {
+		Method("MethodQueryInt", func() {
 			Payload(func() {
 				Attribute("q", Int)
 			})
@@ -58,7 +58,7 @@ var PayloadQueryIntDSL = func() {
 
 var PayloadQueryIntValidateDSL = func() {
 	Service("ServiceQueryIntValidate", func() {
-		Endpoint("EndpointQueryIntValidate", func() {
+		Method("MethodQueryIntValidate", func() {
 			Payload(func() {
 				Attribute("q", Int, func() {
 					Minimum(1)
@@ -75,7 +75,7 @@ var PayloadQueryIntValidateDSL = func() {
 
 var PayloadQueryInt32DSL = func() {
 	Service("ServiceQueryInt32", func() {
-		Endpoint("EndpointQueryInt32", func() {
+		Method("MethodQueryInt32", func() {
 			Payload(func() {
 				Attribute("q", Int32)
 			})
@@ -89,7 +89,7 @@ var PayloadQueryInt32DSL = func() {
 
 var PayloadQueryInt32ValidateDSL = func() {
 	Service("ServiceQueryInt32Validate", func() {
-		Endpoint("EndpointQueryInt32Validate", func() {
+		Method("MethodQueryInt32Validate", func() {
 			Payload(func() {
 				Attribute("q", Int32, func() {
 					Minimum(1)
@@ -106,7 +106,7 @@ var PayloadQueryInt32ValidateDSL = func() {
 
 var PayloadQueryInt64DSL = func() {
 	Service("ServiceQueryInt64", func() {
-		Endpoint("EndpointQueryInt64", func() {
+		Method("MethodQueryInt64", func() {
 			Payload(func() {
 				Attribute("q", Int64)
 			})
@@ -120,7 +120,7 @@ var PayloadQueryInt64DSL = func() {
 
 var PayloadQueryInt64ValidateDSL = func() {
 	Service("ServiceQueryInt64Validate", func() {
-		Endpoint("EndpointQueryInt64Validate", func() {
+		Method("MethodQueryInt64Validate", func() {
 			Payload(func() {
 				Attribute("q", Int64, func() {
 					Minimum(1)
@@ -137,7 +137,7 @@ var PayloadQueryInt64ValidateDSL = func() {
 
 var PayloadQueryUIntDSL = func() {
 	Service("ServiceQueryUInt", func() {
-		Endpoint("EndpointQueryUInt", func() {
+		Method("MethodQueryUInt", func() {
 			Payload(func() {
 				Attribute("q", UInt)
 			})
@@ -151,7 +151,7 @@ var PayloadQueryUIntDSL = func() {
 
 var PayloadQueryUIntValidateDSL = func() {
 	Service("ServiceQueryUIntValidate", func() {
-		Endpoint("EndpointQueryUIntValidate", func() {
+		Method("MethodQueryUIntValidate", func() {
 			Payload(func() {
 				Attribute("q", UInt, func() {
 					Minimum(1)
@@ -168,7 +168,7 @@ var PayloadQueryUIntValidateDSL = func() {
 
 var PayloadQueryUInt32DSL = func() {
 	Service("ServiceQueryUInt32", func() {
-		Endpoint("EndpointQueryUInt32", func() {
+		Method("MethodQueryUInt32", func() {
 			Payload(func() {
 				Attribute("q", UInt32)
 			})
@@ -182,7 +182,7 @@ var PayloadQueryUInt32DSL = func() {
 
 var PayloadQueryUInt32ValidateDSL = func() {
 	Service("ServiceQueryUInt32Validate", func() {
-		Endpoint("EndpointQueryUInt32Validate", func() {
+		Method("MethodQueryUInt32Validate", func() {
 			Payload(func() {
 				Attribute("q", UInt32, func() {
 					Minimum(1)
@@ -199,7 +199,7 @@ var PayloadQueryUInt32ValidateDSL = func() {
 
 var PayloadQueryUInt64DSL = func() {
 	Service("ServiceQueryUInt64", func() {
-		Endpoint("EndpointQueryUInt64", func() {
+		Method("MethodQueryUInt64", func() {
 			Payload(func() {
 				Attribute("q", UInt64)
 			})
@@ -213,7 +213,7 @@ var PayloadQueryUInt64DSL = func() {
 
 var PayloadQueryUInt64ValidateDSL = func() {
 	Service("ServiceQueryUInt64Validate", func() {
-		Endpoint("EndpointQueryUInt64Validate", func() {
+		Method("MethodQueryUInt64Validate", func() {
 			Payload(func() {
 				Attribute("q", UInt64, func() {
 					Minimum(1)
@@ -230,7 +230,7 @@ var PayloadQueryUInt64ValidateDSL = func() {
 
 var PayloadQueryFloat32DSL = func() {
 	Service("ServiceQueryFloat32", func() {
-		Endpoint("EndpointQueryFloat32", func() {
+		Method("MethodQueryFloat32", func() {
 			Payload(func() {
 				Attribute("q", Float32)
 			})
@@ -244,7 +244,7 @@ var PayloadQueryFloat32DSL = func() {
 
 var PayloadQueryFloat32ValidateDSL = func() {
 	Service("ServiceQueryFloat32Validate", func() {
-		Endpoint("EndpointQueryFloat32Validate", func() {
+		Method("MethodQueryFloat32Validate", func() {
 			Payload(func() {
 				Attribute("q", Float32, func() {
 					Minimum(1)
@@ -261,7 +261,7 @@ var PayloadQueryFloat32ValidateDSL = func() {
 
 var PayloadQueryFloat64DSL = func() {
 	Service("ServiceQueryFloat64", func() {
-		Endpoint("EndpointQueryFloat64", func() {
+		Method("MethodQueryFloat64", func() {
 			Payload(func() {
 				Attribute("q", Float64)
 			})
@@ -275,7 +275,7 @@ var PayloadQueryFloat64DSL = func() {
 
 var PayloadQueryFloat64ValidateDSL = func() {
 	Service("ServiceQueryFloat64Validate", func() {
-		Endpoint("EndpointQueryFloat64Validate", func() {
+		Method("MethodQueryFloat64Validate", func() {
 			Payload(func() {
 				Attribute("q", Float64, func() {
 					Minimum(1)
@@ -292,7 +292,7 @@ var PayloadQueryFloat64ValidateDSL = func() {
 
 var PayloadQueryStringDSL = func() {
 	Service("ServiceQueryString", func() {
-		Endpoint("EndpointQueryString", func() {
+		Method("MethodQueryString", func() {
 			Payload(func() {
 				Attribute("q", String)
 			})
@@ -306,7 +306,7 @@ var PayloadQueryStringDSL = func() {
 
 var PayloadQueryStringValidateDSL = func() {
 	Service("ServiceQueryStringValidate", func() {
-		Endpoint("EndpointQueryStringValidate", func() {
+		Method("MethodQueryStringValidate", func() {
 			Payload(func() {
 				Attribute("q", String, func() {
 					Enum("val")
@@ -323,7 +323,7 @@ var PayloadQueryStringValidateDSL = func() {
 
 var PayloadQueryBytesDSL = func() {
 	Service("ServiceQueryBytes", func() {
-		Endpoint("EndpointQueryBytes", func() {
+		Method("MethodQueryBytes", func() {
 			Payload(func() {
 				Attribute("q", Bytes)
 			})
@@ -337,7 +337,7 @@ var PayloadQueryBytesDSL = func() {
 
 var PayloadQueryBytesValidateDSL = func() {
 	Service("ServiceQueryBytesValidate", func() {
-		Endpoint("EndpointQueryBytesValidate", func() {
+		Method("MethodQueryBytesValidate", func() {
 			Payload(func() {
 				Attribute("q", Bytes, func() {
 					MinLength(1)
@@ -354,7 +354,7 @@ var PayloadQueryBytesValidateDSL = func() {
 
 var PayloadQueryAnyDSL = func() {
 	Service("ServiceQueryAny", func() {
-		Endpoint("EndpointQueryAny", func() {
+		Method("MethodQueryAny", func() {
 			Payload(func() {
 				Attribute("q", Any)
 			})
@@ -368,7 +368,7 @@ var PayloadQueryAnyDSL = func() {
 
 var PayloadQueryAnyValidateDSL = func() {
 	Service("ServiceQueryAnyValidate", func() {
-		Endpoint("EndpointQueryAnyValidate", func() {
+		Method("MethodQueryAnyValidate", func() {
 			Payload(func() {
 				Attribute("q", Any, func() {
 					Enum("val", 1)
@@ -385,7 +385,7 @@ var PayloadQueryAnyValidateDSL = func() {
 
 var PayloadQueryArrayBoolDSL = func() {
 	Service("ServiceQueryArrayBool", func() {
-		Endpoint("EndpointQueryArrayBool", func() {
+		Method("MethodQueryArrayBool", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(Boolean))
 			})
@@ -399,7 +399,7 @@ var PayloadQueryArrayBoolDSL = func() {
 
 var PayloadQueryArrayBoolValidateDSL = func() {
 	Service("ServiceQueryArrayBoolValidate", func() {
-		Endpoint("EndpointQueryArrayBoolValidate", func() {
+		Method("MethodQueryArrayBoolValidate", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(Boolean), func() {
 					MinLength(1)
@@ -419,7 +419,7 @@ var PayloadQueryArrayBoolValidateDSL = func() {
 
 var PayloadQueryArrayIntDSL = func() {
 	Service("ServiceQueryArrayInt", func() {
-		Endpoint("EndpointQueryArrayInt", func() {
+		Method("MethodQueryArrayInt", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(Int))
 			})
@@ -433,7 +433,7 @@ var PayloadQueryArrayIntDSL = func() {
 
 var PayloadQueryArrayIntValidateDSL = func() {
 	Service("ServiceQueryArrayIntValidate", func() {
-		Endpoint("EndpointQueryArrayIntValidate", func() {
+		Method("MethodQueryArrayIntValidate", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(Int), func() {
 					MinLength(1)
@@ -453,7 +453,7 @@ var PayloadQueryArrayIntValidateDSL = func() {
 
 var PayloadQueryArrayInt32DSL = func() {
 	Service("ServiceQueryArrayInt32", func() {
-		Endpoint("EndpointQueryArrayInt32", func() {
+		Method("MethodQueryArrayInt32", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(Int32))
 			})
@@ -467,7 +467,7 @@ var PayloadQueryArrayInt32DSL = func() {
 
 var PayloadQueryArrayInt32ValidateDSL = func() {
 	Service("ServiceQueryArrayInt32Validate", func() {
-		Endpoint("EndpointQueryArrayInt32Validate", func() {
+		Method("MethodQueryArrayInt32Validate", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(Int32), func() {
 					MinLength(1)
@@ -487,7 +487,7 @@ var PayloadQueryArrayInt32ValidateDSL = func() {
 
 var PayloadQueryArrayInt64DSL = func() {
 	Service("ServiceQueryArrayInt64", func() {
-		Endpoint("EndpointQueryArrayInt64", func() {
+		Method("MethodQueryArrayInt64", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(Int64))
 			})
@@ -501,7 +501,7 @@ var PayloadQueryArrayInt64DSL = func() {
 
 var PayloadQueryArrayInt64ValidateDSL = func() {
 	Service("ServiceQueryArrayInt64Validate", func() {
-		Endpoint("EndpointQueryArrayInt64Validate", func() {
+		Method("MethodQueryArrayInt64Validate", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(Int64), func() {
 					MinLength(1)
@@ -521,7 +521,7 @@ var PayloadQueryArrayInt64ValidateDSL = func() {
 
 var PayloadQueryArrayUIntDSL = func() {
 	Service("ServiceQueryArrayUInt", func() {
-		Endpoint("EndpointQueryArrayUInt", func() {
+		Method("MethodQueryArrayUInt", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(UInt))
 			})
@@ -535,7 +535,7 @@ var PayloadQueryArrayUIntDSL = func() {
 
 var PayloadQueryArrayUIntValidateDSL = func() {
 	Service("ServiceQueryArrayUIntValidate", func() {
-		Endpoint("EndpointQueryArrayUIntValidate", func() {
+		Method("MethodQueryArrayUIntValidate", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(UInt), func() {
 					MinLength(1)
@@ -555,7 +555,7 @@ var PayloadQueryArrayUIntValidateDSL = func() {
 
 var PayloadQueryArrayUInt32DSL = func() {
 	Service("ServiceQueryArrayUInt32", func() {
-		Endpoint("EndpointQueryArrayUInt32", func() {
+		Method("MethodQueryArrayUInt32", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(UInt32))
 			})
@@ -569,7 +569,7 @@ var PayloadQueryArrayUInt32DSL = func() {
 
 var PayloadQueryArrayUInt32ValidateDSL = func() {
 	Service("ServiceQueryArrayUInt32Validate", func() {
-		Endpoint("EndpointQueryArrayUInt32Validate", func() {
+		Method("MethodQueryArrayUInt32Validate", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(UInt32), func() {
 					MinLength(1)
@@ -589,7 +589,7 @@ var PayloadQueryArrayUInt32ValidateDSL = func() {
 
 var PayloadQueryArrayUInt64DSL = func() {
 	Service("ServiceQueryArrayUInt64", func() {
-		Endpoint("EndpointQueryArrayUInt64", func() {
+		Method("MethodQueryArrayUInt64", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(UInt64))
 			})
@@ -603,7 +603,7 @@ var PayloadQueryArrayUInt64DSL = func() {
 
 var PayloadQueryArrayUInt64ValidateDSL = func() {
 	Service("ServiceQueryArrayUInt64Validate", func() {
-		Endpoint("EndpointQueryArrayUInt64Validate", func() {
+		Method("MethodQueryArrayUInt64Validate", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(UInt64), func() {
 					MinLength(1)
@@ -623,7 +623,7 @@ var PayloadQueryArrayUInt64ValidateDSL = func() {
 
 var PayloadQueryArrayFloat32DSL = func() {
 	Service("ServiceQueryArrayFloat32", func() {
-		Endpoint("EndpointQueryArrayFloat32", func() {
+		Method("MethodQueryArrayFloat32", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(Float32))
 			})
@@ -637,7 +637,7 @@ var PayloadQueryArrayFloat32DSL = func() {
 
 var PayloadQueryArrayFloat32ValidateDSL = func() {
 	Service("ServiceQueryArrayFloat32Validate", func() {
-		Endpoint("EndpointQueryArrayFloat32Validate", func() {
+		Method("MethodQueryArrayFloat32Validate", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(Float32), func() {
 					MinLength(1)
@@ -657,7 +657,7 @@ var PayloadQueryArrayFloat32ValidateDSL = func() {
 
 var PayloadQueryArrayFloat64DSL = func() {
 	Service("ServiceQueryArrayFloat64", func() {
-		Endpoint("EndpointQueryArrayFloat64", func() {
+		Method("MethodQueryArrayFloat64", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(Float64))
 			})
@@ -671,7 +671,7 @@ var PayloadQueryArrayFloat64DSL = func() {
 
 var PayloadQueryArrayFloat64ValidateDSL = func() {
 	Service("ServiceQueryArrayFloat64Validate", func() {
-		Endpoint("EndpointQueryArrayFloat64Validate", func() {
+		Method("MethodQueryArrayFloat64Validate", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(Float64), func() {
 					MinLength(1)
@@ -691,7 +691,7 @@ var PayloadQueryArrayFloat64ValidateDSL = func() {
 
 var PayloadQueryArrayStringDSL = func() {
 	Service("ServiceQueryArrayString", func() {
-		Endpoint("EndpointQueryArrayString", func() {
+		Method("MethodQueryArrayString", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(String))
 			})
@@ -705,7 +705,7 @@ var PayloadQueryArrayStringDSL = func() {
 
 var PayloadQueryArrayStringValidateDSL = func() {
 	Service("ServiceQueryArrayStringValidate", func() {
-		Endpoint("EndpointQueryArrayStringValidate", func() {
+		Method("MethodQueryArrayStringValidate", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(String), func() {
 					MinLength(1)
@@ -725,7 +725,7 @@ var PayloadQueryArrayStringValidateDSL = func() {
 
 var PayloadQueryArrayBytesDSL = func() {
 	Service("ServiceQueryArrayBytes", func() {
-		Endpoint("EndpointQueryArrayBytes", func() {
+		Method("MethodQueryArrayBytes", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(Bytes))
 			})
@@ -739,7 +739,7 @@ var PayloadQueryArrayBytesDSL = func() {
 
 var PayloadQueryArrayBytesValidateDSL = func() {
 	Service("ServiceQueryArrayBytesValidate", func() {
-		Endpoint("EndpointQueryArrayBytesValidate", func() {
+		Method("MethodQueryArrayBytesValidate", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(Bytes), func() {
 					MinLength(1)
@@ -759,7 +759,7 @@ var PayloadQueryArrayBytesValidateDSL = func() {
 
 var PayloadQueryArrayAnyDSL = func() {
 	Service("ServiceQueryArrayAny", func() {
-		Endpoint("EndpointQueryArrayAny", func() {
+		Method("MethodQueryArrayAny", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(Any))
 			})
@@ -773,7 +773,7 @@ var PayloadQueryArrayAnyDSL = func() {
 
 var PayloadQueryArrayAnyValidateDSL = func() {
 	Service("ServiceQueryArrayAnyValidate", func() {
-		Endpoint("EndpointQueryArrayAnyValidate", func() {
+		Method("MethodQueryArrayAnyValidate", func() {
 			Payload(func() {
 				Attribute("q", ArrayOf(Any), func() {
 					MinLength(1)
@@ -793,7 +793,7 @@ var PayloadQueryArrayAnyValidateDSL = func() {
 
 var PayloadQueryMapStringStringDSL = func() {
 	Service("ServiceQueryMapStringString", func() {
-		Endpoint("EndpointQueryMapStringString", func() {
+		Method("MethodQueryMapStringString", func() {
 			Payload(func() {
 				Attribute("q", MapOf(String, String))
 			})
@@ -807,7 +807,7 @@ var PayloadQueryMapStringStringDSL = func() {
 
 var PayloadQueryMapStringStringValidateDSL = func() {
 	Service("ServiceQueryMapStringStringValidate", func() {
-		Endpoint("EndpointQueryMapStringStringValidate", func() {
+		Method("MethodQueryMapStringStringValidate", func() {
 			Payload(func() {
 				Attribute("q", MapOf(String, String), func() {
 					MinLength(1)
@@ -830,7 +830,7 @@ var PayloadQueryMapStringStringValidateDSL = func() {
 
 var PayloadQueryMapStringBoolDSL = func() {
 	Service("ServiceQueryMapStringBool", func() {
-		Endpoint("EndpointQueryMapStringBool", func() {
+		Method("MethodQueryMapStringBool", func() {
 			Payload(func() {
 				Attribute("q", MapOf(String, Boolean))
 			})
@@ -844,7 +844,7 @@ var PayloadQueryMapStringBoolDSL = func() {
 
 var PayloadQueryMapStringBoolValidateDSL = func() {
 	Service("ServiceQueryMapStringBoolValidate", func() {
-		Endpoint("EndpointQueryMapStringBoolValidate", func() {
+		Method("MethodQueryMapStringBoolValidate", func() {
 			Payload(func() {
 				Attribute("q", MapOf(String, Boolean), func() {
 					MinLength(1)
@@ -867,7 +867,7 @@ var PayloadQueryMapStringBoolValidateDSL = func() {
 
 var PayloadQueryMapBoolStringDSL = func() {
 	Service("ServiceQueryMapBoolString", func() {
-		Endpoint("EndpointQueryMapBoolString", func() {
+		Method("MethodQueryMapBoolString", func() {
 			Payload(func() {
 				Attribute("q", MapOf(Boolean, String))
 			})
@@ -881,7 +881,7 @@ var PayloadQueryMapBoolStringDSL = func() {
 
 var PayloadQueryMapBoolStringValidateDSL = func() {
 	Service("ServiceQueryMapBoolStringValidate", func() {
-		Endpoint("EndpointQueryMapBoolStringValidate", func() {
+		Method("MethodQueryMapBoolStringValidate", func() {
 			Payload(func() {
 				Attribute("q", MapOf(Boolean, String), func() {
 					MinLength(1)
@@ -904,7 +904,7 @@ var PayloadQueryMapBoolStringValidateDSL = func() {
 
 var PayloadQueryMapBoolBoolDSL = func() {
 	Service("ServiceQueryMapBoolBool", func() {
-		Endpoint("EndpointQueryMapBoolBool", func() {
+		Method("MethodQueryMapBoolBool", func() {
 			Payload(func() {
 				Attribute("q", MapOf(Boolean, Boolean))
 			})
@@ -918,7 +918,7 @@ var PayloadQueryMapBoolBoolDSL = func() {
 
 var PayloadQueryMapBoolBoolValidateDSL = func() {
 	Service("ServiceQueryMapBoolBoolValidate", func() {
-		Endpoint("EndpointQueryMapBoolBoolValidate", func() {
+		Method("MethodQueryMapBoolBoolValidate", func() {
 			Payload(func() {
 				Attribute("q", MapOf(Boolean, Boolean), func() {
 					MinLength(1)
@@ -941,7 +941,7 @@ var PayloadQueryMapBoolBoolValidateDSL = func() {
 
 var PayloadQueryMapStringArrayStringDSL = func() {
 	Service("ServiceQueryMapStringArrayString", func() {
-		Endpoint("EndpointQueryMapStringArrayString", func() {
+		Method("MethodQueryMapStringArrayString", func() {
 			Payload(func() {
 				Attribute("q", MapOf(String, ArrayOf(String)))
 			})
@@ -955,7 +955,7 @@ var PayloadQueryMapStringArrayStringDSL = func() {
 
 var PayloadQueryMapStringArrayStringValidateDSL = func() {
 	Service("ServiceQueryMapStringArrayStringValidate", func() {
-		Endpoint("EndpointQueryMapStringArrayStringValidate", func() {
+		Method("MethodQueryMapStringArrayStringValidate", func() {
 			Payload(func() {
 				Attribute("q", MapOf(String, ArrayOf(String)), func() {
 					MinLength(1)
@@ -978,7 +978,7 @@ var PayloadQueryMapStringArrayStringValidateDSL = func() {
 
 var PayloadQueryMapStringArrayBoolDSL = func() {
 	Service("ServiceQueryMapStringArrayBool", func() {
-		Endpoint("EndpointQueryMapStringArrayBool", func() {
+		Method("MethodQueryMapStringArrayBool", func() {
 			Payload(func() {
 				Attribute("q", MapOf(String, ArrayOf(Boolean)))
 			})
@@ -992,7 +992,7 @@ var PayloadQueryMapStringArrayBoolDSL = func() {
 
 var PayloadQueryMapStringArrayBoolValidateDSL = func() {
 	Service("ServiceQueryMapStringArrayBoolValidate", func() {
-		Endpoint("EndpointQueryMapStringArrayBoolValidate", func() {
+		Method("MethodQueryMapStringArrayBoolValidate", func() {
 			Payload(func() {
 				Attribute("q", MapOf(String, ArrayOf(Boolean)), func() {
 					MinLength(1)
@@ -1015,7 +1015,7 @@ var PayloadQueryMapStringArrayBoolValidateDSL = func() {
 
 var PayloadQueryMapBoolArrayBoolDSL = func() {
 	Service("ServiceQueryMapBoolArrayBool", func() {
-		Endpoint("EndpointQueryMapBoolArrayBool", func() {
+		Method("MethodQueryMapBoolArrayBool", func() {
 			Payload(func() {
 				Attribute("q", MapOf(Boolean, ArrayOf(Boolean)))
 			})
@@ -1029,7 +1029,7 @@ var PayloadQueryMapBoolArrayBoolDSL = func() {
 
 var PayloadQueryMapBoolArrayBoolValidateDSL = func() {
 	Service("ServiceQueryMapBoolArrayBoolValidate", func() {
-		Endpoint("EndpointQueryMapBoolArrayBoolValidate", func() {
+		Method("MethodQueryMapBoolArrayBoolValidate", func() {
 			Payload(func() {
 				Attribute("q", MapOf(Boolean, ArrayOf(Boolean)), func() {
 					MinLength(1)
@@ -1052,7 +1052,7 @@ var PayloadQueryMapBoolArrayBoolValidateDSL = func() {
 
 var PayloadQueryMapBoolArrayStringDSL = func() {
 	Service("ServiceQueryMapBoolArrayString", func() {
-		Endpoint("EndpointQueryMapBoolArrayString", func() {
+		Method("MethodQueryMapBoolArrayString", func() {
 			Payload(func() {
 				Attribute("q", MapOf(Boolean, ArrayOf(String)))
 			})
@@ -1066,7 +1066,7 @@ var PayloadQueryMapBoolArrayStringDSL = func() {
 
 var PayloadQueryMapBoolArrayStringValidateDSL = func() {
 	Service("ServiceQueryMapBoolArrayStringValidate", func() {
-		Endpoint("EndpointQueryMapBoolArrayStringValidate", func() {
+		Method("MethodQueryMapBoolArrayStringValidate", func() {
 			Payload(func() {
 				Attribute("q", MapOf(Boolean, ArrayOf(String)), func() {
 					MinLength(1)
@@ -1088,7 +1088,7 @@ var PayloadQueryMapBoolArrayStringValidateDSL = func() {
 
 var PayloadQueryPrimitiveStringValidateDSL = func() {
 	Service("ServiceQueryPrimitiveStringValidate", func() {
-		Endpoint("EndpointQueryPrimitiveStringValidate", func() {
+		Method("MethodQueryPrimitiveStringValidate", func() {
 			Payload(String, func() {
 				Enum("val")
 			})
@@ -1102,7 +1102,7 @@ var PayloadQueryPrimitiveStringValidateDSL = func() {
 
 var PayloadQueryPrimitiveBoolValidateDSL = func() {
 	Service("ServiceQueryPrimitiveBoolValidate", func() {
-		Endpoint("EndpointQueryPrimitiveBoolValidate", func() {
+		Method("MethodQueryPrimitiveBoolValidate", func() {
 			Payload(Boolean, func() {
 				Enum(true)
 			})
@@ -1116,7 +1116,7 @@ var PayloadQueryPrimitiveBoolValidateDSL = func() {
 
 var PayloadQueryPrimitiveArrayStringValidateDSL = func() {
 	Service("ServiceQueryPrimitiveArrayStringValidate", func() {
-		Endpoint("EndpointQueryPrimitiveArrayStringValidate", func() {
+		Method("MethodQueryPrimitiveArrayStringValidate", func() {
 			Payload(ArrayOf(String), func() {
 				MinLength(1)
 				Elem(func() {
@@ -1133,7 +1133,7 @@ var PayloadQueryPrimitiveArrayStringValidateDSL = func() {
 
 var PayloadQueryPrimitiveArrayBoolValidateDSL = func() {
 	Service("ServiceQueryPrimitiveArrayBoolValidate", func() {
-		Endpoint("EndpointQueryPrimitiveArrayBoolValidate", func() {
+		Method("MethodQueryPrimitiveArrayBoolValidate", func() {
 			Payload(ArrayOf(Boolean), func() {
 				MinLength(1)
 				Elem(func() {
@@ -1150,7 +1150,7 @@ var PayloadQueryPrimitiveArrayBoolValidateDSL = func() {
 
 var PayloadQueryPrimitiveMapStringArrayStringValidateDSL = func() {
 	Service("ServiceQueryPrimitiveMapStringArrayStringValidate", func() {
-		Endpoint("EndpointQueryPrimitiveMapStringArrayStringValidate", func() {
+		Method("MethodQueryPrimitiveMapStringArrayStringValidate", func() {
 			Payload(MapOf(String, ArrayOf(String)), func() {
 				MinLength(1)
 				Key(func() {
@@ -1173,7 +1173,7 @@ var PayloadQueryPrimitiveMapStringArrayStringValidateDSL = func() {
 
 var PayloadQueryPrimitiveMapStringBoolValidateDSL = func() {
 	Service("ServiceQueryPrimitiveMapStringBoolValidate", func() {
-		Endpoint("EndpointQueryPrimitiveMapStringBoolValidate", func() {
+		Method("MethodQueryPrimitiveMapStringBoolValidate", func() {
 			Payload(MapOf(String, Boolean), func() {
 				MinLength(1)
 				Key(func() {
@@ -1193,7 +1193,7 @@ var PayloadQueryPrimitiveMapStringBoolValidateDSL = func() {
 
 var PayloadQueryPrimitiveMapBoolArrayBoolValidateDSL = func() {
 	Service("ServiceQueryPrimitiveMapBoolArrayBoolValidate", func() {
-		Endpoint("EndpointQueryPrimitiveMapBoolArrayBoolValidate", func() {
+		Method("MethodQueryPrimitiveMapBoolArrayBoolValidate", func() {
 			Payload(MapOf(Boolean, ArrayOf(Boolean)), func() {
 				MinLength(1)
 				Key(func() {
@@ -1216,7 +1216,7 @@ var PayloadQueryPrimitiveMapBoolArrayBoolValidateDSL = func() {
 
 var PayloadQueryStringDefaultDSL = func() {
 	Service("ServiceQueryStringDefault", func() {
-		Endpoint("EndpointQueryStringDefault", func() {
+		Method("MethodQueryStringDefault", func() {
 			Payload(func() {
 				Attribute("q", func() {
 					Default("def")
@@ -1232,7 +1232,7 @@ var PayloadQueryStringDefaultDSL = func() {
 
 var PayloadQueryPrimitiveStringDefaultDSL = func() {
 	Service("ServiceQueryPrimitiveStringDefault", func() {
-		Endpoint("EndpointQueryPrimitiveStringDefault", func() {
+		Method("MethodQueryPrimitiveStringDefault", func() {
 			Payload(String, func() {
 				Default("def")
 			})
@@ -1246,7 +1246,7 @@ var PayloadQueryPrimitiveStringDefaultDSL = func() {
 
 var PayloadPathStringDSL = func() {
 	Service("ServicePathString", func() {
-		Endpoint("EndpointPathString", func() {
+		Method("MethodPathString", func() {
 			Payload(func() {
 				Attribute("p", String)
 			})
@@ -1259,7 +1259,7 @@ var PayloadPathStringDSL = func() {
 
 var PayloadPathStringValidateDSL = func() {
 	Service("ServicePathStringValidate", func() {
-		Endpoint("EndpointPathStringValidate", func() {
+		Method("MethodPathStringValidate", func() {
 			Payload(func() {
 				Attribute("p", String, func() {
 					Enum("val")
@@ -1274,7 +1274,7 @@ var PayloadPathStringValidateDSL = func() {
 
 var PayloadPathArrayStringDSL = func() {
 	Service("ServicePathArrayString", func() {
-		Endpoint("EndpointPathArrayString", func() {
+		Method("MethodPathArrayString", func() {
 			Payload(func() {
 				Attribute("p", ArrayOf(String))
 			})
@@ -1287,7 +1287,7 @@ var PayloadPathArrayStringDSL = func() {
 
 var PayloadPathArrayStringValidateDSL = func() {
 	Service("ServicePathArrayStringValidate", func() {
-		Endpoint("EndpointPathArrayStringValidate", func() {
+		Method("MethodPathArrayStringValidate", func() {
 			Payload(func() {
 				Attribute("p", ArrayOf(String), func() {
 					Enum([]string{"val"})
@@ -1302,7 +1302,7 @@ var PayloadPathArrayStringValidateDSL = func() {
 
 var PayloadPathPrimitiveStringValidateDSL = func() {
 	Service("ServicePathPrimitiveStringValidate", func() {
-		Endpoint("EndpointPathPrimitiveStringValidate", func() {
+		Method("MethodPathPrimitiveStringValidate", func() {
 			Payload(String, func() {
 				Enum("val")
 			})
@@ -1315,7 +1315,7 @@ var PayloadPathPrimitiveStringValidateDSL = func() {
 
 var PayloadPathPrimitiveBoolValidateDSL = func() {
 	Service("ServicePathPrimitiveBoolValidate", func() {
-		Endpoint("EndpointPathPrimitiveBoolValidate", func() {
+		Method("MethodPathPrimitiveBoolValidate", func() {
 			Payload(Boolean, func() {
 				Enum(true)
 			})
@@ -1328,7 +1328,7 @@ var PayloadPathPrimitiveBoolValidateDSL = func() {
 
 var PayloadPathPrimitiveArrayStringValidateDSL = func() {
 	Service("ServicePathPrimitiveArrayStringValidate", func() {
-		Endpoint("EndpointPathPrimitiveArrayStringValidate", func() {
+		Method("MethodPathPrimitiveArrayStringValidate", func() {
 			Payload(ArrayOf(String), func() {
 				MinLength(1)
 				Elem(func() {
@@ -1344,7 +1344,7 @@ var PayloadPathPrimitiveArrayStringValidateDSL = func() {
 
 var PayloadPathPrimitiveArrayBoolValidateDSL = func() {
 	Service("ServicePathPrimitiveArrayBoolValidate", func() {
-		Endpoint("EndpointPathPrimitiveArrayBoolValidate", func() {
+		Method("MethodPathPrimitiveArrayBoolValidate", func() {
 			Payload(ArrayOf(Boolean), func() {
 				MinLength(1)
 				Elem(func() {
@@ -1360,7 +1360,7 @@ var PayloadPathPrimitiveArrayBoolValidateDSL = func() {
 
 var PayloadHeaderStringDSL = func() {
 	Service("ServiceHeaderString", func() {
-		Endpoint("EndpointHeaderString", func() {
+		Method("MethodHeaderString", func() {
 			Payload(func() {
 				Attribute("h", String)
 			})
@@ -1374,7 +1374,7 @@ var PayloadHeaderStringDSL = func() {
 
 var PayloadHeaderStringValidateDSL = func() {
 	Service("ServiceHeaderStringValidate", func() {
-		Endpoint("EndpointHeaderStringValidate", func() {
+		Method("MethodHeaderStringValidate", func() {
 			Payload(func() {
 				Attribute("h", String, func() {
 					Pattern("header")
@@ -1390,7 +1390,7 @@ var PayloadHeaderStringValidateDSL = func() {
 
 var PayloadHeaderArrayStringDSL = func() {
 	Service("ServiceHeaderArrayString", func() {
-		Endpoint("EndpointHeaderArrayString", func() {
+		Method("MethodHeaderArrayString", func() {
 			Payload(func() {
 				Attribute("h", ArrayOf(String))
 			})
@@ -1404,7 +1404,7 @@ var PayloadHeaderArrayStringDSL = func() {
 
 var PayloadHeaderArrayStringValidateDSL = func() {
 	Service("ServiceHeaderArrayStringValidate", func() {
-		Endpoint("EndpointHeaderArrayStringValidate", func() {
+		Method("MethodHeaderArrayStringValidate", func() {
 			Payload(func() {
 				Attribute("h", ArrayOf(String, func() {
 					Enum("val")
@@ -1420,7 +1420,7 @@ var PayloadHeaderArrayStringValidateDSL = func() {
 
 var PayloadHeaderPrimitiveStringValidateDSL = func() {
 	Service("ServiceHeaderPrimitiveStringValidate", func() {
-		Endpoint("EndpointHeaderPrimitiveStringValidate", func() {
+		Method("MethodHeaderPrimitiveStringValidate", func() {
 			Payload(String, func() {
 				Enum("val")
 			})
@@ -1434,7 +1434,7 @@ var PayloadHeaderPrimitiveStringValidateDSL = func() {
 
 var PayloadHeaderPrimitiveBoolValidateDSL = func() {
 	Service("ServiceHeaderPrimitiveBoolValidate", func() {
-		Endpoint("EndpointHeaderPrimitiveBoolValidate", func() {
+		Method("MethodHeaderPrimitiveBoolValidate", func() {
 			Payload(Boolean, func() {
 				Enum(true)
 			})
@@ -1448,7 +1448,7 @@ var PayloadHeaderPrimitiveBoolValidateDSL = func() {
 
 var PayloadHeaderPrimitiveArrayStringValidateDSL = func() {
 	Service("ServiceHeaderPrimitiveArrayStringValidate", func() {
-		Endpoint("EndpointHeaderPrimitiveArrayStringValidate", func() {
+		Method("MethodHeaderPrimitiveArrayStringValidate", func() {
 			Payload(ArrayOf(String), func() {
 				MinLength(1)
 				Elem(func() {
@@ -1465,7 +1465,7 @@ var PayloadHeaderPrimitiveArrayStringValidateDSL = func() {
 
 var PayloadHeaderPrimitiveArrayBoolValidateDSL = func() {
 	Service("ServiceHeaderPrimitiveArrayBoolValidate", func() {
-		Endpoint("EndpointHeaderPrimitiveArrayBoolValidate", func() {
+		Method("MethodHeaderPrimitiveArrayBoolValidate", func() {
 			Payload(ArrayOf(Boolean), func() {
 				MinLength(1)
 				Elem(func() {
@@ -1482,7 +1482,7 @@ var PayloadHeaderPrimitiveArrayBoolValidateDSL = func() {
 
 var PayloadHeaderStringDefaultDSL = func() {
 	Service("ServiceHeaderStringDefault", func() {
-		Endpoint("EndpointHeaderStringDefault", func() {
+		Method("MethodHeaderStringDefault", func() {
 			Payload(func() {
 				Attribute("h", String, func() {
 					Default("def")
@@ -1498,7 +1498,7 @@ var PayloadHeaderStringDefaultDSL = func() {
 
 var PayloadHeaderPrimitiveStringDefaultDSL = func() {
 	Service("ServiceHeaderPrimitiveStringDefault", func() {
-		Endpoint("EndpointHeaderPrimitiveStringDefault", func() {
+		Method("MethodHeaderPrimitiveStringDefault", func() {
 			Payload(String, func() {
 				Default("def")
 			})
@@ -1512,7 +1512,7 @@ var PayloadHeaderPrimitiveStringDefaultDSL = func() {
 
 var PayloadBodyStringDSL = func() {
 	Service("ServiceBodyString", func() {
-		Endpoint("EndpointBodyString", func() {
+		Method("MethodBodyString", func() {
 			Payload(func() {
 				Attribute("b", String)
 			})
@@ -1525,7 +1525,7 @@ var PayloadBodyStringDSL = func() {
 
 var PayloadBodyStringValidateDSL = func() {
 	Service("ServiceBodyStringValidate", func() {
-		Endpoint("EndpointBodyStringValidate", func() {
+		Method("MethodBodyStringValidate", func() {
 			Payload(func() {
 				Attribute("b", String, func() {
 					Pattern("pattern")
@@ -1544,7 +1544,7 @@ var PayloadBodyUserDSL = func() {
 		Attribute("a", String)
 	})
 	Service("ServiceBodyUser", func() {
-		Endpoint("EndpointBodyUser", func() {
+		Method("MethodBodyUser", func() {
 			Payload(PayloadType)
 			HTTP(func() {
 				POST("/")
@@ -1560,7 +1560,7 @@ var PayloadBodyUserValidateDSL = func() {
 		})
 	})
 	Service("ServiceBodyUserValidate", func() {
-		Endpoint("EndpointBodyUserValidate", func() {
+		Method("MethodBodyUserValidate", func() {
 			Payload(PayloadType)
 			HTTP(func() {
 				POST("/")
@@ -1571,7 +1571,7 @@ var PayloadBodyUserValidateDSL = func() {
 
 var PayloadBodyArrayStringDSL = func() {
 	Service("ServiceBodyArrayString", func() {
-		Endpoint("EndpointBodyArrayString", func() {
+		Method("MethodBodyArrayString", func() {
 			Payload(func() {
 				Attribute("b", ArrayOf(String))
 			})
@@ -1584,7 +1584,7 @@ var PayloadBodyArrayStringDSL = func() {
 
 var PayloadBodyArrayStringValidateDSL = func() {
 	Service("ServiceBodyArrayStringValidate", func() {
-		Endpoint("EndpointBodyArrayStringValidate", func() {
+		Method("MethodBodyArrayStringValidate", func() {
 			Payload(func() {
 				Attribute("b", ArrayOf(String), func() {
 					MinLength(2)
@@ -1607,7 +1607,7 @@ var PayloadBodyArrayUserDSL = func() {
 		})
 	})
 	Service("ServiceBodyArrayUser", func() {
-		Endpoint("EndpointBodyArrayUser", func() {
+		Method("MethodBodyArrayUser", func() {
 			Payload(func() {
 				Attribute("b", ArrayOf(PayloadType))
 			})
@@ -1625,7 +1625,7 @@ var PayloadBodyArrayUserValidateDSL = func() {
 		})
 	})
 	Service("ServiceBodyArrayUserValidate", func() {
-		Endpoint("EndpointBodyArrayUserValidate", func() {
+		Method("MethodBodyArrayUserValidate", func() {
 			Payload(func() {
 				Attribute("b", ArrayOf(PayloadType), func() {
 					MinLength(2)
@@ -1640,7 +1640,7 @@ var PayloadBodyArrayUserValidateDSL = func() {
 
 var PayloadBodyMapStringDSL = func() {
 	Service("ServiceBodyMapString", func() {
-		Endpoint("EndpointBodyMapString", func() {
+		Method("MethodBodyMapString", func() {
 			Payload(func() {
 				Attribute("b", MapOf(String, String))
 			})
@@ -1653,7 +1653,7 @@ var PayloadBodyMapStringDSL = func() {
 
 var PayloadBodyMapStringValidateDSL = func() {
 	Service("ServiceBodyMapStringValidate", func() {
-		Endpoint("EndpointBodyMapStringValidate", func() {
+		Method("MethodBodyMapStringValidate", func() {
 			Payload(func() {
 				Attribute("b", MapOf(String, String), func() {
 					Elem(func() {
@@ -1675,7 +1675,7 @@ var PayloadBodyMapUserDSL = func() {
 		})
 	})
 	Service("ServiceBodyMapUser", func() {
-		Endpoint("EndpointBodyMapUser", func() {
+		Method("MethodBodyMapUser", func() {
 			Payload(func() {
 				Attribute("b", MapOf(String, PayloadType))
 			})
@@ -1693,7 +1693,7 @@ var PayloadBodyMapUserValidateDSL = func() {
 		})
 	})
 	Service("ServiceBodyMapUserValidate", func() {
-		Endpoint("EndpointBodyMapUserValidate", func() {
+		Method("MethodBodyMapUserValidate", func() {
 			Payload(func() {
 				Attribute("b", MapOf(String, PayloadType), func() {
 					Key(func() {
@@ -1710,7 +1710,7 @@ var PayloadBodyMapUserValidateDSL = func() {
 
 var PayloadBodyPrimitiveStringValidateDSL = func() {
 	Service("ServiceBodyPrimitiveStringValidate", func() {
-		Endpoint("EndpointBodyPrimitiveStringValidate", func() {
+		Method("MethodBodyPrimitiveStringValidate", func() {
 			Payload(String, func() {
 				Enum("val")
 			})
@@ -1723,7 +1723,7 @@ var PayloadBodyPrimitiveStringValidateDSL = func() {
 
 var PayloadBodyPrimitiveBoolValidateDSL = func() {
 	Service("ServiceBodyPrimitiveBoolValidate", func() {
-		Endpoint("EndpointBodyPrimitiveBoolValidate", func() {
+		Method("MethodBodyPrimitiveBoolValidate", func() {
 			Payload(Boolean, func() {
 				Enum(true)
 			})
@@ -1736,7 +1736,7 @@ var PayloadBodyPrimitiveBoolValidateDSL = func() {
 
 var PayloadBodyPrimitiveArrayStringValidateDSL = func() {
 	Service("ServiceBodyPrimitiveArrayStringValidate", func() {
-		Endpoint("EndpointBodyPrimitiveArrayStringValidate", func() {
+		Method("MethodBodyPrimitiveArrayStringValidate", func() {
 			Payload(ArrayOf(String), func() {
 				MinLength(1)
 				Elem(func() {
@@ -1752,7 +1752,7 @@ var PayloadBodyPrimitiveArrayStringValidateDSL = func() {
 
 var PayloadBodyPrimitiveArrayBoolValidateDSL = func() {
 	Service("ServiceBodyPrimitiveArrayBoolValidate", func() {
-		Endpoint("EndpointBodyPrimitiveArrayBoolValidate", func() {
+		Method("MethodBodyPrimitiveArrayBoolValidate", func() {
 			Payload(ArrayOf(Boolean), func() {
 				MinLength(1)
 				Elem(func() {
@@ -1768,7 +1768,7 @@ var PayloadBodyPrimitiveArrayBoolValidateDSL = func() {
 
 var PayloadBodyQueryObjectDSL = func() {
 	Service("ServiceBodyQueryObject", func() {
-		Endpoint("EndpointBodyQueryObject", func() {
+		Method("MethodBodyQueryObject", func() {
 			Payload(func() {
 				Attribute("a", String)
 				Attribute("b", String)
@@ -1783,7 +1783,7 @@ var PayloadBodyQueryObjectDSL = func() {
 
 var PayloadBodyQueryObjectValidateDSL = func() {
 	Service("ServiceBodyQueryObjectValidate", func() {
-		Endpoint("EndpointBodyQueryObjectValidate", func() {
+		Method("MethodBodyQueryObjectValidate", func() {
 			Payload(func() {
 				Attribute("a", String, func() {
 					Pattern("patterna")
@@ -1807,7 +1807,7 @@ var PayloadBodyQueryUserDSL = func() {
 		Attribute("b", String)
 	})
 	Service("ServiceBodyQueryUser", func() {
-		Endpoint("EndpointBodyQueryUser", func() {
+		Method("MethodBodyQueryUser", func() {
 			Payload(PayloadType)
 			HTTP(func() {
 				POST("/")
@@ -1828,7 +1828,7 @@ var PayloadBodyQueryUserValidateDSL = func() {
 		Required("a", "b")
 	})
 	Service("ServiceBodyQueryUserValidate", func() {
-		Endpoint("EndpointBodyQueryUserValidate", func() {
+		Method("MethodBodyQueryUserValidate", func() {
 			Payload(PayloadType)
 			HTTP(func() {
 				POST("/")
@@ -1840,7 +1840,7 @@ var PayloadBodyQueryUserValidateDSL = func() {
 
 var PayloadBodyPathObjectDSL = func() {
 	Service("ServiceBodyPathObject", func() {
-		Endpoint("EndpointBodyPathObject", func() {
+		Method("MethodBodyPathObject", func() {
 			Payload(func() {
 				Attribute("a", String)
 				Attribute("b", String)
@@ -1854,7 +1854,7 @@ var PayloadBodyPathObjectDSL = func() {
 
 var PayloadBodyPathObjectValidateDSL = func() {
 	Service("ServiceBodyPathObjectValidate", func() {
-		Endpoint("EndpointBodyPathObjectValidate", func() {
+		Method("MethodBodyPathObjectValidate", func() {
 			Payload(func() {
 				Attribute("a", String, func() {
 					Pattern("patterna")
@@ -1877,7 +1877,7 @@ var PayloadBodyPathUserDSL = func() {
 		Attribute("b", String)
 	})
 	Service("ServiceBodyPathUser", func() {
-		Endpoint("EndpointBodyPathUser", func() {
+		Method("MethodBodyPathUser", func() {
 			Payload(PayloadType)
 			HTTP(func() {
 				POST("/{b}")
@@ -1897,7 +1897,7 @@ var PayloadBodyPathUserValidateDSL = func() {
 		Required("a", "b")
 	})
 	Service("ServiceBodyPathUserValidate", func() {
-		Endpoint("EndpointUserBodyPathValidate", func() {
+		Method("MethodUserBodyPathValidate", func() {
 			Payload(PayloadType)
 			HTTP(func() {
 				POST("/{b}")
@@ -1908,7 +1908,7 @@ var PayloadBodyPathUserValidateDSL = func() {
 
 var PayloadBodyQueryPathObjectDSL = func() {
 	Service("ServiceBodyQueryPathObject", func() {
-		Endpoint("EndpointBodyQueryPathObject", func() {
+		Method("MethodBodyQueryPathObject", func() {
 			Payload(func() {
 				Attribute("a", String)
 				Attribute("b", String)
@@ -1924,7 +1924,7 @@ var PayloadBodyQueryPathObjectDSL = func() {
 
 var PayloadBodyQueryPathObjectValidateDSL = func() {
 	Service("ServiceBodyQueryPathObjectValidate", func() {
-		Endpoint("EndpointBodyQueryPathObjectValidate", func() {
+		Method("MethodBodyQueryPathObjectValidate", func() {
 			Payload(func() {
 				Attribute("a", String, func() {
 					Pattern("patterna")
@@ -1952,7 +1952,7 @@ var PayloadBodyQueryPathUserDSL = func() {
 		Attribute("c", String)
 	})
 	Service("ServiceBodyQueryPathUser", func() {
-		Endpoint("EndpointBodyQueryPathUser", func() {
+		Method("MethodBodyQueryPathUser", func() {
 			Payload(PayloadType)
 			HTTP(func() {
 				POST("/{c}")
@@ -1976,7 +1976,7 @@ var PayloadBodyQueryPathUserValidateDSL = func() {
 		Required("a", "b", "c")
 	})
 	Service("ServiceBodyQueryPathUserValidate", func() {
-		Endpoint("EndpointBodyQueryPathUserValidate", func() {
+		Method("MethodBodyQueryPathUserValidate", func() {
 			Payload(PayloadType)
 			HTTP(func() {
 				POST("/{c}")

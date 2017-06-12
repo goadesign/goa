@@ -444,13 +444,13 @@ func buildPathFromExpr(s *OpenAPIV2, root *rest.RootExpr, route *rest.RouteExpr,
 		responses[strconv.Itoa(r.StatusCode)] = resp
 	}
 
-	if action.EndpointExpr.Payload != nil {
-		payloadSchema := TypeSchema(root.Design.API, action.EndpointExpr.Payload.Type)
+	if action.MethodExpr.Payload != nil {
+		payloadSchema := TypeSchema(root.Design.API, action.MethodExpr.Payload.Type)
 		pp := &Parameter{
 			Name:        "payload",
 			In:          "body",
-			Description: action.EndpointExpr.Payload.Description,
-			Required:    action.EndpointExpr.Payload != nil,
+			Description: action.MethodExpr.Payload.Description,
+			Required:    action.MethodExpr.Payload != nil,
 			Schema:      payloadSchema,
 		}
 		params = append(params, pp)
@@ -477,7 +477,7 @@ func buildPathFromExpr(s *OpenAPIV2, root *rest.RootExpr, route *rest.RouteExpr,
 		Tags:         tagNames,
 		Description:  action.Description(),
 		Summary:      summaryFromExpr(action.Name()+" "+action.Resource.Name(), action.Metadata),
-		ExternalDocs: docsFromExpr(action.EndpointExpr.Docs),
+		ExternalDocs: docsFromExpr(action.MethodExpr.Docs),
 		OperationID:  operationID,
 		Parameters:   params,
 		Responses:    responses,

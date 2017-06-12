@@ -9,7 +9,7 @@ import (
 // RequestBodyType returns the type of the request body given an action. If the
 // DSL defines a body explicitly via the Body function then the corresponding
 // type is used instead of the payload type. Otherwise the type is computed by
-// removing the attributes of the endpoint payload used to define headers and
+// removing the attributes of the method payload used to define headers and
 // parameters.
 func RequestBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, suffix string) design.DataType {
 	if a.Body != nil {
@@ -17,7 +17,7 @@ func RequestBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, suffix string) de
 	}
 
 	var (
-		dt      = a.EndpointExpr.Payload.Type
+		dt      = a.MethodExpr.Payload.Type
 		headers = a.MappedHeaders()
 		params  = a.AllParams()
 	)
@@ -44,7 +44,7 @@ func RequestBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, suffix string) de
 	}
 
 	// 3. Remove header and param attributes
-	body := rest.NewMappedAttributeExpr(a.EndpointExpr.Payload)
+	body := rest.NewMappedAttributeExpr(a.MethodExpr.Payload)
 	removeAttributes(body, headers)
 	removeAttributes(body, params)
 
@@ -65,7 +65,7 @@ func RequestBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, suffix string) de
 // the corresponding service attribute (either a result or an error attribute).
 // and result attribute. If the DSL defines a body explicitly via the Body
 // function then the corresponding type is used instead of the attribute type.
-// Otherwise the type is computed by removing the attributes of the endpoint
+// Otherwise the type is computed by removing the attributes of the method
 // payload used to define headers and parameters. Also if the response defines a
 // view then the response media type is projected first. suffix is appended to
 // the created type name if any.

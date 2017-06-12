@@ -13,7 +13,7 @@ import (
 // types.
 var mediaTypeCount int
 
-// MediaType defines a media type used to describe an endpoint response.
+// MediaType defines a media type used to describe a method response.
 //
 // Media types have a unique identifier as described in RFC6838. The identifier
 // defines the default value for the Content-Type header of HTTP responses.

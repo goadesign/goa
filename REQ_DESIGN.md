@@ -36,12 +36,12 @@ var _ = API("cellar", func() {
 
 ## `Service` Expression
 
-The `Service` DSL defines a group of endpoints. This maps to a resource in REST
+The `Service` DSL defines a group of methods. This maps to a resource in REST
 or a `service` declaration in gRPC. A service may define common error responses
-to all the service endpoints, more on error responses in the next section.
+to all the service methods, more on error responses in the next section.
 
 ```go
-// The "account" service exposes the account resource endpoints.
+// The "account" service exposes the account resource methods.
 var _ = Service("account", func() {
     Error(ErrUnauthorized, Unauthorized)
     HTTP(func() {
@@ -56,16 +56,16 @@ The `HTTP` and `GRPC` functions make it possible to define transport specific
 service properties such as a common base path to all HTTP requests or the GRPC
 service name.
 
-## `Endpoint` Expression
+## `Method` Expression
 
-The service endpoints are described using `Endpoint`. This function defines the
-endpoint request and response types. It may also list an arbitrary number of
+The service methods are described using `Method`. This function defines the
+method request and response types. It may also list an arbitrary number of
 error responses. An error response has a name and optionally a type. Omitting
 the request or response type has the same effect as using the built-int type
 `Empty` which maps to an empty body in HTTP and to the `Empty` message in gRPC.
 
 ```go
-    Endpoint("update", func() {
+    Method("update", func() {
         Description("Change account name")
         Request(UpdateAccount)
         Response(Empty)
@@ -105,7 +105,7 @@ response type.
         })
 ```
 
-### Endpoint Request Type
+### Method Request Type
 
 In the example above the `accountID` HTTP request path parameter is defined by
 the attribute of the `UpdateAccount` type with the same name and so is the body
@@ -145,14 +145,14 @@ Array body definition:
         })
 ```
 
-### Endpoint Response Type
+### Method Response Type
 
 While a service may only define one response type the `HTTP` function may list
 multiple responses. Each response defines the HTTP status code, response body
 shape (if any) and may also list HTTP headers.
 
 By default the shape of the body of responses with HTTP status code 200 is
-described by the endpoint response type.  The `HTTP` function may optionnally
+described by the method response type.  The `HTTP` function may optionnally
 use response type attributes to define response headers. Any attribute of the
 response type that is not explicitly used to define a response header defines a
 field of the response body implicitly. This alleviates the need to repeat all the
@@ -166,7 +166,7 @@ object or the name of a specific attribute in which case the response body shape
 is dictated by the type of the attribute.
 
 ```go
-    Endpoint("index", func() {
+    Method("index", func() {
         Description("Index all accounts")
         Request(ListAccounts)
         Response(func() {
@@ -259,7 +259,7 @@ goa DSL --goagen--> api.proto --protoc--> *.go
 
 Often times there may already exist a protobuf definition file for a gRPC
 service. Protobuf focuses on making it possible to describe the information
-required to represent the data on the wire and the service endpoints. The goa
+required to represent the data on the wire and the service methods. The goa
 DSL also makes it possible to provide documentation, validations, default values
 etc. The idea is thus to make it possible to "point" to the relevant part of a
 protobuf file from the goa DSL while still allowing for describing the extra

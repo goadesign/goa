@@ -9,10 +9,10 @@ import (
 // error responses. When describing an error response the first argument is the
 // name of the error.
 //
-// While a service endpoint may only define a single result type Response may be
+// While a service method may only define a single result type Response may be
 // called multiple times to define multiple success HTTP responses. In this case
 // the Tag expression makes it possible to specify the name of a field in the
-// endpoint result type and a value that the field must have for the
+// method result type and a value that the field must have for the
 // corresponding response to be sent. The tag field must be of type String.
 //
 // Response allows specifying the response status code as an argument or via the
@@ -20,7 +20,7 @@ import (
 // via the Body expression.
 //
 // By default success HTTP responses use status code 200 and error HTTP responses
-// use status code 400. Also by default the responses use the endpoint result
+// use status code 400. Also by default the responses use the method result
 // type (success responses) or error type (error responses) to define the
 // response body shape.
 //
@@ -43,13 +43,13 @@ import (
 //
 // the following:
 //
-//     Endpoint("show", func() {
+//     Method("show", func() {
 //         Response(AccountMedia)
 //     })
 //
 // is equivalent to:
 //
-//     Endpoint("show", func() {
+//     Method("show", func() {
 //         Response(AccountMedia)
 //         HTTP(func() {
 //             Response(func() {
@@ -65,7 +65,7 @@ import (
 //
 // The following:
 //
-//     Endpoint("show", func() {
+//     Method("show", func() {
 //         Response(ShowResponse)
 //         HTTP(func() {
 //             Response(func() {
@@ -76,7 +76,7 @@ import (
 //
 // is thus equivalent to:
 //
-//     Endpoint("show", func() {
+//     Method("show", func() {
 //         Response(ShowResponse)
 //         HTTP(func() {
 //             Response(func() {
@@ -91,9 +91,9 @@ import (
 //     })
 //
 // Response may appear in a API or service HTTP expression to define error
-// responses common to all the API or service endpoints. Response may also appear
-// in an endpoint HTTP expression to define both the success and error responses
-// specific to the endpoint.
+// responses common to all the API or service methods. Response may also appear
+// in an method HTTP expression to define both the success and error responses
+// specific to the method.
 //
 // Response takes one to three arguments. Success responses accept a status code
 // or a function as first argument. If the first argument is a status code then
@@ -115,7 +115,7 @@ import (
 //
 // Example:
 //
-//    Endpoint("create", func() {
+//    Method("create", func() {
 //        Payload(CreatePayload)
 //        Result(CreateResult)
 //        Error("an_error")
@@ -126,7 +126,7 @@ import (
 //            Response(func() {
 //                Description("Response used when item already exists")
 //                Code(StatusNoContent) // HTTP status code set using Code
-//                Body(Empty)           // Override endpoint result type
+//                Body(Empty)           // Override method result type
 //            })
 //
 //            Response(StatusAccepted, func() {
@@ -183,7 +183,7 @@ func Response(val interface{}, args ...interface{}) {
 	}
 }
 
-// Tag identifies a endpoint result type field and a value. The algorithm that
+// Tag identifies a method result type field and a value. The algorithm that
 // encodes the result into the HTTP response iterates through the responses and
 // uses the first response that has a matching tag (that is for which the result
 // field with the tag name matches the tag value). There must be one and only
@@ -195,7 +195,7 @@ func Response(val interface{}, args ...interface{}) {
 //
 // Example:
 //
-//    Endpoint("create", func() {
+//    Method("create", func() {
 //        Result(CreateResult)
 //        HTTP(func() {
 //            Response(StatusCreated, func() {

@@ -14,7 +14,7 @@ import (
 
 func TestService(t *testing.T) {
 	const (
-		singleMethod = `type (
+		singleMethodCode = `type (
 	// Single is the Single service interface.
 	Single interface {
 		// A implements A.
@@ -41,7 +41,7 @@ func TestService(t *testing.T) {
 )
 `
 
-		multipleMethods = `type (
+		multipleMethodsCode = `type (
 	// Multiple is the Multiple service interface.
 	Multiple interface {
 		// A implements A.
@@ -100,7 +100,7 @@ func TestService(t *testing.T) {
 )
 `
 
-		emptyMethods = `type (
+		emptyMethodsCode = `type (
 	// Empty is the Empty service interface.
 	Empty interface {
 		// Empty implements Empty.
@@ -109,7 +109,7 @@ func TestService(t *testing.T) {
 )
 `
 
-		emptyResultMethods = `type (
+		emptyResultMethodsCode = `type (
 	// EmptyResult is the EmptyResult service interface.
 	EmptyResult interface {
 		// EmptyResult implements EmptyResult.
@@ -127,7 +127,7 @@ func TestService(t *testing.T) {
 )
 `
 
-		emptyPayloadMethods = `type (
+		emptyPayloadMethodsCode = `type (
 	// EmptyPayload is the EmptyPayload service interface.
 	EmptyPayload interface {
 		// EmptyPayload implements EmptyPayload.
@@ -226,94 +226,94 @@ func TestService(t *testing.T) {
 				}},
 			}}
 
-		a1 = design.EndpointExpr{
+		a1 = design.MethodExpr{
 			Name:    "A",
 			Payload: &apayload,
 			Result:  &aresult,
 		}
 
-		a2 = design.EndpointExpr{
+		a2 = design.MethodExpr{
 			Name:    "A",
 			Payload: &apayload,
 			Result:  &aresult,
 		}
 
-		b = design.EndpointExpr{
+		b = design.MethodExpr{
 			Name:    "B",
 			Payload: &bpayload,
 			Result:  &bresult,
 		}
 
-		empty = design.EndpointExpr{
+		empty = design.MethodExpr{
 			Name:    "Empty",
 			Payload: &design.AttributeExpr{Type: design.Empty},
 			Result:  &design.AttributeExpr{Type: design.Empty},
 		}
 
-		emptyResult = design.EndpointExpr{
+		emptyResult = design.MethodExpr{
 			Name:    "EmptyResult",
 			Payload: &apayload,
 			Result:  &design.AttributeExpr{Type: design.Empty},
 		}
 
-		emptyPayload = design.EndpointExpr{
+		emptyPayload = design.MethodExpr{
 			Name:    "EmptyPayload",
 			Payload: &design.AttributeExpr{Type: design.Empty},
 			Result:  &aresult,
 		}
 
-		singleEndpoint = design.ServiceExpr{
+		singleMethod = design.ServiceExpr{
 			Name: "Single",
-			Endpoints: []*design.EndpointExpr{
+			Methods: []*design.MethodExpr{
 				&a1,
 			},
 		}
 
-		multipleEndpoints = design.ServiceExpr{
+		multipleMethods = design.ServiceExpr{
 			Name: "Multiple",
-			Endpoints: []*design.EndpointExpr{
+			Methods: []*design.MethodExpr{
 				&a2,
 				&b,
 			},
 		}
 
-		emptyEndpoint = design.ServiceExpr{
+		emptyMethod = design.ServiceExpr{
 			Name: "Empty",
-			Endpoints: []*design.EndpointExpr{
+			Methods: []*design.MethodExpr{
 				&empty,
 			},
 		}
 
-		emptyResultEndpoint = design.ServiceExpr{
+		emptyResultMethod = design.ServiceExpr{
 			Name: "EmptyResult",
-			Endpoints: []*design.EndpointExpr{
+			Methods: []*design.MethodExpr{
 				&emptyResult,
 			},
 		}
 
-		emptyPayloadEndpoint = design.ServiceExpr{
+		emptyPayloadMethod = design.ServiceExpr{
 			Name: "EmptyPayload",
-			Endpoints: []*design.EndpointExpr{
+			Methods: []*design.MethodExpr{
 				&emptyPayload,
 			},
 		}
 	)
-	singleEndpoint.Endpoints[0].Service = &singleEndpoint
-	multipleEndpoints.Endpoints[0].Service = &multipleEndpoints
-	multipleEndpoints.Endpoints[1].Service = &multipleEndpoints
-	emptyEndpoint.Endpoints[0].Service = &emptyEndpoint
-	emptyResultEndpoint.Endpoints[0].Service = &emptyResultEndpoint
-	emptyPayloadEndpoint.Endpoints[0].Service = &emptyPayloadEndpoint
+	singleMethod.Methods[0].Service = &singleMethod
+	multipleMethods.Methods[0].Service = &multipleMethods
+	multipleMethods.Methods[1].Service = &multipleMethods
+	emptyMethod.Methods[0].Service = &emptyMethod
+	emptyResultMethod.Methods[0].Service = &emptyResultMethod
+	emptyPayloadMethod.Methods[0].Service = &emptyPayloadMethod
 
 	cases := map[string]struct {
 		Service  *design.ServiceExpr
 		Expected string
 	}{
-		"single":                             {Service: &singleEndpoint, Expected: singleMethod},
-		"multiple":                           {Service: &multipleEndpoints, Expected: multipleMethods},
-		"empty payload, empty result":        {Service: &emptyEndpoint, Expected: emptyMethods},
-		"non empty payload but empty result": {Service: &emptyResultEndpoint, Expected: emptyResultMethods},
-		"empty payload and non empty result": {Service: &emptyPayloadEndpoint, Expected: emptyPayloadMethods},
+		"single":                             {Service: &singleMethod, Expected: singleMethodCode},
+		"multiple":                           {Service: &multipleMethods, Expected: multipleMethodsCode},
+		"empty payload, empty result":        {Service: &emptyMethod, Expected: emptyMethodsCode},
+		"non empty payload but empty result": {Service: &emptyResultMethod, Expected: emptyResultMethodsCode},
+		"empty payload and non empty result": {Service: &emptyPayloadMethod, Expected: emptyPayloadMethodsCode},
 	}
 	for k, tc := range cases {
 		buf := new(bytes.Buffer)

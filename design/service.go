@@ -7,21 +7,21 @@ import (
 )
 
 type (
-	// ServiceExpr describes a set of related endpoints.
+	// ServiceExpr describes a set of related methods.
 	ServiceExpr struct {
 		// DSLFunc contains the DSL used to initialize the expression.
 		eval.DSLFunc
-		// Name of endpoint group.
+		// Name of method group.
 		Name string
-		// Description of endpoint group for consumption by humans.
+		// Description of method group for consumption by humans.
 		Description string
 		// Docs points to external documentation
 		Docs *DocsExpr
 		// Servers list the API hosts
 		Servers []*ServerExpr
-		// Endpoints is the list of service endpoints.
-		Endpoints []*EndpointExpr
-		// Errors list the errors common to all the service endpoints.
+		// Methods is the list of service methods.
+		Methods []*MethodExpr
+		// Errors list the errors common to all the service methods.
 		Errors []*ErrorExpr
 		// Metadata is a set of key/value pairs with semantic that is
 		// specific to each generator.
@@ -61,9 +61,9 @@ func (s *ServiceExpr) Hash() string {
 	return "_service_+" + s.Name
 }
 
-// Finalize finalizes all the service endpoints.
+// Finalize finalizes all the service methods.
 func (s *ServiceExpr) Finalize() {
-	for _, ep := range s.Endpoints {
+	for _, ep := range s.Methods {
 		ep.Finalize()
 	}
 }

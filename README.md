@@ -41,7 +41,7 @@ the
 
 The generated code produced by `goagen` v2 implements a much stronger separation
 of concern between the transport and service layers. This makes it possible to
-easily expose the same endpoints via different transport mechanisms such as HTTP
+easily expose the same methods via different transport mechanisms such as HTTP
 and gRPC. See the
 [account example](https://github.com/goadesign/goa/tree/v2/examples/account)
 which illustrates the new generated code structure.
@@ -73,7 +73,7 @@ generated code would be for the gRPC transport.
 
 ## Design Doc Tasks
 
-- [ ] DSL layout (API -> Service -> Endpoint -> Payload/Result/Errors)
+- [ ] DSL layout (API -> Service -> Method -> Payload/Result/Errors)
 - [ ] Types: primitives
 - [ ] Types: arrays
 - [ ] Types: maps
@@ -138,7 +138,7 @@ Examples:
 * simple "get by identifier" where identifiers are integers:
 
 ```go
-Endpoint("show", func() {
+Method("show", func() {
     Payload(Int)
     HTTP(func() {
         GET("/{id}")
@@ -153,7 +153,7 @@ Endpoint("show", func() {
 * bulk "delete by identifiers" where identifiers are strings:
 
 ```go
-Endpoint("delete", func() {
+Method("delete", func() {
     Payload(ArrayOf(String))
     HTTP(func() {
         DELETE("/{ids}")
@@ -172,7 +172,7 @@ Endpoint("delete", func() {
 * list with filters:
 
 ```go
-Endpoint("list", func() {
+Method("list", func() {
     Payload(ArrayOf(String))
     HTTP(func() {
         GET("")
@@ -188,7 +188,7 @@ Endpoint("list", func() {
 list with version:
 
 ```go
-Endpoint("list", func() {
+Method("list", func() {
     Payload(Float32)
     HTTP(func() {
         GET("")
@@ -204,7 +204,7 @@ Endpoint("list", func() {
 creation:
 
 ```go
-Endpoint("create", func() {
+Method("create", func() {
     Payload(MapOf(String, Int))
     HTTP(func() {
         POST("")
@@ -236,7 +236,7 @@ describe the body.
 For example, given the payload:
 
 ```go
-Endpoint("create", func() {
+Method("create", func() {
     Payload(func() {
         Attribute("id", Int)
         Attribute("name", String)
@@ -249,7 +249,7 @@ The following HTTP expression causes the `id` attribute to get loaded from the
 path parameter while `name` and `age` are loaded from the request body:
 
 ```go 
-Endpoint("create", func() {
+Method("create", func() {
     Payload(func() {
         Attribute("id", Int)
         Attribute("name", String)
@@ -271,7 +271,7 @@ arrays or maps.
 Consider the following payload:
 
 ```go 
-Endpoint("rate", func() {
+Method("rate", func() {
     Payload(func() {
         Attribute("id", Int)
         Attribute("rates", MapOf(String, Float64))
@@ -282,7 +282,7 @@ Endpoint("rate", func() {
 Using the following HTTP expression the rates are loaded from the body:
 
 ```go 
-Endpoint("rate", func() {
+Method("rate", func() {
     Payload(func() {
         Attribute("id", Int)
         Attribute("rates", MapOf(String, Float64))
@@ -321,7 +321,7 @@ mapping between the incoming data field names and the payload attribute names,
 for example:
 
 ```go 
-Endpoint("create", func() {
+Method("create", func() {
     Payload(func() {
         Attribute("name", String)
         Attribute("age", Int)

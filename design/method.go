@@ -7,15 +7,15 @@ import (
 )
 
 type (
-	// EndpointExpr defines a single endpoint.
-	EndpointExpr struct {
+	// MethodExpr defines a single method.
+	MethodExpr struct {
 		// DSLFunc contains the DSL used to initialize the expression.
 		eval.DSLFunc
-		// Name of endpoint.
+		// Name of method.
 		Name string
-		// Description of endpoint for consumption by humans.
+		// Description of method for consumption by humans.
 		Description string
-		// Docs points to the endpoint external documentation if any.
+		// Docs points to the method external documentation if any.
 		Docs *DocsExpr
 		// Payload attribute
 		Payload *AttributeExpr
@@ -23,7 +23,7 @@ type (
 		Result *AttributeExpr
 		// Errors lists the error responses.
 		Errors []*ErrorExpr
-		// Service that owns endpoint.
+		// Service that owns method.
 		Service *ServiceExpr
 		// Metadata is an arbitrary set of key/value pairs, see dsl.Metadata
 		Metadata MetadataExpr
@@ -32,7 +32,7 @@ type (
 
 // Error returns the error with the given name. It looks up recursively in the
 // enpoint then the service and finally the root expression.
-func (e *EndpointExpr) Error(name string) *ErrorExpr {
+func (e *MethodExpr) Error(name string) *ErrorExpr {
 	for _, err := range e.Errors {
 		if err.Name == name {
 			return err
@@ -42,12 +42,12 @@ func (e *EndpointExpr) Error(name string) *ErrorExpr {
 }
 
 // EvalName returns the generic expression name used in error messages.
-func (e *EndpointExpr) EvalName() string {
+func (e *MethodExpr) EvalName() string {
 	var prefix, suffix string
 	if e.Name != "" {
-		suffix = fmt.Sprintf("endpoint %#v", e.Name)
+		suffix = fmt.Sprintf("method %#v", e.Name)
 	} else {
-		suffix = "unnamed endpoint"
+		suffix = "unnamed method"
 	}
 	if e.Service != nil {
 		prefix = e.Service.EvalName() + " "
@@ -55,8 +55,8 @@ func (e *EndpointExpr) EvalName() string {
 	return prefix + suffix
 }
 
-// Finalize makes sure the endpoint payload and result types are set.
-func (e *EndpointExpr) Finalize() {
+// Finalize makes sure the method payload and result types are set.
+func (e *MethodExpr) Finalize() {
 	if e.Payload == nil {
 		e.Payload = &AttributeExpr{Type: Empty}
 	}

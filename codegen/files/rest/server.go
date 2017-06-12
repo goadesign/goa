@@ -13,203 +13,19 @@
 
 // Initialize error responses headers and body from result (action.go)
 
+// Media Type -> Result Type
+
 package rest
 
 import (
 	"fmt"
-	"net/http"
 	"path/filepath"
 	"text/template"
 
-	"strings"
-
 	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/codegen/files"
-	restgen "goa.design/goa.v2/codegen/rest"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
-)
-
-type (
-	// ServerData describes a single endpoint/resource.
-	ServerData struct {
-		// ServiceName is the name of the service.
-		ServiceName string
-		// ServiceVarName is the goified name of the service.
-		ServiceVarName string
-		// HandlerStruct is the name of the main server handler structure.
-		HandlersStruct string
-		// Constructor is the name of the constructor of the handler struct function.
-		Constructor string
-		// MountHandlers is the name of the name of the mount function.
-		MountHandlers string
-		// Action describes the action data for this endpoint.
-		ActionData []*ServerActionData
-	}
-
-	// ServerActionData describes a single action.
-	ServerActionData struct {
-		// EndpointName is the name of the endpoint.
-		EndpointName string
-		// EndpointVarName is the goified name of theendpoint/resource.
-		EndpointVarName string
-		// ServiceName is the name of the service.
-		ServiceName string
-		// ServiceVarName is the goified name of the service.
-		ServiceVarName string
-		// Routes describes the possible routes for this action.
-		Routes []*ServerRouteData
-		// MountHandler is the name of the mount handler function.
-		MountHandler string
-		// Constructor is the name of the constructor function for the http handler function.
-		Constructor string
-		// Decoder is the name of the decoder function.
-		Decoder string
-		// Encoder is the name of the encoder function.
-		Encoder string
-		// ErrorEncoder is the name of the error encoder function.
-		ErrorEncoder string
-		// Payload provides information about the payload.
-		Payload *ServerPayloadData
-		// ResultTypeRef is the service endpoint result type reference
-		ResultTypeRef string
-		// Responses describes the information about the different
-		// responses. If there are more than one responses then the
-		// tagless response must be last.
-		Responses []*ServerResponseData
-		// HTTPErrors describes the information about error responses.
-		HTTPErrors []*ServerErrorData
-	}
-
-	// ServerPayloadData describes a payload.
-	ServerPayloadData struct {
-		// Ref is the reference to the payload type.
-		Ref string
-		// Constructor is the name of the payload constructor function.
-		Constructor string
-		// ConstructorParams is a string representing the Go code for the
-		// section of the payload constructor signature that consists of
-		// passing all the parameter and header values.
-		ConstructorParams string
-		// DecoderReturnValue is a reference to the decoder return value
-		// if there is no payload constructor (i.e. Constructor is the
-		// empty string).
-		DecoderReturnValue string
-		// BodyTypeName is the name of the request body type if any.
-		BodyTypeName string
-		// PathParams describes the information about params that are
-		// present in the path.
-		PathParams []*ServerParamData
-		// QueryParams describes the information about the params that
-		// are present in the query.
-		QueryParams []*ServerParamData
-		// Headers contains the HTTP request headers used to build the
-		// endpoint payload.
-		Headers []*ServerHeaderData
-		// ValidateBody contains the body validation code if any.
-		ValidateBody string
-	}
-
-	// ServerRouteData describes a route.
-	ServerRouteData struct {
-		// Method is the HTTP method.
-		Method string
-		// Path is the full path.
-		Path string
-	}
-
-	// ServerResponseData describes a response.
-	ServerResponseData struct {
-		// Body is the type of the response body, nil if body should be
-		// empty.
-		Body design.DataType
-		// BodyUserTypeName is the name of the Body type if it is a user
-		// or media type, the empty string otherwise.
-		BodyUserTypeName string
-		// StatusCode is the return code of the response.
-		StatusCode string
-		// Headers provides information about the headers in the response.
-		Headers []*ServerHeaderData
-		// BodyFields is the list of the response body type attributes
-		// used to initialize the response body. Not needed if the
-		// response type can be assigned to directly from the endpoint
-		// result type (i.e. if the response body has all the result
-		// attributes).
-		BodyFields []string
-		// TagName is the name of the attribute used to test whether the
-		// response is the one to use.
-		TagName string
-		// TagValue is the value the result attribute named by TagName
-		// must have for this response to be used.
-		TagValue string
-	}
-
-	// ServerErrorData describes a error response.
-	ServerErrorData struct {
-		// TypeRef is a reference to the user type.
-		TypeRef string
-		// Response is the error response data.
-		Response *ServerResponseData
-	}
-
-	// ServerParamData describes a parameter.
-	ServerParamData struct {
-		// Name is the name of the mapping to the actual variable name.
-		Name string
-		// FieldName is the name of the struct field that holds the
-		// param value.
-		FieldName string
-		// VarName is the name of the Go variable used to read or
-		// convert the param value.
-		VarName string
-		// Required is true if the param is required.
-		Required bool
-		// Type is the datatype of the variable.
-		Type design.DataType
-		// Pointer is true if and only the param variable is a pointer.
-		Pointer bool
-		// StringSlice is true if the param type is array of strings.
-		StringSlice bool
-		// Slice is true if the param type is an array.
-		Slice bool
-		// MapStringSlice is true if the param type is a map of string
-		// slice.
-		MapStringSlice bool
-		// Map is true if the param type is a map.
-		Map bool
-		// Validate contains the validation code if any.
-		Validate string
-		// DefaultValue contains the default value if any.
-		DefaultValue interface{}
-	}
-
-	// ServerHeaderData describes a header.
-	ServerHeaderData struct {
-		// Name describes the name of the header key.
-		Name string
-		// CanonicalName is the canonical header key.
-		CanonicalName string
-		// FieldName is the name of the struct field that holds the
-		// header value.
-		FieldName string
-		// VarName is the name of the Go variable used to read or
-		// convert the header value.
-		VarName string
-		// Required is true if the header is required.
-		Required bool
-		// Pointer is true if and only the param variable is a pointer.
-		Pointer bool
-		// StringSlice is true if the param type is array of strings.
-		StringSlice bool
-		// Slice is true if the param type is an array.
-		Slice bool
-		// Type describes the datatype of the variable value. Mainly used for conversion.
-		Type design.DataType
-		// Validate contains the validation code if any.
-		Validate string
-		// DefaultValue contains the default value if any.
-		DefaultValue interface{}
-	}
 )
 
 // ServerFiles returns all the server HTTP transport files.
@@ -224,9 +40,8 @@ func ServerFiles(root *rest.RootExpr) []codegen.File {
 // Server returns the server HTTP transport file
 func Server(r *rest.ResourceExpr) codegen.File {
 	path := filepath.Join(codegen.KebabCase(r.Name()), "transport", "http", "server.go")
+	data := Resources.Get(r.Name())
 	sections := func(genPkg string) []*codegen.Section {
-		d := buildServiceData(r)
-
 		title := fmt.Sprintf("%s server HTTP transport", r.Name())
 		s := []*codegen.Section{
 			codegen.Header(title, "http", []*codegen.ImportSpec{
@@ -240,27 +55,27 @@ func Server(r *rest.ResourceExpr) codegen.File {
 				{Path: genPkg + "/endpoints"},
 				{Path: genPkg + "/services"},
 			}),
-			{Template: serverStructTmpl(r), Data: d},
-			{Template: serverConstructorTmpl(r), Data: d},
-			{Template: serverMountTmpl(r), Data: d},
+			{Template: serverStructTmpl(r), Data: data},
+			{Template: serverConstructorTmpl(r), Data: data},
+			{Template: serverMountTmpl(r), Data: data},
 		}
 
-		for _, a := range d.ActionData {
+		for _, a := range data.Actions {
 			as := []*codegen.Section{
 				{Template: serverHandlerTmpl(r), Data: a},
 				{Template: serverHandlerConstructorTmpl(r), Data: a},
 			}
 			s = append(s, as...)
 
-			if a.HasResponses() {
+			if len(a.Responses) > 0 {
 				s = append(s, &codegen.Section{Template: serverEncoderTmpl(r), Data: a})
 			}
 
-			if a.HasPayload() {
+			if a.Payload != nil {
 				s = append(s, &codegen.Section{Template: serverDecoderTmpl(r), Data: a})
 			}
 
-			if a.HasErrors() {
+			if len(a.ErrorResponses) > 0 {
 				s = append(s, &codegen.Section{Template: serverErrorEncoderTmpl(r), Data: a})
 			}
 		}
@@ -268,13 +83,6 @@ func Server(r *rest.ResourceExpr) codegen.File {
 	}
 
 	return codegen.NewSource(path, sections)
-}
-
-func serverTmpl(r *rest.ResourceExpr) *template.Template {
-	scope := files.Services.Get(r.Name()).Scope
-	return template.New("server").
-		Funcs(template.FuncMap{"goTypeRef": scope.GoTypeRef, "conversionContext": conversionContext}).
-		Funcs(codegen.TemplateFuncs())
 }
 
 func serverStructTmpl(r *rest.ResourceExpr) *template.Template {
@@ -309,309 +117,11 @@ func serverErrorEncoderTmpl(r *rest.ResourceExpr) *template.Template {
 	return template.Must(serverTmpl(r).New("error_encoder").Parse(serverErrorEncoderT))
 }
 
-func buildServiceData(r *rest.ResourceExpr) *ServerData {
-	svc := files.Services.Get(r.ServiceExpr.Name)
-
-	sd := &ServerData{
-		ServiceName:    svc.Name,
-		ServiceVarName: svc.VarName,
-		HandlersStruct: fmt.Sprintf("%sHandlers", svc.VarName),
-		Constructor:    fmt.Sprintf("New%sHandlers", svc.VarName),
-		MountHandlers:  fmt.Sprintf("Mount%sHandlers", svc.VarName),
-	}
-
-	for _, a := range r.Actions {
-		routes := make([]*ServerRouteData, len(a.Routes))
-		for i, r := range a.Routes {
-			routes[i] = &ServerRouteData{
-				Method: strings.ToUpper(r.Method),
-				Path:   r.FullPath(),
-			}
-		}
-
-		var responses []*ServerResponseData
-		notag := -1
-		for i, v := range a.Responses {
-			if v.Tag[0] == "" {
-				if notag > -1 {
-					continue // we don't want more than one response with no tag
-				}
-				notag = i
-			}
-			responses = append(responses, buildResponseData(r, a, v))
-		}
-		count := len(responses)
-		if notag >= 0 && notag < count-1 {
-			// Make sure tagless response is last
-			responses[notag], responses[count-1] = responses[count-1], responses[notag]
-		}
-
-		httperrs := make([]*ServerErrorData, len(a.HTTPErrors))
-		for i, v := range a.HTTPErrors {
-			httperrs[i] = buildErrorData(r, a, v)
-		}
-
-		ep := svc.Method(a.EndpointExpr.Name)
-
-		ad := &ServerActionData{
-			EndpointName:    ep.Name,
-			EndpointVarName: ep.VarName,
-			ServiceName:     svc.Name,
-			ServiceVarName:  svc.VarName,
-			Routes:          routes,
-			ResultTypeRef:   ep.ResultRef,
-			Responses:       responses,
-			HTTPErrors:      httperrs,
-			MountHandler:    fmt.Sprintf("Mount%sHandler", ep.VarName),
-			Constructor:     fmt.Sprintf("New%sHandler", ep.VarName),
-			Decoder:         fmt.Sprintf("Decode%sRequest", ep.VarName),
-			Encoder:         fmt.Sprintf("Encode%sResponse", ep.VarName),
-			ErrorEncoder:    fmt.Sprintf("Encode%sError", ep.VarName),
-		}
-
-		if ep.Payload != "" {
-			var (
-				constructor  string
-				validateBody string
-				bodyTypeName string
-				bodyRef      string
-				params       []string
-			)
-			{
-				body := restgen.RequestBodyType(r, a, "ServerRequestBody")
-				if ut, ok := a.EndpointExpr.Payload.Type.(design.UserType); ok {
-					if ut != body {
-						constructor = fmt.Sprintf("New%s", ep.Payload)
-					}
-				}
-				if body != design.Empty {
-					{
-						if ut, ok := body.(design.UserType); ok {
-							if codegen.HasValidations(ut.Attribute(), false) {
-								validateBody = "\n\t\terr = goa.MergeErrors(err, body.Validate())"
-							}
-						} else {
-							code := codegen.RecursiveValidationCode(a.EndpointExpr.Payload, true, true, "body")
-							if code != "" {
-								validateBody = "\n\t\t" + code
-							}
-						}
-						bodyTypeName = svc.Scope.GoTypeName(body)
-						bodyRef = "body"
-						if design.IsObject(body) {
-							bodyRef = "&" + bodyRef
-						}
-					}
-					params = []string{bodyRef}
-				}
-				restgen.WalkMappedAttr(a.AllParams(), func(_, elem string, _ bool, _ *design.AttributeExpr) error {
-					params = append(params, codegen.Goify(elem, false))
-					return nil
-				})
-				restgen.WalkMappedAttr(a.MappedHeaders(), func(_, elem string, _ bool, _ *design.AttributeExpr) error {
-					params = append(params, codegen.Goify(elem, false))
-					return nil
-				})
-
-			}
-
-			var (
-				returnValue string
-			)
-			if constructor == "" {
-				if keys := a.PathParams().Keys(); len(keys) > 0 {
-					returnValue = codegen.Goify(keys[0], false)
-				} else if keys := a.QueryParams().Keys(); len(keys) > 0 {
-					returnValue = codegen.Goify(keys[0], false)
-				} else if keys := a.MappedHeaders().Keys(); len(keys) > 0 {
-					returnValue = codegen.Goify(keys[0], false)
-				} else {
-					returnValue = bodyRef
-				}
-			}
-
-			ad.Payload = &ServerPayloadData{
-				Ref:                ep.PayloadRef,
-				Constructor:        constructor,
-				ConstructorParams:  strings.Join(params, ", "),
-				DecoderReturnValue: returnValue,
-				BodyTypeName:       bodyTypeName,
-				PathParams:         extractPathParams(a.PathParams()),
-				QueryParams:        extractQueryParams(a.QueryParams()),
-				Headers:            extractHeaders(a.MappedHeaders()),
-				ValidateBody:       validateBody,
-			}
-		}
-		sd.ActionData = append(sd.ActionData, ad)
-	}
-	return sd
-}
-
-func buildResponseData(r *rest.ResourceExpr, a *rest.ActionExpr, v *rest.HTTPResponseExpr) *ServerResponseData {
-	var suffix, bodyTypeName string
-	if len(a.Responses) > 1 {
-		suffix = http.StatusText(v.StatusCode)
-	}
-	body := restgen.ResponseBodyType(r, v, a.EndpointExpr.Result, suffix)
-	if body != nil {
-		if ut, ok := body.(design.UserType); ok {
-			bodyTypeName = ut.Name()
-		}
-	}
-	var bodyFields []string
-	if design.IsObject(a.EndpointExpr.Result.Type) && design.IsObject(body) {
-		if body != a.EndpointExpr.Result.Type {
-			codegen.WalkAttributes(design.AsObject(body), func(name string, att *design.AttributeExpr) error {
-				bodyFields = append(bodyFields, codegen.GoifyAtt(att, name, true))
-				return nil
-			})
-		}
-	}
-	return &ServerResponseData{
-		Body:             body,
-		BodyUserTypeName: bodyTypeName,
-		StatusCode:       restgen.StatusCodeToHTTPConst(v.StatusCode),
-		Headers:          extractHeaders(v.MappedHeaders()),
-		BodyFields:       bodyFields,
-		TagName:          v.Tag[0],
-		TagValue:         v.Tag[1],
-	}
-}
-
-func buildErrorData(r *rest.ResourceExpr, a *rest.ActionExpr, v *rest.HTTPErrorExpr) *ServerErrorData {
-	var bodyTypeName string
-	body := restgen.ResponseBodyType(r, v.Response, v.ErrorExpr.AttributeExpr, http.StatusText(v.Response.StatusCode))
-	if body != nil {
-		if ut, ok := body.(design.UserType); ok {
-			bodyTypeName = ut.Name()
-		}
-	}
-	var bodyFields []string
-	if design.IsObject(v.ErrorExpr.Type) && design.IsObject(body) {
-		if body != v.ErrorExpr.Type {
-			codegen.WalkAttributes(design.AsObject(body), func(name string, att *design.AttributeExpr) error {
-				bodyFields = append(bodyFields, codegen.GoifyAtt(att, name, true))
-				return nil
-			})
-		}
-	}
-	response := ServerResponseData{
-		Body:             body,
-		BodyUserTypeName: bodyTypeName,
-		StatusCode:       restgen.StatusCodeToHTTPConst(v.Response.StatusCode),
-		Headers:          extractHeaders(v.Response.MappedHeaders()),
-		BodyFields:       bodyFields,
-	}
-	return &ServerErrorData{
-		TypeRef:  files.Services.Get(r.Name()).Scope.GoTypeRef(v.ErrorExpr.Type),
-		Response: &response,
-	}
-}
-
-func extractPathParams(a *rest.MappedAttributeExpr) []*ServerParamData {
-	var params []*ServerParamData
-	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
-		var (
-			field = codegen.Goify(name, true)
-			varn  = codegen.Goify(name, false)
-			arr   = design.AsArray(c.Type)
-		)
-		params = append(params, &ServerParamData{
-			Name:           elem,
-			FieldName:      field,
-			VarName:        varn,
-			Required:       required,
-			Type:           c.Type,
-			Pointer:        false,
-			Slice:          arr != nil,
-			StringSlice:    arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
-			Map:            false,
-			MapStringSlice: false,
-			Validate:       codegen.RecursiveValidationCode(c, true, true, varn),
-			DefaultValue:   c.DefaultValue,
-		})
-		return nil
-	})
-
-	return params
-}
-
-func extractQueryParams(a *rest.MappedAttributeExpr) []*ServerParamData {
-	var params []*ServerParamData
-	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
-		var (
-			field = codegen.Goify(name, true)
-			varn  = codegen.Goify(name, false)
-			arr   = design.AsArray(c.Type)
-			mp    = design.AsMap(c.Type)
-		)
-		params = append(params, &ServerParamData{
-			Name:        elem,
-			FieldName:   field,
-			VarName:     varn,
-			Required:    required,
-			Type:        c.Type,
-			Pointer:     a.IsPrimitivePointer(name),
-			Slice:       arr != nil,
-			StringSlice: arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
-			Map:         mp != nil,
-			MapStringSlice: mp != nil &&
-				mp.KeyType.Type.Kind() == design.StringKind &&
-				mp.ElemType.Type.Kind() == design.ArrayKind &&
-				design.AsArray(mp.ElemType.Type).ElemType.Type.Kind() == design.StringKind,
-			Validate:     codegen.RecursiveValidationCode(c, !a.IsPrimitivePointer(name), true, varn),
-			DefaultValue: c.DefaultValue,
-		})
-		return nil
-	})
-
-	return params
-}
-
-func extractHeaders(a *rest.MappedAttributeExpr) []*ServerHeaderData {
-	var headers []*ServerHeaderData
-	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
-		var (
-			varn = codegen.Goify(name, false)
-			arr  = design.AsArray(c.Type)
-		)
-		headers = append(headers, &ServerHeaderData{
-			Name:          elem,
-			CanonicalName: http.CanonicalHeaderKey(elem),
-			FieldName:     codegen.Goify(name, true),
-			VarName:       varn,
-			Required:      required,
-			Pointer:       a.IsPrimitivePointer(name),
-			Slice:         arr != nil,
-			StringSlice:   arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
-			Type:          c.Type,
-			Validate:      codegen.RecursiveValidationCode(c, !a.IsPrimitivePointer(name), true, varn),
-			DefaultValue:  c.DefaultValue,
-		})
-		return nil
-	})
-
-	return headers
-}
-
-// HasResponses indicates if an action has responses.
-func (d *ServerActionData) HasResponses() bool {
-	return len(d.Responses) >= 1
-}
-
-// HasPayload indicates if an action has a payload.
-func (d *ServerActionData) HasPayload() bool {
-	return d.Payload != nil
-}
-
-// HasErrors indicates if an action has errors defined.
-func (d *ServerActionData) HasErrors() bool {
-	return len(d.HTTPErrors) > 0
-}
-
-// HasPathParams indicates if a payload has path parameters.
-func (d *ServerPayloadData) HasPathParams() bool {
-	return len(d.PathParams) > 0
+func serverTmpl(r *rest.ResourceExpr) *template.Template {
+	scope := files.Services.Get(r.Name()).Scope
+	return template.New("server").
+		Funcs(template.FuncMap{"goTypeRef": scope.GoTypeRef, "conversionContext": conversionContext}).
+		Funcs(codegen.TemplateFuncs())
 }
 
 // conversionContext creates a template context suitable for executing the
@@ -624,38 +134,38 @@ func conversionContext(varName, name string, dt design.DataType) map[string]inte
 	}
 }
 
-const serverStructT = `{{ printf "%s lists the %s service endpoint HTTP handlers." .HandlersStruct .ServiceName | comment }}
+const serverStructT = `{{ printf "%s lists the %s service endpoint HTTP handlers." .HandlersStruct .Service.Name | comment }}
 type {{ .HandlersStruct }} struct {
-	{{- range .ActionData }}
-	{{ .EndpointVarName }} http.Handler
+	{{- range .Actions }}
+	{{ .Method.VarName }} http.Handler
 	{{- end }}
 }
 `
 
-const serverConstructorT = `{{ printf "%s instantiates HTTP handlers for all the %s service endpoints." .Constructor .ServiceName | comment }}
+const serverConstructorT = `{{ printf "%s instantiates HTTP handlers for all the %s service endpoints." .Constructor .Service.Name | comment }}
 func {{ .Constructor }}(
-	e *endpoints.{{ .ServiceVarName }},
+	e *endpoints.{{ .Service.VarName }},
 	dec func(*http.Request) rest.Decoder,
 	enc func(http.ResponseWriter, *http.Request) rest.Encoder,
 	logger goa.LogAdapter,
 ) *{{ .HandlersStruct }} {
 	return &{{ .HandlersStruct }}{
-		{{- range .ActionData }}
-		{{ .EndpointVarName }}: {{ .Constructor }}(e.{{ .EndpointVarName }}, dec, enc, logger),
+		{{- range .Actions }}
+		{{ .Method.VarName }}: {{ .Constructor }}(e.{{ .Method.VarName }}, dec, enc, logger),
 		{{- end }}
 	}
 }
 `
 
-const serverMountT = `{{ printf "%s configures the mux to serve the %s endpoints." .MountHandlers .ServiceName | comment }}
+const serverMountT = `{{ printf "%s configures the mux to serve the %s endpoints." .MountHandlers .Service.Name | comment }}
 func {{ .MountHandlers }}(mux rest.Muxer, h *{{ .HandlersStruct }}) {
-	{{- range .ActionData }}
-	{{ .MountHandler }}(mux, h.{{ .EndpointVarName }})
+	{{- range .Actions }}
+	{{ .MountHandler }}(mux, h.{{ .Method.VarName }})
 	{{- end }}
 }
 `
 
-const serverHandlerT = `{{ printf "%s configures the mux to serve the \"%s\" service \"%s\" endpoint." .MountHandler .ServiceName .EndpointName | comment }}
+const serverHandlerT = `{{ printf "%s configures the mux to serve the \"%s\" service \"%s\" endpoint." .MountHandler .ServiceName .Method.Name | comment }}
 func {{ .MountHandler }}(mux rest.Muxer, h http.Handler) {
 	f, ok := h.(http.HandlerFunc)
 	if !ok {
@@ -669,7 +179,7 @@ func {{ .MountHandler }}(mux rest.Muxer, h http.Handler) {
 }
 `
 
-const serverHandlerConstructorT = `{{ printf "%s creates a HTTP handler which loads the HTTP request and calls the \"%s\" service \"%s\" endpoint." .Constructor .ServiceName .EndpointName | comment }}
+const serverHandlerConstructorT = `{{ printf "%s creates a HTTP handler which loads the HTTP request and calls the \"%s\" service \"%s\" endpoint." .Constructor .ServiceName .Method.Name | comment }}
 {{ comment "The middleware is mounted so it executes after the request is loaded and thus may access the request state via the rest package ContextXXX functions."}}
 func {{ .Constructor }}(
 	endpoint goa.Endpoint,
@@ -678,16 +188,16 @@ func {{ .Constructor }}(
 	logger goa.LogAdapter,
 ) http.Handler {
 	var (
-		{{- if .HasPayload }}
+		{{- if .Payload }}
 		decodeRequest  = {{ .Decoder }}(dec)
 		{{- end }}
-		{{- if .HasResponses }}
+		{{- if .Responses }}
 		encodeResponse = {{ .Encoder }}EncodeResponse(enc)
 		{{- end }}
-		encodeError    = {{ if .HasErrors }}{{ .ErrorEncoder }}{{ else }}rest.EncodeError{{ end }}(enc, logger)
+		encodeError    = {{ if .ErrorResponses }}{{ .ErrorEncoder }}{{ else }}rest.EncodeError{{ end }}(enc, logger)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		{{- if .HasPayload }}
+		{{- if .Payload }}
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(w, r, goa.ErrInvalid("request invalid: %s", err))
@@ -703,7 +213,7 @@ func {{ .Constructor }}(
 			encodeError(w, r, err)
 			return
 		}
-		{{- if .HasResponses }}
+		{{- if .Responses }}
 		if err := encodeResponse(w, r, res); err != nil {
 			encodeError(w, r, err)
 		}
@@ -714,13 +224,13 @@ func {{ .Constructor }}(
 }
 `
 
-const serverDecoderT = `{{ printf "%s returns a decoder for requests sent to the %s %s endpoint." .Decoder .ServiceName .EndpointName | comment }}
+const serverDecoderT = `{{ printf "%s returns a decoder for requests sent to the %s %s endpoint." .Decoder .ServiceName .Method.Name | comment }}
 func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) ({{ .Payload.Ref }}, error) {
 
-{{- if .Payload.BodyTypeName }}
+{{- if .Payload.RequestBody }}
 		var (
-			body {{ .Payload.BodyTypeName }}
+			body {{ .Payload.RequestBody.VarName }}
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -730,7 +240,9 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 			}
 			return nil, err
 		}
-		{{- .Payload.ValidateBody }}
+		{{- if .Payload.RequestBody.ValidateRef }}
+		{{ .Payload.RequestBody.ValidateRef }}
+		{{- end }}
 {{ end }}
 
 {{- if or .Payload.PathParams .Payload.QueryParams .Payload.Headers }}
@@ -744,10 +256,10 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		{{- range .Payload.Headers }}
 			{{ .VarName }} {{ if .Pointer }}*{{ end }}{{goTypeRef .Type }}
 		{{- end }}
-		{{- if not .Payload.BodyTypeName }}
+		{{- if not .Payload.RequestBody }}
 			err error
 		{{- end }}
-		{{- if .Payload.HasPathParams }}
+		{{- if .Payload.PathParams }}
 
 			params = rest.ContextParams(r.Context())
 		{{- end }}
@@ -1208,12 +720,12 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 {{- end }}
 `
 
-const serverEncoderT = `{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .Encoder .EndpointName .ServiceName | comment }}
+const serverEncoderT = `{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .Encoder .Method.Name .ServiceName | comment }}
 func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) rest.Encoder) func(http.ResponseWriter, *http.Request, interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 
-	{{- if .ResultTypeRef }}
-		t := v.({{ .ResultTypeRef }})
+	{{- if .Method.ResultRef }}
+		t := v.({{ .Method.ResultRef }})
 
 		{{- range .Responses }}
 
@@ -1257,13 +769,13 @@ func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) rest.Encode
 }
 ` + responseT
 
-const serverErrorEncoderT = `{{ printf "%s returns an encoder for errors returned by the %s %s endpoint." .ErrorEncoder .EndpointName .ServiceName | comment }}
+const serverErrorEncoderT = `{{ printf "%s returns an encoder for errors returned by the %s %s endpoint." .ErrorEncoder .Method.Name .ServiceName | comment }}
 func {{ .ErrorEncoder }}(encoder func(http.ResponseWriter, *http.Request) rest.Encoder, logger goa.LogAdapter) func(http.ResponseWriter, *http.Request, error) {
 	encodeError := rest.EncodeError(encoder, logger)
 	return func(w http.ResponseWriter, r *http.Request, v error) {
 		switch t := v.(type) {
 
-		{{- range .HTTPErrors }}
+		{{- range .ErrorResponses }}
 		case {{ .TypeRef }}:
 
 			{{- template "response" .Response }}
@@ -1286,15 +798,15 @@ const responseT = `{{ define "response" -}}
 	rest.SetContentType(w, ct)
 
 	{{- if .Body }}
-		{{- if .BodyUserTypeName }}
-			{{- if .BodyFields }}
-		body := {{ .BodyUserTypeName }}{
-				{{- range .BodyFields}}	
+		{{- if .Body.IsUser }}
+			{{- if .Body.Fields }}
+		body := {{ .Body.VarName }}{
+				{{- range .Body.Fields}}	
 			{{ . }}: v.{{ . }},
 				{{- end }}
 		}
 			{{- else }}
-			body := {{ .BodyUserTypeName }}(*v)
+			body := {{ .Body.VarName }}(*v)
 			{{- end }}
 		{{- else }}
 		body := v

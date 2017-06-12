@@ -245,36 +245,14 @@ func Email(email string) {
 	dsl.Email(email)
 }
 
-// Endpoint defines a single service endpoint.
-//
-// Endpoint may appear in a Service expression.
-// Endpoint takes two arguments: the name of the endpoint and the defining DSL.
-//
-// Example:
-//
-//    Endpoint("add", func() {
-//        Description("The add endpoint returns the sum of A and B")
-//        Docs(func() {
-//            Description("Add docs")
-//            URL("http//adder.goa.design/docs/actions/add")
-//        })
-//        Payload(Operands)
-//        Result(Sum)
-//        Error(ErrInvalidOperands)
-//    })
-//
-func Endpoint(name string, fn func()) {
-	dsl.Endpoint(name, fn)
-}
-
 // Enum adds a "enum" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor76.
 func Enum(vals ...interface{}) {
 	dsl.Enum(vals...)
 }
 
-// Error describes an endpoint error response. The description includes a unique
-// name (in the scope of the endpoint), an optional type, description and DSL
+// Error describes an method error response. The description includes a unique
+// name (in the scope of the method), an optional type, description and DSL
 // that further describes the type. If no type is specified then the goa
 // ErrorMedia type is used. The DSL syntax is identical to the Attribute DSL.
 // Transport specific DSL may further describe the mapping between the error
@@ -284,7 +262,7 @@ func Enum(vals ...interface{}) {
 // for example.
 //
 // Error may appear in the Service (to define error responses that apply to all
-// the service endpoints) or Endpoint expressions.
+// the service methods) or Method expressions.
 // See Attribute for details on the Error arguments.
 //
 // Example:
@@ -292,8 +270,8 @@ func Enum(vals ...interface{}) {
 //    var _ = Service("divider", func() {
 //        Error("invalid_arguments") // Uses type ErrorMedia
 //
-//        // Endpoint which uses the default type for its response.
-//        Endpoint("divide", func() {
+//        // Method which uses the default type for its response.
+//        Method("divide", func() {
 //            Payload(DivideRequest)
 //            Error("div_by_zero", DivByZero, "Division by zero")
 //        })
@@ -425,7 +403,7 @@ func Maximum(val interface{}) {
 	dsl.Maximum(val)
 }
 
-// MediaType defines a media type used to describe an endpoint response.
+// MediaType defines a media type used to describe a method response.
 //
 // Media types have a unique identifier as described in RFC6838. The identifier
 // defines the default value for the Content-Type header of HTTP responses.
@@ -475,6 +453,28 @@ func MediaType(identifier string, fn func()) *design.MediaTypeExpr {
 	return dsl.MediaType(identifier, fn)
 }
 
+// Method defines a single service method.
+//
+// Method may appear in a Service expression.
+// Method takes two arguments: the name of the method and the defining DSL.
+//
+// Example:
+//
+//    Method("add", func() {
+//        Description("The add method returns the sum of A and B")
+//        Docs(func() {
+//            Description("Add docs")
+//            URL("http//adder.goa.design/docs/actions/add")
+//        })
+//        Payload(Operands)
+//        Result(Sum)
+//        Error(ErrInvalidOperands)
+//    })
+//
+func Method(name string, fn func()) {
+	dsl.Method(name, fn)
+}
+
 // MinLength adss a "minItems" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor45.
 func MinLength(val int) {
@@ -498,10 +498,10 @@ func Pattern(p string) {
 	dsl.Pattern(p)
 }
 
-// Payload defines the data type of an endpoint input. Payload also makes the
+// Payload defines the data type of an method input. Payload also makes the
 // input required.
 //
-// Payload may appear in a Endpoint expression.
+// Payload may appear in a Method expression.
 //
 // Payload takes one or two arguments. The first argument is either a type or a
 // DSL function. If the first argument is a type then an optional DSL may be
@@ -510,12 +510,12 @@ func Pattern(p string) {
 //
 // Examples:
 //
-// Endpoint("save"), func() {
+// Method("save"), func() {
 //	// Use primitive type.
 //	Payload(String)
 // }
 //
-// Endpoint("add", func() {
+// Method("add", func() {
 //     // Define payload data structure inline.
 //     Payload(func() {
 //         Attribute("left", Int32, "Left operand")
@@ -524,12 +524,12 @@ func Pattern(p string) {
 //     })
 // })
 //
-// Endpoint("add", func() {
+// Method("add", func() {
 //     // Define payload type by reference to user type.
 //     Payload(Operands)
 // })
 //
-// Endpoint("divide", func() {
+// Method("divide", func() {
 //     // Specify additional required attributes on user type.
 //     Payload(Operands, func() {
 //         Required("left", "right")
@@ -584,9 +584,9 @@ func Required(names ...string) {
 	dsl.Required(names...)
 }
 
-// Result describes and endpoint result type.
+// Result describes and method result type.
 //
-// Result may appear in a Endpoint expression.
+// Result may appear in a Method expression.
 //
 // Result accepts a type as first argument. This argument is optional in which
 // case the type must be described inline (see below).
@@ -595,9 +595,9 @@ func Required(names ...string) {
 // define the result type inline using Attribute or may further specialize the
 // type passed as first argument e.g. by providing additional validations (e.g.
 // list of required attributes). The DSL may also specify a view when the first
-// argument is a media type corresponding to the view rendered by this endpoint.
+// argument is a media type corresponding to the view rendered by this method.
 // Note that specifying a view when the result type is a media type is optional
-// and only useful in cases the endpoint renders a single view.
+// and only useful in cases the method renders a single view.
 //
 // The valid syntax for Result is thus:
 //
@@ -610,12 +610,12 @@ func Required(names ...string) {
 // Examples:
 //
 //    // Define result using primitive type
-//    Endpoint("add", func() {
+//    Method("add", func() {
 //        Result(Int32)
 //    })
 //
 //    // Define result using object defined inline
-//    Endpoint("add", func() {
+//    Method("add", func() {
 //        Result(func() {
 //            Attribute("value", Int32, "Resulting sum")
 //            Required("value")
@@ -623,12 +623,12 @@ func Required(names ...string) {
 //    })
 //
 //    // Define result type using user type
-//    Endpoint("add", func() {
+//    Method("add", func() {
 //        Result(Sum)
 //    })
 //
 //    // Specify view and required attributes on media type
-//    Endpoint("add", func() {
+//    Method("add", func() {
 //        Result(Sum, func() {
 //            View("default")
 //            Required("value")
@@ -644,7 +644,7 @@ func Server(url string, fn ...func()) {
 	dsl.Server(url, fn...)
 }
 
-// Service defines a group of related endpoints. Refer to the transport specific
+// Service defines a group of related methods. Refer to the transport specific
 // DSLs to learn how to provide transport specific information.
 //
 // Service is as a top level expression.
@@ -657,19 +657,19 @@ func Server(url string, fn ...func()) {
 //        Description("divider service") // Optional description
 //
 //        DefaultType(DivideResult) // Default response type for the service
-//                                  // endpoints. Also defines default
+//                                  // methods. Also defines default
 //                                  // properties (type, description and
 //                                  // validations) for attributes with
 //                                  // identical names in request types.
 //
 //        Error("Unauthorized", Unauthorized) // Error response that applies to
-//                                            // all endpoints
+//                                            // all methods
 //
-//        Endpoint("divide", func() {     // Defines a single endpoint
-//            Description("The divide endpoint returns the division of A and B")
-//            Request(DivideRequest)      // Request type listing all request
-//                                        // parameters in its attributes.
-//            Response(DivideResponse)    // Response type.
+//        Method("divide", func() {     // Defines a single method
+//            Description("The divide method returns the division of A and B")
+//            Request(DivideRequest)    // Request type listing all request
+//                                      // parameters in its attributes.
+//            Response(DivideResponse)  // Response type.
 //            Error("DivisionByZero", DivByZero) // Error, has a name and
 //                                               // optionally a type
 //                                               // (DivByZero) describes the
@@ -719,7 +719,7 @@ func Title(val string) {
 //
 //     // new type
 //     var SumPayload = Type("SumPayload", func() {
-//         Description("Type sent to add endpoint")
+//         Description("Type sent to add method")
 //
 //         Attribute("a", String)                 // string attribute "a"
 //         Attribute("b", Int32, "operand")       // attribute with description

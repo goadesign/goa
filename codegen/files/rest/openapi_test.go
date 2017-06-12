@@ -29,7 +29,7 @@ func newDesign(t *testing.T, resources ...*rest.ResourceExpr) *rest.RootExpr {
 }
 
 func newResource(t *testing.T) *rest.ResourceExpr {
-	ep := &design.EndpointExpr{
+	ep := &design.MethodExpr{
 		Name: "testEndpoint",
 		Payload: &design.AttributeExpr{
 			Type: &design.UserTypeExpr{
@@ -41,14 +41,14 @@ func newResource(t *testing.T) *rest.ResourceExpr {
 			}},
 	}
 	s := &design.ServiceExpr{
-		Name:      "testService",
-		Endpoints: []*design.EndpointExpr{ep},
+		Name:    "testService",
+		Methods: []*design.MethodExpr{ep},
 	}
 	ep.Service = s
 	route := &rest.RouteExpr{Method: "GET", Path: "/"}
 	action := &rest.ActionExpr{
-		EndpointExpr: ep,
-		Routes:       []*rest.RouteExpr{route},
+		MethodExpr: ep,
+		Routes:     []*rest.RouteExpr{route},
 	}
 	route.Action = action
 	res := &rest.ResourceExpr{

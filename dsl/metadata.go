@@ -99,7 +99,7 @@ func Metadata(name string, value ...string) {
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	case *design.MediaTypeExpr:
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
-	case *design.EndpointExpr:
+	case *design.MethodExpr:
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	case *design.ServiceExpr:
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)

@@ -76,7 +76,7 @@ func NewNoPayloadEndpoint(s NoPayload) *NoPayloadEndpoint {
 		genPkg = "goa.design/goa.v2/example"
 	)
 	var (
-		a = design.EndpointExpr{
+		a = design.MethodExpr{
 			Name: "A",
 			Payload: &design.AttributeExpr{
 				Type: &design.UserTypeExpr{
@@ -86,7 +86,7 @@ func NewNoPayloadEndpoint(s NoPayload) *NoPayloadEndpoint {
 			Result: &design.AttributeExpr{Type: design.Empty},
 		}
 
-		b = design.EndpointExpr{
+		b = design.MethodExpr{
 			Name: "B",
 			Payload: &design.AttributeExpr{
 				Type: &design.UserTypeExpr{
@@ -96,7 +96,7 @@ func NewNoPayloadEndpoint(s NoPayload) *NoPayloadEndpoint {
 			Result: &design.AttributeExpr{Type: design.Empty},
 		}
 
-		c = design.EndpointExpr{
+		c = design.MethodExpr{
 			Name: "C",
 			Payload: &design.AttributeExpr{
 				Type: &design.UserTypeExpr{
@@ -106,7 +106,7 @@ func NewNoPayloadEndpoint(s NoPayload) *NoPayloadEndpoint {
 			Result: &design.AttributeExpr{Type: design.Empty},
 		}
 
-		nopayload = design.EndpointExpr{
+		nopayload = design.MethodExpr{
 			Name:    "NoPayload",
 			Payload: &design.AttributeExpr{Type: design.Empty},
 			Result:  &design.AttributeExpr{Type: design.Empty},
@@ -114,14 +114,14 @@ func NewNoPayloadEndpoint(s NoPayload) *NoPayloadEndpoint {
 
 		singleEndpoint = design.ServiceExpr{
 			Name: "Single",
-			Endpoints: []*design.EndpointExpr{
+			Methods: []*design.MethodExpr{
 				&a,
 			},
 		}
 
 		multipleEndpoints = design.ServiceExpr{
 			Name: "Multiple",
-			Endpoints: []*design.EndpointExpr{
+			Methods: []*design.MethodExpr{
 				&b,
 				&c,
 			},
@@ -129,7 +129,7 @@ func NewNoPayloadEndpoint(s NoPayload) *NoPayloadEndpoint {
 
 		nopayloadEndpoint = design.ServiceExpr{
 			Name: "NoPayload",
-			Endpoints: []*design.EndpointExpr{
+			Methods: []*design.MethodExpr{
 				&nopayload,
 			},
 		}

@@ -11,18 +11,18 @@ import (
 )
 
 type (
-	// ActionExpr describes a resource action. It embeds a EndpointExpr and adds HTTP specific
-	// properties.
+	// ActionExpr describes a resource action. It embeds a MethodExpr and
+	// adds HTTP specific properties.
 	//
-	// It defines both an HTTP endpoint and the shape of HTTP requests and responses made to
-	// that endpoint.
-	// The shape of requests is defined via "parameters", there are path parameters (i.e.
-	// portions of the URL that define parameter values), query string parameters and a payload
+	// It defines both an HTTP endpoint and the shape of HTTP requests and
+	// responses made to that endpoint. The shape of requests is defined via
+	// "parameters", there are path parameters (i.e. portions of the URL
+	// that define parameter values), query string parameters and a payload
 	// parameter (request body).
 	ActionExpr struct {
 		eval.DSLFunc
-		// EndpointExpr is the underlying endpoint expression.
-		EndpointExpr *design.EndpointExpr
+		// MethodExpr is the underlying method expression.
+		MethodExpr *design.MethodExpr
 		// Resource is the parent resource.
 		Resource *ResourceExpr
 		// Action routes
@@ -71,14 +71,14 @@ func ExtractRouteWildcards(path string) []string {
 	return wcs
 }
 
-// Name of action (endpoint)
+// Name of action (HTTP endpoint)
 func (a *ActionExpr) Name() string {
-	return a.EndpointExpr.Name
+	return a.MethodExpr.Name
 }
 
-// Description of action (endpoint)
+// Description of action (HTTP endpoint)
 func (a *ActionExpr) Description() string {
-	return a.EndpointExpr.Description
+	return a.MethodExpr.Description
 }
 
 // EvalName returns the generic expression name used in error messages.
@@ -164,7 +164,7 @@ func (a *ActionExpr) MappedHeaders() *MappedAttributeExpr {
 func (a *ActionExpr) Params() *design.AttributeExpr {
 	if a.params == nil {
 		a.params = &design.AttributeExpr{Type: make(design.Object)}
-		if pt := a.EndpointExpr.Payload.Type; pt != design.Empty {
+		if pt := a.MethodExpr.Payload.Type; pt != design.Empty {
 			a.params.Reference = pt
 		}
 	}
@@ -213,8 +213,8 @@ func (a *ActionExpr) Validate() error {
 	if hasTags && allTagged {
 		verr.Add(a, "All responses define a Tag, at least one response must define no Tag.")
 	}
-	if hasTags && !design.IsObject(a.EndpointExpr.Result.Type) {
-		verr.Add(a, "Some responses define a Tag but the endpoint Result type is not an object.")
+	if hasTags && !design.IsObject(a.MethodExpr.Result.Type) {
+		verr.Add(a, "Some responses define a Tag but the method Result type is not an object.")
 	}
 	verr.Merge(a.validateParams())
 	verr.Merge(a.validateHeaders())
@@ -247,7 +247,7 @@ func (a *ActionExpr) Finalize() {
 		}
 	}
 
-	payload := design.AsObject(a.EndpointExpr.Payload.Type)
+	payload := design.AsObject(a.MethodExpr.Payload.Type)
 
 	// Initialize the path and query string parameters with the
 	// corresponding payload attributes.
@@ -258,9 +258,9 @@ func (a *ActionExpr) Finalize() {
 			var required bool
 			if payload != nil {
 				patt = payload[n]
-				required = a.EndpointExpr.Payload.IsRequired(n)
+				required = a.MethodExpr.Payload.IsRequired(n)
 			} else {
-				patt = a.EndpointExpr.Payload
+				patt = a.MethodExpr.Payload
 				required = true
 			}
 			initAttrFromDesign(att, patt)
@@ -281,9 +281,9 @@ func (a *ActionExpr) Finalize() {
 			var required bool
 			if payload != nil {
 				patt = payload[n]
-				required = a.EndpointExpr.Payload.IsRequired(n)
+				required = a.MethodExpr.Payload.IsRequired(n)
 			} else {
-				patt = a.EndpointExpr.Payload
+				patt = a.MethodExpr.Payload
 				required = true
 			}
 			initAttrFromDesign(att, patt)
@@ -306,9 +306,9 @@ func (a *ActionExpr) Finalize() {
 				var required bool
 				if payload != nil {
 					att = payload[n]
-					required = a.EndpointExpr.Payload.IsRequired(n)
+					required = a.MethodExpr.Payload.IsRequired(n)
 				} else {
-					att = a.EndpointExpr.Payload
+					att = a.MethodExpr.Payload
 					required = true
 				}
 				initAttrFromDesign(att, patt)
@@ -322,7 +322,7 @@ func (a *ActionExpr) Finalize() {
 		}
 	}
 
-	result := design.AsObject(a.EndpointExpr.Result.Type)
+	result := design.AsObject(a.MethodExpr.Result.Type)
 
 	// Initialize responses parent, headers and body
 	for _, r := range a.Responses {
@@ -337,10 +337,10 @@ func (a *ActionExpr) Finalize() {
 				var required bool
 				if result != nil {
 					patt = result[n]
-					required = a.EndpointExpr.Result.IsRequired(n)
+					required = a.MethodExpr.Result.IsRequired(n)
 				} else {
-					patt = a.EndpointExpr.Result
-					required = a.EndpointExpr.Result.Type != design.Empty
+					patt = a.MethodExpr.Result
+					required = a.MethodExpr.Result.Type != design.Empty
 				}
 				initAttrFromDesign(att, patt)
 				if required {
@@ -362,10 +362,10 @@ func (a *ActionExpr) Finalize() {
 					var required bool
 					if result != nil {
 						att = result[n]
-						required = a.EndpointExpr.Result.IsRequired(n)
+						required = a.MethodExpr.Result.IsRequired(n)
 					} else {
-						att = a.EndpointExpr.Result
-						required = a.EndpointExpr.Result.Type != design.Empty
+						att = a.MethodExpr.Result
+						required = a.MethodExpr.Result.Type != design.Empty
 					}
 					initAttrFromDesign(att, patt)
 					if required {

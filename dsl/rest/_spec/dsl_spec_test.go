@@ -13,7 +13,7 @@ import (
 // only be one such declaration in a given design package.
 var _ = API("rest_dsl_spec", func() {
 
-	// Error defines an error response common to all the API endpoints.
+	// Error defines an error response common to all the API methods.
 	// It accepts the name of the error as first argument and the type that
 	// describes the response as second argument. If no type is provided
 	// then the built-in ErrorMedia type is used. The expression below is
@@ -50,7 +50,7 @@ var _ = API("rest_dsl_spec", func() {
 
 		// Params groups path and query string parameter expressions.
 		// The attributes defined in Params get merged into the request
-		// types of all the API endpoints. The merge algorithm adds
+		// types of all the API methods. The merge algorithm adds
 		// new attributes to the request types if they don't already have
 		// one with the same name or overrides the existing attribute
 		// properties (type, description etc.) if they do.
@@ -75,7 +75,7 @@ var _ = API("rest_dsl_spec", func() {
 
 		// Headers defines API headers common to all the API requests.
 		// The attributes defined in Headers get merged into the request
-		// types of all the API endpoints. The merge algorithm adds
+		// types of all the API methods. The merge algorithm adds
 		// new attributes to the request types if they don't already have
 		// one with the same name or overrides the existing attribute
 		// properties (type, description etc.) if they do.
@@ -148,14 +148,14 @@ var _ = API("rest_dsl_spec", func() {
 // Service declarations in one design.
 var _ = Service("service", func() {
 
-	// Error defines a common error response to all the service endpoints.
+	// Error defines a common error response to all the service methods.
 	// The DSL is identical as when used in an API expression.
 	Error("service_error")
 
 	// HTTP specific properties, see the API HTTP DSL for the descriptions
 	// of the DSL functions.
 	HTTP(func() {
-		// HTTP request path prefix to all the service endpoints
+		// HTTP request path prefix to all the service methods
 		// (appended to API path prefix if there is one).
 		Path("/service/{service_param}")
 
@@ -182,17 +182,17 @@ var _ = Service("service", func() {
 		})
 
 		// Parent defines the parent service. The parent service
-		// canonical endpoint path is used to prefix all the service
-		// endpoint paths.
+		// canonical method path is used to prefix all the service
+		// method paths.
 		// The argument given to Parent can be either the parent service
 		// name or a value returned by Service.
 		Parent("parent_service")
 
-		// CanonicalEndpoint identifies the endpoint whose path is used
-		// to prefix all the child service endpoint paths.
-		CanonicalEndpoint("endpoint")
+		// CanonicalMethod identifies the method whose path is used
+		// to prefix all the child service method paths.
+		CanonicalMethod("method")
 
-		// Files defines an endpoint that serve static assets. The files
+		// Files defines an method that serve static assets. The files
 		// being served are identified by path, either a file path for
 		// service the file or a directory path for service files in
 		// that directory. The HTTP path for requesting the files is
@@ -208,11 +208,11 @@ var _ = Service("service", func() {
 		})
 	})
 
-	// Endpoint describes a single endpoint. A service may define any number
-	// of endpoints.
-	Endpoint("endpoint", func() {
+	// Method describes a single method. A service may define any number
+	// of methods.
+	Method("method", func() {
 		// Payload describes the request attributes. There can only be
-		// one Payload expression per Endpoint expression.
+		// one Payload expression per Method expression.
 		// Payload attributes can be described inline.
 		//
 		//     Payload(func() {
@@ -240,19 +240,19 @@ var _ = Service("service", func() {
 		// as listing all views in this case.
 		Result(ResponseMediaType, "view")
 
-		// Error in an Endpoint expression defines endpoint specific
+		// Error in an Method expression defines method specific
 		// error responses, the syntax is identical as when used in a
 		// API expression.
-		Error("endpoint_error")
+		Error("method_error")
 
 		// HTTP defines HTTP transport specific properties.
 		HTTP(func() {
 
-			// GET, POST, PUT etc. set the endpoint HTTP route. The
+			// GET, POST, PUT etc. set the method HTTP route. The
 			// complete path is computed by appending the API prefix
-			// path with the resource prefix path with the endpoint
+			// path with the resource prefix path with the method
 			// path.
-			PUT("/endpoint_path/{endpoint_path_param}")
+			PUT("/method_path/{method_path_param}")
 
 			// Params defines the path and query string parameters.
 			Params(func() {
@@ -262,12 +262,12 @@ var _ = Service("service", func() {
 				// the name of one of the request type attribute
 				// then it inherits all its properties
 				// (description, type, validations etc.) from it.
-				Param("endpoint_path_param")
-				Param("endpoint_query_param")
+				Param("method_path_param")
+				Param("method_query_param")
 			})
 
 			// Headers list request headers that are relevant to the
-			// endpoint handler.
+			// method handler.
 			Headers(func() {
 				// Header defines a single header. The syntax
 				// for Header is the same as Attribute's.
@@ -284,7 +284,7 @@ var _ = Service("service", func() {
 				Header("name:Header-Name")
 			})
 
-			// Body defines the endpoint request body fields. This
+			// Body defines the method request body fields. This
 			// function is optional and if not called the body
 			// fields are defined by using all the request type
 			// attributes not used by params or headers. Body also
@@ -307,7 +307,7 @@ var _ = Service("service", func() {
 
 			// Response defines a single HTTP response. There may be
 			// more than one Response expression in a single
-			// Endpoint HTTP expression to describe multiple possible
+			// Method HTTP expression to describe multiple possible
 			// responses. Response accepts the HTTP status code as
 			// first argument and an optional DSL as last argument.
 			Response(StatusOK, func() {
@@ -364,9 +364,9 @@ var _ = Service("service", func() {
 				})
 			})
 
-			// If the endpoint response type is Empty then the
+			// If the method response type is Empty then the
 			// response Body function must be omitted or use Empty.
-			// If the endpoint type is not Empty then the response
+			// If the method type is not Empty then the response
 			// Body function may use Empty to signifiy an empty
 			// response body.
 			// As a convenience responses using HTTP status code 204
@@ -374,27 +374,27 @@ var _ = Service("service", func() {
 			// body.
 			Response(StatusNoContent)
 
-			// Response defines a endpoint specific error response.
+			// Response defines a method specific error response.
 			// The DSL is identical to API level HTTP Response
 			// expressions.
 			Response("service_error")
 		})
 	})
 
-	// Endpoint using the service request and response types default HTTP
+	// Method using the service request and response types default HTTP
 	// mappings.
-	Endpoint("another_endpoint", func() {
+	Method("another_method", func() {
 		Payload(PayloadType)
 		Response(ResponseMediaType)
 
 		HTTP(func() {
 
-			// No Body function means the endpoint HTTP request body
-			// is defined by the endpoint request type PayloadType.
+			// No Body function means the method HTTP request body
+			// is defined by the method request type PayloadType.
 			PUT("/another")
 
 			// No DSL means the response body shape and content type
-			// is defined by the endpoint response type
+			// is defined by the method response type
 			// ResponseMediaType.
 			Response(StatusOK)
 		})
@@ -402,7 +402,7 @@ var _ = Service("service", func() {
 })
 
 // CommonParams is an object whose attributes define HTTP parameters common to
-// all the API endpoints.
+// all the API methods.
 var CommonParams = Type("CommonParams", func() {
 	Attribute("query")
 	Attribute("other:O")
@@ -410,7 +410,7 @@ var CommonParams = Type("CommonParams", func() {
 })
 
 // CommonHeaders is an object whose attributes define HTTP headers common to all
-// the API endpoints.
+// the API methods.
 var CommonHeaders = Type("CommonHeaders", func() {
 	Attribute("Header-Name")
 	Attribute("attribute:Other-Name")

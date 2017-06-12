@@ -70,7 +70,7 @@ const serviceT = `
 {{- if .Description -}}
 	// {{ .Description }}
 {{- end }}
-	{{ .Name }} {{ .TypeDef }}
+	{{ .Name }} {{ .Def }}
 {{ end -}}
 {{ end -}}
 

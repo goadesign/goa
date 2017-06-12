@@ -185,7 +185,7 @@ func ShowAccountPath(sliceInterface []interface{}) string {
 			Name: "Account",
 		}
 
-		endpoint = design.EndpointExpr{
+		endpoint = design.MethodExpr{
 			Name:    "Show",
 			Service: &service,
 			Payload: &design.AttributeExpr{Type: design.Empty},
@@ -221,9 +221,9 @@ func ShowAccountPath(sliceInterface []interface{}) string {
 			}
 
 			a := &rest.ActionExpr{
-				EndpointExpr: &endpoint,
-				Resource:     &resource,
-				Routes:       routes,
+				MethodExpr: &endpoint,
+				Resource:   &resource,
+				Routes:     routes,
 			}
 
 			for _, r := range a.Routes {
