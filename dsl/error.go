@@ -8,7 +8,7 @@ import (
 // Error describes an method error response. The description includes a unique
 // name (in the scope of the method), an optional type, description and DSL
 // that further describes the type. If no type is specified then the goa
-// ErrorMedia type is used. The DSL syntax is identical to the Attribute DSL.
+// ErrorResult type is used. The DSL syntax is identical to the Attribute DSL.
 // Transport specific DSL may further describe the mapping between the error
 // type attributes and the serialized response.
 //
@@ -22,7 +22,7 @@ import (
 // Example:
 //
 //    var _ = Service("divider", func() {
-//        Error("invalid_arguments") // Uses type ErrorMedia
+//        Error("invalid_arguments") // Uses type ErrorResult
 //
 //        // Method which uses the default type for its response.
 //        Method("divide", func() {
@@ -33,7 +33,7 @@ import (
 //
 func Error(name string, args ...interface{}) {
 	if len(args) == 0 {
-		args = []interface{}{design.ErrorMedia}
+		args = []interface{}{design.ErrorResult}
 	}
 	dt, desc, fn := parseAttributeArgs(nil, args...)
 	att := &design.AttributeExpr{

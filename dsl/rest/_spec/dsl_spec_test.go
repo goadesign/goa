@@ -16,12 +16,12 @@ var _ = API("rest_dsl_spec", func() {
 	// Error defines an error response common to all the API methods.
 	// It accepts the name of the error as first argument and the type that
 	// describes the response as second argument. If no type is provided
-	// then the built-in ErrorMedia type is used. The expression below is
+	// then the built-in ErrorResult type is used. The expression below is
 	// therefore equivalent to:
 	//
 	//     Error("api_error")
 	//
-	Error("api_error", ErrorMedia)
+	Error("api_error", ErrorResult)
 
 	// HTTP defines the API HTTP specific properties.
 	// HTTP may appear multiple times to enable the use of traits.
@@ -236,9 +236,9 @@ var _ = Service("service", func() {
 		// Result describes the result attributes. The syntax is
 		// identical to Payload with the exception that it makes it
 		// possible to list the views used by the response when the first
-		// argument is a media type. Listing no view has the same effect
+		// argument is a result type. Listing no view has the same effect
 		// as listing all views in this case.
-		Result(ResponseMediaType, "view")
+		Result(ResponseResultType, "view")
 
 		// Error in an Method expression defines method specific
 		// error responses, the syntax is identical as when used in a
@@ -314,8 +314,8 @@ var _ = Service("service", func() {
 				// ContentType allows setting the value of the
 				// response Content-Type header explicitely. By
 				// default this header is set with the response
-				// media type identifier if the response type is
-				// a media type.
+				// result type identifier if the response type is
+				// a result type.
 				ContentType("application/json")
 
 				// Headers list the response type attributes
@@ -385,7 +385,7 @@ var _ = Service("service", func() {
 	// mappings.
 	Method("another_method", func() {
 		Payload(PayloadType)
-		Response(ResponseMediaType)
+		Response(ResponseResultType)
 
 		HTTP(func() {
 
@@ -395,7 +395,7 @@ var _ = Service("service", func() {
 
 			// No DSL means the response body shape and content type
 			// is defined by the method response type
-			// ResponseMediaType.
+			// ResponseResultType.
 			Response(StatusOK)
 		})
 	})
@@ -425,8 +425,8 @@ var PayloadType = Type("Payload", func() {
 	Required("required")
 })
 
-// ResponseMediaType is the media type that describes the response shape.
-var ResponseMediaType = MediaType("application/vnd.goa.response", func() {
+// ResponseResultType is the result type that describes the response shape.
+var ResponseResultType = ResultType("application/vnd.goa.response", func() {
 	Description("Optional description")
 	Attributes(func() {
 		Attribute("required", String)

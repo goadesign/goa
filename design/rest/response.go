@@ -48,7 +48,7 @@ const (
 	StatusPreconditionFailed           = 412 // RFC 7232, 4.2
 	StatusRequestEntityTooLarge        = 413 // RFC 7231, 6.5.11
 	StatusRequestURITooLong            = 414 // RFC 7231, 6.5.12
-	StatusUnsupportedMediaType         = 415 // RFC 7231, 6.5.13
+	StatusUnsupportedResultType        = 415 // RFC 7231, 6.5.13
 	StatusRequestedRangeNotSatisfiable = 416 // RFC 7233, 4.4
 	StatusExpectationFailed            = 417 // RFC 7231, 6.5.14
 	StatusTeapot                       = 418 // RFC 7168, 2.3.3
@@ -76,7 +76,7 @@ const (
 
 type (
 	// HTTPResponseExpr defines a HTTP response including its status code,
-	// headers and media type.
+	// headers and result type.
 	HTTPResponseExpr struct {
 		// HTTP status
 		StatusCode int
@@ -112,13 +112,13 @@ func (r *HTTPResponseExpr) MappedHeaders() *MappedAttributeExpr {
 	return NewMappedAttributeExpr(r.headers)
 }
 
-// MediaType returns the media type describing the response body if any, nil
+// ResultType returns the result type describing the response body if any, nil
 // otherwise.
-func (r *HTTPResponseExpr) MediaType() *design.MediaTypeExpr {
+func (r *HTTPResponseExpr) ResultType() *design.ResultTypeExpr {
 	if r.Body == nil {
 		return nil
 	}
-	if mt, ok := r.Body.Type.(*design.MediaTypeExpr); ok {
+	if mt, ok := r.Body.Type.(*design.ResultTypeExpr); ok {
 		return mt
 	}
 	return nil
@@ -134,7 +134,7 @@ func (r *HTTPResponseExpr) EvalName() string {
 }
 
 // Validate checks that the response definition is consistent: its status is set
-// and the media type definition if any is valid.
+// and the result type definition if any is valid.
 func (r *HTTPResponseExpr) Validate() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
 	if r.headers != nil {
@@ -149,8 +149,8 @@ func (r *HTTPResponseExpr) Validate() *eval.ValidationErrors {
 	return verr
 }
 
-// Finalize sets the response media type from its type if the type is a media
-// type and no media type is already specified.
+// Finalize sets the response result type from its type if the type is a result
+// type and no result type is already specified.
 func (r *HTTPResponseExpr) Finalize() {
 	if r.Body == nil {
 		return
@@ -158,7 +158,7 @@ func (r *HTTPResponseExpr) Finalize() {
 	if r.ContentType != "" {
 		return
 	}
-	mt, ok := r.Body.Type.(*design.MediaTypeExpr)
+	mt, ok := r.Body.Type.(*design.ResultTypeExpr)
 	if !ok {
 		return
 	}

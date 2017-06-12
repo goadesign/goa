@@ -16,8 +16,8 @@ import (
 // define the result type inline using Attribute or may further specialize the
 // type passed as first argument e.g. by providing additional validations (e.g.
 // list of required attributes). The DSL may also specify a view when the first
-// argument is a media type corresponding to the view rendered by this method.
-// Note that specifying a view when the result type is a media type is optional
+// argument is a result type corresponding to the view rendered by this method.
+// Note that specifying a view when the result type is a result type is optional
 // and only useful in cases the method renders a single view.
 //
 // The valid syntax for Result is thus:
@@ -48,7 +48,7 @@ import (
 //        Result(Sum)
 //    })
 //
-//    // Specify view and required attributes on media type
+//    // Specify view and required attributes on result type
 //    Method("add", func() {
 //        Result(Sum, func() {
 //            View("default")

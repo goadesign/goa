@@ -25,31 +25,31 @@ var BasicType = Type("Name", func() {
 	Required("an_attribute")
 })
 
-// BasicMediaType shows the basic usage for MediaType.
+// BasicResultType shows the basic usage for ResultType.
 //
-// MediaType is the DSL function used to describe media types. A media type is a
+// ResultType is the DSL function used to describe result types. A result type is a
 // special kind of type that adds the concept of views: A view defines a subset
 // of the type attributes to be rendered. This is used to describe *response*
 // types where an method may render different attributes depending on the
 // request state or when different methods render the type differently (for
 // example a list method may render less attribute than a method that retrieves
-// a single value). All media types muse define a default view. The default view
+// a single value). All result types muse define a default view. The default view
 // is the view named "default".
 //
-// Media type takes a media type identifier (as defined by RFC6 838) as first
-// argument. This identifier must be unique across all media types in a given
+// Result type takes a result type identifier (as defined by RFC6 838) as first
+// argument. This identifier must be unique across all result types in a given
 // package.
-var BasicMediaType = MediaType("application/vnd.goa.media", func() {
+var BasicResultType = ResultType("application/vnd.goa.result", func() {
 	// Optional description used in code comments and docs.
 	Description("Optional description")
 
-	// Attributes lists the media type attributes identically to Type.
+	// Attributes lists the result type attributes identically to Type.
 	Attributes(func() {
 		Attribute("an_attribute", String)
 		Required("an_attribute")
 	})
 
-	// View defines a view. View may appear one or more times in a MediaType
+	// View defines a view. View may appear one or more times in a ResultType
 	// expression.
 	View("default", func() {
 		// There is no need to repeat the attribute properties when
@@ -78,8 +78,8 @@ var AllTypes = Type("AllTypes", func() {
 		Required("inner_attribute")
 	})
 	Attribute("user", AUserType)
-	Attribute("media", AMediaType)
-	Attribute("collection", CollectionOf(AMediaType))
+	Attribute("result", AResultType)
+	Attribute("collection", CollectionOf(AResultType))
 })
 
 // AUserType is a type used to define an attribute in AllTypes.
@@ -90,8 +90,8 @@ var AUserType = Type("UserType", func() {
 	Required("required")
 })
 
-// AMediaType is a media type used to define an attribute in AllTypes.
-var AMediaType = MediaType("MediaType", func() {
+// AResultType is a result type used to define an attribute in AllTypes.
+var AResultType = ResultType("ResultType", func() {
 	Description("Optional description")
 	Attributes(func() {
 		Attribute("optional", String)
@@ -107,8 +107,8 @@ var AMediaType = MediaType("MediaType", func() {
 	})
 })
 
-// ACollectionMedia type shows all the possible DSL of CollectionOf.
-var ACollectionMedia = CollectionOf(AMediaType, func() {
+// ACollectionResult type shows all the possible DSL of CollectionOf.
+var ACollectionResult = CollectionOf(AResultType, func() {
 	// View allows defining collection specific views.
 	// The view is defined using the attributes of the element of the
 	// collection.
@@ -116,9 +116,9 @@ var ACollectionMedia = CollectionOf(AMediaType, func() {
 		Attribute("optional")
 	})
 
-	// View can also refer to existing views defined in the element media
+	// View can also refer to existing views defined in the element result
 	// type. If no View is specified (i.e. no DSL argument is provided to
-	// CollectionOf) then all the element media type views are inherited.
+	// CollectionOf) then all the element result type views are inherited.
 	View("tiny")
 })
 

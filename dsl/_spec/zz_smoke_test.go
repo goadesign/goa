@@ -168,7 +168,7 @@ func TestServiceSpec(t *testing.T) {
 	if service.Errors[0].Name != "name_of_error_1" {
 		t.Errorf("Service: invalid first error name")
 	}
-	if service.Errors[0].Type != design.ErrorMedia {
+	if service.Errors[0].Type != design.ErrorResult {
 		t.Errorf("Service: invalid first error type")
 	}
 	if service.Errors[0].Description != "" {
@@ -177,7 +177,7 @@ func TestServiceSpec(t *testing.T) {
 	if service.Errors[1].Name != "name_of_error_2" {
 		t.Errorf("Service: invalid second error name")
 	}
-	if service.Errors[1].Type != design.ErrorMedia {
+	if service.Errors[1].Type != design.ErrorResult {
 		t.Errorf("Service: invalid second error type")
 	}
 	if service.Errors[1].Description != "Optional description of error" {
@@ -186,7 +186,7 @@ func TestServiceSpec(t *testing.T) {
 	if service.Errors[2].Name != "name_of_error_3" {
 		t.Errorf("Service: invalid third error name")
 	}
-	if service.Errors[2].Type != AErrorMediaType {
+	if service.Errors[2].Type != AErrorResultType {
 		t.Errorf("Service: invalid third error type")
 	}
 	if service.Errors[2].Description != "" {
@@ -289,12 +289,12 @@ func TestServiceSpec(t *testing.T) {
 	if service.Methods[0].Result == nil {
 		t.Errorf("Service: first method payload type is nil")
 	}
-	if service.Methods[0].Result != nil && service.Methods[0].Result.Kind() != design.MediaTypeKind {
+	if service.Methods[0].Result != nil && service.Methods[0].Result.Kind() != design.ResultTypeKind {
 		t.Errorf("Service: first method result type has invalid kind")
 	}
-	if mt, ok := service.Methods[0].Result.(*design.MediaTypeExpr); ok {
+	if mt, ok := service.Methods[0].Result.(*design.ResultTypeExpr); ok {
 		if mt.Name() != "application/vnd.goa.result" {
-			t.Errorf("Service: invalid first method result media type identifier")
+			t.Errorf("Service: invalid first method result result type identifier")
 		}
 		if mt.Description != "Optional description" {
 			t.Errorf("Service: invalid first method result type description")
@@ -330,21 +330,21 @@ func TestServiceSpec(t *testing.T) {
 			}
 		}
 		if len(mt.Views) != 1 {
-			t.Errorf("Service: invalid first method result media type view count")
+			t.Errorf("Service: invalid first method result result type view count")
 		}
 		if len(mt.Views) == 1 && mt.Views[0].Name != "default" {
-			t.Errorf("Service: invalid first method result media type view name")
+			t.Errorf("Service: invalid first method result result type view name")
 		}
 		if len(mt.Views) == 1 {
 			o := mt.Views[0].AttributeExpr.Type.(design.Object)
 			if len(o) != 2 {
-				t.Errorf("Service: invalid first method result media type view attribute count")
+				t.Errorf("Service: invalid first method result result type view attribute count")
 			}
 			if len(o) == 2 && o["required"] == nil {
-				t.Errorf("Service: missing first method result media type view attribute 'required' attribute")
+				t.Errorf("Service: missing first method result result type view attribute 'required' attribute")
 			}
 			if len(o) == 2 && o["name"] == nil {
-				t.Errorf("Service: missing first method result media type view attribute 'name' attribute")
+				t.Errorf("Service: missing first method result result type view attribute 'name' attribute")
 			}
 		}
 	}
@@ -354,7 +354,7 @@ func TestServiceSpec(t *testing.T) {
 	if len(service.Methods[0].Errors) == 1 && service.Methods[0].Errors[0].Name != "method_specific_error" {
 		t.Errorf("Service: invalid first method error name")
 	}
-	if len(service.Methods[0].Errors) == 1 && service.Methods[0].Errors[0].Type != design.ErrorMedia {
+	if len(service.Methods[0].Errors) == 1 && service.Methods[0].Errors[0].Type != design.ErrorResult {
 		t.Errorf("Service: invalid first method error type")
 	}
 	if len(service.Methods[0].Metadata) != 1 {
@@ -504,8 +504,8 @@ func TestTypes(t *testing.T) {
 		"any":        design.AnyKind,
 		"object":     design.ObjectKind,
 		"user":       design.UserTypeKind,
-		"media":      design.MediaTypeKind,
-		"collection": design.MediaTypeKind,
+		"result":     design.ResultTypeKind,
+		"collection": design.ResultTypeKind,
 	}
 	for n, k := range cases {
 		att, ok := o[n]

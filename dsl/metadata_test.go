@@ -16,11 +16,11 @@ func TestMetaData(t *testing.T) {
 		MetaFunc    func(e eval.Expression) design.MetadataExpr
 		Invocations int
 	}{
-		"userType":  {&design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{}}, "swagger:summary", []string{"Short summary of what action does"}, userTypeMeta, 1},
-		"api":       {&design.APIExpr{}, "metadata", []string{"some metadata"}, apiExprMeta, 2},
-		"attribute": {&design.AttributeExpr{}, "attribute_meta", []string{"attr meta", "more attr meta"}, attributeMeta, 2},
-		"method":    {&design.MethodExpr{Name: "testmethod"}, "method", []string{"method meta"}, methodMeta, 2},
-		"mediaType": {&design.MediaTypeExpr{UserTypeExpr: &design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{}}}, "mediaTypeMeta", []string{"media type meta"}, mediaTypeMeta, 2},
+		"userType":   {&design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{}}, "swagger:summary", []string{"Short summary of what action does"}, userTypeMeta, 1},
+		"api":        {&design.APIExpr{}, "metadata", []string{"some metadata"}, apiExprMeta, 2},
+		"attribute":  {&design.AttributeExpr{}, "attribute_meta", []string{"attr meta", "more attr meta"}, attributeMeta, 2},
+		"method":     {&design.MethodExpr{Name: "testmethod"}, "method", []string{"method meta"}, methodMeta, 2},
+		"resultType": {&design.ResultTypeExpr{UserTypeExpr: &design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{}}}, "resultTypeMeta", []string{"result type meta"}, resultTypeMeta, 2},
 	}
 
 	for k, tc := range cases {
@@ -58,8 +58,8 @@ func hasValue(vals []string, val string) bool {
 	}
 	return false
 }
-func apiExprMeta(e eval.Expression) design.MetadataExpr   { return e.(*design.APIExpr).Metadata }
-func userTypeMeta(e eval.Expression) design.MetadataExpr  { return e.(*design.UserTypeExpr).Metadata }
-func attributeMeta(e eval.Expression) design.MetadataExpr { return e.(*design.AttributeExpr).Metadata }
-func methodMeta(e eval.Expression) design.MetadataExpr    { return e.(*design.MethodExpr).Metadata }
-func mediaTypeMeta(e eval.Expression) design.MetadataExpr { return e.(*design.MediaTypeExpr).Metadata }
+func apiExprMeta(e eval.Expression) design.MetadataExpr    { return e.(*design.APIExpr).Metadata }
+func userTypeMeta(e eval.Expression) design.MetadataExpr   { return e.(*design.UserTypeExpr).Metadata }
+func attributeMeta(e eval.Expression) design.MetadataExpr  { return e.(*design.AttributeExpr).Metadata }
+func methodMeta(e eval.Expression) design.MetadataExpr     { return e.(*design.MethodExpr).Metadata }
+func resultTypeMeta(e eval.Expression) design.MetadataExpr { return e.(*design.ResultTypeExpr).Metadata }

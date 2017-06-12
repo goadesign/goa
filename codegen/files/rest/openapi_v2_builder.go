@@ -315,13 +315,13 @@ func itemsFromExpr(at *design.AttributeExpr) *Items {
 func responseSpecFromExpr(s *OpenAPIV2, root *rest.RootExpr, r *rest.HTTPResponseExpr) (*Response, error) {
 	var schema *Schema
 	if r.Body != nil {
-		if mt, ok := r.Body.Type.(*design.MediaTypeExpr); ok {
+		if mt, ok := r.Body.Type.(*design.ResultTypeExpr); ok {
 			view := design.DefaultView
 			if v, ok := r.Body.Metadata["view"]; ok {
 				view = v[0]
 			}
 			schema = NewSchema()
-			schema.Ref = MediaTypeRef(root.Design.API, mt, view)
+			schema.Ref = ResultTypeRef(root.Design.API, mt, view)
 		}
 	}
 	headers, err := headersFromExpr(r.MappedHeaders())
@@ -381,7 +381,7 @@ func buildPathFromFileServer(s *OpenAPIV2, root *rest.RootExpr, fs *rest.FileSer
 		},
 	}
 	if len(wcs) > 0 {
-		schema := TypeSchema(root.Design.API, design.ErrorMedia)
+		schema := TypeSchema(root.Design.API, design.ErrorResult)
 		responses["404"] = &Response{Description: "File not found", Schema: schema}
 	}
 

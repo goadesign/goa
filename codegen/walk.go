@@ -71,7 +71,7 @@ func walk(at *design.AttributeExpr, walker func(*design.AttributeExpr) error, se
 		}
 	case *design.UserTypeExpr:
 		return walkUt(actual)
-	case *design.MediaTypeExpr:
+	case *design.ResultTypeExpr:
 		return walkUt(actual.UserTypeExpr)
 	default:
 		panic("unknown attribute type") // bug

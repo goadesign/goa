@@ -14,7 +14,7 @@ import (
 
 type (
 	// ResourceExpr describes a REST resource.
-	// It defines both a media type and a set of actions that can be
+	// It defines both a result type and a set of actions that can be
 	// executed through HTTP requests.
 	// ResourceExpr embeds a ServiceExpr and adds HTTP specific properties.
 	ResourceExpr struct {

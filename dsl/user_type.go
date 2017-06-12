@@ -123,8 +123,8 @@ func Type(name string, args ...interface{}) design.UserType {
 //    })
 //
 // Note: CollectionOf and ArrayOf both return array types. CollectionOf returns
-// a media type where ArrayOf returns a user type. In general you want to use
-// CollectionOf if the argument is a media type and ArrayOf if it is a user
+// a result type where ArrayOf returns a user type. In general you want to use
+// CollectionOf if the argument is a result type and ArrayOf if it is a user
 // type.
 func ArrayOf(v interface{}, fn ...func()) *design.Array {
 	var t design.DataType

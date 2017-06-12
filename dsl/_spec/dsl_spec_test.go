@@ -84,10 +84,10 @@ var _ = Service("service", func() {
 
 	// Error defines a common error to all the service methods.
 	Error("name_of_error_1")
-	// ErrorMedia is a built-in media type used by default for errors.
-	Error("name_of_error_2", ErrorMedia, "Optional description of error")
-	// Error attributes can be described using a media type.
-	Error("name_of_error_3", AErrorMediaType)
+	// ErrorResult is a built-in result type used by default for errors.
+	Error("name_of_error_2", ErrorResult, "Optional description of error")
+	// Error attributes can be described using a result type.
+	Error("name_of_error_3", AErrorResultType)
 	// Error attributes can be described using a user type.
 	Error("name_of_error_4", AErrorType)
 	// Error attributes can be described inline.
@@ -142,14 +142,14 @@ var _ = Service("service", func() {
 		//         Required("name")
 		//     })
 		//
-		// Result attributes can be described using a user or media
+		// Result attributes can be described using a user or result
 		// type.
 		//
-		//     Result(ResultMediaType)
+		//     Result(ResultType)
 		//
 		// Additionally Result can add to the list of required
 		// attributes.
-		Result(ResultMediaType, func() {
+		Result(ResType, func() {
 			Required("name")
 		})
 
@@ -191,9 +191,9 @@ var AErrorType = Type("AErrorType", func() {
 	Attribute("msg")
 })
 
-// AErrorMediaType is a simple media type definition.
-var AErrorMediaType = MediaType("application/vnd.goa.design.error", func() {
-	TypeName("AErrorMedia")
+// AErrorResultType is a simple result type definition.
+var AErrorResultType = ResultType("application/vnd.goa.design.error", func() {
+	TypeName("AErrorResult")
 	Attributes(func() {
 		Attribute("msg")
 	})
@@ -210,8 +210,8 @@ var PayloadType = Type("Payload", func() {
 	Required("required")
 })
 
-// ResultMediaType is the media type that describes the result shape.
-var ResultMediaType = MediaType("application/vnd.goa.result", func() {
+// ResType is the result type that describes the result shape.
+var ResType = ResultType("application/vnd.goa.result", func() {
 	Description("Optional description")
 	Attributes(func() {
 		Attribute("required")

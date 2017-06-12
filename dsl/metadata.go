@@ -8,7 +8,7 @@ import (
 // Metadata is a set of key/value pairs that can be assigned to an object. Each
 // value consists of a slice of strings so that multiple invocation of the
 // Metadata function on the same target using the same key builds up the slice.
-// Metadata may be set on attributes, media types, actions, responses, resources
+// Metadata may be set on attributes, result types, actions, responses, resources
 // and API definitions.
 //
 // While keys can have any value the following names are handled explicitly by
@@ -97,7 +97,7 @@ func Metadata(name string, value ...string) {
 		att.Metadata = appendMetadata(att.Metadata, name, value...)
 	case *design.AttributeExpr:
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
-	case *design.MediaTypeExpr:
+	case *design.ResultTypeExpr:
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	case *design.MethodExpr:
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)

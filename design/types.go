@@ -7,8 +7,8 @@ and numbers), array types which represent a collection of items, map types which
 represent maps of key/value pairs and object types describing data structures
 with fields.
 
-The package also defines user types which are named types and media types which
-describe HTTP media types.
+The package also defines user types which can also be result types. A result
+type is a user type used to described response messages that defines views.
 */
 package design
 
@@ -112,8 +112,8 @@ const (
 	MapKind
 	// UserTypeKind represents a user type.
 	UserTypeKind
-	// MediaTypeKind represents a media type.
-	MediaTypeKind
+	// ResultTypeKind represents a result type.
+	ResultTypeKind
 	// AnyKind represents a unknown type.
 	AnyKind
 )
@@ -174,7 +174,7 @@ func AsObject(dt DataType) Object {
 	switch t := dt.(type) {
 	case *UserTypeExpr:
 		return AsObject(t.Type)
-	case *MediaTypeExpr:
+	case *ResultTypeExpr:
 		return AsObject(t.Type)
 	case Object:
 		return t
@@ -188,7 +188,7 @@ func AsArray(dt DataType) *Array {
 	switch t := dt.(type) {
 	case *UserTypeExpr:
 		return AsArray(t.Type)
-	case *MediaTypeExpr:
+	case *ResultTypeExpr:
 		return AsArray(t.Type)
 	case *Array:
 		return t
@@ -202,7 +202,7 @@ func AsMap(dt DataType) *Map {
 	switch t := dt.(type) {
 	case *UserTypeExpr:
 		return AsMap(t.Type)
-	case *MediaTypeExpr:
+	case *ResultTypeExpr:
 		return AsMap(t.Type)
 	case *Map:
 		return t
@@ -227,7 +227,7 @@ func IsPrimitive(dt DataType) bool {
 		return true
 	case *UserTypeExpr:
 		return IsPrimitive(t.Type)
-	case *MediaTypeExpr:
+	case *ResultTypeExpr:
 		return IsPrimitive(t.Type)
 	default:
 		return false
@@ -558,7 +558,7 @@ func toReflectType(dtype DataType) reflect.Type {
 		return reflect.TypeOf("")
 	case BytesKind:
 		return reflect.TypeOf([]byte{})
-	case ObjectKind, UserTypeKind, MediaTypeKind:
+	case ObjectKind, UserTypeKind, ResultTypeKind:
 		return reflect.TypeOf(map[string]interface{}{})
 	case ArrayKind:
 		return reflect.SliceOf(toReflectType(dtype.(*Array).ElemType.Type))

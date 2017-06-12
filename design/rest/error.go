@@ -7,7 +7,7 @@ import (
 
 type (
 	// HTTPErrorExpr defines a HTTP error response including its name,
-	// status, headers and media type.
+	// status, headers and result type.
 	HTTPErrorExpr struct {
 		// ErrorExpr is the underlying goa design error expression.
 		*design.ErrorExpr

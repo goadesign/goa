@@ -8,7 +8,7 @@ import (
 
 // Description sets the expression description.
 //
-// Description may appear in API, Resource, Action, Files, Response, Type, MediaType or Attribute.
+// Description may appear in API, Resource, Action, Files, Response, Type, ResultType or Attribute.
 //
 // Example:
 //

@@ -21,8 +21,8 @@ type (
 		Errors []*ErrorExpr
 		// Types contains the user types described in the DSL.
 		Types []UserType
-		// MediaTypes contains the media types described in the DSL.
-		MediaTypes []UserType
+		// ResultTypes contains the result types described in the DSL.
+		ResultTypes []UserType
 		// GeneratedTypes contains the types generated during DSL
 		// execution.
 		GeneratedTypes GeneratedRoot
@@ -52,10 +52,10 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	}
 	walk(types)
 
-	// Next media types
-	mtypes := make(eval.ExpressionSet, len(r.MediaTypes))
-	for i, mt := range r.MediaTypes {
-		mtypes[i] = mt.(*MediaTypeExpr)
+	// Next result types
+	mtypes := make(eval.ExpressionSet, len(r.ResultTypes))
+	for i, mt := range r.ResultTypes {
+		mtypes[i] = mt.(*ResultTypeExpr)
 	}
 	walk(mtypes)
 
@@ -104,7 +104,7 @@ func (r *RootExpr) UserType(name string) UserType {
 			return t
 		}
 	}
-	for _, t := range r.MediaTypes {
+	for _, t := range r.ResultTypes {
 		if t.Name() == name {
 			return t
 		}
@@ -112,11 +112,11 @@ func (r *RootExpr) UserType(name string) UserType {
 	return nil
 }
 
-// GeneratedMediaType returns the generated media type expression with the given
+// GeneratedResultType returns the generated result type expression with the given
 // id, nil if there isn't one.
-func (r *RootExpr) GeneratedMediaType(id string) *MediaTypeExpr {
+func (r *RootExpr) GeneratedResultType(id string) *ResultTypeExpr {
 	for _, t := range r.GeneratedTypes {
-		mt := t.(*MediaTypeExpr)
+		mt := t.(*ResultTypeExpr)
 		if mt.Identifier == id {
 			return mt
 		}

@@ -67,7 +67,7 @@ func RequestBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, suffix string) de
 // function then the corresponding type is used instead of the attribute type.
 // Otherwise the type is computed by removing the attributes of the method
 // payload used to define headers and parameters. Also if the response defines a
-// view then the response media type is projected first. suffix is appended to
+// view then the response result type is projected first. suffix is appended to
 // the created type name if any.
 func ResponseBodyType(r *rest.ResourceExpr, resp *rest.HTTPResponseExpr, result *design.AttributeExpr, suffix string) design.DataType {
 	if result == nil || result.Type == design.Empty {
@@ -93,16 +93,15 @@ func ResponseBodyType(r *rest.ResourceExpr, resp *rest.HTTPResponseExpr, result 
 		return design.Empty
 	}
 
-	// 2. Project if response type is media type and attribute has a
-	// view.
-	mt, ismt := dt.(*design.MediaTypeExpr)
+	// 2. Project if response type is result type and attribute has a view.
+	mt, ismt := dt.(*design.ResultTypeExpr)
 	if ismt {
 		if v := result.Metadata["view"]; len(v) > 0 {
 			p, err := new(design.Projector).Project(mt, v[0])
 			if err != nil {
 				panic(err) // bug
 			}
-			dt = p.MediaType
+			dt = p.ResultType
 			result = design.DupAtt(result)
 			result.Type = dt
 		}
@@ -142,7 +141,7 @@ func ResponseBodyType(r *rest.ResourceExpr, resp *rest.HTTPResponseExpr, result 
 			}
 			views[i] = nv
 		}
-		nmt := &design.MediaTypeExpr{
+		nmt := &design.ResultTypeExpr{
 			UserTypeExpr: userType,
 			Identifier:   mt.Identifier,
 			ContentType:  mt.ContentType,

@@ -70,7 +70,7 @@ the request or response type has the same effect as using the built-int type
         Request(UpdateAccount)
         Response(Empty)
         Error(ErrNotFound)
-        Error(ErrBadRequest, ErrorMedia)
+        Error(ErrBadRequest, ErrorResult)
 ```
 
 The request, response and error types define the request and responses
@@ -95,7 +95,7 @@ response type.
             })
             Response(NoContent)
             Error(ErrNotFound, NotFound)
-            Error(ErrBadRequest, BadRequest, ErrorMedia)
+            Error(ErrBadRequest, BadRequest, ErrorResult)
         })
         GRPC(func() {
             Name("Update")
@@ -129,7 +129,7 @@ Implicit request body definition:
             PUT("/{accountID}")    // "accountID" request attribute
             Response(NoContent)
             Error(ErrNotFound, NotFound)
-            Error(ErrBadRequest, BadRequest, ErrorMedia)
+            Error(ErrBadRequest, BadRequest, ErrorResult)
         })
 ```
 
@@ -141,7 +141,7 @@ Array body definition:
             Body("names") // Assumes request type has attribute "names"
             Response(NoContent)
             Error(ErrNotFound, NotFound)
-            Error(ErrBadRequest, BadRequest, ErrorMedia)
+            Error(ErrBadRequest, BadRequest, ErrorResult)
         })
 ```
 
@@ -205,24 +205,24 @@ The list of primitive types in v2 is:
 
 Like in v1 arrays can be declared in one of two ways:
 
-* `ArrayOf()` which accepts any type or media type and returns a type
-* `CollectionOf()` which accepts media types only and returns a media type
+* `ArrayOf()` which accepts any type or result type and returns a type
+* `CollectionOf()` which accepts result types only and returns a result type
 
-The media type returned by `CollectionOf` contains the same views as the media
+The result type returned by `CollectionOf` contains the same views as the result
 type given as argument. Each view simply renders an array where each element has
-been projected using the corresponding element view. The media type id of the
+been projected using the corresponding element view. The result type id of the
 collection is computed by appending the `;collection` qualifier to the element
-media type id.
+result type id.
 
-Like in v1 the goa DSL makes it possible to define both user and media types.
-Media types are user types that also define a media type id, views and links.
-The DSL for defining user types and media types is the same as in v1 (using
-`Type` and `MediaType` respectively).
+Like in v1 the goa DSL makes it possible to define both user and result types.
+Result types are user types that also define a result type id, views and links.
+The DSL for defining user types and result types is the same as in v1 (using
+`Type` and `ResultType` respectively).
 
 ### gRPC: Attribute Tags
 
 gRPC (and other RPC protocols) requires that each attribute defined on a type or
-media type be tagged with a unique integer. This tag is used to pack the data on
+result type be tagged with a unique integer. This tag is used to pack the data on
 the wire and must thus never change as the type evolves. It is therefore
 necessary to explicitly define the tags, they cannot be simply inferred using
 the position of the attribute for example.

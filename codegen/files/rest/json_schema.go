@@ -67,7 +67,7 @@ type (
 		Method       string  `json:"method,omitempty"`
 		Schema       *Schema `json:"schema,omitempty"`
 		TargetSchema *Schema `json:"targetSchema,omitempty"`
-		MediaType    string  `json:"mediaType,omitempty"`
+		ResultType   string  `json:"mediaType,omitempty"`
 		EncType      string  `json:"encType,omitempty"`
 	}
 )
@@ -183,7 +183,7 @@ func GenerateResourceDefinition(api *design.APIExpr, res *rest.ResourceExpr) {
 		var targetSchema *Schema
 		var identifier string
 		for _, resp := range a.Responses {
-			if mt := resp.MediaType(); mt != nil {
+			if mt := resp.ResultType(); mt != nil {
 				if identifier == "" {
 					identifier = mt.Identifier
 				} else {
@@ -208,7 +208,7 @@ func GenerateResourceDefinition(api *design.APIExpr, res *rest.ResourceExpr) {
 				Method:       r.Method,
 				Schema:       requestSchema,
 				TargetSchema: targetSchema,
-				MediaType:    identifier,
+				ResultType:   identifier,
 			}
 			if i == 0 {
 				if ca := a.Resource.CanonicalAction(); ca != nil {
@@ -222,17 +222,17 @@ func GenerateResourceDefinition(api *design.APIExpr, res *rest.ResourceExpr) {
 	}
 }
 
-// MediaTypeRef produces the JSON reference to the media type definition with
+// ResultTypeRef produces the JSON reference to the media type definition with
 // the given view.
-func MediaTypeRef(api *design.APIExpr, mt *design.MediaTypeExpr, view string) string {
+func ResultTypeRef(api *design.APIExpr, mt *design.ResultTypeExpr, view string) string {
 	projected, err := new(design.Projector).Project(mt, view)
 	if err != nil {
 		panic(fmt.Sprintf("failed to project media type %#v: %s", mt.Identifier, err)) // bug
 	}
-	if _, ok := Definitions[projected.MediaType.TypeName]; !ok {
-		GenerateMediaTypeDefinition(api, projected.MediaType, "default")
+	if _, ok := Definitions[projected.ResultType.TypeName]; !ok {
+		GenerateResultTypeDefinition(api, projected.ResultType, "default")
 	}
-	ref := fmt.Sprintf("#/definitions/%s", projected.MediaType.TypeName)
+	ref := fmt.Sprintf("#/definitions/%s", projected.ResultType.TypeName)
 	return ref
 }
 
@@ -244,16 +244,16 @@ func TypeRef(api *design.APIExpr, ut *design.UserTypeExpr) string {
 	return fmt.Sprintf("#/definitions/%s", ut.TypeName)
 }
 
-// GenerateMediaTypeDefinition produces the JSON schema corresponding to the
+// GenerateResultTypeDefinition produces the JSON schema corresponding to the
 // given media type and given view.
-func GenerateMediaTypeDefinition(api *design.APIExpr, mt *design.MediaTypeExpr, view string) {
+func GenerateResultTypeDefinition(api *design.APIExpr, mt *design.ResultTypeExpr, view string) {
 	if _, ok := Definitions[mt.TypeName]; ok {
 		return
 	}
 	s := NewSchema()
 	s.Title = fmt.Sprintf("Mediatype identifier: %s", mt.Identifier)
 	Definitions[mt.TypeName] = s
-	buildMediaTypeSchema(api, mt, view, s)
+	buildResultTypeSchema(api, mt, view, s)
 }
 
 // GenerateTypeDefinition produces the JSON schema corresponding to the given
@@ -303,9 +303,9 @@ func TypeSchema(api *design.APIExpr, t design.DataType) *Schema {
 		s.AdditionalProperties = true
 	case *design.UserTypeExpr:
 		s.Ref = TypeRef(api, actual)
-	case *design.MediaTypeExpr:
+	case *design.ResultTypeExpr:
 		// Use "default" view by default
-		s.Ref = MediaTypeRef(api, actual, design.DefaultView)
+		s.Ref = ResultTypeRef(api, actual, design.DefaultView)
 	}
 	return s
 }
@@ -520,9 +520,9 @@ func propertiesFromDefs(definitions map[string]*Schema, path string) map[string]
 	return res
 }
 
-// buildMediaTypeSchema initializes s as the JSON schema representing mt for the
+// buildResultTypeSchema initializes s as the JSON schema representing mt for the
 // given view.
-func buildMediaTypeSchema(api *design.APIExpr, mt *design.MediaTypeExpr, view string, s *Schema) {
+func buildResultTypeSchema(api *design.APIExpr, mt *design.ResultTypeExpr, view string, s *Schema) {
 	s.Media = &Media{Type: mt.Identifier}
 	projected, err := new(design.Projector).Project(mt, view)
 	if err != nil {
@@ -542,19 +542,19 @@ func buildMediaTypeSchema(api *design.APIExpr, mt *design.MediaTypeExpr, view st
 			// all the API actions and finding one that returns it.
 			var (
 				att = links[ln]
-				lmt = att.Type.(*design.MediaTypeExpr)
+				lmt = att.Type.(*design.ResultTypeExpr)
 			)
 			sm := NewSchema()
-			sm.Ref = MediaTypeRef(api, lmt, "default")
+			sm.Ref = ResultTypeRef(api, lmt, "default")
 			s.Links = append(s.Links, &Link{
 				Title:        ln,
 				Rel:          ln,
 				Description:  att.Description,
 				Method:       "GET",
 				TargetSchema: sm,
-				MediaType:    lmt.Identifier,
+				ResultType:   lmt.Identifier,
 			})
 		}
 	}
-	buildAttributeSchema(api, s, projected.MediaType.AttributeExpr)
+	buildAttributeSchema(api, s, projected.ResultType.AttributeExpr)
 }

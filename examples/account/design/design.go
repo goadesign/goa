@@ -86,7 +86,7 @@ var ListAccount = Type("ListAccount", func() {
 	})
 })
 
-var Account = MediaType("application/vnd.basic.account", func() {
+var Account = ResultType("application/vnd.basic.account", func() {
 	TypeName("Account")
 	Description("Account type")
 	Reference(CreateAccount)

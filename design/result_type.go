@@ -9,21 +9,21 @@ import (
 )
 
 const (
-	// DefaultView is the name of the default media type view.
+	// DefaultView is the name of the default result type view.
 	DefaultView = "default"
 )
 
 type (
-	// MediaTypeExpr describes the rendering of a resource using field and
-	// link definitions. A field corresponds to a single member of the media
+	// ResultTypeExpr describes the rendering of a resource using field and
+	// link definitions. A field corresponds to a single member of the result
 	// type, it has a name and a type as well as optional validation rules.
-	// A link has a name and a URL that points to a related resource. Media
+	// A link has a name and a URL that points to a related resource. Result
 	// types also define views which describe which fields and links to
 	// render when building the response body for the corresponding view.
-	MediaTypeExpr struct {
-		// A media type is a type
+	ResultTypeExpr struct {
+		// A result type is a type
 		*UserTypeExpr
-		// Identifier is the RFC 6838 media type identifier.
+		// Identifier is the RFC 6838 result type media type identifier.
 		Identifier string
 		// ContentType identifies the value written to the response
 		// "Content-Type" header. Defaults to Identifier.
@@ -32,7 +32,7 @@ type (
 		Views []*ViewExpr
 	}
 
-	// LinkExpr defines a media type link, it specifies a URL to a related
+	// LinkExpr defines a result type link, it specifies a URL to a related
 	// resource.
 	LinkExpr struct {
 		// Link name
@@ -41,59 +41,59 @@ type (
 		View string
 		// URITemplate is the RFC6570 URI template of the link Href.
 		URITemplate string
-		// Parent media Type
-		Parent *MediaTypeExpr
+		// Parent result Type
+		Parent *ResultTypeExpr
 	}
 
 	// ViewExpr defines which fields and links to render when building a
 	// response. The view is an object whose field names must match the
-	// names of the parent media type field names. The field definitions are
-	// inherited from the parent media type but may be overridden.
+	// names of the parent result type field names. The field definitions are
+	// inherited from the parent result type but may be overridden.
 	ViewExpr struct {
 		// Set of properties included in view
 		*AttributeExpr
 		// Name of view
 		Name string
-		// Parent media Type
-		Parent *MediaTypeExpr
+		// Parent result Type
+		Parent *ResultTypeExpr
 	}
 
-	// Projector derives media types using a canonical media type expression
+	// Projector derives result types using a canonical result type expression
 	// and a view expression.
 	Projector struct {
-		// Projected is a cache of projected media types indexed by
+		// Projected is a cache of projected result types indexed by
 		// identifier.
 		Projected map[string]*ProjectedMTExpr
 	}
 
-	// ProjectedMTExpr represents a media type that was derived from a media
+	// ProjectedMTExpr represents a result type that was derived from a result
 	// type expression defined in a DSL by applying a view. The result of
-	// applying a view is a media type expression that contains the subset
-	// of the original media type fields listed in the view recursively
-	// projected if they are media types themselves. The result also include
-	// a links object that corresponds to the media type links defined in
+	// applying a view is a result type expression that contains the subset
+	// of the original result type fields listed in the view recursively
+	// projected if they are result types themselves. The result also include
+	// a links object that corresponds to the result type links defined in
 	// the design.
 	ProjectedMTExpr struct {
-		// View used to create projected media type
+		// View used to create projected result type
 		View string
-		// MediaType is the projected media type.
-		MediaType *MediaTypeExpr
-		// Links lists the media type links if any.
+		// ResultType is the projected result type.
+		ResultType *ResultTypeExpr
+		// Links lists the result type links if any.
 		Links *UserTypeExpr
 	}
 )
 
 var (
-	// ErrorMediaIdentifier is the media type identifier used for error
+	// ErrorResultIdentifier is the result type identifier used for error
 	// responses.
-	ErrorMediaIdentifier = "application/vnd.goa.error"
+	ErrorResultIdentifier = "application/vnd.goa.error"
 
-	// ErrorMedia is the built-in media type for error responses.
-	ErrorMedia = &MediaTypeExpr{
+	// ErrorResult is the built-in result type for error responses.
+	ErrorResult = &ResultTypeExpr{
 		UserTypeExpr: &UserTypeExpr{
 			AttributeExpr: &AttributeExpr{
-				Type:        errorMediaType,
-				Description: "Error response media type",
+				Type:        errorResultType,
+				Description: "Error response result type",
 				UserExamples: []*ExampleExpr{{
 					Summary: "BadRequest",
 					Value: Val{
@@ -107,11 +107,11 @@ var (
 			},
 			TypeName: "error",
 		},
-		Identifier: ErrorMediaIdentifier,
-		Views:      []*ViewExpr{errorMediaView},
+		Identifier: ErrorResultIdentifier,
+		Views:      []*ViewExpr{errorResultView},
 	}
 
-	errorMediaType = Object{
+	errorResultType = Object{
 		"id": &AttributeExpr{
 			Type:        String,
 			Description: "a unique identifier for this particular occurrence of the problem.",
@@ -137,16 +137,16 @@ var (
 		},
 	}
 
-	errorMediaView = &ViewExpr{
-		AttributeExpr: &AttributeExpr{Type: errorMediaType},
+	errorResultView = &ViewExpr{
+		AttributeExpr: &AttributeExpr{Type: errorResultType},
 		Name:          "default",
 	}
 )
 
-// NewMediaTypeExpr creates a media type definition but does not
+// NewResultTypeExpr creates a result type definition but does not
 // execute the DSL.
-func NewMediaTypeExpr(name, identifier string, fn func()) *MediaTypeExpr {
-	return &MediaTypeExpr{
+func NewResultTypeExpr(name, identifier string, fn func()) *ResultTypeExpr {
+	return &ResultTypeExpr{
 		UserTypeExpr: &UserTypeExpr{
 			AttributeExpr: &AttributeExpr{Type: Object{}, DSLFunc: fn},
 			TypeName:      name,
@@ -155,8 +155,8 @@ func NewMediaTypeExpr(name, identifier string, fn func()) *MediaTypeExpr {
 	}
 }
 
-// CanonicalIdentifier returns the media type identifier sans suffix
-// which is what the DSL uses to store and lookup media types.
+// CanonicalIdentifier returns the result type identifier sans suffix
+// which is what the DSL uses to store and lookup result types.
 func CanonicalIdentifier(identifier string) string {
 	base, params, err := mime.ParseMediaType(identifier)
 	if err != nil {
@@ -170,22 +170,22 @@ func CanonicalIdentifier(identifier string) string {
 }
 
 // Kind implements DataKind.
-func (m *MediaTypeExpr) Kind() Kind { return MediaTypeKind }
+func (m *ResultTypeExpr) Kind() Kind { return ResultTypeKind }
 
-// Dup creates a deep copy of the media type given a deep copy of its attribute.
-func (m *MediaTypeExpr) Dup(att *AttributeExpr) UserType {
-	return &MediaTypeExpr{
+// Dup creates a deep copy of the result type given a deep copy of its attribute.
+func (m *ResultTypeExpr) Dup(att *AttributeExpr) UserType {
+	return &ResultTypeExpr{
 		UserTypeExpr: m.UserTypeExpr.Dup(att).(*UserTypeExpr),
 		Identifier:   m.Identifier,
 		Views:        m.Views,
 	}
 }
 
-// Name returns the media type name.
-func (m *MediaTypeExpr) Name() string { return m.TypeName }
+// Name returns the result type name.
+func (m *ResultTypeExpr) Name() string { return m.TypeName }
 
 // View returns the view with the given name.
-func (m *MediaTypeExpr) View(name string) *ViewExpr {
+func (m *ResultTypeExpr) View(name string) *ViewExpr {
 	for _, v := range m.Views {
 		if v.Name == name {
 			return v
@@ -194,24 +194,24 @@ func (m *MediaTypeExpr) View(name string) *ViewExpr {
 	return nil
 }
 
-// IsError returns true if the media type is implemented via a goa struct.
-func (m *MediaTypeExpr) IsError() bool {
+// IsError returns true if the result type is implemented via a goa struct.
+func (m *ResultTypeExpr) IsError() bool {
 	base, params, err := mime.ParseMediaType(m.Identifier)
 	if err != nil {
-		panic("invalid media type identifier " + m.Identifier) // bug
+		panic("invalid result type identifier " + m.Identifier) // bug
 	}
 	delete(params, "view")
-	return mime.FormatMediaType(base, params) == ErrorMedia.Identifier
+	return mime.FormatMediaType(base, params) == ErrorResult.Identifier
 }
 
-// ComputeViews returns the media type views recursing as necessary if the media
+// ComputeViews returns the result type views recursing as necessary if the result
 // type is a collection.
-func (m *MediaTypeExpr) ComputeViews() []*ViewExpr {
+func (m *ResultTypeExpr) ComputeViews() []*ViewExpr {
 	if m.Views != nil {
 		return m.Views
 	}
 	if a, ok := m.Type.(*Array); ok {
-		if mt, ok := a.ElemType.Type.(*MediaTypeExpr); ok {
+		if mt, ok := a.ElemType.Type.(*ResultTypeExpr); ok {
 			return mt.ComputeViews()
 		}
 	}
@@ -219,7 +219,7 @@ func (m *MediaTypeExpr) ComputeViews() []*ViewExpr {
 }
 
 // Finalize builds the default view if not explicitly defined.
-func (m *MediaTypeExpr) Finalize() {
+func (m *ResultTypeExpr) Finalize() {
 	if m.View("default") == nil {
 		v := &ViewExpr{
 			AttributeExpr: DupAtt(m.AttributeExpr),
@@ -230,14 +230,14 @@ func (m *MediaTypeExpr) Finalize() {
 	}
 }
 
-// Project creates a MediaTypeExpr containing the fields defined in the view
+// Project creates a ResultTypeExpr containing the fields defined in the view
 // expression of m named after the view argument. Project also returns a links
 // object created after the link expression of m if there is one.
 //
-// The resulting media type defines a default view. The media type identifier is
+// The resulting result type defines a default view. The result type identifier is
 // computed by adding a parameter called "view" to the original identifier. The
 // value of the "view" parameter is the name of the view.
-func (p *Projector) Project(m *MediaTypeExpr, view string) (*ProjectedMTExpr, error) {
+func (p *Projector) Project(m *ResultTypeExpr, view string) (*ProjectedMTExpr, error) {
 	var viewID string
 	cano := CanonicalIdentifier(m.Identifier)
 	base, params, _ := mime.ParseMediaType(cano)
@@ -256,7 +256,7 @@ func (p *Projector) Project(m *MediaTypeExpr, view string) (*ProjectedMTExpr, er
 	return p.projectSingle(m, view, viewID)
 }
 
-func (p *Projector) projectSingle(m *MediaTypeExpr, view, viewID string) (*ProjectedMTExpr, error) {
+func (p *Projector) projectSingle(m *ResultTypeExpr, view, viewID string) (*ProjectedMTExpr, error) {
 	v := m.View(view)
 	if v == nil {
 		return nil, fmt.Errorf("unknown view %#v", view)
@@ -279,7 +279,7 @@ func (p *Projector) projectSingle(m *MediaTypeExpr, view, viewID string) (*Proje
 	// Compute description
 	desc := m.Description
 	if desc == "" {
-		desc = m.TypeName + " media type"
+		desc = m.TypeName + " result type"
 	}
 	desc += " (" + view + " view)"
 
@@ -289,7 +289,7 @@ func (p *Projector) projectSingle(m *MediaTypeExpr, view, viewID string) (*Proje
 		typeName += strings.Title(view)
 	}
 
-	projected := &MediaTypeExpr{
+	projected := &ResultTypeExpr{
 		Identifier: viewID,
 		UserTypeExpr: &UserTypeExpr{
 			TypeName: typeName,
@@ -306,14 +306,14 @@ func (p *Projector) projectSingle(m *MediaTypeExpr, view, viewID string) (*Proje
 		Parent:        projected,
 	}}
 
-	proj := ProjectedMTExpr{View: view, MediaType: projected}
+	proj := ProjectedMTExpr{View: view, ResultType: projected}
 	p.Projected[viewID] = &proj
 	projectedObj := projected.Type.(Object)
 	mtObj := m.Type.(Object)
 	for n := range viewObj {
 		if at := mtObj[n]; at != nil {
 			at = DupAtt(at)
-			if mt, ok := at.Type.(*MediaTypeExpr); ok {
+			if mt, ok := at.Type.(*ResultTypeExpr); ok {
 				vatt := viewObj[n]
 				var view string
 				if len(vatt.Metadata["view"]) > 0 {
@@ -329,7 +329,7 @@ func (p *Projector) projectSingle(m *MediaTypeExpr, view, viewID string) (*Proje
 				if err != nil {
 					return nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", view, n, err)
 				}
-				at.Type = pr.MediaType
+				at.Type = pr.ResultType
 			}
 			projectedObj[n] = at
 		}
@@ -337,31 +337,31 @@ func (p *Projector) projectSingle(m *MediaTypeExpr, view, viewID string) (*Proje
 	return &proj, nil
 }
 
-func (p *Projector) projectCollection(m *MediaTypeExpr, view, viewID string) (*ProjectedMTExpr, error) {
-	// Project the collection element media type
-	e := m.Type.(*Array).ElemType.Type.(*MediaTypeExpr) // validation checked this cast would work
+func (p *Projector) projectCollection(m *ResultTypeExpr, view, viewID string) (*ProjectedMTExpr, error) {
+	// Project the collection element result type
+	e := m.Type.(*Array).ElemType.Type.(*ResultTypeExpr) // validation checked this cast would work
 	pe, err2 := p.Project(e, view)
 	if err2 != nil {
 		return nil, fmt.Errorf("collection element: %s", err2)
 	}
 
 	// Build the projected collection with the results
-	desc := m.TypeName + " is the media type for an array of " + e.TypeName + " (" + view + " view)"
-	proj := &MediaTypeExpr{
+	desc := m.TypeName + " is the result type for an array of " + e.TypeName + " (" + view + " view)"
+	proj := &ResultTypeExpr{
 		Identifier: viewID,
 		UserTypeExpr: &UserTypeExpr{
 			AttributeExpr: &AttributeExpr{
 				Description:  desc,
-				Type:         &Array{ElemType: &AttributeExpr{Type: pe.MediaType}},
+				Type:         &Array{ElemType: &AttributeExpr{Type: pe.ResultType}},
 				UserExamples: m.UserExamples,
 			},
-			TypeName: pe.MediaType.TypeName + "Collection",
+			TypeName: pe.ResultType.TypeName + "Collection",
 		},
 	}
 	proj.Views = []*ViewExpr{&ViewExpr{
-		AttributeExpr: DupAtt(pe.MediaType.View("default").AttributeExpr),
+		AttributeExpr: DupAtt(pe.ResultType.View("default").AttributeExpr),
 		Name:          "default",
-		Parent:        pe.MediaType,
+		Parent:        pe.ResultType,
 	}}
 
 	// Run the DSL that was created by the CollectionOf function
@@ -385,11 +385,11 @@ func (p *Projector) projectCollection(m *MediaTypeExpr, view, viewID string) (*P
 	return &ProjectedMTExpr{view, proj, links}, nil
 }
 
-// projectIdentifier computes the projected media type identifier by adding the
-// "view" param. We need the projected media type identifier to be different so
-// that looking up projected media types from ProjectedMediaTypes works
+// projectIdentifier computes the projected result type identifier by adding the
+// "view" param. We need the projected result type identifier to be different so
+// that looking up projected result types from ProjectedResultTypes works
 // correctly. It's also good for clients.
-func (m *MediaTypeExpr) projectIdentifier(view string) string {
+func (m *ResultTypeExpr) projectIdentifier(view string) string {
 	base, params, err := mime.ParseMediaType(m.Identifier)
 	if err != nil {
 		base = m.Identifier
@@ -423,10 +423,10 @@ func (l *LinkExpr) Attribute() *AttributeExpr {
 	return att
 }
 
-// MediaType returns the media type of the linked attribute.
-func (l *LinkExpr) MediaType() *MediaTypeExpr {
+// ResultType returns the result type of the linked attribute.
+func (l *LinkExpr) ResultType() *ResultTypeExpr {
 	att := l.Attribute()
-	mt, _ := att.Type.(*MediaTypeExpr)
+	mt, _ := att.Type.(*ResultTypeExpr)
 	return mt
 }
 

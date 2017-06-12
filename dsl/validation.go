@@ -26,7 +26,7 @@ func Enum(vals ...interface{}) {
 			// where there's only one argument and the type is string implicitly is very
 			// useful and common, for example to list attributes that refer to other attributes
 			// such as responses that refer to responses defined at the API level or links that
-			// refer to the media type attributes. So if the form that takes a DSL always ended
+			// refer to the result type attributes. So if the form that takes a DSL always ended
 			// up defining an object we'd have a weird situation where one arg is string and
 			// two args is object. Breaks the least surprise principle. Soooo long story
 			// short the lesser evil seems to be to allow the ambiguity. Also tests like the
@@ -231,7 +231,7 @@ func Required(names ...string) {
 	switch def := eval.Current().(type) {
 	case *design.AttributeExpr:
 		at = def
-	case *design.MediaTypeExpr:
+	case *design.ResultTypeExpr:
 		at = def.AttributeExpr
 	default:
 		eval.IncompatibleDSL()

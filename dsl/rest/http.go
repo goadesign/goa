@@ -23,7 +23,7 @@ import (
 // methods that don't match any of the error responses defined in the design).
 // This is the only use of HTTP allowed in the API expression. The attributes of
 // the built in invalid request error are "id", "status", "code", "detail" and
-// "meta", see ErrorMedia.
+// "meta", see ErrorResult.
 //
 // The functions that appear in HTTP such as Header, Param or Body may take
 // advantage of the request or response types (depending on whether they appear
@@ -67,7 +67,7 @@ import (
 //        Method("add", func() {
 //            Description("Add two operands")
 //            Payload(Operands)
-//            Error(ErrBadRequest, ErrorMedia)
+//            Error(ErrBadRequest, ErrorResult)
 //
 //            HTTP(func() {
 //                GET("/add/{left}/{right}") // Define HTTP route. The "left"
@@ -447,7 +447,7 @@ func Params(args interface{}) {
 //        })
 //        Method("show", func() {  // default response type.
 //            Payload(ShowPayload)
-//            Result(AccountMedia)
+//            Result(AccountResult)
 //            HTTP(func() {
 //                Routing(GET("/{id}"))  // HTTP request uses ShowPayload "id"
 //                                       // attribute to define "id" parameter.

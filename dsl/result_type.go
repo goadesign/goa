@@ -9,33 +9,33 @@ import (
 	"goa.design/goa.v2/eval"
 )
 
-// Counter used to create unique media type names for identifier-less media
+// Counter used to create unique result type names for identifier-less result
 // types.
-var mediaTypeCount int
+var resultTypeCount int
 
-// MediaType defines a media type used to describe a method response.
+// ResultType defines a result type used to describe a method response.
 //
-// Media types have a unique identifier as described in RFC6838. The identifier
+// Result types have a unique identifier as described in RFC6838. The identifier
 // defines the default value for the Content-Type header of HTTP responses.
 //
-// The media type expression includes a listing of all the response attributes.
+// The result type expression includes a listing of all the response attributes.
 // Views specify which of the attributes are actually rendered so that the same
-// media type expression may represent multiple rendering of a given response.
+// result type expression may represent multiple rendering of a given response.
 //
-// All media types have a view named "default". This view is used to render the
-// media type in responses when no other view is specified. If the default view
+// All result types have a view named "default". This view is used to render the
+// result type in responses when no other view is specified. If the default view
 // is not explicitly described in the DSL then one is created that lists all the
-// media type attributes.
+// result type attributes.
 //
-// MediaType is a top level DSL.
-// MediaType accepts two arguments: the media type identifier and the defining
+// ResultType is a top level DSL.
+// ResultType accepts two arguments: the result type identifier and the defining
 // DSL.
 //
 // Example:
 //
-//    var BottleMT = MediaType("application/vnd.goa.example.bottle", func() {
+//    var BottleMT = ResultType("application/vnd.goa.example.bottle", func() {
 //        Description("A bottle of wine")
-//        TypeName("BottleMedia")         // Override generated type name
+//        TypeName("BottleResult")         // Override generated type name
 //        ContentType("application/json") // Override Content-Type header
 //
 //        Attributes(func() {
@@ -59,26 +59,26 @@ var mediaTypeCount int
 //        })
 //     })
 //
-func MediaType(identifier string, fn func()) *design.MediaTypeExpr {
+func ResultType(identifier string, fn func()) *design.ResultTypeExpr {
 	if _, ok := eval.Current().(eval.TopExpr); !ok {
 		eval.IncompatibleDSL()
 		return nil
 	}
 
-	// Validate Media Type
+	// Validate Result Type
 	identifier, params, err := mime.ParseMediaType(identifier)
 	if err != nil {
-		eval.ReportError("invalid media type identifier %#v: %s",
+		eval.ReportError("invalid result type identifier %#v: %s",
 			identifier, err)
 		// We don't return so that other errors may be captured in this
 		// one run.
 		identifier = "text/plain"
 	}
 	canonicalID := design.CanonicalIdentifier(identifier)
-	// Validate that media type identifier doesn't clash
+	// Validate that result type identifier doesn't clash
 	if m := design.Root.UserType(canonicalID); m != nil {
 		eval.ReportError(
-			"media type %#v with canonical identifier %#v is defined twice",
+			"result type %#v with canonical identifier %#v is defined twice",
 			identifier, canonicalID)
 		return nil
 	}
@@ -99,24 +99,24 @@ func MediaType(identifier string, fn func()) *design.MediaTypeExpr {
 	}
 	typeName := strings.Join(elems, "")
 	if typeName == "" {
-		mediaTypeCount++
-		typeName = fmt.Sprintf("MediaType%d", mediaTypeCount)
+		resultTypeCount++
+		typeName = fmt.Sprintf("ResultType%d", resultTypeCount)
 	}
-	// Now save the type in the API media types map
-	mt := design.NewMediaTypeExpr(typeName, identifier, fn)
-	design.Root.MediaTypes = append(design.Root.MediaTypes, mt)
+	// Now save the type in the API result types map
+	mt := design.NewResultTypeExpr(typeName, identifier, fn)
+	design.Root.ResultTypes = append(design.Root.ResultTypes, mt)
 
 	return mt
 }
 
-// TypeName makes it possible to set the Go struct name for a type or media type
+// TypeName makes it possible to set the Go struct name for a type or result type
 // in the generated code. By default goagen uses the name (type) or identifier
-// (media type) given in the DSL and computes a valid Go identifier from it.
+// (result type) given in the DSL and computes a valid Go identifier from it.
 // This function makes it possible to override that and provide a custom name.
 // name must be a valid Go identifier.
 func TypeName(name string) {
 	switch expr := eval.Current().(type) {
-	case *design.MediaTypeExpr:
+	case *design.ResultTypeExpr:
 		expr.TypeName = name
 	case *design.UserTypeExpr:
 		expr.TypeName = name
@@ -126,27 +126,27 @@ func TypeName(name string) {
 }
 
 // ContentType sets the value of the Content-Type response header. By default
-// the ID of the media type is used.
+// the ID of the result type is used.
 //
 //    ContentType("application/json")
 //
 func ContentType(typ string) {
-	if mt, ok := eval.Current().(*design.MediaTypeExpr); ok {
+	if mt, ok := eval.Current().(*design.ResultTypeExpr); ok {
 		mt.ContentType = typ
 	} else {
 		eval.IncompatibleDSL()
 	}
 }
 
-// View adds a new view to a media type. A view has a name and lists attributes
+// View adds a new view to a result type. A view has a name and lists attributes
 // that are rendered when the view is used to produce a response. The attribute
-// names must appear in the media type expression. If an attribute is itself a
-// media type then the view may specify which view to use when rendering the
+// names must appear in the result type expression. If an attribute is itself a
+// result type then the view may specify which view to use when rendering the
 // attribute using the View function in the View DSL. If not specified then the
 // view named "default" is used. Examples:
 //
 //	View("default", func() {
-//              // "id" and "name" must be media type attributes
+//              // "id" and "name" must be result type attributes
 //		Attribute("id")
 //		Attribute("name")
 //	})
@@ -162,10 +162,10 @@ func ContentType(typ string) {
 //
 func View(name string, adsl ...func()) {
 	switch expr := eval.Current().(type) {
-	case *design.MediaTypeExpr:
+	case *design.ResultTypeExpr:
 		mt := expr
 		if mt.View(name) != nil {
-			eval.ReportError("multiple expressions for view %#v in media type %#v", name, mt.TypeName)
+			eval.ReportError("multiple expressions for view %#v in result type %#v", name, mt.TypeName)
 			return
 		}
 		at := &design.AttributeExpr{}
@@ -176,7 +176,7 @@ func View(name string, adsl ...func()) {
 			// inherit view from collection element if present
 			elem := a.ElemType
 			if elem != nil {
-				if pa, ok2 := elem.Type.(*design.MediaTypeExpr); ok2 {
+				if pa, ok2 := elem.Type.(*design.ResultTypeExpr); ok2 {
 					if v := pa.View(name); v != nil {
 						at = v.AttributeExpr
 						ok = true
@@ -207,22 +207,22 @@ func View(name string, adsl ...func()) {
 	}
 }
 
-// CollectionOf creates a collection media type from its element media type. A
-// collection media type represents the content of responses that return a
+// CollectionOf creates a collection result type from its element result type. A
+// collection result type represents the content of responses that return a
 // collection of values such as listings. The expression accepts an optional DSL
-// as second argument that allows specifying which view(s) of the original media
+// as second argument that allows specifying which view(s) of the original result
 // type apply.
 //
-// The resulting media type identifier is built from the element media type by
-// appending the media type parameter "type" with value "collection".
+// The resulting result type identifier is built from the element result type by
+// appending the result type parameter "type" with value "collection".
 //
-// CollectionOf takes the element media type as first argument and an optional
+// CollectionOf takes the element result type as first argument and an optional
 // DSL as second argument.
-// CollectionOf may appear wherever MediaType can.
+// CollectionOf may appear wherever ResultType can.
 //
 // Example:
 //
-//     var DivisionResult = MediaType("application/vnd.goa.divresult", func() {
+//     var DivisionResult = ResultType("application/vnd.goa.divresult", func() {
 //         Attributes(func() {
 //             Attribute("value", Float64)
 //         })
@@ -233,30 +233,30 @@ func View(name string, adsl ...func()) {
 //
 //     var MultiResults = CollectionOf(DivisionResult)
 //
-func CollectionOf(v interface{}, adsl ...func()) *design.MediaTypeExpr {
-	var m *design.MediaTypeExpr
+func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
+	var m *design.ResultTypeExpr
 	var ok bool
-	m, ok = v.(*design.MediaTypeExpr)
+	m, ok = v.(*design.ResultTypeExpr)
 	if !ok {
 		if id, ok := v.(string); ok {
 			if dt := design.Root.UserType(design.CanonicalIdentifier(id)); dt != nil {
-				if mt, ok := dt.(*design.MediaTypeExpr); ok {
+				if mt, ok := dt.(*design.ResultTypeExpr); ok {
 					m = mt
 				}
 			}
 		}
 	}
 	if m == nil {
-		eval.ReportError("invalid CollectionOf argument: not a media type and not a known media type identifier")
+		eval.ReportError("invalid CollectionOf argument: not a result type and not a known result type identifier")
 		// don't return nil to avoid panics, the error will get reported at the end
-		return design.NewMediaTypeExpr("InvalidCollection", "text/plain", nil)
+		return design.NewResultTypeExpr("InvalidCollection", "text/plain", nil)
 	}
 	id := m.Identifier
-	mediatype, params, err := mime.ParseMediaType(id)
+	resulttype, params, err := mime.ParseMediaType(id)
 	if err != nil {
-		eval.ReportError("invalid media type identifier %#v: %s", id, err)
+		eval.ReportError("invalid result type identifier %#v: %s", id, err)
 		// don't return nil to avoid panics, the error will get reported at the end
-		return design.NewMediaTypeExpr("InvalidCollection", "text/plain", nil)
+		return design.NewResultTypeExpr("InvalidCollection", "text/plain", nil)
 	}
 	hasType := false
 	for param := range params {
@@ -268,19 +268,19 @@ func CollectionOf(v interface{}, adsl ...func()) *design.MediaTypeExpr {
 	if !hasType {
 		params["type"] = "collection"
 	}
-	id = mime.FormatMediaType(mediatype, params)
+	id = mime.FormatMediaType(resulttype, params)
 	canonical := design.CanonicalIdentifier(id)
-	if mt := design.Root.GeneratedMediaType(canonical); mt != nil {
+	if mt := design.Root.GeneratedResultType(canonical); mt != nil {
 		// Already have a type for this collection, reuse it.
 		return mt
 	}
-	mt := design.NewMediaTypeExpr("", id, func() {
-		mt, ok := eval.Current().(*design.MediaTypeExpr)
+	mt := design.NewResultTypeExpr("", id, func() {
+		mt, ok := eval.Current().(*design.ResultTypeExpr)
 		if !ok {
 			eval.IncompatibleDSL()
 			return
 		}
-		// Cannot compute collection type name before element media type
+		// Cannot compute collection type name before element result type
 		// DSL has executed since the DSL may modify element type name
 		// via the TypeName function.
 		mt.TypeName = m.TypeName + "Collection"
@@ -305,14 +305,14 @@ func CollectionOf(v interface{}, adsl ...func()) *design.MediaTypeExpr {
 	return mt
 }
 
-// Reference sets a type or media type reference. The value itself can be a type
-// or a media type.  The reference type attributes define the default properties
+// Reference sets a type or result type reference. The value itself can be a type
+// or a result type.  The reference type attributes define the default properties
 // for attributes with the same name in the type using the reference.
 //
-// Reference may be used in Type or MediaType.
-// Reference accepts a single argument: the type or media type containing the
+// Reference may be used in Type or ResultType.
+// Reference accepts a single argument: the type or result type containing the
 // attributes that define the default properties of the attributes of the type
-// or media type that uses Reference.
+// or result type that uses Reference.
 //
 // Example:
 //
@@ -326,7 +326,7 @@ func CollectionOf(v interface{}, adsl ...func()) *design.MediaTypeExpr {
 //		Attribute("somethingelse", String)
 //	})
 //
-//	var BottleMedia = MediaType("vnd.goa.bottle", func() {
+//	var BottleResult = ResultType("vnd.goa.bottle", func() {
 //		Reference(Bottle)
 //		Attributes(func() {
 //			Attribute("id", UInt64, "ID is the bottle identifier")
@@ -341,7 +341,7 @@ func CollectionOf(v interface{}, adsl ...func()) *design.MediaTypeExpr {
 //
 func Reference(t design.DataType) {
 	switch def := eval.Current().(type) {
-	case *design.MediaTypeExpr:
+	case *design.ResultTypeExpr:
 		def.Reference = t
 	case *design.AttributeExpr:
 		def.Reference = t
@@ -350,9 +350,9 @@ func Reference(t design.DataType) {
 	}
 }
 
-// Attributes implements the media type Attributes DSL. See MediaType.
+// Attributes implements the result type Attributes DSL. See ResultType.
 func Attributes(fn func()) {
-	mt, ok := eval.Current().(*design.MediaTypeExpr)
+	mt, ok := eval.Current().(*design.ResultTypeExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
@@ -361,8 +361,8 @@ func Attributes(fn func()) {
 }
 
 // buildView builds a view expression given an attribute and a corresponding
-// media type.
-func buildView(name string, mt *design.MediaTypeExpr, at *design.AttributeExpr) (*design.ViewExpr, error) {
+// result type.
+func buildView(name string, mt *design.ResultTypeExpr, at *design.AttributeExpr) (*design.ViewExpr, error) {
 	if at.Type == nil {
 		return nil, fmt.Errorf("invalid view DSL")
 	}

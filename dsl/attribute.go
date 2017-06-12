@@ -29,7 +29,7 @@ import (
 // * The special type Any to indicate that the attribute may take any of the
 //   types listed above.
 //
-// Attribute may appear in MediaType, Type, Attribute or Attributes.
+// Attribute may appear in ResultType, Type, Attribute or Attributes.
 //
 // Attribute accepts one to four arguments, the valid usages of the function
 // are:

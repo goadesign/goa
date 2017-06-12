@@ -18,8 +18,8 @@ var (
 	// parameters.
 	WildcardRegex = regexp.MustCompile(`/{\*?([a-zA-Z0-9_]+)}`)
 
-	// ErrorMedia is the built-in media type for error responses.
-	ErrorMedia = design.ErrorMedia
+	// ErrorResult is the built-in result type for error responses.
+	ErrorResult = design.ErrorResult
 )
 
 const (

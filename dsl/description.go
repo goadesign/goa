@@ -21,7 +21,7 @@ func Description(d string) {
 		expr.Description = d
 	case *design.ServiceExpr:
 		expr.Description = d
-	case *design.MediaTypeExpr:
+	case *design.ResultTypeExpr:
 		expr.Description = d
 	case *design.AttributeExpr:
 		expr.Description = d

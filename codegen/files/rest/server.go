@@ -13,8 +13,6 @@
 
 // Initialize error responses headers and body from result (action.go)
 
-// Media Type -> Result Type
-
 package rest
 
 import (

@@ -24,13 +24,13 @@ import (
 // type (success responses) or error type (error responses) to define the
 // response body shape.
 //
-// Additionally if the response type is a media type then the "Content-Type"
+// Additionally if the response type is a result type then the "Content-Type"
 // response header is set with the corresponding content type (either the value
-// set with ContentType in the media type DSL or the media type identifier).
+// set with ContentType in the result type DSL or the result type identifier).
 //
 // In other words given the following type:
 //
-//     var AccountMedia = MediaType("application/vnd.goa.account", func() {
+//     var AccountResult = ResultType("application/vnd.goa.account", func() {
 //         Attributes(func() {
 //             Attribute("href", String, "Account API href")
 //             Attribute("name", String, "Account name")
@@ -44,18 +44,18 @@ import (
 // the following:
 //
 //     Method("show", func() {
-//         Response(AccountMedia)
+//         Response(AccountResult)
 //     })
 //
 // is equivalent to:
 //
 //     Method("show", func() {
-//         Response(AccountMedia)
+//         Response(AccountResult)
 //         HTTP(func() {
 //             Response(func() {
 //                 Code(StatusOK)
 //                 ContentType("application/vnd.goa.account")
-//                 Body(AccountMedia)
+//                 Body(AccountResult)
 //             })
 //         })
 //     })

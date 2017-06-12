@@ -250,7 +250,7 @@ func recurseValidationCode(att *design.AttributeExpr, req, pub bool, target, con
 		if val != "" {
 			switch a.ElemType.Type.(type) {
 			case design.UserType:
-				// For user and media types, call the Validate method
+				// For user and result types, call the Validate method
 				var buf bytes.Buffer
 				if err := userValT.Execute(&buf, map[string]interface{}{"target": "e"}); err != nil {
 					panic(err) // bug

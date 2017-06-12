@@ -66,8 +66,8 @@ func API(name string, fn func()) *design.APIExpr {
 //    })
 //
 // Note: CollectionOf and ArrayOf both return array types. CollectionOf returns
-// a media type where ArrayOf returns a user type. In general you want to use
-// CollectionOf if the argument is a media type and ArrayOf if it is a user
+// a result type where ArrayOf returns a user type. In general you want to use
+// CollectionOf if the argument is a result type and ArrayOf if it is a user
 // type.
 func ArrayOf(v interface{}, fn ...func()) *design.Array {
 	return dsl.ArrayOf(v, fn...)
@@ -95,7 +95,7 @@ func ArrayOf(v interface{}, fn ...func()) *design.Array {
 // * The special type Any to indicate that the attribute may take any of the
 //   types listed above.
 //
-// Attribute may appear in MediaType, Type, Attribute or Attributes.
+// Attribute may appear in ResultType, Type, Attribute or Attributes.
 //
 // Attribute accepts one to four arguments, the valid usages of the function
 // are:
@@ -181,27 +181,27 @@ func Attribute(name string, args ...interface{}) {
 	dsl.Attribute(name, args...)
 }
 
-// Attributes implements the media type Attributes DSL. See MediaType.
+// Attributes implements the result type Attributes DSL. See ResultType.
 func Attributes(fn func()) {
 	dsl.Attributes(fn)
 }
 
-// CollectionOf creates a collection media type from its element media type. A
-// collection media type represents the content of responses that return a
+// CollectionOf creates a collection result type from its element result type. A
+// collection result type represents the content of responses that return a
 // collection of values such as listings. The expression accepts an optional DSL
-// as second argument that allows specifying which view(s) of the original media
+// as second argument that allows specifying which view(s) of the original result
 // type apply.
 //
-// The resulting media type identifier is built from the element media type by
-// appending the media type parameter "type" with value "collection".
+// The resulting result type identifier is built from the element result type by
+// appending the result type parameter "type" with value "collection".
 //
-// CollectionOf takes the element media type as first argument and an optional
+// CollectionOf takes the element result type as first argument and an optional
 // DSL as second argument.
-// CollectionOf may appear wherever MediaType can.
+// CollectionOf may appear wherever ResultType can.
 //
 // Example:
 //
-//     var DivisionResult = MediaType("application/vnd.goa.divresult", func() {
+//     var DivisionResult = ResultType("application/vnd.goa.divresult", func() {
 //         Attributes(func() {
 //             Attribute("value", Float64)
 //         })
@@ -212,7 +212,7 @@ func Attributes(fn func()) {
 //
 //     var MultiResults = CollectionOf(DivisionResult)
 //
-func CollectionOf(v interface{}, adsl ...func()) *design.MediaTypeExpr {
+func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
 	return dsl.CollectionOf(v, adsl...)
 }
 
@@ -222,7 +222,7 @@ func Contact(fn func()) {
 }
 
 // ContentType sets the value of the Content-Type response header. By default
-// the ID of the media type is used.
+// the ID of the result type is used.
 //
 //    ContentType("application/json")
 //
@@ -254,7 +254,7 @@ func Enum(vals ...interface{}) {
 // Error describes an method error response. The description includes a unique
 // name (in the scope of the method), an optional type, description and DSL
 // that further describes the type. If no type is specified then the goa
-// ErrorMedia type is used. The DSL syntax is identical to the Attribute DSL.
+// ErrorResult type is used. The DSL syntax is identical to the Attribute DSL.
 // Transport specific DSL may further describe the mapping between the error
 // type attributes and the serialized response.
 //
@@ -268,7 +268,7 @@ func Enum(vals ...interface{}) {
 // Example:
 //
 //    var _ = Service("divider", func() {
-//        Error("invalid_arguments") // Uses type ErrorMedia
+//        Error("invalid_arguments") // Uses type ErrorResult
 //
 //        // Method which uses the default type for its response.
 //        Method("divide", func() {
@@ -403,56 +403,6 @@ func Maximum(val interface{}) {
 	dsl.Maximum(val)
 }
 
-// MediaType defines a media type used to describe a method response.
-//
-// Media types have a unique identifier as described in RFC6838. The identifier
-// defines the default value for the Content-Type header of HTTP responses.
-//
-// The media type expression includes a listing of all the response attributes.
-// Views specify which of the attributes are actually rendered so that the same
-// media type expression may represent multiple rendering of a given response.
-//
-// All media types have a view named "default". This view is used to render the
-// media type in responses when no other view is specified. If the default view
-// is not explicitly described in the DSL then one is created that lists all the
-// media type attributes.
-//
-// MediaType is a top level DSL.
-// MediaType accepts two arguments: the media type identifier and the defining
-// DSL.
-//
-// Example:
-//
-//    var BottleMT = MediaType("application/vnd.goa.example.bottle", func() {
-//        Description("A bottle of wine")
-//        TypeName("BottleMedia")         // Override generated type name
-//        ContentType("application/json") // Override Content-Type header
-//
-//        Attributes(func() {
-//            Attribute("id", Integer, "ID of bottle")
-//            Attribute("href", String, "API href of bottle")
-//            Attribute("account", Account, "Owner account")
-//            Attribute("origin", Origin, "Details on wine origin")
-//            Required("id", "href")
-//        })
-//
-//        View("default", func() {        // Explicitly define default view
-//            Attribute("id")
-//            Attribute("href")
-//        })
-//
-//        View("extended", func() {       // Define "extended" view
-//            Attribute("id")
-//            Attribute("href")
-//            Attribute("account")
-//            Attribute("origin")
-//        })
-//     })
-//
-func MediaType(identifier string, fn func()) *design.MediaTypeExpr {
-	return dsl.MediaType(identifier, fn)
-}
-
 // Method defines a single service method.
 //
 // Method may appear in a Service expression.
@@ -540,14 +490,14 @@ func Payload(val interface{}, fns ...func()) {
 	dsl.Payload(val, fns...)
 }
 
-// Reference sets a type or media type reference. The value itself can be a type
-// or a media type.  The reference type attributes define the default properties
+// Reference sets a type or result type reference. The value itself can be a type
+// or a result type.  The reference type attributes define the default properties
 // for attributes with the same name in the type using the reference.
 //
-// Reference may be used in Type or MediaType.
-// Reference accepts a single argument: the type or media type containing the
+// Reference may be used in Type or ResultType.
+// Reference accepts a single argument: the type or result type containing the
 // attributes that define the default properties of the attributes of the type
-// or media type that uses Reference.
+// or result type that uses Reference.
 //
 // Example:
 //
@@ -561,7 +511,7 @@ func Payload(val interface{}, fns ...func()) {
 //		Attribute("somethingelse", String)
 //	})
 //
-//	var BottleMedia = MediaType("vnd.goa.bottle", func() {
+//	var BottleResult = ResultType("vnd.goa.bottle", func() {
 //		Reference(Bottle)
 //		Attributes(func() {
 //			Attribute("id", UInt64, "ID is the bottle identifier")
@@ -595,8 +545,8 @@ func Required(names ...string) {
 // define the result type inline using Attribute or may further specialize the
 // type passed as first argument e.g. by providing additional validations (e.g.
 // list of required attributes). The DSL may also specify a view when the first
-// argument is a media type corresponding to the view rendered by this method.
-// Note that specifying a view when the result type is a media type is optional
+// argument is a result type corresponding to the view rendered by this method.
+// Note that specifying a view when the result type is a result type is optional
 // and only useful in cases the method renders a single view.
 //
 // The valid syntax for Result is thus:
@@ -627,7 +577,7 @@ func Required(names ...string) {
 //        Result(Sum)
 //    })
 //
-//    // Specify view and required attributes on media type
+//    // Specify view and required attributes on result type
 //    Method("add", func() {
 //        Result(Sum, func() {
 //            View("default")
@@ -637,6 +587,56 @@ func Required(names ...string) {
 //
 func Result(val interface{}, fns ...func()) {
 	dsl.Result(val, fns...)
+}
+
+// ResultType defines a result type used to describe a method response.
+//
+// Result types have a unique identifier as described in RFC6838. The identifier
+// defines the default value for the Content-Type header of HTTP responses.
+//
+// The result type expression includes a listing of all the response attributes.
+// Views specify which of the attributes are actually rendered so that the same
+// result type expression may represent multiple rendering of a given response.
+//
+// All result types have a view named "default". This view is used to render the
+// result type in responses when no other view is specified. If the default view
+// is not explicitly described in the DSL then one is created that lists all the
+// result type attributes.
+//
+// ResultType is a top level DSL.
+// ResultType accepts two arguments: the result type identifier and the defining
+// DSL.
+//
+// Example:
+//
+//    var BottleMT = ResultType("application/vnd.goa.example.bottle", func() {
+//        Description("A bottle of wine")
+//        TypeName("BottleResult")         // Override generated type name
+//        ContentType("application/json") // Override Content-Type header
+//
+//        Attributes(func() {
+//            Attribute("id", Integer, "ID of bottle")
+//            Attribute("href", String, "API href of bottle")
+//            Attribute("account", Account, "Owner account")
+//            Attribute("origin", Origin, "Details on wine origin")
+//            Required("id", "href")
+//        })
+//
+//        View("default", func() {        // Explicitly define default view
+//            Attribute("id")
+//            Attribute("href")
+//        })
+//
+//        View("extended", func() {       // Define "extended" view
+//            Attribute("id")
+//            Attribute("href")
+//            Attribute("account")
+//            Attribute("origin")
+//        })
+//     })
+//
+func ResultType(identifier string, fn func()) *design.ResultTypeExpr {
+	return dsl.ResultType(identifier, fn)
 }
 
 // Server defines an API host.
@@ -738,9 +738,9 @@ func Type(name string, args ...interface{}) design.UserType {
 	return dsl.Type(name, args...)
 }
 
-// TypeName makes it possible to set the Go struct name for a type or media type
+// TypeName makes it possible to set the Go struct name for a type or result type
 // in the generated code. By default goagen uses the name (type) or identifier
-// (media type) given in the DSL and computes a valid Go identifier from it.
+// (result type) given in the DSL and computes a valid Go identifier from it.
 // This function makes it possible to override that and provide a custom name.
 // name must be a valid Go identifier.
 func TypeName(name string) {
@@ -768,15 +768,15 @@ func Version(ver string) {
 	dsl.Version(ver)
 }
 
-// View adds a new view to a media type. A view has a name and lists attributes
+// View adds a new view to a result type. A view has a name and lists attributes
 // that are rendered when the view is used to produce a response. The attribute
-// names must appear in the media type expression. If an attribute is itself a
-// media type then the view may specify which view to use when rendering the
+// names must appear in the result type expression. If an attribute is itself a
+// result type then the view may specify which view to use when rendering the
 // attribute using the View function in the View DSL. If not specified then the
 // view named "default" is used. Examples:
 //
 //	View("default", func() {
-//              // "id" and "name" must be media type attributes
+//              // "id" and "name" must be result type attributes
 //		Attribute("id")
 //		Attribute("name")
 //	})
