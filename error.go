@@ -224,7 +224,7 @@ func InvalidLengthError(ctx string, target interface{}, ln, value int, min bool)
 	if !min {
 		comp = "less than or equal to"
 	}
-	msg := fmt.Sprintf("length of %s must be %s than %d but got value %#v (len=%d)", ctx, comp, value, target, ln)
+	msg := fmt.Sprintf("length of %s must be %s %d but got value %#v (len=%d)", ctx, comp, value, target, ln)
 	return ErrInvalidRequest(msg, "attribute", ctx, "value", target, "len", ln, "comp", comp, "expected", value)
 }
 
