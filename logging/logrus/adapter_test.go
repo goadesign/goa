@@ -5,7 +5,7 @@ import (
 
 	"context"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/logging/logrus"
 	. "github.com/onsi/ginkgo"
