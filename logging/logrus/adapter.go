@@ -18,8 +18,8 @@ import (
 
 	"context"
 
-	"github.com/sirupsen/logrus"
 	"github.com/goadesign/goa"
+	"github.com/sirupsen/logrus"
 )
 
 // adapter is the logrus goa logger adapter.

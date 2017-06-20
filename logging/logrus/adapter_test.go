@@ -5,11 +5,11 @@ import (
 
 	"context"
 
-	"github.com/sirupsen/logrus"
 	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/logging/logrus"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 )
 
 var _ = Describe("goalogrus", func() {
