@@ -195,7 +195,7 @@ package and tool and the Swagger specification for the API.
 	controllerCmd.Flags().BoolVar(&force, "force", false, "overwrite existing files")
 	controllerCmd.Flags().BoolVar(&regen, "regen", false, "regenerate scaffolding, maintaining controller implementations")
 	controllerCmd.Flags().StringVar(&res, "res", "", "name of the `resource` to generate the controller for, generate all if not specified")
-	controllerCmd.Flags().StringVar(&pkg, "pkg", "controller", "name of the generated controller `package`")
+	controllerCmd.Flags().StringVar(&pkg, "pkg", "main", "name of the generated controller `package`")
 	controllerCmd.Flags().StringVar(&appPkg, "app-pkg", "app", "`import path` of Go package generated with 'goagen app', may be relative to output")
 	rootCmd.AddCommand(controllerCmd)
 
