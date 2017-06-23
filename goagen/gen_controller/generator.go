@@ -94,7 +94,6 @@ func (g *Generator) Generate() (_ []string, err error) {
 			err      error
 		)
 		if g.Resource == "" || g.Resource == r.Name {
-			fmt.Println(g.OutDir, g.Pkg)
 			filename, err = genmain.GenerateController(g.Force, g.Regen, g.AppPkg, g.OutDir, g.Pkg, r.Name, r)
 		}
 
