@@ -115,7 +115,7 @@ func (g *Generator) smartenPkg() {
 	if g.Pkg != "main" {
 		return
 	}
-	pwd, err := filepath.Abs(".")
+	pwd, err := os.Getwd()
 	if err != nil {
 		return
 	}
