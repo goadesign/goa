@@ -23,8 +23,12 @@ type (
 		// handler registered with Handle. The values argument given to the handler is
 		// always nil.
 		HandleNotFound(handle MuxHandler)
-		// Lookup returns the MuxHandler associated with the given HTTP method and path.
+		// Lookup returns the MuxHandler associated with the given HTTP method and path. (DEPRECATED)
 		Lookup(method, path string) MuxHandler
+		// LookupWithResult call httptreemux Lookup internally.
+		LookupWithResult(w http.ResponseWriter, r *http.Request) (lr httptreemux.LookupResult, found bool)
+		// ServeLookupResult handle request without Lookup.
+		ServeLookupResult(w http.ResponseWriter, r *http.Request, lr httptreemux.LookupResult)
 	}
 
 	// Muxer implements an adapter that given a request handler can produce a mux handler.
@@ -75,9 +79,26 @@ func (m *mux) HandleNotFound(handle MuxHandler) {
 	m.router.MethodNotAllowedHandler = mna
 }
 
-// Lookup returns the MuxHandler associated with the given method and path.
+// Lookup returns the MuxHandler associated with the given method and path. (DEPRECATED)
 func (m *mux) Lookup(method, path string) MuxHandler {
 	return m.handles[method+path]
+}
+
+// LookupWithResult call httptreemux Lookup internally.
+// > Lookup performs a lookup without actually serving the request or mutating the request or response.
+// > The return values are a LookupResult and a boolean. The boolean will be true when a handler
+// > was found or the lookup resulted in a redirect which will point to a real handler. It is false
+// > for requests which would result in a `StatusNotFound` or `StatusMethodNotAllowed`.
+//
+// > Regardless of the returned boolean's value, the LookupResult may be passed to ServeLookupResult
+// > to be served appropriately.
+func (m *mux) LookupWithResult(rw http.ResponseWriter, req *http.Request) (lr httptreemux.LookupResult, found bool) {
+	return m.router.Lookup(rw, req)
+}
+
+// ServeLookupResult serves a request, given a lookup result from the Lookup function.
+func (m *mux) ServeLookupResult(rw http.ResponseWriter, req *http.Request, lr httptreemux.LookupResult) {
+	m.router.ServeLookupResult(rw, req, lr)
 }
 
 // ServeHTTP is the function called back by the underlying HTTP server to handle incoming requests.
