@@ -903,7 +903,7 @@ type byParent []*ResourceDefinition
 
 func (p byParent) Len() int           { return len(p) }
 func (p byParent) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
-func (p byParent) Less(i, j int) bool { return p[j].ParentName == p[i].Name }
+func (p byParent) Less(i, j int) bool { return p[j].ParentName == p[i].Name || p[i].ParentName == "" }
 
 // Context returns the generic definition name used in error messages.
 func (cors *CORSDefinition) Context() string {
