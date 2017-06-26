@@ -425,7 +425,7 @@ func Method(name string, fn func()) {
 	dsl.Method(name, fn)
 }
 
-// MinLength adss a "minItems" validation to the attribute.
+// MinLength adds a "minItems" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor45.
 func MinLength(val int) {
 	dsl.MinLength(val)
