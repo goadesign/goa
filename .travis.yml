@@ -1,7 +1,6 @@
 language: go
 go:
-- 1.7.5
-- 1.8.1
+- 1.8.x
 # matrix:
 #   allow_failures:
 #     - go: tip
@@ -34,4 +33,3 @@ deploy:
   cache-control: max-age=300
   on:
     repo: goadesign/goa
-    go: '1.8.1'
