@@ -82,8 +82,8 @@ func TestMethod(t *testing.T) {
 				if payload.Description != desc {
 					t.Errorf("c: expected payload description '%s' to match '%s' ", desc, payload.Description)
 				}
-				attrs := design.AsObject(payload.Type)
-				if _, ok := attrs["required"]; !ok {
+				obj := design.AsObject(payload.Type)
+				if att := obj.Attribute("required"); att == nil {
 					t.Errorf("c: expected a payload field with key required")
 				}
 				if !payload.IsRequired("required") {

@@ -1,10 +1,6 @@
 package codegen
 
-import (
-	"sort"
-
-	"goa.design/goa.v2/design"
-)
+import "goa.design/goa.v2/design"
 
 // AttributeWalker is the type of the function given to WalkAttributes.
 type AttributeWalker func(string, *design.AttributeExpr) error
@@ -12,16 +8,9 @@ type AttributeWalker func(string, *design.AttributeExpr) error
 // WalkAttributes calls the given iterator passing in each field sorted in
 // alphabetical order. Iteration stops if an iterator returns an error and in
 // this case WalkObject returns that error.
-func WalkAttributes(o design.Object, it AttributeWalker) error {
-	names := make([]string, len(o))
-	i := 0
-	for n := range o {
-		names[i] = n
-		i++
-	}
-	sort.Strings(names)
-	for _, n := range names {
-		if err := it(n, o[n]); err != nil {
+func WalkAttributes(o *design.Object, it AttributeWalker) error {
+	for _, nat := range *o {
+		if err := it(nat.Name, nat.Attribute); err != nil {
 			return err
 		}
 	}
@@ -63,9 +52,9 @@ func walk(at *design.AttributeExpr, walker func(*design.AttributeExpr) error, se
 			return err
 		}
 		return walk(actual.ElemType, walker, seen)
-	case design.Object:
-		for _, cat := range actual {
-			if err := walk(cat, walker, seen); err != nil {
+	case *design.Object:
+		for _, cat := range *actual {
+			if err := walk(cat.Attribute, walker, seen); err != nil {
 				return err
 			}
 		}

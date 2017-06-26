@@ -1,17 +1,11 @@
 package rest
 
 import (
-	"bytes"
-	"io/ioutil"
-	"os"
-	"strings"
 	"testing"
 
-	"goa.design/goa.v2/codegen"
 	. "goa.design/goa.v2/codegen/files/rest/testing"
 	. "goa.design/goa.v2/codegen/testing"
-	restdesign "goa.design/goa.v2/design/rest"
-	. "goa.design/goa.v2/design/rest/testing"
+	"goa.design/goa.v2/design/rest"
 )
 
 func TestDecode(t *testing.T) {
@@ -155,44 +149,17 @@ func TestDecode(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunRestDSL(t, c.DSL)
-			fs := ServerFiles(restdesign.Root)
+			fs := ServerFiles(rest.Root)
 			if len(fs) != 1 {
 				t.Fatalf("got %d files, expected one", len(fs))
 			}
 			sections := fs[0].Sections("")
-			if len(sections) != 7 {
-				t.Fatalf("got %d sections, expected 7", len(sections))
+			if len(sections) != 8 {
+				t.Fatalf("got %d sections, expected 8", len(sections))
 			}
-			var code bytes.Buffer
-			if err := sections[6].Write(&code); err != nil {
-				t.Fatal(err)
-			}
-
-			// format code...
-			tmp, err := ioutil.TempFile("", "server_test")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.Remove(tmp.Name())
-			_, err = tmp.WriteString("package foo\n" + code.String())
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := tmp.Close(); err != nil {
-				t.Fatal(err)
-			}
-			if err := codegen.Format(tmp.Name()); err != nil {
-				t.Fatal(err)
-			}
-			content, err := ioutil.ReadFile(tmp.Name())
-			if err != nil {
-				t.Fatal(err)
-			}
-			formatted := strings.Join(strings.Split(string(content), "\n")[2:], "\n")
-
-			// ... and compare
-			if formatted != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", formatted, Diff(t, formatted, c.Code))
+			code := SectionCode(t, sections[7])
+			if code != c.Code {
+				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, Diff(t, code, c.Code))
 			}
 		})
 	}

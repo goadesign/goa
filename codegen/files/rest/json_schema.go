@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"sort"
 	"strconv"
 
 	"goa.design/goa.v2/design"
@@ -176,7 +175,7 @@ func GenerateResourceDefinition(api *design.APIExpr, res *rest.ResourceExpr) {
 			// defined inline in the href
 			for _, r := range a.Routes {
 				for _, p := range r.Params() {
-					delete(design.AsObject(params.Type), p)
+					design.AsObject(params.Type).Delete(p)
 				}
 			}
 		}
@@ -291,12 +290,12 @@ func TypeSchema(api *design.APIExpr, t design.DataType) *Schema {
 		s.Type = Array
 		s.Items = NewSchema()
 		buildAttributeSchema(api, s.Items, actual.ElemType)
-	case design.Object:
+	case *design.Object:
 		s.Type = Object
-		for n, at := range actual {
+		for _, nat := range *actual {
 			prop := NewSchema()
-			buildAttributeSchema(api, prop, at)
-			s.Properties[n] = prop
+			buildAttributeSchema(api, prop, nat.Attribute)
+			s.Properties[nat.Name] = prop
 		}
 	case *design.Map:
 		s.Type = Object
@@ -530,25 +529,18 @@ func buildResultTypeSchema(api *design.APIExpr, mt *design.ResultTypeExpr, view 
 	}
 	if projected.Links != nil {
 		links := design.AsObject(projected.Links)
-		lnames := make([]string, len(links))
-		i := 0
-		for n := range links {
-			lnames[i] = n
-			i++
-		}
-		sort.Strings(lnames)
-		for _, ln := range lnames {
+		for _, nat := range *links {
 			// TBD: compute the href of the mediatype by looking at
 			// all the API actions and finding one that returns it.
 			var (
-				att = links[ln]
+				att = nat.Attribute
 				lmt = att.Type.(*design.ResultTypeExpr)
 			)
 			sm := NewSchema()
 			sm.Ref = ResultTypeRef(api, lmt, "default")
 			s.Links = append(s.Links, &Link{
-				Title:        ln,
-				Rel:          ln,
+				Title:        nat.Name,
+				Rel:          nat.Name,
 				Description:  att.Description,
 				Method:       "GET",
 				TargetSchema: sm,

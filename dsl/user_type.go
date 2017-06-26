@@ -83,7 +83,7 @@ func Type(name string, args ...interface{}) design.UserType {
 			fn = d
 		}
 	case func():
-		base = design.Object{}
+		base = &design.Object{}
 		fn = a
 		if len(args) == 2 {
 			eval.ReportError("only one argument allowed when it is a function")

@@ -26,14 +26,14 @@ func TestGoTypeDef(t *testing.T) {
 
 		"Array":          {&design.Array{&design.AttributeExpr{Type: design.Boolean}}, "[]bool"},
 		"Map":            {&design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}, "map[int]string"},
-		"Object":         {design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}, "struct {\n\tIntField *int\n\tStringField *string\n}"},
+		"Object":         {&design.Object{{"IntField", &design.AttributeExpr{Type: design.Int}}, {"StringField", &design.AttributeExpr{Type: design.String}}}, "struct {\n\tIntField *int\n\tStringField *string\n}"},
 		"UserTypeExpr":   {&design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{Type: design.Boolean}, TypeName: "UserType"}, "UserType"},
 		"ResultTypeExpr": {&design.ResultTypeExpr{UserTypeExpr: &design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{Type: design.Boolean}, TypeName: "ResultType"}, Identifier: "application/vnd.goa.example", Views: nil}, "ResultType"},
 	}
 
 	for k, tc := range cases {
 		scope := NewNameScope()
-		actual := scope.GoTypeDef(&design.AttributeExpr{Type: tc.dataType})
+		actual := scope.GoTypeDef(&design.AttributeExpr{Type: tc.dataType}, true)
 		if actual != tc.expected {
 			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
 		}

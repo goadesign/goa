@@ -305,9 +305,9 @@ func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
 	return mt
 }
 
-// Reference sets a type or result type reference. The value itself can be a type
-// or a result type.  The reference type attributes define the default properties
-// for attributes with the same name in the type using the reference.
+// Reference sets a type or result type reference. The value itself can be a
+// type or a result type. The reference type attributes define the default
+// properties for attributes with the same name in the type using the reference.
 //
 // Reference may be used in Type or ResultType.
 // Reference accepts a single argument: the type or result type containing the
@@ -374,14 +374,16 @@ func buildView(name string, mt *design.ResultTypeExpr, at *design.AttributeExpr)
 	if mto == nil {
 		mto = design.AsObject(mt.Type.(*design.Array).ElemType.Type)
 	}
-	for n, cat := range o {
-		if existing, ok := mto[n]; ok {
+	for _, nat := range *o {
+		n := nat.Name
+		cat := nat.Attribute
+		if existing := mto.Attribute(n); existing != nil {
 			dup := design.DupAtt(existing)
 			if dup.Metadata == nil {
 				dup.Metadata = make(map[string][]string)
 			}
 			dup.Metadata["view"] = cat.Metadata["view"]
-			o[n] = dup
+			o.Set(n, dup)
 		} else if n != "links" {
 			return nil, fmt.Errorf("unknown attribute %#v", n)
 		}

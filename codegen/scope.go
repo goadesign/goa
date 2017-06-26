@@ -61,27 +61,27 @@ done:
 
 // GoTypeDef returns the Go code that defines a Go type which matches the data
 // structure definition (the part that comes after `type foo`).
-func (s *NameScope) GoTypeDef(att *design.AttributeExpr) string {
+func (s *NameScope) GoTypeDef(att *design.AttributeExpr, useDefault bool) string {
 	switch actual := att.Type.(type) {
 	case design.Primitive:
 		return GoNativeTypeName(actual)
 	case *design.Array:
-		d := s.GoTypeDef(actual.ElemType)
+		d := s.GoTypeDef(actual.ElemType, useDefault)
 		if design.IsObject(actual.ElemType.Type) {
 			d = "*" + d
 		}
 		return "[]" + d
 	case *design.Map:
-		keyDef := s.GoTypeDef(actual.KeyType)
+		keyDef := s.GoTypeDef(actual.KeyType, useDefault)
 		if design.IsObject(actual.KeyType.Type) {
 			keyDef = "*" + keyDef
 		}
-		elemDef := s.GoTypeDef(actual.ElemType)
+		elemDef := s.GoTypeDef(actual.ElemType, useDefault)
 		if design.IsObject(actual.ElemType.Type) {
 			elemDef = "*" + elemDef
 		}
 		return fmt.Sprintf("map[%s]%s", keyDef, elemDef)
-	case design.Object:
+	case *design.Object:
 		var ss []string
 		ss = append(ss, "struct {")
 		WalkAttributes(actual, func(name string, at *design.AttributeExpr) error {
@@ -93,8 +93,8 @@ func (s *NameScope) GoTypeDef(att *design.AttributeExpr) string {
 			)
 			{
 				fn = GoifyAtt(at, name, true)
-				tdef = s.GoTypeDef(at)
-				if design.IsObject(at.Type) || att.IsPrimitivePointer(name) {
+				tdef = s.GoTypeDef(at, useDefault)
+				if design.IsObject(at.Type) || att.IsPrimitivePointer(name, useDefault) {
 					tdef = "*" + tdef
 				}
 				if at.Description != "" {
@@ -118,7 +118,7 @@ func (s *NameScope) GoTypeDef(att *design.AttributeExpr) string {
 // given data type.
 func (s *NameScope) GoTypeRef(dt design.DataType) string {
 	tname := s.GoTypeName(dt)
-	if _, ok := dt.(design.Object); ok {
+	if _, ok := dt.(*design.Object); ok {
 		return tname
 	}
 	if design.IsObject(dt) {
@@ -136,7 +136,7 @@ func (s *NameScope) GoTypeName(dt design.DataType) string {
 		return "[]" + s.GoTypeRef(actual.ElemType.Type)
 	case *design.Map:
 		return fmt.Sprintf("map[%s]%s", s.GoTypeRef(actual.KeyType.Type), s.GoTypeRef(actual.ElemType.Type))
-	case design.Object:
+	case *design.Object:
 		return "map[string]interface{}"
 	case design.UserType:
 		return s.Unique(dt, Goify(actual.Name(), true), "")

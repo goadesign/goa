@@ -22,8 +22,8 @@ func RequestBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, suffix string) de
 		params  = a.AllParams()
 	)
 
-	bodyOnly := len(design.AsObject(headers.Type)) == 0 &&
-		len(design.AsObject(params.Type)) == 0
+	bodyOnly := len(*design.AsObject(headers.Type)) == 0 &&
+		len(*design.AsObject(params.Type)) == 0
 
 	// 1. If Payload is not an object then check whether there are params or
 	// headers defined and if so return empty type (payload encoded in
@@ -38,7 +38,7 @@ func RequestBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, suffix string) de
 
 	// 2. Return user type if no modification needed
 	if _, ok := dt.(design.UserType); ok {
-		if len(design.AsObject(headers.Type)) == 0 && len(design.AsObject(params.Type)) == 0 {
+		if len(*design.AsObject(headers.Type)) == 0 && len(*design.AsObject(params.Type)) == 0 {
 			return dt
 		}
 	}
@@ -49,7 +49,7 @@ func RequestBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, suffix string) de
 	removeAttributes(body, params)
 
 	// 4. Return empty type if no attribute left
-	if len(design.AsObject(body.Type)) == 0 {
+	if len(*design.AsObject(body.Type)) == 0 {
 		return design.Empty
 	}
 
@@ -87,7 +87,7 @@ func ResponseBodyType(r *rest.ResourceExpr, resp *rest.HTTPResponseExpr, result 
 	// headers) otherwise return result type (result encoded in response
 	// body).
 	if !design.IsObject(dt) {
-		if len(design.AsObject(resp.Headers().Type)) == 0 {
+		if len(*design.AsObject(resp.Headers().Type)) == 0 {
 			return dt
 		}
 		return design.Empty
@@ -109,7 +109,7 @@ func ResponseBodyType(r *rest.ResourceExpr, resp *rest.HTTPResponseExpr, result 
 
 	// 3. Return user type if no modification needed
 	if _, ok := dt.(design.UserType); ok {
-		if headers := resp.Headers(); len(design.AsObject(headers.Type)) == 0 {
+		if headers := resp.Headers(); len(*design.AsObject(headers.Type)) == 0 {
 			return dt
 		}
 	}
@@ -119,7 +119,7 @@ func ResponseBodyType(r *rest.ResourceExpr, resp *rest.HTTPResponseExpr, result 
 	removeAttributes(body, headers)
 
 	// 5. Return empty type if no attribute left
-	if len(design.AsObject(body.Type)) == 0 {
+	if len(*design.AsObject(body.Type)) == 0 {
 		return design.Empty
 	}
 

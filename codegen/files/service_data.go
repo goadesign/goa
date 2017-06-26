@@ -2,7 +2,6 @@ package files
 
 import (
 	"fmt"
-	"sort"
 
 	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/design"
@@ -136,7 +135,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *ServiceData {
 		scope.Unique(service, varName)
 		for _, e := range service.Methods {
 			// Create user type for raw object payloads
-			if _, ok := e.Payload.Type.(design.Object); ok {
+			if _, ok := e.Payload.Type.(*design.Object); ok {
 				e.Payload.Type = &design.UserTypeExpr{
 					AttributeExpr: design.DupAtt(e.Payload),
 					TypeName:      fmt.Sprintf("%sPayload", codegen.Goify(e.Name, true)),
@@ -148,7 +147,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *ServiceData {
 			}
 
 			// Create user type for raw object results
-			if _, ok := e.Result.Type.(design.Object); ok {
+			if _, ok := e.Result.Type.(*design.Object); ok {
 				e.Result.Type = &design.UserTypeExpr{
 					AttributeExpr: design.DupAtt(e.Result),
 					TypeName:      fmt.Sprintf("%sResult", codegen.Goify(e.Name, true)),
@@ -164,12 +163,12 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *ServiceData {
 			if ut, ok := patt.Type.(design.UserType); ok {
 				patt = ut.Attribute()
 			}
-			types = append(types, collectTypes(patt, seen, scope)...)
+			types = append(types, collectTypes(patt, seen, scope, true)...)
 			ratt := e.Result
 			if ut, ok := ratt.Type.(design.UserType); ok {
 				ratt = ut.Attribute()
 			}
-			types = append(types, collectTypes(ratt, seen, scope)...)
+			types = append(types, collectTypes(ratt, seen, scope, false)...)
 		}
 	}
 
@@ -207,51 +206,51 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *ServiceData {
 	return data
 }
 
+// BuildFieldsData returns a ordered slice of field data representing the given
+// user type attributes.
+func BuildFieldsData(ut design.UserType, scope *codegen.NameScope) []*FieldData {
+	obj := design.AsObject(ut.Attribute().Type)
+	fields := make([]*FieldData, len(*obj))
+	for i, nat := range *obj {
+		fields[i] = &FieldData{
+			Name:         nat.Name,
+			VarName:      codegen.Goify(nat.Name, true),
+			TypeRef:      scope.GoTypeRef(nat.Attribute.Type),
+			Required:     ut.Attribute().IsRequired(nat.Name),
+			DefaultValue: nat.Attribute.DefaultValue,
+		}
+	}
+
+	return fields
+}
+
 // collectTypes recurses through the attribute to gather all user types and
 // records them in userTypes.
-func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *codegen.NameScope) (data []*UserTypeData) {
+func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *codegen.NameScope, req bool) (data []*UserTypeData) {
 	if at == nil || at.Type == design.Empty {
 		return
 	}
-	collect := func(at *design.AttributeExpr) []*UserTypeData { return collectTypes(at, seen, scope) }
+	collect := func(at *design.AttributeExpr) []*UserTypeData { return collectTypes(at, seen, scope, req) }
 	switch dt := at.Type.(type) {
 	case design.UserType:
 		if _, ok := seen[dt.Name()]; ok {
 			return nil
 		}
-		obj := design.AsObject(dt.Attribute().Type)
-		fields := make([]*FieldData, len(obj))
-		names := make([]string, len(obj))
-		i := 0
-		for n := range obj {
-			names[i] = n
-			i++
-		}
-		sort.Strings(names)
-		for i, n := range names {
-			att := obj[n]
-			fields[i] = &FieldData{
-				Name:         n,
-				VarName:      codegen.Goify(n, true),
-				TypeRef:      scope.GoTypeRef(att.Type),
-				Required:     dt.Attribute().IsRequired(n),
-				DefaultValue: att.DefaultValue,
-			}
-		}
+		fields := BuildFieldsData(dt, scope)
 		data = append(data, &UserTypeData{
 			Name:        dt.Name(),
 			VarName:     scope.GoTypeName(dt),
 			Description: dt.Attribute().Description,
 			Fields:      fields,
-			Def:         scope.GoTypeDef(dt.Attribute()),
+			Def:         scope.GoTypeDef(dt.Attribute(), req),
 			Ref:         scope.GoTypeRef(dt),
 			Type:        dt,
 		})
 		seen[dt.Name()] = struct{}{}
 		data = append(data, collect(dt.Attribute())...)
-	case design.Object:
-		for _, catt := range dt {
-			data = append(data, collect(catt)...)
+	case *design.Object:
+		for _, nat := range *dt {
+			data = append(data, collect(nat.Attribute)...)
 		}
 	case *design.Array:
 		data = append(data, collect(dt.ElemType)...)
@@ -288,7 +287,7 @@ func buildServiceMethodData(m *design.MethodExpr, scope *codegen.NameScope) *Ser
 			case design.UserType:
 				payloadName = scope.GoTypeName(dt)
 				payloadRef = "*" + payloadName
-				payloadDef = scope.GoTypeDef(dt.Attribute())
+				payloadDef = scope.GoTypeDef(dt.Attribute(), true)
 			default:
 				payloadName = scope.GoTypeName(dt)
 				payloadRef = payloadName
@@ -304,7 +303,7 @@ func buildServiceMethodData(m *design.MethodExpr, scope *codegen.NameScope) *Ser
 			case design.UserType:
 				resultName = scope.GoTypeName(dt)
 				resultRef = "*" + resultName
-				resultDef = scope.GoTypeDef(dt.Attribute())
+				resultDef = scope.GoTypeDef(dt.Attribute(), false)
 			default:
 				resultName = scope.GoTypeName(dt)
 				resultRef = resultName

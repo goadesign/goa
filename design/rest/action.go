@@ -98,15 +98,15 @@ func (a *ActionExpr) EvalName() string {
 // PathParams returns the path parameters of the action across all its routes.
 func (a *ActionExpr) PathParams() *MappedAttributeExpr {
 	allParams := a.AllParams()
-	pathParams := NewMappedAttributeExpr(&design.AttributeExpr{Type: design.Object{}})
+	pathParams := NewMappedAttributeExpr(&design.AttributeExpr{Type: &design.Object{}})
 	pathParams.Validation = &design.ValidationExpr{}
 	for _, r := range a.Routes {
-		for _, p := range r.ParamAttributes() {
-			att := allParams.Type.(design.Object)[p]
+		for _, p := range r.ParamAttributeNames() {
+			att := allParams.Type.(*design.Object).Attribute(p)
 			if att == nil {
 				panic("attribute not found " + p) // bug
 			}
-			pathParams.Type.(design.Object)[p] = att
+			pathParams.Type.(*design.Object).Set(p, att)
 		}
 	}
 	return pathParams
@@ -116,19 +116,20 @@ func (a *ActionExpr) PathParams() *MappedAttributeExpr {
 func (a *ActionExpr) QueryParams() *MappedAttributeExpr {
 	allParams := a.AllParams()
 	pathParams := a.PathParams()
-	for attName := range pathParams.Type.(design.Object) {
-		allParams.Delete(attName)
+	for _, nat := range *pathParams.Type.(*design.Object) {
+		allParams.Delete(nat.Name)
 	}
 	return allParams
 }
 
-// AllParams returns the path and query string parameters of the action across all its routes.
+// AllParams returns the path and query string parameters of the action across
+// all its routes.
 func (a *ActionExpr) AllParams() *MappedAttributeExpr {
 	var res *MappedAttributeExpr
 	if a.params != nil {
 		res = a.MappedParams()
 	} else {
-		attr := &design.AttributeExpr{Type: design.Object{}}
+		attr := &design.AttributeExpr{Type: &design.Object{}}
 		res = NewMappedAttributeExpr(attr)
 	}
 	if a.HasAbsoluteRoutes() {
@@ -148,7 +149,7 @@ func (a *ActionExpr) AllParams() *MappedAttributeExpr {
 // Use MappedHeaders to retrieve the corresponding mapped attributes.
 func (a *ActionExpr) Headers() *design.AttributeExpr {
 	if a.headers == nil {
-		a.headers = &design.AttributeExpr{Type: make(design.Object)}
+		a.headers = &design.AttributeExpr{Type: &design.Object{}}
 	}
 	return a.headers
 }
@@ -163,8 +164,8 @@ func (a *ActionExpr) MappedHeaders() *MappedAttributeExpr {
 // Use MappedParams to retrieve the corresponding mapped attributes.
 func (a *ActionExpr) Params() *design.AttributeExpr {
 	if a.params == nil {
-		a.params = &design.AttributeExpr{Type: make(design.Object)}
-		if pt := a.MethodExpr.Payload.Type; pt != design.Empty {
+		a.params = &design.AttributeExpr{Type: &design.Object{}}
+		if pt := a.MethodExpr.Payload.Type; design.IsObject(pt) {
 			a.params.Reference = pt
 		}
 	}
@@ -238,11 +239,11 @@ func (a *ActionExpr) Finalize() {
 	for _, r := range a.Routes {
 		for _, p := range r.Params() {
 			if a.params == nil {
-				a.params = &design.AttributeExpr{Type: design.Object{}}
+				a.params = &design.AttributeExpr{Type: &design.Object{}}
 			}
 			o := design.AsObject(a.params.Type)
-			if _, ok := o[p]; !ok {
-				o[p] = &design.AttributeExpr{Type: design.String}
+			if att := o.Attribute(p); att == nil {
+				o.Set(p, &design.AttributeExpr{Type: design.String})
 			}
 		}
 	}
@@ -252,12 +253,14 @@ func (a *ActionExpr) Finalize() {
 	// Initialize the path and query string parameters with the
 	// corresponding payload attributes.
 	if a.params != nil {
-		for n, att := range design.AsObject(a.params.Type) {
+		for _, nat := range *design.AsObject(a.params.Type) {
+			n := nat.Name
+			att := nat.Attribute
 			n = strings.Split(n, ":")[0]
 			var patt *design.AttributeExpr
 			var required bool
 			if payload != nil {
-				patt = payload[n]
+				patt = payload.Attribute(n)
 				required = a.MethodExpr.Payload.IsRequired(n)
 			} else {
 				patt = a.MethodExpr.Payload
@@ -275,12 +278,14 @@ func (a *ActionExpr) Finalize() {
 
 	// Initialize the headers with the corresponding payload attributes.
 	if a.headers != nil {
-		for n, att := range design.AsObject(a.headers.Type) {
+		for _, nat := range *design.AsObject(a.headers.Type) {
+			n := nat.Name
+			att := nat.Attribute
 			n = strings.Split(n, ":")[0]
 			var patt *design.AttributeExpr
 			var required bool
 			if payload != nil {
-				patt = payload[n]
+				patt = payload.Attribute(n)
 				required = a.MethodExpr.Payload.IsRequired(n)
 			} else {
 				patt = a.MethodExpr.Payload
@@ -300,12 +305,14 @@ func (a *ActionExpr) Finalize() {
 	// payload attributes.
 	if a.Body != nil {
 		if body := design.AsObject(a.Body.Type); body != nil {
-			for n, att := range body {
+			for _, nat := range *body {
+				n := nat.Name
+				att := nat.Attribute
 				n = strings.Split(n, ":")[0]
 				var patt *design.AttributeExpr
 				var required bool
 				if payload != nil {
-					att = payload[n]
+					att = payload.Attribute(n)
 					required = a.MethodExpr.Payload.IsRequired(n)
 				} else {
 					att = a.MethodExpr.Payload
@@ -324,6 +331,11 @@ func (a *ActionExpr) Finalize() {
 
 	result := design.AsObject(a.MethodExpr.Result.Type)
 
+	// Make sure there's a default response if none define explicitly
+	if len(a.Responses) == 0 {
+		a.Responses = []*HTTPResponseExpr{{StatusCode: 200}}
+	}
+
 	// Initialize responses parent, headers and body
 	for _, r := range a.Responses {
 		r.Parent = a
@@ -331,12 +343,14 @@ func (a *ActionExpr) Finalize() {
 		// Initialize the headers with the corresponding result
 		// attributes.
 		if r.headers != nil {
-			for n, att := range design.AsObject(r.headers.Type) {
+			for _, nat := range *design.AsObject(r.headers.Type) {
+				n := nat.Name
+				att := nat.Attribute
 				n = strings.Split(n, ":")[0]
 				var patt *design.AttributeExpr
 				var required bool
 				if result != nil {
-					patt = result[n]
+					patt = result.Attribute(n)
 					required = a.MethodExpr.Result.IsRequired(n)
 				} else {
 					patt = a.MethodExpr.Result
@@ -356,12 +370,14 @@ func (a *ActionExpr) Finalize() {
 		// corresponding payload attributes.
 		if r.Body != nil {
 			if body := design.AsObject(r.Body.Type); body != nil {
-				for n, att := range body {
+				for _, nat := range *body {
+					n := nat.Name
+					att := nat.Attribute
 					n = strings.Split(n, ":")[0]
 					var patt *design.AttributeExpr
 					var required bool
 					if result != nil {
-						att = result[n]
+						att = result.Attribute(n)
 						required = a.MethodExpr.Result.IsRequired(n)
 					} else {
 						att = a.MethodExpr.Result
@@ -394,7 +410,7 @@ func (a *ActionExpr) Finalize() {
 			att := r.AttributeExpr
 			if !design.IsObject(att.Type) {
 				att = &design.AttributeExpr{
-					Type:       design.Object{"error": att},
+					Type:       &design.Object{{"error", att}},
 					Validation: &design.ValidationExpr{Required: []string{"error"}},
 				}
 			}
@@ -432,7 +448,9 @@ func (a *ActionExpr) validateParams() *eval.ValidationErrors {
 		}
 		return false
 	}
-	for n, p := range params {
+	for _, nat := range *params {
+		n := nat.Name
+		p := nat.Attribute
 		if design.IsObject(p.Type) {
 			verr.Add(a, "parameter %s cannot be an object, parameter types must be primitive, array or map (query string only)", n)
 		} else if isRouteParam(n) && design.IsMap(p.Type) {
@@ -456,7 +474,9 @@ func (a *ActionExpr) validateHeaders() *eval.ValidationErrors {
 	}
 	verr := new(eval.ValidationErrors)
 	headers := design.AsObject(a.headers.Type)
-	for n, p := range headers {
+	for _, nat := range *headers {
+		n := nat.Name
+		p := nat.Attribute
 		if design.IsObject(p.Type) {
 			verr.Add(a, "header %s cannot be an object, header type must be primitive or array", n)
 		} else if design.IsArray(p.Type) {
@@ -482,9 +502,10 @@ func (r *RouteExpr) Params() []string {
 	return ExtractRouteWildcards(r.FullPath())
 }
 
-// ParamAttributes returns the route parameter attribute names. For example for
-// the route "GET /foo/{fooID:foo_id}" ParamAttributes returns []string{"fooID"}.
-func (r *RouteExpr) ParamAttributes() []string {
+// ParamAttributeNames returns the route parameter attribute names. For example
+// for the route "GET /foo/{fooID:foo_id}" ParamAttributes returns
+// []string{"fooID"}.
+func (r *RouteExpr) ParamAttributeNames() []string {
 	params := r.Params()
 	res := make([]string, len(params))
 	for i, param := range params {

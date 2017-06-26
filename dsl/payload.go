@@ -66,14 +66,13 @@ func methodDSL(suffix string, p interface{}, fns ...func()) *design.AttributeExp
 	switch actual := p.(type) {
 	case func():
 		fn = actual
-		att = &design.AttributeExpr{Type: design.Object{}}
+		att = &design.AttributeExpr{Type: &design.Object{}}
 	case design.UserType:
 		if len(fns) == 0 {
 			// Do not duplicate type if it is not customized
 			return &design.AttributeExpr{Type: actual}
 		}
-		ut := design.Dup(actual).(design.UserType)
-		att = ut.Attribute()
+		att = design.DupAtt(actual.Attribute())
 	case design.DataType:
 		att = &design.AttributeExpr{Type: actual}
 	default:

@@ -20,27 +20,27 @@ import (
 //      required so that the generated code may validate explicitly if ptr is
 //      true.
 //
-func GoTypeDef(scope *codegen.NameScope, att *design.AttributeExpr, ptr bool) string {
+func GoTypeDef(scope *codegen.NameScope, att *design.AttributeExpr, ptr, useDefault bool) string {
 	switch actual := att.Type.(type) {
 	case design.Primitive:
 		return codegen.GoNativeTypeName(actual)
 	case *design.Array:
-		d := GoTypeDef(scope, actual.ElemType, ptr)
+		d := GoTypeDef(scope, actual.ElemType, ptr, useDefault)
 		if design.IsObject(actual.ElemType.Type) {
 			d = "*" + d
 		}
 		return "[]" + d
 	case *design.Map:
-		keyDef := GoTypeDef(scope, actual.KeyType, ptr)
+		keyDef := GoTypeDef(scope, actual.KeyType, ptr, useDefault)
 		if design.IsObject(actual.KeyType.Type) {
 			keyDef = "*" + keyDef
 		}
-		elemDef := GoTypeDef(scope, actual.ElemType, ptr)
+		elemDef := GoTypeDef(scope, actual.ElemType, ptr, useDefault)
 		if design.IsObject(actual.ElemType.Type) {
 			elemDef = "*" + elemDef
 		}
 		return fmt.Sprintf("map[%s]%s", keyDef, elemDef)
-	case design.Object:
+	case *design.Object:
 		var ss []string
 		ss = append(ss, "struct {")
 		ma := rest.NewMappedAttributeExpr(att)
@@ -54,9 +54,9 @@ func GoTypeDef(scope *codegen.NameScope, att *design.AttributeExpr, ptr bool) st
 			)
 			{
 				fn = codegen.GoifyAtt(at, name, true)
-				tdef = GoTypeDef(scope, at, ptr)
+				tdef = GoTypeDef(scope, at, ptr, useDefault)
 				if design.IsPrimitive(at.Type) {
-					if ptr || mat.IsPrimitivePointer(name) {
+					if ptr || mat.IsPrimitivePointer(name, useDefault) {
 						tdef = "*" + tdef
 					}
 				} else if design.IsObject(at.Type) {

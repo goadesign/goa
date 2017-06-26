@@ -146,16 +146,16 @@ func (s *ServerExpr) Validate() error {
 		}
 		return verr
 	}
-	o := s.Params.Type.(Object)
+	o := s.Params.Type.(*Object)
 	if params := URLParams(s.URL); params != nil {
-		if len(params) != len(o) {
+		if len(params) != len(*o) {
 			verr.Add(s, "invalid parameter count, expected %d, got %d",
-				len(params), len(o))
+				len(params), len(*o))
 		} else {
 			for _, p := range params {
 				found := false
-				for n := range o {
-					if n == p {
+				for _, nat := range *o {
+					if nat.Name == p {
 						found = true
 						break
 					}
@@ -166,9 +166,9 @@ func (s *ServerExpr) Validate() error {
 			}
 		}
 	}
-	for n, p := range o {
-		if p.DefaultValue == nil {
-			verr.Add(s, "parameter %s has no default value", n)
+	for _, nat := range *o {
+		if nat.Attribute.DefaultValue == nil {
+			verr.Add(s, "parameter %s has no default value", nat.Name)
 		}
 	}
 

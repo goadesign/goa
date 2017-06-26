@@ -1,17 +1,11 @@
 package rest
 
 import (
-	"bytes"
-	"io/ioutil"
-	"os"
-	"strings"
 	"testing"
 
-	"goa.design/goa.v2/codegen"
 	. "goa.design/goa.v2/codegen/files/rest/testing"
 	. "goa.design/goa.v2/codegen/testing"
 	restdesign "goa.design/goa.v2/design/rest"
-	. "goa.design/goa.v2/design/rest/testing"
 )
 
 func TestPayloadConstructor(t *testing.T) {
@@ -118,39 +112,12 @@ func TestPayloadConstructor(t *testing.T) {
 			}
 			fs := MarshalTypes(restdesign.Root.Resources[0])
 			sections := fs.Sections("")
-			if len(sections) < 2 {
-				t.Fatalf("got %d sections, expected at least 2", len(sections))
+			if len(sections) < 3 {
+				t.Fatalf("got %d sections, expected at least 3", len(sections))
 			}
-			var code bytes.Buffer
-			if err := sections[1].Write(&code); err != nil {
-				t.Fatal(err)
-			}
-
-			// format code...
-			tmp, err := ioutil.TempFile("", "types_test")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.Remove(tmp.Name())
-			_, err = tmp.WriteString("package foo\n" + code.String())
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := tmp.Close(); err != nil {
-				t.Fatal(err)
-			}
-			if err := codegen.Format(tmp.Name()); err != nil {
-				t.Fatal(err)
-			}
-			content, err := ioutil.ReadFile(tmp.Name())
-			if err != nil {
-				t.Fatal(err)
-			}
-			formatted := strings.Join(strings.Split(string(content), "\n")[2:], "\n")
-
-			// ... and compare
-			if formatted != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", formatted, Diff(t, formatted, c.Code))
+			code := SectionCode(t, sections[2])
+			if code != c.Code {
+				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, Diff(t, code, c.Code))
 			}
 		})
 	}

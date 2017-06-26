@@ -23,20 +23,20 @@ func TestService(t *testing.T) {
 
 	// APayload is the payload type of the Single service A method.
 	APayload struct {
+		IntField      int
+		StringField   string
 		BooleanField  bool
 		BytesField    []byte
-		IntField      int
 		OptionalField *string
-		StringField   string
 	}
 
 	// AResult is the result type of the Single service A method.
 	AResult struct {
+		IntField      int
+		StringField   string
 		BooleanField  bool
 		BytesField    []byte
-		IntField      int
 		OptionalField *string
-		StringField   string
 	}
 )
 `
@@ -52,11 +52,11 @@ func TestService(t *testing.T) {
 
 	// APayload is the payload type of the Multiple service A method.
 	APayload struct {
+		IntField      int
+		StringField   string
 		BooleanField  bool
 		BytesField    []byte
-		IntField      int
 		OptionalField *string
-		StringField   string
 	}
 
 	// BPayload is the payload type of the Multiple service B method.
@@ -72,11 +72,11 @@ func TestService(t *testing.T) {
 
 	// AResult is the result type of the Multiple service A method.
 	AResult struct {
+		IntField      int
+		StringField   string
 		BooleanField  bool
 		BytesField    []byte
-		IntField      int
 		OptionalField *string
-		StringField   string
 	}
 
 	// BResult is the result type of the Multiple service B method.
@@ -118,11 +118,11 @@ func TestService(t *testing.T) {
 
 	// APayload is the payload type of the EmptyResult service EmptyResult method.
 	APayload struct {
+		IntField      int
+		StringField   string
 		BooleanField  bool
 		BytesField    []byte
-		IntField      int
 		OptionalField *string
-		StringField   string
 	}
 )
 `
@@ -136,11 +136,11 @@ func TestService(t *testing.T) {
 
 	// AResult is the result type of the EmptyPayload service EmptyPayload method.
 	AResult struct {
+		IntField      int
+		StringField   string
 		BooleanField  bool
 		BytesField    []byte
-		IntField      int
 		OptionalField *string
-		StringField   string
 	}
 )
 `
@@ -155,18 +155,18 @@ func TestService(t *testing.T) {
 		parent = &design.UserTypeExpr{
 			TypeName: "Parent",
 			AttributeExpr: &design.AttributeExpr{
-				Type: design.Object{
-					"c": &design.AttributeExpr{
+				Type: &design.Object{
+					{"c", &design.AttributeExpr{
 						Type: child,
-					},
+					}},
 				},
 			},
 		}
 	)
 
 	child.AttributeExpr = &design.AttributeExpr{
-		Type: design.Object{
-			"p": &design.AttributeExpr{Type: parent},
+		Type: &design.Object{
+			{"p", &design.AttributeExpr{Type: parent}},
 		},
 	}
 
@@ -175,12 +175,12 @@ func TestService(t *testing.T) {
 			Type: &design.UserTypeExpr{
 				TypeName: "APayload",
 				AttributeExpr: &design.AttributeExpr{
-					Type: design.Object{
-						"IntField":      &design.AttributeExpr{Type: design.Int},
-						"StringField":   &design.AttributeExpr{Type: design.String},
-						"BooleanField":  &design.AttributeExpr{Type: design.Boolean},
-						"BytesField":    &design.AttributeExpr{Type: design.Bytes},
-						"OptionalField": &design.AttributeExpr{Type: design.String},
+					Type: &design.Object{
+						{"IntField", &design.AttributeExpr{Type: design.Int}},
+						{"StringField", &design.AttributeExpr{Type: design.String}},
+						{"BooleanField", &design.AttributeExpr{Type: design.Boolean}},
+						{"BytesField", &design.AttributeExpr{Type: design.Bytes}},
+						{"OptionalField", &design.AttributeExpr{Type: design.String}},
 					},
 					Validation: &design.ValidationExpr{
 						Required: []string{"IntField", "StringField", "BooleanField", "BytesField"},
@@ -191,23 +191,23 @@ func TestService(t *testing.T) {
 		bpayload = design.AttributeExpr{
 			Type: &design.UserTypeExpr{
 				TypeName: "BPayload",
-				AttributeExpr: &design.AttributeExpr{Type: design.Object{
-					"ArrayField":    &design.AttributeExpr{Type: &design.Array{&design.AttributeExpr{Type: design.Boolean}}},
-					"MapField":      &design.AttributeExpr{Type: &design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}},
-					"ObjectField":   &design.AttributeExpr{Type: design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}},
-					"UserTypeField": &design.AttributeExpr{Type: parent},
+				AttributeExpr: &design.AttributeExpr{Type: &design.Object{
+					{"ArrayField", &design.AttributeExpr{Type: &design.Array{&design.AttributeExpr{Type: design.Boolean}}}},
+					{"MapField", &design.AttributeExpr{Type: &design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}}},
+					{"ObjectField", &design.AttributeExpr{Type: &design.Object{{"IntField", &design.AttributeExpr{Type: design.Int}}, {"StringField", &design.AttributeExpr{Type: design.String}}}}},
+					{"UserTypeField", &design.AttributeExpr{Type: parent}},
 				}},
 			}}
 
 		aresult = design.AttributeExpr{
 			Type: &design.UserTypeExpr{
 				TypeName: "AResult",
-				AttributeExpr: &design.AttributeExpr{Type: design.Object{
-					"IntField":      &design.AttributeExpr{Type: design.Int},
-					"StringField":   &design.AttributeExpr{Type: design.String},
-					"BooleanField":  &design.AttributeExpr{Type: design.Boolean},
-					"BytesField":    &design.AttributeExpr{Type: design.Bytes},
-					"OptionalField": &design.AttributeExpr{Type: design.String},
+				AttributeExpr: &design.AttributeExpr{Type: &design.Object{
+					{"IntField", &design.AttributeExpr{Type: design.Int}},
+					{"StringField", &design.AttributeExpr{Type: design.String}},
+					{"BooleanField", &design.AttributeExpr{Type: design.Boolean}},
+					{"BytesField", &design.AttributeExpr{Type: design.Bytes}},
+					{"OptionalField", &design.AttributeExpr{Type: design.String}},
 				},
 					Validation: &design.ValidationExpr{
 						Required: []string{"IntField", "StringField", "BooleanField", "BytesField"},
@@ -218,11 +218,11 @@ func TestService(t *testing.T) {
 		bresult = design.AttributeExpr{
 			Type: &design.UserTypeExpr{
 				TypeName: "BResult",
-				AttributeExpr: &design.AttributeExpr{Type: design.Object{
-					"ArrayField":    &design.AttributeExpr{Type: &design.Array{&design.AttributeExpr{Type: design.Boolean}}},
-					"MapField":      &design.AttributeExpr{Type: &design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}},
-					"ObjectField":   &design.AttributeExpr{Type: design.Object{"IntField": &design.AttributeExpr{Type: design.Int}, "StringField": &design.AttributeExpr{Type: design.String}}},
-					"UserTypeField": &design.AttributeExpr{Type: parent},
+				AttributeExpr: &design.AttributeExpr{Type: &design.Object{
+					{"ArrayField", &design.AttributeExpr{Type: &design.Array{&design.AttributeExpr{Type: design.Boolean}}}},
+					{"MapField", &design.AttributeExpr{Type: &design.Map{KeyType: &design.AttributeExpr{Type: design.Int}, ElemType: &design.AttributeExpr{Type: design.String}}}},
+					{"ObjectField", &design.AttributeExpr{Type: &design.Object{{"IntField", &design.AttributeExpr{Type: design.Int}}, {"StringField", &design.AttributeExpr{Type: design.String}}}}},
+					{"UserTypeField", &design.AttributeExpr{Type: parent}},
 				}},
 			}}
 

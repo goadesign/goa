@@ -138,7 +138,7 @@ func requestBodyTypes(r *rest.ResourceExpr) []*TypeData {
 			if desc == "" {
 				desc = fmt.Sprintf("%s is the type of the %s \"%s\" HTTP endpoint request body.", name, r.Name(), a.Name())
 			}
-			def = restgen.GoTypeDef(scope, ut.Attribute(), true)
+			def = restgen.GoTypeDef(scope, ut.Attribute(), true, true)
 			validate = codegen.RecursiveValidationCode(ut.Attribute(), true, true, "body")
 			if validate != "" {
 				validateRef = "err = goa.MergeErrors(err, body.Validate())"
@@ -184,7 +184,7 @@ func responseBodyTypes(r *rest.ResourceExpr) []*TypeData {
 				if desc == "" {
 					desc = fmt.Sprintf("%s is the type of the %s \"%s\" HTTP endpoint %s response body.", name, r.Name(), a.Name(), http.StatusText(resp.StatusCode))
 				}
-				def = restgen.GoTypeDef(scope, ut.Attribute(), true)
+				def = restgen.GoTypeDef(scope, ut.Attribute(), true, false)
 				validate = codegen.RecursiveValidationCode(ut.Attribute(), true, true, "body")
 				if validate != "" {
 					validateRef = "err = goa.MergeErrors(err, body.Validate())"
@@ -266,7 +266,7 @@ func payloadInitData(r *rest.ResourceExpr, a *rest.ActionExpr, body design.UserT
 		all := a.AllParams()
 		restgen.WalkMappedAttr(all, func(name, elem string, required bool, a *design.AttributeExpr) error {
 			pointer := ""
-			if queryParams.IsPrimitivePointer(name) {
+			if queryParams.IsPrimitivePointer(name, true) {
 				pointer = "*"
 			}
 			param := &ParamData{
@@ -283,7 +283,7 @@ func payloadInitData(r *rest.ResourceExpr, a *rest.ActionExpr, body design.UserT
 		headerParams := a.MappedHeaders()
 		restgen.WalkMappedAttr(headerParams, func(name, elem string, required bool, a *design.AttributeExpr) error {
 			pointer := ""
-			if headerParams.IsPrimitivePointer(name) {
+			if headerParams.IsPrimitivePointer(name, true) {
 				pointer = "*"
 			}
 			param := &ParamData{
@@ -308,7 +308,7 @@ func payloadInitData(r *rest.ResourceExpr, a *rest.ActionExpr, body design.UserT
 }
 
 const typeDeclT = `{{ comment .Description }}
-type {{ .VarName }} {{ .TypeDef }}
+type {{ .VarName }} {{ .Def }}
 `
 
 const payloadInitT = `{{ comment .Description }}

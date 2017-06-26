@@ -128,44 +128,47 @@ func Attribute(name string, args ...interface{}) {
 			return
 		}
 		if parent.Type == nil {
-			parent.Type = make(design.Object)
+			parent.Type = &design.Object{}
 		}
-		if _, ok := parent.Type.(design.Object); !ok {
+		if _, ok := parent.Type.(*design.Object); !ok {
 			eval.ReportError("can't define child attribute %#v on attribute of type %s", name, parent.Type.Name())
 			return
 		}
 	}
 
 	var attr *design.AttributeExpr
-	if parent.Reference != nil {
-		if att, ok := design.AsObject(parent.Reference)[name]; ok {
-			attr = design.DupAtt(att)
+	{
+		if parent.Reference != nil {
+			if att := design.AsObject(parent.Reference).Attribute(name); att != nil {
+				attr = design.DupAtt(att)
+			}
+		}
+
+		dataType, description, fn := parseAttributeArgs(attr, args...)
+		if attr != nil {
+			if description != "" {
+				attr.Description = description
+			}
+			if dataType != nil {
+				attr.Type = dataType
+			}
+		} else {
+			attr = &design.AttributeExpr{
+				Type:        dataType,
+				Description: description,
+			}
+		}
+		attr.Reference = parent.Reference
+		if fn != nil {
+			eval.Execute(fn, attr)
+		}
+		if attr.Type == nil {
+			// DSL did not contain an "Attribute" declaration
+			attr.Type = design.String
 		}
 	}
 
-	dataType, description, fn := parseAttributeArgs(attr, args...)
-	if attr != nil {
-		if description != "" {
-			attr.Description = description
-		}
-		if dataType != nil {
-			attr.Type = dataType
-		}
-	} else {
-		attr = &design.AttributeExpr{
-			Type:        dataType,
-			Description: description,
-		}
-	}
-	attr.Reference = parent.Reference
-	if fn != nil {
-		eval.Execute(fn, attr)
-	}
-	if attr.Type == nil {
-		// DSL did not contain an "Attribute" declaration
-		attr.Type = design.String
-	}
-	design.AsObject(parent.Type)[name] = attr
+	parent.Type.(*design.Object).Set(name, attr)
 }
 
 // Field is syntactic sugar to define an attribute with the "rpc:tag" metadata

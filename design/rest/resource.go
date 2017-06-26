@@ -180,7 +180,7 @@ func (r *ResourceExpr) HTTPError(name string) *HTTPErrorExpr {
 // Headers initializes and returns the attribute holding the API headers.
 func (r *ResourceExpr) Headers() *design.AttributeExpr {
 	if r.headers == nil {
-		r.headers = &design.AttributeExpr{Type: make(design.Object)}
+		r.headers = &design.AttributeExpr{Type: &design.Object{}}
 	}
 	return r.headers
 }
@@ -193,7 +193,7 @@ func (r *ResourceExpr) MappedHeaders() *MappedAttributeExpr {
 // Params initializes and returns the attribute holding the API parameters.
 func (r *ResourceExpr) Params() *design.AttributeExpr {
 	if r.params == nil {
-		r.params = &design.AttributeExpr{Type: make(design.Object)}
+		r.params = &design.AttributeExpr{Type: &design.Object{}}
 	}
 	return r.params
 }

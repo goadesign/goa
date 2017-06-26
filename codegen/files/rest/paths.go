@@ -103,7 +103,7 @@ func buildPathData(a *rest.ActionExpr) *PathData {
 	for i, r := range a.Routes {
 		pd.Routes[i] = &PathRoute{
 			Path:       rest.WildcardRegex.ReplaceAllString(r.FullPath(), "/%v"),
-			PathParams: r.ParamAttributes(),
+			PathParams: r.ParamAttributeNames(),
 			Arguments:  generatePathArguments(r),
 		}
 	}
@@ -111,13 +111,13 @@ func buildPathData(a *rest.ActionExpr) *PathData {
 }
 
 func generatePathArguments(r *rest.RouteExpr) []*PathArgument {
-	routeParams := r.ParamAttributes()
+	routeParams := r.ParamAttributeNames()
 	allParams := r.Action.PathParams()
 	args := make([]*PathArgument, len(routeParams))
 	for i, name := range routeParams {
 		args[i] = &PathArgument{
 			Name: name,
-			Type: allParams.Type.(design.Object)[name].Type,
+			Type: allParams.Type.(*design.Object).Attribute(name).Type,
 		}
 	}
 	return args

@@ -19,14 +19,14 @@ type (
 	MappedAttributeWalker func(name, elem string, required bool, a *design.AttributeExpr) error
 )
 
-// WalkMappedAttr iterates over the mapped attributes in alphabetical order. It
-// calls the given function giving each attribute as it iterates. WalkMappedAttr
-// stops if there is no more attribute to iterate over or if the iterator
-// function returns an error in which case it returns the error.
+// WalkMappedAttr iterates over the mapped attributes. It calls the given
+// function giving each attribute as it iterates. WalkMappedAttr stops if there
+// is no more attribute to iterate over or if the iterator function returns an
+// error in which case it returns the error.
 func WalkMappedAttr(ma *rest.MappedAttributeExpr, it MappedAttributeWalker) error {
 	o := design.AsObject(ma.Type)
-	for _, k := range ma.Keys() {
-		if err := it(k, ma.ElemName(k), ma.IsRequired(k), o[k]); err != nil {
+	for _, nat := range *o {
+		if err := it(nat.Name, ma.ElemName(nat.Name), ma.IsRequired(nat.Name), nat.Attribute); err != nil {
 			return err
 		}
 	}
@@ -56,7 +56,7 @@ func walk(a *rest.ActionExpr, it MappedAttributeWalker, ma, rma *rest.MappedAttr
 
 	var (
 		merged    *rest.MappedAttributeExpr
-		mergedMap design.Object
+		mergedMap *design.Object
 		elemNames []string
 		nameMap   map[string]string
 	)
@@ -70,13 +70,13 @@ func walk(a *rest.ActionExpr, it MappedAttributeWalker, ma, rma *rest.MappedAttr
 			merged.Merge(ma)
 		}
 
-		mergedMap = merged.Type.(design.Object)
-		nameMap = make(map[string]string, len(mergedMap))
-		elemNames = make([]string, len(mergedMap))
+		mergedMap = merged.Type.(*design.Object)
+		nameMap = make(map[string]string, len(*mergedMap))
+		elemNames = make([]string, len(*mergedMap))
 		i := 0
-		for n := range mergedMap {
-			en := merged.ElemName(n)
-			nameMap[en] = n
+		for _, nat := range *mergedMap {
+			en := merged.ElemName(nat.Name)
+			nameMap[en] = nat.Name
 			elemNames[i] = en
 			i++
 		}
@@ -85,7 +85,7 @@ func walk(a *rest.ActionExpr, it MappedAttributeWalker, ma, rma *rest.MappedAttr
 
 	for _, n := range elemNames {
 		attName := nameMap[n]
-		header := mergedMap[attName]
+		header := mergedMap.Attribute(attName)
 		if err := it(attName, n, merged.IsRequired(attName), header); err != nil {
 			return err
 		}

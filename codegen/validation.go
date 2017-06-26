@@ -53,10 +53,10 @@ func HasValidations(att *design.AttributeExpr, ignoreRequired bool) bool {
 		}
 	}
 	if o := design.AsObject(att.Type); o != nil {
-		for _, catt := range o {
+		for _, catt := range *o {
 			seen := make(map[*design.AttributeExpr]struct{})
 			seen[att] = struct{}{}
-			if hasValidationsRecurse(catt, ignoreRequired, seen) {
+			if hasValidationsRecurse(catt.Attribute, ignoreRequired, seen) {
 				return true
 			}
 		}
@@ -165,7 +165,7 @@ func ValidationCode(att *design.AttributeExpr, req, pub bool, target, context st
 	}
 	if req := validation.Required; len(req) > 0 {
 		for _, r := range req {
-			reqAtt := design.AsObject(att.Type)[r]
+			reqAtt := design.AsObject(att.Type).Attribute(r)
 			if reqAtt == nil {
 				continue
 			}
@@ -199,12 +199,12 @@ func hasValidationsRecurse(att *design.AttributeExpr, ignoreRequired bool, seen 
 		}
 	}
 	if o := design.AsObject(att.Type); o != nil {
-		for _, catt := range o {
-			if _, ok := seen[catt]; ok {
+		for _, catt := range *o {
+			if _, ok := seen[catt.Attribute]; ok {
 				continue // break infinite recursions
 			}
-			seen[catt] = struct{}{}
-			if hasValidationsRecurse(catt, ignoreRequired, seen) {
+			seen[catt.Attribute] = struct{}{}
+			if hasValidationsRecurse(catt.Attribute, ignoreRequired, seen) {
 				return true
 			}
 		}
@@ -339,7 +339,7 @@ func recurseAttribute(att, catt *design.AttributeExpr, n, target, context string
 					return done
 				}
 				for _, name := range a.Validation.Required {
-					att := design.AsObject(a.Type)[name]
+					att := design.AsObject(a.Type).Attribute(name)
 					if att != nil && (!design.IsPrimitive(att.Type) || att.Type.Kind() == design.StringKind) {
 						hasValidations = true
 						return done

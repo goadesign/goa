@@ -102,7 +102,7 @@ type (
 // Headers returns the raw response headers attribute.
 func (r *HTTPResponseExpr) Headers() *design.AttributeExpr {
 	if r.headers == nil {
-		r.headers = &design.AttributeExpr{Type: make(design.Object)}
+		r.headers = &design.AttributeExpr{Type: &design.Object{}}
 	}
 	return r.headers
 }

@@ -150,20 +150,13 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 	verr.Merge(a.validateEnumDefault(ctx, parent))
 	if o := AsObject(a.Type); o != nil {
 		for _, n := range a.AllRequired() {
-			found := false
-			for an := range o {
-				if n == an {
-					found = true
-					break
-				}
-			}
-			if !found {
+			if o.Attribute(n) == nil {
 				verr.Add(parent, `%srequired field "%s" does not exist`, ctx, n)
 			}
 		}
-		for n, att := range o {
-			ctx = fmt.Sprintf("field %s", n)
-			verr.Merge(att.Validate(ctx, parent))
+		for _, nat := range *o {
+			ctx = fmt.Sprintf("field %s", nat.Name)
+			verr.Merge(nat.Attribute.Validate(ctx, parent))
 		}
 	} else {
 		if ar := AsArray(a.Type); ar != nil {
@@ -184,18 +177,18 @@ func (a *AttributeExpr) Merge(other *AttributeExpr) {
 	if other == nil {
 		return
 	}
-	left := a.Type.(Object)
-	right := other.Type.(Object)
+	left := a.Type.(*Object)
+	right := other.Type.(*Object)
 	if left == nil || right == nil {
 		panic("cannot merge non object attributes") // bug
 	}
-	for n, v := range right {
-		left[n] = v
-		if other.IsRequired(n) && !a.IsRequired(n) {
+	for _, nat := range *right {
+		left.Set(nat.Name, nat.Attribute)
+		if other.IsRequired(nat.Name) && !a.IsRequired(nat.Name) {
 			if a.Validation == nil {
 				a.Validation = &ValidationExpr{}
 			}
-			a.Validation.Required = append(a.Validation.Required, n)
+			a.Validation.Required = append(a.Validation.Required, nat.Name)
 		}
 	}
 }
@@ -234,36 +227,48 @@ func (a *AttributeExpr) AllRequired() (required []string) {
 func (a *AttributeExpr) IsRequired(attName string) bool {
 	for _, name := range a.AllRequired() {
 		if name == attName {
-			return AsObject(a.Type)[name].DefaultValue == nil
+			return AsObject(a.Type).Attribute(name).DefaultValue == nil
 		}
 	}
 	return false
 }
 
 // IsPrimitivePointer returns true if the field generated for the given
-// attribute should be a pointer to a primitive type. The target attribute must
+// attribute should be a pointer to a primitive type. The receiver attribute must
 // be an object.
-func (a *AttributeExpr) IsPrimitivePointer(attName string) bool {
+//
+// If useDefault is true and the attribute has a default value then
+// IsPrimitivePointer returns false. This makes it possible to differentiate
+// between request types where attributes with default values should not be
+// generated using a pointer value and response types where they should.
+//
+//    DefaultValue UseDefault Pointer (assuming all other conditions are true)
+//    Yes          True       False
+//    Yes          False      True
+//    No           True       True
+//    No           False      True
+//
+func (a *AttributeExpr) IsPrimitivePointer(attName string, useDefault bool) bool {
 	o := AsObject(a.Type)
 	if o == nil {
 		panic("checking pointer field on non-object") // bug
 	}
-	att := o[attName]
+	att := o.Attribute(attName)
 	if att == nil {
 		return false
 	}
 	if IsPrimitive(att.Type) {
 		return att.Type.Kind() != BytesKind && att.Type.Kind() != AnyKind &&
-			!a.IsRequired(attName) && !a.HasDefaultValue(attName)
+			!a.IsRequired(attName) && (!a.HasDefaultValue(attName) || !useDefault)
 	}
 	return false
 }
 
-// HasDefaultValue returns true if the given attribute has a default value.
+// HasDefaultValue returns true if the attribute with the given name has a
+// default value.
 func (a *AttributeExpr) HasDefaultValue(attName string) bool {
 	if o := AsObject(a.Type); o != nil {
-		att := o[attName]
-		return att.DefaultValue != nil
+		return o.Attribute(attName).DefaultValue != nil
 	}
 	return false
 }
@@ -314,8 +319,9 @@ func (a *AttributeExpr) inheritRecursive(parent *AttributeExpr) {
 	if !a.shouldInherit(parent) {
 		return
 	}
-	for n, att := range AsObject(a.Type) {
-		if patt, ok := AsObject(parent.Type)[n]; ok {
+	for _, nat := range *AsObject(a.Type) {
+		if patt := AsObject(parent.Type).Attribute(nat.Name); patt != nil {
+			att := nat.Attribute
 			if att.Description == "" {
 				att.Description = patt.Description
 			}
@@ -326,8 +332,8 @@ func (a *AttributeExpr) inheritRecursive(parent *AttributeExpr) {
 			if att.Type == nil {
 				att.Type = patt.Type
 			} else if att.shouldInherit(patt) {
-				for _, att := range AsObject(att.Type) {
-					att.Inherit(AsObject(patt.Type)[n])
+				for _, nat := range *AsObject(att.Type) {
+					nat.Attribute.Inherit(AsObject(patt.Type).Attribute(nat.Name))
 				}
 			}
 		}

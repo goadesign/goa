@@ -572,9 +572,8 @@ func Body(args ...interface{}) {
 			eval.ReportError("%s type must be an object with an attribute with name %#v, got %T", kind, a, ref.Type)
 			return
 		}
-		var ok bool
-		attr, ok = obj[a]
-		if !ok {
+		attr = obj.Attribute(a)
+		if attr == nil {
 			eval.ReportError("%s type does not have an attribute named %#v", kind, a)
 			return
 		}

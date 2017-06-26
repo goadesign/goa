@@ -44,10 +44,10 @@ func (d *dupper) DupType(t DataType) DataType {
 		return t
 	case *Array:
 		return &Array{ElemType: d.DupAttribute(actual.ElemType)}
-	case Object:
-		res := make(Object, len(actual))
-		for n, att := range actual {
-			res[n] = d.DupAttribute(att)
+	case *Object:
+		res := &Object{}
+		for _, nat := range *actual {
+			res.Set(nat.Name, d.DupAttribute(nat.Attribute))
 		}
 		return res
 	case *Map:

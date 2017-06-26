@@ -18,6 +18,8 @@ package rest
 import (
 	"fmt"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"text/template"
 
 	"goa.design/goa.v2/codegen"
@@ -118,17 +120,51 @@ func serverErrorEncoderTmpl(r *rest.ResourceExpr) *template.Template {
 func serverTmpl(r *rest.ResourceExpr) *template.Template {
 	scope := files.Services.Get(r.Name()).Scope
 	return template.New("server").
-		Funcs(template.FuncMap{"goTypeRef": scope.GoTypeRef, "conversionContext": conversionContext}).
+		Funcs(template.FuncMap{
+			"goTypeRef":            scope.GoTypeRef,
+			"conversionData":       conversionData,
+			"headerConversionData": headerConversionData,
+			"printValue":           printValue,
+		}).
 		Funcs(codegen.TemplateFuncs())
 }
 
-// conversionContext creates a template context suitable for executing the
+// conversionData creates a template context suitable for executing the
 // "type_conversion" template.
-func conversionContext(varName, name string, dt design.DataType) map[string]interface{} {
+func conversionData(varName, name string, dt design.DataType) map[string]interface{} {
 	return map[string]interface{}{
 		"VarName": varName,
 		"Name":    name,
 		"Type":    dt,
+	}
+}
+
+// headerConversionData produces the template data suitable for executing the
+// "header_conversion" template.
+func headerConversionData(dt design.DataType, varName string, required bool, target string) map[string]interface{} {
+	return map[string]interface{}{
+		"Type":     dt,
+		"VarName":  varName,
+		"Required": required,
+		"Target":   target,
+	}
+}
+
+// printValue generates the Go code for a literal string containing the given
+// value. printValue panics if the data type is not a primitive or an array.
+func printValue(dt design.DataType, v interface{}) string {
+	switch actual := dt.(type) {
+	case *design.Array:
+		val := reflect.ValueOf(v)
+		elems := make([]string, val.Len())
+		for i := 0; i < val.Len(); i++ {
+			elems[i] = printValue(actual.ElemType.Type, val.Index(i).Interface())
+		}
+		return strings.Join(elems, ", ")
+	case design.Primitive:
+		return fmt.Sprintf("%v", v)
+	default:
+		panic("unsupported type value " + dt.Name()) // bug
 	}
 }
 
@@ -504,9 +540,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 	for keyRaw, val := range {{ .VarName }}Raw {
 		var key {{ goTypeRef .Type.KeyType.Type }}
 		{
-		{{- with conversionContext "key" (printf "%q" "query") .Type.KeyType.Type }}
-		{{- template "type_conversion" . }}
-		{{- end }}
+		{{- template "type_conversion" (conversionData "key" (printf "%q" "query") .Type.KeyType.Type) }}
 		}
 		{{ .VarName }}[key] = val
 	}
@@ -519,16 +553,12 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		{{- if not (eq .Type.KeyType.Type.Name "string") }}
 		var key {{ goTypeRef .Type.KeyType.Type }}
 		{
-			{{- with conversionContext "key" (printf "%q" "query") .Type.KeyType.Type }}
-			{{- template "type_conversion" . }}
-			{{- end }}
+			{{- template "type_conversion" (conversionData "key" (printf "%q" "query") .Type.KeyType.Type) }}
 		}
 		{{- end }}
 		var val {{ goTypeRef .Type.ElemType.Type }}
 		{
-		{{- with conversionContext "val" (printf "%q" "query") .Type.ElemType.Type }}
-		{{- template "slice_conversion" . }}
-		{{- end }}
+		{{- template "slice_conversion" (conversionData "val" (printf "%q" "query") .Type.ElemType.Type) }}
 		}
 		{{ .VarName }}[key] = val
 	}
@@ -544,9 +574,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 			{{- if eq .Type.KeyType.Type.Name "string" }}
 			key = keyRaw
 			{{- else }}
-			{{- with conversionContext "key" (printf "%q" "query") .Type.KeyType.Type }}
-			{{- template "type_conversion" . }}
-			{{- end }}
+			{{- template "type_conversion" (conversionData "key" (printf "%q" "query") .Type.KeyType.Type) }}
 			{{- end }}
 		}
 		{{- end }}
@@ -556,9 +584,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 			val = va[0]
 			{{- else }}
 			valRaw := va[0]
-			{{- with conversionContext "val" (printf "%q" "query") .Type.ElemType.Type }}
-			{{- template "type_conversion" . }}
-			{{- end }}
+			{{- template "type_conversion" (conversionData "val" (printf "%q" "query") .Type.ElemType.Type) }}
 			{{- end }}
 		}
 		{{ .VarName }}[key] = val
@@ -718,22 +744,22 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 {{- end }}
 `
 
-const serverEncoderT = `{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .Encoder .Method.Name .ServiceName | comment }}
-func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) rest.Encoder) func(http.ResponseWriter, *http.Request, interface{}) error {
+const serverEncoderT = `{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .Encoder .ServiceName .Method.Name | comment }}
+func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) (rest.Encoder, string)) func(http.ResponseWriter, *http.Request, interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 
 	{{- if .Method.ResultRef }}
-		t := v.({{ .Method.ResultRef }})
+		res := v.({{ .Method.ResultRef }})
 
 		{{- range .Responses }}
 
 			{{- if .TagName }}
-		if t.{{ .TagName }} == {{ printf "%q" .TagValue }} {
+		if res.{{ .TagName }} == {{ printf "%q" .TagValue }} {
 			{{- end }}
 			{{ template "response" . }}
 
 			{{- if .Body }}
-			return enc.Encode(&body)
+			return enc.Encode(body)
 			{{- else }}
 			return nil
 			{{- end }}
@@ -748,17 +774,8 @@ func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) rest.Encode
 
 		{{- with (index .Responses 0) }}
 
-		{{- if .Body }}
-		enc, ct := encoder(w, r)
-		rest.SetContentType(w, ct)
-		w.WriteHeader({{ .StatusCode }})
-		return enc.Encode(v)
-
-		{{- else }}
 		w.WriteHeader({{ .StatusCode }})
 		return nil
-
-		{{- end }}
 
 		{{- end }}
 
@@ -771,14 +788,14 @@ const serverErrorEncoderT = `{{ printf "%s returns an encoder for errors returne
 func {{ .ErrorEncoder }}(encoder func(http.ResponseWriter, *http.Request) rest.Encoder, logger goa.LogAdapter) func(http.ResponseWriter, *http.Request, error) {
 	encodeError := rest.EncodeError(encoder, logger)
 	return func(w http.ResponseWriter, r *http.Request, v error) {
-		switch t := v.(type) {
+		switch res := v.(type) {
 
 		{{- range .ErrorResponses }}
 		case {{ .TypeRef }}:
 
 			{{- template "response" .Response }}
 			{{- if .Response.Body }}
-			if err := enc.Encode(&body); err != nil {
+			if err := enc.Encode(body); err != nil {
 				encodeError(w, r, err)
 			}
 			{{- end }}
@@ -798,32 +815,37 @@ const responseT = `{{ define "response" -}}
 	{{- if .Body }}
 		{{- if .Body.IsUser }}
 			{{- if .Body.Fields }}
-		body := {{ .Body.VarName }}{
+		body := &{{ .Body.VarName }}{
 				{{- range .Body.Fields}}	
-			{{ . }}: v.{{ . }},
+			{{ .FieldName }}: res.{{ .VarName }},
 				{{- end }}
 		}
 			{{- else }}
-			body := {{ .Body.VarName }}(*v)
+			val := {{ .Body.VarName }}(*res)
+			body := &val
 			{{- end }}
 		{{- else }}
-		body := v
+		body := res 
 		{{- end }}
 	{{- end }}
 	{{- range .Headers }}
 		{{- if not .Required }}
-	if t.{{ .FieldName }} != nil {
+	if res.{{ .FieldName }} != nil {
 		{{- end }}
 
 		{{- if eq .Type.Name "string" }}
-	w.Header().Set("{{ .Name }}", {{ if not .Required }}*{{ end }}t.{{ .FieldName }})
+	w.Header().Set("{{ .Name }}", {{ if not .Required }}*{{ end }}res.{{ .FieldName }})
 		{{- else }}
-	v := t.{{ .FieldName }}
-	{{ template "header_conversion" . }}
+	v := res.{{ .FieldName }}
+	{{ template "header_conversion" (headerConversionData .Type .VarName .Required "v") }}
 	w.Header().Set("{{ .Name }}", {{ .VarName }})
 		{{- end }}
 
 		{{- if not .Required }}
+			{{- if .DefaultValue }}
+	} else {
+		w.Header().Set("{{ .Name }}", "{{ printValue .Type .DefaultValue }}")
+			{{- end }}
 	}
 		{{- end }}
 	{{- end }}
@@ -831,30 +853,41 @@ const responseT = `{{ define "response" -}}
 {{- end }}
 
 {{- define "header_conversion" }}
-	{{- if eq .Type.Name "boolean" }}
-		{{ .VarName }} := strconv.FormatBool({{ if not .Required }}*{{ end }}v)
-	{{- else if eq .Type.Name "int" }}
-		{{ .VarName }} := strconv.Itoa({{ if not .Required }}*{{ end }}v)
-	{{- else if eq .Type.Name "int32" }}
-		{{ .VarName }} := strconv.FormatInt(int64({{ if not .Required }}*{{ end }}v), 10)
-	{{- else if eq .Type.Name "int64" }}
-		{{ .VarName }} := strconv.FormatInt({{ if not .Required }}*{{ end }}v, 10)
-	{{- else if eq .Type.Name "uint" }}
-		{{ .VarName }} := strconv.FormatUint(uint64({{ if not .Required }}*{{ end }}v), 10)
-	{{- else if eq .Type.Name "uint32" }}
-		{{ .VarName }} := strconv.FormatUint(uint64({{ if not .Required }}*{{ end }}v), 10)
-	{{- else if eq .Type.Name "uint64" }}
-		{{ .VarName }} := strconv.FormatUint({{ if not .Required }}*{{ end }}v, 10)
-	{{- else if eq .Type.Name "float32" }}
-		{{ .VarName }} := strconv.FormatFloat(float64({{ if not .Required }}*{{ end }}v), 'f', -1, 32)
-	{{- else if eq .Type.Name "float64" }}
-		{{ .VarName }} := strconv.FormatFloat({{ if not .Required }}*{{ end }}v, 'f', -1, 64)
-	{{- else if eq .Type.Name "string" }}
-		{{ .VarName }} := v
-	{{- else if eq .Type.Name "bytes" }}
-		{{ .VarName }} := []byte({{ if not .Required }}*{{ end }}v)
-	{{- else if eq .Type.Name "any" }}
-		{{ .VarName }} := {{ if not .Required }}*{{ end }}v
+	{{- if eq .Type.Name "boolean" -}}
+		{{ .VarName }} := strconv.FormatBool({{ if not .Required }}*{{ end }}{{ .Target }})
+	{{- else if eq .Type.Name "int" -}}
+		{{ .VarName }} := strconv.Itoa({{ if not .Required }}*{{ end }}{{ .Target }})
+	{{- else if eq .Type.Name "int32" -}}
+		{{ .VarName }} := strconv.FormatInt(int64({{ if not .Required }}*{{ end }}{{ .Target }}), 10)
+	{{- else if eq .Type.Name "int64" -}}
+		{{ .VarName }} := strconv.FormatInt({{ if not .Required }}*{{ end }}{{ .Target }}, 10)
+	{{- else if eq .Type.Name "uint" -}}
+		{{ .VarName }} := strconv.FormatUint(uint64({{ if not .Required }}*{{ end }}{{ .Target }}), 10)
+	{{- else if eq .Type.Name "uint32" -}}
+		{{ .VarName }} := strconv.FormatUint(uint64({{ if not .Required }}*{{ end }}{{ .Target }}), 10)
+	{{- else if eq .Type.Name "uint64" -}}
+		{{ .VarName }} := strconv.FormatUint({{ if not .Required }}*{{ end }}{{ .Target }}, 10)
+	{{- else if eq .Type.Name "float32" -}}
+		{{ .VarName }} := strconv.FormatFloat(float64({{ if not .Required }}*{{ end }}{{ .Target }}), 'f', -1, 32)
+	{{- else if eq .Type.Name "float64" -}}
+		{{ .VarName }} := strconv.FormatFloat({{ if not .Required }}*{{ end }}{{ .Target }}, 'f', -1, 64)
+	{{- else if eq .Type.Name "string" -}}
+		{{ .VarName }} := {{ .Target }} 
+	{{- else if eq .Type.Name "bytes" -}}
+		{{ .VarName }} := string({{ .Target }})
+	{{- else if eq .Type.Name "any" -}}
+		{{ .VarName }} := fmt.Sprintf("%v", {{ .Target }})
+	{{- else if eq .Type.Name "array" -}}
+		{{- if eq .Type.ElemType.Type.Name "string" -}}
+		{{ .VarName }} := strings.Join({{ .Target }}, ", ")
+		{{- else -}}
+		{{ .VarName }}Slice := make([]string, len({{ .Target }}))
+		for i, e := range {{ .Target }}  {
+			{{ template "header_conversion" (headerConversionData .Type.ElemType.Type "es" true "e") }}
+			{{ .VarName }}Slice[i] = es	
+		}
+		{{ .VarName }} := strings.Join({{ .VarName }}Slice, ", ")
+		{{- end }}
 	{{- else }}
 		// unsupported type {{ .Type.Name }} for header field {{ .FieldName }}
 	{{- end }}

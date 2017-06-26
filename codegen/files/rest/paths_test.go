@@ -197,20 +197,20 @@ func ShowAccountPath(sliceInterface []interface{}) string {
 		}
 
 		setParams = func(a *design.AttributeExpr) {
-			a.Type = design.Object{
-				"id":              {Type: design.Int32},
-				"view":            {Type: design.String},
-				"slice_string":    {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.String}}},
-				"slice_int":       {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Int}}},
-				"slice_int32":     {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Int32}}},
-				"slice_int64":     {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Int64}}},
-				"slice_uint":      {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.UInt}}},
-				"slice_uint32":    {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.UInt32}}},
-				"slice_uint64":    {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.UInt64}}},
-				"slice_float32":   {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Float32}}},
-				"slice_float64":   {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Float64}}},
-				"slice_bool":      {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Boolean}}},
-				"slice_interface": {Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Any}}},
+			a.Type = &design.Object{
+				{"id", &design.AttributeExpr{Type: design.Int32}},
+				{"view", &design.AttributeExpr{Type: design.String}},
+				{"slice_string", &design.AttributeExpr{Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.String}}}},
+				{"slice_int", &design.AttributeExpr{Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Int}}}},
+				{"slice_int32", &design.AttributeExpr{Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Int32}}}},
+				{"slice_int64", &design.AttributeExpr{Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Int64}}}},
+				{"slice_uint", &design.AttributeExpr{Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.UInt}}}},
+				{"slice_uint32", &design.AttributeExpr{Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.UInt32}}}},
+				{"slice_uint64", &design.AttributeExpr{Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.UInt64}}}},
+				{"slice_float32", &design.AttributeExpr{Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Float32}}}},
+				{"slice_float64", &design.AttributeExpr{Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Float64}}}},
+				{"slice_bool", &design.AttributeExpr{Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Boolean}}}},
+				{"slice_interface", &design.AttributeExpr{Type: &design.Array{ElemType: &design.AttributeExpr{Type: design.Any}}}},
 			}
 		}
 

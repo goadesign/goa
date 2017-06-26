@@ -490,9 +490,9 @@ func Payload(val interface{}, fns ...func()) {
 	dsl.Payload(val, fns...)
 }
 
-// Reference sets a type or result type reference. The value itself can be a type
-// or a result type.  The reference type attributes define the default properties
-// for attributes with the same name in the type using the reference.
+// Reference sets a type or result type reference. The value itself can be a
+// type or a result type. The reference type attributes define the default
+// properties for attributes with the same name in the type using the reference.
 //
 // Reference may be used in Type or ResultType.
 // Reference accepts a single argument: the type or result type containing the

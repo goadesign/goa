@@ -206,6 +206,20 @@ type (
 		ValidateDef string
 		// ValidateRef contains the call to the validation code.
 		ValidateRef string
+		// IsUser is true if the type is a user type.
+		IsUser bool
+		// Fields lists the user type fields if IsUser is true.
+		Fields []*FieldData
+	}
+
+	// FieldData contains the data needed to render a single field.
+	FieldData struct {
+		// Name is the name of the attribute.
+		Name string
+		// VarName is the name of the Go type field.
+		VarName string
+		// FieldName is the mapped name of the Go type field.
+		FieldName string
 	}
 )
 
@@ -294,13 +308,13 @@ func (d ResourcesData) analyze(r *rest.ResourceExpr) *ResourceData {
 			ErrorEncoder:   fmt.Sprintf("Encode%sError", ep.VarName),
 		}
 
-		var (
-			body        *TypeData
-			constructor string
-			bodyRef     string
-			params      []string
-		)
-		{
+		if ep.PayloadRef != "" {
+			var (
+				body        *TypeData
+				constructor string
+				bodyRef     string
+				params      []string
+			)
 			if a.MethodExpr.Payload.Type != design.Empty {
 				b := restgen.RequestBodyType(r, a, "ServerRequestBody")
 				var att *design.AttributeExpr
@@ -312,7 +326,7 @@ func (d ResourcesData) analyze(r *rest.ResourceExpr) *ResourceData {
 				if _, ok := a.MethodExpr.Payload.Type.(design.UserType); ok {
 					constructor = fmt.Sprintf("New%s", ep.Payload)
 				}
-				body = buildBodyType(svc, b, att)
+				body = buildBodyType(svc, b, att, true)
 				if body != nil {
 					bodyRef = "body"
 					if design.IsObject(b) {
@@ -337,12 +351,12 @@ func (d ResourcesData) analyze(r *rest.ResourceExpr) *ResourceData {
 				returnValue string
 			)
 			if constructor == "" {
-				if keys := a.PathParams().Keys(); len(keys) > 0 {
-					returnValue = codegen.Goify(keys[0], false)
-				} else if keys := a.QueryParams().Keys(); len(keys) > 0 {
-					returnValue = codegen.Goify(keys[0], false)
-				} else if keys := a.MappedHeaders().Keys(); len(keys) > 0 {
-					returnValue = codegen.Goify(keys[0], false)
+				if o := design.AsObject(a.PathParams().Type); o != nil && len(*o) > 0 {
+					returnValue = codegen.Goify((*o)[0].Name, false)
+				} else if o := design.AsObject(a.QueryParams().Type); o != nil && len(*o) > 0 {
+					returnValue = codegen.Goify((*o)[0].Name, false)
+				} else if o := design.AsObject(a.MappedHeaders().Type); o != nil && len(*o) > 0 {
+					returnValue = codegen.Goify((*o)[0].Name, false)
 				} else {
 					returnValue = bodyRef
 				}
@@ -355,7 +369,7 @@ func (d ResourcesData) analyze(r *rest.ResourceExpr) *ResourceData {
 				DecoderReturnValue: returnValue,
 				PathParams:         extractPathParams(a.PathParams()),
 				QueryParams:        extractQueryParams(a.QueryParams()),
-				Headers:            extractHeaders(a.MappedHeaders()),
+				Headers:            extractHeaders(a.MappedHeaders(), true),
 				RequestBody:        body,
 			}
 		}
@@ -379,20 +393,25 @@ func buildResponseData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Act
 		if att == nil {
 			att = a.MethodExpr.Payload
 		}
-		body = buildBodyType(svc, b, att)
-		if body.Description == "" {
-			status := http.StatusText(v.StatusCode)
-			if status == "" {
-				status = strconv.Itoa(v.StatusCode)
+		body = buildBodyType(svc, b, att, false)
+		if body != nil {
+			if b == a.MethodExpr.Result.Type {
+				body.IsUser = false
 			}
-			body.Description = fmt.Sprintf("%s is the type of the %s \"%s\" HTTP endpoint %s response body.",
-				body.VarName, r.Name(), a.Name(), status)
+			if body.Description == "" {
+				status := http.StatusText(v.StatusCode)
+				if status == "" {
+					status = strconv.Itoa(v.StatusCode)
+				}
+				body.Description = fmt.Sprintf("%s is the type of the %s \"%s\" HTTP endpoint %s response body.",
+					body.VarName, r.Name(), a.Name(), status)
+			}
 		}
 	}
 
 	return &ResponseData{
 		StatusCode: restgen.StatusCodeToHTTPConst(v.StatusCode),
-		Headers:    extractHeaders(v.MappedHeaders()),
+		Headers:    extractHeaders(v.MappedHeaders(), false),
 		Body:       body,
 		TagName:    v.Tag[0],
 		TagValue:   v.Tag[1],
@@ -407,7 +426,7 @@ func buildErrorData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Action
 	}
 }
 
-func buildBodyType(svc *files.ServiceData, dt design.DataType, att *design.AttributeExpr) *TypeData {
+func buildBodyType(svc *files.ServiceData, dt design.DataType, att *design.AttributeExpr, req bool) *TypeData {
 	if dt == nil || dt == design.Empty {
 		return nil
 	}
@@ -419,17 +438,29 @@ func buildBodyType(svc *files.ServiceData, dt design.DataType, att *design.Attri
 		ref         string
 		validateDef string
 		validate    string
+		isUser      bool
+		fields      []*FieldData
 	)
 	name = dt.Name()
 	varname = svc.Scope.GoTypeName(dt)
 	ref = svc.Scope.GoTypeRef(dt)
 	if ut, ok := dt.(design.UserType); ok {
-		def = restgen.GoTypeDef(svc.Scope, ut.Attribute(), true)
+		isUser = true
+		def = restgen.GoTypeDef(svc.Scope, ut.Attribute(), true, req)
 		desc = ut.Attribute().Description
 		validateDef = codegen.RecursiveValidationCode(ut.Attribute(), true, true, "body")
 		if validateDef != "" {
 			validate = "err = goa.MergeErrors(err, body.Validate())"
 		}
+		ma := rest.NewMappedAttributeExpr(ut.Attribute())
+		restgen.WalkMappedAttr(ma, func(name, elem string, required bool, a *design.AttributeExpr) error {
+			fields = append(fields, &FieldData{
+				Name:      name,
+				VarName:   codegen.Goify(name, true),
+				FieldName: codegen.Goify(elem, true),
+			})
+			return nil
+		})
 	} else if att != nil {
 		validate = codegen.RecursiveValidationCode(att, true, true, "body")
 		desc = att.Description
@@ -442,6 +473,8 @@ func buildBodyType(svc *files.ServiceData, dt design.DataType, att *design.Attri
 		Ref:         ref,
 		ValidateDef: validateDef,
 		ValidateRef: validate,
+		IsUser:      isUser,
+		Fields:      fields,
 	}
 }
 
@@ -488,7 +521,7 @@ func extractQueryParams(a *rest.MappedAttributeExpr) []*ParamData {
 			VarName:     varn,
 			Required:    required,
 			Type:        c.Type,
-			Pointer:     a.IsPrimitivePointer(name),
+			Pointer:     a.IsPrimitivePointer(name, true),
 			Slice:       arr != nil,
 			StringSlice: arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
 			Map:         mp != nil,
@@ -496,7 +529,7 @@ func extractQueryParams(a *rest.MappedAttributeExpr) []*ParamData {
 				mp.KeyType.Type.Kind() == design.StringKind &&
 				mp.ElemType.Type.Kind() == design.ArrayKind &&
 				design.AsArray(mp.ElemType.Type).ElemType.Type.Kind() == design.StringKind,
-			Validate:     codegen.RecursiveValidationCode(c, !a.IsPrimitivePointer(name), true, varn),
+			Validate:     codegen.RecursiveValidationCode(c, !a.IsPrimitivePointer(name, true), true, varn),
 			DefaultValue: c.DefaultValue,
 		})
 		return nil
@@ -505,7 +538,7 @@ func extractQueryParams(a *rest.MappedAttributeExpr) []*ParamData {
 	return params
 }
 
-func extractHeaders(a *rest.MappedAttributeExpr) []*HeaderData {
+func extractHeaders(a *rest.MappedAttributeExpr, req bool) []*HeaderData {
 	var headers []*HeaderData
 	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
 		var (
@@ -518,11 +551,11 @@ func extractHeaders(a *rest.MappedAttributeExpr) []*HeaderData {
 			FieldName:     codegen.Goify(name, true),
 			VarName:       varn,
 			Required:      required,
-			Pointer:       a.IsPrimitivePointer(name),
+			Pointer:       a.IsPrimitivePointer(name, req),
 			Slice:         arr != nil,
 			StringSlice:   arr != nil && arr.ElemType.Type.Kind() == design.StringKind,
 			Type:          c.Type,
-			Validate:      codegen.RecursiveValidationCode(c, !a.IsPrimitivePointer(name), true, varn),
+			Validate:      codegen.RecursiveValidationCode(c, !a.IsPrimitivePointer(name, req), true, varn),
 			DefaultValue:  c.DefaultValue,
 		})
 		return nil

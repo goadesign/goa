@@ -15,7 +15,6 @@ package design
 import (
 	"fmt"
 	"reflect"
-	"sort"
 
 	"goa.design/goa.v2/eval"
 )
@@ -53,8 +52,18 @@ type (
 		ElemType *AttributeExpr
 	}
 
+	// NamedAttributeExpr describes object attributes together with their
+	// names.
+	NamedAttributeExpr struct {
+		// Name of attribute
+		Name string
+		// Attribute
+		Attribute *AttributeExpr
+	}
+
 	// Object is the type used to describe composite data structures.
-	Object map[string]*AttributeExpr
+	// Note: not a map because order matters.
+	Object []*NamedAttributeExpr
 
 	// UserType is the interface implemented by all user type implementations.
 	// Plugins may leverage this interface to introduce their own types.
@@ -163,20 +172,20 @@ var Empty = &UserTypeExpr{
 	TypeName: "Empty",
 	AttributeExpr: &AttributeExpr{
 		Description: "Empty represents empty values",
-		Type:        Object{},
+		Type:        &Object{},
 	},
 }
 
 // Convenience methods
 
 // AsObject returns the type underlying object if any, nil otherwise.
-func AsObject(dt DataType) Object {
+func AsObject(dt DataType) *Object {
 	switch t := dt.(type) {
 	case *UserTypeExpr:
 		return AsObject(t.Type)
 	case *ResultTypeExpr:
 		return AsObject(t.Type)
-	case Object:
+	case *Object:
 		return t
 	default:
 		return nil
@@ -388,58 +397,94 @@ func (a ArrayVal) ToSlice() []interface{} {
 	return arr
 }
 
+// Attribute returns the attribute with the given name if any, nil otherwise.
+func (o *Object) Attribute(name string) *AttributeExpr {
+	for _, nat := range *o {
+		if nat.Name == name {
+			return nat.Attribute
+		}
+	}
+	return nil
+}
+
+// Set replaces the object named attribute n if any - creates a new object by
+// appending to the slice of named attributes otherwise. The resulting object is
+// returned in both cases.
+func (o *Object) Set(n string, att *AttributeExpr) {
+	for _, nat := range *o {
+		if nat.Name == n {
+			nat.Attribute = att
+			return
+		}
+	}
+	*o = append(*o, &NamedAttributeExpr{n, att})
+}
+
+// Delete creates a new object with the same named attributes as o but without
+// the named attribute n if any.
+func (o *Object) Delete(n string) {
+	index := -1
+	for i, nat := range *o {
+		if nat.Name == n {
+			index = i
+			break
+		}
+	}
+	if index == -1 {
+		return
+	}
+	*o = append((*o)[:index], (*o)[index+1:]...)
+}
+
+// Rename changes the name of the named attribute n to m. Rename does nothing if
+// o does not have an attribute named n.
+func (o *Object) Rename(n, m string) {
+	for _, nat := range *o {
+		if nat.Name == n {
+			nat.Name = m
+			return
+		}
+	}
+}
+
 // Kind implements DataKind.
-func (o Object) Kind() Kind { return ObjectKind }
+func (o *Object) Kind() Kind { return ObjectKind }
 
 // Name returns the type name.
-func (o Object) Name() string { return "object" }
+func (o *Object) Name() string { return "object" }
 
 // Hash returns a unique hash value for o.
-func (o Object) Hash() string {
+func (o *Object) Hash() string {
 	h := "_object_"
-	// ensure fixed ordering
-	keys := make([]string, len(o))
-	i := 0
-	for n := range o {
-		keys[i] = n
-		i++
-	}
-	sort.Strings(keys)
-
-	for _, n := range keys {
-		h += "+" + o[n].Type.Hash()
+	for _, nat := range *o {
+		h += "+" + nat.Name + "/" + nat.Attribute.Type.Hash()
 	}
 	return h
 }
 
-// Merge copies other's fields into o overridding any pre-existing field with the same name.
-func (o Object) Merge(other Object) {
-	for n, att := range other {
-		o[n] = DupAtt(att)
+// Merge creates a new object consisting of the named attributes of o appended
+// with duplicates of the named attributes of other. Named attributes of o that
+// have an identical name to named attributes of other get overridden.
+func (o *Object) Merge(other *Object) *Object {
+	res := o
+	for _, nat := range *other {
+		res.Set(nat.Name, DupAtt(nat.Attribute))
 	}
+	return res
 }
 
 // IsCompatible returns true if o describes the (Go) type of val.
-func (o Object) IsCompatible(val interface{}) bool {
+func (o *Object) IsCompatible(val interface{}) bool {
 	k := reflect.TypeOf(val).Kind()
 	return k == reflect.Map || k == reflect.Struct
 }
 
 // Example returns a random value of the object.
-func (o Object) Example(r *Random) interface{} {
-	// ensure fixed ordering
-	keys := make([]string, len(o))
-	i := 0
-	for n := range o {
-		keys[i] = n
-		i++
-	}
-	sort.Strings(keys)
-
+func (o *Object) Example(r *Random) interface{} {
 	res := make(map[string]interface{})
-	for _, n := range keys {
-		if v := o[n].Example(r); v != nil {
-			res[n] = v
+	for _, nat := range *o {
+		if v := nat.Attribute.Example(r); v != nil {
+			res[nat.Name] = v
 		}
 	}
 	return res

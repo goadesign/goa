@@ -111,30 +111,30 @@ var (
 		Views:      []*ViewExpr{errorResultView},
 	}
 
-	errorResultType = Object{
-		"id": &AttributeExpr{
+	errorResultType = &Object{
+		{"id", &AttributeExpr{
 			Type:        String,
 			Description: "a unique identifier for this particular occurrence of the problem.",
-		},
-		"status": &AttributeExpr{
+		}},
+		{"status", &AttributeExpr{
 			Type:        String,
 			Description: "the HTTP status code applicable to this problem, expressed as a string value.",
-		},
-		"code": &AttributeExpr{
+		}},
+		{"code", &AttributeExpr{
 			Type:        String,
 			Description: "an application-specific error code, expressed as a string value.",
-		},
-		"detail": &AttributeExpr{
+		}},
+		{"detail", &AttributeExpr{
 			Type:        String,
 			Description: "a human-readable explanation specific to this occurrence of the problem.",
-		},
-		"meta": &AttributeExpr{
+		}},
+		{"meta", &AttributeExpr{
 			Type: &Map{
 				KeyType:  &AttributeExpr{Type: String},
 				ElemType: &AttributeExpr{Type: Any},
 			},
 			Description: "a meta object containing non-standard meta-information about the error.",
-		},
+		}},
 	}
 
 	errorResultView = &ViewExpr{
@@ -148,7 +148,7 @@ var (
 func NewResultTypeExpr(name, identifier string, fn func()) *ResultTypeExpr {
 	return &ResultTypeExpr{
 		UserTypeExpr: &UserTypeExpr{
-			AttributeExpr: &AttributeExpr{Type: Object{}, DSLFunc: fn},
+			AttributeExpr: &AttributeExpr{Type: &Object{}, DSLFunc: fn},
 			TypeName:      name,
 		},
 		Identifier: identifier,
@@ -261,14 +261,14 @@ func (p *Projector) projectSingle(m *ResultTypeExpr, view, viewID string) (*Proj
 	if v == nil {
 		return nil, fmt.Errorf("unknown view %#v", view)
 	}
-	viewObj := v.Type.(Object)
+	viewObj := v.Type.(*Object)
 
 	// Compute validations - view may not have all fields
 	var val *ValidationExpr
 	if m.Validation != nil {
 		var required []string
 		for _, n := range m.Validation.Required {
-			if _, ok := viewObj[n]; ok {
+			if att := viewObj.Attribute(n); att != nil {
 				required = append(required, n)
 			}
 		}
@@ -308,13 +308,13 @@ func (p *Projector) projectSingle(m *ResultTypeExpr, view, viewID string) (*Proj
 
 	proj := ProjectedMTExpr{View: view, ResultType: projected}
 	p.Projected[viewID] = &proj
-	projectedObj := projected.Type.(Object)
-	mtObj := m.Type.(Object)
-	for n := range viewObj {
-		if at := mtObj[n]; at != nil {
+	projectedObj := projected.Type.(*Object)
+	mtObj := m.Type.(*Object)
+	for _, nat := range *viewObj {
+		if at := mtObj.Attribute(nat.Name); at != nil {
 			at = DupAtt(at)
 			if mt, ok := at.Type.(*ResultTypeExpr); ok {
-				vatt := viewObj[n]
+				vatt := viewObj.Attribute(nat.Name)
 				var view string
 				if len(vatt.Metadata["view"]) > 0 {
 					view = vatt.Metadata["view"][0]
@@ -327,11 +327,11 @@ func (p *Projector) projectSingle(m *ResultTypeExpr, view, viewID string) (*Proj
 				}
 				pr, err := p.Project(mt, view)
 				if err != nil {
-					return nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", view, n, err)
+					return nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", view, nat.Name, err)
 				}
 				at.Type = pr.ResultType
 			}
-			projectedObj[n] = at
+			projectedObj.Set(nat.Name, at)
 		}
 	}
 	return &proj, nil
@@ -414,13 +414,11 @@ func (l *LinkExpr) EvalName() string {
 
 // Attribute returns the linked attribute.
 func (l *LinkExpr) Attribute() *AttributeExpr {
-	p := l.Parent.Type.(Object)
+	p := l.Parent.Type.(*Object)
 	if p == nil {
 		return nil
 	}
-	att, _ := p[l.Name]
-
-	return att
+	return p.Attribute(l.Name)
 }
 
 // ResultType returns the result type of the linked attribute.
