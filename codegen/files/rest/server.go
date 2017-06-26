@@ -754,7 +754,11 @@ func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) (rest.Encod
 		{{- range .Responses }}
 
 			{{- if .TagName }}
+			{{- if .TagRequired }}
 		if res.{{ .TagName }} == {{ printf "%q" .TagValue }} {
+			{{- else }}
+		if res.{{ .TagName }} != nil && *res.{{ .TagName }} == {{ printf "%q" .TagValue }} {
+			{{- end }}
 			{{- end }}
 			{{ template "response" . }}
 
@@ -829,7 +833,7 @@ const responseT = `{{ define "response" -}}
 		{{- end }}
 	{{- end }}
 	{{- range .Headers }}
-		{{- if not .Required }}
+		{{- if and (not .Required) (not $.TagName) }}
 	if res.{{ .FieldName }} != nil {
 		{{- end }}
 
@@ -841,7 +845,7 @@ const responseT = `{{ define "response" -}}
 	w.Header().Set("{{ .Name }}", {{ .VarName }})
 		{{- end }}
 
-		{{- if not .Required }}
+		{{- if and (not .Required) (not $.TagName) }}
 			{{- if .DefaultValue }}
 	} else {
 		w.Header().Set("{{ .Name }}", "{{ printValue .Type .DefaultValue }}")

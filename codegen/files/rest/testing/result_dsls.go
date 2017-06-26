@@ -7,7 +7,7 @@ import (
 
 // The DSL function names follow the following pattern:
 //
-// (Payload|Result)(Header|Path|Body)+(Type)()?DSL
+// Result(Header|Body)(Type)(Required|Default)?DSL
 //
 // Where Type is the type of the result or result.
 
@@ -702,6 +702,43 @@ var ResultBodyHeaderUserDSL = func() {
 				Response(StatusOK, func() {
 					Header("b")
 				})
+			})
+		})
+	})
+}
+
+var ResultTagStringDSL = func() {
+	Service("ServiceTagString", func() {
+		Method("MethodTagString", func() {
+			Result(func() {
+				Attribute("h", String)
+			})
+			HTTP(func() {
+				GET("/")
+				Response(StatusAccepted, func() {
+					Header("h")
+					Tag("h", "value")
+				})
+				Response(StatusOK)
+			})
+		})
+	})
+}
+
+var ResultTagStringRequiredDSL = func() {
+	Service("ServiceTagStringRequired", func() {
+		Method("MethodTagStringRequired", func() {
+			Result(func() {
+				Attribute("h", String)
+				Required("h")
+			})
+			HTTP(func() {
+				GET("/")
+				Response(StatusAccepted, func() {
+					Header("h")
+					Tag("h", "value")
+				})
+				Response(StatusOK)
 			})
 		})
 	})

@@ -112,18 +112,6 @@ func (r *HTTPResponseExpr) MappedHeaders() *MappedAttributeExpr {
 	return NewMappedAttributeExpr(r.headers)
 }
 
-// ResultType returns the result type describing the response body if any, nil
-// otherwise.
-func (r *HTTPResponseExpr) ResultType() *design.ResultTypeExpr {
-	if r.Body == nil {
-		return nil
-	}
-	if mt, ok := r.Body.Type.(*design.ResultTypeExpr); ok {
-		return mt
-	}
-	return nil
-}
-
 // EvalName returns the generic definition name used in error messages.
 func (r *HTTPResponseExpr) EvalName() string {
 	var suffix string

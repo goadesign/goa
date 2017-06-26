@@ -3,9 +3,11 @@ package rest
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strconv"
 
+	restgen "goa.design/goa.v2/codegen/rest"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
@@ -182,7 +184,12 @@ func GenerateResourceDefinition(api *design.APIExpr, res *rest.ResourceExpr) {
 		var targetSchema *Schema
 		var identifier string
 		for _, resp := range a.Responses {
-			if mt := resp.ResultType(); mt != nil {
+			var suffix string
+			if len(a.Responses) > 1 {
+				suffix = http.StatusText(resp.StatusCode)
+			}
+			dt := restgen.ResponseBodyType(res, resp, a.MethodExpr.Result, suffix)
+			if mt := dt.(*design.ResultTypeExpr); mt != nil {
 				if identifier == "" {
 					identifier = mt.Identifier
 				} else {

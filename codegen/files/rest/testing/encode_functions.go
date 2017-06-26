@@ -824,3 +824,45 @@ func EncodeMethodBodyHeaderUserResponse(encoder func(http.ResponseWriter, *http.
 	}
 }
 `
+
+var ResultTagStringEncodeCode = `// EncodeMethodTagStringResponse returns an encoder for responses returned by
+// the ServiceTagString MethodTagString endpoint.
+func EncodeMethodTagStringResponse(encoder func(http.ResponseWriter, *http.Request) (rest.Encoder, string)) func(http.ResponseWriter, *http.Request, interface{}) error {
+	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
+		res := v.(*MethodTagStringResult)
+		if res.H != nil && *res.H == "value" {
+			enc, ct := encoder(w, r)
+			rest.SetContentType(w, ct)
+			w.Header().Set("h", *res.H)
+			w.WriteHeader(http.StatusAccepted)
+			return nil
+		}
+		enc, ct := encoder(w, r)
+		rest.SetContentType(w, ct)
+		body := res
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+`
+
+var ResultTagStringRequiredEncodeCode = `// EncodeMethodTagStringRequiredResponse returns an encoder for responses
+// returned by the ServiceTagStringRequired MethodTagStringRequired endpoint.
+func EncodeMethodTagStringRequiredResponse(encoder func(http.ResponseWriter, *http.Request) (rest.Encoder, string)) func(http.ResponseWriter, *http.Request, interface{}) error {
+	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
+		res := v.(*MethodTagStringRequiredResult)
+		if res.H == "value" {
+			enc, ct := encoder(w, r)
+			rest.SetContentType(w, ct)
+			w.Header().Set("h", res.H)
+			w.WriteHeader(http.StatusAccepted)
+			return nil
+		}
+		enc, ct := encoder(w, r)
+		rest.SetContentType(w, ct)
+		body := res
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
+`

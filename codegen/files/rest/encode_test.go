@@ -61,6 +61,9 @@ func TestEncode(t *testing.T) {
 
 		{"body-header-object", ResultBodyHeaderObjectDSL, ResultBodyHeaderObjectEncodeCode},
 		{"body-header-user", ResultBodyHeaderUserDSL, ResultBodyHeaderUserEncodeCode},
+
+		{"tag-string", ResultTagStringDSL, ResultTagStringEncodeCode},
+		{"tag-string-required", ResultTagStringRequiredDSL, ResultTagStringRequiredEncodeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

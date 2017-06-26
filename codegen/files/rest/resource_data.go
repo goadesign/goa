@@ -111,6 +111,8 @@ type (
 		// TagValue is the value the result attribute named by TagName
 		// must have for this response to be used.
 		TagValue string
+		// TagRequired is true if the tag attribute is required.
+		TagRequired bool
 	}
 
 	// ErrorData describes a error response.
@@ -409,12 +411,22 @@ func buildResponseData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Act
 		}
 	}
 
+	var (
+		tagRequired bool
+	)
+	{
+		if res := a.MethodExpr.Result; res != nil && res.Type != design.Empty {
+			tagRequired = res.IsRequired(v.Tag[0])
+		}
+	}
+
 	return &ResponseData{
-		StatusCode: restgen.StatusCodeToHTTPConst(v.StatusCode),
-		Headers:    extractHeaders(v.MappedHeaders(), false),
-		Body:       body,
-		TagName:    v.Tag[0],
-		TagValue:   v.Tag[1],
+		StatusCode:  restgen.StatusCodeToHTTPConst(v.StatusCode),
+		Headers:     extractHeaders(v.MappedHeaders(), false),
+		Body:        body,
+		TagName:     codegen.Goify(v.Tag[0], true),
+		TagValue:    v.Tag[1],
+		TagRequired: tagRequired,
 	}
 }
 
