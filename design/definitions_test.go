@@ -164,6 +164,18 @@ var _ = Describe("FullPath", func() {
 				})
 			})
 		})
+
+		Context("with trailing slashes", func() {
+			BeforeEach(func() {
+				actionPath = "/action/"
+				resourcePath = "/resource"
+				parentResourcePath = "/parent"
+			})
+
+			It("Keeps trailing slashes", func() {
+				Ω(route.FullPath()).Should(Equal("/parent/resource/action/"))
+			})
+		})
 	})
 })
 
