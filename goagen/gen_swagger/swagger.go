@@ -958,9 +958,6 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 			return fmt.Sprintf("/{%s}", w[2:])
 		},
 	)
-	if key == "" {
-		key = "/"
-	}
 	bp := design.WildcardRegex.ReplaceAllStringFunc(
 		basePath,
 		func(w string) string {
@@ -969,6 +966,9 @@ func buildPathFromDefinition(s *Swagger, api *design.APIDefinition, route *desig
 	)
 	if bp != "/" {
 		key = strings.TrimPrefix(key, bp)
+	}
+	if key == "" {
+		key = "/"
 	}
 	var path interface{}
 	var ok bool
