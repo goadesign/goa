@@ -901,9 +901,18 @@ func (r *ResourceDefinition) UserTypes() map[string]*UserTypeDefinition {
 // byParent makes it possible to sort resources - parents first the children.
 type byParent []*ResourceDefinition
 
-func (p byParent) Len() int           { return len(p) }
-func (p byParent) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
-func (p byParent) Less(i, j int) bool { return p[j].ParentName == p[i].Name }
+func (p byParent) Len() int      { return len(p) }
+func (p byParent) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
+func (p byParent) Less(i, j int) bool {
+	for k := 0; k < i; k++ {
+		// We need to inspect _all_ previous fields to see if they are a parent. Sort doesn't do this.
+		if p[i].Name == p[k].ParentName {
+			return true
+		}
+	}
+
+	return false
+}
 
 // Context returns the generic definition name used in error messages.
 func (cors *CORSDefinition) Context() string {
