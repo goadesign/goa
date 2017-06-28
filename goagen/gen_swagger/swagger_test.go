@@ -655,7 +655,7 @@ var _ = Describe("New", func() {
 			})
 
 			It("should set the action tags", func() {
-				p := swagger.Paths[""].(*genswagger.Path)
+				p := swagger.Paths["/"].(*genswagger.Path)
 				Ω(p.Put.Tags).Should(HaveLen(2))
 				tags := []string{"res", "Update"}
 				Ω(p.Put.Tags).Should(Equal(tags))
@@ -664,7 +664,7 @@ var _ = Describe("New", func() {
 			It("should set the swagger extensions", func() {
 				Ω(swagger.Info.Extensions).Should(HaveLen(1))
 				Ω(swagger.Info.Extensions["x-api"]).Should(Equal(unmarshaled))
-				p := swagger.Paths[""].(*genswagger.Path)
+				p := swagger.Paths["/"].(*genswagger.Path)
 				Ω(p.Extensions).Should(HaveLen(1))
 				Ω(p.Extensions["x-action"]).Should(Equal(unmarshaled))
 				Ω(p.Put.Extensions).Should(HaveLen(1))
