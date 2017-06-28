@@ -17,6 +17,7 @@ import (
 var _ = Describe("Generate", func() {
 	var workspace *codegen.Workspace
 	var outDir string
+	var pkg string
 	var files []string
 	var genErr error
 
@@ -70,6 +71,67 @@ var _ = Describe("Generate", func() {
 			content, err := ioutil.ReadFile(filepath.Join(outDir, "foo.go"))
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(len(strings.Split(string(content), "\n"))).Should(BeNumerically(">=", 16))
+		})
+
+		Context("with --out", func() {
+			BeforeEach(func() {
+				var err error
+				outDir, err = ioutil.TempDir(workspace.Path, "foo")
+				Ω(err).ShouldNot(HaveOccurred())
+				os.Args = []string{"goagen", "--out=" + outDir, "--design=foo", "--version=" + version.String()}
+			})
+
+			It("generates a controller package named from --out", func() {
+				Ω(genErr).Should(BeNil())
+				Ω(files).Should(HaveLen(1))
+				content, err := ioutil.ReadFile(filepath.Join(outDir, "foo.go"))
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(string(content)).Should(HavePrefix("package foo"))
+			})
+
+			Context("with --pkg", func() {
+				BeforeEach(func() {
+					pkg = "bar"
+					os.Args = []string{"goagen", "--out=" + outDir, "--pkg", pkg, "--design=foo", "--version=" + version.String()}
+				})
+
+				It("generates a controller package named from --pkg", func() {
+					Ω(genErr).Should(BeNil())
+					Ω(files).Should(HaveLen(1))
+					content, err := ioutil.ReadFile(filepath.Join(outDir, "foo.go"))
+					Ω(err).ShouldNot(HaveOccurred())
+					Ω(string(content)).Should(HavePrefix("package bar"))
+				})
+			})
+		})
+
+		Context("without --out", func() {
+			BeforeEach(func() {
+				os.Args = []string{"goagen", "--out=" + outDir, "--design=foo", "--version=" + version.String()}
+			})
+
+			It("generates a controller package named from default", func() {
+				Ω(genErr).Should(BeNil())
+				Ω(files).Should(HaveLen(1))
+				content, err := ioutil.ReadFile(filepath.Join(outDir, "foo.go"))
+				Ω(err).ShouldNot(HaveOccurred())
+				Ω(string(content)).Should(HavePrefix("package main"))
+			})
+
+			Context("with --pkg", func() {
+				BeforeEach(func() {
+					pkg = "bar"
+					os.Args = []string{"goagen", "--out=" + outDir, "--pkg", pkg, "--design=foo", "--version=" + version.String()}
+				})
+
+				It("generates a controller package named from --pkg", func() {
+					Ω(genErr).Should(BeNil())
+					Ω(files).Should(HaveLen(1))
+					content, err := ioutil.ReadFile(filepath.Join(outDir, "foo.go"))
+					Ω(err).ShouldNot(HaveOccurred())
+					Ω(string(content)).Should(HavePrefix("package bar"))
+				})
+			})
 		})
 	})
 })
