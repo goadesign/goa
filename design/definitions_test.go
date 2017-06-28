@@ -351,3 +351,94 @@ var _ = Describe("PathParams", func() {
 		})
 	})
 })
+
+var _ = Describe("IterateSets", func() {
+
+	var api *design.APIDefinition
+
+	BeforeEach(func() {
+		api = &design.APIDefinition{}
+		api.Name = "Test"
+	})
+
+	Context("ResourceDefinition", func() {
+		// a function that collects resource definitions for validation
+		var valFunc = func(validate func([]*design.ResourceDefinition)) func(s dslengine.DefinitionSet) error {
+			return func(s dslengine.DefinitionSet) error {
+				if len(s) == 0 {
+					return nil
+				}
+
+				if _, ok := s[0].(*design.ResourceDefinition); !ok {
+					return nil
+				}
+
+				resources := make([]*design.ResourceDefinition, len(s))
+				for i, res := range s {
+					resources[i] = res.(*design.ResourceDefinition)
+				}
+
+				validate(resources)
+
+				return nil
+			}
+		}
+
+		It("should order nested resources", func() {
+			inspected := false
+			api.Resources = make(map[string]*design.ResourceDefinition)
+
+			api.Resources["V"] = &design.ResourceDefinition{Name: "V", ParentName: "W"}
+			api.Resources["W"] = &design.ResourceDefinition{Name: "W", ParentName: "X"}
+			api.Resources["X"] = &design.ResourceDefinition{Name: "X", ParentName: "Y"}
+			api.Resources["Y"] = &design.ResourceDefinition{Name: "Y", ParentName: "Z"}
+			api.Resources["Z"] = &design.ResourceDefinition{Name: "Z"}
+
+			validate := func(s []*design.ResourceDefinition) {
+				Ω(s[0].Name).Should(Equal("Z"))
+				Ω(s[1].Name).Should(Equal("Y"))
+				Ω(s[2].Name).Should(Equal("X"))
+				Ω(s[3].Name).Should(Equal("W"))
+				Ω(s[4].Name).Should(Equal("V"))
+				inspected = true
+			}
+
+			api.IterateSets(valFunc(validate))
+
+			Ω(inspected).Should(BeTrue())
+		})
+
+		It("should order multiple nested resources", func() {
+			inspected := false
+			api.Resources = make(map[string]*design.ResourceDefinition)
+
+			api.Resources["A"] = &design.ResourceDefinition{Name: "A"}
+			api.Resources["B"] = &design.ResourceDefinition{Name: "B", ParentName: "A"}
+			api.Resources["C"] = &design.ResourceDefinition{Name: "C", ParentName: "A"}
+			api.Resources["I"] = &design.ResourceDefinition{Name: "I"}
+			api.Resources["J"] = &design.ResourceDefinition{Name: "J", ParentName: "K"}
+			api.Resources["K"] = &design.ResourceDefinition{Name: "K", ParentName: "I"}
+			api.Resources["X"] = &design.ResourceDefinition{Name: "X"}
+			api.Resources["Y"] = &design.ResourceDefinition{Name: "Y"}
+			api.Resources["Z"] = &design.ResourceDefinition{Name: "Z"}
+
+			validate := func(s []*design.ResourceDefinition) {
+				Ω(s[0].Name).Should(Equal("A"))
+				Ω(s[1].Name).Should(Equal("B"))
+				Ω(s[2].Name).Should(Equal("C"))
+				Ω(s[3].Name).Should(Equal("I"))
+				Ω(s[4].Name).Should(Equal("K"))
+				Ω(s[5].Name).Should(Equal("J"))
+				Ω(s[6].Name).Should(Equal("X"))
+				Ω(s[7].Name).Should(Equal("Y"))
+				Ω(s[8].Name).Should(Equal("Z"))
+				inspected = true
+			}
+
+			api.IterateSets(valFunc(validate))
+
+			Ω(inspected).Should(BeTrue())
+		})
+	})
+
+})
