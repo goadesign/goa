@@ -1770,7 +1770,14 @@ func (r *RouteDefinition) FullPath() string {
 	if r.Parent != nil && r.Parent.Parent != nil {
 		base = r.Parent.Parent.FullPath()
 	}
-	return httppath.Clean(path.Join(base, r.Path))
+
+	joinedPath := path.Join(base, r.Path)
+	if strings.HasSuffix(r.Path, "/") {
+		//add slash removed by Join back again (it may be important for routing)
+		joinedPath += "/"
+	}
+
+	return httppath.Clean(joinedPath)
 }
 
 // IsAbsolute returns true if the action path should not be concatenated to the resource and API
