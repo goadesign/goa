@@ -117,8 +117,8 @@ type (
 
 	// ErrorData describes a error response.
 	ErrorData struct {
-		// TypeRef is a reference to the user type.
-		TypeRef string
+		// FullTypeRef is a qualified reference to the user type.
+		FullTypeRef string
 		// Response is the error response data.
 		Response *ResponseData
 	}
@@ -258,9 +258,9 @@ func (d ResourcesData) analyze(r *rest.ResourceExpr) *ResourceData {
 
 	rd := &ResourceData{
 		Service:        svc,
-		HandlersStruct: fmt.Sprintf("%sHandlers", svc.VarName),
-		Constructor:    fmt.Sprintf("New%sHandlers", svc.VarName),
-		MountHandlers:  fmt.Sprintf("Mount%sHandlers", svc.VarName),
+		HandlersStruct: "Handlers",
+		Constructor:    "NewHandlers",
+		MountHandlers:  "MountHandlers",
 	}
 
 	for _, a := range r.Actions {
@@ -433,8 +433,8 @@ func buildResponseData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Act
 func buildErrorData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionExpr, v *rest.HTTPErrorExpr) *ErrorData {
 	response := buildResponseData(svc, r, a, v.Response)
 	return &ErrorData{
-		TypeRef:  svc.Scope.GoTypeRef(v.ErrorExpr.Type),
-		Response: response,
+		FullTypeRef: svc.Scope.GoFullTypeRef(v.ErrorExpr.Type, svc.PkgName),
+		Response:    response,
 	}
 }
 
@@ -460,7 +460,7 @@ func buildBodyType(svc *files.ServiceData, dt design.DataType, att *design.Attri
 		isUser = true
 		def = restgen.GoTypeDef(svc.Scope, ut.Attribute(), true, req)
 		desc = ut.Attribute().Description
-		validateDef = codegen.RecursiveValidationCode(ut.Attribute(), true, true, "body")
+		validateDef = codegen.RecursiveValidationCode(ut.Attribute(), true, false, "body")
 		if validateDef != "" {
 			validate = "err = goa.MergeErrors(err, body.Validate())"
 		}
@@ -474,7 +474,7 @@ func buildBodyType(svc *files.ServiceData, dt design.DataType, att *design.Attri
 			return nil
 		})
 	} else if att != nil {
-		validate = codegen.RecursiveValidationCode(att, true, true, "body")
+		validate = codegen.RecursiveValidationCode(att, true, design.IsPrimitive(att.Type), "body")
 		desc = att.Description
 	}
 	return &TypeData{

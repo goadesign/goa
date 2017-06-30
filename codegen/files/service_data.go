@@ -2,6 +2,7 @@ package files
 
 import (
 	"fmt"
+	"strings"
 
 	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/design"
@@ -24,11 +25,17 @@ type (
 		Description string
 		// VarName is the service struct name.
 		VarName string
+		// PkgName is the name of the package containing the generated
+		// service code.
+		PkgName string
 		// Methods lists the service interface methods.
 		Methods []*ServiceMethodData
 		// UserTypes lists the types definitions that the service
 		// depends on.
 		UserTypes []*UserTypeData
+		// ErrorTypes lists the error types definitions that the service
+		// depends on.
+		ErrorTypes []*UserTypeData
 		// Scope initialized with all the service types.
 		Scope *codegen.NameScope
 	}
@@ -57,6 +64,9 @@ type (
 		ResultDef string
 		// ResultRef is the reference to the result type if any.
 		ResultRef string
+		// AbsResultRef is the reference to the result type qualified
+		// with the package if any.
+		AbsResultRef string
 	}
 
 	// UserTypeData contains the data describing a data type.
@@ -122,17 +132,18 @@ func (s *ServiceData) Method(name string) *ServiceMethodData {
 // It records the user types needed by the service definition in userTypes.
 func (d ServicesData) analyze(service *design.ServiceExpr) *ServiceData {
 	var (
-		scope   *codegen.NameScope
-		varName string
-		types   []*UserTypeData
-		seen    map[string]struct{}
+		scope    *codegen.NameScope
+		varName  string
+		pkgName  string
+		types    []*UserTypeData
+		errTypes []*UserTypeData
+		seen     map[string]struct{}
 	)
 	{
 		scope = codegen.NewNameScope()
 		varName = codegen.Goify(service.Name, true)
+		pkgName = strings.ToLower(codegen.Goify(service.Name, false))
 		seen = make(map[string]struct{})
-		// Reserve service, payload and result type names
-		scope.Unique(service, varName)
 		for _, e := range service.Methods {
 			// Create user type for raw object payloads
 			if _, ok := e.Payload.Type.(*design.Object); ok {
@@ -169,6 +180,9 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *ServiceData {
 				ratt = ut.Attribute()
 			}
 			types = append(types, collectTypes(ratt, seen, scope, false)...)
+			for _, er := range e.Errors {
+				errTypes = append(errTypes, collectTypes(er.AttributeExpr, seen, scope, false)...)
+			}
 		}
 	}
 
@@ -178,7 +192,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *ServiceData {
 	{
 		methods = make([]*ServiceMethodData, len(service.Methods))
 		for i, e := range service.Methods {
-			m := buildServiceMethodData(e, scope)
+			m := buildServiceMethodData(e, pkgName, scope)
 			methods[i] = m
 		}
 	}
@@ -189,7 +203,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *ServiceData {
 	{
 		desc = service.Description
 		if desc == "" {
-			desc = fmt.Sprintf("%s is the %s service interface.", varName, service.Name)
+			desc = fmt.Sprintf("Service is the %s service interface.", service.Name)
 		}
 	}
 
@@ -197,8 +211,10 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *ServiceData {
 		Name:        service.Name,
 		Description: desc,
 		VarName:     varName,
+		PkgName:     pkgName,
 		Methods:     methods,
 		UserTypes:   types,
+		ErrorTypes:  errTypes,
 		Scope:       scope,
 	}
 	d[service.Name] = data
@@ -263,18 +279,19 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 
 // buildServiceMethodData creates the data needed to render the given endpoint. It
 // records the user types needed by the service definition in userTypes.
-func buildServiceMethodData(m *design.MethodExpr, scope *codegen.NameScope) *ServiceMethodData {
+func buildServiceMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.NameScope) *ServiceMethodData {
 	var (
-		varName     string
-		desc        string
-		payloadName string
-		payloadDesc string
-		payloadDef  string
-		payloadRef  string
-		resultName  string
-		resultDesc  string
-		resultDef   string
-		resultRef   string
+		varName      string
+		desc         string
+		payloadName  string
+		payloadDesc  string
+		payloadDef   string
+		payloadRef   string
+		resultName   string
+		resultDesc   string
+		resultDef    string
+		resultRef    string
+		absResultRef string
 	)
 	{
 		varName = codegen.Goify(m.Name, true)
@@ -304,9 +321,11 @@ func buildServiceMethodData(m *design.MethodExpr, scope *codegen.NameScope) *Ser
 				resultName = scope.GoTypeName(dt)
 				resultRef = "*" + resultName
 				resultDef = scope.GoTypeDef(dt.Attribute(), false)
+				absResultRef = scope.GoFullTypeRef(dt, svcPkgName)
 			default:
 				resultName = scope.GoTypeName(dt)
 				resultRef = resultName
+				absResultRef = scope.GoFullTypeRef(dt, svcPkgName)
 			}
 			resultDesc = m.Result.Description
 			if resultDesc == "" {
@@ -316,16 +335,17 @@ func buildServiceMethodData(m *design.MethodExpr, scope *codegen.NameScope) *Ser
 		}
 	}
 	return &ServiceMethodData{
-		Name:        m.Name,
-		VarName:     varName,
-		Description: desc,
-		Payload:     payloadName,
-		PayloadDesc: payloadDesc,
-		PayloadDef:  payloadDef,
-		PayloadRef:  payloadRef,
-		Result:      resultName,
-		ResultDesc:  resultDesc,
-		ResultDef:   resultDef,
-		ResultRef:   resultRef,
+		Name:         m.Name,
+		VarName:      varName,
+		Description:  desc,
+		Payload:      payloadName,
+		PayloadDesc:  payloadDesc,
+		PayloadDef:   payloadDef,
+		PayloadRef:   payloadRef,
+		Result:       resultName,
+		ResultDesc:   resultDesc,
+		ResultDef:    resultDef,
+		ResultRef:    resultRef,
+		AbsResultRef: absResultRef,
 	}
 }

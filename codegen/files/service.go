@@ -1,6 +1,7 @@
 package files
 
 import (
+	"errors"
 	"path/filepath"
 	"text/template"
 
@@ -9,8 +10,12 @@ import (
 )
 
 var (
-	// serviceTmpl is the template used to render the body of the service file.
-	serviceTmpl = template.Must(template.New("service").Parse(serviceT))
+	fns          = template.FuncMap{"comment": codegen.Comment, "errorField": errorField}
+	serviceTmpl  = template.Must(template.New("service").Funcs(fns).Parse(serviceT))
+	payloadTmpl  = template.Must(template.New("payload").Funcs(fns).Parse(payloadT))
+	resultTmpl   = template.Must(template.New("result").Funcs(fns).Parse(resultT))
+	userTypeTmpl = template.Must(template.New("userType").Funcs(fns).Parse(userTypeT))
+	errorTmpl    = template.Must(template.New("error").Funcs(fns).Parse(errorT))
 )
 
 // Service returns the service file for the given service.
@@ -18,66 +23,111 @@ func Service(service *design.ServiceExpr) codegen.File {
 	path := filepath.Join(codegen.KebabCase(service.Name), "service.go")
 	sections := func(genPkg string) []*codegen.Section {
 
-		header := codegen.Header(service.Name+" service", "service",
+		header := codegen.Header(service.Name+" service", codegen.Goify(service.Name, false),
 			[]*codegen.ImportSpec{
 				{Path: "context"},
-				{Path: "goa.design/goa.v2"},
 			})
 
-		body := &codegen.Section{
+		svc := Services.Get(service.Name)
+		def := &codegen.Section{
 			Template: serviceTmpl,
-			Data:     Services.Get(service.Name),
+			Data:     svc,
 		}
 
-		return []*codegen.Section{header, body}
+		secs := []*codegen.Section{header, def}
+		seen := make(map[string]struct{})
+
+		for _, m := range svc.Methods {
+			if m.PayloadDef != "" {
+				if _, ok := seen[m.Payload]; !ok {
+					seen[m.Payload] = struct{}{}
+					secs = append(secs, &codegen.Section{
+						Template: payloadTmpl,
+						Data:     m,
+					})
+				}
+			}
+			if m.ResultDef != "" {
+				if _, ok := seen[m.Result]; !ok {
+					seen[m.Result] = struct{}{}
+					secs = append(secs, &codegen.Section{
+						Template: resultTmpl,
+						Data:     m,
+					})
+				}
+			}
+		}
+
+		for _, ut := range svc.UserTypes {
+			if _, ok := seen[ut.Name]; !ok {
+				secs = append(secs, &codegen.Section{
+					Template: userTypeTmpl,
+					Data:     ut,
+				})
+			}
+		}
+
+		var newErrorTypes []*UserTypeData
+		for _, et := range svc.ErrorTypes {
+			if _, ok := seen[et.Name]; !ok {
+				secs = append(secs, &codegen.Section{
+					Template: userTypeTmpl,
+					Data:     et,
+				})
+				newErrorTypes = append(newErrorTypes, et)
+			}
+		}
+
+		for _, et := range newErrorTypes {
+			secs = append(secs, &codegen.Section{
+				Template: errorTmpl,
+				Data:     et,
+			})
+		}
+		return secs
 	}
 
 	return codegen.NewSource(path, sections)
 }
 
+// errorField returns the name of the attribute that contains the error message.
+func errorField(dt design.DataType) string {
+	var field string
+	codegen.WalkAttributes(design.AsObject(dt), func(n string, att *design.AttributeExpr) error {
+		if att.Metadata != nil && len(att.Metadata["error:message"]) > 0 {
+			field = n
+			return errors.New("done")
+		}
+		return nil
+	})
+	return field
+}
+
 // serviceT is the template used to write an service definition.
 const serviceT = `
-{{- define "interface" }}
-	// {{ .Description }}
-	{{ .VarName }} interface {
+{{ comment .Description }}
+type Service interface {
 {{- range .Methods }}
-		// {{ .Description }}
-		{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) {{ if .Result }}({{ .ResultRef }}, error){{ else }}error{{ end }}
-{{- end }}
-	}
-{{end -}}
-
-{{ define "payloads" -}}
-{{ range .Methods -}}
-{{ if .PayloadDef }}
-	// {{ .PayloadDesc }}
-	{{ .Payload }} {{ .PayloadDef }}
-{{ end -}}
-{{ end -}}
-{{ end -}}
-
-{{ define "results" -}}
-{{ range .Methods -}}
-{{ if .ResultDef }}
-	// {{ .ResultDesc }}
-	{{ .Result }} {{ .ResultDef }}
-{{ end -}}
-{{ end -}}
-{{ end -}}
-
-{{ define "types" -}}
-{{ range .UserTypes }}
-{{- if .Description -}}
 	// {{ .Description }}
+	{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) {{ if .Result }}({{ .ResultRef }}, error){{ else }}error{{ end }}
 {{- end }}
-	{{ .Name }} {{ .Def }}
-{{ end -}}
-{{ end -}}
+}
+`
 
-type (
-{{- template "interface" . -}}
-{{- template "payloads" . -}}
-{{- template "results" . -}}
-{{- template "types" . -}}
-)
+const payloadT = `{{ comment .PayloadDesc }}
+type {{ .Payload }} {{ .PayloadDef }}
+`
+
+const resultT = `{{ comment .ResultDesc }}
+type {{ .Result }} {{ .ResultDef }}
+`
+
+const userTypeT = `{{ comment .Description }}
+type {{ .Name }} {{ .Def }}
+`
+
+const errorT = `{{ comment .Description }}
+func (e {{ .Ref }}) Error() string {
+	return {{ printf "%q" .Name }}
+}
 `

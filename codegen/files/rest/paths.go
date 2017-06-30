@@ -46,14 +46,23 @@ type (
 	}
 )
 
-// PathFile returns the path file.
-func PathFile(r *rest.RootExpr) codegen.File {
-	api := r.Design.API
-	path := filepath.Join("transport", "http", "paths.go")
-	title := fmt.Sprintf("%s HTTP request path constructors", api.Name)
+// Paths returns the service path files.
+func Paths(root *rest.RootExpr) []codegen.File {
+	fw := make([]codegen.File, len(root.Resources))
+	for i, r := range root.Resources {
+		fw[i] = Path(r)
+	}
+	return fw
+}
+
+// Path returns the file containing the request path constructors for the given
+// service.
+func Path(r *rest.ResourceExpr) codegen.File {
+	path := filepath.Join(codegen.SnakeCase(r.Name()), "transport", "http_paths.go")
+	title := fmt.Sprintf("HTTP request path constructors for the %s service.", r.Name())
 	sections := func(_ string) []*codegen.Section {
 		s := []*codegen.Section{
-			codegen.Header(title, "http", []*codegen.ImportSpec{
+			codegen.Header(title, "transport", []*codegen.ImportSpec{
 				{Path: "fmt"},
 				{Path: "net/url"},
 				{Path: "strconv"},
@@ -61,10 +70,8 @@ func PathFile(r *rest.RootExpr) codegen.File {
 			}),
 		}
 
-		for _, res := range r.Resources {
-			for _, a := range res.Actions {
-				s = append(s, PathSection(a))
-			}
+		for _, a := range r.Actions {
+			s = append(s, PathSection(a))
 		}
 		return s
 	}

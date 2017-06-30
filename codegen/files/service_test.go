@@ -14,135 +14,125 @@ import (
 
 func TestService(t *testing.T) {
 	const (
-		singleMethodCode = `type (
-	// Single is the Single service interface.
-	Single interface {
-		// A implements A.
-		A(context.Context, *APayload) (*AResult, error)
-	}
+		singleMethodCode = `// Service is the Single service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context, *APayload) (*AResult, error)
+}
 
-	// APayload is the payload type of the Single service A method.
-	APayload struct {
-		IntField      int
-		StringField   string
-		BooleanField  bool
-		BytesField    []byte
-		OptionalField *string
-	}
+// APayload is the payload type of the Single service A method.
+type APayload struct {
+	IntField      int
+	StringField   string
+	BooleanField  bool
+	BytesField    []byte
+	OptionalField *string
+}
 
-	// AResult is the result type of the Single service A method.
-	AResult struct {
-		IntField      int
-		StringField   string
-		BooleanField  bool
-		BytesField    []byte
-		OptionalField *string
-	}
-)
+// AResult is the result type of the Single service A method.
+type AResult struct {
+	IntField      int
+	StringField   string
+	BooleanField  bool
+	BytesField    []byte
+	OptionalField *string
+}
 `
 
-		multipleMethodsCode = `type (
-	// Multiple is the Multiple service interface.
-	Multiple interface {
-		// A implements A.
-		A(context.Context, *APayload) (*AResult, error)
-		// B implements B.
-		B(context.Context, *BPayload) (*BResult, error)
-	}
+		multipleMethodsCode = `// Service is the Multiple service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context, *APayload) (*AResult, error)
+	// B implements B.
+	B(context.Context, *BPayload) (*BResult, error)
+}
 
-	// APayload is the payload type of the Multiple service A method.
-	APayload struct {
-		IntField      int
-		StringField   string
-		BooleanField  bool
-		BytesField    []byte
-		OptionalField *string
-	}
+// APayload is the payload type of the Multiple service A method.
+type APayload struct {
+	IntField      int
+	StringField   string
+	BooleanField  bool
+	BytesField    []byte
+	OptionalField *string
+}
 
-	// BPayload is the payload type of the Multiple service B method.
-	BPayload struct {
-		ArrayField  []bool
-		MapField    map[int]string
-		ObjectField *struct {
-			IntField    *int
-			StringField *string
-		}
-		UserTypeField *Parent
-	}
+// AResult is the result type of the Multiple service A method.
+type AResult struct {
+	IntField      int
+	StringField   string
+	BooleanField  bool
+	BytesField    []byte
+	OptionalField *string
+}
 
-	// AResult is the result type of the Multiple service A method.
-	AResult struct {
-		IntField      int
-		StringField   string
-		BooleanField  bool
-		BytesField    []byte
-		OptionalField *string
+// BPayload is the payload type of the Multiple service B method.
+type BPayload struct {
+	ArrayField  []bool
+	MapField    map[int]string
+	ObjectField *struct {
+		IntField    *int
+		StringField *string
 	}
+	UserTypeField *Parent
+}
 
-	// BResult is the result type of the Multiple service B method.
-	BResult struct {
-		ArrayField  []bool
-		MapField    map[int]string
-		ObjectField *struct {
-			IntField    *int
-			StringField *string
-		}
-		UserTypeField *Parent
+// BResult is the result type of the Multiple service B method.
+type BResult struct {
+	ArrayField  []bool
+	MapField    map[int]string
+	ObjectField *struct {
+		IntField    *int
+		StringField *string
 	}
+	UserTypeField *Parent
+}
 
-	Parent struct {
-		C *Child
-	}
+type Parent struct {
+	C *Child
+}
 
-	Child struct {
-		P *Parent
-	}
-)
+type Child struct {
+	P *Parent
+}
 `
 
-		emptyMethodsCode = `type (
-	// Empty is the Empty service interface.
-	Empty interface {
-		// Empty implements Empty.
-		Empty(context.Context) error
-	}
-)
+		emptyMethodsCode = `// Service is the Empty service interface.
+type Service interface {
+	// Empty implements Empty.
+	Empty(context.Context) error
+}
 `
 
-		emptyResultMethodsCode = `type (
-	// EmptyResult is the EmptyResult service interface.
-	EmptyResult interface {
-		// EmptyResult implements EmptyResult.
-		EmptyResult(context.Context, *APayload) error
-	}
+		emptyResultMethodsCode = `// Service is the EmptyResult service interface.
+type Service interface {
+	// EmptyResult implements EmptyResult.
+	EmptyResult(context.Context, *APayload) error
+}
 
-	// APayload is the payload type of the EmptyResult service EmptyResult method.
-	APayload struct {
-		IntField      int
-		StringField   string
-		BooleanField  bool
-		BytesField    []byte
-		OptionalField *string
-	}
-)
+// APayload is the payload type of the EmptyResult service EmptyResult method.
+type APayload struct {
+	IntField      int
+	StringField   string
+	BooleanField  bool
+	BytesField    []byte
+	OptionalField *string
+}
 `
 
-		emptyPayloadMethodsCode = `type (
-	// EmptyPayload is the EmptyPayload service interface.
-	EmptyPayload interface {
-		// EmptyPayload implements EmptyPayload.
-		EmptyPayload(context.Context) (*AResult, error)
-	}
+		emptyPayloadMethodsCode = `// Service is the EmptyPayload service interface.
+type Service interface {
+	// EmptyPayload implements EmptyPayload.
+	EmptyPayload(context.Context) (*AResult, error)
+}
 
-	// AResult is the result type of the EmptyPayload service EmptyPayload method.
-	AResult struct {
-		IntField      int
-		StringField   string
-		BooleanField  bool
-		BytesField    []byte
-		OptionalField *string
-	}
-)
+// AResult is the result type of the EmptyPayload service EmptyPayload method.
+type AResult struct {
+	IntField      int
+	StringField   string
+	BooleanField  bool
+	BytesField    []byte
+	OptionalField *string
+}
 `
 
 		genPkg = "goa.design/goa.v2/example"

@@ -28,9 +28,9 @@ func Server(roots ...eval.Root) ([]codegen.File, error) {
 				des = append(des, files.Endpoint(s))
 			}
 		case *rest.RootExpr:
-			tran = append(tran, restfiles.ServerFiles(r)...)
-			tran = append(tran, restfiles.PathFile(r))
-			tran = append(tran, restfiles.PathFile(r))
+			tran = append(tran, restfiles.Servers(r)...)
+			tran = append(tran, restfiles.Types(r)...)
+			tran = append(tran, restfiles.Paths(r)...)
 		}
 		// TBD:
 		// case *rpc.RootExpr:

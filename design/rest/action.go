@@ -107,6 +107,9 @@ func (a *ActionExpr) PathParams() *MappedAttributeExpr {
 				panic("attribute not found " + p) // bug
 			}
 			pathParams.Type.(*design.Object).Set(p, att)
+			if allParams.IsRequired(p) {
+				pathParams.Validation.AddRequired(p)
+			}
 		}
 	}
 	return pathParams

@@ -12,62 +12,62 @@ import (
 func TestEndpoint(t *testing.T) {
 	const (
 		singleMethod = `type (
-	// SingleEndpoint lists the Single service endpoints.
-	SingleEndpoint struct {
+	// Endpoints wraps the Single service endpoints.
+	Endpoints struct {
 		A goa.Endpoint
 	}
 )
 
-// NewSingleEndpoint wraps the methods of a Single service with endpoints.
-func NewSingleEndpoint(s Single) *SingleEndpoint {
-	ep := new(SingleEndpoint)
+// NewEndpoints wraps the methods of a Single service with endpoints.
+func NewEndpoints(s Service) *Endpoints {
+	ep := new(Endpoints)
 
 	ep.A = func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*AType)
-		return s.A(ctx, p)
+		return nil, s.A(ctx, p)
 	}
 
 	return ep
 }`
 
 		multipleMethods = `type (
-	// MultipleEndpoint lists the Multiple service endpoints.
-	MultipleEndpoint struct {
+	// Endpoints wraps the Multiple service endpoints.
+	Endpoints struct {
 		B goa.Endpoint
 		C goa.Endpoint
 	}
 )
 
-// NewMultipleEndpoint wraps the methods of a Multiple service with endpoints.
-func NewMultipleEndpoint(s Multiple) *MultipleEndpoint {
-	ep := new(MultipleEndpoint)
+// NewEndpoints wraps the methods of a Multiple service with endpoints.
+func NewEndpoints(s Service) *Endpoints {
+	ep := new(Endpoints)
 
 	ep.B = func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*BType)
-		return s.B(ctx, p)
+		return nil, s.B(ctx, p)
 	}
 
 	ep.C = func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*CType)
-		return s.C(ctx, p)
+		return nil, s.C(ctx, p)
 	}
 
 	return ep
 }`
 
 		nopayloadMethods = `type (
-	// NoPayloadEndpoint lists the NoPayload service endpoints.
-	NoPayloadEndpoint struct {
+	// Endpoints wraps the NoPayload service endpoints.
+	Endpoints struct {
 		NoPayload goa.Endpoint
 	}
 )
 
-// NewNoPayloadEndpoint wraps the methods of a NoPayload service with endpoints.
-func NewNoPayloadEndpoint(s NoPayload) *NoPayloadEndpoint {
-	ep := new(NoPayloadEndpoint)
+// NewEndpoints wraps the methods of a NoPayload service with endpoints.
+func NewEndpoints(s Service) *Endpoints {
+	ep := new(Endpoints)
 
 	ep.NoPayload = func(ctx context.Context, req interface{}) (interface{}, error) {
-		return s.NoPayload(ctx, nil)
+		return nil, s.NoPayload(ctx, nil)
 	}
 
 	return ep

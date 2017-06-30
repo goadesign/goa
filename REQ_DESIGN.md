@@ -250,11 +250,11 @@ endpoints, the metadata is simply ignored by the generators in this case.
 ### gRPC: Using Protobuf Files
 
 So far we have seen how to describe gRPC services using the goa DSL. The
-`goagen` tool uses that information to generate a protobuf file and then invokes
+`goa` tool uses that information to generate a protobuf file and then invokes
 the `protoc` compiler to generate the corresponding code:
 
 ```
-goa DSL --goagen--> api.proto --protoc--> *.go
+goa DSL --goa--> api.proto --protoc--> *.go
 ```
 
 Often times there may already exist a protobuf definition file for a gRPC

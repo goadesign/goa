@@ -109,8 +109,8 @@ func ResultType(identifier string, fn func()) *design.ResultTypeExpr {
 	return mt
 }
 
-// TypeName makes it possible to set the Go struct name for a type or result type
-// in the generated code. By default goagen uses the name (type) or identifier
+// TypeName makes it possible to set the Go struct name for a type or result
+// type in the generated code. By default goa uses the name (type) or identifier
 // (result type) given in the DSL and computes a valid Go identifier from it.
 // This function makes it possible to override that and provide a custom name.
 // name must be a valid Go identifier.

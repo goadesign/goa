@@ -28,21 +28,19 @@ var _ = API("rest_dsl_spec", func() {
 	HTTP(func() {
 
 		// Consumes lists the mime types corresponding to the encodings
-		// supported by the API in requests.
-		// goagen knows how to generate the decoding code for the
-		// following mime types: "application/json", "application/xml"
-		// and "application/gob". The decoding code for other mime types
-		// must be written and provided to the generated handler
-		// constructors.
+		// supported by the API in requests. goa knows how to generate
+		// the decoding code for the following mime types:
+		// "application/json", "application/xml" and "application/gob".
+		// The decoding code for other mime types must be written and
+		// provided to the generated handler constructors.
 		Consumes("application/json", "application/xml")
 
 		// Produces lists the mime types corresponding to the encodings
-		// used by the API to encode responses.
-		// goagen knows how to generate the encoding code for the
-		// following mime types: "application/json", "application/xml"
-		// and "application/gob". The encoding code for other mime types
-		// must be written and provided to the generated handler
-		// constructors.
+		// used by the API to encode responses. goa knows how to
+		// generate the encoding code for the following mime types:
+		// "application/json", "application/xml" and "application/gob".
+		// The encoding code for other mime types must be written and
+		// provided to the generated handler constructors.
 		Produces("application/json", "application/xml")
 
 		// Path defines the common path prefix to all API HTTP requests.

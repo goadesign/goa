@@ -117,32 +117,54 @@ func (s *NameScope) GoTypeDef(att *design.AttributeExpr, useDefault bool) string
 // GoTypeRef returns the Go code that refers to the Go type which matches the
 // given data type.
 func (s *NameScope) GoTypeRef(dt design.DataType) string {
-	tname := s.GoTypeName(dt)
-	if _, ok := dt.(*design.Object); ok {
-		return tname
-	}
-	if design.IsObject(dt) {
-		return "*" + tname
-	}
-	return tname
+	name := s.GoTypeName(dt)
+	return goTypeRef(name, dt)
+}
+
+// GoFullTypeRef returns the Go code that refers to the Go type which matches
+// the given data type defined in the given package if a user type.
+func (s *NameScope) GoFullTypeRef(dt design.DataType, pkg string) string {
+	name := s.GoFullTypeName(dt, pkg)
+	return goTypeRef(name, dt)
 }
 
 // GoTypeName returns the Go type name of the given data type.
 func (s *NameScope) GoTypeName(dt design.DataType) string {
+	return s.GoFullTypeName(dt, "")
+}
+
+// GoFullTypeName returns the Go type name of the given data type qualified with
+// the given package name if applicable and if not the empty string.
+func (s *NameScope) GoFullTypeName(dt design.DataType, pkg string) string {
 	switch actual := dt.(type) {
 	case design.Primitive:
 		return GoNativeTypeName(dt)
 	case *design.Array:
-		return "[]" + s.GoTypeRef(actual.ElemType.Type)
+		return "[]" + s.GoFullTypeRef(actual.ElemType.Type, pkg)
 	case *design.Map:
-		return fmt.Sprintf("map[%s]%s", s.GoTypeRef(actual.KeyType.Type), s.GoTypeRef(actual.ElemType.Type))
+		return fmt.Sprintf("map[%s]%s",
+			s.GoFullTypeRef(actual.KeyType.Type, pkg),
+			s.GoFullTypeRef(actual.ElemType.Type, pkg))
 	case *design.Object:
 		return "map[string]interface{}"
 	case design.UserType:
-		return s.Unique(dt, Goify(actual.Name(), true), "")
+		if pkg == "" {
+			return s.Unique(dt, Goify(actual.Name(), true), "")
+		}
+		return pkg + "." + Goify(actual.Name(), true)
 	case design.CompositeExpr:
-		return s.GoTypeName(actual.Attribute().Type)
+		return s.GoFullTypeName(actual.Attribute().Type, pkg)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
+}
+
+func goTypeRef(name string, dt design.DataType) string {
+	if _, ok := dt.(*design.Object); ok {
+		return name
+	}
+	if design.IsObject(dt) {
+		return "*" + name
+	}
+	return name
 }

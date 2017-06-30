@@ -208,17 +208,14 @@ func (a *AttributeExpr) Inherit(parent *AttributeExpr) {
 // AllRequired returns the list of all required fields from the underlying
 // object. This method recurses if the type is itself an attribute (i.e. a
 // UserType, this happens with the Reference DSL for example).
-func (a *AttributeExpr) AllRequired() (required []string) {
-	if a == nil {
-		return
+func (a *AttributeExpr) AllRequired() []string {
+	if u, ok := a.Type.(UserType); ok {
+		return u.Attribute().AllRequired()
 	}
 	if a.Validation != nil {
-		required = a.Validation.Required
+		return a.Validation.Required
 	}
-	if u, ok := a.Type.(UserType); ok {
-		required = append(required, u.Attribute().AllRequired()...)
-	}
-	return
+	return nil
 }
 
 // IsRequired returns true if the given string matches the name of a required
@@ -347,7 +344,7 @@ func (a *AttributeExpr) inheritValidations(parent *AttributeExpr) {
 	if a.Validation == nil {
 		a.Validation = &ValidationExpr{}
 	}
-	a.Validation.AddRequired(parent.Validation.Required)
+	a.Validation.AddRequired(parent.Validation.Required...)
 }
 
 func (a *AttributeExpr) shouldInherit(parent *AttributeExpr) bool {
@@ -388,11 +385,11 @@ func (v *ValidationExpr) Merge(other *ValidationExpr) {
 	if v.MaxLength == nil || (other.MaxLength != nil && *v.MaxLength < *other.MaxLength) {
 		v.MaxLength = other.MaxLength
 	}
-	v.AddRequired(other.Required)
+	v.AddRequired(other.Required...)
 }
 
 // AddRequired merges the required fields from other into v
-func (v *ValidationExpr) AddRequired(required []string) {
+func (v *ValidationExpr) AddRequired(required ...string) {
 	for _, r := range required {
 		found := false
 		for _, rr := range v.Required {
@@ -403,6 +400,16 @@ func (v *ValidationExpr) AddRequired(required []string) {
 		}
 		if !found {
 			v.Required = append(v.Required, r)
+		}
+	}
+}
+
+// RemoveRequired removes the given field from the list of required fields
+func (v *ValidationExpr) RemoveRequired(required string) {
+	for i, r := range v.Required {
+		if required == r {
+			v.Required = append(v.Required[:i], v.Required[i+1:]...)
+			break
 		}
 	}
 }
@@ -424,6 +431,13 @@ func (v *ValidationExpr) HasRequiredOnly() bool {
 
 // Dup makes a shallow dup of the validation.
 func (v *ValidationExpr) Dup() *ValidationExpr {
+	var req []string
+	if len(v.Required) > 0 {
+		req = make([]string, len(v.Required))
+		for i, r := range v.Required {
+			req[i] = r
+		}
+	}
 	return &ValidationExpr{
 		Values:    v.Values,
 		Format:    v.Format,
@@ -432,6 +446,6 @@ func (v *ValidationExpr) Dup() *ValidationExpr {
 		Maximum:   v.Maximum,
 		MinLength: v.MinLength,
 		MaxLength: v.MaxLength,
-		Required:  v.Required,
+		Required:  req,
 	}
 }

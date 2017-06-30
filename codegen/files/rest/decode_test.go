@@ -149,7 +149,7 @@ func TestDecode(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunRestDSL(t, c.DSL)
-			fs := ServerFiles(rest.Root)
+			fs := Servers(rest.Root)
 			if len(fs) != 1 {
 				t.Fatalf("got %d files, expected one", len(fs))
 			}

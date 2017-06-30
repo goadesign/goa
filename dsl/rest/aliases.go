@@ -251,9 +251,9 @@ func Enum(vals ...interface{}) {
 	dsl.Enum(vals...)
 }
 
-// Error describes an method error response. The description includes a unique
-// name (in the scope of the method), an optional type, description and DSL
-// that further describes the type. If no type is specified then the goa
+// Error describes a method error return value. The description includes a
+// unique name (in the scope of the method), an optional type, description and
+// DSL that further describes the type. If no type is specified then the goa
 // ErrorResult type is used. The DSL syntax is identical to the Attribute DSL.
 // Transport specific DSL may further describe the mapping between the error
 // type attributes and the serialized response.
@@ -738,8 +738,8 @@ func Type(name string, args ...interface{}) design.UserType {
 	return dsl.Type(name, args...)
 }
 
-// TypeName makes it possible to set the Go struct name for a type or result type
-// in the generated code. By default goagen uses the name (type) or identifier
+// TypeName makes it possible to set the Go struct name for a type or result
+// type in the generated code. By default goa uses the name (type) or identifier
 // (result type) given in the DSL and computes a valid Go identifier from it.
 // This function makes it possible to override that and provide a custom name.
 // name must be a valid Go identifier.

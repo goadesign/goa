@@ -21,8 +21,9 @@ type (
 		Name string
 		// Description is the function description.
 		Description string
-		// TypeName is the name of the payload type.
-		TypeName string
+		// FullTypeName is the qualified (including the package name)
+		// name of the payload type.
+		FullTypeName string
 		// BodyTypeRef is a reference to the body type
 		BodyTypeRef string
 		// BodyFieldsNoDefault contain the list of body struct fields
@@ -33,6 +34,8 @@ type (
 		BodyFieldsDefault []*files.FieldData
 		// Params is the list of constructor parameters other than body.
 		Params []*ParamData
+		// Attribute contains the payload attribute.
+		Attribute *design.AttributeExpr
 	}
 
 	// ValidateData contains the data needed to render the body types
@@ -61,7 +64,16 @@ var (
 	)
 )
 
-// MarshalTypes return the file containing the type definitions used by the HTTP
+// Types returns the HTTP transport type files.
+func Types(root *rest.RootExpr) []codegen.File {
+	fw := make([]codegen.File, len(root.Resources))
+	for i, r := range root.Resources {
+		fw[i] = Type(r)
+	}
+	return fw
+}
+
+// Type return the file containing the type definitions used by the HTTP
 // transport.
 //
 // Below are the rules governing whether values are pointers or not. Note that
@@ -82,14 +94,21 @@ var (
 //   * Response body fields (if the body is a struct) and header variables hold
 //     pointers when not required and have no default value.
 //
-func MarshalTypes(r *rest.ResourceExpr) codegen.File {
-	path := filepath.Join(codegen.KebabCase(r.Name()), "transport", "http", "types.go")
+func Type(r *rest.ResourceExpr) codegen.File {
+	path := filepath.Join(codegen.SnakeCase(r.Name()), "transport", "http_types.go")
 	sections := func(genPkg string) []*codegen.Section {
 		types := requestBodyTypes(r)
 		types = append(types, responseBodyTypes(r)...)
 		inits := payloadInits(r)
 
-		var secs []*codegen.Section
+		header := codegen.Header(r.Name()+" HTTP transport types", "transport",
+			[]*codegen.ImportSpec{
+				{Path: genPkg + "/" + files.Services.Get(r.Name()).PkgName},
+				{Path: "goa.design/goa.v2", Name: "goa"},
+			},
+		)
+
+		secs := []*codegen.Section{header}
 		for _, typ := range types {
 			secs = append(secs, &codegen.Section{
 				Template: typeDeclTmpl,
@@ -103,6 +122,9 @@ func MarshalTypes(r *rest.ResourceExpr) codegen.File {
 			})
 		}
 		for _, typ := range types {
+			if typ.ValidateDef == "" {
+				continue
+			}
 			secs = append(secs, &codegen.Section{
 				Template: validateTmpl,
 				Data:     typ,
@@ -116,15 +138,23 @@ func MarshalTypes(r *rest.ResourceExpr) codegen.File {
 func requestBodyTypes(r *rest.ResourceExpr) []*TypeData {
 	var types []*TypeData
 	scope := files.Services.Get(r.Name()).Scope
+	seen := make(map[string]struct{})
 	for _, a := range r.Actions {
 		if a.MethodExpr.Payload.Type == design.Empty {
 			continue
 		}
 		body := restgen.RequestBodyType(r, a, "ServerRequestBody")
+		if body == nil || body == design.Empty {
+			continue
+		}
 		ut, ok := body.(design.UserType)
 		if !ok {
 			continue // nothing to generate
 		}
+		if _, ok := seen[ut.Name()]; ok {
+			continue // already in the list
+		}
+		seen[ut.Name()] = struct{}{}
 		var (
 			name        string
 			desc        string
@@ -139,7 +169,7 @@ func requestBodyTypes(r *rest.ResourceExpr) []*TypeData {
 				desc = fmt.Sprintf("%s is the type of the %s \"%s\" HTTP endpoint request body.", name, r.Name(), a.Name())
 			}
 			def = restgen.GoTypeDef(scope, ut.Attribute(), true, true)
-			validate = codegen.RecursiveValidationCode(ut.Attribute(), true, true, "body")
+			validate = codegen.RecursiveValidationCode(ut.Attribute(), true, false, "body") //
 			if validate != "" {
 				validateRef = "err = goa.MergeErrors(err, body.Validate())"
 			}
@@ -160,6 +190,7 @@ func requestBodyTypes(r *rest.ResourceExpr) []*TypeData {
 func responseBodyTypes(r *rest.ResourceExpr) []*TypeData {
 	var types []*TypeData
 	scope := files.Services.Get(r.Name()).Scope
+	seen := make(map[string]struct{})
 	for _, a := range r.Actions {
 		for _, resp := range a.Responses {
 			var suffix string
@@ -167,10 +198,17 @@ func responseBodyTypes(r *rest.ResourceExpr) []*TypeData {
 				suffix = http.StatusText(resp.StatusCode)
 			}
 			body := restgen.ResponseBodyType(r, resp, a.MethodExpr.Result, suffix)
+			if body == nil || body == design.Empty {
+				continue
+			}
 			ut, ok := body.(design.UserType)
 			if !ok {
 				continue // nothing to generate
 			}
+			if _, ok := seen[ut.Name()]; ok {
+				continue // already in the list
+			}
+			seen[ut.Name()] = struct{}{}
 			var (
 				desc        string
 				name        string
@@ -184,7 +222,7 @@ func responseBodyTypes(r *rest.ResourceExpr) []*TypeData {
 				if desc == "" {
 					desc = fmt.Sprintf("%s is the type of the %s \"%s\" HTTP endpoint %s response body.", name, r.Name(), a.Name(), http.StatusText(resp.StatusCode))
 				}
-				def = restgen.GoTypeDef(scope, ut.Attribute(), true, false)
+				def = restgen.GoTypeDef(scope, ut.Attribute(), false, false)
 				validate = codegen.RecursiveValidationCode(ut.Attribute(), true, true, "body")
 				if validate != "" {
 					validateRef = "err = goa.MergeErrors(err, body.Validate())"
@@ -206,16 +244,22 @@ func responseBodyTypes(r *rest.ResourceExpr) []*TypeData {
 
 func payloadInits(r *rest.ResourceExpr) []*PayloadInitData {
 	var data []*PayloadInitData
+	seen := make(map[string]struct{})
 	for _, a := range r.Actions {
 		if a.MethodExpr.Payload.Type == design.Empty {
 			continue // no payload
 		}
-		body := restgen.RequestBodyType(r, a, "ServerRequestBody")
-		ut, ok := body.(design.UserType)
-		if ok && ut == a.MethodExpr.Payload.Type {
-			continue // no need for a constructor
+		ut, ok := a.MethodExpr.Payload.Type.(design.UserType)
+		if !ok {
+			continue
 		}
-		data = append(data, payloadInitData(r, a, ut))
+		if _, ok := seen[ut.Name()]; ok {
+			continue // already in the list
+		}
+		seen[ut.Name()] = struct{}{}
+		body := restgen.RequestBodyType(r, a, "ServerRequestBody")
+		but, _ := body.(design.UserType)
+		data = append(data, payloadInitData(r, a, but))
 	}
 	return data
 }
@@ -227,7 +271,7 @@ func payloadInitData(r *rest.ResourceExpr, a *rest.ActionExpr, body design.UserT
 	var (
 		name                string
 		desc                string
-		typeName            string
+		fullTypeName        string
 		bodyRef             string
 		bodyFieldsNoDefault []*files.FieldData
 		bodyFieldsDefault   []*files.FieldData
@@ -235,9 +279,9 @@ func payloadInitData(r *rest.ResourceExpr, a *rest.ActionExpr, body design.UserT
 	)
 	{
 		svc := files.Services.Get(r.Name())
-		typeName = svc.Method(a.Name()).Payload
-		name = fmt.Sprintf("New%s", typeName)
-		desc = fmt.Sprintf("%s instantiates and validates the %s service %s endpoint server request body.",
+		fullTypeName = svc.PkgName + "." + svc.Method(a.Name()).Payload
+		name = fmt.Sprintf("New%s", svc.Method(a.Name()).Payload)
+		desc = fmt.Sprintf("%s instantiates and validates the %s service %s endpoint payload.",
 			name,
 			r.Name(),
 			a.Name())
@@ -264,17 +308,23 @@ func payloadInitData(r *rest.ResourceExpr, a *rest.ActionExpr, body design.UserT
 
 		queryParams := a.QueryParams()
 		all := a.AllParams()
-		restgen.WalkMappedAttr(all, func(name, elem string, required bool, a *design.AttributeExpr) error {
+		restgen.WalkMappedAttr(all, func(name, elem string, required bool, att *design.AttributeExpr) error {
 			pointer := ""
 			if queryParams.IsPrimitivePointer(name, true) {
 				pointer = "*"
 			}
+			// Use payload attribute so it works with path params
+			// that may not be required but whose corresponding
+			// payload attribute may be.
+			req := a.MethodExpr.Payload.IsRequired(name)
 			param := &ParamData{
 				Name:         elem,
+				FieldName:    codegen.GoifyAtt(att, name, true),
 				VarName:      codegen.Goify(elem, false),
-				FieldName:    codegen.GoifyAtt(a, name, true),
-				TypeRef:      pointer + svc.Scope.GoTypeRef(a.Type),
-				DefaultValue: a.DefaultValue,
+				Required:     req,
+				Pointer:      pointer != "",
+				TypeRef:      pointer + svc.Scope.GoTypeRef(att.Type),
+				DefaultValue: att.DefaultValue,
 			}
 			params = append(params, param)
 			return nil
@@ -299,11 +349,12 @@ func payloadInitData(r *rest.ResourceExpr, a *rest.ActionExpr, body design.UserT
 	return &PayloadInitData{
 		Name:                name,
 		Description:         desc,
-		TypeName:            typeName,
+		FullTypeName:        fullTypeName,
 		BodyTypeRef:         bodyRef,
 		BodyFieldsNoDefault: bodyFieldsNoDefault,
 		BodyFieldsDefault:   bodyFieldsDefault,
 		Params:              params,
+		Attribute:           a.MethodExpr.Payload,
 	}
 }
 
@@ -313,13 +364,13 @@ type {{ .VarName }} {{ .Def }}
 
 const payloadInitT = `{{ comment .Description }}
 func {{ .Name }}({{ if .BodyTypeRef }}body {{ .BodyTypeRef }}, {{ end }}
-{{- range .Params }}{{ .VarName }} {{ .TypeRef }}, {{ end }}) (*{{ .TypeName }}, error) {
-	p := {{ .TypeName }}{
+{{- range .Params }}{{ .VarName }} {{ .TypeRef }}, {{ end }}) *{{ .FullTypeName }} {
+	p := {{ .FullTypeName }}{
 	{{- range .BodyFieldsNoDefault }}
-		{{ .VarName }}: body.{{ .VarName }},
+		{{ .VarName }}: {{ if .Required }}*{{ end }}body.{{ .VarName }},
 	{{- end }}
 	{{- range .Params }}
-		{{ .FieldName }}: {{ .VarName }},
+		{{ .FieldName }}: {{ if and (not .Required) (not .Pointer) ($.Attribute.IsPrimitivePointer .Name true) }}{{/* i.e. path params */}}&{{ end }}{{ .VarName }},
 	{{- end }}
 	}
 	{{- range .BodyFieldsDefault }}
@@ -329,13 +380,13 @@ func {{ .Name }}({{ if .BodyTypeRef }}body {{ .BodyTypeRef }}, {{ end }}
 		p.{{ .FieldName }} = {{ .DefaultValue }}
 	}
 	{{- end }}
-	return &p, nil
+	return &p
 }
 `
 
 const validateT = `{{ comment .Description }}
 func (body *{{ .VarName }}) Validate() (err error) {
-	{{ .Validate }}
+	{{ .ValidateDef }}
 	return
 }
 `

@@ -34,7 +34,7 @@ type Generator struct {
 
 // NewGenerator creates a Generator.
 func NewGenerator(cmds []string, path, output string) *Generator {
-	bin := "goagen"
+	bin := "goa"
 	if runtime.GOOS == "windows" {
 		bin += ".exe"
 	}
@@ -47,14 +47,14 @@ func NewGenerator(cmds []string, path, output string) *Generator {
 }
 
 // Write writes the main file.
-func (g *Generator) Write(gens, debug bool) error {
+func (g *Generator) Write(debug bool) error {
 	var tmpDir string
 	{
 		wd := "."
 		if cwd, err := os.Getwd(); err != nil {
 			wd = cwd
 		}
-		tmp, err := ioutil.TempDir(wd, "goagen")
+		tmp, err := ioutil.TempDir(wd, "goa")
 		if err != nil {
 			return err
 		}
@@ -67,9 +67,6 @@ func (g *Generator) Write(gens, debug bool) error {
 		data := map[string]interface{}{
 			"Generators": generators(g.Commands),
 		}
-		if gens {
-			data["Scaffolds"] = scaffolds(g.Commands)
-		}
 		imports := []*codegen.ImportSpec{
 			codegen.SimpleImport("flag"),
 			codegen.SimpleImport("fmt"),
@@ -78,7 +75,7 @@ func (g *Generator) Write(gens, debug bool) error {
 			codegen.SimpleImport("sort"),
 			codegen.SimpleImport("strings"),
 			codegen.SimpleImport("goa.design/goa.v2/codegen"),
-			codegen.SimpleImport("goa.design/goa.v2/codegen/generators"),
+			codegen.SimpleImport("goa.design/goa.v2/codegen/generator"),
 			codegen.SimpleImport("goa.design/goa.v2/eval"),
 			codegen.SimpleImport("goa.design/goa.v2/pkg"),
 			codegen.NewImport("_", g.DesignPath),
@@ -152,7 +149,7 @@ func (g *Generator) Run() ([]string, error) {
 		cmdl = " " + strings.Join(args, " ")
 		rawcmd := filepath.Base(os.Args[0])
 		// Remove possible .exe suffix to not create different ouptut just because
-		// you ran goagen on Windows.
+		// you ran goa on Windows.
 		rawcmd = strings.TrimSuffix(rawcmd, ".exe")
 
 		cmdl = fmt.Sprintf("$ %s%s", rawcmd, cmdl)
@@ -198,21 +195,6 @@ func generators(commands []string) []string {
 	return gens
 }
 
-// scaffolds returns the names of the generator functions for the scaffolds
-// exposed by the generator package for the given commands.
-func scaffolds(commands []string) []string {
-	var scaf []string
-	for _, c := range commands {
-		switch c {
-		case "server":
-			scaf = append(scaf, "ServerScaffold")
-		case "client":
-			scaf = append(scaf, "ClientScaffold")
-		}
-	}
-	return scaf
-}
-
 // mainTmpl is the template for the generator main.
 const mainTmpl = `func main() {
 	var (
@@ -234,7 +216,7 @@ const mainTmpl = `func main() {
 	}
 
 	if *version != pkg.Version() {
-		fail("cannot run generator produced by goagen version %s and compiled with goa version %s\n", *version, pkg.Version())
+		fail("cannot run generator produced by goa version %s and compiled with goa version %s\n", *version, pkg.Version())
 	}
         if err := eval.Context.Errors; err != nil {
 		fail(err.Error())
@@ -276,20 +258,6 @@ const mainTmpl = `func main() {
 	}
 {{ end }}
 
-	var scafiles []codegen.File
-{{- range .Scaffolds }}
-	{
-		fs, err := generator.{{ . }}(roots...)
-		if err != nil {
-			fail(err.Error())
-		}
-		for _, f := range fs {
-			if _, err := os.Stat(f.OutputPath()); os.IsNotExist(err) {
-				scafiles = append(scafiles, f)
-			}
-		}
-	}
-{{ end }}
 	var w *codegen.Writer
 	{
 		w = &codegen.Writer{
@@ -299,11 +267,6 @@ const mainTmpl = `func main() {
 	}
 	for _, f := range genfiles {
 		if err := w.Write("gen", f); err != nil {
-			fail(err.Error())
-		}
-	}
-	for _, f := range scafiles {
-		if err := w.Write(".", f); err != nil {
 			fail(err.Error())
 		}
 	}

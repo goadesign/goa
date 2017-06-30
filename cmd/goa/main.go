@@ -25,7 +25,7 @@ func main() {
 
 		switch os.Args[1] {
 		case "version":
-			fmt.Println("goagen version " + pkg.Version())
+			fmt.Println("goa version " + pkg.Version())
 			os.Exit(0)
 		case "client", "server", "openapi":
 			if len(os.Args) == 2 {
@@ -51,16 +51,14 @@ func main() {
 	}
 
 	var (
-		output      = "."
-		gens, debug bool
+		output = "."
+		debug  bool
 	)
 	if len(os.Args) > offset+1 {
 		var (
-			fset     = flag.NewFlagSet("default", flag.ExitOnError)
-			o        = fset.String("o", "", "output `directory`")
-			out      = fset.String("output", output, "output `directory`")
-			s        = fset.Bool("s", false, "Generate scaffold (does not override existing files)")
-			scaffold = fset.Bool("scaffold", false, "Generate scaffold (does not override existing files)")
+			fset = flag.NewFlagSet("default", flag.ExitOnError)
+			o    = fset.String("o", "", "output `directory`")
+			out  = fset.String("output", output, "output `directory`")
 		)
 		fset.BoolVar(&debug, "debug", false, "Print debug information")
 
@@ -71,14 +69,9 @@ func main() {
 		if output == "" {
 			output = *out
 		}
-
-		gens = *s
-		if !gens {
-			gens = *scaffold
-		}
 	}
 
-	gen(cmds, path, output, gens, debug)
+	gen(cmds, path, output, debug)
 }
 
 // help with tests
@@ -87,7 +80,7 @@ var (
 	gen   = generate
 )
 
-func generate(cmds []string, path, output string, gens, debug bool) {
+func generate(cmds []string, path, output string, debug bool) {
 	var (
 		files []string
 		err   error
@@ -103,7 +96,7 @@ func generate(cmds []string, path, output string, gens, debug bool) {
 		defer tmp.Remove()
 	}
 
-	if err = tmp.Write(gens, debug); err != nil {
+	if err = tmp.Write(debug); err != nil {
 		goto fail
 	}
 
@@ -126,22 +119,17 @@ fail:
 }
 
 func help() {
-	fmt.Fprint(os.Stderr, `goagen is the goa code generation tool.
-Learn more about goa at https://goa.design.
+	fmt.Fprint(os.Stderr, `goa is the code generation tool for the goa framework.
+Learn more at https://goa.design.
 
 The tool supports multiple subcommands that generate different outputs.
 The only argument is the Go import path to the service design package.
 
-The "--scaffold" flag tells goagen to also generate the scaffold for the service
-and/or the client depending on which command is being executed. The scaffold is
-code that is generated once as a way to get started quickly. It should be edited
-after the initial generation.
-
 Usage:
 
-  goagen [server] [client] [openapi] PACKAGE [--out DIRECTORY] [--scaffold] [--debug]
+  goa [server] [client] [openapi] PACKAGE [--out DIRECTORY] [--debug]
 
-  goagen version
+  goa version
 
 Commands:
   server
@@ -164,17 +152,14 @@ Flags:
   -o, -output DIRECTORY
         output directory, defaults to the current working directory
 
-  -s, -scaffold
-        generate scaffold (does not override existing files)
-
   -debug
         Print debug information (mainly intended for goa developers)
 
 Examples:
 
-  goagen server goa.design/cellar/design
+  goa server goa.design/cellar/design
 
-  goagen server client openapi goa.design/cellar/design -o gen -s
+  goa server client openapi goa.design/cellar/design -o gendir
 
 `)
 	os.Exit(1)

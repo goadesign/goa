@@ -2,8 +2,8 @@ package testing
 
 var PayloadQueryBoolDecodeCode = `// DecodeMethodQueryBoolRequest returns a decoder for requests sent to the
 // ServiceQueryBool MethodQueryBool endpoint.
-func DecodeMethodQueryBoolRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryBoolPayload, error) {
+func DecodeMethodQueryBoolRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   *bool
 			err error
@@ -12,7 +12,7 @@ func DecodeMethodQueryBoolRequest(decoder func(*http.Request) rest.Decoder) func
 		if qRaw != "" {
 			v, err := strconv.ParseBool(qRaw)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "boolean")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "boolean")
 			}
 			q = &v
 		}
@@ -27,8 +27,8 @@ func DecodeMethodQueryBoolRequest(decoder func(*http.Request) rest.Decoder) func
 
 var PayloadQueryBoolValidateDecodeCode = `// DecodeMethodQueryBoolValidateRequest returns a decoder for requests sent to
 // the ServiceQueryBoolValidate MethodQueryBoolValidate endpoint.
-func DecodeMethodQueryBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryBoolValidatePayload, error) {
+func DecodeMethodQueryBoolValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   bool
 			err error
@@ -39,7 +39,7 @@ func DecodeMethodQueryBoolValidateRequest(decoder func(*http.Request) rest.Decod
 		}
 		v, err := strconv.ParseBool(qRaw)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError(qRaw, q, "boolean")
+			return nil, goa.InvalidFieldTypeError("q", qRaw, "boolean")
 		}
 		q = v
 		if !(q == true) {
@@ -56,8 +56,8 @@ func DecodeMethodQueryBoolValidateRequest(decoder func(*http.Request) rest.Decod
 
 var PayloadQueryIntDecodeCode = `// DecodeMethodQueryIntRequest returns a decoder for requests sent to the
 // ServiceQueryInt MethodQueryInt endpoint.
-func DecodeMethodQueryIntRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryIntPayload, error) {
+func DecodeMethodQueryIntRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   *int
 			err error
@@ -66,7 +66,7 @@ func DecodeMethodQueryIntRequest(decoder func(*http.Request) rest.Decoder) func(
 		if qRaw != "" {
 			v, err := strconv.ParseInt(qRaw, 10, strconv.IntSize)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "integer")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "integer")
 			}
 			pv := int(v)
 			q = &pv
@@ -82,8 +82,8 @@ func DecodeMethodQueryIntRequest(decoder func(*http.Request) rest.Decoder) func(
 
 var PayloadQueryIntValidateDecodeCode = `// DecodeMethodQueryIntValidateRequest returns a decoder for requests sent to
 // the ServiceQueryIntValidate MethodQueryIntValidate endpoint.
-func DecodeMethodQueryIntValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryIntValidatePayload, error) {
+func DecodeMethodQueryIntValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   int
 			err error
@@ -94,7 +94,7 @@ func DecodeMethodQueryIntValidateRequest(decoder func(*http.Request) rest.Decode
 		}
 		v, err := strconv.ParseInt(qRaw, 10, strconv.IntSize)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError(qRaw, q, "integer")
+			return nil, goa.InvalidFieldTypeError("q", qRaw, "integer")
 		}
 		q = int(v)
 		if q < 1 {
@@ -111,8 +111,8 @@ func DecodeMethodQueryIntValidateRequest(decoder func(*http.Request) rest.Decode
 
 var PayloadQueryInt32DecodeCode = `// DecodeMethodQueryInt32Request returns a decoder for requests sent to the
 // ServiceQueryInt32 MethodQueryInt32 endpoint.
-func DecodeMethodQueryInt32Request(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryInt32Payload, error) {
+func DecodeMethodQueryInt32Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   *int32
 			err error
@@ -121,7 +121,7 @@ func DecodeMethodQueryInt32Request(decoder func(*http.Request) rest.Decoder) fun
 		if qRaw != "" {
 			v, err := strconv.ParseInt(qRaw, 10, 32)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "integer")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "integer")
 			}
 			pv := int32(v)
 			q = &pv
@@ -137,8 +137,8 @@ func DecodeMethodQueryInt32Request(decoder func(*http.Request) rest.Decoder) fun
 
 var PayloadQueryInt32ValidateDecodeCode = `// DecodeMethodQueryInt32ValidateRequest returns a decoder for requests sent to
 // the ServiceQueryInt32Validate MethodQueryInt32Validate endpoint.
-func DecodeMethodQueryInt32ValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryInt32ValidatePayload, error) {
+func DecodeMethodQueryInt32ValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   int32
 			err error
@@ -149,7 +149,7 @@ func DecodeMethodQueryInt32ValidateRequest(decoder func(*http.Request) rest.Deco
 		}
 		v, err := strconv.ParseInt(qRaw, 10, 32)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError(qRaw, q, "integer")
+			return nil, goa.InvalidFieldTypeError("q", qRaw, "integer")
 		}
 		q = int32(v)
 		if q < 1 {
@@ -166,8 +166,8 @@ func DecodeMethodQueryInt32ValidateRequest(decoder func(*http.Request) rest.Deco
 
 var PayloadQueryInt64DecodeCode = `// DecodeMethodQueryInt64Request returns a decoder for requests sent to the
 // ServiceQueryInt64 MethodQueryInt64 endpoint.
-func DecodeMethodQueryInt64Request(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryInt64Payload, error) {
+func DecodeMethodQueryInt64Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   *int64
 			err error
@@ -176,7 +176,7 @@ func DecodeMethodQueryInt64Request(decoder func(*http.Request) rest.Decoder) fun
 		if qRaw != "" {
 			v, err := strconv.ParseInt(qRaw, 10, 64)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "integer")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "integer")
 			}
 			q = &v
 		}
@@ -191,8 +191,8 @@ func DecodeMethodQueryInt64Request(decoder func(*http.Request) rest.Decoder) fun
 
 var PayloadQueryInt64ValidateDecodeCode = `// DecodeMethodQueryInt64ValidateRequest returns a decoder for requests sent to
 // the ServiceQueryInt64Validate MethodQueryInt64Validate endpoint.
-func DecodeMethodQueryInt64ValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryInt64ValidatePayload, error) {
+func DecodeMethodQueryInt64ValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   int64
 			err error
@@ -203,7 +203,7 @@ func DecodeMethodQueryInt64ValidateRequest(decoder func(*http.Request) rest.Deco
 		}
 		v, err := strconv.ParseInt(qRaw, 10, 64)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError(qRaw, q, "integer")
+			return nil, goa.InvalidFieldTypeError("q", qRaw, "integer")
 		}
 		q = v
 		if q < 1 {
@@ -220,8 +220,8 @@ func DecodeMethodQueryInt64ValidateRequest(decoder func(*http.Request) rest.Deco
 
 var PayloadQueryUIntDecodeCode = `// DecodeMethodQueryUIntRequest returns a decoder for requests sent to the
 // ServiceQueryUInt MethodQueryUInt endpoint.
-func DecodeMethodQueryUIntRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryUIntPayload, error) {
+func DecodeMethodQueryUIntRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   *uint
 			err error
@@ -230,7 +230,7 @@ func DecodeMethodQueryUIntRequest(decoder func(*http.Request) rest.Decoder) func
 		if qRaw != "" {
 			v, err := strconv.ParseUint(qRaw, 10, strconv.IntSize)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "unsigned integer")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer")
 			}
 			pv := uint(v)
 			q = &pv
@@ -246,8 +246,8 @@ func DecodeMethodQueryUIntRequest(decoder func(*http.Request) rest.Decoder) func
 
 var PayloadQueryUIntValidateDecodeCode = `// DecodeMethodQueryUIntValidateRequest returns a decoder for requests sent to
 // the ServiceQueryUIntValidate MethodQueryUIntValidate endpoint.
-func DecodeMethodQueryUIntValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryUIntValidatePayload, error) {
+func DecodeMethodQueryUIntValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   uint
 			err error
@@ -258,7 +258,7 @@ func DecodeMethodQueryUIntValidateRequest(decoder func(*http.Request) rest.Decod
 		}
 		v, err := strconv.ParseUint(qRaw, 10, strconv.IntSize)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError(qRaw, q, "unsigned integer")
+			return nil, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer")
 		}
 		q = uint(v)
 		if q < 1 {
@@ -275,8 +275,8 @@ func DecodeMethodQueryUIntValidateRequest(decoder func(*http.Request) rest.Decod
 
 var PayloadQueryUInt32DecodeCode = `// DecodeMethodQueryUInt32Request returns a decoder for requests sent to the
 // ServiceQueryUInt32 MethodQueryUInt32 endpoint.
-func DecodeMethodQueryUInt32Request(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryUInt32Payload, error) {
+func DecodeMethodQueryUInt32Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   *uint32
 			err error
@@ -285,7 +285,7 @@ func DecodeMethodQueryUInt32Request(decoder func(*http.Request) rest.Decoder) fu
 		if qRaw != "" {
 			v, err := strconv.ParseUint(qRaw, 10, 32)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "unsigned integer")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer")
 			}
 			pv := uint32(v)
 			q = &pv
@@ -301,8 +301,8 @@ func DecodeMethodQueryUInt32Request(decoder func(*http.Request) rest.Decoder) fu
 
 var PayloadQueryUInt32ValidateDecodeCode = `// DecodeMethodQueryUInt32ValidateRequest returns a decoder for requests sent
 // to the ServiceQueryUInt32Validate MethodQueryUInt32Validate endpoint.
-func DecodeMethodQueryUInt32ValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryUInt32ValidatePayload, error) {
+func DecodeMethodQueryUInt32ValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   uint32
 			err error
@@ -313,7 +313,7 @@ func DecodeMethodQueryUInt32ValidateRequest(decoder func(*http.Request) rest.Dec
 		}
 		v, err := strconv.ParseUint(qRaw, 10, 32)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError(qRaw, q, "unsigned integer")
+			return nil, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer")
 		}
 		q = uint32(v)
 		if q < 1 {
@@ -330,8 +330,8 @@ func DecodeMethodQueryUInt32ValidateRequest(decoder func(*http.Request) rest.Dec
 
 var PayloadQueryUInt64DecodeCode = `// DecodeMethodQueryUInt64Request returns a decoder for requests sent to the
 // ServiceQueryUInt64 MethodQueryUInt64 endpoint.
-func DecodeMethodQueryUInt64Request(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryUInt64Payload, error) {
+func DecodeMethodQueryUInt64Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   *uint64
 			err error
@@ -340,7 +340,7 @@ func DecodeMethodQueryUInt64Request(decoder func(*http.Request) rest.Decoder) fu
 		if qRaw != "" {
 			v, err := strconv.ParseUint(qRaw, 10, 64)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "unsigned integer")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer")
 			}
 			q = &v
 		}
@@ -355,8 +355,8 @@ func DecodeMethodQueryUInt64Request(decoder func(*http.Request) rest.Decoder) fu
 
 var PayloadQueryUInt64ValidateDecodeCode = `// DecodeMethodQueryUInt64ValidateRequest returns a decoder for requests sent
 // to the ServiceQueryUInt64Validate MethodQueryUInt64Validate endpoint.
-func DecodeMethodQueryUInt64ValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryUInt64ValidatePayload, error) {
+func DecodeMethodQueryUInt64ValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   uint64
 			err error
@@ -367,7 +367,7 @@ func DecodeMethodQueryUInt64ValidateRequest(decoder func(*http.Request) rest.Dec
 		}
 		v, err := strconv.ParseUint(qRaw, 10, 64)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError(qRaw, q, "unsigned integer")
+			return nil, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer")
 		}
 		q = v
 		if q < 1 {
@@ -384,8 +384,8 @@ func DecodeMethodQueryUInt64ValidateRequest(decoder func(*http.Request) rest.Dec
 
 var PayloadQueryFloat32DecodeCode = `// DecodeMethodQueryFloat32Request returns a decoder for requests sent to the
 // ServiceQueryFloat32 MethodQueryFloat32 endpoint.
-func DecodeMethodQueryFloat32Request(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryFloat32Payload, error) {
+func DecodeMethodQueryFloat32Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   *float32
 			err error
@@ -394,7 +394,7 @@ func DecodeMethodQueryFloat32Request(decoder func(*http.Request) rest.Decoder) f
 		if qRaw != "" {
 			v, err := strconv.ParseFloat(qRaw, 32)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "float")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "float")
 			}
 			pv := float32(v)
 			q = &pv
@@ -410,8 +410,8 @@ func DecodeMethodQueryFloat32Request(decoder func(*http.Request) rest.Decoder) f
 
 var PayloadQueryFloat32ValidateDecodeCode = `// DecodeMethodQueryFloat32ValidateRequest returns a decoder for requests sent
 // to the ServiceQueryFloat32Validate MethodQueryFloat32Validate endpoint.
-func DecodeMethodQueryFloat32ValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryFloat32ValidatePayload, error) {
+func DecodeMethodQueryFloat32ValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   float32
 			err error
@@ -422,7 +422,7 @@ func DecodeMethodQueryFloat32ValidateRequest(decoder func(*http.Request) rest.De
 		}
 		v, err := strconv.ParseFloat(qRaw, 32)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError(qRaw, q, "float")
+			return nil, goa.InvalidFieldTypeError("q", qRaw, "float")
 		}
 		q = float32(v)
 		if q < 1 {
@@ -439,8 +439,8 @@ func DecodeMethodQueryFloat32ValidateRequest(decoder func(*http.Request) rest.De
 
 var PayloadQueryFloat64DecodeCode = `// DecodeMethodQueryFloat64Request returns a decoder for requests sent to the
 // ServiceQueryFloat64 MethodQueryFloat64 endpoint.
-func DecodeMethodQueryFloat64Request(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryFloat64Payload, error) {
+func DecodeMethodQueryFloat64Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   *float64
 			err error
@@ -449,7 +449,7 @@ func DecodeMethodQueryFloat64Request(decoder func(*http.Request) rest.Decoder) f
 		if qRaw != "" {
 			v, err := strconv.ParseFloat(qRaw, 64)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "float")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "float")
 			}
 			q = &v
 		}
@@ -464,8 +464,8 @@ func DecodeMethodQueryFloat64Request(decoder func(*http.Request) rest.Decoder) f
 
 var PayloadQueryFloat64ValidateDecodeCode = `// DecodeMethodQueryFloat64ValidateRequest returns a decoder for requests sent
 // to the ServiceQueryFloat64Validate MethodQueryFloat64Validate endpoint.
-func DecodeMethodQueryFloat64ValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryFloat64ValidatePayload, error) {
+func DecodeMethodQueryFloat64ValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   float64
 			err error
@@ -476,7 +476,7 @@ func DecodeMethodQueryFloat64ValidateRequest(decoder func(*http.Request) rest.De
 		}
 		v, err := strconv.ParseFloat(qRaw, 64)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError(qRaw, q, "float")
+			return nil, goa.InvalidFieldTypeError("q", qRaw, "float")
 		}
 		q = v
 		if q < 1 {
@@ -493,8 +493,8 @@ func DecodeMethodQueryFloat64ValidateRequest(decoder func(*http.Request) rest.De
 
 var PayloadQueryStringDecodeCode = `// DecodeMethodQueryStringRequest returns a decoder for requests sent to the
 // ServiceQueryString MethodQueryString endpoint.
-func DecodeMethodQueryStringRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryStringPayload, error) {
+func DecodeMethodQueryStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   *string
 			err error
@@ -514,8 +514,8 @@ func DecodeMethodQueryStringRequest(decoder func(*http.Request) rest.Decoder) fu
 
 var PayloadQueryStringValidateDecodeCode = `// DecodeMethodQueryStringValidateRequest returns a decoder for requests sent
 // to the ServiceQueryStringValidate MethodQueryStringValidate endpoint.
-func DecodeMethodQueryStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryStringValidatePayload, error) {
+func DecodeMethodQueryStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   string
 			err error
@@ -538,8 +538,8 @@ func DecodeMethodQueryStringValidateRequest(decoder func(*http.Request) rest.Dec
 
 var PayloadQueryBytesDecodeCode = `// DecodeMethodQueryBytesRequest returns a decoder for requests sent to the
 // ServiceQueryBytes MethodQueryBytes endpoint.
-func DecodeMethodQueryBytesRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryBytesPayload, error) {
+func DecodeMethodQueryBytesRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []byte
 			err error
@@ -559,8 +559,8 @@ func DecodeMethodQueryBytesRequest(decoder func(*http.Request) rest.Decoder) fun
 
 var PayloadQueryBytesValidateDecodeCode = `// DecodeMethodQueryBytesValidateRequest returns a decoder for requests sent to
 // the ServiceQueryBytesValidate MethodQueryBytesValidate endpoint.
-func DecodeMethodQueryBytesValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryBytesValidatePayload, error) {
+func DecodeMethodQueryBytesValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []byte
 			err error
@@ -584,8 +584,8 @@ func DecodeMethodQueryBytesValidateRequest(decoder func(*http.Request) rest.Deco
 
 var PayloadQueryAnyDecodeCode = `// DecodeMethodQueryAnyRequest returns a decoder for requests sent to the
 // ServiceQueryAny MethodQueryAny endpoint.
-func DecodeMethodQueryAnyRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryAnyPayload, error) {
+func DecodeMethodQueryAnyRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   interface{}
 			err error
@@ -605,8 +605,8 @@ func DecodeMethodQueryAnyRequest(decoder func(*http.Request) rest.Decoder) func(
 
 var PayloadQueryAnyValidateDecodeCode = `// DecodeMethodQueryAnyValidateRequest returns a decoder for requests sent to
 // the ServiceQueryAnyValidate MethodQueryAnyValidate endpoint.
-func DecodeMethodQueryAnyValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryAnyValidatePayload, error) {
+func DecodeMethodQueryAnyValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   interface{}
 			err error
@@ -629,8 +629,8 @@ func DecodeMethodQueryAnyValidateRequest(decoder func(*http.Request) rest.Decode
 
 var PayloadQueryArrayBoolDecodeCode = `// DecodeMethodQueryArrayBoolRequest returns a decoder for requests sent to the
 // ServiceQueryArrayBool MethodQueryArrayBool endpoint.
-func DecodeMethodQueryArrayBoolRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayBoolPayload, error) {
+func DecodeMethodQueryArrayBoolRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []bool
 			err error
@@ -641,7 +641,7 @@ func DecodeMethodQueryArrayBoolRequest(decoder func(*http.Request) rest.Decoder)
 			for i, rv := range qRaw {
 				v, err := strconv.ParseBool(rv)
 				if err != nil {
-					return nil, goa.InvalidFieldTypeError(qRaw, q, "array of booleans")
+					return nil, goa.InvalidFieldTypeError("q", qRaw, "array of booleans")
 				}
 				q[i] = v
 			}
@@ -658,8 +658,8 @@ func DecodeMethodQueryArrayBoolRequest(decoder func(*http.Request) rest.Decoder)
 var PayloadQueryArrayBoolValidateDecodeCode = `// DecodeMethodQueryArrayBoolValidateRequest returns a decoder for requests
 // sent to the ServiceQueryArrayBoolValidate MethodQueryArrayBoolValidate
 // endpoint.
-func DecodeMethodQueryArrayBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayBoolValidatePayload, error) {
+func DecodeMethodQueryArrayBoolValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []bool
 			err error
@@ -672,7 +672,7 @@ func DecodeMethodQueryArrayBoolValidateRequest(decoder func(*http.Request) rest.
 		for i, rv := range qRaw {
 			v, err := strconv.ParseBool(rv)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "array of booleans")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of booleans")
 			}
 			q[i] = v
 		}
@@ -695,8 +695,8 @@ func DecodeMethodQueryArrayBoolValidateRequest(decoder func(*http.Request) rest.
 
 var PayloadQueryArrayIntDecodeCode = `// DecodeMethodQueryArrayIntRequest returns a decoder for requests sent to the
 // ServiceQueryArrayInt MethodQueryArrayInt endpoint.
-func DecodeMethodQueryArrayIntRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayIntPayload, error) {
+func DecodeMethodQueryArrayIntRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []int
 			err error
@@ -707,7 +707,7 @@ func DecodeMethodQueryArrayIntRequest(decoder func(*http.Request) rest.Decoder) 
 			for i, rv := range qRaw {
 				v, err := strconv.ParseInt(rv, 10, strconv.IntSize)
 				if err != nil {
-					return nil, goa.InvalidFieldTypeError(qRaw, q, "array of integers")
+					return nil, goa.InvalidFieldTypeError("q", qRaw, "array of integers")
 				}
 				q[i] = int(v)
 			}
@@ -723,8 +723,8 @@ func DecodeMethodQueryArrayIntRequest(decoder func(*http.Request) rest.Decoder) 
 
 var PayloadQueryArrayIntValidateDecodeCode = `// DecodeMethodQueryArrayIntValidateRequest returns a decoder for requests sent
 // to the ServiceQueryArrayIntValidate MethodQueryArrayIntValidate endpoint.
-func DecodeMethodQueryArrayIntValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayIntValidatePayload, error) {
+func DecodeMethodQueryArrayIntValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []int
 			err error
@@ -737,7 +737,7 @@ func DecodeMethodQueryArrayIntValidateRequest(decoder func(*http.Request) rest.D
 		for i, rv := range qRaw {
 			v, err := strconv.ParseInt(rv, 10, strconv.IntSize)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "array of integers")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of integers")
 			}
 			q[i] = int(v)
 		}
@@ -760,8 +760,8 @@ func DecodeMethodQueryArrayIntValidateRequest(decoder func(*http.Request) rest.D
 
 var PayloadQueryArrayInt32DecodeCode = `// DecodeMethodQueryArrayInt32Request returns a decoder for requests sent to
 // the ServiceQueryArrayInt32 MethodQueryArrayInt32 endpoint.
-func DecodeMethodQueryArrayInt32Request(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayInt32Payload, error) {
+func DecodeMethodQueryArrayInt32Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []int32
 			err error
@@ -772,7 +772,7 @@ func DecodeMethodQueryArrayInt32Request(decoder func(*http.Request) rest.Decoder
 			for i, rv := range qRaw {
 				v, err := strconv.ParseInt(rv, 10, 32)
 				if err != nil {
-					return nil, goa.InvalidFieldTypeError(qRaw, q, "array of integers")
+					return nil, goa.InvalidFieldTypeError("q", qRaw, "array of integers")
 				}
 				q[i] = int32(v)
 			}
@@ -789,8 +789,8 @@ func DecodeMethodQueryArrayInt32Request(decoder func(*http.Request) rest.Decoder
 var PayloadQueryArrayInt32ValidateDecodeCode = `// DecodeMethodQueryArrayInt32ValidateRequest returns a decoder for requests
 // sent to the ServiceQueryArrayInt32Validate MethodQueryArrayInt32Validate
 // endpoint.
-func DecodeMethodQueryArrayInt32ValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayInt32ValidatePayload, error) {
+func DecodeMethodQueryArrayInt32ValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []int32
 			err error
@@ -803,7 +803,7 @@ func DecodeMethodQueryArrayInt32ValidateRequest(decoder func(*http.Request) rest
 		for i, rv := range qRaw {
 			v, err := strconv.ParseInt(rv, 10, 32)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "array of integers")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of integers")
 			}
 			q[i] = int32(v)
 		}
@@ -826,8 +826,8 @@ func DecodeMethodQueryArrayInt32ValidateRequest(decoder func(*http.Request) rest
 
 var PayloadQueryArrayInt64DecodeCode = `// DecodeMethodQueryArrayInt64Request returns a decoder for requests sent to
 // the ServiceQueryArrayInt64 MethodQueryArrayInt64 endpoint.
-func DecodeMethodQueryArrayInt64Request(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayInt64Payload, error) {
+func DecodeMethodQueryArrayInt64Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []int64
 			err error
@@ -838,7 +838,7 @@ func DecodeMethodQueryArrayInt64Request(decoder func(*http.Request) rest.Decoder
 			for i, rv := range qRaw {
 				v, err := strconv.ParseInt(rv, 10, 64)
 				if err != nil {
-					return nil, goa.InvalidFieldTypeError(qRaw, q, "array of integers")
+					return nil, goa.InvalidFieldTypeError("q", qRaw, "array of integers")
 				}
 				q[i] = v
 			}
@@ -855,8 +855,8 @@ func DecodeMethodQueryArrayInt64Request(decoder func(*http.Request) rest.Decoder
 var PayloadQueryArrayInt64ValidateDecodeCode = `// DecodeMethodQueryArrayInt64ValidateRequest returns a decoder for requests
 // sent to the ServiceQueryArrayInt64Validate MethodQueryArrayInt64Validate
 // endpoint.
-func DecodeMethodQueryArrayInt64ValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayInt64ValidatePayload, error) {
+func DecodeMethodQueryArrayInt64ValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []int64
 			err error
@@ -869,7 +869,7 @@ func DecodeMethodQueryArrayInt64ValidateRequest(decoder func(*http.Request) rest
 		for i, rv := range qRaw {
 			v, err := strconv.ParseInt(rv, 10, 64)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "array of integers")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of integers")
 			}
 			q[i] = v
 		}
@@ -892,8 +892,8 @@ func DecodeMethodQueryArrayInt64ValidateRequest(decoder func(*http.Request) rest
 
 var PayloadQueryArrayUIntDecodeCode = `// DecodeMethodQueryArrayUIntRequest returns a decoder for requests sent to the
 // ServiceQueryArrayUInt MethodQueryArrayUInt endpoint.
-func DecodeMethodQueryArrayUIntRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayUIntPayload, error) {
+func DecodeMethodQueryArrayUIntRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []uint
 			err error
@@ -904,7 +904,7 @@ func DecodeMethodQueryArrayUIntRequest(decoder func(*http.Request) rest.Decoder)
 			for i, rv := range qRaw {
 				v, err := strconv.ParseUint(rv, 10, strconv.IntSize)
 				if err != nil {
-					return nil, goa.InvalidFieldTypeError(qRaw, q, "array of unsigned integers")
+					return nil, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers")
 				}
 				q[i] = uint(v)
 			}
@@ -921,8 +921,8 @@ func DecodeMethodQueryArrayUIntRequest(decoder func(*http.Request) rest.Decoder)
 var PayloadQueryArrayUIntValidateDecodeCode = `// DecodeMethodQueryArrayUIntValidateRequest returns a decoder for requests
 // sent to the ServiceQueryArrayUIntValidate MethodQueryArrayUIntValidate
 // endpoint.
-func DecodeMethodQueryArrayUIntValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayUIntValidatePayload, error) {
+func DecodeMethodQueryArrayUIntValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []uint
 			err error
@@ -935,7 +935,7 @@ func DecodeMethodQueryArrayUIntValidateRequest(decoder func(*http.Request) rest.
 		for i, rv := range qRaw {
 			v, err := strconv.ParseUint(rv, 10, strconv.IntSize)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "array of unsigned integers")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers")
 			}
 			q[i] = uint(v)
 		}
@@ -958,8 +958,8 @@ func DecodeMethodQueryArrayUIntValidateRequest(decoder func(*http.Request) rest.
 
 var PayloadQueryArrayUInt32DecodeCode = `// DecodeMethodQueryArrayUInt32Request returns a decoder for requests sent to
 // the ServiceQueryArrayUInt32 MethodQueryArrayUInt32 endpoint.
-func DecodeMethodQueryArrayUInt32Request(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayUInt32Payload, error) {
+func DecodeMethodQueryArrayUInt32Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []uint32
 			err error
@@ -970,7 +970,7 @@ func DecodeMethodQueryArrayUInt32Request(decoder func(*http.Request) rest.Decode
 			for i, rv := range qRaw {
 				v, err := strconv.ParseUint(rv, 10, 32)
 				if err != nil {
-					return nil, goa.InvalidFieldTypeError(qRaw, q, "array of unsigned integers")
+					return nil, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers")
 				}
 				q[i] = int32(v)
 			}
@@ -987,8 +987,8 @@ func DecodeMethodQueryArrayUInt32Request(decoder func(*http.Request) rest.Decode
 var PayloadQueryArrayUInt32ValidateDecodeCode = `// DecodeMethodQueryArrayUInt32ValidateRequest returns a decoder for requests
 // sent to the ServiceQueryArrayUInt32Validate MethodQueryArrayUInt32Validate
 // endpoint.
-func DecodeMethodQueryArrayUInt32ValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayUInt32ValidatePayload, error) {
+func DecodeMethodQueryArrayUInt32ValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []uint32
 			err error
@@ -1001,7 +1001,7 @@ func DecodeMethodQueryArrayUInt32ValidateRequest(decoder func(*http.Request) res
 		for i, rv := range qRaw {
 			v, err := strconv.ParseUint(rv, 10, 32)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "array of unsigned integers")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers")
 			}
 			q[i] = int32(v)
 		}
@@ -1024,8 +1024,8 @@ func DecodeMethodQueryArrayUInt32ValidateRequest(decoder func(*http.Request) res
 
 var PayloadQueryArrayUInt64DecodeCode = `// DecodeMethodQueryArrayUInt64Request returns a decoder for requests sent to
 // the ServiceQueryArrayUInt64 MethodQueryArrayUInt64 endpoint.
-func DecodeMethodQueryArrayUInt64Request(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayUInt64Payload, error) {
+func DecodeMethodQueryArrayUInt64Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []uint64
 			err error
@@ -1036,7 +1036,7 @@ func DecodeMethodQueryArrayUInt64Request(decoder func(*http.Request) rest.Decode
 			for i, rv := range qRaw {
 				v, err := strconv.ParseUint(rv, 10, 64)
 				if err != nil {
-					return nil, goa.InvalidFieldTypeError(qRaw, q, "array of unsigned integers")
+					return nil, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers")
 				}
 				q[i] = v
 			}
@@ -1053,8 +1053,8 @@ func DecodeMethodQueryArrayUInt64Request(decoder func(*http.Request) rest.Decode
 var PayloadQueryArrayUInt64ValidateDecodeCode = `// DecodeMethodQueryArrayUInt64ValidateRequest returns a decoder for requests
 // sent to the ServiceQueryArrayUInt64Validate MethodQueryArrayUInt64Validate
 // endpoint.
-func DecodeMethodQueryArrayUInt64ValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayUInt64ValidatePayload, error) {
+func DecodeMethodQueryArrayUInt64ValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []uint64
 			err error
@@ -1067,7 +1067,7 @@ func DecodeMethodQueryArrayUInt64ValidateRequest(decoder func(*http.Request) res
 		for i, rv := range qRaw {
 			v, err := strconv.ParseUint(rv, 10, 64)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "array of unsigned integers")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers")
 			}
 			q[i] = v
 		}
@@ -1090,8 +1090,8 @@ func DecodeMethodQueryArrayUInt64ValidateRequest(decoder func(*http.Request) res
 
 var PayloadQueryArrayFloat32DecodeCode = `// DecodeMethodQueryArrayFloat32Request returns a decoder for requests sent to
 // the ServiceQueryArrayFloat32 MethodQueryArrayFloat32 endpoint.
-func DecodeMethodQueryArrayFloat32Request(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayFloat32Payload, error) {
+func DecodeMethodQueryArrayFloat32Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []float32
 			err error
@@ -1102,7 +1102,7 @@ func DecodeMethodQueryArrayFloat32Request(decoder func(*http.Request) rest.Decod
 			for i, rv := range qRaw {
 				v, err := strconv.ParseFloat(rv, 32)
 				if err != nil {
-					return nil, goa.InvalidFieldTypeError(qRaw, q, "array of floats")
+					return nil, goa.InvalidFieldTypeError("q", qRaw, "array of floats")
 				}
 				q[i] = float32(v)
 			}
@@ -1119,8 +1119,8 @@ func DecodeMethodQueryArrayFloat32Request(decoder func(*http.Request) rest.Decod
 var PayloadQueryArrayFloat32ValidateDecodeCode = `// DecodeMethodQueryArrayFloat32ValidateRequest returns a decoder for requests
 // sent to the ServiceQueryArrayFloat32Validate MethodQueryArrayFloat32Validate
 // endpoint.
-func DecodeMethodQueryArrayFloat32ValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayFloat32ValidatePayload, error) {
+func DecodeMethodQueryArrayFloat32ValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []float32
 			err error
@@ -1133,7 +1133,7 @@ func DecodeMethodQueryArrayFloat32ValidateRequest(decoder func(*http.Request) re
 		for i, rv := range qRaw {
 			v, err := strconv.ParseFloat(rv, 32)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "array of floats")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of floats")
 			}
 			q[i] = float32(v)
 		}
@@ -1156,8 +1156,8 @@ func DecodeMethodQueryArrayFloat32ValidateRequest(decoder func(*http.Request) re
 
 var PayloadQueryArrayFloat64DecodeCode = `// DecodeMethodQueryArrayFloat64Request returns a decoder for requests sent to
 // the ServiceQueryArrayFloat64 MethodQueryArrayFloat64 endpoint.
-func DecodeMethodQueryArrayFloat64Request(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayFloat64Payload, error) {
+func DecodeMethodQueryArrayFloat64Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []float64
 			err error
@@ -1168,7 +1168,7 @@ func DecodeMethodQueryArrayFloat64Request(decoder func(*http.Request) rest.Decod
 			for i, rv := range qRaw {
 				v, err := strconv.ParseFloat(rv, 64)
 				if err != nil {
-					return nil, goa.InvalidFieldTypeError(qRaw, q, "array of floats")
+					return nil, goa.InvalidFieldTypeError("q", qRaw, "array of floats")
 				}
 				q[i] = v
 			}
@@ -1185,8 +1185,8 @@ func DecodeMethodQueryArrayFloat64Request(decoder func(*http.Request) rest.Decod
 var PayloadQueryArrayFloat64ValidateDecodeCode = `// DecodeMethodQueryArrayFloat64ValidateRequest returns a decoder for requests
 // sent to the ServiceQueryArrayFloat64Validate MethodQueryArrayFloat64Validate
 // endpoint.
-func DecodeMethodQueryArrayFloat64ValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayFloat64ValidatePayload, error) {
+func DecodeMethodQueryArrayFloat64ValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []float64
 			err error
@@ -1199,7 +1199,7 @@ func DecodeMethodQueryArrayFloat64ValidateRequest(decoder func(*http.Request) re
 		for i, rv := range qRaw {
 			v, err := strconv.ParseFloat(rv, 64)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "array of floats")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of floats")
 			}
 			q[i] = v
 		}
@@ -1222,8 +1222,8 @@ func DecodeMethodQueryArrayFloat64ValidateRequest(decoder func(*http.Request) re
 
 var PayloadQueryArrayStringDecodeCode = `// DecodeMethodQueryArrayStringRequest returns a decoder for requests sent to
 // the ServiceQueryArrayString MethodQueryArrayString endpoint.
-func DecodeMethodQueryArrayStringRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayStringPayload, error) {
+func DecodeMethodQueryArrayStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []string
 			err error
@@ -1241,8 +1241,8 @@ func DecodeMethodQueryArrayStringRequest(decoder func(*http.Request) rest.Decode
 var PayloadQueryArrayStringValidateDecodeCode = `// DecodeMethodQueryArrayStringValidateRequest returns a decoder for requests
 // sent to the ServiceQueryArrayStringValidate MethodQueryArrayStringValidate
 // endpoint.
-func DecodeMethodQueryArrayStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayStringValidatePayload, error) {
+func DecodeMethodQueryArrayStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []string
 			err error
@@ -1270,8 +1270,8 @@ func DecodeMethodQueryArrayStringValidateRequest(decoder func(*http.Request) res
 
 var PayloadQueryArrayBytesDecodeCode = `// DecodeMethodQueryArrayBytesRequest returns a decoder for requests sent to
 // the ServiceQueryArrayBytes MethodQueryArrayBytes endpoint.
-func DecodeMethodQueryArrayBytesRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayBytesPayload, error) {
+func DecodeMethodQueryArrayBytesRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   [][]byte
 			err error
@@ -1295,8 +1295,8 @@ func DecodeMethodQueryArrayBytesRequest(decoder func(*http.Request) rest.Decoder
 var PayloadQueryArrayBytesValidateDecodeCode = `// DecodeMethodQueryArrayBytesValidateRequest returns a decoder for requests
 // sent to the ServiceQueryArrayBytesValidate MethodQueryArrayBytesValidate
 // endpoint.
-func DecodeMethodQueryArrayBytesValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayBytesValidatePayload, error) {
+func DecodeMethodQueryArrayBytesValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   [][]byte
 			err error
@@ -1328,8 +1328,8 @@ func DecodeMethodQueryArrayBytesValidateRequest(decoder func(*http.Request) rest
 
 var PayloadQueryArrayAnyDecodeCode = `// DecodeMethodQueryArrayAnyRequest returns a decoder for requests sent to the
 // ServiceQueryArrayAny MethodQueryArrayAny endpoint.
-func DecodeMethodQueryArrayAnyRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayAnyPayload, error) {
+func DecodeMethodQueryArrayAnyRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []interface{}
 			err error
@@ -1352,8 +1352,8 @@ func DecodeMethodQueryArrayAnyRequest(decoder func(*http.Request) rest.Decoder) 
 
 var PayloadQueryArrayAnyValidateDecodeCode = `// DecodeMethodQueryArrayAnyValidateRequest returns a decoder for requests sent
 // to the ServiceQueryArrayAnyValidate MethodQueryArrayAnyValidate endpoint.
-func DecodeMethodQueryArrayAnyValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryArrayAnyValidatePayload, error) {
+func DecodeMethodQueryArrayAnyValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []interface{}
 			err error
@@ -1385,8 +1385,8 @@ func DecodeMethodQueryArrayAnyValidateRequest(decoder func(*http.Request) rest.D
 
 var PayloadQueryMapStringStringDecodeCode = `// DecodeMethodQueryMapStringStringRequest returns a decoder for requests sent
 // to the ServiceQueryMapStringString MethodQueryMapStringString endpoint.
-func DecodeMethodQueryMapStringStringRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryMapStringStringPayload, error) {
+func DecodeMethodQueryMapStringStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[string]string
 			err error
@@ -1414,8 +1414,8 @@ func DecodeMethodQueryMapStringStringRequest(decoder func(*http.Request) rest.De
 var PayloadQueryMapStringStringValidateDecodeCode = `// DecodeMethodQueryMapStringStringValidateRequest returns a decoder for
 // requests sent to the ServiceQueryMapStringStringValidate
 // MethodQueryMapStringStringValidate endpoint.
-func DecodeMethodQueryMapStringStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryMapStringStringValidatePayload, error) {
+func DecodeMethodQueryMapStringStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[string]string
 			err error
@@ -1454,8 +1454,8 @@ func DecodeMethodQueryMapStringStringValidateRequest(decoder func(*http.Request)
 
 var PayloadQueryMapStringBoolDecodeCode = `// DecodeMethodQueryMapStringBoolRequest returns a decoder for requests sent to
 // the ServiceQueryMapStringBool MethodQueryMapStringBool endpoint.
-func DecodeMethodQueryMapStringBoolRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryMapStringBoolPayload, error) {
+func DecodeMethodQueryMapStringBoolRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[string]bool
 			err error
@@ -1469,7 +1469,7 @@ func DecodeMethodQueryMapStringBoolRequest(decoder func(*http.Request) rest.Deco
 					valRaw := va[0]
 					v, err := strconv.ParseBool(valRaw)
 					if err != nil {
-						return nil, goa.InvalidFieldTypeError(valRaw, "query", "boolean")
+						return nil, goa.InvalidFieldTypeError("val", valRaw, "boolean")
 					}
 					val = v
 				}
@@ -1488,8 +1488,8 @@ func DecodeMethodQueryMapStringBoolRequest(decoder func(*http.Request) rest.Deco
 var PayloadQueryMapStringBoolValidateDecodeCode = `// DecodeMethodQueryMapStringBoolValidateRequest returns a decoder for requests
 // sent to the ServiceQueryMapStringBoolValidate
 // MethodQueryMapStringBoolValidate endpoint.
-func DecodeMethodQueryMapStringBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryMapStringBoolValidatePayload, error) {
+func DecodeMethodQueryMapStringBoolValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[string]bool
 			err error
@@ -1505,7 +1505,7 @@ func DecodeMethodQueryMapStringBoolValidateRequest(decoder func(*http.Request) r
 				valRaw := va[0]
 				v, err := strconv.ParseBool(valRaw)
 				if err != nil {
-					return nil, goa.InvalidFieldTypeError(valRaw, "query", "boolean")
+					return nil, goa.InvalidFieldTypeError("val", valRaw, "boolean")
 				}
 				val = v
 			}
@@ -1533,8 +1533,8 @@ func DecodeMethodQueryMapStringBoolValidateRequest(decoder func(*http.Request) r
 
 var PayloadQueryMapBoolStringDecodeCode = `// DecodeMethodQueryMapBoolStringRequest returns a decoder for requests sent to
 // the ServiceQueryMapBoolString MethodQueryMapBoolString endpoint.
-func DecodeMethodQueryMapBoolStringRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryMapBoolStringPayload, error) {
+func DecodeMethodQueryMapBoolStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[bool]string
 			err error
@@ -1547,7 +1547,7 @@ func DecodeMethodQueryMapBoolStringRequest(decoder func(*http.Request) rest.Deco
 				{
 					v, err := strconv.ParseBool(keyRaw)
 					if err != nil {
-						return nil, goa.InvalidFieldTypeError(keyRaw, "query", "boolean")
+						return nil, goa.InvalidFieldTypeError("key", keyRaw, "boolean")
 					}
 					key = v
 				}
@@ -1570,8 +1570,8 @@ func DecodeMethodQueryMapBoolStringRequest(decoder func(*http.Request) rest.Deco
 var PayloadQueryMapBoolStringValidateDecodeCode = `// DecodeMethodQueryMapBoolStringValidateRequest returns a decoder for requests
 // sent to the ServiceQueryMapBoolStringValidate
 // MethodQueryMapBoolStringValidate endpoint.
-func DecodeMethodQueryMapBoolStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryMapBoolStringValidatePayload, error) {
+func DecodeMethodQueryMapBoolStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[bool]string
 			err error
@@ -1586,7 +1586,7 @@ func DecodeMethodQueryMapBoolStringValidateRequest(decoder func(*http.Request) r
 			{
 				v, err := strconv.ParseBool(keyRaw)
 				if err != nil {
-					return nil, goa.InvalidFieldTypeError(keyRaw, "query", "boolean")
+					return nil, goa.InvalidFieldTypeError("key", keyRaw, "boolean")
 				}
 				key = v
 			}
@@ -1618,8 +1618,8 @@ func DecodeMethodQueryMapBoolStringValidateRequest(decoder func(*http.Request) r
 
 var PayloadQueryMapBoolBoolDecodeCode = `// DecodeMethodQueryMapBoolBoolRequest returns a decoder for requests sent to
 // the ServiceQueryMapBoolBool MethodQueryMapBoolBool endpoint.
-func DecodeMethodQueryMapBoolBoolRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryMapBoolBoolPayload, error) {
+func DecodeMethodQueryMapBoolBoolRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[bool]bool
 			err error
@@ -1632,7 +1632,7 @@ func DecodeMethodQueryMapBoolBoolRequest(decoder func(*http.Request) rest.Decode
 				{
 					v, err := strconv.ParseBool(keyRaw)
 					if err != nil {
-						return nil, goa.InvalidFieldTypeError(keyRaw, "query", "boolean")
+						return nil, goa.InvalidFieldTypeError("key", keyRaw, "boolean")
 					}
 					key = v
 				}
@@ -1641,7 +1641,7 @@ func DecodeMethodQueryMapBoolBoolRequest(decoder func(*http.Request) rest.Decode
 					valRaw := va[0]
 					v, err := strconv.ParseBool(valRaw)
 					if err != nil {
-						return nil, goa.InvalidFieldTypeError(valRaw, "query", "boolean")
+						return nil, goa.InvalidFieldTypeError("val", valRaw, "boolean")
 					}
 					val = v
 				}
@@ -1660,8 +1660,8 @@ func DecodeMethodQueryMapBoolBoolRequest(decoder func(*http.Request) rest.Decode
 var PayloadQueryMapBoolBoolValidateDecodeCode = `// DecodeMethodQueryMapBoolBoolValidateRequest returns a decoder for requests
 // sent to the ServiceQueryMapBoolBoolValidate MethodQueryMapBoolBoolValidate
 // endpoint.
-func DecodeMethodQueryMapBoolBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryMapBoolBoolValidatePayload, error) {
+func DecodeMethodQueryMapBoolBoolValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[bool]bool
 			err error
@@ -1676,7 +1676,7 @@ func DecodeMethodQueryMapBoolBoolValidateRequest(decoder func(*http.Request) res
 			{
 				v, err := strconv.ParseBool(keyRaw)
 				if err != nil {
-					return nil, goa.InvalidFieldTypeError(keyRaw, "query", "boolean")
+					return nil, goa.InvalidFieldTypeError("key", keyRaw, "boolean")
 				}
 				key = v
 			}
@@ -1685,7 +1685,7 @@ func DecodeMethodQueryMapBoolBoolValidateRequest(decoder func(*http.Request) res
 				valRaw := va[0]
 				v, err := strconv.ParseBool(valRaw)
 				if err != nil {
-					return nil, goa.InvalidFieldTypeError(valRaw, "query", "boolean")
+					return nil, goa.InvalidFieldTypeError("val", valRaw, "boolean")
 				}
 				val = v
 			}
@@ -1714,8 +1714,8 @@ func DecodeMethodQueryMapBoolBoolValidateRequest(decoder func(*http.Request) res
 var PayloadQueryMapStringArrayStringDecodeCode = `// DecodeMethodQueryMapStringArrayStringRequest returns a decoder for requests
 // sent to the ServiceQueryMapStringArrayString MethodQueryMapStringArrayString
 // endpoint.
-func DecodeMethodQueryMapStringArrayStringRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryMapStringArrayStringPayload, error) {
+func DecodeMethodQueryMapStringArrayStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[string][]string
 			err error
@@ -1733,8 +1733,8 @@ func DecodeMethodQueryMapStringArrayStringRequest(decoder func(*http.Request) re
 var PayloadQueryMapStringArrayStringValidateDecodeCode = `// DecodeMethodQueryMapStringArrayStringValidateRequest returns a decoder for
 // requests sent to the ServiceQueryMapStringArrayStringValidate
 // MethodQueryMapStringArrayStringValidate endpoint.
-func DecodeMethodQueryMapStringArrayStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryMapStringArrayStringValidatePayload, error) {
+func DecodeMethodQueryMapStringArrayStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[string][]string
 			err error
@@ -1766,8 +1766,8 @@ func DecodeMethodQueryMapStringArrayStringValidateRequest(decoder func(*http.Req
 var PayloadQueryMapStringArrayBoolDecodeCode = `// DecodeMethodQueryMapStringArrayBoolRequest returns a decoder for requests
 // sent to the ServiceQueryMapStringArrayBool MethodQueryMapStringArrayBool
 // endpoint.
-func DecodeMethodQueryMapStringArrayBoolRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryMapStringArrayBoolPayload, error) {
+func DecodeMethodQueryMapStringArrayBoolRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[string][]bool
 			err error
@@ -1782,7 +1782,7 @@ func DecodeMethodQueryMapStringArrayBoolRequest(decoder func(*http.Request) rest
 					for i, rv := range valRaw {
 						v, err := strconv.ParseBool(rv)
 						if err != nil {
-							return nil, goa.InvalidFieldTypeError(valRaw, "query", "array of booleans")
+							return nil, goa.InvalidFieldTypeError("val", valRaw, "array of booleans")
 						}
 						val[i] = v
 					}
@@ -1802,8 +1802,8 @@ func DecodeMethodQueryMapStringArrayBoolRequest(decoder func(*http.Request) rest
 var PayloadQueryMapStringArrayBoolValidateDecodeCode = `// DecodeMethodQueryMapStringArrayBoolValidateRequest returns a decoder for
 // requests sent to the ServiceQueryMapStringArrayBoolValidate
 // MethodQueryMapStringArrayBoolValidate endpoint.
-func DecodeMethodQueryMapStringArrayBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryMapStringArrayBoolValidatePayload, error) {
+func DecodeMethodQueryMapStringArrayBoolValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[string][]bool
 			err error
@@ -1820,7 +1820,7 @@ func DecodeMethodQueryMapStringArrayBoolValidateRequest(decoder func(*http.Reque
 				for i, rv := range valRaw {
 					v, err := strconv.ParseBool(rv)
 					if err != nil {
-						return nil, goa.InvalidFieldTypeError(valRaw, "query", "array of booleans")
+						return nil, goa.InvalidFieldTypeError("val", valRaw, "array of booleans")
 					}
 					val[i] = v
 				}
@@ -1850,8 +1850,8 @@ func DecodeMethodQueryMapStringArrayBoolValidateRequest(decoder func(*http.Reque
 var PayloadQueryMapBoolArrayStringDecodeCode = `// DecodeMethodQueryMapBoolArrayStringRequest returns a decoder for requests
 // sent to the ServiceQueryMapBoolArrayString MethodQueryMapBoolArrayString
 // endpoint.
-func DecodeMethodQueryMapBoolArrayStringRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryMapBoolArrayStringPayload, error) {
+func DecodeMethodQueryMapBoolArrayStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[bool][]string
 			err error
@@ -1864,7 +1864,7 @@ func DecodeMethodQueryMapBoolArrayStringRequest(decoder func(*http.Request) rest
 				{
 					v, err := strconv.ParseBool(keyRaw)
 					if err != nil {
-						return nil, goa.InvalidFieldTypeError(keyRaw, "query", "boolean")
+						return nil, goa.InvalidFieldTypeError("key", keyRaw, "boolean")
 					}
 					key = v
 				}
@@ -1883,8 +1883,8 @@ func DecodeMethodQueryMapBoolArrayStringRequest(decoder func(*http.Request) rest
 var PayloadQueryMapBoolArrayStringValidateDecodeCode = `// DecodeMethodQueryMapBoolArrayStringValidateRequest returns a decoder for
 // requests sent to the ServiceQueryMapBoolArrayStringValidate
 // MethodQueryMapBoolArrayStringValidate endpoint.
-func DecodeMethodQueryMapBoolArrayStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryMapBoolArrayStringValidatePayload, error) {
+func DecodeMethodQueryMapBoolArrayStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[bool][]string
 			err error
@@ -1897,7 +1897,7 @@ func DecodeMethodQueryMapBoolArrayStringValidateRequest(decoder func(*http.Reque
 				{
 					v, err := strconv.ParseBool(keyRaw)
 					if err != nil {
-						return nil, goa.InvalidFieldTypeError(keyRaw, "query", "boolean")
+						return nil, goa.InvalidFieldTypeError("key", keyRaw, "boolean")
 					}
 					key = v
 				}
@@ -1926,8 +1926,8 @@ func DecodeMethodQueryMapBoolArrayStringValidateRequest(decoder func(*http.Reque
 
 var PayloadQueryMapBoolArrayBoolDecodeCode = `// DecodeMethodQueryMapBoolArrayBoolRequest returns a decoder for requests sent
 // to the ServiceQueryMapBoolArrayBool MethodQueryMapBoolArrayBool endpoint.
-func DecodeMethodQueryMapBoolArrayBoolRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryMapBoolArrayBoolPayload, error) {
+func DecodeMethodQueryMapBoolArrayBoolRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[bool][]bool
 			err error
@@ -1940,7 +1940,7 @@ func DecodeMethodQueryMapBoolArrayBoolRequest(decoder func(*http.Request) rest.D
 				{
 					v, err := strconv.ParseBool(keyRaw)
 					if err != nil {
-						return nil, goa.InvalidFieldTypeError(keyRaw, "query", "boolean")
+						return nil, goa.InvalidFieldTypeError("key", keyRaw, "boolean")
 					}
 					key = v
 				}
@@ -1950,7 +1950,7 @@ func DecodeMethodQueryMapBoolArrayBoolRequest(decoder func(*http.Request) rest.D
 					for i, rv := range valRaw {
 						v, err := strconv.ParseBool(rv)
 						if err != nil {
-							return nil, goa.InvalidFieldTypeError(valRaw, "query", "array of booleans")
+							return nil, goa.InvalidFieldTypeError("val", valRaw, "array of booleans")
 						}
 						val[i] = v
 					}
@@ -1970,8 +1970,8 @@ func DecodeMethodQueryMapBoolArrayBoolRequest(decoder func(*http.Request) rest.D
 var PayloadQueryMapBoolArrayBoolValidateDecodeCode = `// DecodeMethodQueryMapBoolArrayBoolValidateRequest returns a decoder for
 // requests sent to the ServiceQueryMapBoolArrayBoolValidate
 // MethodQueryMapBoolArrayBoolValidate endpoint.
-func DecodeMethodQueryMapBoolArrayBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryMapBoolArrayBoolValidatePayload, error) {
+func DecodeMethodQueryMapBoolArrayBoolValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[bool][]bool
 			err error
@@ -1986,7 +1986,7 @@ func DecodeMethodQueryMapBoolArrayBoolValidateRequest(decoder func(*http.Request
 			{
 				v, err := strconv.ParseBool(keyRaw)
 				if err != nil {
-					return nil, goa.InvalidFieldTypeError(keyRaw, "query", "boolean")
+					return nil, goa.InvalidFieldTypeError("key", keyRaw, "boolean")
 				}
 				key = v
 			}
@@ -1996,7 +1996,7 @@ func DecodeMethodQueryMapBoolArrayBoolValidateRequest(decoder func(*http.Request
 				for i, rv := range valRaw {
 					v, err := strconv.ParseBool(rv)
 					if err != nil {
-						return nil, goa.InvalidFieldTypeError(valRaw, "query", "array of booleans")
+						return nil, goa.InvalidFieldTypeError("val", valRaw, "array of booleans")
 					}
 					val[i] = v
 				}
@@ -2026,8 +2026,8 @@ func DecodeMethodQueryMapBoolArrayBoolValidateRequest(decoder func(*http.Request
 var PayloadQueryPrimitiveStringValidateDecodeCode = `// DecodeMethodQueryPrimitiveStringValidateRequest returns a decoder for
 // requests sent to the ServiceQueryPrimitiveStringValidate
 // MethodQueryPrimitiveStringValidate endpoint.
-func DecodeMethodQueryPrimitiveStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (string, error) {
+func DecodeMethodQueryPrimitiveStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   string
 			err error
@@ -2051,8 +2051,8 @@ func DecodeMethodQueryPrimitiveStringValidateRequest(decoder func(*http.Request)
 var PayloadQueryPrimitiveBoolValidateDecodeCode = `// DecodeMethodQueryPrimitiveBoolValidateRequest returns a decoder for requests
 // sent to the ServiceQueryPrimitiveBoolValidate
 // MethodQueryPrimitiveBoolValidate endpoint.
-func DecodeMethodQueryPrimitiveBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (bool, error) {
+func DecodeMethodQueryPrimitiveBoolValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   bool
 			err error
@@ -2063,7 +2063,7 @@ func DecodeMethodQueryPrimitiveBoolValidateRequest(decoder func(*http.Request) r
 		}
 		v, err := strconv.ParseBool(qRaw)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError(qRaw, q, "boolean")
+			return nil, goa.InvalidFieldTypeError("q", qRaw, "boolean")
 		}
 		q = v
 		if !(q == true) {
@@ -2081,8 +2081,8 @@ func DecodeMethodQueryPrimitiveBoolValidateRequest(decoder func(*http.Request) r
 var PayloadQueryPrimitiveArrayStringValidateDecodeCode = `// DecodeMethodQueryPrimitiveArrayStringValidateRequest returns a decoder for
 // requests sent to the ServiceQueryPrimitiveArrayStringValidate
 // MethodQueryPrimitiveArrayStringValidate endpoint.
-func DecodeMethodQueryPrimitiveArrayStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) ([]string, error) {
+func DecodeMethodQueryPrimitiveArrayStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []string
 			err error
@@ -2111,8 +2111,8 @@ func DecodeMethodQueryPrimitiveArrayStringValidateRequest(decoder func(*http.Req
 var PayloadQueryPrimitiveArrayBoolValidateDecodeCode = `// DecodeMethodQueryPrimitiveArrayBoolValidateRequest returns a decoder for
 // requests sent to the ServiceQueryPrimitiveArrayBoolValidate
 // MethodQueryPrimitiveArrayBoolValidate endpoint.
-func DecodeMethodQueryPrimitiveArrayBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) ([]bool, error) {
+func DecodeMethodQueryPrimitiveArrayBoolValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   []bool
 			err error
@@ -2125,7 +2125,7 @@ func DecodeMethodQueryPrimitiveArrayBoolValidateRequest(decoder func(*http.Reque
 		for i, rv := range qRaw {
 			v, err := strconv.ParseBool(rv)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(qRaw, q, "array of booleans")
+				return nil, goa.InvalidFieldTypeError("q", qRaw, "array of booleans")
 			}
 			q[i] = v
 		}
@@ -2150,8 +2150,8 @@ var PayloadQueryPrimitiveMapStringArrayStringValidateDecodeCode = `// DecodeMeth
 // decoder for requests sent to the
 // ServiceQueryPrimitiveMapStringArrayStringValidate
 // MethodQueryPrimitiveMapStringArrayStringValidate endpoint.
-func DecodeMethodQueryPrimitiveMapStringArrayStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (map[string][]string, error) {
+func DecodeMethodQueryPrimitiveMapStringArrayStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[string][]string
 			err error
@@ -2184,8 +2184,8 @@ func DecodeMethodQueryPrimitiveMapStringArrayStringValidateRequest(decoder func(
 var PayloadQueryPrimitiveMapStringBoolValidateDecodeCode = `// DecodeMethodQueryPrimitiveMapStringBoolValidateRequest returns a decoder for
 // requests sent to the ServiceQueryPrimitiveMapStringBoolValidate
 // MethodQueryPrimitiveMapStringBoolValidate endpoint.
-func DecodeMethodQueryPrimitiveMapStringBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (map[string]bool, error) {
+func DecodeMethodQueryPrimitiveMapStringBoolValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[string]bool
 			err error
@@ -2201,7 +2201,7 @@ func DecodeMethodQueryPrimitiveMapStringBoolValidateRequest(decoder func(*http.R
 				valRaw := va[0]
 				v, err := strconv.ParseBool(valRaw)
 				if err != nil {
-					return nil, goa.InvalidFieldTypeError(valRaw, "query", "boolean")
+					return nil, goa.InvalidFieldTypeError("val", valRaw, "boolean")
 				}
 				val = v
 			}
@@ -2228,8 +2228,8 @@ func DecodeMethodQueryPrimitiveMapStringBoolValidateRequest(decoder func(*http.R
 var PayloadQueryPrimitiveMapBoolArrayBoolValidateDecodeCode = `// DecodeMethodQueryPrimitiveMapBoolArrayBoolValidateRequest returns a decoder
 // for requests sent to the ServiceQueryPrimitiveMapBoolArrayBoolValidate
 // MethodQueryPrimitiveMapBoolArrayBoolValidate endpoint.
-func DecodeMethodQueryPrimitiveMapBoolArrayBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (map[bool][]bool, error) {
+func DecodeMethodQueryPrimitiveMapBoolArrayBoolValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   map[bool][]bool
 			err error
@@ -2244,7 +2244,7 @@ func DecodeMethodQueryPrimitiveMapBoolArrayBoolValidateRequest(decoder func(*htt
 			{
 				v, err := strconv.ParseBool(keyRaw)
 				if err != nil {
-					return nil, goa.InvalidFieldTypeError(keyRaw, "query", "boolean")
+					return nil, goa.InvalidFieldTypeError("key", keyRaw, "boolean")
 				}
 				key = v
 			}
@@ -2254,7 +2254,7 @@ func DecodeMethodQueryPrimitiveMapBoolArrayBoolValidateRequest(decoder func(*htt
 				for i, rv := range valRaw {
 					v, err := strconv.ParseBool(rv)
 					if err != nil {
-						return nil, goa.InvalidFieldTypeError(valRaw, "query", "array of booleans")
+						return nil, goa.InvalidFieldTypeError("val", valRaw, "array of booleans")
 					}
 					val[i] = v
 				}
@@ -2288,8 +2288,8 @@ func DecodeMethodQueryPrimitiveMapBoolArrayBoolValidateRequest(decoder func(*htt
 
 var PayloadQueryStringDefaultDecodeCode = `// DecodeMethodQueryStringDefaultRequest returns a decoder for requests sent to
 // the ServiceQueryStringDefault MethodQueryStringDefault endpoint.
-func DecodeMethodQueryStringDefaultRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodQueryStringDefaultPayload, error) {
+func DecodeMethodQueryStringDefaultRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   string
 			err error
@@ -2312,8 +2312,8 @@ func DecodeMethodQueryStringDefaultRequest(decoder func(*http.Request) rest.Deco
 var PayloadQueryPrimitiveStringDefaultDecodeCode = `// DecodeMethodQueryPrimitiveStringDefaultRequest returns a decoder for
 // requests sent to the ServiceQueryPrimitiveStringDefault
 // MethodQueryPrimitiveStringDefault endpoint.
-func DecodeMethodQueryPrimitiveStringDefaultRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (string, error) {
+func DecodeMethodQueryPrimitiveStringDefaultRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			q   string
 			err error
@@ -2335,13 +2335,13 @@ func DecodeMethodQueryPrimitiveStringDefaultRequest(decoder func(*http.Request) 
 
 var PayloadPathStringDecodeCode = `// DecodeMethodPathStringRequest returns a decoder for requests sent to the
 // ServicePathString MethodPathString endpoint.
-func DecodeMethodPathStringRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodPathStringPayload, error) {
+func DecodeMethodPathStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			p   string
 			err error
 
-			params = rest.ContextParams(r.Context())
+			params = mux.Vars(r)
 		)
 		p = params["p"]
 
@@ -2355,13 +2355,13 @@ func DecodeMethodPathStringRequest(decoder func(*http.Request) rest.Decoder) fun
 
 var PayloadPathStringValidateDecodeCode = `// DecodeMethodPathStringValidateRequest returns a decoder for requests sent to
 // the ServicePathStringValidate MethodPathStringValidate endpoint.
-func DecodeMethodPathStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodPathStringValidatePayload, error) {
+func DecodeMethodPathStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			p   string
 			err error
 
-			params = rest.ContextParams(r.Context())
+			params = mux.Vars(r)
 		)
 		p = params["p"]
 		if !(p == "val") {
@@ -2378,13 +2378,13 @@ func DecodeMethodPathStringValidateRequest(decoder func(*http.Request) rest.Deco
 
 var PayloadPathArrayStringDecodeCode = `// DecodeMethodPathArrayStringRequest returns a decoder for requests sent to
 // the ServicePathArrayString MethodPathArrayString endpoint.
-func DecodeMethodPathArrayStringRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodPathArrayStringPayload, error) {
+func DecodeMethodPathArrayStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			p   []string
 			err error
 
-			params = rest.ContextParams(r.Context())
+			params = mux.Vars(r)
 		)
 		pRaw := params["p"]
 		pRawSlice := strings.Split(pRaw, ",")
@@ -2404,13 +2404,13 @@ func DecodeMethodPathArrayStringRequest(decoder func(*http.Request) rest.Decoder
 var PayloadPathArrayStringValidateDecodeCode = `// DecodeMethodPathArrayStringValidateRequest returns a decoder for requests
 // sent to the ServicePathArrayStringValidate MethodPathArrayStringValidate
 // endpoint.
-func DecodeMethodPathArrayStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodPathArrayStringValidatePayload, error) {
+func DecodeMethodPathArrayStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			p   []string
 			err error
 
-			params = rest.ContextParams(r.Context())
+			params = mux.Vars(r)
 		)
 		pRaw := params["p"]
 		pRawSlice := strings.Split(pRaw, ",")
@@ -2433,13 +2433,13 @@ func DecodeMethodPathArrayStringValidateRequest(decoder func(*http.Request) rest
 var PayloadPathPrimitiveStringValidateDecodeCode = `// DecodeMethodPathPrimitiveStringValidateRequest returns a decoder for
 // requests sent to the ServicePathPrimitiveStringValidate
 // MethodPathPrimitiveStringValidate endpoint.
-func DecodeMethodPathPrimitiveStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (string, error) {
+func DecodeMethodPathPrimitiveStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			p   string
 			err error
 
-			params = rest.ContextParams(r.Context())
+			params = mux.Vars(r)
 		)
 		p = params["p"]
 		if !(p == "val") {
@@ -2457,18 +2457,18 @@ func DecodeMethodPathPrimitiveStringValidateRequest(decoder func(*http.Request) 
 var PayloadPathPrimitiveBoolValidateDecodeCode = `// DecodeMethodPathPrimitiveBoolValidateRequest returns a decoder for requests
 // sent to the ServicePathPrimitiveBoolValidate MethodPathPrimitiveBoolValidate
 // endpoint.
-func DecodeMethodPathPrimitiveBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (bool, error) {
+func DecodeMethodPathPrimitiveBoolValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			p   bool
 			err error
 
-			params = rest.ContextParams(r.Context())
+			params = mux.Vars(r)
 		)
 		pRaw := params["p"]
 		v, err := strconv.ParseBool(pRaw)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError(pRaw, p, "boolean")
+			return nil, goa.InvalidFieldTypeError("p", pRaw, "boolean")
 		}
 		p = v
 		if !(p == true) {
@@ -2486,13 +2486,13 @@ func DecodeMethodPathPrimitiveBoolValidateRequest(decoder func(*http.Request) re
 var PayloadPathPrimitiveArrayStringValidateDecodeCode = `// DecodeMethodPathPrimitiveArrayStringValidateRequest returns a decoder for
 // requests sent to the ServicePathPrimitiveArrayStringValidate
 // MethodPathPrimitiveArrayStringValidate endpoint.
-func DecodeMethodPathPrimitiveArrayStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) ([]string, error) {
+func DecodeMethodPathPrimitiveArrayStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			p   []string
 			err error
 
-			params = rest.ContextParams(r.Context())
+			params = mux.Vars(r)
 		)
 		pRaw := params["p"]
 		pRawSlice := strings.Split(pRaw, ",")
@@ -2520,13 +2520,13 @@ func DecodeMethodPathPrimitiveArrayStringValidateRequest(decoder func(*http.Requ
 var PayloadPathPrimitiveArrayBoolValidateDecodeCode = `// DecodeMethodPathPrimitiveArrayBoolValidateRequest returns a decoder for
 // requests sent to the ServicePathPrimitiveArrayBoolValidate
 // MethodPathPrimitiveArrayBoolValidate endpoint.
-func DecodeMethodPathPrimitiveArrayBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) ([]bool, error) {
+func DecodeMethodPathPrimitiveArrayBoolValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			p   []bool
 			err error
 
-			params = rest.ContextParams(r.Context())
+			params = mux.Vars(r)
 		)
 		pRaw := params["p"]
 		pRawSlice := strings.Split(pRaw, ",")
@@ -2534,7 +2534,7 @@ func DecodeMethodPathPrimitiveArrayBoolValidateRequest(decoder func(*http.Reques
 		for i, rv := range pRawSlice {
 			v, err := strconv.ParseBool(rv)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(pRaw, p, "array of booleans")
+				return nil, goa.InvalidFieldTypeError("p", pRaw, "array of booleans")
 			}
 			p[i] = v
 		}
@@ -2557,8 +2557,8 @@ func DecodeMethodPathPrimitiveArrayBoolValidateRequest(decoder func(*http.Reques
 
 var PayloadHeaderStringDecodeCode = `// DecodeMethodHeaderStringRequest returns a decoder for requests sent to the
 // ServiceHeaderString MethodHeaderString endpoint.
-func DecodeMethodHeaderStringRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodHeaderStringPayload, error) {
+func DecodeMethodHeaderStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			h   *string
 			err error
@@ -2578,8 +2578,8 @@ func DecodeMethodHeaderStringRequest(decoder func(*http.Request) rest.Decoder) f
 
 var PayloadHeaderStringValidateDecodeCode = `// DecodeMethodHeaderStringValidateRequest returns a decoder for requests sent
 // to the ServiceHeaderStringValidate MethodHeaderStringValidate endpoint.
-func DecodeMethodHeaderStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodHeaderStringValidatePayload, error) {
+func DecodeMethodHeaderStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			h   *string
 			err error
@@ -2602,8 +2602,8 @@ func DecodeMethodHeaderStringValidateRequest(decoder func(*http.Request) rest.De
 
 var PayloadHeaderArrayStringDecodeCode = `// DecodeMethodHeaderArrayStringRequest returns a decoder for requests sent to
 // the ServiceHeaderArrayString MethodHeaderArrayString endpoint.
-func DecodeMethodHeaderArrayStringRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodHeaderArrayStringPayload, error) {
+func DecodeMethodHeaderArrayStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			h   []string
 			err error
@@ -2621,8 +2621,8 @@ func DecodeMethodHeaderArrayStringRequest(decoder func(*http.Request) rest.Decod
 var PayloadHeaderArrayStringValidateDecodeCode = `// DecodeMethodHeaderArrayStringValidateRequest returns a decoder for requests
 // sent to the ServiceHeaderArrayStringValidate MethodHeaderArrayStringValidate
 // endpoint.
-func DecodeMethodHeaderArrayStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodHeaderArrayStringValidatePayload, error) {
+func DecodeMethodHeaderArrayStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			h   []string
 			err error
@@ -2646,8 +2646,8 @@ func DecodeMethodHeaderArrayStringValidateRequest(decoder func(*http.Request) re
 var PayloadHeaderPrimitiveStringValidateDecodeCode = `// DecodeMethodHeaderPrimitiveStringValidateRequest returns a decoder for
 // requests sent to the ServiceHeaderPrimitiveStringValidate
 // MethodHeaderPrimitiveStringValidate endpoint.
-func DecodeMethodHeaderPrimitiveStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (string, error) {
+func DecodeMethodHeaderPrimitiveStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			h   string
 			err error
@@ -2671,8 +2671,8 @@ func DecodeMethodHeaderPrimitiveStringValidateRequest(decoder func(*http.Request
 var PayloadHeaderPrimitiveBoolValidateDecodeCode = `// DecodeMethodHeaderPrimitiveBoolValidateRequest returns a decoder for
 // requests sent to the ServiceHeaderPrimitiveBoolValidate
 // MethodHeaderPrimitiveBoolValidate endpoint.
-func DecodeMethodHeaderPrimitiveBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (bool, error) {
+func DecodeMethodHeaderPrimitiveBoolValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			h   bool
 			err error
@@ -2683,7 +2683,7 @@ func DecodeMethodHeaderPrimitiveBoolValidateRequest(decoder func(*http.Request) 
 		}
 		v, err := strconv.ParseBool(hRaw)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError(hRaw, h, "boolean")
+			return nil, goa.InvalidFieldTypeError("h", hRaw, "boolean")
 		}
 		h = v
 		if !(h == true) {
@@ -2701,8 +2701,8 @@ func DecodeMethodHeaderPrimitiveBoolValidateRequest(decoder func(*http.Request) 
 var PayloadHeaderPrimitiveArrayStringValidateDecodeCode = `// DecodeMethodHeaderPrimitiveArrayStringValidateRequest returns a decoder for
 // requests sent to the ServiceHeaderPrimitiveArrayStringValidate
 // MethodHeaderPrimitiveArrayStringValidate endpoint.
-func DecodeMethodHeaderPrimitiveArrayStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) ([]string, error) {
+func DecodeMethodHeaderPrimitiveArrayStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			h   []string
 			err error
@@ -2730,8 +2730,8 @@ func DecodeMethodHeaderPrimitiveArrayStringValidateRequest(decoder func(*http.Re
 var PayloadHeaderPrimitiveArrayBoolValidateDecodeCode = `// DecodeMethodHeaderPrimitiveArrayBoolValidateRequest returns a decoder for
 // requests sent to the ServiceHeaderPrimitiveArrayBoolValidate
 // MethodHeaderPrimitiveArrayBoolValidate endpoint.
-func DecodeMethodHeaderPrimitiveArrayBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) ([]bool, error) {
+func DecodeMethodHeaderPrimitiveArrayBoolValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			h   []bool
 			err error
@@ -2744,7 +2744,7 @@ func DecodeMethodHeaderPrimitiveArrayBoolValidateRequest(decoder func(*http.Requ
 		for i, rv := range hRaw {
 			v, err := strconv.ParseBool(rv)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError(hRaw, h, "array of booleans")
+				return nil, goa.InvalidFieldTypeError("h", hRaw, "array of booleans")
 			}
 			h[i] = v
 		}
@@ -2767,8 +2767,8 @@ func DecodeMethodHeaderPrimitiveArrayBoolValidateRequest(decoder func(*http.Requ
 
 var PayloadHeaderStringDefaultDecodeCode = `// DecodeMethodHeaderStringDefaultRequest returns a decoder for requests sent
 // to the ServiceHeaderStringDefault MethodHeaderStringDefault endpoint.
-func DecodeMethodHeaderStringDefaultRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodHeaderStringDefaultPayload, error) {
+func DecodeMethodHeaderStringDefaultRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			h   string
 			err error
@@ -2791,8 +2791,8 @@ func DecodeMethodHeaderStringDefaultRequest(decoder func(*http.Request) rest.Dec
 var PayloadHeaderPrimitiveStringDefaultDecodeCode = `// DecodeMethodHeaderPrimitiveStringDefaultRequest returns a decoder for
 // requests sent to the ServiceHeaderPrimitiveStringDefault
 // MethodHeaderPrimitiveStringDefault endpoint.
-func DecodeMethodHeaderPrimitiveStringDefaultRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (string, error) {
+func DecodeMethodHeaderPrimitiveStringDefaultRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			h   string
 			err error
@@ -2814,8 +2814,8 @@ func DecodeMethodHeaderPrimitiveStringDefaultRequest(decoder func(*http.Request)
 
 var PayloadBodyStringDecodeCode = `// DecodeMethodBodyStringRequest returns a decoder for requests sent to the
 // ServiceBodyString MethodBodyString endpoint.
-func DecodeMethodBodyStringRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodBodyStringPayload, error) {
+func DecodeMethodBodyStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyStringPayload
 			err  error
@@ -2838,8 +2838,8 @@ func DecodeMethodBodyStringRequest(decoder func(*http.Request) rest.Decoder) fun
 
 var PayloadBodyStringValidateDecodeCode = `// DecodeMethodBodyStringValidateRequest returns a decoder for requests sent to
 // the ServiceBodyStringValidate MethodBodyStringValidate endpoint.
-func DecodeMethodBodyStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodBodyStringValidatePayload, error) {
+func DecodeMethodBodyStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyStringValidatePayload
 			err  error
@@ -2863,8 +2863,8 @@ func DecodeMethodBodyStringValidateRequest(decoder func(*http.Request) rest.Deco
 
 var PayloadBodyObjectDecodeCode = `// DecodeMethodBodyObjectRequest returns a decoder for requests sent to the
 // ServiceObjectBody MethodBodyObject endpoint.
-func DecodeMethodBodyObjectRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodBodyObjectPayload, error) {
+func DecodeMethodBodyObjectRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyObjectPayload
 			err  error
@@ -2884,8 +2884,8 @@ func DecodeMethodBodyObjectRequest(decoder func(*http.Request) rest.Decoder) fun
 
 var PayloadObjectBodyValidateDecodeCode = `// DecodeMethodBodyObjectValidateRequest returns a decoder for requests sent
 // to the ServiceObjectBodyValidate MethodBodyObjectValidate endpoint.
-func DecodeMethodBodyObjectValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodBodyObjectValidatePayload, error) {
+func DecodeMethodBodyObjectValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyObjectValidatePayload
 			err  error
@@ -2909,8 +2909,8 @@ func DecodeMethodBodyObjectValidateRequest(decoder func(*http.Request) rest.Deco
 
 var PayloadBodyUserDecodeCode = `// DecodeMethodBodyUserRequest returns a decoder for requests sent to the
 // ServiceBodyUser MethodBodyUser endpoint.
-func DecodeMethodBodyUserRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*PayloadType, error) {
+func DecodeMethodBodyUserRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body PayloadType
 			err  error
@@ -2933,8 +2933,8 @@ func DecodeMethodBodyUserRequest(decoder func(*http.Request) rest.Decoder) func(
 
 var PayloadUserBodyValidateDecodeCode = `// DecodeMethodBodyUserValidateRequest returns a decoder for requests sent to
 // the ServiceBodyUserValidate MethodBodyUserValidate endpoint.
-func DecodeMethodBodyUserValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*PayloadType, error) {
+func DecodeMethodBodyUserValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body PayloadType
 			err  error
@@ -2958,8 +2958,8 @@ func DecodeMethodBodyUserValidateRequest(decoder func(*http.Request) rest.Decode
 
 var PayloadBodyArrayStringDecodeCode = `// DecodeMethodBodyArrayStringRequest returns a decoder for requests sent to
 // the ServiceBodyArrayString MethodBodyArrayString endpoint.
-func DecodeMethodBodyArrayStringRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodBodyArrayStringPayload, error) {
+func DecodeMethodBodyArrayStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyArrayStringPayload
 			err  error
@@ -2983,8 +2983,8 @@ func DecodeMethodBodyArrayStringRequest(decoder func(*http.Request) rest.Decoder
 var PayloadBodyArrayStringValidateDecodeCode = `// DecodeMethodBodyArrayStringValidateRequest returns a decoder for requests
 // sent to the ServiceBodyArrayStringValidate MethodBodyArrayStringValidate
 // endpoint.
-func DecodeMethodBodyArrayStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodBodyArrayStringValidatePayload, error) {
+func DecodeMethodBodyArrayStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyArrayStringValidatePayload
 			err  error
@@ -3008,8 +3008,8 @@ func DecodeMethodBodyArrayStringValidateRequest(decoder func(*http.Request) rest
 
 var PayloadBodyArrayUserDecodeCode = `// DecodeMethodBodyArrayUserRequest returns a decoder for requests sent to the
 // ServiceBodyArrayUser MethodBodyArrayUser endpoint.
-func DecodeMethodBodyArrayUserRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodBodyArrayUserPayload, error) {
+func DecodeMethodBodyArrayUserRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyArrayUserPayload
 			err  error
@@ -3033,8 +3033,8 @@ func DecodeMethodBodyArrayUserRequest(decoder func(*http.Request) rest.Decoder) 
 
 var PayloadBodyArrayUserValidateDecodeCode = `// DecodeMethodBodyArrayUserValidateRequest returns a decoder for requests sent
 // to the ServiceBodyArrayUserValidate MethodBodyArrayUserValidate endpoint.
-func DecodeMethodBodyArrayUserValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodBodyArrayUserValidatePayload, error) {
+func DecodeMethodBodyArrayUserValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyArrayUserValidatePayload
 			err  error
@@ -3058,8 +3058,8 @@ func DecodeMethodBodyArrayUserValidateRequest(decoder func(*http.Request) rest.D
 
 var PayloadBodyMapStringDecodeCode = `// DecodeMethodBodyMapStringRequest returns a decoder for requests sent to the
 // ServiceBodyMapString MethodBodyMapString endpoint.
-func DecodeMethodBodyMapStringRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodBodyMapStringPayload, error) {
+func DecodeMethodBodyMapStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyMapStringPayload
 			err  error
@@ -3082,8 +3082,8 @@ func DecodeMethodBodyMapStringRequest(decoder func(*http.Request) rest.Decoder) 
 
 var PayloadBodyMapStringValidateDecodeCode = `// DecodeMethodBodyMapStringValidateRequest returns a decoder for requests sent
 // to the ServiceBodyMapStringValidate MethodBodyMapStringValidate endpoint.
-func DecodeMethodBodyMapStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodBodyMapStringValidatePayload, error) {
+func DecodeMethodBodyMapStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyMapStringValidatePayload
 			err  error
@@ -3107,8 +3107,8 @@ func DecodeMethodBodyMapStringValidateRequest(decoder func(*http.Request) rest.D
 
 var PayloadBodyMapUserDecodeCode = `// DecodeMethodBodyMapUserRequest returns a decoder for requests sent to the
 // ServiceBodyMapUser MethodBodyMapUser endpoint.
-func DecodeMethodBodyMapUserRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodBodyMapUserPayload, error) {
+func DecodeMethodBodyMapUserRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyMapUserPayload
 			err  error
@@ -3132,8 +3132,8 @@ func DecodeMethodBodyMapUserRequest(decoder func(*http.Request) rest.Decoder) fu
 
 var PayloadBodyMapUserValidateDecodeCode = `// DecodeMethodBodyMapUserValidateRequest returns a decoder for requests sent
 // to the ServiceBodyMapUserValidate MethodBodyMapUserValidate endpoint.
-func DecodeMethodBodyMapUserValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodBodyMapUserValidatePayload, error) {
+func DecodeMethodBodyMapUserValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyMapUserValidatePayload
 			err  error
@@ -3158,8 +3158,8 @@ func DecodeMethodBodyMapUserValidateRequest(decoder func(*http.Request) rest.Dec
 var PayloadBodyPrimitiveStringValidateDecodeCode = `// DecodeMethodBodyPrimitiveStringValidateRequest returns a decoder for
 // requests sent to the ServiceBodyPrimitiveStringValidate
 // MethodBodyPrimitiveStringValidate endpoint.
-func DecodeMethodBodyPrimitiveStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (string, error) {
+func DecodeMethodBodyPrimitiveStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body string
 			err  error
@@ -3186,8 +3186,8 @@ func DecodeMethodBodyPrimitiveStringValidateRequest(decoder func(*http.Request) 
 var PayloadBodyPrimitiveBoolValidateDecodeCode = `// DecodeMethodBodyPrimitiveBoolValidateRequest returns a decoder for requests
 // sent to the ServiceBodyPrimitiveBoolValidate MethodBodyPrimitiveBoolValidate
 // endpoint.
-func DecodeMethodBodyPrimitiveBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (bool, error) {
+func DecodeMethodBodyPrimitiveBoolValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body bool
 			err  error
@@ -3214,8 +3214,8 @@ func DecodeMethodBodyPrimitiveBoolValidateRequest(decoder func(*http.Request) re
 var PayloadBodyPrimitiveArrayStringValidateDecodeCode = `// DecodeMethodBodyPrimitiveArrayStringValidateRequest returns a decoder for
 // requests sent to the ServiceBodyPrimitiveArrayStringValidate
 // MethodBodyPrimitiveArrayStringValidate endpoint.
-func DecodeMethodBodyPrimitiveArrayStringValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) ([]string, error) {
+func DecodeMethodBodyPrimitiveArrayStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body []string
 			err  error
@@ -3247,8 +3247,8 @@ func DecodeMethodBodyPrimitiveArrayStringValidateRequest(decoder func(*http.Requ
 var PayloadBodyPrimitiveArrayBoolValidateDecodeCode = `// DecodeMethodBodyPrimitiveArrayBoolValidateRequest returns a decoder for
 // requests sent to the ServiceBodyPrimitiveArrayBoolValidate
 // MethodBodyPrimitiveArrayBoolValidate endpoint.
-func DecodeMethodBodyPrimitiveArrayBoolValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) ([]bool, error) {
+func DecodeMethodBodyPrimitiveArrayBoolValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body []bool
 			err  error
@@ -3279,8 +3279,8 @@ func DecodeMethodBodyPrimitiveArrayBoolValidateRequest(decoder func(*http.Reques
 
 var PayloadBodyQueryObjectDecodeCode = `// DecodeMethodBodyQueryObjectRequest returns a decoder for requests sent to
 // the ServiceBodyQueryObject MethodBodyQueryObject endpoint.
-func DecodeMethodBodyQueryObjectRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodBodyQueryObjectPayload, error) {
+func DecodeMethodBodyQueryObjectRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyQueryObjectServerRequestBody
 			err  error
@@ -3312,8 +3312,8 @@ func DecodeMethodBodyQueryObjectRequest(decoder func(*http.Request) rest.Decoder
 var PayloadBodyQueryObjectValidateDecodeCode = `// DecodeMethodBodyQueryObjectValidateRequest returns a decoder for requests
 // sent to the ServiceBodyQueryObjectValidate MethodBodyQueryObjectValidate
 // endpoint.
-func DecodeMethodBodyQueryObjectValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodBodyQueryObjectValidatePayload, error) {
+func DecodeMethodBodyQueryObjectValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyQueryObjectValidateServerRequestBody
 			err  error
@@ -3346,8 +3346,8 @@ func DecodeMethodBodyQueryObjectValidateRequest(decoder func(*http.Request) rest
 
 var PayloadBodyQueryUserDecodeCode = `// DecodeMethodBodyQueryUserRequest returns a decoder for requests sent to the
 // ServiceBodyQueryUser MethodBodyQueryUser endpoint.
-func DecodeMethodBodyQueryUserRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*PayloadType, error) {
+func DecodeMethodBodyQueryUserRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyQueryUserServerRequestBody
 			err  error
@@ -3378,8 +3378,8 @@ func DecodeMethodBodyQueryUserRequest(decoder func(*http.Request) rest.Decoder) 
 
 var PayloadBodyQueryUserValidateDecodeCode = `// DecodeMethodBodyQueryUserValidateRequest returns a decoder for requests sent
 // to the ServiceBodyQueryUserValidate MethodBodyQueryUserValidate endpoint.
-func DecodeMethodBodyQueryUserValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*PayloadType, error) {
+func DecodeMethodBodyQueryUserValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyQueryUserValidateServerRequestBody
 			err  error
@@ -3412,8 +3412,8 @@ func DecodeMethodBodyQueryUserValidateRequest(decoder func(*http.Request) rest.D
 
 var PayloadBodyPathObjectDecodeCode = `// DecodeMethodBodyPathObjectRequest returns a decoder for requests sent to the
 // ServiceBodyPathObject MethodBodyPathObject endpoint.
-func DecodeMethodBodyPathObjectRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodBodyPathObjectPayload, error) {
+func DecodeMethodBodyPathObjectRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyPathObjectServerRequestBody
 			err  error
@@ -3429,7 +3429,7 @@ func DecodeMethodBodyPathObjectRequest(decoder func(*http.Request) rest.Decoder)
 		var (
 			b string
 
-			params = rest.ContextParams(r.Context())
+			params = mux.Vars(r)
 		)
 		b = params["b"]
 
@@ -3444,8 +3444,8 @@ func DecodeMethodBodyPathObjectRequest(decoder func(*http.Request) rest.Decoder)
 var PayloadBodyPathObjectValidateDecodeCode = `// DecodeMethodBodyPathObjectValidateRequest returns a decoder for requests
 // sent to the ServiceBodyPathObjectValidate MethodBodyPathObjectValidate
 // endpoint.
-func DecodeMethodBodyPathObjectValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodBodyPathObjectValidatePayload, error) {
+func DecodeMethodBodyPathObjectValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyPathObjectValidateServerRequestBody
 			err  error
@@ -3462,7 +3462,7 @@ func DecodeMethodBodyPathObjectValidateRequest(decoder func(*http.Request) rest.
 		var (
 			b string
 
-			params = rest.ContextParams(r.Context())
+			params = mux.Vars(r)
 		)
 		b = params["b"]
 		err = goa.MergeErrors(err, goa.ValidatePattern("b", b, "patternb"))
@@ -3477,8 +3477,8 @@ func DecodeMethodBodyPathObjectValidateRequest(decoder func(*http.Request) rest.
 
 var PayloadBodyPathUserDecodeCode = `// DecodeMethodBodyPathUserRequest returns a decoder for requests sent to the
 // ServiceBodyPathUser MethodBodyPathUser endpoint.
-func DecodeMethodBodyPathUserRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*PayloadType, error) {
+func DecodeMethodBodyPathUserRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyPathUserServerRequestBody
 			err  error
@@ -3494,7 +3494,7 @@ func DecodeMethodBodyPathUserRequest(decoder func(*http.Request) rest.Decoder) f
 		var (
 			b string
 
-			params = rest.ContextParams(r.Context())
+			params = mux.Vars(r)
 		)
 		b = params["b"]
 
@@ -3508,8 +3508,8 @@ func DecodeMethodBodyPathUserRequest(decoder func(*http.Request) rest.Decoder) f
 
 var PayloadBodyPathUserValidateDecodeCode = `// DecodeMethodUserBodyPathValidateRequest returns a decoder for requests sent
 // to the ServiceBodyPathUserValidate MethodUserBodyPathValidate endpoint.
-func DecodeMethodUserBodyPathValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*PayloadType, error) {
+func DecodeMethodUserBodyPathValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodUserBodyPathValidateServerRequestBody
 			err  error
@@ -3526,7 +3526,7 @@ func DecodeMethodUserBodyPathValidateRequest(decoder func(*http.Request) rest.De
 		var (
 			b string
 
-			params = rest.ContextParams(r.Context())
+			params = mux.Vars(r)
 		)
 		b = params["b"]
 		err = goa.MergeErrors(err, goa.ValidatePattern("b", b, "patternb"))
@@ -3541,8 +3541,8 @@ func DecodeMethodUserBodyPathValidateRequest(decoder func(*http.Request) rest.De
 
 var PayloadBodyQueryPathObjectDecodeCode = `// DecodeMethodBodyQueryPathObjectRequest returns a decoder for requests sent
 // to the ServiceBodyQueryPathObject MethodBodyQueryPathObject endpoint.
-func DecodeMethodBodyQueryPathObjectRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodBodyQueryPathObjectPayload, error) {
+func DecodeMethodBodyQueryPathObjectRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyQueryPathObjectServerRequestBody
 			err  error
@@ -3559,7 +3559,7 @@ func DecodeMethodBodyQueryPathObjectRequest(decoder func(*http.Request) rest.Dec
 			c string
 			b *string
 
-			params = rest.ContextParams(r.Context())
+			params = mux.Vars(r)
 		)
 		c = params["c"]
 		bRaw := r.URL.Query().Get("b")
@@ -3578,8 +3578,8 @@ func DecodeMethodBodyQueryPathObjectRequest(decoder func(*http.Request) rest.Dec
 var PayloadBodyQueryPathObjectValidateDecodeCode = `// DecodeMethodBodyQueryPathObjectValidateRequest returns a decoder for
 // requests sent to the ServiceBodyQueryPathObjectValidate
 // MethodBodyQueryPathObjectValidate endpoint.
-func DecodeMethodBodyQueryPathObjectValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*MethodBodyQueryPathObjectValidatePayload, error) {
+func DecodeMethodBodyQueryPathObjectValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyQueryPathObjectValidateServerRequestBody
 			err  error
@@ -3597,7 +3597,7 @@ func DecodeMethodBodyQueryPathObjectValidateRequest(decoder func(*http.Request) 
 			c string
 			b string
 
-			params = rest.ContextParams(r.Context())
+			params = mux.Vars(r)
 		)
 		c = params["c"]
 		err = goa.MergeErrors(err, goa.ValidatePattern("c", c, "patternc"))
@@ -3617,8 +3617,8 @@ func DecodeMethodBodyQueryPathObjectValidateRequest(decoder func(*http.Request) 
 
 var PayloadBodyQueryPathUserDecodeCode = `// DecodeMethodBodyQueryPathUserRequest returns a decoder for requests sent to
 // the ServiceBodyQueryPathUser MethodBodyQueryPathUser endpoint.
-func DecodeMethodBodyQueryPathUserRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*PayloadType, error) {
+func DecodeMethodBodyQueryPathUserRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyQueryPathUserServerRequestBody
 			err  error
@@ -3635,7 +3635,7 @@ func DecodeMethodBodyQueryPathUserRequest(decoder func(*http.Request) rest.Decod
 			c string
 			b *string
 
-			params = rest.ContextParams(r.Context())
+			params = mux.Vars(r)
 		)
 		c = params["c"]
 		bRaw := r.URL.Query().Get("b")
@@ -3654,8 +3654,8 @@ func DecodeMethodBodyQueryPathUserRequest(decoder func(*http.Request) rest.Decod
 var PayloadBodyQueryPathUserValidateDecodeCode = `// DecodeMethodBodyQueryPathUserValidateRequest returns a decoder for requests
 // sent to the ServiceBodyQueryPathUserValidate MethodBodyQueryPathUserValidate
 // endpoint.
-func DecodeMethodBodyQueryPathUserValidateRequest(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (*PayloadType, error) {
+func DecodeMethodBodyQueryPathUserValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 		var (
 			body MethodBodyQueryPathUserValidateServerRequestBody
 			err  error
@@ -3673,7 +3673,7 @@ func DecodeMethodBodyQueryPathUserValidateRequest(decoder func(*http.Request) re
 			c string
 			b string
 
-			params = rest.ContextParams(r.Context())
+			params = mux.Vars(r)
 		)
 		c = params["c"]
 		err = goa.MergeErrors(err, goa.ValidatePattern("c", c, "patternc"))

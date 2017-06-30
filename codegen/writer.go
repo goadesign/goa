@@ -12,7 +12,7 @@ import (
 
 type (
 	// Writer encapsulates the state required to generate multiple files
-	// in the context of a single goagen invocation.
+	// in the context of a single goa invocation.
 	Writer struct {
 		// Dir is the output directory.
 		Dir string

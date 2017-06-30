@@ -37,9 +37,12 @@ generators, see
 the
 [Code Generation Requirements](https://github.com/goadesign/goa/blob/v2/REQ_CODEGEN.md).
 
+The generated code gets entirely re-generated each time alleviating the confusion
+around scaffold vs. generated code.
+
 ## Separation of Concern
 
-The generated code produced by `goagen` v2 implements a much stronger separation
+The generated code produced by `goa` v2 implements a much stronger separation
 of concern between the transport and service layers. This makes it possible to
 easily expose the same methods via different transport mechanisms such as HTTP
 and gRPC. See the
@@ -59,7 +62,6 @@ code generators are not done yet). However:
 * The account example should give a good sense of what the generated code will
   look like, see:
   - The [design](https://github.com/goadesign/goa/blob/v2/examples/account/design/design.go)
-  - The [main scaffold](https://github.com/goadesign/goa/blob/v2/examples/account/cmd/basic/main.go)
   - The [generated service](https://github.com/goadesign/goa/blob/v2/examples/account/gen/service/account.go)
   - The [generated endpoints](https://github.com/goadesign/goa/blob/v2/examples/account/gen/endpoints/account.go)
   - The [generated HTTP transport](https://github.com/goadesign/goa/tree/v2/examples/account/gen/transport/http)

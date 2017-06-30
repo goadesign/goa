@@ -28,19 +28,28 @@ func NewMappedAttributeExpr(att *design.AttributeExpr) *MappedAttributeExpr {
 		n          = &design.Object{}
 		nameMap    = make(map[string]string)
 		reverseMap = make(map[string]string)
+		validation *design.ValidationExpr
 	)
+	if att.Validation != nil {
+		validation = att.Validation.Dup()
+	}
 	for _, nat := range *o {
 		elems := strings.Split(nat.Name, ":")
-		n.Set(elems[0], nat.Attribute)
+		n.Set(elems[0], design.DupAtt(nat.Attribute))
 		if len(elems) > 1 {
 			nameMap[elems[0]] = elems[1]
 			reverseMap[elems[1]] = elems[0]
 		}
 	}
+	if ut, ok := att.Type.(design.UserType); ok {
+		if val := ut.Attribute().Validation; val != nil {
+			validation = val.Dup()
+		}
+	}
 	return &MappedAttributeExpr{
 		AttributeExpr: &design.AttributeExpr{
 			Type:       n,
-			Validation: att.Validation,
+			Validation: validation,
 		},
 		nameMap:    nameMap,
 		reverseMap: reverseMap,
@@ -85,14 +94,7 @@ func (ma *MappedAttributeExpr) Delete(attName string) {
 	}
 	ma.Type.(*design.Object).Delete(attName)
 	if ma.Validation != nil {
-		if req := ma.Validation.Required; len(req) > 0 {
-			for i, r := range req {
-				if r == attName {
-					ma.Validation.Required = append(req[:i], req[i+1:len(req)]...)
-					break
-				}
-			}
-		}
+		ma.Validation.RemoveRequired(attName)
 	}
 }
 

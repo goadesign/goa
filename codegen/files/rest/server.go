@@ -1,17 +1,12 @@
-// MarshalTypes codegen file
+// Fix encoder so it copies result type to http type recursively (arrays, maps)
 // Make sure to generate user type for each error even if declared with primitive
 // Add metadata to specify error type attribute to be used for error message
 // validate only one error per http status code
-// Make sure primitive rename of []byte to bytes didn't break stuff
 
-// DSL validation: make sure there's at least one response for all actions
 // Make sure all routes define identical path params
 // Remove required attributes from 'Required' slice that have default values
 
 // Add response tags to account example
-// Test response tags
-
-// Initialize error responses headers and body from result (action.go)
 
 package rest
 
@@ -28,8 +23,8 @@ import (
 	"goa.design/goa.v2/design/rest"
 )
 
-// ServerFiles returns all the server HTTP transport files.
-func ServerFiles(root *rest.RootExpr) []codegen.File {
+// Servers returns all the server HTTP transport files.
+func Servers(root *rest.RootExpr) []codegen.File {
 	fw := make([]codegen.File, len(root.Resources))
 	for i, r := range root.Resources {
 		fw[i] = Server(r)
@@ -39,21 +34,20 @@ func ServerFiles(root *rest.RootExpr) []codegen.File {
 
 // Server returns the server HTTP transport file
 func Server(r *rest.ResourceExpr) codegen.File {
-	path := filepath.Join(codegen.KebabCase(r.Name()), "transport", "http", "server.go")
+	path := filepath.Join(codegen.SnakeCase(r.Name()), "transport", "http_server.go")
 	data := Resources.Get(r.Name())
 	sections := func(genPkg string) []*codegen.Section {
 		title := fmt.Sprintf("%s server HTTP transport", r.Name())
 		s := []*codegen.Section{
-			codegen.Header(title, "http", []*codegen.ImportSpec{
+			codegen.Header(title, "transport", []*codegen.ImportSpec{
 				{Path: "fmt"},
 				{Path: "io"},
 				{Path: "net/http"},
 				{Path: "strconv"},
 				{Path: "strings"},
-				{Path: "goa.design/goa.v2"},
+				{Path: "goa.design/goa.v2", Name: "goa"},
 				{Path: "goa.design/goa.v2/rest"},
-				{Path: genPkg + "/endpoints"},
-				{Path: genPkg + "/services"},
+				{Path: genPkg + "/" + codegen.Goify(r.Name(), false)},
 			}),
 			{Template: serverStructTmpl(r), Data: data},
 			{Template: serverConstructorTmpl(r), Data: data},
@@ -178,14 +172,14 @@ type {{ .HandlersStruct }} struct {
 
 const serverConstructorT = `{{ printf "%s instantiates HTTP handlers for all the %s service endpoints." .Constructor .Service.Name | comment }}
 func {{ .Constructor }}(
-	e *endpoints.{{ .Service.VarName }},
+	e *{{ .Service.PkgName }}.Endpoints,
+	mux rest.Muxer,
 	dec func(*http.Request) rest.Decoder,
-	enc func(http.ResponseWriter, *http.Request) rest.Encoder,
-	logger goa.LogAdapter,
+	enc func(http.ResponseWriter, *http.Request) (rest.Encoder, string),
 ) *{{ .HandlersStruct }} {
 	return &{{ .HandlersStruct }}{
 		{{- range .Actions }}
-		{{ .Method.VarName }}: {{ .Constructor }}(e.{{ .Method.VarName }}, dec, enc, logger),
+		{{ .Method.VarName }}: {{ .Constructor }}(e.{{ .Method.VarName }}, mux, dec, enc),
 		{{- end }}
 	}
 }
@@ -217,18 +211,18 @@ const serverHandlerConstructorT = `{{ printf "%s creates a HTTP handler which lo
 {{ comment "The middleware is mounted so it executes after the request is loaded and thus may access the request state via the rest package ContextXXX functions."}}
 func {{ .Constructor }}(
 	endpoint goa.Endpoint,
+	mux rest.Muxer,
 	dec func(*http.Request) rest.Decoder,
-	enc func(http.ResponseWriter, *http.Request) rest.Encoder,
-	logger goa.LogAdapter,
+	enc func(http.ResponseWriter, *http.Request) (rest.Encoder, string),
 ) http.Handler {
 	var (
 		{{- if .Payload }}
-		decodeRequest  = {{ .Decoder }}(dec)
+		decodeRequest  = {{ .Decoder }}(mux, dec)
 		{{- end }}
 		{{- if .Responses }}
-		encodeResponse = {{ .Encoder }}EncodeResponse(enc)
+		encodeResponse = {{ .Encoder }}(enc)
 		{{- end }}
-		encodeError    = {{ if .ErrorResponses }}{{ .ErrorEncoder }}{{ else }}rest.EncodeError{{ end }}(enc, logger)
+		encodeError    = {{ if .ErrorResponses }}{{ .ErrorEncoder }}{{ else }}rest.EncodeError{{ end }}(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		{{- if .Payload }}
@@ -259,8 +253,8 @@ func {{ .Constructor }}(
 `
 
 const serverDecoderT = `{{ printf "%s returns a decoder for requests sent to the %s %s endpoint." .Decoder .ServiceName .Method.Name | comment }}
-func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) ({{ .Payload.Ref }}, error) {
+func {{ .Decoder }}(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
 
 {{- if .Payload.RequestBody }}
 		var (
@@ -282,7 +276,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 {{- if or .Payload.PathParams .Payload.QueryParams .Payload.Headers }}
 		var (
 		{{- range .Payload.PathParams }}
-			{{ .VarName }} {{ if .Pointer }}*{{ end }}{{goTypeRef .Type }}
+			{{ .VarName }} {{goTypeRef .Type }}
 		{{- end }}
 		{{- range .Payload.QueryParams }}
 			{{ .VarName }} {{ if .Pointer }}*{{ end }}{{goTypeRef .Type }}
@@ -295,7 +289,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		{{- end }}
 		{{- if .Payload.PathParams }}
 
-			params = rest.ContextParams(r.Context())
+			params = mux.Vars(r)
 		{{- end }}
 		)
 
@@ -597,7 +591,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 	{{- else if eq .Type.Name "int" }}
 		v, err := strconv.ParseInt({{ .VarName }}Raw, 10, strconv.IntSize)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "integer")
+			return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "integer")
 		}
 		{{- if .Pointer }}
 		pv := int(v)
@@ -608,7 +602,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 	{{- else if eq .Type.Name "int32" }}
 		v, err := strconv.ParseInt({{ .VarName }}Raw, 10, 32)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "integer")
+			return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "integer")
 		}
 		{{- if .Pointer }}
 		pv := int32(v)
@@ -619,13 +613,13 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 	{{- else if eq .Type.Name "int64" }}
 		v, err := strconv.ParseInt({{ .VarName }}Raw, 10, 64)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "integer")
+			return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "integer")
 		}
 		{{ .VarName }} = {{ if .Pointer}}&{{ end }}v
 	{{- else if eq .Type.Name "uint" }}
 		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, strconv.IntSize)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "unsigned integer")
+			return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "unsigned integer")
 		}
 		{{- if .Pointer }}
 		pv := uint(v)
@@ -636,7 +630,7 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 	{{- else if eq .Type.Name "uint32" }}
 		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, 32)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "unsigned integer")
+			return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "unsigned integer")
 		}
 		{{- if .Pointer }}
 		pv := uint32(v)
@@ -647,13 +641,13 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 	{{- else if eq .Type.Name "uint64" }}
 		v, err := strconv.ParseUint({{ .VarName }}Raw, 10, 64)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "unsigned integer")
+			return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "unsigned integer")
 		}
 		{{ .VarName }} = {{ if .Pointer }}&{{ end }}v
 	{{- else if eq .Type.Name "float32" }}
 		v, err := strconv.ParseFloat({{ .VarName }}Raw, 32)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "float")
+			return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "float")
 		}
 		{{- if .Pointer }}
 		pv := float32(v)
@@ -664,13 +658,13 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 	{{- else if eq .Type.Name "float64" }}
 		v, err := strconv.ParseFloat({{ .VarName }}Raw, 64)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "float")
+			return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "float")
 		}
 		{{ .VarName }} = {{ if .Pointer }}&{{ end }}v
 	{{- else if eq .Type.Name "boolean" }}
 		v, err := strconv.ParseBool({{ .VarName }}Raw)
 		if err != nil {
-			return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "boolean")
+			return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "boolean")
 		}
 		{{ .VarName }} = {{ if .Pointer }}&{{ end }}v
 	{{- else }}
@@ -685,55 +679,55 @@ func {{ .Decoder }}(decoder func(*http.Request) rest.Decoder) func(*http.Request
 		{{- else if eq .Type.ElemType.Type.Name "int" }}
 			v, err := strconv.ParseInt(rv, 10, strconv.IntSize)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of integers")
+				return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of integers")
 			}
 			{{ .VarName }}[i] = int(v)
 		{{- else if eq .Type.ElemType.Type.Name "int32" }}
 			v, err := strconv.ParseInt(rv, 10, 32)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of integers")
+				return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of integers")
 			}
 			{{ .VarName }}[i] = int32(v)
 		{{- else if eq .Type.ElemType.Type.Name "int64" }}
 			v, err := strconv.ParseInt(rv, 10, 64)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of integers")
+				return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of integers")
 			}
 			{{ .VarName }}[i] = v
 		{{- else if eq .Type.ElemType.Type.Name "uint" }}
 			v, err := strconv.ParseUint(rv, 10, strconv.IntSize)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of unsigned integers")
+				return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of unsigned integers")
 			}
 			{{ .VarName }}[i] = uint(v)
 		{{- else if eq .Type.ElemType.Type.Name "uint32" }}
 			v, err := strconv.ParseUint(rv, 10, 32)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of unsigned integers")
+				return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of unsigned integers")
 			}
 			{{ .VarName }}[i] = int32(v)
 		{{- else if eq .Type.ElemType.Type.Name "uint64" }}
 			v, err := strconv.ParseUint(rv, 10, 64)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of unsigned integers")
+				return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of unsigned integers")
 			}
 			{{ .VarName }}[i] = v
 		{{- else if eq .Type.ElemType.Type.Name "float32" }}
 			v, err := strconv.ParseFloat(rv, 32)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of floats")
+				return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of floats")
 			}
 			{{ .VarName }}[i] = float32(v)
 		{{- else if eq .Type.ElemType.Type.Name "float64" }}
 			v, err := strconv.ParseFloat(rv, 64)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of floats")
+				return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of floats")
 			}
 			{{ .VarName }}[i] = v
 		{{- else if eq .Type.ElemType.Type.Name "boolean" }}
 			v, err := strconv.ParseBool(rv)
 			if err != nil {
-				return nil, goa.InvalidFieldTypeError({{ .VarName}}Raw, {{ .Name }}, "array of booleans")
+				return nil, goa.InvalidFieldTypeError({{ printf "%q" .VarName }}, {{ .VarName}}Raw, "array of booleans")
 			}
 			{{ .VarName }}[i] = v
 		{{- else if eq .Type.ElemType.Type.Name "any" }}
@@ -749,7 +743,7 @@ func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) (rest.Encod
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 
 	{{- if .Method.ResultRef }}
-		res := v.({{ .Method.ResultRef }})
+		res := v.({{ .Method.AbsResultRef }})
 
 		{{- range .Responses }}
 
@@ -789,13 +783,13 @@ func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) (rest.Encod
 ` + responseT
 
 const serverErrorEncoderT = `{{ printf "%s returns an encoder for errors returned by the %s %s endpoint." .ErrorEncoder .Method.Name .ServiceName | comment }}
-func {{ .ErrorEncoder }}(encoder func(http.ResponseWriter, *http.Request) rest.Encoder, logger goa.LogAdapter) func(http.ResponseWriter, *http.Request, error) {
-	encodeError := rest.EncodeError(encoder, logger)
+func {{ .ErrorEncoder }}(encoder func(http.ResponseWriter, *http.Request) (rest.Encoder, string)) func(http.ResponseWriter, *http.Request, error) {
+	encodeError := rest.EncodeError(encoder)
 	return func(w http.ResponseWriter, r *http.Request, v error) {
 		switch res := v.(type) {
 
 		{{- range .ErrorResponses }}
-		case {{ .TypeRef }}:
+		case {{ .FullTypeRef }}:
 
 			{{- template "response" .Response }}
 			{{- if .Response.Body }}

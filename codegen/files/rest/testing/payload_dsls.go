@@ -1264,6 +1264,7 @@ var PayloadPathStringValidateDSL = func() {
 				Attribute("p", String, func() {
 					Enum("val")
 				})
+				Required("p")
 			})
 			HTTP(func() {
 				GET("/{p}")

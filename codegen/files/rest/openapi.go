@@ -6,19 +6,20 @@ import (
 	"text/template"
 
 	"goa.design/goa.v2/codegen"
+	"goa.design/goa.v2/codegen/files/rest/openapi"
 	"goa.design/goa.v2/design/rest"
 )
 
 type (
 	// openAPI is the OpenAPI spec file implementation.
 	openAPI struct {
-		spec *OpenAPIV2
+		spec *openapi.V2
 	}
 )
 
 // OpenAPI returns the file for the OpenAPI spec of the given HTTP API.
 func OpenAPI(root *rest.RootExpr) (codegen.File, error) {
-	spec, err := makeOpenAPIV2(root)
+	spec, err := openapi.NewV2(root)
 	if err != nil {
 		return nil, err
 	}

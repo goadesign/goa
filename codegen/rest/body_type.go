@@ -94,10 +94,10 @@ func ResponseBodyType(r *rest.ResourceExpr, resp *rest.HTTPResponseExpr, result 
 	}
 
 	// 2. Project if response type is result type and attribute has a view.
-	mt, ismt := dt.(*design.ResultTypeExpr)
-	if ismt {
+	rt, isrt := dt.(*design.ResultTypeExpr)
+	if isrt {
 		if v := result.Metadata["view"]; len(v) > 0 {
-			p, err := new(design.Projector).Project(mt, v[0])
+			p, err := new(design.Projector).Project(rt, v[0])
 			if err != nil {
 				panic(err) // bug
 			}
@@ -130,9 +130,9 @@ func ResponseBodyType(r *rest.ResourceExpr, resp *rest.HTTPResponseExpr, result 
 		AttributeExpr: body.Attribute(),
 		TypeName:      name,
 	}
-	if ismt {
-		views := make([]*design.ViewExpr, len(mt.Views))
-		for i, v := range mt.Views {
+	if isrt {
+		views := make([]*design.ViewExpr, len(rt.Views))
+		for i, v := range rt.Views {
 			mv := rest.NewMappedAttributeExpr(v.AttributeExpr)
 			removeAttributes(mv, headers)
 			nv := &design.ViewExpr{
@@ -143,8 +143,8 @@ func ResponseBodyType(r *rest.ResourceExpr, resp *rest.HTTPResponseExpr, result 
 		}
 		nmt := &design.ResultTypeExpr{
 			UserTypeExpr: userType,
-			Identifier:   mt.Identifier,
-			ContentType:  mt.ContentType,
+			Identifier:   rt.Identifier,
+			ContentType:  rt.ContentType,
 			Views:        views,
 		}
 		for _, v := range views {
@@ -158,6 +158,9 @@ func ResponseBodyType(r *rest.ResourceExpr, resp *rest.HTTPResponseExpr, result 
 func removeAttributes(attr, sub *rest.MappedAttributeExpr) {
 	WalkMappedAttr(sub, func(name, _ string, _ bool, _ *design.AttributeExpr) error {
 		attr.Delete(name)
+		if attr.Validation != nil {
+			attr.Validation.RemoveRequired(name)
+		}
 		return nil
 	})
 }

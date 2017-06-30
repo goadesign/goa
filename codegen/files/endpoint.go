@@ -31,6 +31,8 @@ type (
 		Name string
 		// PayloadRef is reference to the payload Go type if any.
 		PayloadRef string
+		// ResultRef is reference to the result Go type if any.
+		ResultRef string
 	}
 )
 
@@ -39,7 +41,7 @@ var endpointTmpl = template.Must(template.New("endpoint").Parse(endpointT))
 
 // Endpoint returns the endpoint file for the given service.
 func Endpoint(service *design.ServiceExpr) codegen.File {
-	path := filepath.Join(codegen.KebabCase(service.Name), "endpoint.go")
+	path := filepath.Join(codegen.KebabCase(service.Name), "endpoints.go")
 	sections := func(genPkg string) []*codegen.Section {
 		var (
 			data *EndpointData
@@ -51,14 +53,12 @@ func Endpoint(service *design.ServiceExpr) codegen.File {
 				methods[i] = &EndpointMethodData{
 					Name:       m.VarName,
 					PayloadRef: m.PayloadRef,
+					ResultRef:  m.ResultRef,
 				}
 			}
-			desc := service.Description
-			serviceVarName := svc.VarName
-			varName := serviceVarName + "Endpoint"
-			if desc == "" {
-				desc = fmt.Sprintf("%s lists the %s service endpoints.", varName, service.Name)
-			}
+			serviceVarName := "Service"
+			varName := "Endpoints"
+			desc := fmt.Sprintf("%s wraps the %s service endpoints.", varName, service.Name)
 			data = &EndpointData{
 				Name:           service.Name,
 				Description:    desc,
@@ -72,10 +72,10 @@ func Endpoint(service *design.ServiceExpr) codegen.File {
 			header, body *codegen.Section
 		)
 		{
-			header = codegen.Header(service.Name+" endpoints", "endpoints",
+			header = codegen.Header(service.Name+" endpoints", codegen.Goify(service.Name, false),
 				[]*codegen.ImportSpec{
 					&codegen.ImportSpec{Path: "context"},
-					&codegen.ImportSpec{Path: "goa.design/goa.v2"},
+					&codegen.ImportSpec{Name: "goa", Path: "goa.design/goa.v2"},
 				})
 			body = &codegen.Section{
 				Template: endpointTmpl,
@@ -107,7 +107,11 @@ func New{{ .VarName }}(s {{ .ServiceVarName }}) *{{ .VarName }} {
 {{- if .PayloadRef }}
 		p := req.({{ .PayloadRef }})
 {{- end }}
+{{- if .ResultRef }}
 		return s.{{ .Name }}(ctx, {{ if .PayloadRef }}p{{ else }}nil{{ end }})
+{{- else }}
+		return nil, s.{{ .Name }}(ctx, {{ if .PayloadRef }}p{{ else }}nil{{ end }})
+{{- end }}
 	}
 {{ end }}
 	return ep

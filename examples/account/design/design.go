@@ -26,10 +26,10 @@ var _ = Service("account", func() {
 		HTTP(func() {
 			POST("/")
 			Response(StatusCreated, func() {
-				Header("Href:Location")
+				Header("href:Location")
 			})
 			Response(StatusAccepted, func() {
-				Header("Href:Location")
+				Header("href:Location")
 				Body(Empty)
 			})
 			Response("name_already_taken", StatusConflict)

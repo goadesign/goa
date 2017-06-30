@@ -1,4 +1,4 @@
-package rest
+package openapi
 
 import (
 	"encoding/json"

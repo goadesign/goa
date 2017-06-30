@@ -5,9 +5,9 @@ import (
 	"goa.design/goa.v2/eval"
 )
 
-// Error describes an method error response. The description includes a unique
-// name (in the scope of the method), an optional type, description and DSL
-// that further describes the type. If no type is specified then the goa
+// Error describes a method error return value. The description includes a
+// unique name (in the scope of the method), an optional type, description and
+// DSL that further describes the type. If no type is specified then the goa
 // ErrorResult type is used. The DSL syntax is identical to the Attribute DSL.
 // Transport specific DSL may further describe the mapping between the error
 // type attributes and the serialized response.

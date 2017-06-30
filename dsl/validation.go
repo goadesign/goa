@@ -244,7 +244,7 @@ func Required(names ...string) {
 		if at.Validation == nil {
 			at.Validation = &design.ValidationExpr{}
 		}
-		at.Validation.AddRequired(names)
+		at.Validation.AddRequired(names...)
 	}
 }
 

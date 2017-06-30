@@ -68,7 +68,7 @@ func TestEncode(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunRestDSL(t, c.DSL)
-			fs := ServerFiles(restdesign.Root)
+			fs := Servers(restdesign.Root)
 			if len(fs) != 1 {
 				t.Fatalf("got %d files, expected one", len(fs))
 			}
