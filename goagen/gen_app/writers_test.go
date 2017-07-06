@@ -1996,9 +1996,6 @@ func NewListBottleContext(ctx context.Context, r *http.Request, service *goa.Ser
 	rctx := ListBottleContext{Context: ctx, ResponseData: resp, RequestData: req}
 	paramParam := req.Params["param"]
 	if len(paramParam) > 0 {
-		paramParam = strings.Split(paramParam, ",")
-	}
-	if len(paramParam) > 0 {
 		params := paramParam
 		rctx.Param = params
 	}
