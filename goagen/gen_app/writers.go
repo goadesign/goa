@@ -573,10 +573,7 @@ func New{{ .Name }}(ctx context.Context, r *http.Request, service *goa.Service) 
 
 */}}{{ if .Params }}{{ range $name, $att := .Params.Type.ToObject }}{{/*
 */}}	param{{ goify $name true }} := req.Params["{{ $name }}"]
-{{ if and (isPathParam $name) (eq $att.Type.Name "array") }}	if len(param{{ goify $name true }}) > 0 {
-		param{{ goify $name true }} = strings.Split(param{{ goify $name true}}, ",")
-	}
-{{ end }}{{ $mustValidate := $.MustValidate $name }}{{ if $mustValidate }}	if len(param{{ goify $name true }}) == 0 {
+{{ $mustValidate := $.MustValidate $name }}{{ if $mustValidate }}	if len(param{{ goify $name true }}) == 0 {
 		{{ if $.Params.HasDefaultValue $name }}{{printf "rctx.%s" (goifyatt $att $name true) }} = {{ printVal $att.Type $att.DefaultValue }}{{else}}{{/*
 */}}err = goa.MergeErrors(err, goa.MissingParamError("{{ $name }}")){{end}}
 	} else {
