@@ -51,6 +51,19 @@ type (
 		// MaxRequestBodyLength is the maximum length read from request bodies.
 		// Set to 0 to remove the limit altogether. Defaults to 1GB.
 		MaxRequestBodyLength int64
+		// FileSystem is used in FileHandler to open files. By default it returns
+		// http.Dir but you can override it with another one that implements http.FileSystem.
+		// For example using github.com/elazarl/go-bindata-assetfs is like below.
+		//
+		//	ctrl.FileSystem = func(dir string) http.FileSystem {
+		//		return &assetfs.AssetFS{
+		//			Asset: Asset,
+		//			AssetDir: AssetDir,
+		//			AssetInfo: AssetInfo,
+		//			Prefix: dir,
+		//		}
+		//	}
+		FileSystem func(string) http.FileSystem
 
 		middleware []Middleware // Controller specific middleware if any
 	}
@@ -173,6 +186,9 @@ func (service *Service) NewController(name string) *Controller {
 		Service:              service,
 		Context:              context.WithValue(service.Context, ctrlKey, name),
 		MaxRequestBodyLength: 1073741824, // 1 GB
+		FileSystem: func(dir string) http.FileSystem {
+			return http.Dir(dir)
+		},
 	}
 }
 
@@ -324,7 +340,7 @@ func (ctrl *Controller) FileHandler(path, filename string) Handler {
 		}
 		LogInfo(ctx, "serve file", "name", fname, "route", req.URL.Path)
 		dir, name := filepath.Split(fname)
-		fs := http.Dir(dir)
+		fs := ctrl.FileSystem(dir)
 		f, err := fs.Open(name)
 		if err != nil {
 			return ErrInvalidFile(err)
