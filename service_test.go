@@ -158,7 +158,7 @@ var _ = Describe("Service", func() {
 			}
 		})
 
-		It("creates a handle", func() {
+		It("creates a handler", func() {
 			Ω(muxHandler).ShouldNot(BeNil())
 		})
 
@@ -341,7 +341,7 @@ var _ = Describe("Service", func() {
 			os.RemoveAll(outDir)
 		})
 
-		It("creates a handle", func() {
+		It("creates a handler", func() {
 			Ω(muxHandler).ShouldNot(BeNil())
 		})
 
