@@ -54,6 +54,7 @@ func init() {
 // Validator is the code generator for the 'Validate' type methods.
 type Validator struct {
 	arrayValT *template.Template
+	hashValT  *template.Template
 	userValT  *template.Template
 	seen      map[string]*bytes.Buffer
 }
@@ -74,6 +75,10 @@ func NewValidator() *Validator {
 		"recurseAttribute": v.recurseAttribute,
 	}
 	v.arrayValT, err = template.New("array").Funcs(fm).Parse(arrayValTmpl)
+	if err != nil {
+		panic(err)
+	}
+	v.hashValT, err = template.New("hash").Funcs(fm).Parse(hashValTmpl)
 	if err != nil {
 		panic(err)
 	}
@@ -163,6 +168,52 @@ func (v *Validator) recurse(att *design.AttributeDefinition, nonzero, required, 
 				"validation": val,
 			}
 			validation = RunTemplate(v.arrayValT, data)
+			if !first {
+				buf.WriteByte('\n')
+			} else {
+				first = false
+			}
+			buf.WriteString(validation)
+		}
+	} else if h := att.Type.ToHash(); h != nil {
+		// Perform any validation on the hash type such as MinLength, MaxLength, etc.
+		validation := ValidationChecker(att, nonzero, required, hasDefault, target, context, depth, private)
+		first := true
+		if validation != "" {
+			buf.WriteString(validation)
+			first = false
+		}
+		val := v.Code(h.KeyType, true, false, false, "k", context+"[*]", depth+1, false)
+		if val != "" {
+			keyVal := val
+			switch h.KeyType.Type.(type) {
+			case *design.UserTypeDefinition, *design.MediaTypeDefinition:
+				// For user and media types, call the Validate method
+				keyVal = RunTemplate(v.userValT, map[string]interface{}{
+					"depth":  depth + 2,
+					"target": "k",
+				})
+				keyVal = fmt.Sprintf("%sif e != nil {\n%s\n%s}", Tabs(depth+1), val, Tabs(depth+1))
+			}
+			elemVal := v.Code(h.ElemType, true, false, false, "e", context+"[*]", depth+1, false)
+			if elemVal != "" {
+				switch h.ElemType.Type.(type) {
+				case *design.UserTypeDefinition, *design.MediaTypeDefinition:
+					// For user and media types, call the Validate method
+					elemVal = RunTemplate(v.userValT, map[string]interface{}{
+						"depth":  depth + 2,
+						"target": "e",
+					})
+					elemVal = fmt.Sprintf("%sif e != nil {\n%s\n%s}", Tabs(depth+1), val, Tabs(depth+1))
+				}
+			}
+			data := map[string]interface{}{
+				"depth":          1,
+				"target":         target,
+				"keyValidation":  keyVal,
+				"elemValidation": elemVal,
+			}
+			validation = RunTemplate(v.hashValT, data)
 			if !first {
 				buf.WriteByte('\n')
 			} else {
@@ -384,6 +435,11 @@ func constant(formatName string) string {
 const (
 	arrayValTmpl = `{{ tabs .depth }}for _, e := range {{ .target }} {
 {{ .validation }}
+{{ tabs .depth }}}`
+
+	hashValTmpl = `{{ tabs .depth }}for k, {{ if .elemValidation }}e{{ else }}_{{ end }} := range {{ .target }} {
+{{ .keyValidation }}
+{{ if .elemValidation }}{{ .elemValidation }}{{ end }}
 {{ tabs .depth }}}`
 
 	userValTmpl = `{{ tabs .depth }}if err2 := {{ .target }}.Validate(); err2 != nil {
