@@ -19,11 +19,11 @@ type (
 		// MethodName is the name of the method defined in the design.
 		MethodName string
 		// Routes describes all the possible paths for an action.
-		Routes []*PathRoute
+		Routes []*PathRouteData
 	}
 
-	// PathRoute contains the data to render a path for a specific route.
-	PathRoute struct {
+	// PathRouteData contains the data to render a path for a specific route.
+	PathRouteData struct {
 		// Path is the fullpath converted to printf compatible layout.
 		Path string
 		// PathParams are all the path parameters in this route.
@@ -89,13 +89,14 @@ func PathSection(a *rest.ActionExpr) *codegen.Section {
 
 // pathTmpl returns the template used to render the paths functions.
 func pathTmpl(r *rest.ResourceExpr) *template.Template {
-	svc := files.Services.Get(r.Name())
 	return template.Must(template.New("path").
 		Funcs(template.FuncMap{
-			"add":       codegen.Add,
-			"goTypeRef": svc.Scope.GoTypeRef,
-			"goify":     codegen.Goify,
-			"isArray":   design.IsArray,
+			"add":     codegen.Add,
+			"goify":   codegen.Goify,
+			"isArray": design.IsArray,
+			"goTypeRef": func(dt design.DataType) string {
+				return files.Services.Get(r.Name()).Scope.GoTypeRef(&design.AttributeExpr{Type: dt})
+			},
 		}).
 		Parse(pathT))
 }
@@ -104,11 +105,11 @@ func buildPathData(a *rest.ActionExpr) *PathData {
 	pd := PathData{
 		ServiceName: a.MethodExpr.Service.Name,
 		MethodName:  a.Name(),
-		Routes:      make([]*PathRoute, len(a.Routes)),
+		Routes:      make([]*PathRouteData, len(a.Routes)),
 	}
 
 	for i, r := range a.Routes {
-		pd.Routes[i] = &PathRoute{
+		pd.Routes[i] = &PathRouteData{
 			Path:       rest.WildcardRegex.ReplaceAllString(r.FullPath(), "/%v"),
 			PathParams: r.ParamAttributeNames(),
 			Arguments:  generatePathArguments(r),
@@ -130,6 +131,7 @@ func generatePathArguments(r *rest.RouteExpr) []*PathArgument {
 	return args
 }
 
+// input: PathData
 const pathT = `{{ range $i, $route := .Routes -}}
 // {{ goify $.MethodName true }}{{ goify $.ServiceName true }}Path{{ if ne $i 0 }}{{ add $i 1 }}{{ end }} returns the URL path to the {{ $.ServiceName }} service {{ $.MethodName }} HTTP endpoint.
 func {{ goify $.MethodName true }}{{ goify $.ServiceName true }}Path{{ if ne $i 0 }}{{ add $i 1 }}{{ end }}({{ template "arguments" .Arguments }}) string {

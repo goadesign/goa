@@ -31,7 +31,7 @@ type CreateAccount struct {
 	Description *string
 }
 
-// is the result type of the account service create method.
+// Account is the result type of the account service create method.
 type Account struct {
 	// Href to account
 	Href string
@@ -56,17 +56,17 @@ type ListAccount struct {
 // ShowPayload is the payload type of the account service show method.
 type ShowPayload struct {
 	// ID of organization that owns  account
-	OrgID *uint
+	OrgID uint
 	// ID of account to show
-	ID *string
+	ID string
 }
 
 // DeletePayload is the payload type of the account service delete method.
 type DeletePayload struct {
 	// ID of organization that owns  account
-	OrgID *uint
+	OrgID uint
 	// ID of account to show
-	ID *string
+	ID string
 }
 
 // NameAlreadyTaken is the type returned when creating an account fails because
@@ -76,8 +76,25 @@ type NameAlreadyTaken struct {
 	Message string
 }
 
+// NotFound is the type returned when attempting to show or delete an account
+// that does not exist.
+type NotFound struct {
+	// Message of error
+	Message string
+	// ID of missing account owner organization
+	OrgID uint
+	// ID of missing account
+	ID string
+}
+
 // NameAlreadyTaken is the type returned when creating an account fails because
 // its name is already taken
 func (e *NameAlreadyTaken) Error() string {
 	return "NameAlreadyTaken"
+}
+
+// NotFound is the type returned when attempting to show or delete an account
+// that does not exist.
+func (e *NotFound) Error() string {
+	return "NotFound"
 }

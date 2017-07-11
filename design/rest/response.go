@@ -108,8 +108,8 @@ func (r *HTTPResponseExpr) Headers() *design.AttributeExpr {
 }
 
 // MappedHeaders returns the computed response headers attribute map.
-func (r *HTTPResponseExpr) MappedHeaders() *MappedAttributeExpr {
-	return NewMappedAttributeExpr(r.headers)
+func (r *HTTPResponseExpr) MappedHeaders() *design.MappedAttributeExpr {
+	return design.NewMappedAttributeExpr(r.headers)
 }
 
 // EvalName returns the generic definition name used in error messages.

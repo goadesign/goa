@@ -108,52 +108,53 @@ func (s *NameScope) GoTypeDef(att *design.AttributeExpr, useDefault bool) string
 		ss = append(ss, "}")
 		return strings.Join(ss, "\n")
 	case design.UserType:
-		return s.GoTypeName(actual)
+		return s.GoTypeName(att)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
 }
 
 // GoTypeRef returns the Go code that refers to the Go type which matches the
-// given data type.
-func (s *NameScope) GoTypeRef(dt design.DataType) string {
-	name := s.GoTypeName(dt)
-	return goTypeRef(name, dt)
+// given attribute type.
+func (s *NameScope) GoTypeRef(att *design.AttributeExpr) string {
+	name := s.GoTypeName(att)
+	return goTypeRef(name, att.Type)
 }
 
 // GoFullTypeRef returns the Go code that refers to the Go type which matches
-// the given data type defined in the given package if a user type.
-func (s *NameScope) GoFullTypeRef(dt design.DataType, pkg string) string {
-	name := s.GoFullTypeName(dt, pkg)
-	return goTypeRef(name, dt)
+// the given attribute type defined in the given package if a user type.
+func (s *NameScope) GoFullTypeRef(att *design.AttributeExpr, pkg string) string {
+	name := s.GoFullTypeName(att, pkg)
+	return goTypeRef(name, att.Type)
 }
 
-// GoTypeName returns the Go type name of the given data type.
-func (s *NameScope) GoTypeName(dt design.DataType) string {
-	return s.GoFullTypeName(dt, "")
+// GoTypeName returns the Go type name of the given attribute type.
+func (s *NameScope) GoTypeName(att *design.AttributeExpr) string {
+	return s.GoFullTypeName(att, "")
 }
 
 // GoFullTypeName returns the Go type name of the given data type qualified with
 // the given package name if applicable and if not the empty string.
-func (s *NameScope) GoFullTypeName(dt design.DataType, pkg string) string {
-	switch actual := dt.(type) {
+func (s *NameScope) GoFullTypeName(att *design.AttributeExpr, pkg string) string {
+	switch actual := att.Type.(type) {
 	case design.Primitive:
-		return GoNativeTypeName(dt)
+		return GoNativeTypeName(actual)
 	case *design.Array:
-		return "[]" + s.GoFullTypeRef(actual.ElemType.Type, pkg)
+		return "[]" + s.GoFullTypeRef(actual.ElemType, pkg)
 	case *design.Map:
 		return fmt.Sprintf("map[%s]%s",
-			s.GoFullTypeRef(actual.KeyType.Type, pkg),
-			s.GoFullTypeRef(actual.ElemType.Type, pkg))
+			s.GoFullTypeRef(actual.KeyType, pkg),
+			s.GoFullTypeRef(actual.ElemType, pkg))
 	case *design.Object:
-		return "map[string]interface{}"
+		return s.GoTypeDef(att, false)
+
 	case design.UserType:
 		if pkg == "" {
-			return s.Unique(dt, Goify(actual.Name(), true), "")
+			return s.Unique(actual, Goify(actual.Name(), true), "")
 		}
 		return pkg + "." + Goify(actual.Name(), true)
 	case design.CompositeExpr:
-		return s.GoFullTypeName(actual.Attribute().Type, pkg)
+		return s.GoFullTypeName(actual.Attribute(), pkg)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}

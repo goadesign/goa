@@ -73,8 +73,8 @@ func NewListAccount(filter *string, orgID uint) *account.ListAccount {
 // payload.
 func NewShowPayload(orgID uint, id string) *account.ShowPayload {
 	p := account.ShowPayload{
-		OrgID: &orgID,
-		ID:    &id,
+		OrgID: orgID,
+		ID:    id,
 	}
 	return &p
 }
@@ -83,8 +83,8 @@ func NewShowPayload(orgID uint, id string) *account.ShowPayload {
 // endpoint payload.
 func NewDeletePayload(orgID uint, id string) *account.DeletePayload {
 	p := account.DeletePayload{
-		OrgID: &orgID,
-		ID:    &id,
+		OrgID: orgID,
+		ID:    id,
 	}
 	return &p
 }
@@ -93,7 +93,7 @@ func NewDeletePayload(orgID uint, id string) *account.DeletePayload {
 // request body.
 func (body *CreateServerRequestBody) Validate() (err error) {
 	if body.Name == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("body", "name"))
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
 	return
 }

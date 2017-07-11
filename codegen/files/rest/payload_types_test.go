@@ -5,7 +5,6 @@ import (
 
 	"goa.design/goa.v2/codegen"
 	. "goa.design/goa.v2/codegen/files/rest/testing"
-	. "goa.design/goa.v2/codegen/testing"
 	restdesign "goa.design/goa.v2/design/rest"
 )
 
@@ -104,6 +103,11 @@ func TestPayloadConstructor(t *testing.T) {
 		{"body-query-path-object-validate", PayloadBodyQueryPathObjectValidateDSL, PayloadBodyQueryPathObjectValidateConstructorCode},
 		{"body-query-path-user", PayloadBodyQueryPathUserDSL, PayloadBodyQueryPathUserConstructorCode},
 		{"body-query-path-user-validate", PayloadBodyQueryPathUserValidateDSL, PayloadBodyQueryPathUserValidateConstructorCode},
+
+		{"body-user-inner", PayloadBodyUserInnerDSL, PayloadBodyUserInnerConstructorCode},
+		{"body-user-inner-default", PayloadBodyUserInnerDefaultDSL, PayloadBodyUserInnerDefaultConstructorCode},
+		{"body-inline-array-user", PayloadBodyInlineArrayUserDSL, PayloadBodyInlineArrayUserConstructorCode},
+		{"body-inline-map-user", PayloadBodyInlineMapUserDSL, PayloadBodyInlineMapUserConstructorCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -111,11 +115,11 @@ func TestPayloadConstructor(t *testing.T) {
 			if len(restdesign.Root.Resources) != 1 {
 				t.Fatalf("got %d file(s), expected 1", len(restdesign.Root.Resources))
 			}
-			fs := Type(restdesign.Root.Resources[0])
+			fs := Type(restdesign.Root.Resources[0], make(map[string]struct{}))
 			sections := fs.Sections("")
 			var section *codegen.Section
 			for _, s := range sections {
-				if s.Template == payloadInitTmpl {
+				if s.Template == typeInitTmpl {
 					section = s
 				}
 			}
@@ -124,7 +128,7 @@ func TestPayloadConstructor(t *testing.T) {
 			}
 			code := SectionCode(t, section)
 			if code != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, Diff(t, code, c.Code))
+				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
 			}
 		})
 	}

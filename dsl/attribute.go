@@ -210,22 +210,26 @@ func Default(def interface{}) {
 }
 
 // Example provides an example value for a type, a parameter, a header or any
-// attribute. Example supports two syntaxes, both syntaxes accept two arguments
-// and in both cases the first argument is a summary describing the example. The
-// second argument provides the value of the example either directly or via a
-// DSL that can also specify a long description.
+// attribute. Example supports two syntaxes: one syntax accepts two arguments
+// where the first argument is a summary describing the example and the second a
+// value provided directly or via a DSL which may also specify a long
+// description. The other syntax accepts a single argument and is equivalent to
+// using the first syntax where the summary is the string "default".
 //
-// If no example is explicitly provided then a random example is generated
-// unless the "swagger:example" metadata is set to "false". See Metadata.
+// If no example is explicitly provided in an attribute expression then a random
+// example is generated unless the "swagger:example" metadata is set to "false".
+// See Metadata.
 //
-// Example may appear in a Attributes or Attribute expression DSL.
-// Example takes two arguments: a summary and the example value or defining DSL.
+// Example may appear in a Attributes or Attribute expression DSL. Example takes
+// one or two arguments: an optional summary and the example value or defining
+// DSL.
 //
 // Examples:
 //
 //	Params(func() {
 //		Param("ZipCode:zip-code", String, "Zip code filter", func() {
 //			Example("Santa Barbara", "93111")
+//			Example("93117") // same as Example("default", "93117")
 //		})
 //	})
 //
@@ -241,7 +245,31 @@ func Default(def interface{}) {
 //		})
 //	})
 //
-func Example(summary string, arg interface{}) {
+func Example(args ...interface{}) {
+	if len(args) == 0 {
+		eval.ReportError("not enough arguments")
+		return
+	}
+	if len(args) > 2 {
+		eval.ReportError("too many arguments")
+		return
+	}
+	var (
+		summary string
+		arg     interface{}
+	)
+	if len(args) == 1 {
+		summary = "default"
+		arg = args[0]
+	} else {
+		var ok bool
+		summary, ok = args[0].(string)
+		if !ok {
+			eval.InvalidArgError("summary (string)", summary)
+			return
+		}
+		arg = args[1]
+	}
 	if a, ok := eval.Current().(*design.AttributeExpr); ok {
 		ex := &design.ExampleExpr{Summary: summary}
 		if dsl, ok := arg.(func()); ok {

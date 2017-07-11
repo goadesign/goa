@@ -15,7 +15,7 @@ var _ = Service("account", func() {
 		Path("/orgs/{org_id}/accounts")
 		Param("org_id", UInt, "ID of owner organization", func() {
 			Maximum(10000)
-			Example("basic", 123)
+			Example(123)
 		})
 	})
 	Method("create", func() {
@@ -49,11 +49,14 @@ var _ = Service("account", func() {
 		Payload(func() {
 			Attribute("org_id", UInt, "ID of organization that owns  account")
 			Attribute("id", String, "ID of account to show")
-			Example("basic", Val{"org_id": 123, "id": "account1"})
+			Required("org_id", "id")
+			Example(Val{"org_id": 123, "id": "account1"})
 		})
 		Result(Account)
+		Error("not_found", NotFound, "Account not found")
 		HTTP(func() {
 			GET("/{id}")
+			Response("not_found", StatusNotFound)
 		})
 	})
 	Method("delete", func() {
@@ -61,9 +64,11 @@ var _ = Service("account", func() {
 		Payload(func() {
 			Attribute("org_id", UInt, "ID of organization that owns  account")
 			Attribute("id", String, "ID of account to show")
-			Example("basic", Val{"org_id": 123, "id": "account1"})
+			Required("org_id", "id")
+			Example(Val{"org_id": 123, "id": "account1"})
 		})
 		Result(Empty)
+		Error("not_found", NotFound, "Account not found")
 		HTTP(func() {
 			DELETE("/{id}")
 		})
@@ -106,4 +111,18 @@ var NameAlreadyTaken = Type("NameAlreadyTaken", func() {
 	Description("NameAlreadyTaken is the type returned when creating an account fails because its name is already taken")
 	Attribute("message", String, "Message of error")
 	Required("message")
+})
+
+var NotFound = Type("NotFound", func() {
+	Description("NotFound is the type returned when attempting to show or delete an account that does not exist.")
+	Attribute("message", String, "Message of error", func() {
+		Example("account 1 of organization 2 not found")
+	})
+	Attribute("org_id", UInt, "ID of missing account owner organization", func() {
+		Example(123)
+	})
+	Attribute("id", String, "ID of missing account", func() {
+		Example("1")
+	})
+	Required("message", "org_id", "id")
 })

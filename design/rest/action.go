@@ -85,9 +85,9 @@ func (a *ActionExpr) Description() string {
 func (a *ActionExpr) EvalName() string {
 	var prefix, suffix string
 	if a.Name() != "" {
-		suffix = fmt.Sprintf("action %#v", a.Name())
+		suffix = fmt.Sprintf("HTTP endpoint %#v", a.Name())
 	} else {
-		suffix = "unnamed action"
+		suffix = "unnamed HTTP endpoint"
 	}
 	if a.Resource != nil {
 		prefix = a.Resource.EvalName() + " "
@@ -96,9 +96,9 @@ func (a *ActionExpr) EvalName() string {
 }
 
 // PathParams returns the path parameters of the action across all its routes.
-func (a *ActionExpr) PathParams() *MappedAttributeExpr {
+func (a *ActionExpr) PathParams() *design.MappedAttributeExpr {
 	allParams := a.AllParams()
-	pathParams := NewMappedAttributeExpr(&design.AttributeExpr{Type: &design.Object{}})
+	pathParams := design.NewMappedAttributeExpr(&design.AttributeExpr{Type: &design.Object{}})
 	pathParams.Validation = &design.ValidationExpr{}
 	for _, r := range a.Routes {
 		for _, p := range r.ParamAttributeNames() {
@@ -116,7 +116,7 @@ func (a *ActionExpr) PathParams() *MappedAttributeExpr {
 }
 
 // QueryParams returns the query parameters of the action across all its routes.
-func (a *ActionExpr) QueryParams() *MappedAttributeExpr {
+func (a *ActionExpr) QueryParams() *design.MappedAttributeExpr {
 	allParams := a.AllParams()
 	pathParams := a.PathParams()
 	for _, nat := range *pathParams.Type.(*design.Object) {
@@ -127,13 +127,13 @@ func (a *ActionExpr) QueryParams() *MappedAttributeExpr {
 
 // AllParams returns the path and query string parameters of the action across
 // all its routes.
-func (a *ActionExpr) AllParams() *MappedAttributeExpr {
-	var res *MappedAttributeExpr
+func (a *ActionExpr) AllParams() *design.MappedAttributeExpr {
+	var res *design.MappedAttributeExpr
 	if a.params != nil {
 		res = a.MappedParams()
 	} else {
 		attr := &design.AttributeExpr{Type: &design.Object{}}
-		res = NewMappedAttributeExpr(attr)
+		res = design.NewMappedAttributeExpr(attr)
 	}
 	if a.HasAbsoluteRoutes() {
 		return res
@@ -158,8 +158,8 @@ func (a *ActionExpr) Headers() *design.AttributeExpr {
 }
 
 // MappedHeaders computes the mapped attribute expression from Headers.
-func (a *ActionExpr) MappedHeaders() *MappedAttributeExpr {
-	return NewMappedAttributeExpr(a.headers)
+func (a *ActionExpr) MappedHeaders() *design.MappedAttributeExpr {
+	return design.NewMappedAttributeExpr(a.headers)
 }
 
 // Params initializes and returns the attribute holding the action parameters.
@@ -176,8 +176,8 @@ func (a *ActionExpr) Params() *design.AttributeExpr {
 }
 
 // MappedParams computes the mapped attribute expression from Params.
-func (a *ActionExpr) MappedParams() *MappedAttributeExpr {
-	return NewMappedAttributeExpr(a.params)
+func (a *ActionExpr) MappedParams() *design.MappedAttributeExpr {
+	return design.NewMappedAttributeExpr(a.params)
 }
 
 // HasAbsoluteRoutes returns true if all the action routes are absolute.
@@ -194,10 +194,10 @@ func (a *ActionExpr) HasAbsoluteRoutes() bool {
 func (a *ActionExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
 	if a.Name() == "" {
-		verr.Add(a, "Action name cannot be empty")
+		verr.Add(a, "Endpoint name cannot be empty")
 	}
 	if len(a.Routes) == 0 {
-		verr.Add(a, "No route defined for action")
+		verr.Add(a, "No route defined for HTTP endpoint")
 	}
 	hasTags := false
 	allTagged := true
@@ -223,13 +223,70 @@ func (a *ActionExpr) Validate() error {
 	verr.Merge(a.validateParams())
 	verr.Merge(a.validateHeaders())
 	if a.Body != nil {
-		verr.Merge(a.Body.Validate("action payload", a))
+		verr.Merge(a.Body.Validate("HTTP endpoint payload", a))
 	}
 	for _, r := range a.Responses {
 		verr.Merge(r.Validate())
 	}
 	for _, e := range a.HTTPErrors {
 		verr.Merge(e.Validate())
+	}
+
+	if a.MethodExpr.Payload != nil && design.IsArray(a.MethodExpr.Payload.Type) {
+		var hasParams, hasHeaders bool
+		queryParams := design.NewMappedAttributeExpr(a.params)
+		for _, r := range a.Routes {
+			for _, p := range r.Params() {
+				queryParams.Delete(p)
+			}
+		}
+		if ln := len(*design.AsObject(queryParams.Type)); ln > 0 {
+			hasParams = true
+			if ln > 1 {
+				verr.Add(a, "Payload type is array but HTTP endpoint defines multiple query string parameters. At most one parameter must be defined and it must be an array.")
+			}
+		}
+		if ln := len(*design.AsObject(a.Headers().Type)); ln > 0 {
+			hasHeaders = true
+			if hasParams {
+				verr.Add(a, "Payload type is array but HTTP endpoint defines both query string parameters and headers. At most one parameter or header must be defined and it must be of type array.")
+			}
+			if ln > 1 {
+				verr.Add(a, "Payload type is array but HTTP endpoint defines multiple headers. At most one header must be defined and it must be an array.")
+			}
+		}
+		if a.Body != nil {
+			if !design.IsArray(a.Body.Type) {
+				verr.Add(a, "Payload type is array but HTTP endpoint body is not.")
+			}
+			if hasParams {
+				verr.Add(a, "Payload type is array but HTTP endpoint defines both a body and route or query string parameters. At most one of these must be defined and it must be an array.")
+			}
+			if hasHeaders {
+				verr.Add(a, "Payload type is array but HTTP endpoint defines both a body and headers. At most one of these must be defined and it must be an array.")
+			}
+		}
+	}
+
+	if a.MethodExpr.Payload != nil && design.IsMap(a.MethodExpr.Payload.Type) {
+		var hasParams bool
+		if ln := len(*design.AsObject(a.QueryParams().Attribute().Type)); ln > 0 {
+			hasParams = true
+			if ln > 1 {
+				verr.Add(a, "Payload type is map but HTTP endpoint defines multiple query string parameters. At most one parameter must be defined and it must be a map.")
+			}
+		}
+		if ln := len(*design.AsObject(a.Headers().Type)); ln > 0 {
+			verr.Add(a, "Payload type is map but HTTP endpoint defines headers. Map payloads can only be decoded from HTTP request bodies or query strings.")
+		}
+		if a.Body != nil {
+			if !design.IsMap(a.Body.Type) {
+				verr.Add(a, "Payload type is map but HTTP endpoint body is not.")
+			}
+			if hasParams {
+				verr.Add(a, "Payload type is map but HTTP endpoint defines both a body and query string parameters. At most one of these must be defined and it must be a map.")
+			}
+		}
 	}
 
 	return verr

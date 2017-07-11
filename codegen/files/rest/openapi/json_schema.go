@@ -3,7 +3,6 @@ package openapi
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"reflect"
 	"strconv"
 
@@ -184,11 +183,7 @@ func GenerateResourceDefinition(api *design.APIExpr, res *rest.ResourceExpr) {
 		var targetSchema *Schema
 		var identifier string
 		for _, resp := range a.Responses {
-			var suffix string
-			if len(a.Responses) > 1 {
-				suffix = http.StatusText(resp.StatusCode)
-			}
-			dt := restgen.ResponseBodyType(res, resp, a.MethodExpr.Result, suffix)
+			dt := restgen.ResponseBodyType(res, a, resp)
 			if mt := dt.(*design.ResultTypeExpr); mt != nil {
 				if identifier == "" {
 					identifier = mt.Identifier

@@ -178,8 +178,8 @@ func (r *RootExpr) Headers() *design.AttributeExpr {
 }
 
 // MappedHeaders computes the mapped attribute expression from Headers.
-func (r *RootExpr) MappedHeaders() *MappedAttributeExpr {
-	return NewMappedAttributeExpr(r.headers)
+func (r *RootExpr) MappedHeaders() *design.MappedAttributeExpr {
+	return design.NewMappedAttributeExpr(r.headers)
 }
 
 // Params initializes and returns the attribute holding the API parameters.
@@ -191,8 +191,8 @@ func (r *RootExpr) Params() *design.AttributeExpr {
 }
 
 // MappedParams computes the mapped attribute expression from Params.
-func (r *RootExpr) MappedParams() *MappedAttributeExpr {
-	return NewMappedAttributeExpr(r.params)
+func (r *RootExpr) MappedParams() *design.MappedAttributeExpr {
+	return design.NewMappedAttributeExpr(r.params)
 }
 
 // EvalName is the expression name used by the evaluation engine to display

@@ -1,53 +1,50 @@
-package rest
+package design
 
-import (
-	"strings"
-
-	"goa.design/goa.v2/design"
-)
+import "strings"
 
 // MappedAttributeExpr is an attribute expression of type object that map the
-// object keys to names used in HTTP elements (e.g. header names, param names)
+// object keys to names used in transport specific elements (e.g. HTTP header
+// names).
 type MappedAttributeExpr struct {
-	*design.AttributeExpr
+	*AttributeExpr
 	nameMap    map[string]string
 	reverseMap map[string]string
 }
 
 // NewMappedAttributeExpr instantiates a mapped attribute expression for the
 // given attribute. The type of att must be Object.
-func NewMappedAttributeExpr(att *design.AttributeExpr) *MappedAttributeExpr {
+func NewMappedAttributeExpr(att *AttributeExpr) *MappedAttributeExpr {
 	if att == nil {
-		return NewMappedAttributeExpr(&design.AttributeExpr{Type: &design.Object{}})
+		return NewMappedAttributeExpr(&AttributeExpr{Type: &Object{}})
 	}
-	if !design.IsObject(att.Type) {
+	if !IsObject(att.Type) {
 		panic("cannot create a mapped attribute with a non object attribute") // bug
 	}
 	var (
-		o          = design.AsObject(att.Type)
-		n          = &design.Object{}
+		o          = AsObject(att.Type)
+		n          = &Object{}
 		nameMap    = make(map[string]string)
 		reverseMap = make(map[string]string)
-		validation *design.ValidationExpr
+		validation *ValidationExpr
 	)
 	if att.Validation != nil {
 		validation = att.Validation.Dup()
 	}
 	for _, nat := range *o {
 		elems := strings.Split(nat.Name, ":")
-		n.Set(elems[0], design.DupAtt(nat.Attribute))
+		n.Set(elems[0], DupAtt(nat.Attribute))
 		if len(elems) > 1 {
 			nameMap[elems[0]] = elems[1]
 			reverseMap[elems[1]] = elems[0]
 		}
 	}
-	if ut, ok := att.Type.(design.UserType); ok {
+	if ut, ok := att.Type.(UserType); ok {
 		if val := ut.Attribute().Validation; val != nil {
 			validation = val.Dup()
 		}
 	}
 	return &MappedAttributeExpr{
-		AttributeExpr: &design.AttributeExpr{
+		AttributeExpr: &AttributeExpr{
 			Type:       n,
 			Validation: validation,
 		},
@@ -67,7 +64,7 @@ func DupMappedAtt(ma *MappedAttributeExpr) *MappedAttributeExpr {
 		reverseMap[k] = v
 	}
 	return &MappedAttributeExpr{
-		AttributeExpr: design.DupAtt(ma.AttributeExpr),
+		AttributeExpr: DupAtt(ma.AttributeExpr),
 		nameMap:       nameMap,
 		reverseMap:    reverseMap,
 	}
@@ -76,7 +73,7 @@ func DupMappedAtt(ma *MappedAttributeExpr) *MappedAttributeExpr {
 // Map records the element name of one of the child attributes.
 // Map panics if attName is not the name of a child attribute.
 func (ma *MappedAttributeExpr) Map(elemName, attName string) {
-	if att := design.AsObject(ma.Type).Attribute(attName); att == nil {
+	if att := AsObject(ma.Type).Attribute(attName); att == nil {
 		panic(attName + " is not the name of a child of the mapped attribute") // bug
 	}
 	ma.nameMap[attName] = elemName
@@ -92,16 +89,16 @@ func (ma *MappedAttributeExpr) Delete(attName string) {
 			break
 		}
 	}
-	ma.Type.(*design.Object).Delete(attName)
+	ma.Type.(*Object).Delete(attName)
 	if ma.Validation != nil {
 		ma.Validation.RemoveRequired(attName)
 	}
 }
 
 // Attribute returns the original attribute using "att:elem" format for the keys.
-func (ma *MappedAttributeExpr) Attribute() *design.AttributeExpr {
-	att := design.DupAtt(ma.AttributeExpr)
-	obj := design.AsObject(att.Type)
+func (ma *MappedAttributeExpr) Attribute() *AttributeExpr {
+	att := DupAtt(ma.AttributeExpr)
+	obj := AsObject(att.Type)
 	for _, nat := range *obj {
 		if elem := ma.ElemName(nat.Name); elem != nat.Name {
 			obj.Rename(nat.Name, nat.Name+":"+elem)
@@ -110,37 +107,37 @@ func (ma *MappedAttributeExpr) Attribute() *design.AttributeExpr {
 	return att
 }
 
-// ElemName returns the HTTP element name of the given object key. It returns
-// keyName if it's a key of the mapped attribute object type. It panics if there
-// is no mapping and keyName is not a key.
+// ElemName returns the transport element name of the given object key. It
+// returns keyName if it's a key of the mapped attribute object type. It panics
+// if there is no mapping and keyName is not a key.
 func (ma *MappedAttributeExpr) ElemName(keyName string) string {
 	if n, ok := ma.nameMap[keyName]; ok {
 		return n
 	}
-	if att := design.AsObject(ma.Type).Attribute(keyName); att != nil {
+	if att := AsObject(ma.Type).Attribute(keyName); att != nil {
 		return keyName
 	}
 	panic("Key " + keyName + " is not defined") // bug
 }
 
-// KeyName returns the object key of the given HTTP element name. It returns
-// elemName if it's a key of the mapped attribute object type. It panics if
-// there is no mapping and elemName is not a key.
+// KeyName returns the object key of the given transport element name. It
+// returns elemName if it's a key of the mapped attribute object type. It panics
+// if there is no mapping and elemName is not a key.
 func (ma *MappedAttributeExpr) KeyName(elemName string) string {
 	if n, ok := ma.reverseMap[elemName]; ok {
 		return n
 	}
-	if att := design.AsObject(ma.Type).Attribute(elemName); att != nil {
+	if att := AsObject(ma.Type).Attribute(elemName); att != nil {
 		return elemName
 	}
-	panic("HTTP element " + elemName + " is not defined and is not a key") // bug
+	panic("transport element " + elemName + " is not defined and is not a key") // bug
 }
 
 // Merge merges other's attributes into a overriding attributes of a with
 // attributes of other with identical names.
 func (ma *MappedAttributeExpr) Merge(other *MappedAttributeExpr) {
 	ma.AttributeExpr.Merge(other.AttributeExpr)
-	for _, nat := range *design.AsObject(other.AttributeExpr.Type) {
+	for _, nat := range *AsObject(other.AttributeExpr.Type) {
 		if en := other.ElemName(nat.Name); en != nat.Name {
 			ma.Map(en, nat.Name)
 		}

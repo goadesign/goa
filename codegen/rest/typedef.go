@@ -6,20 +6,22 @@ import (
 
 	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/design/rest"
 )
 
 // GoTypeDef returns the Go code that defines the struct corresponding to ma.
-// It defers from the function defined in the codegen package in the following
+// It differs from the function defined in the codegen package in the following
 // ways:
 //
-//    - It defines marshaler tags on each fields taking using the HTTP element
-//      names.
+//    - It defines marshaler tags on each fields using the HTTP element names.
 //
 //    - It produced fields with pointers even if the corresponding attribute is
-//      required so that the generated code may validate explicitly if ptr is
-//      true.
+//      required when ptr is true so that the generated code may validate
+//      explicitly.
 //
+// useDefault directs whether fields holding primitive types should hold
+// pointers when ptr is false. If it is true then the fields are values even
+// when not required (to account for the fact that they have a default value so
+// cannot be nil) otherwise the fields are values only when required.
 func GoTypeDef(scope *codegen.NameScope, att *design.AttributeExpr, ptr, useDefault bool) string {
 	switch actual := att.Type.(type) {
 	case design.Primitive:
@@ -43,7 +45,7 @@ func GoTypeDef(scope *codegen.NameScope, att *design.AttributeExpr, ptr, useDefa
 	case *design.Object:
 		var ss []string
 		ss = append(ss, "struct {")
-		ma := rest.NewMappedAttributeExpr(att)
+		ma := design.NewMappedAttributeExpr(att)
 		mat := ma.Attribute()
 		WalkMappedAttr(ma, func(name, elem string, required bool, at *design.AttributeExpr) error {
 			var (
@@ -73,7 +75,7 @@ func GoTypeDef(scope *codegen.NameScope, att *design.AttributeExpr, ptr, useDefa
 		ss = append(ss, "}")
 		return strings.Join(ss, "\n")
 	case design.UserType:
-		return scope.GoTypeName(actual)
+		return scope.GoTypeName(att)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}

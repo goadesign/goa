@@ -1,6 +1,8 @@
 package restgen
 
 import (
+	"net/http"
+
 	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
@@ -11,7 +13,7 @@ import (
 // type is used instead of the payload type. Otherwise the type is computed by
 // removing the attributes of the method payload used to define headers and
 // parameters.
-func RequestBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, suffix string) design.DataType {
+func RequestBodyType(r *rest.ResourceExpr, a *rest.ActionExpr) design.DataType {
 	if a.Body != nil {
 		return a.Body.Type
 	}
@@ -20,6 +22,8 @@ func RequestBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, suffix string) de
 		dt      = a.MethodExpr.Payload.Type
 		headers = a.MappedHeaders()
 		params  = a.AllParams()
+		suffix  = "ServerRequestBody"
+		name    = codegen.Goify(a.Name(), true) + suffix
 	)
 
 	bodyOnly := len(*design.AsObject(headers.Type)) == 0 &&
@@ -31,34 +35,29 @@ func RequestBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, suffix string) de
 	// encoded in request body).
 	if !design.IsObject(dt) {
 		if bodyOnly {
-			return dt
+			return renameType(dt, name, "RequestBody")
 		}
 		return design.Empty
 	}
 
-	// 2. Return user type if no modification needed
-	if _, ok := dt.(design.UserType); ok {
-		if len(*design.AsObject(headers.Type)) == 0 && len(*design.AsObject(params.Type)) == 0 {
-			return dt
-		}
-	}
-
-	// 3. Remove header and param attributes
-	body := rest.NewMappedAttributeExpr(a.MethodExpr.Payload)
+	// 2. Remove header and param attributes
+	body := design.NewMappedAttributeExpr(a.MethodExpr.Payload)
 	removeAttributes(body, headers)
 	removeAttributes(body, params)
 
-	// 4. Return empty type if no attribute left
+	// 3. Return empty type if no attribute left
 	if len(*design.AsObject(body.Type)) == 0 {
 		return design.Empty
 	}
 
-	// 5. Build computed user type
-	name := codegen.Goify(a.Name(), true) + suffix
-	return &design.UserTypeExpr{
+	// 4. Build computed user type
+	ut := &design.UserTypeExpr{
 		AttributeExpr: body.Attribute(),
 		TypeName:      name,
 	}
+	appendSuffix(ut.Attribute().Type, "RequestBody")
+
+	return ut
 }
 
 // ResponseBodyType returns the type of the response body given a response and
@@ -69,7 +68,8 @@ func RequestBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, suffix string) de
 // payload used to define headers and parameters. Also if the response defines a
 // view then the response result type is projected first. suffix is appended to
 // the created type name if any.
-func ResponseBodyType(r *rest.ResourceExpr, resp *rest.HTTPResponseExpr, result *design.AttributeExpr, suffix string) design.DataType {
+func ResponseBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, resp *rest.HTTPResponseExpr) design.DataType {
+	result := a.MethodExpr.Result
 	if result == nil || result.Type == design.Empty {
 		return design.Empty
 	}
@@ -77,18 +77,24 @@ func ResponseBodyType(r *rest.ResourceExpr, resp *rest.HTTPResponseExpr, result 
 		return resp.Body.Type
 	}
 
+	var suffix string
+	if len(a.Responses) > 1 {
+		suffix = http.StatusText(resp.StatusCode)
+	}
+
 	var (
 		dt      = result.Type
 		headers = resp.MappedHeaders()
+		name    = codegen.Goify(a.Name(), true) + suffix + "ResponseBody"
 	)
 
 	// 1. If Result is not an object then check whether there are headers
 	// defined and if so return empty type (result encoded in response
-	// headers) otherwise return result type (result encoded in response
-	// body).
+	// headers) otherwise return renamed result type (result encoded in
+	// response body).
 	if !design.IsObject(dt) {
 		if len(*design.AsObject(resp.Headers().Type)) == 0 {
-			return dt
+			return renameType(dt, name, "ResponseBody")
 		}
 		return design.Empty
 	}
@@ -107,25 +113,16 @@ func ResponseBodyType(r *rest.ResourceExpr, resp *rest.HTTPResponseExpr, result 
 		}
 	}
 
-	// 3. Return user type if no modification needed
-	if _, ok := dt.(design.UserType); ok {
-		if headers := resp.Headers(); len(*design.AsObject(headers.Type)) == 0 {
-			return dt
-		}
-	}
-
-	// 4. Remove header attributes
-	body := rest.NewMappedAttributeExpr(result)
+	// 3. Remove header attributes
+	body := design.NewMappedAttributeExpr(result)
 	removeAttributes(body, headers)
 
-	// 5. Return empty type if no attribute left
+	// 4. Return empty type if no attribute left
 	if len(*design.AsObject(body.Type)) == 0 {
 		return design.Empty
 	}
 
-	// 6. Build computed user type
-	action := resp.Parent.(*rest.ActionExpr)
-	name := codegen.Goify(action.Name(), true) + suffix + "ResponseBody"
+	// 5. Build computed user type
 	userType := &design.UserTypeExpr{
 		AttributeExpr: body.Attribute(),
 		TypeName:      name,
@@ -133,7 +130,7 @@ func ResponseBodyType(r *rest.ResourceExpr, resp *rest.HTTPResponseExpr, result 
 	if isrt {
 		views := make([]*design.ViewExpr, len(rt.Views))
 		for i, v := range rt.Views {
-			mv := rest.NewMappedAttributeExpr(v.AttributeExpr)
+			mv := design.NewMappedAttributeExpr(v.AttributeExpr)
 			removeAttributes(mv, headers)
 			nv := &design.ViewExpr{
 				AttributeExpr: mv.Attribute(),
@@ -152,10 +149,61 @@ func ResponseBodyType(r *rest.ResourceExpr, resp *rest.HTTPResponseExpr, result 
 		}
 		return nmt
 	}
+	appendSuffix(userType.Attribute().Type, "ResponseBody")
+
 	return userType
 }
 
-func removeAttributes(attr, sub *rest.MappedAttributeExpr) {
+func renameType(dt design.DataType, name, suffix string) design.DataType {
+	switch actual := dt.(type) {
+	case design.UserType:
+		rt := design.Dup(dt)
+		if urt, ok := rt.(*design.UserTypeExpr); ok {
+			urt.TypeName = name
+		} else {
+			rt.(*design.ResultTypeExpr).TypeName = name
+		}
+		appendSuffix(actual.Attribute().Type, suffix)
+		return rt
+	case *design.Object:
+		rt := design.Dup(dt)
+		appendSuffix(rt, suffix)
+		return rt
+	case *design.Array:
+		rt := design.Dup(dt)
+		appendSuffix(rt, suffix)
+		return rt
+	case *design.Map:
+		rt := design.Dup(dt)
+		appendSuffix(rt, suffix)
+		return rt
+	}
+	return dt
+}
+
+func appendSuffix(dt design.DataType, suffix string) {
+	switch actual := dt.(type) {
+	case design.UserType:
+		if ut, ok := actual.(*design.UserTypeExpr); ok {
+			ut.TypeName = ut.TypeName + suffix
+		} else {
+			rt := actual.(*design.ResultTypeExpr)
+			rt.TypeName = rt.TypeName + suffix
+		}
+		appendSuffix(actual.Attribute().Type, suffix)
+	case *design.Object:
+		for _, nat := range *actual {
+			appendSuffix(nat.Attribute.Type, suffix)
+		}
+	case *design.Array:
+		appendSuffix(actual.ElemType.Type, suffix)
+	case *design.Map:
+		appendSuffix(actual.KeyType.Type, suffix)
+		appendSuffix(actual.ElemType.Type, suffix)
+	}
+}
+
+func removeAttributes(attr, sub *design.MappedAttributeExpr) {
 	WalkMappedAttr(sub, func(name, _ string, _ bool, _ *design.AttributeExpr) error {
 		attr.Delete(name)
 		if attr.Validation != nil {

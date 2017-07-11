@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	. "goa.design/goa.v2/codegen/testing"
+	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/design"
 )
 
@@ -80,7 +80,7 @@ func NewEndpoints(s Service) *Endpoints {
 			Name: "A",
 			Payload: &design.AttributeExpr{
 				Type: &design.UserTypeExpr{
-					AttributeExpr: &design.AttributeExpr{Type: design.String},
+					AttributeExpr: &design.AttributeExpr{Type: &design.Object{{Name: "a", Attribute: &design.AttributeExpr{Type: design.String}}}},
 					TypeName:      "AType",
 				}},
 			Result: &design.AttributeExpr{Type: design.Empty},
@@ -90,7 +90,7 @@ func NewEndpoints(s Service) *Endpoints {
 			Name: "B",
 			Payload: &design.AttributeExpr{
 				Type: &design.UserTypeExpr{
-					AttributeExpr: &design.AttributeExpr{Type: design.String},
+					AttributeExpr: &design.AttributeExpr{Type: &design.Object{{Name: "b", Attribute: &design.AttributeExpr{Type: design.String}}}},
 					TypeName:      "BType",
 				}},
 			Result: &design.AttributeExpr{Type: design.Empty},
@@ -100,7 +100,7 @@ func NewEndpoints(s Service) *Endpoints {
 			Name: "C",
 			Payload: &design.AttributeExpr{
 				Type: &design.UserTypeExpr{
-					AttributeExpr: &design.AttributeExpr{Type: design.String},
+					AttributeExpr: &design.AttributeExpr{Type: &design.Object{{Name: "c", Attribute: &design.AttributeExpr{Type: design.String}}}},
 					TypeName:      "CType",
 				}},
 			Result: &design.AttributeExpr{Type: design.Empty},
@@ -161,7 +161,7 @@ func NewEndpoints(s Service) *Endpoints {
 		}
 		actual := buf.String()
 		if !strings.Contains(actual, tc.Expected) {
-			d := Diff(t, actual, tc.Expected)
+			d := codegen.Diff(t, actual, tc.Expected)
 			t.Errorf("%s: got\n%v\n=============\nexpected to contain\n%v\ndiff\n%v", k, actual, tc.Expected, d)
 		}
 	}

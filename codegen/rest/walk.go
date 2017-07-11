@@ -23,7 +23,7 @@ type (
 // function giving each attribute as it iterates. WalkMappedAttr stops if there
 // is no more attribute to iterate over or if the iterator function returns an
 // error in which case it returns the error.
-func WalkMappedAttr(ma *rest.MappedAttributeExpr, it MappedAttributeWalker) error {
+func WalkMappedAttr(ma *design.MappedAttributeExpr, it MappedAttributeWalker) error {
 	o := design.AsObject(ma.Type)
 	for _, nat := range *o {
 		if err := it(nat.Name, ma.ElemName(nat.Name), ma.IsRequired(nat.Name), nat.Attribute); err != nil {
@@ -49,13 +49,13 @@ func WalkParams(a *rest.ActionExpr, it MappedAttributeWalker) error {
 	return walk(a, it, a.MappedParams(), a.Resource.MappedParams())
 }
 
-func walk(a *rest.ActionExpr, it MappedAttributeWalker, ma, rma *rest.MappedAttributeExpr) error {
+func walk(a *rest.ActionExpr, it MappedAttributeWalker, ma, rma *design.MappedAttributeExpr) error {
 	if ma == nil && rma == nil {
 		return nil
 	}
 
 	var (
-		merged    *rest.MappedAttributeExpr
+		merged    *design.MappedAttributeExpr
 		mergedMap *design.Object
 		elemNames []string
 		nameMap   map[string]string
@@ -66,7 +66,7 @@ func walk(a *rest.ActionExpr, it MappedAttributeWalker, ma, rma *rest.MappedAttr
 		} else if ma == nil {
 			merged = rma
 		} else {
-			merged = rest.DupMappedAtt(rma)
+			merged = design.DupMappedAtt(rma)
 			merged.Merge(ma)
 		}
 

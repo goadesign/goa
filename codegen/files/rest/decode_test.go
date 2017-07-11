@@ -3,8 +3,8 @@ package rest
 import (
 	"testing"
 
+	"goa.design/goa.v2/codegen"
 	. "goa.design/goa.v2/codegen/files/rest/testing"
-	. "goa.design/goa.v2/codegen/testing"
 	"goa.design/goa.v2/design/rest"
 )
 
@@ -131,6 +131,10 @@ func TestDecode(t *testing.T) {
 		{"body-primitive-array-string-validate", PayloadBodyPrimitiveArrayStringValidateDSL, PayloadBodyPrimitiveArrayStringValidateDecodeCode},
 		{"body-primitive-array-bool-validate", PayloadBodyPrimitiveArrayBoolValidateDSL, PayloadBodyPrimitiveArrayBoolValidateDecodeCode},
 
+		{"body-primitive-array-user-validate", PayloadBodyPrimitiveArrayUserValidateDSL, PayloadBodyPrimitiveArrayUserValidateDecodeCode},
+		{"body-primitive-field-array-user", PayloadBodyPrimitiveFieldArrayUserDSL, PayloadBodyPrimitiveFieldArrayUserDecodeCode},
+		{"body-primitive-field-array-user-validate", PayloadBodyPrimitiveFieldArrayUserValidateDSL, PayloadBodyPrimitiveFieldArrayUserValidateDecodeCode},
+
 		{"body-query-object", PayloadBodyQueryObjectDSL, PayloadBodyQueryObjectDecodeCode},
 		{"body-query-object-validate", PayloadBodyQueryObjectValidateDSL, PayloadBodyQueryObjectValidateDecodeCode},
 		{"body-query-user", PayloadBodyQueryUserDSL, PayloadBodyQueryUserDecodeCode},
@@ -159,7 +163,7 @@ func TestDecode(t *testing.T) {
 			}
 			code := SectionCode(t, sections[7])
 			if code != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, Diff(t, code, c.Code))
+				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
 			}
 		})
 	}

@@ -2,9 +2,6 @@ package rest
 
 import (
 	"bytes"
-	"io/ioutil"
-	"os"
-	"strings"
 	"testing"
 
 	"goa.design/goa.v2/codegen"
@@ -49,25 +46,5 @@ func SectionCode(t *testing.T, section *codegen.Section) string {
 	if err := section.Write(&code); err != nil {
 		t.Fatal(err)
 	}
-	// format code
-	tmp, err := ioutil.TempFile("", "test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(tmp.Name())
-	_, err = tmp.WriteString("package foo\n" + code.String())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := tmp.Close(); err != nil {
-		t.Fatal(err)
-	}
-	if err := codegen.Format(tmp.Name()); err != nil {
-		t.Fatal(err)
-	}
-	content, err := ioutil.ReadFile(tmp.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	return strings.Join(strings.Split(string(content), "\n")[2:], "\n")
+	return codegen.FormatTestCode(t, "package foo\n"+code.String())
 }

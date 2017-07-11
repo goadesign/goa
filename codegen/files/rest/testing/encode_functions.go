@@ -665,7 +665,7 @@ func EncodeMethodBodyStringResponse(encoder func(http.ResponseWriter, *http.Requ
 		res := v.(*servicebodystring.MethodBodyStringResult)
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
-		body := res
+		body := NewMethodBodyStringResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -679,7 +679,7 @@ func EncodeMethodBodyObjectResponse(encoder func(http.ResponseWriter, *http.Requ
 		res := v.(*servicebodyobject.MethodBodyObjectResult)
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
-		body := res
+		body := NewMethodBodyObjectResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -693,7 +693,7 @@ func EncodeMethodBodyUserResponse(encoder func(http.ResponseWriter, *http.Reques
 		res := v.(*servicebodyuser.ResultType)
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
-		body := res
+		body := NewMethodBodyUserResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -707,7 +707,7 @@ func EncodeMethodBodyArrayStringResponse(encoder func(http.ResponseWriter, *http
 		res := v.(*servicebodyarraystring.MethodBodyArrayStringResult)
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
-		body := res
+		body := NewMethodBodyArrayStringResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -721,7 +721,7 @@ func EncodeMethodBodyArrayUserResponse(encoder func(http.ResponseWriter, *http.R
 		res := v.(*servicebodyarrayuser.MethodBodyArrayUserResult)
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
-		body := res
+		body := NewMethodBodyArrayUserResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -794,9 +794,7 @@ func EncodeMethodBodyHeaderObjectResponse(encoder func(http.ResponseWriter, *htt
 		res := v.(*servicebodyheaderobject.MethodBodyHeaderObjectResult)
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
-		body := &MethodBodyHeaderObjectResponseBody{
-			A: res.A,
-		}
+		body := NewMethodBodyHeaderObjectResponseBody(res)
 		if res.B != nil {
 			w.Header().Set("b", *res.B)
 		}
@@ -813,9 +811,7 @@ func EncodeMethodBodyHeaderUserResponse(encoder func(http.ResponseWriter, *http.
 		res := v.(*servicebodyheaderuser.ResultType)
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
-		body := &MethodBodyHeaderUserResponseBody{
-			A: res.A,
-		}
+		body := NewMethodBodyHeaderUserResponseBody(res)
 		if res.B != nil {
 			w.Header().Set("b", *res.B)
 		}
@@ -839,7 +835,7 @@ func EncodeMethodTagStringResponse(encoder func(http.ResponseWriter, *http.Reque
 		}
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
-		body := res
+		body := NewMethodTagStringOKResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -860,7 +856,7 @@ func EncodeMethodTagStringRequiredResponse(encoder func(http.ResponseWriter, *ht
 		}
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
-		body := res
+		body := NewMethodTagStringRequiredOKResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}

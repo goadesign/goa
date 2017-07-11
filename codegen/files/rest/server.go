@@ -1,13 +1,3 @@
-// Fix encoder so it copies result type to http type recursively (arrays, maps)
-// Make sure to generate user type for each error even if declared with primitive
-// Add metadata to specify error type attribute to be used for error message
-// validate only one error per http status code
-
-// Make sure all routes define identical path params
-// Remove required attributes from 'Required' slice that have default values
-
-// Add response tags to account example
-
 package rest
 
 import (
@@ -50,27 +40,24 @@ func Server(r *rest.ResourceExpr) codegen.File {
 				{Path: genPkg + "/" + codegen.Goify(r.Name(), false)},
 			}),
 			{Template: serverStructTmpl(r), Data: data},
-			{Template: serverConstructorTmpl(r), Data: data},
+			{Template: serverInitTmpl(r), Data: data},
 			{Template: serverMountTmpl(r), Data: data},
 		}
 
 		for _, a := range data.Actions {
 			as := []*codegen.Section{
 				{Template: serverHandlerTmpl(r), Data: a},
-				{Template: serverHandlerConstructorTmpl(r), Data: a},
+				{Template: serverHandlerInitTmpl(r), Data: a},
+				{Template: responseEncoderTmpl(r), Data: a},
 			}
 			s = append(s, as...)
 
-			if len(a.Responses) > 0 {
-				s = append(s, &codegen.Section{Template: serverEncoderTmpl(r), Data: a})
-			}
-
 			if a.Payload != nil {
-				s = append(s, &codegen.Section{Template: serverDecoderTmpl(r), Data: a})
+				s = append(s, &codegen.Section{Template: requestDecoderTmpl(r), Data: a})
 			}
 
-			if len(a.ErrorResponses) > 0 {
-				s = append(s, &codegen.Section{Template: serverErrorEncoderTmpl(r), Data: a})
+			if len(a.Errors) > 0 {
+				s = append(s, &codegen.Section{Template: errorEncoderTmpl(r), Data: a})
 			}
 		}
 		return s
@@ -83,8 +70,8 @@ func serverStructTmpl(r *rest.ResourceExpr) *template.Template {
 	return template.Must(serverTmpl(r).New("struct").Parse(serverStructT))
 }
 
-func serverConstructorTmpl(r *rest.ResourceExpr) *template.Template {
-	return template.Must(serverTmpl(r).New("constructor").Parse(serverConstructorT))
+func serverInitTmpl(r *rest.ResourceExpr) *template.Template {
+	return template.Must(serverTmpl(r).New("constructor").Parse(serverInitT))
 }
 
 func serverMountTmpl(r *rest.ResourceExpr) *template.Template {
@@ -95,27 +82,28 @@ func serverHandlerTmpl(r *rest.ResourceExpr) *template.Template {
 	return template.Must(serverTmpl(r).New("handler").Parse(serverHandlerT))
 }
 
-func serverHandlerConstructorTmpl(r *rest.ResourceExpr) *template.Template {
-	return template.Must(serverTmpl(r).New("handler_constructor").Parse(serverHandlerConstructorT))
+func serverHandlerInitTmpl(r *rest.ResourceExpr) *template.Template {
+	return template.Must(serverTmpl(r).New("handler_constructor").Parse(serverHandlerInitT))
 }
 
-func serverDecoderTmpl(r *rest.ResourceExpr) *template.Template {
-	return template.Must(serverTmpl(r).New("decoder").Parse(serverDecoderT))
+func requestDecoderTmpl(r *rest.ResourceExpr) *template.Template {
+	return template.Must(serverTmpl(r).New("decoder").Parse(requestDecoderT))
 }
 
-func serverEncoderTmpl(r *rest.ResourceExpr) *template.Template {
-	return template.Must(serverTmpl(r).New("encoder").Parse(serverEncoderT))
+func responseEncoderTmpl(r *rest.ResourceExpr) *template.Template {
+	return template.Must(serverTmpl(r).New("encoder").Parse(responseEncoderT))
 }
 
-func serverErrorEncoderTmpl(r *rest.ResourceExpr) *template.Template {
-	return template.Must(serverTmpl(r).New("error_encoder").Parse(serverErrorEncoderT))
+func errorEncoderTmpl(r *rest.ResourceExpr) *template.Template {
+	return template.Must(serverTmpl(r).New("error_encoder").Parse(errorEncoderT))
 }
 
 func serverTmpl(r *rest.ResourceExpr) *template.Template {
-	scope := files.Services.Get(r.Name()).Scope
 	return template.New("server").
 		Funcs(template.FuncMap{
-			"goTypeRef":            scope.GoTypeRef,
+			"goTypeRef": func(dt design.DataType) string {
+				return files.Services.Get(r.Name()).Scope.GoTypeRef(&design.AttributeExpr{Type: dt})
+			},
 			"conversionData":       conversionData,
 			"headerConversionData": headerConversionData,
 			"printValue":           printValue,
@@ -162,6 +150,7 @@ func printValue(dt design.DataType, v interface{}) string {
 	}
 }
 
+// input: ResourceData
 const serverStructT = `{{ printf "%s lists the %s service endpoint HTTP handlers." .HandlersStruct .Service.Name | comment }}
 type {{ .HandlersStruct }} struct {
 	{{- range .Actions }}
@@ -170,8 +159,9 @@ type {{ .HandlersStruct }} struct {
 }
 `
 
-const serverConstructorT = `{{ printf "%s instantiates HTTP handlers for all the %s service endpoints." .Constructor .Service.Name | comment }}
-func {{ .Constructor }}(
+// input: ResourceData
+const serverInitT = `{{ printf "%s instantiates HTTP handlers for all the %s service endpoints." .HandlersInit .Service.Name | comment }}
+func {{ .HandlersInit }}(
 	e *{{ .Service.PkgName }}.Endpoints,
 	mux rest.Muxer,
 	dec func(*http.Request) rest.Decoder,
@@ -179,12 +169,13 @@ func {{ .Constructor }}(
 ) *{{ .HandlersStruct }} {
 	return &{{ .HandlersStruct }}{
 		{{- range .Actions }}
-		{{ .Method.VarName }}: {{ .Constructor }}(e.{{ .Method.VarName }}, mux, dec, enc),
+		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, dec, enc),
 		{{- end }}
 	}
 }
 `
 
+// input: ResourceData
 const serverMountT = `{{ printf "%s configures the mux to serve the %s endpoints." .MountHandlers .Service.Name | comment }}
 func {{ .MountHandlers }}(mux rest.Muxer, h *{{ .HandlersStruct }}) {
 	{{- range .Actions }}
@@ -193,6 +184,7 @@ func {{ .MountHandlers }}(mux rest.Muxer, h *{{ .HandlersStruct }}) {
 }
 `
 
+// input: ActionData
 const serverHandlerT = `{{ printf "%s configures the mux to serve the \"%s\" service \"%s\" endpoint." .MountHandler .ServiceName .Method.Name | comment }}
 func {{ .MountHandler }}(mux rest.Muxer, h http.Handler) {
 	f, ok := h.(http.HandlerFunc)
@@ -207,9 +199,10 @@ func {{ .MountHandler }}(mux rest.Muxer, h http.Handler) {
 }
 `
 
-const serverHandlerConstructorT = `{{ printf "%s creates a HTTP handler which loads the HTTP request and calls the \"%s\" service \"%s\" endpoint." .Constructor .ServiceName .Method.Name | comment }}
+// input: ActionData
+const serverHandlerInitT = `{{ printf "%s creates a HTTP handler which loads the HTTP request and calls the \"%s\" service \"%s\" endpoint." .HandlerInit .ServiceName .Method.Name | comment }}
 {{ comment "The middleware is mounted so it executes after the request is loaded and thus may access the request state via the rest package ContextXXX functions."}}
-func {{ .Constructor }}(
+func {{ .HandlerInit }}(
 	endpoint goa.Endpoint,
 	mux rest.Muxer,
 	dec func(*http.Request) rest.Decoder,
@@ -228,7 +221,7 @@ func {{ .Constructor }}(
 		{{- if .Payload }}
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(w, r, goa.ErrInvalid("request invalid: %s", err))
+			encodeError(w, r, err)
 			return
 		}
 
@@ -252,13 +245,14 @@ func {{ .Constructor }}(
 }
 `
 
-const serverDecoderT = `{{ printf "%s returns a decoder for requests sent to the %s %s endpoint." .Decoder .ServiceName .Method.Name | comment }}
+// input: ActionData
+const requestDecoderT = `{{ printf "%s returns a decoder for requests sent to the %s %s endpoint." .Decoder .ServiceName .Method.Name | comment }}
 func {{ .Decoder }}(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 
-{{- if .Payload.RequestBody }}
+{{- if .Payload.Request.Body }}
 		var (
-			body {{ .Payload.RequestBody.VarName }}
+			body {{ .Payload.Request.Body.VarName }}
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -268,36 +262,38 @@ func {{ .Decoder }}(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) fu
 			}
 			return nil, err
 		}
-		{{- if .Payload.RequestBody.ValidateRef }}
-		{{ .Payload.RequestBody.ValidateRef }}
+		{{- if .Payload.Request.Body.ValidateRef }}
+		{{ .Payload.Request.Body.ValidateRef }}
 		{{- end }}
 {{ end }}
 
-{{- if or .Payload.PathParams .Payload.QueryParams .Payload.Headers }}
+{{- if or .Payload.Request.PathParams .Payload.Request.QueryParams .Payload.Request.Headers }}
 		var (
-		{{- range .Payload.PathParams }}
-			{{ .VarName }} {{goTypeRef .Type }}
+		{{- range .Payload.Request.PathParams }}
+			{{ .VarName }} {{ .TypeRef }}
 		{{- end }}
-		{{- range .Payload.QueryParams }}
-			{{ .VarName }} {{ if .Pointer }}*{{ end }}{{goTypeRef .Type }}
+		{{- range .Payload.Request.QueryParams }}
+			{{ .VarName }} {{ .TypeRef }}
 		{{- end }}
-		{{- range .Payload.Headers }}
-			{{ .VarName }} {{ if .Pointer }}*{{ end }}{{goTypeRef .Type }}
+		{{- range .Payload.Request.Headers }}
+			{{ .VarName }} {{ .TypeRef }}
 		{{- end }}
-		{{- if not .Payload.RequestBody }}
+		{{- if not .Payload.Request.Body }}
+		{{- if .Payload.Request.MustValidate }}
 			err error
 		{{- end }}
-		{{- if .Payload.PathParams }}
+		{{- end }}
+		{{- if .Payload.Request.PathParams }}
 
 			params = mux.Vars(r)
 		{{- end }}
 		)
 
-{{- range .Payload.PathParams }}
+{{- range .Payload.Request.PathParams }}
 	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
 		{{ .VarName }} = params["{{ .Name }}"]
 
-	{{- else }}{{/* not string */}}
+	{{- else }}{{/* not string and not any */}}
 		{{ .VarName }}Raw := params["{{ .Name }}"]
 		{{- template "path_conversion" . }}
 
@@ -307,7 +303,7 @@ func {{ .Decoder }}(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) fu
 		{{- end }}
 {{- end }}
 
-{{- range .Payload.QueryParams }}
+{{- range .Payload.Request.QueryParams }}
 	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
 		{{ .VarName }} = r.URL.Query().Get("{{ .Name }}")
 		if {{ .VarName }} == "" {
@@ -424,7 +420,7 @@ func {{ .Decoder }}(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) fu
 		{{- end }}
 {{- end }}
 
-{{- range .Payload.Headers }}
+{{- range .Payload.Request.Headers }}
 	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
 		{{ .VarName }} = r.Header.Get("{{ .Name }}")
 		if {{ .VarName }} == "" {
@@ -498,14 +494,21 @@ func {{ .Decoder }}(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) fu
 		{{ .Validate }}
 		{{- end }}
 {{- end }}
-{{ end }}
+{{- end }}
+		{{- if .Payload.Request.MustValidate }}
 		if err != nil {
 			return nil, err
 		}
-		{{- if .Payload.Constructor }}
-		return {{ .Payload.Constructor }}({{ .Payload.ConstructorParams }}), nil
+		{{- end }}
+		{{- if .Payload.Request.PayloadInit }}
+
+		return {{ .Payload.Request.PayloadInit.Name }}({{ range .Payload.Request.PayloadInit.Args }}{{ .Ref }},{{ end }}), nil
 		{{- else if .Payload.DecoderReturnValue }}
+
 		return {{ .Payload.DecoderReturnValue }}, nil
+		{{- else }}
+
+		return body, nil
 		{{- end }}
 	}
 }
@@ -738,14 +741,15 @@ func {{ .Decoder }}(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) fu
 {{- end }}
 `
 
-const serverEncoderT = `{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .Encoder .ServiceName .Method.Name | comment }}
+// input: ActionData
+const responseEncoderT = `{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .Encoder .ServiceName .Method.Name | comment }}
 func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) (rest.Encoder, string)) func(http.ResponseWriter, *http.Request, interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 
-	{{- if .Method.ResultRef }}
-		res := v.({{ .Method.AbsResultRef }})
+	{{- if .Result.Ref }}
+		res := v.({{ .Result.Ref }})
 
-		{{- range .Responses }}
+		{{- range .Result.Responses }}
 
 			{{- if .TagName }}
 			{{- if .TagRequired }}
@@ -770,8 +774,7 @@ func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) (rest.Encod
 
 	{{- else }}
 
-		{{- with (index .Responses 0) }}
-
+		{{- with (index .Result.Responses 0) }}
 		w.WriteHeader({{ .StatusCode }})
 		return nil
 
@@ -782,14 +785,15 @@ func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) (rest.Encod
 }
 ` + responseT
 
-const serverErrorEncoderT = `{{ printf "%s returns an encoder for errors returned by the %s %s endpoint." .ErrorEncoder .Method.Name .ServiceName | comment }}
+// input: ErrorData
+const errorEncoderT = `{{ printf "%s returns an encoder for errors returned by the %s %s endpoint." .ErrorEncoder .Method.Name .ServiceName | comment }}
 func {{ .ErrorEncoder }}(encoder func(http.ResponseWriter, *http.Request) (rest.Encoder, string)) func(http.ResponseWriter, *http.Request, error) {
 	encodeError := rest.EncodeError(encoder)
 	return func(w http.ResponseWriter, r *http.Request, v error) {
 		switch res := v.(type) {
 
-		{{- range .ErrorResponses }}
-		case {{ .FullTypeRef }}:
+		{{- range .Errors }}
+		case {{ .Ref }}:
 
 			{{- template "response" .Response }}
 			{{- if .Response.Body }}
@@ -806,24 +810,16 @@ func {{ .ErrorEncoder }}(encoder func(http.ResponseWriter, *http.Request) (rest.
 }
 ` + responseT
 
+// input: ResponseData
 const responseT = `{{ define "response" -}}
 	enc, ct := encoder(w, r)
 	rest.SetContentType(w, ct)
 
 	{{- if .Body }}
-		{{- if .Body.IsUser }}
-			{{- if .Body.Fields }}
-		body := &{{ .Body.VarName }}{
-				{{- range .Body.Fields}}	
-			{{ .FieldName }}: res.{{ .VarName }},
-				{{- end }}
-		}
-			{{- else }}
-			val := {{ .Body.VarName }}(*res)
-			body := &val
-			{{- end }}
+		{{- if .Body.Init }}
+	body := {{ .Body.Init.Name }}({{ range .Body.Init.Args }}{{ .Ref }}, {{ end }})
 		{{- else }}
-		body := res 
+	body := res 
 		{{- end }}
 	{{- end }}
 	{{- range .Headers }}

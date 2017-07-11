@@ -1767,6 +1767,61 @@ var PayloadBodyPrimitiveArrayBoolValidateDSL = func() {
 	})
 }
 
+var PayloadBodyPrimitiveArrayUserValidateDSL = func() {
+	var PayloadType = Type("PayloadType", func() {
+		Attribute("a", String, func() {
+			Pattern("pattern")
+		})
+		Required("a")
+	})
+	Service("ServiceBodyPrimitiveArrayUserValidate", func() {
+		Method("MethodBodyPrimitiveArrayUserValidate", func() {
+			Payload(ArrayOf(PayloadType), func() {
+				MinLength(1)
+			})
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
+var PayloadBodyPrimitiveFieldArrayUserDSL = func() {
+	var PayloadType = Type("PayloadType", func() {
+		Attribute("a", ArrayOf(String))
+	})
+	Service("ServiceBodyPrimitiveArrayUser", func() {
+		Method("MethodBodyPrimitiveArrayUser", func() {
+			Payload(PayloadType)
+			HTTP(func() {
+				POST("/")
+				Body("a")
+			})
+		})
+	})
+}
+
+var PayloadBodyPrimitiveFieldArrayUserValidateDSL = func() {
+	var PayloadType = Type("PayloadType", func() {
+		Attribute("a", ArrayOf(String), func() {
+			MinLength(1)
+			Elem(func() {
+				Pattern("pattern")
+			})
+		})
+		Required("a")
+	})
+	Service("ServiceBodyPrimitiveArrayUserValidate", func() {
+		Method("MethodBodyPrimitiveArrayUserValidate", func() {
+			Payload(PayloadType)
+			HTTP(func() {
+				POST("/")
+				Body("a")
+			})
+		})
+	})
+}
+
 var PayloadBodyQueryObjectDSL = func() {
 	Service("ServiceBodyQueryObject", func() {
 		Method("MethodBodyQueryObject", func() {
@@ -1982,6 +2037,103 @@ var PayloadBodyQueryPathUserValidateDSL = func() {
 			HTTP(func() {
 				POST("/{c}")
 				Param("b")
+			})
+		})
+	})
+}
+
+var PayloadBodyUserInnerDSL = func() {
+	var InnerType = Type("InnerType", func() {
+		Attribute("a", String, func() {
+			Pattern("patterna")
+		})
+		Attribute("b", String, func() {
+			Pattern("patternb")
+		})
+		Required("a")
+	})
+	var PayloadType = Type("PayloadType", func() {
+		Attribute("inner", InnerType)
+	})
+	Service("ServiceBodyUserInner", func() {
+		Method("MethodBodyUserInner", func() {
+			Payload(PayloadType)
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
+var PayloadBodyUserInnerDefaultDSL = func() {
+	var InnerType = Type("InnerType", func() {
+		Attribute("a", String, func() {
+			Default("defaulta")
+			Pattern("patterna")
+		})
+		Attribute("b", String, func() {
+			Default("defaultb")
+			Pattern("patternb")
+		})
+		Required("a")
+	})
+	var PayloadType = Type("PayloadType", func() {
+		Attribute("inner", InnerType)
+	})
+	Service("ServiceBodyUserInnerDefault", func() {
+		Method("MethodBodyUserInnerDefault", func() {
+			Payload(PayloadType)
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
+var PayloadBodyInlineArrayUserDSL = func() {
+	var ElemType = Type("ElemType", func() {
+		Attribute("a", String, func() {
+			Pattern("patterna")
+		})
+		Attribute("b", String, func() {
+			Pattern("patternb")
+		})
+		Required("a")
+	})
+	Service("ServiceBodyInlineArrayUser", func() {
+		Method("MethodBodyInlineArrayUser", func() {
+			Payload(ArrayOf(ElemType))
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
+var PayloadBodyInlineMapUserDSL = func() {
+	var KeyType = Type("KeyType", func() {
+		Attribute("a", String, func() {
+			Pattern("patterna")
+		})
+		Attribute("b", String, func() {
+			Pattern("patternb")
+		})
+		Required("a")
+	})
+	var ElemType = Type("ElemType", func() {
+		Attribute("a", String, func() {
+			Pattern("patterna")
+		})
+		Attribute("b", String, func() {
+			Pattern("patternb")
+		})
+		Required("a")
+	})
+	Service("ServiceBodyInlineMapUser", func() {
+		Method("MethodBodyInlineMapUser", func() {
+			Payload(MapOf(KeyType, ElemType))
+			HTTP(func() {
+				POST("/")
 			})
 		})
 	})

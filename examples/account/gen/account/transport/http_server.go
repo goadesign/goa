@@ -78,7 +78,7 @@ func NewCreateHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(w, r, goa.ErrInvalid("request invalid: %s", err))
+			encodeError(w, r, err)
 			return
 		}
 
@@ -129,6 +129,9 @@ func DecodeCreateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decode
 			return nil, err
 		}
 		err = goa.MergeErrors(err, body.Validate())
+		if err != nil {
+			return nil, err
+		}
 
 		var (
 			orgID uint
@@ -202,7 +205,7 @@ func NewListHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(w, r, goa.ErrInvalid("request invalid: %s", err))
+			encodeError(w, r, err)
 			return
 		}
 
@@ -288,12 +291,12 @@ func NewShowHandler(
 	var (
 		decodeRequest  = DecodeShowRequest(mux, dec)
 		encodeResponse = EncodeShowResponse(enc)
-		encodeError    = rest.EncodeError(enc)
+		encodeError    = EncodeShowError(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(w, r, goa.ErrInvalid("request invalid: %s", err))
+			encodeError(w, r, err)
 			return
 		}
 
@@ -351,6 +354,26 @@ func DecodeShowRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder)
 	}
 }
 
+// EncodeShowError returns an encoder for errors returned by the show account
+// endpoint.
+func EncodeShowError(encoder func(http.ResponseWriter, *http.Request) (rest.Encoder, string)) func(http.ResponseWriter, *http.Request, error) {
+	encodeError := rest.EncodeError(encoder)
+	return func(w http.ResponseWriter, r *http.Request, v error) {
+		switch res := v.(type) {
+		case *account.NotFound:
+			enc, ct := encoder(w, r)
+			rest.SetContentType(w, ct)
+			body := res
+			w.WriteHeader(http.StatusNotFound)
+			if err := enc.Encode(body); err != nil {
+				encodeError(w, r, err)
+			}
+		default:
+			encodeError(w, r, v)
+		}
+	}
+}
+
 // MountDeleteHandler configures the mux to serve the "account" service
 // "delete" endpoint.
 func MountDeleteHandler(mux rest.Muxer, h http.Handler) {
@@ -381,7 +404,7 @@ func NewDeleteHandler(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		payload, err := decodeRequest(r)
 		if err != nil {
-			encodeError(w, r, goa.ErrInvalid("request invalid: %s", err))
+			encodeError(w, r, err)
 			return
 		}
 

@@ -7,9 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/design"
-
-	. "goa.design/goa.v2/codegen/testing"
 )
 
 func TestService(t *testing.T) {
@@ -323,7 +322,7 @@ type AResult struct {
 		}
 		actual := string(bs)
 		if !strings.Contains(actual, tc.Expected) {
-			t.Errorf("%s:\ngot:\n%s\ndiff:\n%s", k, actual, Diff(t, actual, tc.Expected))
+			t.Errorf("%s:\ngot:\n%s\ndiff:\n%s", k, actual, codegen.Diff(t, actual, tc.Expected))
 		}
 	}
 }

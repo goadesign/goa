@@ -249,7 +249,7 @@ func extensionsFromExpr(mdata design.MetadataExpr) map[string]interface{} {
 	return extensions
 }
 
-func paramsFromExpr(params *rest.MappedAttributeExpr, path string) ([]*Parameter, error) {
+func paramsFromExpr(params *design.MappedAttributeExpr, path string) ([]*Parameter, error) {
 	if params == nil {
 		return nil, nil
 	}
@@ -336,7 +336,7 @@ func responseSpecFromExpr(s *V2, root *rest.RootExpr, r *rest.HTTPResponseExpr) 
 	}, nil
 }
 
-func headersFromExpr(headers *rest.MappedAttributeExpr) (map[string]*Header, error) {
+func headersFromExpr(headers *design.MappedAttributeExpr) (map[string]*Header, error) {
 	if headers == nil {
 		return nil, nil
 	}

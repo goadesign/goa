@@ -5,8 +5,7 @@ var PayloadQueryBoolDecodeCode = `// DecodeMethodQueryBoolRequest returns a deco
 func DecodeMethodQueryBoolRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   *bool
-			err error
+			q *bool
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -17,10 +16,7 @@ func DecodeMethodQueryBoolRequest(mux rest.Muxer, decoder func(*http.Request) re
 			q = &v
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryBoolPayload(q), nil
+		return NewMethodQueryBoolMethodQueryBoolPayload(q), nil
 	}
 }
 `
@@ -45,11 +41,11 @@ func DecodeMethodQueryBoolValidateRequest(mux rest.Muxer, decoder func(*http.Req
 		if !(q == true) {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []interface{}{true}))
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryBoolValidatePayload(q), nil
+
+		return NewMethodQueryBoolValidateMethodQueryBoolValidatePayload(q), nil
 	}
 }
 `
@@ -59,8 +55,7 @@ var PayloadQueryIntDecodeCode = `// DecodeMethodQueryIntRequest returns a decode
 func DecodeMethodQueryIntRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   *int
-			err error
+			q *int
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -72,10 +67,7 @@ func DecodeMethodQueryIntRequest(mux rest.Muxer, decoder func(*http.Request) res
 			q = &pv
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryIntPayload(q), nil
+		return NewMethodQueryIntMethodQueryIntPayload(q), nil
 	}
 }
 `
@@ -100,11 +92,11 @@ func DecodeMethodQueryIntValidateRequest(mux rest.Muxer, decoder func(*http.Requ
 		if q < 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("q", q, 1, true))
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryIntValidatePayload(q), nil
+
+		return NewMethodQueryIntValidateMethodQueryIntValidatePayload(q), nil
 	}
 }
 `
@@ -114,8 +106,7 @@ var PayloadQueryInt32DecodeCode = `// DecodeMethodQueryInt32Request returns a de
 func DecodeMethodQueryInt32Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   *int32
-			err error
+			q *int32
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -127,10 +118,7 @@ func DecodeMethodQueryInt32Request(mux rest.Muxer, decoder func(*http.Request) r
 			q = &pv
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryInt32Payload(q), nil
+		return NewMethodQueryInt32MethodQueryInt32Payload(q), nil
 	}
 }
 `
@@ -155,11 +143,11 @@ func DecodeMethodQueryInt32ValidateRequest(mux rest.Muxer, decoder func(*http.Re
 		if q < 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("q", q, 1, true))
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryInt32ValidatePayload(q), nil
+
+		return NewMethodQueryInt32ValidateMethodQueryInt32ValidatePayload(q), nil
 	}
 }
 `
@@ -169,8 +157,7 @@ var PayloadQueryInt64DecodeCode = `// DecodeMethodQueryInt64Request returns a de
 func DecodeMethodQueryInt64Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   *int64
-			err error
+			q *int64
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -181,10 +168,7 @@ func DecodeMethodQueryInt64Request(mux rest.Muxer, decoder func(*http.Request) r
 			q = &v
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryInt64Payload(q), nil
+		return NewMethodQueryInt64MethodQueryInt64Payload(q), nil
 	}
 }
 `
@@ -209,11 +193,11 @@ func DecodeMethodQueryInt64ValidateRequest(mux rest.Muxer, decoder func(*http.Re
 		if q < 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("q", q, 1, true))
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryInt64ValidatePayload(q), nil
+
+		return NewMethodQueryInt64ValidateMethodQueryInt64ValidatePayload(q), nil
 	}
 }
 `
@@ -223,8 +207,7 @@ var PayloadQueryUIntDecodeCode = `// DecodeMethodQueryUIntRequest returns a deco
 func DecodeMethodQueryUIntRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   *uint
-			err error
+			q *uint
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -236,10 +219,7 @@ func DecodeMethodQueryUIntRequest(mux rest.Muxer, decoder func(*http.Request) re
 			q = &pv
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryUIntPayload(q), nil
+		return NewMethodQueryUIntMethodQueryUIntPayload(q), nil
 	}
 }
 `
@@ -264,11 +244,11 @@ func DecodeMethodQueryUIntValidateRequest(mux rest.Muxer, decoder func(*http.Req
 		if q < 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("q", q, 1, true))
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryUIntValidatePayload(q), nil
+
+		return NewMethodQueryUIntValidateMethodQueryUIntValidatePayload(q), nil
 	}
 }
 `
@@ -278,8 +258,7 @@ var PayloadQueryUInt32DecodeCode = `// DecodeMethodQueryUInt32Request returns a 
 func DecodeMethodQueryUInt32Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   *uint32
-			err error
+			q *uint32
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -291,10 +270,7 @@ func DecodeMethodQueryUInt32Request(mux rest.Muxer, decoder func(*http.Request) 
 			q = &pv
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryUInt32Payload(q), nil
+		return NewMethodQueryUInt32MethodQueryUInt32Payload(q), nil
 	}
 }
 `
@@ -319,11 +295,11 @@ func DecodeMethodQueryUInt32ValidateRequest(mux rest.Muxer, decoder func(*http.R
 		if q < 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("q", q, 1, true))
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryUInt32ValidatePayload(q), nil
+
+		return NewMethodQueryUInt32ValidateMethodQueryUInt32ValidatePayload(q), nil
 	}
 }
 `
@@ -333,8 +309,7 @@ var PayloadQueryUInt64DecodeCode = `// DecodeMethodQueryUInt64Request returns a 
 func DecodeMethodQueryUInt64Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   *uint64
-			err error
+			q *uint64
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -345,10 +320,7 @@ func DecodeMethodQueryUInt64Request(mux rest.Muxer, decoder func(*http.Request) 
 			q = &v
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryUInt64Payload(q), nil
+		return NewMethodQueryUInt64MethodQueryUInt64Payload(q), nil
 	}
 }
 `
@@ -373,11 +345,11 @@ func DecodeMethodQueryUInt64ValidateRequest(mux rest.Muxer, decoder func(*http.R
 		if q < 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("q", q, 1, true))
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryUInt64ValidatePayload(q), nil
+
+		return NewMethodQueryUInt64ValidateMethodQueryUInt64ValidatePayload(q), nil
 	}
 }
 `
@@ -387,8 +359,7 @@ var PayloadQueryFloat32DecodeCode = `// DecodeMethodQueryFloat32Request returns 
 func DecodeMethodQueryFloat32Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   *float32
-			err error
+			q *float32
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -400,10 +371,7 @@ func DecodeMethodQueryFloat32Request(mux rest.Muxer, decoder func(*http.Request)
 			q = &pv
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryFloat32Payload(q), nil
+		return NewMethodQueryFloat32MethodQueryFloat32Payload(q), nil
 	}
 }
 `
@@ -428,11 +396,11 @@ func DecodeMethodQueryFloat32ValidateRequest(mux rest.Muxer, decoder func(*http.
 		if q < 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("q", q, 1, true))
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryFloat32ValidatePayload(q), nil
+
+		return NewMethodQueryFloat32ValidateMethodQueryFloat32ValidatePayload(q), nil
 	}
 }
 `
@@ -442,8 +410,7 @@ var PayloadQueryFloat64DecodeCode = `// DecodeMethodQueryFloat64Request returns 
 func DecodeMethodQueryFloat64Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   *float64
-			err error
+			q *float64
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -454,10 +421,7 @@ func DecodeMethodQueryFloat64Request(mux rest.Muxer, decoder func(*http.Request)
 			q = &v
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryFloat64Payload(q), nil
+		return NewMethodQueryFloat64MethodQueryFloat64Payload(q), nil
 	}
 }
 `
@@ -482,11 +446,11 @@ func DecodeMethodQueryFloat64ValidateRequest(mux rest.Muxer, decoder func(*http.
 		if q < 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("q", q, 1, true))
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryFloat64ValidatePayload(q), nil
+
+		return NewMethodQueryFloat64ValidateMethodQueryFloat64ValidatePayload(q), nil
 	}
 }
 `
@@ -496,18 +460,14 @@ var PayloadQueryStringDecodeCode = `// DecodeMethodQueryStringRequest returns a 
 func DecodeMethodQueryStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   *string
-			err error
+			q *string
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
 			q = &qRaw
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryStringPayload(q), nil
+		return NewMethodQueryStringMethodQueryStringPayload(q), nil
 	}
 }
 `
@@ -527,11 +487,11 @@ func DecodeMethodQueryStringValidateRequest(mux rest.Muxer, decoder func(*http.R
 		if !(q == "val") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []interface{}{"val"}))
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryStringValidatePayload(q), nil
+
+		return NewMethodQueryStringValidateMethodQueryStringValidatePayload(q), nil
 	}
 }
 `
@@ -541,18 +501,14 @@ var PayloadQueryBytesDecodeCode = `// DecodeMethodQueryBytesRequest returns a de
 func DecodeMethodQueryBytesRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   []byte
-			err error
+			q []byte
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
 			q = []byte(qRaw)
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryBytesPayload(q), nil
+		return NewMethodQueryBytesMethodQueryBytesPayload(q), nil
 	}
 }
 `
@@ -573,11 +529,11 @@ func DecodeMethodQueryBytesValidateRequest(mux rest.Muxer, decoder func(*http.Re
 		if len(q) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryBytesValidatePayload(q), nil
+
+		return NewMethodQueryBytesValidateMethodQueryBytesValidatePayload(q), nil
 	}
 }
 `
@@ -587,18 +543,14 @@ var PayloadQueryAnyDecodeCode = `// DecodeMethodQueryAnyRequest returns a decode
 func DecodeMethodQueryAnyRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   interface{}
-			err error
+			q interface{}
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
 			q = qRaw
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryAnyPayload(q), nil
+		return NewMethodQueryAnyMethodQueryAnyPayload(q), nil
 	}
 }
 `
@@ -618,11 +570,11 @@ func DecodeMethodQueryAnyValidateRequest(mux rest.Muxer, decoder func(*http.Requ
 		if !(q == "val" || q == 1) {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []interface{}{"val", 1}))
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryAnyValidatePayload(q), nil
+
+		return NewMethodQueryAnyValidateMethodQueryAnyValidatePayload(q), nil
 	}
 }
 `
@@ -632,8 +584,7 @@ var PayloadQueryArrayBoolDecodeCode = `// DecodeMethodQueryArrayBoolRequest retu
 func DecodeMethodQueryArrayBoolRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   []bool
-			err error
+			q []bool
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -647,10 +598,7 @@ func DecodeMethodQueryArrayBoolRequest(mux rest.Muxer, decoder func(*http.Reques
 			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryArrayBoolPayload(q), nil
+		return NewMethodQueryArrayBoolMethodQueryArrayBoolPayload(q), nil
 	}
 }
 `
@@ -684,11 +632,11 @@ func DecodeMethodQueryArrayBoolValidateRequest(mux rest.Muxer, decoder func(*htt
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q[*]", e, []interface{}{true}))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryArrayBoolValidatePayload(q), nil
+
+		return NewMethodQueryArrayBoolValidateMethodQueryArrayBoolValidatePayload(q), nil
 	}
 }
 `
@@ -698,8 +646,7 @@ var PayloadQueryArrayIntDecodeCode = `// DecodeMethodQueryArrayIntRequest return
 func DecodeMethodQueryArrayIntRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   []int
-			err error
+			q []int
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -713,10 +660,7 @@ func DecodeMethodQueryArrayIntRequest(mux rest.Muxer, decoder func(*http.Request
 			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryArrayIntPayload(q), nil
+		return NewMethodQueryArrayIntMethodQueryArrayIntPayload(q), nil
 	}
 }
 `
@@ -749,11 +693,11 @@ func DecodeMethodQueryArrayIntValidateRequest(mux rest.Muxer, decoder func(*http
 				err = goa.MergeErrors(err, goa.InvalidRangeError("q[*]", e, 1, true))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryArrayIntValidatePayload(q), nil
+
+		return NewMethodQueryArrayIntValidateMethodQueryArrayIntValidatePayload(q), nil
 	}
 }
 `
@@ -763,8 +707,7 @@ var PayloadQueryArrayInt32DecodeCode = `// DecodeMethodQueryArrayInt32Request re
 func DecodeMethodQueryArrayInt32Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   []int32
-			err error
+			q []int32
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -778,10 +721,7 @@ func DecodeMethodQueryArrayInt32Request(mux rest.Muxer, decoder func(*http.Reque
 			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryArrayInt32Payload(q), nil
+		return NewMethodQueryArrayInt32MethodQueryArrayInt32Payload(q), nil
 	}
 }
 `
@@ -815,11 +755,11 @@ func DecodeMethodQueryArrayInt32ValidateRequest(mux rest.Muxer, decoder func(*ht
 				err = goa.MergeErrors(err, goa.InvalidRangeError("q[*]", e, 1, true))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryArrayInt32ValidatePayload(q), nil
+
+		return NewMethodQueryArrayInt32ValidateMethodQueryArrayInt32ValidatePayload(q), nil
 	}
 }
 `
@@ -829,8 +769,7 @@ var PayloadQueryArrayInt64DecodeCode = `// DecodeMethodQueryArrayInt64Request re
 func DecodeMethodQueryArrayInt64Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   []int64
-			err error
+			q []int64
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -844,10 +783,7 @@ func DecodeMethodQueryArrayInt64Request(mux rest.Muxer, decoder func(*http.Reque
 			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryArrayInt64Payload(q), nil
+		return NewMethodQueryArrayInt64MethodQueryArrayInt64Payload(q), nil
 	}
 }
 `
@@ -881,11 +817,11 @@ func DecodeMethodQueryArrayInt64ValidateRequest(mux rest.Muxer, decoder func(*ht
 				err = goa.MergeErrors(err, goa.InvalidRangeError("q[*]", e, 1, true))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryArrayInt64ValidatePayload(q), nil
+
+		return NewMethodQueryArrayInt64ValidateMethodQueryArrayInt64ValidatePayload(q), nil
 	}
 }
 `
@@ -895,8 +831,7 @@ var PayloadQueryArrayUIntDecodeCode = `// DecodeMethodQueryArrayUIntRequest retu
 func DecodeMethodQueryArrayUIntRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   []uint
-			err error
+			q []uint
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -910,10 +845,7 @@ func DecodeMethodQueryArrayUIntRequest(mux rest.Muxer, decoder func(*http.Reques
 			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryArrayUIntPayload(q), nil
+		return NewMethodQueryArrayUIntMethodQueryArrayUIntPayload(q), nil
 	}
 }
 `
@@ -947,11 +879,11 @@ func DecodeMethodQueryArrayUIntValidateRequest(mux rest.Muxer, decoder func(*htt
 				err = goa.MergeErrors(err, goa.InvalidRangeError("q[*]", e, 1, true))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryArrayUIntValidatePayload(q), nil
+
+		return NewMethodQueryArrayUIntValidateMethodQueryArrayUIntValidatePayload(q), nil
 	}
 }
 `
@@ -961,8 +893,7 @@ var PayloadQueryArrayUInt32DecodeCode = `// DecodeMethodQueryArrayUInt32Request 
 func DecodeMethodQueryArrayUInt32Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   []uint32
-			err error
+			q []uint32
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -976,10 +907,7 @@ func DecodeMethodQueryArrayUInt32Request(mux rest.Muxer, decoder func(*http.Requ
 			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryArrayUInt32Payload(q), nil
+		return NewMethodQueryArrayUInt32MethodQueryArrayUInt32Payload(q), nil
 	}
 }
 `
@@ -1013,11 +941,11 @@ func DecodeMethodQueryArrayUInt32ValidateRequest(mux rest.Muxer, decoder func(*h
 				err = goa.MergeErrors(err, goa.InvalidRangeError("q[*]", e, 1, true))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryArrayUInt32ValidatePayload(q), nil
+
+		return NewMethodQueryArrayUInt32ValidateMethodQueryArrayUInt32ValidatePayload(q), nil
 	}
 }
 `
@@ -1027,8 +955,7 @@ var PayloadQueryArrayUInt64DecodeCode = `// DecodeMethodQueryArrayUInt64Request 
 func DecodeMethodQueryArrayUInt64Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   []uint64
-			err error
+			q []uint64
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -1042,10 +969,7 @@ func DecodeMethodQueryArrayUInt64Request(mux rest.Muxer, decoder func(*http.Requ
 			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryArrayUInt64Payload(q), nil
+		return NewMethodQueryArrayUInt64MethodQueryArrayUInt64Payload(q), nil
 	}
 }
 `
@@ -1079,11 +1003,11 @@ func DecodeMethodQueryArrayUInt64ValidateRequest(mux rest.Muxer, decoder func(*h
 				err = goa.MergeErrors(err, goa.InvalidRangeError("q[*]", e, 1, true))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryArrayUInt64ValidatePayload(q), nil
+
+		return NewMethodQueryArrayUInt64ValidateMethodQueryArrayUInt64ValidatePayload(q), nil
 	}
 }
 `
@@ -1093,8 +1017,7 @@ var PayloadQueryArrayFloat32DecodeCode = `// DecodeMethodQueryArrayFloat32Reques
 func DecodeMethodQueryArrayFloat32Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   []float32
-			err error
+			q []float32
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -1108,10 +1031,7 @@ func DecodeMethodQueryArrayFloat32Request(mux rest.Muxer, decoder func(*http.Req
 			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryArrayFloat32Payload(q), nil
+		return NewMethodQueryArrayFloat32MethodQueryArrayFloat32Payload(q), nil
 	}
 }
 `
@@ -1145,11 +1065,11 @@ func DecodeMethodQueryArrayFloat32ValidateRequest(mux rest.Muxer, decoder func(*
 				err = goa.MergeErrors(err, goa.InvalidRangeError("q[*]", e, 1, true))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryArrayFloat32ValidatePayload(q), nil
+
+		return NewMethodQueryArrayFloat32ValidateMethodQueryArrayFloat32ValidatePayload(q), nil
 	}
 }
 `
@@ -1159,8 +1079,7 @@ var PayloadQueryArrayFloat64DecodeCode = `// DecodeMethodQueryArrayFloat64Reques
 func DecodeMethodQueryArrayFloat64Request(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   []float64
-			err error
+			q []float64
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -1174,10 +1093,7 @@ func DecodeMethodQueryArrayFloat64Request(mux rest.Muxer, decoder func(*http.Req
 			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryArrayFloat64Payload(q), nil
+		return NewMethodQueryArrayFloat64MethodQueryArrayFloat64Payload(q), nil
 	}
 }
 `
@@ -1211,11 +1127,11 @@ func DecodeMethodQueryArrayFloat64ValidateRequest(mux rest.Muxer, decoder func(*
 				err = goa.MergeErrors(err, goa.InvalidRangeError("q[*]", e, 1, true))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryArrayFloat64ValidatePayload(q), nil
+
+		return NewMethodQueryArrayFloat64ValidateMethodQueryArrayFloat64ValidatePayload(q), nil
 	}
 }
 `
@@ -1225,15 +1141,11 @@ var PayloadQueryArrayStringDecodeCode = `// DecodeMethodQueryArrayStringRequest 
 func DecodeMethodQueryArrayStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   []string
-			err error
+			q []string
 		)
 		q = r.URL.Query()["q"]
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryArrayStringPayload(q), nil
+		return NewMethodQueryArrayStringMethodQueryArrayStringPayload(q), nil
 	}
 }
 `
@@ -1259,11 +1171,11 @@ func DecodeMethodQueryArrayStringValidateRequest(mux rest.Muxer, decoder func(*h
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q[*]", e, []interface{}{"val"}))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryArrayStringValidatePayload(q), nil
+
+		return NewMethodQueryArrayStringValidateMethodQueryArrayStringValidatePayload(q), nil
 	}
 }
 `
@@ -1273,8 +1185,7 @@ var PayloadQueryArrayBytesDecodeCode = `// DecodeMethodQueryArrayBytesRequest re
 func DecodeMethodQueryArrayBytesRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   [][]byte
-			err error
+			q [][]byte
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -1284,10 +1195,7 @@ func DecodeMethodQueryArrayBytesRequest(mux rest.Muxer, decoder func(*http.Reque
 			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryArrayBytesPayload(q), nil
+		return NewMethodQueryArrayBytesMethodQueryArrayBytesPayload(q), nil
 	}
 }
 `
@@ -1317,11 +1225,11 @@ func DecodeMethodQueryArrayBytesValidateRequest(mux rest.Muxer, decoder func(*ht
 				err = goa.MergeErrors(err, goa.InvalidLengthError("q[*]", e, len(e), 2, true))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryArrayBytesValidatePayload(q), nil
+
+		return NewMethodQueryArrayBytesValidateMethodQueryArrayBytesValidatePayload(q), nil
 	}
 }
 `
@@ -1331,8 +1239,7 @@ var PayloadQueryArrayAnyDecodeCode = `// DecodeMethodQueryArrayAnyRequest return
 func DecodeMethodQueryArrayAnyRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   []interface{}
-			err error
+			q []interface{}
 		)
 		qRaw := r.URL.Query()["q"]
 		if qRaw != nil {
@@ -1342,10 +1249,7 @@ func DecodeMethodQueryArrayAnyRequest(mux rest.Muxer, decoder func(*http.Request
 			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryArrayAnyPayload(q), nil
+		return NewMethodQueryArrayAnyMethodQueryArrayAnyPayload(q), nil
 	}
 }
 `
@@ -1374,11 +1278,11 @@ func DecodeMethodQueryArrayAnyValidateRequest(mux rest.Muxer, decoder func(*http
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q[*]", e, []interface{}{"val", 1}))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryArrayAnyValidatePayload(q), nil
+
+		return NewMethodQueryArrayAnyValidateMethodQueryArrayAnyValidatePayload(q), nil
 	}
 }
 `
@@ -1388,8 +1292,7 @@ var PayloadQueryMapStringStringDecodeCode = `// DecodeMethodQueryMapStringString
 func DecodeMethodQueryMapStringStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   map[string]string
-			err error
+			q map[string]string
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) != 0 {
@@ -1403,10 +1306,7 @@ func DecodeMethodQueryMapStringStringRequest(mux rest.Muxer, decoder func(*http.
 			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryMapStringStringPayload(q), nil
+		return NewMethodQueryMapStringStringMethodQueryMapStringStringPayload(q), nil
 	}
 }
 `
@@ -1443,11 +1343,11 @@ func DecodeMethodQueryMapStringStringValidateRequest(mux rest.Muxer, decoder fun
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q[key]", v, []interface{}{"val"}))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryMapStringStringValidatePayload(q), nil
+
+		return NewMethodQueryMapStringStringValidateMethodQueryMapStringStringValidatePayload(q), nil
 	}
 }
 `
@@ -1457,8 +1357,7 @@ var PayloadQueryMapStringBoolDecodeCode = `// DecodeMethodQueryMapStringBoolRequ
 func DecodeMethodQueryMapStringBoolRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   map[string]bool
-			err error
+			q map[string]bool
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) != 0 {
@@ -1477,10 +1376,7 @@ func DecodeMethodQueryMapStringBoolRequest(mux rest.Muxer, decoder func(*http.Re
 			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryMapStringBoolPayload(q), nil
+		return NewMethodQueryMapStringBoolMethodQueryMapStringBoolPayload(q), nil
 	}
 }
 `
@@ -1522,11 +1418,11 @@ func DecodeMethodQueryMapStringBoolValidateRequest(mux rest.Muxer, decoder func(
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q[key]", v, []interface{}{true}))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryMapStringBoolValidatePayload(q), nil
+
+		return NewMethodQueryMapStringBoolValidateMethodQueryMapStringBoolValidatePayload(q), nil
 	}
 }
 `
@@ -1536,8 +1432,7 @@ var PayloadQueryMapBoolStringDecodeCode = `// DecodeMethodQueryMapBoolStringRequ
 func DecodeMethodQueryMapBoolStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   map[bool]string
-			err error
+			q map[bool]string
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) != 0 {
@@ -1559,10 +1454,7 @@ func DecodeMethodQueryMapBoolStringRequest(mux rest.Muxer, decoder func(*http.Re
 			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryMapBoolStringPayload(q), nil
+		return NewMethodQueryMapBoolStringMethodQueryMapBoolStringPayload(q), nil
 	}
 }
 `
@@ -1607,11 +1499,11 @@ func DecodeMethodQueryMapBoolStringValidateRequest(mux rest.Muxer, decoder func(
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q[key]", v, []interface{}{"val"}))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryMapBoolStringValidatePayload(q), nil
+
+		return NewMethodQueryMapBoolStringValidateMethodQueryMapBoolStringValidatePayload(q), nil
 	}
 }
 `
@@ -1621,8 +1513,7 @@ var PayloadQueryMapBoolBoolDecodeCode = `// DecodeMethodQueryMapBoolBoolRequest 
 func DecodeMethodQueryMapBoolBoolRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   map[bool]bool
-			err error
+			q map[bool]bool
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) != 0 {
@@ -1649,10 +1540,7 @@ func DecodeMethodQueryMapBoolBoolRequest(mux rest.Muxer, decoder func(*http.Requ
 			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryMapBoolBoolPayload(q), nil
+		return NewMethodQueryMapBoolBoolMethodQueryMapBoolBoolPayload(q), nil
 	}
 }
 `
@@ -1702,11 +1590,11 @@ func DecodeMethodQueryMapBoolBoolValidateRequest(mux rest.Muxer, decoder func(*h
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q[key]", v, []interface{}{true}))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryMapBoolBoolValidatePayload(q), nil
+
+		return NewMethodQueryMapBoolBoolValidateMethodQueryMapBoolBoolValidatePayload(q), nil
 	}
 }
 `
@@ -1717,15 +1605,11 @@ var PayloadQueryMapStringArrayStringDecodeCode = `// DecodeMethodQueryMapStringA
 func DecodeMethodQueryMapStringArrayStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   map[string][]string
-			err error
+			q map[string][]string
 		)
 		q = r.URL.Query()
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryMapStringArrayStringPayload(q), nil
+		return NewMethodQueryMapStringArrayStringMethodQueryMapStringArrayStringPayload(q), nil
 	}
 }
 `
@@ -1754,11 +1638,11 @@ func DecodeMethodQueryMapStringArrayStringValidateRequest(mux rest.Muxer, decode
 				err = goa.MergeErrors(err, goa.InvalidLengthError("q[key]", v, len(v), 2, true))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryMapStringArrayStringValidatePayload(q), nil
+
+		return NewMethodQueryMapStringArrayStringValidateMethodQueryMapStringArrayStringValidatePayload(q), nil
 	}
 }
 `
@@ -1769,8 +1653,7 @@ var PayloadQueryMapStringArrayBoolDecodeCode = `// DecodeMethodQueryMapStringArr
 func DecodeMethodQueryMapStringArrayBoolRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   map[string][]bool
-			err error
+			q map[string][]bool
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) != 0 {
@@ -1791,10 +1674,7 @@ func DecodeMethodQueryMapStringArrayBoolRequest(mux rest.Muxer, decoder func(*ht
 			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryMapStringArrayBoolPayload(q), nil
+		return NewMethodQueryMapStringArrayBoolMethodQueryMapStringArrayBoolPayload(q), nil
 	}
 }
 `
@@ -1838,11 +1718,11 @@ func DecodeMethodQueryMapStringArrayBoolValidateRequest(mux rest.Muxer, decoder 
 				err = goa.MergeErrors(err, goa.InvalidLengthError("q[key]", v, len(v), 2, true))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryMapStringArrayBoolValidatePayload(q), nil
+
+		return NewMethodQueryMapStringArrayBoolValidateMethodQueryMapStringArrayBoolValidatePayload(q), nil
 	}
 }
 `
@@ -1853,8 +1733,7 @@ var PayloadQueryMapBoolArrayStringDecodeCode = `// DecodeMethodQueryMapBoolArray
 func DecodeMethodQueryMapBoolArrayStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   map[bool][]string
-			err error
+			q map[bool][]string
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) != 0 {
@@ -1872,10 +1751,7 @@ func DecodeMethodQueryMapBoolArrayStringRequest(mux rest.Muxer, decoder func(*ht
 			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryMapBoolArrayStringPayload(q), nil
+		return NewMethodQueryMapBoolArrayStringMethodQueryMapBoolArrayStringPayload(q), nil
 	}
 }
 `
@@ -1915,11 +1791,11 @@ func DecodeMethodQueryMapBoolArrayStringValidateRequest(mux rest.Muxer, decoder 
 				err = goa.MergeErrors(err, goa.InvalidLengthError("q[key]", v, len(v), 2, true))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryMapBoolArrayStringValidatePayload(q), nil
+
+		return NewMethodQueryMapBoolArrayStringValidateMethodQueryMapBoolArrayStringValidatePayload(q), nil
 	}
 }
 `
@@ -1929,8 +1805,7 @@ var PayloadQueryMapBoolArrayBoolDecodeCode = `// DecodeMethodQueryMapBoolArrayBo
 func DecodeMethodQueryMapBoolArrayBoolRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   map[bool][]bool
-			err error
+			q map[bool][]bool
 		)
 		qRaw := r.URL.Query()
 		if len(qRaw) != 0 {
@@ -1959,10 +1834,7 @@ func DecodeMethodQueryMapBoolArrayBoolRequest(mux rest.Muxer, decoder func(*http
 			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryMapBoolArrayBoolPayload(q), nil
+		return NewMethodQueryMapBoolArrayBoolMethodQueryMapBoolArrayBoolPayload(q), nil
 	}
 }
 `
@@ -2014,11 +1886,11 @@ func DecodeMethodQueryMapBoolArrayBoolValidateRequest(mux rest.Muxer, decoder fu
 				err = goa.MergeErrors(err, goa.InvalidLengthError("q[key]", v, len(v), 2, true))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodQueryMapBoolArrayBoolValidatePayload(q), nil
+
+		return NewMethodQueryMapBoolArrayBoolValidateMethodQueryMapBoolArrayBoolValidatePayload(q), nil
 	}
 }
 `
@@ -2039,10 +1911,10 @@ func DecodeMethodQueryPrimitiveStringValidateRequest(mux rest.Muxer, decoder fun
 		if !(q == "val") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []interface{}{"val"}))
 		}
-
 		if err != nil {
 			return nil, err
 		}
+
 		return q, nil
 	}
 }
@@ -2069,10 +1941,10 @@ func DecodeMethodQueryPrimitiveBoolValidateRequest(mux rest.Muxer, decoder func(
 		if !(q == true) {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []interface{}{true}))
 		}
-
 		if err != nil {
 			return nil, err
 		}
+
 		return q, nil
 	}
 }
@@ -2099,10 +1971,10 @@ func DecodeMethodQueryPrimitiveArrayStringValidateRequest(mux rest.Muxer, decode
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q[*]", e, []interface{}{"val"}))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
+
 		return q, nil
 	}
 }
@@ -2137,10 +2009,10 @@ func DecodeMethodQueryPrimitiveArrayBoolValidateRequest(mux rest.Muxer, decoder 
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q[*]", e, []interface{}{true}))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
+
 		return q, nil
 	}
 }
@@ -2172,10 +2044,10 @@ func DecodeMethodQueryPrimitiveMapStringArrayStringValidateRequest(mux rest.Muxe
 				err = goa.MergeErrors(err, goa.ValidatePattern("q[key][*]", e, "val"))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
+
 		return q, nil
 	}
 }
@@ -2216,10 +2088,10 @@ func DecodeMethodQueryPrimitiveMapStringBoolValidateRequest(mux rest.Muxer, deco
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q[key]", v, []interface{}{true}))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
+
 		return q, nil
 	}
 }
@@ -2277,10 +2149,10 @@ func DecodeMethodQueryPrimitiveMapBoolArrayBoolValidateRequest(mux rest.Muxer, d
 				}
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
+
 		return q, nil
 	}
 }
@@ -2291,8 +2163,7 @@ var PayloadQueryStringDefaultDecodeCode = `// DecodeMethodQueryStringDefaultRequ
 func DecodeMethodQueryStringDefaultRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   string
-			err error
+			q string
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -2301,10 +2172,7 @@ func DecodeMethodQueryStringDefaultRequest(mux rest.Muxer, decoder func(*http.Re
 			q = "def"
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodQueryStringDefaultPayload(q), nil
+		return NewMethodQueryStringDefaultMethodQueryStringDefaultPayload(q), nil
 	}
 }
 `
@@ -2315,8 +2183,7 @@ var PayloadQueryPrimitiveStringDefaultDecodeCode = `// DecodeMethodQueryPrimitiv
 func DecodeMethodQueryPrimitiveStringDefaultRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			q   string
-			err error
+			q string
 		)
 		qRaw := r.URL.Query().Get("q")
 		if qRaw != "" {
@@ -2325,9 +2192,6 @@ func DecodeMethodQueryPrimitiveStringDefaultRequest(mux rest.Muxer, decoder func
 			q = "def"
 		}
 
-		if err != nil {
-			return nil, err
-		}
 		return q, nil
 	}
 }
@@ -2338,17 +2202,13 @@ var PayloadPathStringDecodeCode = `// DecodeMethodPathStringRequest returns a de
 func DecodeMethodPathStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			p   string
-			err error
+			p string
 
 			params = mux.Vars(r)
 		)
 		p = params["p"]
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodPathStringPayload(p), nil
+		return NewMethodPathStringMethodPathStringPayload(p), nil
 	}
 }
 `
@@ -2367,11 +2227,11 @@ func DecodeMethodPathStringValidateRequest(mux rest.Muxer, decoder func(*http.Re
 		if !(p == "val") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("p", p, []interface{}{"val"}))
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodPathStringValidatePayload(p), nil
+
+		return NewMethodPathStringValidateMethodPathStringValidatePayload(p), nil
 	}
 }
 `
@@ -2381,8 +2241,7 @@ var PayloadPathArrayStringDecodeCode = `// DecodeMethodPathArrayStringRequest re
 func DecodeMethodPathArrayStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			p   []string
-			err error
+			p []string
 
 			params = mux.Vars(r)
 		)
@@ -2393,10 +2252,7 @@ func DecodeMethodPathArrayStringRequest(mux rest.Muxer, decoder func(*http.Reque
 			p[i] = rv
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodPathArrayStringPayload(p), nil
+		return NewMethodPathArrayStringMethodPathArrayStringPayload(p), nil
 	}
 }
 `
@@ -2421,11 +2277,11 @@ func DecodeMethodPathArrayStringValidateRequest(mux rest.Muxer, decoder func(*ht
 		if !(p == []string{"val"}) {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("p", p, []interface{}{[]string{"val"}}))
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodPathArrayStringValidatePayload(p), nil
+
+		return NewMethodPathArrayStringValidateMethodPathArrayStringValidatePayload(p), nil
 	}
 }
 `
@@ -2445,10 +2301,10 @@ func DecodeMethodPathPrimitiveStringValidateRequest(mux rest.Muxer, decoder func
 		if !(p == "val") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("p", p, []interface{}{"val"}))
 		}
-
 		if err != nil {
 			return nil, err
 		}
+
 		return p, nil
 	}
 }
@@ -2474,10 +2330,10 @@ func DecodeMethodPathPrimitiveBoolValidateRequest(mux rest.Muxer, decoder func(*
 		if !(p == true) {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("p", p, []interface{}{true}))
 		}
-
 		if err != nil {
 			return nil, err
 		}
+
 		return p, nil
 	}
 }
@@ -2508,10 +2364,10 @@ func DecodeMethodPathPrimitiveArrayStringValidateRequest(mux rest.Muxer, decoder
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("p[*]", e, []interface{}{"val"}))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
+
 		return p, nil
 	}
 }
@@ -2546,10 +2402,10 @@ func DecodeMethodPathPrimitiveArrayBoolValidateRequest(mux rest.Muxer, decoder f
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("p[*]", e, []interface{}{true}))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
+
 		return p, nil
 	}
 }
@@ -2560,18 +2416,14 @@ var PayloadHeaderStringDecodeCode = `// DecodeMethodHeaderStringRequest returns 
 func DecodeMethodHeaderStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			h   *string
-			err error
+			h *string
 		)
 		hRaw := r.Header.Get("h")
 		if hRaw != "" {
 			h = &hRaw
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodHeaderStringPayload(h), nil
+		return NewMethodHeaderStringMethodHeaderStringPayload(h), nil
 	}
 }
 `
@@ -2591,11 +2443,11 @@ func DecodeMethodHeaderStringValidateRequest(mux rest.Muxer, decoder func(*http.
 		if h != nil {
 			err = goa.MergeErrors(err, goa.ValidatePattern("h", *h, "header"))
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodHeaderStringValidatePayload(h), nil
+
+		return NewMethodHeaderStringValidateMethodHeaderStringValidatePayload(h), nil
 	}
 }
 `
@@ -2605,15 +2457,11 @@ var PayloadHeaderArrayStringDecodeCode = `// DecodeMethodHeaderArrayStringReques
 func DecodeMethodHeaderArrayStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			h   []string
-			err error
+			h []string
 		)
 		h = r.Header["H"]
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodHeaderArrayStringPayload(h), nil
+		return NewMethodHeaderArrayStringMethodHeaderArrayStringPayload(h), nil
 	}
 }
 `
@@ -2634,11 +2482,11 @@ func DecodeMethodHeaderArrayStringValidateRequest(mux rest.Muxer, decoder func(*
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("h[*]", e, []interface{}{"val"}))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodHeaderArrayStringValidatePayload(h), nil
+
+		return NewMethodHeaderArrayStringValidateMethodHeaderArrayStringValidatePayload(h), nil
 	}
 }
 `
@@ -2659,10 +2507,10 @@ func DecodeMethodHeaderPrimitiveStringValidateRequest(mux rest.Muxer, decoder fu
 		if !(h == "val") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("h", h, []interface{}{"val"}))
 		}
-
 		if err != nil {
 			return nil, err
 		}
+
 		return h, nil
 	}
 }
@@ -2689,10 +2537,10 @@ func DecodeMethodHeaderPrimitiveBoolValidateRequest(mux rest.Muxer, decoder func
 		if !(h == true) {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("h", h, []interface{}{true}))
 		}
-
 		if err != nil {
 			return nil, err
 		}
+
 		return h, nil
 	}
 }
@@ -2718,10 +2566,10 @@ func DecodeMethodHeaderPrimitiveArrayStringValidateRequest(mux rest.Muxer, decod
 		for _, e := range h {
 			err = goa.MergeErrors(err, goa.ValidatePattern("h[*]", e, "val"))
 		}
-
 		if err != nil {
 			return nil, err
 		}
+
 		return h, nil
 	}
 }
@@ -2756,10 +2604,10 @@ func DecodeMethodHeaderPrimitiveArrayBoolValidateRequest(mux rest.Muxer, decoder
 				err = goa.MergeErrors(err, goa.InvalidEnumValueError("h[*]", e, []interface{}{true}))
 			}
 		}
-
 		if err != nil {
 			return nil, err
 		}
+
 		return h, nil
 	}
 }
@@ -2770,8 +2618,7 @@ var PayloadHeaderStringDefaultDecodeCode = `// DecodeMethodHeaderStringDefaultRe
 func DecodeMethodHeaderStringDefaultRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			h   string
-			err error
+			h string
 		)
 		hRaw := r.Header.Get("h")
 		if hRaw != "" {
@@ -2780,10 +2627,7 @@ func DecodeMethodHeaderStringDefaultRequest(mux rest.Muxer, decoder func(*http.R
 			h = "def"
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodHeaderStringDefaultPayload(h), nil
+		return NewMethodHeaderStringDefaultMethodHeaderStringDefaultPayload(h), nil
 	}
 }
 `
@@ -2794,8 +2638,7 @@ var PayloadHeaderPrimitiveStringDefaultDecodeCode = `// DecodeMethodHeaderPrimit
 func DecodeMethodHeaderPrimitiveStringDefaultRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			h   string
-			err error
+			h string
 		)
 		hRaw := r.Header.Get("h")
 		if hRaw != "" {
@@ -2804,9 +2647,6 @@ func DecodeMethodHeaderPrimitiveStringDefaultRequest(mux rest.Muxer, decoder fun
 			h = "def"
 		}
 
-		if err != nil {
-			return nil, err
-		}
 		return h, nil
 	}
 }
@@ -2817,7 +2657,7 @@ var PayloadBodyStringDecodeCode = `// DecodeMethodBodyStringRequest returns a de
 func DecodeMethodBodyStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyStringPayload
+			body MethodBodyStringServerRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -2828,10 +2668,7 @@ func DecodeMethodBodyStringRequest(mux rest.Muxer, decoder func(*http.Request) r
 			return nil, err
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return &body, nil
+		return NewMethodBodyStringMethodBodyStringPayload(&body), nil
 	}
 }
 `
@@ -2841,7 +2678,7 @@ var PayloadBodyStringValidateDecodeCode = `// DecodeMethodBodyStringValidateRequ
 func DecodeMethodBodyStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyStringValidatePayload
+			body MethodBodyStringValidateServerRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -2856,7 +2693,8 @@ func DecodeMethodBodyStringValidateRequest(mux rest.Muxer, decoder func(*http.Re
 		if err != nil {
 			return nil, err
 		}
-		return &body, nil
+
+		return NewMethodBodyStringValidateMethodBodyStringValidatePayload(&body), nil
 	}
 }
 `
@@ -2898,10 +2736,14 @@ func DecodeMethodBodyObjectValidateRequest(mux rest.Muxer, decoder func(*http.Re
 			return nil, err
 		}
 		err = goa.MergeErrors(err, body.Validate())
+		if err != nil {
+			return nil, err
+		}
 
 		if err != nil {
 			return nil, err
 		}
+
 		return &body, nil
 	}
 }
@@ -2912,7 +2754,7 @@ var PayloadBodyUserDecodeCode = `// DecodeMethodBodyUserRequest returns a decode
 func DecodeMethodBodyUserRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body PayloadType
+			body MethodBodyUserServerRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -2923,10 +2765,7 @@ func DecodeMethodBodyUserRequest(mux rest.Muxer, decoder func(*http.Request) res
 			return nil, err
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return &body, nil
+		return NewMethodBodyUserPayloadType(&body), nil
 	}
 }
 `
@@ -2936,7 +2775,7 @@ var PayloadUserBodyValidateDecodeCode = `// DecodeMethodBodyUserValidateRequest 
 func DecodeMethodBodyUserValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body PayloadType
+			body MethodBodyUserValidateServerRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -2951,7 +2790,8 @@ func DecodeMethodBodyUserValidateRequest(mux rest.Muxer, decoder func(*http.Requ
 		if err != nil {
 			return nil, err
 		}
-		return &body, nil
+
+		return NewMethodBodyUserValidatePayloadType(&body), nil
 	}
 }
 `
@@ -2961,7 +2801,7 @@ var PayloadBodyArrayStringDecodeCode = `// DecodeMethodBodyArrayStringRequest re
 func DecodeMethodBodyArrayStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyArrayStringPayload
+			body MethodBodyArrayStringServerRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -2972,10 +2812,7 @@ func DecodeMethodBodyArrayStringRequest(mux rest.Muxer, decoder func(*http.Reque
 			return nil, err
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return &body, nil
+		return NewMethodBodyArrayStringMethodBodyArrayStringPayload(&body), nil
 	}
 }
 `
@@ -2986,7 +2823,7 @@ var PayloadBodyArrayStringValidateDecodeCode = `// DecodeMethodBodyArrayStringVa
 func DecodeMethodBodyArrayStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyArrayStringValidatePayload
+			body MethodBodyArrayStringValidateServerRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3001,7 +2838,8 @@ func DecodeMethodBodyArrayStringValidateRequest(mux rest.Muxer, decoder func(*ht
 		if err != nil {
 			return nil, err
 		}
-		return &body, nil
+
+		return NewMethodBodyArrayStringValidateMethodBodyArrayStringValidatePayload(&body), nil
 	}
 }
 `
@@ -3011,7 +2849,7 @@ var PayloadBodyArrayUserDecodeCode = `// DecodeMethodBodyArrayUserRequest return
 func DecodeMethodBodyArrayUserRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyArrayUserPayload
+			body MethodBodyArrayUserServerRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3026,7 +2864,8 @@ func DecodeMethodBodyArrayUserRequest(mux rest.Muxer, decoder func(*http.Request
 		if err != nil {
 			return nil, err
 		}
-		return &body, nil
+
+		return NewMethodBodyArrayUserMethodBodyArrayUserPayload(&body), nil
 	}
 }
 `
@@ -3036,7 +2875,7 @@ var PayloadBodyArrayUserValidateDecodeCode = `// DecodeMethodBodyArrayUserValida
 func DecodeMethodBodyArrayUserValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyArrayUserValidatePayload
+			body MethodBodyArrayUserValidateServerRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3051,7 +2890,8 @@ func DecodeMethodBodyArrayUserValidateRequest(mux rest.Muxer, decoder func(*http
 		if err != nil {
 			return nil, err
 		}
-		return &body, nil
+
+		return NewMethodBodyArrayUserValidateMethodBodyArrayUserValidatePayload(&body), nil
 	}
 }
 `
@@ -3061,7 +2901,7 @@ var PayloadBodyMapStringDecodeCode = `// DecodeMethodBodyMapStringRequest return
 func DecodeMethodBodyMapStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyMapStringPayload
+			body MethodBodyMapStringServerRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3072,10 +2912,7 @@ func DecodeMethodBodyMapStringRequest(mux rest.Muxer, decoder func(*http.Request
 			return nil, err
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return &body, nil
+		return NewMethodBodyMapStringMethodBodyMapStringPayload(&body), nil
 	}
 }
 `
@@ -3085,7 +2922,7 @@ var PayloadBodyMapStringValidateDecodeCode = `// DecodeMethodBodyMapStringValida
 func DecodeMethodBodyMapStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyMapStringValidatePayload
+			body MethodBodyMapStringValidateServerRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3100,7 +2937,8 @@ func DecodeMethodBodyMapStringValidateRequest(mux rest.Muxer, decoder func(*http
 		if err != nil {
 			return nil, err
 		}
-		return &body, nil
+
+		return NewMethodBodyMapStringValidateMethodBodyMapStringValidatePayload(&body), nil
 	}
 }
 `
@@ -3110,7 +2948,7 @@ var PayloadBodyMapUserDecodeCode = `// DecodeMethodBodyMapUserRequest returns a 
 func DecodeMethodBodyMapUserRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyMapUserPayload
+			body MethodBodyMapUserServerRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3125,7 +2963,8 @@ func DecodeMethodBodyMapUserRequest(mux rest.Muxer, decoder func(*http.Request) 
 		if err != nil {
 			return nil, err
 		}
-		return &body, nil
+
+		return NewMethodBodyMapUserMethodBodyMapUserPayload(&body), nil
 	}
 }
 `
@@ -3135,7 +2974,7 @@ var PayloadBodyMapUserValidateDecodeCode = `// DecodeMethodBodyMapUserValidateRe
 func DecodeMethodBodyMapUserValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyMapUserValidatePayload
+			body MethodBodyMapUserValidateServerRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3150,7 +2989,8 @@ func DecodeMethodBodyMapUserValidateRequest(mux rest.Muxer, decoder func(*http.R
 		if err != nil {
 			return nil, err
 		}
-		return &body, nil
+
+		return NewMethodBodyMapUserValidateMethodBodyMapUserValidatePayload(&body), nil
 	}
 }
 `
@@ -3171,13 +3011,16 @@ func DecodeMethodBodyPrimitiveStringValidateRequest(mux rest.Muxer, decoder func
 			}
 			return nil, err
 		}
-		if !(body == "val") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body", body, []interface{}{"val"}))
+		if body != nil {
+			if !(*body == "val") {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("body", *body, []interface{}{"val"}))
+			}
 		}
 
 		if err != nil {
 			return nil, err
 		}
+
 		return body, nil
 	}
 }
@@ -3199,13 +3042,16 @@ func DecodeMethodBodyPrimitiveBoolValidateRequest(mux rest.Muxer, decoder func(*
 			}
 			return nil, err
 		}
-		if !(body == true) {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body", body, []interface{}{true}))
+		if body != nil {
+			if !(*body == true) {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("body", *body, []interface{}{true}))
+			}
 		}
 
 		if err != nil {
 			return nil, err
 		}
+
 		return body, nil
 	}
 }
@@ -3239,6 +3085,7 @@ func DecodeMethodBodyPrimitiveArrayStringValidateRequest(mux rest.Muxer, decoder
 		if err != nil {
 			return nil, err
 		}
+
 		return body, nil
 	}
 }
@@ -3272,7 +3119,98 @@ func DecodeMethodBodyPrimitiveArrayBoolValidateRequest(mux rest.Muxer, decoder f
 		if err != nil {
 			return nil, err
 		}
+
 		return body, nil
+	}
+}
+`
+
+var PayloadBodyPrimitiveArrayUserValidateDecodeCode = `// DecodeMethodBodyPrimitiveArrayUserValidateRequest returns a decoder for
+// requests sent to the ServiceBodyPrimitiveArrayUserValidate
+// MethodBodyPrimitiveArrayUserValidate endpoint.
+func DecodeMethodBodyPrimitiveArrayUserValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			body []*PayloadTypeRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				err = goa.MissingPayloadError()
+			}
+			return nil, err
+		}
+		if len(body) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body", body, len(body), 1, true))
+		}
+		for _, e := range body {
+			if e != nil {
+				if err2 := e.Validate(); err2 != nil {
+					err = goa.MergeErrors(err, err2)
+				}
+			}
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		return NewMethodBodyPrimitiveArrayUserValidatePayloadType(body), nil
+	}
+}
+`
+
+var PayloadBodyPrimitiveFieldArrayUserDecodeCode = `// DecodeMethodBodyPrimitiveArrayUserRequest returns a decoder for requests
+// sent to the ServiceBodyPrimitiveArrayUser MethodBodyPrimitiveArrayUser
+// endpoint.
+func DecodeMethodBodyPrimitiveArrayUserRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			body []string
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				err = goa.MissingPayloadError()
+			}
+			return nil, err
+		}
+
+		return NewMethodBodyPrimitiveArrayUserPayloadType(body), nil
+	}
+}
+`
+
+var PayloadBodyPrimitiveFieldArrayUserValidateDecodeCode = `// DecodeMethodBodyPrimitiveArrayUserValidateRequest returns a decoder for
+// requests sent to the ServiceBodyPrimitiveArrayUserValidate
+// MethodBodyPrimitiveArrayUserValidate endpoint.
+func DecodeMethodBodyPrimitiveArrayUserValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			body []string
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				err = goa.MissingPayloadError()
+			}
+			return nil, err
+		}
+		if len(body) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body", body, len(body), 1, true))
+		}
+		for _, e := range body {
+			err = goa.MergeErrors(err, goa.ValidatePattern("body[*]", e, "pattern"))
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		return NewMethodBodyPrimitiveArrayUserValidatePayloadType(body), nil
 	}
 }
 `
@@ -3301,10 +3239,7 @@ func DecodeMethodBodyQueryObjectRequest(mux rest.Muxer, decoder func(*http.Reque
 			b = &bRaw
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodBodyQueryObjectPayload(&body, b), nil
+		return NewMethodBodyQueryObjectMethodBodyQueryObjectPayload(&body, b), nil
 	}
 }
 `
@@ -3335,11 +3270,11 @@ func DecodeMethodBodyQueryObjectValidateRequest(mux rest.Muxer, decoder func(*ht
 			err = goa.MergeErrors(err, goa.MissingFieldError("b", "query string"))
 		}
 		err = goa.MergeErrors(err, goa.ValidatePattern("b", b, "patternb"))
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodBodyQueryObjectValidatePayload(&body, b), nil
+
+		return NewMethodBodyQueryObjectValidateMethodBodyQueryObjectValidatePayload(&body, b), nil
 	}
 }
 `
@@ -3368,10 +3303,7 @@ func DecodeMethodBodyQueryUserRequest(mux rest.Muxer, decoder func(*http.Request
 			b = &bRaw
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewPayloadType(&body, b), nil
+		return NewMethodBodyQueryUserPayloadType(&body, b), nil
 	}
 }
 `
@@ -3401,11 +3333,11 @@ func DecodeMethodBodyQueryUserValidateRequest(mux rest.Muxer, decoder func(*http
 			err = goa.MergeErrors(err, goa.MissingFieldError("b", "query string"))
 		}
 		err = goa.MergeErrors(err, goa.ValidatePattern("b", b, "patternb"))
-
 		if err != nil {
 			return nil, err
 		}
-		return NewPayloadType(&body, b), nil
+
+		return NewMethodBodyQueryUserValidatePayloadType(&body, b), nil
 	}
 }
 `
@@ -3433,10 +3365,7 @@ func DecodeMethodBodyPathObjectRequest(mux rest.Muxer, decoder func(*http.Reques
 		)
 		b = params["b"]
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodBodyPathObjectPayload(&body, b), nil
+		return NewMethodBodyPathObjectMethodBodyPathObjectPayload(&body, b), nil
 	}
 }
 `
@@ -3466,11 +3395,11 @@ func DecodeMethodBodyPathObjectValidateRequest(mux rest.Muxer, decoder func(*htt
 		)
 		b = params["b"]
 		err = goa.MergeErrors(err, goa.ValidatePattern("b", b, "patternb"))
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodBodyPathObjectValidatePayload(&body, b), nil
+
+		return NewMethodBodyPathObjectValidateMethodBodyPathObjectValidatePayload(&body, b), nil
 	}
 }
 `
@@ -3498,10 +3427,7 @@ func DecodeMethodBodyPathUserRequest(mux rest.Muxer, decoder func(*http.Request)
 		)
 		b = params["b"]
 
-		if err != nil {
-			return nil, err
-		}
-		return NewPayloadType(&body, b), nil
+		return NewMethodBodyPathUserPayloadType(&body, b), nil
 	}
 }
 `
@@ -3530,11 +3456,11 @@ func DecodeMethodUserBodyPathValidateRequest(mux rest.Muxer, decoder func(*http.
 		)
 		b = params["b"]
 		err = goa.MergeErrors(err, goa.ValidatePattern("b", b, "patternb"))
-
 		if err != nil {
 			return nil, err
 		}
-		return NewPayloadType(&body, b), nil
+
+		return NewMethodUserBodyPathValidatePayloadType(&body, b), nil
 	}
 }
 `
@@ -3567,10 +3493,7 @@ func DecodeMethodBodyQueryPathObjectRequest(mux rest.Muxer, decoder func(*http.R
 			b = &bRaw
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewMethodBodyQueryPathObjectPayload(&body, b, c), nil
+		return NewMethodBodyQueryPathObjectMethodBodyQueryPathObjectPayload(&body, c, b), nil
 	}
 }
 `
@@ -3606,11 +3529,11 @@ func DecodeMethodBodyQueryPathObjectValidateRequest(mux rest.Muxer, decoder func
 			err = goa.MergeErrors(err, goa.MissingFieldError("b", "query string"))
 		}
 		err = goa.MergeErrors(err, goa.ValidatePattern("b", b, "patternb"))
-
 		if err != nil {
 			return nil, err
 		}
-		return NewMethodBodyQueryPathObjectValidatePayload(&body, b, c), nil
+
+		return NewMethodBodyQueryPathObjectValidateMethodBodyQueryPathObjectValidatePayload(&body, c, b), nil
 	}
 }
 `
@@ -3643,10 +3566,7 @@ func DecodeMethodBodyQueryPathUserRequest(mux rest.Muxer, decoder func(*http.Req
 			b = &bRaw
 		}
 
-		if err != nil {
-			return nil, err
-		}
-		return NewPayloadType(&body, b, c), nil
+		return NewMethodBodyQueryPathUserPayloadType(&body, c, b), nil
 	}
 }
 `
@@ -3682,11 +3602,11 @@ func DecodeMethodBodyQueryPathUserValidateRequest(mux rest.Muxer, decoder func(*
 			err = goa.MergeErrors(err, goa.MissingFieldError("b", "query string"))
 		}
 		err = goa.MergeErrors(err, goa.ValidatePattern("b", b, "patternb"))
-
 		if err != nil {
 			return nil, err
 		}
-		return NewPayloadType(&body, b, c), nil
+
+		return NewMethodBodyQueryPathUserValidatePayloadType(&body, c, b), nil
 	}
 }
 `

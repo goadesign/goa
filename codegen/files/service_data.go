@@ -64,9 +64,6 @@ type (
 		ResultDef string
 		// ResultRef is the reference to the result type if any.
 		ResultRef string
-		// AbsResultRef is the reference to the result type qualified
-		// with the package if any.
-		AbsResultRef string
 	}
 
 	// UserTypeData contains the data describing a data type.
@@ -231,7 +228,7 @@ func BuildFieldsData(ut design.UserType, scope *codegen.NameScope) []*FieldData 
 		fields[i] = &FieldData{
 			Name:         nat.Name,
 			VarName:      codegen.Goify(nat.Name, true),
-			TypeRef:      scope.GoTypeRef(nat.Attribute.Type),
+			TypeRef:      scope.GoTypeRef(nat.Attribute),
 			Required:     ut.Attribute().IsRequired(nat.Name),
 			DefaultValue: nat.Attribute.DefaultValue,
 		}
@@ -255,11 +252,11 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 		fields := BuildFieldsData(dt, scope)
 		data = append(data, &UserTypeData{
 			Name:        dt.Name(),
-			VarName:     scope.GoTypeName(dt),
+			VarName:     scope.GoTypeName(at),
 			Description: dt.Attribute().Description,
 			Fields:      fields,
 			Def:         scope.GoTypeDef(dt.Attribute(), req),
-			Ref:         scope.GoTypeRef(dt),
+			Ref:         scope.GoTypeRef(at),
 			Type:        dt,
 		})
 		seen[dt.Name()] = struct{}{}
@@ -281,17 +278,16 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 // records the user types needed by the service definition in userTypes.
 func buildServiceMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.NameScope) *ServiceMethodData {
 	var (
-		varName      string
-		desc         string
-		payloadName  string
-		payloadDesc  string
-		payloadDef   string
-		payloadRef   string
-		resultName   string
-		resultDesc   string
-		resultDef    string
-		resultRef    string
-		absResultRef string
+		varName     string
+		desc        string
+		payloadName string
+		payloadDesc string
+		payloadDef  string
+		payloadRef  string
+		resultName  string
+		resultDesc  string
+		resultDef   string
+		resultRef   string
 	)
 	{
 		varName = codegen.Goify(m.Name, true)
@@ -300,14 +296,10 @@ func buildServiceMethodData(m *design.MethodExpr, svcPkgName string, scope *code
 			desc = codegen.Goify(m.Name, true) + " implements " + m.Name + "."
 		}
 		if m.Payload != nil && m.Payload.Type != design.Empty {
-			switch dt := m.Payload.Type.(type) {
-			case design.UserType:
-				payloadName = scope.GoTypeName(dt)
-				payloadRef = "*" + payloadName
-				payloadDef = scope.GoTypeDef(dt.Attribute(), true)
-			default:
-				payloadName = scope.GoTypeName(dt)
-				payloadRef = payloadName
+			payloadName = scope.GoTypeName(m.Payload)
+			payloadRef = scope.GoTypeRef(m.Payload)
+			if dt, ok := m.Payload.Type.(design.UserType); ok {
+				payloadDef = scope.GoTypeDef(dt.Attribute(), false)
 			}
 			payloadDesc = m.Payload.Description
 			if payloadDesc == "" {
@@ -316,16 +308,10 @@ func buildServiceMethodData(m *design.MethodExpr, svcPkgName string, scope *code
 			}
 		}
 		if m.Result != nil && m.Result.Type != design.Empty {
-			switch dt := m.Result.Type.(type) {
-			case design.UserType:
-				resultName = scope.GoTypeName(dt)
-				resultRef = "*" + resultName
+			resultName = scope.GoTypeName(m.Result)
+			resultRef = scope.GoTypeRef(m.Result)
+			if dt, ok := m.Result.Type.(design.UserType); ok {
 				resultDef = scope.GoTypeDef(dt.Attribute(), false)
-				absResultRef = scope.GoFullTypeRef(dt, svcPkgName)
-			default:
-				resultName = scope.GoTypeName(dt)
-				resultRef = resultName
-				absResultRef = scope.GoFullTypeRef(dt, svcPkgName)
 			}
 			resultDesc = m.Result.Description
 			if resultDesc == "" {
@@ -335,17 +321,16 @@ func buildServiceMethodData(m *design.MethodExpr, svcPkgName string, scope *code
 		}
 	}
 	return &ServiceMethodData{
-		Name:         m.Name,
-		VarName:      varName,
-		Description:  desc,
-		Payload:      payloadName,
-		PayloadDesc:  payloadDesc,
-		PayloadDef:   payloadDef,
-		PayloadRef:   payloadRef,
-		Result:       resultName,
-		ResultDesc:   resultDesc,
-		ResultDef:    resultDef,
-		ResultRef:    resultRef,
-		AbsResultRef: absResultRef,
+		Name:        m.Name,
+		VarName:     varName,
+		Description: desc,
+		Payload:     payloadName,
+		PayloadDesc: payloadDesc,
+		PayloadDef:  payloadDef,
+		PayloadRef:  payloadRef,
+		Result:      resultName,
+		ResultDesc:  resultDesc,
+		ResultDef:   resultDef,
+		ResultRef:   resultRef,
 	}
 }

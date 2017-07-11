@@ -186,8 +186,8 @@ func (r *ResourceExpr) Headers() *design.AttributeExpr {
 }
 
 // MappedHeaders computes the mapped attribute expression from Headers.
-func (r *ResourceExpr) MappedHeaders() *MappedAttributeExpr {
-	return NewMappedAttributeExpr(r.headers)
+func (r *ResourceExpr) MappedHeaders() *design.MappedAttributeExpr {
+	return design.NewMappedAttributeExpr(r.headers)
 }
 
 // Params initializes and returns the attribute holding the API parameters.
@@ -199,8 +199,8 @@ func (r *ResourceExpr) Params() *design.AttributeExpr {
 }
 
 // MappedParams computes the mapped attribute expression from Params.
-func (r *ResourceExpr) MappedParams() *MappedAttributeExpr {
-	return NewMappedAttributeExpr(r.params)
+func (r *ResourceExpr) MappedParams() *design.MappedAttributeExpr {
+	return design.NewMappedAttributeExpr(r.params)
 }
 
 // EvalName returns the generic definition name used in error messages.
