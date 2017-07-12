@@ -89,6 +89,90 @@ var _ = Describe("validation code generation", func() {
 				})
 			})
 
+			Context("of array elements", func() {
+				BeforeEach(func() {
+					attType = &design.Array{
+						ElemType: &design.AttributeDefinition{
+							Type: design.String,
+							Validation: &dslengine.ValidationDefinition{
+								Pattern: ".*",
+							},
+						},
+					}
+					validation = nil
+				})
+
+				It("produces the validation go code", func() {
+					Ω(code).Should(Equal(arrayElementsValCode))
+				})
+			})
+
+			Context("of hash elements (key, elem)", func() {
+				BeforeEach(func() {
+					attType = &design.Hash{
+						KeyType: &design.AttributeDefinition{
+							Type: design.String,
+							Validation: &dslengine.ValidationDefinition{
+								Pattern: ".*",
+							},
+						},
+						ElemType: &design.AttributeDefinition{
+							Type: design.String,
+							Validation: &dslengine.ValidationDefinition{
+								Pattern: ".*",
+							},
+						},
+					}
+					validation = nil
+				})
+
+				It("produces the validation go code", func() {
+					Ω(code).Should(Equal(hashKeyElemValCode))
+				})
+			})
+
+			Context("of hash elements (key, _)", func() {
+				BeforeEach(func() {
+					attType = &design.Hash{
+						KeyType: &design.AttributeDefinition{
+							Type: design.String,
+							Validation: &dslengine.ValidationDefinition{
+								Pattern: ".*",
+							},
+						},
+						ElemType: &design.AttributeDefinition{
+							Type: design.String,
+						},
+					}
+					validation = nil
+				})
+
+				It("produces the validation go code", func() {
+					Ω(code).Should(Equal(hashKeyValCode))
+				})
+			})
+
+			Context("of hash elements (_, elem)", func() {
+				BeforeEach(func() {
+					attType = &design.Hash{
+						KeyType: &design.AttributeDefinition{
+							Type: design.String,
+						},
+						ElemType: &design.AttributeDefinition{
+							Type: design.String,
+							Validation: &dslengine.ValidationDefinition{
+								Pattern: ".*",
+							},
+						},
+					}
+					validation = nil
+				})
+
+				It("produces the validation go code", func() {
+					Ω(code).Should(Equal(hashElemValCode))
+				})
+			})
+
 			Context("of string min length 2", func() {
 				BeforeEach(func() {
 					attType = design.String
@@ -244,6 +328,33 @@ const (
 	arrayMinLengthValCode = `	if val != nil {
 		if len(val) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError(` + "`" + `context` + "`" + `, val, len(val), 1, true))
+		}
+	}`
+
+	arrayElementsValCode = `	for _, e := range val {
+		if ok := goa.ValidatePattern(` + "`" + `.*` + "`" + `, e); !ok {
+			err = goa.MergeErrors(err, goa.InvalidPatternError(` + "`" + `context[*]` + "`" + `, e, ` + "`" + `.*` + "`" + `))
+		}
+	}`
+
+	hashKeyElemValCode = `	for k, e := range val {
+		if ok := goa.ValidatePattern(` + "`" + `.*` + "`" + `, k); !ok {
+			err = goa.MergeErrors(err, goa.InvalidPatternError(` + "`" + `context[*]` + "`" + `, k, ` + "`" + `.*` + "`" + `))
+		}
+		if ok := goa.ValidatePattern(` + "`" + `.*` + "`" + `, e); !ok {
+			err = goa.MergeErrors(err, goa.InvalidPatternError(` + "`" + `context[*]` + "`" + `, e, ` + "`" + `.*` + "`" + `))
+		}
+	}`
+
+	hashKeyValCode = `	for k, _ := range val {
+		if ok := goa.ValidatePattern(` + "`" + `.*` + "`" + `, k); !ok {
+			err = goa.MergeErrors(err, goa.InvalidPatternError(` + "`" + `context[*]` + "`" + `, k, ` + "`" + `.*` + "`" + `))
+		}
+	}`
+
+	hashElemValCode = `	for _, e := range val {
+		if ok := goa.ValidatePattern(` + "`" + `.*` + "`" + `, e); !ok {
+			err = goa.MergeErrors(err, goa.InvalidPatternError(` + "`" + `context[*]` + "`" + `, e, ` + "`" + `.*` + "`" + `))
 		}
 	}`
 
