@@ -54,6 +54,7 @@ func init() {
 // Validator is the code generator for the 'Validate' type methods.
 type Validator struct {
 	arrayValT *template.Template
+	hashValT  *template.Template
 	userValT  *template.Template
 	seen      map[string]*bytes.Buffer
 }
@@ -77,6 +78,10 @@ func NewValidator() *Validator {
 	if err != nil {
 		panic(err)
 	}
+	v.hashValT, err = template.New("hash").Funcs(fm).Parse(hashValTmpl)
+	if err != nil {
+		panic(err)
+	}
 	v.userValT, err = template.New("user").Funcs(fm).Parse(userValTmpl)
 	if err != nil {
 		panic(err)
@@ -92,6 +97,108 @@ func (v *Validator) Code(att *design.AttributeDefinition, nonzero, required, has
 	}
 	buf := v.recurse(att, nonzero, required, hasDefault, target, context, depth, private)
 	return buf.String()
+}
+
+func (v *Validator) arrayValCode(att *design.AttributeDefinition, nonzero, required, hasDefault bool, target, context string, depth int, private bool) []byte {
+	a := att.Type.ToArray()
+	if a == nil {
+		return nil
+	}
+
+	var buf bytes.Buffer
+
+	// Perform any validation on the array type such as MinLength, MaxLength, etc.
+	validation := ValidationChecker(att, nonzero, required, hasDefault, target, context, depth, private)
+	first := true
+	if validation != "" {
+		buf.WriteString(validation)
+		first = false
+	}
+	val := v.Code(a.ElemType, true, false, false, "e", context+"[*]", depth+1, false)
+	if val != "" {
+		switch a.ElemType.Type.(type) {
+		case *design.UserTypeDefinition, *design.MediaTypeDefinition:
+			// For user and media types, call the Validate method
+			val = RunTemplate(v.userValT, map[string]interface{}{
+				"depth":  depth + 2,
+				"target": "e",
+			})
+			val = fmt.Sprintf("%sif e != nil {\n%s\n%s}", Tabs(depth+1), val, Tabs(depth+1))
+		}
+		data := map[string]interface{}{
+			"elemType":   a.ElemType,
+			"context":    context,
+			"target":     target,
+			"depth":      1,
+			"private":    private,
+			"validation": val,
+		}
+		validation = RunTemplate(v.arrayValT, data)
+		if !first {
+			buf.WriteByte('\n')
+		} else {
+			first = false
+		}
+		buf.WriteString(validation)
+	}
+	return buf.Bytes()
+}
+
+func (v *Validator) hashValCode(att *design.AttributeDefinition, nonzero, required, hasDefault bool, target, context string, depth int, private bool) []byte {
+	h := att.Type.ToHash()
+	if h == nil {
+		return nil
+	}
+
+	var buf bytes.Buffer
+
+	// Perform any validation on the hash type such as MinLength, MaxLength, etc.
+	validation := ValidationChecker(att, nonzero, required, hasDefault, target, context, depth, private)
+	first := true
+	if validation != "" {
+		buf.WriteString(validation)
+		first = false
+	}
+	keyVal := v.Code(h.KeyType, true, false, false, "k", context+"[*]", depth+1, false)
+	if keyVal != "" {
+		switch h.KeyType.Type.(type) {
+		case *design.UserTypeDefinition, *design.MediaTypeDefinition:
+			// For user and media types, call the Validate method
+			keyVal = RunTemplate(v.userValT, map[string]interface{}{
+				"depth":  depth + 2,
+				"target": "k",
+			})
+			keyVal = fmt.Sprintf("%sif e != nil {\n%s\n%s}", Tabs(depth+1), keyVal, Tabs(depth+1))
+		}
+	}
+	elemVal := v.Code(h.ElemType, true, false, false, "e", context+"[*]", depth+1, false)
+	if elemVal != "" {
+		switch h.ElemType.Type.(type) {
+		case *design.UserTypeDefinition, *design.MediaTypeDefinition:
+			// For user and media types, call the Validate method
+			elemVal = RunTemplate(v.userValT, map[string]interface{}{
+				"depth":  depth + 2,
+				"target": "e",
+			})
+			elemVal = fmt.Sprintf("%sif e != nil {\n%s\n%s}", Tabs(depth+1), elemVal, Tabs(depth+1))
+		}
+	}
+	if keyVal != "" || elemVal != "" {
+		data := map[string]interface{}{
+			"depth":          1,
+			"target":         target,
+			"keyValidation":  keyVal,
+			"elemValidation": elemVal,
+		}
+		validation = RunTemplate(v.hashValT, data)
+		if !first {
+			buf.WriteByte('\n')
+		} else {
+			first = false
+		}
+		buf.WriteString(validation)
+	}
+	return buf.Bytes()
 }
 
 func (v *Validator) recurse(att *design.AttributeDefinition, nonzero, required, hasDefault bool, target, context string, depth int, private bool) *bytes.Buffer {
@@ -136,40 +243,9 @@ func (v *Validator) recurse(att *design.AttributeDefinition, nonzero, required, 
 			return nil
 		})
 	} else if a := att.Type.ToArray(); a != nil {
-		// Perform any validation on the array type such as MinLength, MaxLength, etc.
-		validation := ValidationChecker(att, nonzero, required, hasDefault, target, context, depth, private)
-		first := true
-		if validation != "" {
-			buf.WriteString(validation)
-			first = false
-		}
-		val := v.Code(a.ElemType, true, false, false, "e", context+"[*]", depth+1, false)
-		if val != "" {
-			switch a.ElemType.Type.(type) {
-			case *design.UserTypeDefinition, *design.MediaTypeDefinition:
-				// For user and media types, call the Validate method
-				val = RunTemplate(v.userValT, map[string]interface{}{
-					"depth":  depth + 2,
-					"target": "e",
-				})
-				val = fmt.Sprintf("%sif e != nil {\n%s\n%s}", Tabs(depth+1), val, Tabs(depth+1))
-			}
-			data := map[string]interface{}{
-				"elemType":   a.ElemType,
-				"context":    context,
-				"target":     target,
-				"depth":      1,
-				"private":    private,
-				"validation": val,
-			}
-			validation = RunTemplate(v.arrayValT, data)
-			if !first {
-				buf.WriteByte('\n')
-			} else {
-				first = false
-			}
-			buf.WriteString(validation)
-		}
+		buf.Write(v.arrayValCode(att, nonzero, required, hasDefault, target, context, depth, private))
+	} else if h := att.Type.ToHash(); h != nil {
+		buf.Write(v.hashValCode(att, nonzero, required, hasDefault, target, context, depth, private))
 	} else {
 		validation := ValidationChecker(att, nonzero, required, hasDefault, target, context, depth, private)
 		if validation != "" {
@@ -384,6 +460,12 @@ func constant(formatName string) string {
 const (
 	arrayValTmpl = `{{ tabs .depth }}for _, e := range {{ .target }} {
 {{ .validation }}
+{{ tabs .depth }}}`
+
+	hashValTmpl = `{{ tabs .depth }}for {{ if .keyValidation }}k{{ else }}_{{ end }}, {{ if .elemValidation }}e{{ else }}_{{ end }} := range {{ .target }} {
+{{- if .keyValidation }}
+{{ .keyValidation }}{{ end }}{{ if .elemValidation }}
+{{ .elemValidation }}{{ end }}
 {{ tabs .depth }}}`
 
 	userValTmpl = `{{ tabs .depth }}if err2 := {{ .target }}.Validate(); err2 != nil {
