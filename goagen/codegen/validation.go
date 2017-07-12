@@ -183,9 +183,8 @@ func (v *Validator) recurse(att *design.AttributeDefinition, nonzero, required, 
 			buf.WriteString(validation)
 			first = false
 		}
-		val := v.Code(h.KeyType, true, false, false, "k", context+"[*]", depth+1, false)
-		if val != "" {
-			keyVal := val
+		keyVal := v.Code(h.KeyType, true, false, false, "k", context+"[*]", depth+1, false)
+		if keyVal != "" {
 			switch h.KeyType.Type.(type) {
 			case *design.UserTypeDefinition, *design.MediaTypeDefinition:
 				// For user and media types, call the Validate method
@@ -193,20 +192,22 @@ func (v *Validator) recurse(att *design.AttributeDefinition, nonzero, required, 
 					"depth":  depth + 2,
 					"target": "k",
 				})
-				keyVal = fmt.Sprintf("%sif e != nil {\n%s\n%s}", Tabs(depth+1), val, Tabs(depth+1))
+				keyVal = fmt.Sprintf("%sif e != nil {\n%s\n%s}", Tabs(depth+1), keyVal, Tabs(depth+1))
 			}
-			elemVal := v.Code(h.ElemType, true, false, false, "e", context+"[*]", depth+1, false)
-			if elemVal != "" {
-				switch h.ElemType.Type.(type) {
-				case *design.UserTypeDefinition, *design.MediaTypeDefinition:
-					// For user and media types, call the Validate method
-					elemVal = RunTemplate(v.userValT, map[string]interface{}{
-						"depth":  depth + 2,
-						"target": "e",
-					})
-					elemVal = fmt.Sprintf("%sif e != nil {\n%s\n%s}", Tabs(depth+1), val, Tabs(depth+1))
-				}
+		}
+		elemVal := v.Code(h.ElemType, true, false, false, "e", context+"[*]", depth+1, false)
+		if elemVal != "" {
+			switch h.ElemType.Type.(type) {
+			case *design.UserTypeDefinition, *design.MediaTypeDefinition:
+				// For user and media types, call the Validate method
+				elemVal = RunTemplate(v.userValT, map[string]interface{}{
+					"depth":  depth + 2,
+					"target": "e",
+				})
+				elemVal = fmt.Sprintf("%sif e != nil {\n%s\n%s}", Tabs(depth+1), elemVal, Tabs(depth+1))
 			}
+		}
+		if keyVal != "" || elemVal != "" {
 			data := map[string]interface{}{
 				"depth":          1,
 				"target":         target,
@@ -437,9 +438,10 @@ const (
 {{ .validation }}
 {{ tabs .depth }}}`
 
-	hashValTmpl = `{{ tabs .depth }}for k, {{ if .elemValidation }}e{{ else }}_{{ end }} := range {{ .target }} {
-{{ .keyValidation }}
-{{ if .elemValidation }}{{ .elemValidation }}{{ end }}
+	hashValTmpl = `{{ tabs .depth }}for {{ if .keyValidation }}k{{ else }}_{{ end }}, {{ if .elemValidation }}e{{ else }}_{{ end }} := range {{ .target }} {
+{{- if .keyValidation }}
+{{ .keyValidation }}{{ end }}{{ if .elemValidation }}
+{{ .elemValidation }}{{ end }}
 {{ tabs .depth }}}`
 
 	userValTmpl = `{{ tabs .depth }}if err2 := {{ .target }}.Validate(); err2 != nil {
