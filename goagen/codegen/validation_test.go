@@ -108,7 +108,7 @@ var _ = Describe("validation code generation", func() {
 				})
 			})
 
-			Context("of hash elements", func() {
+			Context("of hash elements (key, elem)", func() {
 				BeforeEach(func() {
 					attType = &design.Hash{
 						KeyType: &design.AttributeDefinition{
@@ -128,7 +128,49 @@ var _ = Describe("validation code generation", func() {
 				})
 
 				It("produces the validation go code", func() {
-					Ω(code).Should(Equal(hashElementsValCode))
+					Ω(code).Should(Equal(hashKeyElemValCode))
+				})
+			})
+
+			Context("of hash elements (key, _)", func() {
+				BeforeEach(func() {
+					attType = &design.Hash{
+						KeyType: &design.AttributeDefinition{
+							Type: design.String,
+							Validation: &dslengine.ValidationDefinition{
+								Pattern: ".*",
+							},
+						},
+						ElemType: &design.AttributeDefinition{
+							Type: design.String,
+						},
+					}
+					validation = nil
+				})
+
+				It("produces the validation go code", func() {
+					Ω(code).Should(Equal(hashKeyValCode))
+				})
+			})
+
+			Context("of hash elements (_, elem)", func() {
+				BeforeEach(func() {
+					attType = &design.Hash{
+						KeyType: &design.AttributeDefinition{
+							Type: design.String,
+						},
+						ElemType: &design.AttributeDefinition{
+							Type: design.String,
+							Validation: &dslengine.ValidationDefinition{
+								Pattern: ".*",
+							},
+						},
+					}
+					validation = nil
+				})
+
+				It("produces the validation go code", func() {
+					Ω(code).Should(Equal(hashElemValCode))
 				})
 			})
 
@@ -313,10 +355,22 @@ const (
 		}
 	}`
 
-	hashElementsValCode = `	for k, e := range val {
+	hashKeyElemValCode = `	for k, e := range val {
 		if ok := goa.ValidatePattern(` + "`" + `.*` + "`" + `, k); !ok {
 			err = goa.MergeErrors(err, goa.InvalidPatternError(` + "`" + `context[*]` + "`" + `, k, ` + "`" + `.*` + "`" + `))
 		}
+		if ok := goa.ValidatePattern(` + "`" + `.*` + "`" + `, e); !ok {
+			err = goa.MergeErrors(err, goa.InvalidPatternError(` + "`" + `context[*]` + "`" + `, e, ` + "`" + `.*` + "`" + `))
+		}
+	}`
+
+	hashKeyValCode = `	for k, _ := range val {
+		if ok := goa.ValidatePattern(` + "`" + `.*` + "`" + `, k); !ok {
+			err = goa.MergeErrors(err, goa.InvalidPatternError(` + "`" + `context[*]` + "`" + `, k, ` + "`" + `.*` + "`" + `))
+		}
+	}`
+
+	hashElemValCode = `	for _, e := range val {
 		if ok := goa.ValidatePattern(` + "`" + `.*` + "`" + `, e); !ok {
 			err = goa.MergeErrors(err, goa.InvalidPatternError(` + "`" + `context[*]` + "`" + `, e, ` + "`" + `.*` + "`" + `))
 		}
