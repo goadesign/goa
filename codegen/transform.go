@@ -36,7 +36,7 @@ func init() {
 // targetPkg contain the name of the Go package that defines the target type in
 // case it's not the same package as where the generated code lives.
 //
-// pointers indicates whether the source data structure uses pointers
+// fromPtrs indicates whether the source data structure uses pointers
 // to store all attributes even required ones (i.e. unmarshaled request body)
 //
 // initDefaults indicates whether fields in the target should be initialized with
@@ -45,7 +45,7 @@ func init() {
 // scope is used to compute the name of the user types when initializing fields
 // that use them.
 func GoTypeTransform(source, target design.DataType, sourceVar, targetVar, targetPkg string,
-	pointers, initDefaults bool, scope *NameScope) (string, error) {
+	fromPtrs, toPtrs, initDefaults bool, scope *NameScope) (string, error) {
 
 	var (
 		satt = &design.AttributeExpr{Type: source}
@@ -53,7 +53,7 @@ func GoTypeTransform(source, target design.DataType, sourceVar, targetVar, targe
 	)
 
 	code, err := transformAttribute(satt, tatt, sourceVar,
-		targetVar, targetPkg, pointers, initDefaults, true, scope)
+		targetVar, targetPkg, fromPtrs, toPtrs, initDefaults, true, scope)
 
 	if err != nil {
 		return "", err
@@ -63,7 +63,7 @@ func GoTypeTransform(source, target design.DataType, sourceVar, targetVar, targe
 }
 
 func transformAttribute(source, target *design.AttributeExpr,
-	sctx, tctx, targetPkg string, ptr, def, newVar bool, scope *NameScope) (string, error) {
+	sctx, tctx, targetPkg string, fromPtrs, toPtrs, def, newVar bool, scope *NameScope) (string, error) {
 
 	if err := isCompatible(source.Type, target.Type, sctx, tctx); err != nil {
 		return "", err
@@ -74,11 +74,11 @@ func transformAttribute(source, target *design.AttributeExpr,
 	)
 	switch {
 	case design.IsArray(source.Type):
-		code, err = transformArray(design.AsArray(source.Type), design.AsArray(target.Type), sctx, tctx, targetPkg, ptr, def, scope)
+		code, err = transformArray(design.AsArray(source.Type), design.AsArray(target.Type), sctx, tctx, targetPkg, fromPtrs, toPtrs, def, scope)
 	case design.IsMap(source.Type):
-		code, err = transformMap(design.AsMap(source.Type), design.AsMap(target.Type), sctx, tctx, targetPkg, ptr, def, scope)
+		code, err = transformMap(design.AsMap(source.Type), design.AsMap(target.Type), sctx, tctx, targetPkg, fromPtrs, toPtrs, def, scope)
 	case design.IsObject(source.Type):
-		code, err = transformObject(source, target, sctx, tctx, targetPkg, ptr, def, newVar, scope)
+		code, err = transformObject(source, target, sctx, tctx, targetPkg, fromPtrs, toPtrs, def, newVar, scope)
 	default:
 		assign := "="
 		if newVar {
@@ -92,7 +92,7 @@ func transformAttribute(source, target *design.AttributeExpr,
 	return code, nil
 }
 
-func transformObject(source, target *design.AttributeExpr, sctx, tctx, targetPkg string, ptr, def, newVar bool, scope *NameScope) (string, error) {
+func transformObject(source, target *design.AttributeExpr, sctx, tctx, targetPkg string, fromPtrs, toPtrs, def, newVar bool, scope *NameScope) (string, error) {
 	src := design.NewMappedAttributeExpr(source)
 	tgt := design.NewMappedAttributeExpr(target)
 	srcObj := design.AsObject(src.Type)
@@ -119,8 +119,11 @@ func transformObject(source, target *design.AttributeExpr, sctx, tctx, targetPkg
 		}
 		srcField := sctx + "." + Goify(src.ElemName(n), true)
 		deref := ""
-		if (ptr || src.IsPrimitivePointer(n, !ptr)) && tgt.IsRequired(n) {
+		if (fromPtrs || src.IsPrimitivePointer(n, !fromPtrs)) && tgt.IsRequired(n) {
 			deref = "*"
+		}
+		if toPtrs && !src.IsPrimitivePointer(n, true) {
+			deref = "&"
 		}
 		initCode += fmt.Sprintf("\n%s: %s%s,", Goify(tgt.ElemName(n), true), deref, srcField)
 	}
@@ -153,11 +156,11 @@ func transformObject(source, target *design.AttributeExpr, sctx, tctx, targetPkg
 		)
 		switch {
 		case design.IsArray(srcAtt.Type):
-			code, err = transformArray(design.AsArray(srcAtt.Type), design.AsArray(att.Type), srcField, tgtField, targetPkg, ptr, def, scope)
+			code, err = transformArray(design.AsArray(srcAtt.Type), design.AsArray(att.Type), srcField, tgtField, targetPkg, fromPtrs, toPtrs, def, scope)
 		case design.IsMap(srcAtt.Type):
-			code, err = transformMap(design.AsMap(srcAtt.Type), design.AsMap(att.Type), srcField, tgtField, targetPkg, ptr, def, scope)
+			code, err = transformMap(design.AsMap(srcAtt.Type), design.AsMap(att.Type), srcField, tgtField, targetPkg, fromPtrs, toPtrs, def, scope)
 		case design.IsObject(srcAtt.Type):
-			code, err = transformObject(srcAtt, att, srcField, tgtField, targetPkg, ptr, def, false, scope)
+			code, err = transformObject(srcAtt, att, srcField, tgtField, targetPkg, fromPtrs, toPtrs, def, false, scope)
 		}
 		if !src.IsRequired(n) && (!tgt.IsPrimitivePointer(n, false) || tgt.HasDefaultValue(n) && def) {
 			hasTransform := code != ""
@@ -188,7 +191,7 @@ func transformObject(source, target *design.AttributeExpr, sctx, tctx, targetPkg
 	return buffer.String(), nil
 }
 
-func transformArray(source, target *design.Array, sctx, tctx, targetPkg string, ptr, def bool, scope *NameScope) (string, error) {
+func transformArray(source, target *design.Array, sctx, tctx, targetPkg string, fromPtrs, toPtrs, def bool, scope *NameScope) (string, error) {
 	if err := isCompatible(source.ElemType.Type, target.ElemType.Type, sctx+"[0]", tctx+"[0]"); err != nil {
 		return "", err
 	}
@@ -199,7 +202,8 @@ func transformArray(source, target *design.Array, sctx, tctx, targetPkg string, 
 		"SourceElem":   source.ElemType,
 		"TargetElem":   target.ElemType,
 		"TargetPkg":    targetPkg,
-		"Pointers":     ptr,
+		"FromPtrs":     fromPtrs,
+		"ToPtrs":       toPtrs,
 		"InitDefaults": def,
 		"Scope":        scope,
 	}
@@ -212,7 +216,7 @@ func transformArray(source, target *design.Array, sctx, tctx, targetPkg string, 
 	return code, nil
 }
 
-func transformMap(source, target *design.Map, sctx, tctx, targetPkg string, ptr, def bool, scope *NameScope) (string, error) {
+func transformMap(source, target *design.Map, sctx, tctx, targetPkg string, fromPtrs, toPtrs, def bool, scope *NameScope) (string, error) {
 	if err := isCompatible(source.KeyType.Type, target.KeyType.Type, sctx+".key", tctx+".key"); err != nil {
 		return "", err
 	}
@@ -229,7 +233,8 @@ func transformMap(source, target *design.Map, sctx, tctx, targetPkg string, ptr,
 		"SourceElem":   source.ElemType,
 		"TargetElem":   target.ElemType,
 		"TargetPkg":    targetPkg,
-		"Pointers":     ptr,
+		"FromPtrs":     fromPtrs,
+		"ToPtrs":       toPtrs,
 		"InitDefaults": def,
 		"Scope":        scope,
 	}
@@ -268,14 +273,14 @@ func isCompatible(a, b design.DataType, actx, bctx string) error {
 
 const transformArrayTmpl = `{{ .Target}} := make([]{{ .ElemTypeRef }}, len({{ .Source }}))
 for i, val := range {{ .Source }} {
-	{{ transformAttribute .SourceElem .TargetElem "val" (printf "%s[i]" .Target) .TargetPkg .Pointers .InitDefaults false .Scope -}}
+	{{ transformAttribute .SourceElem .TargetElem "val" (printf "%s[i]" .Target) .TargetPkg .FromPtrs .ToPtrs .InitDefaults false .Scope -}}
 }
 `
 
 const transformMapTmpl = `{{ .Target }} := make(map[{{ .KeyTypeRef }}]{{ .ElemTypeRef }}, len({{ .Source }}))
 for key, val := range {{ .Source }} {
-	{{ transformAttribute .SourceKey .TargetKey "key" "tk" .TargetPkg  .Pointers .InitDefaults true .Scope -}}
-	{{ transformAttribute .SourceElem .TargetElem "val" "tv" .TargetPkg .Pointers .InitDefaults true .Scope -}}
+	{{ transformAttribute .SourceKey .TargetKey "key" "tk" .TargetPkg  .FromPtrs .ToPtrs .InitDefaults true .Scope -}}
+	{{ transformAttribute .SourceElem .TargetElem "val" "tv" .TargetPkg .FromPtrs .ToPtrs .InitDefaults true .Scope -}}
 	{{ .Target }}[tk] = tv
 }
 `

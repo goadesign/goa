@@ -28,12 +28,12 @@ func NewEndpoints(s Service) *Endpoints {
 	ep := new(Endpoints)
 
 	ep.Create = func(ctx context.Context, req interface{}) (interface{}, error) {
-		p := req.(*CreateAccount)
+		p := req.(*CreatePayload)
 		return s.Create(ctx, p)
 	}
 
 	ep.List = func(ctx context.Context, req interface{}) (interface{}, error) {
-		p := req.(*ListAccount)
+		p := req.(*ListPayload)
 		return s.List(ctx, p)
 	}
 

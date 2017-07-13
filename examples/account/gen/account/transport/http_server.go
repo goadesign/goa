@@ -62,8 +62,6 @@ func MountCreateHandler(mux rest.Muxer, h http.Handler) {
 
 // NewCreateHandler creates a HTTP handler which loads the HTTP request and
 // calls the "account" service "create" endpoint.
-// The middleware is mounted so it executes after the request is loaded and
-// thus may access the request state via the rest package ContextXXX functions.
 func NewCreateHandler(
 	endpoint goa.Endpoint,
 	mux rest.Muxer,
@@ -101,12 +99,7 @@ func EncodeCreateResponse(encoder func(http.ResponseWriter, *http.Request) (rest
 		res := v.(*account.Account)
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
-		body := &CreateCreatedResponseBody{
-			ID:          res.ID,
-			OrgID:       res.OrgID,
-			Name:        res.Name,
-			Description: res.Description,
-		}
+		body := NewCreateCreatedResponseBody(res)
 		w.Header().Set("Location", res.Href)
 		w.WriteHeader(http.StatusCreated)
 		return enc.Encode(body)
@@ -129,9 +122,6 @@ func DecodeCreateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decode
 			return nil, err
 		}
 		err = goa.MergeErrors(err, body.Validate())
-		if err != nil {
-			return nil, err
-		}
 
 		var (
 			orgID uint
@@ -147,11 +137,11 @@ func DecodeCreateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decode
 		if orgID > 10000 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("orgID", orgID, 10000, false))
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewCreateAccount(&body, orgID), nil
+
+		return NewCreateCreatePayload(&body, orgID), nil
 	}
 }
 
@@ -164,7 +154,7 @@ func EncodeCreateError(encoder func(http.ResponseWriter, *http.Request) (rest.En
 		case *account.NameAlreadyTaken:
 			enc, ct := encoder(w, r)
 			rest.SetContentType(w, ct)
-			body := res
+			body := NewCreateNameAlreadyTakenResponseBody(res)
 			w.WriteHeader(http.StatusConflict)
 			if err := enc.Encode(body); err != nil {
 				encodeError(w, r, err)
@@ -189,8 +179,6 @@ func MountListHandler(mux rest.Muxer, h http.Handler) {
 
 // NewListHandler creates a HTTP handler which loads the HTTP request and calls
 // the "account" service "list" endpoint.
-// The middleware is mounted so it executes after the request is loaded and
-// thus may access the request state via the rest package ContextXXX functions.
 func NewListHandler(
 	endpoint goa.Endpoint,
 	mux rest.Muxer,
@@ -228,7 +216,7 @@ func EncodeListResponse(encoder func(http.ResponseWriter, *http.Request) (rest.E
 		res := v.([]*account.Account)
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
-		body := res
+		body := NewAccountResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -258,11 +246,11 @@ func DecodeListRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder)
 		if filterRaw != "" {
 			filter = &filterRaw
 		}
-
 		if err != nil {
 			return nil, err
 		}
-		return NewListAccount(filter, orgID), nil
+
+		return NewListListPayload(orgID, filter), nil
 	}
 }
 
@@ -280,8 +268,6 @@ func MountShowHandler(mux rest.Muxer, h http.Handler) {
 
 // NewShowHandler creates a HTTP handler which loads the HTTP request and calls
 // the "account" service "show" endpoint.
-// The middleware is mounted so it executes after the request is loaded and
-// thus may access the request state via the rest package ContextXXX functions.
 func NewShowHandler(
 	endpoint goa.Endpoint,
 	mux rest.Muxer,
@@ -319,7 +305,7 @@ func EncodeShowResponse(encoder func(http.ResponseWriter, *http.Request) (rest.E
 		res := v.(*account.Account)
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
-		body := res
+		body := NewShowResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}
@@ -346,11 +332,11 @@ func DecodeShowRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder)
 			err = goa.MergeErrors(err, goa.InvalidRangeError("orgID", orgID, 10000, false))
 		}
 		id = params["id"]
-
 		if err != nil {
 			return nil, err
 		}
-		return NewShowPayload(orgID, id), nil
+
+		return NewShowShowPayload(orgID, id), nil
 	}
 }
 
@@ -363,7 +349,7 @@ func EncodeShowError(encoder func(http.ResponseWriter, *http.Request) (rest.Enco
 		case *account.NotFound:
 			enc, ct := encoder(w, r)
 			rest.SetContentType(w, ct)
-			body := res
+			body := NewShowNotFoundResponseBody(res)
 			w.WriteHeader(http.StatusNotFound)
 			if err := enc.Encode(body); err != nil {
 				encodeError(w, r, err)
@@ -388,8 +374,6 @@ func MountDeleteHandler(mux rest.Muxer, h http.Handler) {
 
 // NewDeleteHandler creates a HTTP handler which loads the HTTP request and
 // calls the "account" service "delete" endpoint.
-// The middleware is mounted so it executes after the request is loaded and
-// thus may access the request state via the rest package ContextXXX functions.
 func NewDeleteHandler(
 	endpoint goa.Endpoint,
 	mux rest.Muxer,
@@ -424,7 +408,6 @@ func NewDeleteHandler(
 // account delete endpoint.
 func EncodeDeleteResponse(encoder func(http.ResponseWriter, *http.Request) (rest.Encoder, string)) func(http.ResponseWriter, *http.Request, interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
-
 		w.WriteHeader(http.StatusOK)
 		return nil
 	}
@@ -451,10 +434,10 @@ func DecodeDeleteRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decode
 			err = goa.MergeErrors(err, goa.InvalidRangeError("orgID", orgID, 10000, false))
 		}
 		id = params["id"]
-
 		if err != nil {
 			return nil, err
 		}
-		return NewDeletePayload(orgID, id), nil
+
+		return NewDeleteDeletePayload(orgID, id), nil
 	}
 }

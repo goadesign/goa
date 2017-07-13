@@ -20,7 +20,7 @@ var _ = Service("account", func() {
 	})
 	Method("create", func() {
 		Description("Create new account")
-		Payload(CreateAccount)
+		Payload(CreatePayload)
 		Result(Account)
 		Error("name_already_taken", NameAlreadyTaken, "Error returned when name is already taken")
 		HTTP(func() {
@@ -37,7 +37,7 @@ var _ = Service("account", func() {
 	})
 	Method("list", func() {
 		Description("List all accounts")
-		Payload(ListAccount)
+		Payload(ListPayload)
 		Result(ArrayOf(Account))
 		HTTP(func() {
 			GET("/")
@@ -75,16 +75,16 @@ var _ = Service("account", func() {
 	})
 })
 
-var CreateAccount = Type("CreateAccount", func() {
-	Description("CreateAccount is the account creation payload")
+var CreatePayload = Type("CreatePayload", func() {
+	Description("CreatePayload is the account creation payload")
 	Attribute("org_id", UInt, "ID of organization that owns newly created account")
 	Attribute("name", String, "Name of new account")
 	Attribute("description", String, "Description of new account")
 	Required("org_id", "name")
 })
 
-var ListAccount = Type("ListAccount", func() {
-	Description("ListAccount is the list account payload, it defines an optional list filter")
+var ListPayload = Type("ListPayload", func() {
+	Description("ListPayload is the list account payload, it defines an optional list filter")
 	Attribute("org_id", UInt, "ID of organization that owns newly created account")
 	Attribute("filter", String, "Filter is the account name prefix filter", func() {
 		Example("prefix", "go")
@@ -94,7 +94,7 @@ var ListAccount = Type("ListAccount", func() {
 var Account = ResultType("application/vnd.basic.account", func() {
 	TypeName("Account")
 	Description("Account type")
-	Reference(CreateAccount)
+	Reference(CreatePayload)
 	Attributes(func() {
 		Attribute("href", String, "Href to account")
 		Attribute("id", String, "ID of account")

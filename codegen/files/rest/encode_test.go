@@ -58,6 +58,7 @@ func TestEncode(t *testing.T) {
 		{"body-primitive-bool", ResultBodyPrimitiveBoolDSL, ResultBodyPrimitiveBoolEncodeCode},
 		{"body-primitive-array-string", ResultBodyPrimitiveArrayStringDSL, ResultBodyPrimitiveArrayStringEncodeCode},
 		{"body-primitive-array-bool", ResultBodyPrimitiveArrayBoolDSL, ResultBodyPrimitiveArrayBoolEncodeCode},
+		{"body-primitive-array-user", ResultBodyPrimitiveArrayUserDSL, ResultBodyPrimitiveArrayUserEncodeCode},
 
 		{"body-header-object", ResultBodyHeaderObjectDSL, ResultBodyHeaderObjectEncodeCode},
 		{"body-header-user", ResultBodyHeaderUserDSL, ResultBodyHeaderUserEncodeCode},

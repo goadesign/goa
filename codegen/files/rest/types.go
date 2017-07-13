@@ -1,14 +1,11 @@
 package rest
 
 import (
-	"fmt"
 	"path/filepath"
 	"text/template"
 
 	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/codegen/files"
-	"goa.design/goa.v2/codegen/rest"
-	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
 
@@ -70,7 +67,7 @@ func Type(r *rest.ResourceExpr, seen map[string]struct{}) codegen.File {
 		path     string
 		sections func(string) []*codegen.Section
 
-		scope = files.Services.Get(r.Name()).Scope
+		rdata = Resources.Get(r.Name())
 	)
 	path = filepath.Join(codegen.SnakeCase(r.Name()), "transport", "http_types.go")
 	sections = func(genPkg string) []*codegen.Section {
@@ -82,116 +79,103 @@ func Type(r *rest.ResourceExpr, seen map[string]struct{}) codegen.File {
 		)
 
 		var (
-			bodyAttributeTypes []*TypeData
-			validatedTypes     []*TypeData
+			initData       []*InitData
+			validatedTypes []*TypeData
 
 			secs = []*codegen.Section{header}
 		)
 
 		// request body types
 		for _, a := range r.Actions {
-			body := restgen.RequestBodyType(r, a)
-			if data := bodyTypeData(body, r, a, true, scope, seen); data != nil {
-				secs = append(secs, &codegen.Section{
-					Template: typeDeclTmpl,
-					Data:     data,
-				})
-				if data.ValidateDef != "" {
-					validatedTypes = append(validatedTypes, data)
-				}
-			}
-			collectUserTypes(body, func(ut design.UserType) {
-				bodyAttributeTypes = append(bodyAttributeTypes, attributeTypeData(ut, true, scope, seen))
-			})
-		}
-
-		// response body types
-		for _, a := range r.Actions {
-			for _, resp := range a.Responses {
-				body := restgen.ResponseBodyType(r, a, resp)
-				if data := bodyTypeData(body, r, a, false, scope, seen); data != nil {
+			adata := rdata.Action(a.Name())
+			if data := adata.Payload.Request.Body; data != nil {
+				if data.Def != "" {
 					secs = append(secs, &codegen.Section{
 						Template: typeDeclTmpl,
 						Data:     data,
 					})
+				}
+				if data.Init != nil {
+					initData = append(initData, data.Init)
+				}
+				if data.ValidateDef != "" {
+					validatedTypes = append(validatedTypes, data)
+				}
+			}
+		}
+
+		// response body types
+		for _, a := range r.Actions {
+			adata := rdata.Action(a.Name())
+			for _, resp := range adata.Result.Responses {
+				if data := resp.Body; data != nil {
+					if data.Def != "" {
+						secs = append(secs, &codegen.Section{
+							Template: typeDeclTmpl,
+							Data:     data,
+						})
+					}
+					if data.Init != nil {
+						initData = append(initData, data.Init)
+					}
 					if data.ValidateDef != "" {
 						validatedTypes = append(validatedTypes, data)
 					}
 				}
-				collectUserTypes(body, func(ut design.UserType) {
-					bodyAttributeTypes = append(bodyAttributeTypes, attributeTypeData(ut, false, scope, seen))
-				})
 			}
 		}
 
 		// error body types
 		for _, a := range r.Actions {
-			for _, herr := range a.HTTPErrors {
-				body := restgen.ResponseBodyType(r, a, herr.Response)
-				if data := bodyTypeData(body, r, a, false, scope, seen); data != nil {
-					secs = append(secs, &codegen.Section{
-						Template: typeDeclTmpl,
-						Data:     data,
-					})
+			adata := rdata.Action(a.Name())
+			for _, herr := range adata.Errors {
+				if data := herr.Response.Body; data != nil {
+					if data.Def != "" {
+						secs = append(secs, &codegen.Section{
+							Template: typeDeclTmpl,
+							Data:     data,
+						})
+					}
+					if data.Init != nil {
+						initData = append(initData, data.Init)
+					}
 					if data.ValidateDef != "" {
 						validatedTypes = append(validatedTypes, data)
 					}
 				}
-				collectUserTypes(body, func(ut design.UserType) {
-					bodyAttributeTypes = append(bodyAttributeTypes, attributeTypeData(ut, false, scope, seen))
-				})
 			}
 		}
 
 		// body attribute types
-		for _, typ := range bodyAttributeTypes {
+		for _, data := range rdata.BodyAttributeTypes {
+			if data.Def != "" {
+				secs = append(secs, &codegen.Section{
+					Template: typeDeclTmpl,
+					Data:     data,
+				})
+			}
+		}
+
+		// body constructors
+		for _, init := range initData {
 			secs = append(secs, &codegen.Section{
-				Template: typeDeclTmpl,
-				Data:     typ,
+				Template: bodyInitTmpl,
+				Data:     init,
 			})
 		}
 
-		rdata := Resources.Get(r.Name())
-		for _, a := range rdata.Actions {
-
-			// method payload to request body (client)
-			if body := a.Payload.Request.Body; body != nil && body.Init != nil {
-				secs = append(secs, &codegen.Section{
-					Template: bodyInitTmpl,
-					Data:     body.Init,
-				})
-			}
+		for _, adata := range rdata.Actions {
 
 			// request to method payload (server)
-			if init := a.Payload.Request.PayloadInit; init != nil {
+			if init := adata.Payload.Request.PayloadInit; init != nil {
 				secs = append(secs, &codegen.Section{
 					Template: typeInitTmpl,
 					Data:     init,
 				})
 			}
 
-			// method result to response body (server)
-			for _, resp := range a.Result.Responses {
-				if body := resp.Body; body != nil && body.Init != nil {
-					secs = append(secs, &codegen.Section{
-						Template: bodyInitTmpl,
-						Data:     body.Init,
-					})
-				}
-			}
-
-			// method error to response body (server)
-			for _, aerr := range a.Errors {
-				if body := aerr.Response.Body; body != nil && body.Init != nil {
-					secs = append(secs, &codegen.Section{
-						Template: bodyInitTmpl,
-						Data:     body.Init,
-					})
-				}
-			}
-
 			// response to method result (client)
-			for _, resp := range a.Result.Responses {
+			for _, resp := range adata.Result.Responses {
 				if init := resp.ResultInit; init != nil {
 					secs = append(secs, &codegen.Section{
 						Template: typeInitTmpl,
@@ -202,121 +186,16 @@ func Type(r *rest.ResourceExpr, seen map[string]struct{}) codegen.File {
 		}
 
 		// validate methods
-		for _, typ := range validatedTypes {
+		for _, data := range validatedTypes {
 			secs = append(secs, &codegen.Section{
 				Template: validateTmpl,
-				Data:     typ,
+				Data:     data,
 			})
 		}
 
 		return secs
 	}
 	return codegen.NewSource(path, sections)
-}
-
-func bodyTypeData(dt design.DataType, r *rest.ResourceExpr, a *rest.ActionExpr, isRequest bool, scope *codegen.NameScope, seen map[string]struct{}) *TypeData {
-	if dt == nil || dt == design.Empty {
-		return nil
-	}
-	ut, ok := dt.(design.UserType)
-	if !ok {
-		return nil // nothing to generate
-	}
-	att := &design.AttributeExpr{Type: ut}
-	var (
-		name        string
-		desc        string
-		def         string
-		validate    string
-		validateRef string
-	)
-	{
-		name = scope.GoTypeName(att)
-		if _, ok := seen[name]; ok {
-			return nil
-		}
-		seen[name] = struct{}{}
-		desc = ut.Attribute().Description
-		if desc == "" {
-			ctx := "request"
-			if !isRequest {
-				ctx = "response"
-			}
-			desc = fmt.Sprintf("%s is the type of the %s \"%s\" HTTP endpoint %s body.", name, r.Name(), a.Name(), ctx)
-		}
-		def = restgen.GoTypeDef(scope, ut.Attribute(), isRequest, false)
-		validate = codegen.RecursiveValidationCode(ut.Attribute(), true, isRequest, "body") //
-		if validate != "" {
-			validateRef = "err = goa.MergeErrors(err, body.Validate())"
-		}
-	}
-	return &TypeData{
-		Name:        ut.Name(),
-		VarName:     name,
-		Description: desc,
-		Def:         def,
-		Ref:         scope.GoTypeRef(att),
-		ValidateDef: validate,
-		ValidateRef: validateRef,
-	}
-}
-
-func attributeTypeData(ut design.UserType, req bool, scope *codegen.NameScope, seen map[string]struct{}) *TypeData {
-	att := &design.AttributeExpr{Type: ut}
-	var (
-		name        string
-		desc        string
-		def         string
-		validate    string
-		validateRef string
-	)
-	{
-		name = scope.GoTypeName(att)
-		if _, ok := seen[name]; ok {
-			return nil
-		}
-		seen[name] = struct{}{}
-		desc = ut.Attribute().Description
-		if desc == "" {
-			ctx := "request"
-			if !req {
-				ctx = "response"
-			}
-			desc = name + " is used to define fields on " + ctx + " body types."
-		}
-		def = restgen.GoTypeDef(scope, ut.Attribute(), req, false)
-		validate = codegen.RecursiveValidationCode(ut.Attribute(), true, req, "v") //
-		if validate != "" {
-			validateRef = "err = goa.MergeErrors(err, v.Validate())"
-		}
-	}
-	return &TypeData{
-		Name:        ut.Name(),
-		VarName:     name,
-		Description: desc,
-		Def:         def,
-		Ref:         scope.GoTypeRef(att),
-		ValidateDef: validate,
-		ValidateRef: validateRef,
-	}
-}
-
-// collectUserTypes traverses the given data type recursively and calls back the
-// given function for each attribute using a user type.
-func collectUserTypes(dt design.DataType, cb func(design.UserType)) {
-	switch actual := dt.(type) {
-	case *design.Object:
-		for _, nat := range *actual {
-			collectUserTypes(nat.Attribute.Type, cb)
-		}
-	case *design.Array:
-		collectUserTypes(actual.ElemType.Type, cb)
-	case *design.Map:
-		collectUserTypes(actual.KeyType.Type, cb)
-		collectUserTypes(actual.ElemType.Type, cb)
-	case design.UserType:
-		cb(actual)
-	}
 }
 
 // input: TypeData
@@ -358,8 +237,7 @@ func {{ .Name }}({{- range .Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .Re
 
 // input: InitData
 const bodyInitT = `{{ comment .Description }}
-func {{ .Name }}(res {{ .TypeRef }}) {{ .BodyTypeRef }} {
-	var body {{ .BodyTypeRef }}
+func {{ .Name }}({{ range .Args }}{{ .Name }} {{.TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
 	{{ .Code }}
 	return body
 }

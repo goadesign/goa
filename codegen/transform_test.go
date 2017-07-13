@@ -27,51 +27,53 @@ func TestGoTypeTransform(t *testing.T) {
 		targetVar = "target"
 	)
 	cases := []struct {
-		Name                            string
-		Source, Target                  *design.AttributeExpr
-		SourceHasPointers, InitDefaults bool
-		TargetPkg                       string
+		Name              string
+		Source, Target    *design.AttributeExpr
+		SourceHasPointers bool
+		TargetHasPointers bool
+		InitDefaults      bool
+		TargetPkg         string
 
 		Code string
 	}{
 		// basic stuff
-		{"simple", SimpleObj, SimpleObj, false, false, "", objCode},
-		{"required", SimpleObj, RequiredObj, false, false, "", requiredCode},
+		{"simple", SimpleObj, SimpleObj, false, false, false, "", objCode},
+		{"required", SimpleObj, RequiredObj, false, false, false, "", requiredCode},
 
 		// sourceHasPointers and initDefaults handling
-		{"has pointers", SimpleObj, SimpleObj, true, false, "", objPointersCode},
-		{"default no value", SimpleObj, SimpleObj, false, true, "", objCode},
-		{"default no init", SimpleObj, DefaultObj, false, false, "", objCode},
-		{"default", SimpleObj, DefaultObj, false, true, "", defaultCode},
-		{"default and has pointers", SimpleObj, DefaultObj, true, true, "", objDefaultPointersCode},
+		{"has pointers", SimpleObj, SimpleObj, true, false, false, "", objPointersCode},
+		{"default no value", SimpleObj, SimpleObj, false, false, true, "", objCode},
+		{"default no init", SimpleObj, DefaultObj, false, false, false, "", objCode},
+		{"default", SimpleObj, DefaultObj, false, false, true, "", defaultCode},
+		{"default and has pointers", SimpleObj, DefaultObj, true, false, true, "", objDefaultPointersCode},
 
 		// non match field ignore
-		{"super", SimpleObj, SuperObj, false, false, "", objCode},
+		{"super", SimpleObj, SuperObj, false, false, false, "", objCode},
 
 		// simple array and map
-		{"array", SimpleArray, SimpleArray, false, false, "", arrayCode},
-		{"map", SimpleMap, SimpleMap, false, false, "", mapCode},
+		{"array", SimpleArray, SimpleArray, false, false, false, "", arrayCode},
+		{"map", SimpleMap, SimpleMap, false, false, false, "", mapCode},
 
 		// recursive data structures
-		{"recursive", RecursiveObj, RecursiveDefaultObj, false, false, "", recCode},
-		{"recursive default", RecursiveObj, RecursiveDefaultObj, false, true, "", recDefaultsCode},
-		{"recursive has pointers", RecursiveObj, RecursiveDefaultObj, true, false, "", recPointersCode},
-		{"recursive default and has pointers", RecursiveObj, RecursiveDefaultObj, true, true, "", recDefaultsPointersCode},
+		{"recursive", RecursiveObj, RecursiveDefaultObj, false, false, false, "", recCode},
+		{"recursive default", RecursiveObj, RecursiveDefaultObj, false, false, true, "", recDefaultsCode},
+		{"recursive has pointers", RecursiveObj, RecursiveDefaultObj, true, false, false, "", recPointersCode},
+		{"recursive default and has pointers", RecursiveObj, RecursiveDefaultObj, true, false, true, "", recDefaultsPointersCode},
 
 		// object in arrays and maps
-		{"object array", ObjArray, ObjArray, false, false, "", objArrayCode},
-		{"object map", ObjMap, ObjMap, false, false, "", objMapCode},
-		{"user type", UserType, UserType, false, false, "", userTypeCode},
-		{"array user type", ArrayUserType, ArrayUserType, false, false, "", arrayUserTypeCode},
+		{"object array", ObjArray, ObjArray, false, false, false, "", objArrayCode},
+		{"object map", ObjMap, ObjMap, false, false, false, "", objMapCode},
+		{"user type", UserType, UserType, false, false, false, "", userTypeCode},
+		{"array user type", ArrayUserType, ArrayUserType, false, false, false, "", arrayUserTypeCode},
 
 		// package handling
-		{"target package", ArrayUserType, ArrayUserType, false, false, "tpkg", objTargetPkgCode},
+		{"target package", ArrayUserType, ArrayUserType, false, false, false, "tpkg", objTargetPkgCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			src := &design.UserTypeExpr{TypeName: "SourceType", AttributeExpr: c.Source}
 			tgt := &design.UserTypeExpr{TypeName: "TargetType", AttributeExpr: c.Target}
-			code, err := GoTypeTransform(src, tgt, sourceVar, targetVar, c.TargetPkg, c.SourceHasPointers, c.InitDefaults, NewNameScope())
+			code, err := GoTypeTransform(src, tgt, sourceVar, targetVar, c.TargetPkg, c.SourceHasPointers, c.TargetHasPointers, c.InitDefaults, NewNameScope())
 			if err != nil {
 				t.Fatal(err)
 			}

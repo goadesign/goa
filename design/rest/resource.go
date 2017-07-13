@@ -239,17 +239,3 @@ func (r *ResourceExpr) Validate() error {
 	}
 	return verr
 }
-
-// Finalize is run post DSL execution. It merges response definitions, creates
-// implicit action parameters and initializes querystring parameters. It also
-// flattens the error responses and makes sure the error types are all user
-// types so that the response encoding code can properly use the type to infer
-// the response that it needs to build.
-func (r *ResourceExpr) Finalize() {
-	for _, f := range r.FileServers {
-		f.Finalize()
-	}
-	for _, a := range r.Actions {
-		a.Finalize()
-	}
-}

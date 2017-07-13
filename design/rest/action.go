@@ -292,8 +292,11 @@ func (a *ActionExpr) Validate() error {
 	return verr
 }
 
-// Finalize sets the Parent fields of the action responses and errors. It also
-// flattens the errors.
+// Finalize is run post DSL execution. It merges response definitions, creates
+// implicit action parameters and initializes querystring parameters. It also
+// flattens the error responses and makes sure the error types are all user
+// types so that the response encoding code can properly use the type to infer
+// the response that it needs to build.
 func (a *ActionExpr) Finalize() {
 	// Define uninitialized route parameters
 	for _, r := range a.Routes {
@@ -393,7 +396,11 @@ func (a *ActionExpr) Finalize() {
 
 	// Make sure there's a default response if none define explicitly
 	if len(a.Responses) == 0 {
-		a.Responses = []*HTTPResponseExpr{{StatusCode: 200}}
+		status := StatusOK
+		if a.MethodExpr.Payload.Type == design.Empty {
+			status = StatusNoContent
+		}
+		a.Responses = []*HTTPResponseExpr{{StatusCode: status}}
 	}
 
 	// Initialize responses parent, headers and body

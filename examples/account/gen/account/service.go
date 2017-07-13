@@ -12,17 +12,17 @@ import "context"
 // Manage accounts
 type Service interface {
 	// Create new account
-	Create(context.Context, *CreateAccount) (*Account, error)
+	Create(context.Context, *CreatePayload) (*Account, error)
 	// List all accounts
-	List(context.Context, *ListAccount) ([]*Account, error)
+	List(context.Context, *ListPayload) ([]*Account, error)
 	// Show account by ID
 	Show(context.Context, *ShowPayload) (*Account, error)
 	// Delete account by IF
 	Delete(context.Context, *DeletePayload) error
 }
 
-// CreateAccount is the payload type of the account service create method.
-type CreateAccount struct {
+// CreatePayload is the payload type of the account service create method.
+type CreatePayload struct {
 	// ID of organization that owns newly created account
 	OrgID uint
 	// Name of new account
@@ -45,8 +45,8 @@ type Account struct {
 	Description *string
 }
 
-// ListAccount is the payload type of the account service list method.
-type ListAccount struct {
+// ListPayload is the payload type of the account service list method.
+type ListPayload struct {
 	// ID of organization that owns newly created account
 	OrgID *uint
 	// Filter is the account name prefix filter

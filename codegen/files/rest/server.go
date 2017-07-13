@@ -201,7 +201,6 @@ func {{ .MountHandler }}(mux rest.Muxer, h http.Handler) {
 
 // input: ActionData
 const serverHandlerInitT = `{{ printf "%s creates a HTTP handler which loads the HTTP request and calls the \"%s\" service \"%s\" endpoint." .HandlerInit .ServiceName .Method.Name | comment }}
-{{ comment "The middleware is mounted so it executes after the request is loaded and thus may access the request state via the rest package ContextXXX functions."}}
 func {{ .HandlerInit }}(
 	endpoint goa.Endpoint,
 	mux rest.Muxer,
@@ -209,16 +208,14 @@ func {{ .HandlerInit }}(
 	enc func(http.ResponseWriter, *http.Request) (rest.Encoder, string),
 ) http.Handler {
 	var (
-		{{- if .Payload }}
+		{{- if .Payload.Ref }}
 		decodeRequest  = {{ .Decoder }}(mux, dec)
 		{{- end }}
-		{{- if .Responses }}
 		encodeResponse = {{ .Encoder }}(enc)
-		{{- end }}
-		encodeError    = {{ if .ErrorResponses }}{{ .ErrorEncoder }}{{ else }}rest.EncodeError{{ end }}(enc)
+		encodeError    = {{ if .Errors }}{{ .ErrorEncoder }}{{ else }}rest.EncodeError{{ end }}(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		{{- if .Payload }}
+		{{- if .Payload.Ref }}
 		payload, err := decodeRequest(r)
 		if err != nil {
 			encodeError(w, r, err)
@@ -234,13 +231,9 @@ func {{ .HandlerInit }}(
 			encodeError(w, r, err)
 			return
 		}
-		{{- if .Responses }}
 		if err := encodeResponse(w, r, res); err != nil {
 			encodeError(w, r, err)
 		}
-		{{- else }}
-		w.Write(http.StatusNoContent)
-		{{- end }}
 	})
 }
 `

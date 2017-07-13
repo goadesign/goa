@@ -672,6 +672,22 @@ var ResultBodyPrimitiveArrayBoolDSL = func() {
 	})
 }
 
+var ResultBodyPrimitiveArrayUserDSL = func() {
+	var ResultType = Type("ResultType", func() {
+		Attribute("a", String, func() {
+			Pattern("apattern")
+		})
+	})
+	Service("ServiceBodyPrimitiveArrayUser", func() {
+		Method("MethodBodyPrimitiveArrayUser", func() {
+			Result(ArrayOf(ResultType))
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
 var ResultBodyHeaderObjectDSL = func() {
 	Service("ServiceBodyHeaderObject", func() {
 		Method("MethodBodyHeaderObject", func() {

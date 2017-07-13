@@ -18,10 +18,11 @@ import (
 //      required when ptr is true so that the generated code may validate
 //      explicitly.
 //
-// useDefault directs whether fields holding primitive types should hold
-// pointers when ptr is false. If it is true then the fields are values even
-// when not required (to account for the fact that they have a default value so
-// cannot be nil) otherwise the fields are values only when required.
+// useDefault directs whether fields holding primitive types with default values
+// should hold pointers when ptr is false. If it is true then the fields are
+// values even when not required (to account for the fact that they have a
+// default value so cannot be nil) otherwise the fields are values only when
+// required.
 func GoTypeDef(scope *codegen.NameScope, att *design.AttributeExpr, ptr, useDefault bool) string {
 	switch actual := att.Type.(type) {
 	case design.Primitive:

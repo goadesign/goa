@@ -5,7 +5,7 @@ import (
 
 	"goa.design/goa.v2/codegen"
 	. "goa.design/goa.v2/codegen/files/rest/testing"
-	restdesign "goa.design/goa.v2/design/rest"
+	"goa.design/goa.v2/design/rest"
 )
 
 func TestPayloadConstructor(t *testing.T) {
@@ -112,10 +112,10 @@ func TestPayloadConstructor(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunRestDSL(t, c.DSL)
-			if len(restdesign.Root.Resources) != 1 {
-				t.Fatalf("got %d file(s), expected 1", len(restdesign.Root.Resources))
+			if len(rest.Root.Resources) != 1 {
+				t.Fatalf("got %d file(s), expected 1", len(rest.Root.Resources))
 			}
-			fs := Type(restdesign.Root.Resources[0], make(map[string]struct{}))
+			fs := Type(rest.Root.Resources[0], make(map[string]struct{}))
 			sections := fs.Sections("")
 			var section *codegen.Section
 			for _, s := range sections {

@@ -36,6 +36,12 @@ type (
 		HandlersInit string
 		// MountHandlers is the name of the name of the mount function.
 		MountHandlers string
+		// BodyAttributeTypes is the list of user types used to define
+		// the request, response and error response type attributes.
+		BodyAttributeTypes []*TypeData
+		// TypeNames records all the user type names used to define the
+		// endpoint request and response bodies.
+		TypeNames map[string]struct{}
 	}
 
 	// ActionData contains the data used to render the code related to a
@@ -323,6 +329,7 @@ func (d ResourcesData) analyze(r *rest.ResourceExpr) *ResourceData {
 		HandlersStruct: "Handlers",
 		HandlersInit:   "NewHandlers",
 		MountHandlers:  "MountHandlers",
+		TypeNames:      make(map[string]struct{}),
 	}
 
 	for _, a := range r.Actions {
@@ -339,9 +346,9 @@ func (d ResourcesData) analyze(r *rest.ResourceExpr) *ResourceData {
 		ad := &ActionData{
 			Method:       ep,
 			ServiceName:  svc.Name,
-			Payload:      buildPayloadData(svc, r, a),
-			Result:       buildResultData(svc, r, a),
-			Errors:       buildErrorsData(svc, r, a),
+			Payload:      buildPayloadData(svc, r, a, rd),
+			Result:       buildResultData(svc, r, a, rd),
+			Errors:       buildErrorsData(svc, r, a, rd),
 			Routes:       routes,
 			MountHandler: fmt.Sprintf("Mount%sHandler", ep.VarName),
 			HandlerInit:  fmt.Sprintf("New%sHandler", ep.VarName),
@@ -352,10 +359,38 @@ func (d ResourcesData) analyze(r *rest.ResourceExpr) *ResourceData {
 
 		rd.Actions = append(rd.Actions, ad)
 	}
+
+	for _, a := range r.Actions {
+		collectUserTypes(restgen.RequestBodyType(r, a), func(ut design.UserType) {
+			if d := attributeTypeData(ut, true, svc.Scope, rd); d != nil {
+				rd.BodyAttributeTypes = append(rd.BodyAttributeTypes, d)
+			}
+		})
+
+		for _, v := range a.Responses {
+			collectUserTypes(restgen.ResponseBodyType(r, a, v), func(ut design.UserType) {
+				if d := attributeTypeData(ut, false, svc.Scope, rd); d != nil {
+					rd.BodyAttributeTypes = append(rd.BodyAttributeTypes, d)
+				}
+			})
+		}
+
+		for _, v := range a.HTTPErrors {
+			collectUserTypes(restgen.ErrorResponseBodyType(r, a, v), func(ut design.UserType) {
+				if d := attributeTypeData(ut, false, svc.Scope, rd); d != nil {
+					rd.BodyAttributeTypes = append(rd.BodyAttributeTypes, d)
+				}
+			})
+		}
+	}
+
 	return rd
 }
 
-func buildPayloadData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionExpr) *PayloadData {
+// buildPayloadData returns the data structure used to describe the endpoint
+// payload including the HTTP request details. It also returns the user types
+// used by the request body type recursively if any.
+func buildPayloadData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionExpr, rd *ResourceData) *PayloadData {
 	var (
 		payload = a.MethodExpr.Payload
 
@@ -366,6 +401,7 @@ func buildPayloadData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Acti
 	{
 		ep = svc.Method(a.MethodExpr.Name)
 		body = restgen.RequestBodyType(r, a)
+
 		var att *design.AttributeExpr
 		if a.Body != nil {
 			att = a.Body
@@ -381,6 +417,9 @@ func buildPayloadData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Acti
 			mustValidate bool
 		)
 		{
+			if bodyData != nil {
+				rd.TypeNames[bodyData.Name] = struct{}{}
+			}
 			mustValidate = bodyData != nil && bodyData.ValidateRef != ""
 			if !mustValidate {
 				for _, p := range paramsData {
@@ -427,7 +466,7 @@ func buildPayloadData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Acti
 			isObject bool
 			args     []*InitArgData
 		)
-		name = fmt.Sprintf("New%s%s", ep.Name, codegen.Goify(ep.Payload, true))
+		name = fmt.Sprintf("New%s%s", codegen.Goify(ep.Name, true), codegen.Goify(ep.Payload, true))
 		desc = fmt.Sprintf("%s builds a %s service %s endpoint payload.",
 			name, r.Name(), a.Name())
 		isObject = design.IsObject(payload.Type)
@@ -484,11 +523,11 @@ func buildPayloadData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Acti
 				}
 			}
 
-			code, err = codegen.GoTypeTransform(body, ptype, "body", "v", svc.PkgName, true, true, svc.Scope)
+			code, err = codegen.GoTypeTransform(body, ptype, "body", "v", svc.PkgName, true, false, true, svc.Scope)
 		} else if design.IsArray(payload.Type) || design.IsMap(payload.Type) {
 			if params := design.AsObject(a.QueryParams().Type); len(*params) > 0 {
 				code, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, payload.Type,
-					codegen.Goify((*params)[0].Name, false), "v", svc.PkgName, true, true, svc.Scope)
+					codegen.Goify((*params)[0].Name, false), "v", svc.PkgName, true, false, true, svc.Scope)
 			}
 		}
 		if err != nil {
@@ -527,7 +566,7 @@ func buildPayloadData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Acti
 	}
 }
 
-func buildResultData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionExpr) *ResultData {
+func buildResultData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionExpr, rd *ResourceData) *ResultData {
 	var (
 		result = a.MethodExpr.Result
 
@@ -548,22 +587,22 @@ func buildResultData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Actio
 			}
 			var (
 				init *InitData
+				body = restgen.ResponseBodyType(r, a, v)
 			)
+
 			if needInit(result.Type) {
 				var (
 					name     string
 					desc     string
 					isObject bool
-					body     design.DataType
 					args     []*InitArgData
 				)
 				{
 					ep := svc.Method(a.MethodExpr.Name)
-					name = fmt.Sprintf("New%s%s", ep.Name, codegen.Goify(ep.Result, true))
+					name = fmt.Sprintf("New%s%s", codegen.Goify(ep.Name, true), codegen.Goify(ep.Result, true))
 					desc = fmt.Sprintf("%s builds a %s service %s endpoint result.",
 						name, r.Name(), a.Name())
 					isObject = design.IsObject(result.Type)
-					body = restgen.ResponseBodyType(r, a, v)
 					if body != design.Empty {
 						ref := "body"
 						if design.IsObject(body) {
@@ -599,10 +638,10 @@ func buildResultData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Actio
 							}
 						}
 
-						code, err = codegen.GoTypeTransform(body, result.Type, "body", "v", svc.PkgName, false, true, svc.Scope)
+						code, err = codegen.GoTypeTransform(body, result.Type, "body", "v", svc.PkgName, false, false, true, svc.Scope)
 					} else if design.IsArray(result.Type) || design.IsMap(result.Type) {
 						if params := design.AsObject(a.QueryParams().Type); len(*params) > 0 {
-							code, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, result.Type, codegen.Goify((*params)[0].Name, false), "v", svc.PkgName, false, true, svc.Scope)
+							code, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, result.Type, codegen.Goify((*params)[0].Name, false), "v", svc.PkgName, false, false, true, svc.Scope)
 						}
 					}
 					if err != nil {
@@ -621,7 +660,36 @@ func buildResultData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Actio
 					Code:                code,
 				}
 			}
-			responses = append(responses, buildResponseData(svc, r, a, v, init))
+
+			var (
+				responseData *ResponseData
+			)
+			{
+				var (
+					bodyData *TypeData
+				)
+				{
+					att := v.Body
+					if att == nil {
+						att = result
+					}
+					bodyData = buildBodyType(svc, r, a, body, result, att, false)
+					if bodyData != nil {
+						rd.TypeNames[bodyData.Name] = struct{}{}
+					}
+				}
+
+				responseData = &ResponseData{
+					StatusCode:  restgen.StatusCodeToHTTPConst(v.StatusCode),
+					Headers:     extractHeaders(v.MappedHeaders(), false, svc.Scope),
+					Body:        bodyData,
+					ResultInit:  init,
+					TagName:     codegen.Goify(v.Tag[0], true),
+					TagValue:    v.Tag[1],
+					TagRequired: result.IsRequired(v.Tag[0]),
+				}
+			}
+			responses = append(responses, responseData)
 		}
 		count := len(responses)
 		if notag >= 0 && notag < count-1 {
@@ -636,26 +704,25 @@ func buildResultData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Actio
 	}
 }
 
-func buildErrorsData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionExpr) []*ErrorData {
+func buildErrorsData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionExpr, rd *ResourceData) []*ErrorData {
 	data := make([]*ErrorData, len(a.HTTPErrors))
 	for i, v := range a.HTTPErrors {
 		var (
 			init *InitData
+			body = restgen.ErrorResponseBodyType(r, a, v)
 		)
 		if needInit(v.ErrorExpr.Type) {
 			var (
 				name     string
 				desc     string
-				body     design.DataType
 				isObject bool
 				args     []*InitArgData
 			)
 			{
 				ep := svc.Method(a.MethodExpr.Name)
-				name = fmt.Sprintf("New%s%s", ep.Name, codegen.Goify(v.ErrorExpr.Name, true))
+				name = fmt.Sprintf("New%s%s", codegen.Goify(ep.Name, true), codegen.Goify(v.ErrorExpr.Name, true))
 				desc = fmt.Sprintf("%s builds a %s service %s endpoint %s error.",
 					name, r.Name(), a.Name(), v.ErrorExpr.Name)
-				body = restgen.ResponseBodyType(r, a, v.Response)
 				if body != design.Empty {
 					isObject = design.IsObject(body)
 					ref := "body"
@@ -693,10 +760,10 @@ func buildErrorsData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Actio
 						}
 					}
 
-					code, err = codegen.GoTypeTransform(body, etype, "body", "v", svc.PkgName, false, true, svc.Scope)
+					code, err = codegen.GoTypeTransform(body, etype, "body", "v", svc.PkgName, false, false, true, svc.Scope)
 				} else if design.IsArray(herr.Type) || design.IsMap(herr.Type) {
 					if params := design.AsObject(a.QueryParams().Type); len(*params) > 0 {
-						code, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, herr.Type, codegen.Goify((*params)[0].Name, false), "v", svc.PkgName, false, true, svc.Scope)
+						code, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, herr.Type, codegen.Goify((*params)[0].Name, false), "v", svc.PkgName, false, false, true, svc.Scope)
 					}
 				}
 				if err != nil {
@@ -715,55 +782,48 @@ func buildErrorsData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Actio
 				Code:                code,
 			}
 		}
+
+		var (
+			responseData *ResponseData
+		)
+		{
+			var (
+				bodyData *TypeData
+			)
+			{
+				att := v.Response.Body
+				if att == nil {
+					att = v.ErrorExpr.AttributeExpr
+				}
+				bodyData = buildBodyType(svc, r, a, body, v.ErrorExpr.AttributeExpr, att, false)
+				if bodyData != nil {
+					rd.TypeNames[bodyData.Name] = struct{}{}
+					status := http.StatusText(v.Response.StatusCode)
+					if status == "" {
+						status = strconv.Itoa(v.Response.StatusCode)
+					}
+					bodyData.Description = fmt.Sprintf("%s is the type of the %s \"%s\" HTTP endpoint %s %s error response body.",
+						bodyData.VarName, r.Name(), a.Name(), v.Name, status)
+				}
+			}
+
+			responseData = &ResponseData{
+				StatusCode:  restgen.StatusCodeToHTTPConst(v.Response.StatusCode),
+				Headers:     extractHeaders(v.Response.MappedHeaders(), false, svc.Scope),
+				Body:        bodyData,
+				ResultInit:  init,
+				TagName:     codegen.Goify(v.Response.Tag[0], true),
+				TagValue:    v.Response.Tag[1],
+				TagRequired: v.ErrorExpr.AttributeExpr.IsRequired(v.Response.Tag[0]),
+			}
+		}
+
 		data[i] = &ErrorData{
 			Ref:      svc.Scope.GoFullTypeRef(v.ErrorExpr.AttributeExpr, svc.PkgName),
-			Response: buildResponseData(svc, r, a, v.Response, init),
+			Response: responseData,
 		}
 	}
 	return data
-}
-
-func buildResponseData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionExpr, v *rest.HTTPResponseExpr, init *InitData) *ResponseData {
-	var (
-		body *TypeData
-	)
-	{
-		b := restgen.ResponseBodyType(r, a, v)
-		att := v.Body
-		if att == nil {
-			att = a.MethodExpr.Result
-		}
-		body = buildBodyType(svc, r, a, b, a.MethodExpr.Result, att, false)
-		if body != nil {
-			if body.Description == "" {
-				status := http.StatusText(v.StatusCode)
-				if status == "" {
-					status = strconv.Itoa(v.StatusCode)
-				}
-				body.Description = fmt.Sprintf("%s is the type of the %s \"%s\" HTTP endpoint %s response body.",
-					body.VarName, r.Name(), a.Name(), status)
-			}
-		}
-	}
-
-	var (
-		tagRequired bool
-	)
-	{
-		if res := a.MethodExpr.Result; res != nil {
-			tagRequired = res.IsRequired(v.Tag[0])
-		}
-	}
-
-	return &ResponseData{
-		StatusCode:  restgen.StatusCodeToHTTPConst(v.StatusCode),
-		Headers:     extractHeaders(v.MappedHeaders(), false, svc.Scope),
-		Body:        body,
-		ResultInit:  init,
-		TagName:     codegen.Goify(v.Tag[0], true),
-		TagValue:    v.Tag[1],
-		TagRequired: tagRequired,
-	}
 }
 
 // buildBodyType builds the TypeData for a request or response body.
@@ -792,15 +852,23 @@ func buildBodyType(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionE
 		ref         string
 		validateDef string
 		validateRef string
+
+		datt = &design.AttributeExpr{Type: dt}
 	)
 	{
 		name = dt.Name()
-		datt := &design.AttributeExpr{Type: dt}
 		ref = svc.Scope.GoTypeRef(datt)
 		if ut, ok := dt.(design.UserType); ok {
 			varname = codegen.Goify(ut.Name(), true)
-			def = restgen.GoTypeDef(svc.Scope, ut.Attribute(), true, req)
+			def = restgen.GoTypeDef(svc.Scope, ut.Attribute(), req, req)
 			desc = ut.Attribute().Description
+			if desc == "" {
+				ctx := "request"
+				if !req {
+					ctx = "response"
+				}
+				desc = fmt.Sprintf("%s is the type of the %s %s HTTP endpoint %s body.", varname, svc.Name, a.Name(), ctx)
+			}
 			if req {
 				// only validate incoming request bodies
 				validateDef = codegen.RecursiveValidationCode(ut.Attribute(), true, true, "body")
@@ -809,7 +877,7 @@ func buildBodyType(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionE
 				}
 			}
 		} else if vatt != nil {
-			varname = svc.Scope.GoTypeRef(&design.AttributeExpr{Type: dt})
+			varname = svc.Scope.GoTypeRef(datt)
 			validateRef = codegen.RecursiveValidationCode(vatt, true, req, "body")
 			desc = vatt.Description
 		}
@@ -825,7 +893,7 @@ func buildBodyType(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionE
 			code   string
 			origin string
 		)
-		name = fmt.Sprintf("New%s", varname)
+		name = fmt.Sprintf("New%s", codegen.Goify(svc.Scope.GoTypeName(datt), true))
 		ctx := "request"
 		rctx := "payload"
 		sourceVar := "p"
@@ -846,7 +914,7 @@ func buildBodyType(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionE
 			sourceVar = sourceVar + "." + codegen.Goify(origin, true)
 		}
 
-		code, err = codegen.GoTypeTransform(att.Type, dt, sourceVar, "body", "", false, false, svc.Scope)
+		code, err = codegen.GoTypeTransform(att.Type, dt, sourceVar, "body", "", false, req, false, svc.Scope)
 		if err != nil {
 			fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
 		}
@@ -855,7 +923,7 @@ func buildBodyType(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionE
 			Description:         desc,
 			ReturnTypeRef:       svc.Scope.GoTypeRef(&design.AttributeExpr{Type: dt}),
 			ReturnTypeAttribute: codegen.Goify(origin, true),
-			Args:                []*InitArgData{{Name: sourceVar, Ref: sourceVar, TypeRef: svc.Scope.GoTypeRef(att)}},
+			Args:                []*InitArgData{{Name: sourceVar, Ref: sourceVar, TypeRef: svc.Scope.GoFullTypeRef(att, svc.PkgName)}},
 			Code:                code,
 		}
 	}
@@ -966,6 +1034,68 @@ func extractHeaders(a *design.MappedAttributeExpr, req bool, scope *codegen.Name
 	})
 
 	return headers
+}
+
+// collectUserTypes traverses the given data type recursively and calls back the
+// given function for each attribute using a user type.
+func collectUserTypes(dt design.DataType, cb func(design.UserType)) {
+	switch actual := dt.(type) {
+	case *design.Object:
+		for _, nat := range *actual {
+			collectUserTypes(nat.Attribute.Type, cb)
+		}
+	case *design.Array:
+		collectUserTypes(actual.ElemType.Type, cb)
+	case *design.Map:
+		collectUserTypes(actual.KeyType.Type, cb)
+		collectUserTypes(actual.ElemType.Type, cb)
+	case design.UserType:
+		cb(actual)
+	}
+}
+
+func attributeTypeData(ut design.UserType, req bool, scope *codegen.NameScope, rd *ResourceData) *TypeData {
+	if ut == design.Empty {
+		return nil
+	}
+	if _, ok := rd.TypeNames[ut.Name()]; ok {
+		return nil
+	}
+	rd.TypeNames[ut.Name()] = struct{}{}
+
+	att := &design.AttributeExpr{Type: ut}
+	var (
+		name        string
+		desc        string
+		def         string
+		validate    string
+		validateRef string
+	)
+	{
+		name = scope.GoTypeName(att)
+		desc = ut.Attribute().Description
+		if desc == "" {
+			ctx := "request"
+			if !req {
+				ctx = "response"
+			}
+			desc = name + " is used to define fields on " + ctx + " body types."
+		}
+		def = restgen.GoTypeDef(scope, ut.Attribute(), req, false)
+		validate = codegen.RecursiveValidationCode(ut.Attribute(), true, req, "v") //
+		if validate != "" {
+			validateRef = "err = goa.MergeErrors(err, v.Validate())"
+		}
+	}
+	return &TypeData{
+		Name:        ut.Name(),
+		VarName:     name,
+		Description: desc,
+		Def:         def,
+		Ref:         scope.GoTypeRef(att),
+		ValidateDef: validate,
+		ValidateRef: validateRef,
+	}
 }
 
 // needInit returns true if and only if the given type is or makes use of user

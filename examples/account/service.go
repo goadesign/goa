@@ -30,7 +30,7 @@ func New(db *bolt.DB, logger *log.Logger) (account.Service, error) {
 }
 
 // Create new account
-func (s *service) Create(ctx context.Context, ca *account.CreateAccount) (*account.Account, error) {
+func (s *service) Create(ctx context.Context, ca *account.CreatePayload) (*account.Account, error) {
 	accountID, err := s.db.NewID("ACCOUNTS")
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (s *service) Create(ctx context.Context, ca *account.CreateAccount) (*accou
 }
 
 // List all accounts
-func (s *service) List(context.Context, *account.ListAccount) ([]*account.Account, error) {
+func (s *service) List(context.Context, *account.ListPayload) ([]*account.Account, error) {
 	var accounts []*account.Account
 	if err := s.db.LoadAll("ACCOUNTS", &accounts); err != nil {
 		return nil, err

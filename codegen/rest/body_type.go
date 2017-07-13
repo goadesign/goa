@@ -154,6 +154,95 @@ func ResponseBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, resp *rest.HTTPR
 	return userType
 }
 
+// ErrorResponseBodyType returns the type of the response body given a error. If
+// the DSL defines a body explicitly via the Body function then the
+// corresponding type is used instead of the attribute type. Otherwise the type
+// is computed by removing the attributes of the error used to define headers
+// and parameters. Also if the error response defines a view then the result
+// type is projected first. suffix is appended to the created type name if any.
+func ErrorResponseBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, v *rest.HTTPErrorExpr) design.DataType {
+	result := v.ErrorExpr.AttributeExpr
+	if result == nil || result.Type == design.Empty {
+		return design.Empty
+	}
+	resp := v.Response
+	if resp.Body != nil {
+		return resp.Body.Type
+	}
+
+	var (
+		dt      = result.Type
+		headers = resp.MappedHeaders()
+		suffix  = codegen.Goify(v.ErrorExpr.Name, true) + "ResponseBody"
+		name    = codegen.Goify(a.Name(), true) + suffix
+	)
+
+	// 1. If Result is not an object then check whether there are headers
+	// defined and if so return empty type (result encoded in response
+	// headers) otherwise return renamed result type (result encoded in
+	// response body).
+	if !design.IsObject(dt) {
+		if len(*design.AsObject(resp.Headers().Type)) == 0 {
+			return renameType(dt, name, suffix)
+		}
+		return design.Empty
+	}
+
+	// 2. Project if errorResponse type is result type and attribute has a view.
+	rt, isrt := dt.(*design.ResultTypeExpr)
+	if isrt {
+		if v := result.Metadata["view"]; len(v) > 0 {
+			p, err := new(design.Projector).Project(rt, v[0])
+			if err != nil {
+				panic(err) // bug
+			}
+			dt = p.ResultType
+			result = design.DupAtt(result)
+			result.Type = dt
+		}
+	}
+
+	// 3. Remove header attributes
+	body := design.NewMappedAttributeExpr(result)
+	removeAttributes(body, headers)
+
+	// 4. Return empty type if no attribute left
+	if len(*design.AsObject(body.Type)) == 0 {
+		return design.Empty
+	}
+
+	// 5. Build computed user type
+	userType := &design.UserTypeExpr{
+		AttributeExpr: body.Attribute(),
+		TypeName:      name,
+	}
+	if isrt {
+		views := make([]*design.ViewExpr, len(rt.Views))
+		for i, v := range rt.Views {
+			mv := design.NewMappedAttributeExpr(v.AttributeExpr)
+			removeAttributes(mv, headers)
+			nv := &design.ViewExpr{
+				AttributeExpr: mv.Attribute(),
+				Name:          v.Name,
+			}
+			views[i] = nv
+		}
+		nmt := &design.ResultTypeExpr{
+			UserTypeExpr: userType,
+			Identifier:   rt.Identifier,
+			ContentType:  rt.ContentType,
+			Views:        views,
+		}
+		for _, v := range views {
+			v.Parent = nmt
+		}
+		return nmt
+	}
+	appendSuffix(userType.Attribute().Type, suffix)
+
+	return userType
+}
+
 func renameType(dt design.DataType, name, suffix string) design.DataType {
 	switch actual := dt.(type) {
 	case design.UserType:

@@ -666,7 +666,7 @@ func EncodeMethodBodyStringResponse(encoder func(http.ResponseWriter, *http.Requ
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
 		body := NewMethodBodyStringResponseBody(res)
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return enc.Encode(body)
 	}
 }
@@ -680,7 +680,7 @@ func EncodeMethodBodyObjectResponse(encoder func(http.ResponseWriter, *http.Requ
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
 		body := NewMethodBodyObjectResponseBody(res)
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return enc.Encode(body)
 	}
 }
@@ -694,7 +694,7 @@ func EncodeMethodBodyUserResponse(encoder func(http.ResponseWriter, *http.Reques
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
 		body := NewMethodBodyUserResponseBody(res)
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return enc.Encode(body)
 	}
 }
@@ -708,7 +708,7 @@ func EncodeMethodBodyArrayStringResponse(encoder func(http.ResponseWriter, *http
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
 		body := NewMethodBodyArrayStringResponseBody(res)
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return enc.Encode(body)
 	}
 }
@@ -722,7 +722,7 @@ func EncodeMethodBodyArrayUserResponse(encoder func(http.ResponseWriter, *http.R
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
 		body := NewMethodBodyArrayUserResponseBody(res)
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return enc.Encode(body)
 	}
 }
@@ -737,7 +737,7 @@ func EncodeMethodBodyPrimitiveStringResponse(encoder func(http.ResponseWriter, *
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
 		body := res
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return enc.Encode(body)
 	}
 }
@@ -751,7 +751,7 @@ func EncodeMethodBodyPrimitiveBoolResponse(encoder func(http.ResponseWriter, *ht
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
 		body := res
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return enc.Encode(body)
 	}
 }
@@ -766,7 +766,7 @@ func EncodeMethodBodyPrimitiveArrayStringResponse(encoder func(http.ResponseWrit
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
 		body := res
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return enc.Encode(body)
 	}
 }
@@ -781,7 +781,22 @@ func EncodeMethodBodyPrimitiveArrayBoolResponse(encoder func(http.ResponseWriter
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
 		body := res
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
+		return enc.Encode(body)
+	}
+}
+`
+
+var ResultBodyPrimitiveArrayUserEncodeCode = `// EncodeMethodBodyPrimitiveArrayUserResponse returns an encoder for responses
+// returned by the ServiceBodyPrimitiveArrayUser MethodBodyPrimitiveArrayUser
+// endpoint.
+func EncodeMethodBodyPrimitiveArrayUserResponse(encoder func(http.ResponseWriter, *http.Request) (rest.Encoder, string)) func(http.ResponseWriter, *http.Request, interface{}) error {
+	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
+		res := v.([]*servicebodyprimitivearrayuser.ResultType)
+		enc, ct := encoder(w, r)
+		rest.SetContentType(w, ct)
+		body := NewResultTypeResponseBody(res)
+		w.WriteHeader(http.StatusNoContent)
 		return enc.Encode(body)
 	}
 }
