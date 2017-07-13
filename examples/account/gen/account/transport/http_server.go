@@ -25,8 +25,8 @@ type Handlers struct {
 	Delete http.Handler
 }
 
-// NewHandlers instantiates HTTP handlers for all the account service endpoints.
-func NewHandlers(
+// NewServer instantiates HTTP handlers for all the account service endpoints.
+func NewServer(
 	e *account.Endpoints,
 	mux rest.Muxer,
 	dec func(*http.Request) rest.Decoder,
@@ -40,8 +40,8 @@ func NewHandlers(
 	}
 }
 
-// MountHandlers configures the mux to serve the account endpoints.
-func MountHandlers(mux rest.Muxer, h *Handlers) {
+// MountServer configures the mux to serve the account endpoints.
+func MountServer(mux rest.Muxer, h *Handlers) {
 	MountCreateHandler(mux, h.Create)
 	MountListHandler(mux, h.List)
 	MountShowHandler(mux, h.Show)

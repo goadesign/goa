@@ -87,14 +87,12 @@ type NotFound struct {
 	ID string
 }
 
-// NameAlreadyTaken is the type returned when creating an account fails because
-// its name is already taken
+// Error returns "NameAlreadyTaken".
 func (e *NameAlreadyTaken) Error() string {
 	return "NameAlreadyTaken"
 }
 
-// NotFound is the type returned when attempting to show or delete an account
-// that does not exist.
+// Error returns "NotFound".
 func (e *NotFound) Error() string {
 	return "NotFound"
 }

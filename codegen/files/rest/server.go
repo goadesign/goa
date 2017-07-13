@@ -160,8 +160,8 @@ type {{ .HandlersStruct }} struct {
 `
 
 // input: ResourceData
-const serverInitT = `{{ printf "%s instantiates HTTP handlers for all the %s service endpoints." .HandlersInit .Service.Name | comment }}
-func {{ .HandlersInit }}(
+const serverInitT = `{{ printf "%s instantiates HTTP handlers for all the %s service endpoints." .ServerInit .Service.Name | comment }}
+func {{ .ServerInit }}(
 	e *{{ .Service.PkgName }}.Endpoints,
 	mux rest.Muxer,
 	dec func(*http.Request) rest.Decoder,
@@ -176,8 +176,8 @@ func {{ .HandlersInit }}(
 `
 
 // input: ResourceData
-const serverMountT = `{{ printf "%s configures the mux to serve the %s endpoints." .MountHandlers .Service.Name | comment }}
-func {{ .MountHandlers }}(mux rest.Muxer, h *{{ .HandlersStruct }}) {
+const serverMountT = `{{ printf "%s configures the mux to serve the %s endpoints." .MountServer .Service.Name | comment }}
+func {{ .MountServer }}(mux rest.Muxer, h *{{ .HandlersStruct }}) {
 	{{- range .Actions }}
 	{{ .MountHandler }}(mux, h.{{ .Method.VarName }})
 	{{- end }}

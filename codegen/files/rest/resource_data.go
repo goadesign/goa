@@ -31,11 +31,11 @@ type (
 		// HandlerStruct is the name of the main server handler
 		// structure.
 		HandlersStruct string
-		// HandlersInit is the name of the constructor of the handler
-		// struct function.
-		HandlersInit string
-		// MountHandlers is the name of the name of the mount function.
-		MountHandlers string
+		// ServerInit is the name of the constructor of the server
+		// struct.
+		ServerInit string
+		// MountServer is the name of the name of the mount function.
+		MountServer string
 		// BodyAttributeTypes is the list of user types used to define
 		// the request, response and error response type attributes.
 		BodyAttributeTypes []*TypeData
@@ -327,8 +327,8 @@ func (d ResourcesData) analyze(r *rest.ResourceExpr) *ResourceData {
 	rd := &ResourceData{
 		Service:        svc,
 		HandlersStruct: "Handlers",
-		HandlersInit:   "NewHandlers",
-		MountHandlers:  "MountHandlers",
+		ServerInit:     "NewServer",
+		MountServer:    "MountServer",
 		TypeNames:      make(map[string]struct{}),
 	}
 
@@ -861,14 +861,11 @@ func buildBodyType(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionE
 		if ut, ok := dt.(design.UserType); ok {
 			varname = codegen.Goify(ut.Name(), true)
 			def = restgen.GoTypeDef(svc.Scope, ut.Attribute(), req, req)
-			desc = ut.Attribute().Description
-			if desc == "" {
-				ctx := "request"
-				if !req {
-					ctx = "response"
-				}
-				desc = fmt.Sprintf("%s is the type of the %s %s HTTP endpoint %s body.", varname, svc.Name, a.Name(), ctx)
+			ctx := "request"
+			if !req {
+				ctx = "response"
 			}
+			desc = fmt.Sprintf("%s is the type of the %s %s HTTP endpoint %s body.", varname, svc.Name, a.Name(), ctx)
 			if req {
 				// only validate incoming request bodies
 				validateDef = codegen.RecursiveValidationCode(ut.Attribute(), true, true, "body")

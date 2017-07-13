@@ -1,7 +1,6 @@
 package files
 
 import (
-	"errors"
 	"path/filepath"
 	"text/template"
 
@@ -10,7 +9,7 @@ import (
 )
 
 var (
-	fns          = template.FuncMap{"comment": codegen.Comment, "errorField": errorField}
+	fns          = template.FuncMap{"comment": codegen.Comment}
 	serviceTmpl  = template.Must(template.New("service").Funcs(fns).Parse(serviceT))
 	payloadTmpl  = template.Must(template.New("payload").Funcs(fns).Parse(payloadT))
 	resultTmpl   = template.Must(template.New("result").Funcs(fns).Parse(resultT))
@@ -90,19 +89,6 @@ func Service(service *design.ServiceExpr) codegen.File {
 	return codegen.NewSource(path, sections)
 }
 
-// errorField returns the name of the attribute that contains the error message.
-func errorField(dt design.DataType) string {
-	var field string
-	codegen.WalkAttributes(design.AsObject(dt), func(n string, att *design.AttributeExpr) error {
-		if att.Metadata != nil && len(att.Metadata["error:message"]) > 0 {
-			field = n
-			return errors.New("done")
-		}
-		return nil
-	})
-	return field
-}
-
 // serviceT is the template used to write an service definition.
 const serviceT = `
 {{ comment .Description }}
@@ -123,10 +109,10 @@ type {{ .Result }} {{ .ResultDef }}
 `
 
 const userTypeT = `{{ comment .Description }}
-type {{ .Name }} {{ .Def }}
+type {{ .VarName }} {{ .Def }}
 `
 
-const errorT = `{{ comment .Description }}
+const errorT = `// Error returns {{ printf "%q" .Name }}.
 func (e {{ .Ref }}) Error() string {
 	return {{ printf "%q" .Name }}
 }

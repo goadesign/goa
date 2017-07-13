@@ -477,8 +477,8 @@ func (a *ActionExpr) Finalize() {
 			att := r.AttributeExpr
 			if !design.IsObject(att.Type) {
 				att = &design.AttributeExpr{
-					Type:       &design.Object{{"error", att}},
-					Validation: &design.ValidationExpr{Required: []string{"error"}},
+					Type:       &design.Object{{"value", att}},
+					Validation: &design.ValidationExpr{Required: []string{"value"}},
 				}
 			}
 			ut := &design.UserTypeExpr{
