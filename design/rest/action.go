@@ -232,6 +232,36 @@ func (a *ActionExpr) Validate() error {
 		verr.Merge(e.Validate())
 	}
 
+	if len(a.Routes) > 1 {
+		params := a.Routes[0].Params()
+		for _, r := range a.Routes[1:] {
+			for _, p := range params {
+				found := false
+				for _, p2 := range r.Params() {
+					if p == p2 {
+						found = true
+						break
+					}
+				}
+				if !found {
+					verr.Add(a, "Param %q does not appear in all routes", p)
+				}
+			}
+			for _, p2 := range r.Params() {
+				found := false
+				for _, p := range params {
+					if p == p2 {
+						found = true
+						break
+					}
+				}
+				if !found {
+					verr.Add(a, "Param %q does not appear in all routes", p2)
+				}
+			}
+		}
+	}
+
 	if a.MethodExpr.Payload != nil && design.IsArray(a.MethodExpr.Payload.Type) {
 		var hasParams, hasHeaders bool
 		queryParams := design.NewMappedAttributeExpr(a.params)
