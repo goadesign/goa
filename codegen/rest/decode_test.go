@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"goa.design/goa.v2/codegen"
-	. "goa.design/goa.v2/codegen/files/rest/testing"
+	. "goa.design/goa.v2/codegen/rest/testing"
 	"goa.design/goa.v2/design/rest"
 )
 

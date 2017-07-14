@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"goa.design/goa.v2/codegen"
-	restfiles "goa.design/goa.v2/codegen/files/rest"
-	"goa.design/goa.v2/design/rest"
+	"goa.design/goa.v2/codegen/rest"
+	restdesign "goa.design/goa.v2/design/rest"
 	"goa.design/goa.v2/eval"
 )
 
@@ -19,8 +19,8 @@ func OpenAPI(roots ...eval.Root) ([]codegen.File, error) {
 	)
 	for _, root := range roots {
 		switch r := root.(type) {
-		case *rest.RootExpr:
-			file, err = restfiles.OpenAPI(r)
+		case *restdesign.RootExpr:
+			file, err = rest.OpenAPI(r)
 		}
 	}
 	if err != nil {

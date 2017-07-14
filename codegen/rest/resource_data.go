@@ -7,8 +7,7 @@ import (
 	"strings"
 
 	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/codegen/files"
-	restgen "goa.design/goa.v2/codegen/rest"
+	"goa.design/goa.v2/codegen/service"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
@@ -25,7 +24,7 @@ type (
 	// single service.
 	ResourceData struct {
 		// Service contains the related service data.
-		Service *files.ServiceData
+		Service *service.Data
 		// Actions describes the action data for this service.
 		Actions []*ActionData
 		// HandlerStruct is the name of the main server handler
@@ -48,7 +47,7 @@ type (
 	// single service HTTP endpoint.
 	ActionData struct {
 		// Method contains the related service method data.
-		Method *files.ServiceMethodData
+		Method *service.MethodData
 		// ServiceName is the name of the service exposing the endpoint.
 		ServiceName string
 		// Payload describes the method payload transport.
@@ -322,7 +321,7 @@ func (r *ResourceData) Action(name string) *ActionData {
 // analyze creates the data necessary to render the code of the given service.
 // It records the user types needed by the service definition in userTypes.
 func (d ResourcesData) analyze(r *rest.ResourceExpr) *ResourceData {
-	svc := files.Services.Get(r.ServiceExpr.Name)
+	svc := service.Services.Get(r.ServiceExpr.Name)
 
 	rd := &ResourceData{
 		Service:        svc,
@@ -361,14 +360,14 @@ func (d ResourcesData) analyze(r *rest.ResourceExpr) *ResourceData {
 	}
 
 	for _, a := range r.Actions {
-		collectUserTypes(restgen.RequestBodyType(r, a), func(ut design.UserType) {
+		collectUserTypes(a.Body.Type, func(ut design.UserType) {
 			if d := attributeTypeData(ut, true, svc.Scope, rd); d != nil {
 				rd.BodyAttributeTypes = append(rd.BodyAttributeTypes, d)
 			}
 		})
 
 		for _, v := range a.Responses {
-			collectUserTypes(restgen.ResponseBodyType(r, a, v), func(ut design.UserType) {
+			collectUserTypes(v.Body.Type, func(ut design.UserType) {
 				if d := attributeTypeData(ut, false, svc.Scope, rd); d != nil {
 					rd.BodyAttributeTypes = append(rd.BodyAttributeTypes, d)
 				}
@@ -376,7 +375,7 @@ func (d ResourcesData) analyze(r *rest.ResourceExpr) *ResourceData {
 		}
 
 		for _, v := range a.HTTPErrors {
-			collectUserTypes(restgen.ErrorResponseBodyType(r, a, v), func(ut design.UserType) {
+			collectUserTypes(v.Response.Body.Type, func(ut design.UserType) {
 				if d := attributeTypeData(ut, false, svc.Scope, rd); d != nil {
 					rd.BodyAttributeTypes = append(rd.BodyAttributeTypes, d)
 				}
@@ -390,26 +389,20 @@ func (d ResourcesData) analyze(r *rest.ResourceExpr) *ResourceData {
 // buildPayloadData returns the data structure used to describe the endpoint
 // payload including the HTTP request details. It also returns the user types
 // used by the request body type recursively if any.
-func buildPayloadData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionExpr, rd *ResourceData) *PayloadData {
+func buildPayloadData(svc *service.Data, r *rest.ResourceExpr, a *rest.ActionExpr, rd *ResourceData) *PayloadData {
 	var (
 		payload = a.MethodExpr.Payload
 
 		body    design.DataType
 		request *RequestData
-		ep      *files.ServiceMethodData
+		ep      *service.MethodData
 	)
 	{
 		ep = svc.Method(a.MethodExpr.Name)
-		body = restgen.RequestBodyType(r, a)
+		body = a.Body.Type
 
-		var att *design.AttributeExpr
-		if a.Body != nil {
-			att = a.Body
-		} else {
-			att = payload
-		}
 		var (
-			bodyData    = buildBodyType(svc, r, a, body, payload, att, true)
+			bodyData    = buildBodyType(svc, r, a, a.Body, payload, true)
 			paramsData  = extractPathParams(a.PathParams(), svc.Scope)
 			queryData   = extractQueryParams(a.QueryParams(), svc.Scope)
 			headersData = extractHeaders(a.MappedHeaders(), true, svc.Scope)
@@ -516,11 +509,9 @@ func buildPayloadData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Acti
 			// If design uses Body("name") syntax then need to use payload
 			// attribute to transform.
 			ptype := payload.Type
-			if a.Body != nil {
-				if o, ok := a.Body.Metadata["origin:attribute"]; ok {
-					origin = o[0]
-					ptype = design.AsObject(ptype).Attribute(origin).Type
-				}
+			if o, ok := a.Body.Metadata["origin:attribute"]; ok {
+				origin = o[0]
+				ptype = design.AsObject(ptype).Attribute(origin).Type
 			}
 
 			code, err = codegen.GoTypeTransform(body, ptype, "body", "v", svc.PkgName, true, false, true, svc.Scope)
@@ -566,7 +557,7 @@ func buildPayloadData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Acti
 	}
 }
 
-func buildResultData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionExpr, rd *ResourceData) *ResultData {
+func buildResultData(svc *service.Data, r *rest.ResourceExpr, a *rest.ActionExpr, rd *ResourceData) *ResultData {
 	var (
 		result = a.MethodExpr.Result
 
@@ -587,7 +578,7 @@ func buildResultData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Actio
 			}
 			var (
 				init *InitData
-				body = restgen.ResponseBodyType(r, a, v)
+				body = v.Body.Type
 			)
 
 			if needInit(result.Type) {
@@ -632,11 +623,9 @@ func buildResultData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Actio
 						// If design uses Body("name") syntax then need to use payload
 						// attribute to transform.
 						rtype := result.Type
-						if v.Body != nil {
-							if o, ok := v.Body.Metadata["origin:attribute"]; ok {
-								origin = o[0]
-								rtype = design.AsObject(rtype).Attribute(origin).Type
-							}
+						if o, ok := v.Body.Metadata["origin:attribute"]; ok {
+							origin = o[0]
+							rtype = design.AsObject(rtype).Attribute(origin).Type
 						}
 
 						code, err = codegen.GoTypeTransform(body, result.Type, "body", "v", svc.PkgName, false, false, true, svc.Scope)
@@ -670,18 +659,14 @@ func buildResultData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Actio
 					bodyData *TypeData
 				)
 				{
-					att := v.Body
-					if att == nil {
-						att = result
-					}
-					bodyData = buildBodyType(svc, r, a, body, result, att, false)
+					bodyData = buildBodyType(svc, r, a, v.Body, result, false)
 					if bodyData != nil {
 						rd.TypeNames[bodyData.Name] = struct{}{}
 					}
 				}
 
 				responseData = &ResponseData{
-					StatusCode:  restgen.StatusCodeToHTTPConst(v.StatusCode),
+					StatusCode:  StatusCodeToHTTPConst(v.StatusCode),
 					Headers:     extractHeaders(v.MappedHeaders(), false, svc.Scope),
 					Body:        bodyData,
 					ResultInit:  init,
@@ -705,12 +690,12 @@ func buildResultData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Actio
 	}
 }
 
-func buildErrorsData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionExpr, rd *ResourceData) []*ErrorData {
+func buildErrorsData(svc *service.Data, r *rest.ResourceExpr, a *rest.ActionExpr, rd *ResourceData) []*ErrorData {
 	data := make([]*ErrorData, len(a.HTTPErrors))
 	for i, v := range a.HTTPErrors {
 		var (
 			init *InitData
-			body = restgen.ErrorResponseBodyType(r, a, v)
+			body = v.Response.Body.Type
 		)
 		if needInit(v.ErrorExpr.Type) {
 			var (
@@ -754,11 +739,9 @@ func buildErrorsData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Actio
 					// If design uses Body("name") syntax then need to use payload
 					// attribute to transform.
 					etype := herr.Type
-					if v.Response.Body != nil {
-						if o, ok := v.Response.Body.Metadata["origin:attribute"]; ok {
-							origin = o[0]
-							etype = design.AsObject(etype).Attribute(origin).Type
-						}
+					if o, ok := v.Response.Body.Metadata["origin:attribute"]; ok {
+						origin = o[0]
+						etype = design.AsObject(etype).Attribute(origin).Type
 					}
 
 					code, err = codegen.GoTypeTransform(body, etype, "body", "v", svc.PkgName, false, false, true, svc.Scope)
@@ -796,7 +779,7 @@ func buildErrorsData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Actio
 				if att == nil {
 					att = v.ErrorExpr.AttributeExpr
 				}
-				bodyData = buildBodyType(svc, r, a, body, v.ErrorExpr.AttributeExpr, att, false)
+				bodyData = buildBodyType(svc, r, a, v.Response.Body, v.ErrorExpr.AttributeExpr, false)
 				if bodyData != nil {
 					rd.TypeNames[bodyData.Name] = struct{}{}
 					status := http.StatusText(v.Response.StatusCode)
@@ -809,7 +792,7 @@ func buildErrorsData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Actio
 			}
 
 			responseData = &ResponseData{
-				StatusCode:  restgen.StatusCodeToHTTPConst(v.Response.StatusCode),
+				StatusCode:  StatusCodeToHTTPConst(v.Response.StatusCode),
 				Headers:     extractHeaders(v.Response.MappedHeaders(), false, svc.Scope),
 				Body:        bodyData,
 				ResultInit:  init,
@@ -829,20 +812,14 @@ func buildErrorsData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Actio
 
 // buildBodyType builds the TypeData for a request or response body.
 //
-// dt is the body data type as returned by rest.BuildRequestBody or
-// rest.BuildResponseBody.
-//
-// att is the payload, result or error attribute from which the body is built.
-//
-// vatt is used to compute the validation code and type description in case dt
-// is not a user type.
+// att is the payload, result or error body attribute.
 //
 // req indicates whether the type is for a request body (true) or a response
 // body (false).
-func buildBodyType(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionExpr,
-	dt design.DataType, att, vatt *design.AttributeExpr, req bool) *TypeData {
+func buildBodyType(svc *service.Data, r *rest.ResourceExpr, a *rest.ActionExpr,
+	body, att *design.AttributeExpr, req bool) *TypeData {
 
-	if dt == design.Empty {
+	if body.Type == design.Empty {
 		return nil
 	}
 	var (
@@ -853,15 +830,13 @@ func buildBodyType(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionE
 		ref         string
 		validateDef string
 		validateRef string
-
-		datt = &design.AttributeExpr{Type: dt}
 	)
 	{
-		name = dt.Name()
-		ref = svc.Scope.GoTypeRef(datt)
-		if ut, ok := dt.(design.UserType); ok {
+		name = body.Type.Name()
+		ref = svc.Scope.GoTypeRef(body)
+		if ut, ok := body.Type.(design.UserType); ok {
 			varname = codegen.Goify(ut.Name(), true)
-			def = restgen.GoTypeDef(svc.Scope, ut.Attribute(), req, req)
+			def = GoTypeDef(svc.Scope, ut.Attribute(), req, req)
 			ctx := "request"
 			if !req {
 				ctx = "response"
@@ -869,29 +844,30 @@ func buildBodyType(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionE
 			desc = fmt.Sprintf("%s is the type of the %s %s HTTP endpoint %s body.", varname, svc.Name, a.Name(), ctx)
 			if req {
 				// only validate incoming request bodies
-				validateDef = codegen.RecursiveValidationCode(ut.Attribute(), true, true, "body")
+				validateDef = codegen.RecursiveValidationCode(body, true, true, "body")
 				if validateDef != "" {
 					validateRef = "err = goa.MergeErrors(err, body.Validate())"
 				}
 			}
-		} else if vatt != nil {
-			varname = svc.Scope.GoTypeRef(datt)
-			validateRef = codegen.RecursiveValidationCode(vatt, true, req, "body")
-			desc = vatt.Description
+		} else {
+			varname = svc.Scope.GoTypeRef(body)
+			validateRef = codegen.RecursiveValidationCode(body, true, req, "body")
+			desc = body.Description
 		}
 	}
 
 	var (
 		init *InitData
 	)
-	if needInit(dt) {
+	if needInit(body.Type) {
 		var (
 			name   string
 			desc   string
 			code   string
 			origin string
+			err    error
 		)
-		name = fmt.Sprintf("New%s", codegen.Goify(svc.Scope.GoTypeName(datt), true))
+		name = fmt.Sprintf("New%s", codegen.Goify(svc.Scope.GoTypeName(body), true))
 		ctx := "request"
 		rctx := "payload"
 		sourceVar := "p"
@@ -902,24 +878,23 @@ func buildBodyType(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionE
 		}
 		desc = fmt.Sprintf("%s builds the %s service %s endpoint %s body from a %s.",
 			name, r.Name(), a.Name(), ctx, rctx)
-		var err error
 
 		// If design uses Body("name") syntax then need to use payload
 		// attribute to transform.
-		if o, ok := vatt.Metadata["origin:attribute"]; ok {
+		if o, ok := body.Metadata["origin:attribute"]; ok {
 			origin = o[0]
-			att = vatt.Type.(*design.Object).Attribute(origin)
+			att = design.AsObject(att.Type).Attribute(origin)
 			sourceVar = sourceVar + "." + codegen.Goify(origin, true)
 		}
 
-		code, err = codegen.GoTypeTransform(att.Type, dt, sourceVar, "body", "", false, req, false, svc.Scope)
+		code, err = codegen.GoTypeTransform(att.Type, body.Type, sourceVar, "body", "", false, req, false, svc.Scope)
 		if err != nil {
 			fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
 		}
 		init = &InitData{
 			Name:                name,
 			Description:         desc,
-			ReturnTypeRef:       svc.Scope.GoTypeRef(&design.AttributeExpr{Type: dt}),
+			ReturnTypeRef:       svc.Scope.GoTypeRef(body),
 			ReturnTypeAttribute: codegen.Goify(origin, true),
 			Args:                []*InitArgData{{Name: sourceVar, Ref: sourceVar, TypeRef: svc.Scope.GoFullTypeRef(att, svc.PkgName)}},
 			Code:                code,
@@ -939,7 +914,7 @@ func buildBodyType(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.ActionE
 
 func extractPathParams(a *design.MappedAttributeExpr, scope *codegen.NameScope) []*ParamData {
 	var params []*ParamData
-	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
+	codegen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
 		var (
 			field = codegen.Goify(name, true)
 			varn  = codegen.Goify(name, false)
@@ -968,7 +943,7 @@ func extractPathParams(a *design.MappedAttributeExpr, scope *codegen.NameScope) 
 
 func extractQueryParams(a *design.MappedAttributeExpr, scope *codegen.NameScope) []*ParamData {
 	var params []*ParamData
-	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
+	codegen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
 		var (
 			field   = codegen.Goify(name, true)
 			varn    = codegen.Goify(name, false)
@@ -1005,7 +980,7 @@ func extractQueryParams(a *design.MappedAttributeExpr, scope *codegen.NameScope)
 
 func extractHeaders(a *design.MappedAttributeExpr, req bool, scope *codegen.NameScope) []*HeaderData {
 	var headers []*HeaderData
-	restgen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
+	codegen.WalkMappedAttr(a, func(name, elem string, required bool, c *design.AttributeExpr) error {
 		var (
 			varn    = codegen.Goify(name, false)
 			arr     = design.AsArray(c.Type)
@@ -1079,7 +1054,7 @@ func attributeTypeData(ut design.UserType, req bool, scope *codegen.NameScope, r
 			}
 			desc = name + " is used to define fields on " + ctx + " body types."
 		}
-		def = restgen.GoTypeDef(scope, ut.Attribute(), req, false)
+		def = GoTypeDef(scope, ut.Attribute(), req, false)
 		validate = codegen.RecursiveValidationCode(ut.Attribute(), true, req, "v") //
 		if validate != "" {
 			validateRef = "err = goa.MergeErrors(err, v.Validate())"

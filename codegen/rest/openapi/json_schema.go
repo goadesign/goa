@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"strconv"
 
-	restgen "goa.design/goa.v2/codegen/rest"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
@@ -183,7 +182,7 @@ func GenerateResourceDefinition(api *design.APIExpr, res *rest.ResourceExpr) {
 		var targetSchema *Schema
 		var identifier string
 		for _, resp := range a.Responses {
-			dt := restgen.ResponseBodyType(res, a, resp)
+			dt := resp.Body.Type
 			if mt := dt.(*design.ResultTypeExpr); mt != nil {
 				if identifier == "" {
 					identifier = mt.Identifier

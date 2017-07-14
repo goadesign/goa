@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"goa.design/goa.v2/codegen"
-	. "goa.design/goa.v2/codegen/files/rest/testing"
-	restdesign "goa.design/goa.v2/design/rest"
+	. "goa.design/goa.v2/codegen/rest/testing"
+	"goa.design/goa.v2/design/rest"
 )
 
 func TestEncode(t *testing.T) {
@@ -69,7 +69,7 @@ func TestEncode(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunRestDSL(t, c.DSL)
-			fs := Servers(restdesign.Root)
+			fs := Servers(rest.Root)
 			if len(fs) != 1 {
 				t.Fatalf("got %d files, expected one", len(fs))
 			}

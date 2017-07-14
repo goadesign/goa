@@ -232,7 +232,9 @@ func recurseValidationCode(att *design.AttributeExpr, req, ptr bool, target, con
 	}
 
 	if o := design.AsObject(att.Type); o != nil {
-		WalkAttributes(o, func(n string, catt *design.AttributeExpr) error {
+		for _, nat := range *o {
+			n := nat.Name
+			catt := nat.Attribute
 			validation := recurseAttribute(att, catt, n, target, context, ptr, seen)
 			if validation != "" {
 				if !first {
@@ -242,8 +244,7 @@ func recurseValidationCode(att *design.AttributeExpr, req, ptr bool, target, con
 				}
 				buf.WriteString(validation)
 			}
-			return nil
-		})
+		}
 	} else if a := design.AsArray(att.Type); a != nil {
 		val := recurseValidationCode(a.ElemType, true, false, "e", context+"[*]", seen).String()
 		if val != "" {

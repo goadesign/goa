@@ -1,4 +1,4 @@
-package files
+package service
 
 import (
 	"fmt"
@@ -14,11 +14,11 @@ var Services = make(ServicesData)
 
 type (
 	// ServicesData encapsulates the data computed from the service designs.
-	ServicesData map[string]*ServiceData
+	ServicesData map[string]*Data
 
-	// ServiceData contains the data used to render the code related to a
+	// Data contains the data used to render the code related to a
 	// single service.
-	ServiceData struct {
+	Data struct {
 		// Name is the service name.
 		Name string
 		// Description is the service description.
@@ -29,7 +29,7 @@ type (
 		// service code.
 		PkgName string
 		// Methods lists the service interface methods.
-		Methods []*ServiceMethodData
+		Methods []*MethodData
 		// UserTypes lists the types definitions that the service
 		// depends on.
 		UserTypes []*UserTypeData
@@ -40,8 +40,8 @@ type (
 		Scope *codegen.NameScope
 	}
 
-	// ServiceMethodData describes a single service method.
-	ServiceMethodData struct {
+	// MethodData describes a single service method.
+	MethodData struct {
 		// Name is the method name.
 		Name string
 		// Description is the method description.
@@ -102,7 +102,7 @@ type (
 
 // Get retrieves the data for the service with the given name computing it if
 // needed. It returns nil if there is no service with the given name.
-func (d ServicesData) Get(name string) *ServiceData {
+func (d ServicesData) Get(name string) *Data {
 	if data, ok := d[name]; ok {
 		return data
 	}
@@ -116,7 +116,7 @@ func (d ServicesData) Get(name string) *ServiceData {
 
 // Method returns the service method data for the method with the given name,
 // nil if there isn't one.
-func (s *ServiceData) Method(name string) *ServiceMethodData {
+func (s *Data) Method(name string) *MethodData {
 	for _, m := range s.Methods {
 		if m.Name == name {
 			return m
@@ -127,7 +127,7 @@ func (s *ServiceData) Method(name string) *ServiceMethodData {
 
 // analyze creates the data necessary to render the code of the given service.
 // It records the user types needed by the service definition in userTypes.
-func (d ServicesData) analyze(service *design.ServiceExpr) *ServiceData {
+func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 	var (
 		scope    *codegen.NameScope
 		varName  string
@@ -184,12 +184,12 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *ServiceData {
 	}
 
 	var (
-		methods []*ServiceMethodData
+		methods []*MethodData
 	)
 	{
-		methods = make([]*ServiceMethodData, len(service.Methods))
+		methods = make([]*MethodData, len(service.Methods))
 		for i, e := range service.Methods {
-			m := buildServiceMethodData(e, pkgName, scope)
+			m := buildMethodData(e, pkgName, scope)
 			methods[i] = m
 		}
 	}
@@ -204,7 +204,7 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *ServiceData {
 		}
 	}
 
-	data := &ServiceData{
+	data := &Data{
 		Name:        service.Name,
 		Description: desc,
 		VarName:     varName,
@@ -274,9 +274,9 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 	return
 }
 
-// buildServiceMethodData creates the data needed to render the given endpoint. It
+// buildMethodData creates the data needed to render the given endpoint. It
 // records the user types needed by the service definition in userTypes.
-func buildServiceMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.NameScope) *ServiceMethodData {
+func buildMethodData(m *design.MethodExpr, svcPkgName string, scope *codegen.NameScope) *MethodData {
 	var (
 		varName     string
 		desc        string
@@ -320,7 +320,7 @@ func buildServiceMethodData(m *design.MethodExpr, svcPkgName string, scope *code
 			}
 		}
 	}
-	return &ServiceMethodData{
+	return &MethodData{
 		Name:        m.Name,
 		VarName:     varName,
 		Description: desc,

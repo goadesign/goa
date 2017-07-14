@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"goa.design/goa.v2/codegen/files"
+	"goa.design/goa.v2/codegen/service"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
@@ -181,18 +181,18 @@ func ShowAccountPath(sliceInterface []interface{}) string {
 `
 	)
 	var (
-		service = design.ServiceExpr{
+		svc = design.ServiceExpr{
 			Name: "Account",
 		}
 
 		endpoint = design.MethodExpr{
 			Name:    "Show",
-			Service: &service,
+			Service: &svc,
 			Payload: &design.AttributeExpr{Type: design.Empty},
 		}
 
 		resource = rest.ResourceExpr{
-			ServiceExpr: &service,
+			ServiceExpr: &svc,
 			Path:        "/account",
 		}
 
@@ -235,7 +235,7 @@ func ShowAccountPath(sliceInterface []interface{}) string {
 		}
 	)
 
-	files.Services = make(files.ServicesData)
+	service.Services = make(service.ServicesData)
 	design.Root.Services = []*design.ServiceExpr{resource.ServiceExpr}
 
 	cases := map[string]struct {

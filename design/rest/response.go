@@ -2,6 +2,7 @@ package rest
 
 import (
 	"fmt"
+	"strings"
 
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/eval"
@@ -139,8 +140,70 @@ func (r *HTTPResponseExpr) Validate() *eval.ValidationErrors {
 
 // Finalize sets the response result type from its type if the type is a result
 // type and no result type is already specified.
-func (r *HTTPResponseExpr) Finalize() {
-	if r.Body == nil {
+func (r *HTTPResponseExpr) Finalize(a *ActionExpr, svcAtt *design.AttributeExpr) {
+	r.Parent = a
+
+	// Initialize the headers with the corresponding result attributes.
+	svcObj := design.AsObject(svcAtt.Type)
+	if r.headers != nil {
+		for _, nat := range *design.AsObject(r.headers.Type) {
+			n := nat.Name
+			att := nat.Attribute
+			n = strings.Split(n, ":")[0]
+			var patt *design.AttributeExpr
+			var required bool
+			if svcObj != nil {
+				patt = svcObj.Attribute(n)
+				required = svcAtt.IsRequired(n)
+			} else {
+				patt = svcAtt
+				required = svcAtt.Type != design.Empty
+			}
+			initAttrFromDesign(att, patt)
+			if required {
+				if r.headers.Validation == nil {
+					r.headers.Validation = &design.ValidationExpr{}
+				}
+				r.headers.Validation.Required = append(r.headers.Validation.Required, n)
+			}
+		}
+	}
+
+	// Initialize the body attributes (if an object) with the corresponding
+	// payload attributes.
+	if r.Body != nil {
+		if body := design.AsObject(r.Body.Type); body != nil {
+			for _, nat := range *body {
+				n := nat.Name
+				att := nat.Attribute
+				n = strings.Split(n, ":")[0]
+				var patt *design.AttributeExpr
+				var required bool
+				if svcObj != nil {
+					att = svcObj.Attribute(n)
+					required = svcAtt.IsRequired(n)
+				} else {
+					att = svcAtt
+					required = svcAtt.Type != design.Empty
+				}
+				initAttrFromDesign(att, patt)
+				if required {
+					if r.Body.Validation == nil {
+						r.Body.Validation = &design.ValidationExpr{}
+					}
+					r.Body.Validation.Required = append(r.Body.Validation.Required, n)
+				}
+			}
+		}
+	} else {
+		r.Body = &design.AttributeExpr{Type: ResponseBodyType(a, r)}
+		if svcAtt.Validation != nil {
+			a.Body.Validation = svcAtt.Validation.Dup()
+		}
+	}
+
+	// Initialize response content type if result is media type.
+	if r.Body.Type == design.Empty {
 		return
 	}
 	if r.ContentType != "" {

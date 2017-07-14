@@ -6,7 +6,7 @@ import (
 	"text/template"
 
 	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/codegen/files"
+	"goa.design/goa.v2/codegen/service"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
@@ -95,7 +95,7 @@ func pathTmpl(r *rest.ResourceExpr) *template.Template {
 			"goify":   codegen.Goify,
 			"isArray": design.IsArray,
 			"goTypeRef": func(dt design.DataType) string {
-				return files.Services.Get(r.Name()).Scope.GoTypeRef(&design.AttributeExpr{Type: dt})
+				return service.Services.Get(r.Name()).Scope.GoTypeRef(&design.AttributeExpr{Type: dt})
 			},
 		}).
 		Parse(pathT))

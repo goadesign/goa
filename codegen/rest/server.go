@@ -8,7 +8,7 @@ import (
 	"text/template"
 
 	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/codegen/files"
+	"goa.design/goa.v2/codegen/service"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
@@ -102,7 +102,7 @@ func serverTmpl(r *rest.ResourceExpr) *template.Template {
 	return template.New("server").
 		Funcs(template.FuncMap{
 			"goTypeRef": func(dt design.DataType) string {
-				return files.Services.Get(r.Name()).Scope.GoTypeRef(&design.AttributeExpr{Type: dt})
+				return service.Services.Get(r.Name()).Scope.GoTypeRef(&design.AttributeExpr{Type: dt})
 			},
 			"conversionData":       conversionData,
 			"headerConversionData": headerConversionData,

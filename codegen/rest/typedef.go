@@ -1,4 +1,4 @@
-package restgen
+package rest
 
 import (
 	"fmt"
@@ -48,7 +48,7 @@ func GoTypeDef(scope *codegen.NameScope, att *design.AttributeExpr, ptr, useDefa
 		ss = append(ss, "struct {")
 		ma := design.NewMappedAttributeExpr(att)
 		mat := ma.Attribute()
-		WalkMappedAttr(ma, func(name, elem string, required bool, at *design.AttributeExpr) error {
+		codegen.WalkMappedAttr(ma, func(name, elem string, required bool, at *design.AttributeExpr) error {
 			var (
 				fn   string
 				tdef string

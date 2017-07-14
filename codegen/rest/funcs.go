@@ -1,4 +1,4 @@
-package restgen
+package rest
 
 import (
 	"fmt"

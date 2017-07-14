@@ -1,11 +1,10 @@
-package restgen
+package rest
 
 import (
 	"net/http"
 
 	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/design/rest"
 )
 
 // RequestBodyType returns the type of the request body given an action. If the
@@ -13,7 +12,7 @@ import (
 // type is used instead of the payload type. Otherwise the type is computed by
 // removing the attributes of the method payload used to define headers and
 // parameters.
-func RequestBodyType(r *rest.ResourceExpr, a *rest.ActionExpr) design.DataType {
+func RequestBodyType(a *ActionExpr) design.DataType {
 	if a.Body != nil {
 		return a.Body.Type
 	}
@@ -68,7 +67,7 @@ func RequestBodyType(r *rest.ResourceExpr, a *rest.ActionExpr) design.DataType {
 // payload used to define headers and parameters. Also if the response defines a
 // view then the response result type is projected first. suffix is appended to
 // the created type name if any.
-func ResponseBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, resp *rest.HTTPResponseExpr) design.DataType {
+func ResponseBodyType(a *ActionExpr, resp *HTTPResponseExpr) design.DataType {
 	result := a.MethodExpr.Result
 	if result == nil || result.Type == design.Empty {
 		return design.Empty
@@ -160,7 +159,7 @@ func ResponseBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, resp *rest.HTTPR
 // is computed by removing the attributes of the error used to define headers
 // and parameters. Also if the error response defines a view then the result
 // type is projected first. suffix is appended to the created type name if any.
-func ErrorResponseBodyType(r *rest.ResourceExpr, a *rest.ActionExpr, v *rest.HTTPErrorExpr) design.DataType {
+func ErrorResponseBodyType(r *ResourceExpr, a *ActionExpr, v *HTTPErrorExpr) design.DataType {
 	result := v.ErrorExpr.AttributeExpr
 	if result == nil || result.Type == design.Empty {
 		return design.Empty
@@ -293,7 +292,7 @@ func appendSuffix(dt design.DataType, suffix string) {
 }
 
 func removeAttributes(attr, sub *design.MappedAttributeExpr) {
-	WalkMappedAttr(sub, func(name, _ string, _ bool, _ *design.AttributeExpr) error {
+	codegen.WalkMappedAttr(sub, func(name, _ string, _ bool, _ *design.AttributeExpr) error {
 		attr.Delete(name)
 		if attr.Validation != nil {
 			attr.Validation.RemoveRequired(name)

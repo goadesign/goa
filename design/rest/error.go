@@ -46,7 +46,7 @@ func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
 }
 
 // Finalize looks up the corresponding method error expression.
-func (e *HTTPErrorExpr) Finalize() {
+func (e *HTTPErrorExpr) Finalize(a *ActionExpr) {
 	var ee *design.ErrorExpr
 	switch p := e.Response.Parent.(type) {
 	case *ActionExpr:
@@ -57,6 +57,7 @@ func (e *HTTPErrorExpr) Finalize() {
 		ee = design.Root.Error(e.Name)
 	}
 	e.ErrorExpr = ee
+	e.Response.Finalize(a, e.AttributeExpr)
 }
 
 // Dup creates a copy of the error expression.

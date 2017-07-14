@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/codegen/files"
-	restfiles "goa.design/goa.v2/codegen/files/rest"
+	"goa.design/goa.v2/codegen/rest"
+	"goa.design/goa.v2/codegen/service"
 	"goa.design/goa.v2/design"
-	"goa.design/goa.v2/design/rest"
+	restdesign "goa.design/goa.v2/design/rest"
 	"goa.design/goa.v2/eval"
 )
 
@@ -22,11 +22,11 @@ func Client(roots ...eval.Root) ([]codegen.File, error) {
 		switch r := root.(type) {
 		case *design.RootExpr:
 			for _, s := range r.Services {
-				des = append(des, files.Service(s))
-				des = append(des, files.Endpoint(s))
+				des = append(des, service.Service(s))
+				des = append(des, service.Endpoint(s))
 			}
-		case *rest.RootExpr:
-			tran = append(tran, restfiles.ClientFiles(r)...)
+		case *restdesign.RootExpr:
+			tran = append(tran, rest.ClientFiles(r)...)
 		}
 		// TBD:
 		// case *rpc.RootExpr:

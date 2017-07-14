@@ -5,7 +5,7 @@ import (
 	"text/template"
 
 	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/codegen/files"
+	"goa.design/goa.v2/codegen/service"
 	"goa.design/goa.v2/design/rest"
 )
 
@@ -73,7 +73,7 @@ func Type(r *rest.ResourceExpr, seen map[string]struct{}) codegen.File {
 	sections = func(genPkg string) []*codegen.Section {
 		header := codegen.Header(r.Name()+" HTTP transport types", "transport",
 			[]*codegen.ImportSpec{
-				{Path: genPkg + "/" + files.Services.Get(r.Name()).PkgName},
+				{Path: genPkg + "/" + service.Services.Get(r.Name()).PkgName},
 				{Path: "goa.design/goa.v2", Name: "goa"},
 			},
 		)

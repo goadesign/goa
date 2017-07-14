@@ -84,12 +84,15 @@ func (s *NameScope) GoTypeDef(att *design.AttributeExpr, useDefault bool) string
 	case *design.Object:
 		var ss []string
 		ss = append(ss, "struct {")
-		WalkAttributes(actual, func(name string, at *design.AttributeExpr) error {
+		for _, nat := range *actual {
 			var (
 				fn   string
 				tdef string
 				desc string
 				tags string
+
+				name = nat.Name
+				at   = nat.Attribute
 			)
 			{
 				fn = GoifyAtt(at, name, true)
@@ -103,8 +106,7 @@ func (s *NameScope) GoTypeDef(att *design.AttributeExpr, useDefault bool) string
 				tags = AttributeTags(att, at)
 			}
 			ss = append(ss, fmt.Sprintf("\t%s%s %s%s", desc, fn, tdef, tags))
-			return nil
-		})
+		}
 		ss = append(ss, "}")
 		return strings.Join(ss, "\n")
 	case design.UserType:

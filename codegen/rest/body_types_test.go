@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"goa.design/goa.v2/codegen"
-	. "goa.design/goa.v2/codegen/files/rest/testing"
+	. "goa.design/goa.v2/codegen/rest/testing"
 	"goa.design/goa.v2/design/rest"
 )
 
@@ -19,7 +19,7 @@ func TestBodyTypeDecl(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunRestDSL(t, c.DSL)
+			rest.RunRestDSL(t, c.DSL)
 			fs := Type(rest.Root.Resources[0], make(map[string]struct{}))
 			section := fs.Sections("")[1]
 			code := SectionCode(t, section)

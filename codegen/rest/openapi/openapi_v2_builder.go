@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	codegen "goa.design/goa.v2/codegen/rest"
+	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 )
@@ -277,11 +277,30 @@ func paramsFromExpr(params *design.MappedAttributeExpr, path string) ([]*Paramet
 
 func paramsFromHeaders(action *rest.ActionExpr) []*Parameter {
 	params := []*Parameter{}
-	codegen.WalkHeaders(action, func(_, name string, required bool, header *design.AttributeExpr) error {
-		p := paramFor(header, name, "header", required)
+	var (
+		rma = action.Resource.MappedParams()
+		ma  = action.MappedHeaders()
+
+		merged *design.MappedAttributeExpr
+	)
+	{
+		if rma == nil {
+			merged = ma
+		} else if ma == nil {
+			merged = rma
+		} else {
+			merged = design.DupMappedAtt(rma)
+			merged.Merge(ma)
+		}
+	}
+
+	for _, n := range *design.AsObject(merged.Type) {
+		header := n.Attribute
+		required := merged.IsRequired(n.Name)
+		p := paramFor(header, n.Name, "header", required)
 		params = append(params, p)
 		return nil
-	})
+	}
 	return params
 }
 
@@ -314,15 +333,13 @@ func itemsFromExpr(at *design.AttributeExpr) *Items {
 
 func responseSpecFromExpr(s *V2, root *rest.RootExpr, r *rest.HTTPResponseExpr) (*Response, error) {
 	var schema *Schema
-	if r.Body != nil {
-		if mt, ok := r.Body.Type.(*design.ResultTypeExpr); ok {
-			view := design.DefaultView
-			if v, ok := r.Body.Metadata["view"]; ok {
-				view = v[0]
-			}
-			schema = NewSchema()
-			schema.Ref = ResultTypeRef(root.Design.API, mt, view)
+	if mt, ok := r.Body.Type.(*design.ResultTypeExpr); ok {
+		view := design.DefaultView
+		if v, ok := r.Body.Metadata["view"]; ok {
+			view = v[0]
 		}
+		schema = NewSchema()
+		schema.Ref = ResultTypeRef(root.Design.API, mt, view)
 	}
 	headers, err := headersFromExpr(r.MappedHeaders())
 	if err != nil {

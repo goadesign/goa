@@ -6,7 +6,7 @@ import (
 	"text/template"
 
 	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/codegen/files/rest/openapi"
+	"goa.design/goa.v2/codegen/rest/openapi"
 	"goa.design/goa.v2/design/rest"
 )
 

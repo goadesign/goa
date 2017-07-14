@@ -285,7 +285,7 @@ func (a *ActionExpr) Validate() error {
 				verr.Add(a, "Payload type is array but HTTP endpoint defines multiple headers. At most one header must be defined and it must be an array.")
 			}
 		}
-		if a.Body != nil {
+		if a.Body != nil && a.Body.Type != design.Empty {
 			if !design.IsArray(a.Body.Type) {
 				verr.Add(a, "Payload type is array but HTTP endpoint body is not.")
 			}
@@ -309,7 +309,7 @@ func (a *ActionExpr) Validate() error {
 		if ln := len(*design.AsObject(a.Headers().Type)); ln > 0 {
 			verr.Add(a, "Payload type is map but HTTP endpoint defines headers. Map payloads can only be decoded from HTTP request bodies or query strings.")
 		}
-		if a.Body != nil {
+		if a.Body != nil && a.Body.Type != design.Empty {
 			if !design.IsMap(a.Body.Type) {
 				verr.Add(a, "Payload type is map but HTTP endpoint body is not.")
 			}
@@ -394,9 +394,9 @@ func (a *ActionExpr) Finalize() {
 		}
 	}
 
-	// Initialize the body attributes (if an object) with the corresponding
-	// payload attributes.
 	if a.Body != nil {
+		// Initialize the body attributes (if an object) with the
+		// corresponding payload attributes.
 		if body := design.AsObject(a.Body.Type); body != nil {
 			for _, nat := range *body {
 				n := nat.Name
@@ -420,9 +420,13 @@ func (a *ActionExpr) Finalize() {
 				}
 			}
 		}
+	} else {
+		// No explicit body, compute it
+		a.Body = &design.AttributeExpr{Type: RequestBodyType(a)}
+		if a.MethodExpr.Payload.Validation != nil {
+			a.Body.Validation = a.MethodExpr.Payload.Validation.Dup()
+		}
 	}
-
-	result := design.AsObject(a.MethodExpr.Result.Type)
 
 	// Make sure there's a default response if none define explicitly
 	if len(a.Responses) == 0 {
@@ -435,61 +439,7 @@ func (a *ActionExpr) Finalize() {
 
 	// Initialize responses parent, headers and body
 	for _, r := range a.Responses {
-		r.Parent = a
-
-		// Initialize the headers with the corresponding result
-		// attributes.
-		if r.headers != nil {
-			for _, nat := range *design.AsObject(r.headers.Type) {
-				n := nat.Name
-				att := nat.Attribute
-				n = strings.Split(n, ":")[0]
-				var patt *design.AttributeExpr
-				var required bool
-				if result != nil {
-					patt = result.Attribute(n)
-					required = a.MethodExpr.Result.IsRequired(n)
-				} else {
-					patt = a.MethodExpr.Result
-					required = a.MethodExpr.Result.Type != design.Empty
-				}
-				initAttrFromDesign(att, patt)
-				if required {
-					if r.headers.Validation == nil {
-						r.headers.Validation = &design.ValidationExpr{}
-					}
-					r.headers.Validation.Required = append(r.headers.Validation.Required, n)
-				}
-			}
-		}
-
-		// Initialize the body attributes (if an object) with the
-		// corresponding payload attributes.
-		if r.Body != nil {
-			if body := design.AsObject(r.Body.Type); body != nil {
-				for _, nat := range *body {
-					n := nat.Name
-					att := nat.Attribute
-					n = strings.Split(n, ":")[0]
-					var patt *design.AttributeExpr
-					var required bool
-					if result != nil {
-						att = result.Attribute(n)
-						required = a.MethodExpr.Result.IsRequired(n)
-					} else {
-						att = a.MethodExpr.Result
-						required = a.MethodExpr.Result.Type != design.Empty
-					}
-					initAttrFromDesign(att, patt)
-					if required {
-						if r.Body.Validation == nil {
-							r.Body.Validation = &design.ValidationExpr{}
-						}
-						r.Body.Validation.Required = append(r.Body.Validation.Required, n)
-					}
-				}
-			}
-		}
+		r.Finalize(a, a.MethodExpr.Result)
 	}
 
 	// Inherit HTTP errors from resource and root
@@ -500,11 +450,11 @@ func (a *ActionExpr) Finalize() {
 		a.HTTPErrors = append(a.HTTPErrors, r.Dup())
 	}
 
-	// Make sure all error types are user types.
-	for _, r := range a.HTTPErrors {
-		r.Finalize()
-		if _, ok := r.AttributeExpr.Type.(design.UserType); !ok {
-			att := r.AttributeExpr
+	// Make sure all error types are user types and have a body.
+	for _, herr := range a.HTTPErrors {
+		herr.Finalize(a)
+		if _, ok := herr.AttributeExpr.Type.(design.UserType); !ok {
+			att := herr.AttributeExpr
 			if !design.IsObject(att.Type) {
 				att = &design.AttributeExpr{
 					Type:       &design.Object{{"value", att}},
@@ -513,16 +463,11 @@ func (a *ActionExpr) Finalize() {
 			}
 			ut := &design.UserTypeExpr{
 				AttributeExpr: att,
-				TypeName:      r.Name,
+				TypeName:      herr.Name,
 			}
-			r.AttributeExpr = &design.AttributeExpr{Type: ut}
+			herr.AttributeExpr = &design.AttributeExpr{Type: ut}
 			design.Root.GeneratedTypes = append(design.Root.GeneratedTypes, ut)
 		}
-	}
-
-	// Initialize error responses parent
-	for _, e := range a.HTTPErrors {
-		e.Response.Parent = a
 	}
 }
 
