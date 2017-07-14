@@ -31,6 +31,7 @@ var _ = Service("account", func() {
 			Response(StatusAccepted, func() {
 				Header("href:Location")
 				Body(Empty)
+				Tag("status", "provisioning")
 			})
 			Response("name_already_taken", StatusConflict)
 		})
@@ -102,6 +103,9 @@ var Account = ResultType("application/vnd.basic.account", func() {
 		Attribute("name")
 		Attribute("description", func() {
 			Default("An active account")
+		})
+		Attribute("status", String, "Status of account", func() {
+			Enum("provisioning", "ready", "deprovisioning")
 		})
 		Required("href", "id", "org_id", "name")
 	})

@@ -32,18 +32,20 @@ func TestBodyTypeDecl(t *testing.T) {
 
 func TestBodyTypeInit(t *testing.T) {
 	cases := []struct {
-		Name string
-		DSL  func()
-		Code string
+		Name         string
+		DSL          func()
+		SectionIndex int
+		Code         string
 	}{
-		{"body-user-inner", PayloadBodyUserInnerDSL, BodyUserInnerInitCode},
-		{"body-path-user-validate", PayloadBodyPathUserValidateDSL, BodyPathUserValidateInitCode},
+		{"body-user-inner", PayloadBodyUserInnerDSL, 2, BodyUserInnerInitCode},
+		{"body-path-user-validate", PayloadBodyPathUserValidateDSL, 2, BodyPathUserValidateInitCode},
+		{"body-empty", PayloadBodyPrimitiveFieldEmptyDSL, 1, BodyEmptyInitCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunRestDSL(t, c.DSL)
 			fs := Type(rest.Root.Resources[0], make(map[string]struct{}))
-			section := fs.Sections("")[2]
+			section := fs.Sections("")[c.SectionIndex]
 			code := SectionCode(t, section)
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
@@ -91,5 +93,15 @@ func NewMethodUserBodyPathValidateServerRequestBody(p *servicebodypathuservalida
 	}
 
 	return body
+}
+`
+
+const BodyEmptyInitCode = `// NewMethodBodyPrimitiveArrayUserPayloadType builds a
+// ServiceBodyPrimitiveArrayUser service MethodBodyPrimitiveArrayUser endpoint
+// payload.
+func NewMethodBodyPrimitiveArrayUserPayloadType(a []string) *servicebodyprimitivearrayuser.PayloadType {
+	return &servicebodyprimitivearrayuser.PayloadType{
+		A: a,
+	}
 }
 `

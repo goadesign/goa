@@ -583,7 +583,7 @@ func Body(args ...interface{}) {
 			return
 		}
 	case design.UserType:
-		attr = a.Attribute()
+		attr = &design.AttributeExpr{Type: a}
 		if len(args) > 1 {
 			var ok bool
 			fn, ok = args[1].(func())

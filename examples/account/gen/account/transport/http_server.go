@@ -97,6 +97,13 @@ func NewCreateHandler(
 func EncodeCreateResponse(encoder func(http.ResponseWriter, *http.Request) (rest.Encoder, string)) func(http.ResponseWriter, *http.Request, interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 		res := v.(*account.Account)
+		if res.Status != nil && *res.Status == "provisioning" {
+			_, ct := encoder(w, r)
+			rest.SetContentType(w, ct)
+			w.Header().Set("Location", res.Href)
+			w.WriteHeader(http.StatusAccepted)
+			return nil
+		}
 		enc, ct := encoder(w, r)
 		rest.SetContentType(w, ct)
 		body := NewCreateCreatedResponseBody(res)

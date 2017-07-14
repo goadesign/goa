@@ -1786,6 +1786,22 @@ var PayloadBodyPrimitiveArrayUserValidateDSL = func() {
 	})
 }
 
+var PayloadBodyPrimitiveFieldEmptyDSL = func() {
+	var PayloadType = Type("PayloadType", func() {
+		Attribute("a", ArrayOf(String))
+	})
+	Service("ServiceBodyPrimitiveArrayUser", func() {
+		Method("MethodBodyPrimitiveArrayUser", func() {
+			Payload(PayloadType)
+			HTTP(func() {
+				POST("/")
+				Param("a")
+				Body(Empty)
+			})
+		})
+	})
+}
+
 var PayloadBodyPrimitiveFieldArrayUserDSL = func() {
 	var PayloadType = Type("PayloadType", func() {
 		Attribute("a", ArrayOf(String))

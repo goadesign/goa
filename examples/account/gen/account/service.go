@@ -43,6 +43,8 @@ type Account struct {
 	Name string
 	// Description of new account
 	Description *string
+	// Status of account
+	Status *string
 }
 
 // ListPayload is the payload type of the account service list method.

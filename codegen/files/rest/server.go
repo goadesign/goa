@@ -805,7 +805,7 @@ func {{ .ErrorEncoder }}(encoder func(http.ResponseWriter, *http.Request) (rest.
 
 // input: ResponseData
 const responseT = `{{ define "response" -}}
-	enc, ct := encoder(w, r)
+	{{ if .Body }}enc{{ else }}_{{ end }}, ct := encoder(w, r)
 	rest.SetContentType(w, ct)
 
 	{{- if .Body }}

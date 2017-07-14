@@ -599,9 +599,10 @@ func buildResultData(svc *files.ServiceData, r *rest.ResourceExpr, a *rest.Actio
 				)
 				{
 					ep := svc.Method(a.MethodExpr.Name)
-					name = fmt.Sprintf("New%s%s", codegen.Goify(ep.Name, true), codegen.Goify(ep.Result, true))
-					desc = fmt.Sprintf("%s builds a %s service %s endpoint result.",
-						name, r.Name(), a.Name())
+					status := http.StatusText(v.StatusCode)
+					name = fmt.Sprintf("New%s%s%s", codegen.Goify(ep.Name, true), codegen.Goify(ep.Result, true), status)
+					desc = fmt.Sprintf("%s builds a %s service %s endpoint %s result.",
+						name, r.Name(), a.Name(), status)
 					isObject = design.IsObject(result.Type)
 					if body != design.Empty {
 						ref := "body"

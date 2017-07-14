@@ -32,6 +32,8 @@ type CreateCreatedResponseBody struct {
 	Name string `form:"name" json:"name" xml:"name"`
 	// Description of new account
 	Description *string `form:"description,omitempty" json:"description,omitempty" xml:"description,omitempty"`
+	// Status of account
+	Status *string `form:"status,omitempty" json:"status,omitempty" xml:"status,omitempty"`
 }
 
 // ShowResponseBody is the type of the account show HTTP endpoint response body.
@@ -46,6 +48,8 @@ type ShowResponseBody struct {
 	Name string `form:"name" json:"name" xml:"name"`
 	// Description of new account
 	Description *string `form:"description,omitempty" json:"description,omitempty" xml:"description,omitempty"`
+	// Status of account
+	Status *string `form:"status,omitempty" json:"status,omitempty" xml:"status,omitempty"`
 }
 
 // CreateNameAlreadyTakenResponseBody is the type of the account "create" HTTP
@@ -78,6 +82,8 @@ type AccountResponseBody struct {
 	Name string `form:"name" json:"name" xml:"name"`
 	// Description of new account
 	Description *string `form:"description,omitempty" json:"description,omitempty" xml:"description,omitempty"`
+	// Status of account
+	Status *string `form:"status,omitempty" json:"status,omitempty" xml:"status,omitempty"`
 }
 
 // NewCreateServerRequestBody builds the account service create endpoint
@@ -99,6 +105,7 @@ func NewCreateCreatedResponseBody(res *account.Account) *CreateCreatedResponseBo
 		OrgID:       res.OrgID,
 		Name:        res.Name,
 		Description: res.Description,
+		Status:      res.Status,
 	}
 
 	return body
@@ -115,6 +122,7 @@ func NewAccountResponseBody(res []*account.Account) []*AccountResponseBody {
 			OrgID:       val.OrgID,
 			Name:        val.Name,
 			Description: val.Description,
+			Status:      val.Status,
 		}
 	}
 
@@ -130,6 +138,7 @@ func NewShowResponseBody(res *account.Account) *ShowResponseBody {
 		OrgID:       res.OrgID,
 		Name:        res.Name,
 		Description: res.Description,
+		Status:      res.Status,
 	}
 
 	return body
@@ -168,13 +177,23 @@ func NewCreateCreatePayload(body *CreateServerRequestBody, orgID uint) *account.
 	return v
 }
 
-// NewCreateAccount builds a account service create endpoint result.
-func NewCreateAccount(body *CreateCreatedResponseBody, href string) *account.Account {
+// NewCreateAccountAccepted builds a account service create endpoint Accepted
+// result.
+func NewCreateAccountAccepted(href string) *account.Account {
+	return &account.Account{
+		Href: href,
+	}
+}
+
+// NewCreateAccountCreated builds a account service create endpoint Created
+// result.
+func NewCreateAccountCreated(body *CreateCreatedResponseBody, href string) *account.Account {
 	v := &account.Account{
 		ID:          body.ID,
 		OrgID:       body.OrgID,
 		Name:        body.Name,
 		Description: body.Description,
+		Status:      body.Status,
 	}
 	if body.Description == nil {
 		tmp := "An active account"
@@ -193,8 +212,8 @@ func NewListListPayload(orgID uint, filter *string) *account.ListPayload {
 	}
 }
 
-// NewListAccount builds a account service list endpoint result.
-func NewListAccount(body []*AccountResponseBody) []*account.Account {
+// NewListAccountOK builds a account service list endpoint OK result.
+func NewListAccountOK(body []*AccountResponseBody) []*account.Account {
 	v := make([]*account.Account, len(body))
 	for i, val := range body {
 		v[i] = &account.Account{
@@ -203,6 +222,7 @@ func NewListAccount(body []*AccountResponseBody) []*account.Account {
 			OrgID:       val.OrgID,
 			Name:        val.Name,
 			Description: val.Description,
+			Status:      val.Status,
 		}
 		if val.Description == nil {
 			tmp := "An active account"
@@ -221,14 +241,15 @@ func NewShowShowPayload(orgID uint, id string) *account.ShowPayload {
 	}
 }
 
-// NewShowAccount builds a account service show endpoint result.
-func NewShowAccount(body *ShowResponseBody) *account.Account {
+// NewShowAccountOK builds a account service show endpoint OK result.
+func NewShowAccountOK(body *ShowResponseBody) *account.Account {
 	v := &account.Account{
 		Href:        body.Href,
 		ID:          body.ID,
 		OrgID:       body.OrgID,
 		Name:        body.Name,
 		Description: body.Description,
+		Status:      body.Status,
 	}
 	if body.Description == nil {
 		tmp := "An active account"
