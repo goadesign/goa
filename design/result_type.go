@@ -14,10 +14,10 @@ const (
 )
 
 type (
-	// ResultTypeExpr describes the rendering of a resource using field and
+	// ResultTypeExpr describes the rendering of a service using field and
 	// link definitions. A field corresponds to a single member of the result
 	// type, it has a name and a type as well as optional validation rules.
-	// A link has a name and a URL that points to a related resource. Result
+	// A link has a name and a URL that points to a related service. Result
 	// types also define views which describe which fields and links to
 	// render when building the response body for the corresponding view.
 	ResultTypeExpr struct {
@@ -33,7 +33,7 @@ type (
 	}
 
 	// LinkExpr defines a result type link, it specifies a URL to a related
-	// resource.
+	// service.
 	LinkExpr struct {
 		// Link name
 		Name string
@@ -376,7 +376,7 @@ func (p *Projector) projectCollection(m *ResultTypeExpr, view, viewID string) (*
 		links = &UserTypeExpr{
 			AttributeExpr: &AttributeExpr{
 				Type:        &Array{ElemType: &AttributeExpr{Type: pe.Links}},
-				Description: fmt.Sprintf("%s contains links to related resources of %s.", lTypeName, m.TypeName),
+				Description: fmt.Sprintf("%s contains links to related services of %s.", lTypeName, m.TypeName),
 			},
 			TypeName: lTypeName,
 		}

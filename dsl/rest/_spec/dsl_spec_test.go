@@ -248,7 +248,7 @@ var _ = Service("service", func() {
 
 			// GET, POST, PUT etc. set the method HTTP route. The
 			// complete path is computed by appending the API prefix
-			// path with the resource prefix path with the method
+			// path with the service prefix path with the method
 			// path.
 			PUT("/method_path/{method_path_param}")
 

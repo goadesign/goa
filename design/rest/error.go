@@ -29,11 +29,11 @@ func (e *HTTPErrorExpr) EvalName() string {
 func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
 	switch p := e.Response.Parent.(type) {
-	case *ActionExpr:
+	case *HTTPEndpointExpr:
 		if p.MethodExpr.Error(e.Name) == nil {
 			verr.Add(e, "Error %#v does not match an error defined in the method", e.Name)
 		}
-	case *ResourceExpr:
+	case *HTTPServiceExpr:
 		if p.Error(e.Name) == nil {
 			verr.Add(e, "Error %#v does not match an error defined in the service", e.Name)
 		}
@@ -46,12 +46,12 @@ func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
 }
 
 // Finalize looks up the corresponding method error expression.
-func (e *HTTPErrorExpr) Finalize(a *ActionExpr) {
+func (e *HTTPErrorExpr) Finalize(a *HTTPEndpointExpr) {
 	var ee *design.ErrorExpr
 	switch p := e.Response.Parent.(type) {
-	case *ActionExpr:
+	case *HTTPEndpointExpr:
 		ee = p.MethodExpr.Error(e.Name)
-	case *ResourceExpr:
+	case *HTTPServiceExpr:
 		ee = p.Error(e.Name)
 	case *RootExpr:
 		ee = design.Root.Error(e.Name)

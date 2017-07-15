@@ -16,7 +16,7 @@ func TestMetaData(t *testing.T) {
 		MetaFunc    func(e eval.Expression) design.MetadataExpr
 		Invocations int
 	}{
-		"userType":   {&design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{}}, "swagger:summary", []string{"Short summary of what action does"}, userTypeMeta, 1},
+		"userType":   {&design.UserTypeExpr{AttributeExpr: &design.AttributeExpr{}}, "swagger:summary", []string{"Short summary of what endpoint does"}, userTypeMeta, 1},
 		"api":        {&design.APIExpr{}, "metadata", []string{"some metadata"}, apiExprMeta, 2},
 		"attribute":  {&design.AttributeExpr{}, "attribute_meta", []string{"attr meta", "more attr meta"}, attributeMeta, 2},
 		"method":     {&design.MethodExpr{Name: "testmethod"}, "method", []string{"method meta"}, methodMeta, 2},

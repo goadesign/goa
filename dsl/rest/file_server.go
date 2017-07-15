@@ -54,9 +54,9 @@ func Files(path, filename string, fns ...func()) {
 		path = "/" + path
 	}
 	if s, ok := eval.Current().(*design.ServiceExpr); ok {
-		r := rest.Root.ResourceFor(s)
+		r := rest.Root.ServiceFor(s)
 		server := &rest.FileServerExpr{
-			Resource:    r,
+			Service:     r,
 			RequestPath: path,
 			FilePath:    filename,
 		}

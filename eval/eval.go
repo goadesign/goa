@@ -154,7 +154,7 @@ func ReportError(fm string, vals ...interface{}) {
 }
 
 // IncompatibleDSL should be called by DSL functions when they are invoked in an
-// incorrect context (e.g. "Params" in "Resource").
+// incorrect context (e.g. "Params" in "Service").
 func IncompatibleDSL() {
 	elems := strings.Split(caller(), ".")
 	ReportError("invalid use of %s", elems[len(elems)-1])

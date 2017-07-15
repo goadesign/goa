@@ -92,11 +92,11 @@ func HTTP(fn func()) {
 	case *rest.RootExpr:
 		eval.Execute(fn, rest.Root)
 	case *design.ServiceExpr:
-		res := rest.Root.ResourceFor(actual)
+		res := rest.Root.ServiceFor(actual)
 		res.DSLFunc = fn
 	case *design.MethodExpr:
-		res := rest.Root.ResourceFor(actual.Service)
-		act := res.ActionFor(actual.Name, actual)
+		res := rest.Root.ServiceFor(actual.Service)
+		act := res.EndpointFor(actual.Name, actual)
 		act.DSLFunc = fn
 	default:
 		eval.IncompatibleDSL()
@@ -169,7 +169,7 @@ func Path(val string) {
 	switch def := eval.Current().(type) {
 	case *design.APIExpr:
 		rest.Root.Path = val
-	case *rest.ResourceExpr:
+	case *rest.HTTPServiceExpr:
 		def.Path = val
 		if !strings.HasPrefix(val, "//") {
 			awcs := rest.ExtractWildcards(rest.Root.Path)
@@ -273,12 +273,12 @@ func PATCH(path string) *rest.RouteExpr {
 
 func route(method, path string) *rest.RouteExpr {
 	r := &rest.RouteExpr{Method: method, Path: path}
-	a, ok := eval.Current().(*rest.ActionExpr)
+	a, ok := eval.Current().(*rest.HTTPEndpointExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return r
 	}
-	r.Action = a
+	r.Endpoint = a
 	a.Routes = append(a.Routes, r)
 	return r
 }
@@ -531,7 +531,7 @@ func Body(args ...interface{}) {
 
 	// Figure out reference type and setter function
 	switch e := eval.Current().(type) {
-	case *rest.ActionExpr:
+	case *rest.HTTPEndpointExpr:
 		ref = e.MethodExpr.Payload
 		setter = func(att *design.AttributeExpr) {
 			e.Body = att
@@ -550,7 +550,7 @@ func Body(args ...interface{}) {
 			kind += " " + e.Name
 		}
 	case *rest.HTTPResponseExpr:
-		ref = e.Parent.(*rest.ActionExpr).MethodExpr.Result
+		ref = e.Parent.(*rest.HTTPEndpointExpr).MethodExpr.Result
 		setter = func(att *design.AttributeExpr) {
 			e.Body = att
 		}
@@ -609,7 +609,7 @@ func Body(args ...interface{}) {
 // Parent sets the name of the parent service. The parent service canonical
 // method path is used as prefix for all the service HTTP endpoint paths.
 func Parent(name string) {
-	r, ok := eval.Current().(*rest.ResourceExpr)
+	r, ok := eval.Current().(*rest.HTTPServiceExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
@@ -621,10 +621,10 @@ func Parent(name string) {
 // method endpoint path is used to prefix the paths to any child service
 // endpoint. The default value is "show".
 func CanonicalMethod(name string) {
-	r, ok := eval.Current().(*rest.ResourceExpr)
+	r, ok := eval.Current().(*rest.HTTPServiceExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
-	r.CanonicalActionName = name
+	r.CanonicalEndpointName = name
 }

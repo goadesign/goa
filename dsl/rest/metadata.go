@@ -29,7 +29,7 @@ import (
 //        Metadata("struct:tag:xml", "myName,attr")
 //
 // `swagger:tag:xxx`: sets the Swagger object field tag xxx.
-// Applicable to resources and actions.
+// Applicable to services and endpoints.
 //
 //        Metadata("swagger:tag:Backend")
 //        Metadata("swagger:tag:Backend:desc", "description of 'Backend'")
@@ -37,9 +37,9 @@ import (
 //        Metadata("swagger:tag:Backend:url:desc", "See more docs here")
 //
 // `swagger:summary`: sets the Swagger operation summary field.
-// Applicable to actions.
+// Applicable to endpoints.
 //
-//        Metadata("swagger:summary", "Short summary of what action does")
+//        Metadata("swagger:summary", "Short summary of what endpoint does")
 //
 // `swagger:extension:xxx`: defines a swagger extension value.
 // Applicable to all constructs that support Metadata.
@@ -66,9 +66,9 @@ func Metadata(name string, value ...string) {
 	switch expr := eval.Current().(type) {
 	case *rest.RootExpr:
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
-	case *rest.ResourceExpr:
+	case *rest.HTTPServiceExpr:
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
-	case *rest.ActionExpr:
+	case *rest.HTTPEndpointExpr:
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)
 	case *rest.RouteExpr:
 		expr.Metadata = appendMetadata(expr.Metadata, name, value...)

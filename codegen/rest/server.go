@@ -15,17 +15,17 @@ import (
 
 // Servers returns all the server HTTP transport files.
 func Servers(root *rest.RootExpr) []codegen.File {
-	fw := make([]codegen.File, len(root.Resources))
-	for i, r := range root.Resources {
+	fw := make([]codegen.File, len(root.HTTPServices))
+	for i, r := range root.HTTPServices {
 		fw[i] = Server(r)
 	}
 	return fw
 }
 
 // Server returns the server HTTP transport file
-func Server(r *rest.ResourceExpr) codegen.File {
+func Server(r *rest.HTTPServiceExpr) codegen.File {
 	path := filepath.Join(codegen.SnakeCase(r.Name()), "transport", "http_server.go")
-	data := Resources.Get(r.Name())
+	data := HTTPServices.Get(r.Name())
 	sections := func(genPkg string) []*codegen.Section {
 		title := fmt.Sprintf("%s server HTTP transport", r.Name())
 		s := []*codegen.Section{
@@ -44,7 +44,7 @@ func Server(r *rest.ResourceExpr) codegen.File {
 			{Template: serverMountTmpl(r), Data: data},
 		}
 
-		for _, a := range data.Actions {
+		for _, a := range data.Endpoints {
 			as := []*codegen.Section{
 				{Template: serverHandlerTmpl(r), Data: a},
 				{Template: serverHandlerInitTmpl(r), Data: a},
@@ -66,39 +66,39 @@ func Server(r *rest.ResourceExpr) codegen.File {
 	return codegen.NewSource(path, sections)
 }
 
-func serverStructTmpl(r *rest.ResourceExpr) *template.Template {
+func serverStructTmpl(r *rest.HTTPServiceExpr) *template.Template {
 	return template.Must(serverTmpl(r).New("struct").Parse(serverStructT))
 }
 
-func serverInitTmpl(r *rest.ResourceExpr) *template.Template {
+func serverInitTmpl(r *rest.HTTPServiceExpr) *template.Template {
 	return template.Must(serverTmpl(r).New("constructor").Parse(serverInitT))
 }
 
-func serverMountTmpl(r *rest.ResourceExpr) *template.Template {
+func serverMountTmpl(r *rest.HTTPServiceExpr) *template.Template {
 	return template.Must(serverTmpl(r).New("mount").Parse(serverMountT))
 }
 
-func serverHandlerTmpl(r *rest.ResourceExpr) *template.Template {
+func serverHandlerTmpl(r *rest.HTTPServiceExpr) *template.Template {
 	return template.Must(serverTmpl(r).New("handler").Parse(serverHandlerT))
 }
 
-func serverHandlerInitTmpl(r *rest.ResourceExpr) *template.Template {
+func serverHandlerInitTmpl(r *rest.HTTPServiceExpr) *template.Template {
 	return template.Must(serverTmpl(r).New("handler_constructor").Parse(serverHandlerInitT))
 }
 
-func requestDecoderTmpl(r *rest.ResourceExpr) *template.Template {
+func requestDecoderTmpl(r *rest.HTTPServiceExpr) *template.Template {
 	return template.Must(serverTmpl(r).New("decoder").Parse(requestDecoderT))
 }
 
-func responseEncoderTmpl(r *rest.ResourceExpr) *template.Template {
+func responseEncoderTmpl(r *rest.HTTPServiceExpr) *template.Template {
 	return template.Must(serverTmpl(r).New("encoder").Parse(responseEncoderT))
 }
 
-func errorEncoderTmpl(r *rest.ResourceExpr) *template.Template {
+func errorEncoderTmpl(r *rest.HTTPServiceExpr) *template.Template {
 	return template.Must(serverTmpl(r).New("error_encoder").Parse(errorEncoderT))
 }
 
-func serverTmpl(r *rest.ResourceExpr) *template.Template {
+func serverTmpl(r *rest.HTTPServiceExpr) *template.Template {
 	return template.New("server").
 		Funcs(template.FuncMap{
 			"goTypeRef": func(dt design.DataType) string {
@@ -150,16 +150,16 @@ func printValue(dt design.DataType, v interface{}) string {
 	}
 }
 
-// input: ResourceData
+// input: ServiceData
 const serverStructT = `{{ printf "%s lists the %s service endpoint HTTP handlers." .HandlersStruct .Service.Name | comment }}
 type {{ .HandlersStruct }} struct {
-	{{- range .Actions }}
+	{{- range .Endpoints }}
 	{{ .Method.VarName }} http.Handler
 	{{- end }}
 }
 `
 
-// input: ResourceData
+// input: ServiceData
 const serverInitT = `{{ printf "%s instantiates HTTP handlers for all the %s service endpoints." .ServerInit .Service.Name | comment }}
 func {{ .ServerInit }}(
 	e *{{ .Service.PkgName }}.Endpoints,
@@ -168,23 +168,23 @@ func {{ .ServerInit }}(
 	enc func(http.ResponseWriter, *http.Request) (rest.Encoder, string),
 ) *{{ .HandlersStruct }} {
 	return &{{ .HandlersStruct }}{
-		{{- range .Actions }}
+		{{- range .Endpoints }}
 		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, dec, enc),
 		{{- end }}
 	}
 }
 `
 
-// input: ResourceData
+// input: ServiceData
 const serverMountT = `{{ printf "%s configures the mux to serve the %s endpoints." .MountServer .Service.Name | comment }}
 func {{ .MountServer }}(mux rest.Muxer, h *{{ .HandlersStruct }}) {
-	{{- range .Actions }}
+	{{- range .Endpoints }}
 	{{ .MountHandler }}(mux, h.{{ .Method.VarName }})
 	{{- end }}
 }
 `
 
-// input: ActionData
+// input: EndpointData
 const serverHandlerT = `{{ printf "%s configures the mux to serve the \"%s\" service \"%s\" endpoint." .MountHandler .ServiceName .Method.Name | comment }}
 func {{ .MountHandler }}(mux rest.Muxer, h http.Handler) {
 	f, ok := h.(http.HandlerFunc)
@@ -199,7 +199,7 @@ func {{ .MountHandler }}(mux rest.Muxer, h http.Handler) {
 }
 `
 
-// input: ActionData
+// input: EndpointData
 const serverHandlerInitT = `{{ printf "%s creates a HTTP handler which loads the HTTP request and calls the \"%s\" service \"%s\" endpoint." .HandlerInit .ServiceName .Method.Name | comment }}
 func {{ .HandlerInit }}(
 	endpoint goa.Endpoint,
@@ -238,7 +238,7 @@ func {{ .HandlerInit }}(
 }
 `
 
-// input: ActionData
+// input: EndpointData
 const requestDecoderT = `{{ printf "%s returns a decoder for requests sent to the %s %s endpoint." .Decoder .ServiceName .Method.Name | comment }}
 func {{ .Decoder }}(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
@@ -734,7 +734,7 @@ func {{ .Decoder }}(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) fu
 {{- end }}
 `
 
-// input: ActionData
+// input: EndpointData
 const responseEncoderT = `{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .Encoder .ServiceName .Method.Name | comment }}
 func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) (rest.Encoder, string)) func(http.ResponseWriter, *http.Request, interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {

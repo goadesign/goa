@@ -12,22 +12,22 @@ import (
 	"goa.design/goa.v2/design/rest"
 )
 
-// Resources holds the data computed from the design needed to generate the
+// HTTPServices holds the data computed from the design needed to generate the
 // transport code of the services.
-var Resources = make(ResourcesData)
+var HTTPServices = make(ServicesData)
 
 type (
-	// ResourcesData encapsulates the data computed from the design.
-	ResourcesData map[string]*ResourceData
+	// ServicesData encapsulates the data computed from the design.
+	ServicesData map[string]*ServiceData
 
-	// ResourceData contains the data used to render the code related to a
+	// ServiceData contains the data used to render the code related to a
 	// single service.
-	ResourceData struct {
+	ServiceData struct {
 		// Service contains the related service data.
 		Service *service.Data
-		// Actions describes the action data for this service.
-		Actions []*ActionData
-		// HandlerStruct is the name of the main server handler
+		// Endpoints describes the endpoint data for this service.
+		Endpoints []*EndpointData
+		// HaldlerStruct is the name of the main server handler
 		// structure.
 		HandlersStruct string
 		// ServerInit is the name of the constructor of the server
@@ -43,9 +43,9 @@ type (
 		TypeNames map[string]struct{}
 	}
 
-	// ActionData contains the data used to render the code related to a
+	// EndpointData contains the data used to render the code related to a
 	// single service HTTP endpoint.
-	ActionData struct {
+	EndpointData struct {
 		// Method contains the related service method data.
 		Method *service.MethodData
 		// ServiceName is the name of the service exposing the endpoint.
@@ -56,7 +56,7 @@ type (
 		Result *ResultData
 		// Errors describes the method errors transport.
 		Errors []*ErrorData
-		// Routes describes the possible routes for this action.
+		// Routes describes the possible routes for this endpoint.
 		Routes []*RouteData
 		// MountHandler is the name of the mount handler function.
 		MountHandler string
@@ -295,11 +295,11 @@ type (
 // Get retrieves the transport data for the service with the given name
 // computing it if needed. It returns nil if there is no service with the given
 // name.
-func (d ResourcesData) Get(name string) *ResourceData {
+func (d ServicesData) Get(name string) *ServiceData {
 	if data, ok := d[name]; ok {
 		return data
 	}
-	service := rest.Root.Resource(name)
+	service := rest.Root.Service(name)
 	if service == nil {
 		return nil
 	}
@@ -307,10 +307,10 @@ func (d ResourcesData) Get(name string) *ResourceData {
 	return d[name]
 }
 
-// Action returns the service method transport data for the endpoint with the
+// Endpoint returns the service method transport data for the endpoint with the
 // given name, nil if there isn't one.
-func (r *ResourceData) Action(name string) *ActionData {
-	for _, a := range r.Actions {
+func (r *ServiceData) Endpoint(name string) *EndpointData {
+	for _, a := range r.Endpoints {
 		if a.Method.Name == name {
 			return a
 		}
@@ -320,10 +320,10 @@ func (r *ResourceData) Action(name string) *ActionData {
 
 // analyze creates the data necessary to render the code of the given service.
 // It records the user types needed by the service definition in userTypes.
-func (d ResourcesData) analyze(r *rest.ResourceExpr) *ResourceData {
+func (d ServicesData) analyze(r *rest.HTTPServiceExpr) *ServiceData {
 	svc := service.Services.Get(r.ServiceExpr.Name)
 
-	rd := &ResourceData{
+	rd := &ServiceData{
 		Service:        svc,
 		HandlersStruct: "Handlers",
 		ServerInit:     "NewServer",
@@ -331,7 +331,7 @@ func (d ResourcesData) analyze(r *rest.ResourceExpr) *ResourceData {
 		TypeNames:      make(map[string]struct{}),
 	}
 
-	for _, a := range r.Actions {
+	for _, a := range r.HTTPEndpoints {
 		routes := make([]*RouteData, len(a.Routes))
 		for i, r := range a.Routes {
 			routes[i] = &RouteData{
@@ -342,7 +342,7 @@ func (d ResourcesData) analyze(r *rest.ResourceExpr) *ResourceData {
 
 		ep := svc.Method(a.MethodExpr.Name)
 
-		ad := &ActionData{
+		ad := &EndpointData{
 			Method:       ep,
 			ServiceName:  svc.Name,
 			Payload:      buildPayloadData(svc, r, a, rd),
@@ -356,10 +356,10 @@ func (d ResourcesData) analyze(r *rest.ResourceExpr) *ResourceData {
 			ErrorEncoder: fmt.Sprintf("Encode%sError", ep.VarName),
 		}
 
-		rd.Actions = append(rd.Actions, ad)
+		rd.Endpoints = append(rd.Endpoints, ad)
 	}
 
-	for _, a := range r.Actions {
+	for _, a := range r.HTTPEndpoints {
 		collectUserTypes(a.Body.Type, func(ut design.UserType) {
 			if d := attributeTypeData(ut, true, svc.Scope, rd); d != nil {
 				rd.BodyAttributeTypes = append(rd.BodyAttributeTypes, d)
@@ -389,7 +389,7 @@ func (d ResourcesData) analyze(r *rest.ResourceExpr) *ResourceData {
 // buildPayloadData returns the data structure used to describe the endpoint
 // payload including the HTTP request details. It also returns the user types
 // used by the request body type recursively if any.
-func buildPayloadData(svc *service.Data, r *rest.ResourceExpr, a *rest.ActionExpr, rd *ResourceData) *PayloadData {
+func buildPayloadData(svc *service.Data, r *rest.HTTPServiceExpr, a *rest.HTTPEndpointExpr, rd *ServiceData) *PayloadData {
 	var (
 		payload = a.MethodExpr.Payload
 
@@ -557,7 +557,7 @@ func buildPayloadData(svc *service.Data, r *rest.ResourceExpr, a *rest.ActionExp
 	}
 }
 
-func buildResultData(svc *service.Data, r *rest.ResourceExpr, a *rest.ActionExpr, rd *ResourceData) *ResultData {
+func buildResultData(svc *service.Data, r *rest.HTTPServiceExpr, a *rest.HTTPEndpointExpr, rd *ServiceData) *ResultData {
 	var (
 		result = a.MethodExpr.Result
 
@@ -690,7 +690,7 @@ func buildResultData(svc *service.Data, r *rest.ResourceExpr, a *rest.ActionExpr
 	}
 }
 
-func buildErrorsData(svc *service.Data, r *rest.ResourceExpr, a *rest.ActionExpr, rd *ResourceData) []*ErrorData {
+func buildErrorsData(svc *service.Data, r *rest.HTTPServiceExpr, a *rest.HTTPEndpointExpr, rd *ServiceData) []*ErrorData {
 	data := make([]*ErrorData, len(a.HTTPErrors))
 	for i, v := range a.HTTPErrors {
 		var (
@@ -816,8 +816,7 @@ func buildErrorsData(svc *service.Data, r *rest.ResourceExpr, a *rest.ActionExpr
 //
 // req indicates whether the type is for a request body (true) or a response
 // body (false).
-func buildBodyType(svc *service.Data, r *rest.ResourceExpr, a *rest.ActionExpr,
-	body, att *design.AttributeExpr, req bool) *TypeData {
+func buildBodyType(svc *service.Data, r *rest.HTTPServiceExpr, a *rest.HTTPEndpointExpr, body, att *design.AttributeExpr, req bool) *TypeData {
 
 	if body.Type == design.Empty {
 		return nil
@@ -1027,7 +1026,7 @@ func collectUserTypes(dt design.DataType, cb func(design.UserType)) {
 	}
 }
 
-func attributeTypeData(ut design.UserType, req bool, scope *codegen.NameScope, rd *ResourceData) *TypeData {
+func attributeTypeData(ut design.UserType, req bool, scope *codegen.NameScope, rd *ServiceData) *TypeData {
 	if ut == design.Empty {
 		return nil
 	}

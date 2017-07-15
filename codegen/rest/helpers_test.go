@@ -13,7 +13,7 @@ import (
 func RunRestDSL(t *testing.T, dsl func()) *rest.RootExpr {
 	// reset all roots and codegen data structures
 	service.Services = make(service.ServicesData)
-	Resources = make(ResourcesData)
+	HTTPServices = make(ServicesData)
 	return rest.RunRestDSL(t, dsl)
 }
 

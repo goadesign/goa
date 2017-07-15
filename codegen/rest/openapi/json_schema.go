@@ -124,8 +124,8 @@ func (s *Schema) JSON() ([]byte, error) {
 
 // APISchema produces the API JSON hyper schema.
 func APISchema(api *design.APIExpr, r *rest.RootExpr) *Schema {
-	for _, res := range r.Resources {
-		GenerateResourceDefinition(api, res)
+	for _, res := range r.HTTPServices {
+		GenerateServiceDefinition(api, res)
 	}
 	href := api.Servers[0].URL
 	links := []*Link{
@@ -155,15 +155,15 @@ func APISchema(api *design.APIExpr, r *rest.RootExpr) *Schema {
 	return &s
 }
 
-// GenerateResourceDefinition produces the JSON schema corresponding to the given
-// API resource. It stores the results in cachedSchema.
-func GenerateResourceDefinition(api *design.APIExpr, res *rest.ResourceExpr) {
+// GenerateServiceDefinition produces the JSON schema corresponding to the given
+// service. It stores the results in cachedSchema.
+func GenerateServiceDefinition(api *design.APIExpr, res *rest.HTTPServiceExpr) {
 	s := NewSchema()
 	s.Description = res.Description()
 	s.Type = Object
 	s.Title = res.Name()
 	Definitions[res.Name()] = s
-	for _, a := range res.Actions {
+	for _, a := range res.HTTPEndpoints {
 		var requestSchema *Schema
 		if a.MethodExpr.Payload != nil {
 			requestSchema = TypeSchema(api, a.MethodExpr.Payload.Type)
@@ -211,7 +211,7 @@ func GenerateResourceDefinition(api *design.APIExpr, res *rest.ResourceExpr) {
 				ResultType:   identifier,
 			}
 			if i == 0 {
-				if ca := a.Resource.CanonicalAction(); ca != nil {
+				if ca := a.Service.CanonicalEndpoint(); ca != nil {
 					if ca.Name() == a.Name() {
 						link.Rel = "self"
 					}
@@ -532,7 +532,8 @@ func buildResultTypeSchema(api *design.APIExpr, mt *design.ResultTypeExpr, view 
 		links := design.AsObject(projected.Links)
 		for _, nat := range *links {
 			// TBD: compute the href of the mediatype by looking at
-			// all the API actions and finding one that returns it.
+			// all the API endpoints and finding one that returns
+			// it.
 			var (
 				att = nat.Attribute
 				lmt = att.Type.(*design.ResultTypeExpr)

@@ -65,8 +65,9 @@ type (
 
 	// Operation describes a single API operation on a path.
 	Operation struct {
-		// Tags is a list of tags for API documentation control. Tags can be used for
-		// logical grouping of operations by resources or any other qualifier.
+		// Tags is a list of tags for API documentation control. Tags
+		// can be used for logical grouping of operations by services or
+		// any other qualifier.
 		Tags []string `json:"tags,omitempty"`
 		// Summary is a short summary of what the operation does. For maximum readability
 		// in the swagger-ui, this field should be less than 120 characters.
@@ -231,7 +232,8 @@ type (
 		Description string `json:"description,omitempty"`
 	}
 
-	// ExternalDocs allows referencing an external resource for extended documentation.
+	// ExternalDocs allows referencing an external document for extended
+	// documentation.
 	ExternalDocs struct {
 		// Description is a short description of the target documentation.
 		// GFM syntax can be used for rich text representation.

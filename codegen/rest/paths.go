@@ -18,7 +18,7 @@ type (
 		ServiceName string
 		// MethodName is the name of the method defined in the design.
 		MethodName string
-		// Routes describes all the possible paths for an action.
+		// Routes describes all the possible paths for an endpoint.
 		Routes []*PathRouteData
 	}
 
@@ -48,8 +48,8 @@ type (
 
 // Paths returns the service path files.
 func Paths(root *rest.RootExpr) []codegen.File {
-	fw := make([]codegen.File, len(root.Resources))
-	for i, r := range root.Resources {
+	fw := make([]codegen.File, len(root.HTTPServices))
+	for i, r := range root.HTTPServices {
 		fw[i] = Path(r)
 	}
 	return fw
@@ -57,7 +57,7 @@ func Paths(root *rest.RootExpr) []codegen.File {
 
 // Path returns the file containing the request path constructors for the given
 // service.
-func Path(r *rest.ResourceExpr) codegen.File {
+func Path(r *rest.HTTPServiceExpr) codegen.File {
 	path := filepath.Join(codegen.SnakeCase(r.Name()), "transport", "http_paths.go")
 	title := fmt.Sprintf("HTTP request path constructors for the %s service.", r.Name())
 	sections := func(_ string) []*codegen.Section {
@@ -70,7 +70,7 @@ func Path(r *rest.ResourceExpr) codegen.File {
 			}),
 		}
 
-		for _, a := range r.Actions {
+		for _, a := range r.HTTPEndpoints {
 			s = append(s, PathSection(a))
 		}
 		return s
@@ -80,15 +80,15 @@ func Path(r *rest.ResourceExpr) codegen.File {
 }
 
 // PathSection returns the section to generate the given paht.
-func PathSection(a *rest.ActionExpr) *codegen.Section {
+func PathSection(a *rest.HTTPEndpointExpr) *codegen.Section {
 	return &codegen.Section{
-		Template: pathTmpl(a.Resource),
+		Template: pathTmpl(a.Service),
 		Data:     buildPathData(a),
 	}
 }
 
 // pathTmpl returns the template used to render the paths functions.
-func pathTmpl(r *rest.ResourceExpr) *template.Template {
+func pathTmpl(r *rest.HTTPServiceExpr) *template.Template {
 	return template.Must(template.New("path").
 		Funcs(template.FuncMap{
 			"add":     codegen.Add,
@@ -101,7 +101,7 @@ func pathTmpl(r *rest.ResourceExpr) *template.Template {
 		Parse(pathT))
 }
 
-func buildPathData(a *rest.ActionExpr) *PathData {
+func buildPathData(a *rest.HTTPEndpointExpr) *PathData {
 	pd := PathData{
 		ServiceName: a.MethodExpr.Service.Name,
 		MethodName:  a.Name(),
@@ -120,7 +120,7 @@ func buildPathData(a *rest.ActionExpr) *PathData {
 
 func generatePathArguments(r *rest.RouteExpr) []*PathArgument {
 	routeParams := r.ParamAttributeNames()
-	allParams := r.Action.PathParams()
+	allParams := r.Endpoint.PathParams()
 	args := make([]*PathArgument, len(routeParams))
 	for i, name := range routeParams {
 		args[i] = &PathArgument{

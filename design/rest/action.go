@@ -11,21 +11,21 @@ import (
 )
 
 type (
-	// ActionExpr describes a resource action. It embeds a MethodExpr and
-	// adds HTTP specific properties.
+	// HTTPEndpointExpr describes a service endpoint. It embeds a
+	// MethodExpr and adds HTTP specific properties.
 	//
 	// It defines both an HTTP endpoint and the shape of HTTP requests and
 	// responses made to that endpoint. The shape of requests is defined via
 	// "parameters", there are path parameters (i.e. portions of the URL
 	// that define parameter values), query string parameters and a payload
 	// parameter (request body).
-	ActionExpr struct {
+	HTTPEndpointExpr struct {
 		eval.DSLFunc
 		// MethodExpr is the underlying method expression.
 		MethodExpr *design.MethodExpr
-		// Resource is the parent resource.
-		Resource *ResourceExpr
-		// Action routes
+		// Service is the parent service.
+		Service *HTTPServiceExpr
+		// Endpoint routes
 		Routes []*RouteExpr
 		// Responses is the list of possible HTTP responses.
 		Responses []*HTTPResponseExpr
@@ -48,15 +48,16 @@ type (
 		headers *design.AttributeExpr
 	}
 
-	// RouteExpr represents an action route (HTTP endpoint).
+	// RouteExpr represents an endpoint route (HTTP endpoint).
 	RouteExpr struct {
 		// Method is the HTTP method, e.g. "GET", "POST", etc.
 		Method string
 		// Path is the URL path e.g. "/tasks/{id}"
 		Path string
-		// Action is the action this route applies to.
-		Action *ActionExpr
-		// Metadata is an arbitrary set of key/value pairs, see dsl.Metadata
+		// Endpoint is the endpoint this route applies to.
+		Endpoint *HTTPEndpointExpr
+		// Metadata is an arbitrary set of key/value pairs, see
+		// dsl.Metadata
 		Metadata design.MetadataExpr
 	}
 )
@@ -71,32 +72,32 @@ func ExtractRouteWildcards(path string) []string {
 	return wcs
 }
 
-// Name of action (HTTP endpoint)
-func (a *ActionExpr) Name() string {
+// Name of HTTP endpoint
+func (a *HTTPEndpointExpr) Name() string {
 	return a.MethodExpr.Name
 }
 
-// Description of action (HTTP endpoint)
-func (a *ActionExpr) Description() string {
+// Description of HTTP endpoint
+func (a *HTTPEndpointExpr) Description() string {
 	return a.MethodExpr.Description
 }
 
 // EvalName returns the generic expression name used in error messages.
-func (a *ActionExpr) EvalName() string {
+func (a *HTTPEndpointExpr) EvalName() string {
 	var prefix, suffix string
 	if a.Name() != "" {
 		suffix = fmt.Sprintf("HTTP endpoint %#v", a.Name())
 	} else {
 		suffix = "unnamed HTTP endpoint"
 	}
-	if a.Resource != nil {
-		prefix = a.Resource.EvalName() + " "
+	if a.Service != nil {
+		prefix = a.Service.EvalName() + " "
 	}
 	return prefix + suffix
 }
 
-// PathParams returns the path parameters of the action across all its routes.
-func (a *ActionExpr) PathParams() *design.MappedAttributeExpr {
+// PathParams returns the path parameters of the endpoint across all its routes.
+func (a *HTTPEndpointExpr) PathParams() *design.MappedAttributeExpr {
 	allParams := a.AllParams()
 	pathParams := design.NewMappedAttributeExpr(&design.AttributeExpr{Type: &design.Object{}})
 	pathParams.Validation = &design.ValidationExpr{}
@@ -115,8 +116,9 @@ func (a *ActionExpr) PathParams() *design.MappedAttributeExpr {
 	return pathParams
 }
 
-// QueryParams returns the query parameters of the action across all its routes.
-func (a *ActionExpr) QueryParams() *design.MappedAttributeExpr {
+// QueryParams returns the query parameters of the endpoint across all its
+// routes.
+func (a *HTTPEndpointExpr) QueryParams() *design.MappedAttributeExpr {
 	allParams := a.AllParams()
 	pathParams := a.PathParams()
 	for _, nat := range *pathParams.Type.(*design.Object) {
@@ -125,9 +127,9 @@ func (a *ActionExpr) QueryParams() *design.MappedAttributeExpr {
 	return allParams
 }
 
-// AllParams returns the path and query string parameters of the action across
+// AllParams returns the path and query string parameters of the endpoint across
 // all its routes.
-func (a *ActionExpr) AllParams() *design.MappedAttributeExpr {
+func (a *HTTPEndpointExpr) AllParams() *design.MappedAttributeExpr {
 	var res *design.MappedAttributeExpr
 	if a.params != nil {
 		res = a.MappedParams()
@@ -138,19 +140,19 @@ func (a *ActionExpr) AllParams() *design.MappedAttributeExpr {
 	if a.HasAbsoluteRoutes() {
 		return res
 	}
-	if p := a.Resource.Parent(); p != nil {
-		res.Merge(p.CanonicalAction().PathParams())
+	if p := a.Service.Parent(); p != nil {
+		res.Merge(p.CanonicalEndpoint().PathParams())
 	} else {
-		res.Merge(a.Resource.MappedParams())
+		res.Merge(a.Service.MappedParams())
 		res.Merge(Root.MappedParams())
 	}
 	return res
 }
 
-// Headers initializes and returns the attribute holding the action headers.
+// Headers initializes and returns the attribute holding the endpoint headers.
 // The underlying object type keys are the raw values as defined in the design.
 // Use MappedHeaders to retrieve the corresponding mapped attributes.
-func (a *ActionExpr) Headers() *design.AttributeExpr {
+func (a *HTTPEndpointExpr) Headers() *design.AttributeExpr {
 	if a.headers == nil {
 		a.headers = &design.AttributeExpr{Type: &design.Object{}}
 	}
@@ -158,14 +160,14 @@ func (a *ActionExpr) Headers() *design.AttributeExpr {
 }
 
 // MappedHeaders computes the mapped attribute expression from Headers.
-func (a *ActionExpr) MappedHeaders() *design.MappedAttributeExpr {
+func (a *HTTPEndpointExpr) MappedHeaders() *design.MappedAttributeExpr {
 	return design.NewMappedAttributeExpr(a.headers)
 }
 
-// Params initializes and returns the attribute holding the action parameters.
+// Params initializes and returns the attribute holding the endpoint parameters.
 // The underlying object type keys are the raw values as defined in the design.
 // Use MappedParams to retrieve the corresponding mapped attributes.
-func (a *ActionExpr) Params() *design.AttributeExpr {
+func (a *HTTPEndpointExpr) Params() *design.AttributeExpr {
 	if a.params == nil {
 		a.params = &design.AttributeExpr{Type: &design.Object{}}
 		if pt := a.MethodExpr.Payload.Type; design.IsObject(pt) {
@@ -176,12 +178,12 @@ func (a *ActionExpr) Params() *design.AttributeExpr {
 }
 
 // MappedParams computes the mapped attribute expression from Params.
-func (a *ActionExpr) MappedParams() *design.MappedAttributeExpr {
+func (a *HTTPEndpointExpr) MappedParams() *design.MappedAttributeExpr {
 	return design.NewMappedAttributeExpr(a.params)
 }
 
-// HasAbsoluteRoutes returns true if all the action routes are absolute.
-func (a *ActionExpr) HasAbsoluteRoutes() bool {
+// HasAbsoluteRoutes returns true if all the endpoint routes are absolute.
+func (a *HTTPEndpointExpr) HasAbsoluteRoutes() bool {
 	for _, r := range a.Routes {
 		if !r.IsAbsolute() {
 			return false
@@ -190,8 +192,8 @@ func (a *ActionExpr) HasAbsoluteRoutes() bool {
 	return true
 }
 
-// Validate validates the action expression.
-func (a *ActionExpr) Validate() error {
+// Validate validates the endpoint expression.
+func (a *HTTPEndpointExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
 	if a.Name() == "" {
 		verr.Add(a, "Endpoint name cannot be empty")
@@ -323,11 +325,11 @@ func (a *ActionExpr) Validate() error {
 }
 
 // Finalize is run post DSL execution. It merges response definitions, creates
-// implicit action parameters and initializes querystring parameters. It also
+// implicit endpoint parameters and initializes querystring parameters. It also
 // flattens the error responses and makes sure the error types are all user
 // types so that the response encoding code can properly use the type to infer
 // the response that it needs to build.
-func (a *ActionExpr) Finalize() {
+func (a *HTTPEndpointExpr) Finalize() {
 	// Define uninitialized route parameters
 	for _, r := range a.Routes {
 		for _, p := range r.Params() {
@@ -442,8 +444,8 @@ func (a *ActionExpr) Finalize() {
 		r.Finalize(a, a.MethodExpr.Result)
 	}
 
-	// Inherit HTTP errors from resource and root
-	for _, r := range a.Resource.HTTPErrors {
+	// Inherit HTTP errors from service and root
+	for _, r := range a.Service.HTTPErrors {
 		a.HTTPErrors = append(a.HTTPErrors, r.Dup())
 	}
 	for _, r := range Root.HTTPErrors {
@@ -471,8 +473,8 @@ func (a *ActionExpr) Finalize() {
 	}
 }
 
-// validateParams checks the action parameters are of an allowed type.
-func (a *ActionExpr) validateParams() *eval.ValidationErrors {
+// validateParams checks the endpoint parameters are of an allowed type.
+func (a *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
 	if a.params == nil {
 		return nil
 	}
@@ -510,7 +512,7 @@ func (a *ActionExpr) validateParams() *eval.ValidationErrors {
 }
 
 // validateHeaders makes sure headers are of an allowed type.
-func (a *ActionExpr) validateHeaders() *eval.ValidationErrors {
+func (a *HTTPEndpointExpr) validateHeaders() *eval.ValidationErrors {
 	if a.headers == nil {
 		return nil
 	}
@@ -535,7 +537,7 @@ func (a *ActionExpr) validateHeaders() *eval.ValidationErrors {
 
 // EvalName returns the generic definition name used in error messages.
 func (r *RouteExpr) EvalName() string {
-	return fmt.Sprintf(`route %s "%s" of %s`, r.Method, r.Path, r.Action.EvalName())
+	return fmt.Sprintf(`route %s "%s" of %s`, r.Method, r.Path, r.Endpoint.EvalName())
 }
 
 // Params returns the route parameters. For example for the route
@@ -556,21 +558,21 @@ func (r *RouteExpr) ParamAttributeNames() []string {
 	return res
 }
 
-// FullPath returns the action full path computed by concatenating the API and
-// resource base paths with the action specific path.
+// FullPath returns the endpoint full path computed by concatenating the API and
+// service base paths with the endpoint specific path.
 func (r *RouteExpr) FullPath() string {
 	if r.IsAbsolute() {
 		return httppath.Clean(r.Path[1:])
 	}
 	var base string
-	if r.Action != nil && r.Action.Resource != nil {
-		base = r.Action.Resource.FullPath()
+	if r.Endpoint != nil && r.Endpoint.Service != nil {
+		base = r.Endpoint.Service.FullPath()
 	}
 	return httppath.Clean(path.Join(base, r.Path))
 }
 
-// IsAbsolute returns true if the action path should not be concatenated to the
-// resource and API base paths.
+// IsAbsolute returns true if the endpoint path should not be concatenated to
+// the service and API base paths.
 func (r *RouteExpr) IsAbsolute() bool {
 	return strings.HasPrefix(r.Path, "//")
 }

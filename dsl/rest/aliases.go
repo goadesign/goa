@@ -418,7 +418,7 @@ func Maximum(val interface{}) {
 //        Description("The add method returns the sum of A and B")
 //        Docs(func() {
 //            Description("Add docs")
-//            URL("http//adder.goa.design/docs/actions/add")
+//            URL("http//adder.goa.design/docs/endpoints/add")
 //        })
 //        Payload(Operands)
 //        Result(Sum)

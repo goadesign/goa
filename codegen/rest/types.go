@@ -28,18 +28,17 @@ var (
 
 // Types returns the HTTP transport type files.
 func Types(root *rest.RootExpr) []codegen.File {
-	fw := make([]codegen.File, len(root.Resources))
+	fw := make([]codegen.File, len(root.HTTPServices))
 	seen := make(map[string]struct{})
-	for i, r := range root.Resources {
+	for i, r := range root.HTTPServices {
 		fw[i] = Type(r, seen)
 	}
 	return fw
 }
 
 // Type return the file containing the type definitions used by the HTTP
-// transport for the given resource (service). seen keeps track of the names of
-// the types that have already been generated to prevent duplicate code
-// generation.
+// transport for the given service. seen keeps track of the names of the types
+// that have already been generated to prevent duplicate code generation.
 //
 // Below are the rules governing whether values are pointers or not. Note that
 // the rules only applies to values that hold primitive types, values that hold
@@ -62,12 +61,12 @@ func Types(root *rest.RootExpr) []codegen.File {
 //   * Response body fields (if the body is a struct) and header variables hold
 //     pointers when not required and have no default value.
 //
-func Type(r *rest.ResourceExpr, seen map[string]struct{}) codegen.File {
+func Type(r *rest.HTTPServiceExpr, seen map[string]struct{}) codegen.File {
 	var (
 		path     string
 		sections func(string) []*codegen.Section
 
-		rdata = Resources.Get(r.Name())
+		rdata = HTTPServices.Get(r.Name())
 	)
 	path = filepath.Join(codegen.SnakeCase(r.Name()), "transport", "http_types.go")
 	sections = func(genPkg string) []*codegen.Section {
@@ -86,8 +85,8 @@ func Type(r *rest.ResourceExpr, seen map[string]struct{}) codegen.File {
 		)
 
 		// request body types
-		for _, a := range r.Actions {
-			adata := rdata.Action(a.Name())
+		for _, a := range r.HTTPEndpoints {
+			adata := rdata.Endpoint(a.Name())
 			if data := adata.Payload.Request.Body; data != nil {
 				if data.Def != "" {
 					secs = append(secs, &codegen.Section{
@@ -105,8 +104,8 @@ func Type(r *rest.ResourceExpr, seen map[string]struct{}) codegen.File {
 		}
 
 		// response body types
-		for _, a := range r.Actions {
-			adata := rdata.Action(a.Name())
+		for _, a := range r.HTTPEndpoints {
+			adata := rdata.Endpoint(a.Name())
 			for _, resp := range adata.Result.Responses {
 				if data := resp.Body; data != nil {
 					if data.Def != "" {
@@ -126,8 +125,8 @@ func Type(r *rest.ResourceExpr, seen map[string]struct{}) codegen.File {
 		}
 
 		// error body types
-		for _, a := range r.Actions {
-			adata := rdata.Action(a.Name())
+		for _, a := range r.HTTPEndpoints {
+			adata := rdata.Endpoint(a.Name())
 			for _, herr := range adata.Errors {
 				if data := herr.Response.Body; data != nil {
 					if data.Def != "" {
@@ -164,7 +163,7 @@ func Type(r *rest.ResourceExpr, seen map[string]struct{}) codegen.File {
 			})
 		}
 
-		for _, adata := range rdata.Actions {
+		for _, adata := range rdata.Endpoints {
 
 			// request to method payload (server)
 			if init := adata.Payload.Request.PayloadInit; init != nil {

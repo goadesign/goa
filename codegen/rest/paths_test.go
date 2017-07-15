@@ -185,13 +185,13 @@ func ShowAccountPath(sliceInterface []interface{}) string {
 			Name: "Account",
 		}
 
-		endpoint = design.MethodExpr{
+		method = design.MethodExpr{
 			Name:    "Show",
 			Service: &svc,
 			Payload: &design.AttributeExpr{Type: design.Empty},
 		}
 
-		resource = rest.ResourceExpr{
+		httpSvc = rest.HTTPServiceExpr{
 			ServiceExpr: &svc,
 			Path:        "/account",
 		}
@@ -214,20 +214,20 @@ func ShowAccountPath(sliceInterface []interface{}) string {
 			}
 		}
 
-		action = func(paths ...string) *rest.ActionExpr {
+		endpoint = func(paths ...string) *rest.HTTPEndpointExpr {
 			routes := make([]*rest.RouteExpr, len(paths))
 			for i, path := range paths {
 				routes[i] = &rest.RouteExpr{Path: path}
 			}
 
-			a := &rest.ActionExpr{
-				MethodExpr: &endpoint,
-				Resource:   &resource,
+			a := &rest.HTTPEndpointExpr{
+				MethodExpr: &method,
+				Service:    &httpSvc,
 				Routes:     routes,
 			}
 
 			for _, r := range a.Routes {
-				r.Action = a
+				r.Endpoint = a
 			}
 			setParams(a.Params())
 
@@ -236,32 +236,32 @@ func ShowAccountPath(sliceInterface []interface{}) string {
 	)
 
 	service.Services = make(service.ServicesData)
-	design.Root.Services = []*design.ServiceExpr{resource.ServiceExpr}
+	design.Root.Services = []*design.ServiceExpr{httpSvc.ServiceExpr}
 
 	cases := map[string]struct {
-		Action   *rest.ActionExpr
+		Endpoint *rest.HTTPEndpointExpr
 		Expected string
 	}{
-		"single-path-no-param":            {Action: action("/test"), Expected: pathWithoutParams},
-		"single-path-one-param":           {Action: action("/test/{id}"), Expected: pathWithOneParam},
-		"single-path-multiple-params":     {Action: action("/test/{id}/view/{view}"), Expected: pathWithMultipleParams},
-		"alternative-paths":               {Action: action("/test", "/test/{id}", "/test/{id}/view/{view}"), Expected: pathWithAlternatives},
-		"path-with-string-slice-param":    {Action: action("/test/{slice_string}"), Expected: pathWithStringSliceParam},
-		"path-with-int-slice-param":       {Action: action("/test/{slice_int}"), Expected: pathWithIntSliceParam},
-		"path-with-int32-slice-param":     {Action: action("/test/{slice_int32}"), Expected: pathWithInt32SliceParam},
-		"path-with-int64-slice-param":     {Action: action("/test/{slice_int64}"), Expected: pathWithInt64SliceParam},
-		"path-with-uint-slice-param":      {Action: action("/test/{slice_uint}"), Expected: pathWithUintSliceParam},
-		"path-with-uint32-slice-param":    {Action: action("/test/{slice_uint32}"), Expected: pathWithUint32SliceParam},
-		"path-with-uint64-slice-param":    {Action: action("/test/{slice_uint64}"), Expected: pathWithUint64SliceParam},
-		"path-with-float33-slice-param":   {Action: action("/test/{slice_float32}"), Expected: pathWithFloat32SliceParam},
-		"path-with-float64-slice-param":   {Action: action("/test/{slice_float64}"), Expected: pathWithFloat64SliceParam},
-		"path-with-bool-slice-param":      {Action: action("/test/{slice_bool}"), Expected: pathWithBoolSliceParam},
-		"path-with-interface-slice-param": {Action: action("/test/{slice_interface}"), Expected: pathWithInterfaceSliceParam},
+		"single-path-no-param":            {Endpoint: endpoint("/test"), Expected: pathWithoutParams},
+		"single-path-one-param":           {Endpoint: endpoint("/test/{id}"), Expected: pathWithOneParam},
+		"single-path-multiple-params":     {Endpoint: endpoint("/test/{id}/view/{view}"), Expected: pathWithMultipleParams},
+		"alternative-paths":               {Endpoint: endpoint("/test", "/test/{id}", "/test/{id}/view/{view}"), Expected: pathWithAlternatives},
+		"path-with-string-slice-param":    {Endpoint: endpoint("/test/{slice_string}"), Expected: pathWithStringSliceParam},
+		"path-with-int-slice-param":       {Endpoint: endpoint("/test/{slice_int}"), Expected: pathWithIntSliceParam},
+		"path-with-int32-slice-param":     {Endpoint: endpoint("/test/{slice_int32}"), Expected: pathWithInt32SliceParam},
+		"path-with-int64-slice-param":     {Endpoint: endpoint("/test/{slice_int64}"), Expected: pathWithInt64SliceParam},
+		"path-with-uint-slice-param":      {Endpoint: endpoint("/test/{slice_uint}"), Expected: pathWithUintSliceParam},
+		"path-with-uint32-slice-param":    {Endpoint: endpoint("/test/{slice_uint32}"), Expected: pathWithUint32SliceParam},
+		"path-with-uint64-slice-param":    {Endpoint: endpoint("/test/{slice_uint64}"), Expected: pathWithUint64SliceParam},
+		"path-with-float33-slice-param":   {Endpoint: endpoint("/test/{slice_float32}"), Expected: pathWithFloat32SliceParam},
+		"path-with-float64-slice-param":   {Endpoint: endpoint("/test/{slice_float64}"), Expected: pathWithFloat64SliceParam},
+		"path-with-bool-slice-param":      {Endpoint: endpoint("/test/{slice_bool}"), Expected: pathWithBoolSliceParam},
+		"path-with-interface-slice-param": {Endpoint: endpoint("/test/{slice_interface}"), Expected: pathWithInterfaceSliceParam},
 	}
 
 	for k, tc := range cases {
 		buf := new(bytes.Buffer)
-		s := PathSection(tc.Action)
+		s := PathSection(tc.Endpoint)
 		e := s.Write(buf)
 		actual := buf.String()
 

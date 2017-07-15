@@ -62,7 +62,7 @@ sections and render the templates) makes it possible to modify the templates
 prior to the code generator iterating. This provides the basic for writing code
 generators that modify the output of existing ones. An example would be a
 middleware generator that modifies the controller generator templates to inject
-code prior and/or after the action is run.
+code prior and/or after the endpoint is run.
 
 ### Generated Files
 

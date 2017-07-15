@@ -73,7 +73,7 @@ func NewV2(root *rest.RootExpr) (*V2, error) {
 		s.Responses[he.Name] = res
 	}
 
-	for _, res := range root.Resources {
+	for _, res := range root.HTTPServices {
 		for k, v := range extensionsFromExpr(res.Metadata) {
 			s.Paths[k] = v
 		}
@@ -84,7 +84,7 @@ func NewV2(root *rest.RootExpr) (*V2, error) {
 				}
 			}
 		}
-		for _, a := range res.Actions {
+		for _, a := range res.HTTPEndpoints {
 			if mustGenerate(a.Metadata) {
 				for _, route := range a.Routes {
 					if err := buildPathFromExpr(s, root, route, basePath); err != nil {
@@ -120,12 +120,13 @@ func mustGenerate(meta design.MetadataExpr) bool {
 	return true
 }
 
-// hasAbsoluteRoutes returns true if any action exposed by the API uses an absolute route of if the
-// API has file servers. This is needed as OpenAPI does not support exceptions to the base path so
-// if the API has any absolute route the base path must be "/" and all routes must be absolutes.
+// hasAbsoluteRoutes returns true if any endpoint exposed by the API uses an
+// absolute route of if the API has file servers. This is needed as OpenAPI does
+// not support exceptions to the base path so if the API has any absolute route
+// the base path must be "/" and all routes must be absolutes.
 func hasAbsoluteRoutes(root *rest.RootExpr) bool {
 	hasAbsoluteRoutes := false
-	for _, res := range root.Resources {
+	for _, res := range root.HTTPServices {
 		for _, fs := range res.FileServers {
 			if !mustGenerate(fs.Metadata) {
 				continue
@@ -133,7 +134,7 @@ func hasAbsoluteRoutes(root *rest.RootExpr) bool {
 			hasAbsoluteRoutes = true
 			break
 		}
-		for _, a := range res.Actions {
+		for _, a := range res.HTTPEndpoints {
 			if !mustGenerate(a.Metadata) {
 				continue
 			}
@@ -275,11 +276,11 @@ func paramsFromExpr(params *design.MappedAttributeExpr, path string) ([]*Paramet
 	return res, nil
 }
 
-func paramsFromHeaders(action *rest.ActionExpr) []*Parameter {
+func paramsFromHeaders(endpoint *rest.HTTPEndpointExpr) []*Parameter {
 	params := []*Parameter{}
 	var (
-		rma = action.Resource.MappedParams()
-		ma  = action.MappedHeaders()
+		rma = endpoint.Service.MappedParams()
+		ma  = endpoint.MappedHeaders()
 
 		merged *design.MappedAttributeExpr
 	)
@@ -402,7 +403,7 @@ func buildPathFromFileServer(s *V2, root *rest.RootExpr, fs *rest.FileServerExpr
 		responses["404"] = &Response{Description: "File not found", Schema: schema}
 	}
 
-	operationID := fmt.Sprintf("%s#%s", fs.Resource.Name(), fs.RequestPath)
+	operationID := fmt.Sprintf("%s#%s", fs.Service.Name(), fs.RequestPath)
 	schemes := root.Design.API.Schemes()
 
 	operation := &Operation{
@@ -438,22 +439,22 @@ func buildPathFromFileServer(s *V2, root *rest.RootExpr, fs *rest.FileServerExpr
 }
 
 func buildPathFromExpr(s *V2, root *rest.RootExpr, route *rest.RouteExpr, basePath string) error {
-	action := route.Action
+	endpoint := route.Endpoint
 
-	tagNames := tagNamesFromExpr(action.Resource.Metadata, action.Metadata)
+	tagNames := tagNamesFromExpr(endpoint.Service.Metadata, endpoint.Metadata)
 	if len(tagNames) == 0 {
-		// By default tag with resource name
-		tagNames = []string{route.Action.Resource.Name()}
+		// By default tag with service name
+		tagNames = []string{route.Endpoint.Service.Name()}
 	}
-	params, err := paramsFromExpr(action.AllParams(), route.FullPath())
+	params, err := paramsFromExpr(endpoint.AllParams(), route.FullPath())
 	if err != nil {
 		return err
 	}
 
-	params = append(params, paramsFromHeaders(action)...)
+	params = append(params, paramsFromHeaders(endpoint)...)
 
-	responses := make(map[string]*Response, len(action.Responses))
-	for _, r := range action.Responses {
+	responses := make(map[string]*Response, len(endpoint.Responses))
+	for _, r := range endpoint.Responses {
 		resp, err := responseSpecFromExpr(s, root, r)
 		if err != nil {
 			return err
@@ -461,21 +462,21 @@ func buildPathFromExpr(s *V2, root *rest.RootExpr, route *rest.RouteExpr, basePa
 		responses[strconv.Itoa(r.StatusCode)] = resp
 	}
 
-	if action.MethodExpr.Payload != nil {
-		payloadSchema := TypeSchema(root.Design.API, action.MethodExpr.Payload.Type)
+	if endpoint.MethodExpr.Payload != nil {
+		payloadSchema := TypeSchema(root.Design.API, endpoint.MethodExpr.Payload.Type)
 		pp := &Parameter{
 			Name:        "payload",
 			In:          "body",
-			Description: action.MethodExpr.Payload.Description,
-			Required:    action.MethodExpr.Payload != nil,
+			Description: endpoint.MethodExpr.Payload.Description,
+			Required:    endpoint.MethodExpr.Payload != nil,
 			Schema:      payloadSchema,
 		}
 		params = append(params, pp)
 	}
 
-	operationID := fmt.Sprintf("%s#%s", action.Resource.Name(), action.Name())
+	operationID := fmt.Sprintf("%s#%s", endpoint.Service.Name(), endpoint.Name())
 	index := 0
-	for i, rt := range action.Routes {
+	for i, rt := range endpoint.Routes {
 		if rt == route {
 			index = i
 			break
@@ -485,16 +486,16 @@ func buildPathFromExpr(s *V2, root *rest.RootExpr, route *rest.RouteExpr, basePa
 		operationID = fmt.Sprintf("%s#%d", operationID, index)
 	}
 
-	schemes := action.Resource.Schemes()
+	schemes := endpoint.Service.Schemes()
 	if len(schemes) == 0 {
 		schemes = root.Design.API.Schemes()
 	}
 
 	operation := &Operation{
 		Tags:         tagNames,
-		Description:  action.Description(),
-		Summary:      summaryFromExpr(action.Name()+" "+action.Resource.Name(), action.Metadata),
-		ExternalDocs: docsFromExpr(action.MethodExpr.Docs),
+		Description:  endpoint.Description(),
+		Summary:      summaryFromExpr(endpoint.Name()+" "+endpoint.Service.Name(), endpoint.Metadata),
+		ExternalDocs: docsFromExpr(endpoint.MethodExpr.Docs),
 		OperationID:  operationID,
 		Parameters:   params,
 		Responses:    responses,
@@ -544,7 +545,7 @@ func buildPathFromExpr(s *V2, root *rest.RootExpr, route *rest.RouteExpr, basePa
 	case "PATCH":
 		p.Patch = operation
 	}
-	p.Extensions = extensionsFromExpr(route.Action.Metadata)
+	p.Extensions = extensionsFromExpr(route.Endpoint.Metadata)
 	return nil
 }
 

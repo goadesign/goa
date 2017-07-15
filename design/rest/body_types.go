@@ -7,12 +7,12 @@ import (
 	"goa.design/goa.v2/design"
 )
 
-// RequestBodyType returns the type of the request body given an action. If the
-// DSL defines a body explicitly via the Body function then the corresponding
-// type is used instead of the payload type. Otherwise the type is computed by
-// removing the attributes of the method payload used to define headers and
-// parameters.
-func RequestBodyType(a *ActionExpr) design.DataType {
+// RequestBodyType returns the type of the request body given an endpoint. If
+// the DSL defines a body explicitly via the Body function then the
+// corresponding type is used instead of the payload type. Otherwise the type is
+// computed by removing the attributes of the method payload used to define
+// headers and parameters.
+func RequestBodyType(a *HTTPEndpointExpr) design.DataType {
 	if a.Body != nil {
 		return a.Body.Type
 	}
@@ -67,7 +67,7 @@ func RequestBodyType(a *ActionExpr) design.DataType {
 // payload used to define headers and parameters. Also if the response defines a
 // view then the response result type is projected first. suffix is appended to
 // the created type name if any.
-func ResponseBodyType(a *ActionExpr, resp *HTTPResponseExpr) design.DataType {
+func ResponseBodyType(a *HTTPEndpointExpr, resp *HTTPResponseExpr) design.DataType {
 	result := a.MethodExpr.Result
 	if result == nil || result.Type == design.Empty {
 		return design.Empty
@@ -159,7 +159,7 @@ func ResponseBodyType(a *ActionExpr, resp *HTTPResponseExpr) design.DataType {
 // is computed by removing the attributes of the error used to define headers
 // and parameters. Also if the error response defines a view then the result
 // type is projected first. suffix is appended to the created type name if any.
-func ErrorResponseBodyType(r *ResourceExpr, a *ActionExpr, v *HTTPErrorExpr) design.DataType {
+func ErrorResponseBodyType(r *HTTPServiceExpr, a *HTTPEndpointExpr, v *HTTPErrorExpr) design.DataType {
 	result := v.ErrorExpr.AttributeExpr
 	if result == nil || result.Type == design.Empty {
 		return design.Empty

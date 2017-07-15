@@ -143,7 +143,7 @@ import (
 func Response(val interface{}, args ...interface{}) {
 	name, ok := val.(string)
 	switch t := eval.Current().(type) {
-	case *rest.ResourceExpr:
+	case *rest.HTTPServiceExpr:
 		if !ok {
 			eval.InvalidArgError("name of error", val)
 			return
@@ -159,7 +159,7 @@ func Response(val interface{}, args ...interface{}) {
 		if e := httpError(name, t, args...); e != nil {
 			t.HTTPErrors = append(t.HTTPErrors, e)
 		}
-	case *rest.ActionExpr:
+	case *rest.HTTPEndpointExpr:
 		if ok {
 			if e := httpError(name, t, args...); e != nil {
 				t.HTTPErrors = append(t.HTTPErrors, e)

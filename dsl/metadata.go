@@ -8,8 +8,8 @@ import (
 // Metadata is a set of key/value pairs that can be assigned to an object. Each
 // value consists of a slice of strings so that multiple invocation of the
 // Metadata function on the same target using the same key builds up the slice.
-// Metadata may be set on attributes, result types, actions, responses, resources
-// and API definitions.
+// Metadata may be set on attributes, result types, endpoints, responses,
+// services and API definitions.
 //
 // While keys can have any value the following names are handled explicitly by
 // goa when set on attributes.
@@ -36,14 +36,14 @@ import (
 //
 // `swagger:generate`: specifies whether Swagger specification should be
 // generated. Defaults to true.
-// Applicable to resources, actions and file servers.
+// Applicable to services, endpoints and file servers.
 //
 //        Metadata("swagger:generate", "false")
 //
 // `swagger:summary`: sets the Swagger operation summary field.
-// Applicable to actions.
+// Applicable to endpoints.
 //
-//        Metadata("swagger:summary", "Short summary of what action does")
+//        Metadata("swagger:summary", "Short summary of what endpoint does")
 //
 // `swagger:example`: specifies whether to generate random example. Defaults to
 // true.
@@ -52,7 +52,7 @@ import (
 //        Metadata("swagger:example", "false")
 //
 // `swagger:tag:xxx`: sets the Swagger object field tag xxx.
-// Applicable to resources and actions.
+// Applicable to services and endpoints.
 //
 //        Metadata("swagger:tag:Backend")
 //        Metadata("swagger:tag:Backend:desc", "Description of Backend")
@@ -63,8 +63,8 @@ import (
 // valid JSON format value.
 // Applicable to:
 // api as within the info and tag object,
-// resource as within the paths object,
-// action as within the path-item object,
+// service within the paths object,
+// endpoint as within the path-item object,
 // route as within the operation object,
 // param as within the parameter object,
 // response as within the response object

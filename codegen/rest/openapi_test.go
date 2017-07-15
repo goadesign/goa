@@ -12,23 +12,23 @@ import (
 	"goa.design/goa.v2/design/rest"
 )
 
-func newDesign(t *testing.T, resources ...*rest.ResourceExpr) *rest.RootExpr {
+func newDesign(t *testing.T, httpSvcs ...*rest.HTTPServiceExpr) *rest.RootExpr {
 	a := &design.APIExpr{
 		Name:    "test",
 		Servers: []*design.ServerExpr{{URL: "https://goa.design"}},
 	}
-	services := make([]*design.ServiceExpr, len(resources))
-	for i, r := range resources {
+	services := make([]*design.ServiceExpr, len(httpSvcs))
+	for i, r := range httpSvcs {
 		services[i] = r.ServiceExpr
 	}
 	d := &design.RootExpr{API: a, Services: services}
 	return &rest.RootExpr{
-		Design:    d,
-		Resources: resources,
+		Design:       d,
+		HTTPServices: httpSvcs,
 	}
 }
 
-func newResource(t *testing.T) *rest.ResourceExpr {
+func newService(t *testing.T) *rest.HTTPServiceExpr {
 	ep := &design.MethodExpr{
 		Name: "testEndpoint",
 		Payload: &design.AttributeExpr{
@@ -46,17 +46,17 @@ func newResource(t *testing.T) *rest.ResourceExpr {
 	}
 	ep.Service = s
 	route := &rest.RouteExpr{Method: "GET", Path: "/"}
-	action := &rest.ActionExpr{
+	endpoint := &rest.HTTPEndpointExpr{
 		MethodExpr: ep,
 		Routes:     []*rest.RouteExpr{route},
 	}
-	route.Action = action
-	res := &rest.ResourceExpr{
-		ServiceExpr: s,
-		Path:        "/",
-		Actions:     []*rest.ActionExpr{action},
+	route.Endpoint = endpoint
+	res := &rest.HTTPServiceExpr{
+		ServiceExpr:   s,
+		Path:          "/",
+		HTTPEndpoints: []*rest.HTTPEndpointExpr{endpoint},
 	}
-	action.Resource = res
+	endpoint.Service = res
 	return res
 }
 
@@ -65,7 +65,7 @@ func TestOpenAPI(t *testing.T) {
 		invalidURL = "http://[::1]:namedport"
 	)
 	var (
-		simple  = newDesign(t, newResource(t))
+		simple  = newDesign(t, newService(t))
 		empty   = newDesign(t)
 		invalid = newDesign(t)
 	)
@@ -92,7 +92,7 @@ func TestOpenAPI(t *testing.T) {
 
 func TestOutputPath(t *testing.T) {
 	var (
-		simple = newDesign(t, newResource(t))
+		simple = newDesign(t, newService(t))
 	)
 	o, err := OpenAPI(simple)
 	if err != nil {
@@ -109,7 +109,7 @@ func TestSections(t *testing.T) {
 	)
 	var (
 		empty  = newDesign(t)
-		simple = newDesign(t, newResource(t))
+		simple = newDesign(t, newService(t))
 	)
 	cases := map[string]struct {
 		Root *rest.RootExpr

@@ -21,7 +21,7 @@ can be created with NewErrorClass.
 All instance of errors created via a error class implement the Error interface.
 This interface is leveraged by the error handler middleware to produce the error
 responses. The middleware takes care of mapping back any error returned by
-previously called middleware or action handler into transport specific
+previously called middleware or endpoint handler into transport specific
 responses.
 */
 package goa

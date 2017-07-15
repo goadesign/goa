@@ -90,7 +90,7 @@ type (
 		// Tag the value a field of the result must have for this
 		// response to be used.
 		Tag [2]string
-		// Parent expression, one of ActionExpr, ResourceExpr or
+		// Parent expression, one of EndpointExpr, ServiceExpr or
 		// RootExpr.
 		Parent eval.Expression
 		// Metadata is a list of key/value pairs
@@ -140,7 +140,7 @@ func (r *HTTPResponseExpr) Validate() *eval.ValidationErrors {
 
 // Finalize sets the response result type from its type if the type is a result
 // type and no result type is already specified.
-func (r *HTTPResponseExpr) Finalize(a *ActionExpr, svcAtt *design.AttributeExpr) {
+func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *design.AttributeExpr) {
 	r.Parent = a
 
 	// Initialize the headers with the corresponding result attributes.
