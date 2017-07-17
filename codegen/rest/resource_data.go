@@ -50,6 +50,9 @@ type (
 		Method *service.MethodData
 		// ServiceName is the name of the service exposing the endpoint.
 		ServiceName string
+		// ServiceVarName is the goified name of the service exposing
+		// the endpoint.
+		ServiceVarName string
 		// Payload describes the method payload transport.
 		Payload *PayloadData
 		// Result describes the method result transport.
@@ -58,17 +61,32 @@ type (
 		Errors []*ErrorData
 		// Routes describes the possible routes for this endpoint.
 		Routes []*RouteData
+
+		// server
+
 		// MountHandler is the name of the mount handler function.
 		MountHandler string
 		// HandlerInit is the name of the constructor function for the
 		// http handler function.
 		HandlerInit string
-		// Decoder is the name of the decoder function.
-		Decoder string
-		// Encoder is the name of the encoder function.
-		Encoder string
+		// RequestDecoder is the name of the request decoder function.
+		RequestDecoder string
+		// ResponseEncoder is the name of the response encoder function.
+		ResponseEncoder string
 		// ErrorEncoder is the name of the error encoder function.
 		ErrorEncoder string
+
+		// client
+
+		// Client is the name of the client struct.
+		Client string
+		// EndpointInit is the name of the constructor function for the
+		// client endpoint.
+		EndpointInit string
+		// RequestEncoder is the name of the request encoder function.
+		RequestEncoder string
+		// ResponseDecoder is the name of the response decoder function.
+		ResponseDecoder string
 	}
 
 	// PayloadData contains the payload information required to generate the
@@ -116,8 +134,12 @@ type (
 		// Headers contains the HTTP request headers used to build the
 		// method payload.
 		Headers []*HeaderData
-		// Body describes the request body type.
-		Body *TypeData
+		// ServerBody describes the request body type used by server
+		// code.
+		ServerBody *TypeData
+		// ClientBody describes the request body type used by client
+		// code.
+		ClientBody *TypeData
 		// PayloadInit contains the data required to render the payload
 		// constructor if any.
 		PayloadInit *InitData
@@ -133,9 +155,12 @@ type (
 		// Headers provides information about the headers in the
 		// response.
 		Headers []*HeaderData
-		// Body is the type of the response body, nil if body should be
-		// empty.
-		Body *TypeData
+		// ServerBody is the type of the response body used by server
+		// code, nil if body should be empty.
+		ServerBody *TypeData
+		// ClientBody is the type of the response body used by client
+		// code, nil if body should be empty.
+		ClientBody *TypeData
 		// Init contains the data required to render the result or error
 		// constructor if any.
 		ResultInit *InitData
@@ -147,6 +172,9 @@ type (
 		TagValue string
 		// TagRequired is true if the tag attribute is required.
 		TagRequired bool
+		// MustValidate is true if the response body or at least one
+		// header requires validation.
+		MustValidate bool
 	}
 
 	// InitData contains the data required to render a constructor.
@@ -191,10 +219,16 @@ type (
 
 	// RouteData describes a route.
 	RouteData struct {
-		// Method is the HTTP method.
-		Method string
-		// Path is the full path.
+		// Verb is the HTTP method.
+		Verb string
+		// Path is the fullpath.
 		Path string
+		// PathFormat is the fullpath converted to printf compatible
+		// layout.
+		PathFormat string
+		// PathArguments is the list of argument names in the order
+		// expected by PathFormat.
+		PathArguments []string
 	}
 
 	// ParamData describes a HTTP request parameter.
@@ -309,10 +343,10 @@ func (d ServicesData) Get(name string) *ServiceData {
 
 // Endpoint returns the service method transport data for the endpoint with the
 // given name, nil if there isn't one.
-func (r *ServiceData) Endpoint(name string) *EndpointData {
-	for _, a := range r.Endpoints {
-		if a.Method.Name == name {
-			return a
+func (svc *ServiceData) Endpoint(name string) *EndpointData {
+	for _, e := range svc.Endpoints {
+		if e.Method.Name == name {
+			return e
 		}
 	}
 	return nil
@@ -334,26 +368,37 @@ func (d ServicesData) analyze(r *rest.HTTPServiceExpr) *ServiceData {
 	for _, a := range r.HTTPEndpoints {
 		routes := make([]*RouteData, len(a.Routes))
 		for i, r := range a.Routes {
+			params := r.Params()
+			args := make([]string, len(params))
+			for i, p := range params {
+				args[i] = codegen.Goify(p, false)
+				if design.IsArray(design.AsObject(a.PathParams().Type).Attribute(p).Type) {
+					args[i] = fmt.Sprintf(`strings.Join(%sSlice, ",")`, args[i])
+				}
+			}
 			routes[i] = &RouteData{
-				Method: strings.ToUpper(r.Method),
-				Path:   r.FullPath(),
+				Verb:          strings.ToUpper(r.Method),
+				Path:          r.FullPath(),
+				PathFormat:    rest.WildcardRegex.ReplaceAllString(r.FullPath(), "/%v"),
+				PathArguments: args,
 			}
 		}
 
 		ep := svc.Method(a.MethodExpr.Name)
 
 		ad := &EndpointData{
-			Method:       ep,
-			ServiceName:  svc.Name,
-			Payload:      buildPayloadData(svc, r, a, rd),
-			Result:       buildResultData(svc, r, a, rd),
-			Errors:       buildErrorsData(svc, r, a, rd),
-			Routes:       routes,
-			MountHandler: fmt.Sprintf("Mount%sHandler", ep.VarName),
-			HandlerInit:  fmt.Sprintf("New%sHandler", ep.VarName),
-			Decoder:      fmt.Sprintf("Decode%sRequest", ep.VarName),
-			Encoder:      fmt.Sprintf("Encode%sResponse", ep.VarName),
-			ErrorEncoder: fmt.Sprintf("Encode%sError", ep.VarName),
+			Method:          ep,
+			ServiceName:     svc.Name,
+			ServiceVarName:  codegen.Goify(svc.Name, true),
+			Payload:         buildPayloadData(svc, r, a, rd),
+			Result:          buildResultData(svc, r, a, rd),
+			Errors:          buildErrorsData(svc, r, a, rd),
+			Routes:          routes,
+			MountHandler:    fmt.Sprintf("Mount%sHandler", ep.VarName),
+			HandlerInit:     fmt.Sprintf("New%sHandler", ep.VarName),
+			RequestDecoder:  fmt.Sprintf("Decode%sRequest", ep.VarName),
+			ResponseEncoder: fmt.Sprintf("Encode%sResponse", ep.VarName),
+			ErrorEncoder:    fmt.Sprintf("Encode%sError", ep.VarName),
 		}
 
 		rd.Endpoints = append(rd.Endpoints, ad)
@@ -402,18 +447,19 @@ func buildPayloadData(svc *service.Data, r *rest.HTTPServiceExpr, a *rest.HTTPEn
 		body = a.Body.Type
 
 		var (
-			bodyData    = buildBodyType(svc, r, a, a.Body, payload, true)
-			paramsData  = extractPathParams(a.PathParams(), svc.Scope)
-			queryData   = extractQueryParams(a.QueryParams(), svc.Scope)
-			headersData = extractHeaders(a.MappedHeaders(), true, svc.Scope)
+			serverBodyData = buildBodyType(svc, r, a, a.Body, payload, true, true)
+			clientBodyData = buildBodyType(svc, r, a, a.Body, payload, true, false)
+			paramsData     = extractPathParams(a.PathParams(), svc.Scope)
+			queryData      = extractQueryParams(a.QueryParams(), svc.Scope)
+			headersData    = extractHeaders(a.MappedHeaders(), true, svc.Scope)
 
 			mustValidate bool
 		)
 		{
-			if bodyData != nil {
-				rd.TypeNames[bodyData.Name] = struct{}{}
+			if serverBodyData != nil {
+				rd.TypeNames[serverBodyData.Name] = struct{}{}
 			}
-			mustValidate = bodyData != nil && bodyData.ValidateRef != ""
+			mustValidate = serverBodyData != nil && serverBodyData.ValidateRef != ""
 			if !mustValidate {
 				for _, p := range paramsData {
 					if p.Validate != "" {
@@ -444,7 +490,8 @@ func buildPayloadData(svc *service.Data, r *rest.HTTPServiceExpr, a *rest.HTTPEn
 			PathParams:   paramsData,
 			QueryParams:  queryData,
 			Headers:      headersData,
-			Body:         bodyData,
+			ServerBody:   serverBodyData,
+			ClientBody:   clientBodyData,
 			MustValidate: mustValidate,
 		}
 	}
@@ -656,23 +703,38 @@ func buildResultData(svc *service.Data, r *rest.HTTPServiceExpr, a *rest.HTTPEnd
 			)
 			{
 				var (
-					bodyData *TypeData
+					serverBodyData = buildBodyType(svc, r, a, v.Body, result, false, false)
+					clientBodyData = buildBodyType(svc, r, a, v.Body, result, false, true)
+					headersData    = extractHeaders(v.MappedHeaders(), false, svc.Scope)
+
+					mustValidate bool
 				)
 				{
-					bodyData = buildBodyType(svc, r, a, v.Body, result, false)
-					if bodyData != nil {
-						rd.TypeNames[bodyData.Name] = struct{}{}
+					if clientBodyData != nil {
+						rd.TypeNames[clientBodyData.Name] = struct{}{}
+					}
+
+					mustValidate = serverBodyData != nil && serverBodyData.ValidateRef != ""
+					if !mustValidate {
+						for _, h := range headersData {
+							if h.Validate != "" {
+								mustValidate = true
+								break
+							}
+						}
 					}
 				}
 
 				responseData = &ResponseData{
-					StatusCode:  StatusCodeToHTTPConst(v.StatusCode),
-					Headers:     extractHeaders(v.MappedHeaders(), false, svc.Scope),
-					Body:        bodyData,
-					ResultInit:  init,
-					TagName:     codegen.Goify(v.Tag[0], true),
-					TagValue:    v.Tag[1],
-					TagRequired: result.IsRequired(v.Tag[0]),
+					StatusCode:   StatusCodeToHTTPConst(v.StatusCode),
+					Headers:      headersData,
+					ServerBody:   serverBodyData,
+					ClientBody:   clientBodyData,
+					ResultInit:   init,
+					TagName:      codegen.Goify(v.Tag[0], true),
+					TagValue:     v.Tag[1],
+					TagRequired:  result.IsRequired(v.Tag[0]),
+					MustValidate: mustValidate,
 				}
 			}
 			responses = append(responses, responseData)
@@ -772,29 +834,34 @@ func buildErrorsData(svc *service.Data, r *rest.HTTPServiceExpr, a *rest.HTTPEnd
 		)
 		{
 			var (
-				bodyData *TypeData
+				serverBodyData *TypeData
+				clientBodyData *TypeData
 			)
 			{
 				att := v.Response.Body
 				if att == nil {
 					att = v.ErrorExpr.AttributeExpr
 				}
-				bodyData = buildBodyType(svc, r, a, v.Response.Body, v.ErrorExpr.AttributeExpr, false)
-				if bodyData != nil {
-					rd.TypeNames[bodyData.Name] = struct{}{}
+				serverBodyData = buildBodyType(svc, r, a, v.Response.Body, v.ErrorExpr.AttributeExpr, false, false)
+				clientBodyData = buildBodyType(svc, r, a, v.Response.Body, v.ErrorExpr.AttributeExpr, false, true)
+				if clientBodyData != nil {
+					rd.TypeNames[clientBodyData.Name] = struct{}{}
 					status := http.StatusText(v.Response.StatusCode)
 					if status == "" {
 						status = strconv.Itoa(v.Response.StatusCode)
 					}
-					bodyData.Description = fmt.Sprintf("%s is the type of the %s \"%s\" HTTP endpoint %s %s error response body.",
-						bodyData.VarName, r.Name(), a.Name(), v.Name, status)
+					clientBodyData.Description = fmt.Sprintf("%s is the type of the %s \"%s\" HTTP endpoint %s %s error response body.",
+						clientBodyData.VarName, r.Name(), a.Name(), v.Name, status)
+					serverBodyData.Description = fmt.Sprintf("%s is the type of the %s \"%s\" HTTP endpoint %s %s error response body.",
+						serverBodyData.VarName, r.Name(), a.Name(), v.Name, status)
 				}
 			}
 
 			responseData = &ResponseData{
 				StatusCode:  StatusCodeToHTTPConst(v.Response.StatusCode),
 				Headers:     extractHeaders(v.Response.MappedHeaders(), false, svc.Scope),
-				Body:        bodyData,
+				ServerBody:  serverBodyData,
+				ClientBody:  clientBodyData,
 				ResultInit:  init,
 				TagName:     codegen.Goify(v.Response.Tag[0], true),
 				TagValue:    v.Response.Tag[1],
@@ -816,7 +883,7 @@ func buildErrorsData(svc *service.Data, r *rest.HTTPServiceExpr, a *rest.HTTPEnd
 //
 // req indicates whether the type is for a request body (true) or a response
 // body (false).
-func buildBodyType(svc *service.Data, r *rest.HTTPServiceExpr, a *rest.HTTPEndpointExpr, body, att *design.AttributeExpr, req bool) *TypeData {
+func buildBodyType(svc *service.Data, r *rest.HTTPServiceExpr, a *rest.HTTPEndpointExpr, body, att *design.AttributeExpr, req, ptr bool) *TypeData {
 
 	if body.Type == design.Empty {
 		return nil
@@ -835,7 +902,7 @@ func buildBodyType(svc *service.Data, r *rest.HTTPServiceExpr, a *rest.HTTPEndpo
 		ref = svc.Scope.GoTypeRef(body)
 		if ut, ok := body.Type.(design.UserType); ok {
 			varname = codegen.Goify(ut.Name(), true)
-			def = GoTypeDef(svc.Scope, ut.Attribute(), req, req)
+			def = GoTypeDef(svc.Scope, ut.Attribute(), ptr, false)
 			ctx := "request"
 			if !req {
 				ctx = "response"
@@ -843,14 +910,14 @@ func buildBodyType(svc *service.Data, r *rest.HTTPServiceExpr, a *rest.HTTPEndpo
 			desc = fmt.Sprintf("%s is the type of the %s %s HTTP endpoint %s body.", varname, svc.Name, a.Name(), ctx)
 			if req {
 				// only validate incoming request bodies
-				validateDef = codegen.RecursiveValidationCode(body, true, true, "body")
+				validateDef = codegen.RecursiveValidationCode(body, true, ptr, "body")
 				if validateDef != "" {
 					validateRef = "err = goa.MergeErrors(err, body.Validate())"
 				}
 			}
 		} else {
 			varname = svc.Scope.GoTypeRef(body)
-			validateRef = codegen.RecursiveValidationCode(body, true, req, "body")
+			validateRef = codegen.RecursiveValidationCode(body, true, ptr, "body")
 			desc = body.Description
 		}
 	}
@@ -886,7 +953,7 @@ func buildBodyType(svc *service.Data, r *rest.HTTPServiceExpr, a *rest.HTTPEndpo
 			sourceVar = sourceVar + "." + codegen.Goify(origin, true)
 		}
 
-		code, err = codegen.GoTypeTransform(att.Type, body.Type, sourceVar, "body", "", false, req, false, svc.Scope)
+		code, err = codegen.GoTypeTransform(att.Type, body.Type, sourceVar, "body", "", false, ptr, false, svc.Scope)
 		if err != nil {
 			fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
 		}

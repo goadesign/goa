@@ -24,12 +24,12 @@ func TestHandlerInit(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			RunRestDSL(t, c.DSL)
 			fs := Servers(rest.Root)
-			if len(fs) != 1 {
-				t.Fatalf("got %d files, expected one", len(fs))
+			if len(fs) != 2 {
+				t.Fatalf("got %d files, expected two", len(fs))
 			}
 			sections := fs[0].Sections("")
-			if len(sections) < 8 {
-				t.Fatalf("got %d sections, expected a least 8", len(sections))
+			if len(sections) < 6 {
+				t.Fatalf("got %d sections, expected a least 6", len(sections))
 			}
 			code := SectionCode(t, sections[5])
 			if code != c.Code {

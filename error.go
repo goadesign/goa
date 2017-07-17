@@ -110,13 +110,13 @@ func MissingPayloadError() error {
 // InvalidFieldTypeError is the error produced when the type of a payload field
 // does not match the type defined in the design.
 func InvalidFieldTypeError(name string, val interface{}, expected string) error {
-	return ErrInvalid("invalid value %#v for %#v, must be a %s", val, name, expected)
+	return ErrInvalid("invalid value %#v for %q, must be a %s", val, name, expected)
 }
 
 // MissingFieldError is the error produced when a payload is missing a required
 // field.
 func MissingFieldError(name, context string) error {
-	return ErrInvalid("%#v is missing from %s", name, context)
+	return ErrInvalid("%q is missing from %s", name, context)
 }
 
 // InvalidEnumValueError is the error produced when the value of a payload field
@@ -132,13 +132,13 @@ func InvalidEnumValueError(name string, val interface{}, allowed []interface{}) 
 // InvalidFormatError is the error produced when the value of a payload field
 // does not match the format validation defined in the design.
 func InvalidFormatError(name, target string, format Format, formatError error) error {
-	return ErrInvalid("%s must be formatted as a %s but got value %#v, %s", name, format, target, formatError.Error())
+	return ErrInvalid("%s must be formatted as a %s but got value %q, %s", name, format, target, formatError.Error())
 }
 
 // InvalidPatternError is the error produced when the value of a payload field
 // does not match the pattern validation defined in the design.
 func InvalidPatternError(name, target string, pattern string) error {
-	return ErrInvalid("%s must match the regexp %#v but got value %#v", name, pattern, target)
+	return ErrInvalid("%s must match the regexp %q but got value %q", name, pattern, target)
 }
 
 // InvalidRangeError is the error produced when the value of a payload field does

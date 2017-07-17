@@ -20,7 +20,7 @@ func TestBodyTypeDecl(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			rest.RunRestDSL(t, c.DSL)
-			fs := Type(rest.Root.HTTPServices[0], make(map[string]struct{}))
+			fs := ServerType(rest.Root.HTTPServices[0], make(map[string]struct{}))
 			section := fs.Sections("")[1]
 			code := SectionCode(t, section)
 			if code != c.Code {
@@ -39,12 +39,11 @@ func TestBodyTypeInit(t *testing.T) {
 	}{
 		{"body-user-inner", PayloadBodyUserInnerDSL, 2, BodyUserInnerInitCode},
 		{"body-path-user-validate", PayloadBodyPathUserValidateDSL, 2, BodyPathUserValidateInitCode},
-		{"body-empty", PayloadBodyPrimitiveFieldEmptyDSL, 1, BodyEmptyInitCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunRestDSL(t, c.DSL)
-			fs := Type(rest.Root.HTTPServices[0], make(map[string]struct{}))
+			fs := ServerType(rest.Root.HTTPServices[0], make(map[string]struct{}))
 			section := fs.Sections("")[c.SectionIndex]
 			code := SectionCode(t, section)
 			if code != c.Code {
@@ -93,15 +92,5 @@ func NewMethodUserBodyPathValidateServerRequestBody(p *servicebodypathuservalida
 	}
 
 	return body
-}
-`
-
-const BodyEmptyInitCode = `// NewMethodBodyPrimitiveArrayUserPayloadType builds a
-// ServiceBodyPrimitiveArrayUser service MethodBodyPrimitiveArrayUser endpoint
-// payload.
-func NewMethodBodyPrimitiveArrayUserPayloadType(a []string) *servicebodyprimitivearrayuser.PayloadType {
-	return &servicebodyprimitivearrayuser.PayloadType{
-		A: a,
-	}
 }
 `

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/codegen/rest"
 	"goa.design/goa.v2/codegen/service"
 	"goa.design/goa.v2/design"
 	restdesign "goa.design/goa.v2/design/rest"
@@ -26,7 +25,7 @@ func Client(roots ...eval.Root) ([]codegen.File, error) {
 				des = append(des, service.Endpoint(s))
 			}
 		case *restdesign.RootExpr:
-			tran = append(tran, rest.ClientFiles(r)...)
+			// tran = append(tran, rest.ClientFiles(r)...)
 		}
 		// TBD:
 		// case *rpc.RootExpr:

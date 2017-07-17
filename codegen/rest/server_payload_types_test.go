@@ -115,7 +115,7 @@ func TestPayloadConstructor(t *testing.T) {
 			if len(rest.Root.HTTPServices) != 1 {
 				t.Fatalf("got %d file(s), expected 1", len(rest.Root.HTTPServices))
 			}
-			fs := Type(rest.Root.HTTPServices[0], make(map[string]struct{}))
+			fs := ServerType(rest.Root.HTTPServices[0], make(map[string]struct{}))
 			sections := fs.Sections("")
 			var section *codegen.Section
 			for _, s := range sections {

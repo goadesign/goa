@@ -15,21 +15,58 @@ import (
 
 // Servers returns all the server HTTP transport files.
 func Servers(root *rest.RootExpr) []codegen.File {
-	fw := make([]codegen.File, len(root.HTTPServices))
+	fw := make([]codegen.File, 2*len(root.HTTPServices))
 	for i, r := range root.HTTPServices {
-		fw[i] = Server(r)
+		fw[i] = server(r)
+	}
+	for i, r := range root.HTTPServices {
+		fw[i+len(root.HTTPServices)] = serverEncodeDecode(r)
 	}
 	return fw
 }
 
-// Server returns the server HTTP transport file
-func Server(r *rest.HTTPServiceExpr) codegen.File {
-	path := filepath.Join(codegen.SnakeCase(r.Name()), "transport", "http_server.go")
-	data := HTTPServices.Get(r.Name())
+// server returns the files defining the HTTP server.
+func server(svc *rest.HTTPServiceExpr) codegen.File {
+	path := filepath.Join(codegen.SnakeCase(svc.Name()), "http", "server", "server.go")
+	data := HTTPServices.Get(svc.Name())
 	sections := func(genPkg string) []*codegen.Section {
-		title := fmt.Sprintf("%s server HTTP transport", r.Name())
+		title := fmt.Sprintf("%s HTTP server", svc.Name())
 		s := []*codegen.Section{
-			codegen.Header(title, "transport", []*codegen.ImportSpec{
+			codegen.Header(title, "server", []*codegen.ImportSpec{
+				{Path: "fmt"},
+				{Path: "io"},
+				{Path: "net/http"},
+				{Path: "goa.design/goa.v2", Name: "goa"},
+				{Path: "goa.design/goa.v2/rest"},
+				{Path: genPkg + "/" + codegen.Goify(svc.Name(), false)},
+			}),
+			{Template: serverStructTmpl(svc), Data: data},
+			{Template: serverInitTmpl(svc), Data: data},
+			{Template: serverMountTmpl(svc), Data: data},
+		}
+
+		for _, e := range data.Endpoints {
+			es := []*codegen.Section{
+				{Template: serverHandlerTmpl(svc), Data: e},
+				{Template: serverHandlerInitTmpl(svc), Data: e},
+			}
+			s = append(s, es...)
+		}
+		return s
+	}
+
+	return codegen.NewSource(path, sections)
+}
+
+// serverEncodeDecode returns the file defining the HTTP server encoding and
+// decoding logic.
+func serverEncodeDecode(svc *rest.HTTPServiceExpr) codegen.File {
+	path := filepath.Join(codegen.SnakeCase(svc.Name()), "http", "server", "encode_decode.go")
+	data := HTTPServices.Get(svc.Name())
+	sections := func(genPkg string) []*codegen.Section {
+		title := fmt.Sprintf("%s HTTP server encoders and decoders", svc.Name())
+		s := []*codegen.Section{
+			codegen.Header(title, "server", []*codegen.ImportSpec{
 				{Path: "fmt"},
 				{Path: "io"},
 				{Path: "net/http"},
@@ -37,27 +74,22 @@ func Server(r *rest.HTTPServiceExpr) codegen.File {
 				{Path: "strings"},
 				{Path: "goa.design/goa.v2", Name: "goa"},
 				{Path: "goa.design/goa.v2/rest"},
-				{Path: genPkg + "/" + codegen.Goify(r.Name(), false)},
+				{Path: genPkg + "/" + codegen.Goify(svc.Name(), false)},
 			}),
-			{Template: serverStructTmpl(r), Data: data},
-			{Template: serverInitTmpl(r), Data: data},
-			{Template: serverMountTmpl(r), Data: data},
 		}
 
-		for _, a := range data.Endpoints {
-			as := []*codegen.Section{
-				{Template: serverHandlerTmpl(r), Data: a},
-				{Template: serverHandlerInitTmpl(r), Data: a},
-				{Template: responseEncoderTmpl(r), Data: a},
+		for _, e := range data.Endpoints {
+			es := []*codegen.Section{
+				{Template: responseEncoderTmpl(svc), Data: e},
 			}
-			s = append(s, as...)
+			s = append(s, es...)
 
-			if a.Payload != nil {
-				s = append(s, &codegen.Section{Template: requestDecoderTmpl(r), Data: a})
+			if e.Payload != nil {
+				s = append(s, &codegen.Section{Template: requestDecoderTmpl(svc), Data: e})
 			}
 
-			if len(a.Errors) > 0 {
-				s = append(s, &codegen.Section{Template: errorEncoderTmpl(r), Data: a})
+			if len(e.Errors) > 0 {
+				s = append(s, &codegen.Section{Template: errorEncoderTmpl(svc), Data: e})
 			}
 		}
 		return s
@@ -66,43 +98,43 @@ func Server(r *rest.HTTPServiceExpr) codegen.File {
 	return codegen.NewSource(path, sections)
 }
 
-func serverStructTmpl(r *rest.HTTPServiceExpr) *template.Template {
-	return template.Must(serverTmpl(r).New("struct").Parse(serverStructT))
+func serverStructTmpl(s *rest.HTTPServiceExpr) *template.Template {
+	return template.Must(transTmpl(s).New("server-struct").Parse(serverStructT))
 }
 
-func serverInitTmpl(r *rest.HTTPServiceExpr) *template.Template {
-	return template.Must(serverTmpl(r).New("constructor").Parse(serverInitT))
+func serverInitTmpl(s *rest.HTTPServiceExpr) *template.Template {
+	return template.Must(transTmpl(s).New("server-constructor").Parse(serverInitT))
 }
 
-func serverMountTmpl(r *rest.HTTPServiceExpr) *template.Template {
-	return template.Must(serverTmpl(r).New("mount").Parse(serverMountT))
+func serverMountTmpl(s *rest.HTTPServiceExpr) *template.Template {
+	return template.Must(transTmpl(s).New("mount").Parse(serverMountT))
 }
 
-func serverHandlerTmpl(r *rest.HTTPServiceExpr) *template.Template {
-	return template.Must(serverTmpl(r).New("handler").Parse(serverHandlerT))
+func serverHandlerTmpl(s *rest.HTTPServiceExpr) *template.Template {
+	return template.Must(transTmpl(s).New("handler").Parse(serverHandlerT))
 }
 
-func serverHandlerInitTmpl(r *rest.HTTPServiceExpr) *template.Template {
-	return template.Must(serverTmpl(r).New("handler_constructor").Parse(serverHandlerInitT))
+func serverHandlerInitTmpl(s *rest.HTTPServiceExpr) *template.Template {
+	return template.Must(transTmpl(s).New("handler-constructor").Parse(serverHandlerInitT))
 }
 
-func requestDecoderTmpl(r *rest.HTTPServiceExpr) *template.Template {
-	return template.Must(serverTmpl(r).New("decoder").Parse(requestDecoderT))
+func requestDecoderTmpl(s *rest.HTTPServiceExpr) *template.Template {
+	return template.Must(transTmpl(s).New("request-decoder").Parse(requestDecoderT))
 }
 
-func responseEncoderTmpl(r *rest.HTTPServiceExpr) *template.Template {
-	return template.Must(serverTmpl(r).New("encoder").Parse(responseEncoderT))
+func responseEncoderTmpl(s *rest.HTTPServiceExpr) *template.Template {
+	return template.Must(transTmpl(s).New("response-encoder").Parse(responseEncoderT))
 }
 
-func errorEncoderTmpl(r *rest.HTTPServiceExpr) *template.Template {
-	return template.Must(serverTmpl(r).New("error_encoder").Parse(errorEncoderT))
+func errorEncoderTmpl(s *rest.HTTPServiceExpr) *template.Template {
+	return template.Must(transTmpl(s).New("error-encoder").Parse(errorEncoderT))
 }
 
-func serverTmpl(r *rest.HTTPServiceExpr) *template.Template {
+func transTmpl(s *rest.HTTPServiceExpr) *template.Template {
 	return template.New("server").
 		Funcs(template.FuncMap{
 			"goTypeRef": func(dt design.DataType) string {
-				return service.Services.Get(r.Name()).Scope.GoTypeRef(&design.AttributeExpr{Type: dt})
+				return service.Services.Get(s.Name()).Scope.GoTypeRef(&design.AttributeExpr{Type: dt})
 			},
 			"conversionData":       conversionData,
 			"headerConversionData": headerConversionData,
@@ -194,7 +226,7 @@ func {{ .MountHandler }}(mux rest.Muxer, h http.Handler) {
 		}
 	}
 	{{- range .Routes }}
-	mux.Handle("{{ .Method }}", "{{ .Path }}", f)
+	mux.Handle("{{ .Verb }}", "{{ .Path }}", f)
 	{{- end }}
 }
 `
@@ -209,9 +241,9 @@ func {{ .HandlerInit }}(
 ) http.Handler {
 	var (
 		{{- if .Payload.Ref }}
-		decodeRequest  = {{ .Decoder }}(mux, dec)
+		decodeRequest  = {{ .RequestDecoder }}(mux, dec)
 		{{- end }}
-		encodeResponse = {{ .Encoder }}(enc)
+		encodeResponse = {{ .ResponseEncoder }}(enc)
 		encodeError    = {{ if .Errors }}{{ .ErrorEncoder }}{{ else }}rest.EncodeError{{ end }}(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -239,13 +271,13 @@ func {{ .HandlerInit }}(
 `
 
 // input: EndpointData
-const requestDecoderT = `{{ printf "%s returns a decoder for requests sent to the %s %s endpoint." .Decoder .ServiceName .Method.Name | comment }}
-func {{ .Decoder }}(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+const requestDecoderT = `{{ printf "%s returns a decoder for requests sent to the %s %s endpoint." .RequestDecoder .ServiceName .Method.Name | comment }}
+func {{ .RequestDecoder }}(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 
-{{- if .Payload.Request.Body }}
+{{- if .Payload.Request.ServerBody }}
 		var (
-			body {{ .Payload.Request.Body.VarName }}
+			body {{ .Payload.Request.ServerBody.VarName }}
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -255,8 +287,8 @@ func {{ .Decoder }}(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) fu
 			}
 			return nil, err
 		}
-		{{- if .Payload.Request.Body.ValidateRef }}
-		{{ .Payload.Request.Body.ValidateRef }}
+		{{- if .Payload.Request.ServerBody.ValidateRef }}
+		{{ .Payload.Request.ServerBody.ValidateRef }}
 		{{- end }}
 {{ end }}
 
@@ -271,7 +303,7 @@ func {{ .Decoder }}(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) fu
 		{{- range .Payload.Request.Headers }}
 			{{ .VarName }} {{ .TypeRef }}
 		{{- end }}
-		{{- if not .Payload.Request.Body }}
+		{{- if not .Payload.Request.ServerBody }}
 		{{- if .Payload.Request.MustValidate }}
 			err error
 		{{- end }}
@@ -735,8 +767,8 @@ func {{ .Decoder }}(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) fu
 `
 
 // input: EndpointData
-const responseEncoderT = `{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .Encoder .ServiceName .Method.Name | comment }}
-func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) (rest.Encoder, string)) func(http.ResponseWriter, *http.Request, interface{}) error {
+const responseEncoderT = `{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .ResponseEncoder .ServiceName .Method.Name | comment }}
+func {{ .ResponseEncoder }}(encoder func(http.ResponseWriter, *http.Request) (rest.Encoder, string)) func(http.ResponseWriter, *http.Request, interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 
 	{{- if .Result.Ref }}
@@ -753,7 +785,7 @@ func {{ .Encoder }}(encoder func(http.ResponseWriter, *http.Request) (rest.Encod
 			{{- end }}
 			{{ template "response" . }}
 
-			{{- if .Body }}
+			{{- if .ServerBody }}
 			return enc.Encode(body)
 			{{- else }}
 			return nil
@@ -789,7 +821,7 @@ func {{ .ErrorEncoder }}(encoder func(http.ResponseWriter, *http.Request) (rest.
 		case {{ .Ref }}:
 
 			{{- template "response" .Response }}
-			{{- if .Response.Body }}
+			{{- if .Response.ServerBody }}
 			if err := enc.Encode(body); err != nil {
 				encodeError(w, r, err)
 			}
@@ -805,12 +837,12 @@ func {{ .ErrorEncoder }}(encoder func(http.ResponseWriter, *http.Request) (rest.
 
 // input: ResponseData
 const responseT = `{{ define "response" -}}
-	{{ if .Body }}enc{{ else }}_{{ end }}, ct := encoder(w, r)
+	{{ if .ServerBody }}enc{{ else }}_{{ end }}, ct := encoder(w, r)
 	rest.SetContentType(w, ct)
 
-	{{- if .Body }}
-		{{- if .Body.Init }}
-	body := {{ .Body.Init.Name }}({{ range .Body.Init.Args }}{{ .Ref }}, {{ end }})
+	{{- if .ServerBody }}
+		{{- if .ServerBody.Init }}
+	body := {{ .ServerBody.Init.Name }}({{ range .ServerBody.Init.Args }}{{ .Ref }}, {{ end }})
 		{{- else }}
 	body := res 
 		{{- end }}

@@ -33,35 +33,16 @@ func TestCmdLine(t *testing.T) {
 		ExpectedOutput   string
 		ExpectedDebug    bool
 	}{
-		"client":                {"client " + testPkg, false, []string{"client"}, testPkg, ".", false},
-		"client server":         {"client server " + testPkg, false, []string{"client", "server"}, testPkg, ".", false},
-		"client openapi":        {"client openapi " + testPkg, false, []string{"client", "openapi"}, testPkg, ".", false},
-		"client server openapi": {"client server openapi " + testPkg, false, []string{"client", "openapi", "server"}, testPkg, ".", false},
-		"client openapi server": {"client openapi server " + testPkg, false, []string{"client", "openapi", "server"}, testPkg, ".", false},
-		"client client":         {"client client " + testPkg, false, []string{"client"}, testPkg, ".", false},
+		"gen": {"gen " + testPkg, false, []string{"client", "openapi", "server"}, testPkg, ".", false},
 
-		"server":                {"server " + testPkg, false, []string{"server"}, testPkg, ".", false},
-		"server client":         {"server client " + testPkg, false, []string{"client", "server"}, testPkg, ".", false},
-		"server openapi":        {"server openapi " + testPkg, false, []string{"openapi", "server"}, testPkg, ".", false},
-		"server client openapi": {"server client openapi " + testPkg, false, []string{"client", "openapi", "server"}, testPkg, ".", false},
-		"server openapi client": {"server openapi client " + testPkg, false, []string{"client", "openapi", "server"}, testPkg, ".", false},
-		"server server":         {"server server " + testPkg, false, []string{"server"}, testPkg, ".", false},
+		"invalid":     {"invalid " + testPkg, true, nil, "", ".", false},
+		"empty":       {"", true, nil, "", ".", false},
+		"invalid gen": {"invalid gen" + testPkg, true, nil, "", ".", false},
 
-		"openapi":               {"openapi " + testPkg, false, []string{"openapi"}, testPkg, ".", false},
-		"openapi client":        {"openapi client " + testPkg, false, []string{"client", "openapi"}, testPkg, ".", false},
-		"openapi server":        {"openapi server " + testPkg, false, []string{"openapi", "server"}, testPkg, ".", false},
-		"openapi client server": {"openapi client server " + testPkg, false, []string{"client", "openapi", "server"}, testPkg, ".", false},
-		"openapi server client": {"openapi server client " + testPkg, false, []string{"client", "openapi", "server"}, testPkg, ".", false},
-		"openapi openapi":       {"openapi openapi " + testPkg, false, []string{"openapi"}, testPkg, ".", false},
+		"output":       {"gen " + testPkg + " -output " + testOutput, false, []string{"client", "openapi", "server"}, testPkg, testOutput, false},
+		"output short": {"gen " + testPkg + " -o " + testOutput, false, []string{"client", "openapi", "server"}, testPkg, testOutput, false},
 
-		"invalid":        {"invalid " + testPkg, true, nil, "", ".", false},
-		"empty":          {"", true, nil, "", ".", false},
-		"invalid client": {"invalid client " + testPkg, true, nil, "", ".", false},
-
-		"output":       {"client " + testPkg + " -output " + testOutput, false, []string{"client"}, testPkg, testOutput, false},
-		"output short": {"client " + testPkg + " -o " + testOutput, false, []string{"client"}, testPkg, testOutput, false},
-
-		"debug": {"client " + testPkg + " -debug", false, []string{"client"}, testPkg, ".", true},
+		"debug": {"gen " + testPkg + " -debug", false, []string{"client", "openapi", "server"}, testPkg, ".", true},
 	}
 
 	for k, c := range cases {

@@ -70,14 +70,14 @@ func TestEncode(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			RunRestDSL(t, c.DSL)
 			fs := Servers(rest.Root)
-			if len(fs) != 1 {
-				t.Fatalf("got %d files, expected one", len(fs))
+			if len(fs) != 2 {
+				t.Fatalf("got %d files, expected two", len(fs))
 			}
-			sections := fs[0].Sections("")
-			if len(sections) != 8 {
-				t.Fatalf("got %d sections, expected 8", len(sections))
+			sections := fs[1].Sections("")
+			if len(sections) != 3 {
+				t.Fatalf("got %d sections, expected 3", len(sections))
 			}
-			code := SectionCode(t, sections[6])
+			code := SectionCode(t, sections[1])
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
 			}

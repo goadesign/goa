@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go/build"
 	"os"
-	"sort"
 	"strings"
 
 	"goa.design/goa.v2/pkg"
@@ -27,24 +26,13 @@ func main() {
 		case "version":
 			fmt.Println("goa version " + pkg.Version())
 			os.Exit(0)
-		case "client", "server", "openapi":
+		case "gen":
 			if len(os.Args) == 2 {
 				usage()
 			}
-			cm := map[string]bool{os.Args[1]: true}
+			cmds = []string{"client", "openapi", "server"}
+			path = os.Args[2]
 			offset = 2
-			for len(os.Args) > offset+1 &&
-				(os.Args[offset] == "client" ||
-					os.Args[offset] == "server" ||
-					os.Args[offset] == "openapi") {
-				cm[os.Args[offset]] = true
-				offset++
-			}
-			for cmd := range cm {
-				cmds = append(cmds, cmd)
-			}
-			sort.Strings(cmds)
-			path = os.Args[offset]
 		default:
 			usage()
 		}
@@ -122,24 +110,15 @@ func help() {
 	fmt.Fprint(os.Stderr, `goa is the code generation tool for the goa framework.
 Learn more at https://goa.design.
 
-The tool supports multiple subcommands that generate different outputs.
-The only argument is the Go import path to the service design package.
-
 Usage:
 
-  goa [server] [client] [openapi] PACKAGE [--out DIRECTORY] [--debug]
+  goa gen PACKAGE [--out DIRECTORY] [--debug]
 
   goa version
 
 Commands:
-  server
-        Generate service interfaces, endpoints and server transport code.
-
-  client
-        Generate endpoints and client transport code.
-
-  openapi
-        Generate OpenAPI specification (https://www.openapis.org/).
+  gen
+        Generate service interfaces, endpoints, transport code and OpenAPI spec.
 
   version
         Print version information (exclusive with other flags and commands).
@@ -155,11 +134,9 @@ Flags:
   -debug
         Print debug information (mainly intended for goa developers)
 
-Examples:
+Example:
 
-  goa server goa.design/cellar/design
-
-  goa server client openapi goa.design/cellar/design -o gendir
+  goa gen goa.design/cellar/design -o gendir
 
 `)
 	os.Exit(1)
