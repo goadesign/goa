@@ -183,8 +183,8 @@ func printValue(dt design.DataType, v interface{}) string {
 }
 
 // input: ServiceData
-const serverStructT = `{{ printf "%s lists the %s service endpoint HTTP handlers." .HandlersStruct .Service.Name | comment }}
-type {{ .HandlersStruct }} struct {
+const serverStructT = `{{ printf "%s lists the %s service endpoint HTTP handlers." .ServerStruct .Service.Name | comment }}
+type {{ .ServerStruct }} struct {
 	{{- range .Endpoints }}
 	{{ .Method.VarName }} http.Handler
 	{{- end }}
@@ -198,8 +198,8 @@ func {{ .ServerInit }}(
 	mux rest.Muxer,
 	dec func(*http.Request) rest.Decoder,
 	enc func(http.ResponseWriter, *http.Request) (rest.Encoder, string),
-) *{{ .HandlersStruct }} {
-	return &{{ .HandlersStruct }}{
+) *{{ .ServerStruct }} {
+	return &{{ .ServerStruct }}{
 		{{- range .Endpoints }}
 		{{ .Method.VarName }}: {{ .HandlerInit }}(e.{{ .Method.VarName }}, mux, dec, enc),
 		{{- end }}
@@ -209,7 +209,7 @@ func {{ .ServerInit }}(
 
 // input: ServiceData
 const serverMountT = `{{ printf "%s configures the mux to serve the %s endpoints." .MountServer .Service.Name | comment }}
-func {{ .MountServer }}(mux rest.Muxer, h *{{ .HandlersStruct }}) {
+func {{ .MountServer }}(mux rest.Muxer, h *{{ .ServerStruct }}) {
 	{{- range .Endpoints }}
 	{{ .MountHandler }}(mux, h.{{ .Method.VarName }})
 	{{- end }}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"goa.design/goa.v2/codegen"
+	"goa.design/goa.v2/codegen/rest"
 	"goa.design/goa.v2/codegen/service"
 	"goa.design/goa.v2/design"
 	restdesign "goa.design/goa.v2/design/rest"
@@ -25,17 +26,14 @@ func Client(roots ...eval.Root) ([]codegen.File, error) {
 				des = append(des, service.Endpoint(s))
 			}
 		case *restdesign.RootExpr:
-			// tran = append(tran, rest.ClientFiles(r)...)
+			tran = append(tran, rest.Clients(r)...)
 		}
-		// TBD:
-		// case *rpc.RootExpr:
-		// tranws = append(tran, rpccodegen.ClientFiles(r))
 	}
 	if len(des) == 0 {
-		return nil, fmt.Errorf("could not find goa design in DSL roots, vendoring issue?")
+		return nil, fmt.Errorf("client: could not find goa design in DSL roots, vendoring issue?")
 	}
 	if len(tran) == 0 {
-		return nil, fmt.Errorf("could not find transport design in DSL roots")
+		return nil, fmt.Errorf("client: could not find transport design in DSL roots")
 	}
 	return append(des, tran...), nil
 }

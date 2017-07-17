@@ -27,14 +27,15 @@ type (
 		Service *service.Data
 		// Endpoints describes the endpoint data for this service.
 		Endpoints []*EndpointData
-		// HaldlerStruct is the name of the main server handler
-		// structure.
-		HandlersStruct string
+		// ServerStruct is the name of the HTTP server struct.
+		ServerStruct string
 		// ServerInit is the name of the constructor of the server
 		// struct.
 		ServerInit string
 		// MountServer is the name of the name of the mount function.
 		MountServer string
+		// ClientStruct is the name of the HTTP client struct.
+		ClientStruct string
 		// BodyAttributeTypes is the list of user types used to define
 		// the request, response and error response type attributes.
 		BodyAttributeTypes []*TypeData
@@ -78,8 +79,8 @@ type (
 
 		// client
 
-		// Client is the name of the client struct.
-		Client string
+		// ClientStruct is the name of the HTTP client struct.
+		ClientStruct string
 		// EndpointInit is the name of the constructor function for the
 		// client endpoint.
 		EndpointInit string
@@ -358,11 +359,12 @@ func (d ServicesData) analyze(r *rest.HTTPServiceExpr) *ServiceData {
 	svc := service.Services.Get(r.ServiceExpr.Name)
 
 	rd := &ServiceData{
-		Service:        svc,
-		HandlersStruct: "Handlers",
-		ServerInit:     "NewServer",
-		MountServer:    "MountServer",
-		TypeNames:      make(map[string]struct{}),
+		Service:      svc,
+		ServerStruct: "Server",
+		ServerInit:   "NewServer",
+		MountServer:  "MountServer",
+		ClientStruct: "Client",
+		TypeNames:    make(map[string]struct{}),
 	}
 
 	for _, a := range r.HTTPEndpoints {
@@ -399,6 +401,10 @@ func (d ServicesData) analyze(r *rest.HTTPServiceExpr) *ServiceData {
 			RequestDecoder:  fmt.Sprintf("Decode%sRequest", ep.VarName),
 			ResponseEncoder: fmt.Sprintf("Encode%sResponse", ep.VarName),
 			ErrorEncoder:    fmt.Sprintf("Encode%sError", ep.VarName),
+			ClientStruct:    "Client",
+			EndpointInit:    fmt.Sprintf("%sEndpoint", ep.VarName),
+			RequestEncoder:  fmt.Sprintf("Encode%sRequest", ep.VarName),
+			ResponseDecoder: fmt.Sprintf("Decode%sResponse", ep.VarName),
 		}
 
 		rd.Endpoints = append(rd.Endpoints, ad)

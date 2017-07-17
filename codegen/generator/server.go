@@ -37,10 +37,10 @@ func Server(roots ...eval.Root) ([]codegen.File, error) {
 		// tranws = append(tranws, rpccodegen.ServerFiles(r))
 	}
 	if len(des) == 0 {
-		return nil, fmt.Errorf("could not find goa design in DSL roots, vendoring issue?")
+		return nil, fmt.Errorf("server: could not find goa design in DSL roots, vendoring issue?")
 	}
 	if len(tran) == 0 {
-		return nil, fmt.Errorf("could not find transport design in DSL roots")
+		return nil, fmt.Errorf("server: could not find transport design in DSL roots")
 	}
 	return append(des, tran...), nil
 }

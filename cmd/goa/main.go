@@ -111,15 +111,12 @@ func help() {
 Learn more at https://goa.design.
 
 Usage:
-
   goa gen PACKAGE [--out DIRECTORY] [--debug]
-
   goa version
 
 Commands:
   gen
         Generate service interfaces, endpoints, transport code and OpenAPI spec.
-
   version
         Print version information (exclusive with other flags and commands).
 

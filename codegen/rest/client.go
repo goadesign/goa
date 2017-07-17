@@ -40,7 +40,9 @@ func client(r *rest.HTTPServiceExpr) codegen.File {
 			}),
 			{Template: clientStructTmpl(r), Data: data},
 			{Template: clientInitTmpl(r), Data: data},
-			{Template: endpointInitTmpl(r), Data: data},
+		}
+		for _, e := range data.Endpoints {
+			s = append(s, &codegen.Section{Template: endpointInitTmpl(r), Data: e})
 		}
 
 		return s
@@ -102,8 +104,8 @@ func responseDecoderTmpl(r *rest.HTTPServiceExpr) *template.Template {
 }
 
 // input: ServiceData
-const clientStructT = `{{ printf "%s lists the %s service endpoint HTTP clients." .ClientsStruct .Service.Name | comment }}
-type {{ .ClientsStruct }} struct {
+const clientStructT = `{{ printf "%s lists the %s service endpoint HTTP clients." .ClientStruct .Service.Name | comment }}
+type {{ .ClientStruct }} struct {
 	{{- range .Endpoints }}
 	{{ .Method.VarName }} rest.Doer
 	{{- end }}
@@ -115,15 +117,15 @@ type {{ .ClientsStruct }} struct {
 `
 
 // input: ServiceData
-const clientInitT = `{{ printf "New%s instantiates HTTP clients for all the %s service servers." .Client .Service.Name | comment }}
-func New{{ .Client }}(
+const clientInitT = `{{ printf "New%s instantiates HTTP clients for all the %s service servers." .ClientStruct .Service.Name | comment }}
+func New{{ .ClientStruct }}(
 	scheme string,
 	host string,
 	doer rest.Doer,
 	enc func(*http.Request) rest.Encoder,
 	dec func(*http.Response) rest.Decoder,
-) *{{ .Client }} {
-	return &{{ .Client }}{
+) *{{ .ClientStruct }} {
+	return &{{ .ClientStruct }}{
 		{{- range .Endpoints }}
 		{{ .Method.VarName }}Doer: doer,
 		{{- end }}
@@ -137,7 +139,7 @@ func New{{ .Client }}(
 
 // input: EndpointData
 const endpointInitT = `{{ printf "%s returns a endpoint that makes HTTP requests to the %s service %s server." .EndpointInit .ServiceName .Method.Name | comment }}
-func (c *{{ .Client }}) {{ .EndpointInit }}() goa.Endpoint {
+func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 	var (
 		encodeRequest  = c.{{ .RequestEncoder }}(c.encoder)
 		decodeResponse = c.{{ .ResponseDecoder }}(c.decoder)
@@ -160,7 +162,7 @@ func (c *{{ .Client }}) {{ .EndpointInit }}() goa.Endpoint {
 
 // input: EndpointData
 const requestEncoderT = `{{ printf "%s returns an encoder for requests sent to the %s %s server." .Decoder .ServiceName .Method.Name | comment }}
-func (c *{{ .Client }}) {{ .RequestEncoder }}(encoder func(*http.Request) rest.Encoder) func(interface{}) (*http.Request, error) {
+func (c *{{ .ClientStruct }}) {{ .RequestEncoder }}(encoder func(*http.Request) rest.Encoder) func(interface{}) (*http.Request, error) {
 	return func(v interface{}) (*http.Request, error) {
 	{{- if .Payload.Ref }}
 		p, ok := v.({{ .Payload.Ref }})
@@ -198,7 +200,7 @@ func (c *{{ .Client }}) {{ .RequestEncoder }}(encoder func(*http.Request) rest.E
 
 // input: EndpointData
 const responseDecoderT = `{{ printf "%s returns a decoder for responses returned by the %s %s endpoint." .Encoder .ServiceName .Method.Name | comment }}
-func (c *{{ .Client }}) {{ .ResponseDecoder }}(decoder func(*http.Response) rest.Decoder) func(*http.Response) (interface{}, error) {
+func (c *{{ .ClientStruct }}) {{ .ResponseDecoder }}(decoder func(*http.Response) rest.Decoder) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		defer resp.Body.Close()
 		switch resp.StatusCode {

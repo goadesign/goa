@@ -27,7 +27,7 @@ func OpenAPI(roots ...eval.Root) ([]codegen.File, error) {
 		return nil, err
 	}
 	if file == nil {
-		return nil, fmt.Errorf("could not find rest design in DSL roots")
+		return nil, fmt.Errorf("openapi: could not find rest design in DSL roots")
 	}
 	return []codegen.File{file}, nil
 }

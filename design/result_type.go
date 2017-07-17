@@ -307,6 +307,9 @@ func (p *Projector) projectSingle(m *ResultTypeExpr, view, viewID string) (*Proj
 	}}
 
 	proj := ProjectedMTExpr{View: view, ResultType: projected}
+	if p.Projected == nil {
+		p.Projected = make(map[string]*ProjectedMTExpr)
+	}
 	p.Projected[viewID] = &proj
 	projectedObj := projected.Type.(*Object)
 	mtObj := m.Type.(*Object)
