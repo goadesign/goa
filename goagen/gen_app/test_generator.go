@@ -440,7 +440,7 @@ func {{ $test.Name }}(t goatest.TInterface, ctx context.Context, service *goa.Se
 		var {{ $ok := $test.Escape "ok" }}{{ $ok }} bool
 		mt, {{ $ok }} = {{ $resp }}.({{ $test.ReturnType.Pointer }}{{ $test.ReturnType.Type }})
 		if !{{ $ok }} {
-			t.Fatalf("invalid response media: got %+v, expected instance of {{ $test.ReturnType.Type }}", {{ $resp }})
+			t.Fatalf("invalid response media: got variable of type %T, value %+v, expected instance of {{ $test.ReturnType.Type }}", {{ $resp }}, {{ $resp }})
 		}
 {{ if $test.ReturnType.Validatable }}		{{ $err }} = mt.Validate()
 		if {{ $err }} != nil {
