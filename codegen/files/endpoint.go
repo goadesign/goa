@@ -78,9 +78,9 @@ func Endpoint(service *design.ServiceExpr) codegen.File {
 		{
 			header = codegen.Header(service.Name+" endpoints", "endpoints",
 				[]*codegen.ImportSpec{
-					&codegen.ImportSpec{Path: "context"},
-					&codegen.ImportSpec{Path: "goa.design/goa.v2"},
-					&codegen.ImportSpec{Path: genPkg + "/services"},
+					{Path: "context"},
+					{Path: "goa.design/goa.v2"},
+					{Path: genPkg + "/services"},
 				})
 			body = &codegen.Section{
 				Template: endpointTmpl,
