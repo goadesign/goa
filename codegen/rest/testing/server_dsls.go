@@ -5,7 +5,7 @@ import (
 	. "goa.design/goa.v2/dsl/rest"
 )
 
-var ServerNoPayloadNoResult = func() {
+var ServerNoPayloadNoResultDSL = func() {
 	Service("ServiceNoPayloadNoResult", func() {
 		Method("MethodNoPayloadNoResult", func() {
 			HTTP(func() {
@@ -15,7 +15,7 @@ var ServerNoPayloadNoResult = func() {
 	})
 }
 
-var ServerPayloadNoResult = func() {
+var ServerPayloadNoResultDSL = func() {
 	Service("ServicePayloadNoResult", func() {
 		Method("MethodPayloadNoResult", func() {
 			Payload(func() {
@@ -28,7 +28,7 @@ var ServerPayloadNoResult = func() {
 	})
 }
 
-var ServerNoPayloadResult = func() {
+var ServerNoPayloadResultDSL = func() {
 	Service("ServiceNoPayloadResult", func() {
 		Method("MethodNoPayloadResult", func() {
 			Result(func() {
@@ -42,7 +42,7 @@ var ServerNoPayloadResult = func() {
 	})
 }
 
-var ServerPayloadResult = func() {
+var ServerPayloadResultDSL = func() {
 	Service("ServicePayloadResult", func() {
 		Method("MethodPayloadResult", func() {
 			Payload(func() {
@@ -59,7 +59,7 @@ var ServerPayloadResult = func() {
 	})
 }
 
-var ServerPayloadResultError = func() {
+var ServerPayloadResultErrorDSL = func() {
 	Service("ServicePayloadResultError", func() {
 		Method("MethodPayloadResultError", func() {
 			Payload(func() {

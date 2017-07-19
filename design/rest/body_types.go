@@ -159,7 +159,7 @@ func ResponseBodyType(a *HTTPEndpointExpr, resp *HTTPResponseExpr) design.DataTy
 // is computed by removing the attributes of the error used to define headers
 // and parameters. Also if the error response defines a view then the result
 // type is projected first. suffix is appended to the created type name if any.
-func ErrorResponseBodyType(r *HTTPServiceExpr, a *HTTPEndpointExpr, v *HTTPErrorExpr) design.DataType {
+func ErrorResponseBodyType(a *HTTPEndpointExpr, v *HTTPErrorExpr) design.DataType {
 	result := v.ErrorExpr.AttributeExpr
 	if result == nil || result.Type == design.Empty {
 		return design.Empty
@@ -215,31 +215,32 @@ func ErrorResponseBodyType(r *HTTPServiceExpr, a *HTTPEndpointExpr, v *HTTPError
 		AttributeExpr: body.Attribute(),
 		TypeName:      name,
 	}
-	if isrt {
-		views := make([]*design.ViewExpr, len(rt.Views))
-		for i, v := range rt.Views {
-			mv := design.NewMappedAttributeExpr(v.AttributeExpr)
-			removeAttributes(mv, headers)
-			nv := &design.ViewExpr{
-				AttributeExpr: mv.Attribute(),
-				Name:          v.Name,
-			}
-			views[i] = nv
-		}
-		nmt := &design.ResultTypeExpr{
-			UserTypeExpr: userType,
-			Identifier:   rt.Identifier,
-			ContentType:  rt.ContentType,
-			Views:        views,
-		}
-		for _, v := range views {
-			v.Parent = nmt
-		}
-		return nmt
-	}
 	appendSuffix(userType.Attribute().Type, suffix)
 
-	return userType
+	if !isrt {
+		return userType
+	}
+
+	views := make([]*design.ViewExpr, len(rt.Views))
+	for i, v := range rt.Views {
+		mv := design.NewMappedAttributeExpr(v.AttributeExpr)
+		removeAttributes(mv, headers)
+		nv := &design.ViewExpr{
+			AttributeExpr: mv.Attribute(),
+			Name:          v.Name,
+		}
+		views[i] = nv
+	}
+	nmt := &design.ResultTypeExpr{
+		UserTypeExpr: userType,
+		Identifier:   rt.Identifier,
+		ContentType:  rt.ContentType,
+		Views:        views,
+	}
+	for _, v := range views {
+		v.Parent = nmt
+	}
+	return nmt
 }
 
 func renameType(dt design.DataType, name, suffix string) design.DataType {

@@ -26,8 +26,8 @@ var (
 	)
 )
 
-// Types returns the HTTP transport type files.
-func Types(root *rest.RootExpr) []codegen.File {
+// ServerTypes returns the HTTP transport type files.
+func ServerTypes(root *rest.RootExpr) []codegen.File {
 	fw := make([]codegen.File, len(root.HTTPServices))
 	seen := make(map[string]struct{})
 	for i, r := range root.HTTPServices {
@@ -94,9 +94,6 @@ func ServerType(r *rest.HTTPServiceExpr, seen map[string]struct{}) codegen.File 
 						Data:     data,
 					})
 				}
-				if data.Init != nil {
-					initData = append(initData, data.Init)
-				}
 				if data.ValidateDef != "" {
 					validatedTypes = append(validatedTypes, data)
 				}
@@ -146,12 +143,16 @@ func ServerType(r *rest.HTTPServiceExpr, seen map[string]struct{}) codegen.File 
 		}
 
 		// body attribute types
-		for _, data := range rdata.BodyAttributeTypes {
+		for _, data := range rdata.ServerBodyAttributeTypes {
 			if data.Def != "" {
 				secs = append(secs, &codegen.Section{
 					Template: typeDeclTmpl,
 					Data:     data,
 				})
+			}
+
+			if data.ValidateDef != "" {
+				validatedTypes = append(validatedTypes, data)
 			}
 		}
 

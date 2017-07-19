@@ -14,11 +14,11 @@ func TestHandlerInit(t *testing.T) {
 		DSL  func()
 		Code string
 	}{
-		{"no payload no result", ServerNoPayloadNoResult, ServerNoPayloadNoResultHandlerConstructorCode},
-		{"payload no result", ServerPayloadNoResult, ServerPayloadNoResultHandlerConstructorCode},
-		{"no payload result", ServerNoPayloadResult, ServerNoPayloadResultHandlerConstructorCode},
-		{"payload result", ServerPayloadResult, ServerPayloadResultHandlerConstructorCode},
-		{"payload result error", ServerPayloadResultError, ServerPayloadResultErrorHandlerConstructorCode},
+		{"no payload no result", ServerNoPayloadNoResultDSL, ServerNoPayloadNoResultHandlerConstructorCode},
+		{"payload no result", ServerPayloadNoResultDSL, ServerPayloadNoResultHandlerConstructorCode},
+		{"no payload result", ServerNoPayloadResultDSL, ServerNoPayloadResultHandlerConstructorCode},
+		{"payload result", ServerPayloadResultDSL, ServerPayloadResultHandlerConstructorCode},
+		{"payload result error", ServerPayloadResultErrorDSL, ServerPayloadResultErrorHandlerConstructorCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

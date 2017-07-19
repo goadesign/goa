@@ -30,7 +30,7 @@ func main() {
 			if len(os.Args) == 2 {
 				usage()
 			}
-			cmds = []string{"client", "openapi", "server"}
+			cmds = []string{"gen"}
 			path = os.Args[2]
 			offset = 2
 		default:

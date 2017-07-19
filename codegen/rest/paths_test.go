@@ -37,7 +37,7 @@ func TestPaths(t *testing.T) {
 			if len(rest.Root.HTTPServices) != 1 {
 				t.Fatalf("got %d file(s), expected 1", len(rest.Root.HTTPServices))
 			}
-			fs := Path(rest.Root.HTTPServices[0])
+			fs := serverPath(rest.Root.HTTPServices[0])
 			sections := fs.Sections("")
 			code := SectionCode(t, sections[1])
 			if code != c.Code {

@@ -28,7 +28,8 @@ func client(r *rest.HTTPServiceExpr) codegen.File {
 	sections := func(genPkg string) []*codegen.Section {
 		title := fmt.Sprintf("%s client HTTP transport", r.Name())
 		s := []*codegen.Section{
-			codegen.Header(title, "transport", []*codegen.ImportSpec{
+			codegen.Header(title, "client", []*codegen.ImportSpec{
+				{Path: "context"},
 				{Path: "fmt"},
 				{Path: "io"},
 				{Path: "net/http"},
@@ -59,10 +60,12 @@ func clientEncodeDecode(r *rest.HTTPServiceExpr) codegen.File {
 	sections := func(genPkg string) []*codegen.Section {
 		title := fmt.Sprintf("%s HTTP client encoders and decoders", r.Name())
 		s := []*codegen.Section{
-			codegen.Header(title, "transport", []*codegen.ImportSpec{
+			codegen.Header(title, "client", []*codegen.ImportSpec{
 				{Path: "fmt"},
 				{Path: "io"},
+				{Path: "io/ioutil"},
 				{Path: "net/http"},
+				{Path: "net/url"},
 				{Path: "strconv"},
 				{Path: "strings"},
 				{Path: "goa.design/goa.v2", Name: "goa"},
@@ -96,18 +99,18 @@ func endpointInitTmpl(r *rest.HTTPServiceExpr) *template.Template {
 }
 
 func requestEncoderTmpl(r *rest.HTTPServiceExpr) *template.Template {
-	return template.Must(transTmpl(r).New("request-decoder").Parse(requestDecoderT))
+	return template.Must(transTmpl(r).New("request-encoder").Parse(requestEncoderT))
 }
 
 func responseDecoderTmpl(r *rest.HTTPServiceExpr) *template.Template {
-	return template.Must(transTmpl(r).New("response-encoder").Parse(responseEncoderT))
+	return template.Must(transTmpl(r).New("response-decoder").Parse(responseDecoderT))
 }
 
 // input: ServiceData
 const clientStructT = `{{ printf "%s lists the %s service endpoint HTTP clients." .ClientStruct .Service.Name | comment }}
 type {{ .ClientStruct }} struct {
 	{{- range .Endpoints }}
-	{{ .Method.VarName }} rest.Doer
+	{{ .Method.VarName }}Doer rest.Doer
 	{{- end }}
 	scheme     string
 	host       string
@@ -161,7 +164,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 `
 
 // input: EndpointData
-const requestEncoderT = `{{ printf "%s returns an encoder for requests sent to the %s %s server." .Decoder .ServiceName .Method.Name | comment }}
+const requestEncoderT = `{{ printf "%s returns an encoder for requests sent to the %s %s server." .RequestEncoder .ServiceName .Method.Name | comment }}
 func (c *{{ .ClientStruct }}) {{ .RequestEncoder }}(encoder func(*http.Request) rest.Encoder) func(interface{}) (*http.Request, error) {
 	return func(v interface{}) (*http.Request, error) {
 	{{- if .Payload.Ref }}
@@ -173,7 +176,17 @@ func (c *{{ .ClientStruct }}) {{ .RequestEncoder }}(encoder func(*http.Request) 
 
 	{{- with (index .Routes 0) }}
 		// Build request
-		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: {{ $.Method.VarName }}{{ $.ServiceVarName }}Path({{ range .Params }}{{ .Name }}, {{ end }})}
+		{{- range $i, $arg := .PathInit.Args }}
+		var {{ .Name }} {{ .TypeRef }}
+			{{ if .Pointer -}}
+		if p.{{ .FieldName }} != nil {
+			{{- end }}
+			{{- .Name }} = {{ if .Pointer }}*{{ end }}p.{{ .FieldName }}
+			{{- if .Pointer }}
+		}
+			{{- end }}
+		{{- end }}
+		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: {{ .PathInit.Name }}({{ range .PathInit.Args }}{{ .Ref }}, {{ end }})}
 		req, err := http.NewRequest("{{ .Verb }}", u.String(), nil)
 		if err != nil {
 			return nil, rest.ErrInvalidURL("{{ $.ServiceName }}", "{{ $.Method.Name }}", u.String(), err)
@@ -181,14 +194,14 @@ func (c *{{ .ClientStruct }}) {{ .RequestEncoder }}(encoder func(*http.Request) 
 	{{- end }}
 
 	{{- if .Payload.Ref }}
-	{{- if .Payload.Request.Body }}
-		body := {{ .Payload.Request.Body.Init.Name }}({{ range .Payload.Request.Body.Init.Args }}{{ if .Pointer }}&{{ end }}{{ .Name }}, {{ end }})
+	{{- if .Payload.Request.ClientBody }}
+		body := {{ .Payload.Request.ClientBody.Init.Name }}({{ range .Payload.Request.ClientBody.Init.Args }}{{ if .Pointer }}&{{ end }}{{ .Name }}, {{ end }})
 		err = encoder(req).Encode(&body)
 		if err != nil {
 			return nil, rest.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
 	{{- end }}
-	{{- range Payload.Request.Headers }}
+	{{- range .Payload.Request.Headers }}
 		req.Header.Set("{{ .Name }}", p.{{ .FieldName }})
 	{{- end }}
 	{{- end }}
@@ -199,25 +212,31 @@ func (c *{{ .ClientStruct }}) {{ .RequestEncoder }}(encoder func(*http.Request) 
 `
 
 // input: EndpointData
-const responseDecoderT = `{{ printf "%s returns a decoder for responses returned by the %s %s endpoint." .Encoder .ServiceName .Method.Name | comment }}
+const responseDecoderT = `{{ printf "%s returns a decoder for responses returned by the %s %s endpoint." .ResponseDecoder .ServiceName .Method.Name | comment }}
 func (c *{{ .ClientStruct }}) {{ .ResponseDecoder }}(decoder func(*http.Response) rest.Decoder) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
 		defer resp.Body.Close()
 		switch resp.StatusCode {
 	{{- range .Result.Responses }}
-		{{ template "singleResponse" . }}
+` + singleResponseT + `
 		{{- if .ResultInit }}
-			return {{ .Payload.Request.PayloadInit.Name }}({{ range .Payload.Request.PayloadInit.Args }}{{ .Ref }},{{ end }}), nil
-		{{- else }}
+			return {{ .ResultInit.Name }}({{ range .ResultInit.Args }}{{ .Ref }},{{ end }}), nil
+		{{- else if .ClientBody }}
 			return body, nil
+		{{- else }}
+			return nil, nil
 		{{- end }}
 	{{- end }}
 	{{- range .Errors }}
-		{{ template "singleResponse" .Response }}
+		{{- with .Response }}
+` + singleResponseT + `
 		{{- if .ResultInit }}
-			return {{ .Payload.Request.PayloadInit.Name }}({{ range .Payload.Request.PayloadInit.Args }}{{ .Ref }},{{ end }}), nil
-		{{- else }}
+			return {{ .ResultInit.Name }}({{ range .ResultInit.Args }}{{ .Ref }},{{ end }}), nil
+		{{- else if .ClientBody }}
 			return body, nil
+		{{- else }}
+			return nil, nil
+		{{- end }}
 		{{- end }}
 	{{- end }}
 		default:
@@ -226,20 +245,20 @@ func (c *{{ .ClientStruct }}) {{ .ResponseDecoder }}(decoder func(*http.Response
 		}
 	}
 }
+`
 
-{{- define "singleResponse" }}
-		case {{ .StatusCode }}:
+const singleResponseT = `case {{ .StatusCode }}:
 	{{- if .ClientBody }}
 			var (
 				body {{ .ClientBody.VarName }}
 				err error
 			)
-			err := decoder(resp).Decode(&body)
+			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, rest.ErrDecodingError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
 			}
-		{{- if .Payload.Request.ClientBody.ValidateRef }}
-			{{ .Payload.Request.ClientBody.ValidateRef }}
+		{{- if .ClientBody.ValidateRef }}
+			{{ .ClientBody.ValidateRef }}
 		{{- end }}
 	{{ end }}
 
@@ -254,13 +273,11 @@ func (c *{{ .ClientStruct }}) {{ .ResponseDecoder }}(decoder func(*http.Response
 			{{- end }}
 		{{- end }}
 			)
-			{
-
 		{{- range .Headers }}
 
 		{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
 			{{ .VarName }} = resp.Header.Get("{{ .Name }}")
-			if {{ .VarName }} == "" {
+			if {{ .VarName }} != "" {
 				err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
 			}
 
@@ -338,5 +355,4 @@ func (c *{{ .ClientStruct }}) {{ .ResponseDecoder }}(decoder func(*http.Response
 				return nil, err
 			}
 	{{- end }}
-{{- end }}
 `

@@ -58,6 +58,25 @@ func (e *HTTPErrorExpr) Finalize(a *HTTPEndpointExpr) {
 	}
 	e.ErrorExpr = ee
 	e.Response.Finalize(a, e.AttributeExpr)
+	if e.Response.Body == nil {
+		e.Response.Body = &design.AttributeExpr{Type: ErrorResponseBodyType(a, e)}
+		if val := ee.AttributeExpr.Validation; val != nil {
+			e.Response.Body.Validation = val.Dup()
+		}
+	}
+
+	// Initialize response content type if result is media type.
+	if e.Response.Body.Type == design.Empty {
+		return
+	}
+	if e.Response.ContentType != "" {
+		return
+	}
+	mt, ok := e.Response.Body.Type.(*design.ResultTypeExpr)
+	if !ok {
+		return
+	}
+	e.Response.ContentType = mt.Identifier
 }
 
 // Dup creates a copy of the error expression.

@@ -179,15 +179,11 @@ func (g *Generator) Remove() {
 // generators returns the names of the generator functions exposed by the
 // generator package for the given commands.
 func generators(commands []string) []string {
-	gens := make([]string, len(commands))
-	for i, c := range commands {
+	var gens []string
+	for _, c := range commands {
 		switch c {
-		case "server":
-			gens[i] = "Server"
-		case "client":
-			gens[i] = "Client"
-		case "openapi":
-			gens[i] = "OpenAPI"
+		case "gen":
+			gens = append(gens, "Service", "Transport", "OpenAPI")
 		default:
 			panic("unknown command " + c) // bug
 		}

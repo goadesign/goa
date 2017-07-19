@@ -20,7 +20,7 @@ func TestBodyTypeDecl(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			rest.RunRestDSL(t, c.DSL)
-			fs := ServerType(rest.Root.HTTPServices[0], make(map[string]struct{}))
+			fs := ClientType(rest.Root.HTTPServices[0], make(map[string]struct{}))
 			section := fs.Sections("")[1]
 			code := SectionCode(t, section)
 			if code != c.Code {
@@ -43,7 +43,7 @@ func TestBodyTypeInit(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunRestDSL(t, c.DSL)
-			fs := ServerType(rest.Root.HTTPServices[0], make(map[string]struct{}))
+			fs := ClientType(rest.Root.HTTPServices[0], make(map[string]struct{}))
 			section := fs.Sections("")[c.SectionIndex]
 			code := SectionCode(t, section)
 			if code != c.Code {
@@ -64,7 +64,7 @@ const BodyPathUserValidateDeclCode = `// MethodUserBodyPathValidateServerRequest
 // ServiceBodyPathUserValidate MethodUserBodyPathValidate HTTP endpoint request
 // body.
 type MethodUserBodyPathValidateServerRequestBody struct {
-	A *string ` + "`" + `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"` + "`" + `
+	A string ` + "`" + `form:"a" json:"a" xml:"a"` + "`" + `
 }
 `
 
@@ -74,7 +74,7 @@ func NewMethodBodyUserInnerServerRequestBody(p *servicebodyuserinner.PayloadType
 	body := &MethodBodyUserInnerServerRequestBody{}
 	if p.Inner != nil {
 		body.Inner = &InnerTypeRequestBody{
-			A: &p.Inner.A,
+			A: p.Inner.A,
 			B: p.Inner.B,
 		}
 	}
@@ -88,7 +88,7 @@ const BodyPathUserValidateInitCode = `// NewMethodUserBodyPathValidateServerRequ
 // request body from a payload.
 func NewMethodUserBodyPathValidateServerRequestBody(p *servicebodypathuservalidate.PayloadType) *MethodUserBodyPathValidateServerRequestBody {
 	body := &MethodUserBodyPathValidateServerRequestBody{
-		A: &p.A,
+		A: p.A,
 	}
 
 	return body

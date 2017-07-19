@@ -16,86 +16,55 @@ var (
 
 // Paths returns the service path files.
 func Paths(root *rest.RootExpr) []codegen.File {
-	fw := make([]codegen.File, len(root.HTTPServices))
-	for i, r := range root.HTTPServices {
-		fw[i] = Path(r)
+	fw := make([]codegen.File, 2*len(root.HTTPServices))
+	for i := 0; i < 2*len(root.HTTPServices); i += 2 {
+		fw[i] = serverPath(root.HTTPServices[i])
+		fw[i+1] = clientPath(root.HTTPServices[i])
 	}
 	return fw
 }
 
-// Path returns the file containing the request path constructors for the given
-// service.
-func Path(svc *rest.HTTPServiceExpr) codegen.File {
-	path := filepath.Join(codegen.SnakeCase(svc.Name()), "transport", "http_paths.go")
-	title := fmt.Sprintf("HTTP request path constructors for the %s service.", svc.Name())
-	sections := func(_ string) []*codegen.Section {
+// serverPath returns the server file containing the request path constructors
+// for the given service.
+func serverPath(svc *rest.HTTPServiceExpr) codegen.File {
+	path := filepath.Join(codegen.SnakeCase(svc.Name()), "http", "server", "paths.go")
+	return codegen.NewSource(path, pathSections(svc, "server"))
+}
+
+// clientPath returns the client file containing the request path constructors
+// for the given service.
+func clientPath(svc *rest.HTTPServiceExpr) codegen.File {
+	path := filepath.Join(codegen.SnakeCase(svc.Name()), "http", "client", "paths.go")
+	return codegen.NewSource(path, pathSections(svc, "client"))
+}
+
+// pathSections returns the sections of the file of the pkg package that
+// contains the request path constructors for the given service.
+func pathSections(svc *rest.HTTPServiceExpr, pkg string) codegen.SectionsFunc {
+	return func(_ string) []*codegen.Section {
+		title := fmt.Sprintf("HTTP request path constructors for the %s service.", svc.Name())
 		s := []*codegen.Section{
-			codegen.Header(title, "transport", []*codegen.ImportSpec{
+			codegen.Header(title, pkg, []*codegen.ImportSpec{
 				{Path: "fmt"},
 				{Path: "net/url"},
 				{Path: "strconv"},
 				{Path: "strings"},
 			}),
 		}
-
 		sdata := HTTPServices.Get(svc.Name())
 		for _, e := range svc.HTTPEndpoints {
-			edata := sdata.Endpoint(e.Name())
-			s = append(s, PathSection(edata))
+			s = append(s, &codegen.Section{
+				Template: pathTmpl,
+				Data:     sdata.Endpoint(e.Name()),
+			})
 		}
 		return s
-	}
-
-	return codegen.NewSource(path, sections)
-}
-
-// PathSection returns the section to generate the given path.
-func PathSection(e *EndpointData) *codegen.Section {
-	return &codegen.Section{
-		Template: pathTmpl,
-		Data:     e,
 	}
 }
 
 // input: EndpointData
-const pathT = `{{ range $i, $route := .Routes -}}
-// {{ $.Method.VarName }}{{ $.ServiceVarName }}Path{{ if ne $i 0 }}{{ add $i 1 }}{{ end }} returns the URL path to the {{ $.ServiceName }} service {{ $.Method.Name }} HTTP endpoint.
-func {{ $.Method.VarName }}{{ $.ServiceVarName }}Path{{ if ne $i 0 }}{{ add $i 1 }}{{ end }}({{ template "arguments" $.Payload.Request.PathParams }}) string {
-{{- if $.Payload.Request.PathParams }}
-	{{- template "slice_conversion" $.Payload.Request.PathParams }}
-	return fmt.Sprintf("{{ .PathFormat }}", {{ range $route.PathArguments }}{{ . }},{{ end }})
-{{- else }}
-	return "{{ .PathFormat }}"
-{{- end }}
+const pathT = `{{ range .Routes }}// {{ .PathInit.Description }}
+func {{ .PathInit.Name }}({{ range .PathInit.Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .PathInit.ReturnTypeRef }} {
+{{- .PathInit.Code }}
 }
-
-{{ end }}
-
-{{- define "arguments" -}}
-{{ range $i, $arg := . -}}
-{{ if ne $i 0 }}, {{ end }}{{ .VarName }} {{ .TypeRef }}
-{{- end }}
-{{- end }}
-
-{{- define "slice_conversion" }}
-{{- range $i, $arg := . }}
-	{{- if eq .Type.Name "array" }}
-	{{ .VarName }}Slice := make([]string, len({{ .VarName }}))
-	{{- $elemType := .Type.ElemType.Type.Name }}
-	for i, v := range {{ .VarName }} {
-		{{ .VarName }}Slice[i] =
-	{{- if eq $elemType "string" }} url.QueryEscape(v)
-	{{- else if eq $elemType "int" "int32" }} strconv.FormatInt(int64(v), 10)
-	{{- else if eq $elemType "int64" }} strconv.FormatInt(v, 10)
-	{{- else if eq $elemType "uint" "uint32" }} strconv.FormatUint(uint64(v), 10)
-	{{- else if eq $elemType "uint64" }} strconv.FormatUint(v, 10)
-	{{- else if eq $elemType "float32" }} strconv.FormatFloat(float64(v), 'f', -1, 32)
-	{{- else if eq $elemType "float64" }} strconv.FormatFloat(v, 'f', -1, 64)
-	{{- else if eq $elemType "boolean" }} strconv.FormatBool(v)
-	{{- else if eq $elemType "bytes" }} url.QueryEscape(string(v))
-	{{- else }} url.QueryEscape(fmt.Sprintf("%v", v))
-	{{- end }}
-	}
-	{{ end }}
-{{- end }}
-{{- end }}`
+{{ end }}`

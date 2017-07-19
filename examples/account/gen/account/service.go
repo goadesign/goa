@@ -3,7 +3,7 @@
 // account service
 //
 // Command:
-// $ goa server goa.design/goa.v2/examples/account/design
+// $ goa gen goa.design/goa.v2/examples/account/design
 
 package account
 

@@ -33,16 +33,16 @@ func TestCmdLine(t *testing.T) {
 		ExpectedOutput   string
 		ExpectedDebug    bool
 	}{
-		"gen": {"gen " + testPkg, false, []string{"client", "openapi", "server"}, testPkg, ".", false},
+		"gen": {"gen " + testPkg, false, []string{"gen"}, testPkg, ".", false},
 
 		"invalid":     {"invalid " + testPkg, true, nil, "", ".", false},
 		"empty":       {"", true, nil, "", ".", false},
 		"invalid gen": {"invalid gen" + testPkg, true, nil, "", ".", false},
 
-		"output":       {"gen " + testPkg + " -output " + testOutput, false, []string{"client", "openapi", "server"}, testPkg, testOutput, false},
-		"output short": {"gen " + testPkg + " -o " + testOutput, false, []string{"client", "openapi", "server"}, testPkg, testOutput, false},
+		"output":       {"gen " + testPkg + " -output " + testOutput, false, []string{"gen"}, testPkg, testOutput, false},
+		"output short": {"gen " + testPkg + " -o " + testOutput, false, []string{"gen"}, testPkg, testOutput, false},
 
-		"debug": {"gen " + testPkg + " -debug", false, []string{"client", "openapi", "server"}, testPkg, ".", true},
+		"debug": {"gen " + testPkg + " -debug", false, []string{"gen"}, testPkg, ".", true},
 	}
 
 	for k, c := range cases {

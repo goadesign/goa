@@ -96,9 +96,6 @@ func ClientType(r *rest.HTTPServiceExpr, seen map[string]struct{}) codegen.File 
 							Data:     data,
 						})
 					}
-					if data.Init != nil {
-						initData = append(initData, data.Init)
-					}
 					if data.ValidateDef != "" {
 						validatedTypes = append(validatedTypes, data)
 					}
@@ -117,9 +114,6 @@ func ClientType(r *rest.HTTPServiceExpr, seen map[string]struct{}) codegen.File 
 							Data:     data,
 						})
 					}
-					if data.Init != nil {
-						initData = append(initData, data.Init)
-					}
 					if data.ValidateDef != "" {
 						validatedTypes = append(validatedTypes, data)
 					}
@@ -128,12 +122,16 @@ func ClientType(r *rest.HTTPServiceExpr, seen map[string]struct{}) codegen.File 
 		}
 
 		// body attribute types
-		for _, data := range rdata.BodyAttributeTypes {
+		for _, data := range rdata.ClientBodyAttributeTypes {
 			if data.Def != "" {
 				secs = append(secs, &codegen.Section{
 					Template: typeDeclTmpl,
 					Data:     data,
 				})
+			}
+
+			if data.ValidateDef != "" {
+				validatedTypes = append(validatedTypes, data)
 			}
 		}
 
@@ -149,6 +147,16 @@ func ClientType(r *rest.HTTPServiceExpr, seen map[string]struct{}) codegen.File 
 			// response to method result (client)
 			for _, resp := range adata.Result.Responses {
 				if init := resp.ResultInit; init != nil {
+					secs = append(secs, &codegen.Section{
+						Template: typeInitTmpl,
+						Data:     init,
+					})
+				}
+			}
+
+			// error response to method result (client)
+			for _, herr := range adata.Errors {
+				if init := herr.Response.ResultInit; init != nil {
 					secs = append(secs, &codegen.Section{
 						Template: typeInitTmpl,
 						Data:     init,

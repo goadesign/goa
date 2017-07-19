@@ -1,11 +1,11 @@
 // Code generated with goa v2.0.0-wip, DO NOT EDIT.
 //
-// account HTTP transport types
+// account HTTP server types
 //
 // Command:
-// $ goa server goa.design/goa.v2/examples/account/design
+// $ goa gen goa.design/goa.v2/examples/account/design
 
-package transport
+package server
 
 import (
 	goa "goa.design/goa.v2"
@@ -53,14 +53,14 @@ type ShowResponseBody struct {
 }
 
 // CreateNameAlreadyTakenResponseBody is the type of the account "create" HTTP
-// endpoint name_already_taken Conflict error response body.
+// endpoint name_already_taken error response body.
 type CreateNameAlreadyTakenResponseBody struct {
 	// Message of error
 	Message string `form:"message" json:"message" xml:"message"`
 }
 
 // ShowNotFoundResponseBody is the type of the account "show" HTTP endpoint
-// not_found Not Found error response body.
+// not_found error response body.
 type ShowNotFoundResponseBody struct {
 	// Message of error
 	Message string `form:"message" json:"message" xml:"message"`
@@ -70,7 +70,7 @@ type ShowNotFoundResponseBody struct {
 	ID string `form:"id" json:"id" xml:"id"`
 }
 
-// Account type
+// AccountResponseBody is used to define fields on response body types.
 type AccountResponseBody struct {
 	// Href to account
 	Href string `form:"href" json:"href" xml:"href"`
@@ -84,17 +84,6 @@ type AccountResponseBody struct {
 	Description *string `form:"description,omitempty" json:"description,omitempty" xml:"description,omitempty"`
 	// Status of account
 	Status *string `form:"status,omitempty" json:"status,omitempty" xml:"status,omitempty"`
-}
-
-// NewCreateServerRequestBody builds the account service create endpoint
-// request body from a payload.
-func NewCreateServerRequestBody(p *account.CreatePayload) *CreateServerRequestBody {
-	body := &CreateServerRequestBody{
-		Name:        &p.Name,
-		Description: p.Description,
-	}
-
-	return body
 }
 
 // NewCreateCreatedResponseBody builds the account service create endpoint
@@ -177,60 +166,12 @@ func NewCreateCreatePayload(body *CreateServerRequestBody, orgID uint) *account.
 	return v
 }
 
-// NewCreateAccountAccepted builds a account service create endpoint Accepted
-// result.
-func NewCreateAccountAccepted(href string) *account.Account {
-	return &account.Account{
-		Href: href,
-	}
-}
-
-// NewCreateAccountCreated builds a account service create endpoint Created
-// result.
-func NewCreateAccountCreated(body *CreateCreatedResponseBody, href string) *account.Account {
-	v := &account.Account{
-		ID:          body.ID,
-		OrgID:       body.OrgID,
-		Name:        body.Name,
-		Description: body.Description,
-		Status:      body.Status,
-	}
-	if body.Description == nil {
-		tmp := "An active account"
-		v.Description = &tmp
-	}
-	v.Href = href
-
-	return v
-}
-
 // NewListListPayload builds a account service list endpoint payload.
 func NewListListPayload(orgID uint, filter *string) *account.ListPayload {
 	return &account.ListPayload{
 		OrgID:  &orgID,
 		Filter: filter,
 	}
-}
-
-// NewListAccountOK builds a account service list endpoint OK result.
-func NewListAccountOK(body []*AccountResponseBody) []*account.Account {
-	v := make([]*account.Account, len(body))
-	for i, val := range body {
-		v[i] = &account.Account{
-			Href:        val.Href,
-			ID:          val.ID,
-			OrgID:       val.OrgID,
-			Name:        val.Name,
-			Description: val.Description,
-			Status:      val.Status,
-		}
-		if val.Description == nil {
-			tmp := "An active account"
-			v[i].Description = &tmp
-		}
-	}
-
-	return v
 }
 
 // NewShowShowPayload builds a account service show endpoint payload.
@@ -241,24 +182,6 @@ func NewShowShowPayload(orgID uint, id string) *account.ShowPayload {
 	}
 }
 
-// NewShowAccountOK builds a account service show endpoint OK result.
-func NewShowAccountOK(body *ShowResponseBody) *account.Account {
-	v := &account.Account{
-		Href:        body.Href,
-		ID:          body.ID,
-		OrgID:       body.OrgID,
-		Name:        body.Name,
-		Description: body.Description,
-		Status:      body.Status,
-	}
-	if body.Description == nil {
-		tmp := "An active account"
-		v.Description = &tmp
-	}
-
-	return v
-}
-
 // NewDeleteDeletePayload builds a account service delete endpoint payload.
 func NewDeleteDeletePayload(orgID uint, id string) *account.DeletePayload {
 	return &account.DeletePayload{
@@ -267,11 +190,12 @@ func NewDeleteDeletePayload(orgID uint, id string) *account.DeletePayload {
 	}
 }
 
-// CreateServerRequestBody is the type of the account create HTTP endpoint
-// request body.
-func (body *CreateServerRequestBody) Validate() (err error) {
-	if body.Name == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+// AccountResponseBody is used to define fields on response body types.
+func (body *AccountResponseBody) Validate() (err error) {
+	if body.Status != nil {
+		if !(*body.Status == "provisioning" || *body.Status == "ready" || *body.Status == "deprovisioning") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.status", *body.Status, []interface{}{"provisioning", "ready", "deprovisioning"}))
+		}
 	}
 	return
 }

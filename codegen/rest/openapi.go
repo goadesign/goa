@@ -38,7 +38,7 @@ func (w *openAPI) Sections(_ string) []*codegen.Section {
 
 // OutputPath is the relative path to the output file.
 func (w *openAPI) OutputPath() string {
-	return filepath.Join("openapi", "swagger.json")
+	return filepath.Join("openapi.json")
 }
 
 // Finalize is a no-op for this file.

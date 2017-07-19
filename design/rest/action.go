@@ -442,6 +442,19 @@ func (a *HTTPEndpointExpr) Finalize() {
 	// Initialize responses parent, headers and body
 	for _, r := range a.Responses {
 		r.Finalize(a, a.MethodExpr.Result)
+		if r.Body == nil {
+			r.Body = &design.AttributeExpr{Type: ResponseBodyType(a, r)}
+			if val := a.MethodExpr.Result.Validation; val != nil {
+				r.Body.Validation = val.Dup()
+			}
+		}
+
+		// Initialize response content type if result is media type.
+		if r.Body.Type != design.Empty && r.ContentType == "" {
+			if mt, ok := r.Body.Type.(*design.ResultTypeExpr); ok {
+				r.ContentType = mt.Identifier
+			}
+		}
 	}
 
 	// Inherit HTTP errors from service and root

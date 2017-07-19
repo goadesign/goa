@@ -195,25 +195,7 @@ func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *design.Attribut
 				}
 			}
 		}
-	} else {
-		r.Body = &design.AttributeExpr{Type: ResponseBodyType(a, r)}
-		if svcAtt.Validation != nil {
-			a.Body.Validation = svcAtt.Validation.Dup()
-		}
 	}
-
-	// Initialize response content type if result is media type.
-	if r.Body.Type == design.Empty {
-		return
-	}
-	if r.ContentType != "" {
-		return
-	}
-	mt, ok := r.Body.Type.(*design.ResultTypeExpr)
-	if !ok {
-		return
-	}
-	r.ContentType = mt.Identifier
 }
 
 // Dup creates a copy of the response expression.

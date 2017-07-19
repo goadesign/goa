@@ -18,9 +18,9 @@ func OpenAPI(roots ...eval.Root) ([]codegen.File, error) {
 		err  error
 	)
 	for _, root := range roots {
-		switch r := root.(type) {
-		case *restdesign.RootExpr:
+		if r, ok := root.(*restdesign.RootExpr); ok {
 			file, err = rest.OpenAPI(r)
+			break
 		}
 	}
 	if err != nil {

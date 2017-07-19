@@ -8,7 +8,7 @@ import (
 	"github.com/boltdb/bolt"
 
 	"goa.design/goa.v2/examples/account/gen/account"
-	"goa.design/goa.v2/examples/account/gen/account/transport"
+	"goa.design/goa.v2/examples/account/gen/account/http/server"
 )
 
 // service state
@@ -37,7 +37,7 @@ func (s *service) Create(ctx context.Context, ca *account.CreatePayload) (*accou
 	}
 
 	a := account.Account{
-		Href:        transport.ShowAccountPath(ca.OrgID, accountID),
+		Href:        server.ShowAccountPath(ca.OrgID, accountID),
 		ID:          accountID,
 		OrgID:       ca.OrgID,
 		Name:        ca.Name,
