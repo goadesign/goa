@@ -33,7 +33,7 @@ import (
 //
 //     // new type
 //     var SumPayload = Type("SumPayload", func() {
-//         Description("Type sent to add endpoint")
+//         Description("Type sent to add method")
 //
 //         Attribute("a", String)                 // string attribute "a"
 //         Attribute("b", Int32, "operand")       // attribute with description
@@ -83,7 +83,7 @@ func Type(name string, args ...interface{}) design.UserType {
 			fn = d
 		}
 	case func():
-		base = design.Object{}
+		base = &design.Object{}
 		fn = a
 		if len(args) == 2 {
 			eval.ReportError("only one argument allowed when it is a function")
@@ -123,8 +123,8 @@ func Type(name string, args ...interface{}) design.UserType {
 //    })
 //
 // Note: CollectionOf and ArrayOf both return array types. CollectionOf returns
-// a media type where ArrayOf returns a user type. In general you want to use
-// CollectionOf if the argument is a media type and ArrayOf if it is a user
+// a result type where ArrayOf returns a user type. In general you want to use
+// CollectionOf if the argument is a result type and ArrayOf if it is a user
 // type.
 func ArrayOf(v interface{}, fn ...func()) *design.Array {
 	var t design.DataType
@@ -218,17 +218,26 @@ func Key(fn func()) {
 		eval.IncompatibleDSL()
 		return
 	}
-	m := at.Type.(*design.Map)
-	eval.Execute(fn, m.KeyType)
+	if m, ok := at.Type.(*design.Map); ok {
+		eval.Execute(fn, m.KeyType)
+		return
+	}
+	eval.IncompatibleDSL()
 }
 
-// Elem makes it possible to specify validations for map values.
+// Elem makes it possible to specify validations for array and map values.
 func Elem(fn func()) {
 	at, ok := eval.Current().(*design.AttributeExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
-	m := at.Type.(*design.Map)
-	eval.Execute(fn, m.ElemType)
+	switch e := at.Type.(type) {
+	case *design.Array:
+		eval.Execute(fn, e.ElemType)
+	case *design.Map:
+		eval.Execute(fn, e.ElemType)
+	default:
+		eval.IncompatibleDSL()
+	}
 }

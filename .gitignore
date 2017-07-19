@@ -19,3 +19,4 @@ cmd/goagen/goagen
 
 # Example outputs
 /examples/account/cmd/*
+/examples/account/account

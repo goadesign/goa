@@ -33,7 +33,7 @@ func Header(title, pack string, imports []*ImportSpec) *Section {
 }
 
 const (
-	headerT = `{{if .Title}}// Code generated with goagen {{.ToolVersion}}, DO NOT EDIT.
+	headerT = `{{if .Title}}// Code generated with goa {{.ToolVersion}}, DO NOT EDIT.
 //
 // {{.Title}}
 //

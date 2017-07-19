@@ -37,7 +37,7 @@ type (
 	clientError struct {
 		message   string
 		service   string
-		endpoint  string
+		method    string
 		temporary bool
 		timeout   bool
 	}
@@ -125,40 +125,40 @@ func (dd *debugDoer) Fprint(w io.Writer) {
 
 // Error builds an error message.
 func (c *clientError) Error() string {
-	return fmt.Sprintf("client [%s %s]: %s", c.service, c.endpoint, c.message)
+	return fmt.Sprintf("client [%s %s]: %s", c.service, c.method, c.message)
 }
 
 // ErrInvalidType is the error returned when the wrong type is given to an
-// endpoint function.
-func ErrInvalidType(svc, ep, expected string, actual interface{}) error {
+// method function.
+func ErrInvalidType(svc, m, expected string, actual interface{}) error {
 	msg := fmt.Sprintf("invalid value expected %s, got %v", expected, actual)
-	return &clientError{message: msg, service: svc, endpoint: ep}
+	return &clientError{message: msg, service: svc, method: m}
 }
 
 // ErrEncodingError is the error returned when the encoder fails to encode the
 // request body.
-func ErrEncodingError(svc, ep string, err error) error {
+func ErrEncodingError(svc, m string, err error) error {
 	msg := fmt.Sprintf("failed to encode request body: %s", err)
-	return &clientError{message: msg, service: svc, endpoint: ep}
+	return &clientError{message: msg, service: svc, method: m}
 }
 
-// ErrInvalidURL is the error returned when the URL computed for an endpoint is
+// ErrInvalidURL is the error returned when the URL computed for an method is
 // invalid.
-func ErrInvalidURL(svc, ep, u string, err error) error {
+func ErrInvalidURL(svc, m, u string, err error) error {
 	msg := fmt.Sprintf("invalid URL %s: %s", u, err)
-	return &clientError{message: msg, service: svc, endpoint: ep}
+	return &clientError{message: msg, service: svc, method: m}
 }
 
 // ErrDecodingError is the error returned when the decoder fails to decode the
 // response body.
-func ErrDecodingError(svc, ep string, err error) error {
+func ErrDecodingError(svc, m string, err error) error {
 	msg := fmt.Sprintf("failed to decode response body: %s", err)
-	return &clientError{message: msg, service: svc, endpoint: ep}
+	return &clientError{message: msg, service: svc, method: m}
 }
 
 // ErrInvalidResponse is the error returned when the service responded with an
 // unexpected response status code.
-func ErrInvalidResponse(svc, ep string, code int, body string) error {
+func ErrInvalidResponse(svc, m string, code int, body string) error {
 	var b string
 	if body != "" {
 		b = ", body: "
@@ -172,18 +172,18 @@ func ErrInvalidResponse(svc, ep string, code int, body string) error {
 	timeout := code == http.StatusRequestTimeout ||
 		code == http.StatusGatewayTimeout
 
-	return &clientError{message: msg, service: svc, endpoint: ep,
+	return &clientError{message: msg, service: svc, method: m,
 		temporary: temporary, timeout: timeout}
 }
 
 // ErrRequestError is the error returned when the request fails to be sent.
-func ErrRequestError(svc, ep string, err error) error {
+func ErrRequestError(svc, m string, err error) error {
 	temporary := false
 	timeout := false
 	if nerr, ok := err.(net.Error); ok {
 		temporary = nerr.Temporary()
 		timeout = nerr.Timeout()
 	}
-	return &clientError{message: err.Error(), service: svc, endpoint: ep,
+	return &clientError{message: err.Error(), service: svc, method: m,
 		temporary: temporary, timeout: timeout}
 }

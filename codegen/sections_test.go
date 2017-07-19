@@ -12,12 +12,12 @@ func TestHeader(t *testing.T) {
 		noTitleHeader = `package testpackage
 
 `
-		titleHeader = `// Code generated with goagen v2.0.0-wip, DO NOT EDIT.
+		titleHeader = `// Code generated with goa v2.0.0-wip, DO NOT EDIT.
 //
 // test title
 //
 // Command:
-// $ goagen
+// $ goa
 
 package testpackage
 

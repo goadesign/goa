@@ -58,9 +58,10 @@ var (
 	ipv4Regex = regexp.MustCompile(`^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$`)
 )
 
-// ValidateFormat validates a string against a standard format.
-// It returns nil if the string conforms to the format, an error otherwise.
-// The format specification follows the json schema draft 4 validation extension.
+// ValidateFormat validates val against f. It returns nil if the string conforms
+// to the format, an error otherwise. name is the name of the variable used in
+// error messages. where in a data structure the error occurred if any. The
+// format specification follows the json schema draft 4 validation extension.
 // see http://json-schema.org/latest/json-schema-validation.html#anchor105
 // Supported formats are:
 //
@@ -72,7 +73,7 @@ var (
 //     - "mac": IEEE 802 MAC-48, EUI-48 or EUI-64 MAC address value
 //     - "cidr": RFC4632 and RFC4291 CIDR notation IP address value
 //     - "regexp": Regular expression syntax accepted by RE2
-func ValidateFormat(f Format, val string) error {
+func ValidateFormat(name string, val string, f Format) error {
 	var err error
 	switch f {
 	case FormatDateTime:
@@ -113,7 +114,7 @@ func ValidateFormat(f Format, val string) error {
 		return fmt.Errorf("unknown format %#v", f)
 	}
 	if err != nil {
-		return fmt.Errorf("invalid %s value, %s", f, err)
+		return InvalidFormatError(name, val, f, err)
 	}
 	return nil
 }
@@ -126,9 +127,10 @@ var knownPatterns = make(map[string]*regexp.Regexp)
 // knownPatternsLock is the mutex used to access knownPatterns
 var knownPatternsLock = &sync.RWMutex{}
 
-// ValidatePattern returns an error if val does not match the regular expression p.
-// It makes an effort to minimize the number of times the regular expression needs to be compiled.
-func ValidatePattern(p string, val string) bool {
+// ValidatePattern returns an error if val does not match the regular expression
+// p. It makes an effort to minimize the number of times the regular expression
+// needs to be compiled. name is the name of the variable used in error messages.
+func ValidatePattern(name, val, p string) error {
 	knownPatternsLock.RLock()
 	r, ok := knownPatterns[p]
 	knownPatternsLock.RUnlock()
@@ -138,5 +140,8 @@ func ValidatePattern(p string, val string) bool {
 		knownPatterns[p] = r
 		knownPatternsLock.Unlock()
 	}
-	return r.MatchString(val)
+	if !r.MatchString(val) {
+		return InvalidPatternError(name, val, p)
+	}
+	return nil
 }

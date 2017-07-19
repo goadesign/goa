@@ -27,7 +27,7 @@ func CheckVersion(ver string) error {
 		return err
 	}
 	if !compat {
-		return fmt.Errorf("version mismatch: using goagen %s to generate code that compiles with goa %s",
+		return fmt.Errorf("version mismatch: using goa %s to generate code that compiles with goa %s",
 			ver, pkg.Version())
 	}
 	return nil
@@ -35,7 +35,7 @@ func CheckVersion(ver string) error {
 
 // CommandLine return the command used to run this process.
 func CommandLine() string {
-	cmdl := "$ goagen"
+	cmdl := "$ goa"
 	for _, arg := range os.Args {
 		if strings.HasPrefix(arg, "--cmd=") {
 			cmdl = arg[6:]

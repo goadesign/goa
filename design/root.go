@@ -17,15 +17,15 @@ type (
 		// Services contains the list of services exposed by the API.
 		Services []*ServiceExpr
 		// Errors contains the list of errors returned by all the API
-		// endpoints.
+		// methods.
 		Errors []*ErrorExpr
 		// Types contains the user types described in the DSL.
 		Types []UserType
-		// MediaTypes contains the media types described in the DSL.
-		MediaTypes []UserType
-		// GeneratedMediaTypes contains the set of media types created
-		// by CollectionOf.
-		GeneratedMediaTypes GeneratedRoot
+		// ResultTypes contains the result types described in the DSL.
+		ResultTypes []UserType
+		// GeneratedTypes contains the types generated during DSL
+		// execution.
+		GeneratedTypes GeneratedRoot
 	}
 
 	// MetadataExpr is a set of key/value pairs
@@ -52,10 +52,10 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	}
 	walk(types)
 
-	// Next media types
-	mtypes := make(eval.ExpressionSet, len(r.MediaTypes))
-	for i, mt := range r.MediaTypes {
-		mtypes[i] = mt.(*MediaTypeExpr)
+	// Next result types
+	mtypes := make(eval.ExpressionSet, len(r.ResultTypes))
+	for i, mt := range r.ResultTypes {
+		mtypes[i] = mt.(*ResultTypeExpr)
 	}
 	walk(mtypes)
 
@@ -66,14 +66,14 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	}
 	walk(services)
 
-	// Next the endpoints
-	var endpoints eval.ExpressionSet
+	// Next the methods
+	var methods eval.ExpressionSet
 	for _, s := range r.Services {
-		for _, e := range s.Endpoints {
-			endpoints = append(endpoints, e)
+		for _, e := range s.Methods {
+			methods = append(methods, e)
 		}
 	}
-	walk(endpoints)
+	walk(methods)
 }
 
 // DependsOn returns nil, the core DSL has no dependency.
@@ -104,7 +104,7 @@ func (r *RootExpr) UserType(name string) UserType {
 			return t
 		}
 	}
-	for _, t := range r.MediaTypes {
+	for _, t := range r.ResultTypes {
 		if t.Name() == name {
 			return t
 		}
@@ -112,11 +112,11 @@ func (r *RootExpr) UserType(name string) UserType {
 	return nil
 }
 
-// GeneratedMediaType returns the generated media type expression with the given
+// GeneratedResultType returns the generated result type expression with the given
 // id, nil if there isn't one.
-func (r *RootExpr) GeneratedMediaType(id string) *MediaTypeExpr {
-	for _, t := range r.GeneratedMediaTypes {
-		mt := t.(*MediaTypeExpr)
+func (r *RootExpr) GeneratedResultType(id string) *ResultTypeExpr {
+	for _, t := range r.GeneratedTypes {
+		mt := t.(*ResultTypeExpr)
 		if mt.Identifier == id {
 			return mt
 		}

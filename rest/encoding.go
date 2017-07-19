@@ -17,31 +17,38 @@ import (
 )
 
 type (
-	// Decoder is the low level decoder interface.
+	// Decoder provides the actual decoding algorithm used to load HTTP
+	// request and response bodies.
 	Decoder interface {
 		// Decode decodes into v.
 		Decode(v interface{}) error
 	}
 
-	// Encoder is the low level encoder interface.
+	// Encoder provides the actual encoding algorithm used to write HTTP
+	// request and response bodies.
 	Encoder interface {
 		// Encode encodes v.
 		Encode(v interface{}) error
 	}
 )
 
-// DefaultRequestDecoder returns a HTTP request body decoder.
-// The decoder handles the following content types:
+// RequestDecoder returns a HTTP request body decoder suitable for the given
+// request. The decoder handles the following mime types:
 //
-// * application/json using package encoding/json
-// * application/xml using package encoding/xml
-// * application/gob using package encoding/gob
-func DefaultRequestDecoder(r *http.Request) Decoder {
+//     * application/json using package encoding/json
+//     * application/xml using package encoding/xml
+//     * application/gob using package encoding/gob
+//
+// RequestDecoder defaults to the JSON decoder if the request "Content-Type"
+// header does not match any of the supported mime type or is missing
+// altogether.
+func RequestDecoder(r *http.Request) Decoder {
 	contentType := r.Header.Get("Content-Type")
 	if contentType == "" {
-		// Default to JSON
+		// default to JSON
 		contentType = "application/json"
 	} else {
+		// sanitize
 		if mediaType, _, err := mime.ParseMediaType(contentType); err == nil {
 			contentType = mediaType
 		}
@@ -58,14 +65,17 @@ func DefaultRequestDecoder(r *http.Request) Decoder {
 	}
 }
 
-// DefaultResponseEncoder returns a HTTP response encoder and the corresponding
-// mime type according to the request "Accept" header. The encoder supports the
-// following mime types:
+// ResponseEncoder returns a HTTP response encoder and the corresponding mime
+// type suitable for the given request. The encoder supports the following mime
+// types:
 //
-//   - application/json using package encoding/json
-//   - application/xml using package encoding/xml
-//   - application/gob using package encoding/gob
-func DefaultResponseEncoder(w http.ResponseWriter, r *http.Request) (enc Encoder, mt string) {
+//     * application/json using package encoding/json
+//     * application/xml using package encoding/xml
+//     * application/gob using package encoding/gob
+//
+// ResponseEncoder defaults to the JSON encoder if the request "Accept" header
+// does not match any of the supported mime types or is missing altogether.
+func ResponseEncoder(w http.ResponseWriter, r *http.Request) (enc Encoder, mt string) {
 	accept := r.Header.Get("Accept")
 	builtin := func(a string) (Encoder, string) {
 		switch a {
@@ -91,21 +101,21 @@ func DefaultResponseEncoder(w http.ResponseWriter, r *http.Request) (enc Encoder
 	return
 }
 
-// DefaultRequestEncoder returns a HTTP request encoder.
+// RequestEncoder returns a HTTP request encoder.
 // The encoder uses package encoding/json.
-func DefaultRequestEncoder(r *http.Request) Encoder {
+func RequestEncoder(r *http.Request) Encoder {
 	var buf bytes.Buffer
 	r.Body = ioutil.NopCloser(&buf)
 	return json.NewEncoder(&buf)
 }
 
-// DefaultResponseDecoder returns a HTTP response decoder.
+// ResponseDecoder returns a HTTP response decoder.
 // The decoder handles the following content types:
 //
 // * application/json using package encoding/json (default)
 // * application/xml using package encoding/xml
 // * application/gob using package encoding/gob
-func DefaultResponseDecoder(resp *http.Response) Decoder {
+func ResponseDecoder(resp *http.Response) Decoder {
 	ct := resp.Header.Get("Content-Type")
 	if ct == "" {
 		return json.NewDecoder(resp.Body)
@@ -125,30 +135,28 @@ func DefaultResponseDecoder(resp *http.Response) Decoder {
 	}
 }
 
-// EncodeError returns an encoder that checks whether the error is a goa
-// Error and if so sets the response status code using the error status and
-// encodes the corresponding ErrorResponse struct to the response body. If the
-// error is not a goa.Error then it sets the response status code to 500, writes
-// the error message to the response body and logs it.
-func EncodeError(encoder func(http.ResponseWriter, *http.Request) (Encoder, string), logger goa.LogAdapter) func(http.ResponseWriter, *http.Request, error) {
+// EncodeError returns an encoder that checks whether the error is a goa Error
+// and if so sets the response status code using the error status and encodes
+// the corresponding ErrorResponse struct to the response body. If the error is
+// not a goa.Error then it sets the response status code to 500 and writes the
+// error message to the response body.
+func EncodeError(encoder func(http.ResponseWriter, *http.Request) (Encoder, string)) func(http.ResponseWriter, *http.Request, error) {
 	return func(w http.ResponseWriter, r *http.Request, v error) {
 		switch t := v.(type) {
+
 		case goa.Error:
 			enc, ct := encoder(w, r)
 			SetContentType(w, ct)
 			w.WriteHeader(HTTPStatus(t.Status()))
-			err := enc.Encode(NewErrorResponse(t))
-			if err != nil {
-				logger.Error(r.Context(), "encoding", err)
-			}
+			enc.Encode(NewErrorResponse(t))
+
 		default:
 			b := make([]byte, 6)
 			io.ReadFull(rand.Reader, b)
-			id := base64.RawURLEncoding.EncodeToString(b) + ": "
+			id := base64.RawURLEncoding.EncodeToString(b)
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(id + t.Error()))
-			logger.Error(r.Context(), "id", id, "error", t.Error())
+			w.Write([]byte(id + ": " + t.Error()))
 		}
 	}
 }

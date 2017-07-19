@@ -2,7 +2,7 @@
 Package rest implements the goa DSL used to define REST APIs.
 
 The REST DSL adds a "HTTP" function to the generic DSL constructs that require
-HTTP specific information. These include the API, Service, Endpoint and Error
+HTTP specific information. These include the API, Service, Method and Error
 DSLs.
 
 For example:
@@ -22,7 +22,7 @@ in the generic DSL to HTTP parameters (for requests), headers and body fields.
 For example:
 
     var _ = Service("name", func() {
-        Endpoint("name", func() {
+        Method("name", func() {
             Request(RequestType)     // has attributes rq1, rq2, rq3 and rq4
             Response(ResponseType)   // has attributes rp1 and rp2
             Error("name", ErrorType) // has attributes er1 and er2
@@ -67,7 +67,7 @@ Also the default response status code is 200 OK for response types other than
 Empty and 204 NoContent for the Empty response type. So the following:
 
     var _ = Service("name", func() {
-        Endpoint("name", func() {
+        Method("name", func() {
             Request(RequestType)
             Response(ResponseType)
             HTTP(func() {
@@ -79,7 +79,7 @@ Empty and 204 NoContent for the Empty response type. So the following:
 is equivalent to:
 
     var _ = Service("name", func() {
-        Endpoint("name", func() {
+        Method("name", func() {
             Request(RequestType)   // has attributes rq1 and rq2
             Response(ResponseType) // has attributes rp1 and rp2
             HTTP(func() {
@@ -114,7 +114,7 @@ properties (type, description, validations etc.) of the attribute with the same
 name defined in the top level request or response if any. For example:
 
     var _ = Service("name", func() {
-        Endpoint("name", func() {
+        Method("name", func() {
             Response(ResponseType) // has attributes rp1 and rp2
             HTTP(func() {
                 GET("/")

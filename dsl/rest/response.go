@@ -9,24 +9,28 @@ import (
 // error responses. When describing an error response the first argument is the
 // name of the error.
 //
-// While a service endpoint may only define a single result type Response may
-// define multiple success HTTP responses. The expression allows for specifying
-// the response status code (as an argument of the Response function or via the
-// Code function), headers (via the Header and ContentType functions) and body
-// (via the Body function).
+// While a service method may only define a single result type Response may be
+// called multiple times to define multiple success HTTP responses. In this case
+// the Tag expression makes it possible to specify the name of a field in the
+// method result type and a value that the field must have for the
+// corresponding response to be sent. The tag field must be of type String.
+//
+// Response allows specifying the response status code as an argument or via the
+// Code expression, headers via the Header and ContentType expressions and body
+// via the Body expression.
 //
 // By default success HTTP responses use status code 200 and error HTTP responses
-// use status code 400. Also by default the responses use the endpoint result
+// use status code 400. Also by default the responses use the method result
 // type (success responses) or error type (error responses) to define the
 // response body shape.
 //
-// Additionally if the response type is a media type then the "Content-Type"
+// Additionally if the response type is a result type then the "Content-Type"
 // response header is set with the corresponding content type (either the value
-// set with ContentType in the media type DSL or the media type identifier).
+// set with ContentType in the result type DSL or the result type identifier).
 //
 // In other words given the following type:
 //
-//     var AccountMedia = MediaType("application/vnd.goa.account", func() {
+//     var AccountResult = ResultType("application/vnd.goa.account", func() {
 //         Attributes(func() {
 //             Attribute("href", String, "Account API href")
 //             Attribute("name", String, "Account name")
@@ -39,19 +43,19 @@ import (
 //
 // the following:
 //
-//     Endpoint("show", func() {
-//         Response(AccountMedia)
+//     Method("show", func() {
+//         Response(AccountResult)
 //     })
 //
 // is equivalent to:
 //
-//     Endpoint("show", func() {
-//         Response(AccountMedia)
+//     Method("show", func() {
+//         Response(AccountResult)
 //         HTTP(func() {
 //             Response(func() {
 //                 Code(StatusOK)
 //                 ContentType("application/vnd.goa.account")
-//                 Body(AccountMedia)
+//                 Body(AccountResult)
 //             })
 //         })
 //     })
@@ -61,7 +65,7 @@ import (
 //
 // The following:
 //
-//     Endpoint("show", func() {
+//     Method("show", func() {
 //         Response(ShowResponse)
 //         HTTP(func() {
 //             Response(func() {
@@ -72,7 +76,7 @@ import (
 //
 // is thus equivalent to:
 //
-//     Endpoint("show", func() {
+//     Method("show", func() {
 //         Response(ShowResponse)
 //         HTTP(func() {
 //             Response(func() {
@@ -87,9 +91,9 @@ import (
 //     })
 //
 // Response may appear in a API or service HTTP expression to define error
-// responses common to all the API or service endpoints. Response may also appear
-// in an endpoint HTTP expression to define both the success and error responses
-// specific to the endpoint.
+// responses common to all the API or service methods. Response may also appear
+// in an method HTTP expression to define both the success and error responses
+// specific to the method.
 //
 // Response takes one to three arguments. Success responses accept a status code
 // or a function as first argument. If the first argument is a status code then
@@ -111,35 +115,35 @@ import (
 //
 // Example:
 //
-// Endpoint("create", func() {
-//     Payload(CreatePayload)
-//     Result(CreateResult)
-//     Error("an_error")
-//     HTTP(func() {
-//         Response(StatusCreated) // Uses HTTP status code 201 Created and
-//                                 // CreateResult type to describe body
+//    Method("create", func() {
+//        Payload(CreatePayload)
+//        Result(CreateResult)
+//        Error("an_error")
+//        HTTP(func() {
+//            Response(StatusCreated) // Uses HTTP status code 201 Created and
+//                                    // CreateResult type to describe body
 //
-//         Response(func() {
-//             Description("Response used when item already exists")
-//             Code(StatusNoContent) // HTTP status code set using Code
-//             Body(Empty)           // Override endpoint result type
-//         })
+//            Response(func() {
+//                Description("Response used when item already exists")
+//                Code(StatusNoContent) // HTTP status code set using Code
+//                Body(Empty)           // Override method result type
+//            })
 //
-//         Response(StatusAccepted, func() {
-//             Description("Response used for async creations")
-//             Body(func() {
-//                 Attribute("taskHref", String, "API href to async task")
-//             })
-//         })
+//            Response(StatusAccepted, func() {
+//                Description("Response used for async creations")
+//                Body(func() {
+//                    Attribute("taskHref", String, "API href to async task")
+//                })
+//            })
 //
-//         Response("an_error", StatusConflict) // Override default of 400
-//     })
-// })
+//            Response("an_error", StatusConflict) // Override default of 400
+//        })
+//    })
 //
 func Response(val interface{}, args ...interface{}) {
 	name, ok := val.(string)
 	switch t := eval.Current().(type) {
-	case *rest.ResourceExpr:
+	case *rest.HTTPServiceExpr:
 		if !ok {
 			eval.InvalidArgError("name of error", val)
 			return
@@ -155,7 +159,7 @@ func Response(val interface{}, args ...interface{}) {
 		if e := httpError(name, t, args...); e != nil {
 			t.HTTPErrors = append(t.HTTPErrors, e)
 		}
-	case *rest.ActionExpr:
+	case *rest.HTTPEndpointExpr:
 		if ok {
 			if e := httpError(name, t, args...); e != nil {
 				t.HTTPErrors = append(t.HTTPErrors, e)
@@ -177,6 +181,45 @@ func Response(val interface{}, args ...interface{}) {
 	default:
 		eval.IncompatibleDSL()
 	}
+}
+
+// Tag identifies a method result type field and a value. The algorithm that
+// encodes the result into the HTTP response iterates through the responses and
+// uses the first response that has a matching tag (that is for which the result
+// field with the tag name matches the tag value). There must be one and only
+// one response with no Tag expression, this response is used when no other tag
+// matches.
+//
+// Tag may appear in Response.
+// Tag accepts two arguments: the name of the field and the (string) value.
+//
+// Example:
+//
+//    Method("create", func() {
+//        Result(CreateResult)
+//        HTTP(func() {
+//            Response(StatusCreated, func() {
+//                Tag("outcome", "created") // Assumes CreateResult has attribute
+//                                          // "outcome" which may be "created"
+//                                          // or "accepted"
+//            })
+//
+//            Response(StatusAccepted, func() {
+//                Tag("outcome", "accepted")
+//            })
+//
+//            Response(StatusOK)            // Default response if "outcome" is
+//                                          // neither "created" nor "accepted"
+//        })
+//    })
+//
+func Tag(name, value string) {
+	res, ok := eval.Current().(*rest.HTTPResponseExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	res.Tag = [2]string{name, value}
 }
 
 // Code sets the Response status code.

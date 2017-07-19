@@ -26,14 +26,14 @@ func Enum(vals ...interface{}) {
 			// where there's only one argument and the type is string implicitly is very
 			// useful and common, for example to list attributes that refer to other attributes
 			// such as responses that refer to responses defined at the API level or links that
-			// refer to the media type attributes. So if the form that takes a DSL always ended
+			// refer to the result type attributes. So if the form that takes a DSL always ended
 			// up defining an object we'd have a weird situation where one arg is string and
 			// two args is object. Breaks the least surprise principle. Soooo long story
 			// short the lesser evil seems to be to allow the ambiguity. Also tests like the
 			// one below are really a convenience to the user and not a fundamental feature
 			// - not checking in the case the type is not known yet is OK.
 			if a.Type != nil && !a.Type.IsCompatible(v) {
-				eval.ReportError("value %#v at index #d is incompatible with attribute of type %s",
+				eval.ReportError("value %#v at index %d is incompatible with attribute of type %s",
 					v, i, a.Type.Name())
 				ok = false
 			}
@@ -114,7 +114,9 @@ func Pattern(p string) {
 func Minimum(val interface{}) {
 	if a, ok := eval.Current().(*design.AttributeExpr); ok {
 		if a.Type != nil &&
-			a.Type.Kind() != design.Int32Kind && a.Type.Kind() != design.Int64Kind &&
+			a.Type.Kind() != design.IntKind && a.Type.Kind() != design.UIntKind &&
+			a.Type.Kind() != design.Int32Kind && a.Type.Kind() != design.UInt32Kind &&
+			a.Type.Kind() != design.Int64Kind && a.Type.Kind() != design.UInt64Kind &&
 			a.Type.Kind() != design.Float32Kind && a.Type.Kind() != design.Float64Kind {
 
 			incompatibleAttributeType("minimum", a.Type.Name(), "an integer or a number")
@@ -147,7 +149,9 @@ func Minimum(val interface{}) {
 func Maximum(val interface{}) {
 	if a, ok := eval.Current().(*design.AttributeExpr); ok {
 		if a.Type != nil &&
-			a.Type.Kind() != design.Int32Kind && a.Type.Kind() != design.Int64Kind &&
+			a.Type.Kind() != design.IntKind && a.Type.Kind() != design.UIntKind &&
+			a.Type.Kind() != design.Int32Kind && a.Type.Kind() != design.UInt32Kind &&
+			a.Type.Kind() != design.Int64Kind && a.Type.Kind() != design.UInt64Kind &&
 			a.Type.Kind() != design.Float32Kind && a.Type.Kind() != design.Float64Kind {
 
 			incompatibleAttributeType("maximum", a.Type.Name(), "an integer or a number")
@@ -227,7 +231,7 @@ func Required(names ...string) {
 	switch def := eval.Current().(type) {
 	case *design.AttributeExpr:
 		at = def
-	case *design.MediaTypeExpr:
+	case *design.ResultTypeExpr:
 		at = def.AttributeExpr
 	default:
 		eval.IncompatibleDSL()
@@ -240,7 +244,7 @@ func Required(names ...string) {
 		if at.Validation == nil {
 			at.Validation = &design.ValidationExpr{}
 		}
-		at.Validation.AddRequired(names)
+		at.Validation.AddRequired(names...)
 	}
 }
 

@@ -5,7 +5,7 @@ import (
 	"goa.design/goa.v2/eval"
 )
 
-// Service defines a group of related endpoints. Refer to the transport specific
+// Service defines a group of related methods. Refer to the transport specific
 // DSLs to learn how to provide transport specific information.
 //
 // Service is as a top level expression.
@@ -18,19 +18,19 @@ import (
 //        Description("divider service") // Optional description
 //
 //        DefaultType(DivideResult) // Default response type for the service
-//                                  // endpoints. Also defines default
+//                                  // methods. Also defines default
 //                                  // properties (type, description and
 //                                  // validations) for attributes with
 //                                  // identical names in request types.
 //
 //        Error("Unauthorized", Unauthorized) // Error response that applies to
-//                                            // all endpoints
+//                                            // all methods
 //
-//        Endpoint("divide", func() {     // Defines a single endpoint
-//            Description("The divide endpoint returns the division of A and B")
-//            Request(DivideRequest)      // Request type listing all request
-//                                        // parameters in its attributes.
-//            Response(DivideResponse)    // Response type.
+//        Method("divide", func() {     // Defines a single method
+//            Description("The divide method returns the division of A and B")
+//            Request(DivideRequest)    // Request type listing all request
+//                                      // parameters in its attributes.
+//            Response(DivideResponse)  // Response type.
 //            Error("DivisionByZero", DivByZero) // Error, has a name and
 //                                               // optionally a type
 //                                               // (DivByZero) describes the

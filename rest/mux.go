@@ -1,7 +1,6 @@
 package rest
 
 import (
-	"context"
 	"net/http"
 	"regexp"
 
@@ -10,10 +9,10 @@ import (
 
 type (
 	// Muxer is the HTTP request multiplexer interface used by the generated
-	// code. The implementation must match the HTTP method and URL of each
-	// incoming request against a list of registered patterns and call the
-	// handler for the corresponding method and the pattern that most
-	// closely matches the URL.
+	// code. ServerHTTP must match the HTTP method and URL of each incoming
+	// request against the list of registered patterns and call the handler
+	// for the corresponding method and the pattern that most closely
+	// matches the URL.
 	//
 	// The patterns may include wildcards that identify URL segments that
 	// must be captured. The captured values must be stored in the request
@@ -42,7 +41,11 @@ type (
 		// ServeHTTP dispatches the request to the handler whose method
 		// matches the request method and whose pattern most closely
 		// matches the request URL.
-		ServeHTTP(w http.ResponseWriter, r *http.Request)
+		ServeHTTP(http.ResponseWriter, *http.Request)
+
+		// Vars returns the path variables captured for the given
+		// request.
+		Vars(*http.Request) map[string]string
 	}
 
 	// mux is the default Muxer implementation. It leverages the
@@ -54,31 +57,21 @@ type (
 	}
 )
 
-// ParamsContextKey is the value of the key used to store the request parameters
-// map in its context.
-const ParamsContextKey = "params.context.key"
-
-// NewMuxer returns the Muxer implementation used by the generated scaffold code.
-// User code may override the implementation provided when mounting the
-// controllers via the generated MountXXX functions.
+// NewMuxer returns a Muxer implementation based on the httptreemux router.
 func NewMuxer() Muxer {
 	r := httptreemux.NewContextMux()
 	r.EscapeAddedRoutes = true
-	return mux{r}
-}
-
-// ContextParams returns the params map associated with the given context if one
-// exists. Otherwise, nil is returned.
-func ContextParams(ctx context.Context) map[string]string {
-	if p, ok := ctx.Value(ParamsContextKey).(map[string]string); ok {
-		return p
-	}
-	return nil
+	return &mux{r}
 }
 
 // Handle maps the wildcard format used by goa to the one used by httptreemux.
-func (m mux) Handle(method, pattern string, handler http.HandlerFunc) {
+func (m *mux) Handle(method, pattern string, handler http.HandlerFunc) {
 	m.ContextMux.Handle(method, treemuxify(pattern), handler)
+}
+
+// Vars extracts the path variables from the request context.
+func (m *mux) Vars(r *http.Request) map[string]string {
+	return httptreemux.ContextParams(r.Context())
 }
 
 var wildSeg = regexp.MustCompile(`/{([a-zA-Z0-9_]+)}`)

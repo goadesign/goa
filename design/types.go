@@ -7,15 +7,14 @@ and numbers), array types which represent a collection of items, map types which
 represent maps of key/value pairs and object types describing data structures
 with fields.
 
-The package also defines user types which are named types and media types which
-describe HTTP media types.
+The package also defines user types which can also be result types. A result
+type is a user type used to described response messages that defines views.
 */
 package design
 
 import (
 	"fmt"
 	"reflect"
-	"sort"
 
 	"goa.design/goa.v2/eval"
 )
@@ -35,6 +34,8 @@ type (
 		IsCompatible(interface{}) bool
 		// Example generates a pseudo-random value using the given random generator.
 		Example(*Random) interface{}
+		// Hash returns a unique hash value for the instance of the type.
+		Hash() string
 	}
 
 	// Primitive is the type for null, boolean, integer, number, string, and time.
@@ -51,8 +52,18 @@ type (
 		ElemType *AttributeExpr
 	}
 
+	// NamedAttributeExpr describes object attributes together with their
+	// names.
+	NamedAttributeExpr struct {
+		// Name of attribute
+		Name string
+		// Attribute
+		Attribute *AttributeExpr
+	}
+
 	// Object is the type used to describe composite data structures.
-	Object map[string]*AttributeExpr
+	// Note: not a map because order matters.
+	Object []*NamedAttributeExpr
 
 	// UserType is the interface implemented by all user type implementations.
 	// Plugins may leverage this interface to introduce their own types.
@@ -110,8 +121,8 @@ const (
 	MapKind
 	// UserTypeKind represents a user type.
 	UserTypeKind
-	// MediaTypeKind represents a media type.
-	MediaTypeKind
+	// ResultTypeKind represents a result type.
+	ResultTypeKind
 	// AnyKind represents a unknown type.
 	AnyKind
 )
@@ -161,20 +172,20 @@ var Empty = &UserTypeExpr{
 	TypeName: "Empty",
 	AttributeExpr: &AttributeExpr{
 		Description: "Empty represents empty values",
-		Type:        Object{},
+		Type:        &Object{},
 	},
 }
 
 // Convenience methods
 
 // AsObject returns the type underlying object if any, nil otherwise.
-func AsObject(dt DataType) Object {
+func AsObject(dt DataType) *Object {
 	switch t := dt.(type) {
 	case *UserTypeExpr:
 		return AsObject(t.Type)
-	case *MediaTypeExpr:
+	case *ResultTypeExpr:
 		return AsObject(t.Type)
-	case Object:
+	case *Object:
 		return t
 	default:
 		return nil
@@ -186,7 +197,7 @@ func AsArray(dt DataType) *Array {
 	switch t := dt.(type) {
 	case *UserTypeExpr:
 		return AsArray(t.Type)
-	case *MediaTypeExpr:
+	case *ResultTypeExpr:
 		return AsArray(t.Type)
 	case *Array:
 		return t
@@ -200,7 +211,7 @@ func AsMap(dt DataType) *Map {
 	switch t := dt.(type) {
 	case *UserTypeExpr:
 		return AsMap(t.Type)
-	case *MediaTypeExpr:
+	case *ResultTypeExpr:
 		return AsMap(t.Type)
 	case *Map:
 		return t
@@ -225,7 +236,7 @@ func IsPrimitive(dt DataType) bool {
 		return true
 	case *UserTypeExpr:
 		return IsPrimitive(t.Type)
-	case *MediaTypeExpr:
+	case *ResultTypeExpr:
 		return IsPrimitive(t.Type)
 	default:
 		return false
@@ -261,7 +272,7 @@ func (p Primitive) Name() string {
 	case String:
 		return "string"
 	case Bytes:
-		return "[]byte"
+		return "bytes"
 	case Any:
 		return "any"
 	default:
@@ -293,7 +304,8 @@ func (p Primitive) IsCompatible(val interface{}) bool {
 	return false
 }
 
-// Example generates a pseudo-random primitive value using the given random generator.
+// Example generates a pseudo-random primitive value using the given random
+// generator.
 func (p Primitive) Example(r *Random) interface{} {
 	switch p {
 	case Boolean:
@@ -315,12 +327,22 @@ func (p Primitive) Example(r *Random) interface{} {
 	}
 }
 
+// Hash returns a unique hash value for p.
+func (p Primitive) Hash() string {
+	return p.Name()
+}
+
 // Kind implements DataKind.
 func (a *Array) Kind() Kind { return ArrayKind }
 
 // Name returns the type name.
 func (a *Array) Name() string {
 	return "array"
+}
+
+// Hash returns a unique hash value for a.
+func (a *Array) Hash() string {
+	return "_array_+" + a.ElemType.Type.Hash()
 }
 
 // IsCompatible returns true if val is compatible with p.
@@ -375,40 +397,94 @@ func (a ArrayVal) ToSlice() []interface{} {
 	return arr
 }
 
-// Kind implements DataKind.
-func (o Object) Kind() Kind { return ObjectKind }
+// Attribute returns the attribute with the given name if any, nil otherwise.
+func (o *Object) Attribute(name string) *AttributeExpr {
+	for _, nat := range *o {
+		if nat.Name == name {
+			return nat.Attribute
+		}
+	}
+	return nil
+}
 
-// Name returns the type name.
-func (o Object) Name() string { return "object" }
+// Set replaces the object named attribute n if any - creates a new object by
+// appending to the slice of named attributes otherwise. The resulting object is
+// returned in both cases.
+func (o *Object) Set(n string, att *AttributeExpr) {
+	for _, nat := range *o {
+		if nat.Name == n {
+			nat.Attribute = att
+			return
+		}
+	}
+	*o = append(*o, &NamedAttributeExpr{n, att})
+}
 
-// Merge copies other's fields into o overridding any pre-existing field with the same name.
-func (o Object) Merge(other Object) {
-	for n, att := range other {
-		o[n] = DupAtt(att)
+// Delete creates a new object with the same named attributes as o but without
+// the named attribute n if any.
+func (o *Object) Delete(n string) {
+	index := -1
+	for i, nat := range *o {
+		if nat.Name == n {
+			index = i
+			break
+		}
+	}
+	if index == -1 {
+		return
+	}
+	*o = append((*o)[:index], (*o)[index+1:]...)
+}
+
+// Rename changes the name of the named attribute n to m. Rename does nothing if
+// o does not have an attribute named n.
+func (o *Object) Rename(n, m string) {
+	for _, nat := range *o {
+		if nat.Name == n {
+			nat.Name = m
+			return
+		}
 	}
 }
 
+// Kind implements DataKind.
+func (o *Object) Kind() Kind { return ObjectKind }
+
+// Name returns the type name.
+func (o *Object) Name() string { return "object" }
+
+// Hash returns a unique hash value for o.
+func (o *Object) Hash() string {
+	h := "_object_"
+	for _, nat := range *o {
+		h += "+" + nat.Name + "/" + nat.Attribute.Type.Hash()
+	}
+	return h
+}
+
+// Merge creates a new object consisting of the named attributes of o appended
+// with duplicates of the named attributes of other. Named attributes of o that
+// have an identical name to named attributes of other get overridden.
+func (o *Object) Merge(other *Object) *Object {
+	res := o
+	for _, nat := range *other {
+		res.Set(nat.Name, DupAtt(nat.Attribute))
+	}
+	return res
+}
+
 // IsCompatible returns true if o describes the (Go) type of val.
-func (o Object) IsCompatible(val interface{}) bool {
+func (o *Object) IsCompatible(val interface{}) bool {
 	k := reflect.TypeOf(val).Kind()
 	return k == reflect.Map || k == reflect.Struct
 }
 
 // Example returns a random value of the object.
-func (o Object) Example(r *Random) interface{} {
-	// ensure fixed ordering
-	keys := make([]string, len(o))
-	i := 0
-	for n := range o {
-		keys[i] = n
-		i++
-	}
-	sort.Strings(keys)
-
+func (o *Object) Example(r *Random) interface{} {
 	res := make(map[string]interface{})
-	for _, n := range keys {
-		if v := o[n].Example(r); v != nil {
-			res[n] = v
+	for _, nat := range *o {
+		if v := nat.Attribute.Example(r); v != nil {
+			res[nat.Name] = v
 		}
 	}
 	return res
@@ -418,7 +494,12 @@ func (o Object) Example(r *Random) interface{} {
 func (m *Map) Kind() Kind { return MapKind }
 
 // Name returns the type name.
-func (m *Map) Name() string { return "hash" }
+func (m *Map) Name() string { return "map" }
+
+// Hash returns a unique hash value for m.
+func (m *Map) Hash() string {
+	return "_map_+" + m.KeyType.Type.Hash() + ":" + m.ElemType.Type.Hash()
+}
 
 // IsCompatible returns true if o describes the (Go) type of val.
 func (m *Map) IsCompatible(val interface{}) bool {
@@ -522,7 +603,7 @@ func toReflectType(dtype DataType) reflect.Type {
 		return reflect.TypeOf("")
 	case BytesKind:
 		return reflect.TypeOf([]byte{})
-	case ObjectKind, UserTypeKind, MediaTypeKind:
+	case ObjectKind, UserTypeKind, ResultTypeKind:
 		return reflect.TypeOf(map[string]interface{}{})
 	case ArrayKind:
 		return reflect.SliceOf(toReflectType(dtype.(*Array).ElemType.Type))

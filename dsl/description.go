@@ -21,13 +21,13 @@ func Description(d string) {
 		expr.Description = d
 	case *design.ServiceExpr:
 		expr.Description = d
-	case *design.MediaTypeExpr:
+	case *design.ResultTypeExpr:
 		expr.Description = d
 	case *design.AttributeExpr:
 		expr.Description = d
 	case *design.DocsExpr:
 		expr.Description = d
-	case *design.EndpointExpr:
+	case *design.MethodExpr:
 		expr.Description = d
 	case *design.ExampleExpr:
 		expr.Description = d

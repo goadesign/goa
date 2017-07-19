@@ -99,11 +99,11 @@ func finalizeSet(set ExpressionSet) error {
 }
 
 // Execute runs the given DSL to initialize the given expression. It returns
-// true on success.  It returns false and appends to i.Errors on failure.  Note
-// that Run takes care of calling Execute on all expressions that implement
-// Source.  This function is intended for use by expressions that run the DSL at
+// true on success. It returns false and appends to Context.Errors on failure.
+// Note that Run takes care of calling Execute on all expressions that implement
+// Source. This function is intended for use by expressions that run the DSL at
 // declaration time rather than store the DSL for execution by the dsl engine
-// (usually simple independent expressions).  The DSL should use ReportError to
+// (usually simple independent expressions). The DSL should use ReportError to
 // record DSL execution errors.
 func Execute(fn func(), def Expression) bool {
 	if fn == nil {
@@ -154,7 +154,7 @@ func ReportError(fm string, vals ...interface{}) {
 }
 
 // IncompatibleDSL should be called by DSL functions when they are invoked in an
-// incorrect context (e.g. "Params" in "Resource").
+// incorrect context (e.g. "Params" in "Service").
 func IncompatibleDSL() {
 	elems := strings.Split(caller(), ".")
 	ReportError("invalid use of %s", elems[len(elems)-1])

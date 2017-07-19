@@ -1,6 +1,6 @@
 /*
 Package rest includes an error handler middleware that takes care of mapping
-back any error returned by middlewares or action handlers into HTTP responses.
+back any error returned by middlewares or endpoint handlers into HTTP responses.
 
 If the error being mapped is a goa.Error then the ID, Status and Message values
 are used to build the HTTP response otherwise an internal error is returned.

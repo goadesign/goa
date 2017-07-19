@@ -1,7 +1,0 @@
-- Fix docs in dsl/rest/doc.go
-- Fix https://godoc.org/goa.design/goa.v2
-- Fix client so New works with stdlib client (or add new NewStd)
-- Add back security
-- Consider using https://github.com/rightscale/goa-jwtauth as a replacement for middleware/security/jwt
-- Add back CORS
-- Add back (HTTP) response templates?
