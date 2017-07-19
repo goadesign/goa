@@ -50,6 +50,11 @@ func (u *UserTypeExpr) Dup(att *AttributeExpr) UserType {
 	}
 }
 
+// Hash returns a unique hash value for u.
+func (u *UserTypeExpr) Hash() string {
+	return "_type_+" + u.TypeName
+}
+
 // Validate checks that the user type definition is consistent: it has a name
 // and the attribute backing the type is valid.
 func (u *UserTypeExpr) Validate(ctx string, parent eval.Expression) *eval.ValidationErrors {

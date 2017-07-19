@@ -5,9 +5,10 @@ import (
 	"goa.design/goa.v2/eval"
 )
 
-// Payload defines the data type which lists the payload attributes.
+// Payload defines the data type of an method input. Payload also makes the
+// input required.
 //
-// Payload may appear in a Endpoint expression.
+// Payload may appear in a Method expression.
 //
 // Payload takes one or two arguments. The first argument is either a type or a
 // DSL function. If the first argument is a type then an optional DSL may be
@@ -16,8 +17,13 @@ import (
 //
 // Examples:
 //
-// Endpoint("add", func() {
-//     // Define payload type inline
+// Method("save"), func() {
+//	// Use primitive type.
+//	Payload(String)
+// }
+//
+// Method("add", func() {
+//     // Define payload data structure inline.
 //     Payload(func() {
 //         Attribute("left", Int32, "Left operand")
 //         Attribute("right", Int32, "Left operand")
@@ -25,13 +31,13 @@ import (
 //     })
 // })
 //
-// Endpoint("add", func() {
-//     // Define payload type by reference to user type
+// Method("add", func() {
+//     // Define payload type by reference to user type.
 //     Payload(Operands)
 // })
 //
-// Endpoint("divide", func() {
-//     // Specify required attributes on user type
+// Method("divide", func() {
+//     // Specify additional required attributes on user type.
 //     Payload(Operands, func() {
 //         Required("left", "right")
 //     })
@@ -41,15 +47,15 @@ func Payload(val interface{}, fns ...func()) {
 	if len(fns) > 1 {
 		eval.ReportError("too many arguments")
 	}
-	e, ok := eval.Current().(*design.EndpointExpr)
+	e, ok := eval.Current().(*design.MethodExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
-	e.Payload = endpointDSL("Payload", val, fns...)
+	e.Payload = methodDSL("Payload", val, fns...)
 }
 
-func endpointDSL(suffix string, p interface{}, fns ...func()) *design.AttributeExpr {
+func methodDSL(suffix string, p interface{}, fns ...func()) *design.AttributeExpr {
 	var (
 		att *design.AttributeExpr
 		fn  func()
@@ -60,14 +66,13 @@ func endpointDSL(suffix string, p interface{}, fns ...func()) *design.AttributeE
 	switch actual := p.(type) {
 	case func():
 		fn = actual
-		att = &design.AttributeExpr{Type: design.Object{}}
+		att = &design.AttributeExpr{Type: &design.Object{}}
 	case design.UserType:
 		if len(fns) == 0 {
 			// Do not duplicate type if it is not customized
 			return &design.AttributeExpr{Type: actual}
 		}
-		ut := design.Dup(actual).(design.UserType)
-		att = ut.Attribute()
+		att = design.DupAtt(actual.Attribute())
 	case design.DataType:
 		att = &design.AttributeExpr{Type: actual}
 	default:

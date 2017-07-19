@@ -1,6 +1,6 @@
 language: go
 go:
-- 1.8
+- 1.8.x
 install:
 - export PATH=${PATH}:${HOME}/gopath/bin
 script:

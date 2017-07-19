@@ -7,23 +7,23 @@ import (
 )
 
 type (
-	// GeneratedRoot records the generated media types and is a DSL root
+	// GeneratedRoot records the generated result types and is a DSL root
 	// evaluated after Root.
 	GeneratedRoot []UserType
 )
 
 // EvalName is the name of the expression used by eval.
 func (r GeneratedRoot) EvalName() string {
-	return "generated media types"
+	return "generated result types"
 }
 
-// WalkSets returns the generated media types for evaluation.
+// WalkSets returns the generated result types for evaluation.
 func (r GeneratedRoot) WalkSets(w eval.SetWalker) {
 	ids := make([]string, len(r))
 	for i, t := range r {
-		mt := t.(*MediaTypeExpr)
+		mt := t.(*ResultTypeExpr)
 		id := CanonicalIdentifier(mt.Identifier)
-		Root.MediaTypes = append(Root.MediaTypes, mt)
+		Root.ResultTypes = append(Root.ResultTypes, mt)
 		ids[i] = id
 	}
 	sort.Strings(ids)

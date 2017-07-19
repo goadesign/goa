@@ -2,6 +2,7 @@ package rest
 
 import (
 	"fmt"
+	"strings"
 
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/eval"
@@ -48,7 +49,7 @@ const (
 	StatusPreconditionFailed           = 412 // RFC 7232, 4.2
 	StatusRequestEntityTooLarge        = 413 // RFC 7231, 6.5.11
 	StatusRequestURITooLong            = 414 // RFC 7231, 6.5.12
-	StatusUnsupportedMediaType         = 415 // RFC 7231, 6.5.13
+	StatusUnsupportedResultType        = 415 // RFC 7231, 6.5.13
 	StatusRequestedRangeNotSatisfiable = 416 // RFC 7233, 4.4
 	StatusExpectationFailed            = 417 // RFC 7231, 6.5.14
 	StatusTeapot                       = 418 // RFC 7168, 2.3.3
@@ -76,7 +77,7 @@ const (
 
 type (
 	// HTTPResponseExpr defines a HTTP response including its status code,
-	// headers and media type.
+	// headers and result type.
 	HTTPResponseExpr struct {
 		// HTTP status
 		StatusCode int
@@ -86,7 +87,10 @@ type (
 		Body *design.AttributeExpr
 		// Response Content-Type header value
 		ContentType string
-		// Parent expression, one of ActionExpr, ResourceExpr or
+		// Tag the value a field of the result must have for this
+		// response to be used.
+		Tag [2]string
+		// Parent expression, one of EndpointExpr, ServiceExpr or
 		// RootExpr.
 		Parent eval.Expression
 		// Metadata is a list of key/value pairs
@@ -99,26 +103,14 @@ type (
 // Headers returns the raw response headers attribute.
 func (r *HTTPResponseExpr) Headers() *design.AttributeExpr {
 	if r.headers == nil {
-		r.headers = &design.AttributeExpr{Type: make(design.Object)}
+		r.headers = &design.AttributeExpr{Type: &design.Object{}}
 	}
 	return r.headers
 }
 
 // MappedHeaders returns the computed response headers attribute map.
-func (r *HTTPResponseExpr) MappedHeaders() *MappedAttributeExpr {
-	return NewMappedAttributeExpr(r.headers)
-}
-
-// MediaType returns the media type describing the response body if any, nil
-// otherwise.
-func (r *HTTPResponseExpr) MediaType() *design.MediaTypeExpr {
-	if r.Body == nil {
-		return nil
-	}
-	if mt, ok := r.Body.Type.(*design.MediaTypeExpr); ok {
-		return mt
-	}
-	return nil
+func (r *HTTPResponseExpr) MappedHeaders() *design.MappedAttributeExpr {
+	return design.NewMappedAttributeExpr(r.headers)
 }
 
 // EvalName returns the generic definition name used in error messages.
@@ -131,7 +123,7 @@ func (r *HTTPResponseExpr) EvalName() string {
 }
 
 // Validate checks that the response definition is consistent: its status is set
-// and the media type definition if any is valid.
+// and the result type definition if any is valid.
 func (r *HTTPResponseExpr) Validate() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
 	if r.headers != nil {
@@ -146,18 +138,75 @@ func (r *HTTPResponseExpr) Validate() *eval.ValidationErrors {
 	return verr
 }
 
-// Finalize sets the response media type from its type if the type is a media
-// type and no media type is already specified.
-func (r *HTTPResponseExpr) Finalize() {
-	if r.Body == nil {
-		return
+// Finalize sets the response result type from its type if the type is a result
+// type and no result type is already specified.
+func (r *HTTPResponseExpr) Finalize(a *HTTPEndpointExpr, svcAtt *design.AttributeExpr) {
+	r.Parent = a
+
+	// Initialize the headers with the corresponding result attributes.
+	svcObj := design.AsObject(svcAtt.Type)
+	if r.headers != nil {
+		for _, nat := range *design.AsObject(r.headers.Type) {
+			n := nat.Name
+			att := nat.Attribute
+			n = strings.Split(n, ":")[0]
+			var patt *design.AttributeExpr
+			var required bool
+			if svcObj != nil {
+				patt = svcObj.Attribute(n)
+				required = svcAtt.IsRequired(n)
+			} else {
+				patt = svcAtt
+				required = svcAtt.Type != design.Empty
+			}
+			initAttrFromDesign(att, patt)
+			if required {
+				if r.headers.Validation == nil {
+					r.headers.Validation = &design.ValidationExpr{}
+				}
+				r.headers.Validation.Required = append(r.headers.Validation.Required, n)
+			}
+		}
 	}
-	if r.ContentType != "" {
-		return
+
+	// Initialize the body attributes (if an object) with the corresponding
+	// payload attributes.
+	if r.Body != nil {
+		if body := design.AsObject(r.Body.Type); body != nil {
+			for _, nat := range *body {
+				n := nat.Name
+				att := nat.Attribute
+				n = strings.Split(n, ":")[0]
+				var patt *design.AttributeExpr
+				var required bool
+				if svcObj != nil {
+					att = svcObj.Attribute(n)
+					required = svcAtt.IsRequired(n)
+				} else {
+					att = svcAtt
+					required = svcAtt.Type != design.Empty
+				}
+				initAttrFromDesign(att, patt)
+				if required {
+					if r.Body.Validation == nil {
+						r.Body.Validation = &design.ValidationExpr{}
+					}
+					r.Body.Validation.Required = append(r.Body.Validation.Required, n)
+				}
+			}
+		}
 	}
-	mt, ok := r.Body.Type.(*design.MediaTypeExpr)
-	if !ok {
-		return
+}
+
+// Dup creates a copy of the response expression.
+func (r *HTTPResponseExpr) Dup() *HTTPResponseExpr {
+	return &HTTPResponseExpr{
+		StatusCode:  r.StatusCode,
+		Description: r.Description,
+		Body:        design.DupAtt(r.Body),
+		ContentType: r.ContentType,
+		Parent:      r.Parent,
+		Metadata:    r.Metadata,
+		headers:     design.DupAtt(r.headers),
 	}
-	r.ContentType = mt.Identifier
 }

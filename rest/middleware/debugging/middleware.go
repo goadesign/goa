@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dimfeld/httptreemux"
 	goa "goa.design/goa.v2"
+	"goa.design/goa.v2/rest"
 	"goa.design/goa.v2/rest/middleware/tracing"
 )
 
@@ -23,7 +23,7 @@ type responseDupper struct {
 
 // New returns a debug middleware which logs all the details about incoming
 // requests and outgoing responses.
-func New(logger goa.LogAdapter) func(http.Handler) http.Handler {
+func New(mux rest.Muxer, logger goa.LogAdapter) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requestID := tracing.ContextTraceID(r.Context())
@@ -45,7 +45,7 @@ func New(logger goa.LogAdapter) func(http.Handler) http.Handler {
 				}
 				logger.Info(r.Context(), entries...)
 			}
-			params := httptreemux.ContextParams(r.Context())
+			params := mux.Vars(r)
 			if len(params) > 0 {
 				entries := make([]interface{}, 4+2*len(params))
 				entries[0] = "id"

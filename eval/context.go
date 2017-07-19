@@ -4,10 +4,8 @@ import (
 	"fmt"
 )
 
-var (
-	// Context contains the state used by the engine to execute the DSL.
-	Context = &DSLContext{dslPackages: []string{"goa.design/goa.v2/eval"}}
-)
+// Context contains the state used by the engine to execute the DSL.
+var Context *DSLContext
 
 type (
 	// DSLContext is the data structure that contains the DSL execution state.
@@ -33,6 +31,15 @@ type (
 	// DSL.
 	Stack []Expression
 )
+
+func init() {
+	Reset()
+}
+
+// Reset rests the eval context, mostly useful for tests.
+func Reset() {
+	Context = &DSLContext{dslPackages: []string{"goa.design/goa.v2/eval"}}
+}
 
 // Register appends a root expression to the current Context root expressions.
 // Each root expression may only be registered once.

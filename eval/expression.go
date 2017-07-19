@@ -4,7 +4,7 @@ type (
 	// Expression built by the engine through the DSL functions.
 	Expression interface {
 		// EvalName is the qualified name of the DSL expression e.g.
-		// "resource bottle".
+		// "service bottle".
 		EvalName() string
 	}
 

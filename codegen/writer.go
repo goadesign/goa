@@ -12,7 +12,7 @@ import (
 
 type (
 	// Writer encapsulates the state required to generate multiple files
-	// in the context of a single goagen invocation.
+	// in the context of a single goa invocation.
 	Writer struct {
 		// Dir is the output directory.
 		Dir string
@@ -52,7 +52,7 @@ func (w *Writer) Write(dir string, file File) error {
 	if err == nil {
 		i := 1
 		for err == nil {
-			i := i + 1
+			i = i + 1
 			ext := filepath.Ext(path)
 			path = strings.TrimSuffix(path, ext)
 			path = strings.TrimRight(path, "0123456789")

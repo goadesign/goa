@@ -7,7 +7,7 @@ import (
 
 type (
 	// HTTPErrorExpr defines a HTTP error response including its name,
-	// status, headers and media type.
+	// status, headers and result type.
 	HTTPErrorExpr struct {
 		// ErrorExpr is the underlying goa design error expression.
 		*design.ErrorExpr
@@ -29,11 +29,11 @@ func (e *HTTPErrorExpr) EvalName() string {
 func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
 	switch p := e.Response.Parent.(type) {
-	case *ActionExpr:
-		if p.EndpointExpr.Error(e.Name) == nil {
-			verr.Add(e, "Error %#v does not match an error defined in the endpoint", e.Name)
+	case *HTTPEndpointExpr:
+		if p.MethodExpr.Error(e.Name) == nil {
+			verr.Add(e, "Error %#v does not match an error defined in the method", e.Name)
 		}
-	case *ResourceExpr:
+	case *HTTPServiceExpr:
 		if p.Error(e.Name) == nil {
 			verr.Add(e, "Error %#v does not match an error defined in the service", e.Name)
 		}
@@ -45,16 +45,45 @@ func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
 	return verr
 }
 
-// Finalize looks up the corresponding endpoint error expression.
-func (e *HTTPErrorExpr) Finalize() {
+// Finalize looks up the corresponding method error expression.
+func (e *HTTPErrorExpr) Finalize(a *HTTPEndpointExpr) {
 	var ee *design.ErrorExpr
 	switch p := e.Response.Parent.(type) {
-	case *ActionExpr:
-		ee = p.EndpointExpr.Error(e.Name)
-	case *ResourceExpr:
+	case *HTTPEndpointExpr:
+		ee = p.MethodExpr.Error(e.Name)
+	case *HTTPServiceExpr:
 		ee = p.Error(e.Name)
 	case *RootExpr:
 		ee = design.Root.Error(e.Name)
 	}
 	e.ErrorExpr = ee
+	e.Response.Finalize(a, e.AttributeExpr)
+	if e.Response.Body == nil {
+		e.Response.Body = &design.AttributeExpr{Type: ErrorResponseBodyType(a, e)}
+		if val := ee.AttributeExpr.Validation; val != nil {
+			e.Response.Body.Validation = val.Dup()
+		}
+	}
+
+	// Initialize response content type if result is media type.
+	if e.Response.Body.Type == design.Empty {
+		return
+	}
+	if e.Response.ContentType != "" {
+		return
+	}
+	mt, ok := e.Response.Body.Type.(*design.ResultTypeExpr)
+	if !ok {
+		return
+	}
+	e.Response.ContentType = mt.Identifier
+}
+
+// Dup creates a copy of the error expression.
+func (e *HTTPErrorExpr) Dup() *HTTPErrorExpr {
+	return &HTTPErrorExpr{
+		ErrorExpr: e.ErrorExpr,
+		Name:      e.Name,
+		Response:  e.Response.Dup(),
+	}
 }

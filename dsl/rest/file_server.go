@@ -1,6 +1,8 @@
 package rest
 
 import (
+	"strings"
+
 	"goa.design/goa.v2/design"
 	"goa.design/goa.v2/design/rest"
 	"goa.design/goa.v2/eval"
@@ -47,10 +49,14 @@ func Files(path, filename string, fns ...func()) {
 		eval.ReportError("too many arguments given to Files")
 		return
 	}
+	// Make sure request path starts with a "/" so codegen can rely on it.
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
 	if s, ok := eval.Current().(*design.ServiceExpr); ok {
-		r := rest.Root.ResourceFor(s)
+		r := rest.Root.ServiceFor(s)
 		server := &rest.FileServerExpr{
-			Resource:    r,
+			Service:     r,
 			RequestPath: path,
 			FilePath:    filename,
 		}

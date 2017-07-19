@@ -3,6 +3,8 @@ package codegen
 import (
 	"bytes"
 	"fmt"
+	"go/ast"
+	"go/format"
 	"go/parser"
 	"go/scanner"
 	"go/token"
@@ -47,6 +49,11 @@ func (f *SourceFile) OutputPath() string {
 
 // Finalize formats the file.
 func (f *SourceFile) Finalize(path string) error {
+	return Format(path)
+}
+
+// Format formats the file.
+func Format(path string) error {
 	// Make sure file parses and print content if it does not.
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
@@ -71,8 +78,15 @@ func (f *SourceFile) Finalize(path string) error {
 			}
 		}
 	}
+	ast.SortImports(fset, file)
+	w, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	format.Node(w, fset, file)
+	w.Close()
 
-	// Format code
+	// Format code using goimport standard
 	bs, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
