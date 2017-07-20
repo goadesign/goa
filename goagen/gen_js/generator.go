@@ -325,7 +325,7 @@ const jsFuncsT = `{{$params := params .Action}}
   // The content of the config object is described here: https://github.com/mzabriskie/axios#request-api
   // This function returns a promise which raises an error if the HTTP response is a 4xx or 5xx.
   client.{{$name}} = function (path{{if .Action.Payload}}, data{{end}}{{if $params}}, {{join $params ", "}}{{end}}, config) {
-    cfg = {
+    var cfg = {
       timeout: timeout,
       url: urlPrefix + path,
       method: '{{toLower (index .Action.Routes 0).Verb}}',
