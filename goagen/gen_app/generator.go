@@ -37,8 +37,8 @@ type Generator struct {
 // Generate is the generator entry point called by the meta generator.
 func Generate() (files []string, err error) {
 	var (
-		outDir, target, ver string
-		notest              bool
+		outDir, toolDir, target, ver string
+		notest, regen                bool
 	)
 
 	set := flag.NewFlagSet("app", flag.PanicOnError)
@@ -46,7 +46,9 @@ func Generate() (files []string, err error) {
 	set.StringVar(&outDir, "out", "", "")
 	set.StringVar(&target, "pkg", "app", "")
 	set.StringVar(&ver, "version", "", "")
+	set.StringVar(&toolDir, "tooldir", "tool", "")
 	set.BoolVar(&notest, "notest", false, "")
+	set.BoolVar(&regen, "regen", false, "")
 	set.Bool("force", false, "")
 	set.Parse(os.Args[1:])
 	outDir = filepath.Join(outDir, target)
