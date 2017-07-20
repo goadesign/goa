@@ -49,7 +49,7 @@ type Generator struct {
 func Generate() (files []string, err error) {
 	var (
 		outDir, target, toolDir, tool, ver string
-		notool                             bool
+		notool, regen                      bool
 	)
 	dtool := defaultToolName(design.Design)
 
@@ -60,6 +60,7 @@ func Generate() (files []string, err error) {
 	set.StringVar(&tool, "tool", dtool, "")
 	set.StringVar(&ver, "version", "", "")
 	set.BoolVar(&notool, "notool", false, "")
+	set.BoolVar(&regen, "regen", false, "")
 	set.String("design", "", "")
 	set.Bool("force", false, "")
 	set.Bool("notest", false, "")
