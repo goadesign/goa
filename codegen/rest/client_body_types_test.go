@@ -20,9 +20,9 @@ func TestBodyTypeDecl(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			rest.RunRestDSL(t, c.DSL)
-			fs := ClientType(rest.Root.HTTPServices[0], make(map[string]struct{}))
+			fs := clientType(rest.Root.HTTPServices[0], make(map[string]struct{}))
 			section := fs.Sections("")[1]
-			code := SectionCode(t, section)
+			code := codegen.SectionCode(t, section)
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
 			}
@@ -43,9 +43,9 @@ func TestBodyTypeInit(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunRestDSL(t, c.DSL)
-			fs := ClientType(rest.Root.HTTPServices[0], make(map[string]struct{}))
+			fs := clientType(rest.Root.HTTPServices[0], make(map[string]struct{}))
 			section := fs.Sections("")[c.SectionIndex]
-			code := SectionCode(t, section)
+			code := codegen.SectionCode(t, section)
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
 			}

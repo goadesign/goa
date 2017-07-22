@@ -803,7 +803,7 @@ func buildResultData(svc *service.Data, r *rest.HTTPServiceExpr, a *rest.HTTPEnd
 				}
 
 				responseData = &ResponseData{
-					StatusCode:   StatusCodeToHTTPConst(v.StatusCode),
+					StatusCode:   statusCodeToHTTPConst(v.StatusCode),
 					Headers:      headersData,
 					ServerBody:   serverBodyData,
 					ClientBody:   clientBodyData,
@@ -929,7 +929,7 @@ func buildErrorsData(svc *service.Data, r *rest.HTTPServiceExpr, a *rest.HTTPEnd
 			}
 
 			responseData = &ResponseData{
-				StatusCode:  StatusCodeToHTTPConst(v.Response.StatusCode),
+				StatusCode:  statusCodeToHTTPConst(v.Response.StatusCode),
 				Headers:     extractHeaders(v.Response.MappedHeaders(), false, svc.Scope),
 				ServerBody:  serverBodyData,
 				ClientBody:  clientBodyData,
@@ -973,7 +973,7 @@ func buildBodyType(svc *service.Data, r *rest.HTTPServiceExpr, a *rest.HTTPEndpo
 		ref = svc.Scope.GoTypeRef(body)
 		if ut, ok := body.Type.(design.UserType); ok {
 			varname = codegen.Goify(ut.Name(), true)
-			def = GoTypeDef(svc.Scope, ut.Attribute(), ptr, false)
+			def = goTypeDef(svc.Scope, ut.Attribute(), ptr, false)
 			ctx := "request"
 			if !req {
 				ctx = "response"
@@ -1192,7 +1192,7 @@ func attributeTypeData(ut design.UserType, req, ptr, server bool, scope *codegen
 			ctx = "response"
 		}
 		desc = name + " is used to define fields on " + ctx + " body types."
-		def = GoTypeDef(scope, ut.Attribute(), ptr, false)
+		def = goTypeDef(scope, ut.Attribute(), ptr, false)
 		validate = codegen.RecursiveValidationCode(ut.Attribute(), true, ptr, "body") //
 		if validate != "" {
 			validateRef = "err = goa.MergeErrors(err, v.Validate())"

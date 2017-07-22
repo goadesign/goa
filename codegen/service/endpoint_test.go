@@ -151,9 +151,9 @@ func NewEndpoints(s Service) *Endpoints {
 		buf := new(bytes.Buffer)
 		Services = make(ServicesData)
 		design.Root.Services = []*design.ServiceExpr{tc.Service}
-		s := Service(tc.Service) // to initialize ServiceScope
+		s := File(tc.Service) // to initialize ServiceScope
 		s.Sections("")
-		file := Endpoint(tc.Service)
+		file := EndpointFile(tc.Service)
 		for _, s := range file.Sections(genPkg) {
 			if err := s.Write(buf); err != nil {
 				t.Fatal(err)

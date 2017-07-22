@@ -13,8 +13,8 @@ import (
 	"goa.design/goa.v2/design/rest"
 )
 
-// Servers returns all the server HTTP transport files.
-func Servers(root *rest.RootExpr) []codegen.File {
+// ServerFiles returns all the server HTTP transport files.
+func ServerFiles(root *rest.RootExpr) []codegen.File {
 	fw := make([]codegen.File, 2*len(root.HTTPServices))
 	for i, r := range root.HTTPServices {
 		fw[i] = server(r)

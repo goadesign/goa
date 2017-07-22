@@ -15,7 +15,7 @@ func TestStatusCodeToHttpConst(t *testing.T) {
 
 	for k, tc := range cases {
 
-		actual := StatusCodeToHTTPConst(tc.Code)
+		actual := statusCodeToHTTPConst(tc.Code)
 		if actual != tc.Expected {
 			t.Errorf("%s: got `%s`, expected `%s`", k, actual, tc.Expected)
 		}

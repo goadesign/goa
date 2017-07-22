@@ -17,8 +17,8 @@ type (
 	}
 )
 
-// OpenAPI returns the file for the OpenAPI spec of the given HTTP API.
-func OpenAPI(root *rest.RootExpr) (codegen.File, error) {
+// OpenAPIFile returns the file for the OpenAPIFile spec of the given HTTP API.
+func OpenAPIFile(root *rest.RootExpr) (codegen.File, error) {
 	spec, err := openapi.NewV2(root)
 	if err != nil {
 		return nil, err

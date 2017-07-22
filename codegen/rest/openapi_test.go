@@ -79,7 +79,7 @@ func TestOpenAPI(t *testing.T) {
 		"invalid": {Root: invalid, Error: true},
 	}
 	for k, c := range cases {
-		_, err := OpenAPI(c.Root)
+		_, err := OpenAPIFile(c.Root)
 		if err != nil && !c.Error {
 			t.Errorf("%s: unexpected error %s", k, err)
 		}
@@ -93,7 +93,7 @@ func TestOutputPath(t *testing.T) {
 	var (
 		simple = newDesign(t, newService(t))
 	)
-	o, err := OpenAPI(simple)
+	o, err := OpenAPIFile(simple)
 	if err != nil {
 		t.Fatalf("OpenAPI failed with %s", err)
 	}
@@ -117,7 +117,7 @@ func TestSections(t *testing.T) {
 		"valid": {Root: simple},
 	}
 	for k, c := range cases {
-		o, err := OpenAPI(c.Root)
+		o, err := OpenAPIFile(c.Root)
 		if err != nil {
 			t.Fatalf("%s: OpenAPI failed with %s", k, err)
 		}

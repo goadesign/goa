@@ -39,7 +39,7 @@ func TestPaths(t *testing.T) {
 			}
 			fs := serverPath(rest.Root.HTTPServices[0])
 			sections := fs.Sections("")
-			code := SectionCode(t, sections[1])
+			code := codegen.SectionCode(t, sections[1])
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
 			}

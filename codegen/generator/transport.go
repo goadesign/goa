@@ -16,11 +16,11 @@ func Transport(roots ...eval.Root) ([]codegen.File, error) {
 	var files []codegen.File
 	for _, root := range roots {
 		if r, ok := root.(*restdesign.RootExpr); ok {
-			files = rest.Servers(r)
-			files = append(files, rest.Clients(r)...)
-			files = append(files, rest.ServerTypes(r)...)
-			files = append(files, rest.ClientTypes(r)...)
-			files = append(files, rest.Paths(r)...)
+			files = rest.ServerFiles(r)
+			files = append(files, rest.ClientFiles(r)...)
+			files = append(files, rest.ServerTypeFiles(r)...)
+			files = append(files, rest.ClientTypeFiles(r)...)
+			files = append(files, rest.PathFiles(r)...)
 			break
 		}
 	}

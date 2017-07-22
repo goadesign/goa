@@ -1,14 +1,45 @@
 package codegen
 
 import (
+	"bytes"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
 
+	"goa.design/goa.v2/design"
+	"goa.design/goa.v2/eval"
+
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
+
+// RunDSL returns the DSL root resulting from running the given DSL.
+func RunDSL(t *testing.T, dsl func()) *design.RootExpr {
+	eval.Reset()
+	design.Root = new(design.RootExpr)
+	eval.Register(design.Root)
+	design.Root.API = &design.APIExpr{
+		Name:    "test api",
+		Servers: []*design.ServerExpr{{URL: "http://localhost"}},
+	}
+	if !eval.Execute(dsl, nil) {
+		t.Fatal(eval.Context.Error())
+	}
+	if err := eval.RunDSL(); err != nil {
+		t.Fatal(err)
+	}
+	return design.Root
+}
+
+// SectionCode generates and formats the code for the given section.
+func SectionCode(t *testing.T, section *Section) string {
+	var code bytes.Buffer
+	if err := section.Write(&code); err != nil {
+		t.Fatal(err)
+	}
+	return FormatTestCode(t, "package foo\n"+code.String())
+}
 
 // FormatTestCode formats the given Go code. The code must correspond to the
 // content of a valid Go source file (i.e. start with "package")

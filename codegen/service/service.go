@@ -17,8 +17,8 @@ var (
 	errorTmpl    = template.Must(template.New("error").Funcs(fns).Parse(errorT))
 )
 
-// Service returns the service file for the given service.
-func Service(service *design.ServiceExpr) codegen.File {
+// File returns the service file for the given service.
+func File(service *design.ServiceExpr) codegen.File {
 	path := filepath.Join(codegen.KebabCase(service.Name), "service.go")
 	sections := func(genPkg string) []*codegen.Section {
 

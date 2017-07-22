@@ -9,8 +9,8 @@ import (
 	"goa.design/goa.v2/design/rest"
 )
 
-// Clients returns the client HTTP transport files.
-func Clients(root *rest.RootExpr) []codegen.File {
+// ClientFiles returns the client HTTP transport files.
+func ClientFiles(root *rest.RootExpr) []codegen.File {
 	fw := make([]codegen.File, 2*len(root.HTTPServices))
 	for i, r := range root.HTTPServices {
 		fw[i] = client(r)
