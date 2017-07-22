@@ -2,11 +2,9 @@ package codegen
 
 import "goa.design/goa.v2/design"
 
-// MappedAttributeWalker is the type of functions given to WalkHeaders
-// and WalkParams.
-// name is the name of the attribute, elem the name of the corresponding
-// HTTP element (header or parameter). required is true if the attribute
-// is required.
+// MappedAttributeWalker is the type of functions given to WalkMappedAttr. name
+// is the name of the attribute, elem the name of the corresponding transport
+// element (e.g. HTTP header). required is true if the attribute is required.
 type MappedAttributeWalker func(name, elem string, required bool, a *design.AttributeExpr) error
 
 // Walk traverses the data structure recursively and calls the given function

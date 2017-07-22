@@ -8,17 +8,17 @@ import (
 	"goa.design/goa.v2/design/rest"
 )
 
-// ClientTypes returns the HTTP transport client types files.
-func ClientTypes(root *rest.RootExpr) []codegen.File {
+// ClientTypeFiles returns the HTTP transport client types files.
+func ClientTypeFiles(root *rest.RootExpr) []codegen.File {
 	fw := make([]codegen.File, len(root.HTTPServices))
 	seen := make(map[string]struct{})
 	for i, svc := range root.HTTPServices {
-		fw[i] = ClientType(svc, seen)
+		fw[i] = clientType(svc, seen)
 	}
 	return fw
 }
 
-// ClientType return the file containing the type definitions used by the HTTP
+// clientType return the file containing the type definitions used by the HTTP
 // transport for the given service client. seen keeps track of the names of the
 // types that have already been generated to prevent duplicate code generation.
 //
@@ -43,7 +43,7 @@ func ClientTypes(root *rest.RootExpr) []codegen.File {
 //   * Response body fields (if the body is a struct) and header variables hold
 //     pointers when not required and have no default value.
 //
-func ClientType(r *rest.HTTPServiceExpr, seen map[string]struct{}) codegen.File {
+func clientType(r *rest.HTTPServiceExpr, seen map[string]struct{}) codegen.File {
 	var (
 		path     string
 		sections func(string) []*codegen.Section

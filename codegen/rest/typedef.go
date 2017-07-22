@@ -8,7 +8,7 @@ import (
 	"goa.design/goa.v2/design"
 )
 
-// GoTypeDef returns the Go code that defines the struct corresponding to ma.
+// goTypeDef returns the Go code that defines the struct corresponding to ma.
 // It differs from the function defined in the codegen package in the following
 // ways:
 //
@@ -23,22 +23,22 @@ import (
 // values even when not required (to account for the fact that they have a
 // default value so cannot be nil) otherwise the fields are values only when
 // required.
-func GoTypeDef(scope *codegen.NameScope, att *design.AttributeExpr, ptr, useDefault bool) string {
+func goTypeDef(scope *codegen.NameScope, att *design.AttributeExpr, ptr, useDefault bool) string {
 	switch actual := att.Type.(type) {
 	case design.Primitive:
 		return codegen.GoNativeTypeName(actual)
 	case *design.Array:
-		d := GoTypeDef(scope, actual.ElemType, ptr, useDefault)
+		d := goTypeDef(scope, actual.ElemType, ptr, useDefault)
 		if design.IsObject(actual.ElemType.Type) {
 			d = "*" + d
 		}
 		return "[]" + d
 	case *design.Map:
-		keyDef := GoTypeDef(scope, actual.KeyType, ptr, useDefault)
+		keyDef := goTypeDef(scope, actual.KeyType, ptr, useDefault)
 		if design.IsObject(actual.KeyType.Type) {
 			keyDef = "*" + keyDef
 		}
-		elemDef := GoTypeDef(scope, actual.ElemType, ptr, useDefault)
+		elemDef := goTypeDef(scope, actual.ElemType, ptr, useDefault)
 		if design.IsObject(actual.ElemType.Type) {
 			elemDef = "*" + elemDef
 		}
@@ -57,7 +57,7 @@ func GoTypeDef(scope *codegen.NameScope, att *design.AttributeExpr, ptr, useDefa
 			)
 			{
 				fn = codegen.GoifyAtt(at, name, true)
-				tdef = GoTypeDef(scope, at, ptr, useDefault)
+				tdef = goTypeDef(scope, at, ptr, useDefault)
 				if design.IsPrimitive(at.Type) {
 					if ptr || mat.IsPrimitivePointer(name, useDefault) {
 						tdef = "*" + tdef

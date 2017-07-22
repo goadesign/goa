@@ -26,17 +26,17 @@ var (
 	)
 )
 
-// ServerTypes returns the HTTP transport type files.
-func ServerTypes(root *rest.RootExpr) []codegen.File {
+// ServerTypeFiles returns the HTTP transport type files.
+func ServerTypeFiles(root *rest.RootExpr) []codegen.File {
 	fw := make([]codegen.File, len(root.HTTPServices))
 	seen := make(map[string]struct{})
 	for i, r := range root.HTTPServices {
-		fw[i] = ServerType(r, seen)
+		fw[i] = serverType(r, seen)
 	}
 	return fw
 }
 
-// ServerType return the file containing the type definitions used by the HTTP
+// serverType return the file containing the type definitions used by the HTTP
 // transport for the given service server. seen keeps track of the names of the
 // types that have already been generated to prevent duplicate code generation.
 //
@@ -61,7 +61,7 @@ func ServerTypes(root *rest.RootExpr) []codegen.File {
 //   * Response body fields (if the body is a struct) and header variables hold
 //     pointers when not required and have no default value.
 //
-func ServerType(r *rest.HTTPServiceExpr, seen map[string]struct{}) codegen.File {
+func serverType(r *rest.HTTPServiceExpr, seen map[string]struct{}) codegen.File {
 	var (
 		path     string
 		sections func(string) []*codegen.Section

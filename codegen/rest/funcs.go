@@ -5,10 +5,10 @@ import (
 	"net/http"
 )
 
-// StatusCodeToHTTPConst produces the standard name for the given HTTP status
+// statusCodeToHTTPConst produces the standard name for the given HTTP status
 // code. If no standard name exists then the string consisting of the code
 // integer value is returned.
-func StatusCodeToHTTPConst(statusCode int) string {
+func statusCodeToHTTPConst(statusCode int) string {
 	if v, ok := statusCodeToConst[statusCode]; ok {
 		return fmt.Sprintf("http.%s", v)
 	}

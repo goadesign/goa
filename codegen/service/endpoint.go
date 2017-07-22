@@ -39,8 +39,8 @@ type (
 // endpointTmpl is the template used to render the body of the endpoint file.
 var endpointTmpl = template.Must(template.New("endpoint").Parse(endpointT))
 
-// Endpoint returns the endpoint file for the given service.
-func Endpoint(service *design.ServiceExpr) codegen.File {
+// EndpointFile returns the endpoint file for the given service.
+func EndpointFile(service *design.ServiceExpr) codegen.File {
 	path := filepath.Join(codegen.KebabCase(service.Name), "endpoints.go")
 	sections := func(genPkg string) []*codegen.Section {
 		var (

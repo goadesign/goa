@@ -20,8 +20,8 @@ func Service(roots ...eval.Root) ([]codegen.File, error) {
 			for _, s := range r.Services {
 				// Make sure service is first so name scope is
 				// properly initialized.
-				files = append(files, service.Service(s))
-				files = append(files, service.Endpoint(s))
+				files = append(files, service.File(s))
+				files = append(files, service.EndpointFile(s))
 			}
 		}
 	}

@@ -115,7 +115,7 @@ func TestPayloadConstructor(t *testing.T) {
 			if len(rest.Root.HTTPServices) != 1 {
 				t.Fatalf("got %d file(s), expected 1", len(rest.Root.HTTPServices))
 			}
-			fs := ServerType(rest.Root.HTTPServices[0], make(map[string]struct{}))
+			fs := serverType(rest.Root.HTTPServices[0], make(map[string]struct{}))
 			sections := fs.Sections("")
 			var section *codegen.Section
 			for _, s := range sections {
@@ -126,7 +126,7 @@ func TestPayloadConstructor(t *testing.T) {
 			if section == nil {
 				t.Fatalf("could not find payload init section")
 			}
-			code := SectionCode(t, section)
+			code := codegen.SectionCode(t, section)
 			if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
 			}

@@ -18,6 +18,8 @@ type (
 	// Hasher is the interface implemented by the objects that must be
 	// scoped.
 	Hasher interface {
+		// Hash computes a unique instance hash suitable for indexing
+		// in a map.
 		Hash() string
 	}
 )

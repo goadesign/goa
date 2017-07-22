@@ -309,7 +309,7 @@ type AResult struct {
 		Services = make(ServicesData)
 		design.Root = new(design.RootExpr)
 		design.Root.Services = []*design.ServiceExpr{tc.Service}
-		file := Service(tc.Service)
+		file := File(tc.Service)
 		for _, s := range file.Sections(genPkg) {
 			if err := s.Write(buf); err != nil {
 				t.Fatal(err)

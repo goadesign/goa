@@ -219,9 +219,9 @@ func (d ServicesData) analyze(service *design.ServiceExpr) *Data {
 	return data
 }
 
-// BuildFieldsData returns a ordered slice of field data representing the given
+// buildFieldsData returns a ordered slice of field data representing the given
 // user type attributes.
-func BuildFieldsData(ut design.UserType, scope *codegen.NameScope) []*FieldData {
+func buildFieldsData(ut design.UserType, scope *codegen.NameScope) []*FieldData {
 	obj := design.AsObject(ut.Attribute().Type)
 	fields := make([]*FieldData, len(*obj))
 	for i, nat := range *obj {
@@ -249,7 +249,7 @@ func collectTypes(at *design.AttributeExpr, seen map[string]struct{}, scope *cod
 		if _, ok := seen[dt.Name()]; ok {
 			return nil
 		}
-		fields := BuildFieldsData(dt, scope)
+		fields := buildFieldsData(dt, scope)
 		data = append(data, &UserTypeData{
 			Name:        dt.Name(),
 			VarName:     scope.GoTypeName(at),

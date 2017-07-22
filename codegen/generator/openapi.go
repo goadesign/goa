@@ -19,7 +19,7 @@ func OpenAPI(roots ...eval.Root) ([]codegen.File, error) {
 	)
 	for _, root := range roots {
 		if r, ok := root.(*restdesign.RootExpr); ok {
-			file, err = rest.OpenAPI(r)
+			file, err = rest.OpenAPIFile(r)
 			break
 		}
 	}

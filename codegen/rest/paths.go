@@ -14,8 +14,8 @@ var (
 	pathTmpl    = template.Must(template.New("path").Funcs(pathFuncMap).Parse(pathT))
 )
 
-// Paths returns the service path files.
-func Paths(root *rest.RootExpr) []codegen.File {
+// PathFiles returns the service path files.
+func PathFiles(root *rest.RootExpr) []codegen.File {
 	fw := make([]codegen.File, 2*len(root.HTTPServices))
 	for i := 0; i < 2*len(root.HTTPServices); i += 2 {
 		fw[i] = serverPath(root.HTTPServices[i])
