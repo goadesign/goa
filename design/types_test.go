@@ -565,3 +565,27 @@ var _ = Describe("Finalize", func() {
 		}).ShouldNot(HaveOccurred())
 	})
 })
+
+var _ = Describe("GenerateExample", func() {
+
+	Context("Given a UUID", func() {
+		It("generates a string example", func() {
+			rand := NewRandomGenerator("foo")
+			Ω(UUID.GenerateExample(rand, nil)).Should(BeAssignableToTypeOf("foo"))
+		})
+	})
+
+	Context("Given a Hash keyed by UUIDs", func() {
+		var h *Hash
+		BeforeEach(func() {
+			h = &Hash{
+				KeyType:  &AttributeDefinition{Type: UUID},
+				ElemType: &AttributeDefinition{Type: String},
+			}
+		})
+		It("generates a serializable example", func() {
+			rand := NewRandomGenerator("foo")
+			Ω(h.GenerateExample(rand, nil)).Should(BeAssignableToTypeOf(map[string]string{"foo": "bar"}))
+		})
+	})
+})
