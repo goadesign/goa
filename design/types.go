@@ -895,7 +895,7 @@ func (m *MediaTypeDefinition) projectCollection(view string) (*MediaTypeDefiniti
 			AttributeDefinition: &AttributeDefinition{
 				Description: desc,
 				Type:        &Array{ElemType: &AttributeDefinition{Type: pe}},
-				Example:     m.Example,
+				Example:     nil,
 			},
 			TypeName: pe.TypeName + "Collection",
 		},
