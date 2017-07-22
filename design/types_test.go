@@ -190,6 +190,20 @@ var _ = Describe("Project", func() {
 				Ω(att.Type).ShouldNot(BeNil())
 				Ω(att.Type.Kind()).Should(Equal(StringKind))
 			})
+
+			Context("on a collection", func() {
+				BeforeEach(func() {
+					mt = CollectionOf(Dup(mt))
+					dslengine.Execute(mt.DSL(), mt)
+					mt.GenerateExample(NewRandomGenerator(""), nil)
+				})
+
+				It("resets the example", func() {
+					Ω(prErr).ShouldNot(HaveOccurred())
+					Ω(projected).ShouldNot(BeNil())
+					Ω(projected.Example).Should(BeNil())
+				})
+			})
 		})
 
 	})
