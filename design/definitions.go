@@ -1,6 +1,7 @@
 package design
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"path"
@@ -642,23 +643,31 @@ func (a *APIDefinition) Finalize() {
 	if len(a.Produces) == 0 {
 		a.Produces = DefaultEncoders
 	}
-	found := false
 	a.IterateResources(func(r *ResourceDefinition) error {
-		if found {
-			return nil
+		returnsError := func(resp *ResponseDefinition) bool {
+			if resp.MediaType == ErrorMediaIdentifier {
+				if a.MediaTypes == nil {
+					a.MediaTypes = make(map[string]*MediaTypeDefinition)
+				}
+				a.MediaTypes[CanonicalIdentifier(ErrorMediaIdentifier)] = ErrorMedia
+				return true
+			}
+			return false
+		}
+		for _, resp := range a.Responses {
+			if returnsError(resp) {
+				return errors.New("done")
+			}
+		}
+		for _, resp := range r.Responses {
+			if returnsError(resp) {
+				return errors.New("done")
+			}
 		}
 		return r.IterateActions(func(action *ActionDefinition) error {
-			if found {
-				return nil
-			}
 			for _, resp := range action.Responses {
-				if resp.MediaType == ErrorMediaIdentifier {
-					if a.MediaTypes == nil {
-						a.MediaTypes = make(map[string]*MediaTypeDefinition)
-					}
-					a.MediaTypes[CanonicalIdentifier(ErrorMediaIdentifier)] = ErrorMedia
-					found = true
-					break
+				if returnsError(resp) {
+					return errors.New("done")
 				}
 			}
 			return nil
