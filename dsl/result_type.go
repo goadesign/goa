@@ -275,7 +275,7 @@ func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
 		return mt
 	}
 	mt := design.NewResultTypeExpr("", id, func() {
-		mt, ok := eval.Current().(*design.ResultTypeExpr)
+		rt, ok := eval.Current().(*design.ResultTypeExpr)
 		if !ok {
 			eval.IncompatibleDSL()
 			return
@@ -283,25 +283,25 @@ func CollectionOf(v interface{}, adsl ...func()) *design.ResultTypeExpr {
 		// Cannot compute collection type name before element result type
 		// DSL has executed since the DSL may modify element type name
 		// via the TypeName function.
-		mt.TypeName = m.TypeName + "Collection"
-		mt.AttributeExpr = &design.AttributeExpr{Type: ArrayOf(m)}
+		rt.TypeName = m.TypeName + "Collection"
+		rt.AttributeExpr = &design.AttributeExpr{Type: ArrayOf(m)}
 		if len(adsl) > 0 {
-			eval.Execute(adsl[0], mt)
+			eval.Execute(adsl[0], rt)
 		}
-		if mt.Views == nil {
-			// If the adsl didn't create any views (or there is no
-			// adsl at all) then inherit the views from the
-			// collection element.
-			mt.Views = make([]*design.ViewExpr, len(m.Views))
+		if rt.Views == nil {
+			// If the DSL didn't create any view (or there is no DSL
+			// at all) then inherit the views from the collection
+			// element.
+			rt.Views = make([]*design.ViewExpr, len(m.Views))
 			for i, v := range m.Views {
 				v := v
-				mt.Views[i] = v
+				rt.Views[i] = v
 			}
 		}
 	})
-	// Do not execute the adsl right away, will be done last to make sure
-	// the element adsl has run first.
-	design.Root.GeneratedTypes = append(design.Root.GeneratedTypes, mt)
+	// do not execute the DSL right away, will be done last to make sure
+	// the element DSL has run first.
+	*design.Root.GeneratedTypes = append(*design.Root.GeneratedTypes, mt)
 	return mt
 }
 

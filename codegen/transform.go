@@ -3,6 +3,7 @@ package codegen
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"text/template"
 
 	"goa.design/goa.v2/design"
@@ -198,6 +199,7 @@ func transformArray(source, target *design.Array, sctx, tctx, targetPkg string, 
 	data := map[string]interface{}{
 		"Source":       sctx,
 		"Target":       tctx,
+		"NewVar":       !strings.Contains(sctx, "."),
 		"ElemTypeRef":  scope.GoFullTypeRef(target.ElemType, targetPkg),
 		"SourceElem":   source.ElemType,
 		"TargetElem":   target.ElemType,
@@ -226,6 +228,7 @@ func transformMap(source, target *design.Map, sctx, tctx, targetPkg string, from
 	data := map[string]interface{}{
 		"Source":       sctx,
 		"Target":       tctx,
+		"NewVar":       !strings.Contains(sctx, "."),
 		"KeyTypeRef":   scope.GoFullTypeRef(target.KeyType, targetPkg),
 		"ElemTypeRef":  scope.GoFullTypeRef(target.ElemType, targetPkg),
 		"SourceKey":    source.KeyType,
@@ -271,13 +274,13 @@ func isCompatible(a, b design.DataType, actx, bctx string) error {
 	return nil
 }
 
-const transformArrayTmpl = `{{ .Target}} := make([]{{ .ElemTypeRef }}, len({{ .Source }}))
+const transformArrayTmpl = `{{ .Target}} {{ if .NewVar }}:{{ end }}= make([]{{ .ElemTypeRef }}, len({{ .Source }}))
 for i, val := range {{ .Source }} {
 	{{ transformAttribute .SourceElem .TargetElem "val" (printf "%s[i]" .Target) .TargetPkg .FromPtrs .ToPtrs .InitDefaults false .Scope -}}
 }
 `
 
-const transformMapTmpl = `{{ .Target }} := make(map[{{ .KeyTypeRef }}]{{ .ElemTypeRef }}, len({{ .Source }}))
+const transformMapTmpl = `{{ .Target }} {{ if .NewVar }}:{{ end }}= make(map[{{ .KeyTypeRef }}]{{ .ElemTypeRef }}, len({{ .Source }}))
 for key, val := range {{ .Source }} {
 	{{ transformAttribute .SourceKey .TargetKey "key" "tk" .TargetPkg  .FromPtrs .ToPtrs .InitDefaults true .Scope -}}
 	{{ transformAttribute .SourceElem .TargetElem "val" "tv" .TargetPkg .FromPtrs .ToPtrs .InitDefaults true .Scope -}}

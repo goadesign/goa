@@ -1,9 +1,9 @@
 // Code generated with goa v2.0.0-wip, DO NOT EDIT.
 //
-// account client HTTP transport
+// storage client HTTP transport
 //
 // Command:
-// $ goa gen goa.design/goa.v2/examples/account/design
+// $ goa gen goa.design/goa.v2/examples/cellar/design
 
 package client
 
@@ -15,19 +15,19 @@ import (
 	"goa.design/goa.v2/rest"
 )
 
-// Client lists the account service endpoint HTTP clients.
+// Client lists the storage service endpoint HTTP clients.
 type Client struct {
-	CreateDoer rest.Doer
+	AddDoer    rest.Doer
 	ListDoer   rest.Doer
 	ShowDoer   rest.Doer
-	DeleteDoer rest.Doer
+	RemoveDoer rest.Doer
 	scheme     string
 	host       string
 	encoder    func(*http.Request) rest.Encoder
 	decoder    func(*http.Response) rest.Decoder
 }
 
-// NewClient instantiates HTTP clients for all the account service servers.
+// NewClient instantiates HTTP clients for all the storage service servers.
 func NewClient(
 	scheme string,
 	host string,
@@ -36,10 +36,10 @@ func NewClient(
 	dec func(*http.Response) rest.Decoder,
 ) *Client {
 	return &Client{
-		CreateDoer: doer,
+		AddDoer:    doer,
 		ListDoer:   doer,
 		ShowDoer:   doer,
-		DeleteDoer: doer,
+		RemoveDoer: doer,
 		scheme:     scheme,
 		host:       host,
 		decoder:    dec,
@@ -47,12 +47,12 @@ func NewClient(
 	}
 }
 
-// Create returns a endpoint that makes HTTP requests to the account service
-// create server.
-func (c *Client) Create() goa.Endpoint {
+// Add returns a endpoint that makes HTTP requests to the storage service add
+// server.
+func (c *Client) Add() goa.Endpoint {
 	var (
-		encodeRequest  = c.EncodeCreateRequest(c.encoder)
-		decodeResponse = c.DecodeCreateResponse(c.decoder)
+		encodeRequest  = c.EncodeAddRequest(c.encoder)
+		decodeResponse = c.DecodeAddResponse(c.decoder)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		req, err := encodeRequest(v)
@@ -60,16 +60,16 @@ func (c *Client) Create() goa.Endpoint {
 			return nil, err
 		}
 
-		resp, err := c.CreateDoer.Do(req)
+		resp, err := c.AddDoer.Do(req)
 
 		if err != nil {
-			return nil, rest.ErrRequestError("account", "create", err)
+			return nil, rest.ErrRequestError("storage", "add", err)
 		}
 		return decodeResponse(resp)
 	}
 }
 
-// List returns a endpoint that makes HTTP requests to the account service list
+// List returns a endpoint that makes HTTP requests to the storage service list
 // server.
 func (c *Client) List() goa.Endpoint {
 	var (
@@ -85,13 +85,13 @@ func (c *Client) List() goa.Endpoint {
 		resp, err := c.ListDoer.Do(req)
 
 		if err != nil {
-			return nil, rest.ErrRequestError("account", "list", err)
+			return nil, rest.ErrRequestError("storage", "list", err)
 		}
 		return decodeResponse(resp)
 	}
 }
 
-// Show returns a endpoint that makes HTTP requests to the account service show
+// Show returns a endpoint that makes HTTP requests to the storage service show
 // server.
 func (c *Client) Show() goa.Endpoint {
 	var (
@@ -107,18 +107,18 @@ func (c *Client) Show() goa.Endpoint {
 		resp, err := c.ShowDoer.Do(req)
 
 		if err != nil {
-			return nil, rest.ErrRequestError("account", "show", err)
+			return nil, rest.ErrRequestError("storage", "show", err)
 		}
 		return decodeResponse(resp)
 	}
 }
 
-// Delete returns a endpoint that makes HTTP requests to the account service
-// delete server.
-func (c *Client) Delete() goa.Endpoint {
+// Remove returns a endpoint that makes HTTP requests to the storage service
+// remove server.
+func (c *Client) Remove() goa.Endpoint {
 	var (
-		encodeRequest  = c.EncodeDeleteRequest(c.encoder)
-		decodeResponse = c.DecodeDeleteResponse(c.decoder)
+		encodeRequest  = c.EncodeRemoveRequest(c.encoder)
+		decodeResponse = c.DecodeRemoveResponse(c.decoder)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		req, err := encodeRequest(v)
@@ -126,10 +126,10 @@ func (c *Client) Delete() goa.Endpoint {
 			return nil, err
 		}
 
-		resp, err := c.DeleteDoer.Do(req)
+		resp, err := c.RemoveDoer.Do(req)
 
 		if err != nil {
-			return nil, rest.ErrRequestError("account", "delete", err)
+			return nil, rest.ErrRequestError("storage", "remove", err)
 		}
 		return decodeResponse(resp)
 	}

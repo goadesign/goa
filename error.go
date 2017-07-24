@@ -230,5 +230,5 @@ func (e *serviceError) Message() string     { return e.message }
 func newErrorID() string {
 	b := make([]byte, 6)
 	io.ReadFull(rand.Reader, b)
-	return base64.URLEncoding.EncodeToString(b)
+	return base64.RawURLEncoding.EncodeToString(b)
 }

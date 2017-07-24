@@ -1,11 +1,9 @@
 package design
 
-import (
-	"goa.design/goa.v2/eval"
-)
+import "goa.design/goa.v2/eval"
 
 // Root is the root object built by the DSL.
-var Root = new(RootExpr)
+var Root = &RootExpr{GeneratedTypes: &GeneratedRoot{}}
 
 type (
 	// RootExpr is the struct built by the DSL on process start.
@@ -25,7 +23,7 @@ type (
 		ResultTypes []UserType
 		// GeneratedTypes contains the types generated during DSL
 		// execution.
-		GeneratedTypes GeneratedRoot
+		GeneratedTypes *GeneratedRoot
 	}
 
 	// MetadataExpr is a set of key/value pairs
@@ -115,7 +113,7 @@ func (r *RootExpr) UserType(name string) UserType {
 // GeneratedResultType returns the generated result type expression with the given
 // id, nil if there isn't one.
 func (r *RootExpr) GeneratedResultType(id string) *ResultTypeExpr {
-	for _, t := range r.GeneratedTypes {
+	for _, t := range *r.GeneratedTypes {
 		mt := t.(*ResultTypeExpr)
 		if mt.Identifier == id {
 			return mt

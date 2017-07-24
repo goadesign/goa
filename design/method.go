@@ -32,35 +32,38 @@ type (
 
 // Error returns the error with the given name. It looks up recursively in the
 // enpoint then the service and finally the root expression.
-func (e *MethodExpr) Error(name string) *ErrorExpr {
-	for _, err := range e.Errors {
+func (m *MethodExpr) Error(name string) *ErrorExpr {
+	for _, err := range m.Errors {
 		if err.Name == name {
 			return err
 		}
 	}
-	return e.Service.Error(name)
+	return m.Service.Error(name)
 }
 
 // EvalName returns the generic expression name used in error messages.
-func (e *MethodExpr) EvalName() string {
+func (m *MethodExpr) EvalName() string {
 	var prefix, suffix string
-	if e.Name != "" {
-		suffix = fmt.Sprintf("method %#v", e.Name)
+	if m.Name != "" {
+		suffix = fmt.Sprintf("method %#v", m.Name)
 	} else {
 		suffix = "unnamed method"
 	}
-	if e.Service != nil {
-		prefix = e.Service.EvalName() + " "
+	if m.Service != nil {
+		prefix = m.Service.EvalName() + " "
 	}
 	return prefix + suffix
 }
 
 // Finalize makes sure the method payload and result types are set.
-func (e *MethodExpr) Finalize() {
-	if e.Payload == nil {
-		e.Payload = &AttributeExpr{Type: Empty}
+func (m *MethodExpr) Finalize() {
+	if m.Payload == nil {
+		m.Payload = &AttributeExpr{Type: Empty}
 	}
-	if e.Result == nil {
-		e.Result = &AttributeExpr{Type: Empty}
+	if m.Result == nil {
+		m.Result = &AttributeExpr{Type: Empty}
+	}
+	for _, e := range m.Errors {
+		e.Finalize()
 	}
 }

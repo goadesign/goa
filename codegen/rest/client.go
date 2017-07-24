@@ -54,11 +54,11 @@ func client(r *rest.HTTPServiceExpr) codegen.File {
 
 // clientEncodeDecode returns the file containing the HTTP client encoding and
 // decoding logic.
-func clientEncodeDecode(r *rest.HTTPServiceExpr) codegen.File {
-	path := filepath.Join(codegen.SnakeCase(r.Name()), "http", "client", "encode_decode.go")
-	data := HTTPServices.Get(r.Name())
+func clientEncodeDecode(svc *rest.HTTPServiceExpr) codegen.File {
+	path := filepath.Join(codegen.SnakeCase(svc.Name()), "http", "client", "encode_decode.go")
+	data := HTTPServices.Get(svc.Name())
 	sections := func(genPkg string) []*codegen.Section {
-		title := fmt.Sprintf("%s HTTP client encoders and decoders", r.Name())
+		title := fmt.Sprintf("%s HTTP client encoders and decoders", svc.Name())
 		s := []*codegen.Section{
 			codegen.Header(title, "client", []*codegen.ImportSpec{
 				{Path: "fmt"},
@@ -70,14 +70,14 @@ func clientEncodeDecode(r *rest.HTTPServiceExpr) codegen.File {
 				{Path: "strings"},
 				{Path: "goa.design/goa.v2", Name: "goa"},
 				{Path: "goa.design/goa.v2/rest"},
-				{Path: genPkg + "/" + codegen.Goify(r.Name(), false)},
+				{Path: genPkg + "/" + codegen.Goify(svc.Name(), false)},
 			}),
 		}
 
-		for _, a := range data.Endpoints {
-			s = append(s, &codegen.Section{Template: requestEncoderTmpl(r), Data: a})
-			if a.Result != nil || len(a.Errors) > 0 {
-				s = append(s, &codegen.Section{Template: responseDecoderTmpl(r), Data: a})
+		for _, e := range data.Endpoints {
+			s = append(s, &codegen.Section{Template: requestEncoderTmpl(svc), Data: e})
+			if e.Result != nil || len(e.Errors) > 0 {
+				s = append(s, &codegen.Section{Template: responseDecoderTmpl(svc), Data: e})
 			}
 		}
 		return s

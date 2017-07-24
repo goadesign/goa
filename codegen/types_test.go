@@ -73,20 +73,22 @@ func TestGoify(t *testing.T) {
 		firstUpper bool
 		expected   string
 	}{
-		"with first upper false":                                 {"blue_id", false, "blueID"},
-		"with first upper false normal identifier all lower":     {"blue", false, "blue"},
-		"with first upper false and UUID":                        {"blue_uuid", false, "blueUUID"},
-		"with first upper true":                                  {"blue_id", true, "BlueID"},
-		"with first upper true and UUID":                         {"blue_uuid", true, "BlueUUID"},
-		"with first upper true normal identifier all lower":      {"blue", true, "Blue"},
-		"with first upper false normal identifier":               {"Blue", false, "blue"},
-		"with first upper true normal identifier":                {"Blue", true, "Blue"},
-		"with invalid identifier":                                {"Blue%50", true, "Blue50"},
-		"with invalid identifier firstupper false":               {"Blue%50", false, "blue50"},
-		"with only UUID and firstupper false":                    {"UUID", false, "uuid"},
-		"with consecutives invalid identifiers firstupper false": {"[[fields___type]]", false, "fieldsType"},
-		"with consecutives invalid identifiers":                  {"[[fields___type]]", true, "FieldsType"},
-		"with all invalid identifiers":                           {"[[", false, ""},
+		"first upper false":                                 {"blue_id", false, "blueID"},
+		"first upper false normal identifier all lower":     {"blue", false, "blue"},
+		"first upper false and UUID":                        {"blue_uuid", false, "blueUUID"},
+		"first upper true":                                  {"blue_id", true, "BlueID"},
+		"first upper true and UUID":                         {"blue_uuid", true, "BlueUUID"},
+		"first upper true normal identifier all lower":      {"blue", true, "Blue"},
+		"first upper false normal identifier":               {"Blue", false, "blue"},
+		"first upper true normal identifier":                {"Blue", true, "Blue"},
+		"invalid identifier":                                {"Blue%50", true, "Blue50"},
+		"invalid identifier firstupper false":               {"Blue%50", false, "blue50"},
+		"only UUID and firstupper false":                    {"UUID", false, "uuid"},
+		"consecutives invalid identifiers firstupper false": {"[[fields___type]]", false, "fieldsType"},
+		"consecutives invalid identifiers":                  {"[[fields___type]]", true, "FieldsType"},
+		"invalid identifiers":                               {"[[", false, ""},
+		"middle upper firstupper false":                     {"MiddleUpper", false, "middleUpper"},
+		"middle upper":                                      {"MiddleUpper", true, "MiddleUpper"},
 	}
 
 	for k, tc := range cases {

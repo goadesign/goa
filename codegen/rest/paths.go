@@ -17,9 +17,9 @@ var (
 // PathFiles returns the service path files.
 func PathFiles(root *rest.RootExpr) []codegen.File {
 	fw := make([]codegen.File, 2*len(root.HTTPServices))
-	for i := 0; i < 2*len(root.HTTPServices); i += 2 {
-		fw[i] = serverPath(root.HTTPServices[i])
-		fw[i+1] = clientPath(root.HTTPServices[i])
+	for i := 0; i < len(root.HTTPServices); i++ {
+		fw[i*2] = serverPath(root.HTTPServices[i])
+		fw[i*2+1] = clientPath(root.HTTPServices[i])
 	}
 	return fw
 }
