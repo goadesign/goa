@@ -2,7 +2,13 @@ package design
 
 // Dup creates a copy the given data type.
 func Dup(d DataType) DataType {
-	return newDupper().DupType(d)
+	res := newDupper().DupType(d)
+	if rt, ok := d.(*ResultTypeExpr); ok {
+		if Root.GeneratedResultType(rt.Identifier) != nil {
+			*Root.GeneratedTypes = append(*Root.GeneratedTypes, res.(*ResultTypeExpr))
+		}
+	}
+	return res
 }
 
 // DupAtt creates a copy of the given attribute.

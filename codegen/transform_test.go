@@ -13,6 +13,7 @@ var (
 	SuperObj            = require(object("a", design.String, "b", design.Int, "c", design.Boolean), "a")
 	SimpleArray         = array(design.String)
 	SimpleMap           = mapa(design.String, design.Int)
+	ArrayObj            = object("a", design.String, "b", SimpleArray.Type)
 	RecursiveObj        = defaulta(require(object("aa", design.String, "bb", SimpleObj.Type), "bb"), "aa", "default")
 	RecursiveDefaultObj = defaulta(require(object("aa", design.String, "bb", SimpleObj.Type), "bb"), "aa", "default")
 	ObjArray            = array(RequiredObj.Type)
@@ -53,6 +54,7 @@ func TestGoTypeTransform(t *testing.T) {
 		// simple array and map
 		{"array", SimpleArray, SimpleArray, false, false, false, "", arrayCode},
 		{"map", SimpleMap, SimpleMap, false, false, false, "", mapCode},
+		{"object array", ArrayObj, ArrayObj, false, false, false, "", arrayObjCode},
 
 		// recursive data structures
 		{"recursive", RecursiveObj, RecursiveDefaultObj, false, false, false, "", recCode},
@@ -185,6 +187,19 @@ const arrayCode = `func transform() {
 	target := make([]string, len(source))
 	for i, val := range source {
 		target[i] = val
+	}
+}
+`
+
+const arrayObjCode = `func transform() {
+	target := &TargetType{
+		A: source.A,
+	}
+	if source.B != nil {
+		target.B = make([]string, len(source.B))
+		for i, val := range source.B {
+			target.B[i] = val
+		}
 	}
 }
 `

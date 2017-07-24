@@ -151,7 +151,7 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 	if o := AsObject(a.Type); o != nil {
 		for _, n := range a.AllRequired() {
 			if o.Attribute(n) == nil {
-				verr.Add(parent, `%srequired field "%s" does not exist`, ctx, n)
+				verr.Add(parent, `%srequired field %q does not exist`, ctx, n)
 			}
 		}
 		for _, nat := range *o {
@@ -162,6 +162,26 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 		if ar := AsArray(a.Type); ar != nil {
 			elemType := ar.ElemType
 			verr.Merge(elemType.Validate(ctx, a))
+		}
+	}
+
+	if views, ok := a.Metadata["view"]; ok {
+		rt, ok := a.Type.(*ResultTypeExpr)
+		if !ok {
+			verr.Add(parent, "%sdefines a view but is not a result type", ctx)
+		}
+		if rt != nil {
+			found := false
+			name := views[0]
+			for _, v := range rt.Views {
+				if v.Name == name {
+					found = true
+					break
+				}
+			}
+			if !found {
+				verr.Add(parent, "%stype does not define view %q", ctx, name)
+			}
 		}
 	}
 

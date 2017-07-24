@@ -468,21 +468,6 @@ func (a *HTTPEndpointExpr) Finalize() {
 	// Make sure all error types are user types and have a body.
 	for _, herr := range a.HTTPErrors {
 		herr.Finalize(a)
-		if _, ok := herr.AttributeExpr.Type.(design.UserType); !ok {
-			att := herr.AttributeExpr
-			if !design.IsObject(att.Type) {
-				att = &design.AttributeExpr{
-					Type:       &design.Object{{"value", att}},
-					Validation: &design.ValidationExpr{Required: []string{"value"}},
-				}
-			}
-			ut := &design.UserTypeExpr{
-				AttributeExpr: att,
-				TypeName:      herr.Name,
-			}
-			herr.AttributeExpr = &design.AttributeExpr{Type: ut}
-			design.Root.GeneratedTypes = append(design.Root.GeneratedTypes, ut)
-		}
 	}
 }
 

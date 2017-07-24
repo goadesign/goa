@@ -21,7 +21,7 @@ func RequestBodyType(a *HTTPEndpointExpr) design.DataType {
 		dt      = a.MethodExpr.Payload.Type
 		headers = a.MappedHeaders()
 		params  = a.AllParams()
-		suffix  = "ServerRequestBody"
+		suffix  = "RequestBody"
 		name    = codegen.Goify(a.Name(), true) + suffix
 	)
 
@@ -244,7 +244,7 @@ func ErrorResponseBodyType(a *HTTPEndpointExpr, v *HTTPErrorExpr) design.DataTyp
 }
 
 func renameType(dt design.DataType, name, suffix string) design.DataType {
-	switch actual := dt.(type) {
+	switch dt.(type) {
 	case design.UserType:
 		rt := design.Dup(dt)
 		if urt, ok := rt.(*design.UserTypeExpr); ok {
@@ -252,7 +252,7 @@ func renameType(dt design.DataType, name, suffix string) design.DataType {
 		} else {
 			rt.(*design.ResultTypeExpr).TypeName = name
 		}
-		appendSuffix(actual.Attribute().Type, suffix)
+		appendSuffix(rt.(design.UserType).Attribute().Type, suffix)
 		return rt
 	case *design.Object:
 		rt := design.Dup(dt)

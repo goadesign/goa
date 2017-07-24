@@ -84,7 +84,7 @@ func serverEncodeDecode(svc *rest.HTTPServiceExpr) codegen.File {
 			}
 			s = append(s, es...)
 
-			if e.Payload != nil {
+			if e.Payload.Ref != "" {
 				s = append(s, &codegen.Section{Template: requestDecoderTmpl(svc), Data: e})
 			}
 
@@ -256,7 +256,7 @@ func {{ .HandlerInit }}(
 
 		res, err := endpoint(r.Context(), payload)
 		{{- else }}
-		res, err := endpoint(r.Context())
+		res, err := endpoint(r.Context(), nil)
 		{{- end }}
 
 		if err != nil {

@@ -54,6 +54,7 @@ func clientType(r *rest.HTTPServiceExpr, seen map[string]struct{}) codegen.File 
 	sections = func(genPkg string) []*codegen.Section {
 		header := codegen.Header(r.Name()+" HTTP client types", "client",
 			[]*codegen.ImportSpec{
+				{Path: "unicode/utf8"},
 				{Path: genPkg + "/" + service.Services.Get(r.Name()).PkgName},
 				{Path: "goa.design/goa.v2", Name: "goa"},
 			},

@@ -61,9 +61,45 @@ func (s *ServiceExpr) Hash() string {
 	return "_service_+" + s.Name
 }
 
+// Validate validates the service method payloads and results.
+func (s *ServiceExpr) Validate() error {
+	verr := new(eval.ValidationErrors)
+	for _, m := range s.Methods {
+		if m.Payload != nil {
+			verr.Merge(m.Payload.Validate("payload", m))
+		}
+		if m.Result != nil {
+			verr.Merge(m.Result.Validate("result", m))
+		}
+	}
+	return verr
+}
+
 // Finalize finalizes all the service methods.
 func (s *ServiceExpr) Finalize() {
 	for _, ep := range s.Methods {
 		ep.Finalize()
+	}
+	for _, e := range s.Errors {
+		e.Finalize()
+	}
+}
+
+// Finalize makes sure the error type is a user type since it has to generate a
+// Go error.
+func (e *ErrorExpr) Finalize() {
+	if _, ok := e.AttributeExpr.Type.(UserType); !ok {
+		att := e.AttributeExpr
+		if !IsObject(att.Type) {
+			att = &AttributeExpr{
+				Type:       &Object{{"value", att}},
+				Validation: &ValidationExpr{Required: []string{"value"}},
+			}
+		}
+		ut := &UserTypeExpr{
+			AttributeExpr: att,
+			TypeName:      e.Name,
+		}
+		e.AttributeExpr = &AttributeExpr{Type: ut}
 	}
 }

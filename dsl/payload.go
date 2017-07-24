@@ -72,7 +72,7 @@ func methodDSL(suffix string, p interface{}, fns ...func()) *design.AttributeExp
 			// Do not duplicate type if it is not customized
 			return &design.AttributeExpr{Type: actual}
 		}
-		att = design.DupAtt(actual.Attribute())
+		att = &design.AttributeExpr{Type: design.Dup(actual)}
 	case design.DataType:
 		att = &design.AttributeExpr{Type: actual}
 	default:

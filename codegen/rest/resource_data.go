@@ -1148,7 +1148,10 @@ func extractHeaders(a *design.MappedAttributeExpr, req bool, scope *codegen.Name
 
 // collectUserTypes traverses the given data type recursively and calls back the
 // given function for each attribute using a user type.
-func collectUserTypes(dt design.DataType, cb func(design.UserType)) {
+func collectUserTypes(dt design.DataType, cb func(design.UserType), seen ...map[string]struct{}) {
+	if dt == design.Empty {
+		return
+	}
 	switch actual := dt.(type) {
 	case *design.Object:
 		for _, nat := range *actual {
@@ -1160,7 +1163,18 @@ func collectUserTypes(dt design.DataType, cb func(design.UserType)) {
 		collectUserTypes(actual.KeyType.Type, cb)
 		collectUserTypes(actual.ElemType.Type, cb)
 	case design.UserType:
+		var s map[string]struct{}
+		if len(seen) > 0 {
+			s = seen[0]
+		} else {
+			s = make(map[string]struct{})
+		}
+		if _, ok := s[actual.Name()]; ok {
+			return
+		}
+		s[actual.Name()] = struct{}{}
 		cb(actual)
+		collectUserTypes(actual.Attribute().Type, cb, s)
 	}
 }
 
