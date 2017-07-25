@@ -259,8 +259,10 @@ func (body *AddRequestBody) Validate() (err error) {
 			}
 		}
 	}
-	if utf8.RuneCountInString(*body.Description) > 2000 {
-		err = goa.MergeErrors(err, goa.InvalidLengthError("body.description", *body.Description, utf8.RuneCountInString(*body.Description), 2000, false))
+	if body.Description != nil {
+		if utf8.RuneCountInString(*body.Description) > 2000 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.description", *body.Description, utf8.RuneCountInString(*body.Description), 2000, false))
+		}
 	}
 	if body.Rating != nil {
 		if *body.Rating < 1 {
@@ -318,8 +320,10 @@ func (body *StoredBottleResponseBody) Validate() (err error) {
 	if body.Vintage == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("vintage", "body"))
 	}
-	if utf8.RuneCountInString(*body.Name) > 100 {
-		err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 100, false))
+	if body.Name != nil {
+		if utf8.RuneCountInString(*body.Name) > 100 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", *body.Name, utf8.RuneCountInString(*body.Name), 100, false))
+		}
 	}
 	if body.Winery != nil {
 		if err2 := body.Winery.Validate(); err2 != nil {
@@ -343,8 +347,10 @@ func (body *StoredBottleResponseBody) Validate() (err error) {
 			}
 		}
 	}
-	if utf8.RuneCountInString(*body.Description) > 2000 {
-		err = goa.MergeErrors(err, goa.InvalidLengthError("body.description", *body.Description, utf8.RuneCountInString(*body.Description), 2000, false))
+	if body.Description != nil {
+		if utf8.RuneCountInString(*body.Description) > 2000 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.description", *body.Description, utf8.RuneCountInString(*body.Description), 2000, false))
+		}
 	}
 	if body.Rating != nil {
 		if *body.Rating < 1 {
@@ -390,8 +396,10 @@ func (body *ComponentResponseBody) Validate() (err error) {
 	if body.Varietal != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", *body.Varietal, "[A-Za-z' ]+"))
 	}
-	if utf8.RuneCountInString(*body.Varietal) > 100 {
-		err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", *body.Varietal, utf8.RuneCountInString(*body.Varietal), 100, false))
+	if body.Varietal != nil {
+		if utf8.RuneCountInString(*body.Varietal) > 100 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", *body.Varietal, utf8.RuneCountInString(*body.Varietal), 100, false))
+		}
 	}
 	if body.Percentage != nil {
 		if *body.Percentage < 1 {
@@ -437,8 +445,10 @@ func (body *Component) Validate() (err error) {
 	if body.Varietal != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", *body.Varietal, "[A-Za-z' ]+"))
 	}
-	if utf8.RuneCountInString(*body.Varietal) > 100 {
-		err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", *body.Varietal, utf8.RuneCountInString(*body.Varietal), 100, false))
+	if body.Varietal != nil {
+		if utf8.RuneCountInString(*body.Varietal) > 100 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", *body.Varietal, utf8.RuneCountInString(*body.Varietal), 100, false))
+		}
 	}
 	if body.Percentage != nil {
 		if *body.Percentage < 1 {

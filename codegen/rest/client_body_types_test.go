@@ -37,7 +37,7 @@ func TestBodyTypeInit(t *testing.T) {
 		SectionIndex int
 		Code         string
 	}{
-		{"body-user-inner", PayloadBodyUserInnerDSL, 2, BodyUserInnerInitCode},
+		{"body-user-inner", PayloadBodyUserInnerDSL, 3, BodyUserInnerInitCode},
 		{"body-path-user-validate", PayloadBodyPathUserValidateDSL, 2, BodyPathUserValidateInitCode},
 	}
 	for _, c := range cases {
@@ -53,25 +53,25 @@ func TestBodyTypeInit(t *testing.T) {
 	}
 }
 
-const BodyUserInnerDeclCode = `// MethodBodyUserInnerServerRequestBody is the type of the ServiceBodyUserInner
+const BodyUserInnerDeclCode = `// MethodBodyUserInnerRequestBody is the type of the ServiceBodyUserInner
 // MethodBodyUserInner HTTP endpoint request body.
-type MethodBodyUserInnerServerRequestBody struct {
+type MethodBodyUserInnerRequestBody struct {
 	Inner *InnerTypeRequestBody ` + "`" + `form:"inner,omitempty" json:"inner,omitempty" xml:"inner,omitempty"` + "`" + `
 }
 `
 
-const BodyPathUserValidateDeclCode = `// MethodUserBodyPathValidateServerRequestBody is the type of the
+const BodyPathUserValidateDeclCode = `// MethodUserBodyPathValidateRequestBody is the type of the
 // ServiceBodyPathUserValidate MethodUserBodyPathValidate HTTP endpoint request
 // body.
-type MethodUserBodyPathValidateServerRequestBody struct {
+type MethodUserBodyPathValidateRequestBody struct {
 	A string ` + "`" + `form:"a" json:"a" xml:"a"` + "`" + `
 }
 `
 
-const BodyUserInnerInitCode = `// NewMethodBodyUserInnerServerRequestBody builds the ServiceBodyUserInner
-// service MethodBodyUserInner endpoint request body from a payload.
-func NewMethodBodyUserInnerServerRequestBody(p *servicebodyuserinner.PayloadType) *MethodBodyUserInnerServerRequestBody {
-	body := &MethodBodyUserInnerServerRequestBody{}
+const BodyUserInnerInitCode = `// NewMethodBodyUserInnerRequestBody builds the ServiceBodyUserInner service
+// MethodBodyUserInner endpoint request body from a payload.
+func NewMethodBodyUserInnerRequestBody(p *servicebodyuserinner.PayloadType) *MethodBodyUserInnerRequestBody {
+	body := &MethodBodyUserInnerRequestBody{}
 	if p.Inner != nil {
 		body.Inner = &InnerTypeRequestBody{
 			A: p.Inner.A,
@@ -83,11 +83,11 @@ func NewMethodBodyUserInnerServerRequestBody(p *servicebodyuserinner.PayloadType
 }
 `
 
-const BodyPathUserValidateInitCode = `// NewMethodUserBodyPathValidateServerRequestBody builds the
+const BodyPathUserValidateInitCode = `// NewMethodUserBodyPathValidateRequestBody builds the
 // ServiceBodyPathUserValidate service MethodUserBodyPathValidate endpoint
 // request body from a payload.
-func NewMethodUserBodyPathValidateServerRequestBody(p *servicebodypathuservalidate.PayloadType) *MethodUserBodyPathValidateServerRequestBody {
-	body := &MethodUserBodyPathValidateServerRequestBody{
+func NewMethodUserBodyPathValidateRequestBody(p *servicebodypathuservalidate.PayloadType) *MethodUserBodyPathValidateRequestBody {
+	body := &MethodUserBodyPathValidateRequestBody{
 		A: p.A,
 	}
 
