@@ -2657,7 +2657,7 @@ var PayloadBodyStringDecodeCode = `// DecodeMethodBodyStringRequest returns a de
 func DecodeMethodBodyStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyStringServerRequestBody
+			body MethodBodyStringRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -2678,7 +2678,7 @@ var PayloadBodyStringValidateDecodeCode = `// DecodeMethodBodyStringValidateRequ
 func DecodeMethodBodyStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyStringValidateServerRequestBody
+			body MethodBodyStringValidateRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -2754,7 +2754,7 @@ var PayloadBodyUserDecodeCode = `// DecodeMethodBodyUserRequest returns a decode
 func DecodeMethodBodyUserRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyUserServerRequestBody
+			body MethodBodyUserRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -2775,7 +2775,7 @@ var PayloadUserBodyValidateDecodeCode = `// DecodeMethodBodyUserValidateRequest 
 func DecodeMethodBodyUserValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyUserValidateServerRequestBody
+			body MethodBodyUserValidateRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -2801,7 +2801,7 @@ var PayloadBodyArrayStringDecodeCode = `// DecodeMethodBodyArrayStringRequest re
 func DecodeMethodBodyArrayStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyArrayStringServerRequestBody
+			body MethodBodyArrayStringRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -2823,7 +2823,7 @@ var PayloadBodyArrayStringValidateDecodeCode = `// DecodeMethodBodyArrayStringVa
 func DecodeMethodBodyArrayStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyArrayStringValidateServerRequestBody
+			body MethodBodyArrayStringValidateRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -2849,7 +2849,7 @@ var PayloadBodyArrayUserDecodeCode = `// DecodeMethodBodyArrayUserRequest return
 func DecodeMethodBodyArrayUserRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyArrayUserServerRequestBody
+			body MethodBodyArrayUserRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -2875,7 +2875,7 @@ var PayloadBodyArrayUserValidateDecodeCode = `// DecodeMethodBodyArrayUserValida
 func DecodeMethodBodyArrayUserValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyArrayUserValidateServerRequestBody
+			body MethodBodyArrayUserValidateRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -2901,7 +2901,7 @@ var PayloadBodyMapStringDecodeCode = `// DecodeMethodBodyMapStringRequest return
 func DecodeMethodBodyMapStringRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyMapStringServerRequestBody
+			body MethodBodyMapStringRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -2922,7 +2922,7 @@ var PayloadBodyMapStringValidateDecodeCode = `// DecodeMethodBodyMapStringValida
 func DecodeMethodBodyMapStringValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyMapStringValidateServerRequestBody
+			body MethodBodyMapStringValidateRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -2948,7 +2948,7 @@ var PayloadBodyMapUserDecodeCode = `// DecodeMethodBodyMapUserRequest returns a 
 func DecodeMethodBodyMapUserRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyMapUserServerRequestBody
+			body MethodBodyMapUserRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -2974,7 +2974,7 @@ var PayloadBodyMapUserValidateDecodeCode = `// DecodeMethodBodyMapUserValidateRe
 func DecodeMethodBodyMapUserValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyMapUserValidateServerRequestBody
+			body MethodBodyMapUserValidateRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3220,7 +3220,7 @@ var PayloadBodyQueryObjectDecodeCode = `// DecodeMethodBodyQueryObjectRequest re
 func DecodeMethodBodyQueryObjectRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyQueryObjectServerRequestBody
+			body MethodBodyQueryObjectRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3250,7 +3250,7 @@ var PayloadBodyQueryObjectValidateDecodeCode = `// DecodeMethodBodyQueryObjectVa
 func DecodeMethodBodyQueryObjectValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyQueryObjectValidateServerRequestBody
+			body MethodBodyQueryObjectValidateRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3284,7 +3284,7 @@ var PayloadBodyQueryUserDecodeCode = `// DecodeMethodBodyQueryUserRequest return
 func DecodeMethodBodyQueryUserRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyQueryUserServerRequestBody
+			body MethodBodyQueryUserRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3313,7 +3313,7 @@ var PayloadBodyQueryUserValidateDecodeCode = `// DecodeMethodBodyQueryUserValida
 func DecodeMethodBodyQueryUserValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyQueryUserValidateServerRequestBody
+			body MethodBodyQueryUserValidateRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3347,7 +3347,7 @@ var PayloadBodyPathObjectDecodeCode = `// DecodeMethodBodyPathObjectRequest retu
 func DecodeMethodBodyPathObjectRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyPathObjectServerRequestBody
+			body MethodBodyPathObjectRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3376,7 +3376,7 @@ var PayloadBodyPathObjectValidateDecodeCode = `// DecodeMethodBodyPathObjectVali
 func DecodeMethodBodyPathObjectValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyPathObjectValidateServerRequestBody
+			body MethodBodyPathObjectValidateRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3409,7 +3409,7 @@ var PayloadBodyPathUserDecodeCode = `// DecodeMethodBodyPathUserRequest returns 
 func DecodeMethodBodyPathUserRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyPathUserServerRequestBody
+			body MethodBodyPathUserRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3437,7 +3437,7 @@ var PayloadBodyPathUserValidateDecodeCode = `// DecodeMethodUserBodyPathValidate
 func DecodeMethodUserBodyPathValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodUserBodyPathValidateServerRequestBody
+			body MethodUserBodyPathValidateRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3470,7 +3470,7 @@ var PayloadBodyQueryPathObjectDecodeCode = `// DecodeMethodBodyQueryPathObjectRe
 func DecodeMethodBodyQueryPathObjectRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyQueryPathObjectServerRequestBody
+			body MethodBodyQueryPathObjectRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3504,7 +3504,7 @@ var PayloadBodyQueryPathObjectValidateDecodeCode = `// DecodeMethodBodyQueryPath
 func DecodeMethodBodyQueryPathObjectValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyQueryPathObjectValidateServerRequestBody
+			body MethodBodyQueryPathObjectValidateRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3543,7 +3543,7 @@ var PayloadBodyQueryPathUserDecodeCode = `// DecodeMethodBodyQueryPathUserReques
 func DecodeMethodBodyQueryPathUserRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyQueryPathUserServerRequestBody
+			body MethodBodyQueryPathUserRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -3577,7 +3577,7 @@ var PayloadBodyQueryPathUserValidateDecodeCode = `// DecodeMethodBodyQueryPathUs
 func DecodeMethodBodyQueryPathUserValidateRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
-			body MethodBodyQueryPathUserValidateServerRequestBody
+			body MethodBodyQueryPathUserValidateRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)

@@ -108,9 +108,9 @@ func New{{ .VarName }}(s {{ .ServiceVarName }}) *{{ .VarName }} {
 		p := req.({{ .PayloadRef }})
 {{- end }}
 {{- if .ResultRef }}
-		return s.{{ .Name }}(ctx, {{ if .PayloadRef }}p{{ end }})
+		return s.{{ .Name }}(ctx{{ if .PayloadRef }} ,p{{ end }})
 {{- else }}
-		return nil, s.{{ .Name }}(ctx, {{ if .PayloadRef }}p{{ end }})
+		return nil, s.{{ .Name }}(ctx{{ if .PayloadRef }}, p{{ end }})
 {{- end }}
 	}
 {{ end }}

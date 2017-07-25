@@ -174,8 +174,10 @@ func (body *StoredBottleResponseBody) Validate() (err error) {
 			}
 		}
 	}
-	if utf8.RuneCountInString(*body.Description) > 2000 {
-		err = goa.MergeErrors(err, goa.InvalidLengthError("body.description", *body.Description, utf8.RuneCountInString(*body.Description), 2000, false))
+	if body.Description != nil {
+		if utf8.RuneCountInString(*body.Description) > 2000 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.description", *body.Description, utf8.RuneCountInString(*body.Description), 2000, false))
+		}
 	}
 	if body.Rating != nil {
 		if *body.Rating < 1 {

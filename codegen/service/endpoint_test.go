@@ -67,7 +67,7 @@ func NewEndpoints(s Service) *Endpoints {
 	ep := new(Endpoints)
 
 	ep.NoPayload = func(ctx context.Context, req interface{}) (interface{}, error) {
-		return nil, s.NoPayload(ctx, nil)
+		return nil, s.NoPayload(ctx)
 	}
 
 	return ep

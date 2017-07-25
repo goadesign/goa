@@ -14,7 +14,7 @@ func NewMethodNoPayloadNoResultHandler(
 		encodeError    = rest.EncodeError(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		res, err := endpoint(r.Context())
+		res, err := endpoint(r.Context(), nil)
 
 		if err != nil {
 			encodeError(w, r, err)
@@ -75,7 +75,7 @@ func NewMethodNoPayloadResultHandler(
 		encodeError    = rest.EncodeError(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		res, err := endpoint(r.Context())
+		res, err := endpoint(r.Context(), nil)
 
 		if err != nil {
 			encodeError(w, r, err)
