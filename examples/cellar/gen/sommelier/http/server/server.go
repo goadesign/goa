@@ -12,7 +12,7 @@ import (
 
 	goa "goa.design/goa.v2"
 	"goa.design/goa.v2/examples/cellar/gen/sommelier"
-	"goa.design/goa.v2/rest"
+	goahttp "goa.design/goa.v2/http"
 )
 
 // Server lists the sommelier service endpoint HTTP handlers.
@@ -23,9 +23,9 @@ type Server struct {
 // New instantiates HTTP handlers for all the sommelier service endpoints.
 func New(
 	e *sommelier.Endpoints,
-	mux rest.Muxer,
-	dec func(*http.Request) rest.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (rest.Encoder, string),
+	mux goahttp.Muxer,
+	dec func(*http.Request) goahttp.Decoder,
+	enc func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string),
 ) *Server {
 	return &Server{
 		Pick: NewPickHandler(e.Pick, mux, dec, enc),
@@ -33,13 +33,13 @@ func New(
 }
 
 // Mount configures the mux to serve the sommelier endpoints.
-func Mount(mux rest.Muxer, h *Server) {
+func Mount(mux goahttp.Muxer, h *Server) {
 	MountPickHandler(mux, h.Pick)
 }
 
 // MountPickHandler configures the mux to serve the "sommelier" service "pick"
 // endpoint.
-func MountPickHandler(mux rest.Muxer, h http.Handler) {
+func MountPickHandler(mux goahttp.Muxer, h http.Handler) {
 	f, ok := h.(http.HandlerFunc)
 	if !ok {
 		f = func(w http.ResponseWriter, r *http.Request) {
@@ -53,9 +53,9 @@ func MountPickHandler(mux rest.Muxer, h http.Handler) {
 // the "sommelier" service "pick" endpoint.
 func NewPickHandler(
 	endpoint goa.Endpoint,
-	mux rest.Muxer,
-	dec func(*http.Request) rest.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (rest.Encoder, string),
+	mux goahttp.Muxer,
+	dec func(*http.Request) goahttp.Decoder,
+	enc func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string),
 ) http.Handler {
 	var (
 		decodeRequest  = DecodePickRequest(mux, dec)

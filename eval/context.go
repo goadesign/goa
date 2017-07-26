@@ -36,7 +36,7 @@ func init() {
 	Reset()
 }
 
-// Reset rests the eval context, mostly useful for tests.
+// Reset resets the eval context, mostly useful for tests.
 func Reset() {
 	Context = &DSLContext{dslPackages: []string{"goa.design/goa.v2/eval"}}
 }

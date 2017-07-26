@@ -13,16 +13,16 @@ import (
 
 	goa "goa.design/goa.v2"
 	"goa.design/goa.v2/examples/cellar/gen/sommelier"
-	"goa.design/goa.v2/rest"
+	goahttp "goa.design/goa.v2/http"
 )
 
 // EncodePickResponse returns an encoder for responses returned by the
 // sommelier pick endpoint.
-func EncodePickResponse(encoder func(http.ResponseWriter, *http.Request) (rest.Encoder, string)) func(http.ResponseWriter, *http.Request, interface{}) error {
+func EncodePickResponse(encoder func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string)) func(http.ResponseWriter, *http.Request, interface{}) error {
 	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
 		res := v.(sommelier.StoredBottleCollection)
 		enc, ct := encoder(w, r)
-		rest.SetContentType(w, ct)
+		goahttp.SetContentType(w, ct)
 		body := NewPickResponseBody(res)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
@@ -31,7 +31,7 @@ func EncodePickResponse(encoder func(http.ResponseWriter, *http.Request) (rest.E
 
 // DecodePickRequest returns a decoder for requests sent to the sommelier pick
 // endpoint.
-func DecodePickRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder) func(*http.Request) (interface{}, error) {
+func DecodePickRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
 	return func(r *http.Request) (interface{}, error) {
 		var (
 			body PickRequestBody
@@ -51,13 +51,13 @@ func DecodePickRequest(mux rest.Muxer, decoder func(*http.Request) rest.Decoder)
 
 // EncodePickError returns an encoder for errors returned by the pick sommelier
 // endpoint.
-func EncodePickError(encoder func(http.ResponseWriter, *http.Request) (rest.Encoder, string)) func(http.ResponseWriter, *http.Request, error) {
-	encodeError := rest.EncodeError(encoder)
+func EncodePickError(encoder func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string)) func(http.ResponseWriter, *http.Request, error) {
+	encodeError := goahttp.EncodeError(encoder)
 	return func(w http.ResponseWriter, r *http.Request, v error) {
 		switch res := v.(type) {
 		case *sommelier.NoCriteria:
 			enc, ct := encoder(w, r)
-			rest.SetContentType(w, ct)
+			goahttp.SetContentType(w, ct)
 			body := NewPickNoCriteriaResponseBody(res)
 			w.WriteHeader(http.StatusBadRequest)
 			if err := enc.Encode(body); err != nil {
@@ -65,7 +65,7 @@ func EncodePickError(encoder func(http.ResponseWriter, *http.Request) (rest.Enco
 			}
 		case *sommelier.NoMatch:
 			enc, ct := encoder(w, r)
-			rest.SetContentType(w, ct)
+			goahttp.SetContentType(w, ct)
 			body := NewPickNoMatchResponseBody(res)
 			w.WriteHeader(http.StatusNotFound)
 			if err := enc.Encode(body); err != nil {

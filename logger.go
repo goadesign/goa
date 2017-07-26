@@ -7,9 +7,6 @@ import (
 	"log"
 )
 
-// errMissingLogValue is the value used to log keys with missing values
-const errMissingLogValue = "MISSING"
-
 type (
 	// LogAdapter is the logging interface used by goa to produce log
 	// entries.
@@ -39,14 +36,14 @@ func (a *adapter) Info(ctx context.Context, keyvals ...interface{}) {
 
 // Error logs an error message.
 func (a *adapter) Error(ctx context.Context, keyvals ...interface{}) {
-	a.log("EROR", keyvals...)
+	a.log("ERROR", keyvals...)
 }
 
 // Log renders the log entries using the std lib logger.
 func (a *adapter) log(lvl string, keyvals ...interface{}) {
 	n := (len(keyvals) + 1) / 2
 	if len(keyvals)%2 != 0 {
-		keyvals = append(keyvals, errMissingLogValue)
+		keyvals = append(keyvals, "MISSING")
 	}
 	var fm bytes.Buffer
 	fm.WriteString("[%s]")

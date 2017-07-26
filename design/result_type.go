@@ -32,19 +32,6 @@ type (
 		Views []*ViewExpr
 	}
 
-	// LinkExpr defines a result type link, it specifies a URL to a related
-	// service.
-	LinkExpr struct {
-		// Link name
-		Name string
-		// View used to render link if not "link"
-		View string
-		// URITemplate is the RFC6570 URI template of the link Href.
-		URITemplate string
-		// Parent result Type
-		Parent *ResultTypeExpr
-	}
-
 	// ViewExpr defines which fields and links to render when building a
 	// response. The view is an object whose field names must match the
 	// names of the parent result type field names. The field definitions are
@@ -56,30 +43,6 @@ type (
 		Name string
 		// Parent result Type
 		Parent *ResultTypeExpr
-	}
-
-	// Projector derives result types using a canonical result type expression
-	// and a view expression.
-	Projector struct {
-		// Projected is a cache of projected result types indexed by
-		// identifier.
-		Projected map[string]*ProjectedMTExpr
-	}
-
-	// ProjectedMTExpr represents a result type that was derived from a result
-	// type expression defined in a DSL by applying a view. The result of
-	// applying a view is a result type expression that contains the subset
-	// of the original result type fields listed in the view recursively
-	// projected if they are result types themselves. The result also include
-	// a links object that corresponds to the result type links defined in
-	// the design.
-	ProjectedMTExpr struct {
-		// View used to create projected result type
-		View string
-		// ResultType is the projected result type.
-		ResultType *ResultTypeExpr
-		// Links lists the result type links if any.
-		Links *UserTypeExpr
 	}
 )
 
@@ -237,26 +200,19 @@ func (m *ResultTypeExpr) Finalize() {
 // The resulting result type defines a default view. The result type identifier is
 // computed by adding a parameter called "view" to the original identifier. The
 // value of the "view" parameter is the name of the view.
-func (p *Projector) Project(m *ResultTypeExpr, view string) (*ProjectedMTExpr, error) {
-	var viewID string
-	cano := CanonicalIdentifier(m.Identifier)
-	base, params, _ := mime.ParseMediaType(cano)
-	if params["view"] != "" {
-		viewID = cano // Already projected
-	} else {
-		params["view"] = view
-		viewID = mime.FormatMediaType(base, params)
-	}
-	if proj, ok := p.Projected[viewID]; ok {
-		return proj, nil
+func Project(m *ResultTypeExpr, view string) (*ResultTypeExpr, error) {
+	_, params, _ := mime.ParseMediaType(m.Identifier)
+	if params["view"] == view {
+		// nothing to do
+		return m, nil
 	}
 	if _, ok := m.Type.(*Array); ok {
-		return p.projectCollection(m, view, viewID)
+		return projectCollection(m, view)
 	}
-	return p.projectSingle(m, view, viewID)
+	return projectSingle(m, view)
 }
 
-func (p *Projector) projectSingle(m *ResultTypeExpr, view, viewID string) (*ProjectedMTExpr, error) {
+func projectSingle(m *ResultTypeExpr, view string) (*ResultTypeExpr, error) {
 	v := m.View(view)
 	if v == nil {
 		return nil, fmt.Errorf("unknown view %#v", view)
@@ -289,8 +245,10 @@ func (p *Projector) projectSingle(m *ResultTypeExpr, view, viewID string) (*Proj
 		typeName += strings.Title(view)
 	}
 
+	params := map[string]string{"view": view}
+	id := mime.FormatMediaType(m.Identifier, params)
 	projected := &ResultTypeExpr{
-		Identifier: viewID,
+		Identifier: id,
 		UserTypeExpr: &UserTypeExpr{
 			TypeName: typeName,
 			AttributeExpr: &AttributeExpr{
@@ -306,11 +264,6 @@ func (p *Projector) projectSingle(m *ResultTypeExpr, view, viewID string) (*Proj
 		Parent:        projected,
 	}}
 
-	proj := ProjectedMTExpr{View: view, ResultType: projected}
-	if p.Projected == nil {
-		p.Projected = make(map[string]*ProjectedMTExpr)
-	}
-	p.Projected[viewID] = &proj
 	projectedObj := projected.Type.(*Object)
 	mtObj := m.Type.(*Object)
 	for _, nat := range *viewObj {
@@ -328,43 +281,45 @@ func (p *Projector) projectSingle(m *ResultTypeExpr, view, viewID string) (*Proj
 				if view == "" {
 					view = DefaultView
 				}
-				pr, err := p.Project(mt, view)
+				pr, err := Project(mt, view)
 				if err != nil {
 					return nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", view, nat.Name, err)
 				}
-				at.Type = pr.ResultType
+				at.Type = pr
 			}
 			projectedObj.Set(nat.Name, at)
 		}
 	}
-	return &proj, nil
+	return projected, nil
 }
 
-func (p *Projector) projectCollection(m *ResultTypeExpr, view, viewID string) (*ProjectedMTExpr, error) {
+func projectCollection(m *ResultTypeExpr, view string) (*ResultTypeExpr, error) {
 	// Project the collection element result type
 	e := m.Type.(*Array).ElemType.Type.(*ResultTypeExpr) // validation checked this cast would work
-	pe, err2 := p.Project(e, view)
+	pe, err2 := Project(e, view)
 	if err2 != nil {
 		return nil, fmt.Errorf("collection element: %s", err2)
 	}
 
 	// Build the projected collection with the results
+	params := map[string]string{"view": view}
+	id := mime.FormatMediaType(m.Identifier, params)
 	desc := m.TypeName + " is the result type for an array of " + e.TypeName + " (" + view + " view)"
 	proj := &ResultTypeExpr{
-		Identifier: viewID,
+		Identifier: id,
 		UserTypeExpr: &UserTypeExpr{
 			AttributeExpr: &AttributeExpr{
 				Description:  desc,
-				Type:         &Array{ElemType: &AttributeExpr{Type: pe.ResultType}},
+				Type:         &Array{ElemType: &AttributeExpr{Type: pe}},
 				UserExamples: m.UserExamples,
 			},
-			TypeName: pe.ResultType.TypeName + "Collection",
+			TypeName: pe.TypeName + "Collection",
 		},
 	}
 	proj.Views = []*ViewExpr{&ViewExpr{
-		AttributeExpr: DupAtt(pe.ResultType.View("default").AttributeExpr),
+		AttributeExpr: DupAtt(pe.View("default").AttributeExpr),
 		Name:          "default",
-		Parent:        pe.ResultType,
+		Parent:        pe,
 	}}
 
 	// Run the DSL that was created by the CollectionOf function
@@ -372,20 +327,7 @@ func (p *Projector) projectCollection(m *ResultTypeExpr, view, viewID string) (*
 		return nil, eval.Context.Errors
 	}
 
-	// Build the links user type
-	var links *UserTypeExpr
-	if pe.Links != nil {
-		lTypeName := pe.Links.TypeName + "Array"
-		links = &UserTypeExpr{
-			AttributeExpr: &AttributeExpr{
-				Type:        &Array{ElemType: &AttributeExpr{Type: pe.Links}},
-				Description: fmt.Sprintf("%s contains links to related services of %s.", lTypeName, m.TypeName),
-			},
-			TypeName: lTypeName,
-		}
-	}
-
-	return &ProjectedMTExpr{view, proj, links}, nil
+	return proj, nil
 }
 
 // projectIdentifier computes the projected result type identifier by adding the
@@ -399,36 +341,6 @@ func (m *ResultTypeExpr) projectIdentifier(view string) string {
 	}
 	params["view"] = view
 	return mime.FormatMediaType(base, params)
-}
-
-// EvalName returns the generic definition name used in error messages.
-func (l *LinkExpr) EvalName() string {
-	var prefix, suffix string
-	if l.Name != "" {
-		prefix = fmt.Sprintf("link %#v", l.Name)
-	} else {
-		prefix = "unnamed link"
-	}
-	if l.Parent != nil {
-		suffix = fmt.Sprintf(" of %s", l.Parent.EvalName())
-	}
-	return prefix + suffix
-}
-
-// Attribute returns the linked attribute.
-func (l *LinkExpr) Attribute() *AttributeExpr {
-	p := l.Parent.Type.(*Object)
-	if p == nil {
-		return nil
-	}
-	return p.Attribute(l.Name)
-}
-
-// ResultType returns the result type of the linked attribute.
-func (l *LinkExpr) ResultType() *ResultTypeExpr {
-	att := l.Attribute()
-	mt, _ := att.Type.(*ResultTypeExpr)
-	return mt
 }
 
 // EvalName returns the generic definition name used in error messages.

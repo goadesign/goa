@@ -26,8 +26,8 @@ of generating all the transport specific code including marshalling,
 unmarshalling, validation etc. so that user code can focus on the actual
 implementation.
 
-The new top level `rest` package implement the DSL, design objects, code
-generation and runtime support for HTTP/REST APIs. The REST DSL is built on top
+The new top level `http` package implement the DSL, design objects, code
+generation and runtime support for HTTP/HTTP APIs. The HTTP DSL is built on top
 of the core DSL package and add transport specific keywords to describe aspects
 specific to HTTP requests and responses.
 
@@ -35,7 +35,7 @@ specific to HTTP requests and responses.
 
 The primitive types now include `Int`, `Int32`, `Int64`, `UInt` `UInt32`,
 `UInt64`, `Float32`, `Float64` and `Bytes`. This makes it possible to support
-transports such as gRPC but also makes REST interface definitions crisper. The
+transports such as gRPC but also makes HTTP interface definitions crisper. The
 v1 types `Integer` and `Float` have been removed in favor of these new types.
 
 ## Composable Code Generation
@@ -92,7 +92,7 @@ and `IMPORT` is the Go import path to the design package.
 * The core and HTTP DSLs are stable, see:
   - The [core API DSL spec](https://github.com/goadesign/goa/blob/v2/dsl/_spec/dsl_spec_test.go)
   - The [type DSL spec](https://github.com/goadesign/goa/blob/v2/dsl/_spec/type_spec_test.go)
-  - The [rest DSL spec](https://github.com/goadesign/goa/blob/v2/dsl/rest/_spec/dsl_spec_test.go)
+  - The [HTTP DSL spec](https://github.com/goadesign/goa/blob/v2/dsl/http/_spec/dsl_spec_test.go)
 
 * The account example is functional, see:
   - The [design](https://github.com/goadesign/goa/blob/v2/examples/account/design/design.go)

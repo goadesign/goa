@@ -1,7 +1,7 @@
 package design
 
-import . "goa.design/goa.v2/design/rest"
-import . "goa.design/goa.v2/dsl/rest"
+import . "goa.design/goa.v2/design/http"
+import . "goa.design/goa.v2/dsl/http"
 
 var _ = API("cellar", func() {
 	Title("Cellar Service")

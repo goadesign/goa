@@ -12,25 +12,25 @@ import (
 	"net/http"
 
 	goa "goa.design/goa.v2"
-	"goa.design/goa.v2/rest"
+	goahttp "goa.design/goa.v2/http"
 )
 
 // Client lists the sommelier service endpoint HTTP clients.
 type Client struct {
-	PickDoer rest.Doer
+	PickDoer goahttp.Doer
 	scheme   string
 	host     string
-	encoder  func(*http.Request) rest.Encoder
-	decoder  func(*http.Response) rest.Decoder
+	encoder  func(*http.Request) goahttp.Encoder
+	decoder  func(*http.Response) goahttp.Decoder
 }
 
 // NewClient instantiates HTTP clients for all the sommelier service servers.
 func NewClient(
 	scheme string,
 	host string,
-	doer rest.Doer,
-	enc func(*http.Request) rest.Encoder,
-	dec func(*http.Response) rest.Decoder,
+	doer goahttp.Doer,
+	enc func(*http.Request) goahttp.Encoder,
+	dec func(*http.Response) goahttp.Decoder,
 ) *Client {
 	return &Client{
 		PickDoer: doer,
@@ -57,7 +57,7 @@ func (c *Client) Pick() goa.Endpoint {
 		resp, err := c.PickDoer.Do(req)
 
 		if err != nil {
-			return nil, rest.ErrRequestError("sommelier", "pick", err)
+			return nil, goahttp.ErrRequestError("sommelier", "pick", err)
 		}
 		return decodeResponse(resp)
 	}
