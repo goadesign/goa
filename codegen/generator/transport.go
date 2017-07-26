@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/codegen/http"
-	httpdesign "goa.design/goa.v2/design/http"
 	"goa.design/goa.v2/eval"
+	httpcodegen "goa.design/goa.v2/http/codegen"
+	httpdesign "goa.design/goa.v2/http/design"
 )
 
 // Transport iterates through the roots and returns the files needed to render
@@ -16,11 +16,11 @@ func Transport(roots ...eval.Root) ([]codegen.File, error) {
 	var files []codegen.File
 	for _, root := range roots {
 		if r, ok := root.(*httpdesign.RootExpr); ok {
-			files = http.ServerFiles(r)
-			files = append(files, http.ClientFiles(r)...)
-			files = append(files, http.ServerTypeFiles(r)...)
-			files = append(files, http.ClientTypeFiles(r)...)
-			files = append(files, http.PathFiles(r)...)
+			files = httpcodegen.ServerFiles(r)
+			files = append(files, httpcodegen.ClientFiles(r)...)
+			files = append(files, httpcodegen.ServerTypeFiles(r)...)
+			files = append(files, httpcodegen.ClientTypeFiles(r)...)
+			files = append(files, httpcodegen.PathFiles(r)...)
 			break
 		}
 	}

@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"goa.design/goa.v2/codegen"
-	"goa.design/goa.v2/codegen/http"
-	httpdesign "goa.design/goa.v2/design/http"
 	"goa.design/goa.v2/eval"
+	httpcodegen "goa.design/goa.v2/http/codegen"
+	httpdesign "goa.design/goa.v2/http/design"
 )
 
 // OpenAPI iterates through the roots and returns the file needed to render
@@ -19,7 +19,7 @@ func OpenAPI(roots ...eval.Root) ([]codegen.File, error) {
 	)
 	for _, root := range roots {
 		if r, ok := root.(*httpdesign.RootExpr); ok {
-			file, err = http.OpenAPIFile(r)
+			file, err = httpcodegen.OpenAPIFile(r)
 			break
 		}
 	}

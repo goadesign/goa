@@ -13,7 +13,7 @@ import (
 
 const (
 	goaDSL  = "goa.design/goa.v2/dsl"
-	httpDSL = "goa.design/goa.v2/dsl/http"
+	httpDSL = "goa.design/goa.v2/http/dsl"
 	//rpcDSL    = "goa.design/goa.v2/dsl/rpc"
 	aliasFile = "aliases.go"
 )
@@ -44,12 +44,12 @@ func main() {
 		httpAlias = filepath.Join(httpPkg, aliasFile)
 		os.Remove(httpAlias) // to avoid parsing them
 
-		httpFuncs, err = ParseFuncs(httpPkg, "http")
+		httpFuncs, err = ParseFuncs(httpPkg, "dsl")
 		if err != nil {
 			fail("could not parse functions in %s: %s", httpPkg, err)
 		}
 
-		funcs, err = ParseFuncs(goaPkg, "dsl")
+		funcs, err = ParseFuncs(goaPkg, "dsl") //
 		if err != nil {
 			fail("could not parse functions in %s: %s", goaPkg, err)
 		}
@@ -125,7 +125,7 @@ const (
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
-package http
+package dsl
 
 import (
 	"goa.design/goa.v2/design"
