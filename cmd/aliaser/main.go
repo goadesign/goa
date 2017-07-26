@@ -13,7 +13,7 @@ import (
 
 const (
 	goaDSL  = "goa.design/goa.v2/dsl"
-	restDSL = "goa.design/goa.v2/dsl/rest"
+	httpDSL = "goa.design/goa.v2/dsl/http"
 	//rpcDSL    = "goa.design/goa.v2/dsl/rpc"
 	aliasFile = "aliases.go"
 )
@@ -23,9 +23,9 @@ var aliasTmpl = template.Must(template.New("alias").Parse(aliasT))
 
 func main() {
 	var (
-		restPkg, goaPkg  string
-		restFuncs, funcs map[string]*ExportedFunc
-		restAlias        string
+		httpPkg, goaPkg  string
+		httpFuncs, funcs map[string]*ExportedFunc
+		httpAlias        string
 		names, aliases   []string
 		err              error
 	)
@@ -36,17 +36,17 @@ func main() {
 		}
 		goaPkg = pkg.Dir
 
-		pkg, err = build.Import(restDSL, ".", build.FindOnly)
+		pkg, err = build.Import(httpDSL, ".", build.FindOnly)
 		if err != nil {
-			fail("could not find %s package: %s", restDSL, err)
+			fail("could not find %s package: %s", httpDSL, err)
 		}
-		restPkg = pkg.Dir
-		restAlias = filepath.Join(restPkg, aliasFile)
-		os.Remove(restAlias) // to avoid parsing them
+		httpPkg = pkg.Dir
+		httpAlias = filepath.Join(httpPkg, aliasFile)
+		os.Remove(httpAlias) // to avoid parsing them
 
-		restFuncs, err = ParseFuncs(restPkg, "rest")
+		httpFuncs, err = ParseFuncs(httpPkg, "http")
 		if err != nil {
-			fail("could not parse functions in %s: %s", restPkg, err)
+			fail("could not parse functions in %s: %s", httpPkg, err)
 		}
 
 		funcs, err = ParseFuncs(goaPkg, "dsl")
@@ -62,10 +62,10 @@ func main() {
 		sort.Strings(names)
 	}
 
-	if aliases, err = CreateAliases(names, funcs, restFuncs, restAlias); err != nil {
-		fail("failed to create rest package aliases: %s", err)
+	if aliases, err = CreateAliases(names, funcs, httpFuncs, httpAlias); err != nil {
+		fail("failed to create http package aliases: %s", err)
 	}
-	fmt.Printf("rest (%d):\n", len(aliases))
+	fmt.Printf("http (%d):\n", len(aliases))
 	fmt.Println("  " + strings.Join(aliases, "\n  "))
 }
 
@@ -125,7 +125,7 @@ const (
 // The content of this file is auto-generated, DO NOT MODIFY
 //************************************************************************//
 
-package rest
+package http
 
 import (
 	"goa.design/goa.v2/design"

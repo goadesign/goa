@@ -18,9 +18,9 @@ import (
 	somsvr "goa.design/goa.v2/examples/cellar/gen/sommelier/http/server"
 	"goa.design/goa.v2/examples/cellar/gen/storage"
 	stgsvr "goa.design/goa.v2/examples/cellar/gen/storage/http/server"
-	"goa.design/goa.v2/rest"
-	"goa.design/goa.v2/rest/middleware/debugging"
-	"goa.design/goa.v2/rest/middleware/logging"
+	goahttp "goa.design/goa.v2/http"
+	"goa.design/goa.v2/http/middleware/debugging"
+	"goa.design/goa.v2/http/middleware/logging"
 )
 
 func main() {
@@ -84,19 +84,19 @@ func main() {
 	}
 
 	// Provide the transport specific request decoder and response encoder.
-	// The goa rest package has built-in support for JSON, XML and gob.
+	// The goa http package has built-in support for JSON, XML and gob.
 	// Other encodings can be used by providing the corresponding functions,
 	// see goa.design/encoding.
 	var (
-		dec = rest.RequestDecoder
-		enc = rest.ResponseEncoder
+		dec = goahttp.RequestDecoder
+		enc = goahttp.ResponseEncoder
 	)
 
 	// Build the service HTTP request multiplexer and configure it to serve
 	// HTTP requests to the service endpoints.
-	var mux rest.Muxer
+	var mux goahttp.Muxer
 	{
-		mux = rest.NewMuxer()
+		mux = goahttp.NewMuxer()
 	}
 
 	// Wrap the endpoints with the transport specific layers. The generated
