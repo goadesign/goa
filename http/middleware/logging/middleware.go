@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"goa.design/goa.v2"
-	goahttp "goa.design/goa.v2/http"
 	"goa.design/goa.v2/http/middleware/tracing"
 )
 
@@ -29,7 +28,7 @@ func New(logger goa.LogAdapter) func(h http.Handler) http.Handler {
 				r.Method, r.URL.String(),
 				"from", from(r))
 
-			rw := goahttp.CaptureResponse(w)
+			rw := CaptureResponse(w)
 			h.ServeHTTP(rw, r)
 
 			logger.Info(r.Context(),

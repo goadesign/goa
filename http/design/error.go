@@ -59,9 +59,14 @@ func (e *ErrorExpr) Finalize(a *EndpointExpr) {
 	e.ErrorExpr = ee
 	e.Response.Finalize(a, e.AttributeExpr)
 	if e.Response.Body == nil {
-		e.Response.Body = &design.AttributeExpr{Type: ErrorResponseBodyType(a, e)}
+		rt := ErrorResponseBodyType(a, e)
+		e.Response.Body = &design.AttributeExpr{Type: rt}
 		if val := ee.AttributeExpr.Validation; val != nil {
 			e.Response.Body.Validation = val.Dup()
+		} else if ut, ok := rt.(design.UserType); ok {
+			if ut.Attribute().Validation != nil {
+				e.Response.Body.Validation = ut.Attribute().Validation.Dup()
+			}
 		}
 	}
 

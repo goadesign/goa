@@ -2,5 +2,6 @@ package goa
 
 import "context"
 
-// Endpoint exposes service methods to remote clients.
+// Endpoint exposes service methods to remote clients independently of the
+// underlying transport.
 type Endpoint func(ctx context.Context, request interface{}) (response interface{}, err error)
