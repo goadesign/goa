@@ -3,7 +3,7 @@ package dsl
 import (
 	"goa.design/goa.v2/dsl"
 	"goa.design/goa.v2/eval"
-	"goa.design/goa.v2/http/design"
+	httpdesign "goa.design/goa.v2/http/design"
 )
 
 // Description sets the expression description.
@@ -18,9 +18,9 @@ import (
 //
 func Description(d string) {
 	switch expr := eval.Current().(type) {
-	case *design.HTTPResponseExpr:
+	case *httpdesign.HTTPResponseExpr:
 		expr.Description = d
-	case *design.FileServerExpr:
+	case *httpdesign.FileServerExpr:
 		expr.Description = d
 	default:
 		dsl.Description(d)

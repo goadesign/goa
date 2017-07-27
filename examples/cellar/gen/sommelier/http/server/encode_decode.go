@@ -40,9 +40,9 @@ func DecodePickRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if err == io.EOF {
-				err = goa.MissingPayloadError()
+				return nil, goa.MissingPayloadError()
 			}
-			return nil, err
+			return nil, goa.DecodePayloadError(err.Error())
 		}
 
 		return NewPickCriteria(&body), nil

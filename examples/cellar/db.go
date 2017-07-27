@@ -88,18 +88,19 @@ func (b *Bolt) LoadAll(bucket string, data interface{}) error {
 	err := b.client.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket([]byte(bucket))
 		buf.WriteByte('[')
-		bkt.ForEach(func(_, v []byte) error {
-			buf.Write(v)
-			buf.WriteByte(',')
-			return nil
-		})
-		buf.Truncate(buf.Len() - 1)
+		if bkt != nil {
+			bkt.ForEach(func(_, v []byte) error {
+				buf.Write(v)
+				buf.WriteByte(',')
+				return nil
+			})
+			buf.Truncate(buf.Len() - 1)
+		}
 		buf.WriteByte(']')
 		return nil
 	})
 	if err != nil {
 		return err
 	}
-	fmt.Printf("BYTES:\n%s", buf.String())
 	return json.Unmarshal(buf.Bytes(), data)
 }
