@@ -11,7 +11,7 @@ import (
 	"goa.design/goa.v2/codegen"
 	"goa.design/goa.v2/codegen/service"
 	"goa.design/goa.v2/design"
-	goahttp "goa.design/goa.v2/http/design"
+	httpdesign "goa.design/goa.v2/http/design"
 )
 
 // HTTPServices holds the data computed from the design needed to generate the
@@ -348,7 +348,7 @@ func (d ServicesData) Get(name string) *ServiceData {
 	if data, ok := d[name]; ok {
 		return data
 	}
-	service := goahttp.Root.Service(name)
+	service := httpdesign.Root.Service(name)
 	if service == nil {
 		return nil
 	}
@@ -369,7 +369,7 @@ func (svc *ServiceData) Endpoint(name string) *EndpointData {
 
 // analyze creates the data necessary to render the code of the given service.
 // It records the user types needed by the service definition in userTypes.
-func (d ServicesData) analyze(hs *goahttp.ServiceExpr) *ServiceData {
+func (d ServicesData) analyze(hs *httpdesign.ServiceExpr) *ServiceData {
 	svc := service.Services.Get(hs.ServiceExpr.Name)
 
 	rd := &ServiceData{
@@ -415,7 +415,7 @@ func (d ServicesData) analyze(hs *goahttp.ServiceExpr) *ServiceData {
 				}
 
 				var buffer bytes.Buffer
-				pf := goahttp.WildcardRegex.ReplaceAllString(r.FullPath(), "/%v")
+				pf := httpdesign.WildcardRegex.ReplaceAllString(r.FullPath(), "/%v")
 				err := pathInitTmpl.Execute(&buffer, map[string]interface{}{
 					"Args":       initArgs,
 					"PathParams": pathParamsObj,
@@ -502,31 +502,31 @@ func (d ServicesData) analyze(hs *goahttp.ServiceExpr) *ServiceData {
 // buildPayloadData returns the data structure used to describe the endpoint
 // payload including the HTTP request details. It also returns the user types
 // used by the request body type recursively if any.
-func buildPayloadData(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.EndpointExpr, rd *ServiceData) *PayloadData {
+func buildPayloadData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.EndpointExpr, sd *ServiceData) *PayloadData {
 	var (
-		payload = a.MethodExpr.Payload
+		payload = e.MethodExpr.Payload
 
 		body    design.DataType
 		request *RequestData
 		ep      *service.MethodData
 	)
 	{
-		ep = svc.Method(a.MethodExpr.Name)
-		body = a.Body.Type
+		ep = svc.Method(e.MethodExpr.Name)
+		body = e.Body.Type
 
 		var (
-			serverBodyData = buildBodyType(svc, r, a, a.Body, payload, true, true)
-			clientBodyData = buildBodyType(svc, r, a, a.Body, payload, true, false)
-			paramsData     = extractPathParams(a.PathParams(), svc.Scope)
-			queryData      = extractQueryParams(a.QueryParams(), svc.Scope)
-			headersData    = extractHeaders(a.MappedHeaders(), true, svc.Scope)
+			serverBodyData = buildBodyType(svc, s, e, e.Body, payload, true, true)
+			clientBodyData = buildBodyType(svc, s, e, e.Body, payload, true, false)
+			paramsData     = extractPathParams(e.PathParams(), svc.Scope)
+			queryData      = extractQueryParams(e.QueryParams(), svc.Scope)
+			headersData    = extractHeaders(e.MappedHeaders(), true, svc.Scope)
 
 			mustValidate bool
 		)
 		{
 			if serverBodyData != nil {
-				rd.ServerTypeNames[serverBodyData.Name] = struct{}{}
-				rd.ClientTypeNames[serverBodyData.Name] = struct{}{}
+				sd.ServerTypeNames[serverBodyData.Name] = struct{}{}
+				sd.ClientTypeNames[serverBodyData.Name] = struct{}{}
 			}
 			mustValidate = serverBodyData != nil && serverBodyData.ValidateRef != ""
 			if !mustValidate {
@@ -577,7 +577,7 @@ func buildPayloadData(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.Endp
 		)
 		name = fmt.Sprintf("New%s%s", codegen.Goify(ep.Name, true), codegen.Goify(ep.Payload, true))
 		desc = fmt.Sprintf("%s builds a %s service %s endpoint payload.",
-			name, r.Name(), a.Name())
+			name, s.Name(), e.Name())
 		isObject = design.IsObject(payload.Type)
 		if body != design.Empty {
 			ref := "body"
@@ -625,14 +625,14 @@ func buildPayloadData(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.Endp
 			// If design uses Body("name") syntax then need to use payload
 			// attribute to transform.
 			ptype := payload.Type
-			if o, ok := a.Body.Metadata["origin:attribute"]; ok {
+			if o, ok := e.Body.Metadata["origin:attribute"]; ok {
 				origin = o[0]
 				ptype = design.AsObject(ptype).Attribute(origin).Type
 			}
 
 			code, err = codegen.GoTypeTransform(body, ptype, "body", "v", svc.PkgName, true, false, true, svc.Scope)
 		} else if design.IsArray(payload.Type) || design.IsMap(payload.Type) {
-			if params := design.AsObject(a.QueryParams().Type); len(*params) > 0 {
+			if params := design.AsObject(e.QueryParams().Type); len(*params) > 0 {
 				code, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, payload.Type,
 					codegen.Goify((*params)[0].Name, false), "v", svc.PkgName, true, false, true, svc.Scope)
 			}
@@ -661,11 +661,11 @@ func buildPayloadData(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.Endp
 		ref = svc.Scope.GoFullTypeRef(payload, svc.PkgName)
 	}
 	if init == nil {
-		if o := design.AsObject(a.PathParams().Type); o != nil && len(*o) > 0 {
+		if o := design.AsObject(e.PathParams().Type); o != nil && len(*o) > 0 {
 			returnValue = codegen.Goify((*o)[0].Name, false)
-		} else if o := design.AsObject(a.QueryParams().Type); o != nil && len(*o) > 0 {
+		} else if o := design.AsObject(e.QueryParams().Type); o != nil && len(*o) > 0 {
 			returnValue = codegen.Goify((*o)[0].Name, false)
-		} else if o := design.AsObject(a.MappedHeaders().Type); o != nil && len(*o) > 0 {
+		} else if o := design.AsObject(e.MappedHeaders().Type); o != nil && len(*o) > 0 {
 			returnValue = codegen.Goify((*o)[0].Name, false)
 		}
 	}
@@ -677,9 +677,9 @@ func buildPayloadData(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.Endp
 	}
 }
 
-func buildResultData(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.EndpointExpr, rd *ServiceData) *ResultData {
+func buildResultData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.EndpointExpr, sd *ServiceData) *ResultData {
 	var (
-		result = a.MethodExpr.Result
+		result = e.MethodExpr.Result
 
 		ref       string
 		responses []*ResponseData
@@ -689,7 +689,7 @@ func buildResultData(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.Endpo
 			ref = svc.Scope.GoFullTypeRef(result, svc.PkgName)
 		}
 		notag := -1
-		for i, v := range a.Responses {
+		for i, v := range e.Responses {
 			if v.Tag[0] == "" {
 				if notag > -1 {
 					continue // we don't want more than one response with no tag
@@ -709,11 +709,11 @@ func buildResultData(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.Endpo
 					args     []*InitArgData
 				)
 				{
-					ep := svc.Method(a.MethodExpr.Name)
+					ep := svc.Method(e.MethodExpr.Name)
 					status := http.StatusText(v.StatusCode)
 					name = fmt.Sprintf("New%s%s%s", codegen.Goify(ep.Name, true), codegen.Goify(ep.Result, true), status)
 					desc = fmt.Sprintf("%s builds a %s service %s endpoint %s result.",
-						name, r.Name(), a.Name(), status)
+						name, s.Name(), e.Name(), status)
 					isObject = design.IsObject(result.Type)
 					if body != design.Empty {
 						ref := "body"
@@ -750,7 +750,7 @@ func buildResultData(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.Endpo
 
 						code, err = codegen.GoTypeTransform(body, result.Type, "body", "v", svc.PkgName, true, false, true, svc.Scope)
 					} else if design.IsArray(result.Type) || design.IsMap(result.Type) {
-						if params := design.AsObject(a.QueryParams().Type); len(*params) > 0 {
+						if params := design.AsObject(e.QueryParams().Type); len(*params) > 0 {
 							code, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, result.Type, codegen.Goify((*params)[0].Name, false), "v", svc.PkgName, true, false, true, svc.Scope)
 						}
 					}
@@ -776,16 +776,16 @@ func buildResultData(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.Endpo
 			)
 			{
 				var (
-					serverBodyData = buildBodyType(svc, r, a, v.Body, result, false, false)
-					clientBodyData = buildBodyType(svc, r, a, v.Body, result, false, true)
+					serverBodyData = buildBodyType(svc, s, e, v.Body, result, false, false)
+					clientBodyData = buildBodyType(svc, s, e, v.Body, result, false, true)
 					headersData    = extractHeaders(v.MappedHeaders(), false, svc.Scope)
 
 					mustValidate bool
 				)
 				{
 					if clientBodyData != nil {
-						rd.ClientTypeNames[clientBodyData.Name] = struct{}{}
-						rd.ServerTypeNames[clientBodyData.Name] = struct{}{}
+						sd.ClientTypeNames[clientBodyData.Name] = struct{}{}
+						sd.ServerTypeNames[clientBodyData.Name] = struct{}{}
 					}
 
 					mustValidate = serverBodyData != nil && serverBodyData.ValidateRef != ""
@@ -829,9 +829,9 @@ func buildResultData(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.Endpo
 	}
 }
 
-func buildErrorsData(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.EndpointExpr, rd *ServiceData) []*ErrorData {
-	data := make([]*ErrorData, len(a.HTTPErrors))
-	for i, v := range a.HTTPErrors {
+func buildErrorsData(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.EndpointExpr, sd *ServiceData) []*ErrorData {
+	data := make([]*ErrorData, len(e.HTTPErrors))
+	for i, v := range e.HTTPErrors {
 		var (
 			init *InitData
 			body = v.Response.Body.Type
@@ -844,10 +844,10 @@ func buildErrorsData(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.Endpo
 				args     []*InitArgData
 			)
 			{
-				ep := svc.Method(a.MethodExpr.Name)
+				ep := svc.Method(e.MethodExpr.Name)
 				name = fmt.Sprintf("New%s%s", codegen.Goify(ep.Name, true), codegen.Goify(v.ErrorExpr.Name, true))
 				desc = fmt.Sprintf("%s builds a %s service %s endpoint %s error.",
-					name, r.Name(), a.Name(), v.ErrorExpr.Name)
+					name, s.Name(), e.Name(), v.ErrorExpr.Name)
 				if body != design.Empty {
 					isObject = design.IsObject(body)
 					ref := "body"
@@ -885,7 +885,7 @@ func buildErrorsData(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.Endpo
 
 					code, err = codegen.GoTypeTransform(body, etype, "body", "v", svc.PkgName, true, false, true, svc.Scope)
 				} else if design.IsArray(herr.Type) || design.IsMap(herr.Type) {
-					if params := design.AsObject(a.QueryParams().Type); len(*params) > 0 {
+					if params := design.AsObject(e.QueryParams().Type); len(*params) > 0 {
 						code, err = codegen.GoTypeTransform((*params)[0].Attribute.Type, herr.Type, codegen.Goify((*params)[0].Name, false), "v", svc.PkgName, true, false, true, svc.Scope)
 					}
 				}
@@ -916,15 +916,15 @@ func buildErrorsData(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.Endpo
 			)
 			{
 				att := v.ErrorExpr.AttributeExpr
-				serverBodyData = buildBodyType(svc, r, a, v.Response.Body, att, false, false)
-				clientBodyData = buildBodyType(svc, r, a, v.Response.Body, att, false, true)
+				serverBodyData = buildBodyType(svc, s, e, v.Response.Body, att, false, false)
+				clientBodyData = buildBodyType(svc, s, e, v.Response.Body, att, false, true)
 				if clientBodyData != nil {
-					rd.ClientTypeNames[clientBodyData.Name] = struct{}{}
-					rd.ServerTypeNames[clientBodyData.Name] = struct{}{}
+					sd.ClientTypeNames[clientBodyData.Name] = struct{}{}
+					sd.ServerTypeNames[clientBodyData.Name] = struct{}{}
 					clientBodyData.Description = fmt.Sprintf("%s is the type of the %s \"%s\" HTTP endpoint %s error response body.",
-						clientBodyData.VarName, r.Name(), a.Name(), v.Name)
+						clientBodyData.VarName, s.Name(), e.Name(), v.Name)
 					serverBodyData.Description = fmt.Sprintf("%s is the type of the %s \"%s\" HTTP endpoint %s error response body.",
-						serverBodyData.VarName, r.Name(), a.Name(), v.Name)
+						serverBodyData.VarName, s.Name(), e.Name(), v.Name)
 				}
 			}
 
@@ -954,7 +954,7 @@ func buildErrorsData(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.Endpo
 //
 // req indicates whether the type is for a request body (true) or a response
 // body (false).
-func buildBodyType(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.EndpointExpr, body, att *design.AttributeExpr, req, ptr bool) *TypeData {
+func buildBodyType(svc *service.Data, s *httpdesign.ServiceExpr, e *httpdesign.EndpointExpr, body, att *design.AttributeExpr, req, ptr bool) *TypeData {
 
 	if body.Type == design.Empty {
 		return nil
@@ -978,7 +978,7 @@ func buildBodyType(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.Endpoin
 			if !req {
 				ctx = "response"
 			}
-			desc = fmt.Sprintf("%s is the type of the %s %s HTTP endpoint %s body.", varname, svc.Name, a.Name(), ctx)
+			desc = fmt.Sprintf("%s is the type of the %s %s HTTP endpoint %s body.", varname, svc.Name, e.Name(), ctx)
 			if req {
 				// only validate incoming request bodies
 				validateDef = codegen.RecursiveValidationCode(body, true, ptr, "body")
@@ -1014,7 +1014,7 @@ func buildBodyType(svc *service.Data, r *goahttp.ServiceExpr, a *goahttp.Endpoin
 			rctx = "result"
 		}
 		desc = fmt.Sprintf("%s builds the %s service %s endpoint %s body from a %s.",
-			name, r.Name(), a.Name(), ctx, rctx)
+			name, s.Name(), e.Name(), ctx, rctx)
 
 		// If design uses Body("name") syntax then need to use payload
 		// attribute to transform.

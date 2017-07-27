@@ -40,9 +40,9 @@ func DecodeAddRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Dec
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if err == io.EOF {
-				err = goa.MissingPayloadError()
+				return nil, goa.MissingPayloadError()
 			}
-			return nil, err
+			return nil, goa.DecodePayloadError(err.Error())
 		}
 		err = goa.MergeErrors(err, body.Validate())
 

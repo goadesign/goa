@@ -107,6 +107,12 @@ func MissingPayloadError() error {
 	return ErrInvalid("missing required payload")
 }
 
+// DecodePayloadError is the error produced when a request body cannot be
+// decoded successfully.
+func DecodePayloadError(msg string) error {
+	return ErrInvalid(msg)
+}
+
 // InvalidFieldTypeError is the error produced when the type of a payload field
 // does not match the type defined in the design.
 func InvalidFieldTypeError(name string, val interface{}, expected string) error {

@@ -283,9 +283,9 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if err == io.EOF {
-				err = goa.MissingPayloadError()
+				return nil, goa.MissingPayloadError()
 			}
-			return nil, err
+			return nil, goa.DecodePayloadError(err.Error())
 		}
 		{{- if .Payload.Request.ServerBody.ValidateRef }}
 		{{ .Payload.Request.ServerBody.ValidateRef }}

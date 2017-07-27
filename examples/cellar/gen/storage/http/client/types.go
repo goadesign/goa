@@ -238,6 +238,9 @@ func NewShowNotFound(body *ShowNotFoundResponseBody) *storage.NotFound {
 
 // AddRequestBody is the type of the storage add HTTP endpoint request body.
 func (body *AddRequestBody) Validate() (err error) {
+	if body.Winery == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("winery", "body"))
+	}
 	if utf8.RuneCountInString(body.Name) > 100 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", body.Name, utf8.RuneCountInString(body.Name), 100, false))
 	}
