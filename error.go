@@ -95,6 +95,16 @@ type (
 		Token() string
 	}
 
+	// ServiceMergeableError is the interface implemented by ServiceErrors that can merge
+	// another error into a combined error.
+	ServiceMergeableError interface {
+		// ServiceMergeableError extends from the ServiceError interface.
+		ServiceError
+
+		// Merge updates an error by combining another error into it.
+		Merge(other error) error
+	}
+
 	// ErrorResponse contains the details of a error response. It implements ServiceError.
 	// This struct is mainly intended for clients to decode error responses.
 	ErrorResponse struct {
@@ -254,6 +264,8 @@ func (e *ErrorResponse) Token() string { return e.ID }
 // ServiceError if not already one - producing an internal error in that case. The merge algorithm
 // is:
 //
+// * If any of e or other implements ServiceMergableError, it is handled by its Merge method.
+//
 // * If any of e or other is an internal error then the result is an internal error
 //
 // * If the status or code of e and other don't match then the result is a 400 "bad_request"
@@ -269,11 +281,20 @@ func MergeErrors(err, other error) error {
 		if other == nil {
 			return nil
 		}
-		return asErrorResponse(other)
+		return asServiceError(other)
 	}
 	if other == nil {
-		return asErrorResponse(err)
+		return asServiceError(err)
 	}
+
+	// If either error is a mergable error.
+	if me, ok := err.(ServiceMergeableError); ok {
+		return me.Merge(other)
+	}
+	if mo, ok := other.(ServiceMergeableError); ok {
+		return mo.Merge(err)
+	}
+
 	e := asErrorResponse(err)
 	o := asErrorResponse(other)
 	switch {
@@ -293,6 +314,14 @@ func MergeErrors(err, other error) error {
 	}
 	for k, v := range o.Meta {
 		e.Meta[k] = v
+	}
+	return e
+}
+
+func asServiceError(err error) ServiceError {
+	e, ok := err.(ServiceError)
+	if !ok {
+		return asErrorResponse(err)
 	}
 	return e
 }
