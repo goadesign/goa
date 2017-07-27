@@ -15,21 +15,21 @@ type (
 	// matches the URL.
 	//
 	// The patterns may include wildcards that identify URL segments that
-	// must be captured. The captured values must be stored in the request
-	// context "params.context.key" key as a map of wildcard name to value.
+	// must be captured.
 	//
 	// There are two forms of wildcards the implementation must support:
 	//
 	//   - "{name}" wildcards capture a single path segment, for example the
-	//     pattern "/images/{name}" captures "/images/favicon.ico" and
-	//     associates the request context params map key "name" with
-	//     "favicon.ico".
+	//     pattern "/images/{name}" captures "/images/favicon.ico" and adds
+	//     the key "name" with the value "favicon.ico" to the map returned
+	//     by Vars.
 	//
 	//   - "{*name}" wildcards must appear at the end of the pattern and
-	//     capture the entire path starting where the wildcard matches. For
+	//     captures the entire path starting where the wildcard matches. For
 	//     example the pattern "/images/{*filename}" captures
-	//     "/images/public/thumbnail.jpg" and associates the request context
-	//     params map key "filename" with "public/thumbnail.jpg".
+	//     "/images/public/thumbnail.jpg" and associates the key key
+	//     "filename" with "public/thumbnail.jpg" in the map returned by
+	//     Vars.
 	//
 	// The names of wildcards must match the regular expression
 	// "[a-zA-Z0-9_]+".

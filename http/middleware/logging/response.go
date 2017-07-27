@@ -1,4 +1,4 @@
-package http
+package logging
 
 import "net/http"
 
@@ -12,10 +12,7 @@ type ResponseCapture struct {
 
 // CaptureResponse creates a ResponseCapture that wraps the given ResponseWriter.
 func CaptureResponse(w http.ResponseWriter) *ResponseCapture {
-	return &ResponseCapture{
-		ResponseWriter: w,
-		StatusCode:     http.StatusOK, // Default value
-	}
+	return &ResponseCapture{ResponseWriter: w}
 }
 
 // WriteHeader records the value of the status code before writing it.

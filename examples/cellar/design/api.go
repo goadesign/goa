@@ -9,82 +9,42 @@ var _ = API("cellar", func() {
 	Server("http://localhost:8080")
 })
 
-var _ = Service("storage", func() {
-	Description("The storage service makes it possible to add new or to remove existing wine bottles.")
+var StoredBottle = ResultType("application/vnd.cellar.stored-bottle", func() {
+	Description("A StoredBottle describes a bottle retrieved by the storage service.")
+	Reference(Bottle)
+	TypeName("StoredBottle")
 
-	HTTP(func() {
-		Path("/storage")
-	})
-
-	Method("add", func() {
-		Description("Add new bottle and return its ID.")
-		Payload(Bottle)
-		Result(String)
-		HTTP(func() {
-			POST("/")
-			Response(StatusCreated)
+	Attributes(func() {
+		Attribute("id", String, "ID is the unique id of the bottle.", func() {
+			Example("123abc")
 		})
+		Attribute("name")
+		Attribute("winery")
+		Attribute("vintage")
+		Attribute("composition")
+		Attribute("description")
+		Attribute("rating")
 	})
 
-	Method("list", func() {
-		Description("List all stored bottles")
-		Result(CollectionOf(StoredBottle), func() {
+	View("default", func() {
+		Attribute("id")
+		Attribute("name")
+		Attribute("winery")
+		Attribute("vintage")
+		Attribute("composition")
+		Attribute("description")
+		Attribute("rating")
+	})
+
+	View("tiny", func() {
+		Attribute("id")
+		Attribute("name")
+		Attribute("winery", func() {
 			View("tiny")
 		})
-		HTTP(func() {
-			GET("/")
-			Response(StatusOK)
-		})
 	})
 
-	Method("show", func() {
-		Description("Show bottle by ID")
-		Payload(func() {
-			Attribute("id", String, "ID of bottle to show")
-			Required("id")
-		})
-		Result(StoredBottle)
-		Error("not_found", NotFound, "Bottle not found")
-		HTTP(func() {
-			GET("/{id}")
-			Response(StatusOK)
-			Response("not_found", StatusNotFound)
-		})
-	})
-
-	Method("remove", func() {
-		Description("Remove bottle from storage")
-		Payload(func() {
-			Attribute("id", String, "ID of bottle to remove")
-			Required("id")
-		})
-		Error("not_found", NotFound, "Bottle not found")
-		HTTP(func() {
-			DELETE("/{id}")
-			Response(StatusNoContent)
-		})
-	})
-})
-
-var _ = Service("sommelier", func() {
-	Description("The sommelier service retrieves bottles given a set of criteria.")
-	HTTP(func() {
-		Path("/sommelier")
-	})
-	Method("pick", func() {
-		Payload(Criteria)
-		Result(CollectionOf(StoredBottle, func() {
-			View("default")
-		}))
-		Error("no_criteria", String, "Missing criteria")
-		Error("no_match", String, "No bottle matched given criteria")
-		HTTP(func() {
-			POST("/")
-			Response(StatusOK)
-			Response("no_criteria", StatusBadRequest)
-			Response("no_match", StatusNotFound)
-		})
-	})
+	Required("id", "name", "winery", "vintage")
 })
 
 var Bottle = Type("Bottle", func() {
@@ -153,31 +113,6 @@ var Component = Type("Component", func() {
 	Required("varietal")
 })
 
-var StoredBottle = ResultType("application/vnd.cellar.stored-bottle", func() {
-	Description("A StoredBottle describes a bottle retrieved by the storage service.")
-	Reference(Bottle)
-	TypeName("StoredBottle")
-	Attributes(func() {
-		Attribute("id", String, "ID is the unique id of the bottle.", func() {
-			Example("123abc")
-		})
-		Attribute("name")
-		Attribute("winery")
-		Attribute("vintage")
-		Attribute("composition")
-		Attribute("description")
-		Attribute("rating")
-	})
-	View("tiny", func() {
-		Attribute("id")
-		Attribute("name")
-		Attribute("winery", func() {
-			View("tiny")
-		})
-	})
-	Required("id", "name", "winery", "vintage")
-})
-
 var NotFound = Type("NotFound", func() {
 	Description("NotFound is the type returned when attempting to show or delete a bottle that does not exist.")
 	Attribute("message", String, "Message of error", func() {
@@ -189,7 +124,13 @@ var NotFound = Type("NotFound", func() {
 
 var Criteria = Type("Criteria", func() {
 	Description("Criteria described a set of criteria used to pick a bottle. All criteria are optional, at least one must be provided.")
-	Attribute("name", String, "Name of bottle to pick")
-	Attribute("varietal", ArrayOf(String), "Varietals in preference order")
-	Attribute("winery", String, "Winery of bottle to pick")
+	Attribute("name", String, "Name of bottle to pick", func() {
+		Example("Blue's Cuvee")
+	})
+	Attribute("varietal", ArrayOf(String), "Varietals in preference order", func() {
+		Example([]string{"pinot noir", "merlot", "cabernet franc"})
+	})
+	Attribute("winery", String, "Winery of bottle to pick", func() {
+		Example("longoria")
+	})
 })
