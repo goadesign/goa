@@ -5,16 +5,11 @@
 // Command:
 // $ goa gen goa.design/goa.v2/examples/cellar/design
 
-package server
+package client
 
 import (
 	"fmt"
 )
-
-// AddStoragePath returns the URL path to the storage service add HTTP endpoint.
-func AddStoragePath() string {
-	return "/storage"
-}
 
 // ListStoragePath returns the URL path to the storage service list HTTP endpoint.
 func ListStoragePath() string {
@@ -24,6 +19,11 @@ func ListStoragePath() string {
 // ShowStoragePath returns the URL path to the storage service show HTTP endpoint.
 func ShowStoragePath(id string) string {
 	return fmt.Sprintf("/storage/%v", id)
+}
+
+// AddStoragePath returns the URL path to the storage service add HTTP endpoint.
+func AddStoragePath() string {
+	return "/storage"
 }
 
 // RemoveStoragePath returns the URL path to the storage service remove HTTP endpoint.

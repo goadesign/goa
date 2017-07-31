@@ -24,7 +24,7 @@ func New(logger goa.LogAdapter) func(h http.Handler) http.Handler {
 			started := time.Now()
 
 			logger.Info(r.Context(),
-				"reqID", reqID,
+				"id", reqID,
 				r.Method, r.URL.String(),
 				"from", from(r))
 
@@ -32,7 +32,7 @@ func New(logger goa.LogAdapter) func(h http.Handler) http.Handler {
 			h.ServeHTTP(rw, r)
 
 			logger.Info(r.Context(),
-				"reqID", reqID,
+				"id", reqID,
 				"status", rw.StatusCode,
 				"bytes", rw.ContentLength,
 				"time", time.Since(started).String())

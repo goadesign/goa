@@ -23,7 +23,7 @@ func ClientFiles(root *httpdesign.RootExpr) []codegen.File {
 
 // client returns the client HTTP transport file
 func client(r *httpdesign.ServiceExpr) codegen.File {
-	path := filepath.Join(codegen.SnakeCase(r.Name()), "http", "client", "client.go")
+	path := filepath.Join("http", codegen.SnakeCase(r.Name()), "client", "client.go")
 	data := HTTPServices.Get(r.Name())
 	sections := func(genPkg string) []*codegen.Section {
 		title := fmt.Sprintf("%s client HTTP transport", r.Name())
@@ -55,12 +55,13 @@ func client(r *httpdesign.ServiceExpr) codegen.File {
 // clientEncodeDecode returns the file containing the HTTP client encoding and
 // decoding logic.
 func clientEncodeDecode(svc *httpdesign.ServiceExpr) codegen.File {
-	path := filepath.Join(codegen.SnakeCase(svc.Name()), "http", "client", "encode_decode.go")
+	path := filepath.Join("http", codegen.SnakeCase(svc.Name()), "client", "encode_decode.go")
 	data := HTTPServices.Get(svc.Name())
 	sections := func(genPkg string) []*codegen.Section {
 		title := fmt.Sprintf("%s HTTP client encoders and decoders", svc.Name())
 		s := []*codegen.Section{
 			codegen.Header(title, "client", []*codegen.ImportSpec{
+				{Path: "bytes"},
 				{Path: "fmt"},
 				{Path: "io"},
 				{Path: "io/ioutil"},
@@ -110,8 +111,13 @@ func responseDecoderTmpl(r *httpdesign.ServiceExpr) *template.Template {
 const clientStructT = `{{ printf "%s lists the %s service endpoint HTTP clients." .ClientStruct .Service.Name | comment }}
 type {{ .ClientStruct }} struct {
 	{{- range .Endpoints }}
+	{{ printf "%s Doer is the HTTP client used to make requests to the %s endpoint." .Method.VarName .Method.Name | comment }}
 	{{ .Method.VarName }}Doer goahttp.Doer
-	{{- end }}
+	{{ end }}
+	// RestoreResponseBody controls whether the response bodies are reset after
+	// decoding so they can be read again.
+	RestoreResponseBody bool
+
 	scheme     string
 	host       string
 	encoder    func(*http.Request) goahttp.Encoder
@@ -127,15 +133,17 @@ func New{{ .ClientStruct }}(
 	doer goahttp.Doer,
 	enc func(*http.Request) goahttp.Encoder,
 	dec func(*http.Response) goahttp.Decoder,
+	restoreBody bool,
 ) *{{ .ClientStruct }} {
 	return &{{ .ClientStruct }}{
 		{{- range .Endpoints }}
 		{{ .Method.VarName }}Doer: doer,
 		{{- end }}
-		scheme:  scheme,
-		host:    host,
-		decoder: dec,
-		encoder: enc,
+		RestoreResponseBody: restoreBody,
+		scheme:            scheme,
+		host:              host,
+		decoder:           dec,
+		encoder:           enc,
 	}
 }
 `
@@ -145,7 +153,7 @@ const endpointInitT = `{{ printf "%s returns a endpoint that makes HTTP requests
 func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 	var (
 		encodeRequest  = c.{{ .RequestEncoder }}(c.encoder)
-		decodeResponse = c.{{ .ResponseDecoder }}(c.decoder)
+		decodeResponse = c.{{ .ResponseDecoder }}(c.decoder, c.RestoreResponseBody)
 	)
 	return func(ctx context.Context, v interface{}) (interface{}, error) {
 		req, err := encodeRequest(v)
@@ -212,10 +220,21 @@ func (c *{{ .ClientStruct }}) {{ .RequestEncoder }}(encoder func(*http.Request) 
 `
 
 // input: EndpointData
-const responseDecoderT = `{{ printf "%s returns a decoder for responses returned by the %s %s endpoint." .ResponseDecoder .ServiceName .Method.Name | comment }}
-func (c *{{ .ClientStruct }}) {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder) func(*http.Response) (interface{}, error) {
+const responseDecoderT = `{{ printf "%s returns a decoder for responses returned by the %s %s endpoint. restoreBody controls whether the response body should be restored after having been read." .ResponseDecoder .ServiceName .Method.Name | comment }}
+func (c *{{ .ClientStruct }}) {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
-		defer resp.Body.Close()
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
 		switch resp.StatusCode {
 	{{- range .Result.Responses }}
 ` + singleResponseT + `

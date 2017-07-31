@@ -17,9 +17,9 @@ import (
 
 // Server lists the storage service endpoint HTTP handlers.
 type Server struct {
-	Add    http.Handler
 	List   http.Handler
 	Show   http.Handler
+	Add    http.Handler
 	Remove http.Handler
 }
 
@@ -31,63 +31,19 @@ func New(
 	enc func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string),
 ) *Server {
 	return &Server{
-		Add:    NewAddHandler(e.Add, mux, dec, enc),
 		List:   NewListHandler(e.List, mux, dec, enc),
 		Show:   NewShowHandler(e.Show, mux, dec, enc),
+		Add:    NewAddHandler(e.Add, mux, dec, enc),
 		Remove: NewRemoveHandler(e.Remove, mux, dec, enc),
 	}
 }
 
 // Mount configures the mux to serve the storage endpoints.
 func Mount(mux goahttp.Muxer, h *Server) {
-	MountAddHandler(mux, h.Add)
 	MountListHandler(mux, h.List)
 	MountShowHandler(mux, h.Show)
+	MountAddHandler(mux, h.Add)
 	MountRemoveHandler(mux, h.Remove)
-}
-
-// MountAddHandler configures the mux to serve the "storage" service "add"
-// endpoint.
-func MountAddHandler(mux goahttp.Muxer, h http.Handler) {
-	f, ok := h.(http.HandlerFunc)
-	if !ok {
-		f = func(w http.ResponseWriter, r *http.Request) {
-			h.ServeHTTP(w, r)
-		}
-	}
-	mux.Handle("POST", "/storage", f)
-}
-
-// NewAddHandler creates a HTTP handler which loads the HTTP request and calls
-// the "storage" service "add" endpoint.
-func NewAddHandler(
-	endpoint goa.Endpoint,
-	mux goahttp.Muxer,
-	dec func(*http.Request) goahttp.Decoder,
-	enc func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string),
-) http.Handler {
-	var (
-		decodeRequest  = DecodeAddRequest(mux, dec)
-		encodeResponse = EncodeAddResponse(enc)
-		encodeError    = goahttp.EncodeError(enc)
-	)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		payload, err := decodeRequest(r)
-		if err != nil {
-			encodeError(w, r, err)
-			return
-		}
-
-		res, err := endpoint(r.Context(), payload)
-
-		if err != nil {
-			encodeError(w, r, err)
-			return
-		}
-		if err := encodeResponse(w, r, res); err != nil {
-			encodeError(w, r, err)
-		}
-	})
 }
 
 // MountListHandler configures the mux to serve the "storage" service "list"
@@ -151,6 +107,50 @@ func NewShowHandler(
 		decodeRequest  = DecodeShowRequest(mux, dec)
 		encodeResponse = EncodeShowResponse(enc)
 		encodeError    = EncodeShowError(enc)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		payload, err := decodeRequest(r)
+		if err != nil {
+			encodeError(w, r, err)
+			return
+		}
+
+		res, err := endpoint(r.Context(), payload)
+
+		if err != nil {
+			encodeError(w, r, err)
+			return
+		}
+		if err := encodeResponse(w, r, res); err != nil {
+			encodeError(w, r, err)
+		}
+	})
+}
+
+// MountAddHandler configures the mux to serve the "storage" service "add"
+// endpoint.
+func MountAddHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("POST", "/storage", f)
+}
+
+// NewAddHandler creates a HTTP handler which loads the HTTP request and calls
+// the "storage" service "add" endpoint.
+func NewAddHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	dec func(*http.Request) goahttp.Decoder,
+	enc func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string),
+) http.Handler {
+	var (
+		decodeRequest  = DecodeAddRequest(mux, dec)
+		encodeResponse = EncodeAddResponse(enc)
+		encodeError    = goahttp.EncodeError(enc)
 	)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		payload, err := decodeRequest(r)

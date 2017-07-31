@@ -16,9 +16,9 @@ import (
 type (
 	// Endpoints wraps the storage service endpoints.
 	Endpoints struct {
-		Add    goa.Endpoint
 		List   goa.Endpoint
 		Show   goa.Endpoint
+		Add    goa.Endpoint
 		Remove goa.Endpoint
 	}
 )
@@ -27,11 +27,6 @@ type (
 func NewEndpoints(s Service) *Endpoints {
 	ep := new(Endpoints)
 
-	ep.Add = func(ctx context.Context, req interface{}) (interface{}, error) {
-		p := req.(*Bottle)
-		return s.Add(ctx, p)
-	}
-
 	ep.List = func(ctx context.Context, req interface{}) (interface{}, error) {
 		return s.List(ctx)
 	}
@@ -39,6 +34,11 @@ func NewEndpoints(s Service) *Endpoints {
 	ep.Show = func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*ShowPayload)
 		return s.Show(ctx, p)
+	}
+
+	ep.Add = func(ctx context.Context, req interface{}) (interface{}, error) {
+		p := req.(*Bottle)
+		return s.Add(ctx, p)
 	}
 
 	ep.Remove = func(ctx context.Context, req interface{}) (interface{}, error) {

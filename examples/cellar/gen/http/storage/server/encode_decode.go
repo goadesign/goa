@@ -16,44 +16,6 @@ import (
 	goahttp "goa.design/goa.v2/http"
 )
 
-// EncodeAddResponse returns an encoder for responses returned by the storage
-// add endpoint.
-func EncodeAddResponse(encoder func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string)) func(http.ResponseWriter, *http.Request, interface{}) error {
-	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
-		res := v.(string)
-		enc, ct := encoder(w, r)
-		goahttp.SetContentType(w, ct)
-		body := res
-		w.WriteHeader(http.StatusCreated)
-		return enc.Encode(body)
-	}
-}
-
-// DecodeAddRequest returns a decoder for requests sent to the storage add
-// endpoint.
-func DecodeAddRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
-	return func(r *http.Request) (interface{}, error) {
-		var (
-			body AddRequestBody
-			err  error
-		)
-		err = decoder(r).Decode(&body)
-		if err != nil {
-			if err == io.EOF {
-				return nil, goa.MissingPayloadError()
-			}
-			return nil, goa.DecodePayloadError(err.Error())
-		}
-		err = goa.MergeErrors(err, body.Validate())
-
-		if err != nil {
-			return nil, err
-		}
-
-		return NewAddBottle(&body), nil
-	}
-}
-
 // EncodeListResponse returns an encoder for responses returned by the storage
 // list endpoint.
 func EncodeListResponse(encoder func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string)) func(http.ResponseWriter, *http.Request, interface{}) error {
@@ -112,6 +74,44 @@ func EncodeShowError(encoder func(http.ResponseWriter, *http.Request) (goahttp.E
 		default:
 			encodeError(w, r, v)
 		}
+	}
+}
+
+// EncodeAddResponse returns an encoder for responses returned by the storage
+// add endpoint.
+func EncodeAddResponse(encoder func(http.ResponseWriter, *http.Request) (goahttp.Encoder, string)) func(http.ResponseWriter, *http.Request, interface{}) error {
+	return func(w http.ResponseWriter, r *http.Request, v interface{}) error {
+		res := v.(string)
+		enc, ct := encoder(w, r)
+		goahttp.SetContentType(w, ct)
+		body := res
+		w.WriteHeader(http.StatusCreated)
+		return enc.Encode(body)
+	}
+}
+
+// DecodeAddRequest returns a decoder for requests sent to the storage add
+// endpoint.
+func DecodeAddRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (interface{}, error) {
+	return func(r *http.Request) (interface{}, error) {
+		var (
+			body AddRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				return nil, goa.MissingPayloadError()
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		err = goa.MergeErrors(err, body.Validate())
+
+		if err != nil {
+			return nil, err
+		}
+
+		return NewAddBottle(&body), nil
 	}
 }
 

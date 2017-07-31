@@ -60,26 +60,6 @@ type ShowNotFoundResponseBody struct {
 	ID string `form:"id" json:"id" xml:"id"`
 }
 
-// WineryRequestBody is used to define fields on request body types.
-type WineryRequestBody struct {
-	// Name of winery
-	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
-	// Region of winery
-	Region *string `form:"region,omitempty" json:"region,omitempty" xml:"region,omitempty"`
-	// Country of winery
-	Country *string `form:"country,omitempty" json:"country,omitempty" xml:"country,omitempty"`
-	// Winery website URL
-	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
-}
-
-// ComponentRequestBody is used to define fields on request body types.
-type ComponentRequestBody struct {
-	// Grape varietal
-	Varietal *string `form:"varietal,omitempty" json:"varietal,omitempty" xml:"varietal,omitempty"`
-	// Percentage of varietal in wine
-	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
-}
-
 // StoredBottleResponseBody is used to define fields on response body types.
 type StoredBottleResponseBody struct {
 	// ID is the unique id of the bottle.
@@ -134,6 +114,26 @@ type Winery struct {
 type Component struct {
 	// Grape varietal
 	Varietal string `form:"varietal" json:"varietal" xml:"varietal"`
+	// Percentage of varietal in wine
+	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
+}
+
+// WineryRequestBody is used to define fields on request body types.
+type WineryRequestBody struct {
+	// Name of winery
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// Region of winery
+	Region *string `form:"region,omitempty" json:"region,omitempty" xml:"region,omitempty"`
+	// Country of winery
+	Country *string `form:"country,omitempty" json:"country,omitempty" xml:"country,omitempty"`
+	// Winery website URL
+	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
+}
+
+// ComponentRequestBody is used to define fields on request body types.
+type ComponentRequestBody struct {
+	// Grape varietal
+	Varietal *string `form:"varietal,omitempty" json:"varietal,omitempty" xml:"varietal,omitempty"`
 	// Percentage of varietal in wine
 	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
 }
@@ -210,6 +210,13 @@ func NewShowNotFoundResponseBody(res *storage.NotFound) *ShowNotFoundResponseBod
 	return body
 }
 
+// NewShowShowPayload builds a storage service show endpoint payload.
+func NewShowShowPayload(id string) *storage.ShowPayload {
+	return &storage.ShowPayload{
+		ID: id,
+	}
+}
+
 // NewAddBottle builds a storage service add endpoint payload.
 func NewAddBottle(body *AddRequestBody) *storage.Bottle {
 	v := &storage.Bottle{
@@ -235,13 +242,6 @@ func NewAddBottle(body *AddRequestBody) *storage.Bottle {
 	}
 
 	return v
-}
-
-// NewShowShowPayload builds a storage service show endpoint payload.
-func NewShowShowPayload(id string) *storage.ShowPayload {
-	return &storage.ShowPayload{
-		ID: id,
-	}
 }
 
 // NewRemoveRemovePayload builds a storage service remove endpoint payload.
@@ -302,55 +302,6 @@ func (body *AddRequestBody) Validate() (err error) {
 	if body.Rating != nil {
 		if *body.Rating > 5 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("body.rating", *body.Rating, 5, false))
-		}
-	}
-	return
-}
-
-// WineryRequestBody is used to define fields on request body types.
-func (body *WineryRequestBody) Validate() (err error) {
-	if body.Name == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
-	}
-	if body.Region == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("region", "body"))
-	}
-	if body.Country == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("country", "body"))
-	}
-	if body.Region != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.region", *body.Region, "(?i)[a-z '\\.]+"))
-	}
-	if body.Country != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.country", *body.Country, "(?i)[a-z '\\.]+"))
-	}
-	if body.URL != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.url", *body.URL, "(?i)^(https?|ftp)://[^\\s/$.?#].[^\\s]*$"))
-	}
-	return
-}
-
-// ComponentRequestBody is used to define fields on request body types.
-func (body *ComponentRequestBody) Validate() (err error) {
-	if body.Varietal == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("varietal", "body"))
-	}
-	if body.Varietal != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", *body.Varietal, "[A-Za-z' ]+"))
-	}
-	if body.Varietal != nil {
-		if utf8.RuneCountInString(*body.Varietal) > 100 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", *body.Varietal, utf8.RuneCountInString(*body.Varietal), 100, false))
-		}
-	}
-	if body.Percentage != nil {
-		if *body.Percentage < 1 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 1, true))
-		}
-	}
-	if body.Percentage != nil {
-		if *body.Percentage > 100 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 100, false))
 		}
 	}
 	return
@@ -444,6 +395,55 @@ func (body *Component) Validate() (err error) {
 	err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", body.Varietal, "[A-Za-z' ]+"))
 	if utf8.RuneCountInString(body.Varietal) > 100 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", body.Varietal, utf8.RuneCountInString(body.Varietal), 100, false))
+	}
+	if body.Percentage != nil {
+		if *body.Percentage < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 1, true))
+		}
+	}
+	if body.Percentage != nil {
+		if *body.Percentage > 100 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 100, false))
+		}
+	}
+	return
+}
+
+// WineryRequestBody is used to define fields on request body types.
+func (body *WineryRequestBody) Validate() (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Region == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("region", "body"))
+	}
+	if body.Country == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("country", "body"))
+	}
+	if body.Region != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.region", *body.Region, "(?i)[a-z '\\.]+"))
+	}
+	if body.Country != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.country", *body.Country, "(?i)[a-z '\\.]+"))
+	}
+	if body.URL != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.url", *body.URL, "(?i)^(https?|ftp)://[^\\s/$.?#].[^\\s]*$"))
+	}
+	return
+}
+
+// ComponentRequestBody is used to define fields on request body types.
+func (body *ComponentRequestBody) Validate() (err error) {
+	if body.Varietal == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("varietal", "body"))
+	}
+	if body.Varietal != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", *body.Varietal, "[A-Za-z' ]+"))
+	}
+	if body.Varietal != nil {
+		if utf8.RuneCountInString(*body.Varietal) > 100 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", *body.Varietal, utf8.RuneCountInString(*body.Varietal), 100, false))
+		}
 	}
 	if body.Percentage != nil {
 		if *body.Percentage < 1 {
