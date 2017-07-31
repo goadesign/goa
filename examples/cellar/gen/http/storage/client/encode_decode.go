@@ -8,6 +8,7 @@
 package client
 
 import (
+	"bytes"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -15,54 +16,6 @@ import (
 	"goa.design/goa.v2/examples/cellar/gen/storage"
 	goahttp "goa.design/goa.v2/http"
 )
-
-// EncodeAddRequest returns an encoder for requests sent to the storage add
-// server.
-func (c *Client) EncodeAddRequest(encoder func(*http.Request) goahttp.Encoder) func(interface{}) (*http.Request, error) {
-	return func(v interface{}) (*http.Request, error) {
-		p, ok := v.(*storage.Bottle)
-		if !ok {
-			return nil, goahttp.ErrInvalidType("storage", "add", "*storage.Bottle", v)
-		}
-		// Build request
-		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: AddStoragePath()}
-		req, err := http.NewRequest("POST", u.String(), nil)
-		if err != nil {
-			return nil, goahttp.ErrInvalidURL("storage", "add", u.String(), err)
-		}
-		body := NewAddRequestBody(p)
-		err = encoder(req).Encode(&body)
-		if err != nil {
-			return nil, goahttp.ErrEncodingError("storage", "add", err)
-		}
-
-		return req, nil
-	}
-}
-
-// DecodeAddResponse returns a decoder for responses returned by the storage
-// add endpoint.
-func (c *Client) DecodeAddResponse(decoder func(*http.Response) goahttp.Decoder) func(*http.Response) (interface{}, error) {
-	return func(resp *http.Response) (interface{}, error) {
-		defer resp.Body.Close()
-		switch resp.StatusCode {
-		case http.StatusCreated:
-			var (
-				body string
-				err  error
-			)
-			err = decoder(resp).Decode(&body)
-			if err != nil {
-				return nil, goahttp.ErrDecodingError("storage", "add", err)
-			}
-
-			return body, nil
-		default:
-			body, _ := ioutil.ReadAll(resp.Body)
-			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
-		}
-	}
-}
 
 // EncodeListRequest returns an encoder for requests sent to the storage list
 // server.
@@ -80,10 +33,22 @@ func (c *Client) EncodeListRequest(encoder func(*http.Request) goahttp.Encoder) 
 }
 
 // DecodeListResponse returns a decoder for responses returned by the storage
-// list endpoint.
-func (c *Client) DecodeListResponse(decoder func(*http.Response) goahttp.Decoder) func(*http.Response) (interface{}, error) {
+// list endpoint. restoreBody controls whether the response body should be
+// restored after having been read.
+func (c *Client) DecodeListResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
-		defer resp.Body.Close()
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
 		switch resp.StatusCode {
 		case http.StatusOK:
 			var (
@@ -125,10 +90,22 @@ func (c *Client) EncodeShowRequest(encoder func(*http.Request) goahttp.Encoder) 
 }
 
 // DecodeShowResponse returns a decoder for responses returned by the storage
-// show endpoint.
-func (c *Client) DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder) func(*http.Response) (interface{}, error) {
+// show endpoint. restoreBody controls whether the response body should be
+// restored after having been read.
+func (c *Client) DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
-		defer resp.Body.Close()
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
 		switch resp.StatusCode {
 		case http.StatusOK:
 			var (
@@ -159,6 +136,66 @@ func (c *Client) DecodeShowResponse(decoder func(*http.Response) goahttp.Decoder
 	}
 }
 
+// EncodeAddRequest returns an encoder for requests sent to the storage add
+// server.
+func (c *Client) EncodeAddRequest(encoder func(*http.Request) goahttp.Encoder) func(interface{}) (*http.Request, error) {
+	return func(v interface{}) (*http.Request, error) {
+		p, ok := v.(*storage.Bottle)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("storage", "add", "*storage.Bottle", v)
+		}
+		// Build request
+		u := &url.URL{Scheme: c.scheme, Host: c.host, Path: AddStoragePath()}
+		req, err := http.NewRequest("POST", u.String(), nil)
+		if err != nil {
+			return nil, goahttp.ErrInvalidURL("storage", "add", u.String(), err)
+		}
+		body := NewAddRequestBody(p)
+		err = encoder(req).Encode(&body)
+		if err != nil {
+			return nil, goahttp.ErrEncodingError("storage", "add", err)
+		}
+
+		return req, nil
+	}
+}
+
+// DecodeAddResponse returns a decoder for responses returned by the storage add
+// endpoint. restoreBody controls whether the response body should be restored
+// after having been read.
+func (c *Client) DecodeAddResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusCreated:
+			var (
+				body string
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("storage", "add", err)
+			}
+
+			return body, nil
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("account", "create", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // EncodeRemoveRequest returns an encoder for requests sent to the storage
 // remove server.
 func (c *Client) EncodeRemoveRequest(encoder func(*http.Request) goahttp.Encoder) func(interface{}) (*http.Request, error) {
@@ -181,10 +218,22 @@ func (c *Client) EncodeRemoveRequest(encoder func(*http.Request) goahttp.Encoder
 }
 
 // DecodeRemoveResponse returns a decoder for responses returned by the storage
-// remove endpoint.
-func (c *Client) DecodeRemoveResponse(decoder func(*http.Response) goahttp.Decoder) func(*http.Response) (interface{}, error) {
+// remove endpoint. restoreBody controls whether the response body should be
+// reset after having been read.
+func (c *Client) DecodeRemoveResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
-		defer resp.Body.Close()
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
 		switch resp.StatusCode {
 		case http.StatusNoContent:
 			return nil, nil

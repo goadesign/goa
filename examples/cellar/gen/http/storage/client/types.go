@@ -60,26 +60,6 @@ type ShowNotFoundResponseBody struct {
 	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 }
 
-// WineryRequestBody is used to define fields on request body types.
-type WineryRequestBody struct {
-	// Name of winery
-	Name string `form:"name" json:"name" xml:"name"`
-	// Region of winery
-	Region string `form:"region" json:"region" xml:"region"`
-	// Country of winery
-	Country string `form:"country" json:"country" xml:"country"`
-	// Winery website URL
-	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
-}
-
-// ComponentRequestBody is used to define fields on request body types.
-type ComponentRequestBody struct {
-	// Grape varietal
-	Varietal string `form:"varietal" json:"varietal" xml:"varietal"`
-	// Percentage of varietal in wine
-	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
-}
-
 // StoredBottleResponseBody is used to define fields on response body types.
 type StoredBottleResponseBody struct {
 	// ID is the unique id of the bottle.
@@ -134,6 +114,26 @@ type Winery struct {
 type Component struct {
 	// Grape varietal
 	Varietal *string `form:"varietal,omitempty" json:"varietal,omitempty" xml:"varietal,omitempty"`
+	// Percentage of varietal in wine
+	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
+}
+
+// WineryRequestBody is used to define fields on request body types.
+type WineryRequestBody struct {
+	// Name of winery
+	Name string `form:"name" json:"name" xml:"name"`
+	// Region of winery
+	Region string `form:"region" json:"region" xml:"region"`
+	// Country of winery
+	Country string `form:"country" json:"country" xml:"country"`
+	// Winery website URL
+	URL *string `form:"url,omitempty" json:"url,omitempty" xml:"url,omitempty"`
+}
+
+// ComponentRequestBody is used to define fields on request body types.
+type ComponentRequestBody struct {
+	// Grape varietal
+	Varietal string `form:"varietal" json:"varietal" xml:"varietal"`
 	// Percentage of varietal in wine
 	Percentage *uint32 `form:"percentage,omitempty" json:"percentage,omitempty" xml:"percentage,omitempty"`
 }
@@ -275,35 +275,6 @@ func (body *AddRequestBody) Validate() (err error) {
 	if body.Rating != nil {
 		if *body.Rating > 5 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("body.rating", *body.Rating, 5, false))
-		}
-	}
-	return
-}
-
-// WineryRequestBody is used to define fields on request body types.
-func (body *WineryRequestBody) Validate() (err error) {
-	err = goa.MergeErrors(err, goa.ValidatePattern("body.region", body.Region, "(?i)[a-z '\\.]+"))
-	err = goa.MergeErrors(err, goa.ValidatePattern("body.country", body.Country, "(?i)[a-z '\\.]+"))
-	if body.URL != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.url", *body.URL, "(?i)^(https?|ftp)://[^\\s/$.?#].[^\\s]*$"))
-	}
-	return
-}
-
-// ComponentRequestBody is used to define fields on request body types.
-func (body *ComponentRequestBody) Validate() (err error) {
-	err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", body.Varietal, "[A-Za-z' ]+"))
-	if utf8.RuneCountInString(body.Varietal) > 100 {
-		err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", body.Varietal, utf8.RuneCountInString(body.Varietal), 100, false))
-	}
-	if body.Percentage != nil {
-		if *body.Percentage < 1 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 1, true))
-		}
-	}
-	if body.Percentage != nil {
-		if *body.Percentage > 100 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 100, false))
 		}
 	}
 	return
@@ -452,6 +423,35 @@ func (body *Component) Validate() (err error) {
 		if utf8.RuneCountInString(*body.Varietal) > 100 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", *body.Varietal, utf8.RuneCountInString(*body.Varietal), 100, false))
 		}
+	}
+	if body.Percentage != nil {
+		if *body.Percentage < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 1, true))
+		}
+	}
+	if body.Percentage != nil {
+		if *body.Percentage > 100 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("body.percentage", *body.Percentage, 100, false))
+		}
+	}
+	return
+}
+
+// WineryRequestBody is used to define fields on request body types.
+func (body *WineryRequestBody) Validate() (err error) {
+	err = goa.MergeErrors(err, goa.ValidatePattern("body.region", body.Region, "(?i)[a-z '\\.]+"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("body.country", body.Country, "(?i)[a-z '\\.]+"))
+	if body.URL != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.url", *body.URL, "(?i)^(https?|ftp)://[^\\s/$.?#].[^\\s]*$"))
+	}
+	return
+}
+
+// ComponentRequestBody is used to define fields on request body types.
+func (body *ComponentRequestBody) Validate() (err error) {
+	err = goa.MergeErrors(err, goa.ValidatePattern("body.varietal", body.Varietal, "[A-Za-z' ]+"))
+	if utf8.RuneCountInString(body.Varietal) > 100 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("body.varietal", body.Varietal, utf8.RuneCountInString(body.Varietal), 100, false))
 	}
 	if body.Percentage != nil {
 		if *body.Percentage < 1 {

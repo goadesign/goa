@@ -14,10 +14,10 @@ import (
 
 	"goa.design/goa.v2"
 	"goa.design/goa.v2/examples/cellar"
+	somsvr "goa.design/goa.v2/examples/cellar/gen/http/sommelier/server"
+	stgsvr "goa.design/goa.v2/examples/cellar/gen/http/storage/server"
 	"goa.design/goa.v2/examples/cellar/gen/sommelier"
-	somsvr "goa.design/goa.v2/examples/cellar/gen/sommelier/http/server"
 	"goa.design/goa.v2/examples/cellar/gen/storage"
-	stgsvr "goa.design/goa.v2/examples/cellar/gen/storage/http/server"
 	goahttp "goa.design/goa.v2/http"
 	"goa.design/goa.v2/http/middleware/debugging"
 	"goa.design/goa.v2/http/middleware/logging"
@@ -41,7 +41,7 @@ func main() {
 		adapter goa.LogAdapter
 	)
 	{
-		logger = log.New(os.Stderr, "[basic] ", log.Ltime)
+		logger = log.New(os.Stderr, "[cellar] ", log.Ltime)
 		adapter = goa.AdaptStdLogger(logger)
 	}
 
@@ -140,7 +140,7 @@ func main() {
 
 	// Start HTTP server using default configuration, change the code to
 	// configure the server as required by your service.
-	srv := &http.Server{Addr: *addr, Handler: mux}
+	srv := &http.Server{Addr: *addr, Handler: handler}
 	go func() {
 		logger.Printf("[INFO] listening on %s", *addr)
 		errc <- srv.ListenAndServe()

@@ -63,10 +63,14 @@ func (dd *debugDoer) Do(req *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 
-	respb, _ := ioutil.ReadAll(resp.Body)
+	respb, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		respb = []byte(fmt.Sprintf("!!failed to read response: %s", err))
+	}
 	resp.Body = ioutil.NopCloser(bytes.NewBuffer(respb))
 
 	dd.Response = resp
+
 	req.Body = ioutil.NopCloser(bytes.NewBuffer(reqb))
 	dd.Request = req
 
@@ -115,10 +119,10 @@ func (dd *debugDoer) Fprint(w io.Writer) {
 		buf.WriteString(fmt.Sprintf("\n< %s: %s", k, strings.Join(dd.Response.Header[k], ", ")))
 	}
 
-	b, _ = ioutil.ReadAll(dd.Response.Body)
-	if len(b) > 0 {
+	rb, _ := ioutil.ReadAll(dd.Response.Body) // this is reading from a memory buffer so safe to ignore errors
+	if len(rb) > 0 {
 		buf.Write([]byte{'\n'})
-		buf.Write(b)
+		buf.Write(rb)
 	}
 	w.Write(buf.Bytes())
 }

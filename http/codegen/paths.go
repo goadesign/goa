@@ -27,14 +27,14 @@ func PathFiles(root *httpdesign.RootExpr) []codegen.File {
 // serverPath returns the server file containing the request path constructors
 // for the given service.
 func serverPath(svc *httpdesign.ServiceExpr) codegen.File {
-	path := filepath.Join(codegen.SnakeCase(svc.Name()), "http", "server", "paths.go")
+	path := filepath.Join("http", codegen.SnakeCase(svc.Name()), "server", "paths.go")
 	return codegen.NewSource(path, pathSections(svc, "server"))
 }
 
 // clientPath returns the client file containing the request path constructors
 // for the given service.
 func clientPath(svc *httpdesign.ServiceExpr) codegen.File {
-	path := filepath.Join(codegen.SnakeCase(svc.Name()), "http", "client", "paths.go")
+	path := filepath.Join("http", codegen.SnakeCase(svc.Name()), "client", "paths.go")
 	return codegen.NewSource(path, pathSections(svc, "client"))
 }
 

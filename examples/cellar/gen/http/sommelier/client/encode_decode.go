@@ -8,6 +8,7 @@
 package client
 
 import (
+	"bytes"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -41,10 +42,22 @@ func (c *Client) EncodePickRequest(encoder func(*http.Request) goahttp.Encoder) 
 }
 
 // DecodePickResponse returns a decoder for responses returned by the sommelier
-// pick endpoint.
-func (c *Client) DecodePickResponse(decoder func(*http.Response) goahttp.Decoder) func(*http.Response) (interface{}, error) {
+// pick endpoint. restoreBody controls whether the response body should be
+// restored after having been read.
+func (c *Client) DecodePickResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
-		defer resp.Body.Close()
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
 		switch resp.StatusCode {
 		case http.StatusOK:
 			var (

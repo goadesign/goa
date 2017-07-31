@@ -9,33 +9,16 @@ package storage
 
 import "context"
 
-// The storage service makes it possible to add new or to remove existing wine
-// bottles.
+// The storage service makes it possible to view, add or remove wine bottles.
 type Service interface {
-	// Add new bottle and return its ID.
-	Add(context.Context, *Bottle) (string, error)
 	// List all stored bottles
 	List(context.Context) (StoredBottleCollection, error)
 	// Show bottle by ID
 	Show(context.Context, *ShowPayload) (*StoredBottle, error)
+	// Add new bottle and return its ID.
+	Add(context.Context, *Bottle) (string, error)
 	// Remove bottle from storage
 	Remove(context.Context, *RemovePayload) error
-}
-
-// Bottle is the payload type of the storage service add method.
-type Bottle struct {
-	// Name of bottle
-	Name string
-	// Winery that produces wine
-	Winery *Winery
-	// Vintage of bottle
-	Vintage uint32
-	// Composition is the list of grape varietals and associated percentage.
-	Composition []*Component
-	// Description of bottle
-	Description *string
-	// Rating of bottle from 1 (worst) to 5 (best)
-	Rating *uint32
 }
 
 // StoredBottleCollection is the result type of the storage service list method.
@@ -51,6 +34,22 @@ type ShowPayload struct {
 type StoredBottle struct {
 	// ID is the unique id of the bottle.
 	ID string
+	// Name of bottle
+	Name string
+	// Winery that produces wine
+	Winery *Winery
+	// Vintage of bottle
+	Vintage uint32
+	// Composition is the list of grape varietals and associated percentage.
+	Composition []*Component
+	// Description of bottle
+	Description *string
+	// Rating of bottle from 1 (worst) to 5 (best)
+	Rating *uint32
+}
+
+// Bottle is the payload type of the storage service add method.
+type Bottle struct {
 	// Name of bottle
 	Name string
 	// Winery that produces wine
