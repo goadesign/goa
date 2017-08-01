@@ -62,7 +62,7 @@ cyclo:
 	fi
 
 test:
-	@ginkgo -r --randomizeAllSpecs --failOnPending --randomizeSuites --race -skipPackage vendor
+	@ginkgo -r --randomizeAllSpecs --failOnPending --randomizeSuites -skipPackage vendor
 	go test ./_integration_tests
 
 goagen:
