@@ -45,6 +45,8 @@ type (
 		Status int
 		// Length is the response body length.
 		Length int
+		// Flag if WriteHeader has been called.
+		wroteHeader bool
 	}
 
 	// key is the type used to store internal values in the context.
@@ -150,18 +152,22 @@ func (r *ResponseData) SwitchWriter(rw http.ResponseWriter) http.ResponseWriter 
 
 // Written returns true if the response was written, false otherwise.
 func (r *ResponseData) Written() bool {
-	return r.Status != 0
+	return r.wroteHeader
 }
 
 // WriteHeader records the response status code and calls the underlying writer.
 func (r *ResponseData) WriteHeader(status int) {
 	go IncrCounter([]string{"goa", "response", strconv.Itoa(status)}, 1.0)
+	r.wroteHeader = true
 	r.Status = status
 	r.ResponseWriter.WriteHeader(status)
 }
 
 // Write records the amount of data written and calls the underlying writer.
 func (r *ResponseData) Write(b []byte) (int, error) {
+	if !r.wroteHeader {
+		r.WriteHeader(http.StatusOK)
+	}
 	r.Length += len(b)
 	return r.ResponseWriter.Write(b)
 }

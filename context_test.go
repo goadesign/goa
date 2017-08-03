@@ -39,4 +39,20 @@ var _ = Describe("ResponseData", func() {
 			Ω(trw.Status).Should(Equal(42))
 		})
 	})
+
+	Context("Write", func() {
+		It("should call WriteHeader(http.StatusOK) if WriteHeader has not yet been called", func() {
+			_, err := data.Write(nil)
+			Ω(err).Should(BeNil())
+			Ω(data.Status).Should(Equal(http.StatusOK))
+		})
+
+		It("should not affect Status if WriteHeader has been called", func() {
+			status := http.StatusBadRequest
+			data.WriteHeader(status)
+			_, err := data.Write(nil)
+			Ω(err).Should(BeNil())
+			Ω(data.Status).Should(Equal(status))
+		})
+	})
 })
