@@ -162,6 +162,9 @@ func (r *ResponseData) WriteHeader(status int) {
 
 // Write records the amount of data written and calls the underlying writer.
 func (r *ResponseData) Write(b []byte) (int, error) {
+	if !r.Written() {
+		r.WriteHeader(http.StatusOK)
+	}
 	r.Length += len(b)
 	return r.ResponseWriter.Write(b)
 }
