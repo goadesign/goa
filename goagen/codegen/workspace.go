@@ -9,6 +9,7 @@ import (
 	"go/parser"
 	"go/scanner"
 	"go/token"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -45,6 +46,8 @@ type (
 		Name string
 		// Package containing source file
 		Package *Package
+
+		file io.WriteCloser
 	}
 )
 
@@ -238,16 +241,29 @@ func (f *SourceFile) WriteHeader(title, pack string, imports []*ImportSpec) erro
 // Write implements io.Writer so that variables of type *SourceFile can be
 // used in template.Execute.
 func (f *SourceFile) Write(b []byte) (int, error) {
-	file, err := os.OpenFile(f.Abs(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return 0, err
+	if f.file == nil {
+		var err error
+		f.file, err = os.OpenFile(f.Abs(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		if err != nil {
+			return 0, err
+		}
 	}
-	defer file.Close()
-	return file.Write(b)
+	return f.file.Write(b)
+}
+
+// Close the file if still open.
+func (f *SourceFile) Close() error {
+	if f.file != nil {
+		ff := f.file
+		f.file = nil
+		return ff.Close()
+	}
+	return nil
 }
 
 // FormatCode runs "goimports -w" on the source file.
 func (f *SourceFile) FormatCode() error {
+	f.Close()
 	// Parse file into AST
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, f.Abs(), nil, parser.ParseComments)
