@@ -147,7 +147,11 @@ func (m *Generator) Generate() ([]string, error) {
 }
 
 func (m *Generator) generateToolSourceCode(pkg *codegen.Package) {
-	file := pkg.CreateSourceFile("main.go")
+	file, err := pkg.CreateSourceFile("main.go")
+	if err != nil {
+		panic(err) // bug
+	}
+	defer file.Close()
 	imports := append(m.Imports,
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("strings"),
@@ -168,8 +172,7 @@ func (m *Generator) generateToolSourceCode(pkg *codegen.Package) {
 		"DesignPackage": m.DesignPkgPath,
 		"PkgName":       pkgName,
 	}
-	err = tmpl.Execute(file, context)
-	if err != nil {
+	if err := tmpl.Execute(file, context); err != nil {
 		panic(err) // bug
 	}
 }

@@ -99,20 +99,27 @@ func (g *Generator) generateResourceTest() error {
 		codegen.NewImport("uuid", "github.com/satori/go.uuid"),
 	}
 
-	return g.API.IterateResources(func(res *design.ResourceDefinition) error {
+	return g.API.IterateResources(func(res *design.ResourceDefinition) (err error) {
 		filename := filepath.Join(outDir, codegen.SnakeCase(res.Name)+"_testing.go")
-		file, err := codegen.SourceFileFor(filename)
+		var file *codegen.SourceFile
+		file, err = codegen.SourceFileFor(filename)
 		if err != nil {
 			return err
 		}
+		defer func() {
+			file.Close()
+			if err == nil {
+				err = file.Format()
+			}
+		}()
 		title := fmt.Sprintf("%s: %s TestHelpers", g.API.Context(), res.Name)
-		if err := file.WriteHeader(title, "test", imports); err != nil {
+		if err = file.WriteHeader(title, "test", imports); err != nil {
 			return err
 		}
 
 		var methods []*TestMethod
 
-		if err := res.IterateActions(func(action *design.ActionDefinition) error {
+		if err = res.IterateActions(func(action *design.ActionDefinition) error {
 			if err := action.IterateResponses(func(response *design.ResponseDefinition) error {
 				if response.Status == 101 { // SwitchingProtocols, Don't currently handle WebSocket endpoints
 					return nil
@@ -140,10 +147,7 @@ func (g *Generator) generateResourceTest() error {
 		}
 		g.genfiles = append(g.genfiles, filename)
 		err = testTmpl.Execute(file, methods)
-		if err != nil {
-			panic(err)
-		}
-		return file.FormatCode()
+		return
 	})
 }
 
