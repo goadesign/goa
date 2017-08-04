@@ -52,6 +52,9 @@ func server(svc *httpdesign.ServiceExpr) codegen.File {
 			}
 			s = append(s, es...)
 		}
+		for _, h := range data.TransformHelpers {
+			s = append(s, &codegen.Section{Template: transformHelperTmpl(svc), Data: h})
+		}
 		return s
 	}
 
@@ -118,6 +121,10 @@ func serverHandlerInitTmpl(s *httpdesign.ServiceExpr) *template.Template {
 	return template.Must(transTmpl(s).New("handler-constructor").Parse(serverHandlerInitT))
 }
 
+func transformHelperTmpl(s *httpdesign.ServiceExpr) *template.Template {
+	return template.Must(transTmpl(s).New("transform-helper").Parse(transformHelperT))
+}
+
 func requestDecoderTmpl(s *httpdesign.ServiceExpr) *template.Template {
 	return template.Must(transTmpl(s).New("request-decoder").Parse(requestDecoderT))
 }
@@ -131,7 +138,7 @@ func errorEncoderTmpl(s *httpdesign.ServiceExpr) *template.Template {
 }
 
 func transTmpl(s *httpdesign.ServiceExpr) *template.Template {
-	return template.New("server").
+	return template.New("client-server").
 		Funcs(template.FuncMap{
 			"goTypeRef": func(dt design.DataType) string {
 				return service.Services.Get(s.Name()).Scope.GoTypeRef(&design.AttributeExpr{Type: dt})
@@ -267,6 +274,14 @@ func {{ .HandlerInit }}(
 			encodeError(w, r, err)
 		}
 	})
+}
+`
+
+// input: TransformFunctionData
+const transformHelperT = `{{ printf "%s builds a value of type %s from a value of type %s." .Name .ResultTypeRef .ParamTypeRef | comment }}
+func {{ .Name }}(v {{ .ParamTypeRef }}) {{ .ResultTypeRef }} {
+	{{ .Code }}
+	return res
 }
 `
 

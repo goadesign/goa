@@ -108,6 +108,7 @@ func TestPayloadConstructor(t *testing.T) {
 		{"body-user-inner-default", PayloadBodyUserInnerDefaultDSL, PayloadBodyUserInnerDefaultConstructorCode},
 		{"body-inline-array-user", PayloadBodyInlineArrayUserDSL, PayloadBodyInlineArrayUserConstructorCode},
 		{"body-inline-map-user", PayloadBodyInlineMapUserDSL, PayloadBodyInlineMapUserConstructorCode},
+		{"body-inline-recursive-user", PayloadBodyInlineRecursiveUserDSL, PayloadBodyInlineRecursiveUserConstructorCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

@@ -308,6 +308,7 @@ type AResult struct {
 		buf := new(bytes.Buffer)
 		Services = make(ServicesData)
 		design.Root = new(design.RootExpr)
+		design.Root.API = &design.APIExpr{Name: "test"}
 		design.Root.Services = []*design.ServiceExpr{tc.Service}
 		file := File(tc.Service)
 		for _, s := range file.Sections(genPkg) {

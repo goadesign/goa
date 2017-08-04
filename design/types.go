@@ -73,7 +73,10 @@ type (
 		Rename(string)
 		// Attribute provides the underlying type and validations.
 		Attribute() *AttributeExpr
-		// Dup makes a deep copy of the type given a deep copy of its attribute.
+		// SetAttribute updates the underlying attribute.
+		SetAttribute(*AttributeExpr)
+		// Dup makes a shallow copy of the type and assigns its
+		// attribute with att.
 		Dup(att *AttributeExpr) UserType
 		// EvalName returns the name reported by the DSL engine.
 		EvalName() string
@@ -320,8 +323,10 @@ func (p Primitive) Example(r *Random) interface{} {
 		return r.Float32()
 	case Float64:
 		return r.Float64()
-	case String, Bytes, Any:
+	case String, Any:
 		return r.String()
+	case Bytes:
+		return []byte(r.String())
 	default:
 		panic("unknown primitive type") // bug
 	}
@@ -363,7 +368,7 @@ func (a *Array) IsCompatible(val interface{}) bool {
 
 // Example generates a pseudo-random array value using the given random generator.
 func (a *Array) Example(r *Random) interface{} {
-	count := r.Int()%3 + 1
+	count := r.Int()%3 + 2
 	res := make([]interface{}, count)
 	for i := 0; i < count; i++ {
 		res[i] = a.ElemType.Example(r)
@@ -520,6 +525,10 @@ func (m *Map) IsCompatible(val interface{}) bool {
 
 // Example returns a random hash value.
 func (m *Map) Example(r *Random) interface{} {
+	if IsObject(m.KeyType.Type) || IsArray(m.KeyType.Type) || IsMap(m.KeyType.Type) {
+		// not much we can do for non hashable Go types
+		return nil
+	}
 	count := r.Int()%3 + 1
 	pair := map[interface{}]interface{}{}
 	for i := 0; i < count; i++ {
